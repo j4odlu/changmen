@@ -68,6 +68,10 @@ export function createStaticHandler({ publicDir, webDir, matcherDir }) {
   const esport2AssetCache
     = process.env.NODE_ENV === "production" ? ESPORT2_ASSET_CACHE_PROD : ESPORT2_ASSET_CACHE_DEV;
   function resolveStaticRoot(urlPath) {
+    if (/^\/matcher\/assets\/(venue|games)\//i.test(urlPath)) {
+      const fileRel = urlPath.slice("/matcher".length);
+      return { rootDir: webDir, fileRel, spa: false };
+    }
     if (matcherDir && /^\/matcher(\/|$)/i.test(urlPath)) {
       urlPath = canonicalMatcherPath(urlPath) || urlPath;
       const fileRel

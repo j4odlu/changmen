@@ -1368,7 +1368,8 @@ function gbadge(code) {
   const name = GAME_NAMES[c] || String(c).toUpperCase();
   const file = GAME_ICONS[c];
   if (file) {
-    return `<span class="gbadge" title="${esc(name)}" style="background-image:url(/assets/games/${file})" aria-label="${esc(name)}"></span>`;
+    const asset = window.matcherUrl ? window.matcherUrl(`/assets/games/${file}`) : `/assets/games/${file}`;
+    return `<span class="gbadge" title="${esc(name)}" style="background-image:url(${asset})" aria-label="${esc(name)}"></span>`;
   }
   return `<span class="gbadge-fallback" title="${esc(name)}">${esc(name)}</span>`;
 }
@@ -1395,7 +1396,8 @@ function pbadge(p) {
   const id = String(p || '');
   const file = PLATFORM_ICONS[id];
   if (file) {
-    return `<span class="pbadge" title="${esc(id)}" style="background-image:url(/assets/venue/${file})" aria-label="${esc(id)}"></span>`;
+    const asset = window.matcherUrl ? window.matcherUrl(`/assets/venue/${file}`) : `/assets/venue/${file}`;
+    return `<span class="pbadge" title="${esc(id)}" style="background-image:url(${asset})" aria-label="${esc(id)}"></span>`;
   }
   return `<span class="pbadge-fallback" title="${esc(id)}">${esc(id)}</span>`;
 }

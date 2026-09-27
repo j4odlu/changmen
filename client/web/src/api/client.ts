@@ -65,7 +65,16 @@ export function authHeaders(): Record<string, string> {
   return authToken ? { token: authToken } : {};
 }
 
-const SESSION_KICK_MSGS = new Set(["请先登录", "账号已在其他设备登录"]);
+const SESSION_KICK_MSGS = new Set([
+  "请先登录",
+  "未登录",
+  "账号已在其他设备登录",
+  "会话已失效，请重新登录",
+]);
+
+export function isSessionInvalidMessage(message: unknown): boolean {
+  return SESSION_KICK_MSGS.has(String(message || "").trim());
+}
 
 export function clearAuthSession() {
   setToken(null);
@@ -103,7 +112,7 @@ async function executePost<T>(
     );
     const json = res.data;
 
-    if (json.success === 0 && SESSION_KICK_MSGS.has(String(json.msg || "")) && action !== "Client_Login") {
+    if (json.success === 0 && isSessionInvalidMessage(json.msg) && action !== "Client_Login") {
       clearAuthSession();
       window.location.href = "/";
     }

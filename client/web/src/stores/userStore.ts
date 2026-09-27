@@ -54,6 +54,8 @@ export const useUserStore = defineStore("user", {
     creditPlateUserName: "",
     /** restoreSession / 无 token 判定完成后为 true，避免已登录刷新闪登录框 */
     sessionChecked: !getToken(),
+    /** 有本地会话但后端暂不可达时保留 token，并在恢复页展示重试入口。 */
+    sessionRestoreError: "",
     ready: false,
     error: null as string | null,
     hiddenUserName: localStorage.getItem(HIDDEN_NAME_KEY) === "1",
@@ -148,9 +150,12 @@ export const useUserStore = defineStore("user", {
     async restoreSession() {
       if (!getToken()) {
         this.ready = false;
+        this.sessionRestoreError = "";
         this.sessionChecked = true;
         return false;
       }
+      this.sessionChecked = false;
+      this.sessionRestoreError = "";
       // 提前启动 JWT refresh，防止 token 在使用中到期
       const rft = getRefreshToken();
       if (rft) {
@@ -158,15 +163,23 @@ export const useUserStore = defineStore("user", {
       }
       try {
         await this.fetchUserInfo();
+        this.sessionRestoreError = "";
         return true;
       }
-      catch {
-        clearAuthSession();
+      catch (err) {
         this.ready = false;
+        // client.ts 只会在服务端明确判定会话失效时清 token；网络/502 保留会话。
+        if (getToken()) {
+          this.sessionRestoreError = "连接暂时不可用，请检查网络后重试";
+          this.error = err instanceof Error ? err.message : String(err);
+          return false;
+        }
+        clearAuthSession();
+        this.sessionRestoreError = "";
         return false;
       }
       finally {
-        this.sessionChecked = true;
+        this.sessionChecked = this.ready || !getToken();
       }
     },
 

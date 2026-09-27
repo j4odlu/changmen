@@ -53,7 +53,11 @@ async function onLoginSuccess() {
       <HomeView />
     </KeepAlive>
   </template>
-  <SessionRestoreLoader v-else-if="showSessionRestore" />
+  <SessionRestoreLoader
+    v-else-if="showSessionRestore"
+    :error="user.sessionRestoreError"
+    @retry="user.restoreSession()"
+  />
   <PluginIntroShell v-else-if="showLoginGate" :show-login="true">
     <LoginPanel @success="onLoginSuccess" />
   </PluginIntroShell>

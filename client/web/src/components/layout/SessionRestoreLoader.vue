@@ -2,6 +2,9 @@
 import { defineAsyncComponent } from "vue";
 
 const LoginStarfield = defineAsyncComponent(() => import("@/components/layout/LoginStarfield.vue"));
+
+defineProps<{ error?: string }>();
+defineEmits<{ retry: [] }>();
 </script>
 
 <template>
@@ -21,6 +24,12 @@ const LoginStarfield = defineAsyncComponent(() => import("@/components/layout/Lo
         <span class="hero-word hero-word-3">Faster.</span>
         <span class="hero-word hero-word-4 hero-word--accent">Smarter.</span>
       </h1>
+      <div v-if="error" class="session-loader__error" role="alert">
+        <p>{{ error }}</p>
+        <button type="button" class="session-loader__retry" @click="$emit('retry')">
+          重新连接
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -30,6 +39,31 @@ const LoginStarfield = defineAsyncComponent(() => import("@/components/layout/Lo
   width: 100%;
   height: 100%;
   min-height: 100%;
+}
+
+.session-loader__error {
+  position: relative;
+  z-index: 2;
+  margin-top: 28px;
+  color: rgba(255, 255, 255, 0.86);
+  text-align: center;
+}
+
+.session-loader__error p {
+  margin: 0 0 12px;
+}
+
+.session-loader__retry {
+  padding: 8px 20px;
+  border: 1px solid rgba(96, 165, 250, 0.75);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(37, 99, 235, 0.28);
+  cursor: pointer;
+}
+
+.session-loader__retry:hover {
+  background: rgba(37, 99, 235, 0.46);
 }
 
 /* 入场结束后 accent 轻脉冲，表示仍在恢复会话 */

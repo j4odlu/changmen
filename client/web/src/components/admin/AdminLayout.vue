@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { getMatcherUrl } from "@/config/apiBase";
 import { useUserStore } from "@/stores/userStore";
 
 defineProps<{
@@ -66,7 +67,7 @@ const navItems: AdminNavItem[] = [
     name: "admin-matcher",
     label: "赛事匹配",
     icon: "am-icon-th",
-    href: "/matcher/",
+    href: getMatcherUrl(),
   },
   {
     name: "admin-health",

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getMatcherUrl } from "@/config/apiBase";
 import type { AdminDashboard } from "@/types/admin";
 import { onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
@@ -9,6 +10,7 @@ const date = ref(todayKey());
 const loading = ref(false);
 const dashboard = ref<AdminDashboard | null>(null);
 const loadError = ref("");
+const matcherUrl = getMatcherUrl();
 
 function todayKey() {
   const d = new Date();
@@ -184,7 +186,7 @@ onMounted(() => {
           </button>
           <a
             class="admin-quick__item"
-            href="/matcher/"
+            :href="matcherUrl"
             target="_blank"
             rel="noopener noreferrer"
           >

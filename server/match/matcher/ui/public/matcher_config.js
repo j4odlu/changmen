@@ -43,7 +43,7 @@
     location.replace(dest);
   };
 
-  // 与主页同源时 localStorage 已有 token；跨端口（Vite 登录、backend/matcher 不同端口）靠 cookie 共享
+  // 旧版访问令牌继续兼容；新版 HttpOnly 会话由 matcher API 在服务端认证。
   const token = window.getSiteToken();
   if (token && !readTokenCookie()) {
     document.cookie
@@ -88,8 +88,4 @@
       pid = pid.slice(0, atIdx);
     return `${pid}@${gameId}`;
   };
-
-  if (!window.getSiteToken()) {
-    window.redirectToSiteLogin();
-  }
 })();

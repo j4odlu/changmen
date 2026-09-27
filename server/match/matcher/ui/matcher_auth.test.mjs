@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "vitest";
 import { isMatcherSkipAuthEnabled } from "../lib/config.js";
-import { canAccessMatcherUi, getRequestToken, isMatcherAuthBypassed } from "./matcher_auth.js";
+import {
+  canAccessMatcherUi,
+  getRequestToken,
+  isMatcherAuthBypassed,
+  resolveMatcherUser,
+} from "./matcher_auth.js";
 
 const saved = { ...process.env };
 
@@ -49,6 +54,57 @@ describe("getRequestToken", () => {
     assert.equal(getRequestToken({ headers: { authorization: "Bearer xyz" } }), "xyz");
     assert.equal(getRequestToken({ headers: { cookie: "app_token=tok%201" } }), "tok 1");
     assert.equal(getRequestToken({ headers: {} }), "");
+  });
+});
+
+describe("resolveMatcherUser", () => {
+  it("通过 HttpOnly 浏览器会话恢复 matcher 用户", async () => {
+    delete process.env.AUTH_MODE;
+    delete process.env.NODE_ENV;
+    const calls = [];
+    const req = {
+      headers: {
+        cookie: "cm_session=bs_test.secret",
+        "user-agent": "matcher-test",
+      },
+      socket: { remoteAddress: "127.0.0.1" },
+    };
+    const result = await resolveMatcherUser(req, {
+      authBrowserSession: async (sessionToken, audit) => {
+        calls.push({ sessionToken, audit });
+        return { accessToken: "restored-access" };
+      },
+      getUserByToken: async token => ({ userName: token, role: "admin" }),
+    });
+
+    assert.equal(result.user.userName, "restored-access");
+    assert.equal(calls[0].sessionToken, "bs_test.secret");
+    assert.equal(calls[0].audit.userAgent, "matcher-test");
+  });
+
+  it("保留显式 token 的旧版兼容路径", async () => {
+    const result = await resolveMatcherUser(
+      { headers: { token: "legacy-access", cookie: "cm_session=ignored" } },
+      {
+        authBrowserSession: async () => assert.fail("不应恢复浏览器会话"),
+        getUserByToken: async token => ({ userName: token, role: "leader" }),
+      },
+    );
+    assert.equal(result.user.userName, "legacy-access");
+  });
+
+  it("登录服务临时不可用时不会误报会话失效", async () => {
+    delete process.env.AUTH_MODE;
+    delete process.env.NODE_ENV;
+    const result = await resolveMatcherUser(
+      { headers: { cookie: "cm_session=bs_test.secret" }, socket: {} },
+      {
+        authBrowserSession: async () => ({ temporary: true }),
+        getUserByToken: async () => assert.fail("不应查询用户"),
+      },
+    );
+    assert.equal(result.temporary, true);
+    assert.equal(result.user, null);
   });
 });
 

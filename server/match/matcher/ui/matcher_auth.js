@@ -1,5 +1,14 @@
+import * as sb from "@changmen/db";
 import { canAccessAdminPanel } from "../../../backend/core/account/admin_auth.js";
+import {
+  browserSessionEnabled,
+  readBrowserSessionCookie,
+} from "../../../backend/core/auth/browser_session.js";
 import store from "../../../backend/core/esport-api/store.js";
+import {
+  clientCertCnFromSubject,
+  readClientCertStatus,
+} from "../../../backend/core/shared/client_cert_gate.js";
 import { isMatcherSkipAuthEnabled } from "../lib/config.js";
 
 export function isMatcherAuthBypassed() {
@@ -36,13 +45,36 @@ function parseCookies(req) {
   return out;
 }
 
-export async function resolveMatcherUser(req) {
+function matcherAuditContext(req) {
+  const cert = readClientCertStatus(req);
+  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return {
+    clientIp: forwarded || String(req.socket?.remoteAddress || ""),
+    certCn: clientCertCnFromSubject(cert.subject),
+    userAgent: String(req.headers["user-agent"] || ""),
+  };
+}
+
+export async function resolveMatcherUser(req, dependencies = {}) {
   if (isMatcherAuthBypassed())
     return { user: { userName: "__skip_auth__" }, bypassed: true };
   const token = getRequestToken(req);
-  if (!token)
+  const getUserByToken = dependencies.getUserByToken || store.getUserByToken.bind(store);
+  if (token) {
+    const user = await getUserByToken(token);
+    return { user, bypassed: false };
+  }
+
+  const browserSessionToken = browserSessionEnabled() ? readBrowserSessionCookie(req) : "";
+  if (!browserSessionToken)
     return { user: null, bypassed: false };
-  const user = await store.getUserByToken(token);
+  const authBrowserSession = dependencies.authBrowserSession || sb.authBrowserSession;
+  const restored = await authBrowserSession(browserSessionToken, matcherAuditContext(req));
+  if (restored?.temporary)
+    return { user: null, bypassed: false, temporary: true };
+  if (!restored || !("accessToken" in restored))
+    return { user: null, bypassed: false };
+  const user = await getUserByToken(restored.accessToken);
   return { user, bypassed: false };
 }
 
@@ -66,9 +98,16 @@ export function createMatcherAuthMiddleware() {
       if (!path.startsWith("/api/") && path !== "/api")
         return next();
 
-      const { user, bypassed } = await resolveMatcherUser(req);
+      const { user, bypassed, temporary } = await resolveMatcherUser(req);
       if (bypassed)
         return next();
+      if (temporary) {
+        return res.status(503).json({
+          ok: false,
+          error: "temporary_unavailable",
+          message: "登录服务暂时不可用，请稍后重试",
+        });
+      }
       if (!user) {
         return res.status(401).json({ ok: false, error: "unauthorized", login: "/login" });
       }

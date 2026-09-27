@@ -1,6 +1,7 @@
 /** [changmen 扩展] 实时下单进度浮层（div + fixed；勿用 fieldset，Chrome 会忽略宽度） */
 
 .active-bet-run {
+  position: relative;
   border: 1px solid #3f4a5c;
   border-radius: 5px;
   padding: 6px 8px 8px;
@@ -217,6 +218,31 @@
   text-overflow: ellipsis;
   flex: 0 1 42%;
   min-width: 0;
+}
+
+.active-bet-run--resizing {
+  user-select: none;
+}
+
+.active-bet-run__resize-handle {
+  appearance: none;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: linear-gradient(45deg, transparent 45%, #657187 46%, #657187 54%, transparent 55%);
+  cursor: nesw-resize;
+  touch-action: none;
+  opacity: 0.72;
+}
+
+.active-bet-run__resize-handle:hover,
+.active-bet-run--resizing .active-bet-run__resize-handle {
+  opacity: 1;
 }
 
 .active-bet-run__flow {

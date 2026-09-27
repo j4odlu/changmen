@@ -14,8 +14,12 @@ import "@/styles/active-bet-run.css";
 
 const PANEL_POS_KEY = "changmen:active-bet-run:pos:v4";
 const PANEL_COLLAPSED_KEY = "changmen:active-bet-run:collapsed";
+const PANEL_SIZE_KEY = "changmen:active-bet-run:size:v1";
 /** 默认宽度：与原先列表上方单笔栏一致（双腿并排共 460） */
 const PANEL_W = 460;
+const PANEL_H = 370;
+const PANEL_MIN_W = 360;
+const PANEL_MIN_H = 260;
 
 const activeStore = useActiveBetRunStore();
 const loseStore = useLoseOrderStore();
@@ -25,13 +29,16 @@ const now = ref(Date.now());
 const panelEl = ref<HTMLElement | null>(null);
 const collapsed = ref(false);
 const offset = ref<{ left: number; top: number } | null>(null);
+const panelSize = ref({ width: PANEL_W, height: PANEL_H });
 const dragging = ref(false);
+const resizing = ref(false);
 /** 当前展示的套利单下标（visibleRuns：0=最新） */
 const activeIndex = ref(0);
 
 const legEventFeedEls = new Map<string, HTMLElement>();
 let tickTimer: ReturnType<typeof setInterval> | undefined;
 let dragCleanup: (() => void) | undefined;
+let resizeCleanup: (() => void) | undefined;
 
 const runCount = computed(() => visibleRuns.value.length);
 const activeRun = computed(() => visibleRuns.value[activeIndex.value] ?? null);
@@ -50,10 +57,8 @@ const panelStyle = computed(() => {
     boxSizing: "border-box",
   };
   if (!collapsed.value) {
-    style.width = `${PANEL_W}px`;
-    style.minWidth = `${PANEL_W}px`;
-    style.maxWidth = `${PANEL_W}px`;
-    style.height = "370px";
+    style.width = `${panelSize.value.width}px`;
+    style.height = `${panelSize.value.height}px`;
   }
   else {
     style.width = "auto";
@@ -79,12 +84,14 @@ onMounted(() => {
     now.value = Date.now();
   }, 1000);
   restorePanelPrefs();
+  void nextTick(normalizePanelGeometry);
 });
 
 onUnmounted(() => {
   if (tickTimer)
     clearInterval(tickTimer);
   dragCleanup?.();
+  resizeCleanup?.();
 });
 
 watch(
@@ -110,13 +117,21 @@ function restorePanelPrefs() {
   try {
     collapsed.value = localStorage.getItem(PANEL_COLLAPSED_KEY) === "1";
     const raw = localStorage.getItem(PANEL_POS_KEY);
-    if (!raw)
-      return;
-    const parsed = JSON.parse(raw) as { left?: unknown; top?: unknown };
-    const left = Number(parsed.left);
-    const top = Number(parsed.top);
-    if (Number.isFinite(left) && Number.isFinite(top))
-      offset.value = { left, top };
+    if (raw) {
+      const parsed = JSON.parse(raw) as { left?: unknown; top?: unknown };
+      const left = Number(parsed.left);
+      const top = Number(parsed.top);
+      if (Number.isFinite(left) && Number.isFinite(top))
+        offset.value = { left, top };
+    }
+    const sizeRaw = localStorage.getItem(PANEL_SIZE_KEY);
+    if (sizeRaw) {
+      const parsed = JSON.parse(sizeRaw) as { width?: unknown; height?: unknown };
+      const width = Number(parsed.width);
+      const height = Number(parsed.height);
+      if (Number.isFinite(width) && Number.isFinite(height))
+        panelSize.value = { width, height };
+    }
   }
   catch {
     /* ignore */
@@ -143,9 +158,20 @@ function persistOffset() {
   }
 }
 
+function persistSize() {
+  try {
+    localStorage.setItem(PANEL_SIZE_KEY, JSON.stringify(panelSize.value));
+  }
+  catch {
+    /* ignore */
+  }
+}
+
 function toggleCollapsed() {
   collapsed.value = !collapsed.value;
   persistCollapsed();
+  if (!collapsed.value)
+    void nextTick(normalizePanelGeometry);
 }
 
 function showPrev() {
@@ -168,6 +194,33 @@ function clampOffset(left: number, top: number): { left: number; top: number } {
     left: Math.min(Math.max(0, left), Math.max(0, window.innerWidth - w)),
     top: Math.min(Math.max(0, top), Math.max(0, window.innerHeight - h)),
   };
+}
+
+function clampPanelSize(width: number, height: number, maxWidth: number, maxHeight: number) {
+  return {
+    width: Math.min(Math.max(PANEL_MIN_W, width), Math.max(PANEL_MIN_W, maxWidth)),
+    height: Math.min(Math.max(PANEL_MIN_H, height), Math.max(PANEL_MIN_H, maxHeight)),
+  };
+}
+
+function normalizePanelGeometry() {
+  if (collapsed.value)
+    return;
+  const rect = panelEl.value?.getBoundingClientRect();
+  const left = offset.value?.left ?? rect?.left ?? 0;
+  const top = offset.value?.top ?? rect?.top ?? 0;
+  panelSize.value = clampPanelSize(
+    panelSize.value.width,
+    panelSize.value.height,
+    window.innerWidth - left,
+    window.innerHeight - top,
+  );
+  if (offset.value) {
+    offset.value = {
+      left: Math.min(Math.max(0, left), Math.max(0, window.innerWidth - panelSize.value.width)),
+      top: Math.min(Math.max(0, top), Math.max(0, window.innerHeight - panelSize.value.height)),
+    };
+  }
 }
 
 function onDragHandlePointerDown(ev: PointerEvent) {
@@ -208,6 +261,55 @@ function onDragHandlePointerDown(ev: PointerEvent) {
   window.addEventListener("pointerup", onUp, { once: true });
   window.addEventListener("pointercancel", onUp, { once: true });
   dragCleanup = () => {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("pointercancel", onUp);
+  };
+}
+
+function onResizePointerDown(ev: PointerEvent) {
+  if (ev.button !== 0 || collapsed.value)
+    return;
+  const el = panelEl.value;
+  if (!el)
+    return;
+
+  ev.preventDefault();
+  ev.stopPropagation();
+  const rect = el.getBoundingClientRect();
+  const originLeft = rect.left;
+  const originTop = rect.top;
+  const originRight = rect.right;
+  const originWidth = rect.width;
+  const originHeight = rect.height;
+  const startX = ev.clientX;
+  const startY = ev.clientY;
+  offset.value = { left: originLeft, top: originTop };
+  resizing.value = true;
+
+  const onMove = (moveEv: PointerEvent) => {
+    const nextSize = clampPanelSize(
+      originWidth + (startX - moveEv.clientX),
+      originHeight + (moveEv.clientY - startY),
+      originRight,
+      window.innerHeight - originTop,
+    );
+    panelSize.value = nextSize;
+    offset.value = { left: originRight - nextSize.width, top: originTop };
+  };
+  const onUp = () => {
+    resizing.value = false;
+    resizeCleanup?.();
+    resizeCleanup = undefined;
+    persistOffset();
+    persistSize();
+  };
+
+  resizeCleanup?.();
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp, { once: true });
+  window.addEventListener("pointercancel", onUp, { once: true });
+  resizeCleanup = () => {
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
     window.removeEventListener("pointercancel", onUp);
@@ -352,6 +454,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
       :class="{
         'active-bet-run--collapsed': collapsed,
         'active-bet-run--dragging': dragging,
+        'active-bet-run--resizing': resizing,
       }"
       :style="panelStyle"
     >
@@ -485,6 +588,15 @@ function orderLabel(run: ActiveBetRun, index: number): string {
           ›
         </button>
       </div>
+
+      <button
+        v-show="!collapsed"
+        type="button"
+        class="active-bet-run__resize-handle"
+        title="拖动调整宽度和高度"
+        aria-label="调整实时下单进度框大小"
+        @pointerdown="onResizePointerDown"
+      />
     </div>
   </Teleport>
 </template>

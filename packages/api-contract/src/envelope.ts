@@ -7,6 +7,8 @@ export interface ApiSuccess<T = unknown> {
 
 export interface ApiFailure {
   success: 0;
+  /** 稳定的机器错误码；msg 仅供展示，旧客户端可继续只读 msg。 */
+  code?: string;
   msg?: string;
   info?: null;
 }

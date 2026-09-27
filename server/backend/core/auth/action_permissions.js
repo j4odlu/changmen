@@ -56,7 +56,7 @@ export function checkActionAuth(action, user) {
   if (PUBLIC_ACTIONS.has(action))
     return null;
   if (!user)
-    return { success: 0, msg: "未登录", info: null };
+    return { success: 0, code: "AUTH_REQUIRED", msg: "未登录", info: null };
   if (ADMIN_ONLY_ACTIONS.has(action) && !isAdminUser(user)) {
     return { success: 0, msg: "无管理员权限", info: null };
   }

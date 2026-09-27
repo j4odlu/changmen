@@ -16,11 +16,15 @@ const dbPkgRoot = join(backendRoot, "..", "db");
 
 const CODE_FILES = [
   join(dbPkgRoot, "impl_rds.js"),
+  join(dbPkgRoot, "rds", "auth_store.js"),
   join(dbPkgRoot, "rds", "team_store.js"),
   join(dbPkgRoot, "rds", "matcher_store.js"),
 ];
 
-const SQL_KEYWORDS = new Set([
+// The checker intentionally scans whole source files because SQL is embedded in
+// template strings. Ignore SQL grammar tokens and known prose/function matches
+// that cannot be physical table names.
+const IGNORED_IDENTIFIERS = new Set([
   "select",
   "where",
   "set",
@@ -69,6 +73,8 @@ const SQL_KEYWORDS = new Set([
   "job",
   "record",
   "moved",
+  "failed",
+  "unnest",
 ]);
 
 function readText(path) {
@@ -94,7 +100,7 @@ function tablesFromCode() {
     const src = readText(file);
     for (const m of src.matchAll(re)) {
       const name = m[1].toLowerCase();
-      if (!SQL_KEYWORDS.has(name))
+      if (!IGNORED_IDENTIFIERS.has(name))
         tables.add(name);
     }
   }

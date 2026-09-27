@@ -1,7 +1,7 @@
 import {
   clearAuthSession,
   getRefreshToken,
-  isSessionInvalidMessage,
+  isSessionInvalidResponse,
   post,
   setRefreshToken,
   setToken,
@@ -27,7 +27,7 @@ async function runRefresh(retryDelaysMs: readonly number[]): Promise<boolean> {
         refreshToken: rt,
       });
       if (result.success !== 1) {
-        if (isSessionInvalidMessage(result.msg)) {
+        if (isSessionInvalidResponse(result.code, result.msg)) {
           clearAuthSession();
           return false;
         }

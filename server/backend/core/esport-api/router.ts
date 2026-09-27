@@ -45,7 +45,7 @@ import { handleSendMessage as sendTelegramMessage } from "./telegram_send.js";
 import { handleClientNotifyAdminTelegram } from "../admin_tools/client_mirror_notify.js";
 import { handleV4Request } from "./v4_router.js";
 import { recordEsportRequest } from "../shared/esport_request_timing.js";
-import { certLoginBindError, readClientCertStatus } from "../shared/client_cert_gate.js";
+import { certLoginBindError, clientCertCnFromSubject, readClientCertStatus } from "../shared/client_cert_gate.js";
 
 /** 磁盘全量 Index ∩ client_matches；空合场 → 空 Index（不 fail-open） */
 async function attachFilteredVpsMarketIndex(provider: string, target: Record<string, unknown>) {
@@ -79,6 +79,7 @@ export interface ApiSuccess<T = unknown> {
 
 export interface ApiFailure {
   success: 0;
+  code?: string;
   msg: string;
   info: null;
 }
@@ -97,6 +98,13 @@ export interface EsportUser {
 interface EsportContext {
   token: string;
   user: EsportUser | null;
+  audit?: AuthAuditContext;
+}
+
+interface AuthAuditContext {
+  clientIp?: string;
+  certCn?: string;
+  userAgent?: string;
 }
 
 function requireActionAuth(
@@ -113,8 +121,8 @@ function ok<T>(info: T, msg = "ok"): ApiSuccess<T> {
   return { success: 1, msg, info: info ?? null };
 }
 
-function fail(msg: string, info = null): ApiFailure {
-  return { success: 0, msg, info };
+function fail(msg: string, info = null, code?: string): ApiFailure {
+  return { success: 0, ...(code ? { code } : {}), msg, info };
 }
 
 function getJwtClaim(token: string, claim: string): unknown {
@@ -220,27 +228,42 @@ async function handleClientLogin(
   body: Record<string, unknown>,
   clientIp = "",
   cert?: { hasClientCert: boolean; subject: string } | null,
+  userAgent = "",
 ): Promise<ApiEnvelope> {
   const parsed = LoginRequest.safeParse({ userName: body.userName || body.username, password: body.password });
   if (!parsed.success)
     return fail("用户名或密码不能为空");
   const { userName, password } = parsed.data;
   if (!sb.isAuthConfigured()) {
-    return fail(authNotConfiguredMessage());
+    return fail(authNotConfiguredMessage(), null, "TEMPORARY_UNAVAILABLE");
   }
+
+  const audit = {
+    clientIp,
+    certCn: clientCertCnFromSubject(cert?.subject),
+    userAgent,
+  };
 
   // mTLS 叶子 CN 必须与登录用户名一致（生产默认开启；本机 DEV 默认关）
   // 在验密之前拦截，避免无证/错证时泄露「密码是否正确」
   const bindErr = certLoginBindError(userName, cert ?? null);
-  if (bindErr)
-    return fail(bindErr);
+  if (bindErr) {
+    void sb.recordAuthAudit({
+      ...audit,
+      userName,
+      eventType: "LOGIN",
+      result: "DENIED",
+      reasonCode: "CERT_BIND_FAILED",
+    });
+    return fail(bindErr, null, "CERT_BIND_FAILED");
+  }
 
-  const auth = await sb.authSignIn(userName, password);
+  const auth = await sb.authSignIn(userName, password, audit);
   if (auth && "error" in auth && auth.error === "db") {
-    return fail("数据库连接失败，请检查 DATABASE_URL 配置");
+    return fail("数据库连接失败，请检查 DATABASE_URL 配置", null, "TEMPORARY_UNAVAILABLE");
   }
   if (!auth || "error" in auth)
-    return fail("用户名或密码错误");
+    return fail("用户名或密码错误", null, "INVALID_CREDENTIALS");
 
   const { accessToken, refreshToken, userId: uid, email } = auth;
 
@@ -262,19 +285,19 @@ async function handleClientLogin(
       profile = await dbStore.loadProfileById(uid);
   }
   if (!profile)
-    return fail(profileLoadFailMessage());
+    return fail(profileLoadFailMessage(), null, "TEMPORARY_UNAVAILABLE");
 
   // 密码通过后再用 profile 用户名复核一次（防止大小写/别名与 CN 不一致）
   const bindName = String(profile.userName || userName || "").trim();
   const bindErr2 = certLoginBindError(bindName, cert ?? null);
   if (bindErr2)
-    return fail(bindErr2);
+    return fail(bindErr2, null, "CERT_BIND_FAILED");
 
   try {
     await assertProfileActive(uid);
   }
   catch (err) {
-    return fail((err as Error).message || "账号状态异常，请联系管理员");
+    return fail((err as Error).message || "账号状态异常，请联系管理员", null, "ACCOUNT_DISABLED");
   }
 
   touchUserPresence(uid);
@@ -418,7 +441,7 @@ async function handleCoreAction(
 ): Promise<ApiEnvelope> {
   switch (action as EsportAction) {
     case "Client_Logout": {
-      await sb.authSignOut(ctx.token);
+      await sb.authSignOut(ctx.token, ctx.audit);
       return ok(null);
     }
     case "Client_RefreshToken": {
@@ -426,17 +449,21 @@ async function handleCoreAction(
       if (!rtParsed.success)
         return fail("缺少 refreshToken");
       const refreshToken = rtParsed.data.refreshToken || rtParsed.data.refresh_token;
-      const auth = await sb.authRefreshToken(String(refreshToken));
+      const auth = await sb.authRefreshToken(String(refreshToken), ctx.audit);
       if (auth && "revoked" in auth && auth.revoked) {
-        return fail("会话已失效，请重新登录");
+        return fail("会话已失效，请重新登录", null, "SESSION_REVOKED");
       }
+      if (auth && "invalid" in auth && auth.invalid)
+        return fail("刷新 token 已过期，请重新登录", null, "REFRESH_TOKEN_EXPIRED");
+      if (auth && "temporary" in auth && auth.temporary)
+        return fail("登录服务暂时不可用，请稍后重试", null, "TEMPORARY_UNAVAILABLE");
       if (!auth || !("accessToken" in auth))
-        return fail("刷新 token 失败");
+        return fail("刷新 token 失败", null, "TEMPORARY_UNAVAILABLE");
       try {
         await assertProfileActive(auth.userId);
       }
       catch (err) {
-        return fail((err as Error).message || "账号状态异常，请联系管理员");
+        return fail((err as Error).message || "账号状态异常，请联系管理员", null, "ACCOUNT_DISABLED");
       }
       touchUserPresence(auth.userId);
       return ok({ token: auth.accessToken, refreshToken: auth.refreshToken });
@@ -715,19 +742,27 @@ export async function handleEsportRequest(
     }
 
     const token = String(req.headers.token || ""); // Node.js 请求头键名一律小写
+    const clientIp = clientIpFromRequest(req);
+    const cert = readClientCertStatus(req);
+    const audit = {
+      clientIp,
+      certCn: clientCertCnFromSubject(cert.subject),
+      userAgent: String(req.headers["user-agent"] || ""),
+    };
     // 登录不依赖既有 session；先走 login，避免 RDS/池堵死时 getUserByToken 拖死登录
     if (action === "Client_Login") {
       sendJson(res, 200, await handleClientLogin(
         body,
-        clientIpFromRequest(req),
-        readClientCertStatus(req),
+        clientIp,
+        cert,
+        audit.userAgent,
       ));
       return true;
     }
 
     const user = await store.getUserByToken(token);
 
-    sendJson(res, 200, await handle(action, body, { token, user }));
+    sendJson(res, 200, await handle(action, body, { token, user, audit }));
     return true;
   }
   catch (err: any) {

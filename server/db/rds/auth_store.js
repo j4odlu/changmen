@@ -9,12 +9,60 @@ import {
   JWT_ACCESS_TTL_SEC,
   JWT_REFRESH_TTL_SEC,
   JWT_SECRET,
+  decodeJwtPayload,
   signJwt,
   verifyJwt,
 } from "./jwt.js";
 
+function cleanAuditText(value, maxLength) {
+  return String(value || "").trim().slice(0, maxLength);
+}
+
+function sessionIdPrefix(sessionId) {
+  return cleanAuditText(sessionId, 8);
+}
+
+function auditUserId(value) {
+  const id = String(value || "").trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+    ? id
+    : null;
+}
+
+/** 登录态审计为 best-effort：审计库异常不得阻断用户登录或刷新。 */
+export async function recordAuthAudit(event) {
+  const pool = getPgPool();
+  if (!pool)
+    return false;
+  try {
+    await pool.query(
+      `INSERT INTO auth_session_audit
+       (user_id, user_name, event_type, result, reason_code, session_id_prefix,
+        client_ip, cert_cn, user_agent, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
+        auditUserId(event?.userId),
+        cleanAuditText(event?.userName, 160),
+        cleanAuditText(event?.eventType, 48),
+        cleanAuditText(event?.result, 32),
+        cleanAuditText(event?.reasonCode, 64),
+        sessionIdPrefix(event?.sessionId),
+        cleanAuditText(event?.clientIp, 128),
+        cleanAuditText(event?.certCn, 160),
+        cleanAuditText(event?.userAgent, 512),
+        Date.now(),
+      ],
+    );
+    return true;
+  }
+  catch (err) {
+    console.warn("[rds] recordAuthAudit:", err.message);
+    return false;
+  }
+}
+
 /** 密码登录；返回 { accessToken, refreshToken, userId, email } 或 null */
-export async function authSignIn(userName, password) {
+export async function authSignIn(userName, password, auditContext = {}) {
   const name = String(userName || "").trim();
   const pwd = String(password || "");
   if (!name || !pwd)
@@ -22,17 +70,25 @@ export async function authSignIn(userName, password) {
 
   const pool = getPgPool();
   if (!pool || !JWT_SECRET)
-    return null;
+    return { error: "db", message: "auth database unavailable" };
   try {
     const { rows } = await pool.query(
-      `SELECT id, user_name FROM users
+      `SELECT id, user_name, metadata->>'active_session_id' AS active_session_id FROM users
        WHERE lower(user_name) = lower($1)
          AND password_hash = crypt($2, password_hash)`,
       [name, pwd],
     );
     const row = rows[0];
-    if (!row)
+    if (!row) {
+      void recordAuthAudit({
+        ...auditContext,
+        userName: name,
+        eventType: "LOGIN",
+        result: "DENIED",
+        reasonCode: "INVALID_CREDENTIALS",
+      });
       return null;
+    }
     const userId = String(row.id);
     const sessionId = crypto.randomUUID();
     const accessToken = signJwt(
@@ -45,8 +101,39 @@ export async function authSignIn(userName, password) {
       JWT_SECRET,
       JWT_REFRESH_TTL_SEC,
     );
-    if (!(await setActiveSessionId(userId, sessionId)))
-      return null;
+    if (!(await setActiveSessionId(userId, sessionId))) {
+      void recordAuthAudit({
+        ...auditContext,
+        userId,
+        userName: row.user_name,
+        eventType: "LOGIN",
+        result: "FAILED",
+        reasonCode: "TEMPORARY_UNAVAILABLE",
+        sessionId,
+      });
+      return { error: "db", message: "active session update failed" };
+    }
+    const previousSessionId = String(row.active_session_id || "");
+    if (previousSessionId && previousSessionId !== "logged_out" && previousSessionId !== sessionId) {
+      void recordAuthAudit({
+        ...auditContext,
+        userId,
+        userName: row.user_name,
+        eventType: "SESSION_REVOKED",
+        result: "SUCCESS",
+        reasonCode: "NEW_LOGIN",
+        sessionId: previousSessionId,
+      });
+    }
+    void recordAuthAudit({
+      ...auditContext,
+      userId,
+      userName: row.user_name,
+      eventType: "LOGIN",
+      result: "SUCCESS",
+      reasonCode: "",
+      sessionId,
+    });
     return {
       accessToken,
       refreshToken,
@@ -56,25 +143,56 @@ export async function authSignIn(userName, password) {
   }
   catch (err) {
     console.warn("[rds] authSignIn:", err.message);
+    void recordAuthAudit({
+      ...auditContext,
+      userName: name,
+      eventType: "LOGIN",
+      result: "FAILED",
+      reasonCode: "TEMPORARY_UNAVAILABLE",
+    });
     return { error: "db", message: err.message };
   }
 }
 
 /** 登出：清除 active_session_id 使当前 token 立即失效 */
-export async function authSignOut(token) {
+export async function authSignOut(token, auditContext = {}) {
   if (!token || !JWT_SECRET)
     return;
   const payload = verifyJwt(token, JWT_SECRET);
-  if (!payload?.sub)
+  if (!payload?.sub) {
+    void recordAuthAudit({
+      ...auditContext,
+      eventType: "LOGOUT",
+      result: "DENIED",
+      reasonCode: "ACCESS_TOKEN_INVALID",
+    });
     return;
+  }
   const userId = String(payload.sub);
   const sessionId = payload.session_id ? String(payload.session_id) : "";
   if (!sessionId)
     return;
   const current = await fetchUserActiveSessionId(userId);
-  if (current && current !== sessionId)
+  if (current && current !== sessionId) {
+    void recordAuthAudit({
+      ...auditContext,
+      userId,
+      eventType: "LOGOUT",
+      result: "IGNORED",
+      reasonCode: "SESSION_REVOKED",
+      sessionId,
+    });
     return;
-  await setActiveSessionId(userId, "logged_out");
+  }
+  const updated = await setActiveSessionId(userId, "logged_out");
+  void recordAuthAudit({
+    ...auditContext,
+    userId,
+    eventType: "LOGOUT",
+    result: updated ? "SUCCESS" : "FAILED",
+    reasonCode: updated ? "" : "TEMPORARY_UNAVAILABLE",
+    sessionId,
+  });
 }
 
 async function fetchUserActiveSessionId(userId) {
@@ -197,32 +315,77 @@ export function authPeekAccessToken(token) {
 }
 
 /** 用 refresh token 换取新的 access/refresh token；{ revoked: true } 表示已在别处登录 */
-export async function authRefreshToken(refreshToken) {
+export async function authRefreshToken(refreshToken, auditContext = {}) {
   if (!JWT_SECRET)
-    return null;
+    return { temporary: true };
   const payload = verifyJwt(refreshToken, JWT_SECRET);
-  if (!payload?.sub || payload.typ !== "refresh")
-    return null;
+  if (!payload?.sub || payload.typ !== "refresh") {
+    const decoded = decodeJwtPayload(refreshToken);
+    void recordAuthAudit({
+      ...auditContext,
+      userId: decoded?.sub,
+      eventType: "REFRESH",
+      result: "DENIED",
+      reasonCode: "REFRESH_TOKEN_EXPIRED",
+      sessionId: decoded?.session_id,
+    });
+    return { invalid: true };
+  }
   const userId = String(payload.sub);
   const sessionId = payload.session_id ? String(payload.session_id) : "";
-  if (!sessionId)
+  if (!sessionId) {
+    void recordAuthAudit({
+      ...auditContext,
+      userId,
+      eventType: "REFRESH",
+      result: "DENIED",
+      reasonCode: "SESSION_REVOKED",
+    });
     return { revoked: true };
+  }
   const active = await fetchUserActiveSessionId(userId);
-  if (active === null)
-    return null;
-  if (active && active !== sessionId)
+  if (active === null) {
+    void recordAuthAudit({
+      ...auditContext,
+      userId,
+      eventType: "REFRESH",
+      result: "FAILED",
+      reasonCode: "TEMPORARY_UNAVAILABLE",
+      sessionId,
+    });
+    return { temporary: true };
+  }
+  if (active && active !== sessionId) {
+    void recordAuthAudit({
+      ...auditContext,
+      userId,
+      eventType: "REFRESH",
+      result: "DENIED",
+      reasonCode: "SESSION_REVOKED",
+      sessionId,
+    });
     return { revoked: true };
+  }
   const pool = getPgPool();
   if (!pool)
-    return null;
+    return { temporary: true };
   try {
     const { rows } = await pool.query(
       "SELECT user_name FROM users WHERE id = $1",
       [userId],
     );
     const row = rows[0];
-    if (!row)
-      return null;
+    if (!row) {
+      void recordAuthAudit({
+        ...auditContext,
+        userId,
+        eventType: "REFRESH",
+        result: "DENIED",
+        reasonCode: "REFRESH_TOKEN_EXPIRED",
+        sessionId,
+      });
+      return { invalid: true };
+    }
     const accessToken = signJwt(
       { sub: userId, typ: "access", session_id: sessionId },
       JWT_SECRET,
@@ -233,6 +396,15 @@ export async function authRefreshToken(refreshToken) {
       JWT_SECRET,
       JWT_REFRESH_TTL_SEC,
     );
+    void recordAuthAudit({
+      ...auditContext,
+      userId,
+      userName: row.user_name,
+      eventType: "REFRESH",
+      result: "SUCCESS",
+      reasonCode: "",
+      sessionId,
+    });
     return {
       accessToken,
       refreshToken: newRefresh,
@@ -242,7 +414,15 @@ export async function authRefreshToken(refreshToken) {
   }
   catch (err) {
     console.warn("[rds] authRefreshToken:", err.message);
-    return null;
+    void recordAuthAudit({
+      ...auditContext,
+      userId,
+      eventType: "REFRESH",
+      result: "FAILED",
+      reasonCode: "TEMPORARY_UNAVAILABLE",
+      sessionId,
+    });
+    return { temporary: true };
   }
 }
 

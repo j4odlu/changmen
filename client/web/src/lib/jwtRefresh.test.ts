@@ -13,7 +13,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/api/client", () => ({
   clearAuthSession: mocks.clearAuthSession,
   getRefreshToken: mocks.getRefreshToken,
-  isSessionInvalidMessage: (message: unknown) => [
+  isSessionInvalidResponse: (code: unknown, message: unknown) => [
+    "AUTH_REQUIRED",
+    "REFRESH_TOKEN_EXPIRED",
+    "SESSION_REVOKED",
+  ].includes(String(code || "")) || [
     "请先登录",
     "未登录",
     "账号已在其他设备登录",
@@ -45,6 +49,20 @@ describe("refreshJwtSession", () => {
     expect(mocks.getRefreshToken()).toBe("refresh-old");
   });
 
+  it("keeps the session when the server reports a temporary auth outage", async () => {
+    mocks.post.mockResolvedValue({
+      success: 0,
+      code: "TEMPORARY_UNAVAILABLE",
+      msg: "登录服务暂时不可用，请稍后重试",
+      info: null,
+    });
+
+    await expect(refreshJwtSession([])).resolves.toBe(false);
+
+    expect(mocks.clearAuthSession).not.toHaveBeenCalled();
+    expect(mocks.setToken).not.toHaveBeenCalled();
+  });
+
   it("retries a temporary failure and stores the refreshed tokens", async () => {
     vi.useFakeTimers();
     mocks.post
@@ -68,7 +86,8 @@ describe("refreshJwtSession", () => {
   it("clears the session only when the server explicitly revokes it", async () => {
     mocks.post.mockResolvedValue({
       success: 0,
-      msg: "会话已失效，请重新登录",
+      code: "SESSION_REVOKED",
+      msg: "localized message may change",
       info: null,
     });
 

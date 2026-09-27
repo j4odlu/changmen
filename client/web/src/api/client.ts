@@ -71,9 +71,21 @@ const SESSION_KICK_MSGS = new Set([
   "账号已在其他设备登录",
   "会话已失效，请重新登录",
 ]);
+const SESSION_INVALID_CODES = new Set([
+  "AUTH_REQUIRED",
+  "ACCESS_TOKEN_EXPIRED",
+  "REFRESH_TOKEN_EXPIRED",
+  "SESSION_REVOKED",
+  "ACCOUNT_DISABLED",
+]);
 
 export function isSessionInvalidMessage(message: unknown): boolean {
   return SESSION_KICK_MSGS.has(String(message || "").trim());
+}
+
+export function isSessionInvalidResponse(code: unknown, message: unknown): boolean {
+  const normalizedCode = String(code || "").trim().toUpperCase();
+  return SESSION_INVALID_CODES.has(normalizedCode) || isSessionInvalidMessage(message);
 }
 
 export function clearAuthSession() {
@@ -112,7 +124,7 @@ async function executePost<T>(
     );
     const json = res.data;
 
-    if (json.success === 0 && isSessionInvalidMessage(json.msg) && action !== "Client_Login") {
+    if (json.success === 0 && isSessionInvalidResponse(json.code, json.msg) && action !== "Client_Login") {
       clearAuthSession();
       window.location.href = "/";
     }

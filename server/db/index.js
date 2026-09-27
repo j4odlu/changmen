@@ -204,6 +204,7 @@ export const {
   authGetUser,
   authPeekAccessToken,
   authRefreshToken,
+  recordAuthAudit,
   writeUserMetadata,
   fetchSportClientMatches,
   fetchSportClientMatchVenueOverrides,

@@ -14,6 +14,7 @@ export {
   authSignIn,
   authSignOut,
   isAuthConfigured,
+  recordAuthAudit,
 } from "./rds/auth_store.js";
 
 export {

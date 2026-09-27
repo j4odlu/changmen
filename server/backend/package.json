@@ -62,7 +62,7 @@
     "db:prune": "node scripts/ops/migrations/prune-stale.mjs",
     "check:collect": "node scripts/check-collect-platforms.js",
     "check:collect:probe": "node scripts/check-collect-platforms.js --probe",
-    "test": "vitest run core/shared core/http core/esport-api/action_registry.test.mjs core/football/pod_bet_execution.test.js && npm run test:adapter",
+    "test": "vitest run core/shared core/http core/auth core/esport-api/action_registry.test.mjs core/football/pod_bet_execution.test.js && npm run test:adapter",
     "test:watch": "vitest",
     "test:adapter": "node scripts/test-packaged-adapter-layout.js",
     "test:packaged-adapter": "node scripts/test-packaged-adapter-layout.js",

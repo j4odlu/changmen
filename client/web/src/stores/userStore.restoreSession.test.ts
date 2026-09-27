@@ -6,6 +6,7 @@ import { useUserStore } from "@/stores/userStore";
 const auth = vi.hoisted(() => ({
   clearAuthSession: vi.fn(),
   ensureTokenRefresh: vi.fn(),
+  cookieMode: false,
   refreshToken: "refresh-token" as string | null,
   token: "access-token" as string | null,
 }));
@@ -13,6 +14,8 @@ const auth = vi.hoisted(() => ({
 vi.mock("@/api/client", () => ({
   clearAuthSession: auth.clearAuthSession,
   getRefreshToken: () => auth.refreshToken,
+  hasAuthSession: () => Boolean(auth.token || auth.refreshToken || auth.cookieMode),
+  isCookieAuthMode: () => auth.cookieMode,
 }));
 
 vi.mock("@/api/esport", () => ({
@@ -29,6 +32,7 @@ vi.mock("@/api/esport", () => ({
 
 vi.mock("@/lib/sessionRefresh", () => ({
   ensureTokenRefresh: auth.ensureTokenRefresh,
+  startTokenRefresh: vi.fn(),
   stopTokenRefresh: vi.fn(),
 }));
 
@@ -37,6 +41,7 @@ describe("userStore.restoreSession", () => {
     setActivePinia(createPinia());
     auth.token = "access-token";
     auth.refreshToken = "refresh-token";
+    auth.cookieMode = false;
     auth.clearAuthSession.mockReset();
     auth.clearAuthSession.mockImplementation(() => {
       auth.token = null;

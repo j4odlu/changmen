@@ -7,12 +7,20 @@ import { hasDatabaseUrlConfig } from "../resolve_database_url.js";
 import { getPgPool } from "./common.js";
 import {
   JWT_ACCESS_TTL_SEC,
+  JWT_BROWSER_ACCESS_TTL_SEC,
   JWT_REFRESH_TTL_SEC,
   JWT_SECRET,
   decodeJwtPayload,
   signJwt,
   verifyJwt,
 } from "./jwt.js";
+import {
+  getBrowserSession,
+  isOpaqueRefreshToken,
+  issueOpaqueRefreshToken,
+  revokeBrowserSession,
+  rotateOpaqueRefreshToken,
+} from "./auth_session_store.js";
 
 function cleanAuditText(value, maxLength) {
   return String(value || "").trim().slice(0, maxLength);
@@ -73,7 +81,7 @@ export async function authSignIn(userName, password, auditContext = {}) {
     return { error: "db", message: "auth database unavailable" };
   try {
     const { rows } = await pool.query(
-      `SELECT id, user_name, metadata->>'active_session_id' AS active_session_id FROM users
+      `SELECT id, user_name, password_hash, metadata->>'active_session_id' AS active_session_id FROM users
        WHERE lower(user_name) = lower($1)
          AND password_hash = crypt($2, password_hash)`,
       [name, pwd],
@@ -90,16 +98,23 @@ export async function authSignIn(userName, password, auditContext = {}) {
       return null;
     }
     const userId = String(row.id);
+    const bcryptCost = Number(/^\$2[aby]\$(\d{2})\$/.exec(String(row.password_hash || ""))?.[1] || 0);
+    if (bcryptCost > 0 && bcryptCost < 12) {
+      void pool.query(
+        `UPDATE users SET password_hash = crypt($2, gen_salt('bf', 12)), updated_at = $3 WHERE id = $1`,
+        [userId, pwd, Date.now()],
+      ).catch(err => console.warn("[rds] password rehash:", err.message));
+    }
     const sessionId = crypto.randomUUID();
     const accessToken = signJwt(
       { sub: userId, typ: "access", session_id: sessionId },
       JWT_SECRET,
       JWT_ACCESS_TTL_SEC,
     );
-    const refreshToken = signJwt(
-      { sub: userId, typ: "refresh", session_id: sessionId },
+    const browserAccessToken = signJwt(
+      { sub: userId, typ: "access", session_id: sessionId },
       JWT_SECRET,
-      JWT_REFRESH_TTL_SEC,
+      JWT_BROWSER_ACCESS_TTL_SEC,
     );
     if (!(await setActiveSessionId(userId, sessionId))) {
       void recordAuthAudit({
@@ -113,6 +128,12 @@ export async function authSignIn(userName, password, auditContext = {}) {
       });
       return { error: "db", message: "active session update failed" };
     }
+    const opaqueRefresh = await issueOpaqueRefreshToken(userId, sessionId, auditContext);
+    const refreshToken = opaqueRefresh?.token || signJwt(
+      { sub: userId, typ: "refresh", session_id: sessionId },
+      JWT_SECRET,
+      JWT_REFRESH_TTL_SEC,
+    );
     const previousSessionId = String(row.active_session_id || "");
     if (previousSessionId && previousSessionId !== "logged_out" && previousSessionId !== sessionId) {
       void recordAuthAudit({
@@ -136,8 +157,10 @@ export async function authSignIn(userName, password, auditContext = {}) {
     });
     return {
       accessToken,
+      browserAccessToken,
       refreshToken,
       userId,
+      sessionId,
       email: `${row.user_name}@gamebet.local`,
     };
   }
@@ -318,21 +341,47 @@ export function authPeekAccessToken(token) {
 export async function authRefreshToken(refreshToken, auditContext = {}) {
   if (!JWT_SECRET)
     return { temporary: true };
-  const payload = verifyJwt(refreshToken, JWT_SECRET);
-  if (!payload?.sub || payload.typ !== "refresh") {
-    const decoded = decodeJwtPayload(refreshToken);
-    void recordAuthAudit({
-      ...auditContext,
-      userId: decoded?.sub,
-      eventType: "REFRESH",
-      result: "DENIED",
-      reasonCode: "REFRESH_TOKEN_EXPIRED",
-      sessionId: decoded?.session_id,
-    });
-    return { invalid: true };
+  let userId = "";
+  let sessionId = "";
+  let rotatedRefreshToken = "";
+  if (isOpaqueRefreshToken(refreshToken)) {
+    const rotated = await rotateOpaqueRefreshToken(refreshToken, auditContext);
+    if (rotated?.temporary)
+      return { temporary: true };
+    if (rotated?.replayed) {
+      void recordAuthAudit({
+        ...auditContext,
+        eventType: "REFRESH",
+        result: "DENIED",
+        reasonCode: "REFRESH_TOKEN_REPLAY",
+      });
+      return { revoked: true, replayed: true };
+    }
+    if (rotated?.revoked)
+      return { revoked: true };
+    if (!rotated || rotated.invalid || !rotated.userId)
+      return { invalid: true };
+    userId = String(rotated.userId);
+    sessionId = String(rotated.sessionId || "");
+    rotatedRefreshToken = String(rotated.refreshToken || "");
   }
-  const userId = String(payload.sub);
-  const sessionId = payload.session_id ? String(payload.session_id) : "";
+  else {
+    const payload = verifyJwt(refreshToken, JWT_SECRET);
+    if (!payload?.sub || payload.typ !== "refresh") {
+      const decoded = decodeJwtPayload(refreshToken);
+      void recordAuthAudit({
+        ...auditContext,
+        userId: decoded?.sub,
+        eventType: "REFRESH",
+        result: "DENIED",
+        reasonCode: "REFRESH_TOKEN_EXPIRED",
+        sessionId: decoded?.session_id,
+      });
+      return { invalid: true };
+    }
+    userId = String(payload.sub);
+    sessionId = payload.session_id ? String(payload.session_id) : "";
+  }
   if (!sessionId) {
     void recordAuthAudit({
       ...auditContext,
@@ -391,7 +440,15 @@ export async function authRefreshToken(refreshToken, auditContext = {}) {
       JWT_SECRET,
       JWT_ACCESS_TTL_SEC,
     );
-    const newRefresh = signJwt(
+    const browserAccessToken = signJwt(
+      { sub: userId, typ: "access", session_id: sessionId },
+      JWT_SECRET,
+      JWT_BROWSER_ACCESS_TTL_SEC,
+    );
+    const issuedRefresh = rotatedRefreshToken
+      ? null
+      : await issueOpaqueRefreshToken(userId, sessionId, auditContext);
+    const newRefresh = rotatedRefreshToken || issuedRefresh?.token || signJwt(
       { sub: userId, typ: "refresh", session_id: sessionId },
       JWT_SECRET,
       JWT_REFRESH_TTL_SEC,
@@ -407,8 +464,10 @@ export async function authRefreshToken(refreshToken, auditContext = {}) {
     });
     return {
       accessToken,
+      browserAccessToken,
       refreshToken: newRefresh,
       userId,
+      sessionId,
       email: `${row.user_name}@gamebet.local`,
     };
   }
@@ -422,6 +481,55 @@ export async function authRefreshToken(refreshToken, auditContext = {}) {
       reasonCode: "TEMPORARY_UNAVAILABLE",
       sessionId,
     });
+    return { temporary: true };
+  }
+}
+
+/** 用 HttpOnly 浏览器会话换取短期 access token；浏览器会话密钥不返回给 JS。 */
+export async function authBrowserSession(browserSessionToken, auditContext = {}) {
+  if (!JWT_SECRET)
+    return { temporary: true };
+  const session = await getBrowserSession(browserSessionToken, auditContext);
+  if (session?.temporary)
+    return { temporary: true };
+  if (!session)
+    return { invalid: true };
+  const pool = getPgPool();
+  if (!pool)
+    return { temporary: true };
+  try {
+    const { rows } = await pool.query(
+      "SELECT user_name, metadata->>'active_session_id' AS active_session_id FROM users WHERE id = $1",
+      [session.userId],
+    );
+    const row = rows[0];
+    if (!row)
+      return { invalid: true };
+    if (String(row.active_session_id || "") !== session.jwtSessionId) {
+      await revokeBrowserSession(browserSessionToken, "SESSION_REVOKED");
+      return { revoked: true };
+    }
+    const accessToken = signJwt(
+      { sub: session.userId, typ: "access", session_id: session.jwtSessionId },
+      JWT_SECRET,
+      JWT_BROWSER_ACCESS_TTL_SEC,
+    );
+    void recordAuthAudit({
+      ...auditContext,
+      userId: session.userId,
+      userName: row.user_name,
+      eventType: "SESSION_RESTORE",
+      result: "SUCCESS",
+      sessionId: session.jwtSessionId,
+    });
+    return {
+      accessToken,
+      userId: session.userId,
+      email: `${row.user_name}@gamebet.local`,
+    };
+  }
+  catch (err) {
+    console.warn("[rds] authBrowserSession:", err.message);
     return { temporary: true };
   }
 }

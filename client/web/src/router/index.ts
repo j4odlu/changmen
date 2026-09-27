@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { getToken } from "@/api/esport";
+import { hasAuthSession } from "@/api/client";
 import { useUserStore } from "@/stores/userStore";
 import GateView from "@/views/GateView.vue";
 
@@ -115,7 +115,7 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   if (to.meta.public)
     return true;
-  if (!getToken()) {
+  if (!hasAuthSession()) {
     if (to.fullPath !== "/") {
       sessionStorage.setItem("gamebet:postLoginRedirect", to.fullPath);
     }

@@ -41,9 +41,9 @@ async function createJwtUser(userName, password, asAdmin = false) {
 
     await client.query(
       `INSERT INTO users (id, user_name, password_hash, metadata, is_admin, created_at, updated_at)
-       VALUES ($1, $2, crypt($3, gen_salt('bf')), '{}', $4, $5, $5)
+       VALUES ($1, $2, crypt($3, gen_salt('bf', 12)), '{}', $4, $5, $5)
        ON CONFLICT (user_name) DO UPDATE SET
-         password_hash = crypt($3, gen_salt('bf')),
+         password_hash = crypt($3, gen_salt('bf', 12)),
          is_admin = EXCLUDED.is_admin OR users.is_admin,
          updated_at = EXCLUDED.updated_at`,
       [userId, name, password, Boolean(asAdmin), now],

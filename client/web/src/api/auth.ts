@@ -1,13 +1,16 @@
 import type { LoginInfo, UserInfo } from "@/types/esport";
-import { post, setRefreshToken, setToken, unwrap } from "@/api/client";
+import { clearAuthSession, post, setCookieAuthMode, setRefreshToken, setToken, unwrap } from "@/api/client";
 
 export async function login(userName: string, password: string) {
   const data = await post<LoginInfo>("Client_Login", { userName, password });
   const info = unwrap(data);
   if (!info?.token)
     throw new Error(data.msg || "登录失败");
+  setCookieAuthMode(info.sessionMode === "cookie");
   setToken(info.token);
-  if (info.refreshToken)
+  if (info.sessionMode === "cookie")
+    setRefreshToken(null);
+  else if (info.refreshToken)
     setRefreshToken(info.refreshToken);
   return info;
 }
@@ -17,8 +20,7 @@ export async function logout() {
     await post<null>("Client_Logout");
   }
   finally {
-    setToken(null);
-    setRefreshToken(null);
+    clearAuthSession();
   }
 }
 

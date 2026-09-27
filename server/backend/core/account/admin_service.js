@@ -458,7 +458,7 @@ export async function createAdminUser(userName, password) {
   const userId = crypto.randomUUID();
   await pool.query(
     `INSERT INTO users (id, user_name, password_hash, metadata, created_at, updated_at)
-     VALUES ($1, $2, crypt($3, gen_salt('bf')), '{}', $4, $4)`,
+     VALUES ($1, $2, crypt($3, gen_salt('bf', 12)), '{}', $4, $4)`,
     [userId, name, pwd, now],
   );
   const ok = await insertProfile(userId, {
@@ -571,7 +571,7 @@ export async function resetAdminUserPassword(userId, password, caller = null) {
   if (!rows[0])
     throw new Error("用户不存在");
   await pool.query(
-    `UPDATE users SET password_hash = crypt($2, gen_salt('bf')), updated_at = $3 WHERE id = $1`,
+    `UPDATE users SET password_hash = crypt($2, gen_salt('bf', 12)), updated_at = $3 WHERE id = $1`,
     [id, pwd, now],
   );
   return { id, userName: String(rows[0].user_name) };

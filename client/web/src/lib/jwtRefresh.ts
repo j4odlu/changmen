@@ -1,9 +1,11 @@
 import {
   clearAuthSession,
   getRefreshToken,
+  isCookieAuthMode,
   isSessionInvalidResponse,
   post,
   setRefreshToken,
+  setCookieAuthMode,
   setToken,
 } from "@/api/client";
 
@@ -18,13 +20,13 @@ function wait(ms: number): Promise<void> {
 
 async function runRefresh(retryDelaysMs: readonly number[]): Promise<boolean> {
   const rt = getRefreshToken();
-  if (!rt)
+  if (!rt && !isCookieAuthMode())
     return false;
 
   for (let attempt = 0; attempt <= retryDelaysMs.length; attempt += 1) {
     try {
-      const result = await post<{ token: string; refreshToken?: string }>("Client_RefreshToken", {
-        refreshToken: rt,
+      const result = await post<{ token: string; refreshToken?: string; sessionMode?: "legacy" | "cookie" }>("Client_RefreshToken", {
+        ...(rt ? { refreshToken: rt } : {}),
       });
       if (result.success !== 1) {
         if (isSessionInvalidResponse(result.code, result.msg)) {
@@ -35,13 +37,18 @@ async function runRefresh(retryDelaysMs: readonly number[]): Promise<boolean> {
       }
       if (!result.info?.token)
         throw new Error("刷新 token 返回无效");
+      const cookieMode = result.info.sessionMode === "cookie";
+      if (cookieMode)
+        setCookieAuthMode(true);
       setToken(result.info.token);
-      if (result.info.refreshToken)
+      if (cookieMode)
+        setRefreshToken(null);
+      else if (result.info.refreshToken)
         setRefreshToken(result.info.refreshToken);
       return true;
     }
     catch (err) {
-      if (!getRefreshToken())
+      if (!getRefreshToken() && !isCookieAuthMode())
         return false;
       if (attempt >= retryDelaysMs.length) {
         console.warn("[auth] token 刷新暂时失败，保留当前会话等待下轮重试:", err);
@@ -67,8 +74,8 @@ export function refreshJwtSession(
   return task;
 }
 
-/** 默认每 6 小时刷新（access token 通常 7 天） */
-export function startJwtAutoRefresh(intervalMs = 6 * 60 * 60 * 1000) {
+/** 默认每 10 分钟刷新，给 15 分钟 access token 留出网络重试余量。 */
+export function startJwtAutoRefresh(intervalMs = 10 * 60 * 1000) {
   stopJwtAutoRefresh();
   timer = setInterval(() => {
     void refreshJwtSession();

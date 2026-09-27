@@ -8,7 +8,12 @@ import { readPbWsShadowUiLocal, writePbWsShadowUiLocal } from "@/shared/pbWsShad
 import { readPbChangmenExtensionsLocal, writePbChangmenExtensionsLocal } from "@/shared/pbExtensionsLocal";
 import { defineStore } from "pinia";
 import { toRaw } from "vue";
-import { clearAuthSession, getRefreshToken } from "@/api/client";
+import {
+  clearAuthSession,
+  getRefreshToken,
+  hasAuthSession,
+  isCookieAuthMode,
+} from "@/api/client";
 import {
   login as apiLogin,
   logout as apiLogout,
@@ -20,7 +25,7 @@ import {
   saveClientData,
   saveClientDataDetailed,
 } from "@/api/esport";
-import { ensureTokenRefresh, stopTokenRefresh } from "@/lib/sessionRefresh";
+import { ensureTokenRefresh, startTokenRefresh, stopTokenRefresh } from "@/lib/sessionRefresh";
 import { subscribeUserChannel, unsubscribeUserChannel } from "@/realtime/userChannel";
 import { ensureBetTargetChannelSubscribed } from "@/realtime/betTargetChannel";
 import { ensurePublishChannelSubscribed } from "@/realtime/publishChannel";
@@ -53,7 +58,7 @@ export const useUserStore = defineStore("user", {
     /** 平博 v4 用 A8 账号，来自 GetUserInfo 或 /api/a8/credit-plate-user */
     creditPlateUserName: "",
     /** restoreSession / 无 token 判定完成后为 true，避免已登录刷新闪登录框 */
-    sessionChecked: !getToken(),
+    sessionChecked: !hasAuthSession(),
     /** 有本地会话但后端暂不可达时保留 token，并在恢复页展示重试入口。 */
     sessionRestoreError: "",
     ready: false,
@@ -104,6 +109,7 @@ export const useUserStore = defineStore("user", {
       this.userId = info.ID;
       localStorage.setItem(USER_KEY, info.userName);
       await this.fetchUserInfo();
+      await startTokenRefresh();
       return info;
     },
 
@@ -148,7 +154,7 @@ export const useUserStore = defineStore("user", {
     },
 
     async restoreSession() {
-      if (!getToken()) {
+      if (!hasAuthSession()) {
         this.ready = false;
         this.sessionRestoreError = "";
         this.sessionChecked = true;
@@ -158,7 +164,7 @@ export const useUserStore = defineStore("user", {
       this.sessionRestoreError = "";
       // 提前启动 JWT refresh，防止 token 在使用中到期
       const rft = getRefreshToken();
-      if (rft) {
+      if (rft || isCookieAuthMode()) {
         await ensureTokenRefresh();
       }
       try {
@@ -169,7 +175,7 @@ export const useUserStore = defineStore("user", {
       catch (err) {
         this.ready = false;
         // client.ts 只会在服务端明确判定会话失效时清 token；网络/502 保留会话。
-        if (getToken()) {
+        if (hasAuthSession()) {
           this.sessionRestoreError = "连接暂时不可用，请检查网络后重试";
           this.error = err instanceof Error ? err.message : String(err);
           return false;
@@ -179,7 +185,7 @@ export const useUserStore = defineStore("user", {
         return false;
       }
       finally {
-        this.sessionChecked = this.ready || !getToken();
+        this.sessionChecked = this.ready || !hasAuthSession();
       }
     },
 

@@ -23,6 +23,17 @@ import { normalizeClientIp, recordUserLastLogin } from "../account/user_login_me
 import { touchUserPresence } from "../account/user_presence.js";
 import { checkActionAuth } from "../auth/action_permissions.js";
 import { isAdminUser } from "../auth/admin_auth.js";
+import {
+  browserSessionEnabled,
+  clearBrowserSessionCookie,
+  readBrowserSessionCookie,
+  setBrowserSessionCookie,
+} from "../auth/browser_session.js";
+import {
+  checkLoginRateLimit,
+  recordLoginFailure,
+  recordLoginSuccess,
+} from "../auth/login_rate_limit.js";
 import * as dbStore from "../db/store.js";
 import { resolveA8Credentials } from "../integrations/a8/config.js";
 import { requirePlatform } from "../shared/adapter_paths.js";
@@ -99,6 +110,8 @@ interface EsportContext {
   token: string;
   user: EsportUser | null;
   audit?: AuthAuditContext;
+  browserSessionToken?: string;
+  response?: ServerResponse;
 }
 
 interface AuthAuditContext {
@@ -229,11 +242,24 @@ async function handleClientLogin(
   clientIp = "",
   cert?: { hasClientCert: boolean; subject: string } | null,
   userAgent = "",
+  response?: ServerResponse,
 ): Promise<ApiEnvelope> {
   const parsed = LoginRequest.safeParse({ userName: body.userName || body.username, password: body.password });
   if (!parsed.success)
     return fail("用户名或密码不能为空");
   const { userName, password } = parsed.data;
+  const rate = checkLoginRateLimit(userName, clientIp);
+  if (rate.limited) {
+    void sb.recordAuthAudit({
+      userName,
+      clientIp,
+      userAgent,
+      eventType: "LOGIN",
+      result: "DENIED",
+      reasonCode: "RATE_LIMITED",
+    });
+    return fail(`登录尝试过于频繁，请在 ${rate.retryAfterSec} 秒后重试`, null, "RATE_LIMITED");
+  }
   if (!sb.isAuthConfigured()) {
     return fail(authNotConfiguredMessage(), null, "TEMPORARY_UNAVAILABLE");
   }
@@ -248,6 +274,7 @@ async function handleClientLogin(
   // 在验密之前拦截，避免无证/错证时泄露「密码是否正确」
   const bindErr = certLoginBindError(userName, cert ?? null);
   if (bindErr) {
+    recordLoginFailure(userName, clientIp);
     void sb.recordAuthAudit({
       ...audit,
       userName,
@@ -263,9 +290,12 @@ async function handleClientLogin(
     return fail("数据库连接失败，请检查 DATABASE_URL 配置", null, "TEMPORARY_UNAVAILABLE");
   }
   if (!auth || "error" in auth)
+  {
+    recordLoginFailure(userName, clientIp);
     return fail("用户名或密码错误", null, "INVALID_CREDENTIALS");
+  }
 
-  const { accessToken, refreshToken, userId: uid, email } = auth;
+  const { accessToken, browserAccessToken, refreshToken, userId: uid, sessionId, email } = auth;
 
   let profile = await dbStore.loadProfileById(uid);
   if (!profile) {
@@ -302,8 +332,24 @@ async function handleClientLogin(
 
   touchUserPresence(uid);
   await recordUserLastLogin(uid, clientIp);
+  recordLoginSuccess(userName, clientIp);
 
-  return ok({ token: accessToken, refreshToken, userName: profile.userName, ID: uid });
+  let sessionMode = "legacy";
+  if (response && browserSessionEnabled()) {
+    const browserSession = await sb.createBrowserSession(uid, sessionId, audit);
+    if (browserSession) {
+      setBrowserSessionCookie(response, browserSession.token, browserSession.absoluteExpiresAt);
+      sessionMode = "cookie";
+    }
+  }
+
+  return ok({
+    token: sessionMode === "cookie" ? browserAccessToken : accessToken,
+    ...(sessionMode === "legacy" ? { refreshToken } : {}),
+    sessionMode,
+    userName: profile.userName,
+    ID: uid,
+  });
 }
 
 async function handle(
@@ -442,14 +488,22 @@ async function handleCoreAction(
   switch (action as EsportAction) {
     case "Client_Logout": {
       await sb.authSignOut(ctx.token, ctx.audit);
+      if (ctx.browserSessionToken)
+        await sb.revokeBrowserSession(ctx.browserSessionToken, "LOGOUT");
+      if (ctx.response)
+        clearBrowserSessionCookie(ctx.response);
       return ok(null);
     }
     case "Client_RefreshToken": {
       const rtParsed = RefreshTokenRequest.safeParse(body);
-      if (!rtParsed.success)
-        return fail("缺少 refreshToken");
-      const refreshToken = rtParsed.data.refreshToken || rtParsed.data.refresh_token;
-      const auth = await sb.authRefreshToken(String(refreshToken), ctx.audit);
+      const refreshToken = rtParsed.success
+        ? rtParsed.data.refreshToken || rtParsed.data.refresh_token
+        : "";
+      const auth = refreshToken
+        ? await sb.authRefreshToken(String(refreshToken), ctx.audit)
+        : ctx.browserSessionToken
+          ? await sb.authBrowserSession(ctx.browserSessionToken, ctx.audit)
+          : { invalid: true };
       if (auth && "revoked" in auth && auth.revoked) {
         return fail("会话已失效，请重新登录", null, "SESSION_REVOKED");
       }
@@ -466,7 +520,21 @@ async function handleCoreAction(
         return fail((err as Error).message || "账号状态异常，请联系管理员", null, "ACCOUNT_DISABLED");
       }
       touchUserPresence(auth.userId);
-      return ok({ token: auth.accessToken, refreshToken: auth.refreshToken });
+      let sessionMode = ctx.browserSessionToken ? "cookie" : "legacy";
+      if (!ctx.browserSessionToken && ctx.response && browserSessionEnabled() && "sessionId" in auth) {
+        const browserSession = await sb.createBrowserSession(auth.userId, auth.sessionId, ctx.audit);
+        if (browserSession) {
+          setBrowserSessionCookie(ctx.response, browserSession.token, browserSession.absoluteExpiresAt);
+          sessionMode = "cookie";
+        }
+      }
+      return ok({
+        token: sessionMode === "cookie" && "browserAccessToken" in auth
+          ? auth.browserAccessToken
+          : auth.accessToken,
+        refreshToken: "refreshToken" in auth ? auth.refreshToken : undefined,
+        sessionMode,
+      });
     }
     case "Client_GetUserInfo": {
       return ok({
@@ -756,13 +824,27 @@ export async function handleEsportRequest(
         clientIp,
         cert,
         audit.userAgent,
+        res,
       ));
       return true;
     }
 
-    const user = await store.getUserByToken(token);
+    const browserSessionToken = browserSessionEnabled() ? readBrowserSessionCookie(req) : "";
+    let effectiveToken = token;
+    if (action !== "Client_RefreshToken" && !effectiveToken && browserSessionToken) {
+      const restored = await sb.authBrowserSession(browserSessionToken, audit);
+      if (restored && "accessToken" in restored)
+        effectiveToken = restored.accessToken;
+    }
+    const user = await store.getUserByToken(effectiveToken);
 
-    sendJson(res, 200, await handle(action, body, { token, user, audit }));
+    sendJson(res, 200, await handle(action, body, {
+      token: effectiveToken,
+      user,
+      audit,
+      browserSessionToken,
+      response: res,
+    }));
     return true;
   }
   catch (err: any) {

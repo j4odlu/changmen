@@ -124,9 +124,12 @@ npm install  # 首次：安装全部 workspaces（含 client/web）
 | 变量 | 生产 | 说明 |
 |------|------|------|
 | `DATABASE_URL` 或 `DATABASE_URL_PUBLIC` / `_INTERNAL` | **必填** | RDS 连接（`DATABASE_RDS_TARGET=auto` 内网优先） |
-| `JWT_SECRET` | **必填** | 自签 JWT（至少 16 字符） |
-| `JWT_ACCESS_TTL` | `7d` | access token 有效期 |
-| `JWT_REFRESH_TTL` | `30d` | refresh token 有效期 |
+| `AUTH_MODE` | `dual` | HttpOnly 浏览器会话 + 旧客户端 refresh token 双轨兼容；历史值 `jwt` 等同 `dual`，紧急回退设 `legacy` |
+| `JWT_SECRET` | **必填** | HS256 密钥（至少 32 个随机字节；已有密钥勿在升级时同步轮换） |
+| `JWT_ACCESS_TTL` | `15m` | 短期 access token；前端会自动续期并重放一次过期请求 |
+| `JWT_BROWSER_ACCESS_TTL` | `15m` | 浏览器 access token；独立于旧生产环境里可能保留的 `JWT_ACCESS_TTL=7d` |
+| `JWT_REFRESH_TTL` | `30d` | 旧客户端可轮换 refresh token 有效期；浏览器使用 HttpOnly 会话 |
+| `JWT_ISSUER` / `JWT_AUDIENCE` | `changmen-auth` / `changmen-api` | 新 JWT 的签发方与受众校验；旧 JWT 在过渡期仍兼容 |
 | `CHANGMEN_DB_SCRIPT` | `rds` | 数据层固定 RDS（兼容旧名 `GAMEBET_DB_SCRIPT`） |
 | `PORT` | `3456` 或反代端口 | HTTP 监听 |
 | `A8_AUTH` | **`1`（默认）** | JWT 登录；勿用 `users.json` |
@@ -260,7 +263,7 @@ npm run build
 |--------|-----|
 | P0 | `x-proxy-url` relay：域名白名单 + 路径前缀 + 鉴权 + 审计 |
 | P0 | 生产 `A8_AUTH=1`，禁用本地 `users.json` 免登 |
-| P0 | `JWT_SECRET` 仅服务端；客户端只持 access/refresh token |
+| P0 | `JWT_SECRET` 仅服务端；浏览器长期会话只存在 `HttpOnly; Secure; SameSite=Strict` Cookie 中 |
 | P1 | 日志脱敏 token / cookie |
 | P1 | HTTPS 全站（含 WSS） |
 

@@ -7,6 +7,9 @@ import { a8Axios, responseBodyText } from "@changmen/client-core/shared/a8Axios"
 
 const FORM_HEADERS = { "Content-Type": "application/x-www-form-urlencoded;" };
 const TOKEN_COOKIE = "app_token";
+const AUTH_MODE_KEY = "app:auth-mode";
+let cookieAuthMode
+  = typeof localStorage !== "undefined" && localStorage.getItem(AUTH_MODE_KEY) === "cookie";
 
 function readTokenCookie(): string | null {
   if (typeof document === "undefined")
@@ -26,22 +29,43 @@ function syncTokenCookie(token: string | null) {
   }
 }
 
-let authToken: string | null
-  = typeof localStorage !== "undefined" ? localStorage.getItem("app:token") : null;
-if (!authToken)
+let authToken: string | null = !cookieAuthMode && typeof localStorage !== "undefined"
+  ? localStorage.getItem("app:token")
+  : null;
+if (!authToken && !cookieAuthMode)
   authToken = readTokenCookie();
 if (authToken)
   syncTokenCookie(authToken);
 
-let refreshToken: string | null
-  = typeof localStorage !== "undefined" ? localStorage.getItem("app:refresh-token") : null;
+let refreshToken: string | null = !cookieAuthMode && typeof localStorage !== "undefined"
+  ? localStorage.getItem("app:refresh-token")
+  : null;
+
+export function isCookieAuthMode(): boolean { return cookieAuthMode; }
+
+export function hasAuthSession(): boolean { return Boolean(authToken || refreshToken || cookieAuthMode); }
+
+export function setCookieAuthMode(enabled: boolean) {
+  cookieAuthMode = enabled;
+  if (typeof localStorage !== "undefined") {
+    if (enabled)
+      localStorage.setItem(AUTH_MODE_KEY, "cookie");
+    else localStorage.removeItem(AUTH_MODE_KEY);
+    if (enabled) {
+      localStorage.removeItem("app:token");
+      localStorage.removeItem("app:refresh-token");
+    }
+  }
+  if (enabled)
+    syncTokenCookie(null);
+}
 
 export function getRefreshToken(): string | null { return refreshToken; }
 
 export function setRefreshToken(token: string | null) {
   refreshToken = token;
   if (typeof localStorage !== "undefined") {
-    if (token)
+    if (token && !cookieAuthMode)
       localStorage.setItem("app:refresh-token", token);
     else localStorage.removeItem("app:refresh-token");
   }
@@ -54,11 +78,11 @@ export function getToken(): string | null {
 export function setToken(token: string | null) {
   authToken = token;
   if (typeof localStorage !== "undefined") {
-    if (token)
+    if (token && !cookieAuthMode)
       localStorage.setItem("app:token", token);
     else localStorage.removeItem("app:token");
   }
-  syncTokenCookie(token);
+  syncTokenCookie(cookieAuthMode ? null : token);
 }
 
 export function authHeaders(): Record<string, string> {
@@ -91,6 +115,7 @@ export function isSessionInvalidResponse(code: unknown, message: unknown): boole
 export function clearAuthSession() {
   setToken(null);
   setRefreshToken(null);
+  setCookieAuthMode(false);
 }
 
 export interface PostOptions {
@@ -113,6 +138,7 @@ async function executePost<T>(
   body: Record<string, unknown>,
   query = "",
   opts?: PostOptions,
+  retriedAfterRefresh = false,
 ): Promise<ApiEnvelope<T>> {
   const started = Date.now();
   armEsportPostDelaySample(started);
@@ -120,11 +146,32 @@ async function executePost<T>(
     const res = await a8Axios.post<ApiEnvelope<T>>(
       buildEsportUrl(action, query, getApiBase()),
       toA8PostBody(body),
-      { headers: { ...FORM_HEADERS, ...authHeaders() } },
+      { headers: { ...FORM_HEADERS, ...authHeaders() }, withCredentials: true },
     );
     const json = res.data;
 
-    if (json.success === 0 && isSessionInvalidResponse(json.code, json.msg) && action !== "Client_Login") {
+    // 浏览器从后台/休眠恢复时，15 分钟 access token 可能先于定时器过期。
+    // 只透明续期并重放一次；refresh 本身绝不递归，临时网络故障也不清长期会话。
+    let preserveExpiredSession = false;
+    if (
+      json.success === 0
+      && String(json.code || "").toUpperCase() === "ACCESS_TOKEN_EXPIRED"
+      && action !== "Client_RefreshToken"
+      && !retriedAfterRefresh
+      && hasAuthSession()
+    ) {
+      const { refreshJwtSession } = await import("@/lib/jwtRefresh");
+      if (await refreshJwtSession([]))
+        return executePost<T>(action, body, query, opts, true);
+      preserveExpiredSession = hasAuthSession();
+    }
+
+    if (
+      json.success === 0
+      && isSessionInvalidResponse(json.code, json.msg)
+      && action !== "Client_Login"
+      && !preserveExpiredSession
+    ) {
       clearAuthSession();
       window.location.href = "/";
     }

@@ -24,6 +24,8 @@ export type PlatformId
 export interface LoginInfo {
   token: string;
   refreshToken?: string;
+  /** [changmen 扩展] cookie 表示 refresh 会话已迁入 HttpOnly Cookie。 */
+  sessionMode?: "legacy" | "cookie";
   userName: string;
   ID: number;
 }

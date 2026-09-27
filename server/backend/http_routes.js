@@ -39,6 +39,7 @@ import {
   sendUnhandledError,
   withTiming,
   applyCorsHeaders,
+  applySecurityHeaders,
   tryHandleCorsPreflight,
 } from "./core/http/index.js";
 
@@ -351,6 +352,7 @@ export function createHttpHandler({ port, serveStatic }) {
   return async function handleHttp(req, res) {
     seedRequestContext(req);
     try {
+      applySecurityHeaders(req, res);
       // 步骤 2：页面站 → api. 子域；无 Origin（同源）时 no-op
       applyCorsHeaders(req, res);
       if (tryHandleCorsPreflight(req, res))

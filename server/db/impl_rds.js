@@ -8,6 +8,7 @@
  */
 
 export {
+  authBrowserSession,
   authGetUser,
   authPeekAccessToken,
   authRefreshToken,
@@ -16,6 +17,15 @@ export {
   isAuthConfigured,
   recordAuthAudit,
 } from "./rds/auth_store.js";
+
+export {
+  createBrowserSession,
+  getBrowserSession,
+  isOpaqueRefreshToken,
+  issueOpaqueRefreshToken,
+  revokeBrowserSession,
+  rotateOpaqueRefreshToken,
+} from "./rds/auth_session_store.js";
 
 export {
   fetchClientMatches,

@@ -8,4 +8,5 @@ export {
   tryHandleCorsPreflight,
 } from "./cors.js";
 export { catchErrors, sendUnhandledError } from "./errors.js";
+export { applySecurityHeaders } from "./security_headers.js";
 export { withTiming } from "./timing.js";

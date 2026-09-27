@@ -155,6 +155,9 @@ async function main() {
     console.log("[rds] 执行 043_auth_session_audit.sql …");
     await client.query(readSql("043_auth_session_audit.sql"));
 
+    console.log("[rds] 执行 044_auth_sessions.sql …");
+    await client.query(readSql("044_auth_sessions.sql"));
+
     const tables = await client.query(`
       SELECT tablename FROM pg_tables
       WHERE schemaname = 'public'

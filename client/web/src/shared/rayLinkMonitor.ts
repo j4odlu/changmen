@@ -211,13 +211,13 @@ export function buildRayLinkMonitorModel(
 
   if (["win", "lose", "return"].includes(rowStatus)) {
     return {
-      visible: true,
-      tone: "success",
-      label: "订单已结束",
-      summary: `RAY 场馆结果：${venueStatus}`,
-      orderId,
-      venueStatus,
-      observedAt,
+      visible: false,
+      tone: "neutral",
+      label: "",
+      summary: "",
+      orderId: "",
+      venueStatus: "",
+      observedAt: 0,
       isLive: false,
     };
   }

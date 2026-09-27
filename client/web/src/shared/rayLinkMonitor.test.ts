@@ -24,4 +24,12 @@ describe("buildRayLinkMonitorModel", () => {
     expect(model.label).toBe("持续监控待接入");
     expect(model.isLive).toBe(false);
   });
+
+  it.each(["Win", "Lose", "Return"])("hides a finished RAY order with status %s", (status) => {
+    const model = buildRayLinkMonitorModel([
+      { Link: 12, Type: "RAY", OrderID: "ray-1", Status: status, CreateAt: 100 },
+    ]);
+    expect(model.visible).toBe(false);
+    expect(model.isLive).toBe(false);
+  });
 });

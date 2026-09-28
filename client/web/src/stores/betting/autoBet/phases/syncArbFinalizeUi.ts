@@ -14,6 +14,7 @@ export function syncArbFinalizeActiveBet(
   placed: ArbBetPlaced,
   settle: ArbLegSettleSnapshot,
   makeup: ArbMakeUpEnqueueResult,
+  makeupEnabled = true,
 ): ArbFinalizeOutcome {
   const { legA, legB, accountA, accountB, resultA, resultB } = placed;
   const okA = Boolean(
@@ -45,6 +46,7 @@ export function syncArbFinalizeActiveBet(
     okA,
     okB,
     makeupQueued,
+    makeupEnabled,
     makeupTarget,
     makeupPlatform,
     placeOutcomeA: placed.placeOutcomeA,

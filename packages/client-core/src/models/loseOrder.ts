@@ -36,6 +36,12 @@ export class LoseOrder implements LoseOrderRecord {
   betCount: number;
   pendingVenueOrderId?: string;
   pendingVenueAccountId?: number;
+  pendingVenueRole?: "target" | "anchor";
+  pendingVenueTarget?: BetSide;
+  pendingVenueConditionId?: string;
+  pendingVenueNextPollAt?: number;
+  pendingVenueAttempts?: number;
+  pendingVenueMakeUpEligible?: boolean;
   runtimePhase?: MakeupRuntimePhase;
 
   constructor(raw: Partial<LoseOrderRecord> & {
@@ -63,6 +69,25 @@ export class LoseOrder implements LoseOrderRecord {
     );
     this.pendingVenueAccountId = pendingId && Number.isFinite(pendingAcc) && pendingAcc > 0
       ? pendingAcc
+      : undefined;
+    this.pendingVenueRole = pendingId
+      ? (raw.pendingVenueRole === "anchor" ? "anchor" : "target")
+      : undefined;
+    this.pendingVenueTarget = pendingId && raw.pendingVenueTarget
+      ? raw.pendingVenueTarget as BetSide
+      : undefined;
+    const conditionId = String(raw.pendingVenueConditionId ?? "").trim();
+    this.pendingVenueConditionId = pendingId && conditionId ? conditionId : undefined;
+    const nextPollAt = Number(raw.pendingVenueNextPollAt);
+    this.pendingVenueNextPollAt = pendingId && Number.isFinite(nextPollAt) && nextPollAt > 0
+      ? nextPollAt
+      : undefined;
+    const attempts = Number(raw.pendingVenueAttempts);
+    this.pendingVenueAttempts = pendingId
+      ? (Number.isFinite(attempts) && attempts > 0 ? Math.floor(attempts) : 0)
+      : undefined;
+    this.pendingVenueMakeUpEligible = pendingId
+      ? raw.pendingVenueMakeUpEligible !== false
       : undefined;
     this.runtimePhase = normalizeMakeupRuntimePhase(raw.runtimePhase);
   }
@@ -104,6 +129,12 @@ export class LoseOrder implements LoseOrderRecord {
         ? {
             pendingVenueOrderId: this.pendingVenueOrderId,
             pendingVenueAccountId: this.pendingVenueAccountId,
+            pendingVenueRole: this.pendingVenueRole ?? "target",
+            pendingVenueTarget: this.pendingVenueTarget,
+            pendingVenueConditionId: this.pendingVenueConditionId,
+            pendingVenueNextPollAt: this.pendingVenueNextPollAt,
+            pendingVenueAttempts: this.pendingVenueAttempts,
+            pendingVenueMakeUpEligible: this.pendingVenueMakeUpEligible,
           }
         : {}),
       ...(this.runtimePhase ? { runtimePhase: this.runtimePhase } : {}),

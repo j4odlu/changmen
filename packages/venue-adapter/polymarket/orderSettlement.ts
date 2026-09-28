@@ -5,7 +5,6 @@ import { pmCancelOrder } from "./pmClientApi";
 import {
   POLYMARKET_WS_FALLBACK_POLL_OPTS,
   POLYMARKET_WS_FALLBACK_TRADE_CONFIRM_OPTS,
-  coercePolymarketFokPollOutcome,
   fetchPolymarketOrderRow,
   interpretPolymarketOrderRow,
   isPolymarketDelayLookupPending,
@@ -53,7 +52,7 @@ async function lookupTradeMatched(
 /**
  * FOK 在官方 delay 窗之后的收尾。调用方须已等满 `sd` + 查询滞后。
  * [A8 可证实] 无。官方 Order Lifecycle：窗内不可撤（delayed / 查不到行）；窗后 live/unmatched 可撤。
- * 仍无成交 → unfilled（套利可补），不再 timeout 挂起。
+ * 只有明确 canceled/expired 且无成交才是 unfilled；本地复核耗尽仍无终态则 timeout。
  */
 export async function finalizePolymarketFokRestingOrder(
   account: PlatformAccount,
@@ -101,11 +100,14 @@ export async function finalizePolymarketFokRestingOrder(
     }
   }
 
-  try {
-    await pmCancelOrder(account, orderId);
-  }
-  catch {
-    /* cancel 失败仍复核；可能已系统 cancel、delay 已结束、或竞态成交 */
+  // 官方 delayed / 查不到行不是可撤挂单；只对明确 live/unmatched 发 cancel。
+  if (isPolymarketRestingNoFill(last)) {
+    try {
+      await pmCancelOrder(account, orderId);
+    }
+    catch {
+      /* cancel 失败仍复核；可能已系统 cancel 或竞态成交 */
+    }
   }
 
   for (let i = 0; i < postCancelAttempts; i++) {
@@ -129,7 +131,10 @@ export async function finalizePolymarketFokRestingOrder(
   const state = interpretPolymarketOrderRow(last);
   if (state === "matched")
     return { outcome: "matched", row: last };
-  return { outcome: "unfilled", row: last };
+  if (state === "unfilled")
+    return { outcome: "unfilled", row: last };
+  // 官方没有 timeout 订单态；本地复核耗尽且仍无明确取消/成交，只能保持待确认。
+  return { outcome: "timeout", row: last };
 }
 
 async function settlePolymarketDelayedOrderViaRest(
@@ -214,8 +219,5 @@ export async function settlePolymarketDelayedOrder(
     lookbackMs,
     ...opts?.fokGrace,
   });
-  return {
-    outcome: coercePolymarketFokPollOutcome(fin.outcome),
-    row: fin.row,
-  };
+  return fin;
 }

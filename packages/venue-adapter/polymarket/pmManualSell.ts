@@ -97,7 +97,7 @@ export interface PolymarketManualSellResult {
   unfilled?: boolean;
 }
 
-/** 平仓确认终态：禁止永久 pending */
+/** 平仓确认结果；本地复核耗尽不是场馆终态，必须保持 pending 防止重复卖出。 */
 export type PolymarketManualSellFinalOutcome =
   | {
     outcome: "filled";
@@ -110,6 +110,11 @@ export type PolymarketManualSellFinalOutcome =
   }
   | {
     outcome: "unfilled";
+    sellOrderId: string;
+    reason: string;
+  }
+  | {
+    outcome: "pending";
     sellOrderId: string;
     reason: string;
   };
@@ -404,8 +409,8 @@ function buildFilledOutcome(params: {
 }
 
 /**
- * 按卖单号确认到终态（filled | unfilled）。
- * 轮询 order/trades；截止后仍模糊则按 FOK 未确认成交 → unfilled。
+ * 按卖单号确认状态。只有明确 canceled/expired 才是 unfilled；
+ * 本地轮询截止仍模糊时返回 pending，调用方必须继续锁定卖出入口。
  */
 export async function awaitPolymarketManualSellFinalOutcome(params: {
   account: PlatformAccount;
@@ -481,7 +486,10 @@ export async function awaitPolymarketManualSellFinalOutcome(params: {
       tradeConfirm,
     });
 
-  if (settled.outcome === "unfilled") {
+  if (
+    settled.outcome === "unfilled"
+    && interpretPolymarketOrderRow(settled.row) === "unfilled"
+  ) {
     return {
       outcome: "unfilled",
       sellOrderId,
@@ -573,11 +581,11 @@ export async function awaitPolymarketManualSellFinalOutcome(params: {
     };
   }
 
-  // 截止仍模糊且无 matched 证据：按未成交终态退出平仓中
+  // 截止仍模糊且无 matched 证据：保持待确认，绝不能重新开放卖出造成双卖。
   return {
-    outcome: "unfilled",
+    outcome: "pending",
     sellOrderId,
-    reason: "截止未确认成交，按未成交处理",
+    reason: "卖单结果仍待场馆确认",
   };
 }
 
@@ -727,6 +735,15 @@ export async function sellPolymarketBuyPosition(params: {
         chainSubmitted: false,
       };
     }
+    if (final.outcome === "pending") {
+      return {
+        ok: false,
+        error: final.reason,
+        sellOrderId,
+        pending: true,
+        chainSubmitted: true,
+      };
+    }
 
     return {
       ok: true,
@@ -760,6 +777,15 @@ export async function sellPolymarketBuyPosition(params: {
             pending: false,
             ordersToSave: final.ordersToSave,
             partialFill: final.partialFill,
+          };
+        }
+        if (final.outcome === "pending") {
+          return {
+            ok: false,
+            error: final.reason,
+            sellOrderId: submittedSellOrderId,
+            pending: true,
+            chainSubmitted: true,
           };
         }
         return {

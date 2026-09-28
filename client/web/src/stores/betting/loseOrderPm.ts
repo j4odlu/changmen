@@ -28,7 +28,6 @@ export async function processPmMakeUpLeg(ctx: PmMakeUpLegContext): Promise<void>
   const {
     betId,
     order,
-    match,
     bet,
     account,
     checked,
@@ -45,8 +44,6 @@ export async function processPmMakeUpLeg(ctx: PmMakeUpLegContext): Promise<void>
   const outcome = await applyVenueJbSettlementOutcome({
     betId,
     order,
-    match,
-    bet,
     account,
     result,
     checked,
@@ -66,6 +63,7 @@ export type {
   PmJbSettlementOutcome,
 } from "@/stores/betting/loseOrderPmPending";
 export {
+  schedulePendingVenueMakeUpResume,
   tryResumePendingVenueMakeUp,
   tryResumePmPendingMakeUp,
 } from "@/stores/betting/loseOrderPmPending";

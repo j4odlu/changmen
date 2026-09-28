@@ -563,6 +563,41 @@ describe("activeBetRunStore", () => {
     expect(run.overallLabel).toBe("补单中");
   });
 
+  it("marks a queued reject as not executed when automatic makeup is off", () => {
+    const store = useActiveBetRunStore();
+    syncActiveBetBegin({
+      match: { id: 1, title: "GamerLegion vs Sinners" } as never,
+      bet: { id: 100, getBetName: () => "地图1" } as never,
+      legA: { type: "Polymarket", target: "Away", odds: 1.9231, betMoney: 155 } as never,
+      legB: { type: "RAY", target: "Home", odds: 2.48, betMoney: 111 } as never,
+      accountA: { playerName: "pm" } as never,
+      accountB: { playerName: "ray" } as never,
+      linkId: 1_790_538_363_628,
+      betBothLegs: true,
+    });
+
+    syncActiveBetAfterRejectSync(100, {
+      hasA: true,
+      hasB: true,
+      rejectA: false,
+      rejectB: true,
+      okA: true,
+      okB: false,
+      makeupQueued: true,
+      makeupEnabled: false,
+      makeupTarget: "B",
+      makeupPlatform: "RAY",
+    });
+
+    const run = store.visibleRuns[0]!;
+    const rayLeg = run.legs.find(leg => leg.side === "B")!;
+    expect(run.phase).toBe("syncing");
+    expect(run.overallLabel).toBe("自动补单已关闭");
+    expect(run.terminalAt).toBeTypeOf("number");
+    expect(rayLeg.status).toBe("rejected");
+    expect(rayLeg.detail).toBe("自动补单已关闭，未执行补单");
+  });
+
   it("PM filled settle shows 已成交, not A8 未拒单", () => {
     const store = useActiveBetRunStore();
     syncActiveBetBegin({
@@ -586,7 +621,7 @@ describe("activeBetRunStore", () => {
     expect(legB.events.some(e => e.stage === "拒单" && e.detail === "已成交")).toBe(true);
   });
 
-  it("PM timeout settle shows 拒单, not 待确认", () => {
+  it("PM timeout settle stays 待确认, not 拒单", () => {
     const store = useActiveBetRunStore();
     syncActiveBetBegin({
       match: { id: 1, title: "A vs B" } as never,
@@ -606,10 +641,10 @@ describe("activeBetRunStore", () => {
     });
 
     const legB = store.visibleRuns[0]!.legs.find(l => l.side === "B")!;
-    expect(legB.status).toBe("rejected");
-    expect(legB.detail).toBe("拒单");
+    expect(legB.status).toBe("pending_confirm");
+    expect(legB.detail).toBe("delayed 待确认");
     expect(legB.events.some(e => e.detail === "未拒单")).toBe(false);
-    expect(legB.events.some(e => e.detail === "delayed 待确认" && e.stage === "拒单")).toBe(false);
+    expect(legB.events.some(e => e.detail === "拒单")).toBe(false);
   });
 
   it("A8 settle pass still uses 未拒单", () => {

@@ -104,7 +104,7 @@ describe("awaitPolymarketManualSellFinalOutcome", () => {
   it("unfilled when settlement says unfilled", async () => {
     vi.mocked(awaitPolymarketSettlementJob).mockResolvedValue({
       outcome: "unfilled",
-      row: null,
+      row: { status: "CANCELED" },
     });
     const out = await awaitPolymarketManualSellFinalOutcome({
       account: account(),
@@ -118,7 +118,7 @@ describe("awaitPolymarketManualSellFinalOutcome", () => {
     });
   });
 
-  it("deadline ambiguous → unfilled terminal (no permanent pending)", async () => {
+  it("deadline ambiguous stays pending and cannot reopen sell", async () => {
     vi.mocked(awaitPolymarketSettlementJob).mockResolvedValue({
       outcome: "unfilled",
       row: { status: "DELAYED" },
@@ -135,9 +135,9 @@ describe("awaitPolymarketManualSellFinalOutcome", () => {
       sellOrderId: "0xt",
       fallbackPrice: 0.4,
     });
-    expect(out.outcome).toBe("unfilled");
-    if (out.outcome === "unfilled")
-      expect(out.reason).toMatch(/未确认成交|未成交/);
+    expect(out.outcome).toBe("pending");
+    if (out.outcome === "pending")
+      expect(out.reason).toMatch(/待场馆确认/);
   });
 
   it("matched with size only + fallbackPrice → filled", async () => {

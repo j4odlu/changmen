@@ -10,6 +10,7 @@ import {
   useActiveBetRunStore,
 } from "@/stores/activeBetRunStore";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
+import { useUserStore } from "@/stores/userStore";
 import "@/styles/active-bet-run.css";
 
 const PANEL_POS_KEY = "changmen:active-bet-run:pos:v4";
@@ -23,6 +24,7 @@ const PANEL_MIN_H = 260;
 
 const activeStore = useActiveBetRunStore();
 const loseStore = useLoseOrderStore();
+const userStore = useUserStore();
 const { visibleRuns } = storeToRefs(activeStore);
 
 const now = ref(Date.now());
@@ -79,7 +81,8 @@ const panelStyle = computed(() => {
 });
 
 onMounted(() => {
-  activeStore.bootstrapFromLoseOrders(loseStore.orders);
+  if (userStore.config.makeUp)
+    activeStore.bootstrapFromLoseOrders(loseStore.orders);
   tickTimer = setInterval(() => {
     now.value = Date.now();
   }, 1000);
@@ -112,6 +115,14 @@ watch(
 watch(activeIndex, () => {
   void nextTick(scrollActiveLegFeedsToBottom);
 });
+
+watch(
+  () => userStore.config.makeUp,
+  (enabled) => {
+    if (enabled)
+      activeStore.bootstrapFromLoseOrders(loseStore.orders);
+  },
+);
 
 function restorePanelPrefs() {
   try {

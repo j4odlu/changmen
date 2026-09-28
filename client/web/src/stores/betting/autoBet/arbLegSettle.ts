@@ -17,7 +17,7 @@ export interface ArbLegSettleResult {
   orders: VenueOrder[];
   /** 确认未成交（可补单） */
   rejected: boolean;
-  /** PF 仍待确认（OPEN）；PM FOK 不应出现 */
+  /** 场馆仍待确认；不能作为补单锚腿或补单目标 */
   pendingConfirm: boolean;
 }
 
@@ -29,7 +29,7 @@ export interface SettleArbLegOpts {
   betOption?: BetOption;
 }
 
-/** 本地一轮 timeout 后续跟。仅 PF（挂单可能仍 OPEN）。PM FOK 窗后只有 filled/unfilled。 */
+/** 本地一轮 timeout 后续跟。PF 挂单可能仍 OPEN；PM 由 settlement job 持续确认原单。 */
 export const PENDING_CONFIRM_FOLLOW_ROUNDS = 6;
 export const PENDING_CONFIRM_FOLLOW_GAP_MS = 2_000;
 
@@ -75,13 +75,9 @@ export async function settleArbLeg(
       pmConditionId: String(opts.betOption?.betId ?? "").trim() || undefined,
     },
   );
-  let rejected = isVenueLegConfirmedUnfilled(outcome);
-  let pendingConfirm = isVenueLegPendingConfirm(outcome);
-  // PM 官方无 timeout；编排只认 filled/unfilled。venue 若仍漏 timeout → 未成交。
-  if (isPolymarketProvider(account.provider) && pendingConfirm) {
-    rejected = true;
-    pendingConfirm = false;
-  }
+  const rejected = isVenueLegConfirmedUnfilled(outcome);
+  const pendingConfirm = isVenueLegPendingConfirm(outcome);
+  // 本地查询 timeout 不是业务拒单；PM delayed 与传统场馆拒单检测期间同为待确认。
   if (rejected && result && isPolymarketProvider(account.provider)) {
     try {
       await persistPolymarketExecutionReject(account, result, "unfilled", {
@@ -103,7 +99,7 @@ export async function settleArbLeg(
 /**
  * 跟到已成交 / 未成交。
  * PF：timeout / 仍 pending → 续跟；耗尽仍未知则保持 pendingConfirm。
- * PM：venue 已把内部 timeout 收成 unfilled，一轮即返回。
+ * PM：一轮返回；若仍 pending，由 settlement job / 待确认链继续核对原单。
  * 非 pending-confirm 馆：一轮即返回。
  */
 export async function settleArbLegUntilTerminal(

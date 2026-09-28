@@ -16,6 +16,7 @@ const matchs = vi.hoisted(() => [] as ViewMatch[]);
 const removeOrder = vi.hoisted(() => vi.fn());
 const setPendingVenueOrder = vi.hoisted(() => vi.fn());
 const clearPendingVenueOrder = vi.hoisted(() => vi.fn());
+const deferPendingVenueOrder = vi.hoisted(() => vi.fn());
 const getAccount = vi.hoisted(() => vi.fn());
 const findAccount = vi.hoisted(() => vi.fn());
 const checkBetting = vi.hoisted(() => vi.fn());
@@ -28,6 +29,7 @@ const wait = vi.hoisted(() => vi.fn(async () => {}));
 const updateVenueOrders = vi.hoisted(() => vi.fn(async (_acc?: PlatformAccount) => [] as VenueOrder[]));
 const refreshBalance = vi.hoisted(() => vi.fn(async () => undefined));
 const settlePolymarketDelayedOrder = vi.hoisted(() => vi.fn());
+const makeUpEnabled = vi.hoisted(() => ({ value: true }));
 const activeBetRuns = vi.hoisted(() => new Map<number, { legs: { side: "A" | "B"; target: string; status: string }[] }>());
 const extensionPrefs = vi.hoisted((): {
   arbFailAutoSell: { enabled: boolean };
@@ -47,7 +49,7 @@ vi.mock("@/stores/userStore", () => ({
   useUserStore: () => ({
     config: {
       ...createDefaultUserConfig(),
-      makeUp: true,
+      makeUp: makeUpEnabled.value,
       makeProfit: 1.01,
       noSameProvider: false,
       waitTime: { OB: 10, RAY: 10 },
@@ -70,6 +72,7 @@ vi.mock("@/stores/loseOrderStore", () => ({
     removeOrder,
     setPendingVenueOrder,
     clearPendingVenueOrder,
+    deferPendingVenueOrder,
     setMakeupRuntimePhase: vi.fn(),
     has: (id: number) => loseOrders.has(id),
   }),
@@ -188,24 +191,44 @@ describe("processLoseOrders (A8 jb parity)", () => {
     activeBetRuns.clear();
     matchs.length = 0;
     extensionPrefs.makeupOddsBand = { enabled: false, upper: 1.02, lower: 0.96 };
+    makeUpEnabled.value = true;
     vi.clearAllMocks();
     saveOrderBind.mockResolvedValue(true);
     getAccount.mockReset();
     findAccount.mockReset();
     checkBetting.mockReset();
     betting.mockReset();
-    setPendingVenueOrder.mockImplementation((betId: number, orderId: string, accountId: number) => {
+    setPendingVenueOrder.mockImplementation((betId: number, orderId: string, accountId: number, opts?: {
+      role?: "target" | "anchor";
+      pendingTarget?: "Home" | "Away";
+      conditionId?: string;
+      makeUpEligible?: boolean;
+    }) => {
       const order = loseOrders.get(betId);
       if (order) {
         order.pendingVenueOrderId = orderId;
         order.pendingVenueAccountId = accountId;
+        order.pendingVenueRole = opts?.role ?? "target";
+        order.pendingVenueTarget = opts?.pendingTarget;
+        order.pendingVenueConditionId = opts?.conditionId;
+        order.pendingVenueMakeUpEligible = opts?.makeUpEligible ?? true;
       }
+    });
+    deferPendingVenueOrder.mockReset();
+    deferPendingVenueOrder.mockImplementation((betId: number) => {
+      const order = loseOrders.get(betId);
+      if (order)
+        order.pendingVenueNextPollAt = Date.now() + 1_000;
     });
     clearPendingVenueOrder.mockImplementation((betId: number) => {
       const order = loseOrders.get(betId);
       if (order) {
         order.pendingVenueOrderId = undefined;
         order.pendingVenueAccountId = undefined;
+        order.pendingVenueRole = undefined;
+        order.pendingVenueTarget = undefined;
+        order.pendingVenueConditionId = undefined;
+        order.pendingVenueMakeUpEligible = undefined;
       }
     });
     vi.mocked(makeUpBetToastSeconds).mockReset();
@@ -531,7 +554,7 @@ describe("processLoseOrders (A8 jb parity)", () => {
     );
   });
 
-  it("PM poll timeout 收成 unfilled，不挂 pendingVenue", async () => {
+  it("PM poll timeout 保留 pendingVenue，下一轮只续查不重复 POST", async () => {
     const bet = makeBet([makeItem("Polymarket", 4.167)]);
     matchs.push(makeMatch(bet));
     queueOrder();
@@ -554,9 +577,14 @@ describe("processLoseOrders (A8 jb parity)", () => {
     settlePolymarketDelayedOrder.mockResolvedValueOnce({ outcome: "timeout", row: null });
 
     await processLoseOrders({ setMessage: vi.fn() });
+    await processLoseOrders({ setMessage: vi.fn() });
 
     expect(betting).toHaveBeenCalledTimes(1);
-    expect(setPendingVenueOrder).not.toHaveBeenCalled();
+    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xtimeout-order", 47, {
+      role: "target",
+      pendingTarget: "Home",
+      conditionId: "b1",
+    });
     expect(removeOrder).not.toHaveBeenCalled();
     expect(loseOrderMessage).toHaveBeenCalledWith(
       acc,
@@ -713,6 +741,7 @@ describe("processLoseOrders makeupOddsBand", () => {
   beforeEach(() => {
     loseOrders.clear();
     matchs.length = 0;
+    makeUpEnabled.value = true;
     extensionPrefs.makeupOddsBand = { enabled: true, upper: 1.02, lower: 0.96 };
     vi.clearAllMocks();
     getAccount.mockReset();
@@ -796,6 +825,39 @@ describe("processLoseOrders makeupOddsBand", () => {
 
     expect(getAccount).toHaveBeenCalled();
     expect(betting).toHaveBeenCalledTimes(1);
+  });
+
+  it("makeUp 关闭时即使调度补单队列也不 POST 普通补单", async () => {
+    makeUpEnabled.value = false;
+    const bet = makeBet([makeItem("OB", 2.5)]);
+    matchs.push(makeMatch(bet));
+    queueOrder();
+
+    await processLoseOrders({ setMessage: vi.fn() });
+
+    expect(getAccount).not.toHaveBeenCalled();
+    expect(betting).not.toHaveBeenCalled();
+  });
+
+  it("makeUp 关闭时仍确认 PM delayed 原单，确认未成交后收尾且不 POST", async () => {
+    makeUpEnabled.value = false;
+    const order = queueOrder({
+      pendingVenueOrderId: "0xobserve-only",
+      pendingVenueAccountId: 47,
+      pendingVenueRole: "target",
+      pendingVenueTarget: "Home",
+      pendingVenueConditionId: "b1",
+      pendingVenueMakeUpEligible: true,
+    });
+    const acc = new PlatformAccount({ accountId: 47, playerName: "D8F7", provider: "Polymarket" });
+    findAccount.mockReturnValue(acc);
+    settlePolymarketDelayedOrder.mockResolvedValue({ outcome: "unfilled", row: null });
+
+    await processLoseOrders({ setMessage: vi.fn() });
+
+    await vi.waitFor(() => expect(removeOrder).toHaveBeenCalledWith(order.betId, true));
+    expect(betting).not.toHaveBeenCalled();
+    expect(markSuccessfulBet).not.toHaveBeenCalled();
   });
 
   it("supports profit-rate mode without changing manual makeup behavior", async () => {

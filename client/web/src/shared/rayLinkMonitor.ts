@@ -167,6 +167,20 @@ export function buildRayLinkMonitorModel(
     };
   }
 
+  if (run?.overallLabel === "自动补单已关闭") {
+    return {
+      visible: true,
+      tone: "danger",
+      label: "拒单已确认",
+      summary: "自动补单已关闭，未执行补单",
+      orderId,
+      venueStatus,
+      observedAt,
+      detail: rayLeg?.detail,
+      isLive: false,
+    };
+  }
+
   if (rowStatus === "reject" || rayLeg?.status === "rejected") {
     return {
       visible: true,

@@ -8,6 +8,7 @@ const processLoseOrders = vi.fn(async () => {});
 const matchStoreState = {
   matchs: [] as { id: number; bets: { id: number }[] }[],
 };
+const loseOrders = new Map<number, { pendingVenueOrderId?: string }>();
 
 const runA8ArbRound = vi.fn(async () => {});
 
@@ -20,7 +21,7 @@ vi.mock("@/stores/matchStore", () => ({
 }));
 
 vi.mock("@/stores/loseOrderStore", () => ({
-  useLoseOrderStore: () => ({ orders: { size: 2 } }),
+  useLoseOrderStore: () => ({ orders: loseOrders }),
 }));
 
 vi.mock("@/stores/betting/a8/runA8ArbRound", () => ({
@@ -52,6 +53,9 @@ vi.mock("@/stores/betting/pendingOrderBind", () => ({
 describe("runArbBetRound lose-order gate", () => {
   beforeEach(() => {
     Object.assign(config, createDefaultUserConfig());
+    loseOrders.clear();
+    loseOrders.set(1, {});
+    loseOrders.set(2, {});
     matchStoreState.matchs = [];
     accountsFundingReady.mockReturnValue(true);
     processLoseOrders.mockClear();
@@ -85,6 +89,17 @@ describe("runArbBetRound lose-order gate", () => {
     await runArbBetRound({ setMessage: () => {}, processLoseOrders });
 
     expect(processLoseOrders).not.toHaveBeenCalled();
+  });
+
+  it("continues pending venue observation when makeUp is off", async () => {
+    config.makeUp = false;
+    config.betting = false;
+    loseOrders.set(1, { pendingVenueOrderId: "0xdelayed" });
+
+    await runArbBetRound({ setMessage: () => {}, processLoseOrders });
+
+    expect(processLoseOrders).toHaveBeenCalledOnce();
+    expect(runA8ArbRound).not.toHaveBeenCalled();
   });
 
   it("runs runA8ArbRound when betting on", async () => {

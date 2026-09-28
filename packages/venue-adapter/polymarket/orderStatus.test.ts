@@ -10,7 +10,6 @@ import {
   isPolymarketOrderIdRejected,
   isPolymarketPostedApiFailure,
   isPolymarketPostFillConfirmed,
-  coercePolymarketFokPollOutcome,
   isPolymarketDelayLookupPending,
   isPolymarketRestingNoFill,
 } from "./orderStatus";
@@ -186,17 +185,6 @@ describe("applyPolymarketSettlementToResult", () => {
   });
 });
 
-describe("coercePolymarketFokPollOutcome", () => {
-  it("keeps matched", () => {
-    expect(coercePolymarketFokPollOutcome("matched")).toBe("matched");
-  });
-
-  it("maps timeout and unfilled to unfilled", () => {
-    expect(coercePolymarketFokPollOutcome("timeout")).toBe("unfilled");
-    expect(coercePolymarketFokPollOutcome("unfilled")).toBe("unfilled");
-  });
-});
-
 describe("buildPolymarketRejectVenueOrder", () => {
   it("builds reject status order", () => {
     const acc = { provider: "Polymarket", accountId: 1 } as never;
@@ -211,14 +199,6 @@ describe("buildPolymarketRejectVenueOrder", () => {
     expect(order.pmRejectReason).toBe("unfilled");
   });
 
-  it("timeout keeps official id and does not set pmRejectReason", () => {
-    const acc = { provider: "Polymarket", accountId: 1 } as never;
-    const result = Object.assign(new BetResult("Polymarket", true), { orderId: "0xt" });
-    const order = buildPolymarketRejectVenueOrder(acc, result, "timeout");
-    expect(order.orderId).toBe("0xt");
-    expect(order.bet).toBe("待确认超时");
-    expect(order.pmRejectReason).toBeUndefined();
-  });
 });
 
 describe("buildPolymarketExecutionRejectVenueOrder", () => {

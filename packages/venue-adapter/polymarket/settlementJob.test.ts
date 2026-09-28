@@ -84,4 +84,17 @@ describe("settlementJob", () => {
     });
     await awaitPolymarketSettlementJob(pmAccount(), "0xctx");
   });
+
+  it("preserves timeout as pending instead of coercing to unfilled", async () => {
+    vi.mocked(settlePolymarketDelayedOrder).mockResolvedValue({
+      outcome: "timeout",
+      row: { status: "delayed" },
+    });
+
+    startPolymarketSettlementJob(pmAccount(), "0xtimeout");
+    const out = await awaitPolymarketSettlementJob(pmAccount(), "0xtimeout");
+
+    expect(out).toEqual({ outcome: "timeout", row: { status: "delayed" } });
+    expect(await awaitPolymarketSettlementJob(pmAccount(), "0xtimeout")).toBeNull();
+  });
 });

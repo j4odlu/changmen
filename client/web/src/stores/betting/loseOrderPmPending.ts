@@ -1,40 +1,45 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { BetResult } from "@changmen/client-core/models/betResult";
-import type { ViewBet, ViewMatch } from "@/models/match";
 import type { LoseOrder } from "@/models/loseOrder";
+import type { ViewBet, ViewMatch } from "@/models/match";
 import type { PlatformAccount } from "@/models/platformAccount";
+import type { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { BetOption as BetOptionCtor } from "@changmen/client-core/models/betOption";
 import { BetResult as BetResultCtor } from "@changmen/client-core/models/betResult";
 import { isPendingConfirmVenueProvider, isPolymarketProvider } from "@changmen/shared/account_multiply";
 import { isVenueLegConfirmedUnfilled, isVenueLegPendingConfirm, isVenueLegRejected } from "@changmen/venue-adapter/contract";
+import { resolveVenueLegOutcome } from "@/domain/betting/resolveVenueLegOutcome";
+import { saveVenueSettlementLog } from "@/services/bettingLog";
+import { a8Tip } from "@/shared/a8Notify";
+import { persistPolymarketExecutionReject } from "@/stores/account/pmRejectOrder";
+import { useAccountStore } from "@/stores/accountStore";
+import {
+  syncActiveBetFail,
+  syncActiveBetMakeupDone,
+  syncActiveBetMakeupPendingConfirm,
+  syncActiveBetMakeupRejected,
+} from "@/stores/betting/activeBetRunSync";
 import {
   bindArbLegOrder,
   refreshOrderListAfterBind,
   resolveArbBindOrderId,
 } from "@/stores/betting/arbOrderBind";
 import { enqueuePendingOrderBind } from "@/stores/betting/pendingOrderBind";
-import { resolveVenueLegOutcome } from "@/domain/betting/resolveVenueLegOutcome";
-import type { useLoseOrderStore } from "@/stores/loseOrderStore";
-import { useAccountStore } from "@/stores/accountStore";
 import { useMessageStore } from "@/stores/messageStore";
-import { persistPolymarketExecutionReject } from "@/stores/account/pmRejectOrder";
-import {
-  syncActiveBetMakeupDone,
-  syncActiveBetMakeupPendingConfirm,
-  syncActiveBetMakeupRejected,
-} from "@/stores/betting/activeBetRunSync";
-import { a8Tip } from "@/shared/a8Notify";
-import { saveVenueSettlementLog } from "@/services/bettingLog";
+import { useUserStore } from "@/stores/userStore";
 
-export type VenueJbSettlementOutcome = "dequeued" | "pending" | "rejected";
+export type VenueJbSettlementOutcome
+  = | "dequeued"
+    | "pending"
+    | "rejected"
+    | "ready-makeup"
+    | "stopped";
 /** @deprecated 用 VenueJbSettlementOutcome */
 export type PmJbSettlementOutcome = VenueJbSettlementOutcome;
 
 export interface VenueJbSettlementContext {
   betId: number;
   order: LoseOrder;
-  match: ViewMatch;
-  bet: ViewBet;
   account: PlatformAccount;
   result: BetResult;
   checked: BetOption;
@@ -63,6 +68,10 @@ export async function applyVenueJbSettlementOutcome(
     removeIds,
     setMessage,
   } = ctx;
+  const pendingRole = order.pendingVenueRole ?? "target";
+  const makeUpEligible = order.pendingVenueMakeUpEligible !== false;
+  const makeUpEnabled = useUserStore().config.makeUp === true;
+  const canMakeUp = makeUpEligible && makeUpEnabled;
 
   const legOutcome = await resolveVenueLegOutcome(
     account,
@@ -75,18 +84,16 @@ export async function applyVenueJbSettlementOutcome(
     { confirmPostAccepted: true, pmConditionId: String(checked.betId ?? "").trim() || undefined },
   );
   const venueOrders = legOutcome.orders;
-  const pmPendingAsUnfilled = isPolymarketProvider(account.provider)
-    && (isVenueLegPendingConfirm(legOutcome) || isVenueTimeoutReject(result));
   saveVenueSettlementLog({
     account,
     option: checked,
     result,
     orders: venueOrders,
-    settlement: pmPendingAsUnfilled ? "unfilled" : legOutcome.settlement,
+    settlement: legOutcome.settlement,
     linkId: order.linkId,
   });
 
-  if (!isVenueLegRejected(legOutcome) && !pmPendingAsUnfilled) {
+  if (!isVenueLegRejected(legOutcome)) {
     loseStore.clearPendingVenueOrder(betId);
     const orderId = resolveArbBindOrderId(venueOrders, result, false);
     if (!(await bindArbLegOrder(order.linkId, account, result, venueOrders, false)) && orderId) {
@@ -99,6 +106,19 @@ export async function applyVenueJbSettlementOutcome(
       });
     }
     refreshOrderListAfterBind();
+    if (pendingRole === "anchor") {
+      if (!canMakeUp) {
+        removeIds.add(betId);
+        const reason = makeUpEnabled ? "补单条件未通过" : "自动补单已关闭";
+        setMessage(`锚腿已成交，${reason}`);
+        syncActiveBetFail(betId, `单腿已成交，${reason}`);
+        void useAccountStore().refreshBalance(account);
+        return "stopped";
+      }
+      setMessage(`锚腿已成交，开始补 ${order.target}`);
+      void useAccountStore().refreshBalance(account);
+      return "ready-makeup";
+    }
     removeIds.add(betId);
     setMessage(`补单成功 ${platformLabel}@${checked.odds}`);
     syncActiveBetMakeupDone(betId, platformLabel, checked.odds);
@@ -114,10 +134,14 @@ export async function applyVenueJbSettlementOutcome(
   }
 
   if (
-    !pmPendingAsUnfilled
-    && (isVenueLegPendingConfirm(legOutcome) || isVenueTimeoutReject(result))
+    isVenueLegPendingConfirm(legOutcome) || isVenueTimeoutReject(result)
   ) {
-    loseStore.setPendingVenueOrder(betId, String(result.orderId ?? ""), account.accountId);
+    loseStore.setPendingVenueOrder(betId, String(result.orderId ?? ""), account.accountId, {
+      role: pendingRole,
+      pendingTarget: order.pendingVenueTarget ?? order.target,
+      conditionId: order.pendingVenueConditionId ?? String(checked.betId ?? ""),
+    });
+    loseStore.deferPendingVenueOrder(betId);
     setMessage(`订单待确认，下轮续查 ${String(result.orderId ?? "").slice(0, 10)}…`);
     syncActiveBetMakeupPendingConfirm(betId, result.orderId);
     useMessageStore().loseOrderMessage(account, order, checked, true);
@@ -126,7 +150,7 @@ export async function applyVenueJbSettlementOutcome(
 
   loseStore.clearPendingVenueOrder(betId);
   if (
-    (isVenueLegConfirmedUnfilled(legOutcome) || pmPendingAsUnfilled)
+    isVenueLegConfirmedUnfilled(legOutcome)
     && isPolymarketProvider(account.provider)
   ) {
     try {
@@ -150,6 +174,21 @@ export async function applyVenueJbSettlementOutcome(
     });
   }
   refreshOrderListAfterBind();
+  if (pendingRole === "anchor") {
+    removeIds.add(betId);
+    setMessage("待确认锚腿未成交，双方均未形成敞口");
+    syncActiveBetFail(betId, "待确认订单未成交，补单结束");
+    void useAccountStore().refreshBalance(account);
+    return "stopped";
+  }
+  if (!canMakeUp) {
+    removeIds.add(betId);
+    const reason = makeUpEnabled ? "补单条件未通过" : "自动补单已关闭";
+    setMessage(`待确认订单未成交，${reason}`);
+    syncActiveBetFail(betId, `另一腿已成交，${reason}`);
+    void useAccountStore().refreshBalance(account);
+    return "stopped";
+  }
   setMessage(`${order.target} 再次被拒单`);
   a8Tip("拒单提醒", `${order.target} 再次被拒单`, 3000);
   syncActiveBetMakeupRejected(betId, order.target);
@@ -171,18 +210,24 @@ export type VenueJbResumeResult = "not-applicable" | "handled";
 /** @deprecated 用 VenueJbResumeResult */
 export type PmJbResumeResult = VenueJbResumeResult;
 
-/** 队列项已有 pendingVenueOrderId 时续轮 settle，不再 POST */
-export async function tryResumePendingVenueMakeUp(params: {
+const pendingResumeFlights = new Map<string, Promise<void>>();
+
+export interface PendingVenueResumeParams {
   betId: number;
   order: LoseOrder;
-  match: ViewMatch;
-  bet: ViewBet;
+  match?: ViewMatch;
+  bet?: ViewBet;
   accountStore: ReturnType<typeof useAccountStore>;
   loseStore: ReturnType<typeof useLoseOrderStore>;
   removeIds: Set<number>;
   setMessage: (msg: string) => void;
-  markSuccess: (account: PlatformAccount) => void;
-}): Promise<VenueJbResumeResult> {
+  markSuccess: (account: PlatformAccount, target: LoseOrder["target"]) => void;
+}
+
+/** 队列项已有 pendingVenueOrderId 时续轮 settle，不再 POST */
+export async function tryResumePendingVenueMakeUp(
+  params: PendingVenueResumeParams,
+): Promise<VenueJbResumeResult> {
   const {
     betId,
     order,
@@ -206,14 +251,21 @@ export async function tryResumePendingVenueMakeUp(params: {
     return "not-applicable";
   }
 
-  const ref = bet.items.find(item => item.type === account.provider);
-  if (!ref) {
-    loseStore.clearPendingVenueOrder(betId);
-    return "not-applicable";
-  }
-
-  const sideOdds = ref.getOdds(order.target);
-  const checked = new BetOptionCtor(match, bet, ref, order.target, order.getBetMoney(sideOdds));
+  const pendingRole = order.pendingVenueRole ?? "target";
+  const ref = bet?.items.find(item => item.type === account.provider);
+  const pendingTarget = order.pendingVenueTarget ?? order.target;
+  const sideOdds = ref?.getOdds(pendingTarget) || order.betOdds;
+  const checked = match && bet && ref
+    ? new BetOptionCtor(match, bet, ref, pendingTarget, order.getBetMoney(sideOdds))
+    : new BetOptionCtor(
+        account.provider,
+        String(order.matchId),
+        order.pendingVenueConditionId ?? String(order.betId),
+        "",
+        order.getBetMoney(sideOdds),
+        pendingTarget,
+        sideOdds,
+      );
   checked.loseOrder = true;
   checked.diagnosticLinkId = order.linkId;
   checked.diagnosticAttempt = "makeup";
@@ -226,20 +278,54 @@ export async function tryResumePendingVenueMakeUp(params: {
   const outcome = await applyVenueJbSettlementOutcome({
     betId,
     order,
-    match,
-    bet,
     account,
     result,
     checked,
-    platformLabel: ref.type,
+    platformLabel: ref?.type ?? account.provider,
     loseStore,
     removeIds,
     setMessage,
   });
 
-  if (outcome === "dequeued")
-    markSuccess(account);
+  if (outcome === "dequeued" && pendingRole === "target")
+    markSuccess(account, pendingTarget);
+  else if (outcome === "ready-makeup")
+    markSuccess(account, pendingTarget);
 
+  return "handled";
+}
+
+/** 主循环只负责调度；场馆长轮询在单飞后台任务中执行，不阻塞 A8 编排循环。 */
+export function schedulePendingVenueMakeUpResume(
+  params: PendingVenueResumeParams,
+): VenueJbResumeResult {
+  const orderId = String(params.order.pendingVenueOrderId ?? "").trim();
+  if (!orderId)
+    return "not-applicable";
+  if ((Number(params.order.pendingVenueNextPollAt) || 0) > Date.now())
+    return "handled";
+
+  const key = `${params.betId}:${orderId}`;
+  if (pendingResumeFlights.has(key))
+    return "handled";
+
+  const workerRemoveIds = new Set<number>();
+  const flight = tryResumePendingVenueMakeUp({
+    ...params,
+    removeIds: workerRemoveIds,
+  })
+    .then(() => {
+      if (workerRemoveIds.has(params.betId) && params.loseStore.orders.has(params.betId))
+        params.loseStore.removeOrder(params.betId, true);
+    })
+    .catch(() => {
+      params.loseStore.deferPendingVenueOrder(params.betId);
+    })
+    .finally(() => {
+      if (pendingResumeFlights.get(key) === flight)
+        pendingResumeFlights.delete(key);
+    });
+  pendingResumeFlights.set(key, flight);
   return "handled";
 }
 

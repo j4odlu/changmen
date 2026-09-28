@@ -110,15 +110,37 @@ export const useLoseOrderStore = defineStore("loseorder", {
     },
 
     /** 受理后确认场馆：挂原单供 jb 续查（勿重复 POST） */
-    setPendingVenueOrder(betId: number, orderId: string, accountId: number) {
+    setPendingVenueOrder(
+      betId: number,
+      orderId: string,
+      accountId: number,
+      opts: {
+        role?: "target" | "anchor";
+        pendingTarget?: BetSide;
+        conditionId?: string;
+        makeUpEligible?: boolean;
+      } = {},
+    ) {
       const existing = this.orders.get(betId);
       if (!existing)
         return;
       const id = String(orderId ?? "").trim();
       if (!id)
         return;
+      const changed = existing.pendingVenueOrderId !== id;
       existing.pendingVenueOrderId = id;
       existing.pendingVenueAccountId = Number(accountId) || undefined;
+      existing.pendingVenueRole = opts.role ?? existing.pendingVenueRole ?? "target";
+      existing.pendingVenueTarget = opts.pendingTarget ?? existing.pendingVenueTarget;
+      existing.pendingVenueMakeUpEligible
+        = opts.makeUpEligible ?? existing.pendingVenueMakeUpEligible ?? true;
+      const conditionId = String(opts.conditionId ?? "").trim();
+      if (conditionId)
+        existing.pendingVenueConditionId = conditionId;
+      if (changed) {
+        existing.pendingVenueAttempts = 0;
+        existing.pendingVenueNextPollAt = undefined;
+      }
       existing.runtimePhase = "venue_pending";
       this.touchOrdersMap();
       this.persist();
@@ -134,10 +156,27 @@ export const useLoseOrderStore = defineStore("loseorder", {
         return;
       existing.pendingVenueOrderId = undefined;
       existing.pendingVenueAccountId = undefined;
+      existing.pendingVenueRole = undefined;
+      existing.pendingVenueTarget = undefined;
+      existing.pendingVenueConditionId = undefined;
+      existing.pendingVenueNextPollAt = undefined;
+      existing.pendingVenueAttempts = undefined;
+      existing.pendingVenueMakeUpEligible = undefined;
       delete (existing as { pendingPmOrderId?: string }).pendingPmOrderId;
       delete (existing as { pendingPmAccountId?: number }).pendingPmAccountId;
       if (existing.runtimePhase === "venue_pending" || existing.runtimePhase === "pm_pending")
         existing.runtimePhase = undefined;
+      this.touchOrdersMap();
+      this.persist();
+    },
+
+    deferPendingVenueOrder(betId: number) {
+      const existing = this.orders.get(betId);
+      if (!existing?.pendingVenueOrderId)
+        return;
+      const attempts = Math.max(0, Number(existing.pendingVenueAttempts) || 0) + 1;
+      existing.pendingVenueAttempts = attempts;
+      existing.pendingVenueNextPollAt = Date.now() + Math.min(30_000, 1_000 * 2 ** Math.min(attempts - 1, 5));
       this.touchOrdersMap();
       this.persist();
     },
@@ -232,7 +271,7 @@ export const useLoseOrderStore = defineStore("loseorder", {
         const existing = this.orders.get(betId);
         if (!existing)
           continue;
-        if (!active.has(betId)) {
+        if (!active.has(betId) && !existing.pendingVenueOrderId) {
           const linkId = Number(existing.linkId) || 0;
           this.removeOrder(betId, true);
           if (linkId) {

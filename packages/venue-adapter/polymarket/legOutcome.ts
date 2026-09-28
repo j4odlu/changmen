@@ -6,7 +6,6 @@ import { fetchPolymarketConfirmedTradeForOrder } from "./orders";
 import {
   applyPolymarketSettlementToResult,
   buildPolymarketRejectVenueOrder,
-  coercePolymarketFokPollOutcome,
   isPolymarketBetResultFillConfirmed,
   isPolymarketOrderIdRejected,
 } from "./orderStatus";
@@ -24,9 +23,13 @@ export interface PolymarketLegOutcomeDeps {
 }
 
 function pollOutcomeToSettlement(
-  outcome: Exclude<PolymarketPollOutcome, "timeout">,
+  outcome: PolymarketPollOutcome,
 ): VenueLegSettlement {
-  return outcome === "matched" ? "filled" : "unfilled";
+  if (outcome === "matched")
+    return "filled";
+  if (outcome === "unfilled")
+    return "unfilled";
+  return "timeout";
 }
 
 function rejectOrders(
@@ -51,12 +54,12 @@ function needsPmSettlementPoll(result: BetResult): boolean {
   return status === "delayed" || status === "live" || status === "unmatched";
 }
 
-/** Job 仅采信 matched/unfilled；内部 timeout 清掉再 settle（FOK 收尾，须等满官方 sd）。 */
-async function settlePolymarketIgnoringTimeoutJob(
+/** Job 仅采信 matched/unfilled；缺少终态时按官方 sd 再 settle，timeout 保持待确认。 */
+async function settlePolymarketWithJobFallback(
   account: PlatformAccount,
   orderId: string,
   conditionId?: string,
-): Promise<{ outcome: Exclude<PolymarketPollOutcome, "timeout">; row: import("./orderTypes").PolymarketOrderRow | null }> {
+): Promise<{ outcome: PolymarketPollOutcome; row: import("./orderTypes").PolymarketOrderRow | null }> {
   const jobResult = await awaitPolymarketSettlementJob(account, orderId);
   if (jobResult)
     return jobResult;
@@ -64,10 +67,7 @@ async function settlePolymarketIgnoringTimeoutJob(
   const poll = ctx?.poll
     ?? await resolvePolymarketDelayedPollOpts(conditionId ?? ctx?.conditionId);
   const settled = await settlePolymarketDelayedOrder(account, orderId, { poll });
-  return {
-    outcome: coercePolymarketFokPollOutcome(settled.outcome),
-    row: settled.row,
-  };
+  return settled;
 }
 
 async function resolvePolymarketPostAcceptedOutcome(
@@ -76,7 +76,7 @@ async function resolvePolymarketPostAcceptedOutcome(
   deps: PolymarketLegOutcomeDeps,
   conditionId?: string,
 ): Promise<VenueLegOutcome> {
-  // 历史 timeout reject：旧会话残留，再 settle 一次（结果只可能 filled/unfilled）
+  // 历史 timeout reject：旧会话残留，清掉错误拒单标记后重新核对原订单。
   if (result.reject === "timeout") {
     result.reject = null;
     result.pending = true;
@@ -142,12 +142,18 @@ async function resolvePolymarketPostAcceptedOutcome(
 
   const orderId = String(result.orderId ?? "").trim();
   if (orderId && needsPmSettlementPoll(result)) {
-    const settled = await settlePolymarketIgnoringTimeoutJob(account, orderId, conditionId);
+    const settled = await settlePolymarketWithJobFallback(account, orderId, conditionId);
     applyPolymarketSettlementToResult(result, settled.outcome, settled.row);
     const settlement = pollOutcomeToSettlement(settled.outcome);
     if (settlement === "filled") {
       return {
         orders: await fetchSortedVenueOrders(deps),
+        settlement,
+      };
+    }
+    if (settlement === "timeout") {
+      return {
+        orders: settled.row ? await fetchSortedVenueOrders(deps) : [],
         settlement,
       };
     }
@@ -167,12 +173,12 @@ async function resolvePolymarketPostAcceptedOutcome(
 }
 
 /**
- * PM 订单状态层：POST 受理后确认最终 filled / unfilled。
+ * PM 订单状态层：POST 受理后确认 filled / unfilled；本地查询未决则返回 timeout。
  * 编排层（套利收尾、补单 jb、手动下注）统一调用此函数。
  *
  * [changmen 扩展] fill confirmed（matched+takingAmount）→ 直接 filled，不进 delayed poll；
  * 仅拉单一次供绑单。契约见 docs/ARB_VENUE_ORCH_CONTRACT.md。
- * poll 内部 timeout 在此收成 unfilled，不回传编排。
+ * timeout 仅表示结果确认中，不得推断为未成交。
  */
 export async function resolvePolymarketLegOutcome(
   account: PlatformAccount,
@@ -181,7 +187,7 @@ export async function resolvePolymarketLegOutcome(
   conditionId?: string,
 ): Promise<VenueLegOutcome> {
   if (result.pending && result.orderId) {
-    const { outcome, row } = await settlePolymarketIgnoringTimeoutJob(
+    const { outcome, row } = await settlePolymarketWithJobFallback(
       account,
       result.orderId,
       conditionId,
@@ -191,6 +197,12 @@ export async function resolvePolymarketLegOutcome(
     if (settlement === "filled") {
       return {
         orders: await fetchSortedVenueOrders(deps),
+        settlement,
+      };
+    }
+    if (settlement === "timeout") {
+      return {
+        orders: row ? await fetchSortedVenueOrders(deps) : [],
         settlement,
       };
     }

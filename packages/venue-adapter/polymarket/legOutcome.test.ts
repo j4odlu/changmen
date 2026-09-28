@@ -116,7 +116,7 @@ describe("resolvePolymarketLegOutcome", () => {
     expect(fetchVenueOrders).not.toHaveBeenCalled();
   });
 
-  it("poll timeout → settlement unfilled (no timeout leak)", async () => {
+  it("poll timeout → settlement timeout（结果确认中，不推断未成交）", async () => {
     const result = Object.assign(new BetResult("Polymarket", true), {
       pending: true,
       orderId: "0xtimeout",
@@ -128,10 +128,10 @@ describe("resolvePolymarketLegOutcome", () => {
 
     const out = await resolvePolymarketLegOutcome(account(), result, { fetchVenueOrders });
 
-    expect(out.settlement).toBe("unfilled");
-    expect(out.orders[0]?.status).toBe("reject");
-    expect(result.pending).toBe(false);
-    expect(result.reject).toBe("unfilled");
+    expect(out.settlement).toBe("timeout");
+    expect(out.orders).toEqual([]);
+    expect(result.pending).toBe(true);
+    expect(result.reject).toBeNull();
   });
 
   it("honors result.reject without polling venue list", async () => {

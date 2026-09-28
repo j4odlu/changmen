@@ -143,7 +143,7 @@ describe("confirmPolymarketManualSellDelayedFill", () => {
     });
     vi.mocked(awaitPolymarketSettlementJob).mockResolvedValue({
       outcome: "unfilled",
-      row: null,
+      row: { status: "CANCELED" },
     });
 
     await expect(

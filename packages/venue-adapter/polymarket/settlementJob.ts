@@ -1,11 +1,10 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import type { PolymarketOrderRow, PolymarketPollOutcome } from "./orderTypes";
-import { coercePolymarketFokPollOutcome } from "./orderStatus";
 import { settlePolymarketDelayedOrder } from "./orderSettlement";
 
-/** POST delayed 后后台 settle；finalize 仍 A8 wait→sync，sync 时 await 本 Job。outcome 已经过 FOK coerce，不含 timeout。 */
+/** POST delayed 后后台 settle；本地 timeout 保持待确认，不伪造成未成交。 */
 export interface PolymarketSettlementPayload {
-  outcome: Exclude<PolymarketPollOutcome, "timeout">;
+  outcome: PolymarketPollOutcome;
   row: PolymarketOrderRow | null;
 }
 
@@ -73,11 +72,8 @@ async function runSettlementJob(
 ): Promise<PolymarketSettlementPayload> {
   const payload = await settlePolymarketDelayedOrder(account, orderId, opts);
   if (!payload)
-    return { outcome: "unfilled", row: null };
-  return {
-    outcome: coercePolymarketFokPollOutcome(payload.outcome),
-    row: payload.row,
-  };
+    return { outcome: "timeout", row: null };
+  return payload;
 }
 
 /**
@@ -101,7 +97,9 @@ export function startPolymarketSettlementJob(
 
   const promise = runSettlementJob(account, id, opts).finally(() => {
     setTimeout(() => {
-      jobs.delete(key);
+      // 旧 job 的 TTL 不得误删相同 orderId 后续启动的新 job。
+      if (jobs.get(key)?.promise === promise)
+        jobs.delete(key);
     }, JOB_TTL_MS);
   });
 
@@ -118,10 +116,15 @@ export async function awaitPolymarketSettlementJob(
   if (!id || accountId == null)
     return null;
 
-  const entry = jobs.get(settlementJobKey(accountId, id));
+  const key = settlementJobKey(accountId, id);
+  const entry = jobs.get(key);
   if (!entry)
     return null;
-  return entry.promise;
+  const payload = await entry.promise;
+  // timeout 不是可缓存终态；释放后让下一轮按原 orderId 重新做权威查询。
+  if (payload.outcome === "timeout" && jobs.get(key) === entry)
+    jobs.delete(key);
+  return payload;
 }
 
 /** 单笔 Job 清除（旧 timeout 缓存清掉再 settle） */

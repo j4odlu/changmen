@@ -1,4 +1,4 @@
-import type { BetOption } from "@changmen/client-core/models/betOption";
+import { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { AccountStoreContext } from "@/stores/account/context";
 import { ElNotification } from "element-plus";
@@ -76,8 +76,7 @@ async function ensureSharedVaultKeyForAccount(account: PlatformAccount | undefin
 
 /**
  * delayed 受理后：跟到已成交 / 未成交再提示。
- * PF 仍 pendingConfirm（挂单 OPEN）→ 不报成/不成。
- * PM FOK 窗后只有成交/未成交，不会停在 pendingConfirm。
+ * 本地查询耗尽仍 pendingConfirm 时保持待确认，后台退避续查。
  */
 function notifyPendingVenueConfirm(
   store: AccountStoreContext,
@@ -88,34 +87,162 @@ function notifyPendingVenueConfirm(
   option: BetOption,
   toastSeconds: number,
 ) {
-  void (async () => {
+  const orderId = String(result.orderId ?? "").trim();
+  if (!orderId)
+    return;
+  const task: PendingVenueBetConfirmation = {
+    key: `${account.accountId}:${orderId}`,
+    accountId: account.accountId,
+    provider: account.provider,
+    orderId,
+    matchId: option.matchId,
+    venueBetId: option.betId,
+    itemId: option.itemId,
+    betRowId: Number(option.bet?.id ?? option.betId) || 0,
+    target: option.target,
+    betMoney: option.betMoney,
+    odds: option.odds,
+    accountLine,
+    detailHtml,
+    toastSeconds,
+    attempts: 0,
+    nextPollAt: Date.now(),
+  };
+  pendingVenueBetConfirmations.set(task.key, task);
+  persistPendingVenueBetConfirmations();
+  void runPendingVenueBetConfirmation(store, task);
+}
+
+const PENDING_VENUE_CONFIRM_KEY = "PENDING_VENUE_BET_CONFIRM";
+
+interface PendingVenueBetConfirmation {
+  key: string;
+  accountId: number;
+  provider: string;
+  orderId: string;
+  matchId: string;
+  venueBetId: string;
+  itemId: string;
+  betRowId: number;
+  target: BetOption["target"];
+  betMoney: number;
+  odds: number;
+  accountLine: string;
+  detailHtml: string;
+  toastSeconds: number;
+  attempts: number;
+  nextPollAt: number;
+}
+
+function loadPendingVenueBetConfirmations(): Map<string, PendingVenueBetConfirmation> {
+  try {
+    const rows = JSON.parse(sessionStorage.getItem(PENDING_VENUE_CONFIRM_KEY) || "[]") as PendingVenueBetConfirmation[];
+    return new Map(rows.filter(row => row?.key && row.orderId).map(row => [row.key, row]));
+  }
+  catch {
+    return new Map();
+  }
+}
+
+const pendingVenueBetConfirmations = loadPendingVenueBetConfirmations();
+const pendingVenueConfirmationFlights = new Set<string>();
+const pendingVenueConfirmationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function persistPendingVenueBetConfirmations(): void {
+  try {
+    sessionStorage.setItem(
+      PENDING_VENUE_CONFIRM_KEY,
+      JSON.stringify([...pendingVenueBetConfirmations.values()]),
+    );
+  }
+  catch {
+    /* sessionStorage 不可用时仍保留当前页单飞续查 */
+  }
+}
+
+function schedulePendingVenueBetConfirmation(
+  store: AccountStoreContext,
+  task: PendingVenueBetConfirmation,
+): void {
+  if (pendingVenueConfirmationTimers.has(task.key) || pendingVenueConfirmationFlights.has(task.key))
+    return;
+  const delay = Math.max(0, task.nextPollAt - Date.now());
+  const timer = setTimeout(() => {
+    pendingVenueConfirmationTimers.delete(task.key);
+    void runPendingVenueBetConfirmation(store, task);
+  }, delay);
+  pendingVenueConfirmationTimers.set(task.key, timer);
+}
+
+async function runPendingVenueBetConfirmation(
+  store: AccountStoreContext,
+  task: PendingVenueBetConfirmation,
+): Promise<void> {
+  if (pendingVenueConfirmationFlights.has(task.key))
+    return;
+  if (task.nextPollAt > Date.now()) {
+    schedulePendingVenueBetConfirmation(store, task);
+    return;
+  }
+  const account = store.findAccount(task.accountId);
+  if (!account) {
+    task.nextPollAt = Date.now() + 5_000;
+    pendingVenueBetConfirmations.set(task.key, task);
+    persistPendingVenueBetConfirmations();
+    schedulePendingVenueBetConfirmation(store, task);
+    return;
+  }
+
+  pendingVenueConfirmationFlights.add(task.key);
+  try {
+    const result = Object.assign(new BetResult(task.provider as BetOption["type"], true), {
+      orderId: task.orderId,
+      pending: true,
+    });
+    const option = new BetOption(
+      task.provider as BetOption["type"],
+      task.matchId,
+      task.venueBetId,
+      task.itemId,
+      task.betMoney,
+      task.target,
+      task.odds,
+    );
     const { rejected, pendingConfirm } = await settleArbLegUntilTerminal(account, result, {
       rejectWaitSec: 0,
       betOption: option,
     });
-    if (pendingConfirm)
+    if (pendingConfirm) {
+      task.attempts += 1;
+      task.nextPollAt = Date.now() + Math.min(30_000, 1_000 * 2 ** Math.min(task.attempts - 1, 5));
+      pendingVenueBetConfirmations.set(task.key, task);
+      persistPendingVenueBetConfirmations();
       return;
+    }
+
+    pendingVenueBetConfirmations.delete(task.key);
+    persistPendingVenueBetConfirmations();
     const titleSuffix = rejected ? "未成交" : "已成交";
     ElNotification({
       title: "",
       message: bettingResultMessageHtml(
         account.provider,
-        accountLine,
-        detailHtml,
+        task.accountLine,
+        task.detailHtml,
         `<p>${result.message || ""}</p>`,
         titleSuffix,
       ),
       type: rejected ? "error" : "success",
       dangerouslyUseHTMLString: true,
-      duration: toastSeconds === 0 ? 3000 : toastSeconds * 1000,
+      duration: task.toastSeconds === 0 ? 3000 : task.toastSeconds * 1000,
       customClass: `notification ${account.provider}`,
     });
     if (!rejected) {
-      void playOrderSuccessSound({ betRowId: option.betId });
+      void playOrderSuccessSound({ betRowId: task.betRowId || task.venueBetId });
       void publishBettingEvent(option);
       // PF/PM：受理≠成交；成功计数推迟到 filled
       if (isPendingConfirmVenueProvider(account.provider)) {
-        const betRowId = Number(option.bet?.id ?? option.betId);
+        const betRowId = Number(task.betRowId);
         if (Number.isFinite(betRowId) && betRowId > 0)
           markSuccessfulBet(account, betRowId, option.target, option.odds);
       }
@@ -136,7 +263,27 @@ function notifyPendingVenueConfirm(
         /* 侧栏刷新失败不阻断 toast */
       }
     }
-  })();
+  }
+  catch {
+    if (pendingVenueBetConfirmations.has(task.key)) {
+      task.attempts += 1;
+      task.nextPollAt = Date.now() + Math.min(30_000, 1_000 * 2 ** Math.min(task.attempts - 1, 5));
+      pendingVenueBetConfirmations.set(task.key, task);
+      persistPendingVenueBetConfirmations();
+    }
+  }
+  finally {
+    pendingVenueConfirmationFlights.delete(task.key);
+    const current = pendingVenueBetConfirmations.get(task.key);
+    if (current)
+      schedulePendingVenueBetConfirmation(store, current);
+  }
+}
+
+/** 账号加载后恢复手动/正 EV 单的场馆待确认任务。 */
+export function resumePendingVenueConfirmations(store: AccountStoreContext): void {
+  for (const task of pendingVenueBetConfirmations.values())
+    schedulePendingVenueBetConfirmation(store, task);
 }
 
 export async function checkBetting(

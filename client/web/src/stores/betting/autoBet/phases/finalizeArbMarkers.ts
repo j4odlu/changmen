@@ -6,8 +6,7 @@ import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply
 
 /**
  * 场馆未拒单的成功腿写入 BETACCOUNT / BETCOUNT。
- * PF：受理≠成交，仍 pendingConfirm 时不记，等 filled 后再记。
- * PM：settle 只有 filled/unfilled；若仍漏 pendingConfirm 也不记。
+ * PF/PM：受理≠成交，仍 pendingConfirm 时不记，等 filled 后再记。
  * 其它馆：对齐 A8，不看 pendingConfirm。
  */
 export function markArbSuccessLegs(

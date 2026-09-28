@@ -15,7 +15,7 @@ import { bindArbLegOrder, resolveArbBindOrderId } from "@/stores/betting/arbOrde
 import { enqueuePendingOrderBind } from "@/stores/betting/pendingOrderBind";
 import { syncActiveBetLegSettleResult, syncActiveBetPhase } from "@/stores/betting/activeBetRunSync";
 import { useAccountStore } from "@/stores/accountStore";
-import { isPendingConfirmVenueProvider, isPolymarketProvider } from "@changmen/shared/account_multiply";
+import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
 import { wait } from "@changmen/client-core/shared/wait";
 import { saveVenueSettlementLog } from "@/services/bettingLog";
 
@@ -210,8 +210,6 @@ export async function settleBothArbLegs(
       return null;
     if (result?.success) {
       if (pending) {
-        if (isPolymarketProvider(account.provider))
-          return `${leg.type} 🔴拒单`;
         return `${leg.type} 待确认`;
       }
       if (rejected)

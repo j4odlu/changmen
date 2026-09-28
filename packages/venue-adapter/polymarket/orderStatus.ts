@@ -216,17 +216,6 @@ export async function pollPolymarketDelayedOrder(
   return { outcome: "timeout", row: last };
 }
 
-/**
- * 编排可见的 FOK 结果只有 matched / unfilled。
- * poll 内部 `timeout` = 已等满 sd+滞后仍无官方终态 → 按未成交（finalize 可撤则已撤）。
- * 官方 Order Lifecycle 无 timeout 态。
- */
-export function coercePolymarketFokPollOutcome(
-  outcome: PolymarketPollOutcome,
-): Exclude<PolymarketPollOutcome, "timeout"> {
-  return outcome === "matched" ? "matched" : "unfilled";
-}
-
 export function formatPolymarketSettlementMessage(
   orderId: string,
   outcome: PolymarketPollOutcome,
@@ -344,15 +333,13 @@ export function isPolymarketPostedApiFailure(result: BetResult): boolean {
 export function buildPolymarketRejectVenueOrder(
   account: PlatformAccount,
   result: BetResult,
-  outcome: "unfilled" | "timeout",
+  outcome: "unfilled",
   ctx: PolymarketRejectOrderContext = {},
 ): VenueOrder {
   const createAt = Number(ctx.createAt) > 0
     ? Number(ctx.createAt)
     : (Number(result.beginTime) > 0 ? Number(result.beginTime) : Date.now());
-  const orderId = outcome === "timeout"
-    ? String(result.orderId ?? "").trim()
-    : resolvePolymarketRejectOrderId(account, result, "unfilled");
+  const orderId = resolvePolymarketRejectOrderId(account, result, "unfilled");
   return {
     provider: account.provider,
     orderId,
@@ -364,13 +351,11 @@ export function buildPolymarketRejectVenueOrder(
     status: "reject",
     game: String(ctx.game ?? ""),
     match: String(ctx.match ?? ""),
-    bet: outcome === "timeout"
-      ? "待确认超时"
-      : (String(ctx.bet ?? "").trim() || "FOK未成交"),
+    bet: String(ctx.bet ?? "").trim() || "FOK未成交",
     item: String(ctx.item ?? ""),
     pmSide: "buy",
     pmOrigin: "changmen",
-    ...(outcome === "unfilled" ? { pmRejectReason: "unfilled" as const } : {}),
+    pmRejectReason: outcome,
     ...(Number(ctx.link) ? { link: Number(ctx.link) } : {}),
   };
 }

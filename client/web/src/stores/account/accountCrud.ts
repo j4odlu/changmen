@@ -112,6 +112,9 @@ export async function loadAccounts(store: AccountStoreContext, refreshBalances =
       /* adapter 未就绪 */
     }
     void warmPolymarketUserWsFromAccounts(store.accounts);
+    void import("@/stores/account/betGateway")
+      .then(({ resumePendingVenueConfirmations }) => resumePendingVenueConfirmations(store))
+      .catch(() => {});
     await syncPbAccountHosts(store.accounts);
     if (userId) {
       try {

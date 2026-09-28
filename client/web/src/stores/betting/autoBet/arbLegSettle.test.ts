@@ -139,7 +139,7 @@ describe("settleArbLeg (Polymarket)", () => {
     );
   });
 
-  it("timeout poll outcome settles as unfilled and persists reject", async () => {
+  it("timeout poll outcome stays pending and does not persist reject", async () => {
     const acc = account("Polymarket");
     const result = Object.assign(new BetResult("Polymarket", true), {
       pending: true,
@@ -149,15 +149,11 @@ describe("settleArbLeg (Polymarket)", () => {
 
     const out = await settleArbLeg(acc, result);
 
-    expect(out.rejected).toBe(true);
-    expect(out.pendingConfirm).toBe(false);
-    expect(result.reject).toBe("unfilled");
-    expect(persistPolymarketExecutionReject).toHaveBeenCalledWith(
-      acc,
-      result,
-      "unfilled",
-      expect.objectContaining({}),
-    );
+    expect(out.rejected).toBe(false);
+    expect(out.pendingConfirm).toBe(true);
+    expect(result.pending).toBe(true);
+    expect(result.reject).toBeNull();
+    expect(persistPolymarketExecutionReject).not.toHaveBeenCalled();
   });
 
   it("delayed pending matched → refresh venue orders", async () => {
@@ -277,7 +273,7 @@ describe("settleArbLeg (Polymarket)", () => {
     expect(result.reject).toBe("unfilled");
   });
 
-  it("UntilTerminal PM timeout is one round unfilled", async () => {
+  it("untilTerminal PM timeout is one round pending", async () => {
     const acc = account("Polymarket");
     const result = Object.assign(new BetResult("Polymarket", true), {
       pending: true,
@@ -287,10 +283,11 @@ describe("settleArbLeg (Polymarket)", () => {
 
     const out = await settleArbLegUntilTerminal(acc, result);
 
-    expect(out.pendingConfirm).toBe(false);
-    expect(out.rejected).toBe(true);
-    expect(result.reject).toBe("unfilled");
-    expect(persistPolymarketExecutionReject).toHaveBeenCalled();
+    expect(out.pendingConfirm).toBe(true);
+    expect(out.rejected).toBe(false);
+    expect(result.pending).toBe(true);
+    expect(result.reject).toBeNull();
+    expect(persistPolymarketExecutionReject).not.toHaveBeenCalled();
     expect(settlePolymarketDelayedOrder).toHaveBeenCalledTimes(1);
   });
 

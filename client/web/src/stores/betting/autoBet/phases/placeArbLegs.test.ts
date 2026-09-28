@@ -522,7 +522,7 @@ describe("placeArbLegs two-leg report contract", () => {
     expect(retryFailedLeg).not.toHaveBeenCalled();
   });
 
-  it("PM delayed 已受理但 RAY 失败且即时补腿未成：立即入 LoseOrder 补单队列", async () => {
+  it("pm delayed 已受理但 RAY 失败且即时补腿未成：等待 PM 确认，不入普通补单队列", async () => {
     const pmLeg = leg("Polymarket", "Home");
     pmLeg.betMoney = 39.54;
     pmLeg.odds = 2.3256;
@@ -552,15 +552,7 @@ describe("placeArbLegs two-leg report contract", () => {
     expect(out.placeOutcomeA).toBe("accepted_pending_confirm");
     expect(out.placeOutcomeB).toBe("api_failed");
     expect(retryFailedLeg).toHaveBeenCalledTimes(1);
-    expect(enqueueMakeUpOrder).toHaveBeenCalledWith(expect.objectContaining({
-      loseStore,
-      linkId: 1_700_000_000_000,
-      accountId: 2,
-      target: "Away",
-      betOdds: 2.3256,
-      failedLegOdds: 1.55,
-      failedPlatformLabel: "RAY",
-    }));
+    expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
   });
 
   it("Custom + OB/RAY：仍顺序下单", async () => {

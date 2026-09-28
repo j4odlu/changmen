@@ -9,7 +9,7 @@ import {
 } from "@/stores/betting/loseOrderLookup";
 import {
   processPmMakeUpLeg,
-  tryResumePendingVenueMakeUp,
+  schedulePendingVenueMakeUpResume,
 } from "@/stores/betting/loseOrderPm";
 import { processA8RegularVenueMakeUpLeg } from "@/stores/betting/loseOrderRegular";
 import { markSuccessfulBet, readUsedAccounts } from "@/stores/betting/successMarkers";
@@ -67,6 +67,22 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
 
   for (const [betId, order] of loseStore.orders) {
     const ref = resolveLoseOrderBetRef(order, matchStore.matchs, betLookup);
+    const resumed = schedulePendingVenueMakeUpResume({
+      betId,
+      order,
+      match: ref?.match,
+      bet: ref?.bet,
+      accountStore,
+      loseStore,
+      removeIds,
+      setMessage,
+      markSuccess: (account, target) => markSuccessfulBet(account, betId, target),
+    });
+    if (resumed === "handled")
+      continue;
+    // PM/PF delayed 状态观察可以在 makeUp 关闭时运行；普通补单 POST 仍严格受 A8 开关门控。
+    if (!config.makeUp)
+      continue;
     if (!ref) {
       // [A8 可证实] `!ce||!ge` → Z.push(z) 出队（含 link 绑定）
       removeIds.add(betId);
@@ -79,20 +95,6 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
       continue;
     }
     const { match, bet } = ref;
-
-    const resumed = await tryResumePendingVenueMakeUp({
-      betId,
-      order,
-      match,
-      bet,
-      accountStore,
-      loseStore,
-      removeIds,
-      setMessage,
-      markSuccess: account => markSuccessfulBet(account, bet.id, order.target),
-    });
-    if (resumed === "handled")
-      continue;
 
     const bandPrefs = user.extensionPrefs?.makeupOddsBand;
     const useBand = isMakeupOddsBandEnabled(bandPrefs) && !order.isCreateOrder;

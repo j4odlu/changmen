@@ -6,10 +6,12 @@ import { applyArbMakeUpFromRejects } from "@/stores/betting/autoBet/arbMakeUpFro
 
 const enqueueMakeUpOrder = vi.hoisted(() => vi.fn());
 const setPendingVenueOrder = vi.hoisted(() => vi.fn());
+const createOrder = vi.hoisted(() => vi.fn());
 const useLoseOrderStore = vi.hoisted(() =>
   vi.fn(() => ({
     orders: new Map(),
     setPendingVenueOrder,
+    createOrder,
   })),
 );
 
@@ -60,10 +62,12 @@ describe("applyArbMakeUpFromRejects", () => {
     enqueueMakeUpOrder.mockReset();
     enqueueMakeUpOrder.mockResolvedValue(true);
     setPendingVenueOrder.mockReset();
+    createOrder.mockReset();
     useLoseOrderStore.mockReset();
     useLoseOrderStore.mockReturnValue({
       orders: new Map(),
       setPendingVenueOrder,
+      createOrder,
     });
   });
 
@@ -336,6 +340,82 @@ describe("applyArbMakeUpFromRejects", () => {
         failedPlatformLabel: "PredictFun(待确认续查)",
       }),
     );
-    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xpf-timeout", 99);
+    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xpf-timeout", 99, {
+      role: "target",
+      pendingTarget: "Away",
+      conditionId: "b2",
+      makeUpEligible: true,
+    });
+  });
+
+  it("observes pending PM anchor when the opposite leg failed", async () => {
+    const placed = basePlaced();
+    placed.accountA = { accountId: 88, provider: "Polymarket" } as never;
+    placed.accountB = { accountId: 23, provider: "OB" } as never;
+    placed.legA = new BetOption("Polymarket" as never, "m1", "0xcondition", "h1", 25, "Home", 3.125);
+    placed.legB = new BetOption("OB" as never, "m2", "b2", "a1", 70, "Away", 1.47);
+    placed.resultA = Object.assign(new BetResult("Polymarket", true), {
+      orderId: "0xpm-delayed",
+      pending: true,
+    });
+    placed.resultB = new BetResult("OB", false, "API failed");
+    placed.placeOutcomeA = "accepted_pending_confirm";
+    placed.placeOutcomeB = "api_failed";
+
+    const out = await applyArbMakeUpFromRejects(
+      params(),
+      placed,
+      false,
+      false,
+      { ordersA: [], ordersB: [] },
+      { pendingConfirmA: true, pendingConfirmB: false },
+    );
+
+    expect(out).toEqual({ enqueuedForLegA: false, enqueuedForLegB: true });
+    expect(enqueueMakeUpOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: "Away",
+        accountId: 88,
+        failedPlatformLabel: "OB(待确认续查)",
+      }),
+    );
+    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xpm-delayed", 88, {
+      role: "anchor",
+      pendingTarget: "Home",
+      conditionId: "0xcondition",
+      makeUpEligible: true,
+    });
+  });
+
+  it("keeps observing a pending PM order when makeup admission is denied", async () => {
+    enqueueMakeUpOrder.mockResolvedValueOnce(false);
+    const placed = basePlaced();
+    placed.accountA = { accountId: 88, provider: "Polymarket" } as never;
+    placed.accountB = { accountId: 23, provider: "OB" } as never;
+    placed.legA = new BetOption("Polymarket" as never, "m1", "0xcondition", "h1", 25, "Home", 3.125);
+    placed.legB = new BetOption("OB" as never, "m2", "b2", "a1", 70, "Away", 1.47);
+    placed.resultA = Object.assign(new BetResult("Polymarket", true), {
+      orderId: "0xpm-delayed-denied",
+      pending: true,
+    });
+    placed.resultB = new BetResult("OB", false, "API failed");
+
+    const out = await applyArbMakeUpFromRejects(
+      params(),
+      placed,
+      false,
+      false,
+      { ordersA: [], ordersB: [] },
+      { pendingConfirmA: true, pendingConfirmB: false },
+    );
+
+    expect(out).toEqual({ enqueuedForLegA: false, enqueuedForLegB: true });
+    expect(createOrder).toHaveBeenCalledWith(expect.any(Object));
+    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xpm-delayed-denied", 88, {
+      role: "anchor",
+      pendingTarget: "Home",
+      conditionId: "0xcondition",
+      makeUpEligible: false,
+    });
   });
 });

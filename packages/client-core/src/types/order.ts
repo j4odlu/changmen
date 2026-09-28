@@ -20,6 +20,17 @@ export interface LoseOrderRecord {
    */
   pendingVenueOrderId?: string;
   pendingVenueAccountId?: number;
+  /** pending 原单是待补目标腿，还是可能成为补单锚点的腿 */
+  pendingVenueRole?: "target" | "anchor";
+  /** pending 原单真实方向；anchor 模式下与 LoseOrder.target 不同 */
+  pendingVenueTarget?: BetSide;
+  /** PM condition/market id，赛事离盘后仍可按官方 delay 参数续查 */
+  pendingVenueConditionId?: string;
+  /** 后台续查退避状态；刷新后继续生效 */
+  pendingVenueNextPollAt?: number;
+  pendingVenueAttempts?: number;
+  /** delayed 原单确认后，是否允许转入补单；状态观察本身不受此值影响 */
+  pendingVenueMakeUpEligible?: boolean;
   /** [changmen 扩展] 侧栏补单行运行时阶段（刷新后 placing/settling 会清空） */
   runtimePhase?: MakeupRuntimePhase;
 }

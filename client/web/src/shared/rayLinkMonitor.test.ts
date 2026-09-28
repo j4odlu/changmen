@@ -32,4 +32,19 @@ describe("buildRayLinkMonitorModel", () => {
     expect(model.visible).toBe(false);
     expect(model.isLive).toBe(false);
   });
+
+  it("shows that a rejected RAY leg was not made up when automatic makeup is off", () => {
+    const model = buildRayLinkMonitorModel(
+      [{ Link: 12, Type: "RAY", OrderID: "ray-1", Status: "Reject", CreateAt: 100 }],
+      {
+        phase: "syncing",
+        overallLabel: "自动补单已关闭",
+        updatedAt: 200,
+        legs: [{ platform: "RAY", status: "rejected", detail: "自动补单已关闭，未执行补单" }],
+      } as never,
+    );
+    expect(model.label).toBe("拒单已确认");
+    expect(model.summary).toBe("自动补单已关闭，未执行补单");
+    expect(model.isLive).toBe(false);
+  });
 });

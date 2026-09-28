@@ -173,8 +173,8 @@ export async function finalizeArbBet(
   logArbFinalizeTraceEvents(params.trace, linkId, placed, settle, makeup, bet.id);
   markArbSuccessLegs(bet, placed, settle);
   const singleLeg9999Filled = placed.singleLegByRate && (
-    (placed.resultA?.success && placed.accountA && !settle.rejectA)
-    || (placed.resultB?.success && placed.accountB && !settle.rejectB)
+    (placed.resultA?.success && placed.accountA && !settle.rejectA && !settle.pendingConfirmA)
+    || (placed.resultB?.success && placed.accountB && !settle.rejectB && !settle.pendingConfirmB)
   );
   if (singleLeg9999Filled) {
     if (!placed.singleLeg9999MapReserved) {
@@ -190,7 +190,13 @@ export async function finalizeArbBet(
   }
   refreshOrderListAfterBind();
 
-  const outcome = syncArbFinalizeActiveBet(bet.id, placed, settle, makeup);
+  const outcome = syncArbFinalizeActiveBet(
+    bet.id,
+    placed,
+    settle,
+    makeup,
+    params.config.makeUp === true,
+  );
   finishArbExecutionTrace(params, placed, settle, outcome);
   sendArbBettingMessageIfNeeded(params, placed, settle);
 

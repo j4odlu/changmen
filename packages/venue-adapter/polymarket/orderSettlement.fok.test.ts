@@ -133,7 +133,7 @@ describe("finalizePolymarketFokRestingOrder", () => {
     expect(out.row?.size_matched).toBe("4");
   });
 
-  it("after delay window: delayed row is cancelled then unfilled", async () => {
+  it("after delay window: delayed row after cancel attempt stays pending", async () => {
     fetchPolymarketOrderRow.mockResolvedValue({ status: "delayed", size_matched: "0" });
     pmCancelOrder.mockResolvedValue({});
 
@@ -144,10 +144,10 @@ describe("finalizePolymarketFokRestingOrder", () => {
       { graceMs: 0, postCancelAttempts: 1, postCancelIntervalMs: 0 },
     );
     expect(pmCancelOrder).toHaveBeenCalledWith(acc, "0xd");
-    expect(out.outcome).toBe("unfilled");
+    expect(out.outcome).toBe("timeout");
   });
 
-  it("still live after cancel → unfilled (FOK must not rest)", async () => {
+  it("still live after cancel attempt → timeout until authoritative confirmation", async () => {
     fetchPolymarketOrderRow.mockResolvedValue({ status: "live", size_matched: "0" });
     pmCancelOrder.mockResolvedValue({});
 
@@ -159,7 +159,7 @@ describe("finalizePolymarketFokRestingOrder", () => {
     );
 
     expect(pmCancelOrder).toHaveBeenCalledWith(acc, "0xhang");
-    expect(out.outcome).toBe("unfilled");
+    expect(out.outcome).toBe("timeout");
   });
 });
 
@@ -212,7 +212,7 @@ describe("settlePolymarketDelayedOrder FOK resting", () => {
     expect(pmCancelOrder).toHaveBeenCalledWith(acc, "0xws-lag");
   });
 
-  it("poll timeout on delayed (no book row) → cancel then unfilled", async () => {
+  it("poll timeout on delayed (no terminal row) → remains timeout", async () => {
     pollPolymarketDelayedOrder.mockResolvedValue({
       outcome: "timeout",
       row: { status: "delayed", size_matched: "0" },
@@ -225,7 +225,7 @@ describe("settlePolymarketDelayedOrder FOK resting", () => {
       fokGrace: { graceMs: 0, graceIntervalMs: 0, postCancelAttempts: 1, postCancelIntervalMs: 0 },
     });
 
-    expect(out.outcome).toBe("unfilled");
+    expect(out.outcome).toBe("timeout");
     expect(pmCancelOrder).toHaveBeenCalledWith(acc, "0xdelay");
   });
 });

@@ -184,7 +184,13 @@ export async function placeArbLegs(
     }
     else {
       trace?.event("重试", "换腿未成功");
-      if (accountA) {
+      const anchorPlaceOutcome = resolveArbLegPlaceOutcome(attemptedA, resultA);
+      if (anchorPlaceOutcome === "accepted_pending_confirm") {
+        // PM delayed / PF OPEN 与传统场馆拒单检测中的语义一致：尚未确认成交，
+        // 可以保留 A8 即时换腿重试，但不能作为普通补单的成功锚腿。
+        trace?.event("补单", `${legA.type} 结果确认中，暂不进入补单队列`);
+      }
+      else if (accountA) {
         const enqueued = await enqueueMakeUpOrder({
           loseStore: useLoseOrderStore(),
           match,

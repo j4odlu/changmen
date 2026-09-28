@@ -18,10 +18,13 @@ export async function runArbBetRound(ctx: ArbBetRoundContext): Promise<void> {
 
   const config = user.config;
   const hasPending = peekPendingOrderBinds().length > 0;
+  const hasPendingVenueObservation = [...loseStore.orders.values()]
+    .some(order => Boolean(order.pendingVenueOrderId));
   const needMakeUp = Boolean(config.makeUp && loseStore.orders.size);
+  const needLoseOrderWork = needMakeUp || hasPendingVenueObservation;
   const needBetting = Boolean(config.betting && accountsFundingReady(useAccountStore()));
 
-  if (!hasPending && !needMakeUp && !needBetting)
+  if (!hasPending && !needLoseOrderWork && !needBetting)
     return;
 
   // [changmen 扩展] 上一轮 Bind 失败的补绑（不依赖 betting 开关）
@@ -32,6 +35,7 @@ export async function runArbBetRound(ctx: ArbBetRoundContext): Promise<void> {
   if (needBetting)
     await runA8ArbRound({ setMessage });
 
-  if (needMakeUp)
+  // [changmen 扩展] delayed 原单观察不受补单开关控制；processLoseOrders 内仍禁止关闭时 POST 新单。
+  if (needLoseOrderWork)
     await processLoseOrders();
 }

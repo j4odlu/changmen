@@ -4,7 +4,7 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { ActiveBetLegStatus, ActiveBetRunPhase } from "@/types/activeBetRun";
 import type { MakeupRuntimePhase } from "@/types/order";
 import { getActivePinia } from "pinia";
-import { isPendingConfirmVenueProvider, isPolymarketProvider } from "@changmen/shared/account_multiply";
+import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
 import { useActiveBetRunStore } from "@/stores/activeBetRunStore";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
 
@@ -212,11 +212,6 @@ export function syncActiveBetLegSettleResult(
     return;
   }
   if (opts?.pendingConfirm) {
-    // PM：官方无 timeout；窗后未知按未成交。待确认仅 PF。
-    if (isPolymarketProvider(opts?.provider)) {
-      syncActiveBetLeg(betId, side, "rejected", "拒单");
-      return;
-    }
     syncActiveBetLeg(
       betId,
       side,
@@ -404,6 +399,7 @@ export function syncActiveBetAfterRejectSync(
     okA: boolean;
     okB: boolean;
     makeupQueued: boolean;
+    makeupEnabled?: boolean;
     makeupTarget?: "A" | "B";
     makeupPlatform?: string;
     placeOutcomeA?: PlaceOutcome;
@@ -486,15 +482,51 @@ export function syncActiveBetAfterRejectSync(
 
   // 待确认续查：挂补单队列但腿态保持 pending_confirm（jb 续查原单，非立刻重下）
   if (flags.makeupQueued && (pendingA || pendingB)) {
-    store.setPhase(betId, "makeup", "待场馆确认");
+    store.setPhase(
+      betId,
+      flags.makeupEnabled === false ? "settling" : "makeup",
+      flags.makeupEnabled === false ? "待场馆确认 · 自动补单关闭" : "待场馆确认",
+    );
+    // 关闭补单时只展示 delayed 原单确认，不把另一腿标成“补单中”。
+    if (flags.makeupEnabled === false)
+      return;
     if (flags.makeupTarget && flags.makeupPlatform) {
+      const pendingSide = pendingA ? "A" : "B";
+      const pendingIsAnchor = flags.makeupTarget !== pendingSide;
       store.patchLeg(betId, flags.makeupTarget, {
-        status: "pending_confirm",
+        status: pendingIsAnchor ? "makeup" : "pending_confirm",
         platform: flags.makeupPlatform,
-        detail: "待确认 · 下轮续查",
+        detail: pendingIsAnchor ? "等待锚腿确认后补单" : "待确认 · 下轮续查",
       });
-      store.appendLegEvent(betId, flags.makeupTarget, "补单", "续查原单（未确认不补新单）");
+      store.appendLegEvent(
+        betId,
+        flags.makeupTarget,
+        "补单",
+        pendingIsAnchor ? "等待锚腿确认（未确认不补新单）" : "续查原单（未确认不补新单）",
+      );
     }
+    return;
+  }
+
+  // 队列可以按 A8 语义先创建，但关闭补单时不会被主循环消费。
+  if (flags.makeupQueued && flags.makeupEnabled === false) {
+    store.setPhase(betId, "syncing", "自动补单已关闭");
+    if (flags.makeupTarget) {
+      store.patchLeg(betId, flags.makeupTarget, {
+        status: (flags.makeupTarget === "A" && flags.rejectA)
+          || (flags.makeupTarget === "B" && flags.rejectB)
+          ? "rejected"
+          : "failed",
+        detail: "自动补单已关闭，未执行补单",
+      });
+      store.appendLegEvent(
+        betId,
+        flags.makeupTarget,
+        "补单",
+        "自动补单已关闭，未执行",
+      );
+    }
+    store.scheduleTerminalRemoval(betId);
     return;
   }
 

@@ -33,6 +33,16 @@ const CLOSING_KEY = "pmManualSell.closing";
 const closingByBuyId = shallowRef(loadClosing());
 /** resume 防重入 */
 let resumeInFlight = false;
+let resumeTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleResumePmManualSellClosings(delayMs = 5_000): void {
+  if (resumeTimer)
+    return;
+  resumeTimer = setTimeout(() => {
+    resumeTimer = null;
+    void resumePmManualSellClosings();
+  }, delayMs);
+}
 
 function loadClosing(): Map<string, ClosingEntry> {
   const map = new Map<string, ClosingEntry>();
@@ -382,8 +392,12 @@ export async function resumePmManualSellClosings(): Promise<void> {
           }
           // 落库失败：保留 closing 下次再试
         }
-        else {
+        else if (final.outcome === "unfilled") {
           clearClosing(buyId);
+        }
+        else {
+          // pending：保留 closing，并退避续查；绝不重新开放卖出。
+          scheduleResumePmManualSellClosings();
         }
       }
       catch {
@@ -458,6 +472,12 @@ export async function confirmAndSellPmBuyOrder(row: OrderRow): Promise<boolean> 
       return false;
     }
 
+    if (result.pending && result.sellOrderId) {
+      ElMessage.warning(result.error ?? "卖单仍待场馆确认，已保持平仓中");
+      scheduleResumePmManualSellClosings();
+      return false;
+    }
+
     // 异常仍带 sellOrderId：再跑终态，保证离开平仓中
     if (result.sellOrderId) {
       const closing = closingByBuyId.value.get(orderId);
@@ -482,6 +502,11 @@ export async function confirmAndSellPmBuyOrder(row: OrderRow): Promise<boolean> 
           final.partialFill,
         );
         return true;
+      }
+      if (final.outcome === "pending") {
+        ElMessage.warning(final.reason || "卖单仍待场馆确认，已保持平仓中");
+        scheduleResumePmManualSellClosings();
+        return false;
       }
       clearClosing(orderId);
       ElMessage.warning(final.reason || "未成交，可重新卖出");

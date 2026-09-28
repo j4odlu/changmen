@@ -6,18 +6,18 @@ function settledRows(result: PromiseSettledResult<ClientMatchDto[]>): ClientMatc
 
 /** 场馆列表只并列，不合场、不 overlay；POD 插件分别完成身份与盘口匹配。 */
 export async function collectIndependentFootballVenueRows(
-  pmPromise: Promise<ClientMatchDto[]>,
-  obPromise: Promise<ClientMatchDto[]>,
+  ...venuePromises: Promise<ClientMatchDto[]>[]
 ): Promise<ClientMatchDto[]> {
-  const [pm, ob] = await Promise.allSettled([pmPromise, obPromise]);
-  const rows = [...settledRows(pm), ...settledRows(ob)];
+  const settled = await Promise.allSettled(venuePromises);
+  const rows = settled.flatMap(settledRows);
   rows.sort((a, b) => (
     (Number(a.StartTime) || 0) - (Number(b.StartTime) || 0)
     || (Number(a.ID) || 0) - (Number(b.ID) || 0)
   ));
   if (rows.length)
     return rows;
-  const reason = pm.status === "rejected" ? pm.reason : ob.status === "rejected" ? ob.reason : null;
+  const rejected = settled.find(result => result.status === "rejected");
+  const reason = rejected?.status === "rejected" ? rejected.reason : null;
   if (reason)
     throw reason instanceof Error ? reason : new Error(String(reason));
   return [];

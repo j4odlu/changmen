@@ -11,7 +11,7 @@ export type SportLiveOddsReader = {
   getLine?: (oid: string) => number | null;
 };
 
-const VENUE_ORDER = ["Polymarket", "PredictFun", "OB"];
+const VENUE_ORDER = ["Polymarket", "PredictFun", "OB", "RAY"];
 
 function venueRank(venue: string) {
   const i = VENUE_ORDER.indexOf(String(venue || ""));

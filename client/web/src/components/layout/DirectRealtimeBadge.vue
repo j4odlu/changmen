@@ -174,6 +174,9 @@ function openPmStatusPage(): void {
 const venueWsSports = computed(() =>
   venueWsStatuses.value.filter(entry => SPORTS_VENUE_WS_IDS.has(entry.id)),
 );
+const raySportStatus = computed(() =>
+  statuses.value.find(status => status.platform === "RAY") ?? null,
+);
 
 onMounted(() => {
   void startPmMaintenanceFeed();
@@ -353,7 +356,7 @@ function venueWsTooltip(entry: VenueWsStatusEntry): string {
 }
 
 function tooltip(status: DirectRealtimeStatus): string {
-  const lines = [status.platform];
+  const lines = [props.workspace === "sports" && status.platform === "RAY" ? "RAY-S 足球实时赔率 WS" : status.platform];
   if (status.upstreamConnected) {
     if (status.upstreamRoute === "a8")
       lines.push("已连接聚合通道");
@@ -467,7 +470,7 @@ function handleStatusClick(status: DirectRealtimeStatus): void {
   <div
     class="direct-realtime-bar"
     :aria-label="workspace === 'sports'
-      ? 'PM 官网维护检测；体育推送状态 PM-S OB-S HUB'
+      ? 'PM 官网维护检测；体育推送状态 PM-S OB-S RAY-S HUB'
       : 'PM 官网维护检测；直连推送状态 PB IA OB RAY HUB；第二行 PM PF DEX LM'"
   >
     <div class="direct-realtime-row direct-realtime-row--pm-official">
@@ -493,6 +496,20 @@ function handleStatusClick(status: DirectRealtimeStatus): void {
       >
         <span class="direct-realtime-dot" :class="venueWsDotClass(entry)" />
         {{ entry.label }}
+      </span>
+      <span
+        v-if="raySportStatus"
+        class="direct-realtime-item"
+        :class="itemClass(raySportStatus)"
+        :title="tooltip(raySportStatus)"
+        role="button"
+        tabindex="0"
+        @click="handleStatusClick(raySportStatus)"
+        @keydown.enter.prevent="handleStatusClick(raySportStatus)"
+        @keydown.space.prevent="handleStatusClick(raySportStatus)"
+      >
+        <span class="direct-realtime-dot" :class="dotClass(raySportStatus)" />
+        RAY-S
       </span>
     </div>
     <template v-else>

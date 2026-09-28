@@ -587,6 +587,7 @@ describe("sport / esport UI isolation", () => {
     const ws = readFileSync(join(root, "runtime/obSportWs.ts"), "utf8");
     expect(badge).toMatch(/ob-sport/);
     expect(badge).toMatch(/OB-S/);
+    expect(badge).toMatch(/RAY-S/);
     expect(badge).toMatch(/SPORTS_VENUE_WS_IDS/);
     expect(badge).toMatch(/workspace === 'sports'/);
     expect(bar).toMatch(/OB_SPORT_WS_ID/);

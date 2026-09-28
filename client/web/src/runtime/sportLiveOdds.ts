@@ -11,6 +11,7 @@ import {
   onPredictFunSportQuote,
   setPredictFunSportMarketIds,
 } from "@changmen/venue-adapter/predictfun";
+import { createRayRealtimeClient } from "@changmen/venue-adapter/ray";
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 import { useSportOddsStore } from "@/stores/sportOddsStore";
 import { useObSportLiveStore } from "@/stores/obSportLiveStore";
@@ -31,6 +32,7 @@ export const SPORT_OB_MID_CAP = 64;
 const PM = "Polymarket";
 const PF = "PredictFun";
 const OB = "OB";
+const RAY = "RAY";
 
 function decimalOddsFromProbability(price: number): number {
   if (!Number.isFinite(price) || price <= 0 || price >= 1)
@@ -54,6 +56,7 @@ export interface SportSubscribePick {
   predictFunMarketIds: string[];
   obOids: string[];
   obMids: string[];
+  rayOddIds: string[];
 }
 
 /**
@@ -73,6 +76,7 @@ export function pickSportSubscribeIds(
   const pm = new Set<string>();
   const pf = new Set<string>();
   const ob = new Set<string>();
+  const ray = new Set<string>();
   const obMids: string[] = [];
   const seenMids = new Set<string>();
   let used = 0;
@@ -122,6 +126,11 @@ export function pickSportSubscribeIds(
           tryAdd(ob, away || String(item.awayId || "").trim());
           tryAdd(ob, String(item.drawSubscribeId || "").trim());
         }
+        else if (item.type === RAY) {
+          tryAdd(ray, home || String(item.homeId || "").trim());
+          tryAdd(ray, away || String(item.awayId || "").trim());
+          tryAdd(ray, String(item.drawSubscribeId || "").trim());
+        }
       }
     }
   }
@@ -131,6 +140,7 @@ export function pickSportSubscribeIds(
     predictFunMarketIds: [...pf],
     obOids: [...ob],
     obMids,
+    rayOddIds: [...ray],
   };
 }
 
@@ -197,6 +207,7 @@ export function startSportLiveOddsSession(
   const playAt = new Map<string, number>();
   const pendingOdds = new Map<string, number>();
   const pendingLines = new Map<string, number>();
+  let rayOddIds = new Set<string>();
   const flushPendingQuotes = createRafTicker();
   let syncTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -259,6 +270,24 @@ export function startSportLiveOddsSession(
     },
   );
 
+  const rayWs = createRayRealtimeClient();
+  void rayWs.start((message) => {
+    if (stopped || message.source !== "odds" || !Array.isArray(message.odds))
+      return;
+    const quotes: Array<{ id: string; odds: number }> = [];
+    for (const row of message.odds) {
+      const id = String(row.id ?? row.odds_id ?? "").trim();
+      if (!id || !rayOddIds.has(id))
+        continue;
+      quotes.push({ id, odds: Number(row.status) === 1 ? Number(row.odds) || 0 : 0 });
+    }
+    if (quotes.length)
+      sportOdds.saveMany(RAY, quotes);
+  }).catch((err) => {
+    if (!stopped && import.meta.env?.DEV)
+      console.warn("[football] RAY WS skipped", err);
+  });
+
   async function loadObSession() {
     try {
       obSession = readLocalSportObSession();
@@ -275,6 +304,7 @@ export function startSportLiveOddsSession(
     if (stopped)
       return;
     const pick = pickSportSubscribeIds(getMatches());
+    rayOddIds = new Set(pick.rayOddIds);
     setPolymarketSportAssetIds(pick.polymarketAssetIds, force);
     setPredictFunSportMarketIds(pick.predictFunMarketIds, force);
     void loadObSession().then(() => {
@@ -290,7 +320,7 @@ export function startSportLiveOddsSession(
     for (const m of matches) {
       for (const bet of m.bets) {
         for (const item of bet.items) {
-          if (item.type !== PM && item.type !== PF && item.type !== OB)
+          if (item.type !== PM && item.type !== PF && item.type !== OB && item.type !== RAY)
             continue;
           const homeKey = String(item.homeSubscribeId || "").trim();
           const awayKey = String(item.awaySubscribeId || "").trim();
@@ -396,6 +426,7 @@ export function startSportLiveOddsSession(
       if (typeof window !== "undefined")
         window.removeEventListener(SPORT_OB_SESSION_UPDATED, onSportObSession);
       obWs.stop();
+      void rayWs.stop();
       sportOdds.clear();
       obLive.clear();
       clearPolymarketSportHub();

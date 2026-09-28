@@ -62,8 +62,8 @@ const displayedMatchs = computed(() => {
 
 const horizonHint = computed(() => (
   showLive.value
-    ? "预测市场 2小时 · OB 2小时/滚球"
-    : "预测市场 2小时 · OB 2小时（不含滚球）"
+    ? "预测市场 / RAY 2小时 · OB 2小时/滚球"
+    : "预测市场 / RAY 2小时 · OB 2小时（不含滚球）"
 ));
 
 watch(showLive, (v) => {

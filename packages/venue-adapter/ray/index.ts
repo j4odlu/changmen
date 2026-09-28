@@ -11,6 +11,13 @@ export {
   rayWsSourceModeLabel,
 } from "./collect";
 export type { RayWsSourceMode } from "./collect";
+export {
+  fetchRayFootballAsClientMatchDtos,
+  rayFootballRowToClientMatchDto,
+  RAY_FOOTBALL_GAME_ID,
+} from "./sportFootball";
+export { createRayRealtimeClient } from "./realtime";
+export type { RayRealtimeClient, RayRealtimeMessage } from "./realtime";
 
 export const rayAdapter: PlatformAdapter = {
   id: "RAY",

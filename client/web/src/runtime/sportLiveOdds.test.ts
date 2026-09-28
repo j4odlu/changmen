@@ -15,6 +15,7 @@ function makeMatch(opts: {
   pfAwayM?: string;
   obMid?: string;
   obHome?: string;
+  rayHome?: string;
 }): ViewMatch {
   const m = Object.create(ViewMatch.prototype) as ViewMatch;
   m.id = opts.id;
@@ -46,6 +47,16 @@ function makeMatch(opts: {
     item.type = "OB";
     item.homeSubscribeId = opts.obHome;
     item.awaySubscribeId = `${opts.obHome}-a`;
+    bet.items.push(item);
+  }
+  if (opts.rayHome) {
+    const item = Object.create(ViewBetItem.prototype) as ViewBetItem;
+    item.type = "RAY";
+    item.homeId = opts.rayHome;
+    item.awayId = `${opts.rayHome}-a`;
+    item.homeSubscribeId = item.homeId;
+    item.awaySubscribeId = item.awayId;
+    item.drawSubscribeId = `${opts.rayHome}-d`;
     bet.items.push(item);
   }
   m.bets.push(bet);
@@ -128,6 +139,13 @@ describe("pickSportSubscribeIds", () => {
     const pick = pickSportSubscribeIds([m], 100, now);
     expect(pick.obMids).toEqual(["5650335"]);
     expect(pick.obOids.sort()).toEqual(["oid-h", "oid-h-a"]);
+  });
+
+  test("tracks listed RAY odd ids for the shared SocketCluster feed", () => {
+    const now = 1_700_000_000_000;
+    const m = makeMatch({ id: 1, startAt: now, rayHome: "ray-h" });
+    const pick = pickSportSubscribeIds([m], 100, now);
+    expect(pick.rayOddIds.sort()).toEqual(["ray-h", "ray-h-a", "ray-h-d"]);
   });
 
   test("drops 19-digit OB bag ids from C8 mids", () => {

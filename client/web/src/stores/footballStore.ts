@@ -3,6 +3,7 @@ import {
   fetchPmFootballDirect,
   getPmMarketWsSourceMode,
 } from "@changmen/venue-adapter/polymarket";
+import { fetchRayFootballAsClientMatchDtos } from "@changmen/venue-adapter/ray";
 import { getFootballMatchs } from "@/api/esport";
 import { collectIndependentFootballVenueRows } from "@/runtime/footballVenueLists";
 import { fetchObFootballAsClientMatchDtos } from "@/runtime/obSportFootballFetch";
@@ -26,6 +27,7 @@ async function fetchFootballCombined(userName: string) {
   return collectIndependentFootballVenueRows(
     fetchPmFootballRows(userName),
     fetchObRows(),
+    fetchRayFootballAsClientMatchDtos(),
   );
 }
 

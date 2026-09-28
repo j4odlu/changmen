@@ -49,6 +49,14 @@ function stringifyHeaders(headers: L1PolyHeader): Record<string, string> {
   );
 }
 
+async function fetchClobServerTime(gateway: string): Promise<number> {
+  const raw = await polymarketPluginGet<unknown>(`${gateway}/time`);
+  const timestamp = Number(raw);
+  if (!Number.isFinite(timestamp) || timestamp <= 0)
+    throw new Error("Polymarket CLOB 未返回有效服务器时间");
+  return Math.floor(timestamp);
+}
+
 function normalizeApiCreds(raw: ApiKeyRaw | unknown): PolymarketApiCreds | undefined {
   if (!raw || typeof raw !== "object")
     return undefined;
@@ -91,12 +99,21 @@ export async function createOrDerivePolymarketApiCreds(
     chain: polygonChainForRpc(),
     transport: createPolygonHttpTransport(),
   });
-  const headers = stringifyHeaders(await clob.createL1Headers(signer, clob.Chain.POLYGON));
+  const createL1Headers = async (): Promise<Record<string, string>> => {
+    // L1 timestamp is validated by CLOB. Use its clock and generate a fresh
+    // signature for each create/derive request, matching the official client.
+    const timestamp = await fetchClobServerTime(gateway);
+    return stringifyHeaders(
+      await clob.createL1Headers(signer, clob.Chain.POLYGON, undefined, timestamp),
+    );
+  };
 
   let created: PolymarketApiCreds | undefined;
   try {
     created = normalizeApiCreds(
-      await polymarketPluginPost<ApiKeyRaw>(`${gateway}/auth/api-key`, undefined, { headers }),
+      await polymarketPluginPost<ApiKeyRaw>(`${gateway}/auth/api-key`, undefined, {
+        headers: await createL1Headers(),
+      }),
     );
   }
   catch {
@@ -106,7 +123,9 @@ export async function createOrDerivePolymarketApiCreds(
     return { signerAddress, apiCreds: created };
 
   const derived = normalizeApiCreds(
-    await polymarketPluginGet<ApiKeyRaw>(`${gateway}/auth/derive-api-key`, { headers }),
+    await polymarketPluginGet<ApiKeyRaw>(`${gateway}/auth/derive-api-key`, {
+      headers: await createL1Headers(),
+    }),
   );
   if (!derived)
     throw new Error("Polymarket 未返回有效 API 凭证");

@@ -15,6 +15,7 @@ import {
   mapBetMuteGlobal,
   toggleMapMuteGlobal,
 } from "@/extensions/mapBetMute";
+import PmOddsDropSignalPanel from "@/extensions/pmOddsDropSignal/PmOddsDropSignalPanel.vue";
 import {
   filterMatchesForPrematchFull,
   prematchFullMode,
@@ -159,6 +160,7 @@ async function logout() {
     :bet="createLoseBet"
     @close="createLoseDialog.close()"
   />
+  <PmOddsDropSignalPanel />
   <el-container class="common-layout home-view">
     <el-aside width="300px">
       <AppSidebar @logout="logout" />
@@ -255,7 +257,7 @@ async function logout() {
             </el-button>
           </div>
           <div v-if="filteredMatchs.length" class="matchs">
-            <MatchCard v-for="m in filteredMatchs" :key="m.id" :match="m" />
+            <MatchCard v-for="m in filteredMatchs" :key="m.id" :match="m" :data-match-id="m.id" />
           </div>
           <div v-else-if="searchQuery" class="match-empty">
             无匹配比赛

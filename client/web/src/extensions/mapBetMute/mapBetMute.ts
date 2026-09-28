@@ -2,8 +2,9 @@
  * [changmen 扩展] 用户折叠全场或任意地图盘口：禁止该局自动/手动新开仓。
  * Map -1（非地图盘）不可折叠。状态仅 sessionStorage，不进 USERCONFIG / 服务端。
  *
- * 全局开关：默认折叠所有比赛的全场 + 各地图；单行仍可单独展开（例外表）。
- * 关闭全局时清空全部单行 mute 与例外。
+ * 全局开关：可折叠所有比赛的全场 + 各地图；单行仍可单独展开（例外表）。
+ * 全场胜负开关：硬关闭所有 round=0，地图仍正常；关闭时仅清全场单行 mute。
+ * 关闭全部盘口全局开关时清空全部单行 mute 与例外。
  */
 
 import { ref, type Ref } from "vue";
@@ -11,12 +12,14 @@ import { ref, type Ref } from "vue";
 export const MIN_FOLDABLE_MAP = 0;
 export const MAP_BET_MUTE_SESSION_KEY = "MapBetMute";
 export const MAP_BET_MUTE_GLOBAL_SESSION_KEY = "MapBetMuteGlobal";
+export const MAP_BET_MUTE_FULL_MATCH_GLOBAL_SESSION_KEY = "MapBetMuteFullMatchGlobal";
 /** 全局折叠开启时，单独展开的 matchId:round */
 export const MAP_BET_MUTE_GLOBAL_OPEN_SESSION_KEY = "MapBetMuteGlobalOpen";
 
 const mutedKeys: Ref<Set<string>> = ref(new Set());
 const globalOpenKeys: Ref<Set<string>> = ref(new Set());
 const globalMuteAll: Ref<boolean> = ref(false);
+const globalMuteFullMatch: Ref<boolean> = ref(false);
 let loaded = false;
 
 export function canFoldMap(round: number): boolean {
@@ -54,21 +57,21 @@ function writeSessionKeySet(storageKey: string, keys: Set<string>): void {
   }
 }
 
-function readSessionGlobal(): boolean {
+function readSessionFlag(storageKey: string): boolean {
   try {
-    return sessionStorage.getItem(MAP_BET_MUTE_GLOBAL_SESSION_KEY) === "1";
+    return sessionStorage.getItem(storageKey) === "1";
   }
   catch {
     return false;
   }
 }
 
-function writeSessionGlobal(on: boolean): void {
+function writeSessionFlag(storageKey: string, on: boolean): void {
   try {
     if (on)
-      sessionStorage.setItem(MAP_BET_MUTE_GLOBAL_SESSION_KEY, "1");
+      sessionStorage.setItem(storageKey, "1");
     else
-      sessionStorage.removeItem(MAP_BET_MUTE_GLOBAL_SESSION_KEY);
+      sessionStorage.removeItem(storageKey);
   }
   catch {
     /* ignore quota / private mode */
@@ -93,7 +96,8 @@ export function ensureMapBetMuteLoaded(): void {
   loaded = true;
   mutedKeys.value = readSessionKeySet(MAP_BET_MUTE_SESSION_KEY);
   globalOpenKeys.value = readSessionKeySet(MAP_BET_MUTE_GLOBAL_OPEN_SESSION_KEY);
-  globalMuteAll.value = readSessionGlobal();
+  globalMuteAll.value = readSessionFlag(MAP_BET_MUTE_GLOBAL_SESSION_KEY);
+  globalMuteFullMatch.value = readSessionFlag(MAP_BET_MUTE_FULL_MATCH_GLOBAL_SESSION_KEY);
 }
 
 /** 供 Vue computed 订阅；勿在非 UI 路径依赖其响应式 */
@@ -114,9 +118,41 @@ export function mapBetMuteGlobal(): Ref<boolean> {
   return globalMuteAll;
 }
 
+/** 全局仅折叠全场（round=0）；地图盘口不受影响。 */
+export function mapBetMuteFullMatchGlobal(): Ref<boolean> {
+  ensureMapBetMuteLoaded();
+  return globalMuteFullMatch;
+}
+
 export function isMapMuteGlobal(): boolean {
   ensureMapBetMuteLoaded();
   return globalMuteAll.value;
+}
+
+export function isFullMatchMuteGlobal(): boolean {
+  ensureMapBetMuteLoaded();
+  return globalMuteFullMatch.value;
+}
+
+/**
+ * 一键关闭/恢复所有全场胜负。关闭时清掉全场单行折叠，地图单行状态保持不变。
+ */
+export function setFullMatchMuteGlobal(on: boolean): boolean {
+  ensureMapBetMuteLoaded();
+  globalMuteFullMatch.value = on;
+  writeSessionFlag(MAP_BET_MUTE_FULL_MATCH_GLOBAL_SESSION_KEY, on);
+  if (!on) {
+    const next = new Set([...mutedKeys.value].filter(key => !key.endsWith(":0")));
+    if (next.size !== mutedKeys.value.size) {
+      mutedKeys.value = next;
+      writeSessionKeySet(MAP_BET_MUTE_SESSION_KEY, next);
+    }
+  }
+  return on;
+}
+
+export function toggleFullMatchMuteGlobal(): boolean {
+  return setFullMatchMuteGlobal(!isFullMatchMuteGlobal());
 }
 
 /**
@@ -128,7 +164,7 @@ export function setMapMuteGlobal(on: boolean): boolean {
   ensureMapBetMuteLoaded();
   if (on) {
     globalMuteAll.value = true;
-    writeSessionGlobal(true);
+    writeSessionFlag(MAP_BET_MUTE_GLOBAL_SESSION_KEY, true);
     // 开启时清例外，保证「全部折」是干净起点
     if (globalOpenKeys.value.size > 0) {
       globalOpenKeys.value = new Set();
@@ -137,7 +173,7 @@ export function setMapMuteGlobal(on: boolean): boolean {
     return true;
   }
   globalMuteAll.value = false;
-  writeSessionGlobal(false);
+  writeSessionFlag(MAP_BET_MUTE_GLOBAL_SESSION_KEY, false);
   clearPerRowState();
   return false;
 }
@@ -172,6 +208,8 @@ export function isMapMuteActive(
     return false;
   ensureMapBetMuteLoaded();
   const key = muteKey(matchId, round);
+  if (globalMuteFullMatch.value && round === 0)
+    return true;
   if (globalMuteAll.value)
     return !globalOpenKeys.value.has(key);
   return mutedKeys.value.has(key);
@@ -210,6 +248,8 @@ export function toggleMapMute(matchId: number, round: number): boolean {
   ensureMapBetMuteLoaded();
   if (!canFoldMap(round))
     return false;
+  if (globalMuteFullMatch.value && round === 0)
+    return true;
   const key = muteKey(matchId, round);
   if (globalMuteAll.value) {
     const next = new Set(globalOpenKeys.value);
@@ -237,9 +277,11 @@ export function resetMapBetMuteForTests(): void {
   mutedKeys.value = new Set();
   globalOpenKeys.value = new Set();
   globalMuteAll.value = false;
+  globalMuteFullMatch.value = false;
   try {
     sessionStorage.removeItem(MAP_BET_MUTE_SESSION_KEY);
     sessionStorage.removeItem(MAP_BET_MUTE_GLOBAL_SESSION_KEY);
+    sessionStorage.removeItem(MAP_BET_MUTE_FULL_MATCH_GLOBAL_SESSION_KEY);
     sessionStorage.removeItem(MAP_BET_MUTE_GLOBAL_OPEN_SESSION_KEY);
   }
   catch {

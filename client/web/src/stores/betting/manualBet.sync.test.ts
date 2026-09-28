@@ -59,6 +59,7 @@ vi.mock("element-plus", () => ({
 }));
 
 import { ElMessageBox } from "element-plus";
+import { resetMapBetMuteForTests, setFullMatchMuteGlobal } from "@/extensions/mapBetMute";
 import { resetPrematchFullOnlyForTests, setPrematchFullMode } from "@/extensions/prematchFullOnly";
 import { runManualBet } from "@/stores/betting/manualBet";
 
@@ -82,6 +83,7 @@ describe("runManualBet post-success sync", () => {
       tip: { pmOptimisticSaved: true },
     });
     resetPrematchFullOnlyForTests();
+    resetMapBetMuteForTests();
     vi.mocked(ElMessageBox.prompt).mockClear();
     vi.mocked(ElMessageBox.alert).mockClear();
   });
@@ -186,6 +188,35 @@ describe("runManualBet post-success sync", () => {
       homeName: "A",
       awayName: "B",
       getBetName: () => "Map 1",
+      items: [],
+    } as unknown as ViewBet;
+    const item = {
+      type: "Polymarket",
+      getOdds: () => 1.8,
+    } as unknown as ViewBetItem;
+
+    await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
+
+    expect(ElMessageBox.prompt).not.toHaveBeenCalled();
+    expect(ElMessageBox.alert).not.toHaveBeenCalled();
+    expect(getAccount).not.toHaveBeenCalled();
+  });
+
+  it("[changmen 扩展] 全场胜负总关不能绕过手动下注核心入口", async () => {
+    setFullMatchMuteGlobal(true);
+    const match = {
+      id: 1,
+      title: "A vs B",
+      bets: [],
+      liveRound: 0,
+      startAt: Date.now() + 86_400_000,
+    } as unknown as ViewMatch;
+    const bet = {
+      id: 1,
+      round: 0,
+      homeName: "A",
+      awayName: "B",
+      getBetName: () => "Full Match",
       items: [],
     } as unknown as ViewBet;
     const item = {

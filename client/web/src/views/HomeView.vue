@@ -12,7 +12,9 @@ import ActiveBetRunView from "@/components/order/ActiveBetRunView.vue";
 import MakeupCalcBar from "@/components/user/MakeupCalcBar.vue";
 import { useExtensionGate } from "@/composables/useExtensionGate";
 import {
+  mapBetMuteFullMatchGlobal,
   mapBetMuteGlobal,
+  toggleFullMatchMuteGlobal,
   toggleMapMuteGlobal,
 } from "@/extensions/mapBetMute";
 import PmOddsDropSignalPanel from "@/extensions/pmOddsDropSignal/PmOddsDropSignalPanel.vue";
@@ -52,6 +54,14 @@ const mapMuteGlobalOn = computed(() => muteGlobalRef.value);
 
 function onToggleMapMuteGlobal() {
   toggleMapMuteGlobal();
+}
+
+/** [changmen 扩展] 一键关闭所有全场胜负；地图盘口保持正常 */
+const muteFullMatchGlobalRef = mapBetMuteFullMatchGlobal();
+const fullMatchMuteGlobalOn = computed(() => muteFullMatchGlobalRef.value);
+
+function onToggleFullMatchMuteGlobal() {
+  toggleFullMatchMuteGlobal();
 }
 
 /** [changmen 扩展] 只看赛前全场；默认 off，与折叠正交 */
@@ -202,6 +212,18 @@ async function logout() {
               @click="onToggleMapMuteGlobal"
             >
               {{ mapMuteGlobalOn ? "开" : "关" }} 全部盘口
+            </button>
+            <button
+              type="button"
+              class="map-mute-global-toggle"
+              :class="{ 'is-on': fullMatchMuteGlobalOn }"
+              :title="fullMatchMuteGlobalOn
+                ? '恢复全部全场胜负；地图盘口不受影响'
+                : '一键折叠并禁止所有全场胜负新开仓；地图盘口保持正常'"
+              :aria-pressed="fullMatchMuteGlobalOn"
+              @click="onToggleFullMatchMuteGlobal"
+            >
+              {{ fullMatchMuteGlobalOn ? "开" : "关" }} 全场胜负
             </button>
             <div class="prematch-full-toggle-group">
               <button

@@ -3,17 +3,21 @@ import {
   MIN_FOLDABLE_MAP,
   MAP_BET_MUTE_SESSION_KEY,
   MAP_BET_MUTE_GLOBAL_SESSION_KEY,
+  MAP_BET_MUTE_FULL_MATCH_GLOBAL_SESSION_KEY,
   MAP_BET_MUTE_GLOBAL_OPEN_SESSION_KEY,
   canFoldMap,
   clearMapMute,
   isMapMuteActive,
   isMapMuteGlobal,
+  isFullMatchMuteGlobal,
   isMapMuted,
   muteKey,
   resetMapBetMuteForTests,
   setMapMuteGlobal,
+  setFullMatchMuteGlobal,
   toggleMapMute,
   toggleMapMuteGlobal,
+  toggleFullMatchMuteGlobal,
 } from "@/extensions/mapBetMute/mapBetMute";
 
 function mockSessionStorage() {
@@ -120,6 +124,28 @@ describe("mapBetMute", () => {
     expect(isMapMuteActive(100, 3, 3)).toBe(false);
     expect(isMapMuteActive(100, 3, 2)).toBe(true);
     expect(isMapMuteActive(100, 0, 3)).toBe(true);
+  });
+
+  it("full-match global mute closes round 0 and leaves maps normal", () => {
+    expect(isFullMatchMuteGlobal()).toBe(false);
+    expect(toggleFullMatchMuteGlobal()).toBe(true);
+    expect(sessionStorage.getItem(MAP_BET_MUTE_FULL_MATCH_GLOBAL_SESSION_KEY)).toBe("1");
+    expect(isMapMuteActive(100, 0, 0)).toBe(true);
+    expect(isMapMuteActive(100, 0, 3)).toBe(true);
+    expect(isMapMuteActive(100, 1, 0)).toBe(false);
+    expect(isMapMuteActive(100, 3, 3)).toBe(false);
+    expect(toggleMapMute(100, 0)).toBe(true);
+    expect(isMapMuteActive(100, 0, 0)).toBe(true);
+  });
+
+  it("turning full-match global mute off restores full matches without changing map mutes", () => {
+    toggleMapMute(100, 0);
+    toggleMapMute(100, 2);
+    setFullMatchMuteGlobal(true);
+    expect(setFullMatchMuteGlobal(false)).toBe(false);
+    expect(isMapMuteActive(100, 0, 0)).toBe(false);
+    expect(isMapMuteActive(100, 2, 0)).toBe(true);
+    expect(sessionStorage.getItem(MAP_BET_MUTE_FULL_MATCH_GLOBAL_SESSION_KEY)).toBeNull();
   });
 
   it("turning global off clears all per-row mutes and exceptions", () => {

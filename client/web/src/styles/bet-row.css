@@ -25,6 +25,9 @@
 .matchs .bet .map-mute-toggle:hover {
   border-color:hsla(0,0%,100%,.7);background:#000c;
 }
+.matchs .bet .map-mute-toggle:disabled {
+  cursor:not-allowed;opacity:.75;border-color:var(--cm-color-warning, #e6a23c);color:var(--cm-color-warning, #e6a23c);
+}
 .matchs .bet:has(.map-mute-toggle) .bet-title {
   padding-right:28px;
 }

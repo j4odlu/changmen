@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   resetMapBetMuteForTests,
+  setFullMatchMuteGlobal,
   toggleMapMute,
 } from "@/extensions/mapBetMute";
 import {
@@ -108,6 +109,26 @@ describe("executeArbBet orchestration", () => {
     });
     expect(prepareArbAttempt).not.toHaveBeenCalled();
     expect(recordArbAttemptMetric).not.toHaveBeenCalled();
+  });
+
+  it("[changmen 扩展] 全场胜负总开关只拦全场，地图仍进 prepare", async () => {
+    setFullMatchMuteGlobal(true);
+    await executeArbBet({
+      match: { id: 1, liveRound: 0 } as never,
+      bet: { id: 10, round: 0 } as never,
+      config: createDefaultUserConfig(),
+      setMessage: vi.fn(),
+    });
+    expect(prepareArbAttempt).not.toHaveBeenCalled();
+
+    prepareArbAttempt.mockResolvedValue(null);
+    await executeArbBet({
+      match: { id: 1, liveRound: 0 } as never,
+      bet: { id: 11, round: 1 } as never,
+      config: createDefaultUserConfig(),
+      setMessage: vi.fn(),
+    });
+    expect(prepareArbAttempt).toHaveBeenCalledOnce();
   });
 
   it("预检通过后 place 失败结果仍调用 finalize", async () => {

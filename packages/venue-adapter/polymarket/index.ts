@@ -4,6 +4,7 @@ import { startPolymarketCollector } from "./collect";
 
 export { startPolymarketCollector };
 export * from "./api";
+export * from "./balance";
 export * from "./bet";
 export * from "./orderStatus";
 export * from "./orderSettlement";

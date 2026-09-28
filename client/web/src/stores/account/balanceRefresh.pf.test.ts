@@ -10,6 +10,7 @@ const refreshPfBalance = vi.hoisted(() => vi.fn(async () => ({
   orderCount: 3,
 })));
 const getBalance = vi.hoisted(() => vi.fn());
+const fetchPolymarketBalanceViaTransport = vi.hoisted(() => vi.fn());
 const pmAccountShowsUnlockPending = vi.hoisted(() => vi.fn(() => false));
 const fetchObSportAmountForAccount = vi.hoisted(() => vi.fn());
 
@@ -30,6 +31,10 @@ vi.mock("@/runtime/venueAdapters", () => ({
   getAdapter: () => ({
     provider: { getBalance },
   }),
+}));
+
+vi.mock("@changmen/venue-adapter/polymarket", () => ({
+  fetchPolymarketBalanceViaTransport: (...args: unknown[]) => fetchPolymarketBalanceViaTransport(...args),
 }));
 
 vi.mock("@/security/pmVault", () => ({
@@ -88,6 +93,53 @@ describe("refreshAccountBalance PredictFun", () => {
 
     expect(getBalance).not.toHaveBeenCalled();
     expect(acc.balance).toBeUndefined();
+  });
+});
+
+describe("refreshAccountBalance Polymarket", () => {
+  beforeEach(() => {
+    updateBalance.mockClear();
+    getBalance.mockReset();
+    fetchPolymarketBalanceViaTransport.mockReset();
+    pmAccountShowsUnlockPending.mockReturnValue(false);
+  });
+
+  it("uses direct-first transport and persists the returned balance once", async () => {
+    fetchPolymarketBalanceViaTransport.mockResolvedValue({ balance: 12.5, currency: "USDT" });
+    const { refreshAccountBalance } = await import("./balanceRefresh");
+    const acc = new PlatformAccount({
+      accountId: 47,
+      playerName: "pm",
+      provider: "Polymarket",
+      token: "token",
+    });
+
+    await refreshAccountBalance({} as never, acc);
+
+    expect(fetchPolymarketBalanceViaTransport).toHaveBeenCalledWith(acc);
+    expect(getBalance).not.toHaveBeenCalled();
+    expect(acc.balance).toBe(12.5);
+    expect(acc.currency).toBe("USDT");
+    expect(updateBalance).toHaveBeenCalledTimes(1);
+    expect(updateBalance).toHaveBeenCalledWith(47, 12.5);
+  });
+
+  it("keeps the last good balance when both direct and VPS transport fail", async () => {
+    fetchPolymarketBalanceViaTransport.mockRejectedValue(new Error("PM transport unavailable"));
+    const { refreshAccountBalance } = await import("./balanceRefresh");
+    const acc = new PlatformAccount({
+      accountId: 48,
+      playerName: "pm",
+      provider: "Polymarket",
+      token: "token",
+    });
+    acc.balance = 9;
+
+    await refreshAccountBalance({} as never, acc);
+
+    expect(acc.balance).toBe(9);
+    expect(acc.balanceStale).toBe(true);
+    expect(updateBalance).not.toHaveBeenCalled();
   });
 });
 

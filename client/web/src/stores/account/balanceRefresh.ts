@@ -61,11 +61,7 @@ function noteAuthFailure(account: PlatformAccount, msg: string) {
   }
 }
 
-/**
- * PM 已存账号：一律 Pm_RefreshBalance（VPS 直连 CLOB）。
- * 不跟 PM_HTTP_MODE 走——extension 模式仍从用户本机出网，没翻墙会刷不出余额；
- * 保存前探测（无 accountId）仍走 Provider.getBalance。
- */
+/** PM 已存账号：official 可达时本机直连优先，短超时失败后仅本次回退 VPS。 */
 async function fetchVenueBalance(account: PlatformAccount): Promise<AccountBalanceResult | undefined> {
   const providerId = String(account.provider ?? "").toLowerCase();
   // PredictFun：链上 USDT（OrderBuilder.balanceOf）为展示真源；不再读中转 total_balance
@@ -74,14 +70,8 @@ async function fetchVenueBalance(account: PlatformAccount): Promise<AccountBalan
     return provider?.getBalance?.(account);
   }
   if (providerId === "polymarket" && account.accountId) {
-    const { refreshPmBalance } = await import("@/api/account");
-    const info = await refreshPmBalance(account.accountId);
-    if (!info || info.balance == null)
-      return undefined;
-    return {
-      balance: Number(info.balance),
-      currency: info.currency ?? Currency.USDT,
-    };
+    const { fetchPolymarketBalanceViaTransport } = await import("@changmen/venue-adapter/polymarket");
+    return fetchPolymarketBalanceViaTransport(account);
   }
   const provider = getAdapter(account.provider)?.provider;
   return provider?.getBalance?.(account);

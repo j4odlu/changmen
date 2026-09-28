@@ -85,4 +85,29 @@ describe("polymarket transport", () => {
       },
     });
   });
+
+  test("L1 api-key 请求保留 POLY_NONCE", async () => {
+    vi.mocked(changmenPmHttpRequest).mockResolvedValue({
+      status: 200,
+      text: JSON.stringify({ apiKey: "key", secret: "secret", passphrase: "pass" }),
+    });
+    await polymarketPluginPost("https://clob.polymarket.com/auth/api-key", undefined, {
+      headers: {
+        POLY_ADDRESS: "0xabc",
+        POLY_SIGNATURE: "sig",
+        POLY_TIMESTAMP: "1",
+        POLY_NONCE: "0",
+      },
+    });
+    expect(changmenPmHttpRequest).toHaveBeenCalledWith({
+      method: "POST",
+      url: "https://clob.polymarket.com/auth/api-key",
+      polyHeaders: {
+        POLY_ADDRESS: "0xabc",
+        POLY_SIGNATURE: "sig",
+        POLY_TIMESTAMP: "1",
+        POLY_NONCE: "0",
+      },
+    });
+  });
 });

@@ -15,10 +15,18 @@ describe("clob_proxy", () => {
 
   test("pickPolymarketPolyHeaders keeps POLY_* only", () => {
     expect(pickPolymarketPolyHeaders({
+      POLY_ADDRESS: "0xabc",
+      POLY_SIGNATURE: "sig",
+      POLY_TIMESTAMP: "1",
+      POLY_NONCE: "0",
       POLY_API_KEY: "k",
       POLY_PASSPHRASE: "p",
       Host: "ignored",
     })).toEqual({
+      POLY_ADDRESS: "0xabc",
+      POLY_SIGNATURE: "sig",
+      POLY_TIMESTAMP: "1",
+      POLY_NONCE: "0",
       POLY_API_KEY: "k",
       POLY_PASSPHRASE: "p",
     });

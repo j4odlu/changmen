@@ -11,6 +11,8 @@ const POLY_HEADER_NAMES = [
   "POLY_ADDRESS",
   "POLY_SIGNATURE",
   "POLY_TIMESTAMP",
+  // Required by CLOB L1 create/derive api-key authentication.
+  "POLY_NONCE",
   "POLY_API_KEY",
   "POLY_PASSPHRASE",
 ];

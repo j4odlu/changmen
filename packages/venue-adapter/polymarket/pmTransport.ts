@@ -57,6 +57,10 @@ const POLY_HEADER_NAMES = [
   "POLY_ADDRESS",
   "POLY_SIGNATURE",
   "POLY_TIMESTAMP",
+  // L1 create/derive api-key requests require the nonce emitted by
+  // createL1Headers. L2 requests do not use it, but it must survive the
+  // browser -> VPS proxy boundary for credential generation.
+  "POLY_NONCE",
   "POLY_API_KEY",
   "POLY_PASSPHRASE",
 ] as const;

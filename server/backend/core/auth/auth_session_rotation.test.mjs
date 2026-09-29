@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import crypto from "node:crypto";
 
 const mocks = vi.hoisted(() => {
   const poolQuery = vi.fn();
@@ -155,5 +156,47 @@ describe("opaque refresh rotation", () => {
       replayed: true,
       revoked: true,
     });
+  });
+});
+
+describe("browser session lifetime and concurrent tabs", () => {
+  const secret = "s".repeat(43);
+  const cookie = `bs1.8f13916f-262e-43f9-9e7b-b825920b8a12.${secret}`;
+  function row(overrides = {}) {
+    return {
+      id: "8f13916f-262e-43f9-9e7b-b825920b8a12", user_id: "u1", jwt_session_id: "s1",
+      secret_hash: crypto.createHash("sha256").update(secret).digest("hex"), cert_cn: "gb14",
+      idle_expires_at: Date.now() + 60_000, absolute_expires_at: Date.now() + 86400_000,
+      ...overrides,
+    };
+  }
+  it("allows concurrent football/esports restoration without revoking or rotating the cookie", async () => {
+    mocks.poolQuery.mockResolvedValue({ rows: [row()], rowCount: 1 });
+    const results = await Promise.all([getBrowserSession(cookie, { certCn: "GB14" }), getBrowserSession(cookie, { certCn: "gb14" })]);
+    expect(results).toEqual([expect.objectContaining({ userId: "u1", jwtSessionId: "s1" }), expect.objectContaining({ userId: "u1", jwtSessionId: "s1" })]);
+    expect(mocks.poolQuery.mock.calls.every(([sql]) => !/INSERT|revoked_at\s*=/.test(sql))).toBe(true);
+  });
+  it.each([
+    [{ idle_expires_at: 1 }, "BROWSER_IDLE_EXPIRED"],
+    [{ absolute_expires_at: 1 }, "BROWSER_ABSOLUTE_EXPIRED"],
+    [{ cert_cn: "another-cert" }, "CERT_MISMATCH"],
+  ])("retains expiry and certificate constraints with a diagnostic reason %s", async (overrides, reasonCode) => {
+    mocks.poolQuery.mockResolvedValue({ rows: [row(overrides)] });
+    expect(await getBrowserSession(cookie, { certCn: "gb14" })).toMatchObject({ invalid: true, reasonCode });
+    expect(mocks.poolQuery).toHaveBeenCalledTimes(1);
+  });
+  it("retains explicit logout/new-login revocations", async () => {
+    mocks.poolQuery.mockResolvedValue({ rows: [row({ revoked_at: Date.now(), revoke_reason: "LOGOUT" })] });
+    expect(await getBrowserSession(cookie, { certCn: "gb14" })).toMatchObject({ revoked: true, reasonCode: "LOGOUT" });
+  });
+  it("does not extend the idle expiry past the absolute lifetime", async () => {
+    const expiry = Date.now() + 60_000;
+    mocks.poolQuery.mockResolvedValue({ rows: [row({ absolute_expires_at: expiry })] });
+    await getBrowserSession(cookie, { certCn: "gb14" });
+    expect(mocks.poolQuery.mock.calls[1][1][2]).toBe(expiry);
+  });
+  it("keeps DB errors temporary even after looking up the session", async () => {
+    mocks.poolQuery.mockResolvedValueOnce({ rows: [row()] }).mockRejectedValueOnce(new Error("write timeout"));
+    expect(await getBrowserSession(cookie, { certCn: "gb14" })).toEqual({ temporary: true });
   });
 });

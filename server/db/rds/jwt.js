@@ -42,7 +42,7 @@ export function signJwt(payload, secret, ttlSec) {
   return `${h}.${p}.${sig}`;
 }
 
-export function verifyJwt(token, secret) {
+export function verifyJwt(token, secret, { allowExpired = false } = {}) {
   const parts = String(token || "").split(".");
   if (parts.length !== 3)
     return null;
@@ -60,7 +60,7 @@ export function verifyJwt(token, secret) {
     return null;
   try {
     const payload = JSON.parse(Buffer.from(p, "base64url").toString("utf8"));
-    if (!Number.isFinite(payload.exp) || payload.exp * 1000 < Date.now())
+    if (!Number.isFinite(payload.exp) || (!allowExpired && payload.exp * 1000 <= Date.now()))
       return null;
     const hasModernClaims = payload.iss != null || payload.aud != null || payload.jti != null;
     if (hasModernClaims && (payload.iss !== JWT_ISSUER || payload.aud !== JWT_AUDIENCE || !payload.jti))

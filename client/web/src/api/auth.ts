@@ -1,27 +1,37 @@
 import type { LoginInfo, UserInfo } from "@/types/esport";
-import { clearAuthSession, post, setCookieAuthMode, setRefreshToken, setToken, unwrap } from "@/api/client";
+import { advanceAuthSessionVersion, beginAuthTransition, clearAuthSession, getAuthSessionVersion, isAuthSessionCurrent, post, setCookieAuthMode, setRefreshToken, setToken, unwrap } from "@/api/client";
+import { withAuthLock } from "@/lib/authLock";
 
 export async function login(userName: string, password: string) {
-  const data = await post<LoginInfo>("Client_Login", { userName, password });
-  const info = unwrap(data);
-  if (!info?.token)
-    throw new Error(data.msg || "登录失败");
-  setCookieAuthMode(info.sessionMode === "cookie");
-  setToken(info.token);
-  if (info.sessionMode === "cookie")
-    setRefreshToken(null);
-  else if (info.refreshToken)
-    setRefreshToken(info.refreshToken);
-  return info;
+  return withAuthLock(async () => {
+    const finishTransition = beginAuthTransition();
+    try {
+      const data = await post<LoginInfo>("Client_Login", { userName, password });
+      const info = unwrap(data);
+      if (!info?.token)
+        throw new Error(data.msg || "登录失败");
+      setCookieAuthMode(info.sessionMode === "cookie");
+      setToken(info.token);
+      setRefreshToken(info.sessionMode === "cookie" ? null : info.refreshToken || null);
+      advanceAuthSessionVersion();
+      return info;
+    }
+    finally {
+      finishTransition();
+    }
+  });
 }
 
 export async function logout() {
-  try {
-    await post<null>("Client_Logout");
-  }
-  finally {
+  const version = getAuthSessionVersion();
+  return withAuthLock(async () => {
+    if (!isAuthSessionCurrent(version))
+      return;
+    const request = post<null>("Client_Logout");
+    // 请求已携带旧 token；立即使在途续期失效，防止退出后被慢响应重新登录。
     clearAuthSession();
-  }
+    await request;
+  });
 }
 
 export async function getUserInfo() {

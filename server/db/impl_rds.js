@@ -10,6 +10,7 @@
 export {
   authBrowserSession,
   authGetUser,
+  authGetUserStatus,
   authPeekAccessToken,
   authRefreshToken,
   authSignIn,

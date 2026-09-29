@@ -116,6 +116,8 @@ export const useUserStore = defineStore("user", {
     async fetchUserInfo() {
       if (!getToken()) {
         this.ready = false;
+        if (hasAuthSession())
+          throw new Error("登录会话暂未恢复，请稍后重试");
         return;
       }
       try {
@@ -163,11 +165,10 @@ export const useUserStore = defineStore("user", {
       this.sessionChecked = false;
       this.sessionRestoreError = "";
       // 提前启动 JWT refresh，防止 token 在使用中到期
-      const rft = getRefreshToken();
-      if (rft || isCookieAuthMode()) {
-        await ensureTokenRefresh();
-      }
       try {
+        const rft = getRefreshToken();
+        if (rft || isCookieAuthMode())
+          await ensureTokenRefresh();
         await this.fetchUserInfo();
         this.sessionRestoreError = "";
         return true;

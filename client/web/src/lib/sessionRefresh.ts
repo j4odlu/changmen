@@ -1,8 +1,7 @@
-import { getRefreshToken, getToken, isCookieAuthMode } from "@/api/client";
+import { getRefreshToken, isCookieAuthMode } from "@/api/client";
 
 /** JWT 模式：Client_RefreshToken 续期 */
 export async function ensureTokenRefresh(): Promise<void> {
-  const jwt = getToken();
   const rft = getRefreshToken();
   if (isCookieAuthMode()) {
     const { refreshJwtSession, startJwtAutoRefresh } = await import("@/lib/jwtRefresh");
@@ -10,7 +9,7 @@ export async function ensureTokenRefresh(): Promise<void> {
     startJwtAutoRefresh();
     return;
   }
-  if (!jwt || !rft)
+  if (!rft)
     return;
 
   const { refreshJwtSession, startJwtAutoRefresh } = await import("@/lib/jwtRefresh");

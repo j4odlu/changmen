@@ -203,6 +203,7 @@ export const {
   authBrowserSession,
   authSignOut,
   authGetUser,
+  authGetUserStatus,
   authPeekAccessToken,
   authRefreshToken,
   recordAuthAudit,

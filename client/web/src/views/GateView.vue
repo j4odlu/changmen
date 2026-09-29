@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getToken } from "@/api/client";
+import { hasAuthSession } from "@/api/client";
 import LoginPanel from "@/components/auth/LoginPanel.vue";
 import SessionRestoreLoader from "@/components/layout/SessionRestoreLoader.vue";
 import PluginIntroShell from "@/components/layout/PluginIntroShell.vue";
@@ -34,7 +34,7 @@ const showComingSoon = computed(
 );
 /** restoreSession 进行中（有 token 且尚未判定完成）时显示会话恢复加载动画 */
 const showSessionRestore = computed(
-  () => Boolean(getToken()) && !sessionReady.value && !sessionChecked.value,
+  () => hasAuthSession() && !sessionReady.value && !sessionChecked.value,
 );
 
 async function onLoginSuccess() {

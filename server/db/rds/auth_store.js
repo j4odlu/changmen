@@ -273,7 +273,7 @@ function _sessionCacheEvictUser(userId) {
 /** 无 active_session_id 时放行（旧会话）；有则必须与 token 内 session_id 一致。
  * DB 查询失败（返回 null）时 fail-open：JWT 已通过签名校验则放行，避免 RDS 抖动整站踢人。
  */
-async function isSessionActive(userId, sessionId) {
+async function isSessionActive(userId, sessionId, reportTemporary = false) {
   if (!sessionId)
     return false;
   const cached = _sessionCacheGet(userId, sessionId);
@@ -281,6 +281,8 @@ async function isSessionActive(userId, sessionId) {
     return cached;
   const active = await fetchUserActiveSessionId(userId);
   if (active === null) {
+    if (reportTemporary)
+      return null;
     console.warn(`[rds] isSessionActive: db unavailable, fail-open user=${userId}`);
     return true;
   }
@@ -321,6 +323,26 @@ export async function authGetUser(token) {
   const sessionId = payload.session_id ? String(payload.session_id) : "";
   if (!(await isSessionActive(payload.sub, sessionId)))
     return null;
+  return { userId: String(payload.sub), metadata: {} };
+}
+
+/** HTTP 鉴权区分可续期、撤销和临时故障；不改变旧 authGetUser 调用方的契约。 */
+export async function authGetUserStatus(token) {
+  if (!token)
+    return { code: "AUTH_REQUIRED" };
+  if (!JWT_SECRET)
+    return { code: "TEMPORARY_UNAVAILABLE" };
+  // 仅用于归因：过期令牌仍须通过签名/issuer/audience 校验，绝不据此放行业务。
+  const payload = verifyJwt(token, JWT_SECRET, { allowExpired: true });
+  if (!payload?.sub || payload.typ !== "access")
+    return { code: "AUTH_REQUIRED" };
+  if (payload.exp * 1000 <= Date.now())
+    return { code: "ACCESS_TOKEN_EXPIRED", userId: String(payload.sub) };
+  const active = await isSessionActive(payload.sub, String(payload.session_id || ""), true);
+  if (active === null)
+    return { code: "TEMPORARY_UNAVAILABLE", userId: String(payload.sub) };
+  if (!active)
+    return { code: "SESSION_REVOKED", userId: String(payload.sub) };
   return { userId: String(payload.sub), metadata: {} };
 }
 
@@ -492,8 +514,16 @@ export async function authBrowserSession(browserSessionToken, auditContext = {})
   const session = await getBrowserSession(browserSessionToken, auditContext);
   if (session?.temporary)
     return { temporary: true };
-  if (!session)
-    return { invalid: true };
+  if (!session || session.invalid || session.revoked) {
+    void recordAuthAudit({
+      ...auditContext,
+      userId: session?.userId,
+      eventType: "SESSION_RESTORE",
+      result: "DENIED",
+      reasonCode: session?.reasonCode || "BROWSER_SESSION_INVALID",
+    });
+    return session?.revoked ? { revoked: true } : { invalid: true };
+  }
   const pool = getPgPool();
   if (!pool)
     return { temporary: true };

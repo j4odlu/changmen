@@ -1,9 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { refreshJwtSession } from "@/lib/jwtRefresh";
+import { refreshJwtSession, startJwtAutoRefresh, stopJwtAutoRefresh } from "@/lib/jwtRefresh";
 
 const mocks = vi.hoisted(() => ({
   clearAuthSession: vi.fn(),
+  version: "session-1",
+  cookieMode: false,
+  transitionPending: false,
   getRefreshToken: vi.fn<() => string | null>(),
   post: vi.fn(),
   setRefreshToken: vi.fn(),
@@ -11,7 +14,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/api/client", () => ({
-  clearAuthSession: mocks.clearAuthSession,
+  invalidateAuthSession: mocks.clearAuthSession,
+  getAuthSessionVersion: () => mocks.version,
+  isAuthSessionCurrent: (version: string) => version === mocks.version,
+  isAuthTransitionPending: () => mocks.transitionPending,
+  isCookieAuthMode: () => mocks.cookieMode,
+  setCookieAuthMode: vi.fn(),
   getRefreshToken: mocks.getRefreshToken,
   isSessionInvalidResponse: (code: unknown, message: unknown) => [
     "AUTH_REQUIRED",
@@ -29,8 +37,16 @@ vi.mock("@/api/client", () => ({
 }));
 
 describe("refreshJwtSession", () => {
+  afterEach(() => {
+    stopJwtAutoRefresh();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
   beforeEach(() => {
     vi.useRealTimers();
+    mocks.version = "session-1";
+    mocks.cookieMode = false;
+    mocks.transitionPending = false;
     mocks.clearAuthSession.mockReset();
     mocks.getRefreshToken.mockReset();
     mocks.getRefreshToken.mockReturnValue("refresh-old");
@@ -96,6 +112,13 @@ describe("refreshJwtSession", () => {
     expect(mocks.clearAuthSession).toHaveBeenCalledTimes(1);
   });
 
+  it("does not abort a pending login when old cookie refresh is revoked", async () => {
+    mocks.transitionPending = true;
+    mocks.post.mockResolvedValue({ success: 0, code: "SESSION_REVOKED" });
+    await expect(refreshJwtSession([])).resolves.toBe(false);
+    expect(mocks.clearAuthSession).not.toHaveBeenCalled();
+  });
+
   it("shares one in-flight refresh across concurrent callers", async () => {
     let resolvePost: ((value: unknown) => void) | undefined;
     mocks.post.mockImplementation(() => new Promise((resolve) => {
@@ -114,5 +137,89 @@ describe("refreshJwtSession", () => {
       info: { token: "access-new", refreshToken: "refresh-new" },
     });
     await expect(first).resolves.toBe(true);
+  });
+
+  it.each([true, false])("ignores a slow refresh after login/logout (success=%s)", async (success) => {
+    let finish!: (value: unknown) => void;
+    mocks.post.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    const pending = refreshJwtSession([]);
+    mocks.version = "session-2";
+    finish(success
+      ? { success: 1, info: { token: "obsolete", refreshToken: "obsolete" } }
+      : { success: 0, code: "SESSION_REVOKED" });
+    await expect(pending).resolves.toBe(false);
+    expect(mocks.clearAuthSession).not.toHaveBeenCalled();
+    expect(mocks.setToken).not.toHaveBeenCalled();
+  });
+
+  it("uses the HttpOnly session without a JS refresh token", async () => {
+    const requestLock = vi.fn();
+    vi.stubGlobal("navigator", { locks: { request: requestLock } });
+    mocks.cookieMode = true;
+    mocks.getRefreshToken.mockReturnValue(null);
+    mocks.post.mockResolvedValue({ success: 1, info: { token: "access-new", sessionMode: "cookie" } });
+    await expect(refreshJwtSession([])).resolves.toBe(true);
+    expect(mocks.post).toHaveBeenCalledWith("Client_RefreshToken", {});
+    expect(mocks.setRefreshToken).toHaveBeenCalledWith(null);
+    expect(requestLock).not.toHaveBeenCalled();
+  });
+
+  it("reads another tab's latest refresh token after acquiring the shared lock", async () => {
+    let run!: () => Promise<boolean>;
+    vi.stubGlobal("navigator", { locks: { request: vi.fn((_name, callback) => new Promise(resolve => {
+      run = async () => { const value = await callback(); resolve(value); return value; };
+    })) } });
+    try {
+      const pending = refreshJwtSession([]);
+      expect(mocks.post).not.toHaveBeenCalled();
+      mocks.getRefreshToken.mockReturnValue("other-tab-latest");
+      mocks.post.mockResolvedValue({ success: 1, info: { token: "new", refreshToken: "next" } });
+      await run();
+      await expect(pending).resolves.toBe(true);
+      expect(mocks.post).toHaveBeenCalledWith("Client_RefreshToken", { refreshToken: "other-tab-latest" });
+    }
+    finally { vi.unstubAllGlobals(); }
+  });
+
+  it("renews on wake/online, debounces duplicate events and removes listeners on stop", async () => {
+    vi.useFakeTimers();
+    const target = new EventTarget();
+    const doc = Object.assign(new EventTarget(), { visibilityState: "visible" });
+    vi.stubGlobal("window", target);
+    vi.stubGlobal("document", doc);
+    mocks.post.mockResolvedValue({ success: 1, info: { token: "new", refreshToken: "next" } });
+    startJwtAutoRefresh();
+    target.dispatchEvent(new Event("online"));
+    target.dispatchEvent(new Event("focus"));
+    doc.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(1);
+    expect(mocks.post).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(30_000);
+    target.dispatchEvent(new Event("pageshow"));
+    await vi.advanceTimersByTimeAsync(1);
+    expect(mocks.post).toHaveBeenCalledTimes(2);
+    stopJwtAutoRefresh();
+    await vi.advanceTimersByTimeAsync(600_000);
+    target.dispatchEvent(new Event("online"));
+    expect(mocks.post).toHaveBeenCalledTimes(2);
+  });
+
+  it("two tab instances serialize rotation and use the token stored by the preceding tab", async () => {
+    let tail = Promise.resolve();
+    vi.stubGlobal("navigator", { locks: { request: (_name: string, callback: () => Promise<boolean>) => {
+      const next = tail.then(callback);
+      tail = next.then(() => undefined);
+      return next;
+    } } });
+    vi.resetModules();
+    const tabA = await import("@/lib/jwtRefresh");
+    vi.resetModules();
+    const tabB = await import("@/lib/jwtRefresh");
+    mocks.setRefreshToken.mockImplementation(value => mocks.getRefreshToken.mockReturnValue(value));
+    mocks.post.mockResolvedValueOnce({ success: 1, info: { token: "a1", refreshToken: "r1" } })
+      .mockResolvedValueOnce({ success: 1, info: { token: "a2", refreshToken: "r2" } });
+    await expect(Promise.all([tabA.refreshJwtSession([]), tabB.refreshJwtSession([])])).resolves.toEqual([true, true]);
+    expect(mocks.post.mock.calls.map(call => call[1].refreshToken)).toEqual(["refresh-old", "r1"]);
+    expect(mocks.clearAuthSession).not.toHaveBeenCalled();
   });
 });

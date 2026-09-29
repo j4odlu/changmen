@@ -21,7 +21,8 @@ import * as accountStore from "../account/account_store.js";
 import { assertProfileActive } from "../account/admin_service.js";
 import { normalizeClientIp, recordUserLastLogin } from "../account/user_login_meta.js";
 import { touchUserPresence } from "../account/user_presence.js";
-import { checkActionAuth } from "../auth/action_permissions.js";
+import { checkActionAuth, PUBLIC_ACTIONS } from "../auth/action_permissions.js";
+import { resolveRequestAuth, shouldAuditAccessFailure } from "../auth/request_auth.js";
 import { isAdminUser } from "../auth/admin_auth.js";
 import {
   browserSessionEnabled,
@@ -830,13 +831,19 @@ export async function handleEsportRequest(
     }
 
     const browserSessionToken = browserSessionEnabled() ? readBrowserSessionCookie(req) : "";
-    let effectiveToken = token;
-    if (action !== "Client_RefreshToken" && !effectiveToken && browserSessionToken) {
-      const restored = await sb.authBrowserSession(browserSessionToken, audit);
-      if (restored && "accessToken" in restored)
-        effectiveToken = restored.accessToken;
+    const resolved = await resolveRequestAuth({ token, browserSessionToken, action, audit }, {
+      authBrowserSession: sb.authBrowserSession,
+      authGetUserStatus: sb.authGetUserStatus,
+      getProfileById: dbStore.getProfileById,
+      loadProfileById: dbStore.loadProfileById,
+    });
+    if (resolved.failure && !PUBLIC_ACTIONS.has(action)) {
+      if (shouldAuditAccessFailure(resolved.userId, resolved.failure.code))
+        void sb.recordAuthAudit({ ...audit, userId: resolved.userId, eventType: "ACCESS", result: "DENIED", reasonCode: resolved.failure.code });
+      sendJson(res, 200, resolved.failure);
+      return true;
     }
-    const user = await store.getUserByToken(effectiveToken);
+    const { token: effectiveToken, user } = resolved;
 
     sendJson(res, 200, await handle(action, body, {
       token: effectiveToken,

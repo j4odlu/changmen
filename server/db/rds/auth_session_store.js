@@ -109,20 +109,25 @@ export async function getBrowserSession(value, context = {}) {
   try {
     const now = Date.now();
     const { rows } = await pool.query(
-      `SELECT id, user_id, jwt_session_id, secret_hash, cert_cn, idle_expires_at, absolute_expires_at
+      `SELECT id, user_id, jwt_session_id, secret_hash, cert_cn, idle_expires_at, absolute_expires_at,
+              revoked_at, revoke_reason
        FROM auth_sessions
-       WHERE id = $1 AND revoked_at IS NULL`,
+       WHERE id = $1`,
       [parsed.id],
     );
     const row = rows[0];
     if (!row || !hashMatches(row.secret_hash, secretHash(parsed.secret)))
       return null;
-    if (Number(row.idle_expires_at) <= now || Number(row.absolute_expires_at) <= now)
-      return null;
+    if (row.revoked_at)
+      return { revoked: true, userId: String(row.user_id), reasonCode: row.revoke_reason || "SESSION_REVOKED" };
+    if (Number(row.absolute_expires_at) <= now)
+      return { invalid: true, userId: String(row.user_id), reasonCode: "BROWSER_ABSOLUTE_EXPIRED" };
+    if (Number(row.idle_expires_at) <= now)
+      return { invalid: true, userId: String(row.user_id), reasonCode: "BROWSER_IDLE_EXPIRED" };
     const storedCertCn = clean(row.cert_cn, 160).toLowerCase();
     const requestCertCn = clean(context.certCn, 160).toLowerCase();
     if (storedCertCn && storedCertCn !== requestCertCn)
-      return null;
+      return { invalid: true, userId: String(row.user_id), reasonCode: "CERT_MISMATCH" };
     const nextIdle = Math.min(now + BROWSER_IDLE_MS, Number(row.absolute_expires_at));
     await pool.query(
       `UPDATE auth_sessions SET last_seen_at = $2, idle_expires_at = $3 WHERE id = $1`,

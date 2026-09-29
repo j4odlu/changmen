@@ -77,4 +77,24 @@ describe("userStore.restoreSession", () => {
     expect(store.sessionChecked).toBe(true);
     expect(store.sessionRestoreError).toBe("");
   });
+
+  it("shows recovery error when a cookie session cannot obtain an access token", async () => {
+    auth.token = null;
+    auth.refreshToken = null;
+    auth.cookieMode = true;
+    const store = useUserStore();
+    await expect(store.restoreSession()).resolves.toBe(false);
+    expect(store.ready).toBe(false);
+    expect(store.sessionChecked).toBe(false);
+    expect(store.sessionRestoreError).toBeTruthy();
+    expect(auth.clearAuthSession).not.toHaveBeenCalled();
+  });
+
+  it("handles an initialization exception without abandoning the local session", async () => {
+    auth.ensureTokenRefresh.mockRejectedValue(new Error("chunk unavailable"));
+    const store = useUserStore();
+    await expect(store.restoreSession()).resolves.toBe(false);
+    expect(store.sessionRestoreError).toBeTruthy();
+    expect(auth.clearAuthSession).not.toHaveBeenCalled();
+  });
 });

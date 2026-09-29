@@ -45,6 +45,7 @@ describe("persistPolymarketExecutionReject", () => {
     const result = Object.assign(new BetResult("Polymarket", false, "fail"), {
       beginTime: 1_700_000_000_000,
       tip: { pmPosted: true },
+      request: { order: { side: "BUY", makerAmount: "10000000" } },
     });
     const option = new BetOption("Polymarket", "m1", "b1", "i1", 10, "Home", 1.55);
     option.match = { title: "Alpha vs Beta", game: "LoL" } as never;
@@ -56,7 +57,7 @@ describe("persistPolymarketExecutionReject", () => {
     expect(out?.status).toBe("reject");
     expect(out?.orderId).toBe("pm-rej-9-1700000000000-api_failed");
     expect(out?.item).toBe("Alpha");
-    // option.betMoney=10 为场馆 USDC → 落库 CNY + pmStakeUsdc
+    // 原始 POST makerAmount=10 USDC → 落库 CNY + pmStakeUsdc
     expect(out?.pmStakeUsdc).toBe(10);
     expect(out?.betMoney).toBeCloseTo(10 * 6.7, 5);
     expect(out?.link).toBe(55);
@@ -73,6 +74,7 @@ describe("persistPolymarketExecutionReject", () => {
     const account = { provider: "Polymarket", accountId: 3 } as never;
     const result = Object.assign(new BetResult("Polymarket", true), {
       orderId: "0xaway",
+      request: { order: { side: "BUY", makerAmount: "5000000" } },
       beginTime: 100,
     });
     const option = new BetOption("Polymarket", "m1", "b1", "i1", 5, "Away", 1.8);
@@ -88,6 +90,7 @@ describe("persistPolymarketExecutionReject", () => {
     const account = { provider: "Polymarket", accountId: 3 } as never;
     const result = Object.assign(new BetResult("Polymarket", true), {
       orderId: "0xmatch",
+      request: { order: { side: "BUY", makerAmount: "5000000" } },
       beginTime: 100,
     });
     const option = new BetOption("Polymarket", "m1", "b1", "i1", 5, "Away", 1.8);
@@ -102,6 +105,7 @@ describe("persistPolymarketExecutionReject", () => {
     const account = { provider: "Polymarket", accountId: 3 } as never;
     const result = Object.assign(new BetResult("Polymarket", true), {
       orderId: "0xdead",
+      request: { order: { side: "BUY", makerAmount: "5000000" } },
       beginTime: 100,
     });
     const out = await persistPolymarketExecutionReject(account, result, "unfilled");
@@ -116,6 +120,7 @@ describe("persistPolymarketExecutionReject", () => {
     const result = Object.assign(new BetResult("Polymarket", false, "unmatched"), {
       tip: { pmPosted: true },
       response: { orderID: "0xclob" },
+      request: { order: { side: "BUY", makerAmount: "5000000" } },
       beginTime: 100,
     });
     const out = await persistPolymarketExecutionReject(account, result, "api_failed", {
@@ -123,5 +128,13 @@ describe("persistPolymarketExecutionReject", () => {
     });
     expect(out?.orderId).toBe("0xclob");
     expect(out?.link).toBe(1_700_000_000_001);
+  });
+
+  it("rejects incomplete submission data without saving a fabricated order", async () => {
+    const result = Object.assign(new BetResult("Polymarket", true), { orderId: "0xmissing" });
+    const option = new BetOption("Polymarket", "m1", "b1", "i1", 118, "Home", 1.571);
+    await expect(persistPolymarketExecutionReject({ provider: "Polymarket", accountId: 317 } as never,
+      result, "unfilled", { betOption: option })).rejects.toThrow("原始提交记录缺失");
+    expect(saveOrders).not.toHaveBeenCalled();
   });
 });

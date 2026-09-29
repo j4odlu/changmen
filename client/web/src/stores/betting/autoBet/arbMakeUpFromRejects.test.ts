@@ -357,6 +357,8 @@ describe("applyArbMakeUpFromRejects", () => {
     placed.resultA = Object.assign(new BetResult("Polymarket", true), {
       orderId: "0xpm-delayed",
       pending: true,
+      beginTime: 1790697330729,
+      request: { order: { side: "BUY", makerAmount: "25000000" } },
     });
     placed.resultB = new BetResult("OB", false, "API failed");
     placed.placeOutcomeA = "accepted_pending_confirm";
@@ -381,6 +383,7 @@ describe("applyArbMakeUpFromRejects", () => {
     );
     expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xpm-delayed", 88, expect.objectContaining({
       role: "anchor",
+      pmSubmission: { orderId: "0xpm-delayed", accountId: 88, stakeUsdc: 25, makerAmount: "25000000", submittedAt: 1790697330729 },
       pendingTarget: "Home",
       conditionId: "0xcondition",
       makeUpEligible: true,

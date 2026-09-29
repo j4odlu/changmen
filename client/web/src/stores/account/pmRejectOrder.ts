@@ -9,6 +9,8 @@ import {
   type PolymarketRejectOrderContext,
 } from "@changmen/venue-adapter/polymarket";
 import { saveOrders } from "@/api/order";
+import { pmMakerAmountUsdc, pmSubmissionFromResult } from "@changmen/shared/pm_submission";
+import { scaleUsdtToCnyDisplay } from "@changmen/shared/currency";
 import { resolveOrderItemLabel } from "@/shared/orderItemDisplay";
 import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
 
@@ -35,9 +37,9 @@ function contextFromBetOption(
   if (!option) {
     return link ? { link } : {};
   }
-  // checkBetting 后 option.betMoney 已是场馆 USDC；build 内再 scale→CNY + pmStakeUsdc
+  // [changmen 扩展] option 可能来自旧队列，不能用它推断原单申请金额。
   return {
-    betMoney: Number(option.betMoney) || 0,
+    betMoney: 0,
     odds: Number(option.odds) || 0,
     game: String(option.match?.game ?? ""),
     match: String(option.match?.title ?? ""),
@@ -67,12 +69,21 @@ export async function persistPolymarketExecutionReject(
   // api_failed 仅统计已 POST；unfilled 已由买入收尾层作出业务决定
   if (reason === "api_failed" && !isPolymarketPostedApiFailure(result))
     return null;
+  const request = result.request as { order?: { makerAmount?: unknown; side?: unknown } } | undefined;
+  const stakeUsdc = String(request?.order?.side).toUpperCase() === "BUY"
+    ? pmMakerAmountUsdc(request?.order?.makerAmount) : null;
+  // [changmen 扩展] 缺少原始提交记录是读取失败，禁止生成零金额/推算金额的正式订单。
+  if (stakeUsdc == null)
+    throw new Error("PM 原始提交记录缺失，拒绝写入订单");
   const order = buildPolymarketExecutionRejectVenueOrder(
     account,
     result,
     reason,
     contextFromBetOption(opts?.betOption, opts?.linkId),
   );
+  order.pmStakeUsdc = stakeUsdc;
+  order.betMoney = scaleUsdtToCnyDisplay(stakeUsdc);
+  order.pmSubmission = pmSubmissionFromResult(result, account.accountId) ?? undefined;
   if (!String(order.orderId ?? "").trim())
     return null;
   try {

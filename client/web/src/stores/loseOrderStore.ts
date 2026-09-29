@@ -1,6 +1,7 @@
 import type { BetSide } from "@/models/match";
 import type { FollowOrderInput, LoseOrderCancelledRecord, LoseOrderRecord, MakeupRuntimePhase } from "@/types/order";
 import { defineStore } from "pinia";
+import { validatePmSubmission, type PmSubmission } from "@changmen/shared/pm_submission";
 import { LoseOrder } from "@/models/loseOrder";
 import { useMatchStore } from "@/stores/matchStore";
 import { useMessageStore } from "@/stores/messageStore";
@@ -123,6 +124,7 @@ export const useLoseOrderStore = defineStore("loseorder", {
         odds?: number;
         betMoney?: number;
         error?: string;
+        pmSubmission?: PmSubmission | null;
       } = {},
     ) {
       const existing = this.orders.get(betId);
@@ -131,7 +133,11 @@ export const useLoseOrderStore = defineStore("loseorder", {
       const id = String(orderId ?? "").trim();
       if (!id)
         return;
-      const changed = existing.pendingVenueOrderId !== id;
+      const changed = existing.pendingVenueOrderId !== id || existing.pendingVenueAccountId !== Number(accountId);
+      if (changed)
+        existing.pendingPmSubmission = undefined;
+      if (!existing.pendingPmSubmission)
+        existing.pendingPmSubmission = validatePmSubmission(opts.pmSubmission, id, Number(accountId)) ?? undefined;
       existing.pendingVenueOrderId = id;
       existing.pendingVenueAccountId = Number(accountId) || undefined;
       existing.pendingVenueRole = opts.role ?? existing.pendingVenueRole ?? "target";
@@ -165,6 +171,7 @@ export const useLoseOrderStore = defineStore("loseorder", {
       if (!hadPending)
         return;
       existing.pendingVenueOrderId = undefined;
+      existing.pendingPmSubmission = undefined;
       existing.pendingVenueSubmittedAt = undefined;
       existing.pendingVenueOdds = undefined;
       existing.pendingVenueBetMoney = undefined;

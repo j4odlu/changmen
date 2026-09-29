@@ -2,6 +2,13 @@ import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { OrderRow, PageResult } from "@/types/esport";
 import { post, unwrap } from "@/api/client";
+import type { PmSubmission } from "@changmen/shared/pm_submission";
+
+/** [changmen 扩展] 旧待确认队列按原单恢复申请额，不能从当前赔率推算。 */
+export async function getPmSubmission(playerId: number, orderId: string): Promise<PmSubmission | null> {
+  const response = await post<PmSubmission>("Pm_GetSubmission", { playerId, orderId }, "", { errorTip: false });
+  return response.success === 1 ? response.info ?? null : null;
+}
 
 /** [A8 可证实] `Ut.getOrders`：success!==1 时不更新侧栏（返回 null） */
 export async function getOrderList(body: Record<string, unknown> = {}) {

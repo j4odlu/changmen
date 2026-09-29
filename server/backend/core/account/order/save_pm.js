@@ -3,6 +3,7 @@
  */
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { normalizePmMatchResult, parseNum } from "./dto.js";
+import { validatePmSubmission } from "@changmen/shared/pm_submission";
 
 /** pmShares = 官方 fill，取 RDS/CLOB/入参 最大值，避免 0 覆盖有效值 */
 function preservePmBuyFillShares(prevRaw, o, merged) {
@@ -94,6 +95,23 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
     bet_money = parseNum(merged.betMoney, proceedsBet);
     money = sellMoney;
     return { raw: merged, money, bet_money };
+  }
+
+  // [changmen 扩展] 拒单本金来自原始 POST；旧客户端同步不得重新污染已恢复的金额。
+  const isReject = String(o.status ?? o.Status ?? merged.status).toLowerCase() === "reject";
+  if (isReject && !(Number(prevRaw.pmShares) > 0) && !(Number(o.pmShares) > 0)) {
+    const id = String(o.orderId ?? prevRow?.order_id ?? "");
+    const snapshot = validatePmSubmission(prevRaw.pmSubmission, id, Number(prevRaw.pmSubmission?.accountId))
+      || validatePmSubmission(o.pmSubmission, id, Number(o.pmSubmission?.accountId));
+    if (snapshot) {
+      const stake = snapshot.stakeUsdc;
+      const cny = stake * getExchange(Currency.USDT);
+      return {
+        raw: { ...merged, betMoney: cny, pmStakeUsdc: stake,
+          pmSubmission: snapshot, pmFeeUsdc: 0, reward: 0, money: 0 },
+        bet_money: cny, money: 0,
+      };
+    }
   }
 
   const prevState = prevRaw.pmSellState;

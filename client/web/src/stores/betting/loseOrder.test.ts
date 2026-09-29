@@ -840,6 +840,8 @@ describe("processLoseOrders makeupOddsBand", () => {
     makeUpEnabled.value = false;
     const order = queueOrder({
       pendingVenueOrderId: "0xobserve-only",
+      pendingPmSubmission: { orderId: "0xobserve-only", accountId: 47,
+        makerAmount: "14930000", stakeUsdc: 14.93, submittedAt: 1790697330729 },
       pendingVenueAccountId: 47,
       pendingVenueRole: "target",
       pendingVenueTarget: "Home",

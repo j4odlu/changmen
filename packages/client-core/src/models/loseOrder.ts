@@ -1,6 +1,7 @@
 import type { LoseOrderRecord, MakeupRuntimePhase } from "../types/order";
 import type { BetSide } from "./match";
 import { toFixed } from "../shared/format";
+import { validatePmSubmission, type PmSubmission } from "@changmen/shared/pm_submission";
 
 function normalizeMakeupRuntimePhase(raw: unknown): MakeupRuntimePhase | undefined {
   const phase = String(raw ?? "").trim();
@@ -35,6 +36,7 @@ export class LoseOrder implements LoseOrderRecord {
   isCreateOrder: boolean;
   betCount: number;
   pendingVenueSubmittedAt?: number;
+  pendingPmSubmission?: PmSubmission;
   pendingVenueOdds?: number;
   pendingVenueBetMoney?: number;
   pendingVenueError?: string;
@@ -81,6 +83,7 @@ export class LoseOrder implements LoseOrderRecord {
     this.pendingVenueRole = pendingId
       ? (raw.pendingVenueRole === "anchor" ? "anchor" : "target")
       : undefined;
+    this.pendingPmSubmission = validatePmSubmission(raw.pendingPmSubmission, pendingId, pendingAcc) ?? undefined;
     this.pendingVenueTarget = pendingId && raw.pendingVenueTarget
       ? raw.pendingVenueTarget as BetSide
       : undefined;
@@ -136,6 +139,7 @@ export class LoseOrder implements LoseOrderRecord {
       ...(this.pendingVenueOrderId
         ? {
             pendingVenueOrderId: this.pendingVenueOrderId,
+            pendingPmSubmission: this.pendingPmSubmission,
             pendingVenueSubmittedAt: this.pendingVenueSubmittedAt,
             pendingVenueOdds: this.pendingVenueOdds,
             pendingVenueBetMoney: this.pendingVenueBetMoney,

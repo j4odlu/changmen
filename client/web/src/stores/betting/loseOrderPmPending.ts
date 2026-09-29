@@ -6,6 +6,8 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { BetOption as BetOptionCtor } from "@changmen/client-core/models/betOption";
 import { BetResult as BetResultCtor } from "@changmen/client-core/models/betResult";
+import { pmSubmissionFromResult, validatePmSubmission } from "@changmen/shared/pm_submission";
+import { getPmSubmission } from "@/api/order";
 import { isPendingConfirmVenueProvider, isPolymarketProvider } from "@changmen/shared/account_multiply";
 import { isVenueLegConfirmedUnfilled, isVenueLegPendingConfirm, isVenueLegRejected } from "@changmen/venue-adapter/contract";
 import { resolveVenueLegOutcome } from "@/domain/betting/resolveVenueLegOutcome";
@@ -141,6 +143,7 @@ export async function applyVenueJbSettlementOutcome(
       pendingTarget: order.pendingVenueTarget ?? order.target,
       conditionId: order.pendingVenueConditionId ?? String(checked.betId ?? ""),
       submittedAt: result.beginTime,
+      pmSubmission: isPolymarketProvider(account.provider) ? pmSubmissionFromResult(result, account.accountId) : null,
       odds: checked.newOdds || checked.odds,
       betMoney: checked.betMoney,
     });
@@ -269,8 +272,31 @@ export async function tryResumePendingVenueMakeUp(
   const pendingRole = order.pendingVenueRole ?? "target";
   const ref = bet?.items.find(item => item.type === account.provider);
   const pendingTarget = order.pendingVenueTarget ?? order.target;
-  const sideOdds = order.pendingVenueOdds || ref?.getOdds(pendingTarget) || order.betOdds;
-  const pendingStake = order.pendingVenueBetMoney ?? order.getBetMoney(sideOdds);
+  const isPm = isPolymarketProvider(account.provider);
+  let submission = validatePmSubmission(order.pendingPmSubmission, pendingId, account.accountId);
+  if (isPm && !submission) {
+    try {
+      submission = validatePmSubmission(await getPmSubmission(account.accountId, pendingId), pendingId, account.accountId);
+    }
+    catch { /* 金额恢复失败不阻断原单状态核验，也不得触发新 POST。 */ }
+    if (submission) {
+      order.pendingPmSubmission = submission;
+      order.pendingVenueBetMoney = submission.stakeUsdc;
+      order.pendingVenueSubmittedAt = submission.submittedAt;
+      loseStore.persist?.();
+    }
+    else {
+      // 保留原单锁和队列以便恢复读取；不制造订单、不触发另一笔 POST。
+      order.pendingVenueError = "原单记录读取失败，正在重试";
+      loseStore.deferPendingVenueOrder(betId);
+      loseStore.persist?.();
+      setMessage(order.pendingVenueError);
+      return "handled";
+    }
+  }
+  // [changmen 扩展] PM 续查只能使用原单 USDC；旧队列的人民币计划额不可作为兜底。
+  const sideOdds = isPm ? order.pendingVenueOdds || 0 : order.pendingVenueOdds || ref?.getOdds(pendingTarget) || order.betOdds;
+  const pendingStake = isPm ? submission!.stakeUsdc : order.pendingVenueBetMoney ?? order.getBetMoney(sideOdds);
   const checked = match && bet && ref
     ? new BetOptionCtor(match, bet, ref, pendingTarget, pendingStake)
     : new BetOptionCtor(
@@ -291,7 +317,8 @@ export async function tryResumePendingVenueMakeUp(
   const result = Object.assign(new BetResultCtor(account.provider, true), {
     orderId: pendingId,
     pending: true,
-    beginTime: order.pendingVenueSubmittedAt || order.createAt,
+    beginTime: submission?.submittedAt || order.pendingVenueSubmittedAt || order.createAt,
+    ...(submission ? { request: { order: { side: "BUY", makerAmount: submission.makerAmount } } } : {}),
   });
 
   const outcome = await applyVenueJbSettlementOutcome({

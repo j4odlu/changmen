@@ -58,7 +58,7 @@ export function saveBetOptionLog(option: BetOption, account: PlatformAccount): v
 export function saveBetResultLog(result: BetResult, account: PlatformAccount): void {
   const platformLabel = accountPlatformLabel(account);
   const title = `[${result.provider}](${platformLabel},${account.playerName}) 下注 => ${result.success} / 耗时:${Date.now() - result.beginTime}ms`;
-  void saveUserLog(title, { result });
+  void saveUserLog(title, { accountId: account.accountId, result });
 }
 
 function settlementRejectReason(result: BetResult): string | null {

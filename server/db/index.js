@@ -19,6 +19,7 @@
  */
 
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+export { fetchPmSubmissionLogs } from "./rds/pm_submission_store.js";
 
 import { describeDbScript, getDbMode } from "./db_script.js";
 

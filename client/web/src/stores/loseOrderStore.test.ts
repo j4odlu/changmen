@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoseOrder } from "@/models/loseOrder";
+import { pmSubmissionFromResult } from "@changmen/shared/pm_submission";
 
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
 
@@ -66,6 +67,20 @@ describe("useLoseOrderStore A8 publish parity", () => {
     expect(store.orders.get(55)!.pendingVenueNextPollAt! - Date.now()).toBeLessThanOrEqual(1_000);
     store.deferPendingVenueOrder(55);
     expect(store.orders.get(55)!.pendingVenueNextPollAt! - Date.now()).toBeGreaterThan(29_000);
+  });
+
+  it("binds original USDC evidence to the exact order and account across session restore", () => {
+    const store = useLoseOrderStore();
+    store.createOrder(new LoseOrder({ betId: 55 }));
+    const snapshot = pmSubmissionFromResult({ orderId: "original", beginTime: 1000,
+      request: { order: { side: "BUY", makerAmount: "14930000" } } }, 317)!;
+    store.setPendingVenueOrder(55, "original", 317, { pmSubmission: snapshot });
+    store.setPendingVenueOrder(55, "original", 317, { pmSubmission: { ...snapshot, makerAmount: "118000000", stakeUsdc: 118 } });
+    const restored = new LoseOrder(store.orders.get(55)!.toJSON());
+    expect(restored.pendingPmSubmission).toEqual(snapshot);
+    expect(new LoseOrder({ ...restored.toJSON(), pendingVenueAccountId: 318 }).pendingPmSubmission).toBeUndefined();
+    store.setPendingVenueOrder(55, "another", 317, { pmSubmission: snapshot });
+    expect(store.orders.get(55)!.pendingPmSubmission).toBeUndefined();
   });
 
   it("restores orders from sessionStorage on store create (A8 IIFE)", () => {

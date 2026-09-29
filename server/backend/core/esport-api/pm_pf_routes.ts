@@ -4,6 +4,7 @@
  * 勿 import router 运行时符号，以免 ESM 环。
  */
 import { isAdminUser } from "../auth/admin_auth.js";
+import { handlePmGetSubmission } from "../integrations/polymarket/submission_handler.js";
 import {
   handlePmCancelOrder,
   handlePmGetBook,
@@ -77,6 +78,10 @@ export async function handlePmPfAction(
     return null;
 
   switch (action) {
+    case "Pm_GetSubmission": {
+      const snapshot = await handlePmGetSubmission(body, ctx.user.id);
+      return snapshot.ok ? ok(snapshot.info) : fail(snapshot.msg);
+    }
     case "Pm_RefreshBalance": {
       const refreshed = await handleRefreshPmBalance(body, ctx.user.id);
       return refreshed.ok ? ok(refreshed.info) : fail(refreshed.msg);

@@ -2,6 +2,8 @@ import type { BetSide } from "../models/match";
 
 /** 对齐 A8 bundle `eb` 持久化形状 */
 export interface LoseOrderRecord {
+  /** [changmen 扩展] 绑定原单/账号的 USDC 提交证据；旧金额字段不能代替它。 */
+  pendingPmSubmission?: import("@changmen/shared/pm_submission").PmSubmission;
   accountId: number;
   matchId: number;
   betId: number;

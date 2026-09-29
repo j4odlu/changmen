@@ -36,6 +36,7 @@ export interface PolymarketVenueOrderExtras {
    * 剩余敞口随卖出扣减。
    */
   pmStakeUsdc?: number;
+  pmSubmission?: import("@changmen/shared/pm_submission").PmSubmission;
   /** [changmen 扩展] 手续费 USDC：优先 usdcSize−price×size；否则公式回退 */
   pmFeeUsdc?: number;
   /** CLOB condition_id，User WS 订阅与卖出 delayed 检测 */

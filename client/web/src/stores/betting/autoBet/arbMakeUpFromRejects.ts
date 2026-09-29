@@ -4,6 +4,7 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { ArbBetAttemptParams, ArbBetPlaced } from "@/stores/betting/autoBet/phases/types";
 import { isPendingConfirmVenueProvider, isPolymarketProvider } from "@changmen/shared/account_multiply";
 import { LoseOrder } from "@/models/loseOrder";
+import { pmSubmissionFromResult } from "@changmen/shared/pm_submission";
 import { arbMakeUpSides } from "@/stores/betting/autoBet/arbMakeUpPair";
 import { enqueueMakeUpOrder } from "@/stores/betting/autoBet/makeUp";
 import { resolveMakeUpSuccessReference } from "@/stores/betting/makeUpReference";
@@ -113,6 +114,7 @@ export async function applyArbMakeUpFromRejects(
         pendingTarget: pendingLeg.target,
         conditionId: pendingLeg.betId,
         submittedAt: pendingResult?.beginTime,
+        pmSubmission: isPolymarketProvider(pendingAccount.provider) ? pmSubmissionFromResult(pendingResult, pendingAccount.accountId) : null,
         odds: pendingLeg.newOdds || pendingLeg.odds,
         betMoney: pendingLeg.betMoney,
         error: isPolymarketProvider(pendingAccount.provider) ? pendingResult?.message || "PM 核验窗口结束，未取得终态" : undefined,
@@ -162,6 +164,7 @@ export async function applyArbMakeUpFromRejects(
       pendingTarget: pendingLeg.target,
       conditionId: pendingLeg.betId,
       submittedAt: pendingResult?.beginTime,
+      pmSubmission: isPolymarketProvider(pendingAccount.provider) ? pmSubmissionFromResult(pendingResult, pendingAccount.accountId) : null,
       odds: pendingLeg.newOdds || pendingLeg.odds,
       betMoney: pendingLeg.betMoney,
       error: isPolymarketProvider(pendingAccount.provider) ? pendingResult?.message || "PM 核验窗口结束，未取得终态" : undefined,

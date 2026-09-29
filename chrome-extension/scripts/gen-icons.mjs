@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
  * 从 assets/icon128.png 同步 toolbar 用小图标；若无则写 1×1 占位。
- * 正式图：Wikimedia 公有领域木叶纹 File:Konohagakure.svg（User:Shisma, PD-shape），
- * 源图 assets/jiraiya-icon-source.png / konoha-public.svg（不进发行包）。
+ * 正式图：changmen 原创「漩涡 + 门」品牌标志。
  */
 import fs from "fs";
 import path from "path";

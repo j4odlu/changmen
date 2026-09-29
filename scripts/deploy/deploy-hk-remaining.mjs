@@ -44,7 +44,6 @@ const hostArgs = process.argv.slice(2).filter(a => !a.startsWith("-"));
 const HOSTS = hostArgs.length
   ? hostArgs.map(host => ({ label: host, host }))
   : [
-      { label: "HK-214", host: "47.242.248.214" },
       { label: "HK-57", host: "47.57.10.202" },
     ];
 

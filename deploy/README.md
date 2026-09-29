@@ -19,7 +19,7 @@
 
 脚本索引：[scripts/README.md](scripts/README.md)
 
-## 双机部署
+## 生产部署
 
 | 角色 | IP | 说明 |
 |------|-----|------|

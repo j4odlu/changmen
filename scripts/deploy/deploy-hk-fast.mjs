@@ -14,7 +14,6 @@ const distArchive = path.join(os.tmpdir(), "changmen-gha-dist", "changmen-dist.t
 const deployRepo = "/root/changmen";
 
 const HOSTS = [
-  { label: "HK-214", host: "47.242.248.214" },
   { label: "HK-57", host: "47.57.10.202" },
 ];
 

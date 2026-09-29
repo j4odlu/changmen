@@ -16,6 +16,7 @@ export type PolymarketDelayedPollOpts = {
 
 export type PolymarketSettlementJobOpts = {
   side?: "BUY" | "SELL";
+  submittedAt?: number;
   poll?: PolymarketDelayedPollOpts;
   tradeConfirm?: { lookbackMs?: number; retryMs?: number; maxRetries?: number };
   /** CLOB condition_id；Job 掉了后 fallback 再拉 sd */
@@ -28,12 +29,13 @@ interface SettlementJobEntry {
 }
 
 interface SettlementDelayCtx {
+  submittedAt: number;
   poll?: PolymarketDelayedPollOpts;
   conditionId?: string;
 }
 
 const JOB_TTL_MS = 60_000;
-const DELAY_CTX_TTL_MS = 120_000;
+const DELAY_CTX_TTL_MS = 24 * 60 * 60 * 1000;
 
 const jobs = new Map<string, SettlementJobEntry>();
 const delayCtx = new Map<string, SettlementDelayCtx>();
@@ -43,14 +45,17 @@ function settlementJobKey(accountId: number, orderId: string): string {
 }
 
 function rememberDelayCtx(key: string, opts?: PolymarketSettlementJobOpts): void {
-  if (!opts?.poll && !opts?.conditionId)
+  if (delayCtx.has(key))
     return;
-  delayCtx.set(key, {
-    poll: opts.poll,
-    conditionId: opts.conditionId,
-  });
+  const context = {
+    submittedAt: opts?.submittedAt || Date.now(),
+    poll: opts?.poll,
+    conditionId: opts?.conditionId,
+  };
+  delayCtx.set(key, context);
   setTimeout(() => {
-    delayCtx.delete(key);
+    if (delayCtx.get(key) === context)
+      delayCtx.delete(key);
   }, DELAY_CTX_TTL_MS);
 }
 
@@ -70,7 +75,9 @@ async function runSettlementJob(
   orderId: string,
   opts?: PolymarketSettlementJobOpts,
 ): Promise<PolymarketSettlementPayload> {
-  const payload = await settlePolymarketDelayedOrder(account, orderId, opts);
+  const payload = await settlePolymarketDelayedOrder(account, orderId, {
+    ...opts, submittedAt: getPolymarketSettlementDelayCtx(account, orderId)?.submittedAt,
+  });
   if (!payload)
     return { outcome: "timeout", row: null };
   return payload;
@@ -95,7 +102,9 @@ export function startPolymarketSettlementJob(
   if (jobs.has(key))
     return;
 
-  const promise = runSettlementJob(account, id, opts).finally(() => {
+  const promise = runSettlementJob(account, id, opts).catch(() => ({
+    outcome: "timeout" as const, row: { lookupError: "PM 订单核验失败" },
+  })).finally(() => {
     setTimeout(() => {
       // 旧 job 的 TTL 不得误删相同 orderId 后续启动的新 job。
       if (jobs.get(key)?.promise === promise)

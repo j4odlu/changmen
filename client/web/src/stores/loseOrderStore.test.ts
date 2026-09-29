@@ -43,6 +43,31 @@ describe("useLoseOrderStore A8 publish parity", () => {
     );
   });
 
+  it("persists the original pending snapshot across retries and restoration", () => {
+    const store = useLoseOrderStore();
+    store.createOrder(new LoseOrder({ betId: 55, createAt: 1000 }));
+    store.setPendingVenueOrder(55, "original", 7, { submittedAt: 900, odds: 2.2, betMoney: 38.22 });
+    store.orders.get(55)!.pendingVenueError = "核验异常";
+    store.setPendingVenueOrder(55, "original", 7, { submittedAt: 9999, odds: 1.1, betMoney: 80 });
+    const restored = new LoseOrder(store.orders.get(55)!.toJSON());
+    expect(restored).toMatchObject({ pendingVenueSubmittedAt: 900, pendingVenueOdds: 2.2,
+      pendingVenueBetMoney: 38.22, pendingVenueError: "核验异常" });
+    store.clearPendingVenueOrder(55);
+    expect(store.orders.get(55)!.pendingVenueError).toBeUndefined();
+    expect(store.orders.get(55)!.toJSON()).not.toHaveProperty("pendingVenueSubmittedAt");
+  });
+
+  it("allows PM confirmation retries without the 30 second backoff", () => {
+    const store = useLoseOrderStore();
+    store.createOrder(new LoseOrder({ betId: 55, createAt: 1000 }));
+    store.setPendingVenueOrder(55, "original", 7);
+    for (let i = 0; i < 8; i++)
+      store.deferPendingVenueOrder(55, 1_000);
+    expect(store.orders.get(55)!.pendingVenueNextPollAt! - Date.now()).toBeLessThanOrEqual(1_000);
+    store.deferPendingVenueOrder(55);
+    expect(store.orders.get(55)!.pendingVenueNextPollAt! - Date.now()).toBeGreaterThan(29_000);
+  });
+
   it("restores orders from sessionStorage on store create (A8 IIFE)", () => {
     const stored = JSON.stringify([
       {

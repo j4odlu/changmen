@@ -3,7 +3,7 @@ import type { PlatformAccount } from "@changmen/client-core/models/platformAccou
 import { scaleUsdtToCnyDisplay } from "@changmen/shared/currency";
 import type { VenueOrder } from "../contract";
 import { parseTokenConfig, resolveApiCreds } from "./l2Auth";
-import { pmGetOrder } from "./pmClientApi";
+import { pmGetOrder, pmGetOpenOrders } from "./pmClientApi";
 import type {
   PolymarketOrderResponseLike,
   PolymarketOrderRow,
@@ -71,7 +71,7 @@ function parseMatchedSize(row: PolymarketOrderRow | null | undefined): number {
   return Number.isFinite(matched) && matched > 0 ? matched : 0;
 }
 
-/** 官网挂簿或仍在 delay 窗、且无成交（FOK 收尾：grace 后再 cancel） */
+/** 官网明确挂簿且无成交（FOK 收尾：grace 后再 cancel）；delayed 不可撤。 */
 export function isPolymarketRestingNoFill(
   row: PolymarketOrderRow | null | undefined,
 ): boolean {
@@ -83,7 +83,7 @@ export function isPolymarketRestingNoFill(
   if (Array.isArray(trades) && trades.length > 0)
     return false;
   const status = String(row.status ?? "").trim().toLowerCase();
-  return status === "live" || status === "unmatched" || status === "delayed";
+  return status === "live" || status === "unmatched";
 }
 
 /** GET /data/order 暂无行：官方 delay 窗内常见，勿立刻 cancel */
@@ -119,7 +119,8 @@ export function interpretPolymarketOrderRow(
     || status.includes("kill")
     || status === "expired"
   ) {
-    return "unfilled";
+    return row.size_matched != null && String(row.size_matched).trim() !== ""
+      && Number(row.size_matched) === 0 ? "unfilled" : "pending";
   }
   // matched 但无份额：接口滞后时常见，勿立刻当拒单
   if (status === "matched")
@@ -137,14 +138,30 @@ export async function fetchPolymarketOrderRow(
   const config = parseTokenConfig(account.token);
   const creds = resolveApiCreds(config);
   if (!creds.apiKey || !creds.secret || !creds.passphrase || !creds.address)
-    return null;
+    throw new Error("PM 订单核验缺少鉴权信息");
+  let data: PolymarketOrderRow | null;
   try {
-    const data = await pmGetOrder<PolymarketOrderRow | null>(account, id);
-    return data ?? null;
+    data = await pmGetOrder<PolymarketOrderRow | null>(account, id);
   }
-  catch {
-    return null;
+  catch (error) {
+    const status = (error as { status?: number; response?: { status?: number } })?.response?.status
+      ?? (error as { status?: number })?.status;
+    if (status !== 404)
+      throw error;
+    data = null;
   }
+  if (data == null) {
+    const response = await pmGetOpenOrders<PolymarketOrderRow[] | { data: PolymarketOrderRow[] }>(account, undefined, id);
+    const rows = Array.isArray(response) ? response : response?.data;
+    if (!Array.isArray(rows))
+      throw new Error("PM 订单列表查询返回非列表响应");
+    data = rows.find(row => String(row.id).toLowerCase() === id.toLowerCase()) ?? null;
+  }
+  if (data != null && (typeof data !== "object" || !("status" in data)))
+    throw new Error("PM 订单查询返回非订单响应");
+  if (data?.id && data.id.toLowerCase() !== id.toLowerCase())
+    throw new Error("PM 订单查询 ID 不匹配");
+  return data ?? null;
 }
 
 function wait(ms: number) {
@@ -216,6 +233,16 @@ export async function pollPolymarketDelayedOrder(
   return { outcome: "timeout", row: last };
 }
 
+/**
+ * [changmen 扩展] 恢复 051ae854 前的 FOK 收尾映射。
+ * 核验耗尽后 timeout 按 unfilled 处理；这是本地退出策略，并非官方拒单证据。
+ */
+export function coercePolymarketFokPollOutcome(
+  outcome: PolymarketPollOutcome,
+): Exclude<PolymarketPollOutcome, "timeout"> {
+  return outcome === "matched" ? "matched" : "unfilled";
+}
+
 export function formatPolymarketSettlementMessage(
   orderId: string,
   outcome: PolymarketPollOutcome,
@@ -227,9 +254,28 @@ export function formatPolymarketSettlementMessage(
     const status = String(row?.status ?? "matched").trim();
     return `${id} / ${status} / 已成交${size > 0 ? ` ${size} shares` : ""}`;
   }
+  if (outcome === "unfilled" && row?.confirmationBasis === "timeout_policy")
+    return `${id} / 按未成交处理 / 核验耗尽，按超时策略判拒（非官方拒单回执）`;
   if (outcome === "unfilled")
     return `${id} / 未成交 / 延迟后未吃到`;
-  return `${id} / 确认中 / 继续核对成交`;
+  return `${id} / 待确认 / 核验诊断：${row?.lookupError || "本轮超时，未取得成交或取消终态"}`;
+}
+
+/**
+ * [changmen 扩展] 恢复 051ae854 前买入腿的核验耗尽退出策略。
+ * 只在完成核验后应用，不把本地策略伪造成 CANCELED；已有成交证据不得被改成拒单。
+ * 手动卖出仍使用原始核验结果，不调用此策略。
+ */
+export function applyPolymarketBuyTimeoutPolicy(settled: {
+  outcome: PolymarketPollOutcome;
+  row: PolymarketOrderRow | null;
+}): { outcome: PolymarketPollOutcome; row: PolymarketOrderRow | null } {
+  if (settled.outcome !== "timeout" || interpretPolymarketOrderRow(settled.row) === "matched")
+    return settled;
+  return {
+    outcome: coercePolymarketFokPollOutcome(settled.outcome),
+    row: { ...settled.row, confirmationBasis: "timeout_policy" },
+  };
 }
 
 /**

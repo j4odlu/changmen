@@ -348,14 +348,14 @@ export function syncActiveBetPlaceResults(
 }
 
 /** 补单受理后仍待确认：腿行与阶段立即反映 */
-export function syncActiveBetMakeupPendingConfirm(betId: number, orderId?: string | null) {
+export function syncActiveBetMakeupPendingConfirm(betId: number, orderId?: string | null, error?: string) {
   const store = activeStore();
   if (!store)
     return;
   const run = store.runs.get(betId);
   const makeupLeg = run?.legs.find(l => l.status === "makeup" || l.status === "pending_confirm");
   const idHint = String(orderId ?? "").trim();
-  const detail = idHint
+  const detail = error ? `待确认 · 核验诊断：${error}` : idHint
     ? `待确认 · ${idHint.slice(0, 10)}…`
     : "待确认";
   if (makeupLeg)

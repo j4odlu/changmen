@@ -553,8 +553,10 @@ async function pmEsportCallLocal<T>(
       const qs = new URLSearchParams();
       if (assetId)
         qs.set("asset_id", assetId);
+      if (body.id)
+        qs.set("id", String(body.id));
       const l2Path = qs.toString() ? `${OPEN_ORDERS_PATH}?${qs.toString()}` : OPEN_ORDERS_PATH;
-      return localHttpGet<T>(mode, `${gateway}${l2Path}`, { account, l2Path });
+      return localHttpGet<T>(mode, `${gateway}${l2Path}`, { account, l2Path: OPEN_ORDERS_PATH });
     }
     default:
       throw new Error(

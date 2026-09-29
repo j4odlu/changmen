@@ -340,12 +340,12 @@ describe("applyArbMakeUpFromRejects", () => {
         failedPlatformLabel: "PredictFun(待确认续查)",
       }),
     );
-    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xpf-timeout", 99, {
+    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xpf-timeout", 99, expect.objectContaining({
       role: "target",
       pendingTarget: "Away",
       conditionId: "b2",
       makeUpEligible: true,
-    });
+    }));
   });
 
   it("observes pending PM anchor when the opposite leg failed", async () => {
@@ -379,12 +379,12 @@ describe("applyArbMakeUpFromRejects", () => {
         failedPlatformLabel: "OB(待确认续查)",
       }),
     );
-    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xpm-delayed", 88, {
+    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xpm-delayed", 88, expect.objectContaining({
       role: "anchor",
       pendingTarget: "Home",
       conditionId: "0xcondition",
       makeUpEligible: true,
-    });
+    }));
   });
 
   it("keeps observing a pending PM order when makeup admission is denied", async () => {
@@ -411,11 +411,11 @@ describe("applyArbMakeUpFromRejects", () => {
 
     expect(out).toEqual({ enqueuedForLegA: false, enqueuedForLegB: true });
     expect(createOrder).toHaveBeenCalledWith(expect.any(Object));
-    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xpm-delayed-denied", 88, {
+    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xpm-delayed-denied", 88, expect.objectContaining({
       role: "anchor",
       pendingTarget: "Home",
       conditionId: "0xcondition",
       makeUpEligible: false,
-    });
+    }));
   });
 });

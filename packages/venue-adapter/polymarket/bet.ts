@@ -21,7 +21,8 @@ import {
 import { isPolymarketDelayedPending } from "./orderStatus";
 import { markPolymarketChangmenOrder } from "./pmOrigin";
 import { bumpPolymarketOrderSyncAfterBet } from "./pmOrderSync";
-import { registerPolymarketOrderWatch } from "./userWs";
+import { registerPolymarketOrderWatch, warmPolymarketUserWs } from "./userWs";
+import { tracePolymarketOrder } from "./orderTrace";
 import { startPolymarketSettlementJob } from "./settlementJob";
 import {
   UNKNOWN_SPORTS_SECONDS_DELAY,
@@ -936,9 +937,15 @@ export const polymarketProvider: PlatformProvider = {
           orderOptions,
         ),
       );
+      warmPolymarketUserWs(account, String(option.betId ?? "").trim());
+      const submittedAt = Date.now();
+      tracePolymarketOrder(account.accountId, null, "submit", { submittedAt, linkId: option.diagnosticLinkId });
       const result = await measurePmExecution("submit", executionSubmitFields, () =>
         pmSubmitOrder<PolymarketOrderResponse>(account, orderBody),
       );
+      tracePolymarketOrder(account.accountId, result.orderID || null, "ack", {
+        submittedAt, linkId: option.diagnosticLinkId, status: result.success ? result.status : "rejected",
+      });
 
       if (isPolymarketTradingDisabledError(result)) {
         recordPmExecutionMetric({
@@ -997,7 +1004,7 @@ export const polymarketProvider: PlatformProvider = {
       const bet = new BetResult("Polymarket", true, msg, orderBody, result);
       bet.orderId = String(result.orderID ?? "").trim() || null;
       bet.pending = pending;
-      bet.beginTime = beginTime;
+      bet.beginTime = submittedAt;
       if (bet.orderId)
         markPolymarketChangmenOrder(account.accountId, bet.orderId);
       bumpPolymarketOrderSyncAfterBet(account.accountId);
@@ -1022,7 +1029,7 @@ export const polymarketProvider: PlatformProvider = {
           );
         }
         // delayed：后台确认成交（拒单/撮合）；手动卖出见 pmManualSell
-        startPolymarketSettlementJob(account, bet.orderId, { poll, conditionId });
+        startPolymarketSettlementJob(account, bet.orderId, { poll, conditionId, submittedAt });
       }
       recordPmExecutionMetric({
         ...executionSubmitFields,

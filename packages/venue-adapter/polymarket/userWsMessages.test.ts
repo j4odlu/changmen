@@ -18,6 +18,19 @@ describe("polymarketUserOrderIdsFromMessage", () => {
 });
 
 describe("interpretPolymarketUserWsMessage", () => {
+  it("preserves a partial fill when the remaining quantity is canceled", () => {
+    const msg = { event_type: "order", type: "CANCELLATION", id: ORDER_ID,
+      status: "CANCELED", size_matched: "3", original_size: "10" };
+    expect(interpretPolymarketUserWsMessage(msg, ORDER_ID)).toBe("matched");
+    expect(polymarketOrderRowFromUserWsMessage(msg, "matched")).toMatchObject({
+      size_matched: "3", original_size: "10",
+    });
+  });
+
+  it("does not invent zero filled quantity for incomplete cancellation events", () => {
+    expect(interpretPolymarketUserWsMessage({ event_type: "order", type: "CANCELLATION",
+      id: ORDER_ID }, ORDER_ID)).toBeNull();
+  });
   it("matched on trade CONFIRMED for taker order", () => {
     expect(interpretPolymarketUserWsMessage({
       event_type: "trade",
@@ -28,13 +41,13 @@ describe("interpretPolymarketUserWsMessage", () => {
     }, ORDER_ID)).toBe("matched");
   });
 
-  it("unfilled on trade FAILED", () => {
+  it("does not treat a failed trade as a canceled order", () => {
     expect(interpretPolymarketUserWsMessage({
       event_type: "trade",
       type: "TRADE",
       status: "FAILED",
       taker_order_id: ORDER_ID,
-    }, ORDER_ID)).toBe("unfilled");
+    }, ORDER_ID)).toBeNull();
   });
 
   it("unfilled on order CANCELLATION", () => {
@@ -42,6 +55,7 @@ describe("interpretPolymarketUserWsMessage", () => {
       event_type: "order",
       type: "CANCELLATION",
       id: ORDER_ID,
+      size_matched: "0",
     }, ORDER_ID)).toBe("unfilled");
   });
 

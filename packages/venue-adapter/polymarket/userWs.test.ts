@@ -7,6 +7,8 @@ import {
   stopAllPolymarketUserWs,
   warmAllPolymarketUserWs,
   warmPolymarketUserWs,
+  readPolymarketOrderWatch,
+  observePolymarketOrderWatch,
 } from "./userWs";
 import { POLYMARKET_USER_WS } from "./api";
 import { resetPmUserWsSourceModeForTests } from "./pmUserWsMode";
@@ -54,6 +56,18 @@ function pmAccount(): PlatformAccount {
 }
 
 describe("polymarket user ws", () => {
+  it("retains cumulative fills after an initial partial fill", async () => {
+    const account = pmAccount();
+    registerPolymarketOrderWatch(account, "partial", { conditionId: "market" });
+    const ws = MockWebSocket.instances[0]!;
+    ws.open();
+    const emit = (size: string) => ws.onmessage?.({ data: JSON.stringify({ event_type: "order", type: "UPDATE", id: "partial", size_matched: size, original_size: "10" }) });
+    emit("3");
+    expect((await awaitPolymarketOrderWatch("partial", account))?.row?.size_matched).toBe("3");
+    emit("10");
+    emit("3");
+    expect(readPolymarketOrderWatch("partial", account)?.row?.size_matched).toBe("10");
+  });
   beforeEach(() => {
     MockWebSocket.instances = [];
     resetPmUserWsSourceModeForTests("changmen");
@@ -63,6 +77,20 @@ describe("polymarket user ws", () => {
   afterEach(() => {
     stopAllPolymarketUserWs();
     vi.unstubAllGlobals();
+  });
+
+  it("restores an order observer without market metadata and unsubscribes cleanly", () => {
+    const listener = vi.fn();
+    const unsubscribe = observePolymarketOrderWatch(pmAccount(), "restored", listener);
+    const socket = MockWebSocket.instances[0]!;
+    socket.open();
+    expect(listener).toHaveBeenCalledWith("connected");
+    socket.onmessage?.({ data: JSON.stringify({ event_type: "order", type: "UPDATE", id: "restored", size_matched: "10" }) });
+    expect(listener).toHaveBeenCalledWith("update");
+    unsubscribe();
+    listener.mockClear();
+    socket.onmessage?.({ data: JSON.stringify({ event_type: "order", type: "UPDATE", id: "restored", size_matched: "10" }) });
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it("warmPolymarketUserWs opens authenticated session without order watch", () => {
@@ -95,7 +123,7 @@ describe("polymarket user ws", () => {
     const ws = MockWebSocket.instances[0]!;
     ws.open();
     const subscribe = JSON.parse(ws.sent[0]!);
-    expect(subscribe.markets).toEqual(["0xcondition"]);
+    expect(subscribe.markets).toEqual([]);
 
     ws.onmessage?.({
       data: JSON.stringify({
@@ -137,6 +165,38 @@ describe("polymarket user ws", () => {
     expect(MockWebSocket.instances).toHaveLength(2);
   });
 
+  it("reconnects after the replacement socket disconnects following a source switch", async () => {
+    vi.useFakeTimers();
+    try {
+      warmPolymarketUserWs(pmAccount(), "market");
+      MockWebSocket.instances[0]!.open();
+      cyclePmUserWsSourceModeAndReconnect();
+      const replacement = MockWebSocket.instances[1]!;
+      replacement.open();
+      replacement.close();
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(MockWebSocket.instances).toHaveLength(3);
+      const reconnected = MockWebSocket.instances[2]!;
+      reconnected.open();
+      expect(JSON.parse(reconnected.sent[0]!).markets).toEqual([]);
+    }
+    finally {
+      stopAllPolymarketUserWs();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not treat blank cancellation quantities as confirmed zero fill", () => {
+    const account = pmAccount();
+    registerPolymarketOrderWatch(account, "blank", { conditionId: "market" });
+    const ws = MockWebSocket.instances[0]!;
+    ws.open();
+    for (const size of ["", "  "]) {
+      ws.onmessage?.({ data: JSON.stringify({ event_type: "order", type: "CANCELLATION", id: "blank", size_matched: size }) });
+      expect(readPolymarketOrderWatch("blank", account)).toBeNull();
+    }
+  });
+
   it("watch resolves null on timeout so REST poll can continue", async () => {
     vi.useFakeTimers();
     registerPolymarketOrderWatch(pmAccount(), "0xlate", {
@@ -146,6 +206,46 @@ describe("polymarket user ws", () => {
     const pending = awaitPolymarketOrderWatch("0xlate");
     await vi.advanceTimersByTimeAsync(1_100);
     expect(await pending).toBeNull();
+    MockWebSocket.instances[0]!.onmessage?.({ data: JSON.stringify({
+      event_type: "order", type: "CANCELLATION", id: "0xlate", size_matched: "0",
+    }) });
+    expect((await awaitPolymarketOrderWatch("0xlate"))?.outcome).toBe("unfilled");
+    vi.useRealTimers();
+  });
+
+  it("replays an event that arrived before the HTTP ACK registered its watch", async () => {
+    warmPolymarketUserWs(pmAccount());
+    const ws = MockWebSocket.instances[0]!;
+    ws.open();
+    ws.onmessage?.({ data: JSON.stringify([{ event_type: "trade", status: "MATCHED",
+      taker_order_id: "early", size: "12" }]) });
+    registerPolymarketOrderWatch(pmAccount(), "early", { conditionId: "condition" });
+    expect((await awaitPolymarketOrderWatch("early"))?.outcome).toBe("matched");
+  });
+
+  it("keeps account-wide subscription when submitting orders in new markets", async () => {
+    const account = pmAccount();
+    warmPolymarketUserWs(account, "old-market");
+    const socket = MockWebSocket.instances[0]!;
+    socket.open();
+    warmPolymarketUserWs(account, "new-market");
+    expect(socket.sent).toHaveLength(1);
+    expect(JSON.parse(socket.sent[0]!)).toMatchObject({ type: "user", markets: [] });
+    socket.onmessage?.({ data: JSON.stringify({ event_type: "order", type: "CANCELLATION", id: "before-ack", size_matched: "0" }) });
+    registerPolymarketOrderWatch(account, "before-ack", { conditionId: "new-market" });
+    expect((await awaitPolymarketOrderWatch("before-ack", account))?.outcome).toBe("unfilled");
+  });
+
+  it("does not consume another authenticated account's events", async () => {
+    vi.useFakeTimers();
+    const other = { ...pmAccount(), token: JSON.stringify({ apiKey: "other", secret: "s", passphrase: "p" }) } as PlatformAccount;
+    registerPolymarketOrderWatch(pmAccount(), "isolated", { conditionId: "c", timeoutMs: 10 });
+    warmPolymarketUserWs(other);
+    MockWebSocket.instances[1]!.onmessage?.({ data: JSON.stringify({
+      event_type: "trade", status: "MATCHED", taker_order_id: "isolated", size: "12",
+    }) });
+    await vi.advanceTimersByTimeAsync(11);
+    expect(await awaitPolymarketOrderWatch("isolated")).toBeNull();
     vi.useRealTimers();
   });
 });

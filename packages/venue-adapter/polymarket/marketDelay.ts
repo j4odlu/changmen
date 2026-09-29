@@ -71,10 +71,12 @@ export async function fetchPolymarketMarketSecondsDelay(
   if (hit && hit.expiresAt > now)
     return hit.info;
 
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const row = await polymarketPluginGet<{ sd?: unknown; itode?: unknown }>(
-      `${POLYMARKET_CLOB_API}/clob-markets/${id}`,
-    );
+    const row = await Promise.race([
+      polymarketPluginGet<{ sd?: unknown; itode?: unknown }>(`${POLYMARKET_CLOB_API}/clob-markets/${id}`),
+      new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), 3000); }),
+    ]);
     const info = parsePolymarketClobMarketDelay(row);
     if (info.fromMarket)
       delayCache.set(id, { info, expiresAt: now + CACHE_TTL_MS });
@@ -82,6 +84,9 @@ export async function fetchPolymarketMarketSecondsDelay(
   }
   catch {
     return unknownDelayInfo();
+  }
+  finally {
+    clearTimeout(timer);
   }
 }
 

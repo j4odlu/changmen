@@ -335,12 +335,14 @@ export async function handlePmGetOpenOrders(body, userId) {
   const qs = new URLSearchParams();
   if (assetId)
     qs.set("asset_id", assetId);
+  if (body.id)
+    qs.set("id", String(body.id));
   const l2Path = qs.toString() ? `${OPEN_ORDERS_PATH}?${qs.toString()}` : OPEN_ORDERS_PATH;
   try {
     const result = await executePolymarketHttpRequest({
       method: "GET",
       url: `${gateway}${l2Path}`,
-      l2Path,
+      l2Path: OPEN_ORDERS_PATH,
       accountToken: resolved.account.token,
     });
     return { ok: true, info: parseUpstreamJson(result) };

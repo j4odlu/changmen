@@ -119,6 +119,10 @@ export const useLoseOrderStore = defineStore("loseorder", {
         pendingTarget?: BetSide;
         conditionId?: string;
         makeUpEligible?: boolean;
+        submittedAt?: number;
+        odds?: number;
+        betMoney?: number;
+        error?: string;
       } = {},
     ) {
       const existing = this.orders.get(betId);
@@ -138,9 +142,15 @@ export const useLoseOrderStore = defineStore("loseorder", {
       if (conditionId)
         existing.pendingVenueConditionId = conditionId;
       if (changed) {
+        existing.pendingVenueSubmittedAt = Number(opts.submittedAt) || Date.now();
+        existing.pendingVenueOdds = opts.odds;
+        existing.pendingVenueBetMoney = opts.betMoney;
+        existing.pendingVenueError = undefined;
         existing.pendingVenueAttempts = 0;
         existing.pendingVenueNextPollAt = undefined;
       }
+      if (opts.error)
+        existing.pendingVenueError = opts.error;
       existing.runtimePhase = "venue_pending";
       this.touchOrdersMap();
       this.persist();
@@ -155,6 +165,10 @@ export const useLoseOrderStore = defineStore("loseorder", {
       if (!hadPending)
         return;
       existing.pendingVenueOrderId = undefined;
+      existing.pendingVenueSubmittedAt = undefined;
+      existing.pendingVenueOdds = undefined;
+      existing.pendingVenueBetMoney = undefined;
+      existing.pendingVenueError = undefined;
       existing.pendingVenueAccountId = undefined;
       existing.pendingVenueRole = undefined;
       existing.pendingVenueTarget = undefined;
@@ -170,13 +184,15 @@ export const useLoseOrderStore = defineStore("loseorder", {
       this.persist();
     },
 
-    deferPendingVenueOrder(betId: number) {
+    deferPendingVenueOrder(betId: number, retryMs?: number) {
       const existing = this.orders.get(betId);
       if (!existing?.pendingVenueOrderId)
         return;
       const attempts = Math.max(0, Number(existing.pendingVenueAttempts) || 0) + 1;
       existing.pendingVenueAttempts = attempts;
-      existing.pendingVenueNextPollAt = Date.now() + Math.min(30_000, 1_000 * 2 ** Math.min(attempts - 1, 5));
+      const delay = retryMs == null ? Math.min(30_000, 1_000 * 2 ** Math.min(attempts - 1, 5))
+        : Math.max(1_000, Math.min(30_000, retryMs));
+      existing.pendingVenueNextPollAt = Date.now() + delay;
       this.touchOrdersMap();
       this.persist();
     },

@@ -79,6 +79,7 @@ describe("settlementJob", () => {
       conditionId: "0xc",
     });
     expect(getPolymarketSettlementDelayCtx(pmAccount(), "0xctx")).toEqual({
+      submittedAt: expect.any(Number),
       poll,
       conditionId: "0xc",
     });

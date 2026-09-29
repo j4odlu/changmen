@@ -15,7 +15,7 @@ import { wait } from "@changmen/client-core/shared/wait";
 
 export interface ArbLegSettleResult {
   orders: VenueOrder[];
-  /** 确认未成交（可补单） */
+  /** 未成交或 PM 已授权超时判拒（可补单） */
   rejected: boolean;
   /** 场馆仍待确认；不能作为补单锚腿或补单目标 */
   pendingConfirm: boolean;
@@ -77,7 +77,7 @@ export async function settleArbLeg(
   );
   const rejected = isVenueLegConfirmedUnfilled(outcome);
   const pendingConfirm = isVenueLegPendingConfirm(outcome);
-  // 本地查询 timeout 不是业务拒单；PM delayed 与传统场馆拒单检测期间同为待确认。
+  // PM 买入层已区分官方未成交和授权超时策略；两者均按现有拒单流程处理。
   if (rejected && result && isPolymarketProvider(account.provider)) {
     try {
       await persistPolymarketExecutionReject(account, result, "unfilled", {
@@ -99,7 +99,7 @@ export async function settleArbLeg(
 /**
  * 跟到已成交 / 未成交。
  * PF：timeout / 仍 pending → 续跟；耗尽仍未知则保持 pendingConfirm。
- * PM：一轮返回；若仍 pending，由 settlement job / 待确认链继续核对原单。
+ * PM：核验耗尽按授权策略退出；已有成交证据但数量矛盾的异常保留续查。
  * 非 pending-confirm 馆：一轮即返回。
  */
 export async function settleArbLegUntilTerminal(

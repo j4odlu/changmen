@@ -28,6 +28,7 @@ const submissions: ObSubmission[] = [];
 let now = 1_700_000_000_000;
 
 const accountHttpRequest = vi.hoisted(() => vi.fn());
+vi.mock("@/stores/loseOrderStore", () => ({ useLoseOrderStore: () => ({ orders: new Map() }) }));
 
 vi.mock("@changmen/client-core/shared/platformHttp", () => ({
   accountHttpRequest: (...args: unknown[]) => accountHttpRequest(...args),

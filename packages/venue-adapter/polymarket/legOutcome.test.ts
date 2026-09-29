@@ -9,6 +9,11 @@ const awaitPolymarketSettlementJob = vi.fn();
 const getPolymarketSettlementDelayCtx = vi.fn();
 const fetchPolymarketConfirmedTradeForOrder = vi.fn();
 const resolvePolymarketDelayedPollOpts = vi.fn();
+const readPolymarketOrderWatch = vi.fn();
+
+vi.mock("./userWs", () => ({
+  readPolymarketOrderWatch: (...args: unknown[]) => readPolymarketOrderWatch(...args),
+}));
 
 vi.mock("./orderSettlement", () => ({
   settlePolymarketDelayedOrder: (...args: unknown[]) => settlePolymarketDelayedOrder(...args),
@@ -57,6 +62,7 @@ describe("resolvePolymarketLegOutcome", () => {
   const fetchVenueOrders = vi.fn<() => Promise<VenueOrder[]>>();
 
   beforeEach(() => {
+    readPolymarketOrderWatch.mockReset();
     settlePolymarketDelayedOrder.mockReset();
     awaitPolymarketSettlementJob.mockReset();
     awaitPolymarketSettlementJob.mockResolvedValue(null);
@@ -71,6 +77,25 @@ describe("resolvePolymarketLegOutcome", () => {
     fetchPolymarketConfirmedTradeForOrder.mockReset();
     fetchVenueOrders.mockReset();
     fetchVenueOrders.mockResolvedValue([]);
+  });
+
+  it.each(["timeout", "unfilled"] as const)("prefers a late full fill over cached %s", async (outcome) => {
+    awaitPolymarketSettlementJob.mockResolvedValue({ outcome, row: null });
+    readPolymarketOrderWatch.mockReturnValue({ outcome: "matched", row: { size_matched: "10", original_size: "10" } });
+    const result = Object.assign(new BetResult("Polymarket", true), { pending: true, orderId: "late" });
+    const out = await resolvePolymarketLegOutcome(account(), result, { fetchVenueOrders });
+    expect(out.settlement).toBe("filled");
+    expect(result.pending).toBe(false);
+    expect(result.reject).toBeFalsy();
+  });
+
+  it("does not promote an inconsistent late quantity to full fill", async () => {
+    awaitPolymarketSettlementJob.mockResolvedValue({ outcome: "timeout", row: null });
+    readPolymarketOrderWatch.mockReturnValue({ outcome: "matched", row: { size_matched: "3", original_size: "10" } });
+    const result = Object.assign(new BetResult("Polymarket", true), { pending: true, orderId: "inconsistent" });
+    const out = await resolvePolymarketLegOutcome(account(), result, { fetchVenueOrders });
+    expect(out.settlement).toBe("timeout");
+    expect(result.reject).toBeFalsy();
   });
 
   it("prefers POST SettlementJob over settle when job exists", async () => {
@@ -116,7 +141,7 @@ describe("resolvePolymarketLegOutcome", () => {
     expect(fetchVenueOrders).not.toHaveBeenCalled();
   });
 
-  it("poll timeout → settlement timeout（结果确认中，不推断未成交）", async () => {
+  it("poll exhausted → policy rejection releases pending and enables makeup", async () => {
     const result = Object.assign(new BetResult("Polymarket", true), {
       pending: true,
       orderId: "0xtimeout",
@@ -128,10 +153,21 @@ describe("resolvePolymarketLegOutcome", () => {
 
     const out = await resolvePolymarketLegOutcome(account(), result, { fetchVenueOrders });
 
-    expect(out.settlement).toBe("timeout");
-    expect(out.orders).toEqual([]);
-    expect(result.pending).toBe(true);
-    expect(result.reject).toBeNull();
+    expect(out.settlement).toBe("unfilled");
+    expect(out.orders[0]?.status).toBe("reject");
+    expect(result.pending).toBe(false);
+    expect(result.reject).toBe("unfilled");
+    expect(result.message).toContain("非官方拒单回执");
+  });
+
+  it("applies the same policy to a completed background Job timeout", async () => {
+    const result = Object.assign(new BetResult("Polymarket", true), { pending: true, orderId: "0xjob-timeout" });
+    awaitPolymarketSettlementJob.mockResolvedValue({ outcome: "timeout", row: null });
+    const out = await resolvePolymarketLegOutcome(account(), result, { fetchVenueOrders });
+    expect(out.settlement).toBe("unfilled");
+    expect(result.pending).toBe(false);
+    expect(result.message).toContain("超时策略判拒");
+    expect(settlePolymarketDelayedOrder).not.toHaveBeenCalled();
   });
 
   it("honors result.reject without polling venue list", async () => {

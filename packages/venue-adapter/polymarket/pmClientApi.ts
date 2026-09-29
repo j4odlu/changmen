@@ -117,10 +117,13 @@ export async function pmPostHeartbeat(
 export async function pmGetOpenOrders<T = unknown>(
   account: PlatformAccount,
   assetId?: string,
+  orderId?: string,
 ): Promise<T> {
   const fields: Record<string, unknown> = { playerId: requirePlayerId(account) };
   const id = String(assetId ?? "").trim();
   if (id)
     fields.assetId = id;
+  if (orderId)
+    fields.id = orderId;
   return pmEsportCall<T>("Pm_GetOpenOrders", esportBody(account, fields));
 }

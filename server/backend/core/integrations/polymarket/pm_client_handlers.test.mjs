@@ -140,6 +140,15 @@ describe("pm_client_handlers", () => {
     expect(Array.isArray(res.info)).toBe(true);
   });
 
+  test("Pm_GetOpenOrders 支持原订单 id 精确查询", async () => {
+    const { executePolymarketHttpRequest } = await import("./clob_proxy.js");
+    const res = await handlePmGetOpenOrders({ playerId: 47, id: "original-id" }, "user-1");
+    expect(res.ok).toBe(true);
+    expect(executePolymarketHttpRequest).toHaveBeenCalledWith(expect.objectContaining({
+      method: "GET", url: expect.stringContaining("/data/orders?id=original-id"),
+    }));
+  });
+
   test("Pm_CancelOrder 需要 orderId", async () => {
     const res = await handlePmCancelOrder({ playerId: 47 }, "user-1");
     expect(res.ok).toBe(false);

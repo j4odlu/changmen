@@ -18,6 +18,10 @@ export interface LoseOrderRecord {
    * [changmen 扩展] 受理后确认场馆（PM delayed / PF）jb：timeout 后续轮 settle，避免重复 POST
    * 读兼容旧键 pendingPmOrderId
    */
+  pendingVenueSubmittedAt?: number;
+  pendingVenueOdds?: number;
+  pendingVenueBetMoney?: number;
+  pendingVenueError?: string;
   pendingVenueOrderId?: string;
   pendingVenueAccountId?: number;
   /** pending 原单是待补目标腿，还是可能成为补单锚点的腿 */

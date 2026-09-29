@@ -482,6 +482,7 @@ export async function fetchPolymarketConfirmedTradeForOrder(
   orderId: string,
   lookbackMs = 10 * 60 * 1000,
   side: "BUY" | "SELL" = "BUY",
+  strict = false,
 ): Promise<PolymarketTradeRow | null> {
   const id = String(orderId ?? "").trim();
   if (!id)
@@ -491,9 +492,11 @@ export async function fetchPolymarketConfirmedTradeForOrder(
   const userAddresses = collectPolymarketUserAddressesFromAccount(account);
   let rawTrades: PolymarketTradeRow[];
   try {
-    rawTrades = await fetchTradesSince(account, gateway, afterSec);
+    rawTrades = await fetchTradesSince(account, gateway, afterSec, strict);
   }
-  catch {
+  catch (error) {
+    if (strict)
+      throw error;
     return null;
   }
   const flattened = flattenPolymarketTrades(rawTrades, userAddresses);
@@ -1239,13 +1242,18 @@ async function fetchTradesSince(
   account: PlatformAccount,
   gateway: string,
   afterSec: number,
+  strict = false,
 ): Promise<PolymarketTradeRow[]> {
   void gateway;
   try {
     const batch = await pmGetTrades<PolymarketTradeRow[]>(account, afterSec, MAX_TRADE_PAGES);
+    if (strict && !Array.isArray(batch))
+      throw new Error("PM 成交查询返回非列表响应");
     return Array.isArray(batch) ? batch : [];
   }
-  catch {
+  catch (error) {
+    if (strict)
+      throw error;
     return [];
   }
 }

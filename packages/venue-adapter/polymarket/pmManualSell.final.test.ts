@@ -104,7 +104,7 @@ describe("awaitPolymarketManualSellFinalOutcome", () => {
   it("unfilled when settlement says unfilled", async () => {
     vi.mocked(awaitPolymarketSettlementJob).mockResolvedValue({
       outcome: "unfilled",
-      row: { status: "CANCELED" },
+      row: { status: "CANCELED", size_matched: "0" },
     });
     const out = await awaitPolymarketManualSellFinalOutcome({
       account: account(),

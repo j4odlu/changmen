@@ -140,10 +140,22 @@ export async function applyVenueJbSettlementOutcome(
       role: pendingRole,
       pendingTarget: order.pendingVenueTarget ?? order.target,
       conditionId: order.pendingVenueConditionId ?? String(checked.betId ?? ""),
+      submittedAt: result.beginTime,
+      odds: checked.newOdds || checked.odds,
+      betMoney: checked.betMoney,
     });
-    loseStore.deferPendingVenueOrder(betId);
-    setMessage(`订单待确认，下轮续查 ${String(result.orderId ?? "").slice(0, 10)}…`);
-    syncActiveBetMakeupPendingConfirm(betId, result.orderId);
+    const isPm = isPolymarketProvider(account.provider);
+    // 原单迟到回执不能再被最长 30s 的队列退避拖住；仍由单飞任务控制并发。
+    loseStore.deferPendingVenueOrder(betId, isPm ? 1_000 : undefined);
+    if (isPm) {
+      const firstAlert = !order.pendingVenueError;
+      order.pendingVenueError = result.message || "PM 核验窗口结束，未取得成交或取消终态";
+      loseStore.persist?.();
+      if (firstAlert)
+        a8Tip("PM 原单核验超时", "原单仍待确认，继续核对成交结果，禁止重复补单", 10000);
+    }
+    setMessage(`订单待确认，继续核对 ${String(result.orderId ?? "").slice(0, 10)}…`);
+    syncActiveBetMakeupPendingConfirm(betId, result.orderId, order.pendingVenueError);
     useMessageStore().loseOrderMessage(account, order, checked, true);
     return "pending";
   }
@@ -246,26 +258,32 @@ export async function tryResumePendingVenueMakeUp(
 
   const account = accountStore.findAccount(order.pendingVenueAccountId);
   if (!account || !isPendingConfirmVenueProvider(account.provider)) {
-    // 账号丢失/非预测馆：清掉 stale pending，避免永久阻断其它盘口补单
-    loseStore.clearPendingVenueOrder(betId);
-    return "not-applicable";
+    // [changmen 扩展] 账号消失不是原单未成交证据，保留锁并报告异常。
+    order.pendingVenueError = "原单账号不可用，无法核验成交";
+    loseStore.deferPendingVenueOrder(betId);
+    loseStore.persist?.();
+    setMessage(order.pendingVenueError);
+    return "handled";
   }
 
   const pendingRole = order.pendingVenueRole ?? "target";
   const ref = bet?.items.find(item => item.type === account.provider);
   const pendingTarget = order.pendingVenueTarget ?? order.target;
-  const sideOdds = ref?.getOdds(pendingTarget) || order.betOdds;
+  const sideOdds = order.pendingVenueOdds || ref?.getOdds(pendingTarget) || order.betOdds;
+  const pendingStake = order.pendingVenueBetMoney ?? order.getBetMoney(sideOdds);
   const checked = match && bet && ref
-    ? new BetOptionCtor(match, bet, ref, pendingTarget, order.getBetMoney(sideOdds))
+    ? new BetOptionCtor(match, bet, ref, pendingTarget, pendingStake)
     : new BetOptionCtor(
         account.provider,
         String(order.matchId),
         order.pendingVenueConditionId ?? String(order.betId),
         "",
-        order.getBetMoney(sideOdds),
+        pendingStake,
         pendingTarget,
         sideOdds,
       );
+  checked.odds = sideOdds;
+  checked.newOdds = sideOdds;
   checked.loseOrder = true;
   checked.diagnosticLinkId = order.linkId;
   checked.diagnosticAttempt = "makeup";
@@ -273,6 +291,7 @@ export async function tryResumePendingVenueMakeUp(
   const result = Object.assign(new BetResultCtor(account.provider, true), {
     orderId: pendingId,
     pending: true,
+    beginTime: order.pendingVenueSubmittedAt || order.createAt,
   });
 
   const outcome = await applyVenueJbSettlementOutcome({

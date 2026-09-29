@@ -50,11 +50,14 @@ export function interpretPolymarketUserWsMessage(
   const orderStatus = String(msg.status ?? "").trim().toLowerCase();
 
   if (eventType === "order" || type === "PLACEMENT" || type === "UPDATE" || type === "CANCELLATION") {
-    if (type === "CANCELLATION" || orderStatus === "canceled" || orderStatus === "cancelled")
-      return "unfilled";
     const sizeMatched = Number(msg.size_matched);
-    if (type === "UPDATE" && Number.isFinite(sizeMatched) && sizeMatched > 0)
+    if (Number.isFinite(sizeMatched) && sizeMatched > 0)
       return "matched";
+    // [changmen 扩展] 取消只终止剩余量；缺少累计成交量时交给 REST 核对。
+    if (type === "CANCELLATION" || orderStatus === "canceled" || orderStatus === "cancelled")
+      return msg.size_matched != null && String(msg.size_matched).trim() !== "" && sizeMatched === 0
+        && (!Array.isArray(msg.associate_trades) || msg.associate_trades.length === 0)
+        ? "unfilled" : null;
     // PLACEMENT / delayed / live / unmatched：继续等系统 cancel 或成交
     if (
       type === "PLACEMENT"
@@ -71,15 +74,17 @@ export function interpretPolymarketUserWsMessage(
   if (eventType === "trade" || type === "TRADE") {
     const status = String(msg.status ?? "").trim().toUpperCase();
     if (status === "FAILED" || status === "TRADE_STATUS_FAILED")
-      return "unfilled";
+      return null; // 单条 trade 失败不是整张订单未成交的证明。
     if (
       status === "MATCHED"
       || status === "MINED"
       || status === "CONFIRMED"
+      || status === "RETRYING"
       || status === "TRADE_STATUS_MATCHED"
       || status === "TRADE_STATUS_MATCHED_NOT_BROADCASTED"
       || status === "TRADE_STATUS_MINED"
       || status === "TRADE_STATUS_CONFIRMED"
+      || status === "TRADE_STATUS_RETRYING"
     ) {
       return "matched";
     }
@@ -93,10 +98,13 @@ export function polymarketOrderRowFromUserWsMessage(
 ): PolymarketOrderRow {
   if (outcome === "unfilled")
     return { status: "cancelled", size_matched: "0" };
-  const size = msg.size ?? msg.size_matched;
+  const size = msg.size_matched ?? msg.size;
   return {
     status: String(msg.status ?? "MATCHED"),
     size_matched: String(size ?? ""),
-    associate_trades: msg.id ? [String(msg.id)] : undefined,
+    original_size: msg.original_size == null ? undefined : String(msg.original_size),
+    associate_trades: Array.isArray(msg.associate_trades)
+      ? msg.associate_trades.map(String)
+      : msg.event_type === "order" ? undefined : msg.id ? [String(msg.id)] : undefined,
   };
 }

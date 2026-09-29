@@ -1,7 +1,8 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
+import { tracePolymarketOrder } from "./orderTrace";
 import { reportVenueWsStatus } from "../shared/venueWsStatus";
 import type { PolymarketOrderRow } from "./orderTypes";
-import { polymarketUserSubscribeMessage, polymarketUserSubscribeMoreMessage } from "./api";
+import { polymarketUserSubscribeMessage } from "./api";
 import { resolvePolymarketUserWsUrl } from "./wsConfig";
 import {
   cyclePmUserWsSourceMode,
@@ -12,6 +13,7 @@ import {
 import { parseTokenConfig, resolveApiCreds } from "./l2Auth";
 import {
   interpretPolymarketUserWsMessage,
+  polymarketUserOrderIdsFromMessage,
   polymarketOrderRowFromUserWsMessage,
 } from "./userWsMessages";
 
@@ -26,6 +28,9 @@ export interface PolymarketWsSettleResult {
 }
 
 interface WatchEntry {
+  listeners: Set<(event: "update" | "connected") => void>;
+  accountId?: number;
+  accountKey: string;
   promise: Promise<PolymarketWsSettleResult | null>;
   settled: boolean;
   result: PolymarketWsSettleResult | null;
@@ -38,10 +43,10 @@ interface UserWsSession {
   markets: Set<string>;
   ws: WebSocket | null;
   stopped: boolean;
-  skipNextReconnect: boolean;
   reconnectTimer: ReturnType<typeof setTimeout> | null;
   pingTimer: ReturnType<typeof setInterval> | null;
   connected: boolean;
+  recentMessages: { at: number; message: Record<string, unknown> }[];
 }
 
 const sessions = new Map<string, UserWsSession>();
@@ -98,10 +103,10 @@ function getOrCreateSession(account: PlatformAccount): UserWsSession | null {
       markets: new Set(),
       ws: null,
       stopped: false,
-      skipNextReconnect: false,
       reconnectTimer: null,
       pingTimer: null,
       connected: false,
+      recentMessages: [],
     };
     sessions.set(accountKey, session);
   }
@@ -127,24 +132,33 @@ function subscribeMarketOnSession(session: UserWsSession, conditionId: string) {
   if (!id || session.markets.has(id))
     return;
   session.markets.add(id);
-  if (session.connected) {
-    sendJson(session, polymarketUserSubscribeMoreMessage([id]));
-    return;
-  }
+  // 用户流按账号订阅全部市场，不再动态缩窄过滤范围。
   ensureUserWsConnected(session);
 }
 
 function settleWatch(orderId: string, result: PolymarketWsSettleResult) {
   const entry = orderWatches.get(orderId);
-  if (!entry || entry.settled)
+  if (!entry)
     return;
+  if (entry.result?.outcome === "matched") {
+    if (result.outcome !== "matched")
+      return;
+    const previousSize = Number(entry.result.row?.size_matched) || 0;
+    const nextSize = Number(result.row?.size_matched) || 0;
+    if (nextSize < previousSize)
+      return;
+    result = { ...result, row: { ...entry.result.row, ...result.row,
+      original_size: result.row?.original_size ?? entry.result.row?.original_size } };
+  }
   entry.settled = true;
   entry.result = result;
   entry.resolve(result);
+  for (const listener of entry.listeners)
+    listener("update");
 }
 
-function dispatchUserWsMessage(_session: UserWsSession, raw: string) {
-  if (raw === "PONG" || !raw.trim().startsWith("{"))
+function dispatchUserWsMessage(session: UserWsSession, raw: string) {
+  if (raw === "PONG" || !/^[\[{]/.test(raw.trim()))
     return;
   let parsed: unknown;
   try {
@@ -154,25 +168,29 @@ function dispatchUserWsMessage(_session: UserWsSession, raw: string) {
     return;
   }
 
-  for (const [orderId, entry] of orderWatches) {
-    if (entry.settled)
+  for (const message of Array.isArray(parsed) ? parsed : [parsed]) {
+    if (!message || typeof message !== "object")
       continue;
-    const outcome = interpretPolymarketUserWsMessage(parsed, orderId);
-    if (!outcome)
-      continue;
-    const msg = parsed as Record<string, unknown>;
-    settleWatch(orderId, {
-      source: "ws",
-      outcome,
-      row: polymarketOrderRowFromUserWsMessage(msg, outcome),
-    });
+    const msg = message as Record<string, unknown>;
+    // [changmen 扩展] 缓存 ACK 前到达的事件；只存当前鉴权会话，且限制容量。
+    session.recentMessages = session.recentMessages.filter(x => Date.now() - x.at < 120_000);
+    session.recentMessages.push({ at: Date.now(), message: msg });
+    session.recentMessages = session.recentMessages.slice(-256);
+    for (const [orderId, entry] of orderWatches) {
+      if (entry.accountKey !== session.accountKey)
+        continue;
+      if (polymarketUserOrderIdsFromMessage(msg).some(id => id.toLowerCase() === orderId.toLowerCase()))
+        tracePolymarketOrder(entry.accountId, orderId, "ws_event", { receivedAt: Date.now(), status: String(msg.status ?? msg.type ?? ""), replayed: false });
+      const outcome = interpretPolymarketUserWsMessage(msg, orderId);
+      if (outcome)
+        settleWatch(orderId, { source: "ws", outcome, row: polymarketOrderRowFromUserWsMessage(msg, outcome) });
+    }
   }
 }
 
 function forceReconnectSession(session: UserWsSession) {
   if (session.stopped)
     return;
-  session.skipNextReconnect = true;
   if (session.reconnectTimer) {
     clearTimeout(session.reconnectTimer);
     session.reconnectTimer = null;
@@ -205,7 +223,17 @@ function ensureUserWsConnected(session: UserWsSession) {
     if (session.ws !== ws)
       return;
     session.connected = true;
-    sendJson(session, polymarketUserSubscribeMessage(session.auth, [...session.markets]));
+    for (const [id, entry] of orderWatches) {
+      if (entry.accountKey === session.accountKey)
+        tracePolymarketOrder(entry.accountId, id, "ws_open");
+    }
+    sendJson(session, polymarketUserSubscribeMessage(session.auth, []));
+    for (const entry of orderWatches.values()) {
+      if (entry.accountKey === session.accountKey) {
+        for (const listener of entry.listeners)
+          listener("connected");
+      }
+    }
     session.pingTimer = setInterval(() => {
       if (session.ws?.readyState === WebSocket.OPEN)
         session.ws.send("PING");
@@ -222,12 +250,12 @@ function ensureUserWsConnected(session: UserWsSession) {
   ws.onclose = () => {
     if (session.ws !== ws)
       return;
+    for (const [id, entry] of orderWatches) {
+      if (entry.accountKey === session.accountKey)
+        tracePolymarketOrder(entry.accountId, id, "ws_close");
+    }
     cleanupSessionTimers(session);
     refreshPolymarketUserWsStatus();
-    if (session.skipNextReconnect) {
-      session.skipNextReconnect = false;
-      return;
-    }
     scheduleReconnect(session);
   };
 
@@ -239,13 +267,15 @@ function ensureUserWsConnected(session: UserWsSession) {
 }
 
 /** 账号加载后预连 User WS，避免首笔 delayed 冷启动 */
-export function warmPolymarketUserWs(account: PlatformAccount): boolean {
+export function warmPolymarketUserWs(account: PlatformAccount, conditionId?: string): boolean {
   if (account.provider !== "Polymarket")
     return false;
   const session = getOrCreateSession(account);
   if (!session)
     return false;
   ensureUserWsConnected(session);
+  if (conditionId)
+    subscribeMarketOnSession(session, conditionId);
   return true;
 }
 
@@ -271,7 +301,7 @@ export function registerPolymarketOrderWatch(
 ): void {
   const id = String(orderId ?? "").trim();
   const conditionId = String(opts.conditionId ?? "").trim();
-  if (!id || !conditionId)
+  if (!id)
     return;
   if (orderWatches.has(id))
     return;
@@ -286,12 +316,25 @@ export function registerPolymarketOrderWatch(
   });
 
   const entry: WatchEntry = {
+    listeners: new Set(),
+    accountId: account.accountId,
+    accountKey: session.accountKey,
     promise,
     settled: false,
     result: null,
     resolve,
   };
   orderWatches.set(id, entry);
+  tracePolymarketOrder(account.accountId, id, "watch", { status: session.connected ? "connected" : "connecting" });
+  for (const cached of session.recentMessages) {
+    if (Date.now() - cached.at >= 120_000)
+      continue;
+    const outcome = interpretPolymarketUserWsMessage(cached.message, id);
+    if (outcome) {
+      tracePolymarketOrder(account.accountId, id, "ws_event", { receivedAt: cached.at, outcome, replayed: true });
+      settleWatch(id, { source: "ws", outcome, row: polymarketOrderRowFromUserWsMessage(cached.message, outcome) });
+    }
+  }
 
   const timeoutMs = opts.timeoutMs ?? DEFAULT_WATCH_TIMEOUT_MS;
   setTimeout(() => {
@@ -299,21 +342,40 @@ export function registerPolymarketOrderWatch(
       return;
     entry.settled = true;
     entry.result = null;
+    tracePolymarketOrder(entry.accountId, id, "ws_timeout");
     resolve(null);
   }, timeoutMs);
 
   subscribeMarketOnSession(session, conditionId);
+  ensureUserWsConnected(session);
+}
+
+/** [changmen 扩展] 持续通知迟到回执与重连；独立于首次等待 Promise 的超时。 */
+export function observePolymarketOrderWatch(
+  account: PlatformAccount,
+  orderId: string,
+  listener: (event: "update" | "connected") => void,
+): () => void {
+  registerPolymarketOrderWatch(account, orderId, { conditionId: "" });
+  const entry = orderWatches.get(orderId.trim());
+  if (!entry || entry.accountKey !== sessionKeyFromAccount(account))
+    return () => {};
+  entry.listeners.add(listener);
+  if (entry.result)
+    listener("update");
+  return () => { entry.listeners.delete(listener); };
 }
 
 /** 拒单检测：等待已注册的 WS watch；无 watch 或超时 unresolved 返回 null → 走 REST 轮询 */
 export async function awaitPolymarketOrderWatch(
   orderId: string,
+  account?: PlatformAccount,
 ): Promise<PolymarketWsSettleResult | null> {
   const id = String(orderId ?? "").trim();
   if (!id)
     return null;
   const entry = orderWatches.get(id);
-  if (!entry)
+  if (!entry || (account && entry.accountKey !== sessionKeyFromAccount(account)))
     return null;
   if (entry.settled)
     return entry.result;
@@ -324,6 +386,12 @@ export function clearPolymarketOrderWatch(orderId: string): void {
   const id = String(orderId ?? "").trim();
   if (id)
     orderWatches.delete(id);
+}
+
+/** [changmen 扩展] 包括首次等待超时后到达的结果，不重新等待 WS。 */
+export function readPolymarketOrderWatch(orderId: string, account: PlatformAccount): PolymarketWsSettleResult | null {
+  const entry = orderWatches.get(orderId);
+  return entry?.accountKey === sessionKeyFromAccount(account) ? entry?.result ?? null : null;
 }
 
 export { getPmUserWsSourceMode, pmUserWsSourceModeLabel };
@@ -350,8 +418,9 @@ export function stopAllPolymarketUserWs(): void {
     session.stopped = true;
     if (session.reconnectTimer)
       clearTimeout(session.reconnectTimer);
+    const socket = session.ws;
     cleanupSessionTimers(session);
-    session.ws?.close();
+    socket?.close();
   }
   sessions.clear();
   refreshPolymarketUserWsStatus();

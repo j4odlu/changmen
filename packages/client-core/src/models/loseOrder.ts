@@ -34,6 +34,10 @@ export class LoseOrder implements LoseOrderRecord {
   createAt: number;
   isCreateOrder: boolean;
   betCount: number;
+  pendingVenueSubmittedAt?: number;
+  pendingVenueOdds?: number;
+  pendingVenueBetMoney?: number;
+  pendingVenueError?: string;
   pendingVenueOrderId?: string;
   pendingVenueAccountId?: number;
   pendingVenueRole?: "target" | "anchor";
@@ -64,6 +68,10 @@ export class LoseOrder implements LoseOrderRecord {
       raw.pendingVenueOrderId ?? raw.pendingPmOrderId ?? "",
     ).trim();
     this.pendingVenueOrderId = pendingId || undefined;
+    this.pendingVenueSubmittedAt = pendingId ? Number(raw.pendingVenueSubmittedAt) || this.createAt : undefined;
+    this.pendingVenueOdds = pendingId ? Number(raw.pendingVenueOdds) || undefined : undefined;
+    this.pendingVenueBetMoney = pendingId ? Number(raw.pendingVenueBetMoney) || undefined : undefined;
+    this.pendingVenueError = pendingId ? raw.pendingVenueError : undefined;
     const pendingAcc = Number(
       raw.pendingVenueAccountId ?? raw.pendingPmAccountId,
     );
@@ -128,6 +136,10 @@ export class LoseOrder implements LoseOrderRecord {
       ...(this.pendingVenueOrderId
         ? {
             pendingVenueOrderId: this.pendingVenueOrderId,
+            pendingVenueSubmittedAt: this.pendingVenueSubmittedAt,
+            pendingVenueOdds: this.pendingVenueOdds,
+            pendingVenueBetMoney: this.pendingVenueBetMoney,
+            pendingVenueError: this.pendingVenueError,
             pendingVenueAccountId: this.pendingVenueAccountId,
             pendingVenueRole: this.pendingVenueRole ?? "target",
             pendingVenueTarget: this.pendingVenueTarget,

@@ -14,6 +14,7 @@ import { wait } from "@changmen/client-core/shared/wait";
 import { getPolymarketPmSportBlockReasonFromOption } from "@changmen/venue-adapter/polymarket";
 import { PLATFORMS } from "@changmen/venue-adapter/shared";
 import { useAccountStore } from "@/stores/accountStore";
+import { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { useUserStore } from "@/stores/userStore";
 import {
   scheduleActiveBetRunRemoval,
@@ -65,6 +66,18 @@ export async function checkArbLegs(
   } = ready;
   checkAccountA = checkAccountA ?? accountA;
   checkAccountB = checkAccountB ?? accountB;
+
+  // [changmen 扩展] 原单核验异常时阻止该账号继续积累未知敞口；恢复后自动解除。
+  const blocked = [...useLoseOrderStore().orders.values()].some(order =>
+    order.pendingVenueOrderId && order.pendingVenueError
+    && [checkAccountA, checkAccountB].some(account => account?.accountId === order.pendingVenueAccountId));
+  if (blocked) {
+    const reason = "PM 原单确认异常，暂停该账号新增套利";
+    trace?.finish("fail", reason);
+    setMessage(reason);
+    syncActiveBetFail(bet.id, reason);
+    return null;
+  }
 
   syncActiveBetPhase(bet.id, "checking", "正在预检");
 

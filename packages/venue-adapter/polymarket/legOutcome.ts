@@ -5,6 +5,7 @@ import { sortVenueOrdersNewestFirst } from "../contract";
 import { fetchPolymarketConfirmedTradeForOrder } from "./orders";
 import {
   applyPolymarketSettlementToResult,
+  applyPolymarketBuyTimeoutPolicy,
   buildPolymarketRejectVenueOrder,
   isPolymarketBetResultFillConfirmed,
   isPolymarketOrderIdRejected,
@@ -17,6 +18,8 @@ import {
 import { resolvePolymarketDelayedPollOpts } from "./marketDelay";
 import type { PolymarketOrderResponseLike, PolymarketPollOutcome } from "./orderTypes";
 import { buildPolymarketMatchedBuyVenueOrderForSaveAsync } from "./pmPostFillOrder";
+import { readPolymarketOrderWatch } from "./userWs";
+import { tracePolymarketOrder } from "./orderTrace";
 
 export interface PolymarketLegOutcomeDeps {
   fetchVenueOrders: () => Promise<VenueOrder[]>;
@@ -54,20 +57,38 @@ function needsPmSettlementPoll(result: BetResult): boolean {
   return status === "delayed" || status === "live" || status === "unmatched";
 }
 
-/** Job 仅采信 matched/unfilled；缺少终态时按官方 sd 再 settle，timeout 保持待确认。 */
+/** 买入腿统一收尾：Job 和恢复续查都应用已授权的核验耗尽判拒策略。 */
 async function settlePolymarketWithJobFallback(
   account: PlatformAccount,
   orderId: string,
   conditionId?: string,
+  submittedAt?: number,
 ): Promise<{ outcome: PolymarketPollOutcome; row: import("./orderTypes").PolymarketOrderRow | null }> {
+  const finish = (raw: Awaited<ReturnType<typeof settlePolymarketDelayedOrder>>) => {
+    const latest = readPolymarketOrderWatch(orderId, account);
+    let evidence = raw;
+    if (raw.outcome !== "matched" && latest?.outcome === "matched") {
+      const incomplete = Number(latest.row?.size_matched) > 0
+        && Number(latest.row?.original_size) > Number(latest.row?.size_matched);
+      evidence = incomplete
+        ? { outcome: "timeout", row: { ...latest.row, lookupError: "FOK 回执数量不一致，尚未确认整笔成交或未成交" } }
+        : { outcome: "matched", row: latest.row };
+    }
+    const settled = applyPolymarketBuyTimeoutPolicy(evidence);
+    if (settled.row?.confirmationBasis === "timeout_policy")
+      tracePolymarketOrder(account.accountId, orderId, "decision", { submittedAt, outcome: "timeout_policy_unfilled" });
+    return settled;
+  };
   const jobResult = await awaitPolymarketSettlementJob(account, orderId);
   if (jobResult)
-    return jobResult;
+    return finish(jobResult);
   const ctx = getPolymarketSettlementDelayCtx(account, orderId);
   const poll = ctx?.poll
     ?? await resolvePolymarketDelayedPollOpts(conditionId ?? ctx?.conditionId);
-  const settled = await settlePolymarketDelayedOrder(account, orderId, { poll });
-  return settled;
+  const settled = await settlePolymarketDelayedOrder(account, orderId, {
+    poll, submittedAt: ctx?.submittedAt || submittedAt,
+  });
+  return finish(settled);
 }
 
 async function resolvePolymarketPostAcceptedOutcome(
@@ -142,7 +163,7 @@ async function resolvePolymarketPostAcceptedOutcome(
 
   const orderId = String(result.orderId ?? "").trim();
   if (orderId && needsPmSettlementPoll(result)) {
-    const settled = await settlePolymarketWithJobFallback(account, orderId, conditionId);
+    const settled = await settlePolymarketWithJobFallback(account, orderId, conditionId, result.beginTime);
     applyPolymarketSettlementToResult(result, settled.outcome, settled.row);
     const settlement = pollOutcomeToSettlement(settled.outcome);
     if (settlement === "filled") {
@@ -178,7 +199,7 @@ async function resolvePolymarketPostAcceptedOutcome(
  *
  * [changmen 扩展] fill confirmed（matched+takingAmount）→ 直接 filled，不进 delayed poll；
  * 仅拉单一次供绑单。契约见 docs/ARB_VENUE_ORCH_CONTRACT.md。
- * timeout 仅表示结果确认中，不得推断为未成交。
+ * BUY 核验耗尽按用户授权的超时策略判拒；诊断中与官方拒单区分。
  */
 export async function resolvePolymarketLegOutcome(
   account: PlatformAccount,
@@ -191,6 +212,7 @@ export async function resolvePolymarketLegOutcome(
       account,
       result.orderId,
       conditionId,
+      result.beginTime,
     );
     applyPolymarketSettlementToResult(result, outcome, row);
     const settlement = pollOutcomeToSettlement(outcome);

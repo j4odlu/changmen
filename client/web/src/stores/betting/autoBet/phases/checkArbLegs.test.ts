@@ -8,6 +8,8 @@ import { createDefaultUserConfig } from "@/types/userConfig";
 
 const checkBetting = vi.hoisted(() => vi.fn());
 const getEntry = vi.hoisted(() => vi.fn());
+const pendingOrders = vi.hoisted(() => new Map<number, { pendingVenueOrderId: string; pendingVenueError: string; pendingVenueAccountId: number }>());
+vi.mock("@/stores/loseOrderStore", () => ({ useLoseOrderStore: () => ({ orders: pendingOrders }) }));
 
 vi.mock("@/stores/accountStore", () => ({
   useAccountStore: () => ({ checkBetting }),
@@ -65,12 +67,24 @@ const params: ArbBetAttemptParams = {
 describe("checkArbLegs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pendingOrders.clear();
     extensionPrefs.stakeScaleByProfit.skipAccountRateOnScale = false;
     getEntry.mockReturnValue(undefined);
     checkBetting.mockImplementation(async (_acc, option: BetOption) => {
       option.data = { ok: true };
       return option;
     });
+  });
+
+  it("核验异常账号阻止新增套利，原单解除后恢复预检", async () => {
+    const input = ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125));
+    input.accountB!.accountId = 285;
+    pendingOrders.set(1, { pendingVenueOrderId: "original", pendingVenueError: "查询超时", pendingVenueAccountId: 285 });
+    expect(await checkArbLegs(params, input)).toBeNull();
+    expect(checkBetting).not.toHaveBeenCalled();
+    pendingOrders.clear();
+    expect(await checkArbLegs(params, input)).not.toBeNull();
+    expect(checkBetting).toHaveBeenCalledTimes(2);
   });
 
   it("非 PM 双腿并行预检，betMoney 保持 GetOrderOptions 值", async () => {

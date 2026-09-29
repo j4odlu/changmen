@@ -49,7 +49,7 @@ function contextFromBetOption(
 
 /**
  * [changmen 扩展] 已执行 PM 下单但未成交 → 落库 Reject，供平台拒单率统计。
- * - unfilled：settle 确认 FOK/取消
+ * - unfilled：settle 确认 FOK/取消，或用户授权的买入超时判拒（result.message 保留依据）
  * - api_failed：已 POST 但未成交（常无官方 orderId，用合成 id）
  * - 金额：对齐成交单（pmStakeUsdc=U，betMoney=CNY）；勿把场馆 U 直接写入 betMoney
  * 不改补单/判定；timeout 勿调用。预检 / POST 前失败勿调用。
@@ -64,7 +64,7 @@ export async function persistPolymarketExecutionReject(
     return null;
   if (reason !== "unfilled" && reason !== "api_failed")
     return null;
-  // api_failed 仅统计已 POST；unfilled 已由 settle 确认
+  // api_failed 仅统计已 POST；unfilled 已由买入收尾层作出业务决定
   if (reason === "api_failed" && !isPolymarketPostedApiFailure(result))
     return null;
   const order = buildPolymarketExecutionRejectVenueOrder(

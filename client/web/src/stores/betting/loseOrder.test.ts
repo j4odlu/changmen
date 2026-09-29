@@ -554,7 +554,7 @@ describe("processLoseOrders (A8 jb parity)", () => {
     );
   });
 
-  it("PM poll timeout 保留 pendingVenue，下一轮只续查不重复 POST", async () => {
+  it("PM 核验耗尽按策略判拒，下一轮恢复补单而非永久续查", async () => {
     const bet = makeBet([makeItem("Polymarket", 4.167)]);
     matchs.push(makeMatch(bet));
     queueOrder();
@@ -573,18 +573,15 @@ describe("processLoseOrders (A8 jb parity)", () => {
       provider: "Polymarket",
       pending: true,
       orderId: "0xtimeout-order",
-    });
+    }).mockResolvedValueOnce({ success: false, provider: "Polymarket" });
     settlePolymarketDelayedOrder.mockResolvedValueOnce({ outcome: "timeout", row: null });
 
     await processLoseOrders({ setMessage: vi.fn() });
     await processLoseOrders({ setMessage: vi.fn() });
 
-    expect(betting).toHaveBeenCalledTimes(1);
-    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "0xtimeout-order", 47, {
-      role: "target",
-      pendingTarget: "Home",
-      conditionId: "b1",
-    });
+    expect(betting).toHaveBeenCalledTimes(2);
+    expect(setPendingVenueOrder).not.toHaveBeenCalled();
+    expect(loseOrders.get(100)?.pendingVenueOrderId).toBeUndefined();
     expect(removeOrder).not.toHaveBeenCalled();
     expect(loseOrderMessage).toHaveBeenCalledWith(
       acc,

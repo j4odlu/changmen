@@ -90,15 +90,16 @@ export function saveVenueSettlementLog(params: {
   try {
     const { account, option, result, orders, settlement, linkId } = params;
     const exactOrderId = String(result.orderId ?? "").trim();
-    const observedOrder = (exactOrderId
+    const observedOrder = exactOrderId
       ? orders.find(order => String(order.orderId) === exactOrderId)
-      : null) ?? orders[0] ?? null;
+      : orders[0] ?? null;
     const orderId = String(observedOrder?.orderId ?? exactOrderId).trim() || null;
     const observedAt = Date.now();
     const placedAt = Number(observedOrder?.createAt || result.beginTime) || null;
     const rejectDelayMs = placedAt == null ? null : Math.max(0, observedAt - placedAt);
+    const policyRejected = settlement === "unfilled" && String(result.message).includes("超时策略判拒");
     const stateLabel = settlement === "unfilled"
-      ? "确认拒单"
+      ? policyRejected ? "超时策略判拒" : "确认拒单"
       : settlement === "timeout"
         ? "仍待确认"
         : "确认成交";
@@ -127,6 +128,8 @@ export function saveVenueSettlementLog(params: {
         observedAt,
         rejectDelayMs,
         settlement,
+        settlementMessage: result.message,
+        decisionBasis: policyRejected ? "timeout_policy" : null,
         observedStatus: observedOrder?.status ?? (orders.length ? "unknown" : "missing"),
         rejectReason: settlement === "unfilled" ? settlementRejectReason(result) : null,
       },

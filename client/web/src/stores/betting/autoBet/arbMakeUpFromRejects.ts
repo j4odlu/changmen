@@ -2,7 +2,7 @@ import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { ArbBetAttemptParams, ArbBetPlaced } from "@/stores/betting/autoBet/phases/types";
-import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
+import { isPendingConfirmVenueProvider, isPolymarketProvider } from "@changmen/shared/account_multiply";
 import { LoseOrder } from "@/models/loseOrder";
 import { arbMakeUpSides } from "@/stores/betting/autoBet/arbMakeUpPair";
 import { enqueueMakeUpOrder } from "@/stores/betting/autoBet/makeUp";
@@ -112,6 +112,10 @@ export async function applyArbMakeUpFromRejects(
         role,
         pendingTarget: pendingLeg.target,
         conditionId: pendingLeg.betId,
+        submittedAt: pendingResult?.beginTime,
+        odds: pendingLeg.newOdds || pendingLeg.odds,
+        betMoney: pendingLeg.betMoney,
+        error: isPolymarketProvider(pendingAccount.provider) ? pendingResult?.message || "PM 核验窗口结束，未取得终态" : undefined,
       });
       return true;
     }
@@ -157,6 +161,10 @@ export async function applyArbMakeUpFromRejects(
       role,
       pendingTarget: pendingLeg.target,
       conditionId: pendingLeg.betId,
+      submittedAt: pendingResult?.beginTime,
+      odds: pendingLeg.newOdds || pendingLeg.odds,
+      betMoney: pendingLeg.betMoney,
+      error: isPolymarketProvider(pendingAccount.provider) ? pendingResult?.message || "PM 核验窗口结束，未取得终态" : undefined,
       makeUpEligible: enqueued,
     });
     return true;

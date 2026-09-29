@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   applyPolymarketSettlementToResult,
+  applyPolymarketBuyTimeoutPolicy,
+  coercePolymarketFokPollOutcome,
   buildPolymarketExecutionRejectVenueOrder,
   buildPolymarketRejectVenueOrder,
   formatPolymarketSettlementMessage,
@@ -19,14 +21,41 @@ import { BetResult } from "@changmen/client-core/models/betResult";
 const fetchPolymarketConfirmedTradeForOrder = vi.fn();
 const awaitPolymarketOrderWatch = vi.fn();
 
+describe("BUY timeout policy rollback", () => {
+  it.each([
+    ["matched", "matched"],
+    ["unfilled", "unfilled"],
+    ["timeout", "unfilled"],
+  ] as const)("restores the original FOK mapping: %s -> %s", (input, expected) => {
+    expect(coercePolymarketFokPollOutcome(input)).toBe(expected);
+  });
+  it.each([null, { status: "delayed" }, { lookupError: "query failed" }])("exits exhausted confirmation with explicit local basis: %s", (row) => {
+    const decision = applyPolymarketBuyTimeoutPolicy({ outcome: "timeout", row });
+    expect(decision.outcome).toBe("unfilled");
+    expect(decision.row?.confirmationBasis).toBe("timeout_policy");
+    expect(decision.row?.status).not.toBe("CANCELED");
+    expect(formatPolymarketSettlementMessage("original", decision.outcome, decision.row)).toContain("非官方拒单回执");
+  });
+  it("never overrides an existing fill or fabricates official rejection", () => {
+    const matched = { outcome: "matched" as const, row: { size_matched: "10" } };
+    expect(applyPolymarketBuyTimeoutPolicy(matched)).toBe(matched);
+    const inconsistent = { outcome: "timeout" as const, row: { size_matched: "3", original_size: "10" } };
+    expect(applyPolymarketBuyTimeoutPolicy(inconsistent)).toBe(inconsistent);
+    const official = { outcome: "unfilled" as const, row: { status: "CANCELED", size_matched: "0" } };
+    expect(applyPolymarketBuyTimeoutPolicy(official)).toBe(official);
+  });
+});
+
 vi.mock("./orders", () => ({
   fetchPolymarketConfirmedTradeForOrder: (...args: unknown[]) =>
     fetchPolymarketConfirmedTradeForOrder(...args),
 }));
 
 vi.mock("./userWs", () => ({
+  observePolymarketOrderWatch: vi.fn(() => () => {}),
   awaitPolymarketOrderWatch: (...args: unknown[]) => awaitPolymarketOrderWatch(...args),
   clearPolymarketOrderWatch: vi.fn(),
+  readPolymarketOrderWatch: vi.fn(() => null),
 }));
 
 describe("isPolymarketDelayedPending", () => {
@@ -124,6 +153,7 @@ describe("interpretPolymarketOrderRow", () => {
   it("unfilled for canceled", () => {
     expect(interpretPolymarketOrderRow({ status: "CANCELED", size_matched: "0" }))
       .toBe("unfilled");
+    expect(interpretPolymarketOrderRow({ status: "CANCELED" })).toBe("pending");
   });
 
   it("pending for delayed status", () => {
@@ -132,8 +162,8 @@ describe("interpretPolymarketOrderRow", () => {
 });
 
 describe("isPolymarketRestingNoFill / delay lookup", () => {
-  it("treats delayed with no fill as resting", () => {
-    expect(isPolymarketRestingNoFill({ status: "delayed", size_matched: "0" })).toBe(true);
+  it("never treats delayed as cancelable", () => {
+    expect(isPolymarketRestingNoFill({ status: "delayed", size_matched: "0" })).toBe(false);
   });
 
   it("treats live / unmatched with no fill as resting", () => {
@@ -156,7 +186,7 @@ describe("formatPolymarketSettlementMessage", () => {
     expect(formatPolymarketSettlementMessage("0x1", "unfilled", null))
       .toContain("未成交");
     expect(formatPolymarketSettlementMessage("0x1", "timeout", null))
-      .toContain("确认中");
+      .toContain("待确认");
   });
 });
 
@@ -181,7 +211,8 @@ describe("applyPolymarketSettlementToResult", () => {
     applyPolymarketSettlementToResult(result, "timeout", null);
     expect(result.pending).toBe(true);
     expect(result.reject).toBeNull();
-    expect(result.message).toContain("确认中");
+    expect(result.message).toContain("待确认");
+    expect(result.message).toContain("核验诊断");
   });
 });
 
@@ -312,8 +343,8 @@ describe("settlePolymarketDelayedOrder", () => {
     });
 
     expect(out.outcome).toBe("matched");
-    expect(out.row?.status).toBe("MATCHED");
-    expect(fetchPolymarketConfirmedTradeForOrder).toHaveBeenCalledWith(acc, "0xlate", 60_000, "BUY");
+    expect(out.row?.status).toBe("MINED");
+    expect(fetchPolymarketConfirmedTradeForOrder).toHaveBeenCalledWith(acc, "0xlate", expect.any(Number), "BUY", true);
   });
 
   it("does not trust ws unfilled alone — confirms via trades", async () => {

@@ -1,10 +1,12 @@
 # changmen 优化计划（活文档）
 
-本文件是 changmen **代码优化的唯一跟踪入口**：记录待办、风险、执行规约与进度。
-AI 助手每次执行优化任务都**按本文档进行**，用户可据此查看与验收。
+本文件是 changmen **代码正确性 / 性能优化的跟踪入口**：记录待办、风险、执行规约与进度。
+AI 助手每次执行**优化类**任务都**按本文档进行**，用户可据此查看与验收。
 
-- 最近更新：2026-08-13
-- 关联：[ARCHITECTURE.md](./ARCHITECTURE.md)、[DATA_STORAGE.md](./DATA_STORAGE.md)、[ACCOUNT_BACKEND.md](./ACCOUNT_BACKEND.md)、**[MATCH_LIFECYCLE_ROADMAP.md](./MATCH_LIFECYCLE_ROADMAP.md)**（合场 → 场次状态机演进）
+> **分工**：包边界、去重、破循环依赖、新 workspace 拆分 → 见 **[MODULARIZATION_PLAN.md](./MODULARIZATION_PLAN.md)**（模块化）。本文不承接「全面拆包」类条目；两边发现可互相追加 backlog，但认领与进度日志分文档维护。
+
+- 最近更新：2026-09-19（链到模块化计划）
+- 关联：[ARCHITECTURE.md](./ARCHITECTURE.md)、[MODULARIZATION_PLAN.md](./MODULARIZATION_PLAN.md)、[DATA_STORAGE.md](./DATA_STORAGE.md)、[ACCOUNT_BACKEND.md](./ACCOUNT_BACKEND.md)、**[MATCH_LIFECYCLE_ROADMAP.md](./MATCH_LIFECYCLE_ROADMAP.md)**（合场 → 场次状态机演进）
 - **目录注记（2026-08-07）**：match 模块已整合——`match-engine/` → `server/match/identity`、`team-resolver/` → `server/match/resolver`、`matcher/`+`match-composer/` → `server/match/matcher`。下文旧目录名为当时命名；现路径以 [ARCHITECTURE.md](./ARCHITECTURE.md) 为准。
 
 ---

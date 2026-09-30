@@ -43,7 +43,7 @@ function stakeUsdcFromRow(row) {
   if (Number.isFinite(fromRaw) && fromRaw > 0)
     return fromRaw;
   const betCny = Number(row.bet_money) || 0;
-  const fx = getExchange(Currency.USDT) || 6.7;
+  const fx = getExchange(Currency.USDT);
   if (betCny > 0 && fx > 0)
     return Math.round((betCny / fx) * 10000) / 10000;
   return 0;

@@ -1,8 +1,10 @@
 import { getVenueOddsLimit, setVenueOddsLimit } from "@changmen/client-core/bridge/oddsAccess";
+import { Currency, getExchange } from "@changmen/shared/currency";
 import { parseVenueCreateAt } from "@changmen/shared/time/match_time";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-export const STAKE_USDT_TO_CNY = 6.977023058793687;
+/** Stake 与其它 USDT 场馆共用全局 U→CNY 配置。 */
+export const STAKE_USDT_TO_CNY = getExchange(Currency.USDT);
 import { stakeAccountHeaders, stakePluginGraphql } from "./pluginApi";
 import { resolveStakeTabIdNow, stakeTabIdHint } from "./tabId";
 import type { PlatformProvider, VenueOrder, VenueOrderStatus } from "../contract";

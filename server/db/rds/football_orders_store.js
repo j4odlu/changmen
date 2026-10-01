@@ -291,7 +291,7 @@ export async function fetchFootballOrdersAdmin(opts = {}) {
     throw new Error("DATABASE_URL 未配置");
   await ensureTable(pool);
   const limit = Math.min(Math.max(Number(opts.limit) || 2000, 1), 5000);
-  const clauses = [];
+  const clauses = ["UPPER(TRIM(o.venue)) = 'OB'"];
   const params = [];
   const dateKey = String(opts.date || "").trim();
   if (dateKey) {
@@ -349,9 +349,10 @@ export async function fetchFootballOrdersForMonthAggregate(monthKey, userId, use
   await ensureTable(pool);
   try {
     const params = [monthStart, monthEnd];
-    let sql = `SELECT user_id, stake, profit, status, placed_at
+    let sql = `SELECT user_id, venue, stake, profit, status, placed_at
                FROM football_orders
-               WHERE placed_at >= $1 AND placed_at < $2`;
+               WHERE placed_at >= $1 AND placed_at < $2
+                 AND UPPER(TRIM(venue)) = 'OB'`;
     if (userId) {
       params.push(String(userId));
       sql += ` AND user_id = $${params.length}::uuid`;

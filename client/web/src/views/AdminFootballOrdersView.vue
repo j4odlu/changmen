@@ -5,7 +5,7 @@ import type { FootballOrderDto } from "@/api/footballOrder";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { deleteAdminOrders, getAdminUsers } from "@/api/admin";
+import { getAdminUsers } from "@/api/admin";
 import { deleteAdminFootballOrders, getAdminFootballOrders } from "@/api/footballOrder";
 import AdminLayout from "@/components/admin/AdminLayout.vue";
 import AdminOrderLogsDialog from "@/components/admin/AdminOrderLogsDialog.vue";
@@ -99,10 +99,6 @@ function playerLabel(row: FootballOrderDto) {
   return pid ? `${venue} / #${pid}` : venue;
 }
 
-function isObFootballRow(row: FootballOrderDto) {
-  return String(row.venue || "OB").trim().toUpperCase() === "OB";
-}
-
 function toAdminOrderRow(row: FootballOrderDto): AdminOrderRow {
   return {
     id: Number(row.rdsId) || 0,
@@ -121,7 +117,7 @@ function toAdminOrderRow(row: FootballOrderDto): AdminOrderRow {
     createAt: Number(row.at) || 0,
     domain: "sports",
     sport: "football",
-    source: isObFootballRow(row) ? "football_orders" : "orders",
+    source: "football_orders",
     playerName: String(row.accountName || ""),
     platformName: String(row.venue || "OB"),
   };
@@ -297,13 +293,8 @@ async function onDeleteOrders(rows: FootballOrderDto[]) {
     return;
   }
   try {
-    const obIds = list.filter(isObFootballRow).map(row => Number(row.rdsId));
-    const unifiedIds = list.filter(row => !isObFootballRow(row)).map(row => Number(row.rdsId));
-    let deleted = 0;
-    if (obIds.length)
-      deleted += Number((await deleteAdminFootballOrders(obIds)).deleted) || 0;
-    if (unifiedIds.length)
-      deleted += Number((await deleteAdminOrders(unifiedIds)).deleted) || 0;
+    const ids = list.map(row => Number(row.rdsId));
+    const deleted = Number((await deleteAdminFootballOrders(ids)).deleted) || 0;
     ElMessage.success(`已删除 ${deleted} 笔足球订单`);
     await loadOrders();
   }
@@ -515,7 +506,7 @@ onMounted(async () => {
           v-if="!loading && !loadError && !filteredOrders.length && (groupMode === 'account' || !users.length)"
           class="admin-order-groups__empty"
         >
-          {{ date }} 暂无足球订单。可切换日期查看；OB 读 football_orders，其他场馆读统一 orders。
+          {{ date }} 暂无足球订单。可切换日期查看；仅查询 OB 场馆的足球订单。
         </p>
       </div>
 

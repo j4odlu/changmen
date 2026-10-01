@@ -1,5 +1,5 @@
 /**
- * 足球月报：只聚合 football_orders。
+ * 足球月报：只聚合 football_orders 中的 OB 订单。
  * 禁止读写电竞 orders / money_logs，禁止引用电竞月报模块。
  */
 import * as sb from "@changmen/db";
@@ -55,7 +55,7 @@ function isUnsettled(status) {
 
 /**
  * @param {string} [month]
- * @param {Array<{ placed_at?: number, placedAt?: number, stake?: number, profit?: number, status?: string }>} rows
+ * @param {Array<{ placed_at?: number, placedAt?: number, stake?: number, profit?: number, status?: string, venue?: string }>} rows
  */
 export function aggregateFootballMonthRows(month, rows) {
   const { month: m, year, mon, days } = monthBounds(month);
@@ -66,6 +66,8 @@ export function aggregateFootballMonthRows(month, rows) {
   }
 
   for (const o of rows || []) {
+    if (String(o.venue || "OB").trim().toUpperCase() !== "OB")
+      continue;
     if (isReject(o.status))
       continue;
     const key = toLocalDateKey(o.placed_at ?? o.placedAt);

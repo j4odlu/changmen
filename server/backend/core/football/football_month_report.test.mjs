@@ -14,11 +14,13 @@ const jun14 = new Date(2026, 5, 14, 12, 0, 0).getTime();
 const jun15 = new Date(2026, 5, 15, 9, 0, 0).getTime();
 
 const report = aggregateFootballMonthRows("2026-06", [
-  { placed_at: jun13, stake: 100, profit: 80, status: "Win" },
+  { placed_at: jun13, venue: " ob ", stake: 100, profit: 80, status: "Win" },
   { placed_at: jun13, stake: 50, profit: 0, status: "Pending" },
   { placed_at: jun13, stake: 999, profit: 10, status: "Reject" },
   { placed_at: jun14, stake: 200, profit: -200, status: "Lose" },
   { placed_at: jun15, stake: 40, profit: 0, status: "None" },
+  { placed_at: jun13, venue: "Polymarket", stake: 500, profit: 400, status: "Win" },
+  { placed_at: jun14, venue: "IM", stake: 300, profit: -300, status: "Lose" },
 ]);
 
 assert.equal(report.month, "2026-06");

@@ -1,5 +1,5 @@
 /**
- * 足球订单 HTTP。OB 足球走 football_orders；非 OB 足球在管理端由统一 orders 补入查询。
+ * 足球订单 HTTP。管理端仅查询 football_orders 中的 OB 足球订单。
  */
 import { post, unwrap } from "@/api/client";
 import type { PodSportOrder } from "@/runtime/podSportOrders";

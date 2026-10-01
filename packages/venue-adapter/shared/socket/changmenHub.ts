@@ -1,6 +1,8 @@
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 import { reportVenueWsStatus } from "../venueWsStatus";
+import { getChangmenAuthToken } from "../changmenAuthToken";
+import { resolveChangmenWsBase } from "../changmenWsBase";
 
 /** 与 server/realtime-hub/channels.js PM_SPORT_CHANNEL 一致 */
 export const PM_SPORT_CHANNEL = "Polymarket:PmSport";
@@ -17,16 +19,12 @@ const handlers = new Map<string, Set<ChannelHandler>>();
 const serverSubscribed = new Set<string>();
 
 function hubOrigin(): string {
-  if (typeof window !== "undefined" && window.location?.origin)
-    return window.location.origin;
-  const isWin = typeof process !== "undefined" && process.platform === "win32";
-  return `http://127.0.0.1:${isWin ? 3700 : 3456}`;
+  return resolveChangmenWsBase();
 }
 
 function socketToken(): string {
-  if (typeof localStorage === "undefined")
-    return "";
-  return localStorage.getItem("app:token") ?? localStorage.getItem("token") ?? "";
+  // [changmen 扩展] Cookie 会话 token 仅保存在 web 内存，统一 getter 覆盖此登录模式。
+  return getChangmenAuthToken();
 }
 
 function dispatchChannel(channel: string, message: unknown) {

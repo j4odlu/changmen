@@ -30,8 +30,9 @@ export function emitPubSubMessage(io, channel, content) {
 /**
  * BetTarget / Publish / USER:* / TRADE:* — 客户端 pub/sub（对齐 A8 GoEasy 频道语义）
  * @param {import("socket.io").Socket} socket
+ * @param {{ getSnapshot?: (channel: string) => unknown }} [options]
  */
-export function attachPubSubHandlers(socket) {
+export function attachPubSubHandlers(socket, { getSnapshot } = {}) {
   socket.on("pubsub:subscribe", (payload, ack) => {
     const channel = normalizePubSubChannel(payload?.channel);
     if (!channel) {
@@ -39,6 +40,9 @@ export function attachPubSubHandlers(socket) {
       return;
     }
     socket.join(channel);
+    const snapshot = getSnapshot?.(channel);
+    if (snapshot != null)
+      socket.emit("pubsub:message", { channel, content: snapshot });
     ack?.({ ok: true });
   });
 

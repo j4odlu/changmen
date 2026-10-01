@@ -173,5 +173,29 @@ test("watcher enters unknown after repeated network failures", async () => {
   await tick();
   assert.equal(messages.at(-1).message.state, "unknown");
   assert.equal(messages.at(-1).message.error, "boom");
+  const count = messages.length;
+  await tick();
+  assert.equal(messages.length, count + 1);
+  assert.equal(messages.at(-1).message.state, "unknown");
   stop();
+});
+
+test("watcher reports errors even when no poll has succeeded", async () => {
+  const { messages, stop, tick } = startHarness(() => Promise.reject(new Error("status page timeout")));
+  await flush();
+  assert.equal(messages[0].message.state, "unknown");
+  assert.equal(messages[0].message.error, "status page timeout");
+  await tick();
+  assert.equal(messages.length, 2);
+  stop();
+});
+
+test("stopped watcher does not publish an in-flight result", async () => {
+  let resolveFetch;
+  const pending = new Promise(resolve => { resolveFetch = resolve; });
+  const { messages, stop } = startHarness(() => pending);
+  stop();
+  resolveFetch({ ok: true, status: 200, json: async () => ({ ...SUMMARY_UP, components: COMPONENTS_OK }) });
+  await flush();
+  assert.equal(messages.length, 0);
 });

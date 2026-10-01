@@ -152,7 +152,9 @@ function pmOfficialTooltip(): string {
       lines.push("⚠ 异常/事故：部分组件不可用");
       break;
     default:
-      lines.push("未知：尚未收到服务端检测数据");
+      lines.push(pmOfficialDetail.value?.error
+        ? "未知：服务端无法获取官方状态页"
+        : "未知：等待服务端检测数据");
   }
   const detail = pmOfficialDetail.value;
   if (detail?.pageStatus)

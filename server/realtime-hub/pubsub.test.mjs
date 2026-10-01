@@ -4,10 +4,35 @@ import test from "node:test";
 import { io as ioc } from "socket.io-client";
 import { attachChangmenRealtimeHub, closeChangmenRealtimeHub } from "./hub.js";
 import {
+  attachPubSubHandlers,
   MAX_PUBSUB_CHANNEL_LEN,
   MAX_PUBSUB_MESSAGE_LEN,
   normalizePubSubChannel,
 } from "./pubsub.js";
+import { Server } from "socket.io";
+
+test("maintenance subscription and resubscription immediately receive the latest snapshot", async (t) => {
+  const server = http.createServer();
+  const io = new Server(server, { transports: ["websocket"] });
+  const channel = "Polymarket:Maintenance";
+  let snapshot = { state: "operational", checkedAt: 123 };
+  io.on("connection", socket => attachPubSubHandlers(socket, {
+    getSnapshot: name => name === channel ? snapshot : null,
+  }));
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  const client = ioc(`http://127.0.0.1:${server.address().port}`, { transports: ["websocket"] });
+  t.after(() => { client.close(); io.close(); server.close(); });
+  await new Promise(resolve => client.on("connect", resolve));
+  const subscribe = async () => {
+    const received = new Promise(resolve => client.once("pubsub:message", resolve));
+    client.emit("pubsub:subscribe", { channel });
+    return received;
+  };
+  assert.deepEqual(await subscribe(), { channel, content: snapshot });
+  await new Promise(resolve => client.emit("pubsub:unsubscribe", { channel }, resolve));
+  snapshot = { state: "unknown", checkedAt: 456, error: "timeout" };
+  assert.deepEqual(await subscribe(), { channel, content: snapshot });
+});
 
 test("normalizePubSubChannel", () => {
   assert.equal(normalizePubSubChannel(" BetTarget "), "BetTarget");

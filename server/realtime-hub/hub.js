@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import { REALTIME_SOCKET_PATH } from "./channels.js";
+import { PM_MAINTENANCE_CHANNEL, REALTIME_SOCKET_PATH } from "./channels.js";
 import { startPmMaintenanceWatcher } from "./pm_maintenance.js";
 import { broadcastPmSportUpdate } from "./pm_sport_broadcast.js";
 import { attachPubSubHandlers, emitPubSubMessage } from "./pubsub.js";
@@ -12,6 +12,9 @@ let emitChannel = null;
 
 /** @type {(() => void) | null} */
 let stopPmMaintenanceWatcher = null;
+
+/** [changmen 扩展] 官网检测快照：新订阅/重连立即回传，避免等待下一轮轮询。 */
+let pmMaintenanceSnapshot = null;
 
 function requireToken(socket) {
   const token
@@ -42,7 +45,10 @@ export function attachChangmenRealtimeHub(httpServer) {
   };
 
   stopPmMaintenanceWatcher = startPmMaintenanceWatcher({
-    emit: (channel, message) => emitChannel?.(channel, message),
+    emit: (channel, message) => {
+      pmMaintenanceSnapshot = message;
+      emitChannel?.(channel, message);
+    },
   });
 
   io.on("connection", (socket) => {
@@ -51,7 +57,9 @@ export function attachChangmenRealtimeHub(httpServer) {
       return;
     }
 
-    attachPubSubHandlers(socket);
+    attachPubSubHandlers(socket, {
+      getSnapshot: channel => channel === PM_MAINTENANCE_CHANNEL ? pmMaintenanceSnapshot : null,
+    });
 
     socket.on("join room", (room) => {
       const name = String(room || "").trim();
@@ -80,6 +88,7 @@ export async function pushPmSportToBrowsers(clientMatchId, pmSport) {
 export function closeChangmenRealtimeHub() {
   stopPmMaintenanceWatcher?.();
   stopPmMaintenanceWatcher = null;
+  pmMaintenanceSnapshot = null;
   io?.close();
   io = null;
   emitChannel = null;

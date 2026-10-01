@@ -21,8 +21,9 @@ hub 内置 watcher ──轮询 status.polymarket.com──► emit(Polymarket:M
 ## PM 官网维护检测（pm_maintenance.js）
 
 - 每 60s（`PM_MAINTENANCE_POLL_MS`，最小 30s）轮询 `status.polymarket.com` 的 Statuspage 兼容 API（`/api/v2/summary.json` + `/api/v2/components.json`）。
-- 状态机：`operational` / `maintenance`（页面或任一分量 UNDERMAINTENANCE）/ `incident`（HASISSUES 或分量降级、部分/重大故障）/ `unknown`（连续 3 次网络失败）。
+- 状态机：`operational` / `maintenance`（页面或任一分量 UNDERMAINTENANCE）/ `incident`（HASISSUES 或分量降级、部分/重大故障）/ `unknown`（首次检测失败，或已有状态后连续 3 次网络失败；附检测错误）。
 - 状态翻转需连续 2 次读数一致防抖；每轮结果都广播（`state` 为防抖后的公开状态）。
+- [changmen 扩展] 保留最近检测快照，新订阅/重连立即回传；持续检测失败时仍广播错误，避免长期显示“尚未收到数据”。
 - 关闭：`PM_MAINTENANCE_WATCH=0|off|false`。
 
 ## 导出

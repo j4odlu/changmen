@@ -145,13 +145,15 @@ export function startPmMaintenanceWatcher({
   let pendingStreak = 0;
   let failStreak = 0;
   let inFlight = false;
+  let stopped = false;
 
   const publish = (payload) => {
-    emit(PM_MAINTENANCE_CHANNEL, payload);
+    if (!stopped)
+      emit(PM_MAINTENANCE_CHANNEL, payload);
   };
 
   async function tick() {
-    if (inFlight)
+    if (inFlight || stopped)
       return;
     inFlight = true;
     try {
@@ -181,7 +183,10 @@ export function startPmMaintenanceWatcher({
     }
     catch (err) {
       failStreak += 1;
-      if (failStreak >= UNKNOWN_FAIL_STREAK && publicState !== null && publicState !== "unknown") {
+      if (failStreak === 1 || failStreak === UNKNOWN_FAIL_STREAK)
+        console.warn(`[pm-maintenance] poll failed (${failStreak}): ${err instanceof Error ? err.message : String(err)}`);
+      // [changmen 扩展] 首次检测失败也发送诊断；持续 unknown 仍广播，供晚加入的页面读取。
+      if (publicState === null || publicState === "unknown" || failStreak >= UNKNOWN_FAIL_STREAK) {
         publicState = "unknown";
         publish({
           state: "unknown",
@@ -204,6 +209,7 @@ export function startPmMaintenanceWatcher({
   console.log(`[pm-maintenance] watcher started poll=${pollMs}ms source=${PM_STATUS_PAGE_URL}`);
 
   return () => {
+    stopped = true;
     clearIntervalImpl(timer);
   };
 }

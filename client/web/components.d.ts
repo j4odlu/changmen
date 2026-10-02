@@ -106,6 +106,7 @@ declare module 'vue' {
     MoneyRiskView: typeof import('./src/components/account/MoneyRiskView.vue')['default']
     MonthReportTable: typeof import('./src/components/report/MonthReportTable.vue')['default']
     OrderDateNav: typeof import('./src/components/order/OrderDateNav.vue')['default']
+    OrderExecutionTimeline: typeof import('./src/components/order/OrderExecutionTimeline.vue')['default']
     OrderList: typeof import('./src/components/order/OrderList.vue')['default']
     OrderMakeupStatusBar: typeof import('./src/components/order/OrderMakeupStatusBar.vue')['default']
     OrderSoundSettings: typeof import('./src/components/user/OrderSoundSettings.vue')['default']

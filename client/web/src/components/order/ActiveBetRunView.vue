@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { ActiveBetLeg, ActiveBetRun } from "@/types/activeBetRun";
-import { observationEventLabel, observationEventStage, orderObservationTargets } from "@changmen/shared/order_observation_view";
 import { storeToRefs } from "pinia";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import OrderExecutionTimeline from "@/components/order/OrderExecutionTimeline.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
+import { observationLegGroups, observationLegSummary, progressEvidenceWarnings } from "@/shared/activeBetRunPresentation";
 import { formatActiveBetLinkLabel } from "@/shared/linkDisplay";
 import {
   ACTIVE_BET_RUN_QUEUE_CAP,
@@ -18,9 +19,9 @@ import "@/styles/active-bet-run.css";
 const PANEL_POS_KEY = "changmen:active-bet-run:pos:v4";
 const PANEL_COLLAPSED_KEY = "changmen:active-bet-run:collapsed";
 const PANEL_SIZE_KEY = "changmen:active-bet-run:size:v1";
-/** 默认宽度：与原先列表上方单笔栏一致（双腿并排共 460） */
-const PANEL_W = 460;
-const PANEL_H = 370;
+/** [changmen 扩展] 双腿摘要与时间线共用可滚动舞台。 */
+const PANEL_W = 500;
+const PANEL_H = 560;
 const PANEL_MIN_W = 360;
 const PANEL_MIN_H = 260;
 
@@ -40,7 +41,9 @@ const resizing = ref(false);
 /** 当前展示的套利单下标（visibleRuns：0=最新） */
 const activeIndex = ref(0);
 
-const legEventFeedEls = new Map<string, HTMLElement>();
+const expandedTimeline = ref(false);
+const copyLabel = ref("复制 Link");
+let copyTimer: ReturnType<typeof setTimeout> | undefined;
 let tickTimer: ReturnType<typeof setInterval> | undefined;
 let dragCleanup: (() => void) | undefined;
 let resizeCleanup: (() => void) | undefined;
@@ -50,15 +53,18 @@ const activeRun = computed(() => visibleRuns.value[activeIndex.value] ?? null);
 const runFacts = computed(() => userStore.isLoggedIn
   ? observationStore.forLink(String(userStore.userId || ""), activeRun.value?.linkId)
   : []);
-const factTargets = computed(() => orderObservationTargets(runFacts.value));
-const legFactGroups = computed(() => new Map((activeRun.value?.legs || []).map(leg =>
-  [leg.side, runFacts.value.filter(event => factTargets.value.get(event) === leg.target)],
-)));
-function legFacts(leg: ActiveBetLeg) { return legFactGroups.value.get(leg.side) || []; }
-const unassignedFacts = computed(() => runFacts.value.filter((event) => {
-  const target = factTargets.value.get(event);
-  return !activeRun.value?.legs.some(leg => leg.target === target);
-}));
+const factGroups = computed(() => observationLegGroups(runFacts.value, activeRun.value?.legs || []));
+function legFacts(leg: ActiveBetLeg) { return factGroups.value.groups.get(leg.side) || []; }
+const legSummaries = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, observationLegSummary(legFacts(leg), leg.status)])));
+function legSummary(leg: ActiveBetLeg) { return legSummaries.value.get(leg.side)!; }
+function legProvider(leg: ActiveBetLeg) { return legSummary(leg).provider || leg.platform; }
+const unassignedFacts = computed(() => factGroups.value.unassigned);
+const hasMoreTimeline = computed(() => unassignedFacts.value.length > 6
+  || (activeRun.value?.legs || []).some(leg => legFacts(leg).length > 6));
+const evidenceWarnings = computed(() => progressEvidenceWarnings(runFacts.value));
+function latestLegAction(leg: ActiveBetLeg) { return leg.events.at(-1)?.detail || leg.detail || "等待执行"; }
+const executionId = computed(() => [...runFacts.value].reverse().find(event => event.executionId)?.executionId);
+const elapsedLabel = computed(() => `${Math.max(0, Math.floor(((activeRun.value?.terminalAt || now.value) - (activeRun.value?.startedAt || now.value)) / 1000))}s`);
 const localHistoryTruncated = computed(() => userStore.isLoggedIn && observationStore.truncatedOwners.includes(String(userStore.userId || "")));
 const canPrev = computed(() => activeIndex.value < runCount.value - 1);
 const canNext = computed(() => activeIndex.value > 0);
@@ -102,6 +108,7 @@ onMounted(() => {
   tickTimer = setInterval(() => {
     now.value = Date.now();
   }, 1000);
+  window.addEventListener("resize", normalizePanelGeometry);
   restorePanelPrefs();
   void nextTick(normalizePanelGeometry);
 });
@@ -109,8 +116,11 @@ onMounted(() => {
 onUnmounted(() => {
   if (tickTimer)
     clearInterval(tickTimer);
+  window.removeEventListener("resize", normalizePanelGeometry);
   dragCleanup?.();
   resizeCleanup?.();
+  if (copyTimer)
+    clearTimeout(copyTimer);
 });
 
 watch(
@@ -123,16 +133,14 @@ watch(
       activeIndex.value = 0;
     else if (activeIndex.value >= runs.length)
       activeIndex.value = Math.max(0, runs.length - 1);
-    void nextTick(scrollActiveLegFeedsToBottom);
   },
   { deep: true },
 );
 
 watch(activeIndex, () => {
-  void nextTick(scrollActiveLegFeedsToBottom);
+  expandedTimeline.value = false;
+  copyLabel.value = "复制 Link";
 });
-watch(runFacts, () => { void nextTick(scrollActiveLegFeedsToBottom); });
-
 watch(
   () => userStore.config.makeUp,
   (enabled) => {
@@ -226,29 +234,30 @@ function clampOffset(left: number, top: number): { left: number; top: number } {
 
 function clampPanelSize(width: number, height: number, maxWidth: number, maxHeight: number) {
   return {
-    width: Math.min(Math.max(PANEL_MIN_W, width), Math.max(PANEL_MIN_W, maxWidth)),
-    height: Math.min(Math.max(PANEL_MIN_H, height), Math.max(PANEL_MIN_H, maxHeight)),
+    width: Math.min(Math.max(PANEL_MIN_W, width), Math.max(1, maxWidth)),
+    height: Math.min(Math.max(PANEL_MIN_H, height), Math.max(1, maxHeight)),
   };
 }
 
 function normalizePanelGeometry() {
-  if (collapsed.value)
+  if (collapsed.value) {
+    if (offset.value)
+      offset.value = clampOffset(offset.value.left, offset.value.top);
     return;
+  }
   const rect = panelEl.value?.getBoundingClientRect();
-  const left = offset.value?.left ?? rect?.left ?? 0;
-  const top = offset.value?.top ?? rect?.top ?? 0;
+  const left = Math.min(Math.max(0, offset.value?.left ?? rect?.left ?? 0), Math.max(0, window.innerWidth - PANEL_MIN_W));
+  const top = Math.min(Math.max(0, offset.value?.top ?? rect?.top ?? 0), Math.max(0, window.innerHeight - PANEL_MIN_H));
   panelSize.value = clampPanelSize(
     panelSize.value.width,
     panelSize.value.height,
     window.innerWidth - left,
     window.innerHeight - top,
   );
-  if (offset.value) {
-    offset.value = {
-      left: Math.min(Math.max(0, left), Math.max(0, window.innerWidth - panelSize.value.width)),
-      top: Math.min(Math.max(0, top), Math.max(0, window.innerHeight - panelSize.value.height)),
-    };
-  }
+  offset.value = {
+    left: Math.min(Math.max(0, left), Math.max(0, window.innerWidth - panelSize.value.width)),
+    top: Math.min(Math.max(0, top), Math.max(0, window.innerHeight - panelSize.value.height)),
+  };
 }
 
 function onDragHandlePointerDown(ev: PointerEvent) {
@@ -307,7 +316,6 @@ function onResizePointerDown(ev: PointerEvent) {
   const rect = el.getBoundingClientRect();
   const originLeft = rect.left;
   const originTop = rect.top;
-  const originRight = rect.right;
   const originWidth = rect.width;
   const originHeight = rect.height;
   const startX = ev.clientX;
@@ -317,13 +325,13 @@ function onResizePointerDown(ev: PointerEvent) {
 
   const onMove = (moveEv: PointerEvent) => {
     const nextSize = clampPanelSize(
-      originWidth + (startX - moveEv.clientX),
+      originWidth + (moveEv.clientX - startX),
       originHeight + (moveEv.clientY - startY),
-      originRight,
+      window.innerWidth - originLeft,
       window.innerHeight - originTop,
     );
     panelSize.value = nextSize;
-    offset.value = { left: originRight - nextSize.width, top: originTop };
+    offset.value = { left: originLeft, top: originTop };
   };
   const onUp = () => {
     resizing.value = false;
@@ -344,35 +352,29 @@ function onResizePointerDown(ev: PointerEvent) {
   };
 }
 
-function legEventKey(betId: number, side: ActiveBetLeg["side"]): string {
-  return `${betId}:${side}`;
+function eventTime(at: number): string {
+  return new Date(at).toLocaleTimeString("zh-CN", { hour12: false });
 }
-
-function setLegEventFeedEl(betId: number, side: ActiveBetLeg["side"], el: Element | null) {
-  const key = legEventKey(betId, side);
-  if (el)
-    legEventFeedEls.set(key, el as HTMLElement);
-  else
-    legEventFeedEls.delete(key);
-}
-
-function scrollActiveLegFeedsToBottom() {
-  const run = activeRun.value;
-  if (!run)
+async function copyLink() {
+  if (!activeRun.value?.linkId)
     return;
-  for (const leg of run.legs) {
-    const el = legEventFeedEls.get(legEventKey(run.betId, leg.side));
-    if (el)
-      el.scrollTop = el.scrollHeight;
-  }
+  try { await navigator.clipboard.writeText(String(activeRun.value.linkId)); copyLabel.value = "已复制"; }
+  catch { copyLabel.value = "复制失败"; }
+  if (copyTimer)
+    clearTimeout(copyTimer);
+  copyTimer = setTimeout(() => { copyLabel.value = "复制 Link"; }, 2000);
+}
+function shortOrderId(id: string | undefined): string {
+  if (!id)
+    return "尚未记录";
+  return id.length > 20 ? `${id.slice(0, 8)}…${id.slice(-6)}` : id;
+}
+function legTarget(target: string): string {
+  return target === "Home" ? "主队" : target === "Away" ? "客队" : target;
 }
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function legClass(leg: ActiveBetLeg): string {
-  return `active-bet-run__leg--${leg.status}`;
 }
 
 function colToneClass(run: ActiveBetRun): string {
@@ -400,7 +402,7 @@ function phaseLabel(run: ActiveBetRun): string {
     const left = Math.max(0, Math.ceil((run.countdownUntil - now.value) / 1000));
     if (left > 0) {
       if (run.phase === "syncing")
-        return `双腿已成交 ${left}s`;
+        return `同步倒计时 ${left}s`;
       return `等待确认 ${left}s`;
     }
   }
@@ -447,7 +449,7 @@ function flowStepClass(run: ActiveBetRun, index: number): string {
 
 function nextAction(run: ActiveBetRun): string {
   if (run.terminalAt)
-    return "本轮已经结束；完整原因和历史记录请在订单诊断中查看。";
+    return "本轮编排已收尾；确认和补单结果仍需核查执行记录。";
   if (run.phase === "preparing" || run.phase === "checking")
     return "正在校验两腿盘口；任一腿未通过都不会进入首轮下单。";
   if (run.phase === "placing")
@@ -457,12 +459,6 @@ function nextAction(run: ActiveBetRun): string {
   if (run.phase === "makeup")
     return "存在待处理腿，正在续查原单或按已成交敞口补单。";
   return "场馆处理已结束，正在同步订单结果。";
-}
-
-function formatLegMoney(betMoney?: number): string | undefined {
-  if (betMoney == null || !Number.isFinite(betMoney) || betMoney <= 0)
-    return undefined;
-  return `¥${Math.round(betMoney)}`;
 }
 
 function legSideLabel(side: ActiveBetLeg["side"]): string {
@@ -476,195 +472,153 @@ function orderLabel(run: ActiveBetRun, index: number): string {
 
 <template>
   <Teleport to="body">
-    <div
-      ref="panelEl"
-      class="active-bet-run"
-      :class="{
-        'active-bet-run--collapsed': collapsed,
-        'active-bet-run--dragging': dragging,
-        'active-bet-run--resizing': resizing,
-      }"
-      :style="panelStyle"
-    >
-      <div
-        class="active-bet-run__chrome"
-        title="按住拖动"
-        @pointerdown="onDragHandlePointerDown"
-      >
-        <span class="active-bet-run__chrome-title">
-          实时下单进度 ({{ pageLabel }})
-        </span>
-        <button
-          type="button"
-          class="active-bet-run__fold"
-          :title="collapsed ? '展开' : '折叠'"
-          :aria-expanded="!collapsed"
-          @click.stop="toggleCollapsed"
-        >
-          {{ collapsed ? "展开" : "折叠" }}
+    <aside ref="panelEl" class="active-bet-run" :class="{ 'active-bet-run--collapsed': collapsed, 'active-bet-run--dragging': dragging, 'active-bet-run--resizing': resizing }" :style="panelStyle" aria-label="实时下单进度">
+      <header class="active-bet-run__chrome" title="按住拖动" @pointerdown="onDragHandlePointerDown">
+        <div class="active-bet-run__heading">
+          <span class="active-bet-run__live-dot" :class="{ 'is-active': !!activeRun && !activeRun.terminalAt }" />
+          <strong>实时下单进度</strong>
+          <span class="active-bet-run__count">{{ runCount }}</span>
+        </div>
+        <button type="button" class="active-bet-run__fold" :title="collapsed ? '展开' : '收起'" :aria-expanded="!collapsed" @click.stop="toggleCollapsed">
+          {{ collapsed ? '展开' : '—' }}
         </button>
-      </div>
-
-      <div v-show="!collapsed" class="active-bet-run__body">
-        <button
-          type="button"
-          class="active-bet-run__nav"
-          :disabled="!canPrev"
-          title="上一笔（更旧）"
-          aria-label="上一笔"
-          @click="showPrev"
-        >
-          ‹
-        </button>
-
-        <div class="active-bet-run__stage">
-          <p v-if="!activeRun" class="active-bet-run__empty">
-            暂无实时下单任务
-          </p>
-          <article
-            v-else
-            :key="activeRun.betId"
-            class="active-bet-run__col"
-            :class="colToneClass(activeRun)"
-          >
+      </header>
+      <template v-if="!collapsed">
+        <nav class="active-bet-run__toolbar" aria-label="切换执行任务">
+          <span>进行中 / 最近结束</span>
+          <div class="active-bet-run__pagination">
+            <button type="button" :disabled="!canPrev" aria-label="上一笔（更旧）" @click="showPrev">
+              ‹
+            </button>
+            <span>{{ pageLabel }}</span>
+            <button type="button" :disabled="!canNext" aria-label="下一笔（更新）" @click="showNext">
+              ›
+            </button>
+            <button type="button" :disabled="activeIndex === 0" @click="activeIndex = 0">
+              最新
+            </button>
+          </div>
+        </nav>
+        <div class="active-bet-run__body">
+          <div v-if="!activeRun" class="active-bet-run__empty">
+            <strong>暂无实时下单任务</strong>
+            <span>开始执行后显示两腿进度、确认及补单记录</span>
+          </div>
+          <article v-else :key="activeRun.betId" class="active-bet-run__col" :class="colToneClass(activeRun)">
             <header class="active-bet-run__col-head">
-              <span class="active-bet-run__col-label">{{ orderLabel(activeRun, activeIndex) }}</span>
-              <span class="active-bet-run__phase">业务进度 · {{ phaseLabel(activeRun) }}</span>
+              <div class="active-bet-run__order-heading">
+                <strong :title="`完整 Link：${activeRun.linkId || '未记录'}`">{{ orderLabel(activeRun, activeIndex) }}</strong><button type="button" :disabled="!activeRun.linkId" title="复制完整 Link，用于后台执行诊断" @click="copyLink">
+                  {{ copyLabel }}
+                </button>
+              </div>
+              <span class="active-bet-run__phase">编排 · {{ phaseLabel(activeRun) }}</span>
             </header>
-
-            <div
-              class="active-bet-run__meta-line"
-              :title="stripHtml(activeRun.matchTitle)"
-            >
-              <span class="active-bet-run__match" v-html="activeRun.matchTitle" />
-              <span class="active-bet-run__sep">·</span>
-              <span
-                class="active-bet-run__bet"
-                :title="stripHtml(activeRun.betName)"
-                v-html="activeRun.betName"
-              />
+            <div class="active-bet-run__match">
+              {{ stripHtml(activeRun.matchTitle) }}
             </div>
-
-            <ol class="active-bet-run__flow" aria-label="下单流程">
-              <li
-                v-for="(label, index) in flowLabels(activeRun)"
-                :key="label"
-                class="active-bet-run__flow-step"
-                :class="`active-bet-run__flow-step--${flowStepClass(activeRun, index)}`"
-              >
-                <span class="active-bet-run__flow-dot" />
-                <span>{{ label }}</span>
+            <div class="active-bet-run__market">
+              {{ stripHtml(activeRun.betName) }}
+            </div>
+            <div class="active-bet-run__run-meta">
+              <span>开始 {{ eventTime(activeRun.startedAt) }}</span><span>已用时 {{ elapsedLabel }}</span><span>更新 {{ eventTime(activeRun.updatedAt) }}</span>
+            </div>
+            <ol class="active-bet-run__flow" aria-label="编排流程">
+              <li v-for="(label, index) in flowLabels(activeRun)" :key="label" class="active-bet-run__flow-step" :class="`active-bet-run__flow-step--${flowStepClass(activeRun, index)}`">
+                <span class="active-bet-run__flow-dot" />{{ label }}
               </li>
             </ol>
-
             <p class="active-bet-run__next-action">
-              <span>编排状态</span>
-              {{ nextAction(activeRun) }}
+              编排提示 · {{ nextAction(activeRun) }}
             </p>
-            <p class="active-bet-run__next-action">
-              执行记录与后台诊断同源；本地即时展示，后台以已接收记录为准。
+            <header class="active-bet-run__section-head">
+              <strong>双腿实时进度</strong>
+              <button v-if="hasMoreTimeline" type="button" @click="expandedTimeline = !expandedTimeline">
+                {{ expandedTimeline ? '每组最近 6 条' : '展开全部记录' }}
+              </button>
+            </header>
+            <div class="active-bet-run__legs">
+              <section v-for="leg in activeRun.legs" :key="leg.side" class="active-bet-run__leg" :data-tone="legSummary(leg).tone">
+                <header class="active-bet-run__leg-meta">
+                  <span class="active-bet-run__leg-side">{{ legSideLabel(leg.side) }}</span><PlatformIcon :platform="legProvider(leg)" /><strong>{{ legProvider(leg) === 'Polymarket' ? 'PM' : legProvider(leg) }}</strong><span>{{ legTarget(leg.target) }}</span>
+                </header>
+                <strong class="active-bet-run__leg-status" :data-tone="legSummary(leg).tone" :title="legSummary(leg).basis">{{ legSummary(leg).label }}</strong>
+                <p class="active-bet-run__leg-action" :title="latestLegAction(leg)">
+                  <span>编排 · {{ activeStore.legPlacementLabel(leg, activeRun) }}</span>
+                  {{ latestLegAction(leg) }}
+                </p>
+                <div class="active-bet-run__leg-quote">
+                  <span>赔率 @{{ legSummary(leg).odds ?? (legFacts(leg).length ? '—' : leg.odds ?? '—') }}</span>
+                  <span>{{ legSummary(leg).amount ?? (!legFacts(leg).length && leg.betMoney != null ? `${leg.betMoney}（币种未记录）` : '金额未记录') }}</span>
+                </div>
+                <OrderExecutionTimeline
+                  v-if="legFacts(leg).length" :key="`${activeRun.betId}-${leg.side}`"
+                  :title="legTarget(leg.target)" subtitle="执行时间线"
+                  :events="legFacts(leg)" :started-at="activeRun.startedAt" :expanded="expandedTimeline"
+                />
+                <ul v-else class="active-bet-run__fallback-feed">
+                  <li v-for="(event, index) in leg.events.slice(-3)" :key="index">
+                    <time>{{ eventTime(event.at) }}</time><span>{{ event.stage }}</span>
+                    <p>编排记录 · {{ event.detail }}</p>
+                  </li>
+                  <li v-if="!leg.events.length">
+                    尚无执行记录
+                  </li>
+                </ul>
+                <details class="active-bet-run__leg-diagnostic">
+                  <summary>诊断详情</summary>
+                  <p class="active-bet-run__leg-basis">
+                    {{ legSummary(leg).basis }}
+                  </p>
+                  <dl class="active-bet-run__leg-stats">
+                    <dt>记录赔率</dt><dd>{{ legSummary(leg).odds ?? (legFacts(leg).length ? '—' : leg.odds ?? '—') }}</dd>
+                    <dt>记录金额</dt><dd>{{ legSummary(leg).amount ?? (!legFacts(leg).length && leg.betMoney != null ? `${leg.betMoney}（币种未记录）` : '本次未记录') }}</dd>
+                    <dt>订单</dt><dd :title="legSummary(leg).orderId">
+                      {{ shortOrderId(legSummary(leg).orderId) }}
+                    </dd>
+                    <dt>落库回执</dt><dd>{{ legSummary(leg).bound ? '已记录保存成功' : '尚未记录成功' }}</dd>
+                  </dl>
+                </details>
+                <footer class="active-bet-run__leg-footer">
+                  <span>最近尝试</span><span v-if="legSummary(leg).accountId">账号 #{{ legSummary(leg).accountId }}</span><span v-if="legProvider(leg) !== leg.platform">首轮 {{ leg.platform }}</span><span v-if="legSummary(leg).retries">重试 {{ legSummary(leg).retries }} 次</span><span v-if="legSummary(leg).makeups">补单任务 {{ legSummary(leg).makeups }}</span>
+                </footer>
+              </section>
+            </div>
+            <p v-if="localHistoryTruncated" class="active-bet-run__notice">
+              本地历史已裁剪，完整记录请结合后台诊断核查。
             </p>
-            <p v-if="localHistoryTruncated" class="active-bet-run__next-action">
-              本地只保留最近 512 条记录，历史已裁剪；完整性请结合后台诊断核查。
+            <p v-for="warning in evidenceWarnings" :key="warning" class="active-bet-run__notice">
+              {{ warning }}
             </p>
-            <details v-if="unassignedFacts.length">
-              <summary>整单或归属待核验的执行记录（{{ unassignedFacts.length }}）</summary>
-              <ul class="active-bet-run__leg-events">
-                <li v-for="event in unassignedFacts" :key="event.eventId" class="active-bet-run__leg-event" :title="`执行 ${event.executionId || '—'} · 事件 ${event.eventId}`">
-                  <span class="active-bet-run__leg-event-stage">{{ observationEventStage(event) }}</span>
-                  <span class="active-bet-run__leg-event-detail">{{ observationEventLabel(event) }}</span>
+            <details v-if="unassignedFacts.length" class="active-bet-run__orchestration">
+              <summary>整单 / 归属待核查记录 · {{ unassignedFacts.length }} 条</summary>
+              <OrderExecutionTimeline
+                :key="`${activeRun.betId}-unassigned`"
+                title="整单 / 归属待核查" subtitle="未分配到主客方向"
+                :events="unassignedFacts" :started-at="activeRun.startedAt" :expanded="true"
+              />
+            </details>
+            <details class="active-bet-run__orchestration">
+              <summary>编排补充记录</summary>
+              <ul>
+                <li v-for="(event, index) in activeRun.events" :key="`run-${index}`">
+                  <time>{{ eventTime(event.at) }}</time> {{ event.stage }} · {{ event.detail }}
                 </li>
               </ul>
-            </details>
-
-            <div class="active-bet-run__legs">
-              <div
-                v-for="leg in activeRun.legs"
-                :key="leg.side"
-                class="active-bet-run__leg"
-                :class="legClass(leg)"
-                :title="leg.detail || undefined"
-              >
-                <div class="active-bet-run__leg-meta">
-                  <span class="active-bet-run__leg-side">{{ legSideLabel(leg.side) }}</span>
-                  <span class="active-bet-run__leg-platform" :title="leg.platform" :aria-label="leg.platform">
-                    <PlatformIcon :platform="leg.platform" />
-                  </span>
-                  <span class="active-bet-run__leg-target">{{ leg.target }}</span>
-                  <span v-if="leg.odds" class="active-bet-run__leg-odds">@{{ leg.odds }}</span>
-                  <span v-if="formatLegMoney(leg.betMoney)" class="active-bet-run__leg-money">
-                    {{ formatLegMoney(leg.betMoney) }}
-                  </span>
-                </div>
-                <ul
-                  v-if="legFacts(leg).length"
-                  :ref="el => setLegEventFeedEl(activeRun.betId, leg.side, el as Element | null)"
-                  class="active-bet-run__leg-events"
-                >
-                  <li
-                    v-for="(event, eventIndex) in legFacts(leg)"
-                    :key="event.eventId"
-                    class="active-bet-run__leg-event"
-                    :class="{ 'active-bet-run__leg-event--latest': eventIndex === legFacts(leg).length - 1 }"
-                    :title="`执行 ${event.executionId || '—'} · 父尝试 ${event.parentAttemptId || '—'} · 事件 ${event.eventId} · 尝试 ${event.attemptId || '—'} · 队列 ${event.queueId || '—'} · 订单 ${event.orderId || '—'}`"
-                  >
-                    <span class="active-bet-run__leg-event-stage" :data-layer="observationEventStage(event)">{{ observationEventStage(event) }}</span>
-                    <span class="active-bet-run__leg-event-detail">{{ event.provider || '系统' }} · {{ observationEventLabel(event) }}</span>
+              <div v-for="leg in activeRun.legs" :key="leg.side">
+                <strong>{{ legSideLabel(leg.side) }} · {{ activeStore.legPlacementLabel(leg, activeRun) }}</strong><ul>
+                  <li v-for="(event, index) in leg.events" :key="index">
+                    <time>{{ eventTime(event.at) }}</time> {{ event.stage }} · {{ event.detail }}
                   </li>
                 </ul>
-                <ul
-                  v-else-if="leg.events?.length"
-                  :ref="el => setLegEventFeedEl(activeRun.betId, leg.side, el as Element | null)"
-                  class="active-bet-run__leg-events"
-                >
-                  <li
-                    v-for="(ev, evIndex) in leg.events"
-                    :key="`${activeRun.betId}-${leg.side}-${evIndex}`"
-                    class="active-bet-run__leg-event"
-                    :class="{ 'active-bet-run__leg-event--latest': evIndex === leg.events.length - 1 }"
-                    :title="ev.detail"
-                  >
-                    <span
-                      class="active-bet-run__leg-event-stage"
-                      :data-layer="ev.stage"
-                    >{{ ev.stage }}</span>
-                    <span class="active-bet-run__leg-event-detail">编排记录 · {{ ev.detail }}</span>
-                  </li>
-                </ul>
-                <details v-if="legFacts(leg).length && leg.events?.length">
-                  <summary>编排进度详情</summary>
-                  <ul class="active-bet-run__leg-events">
-                    <li v-for="(event, index) in leg.events" :key="index" class="active-bet-run__leg-event">
-                      <span class="active-bet-run__leg-event-stage">{{ event.stage }}</span>
-                      <span class="active-bet-run__leg-event-detail">编排记录 · {{ event.detail }}</span>
-                    </li>
-                  </ul>
-                </details>
               </div>
-            </div>
+            </details>
           </article>
         </div>
-
-        <button
-          type="button"
-          class="active-bet-run__nav"
-          :disabled="!canNext"
-          title="下一笔（更新）"
-          aria-label="下一笔"
-          @click="showNext"
-        >
-          ›
-        </button>
-      </div>
-
-      <button
-        v-show="!collapsed"
-        type="button"
-        class="active-bet-run__resize-handle"
-        title="拖动调整宽度和高度"
-        aria-label="调整实时下单进度框大小"
-        @pointerdown="onResizePointerDown"
-      />
-    </div>
+        <footer class="active-bet-run__footer" :title="executionId ? `执行编号：${executionId}` : '执行编号尚未记录'">
+          <span>本地执行记录 · 后台同源</span><span title="后台展示已接收的记录，上传可能存在延迟">后台可能延迟</span>
+        </footer>
+        <button type="button" class="active-bet-run__resize-handle" title="拖动调整窗口大小" aria-label="调整实时下单进度框大小" @pointerdown="onResizePointerDown" />
+      </template>
+    </aside>
   </Teleport>
 </template>

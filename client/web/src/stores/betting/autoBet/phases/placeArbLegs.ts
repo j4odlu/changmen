@@ -204,7 +204,7 @@ export async function placeArbLegs(
           betOdds: legA.odds,
           failedLegOdds: legB.odds,
           failedPlatformLabel: legB.type,
-          observation: { ownerUserId: legA.observation?.ownerUserId, anchorAttemptId: legA.observation?.attemptId, anchorOrderId: resultA?.orderId || undefined },
+          observation: { executionId: legA.observation?.executionId, parentAttemptId: legA.observation?.attemptId, ownerUserId: legA.observation?.ownerUserId, anchorAttemptId: legA.observation?.attemptId, anchorOrderId: resultA?.orderId || undefined },
         });
         if (enqueued)
           trace?.event("补单", `${legB.type} 已加入补单队列`);

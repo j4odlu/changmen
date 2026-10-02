@@ -13,6 +13,7 @@ import { attachPredictFunDetectionQuote } from "@/domain/predictfun/attachDetect
 import { publishBettingEvent } from "@/realtime/publishBetting";
 import { getProvider } from "@/runtime/providers";
 import { createObservationContext, observeOption } from "@/services/orderObservation";
+import { observationFailureEvidence } from "@/services/orderObservationEvidence";
 import {
   bettingDetailHtml,
   bettingLoadingMessageHtml,
@@ -329,6 +330,8 @@ export async function checkBetting(
     return option;
   }
   let observedPrecheckResult = false;
+  const observationStartedAt = Date.now();
+  let observationError: unknown;
   try {
     // [changmen 扩展] PM 余额/L2 凭证可用不代表本机具备签名私钥。
     // 双腿预检在正式 POST 前汇总结果；此处失败会让整轮套利停止下单。
@@ -355,19 +358,22 @@ export async function checkBetting(
     try { checked.observation ??= option.observation; }
     catch { /* 观察字段写入失败不改变返回值 */ }
     try {
-      observeOption(checked, account, "precheck_result", { outcome: checked.data && !checked.checkError ? "prepared" : "blocked", reasonCode: checked.checkError ? "precheck_error" : undefined });
+      observeOption(checked, account, "precheck_result", { outcome: checked.data && !checked.checkError ? "prepared" : "blocked", durationMs: Date.now() - observationStartedAt, ...(checked.checkError ? observationFailureEvidence(checked.checkError) : {}), reasonCode: checked.checkError ? "precheck_error" : undefined });
     }
     catch { /* 观察快照读取失败不改变 adapter 返回值 */ }
     observedPrecheckResult = true;
     return checked;
   }
   catch (e) {
+    observationError = e;
     option.checkError = e instanceof Error ? e.message : JSON.stringify(e);
     return option;
   }
   finally {
-    if (!observedPrecheckResult)
-      observeOption(option, account, "precheck_result", { outcome: "blocked", reasonCode: "precheck_error" });
+    if (!observedPrecheckResult) {
+      try { observeOption(option, account, "precheck_result", { outcome: "blocked", reasonCode: "precheck_error", durationMs: Date.now() - observationStartedAt, ...observationFailureEvidence(option.checkError, undefined, observationError) }); }
+      catch { /* 旁路证据读取失败不阻断预检收尾 */ }
+    }
     option.saveLog(account);
   }
 }
@@ -420,6 +426,9 @@ export async function placeBet(
   let result: BetResult = new BetResult(account.provider, false, "未知错误");
   let observationSubmitted = false;
   let observationThrew = false;
+  let observationCallAt: number | undefined;
+  let observationDuration: number | undefined;
+  let observationError: unknown;
   try {
     if (!option.data) {
       if (opts?.requirePreparedQuote) {
@@ -434,7 +443,9 @@ export async function placeBet(
     if (option.data) {
       observeOption(option, account, "submission_started", { source: "adapter_call" });
       observationSubmitted = true;
+      observationCallAt = Date.now();
       result = await provider.betting(account, option);
+      observationDuration = Date.now() - observationCallAt;
       // PM matched：官方 POST 成交即真相，立刻落库，勿干等 /data/trades
       if (result.success && !result.pending && account.provider === "Polymarket") {
         try {
@@ -468,6 +479,9 @@ export async function placeBet(
   catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     observationThrew = true;
+    observationError = e;
+    if (observationCallAt !== undefined)
+      observationDuration = Date.now() - observationCallAt;
     const message = raw.includes("Failed to fetch dynamically imported module")
       ? "页面资源已过期（服务端刚发版），请刷新页面后重试"
       : raw;
@@ -488,6 +502,8 @@ export async function placeBet(
         orderId: result.orderId || undefined,
         outcome: observationThrew && observationSubmitted ? "unknown" : result.success ? "accepted" : observationSubmitted ? "adapter_failed" : "not_submitted",
         source: "adapter_result",
+        durationMs: observationDuration,
+        ...(!result.success ? observationFailureEvidence(result.message, result.response, observationError) : {}),
       });
     }
     catch { /* 旁路写入或快照错误不能改变已取得的下注结果 */ }

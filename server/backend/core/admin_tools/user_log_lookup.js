@@ -1037,9 +1037,15 @@ export function toAdminOrderLogPayload(result) {
   };
 }
 
-/**
- * @param {{ userName?: string, userId?: string, link?: number|string, orderId?: string, paddingMs?: number, logLimit?: number }} opts
- */
+/** [changmen 扩展] 精确观察查询，不推造订单或扩展旧日志时间窗。 */
+async function lookupObservationOnly(user, anchor, link = 0, selector = {}) {
+  const observation = summarizeOrderObservations(await fetchOrderObservations(user.id, link, 2000, [], selector));
+  if (!observation.events?.length)
+    return { ok: false, error: observation.status === "unavailable" ? "执行观察记录暂不可用" : "未找到订单或执行记录（可能尚未上传）" };
+  const times = observation.events.map(event => event.occurredAt);
+  return { ok: true, user: { id: user.id, userName: user.user_name }, anchor, link, linkType: linkTypeLabel(link), groupLabel: "执行观察记录", observation, logWindow: { fromMs: Math.min(...times), toMs: Math.max(...times) }, orders: [], logs: [], unrelatedLogs: [], logsRaw: [], logStats: { total: 0, related: 0, unrelated: 0, truncated: false, limit: 2000 } };
+}
+
 export async function lookupOrderLogs(opts) {
   const user = await resolveLookupUser(opts);
   if (!user?.id) {
@@ -1051,22 +1057,25 @@ export async function lookupOrderLogs(opts) {
     return { ok: false, error: hint };
   }
 
+  if (opts?.executionId || opts?.attemptId) {
+    const key = opts.executionId ? "executionId" : "attemptId";
+    const value = String(opts[key]);
+    if (!/^[\w-]{8,160}$/.test(value))
+      return { ok: false, error: "无效执行编号" };
+    return lookupObservationOnly(user, { type: key, value }, 0, { [key]: value });
+  }
   let orders = [];
   let anchor = { type: "user", value: user.user_name };
 
   if (opts?.link != null && String(opts.link).trim() !== "") {
     const linkVal = Number(opts.link);
-    if (!Number.isFinite(linkVal) || linkVal === 0) {
+    if (!Number.isSafeInteger(linkVal) || linkVal === 0) {
       return { ok: false, error: "无效 link" };
     }
     orders = await fetchOrdersByLink(user.id, linkVal);
     anchor = { type: "link", value: linkVal };
     if (!orders.length) {
-      return {
-        ok: false,
-        error: `未找到订单 link=${linkVal}（用户 ${user.user_name}）`,
-        user: { id: user.id, userName: user.user_name },
-      };
+      return lookupObservationOnly(user, anchor, linkVal);
     }
   }
   else if (opts?.orderId) {

@@ -11,9 +11,11 @@ export const useOrderObservationStore = defineStore("orderObservation", {
         return [];
       const owned = state.events.filter(event => event.ownerUserId === ownerUserId);
       const anchors = owned.filter(event => event.linkId === linkId);
+      const executions = new Set(anchors.map(event => event.executionId).filter(Boolean));
       const attempts = new Set(anchors.map(event => event.attemptId).filter(Boolean));
       const queues = new Set(anchors.map(event => event.queueId).filter(Boolean));
       return orderObservationTimeline(owned.filter(event => event.linkId === linkId
+        || Boolean(event.executionId && executions.has(event.executionId))
         || Boolean(event.attemptId && attempts.has(event.attemptId))
         || Boolean(event.queueId && queues.has(event.queueId))));
     },

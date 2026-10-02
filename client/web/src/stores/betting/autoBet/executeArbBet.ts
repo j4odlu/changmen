@@ -1,9 +1,15 @@
+import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { ViewBet, ViewMatch } from "@/models/match";
 import type { ArbAttemptPhase } from "@/stores/betting/autoBet/arbAttemptMetrics";
 import type { ArbBetAttemptParams, ArbBetReady } from "@/stores/betting/autoBet/phases/types";
 import type { UserConfig } from "@/types/userConfig";
+import {
+  releaseSingleLeg9999MapFill,
+  releaseSingleLeg9999MapFillKeys,
+} from "@/extensions/arbBet/singleLeg9999MapCount";
 import { isMapMuteActive } from "@/extensions/mapBetMute";
 import { isPrematchFullMarketAllowed } from "@/extensions/prematchFullOnly";
+import { beginExecutionObservation, finishExecutionObservation } from "@/services/orderExecutionObservation";
 import {
   recordArbAttemptMetric,
 } from "@/stores/betting/autoBet/arbAttemptMetrics";
@@ -11,10 +17,6 @@ import { checkArbLegs } from "@/stores/betting/autoBet/phases/checkArbLegs";
 import { finalizeArbBet } from "@/stores/betting/autoBet/phases/finalizeArbBet";
 import { placeArbLegs } from "@/stores/betting/autoBet/phases/placeArbLegs";
 import { prepareArbAttempt } from "@/stores/betting/autoBet/phases/prepareArbAttempt";
-import {
-  releaseSingleLeg9999MapFill,
-  releaseSingleLeg9999MapFillKeys,
-} from "@/extensions/arbBet/singleLeg9999MapCount";
 
 async function timed<T>(run: () => Promise<T>): Promise<{ value: T; ms: number }> {
   const startedAt = performance.now();
@@ -55,6 +57,9 @@ export async function executeArbBet(params: {
   let ready: ArbBetReady | null = null;
   let phase: ArbAttemptPhase | "idle" = "idle";
   let reservationReleased = false;
+  let observation: ObservationContext | undefined;
+  let observationOutcome = "unknown";
+  let observationMessage: unknown;
 
   try {
     phase = "prepare";
@@ -66,12 +71,14 @@ export async function executeArbBet(params: {
       return;
     }
     const readyValue = ready;
+    observation = beginExecutionObservation(readyValue);
 
     phase = "check";
     const checked = await timed(() => checkArbLegs(attempt, readyValue));
     phaseMsMap.check = checked.ms;
     const checkedValue = checked.value;
     if (!checkedValue) {
+      observationOutcome = "blocked";
       releaseSingleLeg9999Reservation(params.match.id, params.bet.round, readyValue);
       reservationReleased = true;
       recordArbAttemptMetric({ ...base, phaseMs: phaseMsMap, stop: "skip_check" });
@@ -87,8 +94,11 @@ export async function executeArbBet(params: {
     const finalized = await timed(() => finalizeArbBet(attempt, placed.value));
     phaseMsMap.finalize = finalized.ms;
     recordArbAttemptMetric({ ...base, phaseMs: phaseMsMap, stop: "complete" });
+    observationOutcome = "orchestration_completed";
   }
   catch (err) {
+    observationOutcome = "exception";
+    observationMessage = err instanceof Error ? err.message : "";
     if (ready && !reservationReleased && phase === "check") {
       releaseSingleLeg9999Reservation(params.match.id, params.bet.round, ready);
       reservationReleased = true;
@@ -97,5 +107,8 @@ export async function executeArbBet(params: {
     params.setMessage(`自动下单异常：${msg}`);
     attempt.trace?.finish("fail", msg);
     recordArbAttemptMetric({ ...base, phaseMs: phaseMsMap, stop: "error" });
+  }
+  finally {
+    finishExecutionObservation(observation, ready?.linkId, observationOutcome, phase, observationMessage);
   }
 }

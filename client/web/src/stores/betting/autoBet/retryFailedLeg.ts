@@ -141,7 +141,7 @@ export async function retryFailedLeg(
     retryLeg.odds = pickedItem.getOdds(failedLeg.target);
     retryLeg.diagnosticLinkId = linkId;
     retryLeg.diagnosticAttempt = "retry";
-    retryLeg.observation = createObservationContext({ ownerUserId: failedLeg.observation?.ownerUserId, anchorAttemptId: successLeg.observation?.attemptId });
+    retryLeg.observation = createObservationContext({ ownerUserId: failedLeg.observation?.ownerUserId, executionId: failedLeg.observation?.executionId, parentAttemptId: failedLeg.observation?.attemptId, retryRound: round + 1, anchorAttemptId: successLeg.observation?.attemptId });
     observeOption(retryLeg, pickedAccount, "decision", { outcome: "retry_selected", reasonCode: "failed_leg_retry" });
     if (isPendingConfirmVenueProvider(pickedAccount.provider))
       retryLeg.deferPostAcceptSettlement = true;

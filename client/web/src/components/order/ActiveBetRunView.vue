@@ -570,7 +570,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
             <details v-if="unassignedFacts.length">
               <summary>整单或归属待核验的执行记录（{{ unassignedFacts.length }}）</summary>
               <ul class="active-bet-run__leg-events">
-                <li v-for="event in unassignedFacts" :key="event.eventId" class="active-bet-run__leg-event">
+                <li v-for="event in unassignedFacts" :key="event.eventId" class="active-bet-run__leg-event" :title="`执行 ${event.executionId || '—'} · 事件 ${event.eventId}`">
                   <span class="active-bet-run__leg-event-stage">{{ observationEventStage(event) }}</span>
                   <span class="active-bet-run__leg-event-detail">{{ observationEventLabel(event) }}</span>
                 </li>
@@ -606,7 +606,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                     :key="event.eventId"
                     class="active-bet-run__leg-event"
                     :class="{ 'active-bet-run__leg-event--latest': eventIndex === legFacts(leg).length - 1 }"
-                    :title="`事件 ${event.eventId} · 尝试 ${event.attemptId || '—'} · 队列 ${event.queueId || '—'} · 订单 ${event.orderId || '—'}`"
+                    :title="`执行 ${event.executionId || '—'} · 父尝试 ${event.parentAttemptId || '—'} · 事件 ${event.eventId} · 尝试 ${event.attemptId || '—'} · 队列 ${event.queueId || '—'} · 订单 ${event.orderId || '—'}`"
                   >
                     <span class="active-bet-run__leg-event-stage" :data-layer="observationEventStage(event)">{{ observationEventStage(event) }}</span>
                     <span class="active-bet-run__leg-event-detail">{{ event.provider || '系统' }} · {{ observationEventLabel(event) }}</span>

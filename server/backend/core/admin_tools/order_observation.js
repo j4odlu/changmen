@@ -83,6 +83,10 @@ export function summarizeOrderObservations(query) {
       findings.push("队列已创建，尚未观察到执行或关闭事件");
     return { queueId, events, findings };
   });
+  for (const start of query.events.filter(event => event.kind === "execution_started")) {
+    if (!query.events.some(event => event.kind === "execution_finished" && event.executionId === start.executionId))
+      issues.push("缺少编排结束记录，不能判断执行是否仍在进行");
+  }
   if (!query.events.length)
     issues.push("无旁路事件，不能据此认定未下单");
   return { ...query, mode: "shadow", issues: [...new Set(issues)], attempts, queues };

@@ -356,6 +356,8 @@ const executionSteps = computed(() => buildAdminOrderExecutionSteps(legColumns.v
 const diagnosisContext = computed(() => ({ linkType: data.value?.linkType, truncated: data.value?.logStats?.truncated }));
 const evidenceIssues = computed(() => adminOrderEvidenceIssues(executionSteps.value, diagnosisContext.value));
 const suggestedCheck = computed(() => {
+  if (executionLookup.value && !data.value?.orders.length)
+    return "核查执行时间线中的失败、确认、绑定及缺口事件；缺少落库证据不能证明未成交。";
   if (data.value?.logStats?.truncated)
     return "扩大日志查询后重新诊断；当前日志已截断，后续动作可能缺失。";
   if (evidenceIssues.value.length)
@@ -364,9 +366,9 @@ const suggestedCheck = computed(() => {
     return "核对失败或拒单原因，以及重试、补单后的场馆订单，确认是否仍存在单腿敞口。";
   return "现有证据已覆盖执行过程；比赛未结算前，盈亏以当前记录为准。";
 });
-const diagnosisSummary = computed(() =>
-  buildAdminOrderDiagnosisSummary(executionSteps.value, totalProfit.value, diagnosisContext.value),
-);
+const diagnosisSummary = computed(() => executionLookup.value && !data.value?.orders.length
+  ? { text: "当前显示执行观察记录；成交与落库状态请核查确认和绑定事件。", tone: "warning" as const }
+  : buildAdminOrderDiagnosisSummary(executionSteps.value, totalProfit.value, diagnosisContext.value));
 const orchestrationStages = computed(() =>
   buildAdminOrderOrchestrationStages(executionSteps.value, totalProfit.value, diagnosisContext.value),
 );
@@ -452,9 +454,19 @@ function legProfit(leg: AdminOrderLogLegSection) {
 
 const hasOverviewOrders = computed(() => sortedOrders.value.length > 0);
 
+const executionLookup = ref<{ userId: string; linkId?: number; executionId?: string; attemptId?: string } | null>(null);
+
+async function openExecution(input: NonNullable<typeof executionLookup.value>) {
+  executionLookup.value = { ...input };
+  lookupRows.value = [];
+  expanded.value = false;
+  await loadDiagnosis();
+}
+
 async function open(rows: AdminOrderRow[]) {
   if (!rows.length)
     return;
+  executionLookup.value = null;
   lookupRows.value = [...rows];
   expanded.value = false;
   await loadDiagnosis();
@@ -462,7 +474,7 @@ async function open(rows: AdminOrderRow[]) {
 
 async function loadDiagnosis() {
   const rows = lookupRows.value;
-  if (!rows.length)
+  if (!rows.length && !executionLookup.value)
     return;
   const sequence = ++requestSequence;
   const head = rows[0]!;
@@ -470,9 +482,9 @@ async function loadDiagnosis() {
   loading.value = true;
   error.value = "";
   data.value = null;
-  title.value = `下单诊断 · ${formatLinkId(head.linkId)}`;
+  title.value = head ? `下单诊断 · ${formatLinkId(head.linkId)}` : "执行诊断（包含无落库订单）";
   try {
-    const payload = await getAdminOrderLogs({
+    const payload = await getAdminOrderLogs(executionLookup.value || {
       userId: head.userId,
       linkId: head.linkId || undefined,
       orderId: !head.linkId ? head.orderId : undefined,
@@ -527,7 +539,7 @@ async function copyReport() {
   }
 }
 
-defineExpose({ open });
+defineExpose({ open, openExecution });
 </script>
 
 <template>
@@ -569,7 +581,7 @@ defineExpose({ open });
                 </div>
                 <div class="admin-order-log-stat">
                   <span class="admin-order-log-stat__label">订单</span>
-                  <span class="admin-order-log-stat__value">{{ sortedOrders.length }} 笔</span>
+                  <span class="admin-order-log-stat__value">{{ executionLookup?.executionId || executionLookup?.attemptId ? "本次未查询" : `${sortedOrders.length} 笔` }}</span>
                 </div>
                 <div class="admin-order-log-stat">
                   <span class="admin-order-log-stat__label">日志</span>
@@ -842,6 +854,7 @@ defineExpose({ open });
                   <span>{{ observationEventLabel(event) }}</span>
                   <small>账号 {{ event.accountId || '—' }} · 订单 {{ event.orderId || '—' }}</small>
                   <small>发生 {{ fmtTime(event.occurredAt) }} · 接收 {{ fmtTime(event.receivedAt || 0) }}</small>
+                  <small v-if="event.executionId">执行 {{ event.executionId }} · 父尝试 {{ event.parentAttemptId || '—' }}</small>
                   <small>事件 {{ event.eventId }} · 尝试 {{ event.attemptId || '—' }} · 队列 {{ event.queueId || '—' }}</small>
                 </li>
               </ul>

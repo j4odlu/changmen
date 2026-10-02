@@ -23,24 +23,32 @@ export async function insertOrderObservations(userId, events) {
   return confirmed.rows.map(row => row.event_id);
 }
 
-export async function fetchOrderObservations(userId, linkId, limit = 2000, orderRefs = []) {
+export async function fetchOrderObservations(userId, linkId, limit = 2000, orderRefs = [], selector = {}) {
   const pool = getPgPool();
   if (!pool)
     return { status: "unavailable", events: [], truncated: false };
   try {
     const cap = Math.min(Math.max(Math.floor(Number(limit) || 2000), 1), 5000);
     const result = await pool.query(
-      `WITH anchors AS (SELECT attempt_id,queue_id FROM order_observations
+      `WITH anchors AS (SELECT attempt_id,queue_id,event->>'executionId' AS execution_id FROM order_observations
        WHERE user_id=$1 AND (($2::bigint <> 0 AND link_id=$2)
+         OR ($5::text IS NOT NULL AND event->>'executionId'=$5)
+         OR ($6::text IS NOT NULL AND attempt_id=$6)
          OR EXISTS (SELECT 1 FROM jsonb_array_elements($4::jsonb) ref
            WHERE event->>'provider'=ref->>'provider' AND event->>'accountId'=ref->>'accountId'
              AND event->>'orderId'=ref->>'orderId')))
        SELECT event,received_at FROM order_observations
        WHERE user_id=$1 AND (($2::bigint <> 0 AND link_id=$2)
+         OR ($5::text IS NOT NULL AND event->>'executionId'=$5)
+         OR ($6::text IS NOT NULL AND attempt_id=$6)
+         OR event->>'executionId' IN (SELECT execution_id FROM anchors WHERE execution_id IS NOT NULL)
          OR attempt_id IN (SELECT attempt_id FROM anchors WHERE attempt_id IS NOT NULL)
-         OR queue_id IN (SELECT queue_id FROM anchors WHERE queue_id IS NOT NULL))
+         OR queue_id IN (SELECT queue_id FROM anchors WHERE queue_id IS NOT NULL)
+         OR EXISTS (SELECT 1 FROM jsonb_array_elements($4::jsonb) ref
+           WHERE event->>'provider'=ref->>'provider' AND event->>'accountId'=ref->>'accountId'
+             AND event->>'orderId'=ref->>'orderId'))
        ORDER BY received_at,event_id LIMIT $3`,
-      [userId, linkId, cap + 1, JSON.stringify(orderRefs)],
+      [userId, linkId, cap + 1, JSON.stringify(orderRefs), selector.executionId || null, selector.attemptId || null],
     );
     return {
       status: "available",

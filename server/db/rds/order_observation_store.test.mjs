@@ -22,4 +22,13 @@ describe("独立观察表", () => {
     expect(mocks.query.mock.calls[0][0]).toContain("$2::bigint <> 0");
     expect(mocks.query.mock.calls[0][0]).toContain("event->>'accountId'=ref->>'accountId'");
   });
+  it("parameterizes exact execution identity and preserves owner scope", async () => {
+    mocks.query.mockResolvedValue({ rows: [] });
+    await fetchOrderObservations("u1", 0, 20, [], { executionId: "execution-123" });
+    const [sql, params] = mocks.query.mock.calls[0];
+    expect(params).toEqual(["u1", 0, 21, "[]", "execution-123", null]);
+    expect(sql).toContain("event->>'executionId'=$5");
+    expect(sql).toContain("WHERE user_id=$1 AND");
+    expect(sql).not.toContain("execution-123");
+  });
 });

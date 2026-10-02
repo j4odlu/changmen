@@ -687,6 +687,8 @@ export async function getAdminPolymarketBuilder(body: Record<string, unknown> = 
 
 /** Link / order_id 关联 Client_SaveUserLog（管理端诊断） */
 export async function getAdminOrderLogs(body: {
+  executionId?: string;
+  attemptId?: string;
   userId: string;
   linkId?: number;
   orderId?: string;

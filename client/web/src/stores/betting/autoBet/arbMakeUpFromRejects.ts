@@ -142,7 +142,7 @@ export async function applyArbMakeUpFromRejects(
       betOdds: successRef.betOdds,
       failedLegOdds: makeupTargetLeg.odds,
       failedPlatformLabel: `${makeupTargetLeg.type}(待确认续查)`,
-      observation: { ownerUserId: successLeg.observation?.ownerUserId, anchorAttemptId: successLeg.observation?.attemptId, anchorOrderId: successResult?.orderId || undefined },
+      observation: { executionId: successLeg.observation?.executionId, parentAttemptId: successLeg.observation?.attemptId, ownerUserId: successLeg.observation?.ownerUserId, anchorAttemptId: successLeg.observation?.attemptId, anchorOrderId: successResult?.orderId || undefined },
     });
     // delayed 原单必须继续观察，即使补单赔率门槛不允许后续补单。
     if (!enqueued) {
@@ -225,7 +225,7 @@ export async function applyArbMakeUpFromRejects(
       betOdds: successRef.betOdds,
       failedLegOdds: legB.odds,
       failedPlatformLabel: legB.type,
-      observation: { ownerUserId: legA.observation?.ownerUserId, anchorAttemptId: legA.observation?.attemptId, anchorOrderId: resultA?.orderId || undefined },
+      observation: { executionId: legA.observation?.executionId, parentAttemptId: legA.observation?.attemptId, ownerUserId: legA.observation?.ownerUserId, anchorAttemptId: legA.observation?.attemptId, anchorOrderId: resultA?.orderId || undefined },
     });
   }
   else if (side === "enqueueA" && accountB) {
@@ -249,7 +249,7 @@ export async function applyArbMakeUpFromRejects(
       betOdds: successRef.betOdds,
       failedLegOdds: legA.odds,
       failedPlatformLabel: legA.type,
-      observation: { ownerUserId: legB.observation?.ownerUserId, anchorAttemptId: legB.observation?.attemptId, anchorOrderId: resultB?.orderId || undefined },
+      observation: { executionId: legB.observation?.executionId, parentAttemptId: legB.observation?.attemptId, ownerUserId: legB.observation?.ownerUserId, anchorAttemptId: legB.observation?.attemptId, anchorOrderId: resultB?.orderId || undefined },
     });
   }
 

@@ -1,8 +1,11 @@
 /** [changmen 扩展] 旁路观察协议；不得作为下注、补单或订单状态的输入。 */
 export const OBSERVATION_TITLE = "[changmen] OrderObservation/v1";
-export const OBSERVATION_KINDS = ["precheck_started", "precheck_result", "submission_started", "submission_result", "settlement_observed", "queue_created", "queue_replaced", "queue_canceled", "queue_removed", "decision", "bind_result", "transport_gap"] as const;
+export const OBSERVATION_KINDS = ["execution_started", "execution_finished", "precheck_started", "precheck_result", "submission_started", "submission_result", "settlement_observed", "queue_created", "queue_replaced", "queue_canceled", "queue_removed", "decision", "bind_result", "transport_gap"] as const;
 export type ObservationKind = typeof OBSERVATION_KINDS[number];
 export interface ObservationContext {
+  executionId?: string;
+  parentAttemptId?: string;
+  retryRound?: number;
   attemptId?: string;
   queueId?: string;
   anchorAttemptId?: string;
@@ -11,6 +14,14 @@ export interface ObservationContext {
   sequence?: number;
 }
 export interface OrderObservationEvent {
+  executionId?: string;
+  parentAttemptId?: string;
+  retryRound?: number;
+  durationMs?: number;
+  httpStatus?: number;
+  responseCode?: string;
+  errorCategory?: string;
+  safeSummary?: string;
   version: 1;
   eventId: string;
   ownerUserId: string;
@@ -64,7 +75,7 @@ export function normalizeObservationEvent(raw: unknown, ownerUserId: string): Or
     sequence: Number(row.sequence),
     occurredAt: Number(row.occurredAt),
   };
-  for (const key of ["attemptId", "queueId", "anchorAttemptId", "anchorOrderId", "provider", "orderId", "target", "phase", "outcome", "source", "reasonCode", "currency", "observedStatus"] as const) {
+  for (const key of ["executionId", "parentAttemptId", "attemptId", "queueId", "anchorAttemptId", "anchorOrderId", "provider", "orderId", "target", "phase", "outcome", "source", "reasonCode", "currency", "observedStatus", "responseCode", "errorCategory", "safeSummary"] as const) {
     if (typeof row[key] === "string" && row[key].length <= 160)
       event[key] = row[key];
   }
@@ -72,5 +83,11 @@ export function normalizeObservationEvent(raw: unknown, ownerUserId: string): Or
     if (typeof row[key] === "number" && Number.isFinite(row[key]))
       event[key] = row[key];
   }
+  if (Number.isSafeInteger(row.retryRound) && Number(row.retryRound) >= 1)
+    event.retryRound = Number(row.retryRound);
+  if (Number.isFinite(row.durationMs) && typeof row.durationMs === "number" && row.durationMs >= 0)
+    event.durationMs = row.durationMs;
+  if (Number.isInteger(row.httpStatus) && Number(row.httpStatus) >= 100 && Number(row.httpStatus) <= 599)
+    event.httpStatus = Number(row.httpStatus);
   return event;
 }

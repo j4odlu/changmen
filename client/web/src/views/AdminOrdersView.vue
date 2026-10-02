@@ -9,8 +9,8 @@ import AdminLayout from "@/components/admin/AdminLayout.vue";
 import AdminOrderLinkLines from "@/components/admin/AdminOrderLinkLines.vue";
 import AdminUserOrdersColumn from "@/components/admin/AdminUserOrdersColumn.vue";
 import OrderDateNav from "@/components/order/OrderDateNav.vue";
-import { adminAccountStubFromOrder, adminOrderDisplayProvider, countAdminPrimaryOrders } from "@/shared/adminOrderDisplay";
 import { compareAdminAccountKeys } from "@/shared/adminAccountSort";
+import { adminAccountStubFromOrder, adminOrderDisplayProvider, countAdminPrimaryOrders } from "@/shared/adminOrderDisplay";
 import { sumAdminOrdersMoneyCny } from "@/shared/adminOrderMoney";
 import { todayKey } from "@/shared/dateKey";
 import { useUserStore } from "@/stores/userStore";
@@ -32,8 +32,8 @@ const filterPlayerId = ref(
 );
 const groupMode = ref<GroupMode>(
   route.query.view === "account"
-    || filterPlayerId.value
-    || String(route.query.provider || "") === "PredictFun"
+  || filterPlayerId.value
+  || String(route.query.provider || "") === "PredictFun"
     ? "account"
     : "user",
 );
@@ -441,6 +441,7 @@ onMounted(async () => {
               :key="col.userId"
               class="admin-orders-by-user__col"
               :user-name="col.userName"
+              :user-id="col.userId"
               :accounts="col.accounts"
               :orders="col.orders"
               @delete="onDeleteOrders"
@@ -463,7 +464,7 @@ onMounted(async () => {
               :accounts="col.accounts.length ? col.accounts : allAccounts"
               @delete="onDeleteOrders"
             />
-            <AdminOrderLinkLines :container-ref="columnsContainerRef" :key="linkLinesKey" />
+            <AdminOrderLinkLines :key="linkLinesKey" :container-ref="columnsContainerRef" />
           </div>
         </div>
 

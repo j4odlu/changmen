@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import type { AdminAccountDetail, AdminOrderRow } from "@/types/admin";
 import type { OrderRow } from "@/types/order";
+import { ElMessageBox } from "element-plus";
 import { computed, ref, watch } from "vue";
 import AdminOrderLogsDialog from "@/components/admin/AdminOrderLogsDialog.vue";
 import OrderList from "@/components/order/OrderList.vue";
+import { accountOrderDisplayName } from "@/shared/accountDisplayName";
 import { adminPlayerLabel, countAdminPrimaryOrders, groupAdminOrderEntries, mergeAdminAccountsWithOrderHistory } from "@/shared/adminOrderDisplay";
 import { sumAdminOrdersMoneyCny } from "@/shared/adminOrderMoney";
-import { accountOrderDisplayName } from "@/shared/accountDisplayName";
 
 const props = defineProps<{
   userName: string;
+  userId?: string;
   accounts: AdminAccountDetail[];
   orders: AdminOrderRow[];
 }>();
@@ -27,7 +29,7 @@ const displayAccounts = computed(() =>
 
 const accountOptions = computed(() =>
   [...displayAccounts.value]
-    .map(acc => {
+    .map((acc) => {
       const platform = acc.platformName || acc.platform || "—";
       const name = accountOrderDisplayName(acc) || `#${acc.accountId}`;
       return {
@@ -95,6 +97,24 @@ function adminRowForOrder(row: OrderRow) {
   return visibleOrders.value.find(o => o.orderId === oid);
 }
 
+async function openExecutionLogs() {
+  if (!props.userId)
+    return;
+  try {
+    const { value } = await ElMessageBox.prompt("输入 Link 或执行编号，可查看未落库的执行", "执行诊断", {
+      inputValidator: (value) => {
+        const id = value?.trim() || "";
+        if (/^-?\d+$/.test(id))
+          return (Number.isSafeInteger(Number(id)) && Number(id) !== 0) || "请输入非零整数 Link";
+        return /^[\w-]{8,160}$/.test(id) || "请输入有效执行编号";
+      },
+    });
+    const id = value.trim();
+    await logsDialogRef.value?.openExecution({ userId: props.userId, ...(/^-?\d+$/.test(id) ? { linkId: Number(id) } : { executionId: id }) });
+  }
+  catch { /* 用户取消输入 */ }
+}
+
 function openLogs(rows: AdminOrderRow[]) {
   logsDialogRef.value?.open(rows);
 }
@@ -119,6 +139,9 @@ function onDeleteGroup(link: number) {
         <h3 class="admin-orders-user-col__name">
           {{ userName }}
         </h3>
+        <el-button v-if="userId" size="small" @click="openExecutionLogs">
+          执行诊断
+        </el-button>
         <el-select
           v-if="accountOptions.length"
           v-model="filterPlayerId"

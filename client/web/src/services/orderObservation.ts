@@ -41,6 +41,9 @@ export function createObservationContext(parent: ObservationContext = {}, queue 
       return undefined;
     return {
       ownerUserId,
+      executionId: parent.executionId,
+      parentAttemptId: parent.parentAttemptId,
+      retryRound: parent.retryRound,
       sequence: 0,
       ...(queue ? { queueId: crypto.randomUUID() } : { attemptId: crypto.randomUUID(), queueId: parent.queueId }),
       anchorAttemptId: parent.anchorAttemptId,

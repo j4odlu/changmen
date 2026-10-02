@@ -2,6 +2,8 @@ import type { OrderObservationEvent } from "./order_observation";
 
 /** [changmen 扩展] 实时面板与后台诊断共用的只读事实展示；不得参与业务判定。 */
 export function observationEventStage(event: OrderObservationEvent): string {
+  if (event.kind.startsWith("execution_"))
+    return "执行";
   if (event.kind.startsWith("precheck_"))
     return "预检";
   if (event.kind.startsWith("submission_"))
@@ -18,6 +20,8 @@ export function observationEventStage(event: OrderObservationEvent): string {
 }
 
 const KIND_LABELS: Record<string, string> = {
+  execution_started: "整轮执行开始",
+  execution_finished: "编排结束（确认或补单可能继续）",
   precheck_started: "开始预检",
   precheck_result: "预检结果",
   submission_started: "调用下注适配器（尚不证明场馆收到）",
@@ -32,6 +36,8 @@ const KIND_LABELS: Record<string, string> = {
   transport_gap: "执行记录存在缺口",
 };
 const OUTCOME_LABELS: Record<string, string> = {
+  orchestration_completed: "编排完成",
+  exception: "编排异常",
   prepared: "预检已准备",
   blocked: "被拦截",
   not_submitted: "未调用下注适配器",
@@ -60,7 +66,7 @@ export function observationEventLabel(event: OrderObservationEvent): string {
   if (event.source === "orchestration_result")
     return `${label} · 编排判定：${lookupLabel(BUSINESS_OUTCOME_LABELS, event.outcome || "未知")}，缺少精确订单确认`;
   const outcome = event.outcome ? lookupLabel(OUTCOME_LABELS, event.outcome) : "";
-  return [label, outcome].filter(Boolean).join(" · ");
+  return [label, outcome, event.safeSummary ? `摘要分类：${event.safeSummary}` : "", event.responseCode ? `场馆码 ${event.responseCode}` : "", event.httpStatus ? `HTTP ${event.httpStatus}` : "", event.durationMs !== undefined ? `${event.durationMs}ms` : "", event.retryRound ? `重试第${event.retryRound}轮` : ""].filter(Boolean).join(" · ");
 }
 
 /** 没有 target 的回执仅在同一尝试/队列的方向唯一时归属；不靠平台或时间猜腿。 */
@@ -93,7 +99,7 @@ export function orderObservationTimeline(events: readonly OrderObservationEvent[
     if (seen.has(identity))
       continue;
     seen.add(identity);
-    const key = `${event.ownerUserId}:${event.attemptId ? `attempt:${event.attemptId}` : event.queueId ? `queue:${event.queueId}` : identity}`;
+    const key = `${event.ownerUserId}:${event.attemptId ? `attempt:${event.attemptId}` : event.queueId ? `queue:${event.queueId}` : event.executionId ? `execution:${event.executionId}` : identity}`;
     const rows = groups.get(key) || [];
     rows.push(event);
     groups.set(key, rows);

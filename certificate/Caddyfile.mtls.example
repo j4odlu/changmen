@@ -32,7 +32,8 @@ https://47.57.10.202 {
 
 	root * /root/changmen/client/web/dist
 
-	handle /health {
+	@health path /health /health/pm-market
+	handle @health {
 		import changmen_proxy_mtls
 	}
 	# 须在 /esport/* 之前：PM-MARKET → 独立 hub :3457（勿进 esport，避免扇出拖死 HTTP）

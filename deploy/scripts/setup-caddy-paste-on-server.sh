@@ -10,7 +10,8 @@ sudo tee /etc/caddy/Caddyfile >/dev/null <<'EOF'
 
 	root * /root/changmen/client/web/dist
 
-	handle /health {
+	@health path /health /health/pm-market
+	handle @health {
 		reverse_proxy 127.0.0.1:3456
 	}
 	handle /esport/ws-forward/PM-MARKET* {

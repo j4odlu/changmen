@@ -47,7 +47,8 @@
 
 	root * /root/changmen/client/web/dist
 
-	handle /health {
+	@health_https path /health /health/pm-market
+	handle @health_https {
 		import changmen_proxy_mtls
 	}
 	handle /esport/ws-forward/PM-MARKET* {
@@ -98,7 +99,8 @@
 (changmen_api_only) {
 	encode gzip
 
-	handle /health {
+	@health_api path /health /health/pm-market
+	handle @health_api {
 		import changmen_proxy_mtls
 	}
 	handle /esport/ws-forward/PM-MARKET* {

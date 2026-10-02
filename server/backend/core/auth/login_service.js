@@ -121,4 +121,3 @@ export async function login(body, dependencies, clientIp = "", cert = null, user
     ID: uid,
   });
 }
-

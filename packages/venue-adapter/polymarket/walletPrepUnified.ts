@@ -22,6 +22,7 @@ export interface WalletPrepUnifiedInput {
   privateKey: string;
   signUrl: string;
   authToken: string;
+  getAuthToken?: () => Promise<string>;
   relayerUrl?: string;
   signatureType?: string | number;
   /**
@@ -127,7 +128,7 @@ async function preparePolymarketWalletUnifiedInner(
     environment,
     apiKey: remoteBuilderSigning({
       url: signUrl,
-      headers: {
+      headers: input.getAuthToken ? async () => ({ Authorization: `Bearer ${await input.getAuthToken!()}` }) : {
         Authorization: `Bearer ${authToken}`,
       },
     }),

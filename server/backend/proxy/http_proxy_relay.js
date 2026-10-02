@@ -5,7 +5,7 @@ import net from "node:net";
 import { URL } from "node:url";
 import zlib from "node:zlib";
 import { resolvePmRelayL2Headers } from "./pm_relay_l2.js";
-import { requireHttpUser } from "../core/auth/http_identity.js";
+import { readAccessToken, requireHttpUser } from "../core/auth/http_identity.js";
 
 const require = createRequire(import.meta.url);
 
@@ -202,6 +202,8 @@ const RELAY_STRIP_HEADERS = new Set([
   // changmen JWT（仅用于 relay 鉴权，不可转发到上游）
   "token",
   "cookie",
+  "x-csrf-token",
+  "x-changmen-auth",
   // 浏览器同源请求会带 changmen 的 referer/origin，与扩展直连 PM 不一致
   "referer",
   "origin",
@@ -342,13 +344,15 @@ function injectPredictFunApiKey(headers, targetUrl) {
   return { ...headers, "x-api-key": serverKey };
 }
 
-function forwardHeaders(req, targetUrl) {
+function forwardHeaders(req, targetUrl, stripAuthBearer = false) {
   if (isPolymarketUpstream(targetUrl))
     return forwardPolymarketHeaders(req, targetUrl);
 
   const out = {};
   for (const [key, value] of Object.entries(req.headers)) {
     const lower = key.toLowerCase();
+    if (lower === "authorization" && stripAuthBearer)
+      continue;
     if (RELAY_STRIP_HEADERS.has(lower))
       continue;
     const outKey = POLY_HEADER_CANONICAL[lower] || key;
@@ -377,7 +381,7 @@ function forwardHeaders(req, targetUrl) {
   else if (req.headers["user-agent"])
     out["User-Agent"] = String(req.headers["user-agent"]);
   const auth = req.headers.authorization || req.headers.Authorization;
-  if (auth)
+  if (auth && !stripAuthBearer)
     out.Authorization = String(auth);
   try {
     out.Host = new URL(targetUrl).host;
@@ -399,12 +403,16 @@ async function tryHttpProxyRelay(req, res, baseOrigin) {
   if (pathname !== RELAY_PATH)
     return false;
 
+  let stripAuthBearer = false;
   if (RELAY_REQUIRE_TOKEN || req.headers["x-changmen-auth"] === "cookie") {
     const auth = await requireHttpUser(req, { alwaysCsrf: true });
     if (auth.error) {
       sendRelayError(res, auth.error.status, auth.error.body.error);
       return true;
     }
+    const bearer = /^bearer\s+(.+)$/i.exec(String(req.headers.authorization || ""));
+    stripAuthBearer = req.headers["x-changmen-auth"] !== "cookie"
+      && Boolean(bearer && bearer[1].trim() === readAccessToken(req));
   }
 
   const proxyTarget = req.headers["x-proxy-url"];
@@ -434,7 +442,7 @@ async function tryHttpProxyRelay(req, res, baseOrigin) {
     sendRelayError(res, pmL2.error.status, pmL2.error.msg);
     return true;
   }
-  const authHeaders = pmL2?.headers ?? forwardHeaders(req, targetUrl);
+  const authHeaders = pmL2?.headers ?? forwardHeaders(req, targetUrl, stripAuthBearer);
   const headers = isPolymarketUpstream(targetUrl)
     ? mergePolymarketUpstreamHeaders(req, authHeaders, req.method)
     : authHeaders;

@@ -1,4 +1,5 @@
 import { BuilderConfig } from "@polymarket/builder-signing-sdk";
+import { SessionBuilderConfig } from "./sessionBuilderConfig";
 import {
   RelayClient,
   RelayerTxType,
@@ -63,6 +64,7 @@ export interface PolymarketRelayClientInput {
   privateKey: string;
   signUrl?: string;
   authToken?: string;
+  getAuthToken?: () => Promise<string>;
   relayerUrl?: string;
   relayTxType?: RelayerTxType;
 }
@@ -93,7 +95,7 @@ export async function createPolymarketRelayClient(
   const signUrl = input.signUrl?.trim();
   const authToken = input.authToken?.trim();
   const builderConfig = signUrl && authToken
-    ? new BuilderConfig({
+    ? input.getAuthToken ? new SessionBuilderConfig(joinSignUrl(signUrl), input.getAuthToken) : new BuilderConfig({
         remoteBuilderConfig: {
           url: joinSignUrl(signUrl),
           token: authToken,

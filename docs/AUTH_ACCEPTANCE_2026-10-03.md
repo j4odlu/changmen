@@ -2,6 +2,8 @@
 
 执行日期：2026-10-03。分支：`codex/unified-auth`。验收使用本机专用 PostgreSQL、实际 Vue 页面、实际 HTTP 路由及私有 Socket.IO Hub；River 为隔离库测试账号。未发布认证代码到生产。
 
+后续扩展验收与当前发布结论见 [全面验收记录](AUTH_COMPREHENSIVE_ACCEPTANCE_2026-10-03.md)。下文保留第一次执行结果与事故记录。
+
 ## 已执行结果
 
 | 验收项 | 结果与证据 |

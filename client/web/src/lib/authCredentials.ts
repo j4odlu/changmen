@@ -3,6 +3,18 @@ import { getApiBase } from "@/config/apiBase";
 import { refreshJwtSession } from "@/lib/jwtRefresh";
 
 /** Compatibility credential for external relays and SDKs that only support Bearer JWT. */
+export function createCompatibilityTokenProvider(): () => Promise<string> {
+  const version = getAuthSessionVersion();
+  return async () => {
+    if (!isAuthSessionCurrent(version))
+      throw new Error("登录状态已变更，请重新开始操作");
+    const token = await getCompatibilityToken();
+    if (!isAuthSessionCurrent(version))
+      throw new Error("登录状态已变更，请重新开始操作");
+    return token;
+  };
+}
+
 export async function getCompatibilityToken(): Promise<string> {
   const version = getAuthSessionVersion();
   if (browserAuthState.value === "unavailable")

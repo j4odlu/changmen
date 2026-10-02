@@ -30,6 +30,7 @@ export interface PolymarketRelayerPrepareInput {
   signUrl: string;
   /** 用户 JWT，作为 remoteBuilderConfig.token（Bearer） */
   authToken: string;
+  getAuthToken?: () => Promise<string>;
   relayerUrl?: string;
   signatureType?: SignatureType;
   /** unified 路径可选：已有 CLOB L2 凭证，避免 createSecureClient 再派生 */
@@ -167,6 +168,7 @@ async function prepareDepositPolymarketWallet(
     privateKey,
     signUrl: input.signUrl,
     authToken,
+    getAuthToken: input.getAuthToken,
     relayerUrl,
   });
 
@@ -217,6 +219,7 @@ async function prepareLegacyPolymarketWallet(
     privateKey,
     signUrl: input.signUrl,
     authToken,
+    getAuthToken: input.getAuthToken,
     relayerUrl,
     relayTxType,
   });

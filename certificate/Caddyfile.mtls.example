@@ -40,6 +40,9 @@ https://47.57.10.202 {
 	handle /esport/ws-forward/PM-MARKET* {
 		reverse_proxy 127.0.0.1:3457
 	}
+	handle /auth/* {
+		import changmen_proxy_mtls
+	}
 	handle /esport/* {
 		import changmen_proxy_mtls
 	}

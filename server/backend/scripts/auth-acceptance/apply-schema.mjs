@@ -7,7 +7,7 @@ Object.assign(process.env, {
 });
 const { getPgPool } = await import("@changmen/db");
 const pool = getPgPool();
-const result = await pool.query("SELECT current_database() AS name, inet_server_addr()::text AS host");
+const result = await pool.query("SELECT current_database() AS name, host(inet_server_addr()) AS host");
 assert.deepEqual(result.rows[0], { name: "changmen_auth_acceptance", host: "127.0.0.1" });
 await pool.end();
 const applied = spawnSync(process.execPath, ["server/backend/scripts/apply-rds-schema.mjs"], {

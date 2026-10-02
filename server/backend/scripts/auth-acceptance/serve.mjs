@@ -7,7 +7,7 @@ process.env.WEB_AUTH_CSRF_SECRET='isolated-auth-acceptance-csrf-key-20261003';
 process.env.WEB_AUTH_ORIGINS='http://127.0.0.1:4931'; process.env.CORS_ALLOWED_ORIGINS=process.env.WEB_AUTH_ORIGINS;
 process.env.CHANGMEN_CERT_LOGIN_BIND='0'; process.env.CHANGMEN_STORAGE_DIR=process.cwd()+'/output/auth-acceptance-storage';
 const {getPgPool}=await import('@changmen/db'); const pool=getPgPool();
-const target=await pool.query('SELECT current_database() AS name, inet_server_addr()::text AS host');
+const target=await pool.query('SELECT current_database() AS name, host(inet_server_addr()) AS host');
 if(target.rows[0].name!=='changmen_auth_acceptance'||target.rows[0].host!=='127.0.0.1')throw new Error('Refusing to write outside the isolated acceptance database');
 for(const name of ['river','acceptance-long']) {
  const u=await pool.query(`INSERT INTO users(user_name,password_hash,created_at,updated_at) VALUES($1,crypt('Acceptance-Only-2026!',gen_salt('bf',12)),$2,$2) ON CONFLICT(user_name) DO UPDATE SET password_hash=excluded.password_hash RETURNING id`,[name,Date.now()]);

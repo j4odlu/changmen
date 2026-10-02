@@ -8,7 +8,7 @@ vi.mock("@/api/client", () => ({
 }));
 vi.mock("@/config/apiBase", () => ({ getApiBase: () => "https://api.changmen.fun" }));
 vi.mock("@/lib/jwtRefresh", () => ({ refreshJwtSession: mock.refresh }));
-import { getCompatibilityToken, getRequestAuthHeaders } from "./authCredentials";
+import { createCompatibilityTokenProvider, getCompatibilityToken, getRequestAuthHeaders } from "./authCredentials";
 beforeEach(() => {
   mock.token = "legacy"; mock.cookie = true; mock.version = "one"; mock.state.value = "authenticated";
   mock.refresh.mockReset(); vi.stubGlobal("window", { location: { origin: "https://changmen.fun" } });
@@ -37,5 +37,19 @@ describe("request credential selection", () => {
     mock.state.value = "unavailable";
     await expect(getRequestAuthHeaders("https://api.changmen.fun/esport/Client_GetData")).rejects.toThrow("暂时不可用");
     expect(mock.token).toBe("legacy");
+  });
+  it("refreshes credentials for a later signing call in the same operation", async () => {
+    const provider = createCompatibilityTokenProvider();
+    expect(await provider()).toBe("legacy");
+    mock.token = `header.${btoa(JSON.stringify({ exp: 1 }))}.signature`;
+    mock.refresh.mockImplementation(async () => { mock.token = "renewed"; return true; });
+    expect(await provider()).toBe("renewed");
+  });
+  it("rejects later signing calls after logout or a different login", async () => {
+    const provider = createCompatibilityTokenProvider();
+    mock.version = "two";
+    mock.token = "new-user";
+    await expect(provider()).rejects.toThrow("重新开始操作");
+    expect(mock.refresh).not.toHaveBeenCalled();
   });
 });

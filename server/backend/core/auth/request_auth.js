@@ -8,6 +8,7 @@ const MESSAGES = {
   TEMPORARY_UNAVAILABLE: "登录服务暂时不可用，请稍后重试",
   CREDENTIAL_CONFLICT: "登录凭证不一致，请刷新页面",
   CSRF_INVALID: "请求校验失败，请刷新页面",
+  CERT_BIND_FAILED: "客户端证书与账号不匹配、已吊销或尚未登记",
 };
 
 export function authFailure(code) {

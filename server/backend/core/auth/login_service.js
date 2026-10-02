@@ -32,12 +32,20 @@ export async function login(body, dependencies, clientIp = "", cert = null, user
   const audit = {
     clientIp,
     certCn: clientCertCnFromSubject(cert?.subject),
+    certFingerprint: cert?.fingerprint || '',
     userAgent,
   };
 
-  // mTLS 叶子 CN 必须与登录用户名一致（生产默认开启；本机 DEV 默认关）
+  // 已登记证书绑定不可变 userId；未知旧证书仅在兼容模式按 CN 验证。
   // 在验密之前拦截，避免无证/错证时泄露「密码是否正确」
-  const bindErr = certLoginBindError(userName, cert ?? null);
+  let binding;
+  try {
+    if (db.certificateRegistryEnabled?.() && cert?.fingerprint)
+      binding = await db.getClientCertificate(cert.fingerprint);
+  } catch { return fail('证书登记服务暂时不可用', null, 'TEMPORARY_UNAVAILABLE'); }
+  const bindErr = binding
+    ? binding.revoked_at || Number(binding.expires_at) <= Date.now() ? '客户端证书已吊销或过期' : null
+    : certLoginBindError(userName, cert ?? null);
   if (bindErr) {
     recordLoginFailure(userName, clientIp);
     void db.recordAuthAudit({
@@ -53,7 +61,9 @@ export async function login(body, dependencies, clientIp = "", cert = null, user
   const auth = await db.authSignIn(userName, password, audit, {
     browserSession: Boolean(response && browserSessionEnabled()),
     validateProfile: async (profile) => {
-      const error = certLoginBindError(profile.userName, cert ?? null);
+      const error = db.certificateRegistryEnabled?.()
+        ? await db.authorizeClientCertificate(audit, profile.id)
+        : certLoginBindError(profile.userName, cert ?? null);
       if (error)
         throw Object.assign(new Error(error), { code: "CERT_BIND_FAILED" });
       await assertProfileActive(profile.id);
@@ -98,7 +108,9 @@ export async function login(body, dependencies, clientIp = "", cert = null, user
 
   // 密码通过后再用 profile 用户名复核一次（防止大小写/别名与 CN 不一致）
   const bindName = String(profile.userName || userName || "").trim();
-  const bindErr2 = certLoginBindError(bindName, cert ?? null);
+  const bindErr2 = db.certificateRegistryEnabled?.()
+    ? await db.authorizeClientCertificate(audit, uid)
+    : certLoginBindError(bindName, cert ?? null);
   if (bindErr2)
     return fail(bindErr2, null, "CERT_BIND_FAILED");
 

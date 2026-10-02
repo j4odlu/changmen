@@ -1,6 +1,7 @@
 import { getPgPool } from "@changmen/db";
 import { requireHttpUser } from "./core/auth/http_identity.js";
 import { tryWebSessionRoutes } from "./core/auth/web_session_routes.js";
+import { tryCertificateRoutes } from './core/certificates/routes.js';
 import { getCatalogSummary } from "@changmen/shared/catalog/game_catalog";
 import { getCatalogSummary as getMarketCatalogSummary } from "@changmen/shared/catalog/market_catalog";
 import { getWsForwardStatus, isWsForwardHttpPath } from "@changmen/ws-forward";
@@ -361,6 +362,8 @@ export function createHttpHandler({ port, serveStatic }) {
 
       const url = req.pathname;
       if (await tryWebSessionRoutes(req, res, { login: handleClientLogin }))
+        return;
+      if (await tryCertificateRoutes(req,res))
         return;
       // Socket.IO 握手由 ws_forward / realtime-hub 处理，勿走 esport-api / 静态文件
       if (isWsForwardHttpPath(url))

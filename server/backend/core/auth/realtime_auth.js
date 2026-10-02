@@ -1,6 +1,6 @@
 import * as db from "@changmen/db";
 import { loadProfileById } from "../db/store.js";
-import { readClientCertStatus, clientCertCnFromSubject } from "../shared/client_cert_gate.js";
+import { readClientCertStatus, clientCertCnFromSubject, clientCertificateAudit } from "../shared/client_cert_gate.js";
 import { readBrowserSessionCookie } from "./browser_session.js";
 import { validAuthOrigin } from "./web_session_security.js";
 import { authenticateIdentity } from "./identity.js";
@@ -11,7 +11,7 @@ export async function authenticateRealtime(socket) {
     return { code: "ORIGIN_INVALID" };
   const token = String(socket.handshake.auth?.token || socket.handshake.headers.token || "");
   const cookie = readBrowserSessionCookie(socket.request);
-  const audit = { certCn: clientCertCnFromSubject(readClientCertStatus(socket.request).subject) };
+  const audit = { ...clientCertificateAudit(socket.request) };
   const auth = await authenticateIdentity({ token, browserSessionToken: cookie,
     protocol: socket.handshake.auth?.protocol, audit, fresh: true }, db);
   if (auth.code)

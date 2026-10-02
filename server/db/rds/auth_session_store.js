@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { getPgPool } from "./common.js";
+import { certificateRegistryEnabled, authorizeClientCertificate } from './client_certificate_store.js';
 
 const BROWSER_SESSION_PREFIX = "bs1";
 const REFRESH_TOKEN_PREFIX = "rt1";
@@ -78,8 +79,8 @@ export async function createBrowserSession(userId, jwtSessionId, context = {}, t
     await client.query(
       `INSERT INTO auth_sessions
        (id, user_id, jwt_session_id, secret_hash, cert_cn, client_ip, user_agent, created_at,
-        last_seen_at, idle_expires_at, absolute_expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10)`,
+        last_seen_at, idle_expires_at, absolute_expires_at${certificateRegistryEnabled() ? ', cert_fingerprint' : ''})
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10${certificateRegistryEnabled() ? ', $11' : ''})`,
       [
         opaque.id,
         String(userId),
@@ -91,6 +92,7 @@ export async function createBrowserSession(userId, jwtSessionId, context = {}, t
         createdAt,
         createdAt + BROWSER_IDLE_MS,
         createdAt + BROWSER_ABSOLUTE_MS,
+        ...(certificateRegistryEnabled() ? [context.certFingerprint || null] : []),
       ],
     );
     if (!transaction)
@@ -122,7 +124,7 @@ export async function getBrowserSession(value, context = {}) {
     const now = Date.now();
     const { rows } = await pool.query(
       `SELECT id, user_id, jwt_session_id, secret_hash, cert_cn, idle_expires_at, absolute_expires_at,
-              revoked_at, revoke_reason, last_seen_at
+              revoked_at, revoke_reason, last_seen_at${certificateRegistryEnabled() ? ', cert_fingerprint' : ''}
        FROM auth_sessions
        WHERE id = $1`,
       [parsed.id],
@@ -138,6 +140,9 @@ export async function getBrowserSession(value, context = {}) {
       return { invalid: true, userId: String(row.user_id), reasonCode: "BROWSER_IDLE_EXPIRED" };
     const storedCertCn = clean(row.cert_cn, 160).toLowerCase();
     const requestCertCn = clean(context.certCn, 160).toLowerCase();
+    if (row.cert_fingerprint && row.cert_fingerprint !== context.certFingerprint
+      || await authorizeClientCertificate(context, String(row.user_id)))
+      return { invalid: true, userId: String(row.user_id), reasonCode: 'CERT_MISMATCH' };
     if (storedCertCn && storedCertCn !== requestCertCn)
       return { invalid: true, userId: String(row.user_id), reasonCode: "CERT_MISMATCH" };
     const nextIdle = Math.min(now + BROWSER_IDLE_MS, Number(row.absolute_expires_at));
@@ -187,8 +192,8 @@ async function insertRefreshToken(queryable, userId, sessionId, context, familyI
   const now = Date.now();
   await queryable.query(
     `INSERT INTO auth_refresh_tokens
-     (id, family_id, user_id, session_id, secret_hash, cert_cn, created_at, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+     (id, family_id, user_id, session_id, secret_hash, cert_cn, created_at, expires_at${certificateRegistryEnabled() ? ', cert_fingerprint' : ''})
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8${certificateRegistryEnabled() ? ', $9' : ''})`,
     [
       opaque.id,
       familyId,
@@ -198,6 +203,7 @@ async function insertRefreshToken(queryable, userId, sessionId, context, familyI
       clean(context?.certCn, 160),
       now,
       now + REFRESH_TOKEN_MS,
+      ...(certificateRegistryEnabled() ? [context?.certFingerprint || null] : []),
     ],
   );
   return { id: opaque.id, token: opaque.token, expiresAt: now + REFRESH_TOKEN_MS };
@@ -231,7 +237,7 @@ export async function rotateOpaqueRefreshToken(value, context = {}) {
     await client.query("BEGIN");
     const { rows } = await client.query(
       `SELECT id, family_id, user_id, session_id, secret_hash, cert_cn,
-              expires_at, used_at, revoked_at, replaced_by_id
+              expires_at, used_at, revoked_at, replaced_by_id${certificateRegistryEnabled() ? ', cert_fingerprint' : ''}
        FROM auth_refresh_tokens WHERE id = $1 FOR UPDATE`,
       [parsed.id],
     );
@@ -242,7 +248,9 @@ export async function rotateOpaqueRefreshToken(value, context = {}) {
     }
     const storedCertCn = clean(row.cert_cn, 160).toLowerCase();
     const requestCertCn = clean(context.certCn, 160).toLowerCase();
-    if (storedCertCn && storedCertCn !== requestCertCn) {
+    if (storedCertCn && storedCertCn !== requestCertCn
+      || row.cert_fingerprint && row.cert_fingerprint !== context.certFingerprint
+      || await authorizeClientCertificate(context, String(row.user_id))) {
       await client.query(
         `UPDATE auth_refresh_tokens SET revoked_at = $2, revoke_reason = 'CERT_MISMATCH'
          WHERE family_id = $1 AND revoked_at IS NULL`,

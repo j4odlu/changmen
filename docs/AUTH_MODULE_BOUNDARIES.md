@@ -45,3 +45,7 @@ flowchart LR
 `npm run check:boundaries` 已增加规则：身份核心/登录用例不得导入 account、esport-api、场馆或 proxy；认证 HTTP/WS 适配器不得反向导入业务路由；前端会话核心不得导入 api/client、业务 store 或组件。
 
 不改变 GitHub master 的账户存储、ACCOUNT 调用时序、订单和下注算法。短期凭证过期可续期；业务写请求的网络失败不能自动重放。配置变更、部署与数据库故障不应被包装成普通“未登录”。
+
+## 用户证书
+
+证书管理是独立模块 `core/certificates`，签发、登记和吊销只能由管理员后台调用。认证层经 `@changmen/db.authorizeClientCertificate` 验证指纹对应的不可变 userId；业务权限判断仍由各业务模块承担。表结构、兼容和部署顺序见 [用户证书模块](CLIENT_CERTIFICATES.md)。

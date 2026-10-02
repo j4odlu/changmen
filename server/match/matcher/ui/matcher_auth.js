@@ -10,6 +10,7 @@ import {
 import store from "../../../backend/core/esport-api/store.js";
 import {
   clientCertCnFromSubject,
+  clientCertificateAudit,
   readClientCertStatus,
 } from "../../../backend/core/shared/client_cert_gate.js";
 import { isMatcherSkipAuthEnabled } from "../lib/config.js";
@@ -53,7 +54,7 @@ function matcherAuditContext(req) {
   const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
   return {
     clientIp: forwarded || String(req.socket?.remoteAddress || ""),
-    certCn: clientCertCnFromSubject(cert.subject),
+    ...clientCertificateAudit(req),
     userAgent: String(req.headers["user-agent"] || ""),
   };
 }
@@ -66,7 +67,7 @@ export async function resolveMatcherUser(req, dependencies = {}) {
     const resolved = await resolveRequestAuth({
       token, browserSessionToken: browserSessionEnabled() ? readBrowserSessionCookie(req) : "",
       action: "Matcher", audit: matcherAuditContext(req), protocol: req.headers["x-changmen-auth"],
-    }, { authResolveBrowserSession: sb.authResolveBrowserSession, authGetUserStatus: sb.authGetUserStatus, getProfileById, loadProfileById });
+    }, { authResolveBrowserSession: sb.authResolveBrowserSession, authGetUserStatus: sb.authGetUserStatus, authorizeClientCertificate: sb.authorizeClientCertificate, getProfileById, loadProfileById });
     return { user: resolved.user, bypassed: false, temporary: resolved.failure?.code === "TEMPORARY_UNAVAILABLE", session: resolved.session };
   }
   const getUserByToken = dependencies.getUserByToken || store.getUserByToken.bind(store);

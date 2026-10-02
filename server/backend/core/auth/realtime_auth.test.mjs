@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const savedEnv = { ...process.env };
 afterEach(() => { process.env = { ...savedEnv }; });
 const mocks = vi.hoisted(() => ({ jwt: vi.fn(), cookie: vi.fn(), profile: vi.fn() }));
-vi.mock("@changmen/db", () => ({ authGetUserStatus: mocks.jwt, authResolveBrowserSession: mocks.cookie }));
+vi.mock("@changmen/db", () => ({ authGetUserStatus: mocks.jwt, authResolveBrowserSession: mocks.cookie, authorizeClientCertificate: async () => null }));
 vi.mock("../db/store.js", () => ({ loadProfileById: mocks.profile }));
 const { authenticateRealtime, authorizeRealtime } = await import("./realtime_auth.js");
 function socket(token = "valid") {

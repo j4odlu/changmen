@@ -1,7 +1,7 @@
 import * as db from "@changmen/db";
 import { loadProfileById } from "../db/store.js";
 import { jsonResponse, readJsonBody } from "../http/body.js";
-import { readClientCertStatus, clientCertCnFromSubject } from "../shared/client_cert_gate.js";
+import { readClientCertStatus, clientCertCnFromSubject, clientCertificateAudit } from "../shared/client_cert_gate.js";
 import { browserSessionEnabled, readBrowserSessionCookie } from "./browser_session.js";
 import { browserAuthAudit, sessionCsrf, validAuthOrigin, validSessionCsrf, webCookieEnabled } from "./web_session_security.js";
 
@@ -39,7 +39,7 @@ export async function tryWebSessionRoutes(req, res, { login } = {}) {
     return true;
   }
   const cookie = readBrowserSessionCookie(req);
-  const audit = { ...browserAuthAudit(req), certCn: clientCertCnFromSubject(readClientCertStatus(req).subject) };
+  const audit = { ...browserAuthAudit(req), ...clientCertificateAudit(req) };
   const session = await db.authResolveBrowserSession(cookie, audit);
   if (session?.temporary) { fail(503, "TEMPORARY_UNAVAILABLE"); return true; }
   if (!session || session.invalid || session.revoked) { fail(401, "SESSION_REVOKED"); return true; }

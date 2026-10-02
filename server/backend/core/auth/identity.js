@@ -16,6 +16,11 @@ async function resolveIdentity({ token = "", browserSessionToken = "", protocol,
   const jwt = token ? await deps.authGetUserStatus(token, { fresh }) : null;
   if (jwt?.code === "TEMPORARY_UNAVAILABLE")
     return { code: jwt.code };
+  const userId = validCookie ? cookie.userId : jwt && !jwt.code ? jwt.userId : null;
+  if (userId && deps.authorizeClientCertificate) {
+    const code = await deps.authorizeClientCertificate(audit, userId);
+    if (code) return { code };
+  }
   if (validCookie && jwt && !jwt.code
     && (cookie.userId !== jwt.userId || cookie.jwtSessionId !== jwt.loginEpoch))
     return { code: "CREDENTIAL_CONFLICT" };

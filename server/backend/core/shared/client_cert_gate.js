@@ -31,7 +31,14 @@ export function readClientCertStatus(req) {
   if (subject.includes("{") || subject.includes("}"))
     subject = "";
   const hasClientCert = flag === "1" || flag === "true" || subject.length > 0;
-  return { hasClientCert, subject: hasClientCert ? subject : "" };
+  const fingerprint = String(req.headers['x-changmen-client-fingerprint'] || '').replace(/:/g, '').toLowerCase();
+  return { hasClientCert, subject: hasClientCert ? subject : "",
+    ...(hasClientCert && /^[a-f0-9]{64}$/.test(fingerprint) ? { fingerprint } : {}) };
+}
+
+export function clientCertificateAudit(req) {
+  const cert = readClientCertStatus(req);
+  return { certCn: clientCertCnFromSubject(cert.subject), certFingerprint: cert.fingerprint || '' };
 }
 
 /** 从 subject（如 CN=gb19 / CN=gb19,O=...）取出 CN */

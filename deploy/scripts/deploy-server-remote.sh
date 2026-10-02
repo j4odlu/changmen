@@ -242,9 +242,13 @@ if [ "$DEPLOY_SKIP_APP_BUILD" = "1" ]; then
   DO_APP_BUILD=0
 fi
 
+CERTIFICATE_SCHEMA_TOUCHED=0
 if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ] || [ "$OLD_HEAD" != "$NEW_HEAD" ]; then
   while IFS= read -r path; do
     case "$path" in
+      server/db/schema/client_certificates.sql|*apply-client-certificate-schema.mjs)
+        CERTIFICATE_SCHEMA_TOUCHED=1
+        ;;
       *028_players_account*|*migrate-accounts-jsonb*|*player_account_record*)
         RDS_SCHEMA_TOUCHED=1
         PLAYERS_RDS_TOUCHED=1
@@ -266,7 +270,7 @@ if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ] || [ "$OLD_HEAD" != "$NEW_HEAD" ]; th
   done < <(if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ]; then cat "$DEPLOY_CHANGED_PATHS_FILE"; else git -C "$GIT_ROOT" diff --name-only "$OLD_HEAD" "$NEW_HEAD"; fi)
 fi
 if [ "${DEPLOY_PLAN_ONLY:-0}" = "1" ]; then
-  printf "DEPLOY_PLAN full=%s install=%s compile=%s web=%s schema=%s players=%s owner=%s timers=%s\n" "$DEPLOY_FULL" "$DO_INSTALL_ROOT" "$DO_COMPILE_ROUTER" "$DO_PM2_WEB" "$RDS_SCHEMA_TOUCHED" "$PLAYERS_RDS_TOUCHED" "$PLAYERS_OWNER_MIGRATION_TOUCHED" "$LIVE_TIMER_TOUCHED"
+  printf "DEPLOY_PLAN full=%s install=%s compile=%s web=%s schema=%s players=%s owner=%s timers=%s certificates=%s\n" "$DEPLOY_FULL" "$DO_INSTALL_ROOT" "$DO_COMPILE_ROUTER" "$DO_PM2_WEB" "$RDS_SCHEMA_TOUCHED" "$PLAYERS_RDS_TOUCHED" "$PLAYERS_OWNER_MIGRATION_TOUCHED" "$LIVE_TIMER_TOUCHED" "$CERTIFICATE_SCHEMA_TOUCHED"
   exit 0
 fi
 
@@ -299,6 +303,10 @@ else
   log "skip compile:router"
 fi
 
+if [ "$CERTIFICATE_SCHEMA_TOUCHED" = "1" ]; then
+  log "apply additive certificate registry only (no account/order backfills)"
+  (cd server/backend && node scripts/ops/migrations/apply-client-certificate-schema.mjs)
+fi
 if [ "$LIVE_TIMER_TOUCHED" = "1" ]; then
   log "live_timer code changed — purge stale OB live_timers rows"
   node server/backend/scripts/ops/incidents/purge-platform-live-timers.mjs OB || echo "WARN: purge live_timers failed"

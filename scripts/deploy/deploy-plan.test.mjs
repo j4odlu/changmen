@@ -42,3 +42,6 @@ test("frontend-only changes do not restart the backend or migrate", () => {
 test("explicit full release retains full-deploy behavior", () => {
   assert.match(plan(["server/backend/core/auth/identity.js"], { DEPLOY_FULL: "1" }), /full=1 install=1 compile=1 web=1/);
 });
+test('certificate schema is applied independently of account/order migrations', () => {
+  assert.match(plan(['server/db/schema/client_certificates.sql']), /schema=0 players=0 owner=0 timers=0 certificates=1/);
+});

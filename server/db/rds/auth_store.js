@@ -3,6 +3,7 @@
  */
 
 import crypto from "node:crypto";
+import { authorizeClientCertificate } from "./client_certificate_store.js";
 import { hasDatabaseUrlConfig } from "../resolve_database_url.js";
 import { getPgPool } from "./common.js";
 import {
@@ -504,6 +505,8 @@ export async function authRefreshToken(refreshToken, auditContext = {}) {
     });
     return { revoked: true };
   }
+  if (await authorizeClientCertificate(auditContext, userId))
+    return { revoked: true };
   const active = await fetchUserActiveSessionId(userId);
   if (active === null) {
     void recordAuthAudit({

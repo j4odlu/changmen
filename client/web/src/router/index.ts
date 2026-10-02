@@ -7,6 +7,11 @@ const router = createRouter({
   history: createWebHistory("/"),
   routes: [
     {
+      path: '/admin/certificates', name: 'admin-certificates',
+      component: () => import('@/views/AdminCertificatesView.vue'),
+      meta: { requiresAdmin: true, requiresFullAdmin: true },
+    },
+    {
       path: "/login",
       redirect: () => "/",
     },

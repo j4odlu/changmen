@@ -20,6 +20,7 @@
 	reverse_proxy 127.0.0.1:3456 {
 		header_up -X-Changmen-Client-Cert
 		header_up -X-Changmen-Client-Subject
+		header_up -X-Changmen-Client-Fingerprint
 	}
 }
 
@@ -28,6 +29,7 @@
 	reverse_proxy 127.0.0.1:3456 {
 		header_up X-Changmen-Client-Cert {http.request.tls.client.subject}
 		header_up X-Changmen-Client-Subject {http.request.tls.client.subject}
+		header_up X-Changmen-Client-Fingerprint {http.request.tls.client.fingerprint}
 	}
 }
 
@@ -35,9 +37,7 @@
 	client_auth {
 		mode require_and_verify
 		trust_pool file /etc/caddy/certs/ca.crt
-		verifier leaf {
-			folder /etc/caddy/certs/clients
-		}
+		# CLIENT_CERT_REGISTRY_ENABLED=1 后由后端登记表验证归属和吊销。
 	}
 }
 

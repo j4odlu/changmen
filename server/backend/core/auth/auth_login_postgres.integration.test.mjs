@@ -11,6 +11,7 @@ if (enabled) {
     throw new Error("AUTH_TEST_DATABASE_URL must target disposable localhost changmen_auth_test");
 }
 const saved = { ...process.env };
+let certificates;
 let pool, auth;
 const userId = "153f91c6-ce36-4014-8f9b-3612bbe4c0d1";
 const oldId = "8f13916f-262e-43f9-9e7b-b825920b8a12";
@@ -33,12 +34,15 @@ describe.skipIf(!enabled)("real PostgreSQL login isolation", () => {
     for (const file of ["043_auth_session_audit.sql", "044_auth_sessions.sql"])
       await pool.query(await readFile(new URL(`../../db/migrations/${file}`, import.meta.url), "utf8"));
     await pool.query("CREATE OR REPLACE FUNCTION auth_test_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected failure'; END $$");
+    await pool.query(await readFile(new URL("../../../db/schema/client_certificates.sql", import.meta.url), "utf8"));
+    certificates = await import("../../../db/rds/client_certificate_store.js");
     auth = await import("../../../db/rds/auth_store.js");
   });
   beforeEach(async () => {
+    process.env.CLIENT_CERT_REGISTRY_ENABLED = "0";
     for (const table of tables)
       await pool.query(`DROP TRIGGER IF EXISTS auth_test_fault ON ${table}`);
-    await pool.query("TRUNCATE auth_session_audit, auth_refresh_tokens, auth_sessions, profiles, users");
+    await pool.query("TRUNCATE client_certificate_audit, client_certificates, auth_session_audit, auth_refresh_tokens, auth_sessions, profiles, users");
     await pool.query("INSERT INTO users (id, user_name, password_hash, metadata) VALUES ($1, 'river', crypt('password', gen_salt('bf', 12)), '{\"active_session_id\":\"old-login\"}')", [userId]);
     await pool.query("INSERT INTO profiles (id, user_name) VALUES ($1, 'river')", [userId]);
     const now = Date.now();
@@ -97,4 +101,30 @@ describe.skipIf(!enabled)("real PostgreSQL login isolation", () => {
     const resolved = await Promise.all(logins.map(login => auth.authResolveBrowserSession(login.browserSession.token)));
     expect(resolved.filter(session => session?.userId && !session.revoked && !session.invalid)).toHaveLength(1);
   });
+  it("preserves legacy sessions, binds fingerprints to immutable users, and revokes all certificate credentials", async () => {
+    process.env.CLIENT_CERT_REGISTRY_ENABLED = "1";
+    process.env.CLIENT_CERT_LEGACY_ENABLED = "1";
+    const fp = "a".repeat(64), otherFp = "b".repeat(64);
+    const audit = { certCn: "river", certFingerprint: fp };
+    // Existing sessions predate the fingerprint column and continue to work.
+    await pool.query("UPDATE auth_sessions SET cert_cn='river' WHERE id=$1",[oldId]);
+    expect(await auth.authResolveBrowserSession(oldCookie,audit)).toHaveProperty("userId",userId);
+    await certificates.registerClientCertificate({fingerprint:fp,userId,serial:"01",cn:"river",pem:"public-test-certificate",notBefore:Date.now()-1000,expiresAt:Date.now()+86400000},userId);
+    await expect(certificates.registerClientCertificate({fingerprint:fp,userId:crypto.randomUUID(),serial:"02",cn:"other",pem:"public",notBefore:0,expiresAt:Date.now()+1000},userId)).rejects.toHaveProperty("status",409);
+    await pool.query("UPDATE users SET user_name='renamed' WHERE id=$1",[userId]);
+    expect(await certificates.authorizeClientCertificate(audit,userId)).toBeNull();
+    expect(await certificates.authorizeClientCertificate(audit,crypto.randomUUID())).toBe("CERT_BIND_FAILED");
+    const login = await auth.authSignIn("renamed","password",audit,{browserSession:true});
+    expect(login.browserSession.token).toBeTruthy();
+    expect(await auth.authResolveBrowserSession(login.browserSession.token,audit)).toHaveProperty("userId",userId);
+    expect(await auth.authResolveBrowserSession(login.browserSession.token,{...audit,certFingerprint:otherFp})).toHaveProperty("invalid",true);
+    const rotated = await auth.authRefreshToken(login.refreshToken,audit);
+    expect(rotated.accessToken).toBeTruthy();
+    await certificates.revokeClientCertificate(fp,userId,"integration test");
+    expect(await certificates.authorizeClientCertificate(audit,userId)).toBe("CERT_BIND_FAILED");
+    expect(await auth.authResolveBrowserSession(login.browserSession.token,audit)).toHaveProperty("revoked",true);
+    const remaining=await pool.query("SELECT count(*)::int AS n FROM auth_refresh_tokens WHERE user_id=$1 AND revoked_at IS NULL",[userId]);
+    expect(remaining.rows[0].n).toBe(0);
+  });
+
 });

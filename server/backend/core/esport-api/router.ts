@@ -51,7 +51,7 @@ import { handleSendMessage as sendTelegramMessage } from "./telegram_send.js";
 import { handleClientNotifyAdminTelegram } from "../admin_tools/client_mirror_notify.js";
 import { handleV4Request } from "./v4_router.js";
 import { recordEsportRequest } from "../shared/esport_request_timing.js";
-import { clientCertCnFromSubject, readClientCertStatus } from "../shared/client_cert_gate.js";
+import { clientCertCnFromSubject, clientCertificateAudit, readClientCertStatus } from "../shared/client_cert_gate.js";
 
 /** 磁盘全量 Index ∩ client_matches；空合场 → 空 Index（不 fail-open） */
 async function attachFilteredVpsMarketIndex(provider: string, target: Record<string, unknown>) {
@@ -693,7 +693,7 @@ export async function handleEsportRequest(
     const cert = readClientCertStatus(req);
     const audit = {
       clientIp,
-      certCn: clientCertCnFromSubject(cert.subject),
+      ...clientCertificateAudit(req),
       userAgent: String(req.headers["user-agent"] || ""),
     };
     // 登录不依赖既有 session；先走 login，避免 RDS/池堵死时 getUserByToken 拖死登录
@@ -716,7 +716,7 @@ export async function handleEsportRequest(
     const resolved = await resolveRequestAuth({ token, browserSessionToken, action, audit, protocol: req.headers["x-changmen-auth"] }, {
       authResolveBrowserSession: sb.authResolveBrowserSession,
       authBrowserSession: sb.authBrowserSession,
-      authGetUserStatus: sb.authGetUserStatus,
+      authGetUserStatus: sb.authGetUserStatus, authorizeClientCertificate: sb.authorizeClientCertificate,
       getProfileById: dbStore.getProfileById,
       loadProfileById: dbStore.loadProfileById,
     });
@@ -825,7 +825,7 @@ export async function callEsportAction(
       return handleClientLogin(body);
     const resolved = await resolveRequestAuth({ token, action: cleanAction }, {
       authResolveBrowserSession: sb.authResolveBrowserSession,
-      authGetUserStatus: sb.authGetUserStatus,
+      authGetUserStatus: sb.authGetUserStatus, authorizeClientCertificate: sb.authorizeClientCertificate,
       getProfileById: dbStore.getProfileById,
       loadProfileById: dbStore.loadProfileById,
     });

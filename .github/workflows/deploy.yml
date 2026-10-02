@@ -90,7 +90,7 @@ jobs:
 
   build:
     needs: classify
-    if: needs.classify.outputs.frontend == 'true'
+    if: needs.classify.outputs.frontend == 'true' || needs.classify.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -114,6 +114,7 @@ jobs:
         run: npm test
 
       - name: Build frontend dist
+        if: needs.classify.outputs.frontend == 'true'
         env:
           VITE_PREDICT_FUN_API_BASE: https://api.predict.fun
           VITE_PREDICT_FUN_API_KEY: ${{ secrets.PREDICT_FUN_API_KEY }}
@@ -123,6 +124,7 @@ jobs:
         run: npm run app:build
 
       - name: Pack frontend dist
+        if: needs.classify.outputs.frontend == 'true'
         run: |
           test -f client/web/dist/index.html
           test -d client/web/dist/assets
@@ -138,6 +140,7 @@ jobs:
           fi
 
       - name: Upload dist artifact
+        if: needs.classify.outputs.frontend == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: frontend-dist-${{ github.sha }}

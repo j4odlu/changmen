@@ -22,6 +22,7 @@ const detailOpen = ref(false), detailLoading = ref(false), detailError = ref('')
 const detailRow = ref<CertificateRow | null>(null);
 const packageOpen = ref(false), packageData = ref<{ fileName: string; p12: string; fingerprint: string } | null>(null);
 let timer: ReturnType<typeof setInterval> | undefined;
+let loadVersion = 0, detailVersion = 0;
 function message(e: unknown) { return e instanceof Error ? e.message : '请求失败'; }
 function date(value: unknown) { return value ? new Date(Number(value)).toLocaleString('zh-CN') : '—'; }
 function download(content: BlobPart, fileName: string, type = 'application/x-pem-file') {
@@ -35,10 +36,10 @@ function downloadPackage() {
 function clearPackage() { packageData.value = null; }
 function beforeCloseForm(done: () => void) { if (!busy.value) done(); }
 async function load() {
-  loading.value = true;
-  try { data.value = await listCertificates(); error.value = ''; now.value = Date.now(); selected.value = []; page.value = Math.min(page.value, Math.max(1, Math.ceil(filtered.value.length / pageSize.value))); }
-  catch (e) { error.value = message(e); }
-  finally { loading.value = false; }
+  const version = ++loadVersion; loading.value = true;
+  try { const result = await listCertificates(); if (version !== loadVersion) return; data.value = result; error.value = ''; now.value = Date.now(); selected.value = []; page.value = Math.min(page.value, Math.max(1, Math.ceil(filtered.value.length / pageSize.value))); }
+  catch (e) { if (version === loadVersion) error.value = message(e); }
+  finally { if (version === loadVersion) loading.value = false; }
 }
 function openForm(mode: typeof formMode.value, row?: CertificateRow) {
   formMode.value = mode; previous.value = row || null; userId.value = row?.user_id || filterUser.value; label.value = row?.label || '';
@@ -68,10 +69,11 @@ async function importFile(event: Event) {
   finally { input.value = ''; }
 }
 async function showDetail(row: CertificateRow) {
+  const version = ++detailVersion;
   detailRow.value = row; detail.value = null; detailError.value = ''; detailOpen.value = true; detailLoading.value = true;
-  try { detail.value = await certificateDetail(row.fingerprint); }
-  catch (e) { detailError.value = message(e); }
-  finally { detailLoading.value = false; }
+  try { const result = await certificateDetail(row.fingerprint); if (version === detailVersion) detail.value = result; }
+  catch (e) { if (version === detailVersion) detailError.value = message(e); }
+  finally { if (version === detailVersion) detailLoading.value = false; }
 }
 async function editLabel(row: CertificateRow) {
   try {

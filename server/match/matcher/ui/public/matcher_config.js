@@ -37,6 +37,11 @@
     const token = window.getSiteToken();
     return token ? { token } : {};
   };
+  window.matcherForbiddenMessage = function matcherForbiddenMessage(detail) {
+    if (detail?.error === 'CSRF_INVALID' || detail?.code === 'CSRF_INVALID')
+      return '请求校验失败（请刷新赛事匹配页面后重试）';
+    return detail?.message || '需要团队长或管理员权限（当前账号无权访问赛事匹配面板）';
+  };
   window.matcherSessionHeaders = async function matcherSessionHeaders() {
     const response = await fetch('/auth/session', { credentials: 'include', cache: 'no-store' });
     if (response.status === 404 || response.status === 401)

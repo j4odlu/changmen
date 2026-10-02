@@ -14,7 +14,7 @@
       }
     })();
   </script>
-  <script src="matcher_config.js"></script>
+  <script src="matcher_config.js?v=20261003-csrf"></script>
   <style>
     :root {
       --bg: #0f1419;
@@ -1646,7 +1646,8 @@ async function fetchJson(url, options) {
     throw new Error('需要登录（请先在主页登录，或刷新后重试）');
   }
   if (res.status === 403) {
-    throw new Error('需要管理员权限（当前账号无权访问赛事匹配面板）');
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(window.matcherForbiddenMessage(detail));
   }
   const ct = res.headers.get('content-type') || '';
   if (!ct.includes('application/json')) {

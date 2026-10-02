@@ -33,4 +33,12 @@ describe("Cookie CSRF and deployment configuration", () => {
     delete process.env.WEB_AUTH_CSRF_SECRET;
     expect(webCookieEnabled()).toBe(false);
   });
+  it("accepts API-host matcher writes only with explicit Origin and matching CSRF", () => {
+    process.env.WEB_AUTH_CSRF_SECRET = "independent-csrf-secret-at-least-32-bytes";
+    process.env.WEB_AUTH_ORIGINS = "https://changmen.fun,https://www.changmen.fun,https://api.changmen.fun";
+    const req = { headers: { origin: "https://api.changmen.fun", "x-csrf-token": sessionCsrf(session) } };
+    expect(validSessionCsrf(req, session)).toBe(true);
+    expect(validSessionCsrf({ headers: { ...req.headers, origin: "https://evil.changmen.fun" } }, session)).toBe(false);
+    expect(validSessionCsrf({ headers: { origin: req.headers.origin } }, session)).toBe(false);
+  });
 });

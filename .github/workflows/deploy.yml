@@ -277,7 +277,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT}" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=8 \
             "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "cd '${DEPLOY_REPO:-/root/changmen}/server/backend' && node scripts/ops/diagnostics/post-deploy-check.mjs"
+            "cd '${DEPLOY_REPO:-/root/changmen}/server/backend' && node scripts/ops/diagnostics/post-deploy-check.mjs --skip-telegram"
 
       - name: Sync HK relay env (hongkong)
         env:

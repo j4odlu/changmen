@@ -108,7 +108,7 @@ describe("实时进度与诊断共用执行事实", () => {
   });
 
   it("does not translate unknown status codes through Object prototype properties", () => {
-    expect(observationEventLabel(event("event-001", { outcome: "constructor" }))).toBe("调用下注适配器（尚不证明场馆收到） · constructor");
+    expect(observationEventLabel(event("event-001", { outcome: "constructor" }))).toBe("开始场馆下注处理（尚未确认请求发出） · constructor");
     expect(observationEventLabel(event("event-002", { source: "orchestration_result", outcome: "toString" }))).toContain("编排判定：toString");
   });
 });

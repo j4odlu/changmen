@@ -1,0 +1,74 @@
+import type { OrderObservationEvent } from "@changmen/shared/order_observation";
+import { describe, expect, it } from "vitest";
+import { observationLegGroups, observationLegSummary, progressEvidenceWarnings } from "./activeBetRunPresentation";
+
+function event(kind: OrderObservationEvent["kind"], patch: Partial<OrderObservationEvent> = {}): OrderObservationEvent {
+  return { version: 1, eventId: "event-123", ownerUserId: "u1", sequence: 1, occurredAt: 1000, linkId: 123, attemptId: "attempt-1", kind, ...patch };
+}
+describe("实时进度只读摘要", () => {
+  it("does not turn adapter acceptance or successful binding into venue confirmation", () => {
+    const summary = observationLegSummary([event("submission_result", { outcome: "accepted" }), event("bind_result", { outcome: "saved", sequence: 2 })], "confirmed");
+    expect(summary.label).toBe("已受理 · 待确认");
+    expect(summary.bound).toBe(true);
+    expect(summary.tone).toBe("pending");
+  });
+  it("distinguishes timeout policy and orchestration from venue evidence", () => {
+    expect(observationLegSummary([event("settlement_observed", { outcome: "unfilled", source: "timeout_policy" })], "rejected").label).toBe("超时策略处理");
+    expect(observationLegSummary([event("settlement_observed", { outcome: "filled", source: "orchestration_result" })], "confirmed").label).toBe("编排：已成交");
+    expect(observationLegSummary([event("settlement_observed", { outcome: "filled", source: "adapter" })], "confirmed").label).toBe("观察到成交");
+  });
+  it("warns on conflicting venue confirmations", () => {
+    const events = [event("settlement_observed", { outcome: "filled", source: "adapter" }), event("settlement_observed", { outcome: "unfilled", source: "adapter", sequence: 2 })];
+    expect(observationLegSummary(events, "confirmed").label).toBe("确认记录冲突");
+  });
+  it("keeps summaries and bindings separate across retry attempts", () => {
+    const events = [event("bind_result", { outcome: "saved", orderId: "old" }), event("submission_result", { attemptId: "attempt-2", outcome: "unknown", retryRound: 1, orderId: "new", amount: 12.25, currency: "USDC" })];
+    const summary = observationLegSummary(events, "failed");
+    expect(summary.label).toBe("提交结果未知");
+    expect(summary.orderId).toBe("new");
+    expect(summary.bound).toBe(false);
+    expect(summary.retries).toBe(1);
+    expect(summary.amount).toBe("12.25 USDC");
+    expect(observationLegSummary([event("precheck_result", { amount: 5 })], "pending").amount).toBe("5 （币种未记录）");
+  });
+  it("does not claim no submission when its result is missing", () => {
+    expect(observationLegSummary([event("submission_started"), event("precheck_result", { outcome: "blocked", sequence: 2 })], "failed").label).toBe("结果待核查");
+  });
+  it("does not let a delayed binding of the original attempt overwrite a newer retry summary", () => {
+    const events = [event("submission_result", { outcome: "adapter_failed" }), event("submission_result", { attemptId: "attempt-2", outcome: "unknown", retryRound: 1 }), event("bind_result", { sequence: 2, outcome: "saved", orderId: "old" })];
+    const summary = observationLegSummary(events, "failed");
+    expect(summary.attemptId).toBe("attempt-2");
+    expect(summary.label).toBe("提交结果未知");
+    expect(summary.bound).toBe(false);
+    expect(summary.orderId).toBeUndefined();
+  });
+  it("marks gaps while excluding transport metadata from sequence checks", () => {
+    const events = [event("precheck_started"), event("transport_gap", { sequence: 1 }), event("precheck_result", { sequence: 3 })];
+    expect(progressEvidenceWarnings(events)).toEqual(["执行记录存在上传或缓存缺口", "部分执行事件缺失"]);
+    expect(progressEvidenceWarnings([event("precheck_started"), event("precheck_result", { sequence: 1 })])).toContain("执行记录序号冲突");
+  });
+});
+
+describe("执行时间线主客方向", () => {
+  const legs = [{ side: "A", target: "Away" }, { side: "B", target: "Home" }] as const;
+  it("uses targets rather than leg order or provider and retains whole-order events", () => {
+    const away = event("submission_started", { target: "Away", provider: "OB" });
+    const home = event("submission_started", { target: "Home", attemptId: "home", provider: "OB" });
+    const receipt = event("bind_result", { attemptId: "home", outcome: "saved" });
+    const root = event("execution_started", { attemptId: undefined });
+    const groups = observationLegGroups([away, home, receipt, root], legs);
+    expect(groups.groups.get("A")).toEqual([away]);
+    expect(groups.groups.get("B")).toEqual([home, receipt]);
+    expect(groups.unassigned).toEqual([root]);
+  });
+  it("keeps ambiguous and unrelated receipts outside both direction timelines", () => {
+    const home = event("submission_started", { target: "Home" });
+    const away = event("submission_started", { target: "Away" });
+    const ambiguous = event("bind_result");
+    const unrelated = event("bind_result", { attemptId: "unknown" });
+    const groups = observationLegGroups([home, away, ambiguous, unrelated], legs);
+    expect(groups.groups.get("A")).toEqual([away]);
+    expect(groups.groups.get("B")).toEqual([home]);
+    expect(groups.unassigned).toEqual([ambiguous, unrelated]);
+  });
+});

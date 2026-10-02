@@ -17,6 +17,21 @@ import {
 } from "./user_log_lookup.js";
 
 describe("user_log_lookup", () => {
+  it("never attaches a conflicting explicit Link result to the previous check", () => {
+    const orders = [{ orderId: "o1", link: 123, provider: "OB", match: "m", bet: "b", createAt: 1000 }];
+    const logs = [
+      { id: 1, kind: "check", linkId: 123, provider: "OB", createAt: 1000 },
+      { id: 2, kind: "bet", linkId: 456, provider: "OB", createAt: 1100 },
+    ];
+    const result = filterRelevantLogs(orders, logs);
+    expect(result.relevant.map(log => log.id)).toEqual([1]);
+    expect(result.unrelated.map(log => log.id)).toEqual([2]);
+  });
+
+  it("caps legacy time-window expansion at one day", () => {
+    const window = computeLogWindow([{ create_at: 100_000_000 }], Number.MAX_SAFE_INTEGER);
+    expect(window.toMs - window.fromMs).toBe(2 * 86_400_000);
+  });
   it("linkTypeLabel and groupMetaLabel", () => {
     expect(linkTypeLabel(1_781_802_360_547)).toBe("套利");
     expect(linkTypeLabel(-1)).toBe("单边");

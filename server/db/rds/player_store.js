@@ -8,13 +8,13 @@ import {
   playerRowToAccountRecord,
 } from "../player_account_record.js";
 import {
-  VenueAccountKeyConflictError,
   buildVenueAccountKey,
   isVenueAccountKeyUniqueViolation,
   ownSoftDeletedVenueAccountMessage,
+  VenueAccountKeyConflictError,
   venueAccountKeyConflictMessage,
 } from "../venue_account_key.js";
-import { getPgPool, _jsonb } from "./common.js";
+import { _jsonb, getPgPool } from "./common.js";
 
 const PLAYER_SELECT
   = `id, owner_user_id, platform_id, platform_name, player_name, provider, venue_member_id, venue_account_key,
@@ -25,8 +25,9 @@ function _mapPlayerRow(row) {
     return null;
   let accountData = {};
   if (row.account_data != null) {
-    if (typeof row.account_data === "object" && !Array.isArray(row.account_data))
+    if (typeof row.account_data === "object" && !Array.isArray(row.account_data)) {
       accountData = row.account_data;
+    }
     else {
       try {
         accountData = JSON.parse(String(row.account_data || "{}"));
@@ -527,21 +528,37 @@ export async function fetchUserLogsInRange(userId, fromMs, toMs, limit = 200) {
  * 必须先在 SQL 层排除赛事/盘口采集噪声，再做数量限制；否则高频采集日志会
  * 占满 LIMIT，导致同一 Link 后半段的补单、下注和终态日志永远无法进入诊断。
  */
-export async function fetchBettingUserLogsInRange(userId, fromMs, toMs, limit = 1000) {
+export async function fetchBettingUserLogsInRange(userId, fromMs, toMs, limit = 1000, identity = {}) {
   const uid = String(userId || "").trim();
   if (!uid)
     return { rows: [], truncated: false, limit: 0 };
   const pool = getPgPool();
   if (!pool)
-    return { rows: [], truncated: false, limit: 0 };
+    throw new Error("诊断日志数据库不可用，请稍后重试");
   const from = Number(fromMs) || 0;
   const to = Number(toMs) || Date.now();
-  const cap = Math.min(Math.max(Number(limit) || 1000, 1), 5000);
+  const cap = Math.floor(Math.min(Math.max(Number(limit) || 1000, 1), 5000));
+  // [changmen 扩展] data 是历史 text 字段，避免 JSON 强转被旧日志破坏。
+  // 明确标识的日志跨时间窗查询，并优先进入 LIMIT；旧日志仍按时间窗兜底。
+  const escapeRegex = value => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [];
+  const link = Number(identity.link);
+  if (Number.isFinite(link) && link !== 0)
+    patterns.push(`"(linkId|link)"[[:space:]]*:[[:space:]]*"?${link}"?[[:space:]]*[,}]`);
+  for (const id of identity.orderIds || []) {
+    if (String(id).trim()) {
+      patterns.push(`"orderId"[[:space:]]*:[[:space:]]*${escapeRegex(JSON.stringify(String(id)))}[[:space:]]*[,}]`);
+      if (/^\d+$/.test(String(id)))
+        patterns.push(`"orderId"[[:space:]]*:[[:space:]]*${id}[[:space:]]*[,}]`);
+    }
+  }
+  const exactPattern = patterns.length ? patterns.map(pattern => `(${pattern})`).join("|") : null;
   try {
     const result = await pool.query(
       `SELECT id, user_id, title, data, create_at
        FROM user_logs
-       WHERE user_id = $1 AND create_at >= $2 AND create_at <= $3
+       WHERE user_id = $1
+         AND ((create_at >= $2 AND create_at <= $3) OR ($5::text IS NOT NULL AND data ~ $5))
          AND (
            title LIKE '%请求盘口数据%'
            OR title LIKE '%下注 =>%'
@@ -549,20 +566,20 @@ export async function fetchBettingUserLogsInRange(userId, fromMs, toMs, limit = 
            OR title LIKE '%补单入队%'
            OR title LIKE '%补单取消%'
           )
-       ORDER BY create_at ASC
+       ORDER BY CASE WHEN $5::text IS NOT NULL AND data ~ $5 THEN 0 ELSE 1 END, create_at ASC, id ASC
        LIMIT $4`,
-      [uid, from, to, cap + 1],
+      [uid, from, to, cap + 1, exactPattern],
     );
     const all = result.rows || [];
     return {
-      rows: all.slice(0, cap),
+      rows: all.slice(0, cap).sort((a, b) => Number(a.create_at) - Number(b.create_at) || Number(a.id) - Number(b.id)),
       truncated: all.length > cap,
       limit: cap,
     };
   }
   catch (err) {
     console.warn("[rds] fetchBettingUserLogsInRange:", err.message);
-    return { rows: [], truncated: false, limit: cap };
+    throw new Error("诊断日志查询失败，请稍后重试", { cause: err });
   }
 }
 

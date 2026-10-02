@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   batchSavePlayerAccountRecords,
   batchUpdatePlayerDisplayNames,
+  fetchBettingUserLogsInRange,
   fetchPlayersByIds,
   saveAccountRecordsForOwner,
 } from "./player_store.js";
@@ -26,6 +27,23 @@ describe("player_store batch SQL", () => {
     const [sql, params] = queryMock.mock.calls[0];
     expect(sql).toMatch(/id = ANY\(\$1::bigint\[\]\)/);
     expect(params).toEqual([[7, 8]]);
+  });
+
+  it("prioritizes exact identities across time windows before limiting diagnostic logs", async () => {
+    queryMock.mockResolvedValue({ rows: [{ id: 2, create_at: 5000 }, { id: 1, create_at: 1000 }, { id: 3, create_at: 2000 }] });
+    const result = await fetchBettingUserLogsInRange("user-1", 1000, 2000, 2, { link: 123, orderIds: ["a.b"] });
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain("OR ($5::text IS NOT NULL AND data ~ $5)");
+    expect(sql).toContain("ORDER BY CASE WHEN");
+    expect(params.slice(0, 4)).toEqual(["user-1", 1000, 2000, 3]);
+    expect(params[4]).toContain("a\\.b");
+    expect(result.rows.map(row => row.id)).toEqual([1, 2]);
+    expect(result.truncated).toBe(true);
+  });
+
+  it("reports diagnostic database failures instead of returning empty evidence", async () => {
+    queryMock.mockRejectedValue(new Error("offline"));
+    await expect(fetchBettingUserLogsInRange("user-1", 1000, 2000)).rejects.toThrow("诊断日志查询失败");
   });
 
   it("batchUpdatePlayerDisplayNames uses unnest", async () => {

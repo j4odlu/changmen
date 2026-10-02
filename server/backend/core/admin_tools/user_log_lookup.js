@@ -2,9 +2,9 @@
  * [changmen 扩展] 运维：订单 Link / order_id ↔ user_logs 关联（不改前端 A8 链路）
  */
 import {
-  fetchOrderByOrderId,
   fetchBettingUserLogsInRange,
   fetchFootballOrderByVenueOrderId,
+  fetchOrderByOrderId,
   fetchOrdersByLink,
   fetchUserById,
   fetchUserByName,
@@ -39,7 +39,7 @@ export function groupMetaLabel(link, orderCount) {
 
 /** 以订单 create_at 与 link 时间戳估窗口 */
 export function computeLogWindow(orders, paddingMs = DEFAULT_LOG_PADDING_MS) {
-  const pad = Math.max(Number(paddingMs) || DEFAULT_LOG_PADDING_MS, 30_000);
+  const pad = Math.min(Math.max(Number(paddingMs) || DEFAULT_LOG_PADDING_MS, 30_000), 86_400_000);
   const times = (orders || [])
     .map(o => Number(o.create_at) || 0)
     .filter(t => t > 0);
@@ -199,7 +199,7 @@ export function filterRelevantLogs(orders, logs) {
     let keep = isStrongLogOrderMatch(best, log);
     const reasons = keep ? [...best.reasons] : [];
     const previousCheck = lastRelevantCheckByActor.get(actorKey(log));
-    if (!keep && log.kind === "bet" && previousCheck && sameLogActor(log, previousCheck)) {
+    if (!keep && !log.linkId && log.kind === "bet" && previousCheck && sameLogActor(log, previousCheck)) {
       const delta = Number(log.createAt) - Number(previousCheck.createAt);
       if (delta >= 0 && delta <= RELATED_BET_LOG_WINDOW_MS) {
         keep = true;
@@ -1107,6 +1107,7 @@ export async function lookupOrderLogs(opts) {
     window.fromMs,
     window.toMs,
     opts?.logLimit ?? 1000,
+    { link, orderIds: normalized.map(order => order.orderId) },
   );
   const logs = diagnosticQuery.rows;
   const summarizedLogs = logs.map(summarizeUserLog);

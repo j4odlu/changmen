@@ -6,18 +6,19 @@ import type {
   AdminOrderLogLookup,
   AdminOrderRow,
 } from "@/types/admin";
+import { formatLinkId } from "@changmen/client-core/shared/format";
 import { ElMessage } from "element-plus";
 import { computed, ref } from "vue";
 import { getAdminOrderLogs } from "@/api/admin";
-import { attemptLogSegments, filterBackendLegSections } from "@/shared/adminOrderLogSegments";
 import {
+  adminOrderEvidenceIssues,
   buildAdminOrderDiagnosisSummary,
   buildAdminOrderExecutionSteps,
   buildAdminOrderOrchestrationStages,
   filterAdminOrderDiagnosisLogs,
 } from "@/shared/adminOrderDiagnosis";
+import { attemptLogSegments, filterBackendLegSections } from "@/shared/adminOrderLogSegments";
 import { adminOrderBetMoneyCny, adminOrderMoneyCny, isAdminPredictionSell, sumAdminOrdersMoneyCny } from "@/shared/adminOrderMoney";
-import { formatLinkId } from "@changmen/client-core/shared/format";
 
 const ARB_LINK_MIN = 1_000_000_000_000;
 
@@ -26,6 +27,9 @@ const loading = ref(false);
 const error = ref("");
 const data = ref<AdminOrderLogLookup | null>(null);
 const title = ref("下单诊断");
+let requestSequence = 0;
+const lookupRows = ref<AdminOrderRow[]>([]);
+const expanded = ref(false);
 
 const kindLabel: Record<string, string> = {
   check: "预检",
@@ -348,11 +352,22 @@ const totalProfit = computed(() =>
 );
 
 const executionSteps = computed(() => buildAdminOrderExecutionSteps(legColumns.value));
+const diagnosisContext = computed(() => ({ linkType: data.value?.linkType, truncated: data.value?.logStats?.truncated }));
+const evidenceIssues = computed(() => adminOrderEvidenceIssues(executionSteps.value, diagnosisContext.value));
+const suggestedCheck = computed(() => {
+  if (data.value?.logStats?.truncated)
+    return "扩大日志查询后重新诊断；当前日志已截断，后续动作可能缺失。";
+  if (evidenceIssues.value.length)
+    return "核对场馆订单状态，并补查缺失日志；当前证据不足以确认完整执行结果。";
+  if (executionSteps.value.some(step => step.bet?.success === false || step.rejectLogic || step.check?.checkError))
+    return "核对失败或拒单原因，以及重试、补单后的场馆订单，确认是否仍存在单腿敞口。";
+  return "现有证据已覆盖执行过程；比赛未结算前，盈亏以当前记录为准。";
+});
 const diagnosisSummary = computed(() =>
-  buildAdminOrderDiagnosisSummary(executionSteps.value, totalProfit.value),
+  buildAdminOrderDiagnosisSummary(executionSteps.value, totalProfit.value, diagnosisContext.value),
 );
 const orchestrationStages = computed(() =>
-  buildAdminOrderOrchestrationStages(executionSteps.value, totalProfit.value),
+  buildAdminOrderOrchestrationStages(executionSteps.value, totalProfit.value, diagnosisContext.value),
 );
 const orchestrationStartAt = computed(() => orchestrationStages.value[0]?.at || 0);
 
@@ -379,8 +394,6 @@ const logStats = computed(() => ({
   truncated: data.value?.logStats?.truncated ?? false,
   limit: data.value?.logStats?.limit ?? 0,
 }));
-
-const hasFilteredLogs = computed(() => filteredLogs.value.length > 0);
 
 function logDetailParts(log: AdminOrderLogEntry) {
   const parts: string[] = [];
@@ -441,6 +454,16 @@ const hasOverviewOrders = computed(() => sortedOrders.value.length > 0);
 async function open(rows: AdminOrderRow[]) {
   if (!rows.length)
     return;
+  lookupRows.value = [...rows];
+  expanded.value = false;
+  await loadDiagnosis();
+}
+
+async function loadDiagnosis() {
+  const rows = lookupRows.value;
+  if (!rows.length)
+    return;
+  const sequence = ++requestSequence;
   const head = rows[0]!;
   visible.value = true;
   loading.value = true;
@@ -448,26 +471,59 @@ async function open(rows: AdminOrderRow[]) {
   data.value = null;
   title.value = `下单诊断 · ${formatLinkId(head.linkId)}`;
   try {
-    data.value = await getAdminOrderLogs({
+    const payload = await getAdminOrderLogs({
       userId: head.userId,
       linkId: head.linkId || undefined,
       orderId: !head.linkId ? head.orderId : undefined,
       domain: head.domain,
       sport: head.sport,
       venue: head.provider,
+      paddingMs: expanded.value ? 1_800_000 : undefined,
+      logLimit: expanded.value ? 5000 : undefined,
     });
+    if (sequence === requestSequence)
+      data.value = payload;
   }
   catch (e) {
+    if (sequence !== requestSequence)
+      return;
     error.value = (e as Error).message || "加载失败";
     ElMessage.error(error.value);
   }
   finally {
-    loading.value = false;
+    if (sequence === requestSequence)
+      loading.value = false;
   }
 }
 
 function close() {
+  ++requestSequence;
+  loading.value = false;
   visible.value = false;
+}
+
+async function expandLookup() {
+  expanded.value = true;
+  await loadDiagnosis();
+}
+
+async function copyReport() {
+  if (!data.value)
+    return;
+  // [changmen 扩展] 仅复制摘要及核查提示，不导出账号凭证和接口原始请求。
+  const report = [
+    `下单诊断 · ${formatLinkId(data.value.link)}`,
+    diagnosisSummary.value.text,
+    `证据：${evidenceIssues.value.join("；") || "现有执行证据覆盖完整"}`,
+    ...orchestrationStages.value.map(stage => `${stage.title}：${stage.decision}`),
+  ].join("\n");
+  try {
+    await navigator.clipboard.writeText(report);
+    ElMessage.success("诊断摘要已复制");
+  }
+  catch {
+    ElMessage.error("复制失败，请检查浏览器剪贴板权限");
+  }
 }
 
 defineExpose({ open });
@@ -481,7 +537,7 @@ defineExpose({ open });
     class="admin-order-log-dialog admin-dialog"
     append-to-body
     destroy-on-close
-    @closed="close"
+    @close="close"
   >
     <div v-loading="loading" class="admin-order-log-dialog__scroll">
       <div class="admin-order-log-dialog__body">
@@ -522,18 +578,18 @@ defineExpose({ open });
                 </div>
                 <div
                   class="admin-order-log-stat"
-                  :class="{ 'admin-order-log-stat--warn': hasFilteredLogs || logStats.truncated }"
+                  :class="{ 'admin-order-log-stat--warn': evidenceIssues.length > 0 }"
                 >
                   <span class="admin-order-log-stat__label">诊断质量</span>
                   <span class="admin-order-log-stat__value">
                     <template v-if="logStats.truncated">
                       日志已截断 {{ logStats.limit }} 条
                     </template>
-                    <template v-else-if="hasFilteredLogs">
-                      已过滤 {{ logStats.unrelated }} 条噪声
+                    <template v-else-if="evidenceIssues.length">
+                      证据不完整
                     </template>
                     <template v-else>
-                      全部匹配
+                      执行证据覆盖完整
                     </template>
                   </span>
                 </div>
@@ -554,6 +610,14 @@ defineExpose({ open });
                 </div>
               </div>
 
+              <el-alert v-if="evidenceIssues.length" type="warning" :closable="false" :title="evidenceIssues.join('；')" />
+              <p class="admin-order-log-overview__window">
+                建议核查：{{ suggestedCheck }}
+              </p>
+              <p class="admin-order-log-overview__window">
+                明确 Link／订单 ID 的日志跨时间窗检索；时间窗用于旧日志关联。流程和金额公式包含推断，须结合技术明细核对。
+              </p>
+
               <section
                 v-if="executionSteps.length"
                 class="admin-order-diagnosis"
@@ -561,7 +625,9 @@ defineExpose({ open });
               >
                 <header class="admin-order-diagnosis__head">
                   <div>
-                    <h5 class="admin-order-diagnosis__title">编排诊断</h5>
+                    <h5 class="admin-order-diagnosis__title">
+                      编排诊断
+                    </h5>
                     <p class="admin-order-diagnosis__summary">
                       {{ diagnosisSummary.text }}
                     </p>
@@ -598,7 +664,9 @@ defineExpose({ open });
                         </p>
                       </div>
                       <ul v-if="!stage.homeNodes.length && !stage.awayNodes.length" class="admin-order-orchestration__evidence">
-                        <li v-for="item in stage.evidence" :key="item">{{ item }}</li>
+                        <li v-for="item in stage.evidence" :key="item">
+                          {{ item }}
+                        </li>
                       </ul>
                     </div>
                     <div
@@ -606,7 +674,9 @@ defineExpose({ open });
                       class="admin-order-orchestration__lanes"
                     >
                       <div class="admin-order-orchestration__lane admin-order-orchestration__lane--home">
-                        <div class="admin-order-orchestration__lane-title">主队腿 Home</div>
+                        <div class="admin-order-orchestration__lane-title">
+                          主队腿 Home
+                        </div>
                         <article
                           v-for="node in stage.homeNodes"
                           :key="node.key"
@@ -623,7 +693,9 @@ defineExpose({ open });
                         <span v-if="!stage.homeNodes.length" class="admin-order-orchestration__empty">本阶段无主队腿动作</span>
                       </div>
                       <div class="admin-order-orchestration__lane admin-order-orchestration__lane--away">
-                        <div class="admin-order-orchestration__lane-title">客队腿 Away</div>
+                        <div class="admin-order-orchestration__lane-title">
+                          客队腿 Away
+                        </div>
                         <article
                           v-for="node in stage.awayNodes"
                           :key="node.key"
@@ -728,8 +800,12 @@ defineExpose({ open });
                             :key="ev.id"
                           >
                             减仓 #{{ ev.id.slice(0, 10) }}
-                            <template v-if="ev.shares != null"> · {{ ev.shares }} 份</template>
-                            <template v-if="ev.proceeds != null"> · 回款 {{ ev.proceeds }}</template>
+                            <template v-if="ev.shares != null">
+                              · {{ ev.shares }} 份
+                            </template>
+                            <template v-if="ev.proceeds != null">
+                              · 回款 {{ ev.proceeds }}
+                            </template>
                           </li>
                         </ul>
                       </div>
@@ -755,181 +831,181 @@ defineExpose({ open });
               </summary>
 
               <section class="admin-order-log-logs-row">
-              <header class="admin-order-log-logs-row__head">
-                <h4 class="admin-order-log-logs-row__title">
-                  原始诊断日志
-                </h4>
-                <span class="admin-order-log-logs-row__hint">
-                  按主客队保留预检与接口原文，用于核对上方执行链
-                </span>
-              </header>
+                <header class="admin-order-log-logs-row__head">
+                  <h4 class="admin-order-log-logs-row__title">
+                    原始诊断日志
+                  </h4>
+                  <span class="admin-order-log-logs-row__hint">
+                    按主客队保留预检与接口原文，用于核对上方执行链
+                  </span>
+                </header>
 
-              <div
-                v-if="legColumns.length"
-                class="admin-order-log-platforms"
-                :style="legColumnsStyle"
-              >
-                <section
-                  v-for="leg in legColumns"
-                  :key="leg.key"
-                  class="admin-order-log-platform-col admin-order-log-leg-col"
+                <div
+                  v-if="legColumns.length"
+                  class="admin-order-log-platforms"
+                  :style="legColumnsStyle"
                 >
-                  <header class="admin-order-log-leg-col__head">
-                    <span class="admin-order-log-leg-col__name">{{ sideLabel(leg) }}</span>
-                    <span class="admin-order-log-platform-col__counts">
-                      {{ leg.attempts.length }} 段 ·
-                      {{ leg.attempts.reduce((n, a) => n + a.logs.length, 0) }} 条日志
-                    </span>
-                  </header>
+                  <section
+                    v-for="leg in legColumns"
+                    :key="leg.key"
+                    class="admin-order-log-platform-col admin-order-log-leg-col"
+                  >
+                    <header class="admin-order-log-leg-col__head">
+                      <span class="admin-order-log-leg-col__name">{{ sideLabel(leg) }}</span>
+                      <span class="admin-order-log-platform-col__counts">
+                        {{ leg.attempts.length }} 段 ·
+                        {{ leg.attempts.reduce((n, a) => n + a.logs.length, 0) }} 条日志
+                      </span>
+                    </header>
 
-                  <template v-if="leg.attempts.length">
-                    <div
-                      v-for="(attempt, attemptIdx) in leg.attempts"
-                      :key="attempt.key"
-                      class="admin-order-log-attempt"
-                    >
+                    <template v-if="leg.attempts.length">
                       <div
-                        v-if="attemptIdx > 0"
-                        class="admin-order-log-attempt-divider"
-                        :data-label="attemptDividerLabel(leg.attempts[attemptIdx - 1]!, attempt)"
-                      />
-
-                      <div class="admin-order-log-attempt__head">
-                        <div class="admin-order-log-order-col__title">
-                          <span v-if="attempt.order" class="admin-order-log-attempt__index">
-                            第 {{ attemptIdx + 1 }} 笔
-                          </span>
-                          <span
-                            v-if="attempt.order"
-                            class="admin-badge admin-order-log-order-col__status"
-                            :class="statusBadgeClass(attempt.order.status)"
-                          >
-                            {{ attempt.order.status }}
-                          </span>
-                          <span v-else class="admin-order-log-order-col__pending">未成单</span>
-                          <span v-if="attemptProvider(attempt)" class="admin-order-provider">{{
-                            attemptProvider(attempt)
-                          }}</span>
-                        </div>
-                        <div v-if="attempt.order" class="admin-order-log-order-col__meta">
-                          <span>{{ attempt.order.item || attempt.order.bet }} @ {{ attempt.order.odds }}</span>
-                          <span>{{ orderStakeLabel(attempt.order) }} ¥{{ fmtMoney(orderStakeCny(attempt.order)) }}</span>
-                          <span class="admin-order-log-order-col__oid">#{{ attempt.order.orderId }}</span>
-                        </div>
-                        <p
-                          v-else
-                          class="admin-order-log-order-col__meta admin-order-log-order-col__meta--muted"
-                        >
-                          仅有下注尝试日志，未落库 orders
-                        </p>
-                      </div>
-
-                      <p
-                        v-if="!attempt.logs.length"
-                        class="admin-order-log-dialog__empty admin-order-log-platform-col__empty"
+                        v-for="(attempt, attemptIdx) in leg.attempts"
+                        :key="attempt.key"
+                        class="admin-order-log-attempt"
                       >
-                        无 Client_SaveUserLog
-                      </p>
-                      <template v-else>
                         <div
-                          v-for="(seg, segIdx) in attemptLogSegments(attempt)"
-                          :key="`${attempt.key}-${seg.key}`"
-                          class="admin-order-log-segment"
-                        >
-                          <header
-                            v-if="seg.accountLabel || seg.isMakeUp"
-                            class="admin-order-log-segment__head"
-                          >
-                            <span v-if="seg.accountLabel" class="admin-order-log-segment__account">{{
-                              seg.accountLabel
-                            }}</span>
-                            <span v-if="seg.isMakeUp" class="admin-order-log-segment__tag">补单轮次</span>
-                            <span
-                              v-if="attemptLogSegments(attempt).length > 1"
-                              class="admin-order-log-segment__round"
-                            >
-                              轮次 {{ segIdx + 1 }}/{{ attemptLogSegments(attempt).length }}
+                          v-if="attemptIdx > 0"
+                          class="admin-order-log-attempt-divider"
+                          :data-label="attemptDividerLabel(leg.attempts[attemptIdx - 1]!, attempt)"
+                        />
+
+                        <div class="admin-order-log-attempt__head">
+                          <div class="admin-order-log-order-col__title">
+                            <span v-if="attempt.order" class="admin-order-log-attempt__index">
+                              第 {{ attemptIdx + 1 }} 笔
                             </span>
-                          </header>
-                          <ul class="admin-order-log-list">
-                            <li
-                              v-for="(log, i) in seg.logs"
-                              :key="log.id ?? `${seg.key}-${i}`"
-                              class="admin-order-log-list__row"
+                            <span
+                              v-if="attempt.order"
+                              class="admin-badge admin-order-log-order-col__status"
+                              :class="statusBadgeClass(attempt.order.status)"
                             >
-                              <span class="admin-order-log-list__time">{{ fmtTime(log.createAt) }}</span>
-                              <span class="admin-order-log-kind" :class="kindClass(log.kind)">{{
-                                kindLabel[log.kind] || log.kind
-                              }}</span>
-                              <span class="admin-order-log-list__summary" :title="log.summary">{{
-                                log.summary
-                              }}</span>
-                              <div
-                                v-if="logDetailParts(log).length"
-                                class="admin-order-log-list__details"
-                              >
-                                <span
-                                  v-for="part in logDetailParts(log)"
-                                  :key="part"
-                                  class="admin-order-log-list__detail"
-                                >
-                                  {{ part }}
-                                </span>
-                              </div>
-                            </li>
-                          </ul>
+                              {{ attempt.order.status }}
+                            </span>
+                            <span v-else class="admin-order-log-order-col__pending">未成单</span>
+                            <span v-if="attemptProvider(attempt)" class="admin-order-provider">{{
+                              attemptProvider(attempt)
+                            }}</span>
+                          </div>
+                          <div v-if="attempt.order" class="admin-order-log-order-col__meta">
+                            <span>{{ attempt.order.item || attempt.order.bet }} @ {{ attempt.order.odds }}</span>
+                            <span>{{ orderStakeLabel(attempt.order) }} ¥{{ fmtMoney(orderStakeCny(attempt.order)) }}</span>
+                            <span class="admin-order-log-order-col__oid">#{{ attempt.order.orderId }}</span>
+                          </div>
+                          <p
+                            v-else
+                            class="admin-order-log-order-col__meta admin-order-log-order-col__meta--muted"
+                          >
+                            仅有下注尝试日志，未落库 orders
+                          </p>
                         </div>
-                      </template>
-                    </div>
-                  </template>
-                  <p v-else class="admin-order-log-dialog__empty admin-order-log-platform-col__empty">
-                    {{ sideLabel(leg) }}无订单与日志
-                  </p>
-                </section>
-              </div>
-              <p v-else class="admin-order-log-dialog__empty">
-                该时间窗内无 Client_SaveUserLog 记录
-              </p>
+
+                        <p
+                          v-if="!attempt.logs.length"
+                          class="admin-order-log-dialog__empty admin-order-log-platform-col__empty"
+                        >
+                          无 Client_SaveUserLog
+                        </p>
+                        <template v-else>
+                          <div
+                            v-for="(seg, segIdx) in attemptLogSegments(attempt)"
+                            :key="`${attempt.key}-${seg.key}`"
+                            class="admin-order-log-segment"
+                          >
+                            <header
+                              v-if="seg.accountLabel || seg.isMakeUp"
+                              class="admin-order-log-segment__head"
+                            >
+                              <span v-if="seg.accountLabel" class="admin-order-log-segment__account">{{
+                                seg.accountLabel
+                              }}</span>
+                              <span v-if="seg.isMakeUp" class="admin-order-log-segment__tag">补单轮次</span>
+                              <span
+                                v-if="attemptLogSegments(attempt).length > 1"
+                                class="admin-order-log-segment__round"
+                              >
+                                轮次 {{ segIdx + 1 }}/{{ attemptLogSegments(attempt).length }}
+                              </span>
+                            </header>
+                            <ul class="admin-order-log-list">
+                              <li
+                                v-for="(log, i) in seg.logs"
+                                :key="log.id ?? `${seg.key}-${i}`"
+                                class="admin-order-log-list__row"
+                              >
+                                <span class="admin-order-log-list__time">{{ fmtTime(log.createAt) }}</span>
+                                <span class="admin-order-log-kind" :class="kindClass(log.kind)">{{
+                                  kindLabel[log.kind] || log.kind
+                                }}</span>
+                                <span class="admin-order-log-list__summary" :title="log.summary">{{
+                                  log.summary
+                                }}</span>
+                                <div
+                                  v-if="logDetailParts(log).length"
+                                  class="admin-order-log-list__details"
+                                >
+                                  <span
+                                    v-for="part in logDetailParts(log)"
+                                    :key="part"
+                                    class="admin-order-log-list__detail"
+                                  >
+                                    {{ part }}
+                                  </span>
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                        </template>
+                      </div>
+                    </template>
+                    <p v-else class="admin-order-log-dialog__empty admin-order-log-platform-col__empty">
+                      {{ sideLabel(leg) }}无订单与日志
+                    </p>
+                  </section>
+                </div>
+                <p v-else class="admin-order-log-dialog__empty">
+                  该时间窗内无 Client_SaveUserLog 记录
+                </p>
               </section>
 
               <section
                 v-if="filteredLogs.length"
                 class="admin-order-log-filtered"
               >
-              <header class="admin-order-log-filtered__head">
-                <h4 class="admin-order-log-logs-row__title">
-                  已过滤的窗口日志
-                </h4>
-                <span class="admin-order-log-logs-row__hint">
-                  这些日志在时间窗内，但未匹配当前订单，通常是其他比赛或账号刷新日志
-                </span>
-              </header>
-              <ul class="admin-order-log-list admin-order-log-list--filtered">
-                <li
-                  v-for="(log, i) in filteredLogs.slice(0, 8)"
-                  :key="log.id ?? `filtered-${i}`"
-                  class="admin-order-log-list__row admin-order-log-list__row--filtered"
-                >
-                  <span class="admin-order-log-list__time">{{ fmtTime(log.createAt) }}</span>
-                  <span class="admin-order-log-kind" :class="kindClass(log.kind)">
-                    {{ kindLabel[log.kind] || log.kind }}
+                <header class="admin-order-log-filtered__head">
+                  <h4 class="admin-order-log-logs-row__title">
+                    已过滤的窗口日志
+                  </h4>
+                  <span class="admin-order-log-logs-row__hint">
+                    这些日志在时间窗内，但未匹配当前订单，通常是其他比赛或账号刷新日志
                   </span>
-                  <span class="admin-order-log-list__summary" :title="log.summary">
-                    {{ log.summary }}
-                  </span>
-                  <div class="admin-order-log-list__details">
-                    <span class="admin-order-log-list__detail">
-                      {{ log.relationReason || "未匹配当前订单" }}
+                </header>
+                <ul class="admin-order-log-list admin-order-log-list--filtered">
+                  <li
+                    v-for="(log, i) in filteredLogs.slice(0, 8)"
+                    :key="log.id ?? `filtered-${i}`"
+                    class="admin-order-log-list__row admin-order-log-list__row--filtered"
+                  >
+                    <span class="admin-order-log-list__time">{{ fmtTime(log.createAt) }}</span>
+                    <span class="admin-order-log-kind" :class="kindClass(log.kind)">
+                      {{ kindLabel[log.kind] || log.kind }}
                     </span>
-                  </div>
-                </li>
-              </ul>
-              <p
-                v-if="filteredLogs.length > 8"
-                class="admin-order-log-filtered__more"
-              >
-                还有 {{ filteredLogs.length - 8 }} 条已过滤日志未展开
-              </p>
+                    <span class="admin-order-log-list__summary" :title="log.summary">
+                      {{ log.summary }}
+                    </span>
+                    <div class="admin-order-log-list__details">
+                      <span class="admin-order-log-list__detail">
+                        {{ log.relationReason || "未匹配当前订单" }}
+                      </span>
+                    </div>
+                  </li>
+                </ul>
+                <p
+                  v-if="filteredLogs.length > 8"
+                  class="admin-order-log-filtered__more"
+                >
+                  还有 {{ filteredLogs.length - 8 }} 条已过滤日志未展开
+                </p>
               </section>
             </details>
           </div>
@@ -937,7 +1013,16 @@ defineExpose({ open });
       </div>
     </div>
     <template #footer>
-      <el-button @click="visible = false">
+      <el-button :disabled="loading || !data" @click="copyReport">
+        复制诊断摘要
+      </el-button>
+      <el-button :disabled="loading || !lookupRows.length" @click="expandLookup">
+        扩大旧日志窗口至前后30分钟
+      </el-button>
+      <el-button :loading="loading" @click="loadDiagnosis">
+        {{ error ? "重试" : "刷新" }}
+      </el-button>
+      <el-button @click="close">
         关闭
       </el-button>
     </template>

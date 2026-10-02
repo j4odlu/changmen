@@ -4,8 +4,8 @@ import type {
   AdminOrderLogLookup,
   AdminOrderLogOrder,
 } from "@/types/admin";
-import { attemptLogSegments } from "@/shared/adminOrderLogSegments";
 import { Currency, defaultCurrencyForProvider, getExchange } from "@changmen/shared/currency";
+import { attemptLogSegments } from "@/shared/adminOrderLogSegments";
 
 export type AdminOrderDiagnosisTone = "neutral" | "success" | "warning" | "danger";
 
@@ -90,7 +90,8 @@ export function filterAdminOrderDiagnosisLogs(
     const nearCurrentAttempt = logLink === 0 && anchors.some(anchor =>
       Math.abs(Number(log.createAt) - anchor) <= LEGACY_LOG_NEAR_ORDER_MS,
     );
-    (exactLink || exactOrder || nearCurrentAttempt ? related : filtered).push(log);
+    const keep = logLink !== 0 ? exactLink : exactOrder || nearCurrentAttempt;
+    (keep ? related : filtered).push(log);
   }
   return { related, filtered };
 }
@@ -157,6 +158,45 @@ function statusText(status: string | null | undefined) {
   return status ? `场馆状态：${status}` : "";
 }
 
+/** [changmen 扩展] 接口受理、订单存在、成交确认、比赛结算分别判断。 */
+function confirmation(step: AdminOrderExecutionStep): "rejected" | "returned" | "filled" | "pending" {
+  const status = String(step.order?.status || "").toLowerCase();
+  if (status === "reject" || step.reject?.settlement === "unfilled")
+    return "rejected";
+  if (status === "return")
+    return "returned";
+  if (status === "win" || status === "lose" || step.reject?.settlement === "filled")
+    return "filled";
+  return "pending";
+}
+
+export interface AdminOrderDiagnosisContext {
+  linkType?: string;
+  truncated?: boolean;
+}
+
+export function adminOrderEvidenceIssues(steps: AdminOrderExecutionStep[], context: AdminOrderDiagnosisContext = {}): string[] {
+  const issues: string[] = [];
+  const initial = steps.filter(step => !step.isMakeUp && !step.isRetry && !step.isQueue && !step.isQueueCancel);
+  if (!steps.length)
+    issues.push("未找到相关诊断日志");
+  if (context.truncated)
+    issues.push("日志已截断");
+  if (context.linkType !== "单边" && !(initial.some(step => step.side === "Home") && initial.some(step => step.side === "Away")))
+    issues.push("初始双腿证据不足");
+  if (steps.some(step => !step.isQueue && !step.isQueueCancel && (!step.check || (!step.bet && !step.check.checkError))))
+    issues.push("缺少预检或下单结果日志");
+  if (steps.some(step => step.bet?.success === true && !step.order))
+    issues.push("接口受理记录缺少对应落库订单");
+  if (steps.some(step => confirmation(step) === "returned"))
+    issues.push("存在已退回订单，需核对对冲是否仍成立");
+  if (steps.some(step => String(step.order?.status || "").toLowerCase() === "reject" && !step.reject?.observedAt && !step.reject?.createAt))
+    issues.push("拒单发现时间缺失");
+  if (steps.some(step => !step.isQueue && !step.isQueueCancel && step.bet?.success !== false && !step.check?.checkError && confirmation(step) === "pending"))
+    issues.push("存在待确认的场馆结果");
+  return issues;
+}
+
 function outcomeFor(
   check: AdminOrderLogEntry | null,
   bet: AdminOrderLogEntry | null,
@@ -196,6 +236,8 @@ function outcomeFor(
     };
   }
   if (bet?.success === true) {
+    if (reject?.settlement === "filled")
+      return { outcome: "接口受理 → 确认成交 · 未找到落库订单", detail: bet.message || null, tone: "warning" };
     return {
       outcome: "接口受理 · 未找到场馆订单",
       detail: bet.message || null,
@@ -283,7 +325,7 @@ export function buildAdminOrderExecutionSteps(
           ? { outcome: "已加入补单队列（尚未下单）", detail: null, tone: "warning" as const }
           : isQueueCancel
             ? { outcome: "补单队列已取消（未继续下单）", detail: queueCancel?.message || null, tone: "success" as const }
-          : outcomeFor(check, bet, reject, order);
+            : outcomeFor(check, bet, reject, order);
         const odds = Number(check?.newOdds ?? check?.odds ?? queue?.failedLegOdds ?? order?.odds) || null;
         const betMoney = Number(check?.betMoney ?? queue?.betMoney ?? order?.betMoney) || null;
         steps.push({
@@ -310,11 +352,11 @@ export function buildAdminOrderExecutionSteps(
             ? `失败腿最后赔率 ${queue?.failedLegOdds || "—"}；入队时尚未产生补单赔率`
             : isQueueCancel
               ? "锚腿确认拒单后撤销队列，未产生新的补单赔率"
-            : isMakeUp
-              ? `补单赔率 ${odds || "—"} 来自补单执行时的场馆实时盘口，不是由公式计算`
-              : isRetry
-                ? `重试赔率 ${odds || "—"} 来自失败后再次预检的实时盘口`
-                : `下单赔率 ${odds || "—"} 来自本轮预检实时盘口`,
+              : isMakeUp
+                ? `补单赔率 ${odds || "—"} 来自补单执行时的场馆实时盘口，不是由公式计算`
+                : isRetry
+                  ? `重试赔率 ${odds || "—"} 来自失败后再次预检的实时盘口`
+                  : `下单赔率 ${odds || "—"} 来自本轮预检实时盘口`,
           stakeLogic: "等待同组订单计算",
           rejectLogic: null,
           ...result,
@@ -335,7 +377,8 @@ export function buildAdminOrderExecutionSteps(
       || String(previous.order?.status || "").toLowerCase() === "reject"
       || previous.reject?.settlement === "unfilled"
     );
-    if (!step.isMakeUp && !step.isQueue && !step.isRetry && !step.order && step.check && previousFailed) {
+    if (!step.isMakeUp && !step.isQueue && !step.isQueueCancel && !step.isRetry && !step.order && step.check && previousFailed
+      && step.at - previous.at >= 0 && step.at - previous.at <= LEGACY_LOG_NEAR_ORDER_MS) {
       step.isRetry = true;
       step.attemptType = "retry";
       step.oddsLogic = `重试赔率 ${step.odds || "—"} 来自失败后再次预检的实时盘口`;
@@ -406,8 +449,9 @@ export function buildAdminOrderExecutionSteps(
     if (
       String(step.order?.status || "").toLowerCase() !== "reject"
       && step.reject?.settlement !== "unfilled"
-    )
+    ) {
       continue;
+    }
     const rejectLog = step.reject;
     const delayMs = Number(rejectLog?.rejectDelayMs);
     const reason = rejectLog?.rejectReason || "场馆最终状态为 Reject，但未返回具体拒因";
@@ -422,9 +466,11 @@ export function buildAdminOrderExecutionSteps(
 export function buildAdminOrderDiagnosisSummary(
   steps: AdminOrderExecutionStep[],
   totalProfit: number,
+  context: AdminOrderDiagnosisContext = {},
 ): { text: string; tone: AdminOrderDiagnosisTone } {
   const originals = steps.filter(step => !step.isMakeUp && !step.isRetry && !step.isQueue && !step.isQueueCancel);
   const apiFailures = originals.filter(step => step.bet?.success === false).length;
+  const precheckFailures = originals.filter(step => Boolean(step.check?.checkError) && !step.bet).length;
   const venueRejects = originals.filter(step =>
     String(step.order?.status || "").toLowerCase() === "reject"
     || step.reject?.settlement === "unfilled",
@@ -434,19 +480,23 @@ export function buildAdminOrderDiagnosisSummary(
   const blockedMakeups = makeups.filter(step => !step.bet && !step.order && Boolean(step.check?.checkError)).length;
   const incompleteMakeups = makeups.filter(step => !step.bet && !step.order && !step.check?.checkError).length;
   const retries = steps.filter(step => step.isRetry).length;
+  const followupFailures = steps.filter(step => (step.isRetry || step.isMakeUp) && (step.bet?.success === false || confirmation(step) === "rejected")).length;
   const queues = steps.filter(step => step.isQueue).length;
   const canceledQueues = steps.filter(step => step.isQueueCancel).length;
   const parts: string[] = [];
+  const issues = adminOrderEvidenceIssues(steps, context);
+  const single = context.linkType === "单边";
 
-  if (apiFailures || venueRejects) {
+  if (apiFailures || venueRejects || precheckFailures) {
     const failures = [
       apiFailures ? `${apiFailures} 腿下单失败` : "",
       venueRejects ? `${venueRejects} 笔场馆拒单` : "",
+      precheckFailures ? `${precheckFailures} 腿预检失败` : "",
     ].filter(Boolean).join("，");
-    parts.push(`首轮套利执行未完整成交：${failures}`);
+    parts.push(`${single ? "单边下单异常" : "首轮套利执行未完整成交"}：${failures}`);
   }
   else {
-    parts.push("原始套利两腿未发现失败或拒单");
+    parts.push(issues.length ? "证据不足，无法确认本轮完整执行结果" : single ? "单边订单未发现失败或拒单" : "原始套利两腿未发现失败或拒单");
   }
   if (retries)
     parts.push(`即时重试 ${retries} 次`);
@@ -456,6 +506,8 @@ export function buildAdminOrderDiagnosisSummary(
     parts.push(`锚腿拒单后取消 ${canceledQueues} 个补单队列`);
   if (submittedMakeups)
     parts.push(`实际提交 ${submittedMakeups} 次补单`);
+  if (followupFailures)
+    parts.push(`重试或补单中 ${followupFailures} 次失败或拒单`);
   if (blockedMakeups)
     parts.push(`补单预检拦截 ${blockedMakeups} 次`);
   if (incompleteMakeups)
@@ -463,15 +515,25 @@ export function buildAdminOrderDiagnosisSummary(
   if (findStaleMakeupQueue(steps))
     parts.push("检测到锚腿拒单后补单队列仍继续执行");
   const sign = totalProfit > 0 ? "+" : "";
-  parts.push(`最终 Link 盈亏 ¥${sign}${Math.floor(totalProfit).toLocaleString()}`);
+  const orders = steps.filter(step => step.order);
+  const finalProfit = orders.length > 0
+    && orders.every(step => ["win", "lose", "reject", "return"].includes(String(step.order?.status || "").toLowerCase()))
+    && !steps.some(step => step.bet?.success === true && !step.order);
+  parts.push(`${finalProfit && !context.truncated ? "最终" : "当前已记录"} Link 盈亏 ¥${sign}${Math.floor(totalProfit).toLocaleString()}`);
+  if (issues.length)
+    parts.push(issues.join("，"));
 
   return {
     text: parts.join("；"),
-    tone: totalProfit < 0 || apiFailures > 0 || venueRejects > 0
+    tone: totalProfit < 0 || apiFailures > 0 || venueRejects > 0 || precheckFailures > 0
+      || steps.some(step => step.bet?.success === false || confirmation(step) === "rejected")
+      || Boolean(findStaleMakeupQueue(steps))
       ? "danger"
-      : totalProfit > 0
-        ? "success"
-        : "neutral",
+      : issues.length
+        ? "warning"
+        : totalProfit > 0
+          ? "success"
+          : "neutral",
   };
 }
 
@@ -479,13 +541,12 @@ function stepRejectedAt(step: AdminOrderExecutionStep): number | null {
   if (
     step.reject?.settlement !== "unfilled"
     && String(step.order?.status || "").toLowerCase() !== "reject"
-  )
+  ) {
     return null;
+  }
   return Number(
     step.reject?.observedAt
-    || step.reject?.createAt
-    || step.order?.createAt
-    || step.at,
+    || step.reject?.createAt,
   ) || null;
 }
 
@@ -540,6 +601,7 @@ function stageNodes(
 export function buildAdminOrderOrchestrationStages(
   steps: AdminOrderExecutionStep[],
   totalProfit: number,
+  context: AdminOrderDiagnosisContext = {},
 ): AdminOrderOrchestrationStage[] {
   if (!steps.length)
     return [];
@@ -559,12 +621,14 @@ export function buildAdminOrderOrchestrationStages(
     stages.push({
       key: "plan",
       at: firstAt,
-      title: "生成对冲方案",
+      title: context.linkType === "单边" ? "单边下单方案" : "生成对冲方案",
       tone: "neutral",
-      decision: initial.length >= 2
-        ? "识别到两条相反方向的套利腿，编排器生成同一 Link 的对冲方案。"
-        : "仅还原到一条初始腿，历史日志不足以完整重建双腿方案。",
-      action: "确定两腿方向、场馆、检测赔率和计划金额，随后进入双腿预检。",
+      decision: context.linkType === "单边"
+        ? "本轮为单边订单，按单腿证据还原执行过程。"
+        : initial.some(step => step.side === "Home") && initial.some(step => step.side === "Away")
+          ? "识别到两条相反方向的套利腿，编排器生成同一 Link 的对冲方案。"
+          : "仅还原到一条初始腿，历史日志不足以完整重建双腿方案。",
+      action: "根据已有日志还原方向、场馆、赔率和金额；金额公式为推算，须结合预检记录核对。",
       evidence: initial.map(step => `${step.sideLabel} ${step.provider}：${step.oddsLogic}；${step.stakeLogic}`),
       ...nodes,
     });
@@ -573,7 +637,7 @@ export function buildAdminOrderOrchestrationStages(
   const checked = initial.filter(step => step.check);
   if (checked.length) {
     const failed = checked.filter(step => Boolean(step.check?.checkError));
-    const allCovered = initial.length >= 2 && checked.length >= 2;
+    const allCovered = context.linkType === "单边" ? checked.length > 0 : checked.some(step => step.side === "Home") && checked.some(step => step.side === "Away");
     const nodes = stageNodes(
       checked,
       step => step.check?.checkError ? "预检失败" : "预检通过",
@@ -583,12 +647,12 @@ export function buildAdminOrderOrchestrationStages(
     stages.push({
       key: "precheck",
       at: Math.min(...checked.map(step => step.check?.createAt || step.at)),
-      title: "双腿预检",
+      title: context.linkType === "单边" ? "单腿预检" : "双腿预检",
       tone: failed.length ? "danger" : allCovered ? "success" : "warning",
       decision: failed.length
         ? `${failed.length} 腿预检未通过，按编排规则不应继续首轮下单。`
         : allCovered
-          ? "双腿预检均通过，编排器允许进入首轮下单。"
+          ? `${context.linkType === "单边" ? "单腿" : "双腿"}预检通过，已有日志未记录预检错误。`
           : "现有日志未覆盖完整双腿预检，无法确认放行条件是否全部满足。",
       action: failed.length ? "停止首轮下单，保留失败原因。" : "复用预检锁定的盘口数据发起首轮下单。",
       evidence: checked.map(step => `${step.sideLabel} ${step.provider}：${step.check?.checkError || `通过，${step.odds}@${step.betMoney}`}`),
@@ -611,36 +675,33 @@ export function buildAdminOrderOrchestrationStages(
       key: "place",
       at: Math.min(...placed.map(step => step.bet?.createAt || step.at)),
       title: "首轮下单",
-      tone: split || failed.length ? "danger" : "success",
+      tone: split || failed.length ? "danger" : context.linkType === "单边" || (accepted.some(step => step.side === "Home") && accepted.some(step => step.side === "Away")) ? "success" : "warning",
       decision: split
         ? "一腿接口已受理、另一腿下单失败，完整套利没有同时成立，产生单腿敞口。"
         : failed.length
           ? `${failed.length} 腿下单失败，编排器不会把本轮判定为完整套利。`
-          : "两腿接口均已受理，编排器继续等待场馆终态，尚不能仅凭接口成功认定成交。",
+          : context.linkType === "单边"
+            ? "单腿接口已受理，仍需确认场馆结果。"
+            : accepted.some(step => step.side === "Home") && accepted.some(step => step.side === "Away")
+              ? "两腿接口均已受理，编排器继续等待场馆终态，尚不能仅凭接口成功认定成交。"
+              : "仅找到部分下单结果，缺少另一方向的受理证据。",
       action: split ? "锁定成功腿作为锚腿，并对失败腿启动即时重试。" : "进入场馆终态确认。",
       evidence: placed.map(stepEvidence),
       ...nodes,
     });
   }
 
-  const settled = initial.filter(step => step.order || step.reject);
+  const settled = initial.filter(step => step.order || step.reject || step.bet?.success === true);
   if (settled.length) {
-    const rejected = settled.filter(step => String(step.order?.status || "").toLowerCase() === "reject" || step.reject?.settlement === "unfilled");
-    const filled = settled.filter(step => step.reject?.settlement === "filled" || (step.order && String(step.order.status || "").toLowerCase() !== "reject"));
-    const pending = settled.length - rejected.length - filled.length;
+    const rejected = settled.filter(step => confirmation(step) === "rejected");
+    const filled = settled.filter(step => confirmation(step) === "filled");
+    const returned = settled.filter(step => confirmation(step) === "returned");
+    const pending = settled.length - rejected.length - filled.length - returned.length;
     const nodes = stageNodes(
       settled,
-      step => step.reject?.settlement === "filled"
-        ? "确认成交"
-        : step.reject?.settlement === "unfilled" || String(step.order?.status || "").toLowerCase() === "reject"
-          ? "确认拒单"
-          : "订单终态",
+      step => ({ filled: "确认成交", rejected: "确认拒单", returned: "已退回", pending: "仍待确认" })[confirmation(step)],
       step => step.rejectLogic || step.outcome,
-      step => step.reject?.settlement === "unfilled" || String(step.order?.status || "").toLowerCase() === "reject"
-        ? "danger"
-        : step.reject?.settlement === "filled" || step.order
-          ? "success"
-          : "warning",
+      step => confirmation(step) === "rejected" ? "danger" : confirmation(step) === "filled" ? "success" : "warning",
     );
     stages.push({
       key: "settle",
@@ -651,8 +712,8 @@ export function buildAdminOrderOrchestrationStages(
         step.at,
       ))),
       title: "场馆终态确认",
-      tone: rejected.length ? "danger" : pending ? "warning" : "success",
-      decision: `终态检查得到：${filled.length} 腿确认有订单，${rejected.length} 腿确认拒单${pending ? `，${pending} 腿仍待确认` : ""}。`,
+      tone: rejected.length ? "danger" : pending || returned.length ? "warning" : "success",
+      decision: `终态检查得到：${filled.length} 腿确认成交，${rejected.length} 腿确认拒单${returned.length ? `，${returned.length} 腿已退回` : ""}${pending ? `，${pending} 腿仍待确认` : ""}。`,
       action: rejected.length ? "将确认拒单腿交给风险处置；仅以已成交腿作为补单锚腿。" : "记录场馆订单及确认耗时。",
       evidence: settled.map(step => `${stepEvidence(step)}${step.rejectLogic ? `；${step.rejectLogic}` : ""}`),
       ...nodes,
@@ -682,7 +743,14 @@ export function buildAdminOrderOrchestrationStages(
       step => step.isQueueCancel ? step.queueCancel?.message || step.stakeLogic : step.stakeLogic,
       step => step.isQueueCancel ? "success" : "warning",
     );
-    const fullyCanceled = queues.length > 0 && canceledQueues.length >= queues.length;
+    // [changmen 扩展] 旧事件没有 queueId，按方向和时序一对一核对，不能只比较数量。
+    const remaining = [...queues].sort((a, b) => a.at - b.at);
+    for (const cancel of [...canceledQueues].sort((a, b) => a.at - b.at)) {
+      const index = remaining.findIndex(queue => queue.side === cancel.side && queue.at <= cancel.at);
+      if (index >= 0)
+        remaining.splice(index, 1);
+    }
+    const fullyCanceled = queues.length > 0 && remaining.length === 0;
     stages.push({
       key: "queue",
       at: Math.min(...queueRows.map(step => step.at)),
@@ -692,12 +760,12 @@ export function buildAdminOrderOrchestrationStages(
         ? `编排器创建 ${queues.length} 个补单任务，但锚腿随后确认拒单，补单已失去有效成交锚点。`
         : fullyCanceled
           ? `编排器创建 ${queues.length} 个补单任务；锚腿随后确认拒单，相关补单队列已全部取消。`
-        : `即时处置未消除敞口，编排器创建 ${queues.length} 个补单任务。`,
+          : `即时处置未消除敞口，编排器创建 ${queues.length} 个补单任务。`,
       action: staleQueue
         ? "锚腿拒单后队列仍未撤销，后续补单不再是有效对冲；这是需要修复的编排异常。"
         : fullyCanceled
           ? "确认已无成交敞口后停止补单，没有继续向场馆提交补单。"
-        : "此时只代表进入补单队列；实际赔率和金额要等补单执行时重新计算。",
+          : "此时只代表进入补单队列；实际赔率和金额要等补单执行时重新计算。",
       evidence: queueRows.map(step => `${step.sideLabel}：${step.outcome}${step.detail ? `；${step.detail}` : ""}`),
       ...nodes,
     });
@@ -714,13 +782,13 @@ export function buildAdminOrderOrchestrationStages(
       at: Math.min(...makeups.map(step => step.at)),
       title: "补单执行",
       tone: staleQueue || failures || incomplete.length ? "danger" : blocked.length ? "warning" : "success",
-      decision: [
+      decision: `${[
         `补单共预检 ${makeups.length} 轮`,
         `实际提交 ${submitted.length} 轮`,
         blocked.length ? `${blocked.length} 轮被预检拦截` : "",
         incomplete.length ? `${incomplete.length} 轮缺少下单结果日志` : "",
         failures ? `${failures} 轮提交后未成功` : "",
-      ].filter(Boolean).join("，") + "。",
+      ].filter(Boolean).join("，")}。`,
       action: staleQueue
         ? "这些补单发生在锚腿确认拒单之后，应标记为无锚补单，而不是正常对冲。"
         : "按锚腿敞口和补单时实时赔率重新计算金额，并再次检查场馆终态。",
@@ -729,15 +797,15 @@ export function buildAdminOrderOrchestrationStages(
     });
   }
 
-  const summary = buildAdminOrderDiagnosisSummary(steps, totalProfit);
+  const summary = buildAdminOrderDiagnosisSummary(steps, totalProfit, context);
   stages.push({
     key: "final",
     at: lastAt,
     title: "编排收尾",
     tone: summary.tone,
     decision: summary.text,
-    action: "以同一 Link 下所有已落库订单的最终盈亏作为本次编排结果。",
-    evidence: [`最终 Link 盈亏 ¥${totalProfit > 0 ? "+" : ""}${Math.floor(totalProfit).toLocaleString()}`],
+    action: "汇总同一 Link 下已记录盈亏；待确认、未结算或日志缺失时继续核查，不能判定编排已完成。",
+    evidence: [`当前已记录 Link 盈亏 ¥${totalProfit > 0 ? "+" : ""}${Math.floor(totalProfit).toLocaleString()}`],
     homeNodes: [],
     awayNodes: [],
   });

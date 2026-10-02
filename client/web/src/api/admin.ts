@@ -1,3 +1,4 @@
+import type { TradeRemoteAccount } from "@/realtime/userChannel";
 import type {
   AdminAccountDetail,
   AdminAccountListRow,
@@ -11,7 +12,6 @@ import type {
   AdminUserRow,
 } from "@/types/admin";
 import type { PlatformId } from "@/types/esport";
-import type { TradeRemoteAccount } from "@/realtime/userChannel";
 import type { MonthReportPayload } from "@/types/monthReport";
 
 import { post, unwrap } from "@/api/client";
@@ -694,6 +694,7 @@ export async function getAdminOrderLogs(body: {
   sport?: string;
   venue?: string;
   paddingMs?: number;
+  logLimit?: number;
 }) {
   return unwrap(await post<AdminOrderLogLookup>("Client_AdminOrderLogs", body));
 }

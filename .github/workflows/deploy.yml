@@ -107,6 +107,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate backend route modules for clean CI checkout
+        run: npm run compile:router --workspace=@changmen/backend
+
       - name: Verify repository before deployment
         run: npm test
 
@@ -177,15 +180,19 @@ jobs:
           echo "DEPLOY_REPO=${DEPLOY_REPO:-/root/changmen}" >> "$GITHUB_ENV"
           echo "Deploying BACKEND to production HK-202 (${DEPLOY_HOST})"
 
-      - name: Record source changes for archive deployment
+      - name: Record source changes since the last successful production release
         env:
-          BEFORE_SHA: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ -n "${BEFORE_SHA}" && "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]] && git cat-file -e "${BEFORE_SHA}^{commit}"; then
-            git diff --name-only "${BEFORE_SHA}" HEAD > /tmp/changmen-changed-paths.txt
-          else
-            # Manual/initial full release: conservatively classify all tracked paths.
+          BASELINE_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?status=success&branch=master&per_page=1" --jq '.workflow_runs[0].head_sha // empty')"
+          if [[ -n "${BASELINE_SHA}" ]] && git cat-file -e "${BASELINE_SHA}^{commit}"; then
+            git diff --name-only "${BASELINE_SHA}" HEAD > /tmp/changmen-changed-paths.txt
+          elif [[ -z "${BASELINE_SHA}" ]]; then
+            # First release: conservatively classify all tracked paths.
             git ls-files > /tmp/changmen-changed-paths.txt
+          else
+            echo "ERROR: production baseline commit unavailable; refusing unverified classification" >&2
+            exit 1
           fi
 
       - name: Verify archive deployment plan

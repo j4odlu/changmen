@@ -30,8 +30,8 @@ function plan(paths, overrides = {}) {
   finally { rmSync(dir, { recursive: true, force: true }); }
 }
 test("auth-only archive release compiles and restarts without rerunning schema/backfills", () => {
-  const result = plan(["server/backend/core/auth/login_service.js", "server/db/rds/auth_store.js", "server/realtime-hub/hub.js"]);
-  assert.match(result, /install=1 compile=1 web=1 schema=0 players=0 owner=0/);
+  const result = plan(["server/backend/core/auth/login_service.js", "server/db/rds/auth_store.js", "server/db/impl_rds.js", "server/realtime-hub/hub.js"]);
+  assert.match(result, /install=1 compile=1 web=1 schema=0 players=0 owner=0 timers=0/);
 });
 test("an actual migration still requests schema application", () => {
   assert.match(plan(["server/backend/db/migrations/044_auth_browser_sessions.sql"]), /schema=1/);

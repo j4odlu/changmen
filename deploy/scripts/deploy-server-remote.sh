@@ -255,7 +255,7 @@ if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ] || [ "$OLD_HEAD" != "$NEW_HEAD" ]; th
       *026_players_owner_user_id*|*027_players_active_owner*|*migrate-players-owner*|*finalize-players-owner*)
         PLAYERS_OWNER_MIGRATION_TOUCHED=1
         ;;
-      *live_timer*|changmen/server/db/impl_rds.js|server/db/impl_rds.js)
+      *live_timer*|changmen/server/db/rds/platform_collector_store.js|server/db/rds/platform_collector_store.js)
         LIVE_TIMER_TOUCHED=1
         ;;
       *006_tag_platforms_players*|*players_json_migrate*|changmen/server/backend/core/account/account_store.js|server/backend/core/account/account_store.js|changmen/server/db/rds/player_store.js|server/db/rds/player_store.js|changmen/server/backend/core/db/store.js|server/backend/core/db/store.js)
@@ -266,7 +266,7 @@ if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ] || [ "$OLD_HEAD" != "$NEW_HEAD" ]; th
   done < <(if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ]; then cat "$DEPLOY_CHANGED_PATHS_FILE"; else git -C "$GIT_ROOT" diff --name-only "$OLD_HEAD" "$NEW_HEAD"; fi)
 fi
 if [ "${DEPLOY_PLAN_ONLY:-0}" = "1" ]; then
-  printf "DEPLOY_PLAN full=%s install=%s compile=%s web=%s schema=%s players=%s owner=%s\n" "$DEPLOY_FULL" "$DO_INSTALL_ROOT" "$DO_COMPILE_ROUTER" "$DO_PM2_WEB" "$RDS_SCHEMA_TOUCHED" "$PLAYERS_RDS_TOUCHED" "$PLAYERS_OWNER_MIGRATION_TOUCHED"
+  printf "DEPLOY_PLAN full=%s install=%s compile=%s web=%s schema=%s players=%s owner=%s timers=%s\n" "$DEPLOY_FULL" "$DO_INSTALL_ROOT" "$DO_COMPILE_ROUTER" "$DO_PM2_WEB" "$RDS_SCHEMA_TOUCHED" "$PLAYERS_RDS_TOUCHED" "$PLAYERS_OWNER_MIGRATION_TOUCHED" "$LIVE_TIMER_TOUCHED"
   exit 0
 fi
 

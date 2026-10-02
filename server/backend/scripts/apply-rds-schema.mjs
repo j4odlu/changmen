@@ -12,6 +12,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPgClientConfig, initDatabaseUrl } from "@changmen/db";
 import pg from "@changmen/db/pg.js";
+import { applyOrderObservationSchema } from "./apply-order-observation-schema.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const backendRoot = join(__dirname, "..");
@@ -157,6 +158,8 @@ async function main() {
 
     console.log("[rds] 执行 044_auth_sessions.sql …");
     await client.query(readSql("044_auth_sessions.sql"));
+
+    await applyOrderObservationSchema(client);
 
     const tables = await client.query(`
       SELECT tablename FROM pg_tables

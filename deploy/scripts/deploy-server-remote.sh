@@ -272,7 +272,7 @@ if [ "$OLD_HEAD" != "$NEW_HEAD" ]; then
         RDS_SCHEMA_TOUCHED=1
         PLAYERS_RDS_TOUCHED=1
         ;;
-      changmen/server/backend/db/migrations/*|server/backend/db/migrations/*)
+      changmen/server/backend/db/migrations/*|server/backend/db/migrations/*|*scripts/apply-rds-schema.mjs|*scripts/apply-order-observation-schema.mjs)
         RDS_SCHEMA_TOUCHED=1
         ;;
       *026_players_owner_user_id*|*027_players_active_owner*|*migrate-players-owner*|*finalize-players-owner*)

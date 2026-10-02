@@ -57,4 +57,4 @@
 
 失败摘要按错误文本分类，只采用固定安全文案，不是独立场馆确认。responseCode 仅保留安全格式的顶层 code；httpStatus 只取实际 Axios 异常响应，不把业务 status 当成 HTTP。durationMs 是预检处理/适配器调用耗时，不代表单个 HTTP 请求耗时；未取得字段则留空。不推造场馆 requestId、部分成交数量或 HTTP 状态。
 
-发布前在观察表已存在的环境执行 20261003_order_observation_execution_index.sql，只创建执行编号索引。本次未执行生产迁移。跨标签页持久交付、服务端独立场馆对账、历史分页及机器策略依据仍需后续建设，旁路证据不能保证每单百分之百完整。
+自动部署的 apply-rds-schema 入口按顺序执行 20261002_order_observations.sql 与 20261003_order_observation_execution_index.sql，随后核验观察表的 5 个查询索引；失败将阻止部署继续。迁移 SQL 或入口脚本变动都会触发 schema 更新。跨标签页持久交付、服务端独立场馆对账、历史分页及机器策略依据仍需后续建设，旁路证据不能保证每单百分之百完整。

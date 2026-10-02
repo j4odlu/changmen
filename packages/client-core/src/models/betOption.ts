@@ -1,7 +1,8 @@
+import type { PlatformId } from "@changmen/api-contract";
+import type { ObservationContext } from "@changmen/shared/order_observation";
+import type { UserConfig } from "../types/userConfig";
 import type { BetSide, ViewBet, ViewBetItem, ViewMatch } from "./match";
 import type { PlatformAccount } from "./platformAccount";
-import type { PlatformId } from "@changmen/api-contract";
-import type { UserConfig } from "../types/userConfig";
 import { saveBetOptionLog } from "../bridge/bettingLog";
 import { writeVenueOdds } from "../bridge/oddsAccess";
 
@@ -36,6 +37,8 @@ export class BetOption {
   /** [changmen 扩展] 诊断关联：本轮套利 Link 与执行阶段。 */
   diagnosticLinkId?: number;
   diagnosticAttempt?: "initial" | "retry" | "makeup";
+  /** [changmen 扩展] 仅供旁路事件关联；不参与下注决策。 */
+  observation?: ObservationContext;
   betCount = 0;
   config?: UserConfig;
   loseOrder = false;

@@ -3,8 +3,8 @@ import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { ArbBetAttemptParams, ArbBetPlaced } from "@/stores/betting/autoBet/phases/types";
 import { isPendingConfirmVenueProvider, isPolymarketProvider } from "@changmen/shared/account_multiply";
-import { LoseOrder } from "@/models/loseOrder";
 import { pmSubmissionFromResult } from "@changmen/shared/pm_submission";
+import { LoseOrder } from "@/models/loseOrder";
 import { arbMakeUpSides } from "@/stores/betting/autoBet/arbMakeUpPair";
 import { enqueueMakeUpOrder } from "@/stores/betting/autoBet/makeUp";
 import { resolveMakeUpSuccessReference } from "@/stores/betting/makeUpReference";
@@ -111,6 +111,7 @@ export async function applyArbMakeUpFromRejects(
     if (loseStore.orders.has(bet.id)) {
       loseStore.setPendingVenueOrder(bet.id, orderId, pendingAccount.accountId, {
         role,
+        observation: pendingLeg.observation,
         pendingTarget: pendingLeg.target,
         conditionId: pendingLeg.betId,
         submittedAt: pendingResult?.beginTime,
@@ -141,6 +142,7 @@ export async function applyArbMakeUpFromRejects(
       betOdds: successRef.betOdds,
       failedLegOdds: makeupTargetLeg.odds,
       failedPlatformLabel: `${makeupTargetLeg.type}(待确认续查)`,
+      observation: { ownerUserId: successLeg.observation?.ownerUserId, anchorAttemptId: successLeg.observation?.attemptId, anchorOrderId: successResult?.orderId || undefined },
     });
     // delayed 原单必须继续观察，即使补单赔率门槛不允许后续补单。
     if (!enqueued) {
@@ -161,6 +163,7 @@ export async function applyArbMakeUpFromRejects(
     }
     loseStore.setPendingVenueOrder(bet.id, orderId, pendingAccount.accountId, {
       role,
+      observation: pendingLeg.observation,
       pendingTarget: pendingLeg.target,
       conditionId: pendingLeg.betId,
       submittedAt: pendingResult?.beginTime,
@@ -222,6 +225,7 @@ export async function applyArbMakeUpFromRejects(
       betOdds: successRef.betOdds,
       failedLegOdds: legB.odds,
       failedPlatformLabel: legB.type,
+      observation: { ownerUserId: legA.observation?.ownerUserId, anchorAttemptId: legA.observation?.attemptId, anchorOrderId: resultA?.orderId || undefined },
     });
   }
   else if (side === "enqueueA" && accountB) {
@@ -245,6 +249,7 @@ export async function applyArbMakeUpFromRejects(
       betOdds: successRef.betOdds,
       failedLegOdds: legA.odds,
       failedPlatformLabel: legA.type,
+      observation: { ownerUserId: legB.observation?.ownerUserId, anchorAttemptId: legB.observation?.attemptId, anchorOrderId: resultB?.orderId || undefined },
     });
   }
 

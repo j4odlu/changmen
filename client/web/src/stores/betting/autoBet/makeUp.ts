@@ -1,13 +1,15 @@
+import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { BetSide, ViewBet, ViewMatch } from "@/models/match";
 import type { useLoseOrderStore } from "@/stores/loseOrderStore";
 import type { UserConfig } from "@/types/userConfig";
-import { getDefaultOdds } from "@/api/report";
-import { LoseOrder } from "@/models/loseOrder";
-import { a8Tip } from "@/shared/a8Notify";
 import { wait } from "@changmen/client-core/shared/wait";
+import { getDefaultOdds } from "@/api/report";
 import { isMakeupOddsBandEnabled } from "@/extensions/arbBet/makeupOddsBand";
-import { useUserStore } from "@/stores/userStore";
+import { LoseOrder } from "@/models/loseOrder";
 import { saveMakeUpQueueLog } from "@/services/bettingLog";
+import { createObservationContext, observeOrder } from "@/services/orderObservation";
+import { a8Tip } from "@/shared/a8Notify";
+import { useUserStore } from "@/stores/userStore";
 
 /**
  * [A8 可证实] 对齐 bundle `B()`：入队前初赔 / 败腿赔率天花板。
@@ -53,6 +55,7 @@ export async function allowMakeUpForLeg(
 
 /** [A8 可证实] 入队：先 `B(败腿)`，通过才 createOrder + tip「补单提醒」 */
 export async function enqueueMakeUpOrder(params: {
+  observation?: ObservationContext;
   loseStore: ReturnType<typeof useLoseOrderStore>;
   match: ViewMatch;
   bet: ViewBet;
@@ -90,11 +93,14 @@ export async function enqueueMakeUpOrder(params: {
     config,
     setMessage,
   );
-  if (!ok)
+  if (!ok) {
+    observeOrder(params.observation, linkId, "decision", { outcome: "blocked", reasonCode: "makeup_entry_gate", target });
     return false;
+  }
 
   loseStore.createOrder(
     new LoseOrder({
+      observation: createObservationContext(params.observation, true),
       accountId,
       matchId: match.id,
       betId: bet.id,

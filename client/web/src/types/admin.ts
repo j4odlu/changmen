@@ -391,6 +391,16 @@ export interface AdminOrderLogOrder {
 }
 
 export interface AdminOrderLogLookup {
+  /** [changmen 扩展] 独立旁路事件；尚未替换原诊断规则。 */
+  observation?: {
+    mode: "shadow";
+    status: "available" | "unavailable";
+    truncated: boolean;
+    issues: string[];
+    events: import("@changmen/shared/order_observation").OrderObservationEvent[];
+    attempts: Array<{ attemptId: string; findings: string[]; evidence: string; events: import("@changmen/shared/order_observation").OrderObservationEvent[] }>;
+    queues?: Array<{ queueId: string; findings: string[] }>;
+  };
   user: { id: string; userName: string };
   anchor: { type: string; value: string | number };
   link: number;

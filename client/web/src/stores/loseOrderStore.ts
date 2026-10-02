@@ -1,8 +1,11 @@
+import type { ObservationContext } from "@changmen/shared/order_observation";
+import type { PmSubmission } from "@changmen/shared/pm_submission";
 import type { BetSide } from "@/models/match";
 import type { FollowOrderInput, LoseOrderCancelledRecord, LoseOrderRecord, MakeupRuntimePhase } from "@/types/order";
+import { validatePmSubmission } from "@changmen/shared/pm_submission";
 import { defineStore } from "pinia";
-import { validatePmSubmission, type PmSubmission } from "@changmen/shared/pm_submission";
 import { LoseOrder } from "@/models/loseOrder";
+import { createObservationContext, observeOrder } from "@/services/orderObservation";
 import { useMatchStore } from "@/stores/matchStore";
 import { useMessageStore } from "@/stores/messageStore";
 
@@ -100,9 +103,14 @@ export const useLoseOrderStore = defineStore("loseorder", {
     },
 
     createOrder(order: LoseOrder) {
+      const previous = this.orders.get(order.betId);
+      order.observation ??= createObservationContext({}, true);
       const next = new Map(this.orders);
       next.set(order.betId, order);
       this.orders = next;
+      if (previous && previous.observation?.queueId !== order.observation?.queueId)
+        observeOrder(previous.observation, previous.linkId, "queue_replaced", { target: previous.target, reasonCode: "same_bet_id_overwrite" });
+      observeOrder(order.observation, order.linkId, "queue_created", { target: order.target, amount: order.betMoney, odds: order.betOdds, accountId: order.accountId, source: "business_queue", phase: order.isCreateOrder ? "manual" : "automatic" });
       this.persist();
       // [A8 可证实] jb.createOrder：仅手动 isCreateOrder 时 PublishLoseOrderMessage
       if (order.isCreateOrder) {
@@ -125,6 +133,7 @@ export const useLoseOrderStore = defineStore("loseorder", {
         betMoney?: number;
         error?: string;
         pmSubmission?: PmSubmission | null;
+        observation?: ObservationContext;
       } = {},
     ) {
       const existing = this.orders.get(betId);
@@ -136,6 +145,10 @@ export const useLoseOrderStore = defineStore("loseorder", {
       const changed = existing.pendingVenueOrderId !== id || existing.pendingVenueAccountId !== Number(accountId);
       if (changed)
         existing.pendingPmSubmission = undefined;
+      if (opts.observation)
+        existing.pendingObservation = opts.observation;
+      else if (changed)
+        existing.pendingObservation = undefined;
       if (!existing.pendingPmSubmission)
         existing.pendingPmSubmission = validatePmSubmission(opts.pmSubmission, id, Number(accountId)) ?? undefined;
       existing.pendingVenueOrderId = id;
@@ -171,6 +184,7 @@ export const useLoseOrderStore = defineStore("loseorder", {
       if (!hadPending)
         return;
       existing.pendingVenueOrderId = undefined;
+      existing.pendingObservation = undefined;
       existing.pendingPmSubmission = undefined;
       existing.pendingVenueSubmittedAt = undefined;
       existing.pendingVenueOdds = undefined;
@@ -197,7 +211,8 @@ export const useLoseOrderStore = defineStore("loseorder", {
         return;
       const attempts = Math.max(0, Number(existing.pendingVenueAttempts) || 0) + 1;
       existing.pendingVenueAttempts = attempts;
-      const delay = retryMs == null ? Math.min(30_000, 1_000 * 2 ** Math.min(attempts - 1, 5))
+      const delay = retryMs == null
+        ? Math.min(30_000, 1_000 * 2 ** Math.min(attempts - 1, 5))
         : Math.max(1_000, Math.min(30_000, retryMs));
       existing.pendingVenueNextPollAt = Date.now() + delay;
       this.touchOrdersMap();
@@ -255,6 +270,7 @@ export const useLoseOrderStore = defineStore("loseorder", {
       }
       else {
         next.delete(betId);
+        observeOrder(existing.observation, existing.linkId, "queue_removed", { target: existing.target, source: "business_queue", reasonCode: "business_remove" });
       }
       this.orders = next;
       this.persist();

@@ -4,24 +4,25 @@ import type {
   ArbBetChecked,
   ArbBetReady,
 } from "@/stores/betting/autoBet/phases/types";
-import { isSingleLegPrecheckOnly } from "@/domain/betting/singleLegRate";
-import { shouldSkipAccountRateOnStakeScale } from "@/extensions/arbBet/stakeScaleByProfit";
-import { setArbExecutionTraceMeta } from "@/stores/betting/autoBet/arbProgressTrace";
-import { a8Tip } from "@/shared/a8Notify";
-import { buildArbProgressLegPair } from "@/shared/arbProgressLegMeta";
-import { arbBetToastSeconds } from "@/shared/betTiming";
 import { wait } from "@changmen/client-core/shared/wait";
 import { getPolymarketPmSportBlockReasonFromOption } from "@changmen/venue-adapter/polymarket";
 import { PLATFORMS } from "@changmen/venue-adapter/shared";
+import { isSingleLegPrecheckOnly } from "@/domain/betting/singleLegRate";
+import { shouldSkipAccountRateOnStakeScale } from "@/extensions/arbBet/stakeScaleByProfit";
+import { createObservationContext, observeOption } from "@/services/orderObservation";
+import { a8Tip } from "@/shared/a8Notify";
+import { buildArbProgressLegPair } from "@/shared/arbProgressLegMeta";
+import { arbBetToastSeconds } from "@/shared/betTiming";
 import { useAccountStore } from "@/stores/accountStore";
-import { useLoseOrderStore } from "@/stores/loseOrderStore";
-import { useUserStore } from "@/stores/userStore";
 import {
   scheduleActiveBetRunRemoval,
   syncActiveBetFail,
   syncActiveBetPhase,
   syncActiveBetPrecheckResults,
 } from "@/stores/betting/activeBetRunSync";
+import { setArbExecutionTraceMeta } from "@/stores/betting/autoBet/arbProgressTrace";
+import { useLoseOrderStore } from "@/stores/loseOrderStore";
+import { useUserStore } from "@/stores/userStore";
 
 function stripPrecheckError(raw?: string): string {
   if (!raw)
@@ -66,6 +67,11 @@ export async function checkArbLegs(
   } = ready;
   checkAccountA = checkAccountA ?? accountA;
   checkAccountB = checkAccountB ?? accountB;
+  for (const leg of [legA, legB]) {
+    leg.diagnosticLinkId = ready.linkId;
+    leg.diagnosticAttempt = "initial";
+    leg.observation ??= createObservationContext();
+  }
 
   // [changmen 扩展] 原单核验异常时阻止该账号继续积累未知敞口；恢复后自动解除。
   const blocked = [...useLoseOrderStore().orders.values()].some(order =>
@@ -73,6 +79,8 @@ export async function checkArbLegs(
     && [checkAccountA, checkAccountB].some(account => account?.accountId === order.pendingVenueAccountId));
   if (blocked) {
     const reason = "PM 原单确认异常，暂停该账号新增套利";
+    observeOption(legA, checkAccountA, "decision", { outcome: "blocked", reasonCode: "pending_anchor_error" });
+    observeOption(legB, checkAccountB, "decision", { outcome: "blocked", reasonCode: "pending_anchor_error" });
     trace?.finish("fail", reason);
     setMessage(reason);
     syncActiveBetFail(bet.id, reason);
@@ -94,6 +102,7 @@ export async function checkArbLegs(
       continue;
     const pmBlock = getPolymarketPmSportBlockReasonFromOption(leg);
     if (pmBlock) {
+      observeOption(leg, account, "decision", { outcome: "blocked", reasonCode: "pm_market_gate" });
       trace?.finish("fail", `${leg.type} ${leg.target}: ${pmBlock}`);
       syncActiveBetPrecheckResults(bet.id, {
         hasA: side === "A",

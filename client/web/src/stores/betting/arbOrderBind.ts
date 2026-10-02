@@ -1,8 +1,9 @@
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import type { BetResult } from "@changmen/client-core/models/betResult";
+import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
-import { saveOrderBind } from "@/api/esport";
 import { wait } from "@changmen/client-core/shared/wait";
+import { saveOrderBind } from "@/api/esport";
+import { observeOrder } from "@/services/orderObservation";
 
 const BIND_RETRY_TIMES = 3;
 const BIND_RETRY_GAP_MS = 400;
@@ -52,7 +53,9 @@ export async function bindArbLegOrder(
   if (!orderId)
     return false;
 
-  return bindArbOrderId(linkId, result.provider, account.accountId, orderId);
+  const bound = await bindArbOrderId(linkId, result.provider, account.accountId, orderId);
+  observeOrder(result.observation, linkId, "bind_result", { provider: result.provider, accountId: account.accountId, orderId, outcome: bound ? "saved" : "failed", source: "bind_api_ack" });
+  return bound;
 }
 
 /** 已知场馆 orderId 的 Link 绑定；供延迟发现订单的旁路监控复用。 */

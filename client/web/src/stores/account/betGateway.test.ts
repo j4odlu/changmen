@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 
 describe("account betGateway", () => {
   it("hydrates shared vault keys before any venue check or bet", () => {
@@ -14,8 +14,8 @@ describe("account betGateway", () => {
     const checkProviderAt = source.indexOf("const provider = getProvider(account);", checkAt);
     expect(checkHydrateAt).toBeGreaterThan(checkAt);
     expect(checkHydrateAt).toBeLessThan(checkProviderAt);
-    const checkSigningAt = source.indexOf('account.provider === "Polymarket" && !signingReady', checkAt);
-    const checkVenueAt = source.indexOf("return await provider.checkBet(account, option);", checkAt);
+    const checkSigningAt = source.indexOf("account.provider === \"Polymarket\" && !signingReady", checkAt);
+    const checkVenueAt = source.indexOf("await provider.checkBet(account, option);", checkAt);
     expect(checkSigningAt).toBeGreaterThan(checkProviderAt);
     expect(checkSigningAt).toBeLessThan(checkVenueAt);
 

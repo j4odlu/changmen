@@ -1,10 +1,18 @@
-import { BetOption } from "@changmen/client-core/models/betOption";
+import type { ObservationContext } from "@changmen/shared/order_observation";
+import type { ResolveVenueStakeOpts } from "@changmen/venue-adapter/adaptation";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { AccountStoreContext } from "@/stores/account/context";
-import { ElNotification } from "element-plus";
+import { BetOption } from "@changmen/client-core/models/betOption";
 import { BetResult } from "@changmen/client-core/models/betResult";
+import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
+import { getExchange } from "@changmen/shared/currency";
+import { resolveVenueStakeFromPlanCny } from "@changmen/venue-adapter/adaptation";
+import { ElNotification } from "element-plus";
+import { attachPolymarketDetectionQuote } from "@/domain/polymarket/attachDetectionQuote";
+import { attachPredictFunDetectionQuote } from "@/domain/predictfun/attachDetectionQuote";
 import { publishBettingEvent } from "@/realtime/publishBetting";
 import { getProvider } from "@/runtime/providers";
+import { createObservationContext, observeOption } from "@/services/orderObservation";
 import {
   bettingDetailHtml,
   bettingLoadingMessageHtml,
@@ -12,17 +20,12 @@ import {
   bettingResultMessageHtml,
 } from "@/shared/a8Notify";
 import { playOrderSuccessSound } from "@/shared/orderSound";
-import { settleArbLegUntilTerminal } from "@/stores/betting/autoBet/arbLegSettle";
-import { attachPolymarketDetectionQuote } from "@/domain/polymarket/attachDetectionQuote";
-import { attachPredictFunDetectionQuote } from "@/domain/predictfun/attachDetectionQuote";
-import { resolveVenueStakeFromPlanCny, type ResolveVenueStakeOpts } from "@changmen/venue-adapter/adaptation";
-import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
-import { useMessageStore } from "@/stores/messageStore";
-import { useUserStore } from "@/stores/userStore";
 import { persistPolymarketMatchedBuyOrder } from "@/stores/account/pmOptimisticOrder";
 import { persistPolymarketExecutionReject } from "@/stores/account/pmRejectOrder";
+import { settleArbLegUntilTerminal } from "@/stores/betting/autoBet/arbLegSettle";
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
-import { getExchange } from "@changmen/shared/currency";
+import { useMessageStore } from "@/stores/messageStore";
+import { useUserStore } from "@/stores/userStore";
 
 export type CheckBettingOpts = ResolveVenueStakeOpts & {
   /** 场馆额已换过：再预检只验盘口，不改 betMoney（勿用 skipAccountRate，USDT 会二次÷汇率） */
@@ -91,6 +94,8 @@ function notifyPendingVenueConfirm(
   if (!orderId)
     return;
   const task: PendingVenueBetConfirmation = {
+    observation: option.observation,
+    linkId: option.diagnosticLinkId,
     key: `${account.accountId}:${orderId}`,
     accountId: account.accountId,
     provider: account.provider,
@@ -116,6 +121,8 @@ function notifyPendingVenueConfirm(
 const PENDING_VENUE_CONFIRM_KEY = "PENDING_VENUE_BET_CONFIRM";
 
 interface PendingVenueBetConfirmation {
+  observation?: ObservationContext;
+  linkId?: number;
   key: string;
   accountId: number;
   provider: string;
@@ -198,6 +205,8 @@ async function runPendingVenueBetConfirmation(
     const result = Object.assign(new BetResult(task.provider as BetOption["type"], true), {
       orderId: task.orderId,
       pending: true,
+      observation: task.observation,
+      link: task.linkId || 0,
     });
     const option = new BetOption(
       task.provider as BetOption["type"],
@@ -208,10 +217,22 @@ async function runPendingVenueBetConfirmation(
       task.target,
       task.odds,
     );
-    const { rejected, pendingConfirm } = await settleArbLegUntilTerminal(account, result, {
+    option.observation = task.observation;
+    option.diagnosticLinkId = task.linkId;
+    const { rejected, pendingConfirm, orders } = await settleArbLegUntilTerminal(account, result, {
       rejectWaitSec: 0,
       betOption: option,
     });
+    try {
+      const exactObservedOrder = orders.find(order => String(order.orderId) === task.orderId);
+      observeOption(option, account, "settlement_observed", {
+        orderId: task.orderId,
+        outcome: pendingConfirm ? "timeout" : rejected ? "unfilled" : "filled",
+        source: String(result.message).includes("超时策略判拒") ? "timeout_policy" : exactObservedOrder ? "adapter" : "orchestration_result",
+        observedStatus: exactObservedOrder?.status,
+      });
+    }
+    catch { /* 观察快照异常不改变原单确认的后续处理 */ }
     if (pendingConfirm) {
       task.attempts += 1;
       task.nextPollAt = Date.now() + Math.min(30_000, 1_000 * 2 ** Math.min(task.attempts - 1, 5));
@@ -292,16 +313,22 @@ export async function checkBetting(
   option: BetOption,
   opts?: CheckBettingOpts,
 ) {
+  try { option.observation ??= createObservationContext(); }
+  catch { /* 不可写对象上的旁路元数据不能阻断预检 */ }
+  observeOption(option, account, "precheck_started");
   if (!account) {
     option.checkError = `场馆${option.type}没有可用账号`;
+    observeOption(option, account, "precheck_result", { outcome: "blocked", reasonCode: "no_account" });
     return option;
   }
   const signingReady = await ensureSharedVaultKeyForAccount(account);
   const provider = getProvider(account);
   if (!provider) {
     option.checkError = `场馆${option.type}不被支持`;
+    observeOption(option, account, "precheck_result", { outcome: "blocked", reasonCode: "unsupported_provider" });
     return option;
   }
+  let observedPrecheckResult = false;
   try {
     // [changmen 扩展] PM 余额/L2 凭证可用不代表本机具备签名私钥。
     // 双腿预检在正式 POST 前汇总结果；此处失败会让整轮套利停止下单。
@@ -323,13 +350,24 @@ export async function checkBetting(
       option.stakeCurrency = String(account.currency || "CNY");
       option.betMoney = venueBetMoney;
     }
-    return await provider.checkBet(account, option);
+    const checked = await provider.checkBet(account, option);
+    // [changmen 扩展] adapter 返回新对象时只传递观察元数据，原业务返回值不变。
+    try { checked.observation ??= option.observation; }
+    catch { /* 观察字段写入失败不改变返回值 */ }
+    try {
+      observeOption(checked, account, "precheck_result", { outcome: checked.data && !checked.checkError ? "prepared" : "blocked", reasonCode: checked.checkError ? "precheck_error" : undefined });
+    }
+    catch { /* 观察快照读取失败不改变 adapter 返回值 */ }
+    observedPrecheckResult = true;
+    return checked;
   }
   catch (e) {
     option.checkError = e instanceof Error ? e.message : JSON.stringify(e);
     return option;
   }
   finally {
+    if (!observedPrecheckResult)
+      observeOption(option, account, "precheck_result", { outcome: "blocked", reasonCode: "precheck_error" });
     option.saveLog(account);
   }
 }
@@ -341,12 +379,22 @@ export async function placeBet(
   toastSeconds = 10,
   opts?: PlaceBetOpts,
 ) {
-  if (!account)
+  try {
+    option.observation ??= createObservationContext();
+    if (opts?.linkId)
+      option.diagnosticLinkId = opts.linkId;
+  }
+  catch { /* 不可写对象上的旁路元数据不能阻断提交 */ }
+  if (!account) {
+    observeOption(option, account, "submission_result", { outcome: "not_submitted", reasonCode: "no_account" });
     return new BetResult(option.type, false, "无可用账号");
+  }
   await ensureSharedVaultKeyForAccount(account);
   const provider = getProvider(account);
-  if (!provider)
+  if (!provider) {
+    observeOption(option, account, "submission_result", { outcome: "not_submitted", reasonCode: "unsupported_provider" });
     return new BetResult(option.type, false, "平台不支持");
+  }
 
   const platformLabel = store.getPlatformName(account.platformId, account.platformName);
   const accountLine = bettingNotifyAccountLine(account, platformLabel);
@@ -370,6 +418,8 @@ export async function placeBet(
 
   const beginTime = Date.now();
   let result: BetResult = new BetResult(account.provider, false, "未知错误");
+  let observationSubmitted = false;
+  let observationThrew = false;
   try {
     if (!option.data) {
       if (opts?.requirePreparedQuote) {
@@ -382,16 +432,20 @@ export async function placeBet(
       }
     }
     if (option.data) {
+      observeOption(option, account, "submission_started", { source: "adapter_call" });
+      observationSubmitted = true;
       result = await provider.betting(account, option);
       // PM matched：官方 POST 成交即真相，立刻落库，勿干等 /data/trades
       if (result.success && !result.pending && account.provider === "Polymarket") {
         try {
           const saved = await persistPolymarketMatchedBuyOrder(account, option, result);
+          observeOption(option, account, "bind_result", { orderId: result.orderId || undefined, outcome: saved ? "saved" : "unknown", source: "pm_optimistic_persist" });
           // 供手动/正EV：乐观落库失败时回退 waitForOrderId
           if (saved)
             result.tip = { pmOptimisticSaved: true };
         }
         catch {
+          observeOption(option, account, "bind_result", { orderId: result.orderId || undefined, outcome: "failed", source: "pm_optimistic_persist" });
           /* 乐观落库失败不阻断下单成功；后续 Io.f / updateVenueOrders 仍可补 */
         }
       }
@@ -413,6 +467,7 @@ export async function placeBet(
   }
   catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
+    observationThrew = true;
     const message = raw.includes("Failed to fetch dynamically imported module")
       ? "页面资源已过期（服务端刚发版），请刷新页面后重试"
       : raw;
@@ -427,6 +482,15 @@ export async function placeBet(
   finally {
     result.link = Number(opts?.linkId || option.diagnosticLinkId) || 0;
     result.diagnosticAttempt = option.diagnosticAttempt;
+    try {
+      result.observation = option.observation;
+      observeOption(option, account, "submission_result", {
+        orderId: result.orderId || undefined,
+        outcome: observationThrew && observationSubmitted ? "unknown" : result.success ? "accepted" : observationSubmitted ? "adapter_failed" : "not_submitted",
+        source: "adapter_result",
+      });
+    }
+    catch { /* 旁路写入或快照错误不能改变已取得的下注结果 */ }
     loading.close();
     const notifyType = result.pending ? "warning" : result.success ? "success" : "error";
     const statusSuffix = result.pending ? "确认中" : "";

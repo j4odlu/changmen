@@ -6,10 +6,10 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { BetOption as BetOptionCtor } from "@changmen/client-core/models/betOption";
 import { BetResult as BetResultCtor } from "@changmen/client-core/models/betResult";
-import { pmSubmissionFromResult, validatePmSubmission } from "@changmen/shared/pm_submission";
-import { getPmSubmission } from "@/api/order";
 import { isPendingConfirmVenueProvider, isPolymarketProvider } from "@changmen/shared/account_multiply";
+import { pmSubmissionFromResult, validatePmSubmission } from "@changmen/shared/pm_submission";
 import { isVenueLegConfirmedUnfilled, isVenueLegPendingConfirm, isVenueLegRejected } from "@changmen/venue-adapter/contract";
+import { getPmSubmission } from "@/api/order";
 import { resolveVenueLegOutcome } from "@/domain/betting/resolveVenueLegOutcome";
 import { saveVenueSettlementLog } from "@/services/bettingLog";
 import { a8Tip } from "@/shared/a8Notify";
@@ -140,6 +140,7 @@ export async function applyVenueJbSettlementOutcome(
   ) {
     loseStore.setPendingVenueOrder(betId, String(result.orderId ?? ""), account.accountId, {
       role: pendingRole,
+      observation: checked.observation,
       pendingTarget: order.pendingVenueTarget ?? order.target,
       conditionId: order.pendingVenueConditionId ?? String(checked.betId ?? ""),
       submittedAt: result.beginTime,
@@ -313,10 +314,12 @@ export async function tryResumePendingVenueMakeUp(
   checked.loseOrder = true;
   checked.diagnosticLinkId = order.linkId;
   checked.diagnosticAttempt = "makeup";
+  checked.observation = order.pendingObservation;
 
   const result = Object.assign(new BetResultCtor(account.provider, true), {
     orderId: pendingId,
     pending: true,
+    observation: order.pendingObservation,
     beginTime: submission?.submittedAt || order.pendingVenueSubmittedAt || order.createAt,
     ...(submission ? { request: { order: { side: "BUY", makerAmount: submission.makerAmount } } } : {}),
   });

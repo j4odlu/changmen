@@ -4,20 +4,21 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { ArbExecutionTrace } from "@/stores/betting/autoBet/arbExecutionTrace";
 import type { PlatformId } from "@/types/esport";
 import type { UserConfig } from "@/types/userConfig";
-import { hedgeStakeCnyFromLeg, legStakeCny } from "@/domain/polymarket/pmArbStake";
-import { isSingleLegRateAtOdds } from "@/domain/betting/singleLegRate";
 import { BetOption, opponentSide } from "@changmen/client-core/models/betOption";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
-import { useAccountStore } from "@/stores/accountStore";
-import { readUsedAccounts } from "@/stores/betting/successMarkers";
-import { useMatchStore } from "@/stores/matchStore";
-import { useUserStore } from "@/stores/userStore";
+import { isSingleLegRateAtOdds } from "@/domain/betting/singleLegRate";
+import { hedgeStakeCnyFromLeg, legStakeCny } from "@/domain/polymarket/pmArbStake";
 import {
   checkMakeupProfitRateCandidate,
   filterMakeupOddsBandCandidates,
   isMakeupOddsBandEnabled,
   isMakeupProfitRateMode,
 } from "@/extensions/arbBet/makeupOddsBand";
+import { createObservationContext, observeOption } from "@/services/orderObservation";
+import { useAccountStore } from "@/stores/accountStore";
+import { readUsedAccounts } from "@/stores/betting/successMarkers";
+import { useMatchStore } from "@/stores/matchStore";
+import { useUserStore } from "@/stores/userStore";
 
 /**
  * 对齐 bundle：一侧成功、一侧失败时换平台重试失败腿（最多 3 轮）。
@@ -140,6 +141,8 @@ export async function retryFailedLeg(
     retryLeg.odds = pickedItem.getOdds(failedLeg.target);
     retryLeg.diagnosticLinkId = linkId;
     retryLeg.diagnosticAttempt = "retry";
+    retryLeg.observation = createObservationContext({ ownerUserId: failedLeg.observation?.ownerUserId, anchorAttemptId: successLeg.observation?.attemptId });
+    observeOption(retryLeg, pickedAccount, "decision", { outcome: "retry_selected", reasonCode: "failed_leg_retry" });
     if (isPendingConfirmVenueProvider(pickedAccount.provider))
       retryLeg.deferPostAcceptSettlement = true;
     trace?.event("重试", `第 ${round + 1} 轮 ${pickedAccount.provider}@${retryLeg.odds}`);
@@ -169,6 +172,7 @@ export async function retryFailedLeg(
         bandPrefs,
       );
       if (!rateCheck?.allowed) {
+        observeOption(retryLeg, pickedAccount, "decision", { outcome: "blocked", reasonCode: "makeup_profit_band" });
         trace?.event(
           "重试",
           `拦截 ${pickedAccount.provider}@${guardedOdds}，总体利润率 ${rateCheck ? `${(rateCheck.rate * 100).toFixed(2)}%` : "无法计算"} 位于不补区间`,
@@ -177,6 +181,7 @@ export async function retryFailedLeg(
       }
     }
     else if (!Number.isFinite(guardedProfit) || guardedProfit < minGuardProfit) {
+      observeOption(retryLeg, pickedAccount, "decision", { outcome: "blocked", reasonCode: "minimum_profit" });
       trace?.event(
         "重试",
         `拦截 ${pickedAccount.provider}@${guardedOdds}，组合收益 ${guardedProfit.toFixed(4)} < ${minGuardProfit}`,

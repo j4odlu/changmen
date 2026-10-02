@@ -3,8 +3,9 @@ import type { RayRejectMonitorTask, RegisterRayRejectMonitorInput } from "./type
 import { saveUserLog } from "@/api/chat";
 import { saveOrders } from "@/api/order";
 import { getProvider } from "@/runtime/providers";
-import { bindArbOrderId, refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
+import { observeOrder } from "@/services/orderObservation";
 import { useAccountStore } from "@/stores/accountStore";
+import { bindArbOrderId, refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
 import { useUserStore } from "@/stores/userStore";
 import {
   RAY_REJECT_MONITOR_DEFAULT_MINUTES,
@@ -60,6 +61,16 @@ function writeMonitorLog(
       closed: "RAY旁路监控 => 场馆订单已结算",
       expired: "RAY旁路监控 => 观察超时",
     } as const;
+    observeOrder(task.observation, task.linkId, event === "rejected" || event === "closed" ? "settlement_observed" : "decision", {
+      provider: "RAY",
+      accountId: task.accountId,
+      orderId: order?.orderId || task.boundOrderId,
+      target: task.target,
+      outcome: event === "rejected" ? "unfilled" : event === "closed" ? "filled" : event,
+      source: "ray_monitor",
+      observedStatus: order?.status,
+      reasonCode: event,
+    });
     void saveUserLog(titles[event], {
       diagnosticVersion: 3,
       monitoringMode: "shadow",
@@ -210,6 +221,7 @@ export function registerRayRejectMonitor(input: RegisterRayRejectMonitorInput): 
     const now = Date.now();
     const monitorMinutes = configuredMonitorMinutes();
     let task: RayRejectMonitorTask = {
+      observation: input.observation,
       key,
       userId,
       linkId: input.linkId,

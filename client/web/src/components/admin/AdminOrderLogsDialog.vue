@@ -39,6 +39,37 @@ const kindLabel: Record<string, string> = {
   makeup_cancel: "补单取消",
   other: "其他",
 };
+const observationLabels: Record<string, string> = {
+  precheck_started: "开始预检",
+  precheck_result: "预检结果",
+  submission_started: "进入提交阶段",
+  submission_result: "提交结果",
+  settlement_observed: "观察场馆结果",
+  queue_created: "补单入队",
+  queue_replaced: "队列被替换",
+  queue_canceled: "队列已取消",
+  queue_removed: "队列已移除",
+  decision: "编排决策",
+  bind_result: "落库或绑定结果",
+  transport_gap: "事件丢失提示",
+};
+const observationOutcomeLabels: Record<string, string> = {
+  prepared: "预检已准备",
+  blocked: "被拦截",
+  not_submitted: "未调用下注适配器",
+  accepted: "接口受理",
+  adapter_failed: "适配器返回失败（不证明未成交）",
+  unknown: "结果未知",
+  filled: "观察到成交",
+  unfilled: "观察到未成交",
+  timeout: "确认超时",
+  saved: "已保存",
+  failed: "失败",
+  retry_selected: "已选择重试候选",
+  registered: "登记观察",
+  bound: "已关联订单",
+  expired: "观察窗口结束",
+};
 
 function fmtTime(ts: number) {
   if (!ts)
@@ -626,7 +657,7 @@ defineExpose({ open });
                 <header class="admin-order-diagnosis__head">
                   <div>
                     <h5 class="admin-order-diagnosis__title">
-                      编排诊断
+                      编排诊断（日志与规则重建）
                     </h5>
                     <p class="admin-order-diagnosis__summary">
                       {{ diagnosisSummary.text }}
@@ -820,6 +851,32 @@ defineExpose({ open });
                 该 Link 无落库订单
               </p>
             </section>
+
+            <details v-if="data.observation" class="admin-order-log-technical">
+              <summary class="admin-order-log-technical__summary">
+                旁路观察 · {{ data.observation.events.length }} 条事件
+              </summary>
+              <p>事件来自客户端上报，尚未独立核验场馆；此结果仅供核查，不参与下注或补单。</p>
+              <el-alert v-for="issue in data.observation.issues" :key="issue" :title="issue" type="warning" :closable="false" />
+              <section v-for="attempt in data.observation.attempts" :key="attempt.attemptId">
+                <p>尝试 {{ attempt.attemptId }}</p>
+                <el-alert v-for="finding in attempt.findings" :key="finding" :title="finding" type="warning" :closable="false" />
+              </section>
+              <section v-for="queue in data.observation.queues" :key="queue.queueId">
+                <p>队列 {{ queue.queueId }}</p>
+                <el-alert v-for="finding in queue.findings" :key="finding" :title="finding" type="warning" :closable="false" />
+              </section>
+              <ul class="admin-order-log-list">
+                <li v-for="event in data.observation.events" :key="event.eventId" class="admin-order-log-list__row">
+                  <span>{{ observationLabels[event.kind] || event.kind }} · {{ event.provider || '系统' }} {{ event.target || '' }}</span>
+                  <span>{{ observationOutcomeLabels[event.outcome || ''] || event.outcome || '已记录' }}</span>
+                  <span v-if="event.source === 'timeout_policy'">按超时策略处理，非官方拒单回执</span>
+                  <span v-if="event.source === 'orchestration_result'">编排规则结果，缺少精确订单确认</span>
+                  <small>发生 {{ fmtTime(event.occurredAt) }} · 接收 {{ fmtTime(event.receivedAt || 0) }}</small>
+                  <small>事件 {{ event.eventId }} · 尝试 {{ event.attemptId || '—' }} · 队列 {{ event.queueId || '—' }}</small>
+                </li>
+              </ul>
+            </details>
 
             <details class="admin-order-log-technical">
               <summary class="admin-order-log-technical__summary">

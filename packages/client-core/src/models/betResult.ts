@@ -1,5 +1,6 @@
-import type { PlatformAccount } from "./platformAccount";
 import type { PlatformId } from "@changmen/api-contract";
+import type { ObservationContext } from "@changmen/shared/order_observation";
+import type { PlatformAccount } from "./platformAccount";
 import { saveBetResultLog } from "../bridge/bettingLog";
 
 /** 对齐 A8 bundle `uo` */
@@ -15,6 +16,8 @@ export class BetResult {
   link = 0;
   /** [changmen 扩展] 管理端诊断执行阶段。 */
   diagnosticAttempt?: "initial" | "retry" | "makeup";
+  /** [changmen 扩展] 旁路观察关联。 */
+  observation?: ObservationContext;
   beginTime: number;
   request?: unknown;
   response?: unknown;

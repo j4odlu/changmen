@@ -5,10 +5,12 @@ import {
   fetchBettingUserLogsInRange,
   fetchFootballOrderByVenueOrderId,
   fetchOrderByOrderId,
+  fetchOrderObservations,
   fetchOrdersByLink,
   fetchUserById,
   fetchUserByName,
 } from "@changmen/db";
+import { summarizeOrderObservations } from "./order_observation.js";
 
 export const ARB_LINK_MIN = 1_000_000_000_000;
 export const DEFAULT_LOG_PADDING_MS = 180_000;
@@ -1015,6 +1017,7 @@ export function toAdminOrderLogPayload(result) {
     linkType: result.linkType,
     groupLabel: result.groupLabel,
     logWindow: result.logWindow,
+    observation: result.observation,
     orders,
     logs,
     unrelatedLogs,
@@ -1112,12 +1115,14 @@ export async function lookupOrderLogs(opts) {
   const logs = diagnosticQuery.rows;
   const summarizedLogs = logs.map(summarizeUserLog);
   const { relevant, unrelated } = filterRelevantLogs(normalized, summarizedLogs);
+  const observation = summarizeOrderObservations(await fetchOrderObservations(user.id, link, 2000, normalized.map(order => ({ provider: order.provider, accountId: String(order.playerId), orderId: order.orderId }))));
   return {
     ok: true,
     user: { id: user.id, userName: user.user_name },
     anchor,
     link,
     linkType: linkTypeLabel(link),
+    observation,
     groupLabel: groupMetaLabel(link, normalized.length),
     logWindow: window,
     orders: normalized,

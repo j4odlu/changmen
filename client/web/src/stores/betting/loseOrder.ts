@@ -1,7 +1,17 @@
 import { BetOption, opponentSide } from "@changmen/client-core/models/betOption";
-import { makeUpBetToastSeconds } from "@/shared/betTiming";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
+import { legStakeCny } from "@/domain/polymarket/pmArbStake";
+import {
+  checkMakeupProfitRateCandidate,
+  filterMakeupOddsBandCandidates,
+  isMakeupOddsBandEnabled,
+  isMakeupProfitRateMode,
+} from "@/extensions/arbBet/makeupOddsBand";
+import { createObservationContext } from "@/services/orderObservation";
+import { makeUpBetToastSeconds } from "@/shared/betTiming";
 import { useAccountStore } from "@/stores/accountStore";
+import { useActiveBetRunStore } from "@/stores/activeBetRunStore";
+import { syncActiveBetMakeupAttempt } from "@/stores/betting/activeBetRunSync";
 import { passesMakeUpAccount } from "@/stores/betting/betFilters";
 import {
   buildLoseOrderBetLookup,
@@ -13,18 +23,9 @@ import {
 } from "@/stores/betting/loseOrderPm";
 import { processA8RegularVenueMakeUpLeg } from "@/stores/betting/loseOrderRegular";
 import { markSuccessfulBet, readUsedAccounts } from "@/stores/betting/successMarkers";
-import { syncActiveBetMakeupAttempt } from "@/stores/betting/activeBetRunSync";
-import { useActiveBetRunStore } from "@/stores/activeBetRunStore";
-import { useUserStore } from "@/stores/userStore";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { useMatchStore } from "@/stores/matchStore";
-import { legStakeCny } from "@/domain/polymarket/pmArbStake";
-import {
-  checkMakeupProfitRateCandidate,
-  filterMakeupOddsBandCandidates,
-  isMakeupOddsBandEnabled,
-  isMakeupProfitRateMode,
-} from "@/extensions/arbBet/makeupOddsBand";
+import { useUserStore } from "@/stores/userStore";
 
 export interface LoseOrderTickContext {
   setMessage: (msg: string) => void;
@@ -51,7 +52,8 @@ function scheduleArbFailAutoSellByLink(
  * [A8 可证实] 补单队列消费（bundle `jb`）
  *
  * 普通场馆：见 `loseOrderRegular.ts`（严格对齐 index0706）。
- * [changmen 扩展] PM：见 `loseOrderPm.ts`（状态层走 adapter `resolvePolymarketLegOutcome`）。 */
+ * [changmen 扩展] PM：见 `loseOrderPm.ts`（状态层走 adapter `resolvePolymarketLegOutcome`）。
+ */
 export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void> {
   const user = useUserStore();
   const matchStore = useMatchStore();
@@ -142,6 +144,7 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
       option.loseOrder = true;
       option.diagnosticLinkId = order.linkId;
       option.diagnosticAttempt = "makeup";
+      option.observation = createObservationContext(order.observation);
 
       const checked = await accountStore.checkBetting(account, option);
       if (!checked.data)
@@ -166,8 +169,7 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
       }
 
       const waitSec = makeUpBetToastSeconds(config, account.provider);
-      const makeupSide = useActiveBetRunStore().runs.get(betId)?.legs
-        .find(l => l.target === order.target && l.status !== "skipped")?.side;
+      const makeupSide = useActiveBetRunStore().runs.get(betId)?.legs.find(l => l.target === order.target && l.status !== "skipped")?.side;
       syncActiveBetMakeupAttempt(betId, item.type, `尝试补单 @${sideOdds}`, makeupSide);
       const result = await accountStore.betting(
         account,

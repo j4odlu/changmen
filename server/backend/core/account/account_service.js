@@ -1,6 +1,7 @@
+import { isVenueAccountKeyUniqueViolation, VenueAccountKeyConflictError } from "@changmen/db/venue_account_key.js";
 import { normalizeAccountMultiplyField, preserveStoredAccountMultiply } from "@changmen/shared/account_multiply";
+import { saveObservationBatch } from "../admin_tools/order_observation.js";
 import * as dbStore from "../db/store.js";
-import { VenueAccountKeyConflictError, isVenueAccountKeyUniqueViolation } from "@changmen/db/venue_account_key.js";
 import store from "../esport-api/store.js";
 import { emptyPage } from "../esport-api/stubs.js";
 import {
@@ -9,21 +10,21 @@ import {
   wrapObjectDirect,
 } from "../esport-api/user_kv.js";
 import * as accountStore from "./account_store.js";
+import { preserveStoredAccountToken } from "./account_token_preserve.js";
 import {
   enrichAccountFromPlatformDefaults,
   getAccountBalance,
 } from "./balance_provider.js";
-import * as orderStore from "./order_store.js";
-import { assertPlayerOwnedByUser, assertPlayersOwnedByUser, isPredictFunPlayerRow } from "./player_ownership.js";
-import { resolvePresenceState } from "./user_presence.js";
-import { enforcePolymarketPersistDto, stripPrivateKeysFromAccountList } from "./pm_token_strip.js";
 import {
   isObSportBetToken,
   mergeSportObPatch,
   preserveSportObOnAccountSave,
   validateSportObMemberBinding,
 } from "./ob_sport_account.js";
-import { preserveStoredAccountToken } from "./account_token_preserve.js";
+import * as orderStore from "./order_store.js";
+import { assertPlayerOwnedByUser, assertPlayersOwnedByUser, isPredictFunPlayerRow } from "./player_ownership.js";
+import { enforcePolymarketPersistDto, stripPrivateKeysFromAccountList } from "./pm_token_strip.js";
+import { resolvePresenceState } from "./user_presence.js";
 
 async function handleCreateTagPlatform(body, userId) {
   const platformName = body.platform || body.platformName || "";
@@ -71,8 +72,9 @@ function isPredictFunClientSaveOrderRequest(body, orders, player) {
   if (Array.isArray(orders) && orders.some((o) => {
     const p = String(o?.provider ?? o?.Type ?? "").trim().toLowerCase();
     return p === "predictfun";
-  }))
+  })) {
     return true;
+  }
   return isPredictFunPlayerRow(player);
 }
 
@@ -631,6 +633,9 @@ async function handleRefreshAccountBalance(body, userId) {
 async function handleSaveUserLog(body, userId) {
   if (!userId)
     return { ok: false, msg: "请先登录" };
+  const observation = await saveObservationBatch(body, userId);
+  if (observation)
+    return observation;
   const title = String(body.title || "").trim();
   if (!title)
     return { ok: false, msg: "title 必填" };
@@ -658,14 +663,14 @@ export {
   handleGetTagPlatforms,
   handleGetUserProfit,
   handleGetUsers,
+  handleRebindOrderLink,
   handleRefreshAccountBalance,
   handleSaveAccounts,
-  handleSaveSportAccount,
   handleSaveData,
   handleSaveMoneyLog,
   handleSaveOrder,
   handleSaveOrderBind,
-  handleRebindOrderLink,
+  handleSaveSportAccount,
   handleSaveUserLog,
   handleUpdateBalance,
   isPredictFunClientSaveOrderRequest,

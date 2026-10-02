@@ -1,7 +1,9 @@
+import type { ObservationContext } from "@changmen/shared/order_observation";
+import type { PmSubmission } from "@changmen/shared/pm_submission";
 import type { LoseOrderRecord, MakeupRuntimePhase } from "../types/order";
 import type { BetSide } from "./match";
+import { validatePmSubmission } from "@changmen/shared/pm_submission";
 import { toFixed } from "../shared/format";
-import { validatePmSubmission, type PmSubmission } from "@changmen/shared/pm_submission";
 
 function normalizeMakeupRuntimePhase(raw: unknown): MakeupRuntimePhase | undefined {
   const phase = String(raw ?? "").trim();
@@ -23,6 +25,8 @@ function normalizeMakeupRuntimePhase(raw: unknown): MakeupRuntimePhase | undefin
 
 /** 对齐 A8 bundle `eb`（补单队列项） */
 export class LoseOrder implements LoseOrderRecord {
+  observation?: ObservationContext;
+  pendingObservation?: ObservationContext;
   accountId: number;
   matchId: number;
   betId: number;
@@ -54,6 +58,8 @@ export class LoseOrder implements LoseOrderRecord {
     pendingPmOrderId?: string;
     pendingPmAccountId?: number;
   }) {
+    this.observation = raw.observation ? { ...raw.observation } : undefined;
+    this.pendingObservation = raw.pendingObservation ? { ...raw.pendingObservation } : undefined;
     this.accountId = Number(raw.accountId) || 0;
     this.matchId = Number(raw.matchId) || 0;
     this.betId = Number(raw.betId) || 0;
@@ -124,6 +130,8 @@ export class LoseOrder implements LoseOrderRecord {
 
   toJSON(): LoseOrderRecord {
     return {
+      ...(this.observation ? { observation: { ...this.observation } } : {}),
+      ...(this.pendingObservation ? { pendingObservation: { ...this.pendingObservation } } : {}),
       accountId: this.accountId,
       matchId: this.matchId,
       betId: this.betId,

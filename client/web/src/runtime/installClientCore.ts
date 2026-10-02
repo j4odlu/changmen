@@ -1,37 +1,39 @@
-import { gamebetExtensionId } from "@/config/gamebetExtension";
-import { getToken } from "@/api/client";
-import { getApiBase } from "@/config/apiBase";
-import { getCollectPlatform, getGames, updatePlatform } from "@/api/platform";
-import { saveLiveTimer } from "@/api/match";
-import { getHgFollowOrders } from "@/api/hg";
-import { saveUserLog } from "@/api/chat";
-import { saveBetOptionLog, saveBetResultLog } from "@/services/bettingLog";
 import type { PlatformAccount as WebPlatformAccount } from "@/models/platformAccount";
-import { useOddsStore } from "@/stores/oddsStore";
-import { useUserStore } from "@/stores/userStore";
-import { toFixed } from "@changmen/client-core/shared/format";
 import {
-  registerBettingLog,
   clearBettingLog,
+  registerBettingLog,
 } from "@changmen/client-core/bridge/bettingLog";
 import {
-  registerClientApi,
   clearClientApi,
+  registerClientApi,
 } from "@changmen/client-core/bridge/clientApi";
 import {
-  registerOddsAccess,
   clearOddsAccess,
+  registerOddsAccess,
 } from "@changmen/client-core/bridge/oddsAccess";
-import {
-  registerPlatformHttpContext,
-  clearPlatformHttpContext,
-} from "@changmen/client-core/shared/platformHttp";
 import {
   registerGamebetExtensionIdResolver,
 } from "@changmen/client-core/chrome-plugin/bridge";
+import { toFixed } from "@changmen/client-core/shared/format";
+import {
+  clearPlatformHttpContext,
+  registerPlatformHttpContext,
+} from "@changmen/client-core/shared/platformHttp";
+import { saveUserLog } from "@/api/chat";
+import { getToken } from "@/api/client";
+import { getHgFollowOrders } from "@/api/hg";
+import { saveLiveTimer } from "@/api/match";
+import { getCollectPlatform, getGames, updatePlatform } from "@/api/platform";
+import { getApiBase } from "@/config/apiBase";
+import { gamebetExtensionId } from "@/config/gamebetExtension";
+import { saveBetOptionLog, saveBetResultLog } from "@/services/bettingLog";
+import { startOrderObservation } from "@/services/orderObservation";
+import { useOddsStore } from "@/stores/oddsStore";
+import { useUserStore } from "@/stores/userStore";
 
 /** 注册 client-core 桥接（须在 createPinia 之后、采集/下注启动前调用） */
 export function installClientCoreBridges() {
+  startOrderObservation();
   registerGamebetExtensionIdResolver(gamebetExtensionId);
 
   registerClientApi({

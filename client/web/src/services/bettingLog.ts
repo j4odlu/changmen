@@ -1,9 +1,10 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { BetResult } from "@changmen/client-core/models/betResult";
-import type { PlatformAccount } from "@/models/platformAccount";
 import type { VenueLegSettlement, VenueOrder } from "@changmen/venue-adapter/contract";
+import type { PlatformAccount } from "@/models/platformAccount";
 import { saveUserLog } from "@/api/chat";
 import { useAccountStore } from "@/stores/accountStore";
+import { observeOption } from "./orderObservation";
 
 function accountPlatformLabel(account: PlatformAccount): string {
   try {
@@ -89,6 +90,18 @@ export function saveVenueSettlementLog(params: {
   // 任一日志字段异常都必须被隔离，不能改变下注/补单结果。
   try {
     const { account, option, result, orders, settlement, linkId } = params;
+    try {
+      const exactObservedOrder = result.orderId
+        ? orders.find(order => String(order.orderId) === String(result.orderId))
+        : undefined;
+      observeOption(option, account, "settlement_observed", {
+        orderId: result.orderId || undefined,
+        outcome: settlement,
+        source: settlement === "unfilled" && String(result.message).includes("超时策略判拒") ? "timeout_policy" : exactObservedOrder ? "adapter" : "orchestration_result",
+        observedStatus: exactObservedOrder?.status,
+      });
+    }
+    catch { /* 新观察异常不能跳过原有日志 */ }
     const exactOrderId = String(result.orderId ?? "").trim();
     const observedOrder = exactOrderId
       ? orders.find(order => String(order.orderId) === exactOrderId)
@@ -205,4 +218,3 @@ export function saveMakeUpCancelLog(params: {
     /* 诊断日志不能影响补单撤销 */
   }
 }
-

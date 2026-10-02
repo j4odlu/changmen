@@ -1,3 +1,4 @@
+import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { VenueOrder, VenueOrderStatus } from "@changmen/venue-adapter/contract";
 
 export type RayRejectMonitorSide = "A" | "B";
@@ -18,6 +19,7 @@ export type RayLateRejectMakeupStatus
     | "failed";
 
 export interface RayRejectMonitorTask {
+  observation?: ObservationContext;
   key: string;
   userId: string;
   linkId: number;
@@ -58,6 +60,7 @@ export interface RayRejectMonitorTask {
 }
 
 export interface RegisterRayRejectMonitorInput {
+  observation?: ObservationContext;
   linkId: number;
   matchId: number;
   betId: number;

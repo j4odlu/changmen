@@ -6,6 +6,8 @@ import {
   releaseSingleLeg9999MapFill,
   releaseSingleLeg9999MapFillKeys,
 } from "@/extensions/arbBet/singleLeg9999MapCount";
+import { saveMakeUpCancelLog } from "@/services/bettingLog";
+import { observeOrder } from "@/services/orderObservation";
 import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
 import {
   applyArbMakeUpFromRejects,
@@ -19,7 +21,6 @@ import {
 } from "@/stores/betting/autoBet/phases/finalizeArbMessaging";
 import { settleBothArbLegs } from "@/stores/betting/autoBet/phases/settleBothArbLegs";
 import { syncArbFinalizeActiveBet } from "@/stores/betting/autoBet/phases/syncArbFinalizeUi";
-import { saveMakeUpCancelLog } from "@/services/bettingLog";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { useUserStore } from "@/stores/userStore";
 
@@ -63,6 +64,7 @@ function cancelQueuedMakeUpForRejectedAnchor(
   }
 
   loseStore.removeOrder(bet.id, true);
+  observeOrder(queued.observation, linkId, "queue_canceled", { target: legB.target, reasonCode: "anchor_rejected", source: "business_queue" });
   saveMakeUpCancelLog({
     linkId,
     betId: bet.id,
@@ -118,6 +120,7 @@ export async function finalizeArbBet(
       : { betMoney: 0, betOdds: 0 };
     const anchorProvider = String(anchorAccount?.provider || "").toUpperCase();
     registerRayRejectMonitor({
+      observation: leg.observation,
       linkId,
       matchId: match.id,
       betId: bet.id,

@@ -15,4 +15,6 @@ CREATE TABLE IF NOT EXISTS client_certificate_audit (
 );
 ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS cert_fingerprint text;
 ALTER TABLE auth_refresh_tokens ADD COLUMN IF NOT EXISTS cert_fingerprint text;
+ALTER TABLE client_certificates ADD COLUMN IF NOT EXISTS replaces_fingerprint text REFERENCES client_certificates(fingerprint);
+ALTER TABLE client_certificate_audit ADD COLUMN IF NOT EXISTS details jsonb NOT NULL DEFAULT '{}'::jsonb;
 COMMIT;

@@ -13,6 +13,7 @@ export function issuerReady() {
 }
 export function certificateMetadata(pem, userId, label = '') {
   if (!uuid.test(String(userId))) throw new Error('请选择有效用户');
+  if (typeof pem !== 'string' || pem.length > 64000 || pem.includes('PRIVATE KEY')) throw new Error('仅接受公开 PEM 证书，不能上传私钥或安装包');
   const cert = new X509Certificate(pem);
   if (cert.ca || !cert.keyUsage?.includes('1.3.6.1.5.5.7.3.2')) throw new Error('需要客户端证书，不能登记 CA 或服务端证书');
   const cn = /^CN=(.+)$/m.exec(cert.subject)?.[1];
@@ -48,4 +49,15 @@ export async function issueManagedCertificate({ userId, password, days = 180, la
     await run(['pkcs12','-export','-out',p12,'-inkey',key,'-in',crt,'-certfile',process.env.CERT_ISSUER_CHAIN,'-name','changmen-'+userId,'-passout','env:CM_CERT_EXPORT_PASSWORD'], { env:{...process.env,CM_CERT_EXPORT_PASSWORD:password} });
     return { ...certificateMetadata(pem,userId,label), p12: (await readFile(p12)).toString('base64') };
   } finally { await rm(dir,{recursive:true,force:true}); }
+}
+
+/** Public trust material only; never read or return signing private keys. */
+export async function certificateAuthorityStatus() {
+  const describe = cert => ({ subject:cert.subject, fingerprint:cert.fingerprint256.replace(/:/g,'').toLowerCase(),
+    notBefore:Date.parse(cert.validFrom),expiresAt:Date.parse(cert.validTo),pem:cert.toString() });
+  let root=null,issuer=null;
+  try { root=describe(new X509Certificate(await readFile(process.env.CERT_CA_BUNDLE))); } catch { /* not configured */ }
+  try { issuer=describe(new X509Certificate(await readFile(process.env.CERT_ISSUER_CERT))); } catch { /* not configured */ }
+  const ready=issuerReady() && !!root && !!issuer && root.notBefore <= Date.now() && root.expiresAt > Date.now()+86400000 && issuer.notBefore <= Date.now() && issuer.expiresAt > Date.now()+86400000;
+  return {ready,root,issuer};
 }

@@ -40,7 +40,7 @@ describe.skipIf(!enabled)("real PostgreSQL login isolation", () => {
   });
   beforeEach(async () => {
     process.env.CLIENT_CERT_REGISTRY_ENABLED = "0";
-    for (const table of tables)
+    for (const table of [...tables, "client_certificates", "client_certificate_audit"])
       await pool.query(`DROP TRIGGER IF EXISTS auth_test_fault ON ${table}`);
     await pool.query("TRUNCATE client_certificate_audit, client_certificates, auth_session_audit, auth_refresh_tokens, auth_sessions, profiles, users");
     await pool.query("INSERT INTO users (id, user_name, password_hash, metadata) VALUES ($1, 'river', crypt('password', gen_salt('bf', 12)), '{\"active_session_id\":\"old-login\"}')", [userId]);
@@ -125,6 +125,41 @@ describe.skipIf(!enabled)("real PostgreSQL login isolation", () => {
     expect(await auth.authResolveBrowserSession(login.browserSession.token,audit)).toHaveProperty("revoked",true);
     const remaining=await pool.query("SELECT count(*)::int AS n FROM auth_refresh_tokens WHERE user_id=$1 AND revoked_at IS NULL",[userId]);
     expect(remaining.rows[0].n).toBe(0);
+  });
+
+  it("records label edits and replacement lineage without changing immutable ownership", async () => {
+    const fp="a".repeat(64),replacement="b".repeat(64);
+    const data={fingerprint:fp,userId,serial:"01",cn:"river",label:"old-device",pem:"public",notBefore:0,expiresAt:Date.now()+86400000};
+    await certificates.registerClientCertificate(data,userId);
+    await certificates.updateClientCertificateLabel(fp,"new-device",userId);
+    expect(await certificates.getClientCertificate(fp)).toHaveProperty("user_id",userId);
+    const details=await certificates.getClientCertificateDetail(fp);
+    expect(details.audit.find(a=>a.operation==="LABEL").details).toEqual({before:"old-device",after:"new-device"});
+    await expect(certificates.registerClientCertificate({...data,fingerprint:replacement,userId:crypto.randomUUID(),replacesFingerprint:fp},userId,"RENEW")).rejects.toHaveProperty("status",409);
+    await certificates.registerClientCertificate({...data,fingerprint:replacement,replacesFingerprint:fp},userId,"RENEW");
+    expect(await certificates.getClientCertificate(replacement)).toHaveProperty("replaces_fingerprint",fp);
+    expect(await certificates.getClientCertificate(fp)).toHaveProperty("revoked_at",null);
+    const list=await certificates.listClientCertificates();expect(list.certificates).toHaveLength(2);
+    expect(list.certificates[0]).toHaveProperty("active_sessions",0);
+  });
+  it("rolls back a batch containing a missing certificate and preserves original revocation audit", async () => {
+    const fps=["a".repeat(64),"b".repeat(64)];
+    for(const fingerprint of fps)await certificates.registerClientCertificate({fingerprint,userId,serial:fingerprint.slice(0,2),cn:"river",pem:"public",notBefore:0,expiresAt:Date.now()+10000},userId);
+    await expect(certificates.revokeClientCertificates([fps[0],"c".repeat(64)],userId,"missing")).rejects.toHaveProperty("status",404);
+    expect(await certificates.getClientCertificate(fps[0])).toHaveProperty("revoked_at",null);
+    expect(await certificates.revokeClientCertificates([...fps,fps[0]],userId,"device lost")).toEqual({revoked:2,unchanged:0});
+    expect(await certificates.revokeClientCertificates(fps,userId,"different reason")).toEqual({revoked:0,unchanged:2});
+    const details=await certificates.getClientCertificateDetail(fps[0]);expect(details.certificate.revoke_reason).toBe("device lost");
+    expect(details.audit.filter(a=>a.operation==="REVOKE")).toHaveLength(1);
+  });
+  it("does not commit certificate or session revocation when auditing fails",async()=>{
+    const fp="a".repeat(64);
+    await certificates.registerClientCertificate({fingerprint:fp,userId,serial:"01",cn:"river",pem:"public",notBefore:0,expiresAt:Date.now()+10000},userId);
+    await pool.query("UPDATE auth_sessions SET cert_fingerprint=$1,cert_cn='river' WHERE id=$2",[fp,oldId]);
+    await pool.query("CREATE TRIGGER auth_test_fault BEFORE INSERT ON client_certificate_audit FOR EACH ROW EXECUTE FUNCTION auth_test_fail()");
+    await expect(certificates.revokeClientCertificates([fp],userId,"test audit failure")).rejects.toThrow(/injected failure/);
+    expect(await certificates.getClientCertificate(fp)).toHaveProperty("revoked_at",null);
+    expect((await pool.query("SELECT revoked_at FROM auth_sessions WHERE id=$1",[oldId])).rows[0].revoked_at).toBeNull();
   });
 
 });

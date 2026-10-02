@@ -19,7 +19,7 @@
  */
 
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
-export { certificateRegistryEnabled, getClientCertificate, listClientCertificates, registerClientCertificate, revokeClientCertificate, authorizeClientCertificate } from './rds/client_certificate_store.js';
+export { certificateRegistryEnabled, getClientCertificate, listClientCertificates, getClientCertificateDetail, updateClientCertificateLabel, revokeClientCertificates, registerClientCertificate, revokeClientCertificate, authorizeClientCertificate } from './rds/client_certificate_store.js';
 export { fetchPmSubmissionLogs } from "./rds/pm_submission_store.js";
 export { insertOrderObservations, fetchOrderObservations } from "./rds/order_observation_store.js";
 

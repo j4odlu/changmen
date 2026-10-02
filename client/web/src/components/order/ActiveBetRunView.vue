@@ -21,7 +21,7 @@ const PANEL_COLLAPSED_KEY = "changmen:active-bet-run:collapsed";
 const PANEL_SIZE_KEY = "changmen:active-bet-run:size:v1";
 /** [changmen 扩展] 双腿摘要与时间线共用可滚动舞台。 */
 const PANEL_W = 500;
-const PANEL_H = 620;
+const PANEL_H = 560;
 const PANEL_MIN_W = 360;
 const PANEL_MIN_H = 260;
 
@@ -62,6 +62,7 @@ const unassignedFacts = computed(() => factGroups.value.unassigned);
 const hasMoreTimeline = computed(() => unassignedFacts.value.length > 6
   || (activeRun.value?.legs || []).some(leg => legFacts(leg).length > 6));
 const evidenceWarnings = computed(() => progressEvidenceWarnings(runFacts.value));
+function latestLegAction(leg: ActiveBetLeg) { return leg.events.at(-1)?.detail || leg.detail || "等待执行"; }
 const executionId = computed(() => [...runFacts.value].reverse().find(event => event.executionId)?.executionId);
 const elapsedLabel = computed(() => `${Math.max(0, Math.floor(((activeRun.value?.terminalAt || now.value) - (activeRun.value?.startedAt || now.value)) / 1000))}s`);
 const localHistoryTruncated = computed(() => userStore.isLoggedIn && observationStore.truncatedOwners.includes(String(userStore.userId || "")));
@@ -529,23 +530,54 @@ function orderLabel(run: ActiveBetRun, index: number): string {
             <p class="active-bet-run__next-action">
               编排提示 · {{ nextAction(activeRun) }}
             </p>
+            <header class="active-bet-run__section-head">
+              <strong>双腿实时进度</strong>
+              <button v-if="hasMoreTimeline" type="button" @click="expandedTimeline = !expandedTimeline">
+                {{ expandedTimeline ? '每组最近 6 条' : '展开全部记录' }}
+              </button>
+            </header>
             <div class="active-bet-run__legs">
               <section v-for="leg in activeRun.legs" :key="leg.side" class="active-bet-run__leg" :data-tone="legSummary(leg).tone">
                 <header class="active-bet-run__leg-meta">
                   <span class="active-bet-run__leg-side">{{ legSideLabel(leg.side) }}</span><PlatformIcon :platform="legProvider(leg)" /><strong>{{ legProvider(leg) === 'Polymarket' ? 'PM' : legProvider(leg) }}</strong><span>{{ legTarget(leg.target) }}</span>
                 </header>
-                <strong class="active-bet-run__leg-status" :data-tone="legSummary(leg).tone">{{ legSummary(leg).label }}</strong>
-                <p class="active-bet-run__leg-basis">
-                  {{ legSummary(leg).basis }}
+                <strong class="active-bet-run__leg-status" :data-tone="legSummary(leg).tone" :title="legSummary(leg).basis">{{ legSummary(leg).label }}</strong>
+                <p class="active-bet-run__leg-action" :title="latestLegAction(leg)">
+                  <span>编排 · {{ activeStore.legPlacementLabel(leg, activeRun) }}</span>
+                  {{ latestLegAction(leg) }}
                 </p>
-                <dl class="active-bet-run__leg-stats">
-                  <dt>记录赔率</dt><dd>{{ legSummary(leg).odds ?? (legFacts(leg).length ? '—' : leg.odds ?? '—') }}</dd>
-                  <dt>记录金额</dt><dd>{{ legSummary(leg).amount ?? (!legFacts(leg).length && leg.betMoney != null ? `${leg.betMoney}（币种未记录）` : '本次未记录') }}</dd>
-                  <dt>订单</dt><dd :title="legSummary(leg).orderId">
-                    {{ shortOrderId(legSummary(leg).orderId) }}
-                  </dd>
-                  <dt>落库回执</dt><dd>{{ legSummary(leg).bound ? '已记录保存成功' : '尚未记录成功' }}</dd>
-                </dl>
+                <div class="active-bet-run__leg-quote">
+                  <span>赔率 @{{ legSummary(leg).odds ?? (legFacts(leg).length ? '—' : leg.odds ?? '—') }}</span>
+                  <span>{{ legSummary(leg).amount ?? (!legFacts(leg).length && leg.betMoney != null ? `${leg.betMoney}（币种未记录）` : '金额未记录') }}</span>
+                </div>
+                <OrderExecutionTimeline
+                  v-if="legFacts(leg).length" :key="`${activeRun.betId}-${leg.side}`"
+                  :title="legTarget(leg.target)" subtitle="执行时间线"
+                  :events="legFacts(leg)" :started-at="activeRun.startedAt" :expanded="expandedTimeline"
+                />
+                <ul v-else class="active-bet-run__fallback-feed">
+                  <li v-for="(event, index) in leg.events.slice(-3)" :key="index">
+                    <time>{{ eventTime(event.at) }}</time><span>{{ event.stage }}</span>
+                    <p>编排记录 · {{ event.detail }}</p>
+                  </li>
+                  <li v-if="!leg.events.length">
+                    尚无执行记录
+                  </li>
+                </ul>
+                <details class="active-bet-run__leg-diagnostic">
+                  <summary>诊断详情</summary>
+                  <p class="active-bet-run__leg-basis">
+                    {{ legSummary(leg).basis }}
+                  </p>
+                  <dl class="active-bet-run__leg-stats">
+                    <dt>记录赔率</dt><dd>{{ legSummary(leg).odds ?? (legFacts(leg).length ? '—' : leg.odds ?? '—') }}</dd>
+                    <dt>记录金额</dt><dd>{{ legSummary(leg).amount ?? (!legFacts(leg).length && leg.betMoney != null ? `${leg.betMoney}（币种未记录）` : '本次未记录') }}</dd>
+                    <dt>订单</dt><dd :title="legSummary(leg).orderId">
+                      {{ shortOrderId(legSummary(leg).orderId) }}
+                    </dd>
+                    <dt>落库回执</dt><dd>{{ legSummary(leg).bound ? '已记录保存成功' : '尚未记录成功' }}</dd>
+                  </dl>
+                </details>
                 <footer class="active-bet-run__leg-footer">
                   <span>最近尝试</span><span v-if="legSummary(leg).accountId">账号 #{{ legSummary(leg).accountId }}</span><span v-if="legProvider(leg) !== leg.platform">首轮 {{ leg.platform }}</span><span v-if="legSummary(leg).retries">重试 {{ legSummary(leg).retries }} 次</span><span v-if="legSummary(leg).makeups">补单任务 {{ legSummary(leg).makeups }}</span>
                 </footer>
@@ -557,28 +589,14 @@ function orderLabel(run: ActiveBetRun, index: number): string {
             <p v-for="warning in evidenceWarnings" :key="warning" class="active-bet-run__notice">
               {{ warning }}
             </p>
-            <section class="active-bet-run__timeline">
-              <header class="active-bet-run__section-head">
-                <strong>执行时间线 <small>{{ runFacts.length }} 条</small></strong><button v-if="hasMoreTimeline" type="button" @click="expandedTimeline = !expandedTimeline">
-                  {{ expandedTimeline ? '每组最近 6 条' : '展开全部' }}
-                </button>
-              </header>
-              <p v-if="!runFacts.length" class="active-bet-run__record-empty">
-                尚无执行事件，当前仅显示编排进度。
-              </p>
-              <div class="active-bet-run__timeline-columns">
-                <OrderExecutionTimeline
-                  v-for="leg in activeRun.legs" :key="`${activeRun.betId}-${leg.side}`"
-                  :title="legTarget(leg.target)" :subtitle="legSideLabel(leg.side)"
-                  :events="legFacts(leg)" :started-at="activeRun.startedAt" :expanded="expandedTimeline"
-                />
-              </div>
+            <details v-if="unassignedFacts.length" class="active-bet-run__orchestration">
+              <summary>整单 / 归属待核查记录 · {{ unassignedFacts.length }} 条</summary>
               <OrderExecutionTimeline
-                v-if="unassignedFacts.length" :key="`${activeRun.betId}-unassigned`"
+                :key="`${activeRun.betId}-unassigned`"
                 title="整单 / 归属待核查" subtitle="未分配到主客方向"
-                :events="unassignedFacts" :started-at="activeRun.startedAt" :expanded="expandedTimeline"
+                :events="unassignedFacts" :started-at="activeRun.startedAt" :expanded="true"
               />
-            </section>
+            </details>
             <details class="active-bet-run__orchestration">
               <summary>编排补充记录</summary>
               <ul>

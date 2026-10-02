@@ -32,7 +32,7 @@ function elapsed(event: OrderObservationEvent) {
   return ms < 0 ? "时钟偏差" : ms < 1000 ? `+${ms}ms` : `+${(ms / 1000).toFixed(1)}s`;
 }
 function identity(event: OrderObservationEvent) {
-  return `执行 ${event.executionId || "—"} · 尝试 ${event.attemptId || "—"} · 队列 ${event.queueId || "—"} · 事件 ${event.eventId}`;
+  return `执行 ${event.executionId || "—"} · 尝试 ${event.attemptId || "—"} · 队列 ${event.queueId || "—"} · 事件 ${event.eventId} · 账号 ${event.accountId || "—"} · 订单 ${event.orderId || "—"}`;
 }
 onMounted(() => { void nextTick(scrollToLatest); });
 watch(displayed, () => { void nextTick(scrollToLatest); });

@@ -1,12 +1,11 @@
 import * as db from "@changmen/db";
 import { loadProfileById } from "../db/store.js";
-import { handleClientLogin } from "../esport-api/router.js";
 import { jsonResponse, readJsonBody } from "../http/body.js";
 import { readClientCertStatus, clientCertCnFromSubject } from "../shared/client_cert_gate.js";
 import { browserSessionEnabled, readBrowserSessionCookie } from "./browser_session.js";
 import { browserAuthAudit, sessionCsrf, validAuthOrigin, validSessionCsrf, webCookieEnabled } from "./web_session_security.js";
 
-export async function tryWebSessionRoutes(req, res) {
+export async function tryWebSessionRoutes(req, res, { login } = {}) {
   const path = String(req.url || "").split("?")[0];
   if (!path.startsWith("/auth/"))
     return false;
@@ -23,7 +22,7 @@ export async function tryWebSessionRoutes(req, res) {
     try { body = await readJsonBody(req); }
     catch { fail(400, "INVALID_BODY"); return true; }
     const audit = browserAuthAudit(req);
-    const result = await handleClientLogin(body, audit.clientIp, readClientCertStatus(req), audit.userAgent, res);
+    const result = await login(body, audit.clientIp, readClientCertStatus(req), audit.userAgent, res);
     if (result.success === 1) {
       const { token: _token, refreshToken: _refreshToken, ...info } = result.info;
       result.info = info;

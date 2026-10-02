@@ -6,7 +6,6 @@ vi.mock("@changmen/db", () => ({
   authSignOutBrowserSession: mocks.signOut,
 }));
 vi.mock("../db/store.js", () => ({ loadProfileById: async () => ({ id: "u", userName: "river", role: "user" }) }));
-vi.mock("../esport-api/router.js", () => ({ handleClientLogin: mocks.login }));
 const { tryWebSessionRoutes } = await import("./web_session_routes.js");
 const { sessionCsrf } = await import("./web_session_security.js");
 const saved = { ...process.env };
@@ -22,7 +21,7 @@ beforeEach(async () => {
   mocks.signOut.mockResolvedValue({ ok: true });
 
   server = http.createServer(async (req, res) => {
-    try { if (!await tryWebSessionRoutes(req, res)) { res.writeHead(404); res.end(); } }
+    try { if (!await tryWebSessionRoutes(req, res, { login: mocks.login })) { res.writeHead(404); res.end(); } }
     catch { res.writeHead(500); res.end(); }
   });
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));

@@ -1,5 +1,5 @@
-import type { CookieSessionInfo } from "@/api/client";
-import { browserAuthState, getAuthSessionVersion, getCookieSessionInfo, invalidateAuthSession, isAuthSessionCurrent, isCookieAuthMode, setCookieAuthMode, setCookieSessionInfo } from "@/api/client";
+import type { CookieSessionInfo } from "@/lib/authSession";
+import { browserAuthState, getAuthSessionVersion, getCookieSessionInfo, invalidateAuthSession, isAuthSessionCurrent, isCookieAuthMode, setCookieAuthMode, setCookieSessionInfo } from "@/lib/authSession";
 import { getApiBase } from "@/config/apiBase";
 import { resolveChangmenWsBase } from "@changmen/venue-adapter/shared";
 

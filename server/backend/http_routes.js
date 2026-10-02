@@ -10,7 +10,7 @@ import {
 } from "@changmen/realtime-hub";
 import { canAccessAdminPanel } from "./core/auth/admin_auth.js";
 import { countAccounts, getClientMatches, listProfiles } from "./core/db/store.js";
-import { resolveCreditPlateUserName, tryEsportApi } from "./core/esport-api/router.js";
+import { handleClientLogin, resolveCreditPlateUserName, tryEsportApi } from "./core/esport-api/router.js";
 import { getHardcodedCredentials } from "./core/integrations/a8/config.js";
 import {
   handlePolymarketRelayerSign,
@@ -360,7 +360,7 @@ export function createHttpHandler({ port, serveStatic }) {
         return;
 
       const url = req.pathname;
-      if (await tryWebSessionRoutes(req, res))
+      if (await tryWebSessionRoutes(req, res, { login: handleClientLogin }))
         return;
       // Socket.IO 握手由 ws_forward / realtime-hub 处理，勿走 esport-api / 静态文件
       if (isWsForwardHttpPath(url))

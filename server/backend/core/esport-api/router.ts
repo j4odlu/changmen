@@ -2,7 +2,6 @@ import type { EsportAction } from "@changmen/api-contract/actions";
 import {
   GetCollectPlatformRequest,
   GetGamesRequest,
-  LoginRequest,
   RefreshTokenRequest,
   SaveBetRequest,
   SaveMatchRequest,
@@ -28,13 +27,8 @@ import { isAdminUser } from "../auth/admin_auth.js";
 import {
   browserSessionEnabled,
   readBrowserSessionCookie,
-  setBrowserSessionCookie,
 } from "../auth/browser_session.js";
-import {
-  checkLoginRateLimit,
-  recordLoginFailure,
-  recordLoginSuccess,
-} from "../auth/login_rate_limit.js";
+import { login } from "../auth/login_service.js";
 import * as dbStore from "../db/store.js";
 import { resolveA8Credentials } from "../integrations/a8/config.js";
 import { requirePlatform } from "../shared/adapter_paths.js";
@@ -57,7 +51,7 @@ import { handleSendMessage as sendTelegramMessage } from "./telegram_send.js";
 import { handleClientNotifyAdminTelegram } from "../admin_tools/client_mirror_notify.js";
 import { handleV4Request } from "./v4_router.js";
 import { recordEsportRequest } from "../shared/esport_request_timing.js";
-import { certLoginBindError, clientCertCnFromSubject, readClientCertStatus } from "../shared/client_cert_gate.js";
+import { clientCertCnFromSubject, readClientCertStatus } from "../shared/client_cert_gate.js";
 
 /** 磁盘全量 Index ∩ client_matches；空合场 → 空 Index（不 fail-open） */
 async function attachFilteredVpsMarketIndex(provider: string, target: Record<string, unknown>) {
@@ -146,10 +140,6 @@ function getJwtClaim(token: string, claim: string): unknown {
   catch {
     return null;
   }
-}
-
-function authNotConfiguredMessage(): string {
-  return "未配置 JWT：请在 server/backend/.env 设置 JWT_SECRET，并配置 DATABASE_URL";
 }
 
 export function resolveCreditPlateUserName(user: EsportUser | null): string {
@@ -241,117 +231,9 @@ export async function handleClientLogin(
   userAgent = "",
   response?: ServerResponse,
 ): Promise<ApiEnvelope> {
-  const parsed = LoginRequest.safeParse({ userName: body.userName || body.username, password: body.password });
-  if (!parsed.success)
-    return fail("用户名或密码不能为空");
-  const { userName, password } = parsed.data;
-  const rate = checkLoginRateLimit(userName, clientIp);
-  if (rate.limited) {
-    void sb.recordAuthAudit({
-      userName,
-      clientIp,
-      userAgent,
-      eventType: "LOGIN",
-      result: "DENIED",
-      reasonCode: "RATE_LIMITED",
-    });
-    return fail(`登录尝试过于频繁，请在 ${rate.retryAfterSec} 秒后重试`, null, "RATE_LIMITED");
-  }
-  if (!sb.isAuthConfigured()) {
-    return fail(authNotConfiguredMessage(), null, "TEMPORARY_UNAVAILABLE");
-  }
-
-  const audit = {
-    clientIp,
-    certCn: clientCertCnFromSubject(cert?.subject),
-    userAgent,
-  };
-
-  // mTLS 叶子 CN 必须与登录用户名一致（生产默认开启；本机 DEV 默认关）
-  // 在验密之前拦截，避免无证/错证时泄露「密码是否正确」
-  const bindErr = certLoginBindError(userName, cert ?? null);
-  if (bindErr) {
-    recordLoginFailure(userName, clientIp);
-    void sb.recordAuthAudit({
-      ...audit,
-      userName,
-      eventType: "LOGIN",
-      result: "DENIED",
-      reasonCode: "CERT_BIND_FAILED",
-    });
-    return fail(bindErr, null, "CERT_BIND_FAILED");
-  }
-
-  const auth = await sb.authSignIn(userName, password, audit, {
-    browserSession: Boolean(response && browserSessionEnabled()),
-    validateProfile: async (profile: { id: string; userName: string }) => {
-      const error = certLoginBindError(profile.userName, cert ?? null);
-      if (error)
-        throw Object.assign(new Error(error), { code: "CERT_BIND_FAILED" });
-      await assertProfileActive(profile.id);
-    },
-  });
-  if (auth?.error === "cert")
-    return fail(auth.message, null, "CERT_BIND_FAILED");
-  if (auth && "error" in auth && auth.error === "db") {
-    return fail("数据库连接失败，请检查 DATABASE_URL 配置", null, "TEMPORARY_UNAVAILABLE");
-  }
-  if (!auth || "error" in auth)
-  {
-    recordLoginFailure(userName, clientIp);
-    return fail("用户名或密码错误", null, "INVALID_CREDENTIALS");
-  }
-
-  const { accessToken, browserAccessToken, refreshToken, userId: uid, email } = auth;
-  // The login transaction is already committed. Preserve its Cookie even if profile hydration fails.
-  const sessionMode = response && auth.browserSession ? "cookie" : "legacy";
-  if (response && auth.browserSession)
-    setBrowserSessionCookie(response, auth.browserSession.token, auth.browserSession.absoluteExpiresAt);
-
-  let profile = await dbStore.loadProfileById(uid);
-  if (!profile) {
-    const inferredName = (email as string).split("@")[0];
-    const now = Date.now();
-    const ok2 = await sb.insertProfile(uid, {
-      id: uid,
-      user_name: inferredName,
-      accounts: [],
-      betting_config: {},
-      collect_config: {},
-      preferences: {},
-      created_at: now,
-      updated_at: now,
-    });
-    if (ok2)
-      profile = await dbStore.loadProfileById(uid);
-  }
-  if (!profile)
-    return fail("登录已提交，用户资料暂时不可用，请刷新页面确认", null, "LOGIN_RESULT_UNCERTAIN");
-
-  // 密码通过后再用 profile 用户名复核一次（防止大小写/别名与 CN 不一致）
-  const bindName = String(profile.userName || userName || "").trim();
-  const bindErr2 = certLoginBindError(bindName, cert ?? null);
-  if (bindErr2)
-    return fail(bindErr2, null, "CERT_BIND_FAILED");
-
-  try {
-    await assertProfileActive(uid);
-  }
-  catch (err) {
-    return fail((err as Error).message || "账号状态异常，请联系管理员", null, "ACCOUNT_DISABLED");
-  }
-
-  touchUserPresence(uid);
-  await recordUserLastLogin(uid, clientIp);
-  recordLoginSuccess(userName, clientIp);
-
-  return ok({
-    token: sessionMode === "cookie" ? browserAccessToken : accessToken,
-    ...(sessionMode === "legacy" ? { refreshToken } : {}),
-    sessionMode,
-    userName: profile.userName,
-    ID: uid,
-  });
+  return login(body, {
+    db: sb, loadProfileById: dbStore.loadProfileById, assertProfileActive, touchUserPresence, recordUserLastLogin,
+  }, clientIp, cert, userAgent, response) as Promise<ApiEnvelope>;
 }
 
 async function handle(

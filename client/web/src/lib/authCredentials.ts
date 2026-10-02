@@ -1,4 +1,4 @@
-import { authHeaders, browserAuthState, getAuthSessionVersion, getToken, isAuthSessionCurrent, usesWebCookieSession } from "@/api/client";
+import { authHeaders, browserAuthState, getAuthSessionVersion, getToken, isAuthSessionCurrent, usesWebCookieSession } from "@/lib/authSession";
 import { getApiBase } from "@/config/apiBase";
 import { refreshJwtSession } from "@/lib/jwtRefresh";
 

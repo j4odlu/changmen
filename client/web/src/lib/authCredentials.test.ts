@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mock = vi.hoisted(() => ({ token: "legacy", cookie: false, version: "one", state: { value: "authenticated" }, refresh: vi.fn() }));
-vi.mock("@/api/client", () => ({
+vi.mock("@/lib/authSession", () => ({
   authHeaders: () => ({ "X-Changmen-Auth": "cookie", "X-CSRF-Token": "csrf" }),
   browserAuthState: mock.state, getAuthSessionVersion: () => mock.version,
   getToken: () => mock.token, isAuthSessionCurrent: (version: string) => version === mock.version,

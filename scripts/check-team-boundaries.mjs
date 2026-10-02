@@ -16,6 +16,21 @@ const SOURCE_EXT = new Set([".js", ".mjs", ".cjs", ".ts", ".tsx", ".vue"]);
 /** @type {{ id: string, roots: string[], forbid: RegExp[], allowFiles?: string[] }[]} */
 const RULES = [
   {
+    id: "auth-core",
+    roots: ["server/backend/core/auth/identity.js", "server/backend/core/auth/login_service.js"],
+    forbid: [/(?:^|\/)\.\.\/account\//, /(?:^|\/)esport-api\//, /@changmen\/venue-adapter/, /(?:^|\/)proxy\//],
+  },
+  {
+    id: "auth-transports",
+    roots: ["server/backend/core/auth/web_session_routes.js", "server/backend/core/auth/http_identity.js", "server/backend/core/auth/realtime_auth.js"],
+    forbid: [/(?:^|\/)esport-api\//, /(?:^|\/)account\//, /@changmen\/venue-adapter/],
+  },
+  {
+    id: "web-auth-session",
+    roots: ["client/web/src/lib/authSession.ts", "client/web/src/lib/authSessionState.ts", "client/web/src/lib/webSession.ts", "client/web/src/lib/authCredentials.ts"],
+    forbid: [/@\/api\/client\b/, /@\/stores\//, /@\/components\//],
+  },
+  {
     id: "client-app",
     roots: ["client/web/src", "chrome-extension/src"],
     forbid: [
@@ -150,6 +165,10 @@ function listSourceFiles(dir) {
   const out = [];
   function walk(abs) {
     if (!fs.existsSync(abs)) return;
+    if (fs.statSync(abs).isFile()) {
+      if (SOURCE_EXT.has(path.extname(abs))) out.push(abs);
+      return;
+    }
     for (const name of fs.readdirSync(abs)) {
       if (GENERATED_DIRS.has(name)) continue;
       const p = path.join(abs, name);

@@ -20,8 +20,11 @@ npm run dev --workspace=@changmen/web -- --host 127.0.0.1 --port 4931 --strictPo
 ```powershell
 node server/backend/scripts/auth-acceptance/run-long.mjs
 node server/backend/scripts/auth-acceptance/run-revocation.mjs
+node server/backend/scripts/auth-acceptance/run-business.mjs
 ```
 
 前者持续真实 16 分钟，覆盖 Cookie 身份、比赛读取、频道权限、100 并发请求及超过默认 JWT 期限后的重连；后者验证互斥登录、旧退出请求、CSRF、Origin 和存量 WS 撤销。后者会撤销浏览器中的 River 测试登录；不要并行操作同一测试用户。
+
+run-business 验证 Cookie、JWT 与旧登录入口的用户/比赛/空账号/空订单读取、测试用户设置写读以及权限拒绝；只用上述专用库 fixture，不发送真实交易。三个脚本均会改变 River 测试登录代次，应顺序运行。
 
 结果写到仓库根 `output/auth-acceptance-*.json`。关闭验收浏览器、这两个 Node/Vite 服务和专用 PostgreSQL 后即可结束；不要停止其他开发服务。浏览器验收结果及局限见 `docs/AUTH_ACCEPTANCE_2026-10-03.md`。

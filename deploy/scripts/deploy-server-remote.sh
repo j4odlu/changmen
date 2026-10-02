@@ -202,6 +202,12 @@ if [ "$DEPLOY_FULL" = "1" ]; then
   DO_PM2_WEB=1
   DO_PM2_PM_SPORTS=1
   DO_PM2_PM_FOOTBALL=1
+elif [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ]; then
+  test -f "$DEPLOY_CHANGED_PATHS_FILE" || { echo "ERROR: missing deploy change manifest"; exit 1; }
+  log "classify archive using verified source change manifest"
+  while IFS= read -r path; do
+    [ -z "$path" ] || classify "$path"
+  done < "$DEPLOY_CHANGED_PATHS_FILE"
 elif [ "$OLD_HEAD" = "$NEW_HEAD" ]; then
   if [ "${DEPLOY_SKIP_GIT_PULL:-0}" = "1" ]; then
     log "archive sync (same HEAD ${NEW_HEAD:0:8}); refresh dist from PC"
@@ -236,6 +242,34 @@ if [ "$DEPLOY_SKIP_APP_BUILD" = "1" ]; then
   DO_APP_BUILD=0
 fi
 
+if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ] || [ "$OLD_HEAD" != "$NEW_HEAD" ]; then
+  while IFS= read -r path; do
+    case "$path" in
+      *028_players_account*|*migrate-accounts-jsonb*|*player_account_record*)
+        RDS_SCHEMA_TOUCHED=1
+        PLAYERS_RDS_TOUCHED=1
+        ;;
+      changmen/server/backend/db/migrations/*|server/backend/db/migrations/*|*scripts/apply-rds-schema.mjs|*scripts/apply-order-observation-schema.mjs)
+        RDS_SCHEMA_TOUCHED=1
+        ;;
+      *026_players_owner_user_id*|*027_players_active_owner*|*migrate-players-owner*|*finalize-players-owner*)
+        PLAYERS_OWNER_MIGRATION_TOUCHED=1
+        ;;
+      *live_timer*|changmen/server/db/impl_rds.js|server/db/impl_rds.js)
+        LIVE_TIMER_TOUCHED=1
+        ;;
+      *006_tag_platforms_players*|*players_json_migrate*|changmen/server/backend/core/account/account_store.js|server/backend/core/account/account_store.js|changmen/server/db/rds/player_store.js|server/db/rds/player_store.js|changmen/server/backend/core/db/store.js|server/backend/core/db/store.js)
+        PLAYERS_RDS_TOUCHED=1
+        PLAYERS_OWNER_MIGRATION_TOUCHED=1
+        ;;
+    esac
+  done < <(if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ]; then cat "$DEPLOY_CHANGED_PATHS_FILE"; else git -C "$GIT_ROOT" diff --name-only "$OLD_HEAD" "$NEW_HEAD"; fi)
+fi
+if [ "${DEPLOY_PLAN_ONLY:-0}" = "1" ]; then
+  printf "DEPLOY_PLAN full=%s install=%s compile=%s web=%s schema=%s players=%s owner=%s\n" "$DEPLOY_FULL" "$DO_INSTALL_ROOT" "$DO_COMPILE_ROUTER" "$DO_PM2_WEB" "$RDS_SCHEMA_TOUCHED" "$PLAYERS_RDS_TOUCHED" "$PLAYERS_OWNER_MIGRATION_TOUCHED"
+  exit 0
+fi
+
 cd "$CHANGMEN"
 DIST_UPLOAD_MARKER="$CHANGMEN/client/web/.deploy-needs-dist-upload"
 rm -f "$DIST_UPLOAD_MARKER"
@@ -265,29 +299,6 @@ else
   log "skip compile:router"
 fi
 
-if [ "$OLD_HEAD" != "$NEW_HEAD" ]; then
-  while IFS= read -r path; do
-    case "$path" in
-      *028_players_account*|*migrate-accounts-jsonb*|*player_account_record*)
-        RDS_SCHEMA_TOUCHED=1
-        PLAYERS_RDS_TOUCHED=1
-        ;;
-      changmen/server/backend/db/migrations/*|server/backend/db/migrations/*|*scripts/apply-rds-schema.mjs|*scripts/apply-order-observation-schema.mjs)
-        RDS_SCHEMA_TOUCHED=1
-        ;;
-      *026_players_owner_user_id*|*027_players_active_owner*|*migrate-players-owner*|*finalize-players-owner*)
-        PLAYERS_OWNER_MIGRATION_TOUCHED=1
-        ;;
-      *live_timer*|changmen/server/db/impl_rds.js|server/db/impl_rds.js)
-        LIVE_TIMER_TOUCHED=1
-        ;;
-      *006_tag_platforms_players*|*players_json_migrate*|changmen/server/backend/core/account/account_store.js|server/backend/core/account/account_store.js|changmen/server/db/rds/player_store.js|server/db/rds/player_store.js|changmen/server/backend/core/db/store.js|server/backend/core/db/store.js)
-        PLAYERS_RDS_TOUCHED=1
-        PLAYERS_OWNER_MIGRATION_TOUCHED=1
-        ;;
-    esac
-  done < <(git -C "$GIT_ROOT" diff --name-only "$OLD_HEAD" "$NEW_HEAD")
-fi
 if [ "$LIVE_TIMER_TOUCHED" = "1" ]; then
   log "live_timer code changed — purge stale OB live_timers rows"
   node server/backend/scripts/ops/incidents/purge-platform-live-timers.mjs OB || echo "WARN: purge live_timers failed"

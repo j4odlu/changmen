@@ -125,6 +125,9 @@ npm install  # 首次：安装全部 workspaces（含 client/web）
 |------|------|------|
 | `DATABASE_URL` 或 `DATABASE_URL_PUBLIC` / `_INTERNAL` | **必填** | RDS 连接（`DATABASE_RDS_TARGET=auto` 内网优先） |
 | `AUTH_MODE` | `dual` | HttpOnly 浏览器会话 + 旧客户端 refresh token 双轨兼容；历史值 `jwt` 等同 `dual`，紧急回退设 `legacy` |
+| `WEB_AUTH_COOKIE_ENABLED` | `1` | 启用原生 `/auth/login`；与前端 `VITE_WEB_COOKIE_AUTH=1` 配套 |
+| `WEB_AUTH_CSRF_SECRET` | **必填** | 独立随机密钥，至少 32 字符；不复用或同时轮换 JWT_SECRET |
+| `WEB_AUTH_ORIGINS` | `https://changmen.fun,https://www.changmen.fun` | 精确 Origin 白名单；API 子域 Caddy 必须反代 `/auth/*` |
 | `JWT_SECRET` | **必填** | HS256 密钥（至少 32 个随机字节；已有密钥勿在升级时同步轮换） |
 | `JWT_ACCESS_TTL` | `15m` | 短期 access token；前端会自动续期并重放一次过期请求 |
 | `JWT_BROWSER_ACCESS_TTL` | `15m` | 浏览器 access token；独立于旧生产环境里可能保留的 `JWT_ACCESS_TTL=7d` |

@@ -107,6 +107,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify repository before deployment
+        run: npm test
+
       - name: Build frontend dist
         env:
           VITE_PREDICT_FUN_API_BASE: https://api.predict.fun
@@ -140,8 +143,11 @@ jobs:
           if-no-files-found: error
 
   deploy-backend:
-    needs: classify
-    if: needs.classify.outputs.backend == 'true'
+    needs: [classify, build]
+    if: |
+      always()
+      && needs.classify.outputs.backend == 'true'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -156,6 +162,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v5
         with:
@@ -168,6 +176,20 @@ jobs:
           echo "DEPLOY_PORT=${DEPLOY_PORT:-22}" >> "$GITHUB_ENV"
           echo "DEPLOY_REPO=${DEPLOY_REPO:-/root/changmen}" >> "$GITHUB_ENV"
           echo "Deploying BACKEND to production HK-202 (${DEPLOY_HOST})"
+
+      - name: Record source changes for archive deployment
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [[ -n "${BEFORE_SHA}" && "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]] && git cat-file -e "${BEFORE_SHA}^{commit}"; then
+            git diff --name-only "${BEFORE_SHA}" HEAD > /tmp/changmen-changed-paths.txt
+          else
+            # Manual/initial full release: conservatively classify all tracked paths.
+            git ls-files > /tmp/changmen-changed-paths.txt
+          fi
+
+      - name: Verify archive deployment plan
+        run: node --test scripts/deploy/deploy-plan.test.mjs
 
       - name: Pack app archive (git HEAD only)
         run: |
@@ -220,7 +242,7 @@ jobs:
           scp -i ~/.ssh/deploy_key -P "${DEPLOY_PORT}" \
             -o BatchMode=yes -o IdentitiesOnly=yes \
             deploy/scripts/apply-repo-archive.sh deploy/scripts/deploy-server-remote.sh \
-            deploy/scripts/sync-hk-relay-env-remote.sh \
+            deploy/scripts/sync-hk-relay-env-remote.sh /tmp/changmen-changed-paths.txt \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DEPLOY_SCRIPTS}/"
 
       - name: Apply archive and service deploy (hongkong)
@@ -230,7 +252,7 @@ jobs:
             "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "set -euo pipefail
             sed -i 's/\\r$//' ${REMOTE_DEPLOY_SCRIPTS}/*.sh
-            export DEPLOY_REPO='${DEPLOY_REPO:-/root/changmen}' CHANGMEN_DEPLOY_SCRIPTS='${REMOTE_DEPLOY_SCRIPTS}' DEPLOY_SKIP_APP_BUILD=1 DEPLOY_SKIP_POSTCHECK=1 DEPLOY_FULL='${DEPLOY_FULL}'
+            export DEPLOY_REPO='${DEPLOY_REPO:-/root/changmen}' CHANGMEN_DEPLOY_SCRIPTS='${REMOTE_DEPLOY_SCRIPTS}' DEPLOY_SKIP_APP_BUILD=1 DEPLOY_SKIP_POSTCHECK=1 DEPLOY_FULL='${DEPLOY_FULL}' DEPLOY_CHANGED_PATHS_FILE='${REMOTE_DEPLOY_SCRIPTS}/changmen-changed-paths.txt'
             if [ ! -d \"\${DEPLOY_REPO}/server/backend\" ] && [ -d /root/gamebet ]; then
               echo '==> migrate /root/gamebet -> '\${DEPLOY_REPO}
               mv /root/gamebet \"\${DEPLOY_REPO}\"

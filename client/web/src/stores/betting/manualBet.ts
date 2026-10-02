@@ -1,7 +1,6 @@
 import type { BetSide, ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
 import { ElMessageBox } from "element-plus";
 import { accountPassesMainBetFilter } from "@/domain/betting/betFilters";
-import { isSingleLegRateAtOdds } from "@/domain/betting/singleLegRate";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { wait } from "@changmen/client-core/shared/wait";
 import { isPrematchFullMarketAllowed } from "@/extensions/prematchFullOnly";
@@ -106,13 +105,7 @@ export async function runManualBet(
 
   let option = new BetOption(match, bet, item, side, amount);
   option.odds = odds;
-  if (isSingleLegRateAtOdds(account, odds)) {
-    await ElMessageBox.alert(
-      "该账号在此赔率区间为比例 9999 单边模式，本侧请用手动在其他平台对冲，或改比例后重试",
-      "提示",
-    );
-    return;
-  }
+  // [changmen 扩展] 比例 9999 仅控制自动下单；手动下单使用用户输入金额。
   if (!accountPassesMainBetFilter(account, bet, match, option, matchStore)) {
     await ElMessageBox.alert(`当前 ${item.type} 账号不满足买入条件`, "提示");
     return;

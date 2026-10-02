@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const updateVenueOrders = vi.hoisted(() => vi.fn(async () => []));
 const refreshBalance = vi.hoisted(() => vi.fn(async () => undefined));
-const checkBetting = vi.hoisted(() => vi.fn(async (opt: unknown) => {
+const checkBetting = vi.hoisted(() => vi.fn(async (_account: unknown, opt: unknown) => {
   const o = opt as { data?: unknown };
   o.data = {};
   return o;
@@ -46,9 +46,6 @@ vi.mock("@/stores/betting/successMarkers", () => ({
 }));
 vi.mock("@/domain/betting/betFilters", () => ({
   accountPassesMainBetFilter: () => true,
-}));
-vi.mock("@/domain/betting/singleLegRate", () => ({
-  isSingleLegRateAtOdds: () => false,
 }));
 vi.mock("@changmen/client-core/shared/wait", () => ({ wait }));
 vi.mock("element-plus", () => ({
@@ -113,6 +110,36 @@ describe("runManualBet post-success sync", () => {
     expect(refreshOrderListAfterBind).toHaveBeenCalledOnce();
     expect(refreshBalance).toHaveBeenCalledOnce();
     expect(markSuccessfulBet).toHaveBeenCalledOnce();
+  });
+
+  it("比例 9999 账号手动下单仍按输入金额预检并下单", async () => {
+    const account = {
+      provider: "Polymarket",
+      rateConfig: [{ minOdds: 1.5, maxOdds: 2, rate: 9999 }],
+      getBalance: () => 1000,
+    };
+    getAccount.mockReturnValue(account);
+    const match = { title: "A vs B", bets: [], game: "Valorant" } as unknown as ViewMatch;
+    const bet = {
+      id: 1,
+      homeName: "A",
+      awayName: "B",
+      getBetName: () => "Map 1",
+      items: [],
+    } as unknown as ViewBet;
+    const item = {
+      type: "Polymarket",
+      matchId: "m1",
+      betId: "b1",
+      getOdds: () => 1.8,
+      getItemId: () => "i1",
+    } as unknown as ViewBetItem;
+
+    await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
+
+    expect(ElMessageBox.alert).not.toHaveBeenCalled();
+    expect(checkBetting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 25 }));
+    expect(betting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 25 }), expect.any(Number));
   });
 
   it("PM pending: waits then updateVenueOrders without waitForOrderId", async () => {

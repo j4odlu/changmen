@@ -45,4 +45,21 @@ describe("admin leaderboard settings", () => {
     vi.mocked(db.setUserLeaderboardExcluded).mockRejectedValue(new Error("数据库不可用"));
     await expect(setAdminLeaderboardExcluded({ userId: "u1", excluded: true }, admin)).rejects.toThrow("数据库不可用");
   });
+
+  it("defaults administrators to excluded but allows explicit participation and exclusion", async () => {
+    vi.mocked(db.fetchLeaderboardUsers).mockResolvedValue([
+      { id: "a1", user_name: "admin1", role: "admin", leaderboard_excluded: null },
+      { id: "a2", user_name: "admin2", is_admin: true },
+      { id: "u1", user_name: "alice", role: "user", leaderboard_excluded: null },
+    ]);
+    expect((await getAdminLeaderboardUsers(admin)).map(row => row.excluded)).toEqual([true, true, false]);
+    for (const excluded of [false, true]) {
+      vi.mocked(db.setUserLeaderboardExcluded).mockResolvedValue({
+        id: "a1", user_name: "admin1", role: "admin", leaderboard_excluded: excluded,
+      });
+      expect(await setAdminLeaderboardExcluded({ userId: "a1", excluded }, admin)).toEqual({
+        userId: "a1", userName: "admin1", isAdmin: true, excluded,
+      });
+    }
+  });
 });

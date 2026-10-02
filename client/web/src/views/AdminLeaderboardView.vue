@@ -49,7 +49,7 @@ onMounted(load);
 </script>
 
 <template>
-  <AdminLayout title="排行榜设置" subtitle="开启排除后，该用户的战绩不进入排行榜；个人战绩、订单和报表不受影响。">
+  <AdminLayout title="排行榜设置" subtitle="管理员默认不参与，可关闭“排除战绩”让其参与。设置不影响个人战绩、订单和报表。">
     <template #toolbar>
       <el-button :loading="loading" :disabled="saving.size > 0" @click="load">刷新</el-button>
     </template>
@@ -60,16 +60,16 @@ onMounted(load);
         <el-table-column prop="userName" label="用户" min-width="180" />
         <el-table-column label="排行榜状态" min-width="160">
           <template #default="{ row }">
-            <el-tag :type="row.isAdmin || row.excluded ? 'info' : 'success'">
-              {{ row.isAdmin ? "管理员默认不参与" : row.excluded ? "已排除" : "参与排行榜" }}
+            <el-tag :type="row.excluded ? 'info' : 'success'">
+              {{ row.excluded ? "已排除" : "参与排行榜" }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="排除战绩" width="160">
           <template #default="{ row }">
             <el-switch
-              :model-value="row.isAdmin || row.excluded"
-              :disabled="loading || row.isAdmin || saving.has(row.userId)"
+              :model-value="row.excluded"
+              :disabled="loading || saving.has(row.userId)"
               :loading="saving.has(row.userId)"
               @change="toggle(row, Boolean($event))"
             />

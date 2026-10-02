@@ -1,6 +1,7 @@
 import * as sb from "@changmen/db";
 import { parseVenueCreateAt } from "@changmen/shared/time/match_time";
 import { isAdminUser } from "../auth/admin_auth.js";
+import { isExcludedFromLeaderboard } from "./leaderboard_policy.js";
 import { toDateKey } from "./order/date_key.js";
 import {
   parseNum,
@@ -285,7 +286,7 @@ function isSportsOrderRow(row) {
   return String(raw.domain || "").trim().toLowerCase() === "sports";
 }
 
-/** 排行榜：按登录用户聚合当日 orders；管理员及管理端配置排除的用户不参与。 */
+/** 排行榜：按登录用户聚合当日 orders；管理员默认排除，显式配置优先。 */
 export async function listUserProfitRank(dateKey = toDateKey(Date.now()), { includeExcluded = false } = {}) {
   const [dayOrders, profiles] = await Promise.all([
     sb.fetchOrdersForProfitAggregate(dateKey),
@@ -297,8 +298,9 @@ export async function listUserProfitRank(dateKey = toDateKey(Date.now()), { incl
   )];
   const orders = (await enrichOrdersBelongingToDate(esportDayOrders, dateKey, { userIds }))
     .filter(o => !isSportsOrderRow(o));
-  const adminIds = new Set(
-    (profiles || []).filter(p => isAdminUser(p) || (!includeExcluded && p.leaderboard_excluded === true)).map(p => String(p.id)),
+  // 后台统计沿用原管理员过滤；公开排行榜按可配置策略过滤。
+  const excludedIds = new Set(
+    (profiles || []).filter(p => includeExcluded ? isAdminUser(p) : isExcludedFromLeaderboard(p)).map(p => String(p.id)),
   );
   const nameById = new Map(
     (profiles || []).map(p => [String(p.id), String(p.user_name || "").trim()]),
@@ -306,7 +308,7 @@ export async function listUserProfitRank(dateKey = toDateKey(Date.now()), { incl
   const agg = new Map();
   for (const o of dedupeOrdersByUserOrderId(orders)) {
     const uid = String(o.user_id || "");
-    if (!uid || adminIds.has(uid))
+    if (!uid || excludedIds.has(uid))
       continue;
     if (!agg.has(uid))
       agg.set(uid, { money: 0, count: 0, betMoney: 0 });
@@ -324,7 +326,7 @@ export async function listUserProfitRank(dateKey = toDateKey(Date.now()), { incl
   }
   const result = [];
   for (const [uid, stats] of agg) {
-    if (adminIds.has(uid))
+    if (excludedIds.has(uid))
       continue;
     const userName = nameById.get(uid) || uid.slice(0, 8);
     result.push({

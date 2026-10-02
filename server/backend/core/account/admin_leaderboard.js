@@ -1,12 +1,13 @@
 import * as db from "@changmen/db";
 import { assertAdmin, isAdminUser } from "../auth/admin_auth.js";
+import { isExcludedFromLeaderboard } from "./leaderboard_policy.js";
 
 function toRow(row) {
   return {
     userId: String(row.id),
     userName: String(row.user_name || ""),
     isAdmin: isAdminUser(row),
-    excluded: row.leaderboard_excluded === true,
+    excluded: isExcludedFromLeaderboard(row),
   };
 }
 

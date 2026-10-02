@@ -78,6 +78,22 @@ describe("parseOrderBindRow", () => {
 });
 
 describe("listUserProfitRank", () => {
+  it("allows administrators to opt into the rank and exclude themselves again", async () => {
+    const sb = await import("@changmen/db");
+    const adminProfile = { id: "a1", user_name: "admin", role: "admin", leaderboard_excluded: null };
+    vi.mocked(sb.fetchProfiles).mockResolvedValue([adminProfile]);
+    vi.mocked(sb.fetchOrdersForProfitAggregate).mockResolvedValue([
+      { user_id: "a1", status: "Win", money: 100, bet_money: 500 },
+    ]);
+    expect(await listUserProfitRank("2026-06-30")).toEqual([]);
+    adminProfile.leaderboard_excluded = false;
+    const rows = await listUserProfitRank("2026-06-30");
+    expect(rows.map(row => row.UserName)).toEqual(["admin"]);
+    expect(rows[0].Money).toBe(100);
+    expect(rows[0].Count).toBe(1);
+    adminProfile.leaderboard_excluded = true;
+    expect(await listUserProfitRank("2026-06-30")).toEqual([]);
+  });
   it("excludes configured users and preserves their admin statistics; restoring re-enters rank", async () => {
     const sb = await import("@changmen/db");
     const profiles = [

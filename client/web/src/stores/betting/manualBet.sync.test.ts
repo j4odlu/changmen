@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const updateVenueOrders = vi.hoisted(() => vi.fn(async () => []));
 const refreshBalance = vi.hoisted(() => vi.fn(async () => undefined));
-const checkBetting = vi.hoisted(() => vi.fn(async (_account: unknown, opt: unknown) => {
+const checkBetting = vi.hoisted(() => vi.fn(async (_account: unknown, opt: unknown, _opts?: { skipAccountRate?: boolean }) => {
   const o = opt as { data?: unknown };
   o.data = {};
   return o;
@@ -22,6 +22,7 @@ const getAccount = vi.hoisted(() => vi.fn());
 const refreshOrderListAfterBind = vi.hoisted(() => vi.fn());
 const markSuccessfulBet = vi.hoisted(() => vi.fn());
 const wait = vi.hoisted(() => vi.fn(async () => undefined));
+const prompt = vi.hoisted(() => vi.fn(async () => ({ value: "25" })));
 
 vi.mock("@/stores/accountStore", () => ({
   useAccountStore: () => ({
@@ -50,12 +51,14 @@ vi.mock("@/domain/betting/betFilters", () => ({
 vi.mock("@changmen/client-core/shared/wait", () => ({ wait }));
 vi.mock("element-plus", () => ({
   ElMessageBox: {
-    prompt: vi.fn(async () => ({ value: "25" })),
+    prompt,
     alert: vi.fn(async () => undefined),
   },
 }));
 
 import { ElMessageBox } from "element-plus";
+import { PlatformAccount } from "@changmen/client-core/models/platformAccount";
+import { resolveVenueStakeFromPlanCny } from "@changmen/venue-adapter/adaptation";
 import { resetMapBetMuteForTests, setFullMatchMuteGlobal } from "@/extensions/mapBetMute";
 import { resetPrematchFullOnlyForTests, setPrematchFullMode } from "@/extensions/prematchFullOnly";
 import { runManualBet } from "@/stores/betting/manualBet";
@@ -112,13 +115,24 @@ describe("runManualBet post-success sync", () => {
     expect(markSuccessfulBet).toHaveBeenCalledOnce();
   });
 
-  it("比例 9999 账号手动下单仍按输入金额预检并下单", async () => {
-    const account = {
-      provider: "Polymarket",
+  it.each(["Polymarket", "PredictFun"] as const)("%s 比例 9999 手动下单只换算币种，不放大金额", async (provider) => {
+    const account = new PlatformAccount({
+      accountId: 1,
+      playerName: "manual",
+      provider,
+      currency: "USDT",
+      balance: 1000,
       rateConfig: [{ minOdds: 1.5, maxOdds: 2, rate: 9999 }],
-      getBalance: () => 1000,
-    };
+    });
     getAccount.mockReturnValue(account);
+    prompt.mockResolvedValueOnce({ value: "90" });
+    // 使用预检边界的真实换算，避免只检查 mock 收到的原始金额而漏掉比例放大。
+    checkBetting.mockImplementationOnce(async (_account, opt, opts) => {
+      const option = opt as { betMoney: number; odds: number; data?: unknown };
+      option.betMoney = resolveVenueStakeFromPlanCny(account, option.betMoney, option.odds, opts);
+      option.data = {};
+      return option;
+    });
     const match = { title: "A vs B", bets: [], game: "Valorant" } as unknown as ViewMatch;
     const bet = {
       id: 1,
@@ -128,7 +142,7 @@ describe("runManualBet post-success sync", () => {
       items: [],
     } as unknown as ViewBet;
     const item = {
-      type: "Polymarket",
+      type: provider,
       matchId: "m1",
       betId: "b1",
       getOdds: () => 1.8,
@@ -138,8 +152,8 @@ describe("runManualBet post-success sync", () => {
     await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
 
     expect(ElMessageBox.alert).not.toHaveBeenCalled();
-    expect(checkBetting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 25 }));
-    expect(betting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 25 }), expect.any(Number));
+    expect(checkBetting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 13.43 }), { skipAccountRate: true });
+    expect(betting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 13.43 }), expect.any(Number));
   });
 
   it("PM pending: waits then updateVenueOrders without waitForOrderId", async () => {

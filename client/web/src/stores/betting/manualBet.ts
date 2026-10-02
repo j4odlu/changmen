@@ -116,7 +116,8 @@ export async function runManualBet(
     return;
   }
   const toastSec = manualBetToastSeconds();
-  option = await accountStore.checkBetting(account, option);
+  // [changmen 扩展] 手动金额仅换算币种，不应用自动下注的账号比例（含 9999）。
+  option = await accountStore.checkBetting(account, option, { skipAccountRate: true });
   if (!option.data) {
     await ElMessageBox.alert(
       buildManualBetCheckFailureHtml(match, bet, item, side, odds, amount, option.checkError),

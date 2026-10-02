@@ -59,4 +59,18 @@
 
 认证统一保证应用用户身份与会话机制一致，不能代替每个页面的业务验收；公开行情连接与受保护业务的权限要求也不同。没有发现足球相关链路被本次认证改动破坏，但不能由此证明整个站点所有功能绝对无 bug。
 
+## matcher 强制结束 403 修复
+
+用户报告 #6710 强制结束失败，页面提示“需要管理员权限”。只读生产核查确认 River 的 users.is_admin=true，本次未提升或修改用户权限。
+
+根因是本次原生 Cookie 上线的 Origin 配置遗漏：管理端 matcher 入口实际为 https://api.changmen.fun/matcher/，它的写请求 Origin 是 https://api.changmen.fun；最初 WEB_AUTH_ORIGINS 只列 changmen.fun/www，因此正确 Cookie 与 CSRF 也会被拒绝。matcher 页面同时将所有 403 错误统一显示成缺少管理员权限，掩盖了真实的 CSRF_INVALID。这是上一轮未覆盖到的管理页面写请求场景。
+
+已将 API 域加入明确 Origin 白名单，并同步后端 .env 与 .deploy-secrets/backend.env，保留原 JWT/CSRF secret；原配置另存发布备份目录 matcher-origin-before-backend.env / matcher-origin-before-persisted.env。配置重新加载后，API 域下的合法 Cookie 写请求通过；未知子域不放行。
+
+页面现在读取 403 错误类型：CSRF_INVALID 显示“请求校验失败（请刷新赛事匹配页面后重试）”，业务 forbidden 显示实际权限要求；matcher_config.js 的 URL 版本同步更新，避免加载旧错误处理脚本。生产配置示例、部署文档和回归测试同步修复。
+
+修复前复现：matcher GET 状态 200，API 域 POST 无副作用测试路径 403 CSRF_INVALID，而页面域相同测试路径通过认证后返回 404。修复后两个 Origin 均返回 404，证明均已越过身份/权限/CSRF 检查。
+
+实际 DELETE 强制结束接口以非数值测试 ID 验证：有效 Cookie/CSRF 到达业务参数检查，400“无效的赛事 ID”；缺 CSRF 与外域 Origin 均为 403 CSRF_INVALID。该 ID 在数据库读取前被拒绝，不操作 #6710。matcher 权限原有 11 项测试通过，新 CSRF/页面错误显示 5 项通过。完整 CI 与 matcher 页面后端发布版本 1bb03757 的 [运行 37063768671](https://github.com/j4odlu/changmen/actions/runs/37063768671) 成功；Vue 前端未改，因此无需重发。发布后原生 Cookie/真实 DELETE 接入复验通过，并确认线上 matcher HTML 及错误处理脚本已更新。
+
 生产回退保留原生接口，优先恢复备份的兼容前端，再根据需要恢复配置；不在缺乏差异审计时自动覆盖整个生产数据库。旧前端可从 frontend.tgz 解压到新的临时目录，校验 index.html/assets 后替换 dist；配置回退使用备份 backend.env/persisted.env/Caddyfile，Caddy 校验后 reload、后端按需 restart。上线前备份保留，避免与持续写入的生产账号/订单相互覆盖。

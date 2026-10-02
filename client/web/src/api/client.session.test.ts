@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { computed } from "vue";
 
 const mocks = vi.hoisted(() => ({ post: vi.fn(), refresh: vi.fn() }));
 vi.mock("@changmen/client-core/shared/a8Axios", () => ({ a8Axios: { post: mocks.post }, responseBodyText: () => "" }));
@@ -22,6 +23,20 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 describe("session recovery with unchanged business request", () => {
+  it("updates cached login status when a cookie session restores its access token", async () => {
+    setToken(null);
+    setRefreshToken(null);
+    setCookieAuthMode(true);
+    const loggedIn = computed(() => Boolean(getToken()));
+    expect(loggedIn.value).toBe(false);
+
+    mocks.post.mockResolvedValueOnce(response("AUTH_REQUIRED")).mockResolvedValueOnce(ok);
+    await post("Client_GetMatchs");
+    expect(loggedIn.value).toBe(true);
+
+    clearAuthSession();
+    expect(loggedIn.value).toBe(false);
+  });
   it.each(["ACCESS_TOKEN_EXPIRED", "AUTH_REQUIRED"])("recovers %s and replays only the rejected request once", async (code) => {
     mocks.post.mockResolvedValueOnce(response(code)).mockResolvedValueOnce(ok);
     expect(await post("Client_SaveData", { key: "ACCOUNT", content: "[]" })).toEqual(ok.data);

@@ -1,6 +1,7 @@
 import type { ApiEnvelope } from "@changmen/api-contract";
 import { buildEsportUrl } from "@changmen/api-contract/urls";
 import { ElMessage } from "element-plus";
+import { shallowRef } from "vue";
 import { armEsportPostDelaySample, finalizeEsportPostDelaySample } from "@/api/apiDelay";
 import { getApiBase } from "@/config/apiBase";
 import { a8Axios, responseBodyText } from "@changmen/client-core/shared/a8Axios";
@@ -60,13 +61,13 @@ function syncTokenCookie(token: string | null) {
   }
 }
 
-let authToken: string | null = !cookieAuthMode && typeof localStorage !== "undefined"
+const authToken = shallowRef<string | null>(!cookieAuthMode && typeof localStorage !== "undefined"
   ? localStorage.getItem("app:token")
-  : null;
-if (!authToken && !cookieAuthMode)
-  authToken = readTokenCookie();
-if (authToken)
-  syncTokenCookie(authToken);
+  : null);
+if (!authToken.value && !cookieAuthMode)
+  authToken.value = readTokenCookie();
+if (authToken.value)
+  syncTokenCookie(authToken.value);
 
 let refreshToken: string | null = !cookieAuthMode && typeof localStorage !== "undefined"
   ? localStorage.getItem("app:refresh-token")
@@ -78,7 +79,7 @@ export function isCookieAuthMode(): boolean {
   return cookieAuthMode;
 }
 
-export function hasAuthSession(): boolean { return Boolean(authToken || refreshToken || cookieAuthMode); }
+export function hasAuthSession(): boolean { return Boolean(authToken.value || refreshToken || cookieAuthMode); }
 
 export function setCookieAuthMode(enabled: boolean) {
   cookieAuthMode = enabled;
@@ -113,11 +114,11 @@ export function setRefreshToken(token: string | null) {
 }
 
 export function getToken(): string | null {
-  return authToken;
+  return authToken.value;
 }
 
 export function setToken(token: string | null) {
-  authToken = token;
+  authToken.value = token;
   if (typeof localStorage !== "undefined") {
     if (token && !cookieAuthMode)
       localStorage.setItem("app:token", token);
@@ -127,7 +128,7 @@ export function setToken(token: string | null) {
 }
 
 export function authHeaders(): Record<string, string> {
-  return authToken ? { token: authToken } : {};
+  return authToken.value ? { token: authToken.value } : {};
 }
 
 const SESSION_KICK_MSGS = new Set([

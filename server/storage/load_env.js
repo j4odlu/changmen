@@ -22,7 +22,9 @@ function hasDatabaseUrl() {
  */
 function clearEmptyEnvPlaceholders() {
   for (const key of Object.keys(process.env)) {
-    if (process.env[key] === "")
+    // Explicitly empty alternatives must stay empty: otherwise dotenv can silently
+    // redirect a script with a local DATABASE_URL to a configured remote database.
+    if (process.env[key] === "" && !/^DATABASE_URL(?:_PUBLIC|_INTERNAL)?$/.test(key))
       delete process.env[key];
   }
 }

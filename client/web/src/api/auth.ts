@@ -5,28 +5,40 @@ import { getApiBase } from "@/config/apiBase";
 
 type WebLoginInfo = Omit<LoginInfo, "token"> & { token?: string };
 
+function markCookieLoginUncertain() {
+  setCookieAuthMode(true);
+  setCookieSessionInfo(null);
+  setToken(null);
+  setRefreshToken(null);
+  advanceAuthSessionVersion();
+  browserAuthState.value = "unavailable";
+}
+
+async function cookieLogin(userName: string, password: string) {
+  try {
+    const response = await fetch(`${getApiBase()}/auth/login`, {
+      method: "POST", credentials: "include", signal: AbortSignal.timeout(10_000),
+      headers: { "Content-Type": "application/json", "X-Changmen-Auth": "cookie" },
+      body: JSON.stringify({ userName, password }),
+    });
+    return await response.json();
+  }
+  catch {
+    // A lost response can follow a committed login. Recover by reading the Cookie;
+    // never replay this write or keep credentials from the previous login epoch.
+    markCookieLoginUncertain();
+    throw new Error("登录结果尚未确认，请刷新页面确认会话");
+  }
+}
+
 export async function login(userName: string, password: string) {
   return withAuthLock(async () => {
     const finishTransition = beginAuthTransition();
     try {
       const nativeCookie = import.meta.env.VITE_WEB_COOKIE_AUTH === "1";
-      const data = nativeCookie ? await fetch(`${getApiBase()}/auth/login`, {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json", "X-Changmen-Auth": "cookie" },
-        body: JSON.stringify({ userName, password }),
-      }).then(async response => {
-        const result = await response.json();
-        if (!response.ok && result.success !== 0)
-          throw new Error("登录服务暂时不可用");
-        return result;
-      }) : await post<LoginInfo>("Client_Login", { userName, password });
+      const data = nativeCookie ? await cookieLogin(userName, password) : await post<LoginInfo>("Client_Login", { userName, password });
       if (nativeCookie && data.code === "LOGIN_RESULT_UNCERTAIN") {
-        setCookieAuthMode(true);
-        setCookieSessionInfo(null);
-        setToken(null);
-        setRefreshToken(null);
-        advanceAuthSessionVersion();
-        browserAuthState.value = "unavailable";
+        markCookieLoginUncertain();
         throw new Error(data.msg || "登录已提交，请刷新页面确认");
       }
       const info = unwrap(data) as WebLoginInfo;
@@ -57,7 +69,7 @@ export async function logout() {
       return;
     const session = getCookieSessionInfo();
     const request = usesWebCookieSession() && session ? fetch(`${getApiBase()}/auth/logout`, {
-      method: "POST", credentials: "include",
+      method: "POST", credentials: "include", signal: AbortSignal.timeout(10_000),
       headers: { "Content-Type": "application/json", "X-CSRF-Token": session.csrfToken },
       body: JSON.stringify({ expectedBrowserSessionId: session.browserSessionId, expectedLoginEpoch: session.loginEpoch }),
     }).then(async (response) => {

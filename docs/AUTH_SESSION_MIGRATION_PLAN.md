@@ -69,6 +69,8 @@
 
 ## 本地验证与待完成验收
 
+2026-10-03 已继续执行真实浏览器、故障恢复、私有 WS 撤销、兼容回退及全仓库测试；实际结果和环境隔离失误记录见 [AUTH_ACCEPTANCE_2026-10-03.md](./AUTH_ACCEPTANCE_2026-10-03.md)。下列计数为前一批实施时记录，不作为最新验收总数。
+
 本地通过：后端测试、真实 HTTP 会话协议测试、前端认证/WS/恢复/初始化测试、client-core 凭证桥接测试、matcher 身份、realtime-hub、前端生产构建/vue-tsc、compile:router、团队边界和共享包检查。
 
 真实 PostgreSQL 使用专用本机 changmen_auth_test；12 项涵盖登录 6 个写入故障、并发登录、退出 3 个写入故障、正常撤销和旧退出代次冲突。测试服务已停止；未使用生产数据库。默认无 AUTH_TEST_DATABASE_URL 时跳过；测试会清空专用库 fixture，代码只允许 127.0.0.1/changmen_auth_test。

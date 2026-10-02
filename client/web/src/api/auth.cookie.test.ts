@@ -3,7 +3,7 @@ const mocks = vi.hoisted(() => ({ fetch: vi.fn(), probe: vi.fn() }));
 vi.mock("@/lib/authLock", () => ({ withAuthLock: (fn: () => unknown) => fn() }));
 vi.mock("@/lib/webSession", () => ({ probeCookieSession: mocks.probe }));
 import { browserAuthState, clearAuthSession, getToken, isCookieAuthMode, setCookieSessionInfo, setToken, usesWebCookieSession } from "@/api/client";
-import { login } from "./auth";
+import { login, logout } from "./auth";
 beforeEach(() => {
   clearAuthSession(); vi.clearAllMocks(); vi.stubEnv("VITE_WEB_COOKIE_AUTH", "1"); vi.stubGlobal("fetch", mocks.fetch);
   mocks.probe.mockImplementation(async () => {
@@ -31,5 +31,24 @@ describe("native Cookie login", () => {
     expect(browserAuthState.value).toBe("unavailable");
     expect(mocks.fetch).toHaveBeenCalledTimes(1);
     expect(mocks.probe).not.toHaveBeenCalled();
+  });
+  it("invalidates old credentials after a lost native login response without replay", async () => {
+    setToken("previous-user-token");
+    mocks.fetch.mockRejectedValue(new DOMException("timed out", "TimeoutError"));
+    await expect(login("river", "password")).rejects.toThrow("登录结果尚未确认");
+    expect(getToken()).toBeNull();
+    expect(isCookieAuthMode()).toBe(true);
+    expect(browserAuthState.value).toBe("unavailable");
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    expect(mocks.fetch.mock.calls[0]?.[1].signal).toBeInstanceOf(AbortSignal);
+    expect(mocks.probe).not.toHaveBeenCalled();
+  });
+  it("bounds logout confirmation and clears local identity even when the response is lost", async () => {
+    await mocks.probe();
+    mocks.fetch.mockRejectedValue(new DOMException("timed out", "TimeoutError"));
+    await expect(logout()).rejects.toThrow("timed out");
+    expect(usesWebCookieSession()).toBe(false);
+    expect(mocks.fetch.mock.calls[0]?.[1].signal).toBeInstanceOf(AbortSignal);
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
   });
 });

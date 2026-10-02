@@ -100,6 +100,8 @@ export async function applyVenueJbSettlementOutcome(
     const orderId = resolveArbBindOrderId(venueOrders, result, false);
     if (!(await bindArbLegOrder(order.linkId, account, result, venueOrders, false)) && orderId) {
       enqueuePendingOrderBind({
+        observation: result.observation,
+        target: checked.target,
         linkId: order.linkId,
         provider: result.provider,
         accountId: account.accountId,
@@ -182,6 +184,8 @@ export async function applyVenueJbSettlementOutcome(
   const orderId = resolveArbBindOrderId(venueOrders, result, true);
   if (!(await bindArbLegOrder(order.linkId, account, result, venueOrders, true)) && orderId) {
     enqueuePendingOrderBind({
+      observation: result.observation,
+      target: checked.target,
       linkId: order.linkId,
       provider: result.provider,
       accountId: account.accountId,

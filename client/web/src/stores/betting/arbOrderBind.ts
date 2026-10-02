@@ -54,7 +54,10 @@ export async function bindArbLegOrder(
     return false;
 
   const bound = await bindArbOrderId(linkId, result.provider, account.accountId, orderId);
-  observeOrder(result.observation, linkId, "bind_result", { provider: result.provider, accountId: account.accountId, orderId, outcome: bound ? "saved" : "failed", source: "bind_api_ack" });
+  try {
+    observeOrder(result.observation, linkId, "bind_result", { provider: result.provider, accountId: account.accountId, orderId, outcome: bound ? "saved" : "failed", source: "bind_api_ack" });
+  }
+  catch { /* 观察异常不改变实际绑定回执 */ }
   return bound;
 }
 

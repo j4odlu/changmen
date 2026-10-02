@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ActiveBetLeg, ActiveBetRun } from "@/types/activeBetRun";
+import { observationEventLabel, observationEventStage, orderObservationTargets } from "@changmen/shared/order_observation_view";
 import { storeToRefs } from "pinia";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
@@ -10,6 +11,7 @@ import {
   useActiveBetRunStore,
 } from "@/stores/activeBetRunStore";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
+import { useOrderObservationStore } from "@/stores/orderObservationStore";
 import { useUserStore } from "@/stores/userStore";
 import "@/styles/active-bet-run.css";
 
@@ -25,6 +27,7 @@ const PANEL_MIN_H = 260;
 const activeStore = useActiveBetRunStore();
 const loseStore = useLoseOrderStore();
 const userStore = useUserStore();
+const observationStore = useOrderObservationStore();
 const { visibleRuns } = storeToRefs(activeStore);
 
 const now = ref(Date.now());
@@ -44,6 +47,19 @@ let resizeCleanup: (() => void) | undefined;
 
 const runCount = computed(() => visibleRuns.value.length);
 const activeRun = computed(() => visibleRuns.value[activeIndex.value] ?? null);
+const runFacts = computed(() => userStore.isLoggedIn
+  ? observationStore.forLink(String(userStore.userId || ""), activeRun.value?.linkId)
+  : []);
+const factTargets = computed(() => orderObservationTargets(runFacts.value));
+const legFactGroups = computed(() => new Map((activeRun.value?.legs || []).map(leg =>
+  [leg.side, runFacts.value.filter(event => factTargets.value.get(event) === leg.target)],
+)));
+function legFacts(leg: ActiveBetLeg) { return legFactGroups.value.get(leg.side) || []; }
+const unassignedFacts = computed(() => runFacts.value.filter((event) => {
+  const target = factTargets.value.get(event);
+  return !activeRun.value?.legs.some(leg => leg.target === target);
+}));
+const localHistoryTruncated = computed(() => userStore.isLoggedIn && observationStore.truncatedOwners.includes(String(userStore.userId || "")));
 const canPrev = computed(() => activeIndex.value < runCount.value - 1);
 const canNext = computed(() => activeIndex.value > 0);
 const pageLabel = computed(() => {
@@ -115,6 +131,7 @@ watch(
 watch(activeIndex, () => {
   void nextTick(scrollActiveLegFeedsToBottom);
 });
+watch(runFacts, () => { void nextTick(scrollActiveLegFeedsToBottom); });
 
 watch(
   () => userStore.config.makeUp,
@@ -512,7 +529,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
           >
             <header class="active-bet-run__col-head">
               <span class="active-bet-run__col-label">{{ orderLabel(activeRun, activeIndex) }}</span>
-              <span class="active-bet-run__phase">{{ phaseLabel(activeRun) }}</span>
+              <span class="active-bet-run__phase">业务进度 · {{ phaseLabel(activeRun) }}</span>
             </header>
 
             <div
@@ -541,9 +558,24 @@ function orderLabel(run: ActiveBetRun, index: number): string {
             </ol>
 
             <p class="active-bet-run__next-action">
-              <span>当前判断</span>
+              <span>编排状态</span>
               {{ nextAction(activeRun) }}
             </p>
+            <p class="active-bet-run__next-action">
+              执行记录与后台诊断同源；本地即时展示，后台以已接收记录为准。
+            </p>
+            <p v-if="localHistoryTruncated" class="active-bet-run__next-action">
+              本地只保留最近 512 条记录，历史已裁剪；完整性请结合后台诊断核查。
+            </p>
+            <details v-if="unassignedFacts.length">
+              <summary>整单或归属待核验的执行记录（{{ unassignedFacts.length }}）</summary>
+              <ul class="active-bet-run__leg-events">
+                <li v-for="event in unassignedFacts" :key="event.eventId" class="active-bet-run__leg-event">
+                  <span class="active-bet-run__leg-event-stage">{{ observationEventStage(event) }}</span>
+                  <span class="active-bet-run__leg-event-detail">{{ observationEventLabel(event) }}</span>
+                </li>
+              </ul>
+            </details>
 
             <div class="active-bet-run__legs">
               <div
@@ -565,7 +597,23 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                   </span>
                 </div>
                 <ul
-                  v-if="leg.events?.length"
+                  v-if="legFacts(leg).length"
+                  :ref="el => setLegEventFeedEl(activeRun.betId, leg.side, el as Element | null)"
+                  class="active-bet-run__leg-events"
+                >
+                  <li
+                    v-for="(event, eventIndex) in legFacts(leg)"
+                    :key="event.eventId"
+                    class="active-bet-run__leg-event"
+                    :class="{ 'active-bet-run__leg-event--latest': eventIndex === legFacts(leg).length - 1 }"
+                    :title="`事件 ${event.eventId} · 尝试 ${event.attemptId || '—'} · 队列 ${event.queueId || '—'} · 订单 ${event.orderId || '—'}`"
+                  >
+                    <span class="active-bet-run__leg-event-stage" :data-layer="observationEventStage(event)">{{ observationEventStage(event) }}</span>
+                    <span class="active-bet-run__leg-event-detail">{{ event.provider || '系统' }} · {{ observationEventLabel(event) }}</span>
+                  </li>
+                </ul>
+                <ul
+                  v-else-if="leg.events?.length"
                   :ref="el => setLegEventFeedEl(activeRun.betId, leg.side, el as Element | null)"
                   class="active-bet-run__leg-events"
                 >
@@ -580,9 +628,18 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                       class="active-bet-run__leg-event-stage"
                       :data-layer="ev.stage"
                     >{{ ev.stage }}</span>
-                    <span class="active-bet-run__leg-event-detail">{{ ev.detail }}</span>
+                    <span class="active-bet-run__leg-event-detail">编排记录 · {{ ev.detail }}</span>
                   </li>
                 </ul>
+                <details v-if="legFacts(leg).length && leg.events?.length">
+                  <summary>编排进度详情</summary>
+                  <ul class="active-bet-run__leg-events">
+                    <li v-for="(event, index) in leg.events" :key="index" class="active-bet-run__leg-event">
+                      <span class="active-bet-run__leg-event-stage">{{ event.stage }}</span>
+                      <span class="active-bet-run__leg-event-detail">编排记录 · {{ event.detail }}</span>
+                    </li>
+                  </ul>
+                </details>
               </div>
             </div>
           </article>

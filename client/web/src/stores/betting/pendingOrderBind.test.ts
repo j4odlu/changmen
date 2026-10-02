@@ -1,10 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  clearPendingOrderBinds,
+  enqueuePendingOrderBind,
+  peekPendingOrderBinds,
+  processPendingOrderBinds,
+} from "./pendingOrderBind";
+
 const saveOrderBind = vi.hoisted(() => vi.fn());
 const refreshOrderListAfterBind = vi.hoisted(() => vi.fn());
 const syncActiveBetBindFailed = vi.hoisted(() => vi.fn());
 const syncActiveBetBindSuccess = vi.hoisted(() => vi.fn());
 const findAccount = vi.hoisted(() => vi.fn());
+const observeOrder = vi.hoisted(() => vi.fn());
+vi.mock("@/services/orderObservation", () => ({ observeOrder }));
 
 vi.mock("@/api/esport", () => ({ saveOrderBind }));
 vi.mock("@/stores/betting/arbOrderBind", () => ({ refreshOrderListAfterBind }));
@@ -16,13 +25,6 @@ vi.mock("@/stores/accountStore", () => ({
   useAccountStore: () => ({ findAccount }),
 }));
 
-import {
-  clearPendingOrderBinds,
-  enqueuePendingOrderBind,
-  peekPendingOrderBinds,
-  processPendingOrderBinds,
-} from "./pendingOrderBind";
-
 describe("pendingOrderBind", () => {
   beforeEach(() => {
     clearPendingOrderBinds();
@@ -31,6 +33,7 @@ describe("pendingOrderBind", () => {
     syncActiveBetBindFailed.mockReset();
     syncActiveBetBindSuccess.mockReset();
     findAccount.mockReset();
+    observeOrder.mockReset();
     findAccount.mockReturnValue({ accountId: 7 });
   });
 
@@ -96,5 +99,24 @@ describe("pendingOrderBind", () => {
       ["B"],
       expect.stringContaining("补绑耗尽"),
     );
+  });
+
+  it("records the original attempt's deferred success without increasing bind calls", async () => {
+    const observation = { ownerUserId: "u1", attemptId: "attempt-1", sequence: 5 };
+    enqueuePendingOrderBind({ linkId: 1700, provider: "OB", accountId: 7, orderId: "o1", betId: 9, side: "A", target: "Home", observation });
+    saveOrderBind.mockResolvedValue(true);
+    expect(await processPendingOrderBinds()).toEqual({ ok: 1, fail: 0, left: 0 });
+    expect(saveOrderBind).toHaveBeenCalledTimes(1);
+    expect(observeOrder).toHaveBeenCalledWith(observation, 1700, "bind_result", expect.objectContaining({ orderId: "o1", target: "Home", outcome: "saved" }));
+  });
+
+  it("keeps successful business callbacks when observation fails", async () => {
+    enqueuePendingOrderBind({ linkId: 1700, provider: "OB", accountId: 7, orderId: "o1", betId: 9, side: "A" });
+    observeOrder.mockImplementation(() => { throw new Error("observer failure"); });
+    saveOrderBind.mockResolvedValue(true);
+    expect(await processPendingOrderBinds()).toEqual({ ok: 1, fail: 0, left: 0 });
+    expect(saveOrderBind).toHaveBeenCalledTimes(1);
+    expect(syncActiveBetBindSuccess).toHaveBeenCalledWith(9, ["A"], "已绑单");
+    expect(refreshOrderListAfterBind).toHaveBeenCalledOnce();
   });
 });

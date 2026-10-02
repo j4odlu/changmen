@@ -192,8 +192,13 @@ async function persistObservedRayOrder(
       ? { ...row, link: task.linkId }
       : row);
     await saveOrders(account, stamped);
-    if (bind)
-      await bindArbOrderId(task.linkId, "RAY", task.accountId, orderId);
+    if (bind) {
+      const bound = await bindArbOrderId(task.linkId, "RAY", task.accountId, orderId);
+      try {
+        observeOrder(task.observation, task.linkId, "bind_result", { provider: "RAY", accountId: task.accountId, orderId, target: task.target, outcome: bound ? "saved" : "failed", source: "ray_bind_api_ack" });
+      }
+      catch { /* 观察失败不能跳过原有订单刷新 */ }
+    }
     refreshOrderListAfterBind();
   }
   catch {

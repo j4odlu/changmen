@@ -5,19 +5,19 @@ import type {
   ArbBetPlaced,
   ArbLegPlaceOutcome,
 } from "@/stores/betting/autoBet/phases/types";
+import { wait } from "@changmen/client-core/shared/wait";
+import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
+import { saveVenueSettlementLog } from "@/services/bettingLog";
+import { useAccountStore } from "@/stores/accountStore";
+import { syncActiveBetLegSettleResult, syncActiveBetPhase } from "@/stores/betting/activeBetRunSync";
+import { bindArbLegOrder, resolveArbBindOrderId } from "@/stores/betting/arbOrderBind";
+import { settleArbLegUntilTerminal } from "@/stores/betting/autoBet/arbLegSettle";
 import { isArbLegPlaceNeedsSettle } from "@/stores/betting/autoBet/phases/types";
 import {
   maxLegRejectWaitSec,
   showRejectDetectionTip,
 } from "@/stores/betting/autoBet/rejectWait";
-import { settleArbLegUntilTerminal } from "@/stores/betting/autoBet/arbLegSettle";
-import { bindArbLegOrder, resolveArbBindOrderId } from "@/stores/betting/arbOrderBind";
 import { enqueuePendingOrderBind } from "@/stores/betting/pendingOrderBind";
-import { syncActiveBetLegSettleResult, syncActiveBetPhase } from "@/stores/betting/activeBetRunSync";
-import { useAccountStore } from "@/stores/accountStore";
-import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
-import { wait } from "@changmen/client-core/shared/wait";
-import { saveVenueSettlementLog } from "@/services/bettingLog";
 
 export interface ArbLegSettleSnapshot {
   ordersA: VenueOrder[];
@@ -153,12 +153,15 @@ export async function settleBothArbLegs(
       pendingDetail: placeOutcome === "accepted_pending_confirm" ? "已挂单待确认" : "delayed 待确认",
     });
     const orderId = resolveArbBindOrderId(synced.orders, result, rejected);
-    if (await bindArbLegOrder(linkId, account, result, synced.orders, rejected))
+    if (await bindArbLegOrder(linkId, account, result, synced.orders, rejected)) {
       snapshot.boundLegLabels.push(leg.type);
+    }
     else if (orderId) {
       snapshot.bindFailedLegLabels.push(leg.type);
       snapshot.bindFailedSides.push(side);
       enqueuePendingOrderBind({
+        observation: result.observation,
+        target: leg.target,
         linkId,
         provider: result.provider,
         accountId: account.accountId,

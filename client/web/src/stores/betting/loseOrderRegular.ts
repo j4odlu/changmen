@@ -1,12 +1,18 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { BetResult } from "@changmen/client-core/models/betResult";
-import type { ViewBet } from "@/models/match";
 import type { LoseOrder } from "@/models/loseOrder";
+import type { ViewBet } from "@/models/match";
 import type { PlatformAccount } from "@/models/platformAccount";
-import { resolveVenueLegOutcome } from "@/domain/betting/resolveVenueLegOutcome";
-import { a8Tip } from "@/shared/a8Notify";
-import { isVenueLegRejected } from "@changmen/venue-adapter/contract";
 import type { useAccountStore } from "@/stores/accountStore";
+import { isVenueLegRejected } from "@changmen/venue-adapter/contract";
+import { resolveVenueLegOutcome } from "@/domain/betting/resolveVenueLegOutcome";
+import { saveVenueSettlementLog } from "@/services/bettingLog";
+import { a8Tip } from "@/shared/a8Notify";
+import {
+  syncActiveBetMakeupDone,
+  syncActiveBetMakeupRejected,
+  syncActiveBetMakeupSettling,
+} from "@/stores/betting/activeBetRunSync";
 import {
   bindArbLegOrder,
   refreshOrderListAfterBind,
@@ -14,13 +20,7 @@ import {
 } from "@/stores/betting/arbOrderBind";
 import { enqueuePendingOrderBind } from "@/stores/betting/pendingOrderBind";
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
-import {
-  syncActiveBetMakeupDone,
-  syncActiveBetMakeupRejected,
-  syncActiveBetMakeupSettling,
-} from "@/stores/betting/activeBetRunSync";
 import { useMessageStore } from "@/stores/messageStore";
-import { saveVenueSettlementLog } from "@/services/bettingLog";
 
 /**
  * [A8 可证实] bundle `jb` 普通场馆腿（index0706）：
@@ -105,6 +105,8 @@ export async function processA8RegularVenueMakeUpLeg(params: {
     const orderId = resolveArbBindOrderId(venueOrders, result, rejected);
     if (!(await bindArbLegOrder(order.linkId, account, result, venueOrders, rejected)) && orderId) {
       enqueuePendingOrderBind({
+        observation: result.observation,
+        target: checked.target,
         linkId: order.linkId,
         provider: result.provider,
         accountId: account.accountId,
@@ -120,6 +122,8 @@ export async function processA8RegularVenueMakeUpLeg(params: {
     const orderId = resolveArbBindOrderId([], result, false);
     if (!(await bindArbLegOrder(order.linkId, account, result, [], false)) && orderId) {
       enqueuePendingOrderBind({
+        observation: result.observation,
+        target: checked.target,
         linkId: order.linkId,
         provider: result.provider,
         accountId: account.accountId,

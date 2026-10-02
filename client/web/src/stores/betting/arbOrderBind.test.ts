@@ -1,10 +1,12 @@
 import type { VenueOrder } from "@changmen/venue-adapter/contract";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetResult } from "@changmen/client-core/models/betResult";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { bindArbLegOrder, bindArbOrderId, resolveArbBindOrderId } from "./arbOrderBind";
 
 const saveOrderBind = vi.hoisted(() => vi.fn());
 const wait = vi.hoisted(() => vi.fn(async () => {}));
+const observeOrder = vi.hoisted(() => vi.fn());
+vi.mock("@/services/orderObservation", () => ({ observeOrder }));
 
 vi.mock("@/api/esport", () => ({ saveOrderBind }));
 vi.mock("@changmen/client-core/shared/wait", () => ({ wait }));
@@ -69,6 +71,7 @@ describe("bindArbLegOrder", () => {
   beforeEach(() => {
     saveOrderBind.mockReset();
     wait.mockClear();
+    observeOrder.mockReset();
   });
 
   it("retries then succeeds", async () => {
@@ -86,6 +89,15 @@ describe("bindArbLegOrder", () => {
     expect(ok).toBe(true);
     expect(saveOrderBind).toHaveBeenCalledTimes(2);
     expect(wait).toHaveBeenCalledOnce();
+  });
+
+  it("returns the actual binding acknowledgement when observation throws", async () => {
+    saveOrderBind.mockResolvedValue(true);
+    observeOrder.mockImplementation(() => { throw new Error("observer failure"); });
+    const result = Object.assign(new BetResult("OB", true), { orderId: "ob-1" });
+    expect(await bindArbLegOrder(1700, { accountId: 1 } as never, result, [], false)).toBe(true);
+    expect(saveOrderBind).toHaveBeenCalledTimes(1);
+    expect(wait).not.toHaveBeenCalled();
   });
 
   it("returns false after retries exhausted", async () => {

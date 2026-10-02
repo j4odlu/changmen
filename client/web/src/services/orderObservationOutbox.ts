@@ -16,6 +16,7 @@ export class OrderObservationOutbox {
     read: () => string | null;
     write: (value: string) => void;
     capacity?: number;
+    onEvent?: (event: OrderObservationEvent) => void;
   }) {
     // 启动时恢复，不在下注函数内读取存储。
     try {
@@ -24,15 +25,19 @@ export class OrderObservationOutbox {
         const seen = new Set<string>();
         const valid = rows.map(row => normalizeObservationEvent(row, row?.ownerUserId)).filter((row): row is OrderObservationEvent => Boolean(row));
         for (const row of valid) {
-          if (seen.has(row.eventId))
+          const identity = `${row.ownerUserId}:${row.eventId}`;
+          if (seen.has(identity))
             continue;
-          seen.add(row.eventId);
+          seen.add(identity);
           if (row.kind === "transport_gap") {
-            if (this.gaps.length < 32)
+            if (this.gaps.length < 32) {
               this.gaps.push(row);
+              this.publish(row);
+            }
           }
           else if (this.events.length < (this.deps.capacity ?? 512)) {
             this.events.push(row);
+            this.publish(row);
           }
           else {
             this.markGap(row, "outbox_restore_overflow");
@@ -54,6 +59,7 @@ export class OrderObservationOutbox {
       }
       else {
         this.events.push({ ...event });
+        this.publish(event);
         if (this.storageFailed)
           this.markGap(event, "storage_unavailable");
       }
@@ -65,8 +71,16 @@ export class OrderObservationOutbox {
   private markGap(event: OrderObservationEvent, reasonCode: string) {
     if (this.gaps.some(gap => gap.ownerUserId === event.ownerUserId && gap.linkId === event.linkId))
       return;
-    if (this.gaps.length < 32)
-      this.gaps.push({ ...event, eventId: `${event.eventId}_gap`, kind: "transport_gap", reasonCode });
+    if (this.gaps.length < 32) {
+      const gap: OrderObservationEvent = { ...event, eventId: `${event.eventId}_gap`, kind: "transport_gap", reasonCode };
+      this.gaps.push(gap);
+      this.publish(gap);
+    }
+  }
+
+  private publish(event: OrderObservationEvent): void {
+    try { this.deps.onEvent?.(Object.freeze({ ...event })); }
+    catch { /* 展示消费者失败不能阻断记录上传或业务 */ }
   }
 
   wake(): void {
@@ -102,8 +116,8 @@ export class OrderObservationOutbox {
         return;
       const acknowledged = new Set(await this.deps.send(owner, batch));
       const sent = new Set(batch.map(event => event.eventId));
-      this.events = this.events.filter(event => !sent.has(event.eventId) || !acknowledged.has(event.eventId));
-      this.gaps = this.gaps.filter(event => !sent.has(event.eventId) || !acknowledged.has(event.eventId));
+      this.events = this.events.filter(event => event.ownerUserId !== owner || !sent.has(event.eventId) || !acknowledged.has(event.eventId));
+      this.gaps = this.gaps.filter(event => event.ownerUserId !== owner || !sent.has(event.eventId) || !acknowledged.has(event.eventId));
       this.retry = batch.every(event => acknowledged.has(event.eventId)) ? 0 : this.retry + 1;
       this.persist();
     }

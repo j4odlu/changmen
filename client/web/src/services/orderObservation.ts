@@ -3,6 +3,7 @@ import type { ObservationContext, ObservationKind, OrderObservationEvent } from 
 import type { PlatformAccount } from "@/models/platformAccount";
 import { normalizeObservationEvent } from "@changmen/shared/order_observation";
 import { getAuthSessionVersion, isAuthSessionCurrent, isAuthTransitionPending } from "@/api/client";
+import { useOrderObservationStore } from "@/stores/orderObservationStore";
 import { useUserStore } from "@/stores/userStore";
 import { OrderObservationOutbox } from "./orderObservationOutbox";
 import { uploadObservationBatch } from "./orderObservationTransport";
@@ -26,6 +27,7 @@ export function startOrderObservation(): void {
       read: () => sessionStorage.getItem(STORAGE_KEY),
       write: value => sessionStorage.setItem(STORAGE_KEY, value),
       send: (ownerUserId, events) => uploadObservationBatch(ownerUserId, events, currentOwner),
+      onEvent: event => useOrderObservationStore().record(event),
     });
     outbox.wake();
   }

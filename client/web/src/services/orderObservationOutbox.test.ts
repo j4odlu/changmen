@@ -89,4 +89,20 @@ describe("旁路上传故障隔离", () => {
     await queue.flush();
     expect(send.mock.calls.at(-1)![1].map((row: OrderObservationEvent) => row.kind)).toEqual(["submission_started"]);
   });
+
+  it("isolates a failing or mutating display consumer from upload contents and retries", async () => {
+    const send = vi.fn(async (_owner, rows) => rows.map((row: OrderObservationEvent) => row.eventId));
+    const queue = new OrderObservationOutbox({ owner: () => "u1", send, read: () => null, write: () => {}, onEvent: (row) => { row.linkId = 456; } });
+    expect(() => queue.enqueue(event("event-001"))).not.toThrow();
+    await queue.flush();
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0]![1][0].linkId).toBe(123);
+  });
+
+  it("restores and acknowledges identical event IDs independently for each owner", async () => {
+    let saved = "";
+    const queue = new OrderObservationOutbox({ owner: () => "u1", read: () => JSON.stringify([event("event-001"), event("event-001", "u2")]), write: (value) => { saved = value; }, send: async () => ["event-001"] });
+    await queue.flush();
+    expect(JSON.parse(saved)).toEqual([event("event-001", "u2")]);
+  });
 });

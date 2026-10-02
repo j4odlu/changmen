@@ -78,6 +78,26 @@ describe("parseOrderBindRow", () => {
 });
 
 describe("listUserProfitRank", () => {
+  it("excludes configured users and preserves their admin statistics; restoring re-enters rank", async () => {
+    const sb = await import("@changmen/db");
+    const profiles = [
+      { id: "u1", user_name: "alice", leaderboard_excluded: true },
+      { id: "u2", user_name: "bob" },
+      { id: "u3", user_name: "admin", role: "admin" },
+    ];
+    vi.mocked(sb.fetchProfiles).mockResolvedValue(profiles);
+    vi.mocked(sb.fetchOrdersForProfitAggregate).mockResolvedValue([
+      { user_id: "u1", status: "Win", money: 100, bet_money: 500 },
+      { user_id: "u2", status: "Lose", money: -50, bet_money: 100 },
+      { user_id: "u3", status: "Win", money: 999, bet_money: 9000 },
+    ]);
+    expect((await listUserProfitRank("2026-06-30")).map(r => r.UserName)).toEqual(["bob"]);
+    const adminRows = await listUserProfitRank("2026-06-30", { includeExcluded: true });
+    expect(adminRows.map(r => r.UserName)).toEqual(["alice", "bob"]);
+    expect(adminRows[0].Money).toBe(100);
+    profiles[0].leaderboard_excluded = false;
+    expect((await listUserProfitRank("2026-06-30")).map(r => r.UserName)).toEqual(["alice", "bob"]);
+  });
   it("excludes admin users from rank rows", async () => {
     const sb = await import("@changmen/db");
     vi.mocked(sb.fetchProfiles).mockResolvedValue([

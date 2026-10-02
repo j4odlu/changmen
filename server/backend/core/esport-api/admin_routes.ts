@@ -3,6 +3,7 @@
  * 勿从本文件 import router 的运行时符号，以免 ESM 环。
  */
 import * as adminService from "../account/admin_service.js";
+import { getAdminLeaderboardUsers, setAdminLeaderboardExcluded } from "../account/admin_leaderboard.js";
 import { getMonthReport } from "../account/report_service.js";
 import { getAdminMonthReportScope } from "../auth/role_filter.js";
 
@@ -430,6 +431,22 @@ export async function handleAdminAction(
       }
       catch (err) {
         return fail((err as Error).message || "操作失败");
+      }
+    }
+    case "Client_AdminLeaderboardUsers": {
+      try {
+        return ok(await getAdminLeaderboardUsers(ctx.user));
+      }
+      catch (err: any) {
+        return fail(err.message || "查询失败");
+      }
+    }
+    case "Client_AdminSetLeaderboardExcluded": {
+      try {
+        return ok(await setAdminLeaderboardExcluded(body, ctx.user));
+      }
+      catch (err: any) {
+        return fail(err.message || "保存失败");
       }
     }
     case "Client_AdminMaintenance": {

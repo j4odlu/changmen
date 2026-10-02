@@ -3,6 +3,8 @@
  * 前端 post(action) 与后端 handleEsportRequest 均须使用此集合中的名称。
  */
 export const ESPORT_ACTIONS = [
+  "Client_AdminLeaderboardUsers",
+  "Client_AdminSetLeaderboardExcluded",
   "Client_Login",
   "Client_Logout",
   "Client_RefreshToken",

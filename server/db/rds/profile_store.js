@@ -14,7 +14,8 @@ export async function fetchProfiles() {
   if (!pool)
     return [];
   try {
-    const { rows } = await pool.query(`SELECT p.*, u.is_admin, u.role, u.team_id ${PROFILE_WITH_ADMIN_FROM}`);
+    const { rows } = await pool.query(`SELECT p.*, u.is_admin, u.role, u.team_id,
+      (u.metadata->'leaderboardExcluded' = 'true'::jsonb) AS leaderboard_excluded ${PROFILE_WITH_ADMIN_FROM}`);
     return rows || [];
   }
   catch (err) {
@@ -154,6 +155,31 @@ export function writeUserMetadata(userId, metadata) {
       ),
     )
     .catch(err => console.warn("[rds] writeUserMetadata:", err.message));
+}
+
+/** [changmen 扩展] 排行榜排除配置属于管理策略，不放入用户可写的 preferences。 */
+export async function fetchLeaderboardUsers() {
+  const pool = getPgPool();
+  if (!pool)
+    throw new Error("数据库不可用");
+  const { rows } = await pool.query(`SELECT id, user_name, is_admin, role,
+    (metadata->'leaderboardExcluded' = 'true'::jsonb) AS leaderboard_excluded
+    FROM users ORDER BY user_name ASC`);
+  return rows;
+}
+
+export async function setUserLeaderboardExcluded(userId, excluded) {
+  const pool = getPgPool();
+  if (!pool)
+    throw new Error("数据库不可用");
+  const { rows } = await pool.query(`UPDATE users
+    SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = $3
+    WHERE id = $1 RETURNING id, user_name, is_admin, role,
+    (metadata->'leaderboardExcluded' = 'true'::jsonb) AS leaderboard_excluded`,
+  [String(userId), JSON.stringify({ leaderboardExcluded: excluded }), Date.now()]);
+  if (!rows.length)
+    throw new Error("用户不存在");
+  return rows[0];
 }
 
 /** 更新登录用户名（users + profiles 同步） */

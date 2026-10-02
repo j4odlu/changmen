@@ -174,6 +174,8 @@ export {
   fetchProfileById,
   fetchProfiles,
   fetchProfilesAdmin,
+  fetchLeaderboardUsers,
+  setUserLeaderboardExcluded,
   fetchTeams,
   insertProfile,
   updateUserIsAdmin,

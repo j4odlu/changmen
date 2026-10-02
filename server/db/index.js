@@ -134,6 +134,8 @@ export const {
   fetchUserByName,
   fetchUserById,
   fetchProfilesAdmin,
+  fetchLeaderboardUsers,
+  setUserLeaderboardExcluded,
   fetchOrdersAdminStats,
   fetchOrdersAdminPage,
   fetchUnifiedFootballOrdersAdmin,

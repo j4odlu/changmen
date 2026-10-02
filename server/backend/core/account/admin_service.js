@@ -338,7 +338,7 @@ export async function getAdminUserConfigDetail(userId, caller = null) {
 export async function getAdminDashboard(dateKey = toDateKey(Date.now()), caller = null) {
   const [allProfiles, rank, orderStats] = await Promise.all([
     sb.fetchProfilesAdmin(),
-    listUserProfitRank(dateKey),
+    listUserProfitRank(dateKey, { includeExcluded: true }),
     sb.fetchOrdersAdminStats(dateKey),
   ]);
   const visibleIds = resolveVisibleUserIds(caller, allProfiles);
@@ -390,7 +390,7 @@ export async function getAdminDashboard(dateKey = toDateKey(Date.now()), caller 
 export async function listAdminUsers(dateKey = toDateKey(Date.now()), caller = null) {
   const [allProfiles, rank] = await Promise.all([
     sb.fetchProfilesAdmin(),
-    listUserProfitRank(dateKey),
+    listUserProfitRank(dateKey, { includeExcluded: true }),
   ]);
   const visibleIds = resolveVisibleUserIds(caller, allProfiles);
   const profiles = filterProfiles(allProfiles, visibleIds);
@@ -410,7 +410,7 @@ export async function getAdminUserDetail(userId, dateKey = toDateKey(Date.now())
     return null;
   const [profiles, rank] = await Promise.all([
     sb.fetchProfilesAdmin(),
-    listUserProfitRank(dateKey),
+    listUserProfitRank(dateKey, { includeExcluded: true }),
   ]);
   const profitByUser = new Map(
     (Array.isArray(rank) ? rank : []).map(r => [String(r.UserName).toLowerCase(), r]),

@@ -285,8 +285,8 @@ function isSportsOrderRow(row) {
   return String(raw.domain || "").trim().toLowerCase() === "sports";
 }
 
-/** 排行榜：按登录用户聚合当日 orders（非按 player_id / 平台账号）；管理员不参与 */
-export async function listUserProfitRank(dateKey = toDateKey(Date.now())) {
+/** 排行榜：按登录用户聚合当日 orders；管理员及管理端配置排除的用户不参与。 */
+export async function listUserProfitRank(dateKey = toDateKey(Date.now()), { includeExcluded = false } = {}) {
   const [dayOrders, profiles] = await Promise.all([
     sb.fetchOrdersForProfitAggregate(dateKey),
     sb.fetchProfiles(),
@@ -298,7 +298,7 @@ export async function listUserProfitRank(dateKey = toDateKey(Date.now())) {
   const orders = (await enrichOrdersBelongingToDate(esportDayOrders, dateKey, { userIds }))
     .filter(o => !isSportsOrderRow(o));
   const adminIds = new Set(
-    (profiles || []).filter(p => isAdminUser(p)).map(p => String(p.id)),
+    (profiles || []).filter(p => isAdminUser(p) || (!includeExcluded && p.leaderboard_excluded === true)).map(p => String(p.id)),
   );
   const nameById = new Map(
     (profiles || []).map(p => [String(p.id), String(p.user_name || "").trim()]),

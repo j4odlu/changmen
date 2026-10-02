@@ -46,6 +46,12 @@ const router = createRouter({
       meta: { requiresAdmin: true, requiresFullAdmin: true },
     },
     {
+      path: "/admin/leaderboard",
+      name: "admin-leaderboard",
+      component: () => import("@/views/AdminLeaderboardView.vue"),
+      meta: { requiresAdmin: true, requiresFullAdmin: true },
+    },
+    {
       path: "/admin/orders",
       name: "admin-orders",
       component: () => import("@/views/AdminOrdersView.vue"),

@@ -7,6 +7,8 @@ const PUBLIC_ACTIONS = new Set([
 ]);
 
 const ADMIN_ONLY_ACTIONS = new Set([
+  "Client_AdminLeaderboardUsers",
+  "Client_AdminSetLeaderboardExcluded",
   "Client_AdminCreateUser",
   "Client_AdminSetUserAdmin",
   "Client_AdminSetUserRole",

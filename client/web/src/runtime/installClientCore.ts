@@ -21,6 +21,7 @@ import {
 } from "@changmen/client-core/shared/platformHttp";
 import { saveUserLog } from "@/api/chat";
 import { getToken } from "@/api/client";
+import { getRequestAuthHeaders } from "@/lib/authCredentials";
 import { getHgFollowOrders } from "@/api/hg";
 import { saveLiveTimer } from "@/api/match";
 import { getCollectPlatform, getGames, updatePlatform } from "@/api/platform";
@@ -84,6 +85,7 @@ export function installClientCoreBridges() {
 
   registerPlatformHttpContext({
     getToken: () => getToken(),
+    getAuthHeaders: getRequestAuthHeaders,
     getApiBase: () => getApiBase(),
     getProxyUrl: (proxyId) => {
       const user = useUserStore();

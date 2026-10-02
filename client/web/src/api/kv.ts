@@ -8,6 +8,7 @@ const JSON_HEADERS = { "Content-Type": "application/json" };
 export async function getClientData<T extends Record<string, unknown>>(key: string) {
   const res = await fetch(buildEsportUrl("Client_GetData", "", getApiBase()), {
     method: "POST",
+    credentials: "include",
     headers: { ...JSON_HEADERS, ...authHeaders() },
     body: JSON.stringify({ key }),
   });
@@ -43,12 +44,15 @@ export async function getClientData<T extends Record<string, unknown>>(key: stri
 export async function getClientDataArray<T>(key: string): Promise<T[]> {
   const res = await fetch(buildEsportUrl("Client_GetData", "", getApiBase()), {
     method: "POST",
+    credentials: "include",
     headers: { ...JSON_HEADERS, ...authHeaders() },
     body: JSON.stringify({ key }),
   });
   if (!res.ok)
     throw new Error(`Client_GetData(${key}) HTTP ${res.status}`);
   const data = await res.json();
+  if (data?.success === 0)
+    throw new Error(data.msg || `Client_GetData(${key}) failed`);
   if (Array.isArray(data))
     return data as T[];
   // 兼容偶发 { success, info: [] } 包裹（直连/代理不一致时）

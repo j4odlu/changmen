@@ -2,6 +2,7 @@ import type { ApiEnvelope } from "@changmen/api-contract";
 import { buildEsportUrl } from "@changmen/api-contract/urls";
 import { ElMessage } from "element-plus";
 import { shallowRef } from "vue";
+import { browserAuthState, getCookieSessionInfo, setCookieSessionInfo, usesWebCookieSession } from "@/lib/authSessionState";
 import { armEsportPostDelaySample, finalizeEsportPostDelaySample } from "@/api/apiDelay";
 import { getApiBase } from "@/config/apiBase";
 import { a8Axios, responseBodyText } from "@changmen/client-core/shared/a8Axios";
@@ -11,6 +12,9 @@ const TOKEN_COOKIE = "app_token";
 const AUTH_MODE_KEY = "app:auth-mode";
 const SESSION_VERSION_KEY = "app:session-version";
 const AUTH_TRANSITION_KEY = "app:auth-transition";
+export { browserAuthState, getCookieSessionInfo, setCookieSessionInfo, usesWebCookieSession } from "@/lib/authSessionState";
+export type { CookieSessionInfo } from "@/lib/authSessionState";
+export function isWebAuthenticated() { return Boolean(getToken() || getCookieSessionInfo()); }
 
 /** 新登录提交期间，旧会话的撤销响应不能中断它；超时防止崩溃标签页留下永久门控。 */
 export function beginAuthTransition(): () => void {
@@ -119,6 +123,8 @@ export function getToken(): string | null {
 
 export function setToken(token: string | null) {
   authToken.value = token;
+  if (token)
+    browserAuthState.value = "authenticated";
   if (typeof localStorage !== "undefined") {
     if (token && !cookieAuthMode)
       localStorage.setItem("app:token", token);
@@ -128,6 +134,9 @@ export function setToken(token: string | null) {
 }
 
 export function authHeaders(): Record<string, string> {
+  if (usesWebCookieSession()) {
+    return { "X-Changmen-Auth": "cookie", "X-CSRF-Token": getCookieSessionInfo()!.csrfToken };
+  }
   return authToken.value ? { token: authToken.value } : {};
 }
 
@@ -156,6 +165,8 @@ export function isSessionInvalidResponse(code: unknown, message: unknown): boole
 }
 
 export function clearAuthSession() {
+  setCookieSessionInfo(null);
+  browserAuthState.value = "anonymous";
   setToken(null);
   setRefreshToken(null);
   setCookieAuthMode(false);
@@ -207,10 +218,12 @@ async function executePost<T>(
   try {
     if (!authAction && !isAuthSessionCurrent(sessionVersion))
       throw new Error("登录状态已变更，请刷新页面");
+    if (!authAction && isCookieAuthMode() && browserAuthState.value === "unavailable")
+      throw new Error("登录服务暂时不可用，请稍后重试");
     const res = await a8Axios.post<ApiEnvelope<T>>(
       buildEsportUrl(action, query, getApiBase()),
       toA8PostBody(body),
-      { headers: { ...FORM_HEADERS, ...authHeaders() }, withCredentials: true },
+      { headers: { ...FORM_HEADERS, ...(action === "Client_RefreshToken" ? {} : authHeaders()) }, withCredentials: true },
     );
     const json = res.data;
 
@@ -226,6 +239,7 @@ async function executePost<T>(
       && recoverable
       && !authAction
       && !retriedAfterRefresh
+      && !usesWebCookieSession()
       && hasAuthSession()
     ) {
       const { refreshJwtSession } = await import("@/lib/jwtRefresh");

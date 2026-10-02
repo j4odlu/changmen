@@ -15,6 +15,7 @@ import {
   verifyJwt,
 } from "./jwt.js";
 import {
+  createBrowserSession,
   getBrowserSession,
   isOpaqueRefreshToken,
   issueOpaqueRefreshToken,
@@ -70,7 +71,7 @@ export async function recordAuthAudit(event) {
 }
 
 /** 密码登录；返回 { accessToken, refreshToken, userId, email } 或 null */
-export async function authSignIn(userName, password, auditContext = {}) {
+export async function authSignIn(userName, password, auditContext = {}, options = {}) {
   const name = String(userName || "").trim();
   const pwd = String(password || "");
   if (!name || !pwd)
@@ -79,6 +80,7 @@ export async function authSignIn(userName, password, auditContext = {}) {
   const pool = getPgPool();
   if (!pool || !JWT_SECRET)
     return { error: "db", message: "auth database unavailable" };
+  let client;
   try {
     const { rows } = await pool.query(
       `SELECT id, user_name, password_hash, metadata->>'active_session_id' AS active_session_id FROM users
@@ -86,7 +88,7 @@ export async function authSignIn(userName, password, auditContext = {}) {
          AND password_hash = crypt($2, password_hash)`,
       [name, pwd],
     );
-    const row = rows[0];
+    let row = rows[0];
     if (!row) {
       void recordAuthAudit({
         ...auditContext,
@@ -97,13 +99,37 @@ export async function authSignIn(userName, password, auditContext = {}) {
       });
       return null;
     }
+    // 验密不长期占行锁；提交前在锁内重新验密，防止并发改密码。
+    client = await pool.connect();
+    await client.query("BEGIN");
+    const locked = await client.query(
+      `SELECT id, user_name, password_hash, metadata->>'active_session_id' AS active_session_id
+       FROM users WHERE id = $1 AND password_hash = crypt($2, password_hash) FOR UPDATE`,
+      [String(row.id), pwd],
+    );
+    row = locked.rows[0];
+    if (!row) {
+      await client.query("ROLLBACK");
+      return null;
+    }
     const userId = String(row.id);
+    const now = Date.now();
+    await client.query(
+      `INSERT INTO profiles (id, user_name, accounts, betting_config, collect_config, preferences, created_at, updated_at)
+       VALUES ($1, $2, '[]'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, $3, $3)
+       ON CONFLICT (id) DO NOTHING`, [userId, row.user_name, now],
+    );
+    const profileResult = await client.query("SELECT user_name FROM profiles WHERE id = $1", [userId]);
+    if (!profileResult.rows[0])
+      throw new Error("profile unavailable");
+    if (options.validateProfile)
+      await options.validateProfile({ id: userId, userName: profileResult.rows[0].user_name });
     const bcryptCost = Number(/^\$2[aby]\$(\d{2})\$/.exec(String(row.password_hash || ""))?.[1] || 0);
     if (bcryptCost > 0 && bcryptCost < 12) {
-      void pool.query(
+      await client.query(
         `UPDATE users SET password_hash = crypt($2, gen_salt('bf', 12)), updated_at = $3 WHERE id = $1`,
         [userId, pwd, Date.now()],
-      ).catch(err => console.warn("[rds] password rehash:", err.message));
+      );
     }
     const sessionId = crypto.randomUUID();
     const accessToken = signJwt(
@@ -116,24 +142,27 @@ export async function authSignIn(userName, password, auditContext = {}) {
       JWT_SECRET,
       JWT_BROWSER_ACCESS_TTL_SEC,
     );
-    if (!(await setActiveSessionId(userId, sessionId))) {
-      void recordAuthAudit({
-        ...auditContext,
-        userId,
-        userName: row.user_name,
-        eventType: "LOGIN",
-        result: "FAILED",
-        reasonCode: "TEMPORARY_UNAVAILABLE",
-        sessionId,
-      });
-      return { error: "db", message: "active session update failed" };
+    const opaqueRefresh = await issueOpaqueRefreshToken(userId, sessionId, auditContext, client);
+    if (!opaqueRefresh)
+      throw new Error("refresh creation failed");
+    const refreshToken = opaqueRefresh.token;
+    const browserSession = options.browserSession
+      ? await createBrowserSession(userId, sessionId, auditContext, client)
+      : null;
+    if (options.browserSession && !browserSession)
+      throw new Error("browser session creation failed");
+    if (!options.browserSession) {
+      await client.query("UPDATE auth_sessions SET revoked_at = $2, revoke_reason = 'NEW_LOGIN' WHERE user_id = $1 AND revoked_at IS NULL", [userId, now]);
     }
-    const opaqueRefresh = await issueOpaqueRefreshToken(userId, sessionId, auditContext);
-    const refreshToken = opaqueRefresh?.token || signJwt(
-      { sub: userId, typ: "refresh", session_id: sessionId },
-      JWT_SECRET,
-      JWT_REFRESH_TTL_SEC,
+    await client.query("UPDATE auth_refresh_tokens SET revoked_at = $3, revoke_reason = 'NEW_LOGIN' WHERE user_id = $1 AND session_id <> $2 AND revoked_at IS NULL", [userId, sessionId, now]);
+    const updated = await client.query(
+      "UPDATE users SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = $3 WHERE id = $1",
+      [userId, JSON.stringify({ active_session_id: sessionId }), now],
     );
+    if (updated.rowCount !== 1)
+      throw new Error("active session update failed");
+    await client.query("COMMIT");
+    _sessionCacheEvictUser(userId);
     const previousSessionId = String(row.active_session_id || "");
     if (previousSessionId && previousSessionId !== "logged_out" && previousSessionId !== sessionId) {
       void recordAuthAudit({
@@ -159,12 +188,15 @@ export async function authSignIn(userName, password, auditContext = {}) {
       accessToken,
       browserAccessToken,
       refreshToken,
+      browserSession,
       userId,
       sessionId,
       email: `${row.user_name}@gamebet.local`,
     };
   }
   catch (err) {
+    try { await client?.query("ROLLBACK"); }
+    catch { /* original failure is retained */ }
     console.warn("[rds] authSignIn:", err.message);
     void recordAuthAudit({
       ...auditContext,
@@ -173,7 +205,10 @@ export async function authSignIn(userName, password, auditContext = {}) {
       result: "FAILED",
       reasonCode: "TEMPORARY_UNAVAILABLE",
     });
-    return { error: "db", message: err.message };
+    return { error: err.code === "CERT_BIND_FAILED" ? "cert" : "db", message: err.message };
+  }
+  finally {
+    client?.release();
   }
 }
 
@@ -207,7 +242,18 @@ export async function authSignOut(token, auditContext = {}) {
     });
     return;
   }
-  const updated = await setActiveSessionId(userId, "logged_out");
+  const pool = getPgPool();
+  if (!pool)
+    return;
+  // 读完 current 后可能有新登录提交，必须在 UPDATE 条件里再次比较代次。
+  const { rowCount } = await pool.query(
+    `UPDATE users SET metadata = COALESCE(metadata, '{}'::jsonb) || '{"active_session_id":"logged_out"}'::jsonb,
+      updated_at = $3 WHERE id = $1 AND metadata->>'active_session_id' = $2`,
+    [userId, sessionId, Date.now()],
+  );
+  const updated = rowCount === 1;
+  if (updated)
+    _sessionCacheEvictUser(userId);
   void recordAuthAudit({
     ...auditContext,
     userId,
@@ -216,6 +262,50 @@ export async function authSignOut(token, auditContext = {}) {
     reasonCode: updated ? "" : "TEMPORARY_UNAVAILABLE",
     sessionId,
   });
+}
+
+/** Direct Cookie logout: revoke the login epoch and its credentials atomically. */
+export async function authSignOutBrowserSession(session, auditContext = {}) {
+  const pool = getPgPool();
+  if (!pool)
+    return { temporary: true };
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query("BEGIN");
+    const now = Date.now();
+    const updated = await client.query(
+      `UPDATE users SET metadata = COALESCE(metadata, '{}'::jsonb) || '{"active_session_id":"logged_out"}'::jsonb,
+       updated_at = $3 WHERE id = $1 AND metadata->>'active_session_id' = $2`,
+      [session.userId, session.jwtSessionId, now],
+    );
+    if (updated.rowCount !== 1) {
+      await client.query("ROLLBACK");
+      return { conflict: true };
+    }
+    const revoked = await client.query(
+      `UPDATE auth_sessions SET revoked_at = $4, revoke_reason = 'LOGOUT'
+       WHERE id = $1 AND user_id = $2 AND jwt_session_id = $3 AND revoked_at IS NULL`,
+      [session.id, session.userId, session.jwtSessionId, now],
+    );
+    if (revoked.rowCount !== 1)
+      throw new Error("browser session changed during logout");
+    await client.query(
+      `UPDATE auth_refresh_tokens SET revoked_at = COALESCE(revoked_at, $3), revoke_reason = 'LOGOUT'
+       WHERE user_id = $1 AND session_id = $2`,
+      [session.userId, session.jwtSessionId, now],
+    );
+    await client.query("COMMIT");
+    _sessionCacheEvictUser(session.userId);
+    void recordAuthAudit({ ...auditContext, userId: session.userId, sessionId: session.jwtSessionId,
+      eventType: "LOGOUT", result: "SUCCESS" });
+    return { ok: true };
+  }
+  catch {
+    if (client) await client.query("ROLLBACK").catch(() => {});
+    return { temporary: true };
+  }
+  finally { client?.release(); }
 }
 
 async function fetchUserActiveSessionId(userId) {
@@ -273,11 +363,11 @@ function _sessionCacheEvictUser(userId) {
 /** 无 active_session_id 时放行（旧会话）；有则必须与 token 内 session_id 一致。
  * DB 查询失败（返回 null）时 fail-open：JWT 已通过签名校验则放行，避免 RDS 抖动整站踢人。
  */
-async function isSessionActive(userId, sessionId, reportTemporary = false) {
+async function isSessionActive(userId, sessionId, reportTemporary = false, fresh = false) {
   if (!sessionId)
     return false;
   const cached = _sessionCacheGet(userId, sessionId);
-  if (cached !== undefined)
+  if (!fresh && cached !== undefined)
     return cached;
   const active = await fetchUserActiveSessionId(userId);
   if (active === null) {
@@ -323,11 +413,11 @@ export async function authGetUser(token) {
   const sessionId = payload.session_id ? String(payload.session_id) : "";
   if (!(await isSessionActive(payload.sub, sessionId)))
     return null;
-  return { userId: String(payload.sub), metadata: {} };
+  return { userId: String(payload.sub), loginEpoch: sessionId, metadata: {} };
 }
 
 /** HTTP 鉴权区分可续期、撤销和临时故障；不改变旧 authGetUser 调用方的契约。 */
-export async function authGetUserStatus(token) {
+export async function authGetUserStatus(token, { fresh = false } = {}) {
   if (!token)
     return { code: "AUTH_REQUIRED" };
   if (!JWT_SECRET)
@@ -338,12 +428,12 @@ export async function authGetUserStatus(token) {
     return { code: "AUTH_REQUIRED" };
   if (payload.exp * 1000 <= Date.now())
     return { code: "ACCESS_TOKEN_EXPIRED", userId: String(payload.sub) };
-  const active = await isSessionActive(payload.sub, String(payload.session_id || ""), true);
+  const active = await isSessionActive(payload.sub, String(payload.session_id || ""), true, fresh);
   if (active === null)
     return { code: "TEMPORARY_UNAVAILABLE", userId: String(payload.sub) };
   if (!active)
     return { code: "SESSION_REVOKED", userId: String(payload.sub) };
-  return { userId: String(payload.sub), metadata: {} };
+  return { userId: String(payload.sub), loginEpoch: String(payload.session_id || ""), metadata: {} };
 }
 
 /**
@@ -508,7 +598,7 @@ export async function authRefreshToken(refreshToken, auditContext = {}) {
 }
 
 /** 用 HttpOnly 浏览器会话换取短期 access token；浏览器会话密钥不返回给 JS。 */
-export async function authBrowserSession(browserSessionToken, auditContext = {}) {
+export async function authResolveBrowserSession(browserSessionToken, auditContext = {}) {
   if (!JWT_SECRET)
     return { temporary: true };
   const session = await getBrowserSession(browserSessionToken, auditContext);
@@ -539,21 +629,8 @@ export async function authBrowserSession(browserSessionToken, auditContext = {})
       await revokeBrowserSession(browserSessionToken, "SESSION_REVOKED");
       return { revoked: true };
     }
-    const accessToken = signJwt(
-      { sub: session.userId, typ: "access", session_id: session.jwtSessionId },
-      JWT_SECRET,
-      JWT_BROWSER_ACCESS_TTL_SEC,
-    );
-    void recordAuthAudit({
-      ...auditContext,
-      userId: session.userId,
-      userName: row.user_name,
-      eventType: "SESSION_RESTORE",
-      result: "SUCCESS",
-      sessionId: session.jwtSessionId,
-    });
     return {
-      accessToken,
+      ...session,
       userId: session.userId,
       email: `${row.user_name}@gamebet.local`,
     };
@@ -562,6 +639,17 @@ export async function authBrowserSession(browserSessionToken, auditContext = {})
     console.warn("[rds] authBrowserSession:", err.message);
     return { temporary: true };
   }
+}
+
+/** Only legacy refresh callers need a JWT; ordinary Cookie auth uses the identity directly. */
+export async function authBrowserSession(browserSessionToken, auditContext = {}) {
+  const session = await authResolveBrowserSession(browserSessionToken, auditContext);
+  if (!session?.userId || session.invalid || session.revoked || session.temporary)
+    return session;
+  return {
+    ...session,
+    accessToken: signJwt({ sub: session.userId, typ: "access", session_id: session.jwtSessionId }, JWT_SECRET, JWT_BROWSER_ACCESS_TTL_SEC),
+  };
 }
 
 export function isAuthConfigured() {

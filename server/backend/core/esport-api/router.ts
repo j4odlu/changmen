@@ -23,10 +23,10 @@ import { normalizeClientIp, recordUserLastLogin } from "../account/user_login_me
 import { touchUserPresence } from "../account/user_presence.js";
 import { checkActionAuth, PUBLIC_ACTIONS } from "../auth/action_permissions.js";
 import { resolveRequestAuth, shouldAuditAccessFailure } from "../auth/request_auth.js";
+import { validAuthOrigin, validSessionCsrf } from "../auth/web_session_security.js";
 import { isAdminUser } from "../auth/admin_auth.js";
 import {
   browserSessionEnabled,
-  clearBrowserSessionCookie,
   readBrowserSessionCookie,
   setBrowserSessionCookie,
 } from "../auth/browser_session.js";
@@ -152,10 +152,6 @@ function authNotConfiguredMessage(): string {
   return "未配置 JWT：请在 server/backend/.env 设置 JWT_SECRET，并配置 DATABASE_URL";
 }
 
-function profileLoadFailMessage(): string {
-  return "加载用户失败，请检查 RDS profiles 连接";
-}
-
 export function resolveCreditPlateUserName(user: EsportUser | null): string {
   const fromSetting = user?.setting?.a8UserName;
   if (fromSetting && String(fromSetting).trim()) {
@@ -238,7 +234,7 @@ function clientIpFromRequest(req?: IncomingMessage): string {
   return normalizeClientIp(raw);
 }
 
-async function handleClientLogin(
+export async function handleClientLogin(
   body: Record<string, unknown>,
   clientIp = "",
   cert?: { hasClientCert: boolean; subject: string } | null,
@@ -286,7 +282,17 @@ async function handleClientLogin(
     return fail(bindErr, null, "CERT_BIND_FAILED");
   }
 
-  const auth = await sb.authSignIn(userName, password, audit);
+  const auth = await sb.authSignIn(userName, password, audit, {
+    browserSession: Boolean(response && browserSessionEnabled()),
+    validateProfile: async (profile: { id: string; userName: string }) => {
+      const error = certLoginBindError(profile.userName, cert ?? null);
+      if (error)
+        throw Object.assign(new Error(error), { code: "CERT_BIND_FAILED" });
+      await assertProfileActive(profile.id);
+    },
+  });
+  if (auth?.error === "cert")
+    return fail(auth.message, null, "CERT_BIND_FAILED");
   if (auth && "error" in auth && auth.error === "db") {
     return fail("数据库连接失败，请检查 DATABASE_URL 配置", null, "TEMPORARY_UNAVAILABLE");
   }
@@ -296,7 +302,11 @@ async function handleClientLogin(
     return fail("用户名或密码错误", null, "INVALID_CREDENTIALS");
   }
 
-  const { accessToken, browserAccessToken, refreshToken, userId: uid, sessionId, email } = auth;
+  const { accessToken, browserAccessToken, refreshToken, userId: uid, email } = auth;
+  // The login transaction is already committed. Preserve its Cookie even if profile hydration fails.
+  const sessionMode = response && auth.browserSession ? "cookie" : "legacy";
+  if (response && auth.browserSession)
+    setBrowserSessionCookie(response, auth.browserSession.token, auth.browserSession.absoluteExpiresAt);
 
   let profile = await dbStore.loadProfileById(uid);
   if (!profile) {
@@ -316,7 +326,7 @@ async function handleClientLogin(
       profile = await dbStore.loadProfileById(uid);
   }
   if (!profile)
-    return fail(profileLoadFailMessage(), null, "TEMPORARY_UNAVAILABLE");
+    return fail("登录已提交，用户资料暂时不可用，请刷新页面确认", null, "LOGIN_RESULT_UNCERTAIN");
 
   // 密码通过后再用 profile 用户名复核一次（防止大小写/别名与 CN 不一致）
   const bindName = String(profile.userName || userName || "").trim();
@@ -334,15 +344,6 @@ async function handleClientLogin(
   touchUserPresence(uid);
   await recordUserLastLogin(uid, clientIp);
   recordLoginSuccess(userName, clientIp);
-
-  let sessionMode = "legacy";
-  if (response && browserSessionEnabled()) {
-    const browserSession = await sb.createBrowserSession(uid, sessionId, audit);
-    if (browserSession) {
-      setBrowserSessionCookie(response, browserSession.token, browserSession.absoluteExpiresAt);
-      sessionMode = "cookie";
-    }
-  }
 
   return ok({
     token: sessionMode === "cookie" ? browserAccessToken : accessToken,
@@ -488,11 +489,12 @@ async function handleCoreAction(
 ): Promise<ApiEnvelope> {
   switch (action as EsportAction) {
     case "Client_Logout": {
-      await sb.authSignOut(ctx.token, ctx.audit);
+      const bridge = !ctx.token && ctx.browserSessionToken
+        ? await sb.authBrowserSession(ctx.browserSessionToken, ctx.audit) : null;
+      await sb.authSignOut(ctx.token || bridge?.accessToken, ctx.audit);
       if (ctx.browserSessionToken)
         await sb.revokeBrowserSession(ctx.browserSessionToken, "LOGOUT");
-      if (ctx.response)
-        clearBrowserSessionCookie(ctx.response);
+      // [changmen 扩展] 迟到的旧 logout 响应不能删除新登录 Cookie。
       return ok(null);
     }
     case "Client_RefreshToken": {
@@ -522,13 +524,7 @@ async function handleCoreAction(
       }
       touchUserPresence(auth.userId);
       let sessionMode = ctx.browserSessionToken ? "cookie" : "legacy";
-      if (!ctx.browserSessionToken && ctx.response && browserSessionEnabled() && "sessionId" in auth) {
-        const browserSession = await sb.createBrowserSession(auth.userId, auth.sessionId, ctx.audit);
-        if (browserSession) {
-          setBrowserSessionCookie(ctx.response, browserSession.token, browserSession.absoluteExpiresAt);
-          sessionMode = "cookie";
-        }
-      }
+      // refresh 只续期自身协议，不写 Cookie；Cookie 只由原子登录签发。
       return ok({
         token: sessionMode === "cookie" && "browserAccessToken" in auth
           ? auth.browserAccessToken
@@ -831,19 +827,29 @@ export async function handleEsportRequest(
     }
 
     const browserSessionToken = browserSessionEnabled() ? readBrowserSessionCookie(req) : "";
-    const resolved = await resolveRequestAuth({ token, browserSessionToken, action, audit }, {
+    if (action === "Client_RefreshToken" && browserSessionToken && !body.refreshToken && !body.refresh_token && !validAuthOrigin(req)) {
+      sendJson(res, 200, fail("请求来源校验失败", null, "CSRF_INVALID"));
+      return true;
+    }
+    const resolved = await resolveRequestAuth({ token, browserSessionToken, action, audit, protocol: req.headers["x-changmen-auth"] }, {
+      authResolveBrowserSession: sb.authResolveBrowserSession,
       authBrowserSession: sb.authBrowserSession,
       authGetUserStatus: sb.authGetUserStatus,
       getProfileById: dbStore.getProfileById,
       loadProfileById: dbStore.loadProfileById,
     });
-    if (resolved.failure && !PUBLIC_ACTIONS.has(action)) {
+    if (resolved.failure && (!PUBLIC_ACTIONS.has(action) || action === "Client_Logout" || resolved.failure.code === "CREDENTIAL_CONFLICT")) {
       if (shouldAuditAccessFailure(resolved.userId, resolved.failure.code))
         void sb.recordAuthAudit({ ...audit, userId: resolved.userId, eventType: "ACCESS", result: "DENIED", reasonCode: resolved.failure.code });
       sendJson(res, 200, resolved.failure);
       return true;
     }
     const { token: effectiveToken, user } = resolved;
+    // Cookie-authenticated actions require CSRF, including legacy GET writes.
+    if (resolved.session && (req.method !== "POST" || !validSessionCsrf(req, resolved.session))) {
+      sendJson(res, 200, fail("请求校验失败，请刷新页面", null, "CSRF_INVALID"));
+      return true;
+    }
 
     sendJson(res, 200, await handle(action, body, {
       token: effectiveToken,
@@ -933,10 +939,17 @@ export async function callEsportAction(
     const cleanAction = String(action || "").split("?")[0];
     if (!cleanAction)
       return fail("missing action");
-    const user = await store.getUserByToken(token);
     if (cleanAction === "Client_Login")
       return handleClientLogin(body);
-    return handle(cleanAction, body || {}, { token, user });
+    const resolved = await resolveRequestAuth({ token, action: cleanAction }, {
+      authResolveBrowserSession: sb.authResolveBrowserSession,
+      authGetUserStatus: sb.authGetUserStatus,
+      getProfileById: dbStore.getProfileById,
+      loadProfileById: dbStore.loadProfileById,
+    });
+    if (resolved.failure && !PUBLIC_ACTIONS.has(cleanAction))
+      return resolved.failure;
+    return handle(cleanAction, body || {}, { token: resolved.token, user: resolved.user });
   }
   catch (err: any) {
     console.error("[esport:ipc]", action, err);

@@ -5,6 +5,7 @@ import net from "node:net";
 import { URL } from "node:url";
 import zlib from "node:zlib";
 import { resolvePmRelayL2Headers } from "./pm_relay_l2.js";
+import { requireHttpUser } from "../core/auth/http_identity.js";
 
 const require = createRequire(import.meta.url);
 
@@ -30,10 +31,6 @@ const RELAY_ALLOWED_PATH_PREFIXES = envList("HTTP_RELAY_ALLOWED_PATH_PREFIXES", 
 function sendRelayError(res, status, msg) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify({ success: 0, msg }));
-}
-
-function tokenPresent(req) {
-  return Boolean(String(req.headers.token || req.headers.authorization || "").trim());
 }
 
 function isPrivateHostname(hostname) {
@@ -402,9 +399,12 @@ async function tryHttpProxyRelay(req, res, baseOrigin) {
   if (pathname !== RELAY_PATH)
     return false;
 
-  if (RELAY_REQUIRE_TOKEN && !tokenPresent(req)) {
-    sendRelayError(res, 401, "http-relay token required");
-    return true;
+  if (RELAY_REQUIRE_TOKEN || req.headers["x-changmen-auth"] === "cookie") {
+    const auth = await requireHttpUser(req, { alwaysCsrf: true });
+    if (auth.error) {
+      sendRelayError(res, auth.error.status, auth.error.body.error);
+      return true;
+    }
   }
 
   const proxyTarget = req.headers["x-proxy-url"];

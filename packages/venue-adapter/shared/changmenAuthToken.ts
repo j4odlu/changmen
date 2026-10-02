@@ -2,6 +2,19 @@
 type AuthTokenGetter = () => string | null | undefined;
 
 let _getter: AuthTokenGetter | null = null;
+let _handshakeGetter: (() => Promise<string>) | null = null;
+let _cookieGetter: (() => boolean) | null = null;
+export function setChangmenCookieSessionGetter(getter: (() => boolean) | null): void { _cookieGetter = getter; }
+export function usesChangmenCookieSession(): boolean { return Boolean(_cookieGetter?.()); }
+
+/** [changmen 扩展] 每次私有握手重新取得凭证，刷新由宿主执行。 */
+export function setChangmenHandshakeTokenGetter(getter: (() => Promise<string>) | null): void {
+  _handshakeGetter = getter;
+}
+
+export async function getChangmenHandshakeToken(): Promise<string> {
+  return _handshakeGetter ? _handshakeGetter() : getChangmenAuthToken();
+}
 
 export function setChangmenAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _getter = getter;
@@ -31,9 +44,9 @@ function readTokenFromStorage(): string {
 
 export function getChangmenAuthToken(): string {
   try {
-    const fromGetter = String(_getter?.() || "").trim();
-    if (fromGetter)
-      return fromGetter;
+    // 安装了宿主 getter 后，空值代表已退出；不能捡回存储里的旧凭证。
+    if (_getter)
+      return String(_getter() || "").trim();
   }
   catch {
     /* fall through */

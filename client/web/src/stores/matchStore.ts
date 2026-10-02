@@ -2,7 +2,6 @@ import type { BetSide, ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
 import type { MainBetLoopState } from "@/stores/match/mainBetLoop";
 import type { PlatformId, PmSportSnapshot } from "@/types/esport";
 import { defineStore } from "pinia";
-import { getToken } from "@/api/client";
 import { getMatchs } from "@/api/esport";
 import { getMatchDefaultOdds } from "@/api/report";
 import { ensureTokenRefresh } from "@/lib/sessionRefresh";
@@ -250,7 +249,7 @@ export const useMatchStore = defineStore("match", {
       await this.fetchMatches(true);
       void this.fetchMatchDefaultOdds();
 
-      if (getToken()) {
+      if (useUserStore().isLoggedIn) {
         void ensureTokenRefresh();
         void startPmSportRealtimeFeed((id, snap) => {
           this.updatePmSport(id, snap);

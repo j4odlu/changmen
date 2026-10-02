@@ -1,6 +1,7 @@
-import { setChangmenAuthTokenGetter, setVenueWebBridge } from "@changmen/venue-adapter/shared";
+import { setChangmenAuthTokenGetter, setChangmenHandshakeTokenGetter, setChangmenCookieSessionGetter, setVenueWebBridge } from "@changmen/venue-adapter/shared";
 import type { VenueWebBridge } from "@changmen/venue-adapter/shared";
-import { getToken } from "@/api/client";
+import { getToken, usesWebCookieSession } from "@/api/client";
+import { getCompatibilityToken } from "@/lib/authCredentials";
 import { useAccountStore } from "@/stores/accountStore";
 import { useCollectStore } from "@/stores/collectStore";
 import { useMatchStore } from "@/stores/matchStore";
@@ -18,9 +19,13 @@ export function installVenueWebBridge() {
   };
   setVenueWebBridge(hooks);
   setChangmenAuthTokenGetter(() => getToken());
+  setChangmenCookieSessionGetter(() => usesWebCookieSession());
+  setChangmenHandshakeTokenGetter(getCompatibilityToken);
 }
 
 export function clearVenueWebBridge() {
   setVenueWebBridge(null);
   setChangmenAuthTokenGetter(null);
+  setChangmenHandshakeTokenGetter(null);
+  setChangmenCookieSessionGetter(null);
 }

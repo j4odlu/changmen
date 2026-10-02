@@ -1,9 +1,13 @@
+import { authenticateIdentity } from "./identity.js";
+
 const MESSAGES = {
   AUTH_REQUIRED: "未登录",
   ACCESS_TOKEN_EXPIRED: "登录凭证已过期，请续期",
   REFRESH_TOKEN_EXPIRED: "会话已过期，请重新登录",
   SESSION_REVOKED: "会话已失效，请重新登录",
   TEMPORARY_UNAVAILABLE: "登录服务暂时不可用，请稍后重试",
+  CREDENTIAL_CONFLICT: "登录凭证不一致，请刷新页面",
+  CSRF_INVALID: "请求校验失败，请刷新页面",
 };
 
 export function authFailure(code) {
@@ -26,10 +30,22 @@ export function shouldAuditAccessFailure(userId, code, now = Date.now()) {
 }
 
 /** 在业务分发之前完成鉴权，续期失败不能被压成 AUTH_REQUIRED。 */
-export async function resolveRequestAuth({ token, browserSessionToken, action, audit }, deps) {
+export async function resolveRequestAuth({ token, browserSessionToken, action, audit, protocol }, deps) {
   if (action === "Client_RefreshToken")
     return { token, user: null };
+  if (deps.authResolveBrowserSession) {
+    const identity = await authenticateIdentity({ token, browserSessionToken, protocol, audit }, deps);
+    if (identity.code)
+      return { token, user: null, userId: identity.userId, failure: authFailure(identity.code) };
+    const user = deps.getProfileById(identity.userId) || await deps.loadProfileById(identity.userId);
+    if (!user)
+      return { token, user: null, failure: authFailure("TEMPORARY_UNAVAILABLE") };
+    return { token: identity.credentialType === "cookie" ? "" : token, user,
+      authMethod: identity.credentialType, session: identity.session, identity };
+  }
   let effectiveToken = token;
+  if (protocol === "cookie" && !browserSessionToken)
+    return { token, user: null, failure: authFailure("AUTH_REQUIRED") };
   if (!effectiveToken && browserSessionToken) {
     const restored = await deps.authBrowserSession(browserSessionToken, audit);
     if (restored?.temporary)
@@ -45,5 +61,5 @@ export async function resolveRequestAuth({ token, browserSessionToken, action, a
   // profiles 加载失败不能证明用户退出。拒绝本次请求但保留客户端会话。
   if (!user)
     return { token: effectiveToken, user: null, failure: authFailure("TEMPORARY_UNAVAILABLE"), userId: auth.userId };
-  return { token: effectiveToken, user };
+  return { token: effectiveToken, user, authMethod: "token" };
 }

@@ -1,4 +1,6 @@
 import { getPgPool } from "@changmen/db";
+import { requireHttpUser } from "./core/auth/http_identity.js";
+import { tryWebSessionRoutes } from "./core/auth/web_session_routes.js";
 import { getCatalogSummary } from "@changmen/shared/catalog/game_catalog";
 import { getCatalogSummary as getMarketCatalogSummary } from "@changmen/shared/catalog/market_catalog";
 import { getWsForwardStatus, isWsForwardHttpPath } from "@changmen/ws-forward";
@@ -9,7 +11,6 @@ import {
 import { canAccessAdminPanel } from "./core/auth/admin_auth.js";
 import { countAccounts, getClientMatches, listProfiles } from "./core/db/store.js";
 import { resolveCreditPlateUserName, tryEsportApi } from "./core/esport-api/router.js";
-import store from "./core/esport-api/store.js";
 import { getHardcodedCredentials } from "./core/integrations/a8/config.js";
 import {
   handlePolymarketRelayerSign,
@@ -158,11 +159,9 @@ async function handleAppRoutes(req, res, serveStatic) {
     return;
   }
   if (url === "/api/a8/credit-plate-user") {
-    const token
-      = (typeof req.headers.token === "string" && req.headers.token)
-        || (typeof req.headers.Token === "string" && req.headers.Token)
-        || "";
-    const user = await store.getUserByToken(token);
+    const auth = await requireHttpUser(req);
+    if (auth.error) { jsonResponse(res, auth.error.status, auth.error.body); return; }
+    const user = auth.user;
     const userName = resolveCreditPlateUserName(user);
     jsonResponse(res, 200, { userName });
     return;
@@ -296,9 +295,10 @@ async function handleAppRoutes(req, res, serveStatic) {
       await sendPmMarketHealth();
       return;
     }
-    const token = String(req.headers.token || req.headers.Token || "");
-    if (token) {
-      const user = await store.getUserByToken(token);
+    {
+      const auth = await requireHttpUser(req);
+      if (auth.error?.status === 503) { jsonResponse(res, 503, auth.error.body); return; }
+      const user = auth.user;
       if (user && canAccessAdminPanel(user)) {
         await sendPmMarketHealth();
         return;
@@ -323,9 +323,10 @@ async function handleAppRoutes(req, res, serveStatic) {
       await sendFullHealth();
       return;
     }
-    const token = String(req.headers.token || req.headers.Token || "");
-    if (token) {
-      const user = await store.getUserByToken(token);
+    {
+      const auth = await requireHttpUser(req);
+      if (auth.error?.status === 503) { jsonResponse(res, 503, auth.error.body); return; }
+      const user = auth.user;
       if (user && canAccessAdminPanel(user)) {
         await sendFullHealth();
         return;
@@ -359,6 +360,8 @@ export function createHttpHandler({ port, serveStatic }) {
         return;
 
       const url = req.pathname;
+      if (await tryWebSessionRoutes(req, res))
+        return;
       // Socket.IO 握手由 ws_forward / realtime-hub 处理，勿走 esport-api / 静态文件
       if (isWsForwardHttpPath(url))
         return;

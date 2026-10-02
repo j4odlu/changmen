@@ -34,8 +34,13 @@ it("subscribes with an in-memory cookie-session token and configured API origin"
   const handler = vi.fn();
   const subscribing = subscribeChangmenChannel(PM_MAINTENANCE_CHANNEL, handler);
   expect(mocks.io).toHaveBeenCalledWith("https://api.changmen.fun", expect.objectContaining({
-    auth: { token: "memory-session-token" },
+    auth: expect.any(Function),
   }));
+  const handshake = vi.fn();
+  mocks.io.mock.calls[0]![1].auth(handshake);
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(handshake).toHaveBeenCalledWith({ token: "memory-session-token" });
   socket.connected = true;
   listeners.get("connect")?.();
   const unsubscribe = await subscribing;

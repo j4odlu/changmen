@@ -11,6 +11,7 @@ import {
 } from "@changmen/db";
 import { attachWsForward } from "@changmen/ws-forward";
 import { attachChangmenRealtimeHub } from "@changmen/realtime-hub";
+import { authenticateRealtime, authorizeRealtime } from "./core/auth/realtime_auth.js";
 import { ensureSeed as ensureAccountSeed } from "./core/account/account_store.js";
 import { setupAdminTools } from "./core/admin_tools/setup.js";
 import { pullProfilesFromDb } from "./core/db/store.js";
@@ -87,7 +88,7 @@ console.log(
   `[ws_forward] platforms=${wsForwardPlatforms.join(",") || "(none)"} `
   + `(PM-MARKET → changmen-pm-market-hub; PREDICTFUN-MARKET → changmen-predictfun-market-hub)`,
 );
-attachChangmenRealtimeHub(server);
+attachChangmenRealtimeHub(server, { authenticate: authenticateRealtime, authorize: authorizeRealtime });
 
 ensurePlatformCredentials()
   .then((r) => {

@@ -11,6 +11,7 @@ import { useOddsStore } from "@/stores/oddsStore";
 import { useOrderStore } from "@/stores/orderStore";
 import { useUserStore } from "@/stores/userStore";
 import { lockPmVault, resetPmVaultAccountUi } from "@/security/pmVault";
+import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 
 async function applyPmTransportRoutingOnLogin(): Promise<void> {
   try {
@@ -73,6 +74,7 @@ export function startAppSession(): void {
 
 /** HomeView onMounted：先拉账号并解锁本机钱包，再启主循环与余额刷新 */
 export async function mountAppSession(): Promise<void> {
+  const sessionVersion = getAuthSessionVersion();
   const user = useUserStore();
   if (!user.userId) {
     await user.fetchUserInfo();
@@ -106,6 +108,8 @@ export async function mountAppSession(): Promise<void> {
       console.warn("[pmVault] unlock skipped", err);
   }
   await bootSessionRuntime();
+  if (!isAuthSessionCurrent(sessionVersion))
+    return;
   startAppSession();
   // 解锁完成后再刷余额 / 订单（与原 loadAccounts(true) 后半段对齐）
   void (async () => {

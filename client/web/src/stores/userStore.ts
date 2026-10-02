@@ -10,9 +10,11 @@ import { defineStore } from "pinia";
 import { toRaw } from "vue";
 import {
   clearAuthSession,
+  browserAuthState,
   getRefreshToken,
   hasAuthSession,
   isCookieAuthMode,
+  isWebAuthenticated,
 } from "@/api/client";
 import {
   login as apiLogin,
@@ -20,7 +22,6 @@ import {
   updateUserSetting as apiUpdateUserSetting,
   getClientData,
   getClientDataArray,
-  getToken,
   getUserInfo,
   saveClientData,
   saveClientDataDetailed,
@@ -87,7 +88,7 @@ export const useUserStore = defineStore("user", {
   }),
 
   getters: {
-    isLoggedIn: () => Boolean(getToken()),
+    isLoggedIn: () => isWebAuthenticated(),
     isLeader: state => state.role === "leader",
     canAccessAdmin: state => state.isAdmin || state.role === "leader",
 
@@ -114,7 +115,7 @@ export const useUserStore = defineStore("user", {
     },
 
     async fetchUserInfo() {
-      if (!getToken()) {
+      if (!isWebAuthenticated()) {
         this.ready = false;
         if (hasAuthSession())
           throw new Error("登录会话暂未恢复，请稍后重试");
@@ -156,10 +157,22 @@ export const useUserStore = defineStore("user", {
     },
 
     async restoreSession() {
+      if (!hasAuthSession() && typeof window !== "undefined" && typeof document !== "undefined") {
+        // HttpOnly Cookie 可能仍有效而本机提示已清除；只读探测，不自动重新登录。
+        const { probeCookieSession } = await import("@/lib/webSession");
+        try { await probeCookieSession(false, true); }
+        catch {
+          this.ready = false;
+          this.sessionChecked = false;
+          this.sessionRestoreError = "连接暂时不可用，请检查网络后重试";
+          return false;
+        }
+      }
       if (!hasAuthSession()) {
         this.ready = false;
         this.sessionRestoreError = "";
         this.sessionChecked = true;
+        browserAuthState.value = "anonymous";
         return false;
       }
       this.sessionChecked = false;

@@ -10,6 +10,7 @@ export interface AccountHttpOptions {
 
 export interface PlatformHttpContext {
   getToken: () => string | null;
+  getAuthHeaders?: (url: string) => Promise<Record<string, string>>;
   getApiBase: () => string;
   getProxyUrl: (proxyId: number) => string | undefined;
 }
@@ -28,6 +29,14 @@ function requireHttpCtx(): PlatformHttpContext {
   if (!httpCtx)
     throw new Error("[client-core] PlatformHttp context not registered");
   return httpCtx;
+}
+
+async function requestAuthHeaders(url: string): Promise<Record<string, string>> {
+  const ctx = requireHttpCtx();
+  if (ctx.getAuthHeaders)
+    return ctx.getAuthHeaders(url);
+  const token = ctx.getToken();
+  return token ? { token } : {};
 }
 
 function originFromReferer(referer?: string): string | undefined {
@@ -80,9 +89,7 @@ export async function accountHttpRequest(
 
   if (account.proxyId && !forceDirect) {
     headers["x-proxy-url"] = targetUrl;
-    const token = requireHttpCtx().getToken();
-    if (token)
-      headers.token = token;
+    Object.assign(headers, await requestAuthHeaders(requestUrl));
     if (account.referer) {
       headers["x-proxy-referer"] = account.referer;
       const origin = originFromReferer(account.referer);
@@ -102,6 +109,7 @@ export async function accountHttpRequest(
       url: requestUrl,
       headers,
       data: init.body,
+      withCredentials: requestUrl !== targetUrl,
       responseType: "text",
       transformResponse: [d => d],
     });
@@ -159,11 +167,8 @@ export async function changmenRelayHttpRequest(
     headers["x-proxy-referer"] = PM_RELAY_REFERER;
   if (!headers["x-proxy-origin"])
     headers["x-proxy-origin"] = "https://polymarket.com";
-  const token = requireHttpCtx().getToken();
-  if (token)
-    headers.token = token;
-
   const relayUrl = buildHttpRelayUrl({ proxyOrigin: resolveHkRelayHttpOrigin() });
+  Object.assign(headers, await requestAuthHeaders(relayUrl));
   try {
     const res = await a8Axios.request({
       method,
@@ -211,8 +216,8 @@ export async function changmenPmEsportCall<T>(
   body: Record<string, unknown>,
   opts?: { timeoutMs?: number },
 ): Promise<T> {
-  const token = requireHttpCtx().getToken();
-  if (!token)
+  const auth = await requestAuthHeaders(buildEsportUrl("", "", requireHttpCtx().getApiBase()));
+  if (!Object.keys(auth).length)
     throw new Error("请先登录");
 
   let res;
@@ -221,7 +226,7 @@ export async function changmenPmEsportCall<T>(
       buildEsportUrl(action, "", requireHttpCtx().getApiBase()),
       toEsportPostBody(body),
       {
-        headers: { ...FORM_HEADERS, token },
+        headers: { ...FORM_HEADERS, ...auth }, withCredentials: true,
         ...(opts?.timeoutMs != null ? { timeout: opts.timeoutMs } : {}),
       },
     );
@@ -244,8 +249,8 @@ export async function changmenPmEsportCall<T>(
 export async function changmenPmHttpRequest(
   input: ChangmenPmHttpRequestInput,
 ): Promise<AccountHttpResult> {
-  const token = requireHttpCtx().getToken();
-  if (!token)
+  const auth = await requestAuthHeaders(buildEsportUrl("", "", requireHttpCtx().getApiBase()));
+  if (!Object.keys(auth).length)
     throw new Error("请先登录");
 
   const payload: Record<string, unknown> = {
@@ -265,7 +270,7 @@ export async function changmenPmHttpRequest(
     const res = await a8Axios.post<{ success?: number; msg?: string; info?: AccountHttpResult }>(
       buildEsportUrl("Pm_HttpRequest", "", requireHttpCtx().getApiBase()),
       toEsportPostBody(payload),
-      { headers: { ...FORM_HEADERS, token } },
+      { headers: { ...FORM_HEADERS, ...auth }, withCredentials: true },
     );
     const json = res.data;
     if (json?.success !== 1 || !json.info) {

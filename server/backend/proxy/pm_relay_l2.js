@@ -4,6 +4,7 @@
  */
 import { refreshAccountsFromRdsIfEmpty } from "../core/db/store.js";
 import store from "../core/esport-api/store.js";
+import { requireHttpUser } from "../core/auth/http_identity.js";
 import { buildPolymarketL2HeadersFromToken } from "../core/integrations/polymarket/clob_l2.js";
 
 function headerText(value) {
@@ -46,13 +47,10 @@ export async function resolvePmRelayL2Headers(req, { method, targetUrl, body = "
   if (!accountId || !l2Path)
     return null;
 
-  const token = headerText(req.headers.token || req.headers.authorization);
-  if (!token)
-    return { error: { status: 401, msg: "http-relay token required" } };
-
-  const user = await store.getUserByToken(token);
-  if (!user?.id)
-    return { error: { status: 401, msg: "http-relay token invalid" } };
+  const auth = await requireHttpUser(req, { alwaysCsrf: true });
+  if (auth.error)
+    return { error: { status: auth.error.status, msg: auth.error.body.error } };
+  const user = auth.user;
 
   const userId = String(user.id ?? user.userId ?? "").trim();
   if (!userId)

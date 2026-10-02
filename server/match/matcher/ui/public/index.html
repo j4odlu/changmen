@@ -1638,7 +1638,7 @@ async function fetchJson(url, options) {
   opts.credentials = 'include';
   opts.headers = {
     ...(opts.headers || {}),
-    ...(window.matcherAuthHeaders ? window.matcherAuthHeaders() : {}),
+    ...(window.matcherSessionHeaders ? await window.matcherSessionHeaders() : window.matcherAuthHeaders ? window.matcherAuthHeaders() : {}),
   };
   const res = await fetch(url, opts);
   if (res.status === 401) {

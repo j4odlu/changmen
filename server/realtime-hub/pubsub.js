@@ -32,14 +32,18 @@ export function emitPubSubMessage(io, channel, content) {
  * @param {import("socket.io").Socket} socket
  * @param {{ getSnapshot?: (channel: string) => unknown }} [options]
  */
-export function attachPubSubHandlers(socket, { getSnapshot } = {}) {
-  socket.on("pubsub:subscribe", (payload, ack) => {
+export function attachPubSubHandlers(socket, { getSnapshot, authorize = async () => true } = {}) {
+  socket.on("pubsub:subscribe", async (payload, ack) => {
     const channel = normalizePubSubChannel(payload?.channel);
     if (!channel) {
       ack?.({ ok: false, error: "channel required" });
       return;
     }
-    socket.join(channel);
+    if (!await authorize(channel, "subscribe")) {
+      ack?.({ ok: false, error: "FORBIDDEN" });
+      return;
+    }
+    await socket.join(channel);
     const snapshot = getSnapshot?.(channel);
     if (snapshot != null)
       socket.emit("pubsub:message", { channel, content: snapshot });
@@ -56,7 +60,7 @@ export function attachPubSubHandlers(socket, { getSnapshot } = {}) {
     ack?.({ ok: true });
   });
 
-  socket.on("pubsub:publish", (payload, ack) => {
+  socket.on("pubsub:publish", async (payload, ack) => {
     const channel = normalizePubSubChannel(payload?.channel);
     const message = payload?.message;
     if (!channel) {
@@ -65,6 +69,10 @@ export function attachPubSubHandlers(socket, { getSnapshot } = {}) {
     }
     if (typeof message !== "string" || message.length > MAX_PUBSUB_MESSAGE_LEN) {
       ack?.({ ok: false, error: "invalid message" });
+      return;
+    }
+    if (!await authorize(channel, "publish", message)) {
+      ack?.({ ok: false, error: "FORBIDDEN" });
       return;
     }
     socket.to(channel).emit("pubsub:message", { channel, content: message });

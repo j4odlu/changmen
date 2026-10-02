@@ -37,6 +37,17 @@
     const token = window.getSiteToken();
     return token ? { token } : {};
   };
+  window.matcherSessionHeaders = async function matcherSessionHeaders() {
+    const response = await fetch('/auth/session', { credentials: 'include', cache: 'no-store' });
+    if (response.status === 404 || response.status === 401)
+      return window.matcherAuthHeaders();
+    if (!response.ok)
+      throw new Error('登录服务暂时不可用，请稍后重试');
+    const info = await response.json();
+    if (info.cookieEnabled)
+      return { 'X-Changmen-Auth': 'cookie', 'X-CSRF-Token': info.csrfToken };
+    return window.matcherAuthHeaders();
+  };
 
   window.redirectToSiteLogin = function redirectToSiteLogin() {
     const dest = `/login?redirect=${encodeURIComponent(location.pathname + location.search)}`;

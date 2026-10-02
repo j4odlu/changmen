@@ -12,7 +12,7 @@ import { installClientCoreBridges } from "@/runtime/installClientCore";
 import { installVenueWebBridge } from "@/runtime/installVenueWebBridge";
 import { clearChunkReloadFlag, installChunkReloadOnDeploy } from "@/shared/chunkReload";
 import { installOrderSoundAudioUnlock } from "@/shared/orderSound";
-import { useUserStore } from "@/stores/userStore";
+import { installSessionRecovery } from "@/runtime/sessionRecovery";
 import "@/styles/index.css";
 import App from "./App.vue";
 import router from "./router";
@@ -27,7 +27,8 @@ function bootstrap() {
   installClientCoreBridges();
   app.mount("#app");
   void initGamebetExtension();
-  void useUserStore(pinia).restoreSession();
+  const stopRecovery = installSessionRecovery(pinia);
+  import.meta.hot?.dispose(stopRecovery);
 }
 
 bootstrap();

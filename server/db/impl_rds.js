@@ -9,12 +9,14 @@
 
 export {
   authBrowserSession,
+  authResolveBrowserSession,
   authGetUser,
   authGetUserStatus,
   authPeekAccessToken,
   authRefreshToken,
   authSignIn,
   authSignOut,
+  authSignOutBrowserSession,
   isAuthConfigured,
   recordAuthAudit,
 } from "./rds/auth_store.js";

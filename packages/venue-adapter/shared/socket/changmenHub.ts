@@ -1,7 +1,7 @@
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 import { reportVenueWsStatus } from "../venueWsStatus";
-import { getChangmenAuthToken } from "../changmenAuthToken";
+import { getChangmenAuthToken, getChangmenHandshakeToken, usesChangmenCookieSession } from "../changmenAuthToken";
 import { resolveChangmenWsBase } from "../changmenWsBase";
 
 /** 与 server/realtime-hub/channels.js PM_SPORT_CHANNEL 一致 */
@@ -17,6 +17,18 @@ let refCount = 0;
 let connecting: Promise<boolean> | null = null;
 const handlers = new Map<string, Set<ChannelHandler>>();
 const serverSubscribed = new Set<string>();
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+function retryConnection(current: Socket, code: string) {
+  if (!["ACCESS_TOKEN_EXPIRED", "TEMPORARY_UNAVAILABLE"].includes(code))
+    return;
+  if (reconnectTimer)
+    clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (socket === current && refCount > 0 && (socketToken() || usesChangmenCookieSession()))
+      current.connect();
+  }, code === "TEMPORARY_UNAVAILABLE" ? 5_000 : 100);
+}
 
 function hubOrigin(): string {
   return resolveChangmenWsBase();
@@ -113,7 +125,7 @@ async function connectSocket(): Promise<boolean> {
     return connecting;
 
   const token = socketToken();
-  if (!token) {
+  if (!token && !usesChangmenCookieSession()) {
     reportVenueWsStatus("cm-hub", "disconnected");
     return false;
   }
@@ -121,11 +133,14 @@ async function connectSocket(): Promise<boolean> {
   reportVenueWsStatus("cm-hub", "connecting");
   connecting = new Promise<boolean>((resolve) => {
     let settled = false;
+    let deadline: ReturnType<typeof setTimeout> | null = null;
     const finish = (ok: boolean) => {
       if (settled)
         return;
       settled = true;
-      connecting = null;
+      if (deadline) clearTimeout(deadline);
+      if (socket === currentSocket)
+        connecting = null;
       resolve(ok);
     };
 
@@ -136,10 +151,16 @@ async function connectSocket(): Promise<boolean> {
       path: "/esport/realtime/socket.io",
       transports: ["websocket"],
       withCredentials: true,
-      auth: { token },
+      // Socket.IO 在每次连接（包括自动重连）调用 auth，不能捕获创建时的 token。
+      auth: (done) => {
+        if (usesChangmenCookieSession()) {
+          done({ protocol: "cookie" });
+          return;
+        }
+        void getChangmenHandshakeToken().then(current => done({ token: current })).catch(() => done({ token: "" }));
+      },
       extraHeaders: {
         Origin: typeof window !== "undefined" ? window.location.origin : "",
-        token,
       },
     });
 
@@ -154,19 +175,22 @@ async function connectSocket(): Promise<boolean> {
         dispatchChannel(packet.channel, packet.content);
     });
 
-    socket.on("connect_error", () => {
+    const currentSocket = socket;
+    socket.on("connect_error", (err: Error & { data?: { code?: string } }) => {
       reportVenueWsStatus("cm-hub", "error");
       finish(false);
+      retryConnection(currentSocket, err.data?.code || "");
     });
+    socket.on("auth:ended", (event: { code?: string }) => retryConnection(currentSocket, event.code || ""));
     socket.on("disconnect", () => {
       serverSubscribed.clear();
       if (refCount <= 0)
         reportVenueWsStatus("cm-hub", "disconnected");
     });
-    setTimeout(() => {
-      if (!socket?.connected)
+    deadline = setTimeout(() => {
+      if (socket === currentSocket && !currentSocket.connected)
         reportVenueWsStatus("cm-hub", "error");
-      finish(Boolean(socket?.connected));
+      finish(socket === currentSocket && currentSocket.connected);
     }, 10_000);
   });
 
@@ -199,6 +223,9 @@ export async function subscribeChangmenChannel(
     }
     refCount -= 1;
     if (refCount <= 0) {
+      if (reconnectTimer)
+        clearTimeout(reconnectTimer);
+      reconnectTimer = null;
       socket?.removeAllListeners();
       socket?.disconnect();
       socket = null;

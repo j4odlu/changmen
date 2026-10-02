@@ -1,5 +1,5 @@
 import { buildHttpRelayUrl } from "@changmen/api-contract/urls";
-import { getToken } from "@/api/client";
+import { getRequestAuthHeaders } from "@/lib/authCredentials";
 import { getApiBase } from "@/config/apiBase";
 /** 对齐 console `mr.test`：Axios 经本地 PROXY 中继访问 `/IP` */
 import { a8Axios } from "@changmen/client-core/shared/a8Axios";
@@ -22,8 +22,9 @@ export async function testProxyUrl(proxyUrl: string): Promise<ProxyTestResult | 
     const res = await a8Axios.get<{ info?: { IP?: string; Address?: string } }>(
       proxyRelayEntry(),
       {
+        withCredentials: true,
         headers: {
-          ...(getToken() ? { token: getToken() } : {}),
+          ...await getRequestAuthHeaders(proxyRelayEntry()),
           "x-proxy": proxyUrl,
           "x-proxy-url": "/IP",
         },

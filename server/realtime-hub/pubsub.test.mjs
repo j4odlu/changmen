@@ -10,6 +10,27 @@ import {
   normalizePubSubChannel,
 } from "./pubsub.js";
 import { Server } from "socket.io";
+const testAuth = {
+  authenticate: async socket => socket.handshake.auth?.token === "test-token" ? { user: { id: "test-user" } } : { code: "AUTH_REQUIRED" },
+  authorize: async (_socket, channel) => channel === "BetTarget",
+};
+
+test("private hub rejects arbitrary nonempty token and unauthorized subscriptions", async (t) => {
+  const server = http.createServer();
+  attachChangmenRealtimeHub(server, testAuth);
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const invalid = ioc(base, { path: "/esport/realtime/socket.io", transports: ["websocket"], auth: { token: "arbitrary-nonempty" }, reconnection: false });
+  const allowed = ioc(base, { path: "/esport/realtime/socket.io", transports: ["websocket"], auth: { token: "test-token" }, reconnection: false });
+  t.after(() => { invalid.close(); allowed.close(); closeChangmenRealtimeHub(); server.close(); });
+  const error = await new Promise(resolve => invalid.once("connect_error", resolve));
+  assert.equal(error.data.code, "AUTH_REQUIRED");
+  if (!allowed.connected) await new Promise(resolve => allowed.once("connect", resolve));
+  const ack = await new Promise(resolve => allowed.emit("pubsub:subscribe", { channel: "USER:another-user" }, resolve));
+  assert.equal(ack.ok, false);
+  const publish = await new Promise(resolve => allowed.emit("pubsub:publish", { channel: "USER:another-user", message: "{}" }, resolve));
+  assert.equal(publish.ok, false);
+});
 
 test("maintenance subscription and resubscription immediately receive the latest snapshot", async (t) => {
   const server = http.createServer();
@@ -42,7 +63,7 @@ test("normalizePubSubChannel", () => {
 
 test("pubsub publish delivers to subscriber not publisher", async () => {
   const server = http.createServer();
-  attachChangmenRealtimeHub(server);
+  attachChangmenRealtimeHub(server, testAuth);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = /** @type {import("node:net").AddressInfo} */ (server.address()).port;
 
@@ -106,7 +127,7 @@ test("pubsub publish delivers to subscriber not publisher", async () => {
 
 test("pubsub rejects oversized message", async () => {
   const server = http.createServer();
-  attachChangmenRealtimeHub(server);
+  attachChangmenRealtimeHub(server, testAuth);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = /** @type {import("node:net").AddressInfo} */ (server.address()).port;
 

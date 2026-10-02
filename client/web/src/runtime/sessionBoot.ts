@@ -4,25 +4,58 @@ import { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { useUserStore } from "@/stores/userStore";
 
 let sessionBooted = false;
+let generation = 0;
+let pending: { generation: number; task: Promise<void> } | null = null;
 
-/** 采集在 SPA 内启动；HG 跟单已暂停 */
-export async function bootSessionRuntime(): Promise<void> {
+/** Serialize initialization; failures remain retryable and logout cancels stale work. */
+export function bootSessionRuntime(): Promise<void> {
   if (sessionBooted)
-    return;
-  sessionBooted = true;
-  useLoseOrderStore().init();
-  const collectStore = useCollectStore();
-  const userStore = useUserStore();
-  await Promise.all([collectStore.init(), userStore.loadConfig()]);
-  // 采集 poll 启动前先把门控写上，避免首轮 50ms ingest 按默认关把影子表清掉
-  await userStore.syncPbCollectModeFromLocal();
-  const { startCollectors } = await import("@/runtime/collectors");
-  await startCollectors();
-  const { primeStakeTabId } = await import("@changmen/venue-adapter/stake");
-  primeStakeTabId();
+    return Promise.resolve();
+  const current = generation;
+  if (pending?.generation === current)
+    return pending.task;
+  const previous = pending?.task;
+  const task = (async () => {
+    await previous?.catch(() => {});
+    if (generation !== current)
+      return;
+    useLoseOrderStore().init();
+    const collectStore = useCollectStore();
+    const userStore = useUserStore();
+    await Promise.all([collectStore.init(), userStore.loadConfig()]);
+    if (generation !== current)
+      return;
+    await userStore.syncPbCollectModeFromLocal();
+    const { startCollectors, stopCollectors } = await import("@/runtime/collectors");
+    if (generation !== current)
+      return;
+    try {
+      await startCollectors();
+      if (generation !== current) {
+        stopCollectors();
+        return;
+      }
+      const { primeStakeTabId } = await import("@changmen/venue-adapter/stake");
+      if (generation !== current) {
+        stopCollectors();
+        return;
+      }
+      primeStakeTabId();
+      sessionBooted = true;
+    }
+    catch (err) {
+      stopCollectors();
+      throw err;
+    }
+  })();
+  const entry = { generation: current, task };
+  pending = entry;
+  void task.finally(() => { if (pending === entry) pending = null; }).catch(() => {});
+  return task;
 }
 
 export function stopSessionRuntime(): void {
+  generation += 1;
   if (!sessionBooted)
     return;
   sessionBooted = false;

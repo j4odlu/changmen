@@ -12,10 +12,12 @@ const auth = vi.hoisted(() => ({
 }));
 
 vi.mock("@/api/client", () => ({
+  browserAuthState: { value: "checking" },
   clearAuthSession: auth.clearAuthSession,
   getRefreshToken: () => auth.refreshToken,
   hasAuthSession: () => Boolean(auth.token || auth.refreshToken || auth.cookieMode),
   isCookieAuthMode: () => auth.cookieMode,
+  isWebAuthenticated: () => Boolean(auth.token),
 }));
 
 vi.mock("@/api/esport", () => ({

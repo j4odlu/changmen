@@ -51,7 +51,7 @@ export function isOpaqueRefreshToken(value) {
   return Boolean(parseOpaqueToken(value, REFRESH_TOKEN_PREFIX));
 }
 
-export async function createBrowserSession(userId, jwtSessionId, context = {}) {
+export async function createBrowserSession(userId, jwtSessionId, context = {}, transaction = null) {
   const pool = getPgPool();
   if (!pool)
     return null;
@@ -59,8 +59,16 @@ export async function createBrowserSession(userId, jwtSessionId, context = {}) {
   const opaque = newOpaqueToken(BROWSER_SESSION_PREFIX);
   let client;
   try {
-    client = await pool.connect();
-    await client.query("BEGIN");
+    client = transaction || await pool.connect();
+    if (!transaction) {
+      await client.query("BEGIN");
+      // 与登录共用用户行锁；禁止旧 refresh 在新登录之后撤销新 Cookie 会话。
+      const { rows } = await client.query("SELECT metadata->>'active_session_id' AS sid FROM users WHERE id = $1 FOR UPDATE", [String(userId)]);
+      if (String(rows[0]?.sid || "") !== String(jwtSessionId)) {
+        await client.query("ROLLBACK");
+        return null;
+      }
+    }
     await client.query(
       `UPDATE auth_sessions
        SET revoked_at = $2, revoke_reason = 'NEW_LOGIN'
@@ -85,17 +93,21 @@ export async function createBrowserSession(userId, jwtSessionId, context = {}) {
         createdAt + BROWSER_ABSOLUTE_MS,
       ],
     );
-    await client.query("COMMIT");
+    if (!transaction)
+      await client.query("COMMIT");
     return { token: opaque.token, absoluteExpiresAt: createdAt + BROWSER_ABSOLUTE_MS };
   }
   catch (err) {
+    if (transaction)
+      throw err;
     try { await client?.query("ROLLBACK"); }
     catch { /* ignore */ }
     console.warn("[rds] createBrowserSession:", err.message);
     return null;
   }
   finally {
-    client?.release();
+    if (!transaction)
+      client?.release();
   }
 }
 
@@ -110,7 +122,7 @@ export async function getBrowserSession(value, context = {}) {
     const now = Date.now();
     const { rows } = await pool.query(
       `SELECT id, user_id, jwt_session_id, secret_hash, cert_cn, idle_expires_at, absolute_expires_at,
-              revoked_at, revoke_reason
+              revoked_at, revoke_reason, last_seen_at
        FROM auth_sessions
        WHERE id = $1`,
       [parsed.id],
@@ -129,14 +141,19 @@ export async function getBrowserSession(value, context = {}) {
     if (storedCertCn && storedCertCn !== requestCertCn)
       return { invalid: true, userId: String(row.user_id), reasonCode: "CERT_MISMATCH" };
     const nextIdle = Math.min(now + BROWSER_IDLE_MS, Number(row.absolute_expires_at));
-    await pool.query(
-      `UPDATE auth_sessions SET last_seen_at = $2, idle_expires_at = $3 WHERE id = $1`,
-      [parsed.id, now, nextIdle],
-    );
+    if (now - Number(row.last_seen_at || 0) >= 60_000) {
+      await pool.query(
+        `UPDATE auth_sessions SET last_seen_at = GREATEST(last_seen_at, $2),
+          idle_expires_at = GREATEST(idle_expires_at, $3) WHERE id = $1 AND revoked_at IS NULL`,
+        [parsed.id, now, nextIdle],
+      );
+    }
     return {
       id: String(row.id),
       userId: String(row.user_id),
       jwtSessionId: String(row.jwt_session_id),
+      absoluteExpiresAt: Number(row.absolute_expires_at),
+      idleExpiresAt: now - Number(row.last_seen_at || 0) >= 60_000 ? nextIdle : Number(row.idle_expires_at),
     };
   }
   catch (err) {
@@ -186,14 +203,16 @@ async function insertRefreshToken(queryable, userId, sessionId, context, familyI
   return { id: opaque.id, token: opaque.token, expiresAt: now + REFRESH_TOKEN_MS };
 }
 
-export async function issueOpaqueRefreshToken(userId, sessionId, context = {}) {
+export async function issueOpaqueRefreshToken(userId, sessionId, context = {}, transaction = null) {
   const pool = getPgPool();
   if (!pool)
     return null;
   try {
-    return await insertRefreshToken(pool, userId, sessionId, context, crypto.randomUUID());
+    return await insertRefreshToken(transaction || pool, userId, sessionId, context, crypto.randomUUID());
   }
   catch (err) {
+    if (transaction)
+      throw err;
     console.warn("[rds] issueOpaqueRefreshToken:", err.message);
     return null;
   }

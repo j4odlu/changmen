@@ -180,6 +180,7 @@ export default defineConfig(({ command, mode }) => {
   proxy["/common"] = withProxyTarget(apiTarget, { ws: true, agent: mtlsAgent });
   proxy["/api"] = withProxyTarget(apiTarget, { ws: true, agent: mtlsAgent });
   proxy["/matcher"] = withProxyTarget(apiTarget, { ws: true, agent: mtlsAgent });
+  proxy["/auth"] = withProxyTarget(apiTarget, { agent: mtlsAgent });
   proxy["/health"] = withProxyTarget(apiTarget, { agent: mtlsAgent });
   proxy["/v4.0"] = withProxyTarget(apiTarget, { ws: true, agent: mtlsAgent });
 

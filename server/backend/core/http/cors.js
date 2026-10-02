@@ -53,6 +53,7 @@ export function applyCorsHeaders(req, res) {
       "Authorization",
       "X-Requested-With",
       "X-CSRF-Token",
+      "X-Changmen-Auth",
       // http-relay / 采集代理常用
       "x-proxy-url",
       "x-proxy-origin",

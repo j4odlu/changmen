@@ -27,7 +27,7 @@ import { normalizeAccountRateConfig, PlatformAccount } from "@/models/platformAc
 import { useAccountStore } from "@/stores/accountStore";
 import { useUserStore } from "@/stores/userStore";
 import { getApiBase } from "@/config/apiBase";
-import { getToken } from "@/api/client";
+import { getCompatibilityToken } from "@/lib/authCredentials";
 import { parseSportObSessionInput } from "@/runtime/obSportSessionLocal";
 import {
   isCompleteObSportCredential,
@@ -939,7 +939,7 @@ function polymarketRelayerSignUrl(): string {
 }
 
 async function refreshPolymarketRelayerStatus() {
-  const token = getToken();
+  const token = await getCompatibilityToken();
   if (!token) {
     polyRelayerConfigured.value = null;
     return;
@@ -965,7 +965,7 @@ async function onPreparePolymarketWallet() {
   polyRelayerPreparing.value = true;
   try {
     const privateKey = await resolvePolymarketPrivateKeyForSave();
-    const authToken = getToken();
+    const authToken = await getCompatibilityToken();
     if (!authToken)
       throw new Error("请先登录");
     await refreshPolymarketRelayerStatus();

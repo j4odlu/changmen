@@ -1,7 +1,9 @@
-/** Vitest node 环境可能有残缺 localStorage（getItem 不是函数），先补齐再加载 api/client。 */
-if (typeof globalThis.localStorage?.getItem !== "function") {
+/** Node 版本提供的 Web Storage 不一致；单测为两种 storage 提供完整实现。 */
+for (const name of ["localStorage", "sessionStorage"] as const) {
+  if (typeof globalThis[name]?.getItem === "function")
+    continue;
   const mem = new Map();
-  globalThis.localStorage = {
+  globalThis[name] = {
     getItem: key => (mem.has(key) ? mem.get(key) : null),
     setItem: (key, value) => {
       mem.set(String(key), String(value));

@@ -176,6 +176,14 @@ if [ -d "$ROOT/.git" ]; then
   OLD_HEAD="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
 fi
 
+# Verify against the actual live files before overwriting them. Workflow history
+# also contains frontend-only/noop runs, so it cannot prove the backend baseline.
+SOURCE_STAGE="$(mktemp -d /tmp/changmen-source-compare.XXXXXX)"
+trap 'rm -rf "$SOURCE_STAGE"' EXIT
+tar --warning=no-unknown-keyword -xzf "$ARCHIVE" -C "$SOURCE_STAGE"
+node "$SOURCE_STAGE/scripts/deploy/compare-deployed-files.mjs" "$SOURCE_STAGE" "$ROOT" "$SOURCE_STAGE/changed-paths.txt"
+export DEPLOY_CHANGED_PATHS_FILE="$SOURCE_STAGE/changed-paths.txt"
+
 # git archive 成员无前导 ./ ；两种写法都排除，避免误解压覆盖热目录
 tar --warning=no-unknown-keyword -xzf "$ARCHIVE" -C "$ROOT" \
   --exclude='server/backend/.env' \

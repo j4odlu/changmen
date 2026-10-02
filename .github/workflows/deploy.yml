@@ -95,6 +95,8 @@ jobs:
     timeout-minutes: 25
     env:
       DIST_ARCHIVE: /tmp/changmen-dist.tgz
+      # Business-day fixtures follow production's Shanghai timezone.
+      TZ: Asia/Shanghai
     steps:
       - uses: actions/checkout@v5
 
@@ -199,7 +201,7 @@ jobs:
           fi
 
       - name: Verify archive deployment plan
-        run: node --test scripts/deploy/deploy-plan.test.mjs
+        run: node --test scripts/deploy/deploy-plan.test.mjs scripts/deploy/compare-deployed-files.test.mjs
 
       - name: Pack app archive (git HEAD only)
         run: |

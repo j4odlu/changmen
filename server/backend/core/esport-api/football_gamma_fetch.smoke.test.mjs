@@ -74,12 +74,17 @@ try {
   assert.equal(leagueByTitle.get("Arsenal vs Chelsea"), "Premier League");
   assert.equal(leagueByTitle.get("Seoul vs Busan"), "K-league");
   assert.equal(FOOTBALL_OPTS.preferUpcoming, true, "PM 足球应先拉未来窗口，避免早盘被滚球分页挡住");
-  assert.equal(FOOTBALL_OPTS.pastMs, 0, "PM 足球只拉 now→future，不再补已开赛窗口");
+  assert.equal(FOOTBALL_OPTS.pastMs, 4 * 60 * 60 * 1000, "PM 足球补齐四小时内已开赛赛事，与当前列表窗口一致");
   assert.ok(FOOTBALL_OPTS.liveBudgetMs >= 10_000, "PM 足球冷拉预算应覆盖多页足球 tag 拉取");
-  assert.equal(keysetUrls.length, 1, "PM 足球过去窗口为 0 时不应请求 past→now");
+  assert.equal(keysetUrls.length, 2, "先请求未来赛事，再补齐已开赛窗口");
   const firstUrl = new URL(keysetUrls[0]);
   const firstMin = Date.parse(firstUrl.searchParams.get("start_time_min") || "");
   assert.ok(firstMin >= now - 1_000, "首个 keyset 请求应从 now 开始拉未来赛事");
+  const liveUrl = new URL(keysetUrls[1]);
+  const liveMin = Date.parse(liveUrl.searchParams.get("start_time_min") || "");
+  const liveMax = Date.parse(liveUrl.searchParams.get("start_time_max") || "");
+  assert.ok(Math.abs(liveMin - (now - FOOTBALL_OPTS.pastMs)) < 1_000, "第二个请求从滚球窗口下界开始");
+  assert.ok(Math.abs(liveMax - now) < 1_000, "滚球请求止于 now");
   console.log("football_gamma_fetch.smoke: ok", { n: rows.length, games: [...byTitle.values()] });
 }
 finally {

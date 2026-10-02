@@ -715,6 +715,7 @@ const store = {
   buildBaseballMatchList,
   buildFootballMatchList,
   buildTennisMatchList,
+  buildBasketballMatchList,
   getCollectorHotSnapshot,
   getCollectorFullSnapshot,
   getCollectorMemoryStats,

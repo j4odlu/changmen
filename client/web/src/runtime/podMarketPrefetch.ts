@@ -16,6 +16,7 @@ import { readLocalSportObSession, type SportObSessionLocal } from "@/runtime/obS
 import { pickObSportBetAccount, sportObSessionFromAccount } from "@/runtime/obSportBetAccount";
 import { readPodBetSettings } from "@/runtime/podBetSettings";
 import { useAccountStore } from "@/stores/accountStore";
+import { clearPodPrefetchQueue, runPodPrefetch } from "@/runtime/podPrefetchQueue";
 
 // 自动下注只能消费近实时预检价；页面盘口列表仍可使用较长 MARKET_TTL_MS。
 const OID_TTL_MS = 3_000;
@@ -31,6 +32,7 @@ const listeners = new Set<() => void>();
 
 export function resetPodMarketPrefetch() {
   generation += 1;
+  clearPodPrefetchQueue();
   oidQuotes.clear();
   markets.clear();
   oidInflight.clear();
@@ -124,7 +126,7 @@ export function podBoardMarketsFromObDetail(
 export async function prefetchObSportOidQuote(
   oid: string,
   mid = "",
-  opts: { marketCode?: string; boardSide?: string; odds?: number } = {},
+  opts: { marketCode?: string; boardSide?: string; odds?: number; submitBefore?: number } = {},
 ): Promise<number> {
   const id = String(oid || "").trim();
   const matchId = String(mid || "").trim();
@@ -142,17 +144,23 @@ export async function prefetchObSportOidQuote(
   const startedGeneration = generation;
   const work = (async () => {
     try {
-      const queried = await postObSportPb(
-        OB_SPORT_QUERY_MARKET_PATH,
-        buildObSportQueryBetAmountBody({
-          oid: id,
-          mid: matchId,
-          odds: Number(opts.odds) || 0,
-          hpid: obSportPlayIdFromMarketCode(opts.marketCode),
-          playOptions: obSportPlayOptions(opts.boardSide),
-        }),
-        session,
-      );
+      const queried = await runPodPrefetch(() => {
+        if (startedGeneration !== generation)
+          return Promise.resolve(null);
+        return postObSportPb(
+          OB_SPORT_QUERY_MARKET_PATH,
+          buildObSportQueryBetAmountBody({
+            oid: id,
+            mid: matchId,
+            odds: Number(opts.odds) || 0,
+            hpid: obSportPlayIdFromMarketCode(opts.marketCode),
+            playOptions: obSportPlayOptions(opts.boardSide),
+          }),
+          session,
+        );
+      }, opts.submitBefore);
+      if (queried == null)
+        return 0;
       const info = pickObSportMarketInfo(queried, id);
       const odds = Number(info?.odds) || 0;
       if (odds > 1 && startedGeneration === generation) {
@@ -165,14 +173,15 @@ export async function prefetchObSportOidQuote(
       return 0;
     }
     finally {
-      oidInflight.delete(id);
+      if (startedGeneration === generation)
+        oidInflight.delete(id);
     }
   })();
   oidInflight.set(id, work);
   return work;
 }
 
-export async function prefetchObSportMatchMarkets(mid: string): Promise<PodBoardMarket[]> {
+export async function prefetchObSportMatchMarkets(mid: string, submitBefore?: number): Promise<PodBoardMarket[]> {
   const id = String(mid || "").trim();
   if (!id)
     return [];
@@ -186,7 +195,9 @@ export async function prefetchObSportMatchMarkets(mid: string): Promise<PodBoard
   const work = (async () => {
     try {
       // 仅在跟单目标盘未命中时调用：列表有其它盘口也不能省掉详情补线。
-      const rows = podBoardMarketsFromObDetail(await fetchObFootballMatchMarkets(id, { includeDetail: true }));
+      const fetched = await runPodPrefetch(() => startedGeneration === generation
+        ? fetchObFootballMatchMarkets(id, { includeDetail: true }) : Promise.resolve([]), submitBefore);
+      const rows = podBoardMarketsFromObDetail(fetched || []);
       if (rows.length && startedGeneration === generation) {
         markets.set(id, { at: Date.now(), rows });
         bump();
@@ -197,7 +208,8 @@ export async function prefetchObSportMatchMarkets(mid: string): Promise<PodBoard
       return [];
     }
     finally {
-      marketInflight.delete(id);
+      if (startedGeneration === generation)
+        marketInflight.delete(id);
     }
   })();
   marketInflight.set(id, work);

@@ -23,6 +23,7 @@ export type PodFollowPlaceTicket = {
   sideLabel?: string;
   marketLabel?: string;
   auto?: boolean;
+  submitBefore?: number;
   accountIds?: number[];
   market: Pick<PodMarketMatch, "status" | "ob" | "locked" | "oid" | "quote" | "marketCode" | "boardSide" | "boardLine" | "fromLive">;
   quote: PodObQuoteCompare;
@@ -103,6 +104,8 @@ export async function placePodFollowBet(ticket: PodFollowPlaceTicket): Promise<{
         odds,
         stake,
         minOdds: Number(ticket.quote.minObOdds) || 0,
+        maxOdds: Number(ticket.quote.maxObOdds) || 0,
+        submitBefore: ticket.auto ? ticket.submitBefore : undefined,
         marketCode: String(ticket.market.marketCode || "").trim(),
         boardSide: String(ticket.market.boardSide || "").trim(),
         line,

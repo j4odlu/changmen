@@ -2,6 +2,7 @@
  * 用户本机直连熊猫体育 HTTP（与电竞 OB `directGet` 同路）。不经扩展、不经 VPS，不写电竞 client_matches。
  */
 import type { ClientMatchDto } from "@/types/esport";
+import { clearObSportMarketMeta, rememberObSportMarketMeta } from "@/runtime/obSportMarketMeta";
 import { a8Axios, responseBodyText } from "@changmen/client-core/shared/a8Axios";
 import { decodeObSportPbPayload } from "@/runtime/obSportCodec";
 import { resolveObFootballGame } from "@/runtime/footballLeague";
@@ -211,7 +212,10 @@ async function postPb(session: SportObSessionLocal, apiPath: string, body: Recor
     const text = responseBodyText(res.data);
     throw new Error(text.slice(0, 160) || `HTTP ${res.status}`);
   }
-  return assertEnvelope(res.data, apiPath);
+  const decoded = await assertEnvelope(res.data, apiPath);
+  if (apiPath === LIST_ODDS_PATH || apiPath === DETAIL_ODDS_PATH)
+    rememberObSportMarketMeta(origin, decoded);
+  return decoded;
 }
 
 /** 直连 yewu*。采集默认本机试玩会话；下单传入下注账号会话。禁止电竞 OB `/game/bet`。 */
@@ -965,6 +969,7 @@ export async function fetchObFootballAsClientMatchDtos(): Promise<ClientMatchDto
 }
 
 export function clearObFootballClientCache() {
+  clearObSportMarketMeta();
   memCache = null;
   inflight = null;
   lastLiveByMid = new Map();

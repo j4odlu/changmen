@@ -428,20 +428,30 @@ function recordLiveTickets() {
 
 watch(tickets, recordLiveTickets, { immediate: true });
 
-watch(tickets, (rows) => {
+watch(() => ({ rows: tickets.value, ready: autoReady.value, enabled: betSettings.value.enabled,
+  auto: betSettings.value.autoPlace, accounts: betSettings.value.followAccountIds.join(",") }), ({ rows }) => {
+  if (!autoReady.value || !betSettings.value.enabled || !betSettings.value.autoPlace || !followObEnabled.value) {
+    requestAutoPlace();
+    return;
+  }
+  const now = Date.now();
+  const skipped = new Set(pendingPlacedIds());
   for (const ticket of rows) {
+    if (skipped.has(ticket.id) || podAlertBetFailReason(ticket.alert, betSettings.value, now) != null)
+      continue;
     if (ticket.fixtureMatch.status === "none")
       void searchPodObMissFixture(ticket.alert);
     const hit = ticket.fixtureMatch.status === "matched" ? ticket.fixtureMatch.hits[0] : null;
     const mid = String(hit?.fixture.obMid || "").trim();
     if (mid && ticket.marketMatch.status !== "matched")
-      void prefetchObSportMatchMarkets(mid);
+      void prefetchObSportMatchMarkets(mid, ticketPlacePayload(ticket, true).submitBefore);
     const oid = String(ticket.marketMatch.oid || "").trim();
     if (oid && mid)
       void prefetchObSportOidQuote(oid, mid, {
         marketCode: ticket.marketMatch.marketCode,
         boardSide: ticket.marketMatch.boardSide || undefined,
         odds: Number(ticket.marketMatch.quote) || Number(ticket.obQuote.quote) || 0,
+        submitBefore: ticketPlacePayload(ticket, true).submitBefore,
       });
   }
   // 新警报、比赛、盘口或目标赔率变化时推进串行队列；不靠轮询重算整板。
@@ -449,11 +459,16 @@ watch(tickets, (rows) => {
 }, { immediate: true });
 
 function jumpToTicket(ticket: (typeof tickets.value)[number]) {
-  if (ticket.fixtureMatch.status !== "matched")
+  if (ticket.fixtureMatch.status !== "matched") {
+    // 手动点击仍可按需补场；关闭自动时不后台扫描所有警报。
+    void searchPodObMissFixture(ticket.alert);
     return;
+  }
   const hit = ticket.fixtureMatch.hits[0];
   if (!hit)
     return;
+  if (ticket.marketMatch.status !== "matched" && hit.fixture.obMid)
+    void prefetchObSportMatchMarkets(hit.fixture.obMid);
   requestPodBoardFocus(buildPodBoardFocus(hit.fixture, ticket.marketMatch));
 }
 
@@ -498,6 +513,10 @@ function ticketPlacePayload(ticket: (typeof tickets.value)[number], auto = false
     sideLabel: ticket.sideLabel,
     marketLabel: ticket.marketLabel,
     auto,
+    submitBefore: auto ? Math.min(
+      betSettings.value.maxAgeSec > 0 ? ticket.alert.alertedAt + betSettings.value.maxAgeSec * 1000 : Infinity,
+      betSettings.value.prematchOnly ? ticket.alert.starts : Infinity,
+    ) : undefined,
     accountIds: betSettings.value.followAccountIds,
     market: ticket.marketMatch,
     quote: ticket.obQuote,
@@ -1049,6 +1068,8 @@ async function maybeAutoPlace(): Promise<boolean> {
   // 暖一下预检价，给 EV/锁盘判断；真下单仍走 queryBetAmountPB
   if (followObEnabled.value) {
     for (const ticket of ageOk.slice(0, 6)) {
+      if (skipped.includes(ticket.id))
+        continue;
       const payload = ticketPlacePayload(ticket);
       if (payload.fixtureBasis !== "confirmed")
         continue;
@@ -1061,6 +1082,7 @@ async function maybeAutoPlace(): Promise<boolean> {
           marketCode: payload.market.marketCode,
           boardSide: payload.market.boardSide || undefined,
           odds: Number(payload.quote.quote) || Number(payload.market.quote) || 0,
+          submitBefore: ticketPlacePayload(ticket, true).submitBefore,
         });
     }
   }
@@ -1392,7 +1414,11 @@ async function refreshSportAmount() {
 }
 
 function reloadBetSettings() {
-  betSettings.value = readPodBetSettings();
+  const next = readPodBetSettings();
+  if (!next.autoPlace || !next.enabled
+    || next.followAccountIds.join(",") !== betSettings.value.followAccountIds.join(","))
+    resetPodMarketPrefetch();
+  betSettings.value = next;
   followV2.value = readFootballFollowV2Settings();
   if (betSettings.value.autoPlace)
     requestAutoPlace();

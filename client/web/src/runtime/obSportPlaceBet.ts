@@ -19,6 +19,7 @@ import {
 import { readLocalSportObSession, type SportObSessionLocal } from "@/runtime/obSportSessionLocal";
 import { readPodBetSettings } from "@/runtime/podBetSettings";
 import { useAccountStore } from "@/stores/accountStore";
+import { peekObSportMarketMeta } from "@/runtime/obSportMarketMeta";
 
 /** [官网可证实] post → `/yewu13/v1/betOrder/queryBetAmountPB` */
 export const OB_SPORT_QUERY_MARKET_PATH = "/yewu13/v1/betOrder/queryBetAmountPB";
@@ -33,6 +34,8 @@ export type ObSportPlaceRequest = {
   odds: number;
   stake: number;
   minOdds?: number;
+  maxOdds?: number;
+  submitBefore?: number;
   marketCode?: string;
   boardSide?: string;
   line?: number | null;
@@ -662,6 +665,10 @@ export async function placeObSportSingle(req: ObSportPlaceRequest): Promise<ObSp
   const stake = Number(req.stake);
   const mid = String(req.mid || "").trim();
   const minOdds = Number(req.minOdds) || 0;
+  const maxOdds = Number(req.maxOdds) || 0;
+  const expired = () => req.submitBefore != null && Date.now() >= req.submitBefore;
+  if (expired())
+    return { ok: false, message: "警报已过期或比赛已开赛" };
   const playOptions = obSportPlayOptions(req.boardSide);
   const hpidGuess = obSportPlayIdFromMarketCode(req.marketCode);
   const line = formatObSportMarketValue(req.line);
@@ -682,8 +689,12 @@ export async function placeObSportSingle(req: ObSportPlaceRequest): Promise<ObSp
   let submitInFlight = false;
 
   const tryOnce = async (matchType: 1 | 2): Promise<ObSportPlaceResult> => {
-    if (detailMeta === undefined)
-      detailMeta = await fetchObSportOidMeta(session, mid, oid);
+    if (expired())
+      return { ok: false, message: "警报已过期或比赛已开赛" };
+    if (detailMeta === undefined) {
+      const cached = peekObSportMarketMeta(String(session.gateway || ""), mid, oid);
+      detailMeta = cached ? { ...cached, odds: 0, oddsValue: 0, placeNum: 1 } : await fetchObSportOidMeta(session, mid, oid);
+    }
     const hidHint = String(detailMeta?.hid || "").trim();
     const hpidHint = String(detailMeta?.hpid || "").trim() || hpidGuess;
     const lineHint = line || String(detailMeta?.marketValue || "").trim();
@@ -723,6 +734,8 @@ export async function placeObSportSingle(req: ObSportPlaceRequest): Promise<ObSp
       return { ok: false, message: "预检无赔率" };
     if (minOdds > 1 && odds + 1e-6 < minOdds)
       return { ok: false, message: `预检 ${odds} 低于门槛 ${minOdds}` };
+    if (maxOdds > 1 && odds > maxOdds + 1e-6)
+      return { ok: false, message: `预检 ${odds} 超过 EV 上限 ${maxOdds}` };
     if (info && info.minStake > 0 && stake < info.minStake)
       return { ok: false, message: `低于最小额 ${info.minStake}` };
     if (info && info.maxStake > 0 && stake > info.maxStake)
@@ -744,6 +757,8 @@ export async function placeObSportSingle(req: ObSportPlaceRequest): Promise<ObSp
     });
     if (!body || !(Number((body.seriesOrders as Array<{ orderDetailList: unknown[] }>)[0]?.orderDetailList?.length) > 0))
       return { ok: false, message: "下单包为空" };
+    if (expired())
+      return { ok: false, message: "警报已过期或比赛已开赛" };
     submitInFlight = true;
     const placed = await postObSportPb(OB_SPORT_PROCESS_BET_PATH, body, session);
     submitInFlight = false;

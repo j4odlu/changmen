@@ -2,10 +2,11 @@
 import type { AdminUserRow } from "@/types/admin";
 import type { AdminOrderRow } from "@/types/admin";
 import type { FootballOrderDto } from "@/api/footballOrder";
+import type { TeamRow } from "@/api/admin";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getAdminUsers } from "@/api/admin";
+import { getAdminUsers, getTeams } from "@/api/admin";
 import { deleteAdminFootballOrders, getAdminFootballOrders } from "@/api/footballOrder";
 import AdminLayout from "@/components/admin/AdminLayout.vue";
 import AdminOrderLogsDialog from "@/components/admin/AdminOrderLogsDialog.vue";
@@ -17,6 +18,7 @@ import { footballOrderSettledProfit } from "@/runtime/podSportOrders";
 import { useUserStore } from "@/stores/userStore";
 
 type GroupMode = "user" | "account";
+const UNGROUPED_TEAM_ID = "__none__";
 
 const route = useRoute();
 const router = useRouter();
@@ -24,14 +26,14 @@ const userStore = useUserStore();
 
 const date = ref(String(route.query.date || todayKey()));
 const filterUserId = ref(String(route.query.userId || ""));
+const activeTeamId = ref(String(route.query.teamId || ""));
 const groupMode = ref<GroupMode>(route.query.view === "account" ? "account" : "user");
 const loading = ref(false);
 const loadError = ref("");
 const orders = ref<FootballOrderDto[]>([]);
-const todayStake = ref(0);
-const todayProfit = ref(0);
 const profitLabel = computed(() => date.value === todayKey() ? "当日盈亏" : "利润合计");
 const users = ref<AdminUserRow[]>([]);
+const teams = ref<TeamRow[]>([]);
 const pageReady = ref(false);
 const hScrollRef = ref<HTMLElement | null>(null);
 const logsDialogRef = ref<InstanceType<typeof AdminOrderLogsDialog> | null>(null);
@@ -123,8 +125,38 @@ function toAdminOrderRow(row: FootballOrderDto): AdminOrderRow {
   };
 }
 
+// [changmen 扩展] 足球订单沿用电竞订单的团队 Tab 与用户归属。
+const teamTabs = computed(() => {
+  const visibleTeams = userStore.isAdmin
+    ? teams.value
+    : teams.value.filter(team => team.id === userStore.teamId
+      || users.value.some(user => user.teamId === team.id));
+  const tabs = visibleTeams.map(team => ({ id: team.id, name: team.name }));
+  const knownIds = new Set(tabs.map(team => team.id));
+  for (const user of users.value) {
+    if (user.teamId && !knownIds.has(user.teamId)) {
+      tabs.push({ id: user.teamId, name: user.teamId });
+      knownIds.add(user.teamId);
+    }
+  }
+  const knownUsers = new Set(users.value.map(user => user.id));
+  if (users.value.some(user => !user.teamId)
+    || orders.value.some(order => !knownUsers.has(String(order.userId || "")))
+    || !tabs.length)
+    tabs.push({ id: UNGROUPED_TEAM_ID, name: "未分组" });
+  return tabs;
+});
+
+const selectedTeamName = computed(() =>
+  teamTabs.value.find(team => team.id === activeTeamId.value)?.name || "团队",
+);
+
+const teamUsers = computed(() => users.value.filter(user =>
+  (user.teamId || UNGROUPED_TEAM_ID) === activeTeamId.value,
+));
+
 const userFilterOptions = computed(() =>
-  [...users.value]
+  [...teamUsers.value]
     .sort((a, b) => a.userName.localeCompare(b.userName, "zh-CN"))
     .map(u => ({
       value: u.id,
@@ -133,10 +165,17 @@ const userFilterOptions = computed(() =>
 );
 
 const filteredOrders = computed(() => {
+  const userTeams = new Map(users.value.map(user => [user.id, user.teamId || UNGROUPED_TEAM_ID]));
+  const list = orders.value.filter(row =>
+    (userTeams.get(String(row.userId || "")) || UNGROUPED_TEAM_ID) === activeTeamId.value,
+  );
   if (!filterUserId.value)
-    return orders.value;
-  return orders.value.filter(row => String(row.userId) === filterUserId.value);
+    return list;
+  return list.filter(row => String(row.userId) === filterUserId.value);
 });
+
+const todayStake = computed(() => sumStake(filteredOrders.value));
+const todayProfit = computed(() => sumProfit(filteredOrders.value));
 
 const userColumns = computed(() => {
   const byUser = new Map<string, FootballOrderDto[]>();
@@ -148,8 +187,8 @@ const userColumns = computed(() => {
   }
   const userById = new Map(users.value.map(u => [u.id, u]));
   const sourceUsers = filterUserId.value
-    ? users.value.filter(u => u.id === filterUserId.value)
-    : users.value;
+    ? teamUsers.value.filter(u => u.id === filterUserId.value)
+    : teamUsers.value;
   const cols = sourceUsers.map(user => ({
     userId: user.id,
     userName: user.userName,
@@ -209,8 +248,8 @@ const hasContent = computed(() =>
 
 const subtitle = computed(() =>
   groupMode.value === "account"
-    ? "按操盘账号分列 · OB 独立，其他场馆来自统一订单"
-    : "每位用户一列 · OB 独立，其他场馆来自统一订单",
+    ? `${selectedTeamName.value} · 按操盘账号分列 · OB 独立，其他场馆来自统一订单`
+    : `${selectedTeamName.value} · 每位用户一列 · OB 独立，其他场馆来自统一订单`,
 );
 
 function syncQuery() {
@@ -218,6 +257,7 @@ function syncQuery() {
     name: "admin-football-orders",
     query: {
       date: date.value,
+      ...(activeTeamId.value ? { teamId: activeTeamId.value } : {}),
       ...(groupMode.value === "account" ? { view: "account" } : {}),
       ...(filterUserId.value ? { userId: filterUserId.value } : {}),
     },
@@ -240,21 +280,16 @@ async function loadOrders() {
   try {
     const page = await getAdminFootballOrders({
       date: date.value,
-      userId: filterUserId.value,
     });
     if (seq !== loadSeq)
       return;
     orders.value = page.list || [];
-    todayStake.value = Number(page.todayStake) || 0;
-    todayProfit.value = Number(page.todayProfit) || 0;
   }
   catch (err) {
     if (seq !== loadSeq)
       return;
     loadError.value = err instanceof Error ? err.message : String(err);
     orders.value = [];
-    todayStake.value = 0;
-    todayProfit.value = 0;
   }
   finally {
     if (seq === loadSeq)
@@ -263,7 +298,33 @@ async function loadOrders() {
 }
 
 async function refresh() {
-  await Promise.all([loadUsers(), loadOrders()]);
+  await Promise.all([loadUsers(), loadOrders(), loadTeams()]);
+  if (!teamTabs.value.some(team => team.id === activeTeamId.value)) {
+    const selectedUser = users.value.find(user => user.id === filterUserId.value);
+    activeTeamId.value = selectedUser
+      ? selectedUser.teamId || UNGROUPED_TEAM_ID
+      : teamTabs.value[0]!.id;
+  }
+  if (filterUserId.value && !teamUsers.value.some(user => user.id === filterUserId.value))
+    filterUserId.value = "";
+  syncQuery();
+}
+
+async function loadTeams() {
+  try {
+    teams.value = await getTeams();
+  }
+  catch {
+    teams.value = [];
+  }
+}
+
+async function onTeamChange() {
+  filterUserId.value = "";
+  syncQuery();
+  await nextTick();
+  if (hScrollRef.value)
+    hScrollRef.value.scrollLeft = 0;
 }
 
 function openLogs(rows: FootballOrderDto[]) {
@@ -337,8 +398,11 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AdminLayout title="足球订单" :subtitle="subtitle">
+  <AdminLayout title="足球订单查询" :subtitle="subtitle">
     <section v-loading="loading" class="admin-card admin-card--orders">
+      <el-tabs v-model="activeTeamId" class="admin-orders-team-tabs" @tab-change="onTeamChange">
+        <el-tab-pane v-for="team in teamTabs" :key="team.id" :label="team.name" :name="team.id" />
+      </el-tabs>
       <div class="admin-card__toolbar admin-orders-filters">
         <OrderDateNav v-model="date" placeholder="统计日期" />
         <el-radio-group v-model="groupMode" size="small">
@@ -503,10 +567,10 @@ onMounted(async () => {
         </div>
 
         <p
-          v-if="!loading && !loadError && !filteredOrders.length && (groupMode === 'account' || !users.length)"
+          v-if="!loading && !loadError && !filteredOrders.length && (groupMode === 'account' || !teamUsers.length)"
           class="admin-order-groups__empty"
         >
-          {{ date }} 暂无足球订单。可切换日期查看；仅查询 OB 场馆的足球订单。
+          {{ selectedTeamName }} · {{ date }} 暂无足球订单，可切换日期查看。
         </p>
       </div>
 
@@ -530,3 +594,19 @@ onMounted(async () => {
     <AdminOrderLogsDialog ref="logsDialogRef" />
   </AdminLayout>
 </template>
+
+<style scoped>
+.admin-orders-team-tabs {
+  padding: 0 16px;
+}
+.admin-orders-team-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
+}
+.admin-orders-team-tabs :deep(.el-tabs__item) {
+  height: 44px;
+  font-weight: 600;
+}
+.admin-orders-team-tabs :deep(.el-tabs__content) {
+  display: none;
+}
+</style>

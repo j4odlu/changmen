@@ -39,6 +39,25 @@ function sortUsersByName(list: AdminUserRow[]): AdminUserRow[] {
   );
 }
 
+// [changmen 扩展] 团队 Tab 与现有团队筛选共用状态，保留全站汇总入口。
+const teamTabs = computed(() => {
+  if (!userStore.isAdmin)
+    return [{ id: "", name: "本团队" }];
+  const tabs = [
+    { id: "", name: "全部团队" },
+    ...teams.value.map(team => ({ id: team.id, name: team.name })),
+  ];
+  const knownIds = new Set(tabs.map(team => team.id));
+  for (const user of users.value) {
+    if (user.teamId && !knownIds.has(user.teamId)) {
+      tabs.push({ id: user.teamId, name: user.teamId });
+      knownIds.add(user.teamId);
+    }
+  }
+  tabs.push({ id: UNGROUPED_TEAM_ID, name: "未分组" });
+  return tabs;
+});
+
 const selectedTeamName = computed(() => {
   if (!filterTeamId.value)
     return "";
@@ -229,6 +248,9 @@ onMounted(async () => {
 <template>
   <AdminLayout :title="pageTitle" :subtitle="pageSubtitle">
     <section class="admin-card admin-card--report">
+      <el-tabs v-model="filterTeamId" class="admin-reports-team-tabs">
+        <el-tab-pane v-for="team in teamTabs" :key="team.id" :label="team.name" :name="team.id" />
+      </el-tabs>
       <div class="admin-card__toolbar">
         <div class="admin-card__toolbar-left">
           <span class="admin-card__toolbar-label">统计月份</span>
@@ -316,3 +338,19 @@ onMounted(async () => {
     </section>
   </AdminLayout>
 </template>
+
+<style scoped>
+.admin-reports-team-tabs {
+  padding: 0 16px;
+}
+.admin-reports-team-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
+}
+.admin-reports-team-tabs :deep(.el-tabs__item) {
+  height: 44px;
+  font-weight: 600;
+}
+.admin-reports-team-tabs :deep(.el-tabs__content) {
+  display: none;
+}
+</style>

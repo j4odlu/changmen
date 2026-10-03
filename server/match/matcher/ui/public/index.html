@@ -605,6 +605,8 @@
     .reverse-toggle-btn:hover:not(:disabled) { filter: brightness(1.1); }
     .reverse-toggle-btn.reverse-on { border-color: #6a5a2a; color: var(--warn); background: #3d321833; }
     .reverse-toggle-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .team-table tr.reverse-row > td { background: #3d321822; }
+    .native-orientation { margin-top: 5px; color: var(--muted); font-size: 10px; }
   </style>
 
 </head>
@@ -2163,8 +2165,8 @@ function displayClientMatchTitleGbIds(cm, rows, teamMaps, gameCode) {
 
 function renderReverseCell(cmId, platform, isReversed) {
   const tag = isReversed
-    ? '<span class="reverse-tag">反</span>'
-    : '<span class="aligned-tag">正</span>';
+    ? '<span class="reverse-tag">已反转 · 生效中</span>'
+    : '<span class="aligned-tag">正向 · 生效中</span>';
   const nextReversed = !isReversed;
   const btnClass = isReversed ? 'reverse-toggle-btn reverse-on' : 'reverse-toggle-btn';
   const btnText = isReversed ? '取消反转' : '主客反转';
@@ -2176,6 +2178,7 @@ function renderReverseCell(cmId, platform, isReversed) {
     data-cm-id="${esc(String(cmId || ''))}"
     data-platform="${esc(platform || '')}"
     data-reversed="${nextReversed ? '1' : '0'}"
+    aria-pressed="${isReversed ? 'true' : 'false'}"
     title="${title}">${btnText}</button></span>`;
 }
 
@@ -2190,21 +2193,24 @@ function renderMatchedTable(rows, gameCode, teamMaps, searchQuery, cm, platforms
   const platIndex = platforms || _lastData?.platforms || {};
   const rowsHtml = visible.map(m => {
     const isReversed = reverseSet.has(m.platform);
+    // [changmen 扩展] 按已生效 Reverse 展示；从原始槽位取队名/ID，保留队伍映射身份。
+    const homeSide = isReversed ? 'away' : 'home';
+    const awaySide = isReversed ? 'home' : 'away';
     const status = m._platformMissing
       ? '<span class="team-status ts-warn" title="平台场次已不在活跃快照">已失效</span>'
       : '<span class="team-status ts-done">已映射</span>';
-    return `<tr>
+    return `<tr class="${isReversed ? 'reverse-row' : ''}">
       <td class="col-match-id">${renderMatchLinkCell(m, m.platform, cms)}</td>
       <td class="col-platform">${pbadge(m.platform)} ${status}</td>
-      <td>${renderTeamCell(m, 'home', gameCode, teamMaps, m.platform, linkCmId != null ? { cmId: linkCmId, side: 'home' } : null)}</td>
+      <td>${renderTeamCell(m, homeSide, gameCode, teamMaps, m.platform, linkCmId != null ? { cmId: linkCmId, side: 'home' } : null)}</td>
       <td style="color:#64748b;font-size:11px">${fmtTime(m.start_time)}</td>
-      <td>${renderTeamCell(m, 'away', gameCode, teamMaps, m.platform, linkCmId != null ? { cmId: linkCmId, side: 'away' } : null)}</td>
+      <td>${renderTeamCell(m, awaySide, gameCode, teamMaps, m.platform, linkCmId != null ? { cmId: linkCmId, side: 'away' } : null)}</td>
       ${renderVenueIdCell(m, platIndex, cm)}
-      <td>${renderReverseCell(cm.id, m.platform, isReversed)}</td>
+      <td>${renderReverseCell(cm.id, m.platform, isReversed)}<div class="native-orientation">场馆原始：主 ${esc(m.home || '?')} / 客 ${esc(m.away || '?')}</div></td>
     </tr>`;
   }).join('');
   return `<table class="team-table">
-    <thead><tr><th>比赛 ID</th><th>平台</th><th>主</th><th>开赛</th><th>客</th><th>场次 ID<span class="th-hint">PB：event.id / rotNum</span></th><th>方向</th></tr></thead>
+    <thead><tr><th>比赛 ID</th><th>平台</th><th>系统主<span class="th-hint">按生效方向展示</span></th><th>开赛</th><th>系统客<span class="th-hint">按生效方向展示</span></th><th>场次 ID<span class="th-hint">PB：event.id / rotNum</span></th><th>方向</th></tr></thead>
     <tbody>${rowsHtml}</tbody>
   </table>`;
 }
@@ -3540,8 +3546,18 @@ async function toggleClientMatchPlatformReverse(btn) {
       body: JSON.stringify({ platform, reversed }),
     });
     if (!res.ok || data.error) throw new Error(data.error || '主客方向更新失败');
-    showActionToast(data.summary || `${platform} 主客方向已更新`, 'ok', 3600);
-    await load();
+    const refreshed = await load({ bustCache: true });
+    const cm = (refreshed?.clientMatches || []).find(c => String(c.id) === String(cmId));
+    if (!cm) {
+      showActionToast(`${platform} 方向设置已保存，当前列表中未找到该场次，请刷新核对`, 'warn', 6000);
+    } else {
+      const appliedReversed = (cm.reverse || []).includes(platform);
+      if (appliedReversed === reversed) {
+        showActionToast(`${platform} ${reversed ? '主客反转已生效，主客两列已对调' : '已恢复正向，主客两列已还原'}`, 'ok', 3600);
+      } else {
+        showActionToast(`${platform} 方向设置已保存，但当前生效方向仍为${appliedReversed ? '反转' : '正向'}，请检查主客锁及合场结果`, 'warn', 6000);
+      }
+    }
     await refreshMatcherStatus();
   } catch (err) {
     showActionToast(`主客方向更新失败\n${err.message}`, 'err', 6000);
@@ -3670,6 +3686,7 @@ async function load(opts = {}) {
       }
     }
     if (opts.focusCmId != null) focusLinkedClientMatch(opts.focusCmId);
+    return d;
   } catch (err) {
     if (seq !== _loadSeq) return;
     _lastDataFingerprint = null;

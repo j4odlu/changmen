@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import CertificatePackageDialog from './CertificatePackageDialog.vue';
 import { onBeforeRouteLeave } from 'vue-router';
 import { listCertificates, certificateDetail, issueCertificate, registerCertificate, updateCertificateLabel, revokeCertificates,
   type CertificateList, type CertificateRow, type CertificateDetail } from '@/api/certificates';
@@ -32,9 +33,6 @@ function download(content: BlobPart, fileName: string, type = 'application/x-pem
   const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement('a'); link.href = url; link.download = fileName; document.body.appendChild(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
-}
-function downloadPackage() {
-  if (packageData.value) download(Uint8Array.from(atob(packageData.value.p12), c => c.charCodeAt(0)), packageData.value.fileName, 'application/x-pkcs12');
 }
 function clearPackage() { packageData.value = null; }
 function beforeCloseForm(done: () => void) { if (!busy.value) done(); }
@@ -183,13 +181,9 @@ onUnmounted(() => { ++loadVersion; ++detailVersion; clearInterval(timer); clearP
       </el-form>
       <template #footer><el-button :disabled="busy" @click="formOpen = false">取消</el-button><el-button type="primary" :loading="busy" :disabled="!userId || (formMode === 'REGISTER' ? !pem : password.length < 12)" @click="submit">{{ formMode === 'REGISTER' ? '确认登记' : '签发安装包' }}</el-button></template>
     </el-dialog>
-    <el-dialog v-model="packageOpen" title="证书已签发，请下载安装包" width="600px" :close-on-click-modal="false" @closed="clearPackage">
-      <el-alert title="关闭此窗口后，安装包无法再次取回。丢失请补发新证书。" type="warning" :closable="false" />
-      <p>安装包已加密，请把文件和安装包密码分别妥善交给所属用户。</p>
-      <p class="mono">{{ packageData?.fingerprint }}</p>
+    <CertificatePackageDialog v-model="packageOpen" :package-data="packageData" @closed="clearPackage">
       <p v-if="previous">原证书仍有效（若原先已过期或吊销则维持原状态）。用户安装并登录确认后，可在列表中吊销原证书。</p>
-      <template #footer><el-button type="primary" @click="downloadPackage">下载 .p12 安装包</el-button><el-button @click="packageOpen = false">我已保存，关闭窗口</el-button></template>
-    </el-dialog>
+    </CertificatePackageDialog>
     <el-drawer v-model="detailOpen" title="证书详情与审计" size="650px">
       <div v-loading="detailLoading"><el-alert v-if="detailError" :title="detailError" type="error" :closable="false" />
         <template v-if="detail && detailRow">

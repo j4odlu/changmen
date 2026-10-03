@@ -1,5 +1,6 @@
 import { authHeaders } from '@/lib/authSession';
 import { getApiBase } from '@/config/apiBase';
+export type CertificatePackage = { fingerprint: string; p12: string; fileName: string };
 export type CertificateRow = {
   fingerprint: string; user_id: string; user_name: string; serial: string; subject_cn: string; label: string;
   not_before: number; expires_at: number; created_at: number; revoked_at: number | null; revoke_reason: string | null;
@@ -21,7 +22,7 @@ async function call<T>(suffix = '', body?: unknown): Promise<T> {
 }
 export const listCertificates = () => call<CertificateList>();
 export const certificateDetail = (fingerprint: string) => call<CertificateDetail>(`/detail?fingerprint=${encodeURIComponent(fingerprint)}`);
-export const issueCertificate = (body: { userId: string; label: string; password: string; days: number; purpose?: string; replacesFingerprint?: string }) => call<{ fingerprint: string; p12: string; fileName: string }>('/issue', body);
+export const issueCertificate = (body: { userId: string; label: string; password: string; days: number; purpose?: string; replacesFingerprint?: string }) => call<CertificatePackage>('/issue', body);
 export const registerCertificate = (body: { userId: string; label: string; pem: string }) => call('/register', body);
 export const updateCertificateLabel = (fingerprint: string, label: string) => call('/label', { fingerprint, label });
 export const revokeCertificate = (fingerprint: string, reason: string) => call('/revoke', { fingerprint, reason });

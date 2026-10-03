@@ -6,7 +6,6 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import {
   deleteTeam as apiDeleteTeam,
-  createAdminUser,
   deleteAdminUser,
   getAdminUsers,
   getTeams,
@@ -16,6 +15,7 @@ import {
   upsertTeam,
 } from "@/api/admin";
 import AdminLayout from "@/components/admin/AdminLayout.vue";
+import AdminCreateUserDialog from "@/components/admin/AdminCreateUserDialog.vue";
 import AdminUserDetail from "@/components/admin/AdminUserDetail.vue";
 import CertificateManagerPanel from "@/components/admin/CertificateManagerPanel.vue";
 import {
@@ -63,8 +63,6 @@ function openCertificates(row: AdminUserRow) {
 }
 
 const createDialog = ref(false);
-const createForm = reactive({ userName: "", password: "", confirm: "" });
-const createLoading = ref(false);
 
 const resetDialog = ref(false);
 const resetTarget = ref<AdminUserRow | null>(null);
@@ -240,9 +238,6 @@ function viewOrders(row: AdminUserRow) {
 }
 
 function openCreate() {
-  createForm.userName = "";
-  createForm.password = "";
-  createForm.confirm = "";
   createDialog.value = true;
 }
 
@@ -259,33 +254,9 @@ function openRename(row: AdminUserRow) {
   renameDialog.value = true;
 }
 
-async function submitCreate() {
-  const name = createForm.userName.trim();
-  if (!name) {
-    ElMessage.warning("请输入用户名");
-    return;
-  }
-  if (createForm.password.length < 6) {
-    ElMessage.warning("密码至少 6 位");
-    return;
-  }
-  if (createForm.password !== createForm.confirm) {
-    ElMessage.warning("两次密码不一致");
-    return;
-  }
-  createLoading.value = true;
-  try {
-    await createAdminUser(name, createForm.password);
-    ElMessage.success(`用户 ${name} 已创建`);
-    createDialog.value = false;
-    await loadUsers();
-  }
-  catch (err) {
-    ElMessage.error(err instanceof Error ? err.message : "创建失败");
-  }
-  finally {
-    createLoading.value = false;
-  }
+async function refreshCreatedUsers() {
+  try { await loadUsers(); }
+  catch (error) { ElMessage.warning(error instanceof Error ? `用户已创建，但列表刷新失败：${error.message}` : '用户已创建，请刷新列表'); }
 }
 
 async function submitReset() {
@@ -645,27 +616,7 @@ onUnmounted(() => {
       </el-tabs>
     </el-drawer>
 
-    <el-dialog v-model="createDialog" title="新建用户" class="admin-dialog" width="400px" destroy-on-close>
-      <el-form label-width="80px" @submit.prevent="submitCreate">
-        <el-form-item label="用户名" required>
-          <el-input v-model="createForm.userName" autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="密码" required>
-          <el-input v-model="createForm.password" type="password" show-password autocomplete="new-password" />
-        </el-form-item>
-        <el-form-item label="确认密码" required>
-          <el-input v-model="createForm.confirm" type="password" show-password autocomplete="new-password" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createDialog = false">
-          取消
-        </el-button>
-        <el-button type="primary" :loading="createLoading" @click="submitCreate">
-          创建
-        </el-button>
-      </template>
-    </el-dialog>
+    <AdminCreateUserDialog v-if="userStore.isAdmin" v-model="createDialog" @created="refreshCreatedUsers" />
 
     <el-dialog
       v-model="resetDialog"

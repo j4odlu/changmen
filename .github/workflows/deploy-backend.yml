@@ -1,0 +1,55 @@
+name: Deploy backend
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'server/**'
+      - 'packages/**'
+      - 'devtools/**'
+      - 'lines/**'
+      - 'deploy/**'
+      - 'scripts/deploy/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'turbo.json'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-backend-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Shanghai
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Check backend
+        run: |
+          npm run check:boundaries
+          npm run compile:router --workspace=@changmen/backend
+          npm test
+          node --test scripts/deploy/classify-deploy-scope.test.mjs scripts/deploy/workflows.test.mjs scripts/deploy/deploy-plan.test.mjs scripts/deploy/compare-deployed-files.test.mjs
+          bash scripts/deploy/release.test.sh
+      - name: Publish backend
+        env:
+          DEPLOY_HOST: '47.57.10.202'
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_REPO: ${{ secrets.DEPLOY_REPO }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: bash scripts/deploy/publish.sh backend

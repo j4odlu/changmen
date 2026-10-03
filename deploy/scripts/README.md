@@ -8,7 +8,10 @@
 
 | 脚本 | 触发方 | 说明 |
 |------|--------|------|
-| [`apply-repo-archive.sh`](apply-repo-archive.sh) | 本机 tarball / GHA | 解压归档 → 扁平化 → 调用 `deploy-server-remote.sh` |
+| [`release-frontend.sh`](release-frontend.sh) | GHA / sh | 独立锁、版本目录、旧资源保留、静态验收及失败回滚 |
+| [`release-backend.sh`](release-backend.sh) | GHA / sh | 独立依赖安装、编译、迁移、PM2 激活、健康检查及失败回滚 |
+| [`release-common.sh`](release-common.sh) | 两端共用 | 版本水位、锁、归档路径校验、原子链接切换 |
+| [`apply-repo-archive.sh`](apply-repo-archive.sh) | 历史 tarball | 原地解压；受管后端启用后拒绝运行 |
 | [`deploy-server-remote.sh`](deploy-server-remote.sh) | 上述 / 手动 | 增量 `npm install`、RDS 迁移、PM2 重启、`post-deploy-check` |
 | [`sync-git-to-flat-app.sh`](sync-git-to-flat-app.sh) | 香港 git pull 流程 | `CHANGMEN_GIT_REPO/changmen` → 扁平 `DEPLOY_REPO` |
 | [`flatten-hk-vps.sh`](flatten-hk-vps.sh) | 一次性 | 旧嵌套布局 → 扁平 `/root/changmen` |

@@ -45,3 +45,12 @@ test("explicit full release retains full-deploy behavior", () => {
 test('certificate schema is applied independently of account/order migrations', () => {
   assert.match(plan(['server/db/schema/client_certificates.sql']), /schema=0 players=0 owner=0 timers=0 certificates=1/);
 });
+
+test('isolated release preserves certificate-only migration and skips install/compile', () => {
+  assert.match(plan(['server/db/schema/client_certificates.sql'], { DEPLOY_RELEASE_MODE: '1' }),
+    /install=0 compile=0 web=1 schema=0 players=0 owner=0 timers=0 certificates=1/);
+});
+
+test('isolated release still applies actual account schema changes', () => {
+  assert.match(plan(['server/backend/db/migrations/044_auth_browser_sessions.sql'], { DEPLOY_RELEASE_MODE: '1' }), /schema=1/);
+});

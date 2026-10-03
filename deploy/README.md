@@ -23,7 +23,7 @@
 
 | 角色 | IP | 说明 |
 |------|-----|------|
-| **生产（HK）** | `47.57.10.202` | **push `master` → GHA**（[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)）；本机 `deploy202.bat` 仅紧急备用 |
+| **生产（HK）** | `47.57.10.202` | **push `master` → GHA**（[前端](../.github/workflows/deploy-frontend.yml) / [后端](../.github/workflows/deploy-backend.yml)）；本机用 `sh/deploy-frontend.sh` / `sh/deploy-backend.sh`，见 [独立部署](../docs/INDEPENDENT_DEPLOYMENT.md) |
 
 | 区域 | 方式 |
 |------|------|
@@ -84,8 +84,8 @@ cd server/backend && node scripts/ops/diagnostics/probe-hk-relay.mjs
 
 `HTTP_RELAY_ALLOWED_HOSTS` 默认含 `gamma-api.polymarket.com,clob.polymarket.com,api.predict.fun,api-testnet.predict.fun`。探针失败时检查 VPS 能否 `curl -I https://clob.polymarket.com/time` 与 `curl -I https://api.predict.fun/v1/tags -H 'x-api-key: …'`。
 
-**Predict.fun 主网**：VPS `server/backend/.env` 需 `PREDICT_FUN_API_KEY`（ws-forward）+ house 代下 `PREDICT_FUN_PRIVY_PRIVATE_KEY` / `PREDICT_FUN_PREDICT_ACCOUNT`；前端勿再打包主号私钥。GHA 部署在 GitHub Secrets 设 `PREDICT_FUN_API_KEY`，`deploy.yml` 会注入构建与 `sync-hk-relay-env-remote.sh`。
+**Predict.fun 主网**：VPS `server/backend/.env` 需 `PREDICT_FUN_API_KEY`（ws-forward）+ house 代下 `PREDICT_FUN_PRIVY_PRIVATE_KEY` / `PREDICT_FUN_PREDICT_ACCOUNT`；前端勿再打包主号私钥。独立 GHA 发布不再注入平台 Key/私钥或自动同步 relay env；服务器凭证用 `scripts/sync/` 的独立入口维护。
 
-**Predict.fun 模式 A（运营主号）**：下注私钥通过构建时 `VITE_PREDICT_FUN_PRIVY_PRIVATE_KEY` + `VITE_PREDICT_FUN_PREDICT_ACCOUNT`（或 `VITE_PREDICT_FUN_MASTER_PRIVATE_KEY`）注入；用户 changmen 账号 token 仅占位 `{ "mode": "house" }`。可选 GitHub Secrets：`PREDICT_FUN_PRIVY_PRIVATE_KEY`、`PREDICT_FUN_PREDICT_ACCOUNT`（见 `deploy.yml`）。
+**Predict.fun 模式 A（运营主号）**：服务器 house 代下凭证留在 VPS `.env`；生产前端构建不接收 `VITE_*PRIVATE_KEY`。用户钱包/账号签名按运行时凭证路径执行，不以构建时共享主号私钥提供。独立发布说明见 [INDEPENDENT_DEPLOYMENT.md](../docs/INDEPENDENT_DEPLOYMENT.md)。
 
 **PROXY 与 relay 分离：** `localStorage.PROXY` / 账号 `proxyId` 仅用于电竞**投注账号**经 http-relay 访问平台 gateway；**Predict.fun HK relay** 走当前页面同源；**Polymarket HTTP** 走 `Pm_HttpRequest`，不受 PROXY 影响。

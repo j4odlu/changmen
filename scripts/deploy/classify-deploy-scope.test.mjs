@@ -35,6 +35,11 @@ describe("classifyDeployScope", () => {
   it("unknown path is full", () => {
     assert.equal(classifyDeployScope(["mystery/tool.js"]), "full");
   });
+
+  it("root dependency/build inputs affect both sides", () => {
+    for (const p of ["package.json", "package-lock.json", "turbo.json"])
+      assert.equal(classifyDeployScope([p]), "full");
+  });
 });
 
 describe("resolveDeployScope", () => {

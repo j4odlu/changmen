@@ -37,6 +37,12 @@ export function classifyDeployScope(paths) {
 
     sawDeployRelevant = true;
 
+    if (p === "package.json" || p === "package-lock.json" || p === "turbo.json") {
+      frontend = true;
+      backend = true;
+      continue;
+    }
+
     if (p.startsWith("client/web/")) {
       frontend = true;
       continue;
@@ -57,9 +63,7 @@ export function classifyDeployScope(paths) {
       || p.startsWith("deploy/")
       || p.startsWith("devtools/")
       || p.startsWith("scripts/deploy/")
-      || p === "package.json"
-      || p === "package-lock.json"
-      || p === "turbo.json"
+      || p.startsWith("lines/")
     ) {
       backend = true;
       continue;

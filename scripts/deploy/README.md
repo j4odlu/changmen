@@ -2,6 +2,8 @@
 
 本机 → 香港 VPS 的 **Node/BAT 部署入口**（整仓 tarball + 本地 `dist`）。VPS 上增量步骤见 [`deploy/scripts/`](../../deploy/scripts/)（bash）。
 
+受管版本发布统一使用 [`publish.sh`](publish.sh)，GHA 与 `sh/deploy-frontend.sh` / `sh/deploy-backend.sh` 共用。下面历史 BAT/fast 工具不适用于新的版本目录后端；详见 [独立部署](../../docs/INDEPENDENT_DEPLOYMENT.md)。
+
 ## 脚本
 
 | 文件 | 用途 |
@@ -12,7 +14,7 @@
 | `deploy-hk-fast.mjs` | 仅变更源文件 + GHA dist（小 tarball） |
 | `deploy202.bat` | 生产 202 紧急部署（GHA 故障时） |
 
-生产 **202** 日常：`push master` → [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml)。env 同步见 [`scripts/sync/`](../sync/README.md)。
+生产 **202** 日常：`push master` → [前端 workflow](../../.github/workflows/deploy-frontend.yml) / [后端 workflow](../../.github/workflows/deploy-backend.yml)。env 同步见 [`scripts/sync/`](../sync/README.md)。
 
 ## 常用命令
 

@@ -194,7 +194,14 @@ classify() {
   return 0
 }
 
-if [ "$DEPLOY_FULL" = "1" ]; then
+if [ "${DEPLOY_RELEASE_MODE:-0}" = "1" ]; then
+  # release-backend.sh has already installed and compiled in an isolated tree.
+  # Preserve the existing migration ordering without archive/Git fallback guesses.
+  DO_PM2_WEB=1
+  DO_PM2_PM_SPORTS=1
+  DO_PM2_PM_FOOTBALL=1
+  RDS_SCHEMA_TOUCHED="${DEPLOY_SCHEMA_CHANGED:-0}"
+elif [ "$DEPLOY_FULL" = "1" ]; then
   DO_INSTALL_ROOT=1
   DO_INSTALL_FRONTEND=1
   DO_APP_BUILD=1
@@ -243,7 +250,7 @@ if [ "$DEPLOY_SKIP_APP_BUILD" = "1" ]; then
 fi
 
 CERTIFICATE_SCHEMA_TOUCHED=0
-if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ] || [ "$OLD_HEAD" != "$NEW_HEAD" ]; then
+if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ] || { [ "${DEPLOY_RELEASE_MODE:-0}" != "1" ] && [ "$OLD_HEAD" != "$NEW_HEAD" ]; }; then
   while IFS= read -r path; do
     case "$path" in
       server/db/schema/client_certificates.sql|*apply-client-certificate-schema.mjs)
@@ -276,8 +283,10 @@ fi
 
 cd "$CHANGMEN"
 DIST_UPLOAD_MARKER="$CHANGMEN/client/web/.deploy-needs-dist-upload"
-rm -f "$DIST_UPLOAD_MARKER"
-if [ "$NEED_DIST_UPLOAD" = "1" ]; then
+if [ "${DEPLOY_RELEASE_MODE:-0}" != "1" ]; then rm -f "$DIST_UPLOAD_MARKER"; fi
+if [ "${DEPLOY_RELEASE_MODE:-0}" = "1" ]; then
+  log "isolated backend release; frontend publish marker untouched"
+elif [ "$NEED_DIST_UPLOAD" = "1" ]; then
   log "frontend changed; local dist upload required"
   printf '%s\n' "$NEW_HEAD" > "$DIST_UPLOAD_MARKER"
 else

@@ -23,6 +23,15 @@ if [ "$ROOT" = /root/gamebet ] && [ -d /root/changmen/server/backend ]; then
   export DEPLOY_REPO="$ROOT"
 fi
 
+# Legacy in-place deployments must never overwrite a managed release installation.
+mkdir -p "$ROOT/.deploy-state"
+exec 8>"$ROOT/.deploy-state/backend.lock"
+flock -w 900 8
+if [ -L "$ROOT/backend-current" ] || [ -L "$ROOT/client/web/dist" ]; then
+  echo "ERROR: managed releases active; use sh/deploy-backend.sh or Deploy backend in Actions" >&2
+  exit 1
+fi
+
 PERSIST_SECRETS="$ROOT/.deploy-secrets"
 
 merge_secrets_to_persist() {

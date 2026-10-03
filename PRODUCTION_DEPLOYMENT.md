@@ -280,7 +280,7 @@ npm run build
 | **2** | API CORS（允许 `changmen.fun` / `www` Origin） | ✅ backend `core/http/cors.js`；`CORS_ALLOWED_ORIGINS` 可覆盖 |
 | **3** | `VITE_API_BASE` 试包验收 | ✅ 已验收（正式切流前） |
 | **4** | 正式前端打 API 域 | ✅ `client/web/.env.production` + 生产 `dist` 已切；Caddy 仍双挂；回滚目录 `dist.prev.step4` |
-| **5** | 拆发布流水线（FE 只换 `dist` / BE 只 `pm2`） | ✅ GHA 按路径分流；`./sh/deploy-frontend.sh` / `./sh/deploy-backend.sh` |
+| **5** | 拆发布流水线（FE 只换 `dist` / BE 只 `pm2`） | ✅ 两个独立 workflow；[版本目录、验收与回滚](docs/INDEPENDENT_DEPLOYMENT.md) |
 | 6 | 收掉页面站 API 反代（真正拆开） | 未做 |
 
 ### 步骤 5 操作（独立发版）
@@ -288,8 +288,8 @@ npm run build
 | 变更范围 | GHA / 本机 | 是否 `pm2 restart` |
 |----------|------------|-------------------|
 | 仅 `client/web/**` | 只 build + 上传 `dist` | **否** |
-| 仅 `server/**` / `deploy/**` 等 | 只 apply 仓库 + 重启进程 | 是 |
-| `venue-adapter` / `packages/*` / 两侧都有 | 全量（先 BE 再 FE） | 是 |
+| 仅 `server/**` / `deploy/**` 等 | 后端版本目录安装、编译、重启和验收，保留页面入口 | 是 |
+| `venue-adapter` / `packages/*` / 根依赖文件 / 两侧都有 | 两条 workflow 各自发布；接口变更须分步兼容 | 是 |
 
 本机紧急：
 
@@ -298,7 +298,7 @@ npm run build
 ./sh/deploy-backend.sh    # 只后端，保留现网 dist
 ```
 
-分类逻辑：`scripts/deploy/classify-deploy-scope.mjs`。手动强制全量：GHA `workflow_dispatch` → `full_deploy` 或 `scope=full`。
+GHA 使用各自 workflow 的 `paths`，不再运行分类 job。手动发布：Actions → `Deploy frontend` / `Deploy backend` → Run workflow（仅 master）；失败重跑对应端。首次切换、发布版本、数据库迁移及回滚限制见 [INDEPENDENT_DEPLOYMENT.md](docs/INDEPENDENT_DEPLOYMENT.md)。本机分类工具 `scripts/deploy/classify-deploy-scope.mjs` 保留供历史调用方使用。
 
 
 ### 步骤 1 操作

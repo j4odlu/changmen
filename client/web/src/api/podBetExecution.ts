@@ -9,7 +9,7 @@ export type PodBetLease = {
 
 export async function reservePodBetExecution(body: {
   alertId: string;
-  venue: "OB" | "Polymarket";
+  venue: "OB" | "Polymarket" | "RAY";
   playerId: number;
 }): Promise<PodBetLease> {
   return unwrap(await post<PodBetLease>("Client_ReservePodBet", body));

@@ -148,5 +148,12 @@ export function finalizeNonPolymarketSave(merged, prevRaw, money, bet_money) {
 
 /** 场馆等非 PM/非 PF：仅共用 raw 保留（历史行为，与旧非 PM 支尾段一致） */
 export function mergeOtherProviderLogicalSave(merged, prevRaw, money, bet_money) {
+  // [changmen 扩展] 通用拉单不带足球跟单元数据，仍须保留 RAY 已绑定业务域及去重键。
+  if (merged.provider === "RAY" && prevRaw.domain === "sports" && prevRaw.sport === "football") {
+    for (const key of ["domain", "sport", "source", "podClientId", "podRayMatchId", "podMarketCode", "podBoardSide"]) {
+      if (!String(merged[key] ?? "").trim() && prevRaw[key] != null)
+        merged[key] = prevRaw[key];
+    }
+  }
   return finalizeNonPolymarketSave(merged, prevRaw, money, bet_money);
 }

@@ -34,6 +34,9 @@ export interface OrderRow {
   PodClientId?: string;
   /** [changmen 扩展] POD 跟单时板上 PM 赛事 id，用于刷新后同场闸门 */
   PodPmMatchId?: string;
+  PodRayMatchId?: string;
+  PodMarketCode?: string;
+  PodBoardSide?: string;
   /** [changmen 扩展] 原始订单游戏/运动码 */
   Game?: string;
   /** [changmen 扩展] Polymarket 持仓，来自 orders.raw */

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { pickPodRayAutoTicket, placePodRayFollowBet, podRayFollowPlaceBlock, readRayFootballBindTasks, rayGateEntry, syncRayFootballOrders, type PodRayFollowPlaceTicket } from "@/runtime/podRayFollowPlace";
+import { getExchange } from "@changmen/shared/currency";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { ElMessage } from "element-plus";
@@ -143,6 +145,10 @@ let autoRunRequested = false;
 let autoRunnerStopped = false;
 const UI_TICK_MS = 1_000;
 const obMatchPlugin = getPodVenueMatchPlugin("OB");
+const rayMatchPlugin = getPodVenueMatchPlugin("RAY");
+let rayOrderTimer: ReturnType<typeof setInterval> | null = null;
+const rayOrderRevision = ref(0);
+const rayOrdersRefreshing = ref(false);
 const pmMatchPlugin = getPodVenueMatchPlugin("Polymarket");
 
 const tickets = computed(() => {
@@ -198,6 +204,9 @@ const tickets = computed(() => {
       maxOdds: scored.maxObOdds,
       nvp: scored.nvp,
     });
+    const rayFixtureMatch = venueMatches.get("RAY")!.fixture;
+    const rayMarketMatch = venueMatches.get("RAY")!.market;
+    const rayQuote = rayMatchPlugin.compareQuote(rayMarketMatch, { minOdds: ticket.minObOdds, maxOdds: ticket.maxObOdds, nvp: ticket.nvp });
     const selectionShadow = buildFootballFollowSelectionShadow({
       fixtureMatch,
       fixture: hit?.fixture,
@@ -248,6 +257,7 @@ const tickets = computed(() => {
       quoteShadow,
       legacyBlock,
       shadowCompare,
+      rayFixtureMatch, rayMarketMatch, rayQuote,
       pmMarketMatch,
       pmQuote,
       pmFixtureMatch,
@@ -259,18 +269,30 @@ const tickets = computed(() => {
 const ticketByAlertId = computed(() => new Map(tickets.value.map(ticket => [ticket.id, ticket])));
 const matchedAlertCount = computed(() => alerts.value.reduce((count, alert) => {
   const ticket = ticketByAlertId.value.get(alert.id);
-  return count + (ticket && ticketHasPodFollowMatch(ticket) ? 1 : 0);
+  return count + (ticket && ticketHasAnyVenueMatch(ticket) ? 1 : 0);
 }, 0));
 const visiblePodAlerts = computed(() => alertFilter.value === "all"
   ? alerts.value
   : alerts.value.filter((alert) => {
       const ticket = ticketByAlertId.value.get(alert.id);
-      return ticket != null && ticketHasPodFollowMatch(ticket);
+      return ticket != null && ticketHasAnyVenueMatch(ticket);
     }));
+
+function ticketHasAnyVenueMatch(ticket: (typeof tickets.value)[number]): boolean {
+  return ticketHasPodFollowMatch(ticket) || (ticket.rayFixtureMatch.status === "matched" && ticket.rayMarketMatch.status === "matched")
+    || (ticket.pmFixtureMatch.status === "matched" && ticket.pmMarketMatch.status === "matched");
+}
+
+function displayLogTicket(ticket: (typeof tickets.value)[number]) {
+  if (ticketHasPodFollowMatch(ticket)) return ticket;
+  const ray = ticket.rayMarketMatch.status === "matched";
+  return { ...ticket, fixtureMatch: ray ? ticket.rayFixtureMatch : ticket.pmFixtureMatch,
+    marketMatch: ray ? ticket.rayMarketMatch : ticket.pmMarketMatch, obQuote: ray ? ticket.rayQuote : ticket.pmQuote };
+}
 
 function podAlertMatched(id: string): boolean {
   const ticket = ticketByAlertId.value.get(id);
-  return ticket != null && ticketHasPodFollowMatch(ticket);
+  return ticket != null && ticketHasAnyVenueMatch(ticket);
 }
 
 function onPodAlertClick(id: string) {
@@ -280,7 +302,7 @@ function onPodAlertClick(id: string) {
 }
 const logRows = ref<PodFollowLogRow[]>(readPodFollowLog());
 const liveById = computed(() => new Map(
-  tickets.value.filter(ticketHasPodFollowMatch).map(ticket => [ticket.id, ticket]),
+  tickets.value.filter(ticketHasAnyVenueMatch).map(ticket => [ticket.id, ticket]),
 ));
 
 function decisionFixtureLabel(ticket: (typeof tickets.value)[number]): string {
@@ -384,6 +406,7 @@ function decisionShadowTitle(ticket: (typeof tickets.value)[number]): string {
 }
 
 const followObEnabled = computed(() => betSettings.value.followAccountIds.length > 0);
+const followRayEnabled = computed(() => betSettings.value.rayFollowAccountIds.length > 0);
 const followPmEnabled = computed(() => betSettings.value.pmFollowAccountIds.length > 0);
 
 function refreshLog() {
@@ -393,9 +416,9 @@ function refreshLog() {
 function recordLiveTickets() {
   let wrote = false;
   for (const ticket of tickets.value) {
-    if (!ticketHasPodFollowMatch(ticket))
+    if (!ticketHasAnyVenueMatch(ticket))
       continue;
-    const next = upsertPodFollowEv(buildPodFollowLogRow(ticket, nowTick.value));
+    const next = upsertPodFollowEv(buildPodFollowLogRow(displayLogTicket(ticket), nowTick.value));
     if (next.added || next.wrote)
       wrote = true;
   }
@@ -434,11 +457,11 @@ function jumpToTicket(ticket: (typeof tickets.value)[number]) {
   requestPodBoardFocus(buildPodBoardFocus(hit.fixture, ticket.marketMatch));
 }
 
-function followStakeFor(venue: "OB" | "Polymarket"): number {
-  return Number(venue === "OB" ? betSettings.value.obStake : betSettings.value.pmStake) || 0;
+function followStakeFor(venue: "OB" | "Polymarket" | "RAY"): number {
+  return Number(venue === "OB" ? betSettings.value.obStake : venue === "RAY" ? betSettings.value.rayStake : betSettings.value.pmStake) || 0;
 }
 
-function strategyStakeFor(venue: "OB" | "Polymarket", auto: boolean): number {
+function strategyStakeFor(venue: "OB" | "Polymarket" | "RAY", auto: boolean): number {
   const base = followStakeFor(venue);
   return auto ? resolvePodYaboStake(base, betSettings.value) : base;
 }
@@ -447,6 +470,8 @@ function formatEnabledVenueStakes(): string {
   const parts: string[] = [];
   if (followObEnabled.value)
     parts.push(`OB ${formatPodStake(followStakeFor("OB"))}${betSettings.value.obAccountRotation && betSettings.value.followAccountIds.length > 1 ? " 轮换" : ""}`);
+  if (followRayEnabled.value)
+    parts.push(`RAY ${formatPodStake(followStakeFor("RAY"))}`);
   if (followPmEnabled.value)
     parts.push(`PM ${formatPodStake(followStakeFor("Polymarket"))}`);
   return parts.join(" · ") || "未选账号";
@@ -498,12 +523,24 @@ function pmTicketPlacePayload(ticket: (typeof tickets.value)[number], auto = fal
   };
 }
 
+function rayTicketPlacePayload(ticket: (typeof tickets.value)[number], auto = false): PodRayFollowPlaceTicket {
+  const hit = ticket.rayFixtureMatch.status === "matched" ? ticket.rayFixtureMatch.hits[0] : null;
+  return { id: ticket.id, stake: strategyStakeFor("RAY", auto), fixtureStatus: ticket.rayFixtureMatch.status,
+    fixtureBasis: ticket.rayFixtureMatch.basis, rayMatchId: String(hit?.fixture.providers?.RAY || ""),
+    home: ticket.alert.home, away: ticket.alert.away, sideLabel: ticket.sideLabel, marketLabel: ticket.marketLabel,
+    auto, submitBefore: auto ? Math.min(
+      betSettings.value.maxAgeSec > 0 ? ticket.alert.alertedAt + betSettings.value.maxAgeSec * 1000 : Infinity,
+      betSettings.value.prematchOnly ? ticket.alert.starts : Infinity,
+    ) : undefined,
+    accountIds: betSettings.value.rayFollowAccountIds, market: ticket.rayMarketMatch, quote: ticket.rayQuote };
+}
+const placingRayId = ref("");
 const placingId = ref("");
 const placingPmId = ref("");
 const placed = ref<Record<string, true>>({});
 const placeNote = ref<Record<string, string>>({});
 
-function venuePlaceKey(venue: "OB" | "Polymarket", id: string): string {
+function venuePlaceKey(venue: "OB" | "Polymarket" | "RAY", id: string): string {
   return `${venue}:${String(id || "").trim()}`;
 }
 
@@ -521,6 +558,42 @@ function isTodayOrderRow(row: OrderRow): boolean {
   return d.getFullYear() === now.getFullYear()
     && d.getMonth() === now.getMonth()
     && d.getDate() === now.getDate();
+}
+
+function rayUnifiedFootballRows(todayOnly = false): OrderRow[] {
+  return [...orderStore.orders.values()].flat().filter(r => r.Type === "RAY" && isUnifiedFootballOrderRow(r)
+    && (!todayOnly || isTodayOrderRow(r)));
+}
+function rayPendingTasks() { void rayOrderRevision.value; return readRayFootballBindTasks(); }
+function rayPendingPlacedIds(): string[] {
+  return [...Object.keys(placed.value), ...Object.keys(autoAttempted.value)]
+    .filter(k => k.startsWith("RAY:")).map(k => k.slice(4))
+    .concat(rayUnifiedFootballRows().map(r => String(r.PodClientId || "")), rayPendingTasks().map(t => t.ticket.id));
+}
+function rayPendingPlacedEntries(): PodOutcomeGateEntry[] {
+  const keys = new Set(rayPendingPlacedIds());
+  return [...tickets.value.filter(t => keys.has(t.id)).map(t => rayGateEntry(rayTicketPlacePayload(t))),
+    ...rayPendingTasks().map(t => rayGateEntry(t.ticket)),
+    ...rayUnifiedFootballRows().map(r => ({ obMid: String(r.PodRayMatchId || ""), marketCode: String(r.PodMarketCode || ""),
+      boardSide: r.PodBoardSide as PodOutcomeGateEntry["boardSide"] }))];
+}
+function rayPlaceBlock(ticket: (typeof tickets.value)[number]): string | null {
+  if (isVenuePlaced(ticket.id, "RAY") || rayPendingTasks().some(t => t.ticket.id === ticket.id)) return "已提交，等待回查";
+  return venueDailyOrderBlock("RAY") || podRayFollowPlaceBlock(rayTicketPlacePayload(ticket));
+}
+async function refreshRayOrders() {
+  if (rayOrdersRefreshing.value) return;
+  rayOrdersRefreshing.value = true;
+  try {
+    await syncRayFootballOrders();
+    rayOrderRevision.value++;
+    await orderStore.fetchOrders(undefined, { sideEffects: false });
+  }
+  catch (err) { console.warn("[football] RAY order refresh failed", err); }
+  finally {
+    rayOrdersRefreshing.value = false;
+    requestAutoPlace();
+  }
 }
 
 function pmUnifiedFootballRows(opts: { todayOnly?: boolean } = {}): OrderRow[] {
@@ -568,10 +641,12 @@ function pmUnifiedPendingCap() {
   return { todayProfit, openStake };
 }
 
-function hasVenueOrder(id: string, venue: "OB" | "Polymarket"): boolean {
+function hasVenueOrder(id: string, venue: "OB" | "Polymarket" | "RAY"): boolean {
   const want = String(id || "").trim();
   if (!want)
     return false;
+  if (venue === "RAY")
+    return rayUnifiedFootballRows().some(r => r.PodClientId === want) || rayPendingTasks().some(t => t.ticket.id === want);
   if (venue === "Polymarket")
     return isPmUnifiedPodPlaced(want);
   const rows = [...footballOrders.todayRows, ...footballOrders.rows];
@@ -583,7 +658,8 @@ function hasVenueOrder(id: string, venue: "OB" | "Polymarket"): boolean {
   });
 }
 
-function venueOrderCountToday(venue: "OB" | "Polymarket"): number {
+function venueOrderCountToday(venue: "OB" | "Polymarket" | "RAY"): number {
+  if (venue === "RAY") return rayUnifiedFootballRows(true).length + rayPendingTasks().filter(t => new Date(t.at).toDateString() === new Date().toDateString()).length;
   if (venue === "Polymarket") {
     const seen = new Set<string>();
     for (const row of pmUnifiedFootballRows({ todayOnly: true })) {
@@ -604,37 +680,39 @@ function venueOrderCountToday(venue: "OB" | "Polymarket"): number {
   return seen.size;
 }
 
-function venueDailyOrderLimit(venue: "OB" | "Polymarket"): number {
+function venueDailyOrderLimit(venue: "OB" | "Polymarket" | "RAY"): number {
+  if (venue === "RAY") return betSettings.value.rayDailyOrderLimit;
   return venue === "OB"
     ? Math.round(Number(betSettings.value.obDailyOrderLimit) || 0)
     : Math.round(Number(betSettings.value.pmDailyOrderLimit) || 0);
 }
 
-function venueSelectedAccountCount(venue: "OB" | "Polymarket"): number {
+function venueSelectedAccountCount(venue: "OB" | "Polymarket" | "RAY"): number {
+  if (venue === "RAY") return betSettings.value.rayFollowAccountIds.length;
   return venue === "OB"
     ? betSettings.value.followAccountIds.length
     : betSettings.value.pmFollowAccountIds.length;
 }
 
-function venueNextOrderCount(venue: "OB" | "Polymarket"): number {
+function venueNextOrderCount(venue: "OB" | "Polymarket" | "RAY"): number {
   const count = venueSelectedAccountCount(venue);
   return venue === "OB" && betSettings.value.obAccountRotation && count > 0 ? 1 : count;
 }
 
-function venueDailyOrderBlock(venue: "OB" | "Polymarket"): string | null {
+function venueDailyOrderBlock(venue: "OB" | "Polymarket" | "RAY"): string | null {
   const limit = venueDailyOrderLimit(venue);
   if (!(limit > 0))
     return null;
   const current = venueOrderCountToday(venue);
   const next = venueNextOrderCount(venue);
   if (current >= limit)
-    return `${venue === "OB" ? "OB" : "PM"} 今日单数已满`;
+    return `${venue === "Polymarket" ? "PM" : venue} 今日单数已满`;
   if (next > 0 && current + next > limit)
-    return `${venue === "OB" ? "OB" : "PM"} 今日剩余 ${Math.max(0, limit - current)} 单`;
+    return `${venue === "Polymarket" ? "PM" : venue} 今日剩余 ${Math.max(0, limit - current)} 单`;
   return null;
 }
 
-function isVenuePlaced(id: string, venue: "OB" | "Polymarket"): boolean {
+function isVenuePlaced(id: string, venue: "OB" | "Polymarket" | "RAY"): boolean {
   const key = venuePlaceKey(venue, id);
   if (placed.value[key] || hasVenueOrder(id, venue))
     return true;
@@ -642,7 +720,7 @@ function isVenuePlaced(id: string, venue: "OB" | "Polymarket"): boolean {
 }
 
 function isPlaced(id: string): boolean {
-  return isVenuePlaced(id, "OB") || isVenuePlaced(id, "Polymarket");
+  return isVenuePlaced(id, "OB") || isVenuePlaced(id, "Polymarket") || isVenuePlaced(id, "RAY");
 }
 
 function placeBlock(ticket: (typeof tickets.value)[number]): string | null {
@@ -682,10 +760,14 @@ function pmPlaceLabel(ticket: (typeof tickets.value)[number]): string {
 function pendingCap() {
   const pm = pmUnifiedPendingCap();
   return {
-    todayProfit: footballOrders.todayProfit + pm.todayProfit,
-    openStake: footballOrders.todayOpenStake + pm.openStake,
+    todayProfit: footballOrders.todayProfit + pm.todayProfit + rayUnifiedFootballRows(true).filter(r => !["none", "pending"].includes(String(r.Status).toLowerCase())).reduce((n, r) => n + (Number(r.Money) || 0) * rayOrderExchange(r), 0),
+    openStake: footballOrders.todayOpenStake + pm.openStake + rayUnifiedFootballRows(true).filter(r => ["none", "pending"].includes(String(r.Status).toLowerCase())).reduce((n, r) => n + (Number(r.BetMoney) || 0) * rayOrderExchange(r), 0) + rayPendingTasks().reduce((n, t) => n + t.venueStake * t.exchange, 0),
     maxDailyLoss: betSettings.value.maxDailyLoss,
   };
+}
+
+function rayOrderExchange(row: OrderRow): number {
+  return getExchange(accountStore.findAccount(Number(row.PlayerID))?.currency || "CNY");
 }
 
 function pendingPlacedIds(): string[] {
@@ -933,8 +1015,27 @@ function onPmPlaceClick(ev: MouseEvent, ticket: (typeof tickets.value)[number]) 
   void placePmTicket(ticket, false);
 }
 
+async function placeRayTicket(ticket: (typeof tickets.value)[number], auto = false) {
+  if (placingRayId.value) return;
+  const block = rayPlaceBlock(ticket);
+  if (block) { if (!auto) ElMessage.warning(block); return; }
+  placingRayId.value = ticket.id;
+  try {
+    const result = await placePodRayFollowBet(rayTicketPlacePayload(ticket, auto));
+    const key = venuePlaceKey("RAY", ticket.id);
+    placeNote.value = { ...placeNote.value, [key]: result.message };
+    if (result.ok) { placed.value = { ...placed.value, [key]: true }; ElMessage.success(result.message); }
+    else ElMessage.warning(result.message);
+    await refreshRayOrders();
+  }
+  finally { placingRayId.value = ""; }
+}
+function onRayPlaceClick(ev: MouseEvent, ticket: (typeof tickets.value)[number]) {
+  ev.stopPropagation(); void placeRayTicket(ticket);
+}
+
 async function maybeAutoPlace(): Promise<boolean> {
-  if (!betSettings.value.autoPlace || placingId.value || placingPmId.value)
+  if (!betSettings.value.autoPlace || placingId.value || placingPmId.value || placingRayId.value || rayOrdersRefreshing.value)
     return false;
   let attempted = false;
   const now = Date.now();
@@ -979,6 +1080,12 @@ async function maybeAutoPlace(): Promise<boolean> {
         attempted = true;
       }
     }
+  }
+  if (followRayEnabled.value) {
+    const next = pickPodRayAutoTicket(ageOk.filter(() => !venueDailyOrderBlock("RAY")).map(t => rayTicketPlacePayload(t, true)),
+      rayPendingPlacedIds(), rayPendingPlacedEntries(), pendingCap());
+    const ui = next && tickets.value.find(t => t.id === next.id);
+    if (ui) { autoAttempted.value = { ...autoAttempted.value, [venuePlaceKey("RAY", ui.id)]: true }; await placeRayTicket(ui, true); attempted = true; }
   }
   if (!followPmEnabled.value)
     return attempted;
@@ -1112,7 +1219,7 @@ const statusText = computed(() => {
     return "恢复订单 · 自动暂停";
   if (snapshot.value.sourceConnected && snapshot.value.gridFound) {
     const n = displayRows.value.length;
-    const live = tickets.value.filter(ticketHasPodFollowMatch).length;
+    const live = tickets.value.filter(ticketHasAnyVenueMatch).length;
     if (!n)
       return "等待机会";
     return betSettings.value.autoPlace
@@ -1341,6 +1448,8 @@ async function restoreAutoPlaceState() {
 }
 
 onMounted(() => {
+  void refreshRayOrders();
+  rayOrderTimer = setInterval(() => { void refreshRayOrders(); }, 15_000);
   autoRunnerStopped = false;
   left.value = Math.max(MARGIN, window.innerWidth - DEFAULT_W - 16);
   loadPos();
@@ -1367,6 +1476,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (rayOrderTimer) clearInterval(rayOrderTimer);
   autoRunnerStopped = true;
   autoRunRequested = false;
   window.removeEventListener("resize", onWindowResize);
@@ -1553,6 +1663,11 @@ onUnmounted(() => {
                   </span>
                 </template>
               </div>
+              <div v-if="row.live.rayFixtureMatch.status === 'matched'" class="pod-follow-row__quote" :class="'is-' + row.live.rayQuote.status">
+                RAY · {{ formatPodFixtureMatch(row.live.rayFixtureMatch) }} · {{ formatPodMarketMatch(row.live.rayMarketMatch) }}
+                · @{{ formatPodPrice(row.live.rayQuote.quote) }} · EV {{ formatPodEv(row.live.rayQuote.evPercent) }}
+                <span v-if="placeNote[venuePlaceKey('RAY', row.live.id)]"> · {{ placeNote[venuePlaceKey('RAY', row.live.id)] }}</span>
+              </div>
               <div class="pod-follow-row__meta">
                 <template v-if="row.pending.placed">
                   {{ row.log.league || row.live.alert.league }} · {{ row.log.marketLabel || row.live.marketLabel }}
@@ -1604,6 +1719,11 @@ onUnmounted(() => {
                   @click="onPlaceClick($event, row.live)"
                 >
                   {{ placeLabel(row.live) }}
+                </button>
+                <button v-if="followRayEnabled" type="button" class="pod-follow-row__place"
+                  :disabled="!!rayPlaceBlock(row.live) || placingRayId === row.live.id"
+                  :title="rayPlaceBlock(row.live) || undefined" @click="onRayPlaceClick($event, row.live)">
+                  {{ isVenuePlaced(row.live.id, 'RAY') ? 'RAY已提交' : placingRayId === row.live.id ? 'RAY中' : '下RAY' }}
                 </button>
                 <button
                   v-if="!isVenuePlaced(row.live.id, 'Polymarket') && followPmEnabled"

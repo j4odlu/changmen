@@ -118,8 +118,24 @@ describe("pod venue match plugins", () => {
   });
 
   it("registers PM as a separate built-in plugin", () => {
-    expect(listPodVenueMatchPlugins().map(row => row.id)).toEqual(["OB", "Polymarket"]);
+    expect(listPodVenueMatchPlugins().map(row => row.id)).toEqual(["OB", "Polymarket", "RAY"]);
     expect(getPodVenueMatchPlugin("Polymarket").matchFixture(alert(), [fixture()]).status).toBe("matched");
+  });
+
+  it("confirms RAY independently of identical OB and PM fixtures", () => {
+    const ray = { ...fixture(), id: 3, obMid: "", pmMid: undefined, providers: { RAY: "ray-1" } };
+    const result = getPodVenueMatchPlugin("RAY").matchFixture(alert(), [fixture(), ray]);
+    expect(result).toMatchObject({ status: "matched", basis: "confirmed" });
+    expect(result.hits[0]?.fixture.id).toBe(3);
+  });
+  it("selects only RAY odds when an OB market has the same market code", () => {
+    const ray = { ...fixture(), id: 3, obMid: "", pmMid: undefined, providers: { RAY: "ray-1" }, markets: [
+      { id: 1, marketCode: "moneyline", line: null, name: "独赢", venue: "OB", ob: true, quoteHome: 9, quoteAway: 9, quoteDraw: 9, oidHome: "ob-odd" },
+      { id: 2, marketCode: "moneyline", line: null, name: "独赢", venue: "RAY", ob: false, quoteHome: 2.1, quoteAway: 2, quoteDraw: 3, oidHome: "ray-odd" },
+    ] };
+    const plugin = getPodVenueMatchPlugin("RAY");
+    const matched = plugin.matchMarket(alert(), plugin.matchFixture(alert(), [ray]), { has: () => true, get: () => 2.1 });
+    expect(matched).toMatchObject({ status: "matched", venue: "RAY", oid: "ray-odd", quote: 2.1 });
   });
 
   it("confirms a PM-only fixture by pmMid without requiring OB", () => {

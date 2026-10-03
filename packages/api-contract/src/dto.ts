@@ -286,6 +286,9 @@ export interface OrderRow {
   Source?: string;
   PodClientId?: string;
   PodPmMatchId?: string;
+  PodRayMatchId?: string;
+  PodMarketCode?: string;
+  PodBoardSide?: string;
   Game?: string;
   PmTokenId?: string;
   PmConditionId?: string;

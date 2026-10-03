@@ -3,6 +3,7 @@
  * 足球赔率格：按 oddId 读 sportOddsStore，不订全局 tick，不读电竞 fo。
  * 双击 OB 格 → 用 POD 跟单金额/账号手动下单。
  */
+import { confirmPlaceRaySportBoardBet } from "@/runtime/raySportBoardPlace";
 import { computed, ref } from "vue";
 import { confirmPlaceObSportBoardBet } from "@/runtime/obSportBoardPlace";
 import { confirmPlacePmSportBoardBet } from "@/runtime/pmSportBoardPlace";
@@ -51,7 +52,7 @@ const locked = computed(() => !(display.value.odds > 0));
 
 const canPlace = computed(() => {
   const venue = String(props.venue || "OB").trim().toUpperCase() || "OB";
-  return (venue === "OB" || venue === "POLYMARKET")
+  return (venue === "OB" || venue === "POLYMARKET" || venue === "RAY")
     && !!String(props.oddId || "").trim()
     && !locked.value;
 });
@@ -77,7 +78,9 @@ async function onDblClick(ev: MouseEvent) {
       home: String(props.home || "").trim(),
       away: String(props.away || "").trim(),
     };
-    if (venueKey === "POLYMARKET")
+    if (venueKey === "RAY")
+      await confirmPlaceRaySportBoardBet(input);
+    else if (venueKey === "POLYMARKET")
       await confirmPlacePmSportBoardBet(input);
     else
       await confirmPlaceObSportBoardBet(input);

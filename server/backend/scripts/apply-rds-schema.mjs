@@ -159,6 +159,9 @@ async function main() {
     console.log("[rds] 执行 044_auth_sessions.sql …");
     await client.query(readSql("044_auth_sessions.sql"));
 
+    console.log("[rds] 执行 045_pod_ray_execution.sql …");
+    await client.query(readSql("045_pod_ray_execution.sql"));
+
     await applyOrderObservationSchema(client);
 
     const tables = await client.query(`

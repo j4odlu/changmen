@@ -794,6 +794,16 @@ describe("mergeOrderLogicalSave parallel branches (characterization)", () => {
 });
 
 describe("rowToOrder sell money zeroing", () => {
+  it("preserves RAY football classification and duplicate guards across generic venue refresh", async () => {
+    const { rowToOrder, mergeOrderLogicalSave } = await import("./order_store.js");
+    const previous = { domain: "sports", sport: "football", source: "football-pod-auto",
+      podClientId: "pod-ray-1", podRayMatchId: "ray-match-1", podMarketCode: "totals", podBoardSide: "over" };
+    const merged = mergeOrderLogicalSave({ provider: "RAY" }, previous, { provider: "RAY", status: "win", money: 50, betMoney: 50 });
+    expect(merged.raw).toMatchObject(previous);
+    const dto = rowToOrder({ provider: "RAY", order_id: "ray-1", raw: merged.raw, bet_money: 50, money: 50, create_at: 1 });
+    expect(dto).toMatchObject({ Domain: "sports", Sport: "football", PodClientId: "pod-ray-1",
+      PodRayMatchId: "ray-match-1", PodMarketCode: "totals", PodBoardSide: "over" });
+  });
   it("exposes PM POD football ids for client-side duplicate guards", async () => {
     const { rowToOrder } = await import("./order_store.js");
     const o = rowToOrder({

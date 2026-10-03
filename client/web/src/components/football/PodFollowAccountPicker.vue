@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<{
   }>;
   /** panel = 深色浮窗；settings = 浅色设置页 */
   variant?: "panel" | "settings";
-  venue?: "OB" | "Polymarket";
+  venue?: "OB" | "Polymarket" | "RAY";
   disabled?: boolean;
   rotation?: boolean;
 }>(), {
@@ -37,13 +37,13 @@ type Chip = {
 };
 
 const chips = computed<Chip[]>(() =>
-  (props.venue === "Polymarket"
-    ? props.accounts.filter(row => String(row.provider || "") === "Polymarket")
+  (props.venue !== "OB"
+    ? props.accounts.filter(row => String(row.provider || "") === props.venue)
     : listObSportFollowAccounts(props.accounts)
   ).map(row => {
     const id = Math.round(Number(row.accountId) || 0);
     const name = accountOrderDisplayName(row) || String(id);
-    const balance = props.venue === "Polymarket"
+    const balance = props.venue !== "OB"
       ? (typeof row.getBalance === "function" ? row.getBalance() : row.balance)
       : readObSportDisplayBalance(row as ObSportBetAccountLike & { sportBalance?: number });
     return {
@@ -105,7 +105,7 @@ function formatBal(n: number | undefined): string {
     :class="[`is-${variant}`, { 'is-disabled': disabled, 'is-empty': !chips.length }]"
   >
     <template v-if="!chips.length">
-      <span class="pod-acct-picker__empty">没有可用的 {{ venue === "Polymarket" ? "PM" : "OB 体育" }}账号</span>
+      <span class="pod-acct-picker__empty">没有可用的 {{ venue === "Polymarket" ? "PM" : venue === "RAY" ? "RAY" : "OB 体育" }}账号</span>
     </template>
     <template v-else>
       <div class="pod-acct-picker__chips">

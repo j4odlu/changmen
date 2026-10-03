@@ -16,6 +16,7 @@ import PodYaboSettings from "@/components/football/PodYaboSettings.vue";
 const form = reactive<PodBetSettings>(readPodBetSettings());
 const accounts = useAccountStore();
 const followAccounts = computed(() => listObSportFollowAccounts(accounts.accounts));
+const rayFollowAccounts = computed(() => accounts.accounts.filter(a => a.provider === "RAY"));
 const pmFollowAccounts = computed(() => listPmFollowAccounts(accounts.accounts));
 
 /** write / apply 期间挡掉回声，避免深监听空转或互相覆盖 */
@@ -28,8 +29,11 @@ function snapshot(): PodBetSettings {
     followVenues.push("OB");
   if (form.pmFollowAccountIds.length)
     followVenues.push("Polymarket");
+  if (form.rayFollowAccountIds.length)
+    followVenues.push("RAY");
   return {
     ...form,
+    rayFollowAccountIds: form.rayFollowAccountIds.slice(),
     followAccountIds: form.followAccountIds.slice(),
     pmFollowAccountIds: form.pmFollowAccountIds.slice(),
     followVenues,
@@ -75,6 +79,10 @@ function applyExternal() {
     form.stake = next.stake;
     form.obStake = next.obStake;
     form.pmStake = next.pmStake;
+    form.rayStake = next.rayStake;
+    form.rayDailyOrderLimit = next.rayDailyOrderLimit;
+    if (form.rayFollowAccountIds.join(",") !== next.rayFollowAccountIds.join(","))
+      form.rayFollowAccountIds = next.rayFollowAccountIds.slice();
     form.autoPlace = next.autoPlace;
     form.obAccountRotation = next.obAccountRotation;
     form.maxDailyLoss = next.maxDailyLoss;
@@ -136,7 +144,7 @@ onUnmounted(() => {
       <section class="pod-bet-settings__section">
         <div class="pod-bet-settings__section-head">
           <h3>账号</h3>
-          <p>OB 可选择全部账号执行，或每笔轮换一个账号；PM 仍是每个账号各下一注。</p>
+          <p>OB 可选择全部账号执行，或每笔轮换一个账号；PM、RAY 每个账号各下一注。</p>
         </div>
         <div class="pod-bet-settings__venue-grid">
           <div class="pod-bet-settings__venue">
@@ -165,6 +173,10 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="pod-bet-settings__venue">
+            <div class="pod-bet-settings__venue-head"><span>RAY</span><small>每个已选账号各下一注</small></div>
+            <PodFollowAccountPicker v-model="form.rayFollowAccountIds" :accounts="rayFollowAccounts" variant="settings" venue="RAY" />
+          </div>
+          <div class="pod-bet-settings__venue">
             <div class="pod-bet-settings__venue-head">
               <span>PM</span>
               <small>必须显式选择账号</small>
@@ -182,7 +194,7 @@ onUnmounted(() => {
       <section class="pod-bet-settings__section">
         <div class="pod-bet-settings__section-head">
           <h3>金额与风控</h3>
-          <p>OB/PM 是执行场馆；所有金额统一填人民币，PM 下单前自动换算成 USDC。</p>
+          <p>OB/PM/RAY 是执行场馆；所有金额统一填人民币，PM 下单前自动换算成 USDC。</p>
         </div>
         <div class="pod-bet-settings__grid">
           <el-form-item label="OB金额">
@@ -203,6 +215,29 @@ onUnmounted(() => {
                 class="pod-bet-settings__chip"
                 :class="{ 'is-on': form.obStake === n }"
                 @click="form.obStake = n"
+              >
+                {{ n }}
+              </button>
+            </div>
+          </el-form-item>
+          <el-form-item label="RAY金额">
+            <div class="pod-bet-settings__inline">
+              <el-input-number
+                v-model="form.rayStake"
+                :min="0"
+                :max="1000000"
+                :step="10"
+                :precision="0"
+                controls-position="right"
+              />
+              <span class="pod-bet-settings__unit">元</span>
+              <button
+                v-for="n in POD_FOLLOW_STAKE_PRESETS"
+                :key="`ray-${n}`"
+                type="button"
+                class="pod-bet-settings__chip"
+                :class="{ 'is-on': form.rayStake === n }"
+                @click="form.rayStake = n"
               >
                 {{ n }}
               </button>
@@ -250,6 +285,20 @@ onUnmounted(() => {
             <div class="pod-bet-settings__inline">
               <el-input-number
                 v-model="form.obDailyOrderLimit"
+                :min="0"
+                :max="10000"
+                :step="1"
+                :precision="0"
+                controls-position="right"
+              />
+              <span class="pod-bet-settings__unit">单</span>
+              <span class="pod-bet-settings__note">0 = 不限</span>
+            </div>
+          </el-form-item>
+          <el-form-item label="RAY每日单数">
+            <div class="pod-bet-settings__inline">
+              <el-input-number
+                v-model="form.rayDailyOrderLimit"
                 :min="0"
                 :max="10000"
                 :step="1"
@@ -309,7 +358,7 @@ onUnmounted(() => {
       <section class="pod-bet-settings__section">
         <div class="pod-bet-settings__section-head">
           <h3>AutoYabo 策略</h3>
-          <p>POD/NVP 是策略基准；OB/PM 只作为交易场馆执行，现有下单路径不在这里改写。</p>
+          <p>POD/NVP 是策略基准；OB/PM/RAY 只作为交易场馆执行，现有下单路径不在这里改写。</p>
         </div>
         <div class="pod-bet-settings__grid">
           <el-form-item label="最小降幅">

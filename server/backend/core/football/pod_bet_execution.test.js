@@ -60,6 +60,13 @@ describe("POD bet execution service", () => {
     expect(mocks.reserve).not.toHaveBeenCalled();
   });
 
+  it("reserves RAY only for an owned RAY account", async () => {
+    mocks.fetchPlayers.mockResolvedValue(ownedPlayer("RAY"));
+    const result = await reservePodBet({ alertId: "pod-ray-1", venue: "RAY", playerId: 7 }, user);
+    expect(result.ok).toBe(true);
+    expect(mocks.reserve).toHaveBeenCalledWith(expect.objectContaining({ venue: "RAY", playerId: 7 }));
+  });
+
   it("returns an existing terminal state without issuing a new token", async () => {
     mocks.reserve.mockResolvedValue({
       acquired: false,

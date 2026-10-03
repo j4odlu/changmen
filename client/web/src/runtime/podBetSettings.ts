@@ -42,10 +42,11 @@ export type PodBetSettings = {
   obStake: number;
   /** Polymarket 跟单下注金额；0 = 未设，不下单 */
   pmStake: number;
+  rayStake: number;
   /** 过线且对上盘口后自动下单。默认关 */
   autoPlace: boolean;
   /** @deprecated 场馆由已选账号决定；仅保留旧 localStorage 兼容。 */
-  followVenues: Array<"OB" | "Polymarket">;
+  followVenues: Array<"OB" | "Polymarket" | "RAY">;
   /**
    * 跟单用的 OB 账号（可多选）。空 = 未选择，不下单。
    */
@@ -54,6 +55,7 @@ export type PodBetSettings = {
   obAccountRotation: boolean;
   /** 跟单用的 Polymarket 账号（可多选）。空 = 未选择，不下单。 */
   pmFollowAccountIds: number[];
+  rayFollowAccountIds: number[];
   /** @deprecated 读时等于 followAccountIds[0]||0；写仍会迁进 followAccountIds */
   followAccountId: number;
   /** 自动当日亏损上限（已结算亏损 + 未结算注码）；0 = 不设 */
@@ -62,6 +64,7 @@ export type PodBetSettings = {
   obDailyOrderLimit: number;
   /** Polymarket 每日跟单订单数上限；0 = 不限 */
   pmDailyOrderLimit: number;
+  rayDailyOrderLimit: number;
 };
 
 export const POD_BET_SETTINGS_DEFAULTS: PodBetSettings = {
@@ -83,6 +86,9 @@ export const POD_BET_SETTINGS_DEFAULTS: PodBetSettings = {
   stake: 0,
   obStake: 0,
   pmStake: 0,
+  rayStake: 0,
+  rayFollowAccountIds: [],
+  rayDailyOrderLimit: 0,
   autoPlace: false,
   followVenues: [],
   followAccountIds: [],
@@ -132,11 +138,11 @@ export function parseFollowAccountIds(raw: unknown, legacyId: unknown = 0): numb
   return out;
 }
 
-export function parseFollowVenues(raw: unknown): Array<"OB" | "Polymarket"> {
-  const out: Array<"OB" | "Polymarket"> = [];
+export function parseFollowVenues(raw: unknown): Array<"OB" | "Polymarket" | "RAY"> {
+  const out: Array<"OB" | "Polymarket" | "RAY"> = [];
   const push = (v: unknown) => {
     const s = String(v || "").trim();
-    if ((s === "OB" || s === "Polymarket") && !out.includes(s))
+    if ((s === "OB" || s === "Polymarket" || s === "RAY") && !out.includes(s))
       out.push(s);
   };
   if (Array.isArray(raw)) {
@@ -185,6 +191,9 @@ export function parsePodBetSettings(raw: unknown): PodBetSettings {
     stake,
     obStake: clampNum(row.obStake, d.obStake, 0, 1_000_000),
     pmStake: clampNum(row.pmStake, d.pmStake, 0, 1_000_000),
+    rayStake: clampNum(row.rayStake, d.rayStake, 0, 1_000_000),
+    rayFollowAccountIds: parseFollowAccountIds(row.rayFollowAccountIds),
+    rayDailyOrderLimit: Math.round(clampNum(row.rayDailyOrderLimit, d.rayDailyOrderLimit, 0, 10_000)),
     autoPlace: bool(row.autoPlace, d.autoPlace),
     followVenues: parseFollowVenues(row.followVenues),
     followAccountIds,

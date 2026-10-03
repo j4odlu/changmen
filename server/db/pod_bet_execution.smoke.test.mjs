@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const migration = readFileSync(join(here, "../backend/db/migrations/042_pod_bet_executions.sql"), "utf8");
+const rayMigration = readFileSync(join(here, "../backend/db/migrations/045_pod_ray_execution.sql"), "utf8");
 const store = readFileSync(join(here, "rds/pod_bet_execution_store.js"), "utf8");
 const service = readFileSync(join(here, "../backend/core/football/football_order_service.js"), "utf8");
 const routes = readFileSync(join(here, "../backend/core/esport-api/football_order_routes.js"), "utf8");
@@ -21,5 +22,9 @@ assert.match(service, /assertPlayerOwnedByUser/);
 assert.match(routes, /Client_ReservePodBet/);
 assert.match(routes, /Client_FinalizePodBet/);
 assert.match(apply, /042_pod_bet_executions\.sql/);
+assert.match(apply, /045_pod_ray_execution\.sql/);
+assert.match(rayMigration, /CHECK \(venue IN \('OB', 'Polymarket', 'RAY'\)\)/);
+assert.match(store, /CHECK \(venue IN \('OB', 'Polymarket', 'RAY'\)\)/);
+assert.match(store, /DO \$\$ BEGIN[\s\S]*END \$\$/);
 
 console.log("pod_bet_execution.smoke: ok");

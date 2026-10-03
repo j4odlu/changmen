@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS pod_bet_executions (
   lease_until bigint NOT NULL DEFAULT 0,
   created_at bigint NOT NULL,
   updated_at bigint NOT NULL,
-  CHECK (venue IN ('OB', 'Polymarket')),
+  CHECK (venue IN ('OB', 'Polymarket', 'RAY')),
   CHECK (state IN ('reserved', 'accepted', 'failed', 'unknown')),
   UNIQUE (user_id, alert_id, venue, player_id)
 )`;
@@ -26,6 +26,11 @@ async function ensureTable(pool) {
   if (ensured)
     return;
   await pool.query(TABLE_DDL);
+  // [changmen 扩展] 兼容已有执行权表；事务内扩展场馆约束。
+  await pool.query(`DO $$ BEGIN
+    ALTER TABLE pod_bet_executions DROP CONSTRAINT IF EXISTS pod_bet_executions_venue_check;
+    ALTER TABLE pod_bet_executions ADD CONSTRAINT pod_bet_executions_venue_check CHECK (venue IN ('OB', 'Polymarket', 'RAY'));
+  END $$`);
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS pod_bet_executions_token_uidx ON pod_bet_executions (lease_token)");
   await pool.query("CREATE INDEX IF NOT EXISTS pod_bet_executions_user_updated_idx ON pod_bet_executions (user_id, updated_at DESC)");
   ensured = true;

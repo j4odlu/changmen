@@ -146,10 +146,11 @@ function venuePlugin(id: string): PodVenueMatchPlugin {
 
 registerPodVenueMatchPlugin(obPlugin);
 registerPodVenueMatchPlugin(venuePlugin("Polymarket"));
+registerPodVenueMatchPlugin(venuePlugin("RAY"));
 
 /** Test-only cleanup; built-in plugins cannot be removed. */
 export function unregisterPodVenueMatchPluginForTests(id: string): void {
-  if (id === "OB" || id === "Polymarket")
+  if (id === "OB" || id === "Polymarket" || id === "RAY")
     return;
   plugins.delete(id);
 }

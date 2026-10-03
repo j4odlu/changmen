@@ -21,7 +21,7 @@ function ok(info) {
 function podExecutionInput(body) {
   const alertId = String(body?.alertId || "").trim().slice(0, 240);
   const venueRaw = String(body?.venue || "").trim().toLowerCase();
-  const venue = venueRaw === "ob" ? "OB" : venueRaw === "polymarket" ? "Polymarket" : "";
+  const venue = venueRaw === "ob" ? "OB" : venueRaw === "polymarket" ? "Polymarket" : venueRaw === "ray" ? "RAY" : "";
   const playerId = Math.round(Number(body?.playerId) || 0);
   if (!alertId || !venue || playerId <= 0)
     return null;

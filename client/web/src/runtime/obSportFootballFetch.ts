@@ -10,7 +10,6 @@ import {
   extractObPlaySelections,
   isObBoardMarket,
   listBetsFromObPlayData,
-  OB_BOARD_HPIDS,
   OB_FOOTBALL_ID_BASE,
   playsFromObMatchRow,
 } from "@/runtime/obSportOdds";
@@ -971,13 +970,25 @@ export function clearObFootballClientCache() {
   lastLiveByMid = new Map();
 }
 
-export async function fetchObFootballMatchMarkets(mid: string): Promise<ClientMarketRow[]> {
+export async function fetchObFootballMatchMarkets(
+  mid: string,
+  options: { includeDetail?: boolean } = {},
+): Promise<ClientMarketRow[]> {
   const session = readLocalSportObSession();
   if (!session?.token || !gatewayOrigin(session))
     return [];
   const id = String(mid || "").trim();
   if (!id)
     return [];
+  // 试玩实测列表与详情的六类主盘结构一致；明确缺少目标盘口时仍允许详情补盘。
+  let listRows: ClientMarketRow[] = [];
+  try {
+    const map = await fetchOddsByMids(session, [id]);
+    listRows = marketsFromRow(id, map.byMid.get(id) || null);
+    if (listRows.length && !options.includeDetail)
+      return listRows;
+  }
+  catch { /* 无列表盘口时再用详情兜底 */ }
   let detailRow: Record<string, unknown> | null = null;
   try {
     detailRow = matchRowFromDecoded(await postPb(session, DETAIL_ODDS_PATH, {
@@ -993,29 +1004,5 @@ export async function fetchObFootballMatchMarkets(mid: string): Promise<ClientMa
   catch {
     detailRow = null;
   }
-  let rows = marketsFromRow(id, detailRow);
-  try {
-    const map = await fetchOddsByMids(session, [id]);
-    rows = mergeMarketRows([rows, marketsFromRow(id, map.byMid.get(id) || null)]);
-  }
-  catch { /* list fallback optional */ }
-  const have = new Set(rows.map(r => String(r.hpid || "")));
-  const missing = OB_BOARD_HPIDS.filter(p => !have.has(p));
-  if (missing.length) {
-    try {
-      const extra = matchRowFromDecoded(await postPb(session, DETAIL_ODDS_PATH, {
-        cuid: sportCuid(session),
-        cos: 0,
-        orpt: 0,
-        euid: EUID_FOOTBALL,
-        mid: id,
-        mcid: 0,
-        newUser: 0,
-        hps: missing.join(","),
-      }));
-      rows = mergeMarketRows([rows, marketsFromRow(id, extra)]);
-    }
-    catch { /* ignore */ }
-  }
-  return rows;
+  return mergeMarketRows([marketsFromRow(id, detailRow), listRows]);
 }

@@ -185,7 +185,8 @@ export async function prefetchObSportMatchMarkets(mid: string): Promise<PodBoard
   const startedGeneration = generation;
   const work = (async () => {
     try {
-      const rows = podBoardMarketsFromObDetail(await fetchObFootballMatchMarkets(id));
+      // 仅在跟单目标盘未命中时调用：列表有其它盘口也不能省掉详情补线。
+      const rows = podBoardMarketsFromObDetail(await fetchObFootballMatchMarkets(id, { includeDetail: true }));
       if (rows.length && startedGeneration === generation) {
         markets.set(id, { at: Date.now(), rows });
         bump();

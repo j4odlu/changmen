@@ -21,7 +21,7 @@ import {
 } from "@/runtime/footballObMarkets";
 import { viewBetsToMarketRows, mergeFootballBookRows } from "@/runtime/footballMarketRows";
 import { useObSportLiveStore } from "@/stores/obSportLiveStore";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 
 const props = defineProps<{
@@ -54,16 +54,24 @@ const teams = computed(() => {
 
 /** HTTP 结构稳定；实时价由 FootballOddsCell 按 oid 读 sportOddsStore，不订全局 tick。 */
 const listRows = computed(() => viewBetsToMarketRows(props.match));
+// 列表已包含全场/半场独赢、让球、大小；锁盘的 0 赔率也属于有效结构。
+const hasObListMarkets = computed(() => listRows.value.some(row => row.Venues?.some(
+  venue => venue.venue === "OB" && venue.Selections.some(selection => !!selection.OddID),
+)));
 
-const allRows = computed(() => mergeFootballBookRows(listRows.value, obRows.value));
+const allRows = computed(() => mergeFootballBookRows(listRows.value, hasObListMarkets.value ? [] : obRows.value));
 
 const columns = computed((): FootballBookColumn[] => groupFootballColumns(allRows.value));
 
 async function fetchAllMarkets(force = false) {
   const mid = obMid.value;
-  if (!mid)
-    return;
   const gen = ++fetchGen;
+  if (hasObListMarkets.value || !mid) {
+    obRows.value = [];
+    loading.value = false;
+    error.value = "";
+    return;
+  }
   if (force)
     invalidateFootballObMarkets(mid);
   const cached = peekFootballObMarkets(mid);
@@ -92,26 +100,17 @@ async function fetchAllMarkets(force = false) {
   }
 }
 
-onMounted(() => {
-  const kick = () => { void fetchAllMarkets(); };
-  if (listRows.value.length && typeof requestIdleCallback === "function")
-    requestIdleCallback(kick, { timeout: 2500 });
-  else
-    kick();
-});
-
-watch(obMid, (mid) => {
-  obRows.value = peekFootballObMarkets(String(mid || "")) || [];
-  error.value = "";
-  void fetchAllMarkets();
-});
-
 watch(
-  () => playRevByMid.value[obMid.value] || 0,
-  (rev, prev) => {
-    if (rev && rev !== prev)
-      void fetchAllMarkets(true);
+  () => [obMid.value, hasObListMarkets.value, playRevByMid.value[obMid.value] || 0] as const,
+  ([mid, , rev], prev) => {
+    if (mid !== prev?.[0]) {
+      obRows.value = [];
+      loading.value = false;
+      error.value = "";
+    }
+    void fetchAllMarkets(mid === prev?.[0] && !!rev && rev !== prev?.[2]);
   },
+  { immediate: true },
 );
 </script>
 

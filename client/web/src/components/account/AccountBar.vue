@@ -7,13 +7,10 @@ import MoneyLogDialog from "@/components/account/MoneyLogDialog.vue";
 import { useAccountStore } from "@/stores/accountStore";
 
 /** 对齐 bundle AccountView：顶栏仅 providers 横排账号卡 */
-const { embedded, workspace } = withDefaults(
-  defineProps<{
-    embedded?: boolean;
-    workspace?: "esport" | "sports";
-  }>(),
-  { embedded: false, workspace: "esport" },
-);
+const { embedded = false, workspace = "esport" } = defineProps<{
+  embedded?: boolean;
+  workspace?: "esport" | "sports";
+}>();
 
 const accountStore = useAccountStore();
 const { sortedAccounts } = storeToRefs(accountStore);

@@ -4,10 +4,26 @@ const saved = { ...process.env };
 afterEach(() => { process.env = { ...saved }; });
 const session = { id: "browser-id", jwtSessionId: "login-epoch" };
 describe("Cookie CSRF and deployment configuration", () => {
+  it("accepts supported local dev origins while rejecting unrelated ports and sites", () => {
+    process.env.NODE_ENV = "development";
+    delete process.env.WEB_AUTH_ORIGINS;
+    for (const host of ["localhost", "127.0.0.1"]) {
+      for (const port of [5274, 5574, 5174, 3700, 3456])
+        expect(validAuthOrigin({ headers: { origin: `http://${host}:${port}` } })).toBe(true);
+    }
+    for (const origin of [undefined, "null", "http://localhost:9999", "https://evil.example"])
+      expect(validAuthOrigin({ headers: { origin } })).toBe(false);
+  });
+  it("keeps explicit origin configuration authoritative", () => {
+    process.env.NODE_ENV = "development";
+    process.env.WEB_AUTH_ORIGINS = "https://changmen.fun";
+    expect(validAuthOrigin({ headers: { origin: "http://localhost:5574" } })).toBe(false);
+    expect(validAuthOrigin({ headers: { origin: "https://changmen.fun" } })).toBe(true);
+  });
   it("rejects missing, null, other-site and alias origins", () => {
     process.env.NODE_ENV = "production";
     delete process.env.WEB_AUTH_ORIGINS;
-    for (const origin of [undefined, "null", "https://evil.example", "https://www.changmen.fun"])
+    for (const origin of [undefined, "null", "https://evil.example", "https://www.changmen.fun", "http://localhost:5574", "http://127.0.0.1:5574"])
       expect(validAuthOrigin({ headers: { origin } })).toBe(false);
     expect(validAuthOrigin({ headers: { origin: "https://changmen.fun" } })).toBe(true);
   });

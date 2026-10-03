@@ -12,6 +12,7 @@ import tls from "node:tls";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import { browserNodeBuiltins } from "./vite/plugins/browserNodeBuiltins";
+import { backendPublicAssets } from "./vite/plugins/backendPublicAssets";
 import { matcherDevRedirect } from "./vite/plugins/matcherDevRedirect";
 import {
   VENUE_ADAPTER_REL,
@@ -117,6 +118,9 @@ function sharedVenueChunk(id: string): string | undefined {
 }
 
 function venueChunkName(id: string): string | undefined {
+  // Workspace 内嵌依赖也属于 node_modules，交给 Rollup 分包，不能误归为场馆源码。
+  if (id.replace(/\\/g, "/").includes("/node_modules/"))
+    return undefined;
   const marker = `${VENUE_ADAPTER_REL.replace(/\\/g, "/")}/`;
   const idx = id.replace(/\\/g, "/").indexOf(marker);
   if (idx === -1)
@@ -189,6 +193,7 @@ export default defineConfig(({ command, mode }) => {
   plugins: [
     // 须靠前：alias/optimizeDeps 影响 builder-relayer-client 预构建
     browserNodeBuiltins(),
+    backendPublicAssets(),
     vue(),
     AutoImport({
       resolvers: [elementPlusResolver],

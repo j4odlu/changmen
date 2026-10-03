@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import type { TeamRow } from "@/api/admin";
 import type { AdminAccountDetail, AdminOrderRow, AdminUserRow } from "@/types/admin";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { deleteAdminOrders, getAdminOrdersAll, getAdminUsers } from "@/api/admin";
+import { deleteAdminOrders, getAdminOrdersAll, getAdminUsers, getTeams } from "@/api/admin";
 import AdminAccountOrdersColumn from "@/components/admin/AdminAccountOrdersColumn.vue";
 import AdminLayout from "@/components/admin/AdminLayout.vue";
 import AdminOrderLinkLines from "@/components/admin/AdminOrderLinkLines.vue";
@@ -16,6 +17,7 @@ import { todayKey } from "@/shared/dateKey";
 import { useUserStore } from "@/stores/userStore";
 
 type GroupMode = "user" | "account";
+const UNGROUPED_TEAM_ID = "__none__";
 
 const route = useRoute();
 const router = useRouter();
@@ -24,6 +26,7 @@ const userStore = useUserStore();
 const date = ref(String(route.query.date || todayKey()));
 const filterProvider = ref(String(route.query.provider || ""));
 const filterUserId = ref(String(route.query.userId || ""));
+const activeTeamId = ref(String(route.query.teamId || ""));
 const filterPlayerId = ref(
   (() => {
     const n = Number(route.query.playerId);
@@ -40,6 +43,7 @@ const groupMode = ref<GroupMode>(
 const loading = ref(false);
 const orders = ref<AdminOrderRow[]>([]);
 const users = ref<AdminUserRow[]>([]);
+const teams = ref<TeamRow[]>([]);
 const loadError = ref("");
 const columnsContainerRef = ref<HTMLElement | null>(null);
 const hScrollRef = ref<HTMLElement | null>(null);
@@ -116,8 +120,41 @@ const accountById = computed(() => {
   return map;
 });
 
+// [changmen 扩展] 管理端按团队切换订单，团队归属沿用用户管理数据。
+const teamTabs = computed(() => {
+  const visibleTeams = userStore.isAdmin
+    ? teams.value
+    : teams.value.filter(team => team.id === userStore.teamId
+      || users.value.some(user => user.teamId === team.id));
+  const tabs = visibleTeams.map(team => ({ id: team.id, name: team.name }));
+  const knownIds = new Set(tabs.map(team => team.id));
+  for (const user of users.value) {
+    if (user.teamId && !knownIds.has(user.teamId)) {
+      tabs.push({ id: user.teamId, name: user.teamId });
+      knownIds.add(user.teamId);
+    }
+  }
+  const knownUsers = new Set(users.value.map(user => user.id));
+  if (users.value.some(user => !user.teamId)
+    || orders.value.some(order => !knownUsers.has(order.userId))
+    || !tabs.length)
+    tabs.push({ id: UNGROUPED_TEAM_ID, name: "未分组" });
+  return tabs;
+});
+
+const selectedTeamName = computed(() =>
+  teamTabs.value.find(team => team.id === activeTeamId.value)?.name || "团队",
+);
+
+const teamUsers = computed(() => users.value.filter(user =>
+  (user.teamId || UNGROUPED_TEAM_ID) === activeTeamId.value,
+));
+
 const filteredOrders = computed(() => {
-  let list = orders.value;
+  const userTeams = new Map(users.value.map(user => [user.id, user.teamId || UNGROUPED_TEAM_ID]));
+  let list = orders.value.filter(row =>
+    (userTeams.get(row.userId) || UNGROUPED_TEAM_ID) === activeTeamId.value,
+  );
   if (filterUserId.value)
     list = list.filter(r => r.userId === filterUserId.value);
   if (filterPlayerId.value)
@@ -126,7 +163,7 @@ const filteredOrders = computed(() => {
 });
 
 const userFilterOptions = computed(() =>
-  [...users.value]
+  [...teamUsers.value]
     .sort((a, b) => a.userName.localeCompare(b.userName, "zh-CN"))
     .map(u => ({
       value: u.id,
@@ -144,8 +181,8 @@ const userColumns = computed(() => {
 
   const userById = new Map(users.value.map(u => [u.id, u]));
   const sourceUsers = filterUserId.value
-    ? users.value.filter(u => u.id === filterUserId.value)
-    : users.value;
+    ? teamUsers.value.filter(u => u.id === filterUserId.value)
+    : teamUsers.value;
 
   const cols = sourceUsers.map(user => ({
     userId: user.id,
@@ -200,6 +237,8 @@ const accountColumns = computed<AccountColumn[]>(() => {
     const user = users.value.find(u => u.id === filterUserId.value);
     for (const acc of user?.accounts ?? []) {
       const playerId = Number(acc.accountId);
+      if (filterPlayerId.value && playerId !== filterPlayerId.value)
+        continue;
       if (byAccount.has(playerId))
         continue;
       byAccount.set(playerId, {
@@ -228,7 +267,7 @@ const primaryOrderCount = computed(() =>
 );
 
 const linkLinesKey = computed(() =>
-  `${filteredOrders.value.length}:${filterUserId.value}`,
+  `${activeTeamId.value}:${filteredOrders.value.length}:${filterUserId.value}`,
 );
 
 const profitTotal = computed(() =>
@@ -237,8 +276,8 @@ const profitTotal = computed(() =>
 
 const subtitle = computed(() =>
   groupMode.value === "account"
-    ? "按操盘账号分列，同 Link 订单以连线标识"
-    : "每位用户一列，订单按 Link 分组展示",
+    ? `${selectedTeamName.value} · 按操盘账号分列，同 Link 订单以连线标识`
+    : `${selectedTeamName.value} · 每位用户一列，订单按 Link 分组展示`,
 );
 
 function fmtMoney(n: number) {
@@ -249,8 +288,18 @@ async function loadUsers() {
   try {
     users.value = await getAdminUsers(date.value);
   }
-  catch {
+  catch (e) {
     users.value = [];
+    loadError.value = (e as Error).message || "加载用户团队信息失败";
+  }
+}
+
+async function loadTeams() {
+  try {
+    teams.value = await getTeams();
+  }
+  catch {
+    teams.value = [];
   }
 }
 
@@ -260,9 +309,7 @@ async function loadOrders() {
   try {
     const page = await getAdminOrdersAll({
       date: date.value,
-      userId: filterUserId.value || undefined,
       provider: filterProvider.value || undefined,
-      playerId: filterPlayerId.value || undefined,
     });
     orders.value = page.list ?? [];
   }
@@ -276,11 +323,26 @@ async function loadOrders() {
 }
 
 async function refresh() {
-  await Promise.all([loadUsers(), loadOrders()]);
+  await Promise.all([loadUsers(), loadOrders(), loadTeams()]);
+  if (!teamTabs.value.some(team => team.id === activeTeamId.value)) {
+    const selectedUser = users.value.find(user => user.id === filterUserId.value)
+      || accountById.value.get(filterPlayerId.value)?.user;
+    activeTeamId.value = selectedUser
+      ? selectedUser.teamId || UNGROUPED_TEAM_ID
+      : teamTabs.value[0]!.id;
+  }
+  if (filterUserId.value && !teamUsers.value.some(user => user.id === filterUserId.value))
+    filterUserId.value = "";
+  const selectedAccountUser = accountById.value.get(filterPlayerId.value)?.user;
+  if (selectedAccountUser && (selectedAccountUser.teamId || UNGROUPED_TEAM_ID) !== activeTeamId.value)
+    filterPlayerId.value = 0;
+  syncRouteQuery();
 }
 
 function syncRouteQuery() {
   const query: Record<string, string> = { date: date.value };
+  if (activeTeamId.value)
+    query.teamId = activeTeamId.value;
   if (groupMode.value === "account")
     query.view = "account";
   if (filterUserId.value)
@@ -303,6 +365,15 @@ function onSearch() {
 function onUserFilterChange(userId: string | null | undefined) {
   filterUserId.value = userId || "";
   syncRouteQuery();
+}
+
+async function onTeamChange() {
+  filterUserId.value = "";
+  filterPlayerId.value = 0;
+  syncRouteQuery();
+  await nextTick();
+  if (hScrollRef.value)
+    hScrollRef.value.scrollLeft = 0;
 }
 
 async function onDeleteOrders(rows: AdminOrderRow[]) {
@@ -364,6 +435,9 @@ onMounted(async () => {
 <template>
   <AdminLayout title="电竞订单查询" :subtitle="subtitle">
     <section v-loading="loading" class="admin-card admin-card--orders">
+      <el-tabs v-model="activeTeamId" class="admin-orders-team-tabs" @tab-change="onTeamChange">
+        <el-tab-pane v-for="team in teamTabs" :key="team.id" :label="team.name" :name="team.id" />
+      </el-tabs>
       <div class="admin-card__toolbar admin-orders-filters">
         <OrderDateNav v-model="date" placeholder="统计日期" />
         <el-radio-group v-model="groupMode" size="small">
@@ -472,13 +546,12 @@ onMounted(async () => {
           v-if="!loading && !loadError && !hasContent"
           class="admin-order-groups__empty"
         >
-          {{ date }} 暂无订单。可切换日期查看；若应有数据仍为空，请确认服务器
-          <code>GAMEBET_DB_SCRIPT=rds</code> 且已重启后端。
+          {{ selectedTeamName }}在 {{ date }} 暂无符合条件的订单，可切换团队、日期或调整筛选条件。
         </p>
       </div>
 
       <div v-if="hasContent" class="admin-orders-profit-summary">
-        <span class="admin-orders-profit-summary__label">利润合计</span>
+        <span class="admin-orders-profit-summary__label">{{ selectedTeamName }} · 利润合计</span>
         <span
           class="admin-orders-profit-summary__value"
           :class="{ pos: profitTotal > 0, neg: profitTotal < 0 }"
@@ -497,3 +570,19 @@ onMounted(async () => {
     </section>
   </AdminLayout>
 </template>
+
+<style scoped>
+.admin-orders-team-tabs {
+  padding: 0 16px;
+}
+.admin-orders-team-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
+}
+.admin-orders-team-tabs :deep(.el-tabs__item) {
+  height: 44px;
+  font-weight: 600;
+}
+.admin-orders-team-tabs :deep(.el-tabs__content) {
+  display: none;
+}
+</style>

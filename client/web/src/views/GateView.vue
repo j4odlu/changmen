@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from "vue";
+import { computed, defineAsyncComponent, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import LoginPanel from "@/components/auth/LoginPanel.vue";
 import SessionRestoreLoader from "@/components/layout/SessionRestoreLoader.vue";
@@ -24,8 +24,24 @@ const isSportsRoute = computed(() => route.path.startsWith("/sports"));
 const accessReady = computed(() => extensionReady.value && certReady.value);
 /** 两道门都完成首次探测后再判定 Coming soon / 登录，避免误闪 */
 const gatesChecked = computed(() => certChecked.value && extensionChecked.value);
+const restoreSlow = ref(false);
+let restoreTimer: ReturnType<typeof setTimeout> | undefined;
+const restoring = computed(() => !sessionReady.value && !sessionChecked.value);
+watch(restoring, (pending) => {
+  if (restoreTimer)
+    clearTimeout(restoreTimer);
+  restoreSlow.value = false;
+  if (pending)
+    restoreTimer = setTimeout(() => { restoreSlow.value = true; }, 12_000);
+}, { immediate: true });
+onUnmounted(() => {
+  if (restoreTimer)
+    clearTimeout(restoreTimer);
+});
+// 恢复不可用时保留旧凭证，由用户主动提交新登录；不自动重放登录请求。
 const showLoginGate = computed(
-  () => sessionChecked.value && gatesChecked.value && accessReady.value,
+  () => gatesChecked.value && accessReady.value
+    && (sessionChecked.value || restoreSlow.value || Boolean(user.sessionRestoreError)),
 );
 /** 会话已判定且（无证或无插件）：Coming soon */
 const showComingSoon = computed(
@@ -33,7 +49,8 @@ const showComingSoon = computed(
 );
 /** 首次 Cookie 探测失败时也显示恢复错误与重试入口，避免无本地凭证时只剩背景。 */
 const showSessionRestore = computed(
-  () => !sessionReady.value && (!sessionChecked.value || Boolean(user.sessionRestoreError)),
+  () => !sessionReady.value && !showLoginGate.value
+    && (!sessionChecked.value || Boolean(user.sessionRestoreError)),
 );
 
 async function onLoginSuccess() {
@@ -58,6 +75,9 @@ async function onLoginSuccess() {
     @retry="user.restoreSession()"
   />
   <PluginIntroShell v-else-if="showLoginGate" :show-login="true">
+    <p v-if="user.sessionRestoreError || restoreSlow" class="login-error" role="status">
+      {{ user.sessionRestoreError || "登录恢复耗时较长，可以重新登录" }}
+    </p>
     <LoginPanel @success="onLoginSuccess" />
   </PluginIntroShell>
   <PluginIntroShell v-else-if="showComingSoon" :show-coming-soon="true" />

@@ -54,7 +54,7 @@ async function openObSportTrial() {
   <el-dialog
     v-model="visible"
     title="足球设置"
-    width="600"
+    width="min(1100px, calc(100vw - 32px))"
     append-to-body
     destroy-on-close
     @closed="onClosed"

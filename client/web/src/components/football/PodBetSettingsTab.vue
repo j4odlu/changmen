@@ -495,8 +495,10 @@ onUnmounted(() => {
 
 .pod-bet-settings__venue-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  align-items: start;
   gap: 12px;
+  overflow-x: auto;
 }
 
 .pod-bet-settings__venue {
@@ -585,8 +587,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 760px) {
-  .pod-bet-settings__grid.is-two,
-  .pod-bet-settings__venue-grid {
+  .pod-bet-settings__grid.is-two {
     grid-template-columns: minmax(0, 1fr);
   }
 

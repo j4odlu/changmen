@@ -270,6 +270,8 @@ export default defineConfig(({ command, mode }) => {
   },
   server: {
     port: DEV_PORT,
+    // 登录存储按 origin 隔离；重复启动应报错，不能悄悄换端口。
+    strictPort: true,
     proxy,
   },
   test: {

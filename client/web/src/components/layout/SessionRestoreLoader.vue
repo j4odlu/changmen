@@ -24,6 +24,9 @@ defineEmits<{ retry: [] }>();
         <span class="hero-word hero-word-3">Faster.</span>
         <span class="hero-word hero-word-4 hero-word--accent">Smarter.</span>
       </h1>
+      <p v-if="!error" class="session-loader__status" role="status">
+        正在恢复登录…
+      </p>
       <div v-if="error" class="session-loader__error" role="alert">
         <p>{{ error }}</p>
         <button type="button" class="session-loader__retry" @click="$emit('retry')">
@@ -47,6 +50,11 @@ defineEmits<{ retry: [] }>();
   margin-top: 28px;
   color: rgba(255, 255, 255, 0.86);
   text-align: center;
+}
+
+.session-loader__status {
+  color: rgba(255, 255, 255, 0.86);
+  margin: 0;
 }
 
 .session-loader__error p {

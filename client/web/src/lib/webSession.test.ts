@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { advanceAuthSessionVersion, browserAuthState, clearAuthSession, getCookieSessionInfo, setCookieAuthMode, setCookieSessionInfo } from "@/api/client";
+import { advanceAuthSessionVersion, beginAuthTransition, browserAuthState, clearAuthSession, getCookieSessionInfo, hasAuthSession, setCookieAuthMode, setCookieSessionInfo } from "@/api/client";
 import { probeCookieSession } from "./webSession";
 vi.mock("@/lib/jwtRefresh", () => ({ stopJwtAutoRefresh: vi.fn(), startJwtAutoRefresh: vi.fn(), refreshJwtSession: async () => true }));
 vi.mock("@changmen/venue-adapter/shared", async (importOriginal) => ({
@@ -16,6 +16,29 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); });
 describe("browser session recovery", () => {
+  it("clears a stale Cookie mode after 401 on the first probe after reload", async () => {
+    expect(getCookieSessionInfo()).toBeNull();
+    expect(hasAuthSession()).toBe(true);
+    fetchMock.mockResolvedValue(response({ code: "SESSION_REVOKED" }, 401));
+    expect(await probeCookieSession()).toBe(false);
+    expect(hasAuthSession()).toBe(false);
+    expect(browserAuthState.value).toBe("anonymous");
+  });
+  it("does not clear Cookie mode while a new login is being submitted", async () => {
+    const finish = beginAuthTransition();
+    try {
+      fetchMock.mockResolvedValue(response({}, 401));
+      expect(await probeCookieSession()).toBe(false);
+      expect(hasAuthSession()).toBe(true);
+    }
+    finally { finish(); }
+  });
+  it("keeps the Cookie mode on a temporary failure before identity is restored", async () => {
+    fetchMock.mockResolvedValue(response({}, 503));
+    await expect(probeCookieSession()).rejects.toThrow();
+    expect(hasAuthSession()).toBe(true);
+    expect(browserAuthState.value).toBe("unavailable");
+  });
   it("restores a Cookie identity without an access JWT", async () => {
     fetchMock.mockResolvedValue(response(info));
     expect(await probeCookieSession(false)).toBe(true);

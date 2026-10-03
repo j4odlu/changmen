@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { hasAuthSession } from "@/api/client";
 import LoginPanel from "@/components/auth/LoginPanel.vue";
 import SessionRestoreLoader from "@/components/layout/SessionRestoreLoader.vue";
 import PluginIntroShell from "@/components/layout/PluginIntroShell.vue";
@@ -32,9 +31,9 @@ const showLoginGate = computed(
 const showComingSoon = computed(
   () => sessionChecked.value && gatesChecked.value && !accessReady.value,
 );
-/** restoreSession 进行中（有 token 且尚未判定完成）时显示会话恢复加载动画 */
+/** 首次 Cookie 探测失败时也显示恢复错误与重试入口，避免无本地凭证时只剩背景。 */
 const showSessionRestore = computed(
-  () => hasAuthSession() && !sessionReady.value && !sessionChecked.value,
+  () => !sessionReady.value && (!sessionChecked.value || Boolean(user.sessionRestoreError)),
 );
 
 async function onLoginSuccess() {

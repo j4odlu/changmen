@@ -64,7 +64,7 @@ export async function prepareArbAttempt(
       = Math.floor(Math.random() * (config.maxMoney - config.minMoney + 1)) + config.minMoney;
   }
 
-  const funded = [...accountStore.getProviders(config.betMoney).keys()] as PlatformId[];
+  const funded = [...accountStore.getProviders(config.betMoneyMode === "total" ? 0 : config.betMoney).keys()] as PlatformId[];
   // [changmen 扩展] 扩展 Tab 套利场馆白名单；null = 不限制（现网）
   const providerKeys = filterArbProviderKeys(funded, userStore.extensionPrefs.arbAllowedPlatforms);
 

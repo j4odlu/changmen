@@ -7,6 +7,7 @@ export {
   applyArbHedgeStakes,
   arbBaseStake,
   impliedFromLegOdds,
+  initialArbBaseStake,
   resolveArbTargetProfit,
 } from "./arbStakeMath";
 export { arbLegsIncludePolymarket } from "./polymarketArbPrecheck";

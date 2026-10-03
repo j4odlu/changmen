@@ -4,6 +4,7 @@ export const ADMIN_SETTING_LABELS: Record<string, string> = {
   bettingAutoOpen: "定时开启买入",
   bettingAutoOpenTime: "定时开启时间",
   betMoney: "买入金额",
+  betMoneyMode: "初始下注金额模式",
   minMoney: "随机金额下限",
   maxMoney: "随机金额上限",
   tenNumber: "整十金额",

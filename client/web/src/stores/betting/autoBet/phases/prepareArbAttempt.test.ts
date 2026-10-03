@@ -7,6 +7,7 @@ import { prepareArbAttempt } from "@/stores/betting/autoBet/phases/prepareArbAtt
 import { createDefaultUserConfig } from "@/types/userConfig";
 
 const loseOrderIds = vi.hoisted(() => new Set<number>());
+const getProviders = vi.hoisted(() => vi.fn(() => new Map([["PB", []], ["RAY", []]])));
 
 let foOdds: Record<string, Record<string, number>> = {};
 
@@ -70,7 +71,7 @@ vi.mock("@/stores/accountStore", () => ({
         playerName: "b",
       },
     ],
-    getProviders: () => new Map([["PB", []], ["RAY", []]]),
+    getProviders,
     getAccount: (provider: string) => ({
       balance: 1000,
       loadingBalance: false,
@@ -140,6 +141,54 @@ describe("prepareArbAttempt early return (A8 静默 continue)", () => {
       PB: { h1: 2.1, a1: 1.5 },
       RAY: { h2: 1.6, a2: 2.2 },
     };
+  });
+
+  it("builds initial legs from total budget using the live odds", async () => {
+    const bet = makeBet(arbSources);
+    for (const item of bet.items) {
+      vi.spyOn(item, "getOdds").mockImplementation(side => foOdds[item.type]?.[item.getItemId(side)] ?? 0);
+    }
+    const config = {
+      ...createDefaultUserConfig(),
+      betMoney: 150,
+      betMoneyMode: "total" as const,
+      profit: 1.03,
+      minOdds: 1.01,
+    };
+    const result = await prepareArbAttempt({ match, bet, config, setMessage: () => {} });
+    expect(result).not.toBeNull();
+    expect(result!.legA.betMoney + result!.legB.betMoney).toBeCloseTo(150);
+    const payoutDifference = Math.abs(result!.legA.betMoney * result!.legA.odds - result!.legB.betMoney * result!.legB.odds);
+    expect(payoutDifference).toBeLessThanOrEqual(Math.max(result!.legA.odds, result!.legB.odds) / 100);
+    expect(config.betMoney).toBe(150);
+    expect(getProviders).toHaveBeenLastCalledWith(0);
+  });
+
+  it.each([
+    { budget: 150.01, tenNumber: false, allowed: true },
+    { budget: 0.01, tenNumber: false, allowed: false },
+    { budget: 5, tenNumber: true, allowed: false },
+    { budget: -100, tenNumber: false, allowed: false },
+    { budget: Number.POSITIVE_INFINITY, tenNumber: false, allowed: false },
+  ])("handles total budget $budget with tenNumber=$tenNumber", async ({ budget, tenNumber, allowed }) => {
+    const bet = makeBet(arbSources);
+    for (const item of bet.items) {
+      vi.spyOn(item, "getOdds").mockReturnValue(2.1);
+    }
+    const config = {
+      ...createDefaultUserConfig(),
+      betMoney: budget,
+      betMoneyMode: "total" as const,
+      tenNumber,
+      minOdds: 1.01,
+    };
+    const result = await prepareArbAttempt({ match, bet, config, setMessage: () => {} });
+    if (!allowed) {
+      expect(result).toBeNull();
+      return;
+    }
+    expect(result).not.toBeNull();
+    expect(Math.round((result!.legA.betMoney + result!.legB.betMoney) * 100)).toBe(Math.round(budget * 100));
   });
 
   it("returns null when bet is in lose order queue", async () => {

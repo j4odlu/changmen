@@ -8,6 +8,8 @@ export interface UserConfig {
   bettingAutoOpen: boolean;
   bettingAutoOpenTime: number;
   betMoney: number;
+  /** [changmen 扩展] 初始注码使用低赔腿金额或双腿合计金额；缺省为低赔腿。 */
+  betMoneyMode?: "buy" | "total";
   minMoney: number;
   maxMoney: number;
   tenNumber: boolean;

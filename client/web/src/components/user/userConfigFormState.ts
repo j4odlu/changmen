@@ -19,6 +19,7 @@ export type UserConfigFormState = ReturnType<typeof createUserConfigFormState>;
 export function createUserConfigFormState(src: UserConfig) {
   return {
     ...src,
+    betMoneyMode: src.betMoneyMode ?? "buy",
     minOdds: String(src.minOdds ?? ""),
     checkTimeout: String(src.checkTimeout ?? 3000),
     providerSortValue: [...src.providerSortValue],

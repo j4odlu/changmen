@@ -405,6 +405,7 @@ export const useUserStore = defineStore("user", {
       return {
         ...configBody,
         betMoney: Number(this.config.betMoney) || 100,
+        betMoneyMode: this.config.betMoneyMode === "total" ? "total" : "buy",
         minMoney: Number(this.config.minMoney) || 0,
         maxMoney: Number(this.config.maxMoney) || 0,
         profit: Number(this.config.profit) || 1.03,

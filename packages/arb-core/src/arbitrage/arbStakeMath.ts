@@ -7,6 +7,15 @@ export function impliedFromLegOdds(legA: BetOption, legB: BetOption): number {
   return 1 / (1 / legA.odds + 1 / legB.odds);
 }
 
+/** [changmen 扩展] 合计模式先换算低赔腿初始金额，后续对冲与取整沿用现有规则。 */
+export function initialArbBaseStake(oddsA: number, oddsB: number, config: UserConfig): number {
+  if (config.betMoneyMode !== "total")
+    return config.betMoney;
+  const low = Math.min(oddsA, oddsB);
+  const high = Math.max(oddsA, oddsB);
+  return config.betMoney * high / (low + high);
+}
+
 /** 对齐 pickArbLegs：账号 profit 覆盖 config.profit */
 export function resolveArbTargetProfit(
   config: UserConfig,

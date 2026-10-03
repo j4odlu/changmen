@@ -49,11 +49,12 @@ export function formatAccountFundingHint(
 
 export function getProviders(store: AccountStoreContext, minBetMoney?: number) {
   const config = useUserStore().config;
-  const threshold = minBetMoney ?? config.betMoney;
+  // [changmen 扩展] 合计模式按选腿后的实际注码选号，不能要求单账号余额达到整组总额。
+  const threshold = minBetMoney ?? (config.betMoneyMode === "total" ? 0 : config.betMoney);
   const map = new Map<PlatformId, PlatformAccount[]>();
   for (const acc of store.accounts) {
     const bal = acc.getBalance();
-    if (bal === undefined || bal < threshold)
+    if (bal === undefined || bal < threshold || (config.betMoneyMode === "total" && bal <= 0))
       continue;
     if (!map.has(acc.provider))
       map.set(acc.provider, []);

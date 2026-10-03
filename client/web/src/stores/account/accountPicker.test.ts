@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 import { accountsFundingReady, getProviders, pickAccount } from "@/stores/account/accountPicker";
 
+const config = vi.hoisted(() => ({ profit: 1.03, betMoney: 100, betMoneyMode: "buy" }));
+
 vi.mock("@/stores/userStore", () => ({
   useUserStore: () => ({
-    config: { profit: 1.03, betMoney: 100 },
+    config,
   }),
 }));
 
@@ -57,6 +59,25 @@ describe("accountsFundingReady", () => {
 });
 
 describe("getProviders", () => {
+  it("uses actual leg stakes for account selection in total mode", () => {
+    config.betMoneyMode = "total";
+    try {
+      const store = makeStore([
+        makeAccount({ accountId: 1, provider: "RAY", balance: 70 }),
+        makeAccount({ accountId: 2, provider: "OB", balance: 40 }),
+        makeAccount({ accountId: 3, provider: "PB", balance: 0 }),
+      ]);
+      expect([...getProviders(store).keys()]).toEqual(["RAY", "OB"]);
+      expect(pickAccount(store, "RAY", 100 * 2 / 3)?.accountId).toBe(1);
+      expect(pickAccount(store, "OB", 100 / 3)?.accountId).toBe(2);
+      expect(pickAccount(store, "OB", 50)).toBeUndefined();
+      expect(getProviders(store, 100).size).toBe(0);
+    }
+    finally {
+      config.betMoneyMode = "buy";
+    }
+  });
+
   it("groups accounts with balance at or above threshold", () => {
     const store = makeStore([
       makeAccount({ accountId: 1, provider: "RAY", balance: 200 }),

@@ -94,9 +94,23 @@ function setWaitTime(platform: string, v: string | number) {
   <el-form :model="form" class="user-config-panel" :class="{ 'user-config-panel--readonly': readonly }">
     <el-form-item>
       <div class="bet-money-row">
-        <el-form-item label="买入金额:" :label-width="LABEL_W" class="bet-money-row__input">
+        <el-form-item
+          :label="form.betMoneyMode === 'total' ? '双腿合计金额:' : '买入金额:'"
+          :label-width="form.betMoneyMode === 'total' ? '100px' : LABEL_W"
+          class="bet-money-row__input"
+        >
           <el-input v-model="form.betMoney" autocomplete="off" :disabled="fieldDisabled()" style="width: 120px" />
         </el-form-item>
+        <el-select
+          v-model="form.betMoneyMode"
+          class="bet-money-row__mode"
+          aria-label="初始下注金额模式"
+          :disabled="fieldDisabled()"
+          title="买入金额固定低赔腿；双腿合计金额按赔率分配初始注码。十位取整后实际合计可能略有变化。"
+        >
+          <el-option label="买入金额" value="buy" />
+          <el-option label="双腿合计金额" value="total" />
+        </el-select>
         <div class="bet-money-row__switches">
           <el-switch
             v-model="form.tenNumber"
@@ -521,8 +535,16 @@ function setWaitTime(platform: string, v: string | number) {
 <style scoped>
 .bet-money-row {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 12px;
   align-items: center;
   width: 100%;
+}
+
+.bet-money-row__mode {
+  flex-shrink: 0;
+  width: 150px;
+  margin-left: 12px;
 }
 
 .bet-money-row__input {

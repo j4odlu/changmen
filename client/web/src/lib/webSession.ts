@@ -1,5 +1,5 @@
 import type { CookieSessionInfo } from "@/lib/authSession";
-import { browserAuthState, getAuthSessionVersion, getCookieSessionInfo, invalidateAuthSession, isAuthSessionCurrent, isCookieAuthMode, setCookieAuthMode, setCookieSessionInfo } from "@/lib/authSession";
+import { browserAuthState, clearAuthSession, getAuthSessionVersion, getCookieSessionInfo, invalidateAuthSession, isAuthSessionCurrent, isAuthTransitionPending, isCookieAuthMode, setCookieAuthMode, setCookieSessionInfo } from "@/lib/authSession";
 import { getApiBase } from "@/config/apiBase";
 import { resolveChangmenWsBase } from "@changmen/venue-adapter/shared";
 
@@ -22,8 +22,12 @@ async function runProbe(force: boolean) {
     if (response.status === 404 && !getCookieSessionInfo())
       return false;
     if (response.status === 401) {
+      if (isAuthTransitionPending())
+        return false;
       if (getCookieSessionInfo())
         invalidateAuthSession("SESSION_REVOKED");
+      else if (isCookieAuthMode())
+        clearAuthSession();
       return false;
     }
     if (!response.ok)

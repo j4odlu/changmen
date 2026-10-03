@@ -12,6 +12,7 @@ export function createDefaultUserConfig(): UserConfig {
     bettingAutoOpen: false,
     bettingAutoOpenTime: 0,
     betMoney: 100,
+    betMoneyMode: "buy",
     minMoney: 0,
     maxMoney: 0,
     tenNumber: false,
@@ -68,6 +69,7 @@ export function mergeUserConfig(raw: Partial<UserConfig> | null | undefined): Us
   return {
     ...base,
     ...rest,
+    betMoneyMode: raw.betMoneyMode === "total" ? "total" : "buy",
     providerSortValue: mergeProviderSortValue(
       Array.isArray(raw.providerSortValue)
         ? (raw.providerSortValue as PlatformId[])

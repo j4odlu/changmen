@@ -37,11 +37,6 @@
     const token = window.getSiteToken();
     return token ? { token } : {};
   };
-  window.matcherForbiddenMessage = function matcherForbiddenMessage(detail) {
-    if (detail?.error === 'CSRF_INVALID' || detail?.code === 'CSRF_INVALID')
-      return '请求校验失败（请刷新赛事匹配页面后重试）';
-    return detail?.message || '需要团队长或管理员权限（当前账号无权访问赛事匹配面板）';
-  };
   window.matcherSessionHeaders = async function matcherSessionHeaders() {
     const response = await fetch('/auth/session', { credentials: 'include', cache: 'no-store' });
     if (response.status === 404 || response.status === 401)
@@ -49,9 +44,21 @@
     if (!response.ok)
       throw new Error('登录服务暂时不可用，请稍后重试');
     const info = await response.json();
-    if (info.cookieEnabled)
+    // 双轨登录也可能只有 HttpOnly 会话；写请求必须携带服务端签发的 CSRF。
+    if (info.csrfToken)
       return { 'X-Changmen-Auth': 'cookie', 'X-CSRF-Token': info.csrfToken };
+    if (info.cookieEnabled || !window.getSiteToken())
+      throw new Error('登录请求校验未配置，请检查后端 WEB_AUTH_CSRF_SECRET 后刷新页面');
     return window.matcherAuthHeaders();
+  };
+
+  window.matcherForbiddenMessage = function matcherForbiddenMessage(data) {
+    const code = data.code || data.error;
+    if (code === 'CSRF_INVALID')
+      return '请求校验失败（CSRF），请刷新赛事匹配页面；这不是账号权限不足';
+    if (code === 'forbidden' || code === 'FORBIDDEN')
+      return data.message || '需要团队长或管理员权限';
+    return data.message || data.error || '请求被拒绝（HTTP 403），请刷新后重试';
   };
 
   window.redirectToSiteLogin = function redirectToSiteLogin() {

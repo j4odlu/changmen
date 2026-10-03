@@ -24,8 +24,9 @@ export function describeGetOrderOptionsSkip(
     if (!anyLoaded && accounts.length) {
       return "账号余额尚未加载（请等待刷新或点账号栏刷新）";
     }
-    const hint = formatAccountFundingHint(accounts, config.betMoney);
-    return `无余额 ≥ ${config.betMoney} 的账号平台（${hint}）`;
+    const threshold = config.betMoneyMode === "total" ? 0 : config.betMoney;
+    const hint = formatAccountFundingHint(accounts, threshold);
+    return `无余额 ≥ ${threshold} 的账号平台（${hint}）`;
   }
   if (providerKeys.length === 1) {
     return `仅 ${providerKeys[0]} 有余额账号，套利需至少两个不同平台`;

@@ -8,7 +8,7 @@ describe("Cookie CSRF and deployment configuration", () => {
     process.env.NODE_ENV = "development";
     delete process.env.WEB_AUTH_ORIGINS;
     for (const host of ["localhost", "127.0.0.1"]) {
-      for (const port of [5274, 5574, 5174, 3700, 3456])
+      for (const port of [5274, 5574, 5575, 5174, 3700, 3456])
         expect(validAuthOrigin({ headers: { origin: `http://${host}:${port}` } })).toBe(true);
     }
     for (const origin of [undefined, "null", "http://localhost:9999", "https://evil.example"])

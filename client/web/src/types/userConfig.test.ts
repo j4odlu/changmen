@@ -25,6 +25,13 @@ describe("mergeProviderSortValue", () => {
 });
 
 describe("mergeUserConfig legacy fields", () => {
+  it("defaults old configs to buy mode and preserves total mode", () => {
+    expect(mergeUserConfig(null).betMoneyMode).toBe("buy");
+    expect(mergeUserConfig({ betMoney: 150 }).betMoneyMode).toBe("buy");
+    expect(mergeUserConfig({ betMoneyMode: "total" }).betMoneyMode).toBe("total");
+    expect(mergeUserConfig({ betMoneyMode: "invalid" } as unknown as Partial<UserConfig>).betMoneyMode).toBe("buy");
+  });
+
   it("strips deprecated arbDetectEngine and arbExecuteEngine", () => {
     const cfg = mergeUserConfig({
       arbDetectEngine: "kakaxi",

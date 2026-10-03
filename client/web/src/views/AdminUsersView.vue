@@ -17,6 +17,7 @@ import {
 } from "@/api/admin";
 import AdminLayout from "@/components/admin/AdminLayout.vue";
 import AdminUserDetail from "@/components/admin/AdminUserDetail.vue";
+import CertificateManagerPanel from "@/components/admin/CertificateManagerPanel.vue";
 import {
   mountAdminUserWorkspace,
   unmountAdminUserWorkspace,
@@ -33,6 +34,33 @@ const users = ref<AdminUserRow[]>([]);
 const keyword = ref("");
 const detailUser = ref<AdminUserRow | null>(null);
 const drawerOpen = ref(false);
+const detailTab = ref('details');
+const certificatePanel = ref<InstanceType<typeof CertificateManagerPanel> | null>(null);
+
+function canLeaveCertificates() {
+  if (certificatePanel.value && !certificatePanel.value.canLeave()) {
+    ElMessage.warning('请等待证书操作完成，并保存安装包后关闭下载窗口');
+    return false;
+  }
+  return true;
+}
+function beforeCloseDetail(done: () => void) { if (canLeaveCertificates()) done(); }
+function changeDetailTab(next: string | number) {
+  if (!canLeaveCertificates() || !detailUser.value) return false;
+  if (next === 'certificates') unmountAdminUserWorkspace();
+  else {
+    try { mountAdminUserWorkspace(detailUser.value); }
+    catch (error) { ElMessage.error(error instanceof Error ? error.message : '无法打开用户详情'); return false; }
+  }
+  return true;
+}
+function openCertificates(row: AdminUserRow) {
+  if (!userStore.isAdmin || !canLeaveCertificates()) return;
+  unmountAdminUserWorkspace();
+  detailUser.value = row;
+  detailTab.value = 'certificates';
+  drawerOpen.value = true;
+}
 
 const createDialog = ref(false);
 const createForm = reactive({ userName: "", password: "", confirm: "" });
@@ -187,7 +215,9 @@ async function loadUsers() {
 
 function openDetail(row: AdminUserRow) {
   try {
+    if (!canLeaveCertificates()) return;
     mountAdminUserWorkspace(row);
+    detailTab.value = 'details';
     detailUser.value = row;
     drawerOpen.value = true;
   }
@@ -436,7 +466,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <AdminLayout title="用户管理" subtitle="账号创建、密码重置与用户详情">
+  <AdminLayout title="用户管理" subtitle="账号创建、密码重置、用户详情与设备证书">
     <section v-loading="loading" class="admin-card">
       <div class="admin-card__toolbar">
         <el-date-picker
@@ -562,11 +592,12 @@ onUnmounted(() => {
                 </span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="340" fixed="right">
+            <el-table-column label="操作" width="380" fixed="right">
               <template #default="{ row }">
                 <el-button v-if="userStore.isAdmin" link type="primary" size="small" @click="openDetail(row)">
                   详情
                 </el-button>
+                <el-button v-if="userStore.isAdmin" link type="primary" size="small" @click="openCertificates(row)">证书</el-button>
                 <el-button link type="primary" size="small" @click="viewOrders(row)">
                   订单
                 </el-button>
@@ -601,13 +632,17 @@ onUnmounted(() => {
       direction="rtl"
       destroy-on-close
       :teleported="false"
+      :before-close="beforeCloseDetail"
       @closed="closeDetailDrawer"
     >
-      <AdminUserDetail
-        v-if="detailUser"
-        :user="detailUser"
-        @view-orders="viewOrders(detailUser)"
-      />
+      <el-tabs v-if="detailUser && userStore.isAdmin" v-model="detailTab" :before-leave="changeDetailTab">
+        <el-tab-pane label="用户详情" name="details">
+          <AdminUserDetail v-if="detailTab === 'details'" :key="detailUser.id" :user="detailUser" @view-orders="viewOrders(detailUser)" />
+        </el-tab-pane>
+        <el-tab-pane label="设备证书" name="certificates">
+          <CertificateManagerPanel v-if="detailTab === 'certificates'" :key="detailUser.id" ref="certificatePanel" :user-id="detailUser.id" :user-name="detailUser.userName" />
+        </el-tab-pane>
+      </el-tabs>
     </el-drawer>
 
     <el-dialog v-model="createDialog" title="新建用户" class="admin-dialog" width="400px" destroy-on-close>

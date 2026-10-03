@@ -22,9 +22,9 @@ type AdminNavItem = {
 };
 
 const navItems: AdminNavItem[] = [
-  { name: 'admin-certificates', label: '用户证书', icon: 'am-icon-lock', to: { name: 'admin-certificates' } },
   { name: "admin", label: "数据概览", icon: "am-icon-dashboard", to: { name: "admin" } },
   { name: "admin-users", label: "用户管理", icon: "am-icon-users", to: { name: "admin-users" } },
+  { name: 'admin-certificates', label: '证书总览', icon: 'am-icon-lock', to: { name: 'admin-certificates' } },
   { name: "admin-leaderboard", label: "排行榜设置", icon: "am-icon-trophy", to: { name: "admin-leaderboard" } },
   { name: "admin-accounts", label: "子账号", icon: "am-icon-credit-card", to: { name: "admin-accounts" } },
   { name: "admin-orders", label: "电竞订单查询", icon: "am-icon-gamepad", to: { name: "admin-orders" } },

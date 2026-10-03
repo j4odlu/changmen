@@ -1,5 +1,6 @@
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
-import type { ActiveBetLeg, ActiveBetLegStatus } from "@/types/activeBetRun";
+import type { ActiveBetLeg, ActiveBetLegStatus, ActiveBetRun } from "@/types/activeBetRun";
+import { classifyLinkId } from "@changmen/client-core/shared/format";
 import { orderObservationTargets } from "@changmen/shared/order_observation_view";
 
 export type ProgressTone = "neutral" | "pending" | "success" | "warning" | "danger";
@@ -15,8 +16,25 @@ const FALLBACK_LABELS: Record<ActiveBetLegStatus, string> = {
   skipped: "不参与",
 };
 
+/** [changmen 扩展] 模式由本次启动参数确定；恢复记录可用 Link 编码兜底，不能按剩余腿数猜测。 */
+export function activeBetRunMode(run: Pick<ActiveBetRun, "mode" | "linkId">) {
+  const source = classifyLinkId(run.linkId);
+  return run.mode ?? (source === "single" ? "single9999" : source === "arb" ? "arb" : source === "valueBet" ? "valueBet" : undefined);
+}
+
+export function activeBetRunModeLabel(run: Pick<ActiveBetRun, "mode" | "linkId">): string {
+  const mode = activeBetRunMode(run);
+  return mode === "single9999" ? "9999 单边下单" : mode === "arb" ? "双边套利" : mode === "valueBet" ? "正EV 单腿下单" : "模式未记录";
+}
+
+export function activeBetLegRole(leg: ActiveBetLeg): string {
+  if (leg.precheckOnly || leg.detail?.includes("9999仅预检"))
+    return "仅预检 · 不下单";
+  return leg.status === "skipped" ? "不参与" : "下单腿";
+}
+
 /** [changmen 扩展] 只读展示最近尝试；受理、超时策略与场馆成交证据分开。 */
-export function observationLegSummary(events: readonly OrderObservationEvent[], fallback: ActiveBetLegStatus) {
+export function observationLegSummary(events: readonly OrderObservationEvent[], fallback: ActiveBetLegStatus, precheckOnly = false) {
   // 老尝试的补绑回执可能晚于新重试到达，按尝试首次出现排序，不能按最后一条回执选尝试。
   const attempts = new Set(events.map(event => event.attemptId).filter(Boolean));
   const lastAttempt = [...attempts].at(-1);
@@ -29,7 +47,9 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
   const check = matching("precheck_result");
   const policy = attempt.some(event => event.kind === "settlement_observed" && event.source === "timeout_policy");
   const evidence = [...attempt].reverse().find(event => event.safeSummary);
-  let label = `编排：${FALLBACK_LABELS[fallback]}`;
+  let label = fallback === "confirmed" ? "编排判定成交 · 缺少场馆确认记录" : `编排：${FALLBACK_LABELS[fallback]}`;
+  if (precheckOnly)
+    label = fallback === "failed" ? "9999 仅预检 · 失败" : "9999 仅预检 · 不下单";
   let tone: ProgressTone = "neutral";
   let basis = "尚无本次尝试的结果证据";
   if (outcomes.size > 1) {
@@ -63,7 +83,8 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
     label = "提交处理中"; tone = "pending"; basis = "已调用适配器，等待返回";
   }
   else if (check?.outcome === "prepared") {
-    label = "预检通过"; tone = "pending"; basis = "尚未记录提交结果";
+    label = precheckOnly ? "9999 预检通过 · 不下单" : "预检通过";
+    tone = "pending"; basis = precheckOnly ? "本侧仅预检，对侧允许真实下单" : "尚未记录提交结果";
   }
   else if (matching("precheck_started")) {
     label = "预检处理中"; tone = "pending"; basis = "等待盘口和下注条件校验";
@@ -85,6 +106,15 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
     retries: new Set(events.filter(event => event.retryRound && event.attemptId).map(event => event.attemptId)).size,
     makeups: new Set(events.filter(event => event.kind === "queue_created" && event.queueId).map(event => event.queueId)).size,
   };
+}
+
+/** [changmen 扩展] 编排成功不能代替场馆成交证据，9999 预检身份独立于可变 detail。 */
+export function progressOrchestrationLabel(leg: Pick<ActiveBetLeg, "status" | "precheckOnly">, events: readonly OrderObservationEvent[], fallbackLabel: string): string {
+  if (leg.precheckOnly)
+    return leg.status === "failed" ? "9999 仅预检 · 失败" : "9999 仅预检 · 不下单";
+  if (leg.status === "confirmed" && observationLegSummary(events, leg.status).label !== "观察到成交")
+    return "编排判定成交 · 缺少场馆确认记录";
+  return fallbackLabel;
 }
 
 export function progressEvidenceWarnings(events: readonly OrderObservationEvent[]): string[] {

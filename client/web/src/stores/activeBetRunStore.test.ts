@@ -48,6 +48,7 @@ describe("activeBetRunStore", () => {
 
     expect(store.visibleRuns).toHaveLength(1);
     expect(store.visibleRuns[0]?.phase).toBe("preparing");
+    expect(store.visibleRuns[0]?.mode).toBe("arb");
 
     syncActiveBetAfterRejectSync(100, {
       hasA: true,
@@ -209,6 +210,38 @@ describe("activeBetRunStore", () => {
       detail: "acc1 · 9999仅预检",
       events: [],
     })).toBe("仅预检");
+  });
+
+  it("preserves 9999 precheck identity independently of changing orchestration detail", () => {
+    const store = useActiveBetRunStore();
+    syncActiveBetBegin({
+      match: { id: 1, title: "A vs B" } as never,
+      bet: { id: 100, getBetName: () => "全场胜负" } as never,
+      legA: { type: "Polymarket", target: "Home", odds: 2, betMoney: 100 } as never,
+      legB: { type: "RAY", target: "Away", odds: 2.1, betMoney: 95 } as never,
+      checkAccountA: { playerName: "pm9999" } as never,
+      accountB: { playerName: "ray1" } as never,
+      linkId: -1_000,
+      betBothLegs: false,
+    });
+    const run = store.visibleRuns[0]!;
+    expect(run.mode).toBe("single9999");
+    expect(run.legs[0]?.precheckOnly).toBe(true);
+    expect(run.legs[1]?.precheckOnly).toBeUndefined();
+    store.patchLeg(100, "A", { detail: "预检通过" });
+    expect(run.legs[0]?.precheckOnly).toBe(true);
+    syncActiveBetAfterRejectSync(100, {
+      hasA: false, hasB: true, rejectA: false, rejectB: false,
+      okA: false, okB: true, makeupQueued: false,
+      placeOutcomeA: "not_attempted", placeOutcomeB: "filled_pending_settle",
+    });
+    expect(run.overallLabel).toBe("单边下单已完成");
+    expect(run.terminalAt).toBeTypeOf("number");
+    expect(run.legs[0]?.status).toBe("pending");
+    expect(run.legs[0]?.events.some(event => event.detail === "已成交")).toBe(false);
+    expect(run.legs[1]?.status).toBe("confirmed");
+    vi.advanceTimersByTime(ACTIVE_BET_TERMINAL_LINGER_MS);
+    expect(store.visibleRuns).toHaveLength(0);
   });
 
   it("patchLeg appends layered event when leg status changes", () => {

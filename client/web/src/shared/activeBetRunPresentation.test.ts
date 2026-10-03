@@ -1,11 +1,22 @@
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import { describe, expect, it } from "vitest";
-import { observationLegGroups, observationLegSummary, progressEvidenceWarnings } from "./activeBetRunPresentation";
+import { activeBetLegRole, activeBetRunMode, activeBetRunModeLabel, observationLegGroups, observationLegSummary, progressEvidenceWarnings, progressOrchestrationLabel } from "./activeBetRunPresentation";
 
 function event(kind: OrderObservationEvent["kind"], patch: Partial<OrderObservationEvent> = {}): OrderObservationEvent {
   return { version: 1, eventId: "event-123", ownerUserId: "u1", sequence: 1, occurredAt: 1000, linkId: 123, attemptId: "attempt-1", kind, ...patch };
 }
 describe("实时进度只读摘要", () => {
+  it("identifies execution mode without guessing from remaining legs or settlement status", () => {
+    expect(activeBetRunMode({ mode: "arb", linkId: -1_000 })).toBe("arb");
+    expect(activeBetRunModeLabel({ mode: "arb" })).toBe("双边套利");
+    expect(activeBetRunModeLabel({ linkId: -1_800_000_000_000 })).toBe("9999 单边下单");
+    expect(activeBetRunModeLabel({ mode: "valueBet" })).toBe("正EV 单腿下单");
+    expect(activeBetRunModeLabel({})).toBe("模式未记录");
+    const leg = { side: "A", platform: "Polymarket", target: "Home", status: "pending", events: [] } as const;
+    expect(activeBetLegRole({ ...leg, events: [] })).toBe("下单腿");
+    expect(activeBetLegRole({ ...leg, events: [], precheckOnly: true })).toBe("仅预检 · 不下单");
+    expect(activeBetLegRole({ ...leg, events: [], status: "skipped" })).toBe("不参与");
+  });
   it("does not turn adapter acceptance or successful binding into venue confirmation", () => {
     const summary = observationLegSummary([event("submission_result", { outcome: "accepted" }), event("bind_result", { outcome: "saved", sequence: 2 })], "confirmed");
     expect(summary.label).toBe("已受理 · 待确认");
@@ -14,8 +25,17 @@ describe("实时进度只读摘要", () => {
   });
   it("distinguishes timeout policy and orchestration from venue evidence", () => {
     expect(observationLegSummary([event("settlement_observed", { outcome: "unfilled", source: "timeout_policy" })], "rejected").label).toBe("超时策略处理");
-    expect(observationLegSummary([event("settlement_observed", { outcome: "filled", source: "orchestration_result" })], "confirmed").label).toBe("编排：已成交");
+    expect(observationLegSummary([event("settlement_observed", { outcome: "filled", source: "orchestration_result" })], "confirmed").label).toBe("编排判定成交 · 缺少场馆确认记录");
     expect(observationLegSummary([event("settlement_observed", { outcome: "filled", source: "adapter" })], "confirmed").label).toBe("观察到成交");
+  });
+  it("does not display a precheck-only or unverified orchestration result as a confirmed fill", () => {
+    const events = [event("precheck_result", { outcome: "prepared" })];
+    const leg = { side: "A", platform: "Polymarket", target: "Home", status: "confirmed", detail: "已成交", events: [] } as const;
+    expect(progressOrchestrationLabel(leg, events, "已成交")).toBe("编排判定成交 · 缺少场馆确认记录");
+    expect(progressOrchestrationLabel({ ...leg, precheckOnly: true }, events, "已成交")).toBe("9999 仅预检 · 不下单");
+    expect(observationLegSummary(events, "confirmed", true).label).toBe("9999 预检通过 · 不下单");
+    expect(observationLegSummary([], "confirmed", true).label).toBe("9999 仅预检 · 不下单");
+    expect(progressOrchestrationLabel(leg, [event("settlement_observed", { outcome: "filled", source: "adapter" })], "已成交")).toBe("已成交");
   });
   it("warns on conflicting venue confirmations", () => {
     const events = [event("settlement_observed", { outcome: "filled", source: "adapter" }), event("settlement_observed", { outcome: "unfilled", source: "adapter", sequence: 2 })];

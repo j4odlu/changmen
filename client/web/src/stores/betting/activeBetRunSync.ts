@@ -32,6 +32,7 @@ function legFromOption(
   odds: number;
   betMoney: number;
   status: ActiveBetLegStatus;
+  precheckOnly?: boolean;
   detail?: string;
   events: { at: number; stage: string; detail: string }[];
 } {
@@ -86,8 +87,10 @@ export function syncActiveBetBegin(params: {
     if (!checkAccount)
       return legFromOption(side, leg, undefined, "skipped");
     const row = legFromOption(side, leg, checkAccount, "pending");
-    if (checkAccount && !betAccount)
+    if (checkAccount && !betAccount) {
+      row.precheckOnly = true;
       row.detail = [checkAccount.playerName, "9999仅预检"].filter(Boolean).join(" · ");
+    }
     return row;
   }
 
@@ -101,8 +104,9 @@ export function syncActiveBetBegin(params: {
     matchTitle: match.title,
     betName: bet.getBetName(),
     linkId,
+    mode: params.betBothLegs ? "arb" : "single9999",
     phase: "preparing",
-    overallLabel: "准备套利",
+    overallLabel: params.betBothLegs ? "准备双边套利" : "准备 9999 单边下单",
     legs,
   });
   if (checkAccountA)
@@ -550,6 +554,12 @@ export function syncActiveBetAfterRejectSync(
 
   if (pendingA || pendingB) {
     store.setPhase(betId, "settling", "待场馆确认");
+    return;
+  }
+
+  // [changmen 扩展] 9999 仅以下单腿收尾，不等待仅预检/不参与的另一腿成交。
+  if (run?.mode === "single9999" && ((flags.hasA && flags.okA) || (flags.hasB && flags.okB))) {
+    store.scheduleTerminalRemoval(betId, undefined, "单边下单已完成");
     return;
   }
 

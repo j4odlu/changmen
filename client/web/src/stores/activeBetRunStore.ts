@@ -188,6 +188,7 @@ export const useActiveBetRunStore = defineStore("activeBetRun", {
         matchTitle: patch.matchTitle,
         betName: patch.betName,
         linkId: patch.linkId ?? existing?.linkId,
+        mode: patch.mode ?? existing?.mode,
         phase: patch.phase ?? existing?.phase ?? "preparing",
         overallLabel: patch.overallLabel ?? existing?.overallLabel ?? PHASE_LABEL.preparing,
         legs: patch.legs ?? existing?.legs ?? [],

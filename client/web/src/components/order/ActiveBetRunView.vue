@@ -4,7 +4,7 @@ import { storeToRefs } from "pinia";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import OrderExecutionTimeline from "@/components/order/OrderExecutionTimeline.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
-import { observationLegGroups, observationLegSummary, progressEvidenceWarnings } from "@/shared/activeBetRunPresentation";
+import { activeBetLegRole, activeBetRunMode, activeBetRunModeLabel, observationLegGroups, observationLegSummary, progressEvidenceWarnings, progressOrchestrationLabel } from "@/shared/activeBetRunPresentation";
 import { formatActiveBetLinkLabel } from "@/shared/linkDisplay";
 import {
   ACTIVE_BET_RUN_QUEUE_CAP,
@@ -55,14 +55,15 @@ const runFacts = computed(() => userStore.isLoggedIn
   : []);
 const factGroups = computed(() => observationLegGroups(runFacts.value, activeRun.value?.legs || []));
 function legFacts(leg: ActiveBetLeg) { return factGroups.value.groups.get(leg.side) || []; }
-const legSummaries = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, observationLegSummary(legFacts(leg), leg.status)])));
+const legSummaries = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, observationLegSummary(legFacts(leg), leg.status, leg.precheckOnly)])));
 function legSummary(leg: ActiveBetLeg) { return legSummaries.value.get(leg.side)!; }
 function legProvider(leg: ActiveBetLeg) { return legSummary(leg).provider || leg.platform; }
 const unassignedFacts = computed(() => factGroups.value.unassigned);
 const hasMoreTimeline = computed(() => unassignedFacts.value.length > 6
   || (activeRun.value?.legs || []).some(leg => legFacts(leg).length > 6));
 const evidenceWarnings = computed(() => progressEvidenceWarnings(runFacts.value));
-function latestLegAction(leg: ActiveBetLeg) { return leg.events.at(-1)?.detail || leg.detail || "等待执行"; }
+function latestLegAction(leg: ActiveBetLeg) { return progressOrchestrationLabel(leg, legFacts(leg), leg.events.at(-1)?.detail || leg.detail || "等待执行"); }
+function legPlacementLabel(leg: ActiveBetLeg) { return progressOrchestrationLabel(leg, legFacts(leg), activeStore.legPlacementLabel(leg, activeRun.value ?? undefined)); }
 const executionId = computed(() => [...runFacts.value].reverse().find(event => event.executionId)?.executionId);
 const elapsedLabel = computed(() => `${Math.max(0, Math.floor(((activeRun.value?.terminalAt || now.value) - (activeRun.value?.startedAt || now.value)) / 1000))}s`);
 const localHistoryTruncated = computed(() => userStore.isLoggedIn && observationStore.truncatedOwners.includes(String(userStore.userId || "")));
@@ -378,7 +379,7 @@ function stripHtml(html: string): string {
 }
 
 function colToneClass(run: ActiveBetRun): string {
-  const active = run.legs.filter(l => l.status !== "skipped");
+  const active = run.legs.filter(l => l.status !== "skipped" && !l.precheckOnly);
   const hasRejected = active.some(l => l.status === "rejected" || l.status === "failed");
   if (hasRejected)
     return "active-bet-run__col--danger";
@@ -416,6 +417,8 @@ function hasMakeupFlow(run: ActiveBetRun): boolean {
 }
 
 function flowLabels(run: ActiveBetRun): string[] {
+  if (activeBetRunMode(run) === "single9999" || activeBetRunMode(run) === "valueBet")
+    return ["预检", "单腿下单", "确认", "结果"];
   return hasMakeupFlow(run)
     ? ["预检", "下单", "确认", "补单", "结果"]
     : ["预检", "下单", "确认", "结果"];
@@ -448,12 +451,31 @@ function flowStepClass(run: ActiveBetRun, index: number): string {
 }
 
 function nextAction(run: ActiveBetRun): string {
+  const mode = activeBetRunMode(run);
+  if (mode === "single9999") {
+    if (run.terminalAt)
+      return "本轮单边下单已结束；仅预检腿不计入成交结果。";
+    if (run.phase === "preparing" || run.phase === "checking")
+      return "校验下单腿及启用的 9999 预检腿；仅预检腿不会提交订单。";
+    if (run.phase === "placing")
+      return "正在向场馆提交下单腿；9999 侧不下单。";
+    return "仅跟踪下单腿的确认结果；9999 侧不要求成交。";
+  }
+  if (mode === "valueBet") {
+    if (run.terminalAt)
+      return "本轮正EV 单腿下单已结束，请核查该腿执行结果。";
+    if (run.phase === "preparing" || run.phase === "checking")
+      return "正在校验正EV 下单腿的盘口和下注条件。";
+    if (run.phase === "placing")
+      return "正在向场馆提交正EV 下单腿。";
+    return "正在跟踪正EV 下单腿的场馆确认结果。";
+  }
   if (run.terminalAt)
     return "本轮编排已收尾；确认和补单结果仍需核查执行记录。";
   if (run.phase === "preparing" || run.phase === "checking")
-    return "正在校验两腿盘口；任一腿未通过都不会进入首轮下单。";
+    return mode === "arb" ? "正在校验两腿盘口；任一腿未通过都不会进入首轮下单。" : "正在校验盘口和下注条件。";
   if (run.phase === "placing")
-    return "双腿预检已通过，正在向场馆提交订单。";
+    return mode === "arb" ? "双腿预检已通过，正在向场馆提交订单。" : "正在向场馆提交订单。";
   if (run.phase === "settling")
     return "接口受理不等于成交，正在等待场馆最终状态。";
   if (run.phase === "makeup")
@@ -519,6 +541,10 @@ function orderLabel(run: ActiveBetRun, index: number): string {
             <div class="active-bet-run__market">
               {{ stripHtml(activeRun.betName) }}
             </div>
+            <div class="active-bet-run__mode" :data-mode="activeBetRunMode(activeRun)">
+              下单模式 · <strong>{{ activeBetRunModeLabel(activeRun) }}</strong>
+              <span v-if="activeBetRunMode(activeRun) === 'single9999'">只提交下单腿，9999 侧不下单</span>
+            </div>
             <div class="active-bet-run__run-meta">
               <span>开始 {{ eventTime(activeRun.startedAt) }}</span><span>已用时 {{ elapsedLabel }}</span><span>更新 {{ eventTime(activeRun.updatedAt) }}</span>
             </div>
@@ -531,7 +557,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
               编排提示 · {{ nextAction(activeRun) }}
             </p>
             <header class="active-bet-run__section-head">
-              <strong>双腿实时进度</strong>
+              <strong>{{ activeBetRunMode(activeRun) === 'arb' ? '双腿实时进度' : activeBetRunMode(activeRun) === 'single9999' ? '单边下单 / 预检进度' : '执行实时进度' }}</strong>
               <button v-if="hasMoreTimeline" type="button" @click="expandedTimeline = !expandedTimeline">
                 {{ expandedTimeline ? '每组最近 6 条' : '展开全部记录' }}
               </button>
@@ -541,9 +567,10 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 <header class="active-bet-run__leg-meta">
                   <span class="active-bet-run__leg-side">{{ legSideLabel(leg.side) }}</span><PlatformIcon :platform="legProvider(leg)" /><strong>{{ legProvider(leg) === 'Polymarket' ? 'PM' : legProvider(leg) }}</strong><span>{{ legTarget(leg.target) }}</span>
                 </header>
+                <span class="active-bet-run__leg-role" :class="{ 'is-precheck': leg.precheckOnly }">{{ activeBetLegRole(leg) }}</span>
                 <strong class="active-bet-run__leg-status" :data-tone="legSummary(leg).tone" :title="legSummary(leg).basis">{{ legSummary(leg).label }}</strong>
                 <p class="active-bet-run__leg-action" :title="latestLegAction(leg)">
-                  <span>编排 · {{ activeStore.legPlacementLabel(leg, activeRun) }}</span>
+                  <span>编排 · {{ legPlacementLabel(leg) }}</span>
                   {{ latestLegAction(leg) }}
                 </p>
                 <div class="active-bet-run__leg-quote">
@@ -605,7 +632,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 </li>
               </ul>
               <div v-for="leg in activeRun.legs" :key="leg.side">
-                <strong>{{ legSideLabel(leg.side) }} · {{ activeStore.legPlacementLabel(leg, activeRun) }}</strong><ul>
+                <strong>{{ legSideLabel(leg.side) }} · {{ legPlacementLabel(leg) }}</strong><ul>
                   <li v-for="(event, index) in leg.events" :key="index">
                     <time>{{ eventTime(event.at) }}</time> {{ event.stage }} · {{ event.detail }}
                   </li>

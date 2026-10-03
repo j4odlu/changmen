@@ -15,3 +15,11 @@ export function accountOrderDisplayName(acc: {
   const id = Number(acc.accountId) || 0;
   return id ? `#${id}` : "";
 }
+
+/** [changmen 扩展] 实时进度与账号列表共用名称，缺失名称时不用内部编号冒充账号名。 */
+export function accountProgressDisplayName(acc: {
+  venueAccountName?: string;
+  playerName?: string;
+} | null | undefined): string {
+  return accountOrderDisplayName(acc ? { venueAccountName: acc.venueAccountName, playerName: acc.playerName } : undefined) || "名称不可用";
+}

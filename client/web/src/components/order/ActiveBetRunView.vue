@@ -4,6 +4,7 @@ import { storeToRefs } from "pinia";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import OrderExecutionTimeline from "@/components/order/OrderExecutionTimeline.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
+import { accountProgressDisplayName } from "@/shared/accountDisplayName";
 import { activeBetLegRole, activeBetRunMode, activeBetRunModeLabel, observationLegGroups, observationLegSummary, progressEvidenceWarnings, progressOrchestrationLabel } from "@/shared/activeBetRunPresentation";
 import { formatActiveBetLinkLabel } from "@/shared/linkDisplay";
 import {
@@ -11,6 +12,7 @@ import {
   ACTIVE_BET_TERMINAL_LINGER_MS,
   useActiveBetRunStore,
 } from "@/stores/activeBetRunStore";
+import { useAccountStore } from "@/stores/accountStore";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { useOrderObservationStore } from "@/stores/orderObservationStore";
 import { useUserStore } from "@/stores/userStore";
@@ -26,6 +28,7 @@ const PANEL_MIN_W = 360;
 const PANEL_MIN_H = 260;
 
 const activeStore = useActiveBetRunStore();
+const accountStore = useAccountStore();
 const loseStore = useLoseOrderStore();
 const userStore = useUserStore();
 const observationStore = useOrderObservationStore();
@@ -58,6 +61,7 @@ function legFacts(leg: ActiveBetLeg) { return factGroups.value.groups.get(leg.si
 const legSummaries = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, observationLegSummary(legFacts(leg), leg.status, leg.precheckOnly)])));
 function legSummary(leg: ActiveBetLeg) { return legSummaries.value.get(leg.side)!; }
 function legProvider(leg: ActiveBetLeg) { return legSummary(leg).provider || leg.platform; }
+function legAccountName(leg: ActiveBetLeg) { return accountProgressDisplayName(accountStore.findAccount(legSummary(leg).accountId)); }
 const unassignedFacts = computed(() => factGroups.value.unassigned);
 const hasMoreTimeline = computed(() => unassignedFacts.value.length > 6
   || (activeRun.value?.legs || []).some(leg => legFacts(leg).length > 6));
@@ -606,7 +610,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                   </dl>
                 </details>
                 <footer class="active-bet-run__leg-footer">
-                  <span>最近尝试</span><span v-if="legSummary(leg).accountId">账号 #{{ legSummary(leg).accountId }}</span><span v-if="legProvider(leg) !== leg.platform">首轮 {{ leg.platform }}</span><span v-if="legSummary(leg).retries">重试 {{ legSummary(leg).retries }} 次</span><span v-if="legSummary(leg).makeups">补单任务 {{ legSummary(leg).makeups }}</span>
+                  <span>最近尝试</span><span v-if="legSummary(leg).accountId" class="active-bet-run__account-name">账号 {{ legAccountName(leg) }}</span><span v-if="legProvider(leg) !== leg.platform">首轮 {{ leg.platform }}</span><span v-if="legSummary(leg).retries">重试 {{ legSummary(leg).retries }} 次</span><span v-if="legSummary(leg).makeups">补单任务 {{ legSummary(leg).makeups }}</span>
                 </footer>
               </section>
             </div>

@@ -7,7 +7,10 @@ export function observationFailureEvidence(message: unknown, response?: unknown,
     const cases: Array<[RegExp, string, string]> = [
       [/timeout|timed out|超时/i, "timeout", "请求或确认超时"],
       [/network|failed to fetch|ECONN|网络|连接失败/i, "network", "网络或连接异常"],
-      [/token|unauthor|forbidden|签名|凭证|登录|鉴权/i, "authentication", "鉴权、凭证或签名异常"],
+      // [changmen 扩展] PM 的 tokenId / tokens 是交易资产，不是鉴权 token。
+      [/\btoken(?:[_-](?:error|expired|invalid|missing))?\b|\b(?:access|auth|refresh)[_-]?token\b|unauthor|forbidden|签名|凭证|私钥|钱包.*解锁|解锁.*钱包|登录|鉴权/i, "authentication", "鉴权、凭证或签名异常"],
+      [/盘口深度不足|无 asks 卖单|盘口无卖单|insufficient liquidity|insufficient depth/i, "liquidity", "盘口深度不足或无可成交卖单"],
+      [/下单金额低于最小份数|无效买入金额|minimum order size|min order size/i, "order_size", "下单金额或份数不满足要求"],
       [/balance|insufficient|余额|资金不足/i, "balance", "余额或可用资金不足"],
       [/suspend|closed|盘口.*关闭|封盘|停盘/i, "market_closed", "盘口关闭或暂停"],
       [/odds|price|quote|赔率|报价/i, "quote", "报价或赔率校验异常"],

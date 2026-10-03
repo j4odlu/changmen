@@ -2,6 +2,8 @@
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import { observationEventLabel, observationEventStage } from "@changmen/shared/order_observation_view";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { accountProgressDisplayName } from "@/shared/accountDisplayName";
+import { useAccountStore } from "@/stores/accountStore";
 
 /** [changmen 扩展] 每个方向独立滚动，仅消费同源执行事件。 */
 const props = defineProps<{
@@ -12,6 +14,8 @@ const props = defineProps<{
   expanded: boolean;
 }>();
 const feedEl = ref<HTMLElement | null>(null);
+const accountStore = useAccountStore();
+function accountName(event: OrderObservationEvent) { return accountProgressDisplayName(accountStore.findAccount(event.accountId)); }
 const following = ref(true);
 const displayed = computed(() => props.expanded ? props.events : props.events.slice(-6));
 
@@ -32,7 +36,7 @@ function elapsed(event: OrderObservationEvent) {
   return ms < 0 ? "时钟偏差" : ms < 1000 ? `+${ms}ms` : `+${(ms / 1000).toFixed(1)}s`;
 }
 function identity(event: OrderObservationEvent) {
-  return `执行 ${event.executionId || "—"} · 尝试 ${event.attemptId || "—"} · 队列 ${event.queueId || "—"} · 事件 ${event.eventId} · 账号 ${event.accountId || "—"} · 订单 ${event.orderId || "—"}`;
+  return `账号 ${event.accountId ? accountName(event) : "—"} · 执行 ${event.executionId || "—"} · 尝试 ${event.attemptId || "—"} · 队列 ${event.queueId || "—"} · 事件 ${event.eventId} · 订单 ${event.orderId || "—"}`;
 }
 onMounted(() => { void nextTick(scrollToLatest); });
 watch(displayed, () => { void nextTick(scrollToLatest); });
@@ -57,7 +61,7 @@ watch(displayed, () => { void nextTick(scrollToLatest); });
         </div>
         <p>{{ observationEventLabel(event) }}</p>
         <small v-if="event.orderId || event.accountId" class="active-bet-run__event-ref">
-          {{ event.accountId ? `账号 #${event.accountId}` : '' }} {{ event.orderId ? `订单 ${event.orderId}` : '' }}
+          {{ event.accountId ? `账号 ${accountName(event)}` : '' }} {{ event.orderId ? `订单 ${event.orderId}` : '' }}
         </small>
       </li>
     </ol>

@@ -23,4 +23,18 @@ describe("footballObMarkets cache", () => {
     await loadFootballObMarkets("m1");
     expect(fetchObFootballMatchMarkets).toHaveBeenCalledTimes(1);
   });
+
+  it("coalesces forced play refreshes while the same match is still loading", async () => {
+    let finish!: (rows: unknown[]) => void;
+    fetchObFootballMatchMarkets.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    const first = loadFootballObMarkets("m1");
+    expect(loadFootballObMarkets("m1", true)).toBe(first);
+    expect(loadFootballObMarkets("m1", true)).toBe(first);
+    expect(fetchObFootballMatchMarkets).toHaveBeenCalledTimes(1);
+    finish([]);
+    await first;
+    fetchObFootballMatchMarkets.mockResolvedValueOnce([]);
+    await loadFootballObMarkets("m1", true);
+    expect(fetchObFootballMatchMarkets).toHaveBeenCalledTimes(2);
+  });
 });

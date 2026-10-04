@@ -342,6 +342,36 @@ export function fixtureFromViewMatch(row: {
 const TEAM_MIN = 0.5;
 const CONFIRMED_MIN = 0.99;
 
+/** [changmen 扩展] 搜索命中同一 mid 时补齐身份，不让板上无队名占位行遮住搜索结果。 */
+export function mergePodObDiscoveryFixtures(board: PodBoardFixture[], discovered: PodBoardFixture[]): PodBoardFixture[] {
+  const rows = [...board];
+  const byMid = new Map<string, number>();
+  rows.forEach((row, index) => {
+    if (row.obMid)
+      byMid.set(row.obMid, index);
+  });
+  for (const row of discovered) {
+    if (!row.obMid)
+      continue;
+    const index = byMid.get(row.obMid);
+    if (index == null) {
+      byMid.set(row.obMid, rows.length);
+      rows.push(row);
+      continue;
+    }
+    const current = rows[index];
+    rows[index] = {
+      ...current,
+      startAt: row.startAt > 0 ? row.startAt : current.startAt,
+      homeEn: row.homeEn || row.homeName || current.homeEn,
+      awayEn: row.awayEn || row.awayName || current.awayEn,
+      gameEn: row.gameEn || row.game || current.gameEn,
+      markets: current.markets.length ? current.markets : row.markets,
+    };
+  }
+  return rows;
+}
+
 function fixtureBasis(hits: PodFixtureHit[]): PodFixtureMatchBasis {
   const hit = hits[0];
   if (hits.length !== 1 || !hit)

@@ -23,6 +23,8 @@ import { readLocalSportObSession } from "@/runtime/obSportSessionLocal";
 const SEARCH_GAP_MS = 1_500;
 const HIT_TTL_MS = 5 * 60_000;
 const FAIL_TTL_MS = 30_000;
+const MAX_QUEUED_SEARCHES = 12;
+type PodObMissAlert = Pick<PodDropAlert, "eventId" | "home" | "away" | "starts" | "league"> & Partial<Pick<PodDropAlert, "alertedAt">>;
 
 const hits = new Map<string, { at: number; fixture: PodBoardFixture }>();
 const failed = new Map<string, number>();
@@ -31,6 +33,7 @@ const retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const attempts = new Map<string, number>();
 let lastSearchAt = 0;
 let searchQueue: Promise<void> = Promise.resolve();
+let queuedSearches = 0;
 let generation = 0;
 let version = 0;
 const listeners = new Set<() => void>();
@@ -87,10 +90,11 @@ function hitToFixture(hit: ObSportSearchHit): PodBoardFixture {
   };
 }
 
-async function searchKeyword(keyword: string): Promise<ObSportSearchHit[]> {
+async function searchKeyword(keyword: string, deadline: number, queuedGeneration: number): Promise<ObSportSearchHit[]> {
   const q = String(keyword || "").trim();
-  if (q.length < 2)
+  if (q.length < 2 || queuedSearches >= MAX_QUEUED_SEARCHES)
     return [];
+  queuedSearches += 1;
   let resolveRows!: (rows: ObSportSearchHit[]) => void;
   let rejectRows!: (reason?: unknown) => void;
   const result = new Promise<ObSportSearchHit[]>((resolve, reject) => {
@@ -99,6 +103,10 @@ async function searchKeyword(keyword: string): Promise<ObSportSearchHit[]> {
   });
   searchQueue = searchQueue.then(async () => {
     try {
+      if (queuedGeneration !== generation || Date.now() >= deadline) {
+        resolveRows([]);
+        return;
+      }
       const session = readLocalSportObSession();
       if (!session?.token) {
         resolveRows([]);
@@ -107,6 +115,10 @@ async function searchKeyword(keyword: string): Promise<ObSportSearchHit[]> {
       const wait = SEARCH_GAP_MS - (Date.now() - lastSearchAt);
       if (wait > 0)
         await new Promise(resolve => setTimeout(resolve, wait));
+      if (queuedGeneration !== generation || Date.now() >= deadline) {
+        resolveRows([]);
+        return;
+      }
       lastSearchAt = Date.now();
       const decoded = await getObSportPb(OB_SPORT_HOT_SEARCH_PATH, {
         keyword: q,
@@ -121,13 +133,17 @@ async function searchKeyword(keyword: string): Promise<ObSportSearchHit[]> {
     catch (err) {
       rejectRows(err);
     }
+    finally {
+      if (queuedGeneration === generation)
+        queuedSearches -= 1;
+    }
   });
   return result;
 }
 
 function markFailed(
   key: string,
-  alert: Pick<PodDropAlert, "eventId" | "home" | "away" | "starts" | "league">,
+  alert: PodObMissAlert,
 ) {
   failed.set(key, Date.now());
   const count = (attempts.get(key) || 0) + 1;
@@ -153,6 +169,7 @@ export function resetPodObMissSearch() {
   retryTimers.clear();
   lastSearchAt = 0;
   searchQueue = Promise.resolve();
+  queuedSearches = 0;
   bump();
 }
 
@@ -169,48 +186,51 @@ async function hydrate(hit: ObSportSearchHit): Promise<PodBoardFixture | null> {
   const view = toViewMatches([dto])[0];
   if (!view)
     return hitToFixture(hit);
-  return fixtureFromViewMatch(view);
+  return { ...fixtureFromViewMatch(view), homeEn: hit.home, awayEn: hit.away, gameEn: hit.league };
 }
 
 export async function searchPodObMissFixture(
-  alert: Pick<PodDropAlert, "eventId" | "home" | "away" | "starts" | "league">,
+  alert: PodObMissAlert,
 ): Promise<PodBoardFixture | null> {
   const key = alertKey(alert);
   const now = Date.now();
+  const deadline = Number(alert.alertedAt) > 0 ? Number(alert.alertedAt) + 60_000 : Infinity;
   const cached = hits.get(key);
   if (cached && now - cached.at < HIT_TTL_MS)
     return cached.fixture;
+  if (now >= deadline)
+    return null;
   const failAt = failed.get(key) || 0;
   if (now - failAt < FAIL_TTL_MS)
     return null;
   const pending = inflight.get(key);
   if (pending)
     return pending;
+  if ((attempts.get(key) || 0) >= 4)
+    return null;
   const startedGeneration = generation;
   const work = (async () => {
     try {
       const homeKw = extractObSportSearchKeyword(alert.home);
-      let rows = await searchKeyword(homeKw);
-      if (startedGeneration !== generation)
-        return null;
-      if (!rows.length) {
-        const awayKw = extractObSportSearchKeyword(alert.away);
-        if (awayKw && awayKw !== homeKw)
-          rows = await searchKeyword(awayKw);
+      const awayKw = extractObSportSearchKeyword(alert.away);
+      const rowsByMid = new Map<string, ObSportSearchHit>();
+      let matched: ReturnType<typeof matchPodAlertToFixtures> | null = null;
+      for (const keyword of new Set([homeKw, awayKw].filter(Boolean))) {
+        const found = await searchKeyword(keyword, deadline, startedGeneration);
         if (startedGeneration !== generation)
           return null;
+        for (const row of found)
+          rowsByMid.set(row.mid, row);
+        matched = matchPodAlertToFixtures(alert, [...rowsByMid.values()].map(hitToFixture));
+        if (matched.status === "matched" && matched.basis === "confirmed")
+          break;
       }
-      if (!rows.length) {
-        markFailed(key, alert);
+      if (matched?.status !== "matched" || matched.basis !== "confirmed") {
+        if (Date.now() < deadline)
+          markFailed(key, alert);
         return null;
       }
-      const fixtures = rows.map(hitToFixture);
-      const matched = matchPodAlertToFixtures(alert, fixtures);
-      if (matched.status !== "matched" || matched.basis !== "confirmed") {
-        markFailed(key, alert);
-        return null;
-      }
-      const hit = rows.find(row => row.mid === matched.hits[0]?.fixture.obMid);
+      const hit = rowsByMid.get(matched.hits[0]?.fixture.obMid || "");
       if (!hit) {
         markFailed(key, alert);
         return null;
@@ -233,11 +253,13 @@ export async function searchPodObMissFixture(
       return fixture;
     }
     catch {
-      markFailed(key, alert);
+      if (startedGeneration === generation && Date.now() < deadline)
+        markFailed(key, alert);
       return null;
     }
     finally {
-      inflight.delete(key);
+      if (startedGeneration === generation)
+        inflight.delete(key);
     }
   })();
   inflight.set(key, work);

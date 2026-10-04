@@ -79,11 +79,18 @@ export function parseObHandicapLine(hv: unknown): number | null {
     if (Number.isFinite(home) && Number.isFinite(away))
       return round3(away - home);
   }
-  const parts = s.split("/").map(x => Number(String(x).trim())).filter(Number.isFinite);
-  if (parts.length === 2)
-    return round3((parts[0] + parts[1]) / 2);
+  const parts = s.split("/").map(x => x.trim());
+  if (parts.some(part => !/^[+-]?\d+(?:\.\d+)?$/.test(part)))
+    return null;
+  if (parts.length === 2) {
+    const first = Number(parts[0]);
+    // [changmen 扩展] OB 实际 hv=-0.5/1：首项负号作用于整档（-0.75），含 -0/0.5。
+    const second = parts[0].startsWith("-") && !/^[+-]/.test(parts[1])
+      ? -Number(parts[1]) : Number(parts[1]);
+    return round3((first + second) / 2);
+  }
   if (parts.length === 1)
-    return parts[0];
+    return Number(parts[0]);
   return null;
 }
 

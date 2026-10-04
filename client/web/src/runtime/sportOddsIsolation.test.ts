@@ -188,6 +188,7 @@ describe("sport / esport UI isolation", () => {
     expect(workspace).toMatch(/PodFollowPanel/);
     expect(workspace).toMatch(/show-football-settings/);
     const followPanel = readFileSync(join(root, "components/football/PodFollowPanel.vue"), "utf8");
+    const followTable = readFileSync(join(root, "components/football/PodFollowTable.vue"), "utf8");
     expect(followPanel).toMatch(/POD 降赔/);
     expect(followPanel).toMatch(/仅已匹配/);
     expect(followPanel).toMatch(/pod-follow-panel__columns/);
@@ -201,7 +202,7 @@ describe("sport / esport UI isolation", () => {
     expect(venuePlugins).toMatch(/return scorePodYaboFollow\(ticket/);
     expect(venuePlugins).not.toMatch(/from\s+["']@\/stores\/(?:matchStore|oddsStore)["']/);
     expect(venuePlugins).not.toMatch(/from\s+["'][^"']*mainBetLoop[^"']*["']/);
-    expect(followPanel).toMatch(/formatPodFixtureMatch/);
+    expect(followTable).toMatch(/formatPodFixtureMatch/);
     expect(followPanel).toMatch(/peekObEnglishNames/);
     expect(followPanel).toMatch(/from ["']@\/runtime\/podYabo["']/);
     expect(followPanel).not.toMatch(/scorePodYaboFollow/);
@@ -211,9 +212,9 @@ describe("sport / esport UI isolation", () => {
     expect(followPanel).toMatch(/followAccountIds/);
     expect(followPanel).not.toMatch(/PodFollowAccountPicker/);
     expect(followPanel).toMatch(/fetchObSportAmount/);
-    expect(followPanel).toMatch(/formatPodMarketMatch/);
-    expect(followPanel).toMatch(/formatPodObQuote/);
-    expect(followPanel).toMatch(/formatPodEv/);
+    expect(followTable).toMatch(/formatPodMarketMatch/);
+    expect(followTable).toMatch(/values\.quote/);
+    expect(followTable).toMatch(/formatPodEv/);
     expect(followPanel).not.toMatch(/pickPodFollowAutoTicket/);
     expect(followPanel).not.toMatch(/matchPodAlertToMarket/);
     expect(followPanel).toMatch(/useSportOddsStore/);
@@ -235,7 +236,7 @@ describe("sport / esport UI isolation", () => {
     expect(followPanel).toMatch(/recordObAttempt/);
     expect(followPanel).toMatch(/decisionShadowText/);
     expect(followPanel).toMatch(/pod-follow-row__diag/);
-    expect(followPanel).toMatch(/v-if="followV2\.showDiagnostics"/);
+    expect(followPanel).toMatch(/:show-diagnostics="followV2\.showDiagnostics"/);
     expect(followPanel).toMatch(/podFollowPlaceBlock\(ticketPlacePayload\(ticket\)\)/);
     expect(followPanel).toMatch(/const legacyBlock = podFollowPlaceBlock/);
     expect(followPanel).toMatch(/pickPodYaboAutoTicket/);
@@ -252,7 +253,8 @@ describe("sport / esport UI isolation", () => {
     expect(followPanel).toMatch(/未下/);
     expect(followPanel).toMatch(/已下/);
     expect(followPanel).toMatch(/resolvePodFollowPending/);
-    expect(followPanel).toMatch(/pod-follow-row__status/);
+    expect(followTable).toMatch(/row\.pending\.label/);
+    expect(followTable).toMatch(/row\.pending\.detail/);
     expect(followPanel).not.toMatch(/历史/);
     expect(followPanel).not.toMatch(/panelTab/);
     expect(followPanel).toMatch(/maxAgeSec: 0/);

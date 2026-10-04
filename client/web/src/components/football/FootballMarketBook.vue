@@ -21,7 +21,7 @@ import {
 } from "@/runtime/footballObMarkets";
 import { viewBetsToMarketRows, mergeFootballBookRows } from "@/runtime/footballMarketRows";
 import { useObSportLiveStore } from "@/stores/obSportLiveStore";
-import { computed, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 
 const props = defineProps<{
@@ -32,6 +32,7 @@ const loading = ref(false);
 const error = ref("");
 const obRows = ref<FootballObMarketRow[]>([]);
 let fetchGen = 0;
+let activeFetch: { mid: string; gen: number; refreshAfter: boolean } | null = null;
 
 const obLive = useObSportLiveStore();
 const { playRevByMid } = storeToRefs(obLive);
@@ -65,6 +66,11 @@ const columns = computed((): FootballBookColumn[] => groupFootballColumns(allRow
 
 async function fetchAllMarkets(force = false) {
   const mid = obMid.value;
+  // [changmen 扩展] 同场变盘通知不作废正在加载的结果，否则慢网下会一直显示加载中。
+  if (mid && !hasObListMarkets.value && activeFetch?.mid === mid && activeFetch.gen === fetchGen) {
+    activeFetch.refreshAfter ||= force;
+    return;
+  }
   const gen = ++fetchGen;
   if (hasObListMarkets.value || !mid) {
     obRows.value = [];
@@ -78,11 +84,15 @@ async function fetchAllMarkets(force = false) {
   if (cached)
     obRows.value = cached;
   const hasRows = (cached?.length || 0) > 0 || obRows.value.length > 0 || listRows.value.length > 0;
-  if (!force && cached && isFootballObMarketsComplete(cached))
+  if (!force && cached && isFootballObMarketsComplete(cached)) {
+    loading.value = false;
+    error.value = "";
     return;
-  if (!hasRows)
-    loading.value = true;
+  }
+  loading.value = !hasRows;
   error.value = "";
+  const request = { mid, gen, refreshAfter: false };
+  activeFetch = request;
   try {
     const rows = await loadFootballObMarkets(mid, force);
     if (gen !== fetchGen)
@@ -95,8 +105,14 @@ async function fetchAllMarkets(force = false) {
     error.value = err instanceof Error ? err.message : String(err);
   }
   finally {
-    if (gen === fetchGen)
+    if (activeFetch?.gen === gen)
+      activeFetch = null;
+    if (gen === fetchGen) {
       loading.value = false;
+      // [changmen 扩展] 合并期间的变盘通知只补刷一次，先显示已返回结构，避免饿死渲染。
+      if (request.refreshAfter)
+        void fetchAllMarkets(true);
+    }
   }
 }
 
@@ -112,6 +128,10 @@ watch(
   },
   { immediate: true },
 );
+onUnmounted(() => {
+  fetchGen += 1;
+  activeFetch = null;
+});
 </script>
 
 <template>

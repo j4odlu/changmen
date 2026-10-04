@@ -94,14 +94,15 @@ export function loadFootballObMarkets(mid: string, force = false): Promise<Footb
   const id = String(mid || "").trim();
   if (!id)
     return Promise.resolve([]);
+  // [changmen 扩展] 变盘刷新也复用正在排队/执行的同场请求，避免推送堆积详情请求。
+  const pending = inflight.get(id);
+  if (pending)
+    return pending;
   if (force)
     cache.delete(id);
   const cached = peekFootballObMarkets(id);
   if (cached && !force)
     return Promise.resolve(cached);
-  const pending = inflight.get(id);
-  if (pending && !force)
-    return pending;
   const job = withSlot(async () => {
     const list = await fetchObFootballMatchMarkets(id);
     const rows = Array.isArray(list) ? list as FootballObMarketRow[] : [];

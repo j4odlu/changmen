@@ -3,6 +3,7 @@ import {
   fixtureFromViewMatch,
   formatPodFixtureMatch,
   matchPodAlertToFixtures,
+  mergePodObDiscoveryFixtures,
   teamNameScore,
   type PodBoardFixture,
 } from "@/runtime/podFixtureMatch";
@@ -34,6 +35,15 @@ function alert(over: { home?: string; away?: string; starts?: number; league?: s
 }
 
 describe("podFixtureMatch", () => {
+  it("enriches an existing unnamed OB row from a search hit instead of discarding the duplicate mid", () => {
+    const placeholder = fixture({ title: "英超 5652292", homeName: "", awayName: "" });
+    const found = fixture({ id: 99, homeEn: "Arsenal", awayEn: "Chelsea" });
+    const rows = mergePodObDiscoveryFixtures([placeholder], [found]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe(placeholder.id);
+    expect(matchPodAlertToFixtures(alert(), rows)).toMatchObject({ status: "matched", basis: "confirmed" });
+    expect(placeholder.homeEn).toBeUndefined();
+  });
   it("scores latin names and ignores CJK-only or junk labels", () => {
     expect(teamNameScore("Arsenal", "Arsenal FC")).toBeGreaterThanOrEqual(0.5);
     expect(teamNameScore("Tottenham Hotspur", "Tottenham")).toBeGreaterThanOrEqual(0.5);

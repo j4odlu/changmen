@@ -49,7 +49,7 @@ function mount(initial: ViewMatch) {
   apps.push(app);
   const vm = app.mount(node());
   const state = (vm.$.subTree.component as unknown as {
-    setupState: { loading: boolean; obRows: FootballObMarketRow[] };
+    setupState: { loading: boolean; error: string; obRows: FootballObMarketRow[] };
   }).setupState;
   return { props, state };
 }
@@ -91,6 +91,49 @@ describe("football book list-first rendering", () => {
     // A later missing snapshot must not reuse the stale in-flight result.
     props.match = match("OB", false);
     await nextTick();
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it("accepts a slow fallback despite repeated play notifications instead of staying in loading", async () => {
+    let finish!: (rows: FootballObMarketRow[]) => void;
+    let finishRefresh!: (rows: FootballObMarketRow[]) => void;
+    load.mockReturnValueOnce(new Promise<FootballObMarketRow[]>(resolve => { finish = resolve; }));
+    load.mockReturnValueOnce(new Promise<FootballObMarketRow[]>(resolve => { finishRefresh = resolve; }));
+    const { state } = mount(match("OB", false));
+    expect(state.loading).toBe(true);
+    for (let rev = 1; rev <= 3; rev++) {
+      useObSportLiveStore().playRevByMid["5505659"] = rev;
+      await nextTick();
+    }
+    expect(load).toHaveBeenCalledTimes(1);
+    const rows: FootballObMarketRow[] = [{ MarketCode: "spreads", Line: -1, Selections: [{ OddID: "current", Odds: 1.95 }] }];
+    finish(rows);
+    await nextTick();
+    expect(state.loading).toBe(false);
+    expect(state.obRows).toEqual(rows);
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(load).toHaveBeenLastCalledWith("5505659", true);
+    finishRefresh(rows);
+    await nextTick();
+    // A later play notification still refreshes the completed snapshot.
+    useObSportLiveStore().playRevByMid["5505659"] = 4;
+    await nextTick();
+    expect(load).toHaveBeenLastCalledWith("5505659", true);
+    expect(load).toHaveBeenCalledTimes(3);
+  });
+
+  it("shows a failed fallback and clears loading even when play notifications arrive during the request", async () => {
+    let fail!: (err: Error) => void;
+    load.mockReturnValueOnce(new Promise<FootballObMarketRow[]>((_resolve, reject) => { fail = reject; }));
+    load.mockRejectedValueOnce(new Error("盘口请求超时"));
+    const { state } = mount(match("OB", false));
+    useObSportLiveStore().playRevByMid["5505659"] = 1;
+    await nextTick();
+    fail(new Error("盘口请求超时"));
+    await nextTick();
+    await nextTick();
+    expect(state.loading).toBe(false);
+    expect(state.error).toBe("盘口请求超时");
     expect(load).toHaveBeenCalledTimes(2);
   });
 });

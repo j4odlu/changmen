@@ -9,6 +9,20 @@ import {
 } from "@/runtime/obSportOdds";
 
 describe("extractObPlaySelections moneyline", () => {
+  it("preserves the shared negative sign in OB Asian split handicaps", () => {
+    expect(parseObHandicapLine("-0.5/1")).toBe(-0.75);
+    expect(parseObHandicapLine("-1/1.5")).toBe(-1.25);
+    expect(parseObHandicapLine("-0/0.5")).toBe(-0.25);
+    expect(parseObHandicapLine("-0.5/-1")).toBe(-0.75);
+    expect(parseObHandicapLine("0.5/1")).toBe(0.75);
+    expect(parseObHandicapLine("0/0.5")).toBe(0.25);
+    expect(parseObHandicapLine("abc/1")).toBeNull();
+    expect(parseObHandicapLine("1/")).toBeNull();
+    const rows = extractObPlaySelections({ hpid: "4", hl: [{ hv: "-1/1.5", ol: [
+      { ot: "1", ov: 190000, oid: "home" }, { ot: "2", ov: 190000, oid: "away" },
+    ] }] });
+    expect(rows[0]?.line).toBe(-1.25);
+  });
   it("keeps only the complete 1X2 line and drops draw-only extras", () => {
     const rows = extractObPlaySelections({
       hpid: "1",

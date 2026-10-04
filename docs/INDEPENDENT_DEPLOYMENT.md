@@ -29,6 +29,10 @@ GitHub Actions：`Deploy frontend` / `Deploy backend`。两者仅发布 `master`
 
 后端源码仍为整仓包，安装使用每个版本独立的 `npm ci`；尚未优化成瘦包或细粒度进程重启。CI 和服务器都编译 router，前者阻止错误代码发布，后者验证实际安装环境。PM2 的 cwd 是具体版本目录，`backend-current` 用于成功版本记录和回滚；运维查看正在运行的源码以 PM2 cwd 为准，原根目录源码不再随 Actions 更新。
 
+后端 CI 使用 `npm run test:backend`：公共边界、共享包和契约检查执行一次，测试覆盖所有 `server/` workspace 及其依赖，不执行 web 测试。前端 workflow 负责 web 测试和带类型检查的构建。根 `npm test` 仍运行全仓测试。matcher 的 identity 测试由 Turbo 依赖图调度一次；`npm run composer:test` 包含依赖测试，在 matcher 目录直接运行 `npm test` 只测本包，需包含 identity 时用 `npm run test:with-deps`。
+
+两端仍各自运行部署脚本测试，保证单端发布、手动发布和失败重跑都有独立检查。该检查耗时约两秒，暂不引入跨 workflow 的等待或共享成功状态。
+
 成功发布后，原根目录 `deploy/ecosystem.config.cjs` 改为指向 `backend-current` 的入口，保证旧 watchdog 的 start 兜底不会启动过期源码。首次切换保存原配置到 `.deploy-state/backend-bootstrap-ecosystem.cjs`；首次失败时恢复该配置，并清掉失败的版本入口。
 
 ## 首次切换、验收与回滚

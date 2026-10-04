@@ -1,7 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import YAML from 'yaml';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const read = (p) => readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8');
 const workflows = Object.fromEntries(['frontend', 'backend'].map(scope => [scope,
@@ -35,4 +37,32 @@ test('frontend build receives no signing secrets and runs the build typecheck on
   assert.ok(!JSON.stringify(build).includes('secrets.'));
   assert.ok(!steps.some(s => s.uses?.includes('artifact')));
   assert.ok(!steps.some(s => s.run?.includes('typecheck:frontend')));
+});
+
+test('backend deployment tests every server workspace without running web tests', () => {
+  const steps = workflows.backend.jobs.deploy.steps;
+  assert.ok(steps.some(s => s.run?.includes('npm run test:backend')));
+  assert.ok(!steps.some(s => /\bnpm test\b|npm run check:boundaries/.test(s.run || '')));
+  const root = JSON.parse(read('package.json'));
+  const filter = root.scripts['test:backend'].match(/--filter=(\S+)/)[1];
+  const graph = JSON.parse(execFileSync(process.execPath, [
+    fileURLToPath(new URL('../../node_modules/turbo/bin/turbo', import.meta.url)),
+    'run', 'test', `--filter=${filter}`, '--dry=json',
+  ], { cwd: fileURLToPath(new URL('../../', import.meta.url)), encoding: 'utf8' }));
+  assert.ok(!graph.tasks.some(t => t.taskId === '@changmen/web#test'));
+  for (const workspace of root.workspaces.filter(p => p.startsWith('server/'))) {
+    const paths = workspace.endsWith('/*')
+      ? readdirSync(new URL(`../../${workspace.slice(0, -1)}`, import.meta.url), { withFileTypes: true })
+        .filter(entry => entry.isDirectory()).map(entry => workspace.replace('*', entry.name))
+      : [workspace];
+    for (const p of paths) {
+      const pkg = JSON.parse(read(`${p}/package.json`));
+      if (pkg.scripts?.test)
+        assert.ok(graph.tasks.some(t => t.taskId === `${pkg.name}#test`), pkg.name);
+    }
+  }
+  const matcher = graph.tasks.find(t => t.taskId === '@changmen/matcher#test');
+  assert.ok(matcher.dependencies.includes('@changmen/match-identity#test'));
+  assert.ok(!matcher.command.includes('prefix ../identity'));
+  assert.equal(graph.tasks.filter(t => t.taskId === '@changmen/match-identity#test').length, 1);
 });

@@ -3,6 +3,7 @@ import FootballLazyBook from "@/components/football/FootballLazyBook.vue";
 import FootballMatchCard from "@/components/football/FootballMatchCard.vue";
 import { footballLeagueKey, groupFootballMatchesByLeague } from "@/runtime/footballLeague";
 import { sportMatchStableKey } from "@/runtime/sportListPatch";
+import { FOOTBALL_VENUE_TABS, footballMatchInVenue, footballMatchVenue, type FootballVenueTab } from "@/runtime/footballBoardVenues";
 import {
   FOOTBALL_LIVE_LOOKBACK_MS,
   FOOTBALL_UPCOMING_MS,
@@ -27,20 +28,73 @@ import {
 import { useFootballStore } from "@/stores/footballStore";
 import { useObSportLiveStore } from "@/stores/obSportLiveStore";
 import { storeToRefs } from "pinia";
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 
 const football = useFootballStore();
 const { matchs, loading, refreshing, error } = storeToRefs(football);
 const obLive = useObSportLiveStore();
 const { listRev } = storeToRefs(obLive);
 
-const searchQuery = ref("");
-const leagueFilter = ref("");
-const showLive = ref(readFootballBoardShowLive());
+// [changmen 扩展] 场馆 tab 只筛选展示；采集、赔率订阅与跟单继续使用全场馆数据。
+const venueTab = ref<FootballVenueTab>("all");
+const tabPrefs = reactive(Object.fromEntries(FOOTBALL_VENUE_TABS.map(tab => [tab.key, {
+  query: "", league: "", showLive: readFootballBoardShowLive(), scrollTop: 0,
+}])) as Record<FootballVenueTab, { query: string; league: string; showLive: boolean; scrollTop: number }>);
+const searchQuery = computed({ get: () => tabPrefs[venueTab.value].query, set: v => { tabPrefs[venueTab.value].query = v; } });
+const leagueFilter = computed({ get: () => tabPrefs[venueTab.value].league, set: v => { tabPrefs[venueTab.value].league = v; } });
+const showLive = computed({ get: () => tabPrefs[venueTab.value].showLive, set: v => { tabPrefs[venueTab.value].showLive = v; } });
 const nowTick = ref(Date.now());
 const matchsEl = ref<HTMLElement | null>(null);
 let nowTimer: ReturnType<typeof setInterval> | null = null;
 let liveSession: SportLiveOddsSession | null = null;
+
+async function switchVenue(venue: FootballVenueTab) {
+  if (venue === venueTab.value)
+    return;
+  tabPrefs[venueTab.value].scrollTop = matchsEl.value?.scrollTop ?? 0;
+  clearPodFlash();
+  venueTab.value = venue;
+  await nextTick();
+  if (venueTab.value === venue && matchsEl.value)
+    matchsEl.value.scrollTop = tabPrefs[venue].scrollTop;
+}
+
+const venueMatchs = computed(() => matchs.value.filter(m => footballMatchInVenue(m, venueTab.value)));
+const venueTabs = computed(() => FOOTBALL_VENUE_TABS.map(tab => ({
+  ...tab, n: matchs.value.filter(m => footballMatchInVenue(m, tab.key)).length,
+})));
+
+// 保留全场馆窗口，并补订各 tab 搜索到的远场与跟单定位场次。
+const liveMatchs = computed(() => {
+  const rows = filterSportBoardMatches(matchs.value, {
+    horizonMs: FOOTBALL_UPCOMING_MS,
+    lookbackMs: FOOTBALL_LIVE_LOOKBACK_MS,
+    now: nowTick.value,
+    showLive: true,
+  });
+  const seen = new Set(rows.map(sportMatchStableKey));
+  const add = (match: (typeof matchs.value)[number]) => {
+    const key = sportMatchStableKey(match);
+    if (!seen.has(key)) {
+      seen.add(key);
+      rows.push(match);
+    }
+  };
+  for (const tab of FOOTBALL_VENUE_TABS) {
+    const query = tabPrefs[tab.key].query.trim();
+    if (!query)
+      continue;
+    for (const match of filterSportBoardMatches(matchs.value, { query, now: nowTick.value })) {
+      if (footballMatchInVenue(match, tab.key))
+        add(match);
+    }
+  }
+  const focus = podBoardFocus.value;
+  const pinned = focus && matchs.value.find(m => sportMatchStableKey(m) === podBoardFocusMatchKey(focus));
+  if (pinned)
+    add(pinned);
+  return rows;
+});
 
 function onMatchsWheel(e: WheelEvent) {
   const el = matchsEl.value;
@@ -51,7 +105,7 @@ function onMatchsWheel(e: WheelEvent) {
 
 const displayedMatchs = computed(() => {
   void nowTick.value;
-  return filterSportBoardMatches(matchs.value, {
+  return filterSportBoardMatches(venueMatchs.value, {
     query: searchQuery.value,
     horizonMs: FOOTBALL_UPCOMING_MS,
     lookbackMs: FOOTBALL_LIVE_LOOKBACK_MS,
@@ -89,14 +143,14 @@ const visibleMatchs = computed(() => {
   const key = podBoardFocusMatchKey(t);
   if (rows.some(m => sportMatchStableKey(m) === key))
     return rows;
-  const pinned = matchs.value.find(m => sportMatchStableKey(m) === key);
+  const pinned = venueMatchs.value.find(m => sportMatchStableKey(m) === key);
   if (!pinned)
     return rows;
   return [pinned, ...rows];
 });
 
 const matchCountLabel = computed(() => {
-  const total = matchs.value.length;
+  const total = venueMatchs.value.length;
   const shown = visibleMatchs.value.length;
   if (shown !== total)
     return `${shown} / ${total} 场`;
@@ -112,7 +166,7 @@ watch(displayedMatchs, () => {
 
 onMounted(() => {
   football.startPolling();
-  liveSession = startSportLiveOddsSession(() => displayedMatchs.value, { patchMatchFallback: false });
+  liveSession = startSportLiveOddsSession(() => liveMatchs.value, { patchMatchFallback: false });
   nowTimer = setInterval(() => { nowTick.value = Date.now(); }, 15_000);
 });
 
@@ -162,7 +216,7 @@ watch(listRev, () => {
 });
 
 watch(
-  () => displayedMatchs.value.map(m => String(m.providers?.OB || m.id)).join(","),
+  () => liveMatchs.value.map(m => sportMatchStableKey(m)).join(","),
   () => {
     liveSession?.sync();
   },
@@ -175,29 +229,40 @@ function isFocusMatch(m: { id?: number; providers?: Record<string, string | numb
   return sportMatchStableKey(m) === podBoardFocusMatchKey(t);
 }
 
-async function waitEl(find: () => HTMLElement | null, ms = 4000): Promise<HTMLElement | null> {
+async function waitEl(find: () => HTMLElement | null, isCurrent: () => boolean, ms = 4000): Promise<HTMLElement | null> {
   const t0 = Date.now();
   while (Date.now() - t0 < ms) {
+    if (!isCurrent())
+      return null;
     const el = find();
     if (el)
       return el;
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
   }
-  return find();
+  return isCurrent() ? find() : null;
 }
 
-watch(() => podBoardFocus.value?.token, async (token) => {
-  const target = podBoardFocus.value;
-  if (!token || !target)
+watch(podBoardFocus, async (target, _previous, onCleanup) => {
+  if (!target)
+    return;
+  let cancelled = false;
+  onCleanup(() => { cancelled = true; });
+  const match = matchs.value.find(m => sportMatchStableKey(m) === podBoardFocusMatchKey(target));
+  const venue = match ? footballMatchVenue(match) : target.obMid ? "OB" : "all";
+  const isCurrent = () => !cancelled && venueTab.value === venue;
+  await switchVenue(venue);
+  if (!isCurrent())
     return;
   searchQuery.value = "";
   leagueFilter.value = "";
   await nextTick();
-  const matchEl = await waitEl(() => selectPodBoardMatch(matchsEl.value, target));
-  if (!matchEl)
+  const matchEl = await waitEl(() => selectPodBoardMatch(matchsEl.value, target), isCurrent);
+  if (!matchEl || !isCurrent())
     return;
   matchEl.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
-  const cell = await waitEl(() => selectPodBoardCell(matchEl, target));
+  const cell = await waitEl(() => selectPodBoardCell(matchEl, target), isCurrent);
+  if (!isCurrent())
+    return;
   clearPodFlash();
   if (!cell)
     return;
@@ -210,6 +275,22 @@ watch(() => podBoardFocus.value?.token, async (token) => {
 
 <template>
   <div class="football-board-list">
+    <div class="football-venue-tabs" role="tablist" aria-label="按场馆筛选比赛">
+      <button
+        v-for="tab in venueTabs"
+        :key="tab.key"
+        type="button"
+        class="football-league-tab"
+        :class="{ 'is-on': venueTab === tab.key }"
+        role="tab"
+        :aria-selected="venueTab === tab.key"
+        :title="`已采集 ${tab.n} 场，下方按时间和筛选条件显示`"
+        @click="switchVenue(tab.key)"
+      >
+        {{ tab.label }} {{ tab.n }}
+      </button>
+      <span class="football-venue-hint">跟单按设置持续运行，切换场馆不影响跟单</span>
+    </div>
     <div class="match-search-row sport-toolbar">
       <el-input
         v-model="searchQuery"
@@ -334,12 +415,21 @@ watch(() => podBoardFocus.value?.token, async (token) => {
 .sport-toolbar :deep(.el-button) {
   margin-left: auto;
 }
+.football-venue-tabs,
 .football-league-tabs {
   display: flex;
   flex: 0 0 auto;
   flex-wrap: wrap;
   gap: 6px;
   padding: 0 10px 8px;
+}
+.football-venue-tabs {
+  align-items: center;
+  padding-top: 8px;
+}
+.football-venue-hint {
+  color: #94a3b8;
+  font-size: 12px;
 }
 .football-league-tab {
   border: 1px solid #334155;

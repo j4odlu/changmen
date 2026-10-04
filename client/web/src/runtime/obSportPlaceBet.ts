@@ -20,6 +20,7 @@ import { readLocalSportObSession, type SportObSessionLocal } from "@/runtime/obS
 import { readPodBetSettings } from "@/runtime/podBetSettings";
 import { useAccountStore } from "@/stores/accountStore";
 import { peekObSportMarketMeta } from "@/runtime/obSportMarketMeta";
+import { ObSportApiError } from "@/runtime/obSportApiError";
 
 /** [官网可证实] post → `/yewu13/v1/betOrder/queryBetAmountPB` */
 export const OB_SPORT_QUERY_MARKET_PATH = "/yewu13/v1/betOrder/queryBetAmountPB";
@@ -191,6 +192,15 @@ function findOidRecord(raw: unknown, oid: string, depth = 0): Record<string, unk
     }
   }
   return null;
+}
+
+function hasOidQuote(raw: unknown, oid: string, depth = 0): boolean {
+  if (depth > 8 || !raw || typeof raw !== "object")
+    return false;
+  const rec = asRecord(raw);
+  if (rec && recId(rec) === oid && ["ov", "od", "odds", "oddsValue", "oddFinally", "oddsFinally"].some(key => rec[key] != null))
+    return true;
+  return Object.values(raw).some(value => hasOidQuote(value, oid, depth + 1));
 }
 
 function oddsListId(rec: Record<string, unknown>): string {
@@ -718,6 +728,8 @@ export async function placeObSportSingle(req: ObSportPlaceRequest): Promise<ObSp
     if (amountErr)
       return { ok: false, message: amountErr };
     const info = pickObSportMarketInfo(queried, oid, { playOptions: playHint, marketValue: lineHint });
+    if (!(Number(info?.odds) > 1) && hasOidQuote(queried, oid))
+      return { ok: false, message: "预检盘口已锁定或无有效赔率" };
     // [changmen 扩展] 缓存只复用结构；预检只返回限额时，恢复下注账号详情报价校验。
     if (!(Number(info?.odds) > 1) && !detailFetched) {
       detailMeta = await fetchObSportOidMeta(session, mid, oid);
@@ -737,8 +749,7 @@ export async function placeObSportSingle(req: ObSportPlaceRequest): Promise<ObSp
       return { ok: false, message: "预检缺 hid/hpid" };
 
     const odds = (info?.odds && info.odds > 1 ? info.odds : 0)
-      || (detailMeta?.odds && detailMeta.odds > 1 ? detailMeta.odds : 0)
-      || oddsHint;
+      || (detailMeta?.odds && detailMeta.odds > 1 ? detailMeta.odds : 0);
     if (!(odds > 1))
       return { ok: false, message: "预检无赔率" };
     if (minOdds > 1 && odds + 1e-6 < minOdds)
@@ -772,58 +783,39 @@ export async function placeObSportSingle(req: ObSportPlaceRequest): Promise<ObSp
     const placed = await postObSportPb(OB_SPORT_PROCESS_BET_PATH, body, session);
     submitInFlight = false;
     const accepted = obSportPlaceAccepted(placed);
-    if (!accepted.ok)
-      return accepted;
+    if (!accepted.ok) {
+      const data = nested(placed);
+      const detail = asRecord(asList(data.orderDetailRespList)[0]);
+      const status = Number(detail?.orderStatusCode ?? data.orderStatusCode);
+      return { ...accepted, outcomeUnknown: accepted.message === "场馆未返回单号" || ![2, 4].includes(status) };
+    }
     const venueOdds = oddsFromObSportPlace(placed) || odds;
     return { ok: true, orderId: accepted.orderId, odds: venueOdds > 1 ? venueOdds : undefined };
   };
 
   const firstType: 1 | 2 = req.matchType === 2 ? 2 : 1;
-  try {
-    const first = await tryOnce(firstType);
-    if (first.ok)
-      return first;
-    const msg = first.message || "";
-    // 早盘/滚球 matchType 不对时常见 0402012；翻一次再试
-    if (/0402012|盘口失效|盘口已变/.test(msg) || /预检未返回|预检缺|预检无赔率/.test(msg)) {
-      const alt: 1 | 2 = firstType === 1 ? 2 : 1;
-      try {
-        const second = await tryOnce(alt);
-        if (second.ok)
-          return second;
-        if (/0402012|盘口失效/.test(second.message))
-          return { ok: false, message: "盘口已变/失效，请刷新后再下" };
-        return second;
-      }
-      catch (err2) {
-        const m2 = err2 instanceof Error ? err2.message : String(err2);
-        if (/0402012|盘口失效/.test(m2))
-          return { ok: false, message: "盘口已变/失效，请刷新后再下" };
-        return { ok: false, message: m2.slice(0, 180) || "下单失败" };
-      }
+  let retryType = firstType;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let result: ObSportPlaceResult;
+    try {
+      result = await tryOnce(attempt === 0 ? firstType : retryType);
     }
-    if (/0402012|盘口失效/.test(msg))
+    catch (err) {
+      if (err instanceof ObSportApiError && err.apiPath === OB_SPORT_PROCESS_BET_PATH)
+        submitInFlight = false;
+      result = { ok: false, message: (err instanceof Error ? err.message : String(err)).slice(0, 180) || "下单失败", outcomeUnknown: submitInFlight };
+    }
+    if (result.ok || result.outcomeUnknown || attempt === 1 || expired())
+      return result;
+    // [changmen 扩展] 只对明确的变盘/元数据失败补试；提交结果未知时保留占位。
+    if (!/0402012|盘口失效|盘口已变|Odds have been changed|赔率已变|预检未返回|预检缺|预检无赔率/i.test(result.message))
+      return result;
+    retryType = /0402012|预检未返回|预检缺/.test(result.message) ? firstType === 1 ? 2 : 1 : firstType;
+    // 刷新同一个 oid，禁止沿用旧 hid 或改到另一档；下一轮重新检查 EV 和时效。
+    detailMeta = await fetchObSportOidMeta(session, mid, oid);
+    detailFetched = true;
+    if (!detailMeta || !(detailMeta.odds > 1))
       return { ok: false, message: "盘口已变/失效，请刷新后再下" };
-    return first;
   }
-  catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (/0402012|盘口失效/.test(msg)) {
-      const alt: 1 | 2 = firstType === 1 ? 2 : 1;
-      try {
-        const second = await tryOnce(alt);
-        if (second.ok)
-          return second;
-        return { ok: false, message: "盘口已变/失效，请刷新后再下" };
-      }
-      catch {
-        return { ok: false, message: "盘口已变/失效，请刷新后再下" };
-      }
-    }
-    return {
-      ok: false,
-      message: msg.slice(0, 180) || "下单失败",
-      outcomeUnknown: submitInFlight,
-    };
-  }
+  return { ok: false, message: "下单失败" };
 }

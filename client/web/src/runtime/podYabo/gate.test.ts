@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { evaluatePodOutcomeGate, podOutcomeGateEntryFrom } from "@/runtime/podYabo/gate";
+import { evaluatePodOutcomeGate, podOutcomeGateEntryFrom, podOutcomeExecutionScope } from "@/runtime/podYabo/gate";
 
 describe("podYabo/gate", () => {
+  it("shares the execution scope across directions but separates halves and preserves moneyline", () => {
+    const entry = { obMid: "m1", marketCode: "totals", boardSide: "over" as const };
+    expect(podOutcomeExecutionScope(entry)).toBe(podOutcomeExecutionScope({ ...entry, boardSide: "under" }));
+    expect(podOutcomeExecutionScope({ ...entry, marketCode: "ht_totals" })).not.toBe(podOutcomeExecutionScope(entry));
+    expect(podOutcomeExecutionScope({ ...entry, marketCode: "moneyline" })).toBe("");
+  });
   it("blocks same-side totals add and opposite-side hedge on one mid", () => {
     const placed = [{ obMid: "m1", marketCode: "totals", boardSide: "over" as const }];
     expect(evaluatePodOutcomeGate({

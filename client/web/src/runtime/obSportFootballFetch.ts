@@ -5,6 +5,7 @@ import type { ClientMatchDto } from "@/types/esport";
 import { clearObSportMarketMeta, rememberObSportMarketMeta } from "@/runtime/obSportMarketMeta";
 import { a8Axios, responseBodyText } from "@changmen/client-core/shared/a8Axios";
 import { decodeObSportPbPayload } from "@/runtime/obSportCodec";
+import { ObSportApiError } from "@/runtime/obSportApiError";
 import { resolveObFootballGame } from "@/runtime/footballLeague";
 import {
   dedupeObPlaySelectionRows,
@@ -191,7 +192,7 @@ async function assertEnvelope(envelope: unknown, apiPath: string): Promise<unkno
   const code = row.code;
   if (!envelopeCodeOk(code)) {
     const msg = String(row.msg || row.message || code);
-    throw new Error(`OB sport ${apiPath} code=${code} ${msg}`);
+    throw new ObSportApiError(apiPath, String(code), msg);
   }
   const decoded = await decodeObSportPbPayload(envelope);
   if (decoded == null)

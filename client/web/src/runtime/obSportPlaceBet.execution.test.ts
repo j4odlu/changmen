@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { placeObSportSingle, OB_SPORT_PROCESS_BET_PATH, OB_SPORT_QUERY_MARKET_PATH } from "@/runtime/obSportPlaceBet";
 import { clearObSportMarketMeta, rememberObSportMarketMeta } from "@/runtime/obSportMarketMeta";
+import { ObSportApiError } from "@/runtime/obSportApiError";
 
 const post = vi.hoisted(() => vi.fn());
 vi.mock("@/runtime/obSportFootballFetch", () => ({ postObSportPb: post }));
@@ -30,6 +31,46 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); clearObSportMarketMeta(); });
 
 describe("OB final submission checks", () => {
+  it("retries an explicit API envelope rejection without confusing it with a transport timeout", async () => {
+    post.mockResolvedValueOnce(query(1.95))
+      .mockRejectedValueOnce(new ObSportApiError(OB_SPORT_PROCESS_BET_PATH, "0402012", "盘口已变"))
+      .mockResolvedValueOnce(detail).mockResolvedValueOnce(query(2))
+      .mockResolvedValueOnce({ orderDetailRespList: [{ orderNo: "retry-envelope", orderStatusCode: 1 }] });
+    expect(await placeObSportSingle(request)).toMatchObject({ ok: true, orderId: "retry-envelope" });
+    expect(post).toHaveBeenCalledTimes(5);
+  });
+  it("does not replace an explicit locked precheck quote with a positive detail or requested quote", async () => {
+    post.mockResolvedValueOnce(query(0));
+    expect(await placeObSportSingle(request)).toMatchObject({ ok: false, message: expect.stringContaining("锁定") });
+    expect(post.mock.calls.map(c => c[0])).toEqual([OB_SPORT_QUERY_MARKET_PATH]);
+  });
+  it("preserves a pending submission as unknown", async () => {
+    post.mockResolvedValueOnce(query(1.95)).mockResolvedValueOnce({ orderDetailRespList: [{ orderStatusCode: 0, orderNo: "pending" }] });
+    expect(await placeObSportSingle(request)).toMatchObject({ ok: false, outcomeUnknown: true });
+    expect(post).toHaveBeenCalledTimes(2);
+  });
+  it("refreshes the exact selection after an explicit odds rejection and submits at most twice", async () => {
+    post.mockResolvedValueOnce(query(1.95))
+      .mockResolvedValueOnce({ orderDetailRespList: [{ orderStatusCode: 2, msg: "Odds have been changed" }] })
+      .mockResolvedValueOnce(detail).mockResolvedValueOnce(query(2))
+      .mockResolvedValueOnce({ orderDetailRespList: [{ orderNo: "retry-order", orderStatusCode: 1 }] });
+    expect(await placeObSportSingle(request)).toMatchObject({ ok: true, odds: 2 });
+    expect(post.mock.calls.map(c => c[0])).toEqual([OB_SPORT_QUERY_MARKET_PATH, OB_SPORT_PROCESS_BET_PATH,
+      "/yewu11/v1/w/getMatchBaseInfoByOddsPB", OB_SPORT_QUERY_MARKET_PATH, OB_SPORT_PROCESS_BET_PATH]);
+  });
+  it("preserves unknown on the retry submission and never retries a transport error", async () => {
+    post.mockResolvedValueOnce(query(1.95))
+      .mockResolvedValueOnce({ orderDetailRespList: [{ orderStatusCode: 2, msg: "Odds have been changed" }] })
+      .mockResolvedValueOnce(detail).mockResolvedValueOnce(query(2))
+      .mockRejectedValueOnce(new Error("timeout 0402012"));
+    expect(await placeObSportSingle(request)).toMatchObject({ ok: false, outcomeUnknown: true });
+    expect(post).toHaveBeenCalledTimes(5);
+  });
+  it("does not retry when the submission response has no order id", async () => {
+    post.mockResolvedValueOnce(query(1.95)).mockResolvedValueOnce({});
+    expect(await placeObSportSingle(request)).toMatchObject({ ok: false, outcomeUnknown: true });
+    expect(post).toHaveBeenCalledTimes(2);
+  });
   it("rejects a final quote above the EV ceiling without submitting", async () => {
     post.mockResolvedValueOnce(query(2.4));
     expect(await placeObSportSingle(request)).toMatchObject({ ok: false, message: expect.stringContaining("EV 上限") });

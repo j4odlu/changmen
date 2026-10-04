@@ -11,6 +11,7 @@ import { pickPodObAccountsForPlacement } from "@/runtime/podObAccountRotation";
 import { useAccountStore } from "@/stores/accountStore";
 import { useFootballOrderStore } from "@/stores/footballOrderStore";
 import { finalizePodBetExecution, reservePodBetExecution } from "@/api/podBetExecution";
+import { podOutcomeExecutionScope, podOutcomeGateEntryFrom } from "@/runtime/podYabo/gate";
 
 export type PodFollowPlaceTicket = {
   id: string;
@@ -54,7 +55,7 @@ export function podFollowPlaceBlock(ticket: PodFollowPlaceTicket): string | null
   return null;
 }
 
-export async function placePodFollowBet(ticket: PodFollowPlaceTicket): Promise<{ ok: boolean; message: string }> {
+export async function placePodFollowBet(ticket: PodFollowPlaceTicket): Promise<{ ok: boolean; message: string; outcomeUnknown?: boolean }> {
   const block = podFollowPlaceBlock(ticket);
   if (block)
     return { ok: false, message: block };
@@ -70,6 +71,7 @@ export async function placePodFollowBet(ticket: PodFollowPlaceTicket): Promise<{
   const orders = useFootballOrderStore();
   const okNotes: string[] = [];
   const failNotes: string[] = [];
+  let outcomeUnknown = false;
   const stake = Number(ticket.stake);
   const odds = Number(ticket.quote.quote) || Number(ticket.market.quote) || 0;
   const oid = String(ticket.market.oid || "").trim();
@@ -84,8 +86,10 @@ export async function placePodFollowBet(ticket: PodFollowPlaceTicket): Promise<{
     let leaseToken = "";
     if (ticket.auto === true) {
       try {
-        const lease = await reservePodBetExecution({ alertId: ticket.id, venue: "OB", playerId: accountId });
+        const lease = await reservePodBetExecution({ alertId: ticket.id, venue: "OB", playerId: accountId,
+          outcomeScope: podOutcomeExecutionScope(podOutcomeGateEntryFrom(ticket)) });
         if (!lease.acquired) {
+          outcomeUnknown ||= lease.state === "reserved" || lease.state === "unknown";
           failNotes.push(`${label}:已由其他页面处理(${lease.state || "reserved"})`);
           continue;
         }
@@ -115,6 +119,7 @@ export async function placePodFollowBet(ticket: PodFollowPlaceTicket): Promise<{
     }
     catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      outcomeUnknown = true;
       if (leaseToken) {
         await finalizePodBetExecution({ leaseToken, state: "unknown", message }).catch(() => {});
       }
@@ -122,6 +127,7 @@ export async function placePodFollowBet(ticket: PodFollowPlaceTicket): Promise<{
       continue;
     }
     if (!placed.ok) {
+      outcomeUnknown ||= placed.outcomeUnknown === true;
       if (leaseToken) {
         await finalizePodBetExecution({
           leaseToken,
@@ -163,12 +169,12 @@ export async function placePodFollowBet(ticket: PodFollowPlaceTicket): Promise<{
   }
 
   if (!okNotes.length)
-    return { ok: false, message: failNotes.join("；") || "下单失败" };
+    return { ok: false, message: failNotes.join("；") || "下单失败", outcomeUnknown };
   // 面板标签已是「已下」，这里只留 账号:订单号（多号带成功数）
   const head = accounts.length > 1 ? `${okNotes.length}/${accounts.length} ` : "";
   const body = okNotes.join("、");
   const msg = failNotes.length
     ? `${head}${body}；失败 ${failNotes.join("；")}`
     : `${head}${body}`;
-  return { ok: true, message: msg.slice(0, 180) };
+  return { ok: true, message: msg.slice(0, 180), outcomeUnknown };
 }

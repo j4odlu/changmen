@@ -21,6 +21,13 @@ function ownedPlayer(provider = "OB", ownerUserId = user.id) {
 }
 
 describe("POD bet execution service", () => {
+  it("forwards the OB market scope for server-side cross-alert protection", async () => {
+    mocks.fetchPlayers.mockResolvedValue(ownedPlayer());
+    mocks.reserve.mockResolvedValue({ acquired: false, row: { state: "unknown" } });
+    const result = await reservePodBet({ alertId: "other-alert", venue: "OB", playerId: 7, outcomeScope: "5505659|FT|Total" }, user);
+    expect(result.info).toMatchObject({ acquired: false, state: "unknown" });
+    expect(mocks.reserve).toHaveBeenCalledWith(expect.objectContaining({ outcomeScope: "5505659|FT|Total" }));
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.fetchPlayers.mockResolvedValue(ownedPlayer());

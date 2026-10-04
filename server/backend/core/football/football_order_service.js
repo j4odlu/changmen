@@ -25,7 +25,8 @@ function podExecutionInput(body) {
   const playerId = Math.round(Number(body?.playerId) || 0);
   if (!alertId || !venue || playerId <= 0)
     return null;
-  return { alertId, venue, playerId };
+  const outcomeScope = venue === "OB" ? String(body?.outcomeScope || "").trim().slice(0, 240) : "";
+  return { alertId, venue, playerId, ...(outcomeScope ? { outcomeScope } : {}) };
 }
 
 export async function reservePodBet(body, user) {

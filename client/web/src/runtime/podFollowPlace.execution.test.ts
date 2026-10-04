@@ -68,6 +68,7 @@ describe("POD auto execution lease", () => {
     mocks.place.mockResolvedValue({ ok: true, message: "ok", orderId: "venue-9", odds: 1.96 });
     const result = await placePodFollowBet(ticket());
     expect(result.ok).toBe(true);
+    expect(mocks.reserve).toHaveBeenCalledWith(expect.objectContaining({ outcomeScope: "mid-1|FT|Total" }));
     expect(mocks.place).toHaveBeenCalledWith(expect.objectContaining({ minOdds: 1.9, maxOdds: 2.2 }));
     expect(mocks.finalize).toHaveBeenCalledWith(expect.objectContaining({
       leaseToken: "lease-1",

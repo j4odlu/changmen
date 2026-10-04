@@ -11,6 +11,7 @@ export async function reservePodBetExecution(body: {
   alertId: string;
   venue: "OB" | "Polymarket" | "RAY";
   playerId: number;
+  outcomeScope?: string;
 }): Promise<PodBetLease> {
   return unwrap(await post<PodBetLease>("Client_ReservePodBet", body));
 }

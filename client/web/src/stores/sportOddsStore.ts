@@ -12,6 +12,7 @@ export const useSportOddsStore = defineStore("sportOdds", {
   state: () => ({
     /** platform → subscribeId（PM asset / PF marketId）→ 欧赔 */
     byVenue: {} as Record<string, Record<string, number>>,
+    receivedAt: {} as Record<string, Record<string, number>>,
     /** 触发 BetRow 重算（fallback 同值时仍可 bump） */
     tick: 0,
   }),
@@ -26,11 +27,13 @@ export const useSportOddsStore = defineStore("sportOdds", {
       if (!this.byVenue[p])
         this.byVenue[p] = {};
       const bag = this.byVenue[p];
+      const times = this.receivedAt[p] ||= {};
       let changed = false;
       for (const row of rows) {
         const id = String(row.id || "").trim();
         if (!id || !Number.isFinite(row.odds) || row.odds < 0)
           continue;
+        times[id] = Date.now();
         if (bag[id] === row.odds)
           continue;
         bag[id] = row.odds;
@@ -45,6 +48,10 @@ export const useSportOddsStore = defineStore("sportOdds", {
         return false;
       return row[String(subscribeId)] !== undefined;
     },
+    hasFresh(platform: string, subscribeId: string, maxAgeMs = 5_000): boolean {
+      const at = this.receivedAt[platform]?.[subscribeId];
+      return at != null && Date.now() - at <= maxAgeMs && this.has(platform, subscribeId);
+    },
     get(platform: PlatformId | string, subscribeId: string): number {
       const row = this.byVenue[String(platform)];
       if (!row)
@@ -53,6 +60,12 @@ export const useSportOddsStore = defineStore("sportOdds", {
     },
     clear() {
       this.byVenue = {};
+      this.receivedAt = {};
+      scheduleTick(() => { this.tick += 1; });
+    },
+    clearVenue(platform: string) {
+      delete this.byVenue[platform];
+      delete this.receivedAt[platform];
       scheduleTick(() => { this.tick += 1; });
     },
   },

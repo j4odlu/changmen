@@ -398,11 +398,13 @@ export function startSportLiveOddsSession(
   });
 
   const onSportObSession = () => {
-    if (!stopped)
+    if (!stopped) {
+      sportOdds.clearVenue(OB);
       void loadObSession().then(() => {
         if (!stopped)
           requestSync(true);
       });
+    }
   };
   if (typeof window !== "undefined")
     window.addEventListener(SPORT_OB_SESSION_UPDATED, onSportObSession);

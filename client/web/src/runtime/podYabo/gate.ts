@@ -34,6 +34,12 @@ function periodTag(code: string): "HT" | "FT" {
   return String(code || "").toLowerCase().startsWith("ht_") ? "HT" : "FT";
 }
 
+/** [changmen 扩展] 同场同市场的执行范围；双向共用，独赢沿用不拦截规则。 */
+export function podOutcomeExecutionScope(entry: PodOutcomeGateEntry): string {
+  const type = marketType(entry.marketCode);
+  return entry.obMid && type && type !== "ML" ? `${entry.obMid}|${periodTag(entry.marketCode)}|${type}` : "";
+}
+
 function ouSide(side: PodMarketSide | null): "over" | "under" | null {
   if (side === "over" || side === "under")
     return side;

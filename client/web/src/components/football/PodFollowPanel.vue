@@ -91,6 +91,7 @@ import {
   listPrefetchedObMarkets,
   mergePodBoardMarkets,
   peekPrefetchedObOdds,
+  hasPrefetchedObOdds,
   prefetchObSportMatchMarkets,
   prefetchObSportOidQuote,
   resetPodMarketPrefetch,
@@ -134,6 +135,7 @@ const prefetchTick = ref(0);
 const sportAmount = ref(0);
 /** 对齐 AutoYabo seenAlertKeys：自动试过的票不再每轮重打 */
 const autoAttempted = ref<Record<string, true>>({});
+const obExecutionEntries = ref<Record<string, PodOutcomeGateEntry>>({});
 const autoReady = ref(false);
 const alertFilter = ref<"all" | "matched">("all");
 let nowTimer: ReturnType<typeof setInterval> | null = null;
@@ -152,13 +154,16 @@ const rayOrdersRefreshing = ref(false);
 const pmMatchPlugin = getPodVenueMatchPlugin("Polymarket");
 
 const tickets = computed(() => {
+  void nowTick.value;
   void sportOddsTick.value;
   void lineTick.value;
   void missTick.value;
   void prefetchTick.value;
   const live = {
-    get: (platform: string, id: string) => peekPrefetchedObOdds(id) || sportOdds.get(platform, id),
-    has: (platform: string, id: string) => peekPrefetchedObOdds(id) > 1 || sportOdds.has(platform, id),
+    get: (platform: string, id: string) => platform !== "OB" || sportOdds.hasFresh("OB", id)
+      ? sportOdds.get(platform, id) : peekPrefetchedObOdds(id),
+    has: (platform: string, id: string) => platform !== "OB" ? sportOdds.has(platform, id)
+      : sportOdds.hasFresh("OB", id) || hasPrefetchedObOdds(id),
     getLine: (oid: string) => obLive.getLine(oid),
   };
   const board = matchs.value.map((row) => {
@@ -446,7 +451,7 @@ watch(() => ({ rows: tickets.value, ready: autoReady.value, enabled: betSettings
     if (mid && ticket.marketMatch.status !== "matched")
       void prefetchObSportMatchMarkets(mid, ticketPlacePayload(ticket, true).submitBefore);
     const oid = String(ticket.marketMatch.oid || "").trim();
-    if (oid && mid)
+    if (oid && mid && !sportOdds.hasFresh("OB", oid))
       void prefetchObSportOidQuote(oid, mid, {
         marketCode: ticket.marketMatch.marketCode,
         boardSide: ticket.marketMatch.boardSide || undefined,
@@ -745,6 +750,8 @@ function isPlaced(id: string): boolean {
 function placeBlock(ticket: (typeof tickets.value)[number]): string | null {
   if (isVenuePlaced(ticket.id, "OB"))
     return "已下过";
+  if (obExecutionEntries.value[ticket.id])
+    return "提交结果待确认，禁止重复下单";
   const dailyBlock = venueDailyOrderBlock("OB");
   if (dailyBlock)
     return dailyBlock;
@@ -808,13 +815,13 @@ function pendingPmPlacedIds(): string[] {
 }
 
 function pendingPlacedEntries() {
-  return logRows.value
+  return [...Object.values(obExecutionEntries.value), ...logRows.value
     .filter(row => row.placed && row.obMid && row.boardSide)
     .map(row => ({
       obMid: row.obMid,
       marketCode: row.marketCode,
       boardSide: row.boardSide,
-    }));
+    }))];
 }
 
 function inferPmMarketCode(label: unknown): string {
@@ -948,7 +955,7 @@ async function placeTicket(ticket: (typeof tickets.value)[number], auto: boolean
     return;
   const payload = ticketPlacePayload(ticket, auto);
   recordObAttempt(ticket, auto ? "auto_attempt" : "manual_click", { stake: payload.stake });
-  const block = venueDailyOrderBlock("OB") || podFollowPlaceBlock(payload);
+  const block = placeBlock(ticket) || podFollowPlaceBlock(payload);
   if (block) {
     recordObAttempt(ticket, "blocked", { reason: block });
     if (!auto)
@@ -962,8 +969,18 @@ async function placeTicket(ticket: (typeof tickets.value)[number], auto: boolean
     return;
   }
   placingId.value = ticket.id;
+  obExecutionEntries.value = { ...obExecutionEntries.value, [ticket.id]: {
+    obMid: payload.obMid, marketCode: payload.market.marketCode, boardSide: payload.market.boardSide,
+  } };
   try {
     const result = await placePodFollowBet(payload);
+    if (!result.ok && !result.outcomeUnknown) {
+      const next = { ...obExecutionEntries.value };
+      delete next[ticket.id];
+      obExecutionEntries.value = next;
+    }
+    if (result.outcomeUnknown)
+      autoAttempted.value = { ...autoAttempted.value, [venuePlaceKey("OB", ticket.id)]: true };
     const key = venuePlaceKey("OB", ticket.id);
     placeNote.value = { ...placeNote.value, [key]: result.message };
     if (result.ok) {
@@ -1054,14 +1071,14 @@ function onRayPlaceClick(ev: MouseEvent, ticket: (typeof tickets.value)[number])
 }
 
 async function maybeAutoPlace(): Promise<boolean> {
-  if (!betSettings.value.autoPlace || placingId.value || placingPmId.value || placingRayId.value || rayOrdersRefreshing.value)
+  if (!betSettings.value.enabled || !betSettings.value.autoPlace || placingId.value || placingPmId.value || placingRayId.value)
     return false;
   let attempted = false;
-  const now = Date.now();
-  const ageOk = tickets.value.filter(ticket =>
-    podAlertBetFailReason(ticket.alert, betSettings.value, now) == null
-    && podAlertWithinFollowAge(ticket.alert, betSettings.value.maxAgeSec, now),
+  const eligibleTickets = () => tickets.value.filter(ticket =>
+    podAlertBetFailReason(ticket.alert, betSettings.value, Date.now()) == null
+    && podAlertWithinFollowAge(ticket.alert, betSettings.value.maxAgeSec, Date.now()),
   );
+  const ageOk = eligibleTickets();
   const skipped = pendingPlacedIds();
   const placedEntries = pendingPlacedEntries();
   const cap = pendingCap();
@@ -1077,7 +1094,7 @@ async function maybeAutoPlace(): Promise<boolean> {
         continue;
       const oid = String(payload.market.oid || "").trim();
       const mid = String(payload.obMid || "").trim();
-      if (oid && mid)
+      if (oid && mid && !sportOdds.hasFresh("OB", oid))
         void prefetchObSportOidQuote(oid, mid, {
           marketCode: payload.market.marketCode,
           boardSide: payload.market.boardSide || undefined,
@@ -1103,19 +1120,19 @@ async function maybeAutoPlace(): Promise<boolean> {
       }
     }
   }
-  if (followRayEnabled.value) {
-    const next = pickPodRayAutoTicket(ageOk.filter(() => !venueDailyOrderBlock("RAY")).map(t => rayTicketPlacePayload(t, true)),
+  if (betSettings.value.enabled && betSettings.value.autoPlace && followRayEnabled.value && !rayOrdersRefreshing.value) {
+    const next = pickPodRayAutoTicket(eligibleTickets().filter(() => !venueDailyOrderBlock("RAY")).map(t => rayTicketPlacePayload(t, true)),
       rayPendingPlacedIds(), rayPendingPlacedEntries(), pendingCap());
     const ui = next && tickets.value.find(t => t.id === next.id);
     if (ui) { autoAttempted.value = { ...autoAttempted.value, [venuePlaceKey("RAY", ui.id)]: true }; await placeRayTicket(ui, true); attempted = true; }
   }
-  if (!followPmEnabled.value)
+  if (!betSettings.value.enabled || !betSettings.value.autoPlace || !followPmEnabled.value)
     return attempted;
   const pmNext = pickPodPmAutoTicket(
-    ageOk.map(row => pmTicketPlacePayload(row, true)),
+    eligibleTickets().map(row => pmTicketPlacePayload(row, true)),
     pendingPmPlacedIds(),
     pendingPmPlacedEntries(),
-    cap,
+    pendingCap(),
   );
   if (!pmNext)
     return attempted;

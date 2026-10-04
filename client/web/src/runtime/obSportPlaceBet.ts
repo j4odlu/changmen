@@ -684,6 +684,7 @@ export async function placeObSportSingle(req: ObSportPlaceRequest): Promise<ObSp
 
   // 详情盘补 hid：同一次下单只拉一次
   let detailMeta: ObSportOidMeta | null | undefined;
+  let detailFetched = false;
   // 只有提交请求已经开始但没有拿到明确响应时，结果才标记为未知。
   // 上层会永久保留该警报/账号的执行占位，禁止自动重试造成重复下注。
   let submitInFlight = false;
@@ -694,6 +695,7 @@ export async function placeObSportSingle(req: ObSportPlaceRequest): Promise<ObSp
     if (detailMeta === undefined) {
       const cached = peekObSportMarketMeta(String(session.gateway || ""), mid, oid);
       detailMeta = cached ? { ...cached, odds: 0, oddsValue: 0, placeNum: 1 } : await fetchObSportOidMeta(session, mid, oid);
+      detailFetched = !cached;
     }
     const hidHint = String(detailMeta?.hid || "").trim();
     const hpidHint = String(detailMeta?.hpid || "").trim() || hpidGuess;
@@ -716,6 +718,13 @@ export async function placeObSportSingle(req: ObSportPlaceRequest): Promise<ObSp
     if (amountErr)
       return { ok: false, message: amountErr };
     const info = pickObSportMarketInfo(queried, oid, { playOptions: playHint, marketValue: lineHint });
+    // [changmen 扩展] 缓存只复用结构；预检只返回限额时，恢复下注账号详情报价校验。
+    if (!(Number(info?.odds) > 1) && !detailFetched) {
+      detailMeta = await fetchObSportOidMeta(session, mid, oid);
+      detailFetched = true;
+      if (!(Number(detailMeta?.odds) > 1))
+        return { ok: false, message: "下注账号未返回有效赔率" };
+    }
     if (!info?.oid && !detailMeta)
       return { ok: false, message: "预检未返回盘口" };
 

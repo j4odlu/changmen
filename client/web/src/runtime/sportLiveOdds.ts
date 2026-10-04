@@ -259,6 +259,8 @@ export function startSportLiveOddsSession(
           return;
         playAt.set(mid, Date.now());
         obLive.noteHandicapPlay(mid);
+        // 列表是足球盘口结构的主来源；变盘后刷新列表，补齐新档位和 oid。
+        obLive.noteListChange();
       },
       onOrderStatus(rows) {
         if (stopped)

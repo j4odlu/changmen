@@ -56,4 +56,25 @@ describe("OB final submission checks", () => {
     expect(post.mock.calls[0]?.[0]).toContain("getMatchBaseInfoByOddsPB");
     expect(post.mock.calls[1]?.[0]).toBe(OB_SPORT_QUERY_MARKET_PATH);
   });
+  it("checks account detail odds when precheck only returns limits despite cached identifiers", async () => {
+    post.mockResolvedValueOnce({ data: { betAmountInfo: [{ playOptionsId: "over", playId: "2", marketId: "hid", minBet: 10, maxBet: 100 }] } })
+      .mockResolvedValueOnce({ ...detail, hps: [{ hpid: "2", hl: [{ hid: "hid", hv: "2.5", ol: [{ oid: "over", ot: "Over", ov: 180000 }] }] }] });
+    expect(await placeObSportSingle(request)).toMatchObject({ ok: false, message: expect.stringContaining("低于门槛") });
+    expect(post.mock.calls.map(c => c[0])).toEqual([OB_SPORT_QUERY_MARKET_PATH, "/yewu11/v1/w/getMatchBaseInfoByOddsPB"]);
+  });
+  it("still submits when the account detail quote satisfies the limits", async () => {
+    post.mockResolvedValueOnce({ data: { betAmountInfo: [{ playOptionsId: "over", playId: "2", marketId: "hid", minBet: 10, maxBet: 100 }] } })
+      .mockResolvedValueOnce(detail)
+      .mockResolvedValueOnce({ orderDetailRespList: [{ orderNo: "order-2", orderStatusCode: 1 }] });
+    expect(await placeObSportSingle(request)).toMatchObject({ ok: true, orderId: "order-2", odds: 1.95 });
+    expect(post.mock.calls.map(c => c[0])).toEqual([OB_SPORT_QUERY_MARKET_PATH, "/yewu11/v1/w/getMatchBaseInfoByOddsPB", OB_SPORT_PROCESS_BET_PATH]);
+    const body = post.mock.calls[2]?.[1];
+    expect(body.seriesOrders[0].orderDetailList[0]).toMatchObject({ playOptionsId: "over", marketId: "hid", oddFinally: 1.95 });
+  });
+  it("does not submit the original quote if the missing account quote cannot be refreshed", async () => {
+    post.mockResolvedValueOnce({ data: { betAmountInfo: [{ playOptionsId: "over", playId: "2", marketId: "hid", minBet: 10 }] } })
+      .mockRejectedValueOnce(new Error("detail unavailable"));
+    expect(await placeObSportSingle(request)).toMatchObject({ ok: false, message: "下注账号未返回有效赔率" });
+    expect(post.mock.calls.map(c => c[0])).not.toContain(OB_SPORT_PROCESS_BET_PATH);
+  });
 });

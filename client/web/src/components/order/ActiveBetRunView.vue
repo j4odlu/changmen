@@ -4,12 +4,11 @@ import { storeToRefs } from "pinia";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import OrderExecutionTimeline from "@/components/order/OrderExecutionTimeline.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
+import { useRecentBetProgress } from "./useRecentBetProgress";
 import { accountProgressDisplayName } from "@/shared/accountDisplayName";
 import { activeBetLegRole, activeBetRunMode, activeBetRunModeLabel, observationLegGroups, observationLegSummary, progressEvidenceWarnings, progressOrchestrationLabel } from "@/shared/activeBetRunPresentation";
 import { formatActiveBetLinkLabel } from "@/shared/linkDisplay";
 import {
-  ACTIVE_BET_RUN_QUEUE_CAP,
-  ACTIVE_BET_TERMINAL_LINGER_MS,
   useActiveBetRunStore,
 } from "@/stores/activeBetRunStore";
 import { useAccountStore } from "@/stores/accountStore";
@@ -41,8 +40,8 @@ const offset = ref<{ left: number; top: number } | null>(null);
 const panelSize = ref({ width: PANEL_W, height: PANEL_H });
 const dragging = ref(false);
 const resizing = ref(false);
-/** 当前展示的套利单下标（visibleRuns：0=最新） */
-const activeIndex = ref(0);
+const progressOwner = computed(() => userStore.isLoggedIn ? String(userStore.userId || userStore.userName) : "");
+const { displayRuns, activeIndex, activeRun, unseenLatest, selectRun, showLatest, isTracking } = useRecentBetProgress(visibleRuns, progressOwner);
 
 const expandedTimeline = ref(false);
 const copyLabel = ref("复制 Link");
@@ -51,8 +50,7 @@ let tickTimer: ReturnType<typeof setInterval> | undefined;
 let dragCleanup: (() => void) | undefined;
 let resizeCleanup: (() => void) | undefined;
 
-const runCount = computed(() => visibleRuns.value.length);
-const activeRun = computed(() => visibleRuns.value[activeIndex.value] ?? null);
+const runCount = computed(() => displayRuns.value.length);
 const runFacts = computed(() => userStore.isLoggedIn
   ? observationStore.forLink(String(userStore.userId || ""), activeRun.value?.linkId)
   : []);
@@ -69,15 +67,12 @@ const evidenceWarnings = computed(() => progressEvidenceWarnings(runFacts.value)
 function latestLegAction(leg: ActiveBetLeg) { return progressOrchestrationLabel(leg, legFacts(leg), leg.events.at(-1)?.detail || leg.detail || "等待执行"); }
 function legPlacementLabel(leg: ActiveBetLeg) { return progressOrchestrationLabel(leg, legFacts(leg), activeStore.legPlacementLabel(leg, activeRun.value ?? undefined)); }
 const executionId = computed(() => [...runFacts.value].reverse().find(event => event.executionId)?.executionId);
-const elapsedLabel = computed(() => `${Math.max(0, Math.floor(((activeRun.value?.terminalAt || now.value) - (activeRun.value?.startedAt || now.value)) / 1000))}s`);
-const localHistoryTruncated = computed(() => userStore.isLoggedIn && observationStore.truncatedOwners.includes(String(userStore.userId || "")));
-const canPrev = computed(() => activeIndex.value < runCount.value - 1);
-const canNext = computed(() => activeIndex.value > 0);
-const pageLabel = computed(() => {
-  if (!runCount.value)
-    return `0/${ACTIVE_BET_RUN_QUEUE_CAP}`;
-  return `${activeIndex.value + 1}/${runCount.value}`;
+const elapsedLabel = computed(() => {
+  const run = activeRun.value;
+  const end = run?.terminalAt || (run && !isTracking(run) ? run.updatedAt : now.value);
+  return `${Math.max(0, Math.floor((end - (run?.startedAt || now.value)) / 1000))}s`;
 });
+const localHistoryTruncated = computed(() => userStore.isLoggedIn && observationStore.truncatedOwners.includes(String(userStore.userId || "")));
 
 const panelStyle = computed(() => {
   const style: Record<string, string> = {
@@ -128,21 +123,7 @@ onUnmounted(() => {
     clearTimeout(copyTimer);
 });
 
-watch(
-  visibleRuns,
-  (runs, prev) => {
-    const prevNewestId = prev?.[0]?.betId;
-    const newestId = runs[0]?.betId;
-    // 有新单进队：切到最新
-    if (newestId != null && newestId !== prevNewestId)
-      activeIndex.value = 0;
-    else if (activeIndex.value >= runs.length)
-      activeIndex.value = Math.max(0, runs.length - 1);
-  },
-  { deep: true },
-);
-
-watch(activeIndex, () => {
+watch(() => activeRun.value && [activeRun.value.betId, activeRun.value.linkId, activeRun.value.startedAt].join(":"), () => {
   expandedTimeline.value = false;
   copyLabel.value = "复制 Link";
 });
@@ -213,18 +194,6 @@ function toggleCollapsed() {
   persistCollapsed();
   if (!collapsed.value)
     void nextTick(normalizePanelGeometry);
-}
-
-function showPrev() {
-  if (!canPrev.value)
-    return;
-  activeIndex.value += 1;
-}
-
-function showNext() {
-  if (!canNext.value)
-    return;
-  activeIndex.value -= 1;
 }
 
 function clampOffset(left: number, top: number): { left: number; top: number } {
@@ -399,10 +368,10 @@ function colToneClass(run: ActiveBetRun): string {
 }
 
 function phaseLabel(run: ActiveBetRun): string {
-  if (run.terminalAt) {
-    const left = Math.max(0, Math.ceil((run.terminalAt + ACTIVE_BET_TERMINAL_LINGER_MS - now.value) / 1000));
-    return left > 0 ? `${run.overallLabel} · ${left}s 后收起` : run.overallLabel;
-  }
+  if (run.terminalAt)
+    return run.overallLabel;
+  if (!isTracking(run))
+    return run.overallLabel + " · 已移出实时跟踪";
   if (run.countdownUntil && (run.phase === "settling" || run.phase === "syncing")) {
     const left = Math.max(0, Math.ceil((run.countdownUntil - now.value) / 1000));
     if (left > 0) {
@@ -501,7 +470,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
     <aside ref="panelEl" class="active-bet-run" :class="{ 'active-bet-run--collapsed': collapsed, 'active-bet-run--dragging': dragging, 'active-bet-run--resizing': resizing }" :style="panelStyle" aria-label="实时下单进度">
       <header class="active-bet-run__chrome" title="按住拖动" @pointerdown="onDragHandlePointerDown">
         <div class="active-bet-run__heading">
-          <span class="active-bet-run__live-dot" :class="{ 'is-active': !!activeRun && !activeRun.terminalAt }" />
+          <span class="active-bet-run__live-dot" :class="{ 'is-active': displayRuns.some(run => !run.terminalAt && isTracking(run)) }" />
           <strong>实时下单进度</strong>
           <span class="active-bet-run__count">{{ runCount }}</span>
         </div>
@@ -511,26 +480,30 @@ function orderLabel(run: ActiveBetRun, index: number): string {
       </header>
       <template v-if="!collapsed">
         <nav class="active-bet-run__toolbar" aria-label="切换执行任务">
-          <span>进行中 / 最近结束</span>
-          <div class="active-bet-run__pagination">
-            <button type="button" :disabled="!canPrev" aria-label="上一笔（更旧）" @click="showPrev">
-              ‹
-            </button>
-            <span>{{ pageLabel }}</span>
-            <button type="button" :disabled="!canNext" aria-label="下一笔（更新）" @click="showNext">
-              ›
-            </button>
-            <button type="button" :disabled="activeIndex === 0" @click="activeIndex = 0">
-              最新
-            </button>
-          </div>
+          <span>最近三单 · 点击摘要查看详情</span>
+          <button type="button" @click="showLatest">{{ unseenLatest ? '有新单 · 查看最新' : '最新' }}</button>
         </nav>
         <div class="active-bet-run__body">
+          <div v-if="runCount" class="active-bet-run__summaries" aria-label="最近订单进度">
+            <button
+              v-for="(run, index) in displayRuns" :key="[run.betId, run.linkId, run.startedAt].join(':')"
+              type="button" class="active-bet-run__summary" :class="[colToneClass(run), { 'is-selected': activeIndex === index }]"
+              :aria-pressed="activeIndex === index" @click="selectRun(run)"
+            >
+              <span class="active-bet-run__summary-heading"><strong>{{ orderLabel(run, index) }}</strong><time>{{ eventTime(run.startedAt) }}</time></span>
+              <span class="active-bet-run__summary-match" :title="stripHtml(run.matchTitle)">{{ stripHtml(run.matchTitle) || '未记录比赛' }}</span>
+              <span class="active-bet-run__phase">{{ phaseLabel(run) }}</span>
+              <span class="active-bet-run__summary-legs">
+                <span v-for="leg in run.legs" :key="leg.side">{{ legSideLabel(leg.side) }} · {{ leg.platform }} · {{ leg.precheckOnly ? '仅预检' : activeStore.legStatusLabel(leg.status) }}</span>
+              </span>
+            </button>
+          </div>
           <div v-if="!activeRun" class="active-bet-run__empty">
             <strong>暂无实时下单任务</strong>
             <span>开始执行后显示两腿进度、确认及补单记录</span>
           </div>
-          <article v-else :key="activeRun.betId" class="active-bet-run__col" :class="colToneClass(activeRun)">
+          <article v-else :key="[activeRun.betId, activeRun.linkId, activeRun.startedAt].join(':')" class="active-bet-run__col" :class="colToneClass(activeRun)">
+            <p v-if="!activeRun.terminalAt && !isTracking(activeRun)" class="active-bet-run__notice">此任务已移出实时跟踪，以下为最后收到的进度，请到订单列表核查结果。</p>
             <header class="active-bet-run__col-head">
               <div class="active-bet-run__order-heading">
                 <strong :title="`完整 Link：${activeRun.linkId || '未记录'}`">{{ orderLabel(activeRun, activeIndex) }}</strong><button type="button" :disabled="!activeRun.linkId" title="复制完整 Link，用于后台执行诊断" @click="copyLink">
@@ -646,7 +619,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
           </article>
         </div>
         <footer class="active-bet-run__footer" :title="executionId ? `执行编号：${executionId}` : '执行编号尚未记录'">
-          <span>本地执行记录 · 后台同源</span><span title="后台展示已接收的记录，上传可能存在延迟">后台可能延迟</span>
+          <span>当前页面保留最近三单</span><span title="后台展示已接收的记录，上传可能存在延迟">后台可能延迟</span>
         </footer>
         <button type="button" class="active-bet-run__resize-handle" title="拖动调整窗口大小" aria-label="调整实时下单进度框大小" @pointerdown="onResizePointerDown" />
       </template>

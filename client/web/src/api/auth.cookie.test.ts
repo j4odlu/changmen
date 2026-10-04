@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ fetch: vi.fn(), probe: vi.fn() }));
+const mocks = vi.hoisted(() => ({ fetch: vi.fn(), probe: vi.fn(), stop: vi.fn() }));
 vi.mock("@/lib/authLock", () => ({ withAuthLock: (fn: () => unknown) => fn() }));
-vi.mock("@/lib/webSession", () => ({ probeCookieSession: mocks.probe }));
-import { browserAuthState, clearAuthSession, getToken, isCookieAuthMode, setCookieSessionInfo, setToken, usesWebCookieSession } from "@/api/client";
+vi.mock("@/lib/webSession", () => ({ probeCookieSession: mocks.probe, stopWebSessionWatch: mocks.stop }));
+import { advanceAuthSessionVersion, browserAuthState, clearAuthSession, getCookieSessionInfo, getToken, isCookieAuthMode, setCookieSessionInfo, setToken, usesWebCookieSession } from "@/api/client";
 import { login, logout } from "./auth";
 beforeEach(() => {
   clearAuthSession(); vi.clearAllMocks(); vi.stubEnv("VITE_WEB_COOKIE_AUTH", "1"); vi.stubGlobal("fetch", mocks.fetch);
@@ -55,12 +55,47 @@ describe("native Cookie login", () => {
     expect(mocks.fetch.mock.calls[0]?.[1].signal).toBeInstanceOf(AbortSignal);
     expect(mocks.probe).not.toHaveBeenCalled();
   });
-  it("bounds logout confirmation and clears local identity even when the response is lost", async () => {
+  it("bounds logout confirmation and preserves retryable identity when the response is lost", async () => {
     await mocks.probe();
     mocks.fetch.mockRejectedValue(new DOMException("timed out", "TimeoutError"));
-    await expect(logout()).rejects.toThrow("timed out");
-    expect(usesWebCookieSession()).toBe(false);
+    await expect(logout()).rejects.toThrow("退出尚未确认");
+    expect(usesWebCookieSession()).toBe(true);
+    expect(browserAuthState.value).toBe("unavailable");
+    expect(mocks.stop).toHaveBeenCalledTimes(1);
     expect(mocks.fetch.mock.calls[0]?.[1].signal).toBeInstanceOf(AbortSignal);
     expect(mocks.fetch).toHaveBeenCalledTimes(1);
+  });
+  it("clears identity after confirmed server revocation", async () => {
+    await mocks.probe();
+    mocks.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true }) });
+    expect(await logout()).toBe(true);
+    expect(getCookieSessionInfo()).toBeNull();
+    expect(mocks.fetch.mock.calls[0]?.[1]).toMatchObject({ credentials: "include", headers: { "X-CSRF-Token": "csrf" }, body: JSON.stringify({ expectedBrowserSessionId: "browser", expectedLoginEpoch: "epoch" }) });
+  });
+  it("accepts an already revoked session as confirmed logout", async () => {
+    await mocks.probe();
+    mocks.fetch.mockResolvedValue({ ok: false, status: 401, json: async () => ({ code: "SESSION_REVOKED" }) });
+    expect(await logout()).toBe(true);
+    expect(getCookieSessionInfo()).toBeNull();
+  });
+  it("does not treat HTTP success without revocation confirmation as logout", async () => {
+    await mocks.probe();
+    mocks.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: false }) });
+    await expect(logout()).rejects.toThrow("退出尚未确认");
+    expect(getCookieSessionInfo()?.browserSessionId).toBe("browser");
+  });
+  it("does not clear a new login when an old logout response arrives", async () => {
+    await mocks.probe();
+    let release!: (value: unknown) => void;
+    let started!: () => void;
+    const sent = new Promise<void>(resolve => { started = resolve; });
+    mocks.fetch.mockImplementation(() => { started(); return new Promise(resolve => { release = resolve; }); });
+    const task = logout();
+    await sent;
+    advanceAuthSessionVersion();
+    setCookieSessionInfo({ user: { id: "new", userName: "new", role: "user" }, browserSessionId: "new", loginEpoch: "new", cookieEnabled: true, csrfToken: "new" });
+    release({ ok: true, status: 200, json: async () => ({ ok: true }) });
+    expect(await task).toBe(false);
+    expect(getCookieSessionInfo()?.user.id).toBe("new");
   });
 });

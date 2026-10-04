@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ElMessage } from "element-plus";
 import { storeToRefs } from "pinia";
 import { computed, onActivated, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
@@ -153,7 +154,8 @@ onUnmounted(() => {
 
 async function logout() {
   stopAppSession();
-  await user.logout();
+  try { await user.logout(); }
+  catch (err) { ElMessage.error(err instanceof Error ? err.message : "退出未完成，请重试"); }
 }
 </script>
 

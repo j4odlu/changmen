@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { advanceAuthSessionVersion, beginAuthTransition, browserAuthState, clearAuthSession, getCookieSessionInfo, hasAuthSession, setCookieAuthMode, setCookieSessionInfo } from "@/api/client";
-import { probeCookieSession } from "./webSession";
+import { probeCookieSession, startWebSessionWatch, stopWebSessionWatch } from "./webSession";
 vi.mock("@/lib/jwtRefresh", () => ({ stopJwtAutoRefresh: vi.fn(), startJwtAutoRefresh: vi.fn(), refreshJwtSession: async () => true }));
 vi.mock("@changmen/venue-adapter/shared", async (importOriginal) => ({
   ...await importOriginal<typeof import("@changmen/venue-adapter/shared")>(),
@@ -12,9 +12,9 @@ function response(data: unknown, status = 200) { return { status, ok: status < 4
 beforeEach(() => {
   clearAuthSession(); setCookieAuthMode(true); fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
-  vi.stubGlobal("window", { location: { origin: "https://changmen.fun", href: "/" } });
+  vi.stubGlobal("window", { location: { origin: "https://changmen.fun", href: "/" }, addEventListener: vi.fn(), removeEventListener: vi.fn() });
 });
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => { stopWebSessionWatch(); vi.useRealTimers(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 describe("browser session recovery", () => {
   it("clears a stale Cookie mode after 401 on the first probe after reload", async () => {
     expect(getCookieSessionInfo()).toBeNull();
@@ -87,5 +87,43 @@ describe("browser session recovery", () => {
     await expect(probeCookieSession(false)).rejects.toThrow();
     expect(getCookieSessionInfo()?.cookieEnabled).toBe(true);
     expect(browserAuthState.value).toBe("unavailable");
+  });
+  it("stops automatic retries after a Cookie configuration error", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("VITE_WEB_COOKIE_AUTH", "1");
+    fetchMock.mockResolvedValue(response({}, 404));
+    startWebSessionWatch();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(window.removeEventListener).toHaveBeenCalledWith("focus", expect.any(Function));
+    await vi.advanceTimersByTimeAsync(180000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it("continues retrying temporary service errors", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockResolvedValue(response({}, 503));
+    startWebSessionWatch();
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(browserAuthState.value).toBe("unavailable");
+  });
+  it("does not let a stopped watch schedule retries in a restarted watch", async () => {
+    vi.useFakeTimers();
+    let release!: (value: unknown) => void;
+    fetchMock.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }))
+      .mockResolvedValue(response(info));
+    startWebSessionWatch();
+    await vi.advanceTimersByTimeAsync(2000);
+    stopWebSessionWatch();
+    advanceAuthSessionVersion();
+    startWebSessionWatch();
+    release(response({}, 503));
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(browserAuthState.value).toBe("authenticated");
+    await vi.advanceTimersByTimeAsync(59999);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });

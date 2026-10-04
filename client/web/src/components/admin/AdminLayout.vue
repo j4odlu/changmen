@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ElMessage } from "element-plus";
 import { computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getMatcherUrl } from "@/config/apiBase";
@@ -102,8 +103,11 @@ const visibleNavItems = computed(() => {
 const activeTab = computed(() => String(route.name || ""));
 
 async function logout() {
-  await user.logout();
-  await router.push({ name: "home" });
+  try {
+    if (await user.logout() === false) return;
+    await router.push({ name: "home" });
+  }
+  catch (err) { ElMessage.error(err instanceof Error ? err.message : "退出未完成，请重试"); }
 }
 
 onMounted(() => {

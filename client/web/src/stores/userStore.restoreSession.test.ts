@@ -6,6 +6,7 @@ import { SessionRestoreConfigurationError } from "@/lib/sessionRestoreError";
 
 const auth = vi.hoisted(() => ({
   clearAuthSession: vi.fn(),
+  logout: vi.fn(),
   ensureTokenRefresh: vi.fn(),
   cookieMode: false,
   refreshToken: "refresh-token" as string | null,
@@ -27,7 +28,7 @@ vi.mock("@/api/esport", () => ({
   getToken: () => auth.token,
   getUserInfo: vi.fn(),
   login: vi.fn(),
-  logout: vi.fn(),
+  logout: auth.logout,
   saveClientData: vi.fn(),
   saveClientDataDetailed: vi.fn(),
   updateUserSetting: vi.fn(),
@@ -52,6 +53,27 @@ describe("userStore.restoreSession", () => {
     });
     auth.ensureTokenRefresh.mockReset();
     auth.ensureTokenRefresh.mockResolvedValue(undefined);
+    auth.logout.mockReset();
+  });
+
+  it("preserves new user state when an old logout is superseded", async () => {
+    const store = useUserStore();
+    store.userName = "new-user";
+    store.ready = true;
+    auth.logout.mockResolvedValue(false);
+    expect(await store.logout()).toBe(false);
+    expect(store.userName).toBe("new-user");
+    expect(store.ready).toBe(true);
+  });
+
+  it("keeps the logout entry available when server confirmation fails", async () => {
+    const store = useUserStore();
+    store.userName = "river";
+    store.ready = true;
+    auth.logout.mockRejectedValue(new Error("退出尚未确认"));
+    await expect(store.logout()).rejects.toThrow("退出尚未确认");
+    expect(store.userName).toBe("river");
+    expect(store.ready).toBe(true);
   });
 
   it("keeps local credentials and offers retry after a temporary user-info failure", async () => {

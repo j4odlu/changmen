@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ElMessage } from "element-plus";
 import { storeToRefs } from "pinia";
 import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -54,8 +55,11 @@ watch(sport, (code) => {
 
 async function logout() {
   stopSportsSession();
-  await user.logout();
-  await router.replace({ name: "home" });
+  try {
+    if (await user.logout() === false) return;
+    await router.replace({ name: "home" });
+  }
+  catch (err) { ElMessage.error(err instanceof Error ? err.message : "退出未完成，请重试"); }
 }
 
 function goSport(code: SportCode) {

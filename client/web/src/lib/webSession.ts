@@ -59,8 +59,11 @@ async function runProbe(force: boolean) {
     return true;
   }
   catch (err) {
-    if (isAuthSessionCurrent(version))
+    if (isAuthSessionCurrent(version)) {
       browserAuthState.value = "unavailable";
+      if (err instanceof SessionRestoreConfigurationError)
+        stopWebSessionWatch();
+    }
     throw err;
   }
   finally { clearTimeout(timeout); }
@@ -81,17 +84,32 @@ async function onWake() {
   if (!watching)
     return;
   if (timer) clearTimeout(timer);
-  try { await probeCookieSession(); failures = 0; }
-  catch { failures += 1; }
+  const generation = watchGeneration;
+  try {
+    await probeCookieSession();
+    if (generation !== watchGeneration) return;
+    failures = 0;
+  }
+  catch (err) {
+    if (generation !== watchGeneration) return;
+    if (err instanceof SessionRestoreConfigurationError) {
+      if (generation === watchGeneration) stopWebSessionWatch();
+      return;
+    }
+    failures += 1;
+  }
+  if (generation !== watchGeneration) return;
   if (watching) {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => { void onWake(); }, failures ? Math.min(60_000, 2000 * 2 ** Math.min(failures - 1, 5)) : 60_000);
   }
 }
+let watchGeneration = 0;
 export function startWebSessionWatch() {
   if (watching)
     return;
   watching = true;
+  watchGeneration += 1;
   failures = 0;
   timer = setTimeout(() => { void onWake(); }, 2000);
   window.addEventListener("focus", onWake);
@@ -100,6 +118,7 @@ export function startWebSessionWatch() {
 }
 export function stopWebSessionWatch() {
   watching = false;
+  watchGeneration += 1;
   if (timer) clearTimeout(timer);
   timer = null;
   window.removeEventListener("focus", onWake);

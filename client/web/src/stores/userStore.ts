@@ -212,7 +212,7 @@ export const useUserStore = defineStore("user", {
     async logout() {
       unsubscribeUserChannel();
       await stopTokenRefresh();
-      await apiLogout();
+      if (await apiLogout() === false) return false;
       this.userName = "";
       this.userId = 0;
       this.setting = {};
@@ -248,6 +248,7 @@ export const useUserStore = defineStore("user", {
       this.ready = false;
       setAssignedMarketHubOrigin("");
       localStorage.removeItem(USER_KEY);
+      return true;
     },
 
     async loadExtras(force = false) {

@@ -64,17 +64,45 @@ export async function login(userName: string, password: string) {
 }
 
 export async function logout() {
-  const version = getAuthSessionVersion();
+  let version = getAuthSessionVersion();
   return withAuthLock(async () => {
     if (!isAuthSessionCurrent(version))
-      return;
+      return false;
     let session = getCookieSessionInfo();
     if (import.meta.env.VITE_WEB_COOKIE_AUTH === "1" && !session) {
       const { probeCookieSession } = await import("@/lib/webSession");
       await probeCookieSession(true, true);
-      if (!isAuthSessionCurrent(version)) return;
+      if (!isAuthSessionCurrent(version)) return false;
       session = getCookieSessionInfo();
-      if (!session) { clearAuthSession(); return; }
+      if (!session) { clearAuthSession(); return true; }
+    }
+    if (import.meta.env.VITE_WEB_COOKIE_AUTH === "1" && session) {
+      const { stopWebSessionWatch } = await import("@/lib/webSession");
+      if (!isAuthSessionCurrent(version)) return false;
+      stopWebSessionWatch();
+      advanceAuthSessionVersion();
+      version = getAuthSessionVersion();
+      // A failed request does not prove that the server revoked its HttpOnly Cookie.
+      // Keep the identity for an explicit retry, while blocking new authenticated work.
+      browserAuthState.value = "unavailable";
+      if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") window.dispatchEvent(new Event("changmen:auth-ending"));
+      try {
+        const response = await fetch(`${getApiBase()}/auth/logout`, {
+          method: "POST", credentials: "include", signal: AbortSignal.timeout(10_000),
+          headers: { "Content-Type": "application/json", "X-CSRF-Token": session.csrfToken },
+          body: JSON.stringify({ expectedBrowserSessionId: session.browserSessionId, expectedLoginEpoch: session.loginEpoch }),
+        });
+        const result = await response.json();
+        if (!(response.ok && result.ok === true) && !(response.status === 401 && result.code === "SESSION_REVOKED"))
+          throw new Error("退出确认失败");
+        if (!isAuthSessionCurrent(version)) return false;
+        clearAuthSession();
+        return true;
+      } catch {
+        if (!isAuthSessionCurrent(version)) return false;
+        browserAuthState.value = "unavailable";
+        throw new Error("退出尚未确认，当前页面已暂停登录操作；请重试退出，未确认前刷新可能恢复原会话");
+      }
     }
     const request = usesWebCookieSession() && session ? fetch(`${getApiBase()}/auth/logout`, {
       method: "POST", credentials: "include", signal: AbortSignal.timeout(10_000),
@@ -88,6 +116,7 @@ export async function logout() {
     // 请求已携带旧 token；立即使在途续期失效，防止退出后被慢响应重新登录。
     clearAuthSession();
     await request;
+    return true;
   });
 }
 

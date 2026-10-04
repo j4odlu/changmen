@@ -211,6 +211,7 @@ onMounted(load);
   --rank-silver: #8594a8;
   --rank-bronze: #b58672;
   width: min(680px, calc(96vw - 56px));
+  margin-inline: auto;
   padding: 8px 4px 4px;
   box-sizing: border-box;
   font-family: "Inter", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -221,7 +222,7 @@ onMounted(load);
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .rank-heading {
@@ -251,7 +252,7 @@ onMounted(load);
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 28px;
+  margin-bottom: 14px;
 }
 
 .rank-section-label {
@@ -304,7 +305,7 @@ onMounted(load);
   grid-template-columns: 1fr 1.12fr 1fr;
   align-items: end;
   gap: 12px;
-  padding-top: 16px;
+  padding-top: 8px;
 }
 
 .rank-podium-member {
@@ -312,12 +313,12 @@ onMounted(load);
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 222px;
+  min-height: 160px;
   flex-direction: column;
   align-items: center;
   box-sizing: border-box;
-  padding: 22px 12px 20px;
-  gap: 14px;
+  padding: 14px 10px 12px;
+  gap: 8px;
   border: 1px solid color-mix(in srgb, var(--el-text-color-primary) 9%, transparent);
   border-radius: 16px;
   background: linear-gradient(160deg, color-mix(in srgb, var(--rank-accent) 8%, var(--el-bg-color)), var(--el-bg-color) 75%);
@@ -328,7 +329,7 @@ onMounted(load);
   --rank-accent: var(--rank-gold);
   grid-column: 2;
   grid-row: 1;
-  min-height: 252px;
+  min-height: 180px;
   border-color: color-mix(in srgb, var(--rank-gold) 40%, transparent);
   background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--rank-gold) 16%, transparent), transparent 75%), var(--el-bg-color);
   box-shadow: 0 8px 24px -14px color-mix(in srgb, var(--rank-gold) 35%, transparent);
@@ -347,14 +348,14 @@ onMounted(load);
 .rank-avatar-ring {
   position: relative;
   display: grid;
-  width: 56px;
-  height: 56px;
+  width: 42px;
+  height: 42px;
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--rank-accent) 45%, transparent);
   border-radius: 50%;
 }
 
-.rank-podium-member--1 .rank-avatar-ring { width: 66px; height: 66px; margin-top: 7px; }
+.rank-podium-member--1 .rank-avatar-ring { width: 48px; height: 48px; margin-top: 5px; }
 
 .rank-honor-avatar {
   display: grid;
@@ -375,15 +376,15 @@ onMounted(load);
   border-radius: 50%;
   color: var(--rank-accent);
   background: color-mix(in srgb, var(--rank-accent) 12%, var(--el-bg-color));
-  font-size: 21px;
+  font-size: 17px;
   font-weight: 500;
 }
 
 .rank-crown {
   position: absolute;
-  top: -19px;
-  width: 23px;
-  height: 23px;
+  top: -15px;
+  width: 19px;
+  height: 19px;
   color: var(--rank-gold);
   transform: rotate(-10deg);
 }
@@ -422,8 +423,8 @@ onMounted(load);
   overflow-wrap: anywhere;
 }
 
-.rank-podium-member .rank-honor-value { font-size: 24px; font-weight: 650; letter-spacing: -1px; }
-.rank-podium-member--1 .rank-honor-value { font-size: 29px; }
+.rank-podium-member .rank-honor-value { font-size: 20px; font-weight: 650; letter-spacing: -0.5px; }
+.rank-podium-member--1 .rank-honor-value { font-size: 23px; }
 .rank-honor-value.is-gain { color: var(--el-color-success); }
 .rank-honor-value.is-loss { color: var(--el-color-danger); }
 
@@ -431,7 +432,7 @@ onMounted(load);
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 26px 12px 10px;
+  padding: 16px 12px 8px;
   color: var(--el-text-color-secondary);
   font-size: 11px;
 }
@@ -457,8 +458,8 @@ onMounted(load);
 @media (max-width: 520px) {
   .rank-panel--podium { padding: 4px 0; }
   .rank-podium { gap: 6px; grid-template-columns: 1fr 1.1fr 1fr; }
-  .rank-podium-member { min-height: 202px; padding: 18px 6px 16px; gap: 12px; border-radius: 12px; }
-  .rank-podium-member--1 { min-height: 228px; }
+  .rank-podium-member { min-height: 150px; padding: 12px 6px 10px; gap: 8px; border-radius: 12px; }
+  .rank-podium-member--1 { min-height: 170px; }
   .rank-podium-member .rank-honor-value { font-size: 16px; letter-spacing: -0.5px; }
   .rank-podium-member--1 .rank-honor-value { font-size: 19px; }
   .rank-podium-title { font-size: 9px; letter-spacing: 1px; }

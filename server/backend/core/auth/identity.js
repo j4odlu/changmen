@@ -1,3 +1,4 @@
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
 /** Transport-independent credential validation. Business permissions belong to callers. */
 export async function authenticateIdentity(input, deps) {
   try { return await resolveIdentity(input, deps); }
@@ -5,7 +6,14 @@ export async function authenticateIdentity(input, deps) {
 }
 
 async function resolveIdentity({ token = "", browserSessionToken = "", protocol, audit, fresh = false }, deps) {
-  const cookieRequested = protocol === "cookie";
+  if (cookieOnlyAuth() && token) {
+    // Audit the migration rejection without decoding or attributing an unverified JWT.
+    try {
+      void Promise.resolve(deps.recordAuthAudit?.({ ...audit, eventType: "AUTH_MIGRATION", result: "DENIED", reasonCode: "JWT_DISABLED" })).catch(() => {});
+    } catch { /* best effort */ }
+    return { code: "JWT_DISABLED" };
+  }
+  const cookieRequested = cookieOnlyAuth() || protocol === "cookie";
   if (cookieRequested && !browserSessionToken)
     return { code: "AUTH_REQUIRED" };
   const cookie = browserSessionToken && deps.authResolveBrowserSession

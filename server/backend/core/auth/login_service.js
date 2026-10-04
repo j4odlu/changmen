@@ -1,4 +1,5 @@
 import { LoginRequest } from "@changmen/api-contract/schemas";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
 import { browserSessionEnabled, setBrowserSessionCookie } from "./browser_session.js";
 import { checkLoginRateLimit, recordLoginFailure, recordLoginSuccess } from "./login_rate_limit.js";
 import { certLoginBindError, clientCertCnFromSubject } from "../shared/client_cert_gate.js";
@@ -8,6 +9,8 @@ const fail = (msg, info = null, code) => ({ success: 0, ...(code ? { code } : {}
 
 /** Auth use case. Profile/account policy hooks are supplied by the application. */
 export async function login(body, dependencies, clientIp = "", cert = null, userAgent = "", response) {
+  if (cookieOnlyAuth() && !response)
+    return fail("旧登录接口已停用，请刷新网页并使用 Cookie 登录", null, "COOKIE_LOGIN_REQUIRED");
   const { db, loadProfileById, assertProfileActive, touchUserPresence, recordUserLastLogin } = dependencies;
   const parsed = LoginRequest.safeParse({ userName: body.userName || body.username, password: body.password });
   if (!parsed.success)
@@ -126,7 +129,7 @@ export async function login(body, dependencies, clientIp = "", cert = null, user
   recordLoginSuccess(userName, clientIp);
 
   return ok({
-    token: sessionMode === "cookie" ? browserAccessToken : accessToken,
+    ...(!cookieOnlyAuth() ? { token: sessionMode === "cookie" ? browserAccessToken : accessToken } : {}),
     ...(sessionMode === "legacy" ? { refreshToken } : {}),
     sessionMode,
     userName: profile.userName,

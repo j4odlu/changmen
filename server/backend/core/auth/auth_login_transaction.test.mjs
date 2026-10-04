@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ query: vi.fn(), tx: vi.fn(), release: vi.fn() }));
 vi.mock("../../../db/rds/common.js", () => ({ getPgPool: () => ({ query: mocks.query, connect: async () => ({ query: mocks.tx, release: mocks.release }) }) }));
 const original = process.env.JWT_SECRET;
 process.env.JWT_SECRET = "login-transaction-test-secret-long-enough";
-const { authSignIn, authSignOut, authSignOutBrowserSession } = await import("../../../db/rds/auth_store.js");
+const { authSignIn, authSignOut, authSignOutBrowserSession, authGetUserStatus, authRefreshToken, authBrowserSession } = await import("../../../db/rds/auth_store.js");
 const { signJwt, JWT_SECRET } = await import("../../../db/rds/jwt.js");
 if (original === undefined) delete process.env.JWT_SECRET;
 else process.env.JWT_SECRET = original;
@@ -15,11 +15,32 @@ function result(sql) {
   return { rows: [], rowCount: 1 };
 }
 beforeEach(() => {
+  vi.stubEnv("AUTH_MODE", "dual");
   vi.clearAllMocks();
   mocks.query.mockImplementation(async sql => result(sql));
   mocks.tx.mockImplementation(async sql => result(sql));
 });
+afterEach(() => vi.unstubAllEnvs());
 describe("atomic login and targeted logout", () => {
+  it("Cookie-only login creates no JWT or refresh credential and commits its browser session", async () => {
+    vi.stubEnv("AUTH_MODE", "cookie");
+    const result = await authSignIn("river", "password", {}, { browserSession: true });
+    expect(result.browserSession.token).toMatch(/^bs1\./);
+    expect(result.accessToken).toBeUndefined();
+    expect(result.browserAccessToken).toBeUndefined();
+    expect(result.refreshToken).toBeUndefined();
+    expect(mocks.tx.mock.calls.some(([sql]) => sql.includes("INSERT INTO auth_refresh_tokens"))).toBe(false);
+    expect(mocks.tx.mock.calls.at(-1)[0]).toBe("COMMIT");
+  });
+  it("Cookie-only legacy login and logout cannot validate a JWT or touch the database", async () => {
+    vi.stubEnv("AUTH_MODE", "cookie");
+    expect(await authSignIn("river", "password")).toEqual({ error: "legacy_disabled" });
+    expect(await authSignOut("old-jwt")).toBe(false);
+    expect(await authGetUserStatus("old-jwt")).toEqual({ code: "JWT_DISABLED" });
+    expect(await authRefreshToken("old-refresh")).toEqual({ disabled: true });
+    expect(await authBrowserSession("opaque")).toEqual({ disabled: true });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
   it("rolls back Cookie logout when refresh revocation fails", async () => {
     mocks.tx.mockImplementation(async sql => {
       if (sql.includes("UPDATE auth_refresh_tokens")) throw new Error("outage");

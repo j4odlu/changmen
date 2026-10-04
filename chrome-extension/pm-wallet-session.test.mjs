@@ -20,7 +20,7 @@ function fixture(devOrigins = []) {
   } } };
   let fetchFn = async (url, options) => {
     calls++;
-    assert.equal(url, "https://changmen.fun/auth/pm-wallet-identity");
+    assert.equal(url, "https://api.changmen.fun/auth/pm-wallet-identity");
     assert.equal(options.redirect, "error");
     return { ok: true, json: async () => structuredClone(identity) };
   };
@@ -34,6 +34,43 @@ async function save(f, hours = 8) {
   const status = await f.call("restore");
   return f.call("save", { revision: status.revision, entries: [entry], hours });
 }
+
+test("production Cookie and JWT checks use the API cookie host and ignore page-supplied URLs", async () => {
+  const f = fixture();
+  for (const token of ["", "test-token"]) {
+    f.setFetch(async (url, options) => {
+      assert.equal(url, "https://api.changmen.fun/auth/pm-wallet-identity");
+      assert.equal(options.credentials, "include");
+      assert.equal(options.cache, "no-store");
+      assert.equal(options.redirect, "error");
+      assert.deepEqual(options.headers, token ? { token } : { "X-Changmen-Auth": "cookie" });
+      return { ok: true, json: async () => ({ userId: "u", loginEpoch: "login-1", accounts: [] }) };
+    });
+    assert.equal((await f.call("restore", { token, apiBase: "https://attacker.example" })).ok, true);
+  }
+});
+
+test("configured development pages retain their same-origin authentication proxy", async () => {
+  const f = fixture(["http://localhost:5576"]);
+  f.setFetch(async (url, options) => {
+    assert.equal(url, "http://localhost:5576/auth/pm-wallet-identity");
+    assert.equal(options.credentials, "include");
+    return { ok: true, json: async () => ({ userId: "u", loginEpoch: "login-1", accounts: [] }) };
+  });
+  assert.equal((await f.call("restore", { token: "" }, { ...sender, url: "http://localhost:5576/" })).ok, true);
+});
+
+test("missing credentials block restoration without falsely declaring session revocation", async () => {
+  const f = fixture();
+  await save(f, 0);
+  f.setFetch(async () => ({ ok: false, status: 401, json: async () => ({ code: "AUTH_REQUIRED" }) }));
+  const result = await f.call("restore", { token: "" });
+  assert.deepEqual(result, { ok: false, code: "AUTH_REQUIRED" });
+  assert.deepEqual(Object.values(f.store)[0].entries, [entry]);
+  f.setFetch(async () => ({ ok: false, status: 401, json: async () => ({ code: "SESSION_REVOKED" }) }));
+  assert.equal((await f.call("restore")).code, "SESSION_REVOKED");
+  assert.deepEqual(Object.values(f.store)[0].entries, []);
+});
 test("restore survives a service-worker restart, uses memory only, and cannot extend expiry", async () => {
   const f = fixture();
   const stored = await save(f, 1);

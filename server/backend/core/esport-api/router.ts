@@ -21,7 +21,8 @@ import { assertProfileActive } from "../account/admin_service.js";
 import { normalizeClientIp, recordUserLastLogin } from "../account/user_login_meta.js";
 import { touchUserPresence } from "../account/user_presence.js";
 import { checkActionAuth, PUBLIC_ACTIONS } from "../auth/action_permissions.js";
-import { resolveRequestAuth, shouldAuditAccessFailure } from "../auth/request_auth.js";
+import { authFailure, resolveRequestAuth, shouldAuditAccessFailure } from "../auth/request_auth.js";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
 import { validAuthOrigin, validSessionCsrf } from "../auth/web_session_security.js";
 import { isAdminUser } from "../auth/admin_auth.js";
 import {
@@ -696,6 +697,11 @@ export async function handleEsportRequest(
       ...clientCertificateAudit(req),
       userAgent: String(req.headers["user-agent"] || ""),
     };
+    if (cookieOnlyAuth() && ["Client_Login", "Client_RefreshToken", "Client_Logout"].includes(action)) {
+      void sb.recordAuthAudit({ ...audit, eventType: "AUTH_MIGRATION", result: "DENIED", reasonCode: "COOKIE_LOGIN_REQUIRED" });
+      sendJson(res, 200, authFailure("COOKIE_LOGIN_REQUIRED"));
+      return true;
+    }
     // 登录不依赖既有 session；先走 login，避免 RDS/池堵死时 getUserByToken 拖死登录
     if (action === "Client_Login") {
       sendJson(res, 200, await handleClientLogin(
@@ -717,6 +723,7 @@ export async function handleEsportRequest(
       authResolveBrowserSession: sb.authResolveBrowserSession,
       authBrowserSession: sb.authBrowserSession,
       authGetUserStatus: sb.authGetUserStatus, authorizeClientCertificate: sb.authorizeClientCertificate,
+      recordAuthAudit: sb.recordAuthAudit,
       getProfileById: dbStore.getProfileById,
       loadProfileById: dbStore.loadProfileById,
     });
@@ -821,11 +828,14 @@ export async function callEsportAction(
     const cleanAction = String(action || "").split("?")[0];
     if (!cleanAction)
       return fail("missing action");
+    if (cookieOnlyAuth() && ["Client_Login", "Client_RefreshToken", "Client_Logout"].includes(cleanAction))
+      return authFailure("COOKIE_LOGIN_REQUIRED");
     if (cleanAction === "Client_Login")
       return handleClientLogin(body);
     const resolved = await resolveRequestAuth({ token, action: cleanAction }, {
       authResolveBrowserSession: sb.authResolveBrowserSession,
       authGetUserStatus: sb.authGetUserStatus, authorizeClientCertificate: sb.authorizeClientCertificate,
+      recordAuthAudit: sb.recordAuthAudit,
       getProfileById: dbStore.getProfileById,
       loadProfileById: dbStore.loadProfileById,
     });

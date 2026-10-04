@@ -68,7 +68,14 @@ export async function logout() {
   return withAuthLock(async () => {
     if (!isAuthSessionCurrent(version))
       return;
-    const session = getCookieSessionInfo();
+    let session = getCookieSessionInfo();
+    if (import.meta.env.VITE_WEB_COOKIE_AUTH === "1" && !session) {
+      const { probeCookieSession } = await import("@/lib/webSession");
+      await probeCookieSession(true, true);
+      if (!isAuthSessionCurrent(version)) return;
+      session = getCookieSessionInfo();
+      if (!session) { clearAuthSession(); return; }
+    }
     const request = usesWebCookieSession() && session ? fetch(`${getApiBase()}/auth/logout`, {
       method: "POST", credentials: "include", signal: AbortSignal.timeout(10_000),
       headers: { "Content-Type": "application/json", "X-CSRF-Token": session.csrfToken },

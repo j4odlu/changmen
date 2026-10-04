@@ -41,6 +41,12 @@ beforeEach(() => {
 });
 afterEach(() => { clearRetainedPmMemory(); localStorage.clear(); vi.clearAllTimers(); vi.useRealTimers(); });
 describe("PM-only session recovery", () => {
+  it("explains missing login credentials separately from a revoked session", async () => {
+    mocks.send.mockResolvedValue({ ok: false, code: "AUTH_REQUIRED" });
+    expect(await restoreRetainedPmSession([account()], "u")).toBe(false);
+    expect(retainedPmSessionUi.error).toContain("插件未取得登录凭证");
+    expect(retainedPmSessionUi.error).not.toContain("请重新登录并解锁");
+  });
   it.each(["local", "other-tab"])("%s removal during an in-flight poll preserves checks for remaining accounts", async source => {
     const secondRow = { ...mocks.row, accountId: 14 };
     mocks.extraRows = [secondRow];

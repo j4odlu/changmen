@@ -119,6 +119,8 @@ async function send(action: "restore" | "save" | "lock" | "remove", userId: stri
         FORBIDDEN: "当前网页地址未获插件授权；开发端口变更后，请重新构建并加载插件",
         UNSUPPORTED: "当前插件不支持 PM 会话保持，请更新并重新加载插件",
         AUTH_UNAVAILABLE: "登录身份核验失败，请检查登录状态和网页 /auth 代理",
+        AUTH_REQUIRED: "插件未取得登录凭证，请确认网站已登录并重新加载最新插件；这不代表登录会话已撤销",
+        JWT_DISABLED: "旧登录凭证已停用，请刷新网页并重新登录；插件请更新至 1.3.74 或以上",
         IDENTITY_MISMATCH: "插件核验的登录身份不匹配，请重新登录",
         TIMEOUT: "插件响应超时，请检查插件版本并重新加载",
         UNAVAILABLE: "插件会话服务暂不可用，请检查后端连接",

@@ -124,7 +124,7 @@ npm install  # 首次：安装全部 workspaces（含 client/web）
 | 变量 | 生产 | 说明 |
 |------|------|------|
 | `DATABASE_URL` 或 `DATABASE_URL_PUBLIC` / `_INTERNAL` | **必填** | RDS 连接（`DATABASE_RDS_TARGET=auto` 内网优先） |
-| `AUTH_MODE` | `dual` | HttpOnly 浏览器会话 + 旧客户端 refresh token 双轨兼容；历史值 `jwt` 等同 `dual`，紧急回退设 `legacy` |
+| `AUTH_MODE` | `cookie` | Cookie 单轨；旧 JWT 鉴权及 Client_Login/RefreshToken/Logout 入口明确拒绝。`dual`/`legacy` 仅用于显式回滚；切换前先部署 Cookie 网页和插件 1.3.74+ |
 | `WEB_AUTH_COOKIE_ENABLED` | `1` | 启用原生 `/auth/login`；与前端 `VITE_WEB_COOKIE_AUTH=1` 配套 |
 | `WEB_AUTH_CSRF_SECRET` | **必填** | 独立随机密钥，至少 32 字符；不复用或同时轮换 JWT_SECRET |
 | `WEB_AUTH_ORIGINS` | `https://changmen.fun,https://www.changmen.fun,https://api.changmen.fun` | 精确 Origin 白名单；matcher 位于 API 子域，其写请求也需要允许该 Origin；API 子域 Caddy 必须反代 `/auth/*` |

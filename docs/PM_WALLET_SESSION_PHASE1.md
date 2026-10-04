@@ -12,7 +12,7 @@
 
 - 网页 IndexedDB 继续保存原密文。插件只用 `chrome.storage.session` 保存 PM 私钥集合、到期时间、登录 epoch 和会话 revision；不缓存密码/共享 vault KEK，不降级到 local/sync。
 - 独立 `pmWalletSession:restore/save/lock/remove` 协议；旧 `getStore/setStore` 无权访问钱包命名空间。session access level 固定为 TRUSTED_CONTEXTS，内容脚本不开放。`expiresAt=-1` 表示跟随浏览器会话，`0` 表示锁定/空会话，正数为绝对到期时间；`hours=0` 请求浏览器会话，非法期限拒绝保存。
-- 仅允许顶层 `https://changmen.fun` 页面，以及 localhost/127.0.0.1 的当前配置开发端口（`VITE_DEV_PORT`）。身份请求统一访问网页同源 `/auth/pm-wallet-identity`，开发时沿用 Vite 的 `/auth` 代理配置，不在插件内硬编码后端端口。构建插件时复用 `server/storage/dev_web_config.js`，读取 `client/web/.env*` 的 development 配置，进程环境变量优先；未配置时使用该共享模块的平台默认值。修改开发端口后重建并重新加载插件，无需修改源码。其他预览站点不启用保持，使用密码回退；网页明确显示地址未授权、插件不支持或身份核验失败的原因。
+- 仅允许顶层 `https://changmen.fun` 页面，以及 localhost/127.0.0.1 的当前配置开发端口（`VITE_DEV_PORT`）。生产身份请求固定访问 `https://api.changmen.fun/auth/pm-wallet-identity`，与网页登录 Cookie 的主机一致；开发访问网页同源 `/auth/pm-wallet-identity`，沿用 Vite 的 `/auth` 代理配置，不在插件内硬编码后端端口。API 地址不允许网页消息覆盖。缺少登录凭证与明确会话撤销分开提示；核验失败不返回私钥，只有明确撤销才清空插件缓存。构建插件时复用 `server/storage/dev_web_config.js`，读取 `client/web/.env*` 的 development 配置，进程环境变量优先；未配置时使用该共享模块的平台默认值。修改开发端口后重建并重新加载插件，无需修改源码。其他预览站点不启用保持，使用密码回退；网页明确显示地址未授权、插件不支持或身份核验失败的原因。
 - 插件自行请求固定后端 `/auth/pm-wallet-identity`，验证 Cookie/JWT、登录 epoch、归属和 PM 钱包地址。该只读接口响应 no-store，仅返回身份和账号/地址，不接收私钥、不返回账号 token。
 - 读取本机密文及 meta 的完整绑定，防止清网站数据、替换密文后恢复旧钥。不同站点/开发环境、用户、登录 epoch 不复用缓存。
 - 密码解锁前获取插件 revision，保存时必须匹配；锁定/到期后 revision 改变，旧异步写不能恢复会话。撤销句柄只具有清空权限，允许后端登出后清空；网页 localStorage 只存偏好和这种不可用于恢复的撤销句柄。

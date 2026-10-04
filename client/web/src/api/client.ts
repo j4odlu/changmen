@@ -63,6 +63,7 @@ async function executePost<T>(
       && !authAction
       && !retriedAfterRefresh
       && !usesWebCookieSession()
+      && import.meta.env.VITE_WEB_COOKIE_AUTH !== "1"
       && hasAuthSession()
     ) {
       const { refreshJwtSession } = await import("@/lib/jwtRefresh");

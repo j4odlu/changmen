@@ -37,7 +37,9 @@ mogfpjihgoghabicofkbcmcidlcoofee
 | **Stake tabId** | 打开 `stake.com` 后自动 `setTab`，供采集/下注使用 |
 | **Polymarket 凭证采集** | 登录 `polymarket.com` 后按需读取 storage 中可见的 API 凭证片段、钱包/资金地址，右上角图标复制到 changmen 账号 |
 
-当前版本 **1.3.73**：content / background 均已可读化打包，协议对齐 A8 2.0.149（本地对照 `A8/A8插件/`）；常规设置使用 `storage.local`，PM 解锁会话仅使用 `storage.session`（无 sync）。
+当前版本 **1.3.74**：content / background 均已可读化打包，协议对齐 A8 2.0.149（本地对照 `A8/A8插件/`）；常规设置使用 `storage.local`，PM 解锁会话仅使用 `storage.session`（无 sync）。
+
+[changmen 扩展] PM 身份核验在生产固定访问 `https://api.changmen.fun/auth/pm-wallet-identity`，与网页登录的 HttpOnly Cookie 使用同一主机；开发使用受信任网页的同源 `/auth` 代理。API 地址不接受网页消息覆盖。缺少登录凭证不会误报为会话撤销，也不会向网页返回缓存私钥；明确撤销仍清空插件缓存。
 
 [changmen 扩展] RAY 凭证检测兼容 `socketcluster.authToken.<服务器域名>`，保留原有 `gameAuthToken` / `socketCluster.authToken` / `userToken.JWT` 的读取优先级。
 

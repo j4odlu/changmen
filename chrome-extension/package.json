@@ -1,7 +1,7 @@
 {
   "name": "@changmen/chrome-extension",
   "private": true,
-  "version": "1.3.73",
+  "version": "1.3.74",
   "description": "Gamebet Chrome 扩展构建脚本",
   "scripts": {
     "build": "node scripts/build.mjs",

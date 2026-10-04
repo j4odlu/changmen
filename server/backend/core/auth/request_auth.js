@@ -1,6 +1,9 @@
 import { authenticateIdentity } from "./identity.js";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
 
 const MESSAGES = {
+  JWT_DISABLED: "旧登录凭证已停用，请刷新网页并重新登录；插件请更新至 1.3.74 或以上",
+  COOKIE_LOGIN_REQUIRED: "旧登录接口已停用，请刷新网页，使用 Cookie 会话重新登录",
   AUTH_REQUIRED: "未登录",
   ACCESS_TOKEN_EXPIRED: "登录凭证已过期，请续期",
   REFRESH_TOKEN_EXPIRED: "会话已过期，请重新登录",
@@ -32,6 +35,8 @@ export function shouldAuditAccessFailure(userId, code, now = Date.now()) {
 
 /** 在业务分发之前完成鉴权，续期失败不能被压成 AUTH_REQUIRED。 */
 export async function resolveRequestAuth({ token, browserSessionToken, action, audit, protocol }, deps) {
+  if (cookieOnlyAuth() && ["Client_Login", "Client_RefreshToken", "Client_Logout"].includes(action))
+    return { token: "", user: null, failure: authFailure("COOKIE_LOGIN_REQUIRED") };
   if (action === "Client_RefreshToken")
     return { token, user: null };
   if (deps.authResolveBrowserSession) {

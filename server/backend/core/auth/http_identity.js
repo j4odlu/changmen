@@ -19,7 +19,7 @@ export async function requireHttpUser(req, { alwaysCsrf = false } = {}, dependen
       browserSessionToken: browserSessionEnabled() ? readBrowserSessionCookie(req) : "",
       protocol: req.headers["x-changmen-auth"], action: "Http",
       audit: { ...browserAuthAudit(req), ...clientCertificateAudit(req) },
-    }, { authResolveBrowserSession: db.authResolveBrowserSession, authGetUserStatus: db.authGetUserStatus, authorizeClientCertificate: db.authorizeClientCertificate,
+    }, { authResolveBrowserSession: db.authResolveBrowserSession, authGetUserStatus: db.authGetUserStatus, authorizeClientCertificate: db.authorizeClientCertificate, recordAuthAudit: db.recordAuthAudit,
       getProfileById, loadProfileById, ...dependencies });
     if (resolved.failure) {
       const code = resolved.failure.code;

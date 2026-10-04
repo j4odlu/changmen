@@ -13,6 +13,18 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); clearAuthSession(); });
 describe("native Cookie login", () => {
+  it("does not load, save or send application JWTs in Cookie-only builds", async () => {
+    const { authHeaders, getRefreshToken, setRefreshToken } = await import("@/lib/authSession");
+    localStorage.setItem("app:token", "legacy");
+    localStorage.setItem("app:refresh-token", "legacy-refresh");
+    setToken("legacy");
+    setRefreshToken("legacy-refresh");
+    expect(getToken()).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(localStorage.getItem("app:token")).toBeNull();
+    expect(localStorage.getItem("app:refresh-token")).toBeNull();
+    expect(authHeaders()).toEqual({ "X-Changmen-Auth": "cookie" });
+  });
   it("accepts a login without JWT and confirms the Cookie identity", async () => {
     setToken("previous-user-token");
     mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ success: 1, info: { ID: "u", userName: "river", sessionMode: "cookie" } }) });

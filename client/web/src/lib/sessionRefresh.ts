@@ -3,6 +3,11 @@ import { probeCookieSession, startWebSessionWatch, stopWebSessionWatch } from "@
 
 /** JWT 模式：Client_RefreshToken 续期 */
 export async function ensureTokenRefresh(): Promise<void> {
+  if (import.meta.env.VITE_WEB_COOKIE_AUTH === "1") {
+    startWebSessionWatch();
+    await probeCookieSession(true, true);
+    return;
+  }
   const rft = getRefreshToken();
   if (isCookieAuthMode()) {
     startWebSessionWatch();
@@ -33,6 +38,11 @@ export async function stopTokenRefresh(): Promise<void> {
 }
 
 export async function startTokenRefresh(): Promise<void> {
+  if (import.meta.env.VITE_WEB_COOKIE_AUTH === "1") {
+    startWebSessionWatch();
+    if (!usesWebCookieSession()) await probeCookieSession(true, true);
+    return;
+  }
   if (isCookieAuthMode()) {
     startWebSessionWatch();
     if (usesWebCookieSession() || await probeCookieSession())

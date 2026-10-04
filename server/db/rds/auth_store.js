@@ -3,6 +3,7 @@
  */
 
 import crypto from "node:crypto";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
 import { authorizeClientCertificate } from "./client_certificate_store.js";
 import { hasDatabaseUrlConfig } from "../resolve_database_url.js";
 import { getPgPool } from "./common.js";
@@ -73,6 +74,8 @@ export async function recordAuthAudit(event) {
 
 /** 密码登录；返回 { accessToken, refreshToken, userId, email } 或 null */
 export async function authSignIn(userName, password, auditContext = {}, options = {}) {
+  if (cookieOnlyAuth() && !options.browserSession)
+    return { error: "legacy_disabled" };
   const name = String(userName || "").trim();
   const pwd = String(password || "");
   if (!name || !pwd)
@@ -133,20 +136,20 @@ export async function authSignIn(userName, password, auditContext = {}, options 
       );
     }
     const sessionId = crypto.randomUUID();
-    const accessToken = signJwt(
+    const accessToken = cookieOnlyAuth() ? undefined : signJwt(
       { sub: userId, typ: "access", session_id: sessionId },
       JWT_SECRET,
       JWT_ACCESS_TTL_SEC,
     );
-    const browserAccessToken = signJwt(
+    const browserAccessToken = cookieOnlyAuth() ? undefined : signJwt(
       { sub: userId, typ: "access", session_id: sessionId },
       JWT_SECRET,
       JWT_BROWSER_ACCESS_TTL_SEC,
     );
-    const opaqueRefresh = await issueOpaqueRefreshToken(userId, sessionId, auditContext, client);
-    if (!opaqueRefresh)
+    const opaqueRefresh = cookieOnlyAuth() ? null : await issueOpaqueRefreshToken(userId, sessionId, auditContext, client);
+    if (!cookieOnlyAuth() && !opaqueRefresh)
       throw new Error("refresh creation failed");
-    const refreshToken = opaqueRefresh.token;
+    const refreshToken = opaqueRefresh?.token;
     const browserSession = options.browserSession
       ? await createBrowserSession(userId, sessionId, auditContext, client)
       : null;
@@ -215,6 +218,7 @@ export async function authSignIn(userName, password, auditContext = {}, options 
 
 /** 登出：清除 active_session_id 使当前 token 立即失效 */
 export async function authSignOut(token, auditContext = {}) {
+  if (cookieOnlyAuth()) return false;
   if (!token || !JWT_SECRET)
     return;
   const payload = verifyJwt(token, JWT_SECRET);
@@ -419,6 +423,7 @@ export async function authGetUser(token) {
 
 /** HTTP 鉴权区分可续期、撤销和临时故障；不改变旧 authGetUser 调用方的契约。 */
 export async function authGetUserStatus(token, { fresh = false } = {}) {
+  if (cookieOnlyAuth()) return { code: "JWT_DISABLED" };
   if (!token)
     return { code: "AUTH_REQUIRED" };
   if (!JWT_SECRET)
@@ -452,6 +457,7 @@ export function authPeekAccessToken(token) {
 
 /** 用 refresh token 换取新的 access/refresh token；{ revoked: true } 表示已在别处登录 */
 export async function authRefreshToken(refreshToken, auditContext = {}) {
+  if (cookieOnlyAuth()) return { disabled: true };
   if (!JWT_SECRET)
     return { temporary: true };
   let userId = "";
@@ -646,6 +652,7 @@ export async function authResolveBrowserSession(browserSessionToken, auditContex
 
 /** Only legacy refresh callers need a JWT; ordinary Cookie auth uses the identity directly. */
 export async function authBrowserSession(browserSessionToken, auditContext = {}) {
+  if (cookieOnlyAuth()) return { disabled: true };
   const session = await authResolveBrowserSession(browserSessionToken, auditContext);
   if (!session?.userId || session.invalid || session.revoked || session.temporary)
     return session;

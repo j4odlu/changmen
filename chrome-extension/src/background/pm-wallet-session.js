@@ -2,8 +2,8 @@
 export const PM_WALLET_PREFIX = "changmen:pm-wallet:";
 // -1 means retain until Chrome clears storage.session; 0 means locked/empty.
 const BROWSER_SESSION = -1;
-// [changmen 扩展] Use the web app's /auth proxy so its configured backend,
-// cookies and development TLS routing remain authoritative.
+// [changmen 扩展] Production login cookies belong to the API host; local
+// development uses the page's /auth proxy. Never accept an API URL from a page.
 const BUILT_DEV_ORIGINS = typeof __CHANGMEN_PM_DEV_ORIGINS__ === "undefined" ? [] : __CHANGMEN_PM_DEV_ORIGINS__;
 export function isPmWalletStorageKey(key) {
   return typeof key === "string" && key.startsWith(PM_WALLET_PREFIX)
@@ -36,7 +36,8 @@ export function createPmWalletSessionHandler({ chromeApi = globalThis.chrome, fe
     if (!area?.setAccessLevel) return { ok: false, code: "UNSUPPORTED" };
     let origin;
     try { origin = new URL(sender?.url).origin; } catch { return { ok: false, code: "FORBIDDEN" }; }
-    const api = origin === "https://changmen.fun" || trustedDevOrigins.has(origin) ? origin : undefined;
+    const api = origin === "https://changmen.fun" ? "https://api.changmen.fun"
+      : trustedDevOrigins.has(origin) ? origin : undefined;
     if (!api || sender?.id || sender?.frameId !== 0 || !sender?.tab?.id)
       return { ok: false, code: "FORBIDDEN" };
     await area.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
@@ -62,11 +63,12 @@ export function createPmWalletSessionHandler({ chromeApi = globalThis.chrome, fe
     });
     if (!response.ok) {
       const failure = await response.json().catch(() => ({}));
-      const revoked = response.status === 401 && ["AUTH_REQUIRED", "SESSION_REVOKED", "REFRESH_TOKEN_EXPIRED", "CERT_BIND_FAILED"].includes(failure.code);
+      const missingAuth = response.status === 401 && failure.code === "AUTH_REQUIRED";
+      const revoked = response.status === 401 && ["SESSION_REVOKED", "REFRESH_TOKEN_EXPIRED", "CERT_BIND_FAILED"].includes(failure.code);
       if (revoked && record) {
         await area.set({ [key]: { ...record, revision: crypto.randomUUID(), expiresAt: 0, entries: [] } });
       }
-      return { ok: false, code: revoked ? "SESSION_REVOKED" : "AUTH_UNAVAILABLE" };
+      return { ok: false, code: revoked ? "SESSION_REVOKED" : missingAuth ? "AUTH_REQUIRED" : "AUTH_UNAVAILABLE" };
     }
     const identity = await response.json();
     if (String(identity.userId) !== String(data.userId) || !identity.loginEpoch || !Array.isArray(identity.accounts))

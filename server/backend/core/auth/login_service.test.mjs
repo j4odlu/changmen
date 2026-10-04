@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const rate = vi.hoisted(() => ({ limited: false }));
 const certificateError = vi.hoisted(() => ({ value: null }));
 vi.mock("./login_rate_limit.js", () => ({ checkLoginRateLimit: () => rate, recordLoginFailure: vi.fn(), recordLoginSuccess: vi.fn() }));
@@ -8,6 +8,7 @@ import { login } from "./login_service.js";
 const profile = { id: "user", userName: "river" };
 let deps;
 beforeEach(() => {
+  vi.stubEnv("AUTH_MODE", "dual");
   rate.limited = false;
   certificateError.value = null;
   deps = {
@@ -19,6 +20,14 @@ beforeEach(() => {
       }) },
     loadProfileById: vi.fn().mockResolvedValue(profile), assertProfileActive: vi.fn(), touchUserPresence: vi.fn(), recordUserLastLogin: vi.fn(),
   };
+});
+afterEach(() => vi.unstubAllEnvs());
+it("Cookie-only login returns identity and sets Cookie without exposing legacy credentials", async () => {
+  vi.stubEnv("AUTH_MODE", "cookie");
+  const response = { setHeader: vi.fn() };
+  const result = await login({ userName: "river", password: "password" }, deps, "", null, "", response);
+  expect(result.info).toEqual({ sessionMode: "cookie", userName: "river", ID: "user" });
+  expect(response.setHeader).toHaveBeenCalledWith("Set-Cookie", "opaque-cookie");
 });
 it("preserves legacy login envelope and profile/presence hooks without a response object", async () => {
   const result = await login({ username: "river", password: "password" }, deps, "127.0.0.1");

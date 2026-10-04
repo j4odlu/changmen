@@ -13,6 +13,7 @@
     "./ensure_storage_seed.js": "./ensure_storage_seed.js",
     "./load_env.js": "./load_env.js",
     "./dev_web_config.js": "./dev_web_config.js",
+    "./auth_mode.js": "./auth_mode.js",
     "./predictfun_market_index.js": "./predictfun_market_index.js",
     "./polymarket_market_index.js": "./polymarket_market_index.js",
     "./sxbet_market_index.js": "./sxbet_market_index.js"

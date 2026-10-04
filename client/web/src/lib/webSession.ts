@@ -19,7 +19,9 @@ async function runProbe(force: boolean) {
     const response = await fetch(`${getApiBase()}/auth/session`, { credentials: "include", cache: "no-store", signal: controller.signal });
     if (!isAuthSessionCurrent(version))
       return false;
-    // Only first contact with an old server may fall back to the JWT path.
+    // Cookie-only builds must not fall back to JWT against an old/misconfigured server.
+    if (response.status === 404 && import.meta.env.VITE_WEB_COOKIE_AUTH === "1")
+      throw new SessionRestoreConfigurationError("当前服务端不支持 Cookie 登录，请更新服务端后重试");
     if (response.status === 404 && !getCookieSessionInfo())
       return false;
     if (response.status === 401) {
@@ -37,6 +39,8 @@ async function runProbe(force: boolean) {
     if (!isAuthSessionCurrent(version))
       return false;
     if (!info.cookieEnabled) {
+      if (import.meta.env.VITE_WEB_COOKIE_AUTH === "1")
+        throw new SessionRestoreConfigurationError("登录服务配置已变更：服务端未启用 Cookie 登录，请检查配置");
       if (getCookieSessionInfo())
         throw new Error("登录服务配置已变更，请刷新页面");
       return false;

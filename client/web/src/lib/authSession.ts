@@ -39,6 +39,8 @@ export function advanceAuthSessionVersion() {
 }
 let cookieAuthMode
   = typeof localStorage !== "undefined" && localStorage.getItem(AUTH_MODE_KEY) === "cookie";
+// [changmen 扩展] Native Cookie builds never load or persist old application JWTs.
+const nativeCookieOnly = () => import.meta.env.VITE_WEB_COOKIE_AUTH === "1";
 
 function readTokenCookie(): string | null {
   if (typeof document === "undefined")
@@ -58,17 +60,24 @@ function syncTokenCookie(token: string | null) {
   }
 }
 
-const authToken = shallowRef<string | null>(!cookieAuthMode && typeof localStorage !== "undefined"
+const authToken = shallowRef<string | null>(!nativeCookieOnly() && !cookieAuthMode && typeof localStorage !== "undefined"
   ? localStorage.getItem("app:token")
   : null);
-if (!authToken.value && !cookieAuthMode)
+if (!nativeCookieOnly() && !authToken.value && !cookieAuthMode)
   authToken.value = readTokenCookie();
 if (authToken.value)
   syncTokenCookie(authToken.value);
 
-let refreshToken: string | null = !cookieAuthMode && typeof localStorage !== "undefined"
+let refreshToken: string | null = !nativeCookieOnly() && !cookieAuthMode && typeof localStorage !== "undefined"
   ? localStorage.getItem("app:refresh-token")
   : null;
+if (nativeCookieOnly()) {
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem("app:token");
+    localStorage.removeItem("app:refresh-token");
+  }
+  syncTokenCookie(null);
+}
 
 export function isCookieAuthMode(): boolean {
   if (typeof localStorage !== "undefined")
@@ -94,7 +103,7 @@ export function setCookieAuthMode(enabled: boolean) {
 }
 
 export function getRefreshToken(): string | null {
-  if (isCookieAuthMode())
+  if (nativeCookieOnly() || isCookieAuthMode())
     return null;
   if (typeof localStorage !== "undefined")
     refreshToken = localStorage.getItem("app:refresh-token");
@@ -102,6 +111,7 @@ export function getRefreshToken(): string | null {
 }
 
 export function setRefreshToken(token: string | null) {
+  if (nativeCookieOnly()) token = null;
   refreshToken = token;
   if (typeof localStorage !== "undefined") {
     if (token && !cookieAuthMode)
@@ -111,10 +121,11 @@ export function setRefreshToken(token: string | null) {
 }
 
 export function getToken(): string | null {
-  return authToken.value;
+  return nativeCookieOnly() ? null : authToken.value;
 }
 
 export function setToken(token: string | null) {
+  if (nativeCookieOnly()) token = null;
   authToken.value = token;
   if (token)
     browserAuthState.value = "authenticated";
@@ -130,6 +141,7 @@ export function authHeaders(): Record<string, string> {
   if (usesWebCookieSession()) {
     return { "X-Changmen-Auth": "cookie", "X-CSRF-Token": getCookieSessionInfo()!.csrfToken };
   }
+  if (nativeCookieOnly()) return { "X-Changmen-Auth": "cookie" };
   return authToken.value ? { token: authToken.value } : {};
 }
 
@@ -140,6 +152,8 @@ const SESSION_KICK_MSGS = new Set([
   "会话已失效，请重新登录",
 ]);
 const SESSION_INVALID_CODES = new Set([
+  "JWT_DISABLED",
+  "COOKIE_LOGIN_REQUIRED",
   "AUTH_REQUIRED",
   "ACCESS_TOKEN_EXPIRED",
   "REFRESH_TOKEN_EXPIRED",

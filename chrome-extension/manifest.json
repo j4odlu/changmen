@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "じらいや",
-  "version": "1.3.64",
+  "version": "1.3.73",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjMR64CZv/aTQQtInC3NZiOFRxfXmT5fPnKHCJdjHel34G4ZB6Vx72wm3fq5Zy7CgE2++6l92opM6agSTBAhabYBanVVIhgd/ycSlJMi0rDqxzfS06vnKywLdhSkKd3XRo5Dl9Y2t630UZObL6/LlEOLgU1KRkFmileWFAU4IjbZ8V5vtVRmRquvLHNF6bqykY1O1wdOoVgOfwlXOvGkmD/zouTBR6YaRmYHGPR4iGWgvAkUkTYR18m532hNQ/HeGVbFT5VopmUTR+yek2vn+UYLyqCAkRj7gG4PuYgOVfMDKyov+6cleLGUYUQTX4d2flzgvOzpNzHflbX7Adk8stwIDAQAB",
   "action": {
     "default_title": "じらいや（侧边栏）",
@@ -38,6 +38,14 @@
     ]
   },
   "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/page-hooks/ray-session.js"],
+      "world": "MAIN",
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
+    },
     {
       "matches": [
         "<all_urls>"
@@ -164,6 +172,7 @@
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess",
     "storage",
+    "alarms",
     "activeTab",
     "sidePanel",
     "offscreen"

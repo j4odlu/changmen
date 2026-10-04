@@ -9,7 +9,7 @@ export async function ensureTokenRefresh(): Promise<void> {
     if (await probeCookieSession())
       return;
     const { refreshJwtSession, startJwtAutoRefresh } = await import("@/lib/jwtRefresh");
-    await refreshJwtSession().catch(() => {});
+    await refreshJwtSession();
     startJwtAutoRefresh();
     return;
   }
@@ -17,7 +17,7 @@ export async function ensureTokenRefresh(): Promise<void> {
     return;
 
   const { refreshJwtSession, startJwtAutoRefresh } = await import("@/lib/jwtRefresh");
-  await refreshJwtSession().catch(() => {});
+  await refreshJwtSession();
   startJwtAutoRefresh();
 }
 

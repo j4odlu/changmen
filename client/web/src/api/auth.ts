@@ -44,6 +44,7 @@ export async function login(userName: string, password: string) {
       const info = unwrap(data) as WebLoginInfo;
       if (!info || (!nativeCookie && !info.token))
         throw new Error(data.msg || "登录失败");
+      if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") window.dispatchEvent(new Event("changmen:auth-ending"));
       setCookieAuthMode(info.sessionMode === "cookie");
       setCookieSessionInfo(null);
       setToken(info.token || null);

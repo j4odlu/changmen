@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import esbuild from "esbuild";
+import { readPmWalletDevOrigins } from "./pm-wallet-build-config.mjs";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const repoRoot = path.dirname(root);
@@ -75,9 +76,11 @@ async function bundlePbWsContent() {
 }
 
 async function bundleBackground() {
+  const devOrigins = readPmWalletDevOrigins(path.join(repoRoot, "client/web"));
   ensureOutDir("background.js");
   await esbuild.build({
     entryPoints: [path.join(root, "src/background/index.js")],
+    define: { __CHANGMEN_PM_DEV_ORIGINS__: JSON.stringify(devOrigins) },
     outfile: outPath("background.js"),
     bundle: true,
     format: "iife",
@@ -85,6 +88,7 @@ async function bundleBackground() {
     target: ["chrome109"],
   });
   console.log("bundled dist/background.js");
+  console.log("PM wallet development origins:", devOrigins.join(", "));
 }
 
 async function bundleObSportWsPage() {

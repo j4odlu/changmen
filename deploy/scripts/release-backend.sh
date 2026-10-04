@@ -22,6 +22,14 @@ changes="$repo/.deploy-state/backend-changes.$id"
 node "$release/scripts/deploy/compare-deployed-files.mjs" "$release" "$previous" "$changes"
 ln -s "$repo/server/backend/.env" "$release/server/backend/.env"
 ln -s "$repo/server/backend/storage" "$release/server/backend/storage"
+# [changmen 扩展] Published extension ZIPs are runtime assets, excluded from git archives.
+# Keep them available when switching to a new isolated backend release.
+mkdir -p "$release/server/backend/public/extensions"
+for extension_package in "$repo/server/backend/public/extensions/"*.zip; do
+  if [[ -f "$extension_package" ]]; then
+    cp "$extension_package" "$release/server/backend/public/extensions/"
+  fi
+done
 if [[ -f "$repo/server/match/matcher/.env" ]]; then
   ln -s "$repo/server/match/matcher/.env" "$release/server/match/matcher/.env"
 fi

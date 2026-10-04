@@ -56,6 +56,7 @@ export * from "./marketQuoteHub";
 export * from "./sportQuoteHub";
 export * from "./pmFootballDiscovery";
 export * from "./wsQuotes";
+export { clearPolymarketOrderClientCache } from "./pmOrderClientCache";
 
 export const polymarketAdapter: PlatformAdapter = {
   id: "Polymarket",

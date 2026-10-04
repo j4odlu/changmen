@@ -39,6 +39,14 @@ Parity 真源是仓库根 `A8/`，**没有**旧文档写的 `A8/A8frontendscipts
 
 配置模板：`client/web/.env.example`；本机覆盖：`client/web/.env.local`（gitignore）。
 
+### 本机登录恢复与开发端口
+
+[changmen 扩展] `VITE_DEV_PORT` 是 Vite 与本机后端认证来源的共同配置。后端读取 `client/web/.env*` 的 development 配置，环境变量优先；修改端口后重启 Vite 和后端。Vite 启用 `strictPort`，端口占用时直接报错，不自动换端口。
+
+本机 Cookie 登录须配套设置前端 `VITE_WEB_COOKIE_AUTH=1`、后端 `WEB_AUTH_COOKIE_ENABLED=1` 和不少于 32 字符的 `WEB_AUTH_CSRF_SECRET`。Cookie 模式的认证实时连接经 Vite `/esport` 代理，与登录 API 使用同一 host。`WEB_AUTH_ORIGINS` 如有显式配置则始终优先，须自行包含实际开发地址；生产仅使用生产域名白名单。
+
+认证来源或 Cookie 配置不匹配会立即显示配置错误并停止自动恢复重试；网络暂不可用仍保留退避重试与已有会话凭证。
+
 Ubuntu 日常：
 
 ```bash

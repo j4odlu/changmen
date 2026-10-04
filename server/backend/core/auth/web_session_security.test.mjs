@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+vi.mock("@changmen/storage/dev_web_config.js", () => ({ readDevWebPort: () => 6007 }));
 import { sessionCsrf, validAuthOrigin, validSessionCsrf, webCookieEnabled } from "./web_session_security.js";
 const saved = { ...process.env };
 afterEach(() => { process.env = { ...saved }; });
@@ -8,10 +9,10 @@ describe("Cookie CSRF and deployment configuration", () => {
     process.env.NODE_ENV = "development";
     delete process.env.WEB_AUTH_ORIGINS;
     for (const host of ["localhost", "127.0.0.1"]) {
-      for (const port of [5274, 5574, 5575, 5174, 3700, 3456])
+      for (const port of [6007, Number(process.env.PORT || (process.platform === "win32" ? 3700 : 3456))])
         expect(validAuthOrigin({ headers: { origin: `http://${host}:${port}` } })).toBe(true);
     }
-    for (const origin of [undefined, "null", "http://localhost:9999", "https://evil.example"])
+    for (const origin of [undefined, "null", "http://localhost:5576", "http://localhost:9999", "https://evil.example"])
       expect(validAuthOrigin({ headers: { origin } })).toBe(false);
   });
   it("keeps explicit origin configuration authoritative", () => {

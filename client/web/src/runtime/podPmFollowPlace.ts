@@ -13,7 +13,7 @@ import { useAccountStore } from "@/stores/accountStore";
 import { useFootballOrderStore } from "@/stores/footballOrderStore";
 import { finalizePodBetExecution, reservePodBetExecution } from "@/api/podBetExecution";
 import {
-  ensurePmVaultUnlocked,
+  ensurePmVaultForAccounts,
   hasVault,
   mergeVaultKeysIntoAccounts,
   migrateTokenPrivateKeysToVault,
@@ -155,7 +155,7 @@ export async function ensurePmFootballAccountsHaveVaultKeys(): Promise<string | 
   const uid = normalizePmVaultUserId(user.userId);
   if (!uid || !(await hasVault(uid)))
     return null;
-  const unlocked = await ensurePmVaultUnlocked(uid);
+  const unlocked = await ensurePmVaultForAccounts(uid, store.accounts.filter(a => String(a.provider) === "Polymarket"));
   if (!unlocked)
     return "请先解锁本机钱包";
   mergeVaultKeysIntoAccounts(store.accounts, uid);

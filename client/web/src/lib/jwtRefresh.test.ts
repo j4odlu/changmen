@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { refreshJwtSession, startJwtAutoRefresh, stopJwtAutoRefresh } from "@/lib/jwtRefresh";
+import { SessionRestoreConfigurationError } from "@/lib/sessionRestoreError";
 
 const mocks = vi.hoisted(() => ({
   clearAuthSession: vi.fn(),
@@ -63,6 +64,21 @@ describe("refreshJwtSession", () => {
     expect(mocks.clearAuthSession).not.toHaveBeenCalled();
     expect(mocks.setToken).not.toHaveBeenCalled();
     expect(mocks.getRefreshToken()).toBe("refresh-old");
+  });
+
+  it("reports origin configuration rejection immediately without retrying or clearing credentials", async () => {
+    mocks.post.mockResolvedValue({ success: 0, code: "CSRF_INVALID", msg: "请求来源校验失败" });
+    await expect(refreshJwtSession()).rejects.toBeInstanceOf(SessionRestoreConfigurationError);
+    expect(mocks.post).toHaveBeenCalledTimes(1);
+    expect(mocks.clearAuthSession).not.toHaveBeenCalled();
+  });
+
+  it("stops background renewal on a configuration rejection without an unhandled rejection", async () => {
+    vi.useFakeTimers();
+    mocks.post.mockResolvedValue({ success: 0, code: "CSRF_INVALID" });
+    startJwtAutoRefresh(1000);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(mocks.post).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the session when the server reports a temporary auth outage", async () => {

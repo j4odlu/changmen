@@ -74,6 +74,8 @@ SH
 tar -C "$fixture/backend" -czf "$fixture/backend.tgz" .
 echo secret-fixture > "$DEPLOY_REPO/server/backend/.env"
 mkdir -p "$DEPLOY_REPO/server/backend/storage"
+mkdir -p "$DEPLOY_REPO/server/backend/public/extensions"
+printf 'published-plugin-fixture' > "$DEPLOY_REPO/server/backend/public/extensions/1.3.73.zip"
 echo hot-data > "$DEPLOY_REPO/server/backend/storage/live.json"
 export TEST_BASE_REPO="$DEPLOY_REPO" TEST_ACTIVATE_LOG="$fixture/activate.log" TEST_FAIL_ACTIVATE="$fixture/fail-activate"
 export DEPLOY_SEQUENCE=5 DEPLOY_RELEASE_ID=be-first
@@ -82,6 +84,7 @@ frontend_before="$(readlink -f "$DEPLOY_REPO/client/web/dist")"
 bash deploy/scripts/release-backend.sh "$fixture/backend.tgz"
 backend_first="$(readlink -f "$DEPLOY_REPO/backend-current")"
 test -f "$backend_first/server/backend/storage/live.json"
+cmp "$DEPLOY_REPO/server/backend/public/extensions/1.3.73.zip" "$backend_first/server/backend/public/extensions/1.3.73.zip"
 grep -q 'backend-current/deploy/ecosystem.config.cjs' "$DEPLOY_REPO/deploy/ecosystem.config.cjs"
 "$real_node" -e 'const fs=require("node:fs"),path=require("node:path"),assert=require("node:assert/strict"); assert.equal(require(process.argv[1]).marker,path.dirname(fs.realpathSync(process.argv[2])));' "$DEPLOY_REPO/deploy/ecosystem.config.cjs" "$DEPLOY_REPO/backend-current/deploy/ecosystem.config.cjs"
 test "$(readlink -f "$DEPLOY_REPO/client/web/dist")" = "$frontend_before"

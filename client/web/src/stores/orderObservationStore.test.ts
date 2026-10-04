@@ -25,6 +25,20 @@ function event(eventId: string, patch: Partial<OrderObservationEvent> = {}): Ord
 describe("实时进度与诊断共用执行事实", () => {
   beforeEach(() => { setActivePinia(createPinia()); });
 
+  it("shows the concrete precheck cause and duration instead of calling it a summary category", () => {
+    const label = observationEventLabel(event("event-price", { kind: "precheck_result", outcome: "blocked", durationMs: 470,
+      safeSummary: "当前卖价高于检测限价，已阻止提交（卖价 0.46，限价 0.4444）" }));
+    expect(label).toBe("预检结果 · 被拦截 · 原因：当前卖价高于检测限价，已阻止提交（卖价 0.46，限价 0.4444） · 470ms");
+    expect(label).not.toContain("摘要分类");
+  });
+  it.each([
+    ["no_account", "没有可用的下单账号"],
+    ["unsupported_provider", "不支持下单预检"],
+    ["precheck_error", "未记录具体原因"],
+  ])("explains legacy precheck reason code %s without inventing missing evidence", (reasonCode, expected) => {
+    expect(observationEventLabel(event("event-legacy", { kind: "precheck_result", outcome: "blocked", reasonCode }))).toContain(expected);
+  });
+
   it("uses the same event IDs, payload and labels locally and after upload acknowledgement", async () => {
     const store = useOrderObservationStore();
     const received: OrderObservationEvent[] = [];

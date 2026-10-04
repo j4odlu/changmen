@@ -37,7 +37,13 @@ mogfpjihgoghabicofkbcmcidlcoofee
 | **Stake tabId** | 打开 `stake.com` 后自动 `setTab`，供采集/下注使用 |
 | **Polymarket 凭证采集** | 登录 `polymarket.com` 后按需读取 storage 中可见的 API 凭证片段、钱包/资金地址，右上角图标复制到 changmen 账号 |
 
-当前版本 **1.3.59**：content / background 均已可读化打包，协议对齐 A8 2.0.149（本地对照 `A8/A8插件/`）；使用 `storage.local`（无 sync）。
+当前版本 **1.3.73**：content / background 均已可读化打包，协议对齐 A8 2.0.149（本地对照 `A8/A8插件/`）；常规设置使用 `storage.local`，PM 解锁会话仅使用 `storage.session`（无 sync）。
+
+[changmen 扩展] RAY 凭证检测兼容 `socketcluster.authToken.<服务器域名>`，保留原有 `gameAuthToken` / `socketCluster.authToken` / `userToken.JWT` 的读取优先级。
+
+[A8 可证实] RAY 从 `https://api.365raylinks.com/configv4?platform=1` 的 `data.game_api` 动态获取网关；面板显示首个网关，Base64 数据保留网关数组供快速填充选择。[changmen 扩展] 已带 Bearer 的 token 避免重复前缀，配置获取失败时提示重试。
+
+[changmen 扩展] 当前 RAY 官网（2026-10-03 `app.3d3117bb.js`）删除 storage 的 `gameAuthToken`，`/user` 改用 Vue `gameAccount.authToken`；点击时通过 MAIN world 读取此 HTTP 会话。SocketCluster 会话不能直接视为 HTTP token，复制前以 `/v2/user` 验证，并优先输出验证成功的官网网关；失败不生成凭证数据。
 
 ## 目录结构
 
@@ -64,6 +70,10 @@ npm run icons               # 重新生成占位图标
 ```
 
 仓库根目录也可：`npm run chromeplug:pack`（输出在 `changmen/dist/`）。
+
+[changmen 扩展] 打包成功后同时生成 `server/backend/public/extensions/{version}.zip` 、专用公告 `server/backend/public/extensions/release.json` 和兼容公告 `server/backend/public/version.json`，ZIP 内含安装更新说明。版本检测与下载入口仅在插件内：浏览器启动、插件安装/更新及每十分钟检查专用公告 `https://changmen.fun/esport2/extensions/release.json`（校验产品名、扩展 ID 和公告格式版本，并用 HEAD 确认 ZIP 可下载）；有新版时插件图标显示 `NEW`，点击图标打开侧边栏查看版本、下载 ZIP 和更新步骤。侧边栏提供手动检查，打开时也会检查。网页不显示插件更新入口；插件不自动覆盖文件、不自动重载，不会因发现新版打断挂机或清理 PM 会话。更新到 1.3.73 时清除旧版未绑定插件身份的公告缓存，避免把 A8 版本误报为此插件的新版本；公告缺失或身份不匹配时不展示下载入口。首次安装仍需手动分发。
+
+发布时须同步部署下载 ZIP、专用公告 release.json 和兼容公告 version.json（下载包被 Git 忽略，不会随普通 Git 推送上传）；只部署网页不等于发布插件。新版本必须先修改 manifest/package 版本号，再执行打包。用户下载后需覆盖原插件目录并在 Chrome 中重新加载；网页不自动安装插件。
 
 Windows：在仓库根目录执行 `npm run chromeplug:pack`，或双击 `BAT\dev.bat` 后于 `changmen/` 运行该命令。
 

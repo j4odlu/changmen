@@ -23,6 +23,7 @@ import {
   stripPrivateKeysForPersist,
 } from "@/security/pmVault";
 import { useUserStore } from "@/stores/userStore";
+import { removeRetainedPmAccount, saveRetainedPmSession } from "@/security/pmVault/retainedPmSession";
 
 async function warmPolymarketUserWsFromAccounts(accounts: PlatformAccount[]) {
   try {
@@ -112,6 +113,7 @@ export async function loadAccounts(store: AccountStoreContext, refreshBalances =
       /* adapter 未就绪 */
     }
     void warmPolymarketUserWsFromAccounts(store.accounts);
+    if (userId) void saveRetainedPmSession(store.accounts, userId);
     void import("@/stores/account/betGateway")
       .then(({ resumePendingVenueConfirmations }) => resumePendingVenueConfirmations(store))
       .catch(() => {});
@@ -151,6 +153,7 @@ export async function persistAccounts(store: AccountStoreContext) {
   for (const row of payload)
     delete row.sportOb;
   const ok = await saveAccounts(payload);
+  if (ok) void saveRetainedPmSession(store.accounts, normalizePmVaultUserId(useUserStore().userId));
   await syncPbAccountHosts(store.accounts);
   return ok;
 }
@@ -298,7 +301,9 @@ export async function createFromTagPlatform(
 }
 
 export async function deleteAccount(store: AccountStoreContext, accountId: number) {
+  const pm = String(store.accounts.find(a => a.accountId === accountId)?.provider) === "Polymarket";
   await deletePlayer(accountId);
+  if (pm) await removeRetainedPmAccount(normalizePmVaultUserId(useUserStore().userId), accountId);
   store.accounts = store.accounts.filter(a => a.accountId !== accountId);
   void persistAccounts(store);
 }

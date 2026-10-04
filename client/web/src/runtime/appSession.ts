@@ -86,7 +86,7 @@ export async function mountAppSession(): Promise<void> {
   await accountStore.loadAccounts(false);
   try {
     const {
-      ensurePmVaultUnlocked,
+      ensurePmVaultForAccounts,
       hasVault,
       mergeVaultKeysIntoAccounts,
       migrateTokenPrivateKeysToVault,
@@ -94,7 +94,7 @@ export async function mountAppSession(): Promise<void> {
     } = await import("@/security/pmVault");
     const uid = normalizePmVaultUserId(user.userId);
     if (uid && await hasVault(uid)) {
-      const unlocked = await ensurePmVaultUnlocked(uid);
+      const unlocked = await ensurePmVaultForAccounts(uid, accountStore.accounts);
       if (unlocked) {
         mergeVaultKeysIntoAccounts(accountStore.accounts, uid);
         const migrated = await migrateTokenPrivateKeysToVault(accountStore.accounts, uid);
@@ -132,7 +132,7 @@ export async function mountAppSession(): Promise<void> {
 export function stopAppSession(): void {
   void resetPmTransportRoutingOnLogout();
   void resetPfTransportRoutingOnLogout();
-  lockPmVault();
+  lockPmVault({ preservePmSession: true });
   resetPmVaultAccountUi();
   stopSessionRuntime();
   teardownArbRuntimeSync();

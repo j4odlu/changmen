@@ -17,11 +17,11 @@ import {
 } from "./ob-entry.js";
 import { validatePbLocalStorageSnapshot } from "./pb-credential.js";
 import { readObSportVenueParams } from "./ob-sport-venue-params.js";
+import { readRayConfig, readRayPageSession } from "./ray-credential.js";
 
 const IM_PATH =
   /^\/(esportsitev2|esportmobilev2)\/index.html\?v=\d+&id=\d+&token=([^\&]+)/;
 const IA_SEARCH = /^\?lang=\d&token=([\w\.\_\-]+)$/;
-const RAY_A8_GATEWAY = "https://cfinfo.365raylinks.com";
 
 const OB_SPORT_STORAGE_KEY = "gamebet.obSportCreds";
 const OB_SPORT_MERCHANT_STORAGE_KEY = "gamebet.obSportMerchantCreds";
@@ -30,12 +30,6 @@ const OB_SPORT_GATEWAY_POLL_MS = 100;
 
 /** @type {ReturnType<typeof setInterval>|null} */
 let obSportGatewayPoller = null;
-
-function normalizeBearerToken(token) {
-  const raw = String(token || "").trim();
-  if (!raw) return "";
-  return raw.startsWith("Bearer ") ? raw : `Bearer ${raw}`;
-}
 
 /** 体育 iframe 内把网关写入 storage，供父页 GetConfig 读取 */
 async function publishObSportGatewayHint(entry, gateway) {
@@ -301,34 +295,8 @@ export const PROVIDER_REGISTRY = {
     }
 
     async GetConfig() {
-      let token =
-        localStorage.getItem("gameAuthToken") || localStorage.getItem("socketCluster.authToken");
-      const userToken = localStorage.getItem("userToken");
-      if (!token && userToken && /^\{/.test(userToken)) {
-        try {
-          token = JSON.parse(userToken).JWT;
-        } catch {
-          return undefined;
-        }
-      }
-      if (!token) return undefined;
-
-      const referer = location.href;
-      const bearer = normalizeBearerToken(token);
-      return {
-        provider: PLATFORMS.RAY,
-        gateway: RAY_A8_GATEWAY,
-        token: bearer,
-        referer,
-        data: btoa(
-          JSON.stringify({
-            provider: PLATFORMS.RAY,
-            gateway: RAY_A8_GATEWAY,
-            token: bearer,
-            referer,
-          }),
-        ),
-      };
+      const session = await readRayPageSession();
+      return readRayConfig(localStorage, location.href, fetch, session);
     }
   },
 

@@ -25,6 +25,7 @@ const RUNTIME_FILES = [
   "ob-sport-ws-offscreen.js",
   "dist/version.json",
   "extension-id.json",
+  "安装更新说明.txt",
 ];
 const RUNTIME_DIRS = ["assets"];
 /** 源图，不进发行包 */
@@ -148,7 +149,14 @@ function main() {
   fs.mkdirSync(publishDir, { recursive: true });
   const publishZip = path.join(publishDir, `${version}.zip`);
   fs.copyFileSync(zipPath, publishZip);
+  const releaseFile = path.join(publishDir, "release.json");
+  fs.writeFileSync(releaseFile, `${JSON.stringify({ schemaVersion: 1, product: "changmen-chrome-extension", extensionId: EXTENSION_ID, version }, null, 2)}\n`, "utf8");
+  // [changmen 扩展] ZIP 成功发布后再更新版本公告，避免提示用户下载不存在的包。
+  const versionFile = path.join(changmenRoot, "server", "backend", "public", "version.json");
+  fs.writeFileSync(versionFile, `${JSON.stringify({ version }, null, 2)}\n`, "utf8");
   console.log(`  发布: server/backend/public/extensions/${version}.zip`);
+  console.log(`  专用版本公告: server/backend/public/extensions/release.json`);
+  console.log(`  版本公告: server/backend/public/version.json (${version})`);
 
   console.log("");
   console.log("打包完成");

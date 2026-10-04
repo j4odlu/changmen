@@ -31,7 +31,7 @@ assert.deepEqual(
 /** 文档化：已核对与 A8 同构 / 有意扩展 */
 const PARITY = {
   OB: "esport Check/GetConfig ≈ A8；+ sport / 父页 iframe [changmen]",
-  RAY: "同 A8",
+  RAY: "[A8 可证实] 旧站 storage 顺序 + configv4 网关数组；[changmen 扩展] 官网 Vue HTTP 会话、复制前余额验证、Bearer 去重、失败提示",
   IM: "同 A8",
   TF: "同 A8",
   IA: "同 A8",

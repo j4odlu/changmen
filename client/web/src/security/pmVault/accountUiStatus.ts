@@ -4,7 +4,7 @@
 
 import { reactive, shallowRef } from "vue";
 import type { PlatformAccount } from "@/models/platformAccount";
-import { extractPrivateKeyFromToken, isVaultKeyProvider } from "./tokenStrip";
+import { extractPrivateKeyFromToken, isVaultKeyProvider, tokenWalletAddress } from "./tokenStrip";
 import {
   getCachedPrivateKey,
   hasVault,
@@ -38,7 +38,7 @@ export function pmAccountShowsUnlockPending(
     return false;
   if (!pmVaultAccountUi.vaultExists)
     return false;
-  if (isPmVaultUnlocked(uid) && getCachedPrivateKey(accountId))
+  if (getCachedPrivateKey(accountId, tokenWalletAddress(account.token)))
     return false;
   if (extractPrivateKeyFromToken(account.token))
     return false;

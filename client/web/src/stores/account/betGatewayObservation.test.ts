@@ -3,6 +3,8 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createPinia, setActivePinia } from "pinia";
+import { useOrderObservationStore } from "../orderObservationStore";
 import { startOrderObservation } from "@/services/orderObservation";
 import { checkBetting, placeBet } from "./betGateway";
 
@@ -14,7 +16,7 @@ vi.mock("@/stores/messageStore", () => ({ useMessageStore: () => ({ delayMessage
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "session-1", isAuthSessionCurrent: () => true, isAuthTransitionPending: () => false, post: mocks.post, unwrap: (data: { info: unknown }) => data.info }));
 vi.mock("element-plus", () => ({ ElNotification: mocks.notify }));
 vi.mock("@/shared/a8Notify", () => ({ bettingNotifyAccountLine: () => "account", bettingDetailHtml: () => "detail", bettingLoadingMessageHtml: () => "loading", bettingResultMessageHtml: () => "result" }));
-vi.mock("@/security/pmVault", () => ({ accountTokenHasPrivateKey: () => false, ensurePmVaultUnlocked: async () => false, hasVault: async () => false, isVaultKeyProvider: () => false, mergeVaultKeysIntoAccounts: () => {}, normalizePmVaultUserId: () => "" }));
+vi.mock("@/security/pmVault", () => ({ accountTokenHasPrivateKey: () => false, ensurePmVaultUnlocked: async () => false, ensurePmVaultForAccounts: async () => false, hasVault: async () => false, isVaultKeyProvider: () => false, mergeVaultKeysIntoAccounts: () => {}, normalizePmVaultUserId: () => "" }));
 vi.mock("@/realtime/publishBetting", () => ({ publishBettingEvent: async () => {} }));
 vi.mock("@/shared/orderSound", () => ({ playOrderSuccessSound: async () => {} }));
 vi.mock("@/stores/account/pmOptimisticOrder", () => ({ persistPolymarketMatchedBuyOrder: vi.fn() }));
@@ -28,6 +30,7 @@ describe("下注主链路与旁路故障隔离", () => {
   const account = { accountId: 1, provider: "OB", currency: "CNY", playerName: "p", platformId: 1, platformName: "OB" } as PlatformAccount;
   const store = { getPlatformName: () => "OB" } as unknown as AccountStoreContext;
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.useFakeTimers();
     mocks.post.mockReset();
     mocks.betting.mockReset();
@@ -86,4 +89,21 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(replacement.observation?.attemptId).toBe(original.observation?.attemptId);
     expect(mocks.check).toHaveBeenCalledTimes(1);
   });
+  it.each([
+    ["Polymarket 盘口价高于检测价，整单取消\n- 最佳卖价 0.46 高于检测价 0.4444", "price_above_detection", "卖价 0.46，限价 0.4444"],
+    ["", "no_market_data", "未获取到可用盘口数据"],
+  ])("records a specific blocked-precheck reason without changing the adapter return: %s", async (message, reason, summary) => {
+    const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
+    option.diagnosticLinkId = 123;
+    option.checkError = message;
+    option.data = null;
+    mocks.check.mockResolvedValue(option);
+    expect(await checkBetting(store, account, option)).toBe(option);
+    const check = useOrderObservationStore().forLink("u1", 123).find(row => row.kind === "precheck_result");
+    expect(check?.outcome).toBe("blocked");
+    expect(check?.reasonCode).toBe(reason);
+    expect(check?.safeSummary).toContain(summary);
+    expect(mocks.betting).not.toHaveBeenCalled();
+  });
+
 });

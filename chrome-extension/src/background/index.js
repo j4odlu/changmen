@@ -4,6 +4,10 @@
  * 存储仅用 chrome.storage.local（Electron loadExtension 无 sync）
  */
 import "./electron-storage-polyfill.js";
+import { createExtensionUpdateChecks } from "./extension-updates.js";
+createExtensionUpdateChecks().install();
+import { createPmWalletSessionHandler, isPmWalletStorageKey } from "./pm-wallet-session.js";
+const handlePmWalletSession = createPmWalletSessionHandler();
 import {
   initModifyHeaderListener,
   MODIFY_HEADER_KEY,
@@ -448,6 +452,7 @@ async function handleExternalMessage(message, reply, sender) {
       return;
     case "getStore": {
       const key = message.data?.key;
+      if (isPmWalletStorageKey(key)) { reply({ type, uuid, response: { data: {} } }); return; }
       if (!key) {
         reply({ type, uuid, response: { data: {} } });
         return;
@@ -472,6 +477,7 @@ async function handleExternalMessage(message, reply, sender) {
     }
     case "setStore": {
       const payload = message.data;
+      if (isPmWalletStorageKey(payload?.key)) { reply({ type, uuid, response: {} }); return; }
       if (payload?.key != null) {
         await storageSet({ [payload.key]: payload.data });
         if (payload.key === MODIFY_HEADER_KEY) {
@@ -593,6 +599,11 @@ installObSportWsBackground();
 
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
   if (!message || typeof message !== "object") return false;
+  if (String(message.type).startsWith("pmWalletSession:")) {
+    if (!["pmWalletSession:restore", "pmWalletSession:save", "pmWalletSession:lock", "pmWalletSession:remove"].includes(message.type)) return false;
+    void handlePmWalletSession(message, sender).then(response => sendResponse({ type: message.type, uuid: message.uuid, response }));
+    return true;
+  }
   handleExternalMessage(message, sendResponse, sender);
   return true;
 });

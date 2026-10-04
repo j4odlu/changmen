@@ -2,6 +2,7 @@ import type { CookieSessionInfo } from "@/lib/authSession";
 import { browserAuthState, clearAuthSession, getAuthSessionVersion, getCookieSessionInfo, invalidateAuthSession, isAuthSessionCurrent, isAuthTransitionPending, isCookieAuthMode, setCookieAuthMode, setCookieSessionInfo } from "@/lib/authSession";
 import { getApiBase } from "@/config/apiBase";
 import { resolveChangmenWsBase } from "@changmen/venue-adapter/shared";
+import { SessionRestoreConfigurationError } from "@/lib/sessionRestoreError";
 
 let pending: { version: string; task: Promise<boolean> } | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -42,7 +43,7 @@ async function runProbe(force: boolean) {
     }
     const apiOrigin = new URL(getApiBase() || window.location.origin, window.location.origin).origin;
     if (new URL(resolveChangmenWsBase(), window.location.origin).origin !== apiOrigin)
-      throw new Error("实时服务与登录服务的 Cookie 作用域不一致");
+      throw new SessionRestoreConfigurationError("实时服务与登录服务的 Cookie 作用域不一致");
     if (!info.user?.id || !info.browserSessionId || !info.loginEpoch || !info.csrfToken)
       throw new Error("登录服务返回了无效会话");
     setCookieAuthMode(true);

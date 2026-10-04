@@ -49,6 +49,7 @@ async function ensureSharedVaultKeyForAccount(account: PlatformAccount | undefin
   const {
     accountTokenHasPrivateKey,
     ensurePmVaultUnlocked,
+    ensurePmVaultForAccounts,
     hasVault,
     isVaultKeyProvider,
     mergeVaultKeysIntoAccounts,
@@ -56,6 +57,10 @@ async function ensureSharedVaultKeyForAccount(account: PlatformAccount | undefin
   } = await import("@/security/pmVault");
   if (!isVaultKeyProvider(account.provider))
     return true;
+  if (String(account.provider) === "Polymarket") {
+    const { getRetainedPmPrivateKey } = await import("@/security/pmVault/retainedPmSession");
+    getRetainedPmPrivateKey(account.accountId);
+  }
   if (accountTokenHasPrivateKey(account.token))
     return true;
 
@@ -65,7 +70,8 @@ async function ensureSharedVaultKeyForAccount(account: PlatformAccount | undefin
   const uid = normalizePmVaultUserId(user.userId);
   if (!uid || !(await hasVault(uid)))
     return false;
-  const unlocked = await ensurePmVaultUnlocked(uid);
+  const unlocked = String(account.provider) === "Polymarket"
+    ? await ensurePmVaultForAccounts(uid, [account]) : await ensurePmVaultUnlocked(uid);
   if (!unlocked)
     return false;
 
@@ -358,7 +364,10 @@ export async function checkBetting(
     try { checked.observation ??= option.observation; }
     catch { /* 观察字段写入失败不改变返回值 */ }
     try {
-      observeOption(checked, account, "precheck_result", { outcome: checked.data && !checked.checkError ? "prepared" : "blocked", durationMs: Date.now() - observationStartedAt, ...(checked.checkError ? observationFailureEvidence(checked.checkError) : {}), reasonCode: checked.checkError ? "precheck_error" : undefined });
+      const blocked = !checked.data || Boolean(checked.checkError);
+      observeOption(checked, account, "precheck_result", { outcome: blocked ? "blocked" : "prepared", durationMs: Date.now() - observationStartedAt,
+        reasonCode: blocked ? "precheck_error" : undefined,
+        ...(blocked ? observationFailureEvidence(checked.checkError || "无盘口数据") : {}) });
     }
     catch { /* 观察快照读取失败不改变 adapter 返回值 */ }
     observedPrecheckResult = true;

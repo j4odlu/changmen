@@ -2,6 +2,34 @@ const ENABLED_KEY = "pbWsObserveEnabled";
 const STATUS_KEY = "pbWsObserve";
 
 document.getElementById("ver").textContent = chrome.runtime.getManifest().version;
+const updateStatus = document.getElementById("updateStatus");
+const latestVersion = document.getElementById("latestVersion");
+const checkUpdate = document.getElementById("checkUpdate");
+const downloadUpdate = document.getElementById("downloadUpdate");
+let checkingUpdates = false;
+function renderRelease(state = {}) {
+  latestVersion.textContent = state.latest || "—";
+  updateStatus.textContent = state.error || (state.updateAvailable ? `有新版本 ${state.latest}，可下载更新` : state.latest ? "当前插件已是最新版或更新版本" : "暂未获取到最新版本");
+  updateStatus.className = state.error ? "status err" : state.updateAvailable ? "status ok" : "status";
+  const safeUrl = typeof state.downloadUrl === "string" && /^https:\/\/changmen\.fun\/esport2\/extensions\/\d{1,5}(?:\.\d{1,5}){0,3}\.zip$/.test(state.downloadUrl);
+  downloadUpdate.hidden = !safeUrl;
+  if (safeUrl) {
+    downloadUpdate.href = state.downloadUrl;
+    downloadUpdate.textContent = `下载 ${state.latest}`;
+  } else downloadUpdate.removeAttribute("href");
+  checkUpdate.disabled = checkingUpdates;
+}
+function refreshRelease(force = false) {
+  if (force && checkingUpdates) return;
+  if (force) { checkingUpdates = true; checkUpdate.disabled = true; updateStatus.textContent = "正在检查插件版本…"; }
+  chrome.runtime.sendMessage({ type: force ? "extensionRelease:check" : "extensionRelease:get" }, state => {
+    const failed = chrome.runtime.lastError;
+    if (force) checkingUpdates = false;
+    renderRelease(failed ? { error: "插件更新服务暂不可用，请稍后重试" } : state);
+  });
+}
+checkUpdate.addEventListener("click", () => refreshRelease(true));
+refreshRelease(true);
 
 const toggle = document.getElementById("pbWs");
 const statusEl = document.getElementById("pbStatus");
@@ -88,6 +116,7 @@ toggle.addEventListener("change", () => {
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
+  if (changes.changmenExtensionRelease) refreshRelease();
   if (changes[ENABLED_KEY] || changes[STATUS_KEY]) refresh();
 });
 

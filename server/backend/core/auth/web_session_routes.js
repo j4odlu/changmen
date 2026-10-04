@@ -4,11 +4,13 @@ import { jsonResponse, readJsonBody } from "../http/body.js";
 import { readClientCertStatus, clientCertCnFromSubject, clientCertificateAudit } from "../shared/client_cert_gate.js";
 import { browserSessionEnabled, readBrowserSessionCookie } from "./browser_session.js";
 import { browserAuthAudit, sessionCsrf, validAuthOrigin, validSessionCsrf, webCookieEnabled } from "./web_session_security.js";
+import { tryPmWalletIdentity } from "./pm_wallet_identity.js";
 
 export async function tryWebSessionRoutes(req, res, { login } = {}) {
   const path = String(req.url || "").split("?")[0];
   if (!path.startsWith("/auth/"))
     return false;
+  if (await tryPmWalletIdentity(req, res)) return true;
   res.setHeader("Cache-Control", "no-store");
   const fail = (status, code) => jsonResponse(res, status, { code });
   if (path === "/auth/login") {

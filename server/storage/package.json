@@ -12,6 +12,7 @@
     "./platform_storage.js": "./platform_storage.js",
     "./ensure_storage_seed.js": "./ensure_storage_seed.js",
     "./load_env.js": "./load_env.js",
+    "./dev_web_config.js": "./dev_web_config.js",
     "./predictfun_market_index.js": "./predictfun_market_index.js",
     "./polymarket_market_index.js": "./polymarket_market_index.js",
     "./sxbet_market_index.js": "./sxbet_market_index.js"

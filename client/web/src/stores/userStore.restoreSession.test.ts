@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useUserStore } from "@/stores/userStore";
+import { SessionRestoreConfigurationError } from "@/lib/sessionRestoreError";
 
 const auth = vi.hoisted(() => ({
   clearAuthSession: vi.fn(),
@@ -97,6 +98,15 @@ describe("userStore.restoreSession", () => {
     const store = useUserStore();
     await expect(store.restoreSession()).resolves.toBe(false);
     expect(store.sessionRestoreError).toBeTruthy();
+    expect(auth.clearAuthSession).not.toHaveBeenCalled();
+  });
+
+  it("preserves credentials and the specific error when restoration requires a configuration fix", async () => {
+    auth.ensureTokenRefresh.mockRejectedValue(new SessionRestoreConfigurationError("认证来源配置不匹配"));
+    const store = useUserStore();
+    await expect(store.restoreSession()).resolves.toBe(false);
+    expect(store.sessionRestoreError).toBe("认证来源配置不匹配");
+    expect(store.sessionRestoreRetryable).toBe(false);
     expect(auth.clearAuthSession).not.toHaveBeenCalled();
   });
 });

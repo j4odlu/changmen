@@ -39,7 +39,7 @@ export async function mountSportsSession(): Promise<void> {
   }
   try {
     const {
-      ensurePmVaultUnlocked,
+      ensurePmVaultForAccounts,
       hasVault,
       mergeVaultKeysIntoAccounts,
       migrateTokenPrivateKeysToVault,
@@ -47,7 +47,7 @@ export async function mountSportsSession(): Promise<void> {
     } = await import("@/security/pmVault");
     const uid = normalizePmVaultUserId(user.userId);
     if (uid && await hasVault(uid)) {
-      const unlocked = await ensurePmVaultUnlocked(uid);
+      const unlocked = await ensurePmVaultForAccounts(uid, accountStore.accounts);
       if (unlocked) {
         mergeVaultKeysIntoAccounts(accountStore.accounts, uid);
         const migrated = await migrateTokenPrivateKeysToVault(accountStore.accounts, uid);

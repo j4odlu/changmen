@@ -35,6 +35,7 @@ export {
   putPrivateKeyInVault,
   vaultHasKey,
   ensurePmVaultUnlocked,
+  ensurePmVaultForAccounts,
   ensurePmVaultSetup,
   completePmVaultUnlock,
   completePmVaultSetup,
@@ -43,3 +44,4 @@ export {
   normalizePmVaultUserId,
   syncUnlockedKeysIntoAccountStore,
 } from "./session";
+export { retainedPmSessionUi, setRetainedPmEnabled, setRetainedPmHours, revokeRetainedPmSession } from "./retainedPmSession";

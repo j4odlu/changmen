@@ -88,6 +88,14 @@ export function parseTokenObject(raw: string | undefined | null): Record<string,
   }
 }
 
+/** Wallet identity used consistently by key recovery, merging and readiness checks. */
+export function tokenWalletAddress(raw: string | undefined | null): string {
+  const obj = parseTokenObject(raw);
+  const value = String(obj?.walletAddress ?? obj?.address ?? obj?.predictAccount
+    ?? obj?.predict_account ?? obj?.funder ?? obj?.funderAddress ?? "").trim().toLowerCase();
+  return /^0x[0-9a-f]{40}$/.test(value) ? value : "";
+}
+
 function resolveConfigObject(
   raw: string,
   unwrap = 0,

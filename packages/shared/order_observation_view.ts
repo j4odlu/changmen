@@ -66,7 +66,14 @@ export function observationEventLabel(event: OrderObservationEvent): string {
   if (event.source === "orchestration_result")
     return `${label} · 编排判定：${lookupLabel(BUSINESS_OUTCOME_LABELS, event.outcome || "未知")}，缺少精确订单确认`;
   const outcome = event.outcome ? lookupLabel(OUTCOME_LABELS, event.outcome) : "";
-  return [label, outcome, event.safeSummary ? `摘要分类：${event.safeSummary}` : "", event.responseCode ? `场馆码 ${event.responseCode}` : "", event.httpStatus ? `HTTP ${event.httpStatus}` : "", event.durationMs !== undefined ? `${event.durationMs}ms` : "", event.retryRound ? `重试第${event.retryRound}轮` : ""].filter(Boolean).join(" · ");
+  const precheckReasons: Record<string, string> = {
+    no_account: "当前场馆没有可用的下单账号",
+    unsupported_provider: "当前场馆不支持下单预检",
+    precheck_error: "预检未通过，未记录具体原因",
+  };
+  const reason = event.safeSummary || (event.kind === "precheck_result" && event.outcome === "blocked"
+    && Object.hasOwn(precheckReasons, event.reasonCode || "") ? precheckReasons[event.reasonCode!] : "");
+  return [label, outcome, reason ? `原因：${reason}` : "", event.responseCode ? `场馆码 ${event.responseCode}` : "", event.httpStatus ? `HTTP ${event.httpStatus}` : "", event.durationMs !== undefined ? `${event.durationMs}ms` : "", event.retryRound ? `重试第${event.retryRound}轮` : ""].filter(Boolean).join(" · ");
 }
 
 /** 没有 target 的回执仅在同一尝试/队列的方向唯一时归属；不靠平台或时间猜腿。 */

@@ -117,3 +117,6 @@ export function hasPolymarketOrderClientRuntime(input: PolymarketOrderClientInpu
 export function clearPolymarketOrderClientCacheForTests(): void {
   runtimes.clear();
 }
+
+/** [changmen 扩展] 主动锁定/会话到期同时销毁持钥 signer 缓存。 */
+export const clearPolymarketOrderClientCache = clearPolymarketOrderClientCacheForTests;

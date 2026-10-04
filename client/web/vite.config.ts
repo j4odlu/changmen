@@ -14,6 +14,7 @@ import { fileURLToPath, URL } from "node:url";
 import { browserNodeBuiltins } from "./vite/plugins/browserNodeBuiltins";
 import { backendPublicAssets } from "./vite/plugins/backendPublicAssets";
 import { matcherDevRedirect } from "./vite/plugins/matcherDevRedirect";
+import { resolveDevWebPort } from "../../server/storage/dev_web_config.js";
 import {
   VENUE_ADAPTER_REL,
   VENUE_ADAPTER_ROOT,
@@ -35,7 +36,6 @@ const clientCoreVitestGlob = path
 // Windows：避开 Hyper-V/WSL 动态保留段（3560 曾落入 3513-3612 → EACCES）；Linux/VPS 仍用 3456
 const DEV_API_PORT = process.platform === "win32" ? 3700 : 3456;
 // Hyper-V/WSL 常保留 5123-5222（含 Vite 默认 5173/5174）
-const DEFAULT_DEV_PORT = process.platform === "win32" ? 5274 : 5174;
 
 type DevProxyOpts = {
   target: string;
@@ -138,7 +138,7 @@ export default defineConfig(({ command, mode }) => {
     .trim()
     .replace(/\/+$/, "")
     || `http://127.0.0.1:${DEV_API_PORT}`;
-  const DEV_PORT = Number(env.VITE_DEV_PORT || process.env.VITE_DEV_PORT) || DEFAULT_DEV_PORT;
+  const DEV_PORT = resolveDevWebPort({ ...env, ...process.env });
   const mtlsAgent = /^https:/i.test(apiTarget) ? buildHttpsClientAgent(env) : undefined;
   const hkRelayTarget = String(env.VITE_HK_RELAY_ORIGIN || env.VITE_PM_HK_RELAY_ORIGIN || "").trim().replace(/\/+$/, "");
 

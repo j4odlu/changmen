@@ -23,6 +23,15 @@ vi.mock("./session", async (importOriginal) => {
 });
 
 describe("pmAccountShowsUnlockPending", () => {
+  it("checks wallet binding when deciding whether an account needs unlock", async () => {
+    const { getCachedPrivateKey } = await import("./session");
+    const walletAddress = `0x${"2".repeat(40)}`;
+    const account = new PlatformAccount({ accountId: 42, provider: "Polymarket", token: JSON.stringify({ walletAddress }) });
+    await refreshPmVaultAccountUi([account], "u1");
+    vi.mocked(getCachedPrivateKey).mockImplementation((_id, wallet) => wallet === `0x${"1".repeat(40)}` ? "old-key" : undefined);
+    expect(pmAccountShowsUnlockPending(account)).toBe(true);
+    expect(getCachedPrivateKey).toHaveBeenCalledWith(42, walletAddress);
+  });
   beforeEach(async () => {
     resetPmVaultAccountUi();
     const { getCachedPrivateKey, isPmVaultUnlocked } = await import("./session");

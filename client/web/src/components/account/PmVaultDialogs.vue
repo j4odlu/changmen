@@ -6,11 +6,16 @@ import {
   pmVaultUi,
   setupPmVault,
   unlockPmVault,
+  retainedPmSessionUi,
+  setRetainedPmEnabled,
+  setRetainedPmHours,
 } from "@/security/pmVault";
 
 const password = ref("");
 const password2 = ref("");
 const localError = ref("");
+function updateRetention(value: unknown) { void setRetainedPmEnabled(Boolean(value), pmVaultUi.userId); }
+function updateRetentionHours(value: unknown) { setRetainedPmHours(Number(value)); }
 
 const unlockOpen = computed({
   get: () => pmVaultUi.needUnlock,
@@ -91,9 +96,20 @@ async function onSetup() {
     append-to-body
   >
     <p class="pm-vault-hint">
-      本机已加密保存 Polymarket 私钥。解锁后本页可自动下注；关闭或退出登录后需重新解锁。
+      本机已加密保存钱包私钥。解锁后本页可自动下注。PM 可通过新版插件保持本次工作会话，刷新免输密码；其他场馆不保持。
       若点「稍后再说」，可稍后在账号设置里保存/导入私钥时再解锁，或刷新页面重新提示。
     </p>
+    <el-checkbox :model-value="retainedPmSessionUi.enabled" :disabled="pmVaultUi.busy"
+      @update:model-value="updateRetention">
+      保持 PM 解锁会话
+    </el-checkbox>
+    <el-select v-if="retainedPmSessionUi.enabled" :model-value="retainedPmSessionUi.hours" style="width: 190px; margin-bottom: 12px"
+      :disabled="pmVaultUi.busy" @update:model-value="updateRetentionHours">
+      <el-option :value="0" label="直到浏览器退出" />
+      <el-option :value="1" label="1 小时" /><el-option :value="4" label="4 小时" /><el-option :value="8" label="8 小时" /><el-option :value="24" label="24 小时" />
+    </el-select>
+    <p class="pm-vault-hint">退出、锁定、浏览器重启或插件更新后重新解锁。插件不可用时使用原有密码流程；导入私钥仍需密码。</p>
+    <p v-if="retainedPmSessionUi.enabled && retainedPmSessionUi.hours === 0" class="pm-vault-hint">适合长期挂机；无人操作或暂停挂机不会锁定。解锁私钥会在浏览器运行期间保留，请使用可信电脑。</p>
     <el-input
       v-model="password"
       type="password"

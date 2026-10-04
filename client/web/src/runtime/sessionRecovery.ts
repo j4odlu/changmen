@@ -9,8 +9,9 @@ export function installSessionRecovery(pinia: Pinia): () => void {
   let failures = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
   const user = useUserStore(pinia);
+  const canRetry = () => user.sessionRestoreRetryable !== false;
   const recover = async () => {
-    if (stopped || running || user.ready)
+    if (stopped || running || user.ready || !canRetry())
       return;
     if (timer) clearTimeout(timer);
     const version = getAuthSessionVersion();
@@ -20,7 +21,7 @@ export function installSessionRecovery(pinia: Pinia): () => void {
     finally { running = false; }
     if (stopped || !isAuthSessionCurrent(version))
       return;
-    if (!user.ready && (user.sessionRestoreError || browserAuthState.value === "unavailable")) {
+    if (!user.ready && canRetry() && (user.sessionRestoreError || browserAuthState.value === "unavailable")) {
       failures += 1;
       timer = setTimeout(() => { void recover(); }, Math.min(60_000, 2000 * 2 ** Math.min(failures - 1, 5)));
     }

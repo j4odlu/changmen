@@ -5,6 +5,7 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import UserConfigDialog from "@/components/user/UserConfigDialog.vue";
 import UserDiagDialog from "@/components/user/UserDiagDialog.vue";
+import PmSessionStatus from "@/components/account/PmSessionStatus.vue";
 import { delay as esportDelay } from "@/api/apiDelay";
 import { isFootballOrderPending } from "@/runtime/podSportOrders";
 import { countPrimaryOrderRows } from "@/shared/orderLink";
@@ -126,6 +127,7 @@ const shownUserName = computed(() =>
         </el-button-group>
       </div>
       <div class="actions flex">
+        <PmSessionStatus v-if="!embedded" />
         <el-button-group>
           <el-button
             v-if="!embedded"

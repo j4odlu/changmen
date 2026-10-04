@@ -12,6 +12,7 @@ import {
   setToken,
 } from "@/api/client";
 import { withAuthLock } from "@/lib/authLock";
+import { SessionRestoreConfigurationError } from "@/lib/sessionRestoreError";
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
@@ -39,6 +40,11 @@ async function runRefresh(retryDelaysMs: readonly number[]): Promise<boolean> {
       if (!isAuthSessionCurrent(version))
         return false;
       if (result.success !== 1) {
+        if (["CSRF_INVALID", "ORIGIN_INVALID", "COOKIE_LOGIN_DISABLED"].includes(String(result.code || ""))) {
+          throw new SessionRestoreConfigurationError(import.meta.env.DEV
+            ? "登录服务配置不匹配，请检查开发地址、认证来源及 Cookie 登录配置后重试"
+            : "登录请求校验失败，请刷新页面后重试");
+        }
         if (isSessionInvalidResponse(result.code, result.msg)) {
           if (isAuthTransitionPending())
             return false;
@@ -60,6 +66,8 @@ async function runRefresh(retryDelaysMs: readonly number[]): Promise<boolean> {
       return true;
     }
     catch (err) {
+      if (err instanceof SessionRestoreConfigurationError)
+        throw err;
       if (!isAuthSessionCurrent(version))
         return false;
       if (!getRefreshToken() && !isCookieAuthMode())
@@ -85,6 +93,8 @@ export function refreshJwtSession(
   const run = async () => isAuthSessionCurrent(version) ? runRefresh(retryDelaysMs) : false;
   const pending = isCookieAuthMode() ? run() : withAuthLock(run);
   const task = pending.catch((err) => {
+    if (err instanceof SessionRestoreConfigurationError)
+      throw err;
     console.warn("[auth] session refresh temporarily unavailable:", err);
     return false;
   });
@@ -93,26 +103,32 @@ export function refreshJwtSession(
   void task.finally(() => {
     if (refreshInFlight === task)
       refreshInFlight = null;
-  });
+  }).catch(() => {});
   return task;
 }
 
 /** 默认每 10 分钟刷新，给 15 分钟 access token 留出网络重试余量。 */
 let lastWakeAt = 0;
+function refreshInBackground() {
+  void refreshJwtSession().catch((err) => {
+    console.warn("[auth] 自动续期已停止:", err);
+    stopJwtAutoRefresh();
+  });
+}
 function refreshOnWake() {
   if (typeof document !== "undefined" && document.visibilityState === "hidden")
     return;
   if (Date.now() - lastWakeAt < 30_000)
     return;
   lastWakeAt = Date.now();
-  void refreshJwtSession();
+  refreshInBackground();
 }
 
 export function startJwtAutoRefresh(intervalMs = 10 * 60 * 1000) {
   stopJwtAutoRefresh();
   lastWakeAt = 0;
   timer = setInterval(() => {
-    void refreshJwtSession();
+    refreshInBackground();
   }, intervalMs);
   if (typeof window !== "undefined") {
     window.addEventListener("online", refreshOnWake);

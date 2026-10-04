@@ -8,7 +8,7 @@ export function changmenDevBackendOrigin(): string {
   return `http://127.0.0.1:${port}`;
 }
 
-/** `VITE_API_BASE` > dev 直连 backend > 同源 */
+/** `VITE_API_BASE` > dev Cookie 同源代理 / legacy 直连 backend > 同源 */
 export function resolveChangmenWsBase(): string {
   if (typeof window !== "undefined") {
     const envBase =
@@ -16,7 +16,11 @@ export function resolveChangmenWsBase(): string {
       import.meta.env &&
       String(import.meta.env.VITE_API_BASE || "").trim();
     if (envBase) return String(envBase).replace(/\/+$/, "");
-    if (import.meta.env?.DEV) return changmenDevBackendOrigin();
+    if (import.meta.env?.DEV) {
+      // [changmen 扩展] HttpOnly Cookie 使用与登录 API 相同的 host，经 Vite /esport WS 代理。
+      if (import.meta.env.VITE_WEB_COOKIE_AUTH === "1") return window.location.origin;
+      return changmenDevBackendOrigin();
+    }
     return window.location.origin;
   }
   return changmenDevBackendOrigin();

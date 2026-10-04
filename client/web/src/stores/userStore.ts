@@ -27,6 +27,7 @@ import {
   saveClientDataDetailed,
 } from "@/api/esport";
 import { ensureTokenRefresh, startTokenRefresh, stopTokenRefresh } from "@/lib/sessionRefresh";
+import { SessionRestoreConfigurationError } from "@/lib/sessionRestoreError";
 import { subscribeUserChannel, unsubscribeUserChannel } from "@/realtime/userChannel";
 import { ensureBetTargetChannelSubscribed } from "@/realtime/betTargetChannel";
 import { ensurePublishChannelSubscribed } from "@/realtime/publishChannel";
@@ -62,6 +63,7 @@ export const useUserStore = defineStore("user", {
     sessionChecked: !hasAuthSession(),
     /** 有本地会话但后端暂不可达时保留 token，并在恢复页展示重试入口。 */
     sessionRestoreError: "",
+    sessionRestoreRetryable: true,
     ready: false,
     error: null as string | null,
     hiddenUserName: localStorage.getItem(HIDDEN_NAME_KEY) === "1",
@@ -157,6 +159,7 @@ export const useUserStore = defineStore("user", {
     },
 
     async restoreSession() {
+      this.sessionRestoreRetryable = true;
       if (!hasAuthSession() && typeof window !== "undefined" && typeof document !== "undefined") {
         // HttpOnly Cookie 可能仍有效而本机提示已清除；只读探测，不自动重新登录。
         const { probeCookieSession } = await import("@/lib/webSession");
@@ -190,7 +193,10 @@ export const useUserStore = defineStore("user", {
         this.ready = false;
         // client.ts 只会在服务端明确判定会话失效时清 token；网络/502 保留会话。
         if (hasAuthSession()) {
-          this.sessionRestoreError = "连接暂时不可用，请检查网络后重试";
+          this.sessionRestoreRetryable = !(err instanceof SessionRestoreConfigurationError);
+          this.sessionRestoreError = this.sessionRestoreRetryable
+            ? "连接暂时不可用，请检查网络后重试"
+            : (err as Error).message;
           this.error = err instanceof Error ? err.message : String(err);
           return false;
         }

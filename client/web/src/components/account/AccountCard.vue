@@ -5,6 +5,7 @@ import { computed } from "vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import {
   ensurePmVaultUnlocked,
+  ensurePmVaultForAccounts,
   normalizePmVaultUserId,
   pmAccountShowsUnlockPending,
 } from "@/security/pmVault";
@@ -69,7 +70,8 @@ async function promptPmVaultUnlock() {
   const uid = normalizePmVaultUserId(useUserStore().userId);
   if (!uid)
     return;
-  await ensurePmVaultUnlocked(uid);
+  if (String(props.account.provider) === "Polymarket") await ensurePmVaultForAccounts(uid, [props.account]);
+  else await ensurePmVaultUnlocked(uid);
 }
 
 function formatBalance(value?: number) {

@@ -6,8 +6,9 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import {
   extractPrivateKeyFromToken,
   isVaultKeyProvider,
+  isPolymarketProvider,
   mergePrivateKeyIntoToken,
-  parseTokenObject,
+  tokenWalletAddress,
   toPersistTokenForProvider,
 } from "./tokenStrip";
 import {
@@ -15,25 +16,7 @@ import {
   isPmVaultUnlocked,
   putPrivateKeyInVault,
 } from "./session";
-
-function normalizeWalletAddress(raw: unknown): string {
-  const s = String(raw ?? "").trim().toLowerCase();
-  return /^0x[0-9a-f]{40}$/.test(s) ? s : "";
-}
-
-function tokenWalletAddress(raw: string | undefined | null): string {
-  const obj = parseTokenObject(raw);
-  if (!obj)
-    return "";
-  return normalizeWalletAddress(
-    obj.walletAddress
-      ?? obj.address
-      ?? obj.predictAccount
-      ?? obj.predict_account
-      ?? obj.funder
-      ?? obj.funderAddress,
-  );
-}
+import { getRetainedPmPrivateKey } from "./retainedPmSession";
 
 export function mergeVaultKeysIntoAccounts(
   accounts: PlatformAccount[],
@@ -43,10 +26,16 @@ export function mergeVaultKeysIntoAccounts(
   let pendingMigrate = 0;
   if (!isPmVaultUnlocked(userId)) {
     for (const acc of accounts) {
+      const retained = isPolymarketProvider(acc.provider) ? getRetainedPmPrivateKey(acc.accountId, userId, tokenWalletAddress(acc.token)) : undefined;
+      if (retained) {
+        acc.token = mergePrivateKeyIntoToken(acc.token, retained, acc.provider);
+        merged += 1;
+        continue;
+      }
       if (isVaultKeyProvider(acc.provider) && extractPrivateKeyFromToken(acc.token))
         pendingMigrate += 1;
     }
-    return { merged: 0, pendingMigrate };
+    return { merged, pendingMigrate };
   }
   for (const acc of accounts) {
     if (!isVaultKeyProvider(acc.provider) || !acc.accountId)

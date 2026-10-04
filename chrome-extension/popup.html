@@ -37,11 +37,21 @@
     .meta { margin-top: 8px; padding: 8px; background: #22262e; border-radius: 6px; font-size: 11px; line-height: 1.45; color: #9aa0a6; }
     .ok { color: #3dd68c; }
     .miss { color: #f87171; }
+    .release { margin: 12px 0; padding: 10px; background: #22262e; border-radius: 6px; }
+    .release a { color: #60a5fa; margin-left: 10px; }
+    .release button { cursor: pointer; padding: 5px 8px; }
   </style>
 </head>
 <body>
   <h1><img src="assets/icon128.png" alt="" />じらいや · PB</h1>
   <p>版本：<span id="ver">…</span></p>
+  <section class="release" aria-label="插件更新">
+    <p id="updateStatus" role="status">正在检查插件版本…</p>
+    <p>最新版本：<span id="latestVersion">—</span></p>
+    <button id="checkUpdate" type="button">检查更新</button>
+    <a id="downloadUpdate" hidden target="_blank" rel="noopener">下载插件</a>
+    <p class="hint">下载后解压，将文件覆盖原插件目录，在 chrome://extensions/ 点击“重新加载”，再刷新网页。PM 会话需首次重新解锁。</p>
+  </section>
 
   <div class="row">
     <label for="pbWs">PB WebSocket 观测</label>

@@ -3,6 +3,9 @@
  */
 
 import { reactive, ref } from "vue";
+import type { PlatformAccount } from "@/models/platformAccount";
+import { isPolymarketProvider, isVaultKeyProvider, tokenWalletAddress } from "./tokenStrip";
+import { clearRetainedPmMemory, getRetainedPmPrivateKey, prepareRetainedPmSession, registerRetainedPmCleanup, removeRetainedPmAccount, restoreRetainedPmSession, revokeRetainedPmSession, saveRetainedPmSession } from "./retainedPmSession";
 import {
   base64ToBytes,
   bytesToBase64,
@@ -62,10 +65,19 @@ interface SessionState {
   kek: CryptoKey;
   plainByAccountId: Map<number, string>;
   plainByWalletAddress: Map<string, string>;
+  walletByAccountId: Map<number, string>;
   unlockedAt: number;
 }
 
 let session: SessionState | null = null;
+registerRetainedPmCleanup((ids, wallets) => {
+  for (const id of ids) {
+    session?.plainByAccountId.delete(id);
+    session?.walletByAccountId.delete(id);
+  }
+  for (const wallet of wallets) session?.plainByWalletAddress.delete(wallet);
+  notifyPmVaultSessionChanged();
+});
 
 /** 供 Vue 订阅 session 变更（session 本身非响应式） */
 export const pmVaultSessionRev = ref(0);
@@ -100,7 +112,10 @@ export function getPmVaultSessionUserId(): string | null {
   return session?.userId ?? null;
 }
 
-export function lockPmVault(): void {
+export function lockPmVault(options: { preservePmSession?: boolean } = {}): void {
+  const uid = session?.userId;
+  if (options.preservePmSession) clearRetainedPmMemory();
+  else void revokeRetainedPmSession(uid);
   sessionEpoch += 1;
   session = null;
   pmVaultUi.needUnlock = false;
@@ -126,30 +141,38 @@ function normalizeVaultWalletAddress(walletAddress?: string): string {
 }
 
 export function getCachedPrivateKey(accountId: number, walletAddress?: string): string | undefined {
+  const retained = getRetainedPmPrivateKey(accountId, session?.userId, walletAddress);
+  if (retained) return retained;
   const byId = session?.plainByAccountId.get(Number(accountId));
+  const boundWallet = session?.walletByAccountId.get(Number(accountId));
+  if (walletAddress !== undefined && boundWallet && normalizeVaultWalletAddress(walletAddress) !== boundWallet)
+    return undefined;
   if (byId)
     return byId;
   const wallet = normalizeVaultWalletAddress(walletAddress);
   return wallet ? session?.plainByWalletAddress.get(wallet) : undefined;
 }
 
-async function loadAllKeysIntoSession(kek: CryptoKey, userId: string): Promise<Pick<SessionState, "plainByAccountId" | "plainByWalletAddress">> {
+async function loadAllKeysIntoSession(kek: CryptoKey, userId: string): Promise<Pick<SessionState, "plainByAccountId" | "plainByWalletAddress" | "walletByAccountId">> {
   const byAccountId = new Map<number, string>();
   const byWalletAddress = new Map<string, string>();
+  const walletByAccountId = new Map<number, string>();
   const rows = await listVaultKeys(userId);
   for (const row of rows) {
     try {
       const pk = await decryptUtf8(kek, row.cipher);
       byAccountId.set(Number(row.accountId), pk);
       const wallet = normalizeVaultWalletAddress(row.walletAddress);
-      if (wallet)
+      if (wallet) {
         byWalletAddress.set(wallet, pk);
+        walletByAccountId.set(Number(row.accountId), wallet);
+      }
     }
     catch {
       /* skip corrupt entry */
     }
   }
-  return { plainByAccountId: byAccountId, plainByWalletAddress: byWalletAddress };
+  return { plainByAccountId: byAccountId, plainByWalletAddress: byWalletAddress, walletByAccountId };
 }
 
 export async function setupPmVault(userId: string, password: string): Promise<void> {
@@ -163,6 +186,7 @@ export async function setupPmVault(userId: string, password: string): Promise<vo
 
   const epoch = sessionEpoch;
   const salt = randomBytes(16);
+  await prepareRetainedPmSession(uid);
   const kek = await deriveKek(password, salt, defaultMetaIterations());
   if (epoch !== sessionEpoch)
     throw new Error("本机钱包已锁定");
@@ -187,6 +211,7 @@ export async function setupPmVault(userId: string, password: string): Promise<vo
     kek,
     plainByAccountId: new Map(),
     plainByWalletAddress: new Map(),
+    walletByAccountId: new Map(),
     unlockedAt: now,
   };
   notifyPmVaultSessionChanged();
@@ -195,6 +220,7 @@ export async function setupPmVault(userId: string, password: string): Promise<vo
 export async function unlockPmVault(userId: string, password: string): Promise<void> {
   const uid = normalizePmVaultUserId(userId);
   const epoch = sessionEpoch;
+  await prepareRetainedPmSession(uid);
   const meta = await getVaultMeta(uid);
   if (!meta)
     throw new Error("本机尚未设置钱包密码");
@@ -213,6 +239,7 @@ export async function unlockPmVault(userId: string, password: string): Promise<v
     kek,
     plainByAccountId: plain.plainByAccountId,
     plainByWalletAddress: plain.plainByWalletAddress,
+    walletByAccountId: plain.walletByAccountId,
     unlockedAt: Date.now(),
   };
   notifyPmVaultSessionChanged();
@@ -223,6 +250,7 @@ export async function changePmVaultPassword(
   oldPassword: string,
   newPassword: string,
 ): Promise<void> {
+  await revokeRetainedPmSession(userId);
   await unlockPmVault(userId, oldPassword);
   if (newPassword.length < 8)
     throw new Error("新密码至少 8 位");
@@ -281,6 +309,10 @@ export async function changePmVaultPassword(
     userId: uid,
     kek,
     plainByAccountId: new Map(entries),
+    walletByAccountId: new Map(existingBefore.flatMap(row => {
+      const wallet = normalizeVaultWalletAddress(row.walletAddress);
+      return wallet ? [[Number(row.accountId), wallet] as const] : [];
+    })),
     plainByWalletAddress: new Map(existingBefore
       .map((row) => {
         const wallet = normalizeVaultWalletAddress(row.walletAddress);
@@ -308,6 +340,11 @@ export async function putPrivateKeyInVault(
   const id = Number(accountId);
   if (!id)
     throw new Error("缺少 accountId");
+  const epoch = sessionEpoch;
+  const oldKey = getCachedPrivateKey(id);
+  if (oldKey && oldKey !== pk) await removeRetainedPmAccount(uid, id);
+  if (!session || session.userId !== uid || epoch !== sessionEpoch)
+    throw new Error("本机钱包已锁定");
   const cipher = await encryptUtf8(session.kek, pk);
   await putVaultKey({
     id: vaultKeyId(uid, id),
@@ -317,11 +354,30 @@ export async function putPrivateKeyInVault(
     cipher,
     updatedAt: Date.now(),
   });
+  if (!session || session.userId !== uid || epoch !== sessionEpoch)
+    throw new Error("本机钱包已锁定");
   session.plainByAccountId.set(id, pk);
   const wallet = normalizeVaultWalletAddress(walletAddress);
+  session.walletByAccountId.delete(id);
+  if (wallet) session.walletByAccountId.set(id, wallet);
   if (wallet)
     session.plainByWalletAddress.set(wallet, pk);
   notifyPmVaultSessionChanged();
+  void syncUnlockedKeysIntoAccountStore();
+}
+
+/** [changmen 扩展] PM 恢复不伪装为共享 vault 完整解锁，导入/改密仍需密码。 */
+export async function ensurePmVaultForAccounts(userId: string, accounts: PlatformAccount[]): Promise<boolean> {
+  try { await restoreRetainedPmSession(accounts, userId); } catch { /* password fallback */ }
+  const ids = new Set((await listVaultKeys(userId)).map(row => Number(row.accountId)));
+  const required = accounts.filter(a => isVaultKeyProvider(a.provider) && ids.has(Number(a.accountId)));
+  const hasKey = (account: PlatformAccount) => Boolean(getCachedPrivateKey(account.accountId, tokenWalletAddress(account.token)));
+  if (isPmVaultUnlocked(userId) && required.every(hasKey)) return true;
+  if (required.length && required.every(a => isPolymarketProvider(a.provider) && getRetainedPmPrivateKey(a.accountId, userId, tokenWalletAddress(a.token))))
+    return true;
+  const unlocked = await ensurePmVaultUnlocked(userId, { force: isPmVaultUnlocked(userId) && required.some(a => !hasKey(a)) });
+  // A correct vault password cannot make an old wallet's key valid for a new address.
+  return unlocked && required.every(hasKey);
 }
 
 export async function vaultHasKey(userId: string, accountId: number): Promise<boolean> {
@@ -335,11 +391,11 @@ export async function vaultHasKey(userId: string, accountId: number): Promise<bo
  * 需要解锁时弹出 UI；无 vault 则直接 true（尚无私钥仓）。
  * 用户取消解锁返回 false。
  */
-export async function ensurePmVaultUnlocked(userId: string): Promise<boolean> {
+export async function ensurePmVaultUnlocked(userId: string, options: { force?: boolean } = {}): Promise<boolean> {
   const uid = normalizePmVaultUserId(userId);
   if (!uid)
     return true;
-  if (isPmVaultUnlocked(uid))
+  if (isPmVaultUnlocked(uid) && !options.force)
     return true;
   if (!(await hasVault(uid)))
     return true;
@@ -399,6 +455,7 @@ export async function syncUnlockedKeysIntoAccountStore(): Promise<void> {
     const migrated = await migrateTokenPrivateKeysToVault(store.accounts, uid);
     if (migrated > 0)
       void store.saveAccounts();
+    void saveRetainedPmSession(store.accounts, uid);
   }
   catch {
     /* store 未就绪时忽略 */
@@ -437,3 +494,7 @@ export function completePmVaultSetup(ok: boolean): void {
 }
 
 export { hasVault };
+
+if (typeof window !== "undefined") {
+  window.addEventListener("changmen:auth-ending", () => lockPmVault());
+}

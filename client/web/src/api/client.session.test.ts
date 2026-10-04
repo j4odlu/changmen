@@ -12,6 +12,7 @@ import { login, logout } from "./auth";
 function response(code: string) { return { data: { success: 0, code, msg: "未登录", info: null } }; }
 const ok = { data: { success: 1, info: { saved: true } } };
 beforeEach(() => {
+  vi.stubEnv("VITE_WEB_COOKIE_AUTH", "0");
   vi.resetAllMocks();
   localStorage.clear();
   advanceAuthSessionVersion();
@@ -21,7 +22,7 @@ beforeEach(() => {
   vi.stubGlobal("window", { location: { href: "/sports/football" } });
   mocks.refresh.mockImplementation(async () => { setToken("new-access"); return true; });
 });
-afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 describe("session recovery with unchanged business request", () => {
   it("updates cached login status when a cookie session restores its access token", async () => {
     setToken(null);

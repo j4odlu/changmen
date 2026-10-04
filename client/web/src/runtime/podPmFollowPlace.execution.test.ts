@@ -27,7 +27,7 @@ vi.mock("@/stores/userStore", () => ({
   useUserStore: () => ({ userId: "u1", isLoggedIn: true, fetchUserInfo: vi.fn() }),
 }));
 vi.mock("@/security/pmVault", () => ({
-  ensurePmVaultUnlocked: vi.fn(),
+  ensurePmVaultForAccounts: vi.fn(),
   hasVault: vi.fn().mockResolvedValue(false),
   mergeVaultKeysIntoAccounts: vi.fn(),
   migrateTokenPrivateKeysToVault: vi.fn().mockResolvedValue(0),

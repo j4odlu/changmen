@@ -158,6 +158,8 @@ export function isSessionInvalidResponse(code: unknown, message: unknown): boole
 }
 
 export function clearAuthSession() {
+  // [changmen 扩展] Revoke the PM work session while old credentials are still available.
+  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") window.dispatchEvent(new Event("changmen:auth-ending"));
   setCookieSessionInfo(null);
   browserAuthState.value = "anonymous";
   setToken(null);

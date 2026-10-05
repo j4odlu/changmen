@@ -1,5 +1,5 @@
 /**
- * Polymarket Data API `/activity`：官网历史同源。
+ * Polymarket Data API `/v2/activity`：适配为内部 camelCase 后核对成本。
  * 收费盘 BUY：`usdcSize ≈ price×size + fee`（实测与官方公式一致）。
  *
  * 与本地下单对齐：
@@ -8,8 +8,8 @@
  * - 精确路径：orderId → CLOB trade.tx → activity.transactionHash → usdcSize
  */
 
-import { POLYMARKET_DATA_API } from "./api";
-import { polymarketPluginGet } from "./transport";
+import type { PolymarketActivityQuery } from "./pmActivityV2";
+import { fetchPolymarketActivityV2 } from "./pmActivityV2";
 
 export interface PolymarketActivityTradeRow {
   proxyWallet?: string;
@@ -44,28 +44,23 @@ function round4(n: number): number {
   return Math.round(n * 10000) / 10000;
 }
 
-function round5(n: number): number {
-  if (!Number.isFinite(n) || n <= 0)
-    return 0;
-  const rounded = Math.round(n * 100_000) / 100_000;
-  return rounded < 0.00001 ? 0 : rounded;
-}
-
 /** 从 activity TRADE BUY 行解析含费成本；无效返回 null */
 export function parsePolymarketActivityBuyCost(
   row: PolymarketActivityTradeRow | null | undefined,
 ): PolymarketActivityBuyCost | null {
-  if (!row || String(row.type ?? "TRADE").toUpperCase() !== "TRADE")
+  if (!row || String(row.type ?? "").toUpperCase() !== "TRADE")
     return null;
   if (String(row.side ?? "").toUpperCase() !== "BUY")
     return null;
   const matchPrice = Number(row.price);
   const shares = Number(row.size);
   const usdcSize = Number(row.usdcSize);
-  if (!(matchPrice > 0 && matchPrice < 1) || !(shares > 0) || !(usdcSize > 0))
+  if (!Number.isFinite(matchPrice) || !Number.isFinite(shares) || !Number.isFinite(usdcSize)
+    || !(matchPrice > 0 && matchPrice < 1) || !(shares > 0) || !(usdcSize > 0)) {
     return null;
+  }
   const notional = matchPrice * shares;
-  let feeUsdc = round5(usdcSize - notional);
+  let feeUsdc = Math.max(0, usdcSize - notional);
   // 浮点噪点：差额极小当 0
   if (feeUsdc < 0.00001)
     feeUsdc = 0;
@@ -118,9 +113,9 @@ function activityMatchScore(
   // 至少要有 condition 或 asset，否则禁止匹配（避免串到无关买单）
   if (!cond && !asset)
     return -1;
-  if (cond && rowCond && cond !== rowCond)
+  if (cond && cond !== rowCond)
     return -1;
-  if (asset && rowAsset && asset !== rowAsset)
+  if (asset && asset !== rowAsset)
     return -1;
   const condOk = !cond || cond === rowCond;
   const assetOk = !asset || asset === rowAsset;
@@ -140,7 +135,9 @@ function activityMatchScore(
   const windowSec = Number(params.timeWindowSec) > 0 ? Number(params.timeWindowSec) : 600;
   let timeScore = 0.5;
   const createAtMs = Number(params.createAtMs);
-  if (createAtMs > 0 && cost.timestamp) {
+  if (createAtMs > 0) {
+    if (!cost.timestamp || !Number.isFinite(cost.timestamp))
+      return -1;
     const createSec = createAtMs > 1e12 ? createAtMs / 1000 : createAtMs;
     const dt = Math.abs(cost.timestamp - createSec);
     if (dt > windowSec)
@@ -168,27 +165,18 @@ export function matchPolymarketActivityBuyCostByTxHashes(
 ): PolymarketActivityBuyCost | null {
   if (!Array.isArray(rows) || !rows.length || !Array.isArray(transactionHashes))
     return null;
-  const want = new Set(
-    transactionHashes
-      .map(h => String(h ?? "").trim().toLowerCase())
-      .filter(h => /^0x[0-9a-f]{64}$/.test(h)),
-  );
+  const hashes = transactionHashes.map(h => String(h ?? "").trim().toLowerCase());
+  if (hashes.some(h => !/^0x[0-9a-f]{64}$/.test(h)))
+    return null;
+  const want = new Set(hashes);
   if (!want.size)
     return null;
 
-  const activityTx = new Set<string>();
-  for (const row of rows) {
-    const tx = String(row.transactionHash ?? "").trim().toLowerCase();
-    if (/^0x[0-9a-f]{64}$/.test(tx))
-      activityTx.add(tx);
-  }
-  for (const h of want) {
-    if (!activityTx.has(h))
-      return null;
-  }
-
   const cond = String(filters?.conditionId ?? "").trim().toLowerCase();
   const asset = String(filters?.tokenId ?? "").trim();
+  if (!cond && !asset)
+    return null;
+  const matchedTx = new Set<string>();
   const hits: PolymarketActivityBuyCost[] = [];
   const seenRow = new Set<string>();
   for (const row of rows) {
@@ -197,23 +185,28 @@ export function matchPolymarketActivityBuyCostByTxHashes(
       continue;
     const rowCond = String(row.conditionId ?? "").trim().toLowerCase();
     const rowAsset = String(row.asset ?? "").trim();
-    if (cond && rowCond && cond !== rowCond)
+    if (cond && cond !== rowCond)
       continue;
-    if (asset && rowAsset && asset !== rowAsset)
+    if (asset && asset !== rowAsset)
       continue;
     const cost = parsePolymarketActivityBuyCost(row);
     if (!cost)
-      continue;
-    const key = `${tx}|${rowAsset}|${cost.shares}|${cost.usdcSize}`;
+      return null;
+    matchedTx.add(tx);
+    const rawCash = Number(row.usdcSize);
+    const key = `${tx}|${rowAsset}|${cost.shares}|${rawCash}|${cost.matchPrice}`;
     if (seenRow.has(key))
       continue;
     seenRow.add(key);
-    hits.push(cost);
+    // Keep full wire precision until the complete multi-fill amount is summed.
+    hits.push({ ...cost, usdcSize: rawCash });
   }
+  if ([...want].some(tx => !matchedTx.has(tx)))
+    return null;
   if (!hits.length)
     return null;
   if (hits.length === 1)
-    return hits[0]!;
+    return { ...hits[0]!, usdcSize: round4(hits[0]!.usdcSize) };
 
   let shares = 0;
   let usdcSize = 0;
@@ -226,8 +219,10 @@ export function matchPolymarketActivityBuyCostByTxHashes(
     if (h.timestamp && (!timestamp || h.timestamp > timestamp))
       timestamp = h.timestamp;
   }
-  if (!(shares > 0) || !(usdcSize > 0))
+  if (!Number.isFinite(shares) || !Number.isFinite(usdcSize) || !Number.isFinite(notional)
+    || !(shares > 0) || !(usdcSize > 0)) {
     return null;
+  }
   const matchPrice = notional / shares;
   const feeUsdc = Math.max(0, usdcSize - notional);
   return {
@@ -253,8 +248,7 @@ export function matchPolymarketActivityBuyCost(
   if (!Array.isArray(rows) || !rows.length)
     return null;
 
-  const wantTx = Array.isArray(params.transactionHashes)
-    && params.transactionHashes.some(h => /^0x[0-9a-fA-F]{64}$/.test(String(h ?? "").trim()));
+  const wantTx = Array.isArray(params.transactionHashes) && params.transactionHashes.length > 0;
   if (wantTx) {
     return matchPolymarketActivityBuyCostByTxHashes(rows, params.transactionHashes, {
       conditionId: params.conditionId,
@@ -276,34 +270,20 @@ export function matchPolymarketActivityBuyCost(
   return parsePolymarketActivityBuyCost(best);
 }
 
-/** GET data-api `/activity`（公开，按 proxyWallet） */
+/** GET data-api `/v2/activity`；失败/截断时丢弃整批，调用方保留成本或回退公式。 */
 export async function fetchPolymarketUserActivityTrades(
   proxyWallet: string,
-  options?: { limit?: number; side?: "BUY" | "SELL"; startSec?: number },
+  options?: PolymarketActivityQuery,
 ): Promise<PolymarketActivityTradeRow[]> {
   const user = String(proxyWallet ?? "").trim().toLowerCase();
   if (!/^0x[0-9a-f]{40}$/.test(user))
     return [];
-  const limit = Math.min(Math.max(Number(options?.limit) || 50, 1), 500);
-  const side = options?.side === "SELL" ? "SELL" : "BUY";
-  const qs = new URLSearchParams({
-    user,
-    limit: String(limit),
-    type: "TRADE",
-    side,
-  });
-  const startSec = Number(options?.startSec);
-  if (startSec > 0)
-    qs.set("start", String(Math.floor(startSec)));
   try {
-    const rows = await polymarketPluginGet<PolymarketActivityTradeRow[]>(
-      `${POLYMARKET_DATA_API}/activity?${qs.toString()}`,
-    );
-    return Array.isArray(rows) ? rows : [];
+    return await fetchPolymarketActivityV2(user, options);
   }
   catch (err) {
     console.warn(
-      "[Polymarket] 拉取 /activity 失败",
+      "[Polymarket] 拉取 /v2/activity 失败，整批结果不用于成本核对",
       user.slice(0, 12),
       err instanceof Error ? err.message : err,
     );
@@ -322,10 +302,14 @@ export async function resolvePolymarketBuyCostFromActivity(
   const startSec = createAtMs > 0
     ? Math.max(0, Math.floor((createAtMs > 1e12 ? createAtMs / 1000 : createAtMs) - 900))
     : undefined;
+  // createAt may be order placement, not fill time (GTC/partial fills).
+  // Pin the upper bound to this read so late fills remain eligible.
+  const endSec = Math.floor(Date.now() / 1000) + 60;
   const rows = await fetchPolymarketUserActivityTrades(proxyWallet, {
     limit: 80,
     side: "BUY",
     startSec,
+    endSec,
   });
   return matchPolymarketActivityBuyCost(rows, params);
 }

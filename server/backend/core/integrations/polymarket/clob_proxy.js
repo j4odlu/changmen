@@ -33,8 +33,8 @@ export function isAllowedPolymarketUrl(url) {
 function polymarketSdkTransportHeaders(method) {
   const out = {
     "User-Agent": PM_CLOB_USER_AGENT,
-    Accept: "*/*",
-    Connection: "keep-alive",
+    "Accept": "*/*",
+    "Connection": "keep-alive",
   };
   if (String(method || "GET").toUpperCase() === "GET")
     out["Accept-Encoding"] = "gzip";
@@ -131,5 +131,12 @@ export async function executePolymarketHttpRequest(input) {
     signal: AbortSignal.timeout(fetchTimeoutMs),
   });
   const text = await res.text();
-  return { status: res.status, text };
+  // Public response metadata only; do not forward cookies/auth headers.
+  const responseHeaders = {};
+  for (const name of ["retry-after", "x-trace-id"]) {
+    const value = res.headers?.get?.(name);
+    if (value)
+      responseHeaders[name] = value;
+  }
+  return { status: res.status, text, ...(Object.keys(responseHeaders).length ? { headers: responseHeaders } : {}) };
 }

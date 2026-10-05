@@ -1,8 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlatformAccount } from "../models/platformAccount";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { accountHttpRequest, changmenPmEsportCall, changmenPmHttpRequest, clearPlatformHttpContext, registerPlatformHttpContext } from "./platformHttp";
+
 const mocks = vi.hoisted(() => { vi.resetModules(); return { request: vi.fn(), post: vi.fn(), auth: vi.fn() }; });
 vi.mock("./a8Axios", () => ({ a8Axios: { request: mocks.request, post: mocks.post }, responseBodyText: (data: unknown) => String(data) }));
-import { accountHttpRequest, changmenPmEsportCall, registerPlatformHttpContext, clearPlatformHttpContext } from "./platformHttp";
+
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.request.mockResolvedValue({ status: 200, data: "ok", headers: {} });
@@ -12,6 +14,17 @@ beforeEach(() => {
 });
 afterEach(clearPlatformHttpContext);
 describe("platform request credential bridge", () => {
+  it("preserves upstream PM error status, body and Retry-After through the VPS wrapper", async () => {
+    const data = { code: "rate_limited", error: "busy", retryable: true, trace_id: "trace" };
+    mocks.post.mockResolvedValue({ data: { success: 1, info: {
+      status: 429,
+      text: JSON.stringify(data),
+      headers: { "retry-after": "2" },
+    } } });
+    await expect(changmenPmHttpRequest({ url: "https://data-api.polymarket.com/v2/activity" })).rejects.toMatchObject({
+      response: { status: 429, headers: { "retry-after": "2" }, data },
+    });
+  });
   it("supports Cookie credentials for PM actions without a JWT", async () => {
     expect(await changmenPmEsportCall("Pm_Test", {})).toBe("result");
     expect(mocks.post.mock.calls[0]?.[2]).toMatchObject({ withCredentials: true, headers: { "X-Changmen-Auth": "cookie", "X-CSRF-Token": "csrf" } });

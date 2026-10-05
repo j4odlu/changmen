@@ -1,6 +1,23 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { a8PluginGet, a8PluginPost } from "@changmen/client-core/chrome-plugin/bridge";
 
+import { directGet, directPostJson } from "@changmen/client-core/shared/http";
 
+import { changmenPmEsportCall, changmenPmHttpRequest } from "@changmen/client-core/shared/platformHttp";
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { fetchPolymarketActivityV2 } from "./pmActivityV2";
+
+import { resetPmMarketWsSourceModeForTests } from "./pmMarketWsMode";
+import {
+  PM_GET_BOOK_DIRECT_TIMEOUT_MS,
+  PM_PRIVATE_READ_DIRECT_TIMEOUT_MS,
+  PM_SUBMIT_ORDER_TIMEOUT_MS,
+  pmEsportCall,
+  pmTransportHttpGet,
+  setPmGetBookDirectTimeoutMsForTests,
+} from "./pmTransport";
+import { resolvePmHttpMode, setPmHttpModeForTests } from "./pmTransportMode";
 
 vi.mock("@changmen/client-core/shared/http", () => ({
 
@@ -12,8 +29,6 @@ vi.mock("@changmen/client-core/shared/http", () => ({
 
 }));
 
-
-
 vi.mock("@changmen/client-core/shared/platformHttp", () => ({
 
   changmenPmHttpRequest: vi.fn(),
@@ -24,8 +39,6 @@ vi.mock("@changmen/client-core/shared/platformHttp", () => ({
 
 }));
 
-
-
 vi.mock("@changmen/client-core/chrome-plugin/bridge", () => ({
 
   a8PluginGet: vi.fn(),
@@ -35,8 +48,6 @@ vi.mock("@changmen/client-core/chrome-plugin/bridge", () => ({
   a8PluginDelete: vi.fn(),
 
 }));
-
-
 
 vi.mock("./l2Auth", () => ({
 
@@ -56,28 +67,6 @@ vi.mock("./l2Auth", () => ({
 
 }));
 
-
-
-import { directGet, directPostJson } from "@changmen/client-core/shared/http";
-
-import { changmenPmEsportCall, changmenPmHttpRequest } from "@changmen/client-core/shared/platformHttp";
-
-import { a8PluginGet, a8PluginPost } from "@changmen/client-core/chrome-plugin/bridge";
-
-import {
-  pmEsportCall,
-  pmTransportHttpGet,
-  setPmGetBookDirectTimeoutMsForTests,
-  PM_GET_BOOK_DIRECT_TIMEOUT_MS,
-  PM_PRIVATE_READ_DIRECT_TIMEOUT_MS,
-  PM_SUBMIT_ORDER_TIMEOUT_MS,
-} from "./pmTransport";
-
-import { resolvePmHttpMode, setPmHttpModeForTests } from "./pmTransportMode";
-import { resetPmMarketWsSourceModeForTests } from "./pmMarketWsMode";
-
-
-
 const pmAccount = {
 
   accountId: 42,
@@ -90,12 +79,25 @@ const pmAccount = {
 
 };
 
-
-
 describe("pmTransport mode", () => {
+  it.each(["direct", "extension", "vps"] as const)("activity v2 envelope survives %s mode", async (mode) => {
+    setPmHttpModeForTests(mode);
+    const user = `0x${"1".repeat(40)}`;
+    const body = { data: [{ proxy_wallet: user, type: "TRADE", side: "BUY", token_id: "token", usdc_size: 10.3 }], pagination: { has_more: false, next_cursor: null } };
+    vi.mocked(directGet).mockResolvedValue(body);
+    vi.mocked(a8PluginGet).mockResolvedValue({ status: 200, headers: {}, data: body });
+    vi.mocked(changmenPmHttpRequest).mockResolvedValue({ status: 200, text: JSON.stringify(body) });
+    expect(await fetchPolymarketActivityV2(user)).toMatchObject([{ asset: "token", usdcSize: 10.3 }]);
+  });
+
+  it("extension preserves resolved Axios error response metadata", async () => {
+    setPmHttpModeForTests("extension");
+    const response = { status: 429, headers: { "retry-after": "3" }, data: { code: "rate_limited" } };
+    vi.mocked(a8PluginGet).mockResolvedValue({ message: "too many requests", response });
+    await expect(pmTransportHttpGet("https://data-api.polymarket.com/v2/activity")).rejects.toMatchObject({ response });
+  });
 
   beforeEach(() => {
-
     setPmHttpModeForTests(null);
 
     setPmGetBookDirectTimeoutMsForTests(PM_GET_BOOK_DIRECT_TIMEOUT_MS);
@@ -112,13 +114,9 @@ describe("pmTransport mode", () => {
     vi.mocked(a8PluginGet).mockReset();
 
     vi.mocked(a8PluginPost).mockReset();
-
   });
 
-
-
-  test("默认 vps 走 changmenPmHttpRequest", async () => {
-
+  it("默认 vps 走 changmenPmHttpRequest", async () => {
     expect(resolvePmHttpMode()).toBe("vps");
 
     vi.mocked(changmenPmHttpRequest).mockResolvedValue({
@@ -134,13 +132,9 @@ describe("pmTransport mode", () => {
     expect(rows).toEqual([{ id: "1" }]);
 
     expect(changmenPmHttpRequest).toHaveBeenCalledOnce();
-
   });
 
-
-
-  test("direct 模式走 directGet", async () => {
-
+  it("direct 模式走 directGet", async () => {
     setPmHttpModeForTests("direct");
 
     vi.mocked(directGet).mockResolvedValue([{ id: "2" }]);
@@ -152,13 +146,9 @@ describe("pmTransport mode", () => {
     expect(directGet).toHaveBeenCalledOnce();
 
     expect(changmenPmHttpRequest).not.toHaveBeenCalled();
-
   });
 
-
-
-  test("extension 模式走 a8PluginGet 并 unwrap axios.data", async () => {
-
+  it("extension 模式走 a8PluginGet 并 unwrap axios.data", async () => {
     setPmHttpModeForTests("extension");
 
     vi.mocked(a8PluginGet).mockResolvedValue({ status: 200, data: [{ id: "3" }] });
@@ -168,13 +158,9 @@ describe("pmTransport mode", () => {
     expect(rows).toEqual([{ id: "3" }]);
 
     expect(a8PluginGet).toHaveBeenCalledOnce();
-
   });
 
-
-
-  test("vps 语义 API 走 changmenPmEsportCall 且剥离 _account", async () => {
-
+  it("vps 语义 API 走 changmenPmEsportCall 且剥离 _account", async () => {
     setPmHttpModeForTests("vps");
 
     vi.mocked(changmenPmEsportCall).mockResolvedValue({ heartbeat_id: "h1" });
@@ -184,13 +170,9 @@ describe("pmTransport mode", () => {
     expect(out).toEqual({ heartbeat_id: "h1" });
 
     expect(changmenPmEsportCall).toHaveBeenCalledWith("Pm_Heartbeat", { heartbeatId: "h0" });
-
   });
 
-
-
-  test("vps Pm_SubmitOrder 只等 POST ACK 30s", async () => {
-
+  it("vps Pm_SubmitOrder 只等 POST ACK 30s", async () => {
     setPmHttpModeForTests("vps");
 
     vi.mocked(changmenPmEsportCall).mockResolvedValue({ success: true, orderID: "oid" });
@@ -202,10 +184,9 @@ describe("pmTransport mode", () => {
       { playerId: 42, order: { foo: 1 } },
       { timeoutMs: PM_SUBMIT_ORDER_TIMEOUT_MS },
     );
-
   });
 
-  test("official PM-M 下 vps L2 GET 优先直连", async () => {
+  it("official PM-M 下 vps L2 GET 优先直连", async () => {
     setPmHttpModeForTests("vps");
     resetPmMarketWsSourceModeForTests("official");
     vi.mocked(directGet).mockResolvedValue({ balance: "1000000" });
@@ -223,7 +204,7 @@ describe("pmTransport mode", () => {
     expect(changmenPmHttpRequest).not.toHaveBeenCalled();
   });
 
-  test("official PM-M 下 vps L2 GET 直连失败回落 VPS", async () => {
+  it("official PM-M 下 vps L2 GET 直连失败回落 VPS", async () => {
     setPmHttpModeForTests("vps");
     resetPmMarketWsSourceModeForTests("official");
     vi.mocked(directGet).mockRejectedValue(Object.assign(new Error("Network Error"), { code: "ERR_NETWORK" }));
@@ -241,7 +222,7 @@ describe("pmTransport mode", () => {
     expect(changmenPmHttpRequest).toHaveBeenCalledOnce();
   });
 
-  test("official PM-M 下 vps L2 GET 直连鉴权失败也回落 VPS", async () => {
+  it("official PM-M 下 vps L2 GET 直连鉴权失败也回落 VPS", async () => {
     setPmHttpModeForTests("vps");
     resetPmMarketWsSourceModeForTests("official");
     vi.mocked(directGet).mockRejectedValue(new Error("HTTP 401"));
@@ -259,7 +240,7 @@ describe("pmTransport mode", () => {
     expect(changmenPmHttpRequest).toHaveBeenCalledOnce();
   });
 
-  test("official PM-M 下 vps 私有只读接口优先直连", async () => {
+  it("official PM-M 下 vps 私有只读接口优先直连", async () => {
     setPmHttpModeForTests("vps");
     resetPmMarketWsSourceModeForTests("official");
     vi.mocked(directGet).mockResolvedValue({ id: "order-1" });
@@ -278,7 +259,7 @@ describe("pmTransport mode", () => {
     expect(changmenPmEsportCall).not.toHaveBeenCalled();
   });
 
-  test("official PM-M 下私有只读直连网络失败回落 VPS", async () => {
+  it("official PM-M 下私有只读直连网络失败回落 VPS", async () => {
     setPmHttpModeForTests("vps");
     resetPmMarketWsSourceModeForTests("official");
     vi.mocked(directGet).mockRejectedValue(Object.assign(new Error("Network Error"), { code: "ERR_NETWORK" }));
@@ -297,7 +278,7 @@ describe("pmTransport mode", () => {
     });
   });
 
-  test("official PM-M 下私有只读直连鉴权失败也回落 VPS", async () => {
+  it("official PM-M 下私有只读直连鉴权失败也回落 VPS", async () => {
     setPmHttpModeForTests("vps");
     resetPmMarketWsSourceModeForTests("official");
     vi.mocked(directGet).mockRejectedValue(new Error("HTTP 401"));
@@ -316,7 +297,7 @@ describe("pmTransport mode", () => {
     });
   });
 
-  test("official PM-M 下私有只读直连超时回落 VPS", async () => {
+  it("official PM-M 下私有只读直连超时回落 VPS", async () => {
     setPmHttpModeForTests("vps");
     resetPmMarketWsSourceModeForTests("official");
     vi.mocked(directGet).mockImplementation(async () => {
@@ -338,7 +319,7 @@ describe("pmTransport mode", () => {
     });
   });
 
-  test("official PM-M 下 SubmitOrder 仍走 VPS", async () => {
+  it("official PM-M 下 SubmitOrder 仍走 VPS", async () => {
     setPmHttpModeForTests("vps");
     resetPmMarketWsSourceModeForTests("official");
     vi.mocked(changmenPmEsportCall).mockResolvedValue({ success: true, orderID: "vps-oid" });
@@ -358,10 +339,7 @@ describe("pmTransport mode", () => {
     );
   });
 
-
-
-  test("vps 模式下公开 Pm_GetBook 优先直连 CLOB", async () => {
-
+  it("vps 模式下公开 Pm_GetBook 优先直连 CLOB", async () => {
     setPmHttpModeForTests("vps");
 
     vi.mocked(directGet).mockResolvedValue({ tick_size: "0.01" });
@@ -379,13 +357,9 @@ describe("pmTransport mode", () => {
     );
 
     expect(changmenPmEsportCall).not.toHaveBeenCalled();
-
   });
 
-
-
-  test("Pm_GetBook 直连 Network Error 时回落 VPS", async () => {
-
+  it("pm_GetBook 直连 Network Error 时回落 VPS", async () => {
     setPmHttpModeForTests("vps");
 
     const netErr = Object.assign(new Error("Network Error"), { code: "ERR_NETWORK" });
@@ -399,23 +373,17 @@ describe("pmTransport mode", () => {
     expect(book).toEqual({ tick_size: "0.02" });
 
     expect(changmenPmEsportCall).toHaveBeenCalledWith("Pm_GetBook", { tokenId: "123" });
-
   });
 
-
-
-  test("Pm_GetBook 直连超时回落 VPS", async () => {
-
+  it("pm_GetBook 直连超时回落 VPS", async () => {
     setPmHttpModeForTests("vps");
 
     setPmGetBookDirectTimeoutMsForTests(20);
 
     vi.mocked(directGet).mockImplementation(async () => {
-
       await new Promise(r => setTimeout(r, 80));
 
       return { tick_size: "slow" };
-
     });
 
     vi.mocked(changmenPmEsportCall).mockResolvedValue({ tick_size: "0.03" });
@@ -425,13 +393,9 @@ describe("pmTransport mode", () => {
     expect(book).toEqual({ tick_size: "0.03" });
 
     expect(changmenPmEsportCall).toHaveBeenCalledWith("Pm_GetBook", { tokenId: "123" });
-
   });
 
-
-
-  test("Pm_GetBook 超时为 0 时 vps 不试直连", async () => {
-
+  it("pm_GetBook 超时为 0 时 vps 不试直连", async () => {
     setPmHttpModeForTests("vps");
 
     setPmGetBookDirectTimeoutMsForTests(0);
@@ -445,13 +409,9 @@ describe("pmTransport mode", () => {
     expect(directGet).not.toHaveBeenCalled();
 
     expect(changmenPmEsportCall).toHaveBeenCalledWith("Pm_GetBook", { tokenId: "123" });
-
   });
 
-
-
-  test("direct 语义 API Pm_GetBook", async () => {
-
+  it("direct 语义 API Pm_GetBook", async () => {
     setPmHttpModeForTests("direct");
 
     vi.mocked(directGet).mockResolvedValue({ tick_size: "0.01" });
@@ -467,13 +427,9 @@ describe("pmTransport mode", () => {
       {},
 
     );
-
   });
 
-
-
-  test("extension 语义 API Pm_GetBook", async () => {
-
+  it("extension 语义 API Pm_GetBook", async () => {
     setPmHttpModeForTests("extension");
 
     vi.mocked(a8PluginGet).mockResolvedValue({ status: 200, data: { tick_size: "0.01" } });
@@ -489,13 +445,9 @@ describe("pmTransport mode", () => {
       undefined,
 
     );
-
   });
 
-
-
-  test("extension 语义 API Pm_SubmitOrder 走 a8PluginPost", async () => {
-
+  it("extension 语义 API Pm_SubmitOrder 走 a8PluginPost", async () => {
     setPmHttpModeForTests("extension");
 
     vi.mocked(a8PluginPost).mockResolvedValue({ success: true, orderID: "oid-1" });
@@ -521,13 +473,9 @@ describe("pmTransport mode", () => {
       expect.objectContaining({ headers: expect.objectContaining({ POLY_API_KEY: "key" }) }),
 
     );
-
   });
 
-
-
-  test("extension 语义 API Pm_GetTrades 分页", async () => {
-
+  it("extension 语义 API Pm_GetTrades 分页", async () => {
     setPmHttpModeForTests("extension");
 
     vi.mocked(a8PluginGet)
@@ -553,13 +501,9 @@ describe("pmTransport mode", () => {
       expect.objectContaining({ headers: expect.objectContaining({ POLY_API_KEY: "key" }) }),
 
     );
-
   });
 
-
-
-  test("extension 语义 API Pm_Heartbeat", async () => {
-
+  it("extension 语义 API Pm_Heartbeat", async () => {
     setPmHttpModeForTests("extension");
 
     vi.mocked(a8PluginPost).mockResolvedValue({ heartbeat_id: "hb-next" });
@@ -585,22 +529,18 @@ describe("pmTransport mode", () => {
       expect.any(Object),
 
     );
-
   });
 
-
-
-  test("extension 缺少 _account 时抛错", async () => {
-
+  it("extension 缺少 _account 时抛错", async () => {
     setPmHttpModeForTests("extension");
 
     await expect(pmEsportCall("Pm_SubmitOrder", { playerId: 1, order: {} }))
 
-      .rejects.toThrow(/需要账号 token/);
-
+      .rejects
+      .toThrow(/需要账号 token/);
   });
 
-  test("extension SubmitOrder Network Error 将 HTTP 降回 vps", async () => {
+  it("extension SubmitOrder Network Error 将 HTTP 降回 vps", async () => {
     setPmHttpModeForTests("extension");
     vi.mocked(a8PluginPost).mockRejectedValue(new Error("Network Error"));
 
@@ -613,17 +553,18 @@ describe("pmTransport mode", () => {
     expect(resolvePmHttpMode()).toBe("vps");
   });
 
-  test("extension GetBook Network Error 也将 HTTP 降回 vps", async () => {
+  it("extension GetBook Network Error 也将 HTTP 降回 vps", async () => {
     setPmHttpModeForTests("extension");
     vi.mocked(a8PluginGet).mockResolvedValue({ message: "Network Error" });
 
     await expect(pmEsportCall("Pm_GetBook", { tokenId: "123" }))
-      .rejects.toThrow(/Network Error/);
+      .rejects
+      .toThrow(/Network Error/);
 
     expect(resolvePmHttpMode()).toBe("vps");
   });
 
-  test("extension 扩展断连时同一次 SubmitOrder 回落 VPS", async () => {
+  it("extension 扩展断连时同一次 SubmitOrder 回落 VPS", async () => {
     setPmHttpModeForTests("extension");
     vi.mocked(a8PluginPost).mockRejectedValue(
       new Error("Could not establish connection. Receiving end does not exist."),
@@ -645,7 +586,7 @@ describe("pmTransport mode", () => {
     );
   });
 
-  test("extension 插件 resolve(AxiosError) 也将 HTTP 降回 vps", async () => {
+  it("extension 插件 resolve(AxiosError) 也将 HTTP 降回 vps", async () => {
     setPmHttpModeForTests("extension");
     vi.mocked(a8PluginPost).mockResolvedValue({
       message: "Network Error",
@@ -663,7 +604,7 @@ describe("pmTransport mode", () => {
     expect(resolvePmHttpMode()).toBe("vps");
   });
 
-  test("extension FOK 业务失败不降级 HTTP", async () => {
+  it("extension FOK 业务失败不降级 HTTP", async () => {
     setPmHttpModeForTests("extension");
     vi.mocked(a8PluginPost).mockResolvedValue({
       status: 200,
@@ -679,7 +620,4 @@ describe("pmTransport mode", () => {
     expect(result).toEqual({ success: false, errorMsg: "FOK 未成交" });
     expect(resolvePmHttpMode()).toBe("extension");
   });
-
 });
-
-

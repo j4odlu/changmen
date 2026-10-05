@@ -202,7 +202,7 @@ describe("resolvePolymarketBuyCostFromActivity (http)", () => {
   it("returns null when fetch empty", async () => {
     vi.resetModules();
     vi.doMock("./transport", () => ({
-      polymarketPluginGet: vi.fn(async () => []),
+      polymarketPluginGet: vi.fn(async () => ({ data: [], pagination: { has_more: false, next_cursor: null } })),
     }));
     const { resolvePolymarketBuyCostFromActivity } = await import("./pmActivity");
     const cost = await resolvePolymarketBuyCostFromActivity(

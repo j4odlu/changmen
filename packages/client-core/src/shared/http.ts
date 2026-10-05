@@ -6,7 +6,9 @@ export async function directGet<T>(url: string, headers: Record<string, string>)
   const res = await a8Axios.get<T>(url, { headers });
   if (res.status >= 400) {
     const text = responseBodyText(res.data);
-    throw new Error(text.slice(0, 160) || `HTTP ${res.status}`);
+    throw Object.assign(new Error(text.slice(0, 160) || `HTTP ${res.status}`), {
+      response: { status: res.status, headers: res.headers, data: res.data },
+    });
   }
   return res.data;
 }

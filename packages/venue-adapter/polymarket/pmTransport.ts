@@ -3,8 +3,8 @@
  * 业务代码只依赖 transport.ts / pmClientApi.ts，不感知 mode。
  */
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import { a8PluginGet, a8PluginPost, a8PluginDelete } from "@changmen/client-core/chrome-plugin/bridge";
-import { directGet, directPostJson, directDeleteJson } from "@changmen/client-core/shared/http";
+import { a8PluginDelete, a8PluginGet, a8PluginPost } from "@changmen/client-core/chrome-plugin/bridge";
+import { directDeleteJson, directGet, directPostJson } from "@changmen/client-core/shared/http";
 import {
   changmenPmEsportCall,
   changmenPmHttpRequest,
@@ -12,9 +12,9 @@ import {
 } from "@changmen/client-core/shared/platformHttp";
 import { POLYMARKET_CLOB_API } from "./api";
 import { buildL2HeadersFromAccount } from "./l2Auth";
+import { measurePmExecution, recordPmExecutionMetric } from "./pmExecutionMetrics";
 import { getPmMarketWsSourceMode } from "./pmMarketWsMode";
 import { demotePmHttpToVpsFromLocalNetworkError, resolvePmHttpMode } from "./pmTransportMode";
-import { measurePmExecution, recordPmExecutionMetric } from "./pmExecutionMetrics";
 
 /** vps 模式下公开 /book 直连试探上限；≤0 则不试直连、仍走 VPS。 */
 export const PM_GET_BOOK_DIRECT_TIMEOUT_MS = 800;
@@ -231,6 +231,15 @@ function unwrapPluginResponse<T>(response: unknown): T {
     throw response;
   if (response && typeof response === "object") {
     const row = response as Record<string, unknown>;
+    // Extension errors may be resolved as serialized Axios errors/responses.
+    const upstream = row.response && typeof row.response === "object"
+      ? row.response as Record<string, unknown>
+      : row;
+    if (Number(upstream.status) >= 400) {
+      throw Object.assign(new Error(pluginErrorMessage(row) || `HTTP ${upstream.status}`), {
+        response: { status: upstream.status, headers: upstream.headers, data: upstream.data },
+      });
+    }
     if (typeof row.message === "string" && row.response == null && row.status == null && !("data" in row))
       throw new Error(row.message);
     if ("data" in row && ("status" in row || "headers" in row || "statusText" in row))
@@ -365,7 +374,7 @@ function extractHeartbeatIdFromError(err: unknown): string {
       catch { /* ignore */ }
     }
   }
-  const m = msg.match(/heartbeat_id["']?\s*[:=]\s*["']?([A-Za-z0-9_-]+)/i);
+  const m = msg.match(/heartbeat_id["']?\s*[:=]\s*["']?([\w-]+)/i);
   return m?.[1] ?? "";
 }
 
@@ -520,7 +529,7 @@ async function pmEsportCallLocal<T>(
     case "Pm_Heartbeat": {
       const account = requireEsportAccount(body);
       const gateway = clobGatewayFromAccount(account);
-      let heartbeatId = String(body.heartbeatId ?? body.heartbeat_id ?? "").trim();
+      const heartbeatId = String(body.heartbeatId ?? body.heartbeat_id ?? "").trim();
 
       async function postOnce(id: string) {
         const payload = { heartbeat_id: id };
@@ -643,7 +652,8 @@ async function pmPrivateReadDirectFirst<T>(
   }
 }
 
-/** pmClientApi 底层：按 mode 走 VPS 语义 API / 直连 / 插件。
+/**
+ * pmClientApi 底层：按 mode 走 VPS 语义 API / 直连 / 插件。
  * 公开 Pm_GetBook 无 L2：vps 下短超时直连 CLOB，失败/超时回落 VPS；extension 保持插件。
  * 官方 PM-M 用户：私有只读接口 direct-first；交易写入仍走 VPS。
  * Pm_SubmitOrder：HTTP 只等 POST ACK（30s）；插件断连同一次回落 VPS。timeout 不重试 POST。
@@ -684,15 +694,14 @@ export async function pmEsportCall<T>(
 async function pmGetBookPreferDirect<T>(body: Record<string, unknown>): Promise<T> {
   const mode = resolvePmHttpMode();
   const tokenId = String(body.tokenId ?? "").trim() || undefined;
-  if (mode === "extension")
+  if (mode === "extension") {
     return measurePmExecution("book", { tokenId, bookSource: "extension" }, () =>
-      pmEsportCallExtension<T>("Pm_GetBook", body),
-    );
+      pmEsportCallExtension<T>("Pm_GetBook", body));
+  }
   const timeoutMs = mode === "vps" ? getBookDirectTimeoutMs : 0;
   if (mode === "vps" && timeoutMs <= 0) {
     return measurePmExecution("book", { tokenId, bookSource: "vps-live" }, () =>
-      changmenPmEsportCall<T>("Pm_GetBook", stripEsportBodyForVps(body)),
-    );
+      changmenPmEsportCall<T>("Pm_GetBook", stripEsportBodyForVps(body)));
   }
   try {
     const startedAt = Date.now();

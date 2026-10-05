@@ -1,8 +1,6 @@
+import type { PolymarketActivityBuyCost } from "./pmActivity";
 import { POLYMARKET_CLOB_API } from "./api";
-import {
-  resolvePolymarketBuyCostFromActivity,
-  type PolymarketActivityBuyCost,
-} from "./pmActivity";
+import { resolvePolymarketBuyCostFromActivity } from "./pmActivity";
 import { polymarketPluginGet } from "./transport";
 
 /** CLOB `/clob-markets/{id}` 的 fee 曲线参数 */
@@ -324,10 +322,15 @@ export async function enrichPolymarketBuyVenueOrderWithFee<T extends {
     createAtMs: Number(order.createAt) || undefined,
     transactionHashes: txHashes?.length ? txHashes : undefined,
   };
+  // A transaction can settle several orders for the same wallet/token.
+  // Its total activity cash must not overwrite a smaller order's cost.
+  // Local fill shares may be rounded to 4 decimals; allow only that dust.
+  const activityFitsOrder = (cost: PolymarketActivityBuyCost): boolean =>
+    Number.isFinite(shares) && shares > 0 && Math.abs(cost.shares - shares) <= 0.0001;
   if (Array.isArray(options?.activityRows)) {
     const { matchPolymarketActivityBuyCost } = await import("./pmActivity");
     const fromActivity = matchPolymarketActivityBuyCost(options.activityRows, matchParams);
-    if (fromActivity && fromActivity.usdcSize > 0) {
+    if (fromActivity && fromActivity.usdcSize > 0 && activityFitsOrder(fromActivity)) {
       return applyOfficialBuyCostToOrder(order, activityToOfficialCost(fromActivity));
     }
   }
@@ -336,7 +339,7 @@ export async function enrichPolymarketBuyVenueOrderWithFee<T extends {
     && (matchParams.conditionId || matchParams.tokenId || matchParams.transactionHashes?.length)
   ) {
     const fromActivity = await resolvePolymarketBuyCostFromActivity(proxy, matchParams);
-    if (fromActivity && fromActivity.usdcSize > 0) {
+    if (fromActivity && fromActivity.usdcSize > 0 && activityFitsOrder(fromActivity)) {
       return applyOfficialBuyCostToOrder(order, activityToOfficialCost(fromActivity));
     }
   }
@@ -430,10 +433,22 @@ export async function enrichPolymarketBuyOrdersWithFees<T extends {
   let activityRows: import("./pmActivity").PolymarketActivityTradeRow[] | undefined;
   if (/^0x[0-9a-f]{40}$/.test(proxy)) {
     const { fetchPolymarketUserActivityTrades } = await import("./pmActivity");
-    // 覆盖近几天买单；limit 拉高一点减少漏匹配
+    // 完整分页覆盖待核对买单的时间窗，避免高频账号只取首页漏掉旧单。
+    const buys = orders.filter(o => String(o.pmSide ?? "buy").toLowerCase() !== "sell");
+    const createdSeconds = buys.map((o) => {
+      const created = Number(o.createAt);
+      return created > 1e12 ? created / 1000 : created;
+    });
+    const startSec = createdSeconds.length && createdSeconds.every(t => Number.isFinite(t) && t > 0)
+      ? Math.max(1, Math.floor(Math.min(...createdSeconds) - 900))
+      : undefined;
+    // A stored createAt can predate the final fill by hours/days.
+    const endSec = Math.floor(Date.now() / 1000) + 60;
     activityRows = await fetchPolymarketUserActivityTrades(proxy, {
       limit: 200,
       side: "BUY",
+      startSec,
+      endSec,
     });
   }
   return Promise.all(orders.map(o => enrichPolymarketBuyVenueOrderWithFee(o, {

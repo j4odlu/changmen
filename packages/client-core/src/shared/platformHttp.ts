@@ -66,7 +66,7 @@ function getA8ProxyRelayEntry(): string {
   });
 }
 
-export interface AccountHttpResult { status: number; text: string }
+export interface AccountHttpResult { status: number; text: string; headers?: Record<string, string> }
 
 /**
  * 对齐 A8 mr.get/post：默认 Rr(Nr) 直连 gateway；仅 proxyId 且非 forceDirect 时走 PROXY + x-proxy-url。
@@ -226,7 +226,8 @@ export async function changmenPmEsportCall<T>(
       buildEsportUrl(action, "", requireHttpCtx().getApiBase()),
       toEsportPostBody(body),
       {
-        headers: { ...FORM_HEADERS, ...auth }, withCredentials: true,
+        headers: { ...FORM_HEADERS, ...auth },
+        withCredentials: true,
         ...(opts?.timeoutMs != null ? { timeout: opts.timeoutMs } : {}),
       },
     );
@@ -280,12 +281,18 @@ export async function changmenPmHttpRequest(
     const upstream = json.info;
     if (upstream.status >= 400) {
       const snippet = upstream.text?.slice(0, 160) || `HTTP ${upstream.status}`;
-      throw new Error(snippet);
+      let data: unknown;
+      try { data = JSON.parse(upstream.text); }
+      catch { data = upstream.text; }
+      throw Object.assign(new Error(snippet), {
+        response: { status: upstream.status, headers: upstream.headers, data },
+      });
     }
     return upstream;
   }
   catch (e) {
     const hint = e instanceof Error ? e.message : String(e);
-    throw new Error(`PM 代理不可用：${hint}`);
+    const response = e && typeof e === "object" && "response" in e ? e.response : undefined;
+    throw Object.assign(new Error(`PM 代理不可用：${hint}`), response ? { response } : {});
   }
 }

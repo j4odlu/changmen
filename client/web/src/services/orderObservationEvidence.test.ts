@@ -2,6 +2,30 @@ import { describe, expect, it } from "vitest";
 import { observationFailureEvidence } from "./orderObservationEvidence";
 
 describe("旁路失败证据", () => {
+  it("retains an unrecognized human RAY rejection description instead of replacing it with a generic error", () => {
+    const evidence = observationFailureEvidence("投注操作失败，请稍后重试", { code: 500, desc: "投注操作失败，请稍后重试" }, undefined, "RAY");
+    expect(evidence.safeSummary).toBe("RAY 场馆返回：投注操作失败，请稍后重试");
+    expect(evidence.responseCode).toBe("500");
+    expect(evidence.reasonCode).toBe("venue_response_failed");
+    expect(evidence.httpStatus).toBeUndefined();
+  });
+  it("explicitly reports when RAY supplies no error description", () => {
+    expect(observationFailureEvidence("", { code: 500 }, undefined, "RAY").safeSummary)
+      .toBe("RAY 返回业务码 500，未提供错误说明");
+  });
+  it("classifies the actual RAY description while retaining its detail", () => {
+    const evidence = observationFailureEvidence("RAY 盘口请求失败", { code: 500, desc: "余额不足，请充值后重试" }, undefined, "RAY");
+    expect(evidence.errorCategory).toBe("balance");
+    expect(evidence.safeSummary).toBe("RAY 场馆返回：余额不足，请充值后重试");
+  });
+  it.each([
+    "token=SECRET", "账号：nipaztec", "密码 SECRET", "https://venue.example/auth", "<html>SECRET</html>",
+    "错误 ABCDEFGHIJKLMNOPQRSTUVWXYZ", "错误 123456789012345", { token: "SECRET" },
+  ])("does not copy sensitive or structured RAY descriptions: %s", (desc) => {
+    const evidence = observationFailureEvidence("", { code: 500, desc }, undefined, "RAY");
+    expect(evidence.safeSummary).toBe("RAY 返回业务码 500，错误说明无法安全展示");
+    expect(JSON.stringify(evidence)).not.toContain("SECRET");
+  });
   it("explains the price limit using safe numeric values, without copying diagnostic credentials", () => {
     const evidence = observationFailureEvidence("Polymarket 盘口价高于检测价，整单取消\n- 最佳卖价 0.46（赔率 2.1739）高于检测价 0.4444（赔率 2.25）\n- tokenId：123456789\n- privateKey=SECRET signature=PRIVATE");
     expect(evidence.reasonCode).toBe("price_above_detection");

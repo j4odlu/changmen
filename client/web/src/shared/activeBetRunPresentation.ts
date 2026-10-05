@@ -90,6 +90,15 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
     label = "预检处理中"; tone = "pending"; basis = "等待盘口和下注条件校验";
   }
   const amountEvent = [...attempt].reverse().find(event => event.amount !== undefined);
+  // [changmen 扩展] 失败原因直接展示；历史通用错误只说明记录缺失，不推断场馆故障。
+  const failure = submission && ["adapter_failed", "unknown", "not_submitted"].includes(submission.outcome || "")
+    ? submission : !submission && check?.outcome === "blocked" ? check : undefined;
+  const failureSummary = failure?.provider === "RAY" && failure.responseCode
+    && failure.safeSummary === "执行失败，未记录可识别的具体原因"
+    ? "该次记录未保留场馆错误说明" : failure?.safeSummary;
+  const failureReason = failureSummary
+    ? `${failureSummary}${failure?.responseCode && !failureSummary.includes(`业务码 ${failure.responseCode}`) ? `（场馆业务码 ${failure.responseCode}）` : ""}`
+    : undefined;
   const money = amountEvent?.amount ?? undefined;
   const numberLabel = (value: number) => value.toLocaleString("zh-CN", { maximumFractionDigits: 4 });
   return {
@@ -97,6 +106,7 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
     label,
     tone,
     basis,
+    failureReason,
     attemptId: lastAttempt,
     orderId: [...attempt].reverse().find(event => event.orderId)?.orderId,
     accountId: [...attempt].reverse().find(event => event.accountId)?.accountId,

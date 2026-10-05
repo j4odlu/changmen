@@ -367,7 +367,7 @@ export async function checkBetting(
       const blocked = !checked.data || Boolean(checked.checkError);
       observeOption(checked, account, "precheck_result", { outcome: blocked ? "blocked" : "prepared", durationMs: Date.now() - observationStartedAt,
         reasonCode: blocked ? "precheck_error" : undefined,
-        ...(blocked ? observationFailureEvidence(checked.checkError || "无盘口数据", checked.response) : {}) });
+        ...(blocked ? observationFailureEvidence(checked.checkError || "无盘口数据", checked.response, undefined, account.provider) : {}) });
     }
     catch { /* 观察快照读取失败不改变 adapter 返回值 */ }
     observedPrecheckResult = true;
@@ -512,7 +512,7 @@ export async function placeBet(
         outcome: observationThrew && observationSubmitted ? "unknown" : result.success ? "accepted" : observationSubmitted ? "adapter_failed" : "not_submitted",
         source: "adapter_result",
         durationMs: observationDuration,
-        ...(!result.success ? observationFailureEvidence(result.message, result.response, observationError) : {}),
+        ...(!result.success ? observationFailureEvidence(result.message, result.response, observationError, result.provider) : {}),
       });
     }
     catch { /* 旁路写入或快照错误不能改变已取得的下注结果 */ }

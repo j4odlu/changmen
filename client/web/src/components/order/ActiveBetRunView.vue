@@ -546,6 +546,9 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 </header>
                 <span class="active-bet-run__leg-role" :class="{ 'is-precheck': leg.precheckOnly }">{{ activeBetLegRole(leg) }}</span>
                 <strong class="active-bet-run__leg-status" :data-tone="legSummary(leg).tone" :title="legSummary(leg).basis">{{ legSummary(leg).label }}</strong>
+                <p v-if="legSummary(leg).failureReason" class="active-bet-run__leg-failure">
+                  失败原因 · {{ legSummary(leg).failureReason }}
+                </p>
                 <p class="active-bet-run__leg-action" :title="latestLegAction(leg)">
                   <span>编排 · {{ legPlacementLabel(leg) }}</span>
                   {{ latestLegAction(leg) }}

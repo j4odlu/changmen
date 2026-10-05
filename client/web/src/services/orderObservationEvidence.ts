@@ -5,6 +5,21 @@ const DIAGNOSTIC_NUMBER = "(\\d{1,8}(?:\\.\\d{1,8})?)(?![\\d.])";
 function diagnosticNumber(text: string, prefix: string, suffix = "") {
   return new RegExp(`${prefix}${DIAGNOSTIC_NUMBER}${suffix}`).exec(text)?.[1];
 }
+/** [changmen 扩展] RAY desc 是场馆错误说明，仅允许简短人类文本进入观察记录。 */
+function rayFailureDescription(response: unknown): { text?: string; supplied: boolean } {
+  if (!response || typeof response !== "object") return { supplied: false };
+  const desc = (response as Record<string, unknown>).desc;
+  if (desc == null || desc === "") return { supplied: false };
+  if (typeof desc !== "string") return { supplied: true };
+  const text = desc.trim();
+  if (!text) return { supplied: false };
+  // 不接收 URL、HTML、JSON、凭证字段、邮箱、长 ID 或整段请求/响应。
+  if (text.length > 120
+    || !/^[\p{L}\p{N}\s.,，。:：;；!！?？()（）\-+%％'"、]+$/u.test(text)
+    || /token|secret|signature|authorization|password|private.?key|api.?key|cookie|gateway|凭证|私钥|密码|签名|钱包地址|账号\s*[:：]|账户\s*[:：]|https?|[A-Za-z0-9]{24,}|\d{9,}/i.test(text))
+    return { supplied: true };
+  return { supplied: true, text: text.replace(/\s+/g, " ") };
+}
 /** [changmen 扩展] 只保留已知原因和白名单数值，不复制错误全文、资产 ID 或凭证。 */
 function specificFailure(text: string, headline: string): FailureReason | undefined {
   if (/盘口无卖单|无 asks 卖单|no asks|no sell orders/i.test(headline)
@@ -45,12 +60,14 @@ function specificFailure(text: string, headline: string): FailureReason | undefi
 }
 
 /** [changmen 扩展] 明确原因优先；未知错误仍只分类，防止敏感信息进入事实记录。 */
-export function observationFailureEvidence(message: unknown, response?: unknown, error?: unknown): Partial<OrderObservationEvent> {
+export function observationFailureEvidence(message: unknown, response?: unknown, error?: unknown, provider?: string): Partial<OrderObservationEvent> {
   try {
     const text = typeof message === "string" ? message : "";
+    const rayDescription = provider === "RAY" ? rayFailureDescription(response) : undefined;
     // 诊断段可能包含“赔率、tokenId”等字段，不能反过来改变主错误的分类。
     const headline = text.split(/\r?\n/).find(line => line.trim()) || "";
-    const specific = specificFailure(text, headline);
+    const classificationHeadline = rayDescription?.text || headline;
+    const specific = specificFailure(rayDescription?.text || text, classificationHeadline);
     const cases: Array<[RegExp, string, string]> = [
       [/timeout|timed out|超时/i, "timeout", "请求或确认超时"],
       [/network|failed to fetch|ECONN|网络|连接失败/i, "network", "网络或连接异常"],
@@ -62,7 +79,7 @@ export function observationFailureEvidence(message: unknown, response?: unknown,
       [/suspend|closed|盘口.*关闭|封盘|停盘/i, "market_closed", "盘口关闭或暂停"],
       [/odds|price|quote|赔率|报价/i, "quote", "报价或赔率校验异常"],
     ];
-    const matched = cases.find(([pattern]) => pattern.test(headline));
+    const matched = cases.find(([pattern]) => pattern.test(classificationHeadline));
     const fields: Partial<OrderObservationEvent> = { errorCategory: specific?.[0] || matched?.[1] || "unclassified",
       safeSummary: specific?.[2] || matched?.[2] || "执行失败，未记录可识别的具体原因",
       ...(specific ? { reasonCode: specific[1] } : {}) };
@@ -70,6 +87,12 @@ export function observationFailureEvidence(message: unknown, response?: unknown,
       const code = (response as Record<string, unknown>).code;
       if ((typeof code === "number" && Number.isSafeInteger(code)) || (typeof code === "string" && /^(?:-?\d{1,10}|[A-Z][A-Z0-9_]{0,47})$/.test(code)))
         fields.responseCode = String(code);
+    }
+    if (rayDescription && fields.responseCode && fields.responseCode !== "200") {
+      fields.safeSummary = rayDescription.text
+        ? `RAY 场馆返回：${rayDescription.text}`
+        : `RAY 返回业务码 ${fields.responseCode}，${rayDescription.supplied ? "错误说明无法安全展示" : "未提供错误说明"}`;
+      fields.reasonCode ??= "venue_response_failed";
     }
     if (error && typeof error === "object" && (error as { isAxiosError?: boolean }).isAxiosError) {
       const status = (error as { response?: { status?: number } }).response?.status;

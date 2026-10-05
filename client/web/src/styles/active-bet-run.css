@@ -73,6 +73,7 @@
 .active-bet-run__leg-status[data-tone="warning"] { color: #fbbf24; }
 .active-bet-run__leg-status[data-tone="danger"] { color: #fb7185; }
 .active-bet-run__leg-basis { color: #7f91aa; font-size: 10px; margin: 3px 0 8px; min-height: 30px; overflow-wrap: anywhere; }
+.active-bet-run__leg-failure { color: #fda4af; font-size: 12px; line-height: 1.5; margin: 6px 0; overflow-wrap: anywhere; }
 .active-bet-run__leg-stats { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 7px; margin: 0; font-size: 10px; font-variant-numeric: tabular-nums; }
 .active-bet-run__leg-stats dt { color: #65768e; }
 .active-bet-run__leg-stats dd { margin: 0; color: #b8c6d9; text-align: right; overflow-wrap: anywhere; }

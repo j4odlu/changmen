@@ -68,6 +68,20 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(mocks.betting).not.toHaveBeenCalled();
     expect(mocks.check).not.toHaveBeenCalled();
   });
+  it("carries the actual RAY submission failure description into the progress record", async () => {
+    const option = new BetOption("RAY", "m", "b", "i", 100, "Home", 1.76);
+    option.data = { quote: "prepared" };
+    const response = { code: 500, desc: "投注操作失败，请稍后重试" };
+    const expected = new BetResult("RAY", false, response.desc, option.data, response);
+    mocks.betting.mockResolvedValue(expected);
+    const result = await placeBet(store, { ...account, provider: "RAY" } as PlatformAccount, option, 10, { linkId: 123, requirePreparedQuote: true });
+    expect(result).toBe(expected);
+    const submission = useOrderObservationStore().forLink("u1", 123).find(row => row.kind === "submission_result");
+    expect(submission?.outcome).toBe("adapter_failed");
+    expect(submission?.responseCode).toBe("500");
+    expect(submission?.safeSummary).toBe("RAY 场馆返回：投注操作失败，请稍后重试");
+    expect(mocks.betting).toHaveBeenCalledTimes(1);
+  });
 
   it("still submits a prepared option when observation metadata cannot be attached", async () => {
     const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);

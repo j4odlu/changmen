@@ -6,6 +6,23 @@ function event(kind: OrderObservationEvent["kind"], patch: Partial<OrderObservat
   return { version: 1, eventId: "event-123", ownerUserId: "u1", sequence: 1, occurredAt: 1000, linkId: 123, attemptId: "attempt-1", kind, ...patch };
 }
 describe("实时进度只读摘要", () => {
+  it("shows the venue failure reason and business code without claiming confirmed rejection", () => {
+    const summary = observationLegSummary([event("submission_result", { provider: "RAY", outcome: "adapter_failed", responseCode: "500", safeSummary: "RAY 场馆返回：投注操作失败，请稍后重试" })], "failed");
+    expect(summary.label).toBe("提交返回失败");
+    expect(summary.failureReason).toBe("RAY 场馆返回：投注操作失败，请稍后重试（场馆业务码 500）");
+    expect(summary.basis).toContain("尚不证明未成交");
+  });
+  it("explains the missing description on historical generic RAY failures", () => {
+    const summary = observationLegSummary([event("submission_result", { provider: "RAY", outcome: "adapter_failed", responseCode: "500", safeSummary: "执行失败，未记录可识别的具体原因" })], "failed");
+    expect(summary.failureReason).toBe("该次记录未保留场馆错误说明（场馆业务码 500）");
+  });
+  it("does not carry a previous failure into an accepted retry", () => {
+    const summary = observationLegSummary([
+      event("submission_result", { provider: "RAY", outcome: "adapter_failed", safeSummary: "旧错误" }),
+      event("submission_result", { attemptId: "attempt-2", outcome: "accepted" }),
+    ], "confirmed");
+    expect(summary.failureReason).toBeUndefined();
+  });
   it("identifies execution mode without guessing from remaining legs or settlement status", () => {
     expect(activeBetRunMode({ mode: "arb", linkId: -1_000 })).toBe("arb");
     expect(activeBetRunModeLabel({ mode: "arb" })).toBe("双边套利");

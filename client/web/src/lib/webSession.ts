@@ -3,11 +3,36 @@ import { browserAuthState, clearAuthSession, getAuthSessionVersion, getCookieSes
 import { getApiBase } from "@/config/apiBase";
 import { resolveChangmenWsBase } from "@changmen/venue-adapter/shared";
 import { SessionRestoreConfigurationError } from "@/lib/sessionRestoreError";
+import { withAuthLock } from "@/lib/authLock";
 
 let pending: { version: string; task: Promise<boolean> } | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let watching = false;
 let failures = 0;
+let renewedVersion = "";
+let renewedAt = 0;
+
+/** Cookie writes share the login/logout lock; read-only probes never write Cookies. */
+export async function renewPersistentCookieSession() {
+  const version = getAuthSessionVersion();
+  if (!getCookieSessionInfo()?.persistent || renewedVersion === version && Date.now() - renewedAt < 24 * 60 * 60 * 1000)
+    return;
+  await withAuthLock(async () => {
+    const info = getCookieSessionInfo();
+    if (!isAuthSessionCurrent(version) || !info?.persistent || isAuthTransitionPending()) return;
+    if (renewedVersion === version && Date.now() - renewedAt < 24 * 60 * 60 * 1000) return;
+    const response = await fetch(`${getApiBase()}/auth/session/renew`, {
+      method: "POST", credentials: "include", signal: AbortSignal.timeout(10_000),
+      headers: { "Content-Type": "application/json", "X-Changmen-Auth": "cookie", "X-CSRF-Token": info.csrfToken },
+      body: JSON.stringify({ expectedBrowserSessionId: info.browserSessionId, expectedLoginEpoch: info.loginEpoch }),
+    });
+    const result = await response.json();
+    if (!isAuthSessionCurrent(version)) return;
+    if (!response.ok || result.ok !== true) throw new Error("登录凭证续期暂时不可用");
+    renewedVersion = version;
+    renewedAt = Date.now();
+  });
+}
 
 async function runProbe(force: boolean) {
   if (!force && !isCookieAuthMode())
@@ -87,6 +112,8 @@ async function onWake() {
   const generation = watchGeneration;
   try {
     await probeCookieSession();
+    if (generation !== watchGeneration) return;
+    await renewPersistentCookieSession();
     if (generation !== watchGeneration) return;
     failures = 0;
   }

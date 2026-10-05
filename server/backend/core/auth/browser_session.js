@@ -1,3 +1,4 @@
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
 const PROD_COOKIE_NAME = "__Host-cm_session";
 const DEV_COOKIE_NAME = "cm_session";
 
@@ -35,7 +36,8 @@ function cookieSecurityAttributes() {
 }
 
 export function setBrowserSessionCookie(res, token, expiresAt) {
-  const maxAge = Math.max(0, Math.floor((Number(expiresAt) - Date.now()) / 1000));
+  // [changmen 扩展] 保存期限为 30 天；使用期间通过串行 POST 续期。
+  const maxAge = cookieOnlyAuth() ? 30 * 24 * 60 * 60 : Math.max(0, Math.floor((Number(expiresAt) - Date.now()) / 1000));
   res.setHeader(
     "Set-Cookie",
     `${browserSessionCookieName()}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=Strict${cookieSecurityAttributes()}`,

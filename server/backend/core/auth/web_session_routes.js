@@ -2,7 +2,8 @@ import * as db from "@changmen/db";
 import { loadProfileById } from "../db/store.js";
 import { jsonResponse, readJsonBody } from "../http/body.js";
 import { readClientCertStatus, clientCertCnFromSubject, clientCertificateAudit } from "../shared/client_cert_gate.js";
-import { browserSessionEnabled, readBrowserSessionCookie } from "./browser_session.js";
+import { browserSessionEnabled, readBrowserSessionCookie, setBrowserSessionCookie } from "./browser_session.js";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
 import { browserAuthAudit, sessionCsrf, validAuthOrigin, validSessionCsrf, webCookieEnabled } from "./web_session_security.js";
 import { tryPmWalletIdentity } from "./pm_wallet_identity.js";
 
@@ -32,7 +33,7 @@ export async function tryWebSessionRoutes(req, res, { login } = {}) {
     jsonResponse(res, result.success === 1 ? 200 : ["TEMPORARY_UNAVAILABLE", "LOGIN_RESULT_UNCERTAIN"].includes(result.code) ? 503 : 401, result);
     return true;
   }
-  if (!["/auth/session", "/auth/logout"].includes(path)) {
+  if (!["/auth/session", "/auth/session/renew", "/auth/logout"].includes(path)) {
     fail(404, "NOT_FOUND");
     return true;
   }
@@ -53,6 +54,7 @@ export async function tryWebSessionRoutes(req, res, { login } = {}) {
       browserSessionId: session.id, loginEpoch: session.jwtSessionId,
       absoluteExpiresAt: session.absoluteExpiresAt, idleExpiresAt: session.idleExpiresAt,
       cookieEnabled: webCookieEnabled(), csrfToken: sessionCsrf(session),
+      persistent: cookieOnlyAuth(),
     });
     return true;
   }
@@ -60,6 +62,14 @@ export async function tryWebSessionRoutes(req, res, { login } = {}) {
   let body;
   try { body = await readJsonBody(req); }
   catch { fail(400, "INVALID_BODY"); return true; }
+  if (path === "/auth/session/renew") {
+    if (body.expectedBrowserSessionId !== session.id || body.expectedLoginEpoch !== session.jwtSessionId) {
+      fail(409, "SESSION_CONFLICT"); return true;
+    }
+    setBrowserSessionCookie(res, cookie, session.absoluteExpiresAt);
+    jsonResponse(res, 200, { ok: true });
+    return true;
+  }
   if (path === "/auth/logout") {
     if (body.expectedBrowserSessionId !== session.id || body.expectedLoginEpoch !== session.jwtSessionId) {
       fail(409, "SESSION_CONFLICT"); return true;

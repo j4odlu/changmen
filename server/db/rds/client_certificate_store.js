@@ -1,4 +1,5 @@
 import { getPgPool } from './common.js';
+import { cookieOnlyAuth } from '@changmen/storage/auth_mode.js';
 export const certificateRegistryEnabled = () => process.env.CLIENT_CERT_REGISTRY_ENABLED === '1';
 const pool = () => { const p = getPgPool(); if (!p) throw new Error('Certificate database unavailable'); return p; };
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
@@ -11,9 +12,10 @@ export async function listClientCertificates() {
     (SELECT max(s.last_seen_at) FROM auth_sessions s WHERE s.user_id=c.user_id AND
       (s.cert_fingerprint=c.fingerprint OR (s.cert_fingerprint IS NULL AND lower(s.cert_cn)=lower(c.subject_cn)))) AS last_browser_activity,
     (SELECT count(*)::int FROM auth_sessions s WHERE s.user_id=c.user_id AND s.revoked_at IS NULL
-      AND s.absolute_expires_at>$1 AND s.idle_expires_at>$1 AND s.jwt_session_id=u.metadata->>'active_session_id'
+      AND ($2::boolean OR (s.absolute_expires_at>$1 AND s.idle_expires_at>$1))
+      AND s.jwt_session_id=u.metadata->>'active_session_id'
       AND (s.cert_fingerprint=c.fingerprint OR (s.cert_fingerprint IS NULL AND lower(s.cert_cn)=lower(c.subject_cn)))) AS active_sessions
-    FROM client_certificates c JOIN users u ON u.id=c.user_id ORDER BY c.created_at DESC,c.fingerprint`, [Date.now()])).rows;
+    FROM client_certificates c JOIN users u ON u.id=c.user_id ORDER BY c.created_at DESC,c.fingerprint`, [Date.now(), cookieOnlyAuth()])).rows;
   const users = (await pool().query('SELECT id,user_name FROM users ORDER BY user_name')).rows;
   return { certificates, users };
 }

@@ -82,4 +82,23 @@ describe("real HTTP Cookie protocol", () => {
     expect(res.status).toBe(503);
     expect(res.headers.get("set-cookie")).toBeNull();
   });
+  it("renews only the explicitly submitted persistent Cookie identity", async () => {
+    process.env.AUTH_MODE = "cookie";
+    const res = await request("/auth/session/renew", { expectedBrowserSessionId: "browser", expectedLoginEpoch: "epoch" });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("set-cookie")).toContain("Max-Age=2592000");
+    expect(await res.json()).toEqual({ ok: true });
+    expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+  it("never overwrites a new Cookie with an old renewal expectation", async () => {
+    const res = await request("/auth/session/renew", { expectedBrowserSessionId: "old", expectedLoginEpoch: "old" });
+    expect(res.status).toBe(409);
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+  it("requires CSRF for Cookie renewal and leaves read-only probes free of Cookie writes", async () => {
+    const res = await request("/auth/session/renew", { expectedBrowserSessionId: "browser", expectedLoginEpoch: "epoch" }, "");
+    expect(res.status).toBe(403);
+    expect(res.headers.get("set-cookie")).toBeNull();
+    expect((await request("/auth/session")).headers.get("set-cookie")).toBeNull();
+  });
 });

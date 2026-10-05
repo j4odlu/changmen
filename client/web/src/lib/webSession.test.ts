@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { advanceAuthSessionVersion, beginAuthTransition, browserAuthState, clearAuthSession, getCookieSessionInfo, hasAuthSession, setCookieAuthMode, setCookieSessionInfo } from "@/api/client";
-import { probeCookieSession, startWebSessionWatch, stopWebSessionWatch } from "./webSession";
+import { probeCookieSession, renewPersistentCookieSession, startWebSessionWatch, stopWebSessionWatch } from "./webSession";
+const locks = vi.hoisted(() => ({ run: vi.fn() }));
+vi.mock("@/lib/authLock", () => ({ withAuthLock: locks.run }));
 vi.mock("@/lib/jwtRefresh", () => ({ stopJwtAutoRefresh: vi.fn(), startJwtAutoRefresh: vi.fn(), refreshJwtSession: async () => true }));
 vi.mock("@changmen/venue-adapter/shared", async (importOriginal) => ({
   ...await importOriginal<typeof import("@changmen/venue-adapter/shared")>(),
@@ -11,11 +13,40 @@ const fetchMock = vi.fn();
 function response(data: unknown, status = 200) { return { status, ok: status < 400, json: async () => data }; }
 beforeEach(() => {
   clearAuthSession(); setCookieAuthMode(true); fetchMock.mockReset();
+  locks.run.mockReset().mockImplementation((fn: () => unknown) => fn());
   vi.stubGlobal("fetch", fetchMock);
   vi.stubGlobal("window", { location: { origin: "https://changmen.fun", href: "/" }, addEventListener: vi.fn(), removeEventListener: vi.fn() });
 });
 afterEach(() => { stopWebSessionWatch(); vi.useRealTimers(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 describe("browser session recovery", () => {
+  it("renews a persistent Cookie once daily under the login/logout lock", async () => {
+    vi.useFakeTimers();
+    setCookieSessionInfo({ ...info, persistent: true });
+    fetchMock.mockResolvedValue(response({ ok: true }));
+    await renewPersistentCookieSession();
+    expect(locks.run).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0][0]).toContain("/auth/session/renew");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ expectedBrowserSessionId: "bs", expectedLoginEpoch: "epoch" });
+    await renewPersistentCookieSession();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000);
+    await renewPersistentCookieSession();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+  it("cancels a queued Cookie write if another login completes before the lock is acquired", async () => {
+    setCookieSessionInfo({ ...info, persistent: true });
+    locks.run.mockImplementation(async (fn: () => unknown) => { advanceAuthSessionVersion(); return fn(); });
+    await renewPersistentCookieSession();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it("retries failed Cookie renewal without clearing the identity", async () => {
+    setCookieSessionInfo({ ...info, persistent: true });
+    fetchMock.mockResolvedValueOnce(response({}, 503)).mockResolvedValueOnce(response({ ok: true }));
+    await expect(renewPersistentCookieSession()).rejects.toThrow();
+    expect(getCookieSessionInfo()?.loginEpoch).toBe("epoch");
+    await renewPersistentCookieSession();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
   it("clears a stale Cookie mode after 401 on the first probe after reload", async () => {
     expect(getCookieSessionInfo()).toBeNull();
     expect(hasAuthSession()).toBe(true);

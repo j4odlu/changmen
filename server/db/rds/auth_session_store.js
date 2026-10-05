@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
 import { getPgPool } from "./common.js";
 import { certificateRegistryEnabled, authorizeClientCertificate } from './client_certificate_store.js';
 
@@ -7,6 +8,8 @@ const REFRESH_TOKEN_PREFIX = "rt1";
 const BROWSER_IDLE_MS = 8 * 60 * 60 * 1000;
 const BROWSER_ABSOLUTE_MS = 7 * 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_MS = 30 * 24 * 60 * 60 * 1000;
+// [changmen 扩展] Cookie 登录仅由显式退出/撤销结束；保留 bigint 列兼容旧部署。
+const PERSISTENT_EXPIRES_AT = 253402300799000;
 
 function clean(value, maxLength = 512) {
   return String(value || "").trim().slice(0, maxLength);
@@ -90,14 +93,14 @@ export async function createBrowserSession(userId, jwtSessionId, context = {}, t
         clean(context.clientIp, 128),
         clean(context.userAgent, 512),
         createdAt,
-        createdAt + BROWSER_IDLE_MS,
-        createdAt + BROWSER_ABSOLUTE_MS,
+        cookieOnlyAuth() ? PERSISTENT_EXPIRES_AT : createdAt + BROWSER_IDLE_MS,
+        cookieOnlyAuth() ? PERSISTENT_EXPIRES_AT : createdAt + BROWSER_ABSOLUTE_MS,
         ...(certificateRegistryEnabled() ? [context.certFingerprint || null] : []),
       ],
     );
     if (!transaction)
       await client.query("COMMIT");
-    return { token: opaque.token, absoluteExpiresAt: createdAt + BROWSER_ABSOLUTE_MS };
+    return { token: opaque.token, absoluteExpiresAt: cookieOnlyAuth() ? PERSISTENT_EXPIRES_AT : createdAt + BROWSER_ABSOLUTE_MS };
   }
   catch (err) {
     if (transaction)
@@ -134,9 +137,9 @@ export async function getBrowserSession(value, context = {}) {
       return null;
     if (row.revoked_at)
       return { revoked: true, userId: String(row.user_id), reasonCode: row.revoke_reason || "SESSION_REVOKED" };
-    if (Number(row.absolute_expires_at) <= now)
+    if (!cookieOnlyAuth() && Number(row.absolute_expires_at) <= now)
       return { invalid: true, userId: String(row.user_id), reasonCode: "BROWSER_ABSOLUTE_EXPIRED" };
-    if (Number(row.idle_expires_at) <= now)
+    if (!cookieOnlyAuth() && Number(row.idle_expires_at) <= now)
       return { invalid: true, userId: String(row.user_id), reasonCode: "BROWSER_IDLE_EXPIRED" };
     const storedCertCn = clean(row.cert_cn, 160).toLowerCase();
     const requestCertCn = clean(context.certCn, 160).toLowerCase();
@@ -145,20 +148,25 @@ export async function getBrowserSession(value, context = {}) {
       return { invalid: true, userId: String(row.user_id), reasonCode: 'CERT_MISMATCH' };
     if (storedCertCn && storedCertCn !== requestCertCn)
       return { invalid: true, userId: String(row.user_id), reasonCode: "CERT_MISMATCH" };
-    const nextIdle = Math.min(now + BROWSER_IDLE_MS, Number(row.absolute_expires_at));
-    if (now - Number(row.last_seen_at || 0) >= 60_000) {
-      await pool.query(
+    const nextAbsolute = cookieOnlyAuth() ? PERSISTENT_EXPIRES_AT : Number(row.absolute_expires_at);
+    const nextIdle = cookieOnlyAuth() ? PERSISTENT_EXPIRES_AT : Math.min(now + BROWSER_IDLE_MS, nextAbsolute);
+    const touch = now - Number(row.last_seen_at || 0) >= 60_000 || cookieOnlyAuth() && Number(row.absolute_expires_at) !== PERSISTENT_EXPIRES_AT;
+    if (touch) {
+      const updated = await pool.query(
         `UPDATE auth_sessions SET last_seen_at = GREATEST(last_seen_at, $2),
-          idle_expires_at = GREATEST(idle_expires_at, $3) WHERE id = $1 AND revoked_at IS NULL`,
-        [parsed.id, now, nextIdle],
+          idle_expires_at = GREATEST(idle_expires_at, $3), absolute_expires_at = $4
+          WHERE id = $1 AND revoked_at IS NULL RETURNING id`,
+        [parsed.id, now, nextIdle, nextAbsolute],
       );
+      if (updated.rowCount === 0)
+        return { revoked: true, userId: String(row.user_id), reasonCode: "SESSION_REVOKED" };
     }
     return {
       id: String(row.id),
       userId: String(row.user_id),
       jwtSessionId: String(row.jwt_session_id),
-      absoluteExpiresAt: Number(row.absolute_expires_at),
-      idleExpiresAt: now - Number(row.last_seen_at || 0) >= 60_000 ? nextIdle : Number(row.idle_expires_at),
+      absoluteExpiresAt: nextAbsolute,
+      idleExpiresAt: touch ? nextIdle : Number(row.idle_expires_at),
     };
   }
   catch (err) {

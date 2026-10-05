@@ -54,4 +54,10 @@ describe("browser session cookie", () => {
     clearBrowserSessionCookie(res);
     expect(res.headers.get("Set-Cookie")).toContain("Max-Age=0");
   });
+  it("limits persistent Cookies to 30 days in Cookie-only mode", () => {
+    process.env.AUTH_MODE = "cookie";
+    const res = responseStub();
+    setBrowserSessionCookie(res, "secret.value", 1);
+    expect(res.headers.get("Set-Cookie")).toContain("Max-Age=2592000");
+  });
 });

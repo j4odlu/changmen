@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import crypto from "node:crypto";
 
 const mocks = vi.hoisted(() => {
@@ -33,11 +33,13 @@ afterAll(() => {
 });
 
 beforeEach(() => {
+  vi.stubEnv("AUTH_MODE", "dual");
   mocks.poolAvailable = true;
   mocks.poolQuery.mockReset();
   mocks.clientQuery.mockReset();
   mocks.release.mockReset();
 });
+afterEach(() => vi.unstubAllEnvs());
 
 describe("opaque refresh rotation", () => {
   it("reports database outages as temporary instead of invalidating sessions", async () => {
@@ -170,6 +172,23 @@ describe("browser session lifetime and concurrent tabs", () => {
       ...overrides,
     };
   }
+  it("keeps existing Cookie-only sessions after both old deadlines and upgrades their stored expiry", async () => {
+    vi.stubEnv("AUTH_MODE", "cookie");
+    mocks.poolQuery.mockResolvedValue({ rows: [row({ idle_expires_at: 1, absolute_expires_at: 1 })], rowCount: 1 });
+    expect(await getBrowserSession(cookie, { certCn: "gb14" })).toMatchObject({ userId: "u1", absoluteExpiresAt: 253402300799000 });
+    expect(mocks.poolQuery.mock.calls[1][1].slice(2)).toEqual([253402300799000, 253402300799000]);
+  });
+  it("does not revive an explicitly revoked persistent session", async () => {
+    vi.stubEnv("AUTH_MODE", "cookie");
+    mocks.poolQuery.mockResolvedValue({ rows: [row({ revoked_at: Date.now(), revoke_reason: "LOGOUT" })] });
+    expect(await getBrowserSession(cookie, { certCn: "gb14" })).toMatchObject({ revoked: true });
+    expect(mocks.poolQuery).toHaveBeenCalledTimes(1);
+  });
+  it("rejects a session revoked between lookup and activity update", async () => {
+    vi.stubEnv("AUTH_MODE", "cookie");
+    mocks.poolQuery.mockResolvedValueOnce({ rows: [row()] }).mockResolvedValueOnce({ rowCount: 0 });
+    expect(await getBrowserSession(cookie, { certCn: "gb14" })).toMatchObject({ revoked: true });
+  });
   it("allows concurrent football/esports restoration without revoking or rotating the cookie", async () => {
     mocks.poolQuery.mockResolvedValue({ rows: [row()], rowCount: 1 });
     const results = await Promise.all([getBrowserSession(cookie, { certCn: "GB14" }), getBrowserSession(cookie, { certCn: "gb14" })]);

@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import crypto from "node:crypto";
 
 const mocks = vi.hoisted(() => ({ query: vi.fn(), tx: vi.fn(), release: vi.fn() }));
 vi.mock("../../../db/rds/common.js", () => ({ getPgPool: () => ({ query: mocks.query, connect: async () => ({ query: mocks.tx, release: mocks.release }) }) }));
 const original = process.env.JWT_SECRET;
 process.env.JWT_SECRET = "login-transaction-test-secret-long-enough";
-const { authSignIn, authSignOut, authSignOutBrowserSession, authGetUserStatus, authRefreshToken, authBrowserSession } = await import("../../../db/rds/auth_store.js");
+const { authSignIn, authSignOut, authSignOutBrowserSession, authGetUserStatus, authRefreshToken, authBrowserSession, authResolveBrowserSession } = await import("../../../db/rds/auth_store.js");
 const { signJwt, JWT_SECRET } = await import("../../../db/rds/jwt.js");
 if (original === undefined) delete process.env.JWT_SECRET;
 else process.env.JWT_SECRET = original;
@@ -30,7 +31,31 @@ describe("atomic login and targeted logout", () => {
     expect(result.browserAccessToken).toBeUndefined();
     expect(result.refreshToken).toBeUndefined();
     expect(mocks.tx.mock.calls.some(([sql]) => sql.includes("INSERT INTO auth_refresh_tokens"))).toBe(false);
+    const revoke = mocks.tx.mock.calls.find(([sql]) => sql.includes("UPDATE auth_sessions"));
+    expect(revoke[0]).toContain("revoke_reason = 'NEW_LOGIN'");
+    expect(revoke[1][0]).toBe(user.id);
+    expect(result.browserSession.absoluteExpiresAt).toBe(253402300799000);
     expect(mocks.tx.mock.calls.at(-1)[0]).toBe("COMMIT");
+  });
+  it("an old Cookie logout cannot revoke a newer login", async () => {
+    vi.stubEnv("AUTH_MODE", "cookie");
+    mocks.tx.mockImplementation(async sql => sql.includes("UPDATE users") ? { rowCount: 0 } : result(sql));
+    expect(await authSignOutBrowserSession({ id: "old-browser", userId: user.id, jwtSessionId: "old-login" })).toEqual({ conflict: true });
+    expect(mocks.tx.mock.calls.some(([sql]) => sql.includes("UPDATE auth_sessions"))).toBe(false);
+  });
+  it("rejects an old persistent Cookie after another device logs in", async () => {
+    vi.stubEnv("AUTH_MODE", "cookie");
+    const secret = "s".repeat(43);
+    mocks.query.mockImplementation(async sql => {
+      if (sql.includes("FROM auth_sessions")) return { rows: [{
+        id: "8f13916f-262e-43f9-9e7b-b825920b8a12", user_id: user.id, jwt_session_id: "older-device",
+        secret_hash: crypto.createHash("sha256").update(secret).digest("hex"),
+        last_seen_at: Date.now(), idle_expires_at: 253402300799000, absolute_expires_at: 253402300799000,
+      }] };
+      return result(sql);
+    });
+    expect(await authResolveBrowserSession(`bs1.8f13916f-262e-43f9-9e7b-b825920b8a12.${secret}`)).toMatchObject({ revoked: true });
+    expect(mocks.query.mock.calls.some(([sql]) => sql.includes("UPDATE auth_sessions"))).toBe(true);
   });
   it("Cookie-only legacy login and logout cannot validate a JWT or touch the database", async () => {
     vi.stubEnv("AUTH_MODE", "cookie");

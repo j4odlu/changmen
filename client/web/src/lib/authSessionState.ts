@@ -6,6 +6,7 @@ export interface CookieSessionInfo {
   loginEpoch: string;
   cookieEnabled: boolean;
   csrfToken: string;
+  persistent?: boolean;
 }
 
 const cookieSession = shallowRef<CookieSessionInfo | null>(null);

@@ -22,9 +22,11 @@ import {
 import {
   cyclePmUserWsSourceModeAndReconnect,
   applyPmAutoTransportOnLogin,
+  cyclePmRoutingPreference,
   getPmMarketWsSourceMode,
   getPmRoutingPreference,
   getPmUserWsSourceMode,
+  markPmTransportManualOverride,
   onPmAutoTransportApplied,
   pmMarketWsSourceModeLabel,
   pmRoutingPreferenceLabel,
@@ -32,6 +34,7 @@ import {
   setPmMarketWsSourceModeAndReconnect,
   setPmRoutingPreference,
   setPmUserWsSourceMode,
+  sourceModeForPmRoutingPreference,
   type PmMarketWsSourceMode,
   type PmRoutingPreference,
   type PmUserWsSourceMode,
@@ -199,7 +202,7 @@ function pmOfficialTooltip(): string {
     lines.push(`检测错误：${detail.error}`);
   if (detail?.checkedAt)
     lines.push(`检测于：${formatAgo(detail.checkedAt)}`);
-  lines.push("点击查看 PM 连接设置与服务状态");
+  lines.push("点击打开官方状态页");
   return lines.join("\n");
 }
 
@@ -377,14 +380,14 @@ function venueWsTooltip(entry: VenueWsStatusEntry): string {
       lines.push(`最近 book：${formatAgo(entry.meta.lastMessageAt)}`);
     if (entry.meta?.lastError)
       lines.push(`错误：${entry.meta.lastError}`);
-    lines.push("点击查看连接设置");
+    lines.push("点击切换：自动 / 官方 / relay");
   }
   if (entry.id === "pm-sport-market") {
     lines.push("固定 CHANGMEN 体育 hub（:3459）");
   }
   if (entry.id === "pm-user") {
     lines.push(`当前选择：${pmUserWsSourceModeLabel(pmUserWsSourceMode.value)}`);
-    lines.push("点击查看连接设置");
+    lines.push("点击切换 CHANGMEN / 官方");
   }
   if (entry.id === "predictfun-market") {
     lines.push(`当前选择：${pfMarketWsSourceModeLabel(pfMarketWsSourceMode.value)}`);
@@ -445,8 +448,31 @@ function venueWsItemClass(entry: VenueWsStatusEntry): Record<string, boolean> {
 }
 
 function handleVenueWsClick(entry: VenueWsStatusEntry): void {
-  if (entry.id === "pm-market" || entry.id === "pm-user") {
-    pmSettingsVisible.value = true;
+  if (entry.id === "pm-market") {
+    pmRoutingPreference.value = cyclePmRoutingPreference();
+    const mode = sourceModeForPmRoutingPreference(pmRoutingPreference.value);
+    if (mode)
+      pmMarketWsSourceMode.value = setPmMarketWsSourceModeAndReconnect(mode, `user_${pmRoutingPreference.value}`);
+    else
+      void applyPmAutoTransportOnLogin().then(() => {
+        pmMarketWsSourceMode.value = getPmMarketWsSourceMode();
+        pmRoutingPreference.value = getPmRoutingPreference();
+      });
+    ElMessage({
+      message: `PM-M 已切换到${pmRoutingPreferenceLabel(pmRoutingPreference.value)}`,
+      type: "success",
+      plain: true,
+    });
+    return;
+  }
+  if (entry.id === "pm-user") {
+    markPmTransportManualOverride();
+    pmUserWsSourceMode.value = cyclePmUserWsSourceModeAndReconnect();
+    ElMessage({
+      message: `PM-U WS 已切换到${pmUserWsSourceModeLabel(pmUserWsSourceMode.value)}，正在重连`,
+      type: "success",
+      plain: true,
+    });
     return;
   }
   if (entry.id === "predictfun-market") {
@@ -489,6 +515,18 @@ function handleStatusClick(status: DirectRealtimeStatus): void {
       : 'PM 官网维护检测；直连推送状态 PB IA OB RAY HUB；第二行 PM PF DEX LM'"
   >
     <div class="direct-realtime-row direct-realtime-row--pm-official">
+      <span
+        class="direct-realtime-item direct-realtime-item--clickable"
+        :title="pmOfficialTooltip()"
+        role="button"
+        tabindex="0"
+        @click="openPmStatusPage"
+        @keydown.enter.prevent="openPmStatusPage"
+        @keydown.space.prevent="openPmStatusPage"
+      >
+        <span class="direct-realtime-dot" :class="pmOfficialDotClass" />
+        {{ pmOfficialText }}
+      </span>
       <el-popover v-model:visible="pmSettingsVisible" placement="bottom-end" :width="320" trigger="click">
         <div class="pm-connection-panel">
           <strong>PM 连接设置</strong>
@@ -501,20 +539,7 @@ function handleStatusClick(status: DirectRealtimeStatus): void {
           <p>控制行情和查询；下注、撤单仍走 VPS。设置保存在当前浏览器。</p>
           <button type="button" @click="openPmStatusPage">查看 PM 官网服务状态</button>
         </div>
-        <template #reference>
-      <span
-        class="direct-realtime-item direct-realtime-item--clickable"
-        :title="pmOfficialTooltip()"
-        role="button"
-        tabindex="0"
-        aria-label="PM 状态与连接设置"
-        @keydown.enter.prevent="pmSettingsVisible = !pmSettingsVisible"
-        @keydown.space.prevent="pmSettingsVisible = !pmSettingsVisible"
-      >
-        <span class="direct-realtime-dot" :class="pmOfficialDotClass" />
-        {{ pmOfficialText }}
-      </span>
-        </template>
+        <template #reference><button type="button" class="pm-config-button" aria-label="PM 连接配置">⚙ PM 配置</button></template>
       </el-popover>
     </div>
     <div v-if="workspace === 'sports'" class="direct-realtime-row">
@@ -599,6 +624,17 @@ function handleStatusClick(status: DirectRealtimeStatus): void {
 </template>
 
 <style scoped>
+.pm-config-button {
+  padding: 4px 8px;
+  border: 1px solid #ffffff40;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pm-config-button:hover { background: #ffffff18; }
 .pm-connection-panel { display: grid; gap: 12px; }
 .pm-connection-panel p { margin: 0; font-size: 13px; line-height: 1.5; }
 .pm-connection-options { display: flex; gap: 8px; }

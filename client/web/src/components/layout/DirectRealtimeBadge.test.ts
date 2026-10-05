@@ -1,13 +1,13 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createRenderer, h, ref, ssrContextKey } from "vue";
-import { getPmRoutingPreference, setPmRoutingPreference } from "@changmen/venue-adapter/polymarket";
+import { getPmRoutingPreference, getPmUserWsSourceMode, setPmRoutingPreference } from "@changmen/venue-adapter/polymarket";
 import Badge from "./DirectRealtimeBadge.vue";
 
 vi.mock("@/services/pmMaintenanceRealtime", () => ({
   startPmMaintenanceFeed: vi.fn(),
   usePmMaintenance: () => ({ state: ref("operational"), detail: ref(null) }),
 }));
-vi.mock("element-plus", () => ({ ElMessage: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("element-plus", () => ({ ElMessage: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 vi.mock("element-plus/es/components/popover/style/css", () => ({}));
 vi.mock("element-plus/es/components/message/style/css", () => ({}));
 vi.mock("element-plus/es/components/base/style/css", () => ({}));
@@ -46,15 +46,12 @@ afterEach(() => {
   setPmRoutingPreference("auto");
 });
 
-it("clicking either PM status opens settings without cycling the user's preference", () => {
+it("preserves the existing PM market button's routing cycle without opening configuration", () => {
   setPmRoutingPreference("relay");
   const state = mount();
-  for (const id of ["pm-market", "pm-user"]) {
-    state.pmSettingsVisible = false;
-    state.handleVenueWsClick({ id });
-    expect(state.pmSettingsVisible).toBe(true);
-    expect(getPmRoutingPreference()).toBe("relay");
-  }
+  state.handleVenueWsClick({ id: "pm-market" });
+  expect(state.pmSettingsVisible).toBe(false);
+  expect(getPmRoutingPreference()).toBe("auto");
 });
 
 it("explicit choices persist relay or automatic official-first routing", async () => {
@@ -66,4 +63,12 @@ it("explicit choices persist relay or automatic official-first routing", async (
   expect(getPmRoutingPreference()).toBe("auto");
   expect(state.pmMarketWsSourceMode).toBe("official");
   expect(state.pmSettingsBusy).toBe(false);
+});
+
+it("preserves the PM user WS toggle without opening configuration", () => {
+  const state = mount();
+  const before = getPmUserWsSourceMode();
+  state.handleVenueWsClick({ id: "pm-user" });
+  expect(getPmUserWsSourceMode()).toBe(before === "official" ? "changmen" : "official");
+  expect(state.pmSettingsVisible).toBe(false);
 });

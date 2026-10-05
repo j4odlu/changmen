@@ -24,6 +24,7 @@ import {
   setPmWalletPrepSdkForTests,
 } from "./pmWalletPrepSdk";
 import { preparePolymarketWalletUnified } from "./walletPrepUnified";
+import { preparePolymarketWallet } from "./relayer";
 
 afterEach(() => {
   setPmWalletPrepSdkForTests(null);
@@ -34,13 +35,29 @@ afterEach(() => {
 });
 
 describe("resolvePmWalletPrepSdk", () => {
-  test("defaults to legacy", () => {
-    expect(resolvePmWalletPrepSdk()).toBe("legacy");
+  test("defaults to unified", () => {
+    expect(resolvePmWalletPrepSdk()).toBe("unified");
   });
 
   test("test override selects unified", () => {
     setPmWalletPrepSdkForTests("unified");
     expect(resolvePmWalletPrepSdk()).toBe("unified");
+  });
+  test("retains an explicit legacy rollback", () => {
+    setPmWalletPrepSdkForTests("legacy");
+    expect(resolvePmWalletPrepSdk()).toBe("legacy");
+  });
+  test("the default entry prepares Deposit Wallet through the official unified SDK", async () => {
+    createSecureClient.mockResolvedValue({ account: { wallet: "deposit-wallet" }, setupTradingApprovals });
+    const result = await preparePolymarketWallet({
+      privateKey: `0x${"11".repeat(32)}`,
+      signUrl: "https://api.changmen.fun/api/polymarket/relayer/sign",
+      getAuthHeaders: async () => ({ "X-Changmen-Auth": "cookie", "X-CSRF-Token": "csrf" }),
+      signatureType: 3,
+    });
+    expect(result).toMatchObject({ ok: true, funder: "deposit-wallet" });
+    expect(createSecureClient).toHaveBeenCalledOnce();
+    expect(setupTradingApprovals).toHaveBeenCalledOnce();
   });
 });
 

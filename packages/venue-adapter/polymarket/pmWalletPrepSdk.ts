@@ -1,8 +1,8 @@
 /**
  * Polymarket 钱包准备（Relayer / Deposit Wallet）SDK 选型。
  *
- * - legacy（默认）：@polymarket/builder-relayer-client + builder-signing-sdk
- * - unified：预留 @polymarket/client（createSecureClient / remoteBuilderSigning）
+ * - unified（默认）：@polymarket/client（createSecureClient / remoteBuilderSigning）
+ * - legacy：显式回滚使用 @polymarket/builder-relayer-client + builder-signing-sdk
  *
  * 下单热路径（bet.ts / pmTransport）不走此开关。
  * 切换：localStorage PM_WALLET_PREP_SDK 或 VITE_PM_WALLET_PREP_SDK
@@ -23,7 +23,7 @@ function normalizeSdk(raw: string | undefined | null): PmWalletPrepSdk | null {
   return null;
 }
 
-/** 当前钱包准备 SDK；默认 legacy */
+/** [changmen 扩展] 用户账号使用 Deposit Wallet，默认官方 unified SDK；legacy 仅显式回滚。 */
 export function resolvePmWalletPrepSdk(): PmWalletPrepSdk {
   if (testOverride)
     return testOverride;
@@ -37,7 +37,7 @@ export function resolvePmWalletPrepSdk(): PmWalletPrepSdk {
     : null;
   if (env)
     return env;
-  return "legacy";
+  return "unified";
 }
 
 export function setPmWalletPrepSdkForTests(sdk: PmWalletPrepSdk | null): void {

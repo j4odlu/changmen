@@ -250,7 +250,7 @@ async function preparePolymarketWalletInner(
   if (!signUrl.startsWith("http://") && !signUrl.startsWith("https://"))
     return { ok: false, message: "Relayer 远程签名 URL 必须是绝对地址" };
 
-  // 备选：@polymarket/client；默认 legacy（builder-relayer-client）
+  // [changmen 扩展] Deposit Wallet 默认使用官方 @polymarket/client；旧路径只作显式回滚。
   if (resolvePmWalletPrepSdk() === "unified")
     return preparePolymarketWalletUnified(input);
 

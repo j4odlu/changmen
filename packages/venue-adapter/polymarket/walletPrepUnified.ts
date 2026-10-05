@@ -5,7 +5,7 @@
  * - 省略 wallet → Deposit Wallet（按需部署）
  * - setupTradingApprovals → 买卖所需 authorize
  *
- * 切换：PM_WALLET_PREP_SDK=unified（默认 legacy）
+ * 默认钱包准备入口；PM_WALLET_PREP_SDK=legacy 仅用于显式回滚。
  * 注意：createSecureClient 会走 CLOB beginAuthentication（校验/派生 apiCreds）；
  * 本机直连 CLOB 不稳时，请先生成凭证再准备，或保持 legacy。
  */

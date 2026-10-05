@@ -40,6 +40,9 @@ async function runRefresh(retryDelaysMs: readonly number[]): Promise<boolean> {
       if (!isAuthSessionCurrent(version))
         return false;
       if (result.success !== 1) {
+        if (["COOKIE_LOGIN_REQUIRED", "JWT_DISABLED"].includes(String(result.code || ""))) {
+          throw new SessionRestoreConfigurationError("登录方式已更新，请刷新页面恢复登录状态");
+        }
         if (["CSRF_INVALID", "ORIGIN_INVALID", "COOKIE_LOGIN_DISABLED"].includes(String(result.code || ""))) {
           throw new SessionRestoreConfigurationError(import.meta.env.DEV
             ? "登录服务配置不匹配，请检查开发地址、认证来源及 Cookie 登录配置后重试"

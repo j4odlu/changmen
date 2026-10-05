@@ -68,6 +68,14 @@ describe("session recovery with unchanged business request", () => {
     expect(window.location.href).toBe("/");
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
+  it.each(["COOKIE_LOGIN_REQUIRED", "JWT_DISABLED"])("preserves identity on transport migration %s", async (code) => {
+    mocks.post.mockResolvedValue(response(code));
+    await post("Client_GetMatchs");
+    expect(isSessionInvalidResponse(code, "未登录")).toBe(false);
+    expect(getToken()).toBe("old-access");
+    expect(window.location.href).toBe("/sports/football");
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
   it("ignores an obsolete failure after a new login", async () => {
     let finish!: (value: unknown) => void;
     mocks.post.mockImplementation(() => new Promise(resolve => { finish = resolve; }));

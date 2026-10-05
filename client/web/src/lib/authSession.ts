@@ -152,8 +152,7 @@ const SESSION_KICK_MSGS = new Set([
   "会话已失效，请重新登录",
 ]);
 const SESSION_INVALID_CODES = new Set([
-  "JWT_DISABLED",
-  "COOKIE_LOGIN_REQUIRED",
+  // [changmen 扩展] 认证协议迁移只说明页面需要更新，不能证明 Cookie 会话已失效。
   "AUTH_REQUIRED",
   "ACCESS_TOKEN_EXPIRED",
   "REFRESH_TOKEN_EXPIRED",

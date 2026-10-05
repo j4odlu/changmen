@@ -26,6 +26,8 @@ vi.mock("@/api/client", () => ({
     "AUTH_REQUIRED",
     "REFRESH_TOKEN_EXPIRED",
     "SESSION_REVOKED",
+    "COOKIE_LOGIN_REQUIRED",
+    "JWT_DISABLED",
   ].includes(String(code || "")) || [
     "请先登录",
     "未登录",
@@ -126,6 +128,12 @@ describe("refreshJwtSession", () => {
     await expect(refreshJwtSession([])).resolves.toBe(false);
 
     expect(mocks.clearAuthSession).toHaveBeenCalledTimes(1);
+  });
+  it.each(["COOKIE_LOGIN_REQUIRED", "JWT_DISABLED"])("requires a page update without ending the session on %s", async (code) => {
+    mocks.post.mockResolvedValue({ success: 0, code, msg: "未登录" });
+    await expect(refreshJwtSession([])).rejects.toBeInstanceOf(SessionRestoreConfigurationError);
+    expect(mocks.clearAuthSession).not.toHaveBeenCalled();
+    expect(mocks.post).toHaveBeenCalledTimes(1);
   });
 
   it("does not abort a pending login when old cookie refresh is revoked", async () => {

@@ -279,7 +279,7 @@ function dispatchHttp<T>(
     return pmHttpViaDirect<T>(method, url, data, options);
   if (mode === "extension")
     return pmHttpViaExtension<T>(method, url, data, options);
-  if (shouldDirectFirstL2Get(method, options))
+  if (shouldDirectFirstL2Get(method, options) || shouldDirectFirstPublicGet(method, url, options))
     return pmL2GetDirectFirst<T>(url, options);
   return pmHttpViaVps<T>(method, url, data, options);
 }
@@ -622,6 +622,25 @@ function shouldDirectFirstL2Get(
     && Boolean(options?.account && options?.l2Path);
 }
 
+function shouldDirectFirstPublicGet(
+  method: PmHttpMethod,
+  url: string,
+  options?: PmTransportHttpOptions,
+): boolean {
+  if (method !== "GET" || resolvePmHttpMode() !== "vps"
+    || getPmMarketWsSourceMode() !== "official" || options?.account || options?.l2Path) {
+    return false;
+  }
+  try {
+    const target = new URL(url);
+    return target.protocol === "https:"
+      && ["data-api.polymarket.com", "gamma-api.polymarket.com", "clob.polymarket.com"].includes(target.hostname);
+  }
+  catch {
+    return false;
+  }
+}
+
 async function pmL2GetDirectFirst<T>(
   url: string,
   options?: PmTransportHttpOptions,
@@ -632,7 +651,9 @@ async function pmL2GetDirectFirst<T>(
       PM_PRIVATE_READ_DIRECT_TIMEOUT_MS,
     );
   }
-  catch {
+  catch (error) {
+    if (!isPmTransportNetworkError(error))
+      throw error;
     return pmHttpViaVps<T>("GET", url, undefined, options);
   }
 }
@@ -647,15 +668,17 @@ async function pmPrivateReadDirectFirst<T>(
       PM_PRIVATE_READ_DIRECT_TIMEOUT_MS,
     );
   }
-  catch {
+  catch (error) {
+    if (!isPmTransportNetworkError(error))
+      throw error;
     return changmenPmEsportCall<T>(action, stripEsportBodyForVps(body));
   }
 }
 
 /**
  * pmClientApi 底层：按 mode 走 VPS 语义 API / 直连 / 插件。
- * 公开 Pm_GetBook 无 L2：vps 下短超时直连 CLOB，失败/超时回落 VPS；extension 保持插件。
- * 官方 PM-M 用户：私有只读接口 direct-first；交易写入仍走 VPS。
+ * 官网模式的读取优先直连，网络失败/超时回落 VPS；relay 模式固定 VPS。
+ * 官方 PM-M 用户：公开/私有读取 direct-first；交易写入仍走 VPS。
  * Pm_SubmitOrder：HTTP 只等 POST ACK（30s）；插件断连同一次回落 VPS。timeout 不重试 POST。
  * 官方 delayed 撮合不占这个窗，见 marketDelay `sd`。
  */
@@ -698,7 +721,9 @@ async function pmGetBookPreferDirect<T>(body: Record<string, unknown>): Promise<
     return measurePmExecution("book", { tokenId, bookSource: "extension" }, () =>
       pmEsportCallExtension<T>("Pm_GetBook", body));
   }
-  const timeoutMs = mode === "vps" ? getBookDirectTimeoutMs : 0;
+  const timeoutMs = mode === "vps" && getPmMarketWsSourceMode() === "official"
+    ? getBookDirectTimeoutMs
+    : 0;
   if (mode === "vps" && timeoutMs <= 0) {
     return measurePmExecution("book", { tokenId, bookSource: "vps-live" }, () =>
       changmenPmEsportCall<T>("Pm_GetBook", stripEsportBodyForVps(body)));

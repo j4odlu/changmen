@@ -80,6 +80,53 @@ const pmAccount = {
 };
 
 describe("pmTransport mode", () => {
+  it.each(["data-api", "gamma-api", "clob"])("official mode reads %s directly without a VPS hop", async (host) => {
+    setPmHttpModeForTests("vps");
+    resetPmMarketWsSourceModeForTests("official");
+    vi.mocked(directGet).mockResolvedValue({ ok: true });
+    expect(await pmTransportHttpGet(`https://${host}.polymarket.com/v2/activity`)).toEqual({ ok: true });
+    expect(directGet).toHaveBeenCalledOnce();
+    expect(changmenPmHttpRequest).not.toHaveBeenCalled();
+  });
+
+  it("official activity falls back on network failure without changing the selected mode", async () => {
+    setPmHttpModeForTests("vps");
+    resetPmMarketWsSourceModeForTests("official");
+    vi.mocked(directGet).mockRejectedValue(Object.assign(new Error("Network Error"), { code: "ERR_NETWORK" }));
+    vi.mocked(changmenPmHttpRequest).mockResolvedValue({ status: 200, text: "{\"ok\":true}" });
+    expect(await pmTransportHttpGet("https://data-api.polymarket.com/v2/activity")).toEqual({ ok: true });
+    expect(changmenPmHttpRequest).toHaveBeenCalledOnce();
+    expect(resolvePmHttpMode()).toBe("vps");
+  });
+
+  it("official activity falls back when the direct request stalls", async () => {
+    setPmHttpModeForTests("vps");
+    resetPmMarketWsSourceModeForTests("official");
+    vi.mocked(directGet).mockImplementation(() => new Promise(() => {}));
+    vi.mocked(changmenPmHttpRequest).mockResolvedValue({ status: 200, text: "{\"ok\":true}" });
+    expect(await pmTransportHttpGet("https://data-api.polymarket.com/v2/activity")).toEqual({ ok: true });
+    expect(changmenPmHttpRequest).toHaveBeenCalledOnce();
+  });
+
+  it("official activity keeps 429 metadata for retry instead of bypassing via VPS", async () => {
+    setPmHttpModeForTests("vps");
+    resetPmMarketWsSourceModeForTests("official");
+    const response = { status: 429, headers: { "retry-after": "2" }, data: { code: "rate_limited" } };
+    vi.mocked(directGet).mockRejectedValue(Object.assign(new Error("HTTP 429"), { response }));
+    await expect(pmTransportHttpGet("https://data-api.polymarket.com/v2/activity")).rejects.toMatchObject({ response });
+    expect(changmenPmHttpRequest).not.toHaveBeenCalled();
+  });
+
+  it("relay mode keeps public activity and book on VPS", async () => {
+    setPmHttpModeForTests("vps");
+    vi.mocked(changmenPmHttpRequest).mockResolvedValue({ status: 200, text: "{\"ok\":true}" });
+    vi.mocked(changmenPmEsportCall).mockResolvedValue({ tick_size: "0.01" });
+    await pmTransportHttpGet("https://data-api.polymarket.com/v2/activity");
+    await pmEsportCall("Pm_GetBook", { tokenId: "123" });
+    expect(directGet).not.toHaveBeenCalled();
+    expect(changmenPmHttpRequest).toHaveBeenCalledOnce();
+    expect(changmenPmEsportCall).toHaveBeenCalledOnce();
+  });
   it.each(["direct", "extension", "vps"] as const)("activity v2 envelope survives %s mode", async (mode) => {
     setPmHttpModeForTests(mode);
     const user = `0x${"1".repeat(40)}`;
@@ -222,7 +269,7 @@ describe("pmTransport mode", () => {
     expect(changmenPmHttpRequest).toHaveBeenCalledOnce();
   });
 
-  it("official PM-M 下 vps L2 GET 直连鉴权失败也回落 VPS", async () => {
+  it("official PM-M 下 L2 GET 鉴权失败不切换通道", async () => {
     setPmHttpModeForTests("vps");
     resetPmMarketWsSourceModeForTests("official");
     vi.mocked(directGet).mockRejectedValue(new Error("HTTP 401"));
@@ -231,13 +278,11 @@ describe("pmTransport mode", () => {
       text: JSON.stringify({ balance: "3000000" }),
     });
 
-    const out = await pmTransportHttpGet<{ balance: string }>(
+    await expect(pmTransportHttpGet<{ balance: string }>(
       "https://clob.polymarket.com/balance-allowance?asset_type=COLLATERAL",
       { account: pmAccount, l2Path: "/balance-allowance?asset_type=COLLATERAL" },
-    );
-
-    expect(out).toEqual({ balance: "3000000" });
-    expect(changmenPmHttpRequest).toHaveBeenCalledOnce();
+    )).rejects.toThrow("HTTP 401");
+    expect(changmenPmHttpRequest).not.toHaveBeenCalled();
   });
 
   it("official PM-M 下 vps 私有只读接口优先直连", async () => {
@@ -278,23 +323,18 @@ describe("pmTransport mode", () => {
     });
   });
 
-  it("official PM-M 下私有只读直连鉴权失败也回落 VPS", async () => {
+  it("official PM-M 下私有只读鉴权失败不切换通道", async () => {
     setPmHttpModeForTests("vps");
     resetPmMarketWsSourceModeForTests("official");
     vi.mocked(directGet).mockRejectedValue(new Error("HTTP 401"));
     vi.mocked(changmenPmEsportCall).mockResolvedValue({ id: "vps-order" });
 
-    const out = await pmEsportCall("Pm_GetOrder", {
+    await expect(pmEsportCall("Pm_GetOrder", {
       playerId: 42,
       orderId: "order-401",
       _account: pmAccount,
-    });
-
-    expect(out).toEqual({ id: "vps-order" });
-    expect(changmenPmEsportCall).toHaveBeenCalledWith("Pm_GetOrder", {
-      playerId: 42,
-      orderId: "order-401",
-    });
+    })).rejects.toThrow("HTTP 401");
+    expect(changmenPmEsportCall).not.toHaveBeenCalled();
   });
 
   it("official PM-M 下私有只读直连超时回落 VPS", async () => {
@@ -339,8 +379,9 @@ describe("pmTransport mode", () => {
     );
   });
 
-  it("vps 模式下公开 Pm_GetBook 优先直连 CLOB", async () => {
+  it("official 模式下公开 Pm_GetBook 优先直连 CLOB", async () => {
     setPmHttpModeForTests("vps");
+    resetPmMarketWsSourceModeForTests("official");
 
     vi.mocked(directGet).mockResolvedValue({ tick_size: "0.01" });
 
@@ -361,6 +402,7 @@ describe("pmTransport mode", () => {
 
   it("pm_GetBook 直连 Network Error 时回落 VPS", async () => {
     setPmHttpModeForTests("vps");
+    resetPmMarketWsSourceModeForTests("official");
 
     const netErr = Object.assign(new Error("Network Error"), { code: "ERR_NETWORK" });
 
@@ -377,6 +419,7 @@ describe("pmTransport mode", () => {
 
   it("pm_GetBook 直连超时回落 VPS", async () => {
     setPmHttpModeForTests("vps");
+    resetPmMarketWsSourceModeForTests("official");
 
     setPmGetBookDirectTimeoutMsForTests(20);
 

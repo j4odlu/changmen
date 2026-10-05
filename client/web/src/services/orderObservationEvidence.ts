@@ -30,6 +30,7 @@ function specificFailure(text: string, headline: string): FailureReason | undefi
     return ["order_size", "below_minimum_size", `买入份数低于场馆最小要求${minimum ? `（${shares ? `预计 ${shares} 份，` : ""}至少 ${minimum} 份）` : ""}`];
   }
   const rules: Array<[RegExp, FailureReason]> = [
+    [/^RAY 盘口请求失败$/, ["market_data", "market_request_failed", "RAY 盘口接口返回失败，无法准备订单"]],
     [/无效买入金额/i, ["order_size", "invalid_amount", "买入金额无效，必须为大于零的有效金额"]],
     [/无盘口数据/i, ["market_data", "no_market_data", "未获取到可用盘口数据，无法准备订单"]],
     [/没有可用账号/i, ["account", "no_account", "当前场馆没有可用的下单账号"]],

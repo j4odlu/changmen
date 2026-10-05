@@ -199,7 +199,11 @@ export const rayProvider: PlatformProvider = {
       { forceDirect: true },
     );
     option.response = res;
-    if (res.code !== 200) return option;
+    // [changmen 扩展] 保留原有拒单条件，补齐原因，避免被编排误报为“无盘口数据”。
+    if (res.code !== 200) {
+      option.checkError = "RAY 盘口请求失败";
+      return option;
+    }
 
     const row = findRayOddsRow(res, option.itemId);
     option.response = row ?? res;
@@ -207,7 +211,11 @@ export const rayProvider: PlatformProvider = {
 
     const liveOdds = Number(row.odds);
     option.updateOdds(liveOdds);
-    if (option.odds > liveOdds + 0.01) return option;
+    if (option.odds > liveOdds + 0.01) {
+      // [changmen 扩展] 仅补诊断；赔率门槛沿用原有 A8 行为。
+      option.checkError = `RAY 赔率下降：检测赔率 ${option.odds}，当前赔率 ${liveOdds}，超过允许差值 0.01`;
+      return option;
+    }
     option.odds = liveOdds;
     option.data = buildRayOrderData(option, row);
     return option;

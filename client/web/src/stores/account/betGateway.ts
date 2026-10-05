@@ -367,7 +367,7 @@ export async function checkBetting(
       const blocked = !checked.data || Boolean(checked.checkError);
       observeOption(checked, account, "precheck_result", { outcome: blocked ? "blocked" : "prepared", durationMs: Date.now() - observationStartedAt,
         reasonCode: blocked ? "precheck_error" : undefined,
-        ...(blocked ? observationFailureEvidence(checked.checkError || "无盘口数据") : {}) });
+        ...(blocked ? observationFailureEvidence(checked.checkError || "无盘口数据", checked.response) : {}) });
     }
     catch { /* 观察快照读取失败不改变 adapter 返回值 */ }
     observedPrecheckResult = true;

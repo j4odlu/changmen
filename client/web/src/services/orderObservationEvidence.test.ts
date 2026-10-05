@@ -13,6 +13,15 @@ describe("旁路失败证据", () => {
     expect(evidence.reasonCode).toBe("no_sell_orders");
     expect(evidence.safeSummary).toBe("盘口没有可成交卖单");
   });
+  it("distinguishes RAY request failure and odds decline from missing market data", () => {
+    const failure = observationFailureEvidence("RAY 盘口请求失败", { code: 401, desc: "token=SECRET" });
+    expect(failure.reasonCode).toBe("market_request_failed");
+    expect(failure.responseCode).toBe("401");
+    expect(failure.safeSummary).toContain("盘口接口返回失败");
+    expect(JSON.stringify(failure)).not.toContain("SECRET");
+    const decline = observationFailureEvidence("RAY 赔率下降：检测赔率 1.65，当前赔率 1.6，超过允许差值 0.01");
+    expect(decline.reasonCode).toBe("odds_changed");
+  });
   it("explains depth and minimum size with whitelisted numeric diagnostics", () => {
     expect(observationFailureEvidence("Polymarket FOK 盘口深度不足\n- 需要 20.00 USDC（金额 10.00 × 2）\n- 成交价 0.44 及更优可立即成交约 8.50 USDC").safeSummary)
       .toContain("可成交 8.50 USDC，需要 20.00 USDC");

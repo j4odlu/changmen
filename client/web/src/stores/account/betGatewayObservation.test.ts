@@ -89,6 +89,19 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(replacement.observation?.attemptId).toBe(original.observation?.attemptId);
     expect(mocks.check).toHaveBeenCalledTimes(1);
   });
+  it("records the venue business code for a blocked RAY precheck without exposing credentials", async () => {
+    const option = new BetOption("RAY", "m", "b", "i", 100, "Home", 1.65);
+    option.diagnosticLinkId = 123;
+    option.checkError = "RAY 盘口请求失败";
+    option.response = { code: 401, desc: "token=SECRET" };
+    mocks.check.mockResolvedValue(option);
+    await checkBetting(store, account, option);
+    const check = useOrderObservationStore().forLink("u1", 123).find(row => row.kind === "precheck_result");
+    expect(check?.reasonCode).toBe("market_request_failed");
+    expect(check?.responseCode).toBe("401");
+    expect(JSON.stringify(check)).not.toContain("SECRET");
+    expect(mocks.betting).not.toHaveBeenCalled();
+  });
   it.each([
     ["Polymarket 盘口价高于检测价，整单取消\n- 最佳卖价 0.46 高于检测价 0.4444", "price_above_detection", "卖价 0.46，限价 0.4444"],
     ["", "no_market_data", "未获取到可用盘口数据"],

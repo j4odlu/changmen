@@ -81,6 +81,18 @@ describe("rayProvider.checkBet", () => {
     const option = makeOption(2);
     const out = await rayProvider.checkBet!(account, option);
     expect(out.data).toBeUndefined();
+    expect(out.checkError).toContain("赔率下降");
+    expect(out.checkError).toContain("检测赔率 2，当前赔率 1.5");
+  });
+
+  it("盘口接口业务失败保留响应并给出原因，不误报无盘口数据", async () => {
+    const response = { code: 401, desc: "token=SECRET" };
+    accountGet.mockResolvedValue(response);
+    const out = await rayProvider.checkBet!(account, makeOption(1.8));
+    expect(out.data).toBeUndefined();
+    expect(out.response).toBe(response);
+    expect(out.checkError).toBe("RAY 盘口请求失败");
+    expect(out.checkError).not.toContain("SECRET");
   });
 
   it("滑点允许范围内写入 data 且 odds 取场馆价", async () => {

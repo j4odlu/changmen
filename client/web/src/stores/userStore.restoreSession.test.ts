@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useUserStore } from "@/stores/userStore";
 import { SessionRestoreConfigurationError } from "@/lib/sessionRestoreError";
@@ -11,7 +11,9 @@ const auth = vi.hoisted(() => ({
   cookieMode: false,
   refreshToken: "refresh-token" as string | null,
   token: "access-token" as string | null,
+  probe: vi.fn(),
 }));
+vi.mock("@/lib/webSession", () => ({ probeCookieSession: auth.probe }));
 
 vi.mock("@/api/client", () => ({
   browserAuthState: { value: "checking" },
@@ -41,6 +43,7 @@ vi.mock("@/lib/sessionRefresh", () => ({
 }));
 
 describe("userStore.restoreSession", () => {
+  afterEach(() => vi.unstubAllGlobals());
   beforeEach(() => {
     setActivePinia(createPinia());
     auth.token = "access-token";
@@ -54,6 +57,17 @@ describe("userStore.restoreSession", () => {
     auth.ensureTokenRefresh.mockReset();
     auth.ensureTokenRefresh.mockResolvedValue(undefined);
     auth.logout.mockReset();
+    auth.probe.mockReset();
+  });
+  it("preserves a configuration error on the first probe without a local session hint", async () => {
+    auth.token = null; auth.refreshToken = null; auth.cookieMode = false;
+    vi.stubGlobal("window", {}); vi.stubGlobal("document", {});
+    auth.probe.mockRejectedValue(new SessionRestoreConfigurationError("服务端未启用 Cookie 登录"));
+    const store = useUserStore();
+    expect(await store.restoreSession()).toBe(false);
+    expect(store.sessionRestoreRetryable).toBe(false);
+    expect(store.sessionRestoreError).toBe("服务端未启用 Cookie 登录");
+    expect(auth.clearAuthSession).not.toHaveBeenCalled();
   });
 
   it("preserves new user state when an old logout is superseded", async () => {

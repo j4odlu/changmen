@@ -2,6 +2,17 @@ import { authHeaders, browserAuthState, getAuthSessionVersion, getToken, isAuthS
 import { getApiBase } from "@/config/apiBase";
 import { refreshJwtSession } from "@/lib/jwtRefresh";
 
+/** [changmen 扩展] Bind each backend signing operation to its initiating login. */
+export function createRequestAuthProvider(url: string): () => Promise<Record<string, string>> {
+  const version = getAuthSessionVersion();
+  return async () => {
+    if (!isAuthSessionCurrent(version)) throw new Error("登录状态已变更，请重新开始操作");
+    const headers = await getRequestAuthHeaders(url);
+    if (!isAuthSessionCurrent(version)) throw new Error("登录状态已变更，请重新开始操作");
+    return headers;
+  };
+}
+
 /** Compatibility credential for external relays and SDKs that only support Bearer JWT. */
 export function createCompatibilityTokenProvider(): () => Promise<string> {
   const version = getAuthSessionVersion();
@@ -16,6 +27,8 @@ export function createCompatibilityTokenProvider(): () => Promise<string> {
 }
 
 export async function getCompatibilityToken(): Promise<string> {
+  if (import.meta.env.VITE_WEB_COOKIE_AUTH === "1")
+    throw new Error("当前登录使用 Cookie，目标服务需要支持 Cookie 鉴权");
   const version = getAuthSessionVersion();
   if (browserAuthState.value === "unavailable")
     throw new Error("登录服务暂时不可用");

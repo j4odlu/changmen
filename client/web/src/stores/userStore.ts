@@ -164,10 +164,14 @@ export const useUserStore = defineStore("user", {
         // HttpOnly Cookie 可能仍有效而本机提示已清除；只读探测，不自动重新登录。
         const { probeCookieSession } = await import("@/lib/webSession");
         try { await probeCookieSession(false, true); }
-        catch {
+        catch (err) {
           this.ready = false;
           this.sessionChecked = false;
-          this.sessionRestoreError = "连接暂时不可用，请检查网络后重试";
+          this.sessionRestoreRetryable = !(err instanceof SessionRestoreConfigurationError);
+          this.sessionRestoreError = this.sessionRestoreRetryable
+            ? "连接暂时不可用，请检查网络后重试"
+            : (err as Error).message;
+          this.error = err instanceof Error ? err.message : String(err);
           return false;
         }
       }

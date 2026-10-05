@@ -1,5 +1,5 @@
 import type { LoginInfo, UserInfo } from "@/types/esport";
-import { advanceAuthSessionVersion, beginAuthTransition, browserAuthState, clearAuthSession, getAuthSessionVersion, getCookieSessionInfo, isAuthSessionCurrent, usesWebCookieSession, post, setCookieSessionInfo, setCookieAuthMode, setRefreshToken, setToken, unwrap } from "@/api/client";
+import { advanceAuthSessionVersion, beginAuthTransition, browserAuthState, clearAuthSession, getAuthSessionVersion, getCookieSessionInfo, hasAuthSession, isAuthSessionCurrent, usesWebCookieSession, post, setCookieSessionInfo, setCookieAuthMode, setRefreshToken, setToken, unwrap } from "@/api/client";
 import { withAuthLock } from "@/lib/authLock";
 import { getApiBase } from "@/config/apiBase";
 
@@ -72,7 +72,7 @@ export async function logout() {
     if (import.meta.env.VITE_WEB_COOKIE_AUTH === "1" && !session) {
       const { probeCookieSession } = await import("@/lib/webSession");
       await probeCookieSession(true, true);
-      if (!isAuthSessionCurrent(version)) return false;
+      if (!isAuthSessionCurrent(version)) return !hasAuthSession();
       session = getCookieSessionInfo();
       if (!session) { clearAuthSession(); return true; }
     }

@@ -8,13 +8,29 @@ vi.mock("@/lib/authSession", () => ({
 }));
 vi.mock("@/config/apiBase", () => ({ getApiBase: () => "https://api.changmen.fun" }));
 vi.mock("@/lib/jwtRefresh", () => ({ refreshJwtSession: mock.refresh }));
-import { createCompatibilityTokenProvider, getCompatibilityToken, getRequestAuthHeaders } from "./authCredentials";
+import { createCompatibilityTokenProvider, createRequestAuthProvider, getCompatibilityToken, getRequestAuthHeaders } from "./authCredentials";
 beforeEach(() => {
   mock.token = "legacy"; mock.cookie = true; mock.version = "one"; mock.state.value = "authenticated";
+  vi.stubEnv("VITE_WEB_COOKIE_AUTH", "0");
   mock.refresh.mockReset(); vi.stubGlobal("window", { location: { origin: "https://changmen.fun" } });
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 describe("request credential selection", () => {
+  it("never calls old refresh for a JWT-only consumer in a native Cookie build", async () => {
+    vi.stubEnv("VITE_WEB_COOKIE_AUTH", "1");
+    mock.token = "";
+    await expect(getCompatibilityToken()).rejects.toThrow("目标服务需要支持 Cookie");
+    expect(mock.refresh).not.toHaveBeenCalled();
+  });
+  it("uses Cookie credentials for each signer call and rejects calls after a login change", async () => {
+    vi.stubEnv("VITE_WEB_COOKIE_AUTH", "1");
+    mock.token = "";
+    const provider = createRequestAuthProvider("https://api.changmen.fun/api/polymarket/relayer/sign");
+    expect(await provider()).toMatchObject({ "X-Changmen-Auth": "cookie", "X-CSRF-Token": "csrf" });
+    mock.version = "other-login";
+    await expect(provider()).rejects.toThrow("重新开始操作");
+    expect(mock.refresh).not.toHaveBeenCalled();
+  });
   it("uses Cookie/CSRF for the backend without refreshing JWT", async () => {
     expect(await getRequestAuthHeaders("https://api.changmen.fun/esport/Pm_HttpRequest")).toEqual({ "X-Changmen-Auth": "cookie", "X-CSRF-Token": "csrf" });
     expect(mock.refresh).not.toHaveBeenCalled();

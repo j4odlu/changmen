@@ -45,6 +45,17 @@ describe("resolvePmWalletPrepSdk", () => {
 });
 
 describe("preparePolymarketWalletUnified", () => {
+  test("admits a Cookie session without JWT and configures Cookie/CSRF for remote signing", async () => {
+    createSecureClient.mockResolvedValue({ account: { wallet: "wallet" }, setupTradingApprovals });
+    const getAuthHeaders = vi.fn().mockResolvedValue({ "X-Changmen-Auth": "cookie", "X-CSRF-Token": "csrf" });
+    const result = await preparePolymarketWalletUnified({
+      privateKey: `0x${"11".repeat(32)}`, signUrl: "https://api.changmen.fun/api/polymarket/relayer/sign", getAuthHeaders, signatureType: 3,
+    });
+    expect(result.ok).toBe(true);
+    const config = remoteBuilderSigning.mock.calls[0][0] as { credentials: string; headers: () => Promise<Record<string, string>> };
+    expect(config.credentials).toBe("include");
+    expect(await config.headers()).toEqual({ "X-Changmen-Auth": "cookie", "X-CSRF-Token": "csrf" });
+  });
   test("rejects Safe/Proxy signature types", async () => {
     const result = await preparePolymarketWalletUnified({
       privateKey: `0x${"11".repeat(32)}`,

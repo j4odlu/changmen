@@ -52,8 +52,14 @@ async function runProbe(force: boolean) {
     if (response.status === 401) {
       if (isAuthTransitionPending())
         return false;
+      const failure = await response.json() as { code?: string };
+      if (!isAuthSessionCurrent(version) || isAuthTransitionPending())
+        return false;
+      // [changmen 扩展] 代理/版本错误的 401 不足以证明当前 Cookie 被撤销。
+      if (!["SESSION_REVOKED", "ACCOUNT_DISABLED"].includes(String(failure?.code || "")))
+        throw new Error("登录服务返回了未确认的鉴权错误，请稍后重试");
       if (getCookieSessionInfo())
-        invalidateAuthSession("SESSION_REVOKED");
+        invalidateAuthSession(failure.code);
       else if (isCookieAuthMode())
         clearAuthSession();
       return false;
@@ -75,6 +81,16 @@ async function runProbe(force: boolean) {
       throw new SessionRestoreConfigurationError("实时服务与登录服务的 Cookie 作用域不一致");
     if (!info.user?.id || !info.browserSessionId || !info.loginEpoch || !info.csrfToken)
       throw new Error("登录服务返回了无效会话");
+    const previous = getCookieSessionInfo();
+    if (previous && (previous.user.id !== info.user.id || previous.browserSessionId !== info.browserSessionId || previous.loginEpoch !== info.loginEpoch)) {
+      if (isAuthTransitionPending()) return false;
+      // [changmen 扩展] 其他页面 origin 的登录可改变共享 API Cookie，但不产生本页 storage 事件。
+      // 先关闭旧身份，再冷启动恢复新 Cookie，避免与旧账号/用户数据混用。
+      stopWebSessionWatch();
+      clearAuthSession();
+      window.location.reload();
+      return false;
+    }
     setCookieAuthMode(true);
     setCookieSessionInfo(info);
     const { stopJwtAutoRefresh } = await import("@/lib/jwtRefresh");

@@ -65,6 +65,7 @@ export interface PolymarketRelayClientInput {
   signUrl?: string;
   authToken?: string;
   getAuthToken?: () => Promise<string>;
+  getAuthHeaders?: () => Promise<Record<string, string>>;
   relayerUrl?: string;
   relayTxType?: RelayerTxType;
 }
@@ -94,8 +95,8 @@ export async function createPolymarketRelayClient(
   });
   const signUrl = input.signUrl?.trim();
   const authToken = input.authToken?.trim();
-  const builderConfig = signUrl && authToken
-    ? input.getAuthToken ? new SessionBuilderConfig(joinSignUrl(signUrl), input.getAuthToken) : new BuilderConfig({
+  const builderConfig = signUrl && (authToken || input.getAuthHeaders)
+    ? input.getAuthToken || input.getAuthHeaders ? new SessionBuilderConfig(joinSignUrl(signUrl), input.getAuthToken, input.getAuthHeaders) : new BuilderConfig({
         remoteBuilderConfig: {
           url: joinSignUrl(signUrl),
           token: authToken,

@@ -78,6 +78,12 @@ describe("native Cookie login", () => {
     expect(await logout()).toBe(true);
     expect(getCookieSessionInfo()).toBeNull();
   });
+  it("finishes logout when its initial recovery probe already confirms no session", async () => {
+    mocks.probe.mockImplementationOnce(async () => { clearAuthSession(); return false; });
+    expect(await logout()).toBe(true);
+    expect(getCookieSessionInfo()).toBeNull();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
   it("does not treat HTTP success without revocation confirmation as logout", async () => {
     await mocks.probe();
     mocks.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: false }) });

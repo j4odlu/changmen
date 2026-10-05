@@ -28,9 +28,10 @@ export interface PolymarketRelayerPrepareInput {
   privateKey: string;
   /** 远程签名 URL，如 `${apiBase}/api/polymarket/relayer/sign` */
   signUrl: string;
-  /** 用户 JWT，作为 remoteBuilderConfig.token（Bearer） */
-  authToken: string;
+  /** 旧 JWT；Cookie 登录使用 getAuthHeaders。 */
+  authToken?: string;
   getAuthToken?: () => Promise<string>;
+  getAuthHeaders?: () => Promise<Record<string, string>>;
   relayerUrl?: string;
   signatureType?: SignatureType;
   /** unified 路径可选：已有 CLOB L2 凭证，避免 createSecureClient 再派生 */
@@ -159,8 +160,8 @@ async function prepareDepositPolymarketWallet(
   input: PolymarketRelayerPrepareInput,
 ): Promise<PolymarketRelayerPrepareResult> {
   const privateKey = normalizePolymarketPrivateKey(input.privateKey);
-  const authToken = input.authToken.trim();
-  if (!authToken)
+  const authToken = input.authToken?.trim();
+  if (!authToken && !input.getAuthHeaders)
     return { ok: false, message: "未登录，无法调用 Relayer 远程签名" };
 
   const relayerUrl = (input.relayerUrl?.trim() || POLYMARKET_RELAYER_URL_DEFAULT).replace(/\/+$/, "");
@@ -169,6 +170,7 @@ async function prepareDepositPolymarketWallet(
     signUrl: input.signUrl,
     authToken,
     getAuthToken: input.getAuthToken,
+    getAuthHeaders: input.getAuthHeaders,
     relayerUrl,
   });
 
@@ -209,8 +211,8 @@ async function prepareLegacyPolymarketWallet(
   input: PolymarketRelayerPrepareInput,
 ): Promise<PolymarketRelayerPrepareResult> {
   const privateKey = normalizePolymarketPrivateKey(input.privateKey);
-  const authToken = input.authToken.trim();
-  if (!authToken)
+  const authToken = input.authToken?.trim();
+  if (!authToken && !input.getAuthHeaders)
     return { ok: false, message: "未登录，无法调用 Relayer 远程签名" };
 
   const relayerUrl = (input.relayerUrl?.trim() || POLYMARKET_RELAYER_URL_DEFAULT).replace(/\/+$/, "");
@@ -220,6 +222,7 @@ async function prepareLegacyPolymarketWallet(
     signUrl: input.signUrl,
     authToken,
     getAuthToken: input.getAuthToken,
+    getAuthHeaders: input.getAuthHeaders,
     relayerUrl,
     relayTxType,
   });
@@ -260,12 +263,14 @@ async function preparePolymarketWalletInner(
 export async function fetchPolymarketRelayerStatus(
   apiBase: string,
   authToken: string,
+  authHeaders?: Record<string, string>,
 ): Promise<{ configured: boolean; relayerUrl?: string }> {
   const base = apiBase.replace(/\/+$/, "");
   const url = `${base}/api/polymarket/relayer/status`;
   const res = await fetch(url, {
+    credentials: authHeaders?.["X-Changmen-Auth"] === "cookie" ? "include" : "same-origin",
     headers: {
-      token: authToken,
+      ...(authHeaders || { token: authToken }),
       Accept: "application/json",
     },
   });

@@ -27,7 +27,7 @@ import { normalizeAccountRateConfig, PlatformAccount } from "@/models/platformAc
 import { useAccountStore } from "@/stores/accountStore";
 import { useUserStore } from "@/stores/userStore";
 import { getApiBase } from "@/config/apiBase";
-import { createCompatibilityTokenProvider, getCompatibilityToken } from "@/lib/authCredentials";
+import { createRequestAuthProvider, getRequestAuthHeaders } from "@/lib/authCredentials";
 import { parseSportObSessionInput } from "@/runtime/obSportSessionLocal";
 import {
   isCompleteObSportCredential,
@@ -939,13 +939,9 @@ function polymarketRelayerSignUrl(): string {
 }
 
 async function refreshPolymarketRelayerStatus() {
-  const token = await getCompatibilityToken();
-  if (!token) {
-    polyRelayerConfigured.value = null;
-    return;
-  }
   try {
-    const status = await fetchPolymarketRelayerStatus(getApiBase(), token);
+    const headers = await getRequestAuthHeaders(`${getApiBase()}/api/polymarket/relayer/status`);
+    const status = await fetchPolymarketRelayerStatus(getApiBase(), "", headers);
     polyRelayerConfigured.value = status.configured;
   }
   catch {
@@ -964,11 +960,10 @@ function resolvePolymarketRelayerSignatureType(): string {
 async function onPreparePolymarketWallet() {
   polyRelayerPreparing.value = true;
   try {
+    const signUrl = polymarketRelayerSignUrl();
+    const getAuthHeaders = createRequestAuthProvider(signUrl);
     const privateKey = await resolvePolymarketPrivateKeyForSave();
-    const getAuthToken = createCompatibilityTokenProvider();
-    const authToken = await getAuthToken();
-    if (!authToken)
-      throw new Error("请先登录");
+    await getAuthHeaders();
     await refreshPolymarketRelayerStatus();
     if (polyRelayerConfigured.value === false)
       throw new Error("服务端未配置 Polymarket Relayer（POLY_BUILDER_*）");
@@ -976,9 +971,8 @@ async function onPreparePolymarketWallet() {
     const result = await preparePolymarketWallet({
       privateKey,
       signatureType: resolvePolymarketRelayerSignatureType(),
-      signUrl: polymarketRelayerSignUrl(),
-      authToken,
-      getAuthToken,
+      signUrl,
+      getAuthHeaders,
       ...(polyApiCreds.value?.apiKey && polyApiCreds.value.secret && polyApiCreds.value.passphrase
         ? {
             credentials: {

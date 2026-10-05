@@ -21,8 +21,9 @@ import {
 export interface WalletPrepUnifiedInput {
   privateKey: string;
   signUrl: string;
-  authToken: string;
+  authToken?: string;
   getAuthToken?: () => Promise<string>;
+  getAuthHeaders?: () => Promise<Record<string, string>>;
   relayerUrl?: string;
   signatureType?: string | number;
   /**
@@ -85,8 +86,8 @@ export async function preparePolymarketWalletUnified(
 async function preparePolymarketWalletUnifiedInner(
   input: WalletPrepUnifiedInput,
 ): Promise<WalletPrepUnifiedResult> {
-  const authToken = input.authToken.trim();
-  if (!authToken)
+  const authToken = input.authToken?.trim();
+  if (!authToken && !input.getAuthHeaders)
     return { ok: false, message: "未登录，无法调用 Relayer 远程签名" };
 
   const signUrl = input.signUrl.trim();
@@ -128,9 +129,10 @@ async function preparePolymarketWalletUnifiedInner(
     environment,
     apiKey: remoteBuilderSigning({
       url: signUrl,
-      headers: input.getAuthToken ? async () => ({ Authorization: `Bearer ${await input.getAuthToken!()}` }) : {
+      credentials: input.getAuthHeaders ? "include" : "omit",
+      headers: input.getAuthHeaders || (input.getAuthToken ? async () => ({ Authorization: `Bearer ${await input.getAuthToken!()}` }) : {
         Authorization: `Bearer ${authToken}`,
-      },
+      }),
     }),
   };
   const creds = input.credentials;

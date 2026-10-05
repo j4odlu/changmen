@@ -15,10 +15,36 @@ beforeEach(() => {
   clearAuthSession(); setCookieAuthMode(true); fetchMock.mockReset();
   locks.run.mockReset().mockImplementation((fn: () => unknown) => fn());
   vi.stubGlobal("fetch", fetchMock);
-  vi.stubGlobal("window", { location: { origin: "https://changmen.fun", href: "/" }, addEventListener: vi.fn(), removeEventListener: vi.fn() });
+  vi.stubGlobal("window", { location: { origin: "https://changmen.fun", href: "/", reload: vi.fn() }, addEventListener: vi.fn(), removeEventListener: vi.fn() });
 });
 afterEach(() => { stopWebSessionWatch(); vi.useRealTimers(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 describe("browser session recovery", () => {
+  it.each([{}, { code: "TEMPORARY_UNAVAILABLE" }, { code: "COOKIE_LOGIN_REQUIRED" }])("preserves the session on an unconfirmed HTTP 401: %s", async (data) => {
+    setCookieSessionInfo(info);
+    fetchMock.mockResolvedValue(response(data, 401));
+    await expect(probeCookieSession()).rejects.toThrow();
+    expect(getCookieSessionInfo()?.loginEpoch).toBe("epoch");
+    expect(browserAuthState.value).toBe("unavailable");
+  });
+  it("discards a revoked response body that arrives after a new login", async () => {
+    setCookieSessionInfo(info);
+    let release!: (value: unknown) => void;
+    fetchMock.mockResolvedValue({ status: 401, ok: false, json: () => new Promise(resolve => { release = resolve; }) });
+    const pending = probeCookieSession();
+    await vi.waitFor(() => expect(release).toBeDefined());
+    advanceAuthSessionVersion();
+    setCookieSessionInfo({ ...info, loginEpoch: "new-login" });
+    release({ code: "SESSION_REVOKED" });
+    expect(await pending).toBe(false);
+    expect(getCookieSessionInfo()?.loginEpoch).toBe("new-login");
+  });
+  it("rebuilds page state when the shared API Cookie changes identity outside this page origin", async () => {
+    setCookieSessionInfo(info);
+    fetchMock.mockResolvedValue(response({ ...info, user: { ...info.user, id: "other" }, browserSessionId: "other-browser", loginEpoch: "other-login" }));
+    expect(await probeCookieSession()).toBe(false);
+    expect(getCookieSessionInfo()).toBeNull();
+    expect(window.location.reload).toHaveBeenCalledOnce();
+  });
   it("renews a persistent Cookie once daily under the login/logout lock", async () => {
     vi.useFakeTimers();
     setCookieSessionInfo({ ...info, persistent: true });

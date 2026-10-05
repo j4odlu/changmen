@@ -71,6 +71,7 @@ function placed(a: string, b: string): ArbBetPlaced {
 describe("settleBothArbLegs A8 wait", () => {
   beforeEach(() => {
     wait.mockClear();
+    showRejectDetectionTip.mockClear();
     settleArbLegUntilTerminal.mockReset();
     settleArbLegUntilTerminal.mockResolvedValue({
       orders: [],
@@ -79,6 +80,16 @@ describe("settleBothArbLegs A8 wait", () => {
     });
     bindArbLegOrder.mockResolvedValue(true);
     maxLegRejectWaitSec.mockReturnValue(30);
+  });
+
+  it("普通场馆检测等待为 0 时仍弹原有倒计时，并立即拉单", async () => {
+    maxLegRejectWaitSec.mockReturnValue(0);
+
+    await settleBothArbLegs(params(), placed("OB", "PB"));
+
+    expect(showRejectDetectionTip).toHaveBeenCalledWith(10);
+    expect(wait).not.toHaveBeenCalled();
+    expect(settleArbLegUntilTerminal).toHaveBeenCalledTimes(2);
   });
 
   it("空等 max 后再依次拉 A8 腿，场馆层 rejectWaitSec=0", async () => {

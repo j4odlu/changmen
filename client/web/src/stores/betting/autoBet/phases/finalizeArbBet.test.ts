@@ -788,18 +788,59 @@ describe("finalizeArbBet makeup enqueue", () => {
     expect(refreshBalance).toHaveBeenCalledTimes(2);
   });
 
-  it("开启套利进度报告时不发旧版 bettingMessage", async () => {
+  it("开启套利进度报告时仍发送原有下单提醒及拒单状态", async () => {
     shouldSendArbProgress.mockReturnValue(true);
     mockDualLegVenueSync(
       { orders: [venueOrder("ob-1", "none", 2)], rejected: false },
-      { orders: [venueOrder("ray-1", "none", 3)], rejected: false },
+      { orders: [venueOrder("ray-1", "reject", 3)], rejected: true },
     );
     const trace = createArbExecutionTrace(params.match, params.bet);
     const tracedParams = { ...params, trace };
 
     await finalizeArbBet(tracedParams, makePlaced());
 
-    expect(bettingMessage).not.toHaveBeenCalled();
+    expect(bettingMessage).toHaveBeenCalledOnce();
+    expect(bettingMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ reject: false }),
+      expect.objectContaining({ reject: true }),
+      expect.any(Number),
+    );
+  });
+
+  it("进度报告发送异常不阻断原有下单提醒", async () => {
+    shouldSendArbProgress.mockReturnValue(true);
+    mockDualLegVenueSync(
+      { orders: [venueOrder("ob-1", "none", 2)], rejected: false },
+      { orders: [venueOrder("ray-1", "reject", 3)], rejected: true },
+    );
+    const deliver = vi.fn(() => { throw new Error("进度报告失败"); });
+    const trace = createArbExecutionTrace(params.match, params.bet, undefined, deliver);
+
+    await expect(finalizeArbBet({ ...params, trace }, makePlaced())).resolves.toBeUndefined();
+
+    expect(deliver).toHaveBeenCalledOnce();
+    expect(bettingMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ reject: false }),
+      expect.objectContaining({ reject: true }),
+      expect.any(Number),
+    );
+  });
+
+  it("进度报告不入队时，同盘口连续拒单仍逐次发送原有提醒", async () => {
+    shouldSendArbProgress.mockReturnValue(true);
+    const deliver = vi.fn();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      mockDualLegVenueSync(
+        { orders: [venueOrder("ob-1", "none", 2)], rejected: false },
+        { orders: [venueOrder("ray-1", "reject", 3)], rejected: true },
+      );
+      const trace = createArbExecutionTrace(params.match, params.bet, undefined, deliver);
+      await finalizeArbBet({ ...params, trace }, makePlaced());
+    }
+
+    expect(bettingMessage).toHaveBeenCalledTimes(2);
+    for (const call of bettingMessage.mock.calls)
+      expect(call[1]).toEqual(expect.objectContaining({ reject: true }));
   });
 
   it("未开套利进度报告时仍发 bettingMessage", async () => {

@@ -6,7 +6,6 @@ import type { ArbMakeUpEnqueueResult } from "@/stores/betting/autoBet/arbMakeUpF
 import type { BettingMessageLeg, BettingMessageSingleLegRatePeer } from "@/stores/messageStore";
 import { findSingleLegRateAccount } from "@/domain/betting/singleLegRate";
 import { opponentSide } from "@changmen/client-core/models/betOption";
-import { shouldSendArbProgress } from "@/stores/betting/autoBet/arbProgressTrace";
 import {
   syncActiveBetBindFailed,
   syncActiveBetBindSuccess,
@@ -160,13 +159,13 @@ export function sendArbBettingMessageIfNeeded(
   placed: ArbBetPlaced,
   settle: ArbLegSettleSnapshot,
 ): void {
-  const { trace } = params;
   const messagePeers = buildBettingMessagePeers(
     params,
     placed,
     settle.rejectA,
     settle.rejectB,
   );
-  if (messagePeers && !(trace && shouldSendArbProgress()))
+  // [A8 可证实] 成功腿收尾始终发送下单提醒；[changmen 扩展] 进度报告只作辅助。
+  if (messagePeers)
     useMessageStore().bettingMessage(messagePeers[0], messagePeers[1], placed.linkId);
 }

@@ -200,7 +200,11 @@ export async function finalizeArbBet(
     makeup,
     params.config.makeUp === true,
   );
-  finishArbExecutionTrace(params, placed, settle, outcome);
+  // [changmen 扩展] 辅助进度报告异常不能阻断 A8 原有的下单结果通知。
+  try {
+    finishArbExecutionTrace(params, placed, settle, outcome);
+  }
+  catch { /* 进度报告不参与下注结果处理 */ }
   sendArbBettingMessageIfNeeded(params, placed, settle);
 
   // [changmen 扩展] 仅开启时加载；关闭时与改前 finalize 路径一致（无额外 await）

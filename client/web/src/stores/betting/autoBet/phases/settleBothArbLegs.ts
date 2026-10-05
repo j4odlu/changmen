@@ -98,11 +98,14 @@ export async function settleBothArbLegs(
 
   const snapshot = emptySettleSnapshot(placeOutcomeA, placeOutcomeB);
   const maxWait = maxLegRejectWaitSec(config, successAccounts);
-  // wait=0（含纯 PM）：无 A8 拒单倒计时，相位用「确认场馆结果」避免误导
+  // [A8 可证实] 普通场馆只要有 API 成功腿就弹 tip，检测等待为 0 也保留原有提示。
+  const hasA8Success = successAccounts.some(account => !isPendingConfirmVenueProvider(account.provider));
+  if (hasA8Success)
+    void showRejectDetectionTip(waitSec);
+  // wait=0（含纯 PM）：相位用「确认场馆结果」，不改变 A8 tip 的展示条件。
   if (maxWait > 0) {
     trace?.event("拒单", `空等 ${maxWait}s 后依次拉单`);
     syncActiveBetPhase(bet.id, "settling", "拒单检测", maxWait);
-    void showRejectDetectionTip(waitSec);
   }
   else {
     trace?.event("拒单", "确认场馆结果（无拒单等待）");

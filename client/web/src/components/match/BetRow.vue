@@ -4,6 +4,7 @@ import type { PlatformId } from "@/types/esport";
 import { computed, onUnmounted, ref, watch } from "vue";
 import LimitDiagDialog from "@/components/match/LimitDiagDialog.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
+import PmPrematchProbability from "@/components/match/PmPrematchProbability.vue";
 import { useBetRowExtensionUiEnabled } from "@/composables/useExtensionPrefs";
 import { useUserStore } from "@/stores/userStore";
 import { storeToRefs } from "pinia";
@@ -471,6 +472,7 @@ function onBetTitleDblClick() {
       {{ bet.getBetName() }} - {{ arb }}
     </div>
     <div v-show="!mapMuted" ref="itemsContainerRef" class="bet-items">
+      <PmPrematchProbability v-if="!bet.marketCode && bet.round >= 0" :bet="bet" />
       <div v-if="showDefaultOdds" class="item flex defaultOdds">
         <div class="item-type default" />
         <div

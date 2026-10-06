@@ -124,6 +124,7 @@ declare module 'vue' {
     PlatformIcon: typeof import('./src/components/platform/PlatformIcon.vue')['default']
     PluginIntroShell: typeof import('./src/components/layout/PluginIntroShell.vue')['default']
     PmPfBufferSettings: typeof import('./src/components/user/PmPfBufferSettings.vue')['default']
+    PmPrematchProbability: typeof import('./src/components/match/PmPrematchProbability.vue')['default']
     PmSessionStatus: typeof import('./src/components/account/PmSessionStatus.vue')['default']
     PmVaultDialogs: typeof import('./src/components/account/PmVaultDialogs.vue')['default']
     PodBetSettingsTab: typeof import('./src/components/football/PodBetSettingsTab.vue')['default']

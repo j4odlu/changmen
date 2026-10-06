@@ -3,7 +3,7 @@ import { renderToString } from "@vue/server-renderer";
 import { createSSRApp } from "vue";
 import { afterEach, expect, it } from "vitest";
 import PmPrematchProbability from "@/components/match/PmPrematchProbability.vue";
-import { replacePmMapOutcomesFromIndex } from "@changmen/venue-adapter/polymarket/pmMapOutcomeStore";
+import { replacePmMapOutcomesFromIndex } from "@changmen/venue-adapter/polymarket";
 
 afterEach(() => replacePmMapOutcomesFromIndex(null));
 

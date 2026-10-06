@@ -10,6 +10,19 @@ const COLLECT_FUTURE_MS = 3600 * 1000;
 const KEYSET_PAGE_LIMIT = 500;
 const MAX_KEYSET_PAGES = 3;
 
+/** [changmen 扩展] 只补赛事身份；比分与状态始终保留 WS 原始字段。 */
+export function withGammaSportIdentity(msg, gammaIndex) {
+  const row = gammaIndex?.byGameId?.get(Number(msg.gameId))
+    || gammaIndex?.bySlug?.get(String(msg.slug || ""));
+  if (!row)
+    return msg;
+  return {
+    ...msg,
+    eventId: msg.eventId ?? row.id,
+    slug: msg.slug || row.slug,
+  };
+}
+
 function unwrapEvents(data) {
   if (Array.isArray(data))
     return data;

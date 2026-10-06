@@ -22,7 +22,9 @@ wss://sports-api.polymarket.com/ws
   → broadcast_notify → realtime-hub（浏览器 pm_sport 推送）
 ```
 
-电竞场若不在 Sports WS 推送范围内，由 `gamma_poll.js` 按 Gamma 轮询补充。
+[changmen 扩展] 比分、阶段和比赛状态只接受 Sports WS，不再使用 Gamma 轮询补充或覆盖。没有 WS 推送的比赛不会由 Gamma 补比分；WS 断线期间保留最后收到的状态。
+
+Gamma 仍用于赛事身份索引和赛前历史价格查询，不参与 `pm_sport` 状态写入。切换不会清空已有数据库快照，已有状态由后续 WS 消息更新。
 
 ## 模块
 
@@ -30,7 +32,7 @@ wss://sports-api.polymarket.com/ws
 |------|------|
 | `index.js` | WS 连接、重连、主循环 |
 | `gamma_map.js` | Gamma event 索引 |
-| `gamma_poll.js` | 已关联场轮询 |
+| `gamma_poll.js` | WS 状态写入、独立历史价轮询（不轮询比分） |
 | `resolve_match.js` | `gameId` / slug → `client_match_id` |
 | `parse_sport.js` | Sports WS 消息解析 |
 

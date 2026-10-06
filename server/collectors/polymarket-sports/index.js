@@ -13,16 +13,14 @@ import {
 } from "@changmen/db";
 import WebSocket from "ws";
 import { notifyPmSportBroadcast } from "./broadcast_notify.js";
-import { refreshGammaEventIndex } from "./gamma_map.js";
-import { applyPmSportFromMessage, pollLinkedPmSportFromGamma, pollLinkedPrematchPrices } from "./gamma_poll.js";
+import { refreshGammaEventIndex, withGammaSportIdentity } from "./gamma_map.js";
+import { applyPmSportFromMessage, pollLinkedPrematchPrices } from "./gamma_poll.js";
 import { resolveClientMatchIdFromSportMessage } from "./resolve_match.js";
 
 loadChangmenEnv();
 
 const SPORTS_WS = "wss://sports-api.polymarket.com/ws";
 const GAMMA_REFRESH_MS = 60_000;
-/** 电竞常不在 Sports WS；已关联场 Gamma 轮询间隔 */
-const GAMMA_POLL_MS = 10_000;
 const RECONNECT_MS = 5_000;
 
 /** @type {{ byGameId: Map<number, object>, bySlug: Map<string, object> }} */
@@ -51,21 +49,6 @@ async function refreshGamma() {
   catch (err) {
     console.warn("[pm-sports] Gamma refresh failed:", err.message);
   }
-}
-
-let gammaPollRunning = false;
-async function runGammaPoll() {
-  if (gammaPollRunning || stopped) return;
-  gammaPollRunning = true;
-  try {
-    const n = await pollLinkedPmSportFromGamma(writePmSport);
-    if (n)
-      console.log(`[pm-sports] Gamma poll wrote ${n} row(s)`);
-  }
-  catch (err) {
-    console.warn("[pm-sports] Gamma poll failed:", err.message);
-  }
-  finally { gammaPollRunning = false; }
 }
 
 let prematchPollRunning = false;
@@ -112,7 +95,8 @@ async function handleSportMessage(raw) {
     return;
   }
 
-  const ok = await applyPmSportFromMessage(clientMatchId, msg, async (id, snapshot) => {
+  const sportMessage = withGammaSportIdentity(msg, gammaIndex);
+  const ok = await applyPmSportFromMessage(clientMatchId, sportMessage, async (id, snapshot) => {
     const written = await writePmSport(id, snapshot);
     if (written) {
       console.log(
@@ -167,15 +151,11 @@ async function main() {
   await ensurePmPrematchSchema();
 
   await refreshGamma();
-  await runGammaPoll();
   void runPrematchPoll();
   setInterval(() => { void runPrematchPoll(); }, 60_000);
   setInterval(() => {
     void refreshGamma();
   }, GAMMA_REFRESH_MS);
-  setInterval(() => {
-    void runGammaPoll();
-  }, GAMMA_POLL_MS);
 
   connectWs();
 

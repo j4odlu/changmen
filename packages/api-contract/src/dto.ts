@@ -239,6 +239,21 @@ export interface PmSportSnapshot {
   updatedAt?: number;
 }
 
+/** [changmen 扩展] VPS 持久化的单 token 赛前历史观测；cutoff 为 epoch 秒。 */
+export interface PmPrematchTokenSnapshot {
+  tokenId: string;
+  marketId: string;
+  status: "ready" | "pending" | "missing" | "error";
+  registeredStart: number | null;
+  cutoff: number;
+  checkedAt: number;
+  nextCheckAt: number;
+  price?: number;
+  observationTime?: number;
+  resolution?: number;
+  lastErrorAt?: number;
+}
+
 export interface ClientMatchDto {
   ID: number;
   Title: string;
@@ -252,6 +267,7 @@ export interface ClientMatchDto {
   Matchs: Record<string, string | number>;
   Bets: BetRowDto[];
   PmSport?: PmSportSnapshot;
+  PmPrematch?: Record<string, PmPrematchTokenSnapshot>;
   /** [changmen 扩展] 足球浏览器合场：token 子集等猜测合并标记（§3c；猜测场禁入未来 N4 自动下单） */
   MergeGuess?: boolean;
   /** [changmen 扩展] 体育只读盘：场馆原生联赛名（Gamma series 标题，如 "K-league"）；Game 未识别联赛时前端用它分组显示 */

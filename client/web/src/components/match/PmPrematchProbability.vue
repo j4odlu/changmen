@@ -1,68 +1,31 @@
 <script setup lang="ts">
-import type { ViewBet } from "@/models/match";
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import type { ViewBet, ViewMatch } from "@/models/match";
+import { computed } from "vue";
 import { formatOrderTime } from "@changmen/client-core/shared/format";
-import { loadPrematchProbability, type PrematchProbability } from "@/shared/pmPrematchProbability";
+import { readPrematchProbability } from "@/shared/pmPrematchProbability";
 
-const props = defineProps<{ bet: ViewBet }>();
+const props = defineProps<{ bet: ViewBet; match: ViewMatch }>();
 const pm = computed(() => props.bet.items.find(item => item.type === "Polymarket"));
-
-const value = ref<PrematchProbability | null>(null);
-const status = ref("等待查询");
-const host = ref<HTMLElement>();
-const visible = ref(false);
-const clock = ref(0);
-let generation = 0;
-let timer: ReturnType<typeof setInterval> | undefined;
-let observer: IntersectionObserver | undefined;
-
-watch(() => [pm.value?.homeId, pm.value?.awayId, visible.value, clock.value] as const, async ([home, away, shown], previous) => {
-  const current = ++generation;
-  if (home !== previous?.[0] || away !== previous?.[1]) {
-    value.value = null;
-    status.value = "等待查询";
+const result = computed(() => readPrematchProbability(pm.value?.homeId ?? "", pm.value?.awayId ?? "", props.match.pmPrematch));
+const value = computed(() => result.value.status === "ready" ? result.value.value : null);
+const status = computed(() => {
+  switch (result.value.status) {
+    case "waiting": return "等待 VPS 历史价";
+    case "pending": return "等待登记开赛时间";
+    case "missing": return "暂无历史数据";
+    case "error": return "VPS 查询失败，稍后重试";
+    default: return "";
   }
-  if (!shown || !home || !away)
-    return;
-  status.value = "查询中";
-  try {
-    const result = await loadPrematchProbability(home, away);
-    if (current !== generation)
-      return;
-    value.value = result.status === "ready" ? result.value : null;
-    status.value = result.status === "pending" ? "等待登记开赛时间" : result.status === "missing" ? "暂无历史数据" : "";
-  }
-  catch {
-    if (current === generation) {
-      value.value = null;
-      status.value = "查询失败，稍后重试";
-    }
-  }
-}, { immediate: true });
-
-onMounted(() => {
-  timer = setInterval(() => { clock.value++; }, 60_000);
-  observer = new IntersectionObserver(([entry]) => { visible.value = entry?.isIntersecting ?? false; }, { rootMargin: "100px" });
-  if (host.value) observer.observe(host.value);
-});
-watch(host, (element, previous) => {
-  if (previous) observer?.unobserve(previous);
-  if (element) observer?.observe(element);
-});
-onUnmounted(() => {
-  generation++;
-  clearInterval(timer);
-  observer?.disconnect();
 });
 
 /** [changmen 扩展] 临时采用登记时间口径，不标作实际清单前最后价。 */
 const detail = computed(() => value.value
   ? `C · ${props.bet.getBetName()} · PM 登记开赛时间前价格，非实际清单确认价。取价截止：${formatOrderTime(value.value.cutoff)}；${props.bet.homeName}记录：${formatOrderTime(value.value.homeTime)}；${props.bet.awayName}记录：${formatOrderTime(value.value.awayTime)}；采样窗口 ${value.value.resolution} 秒。`
-  : `C · ${props.bet.getBetName()} · ${status.value}；按 PM 登记开赛时间前 1 秒查询该盘口历史价格。`);
+  : `C · ${props.bet.getBetName()} · ${status.value}；VPS 按 PM 登记开赛时间前 1 秒查询并保存该盘口历史价格。`);
 </script>
 
 <template>
-  <div v-if="pm" ref="host" class="item flex pm-prematch" :title="detail" @dblclick.stop>
+  <div v-if="pm" class="item flex pm-prematch" :title="detail" @dblclick.stop>
     <div class="item-type pm-prematch-badge" aria-label="C：PM 登记开赛时间前胜率">C</div>
     <div class="item-odds home" :aria-label="`${bet.homeName}：${value ? `${value.home.toFixed(1)}%` : status}`">{{ value ? `${value.home.toFixed(1)}%` : "—" }}</div>
     <div class="item-odds away" :aria-label="`${bet.awayName}：${value ? `${value.away.toFixed(1)}%` : status}`">{{ value ? `${value.away.toFixed(1)}%` : "—" }}</div>

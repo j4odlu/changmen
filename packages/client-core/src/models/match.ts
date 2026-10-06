@@ -1,4 +1,4 @@
-import type { BetRowDto, ClientMatchDto, PlatformId, PmSportSnapshot } from "@changmen/api-contract";
+import type { BetRowDto, ClientMatchDto, PlatformId, PmSportSnapshot, PmPrematchTokenSnapshot } from "@changmen/api-contract";
 import { normalizeEpochMs } from "@changmen/shared/time/match_time";
 import { readVenueOdds } from "../bridge/oddsAccess";
 
@@ -168,6 +168,7 @@ export class ViewMatch {
   providers: Record<string, string | number>;
   bets: ViewBet[];
   pmSport?: PmSportSnapshot;
+  pmPrematch?: Record<string, PmPrematchTokenSnapshot>;
   /** [changmen 扩展] 场馆原生联赛名；Game 未识别时供前端分组显示 */
   league?: string;
 
@@ -183,6 +184,7 @@ export class ViewMatch {
     this.liveRound = dto.Round ?? 0;
     this.liveRoundStart = dto.RoundStart ?? 0;
     this.pmSport = dto.PmSport;
+    this.pmPrematch = dto.PmPrematch;
     this.league = dto.League;
     this.bets = (dto.Bets ?? [])
       .map(b => new ViewBet(b, this.providers, this.liveRound, this.liveRoundStart))

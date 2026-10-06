@@ -5,6 +5,7 @@
 import { fetchLinkedPolymarketPlatformMatches } from "@changmen/db";
 import { fetchGammaEventById, gammaEventToSportMessage } from "./gamma_map.js";
 import { buildPmSportSnapshot } from "./parse_sport.js";
+import { collectPrematchPrices } from "./prematch_prices.js";
 import {
   getLastWrittenSportState,
   getPrevSportState,
@@ -55,6 +56,19 @@ export async function pollLinkedPmSportFromGamma(write) {
         `[pm-sports] poll cm=${row.match_id} event=${row.source_match_id} ${msg.score || ""} ${msg.period || ""}`,
       );
     }
+  }
+  return written;
+}
+
+/** [changmen 扩展] 独立历史价轮询，避免历史接口延迟拖住实时状态写入。 */
+export async function pollLinkedPrematchPrices() {
+  const linked = await fetchLinkedPolymarketPlatformMatches();
+  let written = 0;
+  for (const eventId of new Set(linked.map(row => row.source_match_id))) {
+    const event = await fetchGammaEventById(eventId);
+    if (!event) continue;
+    try { written += await collectPrematchPrices(event); }
+    catch (err) { console.warn(`[pm-prematch] event=${eventId}`, err.message); }
   }
   return written;
 }

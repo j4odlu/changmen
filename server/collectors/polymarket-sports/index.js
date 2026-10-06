@@ -9,11 +9,12 @@ import {
   hasDatabaseUrlConfig,
   initDatabaseUrl,
   updateClientMatchPmSport,
+  ensurePmPrematchSchema,
 } from "@changmen/db";
 import WebSocket from "ws";
 import { notifyPmSportBroadcast } from "./broadcast_notify.js";
 import { refreshGammaEventIndex } from "./gamma_map.js";
-import { applyPmSportFromMessage, pollLinkedPmSportFromGamma } from "./gamma_poll.js";
+import { applyPmSportFromMessage, pollLinkedPmSportFromGamma, pollLinkedPrematchPrices } from "./gamma_poll.js";
 import { resolveClientMatchIdFromSportMessage } from "./resolve_match.js";
 
 loadChangmenEnv();
@@ -52,7 +53,10 @@ async function refreshGamma() {
   }
 }
 
+let gammaPollRunning = false;
 async function runGammaPoll() {
+  if (gammaPollRunning || stopped) return;
+  gammaPollRunning = true;
   try {
     const n = await pollLinkedPmSportFromGamma(writePmSport);
     if (n)
@@ -61,6 +65,19 @@ async function runGammaPoll() {
   catch (err) {
     console.warn("[pm-sports] Gamma poll failed:", err.message);
   }
+  finally { gammaPollRunning = false; }
+}
+
+let prematchPollRunning = false;
+async function runPrematchPoll() {
+  if (prematchPollRunning || stopped) return;
+  prematchPollRunning = true;
+  try {
+    const n = await pollLinkedPrematchPrices();
+    if (n) console.log(`[pm-prematch] saved ${n} token snapshot(s)`);
+  }
+  catch (err) { console.warn("[pm-prematch] poll failed:", err.message); }
+  finally { prematchPollRunning = false; }
 }
 
 async function handleSportMessage(raw) {
@@ -147,9 +164,12 @@ async function main() {
   // VPS：auto 优先内网；本机：内网不可达则走 public / DATABASE_URL
   await initDatabaseUrl();
   console.log(`[pm-sports] RDS ${getResolvedDatabaseLabel() || "DATABASE_URL"}`);
+  await ensurePmPrematchSchema();
 
   await refreshGamma();
   await runGammaPoll();
+  void runPrematchPoll();
+  setInterval(() => { void runPrematchPoll(); }, 60_000);
   setInterval(() => {
     void refreshGamma();
   }, GAMMA_REFRESH_MS);

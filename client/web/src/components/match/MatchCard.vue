@@ -8,6 +8,7 @@ import {
   resolveGameCode,
 } from "@changmen/shared/catalog/game_catalog.browser";
 import {
+  formatPmMatchStatus,
   formatResolutionSourceLabel,
   normalizeResolutionSourceHref,
 } from "@/shared/pmSportDisplay";
@@ -64,6 +65,10 @@ const resolutionSource = computed(() => {
 
 const resolutionLabel = computed(() => formatResolutionSourceLabel(resolutionSource.value || undefined));
 const resolutionHref = computed(() => normalizeResolutionSourceHref(resolutionSource.value || undefined));
+
+const pmMatchStatus = computed(() => props.match.pmSport || props.match.providers?.Polymarket
+  ? formatPmMatchStatus(props.match.pmSport)
+  : null);
 </script>
 
 <template>
@@ -81,6 +86,12 @@ const resolutionHref = computed(() => normalizeResolutionSourceHref(resolutionSo
       <label v-else-if="gameTag" class="game-tag">[{{ gameTag }}]</label>
       <label v-html="match.title" />
       <label class="startTime">{{ formatDate(match.startAt) }}</label>
+      <span
+        v-if="pmMatchStatus"
+        class="pm-match-status"
+        :class="`pm-match-status--${pmMatchStatus.kind}`"
+        title="PM 整场比赛状态；不代表开赛清单已完成"
+      >PM · {{ pmMatchStatus.label }}</span>
       <span v-if="resolutionLabel && resolutionHref" class="pm-sport">
         <a
           class="pm-sport-link"
@@ -102,3 +113,26 @@ const resolutionHref = computed(() => normalizeResolutionSourceHref(resolutionSo
     </div>
   </div>
 </template>
+
+<style scoped>
+.pm-match-status {
+  margin-left: 10px;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  color: var(--cm-color-warning, #e6a23c);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: normal;
+}
+.pm-match-status--live {
+  color: var(--cm-color-success, #67c23a);
+}
+.pm-match-status--canceled {
+  color: var(--cm-color-danger, #f56c6c);
+}
+.pm-match-status--finished,
+.pm-match-status--unknown {
+  color: inherit;
+}
+</style>

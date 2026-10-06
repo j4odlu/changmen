@@ -12,6 +12,7 @@ import { adapterRequire } from "../shared/adapter_paths.js";
 import { isEmbeddedMatcher } from "../shared/matcher_mode.js";
 import { ESPORT_DATA_DIR } from "../shared/storage_paths.js";
 import { createDefaultOddsApi } from "./default_odds.js";
+import { attachPmPrematchPrices } from "./pm_prematch.js";
 
 const PREDICTFUN_LIST_FUTURE_MS = Number(
   process.env.PREDICTFUN_LIST_FUTURE_MS
@@ -536,7 +537,11 @@ export async function buildMatchList() {
   if (!fromDb?.length)
     return [];
   defaultOddsApi.recordFromMatchList(fromDb);
-  return fromDb;
+  try { return await attachPmPrematchPrices(fromDb); }
+  catch (err) {
+    console.warn("[pm-prematch] stored price read failed:", err.message);
+    return fromDb;
+  }
 }
 
 /**

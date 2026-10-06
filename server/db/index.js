@@ -22,6 +22,7 @@ import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 export { certificateRegistryEnabled, getClientCertificate, listClientCertificates, getClientCertificateDetail, updateClientCertificateLabel, revokeClientCertificates, registerClientCertificate, revokeClientCertificate, authorizeClientCertificate } from './rds/client_certificate_store.js';
 export { fetchPmSubmissionLogs } from "./rds/pm_submission_store.js";
 export { insertOrderObservations, fetchOrderObservations } from "./rds/order_observation_store.js";
+export { ensurePmPrematchSchema, fetchPmPrematchPrices, writePmPrematchPrices } from "./rds/pm_prematch_store.js";
 
 import { describeDbScript, getDbMode } from "./db_script.js";
 

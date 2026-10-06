@@ -472,7 +472,7 @@ function onBetTitleDblClick() {
       {{ bet.getBetName() }} - {{ arb }}
     </div>
     <div v-show="!mapMuted" ref="itemsContainerRef" class="bet-items">
-      <PmPrematchProbability v-if="!bet.marketCode && bet.round >= 0" :bet="bet" />
+      <PmPrematchProbability v-if="!bet.marketCode && bet.round >= 0" :bet="bet" :match="match" />
       <div v-if="showDefaultOdds" class="item flex defaultOdds">
         <div class="item-type default" />
         <div

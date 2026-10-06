@@ -21,11 +21,6 @@ import {
 } from "@/extensions/mapBetMute";
 import { useEvMarker } from "@/extensions/valueBet";
 import { arbPercent, formatSecond, percent, toFixed } from "@changmen/client-core/shared/format";
-import {
-  lookupPmMapOutcomeByToken,
-  pmMapOutcomeTick,
-  pmMapOutcomeWinnerLabel,
-} from "@changmen/venue-adapter/polymarket";
 import { useCreateLoseDialogStore } from "@/stores/createLoseDialogStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { useOddsStore } from "@/stores/oddsStore";
@@ -335,30 +330,6 @@ watch(showLiveTimer, (on) => {
 
 onUnmounted(stopLocalLiveClock);
 
-/** PM Index：全场 / 地图盘口胜负（以 Polymarket 为准；按该行 token 查，不串图） */
-const pmMapOutcome = computed(() => {
-  void pmMapOutcomeTick.value;
-  const pmItem = props.bet.items.find(i => String(i.type) === "Polymarket");
-  if (!pmItem)
-    return null;
-  return lookupPmMapOutcomeByToken(pmItem.homeId)
-    ?? lookupPmMapOutcomeByToken(pmItem.awayId);
-});
-
-const pmMapOutcomeLabel = computed(() => {
-  const hit = pmMapOutcome.value;
-  if (!hit)
-    return "";
-  return pmMapOutcomeWinnerLabel(hit, props.bet.homeName, props.bet.awayName);
-});
-
-const pmHomeWon = computed(() => pmMapOutcome.value?.mapOutcome === "home");
-const pmAwayWon = computed(() => pmMapOutcome.value?.mapOutcome === "away");
-
-function pmOddsSideWon(side: BetSide): boolean {
-  return side === "Home" ? pmHomeWon.value : pmAwayWon.value;
-}
-
 const liveSeconds = computed(() => {
   void liveClockTick.value;
   if (!showLiveTimer.value)
@@ -503,19 +474,10 @@ function onBetTitleDblClick() {
             ...oddsCellClasses(item, 'Home'),
             'ev-positive': evMarker.isPositiveEv(item, 'Home'),
             'ev-near': evMarker.isNearEv(item, 'Home'),
-            'pm-map-won': item.type === 'Polymarket' && pmOddsSideWon('Home'),
-            'pm-map-lost': item.type === 'Polymarket' && !!pmMapOutcome && !pmOddsSideWon('Home'),
           }"
-          :title="item.type === 'Polymarket' && pmOddsSideWon('Home')
-            ? `${pmMapOutcomeLabel} · ${pmMapOutcome?.outcomeKind === 'official' ? 'PM 官方胜负' : 'PM 价格决出'}`
-            : undefined"
           @click="onTarget(item.type, 'Home')"
           @dblclick.stop="onOddsDblClick(item, 'Home')"
         >
-          <span
-            v-if="item.type === 'Polymarket' && pmOddsSideWon('Home')"
-            class="pm-map-win-badge"
-          >WIN</span>
           {{ itemOdds(item, "Home") || ""
           }}<span
             v-if="pbShadowLabel(item, 'Home')"
@@ -550,19 +512,10 @@ function onBetTitleDblClick() {
             ...oddsCellClasses(item, 'Away'),
             'ev-positive': evMarker.isPositiveEv(item, 'Away'),
             'ev-near': evMarker.isNearEv(item, 'Away'),
-            'pm-map-won': item.type === 'Polymarket' && pmOddsSideWon('Away'),
-            'pm-map-lost': item.type === 'Polymarket' && !!pmMapOutcome && !pmOddsSideWon('Away'),
           }"
-          :title="item.type === 'Polymarket' && pmOddsSideWon('Away')
-            ? `${pmMapOutcomeLabel} · ${pmMapOutcome?.outcomeKind === 'official' ? 'PM 官方胜负' : 'PM 价格决出'}`
-            : undefined"
           @click="onTarget(item.type, 'Away')"
           @dblclick.stop="onOddsDblClick(item, 'Away')"
         >
-          <span
-            v-if="item.type === 'Polymarket' && pmOddsSideWon('Away')"
-            class="pm-map-win-badge"
-          >WIN</span>
           {{ itemOdds(item, "Away") || ""
           }}<span
             v-if="pbShadowLabel(item, 'Away')"

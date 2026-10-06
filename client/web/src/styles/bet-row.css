@@ -35,7 +35,7 @@
   opacity:.72;
 }
 
-/* WIN 浮在胜方赔率格上方，不增加行高 */
+/* [changmen 扩展] WIN 浮在 C 行胜方赛前价格上方，不增加行高。 */
 .matchs .bet .item .item-odds.pm-map-won {
   border-color:var(--cm-color-success);
   box-shadow:0 0 4px color-mix(in srgb, var(--cm-color-success) 40%, transparent) inset;

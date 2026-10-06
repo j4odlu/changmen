@@ -10,6 +10,7 @@ import type {
 import { shallowRef } from "vue";
 
 export type PmMapOutcomeHit = {
+  winningTokenId: string;
   mapOutcome: PolymarketMapOutcomeSide;
   outcomeKind: PolymarketMapOutcomeKind;
   homeName: string;
@@ -31,6 +32,7 @@ function hitFromEntry(entry: PolymarketMarketIndexEntry): PmMapOutcomeHit | null
     return null;
   const kind = entry.outcomeKind === "official" ? "official" : "price";
   return {
+    winningTokenId: String(side === "home" ? entry.homeTokenId ?? "" : entry.awayTokenId ?? ""),
     mapOutcome: side,
     outcomeKind: kind,
     homeName: String(entry.homeName ?? ""),

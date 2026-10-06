@@ -12,7 +12,6 @@ import { useAccountStore } from "@/stores/accountStore";
 import {
   buildManualBetCheckFailureHtml,
   buildManualBetContextLines,
-  buildManualBetOrderFailureHtml,
 } from "@/stores/betting/manualBetAlert";
 import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
@@ -172,15 +171,11 @@ export async function runManualBet(
   }
   else {
     const message = result?.message || "下单失败";
-    if (item.type === "Polymarket") {
-      ElMessageBox.alert(buildManualBetOrderFailureHtml(message), "下单失败", {
+    await ElMessageBox.alert(
+      buildManualBetCheckFailureHtml(match, bet, item, side, odds, amount, message, "order"), "下单失败", {
         dangerouslyUseHTMLString: true,
         customClass: "manual-bet-result-box",
         confirmButtonText: "知道了",
       });
-    }
-    else {
-      ElMessageBox.alert(message, "下单失败");
-    }
   }
 }

@@ -268,12 +268,158 @@
 }
 
 .manual-bet-result-box {
-  width: 620px;
+  width: 820px;
   max-width: calc(100vw - 48px);
 }
 
 .manual-bet-result-box .el-message-box__message {
   text-align: left;
+  width: 100%;
+}
+
+/* [changmen 扩展] 手动下单反馈：预期与场馆返回逐项对比。 */
+.manual-bet-compare {
+  max-height: 70vh;
+  overflow-y: auto;
+  color: var(--el-text-color-primary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.manual-bet-compare__context {
+  margin-bottom: 16px;
+  overflow-wrap: anywhere;
+}
+
+.manual-bet-compare__context strong {
+  display: block;
+  margin: 6px 0 2px;
+  font-size: 18px;
+}
+
+.manual-bet-compare__context > div {
+  color: var(--el-text-color-regular);
+}
+
+.manual-bet-compare__platform {
+  border: 1px solid var(--el-border-color);
+  border-radius: 5px;
+  padding: 2px 8px;
+  color: var(--el-text-color-regular);
+  font-size: 12px;
+}
+
+.manual-bet-compare__failure {
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  border: 1px solid var(--el-color-danger-light-7);
+  border-left: 4px solid var(--el-color-danger);
+  border-radius: 8px;
+  background: var(--el-color-danger-light-9);
+}
+
+.manual-bet-compare__failure > span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--el-color-danger);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.manual-bet-compare__failure strong {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.manual-bet-compare__failure p {
+  margin: 5px 0 0;
+}
+
+.manual-bet-compare__table {
+  overflow-x: auto;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.manual-bet-compare table {
+  width: 100%;
+  min-width: 590px;
+  border-collapse: collapse;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.manual-bet-compare caption {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.manual-bet-compare th,
+.manual-bet-compare td {
+  padding: 11px 12px;
+  border-top: 1px solid var(--el-border-color-lighter);
+  vertical-align: top;
+}
+
+.manual-bet-compare thead th {
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.manual-bet-compare tbody th {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.manual-bet-compare__verdict {
+  color: var(--el-text-color-secondary);
+}
+
+.manual-bet-compare__problem td:last-child {
+  background: var(--el-color-danger-light-9);
+}
+
+.manual-bet-compare__problem .manual-bet-compare__verdict {
+  color: var(--el-color-danger);
+  font-weight: 600;
+}
+
+.manual-bet-compare__note {
+  margin: 12px 0 16px;
+  color: var(--el-text-color-regular);
+  font-size: 12px;
+}
+
+.manual-bet-compare__details {
+  border-top: 1px solid var(--el-border-color-lighter);
+  padding: 10px 0;
+}
+
+.manual-bet-compare__details summary {
+  cursor: pointer;
+  color: var(--el-text-color-regular);
+  font-size: 12px;
+}
+
+.manual-bet-compare__details pre {
+  padding: 10px;
+  background: var(--el-fill-color-light);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .manual-bet-result-box {
+    max-width: calc(100vw - 24px);
+  }
+
+  .manual-bet-compare__context strong {
+    font-size: 16px;
+  }
 }
 
 .manual-bet-alert__meta {

@@ -43,6 +43,22 @@ export interface AccountEditFormState {
   game: Record<string, { betCount: number; profit: number; odds: string[] }>;
 }
 
+/** [changmen 扩展] 新建体育 OB 卡不继承默认电竞配置；编辑已有卡不改电竞会话。 */
+export function prepareObSportAccountForm(form: AccountEditFormState, isNewAccount: boolean): void {
+  if (isNewAccount && (form.provider !== "OB" || !form.token.trim())) {
+    form.gateway = "";
+    form.token = "";
+    form.referer = "";
+    form.userAgent = "";
+    form.cookie = "";
+    if (form.provider !== "OB") {
+      form.venueMemberId = "";
+      form.venueAccountName = "";
+    }
+  }
+  form.provider = "OB";
+}
+
 function defaultGameMap() {
   return JSON.parse(
     JSON.stringify(new PlatformAccount({ accountId: 0, playerName: "", provider: "Polymarket" }).game),

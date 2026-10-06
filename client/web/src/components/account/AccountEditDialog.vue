@@ -8,6 +8,7 @@ import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import {
   createAccountEditFormStateFromPlatformAccount,
+  prepareObSportAccountForm,
 } from "@/components/account/accountEditFormState";
 import {
   isSportObCollectCredential,
@@ -740,7 +741,7 @@ async function applyPaste() {
         ElMessage.error("这是体育 OB token，请添加到 OB 下注账号");
         return;
       }
-      form.provider = "OB";
+      prepareObSportAccountForm(form, !props.account?.accountId);
       obTokenTab.value = "sport";
       sportObForm.token = sportSession.session.token || "";
       const pastedGw = String(sportSession.session.gateway || "").trim();

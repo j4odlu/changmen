@@ -16,6 +16,30 @@ function makeAccount(patch: Record<string, unknown> = {}) {
   });
 }
 
+describe("OB account serialization", () => {
+  it("preserves both connection configurations after the esport session expires", () => {
+    const sportOb = { token: "abcdef0123456789abcdef01", gateway: "https://sport.example.com", venueMemberId: "1009328104483790848" };
+    const account = makeAccount({ provider: "OB", token: "12345678901234567890", gateway: "https://ob.example.com", referer: "https://ob.example.com/home", userAgent: "test-agent", cookie: "session-cookie", sportOb });
+    account.logout();
+    const saved = account.toJSON();
+    expect(saved).not.toHaveProperty("token");
+    expect(saved).toMatchObject({ gateway: "https://ob.example.com", referer: "https://ob.example.com/home", userAgent: "test-agent", cookie: "session-cookie" });
+    expect(saved.sportOb).toEqual(sportOb);
+    expect(saved.accountId).toBe(1);
+    expect(account.gateway).toBe("https://ob.example.com");
+  });
+
+  it("preserves esport connection settings when an OB esport token exists", () => {
+    const account = makeAccount({ provider: "OB", token: "1234567890", gateway: "https://ob.example.com", referer: "https://ob.example.com/home", userAgent: "test-agent", cookie: "session-cookie" });
+    expect(account.toJSON()).toMatchObject({ token: "1234567890", gateway: "https://ob.example.com", referer: "https://ob.example.com/home", userAgent: "test-agent", cookie: "session-cookie" });
+  });
+
+  it("preserves other venues' connection settings", () => {
+    const account = makeAccount({ provider: "RAY", gateway: "https://ray.example.com" });
+    expect(account.toJSON().gateway).toBe("https://ray.example.com");
+  });
+});
+
 describe("resolveAccountPauseReason", () => {
   it("returns manual pause reason", () => {
     expect(resolveAccountPauseReason({ pause: true })).toBe("手动设定账号暂停");

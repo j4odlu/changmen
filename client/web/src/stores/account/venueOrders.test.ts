@@ -188,6 +188,60 @@ describe("syncVenueOrders sports workspace", () => {
   });
 });
 
+describe("syncVenueOrders OB sport-only cards in esport workspace", () => {
+  const originalLocation = globalThis.location;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getOrders.mockResolvedValue([]);
+    Object.defineProperty(globalThis, "location", { value: { pathname: "/" }, configurable: true });
+  });
+  afterEach(() => {
+    Object.defineProperty(globalThis, "location", { value: originalLocation, configurable: true });
+  });
+
+  function sportAccount(token?: string) {
+    return new PlatformAccount({
+      accountId: 171,
+      playerName: "sport-user",
+      provider: "OB",
+      gateway: "https://clob.polymarket.com",
+      token,
+      sportOb: { token: "abcdef0123456789abcdef01", gateway: "https://api.example.com", venueMemberId: "1009328104483790848" },
+    });
+  }
+
+  it("does not request or save esport orders for a sport-only card with a stale gateway", async () => {
+    expect(await syncVenueOrders(sportAccount())).toBeUndefined();
+    expect(getOrders).not.toHaveBeenCalled();
+    expect(saveOrders).not.toHaveBeenCalled();
+    expect(footballAccountSync).not.toHaveBeenCalled();
+  });
+
+  it("does not use a legacy sport token for esport orders", async () => {
+    const account = sportAccount("abcdef0123456789abcdef01");
+    account.sportOb = undefined;
+    expect(await syncVenueOrders(account)).toBeUndefined();
+    expect(getOrders).not.toHaveBeenCalled();
+    expect(saveOrders).not.toHaveBeenCalled();
+  });
+
+  it("does not request esport orders without a token even when sport credentials are absent", async () => {
+    const account = sportAccount();
+    account.sportOb = undefined;
+    expect(await syncVenueOrders(account)).toBeUndefined();
+    expect(getOrders).not.toHaveBeenCalled();
+  });
+
+  it("keeps esport order refresh for an OB card with both credentials", async () => {
+    const account = sportAccount("12345678901234567890");
+    account.gateway = "https://ob.example.com";
+    expect(await syncVenueOrders(account)).toEqual([]);
+    expect(getOrders).toHaveBeenCalledWith(account);
+    expect(saveOrders).toHaveBeenCalledTimes(1);
+    expect(footballAccountSync).not.toHaveBeenCalled();
+  });
+});
+
 describe("syncVenueOrders waitForOrderId", () => {
   beforeEach(() => {
     saveOrders.mockClear();

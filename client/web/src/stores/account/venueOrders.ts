@@ -7,7 +7,7 @@ import { Currency, getExchange } from "@changmen/shared/currency";
 import { truncateShareUsdtAmount } from "@/shared/pfOrderDisplay";
 import { saveOrders } from "@/api/order";
 import { getProvider } from "@/runtime/providers";
-import { sportObSessionFromAccount } from "@/runtime/obSportBetAccount";
+import { isObSportBetToken, sportObSessionFromAccount } from "@/runtime/obSportBetAccount";
 
 /** PM 下单后等 CLOB trades 索引：最多尝试次数 / 间隔 */
 const WAIT_FOR_ORDER_ATTEMPTS_DEFAULT = 5;
@@ -149,6 +149,13 @@ export async function syncVenueOrders(
     const handled = await syncSportsWorkspaceOrders(account);
     if (handled !== null)
       return handled;
+  }
+
+  // [changmen 扩展] 体育专用 OB 卡没有电竞会话，不能用外层残留网关拉电竞订单。
+  if (account.provider === "OB") {
+    const token = String(account.token || "").trim();
+    if (!token || isObSportBetToken(token))
+      return undefined;
   }
 
   const provider = getProvider(account);

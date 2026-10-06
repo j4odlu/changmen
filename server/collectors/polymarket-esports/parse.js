@@ -193,6 +193,10 @@ export function resolvePolymarketMapMarketOutcome(market) {
       return { mapOutcome: "away", outcomeKind: "official" };
   }
 
+  // [changmen 扩展] 全场高价格只表示预期，不能代替官方胜负（例如 BO5 仍为 2–0）。
+  if (mapNumberOf(market) === 0)
+    return null;
+
   const prices = parseJsonArray(market?.outcomePrices ?? market?.outcome_prices).map(Number);
   for (let i = 0; i < prices.length; i++) {
     const price = prices[i];

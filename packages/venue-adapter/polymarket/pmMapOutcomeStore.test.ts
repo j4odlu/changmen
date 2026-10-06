@@ -41,7 +41,7 @@ describe("pmMapOutcomeStore", () => {
     expect(lookupResolutionSourceBySourceMatchId("e1")).toBeNull();
   });
 
-  it("indexes match-winner (map 0) outcome the same as map markets", () => {
+  it("ignores legacy price outcomes on match winner until an official winner arrives", () => {
     replacePmMapOutcomesFromIndex({
       updatedAt: 1,
       assetIds: ["h0", "a0"],
@@ -59,6 +59,18 @@ describe("pmMapOutcomeStore", () => {
         status: "Normal",
         mapOutcome: "away",
         outcomeKind: "price",
+      }],
+    });
+    expect(lookupPmMapOutcomeByToken("h0")).toBeNull();
+    expect(lookupPmMapOutcomeByToken("a0")).toBeNull();
+    replacePmMapOutcomesFromIndex({
+      updatedAt: 2,
+      assetIds: ["h0", "a0"],
+      entries: [{
+        sourceMatchId: "e1", marketId: "c0", sourceBetId: "c0",
+        homeTokenId: "h0", awayTokenId: "a0", map: 0,
+        homeName: "T1", awayName: "GEN", homeOdds: 1.01, awayOdds: 50,
+        status: "Normal", mapOutcome: "away", outcomeKind: "official",
       }],
     });
     const hit = lookupPmMapOutcomeByToken("h0");

@@ -31,6 +31,9 @@ function hitFromEntry(entry: PolymarketMarketIndexEntry): PmMapOutcomeHit | null
   if (side !== "home" && side !== "away")
     return null;
   const kind = entry.outcomeKind === "official" ? "official" : "price";
+  // [changmen 扩展] 兼容旧 VPS Index：全场价格决出不能显示为整场获胜。
+  if ((Number(entry.map) || 0) === 0 && kind !== "official")
+    return null;
   return {
     winningTokenId: String(side === "home" ? entry.homeTokenId ?? "" : entry.awayTokenId ?? ""),
     mapOutcome: side,

@@ -66,7 +66,7 @@ describe("polymarket-esports parse", () => {
     assert.equal(mapped.bet.Status, "Normal");
   });
 
-  it("attaches mapOutcome from outcomePrices on match winner (map 0)", () => {
+  it("does not declare match winner from high prices while the market is open", () => {
     const market = {
       condition_id: "0xmatch",
       sportsMarketType: "moneyline",
@@ -83,8 +83,12 @@ describe("polymarket-esports parse", () => {
     const mapped = buildPolymarketMappedMarket(market, { "tok-h": 0.001, "tok-a": 0.999 });
     assert.ok(mapped);
     assert.equal(mapped.bet.Map, 0);
-    assert.equal(mapped.mapOutcome, "away");
-    assert.equal(mapped.outcomeKind, "price");
+    assert.equal(mapped.mapOutcome, undefined);
+    assert.equal(mapped.outcomeKind, undefined);
+    market.tokens = [{ token_id: "tok-a", winner: true }];
+    const official = buildPolymarketMappedMarket(market, { "tok-h": 0.001, "tok-a": 0.999 });
+    assert.equal(official.mapOutcome, "away");
+    assert.equal(official.outcomeKind, "official");
   });
 
   it("attaches mapOutcome from outcomePrices on child map market", () => {

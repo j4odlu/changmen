@@ -283,3 +283,17 @@ SDK 回退只替换新提交的签名适配层及对应依赖/锁文件，保留
 更新时保留当前浏览器的 localStorage/sessionStorage 恢复数据，勿通过清缓存解除待确认。先确认现有待确认/closing 原单，暂停发起新单后更新页面；旧页面继续持有旧代码，服务器发布不能替换其在内存中的执行逻辑。更新后核对 PM 下单配置、恢复任务和原订单状态，再恢复新下单。页面关闭后的服务端跟踪、跨浏览器/跨设备防重不属于当前保证。
 
 部署后的实际 BUY/SELL、小范围 delayed 样本、真实 Builder 归因/返佣、生产 P50/P95 仍须使用实际业务证据验收。本次准备不执行真实下单、撤单、生产订单修改或部署。出现错误归账、重复提交或错误钱包/金额时暂停新提交，保留原单恢复数据；回滚 bundle 时不能用不识别未知状态的旧客户端直接恢复交易。
+
+### 最终发布前验证
+
+代码提交 `521a78db` 在单独的干净 checkout 中完成 `npm ci`（845 个包）；先执行发布流水线已有的 `compile:router`，再使用与生产相同的 Node 24.19.0 运行完整 `npm test`，13 个任务成功，前端 2706 项通过、1 项跳过，后端 319 项通过、16 项跳过，matcher 188 项通过。前端较混合工作区的 2714 项少 8 项，原因是未纳入 POD 展示改动。无 ACK、会话竞争、旧恢复记录、卖出归账及 Builder/签名向量回归随此次发布代码一起验证。Node 24 的 `app:build`（含 vue-tsc）成功，保留已有大 chunk 提示。
+
+27 项发布范围、版本比较、流水线协调测试通过；WSL Linux 中的 release integration 通过，覆盖激活、旧 chunk 保留、过期 run 拒绝、失败重试、前后端回滚和 storage 隔离。Windows Git Bash 的 flock 不支持该测试的文件描述符场景，因此以 Linux 的成功结果为验收依据，未修改发布脚本规避检查。新 checkout 首次直接 npm test 缺少 gitignored 的 account_client_routes.js；按 CI 顺序生成 router 后全量通过，未把本机旧生成文件纳入 git。
+
+`npm ls` 确认三个消费者均解析 CLOB 1.2.0、unified 0.12.0。HEAD 后端归档约 4.4 MiB，只包含已提交文件；排除本机日志、浏览器配置、历史调查及未提交的 POD 改动。变更分类为 full，未涉及数据库/schema/迁移文件。构建产物包含生产 API 地址 `https://api.changmen.fun`。
+
+生产只读预检：网站 HTTPS 返回 200；实际浏览器处于安全上下文，支持 Web Locks、crypto.randomUUID 和 localStorage 读取，从生产站点浏览器 GET 官方 /time 返回 200。官方 POST /order 的 OPTIONS 返回 204，允许生产 Origin 与所需 POLY_* 请求头；这不代替真实签名 POST 验收。服务器 Node 24.19.0，八个启用进程 online、各为单实例，运行目录属于已有 53114c32 版本；内网后端健康接口返回 200。生产 Caddy 对 API 域名要求客户端证书，本次无证书公网 API TLS 失败符合该配置，不将它误判为后端故障；未改变证书或鉴权设置。上述浏览器能力验证来自独立检查配置，不能代替每位操作者当前浏览器的存储配额、原单状态或持久化记录检查。
+
+证据保留在本机 output/：pm-release-clean-install.log、pm-release-node24-tests.log、pm-release-node24-build.log、pm-release-deploy-tests.log、pm-release-linux-activation-tests.log、pm-release-production-readonly.log。诊断目录不提交。
+
+用户推送已有提交时在仓库根执行 `git push origin master`。当前还保留其他工作区改动；不要通过自动 git add -u 的批处理将它们混入本次发布。此次准备只创建本地提交，不执行 push 或触发部署。

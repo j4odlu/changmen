@@ -4,7 +4,7 @@
  */
 
 /** 官方文档列出的 tick（含 World Cup 等 0.0025） */
-export type PolymarketTickSize = "0.1" | "0.01" | "0.001" | "0.0001" | "0.0025";
+export type PolymarketTickSize = "0.1" | "0.01" | "0.005" | "0.001" | "0.0001" | "0.0025";
 
 const TICK_EPS = 1e-12;
 
@@ -22,6 +22,7 @@ export function normalizePolymarketTickSize(value: string | number | undefined):
   if (
     tick === "0.1"
     || tick === "0.01"
+    || tick === "0.005"
     || tick === "0.001"
     || tick === "0.0001"
     || tick === "0.0025"

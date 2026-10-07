@@ -10,6 +10,8 @@ import {
 } from "@/stores/betting/autoBet/phases/placeArbLegs";
 import { createDefaultUserConfig } from "@/types/userConfig";
 
+const validatePrepared = vi.hoisted(() => vi.fn((): string | null => null));
+vi.mock("@changmen/venue-adapter/polymarket", () => ({ validatePolymarketPreparedBuy: validatePrepared, recordPmExecutionMetric: vi.fn() }));
 const betting = vi.hoisted(() => vi.fn());
 const checkBetting = vi.hoisted(() => vi.fn());
 const retryFailedLeg = vi.hoisted(() => vi.fn());
@@ -86,6 +88,14 @@ const params: ArbBetAttemptParams = {
 };
 
 describe("shouldPlaceLegsInParallel", () => {
+  it("PM 本地准备失效时两腿均不提交，也不重新预检", async () => {
+    validatePrepared.mockReturnValue("钱包会话已失效");
+    const out = await placeArbLegs(params, checked({ accountB: account("Polymarket"), legB: leg("Polymarket") }));
+    expect(betting).not.toHaveBeenCalled();
+    expect(checkBetting).not.toHaveBeenCalled();
+    expect(out.placeOutcomeA).toBe("not_attempted");
+    expect(out.placeOutcomeB).toBe("not_attempted");
+  });
   it("A8↔A8 Parallel 仍并发", () => {
     expect(shouldPlaceLegsInParallel("Parallel")).toBe(true);
   });
@@ -102,6 +112,7 @@ describe("shouldPlaceLegsInParallel", () => {
 
 describe("placeArbLegs two-leg report contract", () => {
   beforeEach(() => {
+    validatePrepared.mockReset().mockReturnValue(null);
     vi.clearAllMocks();
     retryFailedLeg.mockResolvedValue(null);
     enqueueMakeUpOrder.mockResolvedValue(true);

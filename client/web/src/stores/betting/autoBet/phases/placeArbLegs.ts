@@ -1,3 +1,5 @@
+import { recordPmExecutionMetric } from "@changmen/venue-adapter/polymarket";
+import { validatePolymarketPreparedBuy } from "@changmen/venue-adapter/polymarket";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@/models/platformAccount";
@@ -69,6 +71,13 @@ export async function placeArbLegs(
   const accountStore = useAccountStore();
   let { legA, legB, accountA, accountB, betBothLegs, waitSec, linkId } = checked;
   const placeOpts = { linkId, requirePreparedQuote: true };
+  const dispatchStart = checked.precheckCompletedAt ?? performance.now();
+  const hasPm = [legA.type, legB.type].includes("Polymarket");
+  function submitLeg(account: PlatformAccount, leg: BetOption) {
+    if (hasPm) recordPmExecutionMetric({ kind: "dispatch", tokenId: leg.itemId,
+      stage: leg.type, linkId, ms: performance.now() - dispatchStart, success: true });
+    return accountStore.betting(account, leg, waitSec, placeOpts);
+  }
 
   if (isPendingConfirmVenueProvider(legA.type))
     legA.deferPostAcceptSettlement = true;
@@ -89,8 +98,13 @@ export async function placeArbLegs(
 
   let mixedBlocked = false;
   let mixedBlockReason = "";
+  for (const [account, leg] of [[accountA, legA], [accountB, legB]] as const) {
+    if (account?.provider !== "Polymarket") continue;
+    const reason = validatePolymarketPreparedBuy(account, leg);
+    if (reason) { mixedBlocked = true; mixedBlockReason = reason; trace?.event("预检", reason); }
+  }
   if (betBothLegs && accountA && accountB && (!hasPlaceQuote(legA) || !hasPlaceQuote(legB))) {
-    mixedBlockReason = "双侧预检未齐，取消下单";
+    mixedBlockReason = "双侧预检未齐，不提交订单";
     trace?.event("预检", mixedBlockReason);
     mixedBlocked = true;
   }
@@ -99,12 +113,12 @@ export async function placeArbLegs(
     if (accountA) {
       trace?.event("下单", `开始 ${legA.type} ${legA.target}`);
       attemptedA = true;
-      resultA = await accountStore.betting(accountA, legA, waitSec, placeOpts);
+      resultA = await submitLeg(accountA, legA);
     }
     else {
       trace?.event("下单", `开始 ${legB.type} ${legB.target}`);
       attemptedB = true;
-      resultB = await accountStore.betting(accountB!, legB, waitSec, placeOpts);
+      resultB = await submitLeg(accountB!, legB);
     }
   }
   else if (!mixedBlocked && shouldPlaceLegsInParallel(config.betSorting)) {
@@ -112,8 +126,8 @@ export async function placeArbLegs(
     attemptedA = true;
     attemptedB = true;
     const pair = await Promise.all([
-      accountStore.betting(accountA!, legA, waitSec, placeOpts),
-      accountStore.betting(accountB!, legB, waitSec, placeOpts),
+      submitLeg(accountA!, legA),
+      submitLeg(accountB!, legB),
     ]);
     resultA = pair[0];
     resultB = pair[1];
@@ -130,10 +144,12 @@ export async function placeArbLegs(
   else if (!mixedBlocked) {
     trace?.event("下单", `顺序 ${legA.type} → ${legB.type}`);
     attemptedA = true;
-    resultA = await accountStore.betting(accountA!, legA, waitSec, placeOpts);
+    const firstStart = performance.now();
+    resultA = await submitLeg(accountA!, legA);
+    if (hasPm) recordPmExecutionMetric({ kind: "serial_wait", linkId, ms: performance.now() - firstStart, success: resultA.success });
     if (resultA.success) {
       attemptedB = true;
-      resultB = await accountStore.betting(accountB!, legB, waitSec, placeOpts);
+      resultB = await submitLeg(accountB!, legB);
     }
     // A 失败：B 保持 not_attempted，仍回传编排层
   }

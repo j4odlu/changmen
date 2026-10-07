@@ -16,6 +16,11 @@ describe("pmExecutionMetrics", () => {
     setPmHttpModeForTests("vps");
   });
 
+  test("quote floods cannot evict execution samples", () => {
+    recordPmExecutionMetric({ kind: "check", ms: 42, success: true });
+    for (let i = 0; i < 400; i++) recordPmExecutionMetric({ kind: "quote_to_fo", success: true });
+    expect(getPmExecutionMetricsSummary().byKind.check.count).toBe(1);
+  });
   test("records runtime route context with book metrics", () => {
     recordPmExecutionMetric({
       kind: "book",

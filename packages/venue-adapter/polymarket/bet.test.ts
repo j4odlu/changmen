@@ -1,3 +1,4 @@
+import { notePmTickFrame, clearPmTickStateForTests } from "./pmTickState";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { isPolymarketFokBuyFilled, isPolymarketOrderAccepted, polymarketProvider } from "./bet";
@@ -28,6 +29,8 @@ vi.mock("./transport", () => ({
 
 vi.mock("./pmClientApi", () => ({
   pmGetBook,
+  pmPrepareSubmit: vi.fn().mockResolvedValue(undefined),
+  pmSubmitClockReady: () => true,
   pmSubmitOrder,
   pmGetTrades,
 }));
@@ -49,8 +52,10 @@ vi.mock("@changmen/client-core/bridge/oddsAccess", () => ({
 }));
 
 beforeEach(() => {
+  resetPmFokDepthBufferPrefsForTests();
   clearPmExecutionMetrics();
   clearPolymarketOrderClientCacheForTests();
+  clearPmTickStateForTests();
 });
 
 function accountWithToken(token: string, extra: Partial<PlatformAccount> = {}): PlatformAccount {
@@ -73,7 +78,8 @@ function mockPluginGetWithBook(
   book: Record<string, unknown>,
   tokenId = "123456789",
 ) {
-  vi.mocked(pmGetBook).mockResolvedValue(book);
+  vi.mocked(pmGetBook).mockResolvedValue({
+      asset_id: tokenId, ...book });
   vi.mocked(polymarketPluginGet).mockImplementation(async (url: string) => {
     if (url.includes("gamma-api.polymarket.com/markets")) {
       return [{
@@ -376,6 +382,12 @@ describe("polymarketProvider.getBalance", () => {
   });
 });
 
+async function checkedBetting(account: PlatformAccount, option: any) {
+  const checked = await polymarketProvider.checkBet(account, option);
+  if (!checked.data) return { success: false, message: checked.checkError } as any;
+  return polymarketProvider.betting(account, checked);
+}
+
 describe("polymarketProvider.betting", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -413,7 +425,7 @@ describe("polymarketProvider.betting", () => {
       },
     }), { accountId: 47 as unknown as PlatformAccount["accountId"] });
 
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       odds: 2,
       betMoney: 10,
@@ -424,7 +436,7 @@ describe("polymarketProvider.betting", () => {
       expect.objectContaining({ accountId: 47 }),
       expect.objectContaining({ orderType: "FOK" }),
     );
-  });
+  }, 20_000);
 
   test("uses official CLOB v2 order shape and posts through pmClientApi", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
@@ -459,7 +471,7 @@ describe("polymarketProvider.betting", () => {
       betMoney: 10,
     };
 
-    const result = await polymarketProvider.betting!(account, option as any);
+    const result = await checkedBetting(account, option as any);
 
     expect(result.success).toBe(true);
     expect(pmGetBook).toHaveBeenCalledWith("123456789", POLYMARKET_CLOB_API);
@@ -504,7 +516,7 @@ describe("polymarketProvider.betting", () => {
       makingAmount: "10000000",
     });
 
-    const result = await polymarketProvider.betting!(pmBettingAccount(), {
+    const result = await checkedBetting(pmBettingAccount(), {
       itemId: "123456789",
       odds: 2.631,
       betMoney: 10,
@@ -557,7 +569,7 @@ describe("polymarketProvider.betting", () => {
       betMoney: 10,
     };
 
-    const result = await polymarketProvider.betting!(account, option as any);
+    const result = await checkedBetting(account, option as any);
 
     expect(result.success).toBe(true);
     expect((option as any).newOdds).toBeCloseTo(2, 4);
@@ -602,7 +614,7 @@ describe("polymarketProvider.betting", () => {
       },
     }));
 
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       betId: "cond-1",
       odds: 3.125,
@@ -652,7 +664,7 @@ describe("polymarketProvider.betting", () => {
     }));
 
     // 0.68 → trunc3 展示赔率 1.47（与 fo / 建腿同源）
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       odds: 1.47,
       betMoney: 35,
@@ -695,7 +707,7 @@ describe("polymarketProvider.betting", () => {
       },
     }));
 
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       odds: 2.632,
       betMoney: 3,
@@ -740,7 +752,7 @@ describe("polymarketProvider.betting", () => {
       },
     }));
 
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       odds: 2.632,
       betMoney: 11.43,
@@ -777,7 +789,7 @@ describe("polymarketProvider.betting", () => {
       },
     }));
 
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       odds: 2.632,
       betMoney: 0,
@@ -812,7 +824,7 @@ describe("polymarketProvider.betting", () => {
       },
     }));
 
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       odds: 1.2821,
       betMoney: 3,
@@ -849,7 +861,7 @@ describe("polymarketProvider.betting", () => {
       apiCreds: { apiKey: "key-1", secret: "c2VjcmV0", passphrase: "pass-1" },
     }));
 
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       odds: 2,
       betMoney: 10,
@@ -882,7 +894,7 @@ describe("polymarketProvider.betting", () => {
       apiCreds: { apiKey: "key-1", secret: "c2VjcmV0", passphrase: "pass-1" },
     }));
 
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       odds: 2,
       betMoney: 10,
@@ -911,7 +923,7 @@ describe("polymarketProvider.betting", () => {
       apiCreds: { apiKey: "key-1", secret: "c2VjcmV0", passphrase: "pass-1" },
     }));
 
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       odds: 2,
       betMoney: 10,
@@ -945,7 +957,7 @@ describe("polymarketProvider.betting", () => {
       apiCreds: { apiKey: "key-1", secret: "c2VjcmV0", passphrase: "pass-1" },
     }));
 
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       odds: 2,
       betMoney: 10,
@@ -980,7 +992,7 @@ describe("polymarketProvider.betting", () => {
       apiCreds: { apiKey: "key-1", secret: "c2VjcmV0", passphrase: "pass-1" },
     }));
 
-    const result = await polymarketProvider.betting!(account, {
+    const result = await checkedBetting(account, {
       itemId: "123456789",
       odds: 2,
       betMoney: 10,
@@ -1047,6 +1059,10 @@ describe("isPolymarketOrderAccepted", () => {
   });
 });
 
+function precheckOnly(account: PlatformAccount, option: any) {
+  return polymarketProvider.checkBet(account, option, { role: "precheckOnly" });
+}
+
 describe("polymarketProvider.checkBet", () => {
   beforeEach(() => {
     resetPmFokDepthBufferPrefsForTests();
@@ -1075,9 +1091,10 @@ describe("polymarketProvider.checkBet", () => {
       }
       throw new Error(`unexpected url ${url}`);
     });
-    vi.mocked(pmGetBook).mockResolvedValue({ error: "trading is disabled" });
+    vi.mocked(pmGetBook).mockResolvedValue({
+      asset_id: "123456789", error: "trading is disabled" });
 
-    const out = await polymarketProvider.checkBet(
+    const out = await precheckOnly(
       accountWithToken("{}", { multiply: 7 }),
       { itemId: "123456789", odds: 5, betMoney: 5 } as any,
     );
@@ -1097,6 +1114,7 @@ describe("polymarketProvider.checkBet", () => {
       throw new Error(`unexpected url ${url}`);
     });
     vi.mocked(pmGetBook).mockResolvedValue({
+      asset_id: "123456789",
       tick_size: "0.01",
       min_order_size: "5",
       neg_risk: false,
@@ -1109,7 +1127,7 @@ describe("polymarketProvider.checkBet", () => {
       betMoney: 5,
     };
 
-    const out = await polymarketProvider.checkBet(
+    const out = await precheckOnly(
       accountWithToken("{}", { multiply: 7 }),
       option as any,
     );
@@ -1150,6 +1168,7 @@ describe("polymarketProvider.checkBet", () => {
     vi.mocked(pmGetBook).mockImplementation(async () => {
       releaseGamma(undefined);
       return {
+        asset_id: "123456789",
         tick_size: "0.01",
         min_order_size: "5",
         neg_risk: false,
@@ -1157,7 +1176,7 @@ describe("polymarketProvider.checkBet", () => {
       };
     });
 
-    const out = await polymarketProvider.checkBet(
+    const out = await precheckOnly(
       accountWithToken("{}", { multiply: 7 }),
       { itemId: "123456789", odds: 5, betMoney: 5 } as any,
     );
@@ -1178,13 +1197,14 @@ describe("polymarketProvider.checkBet", () => {
       throw new Error(`unexpected url ${url}`);
     });
     vi.mocked(pmGetBook).mockResolvedValue({
+      asset_id: "123456789",
       tick_size: "0.01",
       min_order_size: "5",
       neg_risk: false,
       asks: [{ price: "0.18", size: "100" }],
     });
 
-    const out = await polymarketProvider.checkBet(
+    const out = await precheckOnly(
       accountWithToken("{}", { multiply: 7 }),
       { itemId: "123456789", odds: 5, betMoney: 5 } as any,
     );
@@ -1208,7 +1228,7 @@ describe("polymarketProvider.checkBet", () => {
       bet: { round: 0 },
     };
 
-    const out = await polymarketProvider.checkBet(
+    const out = await precheckOnly(
       accountWithToken("{}", { multiply: 7 }),
       option as any,
     );
@@ -1234,7 +1254,7 @@ describe("polymarketProvider.checkBet", () => {
       bet: { round: 0 },
     };
 
-    const out = await polymarketProvider.betting(
+    const out = await precheckOnly(
       accountWithToken(JSON.stringify({
         walletAddress: "0xabc",
         privateKey: "0x" + "11".repeat(32),
@@ -1243,8 +1263,8 @@ describe("polymarketProvider.checkBet", () => {
       option as any,
     );
 
-    expect(out.success).toBe(false);
-    expect(out.message).toContain("比赛已结束");
+    expect(out.data).toBeNull();
+    expect(out.checkError).toContain("比赛已结束");
     expect(polymarketPluginGet).not.toHaveBeenCalled();
   });
 
@@ -1259,6 +1279,7 @@ describe("polymarketProvider.checkBet", () => {
       throw new Error(`unexpected url ${url}`);
     });
     vi.mocked(pmGetBook).mockResolvedValue({
+      asset_id: "123456789",
       tick_size: "0.01",
       min_order_size: "5",
       neg_risk: false,
@@ -1283,7 +1304,7 @@ describe("polymarketProvider.checkBet", () => {
       betMoney: 5,
     };
 
-    const out = await polymarketProvider.checkBet(
+    const out = await precheckOnly(
       accountWithToken("{}", { multiply: 7 }),
       option as any,
     );
@@ -1305,6 +1326,7 @@ describe("polymarketProvider.checkBet", () => {
 
   test("price-above fo sync unlocks and keeps betId from fo", async () => {
     vi.mocked(pmGetBook).mockResolvedValue({
+      asset_id: "123456789",
       tick_size: "0.01",
       min_order_size: "5",
       neg_risk: false,
@@ -1321,7 +1343,7 @@ describe("polymarketProvider.checkBet", () => {
     });
     saveVenueOdds.mockClear();
 
-    const out = await polymarketProvider.checkBet(
+    const out = await precheckOnly(
       accountWithToken("{}", { multiply: 7 }),
       { itemId: "123456789", betId: "", odds: 5, betMoney: 5 } as any,
     );
@@ -1343,6 +1365,7 @@ describe("polymarketProvider.checkBet", () => {
 
   test("does not rewrite fo when book ask is not worse than current fo clob", async () => {
     vi.mocked(pmGetBook).mockResolvedValue({
+      asset_id: "123456789",
       tick_size: "0.01",
       min_order_size: "5",
       neg_risk: false,
@@ -1359,7 +1382,7 @@ describe("polymarketProvider.checkBet", () => {
     });
     saveVenueOdds.mockClear();
 
-    const out = await polymarketProvider.checkBet(
+    const out = await precheckOnly(
       accountWithToken("{}", { multiply: 7 }),
       { itemId: "123456789", betId: "cond-1", odds: 5, betMoney: 5 } as any,
     );
@@ -1370,6 +1393,7 @@ describe("polymarketProvider.checkBet", () => {
 
   test("does not rewrite fo on min-size precheck failure", async () => {
     vi.mocked(pmGetBook).mockResolvedValue({
+      asset_id: "123456789",
       tick_size: "0.01",
       min_order_size: "50",
       neg_risk: false,
@@ -1386,7 +1410,7 @@ describe("polymarketProvider.checkBet", () => {
     });
     saveVenueOdds.mockClear();
 
-    const out = await polymarketProvider.checkBet(
+    const out = await precheckOnly(
       accountWithToken("{}", { multiply: 7 }),
       {
         itemId: "123456789",
@@ -1412,6 +1436,7 @@ describe("polymarketProvider.checkBet", () => {
       throw new Error(`unexpected url ${url}`);
     });
     vi.mocked(pmGetBook).mockResolvedValue({
+      asset_id: "123456789",
       tick_size: "0.01",
       min_order_size: "5",
       neg_risk: false,
@@ -1424,7 +1449,7 @@ describe("polymarketProvider.checkBet", () => {
       betMoney: 14,
     };
 
-    const out = await polymarketProvider.checkBet(
+    const out = await precheckOnly(
       accountWithToken("{}", { multiply: 10 }),
       option as any,
     );
@@ -1439,6 +1464,7 @@ describe("polymarketProvider.checkBet", () => {
   describe("pmFokDepthBuffer", () => {
     function capOption(betMoney: number, asks: Array<{ price: string; size: string }>) {
       vi.mocked(pmGetBook).mockResolvedValue({
+      asset_id: "123456789",
         tick_size: "0.01",
         min_order_size: "1",
         neg_risk: false,
@@ -1457,7 +1483,7 @@ describe("polymarketProvider.checkBet", () => {
     }
 
     test("off: 1× at best ask still passes (unchanged)", async () => {
-      const out = await polymarketProvider.checkBet(
+      const out = await precheckOnly(
         accountWithToken("{}", { multiply: 7 }),
         capOption(10, [{ price: "0.5", size: "20" }]) as any,
       );
@@ -1467,7 +1493,7 @@ describe("polymarketProvider.checkBet", () => {
 
     test("on 1.5: best ask 1× fails; worse level inside cap does not count", async () => {
       setPmFokDepthBufferPrefs({ enabled: true, multiplier: 1.5 });
-      const out = await polymarketProvider.checkBet(
+      const out = await precheckOnly(
         accountWithToken("{}", { multiply: 7 }),
         capOption(10, [
           { price: "0.5", size: "20" },
@@ -1482,7 +1508,7 @@ describe("polymarketProvider.checkBet", () => {
 
     test("on 1.5: best ask 1.5× passes at best ask", async () => {
       setPmFokDepthBufferPrefs({ enabled: true, multiplier: 1.5 });
-      const out = await polymarketProvider.checkBet(
+      const out = await precheckOnly(
         accountWithToken("{}", { multiply: 7 }),
         capOption(10, [{ price: "0.5", size: "30" }]) as any,
       );
@@ -1492,7 +1518,7 @@ describe("polymarketProvider.checkBet", () => {
 
     test("on 1.5: 1× walks to second level; P and better counts toward X", async () => {
       setPmFokDepthBufferPrefs({ enabled: true, multiplier: 1.5 });
-      const out = await polymarketProvider.checkBet(
+      const out = await precheckOnly(
         accountWithToken("{}", { multiply: 7 }),
         capOption(10, [
           { price: "0.5", size: "10" },
@@ -1679,7 +1705,7 @@ describe("PM precheck /book reuse", () => {
     });
   });
 
-  test("betting records order client cache hit on repeated PM signatures", async () => {
+  test("betting refuses repeated consumption without signing again", async () => {
     const now = 1_700_000_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now);
     mockPluginGetWithBook({
@@ -1709,17 +1735,12 @@ describe("PM precheck /book reuse", () => {
 
     clearPmExecutionMetrics();
     const result = await polymarketProvider.betting!(account, checked as any);
-
-    expect(result.success).toBe(true);
-    expect(getPmExecutionMetrics().find(row => row.kind === "sign")).toMatchObject({
-      kind: "sign",
-      bookReuse: true,
-      orderClientCacheHit: true,
-      success: true,
-    });
+    expect(result.success).toBe(false);
+    expect(pmSubmitOrder).toHaveBeenCalledOnce();
+    expect(getPmExecutionMetrics().find(row => row.kind === "sign")).toBeUndefined();
   });
 
-  test("betting refetches /book when precheck cache expired", async () => {
+  test("betting keeps the same frozen check after 1500ms", async () => {
     let now = 1_700_000_000_000;
     vi.spyOn(Date, "now").mockImplementation(() => now);
     mockPluginGetWithBook({
@@ -1752,13 +1773,124 @@ describe("PM precheck /book reuse", () => {
     const result = await polymarketProvider.betting!(account, checked as any);
 
     expect(result.success).toBe(true);
-    expect(bookGetCalls().length).toBeGreaterThan(0);
+    expect(bookGetCalls().length).toBe(0);
     expect(getPmExecutionMetrics().find(row => row.kind === "sign")).toMatchObject({
       kind: "sign",
-      bookReuse: false,
+      bookReuse: true,
       bookAgeMs: 1501,
-      reuseRejectReason: "expired",
       success: true,
     });
+  });
+});
+
+
+describe("PM phase 1 frozen attempt", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks(); pmGetBook.mockReset(); pmSubmitOrder.mockReset(); polymarketPluginGet.mockReset();
+    mockPluginGetWithBook({ tick_size: "0.005", min_order_size: "5", neg_risk: false,
+      asks: [{ price: "0.505", size: "1000" }] });
+    pmSubmitOrder.mockResolvedValue({ success: true, status: "matched", orderID: "one", takingAmount: "20", makingAmount: "10" });
+  });
+  const option = () => ({ itemId: "123456789", odds: 1 / 0.505, betMoney: 10 }) as any;
+  test.each(["accountId", "target", "depth"])("changing %s before wallet preparation cannot bind unchecked inputs", async field => {
+    const account = pmBettingAccount(); account.accountId = 47;
+    const raw = option();
+    let release!: (value: boolean) => void;
+    const gate = new Promise<boolean>(resolve => { release = resolve; });
+    const task = polymarketProvider.checkBet(account, raw, { prepareSigning: gate });
+    // Public book/guard finish while wallet preparation is still pending.
+    for (let i = 0; i < 12; i++) await Promise.resolve();
+    if (field === "accountId") account.accountId = 48;
+    if (field === "target") raw.target = "Away";
+    if (field === "depth") setPmFokDepthBufferPrefs({ enabled: true, multiplier: 10 });
+    release(true);
+    const checked = await task;
+    expect(checked.data).toBeNull();
+    expect(pmSubmitOrder).not.toHaveBeenCalled();
+    resetPmFokDepthBufferPrefsForTests();
+  });
+  test("overlapping checks cannot revive a rejected attempt when the first request finishes", async () => {
+    const account = pmBettingAccount(); const raw = option(); raw.data = null;
+    let release!: (value: boolean) => void;
+    const gate = new Promise<boolean>(resolve => { release = resolve; });
+    const first = polymarketProvider.checkBet(account, raw, { prepareSigning: gate });
+    expect((await polymarketProvider.checkBet(account, raw)).data).toBeNull();
+    release(true);
+    expect((await first).data).toBeNull();
+  });
+  test.each(["tick", "minimum"])("invalid book %s cannot be hidden by cached tick metadata", async field => {
+    notePmTickFrame(JSON.stringify({ event_type: "tick_size_change", asset_id: "123456789", new_tick_size: "0.005", timestamp: Date.now() }));
+    pmGetBook.mockResolvedValue({ asset_id: "123456789", tick_size: field === "tick" ? "unsupported" : "0.005",
+      min_order_size: field === "minimum" ? null : "5", neg_risk: false, asks: [{ price: "0.505", size: "100" }] });
+    expect((await polymarketProvider.checkBet(pmBettingAccount(), option())).data).toBeNull();
+  });
+  test("unprepared or repeated-check attempts never trigger submission-time reads", async () => {
+    const account = pmBettingAccount(); const raw = option();
+    expect((await polymarketProvider.betting(account, raw)).success).toBe(false);
+    expect(pmGetBook).not.toHaveBeenCalled();
+    await polymarketProvider.checkBet(account, raw);
+    const repeated = await polymarketProvider.checkBet(account, raw);
+    expect(repeated.data).toBeNull(); expect(pmGetBook).toHaveBeenCalledOnce();
+    expect((await polymarketProvider.betting(account, raw)).success).toBe(false);
+    expect(pmSubmitOrder).not.toHaveBeenCalled();
+  });
+  test("concurrent consumption signs and submits once; no post-check market reads", async () => {
+    const account = pmBettingAccount(); const checked = await polymarketProvider.checkBet(account, option());
+    expect(checked.data).toBeTruthy();
+    pmGetBook.mockClear(); polymarketPluginGet.mockClear();
+    const result = await Promise.all([polymarketProvider.betting(account, checked), polymarketProvider.betting(account, checked)]);
+    expect(result.filter(r => r.success)).toHaveLength(1);
+    expect(pmSubmitOrder).toHaveBeenCalledOnce(); expect(pmGetBook).not.toHaveBeenCalled(); expect(polymarketPluginGet).not.toHaveBeenCalled();
+  });
+  test.each(["amount", "token", "account", "data", "wallet"])("changed %s cannot reuse a prepared attempt", async what => {
+    const account = pmBettingAccount(); const checked = await polymarketProvider.checkBet(account, option());
+    if (what === "amount") checked.betMoney += 1;
+    if (what === "token") checked.itemId = "other";
+    if (what === "account") account.token += " ";
+    if (what === "data") checked.data = { ...checked.data };
+    if (what === "wallet") clearPolymarketOrderClientCacheForTests();
+    pmGetBook.mockClear();
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(false);
+    expect(pmSubmitOrder).not.toHaveBeenCalled(); expect(pmGetBook).not.toHaveBeenCalled();
+  });
+  test("known newer tick invalidates the frozen price without rebuilding", async () => {
+    const account = pmBettingAccount(); const checked = await polymarketProvider.checkBet(account, option());
+    notePmTickFrame(JSON.stringify({ event_type: "tick_size_change", asset_id: "123456789", new_tick_size: "0.01", timestamp: Date.now() }));
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(false);
+    expect(pmSubmitOrder).not.toHaveBeenCalled();
+  });
+  test("precheck-only has no wallet requirement but is not executable", async () => {
+    const account = accountWithToken("{}");
+    const checked = await polymarketProvider.checkBet(account, option(), { role: "precheckOnly" });
+    expect(checked.data).toBeTruthy();
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(false);
+    expect(pmSubmitOrder).not.toHaveBeenCalled();
+  });
+  test("wallet preparation is concurrent with book and completes before execute succeeds", async () => {
+    let release!: (ready: boolean) => void;
+    const ready = new Promise<boolean>(resolve => { release = resolve; });
+    const account = pmBettingAccount(); let done = false;
+    const task = polymarketProvider.checkBet(account, option(), { prepareSigning: ready }).then(r => { done = true; return r; });
+    expect(pmGetBook).toHaveBeenCalledOnce(); await Promise.resolve(); expect(done).toBe(false);
+    release(true); expect((await task).data).toBeTruthy();
+  });
+  test("failed submit consumes the attempt permanently", async () => {
+    const account = pmBettingAccount(); const checked = await polymarketProvider.checkBet(account, option());
+    pmSubmitOrder.mockRejectedValue(new Error("Network Error"));
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(false);
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(false);
+    expect(pmSubmitOrder).toHaveBeenCalledOnce();
+  });
+  test.each(["future", "", null])("unknown book version %s fails in precheck", async version => {
+    pmGetBook.mockResolvedValue({ asset_id: "123456789", version, tick_size: "0.01", min_order_size: "5", neg_risk: false, asks: [{ price: "0.5", size: "100" }] });
+    const checked = await polymarketProvider.checkBet(pmBettingAccount(), option());
+    expect(checked.data).toBeNull(); expect(checked.checkError).toContain("版本无效");
+  });
+  test("v2 book routes to Exchange V3 and preserves position ID", async () => {
+    pmGetBook.mockResolvedValue({ asset_id: "123456789", version: "v2", tick_size: "0.005", min_order_size: "5", neg_risk: false, asks: [{ price: "0.505", size: "100" }] });
+    const account = pmBettingAccount(); const checked = await polymarketProvider.checkBet(account, option());
+    expect(checked.data?.orderOptions).toMatchObject({ version: 3 });
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(true);
+    expect(pmSubmitOrder.mock.calls[0][1]).toMatchObject({ orderType: "FOK", order: { tokenId: "123456789" } });
   });
 });

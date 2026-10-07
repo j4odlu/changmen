@@ -218,7 +218,10 @@ export interface ResolveLegOutcomeOpts {
 export interface PlatformProvider {
   getBalance?(account: PlatformAccount): Promise<AccountBalanceResult | undefined>;
   getOrders?(account: PlatformAccount): Promise<VenueOrder[]>;
-  checkBet(account: PlatformAccount, option: BetOption): Promise<BetOption>;
+  checkBet(account: PlatformAccount, option: BetOption, context?: {
+    role?: "execute" | "precheckOnly";
+    prepareSigning?: Promise<boolean>;
+  }): Promise<BetOption>;
   betting(account: PlatformAccount, option: BetOption): Promise<BetResult>;
   /** 订单状态层：POST 之后判定 filled / unfilled / timeout（拒单检测） */
   resolveLegOutcome?(

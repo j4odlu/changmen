@@ -47,6 +47,7 @@ export const ESPORT_ACTIONS = [
   "Client_RefreshAccountBalance",
   "Pm_RefreshBalance",
   "Pm_HttpRequest",
+  "Pm_PrepareSubmit",
   "Pm_SubmitOrder",
   "Pm_CancelOrder",
   "Pm_GetTrades",

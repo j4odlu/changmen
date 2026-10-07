@@ -11,12 +11,14 @@ on:
       - 'turbo.json'
       - '.github/workflows/deploy-frontend.yml'
       - 'scripts/deploy/publish.sh'
+      - 'scripts/deploy/wait-for-backend*.mjs'
       - 'deploy/scripts/release-common.sh'
       - 'deploy/scripts/release-frontend.sh'
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: deploy-frontend-production
@@ -28,9 +30,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Shanghai
-    timeout-minutes: 30
+    timeout-minutes: 65
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
@@ -42,10 +46,15 @@ jobs:
           VITE_PREDICT_FUN_API_BASE: https://api.predict.fun
         run: |
           npm run check:boundaries
-          node --test scripts/deploy/classify-deploy-scope.test.mjs scripts/deploy/workflows.test.mjs scripts/deploy/deploy-plan.test.mjs scripts/deploy/compare-deployed-files.test.mjs
+          node --test scripts/deploy/classify-deploy-scope.test.mjs scripts/deploy/workflows.test.mjs scripts/deploy/deploy-plan.test.mjs scripts/deploy/compare-deployed-files.test.mjs scripts/deploy/wait-for-backend.test.mjs
           bash scripts/deploy/release.test.sh
           npm run test --workspace=@changmen/web
           npm run app:build
+      - name: Wait for matching backend when push changes both components
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/deploy/wait-for-backend.mjs
       - name: Publish frontend
         env:
           DEPLOY_HOST: '47.57.10.202'

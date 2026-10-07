@@ -13,6 +13,7 @@ import {
   handlePmGetTrades,
   handlePmHeartbeat,
   handlePmHttpRequest,
+  handlePmPrepareSubmit,
   handlePmSubmitOrder,
   handleRefreshPmBalance,
 } from "../integrations/polymarket/pm_client_handlers.js";
@@ -96,6 +97,10 @@ export async function handlePmPfAction(
         return fail(snippet);
       }
       return ok(upstream);
+    }
+    case "Pm_PrepareSubmit": {
+      const prepared = await handlePmPrepareSubmit(body, ctx.user.id);
+      return prepared.ok ? ok(prepared.info) : fail(prepared.msg);
     }
     case "Pm_SubmitOrder": {
       const submitted = await handlePmSubmitOrder(body, ctx.user.id);

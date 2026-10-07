@@ -62,7 +62,7 @@
     "db:prune": "node scripts/ops/migrations/prune-stale.mjs",
     "check:collect": "node scripts/check-collect-platforms.js",
     "check:collect:probe": "node scripts/check-collect-platforms.js --probe",
-    "test": "vitest run core/shared core/http core/auth core/certificates core/admin_tools/user_log_lookup.test.mjs core/admin_tools/user_log_lookup.observation.test.mjs core/admin_tools/order_observation.test.mjs scripts/apply-order-observation-schema.test.mjs core/esport-api/action_registry.test.mjs core/football/pod_bet_execution.test.js && npm run test:adapter",
+    "test": "vitest run core/shared core/http core/auth core/certificates core/integrations/polymarket core/admin_tools/user_log_lookup.test.mjs core/admin_tools/user_log_lookup.observation.test.mjs core/admin_tools/order_observation.test.mjs scripts/apply-order-observation-schema.test.mjs core/esport-api/action_registry.test.mjs core/football/pod_bet_execution.test.js && npm run test:adapter",
     "test:watch": "vitest",
     "test:adapter": "node scripts/test-packaged-adapter-layout.js",
     "test:packaged-adapter": "node scripts/test-packaged-adapter-layout.js",

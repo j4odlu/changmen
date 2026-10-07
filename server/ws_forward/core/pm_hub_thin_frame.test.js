@@ -1,3 +1,4 @@
+import { splitPmControlFrames } from "./pm_hub_thin_frame.js";
 import { afterEach, describe, expect, test } from "vitest";
 import {
   bestAskFromBookAsks,
@@ -134,4 +135,13 @@ describe("pm_hub_thin_frame", () => {
     process.env.PM_HUB_THIN_FRAMES = "1";
     expect(isPmHubThinFramesEnabled()).toBe(true);
   });
+});
+
+
+test("tick control is separated before quote thinning/coalescing even in mixed arrays", () => {
+  const tick = { event_type: "tick_size_change", asset_id: "a", new_tick_size: "0.005", timestamp: "1000" };
+  const book = { event_type: "book", asset_id: "a", asks: [{ price: "0.5", size: "10" }] };
+  const split = splitPmControlFrames(JSON.stringify([tick, book]));
+  expect(split.controls).toEqual([{ assetId: "a", raw: JSON.stringify(tick) }]);
+  expect(JSON.parse(split.quotes)).toEqual([book]);
 });

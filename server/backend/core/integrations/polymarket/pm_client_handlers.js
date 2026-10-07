@@ -2,13 +2,14 @@
  * Polymarket 语义 Pm_* 处理器（VPS 直连 CLOB）
  */
 import { normalizeAccountMultiplyField } from "@changmen/shared/account_multiply";
+import { clobClockInfo, prepareClobClock } from "./clob_clock.js";
 import * as accountStore from "../../account/account_store.js";
 import { assertPlayerOwnedByUser } from "../../account/player_ownership.js";
 import { enrichAccountFromPlatformDefaults } from "../../account/balance_provider.js";
 import * as dbStore from "../../db/store.js";
 import store from "../../esport-api/store.js";
 import { fetchPolymarketCollateralBalance } from "./balance.js";
-import { executePolymarketHttpRequest, pickPolymarketPolyHeaders, PM_SUBMIT_ORDER_POST_TIMEOUT_MS } from "./clob_proxy.js";
+import { isAllowedPolymarketUrl, executePolymarketHttpRequest, pickPolymarketPolyHeaders, PM_SUBMIT_ORDER_POST_TIMEOUT_MS } from "./clob_proxy.js";
 import { fetchPolymarketTradesSince, fetchPolymarketTradesById } from "./clob_l2.js";
 
 const DEFAULT_CLOB = "https://clob.polymarket.com";
@@ -205,7 +206,19 @@ export async function handleRefreshPmBalance(body, userId) {
 }
 
 /** Pm_SubmitOrder */
+export async function handlePmPrepareSubmit(body, userId) {
+  const resolved = await resolveOwnedPmAccount(body.playerId, userId);
+  if (!resolved.ok) return resolved;
+  try {
+    const gateway = clobGateway(resolved.account);
+    if (!isAllowedPolymarketUrl(gateway)) throw new Error("URL 不在 Polymarket 允许列表");
+    const leaseMs = await prepareClobClock(gateway);
+    return { ok: true, info: { ready: true, leaseMs, ...clobClockInfo(gateway) } };
+  } catch (err) { return { ok: false, msg: String(err.message || err) }; }
+}
+
 export async function handlePmSubmitOrder(body, userId) {
+  const receivedAt = performance.now();
   const resolved = await resolveOwnedPmAccount(body.playerId, userId);
   if (!resolved.ok)
     return resolved;
@@ -214,6 +227,7 @@ export async function handlePmSubmitOrder(body, userId) {
     return { ok: false, msg: "order 必填" };
   try {
     const gateway = clobGateway(resolved.account);
+    const outboundPrepareMs = performance.now() - receivedAt;
     const result = await executePolymarketHttpRequest({
       method: "POST",
       url: `${gateway}${ORDER_PATH}`,
@@ -221,8 +235,9 @@ export async function handlePmSubmitOrder(body, userId) {
       accountToken: resolved.account.token,
       body: order,
       timeoutMs: PM_SUBMIT_ORDER_POST_TIMEOUT_MS,
+      clientL2Timestamp: body.clientL2Timestamp,
     });
-    return { ok: true, info: parseUpstreamJson(result) };
+    return { ok: true, info: { ...parseUpstreamJson(result), pmTiming: { ...result.timing, outboundPrepareMs: outboundPrepareMs + (result.timing?.authMs || 0) } } };
   }
   catch (err) {
     return { ok: false, msg: err instanceof Error ? err.message : String(err) };

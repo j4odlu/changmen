@@ -1,3 +1,4 @@
+import { clearPmPublicRoutesForTests } from "./pmPublicRoute";
 import { a8PluginGet, a8PluginPost } from "@changmen/client-core/chrome-plugin/bridge";
 
 import { directGet, directPostJson } from "@changmen/client-core/shared/http";
@@ -145,6 +146,7 @@ describe("pmTransport mode", () => {
   });
 
   beforeEach(() => {
+    clearPmPublicRoutesForTests();
     setPmHttpModeForTests(null);
 
     setPmGetBookDirectTimeoutMsForTests(PM_GET_BOOK_DIRECT_TIMEOUT_MS);
@@ -624,7 +626,7 @@ describe("pmTransport mode", () => {
     expect(resolvePmHttpMode()).toBe("vps");
     expect(changmenPmEsportCall).toHaveBeenCalledWith(
       "Pm_SubmitOrder",
-      { playerId: 42, order: { foo: 1 } },
+      { playerId: 42, order: { foo: 1 }, clientL2Timestamp: expect.any(Number) },
       { timeoutMs: PM_SUBMIT_ORDER_TIMEOUT_MS },
     );
   });

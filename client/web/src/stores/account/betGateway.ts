@@ -29,6 +29,7 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useUserStore } from "@/stores/userStore";
 
 export type CheckBettingOpts = ResolveVenueStakeOpts & {
+  role?: "execute" | "precheckOnly";
   /** 场馆额已换过：再预检只验盘口，不改 betMoney（勿用 skipAccountRate，USDT 会二次÷汇率） */
   skipStakeResolve?: boolean;
 };
@@ -328,7 +329,10 @@ export async function checkBetting(
     observeOption(option, account, "precheck_result", { outcome: "blocked", reasonCode: "no_account" });
     return option;
   }
-  const signingReady = await ensureSharedVaultKeyForAccount(account);
+  const pm = account.provider === "Polymarket";
+  const signingTask = pm && opts?.role === "precheckOnly"
+    ? Promise.resolve(true) : ensureSharedVaultKeyForAccount(account).catch(() => false);
+  if (!pm) await signingTask;
   const provider = getProvider(account);
   if (!provider) {
     option.checkError = `场馆${option.type}不被支持`;
@@ -339,18 +343,11 @@ export async function checkBetting(
   const observationStartedAt = Date.now();
   let observationError: unknown;
   try {
-    // [changmen 扩展] PM 余额/L2 凭证可用不代表本机具备签名私钥。
-    // 双腿预检在正式 POST 前汇总结果；此处失败会让整轮套利停止下单。
-    if (account.provider === "Polymarket" && !signingReady) {
-      option.data = null;
-      option.checkError = "缺少有效私钥：请先解锁本机钱包，或在账号设置中重新导入私钥";
-      return option;
-    }
     attachPolymarketDetectionQuote(option);
     attachPredictFunDetectionQuote(option);
     // [A8 适配] 编排 Plan CNY → 场馆原币（CNY / U / PM）；预检后不改，跌价由各场馆 checkBet 拒单
     if (!opts?.skipStakeResolve) {
-      const planBetMoney = option.betMoney;
+      const planBetMoney = pm ? (option.planBetMoney ?? option.betMoney) : option.betMoney;
       const exchange = getExchange(account.currency);
       const venueBetMoney = resolveVenueStakeFromPlanCny(account, planBetMoney, option.odds, opts);
       option.planBetMoney = planBetMoney;
@@ -359,7 +356,7 @@ export async function checkBetting(
       option.stakeCurrency = String(account.currency || "CNY");
       option.betMoney = venueBetMoney;
     }
-    const checked = await provider.checkBet(account, option);
+    const checked = await provider.checkBet(account, option, { role: opts?.role ?? "execute", prepareSigning: signingTask });
     // [changmen 扩展] adapter 返回新对象时只传递观察元数据，原业务返回值不变。
     try { checked.observation ??= option.observation; }
     catch { /* 观察字段写入失败不改变返回值 */ }
@@ -404,7 +401,7 @@ export async function placeBet(
     observeOption(option, account, "submission_result", { outcome: "not_submitted", reasonCode: "no_account" });
     return new BetResult(option.type, false, "无可用账号");
   }
-  await ensureSharedVaultKeyForAccount(account);
+  if (account.provider !== "Polymarket") await ensureSharedVaultKeyForAccount(account);
   const provider = getProvider(account);
   if (!provider) {
     observeOption(option, account, "submission_result", { outcome: "not_submitted", reasonCode: "unsupported_provider" });
@@ -440,7 +437,7 @@ export async function placeBet(
   let observationError: unknown;
   try {
     if (!option.data) {
-      if (opts?.requirePreparedQuote) {
+      if (opts?.requirePreparedQuote || account.provider === "Polymarket") {
         result = new BetResult(option.type, false, option.checkError || "预检未通过");
       }
       else {

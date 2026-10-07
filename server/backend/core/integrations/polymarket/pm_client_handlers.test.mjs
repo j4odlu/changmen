@@ -1,7 +1,9 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 
+vi.mock("./clob_clock.js", () => ({ prepareClobClock: vi.fn(async () => 120_000), clobClockInfo: () => ({ source: "clob_time", sampleAgeMs: 0 }) }));
 vi.mock("./clob_proxy.js", () => ({
   PM_SUBMIT_ORDER_POST_TIMEOUT_MS: 20_000,
+  isAllowedPolymarketUrl: (url) => String(url).startsWith("https://clob.polymarket.com"),
   executePolymarketHttpRequest: vi.fn(async ({ url, method }) => ({
     status: 200,
     text: method === "GET" && String(url).includes("/book")
@@ -76,6 +78,7 @@ vi.mock("@changmen/shared/account_multiply", () => ({
 const {
   handlePmGetBook,
   handlePmSubmitOrder,
+  handlePmPrepareSubmit,
   handlePmGetTrades,
   handlePmHeartbeat,
   handlePmGetOpenOrders,
@@ -89,6 +92,16 @@ describe("pm_client_handlers", () => {
     vi.clearAllMocks();
   });
 
+  test("Pm_PrepareSubmit checks ownership and returns a bounded clock lease", async () => {
+    const { prepareClobClock } = await import("./clob_clock.js");
+    const ready = await handlePmPrepareSubmit({ playerId: 47 }, "user-1");
+    expect(ready).toEqual({ ok: true, info: { ready: true, leaseMs: 120_000, source: "clob_time", sampleAgeMs: 0 } });
+    expect(prepareClobClock).toHaveBeenCalledOnce();
+    const { assertPlayerOwnedByUser } = await import("../../account/player_ownership.js");
+    assertPlayerOwnedByUser.mockResolvedValueOnce({ ok: false, msg: "not owned" });
+    expect((await handlePmPrepareSubmit({ playerId: 47 }, "other")).ok).toBe(false);
+    expect(prepareClobClock).toHaveBeenCalledOnce();
+  });
   test("Pm_GetBook 公开盘口", async () => {
     const res = await handlePmGetBook({ tokenId: "123" }, "user-1");
     expect(res.ok).toBe(true);
@@ -120,6 +133,18 @@ describe("pm_client_handlers", () => {
     const res = await handlePmGetTrades({ playerId: 47, after: 1700000000 }, "user-1");
     expect(res.ok).toBe(true);
     expect(Array.isArray(res.info)).toBe(true);
+  });
+
+  test("extension fallback forwards only the timestamp after ownership validation", async () => {
+    const { executePolymarketHttpRequest } = await import("./clob_proxy.js");
+    const body = { playerId: 47, order: { foo: 1 }, clientL2Timestamp: 1700000000 };
+    expect((await handlePmSubmitOrder(body, "user-1")).ok).toBe(true);
+    expect(executePolymarketHttpRequest).toHaveBeenCalledWith(expect.objectContaining({ clientL2Timestamp: 1700000000 }));
+    executePolymarketHttpRequest.mockClear();
+    const { assertPlayerOwnedByUser } = await import("../../account/player_ownership.js");
+    assertPlayerOwnedByUser.mockResolvedValueOnce({ ok: false, msg: "not owned" });
+    expect((await handlePmSubmitOrder(body, "other")).ok).toBe(false);
+    expect(executePolymarketHttpRequest).not.toHaveBeenCalled();
   });
 
   test("Pm_GetTrades 支持 id=tradeID", async () => {

@@ -4,6 +4,9 @@ import { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 import { resolvePolymarketVenueStakeUsdc } from "./pmStake";
+import { currentPmTick } from "./pmTickState";
+import { resolvePmHttpMode } from "./pmTransportMode";
+import { getPmMarketWsSourceMode } from "./pmMarketWsMode";
 import { POLYMARKET_CLOB_API } from "./api";
 import { resolvePolymarketBuilderCode } from "./builder";
 import {
@@ -13,7 +16,6 @@ import {
   resolveFunder,
   resolvePrivateKey,
   resolveSignatureType,
-  type PolymarketTokenConfig,
 } from "./l2Auth";
 import {
   fetchPolymarketVenueOrdersMerged,
@@ -50,17 +52,19 @@ import {
   syncPolymarketFoOnPriceAboveDetection,
 } from "./pmTokenQuote";
 import {
+  isPolymarketPriceOnTick,
   alignPolymarketPriceToTick,
   normalizePolymarketTickSize,
   type PolymarketTickSize,
 } from "./pmTickPrice";
 import { resolvePolymarketVenueIdentityFromToken } from "./profile";
 import { polymarketPluginGet } from "./transport";
-import { pmGetBook, pmSubmitOrder } from "./pmClientApi";
+import { pmSubmitClockReady, pmPrepareSubmit, pmGetBook, pmSubmitOrder } from "./pmClientApi";
 import { measurePmExecution, recordPmExecutionMetric } from "./pmExecutionMetrics";
 import {
   getPolymarketOrderClientRuntime,
-  hasPolymarketOrderClientRuntime,
+  polymarketSigningGeneration,
+  type PolymarketOrderClientRuntime,
 } from "./pmOrderClientCache";
 import {
   pmFokDepthReuseMultiplier,
@@ -85,7 +89,6 @@ export {
 const BALANCE_PATH = "/balance-allowance";
 
 const COLLATERAL_DECIMALS = 1_000_000;
-type Hex = `0x${string}`;
 type TickSize = PolymarketTickSize;
 
 interface PolymarketBalanceAllowanceResponse {
@@ -144,6 +147,9 @@ export function polymarketOrderFailureMessage(
 
 interface PolymarketOrderBookResponse {
   error?: string;
+  asset_id?: string;
+  timestamp?: string | number;
+  version?: string;
   tick_size?: string | number;
   minimum_tick_size?: string | number;
   min_order_size?: string | number;
@@ -169,40 +175,16 @@ function builderCodeMetric(): { builderCodePresent: boolean } {
 }
 
 export interface PolymarketOrderOptions {
+  version: 2 | 3;
+  bookTimestamp: number;
   tickSize: TickSize;
   minOrderSize: number;
   negRisk: boolean;
   asks: Array<{ price: number; size: number }>;
 }
 
-/**
- * 刚拉过的 /book 可直接拿去签单提交。
- * 覆盖混合对：CLOB 重检 → 锁即时馆 → 两边同时 POST。
- * 超时则 betting 再拉簿（手动隔很久再点下单）。
- */
-export const PRECHECK_BOOK_REUSE_MS = 1500;
-
-let polymarketClobSdkWarm: Promise<unknown> | null = null;
-
-/** 预检成功后预加载签名 SDK，避免即时馆已 POST 才开始动态 import */
-export function warmupPolymarketClobSdk(): void {
-  if (polymarketClobSdkWarm)
-    return;
-  polymarketClobSdkWarm = Promise.all([
-    import("@polymarket/clob-client-v2"),
-    import("viem"),
-    import("viem/accounts"),
-  ]).catch(() => {
-    polymarketClobSdkWarm = null;
-  });
-}
-
-function isPolymarketClobSdkWarmStarted(): boolean {
-  return Boolean(polymarketClobSdkWarm);
-}
-
 /** checkBet 写入、betting 可复用的 PM 买单预检缓存 */
-export interface PolymarketBuyCheckData {
+export interface PolymarketBuyCheckData extends Record<string, unknown> {
   tokenId: string;
   odds: number;
   detectionOdds: number;
@@ -210,6 +192,7 @@ export interface PolymarketBuyCheckData {
   /** 与 detectionMaxPrice 相同；fo clobPrice 锁定值 */
   detectionClobPrice?: number;
   bookPrice: number;
+  limitPrice: number;
   betMoney: number;
   apiBetMoney: number;
   side: "BUY";
@@ -219,67 +202,51 @@ export interface PolymarketBuyCheckData {
   depthMultiplier?: number;
 }
 
-function isPolymarketBuyCheckData(data: unknown): data is PolymarketBuyCheckData {
-  if (!data || typeof data !== "object")
-    return false;
-  const row = data as PolymarketBuyCheckData;
-  return row.side === "BUY"
-    && Boolean(row.tokenId)
-    && Number.isFinite(row.bookFetchedAt) && row.bookFetchedAt > 0
-    && row.orderOptions != null
-    && Array.isArray(row.orderOptions.asks);
+interface PreparedBuy {
+  data: PolymarketBuyCheckData;
+  runtime: PolymarketOrderClientRuntime | null;
+  binding: string;
+  generation: number;
+  consumed: boolean;
+  role: "execute" | "precheckOnly";
+  readyAt: number;
+  cacheHit: boolean;
+}
+const preparedBuys = new WeakMap<BetOption, PreparedBuy>();
+const checkedOptions = new WeakSet<BetOption>();
+const invalidatedChecks = new WeakSet<BetOption>();
+
+function checkInputBinding(account: PlatformAccount, option: BetOption): string {
+  // 钱包解锁可以补齐 token 中的私钥；行情、账号归属及路由参数须从预检入口保持一致。
+  return JSON.stringify([account.accountId, account.gateway, account.currency,
+    option.itemId, option.betId, option.betMoney, option.odds, option.data,
+    option.target, option.type, option.matchId, pmFokDepthReuseMultiplier(),
+    resolvePmHttpMode(), getPmMarketWsSourceMode()]);
 }
 
-function reusedPolymarketBuyCheck(
-  option: BetOption,
-  tokenId: string,
-  detectionOdds: number,
-  apiBetMoney: number,
-  maxPrice: number,
-): PolymarketBuyCheckData | null {
-  const diagnostic = diagnosePolymarketBuyCheckReuse(option, tokenId, detectionOdds, apiBetMoney, maxPrice);
-  return diagnostic.data;
+function preparationBinding(account: PlatformAccount, option: BetOption): string {
+  // 凭据只保留在内存，不写入 option、日志或订单元数据。
+  return JSON.stringify([account.accountId, account.gateway, account.token,
+    resolvePrivateKey(parseTokenConfig(account.token)), resolvePolymarketBuilderCode(),
+    resolvePmHttpMode(), getPmMarketWsSourceMode(), option.itemId, option.betId,
+    option.betMoney, option.odds, option.target, option.type, option.matchId, account.currency, pmFokDepthReuseMultiplier()]);
 }
 
-type PolymarketBuyCheckReuseRejectReason =
-  | "missing_data"
-  | "token_mismatch"
-  | "detection_odds_mismatch"
-  | "max_price_mismatch"
-  | "amount_mismatch"
-  | "expired"
-  | "depth_multiplier_mismatch";
-
-interface PolymarketBuyCheckReuseDiagnostic {
-  data: PolymarketBuyCheckData | null;
-  bookAgeMs?: number;
-  rejectReason?: PolymarketBuyCheckReuseRejectReason;
-}
-
-function diagnosePolymarketBuyCheckReuse(
-  option: BetOption,
-  tokenId: string,
-  detectionOdds: number,
-  apiBetMoney: number,
-  maxPrice: number,
-): PolymarketBuyCheckReuseDiagnostic {
-  const prior = option.data;
-  if (!isPolymarketBuyCheckData(prior))
-    return { data: null, rejectReason: "missing_data" };
-  const bookAgeMs = Date.now() - prior.bookFetchedAt;
-  if (prior.tokenId !== tokenId)
-    return { data: null, bookAgeMs, rejectReason: "token_mismatch" };
-  if (Number(prior.detectionOdds) !== detectionOdds)
-    return { data: null, bookAgeMs, rejectReason: "detection_odds_mismatch" };
-  if (Number(prior.detectionMaxPrice) !== maxPrice)
-    return { data: null, bookAgeMs, rejectReason: "max_price_mismatch" };
-  if (Number(prior.apiBetMoney) !== apiBetMoney)
-    return { data: null, bookAgeMs, rejectReason: "amount_mismatch" };
-  if (bookAgeMs > PRECHECK_BOOK_REUSE_MS)
-    return { data: null, bookAgeMs, rejectReason: "expired" };
-  if ((prior.depthMultiplier ?? 1) !== pmFokDepthReuseMultiplier())
-    return { data: null, bookAgeMs, rejectReason: "depth_multiplier_mismatch" };
-  return { data: prior, bookAgeMs };
+/** [changmen 扩展] 双腿发单前可同步核验；不拉簿、不重新定价、不消费。 */
+export function validatePolymarketPreparedBuy(account: PlatformAccount, option: BetOption): string | null {
+  const prepared = preparedBuys.get(option);
+  if (!prepared || prepared.data !== option.data) return "PM 缺少本轮预检结果";
+  if (prepared.consumed) return "PM 本轮预检结果已消费";
+  if (prepared.role !== "execute" || !prepared.runtime) return "PM 此腿仅预检";
+  if (option.checkError) return option.checkError;
+  if (!pmSubmitClockReady(account)) return "PM 提交校时准备已失效";
+  if (prepared.generation !== polymarketSigningGeneration()) return "PM 钱包会话已失效";
+  try {
+    if (prepared.binding !== preparationBinding(account, option)) return "PM 下单参数或账号已改变，请新建尝试";
+    const tick = currentPmTick(option.itemId, prepared.data.orderOptions.bookTimestamp);
+    if (tick && !isPolymarketPriceOnTick(prepared.data.limitPrice, tick)) return "PM tick 已改变，冻结限价不再有效";
+  } catch { return "PM 签名准备已失效"; }
+  return null;
 }
 
 /** BUY FOK 限价打在检测上限（向下对齐 tick），不是当前卖一 */
@@ -290,7 +257,7 @@ function polymarketFokLimitFromDetection(
 ): number {
   const aligned = alignPolymarketPriceToTick(maxPrice, tickSize, "floor");
   const limit = fillPrice > aligned + 1e-12 ? fillPrice : aligned;
-  if (!isValidClobPrice(limit))
+  if (!isValidClobPrice(limit) || !isPolymarketPriceOnTick(limit, tickSize) || limit > maxPrice + 1e-12)
     throw new Error(`无效检测价 ${maxPrice}（tick ${tickSize}）`);
   return limit;
 }
@@ -319,8 +286,18 @@ async function fetchOrderOptions(gateway: string, tokenId: string): Promise<Poly
   const book = await pmGetBook<PolymarketOrderBookResponse>(tokenId, gateway);
   if (isPolymarketTradingDisabledError(book))
     throw new Error(POLYMARKET_TRADING_DISABLED_MESSAGE);
+  if (!book || String(book.asset_id) !== tokenId || !Array.isArray(book.asks)
+    || !["string", "number"].includes(typeof book.min_order_size)
+    || !Number.isFinite(Number(book.min_order_size)) || Number(book.min_order_size) <= 0
+    || typeof book.neg_risk !== "boolean" || (book.version !== undefined && book.version !== "v2"))
+    throw new Error("PM 订单簿结构、资产或版本无效");
+  const bookTimestamp = Number(book.timestamp) || 0;
+  const bookTick = normalizePolymarketTickSize(book.tick_size ?? book.minimum_tick_size);
+  const tickSize = currentPmTick(tokenId, bookTimestamp) ?? bookTick;
   return {
-    tickSize: normalizePolymarketTickSize(book?.tick_size ?? book?.minimum_tick_size),
+    version: book.version === "v2" ? 3 : 2,
+    bookTimestamp,
+    tickSize,
     minOrderSize: Number(book?.min_order_size) || 0,
     negRisk: Boolean(book?.neg_risk),
     asks: (book?.asks ?? [])
@@ -469,7 +446,7 @@ function calculateBuyMarketLimitPrice(
   if (maxPrice != null && !bookAsks.length) {
     const best = asks[0];
     const message = [
-      "Polymarket 盘口价高于检测价，整单取消",
+      "Polymarket 盘口价高于检测价，预检不通过",
       ...diagnosticLines({
         ...baseDiag,
         availableUsdc: availableUsdc(asks),
@@ -516,38 +493,18 @@ function calculateBuyMarketLimitPrice(
 }
 
 async function createPolymarketOrderBody(
-  gateway: string,
-  privateKey: Hex,
-  creds: ReturnType<typeof resolveApiCreds>,
-  config: PolymarketTokenConfig,
-  tokenId: string,
-  price: number,
-  amount: number,
-  orderOptions: PolymarketOrderOptions,
+  runtime: PolymarketOrderClientRuntime,
+  apiKey: string,
+  data: PolymarketBuyCheckData,
 ) {
-  const { runtime } = await getPolymarketOrderClientRuntime({
-    gateway,
-    privateKey,
-    creds,
-    config,
-    signatureType: resolveSdkSignatureType(creds.signatureType),
-  });
-  const { client, clob, builderCode } = runtime;
-  // SDK TickSize 尚未含官方 0.0025；运行时仍按 book tick 写入
-  client.tickSizes[tokenId] = orderOptions.tickSize as any;
-  client.negRisk[tokenId] = orderOptions.negRisk;
-  client.feeInfos[tokenId] = { rate: 0, exponent: 0 };
-  // SDK 会 GET /fees/builder-fees/{code}；浏览器走插件，此处预填避免 ClobClient 直连 axios 卡住/跨域
-  client.builderFeeRates[builderCode] = { maker: 0, taker: 0 };
-  const signedOrder = await client.createMarketOrder({
-    tokenID: tokenId,
-    price,
-    amount,
-    side: clob.Side.BUY,
-  }, orderOptions as any);
-  if (!clob.isV2Order(signedOrder))
-    throw new Error("Polymarket SDK 未生成 CLOB v2 订单");
-  return clob.orderToJsonV2(signedOrder, creds.apiKey!, clob.OrderType.FOK, false, false);
+  const { builder, clob, builderCode } = runtime;
+  const signedOrder = await builder.buildMarketOrder({
+    tokenID: data.tokenId, price: data.limitPrice, amount: data.apiBetMoney,
+    side: clob.Side.BUY, builderCode,
+  }, { tickSize: data.orderOptions.tickSize, negRisk: data.orderOptions.negRisk } as any,
+  data.orderOptions.version);
+  if (!clob.isV2Order(signedOrder)) throw new Error("Polymarket SDK 未生成受支持订单");
+  return clob.orderToJsonV2(signedOrder, apiKey, clob.OrderType.FOK, false, false);
 }
 
 // ---- balance helpers ----
@@ -576,58 +533,6 @@ function resolvePolymarketDetectionOdds(option: BetOption): number {
   if (Number.isFinite(fromData) && fromData > 1)
     return fromData;
   return option.odds;
-}
-
-async function resolvePolymarketExecutableBuyForBet(
-  gateway: string,
-  tokenId: string,
-  detectionOdds: number,
-  apiBetMoney: number,
-  option: BetOption,
-): Promise<{
-  price: number;
-  bookOdds: number;
-  orderOptions: PolymarketOrderOptions;
-  fillPrice: number;
-  depthAvailableAtCap: number;
-  depthNeedUsdc?: number;
-}> {
-  const maxPrice = resolvePolymarketDetectionMaxPrice(option, detectionOdds);
-  const reused = reusedPolymarketBuyCheck(option, tokenId, detectionOdds, apiBetMoney, maxPrice);
-  const resolved = reused
-    ? {
-        bookOdds: reused.odds,
-        orderOptions: reused.orderOptions,
-        depthAvailableAtCap: availableUsdcAtPrice(reused.orderOptions.asks, maxPrice),
-        depthNeedUsdc: pmFokDepthBufferNeedUsdc(apiBetMoney) ?? apiBetMoney,
-      }
-    : await resolvePolymarketExecutableBuy(gateway, tokenId, detectionOdds, apiBetMoney, maxPrice);
-  const fillPrice = calculateBuyMarketLimitPrice(
-    resolved.orderOptions.asks,
-    apiBetMoney,
-    resolved.orderOptions.minOrderSize,
-    {
-      tokenId,
-      amountUsdc: apiBetMoney,
-      displayedOdds: detectionOdds,
-      displayedPrice: maxPrice,
-      minOrderSize: resolved.orderOptions.minOrderSize,
-    },
-    maxPrice,
-  );
-  const price = polymarketFokLimitFromDetection(
-    maxPrice,
-    resolved.orderOptions.tickSize,
-    fillPrice,
-  );
-  return {
-    price,
-    bookOdds: resolved.bookOdds,
-    orderOptions: resolved.orderOptions,
-    fillPrice,
-    depthAvailableAtCap: resolved.depthAvailableAtCap,
-    depthNeedUsdc: resolved.depthNeedUsdc,
-  };
 }
 
 // ---- provider ----
@@ -695,8 +600,17 @@ export const polymarketProvider: PlatformProvider = {
     );
   },
 
-  async checkBet(account: PlatformAccount, option: BetOption): Promise<BetOption> {
-    const checkStartedAt = Date.now();
+  async checkBet(account: PlatformAccount, option: BetOption, context): Promise<BetOption> {
+    if (checkedOptions.has(option) || (option.data?.side === "BUY" && option.data?.orderOptions)) {
+      invalidatedChecks.add(option);
+      preparedBuys.delete(option);
+      option.data = null;
+      option.checkError = "PM 每次预检须新建投注尝试";
+      return option;
+    }
+    checkedOptions.add(option);
+    option.checkError = undefined;
+    const checkStartedAt = performance.now();
     const localBlock = getPolymarketPmSportBlockReasonFromOption(option);
     if (localBlock) {
       option.checkError = localBlock;
@@ -705,7 +619,7 @@ export const polymarketProvider: PlatformProvider = {
         kind: "check",
         tokenId: option.itemId,
         accountId: Number(account.accountId) || undefined,
-        ms: Date.now() - checkStartedAt,
+        ms: performance.now() - checkStartedAt,
         success: false,
         error: localBlock,
       });
@@ -721,6 +635,7 @@ export const polymarketProvider: PlatformProvider = {
     const apiBetMoney = resolvePolymarketApiBetMoney(account, option);
     const gateway = account.gateway || POLYMARKET_CLOB_API;
     const tokenId = option.itemId;
+    const initialInputs = checkInputBinding(account, option);
     try {
       // 立刻拉簿，不等 Gamma；两边都回才算预检成功（官方 Place Orders 第一步即 GET /book）
       const buyP = resolvePolymarketExecutableBuy(
@@ -730,8 +645,23 @@ export const polymarketProvider: PlatformProvider = {
         apiBetMoney,
         maxPrice,
       );
-      const guardP = resolvePolymarketBetBlockReason(option);
-      const [buySettled, guardSettled] = await Promise.allSettled([buyP, guardP]);
+      const guardP = measurePmExecution("guard", { tokenId }, () => resolvePolymarketBetBlockReason(option));
+      const clockP = context?.role === "precheckOnly" ? Promise.resolve()
+        : measurePmExecution("clock", { tokenId }, () => pmPrepareSubmit(account));
+      const runtimeP = context?.role === "precheckOnly" ? Promise.resolve(null) : measurePmExecution("runtime", { tokenId }, async () => {
+        if (context?.prepareSigning && !await context.prepareSigning) throw new Error("请先解锁本机钱包");
+        const config = parseTokenConfig(account.token);
+        const creds = resolveApiCreds(config);
+        const privateKey = resolvePrivateKey(config);
+        if (!creds.address || !creds.apiKey || !creds.secret || !creds.passphrase || !privateKey)
+          throw new Error("PM 钱包或 API 凭据未就绪，请解锁钱包并检查账号");
+        const binding = preparationBinding(account, option);
+        const generation = polymarketSigningGeneration();
+        const prepared = await getPolymarketOrderClientRuntime({ gateway, config, creds, privateKey,
+          signatureType: resolveSdkSignatureType(creds.signatureType) });
+        return { ...prepared, binding, generation };
+      });
+      const [buySettled, guardSettled, runtimeSettled, clockSettled] = await Promise.allSettled([buyP, guardP, runtimeP, clockP]);
       if (guardSettled.status === "fulfilled" && guardSettled.value) {
         option.checkError = guardSettled.value;
         option.data = null;
@@ -739,7 +669,7 @@ export const polymarketProvider: PlatformProvider = {
           kind: "check",
           tokenId,
           accountId: Number(account.accountId) || undefined,
-          ms: Date.now() - checkStartedAt,
+          ms: performance.now() - checkStartedAt,
           success: false,
           error: guardSettled.value,
           detectionOdds,
@@ -753,7 +683,21 @@ export const polymarketProvider: PlatformProvider = {
       if (buySettled.status === "rejected")
         throw buySettled.reason;
 
+      if (runtimeSettled.status === "rejected") throw runtimeSettled.reason;
+      if (clockSettled.status === "rejected") throw clockSettled.reason;
+      if (context?.role !== "precheckOnly" && !pmSubmitClockReady(account)) throw new Error("PM 提交校时未就绪");
       const { price, bookOdds, orderOptions, bookFetchedAt, depthAvailableAtCap, depthNeedUsdc } = buySettled.value;
+      if (invalidatedChecks.has(option)) throw new Error("PM 每次预检须新建投注尝试");
+      if (initialInputs !== checkInputBinding(account, option))
+        throw new Error("PM 预检期间投注参数已改变，请新建尝试");
+      if (runtimeSettled.value && (runtimeSettled.value.binding !== preparationBinding(account, option)
+        || runtimeSettled.value.generation !== polymarketSigningGeneration())) throw new Error("PM 预检期间钱包或账号已改变");
+      const limitPrice = polymarketFokLimitFromDetection(maxPrice, orderOptions.tickSize, price);
+      const latestTick = currentPmTick(tokenId, orderOptions.bookTimestamp);
+      if (latestTick && !isPolymarketPriceOnTick(limitPrice, latestTick)) throw new Error("PM tick 已改变，冻结限价不再有效");
+      for (const level of orderOptions.asks) Object.freeze(level);
+      Object.freeze(orderOptions.asks);
+      Object.freeze(orderOptions);
       option.odds = bookOdds;
       option.newOdds = bookOdds;
       option.data = {
@@ -763,6 +707,7 @@ export const polymarketProvider: PlatformProvider = {
         detectionMaxPrice: maxPrice,
         detectionClobPrice: maxPrice,
         bookPrice: price,
+        limitPrice,
         betMoney: option.betMoney,
         apiBetMoney,
         side: "BUY",
@@ -770,11 +715,15 @@ export const polymarketProvider: PlatformProvider = {
         orderOptions,
         depthMultiplier: pmFokDepthReuseMultiplier(),
       } satisfies PolymarketBuyCheckData;
+      Object.freeze(option.data);
+      preparedBuys.set(option, { data: option.data as PolymarketBuyCheckData, runtime: runtimeSettled.value?.runtime ?? null,
+        binding: context?.role === "precheckOnly" ? "" : preparationBinding(account, option), generation: polymarketSigningGeneration(),
+        consumed: false, readyAt: performance.now(), cacheHit: runtimeSettled.value?.cacheHit ?? false, role: context?.role ?? "execute" });
       recordPmExecutionMetric({
         kind: "check",
         tokenId,
         accountId: Number(account.accountId) || undefined,
-        ms: Date.now() - checkStartedAt,
+        ms: performance.now() - checkStartedAt,
         success: true,
         detectionOdds,
         detectionMaxPrice: maxPrice,
@@ -786,7 +735,6 @@ export const polymarketProvider: PlatformProvider = {
         tickSize: Number(orderOptions.tickSize),
         minOrderSize: orderOptions.minOrderSize,
       });
-      warmupPolymarketClobSdk();
     }
     catch (err) {
       if (isPolymarketPriceAboveDetectionError(err)) {
@@ -805,7 +753,7 @@ export const polymarketProvider: PlatformProvider = {
         kind: "check",
         tokenId,
         accountId: Number(account.accountId) || undefined,
-        ms: Date.now() - checkStartedAt,
+        ms: performance.now() - checkStartedAt,
         success: false,
         error: option.checkError,
         detectionOdds,
@@ -818,12 +766,21 @@ export const polymarketProvider: PlatformProvider = {
 
   async betting(account: PlatformAccount, option: BetOption): Promise<BetResult> {
     const beginTime = Date.now();
+    const bettingStarted = performance.now();
+    const invalid = validatePolymarketPreparedBuy(account, option);
+    if (invalid) return new BetResult("Polymarket", false, invalid);
+    const prepared = preparedBuys.get(option)!;
+    // 必须在第一个 await 之前消费。签名失败、超时或未知结果均不恢复。
+    prepared.consumed = true;
+    recordPmExecutionMetric({ kind: "prepared_wait", tokenId: option.itemId, linkId: option.diagnosticLinkId, ms: performance.now() - prepared.readyAt, success: true });
+    const frozen = prepared.data;
     const config = parseTokenConfig(account.token);
     const creds = resolveApiCreds(config);
     const privateKey = resolvePrivateKey(config);
     const readiness = {
       accountId: Number(account.accountId) || undefined,
       tokenId: option.itemId,
+      linkId: option.diagnosticLinkId,
       apiCredsReady: Boolean(creds.apiKey && creds.secret && creds.passphrase),
       privateKeyReady: Boolean(privateKey),
       signatureType: resolveSdkSignatureType(resolveSignatureType(config)),
@@ -844,15 +801,13 @@ export const polymarketProvider: PlatformProvider = {
       return new BetResult("Polymarket", false, "凭证缺少用户 API Key（apiKey/secret/passphrase），请重新通过插件采集");
     }
 
-    const gateway = account.gateway || POLYMARKET_CLOB_API;
-
     const detectionOdds = resolvePolymarketDetectionOdds(option);
     const maxPrice = resolvePolymarketDetectionMaxPrice(option, detectionOdds);
     if (!maxPrice || maxPrice <= 0 || maxPrice >= 1) {
       recordPmExecutionMetric({
         ...readiness,
         kind: "betting",
-        ms: Date.now() - beginTime,
+        ms: performance.now() - bettingStarted,
         success: false,
         error: `invalid maxPrice ${maxPrice}`,
       });
@@ -861,53 +816,12 @@ export const polymarketProvider: PlatformProvider = {
 
     const tokenId = option.itemId;
     const apiBetMoney = resolvePolymarketApiBetMoney(account, option);
-    const reuse = diagnosePolymarketBuyCheckReuse(option, tokenId, detectionOdds, apiBetMoney, maxPrice);
-    const reused = reuse.data;
-    if (reused)
-      warmupPolymarketClobSdk();
-    const orderClientInput = privateKey
-      ? {
-          gateway,
-          privateKey,
-          creds,
-          config,
-          signatureType: readiness.signatureType,
-        }
-      : null;
-    const signWarm = isPolymarketClobSdkWarmStarted();
-    const orderClientCacheHit = orderClientInput
-      ? hasPolymarketOrderClientRuntime(orderClientInput)
-      : false;
-    const executionReadiness = {
-      ...readiness,
-      bookReuse: Boolean(reused),
-      bookAgeMs: reuse.bookAgeMs,
-      reuseRejectReason: reuse.rejectReason,
-      signWarm,
-      orderClientCacheHit,
-    };
-    if (!reused) {
-      const pmBlock = await resolvePolymarketBetBlockReason(option);
-      if (pmBlock) {
-        recordPmExecutionMetric({
-          ...executionReadiness,
-          kind: "betting",
-          ms: Date.now() - beginTime,
-          success: false,
-          error: pmBlock,
-        });
-        return new BetResult("Polymarket", false, pmBlock);
-      }
-    }
-
+    const executionReadiness = { ...readiness, bookReuse: true,
+      bookAgeMs: Date.now() - frozen.bookFetchedAt, signWarm: true, orderClientCacheHit: prepared.cacheHit };
     try {
-      const { price, bookOdds, orderOptions, fillPrice, depthAvailableAtCap, depthNeedUsdc } = await resolvePolymarketExecutableBuyForBet(
-        gateway,
-        tokenId,
-        detectionOdds,
-        apiBetMoney,
-        option,
-      );
+      const { limitPrice: price, odds: bookOdds, orderOptions, bookPrice: fillPrice } = frozen;
+      const depthAvailableAtCap = availableUsdcAtPrice(orderOptions.asks, maxPrice);
+      const depthNeedUsdc = apiBetMoney * (frozen.depthMultiplier ?? 1);
       option.newOdds = bookOdds;
       const executionPriceMetrics = {
         detectionOdds,
@@ -926,17 +840,13 @@ export const polymarketProvider: PlatformProvider = {
         ...executionPriceMetrics,
       };
       const orderBody = await measurePmExecution("sign", executionReadiness, () =>
-        createPolymarketOrderBody(
-          gateway,
-          privateKey,
-          creds,
-          config,
-          tokenId,
-          price,
-          apiBetMoney,
-          orderOptions,
-        ),
+        createPolymarketOrderBody(prepared.runtime!, creds.apiKey!, frozen),
       );
+      // 签名期间若收到已知 tick 变更，只做本地有效性核验。
+      const tick = currentPmTick(tokenId, orderOptions.bookTimestamp);
+      if (tick && !isPolymarketPriceOnTick(price, tick)) throw new Error("PM tick 已改变，冻结限价不再有效");
+      if (prepared.generation !== polymarketSigningGeneration()
+        || option.data !== frozen || prepared.binding !== preparationBinding(account, option)) throw new Error("PM 签名准备已失效");
       warmPolymarketUserWs(account, String(option.betId ?? "").trim());
       const submittedAt = Date.now();
       tracePolymarketOrder(account.accountId, null, "submit", { submittedAt, linkId: option.diagnosticLinkId });
@@ -951,7 +861,7 @@ export const polymarketProvider: PlatformProvider = {
         recordPmExecutionMetric({
           ...executionSubmitFields,
           kind: "betting",
-          ms: Date.now() - beginTime,
+          ms: performance.now() - bettingStarted,
           success: false,
           error: POLYMARKET_TRADING_DISABLED_MESSAGE,
           submitStatus: "trading_disabled",
@@ -986,7 +896,7 @@ export const polymarketProvider: PlatformProvider = {
         recordPmExecutionMetric({
           ...executionSubmitFields,
           kind: "betting",
-          ms: Date.now() - beginTime,
+          ms: performance.now() - bettingStarted,
           success: false,
           error: polymarketOrderFailureMessage(result, fallback),
           submitStatus: String(result?.status ?? "unfilled").trim().toLowerCase() || "unfilled",
@@ -1034,7 +944,7 @@ export const polymarketProvider: PlatformProvider = {
       recordPmExecutionMetric({
         ...executionSubmitFields,
         kind: "betting",
-        ms: Date.now() - beginTime,
+        ms: performance.now() - bettingStarted,
         success: true,
         submitStatus: String(result.status ?? "").trim().toLowerCase() || (pending ? "delayed" : "matched"),
       });
@@ -1051,7 +961,7 @@ export const polymarketProvider: PlatformProvider = {
       recordPmExecutionMetric({
         ...executionReadiness,
         kind: "betting",
-        ms: Date.now() - beginTime,
+        ms: performance.now() - bettingStarted,
         success: false,
         error: err instanceof Error ? err.message : String(err),
       });

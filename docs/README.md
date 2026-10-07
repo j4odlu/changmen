@@ -57,6 +57,12 @@
 | [../client/web/docs/README.md](../client/web/docs/README.md) | A8 parity 文档集索引 |
 | [../client/web/docs/A8_PARITY_REGISTRY.md](../client/web/docs/A8_PARITY_REGISTRY.md) | 对齐总览 |
 
+## PM 交易执行
+
+| 文档 | 内容 |
+|------|------|
+| [PM_PRECHECK_OPTIMIZATION_PLAN.md](./PM_PRECHECK_OPTIMIZATION_PLAN.md) | PM 预检优化方案：第一期代码与本地验收完成；一次预检确定订单、本地构单、请求并行、路由冷却及出口校时；待部署与真实性能验收 |
+
 ## 运维脚本
 
 见 [scripts/README.md](../scripts/README.md)（`changmen/scripts/` + `server/backend/scripts/` 索引）。

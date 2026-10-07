@@ -3,8 +3,8 @@ import type { PolymarketTokenConfig, resolveApiCreds } from "./l2Auth";
 import { resolveFunder } from "./l2Auth";
 import { resolvePolymarketBuilderCode } from "./builder";
 
-interface PolymarketOrderClientRuntime {
-  client: any;
+export interface PolymarketOrderClientRuntime {
+  builder: InstanceType<typeof import("@polymarket/clob-client-v2").OrderBuilder>;
   clob: typeof import("@polymarket/clob-client-v2");
   builderCode: string;
 }
@@ -24,28 +24,22 @@ export interface PolymarketOrderClientRuntimeResult {
 
 const MAX_CLIENTS = 8;
 const runtimes = new Map<string, PolymarketOrderClientRuntime>();
-
-function shortFingerprint(value: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < value.length; i++) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
-}
+const flights = new Map<string, Promise<PolymarketOrderClientRuntimeResult>>();
+let generation = 0;
+export function polymarketSigningGeneration(): number { return generation; }
 
 function runtimeKey(input: PolymarketOrderClientInput, builderCode: string): string {
-  return [
+  return JSON.stringify([
     String(input.gateway || "").replace(/\/+$/, ""),
     String(input.creds.address || "").toLowerCase(),
-    shortFingerprint(String(input.creds.apiKey || "")),
-    shortFingerprint(String(input.creds.secret || "")),
-    shortFingerprint(String(input.creds.passphrase || "")),
+    String(input.creds.apiKey || ""),
+    String(input.creds.secret || ""),
+    String(input.creds.passphrase || ""),
     String(input.signatureType),
     String(resolveFunder(input.config) || "").toLowerCase(),
     builderCode,
-    shortFingerprint(input.privateKey),
-  ].join("|");
+    input.privateKey,
+  ]);
 }
 
 function rememberRuntime(key: string, runtime: PolymarketOrderClientRuntime): void {
@@ -68,40 +62,38 @@ export async function getPolymarketOrderClientRuntime(
     runtimes.set(key, cached);
     return { runtime: cached, cacheHit: true };
   }
-
-  const [
-    clob,
-    viem,
-    accounts,
-  ] = await Promise.all([
-    import("@polymarket/clob-client-v2"),
-    import("viem"),
-    import("viem/accounts"),
-  ]);
-  const { createPolygonHttpTransport, polygonChainForRpc } = await import("./polygonRpc");
-  const account = accounts.privateKeyToAccount(input.privateKey);
-  const signer = viem.createWalletClient({
-    account,
-    chain: polygonChainForRpc(),
-    transport: createPolygonHttpTransport(),
-  });
-  const client = new clob.ClobClient({
-    host: input.gateway,
-    chain: clob.Chain.POLYGON,
-    signer,
-    creds: {
-      key: input.creds.apiKey!,
-      secret: input.creds.secret!,
-      passphrase: input.creds.passphrase!,
-    },
-    signatureType: input.signatureType as any,
-    funderAddress: resolveFunder(input.config) || undefined,
-    builderConfig: { builderCode },
-  });
-  Reflect.set(client, "cachedVersion", 2);
-  const runtime = { client, clob, builderCode };
-  rememberRuntime(key, runtime);
-  return { runtime, cacheHit: false };
+  const pending = flights.get(key);
+  if (pending) return pending;
+  const startedGeneration = generation;
+  const task = (async (): Promise<PolymarketOrderClientRuntimeResult> => {
+    const [
+      clob,
+      viem,
+      accounts,
+    ] = await Promise.all([
+      import("@polymarket/clob-client-v2"),
+      import("viem"),
+      import("viem/accounts"),
+    ]);
+    const { createPolygonHttpTransport, polygonChainForRpc } = await import("./polygonRpc");
+    const account = accounts.privateKeyToAccount(input.privateKey);
+    if (account.address.toLowerCase() !== String(input.creds.address).toLowerCase())
+      throw new Error("PM 私钥与 walletAddress 不匹配");
+    const signer = viem.createWalletClient({
+      account,
+      chain: polygonChainForRpc(),
+      transport: createPolygonHttpTransport(),
+    });
+    const builder = new clob.OrderBuilder(signer, clob.Chain.POLYGON,
+      input.signatureType as any, resolveFunder(input.config) || undefined);
+    if (startedGeneration !== generation) throw new Error("钱包会话已失效");
+    const runtime = { builder, clob, builderCode };
+    rememberRuntime(key, runtime);
+    return { runtime, cacheHit: false };
+  })();
+  flights.set(key, task);
+  try { return await task; }
+  finally { if (flights.get(key) === task) flights.delete(key); }
 }
 
 export function hasPolymarketOrderClientRuntime(input: PolymarketOrderClientInput): boolean {
@@ -115,6 +107,8 @@ export function hasPolymarketOrderClientRuntime(input: PolymarketOrderClientInpu
 }
 
 export function clearPolymarketOrderClientCacheForTests(): void {
+  generation++;
+  flights.clear();
   runtimes.clear();
 }
 

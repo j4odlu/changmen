@@ -1,3 +1,4 @@
+import { measurePmExecution } from "./pmExecutionMetrics";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { getPolymarketMarketBlockReason } from "./pmMarketGuard";
 import {
@@ -21,20 +22,18 @@ export async function resolvePolymarketBetBlockReason(option: BetOption): Promis
 
   try {
     const conditionId = String(option.betId ?? "").trim();
-    const [gammaSettled, clobSettled] = await Promise.allSettled([
-      fetchGammaMarketByTokenId(option.itemId),
-      conditionId ? fetchClobMarketByConditionId(conditionId) : Promise.resolve(null),
+    const refreshSport = shouldRefreshPmSportForBet(option);
+    const eventId = String(option.match?.providers?.Polymarket ?? "").trim();
+    const [gammaSettled, clobSettled, eventSettled] = await Promise.allSettled([
+      measurePmExecution("gamma", { tokenId: option.itemId, stage: "gamma_market" }, () => fetchGammaMarketByTokenId(option.itemId)),
+      conditionId ? measurePmExecution("gamma", { tokenId: option.itemId, stage: "clob_market" }, () => fetchClobMarketByConditionId(conditionId)) : Promise.resolve(null),
+      refreshSport && eventId ? measurePmExecution("gamma", { tokenId: option.itemId, stage: "gamma_event" }, () => fetchGammaEventById(eventId)) : Promise.resolve(null),
     ]);
     const market = gammaSettled.status === "fulfilled" ? gammaSettled.value : null;
     const clob = clobSettled.status === "fulfilled" ? clobSettled.value : null;
 
-    if (shouldRefreshPmSportForBet(option)) {
-      let gammaPm = null;
-      const eventId = String(option.match?.providers?.Polymarket ?? "").trim();
-      if (eventId) {
-        const event = await fetchGammaEventById(eventId);
-        gammaPm = gammaEventToPmSportLike(event);
-      }
+    if (refreshSport) {
+      let gammaPm = eventSettled.status === "fulfilled" ? gammaEventToPmSportLike(eventSettled.value) : null;
       if (!gammaPm && market) {
         const events = Array.isArray(market.events) ? market.events : [];
         const embedded = events[0] as GammaEventLike | undefined;

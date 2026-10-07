@@ -2,6 +2,7 @@
  * Polymarket HTTP 代理（VPS 直连，不经 http-relay）
  */
 import { buildPolymarketL2HeadersFromToken } from "./clob_l2.js";
+import { clobTimestamp, prepareClobClock } from "./clob_clock.js";
 
 const PM_CLOB_USER_AGENT = "@polymarket/clob-client";
 const PM_CLOB_FETCH_TIMEOUT_MS = 60_000;
@@ -41,18 +42,6 @@ function polymarketSdkTransportHeaders(method) {
   return out;
 }
 
-async function fetchClobServerTimeFromUrl(url) {
-  try {
-    const origin = new URL(url).origin;
-    const res = await fetch(`${origin}/time`, { signal: AbortSignal.timeout(8000) });
-    const ts = Number(String(await res.text()).trim());
-    return Number.isFinite(ts) && ts > 0 ? Math.floor(ts) : undefined;
-  }
-  catch {
-    return undefined;
-  }
-}
-
 function normalizeRequestBody(body) {
   if (body === undefined || body === null)
     return "";
@@ -82,6 +71,7 @@ export function pickPolymarketPolyHeaders(raw) {
  *   polyHeaders?: Record<string, string> | null,
  *   body?: unknown,
  *   timeoutMs?: number,
+ *   clientL2Timestamp?: number,
  * }} input
  * @returns {Promise<{ status: number, text: string }>}
  */
@@ -100,9 +90,19 @@ export async function executePolymarketHttpRequest(input) {
     ? timeoutMs
     : PM_CLOB_FETCH_TIMEOUT_MS;
 
+  const authStart = performance.now();
   let authHeaders = null;
   if (l2Path && input?.accountToken) {
-    const timestamp = await fetchClobServerTimeFromUrl(url);
+    // POST /order 不得重新校时；冷启动准备由预检负责。
+    if (!(method === "POST" && l2Path === "/order")) await prepareClobClock(url);
+    let timestamp;
+    if (input.clientL2Timestamp !== undefined) {
+      if (method !== "POST" || l2Path !== "/order"
+        || !Number.isSafeInteger(input.clientL2Timestamp) || input.clientL2Timestamp <= 0)
+        throw new Error("PM 客户端签名时间无效");
+      // 扩展在发出 HTTP 前断连：沿用该路径的客户端时钟，由服务端用所属账号重新生成 HMAC。
+      timestamp = input.clientL2Timestamp;
+    } else timestamp = clobTimestamp(url);
     authHeaders = buildPolymarketL2HeadersFromToken(
       input.accountToken,
       method,
@@ -124,6 +124,8 @@ export async function executePolymarketHttpRequest(input) {
   if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE")
     headers["Content-Type"] = "application/json";
 
+  const authMs = performance.now() - authStart;
+  const postStart = performance.now();
   const res = await fetch(url, {
     method,
     headers,
@@ -138,5 +140,5 @@ export async function executePolymarketHttpRequest(input) {
     if (value)
       responseHeaders[name] = value;
   }
-  return { status: res.status, text, ...(Object.keys(responseHeaders).length ? { headers: responseHeaders } : {}) };
+  return { status: res.status, text, timing: { authMs, upstreamMs: performance.now() - postStart }, ...(Object.keys(responseHeaders).length ? { headers: responseHeaders } : {}) };
 }

@@ -8,7 +8,7 @@ import { useOrderObservationStore } from "../orderObservationStore";
 import { startOrderObservation } from "@/services/orderObservation";
 import { checkBetting, placeBet } from "./betGateway";
 
-const mocks = vi.hoisted(() => ({ betting: vi.fn(), check: vi.fn(), post: vi.fn(), user: { isLoggedIn: true, userId: "u1" }, notify: vi.fn(() => ({ close: vi.fn() })) }));
+const mocks = vi.hoisted(() => ({ stake: vi.fn((_account: unknown, amount: number) => amount), betting: vi.fn(), check: vi.fn(), post: vi.fn(), user: { isLoggedIn: true, userId: "u1" }, notify: vi.fn(() => ({ close: vi.fn() })) }));
 vi.mock("@/services/orderObservationTransport", () => ({ uploadObservationBatch: mocks.post }));
 vi.mock("@/runtime/providers", () => ({ getProvider: () => ({ checkBet: mocks.check, betting: mocks.betting }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => mocks.user }));
@@ -24,7 +24,7 @@ vi.mock("@/stores/account/pmRejectOrder", () => ({ persistPolymarketExecutionRej
 vi.mock("@/stores/betting/autoBet/arbLegSettle", () => ({ settleArbLegUntilTerminal: vi.fn() }));
 vi.mock("@/domain/polymarket/attachDetectionQuote", () => ({ attachPolymarketDetectionQuote: () => {} }));
 vi.mock("@/domain/predictfun/attachDetectionQuote", () => ({ attachPredictFunDetectionQuote: () => {} }));
-vi.mock("@changmen/venue-adapter/adaptation", () => ({ resolveVenueStakeFromPlanCny: (_account: unknown, amount: number) => amount }));
+vi.mock("@changmen/venue-adapter/adaptation", () => ({ resolveVenueStakeFromPlanCny: mocks.stake }));
 
 describe("下注主链路与旁路故障隔离", () => {
   const account = { accountId: 1, provider: "OB", currency: "CNY", playerName: "p", platformId: 1, platformName: "OB" } as PlatformAccount;
@@ -35,6 +35,7 @@ describe("下注主链路与旁路故障隔离", () => {
     mocks.post.mockReset();
     mocks.betting.mockReset();
     mocks.check.mockReset();
+    mocks.stake.mockReset().mockImplementation((_account: unknown, amount: number) => amount);
     mocks.user.userId = "u1";
     mocks.post.mockImplementation(async () => { throw new Error("observer offline"); });
     startOrderObservation();
@@ -132,5 +133,27 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(check?.safeSummary).toContain(summary);
     expect(mocks.betting).not.toHaveBeenCalled();
   });
+
+  it("PM repeating gateway check never converts the already converted venue amount again", async () => {
+    const pm = { ...account, provider: "Polymarket", currency: "USDT" } as PlatformAccount;
+    const option = new BetOption("Polymarket", "m", "b", "i", 67, "Home", 2);
+    mocks.stake.mockImplementation((_account: unknown, amount: number) => amount / 6.7);
+    mocks.check.mockImplementation(async (_account, opt) => opt);
+    await checkBetting(store, pm, option, { skipAccountRate: true });
+    expect(option.betMoney).toBe(10); expect(option.planBetMoney).toBe(67);
+    await checkBetting(store, pm, option, { skipAccountRate: true });
+    expect(option.betMoney).toBe(10);
+    expect(mocks.stake.mock.calls.map(c => c[1])).toEqual([67, 67]);
+    expect(mocks.check.mock.calls[0][2].role).toBe("execute");
+  });
+
+  it("only explicit precheckOnly changes the PM role; manual 9999 remains execute", async () => {
+    const pm = { ...account, provider: "Polymarket", rateConfig: [{ minOdds: 0, maxOdds: 0, rate: 9999 }] } as PlatformAccount;
+    mocks.check.mockImplementation(async (_account, opt) => opt);
+    await checkBetting(store, pm, new BetOption("Polymarket", "m", "b", "i", 67, "Home", 2), { role: "precheckOnly" });
+    await checkBetting(store, pm, new BetOption("Polymarket", "m", "b", "i", 67, "Home", 2), { skipAccountRate: true });
+    expect(mocks.check.mock.calls.map(c => c[2].role)).toEqual(["precheckOnly", "execute"]);
+  });
+
 
 });

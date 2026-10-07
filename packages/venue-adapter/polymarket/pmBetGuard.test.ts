@@ -31,6 +31,20 @@ describe("resolvePolymarketBetBlockReason", () => {
     vi.mocked(polymarketPluginGet).mockReset();
   });
 
+  test("event failure cannot mask a closed CLOB market; all guard requests start together", async () => {
+    const started: string[] = []; let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    vi.mocked(polymarketPluginGet).mockImplementation(async (url: string) => {
+      started.push(url);
+      await gate;
+      if (url.includes("/events/")) throw new Error("offline");
+      if (url.includes("clob.polymarket.com/markets/")) return { accepting_orders: false };
+      return [];
+    });
+    const task = resolvePolymarketBetBlockReason(option());
+    expect(started).toHaveLength(3); release();
+    expect(await task).toBeTruthy();
+  });
   test("local pm_sport series decided blocks without gamma", async () => {
     const o = option({
       match: {

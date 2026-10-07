@@ -17,7 +17,7 @@ import {
   resolvePrivateKey,
   type PolymarketTokenConfig,
 } from "./l2Auth";
-import { pmGetBook, pmSubmitOrder } from "./pmClientApi";
+import { pmPrepareSubmit, pmGetBook, pmSubmitOrder } from "./pmClientApi";
 import { markPolymarketChangmenOrder } from "./pmOrigin";
 import {
   hasOpenPolymarketPosition,
@@ -163,7 +163,7 @@ export async function estimatePolymarketManualSellProceedsUsdc(params: {
     if (!tokenId || !(sharesWanted > 0))
       return 0;
     const gateway = params.account.gateway || POLYMARKET_CLOB_API;
-    const book = await pmGetBook<PolymarketOrderBookResponse>(tokenId, gateway);
+    const [book] = await Promise.all([pmGetBook<PolymarketOrderBookResponse>(tokenId, gateway), pmPrepareSubmit(params.account)]);
     return estimatePolymarketSellProceedsUsdc(parseBidsFromBook(book), sharesWanted);
   }
   catch {

@@ -1,3 +1,4 @@
+import { sharePublicGet, withPublicRoute } from "./pmPublicRoute";
 /**
  * Polymarket HTTP 统一出口：按 pmTransportMode 分流 official / VPS / 插件。
  * 业务代码只依赖 transport.ts / pmClientApi.ts，不感知 mode。
@@ -129,6 +130,7 @@ function pluginErrorMessage(err: unknown): string {
 function isPmTransportNetworkError(err: unknown): boolean {
   if (err == null)
     return false;
+  if (typeof err === "object" && Number((err as { response?: { status?: number } }).response?.status) >= 400) return false;
   const code = pluginErrorCode(err);
   if (
     code === "ERR_NETWORK"
@@ -289,7 +291,9 @@ export async function pmTransportHttpGet<T>(
   url: string,
   options?: PmTransportHttpOptions,
 ): Promise<T> {
-  return dispatchHttp<T>("GET", url, undefined, options);
+  if (options?.account || options?.l2Path || options?.headers) return dispatchHttp<T>("GET", url, undefined, options);
+  const key = JSON.stringify([resolvePmHttpMode(), getPmMarketWsSourceMode(), url]);
+  return sharePublicGet(key, () => dispatchHttp<T>("GET", url, undefined, options));
 }
 
 export async function pmTransportHttpPost<T>(
@@ -645,6 +649,11 @@ async function pmL2GetDirectFirst<T>(
   url: string,
   options?: PmTransportHttpOptions,
 ): Promise<T> {
+  if (shouldDirectFirstPublicGet("GET", url, options)) {
+    return withPublicRoute(url,
+      () => withTimeout(pmHttpViaDirect<T>("GET", url, undefined, options), PM_PRIVATE_READ_DIRECT_TIMEOUT_MS),
+      () => pmHttpViaVps<T>("GET", url, undefined, options), isPmTransportNetworkError);
+  }
   try {
     return await withTimeout(
       pmHttpViaDirect<T>("GET", url, undefined, options),
@@ -687,7 +696,8 @@ export async function pmEsportCall<T>(
   body: Record<string, unknown>,
 ): Promise<T> {
   if (action === "Pm_GetBook")
-    return pmGetBookPreferDirect<T>(body);
+    return sharePublicGet(JSON.stringify(["book", resolvePmHttpMode(), getPmMarketWsSourceMode(), body.gateway, body.tokenId]), () => pmGetBookPreferDirect<T>(body));
+  if (action === "Pm_PrepareSubmit") return changmenPmEsportCall<T>(action, stripEsportBodyForVps(body));
   if (shouldDirectFirstPrivateRead(action))
     return pmPrivateReadDirectFirst<T>(action, body);
   const mode = resolvePmHttpMode();
@@ -706,7 +716,7 @@ export async function pmEsportCall<T>(
     if (action === "Pm_SubmitOrder" && isPmPluginDisconnectError(err)) {
       return changmenPmEsportCall<T>(
         action,
-        stripEsportBodyForVps(body),
+        { ...stripEsportBodyForVps(body), clientL2Timestamp: Math.floor(Date.now() / 1_000) },
         { timeoutMs: PM_SUBMIT_ORDER_TIMEOUT_MS },
       );
     }
@@ -727,6 +737,32 @@ async function pmGetBookPreferDirect<T>(body: Record<string, unknown>): Promise<
   if (mode === "vps" && timeoutMs <= 0) {
     return measurePmExecution("book", { tokenId, bookSource: "vps-live" }, () =>
       changmenPmEsportCall<T>("Pm_GetBook", stripEsportBodyForVps(body)));
+  }
+  if (mode === "vps") {
+    let fallback = false;
+    let directMs = 0; let fallbackMs = 0; let requestCount = 0;
+    const started = performance.now();
+    try {
+      const result = await withPublicRoute(String(body.gateway || POLYMARKET_CLOB_API),
+        async () => {
+          requestCount++; const at = performance.now();
+          try { return await withTimeout(pmEsportCallDirect<T>("Pm_GetBook", body), timeoutMs); }
+          finally { directMs = performance.now() - at; }
+        },
+        async () => {
+          fallback = true; requestCount++; const at = performance.now();
+          try { return await changmenPmEsportCall<T>("Pm_GetBook", stripEsportBodyForVps(body)); }
+          finally { fallbackMs = performance.now() - at; }
+        },
+        isPmTransportNetworkError);
+      recordPmExecutionMetric({ kind: "book", tokenId, directMs, fallbackMs, requestCount, ms: performance.now() - started,
+        bookSource: fallback ? "vps-fallback" : "direct-live", fallback, success: true });
+      return result;
+    } catch (err) {
+      recordPmExecutionMetric({ kind: "book", tokenId, directMs, fallbackMs, requestCount, ms: performance.now() - started,
+        bookSource: fallback ? "vps-fallback" : "direct-live", fallback, success: false, error: String(err) });
+      throw err;
+    }
   }
   try {
     const startedAt = Date.now();

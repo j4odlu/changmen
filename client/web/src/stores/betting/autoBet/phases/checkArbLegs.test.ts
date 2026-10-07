@@ -209,12 +209,12 @@ describe("checkArbLegs", () => {
     expect(checkBetting).toHaveBeenCalledWith(
       pb9999,
       expect.objectContaining({ type: "PB" }),
-      { skipAccountRate: true },
+      expect.objectContaining({ skipAccountRate: true }),
     );
     expect(checkBetting).toHaveBeenCalledWith(
       rayBet,
       expect.objectContaining({ type: "RAY" }),
-      { skipAccountRate: false },
+      expect.objectContaining({ skipAccountRate: false }),
     );
     expect(out!.accountA).toBeUndefined();
     expect(out!.accountB).toBe(rayBet);
@@ -232,12 +232,12 @@ describe("checkArbLegs", () => {
     expect(checkBetting).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ type: "PB" }),
-      { skipAccountRate: true },
+      expect.objectContaining({ skipAccountRate: true }),
     );
     expect(checkBetting).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ type: "RAY" }),
-      { skipAccountRate: true },
+      expect.objectContaining({ skipAccountRate: true }),
     );
   });
 

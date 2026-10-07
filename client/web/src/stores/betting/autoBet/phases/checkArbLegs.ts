@@ -1,3 +1,4 @@
+import { recordPmExecutionMetric } from "@changmen/venue-adapter/polymarket";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type {
   ArbBetAttemptParams,
@@ -119,6 +120,7 @@ export async function checkArbLegs(
   }
 
   const checkStart = Date.now();
+  const pairStart = performance.now();
   const scanOddsA = Number(legA.odds) || 0;
   const scanOddsB = Number(legB.odds) || 0;
   legA.diagnosticLinkId = ready.linkId;
@@ -128,16 +130,21 @@ export async function checkArbLegs(
 
   const taskA = checkAccountA
     ? accountStore.checkBetting(checkAccountA, legA, {
+        role: isSingleLegPrecheckOnly("A", accountA, accountB, checkAccountA, checkAccountB) ? "precheckOnly" : "execute",
         skipAccountRate: resolveSkipAccountRate("A", ready),
       })
     : undefined;
   const taskB = checkAccountB
     ? accountStore.checkBetting(checkAccountB, legB, {
+        role: isSingleLegPrecheckOnly("B", accountA, accountB, checkAccountA, checkAccountB) ? "precheckOnly" : "execute",
         skipAccountRate: resolveSkipAccountRate("B", ready),
       })
     : undefined;
 
   const checked = await Promise.all([taskA, taskB].filter(Boolean) as Promise<BetOption>[]);
+  if ([legA.type, legB.type].includes("Polymarket")) recordPmExecutionMetric({
+    kind: "pair_check", ms: performance.now() - pairStart, success: checked.every(leg => Boolean(leg.data) && !leg.checkError),
+  });
   let checkIdx = 0;
   if (checkAccountA)
     legA = checked[checkIdx++];
@@ -227,6 +234,7 @@ export async function checkArbLegs(
 
   return {
     ...ready,
+    precheckCompletedAt: performance.now(),
     legA,
     legB,
     accountA,

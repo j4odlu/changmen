@@ -12,7 +12,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { PM_MARKET_WS_URL } from "../platforms/pm.js";
 import { recordConnect, recordDisconnect, recordError } from "./forward_stats.js";
 import { attachHubUpstreamBackpressure, createWsRelayGuard } from "./ws_backpressure.js";
-import { isPmHubThinFramesEnabled, pmHubQuoteTimestampMs, thinPmMarketFrames } from "./pm_hub_thin_frame.js";
+import { splitPmControlFrames, isPmHubThinFramesEnabled, pmHubQuoteTimestampMs, thinPmMarketFrames } from "./pm_hub_thin_frame.js";
 
 /** @typedef {(token: string) => Promise<{ userId?: string, userName?: string } | null | undefined>} PmMarketIdentityResolver */
 
@@ -576,9 +576,20 @@ function ensureUpstream() {
   });
 
   ws.on("message", (data, isBinary) => {
-    const raw = isBinary ? data.toString() : String(data);
+    let raw = isBinary ? data.toString() : String(data);
     if (raw === "PONG")
       return;
+    const split = splitPmControlFrames(raw);
+    for (const frame of split.controls) {
+      for (const [clientWs, row] of clients) {
+        if (clientWs.readyState !== WebSocket.OPEN || !row.assetIds.has(frame.assetId)) continue;
+        if (!toClientGuard.isSendAllowed(clientWs)) { clientWs.close(1013, "tick control backpressure"); continue; }
+        row.sentToClient++;
+        clientWs.send(frame.raw);
+      }
+    }
+    raw = split.quotes;
+    if (!raw) return;
     // 不因慢客户端 pause/丢弃上游帧：扇出走 per-client coalesce，避免拖死全员
 
     // 瘦帧：按 asset 拆成独立 best_bid_ask，再扇出（与浏览器取价一致）

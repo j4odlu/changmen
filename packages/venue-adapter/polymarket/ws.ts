@@ -1,3 +1,4 @@
+import { notePmTickFrame } from "./pmTickState";
 import { reportVenueWsMeta, reportVenueWsStatus } from "../shared/venueWsStatus";
 import { resolvePolymarketMarketWsUrl } from "./wsConfig";
 import {
@@ -240,6 +241,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): PolymarketMarketWsHandle 
       if (ws !== socket)
         return;
       const raw = String(event.data);
+      notePmTickFrame(raw);
       if (raw === "PONG") return;
       if (!raw.trim().startsWith("{") && !raw.trim().startsWith("[")) return;
       notePmMarketClientFrame();

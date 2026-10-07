@@ -3,12 +3,19 @@ import { resolvePmHttpMode, type PmHttpMode } from "./pmTransportMode";
 
 export type PmBookSource = "direct-live" | "vps-live" | "vps-fallback" | "extension" | "unknown";
 export type PmQuoteSource = "ws" | "http-seed" | "book-correct";
-export type PmExecutionMetricKind = "quote_to_fo" | "book" | "check" | "sign" | "submit" | "betting";
+export type PmExecutionMetricKind = "clock_sample" | "outbound_prepare" | "prepared_wait" | "serial_wait" | "gamma" | "upstream_auth" | "upstream_post" | "runtime" | "guard" | "clock" | "pair_check" | "dispatch" | "quote_to_fo" | "book" | "check" | "sign" | "submit" | "betting";
 
 export interface PmExecutionMetricEntry {
   at: number;
   kind: PmExecutionMetricKind;
   tokenId?: string;
+  stage?: string;
+  linkId?: number;
+  requestCount?: number;
+  directMs?: number;
+  fallbackMs?: number;
+  clockSource?: string;
+  clockSampleAgeMs?: number;
   accountId?: number;
   wsSource: "changmen" | "official";
   httpMode: PmHttpMode;
@@ -118,6 +125,7 @@ export interface PmExecutionMetricsSummary {
 
 const MAX_ENTRIES = 300;
 const entries: PmExecutionMetricEntry[] = [];
+const quoteEntries: PmExecutionMetricEntry[] = [];
 
 function errorText(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err ?? "");
@@ -127,14 +135,15 @@ function errorText(err: unknown): string {
 export function recordPmExecutionMetric(
   entry: Omit<PmExecutionMetricEntry, "at" | "wsSource" | "httpMode">,
 ): void {
-  entries.push({
+  const target = entry.kind === "quote_to_fo" ? quoteEntries : entries;
+  target.push({
     at: Date.now(),
     wsSource: getPmMarketWsSourceMode(),
     httpMode: resolvePmHttpMode(),
     ...entry,
   });
-  if (entries.length > MAX_ENTRIES)
-    entries.splice(0, entries.length - MAX_ENTRIES);
+  if (target.length > MAX_ENTRIES)
+    target.splice(0, target.length - MAX_ENTRIES);
 }
 
 export function recordPmQuoteToFoMetric(entry: {
@@ -192,7 +201,7 @@ function elapsedMs(startedAt: number): number {
 }
 
 export function getPmExecutionMetrics(): readonly PmExecutionMetricEntry[] {
-  return entries;
+  return [...entries, ...quoteEntries].sort((a, b) => a.at - b.at);
 }
 
 function emptyKindSummary(): PmExecutionKindSummary {
@@ -208,7 +217,7 @@ function emptyKindSummary(): PmExecutionKindSummary {
 }
 
 function metricKinds(): PmExecutionMetricKind[] {
-  return ["quote_to_fo", "book", "check", "sign", "submit", "betting"];
+  return ["clock_sample", "outbound_prepare", "prepared_wait", "serial_wait", "gamma", "upstream_auth", "upstream_post", "runtime", "guard", "clock", "pair_check", "dispatch", "quote_to_fo", "book", "check", "sign", "submit", "betting"];
 }
 
 function percentile(values: number[], pct: number): number | null {
@@ -229,7 +238,7 @@ function increment(map: Record<string, number>, key: string | undefined): void {
 }
 
 export function getPmExecutionMetricsSummary(): PmExecutionMetricsSummary {
-  const snapshot = [...entries];
+  const snapshot = [...getPmExecutionMetrics()];
   const byKind = Object.fromEntries(metricKinds().map(kind => [kind, emptyKindSummary()])) as Record<PmExecutionMetricKind, PmExecutionKindSummary>;
   const durations = Object.fromEntries(metricKinds().map(kind => [kind, [] as number[]])) as Record<PmExecutionMetricKind, number[]>;
   const book = {
@@ -423,4 +432,5 @@ export function getPmExecutionMetricsSummary(): PmExecutionMetricsSummary {
 
 export function clearPmExecutionMetrics(): void {
   entries.length = 0;
+  quoteEntries.length = 0;
 }

@@ -39,11 +39,27 @@ test('frontend build receives no signing secrets and runs the build typecheck on
   assert.ok(!steps.some(s => s.run?.includes('typecheck:frontend')));
 });
 
+test('paired pushes wait for the matching backend after checks and before frontend publication', () => {
+  const frontend = workflows.frontend;
+  const steps = frontend.jobs.deploy.steps;
+  const gate = steps.findIndex(s => s.run === 'node scripts/deploy/wait-for-backend.mjs');
+  const publish = steps.findIndex(s => s.run === 'bash scripts/deploy/publish.sh frontend');
+  const build = steps.findIndex(s => s.run?.includes('npm run app:build'));
+  assert.ok(build < gate && gate < publish);
+  assert.equal(steps[gate].if, "github.event_name == 'push'");
+  assert.equal(frontend.permissions.actions, 'read');
+  assert.equal(steps.find(s => s.uses?.startsWith('actions/checkout@')).with['fetch-depth'], 0);
+  assert.ok(frontend.jobs.deploy['timeout-minutes'] >= 60);
+  assert.ok(frontend.on.push.paths.includes('scripts/deploy/wait-for-backend*.mjs'));
+  assert.ok(steps.some(s => s.run?.includes('scripts/deploy/wait-for-backend.test.mjs')));
+});
+
 test('backend deployment tests every server workspace without running web tests', () => {
   const steps = workflows.backend.jobs.deploy.steps;
   assert.ok(steps.some(s => s.run?.includes('npm run test:backend')));
   assert.ok(!steps.some(s => /\bnpm test\b|npm run check:boundaries/.test(s.run || '')));
   const root = JSON.parse(read('package.json'));
+  assert.ok(JSON.parse(read('server/backend/package.json')).scripts.test.includes('core/integrations/polymarket'));
   const filter = root.scripts['test:backend'].match(/--filter=(\S+)/)[1];
   const graph = JSON.parse(execFileSync(process.execPath, [
     fileURLToPath(new URL('../../node_modules/turbo/bin/turbo', import.meta.url)),

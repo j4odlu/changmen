@@ -29,7 +29,9 @@ export interface ArbBetReady {
 
 export interface ArbBetChecked extends ArbBetReady {
   waitSec: number;
-  /** 扫描检测价。混合对临 POST 再预检即时馆时恢复，不拿第一次 checkBet 写入的 live。 */
+  /** 本轮预检汇合完成时间（同端单调时钟，仅诊断）。 */
+  precheckCompletedAt?: number;
+  /** 扫描检测价，仅用于诊断；提交阶段不重检、不改价。 */
   scanOddsA: number;
   scanOddsB: number;
 }

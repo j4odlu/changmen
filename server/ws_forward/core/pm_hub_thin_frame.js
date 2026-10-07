@@ -149,3 +149,15 @@ export function isPmHubThinFramesEnabled() {
   const v = String(process.env.PM_HUB_THIN_FRAMES ?? "1").trim().toLowerCase();
   return v !== "0" && v !== "false" && v !== "off" && v !== "no";
 }
+
+/** [changmen 扩展] 控制事件不能被同 asset 的最新报价覆盖。 */
+export function splitPmControlFrames(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    const rows = Array.isArray(parsed) ? parsed : [parsed];
+    const controls = rows.filter(r => r?.event_type === "tick_size_change" && r.asset_id)
+      .map(r => ({ assetId: String(r.asset_id), raw: JSON.stringify(r) }));
+    const quotes = rows.filter(r => !(r?.event_type === "tick_size_change" && r.asset_id));
+    return { controls, quotes: controls.length ? (quotes.length ? JSON.stringify(quotes) : "") : raw };
+  } catch { return { controls: [], quotes: raw }; }
+}

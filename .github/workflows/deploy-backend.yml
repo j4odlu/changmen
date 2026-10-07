@@ -42,7 +42,7 @@ jobs:
         run: |
           npm run compile:router --workspace=@changmen/backend
           npm run test:backend
-          node --test scripts/deploy/classify-deploy-scope.test.mjs scripts/deploy/workflows.test.mjs scripts/deploy/deploy-plan.test.mjs scripts/deploy/compare-deployed-files.test.mjs
+          node --test scripts/deploy/classify-deploy-scope.test.mjs scripts/deploy/workflows.test.mjs scripts/deploy/deploy-plan.test.mjs scripts/deploy/compare-deployed-files.test.mjs scripts/deploy/wait-for-backend.test.mjs
           bash scripts/deploy/release.test.sh
       - name: Publish backend
         env:

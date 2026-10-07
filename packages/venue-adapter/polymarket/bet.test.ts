@@ -1,4 +1,5 @@
 import { notePmTickFrame, clearPmTickStateForTests } from "./pmTickState";
+import { createPmTickBufferQuote, clearPmTickBufferMetadata, notePmTickBufferBook } from "./pmTickBuffer";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { isPolymarketFokBuyFilled, isPolymarketOrderAccepted, polymarketProvider } from "./bet";
@@ -64,6 +65,7 @@ beforeEach(() => {
   clearPmExecutionMetrics();
   clearPolymarketOrderClientCacheForTests();
   clearPmTickStateForTests();
+  clearPmTickBufferMetadata();
 });
 
 function accountWithToken(token: string, extra: Partial<PlatformAccount> = {}): PlatformAccount {
@@ -1791,6 +1793,70 @@ describe("PM precheck /book reuse", () => {
   });
 });
 
+
+describe("PM +1 tick frozen quote", () => {
+  beforeEach(() => {
+    pmGetBook.mockReset(); pmSubmitOrder.mockReset(); polymarketPluginGet.mockReset();
+    mockPluginGetWithBook({ tick_size: "0.01", min_order_size: "5", neg_risk: false,
+      asks: [{ price: "0.5", size: "1000" }] });
+    pmSubmitOrder.mockResolvedValue({ success: true, status: "matched", orderID: "tick-one", takingAmount: "19.6078", makingAmount: "10" });
+  });
+  const raw = (amount = 10) => {
+    const quote = createPmTickBufferQuote("123456789", 0.5, "0.01")!;
+    return { itemId: quote.tokenId, odds: quote.displayOdds, betMoney: amount,
+      data: { pmBufferMode: "tick", pmTickQuote: quote, detectionOdds: quote.displayOdds,
+        detectionMaxPrice: quote.cap, detectionClobPrice: quote.cap } } as any;
+  };
+  test("real SDK FOK signs the buffered cap once and keeps detection odds", async () => {
+    const account = pmBettingAccount();
+    const checked = await polymarketProvider.checkBet(account, raw());
+    expect(checked.checkError).toBeUndefined();
+    expect(checked.odds).toBe(1.960);
+    expect(checked.data).toMatchObject({ limitPrice: 0.51, bookPrice: 0.5, detectionMaxPrice: 0.51, pmBufferMode: "tick" });
+    expect(Object.isFrozen(checked.data)).toBe(true);
+    // Later asks do not reprice this attempt, and no new book is fetched while submitting.
+    pmGetBook.mockClear();
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(true);
+    const body = pmSubmitOrder.mock.calls[0]![1] as any;
+    expect(body.orderType).toBe("FOK");
+    expect(body.order).toMatchObject({ makerAmount: "10000000", takerAmount: "19607800", signature: expect.stringMatching(/^0x/) });
+    expect(pmGetBook).not.toHaveBeenCalled();
+    expect(pmSubmitOrder).toHaveBeenCalledOnce();
+  });
+  test.each([[2.5, false], [2.55, true]])("%s USDC minimum shares checked at cap", async (amount, ready) => {
+    const leg = raw(amount);
+    const checked = await polymarketProvider.checkBet(pmBettingAccount(), leg);
+    expect(Boolean(checked.data)).toBe(ready);
+    expect(checked.betMoney).toBe(amount);
+    if (!ready) expect(checked.checkError).toContain("最小份数");
+    expect(pmSubmitOrder).not.toHaveBeenCalled();
+  });
+  test("book tick mismatch invalidates the quote rather than shrinking its buffer", async () => {
+    mockPluginGetWithBook({ tick_size: "0.001", min_order_size: "5", neg_risk: false, asks: [{ price: "0.5", size: "1000" }] });
+    const checked = await polymarketProvider.checkBet(pmBettingAccount(), raw());
+    expect(checked.data).toBeNull();
+    expect(checked.checkError).toContain("tick 已改变");
+  });
+  test("missing and mismatching tick caps cannot use the legacy inverse-odds fallback", async () => {
+    for (const change of [{ pmTickQuote: undefined }, { detectionMaxPrice: 0.52 }]) {
+      const leg = raw(); Object.assign(leg.data, change);
+      expect((await polymarketProvider.checkBet(pmBettingAccount(), leg)).data).toBeNull();
+    }
+    expect(pmGetBook).not.toHaveBeenCalled();
+  });
+  test("new tick metadata cannot change percentage submission prices", async () => {
+    notePmTickBufferBook("123456789", { asset_id: "123456789", tick_size: "0.001", timestamp: Date.now() + 10000 });
+    const checked = await polymarketProvider.checkBet(pmBettingAccount(), {
+      itemId: "123456789", odds: 1.980, betMoney: 10,
+      data: { detectionClobPrice: 0.505, detectionMaxPrice: 0.505 },
+    } as any);
+    expect(checked.data).toMatchObject({ detectionMaxPrice: 0.505, limitPrice: 0.5, detectionOdds: 1.980 });
+    expect(checked.data?.pmBufferMode).toBeUndefined();
+    expect(checked.odds).toBe(2);
+    expect((await polymarketProvider.betting(pmBettingAccount(), checked)).success).toBe(true);
+    expect((pmSubmitOrder.mock.calls[0]![1] as any).order).toMatchObject({ makerAmount: "10000000", takerAmount: "20000000" });
+  });
+});
 
 describe("PM phase 1 frozen attempt", () => {
   beforeEach(() => {

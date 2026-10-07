@@ -4,11 +4,22 @@ import { isValidClobPrice, polymarketClobMatchesOdds } from "./pmDetection";
 /** [changmen 扩展] Extensions `pmArbPriceBuffer` 运行时镜像（web userStore 同步） */
 export interface PmArbPriceBufferPrefs {
   enabled: boolean;
+  /** 缺失时沿用百分比；tick 固定增加一档。 */
+  mode?: "percent" | "tick";
   /** 卖一倍数；默认 1.01 */
   multiplier: number;
 }
 
 const DEFAULT_MULTIPLIER = 1.01;
+const modeListeners = new Set<(enabled: boolean) => void>();
+export * from "./pmTickBuffer";
+export function isPmTickBufferActive(prefs: PmArbPriceBufferPrefs = runtimePrefs): boolean {
+  return prefs.enabled === true && prefs.mode === "tick";
+}
+export function onPmTickBufferModeChange(listener: (enabled: boolean) => void): () => void {
+  modeListeners.add(listener);
+  return () => { modeListeners.delete(listener); };
+}
 
 let runtimePrefs: PmArbPriceBufferPrefs = {
   enabled: false,
@@ -16,10 +27,14 @@ let runtimePrefs: PmArbPriceBufferPrefs = {
 };
 
 export function setPmArbPriceBufferPrefs(prefs: PmArbPriceBufferPrefs): void {
+  const wasTick = isPmTickBufferActive();
   runtimePrefs = {
     enabled: prefs.enabled === true,
     multiplier: normalizePmArbPriceBufferMultiplier(prefs.multiplier),
+    ...(prefs.mode === "tick" ? { mode: "tick" as const } : {}),
   };
+  const tick = isPmTickBufferActive();
+  if (tick !== wasTick) for (const listener of modeListeners) listener(tick);
 }
 
 export function getPmArbPriceBufferPrefs(): PmArbPriceBufferPrefs {
@@ -27,7 +42,7 @@ export function getPmArbPriceBufferPrefs(): PmArbPriceBufferPrefs {
 }
 
 export function resetPmArbPriceBufferPrefsForTests(): void {
-  runtimePrefs = { enabled: false, multiplier: DEFAULT_MULTIPLIER };
+  setPmArbPriceBufferPrefs({ enabled: false, multiplier: DEFAULT_MULTIPLIER });
 }
 
 export function normalizePmArbPriceBufferMultiplier(raw: unknown): number {
@@ -39,7 +54,7 @@ export function normalizePmArbPriceBufferMultiplier(raw: unknown): number {
 
 /** 是否启用卖一 × multiplier。关（默认）时调用方必须走原路径、不乘倍数。 */
 export function isPmArbPriceBufferActive(prefs: PmArbPriceBufferPrefs = runtimePrefs): boolean {
-  return prefs.enabled === true && prefs.multiplier > 1;
+  return prefs.enabled === true && prefs.mode !== "tick" && prefs.multiplier > 1;
 }
 
 function round4(n: number): number {

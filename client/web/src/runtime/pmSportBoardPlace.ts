@@ -116,7 +116,7 @@ export async function placePmSportBoardBet(
       const accountId = Number(account.accountId) || 0;
       const label = String(account.playerName || accountId || "PM账号").trim() || "PM账号";
       const option = new BetOption(PM, matchId, conditionId, tokenId, stake, side, odds);
-      const checked = await accountStore.checkBetting(account, option);
+      const checked = await accountStore.checkBetting(account, option, { pmQuoteScope: "sport" });
       if (!checked.data) {
         failNotes.push(`${label}:${checked.checkError || "预检失败"}`);
         continue;

@@ -37,6 +37,8 @@ export type CheckBettingOpts = ResolveVenueStakeOpts & {
   role?: "execute" | "precheckOnly";
   /** 场馆额已换过：再预检只验盘口，不改 betMoney（勿用 skipAccountRate，USDT 会二次÷汇率） */
   skipStakeResolve?: boolean;
+  /** [changmen 扩展] 体育板/POD 的独立报价不使用电竞 tick 缓冲。默认电竞。 */
+  pmQuoteScope?: "esport" | "sport";
 };
 
 export interface PlaceBetOpts {
@@ -420,7 +422,7 @@ export async function checkBetting(
   const observationStartedAt = Date.now();
   let observationError: unknown;
   try {
-    attachPolymarketDetectionQuote(option);
+    attachPolymarketDetectionQuote(option, opts?.pmQuoteScope);
     attachPredictFunDetectionQuote(option);
     // [A8 适配] 编排 Plan CNY → 场馆原币（CNY / U / PM）；预检后不改，跌价由各场馆 checkBet 拒单
     if (!opts?.skipStakeResolve) {

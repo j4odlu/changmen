@@ -28,6 +28,7 @@ export * from "./pmArbPriceBufferMode";
 export * from "./pmFokDepthBufferMode";
 export * from "./pmStake";
 export * from "./pmTickPrice";
+export * from "./pmTickState";
 export * from "./pmManualSell";
 export { pmAccountSubmitAttempts, finishPmSubmitAttempt, pmSubmitScope, pmSubmitMaker } from "./pmSubmitJournal";
 export * from "./pmHeartbeat";

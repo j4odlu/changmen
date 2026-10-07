@@ -18,6 +18,8 @@ import { PLATFORMS } from "@changmen/venue-adapter/shared";
 import {
   isPmArbPriceBufferActive,
   pmEffectiveOddsFromFoEntry,
+  isPmTickBufferActive,
+  createPmTickBufferQuote,
 } from "@changmen/venue-adapter/polymarket/pmArbPriceBufferMode";
 import {
   isPfArbPriceBufferActive,
@@ -96,6 +98,9 @@ export const useOddsStore = defineStore("odds", {
     flash: new Map<string, { dir: OddsFlashDir; until: number; source: OddsSaveSource }>(),
 
     _limitsCleanedAt: 0,
+    /** [changmen 扩展] 仅新模式的显示失效通知，不重写原始赔率。 */
+    pmTickBufferEnabled: false,
+    pmTickBufferVersion: 0,
   }),
 
   actions: {
@@ -181,6 +186,10 @@ export const useOddsStore = defineStore("odds", {
      */
     getOdds(platform: PlatformId, oddsId: string, fallback = 0): number {
       const row = this.data.get(platform)?.get(String(oddsId));
+      if (platform === PLATFORMS.Polymarket && (this.pmTickBufferEnabled || isPmTickBufferActive())) {
+        void this.pmTickBufferVersion;
+        return row && !row.isLock ? createPmTickBufferQuote(String(oddsId), Number(row.clobPrice))?.displayOdds ?? 0 : 0;
+      }
       const useTrunc = platform === PLATFORMS.Polymarket || platform === PLATFORMS.PredictFun;
       if (row === undefined)
         return useTrunc ? truncateOddsTo3(fallback) : formatDisplayOdds(fallback);

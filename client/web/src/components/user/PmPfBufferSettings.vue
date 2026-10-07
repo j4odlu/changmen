@@ -1,13 +1,18 @@
 <script setup lang="ts">
 /**
  * [changmen 扩展] PM / PF 卖一缓冲 + PM FOK 深度。
- * 只改排版对照，绑定与校验与原「扩展」表单项相同；保存仍走父级 Extensions。
+ * PM 可选择原百分比或固定加 1 tick；保存仍走父级 Extensions。
  */
 import { storeToRefs } from "pinia";
+import { computed } from "vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { useUserStore } from "@/stores/userStore";
 
 const { extensionPrefs } = storeToRefs(useUserStore());
+const pmBufferMode = computed({
+  get: () => extensionPrefs.value.pmArbPriceBuffer.mode ?? "percent",
+  set: (value: "percent" | "tick") => { extensionPrefs.value.pmArbPriceBuffer.mode = value; },
+});
 </script>
 
 <template>
@@ -34,7 +39,7 @@ const { extensionPrefs } = storeToRefs(useUserStore());
         placement="top"
         :show-after="200"
         popper-class="pm-pf-buffer-tip"
-        content="有 fo 时展示/下单价 = 卖一 × 倍数。无 fo 不打折。结算仍用成交价。"
+        content="缓冲用于展示赔率、套利计算和下单限价。结算仍用成交价。"
       >
         <span class="pm-pf-buffer__label">套利卖一缓冲</span>
       </el-tooltip>
@@ -42,7 +47,7 @@ const { extensionPrefs } = storeToRefs(useUserStore());
         placement="top"
         :show-after="200"
         popper-class="pm-pf-buffer-tip"
-        content="开：有 fo 的 PM 展示/扫描/FOK = 卖一 × 倍数（如 0.886×1.01）。无 fo 不打折。结算仍用成交价。关 = 现网。"
+        content="百分比沿用原规则；加 1 tick 使用盘口实际 tick，限价 = 卖一 + tick，展示和套利赔率取其倒数。结算仍用成交价。"
       >
         <span class="pm-pf-buffer__ctrl">
           <el-switch
@@ -69,15 +74,29 @@ const { extensionPrefs } = storeToRefs(useUserStore());
         </span>
       </el-tooltip>
 
+      <span class="pm-pf-buffer__label">缓冲方式</span>
+      <el-radio-group
+        v-model="pmBufferMode"
+        class="pm-pf-buffer__mode"
+        size="small"
+        aria-label="PM 缓冲方式"
+        :disabled="!extensionPrefs.pmArbPriceBuffer.enabled"
+      >
+        <el-radio value="percent">百分比</el-radio>
+        <el-radio value="tick">加 1 tick</el-radio>
+      </el-radio-group>
+      <span class="pm-pf-buffer__na">百分比</span>
+
       <el-tooltip
         placement="top"
         :show-after="200"
         popper-class="pm-pf-buffer-tip"
-        content="卖一 CLOB 价乘以该倍数。默认 1.01（1%）；保存后写入 Extensions。"
+        content="百分比：卖一乘以倍数，默认 1.01（1%）。加 1 tick：固定增加盘口实际的一档价格，元数据未就绪时暂不可下注。"
       >
-        <span class="pm-pf-buffer__label">卖一倍数</span>
+        <span class="pm-pf-buffer__label">缓冲参数</span>
       </el-tooltip>
       <el-input-number
+        v-if="pmBufferMode === 'percent'"
         v-model="extensionPrefs.pmArbPriceBuffer.multiplier"
         class="pm-pf-buffer__num"
         :min="1.01"
@@ -87,6 +106,7 @@ const { extensionPrefs } = storeToRefs(useUserStore());
         :disabled="!extensionPrefs.pmArbPriceBuffer.enabled"
         controls-position="right"
       />
+      <span v-else class="pm-pf-buffer__na">固定增加 1 tick</span>
       <el-input-number
         v-model="extensionPrefs.pfArbPriceBuffer.multiplier"
         class="pm-pf-buffer__num"
@@ -202,6 +222,14 @@ const { extensionPrefs } = storeToRefs(useUserStore());
 
 .pm-pf-buffer__num {
   width: 120px;
+}
+
+.pm-pf-buffer__mode {
+  gap: 0 12px;
+}
+
+.pm-pf-buffer__mode :deep(.el-radio) {
+  margin-right: 0;
 }
 
 .pm-pf-buffer__na {

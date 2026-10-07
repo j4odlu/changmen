@@ -5,6 +5,7 @@ import type { PlatformAccount } from "@changmen/client-core/models/platformAccou
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 import { resolvePolymarketVenueStakeUsdc } from "./pmStake";
 import { currentPmTick } from "./pmTickState";
+import { validatePmTickBufferQuote, notePmTickBufferBook, pmTickBufferTick, pmTickBufferOrderShares, type PmTickBufferQuote } from "./pmTickBuffer";
 import { resolvePmHttpMode } from "./pmTransportMode";
 import { resolvePmOrderSubmitHttpMode } from "./pmOrderSubmitMode";
 import { getPmMarketWsSourceMode } from "./pmMarketWsMode";
@@ -181,6 +182,9 @@ export interface PolymarketOrderOptions {
 
 /** checkBet 写入、betting 可复用的 PM 买单预检缓存 */
 export interface PolymarketBuyCheckData extends Record<string, unknown> {
+  /** [changmen 扩展] 仅 tick 分支携带；百分比数据形状保持原样。 */
+  pmBufferMode?: "tick";
+  pmTickQuote?: PmTickBufferQuote;
   tokenId: string;
   odds: number;
   detectionOdds: number;
@@ -207,6 +211,15 @@ interface PreparedBuy {
   role: "execute" | "precheckOnly";
   readyAt: number;
   cacheHit: boolean;
+}
+function validateTickPrepared(data: PolymarketBuyCheckData): void {
+  if (data.pmBufferMode !== "tick") return;
+  const quote = validatePmTickBufferQuote(data.pmTickQuote, data.tokenId, data.detectionOdds);
+  if (quote.cap !== data.limitPrice || quote.cap !== data.detectionMaxPrice)
+    throw new Error("PM +1 tick 冻结限价已改变");
+  const tick = currentPmTick(data.tokenId, data.orderOptions.bookTimestamp) ?? pmTickBufferTick(data.tokenId) ?? data.orderOptions.tickSize;
+  if (tick !== data.orderOptions.tickSize)
+    throw new Error("PM tick 已改变，请新建投注尝试");
 }
 const preparedBuys = new WeakMap<BetOption, PreparedBuy>();
 const checkedOptions = new WeakSet<BetOption>();
@@ -237,6 +250,10 @@ export function validatePolymarketPreparedBuy(account: PlatformAccount, option: 
   if (option.checkError) return option.checkError;
   if (!pmSubmitClockReady(account)) return "PM 提交校时准备已失效";
   if (prepared.generation !== polymarketSigningGeneration()) return "PM 钱包会话已失效";
+  if (prepared.data.pmBufferMode === "tick") {
+    try { validateTickPrepared(prepared.data); }
+    catch (err) { return err instanceof Error ? err.message : "PM +1 tick 报价失效"; }
+  }
   try {
     if (prepared.binding !== preparationBinding(account, option)) return "PM 下单参数或账号已改变，请新建尝试";
     const tick = currentPmTick(option.itemId, prepared.data.orderOptions.bookTimestamp);
@@ -498,6 +515,8 @@ async function createPolymarketOrderBody(
   }, { tickSize: data.orderOptions.tickSize, negRisk: data.orderOptions.negRisk } as any,
   data.orderOptions.version);
   if (!clob.isV2Order(signedOrder)) throw new Error("Polymarket SDK 未生成受支持订单");
+  if (data.pmBufferMode === "tick" && Number(signedOrder.takerAmount) / 1_000_000 < data.orderOptions.minOrderSize)
+    throw new Error("Polymarket 下单金额低于最小份数（+1 tick 限价）");
   return clob.orderToJsonV2(signedOrder, apiKey, clob.OrderType.FOK, false, false);
 }
 
@@ -621,6 +640,19 @@ export const polymarketProvider: PlatformProvider = {
     }
 
     const prior = option.data as PolymarketOptionQuoteData | PolymarketBuyCheckData | null | undefined;
+    const tickQuoteData = prior as Partial<PolymarketBuyCheckData> | undefined;
+    let tickQuote: PmTickBufferQuote | undefined;
+    if (tickQuoteData?.pmBufferMode === "tick") {
+      try {
+        tickQuote = Object.freeze({ ...validatePmTickBufferQuote(tickQuoteData.pmTickQuote, option.itemId, Number(prior?.detectionOdds ?? option.odds)) });
+        if (tickQuoteData.detectionMaxPrice !== tickQuote.cap || option.odds !== tickQuote.displayOdds)
+          throw new Error("PM +1 tick 检测价已改变");
+      } catch (err) {
+        option.checkError = err instanceof Error ? err.message : String(err);
+        option.data = null;
+        return option;
+      }
+    }
     // 套利检测价：首次预检锁定建腿赔率；限价仅在 fo clob 与该赔率同档时用 fo，否则 1/detectionOdds
     const detectionOdds = Number(prior?.detectionOdds) > 1
       ? Number(prior!.detectionOdds)
@@ -681,6 +713,15 @@ export const polymarketProvider: PlatformProvider = {
       if (clockSettled.status === "rejected") throw clockSettled.reason;
       if (context?.role !== "precheckOnly" && !pmSubmitClockReady(account)) throw new Error("PM 提交校时未就绪");
       const { price, bookOdds, orderOptions, bookFetchedAt, depthAvailableAtCap, depthNeedUsdc } = buySettled.value;
+      if (tickQuote) {
+        notePmTickBufferBook(tokenId, { asset_id: tokenId, tick_size: orderOptions.tickSize, timestamp: orderOptions.bookTimestamp });
+        if (tickQuote.tick !== orderOptions.tickSize || pmTickBufferTick(tokenId) !== tickQuote.tick)
+          throw new Error("PM tick 已改变，请等待新报价并新建投注尝试");
+        // 与当前 SDK BUY 的金额(2位)/份数(tick对应精度)编码一致；不自动增加用户注码。
+        const shares = pmTickBufferOrderShares(apiBetMoney, tickQuote);
+        if (shares < orderOptions.minOrderSize)
+          throw new Error("Polymarket 下单金额低于最小份数（+1 tick 限价）");
+      }
       if (invalidatedChecks.has(option)) throw new Error("PM 每次预检须新建投注尝试");
       if (initialInputs !== checkInputBinding(account, option))
         throw new Error("PM 预检期间投注参数已改变，请新建尝试");
@@ -692,9 +733,10 @@ export const polymarketProvider: PlatformProvider = {
       for (const level of orderOptions.asks) Object.freeze(level);
       Object.freeze(orderOptions.asks);
       Object.freeze(orderOptions);
-      option.odds = bookOdds;
-      option.newOdds = bookOdds;
+      option.odds = tickQuote ? detectionOdds : bookOdds;
+      option.newOdds = tickQuote ? detectionOdds : bookOdds;
       option.data = {
+        ...(tickQuote ? { pmBufferMode: "tick" as const, pmTickQuote: tickQuote } : {}),
         tokenId,
         odds: bookOdds,
         detectionOdds,
@@ -839,6 +881,7 @@ export const polymarketProvider: PlatformProvider = {
       );
       // 签名期间若收到已知 tick 变更，只做本地有效性核验。
       const tick = currentPmTick(tokenId, orderOptions.bookTimestamp);
+      validateTickPrepared(frozen);
       if (tick && !isPolymarketPriceOnTick(price, tick)) throw new Error("PM tick 已改变，冻结限价不再有效");
       if (prepared.generation !== polymarketSigningGeneration()
         || option.data !== frozen || prepared.binding !== preparationBinding(account, option)) throw new Error("PM 签名准备已失效");
@@ -848,6 +891,7 @@ export const polymarketProvider: PlatformProvider = {
       const result = await measurePmExecution("submit", executionSubmitFields, () =>
         guardedPmSubmit(account, orderBody, { version: orderOptions.version, negRisk: orderOptions.negRisk,
           validateBeforeDispatch: () => {
+            validateTickPrepared(frozen);
             if (prepared.generation !== polymarketSigningGeneration()
               || option.data !== frozen || prepared.binding !== preparationBinding(account, option))
               throw new Error("PM 签名准备已失效");

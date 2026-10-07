@@ -124,7 +124,7 @@ describe("podPmFollowPlace", () => {
   it("keeps PM POD stake in RMB until account check converts venue currency", () => {
     const source = readFileSync(join(process.cwd(), "src/runtime/podPmFollowPlace.ts"), "utf8");
     expect(source).toMatch(/planStakeCny/);
-    expect(source).toMatch(/checkBetting\(account, option\)/);
+    expect(source).toMatch(/checkBetting\(account, option[,)]/);
     expect(source).not.toMatch(/skipStakeResolve:\s*true/);
   });
 

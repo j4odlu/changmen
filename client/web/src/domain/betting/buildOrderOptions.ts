@@ -5,6 +5,7 @@ import type { UserConfig } from "@/types/userConfig";
 import { initialArbBaseStake, pickArbLegs } from "@changmen/arb-core";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { sortOptionsByWinRate } from "@/shared/winRate";
+import { capturePmTickBufferQuote } from "@/domain/polymarket/tickBufferQuote";
 
 /** 对齐 A8 `IQ.GetOrderOptions`：选腿 + 对冲金额 + betSorting */
 export function buildOrderOptions(
@@ -49,6 +50,8 @@ export function buildOrderOptions(
         ];
 
   // [changmen 扩展] 小额/十位取整可能产生零注码，禁止以不完整双腿进入预检。
+  try { for (const option of options) capturePmTickBufferQuote(option); }
+  catch { return undefined; }
   if (totalMode && options.some(o => !Number.isFinite(o.betMoney) || o.betMoney <= 0))
     return undefined;
 

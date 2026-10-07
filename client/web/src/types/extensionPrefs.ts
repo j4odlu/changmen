@@ -101,6 +101,8 @@ export interface ArbEarlyLockSellPrefs {
 /** [changmen 扩展] PM 套利：卖一 × multiplier（展示 + FOK；见 PM_ARB_PRICE_BUFFER_PLAN.md） */
 export interface PmArbPriceBufferPrefs {
   enabled: boolean;
+  /** [changmen 扩展] 缺失 = 原百分比；tick = 卖一增加一档。 */
+  mode?: "percent" | "tick";
   /** 卖一倍数；默认 1.01 */
   multiplier: number;
 }
@@ -452,6 +454,7 @@ function normalizePmArbPriceBuffer(raw: unknown): PmArbPriceBufferPrefs {
   const multiplier = Number(row.multiplier);
   return {
     enabled: row.enabled === true,
+    ...(row.mode === "tick" ? { mode: "tick" as const } : {}),
     multiplier: Number.isFinite(multiplier) && multiplier >= 1.01 && multiplier <= 1.1
       ? Math.round(multiplier * 1000) / 1000
       : defaults.multiplier,

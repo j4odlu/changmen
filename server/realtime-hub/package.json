@@ -8,7 +8,7 @@
     ".": "./index.js"
   },
   "scripts": {
-    "test": "node --test hub.test.mjs pubsub.test.mjs pm_maintenance.test.mjs"
+    "test": "node --test hub.test.mjs pubsub.test.mjs pm_maintenance.test.mjs pm_sport_broadcast.test.mjs"
   },
   "dependencies": {
     "@changmen/db": "file:../db",

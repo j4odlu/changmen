@@ -18,6 +18,7 @@ export async function notifyPmSportBroadcast(clientMatchId, pmSport) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clientMatchId, pmSport }),
+      signal: AbortSignal.timeout(5_000),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");

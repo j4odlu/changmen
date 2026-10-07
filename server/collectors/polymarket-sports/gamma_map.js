@@ -215,11 +215,12 @@ export function gammaEventToSportMessage(event, teams = {}) {
   const parsed = parseTeamsFromGammaTitle(event.title);
   const live = event.live === true;
   const ended = event.ended === true;
-  const status = ended
+  // [changmen 扩展] 仅明确的状态/布尔字段可用于补充；缺值不推断未开赛。
+  const status = String(event.status ?? "").trim() || (ended
     ? "finished"
     : live
       ? "running"
-      : "not_started";
+      : event.live === false && event.ended === false ? "not_started" : "");
   const homeTeam = home || parsed.home;
   const awayTeam = away || parsed.away;
   const gameId = event.gameId != null ? Number(event.gameId) : undefined;

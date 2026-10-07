@@ -33,6 +33,16 @@ test("parseTeamsFromGammaTitle", () => {
   assert.equal(row.away, "Team Liquid Academy");
 });
 
+test("Gamma fallback requires explicit state fields and preserves cancellation/postponement", () => {
+  assert.equal(gammaEventToSportMessage({}).status, "");
+  assert.equal(gammaEventToSportMessage({ live: false }).status, "");
+  assert.equal(gammaEventToSportMessage({ live: false, ended: false }).status, "not_started");
+  assert.equal(gammaEventToSportMessage({ live: true }).status, "running");
+  assert.equal(gammaEventToSportMessage({ ended: true }).status, "finished");
+  assert.equal(gammaEventToSportMessage({ status: "postponed", live: false, ended: false }).status, "postponed");
+  assert.equal(gammaEventToSportMessage({ status: "canceled", ended: true }).status, "canceled");
+});
+
 test("gammaEventToSportMessage maps live score without inferring map winners", () => {
   const event = {
     gameId: 1534520,

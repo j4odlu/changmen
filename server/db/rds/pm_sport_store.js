@@ -1,5 +1,5 @@
 /**
- * Polymarket Sports WS → client_matches.pm_sport
+ * Polymarket Gamma 补充 / Sports WS 接管 → client_matches.pm_sport
  */
 
 import { getPgPool } from "../pg_pool.js";
@@ -82,7 +82,16 @@ export async function updateClientMatchPmSport(clientMatchId, pmSport) {
   const { rowCount } = await pool.query(
     `UPDATE client_matches
      SET pm_sport = $2::jsonb
-     WHERE id = $1`,
+     WHERE id = $1
+       AND ($2::jsonb->>'source' IS DISTINCT FROM 'gamma'
+         OR pm_sport IS NULL
+         OR pm_sport->>'source' = 'gamma'
+         OR (pm_sport->>'source' IS NULL
+           AND COALESCE(lower(trim(pm_sport->>'status')), '') NOT IN
+             ('not_started', 'scheduled', 'running', 'inprogress', 'finished', 'final',
+              'postponed', 'canceled', 'cancelled')
+           AND COALESCE(pm_sport->>'live', 'false') <> 'true'
+           AND COALESCE(pm_sport->>'ended', 'false') <> 'true'))`,
     [id, JSON.stringify(pmSport ?? {})],
   );
   return rowCount > 0;

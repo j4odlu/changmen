@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "node index.js",
-    "test": "node --test parse_sport.test.mjs gamma_map.test.mjs prematch_prices.test.mjs"
+    "test": "node --test parse_sport.test.mjs gamma_map.test.mjs sport_state.test.mjs gamma_poll.test.mjs prematch_prices.test.mjs"
   },
   "dependencies": {
     "@changmen/db": "file:../../db",

@@ -182,7 +182,7 @@ pm2 start deploy/ecosystem.config.cjs --only changmen-esport,changmen-pm-market-
 
 `changmen-polymarket-collector` 直连 Gamma + CLOB `/prices`，写 `platform_*` + MarketIndex。浏览器电竞侧**不再** Gamma/`Save*`，只同步 Index → Market WS → `fo`。设 `POLYMARKET_COLLECTOR_WRITE_PLATFORM=0` 可改 shadow（仅 index）。详见 [server/collectors/polymarket-esports/README.md](./server/collectors/polymarket-esports/README.md)。
 
-`changmen-pm-sports` 连 `wss://sports-api.polymarket.com/ws`，按 `platform_matches` 已有 Polymarket 行关联 `client_matches`，写入 `pm_sport`。**不替代**浏览器 CLOB WS 赔率采集。
+`changmen-pm-sports` 连 `wss://sports-api.polymarket.com/ws`，按 `platform_matches` 已有 Polymarket 行关联 `client_matches`，写入 `pm_sport`。[changmen 扩展] 首次收到有效 WS 状态前由 Gamma 每 60 秒补充；WS 接管后不再允许 Gamma 覆盖，断线和重启均保留 WS 优先级（来源存入快照）。**不替代**浏览器 CLOB WS 赔率采集。
 
 `changmen-pm-football-collector` 每 30s 拉取 PM 足球 Gamma/CLOB，原子发布 `storage/sport/soccer6/match_list.json`，作为不能直连 PM 用户的 fallback。PM 官方可达时浏览器直接拉 Gamma/CLOB 并连接官方 Market WS；不可达或直连失败时才读取 VPS 快照并连接独立 `PM-SPORT-MARKET` hub。`changmen-esport` 通过 `PM_FOOTBALL_COLLECTOR_OWNED=1` 只读快照，不在用户请求内直连 Gamma；电竞 `PM-MARKET` / collector 不受影响。
 

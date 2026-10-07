@@ -19,20 +19,26 @@ export function activeBetLegAttemptViews(run: ActiveBetRun, leg: ActiveBetLeg, e
   const ids = [...new Set(events.map(event => event.attemptId).filter((id): id is string => Boolean(id)))];
   let makeup = 0;
   let retry = 0;
+  let initial = 0;
+  let unknown = 0;
   const attempts = ids.map(id => {
     const facts = events.filter(event => event.attemptId === id);
     const phase = facts.find(event => ["initial", "retry", "makeup"].includes(event.phase || ""))?.phase;
+    if (phase === "retry")
+      retry = facts.find(event => event.retryRound)?.retryRound || retry + 1;
     const label = phase === "initial" ? "首轮尝试"
       : phase === "makeup" ? `补单第 ${++makeup} 次`
-        : phase === "retry" ? `即时重试第 ${++retry} 次` : "尝试类型未记录";
+        : phase === "retry" ? `即时重试第 ${retry} 次` : "尝试类型未记录";
+    const key = phase === "initial" ? `initial:${++initial}`
+      : phase === "makeup" ? `makeup:${makeup}` : phase === "retry" ? `retry:${retry}` : `unknown:${leg.side}:${++unknown}`;
     // 历史尝试只取自身证据，不继承最新腿状态、队列或整轮编排结论。
     const stages = activeBetLegStages(run, { ...leg, status: "pending", events: [] }, facts)
       .filter(stage => ["precheck", "submission"].includes(stage.id)
         || (["binding", "confirmation"].includes(stage.id) && stage.at !== undefined));
     const provider = facts.find(event => event.provider)?.provider;
-    return { id, label, provider: provider === "Polymarket" ? "PM" : provider, stages };
+    return { id, key, label, provider: provider === "Polymarket" ? "PM" : provider, stages };
   });
-  return { latestLabel: attempts.at(-1)?.label || "尝试类型未记录", previous: attempts.slice(0, -1) };
+  return { latestLabel: attempts.at(-1)?.label || "尝试类型未记录", previous: attempts.slice(0, -1), attempts };
 }
 
 /** [changmen 扩展] 关键阶段常驻展示；尝试内证据、补单队列和整轮编排分别取值，不参与下注判定。 */

@@ -167,3 +167,21 @@
 .active-bet-run__stages li[data-tone="pending"] strong { color: #93c5fd; }
 .active-bet-run__stage-heading time, .active-bet-run__stage-heading small { color: #7f91aa; font-variant-numeric: tabular-nums; font-size: 10px; }
 .active-bet-run__stage-content p { margin: 2px 0 0; color: #7f91aa; }
+/* [changmen 扩展] 阶段共享同一表格行；窄窗口横向滚动，保持双腿对照。 */
+.active-bet-run__comparison-scroll { overflow-x: auto; margin-bottom: 12px; scrollbar-width: thin; }
+.active-bet-run__comparison { width: 100%; min-width: 420px; table-layout: fixed; border-collapse: collapse; font-size: 11px; background: rgba(8, 13, 22, .46); }
+.active-bet-run__comparison th, .active-bet-run__comparison td { padding: 8px; border: 1px solid rgba(91, 112, 145, .25); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.active-bet-run__comparison th { color: #9fb0c7; font-weight: 500; }
+.active-bet-run__comparison thead th { color: #c6d2e3; background: rgba(21, 35, 52, .98); }
+.active-bet-run__comparison-phase { width: 78px; }
+.active-bet-run__comparison thead small { display: block; margin-top: 3px; color: #93c5fd; font-size: 10px; }
+.active-bet-run__comparison-group th { color: #93c5fd; background: rgba(96, 165, 250, .09); }
+.active-bet-run__comparison-group small { margin-left: 12px; color: #7f91aa; }
+.active-bet-run__comparison-result { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 7px; }
+.active-bet-run__comparison-result strong { color: #9fb0c7; font-weight: 500; }
+.active-bet-run__comparison-result time, .active-bet-run__comparison-result small { color: #7f91aa; font-size: 10px; }
+.active-bet-run__comparison td[data-tone="success"] strong { color: #34d399; }
+.active-bet-run__comparison td[data-tone="danger"] strong { color: #fb7185; }
+.active-bet-run__comparison td[data-tone="warning"] strong { color: #fbbf24; }
+.active-bet-run__comparison td[data-tone="pending"] strong { color: #93c5fd; }
+.active-bet-run__comparison td p { margin: 4px 0 0; color: #7f91aa; font-size: 10px; }

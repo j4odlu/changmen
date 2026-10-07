@@ -3,7 +3,7 @@ import type { ActiveBetLeg, ActiveBetRun } from "@/types/activeBetRun";
 import { storeToRefs } from "pinia";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import OrderExecutionTimeline from "@/components/order/OrderExecutionTimeline.vue";
-import OrderProgressStages from "@/components/order/OrderProgressStages.vue";
+import OrderProgressComparison from "@/components/order/OrderProgressComparison.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { useRecentBetProgress } from "./useRecentBetProgress";
 import { accountProgressDisplayName } from "@/shared/accountDisplayName";
@@ -557,16 +557,14 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 {{ expandedTimeline ? '每组最近 6 条' : '展开全部记录' }}
               </button>
             </header>
+            <OrderProgressComparison :run="activeRun" :facts="factGroups.groups" />
+            <header class="active-bet-run__section-head"><strong>每腿摘要与时间线</strong></header>
             <div class="active-bet-run__legs">
               <section v-for="leg in activeRun.legs" :key="leg.side" class="active-bet-run__leg" :data-tone="legSummary(leg).tone">
                 <header class="active-bet-run__leg-meta">
                   <span class="active-bet-run__leg-side">{{ legSideLabel(leg.side) }}</span><PlatformIcon :platform="legProvider(leg)" /><strong>{{ legProvider(leg) === 'Polymarket' ? 'PM' : legProvider(leg) }}</strong><span>{{ legTarget(leg.target) }}</span>
                 </header>
                 <span class="active-bet-run__leg-role" :class="{ 'is-precheck': leg.precheckOnly }">{{ activeBetLegRole(leg) }}</span>
-                <OrderProgressStages
-                  v-for="attempt in legAttempts.get(leg.side)?.previous || []" :key="attempt.id"
-                  :stages="attempt.stages" :title="[attempt.label, attempt.provider, '历史结果'].filter(Boolean).join(' · ')"
-                />
                 <p v-if="legFacts(leg).length" class="active-bet-run__attempt-heading">最近尝试 · {{ legAttemptLabel(leg) }}</p>
                 <strong class="active-bet-run__leg-status" :data-tone="legSummary(leg).tone" :title="legSummary(leg).basis">{{ legSummary(leg).label }}</strong>
                 <p v-if="legSummary(leg).failureReason" class="active-bet-run__leg-failure">
@@ -576,7 +574,6 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                   <span>赔率 @{{ legSummary(leg).odds ?? (legFacts(leg).length ? '—' : leg.odds ?? '—') }}</span>
                   <span>{{ legSummary(leg).amount ?? (!legFacts(leg).length && leg.betMoney != null ? `${leg.betMoney}（币种未记录）` : '金额未记录') }}</span>
                 </div>
-                <OrderProgressStages :stages="legStages.get(leg.side) || []" :title="legFacts(leg).length ? `${legAttemptLabel(leg)} · 关键阶段` : undefined" />
                 <OrderExecutionTimeline
                   v-if="legFacts(leg).length" :key="`${activeRun.betId}-${leg.side}`"
                   :title="legTarget(leg.target)" subtitle="执行时间线"

@@ -2,7 +2,7 @@ import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import type { ActiveBetLeg, ActiveBetRun } from "@/types/activeBetRun";
 import type { ProgressTone } from "./activeBetRunPresentation";
 import { observationEventLabel } from "@changmen/shared/order_observation_view";
-import { observationLegSummary, progressOrchestrationLabel } from "./activeBetRunPresentation";
+import { observationLegSummary, observationPrecheckEvidence, progressOrchestrationLabel } from "./activeBetRunPresentation";
 
 export interface BetProgressStage {
   id: string;
@@ -14,6 +14,27 @@ export interface BetProgressStage {
   detail?: string;
 }
 
+/** [changmen 扩展] 首轮与后续尝试分别展示；旧尝试迟到回执不能改变最新尝试归属。 */
+export function activeBetLegAttemptViews(run: ActiveBetRun, leg: ActiveBetLeg, events: readonly OrderObservationEvent[]) {
+  const ids = [...new Set(events.map(event => event.attemptId).filter((id): id is string => Boolean(id)))];
+  let makeup = 0;
+  let retry = 0;
+  const attempts = ids.map(id => {
+    const facts = events.filter(event => event.attemptId === id);
+    const phase = facts.find(event => ["initial", "retry", "makeup"].includes(event.phase || ""))?.phase;
+    const label = phase === "initial" ? "首轮尝试"
+      : phase === "makeup" ? `补单第 ${++makeup} 次`
+        : phase === "retry" ? `即时重试第 ${++retry} 次` : "尝试类型未记录";
+    // 历史尝试只取自身证据，不继承最新腿状态、队列或整轮编排结论。
+    const stages = activeBetLegStages(run, { ...leg, status: "pending", events: [] }, facts)
+      .filter(stage => ["precheck", "submission"].includes(stage.id)
+        || (["binding", "confirmation"].includes(stage.id) && stage.at !== undefined));
+    const provider = facts.find(event => event.provider)?.provider;
+    return { id, label, provider: provider === "Polymarket" ? "PM" : provider, stages };
+  });
+  return { latestLabel: attempts.at(-1)?.label || "尝试类型未记录", previous: attempts.slice(0, -1) };
+}
+
 /** [changmen 扩展] 关键阶段常驻展示；尝试内证据、补单队列和整轮编排分别取值，不参与下注判定。 */
 export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events: readonly OrderObservationEvent[]): BetProgressStage[] {
   const summary = observationLegSummary(events, leg.status, leg.precheckOnly);
@@ -23,7 +44,7 @@ export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events:
     id, stage, label, tone, at: event?.occurredAt, durationMs: event?.durationMs,
     detail: event ? observationEventLabel(event) : undefined,
   });
-  const check = last("precheck_result");
+  const { result: check } = observationPrecheckEvidence(attempt);
   const submit = last("submission_result");
   const submitStarted = last("submission_started");
   const directPm = submit?.provider === "Polymarket" && submit.outcome === "accepted" && submit.observedStatus === "matched";
@@ -33,7 +54,7 @@ export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events:
   const notSubmitted = (!submitStarted && !submit && check?.outcome === "blocked")
     || submit?.outcome === "not_submitted";
   const early = !run.terminalAt && ["preparing", "checking"].includes(run.phase);
-  const precheck: BetProgressStage = { id: "precheck", stage: "预检", ...summary.precheck, detail: check?.outcome === "blocked" ? summary.precheck.basis : undefined };
+  const precheck: BetProgressStage = { id: "precheck", stage: "预检", ...summary.precheck, detail: check && ["blocked", "inconsistent"].includes(check.outcome || "") ? summary.precheck.basis : undefined };
   if (!last("precheck_started") && !check) {
     if (leg.status === "skipped")
       precheck.label = "不参与";

@@ -68,6 +68,23 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(mocks.betting).not.toHaveBeenCalled();
     expect(mocks.check).not.toHaveBeenCalled();
   });
+  it.each([false, true])("records contradictory precheck data as inconsistent when adapter throws=%s", async throws => {
+    const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
+    option.diagnosticLinkId = 123;
+    mocks.check.mockImplementation(async (_account, checked) => {
+      checked.data = { quote: "prepared" };
+      checked.checkError = "closed";
+      if (throws) throw new Error("closed");
+      return checked;
+    });
+    expect(await checkBetting(store, account, option)).toBe(option);
+    const check = useOrderObservationStore().forLink("u1", 123).find(row => row.kind === "precheck_result");
+    expect(check).toMatchObject({ outcome: "inconsistent", reasonCode: "precheck_inconsistent" });
+    expect(check?.safeSummary).toContain("不能据此认定已拦截");
+    expect(option.data).toEqual({ quote: "prepared" });
+    expect(option.checkError).toBe("closed");
+    expect(mocks.betting).not.toHaveBeenCalled();
+  });
   it.each(["matched", "delayed"])("records PM %s submission without claiming detection has started before settle", async status => {
     const option = new BetOption("Polymarket", "m", "b", "i", 10, "Home", 2);
     option.data = { quote: "prepared" };

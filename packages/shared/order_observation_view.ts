@@ -45,6 +45,7 @@ const OUTCOME_LABELS: Record<string, string> = {
   orchestration_completed: "编排完成",
   exception: "编排异常",
   prepared: "预检已准备",
+  inconsistent: "预检结果不一致",
   blocked: "被拦截",
   not_submitted: "未开始场馆下注处理",
   accepted: "接口受理（尚不证明成交）",

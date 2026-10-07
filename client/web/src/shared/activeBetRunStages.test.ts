@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createSSRApp, h } from "vue";
 import { renderToString } from "@vue/server-renderer";
 import OrderProgressStages from "@/components/order/OrderProgressStages.vue";
-import { activeBetLegStages } from "./activeBetRunStages";
+import { activeBetLegAttemptViews, activeBetLegStages } from "./activeBetRunStages";
 import { observationLegSummary } from "./activeBetRunPresentation";
 
 const leg: ActiveBetLeg = { side: "A", target: "Home", platform: "RAY", status: "confirmed", events: [] };
@@ -17,6 +17,60 @@ const rows = (events: OrderObservationEvent[], legPatch: Partial<ActiveBetLeg> =
 const stage = (events: OrderObservationEvent[], id: string, legPatch: Partial<ActiveBetLeg> = {}) => rows(events, legPatch).find(row => row.id === id)!;
 
 describe("常驻编排关键阶段", () => {
+  it("resets the visible precheck state when a new check begins and does not claim contradictory data was blocked", () => {
+    const stale = [event("precheck_result", { outcome: "blocked", safeSummary: "旧错误" }), event("precheck_started", { sequence: 2 })];
+    expect(stage(stale, "precheck")).toMatchObject({ label: "正在预检", detail: undefined });
+    expect(stage(stale, "submission").label).not.toBe("未提交");
+    const contradictory = [event("precheck_result", { outcome: "inconsistent", safeSummary: "数据与错误并存" })];
+    expect(stage(contradictory, "precheck")).toMatchObject({ label: "预检结果不一致", tone: "warning" });
+    expect(stage(contradictory, "precheck").detail).toContain("数据与错误并存");
+    expect(stage(contradictory, "submission").label).not.toBe("未提交");
+  });
+  it("keeps the initial PM submission and timeout visible beside a blocked makeup precheck", async () => {
+    const initial = [
+      event("precheck_result", { provider: "Polymarket", phase: "initial", outcome: "prepared" }),
+      event("submission_result", { provider: "Polymarket", phase: "initial", outcome: "accepted", observedStatus: "delayed" }),
+      event("settlement_observed", { provider: "Polymarket", phase: "reject_detection", source: "timeout_policy", outcome: "unfilled" }),
+    ];
+    const makeup = event("precheck_result", { attemptId: "makeup-1", provider: "Polymarket", phase: "makeup", outcome: "blocked", safeSummary: "卖价 0.32，高于限价 0.303" });
+    const facts = [...initial, event("queue_created", { attemptId: undefined, queueId: "q1" }), makeup,
+      event("bind_result", { phase: "initial", outcome: "saved" })];
+    const pmLeg = { ...leg, platform: "Polymarket", status: "makeup" as const };
+    const view = activeBetLegAttemptViews(run, pmLeg, facts);
+    expect(view.latestLabel).toBe("补单第 1 次");
+    expect(view.previous).toHaveLength(1);
+    expect(view.previous[0]).toMatchObject({ id: "initial", label: "首轮尝试", provider: "PM" });
+    const history = view.previous[0]!.stages;
+    expect(history.find(row => row.id === "precheck")?.label).toBe("预检通过");
+    expect(history.find(row => row.id === "submission")?.label).toBe("delayed · 已受理待检测");
+    expect(history.find(row => row.id === "confirmation")?.label).toBe("超时策略处理");
+    expect(history.find(row => row.id === "binding")?.label).toBe("已保存");
+    expect(history.some(row => ["makeup", "result"].includes(row.id))).toBe(false);
+    const latest = activeBetLegStages(run, pmLeg, facts);
+    expect(latest.find(row => row.id === "precheck")?.label).toBe("预检失败");
+    expect(latest.find(row => row.id === "submission")?.label).toBe("未提交");
+    const html = await renderToString(createSSRApp({ render: () => h("div", [
+      h(OrderProgressStages, { stages: history, title: "首轮尝试 · PM · 历史结果" }),
+      h(OrderProgressStages, { stages: latest, title: `${view.latestLabel} · 关键阶段` }),
+    ]) }));
+    expect(html).toContain("首轮尝试 · PM · 历史结果");
+    expect(html).toContain("delayed · 已受理待检测");
+    expect(html).toContain("补单第 1 次 · 关键阶段");
+    expect(html).toContain("卖价 0.32，高于限价 0.303");
+  });
+  it("labels retries and makeup attempts from their evidence without assuming the first retained attempt is initial", () => {
+    const facts = [
+      event("precheck_result", { attemptId: "retry-1", phase: "retry" }),
+      event("precheck_result", { attemptId: "makeup-1", phase: "makeup" }),
+      event("precheck_result", { attemptId: "makeup-2", phase: "makeup" }),
+      event("bind_result", { attemptId: "retry-1", outcome: "saved" }),
+    ];
+    const view = activeBetLegAttemptViews(run, leg, facts);
+    expect(view.latestLabel).toBe("补单第 2 次");
+    expect(view.previous.map(attempt => attempt.label)).toEqual(["即时重试第 1 次", "补单第 1 次"]);
+    expect(activeBetLegAttemptViews(run, leg, [event("precheck_result")]).latestLabel).toBe("尝试类型未记录");
+    expect(activeBetLegAttemptViews(run, leg, []).previous).toEqual([]);
+  });
   it("keeps RAY rejection detection below binding and displays the venue rejection reason", async () => {
     const facts = [event("submission_result", { provider: "RAY", outcome: "accepted" }),
       event("settlement_observed", { provider: "RAY", source: "adapter", phase: "reject_detection", outcome: "unfilled", observedStatus: "reject", safeSummary: "RAY 拒单原因：系统拒绝" }),

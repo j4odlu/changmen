@@ -33,6 +33,13 @@ export function activeBetLegRole(leg: ActiveBetLeg): string {
   return leg.status === "skipped" ? "不参与" : "下单腿";
 }
 
+/** [changmen 扩展] 同一尝试再次开始预检时，旧结果不能充当新检查的结果。 */
+export function observationPrecheckEvidence(events: readonly OrderObservationEvent[]) {
+  const started = [...events].reverse().find(event => event.kind === "precheck_started");
+  const result = [...events].reverse().find(event => event.kind === "precheck_result");
+  return { started, result: result && (!started || events.indexOf(result) > events.indexOf(started)) ? result : undefined };
+}
+
 /** [changmen 扩展] 只读展示最近尝试；受理、超时策略与场馆成交证据分开。 */
 export function observationLegSummary(events: readonly OrderObservationEvent[], fallback: ActiveBetLegStatus, precheckOnly = false) {
   // 老尝试的补绑回执可能晚于新重试到达，按尝试首次出现排序，不能按最后一条回执选尝试。
@@ -47,12 +54,12 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
     && event.orderId && observed.slice(index + 1).some(next => next.orderId === event.orderId && next.observedStatus === "reject")));
   const outcomes = new Set(confirmations.map(event => event.outcome));
   const submission = matching("submission_result");
-  const check = matching("precheck_result");
-  const checkStarted = matching("precheck_started");
+  const { result: check, started: checkStarted } = observationPrecheckEvidence(attempt);
   // [changmen 扩展] 预检结果常驻展示，与后续提交/确认状态分开；只使用最近尝试的证据。
   const precheck = {
     label: check?.outcome === "prepared" ? "预检通过"
       : check?.outcome === "blocked" ? "预检失败"
+        : check?.outcome === "inconsistent" ? "预检结果不一致"
         : check ? "预检结果未明确" : checkStarted ? "正在预检" : "预检结果未记录",
     tone: (check?.outcome === "prepared" ? "success"
       : check?.outcome === "blocked" ? "danger"
@@ -102,6 +109,9 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
   }
   else if (matching("submission_started")) {
     label = "提交处理中"; tone = "pending"; basis = "已调用适配器，等待返回";
+  }
+  else if (check?.outcome === "inconsistent") {
+    label = "预检结果需核查"; tone = "warning"; basis = check.safeSummary || "预检同时返回盘口数据和错误，无法认定已拦截";
   }
   else if (check?.outcome === "prepared") {
     label = precheckOnly ? "9999 预检通过 · 不下单" : "预检通过";
@@ -156,6 +166,8 @@ export function progressOrchestrationLabel(leg: Pick<ActiveBetLeg, "status" | "p
 
 export function progressEvidenceWarnings(events: readonly OrderObservationEvent[]): string[] {
   const warnings: string[] = [];
+  if (events.some(event => event.kind === "precheck_result" && event.outcome === "inconsistent"))
+    warnings.push("预检返回同时包含盘口数据与错误，请核对对应尝试的提交记录");
   if (events.some(event => event.kind === "transport_gap"))
     warnings.push("执行记录存在上传或缓存缺口");
   const attempts = new Map<string, Set<number>>();

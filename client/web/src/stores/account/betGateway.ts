@@ -438,10 +438,13 @@ export async function checkBetting(
     try { checked.observation ??= option.observation; }
     catch { /* 观察字段写入失败不改变返回值 */ }
     try {
-      const blocked = !checked.data || Boolean(checked.checkError);
-      observeOption(checked, account, "precheck_result", { outcome: blocked ? "blocked" : "prepared", durationMs: Date.now() - observationStartedAt,
-        reasonCode: blocked ? "precheck_error" : undefined,
-        ...(blocked ? observationFailureEvidence(checked.checkError || "无盘口数据", checked.response, undefined, account.provider) : {}) });
+      // [changmen 扩展] 执行层按 data 判定可继续；数据与错误并存只能记录矛盾，不能宣称已拦截。
+      const blocked = !checked.data;
+      const inconsistent = !blocked && Boolean(checked.checkError);
+      observeOption(checked, account, "precheck_result", { outcome: blocked ? "blocked" : inconsistent ? "inconsistent" : "prepared", durationMs: Date.now() - observationStartedAt,
+        reasonCode: blocked ? "precheck_error" : inconsistent ? "precheck_inconsistent" : undefined,
+        ...(blocked ? observationFailureEvidence(checked.checkError || "无盘口数据", checked.response, undefined, account.provider) : {}),
+        ...(inconsistent ? { safeSummary: "预检同时返回盘口数据和错误，不能据此认定已拦截；是否提交请查看提交记录" } : {}) });
     }
     catch { /* 观察快照读取失败不改变 adapter 返回值 */ }
     observedPrecheckResult = true;
@@ -454,7 +457,14 @@ export async function checkBetting(
   }
   finally {
     if (!observedPrecheckResult) {
-      try { observeOption(option, account, "precheck_result", { outcome: "blocked", reasonCode: "precheck_error", durationMs: Date.now() - observationStartedAt, ...observationFailureEvidence(option.checkError, undefined, observationError) }); }
+      try {
+        const inconsistent = Boolean(option.data);
+        observeOption(option, account, "precheck_result", {
+          outcome: inconsistent ? "inconsistent" : "blocked", reasonCode: inconsistent ? "precheck_inconsistent" : "precheck_error", durationMs: Date.now() - observationStartedAt,
+          ...(inconsistent ? { safeSummary: "预检抛出异常但仍保留盘口数据，不能据此认定已拦截；是否提交请查看提交记录" }
+            : observationFailureEvidence(option.checkError, undefined, observationError)),
+        });
+      }
       catch { /* 旁路证据读取失败不阻断预检收尾 */ }
     }
     option.saveLog(account);

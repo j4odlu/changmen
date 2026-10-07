@@ -2,15 +2,15 @@
 import type { BetProgressStage } from "@/shared/activeBetRunStages";
 
 /** [changmen 扩展] 常驻关键阶段，不受详细时间线的最近条数限制。 */
-defineProps<{ stages: readonly BetProgressStage[] }>();
+defineProps<{ stages: readonly BetProgressStage[]; title?: string }>();
 function eventTime(at: number) {
   return new Date(at).toLocaleTimeString("zh-CN", { hour12: false });
 }
 </script>
 
 <template>
-  <section class="active-bet-run__stages" aria-label="编排关键阶段">
-    <strong class="active-bet-run__stages-heading">关键阶段</strong>
+  <section class="active-bet-run__stages" :aria-label="title || '编排关键阶段'">
+    <strong class="active-bet-run__stages-heading">{{ title || '关键阶段' }}</strong>
     <ol>
       <li v-for="item in stages" :key="item.id" :data-stage="item.id" :data-tone="item.tone">
         <span class="active-bet-run__stage-name">{{ item.stage }}</span>

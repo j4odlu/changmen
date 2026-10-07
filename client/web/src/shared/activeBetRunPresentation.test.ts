@@ -6,6 +6,24 @@ function event(kind: OrderObservationEvent["kind"], patch: Partial<OrderObservat
   return { version: 1, eventId: "event-123", ownerUserId: "u1", sequence: 1, occurredAt: 1000, linkId: 123, attemptId: "attempt-1", kind, ...patch };
 }
 describe("实时进度只读摘要", () => {
+  it.each(["prepared", "blocked"])("does not retain a previous %s result when the same attempt starts checking again", outcome => {
+    const summary = observationLegSummary([
+      event("precheck_result", { outcome }),
+      event("precheck_started", { sequence: 2, occurredAt: 2000 }),
+    ], "pending");
+    expect(summary.precheck).toMatchObject({ label: "正在预检", tone: "pending", at: 2000 });
+    expect(summary.precheck.durationMs).toBeUndefined();
+    expect(summary.label).toBe("预检处理中");
+  });
+  it("shows contradictory precheck data as a warning and preserves actual submission evidence", () => {
+    const check = event("precheck_result", { outcome: "inconsistent", safeSummary: "数据与错误并存" });
+    expect(observationLegSummary([check], "pending")).toMatchObject({
+      precheck: { label: "预检结果不一致", tone: "warning" }, label: "预检结果需核查",
+    });
+    expect(observationLegSummary([check, event("submission_started")], "pending").label).toBe("提交处理中");
+    expect(observationLegSummary([check, event("submission_result", { outcome: "accepted" })], "submitted").label).toBe("已受理 · 待确认");
+    expect(progressEvidenceWarnings([check])).toContain("预检返回同时包含盘口数据与错误，请核对对应尝试的提交记录");
+  });
   it("keeps the successful precheck visible after submission, confirmation, binding and later decisions", () => {
     const events = [
       event("precheck_started"),

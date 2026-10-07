@@ -7,7 +7,7 @@ import OrderProgressStages from "@/components/order/OrderProgressStages.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { useRecentBetProgress } from "./useRecentBetProgress";
 import { accountProgressDisplayName } from "@/shared/accountDisplayName";
-import { activeBetLegStages } from "@/shared/activeBetRunStages";
+import { activeBetLegAttemptViews, activeBetLegStages } from "@/shared/activeBetRunStages";
 import { withBoundRayOrderEvidence } from "@/shared/boundRayOrderEvidence";
 import { activeBetLegRole, activeBetRunMode, activeBetRunModeLabel, observationLegGroups, observationLegSummary, progressEvidenceWarnings, progressOrchestrationLabel } from "@/shared/activeBetRunPresentation";
 import { formatActiveBetLinkLabel } from "@/shared/linkDisplay";
@@ -64,6 +64,8 @@ function legFacts(leg: ActiveBetLeg) { return factGroups.value.groups.get(leg.si
 const legSummaries = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, observationLegSummary(legFacts(leg), leg.status, leg.precheckOnly)])));
 function legSummary(leg: ActiveBetLeg) { return legSummaries.value.get(leg.side)!; }
 const legStages = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, activeBetLegStages(activeRun.value!, leg, legFacts(leg))])));
+const legAttempts = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, activeBetLegAttemptViews(activeRun.value!, leg, legFacts(leg))])));
+function legAttemptLabel(leg: ActiveBetLeg) { return legAttempts.value.get(leg.side)?.latestLabel || "尝试类型未记录"; }
 function legProvider(leg: ActiveBetLeg) { return legSummary(leg).provider || leg.platform; }
 function legAccountName(leg: ActiveBetLeg) { return accountProgressDisplayName(accountStore.findAccount(legSummary(leg).accountId)); }
 const unassignedFacts = computed(() => factGroups.value.unassigned);
@@ -561,6 +563,11 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                   <span class="active-bet-run__leg-side">{{ legSideLabel(leg.side) }}</span><PlatformIcon :platform="legProvider(leg)" /><strong>{{ legProvider(leg) === 'Polymarket' ? 'PM' : legProvider(leg) }}</strong><span>{{ legTarget(leg.target) }}</span>
                 </header>
                 <span class="active-bet-run__leg-role" :class="{ 'is-precheck': leg.precheckOnly }">{{ activeBetLegRole(leg) }}</span>
+                <OrderProgressStages
+                  v-for="attempt in legAttempts.get(leg.side)?.previous || []" :key="attempt.id"
+                  :stages="attempt.stages" :title="[attempt.label, attempt.provider, '历史结果'].filter(Boolean).join(' · ')"
+                />
+                <p v-if="legFacts(leg).length" class="active-bet-run__attempt-heading">最近尝试 · {{ legAttemptLabel(leg) }}</p>
                 <strong class="active-bet-run__leg-status" :data-tone="legSummary(leg).tone" :title="legSummary(leg).basis">{{ legSummary(leg).label }}</strong>
                 <p v-if="legSummary(leg).failureReason" class="active-bet-run__leg-failure">
                   失败原因 · {{ legSummary(leg).failureReason }}
@@ -569,7 +576,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                   <span>赔率 @{{ legSummary(leg).odds ?? (legFacts(leg).length ? '—' : leg.odds ?? '—') }}</span>
                   <span>{{ legSummary(leg).amount ?? (!legFacts(leg).length && leg.betMoney != null ? `${leg.betMoney}（币种未记录）` : '金额未记录') }}</span>
                 </div>
-                <OrderProgressStages :stages="legStages.get(leg.side) || []" />
+                <OrderProgressStages :stages="legStages.get(leg.side) || []" :title="legFacts(leg).length ? `${legAttemptLabel(leg)} · 关键阶段` : undefined" />
                 <OrderExecutionTimeline
                   v-if="legFacts(leg).length" :key="`${activeRun.betId}-${leg.side}`"
                   :title="legTarget(leg.target)" subtitle="执行时间线"
@@ -599,7 +606,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                   </dl>
                 </details>
                 <footer class="active-bet-run__leg-footer">
-                  <span>最近尝试</span><span v-if="legSummary(leg).accountId" class="active-bet-run__account-name">账号 {{ legAccountName(leg) }}</span><span v-if="legProvider(leg) !== leg.platform">首轮 {{ leg.platform }}</span><span v-if="legSummary(leg).retries">重试 {{ legSummary(leg).retries }} 次</span><span v-if="legSummary(leg).makeups">补单任务 {{ legSummary(leg).makeups }}</span>
+                  <span>最近尝试 · {{ legAttemptLabel(leg) }}</span><span v-if="legSummary(leg).accountId" class="active-bet-run__account-name">账号 {{ legAccountName(leg) }}</span><span v-if="legProvider(leg) !== leg.platform">首轮 {{ leg.platform }}</span><span v-if="legSummary(leg).retries">重试 {{ legSummary(leg).retries }} 次</span><span v-if="legSummary(leg).makeups">补单任务 {{ legSummary(leg).makeups }}</span>
                 </footer>
               </section>
             </div>

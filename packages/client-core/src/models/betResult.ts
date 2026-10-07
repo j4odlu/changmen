@@ -13,6 +13,9 @@ export class BetResult {
   orderId: string | null = null;
   /** PM delayed / PF 挂单受理：已 API 成功但尚未最终成交 */
   pending = false;
+  /** [changmen 扩展] PM 的本地哈希仅供原单查询，不代表官方受理。 */
+  pmSubmitUnknown?: boolean;
+  pmSubmittedAt?: number;
   link = 0;
   /** [changmen 扩展] 管理端诊断执行阶段。 */
   diagnosticAttempt?: "initial" | "retry" | "makeup";

@@ -11,7 +11,7 @@ function legFilledForMakeUpAnchor(
   venueConfirmedUnfilled = false,
   pendingConfirm = false,
 ): boolean {
-  if (pendingConfirm)
+  if (pendingConfirm || result?.pmSubmitUnknown)
     return false;
   return Boolean(result?.success && !venueConfirmedUnfilled && !result.reject);
 }
@@ -25,7 +25,7 @@ function legFailedForMakeUpTarget(
   venueConfirmedUnfilled = false,
   pendingConfirm = false,
 ): boolean {
-  if (pendingConfirm)
+  if (pendingConfirm || result?.pmSubmitUnknown)
     return false;
   if (!result)
     return true;

@@ -2,6 +2,7 @@
  * Polymarket 语义 Pm_* 处理器（VPS 直连 CLOB）
  */
 import { normalizeAccountMultiplyField } from "@changmen/shared/account_multiply";
+import { pmSubmitRejectionFromHttp } from "@changmen/shared/pm_submit_response";
 import { clobClockInfo, prepareClobClock } from "./clob_clock.js";
 import * as accountStore from "../../account/account_store.js";
 import { assertPlayerOwnedByUser } from "../../account/player_ownership.js";
@@ -237,9 +238,13 @@ export async function handlePmSubmitOrder(body, userId) {
       timeoutMs: PM_SUBMIT_ORDER_POST_TIMEOUT_MS,
       clientL2Timestamp: body.clientL2Timestamp,
     });
+    const rejection = pmSubmitRejectionFromHttp(result.status, result.text);
+    if (rejection) return { ok: true, info: { ...rejection, pmTiming: result.timing } };
     return { ok: true, info: { ...parseUpstreamJson(result), pmTiming: { ...result.timing, outboundPrepareMs: outboundPrepareMs + (result.timing?.authMs || 0) } } };
   }
   catch (err) {
+    if (err?.pmSubmitNotSent === true)
+      return { ok: true, info: { success: false, errorMsg: err.message, pmSubmitNotSent: true } };
     return { ok: false, msg: err instanceof Error ? err.message : String(err) };
   }
 }

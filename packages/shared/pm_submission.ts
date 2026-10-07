@@ -5,6 +5,10 @@ export interface PmSubmission {
   makerAmount: string;
   stakeUsdc: number;
   submittedAt: number;
+  /** 本地查询哈希未获受理证据时，不能应用已受理买单超时策略。 */
+  submitUnknown?: boolean;
+  /** 公共 maker 地址，用于旧恢复记录与当前钱包核对。 */
+  makerAddress?: string;
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -26,22 +30,28 @@ export function pmSubmissionFromResult(value: unknown, accountId: number): PmSub
   const orderId = String(result.orderId || response.orderID || "").trim();
   const order = record(record(result.request).order);
   const stakeUsdc = pmMakerAmountUsdc(order.makerAmount);
-  const submittedAt = Number(result.beginTime);
+  const submittedAt = Number(result.pmSubmittedAt ?? result.beginTime);
+  const makerAddress = String(order.maker ?? "").trim().toLowerCase();
   if (!orderId || (response.orderID && response.orderID !== orderId)
     || String(order.side).toUpperCase() !== "BUY" || stakeUsdc == null
     || !Number.isSafeInteger(accountId) || accountId <= 0
     || !Number.isSafeInteger(submittedAt) || submittedAt <= 0)
     return null;
-  return { orderId, accountId, makerAmount: String(order.makerAmount), stakeUsdc, submittedAt };
+  return { orderId, accountId, makerAmount: String(order.makerAmount), stakeUsdc, submittedAt,
+    ...(result.pmSubmitUnknown === true ? { submitUnknown: true } : {}),
+    ...(/^0x[0-9a-f]{40}$/.test(makerAddress) ? { makerAddress } : {}) };
 }
 
 export function validatePmSubmission(value: unknown, orderId: string, accountId: number): PmSubmission | null {
   const row = record(value);
   if (row.orderId !== orderId || row.accountId !== accountId)
     return null;
+  if (row.submitUnknown !== undefined && typeof row.submitUnknown !== "boolean") return null;
+  if (row.makerAddress !== undefined && !/^0x[0-9a-f]{40}$/i.test(String(row.makerAddress))) return null;
   const parsed = pmSubmissionFromResult({
     orderId, beginTime: row.submittedAt,
-    request: { order: { side: "BUY", makerAmount: row.makerAmount } },
+    pmSubmitUnknown: row.submitUnknown,
+    request: { order: { side: "BUY", makerAmount: row.makerAmount, maker: row.makerAddress } },
   }, accountId);
   return parsed && parsed.stakeUsdc === row.stakeUsdc ? parsed : null;
 }

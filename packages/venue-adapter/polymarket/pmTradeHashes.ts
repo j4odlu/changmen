@@ -148,15 +148,17 @@ export async function enrichPolymarketOrderTradeHashes<T extends PolymarketOrder
   const tradeIds = [...new Set(readPolymarketTradeIds(result))];
   const intervalMs = Math.max(50, Number(opts.intervalMs) || 250);
   const timeoutMs = Math.max(intervalMs, Number(opts.timeoutMs) || 3_000);
-  const started = Date.now();
+  const started = performance.now();
   const resolved = new Map<string, PolymarketTradeHashRow>();
 
-  while (Date.now() - started < timeoutMs) {
+  while (performance.now() - started < timeoutMs) {
     const pending = tradeIds.filter(id => !resolved.has(id));
     if (!pending.length)
       break;
     try {
-      const pages = await Promise.all(
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const remaining = Math.max(0, timeoutMs - (performance.now() - started));
+      const pages = await Promise.race([Promise.all(
         pending.map(async (id) => {
           try {
             return await opts.fetchTradesById(id);
@@ -165,7 +167,9 @@ export async function enrichPolymarketOrderTradeHashes<T extends PolymarketOrder
             return [] as PolymarketTradeHashRow[];
           }
         }),
-      );
+      ), new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), remaining); })]);
+      if (timer) clearTimeout(timer);
+      if (!pages) break;
       for (const trades of pages) {
         for (const trade of trades) {
           const id = String(trade?.id ?? "").trim();
@@ -181,7 +185,7 @@ export async function enrichPolymarketOrderTradeHashes<T extends PolymarketOrder
     }
     if (tradeIds.every(id => resolved.has(id)))
       break;
-    await sleep(intervalMs);
+    await sleep(Math.min(intervalMs, Math.max(0, timeoutMs - (performance.now() - started))));
   }
 
   const { hashes } = collectPolymarketHashesFromTrades(tradeIds, [...resolved.values()]);

@@ -105,7 +105,7 @@ export async function syncPmHttpModeWithMarketWs(
 async function applyModes(
   marketWsOk: boolean,
 ): Promise<Omit<PmAutoTransportApplyResult, "applied" | "skippedManualOverride" | "reachable" | "routingPreference"> & { reachable: boolean }> {
-  // REST（book / 下单）固定 VPS，与余额同一出口；翻墙只切行情 WS。
+  // 查询 HTTP 默认 VPS（官网模式可直连优先）；下单出口由独立偏好决定。
   setPmHttpMode("vps");
 
   if (marketWsOk) {
@@ -133,7 +133,7 @@ async function applyModes(
  * 登录后：按用户偏好选择 PM WS。
  * - auto：探测官方 Market WS；可达则 official，不可达则 CHANGMEN relay
  * - official / relay：用户强制选择，不做探测
- * - HTTP（book / 下单）固定 VPS，保护 builder code / 签名链路不漂移
+ * - 查询 HTTP 默认 VPS；不覆盖独立保存的本地/VPS 下单选择
  */
 export async function applyPmAutoTransportOnLogin(): Promise<PmAutoTransportApplyResult> {
   const routingPreference = getPmRoutingPreference();

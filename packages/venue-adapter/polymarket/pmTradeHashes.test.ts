@@ -58,6 +58,18 @@ describe("collectPolymarketHashesFromTrades", () => {
 });
 
 describe("enrichPolymarketOrderTradeHashes", () => {
+  it("a hung trade lookup cannot extend the ACK enrichment deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const result = { success: true, orderID: "order", tradeIDs: ["trade"] };
+      const promise = enrichPolymarketOrderTradeHashes(result, {
+        fetchTradesById: () => new Promise(() => {}), timeoutMs: 300, intervalMs: 50,
+      });
+      await vi.advanceTimersByTimeAsync(300);
+      expect(await promise).toBe(result);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
   it("returns original when enrichment not needed", async () => {
     const result = { success: true, orderID: "0x1" };
     const fetchTradesById = vi.fn();

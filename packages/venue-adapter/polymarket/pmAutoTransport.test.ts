@@ -10,6 +10,7 @@ import { resetPmMarketWsSourceModeForTests, getPmMarketWsSourceMode, setPmMarket
 import { resetPmUserWsSourceModeForTests, getPmUserWsSourceMode } from "./pmUserWsMode";
 import { setPmHttpModeForTests, resolvePmHttpMode, setPmHttpMode } from "./pmTransportMode";
 import * as reachability from "./pmOfficialReachability";
+import { getPmOrderSubmitMode, resolvePmOrderSubmitHttpMode, setPmOrderSubmitMode } from "./pmOrderSubmitMode";
 
 vi.mock("@changmen/client-core/chrome-plugin/bridge", () => ({
   probeGamebetExtension: vi.fn(async () => null),
@@ -109,6 +110,16 @@ describe("pmAutoTransport", () => {
     expect(getPmMarketWsSourceMode()).toBe("changmen");
     expect(getPmUserWsSourceMode()).toBe("changmen");
     expect(resolvePmHttpMode()).toBe("vps");
+  });
+
+  it.each(["auto", "official", "relay"] as const)("preserves local order preference across login and %s query routing", async preference => {
+    setPmOrderSubmitMode("local");
+    setPmRoutingPreference(preference);
+    vi.spyOn(reachability, "probePolymarketOfficialReachable").mockResolvedValue({ reachable: false, httpOk: false, marketWsOk: false });
+    await applyPmAutoTransportOnLogin();
+    expect(resolvePmHttpMode()).toBe("vps");
+    expect(getPmOrderSubmitMode()).toBe("local");
+    expect(resolvePmOrderSubmitHttpMode()).toBe("direct");
   });
 
   it("uses forced relay preference without probing official", async () => {

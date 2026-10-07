@@ -135,6 +135,24 @@ describe("pm_client_handlers", () => {
     expect(Array.isArray(res.info)).toBe(true);
   });
 
+  test.each([400, 500])("official JSON rejection %s keeps upstream evidence", async status => {
+    const { executePolymarketHttpRequest } = await import("./clob_proxy.js");
+    executePolymarketHttpRequest.mockResolvedValueOnce({ status,
+      text: JSON.stringify({ error: status === 400 ? "FOK_ORDER_NOT_FILLED_ERROR" : "order timed out" }) });
+    const result = await handlePmSubmitOrder({ playerId: 47, order: { foo: 1 } }, "user-1");
+    expect(result).toMatchObject({ ok: true, info: { success: false, pmSubmitRejected: true } });
+  });
+
+  test("a local preflight failure releases the attempt, but an upstream transport timeout cannot", async () => {
+    const { executePolymarketHttpRequest } = await import("./clob_proxy.js");
+    executePolymarketHttpRequest.mockRejectedValueOnce(Object.assign(new Error("PM 提交校时未就绪"), { pmSubmitNotSent: true }));
+    expect(await handlePmSubmitOrder({ playerId: 47, order: { foo: 1 } }, "user-1"))
+      .toMatchObject({ ok: true, info: { success: false, pmSubmitNotSent: true } });
+    executePolymarketHttpRequest.mockRejectedValueOnce(new Error("upstream fetch timed out"));
+    expect(await handlePmSubmitOrder({ playerId: 47, order: { foo: 1 } }, "user-1"))
+      .toMatchObject({ ok: false });
+  });
+
   test("extension fallback forwards only the timestamp after ownership validation", async () => {
     const { executePolymarketHttpRequest } = await import("./clob_proxy.js");
     const body = { playerId: 47, order: { foo: 1 }, clientL2Timestamp: 1700000000 };

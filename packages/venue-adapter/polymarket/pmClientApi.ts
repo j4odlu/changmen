@@ -1,4 +1,5 @@
 import { recordPmExecutionMetric } from "./pmExecutionMetrics";
+import { pmSubmitRejectionFromHttp } from "@changmen/shared/pm_submit_response";
 /** Polymarket 语义 API；实际出海路径由 pmTransport mode 决定 */
 
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
@@ -9,17 +10,27 @@ import {
   type PolymarketTradeHashRow,
 } from "./pmTradeHashes";
 import { pmEsportCall } from "./pmTransport";
-import { resolvePmHttpMode } from "./pmTransportMode";
+import { resolvePmOrderSubmitHttpMode } from "./pmOrderSubmitMode";
+import { browserSubmitClockReady, prepareBrowserSubmitClock } from "./pmBrowserSubmitClock";
 
 const clockLeases = new Map<string, number>();
 const clockFlights = new Map<string, Promise<void>>();
 function clockKey(account: PlatformAccount): string { return `${account.gateway}|${account.accountId}`; }
 export function pmSubmitClockReady(account: PlatformAccount): boolean {
-  return resolvePmHttpMode() !== "vps" || (clockLeases.get(clockKey(account)) ?? 0) > performance.now();
+  return resolvePmOrderSubmitHttpMode() === "direct"
+    ? browserSubmitClockReady(account.gateway)
+    : (clockLeases.get(clockKey(account)) ?? 0) > performance.now();
 }
 export async function pmPrepareSubmit(account: PlatformAccount): Promise<void> {
   requirePlayerId(account);
   if (pmSubmitClockReady(account)) return;
+  if (resolvePmOrderSubmitHttpMode() === "direct") {
+    const start = performance.now();
+    await prepareBrowserSubmitClock(account.gateway);
+    recordPmExecutionMetric({ kind: "clock_sample", accountId: Number(account.accountId),
+      ms: performance.now() - start, clockSource: "browser", httpMode: "direct", success: true });
+    return;
+  }
   const key = clockKey(account);
   if (clockFlights.has(key)) return clockFlights.get(key);
   const task = (async () => {
@@ -30,7 +41,7 @@ export async function pmPrepareSubmit(account: PlatformAccount): Promise<void> {
     if (!result?.ready || !(result.leaseMs > 0)) throw new Error("PM 提交校时未就绪");
     clockLeases.set(key, start + Math.min(result.leaseMs, 120_000));
     recordPmExecutionMetric({ kind: "clock_sample", accountId: Number(account.accountId),
-      ms: performance.now() - start, clockSource: result.source, clockSampleAgeMs: result.sampleAgeMs, success: true });
+      ms: performance.now() - start, clockSource: result.source, clockSampleAgeMs: result.sampleAgeMs, httpMode: "vps", success: true });
   })();
   clockFlights.set(key, task);
   try { await task; } finally { if (clockFlights.get(key) === task) clockFlights.delete(key); }
@@ -58,25 +69,38 @@ export async function pmSubmitOrder<T = unknown>(
   order: unknown,
 ): Promise<T> {
   let result: T;
+  const submitHttpMode = resolvePmOrderSubmitHttpMode();
   const leaseKey = clockKey(account);
+  const submitStarted = performance.now();
   try {
     result = await pmEsportCall<T>("Pm_SubmitOrder", esportBody(account, {
       playerId: requirePlayerId(account),
       order,
     }));
+    recordPmExecutionMetric({ kind: "submit_ack", accountId: Number(account.accountId),
+      httpMode: submitHttpMode, ms: performance.now() - submitStarted, success: true });
   } catch (err) {
+    recordPmExecutionMetric({ kind: "submit_ack", accountId: Number(account.accountId),
+      httpMode: submitHttpMode, ms: performance.now() - submitStarted, success: false });
+    const response = (err as { response?: { status?: number; data?: unknown } })?.response;
+    const rejection = pmSubmitRejectionFromHttp(response?.status, response?.data);
+    if (rejection) return rejection as T;
     // 服务端重启或时钟失效：只让下一次新预检重新准备，当前订单绝不自动重发。
     if ((err instanceof Error ? err.message : String(err)).includes("PM 提交校时未就绪"))
       clockLeases.delete(leaseKey);
+    if ((err as { pmSubmitNotSent?: boolean })?.pmSubmitNotSent)
+      return { success: false, errorMsg: err instanceof Error ? err.message : String(err), pmSubmitNotSent: true } as T;
     throw err;
   }
   if (!result || typeof result !== "object")
     return result;
+  if ((result as { pmSubmitNotSent?: boolean }).pmSubmitNotSent)
+    clockLeases.delete(leaseKey);
   const timing = (result as { pmTiming?: { authMs?: number; upstreamMs?: number; outboundPrepareMs?: number } }).pmTiming;
   if (timing) {
-    if (Number.isFinite(timing.outboundPrepareMs)) recordPmExecutionMetric({ kind: "outbound_prepare", ms: timing.outboundPrepareMs, success: true });
-    if (Number.isFinite(timing.authMs)) recordPmExecutionMetric({ kind: "upstream_auth", ms: timing.authMs, success: true });
-    if (Number.isFinite(timing.upstreamMs)) recordPmExecutionMetric({ kind: "upstream_post", ms: timing.upstreamMs, success: true });
+    if (Number.isFinite(timing.outboundPrepareMs)) recordPmExecutionMetric({ kind: "outbound_prepare", ms: timing.outboundPrepareMs, httpMode: submitHttpMode, success: true });
+    if (Number.isFinite(timing.authMs)) recordPmExecutionMetric({ kind: "upstream_auth", ms: timing.authMs, httpMode: submitHttpMode, success: true });
+    if (Number.isFinite(timing.upstreamMs)) recordPmExecutionMetric({ kind: "upstream_post", ms: timing.upstreamMs, httpMode: submitHttpMode, success: true });
   }
   return enrichPolymarketOrderTradeHashes(result as T & PolymarketOrderHashFields, {
     // 官方 clob-client-v2：getTrades({ id }, onlyFirstPage)

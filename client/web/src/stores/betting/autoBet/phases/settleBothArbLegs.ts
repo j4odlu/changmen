@@ -87,7 +87,7 @@ export async function settleBothArbLegs(
       void accountStore.refreshBalance(accountB);
   }
 
-  if (!successAccounts.length) {
+  if (!successAccounts.length && !resultA?.pmSubmitUnknown && !resultB?.pmSubmitUnknown) {
     // 无 API 成功腿：不进场馆 settle；编排层仍用 placeOutcome 收尾
     if (accountA && !isArbLegPlaceNeedsSettle(placeOutcomeA))
       syncActiveBetLegSettleResult(bet.id, "A", false, false);
@@ -155,6 +155,7 @@ export async function settleBothArbLegs(
       provider: account.provider,
       pendingDetail: placeOutcome === "accepted_pending_confirm" ? "已挂单待确认" : "delayed 待确认",
     });
+    if (result.pmSubmitUnknown) return;
     const orderId = resolveArbBindOrderId(synced.orders, result, rejected);
     if (await bindArbLegOrder(linkId, account, result, synced.orders, rejected)) {
       snapshot.boundLegLabels.push(leg.type);
@@ -182,8 +183,8 @@ export async function settleBothArbLegs(
     }
   };
 
-  const settleA = Boolean(resultA?.success && accountA);
-  const settleB = Boolean(resultB?.success && accountB);
+  const settleA = Boolean((resultA?.success || resultA?.pmSubmitUnknown) && accountA);
+  const settleB = Boolean((resultB?.success || resultB?.pmSubmitUnknown) && accountB);
   const pendingA = settleA && isPendingConfirmVenueProvider(accountA!.provider);
   const pendingB = settleB && isPendingConfirmVenueProvider(accountB!.provider);
   const a8A = settleA && !pendingA;

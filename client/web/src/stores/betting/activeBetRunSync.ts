@@ -263,6 +263,7 @@ type PostLegResult = { success?: boolean; pending?: boolean; message?: string | 
 type PlaceOutcome =
   | "filled_pending_settle"
   | "accepted_pending_confirm"
+  | "submit_unknown"
   | "api_failed"
   | "not_attempted";
 
@@ -272,6 +273,7 @@ function legStatusAfterPost(
 ): ActiveBetLegStatus {
   if (placeOutcome === "not_attempted")
     return "failed";
+  if (placeOutcome === "submit_unknown") return "pending_confirm";
   if (!result?.success)
     return "failed";
   if (result.pending || placeOutcome === "accepted_pending_confirm")
@@ -291,6 +293,7 @@ function legDetailAfterPost(
 ): string {
   if (placeOutcome === "not_attempted")
     return formatNotAttemptedDetail(skipReason);
+  if (placeOutcome === "submit_unknown") return "提交结果不确定，核对原单中";
   const msg = String(result?.message ?? "").trim();
   if (!result?.success)
     return msg || "下单失败";

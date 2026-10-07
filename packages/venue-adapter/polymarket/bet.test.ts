@@ -7,10 +7,12 @@ import {
   setPmFokDepthBufferPrefs,
 } from "./pmFokDepthBufferMode";
 import { POLYMARKET_BUILDER_CODE_DEFAULT } from "./builder";
+import { setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "./pmOrderSubmitMode";
 import { POLYMARKET_CLOB_API } from "./api";
 import { resetPolymarketOrderSyncForTest } from "./pmOrderSync";
 import { clearPmExecutionMetrics, getPmExecutionMetrics } from "./pmExecutionMetrics";
 import { clearPolymarketOrderClientCacheForTests } from "./pmOrderClientCache";
+import { clearPmSubmitJournalForTests } from "./pmSubmitJournal";
 
 const polymarketPluginGet = vi.hoisted(() => vi.fn());
 const polymarketPluginPost = vi.hoisted(() => vi.fn());
@@ -52,6 +54,12 @@ vi.mock("@changmen/client-core/bridge/oddsAccess", () => ({
 }));
 
 beforeEach(() => {
+  clearPmSubmitJournalForTests();
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (key?.startsWith("changmen:pm:submission:v1:")) localStorage.removeItem(key);
+  }
+  globalThis.localStorage.removeItem(PM_ORDER_SUBMIT_MODE_KEY);
   resetPmFokDepthBufferPrefsForTests();
   clearPmExecutionMetrics();
   clearPolymarketOrderClientCacheForTests();
@@ -838,7 +846,7 @@ describe("polymarketProvider.betting", () => {
     expect(pmSubmitOrder).not.toHaveBeenCalled();
   });
 
-  test("fails when API success but status is not matched", async () => {
+  test("official success and ID with unmatched status remains accepted pending confirmation", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     mockPluginGetWithBook({
       tick_size: "0.01",
@@ -867,11 +875,11 @@ describe("polymarketProvider.betting", () => {
       betMoney: 10,
     } as any);
 
-    expect(result.success).toBe(false);
-    expect(result.message).toContain("status: unmatched");
-    expect(result.message).toContain("未成交");
+    expect(result.success).toBe(true);
+    expect(result.pending).toBe(true);
+    expect(result.message).toContain("unmatched");
     expect(result.orderId).toBe("order-unmatched");
-    expect(result.tip).toEqual({ pmPosted: true });
+    expect(result.tip).toBeNull();
     expect(result.beginTime).toBe(1_700_000_000_000);
   });
 
@@ -969,7 +977,7 @@ describe("polymarketProvider.betting", () => {
     expect(result.message).toContain("待确认");
   });
 
-  test("fails when matched but takingAmount is zero", async () => {
+  test("accepted matched response without fill amounts waits for confirmation", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     mockPluginGetWithBook({
       tick_size: "0.01",
@@ -998,8 +1006,8 @@ describe("polymarketProvider.betting", () => {
       betMoney: 10,
     } as any);
 
-    expect(result.success).toBe(false);
-    expect(result.message).toContain("takingAmount: 0");
+    expect(result.success).toBe(true);
+    expect(result.pending).toBe(true);
   });
 });
 
@@ -1055,7 +1063,7 @@ describe("isPolymarketOrderAccepted", () => {
       success: true,
       status: "unmatched",
       orderID: "0x2",
-    })).toBe(false);
+    })).toBe(true);
   });
 });
 
@@ -1842,13 +1850,24 @@ describe("PM phase 1 frozen attempt", () => {
     expect(result.filter(r => r.success)).toHaveLength(1);
     expect(pmSubmitOrder).toHaveBeenCalledOnce(); expect(pmGetBook).not.toHaveBeenCalled(); expect(polymarketPluginGet).not.toHaveBeenCalled();
   });
-  test.each(["amount", "token", "account", "data", "wallet"])("changed %s cannot reuse a prepared attempt", async what => {
+  test.each(["local", "vps"] as const)("%s order choice preserves builder attribution in the signed buy body", async mode => {
+    setPmOrderSubmitMode(mode);
+    const account = pmBettingAccount();
+    const checked = await polymarketProvider.checkBet(account, option());
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(true);
+    expect(pmSubmitOrder).toHaveBeenCalledOnce();
+    expect(pmSubmitOrder.mock.calls[0][1]).toMatchObject({
+      orderType: "FOK", order: { builder: POLYMARKET_BUILDER_CODE_DEFAULT, signature: expect.stringMatching(/^0x/) },
+    });
+  });
+  test.each(["amount", "token", "account", "data", "wallet", "submitRoute"])("changed %s cannot reuse a prepared attempt", async what => {
     const account = pmBettingAccount(); const checked = await polymarketProvider.checkBet(account, option());
     if (what === "amount") checked.betMoney += 1;
     if (what === "token") checked.itemId = "other";
     if (what === "account") account.token += " ";
     if (what === "data") checked.data = { ...checked.data };
     if (what === "wallet") clearPolymarketOrderClientCacheForTests();
+    if (what === "submitRoute") setPmOrderSubmitMode("local");
     pmGetBook.mockClear();
     expect((await polymarketProvider.betting(account, checked)).success).toBe(false);
     expect(pmSubmitOrder).not.toHaveBeenCalled(); expect(pmGetBook).not.toHaveBeenCalled();

@@ -8,6 +8,7 @@
     "./order_observation": "./order_observation.ts",
     "./order_observation_view": "./order_observation_view.ts",
     "./pm_submission": "./pm_submission.ts",
+    "./pm_submit_response": "./pm_submit_response.js",
     "./catalog/game_catalog": "./catalog/game_catalog.ts",
     "./catalog/game_catalog.browser": "./catalog/game_catalog.browser.ts",
     "./catalog/game_catalog.json": "./catalog/game_catalog.json",

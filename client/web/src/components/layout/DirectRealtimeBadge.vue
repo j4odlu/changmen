@@ -25,6 +25,7 @@ import {
   cyclePmRoutingPreference,
   getPmMarketWsSourceMode,
   getPmRoutingPreference,
+  getPmOrderSubmitMode,
   getPmUserWsSourceMode,
   markPmTransportManualOverride,
   onPmAutoTransportApplied,
@@ -33,10 +34,13 @@ import {
   pmUserWsSourceModeLabel,
   setPmMarketWsSourceModeAndReconnect,
   setPmRoutingPreference,
+  setPmOrderSubmitMode,
+  PM_ORDER_SUBMIT_MODE_KEY,
   setPmUserWsSourceMode,
   sourceModeForPmRoutingPreference,
   type PmMarketWsSourceMode,
   type PmRoutingPreference,
+  type PmOrderSubmitMode,
   type PmUserWsSourceMode,
 } from "@changmen/venue-adapter/polymarket";
 import {
@@ -71,6 +75,21 @@ const obSourceMode = ref<ObMqttSourceMode>(getObMqttSourceMode());
 const raySourceMode = ref<RayWsSourceMode>(getRayWsSourceMode());
 const pmMarketWsSourceMode = ref<PmMarketWsSourceMode>(getPmMarketWsSourceMode());
 const pmRoutingPreference = ref<PmRoutingPreference>(getPmRoutingPreference());
+const pmOrderSubmitMode = ref<PmOrderSubmitMode>(getPmOrderSubmitMode());
+function selectPmOrderSubmitMode(mode: PmOrderSubmitMode): void {
+  try {
+    setPmOrderSubmitMode(mode);
+    pmOrderSubmitMode.value = getPmOrderSubmitMode();
+    ElMessage.success(`PM 下单已切换到${mode === "local" ? "本地" : "VPS"}`);
+  }
+  catch {
+    ElMessage.error("下单方式保存失败，请重试");
+  }
+}
+function syncPmOrderSubmitMode(event: StorageEvent): void {
+  if (event.key === PM_ORDER_SUBMIT_MODE_KEY || event.key === null)
+    pmOrderSubmitMode.value = getPmOrderSubmitMode();
+}
 const pmSettingsVisible = ref(false);
 const pmSettingsBusy = ref(false);
 const pmConnectionStatus = computed(() => {
@@ -218,6 +237,7 @@ const raySportStatus = computed(() =>
 );
 
 onMounted(() => {
+  globalThis.addEventListener?.("storage", syncPmOrderSubmitMode);
   void startPmMaintenanceFeed();
   venueWsUnsub = subscribeVenueWsStatus(() => {
     venueWsStatuses.value = listVenueWsStatuses();
@@ -234,6 +254,7 @@ onMounted(() => {
   });
 });
 onUnmounted(() => {
+  globalThis.removeEventListener?.("storage", syncPmOrderSubmitMode);
   venueWsUnsub?.();
   pmTransportUnsub?.();
   pfTransportUnsub?.();
@@ -536,10 +557,17 @@ function handleStatusClick(status: DirectRealtimeStatus): void {
           </div>
           <p>行情连接：{{ pmConnectionStatus }}</p>
           <p>官网优先：网络失败或超时回退 VPS。仅 VPS：固定代理。</p>
-          <p>控制行情和查询；下注、撤单仍走 VPS。设置保存在当前浏览器。</p>
+          <p>以上选项控制行情和查询；撤单仍走 VPS。</p>
+          <strong>PM 下单方式</strong>
+          <div class="pm-connection-options" role="group" aria-label="PM 下单方式">
+            <button type="button" :aria-pressed="pmOrderSubmitMode === 'local'" @click="selectPmOrderSubmitMode('local')">本地</button>
+            <button type="button" :aria-pressed="pmOrderSubmitMode === 'vps'" @click="selectPmOrderSubmitMode('vps')">VPS</button>
+          </div>
+          <p>本地：由当前浏览器直连 PM 提交，需网络可达。VPS：由服务器转发。买入、卖出均按此选择。</p>
+          <p>下单方式与行情设置独立，保存在当前浏览器。</p>
           <button type="button" @click="openPmStatusPage">查看 PM 官网服务状态</button>
         </div>
-        <template #reference><button type="button" class="pm-config-button" aria-label="PM 连接配置">⚙ PM 配置</button></template>
+        <template #reference><button type="button" class="pm-config-button" aria-label="PM 连接与下单配置">⚙ PM 配置 · 下单：{{ pmOrderSubmitMode === 'local' ? '本地' : 'VPS' }}</button></template>
       </el-popover>
     </div>
     <div v-if="workspace === 'sports'" class="direct-realtime-row">

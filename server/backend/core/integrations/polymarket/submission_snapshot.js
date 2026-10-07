@@ -26,7 +26,10 @@ export function recoverPmSubmissionFromLogs(rows, player, orderId) {
       continue;
     if (snapshot && (snapshot.makerAmount !== found.makerAmount || snapshot.submittedAt !== found.submittedAt))
       return null;
-    snapshot = found;
+    if (snapshot?.makerAddress && found.makerAddress && snapshot.makerAddress !== found.makerAddress)
+      return null;
+    snapshot = { ...found, ...(found.makerAddress || snapshot?.makerAddress
+      ? { makerAddress: found.makerAddress || snapshot.makerAddress } : {}) };
   }
   return snapshot;
 }

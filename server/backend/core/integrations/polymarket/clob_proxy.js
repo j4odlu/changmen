@@ -99,19 +99,22 @@ export async function executePolymarketHttpRequest(input) {
     if (input.clientL2Timestamp !== undefined) {
       if (method !== "POST" || l2Path !== "/order"
         || !Number.isSafeInteger(input.clientL2Timestamp) || input.clientL2Timestamp <= 0)
-        throw new Error("PM 客户端签名时间无效");
+        throw Object.assign(new Error("PM 客户端签名时间无效"), { pmSubmitNotSent: true });
       // 扩展在发出 HTTP 前断连：沿用该路径的客户端时钟，由服务端用所属账号重新生成 HMAC。
       timestamp = input.clientL2Timestamp;
-    } else timestamp = clobTimestamp(url);
-    authHeaders = buildPolymarketL2HeadersFromToken(
+    } else {
+      try { timestamp = clobTimestamp(url); }
+      catch (err) { throw Object.assign(err, { pmSubmitNotSent: true }); }
+    }
+    try { authHeaders = buildPolymarketL2HeadersFromToken(
       input.accountToken,
       method,
       l2Path,
       bodyText,
       timestamp,
-    );
+    ); } catch (err) { throw Object.assign(err, { pmSubmitNotSent: true }); }
     if (!authHeaders)
-      throw new Error("PM L2 凭据不完整");
+      throw Object.assign(new Error("PM L2 凭据不完整"), { pmSubmitNotSent: true });
   }
   else {
     authHeaders = pickPolymarketPolyHeaders(input?.polyHeaders);

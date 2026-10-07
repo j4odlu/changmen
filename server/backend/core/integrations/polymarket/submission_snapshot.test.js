@@ -36,4 +36,14 @@ describe("recover original PM submission", () => {
     for (const value of ["14.93", "NaN", "-1", "0", "9007199254740992"])
       expect(pmMakerAmountUsdc(value)).toBeNull();
   });
+
+  it("preserves the public original maker for legacy wallet binding and rejects contradictions", () => {
+    const withMaker = maker => row({ request: { order: { side: "BUY", makerAmount: "14930000", maker, signature: "never-return" } } });
+    const maker = "0x1111111111111111111111111111111111111111";
+    const snapshot = recoverPmSubmissionFromLogs([withMaker(maker), row()], player, id);
+    expect(snapshot.makerAddress).toBe(maker);
+    expect(validatePmSubmission(snapshot, id, 317)).toEqual(snapshot);
+    expect(JSON.stringify(snapshot)).not.toContain("never-return");
+    expect(recoverPmSubmissionFromLogs([withMaker(maker), withMaker("0x2222222222222222222222222222222222222222")], player, id)).toBeNull();
+  });
 });

@@ -27,6 +27,10 @@ import { settleArbLegUntilTerminal } from "@/stores/betting/autoBet/arbLegSettle
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
 import { useMessageStore } from "@/stores/messageStore";
 import { useUserStore } from "@/stores/userStore";
+import { pmSubmissionFromResult, validatePmSubmission, type PmSubmission } from "@changmen/shared/pm_submission";
+import { pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-adapter/polymarket";
+import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
+import { getPmSubmission } from "@/api/order";
 
 export type CheckBettingOpts = ResolveVenueStakeOpts & {
   role?: "execute" | "precheckOnly";
@@ -101,10 +105,15 @@ function notifyPendingVenueConfirm(
   const orderId = String(result.orderId ?? "").trim();
   if (!orderId)
     return;
+  const pmScope = account.provider === "Polymarket" ? pmSubmitScope(account) : undefined;
+  const key = pmScope ? `${pmScope}:${orderId}` : `${account.accountId}:${orderId}`;
+  const existing = pendingVenueBetConfirmations.get(key);
+  if (existing) { schedulePendingVenueBetConfirmation(store, existing); return; }
   const task: PendingVenueBetConfirmation = {
     observation: option.observation,
     linkId: option.diagnosticLinkId,
-    key: `${account.accountId}:${orderId}`,
+    key,
+    pmScope,
     accountId: account.accountId,
     provider: account.provider,
     orderId,
@@ -120,6 +129,7 @@ function notifyPendingVenueConfirm(
     toastSeconds,
     attempts: 0,
     nextPollAt: Date.now(),
+    pmSubmission: account.provider === "Polymarket" ? pmSubmissionFromResult(result, account.accountId) ?? undefined : undefined,
   };
   pendingVenueBetConfirmations.set(task.key, task);
   persistPendingVenueBetConfirmations();
@@ -129,6 +139,10 @@ function notifyPendingVenueConfirm(
 const PENDING_VENUE_CONFIRM_KEY = "PENDING_VENUE_BET_CONFIRM";
 
 interface PendingVenueBetConfirmation {
+  pmScope?: string;
+  pmSubmission?: PmSubmission;
+  /** 已由套利/补单队列计数的尝试，恢复页只核对与同步原单。 */
+  recoveryOnly?: boolean;
   observation?: ObservationContext;
   linkId?: number;
   key: string;
@@ -207,10 +221,43 @@ async function runPendingVenueBetConfirmation(
     schedulePendingVenueBetConfirmation(store, task);
     return;
   }
+  // 新任务绑定用户/钱包；旧会话仅在当前钱包的持久化原单能核实时迁移。
+  if (task.provider === "Polymarket") {
+    try {
+      if (account.provider !== "Polymarket") return;
+      const scope = pmSubmitScope(account);
+      if (!task.pmScope && pmAccountSubmitAttempts(account).some(attempt =>
+        attempt.orderHash === task.orderId || attempt.acceptedOrderId === task.orderId)) task.pmScope = scope;
+      if (!task.pmScope) {
+        // 兼容升级前会话：由服务端校验账号归属，再用原签名 maker 核对当前钱包。
+        const version = getAuthSessionVersion();
+        let recovered;
+        try { recovered = validatePmSubmission(await getPmSubmission(account.accountId, task.orderId), task.orderId, account.accountId); }
+        catch {
+          task.nextPollAt = Date.now() + 5_000;
+          schedulePendingVenueBetConfirmation(store, task);
+          return;
+        }
+        if (!isAuthSessionCurrent(version) || scope !== pmSubmitScope(account)) return;
+        if (!recovered?.makerAddress || recovered.makerAddress !== pmSubmitMaker(account)) return;
+        task.pmSubmission = recovered;
+        task.pmScope = scope;
+        persistPendingVenueBetConfirmations();
+      }
+      if (task.pmScope !== scope) return;
+    } catch { return; }
+  }
+  const sessionVersion = getAuthSessionVersion();
 
+  if (pendingVenueConfirmationFlights.has(task.key)) return;
   pendingVenueConfirmationFlights.add(task.key);
   try {
     const result = Object.assign(new BetResult(task.provider as BetOption["type"], true), {
+      success: task.pmSubmission?.submitUnknown !== true,
+      pmSubmitUnknown: task.pmSubmission?.submitUnknown,
+      pmSubmittedAt: task.pmSubmission?.submittedAt,
+      ...(task.pmSubmission ? { beginTime: task.pmSubmission.submittedAt,
+        request: { order: { side: "BUY", makerAmount: task.pmSubmission.makerAmount, maker: task.pmSubmission.makerAddress } } } : {}),
       orderId: task.orderId,
       pending: true,
       observation: task.observation,
@@ -231,6 +278,8 @@ async function runPendingVenueBetConfirmation(
       rejectWaitSec: 0,
       betOption: option,
     });
+    if (!isAuthSessionCurrent(sessionVersion)
+      || task.pmScope && task.pmScope !== pmSubmitScope(account)) return;
     try {
       const exactObservedOrder = orders.find(order => String(order.orderId) === task.orderId);
       observeOption(option, account, "settlement_observed", {
@@ -242,6 +291,7 @@ async function runPendingVenueBetConfirmation(
     }
     catch { /* 观察快照异常不改变原单确认的后续处理 */ }
     if (pendingConfirm) {
+      task.pmSubmission = pmSubmissionFromResult(result, account.accountId) ?? task.pmSubmission;
       task.attempts += 1;
       task.nextPollAt = Date.now() + Math.min(30_000, 1_000 * 2 ** Math.min(task.attempts - 1, 5));
       pendingVenueBetConfirmations.set(task.key, task);
@@ -266,7 +316,7 @@ async function runPendingVenueBetConfirmation(
       duration: task.toastSeconds === 0 ? 3000 : task.toastSeconds * 1000,
       customClass: `notification ${account.provider}`,
     });
-    if (!rejected) {
+    if (!rejected && !task.recoveryOnly) {
       void playOrderSuccessSound({ betRowId: task.betRowId || task.venueBetId });
       void publishBettingEvent(option);
       // PF/PM：受理≠成交；成功计数推迟到 filled
@@ -304,13 +354,38 @@ async function runPendingVenueBetConfirmation(
   finally {
     pendingVenueConfirmationFlights.delete(task.key);
     const current = pendingVenueBetConfirmations.get(task.key);
-    if (current)
+    if (current && isAuthSessionCurrent(sessionVersion))
       schedulePendingVenueBetConfirmation(store, current);
   }
 }
 
 /** 账号加载后恢复手动/正 EV 单的场馆待确认任务。 */
 export function resumePendingVenueConfirmations(store: AccountStoreContext): void {
+  for (const account of store.accounts ?? []) {
+    if (account.provider !== "Polymarket") continue;
+    try {
+      for (const attempt of pmAccountSubmitAttempts(account)) {
+        const recovery = attempt.recovery;
+        if (attempt.side !== "BUY" || !recovery) continue;
+        const orderId = attempt.acceptedOrderId || attempt.orderHash;
+        const pmScope = pmSubmitScope(account);
+        const key = `${pmScope}:${orderId}`;
+        const pmSubmission: PmSubmission = { orderId, accountId: account.accountId, makerAmount: attempt.makerAmount,
+          stakeUsdc: Number(attempt.makerAmount) / 1e6, submittedAt: attempt.submittedAt,
+          ...(!attempt.acceptedOrderId ? { submitUnknown: true } : {}) };
+        const legacy = [...pendingVenueBetConfirmations.values()].find(task => task.provider === "Polymarket"
+          && task.accountId === account.accountId && task.orderId === orderId && (!task.pmScope || task.pmScope === pmScope));
+        if (legacy) { Object.assign(legacy, recovery, { pmScope, pmSubmission }); continue; }
+        if (pendingVenueBetConfirmations.has(key)) continue;
+        pendingVenueBetConfirmations.set(key, { ...recovery, target: recovery.target as BetOption["target"],
+          key, pmScope, accountId: account.accountId, provider: "Polymarket", orderId,
+          betRowId: recovery.betRowId ?? 0, accountLine: "", detailHtml: "",
+          toastSeconds: 3, attempts: 0, nextPollAt: Date.now(),
+          pmSubmission });
+      }
+    } catch { /* 凭证尚未加载时保留原记录，下次恢复 */ }
+  }
+  persistPendingVenueBetConfirmations();
   for (const task of pendingVenueBetConfirmations.values())
     schedulePendingVenueBetConfirmation(store, task);
 }
@@ -467,7 +542,7 @@ export async function placeBet(
         }
       }
       // PM 已 POST 未成交（含无官方 orderId）：落库 Reject，供拒单率统计
-      else if (!result.success && account.provider === "Polymarket") {
+      else if (!result.success && !result.pmSubmitUnknown && account.provider === "Polymarket") {
         try {
           if (Number(beginTime) > 0)
             result.beginTime = beginTime;
@@ -500,13 +575,13 @@ export async function placeBet(
     // POST 前抛错 / 页面过期：不落拒单（无 pmPosted）
   }
   finally {
-    result.link = Number(opts?.linkId || option.diagnosticLinkId) || 0;
+    result.link = result.pmSubmitUnknown && result.link > 0 ? result.link : Number(opts?.linkId || option.diagnosticLinkId) || 0;
     result.diagnosticAttempt = option.diagnosticAttempt;
     try {
       result.observation = option.observation;
       observeOption(option, account, "submission_result", {
         orderId: result.orderId || undefined,
-        outcome: observationThrew && observationSubmitted ? "unknown" : result.success ? "accepted" : observationSubmitted ? "adapter_failed" : "not_submitted",
+        outcome: result.pmSubmitUnknown || observationThrew && observationSubmitted ? "unknown" : result.success ? "accepted" : observationSubmitted ? "adapter_failed" : "not_submitted",
         source: "adapter_result",
         durationMs: observationDuration,
         ...(!result.success ? observationFailureEvidence(result.message, result.response, observationError, result.provider) : {}),

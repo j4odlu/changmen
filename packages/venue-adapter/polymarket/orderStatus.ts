@@ -367,6 +367,7 @@ export function resolvePolymarketRejectStakeUsdc(
 
 /** 已调用 CLOB POST 后的失败（非预检/凭证/盘口挡单） */
 export function isPolymarketPostedApiFailure(result: BetResult): boolean {
+  if (result.pmSubmitUnknown) return false;
   const tip = result.tip;
   if (tip && typeof tip === "object" && (tip as { pmPosted?: boolean }).pmPosted === true)
     return true;

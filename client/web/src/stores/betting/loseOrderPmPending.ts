@@ -321,6 +321,9 @@ export async function tryResumePendingVenueMakeUp(
   checked.observation = order.pendingObservation;
 
   const result = Object.assign(new BetResultCtor(account.provider, true), {
+    success: submission?.submitUnknown !== true,
+    pmSubmitUnknown: submission?.submitUnknown,
+    pmSubmittedAt: submission?.submittedAt,
     orderId: pendingId,
     pending: true,
     observation: order.pendingObservation,

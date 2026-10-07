@@ -9,6 +9,7 @@ import {
   buildPolymarketRejectVenueOrder,
   isPolymarketBetResultFillConfirmed,
   isPolymarketOrderIdRejected,
+  interpretPolymarketOrderRow,
 } from "./orderStatus";
 import { settlePolymarketDelayedOrder } from "./orderSettlement";
 import {
@@ -20,6 +21,8 @@ import type { PolymarketOrderResponseLike, PolymarketPollOutcome } from "./order
 import { buildPolymarketMatchedBuyVenueOrderForSaveAsync } from "./pmPostFillOrder";
 import { readPolymarketOrderWatch } from "./userWs";
 import { tracePolymarketOrder } from "./orderTrace";
+import { recoverPmUnknownSubmission } from "./pmUnknownSubmitRecovery";
+import { finishPmSubmitAttempt, pmSubmitAttemptForOrder } from "./pmSubmitJournal";
 
 export interface PolymarketLegOutcomeDeps {
   fetchVenueOrders: () => Promise<VenueOrder[]>;
@@ -63,11 +66,17 @@ async function settlePolymarketWithJobFallback(
   orderId: string,
   conditionId?: string,
   submittedAt?: number,
+  recoveredRow?: import("./orderTypes").PolymarketOrderRow | null,
 ): Promise<{ outcome: PolymarketPollOutcome; row: import("./orderTypes").PolymarketOrderRow | null }> {
   const finish = (raw: Awaited<ReturnType<typeof settlePolymarketDelayedOrder>>) => {
     const latest = readPolymarketOrderWatch(orderId, account);
     let evidence = raw;
-    if (raw.outcome !== "matched" && latest?.outcome === "matched") {
+    if (interpretPolymarketOrderRow(recoveredRow) === "matched") {
+      const incomplete = Number(recoveredRow?.original_size) > Number(recoveredRow?.size_matched);
+      evidence = incomplete ? { outcome: "timeout", row: recoveredRow ?? null }
+        : { outcome: "matched", row: recoveredRow ?? null };
+    }
+    if (evidence.outcome !== "matched" && latest?.outcome === "matched") {
       const incomplete = Number(latest.row?.size_matched) > 0
         && Number(latest.row?.original_size) > Number(latest.row?.size_matched);
       evidence = incomplete
@@ -207,15 +216,29 @@ export async function resolvePolymarketLegOutcome(
   deps: PolymarketLegOutcomeDeps,
   conditionId?: string,
 ): Promise<VenueLegOutcome> {
+  let recoveredRow = result.orderId ? pmSubmitAttemptForOrder(account, result.orderId)?.evidence?.row : undefined;
+  if (result.pmSubmitUnknown) {
+    const recovered = result.orderId && await recoverPmUnknownSubmission(account, result.orderId, "BUY", result.pmSubmittedAt ?? result.beginTime);
+    if (!recovered)
+      return { orders: [], settlement: "timeout" };
+    recoveredRow = recovered.row;
+    result.pmSubmitUnknown = false;
+    result.success = true;
+    result.pending = true;
+  }
   if (result.pending && result.orderId) {
     const { outcome, row } = await settlePolymarketWithJobFallback(
       account,
       result.orderId,
       conditionId,
-      result.beginTime,
+      result.pmSubmittedAt ?? result.beginTime,
+      recoveredRow,
     );
     applyPolymarketSettlementToResult(result, outcome, row);
     const settlement = pollOutcomeToSettlement(outcome);
+    if (settlement !== "timeout") {
+      try { finishPmSubmitAttempt(account, result.orderId); } catch { /* 不改变官方终态 */ }
+    }
     if (settlement === "filled") {
       return {
         orders: await fetchSortedVenueOrders(deps),
@@ -250,6 +273,7 @@ export function resolvePolymarketListLegOutcome(
   orders: VenueOrder[],
   result?: BetResult,
 ): VenueLegOutcome {
+  if (result?.pmSubmitUnknown) return { orders: [], settlement: "timeout" };
   const sorted = sortVenueOrdersNewestFirst(orders);
   if (result?.success) {
     const orderId = String(result.orderId ?? "").trim();

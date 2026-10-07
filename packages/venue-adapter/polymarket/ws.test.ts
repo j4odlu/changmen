@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cyclePmMarketWsSourceModeAndReconnect,
   getPmMarketClientMetricsSnapshot,
+  getPolymarketWsStatus,
   notePolymarketMarketWsSubscription,
   notePolymarketMarketWsQuote,
   resetOfficialFailStreakForTests,
@@ -14,6 +15,7 @@ import { markPmTransportManualOverride, resetPmTransportManualOverrideForTests }
 import { resetPmRoutingPreferenceForTests, setPmRoutingPreference } from "./pmRoutingPreference";
 import { setChangmenAuthTokenGetter } from "../shared/changmenAuthToken";
 import { PM_MARKET_WS_FORWARD_PATH } from "./wsConfig";
+import { listVenueWsStatuses } from "../shared/venueWsStatus";
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
@@ -130,6 +132,174 @@ describe("polymarket market ws", () => {
 
     expect(getPmMarketWsSourceMode()).toBe("changmen");
     expect(MockWebSocket.instances.at(-1)!.url).toContain(PM_MARKET_WS_FORWARD_PATH);
+  });
+
+  it("falls back after three short-lived official connections even if they receive quotes", () => {
+    resetPmMarketWsSourceModeForTests("official");
+    startPolymarketMarketWs({ onMessage: () => {}, onOpen: () => {} });
+    for (let i = 0; i < 3; i++) {
+      const socket = MockWebSocket.instances.at(-1)!;
+      socket.open();
+      socket.onmessage?.({ data: JSON.stringify({ event_type: "book", asset_id: "a", asks: [] }) });
+      vi.advanceTimersByTime(1_000);
+      socket.close();
+      vi.advanceTimersByTime(5_000);
+    }
+    expect(getPmMarketWsSourceMode()).toBe("changmen");
+    expect(MockWebSocket.instances.at(-1)!.url).toContain(PM_MARKET_WS_FORWARD_PATH);
+  });
+
+  it("clears the official failure streak only after a stable responsive connection", () => {
+    resetPmMarketWsSourceModeForTests("official");
+    startPolymarketMarketWs({ onMessage: () => {}, onOpen: () => {} });
+    MockWebSocket.instances[0]!.close();
+    vi.advanceTimersByTime(5_000);
+    const stable = MockWebSocket.instances.at(-1)!;
+    stable.open();
+    for (let i = 0; i < 3; i++) {
+      vi.advanceTimersByTime(10_000);
+      stable.onmessage?.({ data: "PONG" });
+    }
+    stable.close();
+    vi.advanceTimersByTime(5_000);
+    MockWebSocket.instances.at(-1)!.close();
+    vi.advanceTimersByTime(5_000);
+    expect(getPmMarketWsSourceMode()).toBe("official");
+  });
+
+  it("times out a stalled handshake and ignores callbacks from the retired socket", () => {
+    const onOpen = vi.fn();
+    startPolymarketMarketWs({ onMessage: () => {}, onOpen });
+    const first = MockWebSocket.instances[0]!;
+    vi.advanceTimersByTime(15_000);
+    expect(getPolymarketWsStatus()).toBe("error");
+    expect(listVenueWsStatuses().find(row => row.id === "pm-market")?.meta?.lastError).toContain("handshake");
+    vi.advanceTimersByTime(5_000);
+    expect(MockWebSocket.instances).toHaveLength(2);
+    first.open();
+    first.close();
+    expect(onOpen).not.toHaveBeenCalled();
+    MockWebSocket.instances[1]!.open();
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(getPolymarketWsStatus()).toBe("connected");
+  });
+
+  it("reconnects a silent socket without depending on a close event", () => {
+    startPolymarketMarketWs({ onMessage: () => {}, onOpen: () => {} });
+    const first = MockWebSocket.instances[0]!;
+    first.open();
+    first.close = vi.fn();
+    vi.advanceTimersByTime(30_000);
+    expect(getPolymarketWsStatus()).toBe("error");
+    expect(listVenueWsStatuses().find(row => row.id === "pm-market")?.meta?.reason).toBe("heartbeat_timeout");
+    vi.advanceTimersByTime(5_000);
+    expect(MockWebSocket.instances).toHaveLength(2);
+  });
+
+  it("keeps a quiet market connected while PONGs continue", () => {
+    startPolymarketMarketWs({ onMessage: () => {}, onOpen: () => {} });
+    const first = MockWebSocket.instances[0]!;
+    first.open();
+    for (let i = 0; i < 6; i++) {
+      vi.advanceTimersByTime(10_000);
+      first.onmessage?.({ data: "PONG" });
+    }
+    expect(MockWebSocket.instances).toHaveLength(1);
+    expect(getPolymarketWsStatus()).toBe("connected");
+  });
+
+  it("gives a throttled or suspended browser time to receive PONG before reconnecting", () => {
+    startPolymarketMarketWs({ onMessage: () => {}, onOpen: () => {} });
+    const first = MockWebSocket.instances[0]!;
+    first.open();
+    vi.setSystemTime(Date.now() + 120_000);
+    vi.advanceTimersByTime(10_000);
+    expect(first.sent).toContain("PING");
+    expect(getPolymarketWsStatus()).toBe("connected");
+    first.onmessage?.({ data: "PONG" });
+    vi.advanceTimersByTime(10_000);
+    expect(MockWebSocket.instances).toHaveLength(1);
+    expect(getPolymarketWsStatus()).toBe("connected");
+    vi.advanceTimersByTime(20_000);
+    expect(getPolymarketWsStatus()).toBe("error");
+    vi.advanceTimersByTime(5_000);
+    expect(MockWebSocket.instances).toHaveLength(2);
+  });
+
+  it("counts one failure when an error is followed by a delayed close", () => {
+    resetPmMarketWsSourceModeForTests("official");
+    startPolymarketMarketWs({ onMessage: () => {}, onOpen: () => {} });
+    const first = MockWebSocket.instances[0]!;
+    first.close = vi.fn();
+    first.onerror?.();
+    first.onclose?.();
+    expect(listVenueWsStatuses().find(row => row.id === "pm-market")?.meta?.failStreak).toBe(1);
+    vi.advanceTimersByTime(5_000);
+    expect(MockWebSocket.instances).toHaveLength(2);
+  });
+
+  it("does not switch forced official mode after repeated short-lived connections", () => {
+    setPmRoutingPreference("official");
+    resetPmMarketWsSourceModeForTests("official");
+    startPolymarketMarketWs({ onMessage: () => {}, onOpen: () => {} });
+    for (let i = 0; i < 3; i++) {
+      MockWebSocket.instances.at(-1)!.open();
+      MockWebSocket.instances.at(-1)!.close();
+      vi.advanceTimersByTime(5_000);
+    }
+    expect(getPmMarketWsSourceMode()).toBe("official");
+  });
+
+  it("does not let a previous connection's book watchdog affect its replacement", () => {
+    resetPmMarketWsSourceModeForTests("official");
+    startPolymarketMarketWs({ onMessage: () => {}, onOpen: () => {} });
+    MockWebSocket.instances[0]!.open();
+    notePolymarketMarketWsSubscription(2);
+    vi.advanceTimersByTime(2_000);
+    MockWebSocket.instances[0]!.close();
+    vi.advanceTimersByTime(5_000);
+    MockWebSocket.instances[1]!.open();
+    vi.advanceTimersByTime(2_000);
+    expect(getPmMarketWsSourceMode()).toBe("official");
+    expect(getPolymarketWsStatus()).toBe("connected");
+  });
+
+  it("starts the book timeout after open and does not extend it on subscription updates", () => {
+    resetPmMarketWsSourceModeForTests("official");
+    startPolymarketMarketWs({ onMessage: () => {}, onOpen: () => {} });
+    notePolymarketMarketWsSubscription(2);
+    vi.advanceTimersByTime(9_000);
+    expect(getPmMarketWsSourceMode()).toBe("official");
+    MockWebSocket.instances[0]!.open();
+    vi.advanceTimersByTime(4_000);
+    notePolymarketMarketWsSubscription(3);
+    vi.advanceTimersByTime(4_000);
+    expect(getPmMarketWsSourceMode()).toBe("changmen");
+  });
+
+  it("does not rearm first-book fallback for subscription changes on an established feed", () => {
+    resetPmMarketWsSourceModeForTests("official");
+    startPolymarketMarketWs({ onMessage: () => {}, onOpen: () => {} });
+    const first = MockWebSocket.instances[0]!;
+    first.open();
+    notePolymarketMarketWsSubscription(2);
+    first.onmessage?.({ data: JSON.stringify({ event_type: "book", asset_id: "a", asks: [] }) });
+    notePolymarketMarketWsSubscription(3);
+    vi.advanceTimersByTime(8_000);
+    expect(getPmMarketWsSourceMode()).toBe("official");
+    expect(getPmMarketClientMetricsSnapshot().emptyBookCount).toBe(0);
+  });
+
+  it("stop cancels handshake and first-book recovery timers", () => {
+    resetPmMarketWsSourceModeForTests("official");
+    const handle = startPolymarketMarketWs({ onMessage: () => {}, onOpen: () => {} });
+    MockWebSocket.instances[0]!.open();
+    notePolymarketMarketWsSubscription(2);
+    handle.stop();
+    vi.advanceTimersByTime(60_000);
+    expect(MockWebSocket.instances).toHaveLength(1);
+    expect(getPmMarketWsSourceMode()).toBe("official");
+    expect(getPolymarketWsStatus()).toBe("disconnected");
   });
 
   it("falls back to changmen when official receives no book after subscribing real assets", () => {

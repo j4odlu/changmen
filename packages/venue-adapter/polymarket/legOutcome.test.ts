@@ -252,6 +252,54 @@ describe("resolvePolymarketLegOutcome", () => {
     expect(resolvePolymarketDelayedPollOpts).not.toHaveBeenCalled();
   });
 
+  it("an unknown POST cannot use the accepted BUY timeout policy or unrelated venue orders", async () => {
+    const result = Object.assign(new BetResult("Polymarket", false), { pending: true,
+      orderId: "0xlocalhash", pmSubmitUnknown: true, pmSubmittedAt: 1_700_000_000_000 });
+    fetchPolymarketConfirmedTradeForOrder.mockResolvedValue(null);
+    fetchVenueOrders.mockResolvedValue([makeVenueOrder({ orderId: "other", status: "none", odds: 2, betMoney: 10 })]);
+    expect(await resolvePolymarketLegOutcome(account(), result, { fetchVenueOrders }))
+      .toEqual({ orders: [], settlement: "timeout" });
+    expect(settlePolymarketDelayedOrder).not.toHaveBeenCalled();
+    expect(awaitPolymarketSettlementJob).not.toHaveBeenCalled();
+    expect(fetchVenueOrders).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ success: false, pending: true, pmSubmitUnknown: true, reject: null });
+  });
+
+  it("a matching authenticated WS receipt can promote unknown submission to accepted BUY handling", async () => {
+    const result = Object.assign(new BetResult("Polymarket", false), { pending: true,
+      orderId: "0xlocalhash", pmSubmitUnknown: true, pmSubmittedAt: 1_700_000_000_000 });
+    readPolymarketOrderWatch.mockReturnValue({ outcome: "timeout", row: { id: "0xlocalhash", status: "delayed" } });
+    settlePolymarketDelayedOrder.mockResolvedValue({ outcome: "timeout", row: null });
+    const outcome = await resolvePolymarketLegOutcome(account(), result, { fetchVenueOrders });
+    expect(result.pmSubmitUnknown).toBe(false);
+    expect(result.success).toBe(true);
+    expect(outcome.settlement).toBe("unfilled");
+    expect(settlePolymarketDelayedOrder).toHaveBeenCalledWith(account(), "0xlocalhash",
+      expect.objectContaining({ submittedAt: 1_700_000_000_000 }));
+  });
+
+  it("retains exact recovered trade evidence when later settlement reads lose the fill", async () => {
+    const result = Object.assign(new BetResult("Polymarket", false), { pending: true,
+      orderId: "0xlocalhash", pmSubmitUnknown: true, pmSubmittedAt: 1_700_000_000_000 });
+    fetchPolymarketConfirmedTradeForOrder.mockResolvedValueOnce({ id: "trade", size: "10", price: "0.5", status: "CONFIRMED" });
+    settlePolymarketDelayedOrder.mockResolvedValue({ outcome: "timeout", row: null });
+    const outcome = await resolvePolymarketLegOutcome(account(), result, { fetchVenueOrders });
+    expect(outcome.settlement).toBe("filled");
+    expect(result.reject).toBeFalsy();
+    expect(result.pending).toBe(false);
+  });
+
+  it("recovered partial quantities cannot become timeout rejection when subsequent reads are empty", async () => {
+    const result = Object.assign(new BetResult("Polymarket", false), { pending: true,
+      orderId: "0xlocalhash", pmSubmitUnknown: true, pmSubmittedAt: 1_700_000_000_000 });
+    readPolymarketOrderWatch.mockReturnValueOnce({ outcome: "matched", row: { id: "0xlocalhash", status: "matched", size_matched: "3", original_size: "10" } });
+    settlePolymarketDelayedOrder.mockResolvedValue({ outcome: "timeout", row: null });
+    const outcome = await resolvePolymarketLegOutcome(account(), result, { fetchVenueOrders });
+    expect(outcome.settlement).toBe("timeout");
+    expect(result.reject).toBeFalsy();
+    expect(result.pending).toBe(true);
+  });
+
   it("fallback settle fetches sd from pmConditionId when job ctx missing", async () => {
     const result = Object.assign(new BetResult("Polymarket", true), {
       pending: true,

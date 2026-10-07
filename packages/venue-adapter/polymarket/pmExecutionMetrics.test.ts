@@ -5,12 +5,15 @@ import {
   getPmExecutionMetricsSummary,
   recordPmExecutionMetric,
   recordPmQuoteToFoMetric,
+  measurePmExecution,
 } from "./pmExecutionMetrics";
 import { resetPmMarketWsSourceModeForTests } from "./pmMarketWsMode";
 import { setPmHttpModeForTests } from "./pmTransportMode";
+import { setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "./pmOrderSubmitMode";
 
 describe("pmExecutionMetrics", () => {
   beforeEach(() => {
+    globalThis.localStorage.removeItem(PM_ORDER_SUBMIT_MODE_KEY);
     clearPmExecutionMetrics();
     resetPmMarketWsSourceModeForTests("official");
     setPmHttpModeForTests("vps");
@@ -41,6 +44,14 @@ describe("pmExecutionMetrics", () => {
         success: true,
       },
     ]);
+  });
+
+  test("submit metrics retain the actual initial route when the preference changes while waiting for ACK", async () => {
+    setPmOrderSubmitMode("local");
+    await measurePmExecution("submit", {}, async () => { setPmOrderSubmitMode("vps"); return {}; });
+    recordPmExecutionMetric({ kind: "book", ms: 1, success: true });
+    expect(getPmExecutionMetrics().map(entry => [entry.kind, entry.httpMode]))
+      .toEqual([["submit", "direct"], ["book", "vps"]]);
   });
 
   test("records quote-to-fo rejection reasons", () => {

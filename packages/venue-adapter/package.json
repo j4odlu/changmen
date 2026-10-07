@@ -46,7 +46,7 @@
     "@changmen/shared": "file:../shared",
     "@changmen/storage": "file:../../server/storage",
     "@polymarket/client": "0.12.0",
-    "@polymarket/clob-client-v2": "^1.1.0",
+    "@polymarket/clob-client-v2": "1.2.0",
     "@predictdotfun/sdk": "^1.3.8",
     "centrifuge": "^5.7.0",
     "ethers": "^6.15.0",

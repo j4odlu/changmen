@@ -44,13 +44,14 @@ export type ArbLegPlaceOutcome =
   | "filled_pending_settle"
   /** PF：官网已收下挂单，成交/拒单待 confirm（须进 settle） */
   | "accepted_pending_confirm"
+  | "submit_unknown"
   | "api_failed"
   | "not_attempted";
 
 /** place 成功且需进场馆 settle 的腿态（含 PF 挂单待确认） */
 export function isArbLegPlaceNeedsSettle(placeOutcome: ArbLegPlaceOutcome): boolean {
   return placeOutcome === "filled_pending_settle"
-    || placeOutcome === "accepted_pending_confirm";
+    || placeOutcome === "accepted_pending_confirm" || placeOutcome === "submit_unknown";
 }
 
 export interface ArbBetPlaced extends ArbBetChecked {
@@ -68,6 +69,7 @@ export function resolveArbLegPlaceOutcome(
 ): ArbLegPlaceOutcome {
   if (!attempted)
     return "not_attempted";
+  if (result?.pmSubmitUnknown) return "submit_unknown";
   if (!result?.success)
     return "api_failed";
   // pending：POST 已被场馆受理，但仍须后续确认；PM delayed 与 PF/RAY 类待确认同一编排语义

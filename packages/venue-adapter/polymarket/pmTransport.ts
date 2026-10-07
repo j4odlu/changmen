@@ -13,6 +13,8 @@ import {
 } from "@changmen/client-core/shared/platformHttp";
 import { POLYMARKET_CLOB_API } from "./api";
 import { buildL2HeadersFromAccount } from "./l2Auth";
+import { resolvePmOrderSubmitHttpMode } from "./pmOrderSubmitMode";
+import { browserSubmitTimestamp } from "./pmBrowserSubmitClock";
 import { measurePmExecution, recordPmExecutionMetric } from "./pmExecutionMetrics";
 import { getPmMarketWsSourceMode } from "./pmMarketWsMode";
 import { demotePmHttpToVpsFromLocalNetworkError, resolvePmHttpMode } from "./pmTransportMode";
@@ -70,6 +72,8 @@ export interface PmTransportHttpOptions {
   headers?: Record<string, string>;
   account?: PlatformAccount;
   l2Path?: string;
+  timeoutMs?: number;
+  l2Timestamp?: number;
 }
 
 type PmHttpMethod = "GET" | "POST" | "DELETE";
@@ -101,11 +105,12 @@ async function resolveAuthHeaders(
   account: PlatformAccount | undefined,
   polyFromOptions: Record<string, string> | undefined,
   bodyText = "",
+  timestamp?: number,
 ): Promise<Record<string, string>> {
   if (polyFromOptions)
     return { ...polyFromOptions };
   if (account && l2Path) {
-    const built = await buildL2HeadersFromAccount(account, method, l2Path, bodyText);
+    const built = await buildL2HeadersFromAccount(account, method, l2Path, bodyText, timestamp);
     if (built)
       return built;
   }
@@ -178,13 +183,16 @@ async function pmHttpViaDirect<T>(
     options?.account,
     pickPolyHeaders(options?.headers),
     bodyText,
+    options?.l2Timestamp,
   );
   try {
     if (method === "GET")
       return await directGet<T>(url, headers);
     if (method === "DELETE")
       return await directDeleteJson<T>(url, headers, data);
-    return await directPostJson<T>(url, headers, data);
+    return options?.timeoutMs == null
+      ? await directPostJson<T>(url, headers, data)
+      : await directPostJson<T>(url, headers, data, { timeout: options.timeoutMs });
   }
   catch (err) {
     rethrowAfterLocalNetworkDemote(err);
@@ -482,10 +490,14 @@ async function pmEsportCallLocal<T>(
       if (!order)
         throw new Error("order 必填");
       const gateway = clobGatewayFromAccount(account);
-      return localHttpPost<T>(mode, `${gateway}${ORDER_PATH}`, order, {
+      const request = localHttpPost<T>(mode, `${gateway}${ORDER_PATH}`, order, {
         account,
         l2Path: ORDER_PATH,
+        timeoutMs: PM_SUBMIT_ORDER_TIMEOUT_MS,
+        l2Timestamp: mode === "direct" ? browserSubmitTimestamp(gateway) : undefined,
       });
+      // 本机 POST 超时可能已经受理：只报告不确定结果，绝不换出口重发。
+      return mode === "direct" ? withTimeout(request, PM_SUBMIT_ORDER_TIMEOUT_MS) : request;
     }
     case "Pm_CancelOrder": {
       const account = requireEsportAccount(body);
@@ -592,13 +604,6 @@ async function pmEsportCallExtension<T>(
   return pmEsportCallLocal<T>("extension", action, body);
 }
 
-function isPmPluginDisconnectError(err: unknown): boolean {
-  const msg = pluginErrorMessage(err);
-  return /Could not establish connection/i.test(msg)
-    || /Receiving end does not exist/i.test(msg)
-    || /Extension context invalidated/i.test(msg);
-}
-
 function vpsEsportOpts(action: string): { timeoutMs: number } | undefined {
   return action === "Pm_SubmitOrder" ? { timeoutMs: PM_SUBMIT_ORDER_TIMEOUT_MS } : undefined;
 }
@@ -687,8 +692,8 @@ async function pmPrivateReadDirectFirst<T>(
 /**
  * pmClientApi 底层：按 mode 走 VPS 语义 API / 直连 / 插件。
  * 官网模式的读取优先直连，网络失败/超时回落 VPS；relay 模式固定 VPS。
- * 官方 PM-M 用户：公开/私有读取 direct-first；交易写入仍走 VPS。
- * Pm_SubmitOrder：HTTP 只等 POST ACK（30s）；插件断连同一次回落 VPS。timeout 不重试 POST。
+ * 官方 PM-M 用户：公开/私有读取 direct-first；下单使用独立出口偏好。
+ * Pm_SubmitOrder：HTTP 只等 POST ACK（30s），失败或超时均不切换出口重发。
  * 官方 delayed 撮合不占这个窗，见 marketDelay `sd`。
  */
 export async function pmEsportCall<T>(
@@ -700,7 +705,7 @@ export async function pmEsportCall<T>(
   if (action === "Pm_PrepareSubmit") return changmenPmEsportCall<T>(action, stripEsportBodyForVps(body));
   if (shouldDirectFirstPrivateRead(action))
     return pmPrivateReadDirectFirst<T>(action, body);
-  const mode = resolvePmHttpMode();
+  const mode = action === "Pm_SubmitOrder" ? resolvePmOrderSubmitHttpMode() : resolvePmHttpMode();
   if (mode === "vps") {
     const opts = vpsEsportOpts(action);
     return opts
@@ -709,19 +714,7 @@ export async function pmEsportCall<T>(
   }
   if (mode === "direct")
     return pmEsportCallDirect<T>(action, body);
-  try {
-    return await pmEsportCallExtension<T>(action, body);
-  }
-  catch (err) {
-    if (action === "Pm_SubmitOrder" && isPmPluginDisconnectError(err)) {
-      return changmenPmEsportCall<T>(
-        action,
-        { ...stripEsportBodyForVps(body), clientL2Timestamp: Math.floor(Date.now() / 1_000) },
-        { timeoutMs: PM_SUBMIT_ORDER_TIMEOUT_MS },
-      );
-    }
-    throw err;
-  }
+  return pmEsportCallExtension<T>(action, body);
 }
 
 async function pmGetBookPreferDirect<T>(body: Record<string, unknown>): Promise<T> {

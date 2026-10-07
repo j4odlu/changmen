@@ -23,10 +23,12 @@ import {
   hasOpenPolymarketPosition,
   resolvePmRemainingShares,
   sellPolymarketBuyPosition,
+  pmSubmitScope,
   type OrderRowLike,
 } from "@changmen/venue-adapter/polymarket";
 import { pfSubmitSell } from "@changmen/venue-adapter/predictfun";
 import { saveOrders } from "@/api/order";
+import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { a8Tip } from "@/shared/a8Notify";
 import { useAccountStore } from "@/stores/accountStore";
 import { useOrderStore } from "@/stores/orderStore";
@@ -155,13 +157,17 @@ async function sellPmBuy(
     return { ok: false, error: "卖出进行中" };
   try {
     const { trackPmManualSellClosing, clearPmManualSellClosing } = await import("@/stores/account/pmManualSell");
+    const sessionVersion = getAuthSessionVersion();
+    const scope = pmSubmitScope(account);
+    const current = () => isAuthSessionCurrent(sessionVersion) && scope === pmSubmitScope(account);
     const result = await sellPolymarketBuyPosition({
       account,
       buyRow: buy as VenueOrder | OrderRowLike,
       onSubmitted: (info) => {
-        trackPmManualSellClosing(orderId, info);
+        if (current()) trackPmManualSellClosing(orderId, info, account);
       },
     });
+    if (!current()) return { ok: false, error: "用户或钱包已改变，原卖单保留待确认" };
     if (!result.ok) {
       if (result.unfilled)
         clearPmManualSellClosing(orderId);
@@ -170,7 +176,7 @@ async function sellPmBuy(
     if (result.ordersToSave?.length) {
       try {
         await saveOrders(account, result.ordersToSave);
-        clearPmManualSellClosing(orderId);
+        if (current()) clearPmManualSellClosing(orderId);
       }
       catch (err) {
         return {

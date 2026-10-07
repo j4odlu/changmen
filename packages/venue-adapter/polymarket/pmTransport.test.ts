@@ -19,6 +19,9 @@ import {
   setPmGetBookDirectTimeoutMsForTests,
 } from "./pmTransport";
 import { resolvePmHttpMode, setPmHttpModeForTests } from "./pmTransportMode";
+import { getPmOrderSubmitMode, setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "./pmOrderSubmitMode";
+import { browserSubmitTimestamp } from "./pmBrowserSubmitClock";
+vi.mock("./pmBrowserSubmitClock", () => ({ browserSubmitTimestamp: vi.fn(() => 123) }));
 
 vi.mock("@changmen/client-core/shared/http", () => ({
 
@@ -146,6 +149,8 @@ describe("pmTransport mode", () => {
   });
 
   beforeEach(() => {
+    vi.mocked(browserSubmitTimestamp).mockReset().mockReturnValue(123);
+    globalThis.localStorage.removeItem(PM_ORDER_SUBMIT_MODE_KEY);
     clearPmPublicRoutesForTests();
     setPmHttpModeForTests(null);
 
@@ -492,10 +497,97 @@ describe("pmTransport mode", () => {
     );
   });
 
-  it("extension 语义 API Pm_SubmitOrder 走 a8PluginPost", async () => {
-    setPmHttpModeForTests("extension");
+  it("local order selection posts the signed builder body from the browser, independently of query/WS mode", async () => {
+    setPmHttpModeForTests("vps");
+    resetPmMarketWsSourceModeForTests("changmen");
+    setPmOrderSubmitMode("local");
+    const order = { orderType: "FOK", order: { builder: `0x${"1".repeat(64)}`, signature: "signed-order" } };
+    vi.mocked(directPostJson).mockResolvedValue({ success: true, orderID: "local-order" });
+    expect(await pmEsportCall("Pm_SubmitOrder", { playerId: 42, order, _account: pmAccount }))
+      .toEqual({ success: true, orderID: "local-order" });
+    expect(directPostJson).toHaveBeenCalledWith("https://clob.polymarket.com/order",
+      expect.objectContaining({ POLY_API_KEY: "key" }), order, { timeout: PM_SUBMIT_ORDER_TIMEOUT_MS });
+    expect(changmenPmEsportCall).not.toHaveBeenCalled();
+    expect(a8PluginPost).not.toHaveBeenCalled();
+    vi.mocked(changmenPmEsportCall).mockResolvedValue({ asks: [] });
+    await pmEsportCall("Pm_GetBook", { tokenId: "123" });
+    expect(changmenPmEsportCall).toHaveBeenCalledWith("Pm_GetBook", { tokenId: "123" });
+  });
 
-    vi.mocked(a8PluginPost).mockResolvedValue({ success: true, orderID: "oid-1" });
+  it("explicit VPS order selection wins over a legacy direct HTTP mode", async () => {
+    setPmHttpModeForTests("direct");
+    setPmOrderSubmitMode("vps");
+    const order = { order: { builder: `0x${"2".repeat(64)}` } };
+    vi.mocked(changmenPmEsportCall).mockResolvedValue({ success: true, orderID: "vps-order" });
+    await pmEsportCall("Pm_SubmitOrder", { playerId: 42, order, _account: pmAccount });
+    expect(changmenPmEsportCall).toHaveBeenCalledWith("Pm_SubmitOrder", { playerId: 42, order },
+      { timeoutMs: PM_SUBMIT_ORDER_TIMEOUT_MS });
+    expect(directPostJson).not.toHaveBeenCalled();
+    expect(a8PluginPost).not.toHaveBeenCalled();
+  });
+
+  it("a stalled local order times out without replaying through VPS or changing the order preference", async () => {
+    vi.useFakeTimers();
+    try {
+      setPmHttpModeForTests("vps");
+      setPmOrderSubmitMode("local");
+      vi.mocked(directPostJson).mockImplementation(() => new Promise(() => {}));
+      const submitted = pmEsportCall("Pm_SubmitOrder", { playerId: 42, order: { orderType: "FOK" }, _account: pmAccount });
+      const rejected = expect(submitted).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(PM_SUBMIT_ORDER_TIMEOUT_MS + 1);
+      await rejected;
+      expect(directPostJson).toHaveBeenCalledOnce();
+      expect(changmenPmEsportCall).not.toHaveBeenCalled();
+      expect(a8PluginPost).not.toHaveBeenCalled();
+      expect(getPmOrderSubmitMode()).toBe("local");
+    }
+    finally { vi.useRealTimers(); }
+  });
+
+  it("a rejected local order is never retried through another transport", async () => {
+    setPmHttpModeForTests("vps");
+    setPmOrderSubmitMode("local");
+    vi.mocked(directPostJson).mockRejectedValue(new Error("FOK order is not fully fillable"));
+    await expect(pmEsportCall("Pm_SubmitOrder", { playerId: 42, order: {}, _account: pmAccount })).rejects.toThrow("FOK");
+    expect(directPostJson).toHaveBeenCalledOnce();
+    expect(changmenPmEsportCall).not.toHaveBeenCalled();
+    expect(a8PluginPost).not.toHaveBeenCalled();
+  });
+
+  it("a missing local clock sample rejects before POST and never falls back", async () => {
+    setPmOrderSubmitMode("local");
+    vi.mocked(browserSubmitTimestamp).mockImplementation(() => { throw new Error("PM 本地提交校时未就绪"); });
+    await expect(pmEsportCall("Pm_SubmitOrder", { playerId: 42, order: {}, _account: pmAccount }))
+      .rejects.toThrow("校时未就绪");
+    expect(directPostJson).not.toHaveBeenCalled();
+    expect(changmenPmEsportCall).not.toHaveBeenCalled();
+  });
+
+  it("local order HTTP business errors do not demote query routing or replay", async () => {
+    setPmHttpModeForTests("extension");
+    setPmOrderSubmitMode("local");
+    vi.mocked(directPostJson).mockRejectedValue(Object.assign(new Error("Network Error from upstream"), {
+      response: { status: 400, data: { error: "Network Error from upstream" } },
+    }));
+    await expect(pmEsportCall("Pm_SubmitOrder", { playerId: 42, order: {}, _account: pmAccount })).rejects.toThrow();
+    expect(resolvePmHttpMode()).toBe("extension");
+    expect(changmenPmEsportCall).not.toHaveBeenCalled();
+    expect(a8PluginPost).not.toHaveBeenCalled();
+  });
+
+  it("local order preference leaves cancellation on the existing VPS route", async () => {
+    setPmHttpModeForTests("vps");
+    setPmOrderSubmitMode("local");
+    vi.mocked(changmenPmEsportCall).mockResolvedValue({ canceled: ["oid"] });
+    await pmEsportCall("Pm_CancelOrder", { playerId: 42, orderId: "oid", _account: pmAccount });
+    expect(changmenPmEsportCall).toHaveBeenCalledWith("Pm_CancelOrder", { playerId: 42, orderId: "oid" });
+    expect(directPostJson).not.toHaveBeenCalled();
+    expect(a8PluginPost).not.toHaveBeenCalled();
+  });
+
+  it.each(["direct", "extension"] as const)("default order route remains VPS when legacy HTTP is %s", async mode => {
+    setPmHttpModeForTests(mode);
+    vi.mocked(changmenPmEsportCall).mockResolvedValue({ success: true, orderID: "oid-1" });
 
     const result = await pmEsportCall("Pm_SubmitOrder", {
 
@@ -509,15 +601,11 @@ describe("pmTransport mode", () => {
 
     expect(result).toEqual({ success: true, orderID: "oid-1" });
 
-    expect(a8PluginPost).toHaveBeenCalledWith(
-
-      "https://clob.polymarket.com/order",
-
-      { foo: 1 },
-
-      expect.objectContaining({ headers: expect.objectContaining({ POLY_API_KEY: "key" }) }),
-
-    );
+    expect(getPmOrderSubmitMode()).toBe("vps");
+    expect(changmenPmEsportCall).toHaveBeenCalledWith("Pm_SubmitOrder", { playerId: 42, order: { foo: 1 } },
+      { timeoutMs: PM_SUBMIT_ORDER_TIMEOUT_MS });
+    expect(a8PluginPost).not.toHaveBeenCalled();
+    expect(directPostJson).not.toHaveBeenCalled();
   });
 
   it("extension 语义 API Pm_GetTrades 分页", async () => {
@@ -576,8 +664,8 @@ describe("pmTransport mode", () => {
     );
   });
 
-  it("extension 缺少 _account 时抛错", async () => {
-    setPmHttpModeForTests("extension");
+  it("local 缺少 _account 时抛错", async () => {
+    setPmOrderSubmitMode("local");
 
     await expect(pmEsportCall("Pm_SubmitOrder", { playerId: 1, order: {} }))
 
@@ -585,9 +673,10 @@ describe("pmTransport mode", () => {
       .toThrow(/需要账号 token/);
   });
 
-  it("extension SubmitOrder Network Error 将 HTTP 降回 vps", async () => {
-    setPmHttpModeForTests("extension");
-    vi.mocked(a8PluginPost).mockRejectedValue(new Error("Network Error"));
+  it("local SubmitOrder Network Error 将查询 HTTP 降回 vps，但不重发订单", async () => {
+    setPmHttpModeForTests("direct");
+    setPmOrderSubmitMode("local");
+    vi.mocked(directPostJson).mockRejectedValue(new Error("Network Error"));
 
     await expect(pmEsportCall("Pm_SubmitOrder", {
       playerId: 42,
@@ -596,6 +685,8 @@ describe("pmTransport mode", () => {
     })).rejects.toThrow(/Network Error/);
 
     expect(resolvePmHttpMode()).toBe("vps");
+    expect(getPmOrderSubmitMode()).toBe("local");
+    expect(changmenPmEsportCall).not.toHaveBeenCalled();
   });
 
   it("extension GetBook Network Error 也将 HTTP 降回 vps", async () => {
@@ -609,12 +700,13 @@ describe("pmTransport mode", () => {
     expect(resolvePmHttpMode()).toBe("vps");
   });
 
-  it("extension 扩展断连时同一次 SubmitOrder 回落 VPS", async () => {
+  it("local order ignores a disconnected legacy extension", async () => {
     setPmHttpModeForTests("extension");
+    setPmOrderSubmitMode("local");
     vi.mocked(a8PluginPost).mockRejectedValue(
       new Error("Could not establish connection. Receiving end does not exist."),
     );
-    vi.mocked(changmenPmEsportCall).mockResolvedValue({ success: true, orderID: "vps-oid" });
+    vi.mocked(directPostJson).mockResolvedValue({ success: true, orderID: "local-oid" });
 
     const result = await pmEsportCall("Pm_SubmitOrder", {
       playerId: 42,
@@ -622,13 +714,10 @@ describe("pmTransport mode", () => {
       _account: pmAccount,
     });
 
-    expect(result).toEqual({ success: true, orderID: "vps-oid" });
-    expect(resolvePmHttpMode()).toBe("vps");
-    expect(changmenPmEsportCall).toHaveBeenCalledWith(
-      "Pm_SubmitOrder",
-      { playerId: 42, order: { foo: 1 }, clientL2Timestamp: expect.any(Number) },
-      { timeoutMs: PM_SUBMIT_ORDER_TIMEOUT_MS },
-    );
+    expect(result).toEqual({ success: true, orderID: "local-oid" });
+    expect(resolvePmHttpMode()).toBe("extension");
+    expect(a8PluginPost).not.toHaveBeenCalled();
+    expect(changmenPmEsportCall).not.toHaveBeenCalled();
   });
 
   it("extension 插件 resolve(AxiosError) 也将 HTTP 降回 vps", async () => {
@@ -640,7 +729,7 @@ describe("pmTransport mode", () => {
       request: {},
     });
 
-    await expect(pmEsportCall("Pm_SubmitOrder", {
+    await expect(pmEsportCall("Pm_Heartbeat", {
       playerId: 42,
       order: { foo: 1 },
       _account: pmAccount,
@@ -649,12 +738,10 @@ describe("pmTransport mode", () => {
     expect(resolvePmHttpMode()).toBe("vps");
   });
 
-  it("extension FOK 业务失败不降级 HTTP", async () => {
+  it("local FOK 业务失败不降级查询 HTTP", async () => {
     setPmHttpModeForTests("extension");
-    vi.mocked(a8PluginPost).mockResolvedValue({
-      status: 200,
-      data: { success: false, errorMsg: "FOK 未成交" },
-    });
+    setPmOrderSubmitMode("local");
+    vi.mocked(directPostJson).mockResolvedValue({ success: false, errorMsg: "FOK 未成交" });
 
     const result = await pmEsportCall("Pm_SubmitOrder", {
       playerId: 42,

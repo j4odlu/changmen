@@ -12,14 +12,20 @@ import {
   resolvePmRemainingShares,
   sellPolymarketBuyPosition,
 } from "@changmen/venue-adapter/polymarket";
-import { saveOrders } from "@/api/order";
+import { saveOrders, getPmSubmission } from "@/api/order";
+import { validatePmSubmission } from "@changmen/shared/pm_submission";
 import { groupOrdersByEffectiveLink } from "@/shared/orderLink";
 import { formatPolymarketApiDecimal } from "@/shared/pmOrderDisplay";
 import { useAccountStore } from "@/stores/accountStore";
 import { useOrderStore } from "@/stores/orderStore";
 import type { OrderRow } from "@/types/order";
+import { finishPmSubmitAttempt, pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-adapter/polymarket";
+import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 
 type ClosingEntry = {
+  pmScope?: string;
+  accountId?: number;
+  ordersToSave?: VenueOrder[];
   sellOrderId: string;
   at: number;
   fallbackPrice?: number;
@@ -67,6 +73,9 @@ function loadClosing(): Map<string, ClosingEntry> {
             at: Number(v?.at) || Date.now(),
             fallbackPrice: Number(v?.fallbackPrice) > 0 ? Number(v.fallbackPrice) : undefined,
             sharesWanted: Number(v?.sharesWanted) > 0 ? Number(v.sharesWanted) : undefined,
+            pmScope: typeof v.pmScope === "string" ? v.pmScope : undefined,
+            accountId: Number(v.accountId) || undefined,
+            ordersToSave: Array.isArray(v.ordersToSave) ? v.ordersToSave : undefined,
           });
         }
       }
@@ -95,7 +104,7 @@ function setClosingMap(next: Map<string, ClosingEntry>): void {
 function enterClosing(
   buyOrderId: string,
   sellOrderId: string,
-  opts?: { fallbackPrice?: number; sharesWanted?: number },
+  opts?: { fallbackPrice?: number; sharesWanted?: number; account?: PlatformAccount },
 ): void {
   const id = String(buyOrderId ?? "").trim();
   const sellId = String(sellOrderId ?? "").trim();
@@ -103,6 +112,7 @@ function enterClosing(
     return;
   const next = new Map(closingByBuyId.value);
   next.set(id, {
+    ...(opts?.account ? { pmScope: pmSubmitScope(opts.account), accountId: opts.account.accountId } : {}),
     sellOrderId: sellId,
     at: Date.now(),
     fallbackPrice: opts?.fallbackPrice,
@@ -115,6 +125,14 @@ function clearClosing(buyOrderId: string): void {
   const id = String(buyOrderId ?? "").trim();
   if (!id || !closingByBuyId.value.has(id))
     return;
+  const sellId = closingByBuyId.value.get(id)?.sellOrderId;
+  const scope = closingByBuyId.value.get(id)?.pmScope;
+  if (sellId) {
+    for (const account of useAccountStore().accounts ?? []) {
+      if (account.provider !== "Polymarket") continue;
+      try { if (!scope || pmSubmitScope(account) === scope) finishPmSubmitAttempt(account, sellId); } catch { /* 保留持久化锁 */ }
+    }
+  }
   const next = new Map(closingByBuyId.value);
   next.delete(id);
   setClosingMap(next);
@@ -234,18 +252,31 @@ async function persistFilledSell(
   buyRow: OrderRow,
   ordersToSave: VenueOrder[],
 ): Promise<boolean> {
+  const sessionVersion = getAuthSessionVersion();
+  const scope = pmSubmitScope(account);
+  const current = () => isAuthSessionCurrent(sessionVersion) && scope === pmSubmitScope(account);
   try {
     await saveOrders(account, ordersToSave);
-    return true;
+    return current();
   }
   catch (saveErr) {
+    if (!current()) return false;
     try {
       await saveOrders(account, ordersToSave);
-      return true;
+      return current();
     }
     catch {
+      if (!current()) return false;
+      const id = String(buyRow.OrderID ?? "");
+      const closing = closingByBuyId.value.get(id);
+      if (closing) {
+        const next = new Map(closingByBuyId.value);
+        next.set(id, { ...closing, ordersToSave });
+        setClosingMap(next);
+      }
       // 勿立刻 fetchOrders：会冲掉本地乐观已平仓，导致按钮可再卖 → 双卖
       applyManualSellOrdersLocally(buyRow, ordersToSave);
+      scheduleResumePmManualSellClosings();
       ElMessage.error(
         `链上已平仓，但订单落库失败：${saveErr instanceof Error ? saveErr.message : String(saveErr)}。已按已平仓展示，请稍后刷新。`,
       );
@@ -262,10 +293,12 @@ export function isPmManualSellClosing(orderId: string | number | undefined): boo
 export function trackPmManualSellClosing(
   buyOrderId: string,
   info: { sellOrderId: string; fallbackPrice?: number; sharesWanted?: number },
+  account?: PlatformAccount,
 ): void {
   enterClosing(buyOrderId, info.sellOrderId, {
     fallbackPrice: info.fallbackPrice,
     sharesWanted: info.sharesWanted,
+    account,
   });
 }
 
@@ -331,6 +364,17 @@ async function applyFinalFilled(
 export async function resumePmManualSellClosings(): Promise<void> {
   if (resumeInFlight)
     return;
+  for (const account of useAccountStore().accounts ?? []) {
+    if (account.provider !== "Polymarket") continue;
+    try {
+      for (const attempt of pmAccountSubmitAttempts(account)) {
+        if (attempt.side === "SELL" && attempt.parentBuyId && !closingByBuyId.value.has(attempt.parentBuyId))
+          enterClosing(attempt.parentBuyId, attempt.acceptedOrderId || attempt.orderHash,
+            { sharesWanted: Number(attempt.makerAmount) / 1e6,
+              fallbackPrice: Number(attempt.takerAmount) / Number(attempt.makerAmount), account });
+      }
+    } catch { /* 凭证尚未可用时不解除锁 */ }
+  }
   const entries = [...closingByBuyId.value.entries()];
   if (!entries.length)
     return;
@@ -352,23 +396,50 @@ export async function resumePmManualSellClosings(): Promise<void> {
 
       const row = byId.get(buyId);
       if (!row) {
-        clearClosing(buyId);
+        // 列表尚未加载或过滤掉父单，不能解除未决卖出。
         continue;
       }
       if (!entry.sellOrderId) {
         clearClosing(buyId);
         continue;
       }
-      // 已落库 closed：直接清会话
-      if (String(row.PmSellState ?? "").toLowerCase() === "closed"
-        || resolvePmRemainingShares(row) <= 0.0001) {
+      const account = accountStore.findAccount(Number(row.PlayerID));
+      if (!account?.token || account.provider !== "Polymarket") continue;
+      if (!entry.pmScope) {
+        const original = pmAccountSubmitAttempts(account).find(attempt => attempt.parentBuyId === buyId
+          && (attempt.orderHash === entry.sellOrderId || attempt.acceptedOrderId === entry.sellOrderId));
+        if (!original) {
+          const version = getAuthSessionVersion();
+          const scope = pmSubmitScope(account);
+          let snapshot;
+          try { snapshot = validatePmSubmission(await getPmSubmission(account.accountId, buyId), buyId, account.accountId); }
+          catch { continue; }
+          if (!isAuthSessionCurrent(version) || scope !== pmSubmitScope(account)
+            || !snapshot?.makerAddress || snapshot.makerAddress !== pmSubmitMaker(account)) continue;
+        }
+        entry.pmScope = pmSubmitScope(account);
+        entry.accountId = account.accountId;
+        writeClosing(closingByBuyId.value);
+      }
+      if (entry.pmScope !== pmSubmitScope(account) || entry.accountId !== account.accountId) continue;
+      const sessionVersion = getAuthSessionVersion();
+      // 乐观展示不能视为已落库：优先重放原补丁，避免再次计提盈亏。
+      if (entry.ordersToSave?.length) {
+        if (await persistFilledSell(account, row, entry.ordersToSave) && isAuthSessionCurrent(sessionVersion)) {
+          clearClosing(buyId);
+          try { await orderStore.fetchOrders(); } catch { /* 下次刷新 */ }
+        } else scheduleResumePmManualSellClosings();
+        continue;
+      }
+      const accountedSell = String(row.PmLastSellOrderId ?? "").toLowerCase() === entry.sellOrderId.toLowerCase()
+        || row.PositionEvents?.sells?.some(event => String(event.id).toLowerCase() === entry.sellOrderId.toLowerCase());
+      if (accountedSell) {
         clearClosing(buyId);
         continue;
       }
-
-      const account = accountStore.findAccount(Number(row.PlayerID));
-      if (!account?.token) {
-        // 账号暂不可用：保留 closing，下次再 resume
+      // 父单被其它卖出关闭不能证明本次卖单已归账，保留资产锁。
+      if (String(row.PmSellState ?? "").toLowerCase() === "closed"
+        || resolvePmRemainingShares(row) <= 0.0001) {
         continue;
       }
 
@@ -381,6 +452,7 @@ export async function resumePmManualSellClosings(): Promise<void> {
           fallbackPrice: entry.fallbackPrice,
           sharesWanted: entry.sharesWanted,
         });
+        if (!isAuthSessionCurrent(sessionVersion) || entry.pmScope !== pmSubmitScope(account)) continue;
         if (final.outcome === "filled") {
           const saved = await persistFilledSell(account, row, final.ordersToSave);
           if (saved) {
@@ -390,6 +462,7 @@ export async function resumePmManualSellClosings(): Promise<void> {
             }
             catch { /* ignore */ }
           }
+          else scheduleResumePmManualSellClosings();
           // 落库失败：保留 closing 下次再试
         }
         else if (final.outcome === "unfilled") {
@@ -442,17 +515,23 @@ export async function confirmAndSellPmBuyOrder(row: OrderRow): Promise<boolean> 
       ElMessage.error("找不到对应 Polymarket 账号");
       return false;
     }
+    const sessionVersion = getAuthSessionVersion();
+    const scope = pmSubmitScope(account);
+    const current = () => isAuthSessionCurrent(sessionVersion) && scope === pmSubmitScope(account);
 
     const result = await sellPolymarketBuyPosition({
       account,
       buyRow: row,
       onSubmitted: (info) => {
+        if (!current()) return;
         enterClosing(orderId, info.sellOrderId, {
           fallbackPrice: info.fallbackPrice,
           sharesWanted: info.sharesWanted,
+          account,
         });
       },
     });
+    if (!current()) return false;
 
     if (result.ok && result.ordersToSave?.length) {
       await applyFinalFilled(
@@ -484,6 +563,7 @@ export async function confirmAndSellPmBuyOrder(row: OrderRow): Promise<boolean> 
       enterClosing(orderId, result.sellOrderId, {
         fallbackPrice: closing?.fallbackPrice,
         sharesWanted: closing?.sharesWanted ?? shares,
+        account,
       });
       const final = await awaitPolymarketManualSellFinalOutcome({
         account,

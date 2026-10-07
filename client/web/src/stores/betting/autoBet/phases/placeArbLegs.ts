@@ -175,7 +175,7 @@ export async function placeArbLegs(
       .join(" · "),
   );
 
-  if (betBothLegs && resultA?.success && !resultB?.success && attemptedB) {
+  if (betBothLegs && resultA?.success && !resultB?.success && !resultB?.pmSubmitUnknown && attemptedB) {
     trace?.event("重试", `anyOdds 换腿补 ${legB.type} ${legB.target}`);
     const retry = await retryFailedLeg(
       match,

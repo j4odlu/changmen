@@ -1,9 +1,10 @@
 import { getPmMarketWsSourceMode } from "./pmMarketWsMode";
 import { resolvePmHttpMode, type PmHttpMode } from "./pmTransportMode";
+import { resolvePmOrderSubmitHttpMode } from "./pmOrderSubmitMode";
 
 export type PmBookSource = "direct-live" | "vps-live" | "vps-fallback" | "extension" | "unknown";
 export type PmQuoteSource = "ws" | "http-seed" | "book-correct";
-export type PmExecutionMetricKind = "clock_sample" | "outbound_prepare" | "prepared_wait" | "serial_wait" | "gamma" | "upstream_auth" | "upstream_post" | "runtime" | "guard" | "clock" | "pair_check" | "dispatch" | "quote_to_fo" | "book" | "check" | "sign" | "submit" | "betting";
+export type PmExecutionMetricKind = "submit_ack" | "clock_sample" | "outbound_prepare" | "prepared_wait" | "serial_wait" | "gamma" | "upstream_auth" | "upstream_post" | "runtime" | "guard" | "clock" | "pair_check" | "dispatch" | "quote_to_fo" | "book" | "check" | "sign" | "submit" | "betting";
 
 export interface PmExecutionMetricEntry {
   at: number;
@@ -133,14 +134,15 @@ function errorText(err: unknown): string {
 }
 
 export function recordPmExecutionMetric(
-  entry: Omit<PmExecutionMetricEntry, "at" | "wsSource" | "httpMode">,
+  entry: Omit<PmExecutionMetricEntry, "at" | "wsSource" | "httpMode"> & { httpMode?: PmHttpMode },
 ): void {
+  const { httpMode, ...fields } = entry;
   const target = entry.kind === "quote_to_fo" ? quoteEntries : entries;
   target.push({
     at: Date.now(),
     wsSource: getPmMarketWsSourceMode(),
-    httpMode: resolvePmHttpMode(),
-    ...entry,
+    httpMode: httpMode ?? (entry.kind === "submit" ? resolvePmOrderSubmitHttpMode() : resolvePmHttpMode()),
+    ...fields,
   });
   if (target.length > MAX_ENTRIES)
     target.splice(0, target.length - MAX_ENTRIES);
@@ -168,11 +170,13 @@ export async function measurePmExecution<T>(
   fn: () => Promise<T>,
 ): Promise<T> {
   const startedAt = performanceNow();
+  const httpMode = kind === "submit" ? resolvePmOrderSubmitHttpMode() : resolvePmHttpMode();
   try {
     const value = await fn();
     recordPmExecutionMetric({
       ...fields,
       kind,
+      httpMode,
       ms: elapsedMs(startedAt),
       success: true,
     });
@@ -182,6 +186,7 @@ export async function measurePmExecution<T>(
     recordPmExecutionMetric({
       ...fields,
       kind,
+      httpMode,
       ms: elapsedMs(startedAt),
       success: false,
       error: errorText(err),
@@ -217,7 +222,7 @@ function emptyKindSummary(): PmExecutionKindSummary {
 }
 
 function metricKinds(): PmExecutionMetricKind[] {
-  return ["clock_sample", "outbound_prepare", "prepared_wait", "serial_wait", "gamma", "upstream_auth", "upstream_post", "runtime", "guard", "clock", "pair_check", "dispatch", "quote_to_fo", "book", "check", "sign", "submit", "betting"];
+  return ["submit_ack", "clock_sample", "outbound_prepare", "prepared_wait", "serial_wait", "gamma", "upstream_auth", "upstream_post", "runtime", "guard", "clock", "pair_check", "dispatch", "quote_to_fo", "book", "check", "sign", "submit", "betting"];
 }
 
 function percentile(values: number[], pct: number): number | null {

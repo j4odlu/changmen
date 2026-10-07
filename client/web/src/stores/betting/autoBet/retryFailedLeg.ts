@@ -195,7 +195,7 @@ export async function retryFailedLeg(
       waitSec,
       linkId ? { linkId } : undefined,
     );
-    if (result?.success) {
+    if (result?.success || result?.pmSubmitUnknown) {
       return { leg: retryLeg, account: pickedAccount, result };
     }
   }

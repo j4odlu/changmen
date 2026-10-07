@@ -147,6 +147,26 @@ describe("placeArbLegs two-leg report contract", () => {
     );
   });
 
+  it("an unknown PM first leg does not submit the serial second leg", async () => {
+    betting.mockResolvedValueOnce(Object.assign(new BetResult("Polymarket", false),
+      { pending: true, pmSubmitUnknown: true, orderId: "localhash" }));
+    const out = await placeArbLegs(params, checked({ accountA: account("Polymarket"), legA: leg("Polymarket") }));
+    expect(betting).toHaveBeenCalledOnce();
+    expect(out.placeOutcomeA).toBe("submit_unknown");
+    expect(out.placeOutcomeB).toBe("not_attempted");
+    expect(retryFailedLeg).not.toHaveBeenCalled();
+  });
+
+  it("an unknown PM second leg cannot trigger anyOdds replacement or makeup before settlement", async () => {
+    betting.mockResolvedValueOnce(new BetResult("OB", true))
+      .mockResolvedValueOnce(Object.assign(new BetResult("Polymarket", false),
+        { pending: true, pmSubmitUnknown: true, orderId: "localhash" }));
+    const out = await placeArbLegs(params, checked({ accountB: account("Polymarket"), legB: leg("Polymarket", "Away") }));
+    expect(out.placeOutcomeB).toBe("submit_unknown");
+    expect(retryFailedLeg).not.toHaveBeenCalled();
+    expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
+  });
+
   it("并行双腿 API 失败：双 api_failed，仍返回 placed", async () => {
     const parallelParams = {
       ...params,

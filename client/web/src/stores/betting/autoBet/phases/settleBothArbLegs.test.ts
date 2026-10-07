@@ -129,4 +129,20 @@ describe("settleBothArbLegs A8 wait", () => {
     expect(order).toContain("wait");
     expect(order).toEqual(["Polymarket", "wait", "OB"]);
   });
+
+  it("a sole unknown PM leg is confirmed without a fake API success or binding its local hash", async () => {
+    const input = placed("Polymarket", "OB");
+    input.resultA = Object.assign(new BetResult("Polymarket", false),
+      { pending: true, pmSubmitUnknown: true, orderId: "localhash" });
+    input.resultB = new BetResult("OB", false);
+    input.placeOutcomeA = "submit_unknown"; input.placeOutcomeB = "api_failed";
+    bindArbLegOrder.mockClear();
+    refreshBalance.mockClear();
+    settleArbLegUntilTerminal.mockResolvedValue({ orders: [], rejected: false, pendingConfirm: true });
+    const out = await settleBothArbLegs(params(), input);
+    expect(settleArbLegUntilTerminal).toHaveBeenCalledOnce();
+    expect(out).toMatchObject({ pendingConfirmA: true, rejectA: false });
+    expect(bindArbLegOrder).not.toHaveBeenCalled();
+    expect(refreshBalance).not.toHaveBeenCalled();
+  });
 });

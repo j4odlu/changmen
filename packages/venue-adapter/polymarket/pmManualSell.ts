@@ -9,15 +9,19 @@ import type { PlatformAccount } from "@changmen/client-core/models/platformAccou
 import type { VenueOrder } from "../contract";
 import { PLATFORMS } from "../shared/platforms";
 import { POLYMARKET_CLOB_API } from "./api";
-import { resolvePolymarketBuilderCode } from "./builder";
 import {
   parseTokenConfig,
   resolveApiCreds,
-  resolveFunder,
   resolvePrivateKey,
   type PolymarketTokenConfig,
 } from "./l2Auth";
-import { pmPrepareSubmit, pmGetBook, pmSubmitOrder } from "./pmClientApi";
+import { pmPrepareSubmit, pmSubmitClockReady, pmGetBook, pmSubmitOrder } from "./pmClientApi";
+import { resolvePmOrderSubmitHttpMode } from "./pmOrderSubmitMode";
+import { getPolymarketOrderClientRuntime, polymarketSigningGeneration } from "./pmOrderClientCache";
+import { polymarketMarketOrderOptions } from "./pmMarketOrderOptions";
+import { guardedPmSubmit, PmSubmitUnknownError, finishPmSubmitAttempt } from "./pmSubmitJournal";
+import { pmSubmitAttemptForOrder } from "./pmSubmitJournal";
+import { recoverPmUnknownSubmission } from "./pmUnknownSubmitRecovery";
 import { markPolymarketChangmenOrder } from "./pmOrigin";
 import {
   hasOpenPolymarketPosition,
@@ -47,7 +51,7 @@ import {
   POLYMARKET_DELAYED_TRADE_CONFIRM_OPTS,
 } from "./orderStatus";
 import {
-  normalizePolymarketTickSize,
+  isPolymarketPriceOnTick,
   type PolymarketTickSize,
 } from "./pmTickPrice";
 import { polymarketCnyFromUsdt } from "./pmStake";
@@ -60,6 +64,8 @@ import { registerPolymarketOrderWatch } from "./userWs";
 type Hex = `0x${string}`;
 
 interface PolymarketOrderBookResponse {
+  asset_id?: string;
+  version?: string;
   tick_size?: string | number;
   minimum_tick_size?: string | number;
   min_order_size?: string | number;
@@ -84,6 +90,7 @@ export interface PolymarketManualSellResult {
   fillPrice?: number;
   proceedsUsdc?: number;
   pending?: boolean;
+  pmSubmitUnknown?: boolean;
   /** 待 saveOrders：买单 patch + 卖单（先买后卖，便于同批跟 Link） */
   ordersToSave?: VenueOrder[];
   /** 已确认成交但份数少于请求（仍应落库） */
@@ -163,7 +170,7 @@ export async function estimatePolymarketManualSellProceedsUsdc(params: {
     if (!tokenId || !(sharesWanted > 0))
       return 0;
     const gateway = params.account.gateway || POLYMARKET_CLOB_API;
-    const [book] = await Promise.all([pmGetBook<PolymarketOrderBookResponse>(tokenId, gateway), pmPrepareSubmit(params.account)]);
+    const book = await pmGetBook<PolymarketOrderBookResponse>(tokenId, gateway);
     return estimatePolymarketSellProceedsUsdc(parseBidsFromBook(book), sharesWanted);
   }
   catch {
@@ -208,53 +215,21 @@ async function createPolymarketFokSellOrderBody(
   tokenId: string,
   price: number,
   shares: number,
-  orderOptions: { tickSize: PolymarketTickSize; negRisk: boolean },
+  orderOptions: { tickSize: PolymarketTickSize; negRisk: boolean; version: 2 | 3 },
 ) {
-  const [
-    clob,
-    viem,
-    accounts,
-  ] = await Promise.all([
-    import("@polymarket/clob-client-v2"),
-    import("viem"),
-    import("viem/accounts"),
-  ]);
-  const { createPolygonHttpTransport, polygonChainForRpc } = await import("./polygonRpc");
-  const account = accounts.privateKeyToAccount(privateKey);
-  const signer = viem.createWalletClient({
-    account,
-    chain: polygonChainForRpc(),
-    transport: createPolygonHttpTransport(),
+  const { runtime: { clob, builder, builderCode } } = await getPolymarketOrderClientRuntime({
+    gateway, privateKey, creds, config, signatureType: resolveSdkSignatureType(creds.signatureType),
   });
-  const builderCode = resolvePolymarketBuilderCode();
-  const client = new clob.ClobClient({
-    host: gateway,
-    chain: clob.Chain.POLYGON,
-    signer,
-    creds: {
-      key: creds.apiKey!,
-      secret: creds.secret!,
-      passphrase: creds.passphrase!,
-    },
-    signatureType: resolveSdkSignatureType(creds.signatureType) as any,
-    funderAddress: resolveFunder(config) || undefined,
-    builderConfig: { builderCode },
-  });
-  Reflect.set(client, "cachedVersion", 2);
-  client.tickSizes[tokenId] = orderOptions.tickSize as any;
-  client.negRisk[tokenId] = orderOptions.negRisk;
-  client.feeInfos[tokenId] = { rate: 0, exponent: 0 };
-  client.builderFeeRates[builderCode] = { maker: 0, taker: 0 };
-
-  const signedOrder = await client.createMarketOrder({
+  const signedOrder = await builder.buildMarketOrder({
     tokenID: tokenId,
     price,
     amount: shares,
     side: clob.Side.SELL,
+    builderCode,
   }, {
     tickSize: orderOptions.tickSize as any,
     negRisk: orderOptions.negRisk,
-  });
+  }, orderOptions.version);
   if (!clob.isV2Order(signedOrder))
     throw new Error("Polymarket SDK 未生成 CLOB v2 卖单");
   return clob.orderToJsonV2(signedOrder, creds.apiKey!, clob.OrderType.FOK, false, false);
@@ -425,6 +400,14 @@ export async function awaitPolymarketManualSellFinalOutcome(params: {
   fallbackPrice?: number;
   sharesWanted?: number;
 }): Promise<PolymarketManualSellFinalOutcome> {
+  const attempt = pmSubmitAttemptForOrder(params.account, params.sellOrderId);
+  let recoveredEvidence = attempt?.evidence;
+  if (attempt && !params.postResponse && ["dispatching", "submit_unknown"].includes(attempt.state)) {
+    const recovered = await recoverPmUnknownSubmission(params.account, params.sellOrderId, "SELL", attempt.submittedAt);
+    if (!recovered)
+      return { outcome: "pending", sellOrderId: params.sellOrderId, reason: "卖出提交结果不确定，继续核对原单" };
+    recoveredEvidence = recovered;
+  }
   const sellOrderId = String(params.sellOrderId ?? "").trim();
   const buy = normalizeManualSellBuy(params.buyRow);
   const sharesWanted = params.sharesWanted && params.sharesWanted > 0
@@ -449,6 +432,14 @@ export async function awaitPolymarketManualSellFinalOutcome(params: {
       fallbackPrice,
       sharesWanted,
     });
+  }
+
+  const recoveredShares = Number(recoveredEvidence?.trade?.size);
+  const recoveredPrice = Number(recoveredEvidence?.trade?.price);
+  if (recoveredShares > 0 && recoveredPrice > 0 && recoveredPrice < 1) {
+    return buildFilledOutcome({ account: params.account, buy, sellOrderId,
+      sharesSold: recoveredShares, proceedsUsdc: recoveredShares * recoveredPrice,
+      fallbackPrice, sharesWanted });
   }
 
   const conditionId = String(buy.pmConditionId ?? "").trim();
@@ -479,12 +470,15 @@ export async function awaitPolymarketManualSellFinalOutcome(params: {
     conditionId: conditionId || undefined,
   });
 
-  const settled = await awaitPolymarketSettlementJob(params.account, sellOrderId)
+  let settled = await awaitPolymarketSettlementJob(params.account, sellOrderId)
     ?? await settlePolymarketDelayedOrder(params.account, sellOrderId, {
       side: "SELL",
       poll,
       tradeConfirm,
     });
+  if (interpretPolymarketOrderRow(recoveredEvidence?.row) === "matched"
+    && interpretPolymarketOrderRow(settled.row) !== "matched")
+    settled = { outcome: "matched", row: recoveredEvidence!.row };
 
   if (
     settled.outcome === "unfilled"
@@ -677,17 +671,22 @@ export async function sellPolymarketBuyPosition(params: {
   let submittedSellOrderId = "";
   let sellLimitPrice = 0;
   try {
-    const book = await pmGetBook<PolymarketOrderBookResponse>(tokenId, gateway);
+    const submitMode = resolvePmOrderSubmitHttpMode();
+    const signingGeneration = polymarketSigningGeneration();
+    const accountBinding = JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]);
+    const [book] = await Promise.all([
+      pmGetBook<PolymarketOrderBookResponse>(tokenId, gateway),
+      pmPrepareSubmit(params.account),
+    ]);
     const bids = parseBidsFromBook(book);
-    const tickSize = normalizePolymarketTickSize(book?.tick_size ?? book?.minimum_tick_size);
-    const minOrderSize = Number(book?.min_order_size) || 0;
-    const negRisk = Boolean(book?.neg_risk);
+    const { tickSize, minOrderSize, negRisk, version } = polymarketMarketOrderOptions(book, tokenId);
 
     const estimated = estimatePolymarketSellProceedsUsdc(bids, sharesWanted);
     if (!(estimated > 0))
       throw new Error("bids 深度不足以全卖该买单份额");
 
     const price = calculateSellMarketLimitPrice(bids, sharesWanted, minOrderSize);
+    if (!isPolymarketPriceOnTick(price, tickSize)) throw new Error("PM 卖出限价不符合盘口 tick");
     sellLimitPrice = price;
     const orderBody = await createPolymarketFokSellOrderBody(
       gateway,
@@ -697,9 +696,23 @@ export async function sellPolymarketBuyPosition(params: {
       tokenId,
       price,
       sharesWanted,
-      { tickSize, negRisk },
+      { tickSize, negRisk, version },
     );
-    const result = await pmSubmitOrder<PolymarketOrderResponse>(params.account, orderBody);
+    if (resolvePmOrderSubmitHttpMode() !== submitMode)
+      throw new Error("PM 下单方式已改变，请重新卖出");
+    if (polymarketSigningGeneration() !== signingGeneration
+      || JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]) !== accountBinding)
+      throw new Error("PM 账号或钱包会话已改变，请重新卖出");
+    if (!pmSubmitClockReady(params.account))
+      throw new Error("PM 提交校时未就绪，请重新卖出");
+    const result = await guardedPmSubmit(params.account, orderBody,
+      { version, negRisk, parentBuyId: String(buy.orderId), validateBeforeDispatch: () => {
+        if (polymarketSigningGeneration() !== signingGeneration
+          || JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]) !== accountBinding)
+          throw new Error("PM 账号或钱包会话已改变，请重新卖出");
+        if (!pmSubmitClockReady(params.account)) throw new Error("PM 提交校时未就绪，请重新卖出");
+      } },
+      () => pmSubmitOrder<PolymarketOrderResponse>(params.account, orderBody));
     const sellOrderId = String(result?.orderID ?? "").trim();
     submittedSellOrderId = sellOrderId;
     if (!result?.success || !sellOrderId) {
@@ -727,6 +740,7 @@ export async function sellPolymarketBuyPosition(params: {
     });
 
     if (final.outcome === "unfilled") {
+      finishPmSubmitAttempt(params.account, sellOrderId);
       return {
         ok: false,
         error: final.reason,
@@ -757,6 +771,18 @@ export async function sellPolymarketBuyPosition(params: {
     };
   }
   catch (err) {
+    if (err instanceof PmSubmitUnknownError) {
+      if (err.attempt.parentBuyId !== String(buy.orderId))
+        return { ok: false, error: "同资产的另一张买单仍在平仓确认中，请等待原单完成", unfilled: true };
+      const lookupId = err.attempt.acceptedOrderId || err.attempt.orderHash;
+      // 让现有平仓续查持有查询哈希；它不属于官方 ACK。
+      try { params.onSubmitted?.({ sellOrderId: lookupId,
+        fallbackPrice: Number(err.attempt.takerAmount) / Number(err.attempt.makerAmount),
+        sharesWanted: Number(err.attempt.makerAmount) / 1e6 }); } catch { /* UI 不影响原单 */ }
+      return { ok: false, error: err.message, sellOrderId: lookupId,
+        pending: true, pmSubmitUnknown: !err.attempt.acceptedOrderId,
+        unfilled: false, chainSubmitted: Boolean(err.attempt.acceptedOrderId) };
+    }
     // 已受理但确认过程抛错：再跑一遍终态，保证不卡在模糊态
     if (submittedSellOrderId) {
       try {

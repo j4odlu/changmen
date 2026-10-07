@@ -13,10 +13,12 @@ import {
   estimatePolymarketManualSellProceedsUsdc,
   hasOpenPolymarketPosition,
   sellPolymarketBuyPosition,
+  pmSubmitScope,
   type OrderRowLike,
 } from "@changmen/venue-adapter/polymarket";
 import { pfSubmitSell } from "@changmen/venue-adapter/predictfun";
 import { saveOrders } from "@/api/order";
+import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { a8Tip } from "@/shared/a8Notify";
 import { isSingleLegLink } from "@changmen/client-core/shared/format";
 import {
@@ -216,13 +218,17 @@ async function sellPm(account: PlatformAccount, row: OrderRow): Promise<boolean>
     return false;
   try {
     const { trackPmManualSellClosing, clearPmManualSellClosing } = await import("@/stores/account/pmManualSell");
+    const sessionVersion = getAuthSessionVersion();
+    const scope = pmSubmitScope(account);
+    const current = () => isAuthSessionCurrent(sessionVersion) && scope === pmSubmitScope(account);
     const result = await sellPolymarketBuyPosition({
       account,
       buyRow: row as OrderRowLike,
       onSubmitted: (info) => {
-        trackPmManualSellClosing(orderId, info);
+        if (current()) trackPmManualSellClosing(orderId, info, account);
       },
     });
+    if (!current()) return false;
     if (!result.ok) {
       if (result.unfilled)
         clearPmManualSellClosing(orderId);
@@ -231,7 +237,7 @@ async function sellPm(account: PlatformAccount, row: OrderRow): Promise<boolean>
     if (result.ordersToSave?.length) {
       try {
         await saveOrders(account, result.ordersToSave);
-        clearPmManualSellClosing(orderId);
+        if (current()) clearPmManualSellClosing(orderId);
       }
       catch {
         // 保留 closing，等订单刷新 resume 再落库

@@ -5,6 +5,8 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import { saveUserLog } from "@/api/chat";
 import { useAccountStore } from "@/stores/accountStore";
 import { observeOption } from "./orderObservation";
+import { rayRejectFailureEvidence } from "./orderObservationEvidence";
+import { settlementEvidenceOrder, submissionVenueStatus } from "./venueSettlementEvidence";
 
 function accountPlatformLabel(account: PlatformAccount): string {
   try {
@@ -90,15 +92,22 @@ export function saveVenueSettlementLog(params: {
   // 任一日志字段异常都必须被隔离，不能改变下注/补单结果。
   try {
     const { account, option, result, orders, settlement, linkId } = params;
+    let reason: string | undefined;
     try {
-      const exactObservedOrder = result.orderId
-        ? orders.find(order => String(order.orderId) === String(result.orderId))
-        : undefined;
+      const evidenceOrder = settlementEvidenceOrder(option, result, orders);
+      const status = submissionVenueStatus(result);
+      const mode = account.provider !== "Polymarket" || status === "delayed" || result.pmSubmitUnknown ? "reject_detection"
+        : status === "matched" ? "direct_fill" : "confirmation";
+      reason = evidenceOrder?.venueRejectReason;
+      const reasonEvidence = settlement === "unfilled" && account.provider === "RAY" && reason
+        ? rayRejectFailureEvidence(reason) : {};
       observeOption(option, account, "settlement_observed", {
-        orderId: result.orderId || undefined,
+        orderId: evidenceOrder?.orderId || result.orderId || undefined,
         outcome: settlement,
-        source: settlement === "unfilled" && String(result.message).includes("超时策略判拒") ? "timeout_policy" : exactObservedOrder ? "adapter" : "orchestration_result",
-        observedStatus: exactObservedOrder?.status,
+        source: settlement === "unfilled" && String(result.message).includes("超时策略判拒") ? "timeout_policy" : evidenceOrder ? "adapter" : "orchestration_result",
+        phase: mode,
+        observedStatus: evidenceOrder?.status,
+        ...reasonEvidence,
       });
     }
     catch { /* 新观察异常不能跳过原有日志 */ }
@@ -119,6 +128,7 @@ export function saveVenueSettlementLog(params: {
     const platformLabel = accountPlatformLabel(account);
 
     void saveUserLog(
+      // [changmen 扩展] 保留管理端按“拒单”识别的历史日志格式；实时阶段由观察事件区分。
       `[${account.provider}](${platformLabel},${account.playerName}) 拒单检测 => ${stateLabel}`,
       {
         diagnosticVersion: 2,
@@ -144,7 +154,7 @@ export function saveVenueSettlementLog(params: {
         settlementMessage: result.message,
         decisionBasis: policyRejected ? "timeout_policy" : null,
         observedStatus: observedOrder?.status ?? (orders.length ? "unknown" : "missing"),
-        rejectReason: settlement === "unfilled" ? settlementRejectReason(result) : null,
+        rejectReason: settlement === "unfilled" ? reason || settlementRejectReason(result) : null,
       },
     ).catch(() => {});
   }

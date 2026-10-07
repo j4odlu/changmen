@@ -14,6 +14,7 @@ import { publishBettingEvent } from "@/realtime/publishBetting";
 import { getProvider } from "@/runtime/providers";
 import { createObservationContext, observeOption } from "@/services/orderObservation";
 import { observationFailureEvidence } from "@/services/orderObservationEvidence";
+import { submissionVenueStatus } from "@/services/venueSettlementEvidence";
 import {
   bettingDetailHtml,
   bettingLoadingMessageHtml,
@@ -287,6 +288,7 @@ async function runPendingVenueBetConfirmation(
         outcome: pendingConfirm ? "timeout" : rejected ? "unfilled" : "filled",
         source: String(result.message).includes("超时策略判拒") ? "timeout_policy" : exactObservedOrder ? "adapter" : "orchestration_result",
         observedStatus: exactObservedOrder?.status,
+        phase: "reject_detection",
       });
     }
     catch { /* 观察快照异常不改变原单确认的后续处理 */ }
@@ -583,6 +585,7 @@ export async function placeBet(
         orderId: result.orderId || undefined,
         outcome: result.pmSubmitUnknown || observationThrew && observationSubmitted ? "unknown" : result.success ? "accepted" : observationSubmitted ? "adapter_failed" : "not_submitted",
         source: "adapter_result",
+        observedStatus: submissionVenueStatus(result),
         durationMs: observationDuration,
         ...(!result.success ? observationFailureEvidence(result.message, result.response, observationError, result.provider) : {}),
       });

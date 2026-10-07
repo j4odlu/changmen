@@ -20,6 +20,12 @@ function rayFailureDescription(response: unknown): { text?: string; supplied: bo
     return { supplied: true };
   return { supplied: true, text: text.replace(/\s+/g, " ") };
 }
+/** [changmen 扩展] 拒单 comment 沿用场馆说明白名单，不依赖 POST 的业务码。 */
+export function rayRejectFailureEvidence(reason: unknown): Partial<OrderObservationEvent> {
+  const description = rayFailureDescription({ desc: reason });
+  return { reasonCode: "venue_rejected", errorCategory: "venue_reject", safeSummary: description.text
+    ? `RAY 拒单原因：${description.text}` : "RAY 已拒单，未记录可安全展示的场馆说明" };
+}
 /** [changmen 扩展] 只保留已知原因和白名单数值，不复制错误全文、资产 ID 或凭证。 */
 function specificFailure(text: string, headline: string): FailureReason | undefined {
   if (/盘口无卖单|无 asks 卖单|no asks|no sell orders/i.test(headline)

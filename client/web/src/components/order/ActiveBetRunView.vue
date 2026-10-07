@@ -3,9 +3,12 @@ import type { ActiveBetLeg, ActiveBetRun } from "@/types/activeBetRun";
 import { storeToRefs } from "pinia";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import OrderExecutionTimeline from "@/components/order/OrderExecutionTimeline.vue";
+import OrderProgressStages from "@/components/order/OrderProgressStages.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { useRecentBetProgress } from "./useRecentBetProgress";
 import { accountProgressDisplayName } from "@/shared/accountDisplayName";
+import { activeBetLegStages } from "@/shared/activeBetRunStages";
+import { withBoundRayOrderEvidence } from "@/shared/boundRayOrderEvidence";
 import { activeBetLegRole, activeBetRunMode, activeBetRunModeLabel, observationLegGroups, observationLegSummary, progressEvidenceWarnings, progressOrchestrationLabel } from "@/shared/activeBetRunPresentation";
 import { formatActiveBetLinkLabel } from "@/shared/linkDisplay";
 import {
@@ -14,6 +17,7 @@ import {
 import { useAccountStore } from "@/stores/accountStore";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { useOrderObservationStore } from "@/stores/orderObservationStore";
+import { useOrderStore } from "@/stores/orderStore";
 import { useUserStore } from "@/stores/userStore";
 import "@/styles/active-bet-run.css";
 
@@ -31,6 +35,7 @@ const accountStore = useAccountStore();
 const loseStore = useLoseOrderStore();
 const userStore = useUserStore();
 const observationStore = useOrderObservationStore();
+const orderStore = useOrderStore();
 const { visibleRuns } = storeToRefs(activeStore);
 
 const now = ref(Date.now());
@@ -52,19 +57,19 @@ let resizeCleanup: (() => void) | undefined;
 
 const runCount = computed(() => displayRuns.value.length);
 const runFacts = computed(() => userStore.isLoggedIn
-  ? observationStore.forLink(String(userStore.userId || ""), activeRun.value?.linkId)
+  ? withBoundRayOrderEvidence(observationStore.forLink(String(userStore.userId || ""), activeRun.value?.linkId), orderStore.orders.get(activeRun.value?.linkId || 0) || [])
   : []);
 const factGroups = computed(() => observationLegGroups(runFacts.value, activeRun.value?.legs || []));
 function legFacts(leg: ActiveBetLeg) { return factGroups.value.groups.get(leg.side) || []; }
 const legSummaries = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, observationLegSummary(legFacts(leg), leg.status, leg.precheckOnly)])));
 function legSummary(leg: ActiveBetLeg) { return legSummaries.value.get(leg.side)!; }
+const legStages = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, activeBetLegStages(activeRun.value!, leg, legFacts(leg))])));
 function legProvider(leg: ActiveBetLeg) { return legSummary(leg).provider || leg.platform; }
 function legAccountName(leg: ActiveBetLeg) { return accountProgressDisplayName(accountStore.findAccount(legSummary(leg).accountId)); }
 const unassignedFacts = computed(() => factGroups.value.unassigned);
 const hasMoreTimeline = computed(() => unassignedFacts.value.length > 6
   || (activeRun.value?.legs || []).some(leg => legFacts(leg).length > 6));
 const evidenceWarnings = computed(() => progressEvidenceWarnings(runFacts.value));
-function latestLegAction(leg: ActiveBetLeg) { return progressOrchestrationLabel(leg, legFacts(leg), leg.events.at(-1)?.detail || leg.detail || "等待执行"); }
 function legPlacementLabel(leg: ActiveBetLeg) { return progressOrchestrationLabel(leg, legFacts(leg), activeStore.legPlacementLabel(leg, activeRun.value ?? undefined)); }
 const executionId = computed(() => [...runFacts.value].reverse().find(event => event.executionId)?.executionId);
 const elapsedLabel = computed(() => {
@@ -390,11 +395,12 @@ function hasMakeupFlow(run: ActiveBetRun): boolean {
 }
 
 function flowLabels(run: ActiveBetRun): string[] {
-  if (activeBetRunMode(run) === "single9999" || activeBetRunMode(run) === "valueBet")
-    return ["预检", "单腿下单", "确认", "结果"];
-  return hasMakeupFlow(run)
-    ? ["预检", "下单", "确认", "补单", "结果"]
-    : ["预检", "下单", "确认", "结果"];
+  const stages = run.legs.filter(leg => !leg.precheckOnly && leg.status !== "skipped")
+    .flatMap(leg => legStages.value.get(leg.side) || []);
+  const confirmation = stages.some(stage => stage.stage === "拒单检测") ? "拒单检测"
+    : stages.some(stage => stage.id === "confirmation") ? "成交确认" : undefined;
+  return ["预检", "提交下注", "绑定订单", ...(confirmation ? [confirmation] : []),
+    ...(hasMakeupFlow(run) ? ["补单"] : []), "编排收尾"];
 }
 
 function currentFlowIndex(run: ActiveBetRun): number {
@@ -406,21 +412,31 @@ function currentFlowIndex(run: ActiveBetRun): number {
   if (run.phase === "placing")
     return 1;
   if (run.phase === "settling")
-    return 2;
+    return Math.max(2, labels.findIndex(label => label === "拒单检测" || label === "成交确认"));
   if (run.phase === "makeup")
     return labels.indexOf("补单");
   return Math.max(2, labels.length - 2);
 }
 
 function flowStepClass(run: ActiveBetRun, index: number): string {
-  const current = currentFlowIndex(run);
-  if (index < current)
-    return "done";
-  if (index > current)
-    return "pending";
-  if (run.terminalAt && run.legs.some(leg => leg.status === "failed" || leg.status === "rejected"))
+  const label = flowLabels(run)[index];
+  if (label === "编排收尾") {
+    if (!run.terminalAt)
+      return "pending";
+    return run.legs.some(leg => !leg.precheckOnly && (leg.status === "failed" || leg.status === "rejected")) ? "danger" : "current";
+  }
+  const stageId = label === "预检" ? "precheck" : label === "提交下注" ? "submission" : label === "绑定订单" ? "binding"
+    : label === "拒单检测" || label === "成交确认" ? "confirmation" : "makeup";
+  const rows = run.legs.flatMap(leg => legStages.value.get(leg.side)?.filter(stage => stage.id === stageId) || []);
+  if (rows.some(stage => stage.tone === "danger"))
     return "danger";
-  return "current";
+  if (rows.some(stage => stage.tone === "warning"))
+    return "warning";
+  if (rows.some(stage => stage.tone === "pending"))
+    return "current";
+  if (rows.some(stage => stage.at !== undefined))
+    return "done";
+  return !run.terminalAt && index === currentFlowIndex(run) ? "current" : "pending";
 }
 
 function nextAction(run: ActiveBetRun): string {
@@ -549,14 +565,11 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 <p v-if="legSummary(leg).failureReason" class="active-bet-run__leg-failure">
                   失败原因 · {{ legSummary(leg).failureReason }}
                 </p>
-                <p class="active-bet-run__leg-action" :title="latestLegAction(leg)">
-                  <span>编排 · {{ legPlacementLabel(leg) }}</span>
-                  {{ latestLegAction(leg) }}
-                </p>
                 <div class="active-bet-run__leg-quote">
                   <span>赔率 @{{ legSummary(leg).odds ?? (legFacts(leg).length ? '—' : leg.odds ?? '—') }}</span>
                   <span>{{ legSummary(leg).amount ?? (!legFacts(leg).length && leg.betMoney != null ? `${leg.betMoney}（币种未记录）` : '金额未记录') }}</span>
                 </div>
+                <OrderProgressStages :stages="legStages.get(leg.side) || []" />
                 <OrderExecutionTimeline
                   v-if="legFacts(leg).length" :key="`${activeRun.betId}-${leg.side}`"
                   :title="legTarget(leg.target)" subtitle="执行时间线"

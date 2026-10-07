@@ -6,6 +6,43 @@ function event(kind: OrderObservationEvent["kind"], patch: Partial<OrderObservat
   return { version: 1, eventId: "event-123", ownerUserId: "u1", sequence: 1, occurredAt: 1000, linkId: 123, attemptId: "attempt-1", kind, ...patch };
 }
 describe("实时进度只读摘要", () => {
+  it("keeps the successful precheck visible after submission, confirmation, binding and later decisions", () => {
+    const events = [
+      event("precheck_started"),
+      event("precheck_result", { sequence: 2, outcome: "prepared", occurredAt: 1200, durationMs: 200 }),
+      event("submission_started", { sequence: 3 }),
+      event("submission_result", { sequence: 4, outcome: "accepted" }),
+      event("settlement_observed", { sequence: 5, outcome: "filled", source: "adapter" }),
+      event("bind_result", { sequence: 6, outcome: "saved" }),
+      event("decision", { sequence: 7, outcome: "registered" }),
+      event("decision", { sequence: 8, outcome: "bound" }),
+      event("decision", { sequence: 9, outcome: "expired" }),
+    ];
+    expect(events.slice(-6).some(row => row.kind === "precheck_result")).toBe(false);
+    const summary = observationLegSummary(events, "confirmed");
+    expect(summary.label).toBe("观察到成交");
+    expect(summary.precheck).toMatchObject({ label: "预检通过", tone: "success", at: 1200, durationMs: 200 });
+  });
+  it("preserves failed prechecks and their reason independently of later progress", () => {
+    const summary = observationLegSummary([
+      event("precheck_result", { outcome: "blocked", safeSummary: "盘口已关闭" }),
+      event("bind_result", { sequence: 2, outcome: "saved" }),
+    ], "failed");
+    expect(summary.precheck.label).toBe("预检失败");
+    expect(summary.precheck.tone).toBe("danger");
+    expect(summary.precheck.basis).toContain("盘口已关闭");
+  });
+  it("does not reuse an earlier passed precheck for a retry or infer it from acceptance", () => {
+    const passed = event("precheck_result", { outcome: "prepared" });
+    const retry = event("submission_result", { attemptId: "attempt-2", outcome: "accepted" });
+    const delayed = event("bind_result", { sequence: 2, outcome: "saved" });
+    expect(observationLegSummary([passed, retry, delayed], "confirmed").precheck.label).toBe("预检结果未记录");
+    expect(observationLegSummary([], "confirmed").precheck.label).toBe("预检结果未记录");
+  });
+  it("distinguishes an ongoing precheck from a result with an unknown outcome", () => {
+    expect(observationLegSummary([event("precheck_started")], "pending").precheck).toMatchObject({ label: "正在预检", tone: "pending" });
+    expect(observationLegSummary([event("precheck_result")], "pending").precheck).toMatchObject({ label: "预检结果未明确", tone: "warning" });
+  });
   it("shows the venue failure reason and business code without claiming confirmed rejection", () => {
     const summary = observationLegSummary([event("submission_result", { provider: "RAY", outcome: "adapter_failed", responseCode: "500", safeSummary: "RAY 场馆返回：投注操作失败，请稍后重试" })], "failed");
     expect(summary.label).toBe("提交返回失败");
@@ -57,6 +94,11 @@ describe("实时进度只读摘要", () => {
   it("warns on conflicting venue confirmations", () => {
     const events = [event("settlement_observed", { outcome: "filled", source: "adapter" }), event("settlement_observed", { outcome: "unfilled", source: "adapter", sequence: 2 })];
     expect(observationLegSummary(events, "confirmed").label).toBe("确认记录冲突");
+  });
+  it("does not claim missing evidence when a later RAY monitor actually observed rejection", () => {
+    const events = [event("settlement_observed", { provider: "RAY", orderId: "r1", outcome: "filled", observedStatus: "none", source: "adapter" }),
+      event("settlement_observed", { provider: "RAY", orderId: "r1", outcome: "unfilled", observedStatus: "reject", source: "ray_monitor" })];
+    expect(progressOrchestrationLabel({ status: "confirmed" }, events, "已成交")).toBe("编排曾判定成交 · 后续检测到拒单");
   });
   it("keeps summaries and bindings separate across retry attempts", () => {
     const events = [event("bind_result", { outcome: "saved", orderId: "old" }), event("submission_result", { attemptId: "attempt-2", outcome: "unknown", retryRound: 1, orderId: "new", amount: 12.25, currency: "USDC" })];

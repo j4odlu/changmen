@@ -3,6 +3,8 @@ import { BetResult } from "@changmen/client-core/models/betResult";
 import { resolveVenueLegOutcome } from "./resolveVenueLegOutcome";
 
 const getProvider = vi.hoisted(() => vi.fn());
+const observeOrder = vi.hoisted(() => vi.fn());
+vi.mock("@/services/orderObservation", () => ({ observeOrder }));
 
 vi.mock("@/runtime/providers", () => ({
   getProvider,
@@ -11,6 +13,34 @@ vi.mock("@/runtime/providers", () => ({
 describe("resolveVenueLegOutcome", () => {
   beforeEach(() => {
     getProvider.mockReset();
+    observeOrder.mockReset();
+  });
+  it.each(["matched", "delayed"])("starts detection at the actual settle entry only for PM %s", async status => {
+    const result = Object.assign(new BetResult("Polymarket", true, "", undefined, { status }), {
+      link: 123, observation: { ownerUserId: "u1", attemptId: "a1" }, pending: status === "delayed",
+    });
+    const outcome = { orders: [], settlement: "filled" };
+    const resolveLegOutcome = vi.fn(async () => outcome);
+    getProvider.mockReturnValue({ resolveLegOutcome });
+    const fetch = vi.fn();
+    expect(await resolveVenueLegOutcome({ provider: "Polymarket", accountId: 46 } as never, result, fetch)).toBe(outcome);
+    expect(observeOrder).toHaveBeenCalledTimes(status === "delayed" ? 1 : 0);
+    if (status === "delayed")
+      expect(observeOrder).toHaveBeenCalledWith(result.observation, 123, "decision", expect.objectContaining({ reasonCode: "reject_detection_started" }));
+    expect(resolveLegOutcome).toHaveBeenCalledTimes(1);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("preserves the provider outcome and fetch ordering even if observation fails", async () => {
+    observeOrder.mockImplementation(() => { throw new Error("observer failure"); });
+    const outcome = { orders: [], settlement: "unfilled" };
+    const resolveLegOutcome = vi.fn(async () => outcome);
+    getProvider.mockReturnValue({ resolveLegOutcome });
+    const result = new BetResult("RAY", true);
+    const fetch = vi.fn();
+    expect(await resolveVenueLegOutcome({ provider: "RAY" } as never, result, fetch, { rejectWaitSec: 30 })).toBe(outcome);
+    expect(resolveLegOutcome).toHaveBeenCalledWith(expect.anything(), result, expect.objectContaining({ rejectWaitSec: 30 }));
+    expect(result.success).toBe(true);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("with resolveLegOutcome skips entry pre-fetch; provider gets fetchVenueOrders", async () => {

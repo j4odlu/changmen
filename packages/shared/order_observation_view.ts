@@ -2,6 +2,12 @@ import type { OrderObservationEvent } from "./order_observation";
 
 /** [changmen 扩展] 实时面板与后台诊断共用的只读事实展示；不得参与业务判定。 */
 export function observationEventStage(event: OrderObservationEvent): string {
+  if (event.source === "ray_monitor")
+    return "RAY订单监控";
+  if (event.phase === "reject_detection" && (event.kind === "settlement_observed" || event.reasonCode === "reject_detection_started"))
+    return "拒单检测";
+  if (event.kind === "settlement_observed" && event.phase === "direct_fill")
+    return "成交";
   if (event.kind.startsWith("execution_"))
     return "执行";
   if (event.kind.startsWith("precheck_"))
@@ -60,12 +66,27 @@ function lookupLabel(labels: Record<string, string>, value: string): string {
 }
 
 export function observationEventLabel(event: OrderObservationEvent): string {
-  const label = lookupLabel(KIND_LABELS, event.kind);
+  if (event.source === "ray_monitor") {
+    const state = event.kind === "settlement_observed" && event.outcome === "unfilled" ? "检测到延迟拒单"
+      : event.kind === "settlement_observed" && event.outcome === "filled" ? "订单已结算，监控结束"
+        : event.outcome === "registered" ? "开始独立监控"
+          : event.outcome === "bound" ? "已关联订单，持续监控"
+            : event.outcome === "expired" ? "监控窗口结束" : lookupLabel(OUTCOME_LABELS, event.outcome || "未知");
+    return ["RAY订单监控", state, event.safeSummary ? `原因：${event.safeSummary}` : ""].filter(Boolean).join(" · ");
+  }
+  if (event.reasonCode === "reject_detection_started")
+    return "开始拒单检测";
+  const label = event.kind === "settlement_observed" && event.phase === "reject_detection" ? "拒单检测" : lookupLabel(KIND_LABELS, event.kind);
   if (event.source === "timeout_policy")
     return `${label} · 按超时策略处理，非官方拒单回执`;
   if (event.source === "orchestration_result")
     return `${label} · 编排判定：${lookupLabel(BUSINESS_OUTCOME_LABELS, event.outcome || "未知")}，缺少精确订单确认`;
-  const outcome = event.outcome ? lookupLabel(OUTCOME_LABELS, event.outcome) : "";
+  const rejected = event.kind === "settlement_observed" && event.outcome === "unfilled" && event.observedStatus === "reject";
+  const outcome = rejected ? "检测到拒单"
+    : event.kind === "settlement_observed" && event.provider === "RAY" && event.observedStatus === "none" && event.outcome === "filled" ? "检测通过 · 未拒单"
+      : event.kind === "submission_result" && event.provider === "Polymarket" && event.outcome === "accepted"
+    ? event.observedStatus === "matched" ? "直接成交" : event.observedStatus === "delayed" ? "delayed · 等待拒单检测" : lookupLabel(OUTCOME_LABELS, event.outcome)
+    : event.outcome ? lookupLabel(OUTCOME_LABELS, event.outcome) : "";
   const precheckReasons: Record<string, string> = {
     no_account: "当前场馆没有可用的下单账号",
     unsupported_provider: "当前场馆不支持下单预检",

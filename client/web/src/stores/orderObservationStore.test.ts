@@ -1,5 +1,5 @@
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
-import { observationEventLabel, orderObservationTargets, orderObservationTimeline } from "@changmen/shared/order_observation_view";
+import { observationEventLabel, observationEventStage, orderObservationTargets, orderObservationTimeline } from "@changmen/shared/order_observation_view";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OrderObservationOutbox } from "@/services/orderObservationOutbox";
@@ -23,6 +23,26 @@ function event(eventId: string, patch: Partial<OrderObservationEvent> = {}): Ord
 }
 
 describe("实时进度与诊断共用执行事实", () => {
+  it("names rejection detection actions and preserves the actual venue reason", () => {
+    const start = event("start", { kind: "decision", phase: "reject_detection", reasonCode: "reject_detection_started" });
+    expect(observationEventStage(start)).toBe("拒单检测");
+    expect(observationEventLabel(start)).toBe("开始拒单检测");
+    const rejected = event("reject", { kind: "settlement_observed", phase: "reject_detection", source: "adapter", outcome: "unfilled", observedStatus: "reject", safeSummary: "RAY 拒单原因：系统拒绝" });
+    expect(observationEventStage(rejected)).toBe("拒单检测");
+    expect(observationEventLabel(rejected)).toContain("检测到拒单");
+    expect(observationEventLabel(rejected)).toContain("系统拒绝");
+    expect(observationEventLabel(event("matched", { kind: "submission_result", provider: "Polymarket", outcome: "accepted", observedStatus: "matched" }))).toContain("直接成交");
+  });
+  it("distinguishes standalone RAY monitoring from fixed-time rejection detection", () => {
+    const monitor = event("monitor", { kind: "decision", provider: "RAY", source: "ray_monitor", outcome: "registered" });
+    expect(observationEventStage(monitor)).toBe("RAY订单监控");
+    expect(observationEventLabel(monitor)).toContain("开始独立监控");
+    expect(observationEventLabel({ ...monitor, outcome: "expired" })).toContain("监控窗口结束");
+    const reject = { ...monitor, kind: "settlement_observed" as const, outcome: "unfilled", observedStatus: "reject", phase: "reject_detection", safeSummary: "RAY 拒单原因：系统拒绝" };
+    expect(observationEventStage(reject)).toBe("RAY订单监控");
+    expect(observationEventLabel(reject)).toContain("检测到延迟拒单");
+    expect(observationEventLabel(reject)).toContain("系统拒绝");
+  });
   beforeEach(() => { setActivePinia(createPinia()); });
 
   it("shows the concrete precheck cause and duration instead of calling it a summary category", () => {

@@ -138,6 +138,11 @@ export interface VenueOrder extends PolymarketVenueOrderExtras, PredictFunVenueO
   match: string;
   bet: string;
   item: string;
+  /** [changmen 扩展] 场馆订单身份及拒单说明，仅用于订单关联与诊断展示。 */
+  venueMatchId?: string;
+  venueItemId?: string;
+  venueRejectReason?: string;
+  venueSettledAt?: number;
   /** [changmen 扩展] 订单业务域；非电竞运动订单写 orders 时必须带 sports。 */
   domain?: "esport" | "sports" | string;
   /** [changmen 扩展] 体育运动类型。 */

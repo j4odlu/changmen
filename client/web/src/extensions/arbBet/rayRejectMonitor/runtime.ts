@@ -4,6 +4,7 @@ import { saveUserLog } from "@/api/chat";
 import { saveOrders } from "@/api/order";
 import { getProvider } from "@/runtime/providers";
 import { observeOrder } from "@/services/orderObservation";
+import { rayRejectFailureEvidence } from "@/services/orderObservationEvidence";
 import { useAccountStore } from "@/stores/accountStore";
 import { bindArbOrderId, refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
 import { useUserStore } from "@/stores/userStore";
@@ -68,8 +69,10 @@ function writeMonitorLog(
       target: task.target,
       outcome: event === "rejected" ? "unfilled" : event === "closed" ? "filled" : event,
       source: "ray_monitor",
+      phase: "ray_order_monitor",
       observedStatus: order?.status,
       reasonCode: event,
+      ...(event === "rejected" && order?.venueRejectReason ? rayRejectFailureEvidence(order.venueRejectReason) : {}),
     });
     void saveUserLog(titles[event], {
       diagnosticVersion: 3,

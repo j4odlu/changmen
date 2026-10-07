@@ -5,7 +5,7 @@ import { BetResult } from "@changmen/client-core/models/betResult";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { saveVenueSettlementLog } from "./bettingLog";
 
-const mocks = vi.hoisted(() => ({ observe: vi.fn(), log: vi.fn(async () => true) }));
+const mocks = vi.hoisted(() => ({ observe: vi.fn(), log: vi.fn(async (_title: string, _data: unknown) => true) }));
 vi.mock("./orderObservation", () => ({ observeOption: mocks.observe }));
 vi.mock("@/api/chat", () => ({ saveUserLog: mocks.log }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ getPlatformName: () => "OB" }) }));
@@ -36,5 +36,40 @@ describe("结算观察的证据边界", () => {
     mocks.observe.mockImplementation(() => { throw new Error("observer failure"); });
     saveVenueSettlementLog({ account, option, result: new BetResult("OB", true), orders: [], settlement: "filled" });
     expect(mocks.log).toHaveBeenCalledTimes(1);
+  });
+  it("records the RAY rejection and reason even when its POST did not return an order ID", () => {
+    const ray = { ...account, provider: "RAY" } as PlatformAccount;
+    const option = new BetOption("RAY", "38450996", "18304", "76390520", 100, "Home", 1.4);
+    const result = Object.assign(new BetResult("RAY", true), { beginTime: 1791393169828 });
+    const order = { provider: "RAY", orderId: "406855f4d96e6acdb1ee", status: "reject", venueMatchId: "38450996", venueItemId: "76390520",
+      createAt: 1791393170000, betMoney: 100, odds: 1.4, venueRejectReason: "系统拒绝" } as VenueOrder;
+    saveVenueSettlementLog({ account: ray, option, result, orders: [order], settlement: "unfilled" });
+    expect(mocks.observe).toHaveBeenCalledWith(option, ray, "settlement_observed", expect.objectContaining({
+      orderId: order.orderId, outcome: "unfilled", observedStatus: "reject", source: "adapter", phase: "reject_detection", safeSummary: "RAY 拒单原因：系统拒绝",
+    }));
+    expect(result.orderId).toBeNull();
+    expect(result.success).toBe(true);
+    order.venueRejectReason = "token=SECRET";
+    mocks.observe.mockClear();
+    saveVenueSettlementLog({ account: ray, option, result, orders: [order], settlement: "unfilled" });
+    expect(JSON.stringify(mocks.observe.mock.calls)).not.toContain("SECRET");
+  });
+  it.each(["matched", "delayed"])("records the PM %s phase correctly even after pending is cleared", status => {
+    const pm = { ...account, provider: "Polymarket" } as PlatformAccount;
+    const result = new BetResult("Polymarket", true, "", undefined, { status });
+    result.orderId = "pm-1";
+    saveVenueSettlementLog({ account: pm, option, result, orders: [{ orderId: "pm-1", status: "none" }] as VenueOrder[], settlement: "filled" });
+    expect(mocks.observe).toHaveBeenCalledWith(option, pm, "settlement_observed", expect.objectContaining({ phase: status === "matched" ? "direct_fill" : "reject_detection" }));
+    expect(mocks.log.mock.calls[0]?.[0]).toContain("拒单检测 =>");
+  });
+  it("does not drop the legacy settlement log if the new evidence lookup throws", () => {
+    const ray = { ...account, provider: "RAY" } as PlatformAccount;
+    const option = new BetOption("RAY", "m", "b", "i", 100, "Home", 2);
+    Object.defineProperty(option, "matchId", { get() { throw new Error("evidence lookup failure"); } });
+    const result = new BetResult("RAY", true);
+    const order = { provider: "RAY", orderId: "r1", createAt: Date.now(), status: "reject" } as VenueOrder;
+    expect(() => saveVenueSettlementLog({ account: ray, option, result, orders: [order], settlement: "unfilled" })).not.toThrow();
+    expect(mocks.log).toHaveBeenCalledTimes(1);
+    expect(result.success).toBe(true);
   });
 });

@@ -147,6 +147,7 @@ describe("rayProvider.getOrders", () => {
       result: [
         {
           order_number: "R-1",
+          settle_time: "2024-01-01 12:00:05",
           status: 4,
           win: 0,
           total_bonus: 0,
@@ -154,6 +155,9 @@ describe("rayProvider.getOrders", () => {
           detail: [
             {
               title: "独赢\n主队",
+              match_id: 38450996,
+              odds_id: 76390520,
+              comment: "系统拒绝",
               odds: 1.85,
               stake: 50,
               game_id: 1,
@@ -167,6 +171,8 @@ describe("rayProvider.getOrders", () => {
     const orders = await rayProvider.getOrders!(account);
     expect(orders[0]!.status).toBe("reject");
     expect(orders[0]!.orderId).toBe("R-1");
+    expect(orders[0]).toMatchObject({ venueMatchId: "38450996", venueItemId: "76390520", venueRejectReason: "系统拒绝" });
+    expect(orders[0]!.venueSettledAt).toBe(new Date("2024-01-01T12:00:05").getTime());
   });
 
   it("status=1 win=0 maps to lose", async () => {

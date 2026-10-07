@@ -41,7 +41,6 @@ describe("下注主链路与旁路故障隔离", () => {
     startOrderObservation();
   });
   afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
-
   it("makes exactly one adapter bet with unchanged inputs despite upload failures", async () => {
     const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
     option.data = { quote: "prepared" };
@@ -68,6 +67,20 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(result.message).toBe("closed");
     expect(mocks.betting).not.toHaveBeenCalled();
     expect(mocks.check).not.toHaveBeenCalled();
+  });
+  it.each(["matched", "delayed"])("records PM %s submission without claiming detection has started before settle", async status => {
+    const option = new BetOption("Polymarket", "m", "b", "i", 10, "Home", 2);
+    option.data = { quote: "prepared" };
+    option.deferPostAcceptSettlement = true;
+    const expected = new BetResult("Polymarket", true, "", undefined, { status });
+    expected.pending = status === "delayed";
+    expected.orderId = "pm-1";
+    mocks.betting.mockResolvedValue(expected);
+    expect(await placeBet(store, { ...account, provider: "Polymarket" } as PlatformAccount, option, 10, { linkId: 123, requirePreparedQuote: true })).toBe(expected);
+    const facts = useOrderObservationStore().forLink("u1", 123);
+    expect(facts.find(row => row.kind === "submission_result")?.observedStatus).toBe(status);
+    expect(facts.filter(row => row.reasonCode === "reject_detection_started")).toHaveLength(0);
+    expect(mocks.betting).toHaveBeenCalledTimes(1);
   });
   it("carries the actual RAY submission failure description into the progress record", async () => {
     const option = new BetOption("RAY", "m", "b", "i", 100, "Home", 1.76);

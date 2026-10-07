@@ -43,6 +43,9 @@ interface RayOrderDetail {
   game_id?: number | string;
   match_name?: string;
   match_stage?: string;
+  match_id?: string | number;
+  odds_id?: string | number;
+  comment?: string;
 }
 
 interface RayOrderRow {
@@ -51,6 +54,7 @@ interface RayOrderRow {
   win?: number;
   total_bonus?: number;
   create_time?: string;
+  settle_time?: string;
   detail?: RayOrderDetail[];
 }
 
@@ -94,6 +98,11 @@ function mapRayOrderRow(row: RayOrderRow): VenueOrder | null {
     reward: totalBonus,
     status,
     money,
+    // [changmen 扩展] 保留场馆身份和拒单说明，避免实时检测结果丢失；不改状态判定。
+    venueMatchId: detail.match_id == null ? undefined : String(detail.match_id),
+    venueItemId: detail.odds_id == null ? undefined : String(detail.odds_id),
+    venueRejectReason: status === "reject" && typeof detail.comment === "string" ? detail.comment : undefined,
+    venueSettledAt: row.settle_time ? parseVenueCreateAt(row.settle_time) : undefined,
   };
 }
 

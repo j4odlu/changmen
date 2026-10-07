@@ -1,7 +1,7 @@
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import type { ActiveBetLeg, ActiveBetLegStatus, ActiveBetRun } from "@/types/activeBetRun";
 import { classifyLinkId } from "@changmen/client-core/shared/format";
-import { orderObservationTargets } from "@changmen/shared/order_observation_view";
+import { observationEventLabel, orderObservationTargets } from "@changmen/shared/order_observation_view";
 
 export type ProgressTone = "neutral" | "pending" | "success" | "warning" | "danger";
 const FALLBACK_LABELS: Record<ActiveBetLegStatus, string> = {
@@ -40,11 +40,27 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
   const lastAttempt = [...attempts].at(-1);
   const attempt = lastAttempt ? events.filter(event => event.attemptId === lastAttempt) : events;
   const matching = (kind: OrderObservationEvent["kind"]) => [...attempt].reverse().find(event => event.kind === kind);
-  const confirmations = attempt.filter(event => event.kind === "settlement_observed"
-    && ["adapter", "ray_monitor"].includes(event.source || "") && ["filled", "unfilled"].includes(event.outcome || ""));
+  const observed = attempt.filter(event => event.kind === "settlement_observed"
+    && ["adapter", "ray_monitor", "order_record"].includes(event.source || "") && ["filled", "unfilled"].includes(event.outcome || ""));
+  // RAY 的 none 表示检测时未拒单，后续同订单拒单是状态更新，不是终态冲突。
+  const confirmations = observed.filter((event, index) => !(event.provider === "RAY" && event.observedStatus === "none"
+    && event.orderId && observed.slice(index + 1).some(next => next.orderId === event.orderId && next.observedStatus === "reject")));
   const outcomes = new Set(confirmations.map(event => event.outcome));
   const submission = matching("submission_result");
   const check = matching("precheck_result");
+  const checkStarted = matching("precheck_started");
+  // [changmen 扩展] 预检结果常驻展示，与后续提交/确认状态分开；只使用最近尝试的证据。
+  const precheck = {
+    label: check?.outcome === "prepared" ? "预检通过"
+      : check?.outcome === "blocked" ? "预检失败"
+        : check ? "预检结果未明确" : checkStarted ? "正在预检" : "预检结果未记录",
+    tone: (check?.outcome === "prepared" ? "success"
+      : check?.outcome === "blocked" ? "danger"
+        : check ? "warning" : checkStarted ? "pending" : "neutral") as ProgressTone,
+    at: (check || checkStarted)?.occurredAt,
+    durationMs: check?.durationMs,
+    basis: check ? observationEventLabel(check) : checkStarted ? "等待预检结果记录" : "本次尝试尚无预检结果记录",
+  };
   const policy = attempt.some(event => event.kind === "settlement_observed" && event.source === "timeout_policy");
   const evidence = [...attempt].reverse().find(event => event.safeSummary);
   let label = fallback === "confirmed" ? "编排判定成交 · 缺少场馆确认记录" : `编排：${FALLBACK_LABELS[fallback]}`;
@@ -56,16 +72,21 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
     label = "确认记录冲突"; tone = "danger"; basis = "同时记录成交与未成交，需要核查";
   }
   else if (outcomes.has("filled")) {
-    label = "观察到成交"; tone = "success"; basis = "场馆订单关联的确认记录";
+    const notRejected = confirmations.at(-1)?.provider === "RAY" && confirmations.at(-1)?.observedStatus === "none";
+    label = notRejected ? "拒单检测通过 · 未拒单" : "观察到成交";
+    tone = "success"; basis = notRejected ? "检测时场馆订单状态为未结算，未发现拒单" : "场馆订单关联的确认记录";
   }
   else if (outcomes.has("unfilled")) {
-    label = "观察到未成交"; tone = "danger"; basis = "场馆订单关联的确认记录";
+    label = confirmations.some(event => event.observedStatus === "reject") ? "检测到拒单" : "观察到未成交";
+    tone = "danger"; basis = confirmations.some(event => event.source === "order_record") ? "已绑定订单当前状态为拒单" : "场馆订单关联的拒单检测记录";
   }
   else if (policy) {
     label = "超时策略处理"; tone = "warning"; basis = "仍缺少场馆终态，不能认定官方拒单";
   }
   else if (submission?.outcome === "accepted") {
-    label = "已受理 · 待确认"; tone = "pending"; basis = "接口受理尚不证明成交";
+    const direct = submission.provider === "Polymarket" && submission.observedStatus === "matched";
+    label = direct ? "直接成交" : "已受理 · 待确认"; tone = direct ? "success" : "pending";
+    basis = direct ? "PM 提交返回 matched" : "接口受理尚不证明成交";
   }
   else if (submission?.outcome === "unknown") {
     label = "提交结果未知"; tone = "warning"; basis = "不能据此认定未成交";
@@ -91,8 +112,8 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
   }
   const amountEvent = [...attempt].reverse().find(event => event.amount !== undefined);
   // [changmen 扩展] 失败原因直接展示；历史通用错误只说明记录缺失，不推断场馆故障。
-  const failure = submission && ["adapter_failed", "unknown", "not_submitted"].includes(submission.outcome || "")
-    ? submission : !submission && check?.outcome === "blocked" ? check : undefined;
+  const failure = [...confirmations].reverse().find(event => event.outcome === "unfilled" && event.safeSummary) || (submission && ["adapter_failed", "unknown", "not_submitted"].includes(submission.outcome || "")
+    ? submission : !submission && check?.outcome === "blocked" ? check : undefined);
   const failureSummary = failure?.provider === "RAY" && failure.responseCode
     && failure.safeSummary === "执行失败，未记录可识别的具体原因"
     ? "该次记录未保留场馆错误说明" : failure?.safeSummary;
@@ -103,6 +124,7 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
   const numberLabel = (value: number) => value.toLocaleString("zh-CN", { maximumFractionDigits: 4 });
   return {
     provider: [...attempt].reverse().find(event => event.provider)?.provider,
+    precheck,
     label,
     tone,
     basis,
@@ -122,8 +144,13 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
 export function progressOrchestrationLabel(leg: Pick<ActiveBetLeg, "status" | "precheckOnly">, events: readonly OrderObservationEvent[], fallbackLabel: string): string {
   if (leg.precheckOnly)
     return leg.status === "failed" ? "9999 仅预检 · 失败" : "9999 仅预检 · 不下单";
-  if (leg.status === "confirmed" && observationLegSummary(events, leg.status).label !== "观察到成交")
-    return "编排判定成交 · 缺少场馆确认记录";
+  if (leg.status === "confirmed") {
+    const summary = observationLegSummary(events, leg.status);
+    if (summary.label === "检测到拒单")
+      return "编排曾判定成交 · 后续检测到拒单";
+    if (summary.tone !== "success")
+      return summary.label === "确认记录冲突" ? "编排曾判定成交 · 确认记录冲突" : "编排判定成交 · 缺少场馆确认记录";
+  }
   return fallbackLabel;
 }
 

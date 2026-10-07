@@ -180,6 +180,8 @@ async function fetchHealth() {
   try {
     const base = getApiBase();
     const res = await fetch(`${base}/health`, {
+      credentials: "include",
+      cache: "no-store",
       headers: { Accept: "application/json", ...authHeaders() },
     });
     const ct = res.headers.get("content-type") || "";
@@ -188,6 +190,9 @@ async function fetchHealth() {
     }
     const payload: unknown = await res.json();
     if (!isFullHealthData(payload)) {
+      const failure = payload as { msg?: string; error?: string } | null;
+      if (!res.ok)
+        throw new Error(failure?.msg || failure?.error || `健康检查接口异常（${res.status}）`);
       throw new Error("健康检查数据不完整：请确认已用管理员或团队长账号登录，且后端已部署 /health 鉴权");
     }
     health.value = payload;
@@ -220,11 +225,13 @@ async function fetchPmMarketObservability() {
   try {
     const base = getApiBase();
     const res = await fetch(`${base}/health/pm-market`, {
+      credentials: "include",
+      cache: "no-store",
       headers: { Accept: "application/json", ...authHeaders() },
     });
     const payload: unknown = await res.json();
     if (!isPmMarketObservability(payload))
-      throw new Error((payload as { msg?: string })?.msg || `PM-M 观测接口异常（${res.status}）`);
+      throw new Error((payload as { msg?: string; error?: string })?.msg || (payload as { error?: string })?.error || `PM-M 观测接口异常（${res.status}）`);
     pmMarketObs.value = payload;
     pmMarketObsError.value = "";
   }

@@ -31,13 +31,22 @@ export interface PmSubmitAttempt {
 const memory = new Map<string, PmSubmitAttempt>();
 const flights = new Set<string>();
 
+function hasReadyUserId(userId: unknown): boolean {
+  if (typeof userId === "number") return Number.isFinite(userId) && userId > 0;
+  if (typeof userId !== "string") return false;
+  const id = userId.trim();
+  // [changmen 扩展] RDS 用户 ID 为 UUID；兼容旧数值 ID，但不改变恢复记录的 scope 输入。
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+    || id !== "" && Number.isFinite(Number(id)) && Number(id) > 0;
+}
+
 function scopeFor(account: PlatformAccount): string {
   const config = parseTokenConfig(account.token);
   const creds = resolveApiCreds(config);
-  let userId = 0;
+  let userId: unknown = 0;
   try { userId = useUserStore().userId; }
   catch { if (typeof window !== "undefined") throw new Error("PM 用户会话尚未准备好"); }
-  if (typeof window !== "undefined" && !(Number(userId) > 0)) throw new Error("PM 用户会话尚未准备好");
+  if (typeof window !== "undefined" && !hasReadyUserId(userId)) throw new Error("PM 用户会话尚未准备好");
   return keccak256(toBytes(JSON.stringify([userId, account.accountId,
     String(account.gateway).replace(/\/+$/, ""), creds.address?.toLowerCase(),
     resolveFunder(config)?.toLowerCase()])));

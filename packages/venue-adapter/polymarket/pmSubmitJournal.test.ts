@@ -1,10 +1,10 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { clearPmSubmitJournalForTests, finishPmSubmitAttempt, guardedPmSubmit,
-  pmAccountSubmitAttempts, PmSubmitUnknownError } from "./pmSubmitJournal";
+  pmAccountSubmitAttempts, pmSubmitScope, PmSubmitUnknownError } from "./pmSubmitJournal";
 import { getPolymarketOrderClientRuntime } from "./pmOrderClientCache";
 import { resolveApiCreds } from "./l2Auth";
-const owner = vi.hoisted(() => ({ userId: 1 }));
+const owner = vi.hoisted(() => ({ userId: 1 as unknown }));
 vi.mock("../shared/webBridge", () => ({ useUserStore: () => owner }));
 
 const config = { walletAddress: "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf",
@@ -21,6 +21,43 @@ async function body(side: "BUY" | "SELL" = "BUY", tokenID = "123") {
     { tickSize: "0.01", negRisk: false }, 2) as any, "api-key", clob.OrderType.FOK);
 }
 beforeEach(() => { localStorage.clear(); clearPmSubmitJournalForTests(); vi.restoreAllMocks(); vi.unstubAllGlobals(); owner.userId = 1; });
+
+test("an unlocked browser with a UUID user can submit and retains per-user recovery isolation", async () => {
+  vi.stubGlobal("window", {});
+  vi.stubGlobal("navigator", { locks: { request: async (_key: string, run: () => Promise<unknown>) => run() } });
+  const userA = "11111111-1111-4111-8111-111111111111";
+  const userB = "22222222-2222-4222-8222-222222222222";
+  owner.userId = userA;
+  const post = vi.fn(async () => { throw new Error("lost ACK"); });
+  await expect(guardedPmSubmit(account, await body(), context, post)).rejects.toBeInstanceOf(PmSubmitUnknownError);
+  expect(post).toHaveBeenCalledOnce();
+  const originalScope = pmSubmitScope(account);
+  expect(pmAccountSubmitAttempts(account)).toHaveLength(1);
+  owner.userId = userB;
+  expect(pmSubmitScope(account)).not.toBe(originalScope);
+  expect(pmAccountSubmitAttempts(account)).toHaveLength(0);
+  owner.userId = userA;
+  const retry = vi.fn();
+  await expect(guardedPmSubmit(account, await body(), context, retry)).rejects.toBeInstanceOf(PmSubmitUnknownError);
+  expect(retry).not.toHaveBeenCalled();
+});
+
+test.each([0, -1, NaN, Infinity, undefined, null, "", " ", "0", "-1", "undefined", "not-a-user-id"])(
+  "an invalid browser user remains blocked before dispatch: %s", async (userId) => {
+    vi.stubGlobal("window", {});
+    owner.userId = userId;
+    const post = vi.fn();
+    await expect(guardedPmSubmit(account, await body(), context, post)).rejects.toThrow("PM 用户会话尚未准备好");
+    expect(post).not.toHaveBeenCalled();
+    expect(localStorage.length).toBe(0);
+  });
+
+test.each([1, "1"])("legacy positive user IDs remain valid without changing their scope: %s", (userId) => {
+  owner.userId = userId;
+  const scopeBeforeBrowser = pmSubmitScope(account);
+  vi.stubGlobal("window", {});
+  expect(pmSubmitScope(account)).toBe(scopeBeforeBrowser);
+});
 
 test("dispatch is durable before POST; lost ACK survives restart and blocks a fresh signature", async () => {
   const order = await body();

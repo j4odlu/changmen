@@ -87,6 +87,46 @@ it("mode changes and tick-only WS updates refresh UI without rewriting raw fo", 
   setPmArbPriceBufferPrefs({ enabled: true, mode: "percent", multiplier: 1.01 });
   expect(displayed.value).toBe(1.980);
 });
+
+it("resumes tick prefetch after a logout resets the odds store without reloading the page", async () => {
+  vi.useFakeTimers();
+  seed();
+  setPmArbPriceBufferPrefs({ enabled: true, mode: "tick", multiplier: 1.01 });
+  await vi.advanceTimersByTimeAsync(0);
+  const odds = useOddsStore();
+  expect(odds.getOdds("Polymarket", "t")).toBe(1.960);
+  useMatchStore().matchs = [];
+  odds.$reset();
+  seed();
+  odds.save("Polymarket", { id: "a", odds: 2.5, clobPrice: 0.4, isLock: false, time: Date.now() });
+  await vi.advanceTimersByTimeAsync(5_000);
+  expect(load.mock.calls.map(call => call[0])).toContain("a");
+  expect(odds.pmTickBufferEnabled).toBe(true);
+  expect(odds.isQuotePending("Polymarket", "a")).toBe(false);
+  expect(odds.getOdds("Polymarket", "a")).toBe(2.439);
+});
+
+it.each([{ enabled: false, mode: "tick" }, { enabled: true, mode: "percent" }] as const)(
+  "reset does not enable tick prefetch when the selected policy is %j", async prefs => {
+    vi.useFakeTimers();
+    setPmArbPriceBufferPrefs({ ...prefs, multiplier: 1.01 });
+    useOddsStore().$reset(); seed();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(load).not.toHaveBeenCalled();
+    expect(useOddsStore().pmTickBufferEnabled).toBe(false);
+  },
+);
+
+it("stopping the quote runtime releases the enabled mirror watcher", async () => {
+  vi.useFakeTimers(); seed();
+  setPmArbPriceBufferPrefs({ enabled: true, mode: "tick", multiplier: 1.01 });
+  await vi.advanceTimersByTimeAsync(0);
+  stopPmTickBufferQuotes();
+  useOddsStore().$reset(); seed();
+  await vi.advanceTimersByTimeAsync(5_000);
+  expect(useOddsStore().pmTickBufferEnabled).toBe(false);
+  expect(load).toHaveBeenCalledOnce();
+});
 it("a late tick HTTP result stays independent of percentage and is reused when switching back", async () => {
   vi.useFakeTimers();
   let release!: (book: { asset_id: string; tick_size: string; timestamp: number }) => void;

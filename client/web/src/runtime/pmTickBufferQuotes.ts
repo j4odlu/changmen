@@ -41,6 +41,11 @@ export function installPmTickBufferQuotes(): void {
     // 模式切换仅改变转换规则，已确认的公开 tick 与在途请求不被销毁。
     prefetch();
   };
+  // [changmen 扩展] 登出会 $reset fo；报价偏好不变时也须恢复预取镜像，不能等页面刷新。
+  const stopEnabled = watch(() => odds.pmTickBufferEnabled, enabled => {
+    const active = isPmTickBufferActive();
+    if (enabled !== active) applyMode(active);
+  }, { flush: "sync" });
   const stopMode = onPmTickBufferModeChange(applyMode);
   const stopPolicy = onPmPricePolicyChange(() => { odds.pmTickBufferVersion++; });
   const stopTick = onPmTickBufferChange(tokenId => {
@@ -56,7 +61,7 @@ export function installPmTickBufferQuotes(): void {
   applyMode(isPmTickBufferActive());
   odds.pmTickBufferVersion++;
   cleanup = () => {
-    stopMode(); stopPolicy(); stopTick(); stopMatches(); stopSave();
+    stopEnabled(); stopMode(); stopPolicy(); stopTick(); stopMatches(); stopSave();
     if (timer) clearInterval(timer);
     setPmTickBufferLoader(undefined);
     clearPmTickBufferMetadata();

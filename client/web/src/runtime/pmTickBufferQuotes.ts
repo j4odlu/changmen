@@ -1,7 +1,8 @@
 import { computed, watch } from "vue";
 import { isPmTickBufferActive, onPmTickBufferModeChange, onPmPricePolicyChange, onPmTickBufferChange,
   requestPmTickBufferTick, setPmTickBufferLoader, clearPmTickBufferMetadata,
-  retainPmTickBufferRequests, fetchPmTickBufferBook, isValidClobPrice } from "@changmen/venue-adapter/polymarket";
+  retainPmTickBufferRequests, fetchPmTickBufferBook, isValidClobPrice,
+  getPolymarketPmSportBlockReason } from "@changmen/venue-adapter/polymarket";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useMatchStore } from "@/stores/matchStore";
 
@@ -14,8 +15,11 @@ export function installPmTickBufferQuotes(): void {
   let timer: ReturnType<typeof setInterval> | undefined;
   const activeAssets = computed(() => {
     const ids = new Set<string>();
-    for (const match of matches.matchs) for (const bet of match.bets) for (const item of bet.items) {
-      if (item.type === "Polymarket") { ids.add(item.homeId); ids.add(item.awayId); }
+    for (const match of matches.matchs) for (const bet of match.bets) {
+      if (getPolymarketPmSportBlockReason(match.pmSport, bet.round)) continue;
+      for (const item of bet.items) {
+        if (item.type === "Polymarket") { ids.add(item.homeId); ids.add(item.awayId); }
+      }
     }
     return ids;
   });

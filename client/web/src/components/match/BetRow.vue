@@ -24,6 +24,7 @@ import { arbPercent, formatSecond, percent, toFixed } from "@changmen/client-cor
 import { useCreateLoseDialogStore } from "@/stores/createLoseDialogStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { useOddsStore } from "@/stores/oddsStore";
+import { getPolymarketPmSportBlockReason } from "@changmen/venue-adapter/polymarket";
 import {
   getPbWsShadowRevision,
   isPbWsShadowUiAllowed,
@@ -101,7 +102,21 @@ function onToggleMapMute(e: MouseEvent) {
 /** 体育只读板关掉扩展交互暗示（红线/EV），避免看起来能下单 */
 const extensionsEnabled = computed(() => betRowUiEnabled.value && bettingEnabled.value);
 
-const arbUi = useBetRowArbUi(() => props.match, () => props.bet, extensionsEnabled);
+/** [changmen 扩展] 电竞比赛/地图已结束时，旧行情与缺 tick 都不能显示为可报价。 */
+const pmQuoteBlocked = computed(() => props.allowBetting && Boolean(
+  getPolymarketPmSportBlockReason(props.match.pmSport, props.bet.round),
+));
+
+/** [changmen 扩展] 显示已锁定的 PM 不再参与本行套利/EV 标记；保留其它场馆。 */
+const extensionBet = computed(() => {
+  if (!pmQuoteBlocked.value)
+    return props.bet;
+  return Object.assign(Object.create(Object.getPrototypeOf(props.bet)) as ViewBet, props.bet, {
+    items: props.bet.items.filter(item => item.type !== "Polymarket"),
+  });
+});
+
+const arbUi = useBetRowArbUi(() => props.match, () => extensionBet.value, extensionsEnabled);
 const {
   itemsContainerRef,
   line: arbLine,
@@ -113,7 +128,7 @@ const {
   sourceLabel,
 } = arbUi;
 
-const evMarker = useEvMarker(() => props.bet, extensionsEnabled);
+const evMarker = useEvMarker(() => extensionBet.value, extensionsEnabled);
 
 const oddsByItemKey = computed(() => {
   void props.oddsDisplayTick;
@@ -124,9 +139,10 @@ const oddsByItemKey = computed(() => {
   // 电竞：MQTT/WS 只写 fo；靠 Pinia reactive Map 按 oddId 追踪 getOdds（勿用全局 foRevision 扇出）
   const out = new Map<string, { home: number; away: number }>();
   for (const item of props.bet.items) {
+    const blocked = item.type === "Polymarket" && pmQuoteBlocked.value;
     out.set(`${item.type}:${item.betId}`, {
-      home: oddsStore.getOdds(item.type, item.homeId, item.fallbackHomeOdds),
-      away: oddsStore.getOdds(item.type, item.awayId, item.fallbackAwayOdds),
+      home: blocked ? 0 : oddsStore.getOdds(item.type, item.homeId, item.fallbackHomeOdds),
+      away: blocked ? 0 : oddsStore.getOdds(item.type, item.awayId, item.fallbackAwayOdds),
     });
   }
   return out;
@@ -155,6 +171,8 @@ function itemOdds(item: ViewBet["items"][0], side: BetSide) {
 }
 
 function itemQuotePending(item: ViewBet["items"][0], side: BetSide): boolean {
+  if (item.type === "Polymarket" && pmQuoteBlocked.value)
+    return false;
   return props.allowBetting && oddsStore.isQuotePending(item.type, side === "Home" ? item.homeId : item.awayId);
 }
 
@@ -381,7 +399,7 @@ function defaultOddsLabel(betId: number, side: BetSide): string {
 }
 
 function onTarget(platform: ViewBet["items"][0]["type"], side: BetSide) {
-  if (!bettingEnabled.value)
+  if (!bettingEnabled.value || (platform === "Polymarket" && pmQuoteBlocked.value))
     return;
   void matchStore.setBetTarget(platform, props.bet.id, side);
 }
@@ -395,7 +413,7 @@ function openLimit(item: ViewBet["items"][0]) {
 }
 
 function onOddsDblClick(item: ViewBet["items"][0], side: BetSide) {
-  if (!bettingEnabled.value)
+  if (!bettingEnabled.value || (item.type === "Polymarket" && pmQuoteBlocked.value))
     return;
   void matchStore.manualBet(props.match, props.bet, item, side);
 }

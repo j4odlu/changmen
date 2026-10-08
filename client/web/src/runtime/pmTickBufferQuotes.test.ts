@@ -150,6 +150,45 @@ it("a failed metadata refresh retains the last confirmed quote without touching 
   warning.mockRestore();
 });
 
+it.each([{ ended: true }, { status: "finished" }, { status: "final" },
+  { bo: 3, mapScore: { home: 2, away: 1 } }])(
+  "finished PM matches do not prefetch metadata even with stale unlocked prices: %j", async pmSport => {
+    seed();
+    useMatchStore().matchs[0]!.pmSport = pmSport;
+    setPmArbPriceBufferPrefs({ enabled: true, mode: "tick", multiplier: 1.01 });
+    await Promise.resolve();
+    expect(load).not.toHaveBeenCalled();
+  },
+);
+
+it("stops refreshing metadata when a live match ends", async () => {
+  vi.useFakeTimers(); vi.setSystemTime(100_000);
+  seed();
+  const match = useMatchStore().matchs[0]!;
+  match.pmSport = { live: true, currentMap: 3 };
+  setPmArbPriceBufferPrefs({ enabled: true, mode: "tick", multiplier: 1.01 });
+  await vi.advanceTimersByTimeAsync(0);
+  expect(load).toHaveBeenCalledOnce();
+  match.pmSport = { ended: true, status: "finished" };
+  await vi.advanceTimersByTimeAsync(65_000);
+  useOddsStore().save("Polymarket", { id: "t", odds: 2, clobPrice: 0.5, isLock: false, time: Date.now() });
+  await vi.advanceTimersByTimeAsync(0);
+  expect(load).toHaveBeenCalledOnce();
+});
+
+it("prefetches the current map but excludes completed maps", async () => {
+  seed();
+  const match = useMatchStore().matchs[0]!;
+  match.pmSport = { live: true, currentMap: 3 };
+  match.bets[0]!.round = 3;
+  match.bets.push({ round: 2, items: [{ type: "Polymarket", homeId: "old-home", awayId: "old-away" }] } as ViewMatch["bets"][number]);
+  for (const id of ["old-home", "old-away"])
+    useOddsStore().save("Polymarket", { id, odds: 2, clobPrice: 0.5, isLock: false, time: Date.now() });
+  setPmArbPriceBufferPrefs({ enabled: true, mode: "tick", multiplier: 1.01 });
+  await vi.waitFor(() => expect(load).toHaveBeenCalledOnce());
+  expect(load.mock.calls[0]![0]).toBe("t");
+});
+
 it("tick-only WS changes refresh a retained quote while the collection cache is rebuilding", async () => {
   seed(); setPmArbPriceBufferPrefs({ enabled: true, mode: "tick", multiplier: 1.01 });
   const odds = useOddsStore(); const displayed = computed(() => odds.getOdds("Polymarket", "t"));

@@ -7,13 +7,15 @@
 ## 流程（对齐 A8 `AQ` / `_Ze`）
 
 ```text
-getCollectPlatform(PB)  // 仅 games 配置
+getGames(PB)  // 游戏配置；失败/空时回退静态表
 resolvePbCollectAccount()  // bv：PB + balance!==undefined，不用 platforms.json
   → collectPbGet (Zn.get / 扩展) pbOddsUrl
   → parseEuroOddsPayload (allowedSlugs from getGames)
   → setPbLineId(`${matchId}:${map}`, lineId)  // TQ
   → oddsStore 实时 + 每 60s saveMatch/saveBets
 ```
+
+[changmen 扩展] 已暂停 PB 采集器的 `Client_GetCollectPlatform` 请求。A8 通用 `getPlatform(PB)` 会先请求该接口，再请求 `Client_GetGames`；PB 实际只使用 games 过滤比赛，采集凭证来自本机账号。
 
 轮询 **5s**；批量落库 **60s**（`SAVE_MS`）；无已登录有余额账号时 **3s** 且 `clean(PB)`。
 

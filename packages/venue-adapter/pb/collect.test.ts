@@ -102,7 +102,7 @@ describe("PB collect platform parity", () => {
     setPbChangmenExtensions(true);
   });
 
-  test("reads platform config before checking the PB account, matching A8 YY", async () => {
+  test("reads games before checking the PB account without requesting collect credentials", async () => {
     const { startPbCollector } = await import("./collect");
     hasA8PluginRuntime.mockReturnValue(true);
     getCollectPlatform.mockResolvedValue({ Gateway: "https://pb.example", BetName: "winner" });
@@ -113,8 +113,9 @@ describe("PB collect platform parity", () => {
     await vi.waitFor(() => expect(resolvePbAccount).toHaveBeenCalled());
     stop();
 
-    expect(getCollectPlatform).toHaveBeenCalledWith("PB");
-    expect(getCollectPlatform.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(getCollectPlatform).not.toHaveBeenCalled();
+    expect(getGames).toHaveBeenCalledWith("PB");
+    expect(getGames.mock.invocationCallOrder[0]).toBeLessThan(
       resolvePbAccount.mock.invocationCallOrder[0]!,
     );
   });
@@ -143,6 +144,7 @@ describe("PB collect platform parity", () => {
     expect(getGames).toHaveBeenCalledWith("PB");
     expect(pbCollectEuroOdds).toHaveBeenCalledWith(expect.anything(), true);
     expect(pbCollectEuroOdds).toHaveBeenCalledWith(expect.anything(), false);
+    expect(getCollectPlatform).not.toHaveBeenCalled();
     expect(ingestAndReportPbParsedMatch.mock.calls[0]![0].gameId).toBe("cs-go");
     expect(ingestAndReportPbParsedMatch.mock.calls[0]![0].rotNum).toBe("10001");
   });

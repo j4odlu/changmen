@@ -1,6 +1,6 @@
 import { cleanVenueOdds } from "@changmen/client-core/bridge/oddsAccess";
 import { hasA8PluginRuntime } from "@changmen/client-core/chrome-plugin/bridge";
-import { getCollectPlatform, getGames } from "@changmen/client-core/bridge/clientApi";
+import { getGames } from "@changmen/client-core/bridge/clientApi";
 import { getStaticVenueGames } from "@changmen/client-core/shared/venueGames";
 import { PB_PLUGIN_REQUIRED_MSG, pbCollectEuroOdds, resolvePbAccount } from "./transport";
 import type { CollectBetDto, CollectMatchDto } from "@changmen/client-core/types/collect";
@@ -63,9 +63,7 @@ export function startPbCollector(): () => void {
   type GateOk = { account: PlatformAccount; games: string[] };
 
   async function resolveGate(): Promise<"skip" | "no-account" | GateOk> {
-    const platform = await getCollectPlatform(PLATFORM);
-    if (!platform) return "skip";
-
+    // [changmen 扩展] 暂停 PB Client_GetCollectPlatform；采集凭证来自本机账号，仅保留游戏配置请求。
     const games = await resolvePbPlatformGames();
     const account = resolvePbAccount();
     if (!account) {

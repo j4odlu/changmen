@@ -9,7 +9,7 @@
 | 3 | 无账�?3s + clean | `AQ` | `packages/venue-adapter/pb/collect.ts` | 已实�?|
 | 4 | 采集�?`balance!==undefined` �?PB 账号 | `bv` | `packages/venue-adapter/pb/auth.ts` | 已实�?|
 | 5 | 不用 platforms.json 采盘 | �?| 同上 | 已实�?|
-| 6 | `getPlatform(PB)` 仅过�?games | `Vt.getPlatform` | `getCollectPlatform` + `getGames` | 已实�?|
+| 6 | [A8 可证实] `getPlatform(PB)` 仅用 games 过滤 | `Ut.getPlatform` / `YY` | `getGames`（暂停 `getCollectPlatform`） | [changmen 扩展] 保留游戏配置，暂停采集凭证请求 |
 | 7 | 拉盘 `Zn.get` euro/odds | `_Ze` | `packages/venue-adapter/pb/transport.ts` | 已实�?|
 | 8 | 请求�?`k0` 固定 515 | `k0` | `packages/venue-adapter/pb/auth.ts` ([changmen] 515/suffix/plain+XU; see PB.md) | 已实�?|
 | 9 | `TQ` key `${matchId}:${map}` | `TQ.set` | `packages/venue-adapter/pb/lineCache.ts` | 已实�?|

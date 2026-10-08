@@ -5,7 +5,7 @@ import type { AdminOrderLogLookup } from "@/types/admin";
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import { progressPrecheck, progressSubmission, progressBinding, delayedPmConfirmation } from "@changmen/shared/order_progress_evidence";
 import AdminOrderExecutionRecords from "@/components/admin/AdminOrderExecutionRecords.vue";
-import { adminObservationAttempts, adminObservationIssues, adminObservationReport, hasDirectAdminDiagnosis } from "./adminOrderObservation";
+import { adminObservationAttemptKind, adminObservationAttempts, adminObservationExecutions, adminObservationIssues, adminObservationReport, hasDirectAdminDiagnosis } from "./adminOrderObservation";
 
 function payload(): AdminOrderLogLookup {
   const base: OrderObservationEvent = { version: 1, ownerUserId: "u1", eventId: "check-123", kind: "precheck_result", occurredAt: 1000,
@@ -25,6 +25,49 @@ function payload(): AdminOrderLogLookup {
 }
 
 describe("管理后台直接执行诊断", () => {
+  it("distinguishes precheck polling and monitoring from submission-stage records", () => {
+    const data = payload();
+    const events = data.observation!.attempts[0]!.events;
+    expect(adminObservationAttemptKind({ events })).toBe("submission");
+    expect(adminObservationAttemptKind({ events: events.slice(0, 1) })).toBe("precheck");
+    expect(adminObservationAttemptKind({ events: [{ ...events[0]!, kind: "settlement_observed", source: "ray_monitor" }] })).toBe("other");
+    expect(adminObservationAttemptKind({ events: [{ ...events[0]!, kind: "submission_started" }] })).toBe("submission");
+  });
+  it("keeps hundreds of blocked prechecks out of the default submission comparison", async () => {
+    const data = payload();
+    data.observation!.truncated = true;
+    const event = data.observation!.attempts[0]!.events[0]!;
+    for (let index = 0; index < 994; index++) {
+      const blocked = { ...event, attemptId: `check-${index}`, eventId: `check-${index}`, phase: "makeup", outcome: "blocked", occurredAt: 4000 + index };
+      data.observation!.attempts.push({ attemptId: blocked.attemptId, events: [blocked], findings: [], evidence: "client_reported" });
+    }
+    const html = await renderToString(createSSRApp(AdminOrderExecutionRecords, { data }));
+    const comparison = html.slice(html.indexOf('<table'), html.indexOf('</table>'));
+    expect(comparison).toContain("attempt-123");
+    expect(comparison).not.toContain('value="check-');
+    expect(html).toContain("仅预检 994 组");
+    expect(comparison).toContain("仅预检 994");
+    expect(html).toContain("计数仅代表本次查询结果");
+    expect(html).not.toContain("994 次尝试");
+  });
+  it("compares only attempts sharing a unique execution and preserves unknown directions", () => {
+    const data = payload();
+    const original = data.observation!.attempts[0]!;
+    const copy = (attemptId: string, executionId?: string, target?: string) => ({ ...original, attemptId,
+      events: original.events.map(event => ({ ...event, eventId: `${attemptId}:${event.eventId}`, attemptId, executionId, target })) });
+    data.observation!.attempts.push(copy("home", "exec-123", "Home"), copy("retry", "exec-123", "Away"),
+      copy("other", "exec-other", "Home"), copy("missing-1"), copy("missing-2"), copy("unknown", "exec-123"));
+    const executions = adminObservationExecutions(data);
+    expect(executions).toHaveLength(4);
+    expect(executions[0]!.lanes[0]!.attempts.map(attempt => attempt.attemptId)).toEqual(["home"]);
+    expect(executions[0]!.lanes[1]!.attempts.map(attempt => attempt.attemptId)).toEqual(["attempt-123", "retry"]);
+    expect(executions[0]!.lanes[2]!.attempts.map(attempt => attempt.attemptId)).toEqual(["unknown"]);
+    expect(executions.slice(2).map(group => group.attempts.length)).toEqual([1, 1]);
+    original.events[1]!.executionId = "conflicting";
+    const conflicting = adminObservationExecutions(data).find(group => group.attempts.some(attempt => attempt.attemptId === original.attemptId))!;
+    expect(conflicting.executionId).toBeUndefined();
+    expect(conflicting.attempts).toHaveLength(1);
+  });
   it("shows each phase with its own price, receipt and account rather than borrowing adjacent records", () => {
     const data = payload();
     data.orders.push({ ...data.orders[0]!, playerId: 8 });

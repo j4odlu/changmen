@@ -330,7 +330,7 @@ const legColumns = computed(() => {
 const dialogWidth = computed(() => {
   const n = legColumns.value.length;
   if (n <= 2)
-    return "min(980px, 98vw)";
+    return "min(1040px, 96vw)";
   return `min(${720 + n * 240}px, 98vw)`;
 });
 
@@ -642,8 +642,12 @@ defineExpose({ open, openExecution });
                 </div>
               </div>
 
-              <el-alert v-if="evidenceIssues.length" type="warning" :closable="false" :title="evidenceIssues.join('；')" />
-              <p class="admin-order-log-overview__window">
+              <details v-if="directDiagnosis && evidenceIssues.length" class="admin-order-log-issues">
+                <summary>{{ evidenceIssues.length }} 项核查提示 · 展开查看</summary>
+                <ul><li v-for="issue in evidenceIssues" :key="issue">{{ issue }}</li></ul>
+              </details>
+              <el-alert v-else-if="evidenceIssues.length" type="warning" :closable="false" :title="evidenceIssues.join('；')" />
+              <p v-if="!directDiagnosis" class="admin-order-log-overview__window">
                 建议核查：{{ suggestedCheck }}
               </p>
               <p v-if="!directDiagnosis" class="admin-order-log-overview__window">
@@ -1080,3 +1084,18 @@ defineExpose({ open, openExecution });
     </template>
   </el-dialog>
 </template>
+
+<style scoped>
+:global(.admin-order-log-dialog .el-dialog__body) { display: flex; flex-direction: column; }
+.admin-order-log-dialog__scroll { flex: 1; min-height: 0; max-height: none; }
+.admin-order-log-issues { padding: 8px 12px; margin-top: 10px; background: rgba(251, 191, 36, .06); border: 1px solid rgba(251, 191, 36, .2); border-radius: 6px; color: #fbbf24; font-size: 12px; }
+.admin-order-log-issues summary { cursor: pointer; }
+.admin-order-log-issues ul { margin: 8px 0 0; padding-left: 18px; line-height: 1.8; }
+@media (max-width: 700px) {
+  :global(.admin-order-log-dialog .el-dialog__body) { padding: 10px 12px; }
+  :global(.admin-order-log-dialog .el-dialog__footer) { display: flex; flex-wrap: wrap; gap: 6px; }
+  :global(.admin-order-log-dialog .el-dialog__footer .el-button) { margin: 0; flex: 1 1 calc(50% - 6px); }
+  .admin-order-log-overview { padding: 10px; }
+  .admin-order-log-overview__stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+}
+</style>

@@ -17,6 +17,7 @@ declare module 'vue' {
     AdminArbOddsSection: typeof import('./src/components/admin/AdminArbOddsSection.vue')['default']
     AdminCreateUserDialog: typeof import('./src/components/admin/AdminCreateUserDialog.vue')['default']
     AdminLayout: typeof import('./src/components/admin/AdminLayout.vue')['default']
+    AdminOrderExecutionProgress: typeof import('./src/components/admin/AdminOrderExecutionProgress.vue')['default']
     AdminOrderExecutionRecords: typeof import('./src/components/admin/AdminOrderExecutionRecords.vue')['default']
     AdminOrderLinkLines: typeof import('./src/components/admin/AdminOrderLinkLines.vue')['default']
     AdminOrderLogsDialog: typeof import('./src/components/admin/AdminOrderLogsDialog.vue')['default']

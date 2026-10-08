@@ -31,6 +31,35 @@ export function adminObservationAttempts(data: AdminOrderLogLookup) {
   });
 }
 
+/** [changmen 扩展] 仅按明确执行编号分组；缺失或冲突的身份独立展示。 */
+export function adminObservationExecutions(data: AdminOrderLogLookup) {
+  const groups = new Map<string, { key: string; executionId?: string; attempts: ReturnType<typeof adminObservationAttempts> }>();
+  const attempts = adminObservationAttempts(data).sort((a, b) =>
+    Math.min(...a.events.map(event => event.occurredAt)) - Math.min(...b.events.map(event => event.occurredAt)));
+  for (const attempt of attempts) {
+    const ids = [...new Set(attempt.events.map(event => event.executionId).filter(Boolean))];
+    const executionId = ids.length === 1 ? ids[0] : undefined;
+    const key = executionId ? `execution:${executionId}` : `attempt:${attempt.attemptId}`;
+    const group = groups.get(key) || { key, executionId, attempts: [] };
+    group.attempts.push(attempt);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map(group => ({ ...group, lanes: [
+    ...["Home", "Away"].map(target => ({ key: target, label: target === "Home" ? "主队腿" : "客队腿",
+      attempts: group.attempts.filter(attempt => attempt.target === target) })),
+    ...group.attempts.filter(attempt => !["Home", "Away"].includes(attempt.target)).map(attempt => ({
+      key: `unassigned:${attempt.attemptId}`, label: "方向待核查", attempts: [attempt],
+    })),
+  ] }));
+}
+
+/** [changmen 扩展] 预检轮询和订单监控不计为提交阶段；提交阶段也不等于已成交。 */
+export function adminObservationAttemptKind(attempt: { events: readonly OrderObservationEvent[] }) {
+  if (attempt.events.some(event => event.kind === "submission_started" || event.kind === "submission_result")) return "submission";
+  if (attempt.events.some(event => event.kind === "precheck_started" || event.kind === "precheck_result")) return "precheck";
+  return "other";
+}
+
 export function adminObservationIssues(data: AdminOrderLogLookup | null) {
   return [...new Set([...(data?.observation?.issues || []),
     ...(data?.observation?.truncated ? ["旁路事件已截断"] : []),

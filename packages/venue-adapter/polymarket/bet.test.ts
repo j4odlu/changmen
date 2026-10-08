@@ -1823,6 +1823,48 @@ describe("PM +1 tick frozen quote", () => {
     expect(pmGetBook).not.toHaveBeenCalled();
     expect(pmSubmitOrder).toHaveBeenCalledOnce();
   });
+  test.each([
+    [0.976, "0.001", 0.977, 1.023],
+    [0.98, "0.005", 0.985, 1.015],
+    [0.49, "0.0025", 0.4925, 2.030],
+    [0.9869, "0.0001", 0.987, 1.013],
+  ] as const)("%s + %s never reverses truncated odds into the FOK price", async (ask, tick, cap, odds) => {
+    mockPluginGetWithBook({ tick_size: tick, min_order_size: "5", neg_risk: false,
+      asks: [{ price: String(ask), size: "100000" }] });
+    const quote = createPmTickBufferQuote("123456789", ask, tick)!;
+    const leg = { itemId: quote.tokenId, odds: quote.displayOdds, betMoney: 10,
+      data: { pmBufferMode: "tick", pmTickQuote: quote, detectionOdds: quote.displayOdds,
+        detectionMaxPrice: quote.cap, detectionClobPrice: quote.cap } } as any;
+    const account = pmBettingAccount();
+    const checked = await polymarketProvider.checkBet(account, leg);
+    expect(checked.checkError).toBeUndefined();
+    expect(checked.data).toMatchObject({ detectionMaxPrice: cap, limitPrice: cap, detectionOdds: odds });
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(true);
+    expect(pmSubmitOrder).toHaveBeenCalledOnce();
+  });
+  test.each(["0.1", "0.01", "0.005", "0.0025", "0.001", "0.0001"] as const)(
+    "all tradeable %s price levels retain exactly one tick through precheck",
+    async tick => {
+      const step = Math.round(Number(tick) * 10_000);
+      const account = accountWithToken("{}");
+      for (let units = step; units + step < 10_000; units += step) {
+        const ask = units / 10_000;
+        const quote = createPmTickBufferQuote("123456789", ask, tick);
+        if (!quote) continue; // 超过价格边界或 UI 截断到 1 的报价不可交易。
+        const expectedCap = (units + step) / 10_000;
+        mockPluginGetWithBook({ tick_size: tick, min_order_size: "5", neg_risk: false,
+          asks: [{ price: String(ask), size: "100000" }] });
+        const leg = { itemId: quote.tokenId, odds: quote.displayOdds, betMoney: 10,
+          data: { pmBufferMode: "tick", pmTickQuote: quote, detectionOdds: quote.displayOdds,
+            detectionMaxPrice: quote.cap, detectionClobPrice: quote.cap } } as any;
+        const checked = await polymarketProvider.checkBet(account, leg, { role: "precheckOnly" });
+        expect(checked.checkError, `${ask} + ${tick}`).toBeUndefined();
+        expect(checked.data?.detectionMaxPrice, `${ask} + ${tick}`).toBe(expectedCap);
+        expect(checked.data?.limitPrice, `${ask} + ${tick}`).toBe(expectedCap);
+      }
+      expect(pmSubmitOrder).not.toHaveBeenCalled();
+    }, 30_000,
+  );
   test.each([[2.5, false], [2.55, true]])("%s USDC minimum shares checked at cap", async (amount, ready) => {
     const leg = raw(amount);
     const checked = await polymarketProvider.checkBet(pmBettingAccount(), leg);

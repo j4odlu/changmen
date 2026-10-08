@@ -657,7 +657,8 @@ export const polymarketProvider: PlatformProvider = {
     const detectionOdds = Number(prior?.detectionOdds) > 1
       ? Number(prior!.detectionOdds)
       : option.odds;
-    const maxPrice = resolvePolymarketDetectionMaxPrice(option, detectionOdds);
+    // [changmen 扩展] tick 模式始终复用精确 cap，不让三位赔率的二次截断触发倒数回退。
+    const maxPrice = tickQuote ? tickQuote.cap : resolvePolymarketDetectionMaxPrice(option, detectionOdds);
     const apiBetMoney = resolvePolymarketApiBetMoney(account, option);
     const gateway = account.gateway || POLYMARKET_CLOB_API;
     const tokenId = option.itemId;

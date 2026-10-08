@@ -19,6 +19,8 @@
 | 文档 | 内容 |
 |------|------|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Monorepo 结构、`client/*` / `server/*` / `packages/*`、数据流、**本地开发端口** |
+| [MODULARIZATION_PLAN.md](./MODULARIZATION_PLAN.md) | **模块化再分析**：热点定量、P0/P1/P2 清单、与阶段 19 冻结关系 |
+| [OPTIMIZATION_PLAN.md](./OPTIMIZATION_PLAN.md) | 代码优化跟踪（数据正确性 / 性能）；与模块化计划分工见该文 |
 | [MATCH_IDENTITY_MODEL.md](./MATCH_IDENTITY_MODEL.md) | **赛事/队伍身份模型与不变量**：合场、人工关联、队伍解析三者的共同契约 |
 | [ARB_MULTI_SPORT.md](./ARB_MULTI_SPORT.md) | **多运动维护态**：棒/足 Tab + PM∥PF + N3 moneyline 合并；不开 N4；电竞主线见 `client/web/docs/A8_NEXT_STEPS.md`；熊猫体育试玩协议见 [OB_SPORT.md](../client/web/docs/platforms/OB_SPORT.md) |
 | [SPORTS_PRODUCT_LINES.md](./SPORTS_PRODUCT_LINES.md) | monorepo 目录 / `lines/` manifest / 脚本落点（服从 ARB_MULTI_SPORT） |

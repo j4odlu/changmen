@@ -57,7 +57,8 @@ export function summarizeOrderObservations(query, records = []) {
       findings.push("接口受理，缺少场馆确认事件");
     if (results.some(event => event.outcome === "accepted") && !events.some(event => event.kind === "bind_result" && event.outcome === "saved"))
       findings.push("缺少落库或绑定确认事件");
-    if (new Set(events.map(event => event.linkId).filter(Boolean)).size > 1)
+    const linkConflict = new Set(events.map(event => event.linkId).filter(Boolean)).size > 1;
+    if (linkConflict)
       findings.push("同一尝试出现多个非零 Link，关联存在冲突");
     if (settlements.some(event => event.source === "timeout_policy"))
       findings.push("业务按超时策略处理；不是官方拒单回执");
@@ -75,9 +76,10 @@ export function summarizeOrderObservations(query, records = []) {
     const identityConflict = ["ownerUserId", "executionId", "provider", "accountId", "target"].some(key =>
       new Set(events.map(event => event[key]).filter(value => value !== undefined && value !== "")).size > 1);
     if (identityConflict) findings.push("同一尝试的执行、平台、账号或主客身份冲突；不合并判定结果");
-    const confirmation = identityConflict ? undefined : delayedPmConfirmation(events, records) || boundRayOrderConfirmation(events, records);
+    const canMerge = !linkConflict && !identityConflict;
+    const confirmation = canMerge ? delayedPmConfirmation(events, records) || boundRayOrderConfirmation(events, records) : undefined;
     return { attemptId, events, findings, evidence: "client_reported", ...(confirmation ? { confirmation } : {}),
-      progress: identityConflict ? {} : { precheck: progressPrecheck(events), submission: progressSubmission(events, query.events), binding: progressBinding(events) } };
+      progress: canMerge ? { precheck: progressPrecheck(events), submission: progressSubmission(events, query.events), binding: progressBinding(events) } : {} };
   });
   const queueIds = new Set(query.events.map(event => event.queueId).filter(Boolean));
   const queues = [...queueIds].map((queueId) => {

@@ -358,8 +358,10 @@ const totalProfit = computed(() =>
 
 const executionSteps = computed(() => buildAdminOrderExecutionSteps(legColumns.value));
 const diagnosisContext = computed(() => ({ linkType: data.value?.linkType, truncated: data.value?.logStats?.truncated }));
-const evidenceIssues = computed(() => directDiagnosis.value ? adminObservationIssues(data.value)
-  : adminOrderEvidenceIssues(executionSteps.value, diagnosisContext.value));
+const evidenceIssues = computed(() => [...new Set([
+  ...adminObservationIssues(data.value),
+  ...(!directDiagnosis.value ? adminOrderEvidenceIssues(executionSteps.value, diagnosisContext.value) : []),
+])]);
 const suggestedCheck = computed(() => {
   if (directDiagnosis.value)
     return "逐笔核对预检、提交、绑定与场馆确认；缺口和超时策略不能代表官方未成交。需要历史文字记录时可补查旧日志。";
@@ -848,7 +850,7 @@ defineExpose({ open, openExecution });
                 </div>
               </div>
               <p v-else-if="!hasOverviewOrders && !directDiagnosis" class="admin-order-log-overview__empty">
-                该 Link 无落库订单
+                {{ data.ordersQueried === false ? '本次未查询当前订单' : '本次未查询到落库订单' }}
               </p>
             </section>
 

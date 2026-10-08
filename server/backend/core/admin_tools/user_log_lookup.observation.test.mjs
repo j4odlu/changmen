@@ -71,12 +71,14 @@ describe("没有订单的精确执行诊断", () => {
     expect(JSON.stringify(payload)).not.toContain("secret");
     expect(mocks.logs).not.toHaveBeenCalled();
   });
-  it.each(["unavailable", "empty"])("falls back to the existing diagnostic logs when observations are %s", async status => {
+  it.each(["unavailable", "empty", "gap-only"])("falls back to the existing diagnostic logs when observations are %s", async status => {
     mocks.orders.mockResolvedValue([order]);
-    mocks.observations.mockResolvedValue({ status: status === "empty" ? "available" : status, events: [], truncated: false });
+    mocks.observations.mockResolvedValue({ status: status === "unavailable" ? status : "available",
+      events: status === "gap-only" ? [{ ...submit, kind: "transport_gap" }] : [], truncated: false });
     const payload = await lookupOrderLogs({ userId: "u1", link: 123, preferDirect: true });
     expect(payload).toMatchObject({ ok: true, diagnosticSource: "legacy", legacyLogsLoaded: true });
     expect(mocks.logs).toHaveBeenCalledOnce();
+    if (status === "gap-only") expect(payload.observation.issues).toContain("客户端报告观察事件丢失");
   });
   it("allows old logs to be requested explicitly without replacing the direct records", async () => {
     mocks.orders.mockResolvedValue([order]);

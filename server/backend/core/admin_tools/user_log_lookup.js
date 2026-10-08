@@ -1142,7 +1142,7 @@ export async function lookupOrderLogs(opts) {
   const observationQuery = await fetchOrderObservations(user.id, link, 2000, normalized.map(order => ({
     provider: order.provider, accountId: String(order.playerId), orderId: order.orderId,
   })));
-  if (opts.preferDirect === true && observationQuery.status === "available" && observationQuery.events.length)
+  if (opts.preferDirect === true && observationQuery.status === "available" && observationQuery.events.some(event => event.kind !== "transport_gap"))
     return directObservationResult(user, anchor, link, observationQuery, orders, true);
   const window = computeLogWindow(orders, opts?.paddingMs);
   if (!window) {

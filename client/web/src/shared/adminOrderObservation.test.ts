@@ -51,6 +51,16 @@ describe("管理后台直接执行诊断", () => {
     data.observation!.status = "unavailable";
     expect(hasDirectAdminDiagnosis(data)).toBe(false);
   });
+  it("uses the legacy fallback when only transport loss metadata is present and keeps its warnings", () => {
+    const data = payload();
+    data.observation!.events = [{ ...data.observation!.events[0]!, kind: "transport_gap" }];
+    data.observation!.attempts = [];
+    data.observation!.issues = ["客户端报告观察事件丢失"];
+    data.observation!.truncated = true;
+    data.logStats = { total: 1000, related: 10, unrelated: 990, truncated: true, limit: 1000 };
+    expect(hasDirectAdminDiagnosis(data)).toBe(false);
+    expect(adminObservationIssues(data)).toEqual(["客户端报告观察事件丢失", "旁路事件已截断", "旧日志已截断，可能缺少后续记录"]);
+  });
   it("the full admin view displays currencies, zero duration, IDs, status and reasons while escaping text", async () => {
     const data = payload();
     data.observation!.attempts[0]!.events[1]!.safeSummary = "<script>unsafe</script>";

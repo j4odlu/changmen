@@ -108,4 +108,23 @@ describe("旁路观察协议与证据回放", () => {
     expect(result.attempts[0].findings).toContain("同一尝试的执行、平台、账号或主客身份冲突；不合并判定结果");
     expect(result.attempts[0].events).toHaveLength(2);
   });
+  it("keeps conflicting nonzero Links as raw records instead of merging their stage decisions", () => {
+    const result = summarizeOrderObservations(query([
+      { ...base, provider: "Polymarket", accountId: 7, kind: "precheck_result", outcome: "prepared" },
+      { ...base, eventId: "submit-other-link", sequence: 2, linkId: 456, provider: "Polymarket", accountId: 7,
+        kind: "submission_result", outcome: "accepted", observedStatus: "delayed" },
+    ]));
+    expect(result.attempts[0].progress).toEqual({});
+    expect(result.attempts[0].confirmation).toBeUndefined();
+    expect(result.attempts[0].findings).toContain("同一尝试出现多个非零 Link，关联存在冲突");
+    expect(result.attempts[0].events).toHaveLength(2);
+  });
+  it("allows a zero Link followed by one explicit Link without treating it as conflicting identities", () => {
+    const result = summarizeOrderObservations(query([
+      { ...base, linkId: 0 },
+      { ...base, eventId: "check-explicit-link", sequence: 2, kind: "precheck_result", outcome: "prepared" },
+    ]));
+    expect(result.attempts[0].progress.precheck.label).toBe("预检通过");
+    expect(result.attempts[0].findings).not.toContain("同一尝试出现多个非零 Link，关联存在冲突");
+  });
 });

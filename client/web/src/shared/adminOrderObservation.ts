@@ -2,7 +2,7 @@ import type { AdminOrderLogLookup } from "@/types/admin";
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 
 export function hasDirectAdminDiagnosis(data: AdminOrderLogLookup | null) {
-  return data?.observation?.status === "available" && data.observation.events.length > 0;
+  return data?.observation?.status === "available" && data.observation.events.some(event => event.kind !== "transport_gap");
 }
 
 /** [changmen 扩展] 只投影服务端判定和原始记录，不从时间相近或场馆相同推造关联。 */
@@ -33,6 +33,8 @@ export function adminObservationAttempts(data: AdminOrderLogLookup) {
 
 export function adminObservationIssues(data: AdminOrderLogLookup | null) {
   return [...new Set([...(data?.observation?.issues || []),
+    ...(data?.observation?.truncated ? ["旁路事件已截断"] : []),
+    ...(data?.logStats?.truncated ? ["旧日志已截断，可能缺少后续记录"] : []),
     ...(data?.observation?.attempts || []).flatMap(attempt => attempt.findings),
     ...(data?.observation?.queues || []).flatMap(queue => queue.findings)])];
 }

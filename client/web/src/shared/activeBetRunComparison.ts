@@ -1,5 +1,6 @@
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import type { ActiveBetLeg, ActiveBetRun } from "@/types/activeBetRun";
+import type { OrderRow } from "@/types/order";
 import type { BetProgressStage } from "./activeBetRunStages";
 import { activeBetLegAttemptViews, activeBetLegStages } from "./activeBetRunStages";
 
@@ -17,7 +18,7 @@ export interface ProgressComparisonGroup {
 }
 
 /** [changmen 扩展] 按同类尝试的轮次和阶段横向对齐；单腿补单不借用对腿首轮结果。 */
-export function activeBetRunComparison(run: ActiveBetRun, facts: ReadonlyMap<ActiveBetLeg["side"], readonly OrderObservationEvent[]>): ProgressComparisonGroup[] {
+export function activeBetRunComparison(run: ActiveBetRun, facts: ReadonlyMap<ActiveBetLeg["side"], readonly OrderObservationEvent[]>, orders: readonly OrderRow[] = []): ProgressComparisonGroup[] {
   const legs = [...run.legs].sort((a, b) => a.side.localeCompare(b.side));
   const views = legs.map(leg => activeBetLegAttemptViews(run, leg, facts.get(leg.side) || []));
   const definitions = new Map<string, string>();
@@ -44,14 +45,14 @@ export function activeBetRunComparison(run: ActiveBetRun, facts: ReadonlyMap<Act
       if (!attempt) return undefined;
       const events = (facts.get(leg.side) || []).filter(event => event.attemptId === attempt.id);
       const latest = attempt.id === views[index]!.attempts.at(-1)?.id;
-      const rows = activeBetLegStages(run, latest ? leg : { ...leg, status: "pending", events: [] }, events);
+      const rows = activeBetLegStages(run, latest ? leg : { ...leg, status: "pending", events: [] }, events, orders);
       const matched = events.find(event => event.kind === "submission_result" && event.provider === "Polymarket" && event.outcome === "accepted" && event.observedStatus === "matched");
       if (matched) rows.push({ id: "confirmation", stage: "成交确认", label: "直接成交 · 无需拒单检测", tone: "success", at: matched.occurredAt });
       return rows;
     });
     build(key, definitions.get(key)!, stages, providers, STAGES.slice(0, 5).map(([id]) => id));
   }
-  const current = legs.map(leg => activeBetLegStages(run, leg, facts.get(leg.side) || []));
+  const current = legs.map(leg => activeBetLegStages(run, leg, facts.get(leg.side) || [], orders));
   if (!keys.length) build("current", "当前进度", current, legs.map(leg => leg.platform), STAGES.slice(0, 5).map(([id]) => id));
   build("orchestration", "补单与编排", current, [], ["makeup", "result"]);
   return groups;

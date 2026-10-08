@@ -19,12 +19,32 @@ function event(kind: OrderObservationEvent["kind"], patch: Partial<OrderObservat
 const facts = () => new Map<"A" | "B", OrderObservationEvent[]>([
   ["A", [event("precheck_result", { provider: "RAY", outcome: "prepared", durationMs: 158 }), event("submission_result", { provider: "RAY", outcome: "accepted" }),
     event("settlement_observed", { provider: "RAY", source: "adapter", outcome: "filled", observedStatus: "none" })]],
-  ["B", [event("precheck_result", { provider: "Polymarket", outcome: "prepared" }), event("submission_result", { provider: "Polymarket", outcome: "accepted", observedStatus: "delayed" }),
-    event("settlement_observed", { provider: "Polymarket", source: "timeout_policy", outcome: "unfilled" }),
+  ["B", [event("precheck_result", { provider: "Polymarket", outcome: "prepared" }), event("submission_result", { provider: "Polymarket", orderId: "pm-initial", outcome: "accepted", observedStatus: "delayed" }),
+    event("settlement_observed", { provider: "Polymarket", orderId: "pm-initial", source: "timeout_policy", outcome: "unfilled" }),
     event("precheck_result", { attemptId: "makeup-1", phase: "makeup", provider: "Polymarket", outcome: "blocked", durationMs: 1496, safeSummary: "当前卖价高于检测限价，已阻止提交（卖价 0.32，限价 0.303）" })]],
 ]);
 
 describe("双腿按阶段对照", () => {
+  it("shows each leg's precheck odds and preserves the snapshot across submission and makeup", async () => {
+    const events = new Map<"A" | "B", OrderObservationEvent[]>([
+      ["A", [event("precheck_result", { provider: "RAY", outcome: "prepared", odds: 1.85 }),
+        event("submission_result", { provider: "RAY", outcome: "accepted", odds: 1.8 })]],
+      ["B", [event("precheck_result", { provider: "Polymarket", outcome: "prepared", odds: 2.35 }),
+        event("submission_result", { provider: "Polymarket", outcome: "accepted", odds: 2.3 }),
+        event("precheck_result", { attemptId: "makeup-1", phase: "makeup", provider: "Polymarket", outcome: "prepared", odds: 2.25 })]],
+    ]);
+    const groups = activeBetRunComparison(run, events);
+    expect(groups.find(group => group.key === "initial:1")?.rows.find(row => row.id === "precheck")?.cells.map(cell => cell.odds)).toEqual([1.85, 2.35]);
+    expect(groups.find(group => group.key === "makeup:1")?.rows.find(row => row.id === "precheck")?.cells.map(cell => cell.odds)).toEqual([undefined, 2.25]);
+    const html = await renderToString(createSSRApp({ render: () => h(OrderProgressComparison, { run, facts: events }) }));
+    const prechecks = [...html.matchAll(/<tr data-stage="precheck">([\s\S]*?)<\/tr>/g)].map(match => match[1]!);
+    expect(prechecks[0]).toMatch(/data-side="A"[\s\S]*?预检赔率 @1\.85/);
+    expect(prechecks[0]).toMatch(/data-side="B"[\s\S]*?预检赔率 @2\.35/);
+    expect(prechecks[1]).toContain("预检赔率 @2.25");
+    expect(prechecks[1]).not.toContain("预检赔率 @1.85");
+    expect(html).not.toContain("预检赔率 @1.8<");
+    expect(html).not.toContain("预检赔率 @2.3<");
+  });
   it("keeps both initial prechecks on one row and isolates a one-leg makeup attempt", async () => {
     const groups = activeBetRunComparison(run, facts());
     const initial = groups.find(group => group.key === "initial:1")!;

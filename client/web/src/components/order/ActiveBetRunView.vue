@@ -56,14 +56,15 @@ let dragCleanup: (() => void) | undefined;
 let resizeCleanup: (() => void) | undefined;
 
 const runCount = computed(() => displayRuns.value.length);
+const runOrders = computed(() => userStore.isLoggedIn ? orderStore.orders.get(activeRun.value?.linkId || 0) || [] : []);
 const runFacts = computed(() => userStore.isLoggedIn
-  ? withBoundRayOrderEvidence(observationStore.forLink(String(userStore.userId || ""), activeRun.value?.linkId), orderStore.orders.get(activeRun.value?.linkId || 0) || [])
+  ? withBoundRayOrderEvidence(observationStore.forLink(String(userStore.userId || ""), activeRun.value?.linkId), runOrders.value)
   : []);
 const factGroups = computed(() => observationLegGroups(runFacts.value, activeRun.value?.legs || []));
 function legFacts(leg: ActiveBetLeg) { return factGroups.value.groups.get(leg.side) || []; }
-const legSummaries = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, observationLegSummary(legFacts(leg), leg.status, leg.precheckOnly)])));
+const legSummaries = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, observationLegSummary(legFacts(leg), leg.status, leg.precheckOnly, runOrders.value)])));
 function legSummary(leg: ActiveBetLeg) { return legSummaries.value.get(leg.side)!; }
-const legStages = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, activeBetLegStages(activeRun.value!, leg, legFacts(leg))])));
+const legStages = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, activeBetLegStages(activeRun.value!, leg, legFacts(leg), runOrders.value)])));
 const legAttempts = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, activeBetLegAttemptViews(activeRun.value!, leg, legFacts(leg))])));
 function legAttemptLabel(leg: ActiveBetLeg) { return legAttempts.value.get(leg.side)?.latestLabel || "尝试类型未记录"; }
 function legProvider(leg: ActiveBetLeg) { return legSummary(leg).provider || leg.platform; }
@@ -72,7 +73,7 @@ const unassignedFacts = computed(() => factGroups.value.unassigned);
 const hasMoreTimeline = computed(() => unassignedFacts.value.length > 6
   || (activeRun.value?.legs || []).some(leg => legFacts(leg).length > 6));
 const evidenceWarnings = computed(() => progressEvidenceWarnings(runFacts.value));
-function legPlacementLabel(leg: ActiveBetLeg) { return progressOrchestrationLabel(leg, legFacts(leg), activeStore.legPlacementLabel(leg, activeRun.value ?? undefined)); }
+function legPlacementLabel(leg: ActiveBetLeg) { return progressOrchestrationLabel(leg, legFacts(leg), activeStore.legPlacementLabel(leg, activeRun.value ?? undefined), runOrders.value); }
 const executionId = computed(() => [...runFacts.value].reverse().find(event => event.executionId)?.executionId);
 const elapsedLabel = computed(() => {
   const run = activeRun.value;
@@ -557,7 +558,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 {{ expandedTimeline ? '每组最近 6 条' : '展开全部记录' }}
               </button>
             </header>
-            <OrderProgressComparison :run="activeRun" :facts="factGroups.groups" />
+            <OrderProgressComparison :run="activeRun" :facts="factGroups.groups" :orders="runOrders" />
             <header class="active-bet-run__section-head"><strong>每腿摘要与时间线</strong></header>
             <div class="active-bet-run__legs">
               <section v-for="leg in activeRun.legs" :key="leg.side" class="active-bet-run__leg" :data-tone="legSummary(leg).tone">

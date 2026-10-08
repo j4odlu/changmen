@@ -17,6 +17,16 @@ const rows = (events: OrderObservationEvent[], legPatch: Partial<ActiveBetLeg> =
 const stage = (events: OrderObservationEvent[], id: string, legPatch: Partial<ActiveBetLeg> = {}) => rows(events, legPatch).find(row => row.id === id)!;
 
 describe("常驻编排关键阶段", () => {
+  it("does not borrow precheck odds from the planned leg, submission, or an earlier check", () => {
+    const planned = { odds: 1.95 };
+    expect(stage([event("submission_result", { odds: 1.9 })], "precheck", planned).odds).toBeUndefined();
+    expect(stage([event("precheck_result", { outcome: "prepared" })], "precheck", planned).odds).toBeUndefined();
+    const restarted = [event("precheck_result", { outcome: "prepared", odds: 1.85 }), event("precheck_started", { sequence: 2, odds: 1.8 })];
+    expect(stage(restarted, "precheck", planned).label).toBe("正在预检");
+    expect(stage(restarted, "precheck", planned).odds).toBeUndefined();
+    for (const odds of [0, -1, Number.NaN, Number.POSITIVE_INFINITY])
+      expect(stage([event("precheck_result", { odds })], "precheck").odds).toBeUndefined();
+  });
   it("resets the visible precheck state when a new check begins and does not claim contradictory data was blocked", () => {
     const stale = [event("precheck_result", { outcome: "blocked", safeSummary: "旧错误" }), event("precheck_started", { sequence: 2 })];
     expect(stage(stale, "precheck")).toMatchObject({ label: "正在预检", detail: undefined });
@@ -29,8 +39,8 @@ describe("常驻编排关键阶段", () => {
   it("keeps the initial PM submission and timeout visible beside a blocked makeup precheck", async () => {
     const initial = [
       event("precheck_result", { provider: "Polymarket", phase: "initial", outcome: "prepared" }),
-      event("submission_result", { provider: "Polymarket", phase: "initial", outcome: "accepted", observedStatus: "delayed" }),
-      event("settlement_observed", { provider: "Polymarket", phase: "reject_detection", source: "timeout_policy", outcome: "unfilled" }),
+      event("submission_result", { provider: "Polymarket", orderId: "pm-initial", phase: "initial", outcome: "accepted", observedStatus: "delayed" }),
+      event("settlement_observed", { provider: "Polymarket", orderId: "pm-initial", phase: "reject_detection", source: "timeout_policy", outcome: "unfilled" }),
     ];
     const makeup = event("precheck_result", { attemptId: "makeup-1", provider: "Polymarket", phase: "makeup", outcome: "blocked", safeSummary: "卖价 0.32，高于限价 0.303" });
     const facts = [...initial, event("queue_created", { attemptId: undefined, queueId: "q1" }), makeup,
@@ -94,11 +104,11 @@ describe("常驻编排关键阶段", () => {
     expect(html).not.toContain("拒单检测");
   });
   it("shows PM delayed detection before and after a venue result", () => {
-    const facts = [event("submission_result", { provider: "Polymarket", outcome: "accepted", observedStatus: "delayed" }),
+    const facts = [event("submission_result", { provider: "Polymarket", orderId: "pm-current", outcome: "accepted", observedStatus: "delayed" }),
       event("decision", { provider: "Polymarket", phase: "reject_detection", reasonCode: "reject_detection_started" })];
-    expect(stage(facts, "confirmation", { platform: "Polymarket" })).toMatchObject({ stage: "拒单检测", label: "正在拒单检测" });
-    const result = rows([...facts, event("settlement_observed", { provider: "Polymarket", source: "adapter", phase: "reject_detection", outcome: "filled" })], { platform: "Polymarket" });
-    expect(result[3]).toMatchObject({ stage: "拒单检测", label: "观察到成交", tone: "success" });
+    expect(stage(facts, "confirmation", { platform: "Polymarket" })).toMatchObject({ stage: "订单状态", label: "订单待确认" });
+    const result = rows([...facts, event("settlement_observed", { provider: "Polymarket", orderId: "pm-current", observedStatus: "none", source: "adapter", phase: "reject_detection", outcome: "filled" })], { platform: "Polymarket" });
+    expect(result[3]).toMatchObject({ stage: "订单状态", label: "订单已成交 · 未结算", tone: "success" });
   });
   it("preserves the fixed-time result while a separate monitor detects a later rejection", async () => {
     const first = event("settlement_observed", { provider: "RAY", orderId: "r1", source: "adapter", outcome: "filled", observedStatus: "none" });

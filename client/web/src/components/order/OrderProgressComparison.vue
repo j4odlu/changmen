@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import type { ActiveBetLeg, ActiveBetRun } from "@/types/activeBetRun";
+import type { OrderRow } from "@/types/order";
 import { computed } from "vue";
 import { activeBetRunComparison } from "@/shared/activeBetRunComparison";
 import { activeBetLegRole } from "@/shared/activeBetRunPresentation";
 
 /** [changmen 扩展] 原生表格共享行高，错误说明换行时双腿仍按阶段对齐。 */
-const props = defineProps<{ run: ActiveBetRun; facts: ReadonlyMap<ActiveBetLeg["side"], readonly OrderObservationEvent[]> }>();
+const props = defineProps<{ run: ActiveBetRun; facts: ReadonlyMap<ActiveBetLeg["side"], readonly OrderObservationEvent[]>; orders?: readonly OrderRow[] }>();
 const legs = computed(() => [...props.run.legs].sort((a, b) => a.side.localeCompare(b.side)));
-const groups = computed(() => activeBetRunComparison(props.run, props.facts));
+const groups = computed(() => activeBetRunComparison(props.run, props.facts, props.orders));
 function eventTime(at: number) { return new Date(at).toLocaleTimeString("zh-CN", { hour12: false }); }
 </script>
 
@@ -36,6 +37,7 @@ function eventTime(at: number) { return new Date(at).toLocaleTimeString("zh-CN",
           <td v-for="(cell, index) in row.cells" :key="index" :data-side="legs[index]?.side" :data-tone="cell.tone">
             <div class="active-bet-run__comparison-result">
               <strong>{{ cell.label }}</strong>
+              <span v-if="cell.odds !== undefined" class="active-bet-run__precheck-odds">预检赔率 @{{ cell.odds }}</span>
               <time v-if="cell.at !== undefined">{{ eventTime(cell.at) }}</time>
               <small v-if="cell.durationMs !== undefined">{{ cell.durationMs }}ms</small>
             </div>

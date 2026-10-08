@@ -178,6 +178,7 @@
 .active-bet-run__comparison-group th { color: #93c5fd; background: rgba(96, 165, 250, .09); }
 .active-bet-run__comparison-group small { margin-left: 12px; color: #7f91aa; }
 .active-bet-run__comparison-result { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 7px; }
+.active-bet-run__precheck-odds { color: #c6d2e3; font-variant-numeric: tabular-nums; }
 .active-bet-run__comparison-result strong { color: #9fb0c7; font-weight: 500; }
 .active-bet-run__comparison-result time, .active-bet-run__comparison-result small { color: #7f91aa; font-size: 10px; }
 .active-bet-run__comparison td[data-tone="success"] strong { color: #34d399; }

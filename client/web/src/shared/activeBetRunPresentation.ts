@@ -1,7 +1,9 @@
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import type { ActiveBetLeg, ActiveBetLegStatus, ActiveBetRun } from "@/types/activeBetRun";
+import type { OrderRow } from "@/types/order";
 import { classifyLinkId } from "@changmen/client-core/shared/format";
 import { observationEventLabel, orderObservationTargets } from "@changmen/shared/order_observation_view";
+import { pmOrderConfirmation } from "./pmOrderConfirmation";
 
 export type ProgressTone = "neutral" | "pending" | "success" | "warning" | "danger";
 const FALLBACK_LABELS: Record<ActiveBetLegStatus, string> = {
@@ -41,7 +43,7 @@ export function observationPrecheckEvidence(events: readonly OrderObservationEve
 }
 
 /** [changmen 扩展] 只读展示最近尝试；受理、超时策略与场馆成交证据分开。 */
-export function observationLegSummary(events: readonly OrderObservationEvent[], fallback: ActiveBetLegStatus, precheckOnly = false) {
+export function observationLegSummary(events: readonly OrderObservationEvent[], fallback: ActiveBetLegStatus, precheckOnly = false, orders: readonly OrderRow[] = []) {
   // 老尝试的补绑回执可能晚于新重试到达，按尝试首次出现排序，不能按最后一条回执选尝试。
   const attempts = new Set(events.map(event => event.attemptId).filter(Boolean));
   const lastAttempt = [...attempts].at(-1);
@@ -131,31 +133,39 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
     ? `${failureSummary}${failure?.responseCode && !failureSummary.includes(`业务码 ${failure.responseCode}`) ? `（场馆业务码 ${failure.responseCode}）` : ""}`
     : undefined;
   const money = amountEvent?.amount ?? undefined;
+  const pmConfirmation = pmOrderConfirmation(attempt, orders);
+  if (pmConfirmation) {
+    label = pmConfirmation.label;
+    tone = pmConfirmation.tone;
+    basis = pmConfirmation.basis;
+  }
   const numberLabel = (value: number) => value.toLocaleString("zh-CN", { maximumFractionDigits: 4 });
   return {
-    provider: [...attempt].reverse().find(event => event.provider)?.provider,
+    provider: pmConfirmation ? submission?.provider : [...attempt].reverse().find(event => event.provider)?.provider,
     precheck,
     label,
     tone,
     basis,
     failureReason,
     attemptId: lastAttempt,
-    orderId: [...attempt].reverse().find(event => event.orderId)?.orderId,
-    accountId: [...attempt].reverse().find(event => event.accountId)?.accountId,
+    orderId: pmConfirmation ? submission?.orderId : [...attempt].reverse().find(event => event.orderId)?.orderId,
+    accountId: pmConfirmation ? submission?.accountId : [...attempt].reverse().find(event => event.accountId)?.accountId,
     amount: money === undefined ? undefined : `${numberLabel(money)} ${amountEvent?.currency || "（币种未记录）"}`,
     odds: [...attempt].reverse().find(event => event.odds !== undefined)?.odds,
-    bound: attempt.some(event => event.kind === "bind_result" && event.outcome === "saved"),
+    bound: attempt.some(event => event.kind === "bind_result" && event.outcome === "saved"
+      && (!pmConfirmation || Boolean(submission?.orderId) && event.orderId === submission?.orderId
+        && event.provider === submission?.provider && (submission?.accountId === undefined || event.accountId === submission.accountId))),
     retries: new Set(events.filter(event => event.retryRound && event.attemptId).map(event => event.attemptId)).size,
     makeups: new Set(events.filter(event => event.kind === "queue_created" && event.queueId).map(event => event.queueId)).size,
   };
 }
 
 /** [changmen 扩展] 编排成功不能代替场馆成交证据，9999 预检身份独立于可变 detail。 */
-export function progressOrchestrationLabel(leg: Pick<ActiveBetLeg, "status" | "precheckOnly">, events: readonly OrderObservationEvent[], fallbackLabel: string): string {
+export function progressOrchestrationLabel(leg: Pick<ActiveBetLeg, "status" | "precheckOnly">, events: readonly OrderObservationEvent[], fallbackLabel: string, orders: readonly OrderRow[] = []): string {
   if (leg.precheckOnly)
     return leg.status === "failed" ? "9999 仅预检 · 失败" : "9999 仅预检 · 不下单";
   if (leg.status === "confirmed") {
-    const summary = observationLegSummary(events, leg.status);
+    const summary = observationLegSummary(events, leg.status, leg.precheckOnly, orders);
     if (summary.label === "检测到拒单")
       return "编排曾判定成交 · 后续检测到拒单";
     if (summary.tone !== "success")

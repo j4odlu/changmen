@@ -17,6 +17,7 @@ function eventTime(at: number) {
         <div class="active-bet-run__stage-content">
           <div class="active-bet-run__stage-heading">
             <strong>{{ item.label }}</strong>
+            <span v-if="item.odds !== undefined" class="active-bet-run__precheck-odds">预检赔率 @{{ item.odds }}</span>
             <time v-if="item.at !== undefined">{{ eventTime(item.at) }}</time>
             <small v-if="item.durationMs !== undefined">{{ item.durationMs }}ms</small>
           </div>

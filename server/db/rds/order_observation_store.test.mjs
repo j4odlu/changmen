@@ -26,9 +26,18 @@ describe("独立观察表", () => {
     mocks.query.mockResolvedValue({ rows: [] });
     await fetchOrderObservations("u1", 0, 20, [], { executionId: "execution-123" });
     const [sql, params] = mocks.query.mock.calls[0];
-    expect(params).toEqual(["u1", 0, 21, "[]", "execution-123", null]);
+    expect(params).toEqual(["u1", 0, 21, "[]", "execution-123", null, null]);
     expect(sql).toContain("event->>'executionId'=$5");
     expect(sql).toContain("WHERE user_id=$1 AND");
     expect(sql).not.toContain("execution-123");
+  });
+  it("looks up an exact evidence ID only within the requested user", async () => {
+    mocks.query.mockResolvedValue({ rows: [] });
+    await fetchOrderObservations("u1", 0, 20, [], { eventId: "event-123" });
+    const [sql, params] = mocks.query.mock.calls[0];
+    expect(params).toEqual(["u1", 0, 21, "[]", null, null, "event-123"]);
+    expect(sql).toContain("event_id=$7");
+    expect(sql).not.toContain("event-123");
+    expect(sql).toContain("WHERE user_id=$1 AND");
   });
 });

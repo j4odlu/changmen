@@ -40,6 +40,13 @@ describe("没有订单的精确执行诊断", () => {
     expect((await lookupOrderLogs({ userId: "u1", link: 1.5 })).ok).toBe(false);
     expect(mocks.observations).not.toHaveBeenCalled();
   });
+  it("reads an exact evidence record without searching legacy logs", async () => {
+    const result = await lookupOrderLogs({ userId: "u1", eventId: "event-123" });
+    expect(result.ok).toBe(true);
+    expect(mocks.observations).toHaveBeenCalledWith("u1", 0, 2000, [], { eventId: "event-123" });
+    expect(mocks.orders).not.toHaveBeenCalled();
+    expect(mocks.logs).not.toHaveBeenCalled();
+  });
   it("does not turn unavailable or missing observations into success", async () => {
     mocks.observations.mockResolvedValue({ status: "unavailable", events: [], truncated: false });
     expect((await lookupOrderLogs({ userId: "u1", link: 123 })).ok).toBe(false);

@@ -4,11 +4,11 @@ import { storeToRefs } from "pinia";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import OrderExecutionTimeline from "@/components/order/OrderExecutionTimeline.vue";
 import OrderProgressComparison from "@/components/order/OrderProgressComparison.vue";
+import OrderProgressEvidence from "@/components/order/OrderProgressEvidence.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { useRecentBetProgress } from "./useRecentBetProgress";
 import { accountProgressDisplayName } from "@/shared/accountDisplayName";
 import { activeBetLegAttemptViews, activeBetLegStages } from "@/shared/activeBetRunStages";
-import { withBoundRayOrderEvidence } from "@/shared/boundRayOrderEvidence";
 import { activeBetLegRole, activeBetRunMode, activeBetRunModeLabel, observationLegGroups, observationLegSummary, progressEvidenceWarnings, progressOrchestrationLabel } from "@/shared/activeBetRunPresentation";
 import { formatActiveBetLinkLabel } from "@/shared/linkDisplay";
 import {
@@ -58,13 +58,13 @@ let resizeCleanup: (() => void) | undefined;
 const runCount = computed(() => displayRuns.value.length);
 const runOrders = computed(() => userStore.isLoggedIn ? orderStore.orders.get(activeRun.value?.linkId || 0) || [] : []);
 const runFacts = computed(() => userStore.isLoggedIn
-  ? withBoundRayOrderEvidence(observationStore.forLink(String(userStore.userId || ""), activeRun.value?.linkId), runOrders.value)
+  ? observationStore.forLink(String(userStore.userId || ""), activeRun.value?.linkId)
   : []);
 const factGroups = computed(() => observationLegGroups(runFacts.value, activeRun.value?.legs || []));
 function legFacts(leg: ActiveBetLeg) { return factGroups.value.groups.get(leg.side) || []; }
 const legSummaries = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, observationLegSummary(legFacts(leg), leg.status, leg.precheckOnly, runOrders.value)])));
 function legSummary(leg: ActiveBetLeg) { return legSummaries.value.get(leg.side)!; }
-const legStages = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, activeBetLegStages(activeRun.value!, leg, legFacts(leg), runOrders.value)])));
+const legStages = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, activeBetLegStages(activeRun.value!, leg, legFacts(leg), runOrders.value, factGroups.value.unassigned)])));
 const legAttempts = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, activeBetLegAttemptViews(activeRun.value!, leg, legFacts(leg))])));
 function legAttemptLabel(leg: ActiveBetLeg) { return legAttempts.value.get(leg.side)?.latestLabel || "尝试类型未记录"; }
 function legProvider(leg: ActiveBetLeg) { return legSummary(leg).provider || leg.platform; }
@@ -542,6 +542,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
               <span v-if="activeBetRunMode(activeRun) === 'single9999'">只提交下单腿，9999 侧不下单</span>
             </div>
             <div class="active-bet-run__run-meta">
+              <span>完整 Link {{ activeRun.linkId || '未记录' }}</span><span v-if="executionId">执行 {{ executionId }}</span>
               <span>开始 {{ eventTime(activeRun.startedAt) }}</span><span>已用时 {{ elapsedLabel }}</span><span>更新 {{ eventTime(activeRun.updatedAt) }}</span>
             </div>
             <ol class="active-bet-run__flow" aria-label="编排流程">
@@ -558,7 +559,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 {{ expandedTimeline ? '每组最近 6 条' : '展开全部记录' }}
               </button>
             </header>
-            <OrderProgressComparison :run="activeRun" :facts="factGroups.groups" :orders="runOrders" />
+            <OrderProgressComparison :run="activeRun" :facts="factGroups.groups" :orders="runOrders" :execution-events="factGroups.unassigned" />
             <header class="active-bet-run__section-head"><strong>每腿摘要与时间线</strong></header>
             <div class="active-bet-run__legs">
               <section v-for="leg in activeRun.legs" :key="leg.side" class="active-bet-run__leg" :data-tone="legSummary(leg).tone">
@@ -568,6 +569,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 <span class="active-bet-run__leg-role" :class="{ 'is-precheck': leg.precheckOnly }">{{ activeBetLegRole(leg) }}</span>
                 <p v-if="legFacts(leg).length" class="active-bet-run__attempt-heading">最近尝试 · {{ legAttemptLabel(leg) }}</p>
                 <strong class="active-bet-run__leg-status" :data-tone="legSummary(leg).tone" :title="legSummary(leg).basis">{{ legSummary(leg).label }}</strong>
+                <OrderProgressEvidence :proof="legSummary(leg).proof" />
                 <p v-if="legSummary(leg).failureReason" class="active-bet-run__leg-failure">
                   失败原因 · {{ legSummary(leg).failureReason }}
                 </p>

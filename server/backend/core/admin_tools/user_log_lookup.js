@@ -1057,8 +1057,8 @@ export async function lookupOrderLogs(opts) {
     return { ok: false, error: hint };
   }
 
-  if (opts?.executionId || opts?.attemptId) {
-    const key = opts.executionId ? "executionId" : "attemptId";
+  if (opts?.executionId || opts?.attemptId || opts?.eventId) {
+    const key = opts.eventId ? "eventId" : opts.executionId ? "executionId" : "attemptId";
     const value = String(opts[key]);
     if (!/^[\w-]{8,160}$/.test(value))
       return { ok: false, error: "无效执行编号" };
@@ -1124,7 +1124,13 @@ export async function lookupOrderLogs(opts) {
   const logs = diagnosticQuery.rows;
   const summarizedLogs = logs.map(summarizeUserLog);
   const { relevant, unrelated } = filterRelevantLogs(normalized, summarizedLogs);
-  const observation = summarizeOrderObservations(await fetchOrderObservations(user.id, link, 2000, normalized.map(order => ({ provider: order.provider, accountId: String(order.playerId), orderId: order.orderId }))));
+  // [changmen 扩展] 当前订单只读白名单，原始 raw 不进入判定依据。
+  const evidenceRecords = orders.map(order => ({ orderId: String(order.order_id), provider: String(order.provider || ""),
+    accountId: Number(order.player_id), linkId: Number(order.link) || 0, status: String(order.status || ""),
+    shares: Number.isFinite(Number(order.raw?.pmShares)) ? Number(order.raw.pmShares) || undefined : undefined,
+    side: ["buy", "sell"].includes(order.raw?.pmSide) ? order.raw.pmSide : undefined,
+  }));
+  const observation = summarizeOrderObservations(await fetchOrderObservations(user.id, link, 2000, normalized.map(order => ({ provider: order.provider, accountId: String(order.playerId), orderId: order.orderId }))), evidenceRecords);
   return {
     ok: true,
     user: { id: user.id, userName: user.user_name },

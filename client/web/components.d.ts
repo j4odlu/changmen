@@ -119,6 +119,7 @@ declare module 'vue' {
     OrderList: typeof import('./src/components/order/OrderList.vue')['default']
     OrderMakeupStatusBar: typeof import('./src/components/order/OrderMakeupStatusBar.vue')['default']
     OrderProgressComparison: typeof import('./src/components/order/OrderProgressComparison.vue')['default']
+    OrderProgressEvidence: typeof import('./src/components/order/OrderProgressEvidence.vue')['default']
     OrderProgressStages: typeof import('./src/components/order/OrderProgressStages.vue')['default']
     OrderSoundSettings: typeof import('./src/components/user/OrderSoundSettings.vue')['default']
     OrderView: typeof import('./src/components/order/OrderView.vue')['default']

@@ -25,6 +25,29 @@ const facts = () => new Map<"A" | "B", OrderObservationEvent[]>([
 ]);
 
 describe("双腿按阶段对照", () => {
+  it("shows both legs unsubmitted when the same execution is blocked in precheck", async () => {
+    const events = new Map<"A" | "B", OrderObservationEvent[]>([
+      ["A", [event("precheck_result", { executionId: "blocked-run", provider: "RAY", outcome: "prepared", odds: 2.48 })]],
+      ["B", [event("precheck_result", { executionId: "blocked-run", provider: "Polymarket", outcome: "blocked", odds: 1.886,
+        safeSummary: "当前卖价高于检测限价（卖价 0.63，限价 0.53）" })]],
+    ]);
+    const executionEvents = [event("execution_finished", { attemptId: undefined, executionId: "blocked-run", phase: "check", outcome: "blocked" })];
+    const blocked = { ...run, phase: "syncing" as const, overallLabel: "预检失败", terminalAt: 2000 };
+    const initial = activeBetRunComparison(blocked, events, [], executionEvents)[0]!;
+    expect(initial.rows.find(row => row.id === "precheck")?.cells.map(cell => cell.label)).toEqual(["预检通过", "预检失败"]);
+    expect(initial.rows.find(row => row.id === "submission")?.cells.map(cell => cell.label)).toEqual(["未提交", "未提交"]);
+    expect(initial.rows.find(row => row.id === "confirmation")?.cells.map(cell => cell.label)).toEqual(["未进入确认", "未进入确认"]);
+    expect(initial.rows.find(row => row.id === "ray_monitor")?.cells[0]?.label).toBe("不参与");
+    const html = await renderToString(createSSRApp({ render: () => h(OrderProgressComparison, { run: blocked, facts: events, executionEvents }) }));
+    expect(html).toContain("整轮已拦截");
+    expect(html).not.toContain("提交记录缺失");
+    expect(html).not.toContain("等待确认");
+    const another = activeBetRunComparison(blocked, events, [], [{ ...executionEvents[0]!, executionId: "another-run" }])[0]!;
+    expect(another.rows.find(row => row.id === "submission")?.cells[0]?.label).toBe("提交记录缺失");
+    events.get("A")!.push(event("submission_result", { executionId: "blocked-run", provider: "RAY", outcome: "accepted" }));
+    const submitted = activeBetRunComparison(blocked, events, [], executionEvents)[0]!;
+    expect(submitted.rows.find(row => row.id === "submission")?.cells[0]?.label).toBe("接口已受理");
+  });
   it("shows each leg's precheck odds and preserves the snapshot across submission and makeup", async () => {
     const events = new Map<"A" | "B", OrderObservationEvent[]>([
       ["A", [event("precheck_result", { provider: "RAY", outcome: "prepared", odds: 1.85 }),

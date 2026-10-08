@@ -5,11 +5,12 @@ import type { OrderRow } from "@/types/order";
 import { computed } from "vue";
 import { activeBetRunComparison } from "@/shared/activeBetRunComparison";
 import { activeBetLegRole } from "@/shared/activeBetRunPresentation";
+import OrderProgressEvidence from "./OrderProgressEvidence.vue";
 
 /** [changmen 扩展] 原生表格共享行高，错误说明换行时双腿仍按阶段对齐。 */
-const props = defineProps<{ run: ActiveBetRun; facts: ReadonlyMap<ActiveBetLeg["side"], readonly OrderObservationEvent[]>; orders?: readonly OrderRow[] }>();
+const props = defineProps<{ run: ActiveBetRun; facts: ReadonlyMap<ActiveBetLeg["side"], readonly OrderObservationEvent[]>; orders?: readonly OrderRow[]; executionEvents?: readonly OrderObservationEvent[] }>();
 const legs = computed(() => [...props.run.legs].sort((a, b) => a.side.localeCompare(b.side)));
-const groups = computed(() => activeBetRunComparison(props.run, props.facts, props.orders));
+const groups = computed(() => activeBetRunComparison(props.run, props.facts, props.orders, props.executionEvents));
 function eventTime(at: number) { return new Date(at).toLocaleTimeString("zh-CN", { hour12: false }); }
 </script>
 
@@ -42,6 +43,7 @@ function eventTime(at: number) { return new Date(at).toLocaleTimeString("zh-CN",
               <small v-if="cell.durationMs !== undefined">{{ cell.durationMs }}ms</small>
             </div>
             <p v-if="cell.detail">{{ cell.detail }}</p>
+            <OrderProgressEvidence :proof="cell.proof" />
           </td>
         </tr>
       </tbody>

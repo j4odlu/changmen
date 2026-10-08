@@ -1,26 +1,9 @@
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import type { OrderRow } from "@/types/order";
+import { boundRayOrderConfirmation } from "@changmen/shared/order_progress_evidence";
+import { progressOrderRecords } from "./progressOrderRecords";
 
-/** [changmen 扩展] 旧检测事件缺订单号时，以同尝试的成功绑定和当前订单拒单状态补充只读展示。 */
-export function withBoundRayOrderEvidence(events: readonly OrderObservationEvent[], orders: readonly OrderRow[]): OrderObservationEvent[] {
-  return events.map(event => {
-    if (event.provider !== "RAY" || event.kind !== "settlement_observed" || event.source !== "orchestration_result"
-      || event.outcome !== "unfilled" || !event.attemptId || !event.accountId)
-      return event;
-    const bindings = events.filter(bind => bind.kind === "bind_result" && bind.outcome === "saved" && bind.orderId
-      && bind.source !== "ray_bind_api_ack"
-      && bind.ownerUserId === event.ownerUserId && bind.attemptId === event.attemptId
-      && bind.linkId === event.linkId && bind.provider === "RAY" && bind.accountId === event.accountId);
-    const ids = new Set(bindings.map(bind => bind.orderId));
-    if (ids.size !== 1)
-      return event;
-    const orderId = [...ids][0]!;
-    if (event.orderId && event.orderId !== orderId)
-      return event;
-    const matches = orders.filter(order => String(order.OrderID) === orderId && order.Type === "RAY"
-      && order.Link === event.linkId && order.PlayerID === event.accountId);
-    if (matches.length !== 1 || matches[0]?.Status !== "Reject")
-      return event;
-    return { ...event, source: "order_record", orderId, observedStatus: "reject", phase: "reject_detection" };
-  });
+/** [changmen 扩展] 组合判断单独携带依据，保留时间线原始事件。 */
+export function boundRayOrderEvidence(events: readonly OrderObservationEvent[], orders: readonly OrderRow[]) {
+  return boundRayOrderConfirmation(events, progressOrderRecords(orders));
 }

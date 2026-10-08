@@ -1,6 +1,7 @@
 import { insertOrderObservations } from "@changmen/db";
 /** [changmen 扩展] 只输出旁路证据，不提供任何业务决策接口。 */
 import { normalizeObservationEvent, OBSERVATION_TITLE } from "@changmen/shared/order_observation";
+import { delayedPmConfirmation, boundRayOrderConfirmation, progressPrecheck, progressSubmission, progressBinding } from "@changmen/shared/order_progress_evidence";
 
 export async function saveObservationBatch(body, userId) {
   if (body.title !== OBSERVATION_TITLE)
@@ -22,7 +23,7 @@ export async function saveObservationBatch(body, userId) {
   }
 }
 
-export function summarizeOrderObservations(query) {
+export function summarizeOrderObservations(query, records = []) {
   if (query.status !== "available")
     return { ...query, mode: "shadow", issues: ["旁路事件不可用，保留原诊断"], attempts: [] };
   const byAttempt = new Map();
@@ -71,7 +72,9 @@ export function summarizeOrderObservations(query) {
       findings.push("缺少预检结果事件");
     if (events.some(event => event.kind === "submission_result" && event.outcome === "unknown"))
       findings.push("提交结果未知，不能认定未成交");
-    return { attemptId, events, findings, evidence: "client_reported" };
+    const confirmation = delayedPmConfirmation(events, records) || boundRayOrderConfirmation(events, records);
+    return { attemptId, events, findings, evidence: "client_reported", ...(confirmation ? { confirmation } : {}),
+      progress: { precheck: progressPrecheck(events), submission: progressSubmission(events, query.events), binding: progressBinding(events) } };
   });
   const queueIds = new Set(query.events.map(event => event.queueId).filter(Boolean));
   const queues = [...queueIds].map((queueId) => {

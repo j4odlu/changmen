@@ -398,7 +398,9 @@ export interface AdminOrderLogLookup {
     truncated: boolean;
     issues: string[];
     events: import("@changmen/shared/order_observation").OrderObservationEvent[];
-    attempts: Array<{ attemptId: string; findings: string[]; evidence: string; events: import("@changmen/shared/order_observation").OrderObservationEvent[] }>;
+    attempts: Array<{ attemptId: string; findings: string[]; evidence: string; events: import("@changmen/shared/order_observation").OrderObservationEvent[];
+      confirmation?: { label: string; basis: string; proof: import("@changmen/shared/order_progress_evidence").ProgressProof };
+      progress?: Partial<Record<"precheck" | "submission" | "binding", { label: string; proof: import("@changmen/shared/order_progress_evidence").ProgressProof }>> }>;
     queues?: Array<{ queueId: string; findings: string[] }>;
   };
   user: { id: string; userName: string };

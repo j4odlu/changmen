@@ -11,6 +11,7 @@ import { observationEventLabel, observationEventStage, orderObservationTimeline 
 import { ElMessage } from "element-plus";
 import { computed, ref } from "vue";
 import { getAdminOrderLogs } from "@/api/admin";
+import OrderProgressEvidence from "@/components/order/OrderProgressEvidence.vue";
 import {
   adminOrderEvidenceIssues,
   buildAdminOrderDiagnosisSummary,
@@ -454,7 +455,7 @@ function legProfit(leg: AdminOrderLogLegSection) {
 
 const hasOverviewOrders = computed(() => sortedOrders.value.length > 0);
 
-const executionLookup = ref<{ userId: string; linkId?: number; executionId?: string; attemptId?: string } | null>(null);
+const executionLookup = ref<{ userId: string; linkId?: number; executionId?: string; attemptId?: string; eventId?: string } | null>(null);
 
 async function openExecution(input: NonNullable<typeof executionLookup.value>) {
   executionLookup.value = { ...input };
@@ -581,7 +582,7 @@ defineExpose({ open, openExecution });
                 </div>
                 <div class="admin-order-log-stat">
                   <span class="admin-order-log-stat__label">订单</span>
-                  <span class="admin-order-log-stat__value">{{ executionLookup?.executionId || executionLookup?.attemptId ? "本次未查询" : `${sortedOrders.length} 笔` }}</span>
+                  <span class="admin-order-log-stat__value">{{ executionLookup?.executionId || executionLookup?.attemptId || executionLookup?.eventId ? "本次未查询" : `${sortedOrders.length} 笔` }}</span>
                 </div>
                 <div class="admin-order-log-stat">
                   <span class="admin-order-log-stat__label">日志</span>
@@ -842,6 +843,16 @@ defineExpose({ open, openExecution });
               <el-alert v-for="issue in data.observation.issues" :key="issue" :title="issue" type="warning" :closable="false" />
               <section v-for="attempt in data.observation.attempts" :key="attempt.attemptId">
                 <p>尝试 {{ attempt.attemptId }}</p>
+                <template v-for="(stage, name) in attempt.progress" :key="name">
+                  <div v-if="stage">
+                    <p>{{ name === 'precheck' ? '预检' : name === 'submission' ? '提交下注' : '绑定订单' }} · {{ stage.label }}</p>
+                    <OrderProgressEvidence :proof="stage.proof" />
+                  </div>
+                </template>
+                <template v-if="attempt.confirmation">
+                  <p>{{ attempt.confirmation.label }} · {{ attempt.confirmation.basis }}</p>
+                  <OrderProgressEvidence :proof="attempt.confirmation.proof" />
+                </template>
                 <el-alert v-for="finding in attempt.findings" :key="finding" :title="finding" type="warning" :closable="false" />
               </section>
               <section v-for="queue in data.observation.queues" :key="queue.queueId">

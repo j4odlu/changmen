@@ -301,7 +301,7 @@ export async function listAdminOrderLogs(body = {}, caller = null) {
     if (visibleIds && !visibleIds.has(userId))
       throw new Error("无权查看该用户的日志");
   }
-  if (linkRaw == null && !orderId && !body.executionId && !body.attemptId)
+  if (linkRaw == null && !orderId && !body.executionId && !body.attemptId && !body.eventId)
     throw new Error("请指定 linkId、orderId 或执行编号");
 
   const result = await lookupOrderLogs({
@@ -309,6 +309,7 @@ export async function listAdminOrderLogs(body = {}, caller = null) {
     link: linkRaw ?? undefined,
     executionId: body.executionId,
     attemptId: body.attemptId,
+    eventId: body.eventId,
     orderId: orderId ? String(orderId) : undefined,
     domain: body.domain,
     sport: body.sport,

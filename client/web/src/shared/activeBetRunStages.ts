@@ -5,6 +5,8 @@ import type { ProgressTone } from "./activeBetRunPresentation";
 import { observationEventLabel } from "@changmen/shared/order_observation_view";
 import { observationLegSummary, observationPrecheckEvidence, progressOrchestrationLabel } from "./activeBetRunPresentation";
 import { pmOrderConfirmation } from "./pmOrderConfirmation";
+import { boundRayOrderEvidence } from "./boundRayOrderEvidence";
+import { progressProof, progressPrecheck, progressSubmission, progressBinding, blockedExecutionEvidence, type ProgressProof } from "@changmen/shared/order_progress_evidence";
 
 export interface BetProgressStage {
   id: string;
@@ -15,6 +17,7 @@ export interface BetProgressStage {
   durationMs?: number;
   odds?: number;
   detail?: string;
+  proof?: ProgressProof;
 }
 
 /** [changmen 扩展] 首轮与后续尝试分别展示；旧尝试迟到回执不能改变最新尝试归属。 */
@@ -45,25 +48,31 @@ export function activeBetLegAttemptViews(run: ActiveBetRun, leg: ActiveBetLeg, e
 }
 
 /** [changmen 扩展] 关键阶段常驻展示；尝试内证据、补单队列和整轮编排分别取值，不参与下注判定。 */
-export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events: readonly OrderObservationEvent[], orders: readonly OrderRow[] = []): BetProgressStage[] {
+export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events: readonly OrderObservationEvent[], orders: readonly OrderRow[] = [], executionEvents: readonly OrderObservationEvent[] = []): BetProgressStage[] {
   const summary = observationLegSummary(events, leg.status, leg.precheckOnly, orders);
   const attempt = summary.attemptId ? events.filter(event => event.attemptId === summary.attemptId) : events;
   const last = (kind: OrderObservationEvent["kind"]) => [...attempt].reverse().find(event => event.kind === kind);
   const fromEvent = (id: string, stage: string, label: string, tone: ProgressTone, event?: OrderObservationEvent): BetProgressStage => ({
     id, stage, label, tone, at: event?.occurredAt, durationMs: event?.durationMs,
     detail: event ? observationEventLabel(event) : undefined,
+    proof: progressProof(`${id}.${event?.outcome || event?.kind || "missing"}`, [event]),
   });
   const { result: check } = observationPrecheckEvidence(attempt);
   const submit = last("submission_result");
   const submitStarted = last("submission_started");
+  // [changmen 扩展] 整轮在预检阶段结束时，预检通过的对腿也未提交；仅关联同一执行，不借用其他轮的结束记录。
+  const executionIds = new Set(attempt.map(event => event.executionId).filter(Boolean));
+  const blockedExecution = blockedExecutionEvidence(attempt, executionEvents);
+  const blockedBeforeSubmission = !submit && !submitStarted && Boolean(blockedExecution);
   const directPm = submit?.provider === "Polymarket" && submit.outcome === "accepted" && submit.observedStatus === "matched";
   const detecting = attempt.some(event => event.source !== "ray_monitor" && (event.reasonCode === "reject_detection_started" || event.phase === "reject_detection"));
   const detectionStage = (submit?.provider || leg.platform) !== "Polymarket" || submit?.observedStatus === "delayed" || detecting;
   const noBet = !submit && !submitStarted && (leg.precheckOnly || leg.status === "skipped");
-  const notSubmitted = (!submitStarted && !submit && check?.outcome === "blocked")
+  const notSubmitted = blockedBeforeSubmission || (!submitStarted && !submit && check?.outcome === "blocked")
     || submit?.outcome === "not_submitted";
   const early = !run.terminalAt && ["preparing", "checking"].includes(run.phase);
   const precheck: BetProgressStage = { id: "precheck", stage: "预检", ...summary.precheck, detail: check && ["blocked", "inconsistent"].includes(check.outcome || "") ? summary.precheck.basis : undefined };
+  precheck.proof = progressPrecheck(attempt).proof;
   // [changmen 扩展] 赔率只取本轮有效预检结果，避免提交、补单或实时赔率覆盖历史预检快照。
   if (check?.odds !== undefined && Number.isFinite(check.odds) && check.odds > 0)
     precheck.odds = check.odds;
@@ -74,14 +83,9 @@ export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events:
       precheck.label = "等待预检";
   }
 
+  const submissionFact = progressSubmission(attempt, executionEvents);
   const submission = fromEvent("submission", "提交下注",
-    submit?.outcome === "accepted" ? directPm ? "直接成交" : submit.observedStatus === "delayed" ? "delayed · 已受理待检测" : "接口已受理"
-      : submit?.outcome === "adapter_failed" ? "提交返回失败"
-        : submit?.outcome === "unknown" ? "提交结果未知"
-          : submit?.outcome === "not_submitted" || notSubmitted ? "未提交"
-            : submit ? "提交结果未明确" : submitStarted ? "提交处理中"
-              : noBet ? leg.precheckOnly ? "仅预检 · 不下单" : "不参与"
-                : early ? "等待提交" : "提交记录缺失",
+    submissionFact?.label ?? (noBet ? leg.precheckOnly ? "仅预检 · 不下单" : "不参与" : early ? "等待提交" : "提交记录缺失"),
     submit?.outcome === "accepted" ? "success" : submit?.outcome === "adapter_failed" ? "danger"
       : submit ? "warning" : submitStarted ? "pending" : "neutral", submit || submitStarted);
   // 接口受理只完成提交阶段，确认阶段必须继续显示待确认。
@@ -89,6 +93,10 @@ export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events:
     submission.detail = directPm ? "PM 提交返回 matched，直接成交" : "接口受理尚不证明成交";
   else if (summary.failureReason && submit)
     submission.detail = summary.failureReason;
+  if (blockedBeforeSubmission)
+    submission.detail = "本轮预检未通过，整轮已拦截，未进入场馆下注处理";
+  if (submissionFact)
+    submission.proof = submissionFact.proof;
 
   // [changmen 扩展] 定时检测和独立监控分别展示，监控结果不能覆盖第一次检测记录。
   const detectionEvents = attempt.filter(event => event.source !== "ray_monitor");
@@ -112,6 +120,8 @@ export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events:
     venueOutcomes.size > 1 || venueOutcomes.has("unfilled") ? "danger" : venueOutcomes.has("filled") ? "success"
       : policy || orchestration ? "warning"
         : evidence || submit?.outcome === "accepted" || submit?.outcome === "unknown" ? "pending" : "neutral", evidence);
+  confirmation.proof = progressProof("confirmation.observation", [submit, ...(venue.length ? venue : [evidence]),
+    notSubmitted ? check : undefined, blockedBeforeSubmission ? blockedExecution : undefined]);
   if (policy || orchestration || venue.length)
     confirmation.detail = venue.length ? [detectionSummary.basis, detectionSummary.failureReason].filter(Boolean).join(" · ") : policy ? "仍缺少场馆终态，不能认定官方拒单" : "编排判定不代替场馆订单确认";
   const pmConfirmation = pmOrderConfirmation(detectionEvents, orders);
@@ -121,6 +131,17 @@ export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events:
     confirmation.tone = pmConfirmation.tone;
     confirmation.detail = pmConfirmation.basis;
     confirmation.at = pmConfirmation.event?.occurredAt;
+    confirmation.durationMs = pmConfirmation.event?.durationMs;
+    confirmation.proof = pmConfirmation.proof;
+  }
+  const rayConfirmation = boundRayOrderEvidence(detectionEvents, orders);
+  if (!pmConfirmation && rayConfirmation) {
+    confirmation.label = rayConfirmation.label;
+    confirmation.tone = rayConfirmation.tone;
+    confirmation.detail = `${rayConfirmation.basis}（状态更新时间未提供）`;
+    confirmation.at = undefined;
+    confirmation.durationMs = undefined;
+    confirmation.proof = rayConfirmation.proof;
   }
   const isRay = (submit?.provider || summary.provider || leg.platform) === "RAY";
   if (isRay)
@@ -140,12 +161,18 @@ export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events:
     monitorRejected ? "danger" : monitorClosed ? "success" : monitorEvent && !monitorExpired ? "pending" : "neutral", monitorEvent);
   if (monitorEvent)
     monitor.detail = ["独立监控后续拒单", monitorEvent.safeSummary].filter(Boolean).join(" · ");
+  else if (notSubmitted)
+    monitor.proof = submission.proof;
 
   const bind = last("bind_result");
   const binding = fromEvent("binding", "绑定订单", bind?.outcome === "saved" ? "已保存"
     : bind?.outcome === "failed" ? "绑定失败" : bind ? "绑定结果未明确"
       : noBet || notSubmitted ? "不参与" : "尚无绑定回执",
   bind?.outcome === "saved" ? "success" : bind?.outcome === "failed" ? "danger" : "neutral", bind);
+  const bindingFact = progressBinding(attempt);
+  if (bindingFact) binding.proof = bindingFact.proof;
+  if (!bind && notSubmitted)
+    binding.proof = submission.proof;
 
   // 按队列首次出现选最新队列，旧队列迟到的出队记录不能覆盖新补单。
   const queues = [...new Set(events.filter(event => event.kind.startsWith("queue_")).map(event => event.queueId).filter(Boolean))];
@@ -166,6 +193,7 @@ export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events:
       makeup.detail = queue ? observationEventLabel(queue) : undefined;
       makeup.at = localMakeup.at;
       makeup.tone = localMakeup.detail.includes("自动补单已关闭") ? "warning" : "neutral";
+      makeup.proof = progressProof("makeup.local_orchestration", []);
     }
   }
 
@@ -179,6 +207,7 @@ export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events:
         row.label = `编排：${local.detail}`;
         row.at = local.at;
         row.tone = "neutral";
+        row.proof = progressProof(`${id}.local_orchestration`, []);
       }
     }
   }
@@ -186,6 +215,9 @@ export function activeBetLegStages(run: ActiveBetRun, leg: ActiveBetLeg, events:
     id: "result", stage: "编排收尾", label: run.terminalAt ? "本轮编排已结束" : "编排进行中", tone: "neutral",
     at: run.terminalAt,
     detail: `${run.overallLabel} · ${progressOrchestrationLabel(leg, events, leg.events.at(-1)?.detail || leg.detail || "等待执行", orders)}`,
+    proof: progressProof("execution.lifecycle", executionEvents.filter(event => event.kind.startsWith("execution_")
+      && Boolean(event.executionId) && executionIds.has(event.executionId)
+      && attempt.some(fact => fact.ownerUserId === event.ownerUserId && fact.linkId === event.linkId))),
   });
   return stages;
 }

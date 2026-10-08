@@ -56,6 +56,23 @@ describe("旁路观察协议与证据回放", () => {
     expect(summarizeOrderObservations(query([])).issues).toContain("无旁路事件，不能据此认定未下单");
     expect(summarizeOrderObservations({ status: "unavailable", events: [] }).issues).toContain("旁路事件不可用，保留原诊断");
   });
+  it("uses the shared PM rule and keeps current records distinct from historical receipts", () => {
+    const submit = { ...base, eventId: "submit-123", kind: "submission_result", provider: "Polymarket", accountId: 7,
+      orderId: "pm-original", outcome: "accepted", observedStatus: "delayed", source: "adapter_result" };
+    const record = { orderId: "pm-original", provider: "Polymarket", accountId: 7, linkId: 123, status: "None", shares: 10 };
+    const result = summarizeOrderObservations(query([submit]), [record]);
+    expect(result.attempts[0].confirmation).toMatchObject({ label: "订单已成交 · 未结算", event: undefined,
+      proof: { rule: "pm.current_order_record", records: [record] } });
+    expect(result.attempts[0].events[0]).toBe(submit);
+  });
+  it("reports the same explicit whole-execution block for the leg whose precheck passed", () => {
+    const check = { ...base, kind: "precheck_result", outcome: "prepared", executionId: "exec-123" };
+    const end = { ...base, eventId: "end-123", kind: "execution_finished", attemptId: undefined, executionId: "exec-123", phase: "check", outcome: "blocked" };
+    const result = summarizeOrderObservations(query([check, end]));
+    expect(result.attempts[0].progress.precheck.label).toBe("预检通过");
+    expect(result.attempts[0].progress.submission.label).toBe("未提交");
+    expect(result.attempts[0].progress.submission.proof.events.map(event => event.eventId)).toEqual([check.eventId, end.eventId]);
+  });
 
   it("does not treat gap metadata as a duplicate business sequence", () => {
     const result = summarizeOrderObservations(query([

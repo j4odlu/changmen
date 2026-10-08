@@ -7,6 +7,7 @@
   "exports": {
     "./order_observation": "./order_observation.ts",
     "./order_observation_view": "./order_observation_view.ts",
+    "./order_progress_evidence": "./order_progress_evidence.ts",
     "./pm_submission": "./pm_submission.ts",
     "./pm_submit_response": "./pm_submit_response.js",
     "./catalog/game_catalog": "./catalog/game_catalog.ts",

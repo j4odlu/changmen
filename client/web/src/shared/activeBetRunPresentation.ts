@@ -4,6 +4,8 @@ import type { OrderRow } from "@/types/order";
 import { classifyLinkId } from "@changmen/client-core/shared/format";
 import { observationEventLabel, orderObservationTargets } from "@changmen/shared/order_observation_view";
 import { pmOrderConfirmation } from "./pmOrderConfirmation";
+import { boundRayOrderEvidence } from "./boundRayOrderEvidence";
+import { progressPrecheckEvidence, progressPrecheck, progressProof } from "@changmen/shared/order_progress_evidence";
 
 export type ProgressTone = "neutral" | "pending" | "success" | "warning" | "danger";
 const FALLBACK_LABELS: Record<ActiveBetLegStatus, string> = {
@@ -37,9 +39,7 @@ export function activeBetLegRole(leg: ActiveBetLeg): string {
 
 /** [changmen 扩展] 同一尝试再次开始预检时，旧结果不能充当新检查的结果。 */
 export function observationPrecheckEvidence(events: readonly OrderObservationEvent[]) {
-  const started = [...events].reverse().find(event => event.kind === "precheck_started");
-  const result = [...events].reverse().find(event => event.kind === "precheck_result");
-  return { started, result: result && (!started || events.indexOf(result) > events.indexOf(started)) ? result : undefined };
+  return progressPrecheckEvidence(events);
 }
 
 /** [changmen 扩展] 只读展示最近尝试；受理、超时策略与场馆成交证据分开。 */
@@ -59,10 +59,7 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
   const { result: check, started: checkStarted } = observationPrecheckEvidence(attempt);
   // [changmen 扩展] 预检结果常驻展示，与后续提交/确认状态分开；只使用最近尝试的证据。
   const precheck = {
-    label: check?.outcome === "prepared" ? "预检通过"
-      : check?.outcome === "blocked" ? "预检失败"
-        : check?.outcome === "inconsistent" ? "预检结果不一致"
-        : check ? "预检结果未明确" : checkStarted ? "正在预检" : "预检结果未记录",
+    label: progressPrecheck(attempt).label,
     tone: (check?.outcome === "prepared" ? "success"
       : check?.outcome === "blocked" ? "danger"
         : check ? "warning" : checkStarted ? "pending" : "neutral") as ProgressTone,
@@ -134,21 +131,30 @@ export function observationLegSummary(events: readonly OrderObservationEvent[], 
     : undefined;
   const money = amountEvent?.amount ?? undefined;
   const pmConfirmation = pmOrderConfirmation(attempt, orders);
+  const rayConfirmation = boundRayOrderEvidence(attempt, orders);
   if (pmConfirmation) {
     label = pmConfirmation.label;
     tone = pmConfirmation.tone;
     basis = pmConfirmation.basis;
   }
+  else if (rayConfirmation) {
+    label = rayConfirmation.label;
+    tone = rayConfirmation.tone;
+    basis = rayConfirmation.basis;
+  }
   const numberLabel = (value: number) => value.toLocaleString("zh-CN", { maximumFractionDigits: 4 });
+  const proof = pmConfirmation?.proof || rayConfirmation?.proof || progressProof("leg.summary", confirmations.length ? confirmations
+    : policy ? attempt.filter(event => event.source === "timeout_policy") : [submission || check || checkStarted]);
   return {
     provider: pmConfirmation ? submission?.provider : [...attempt].reverse().find(event => event.provider)?.provider,
     precheck,
     label,
     tone,
     basis,
+    proof,
     failureReason,
     attemptId: lastAttempt,
-    orderId: pmConfirmation ? submission?.orderId : [...attempt].reverse().find(event => event.orderId)?.orderId,
+    orderId: pmConfirmation ? submission?.orderId : rayConfirmation?.orderId || [...attempt].reverse().find(event => event.orderId)?.orderId,
     accountId: pmConfirmation ? submission?.accountId : [...attempt].reverse().find(event => event.accountId)?.accountId,
     amount: money === undefined ? undefined : `${numberLabel(money)} ${amountEvent?.currency || "（币种未记录）"}`,
     odds: [...attempt].reverse().find(event => event.odds !== undefined)?.odds,

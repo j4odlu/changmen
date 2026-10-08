@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { BetProgressStage } from "@/shared/activeBetRunStages";
-import OrderProgressEvidence from "./OrderProgressEvidence.vue";
 
 /** [changmen 扩展] 常驻关键阶段，不受详细时间线的最近条数限制。 */
 defineProps<{ stages: readonly BetProgressStage[]; title?: string }>();
@@ -23,7 +22,6 @@ function eventTime(at: number) {
             <small v-if="item.durationMs !== undefined">{{ item.durationMs }}ms</small>
           </div>
           <p v-if="item.detail">{{ item.detail }}</p>
-          <OrderProgressEvidence :proof="item.proof" />
         </div>
       </li>
     </ol>

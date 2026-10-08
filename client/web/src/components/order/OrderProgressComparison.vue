@@ -5,7 +5,6 @@ import type { OrderRow } from "@/types/order";
 import { computed } from "vue";
 import { activeBetRunComparison } from "@/shared/activeBetRunComparison";
 import { activeBetLegRole } from "@/shared/activeBetRunPresentation";
-import OrderProgressEvidence from "./OrderProgressEvidence.vue";
 
 /** [changmen 扩展] 原生表格共享行高，错误说明换行时双腿仍按阶段对齐。 */
 const props = defineProps<{ run: ActiveBetRun; facts: ReadonlyMap<ActiveBetLeg["side"], readonly OrderObservationEvent[]>; orders?: readonly OrderRow[]; executionEvents?: readonly OrderObservationEvent[] }>();
@@ -43,7 +42,6 @@ function eventTime(at: number) { return new Date(at).toLocaleTimeString("zh-CN",
               <small v-if="cell.durationMs !== undefined">{{ cell.durationMs }}ms</small>
             </div>
             <p v-if="cell.detail">{{ cell.detail }}</p>
-            <OrderProgressEvidence :proof="cell.proof" />
           </td>
         </tr>
       </tbody>

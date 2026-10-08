@@ -1,9 +1,6 @@
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import { delayedPmConfirmation, progressProof } from "@changmen/shared/order_progress_evidence";
 import { describe, expect, it } from "vitest";
-import { createSSRApp, h } from "vue";
-import { renderToString } from "@vue/server-renderer";
-import OrderProgressEvidence from "@/components/order/OrderProgressEvidence.vue";
 import { activeBetLegStages } from "./activeBetRunStages";
 import type { ActiveBetRun } from "@/types/activeBetRun";
 
@@ -60,14 +57,5 @@ describe("只读下单判定依据", () => {
     expect(row).toMatchObject({ label: "检测到拒单", at: undefined, durationMs: undefined });
     expect(row?.proof?.events[0]?.source).toBe("orchestration_result");
     expect(settlement.source).toBe("orchestration_result");
-  });
-  it("renders unknown times explicitly and escapes evidence text", async () => {
-    const proof = progressProof("pm.current_order_record", [submit], [{ orderId: "<script>bad</script>", provider: "Polymarket", status: "None", shares: 10 }]);
-    const html = await renderToString(createSSRApp({ render: () => h(OrderProgressEvidence, { proof }) }));
-    expect(html).toContain("查看依据");
-    expect(html).toContain("submit-123");
-    expect(html).toContain("未提供状态更新时间和历史版本");
-    expect(html).toContain("未提供服务端接收时间");
-    expect(html).not.toContain("<script>bad</script>");
   });
 });

@@ -4,7 +4,6 @@ import { storeToRefs } from "pinia";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import OrderExecutionTimeline from "@/components/order/OrderExecutionTimeline.vue";
 import OrderProgressComparison from "@/components/order/OrderProgressComparison.vue";
-import OrderProgressEvidence from "@/components/order/OrderProgressEvidence.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { useRecentBetProgress } from "./useRecentBetProgress";
 import { accountProgressDisplayName } from "@/shared/accountDisplayName";
@@ -569,7 +568,6 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 <span class="active-bet-run__leg-role" :class="{ 'is-precheck': leg.precheckOnly }">{{ activeBetLegRole(leg) }}</span>
                 <p v-if="legFacts(leg).length" class="active-bet-run__attempt-heading">最近尝试 · {{ legAttemptLabel(leg) }}</p>
                 <strong class="active-bet-run__leg-status" :data-tone="legSummary(leg).tone" :title="legSummary(leg).basis">{{ legSummary(leg).label }}</strong>
-                <OrderProgressEvidence :proof="legSummary(leg).proof" />
                 <p v-if="legSummary(leg).failureReason" class="active-bet-run__leg-failure">
                   失败原因 · {{ legSummary(leg).failureReason }}
                 </p>

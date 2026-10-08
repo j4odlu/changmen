@@ -11,7 +11,6 @@ import { observationEventLabel, observationEventStage, orderObservationTimeline 
 import { ElMessage } from "element-plus";
 import { computed, ref } from "vue";
 import { getAdminOrderLogs } from "@/api/admin";
-import OrderProgressEvidence from "@/components/order/OrderProgressEvidence.vue";
 import {
   adminOrderEvidenceIssues,
   buildAdminOrderDiagnosisSummary,
@@ -846,12 +845,10 @@ defineExpose({ open, openExecution });
                 <template v-for="(stage, name) in attempt.progress" :key="name">
                   <div v-if="stage">
                     <p>{{ name === 'precheck' ? '预检' : name === 'submission' ? '提交下注' : '绑定订单' }} · {{ stage.label }}</p>
-                    <OrderProgressEvidence :proof="stage.proof" />
                   </div>
                 </template>
                 <template v-if="attempt.confirmation">
                   <p>{{ attempt.confirmation.label }} · {{ attempt.confirmation.basis }}</p>
-                  <OrderProgressEvidence :proof="attempt.confirmation.proof" />
                 </template>
                 <el-alert v-for="finding in attempt.findings" :key="finding" :title="finding" type="warning" :closable="false" />
               </section>

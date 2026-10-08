@@ -186,36 +186,6 @@
 .active-bet-run__comparison td[data-tone="warning"] strong { color: #fbbf24; }
 .active-bet-run__comparison td[data-tone="pending"] strong { color: #93c5fd; }
 .active-bet-run__comparison td p { margin: 4px 0 0; color: #7f91aa; font-size: 10px; }
-.active-bet-run__evidence {
-  margin-top: 6px;
-  font-size: 12px;
-  color: #9dafc5;
-}
-.active-bet-run__evidence summary {
-  cursor: pointer;
-  color: #9ecbff;
-}
-.active-bet-run__evidence ul {
-  list-style: none;
-  padding: 0;
-  margin: 8px 0 0;
-}
-.active-bet-run__evidence li {
-  margin-top: 8px;
-  border-top: 1px solid #2a3648;
-  padding-top: 8px;
-}
-.active-bet-run__evidence dl {
-  display: grid;
-  grid-template-columns: 90px minmax(0, 1fr);
-  gap: 4px 8px;
-  margin: 6px 0;
-}
-.active-bet-run__evidence dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.active-bet-run__evidence-rule,
 .active-bet-run__run-meta span {
   overflow-wrap: anywhere;
 }

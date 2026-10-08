@@ -391,7 +391,10 @@ export interface AdminOrderLogOrder {
 }
 
 export interface AdminOrderLogLookup {
-  /** [changmen 扩展] 独立旁路事件；尚未替换原诊断规则。 */
+  diagnosticSource?: "events" | "legacy";
+  legacyLogsLoaded?: boolean;
+  ordersQueried?: boolean;
+  /** [changmen 扩展] 只读执行记录，默认优先于旧日志重建。 */
   observation?: {
     mode: "shadow";
     status: "available" | "unavailable";

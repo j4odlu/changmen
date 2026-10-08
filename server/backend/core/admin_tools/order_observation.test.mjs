@@ -98,4 +98,14 @@ describe("旁路观察协议与证据回放", () => {
       expect(result.attempts[0].findings).toContain("接口受理，缺少场馆确认事件");
     }
   });
+  it("does not merge status decisions when one attempt contains conflicting account identities", () => {
+    const result = summarizeOrderObservations(query([
+      { ...base, provider: "Polymarket", accountId: 7, kind: "precheck_result", outcome: "prepared", odds: 1.9 },
+      { ...base, eventId: "submit-other", sequence: 2, provider: "Polymarket", accountId: 8, kind: "submission_result", outcome: "accepted", observedStatus: "delayed" },
+    ]));
+    expect(result.attempts[0].progress).toEqual({});
+    expect(result.attempts[0].confirmation).toBeUndefined();
+    expect(result.attempts[0].findings).toContain("同一尝试的执行、平台、账号或主客身份冲突；不合并判定结果");
+    expect(result.attempts[0].events).toHaveLength(2);
+  });
 });

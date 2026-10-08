@@ -11,6 +11,8 @@ import { observationEventLabel, observationEventStage, orderObservationTimeline 
 import { ElMessage } from "element-plus";
 import { computed, ref } from "vue";
 import { getAdminOrderLogs } from "@/api/admin";
+import AdminOrderExecutionRecords from "./AdminOrderExecutionRecords.vue";
+import { adminObservationIssues, adminObservationReport, hasDirectAdminDiagnosis } from "@/shared/adminOrderObservation";
 import {
   adminOrderEvidenceIssues,
   buildAdminOrderDiagnosisSummary,
@@ -32,6 +34,8 @@ const title = ref("下单诊断");
 let requestSequence = 0;
 const lookupRows = ref<AdminOrderRow[]>([]);
 const expanded = ref(false);
+const legacyDetailed = ref(false);
+const directDiagnosis = computed(() => hasDirectAdminDiagnosis(data.value));
 
 const kindLabel: Record<string, string> = {
   check: "预检",
@@ -354,8 +358,11 @@ const totalProfit = computed(() =>
 
 const executionSteps = computed(() => buildAdminOrderExecutionSteps(legColumns.value));
 const diagnosisContext = computed(() => ({ linkType: data.value?.linkType, truncated: data.value?.logStats?.truncated }));
-const evidenceIssues = computed(() => adminOrderEvidenceIssues(executionSteps.value, diagnosisContext.value));
+const evidenceIssues = computed(() => directDiagnosis.value ? adminObservationIssues(data.value)
+  : adminOrderEvidenceIssues(executionSteps.value, diagnosisContext.value));
 const suggestedCheck = computed(() => {
+  if (directDiagnosis.value)
+    return "逐笔核对预检、提交、绑定与场馆确认；缺口和超时策略不能代表官方未成交。需要历史文字记录时可补查旧日志。";
   if (executionLookup.value && !data.value?.orders.length)
     return "核查执行时间线中的失败、确认、绑定及缺口事件；缺少落库证据不能证明未成交。";
   if (data.value?.logStats?.truncated)
@@ -366,7 +373,9 @@ const suggestedCheck = computed(() => {
     return "核对失败或拒单原因，以及重试、补单后的场馆订单，确认是否仍存在单腿敞口。";
   return "现有证据已覆盖执行过程；比赛未结算前，盈亏以当前记录为准。";
 });
-const diagnosisSummary = computed(() => executionLookup.value && !data.value?.orders.length
+const diagnosisSummary = computed(() => directDiagnosis.value
+  ? { text: `已读取 ${data.value?.observation?.events.length || 0} 条直接执行记录、${data.value?.observation?.attempts.length || 0} 次尝试；每笔状态分别展示。`, tone: "warning" as const }
+  : executionLookup.value && !data.value?.orders.length
   ? { text: "当前显示执行观察记录；成交与落库状态请核查确认和绑定事件。", tone: "warning" as const }
   : buildAdminOrderDiagnosisSummary(executionSteps.value, totalProfit.value, diagnosisContext.value));
 const orchestrationStages = computed(() =>
@@ -386,6 +395,9 @@ const platformLabels = computed(() => {
   for (const o of sortedOrders.value) {
     if (o.provider)
       labels.add(o.provider);
+  }
+  for (const event of data.value?.observation?.events || []) {
+    if (event.provider) labels.add(event.provider);
   }
   return [...labels].join(" · ");
 });
@@ -460,6 +472,7 @@ async function openExecution(input: NonNullable<typeof executionLookup.value>) {
   executionLookup.value = { ...input };
   lookupRows.value = [];
   expanded.value = false;
+  legacyDetailed.value = false;
   await loadDiagnosis();
 }
 
@@ -469,6 +482,7 @@ async function open(rows: AdminOrderRow[]) {
   executionLookup.value = null;
   lookupRows.value = [...rows];
   expanded.value = false;
+  legacyDetailed.value = false;
   await loadDiagnosis();
 }
 
@@ -484,7 +498,7 @@ async function loadDiagnosis() {
   data.value = null;
   title.value = head ? `下单诊断 · ${formatLinkId(head.linkId)}` : "执行诊断（包含无落库订单）";
   try {
-    const payload = await getAdminOrderLogs(executionLookup.value || {
+    const payload = await getAdminOrderLogs({ ...(executionLookup.value || {
       userId: head.userId,
       linkId: head.linkId || undefined,
       orderId: !head.linkId ? head.orderId : undefined,
@@ -493,7 +507,7 @@ async function loadDiagnosis() {
       venue: head.provider,
       paddingMs: expanded.value ? 1_800_000 : undefined,
       logLimit: expanded.value ? 5000 : undefined,
-    });
+    }), preferDirect: !legacyDetailed.value });
     if (sequence === requestSequence)
       data.value = payload;
   }
@@ -516,7 +530,8 @@ function close() {
 }
 
 async function expandLookup() {
-  expanded.value = true;
+  expanded.value = legacyDetailed.value || data.value?.legacyLogsLoaded === true;
+  legacyDetailed.value = true;
   await loadDiagnosis();
 }
 
@@ -524,7 +539,7 @@ async function copyReport() {
   if (!data.value)
     return;
   // [changmen 扩展] 仅复制摘要及核查提示，不导出账号凭证和接口原始请求。
-  const report = [
+  const report = directDiagnosis.value ? adminObservationReport(data.value) : [
     `下单诊断 · ${formatLinkId(data.value.link)}`,
     diagnosisSummary.value.text,
     `证据：${evidenceIssues.value.join("；") || "现有执行证据覆盖完整"}`,
@@ -570,7 +585,7 @@ defineExpose({ open, openExecution });
                   }}</span>
                 </div>
                 <div class="admin-order-log-overview__window">
-                  日志窗口 {{ fmtTime(data.logWindow.fromMs) }} — {{ fmtTime(data.logWindow.toMs) }}
+                  {{ directDiagnosis ? '执行记录时间' : '日志窗口' }} {{ fmtTime(data.logWindow.fromMs) }} — {{ fmtTime(data.logWindow.toMs) }}
                 </div>
               </div>
 
@@ -581,12 +596,13 @@ defineExpose({ open, openExecution });
                 </div>
                 <div class="admin-order-log-stat">
                   <span class="admin-order-log-stat__label">订单</span>
-                  <span class="admin-order-log-stat__value">{{ executionLookup?.executionId || executionLookup?.attemptId || executionLookup?.eventId ? "本次未查询" : `${sortedOrders.length} 笔` }}</span>
+                  <span class="admin-order-log-stat__value">{{ data.ordersQueried === false ? '本次未查询' : `${sortedOrders.length} 笔` }}</span>
                 </div>
                 <div class="admin-order-log-stat">
                   <span class="admin-order-log-stat__label">日志</span>
                   <span class="admin-order-log-stat__value">
-                    {{ logStats.related }} / {{ logStats.total }} 条相关
+                    <template v-if="data.legacyLogsLoaded === false">旧日志未查询 · 执行 {{ data.observation?.events.length || 0 }} 条</template>
+                    <template v-else>{{ logStats.related }} / {{ logStats.total }} 条相关</template>
                   </span>
                 </div>
                 <div
@@ -595,14 +611,15 @@ defineExpose({ open, openExecution });
                 >
                   <span class="admin-order-log-stat__label">诊断质量</span>
                   <span class="admin-order-log-stat__value">
-                    <template v-if="logStats.truncated">
+                    <template v-if="directDiagnosis && data.observation?.truncated">执行记录已截断</template>
+                    <template v-else-if="logStats.truncated">
                       日志已截断 {{ logStats.limit }} 条
                     </template>
                     <template v-else-if="evidenceIssues.length">
                       证据不完整
                     </template>
                     <template v-else>
-                      执行证据覆盖完整
+                      {{ directDiagnosis ? '直接记录可用' : '执行证据覆盖完整' }}
                     </template>
                   </span>
                 </div>
@@ -627,12 +644,13 @@ defineExpose({ open, openExecution });
               <p class="admin-order-log-overview__window">
                 建议核查：{{ suggestedCheck }}
               </p>
-              <p class="admin-order-log-overview__window">
+              <p v-if="!directDiagnosis" class="admin-order-log-overview__window">
                 明确 Link／订单 ID 的日志跨时间窗检索；时间窗用于旧日志关联。流程和金额公式包含推断，须结合技术明细核对。
               </p>
+              <AdminOrderExecutionRecords v-if="directDiagnosis" :data="data" />
 
               <section
-                v-if="executionSteps.length"
+                v-if="executionSteps.length && !directDiagnosis"
                 class="admin-order-diagnosis"
                 :class="`admin-order-diagnosis--${diagnosisSummary.tone}`"
               >
@@ -729,7 +747,7 @@ defineExpose({ open, openExecution });
                 </ol>
               </section>
 
-              <div v-if="legColumns.length" class="admin-order-log-overview__orders">
+              <div v-if="legColumns.length && !directDiagnosis" class="admin-order-log-overview__orders">
                 <h5 class="admin-order-log-overview__orders-title">
                   订单概况
                 </h5>
@@ -829,33 +847,17 @@ defineExpose({ open, openExecution });
                   </section>
                 </div>
               </div>
-              <p v-else-if="!hasOverviewOrders" class="admin-order-log-overview__empty">
+              <p v-else-if="!hasOverviewOrders && !directDiagnosis" class="admin-order-log-overview__empty">
                 该 Link 无落库订单
               </p>
             </section>
 
-            <details v-if="data.observation" class="admin-order-log-technical" open>
+            <details v-if="data.observation" class="admin-order-log-technical">
               <summary class="admin-order-log-technical__summary">
-                执行记录（与实时进度同源） · {{ data.observation.events.length }} 条事件
+                原始执行时间线 · {{ data.observation.events.length }} 条事件
               </summary>
               <p>事件来自客户端上报，尚未独立核验场馆；此结果仅供核查，不参与下注或补单。</p>
               <el-alert v-for="issue in data.observation.issues" :key="issue" :title="issue" type="warning" :closable="false" />
-              <section v-for="attempt in data.observation.attempts" :key="attempt.attemptId">
-                <p>尝试 {{ attempt.attemptId }}</p>
-                <template v-for="(stage, name) in attempt.progress" :key="name">
-                  <div v-if="stage">
-                    <p>{{ name === 'precheck' ? '预检' : name === 'submission' ? '提交下注' : '绑定订单' }} · {{ stage.label }}</p>
-                  </div>
-                </template>
-                <template v-if="attempt.confirmation">
-                  <p>{{ attempt.confirmation.label }} · {{ attempt.confirmation.basis }}</p>
-                </template>
-                <el-alert v-for="finding in attempt.findings" :key="finding" :title="finding" type="warning" :closable="false" />
-              </section>
-              <section v-for="queue in data.observation.queues" :key="queue.queueId">
-                <p>队列 {{ queue.queueId }}</p>
-                <el-alert v-for="finding in queue.findings" :key="finding" :title="finding" type="warning" :closable="false" />
-              </section>
               <ul class="admin-order-log-list">
                 <li v-for="event in observationTimeline" :key="event.eventId" class="admin-order-log-list__row">
                   <span>{{ observationEventStage(event) }} · {{ event.provider || '系统' }} {{ event.target || '' }}</span>
@@ -876,6 +878,7 @@ defineExpose({ open, openExecution });
                   <template v-if="filteredLogs.length"> · {{ filteredLogs.length }} 条已排除</template>
                 </small>
               </summary>
+              <p v-if="data.legacyLogsLoaded === false">当前使用直接执行记录；旧日志尚未查询，可通过底部“补查旧日志”加载。</p>
 
               <section class="admin-order-log-logs-row">
                 <header class="admin-order-log-logs-row__head">
@@ -1064,7 +1067,7 @@ defineExpose({ open, openExecution });
         复制诊断摘要
       </el-button>
       <el-button :disabled="loading || !lookupRows.length" @click="expandLookup">
-        扩大旧日志窗口至前后30分钟
+        {{ data?.legacyLogsLoaded === false ? '补查旧日志' : '扩大旧日志窗口至前后30分钟' }}
       </el-button>
       <el-button :loading="loading" @click="loadDiagnosis">
         {{ error ? "重试" : "刷新" }}

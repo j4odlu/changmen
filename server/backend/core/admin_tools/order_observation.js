@@ -72,9 +72,12 @@ export function summarizeOrderObservations(query, records = []) {
       findings.push("缺少预检结果事件");
     if (events.some(event => event.kind === "submission_result" && event.outcome === "unknown"))
       findings.push("提交结果未知，不能认定未成交");
-    const confirmation = delayedPmConfirmation(events, records) || boundRayOrderConfirmation(events, records);
+    const identityConflict = ["ownerUserId", "executionId", "provider", "accountId", "target"].some(key =>
+      new Set(events.map(event => event[key]).filter(value => value !== undefined && value !== "")).size > 1);
+    if (identityConflict) findings.push("同一尝试的执行、平台、账号或主客身份冲突；不合并判定结果");
+    const confirmation = identityConflict ? undefined : delayedPmConfirmation(events, records) || boundRayOrderConfirmation(events, records);
     return { attemptId, events, findings, evidence: "client_reported", ...(confirmation ? { confirmation } : {}),
-      progress: { precheck: progressPrecheck(events), submission: progressSubmission(events, query.events), binding: progressBinding(events) } };
+      progress: identityConflict ? {} : { precheck: progressPrecheck(events), submission: progressSubmission(events, query.events), binding: progressBinding(events) } };
   });
   const queueIds = new Set(query.events.map(event => event.queueId).filter(Boolean));
   const queues = [...queueIds].map((queueId) => {

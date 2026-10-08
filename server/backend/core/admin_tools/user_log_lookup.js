@@ -7,6 +7,7 @@ import {
   fetchOrderByOrderId,
   fetchOrderObservations,
   fetchOrdersByLink,
+  fetchOrdersByLinks,
   fetchUserById,
   fetchUserByName,
 } from "@changmen/db";
@@ -1018,6 +1019,9 @@ export function toAdminOrderLogPayload(result) {
     groupLabel: result.groupLabel,
     logWindow: result.logWindow,
     observation: result.observation,
+    diagnosticSource: result.diagnosticSource,
+    legacyLogsLoaded: result.legacyLogsLoaded,
+    ordersQueried: result.ordersQueried,
     orders,
     logs,
     unrelatedLogs,
@@ -1030,7 +1034,7 @@ export function toAdminOrderLogPayload(result) {
     },
     platforms: buildPlatformSections(orders, logs),
     orderSections: buildOrderSections(orders, logs),
-    legSections: buildLegSections(orders, logs, {
+    legSections: result.legacyLogsLoaded === false ? [] : buildLegSections(orders, logs, {
       groupLabel: result.groupLabel,
       linkType: result.linkType,
     }),
@@ -1038,12 +1042,38 @@ export function toAdminOrderLogPayload(result) {
 }
 
 /** [changmen 扩展] 精确观察查询，不推造订单或扩展旧日志时间窗。 */
-async function lookupObservationOnly(user, anchor, link = 0, selector = {}) {
-  const observation = summarizeOrderObservations(await fetchOrderObservations(user.id, link, 2000, [], selector));
+function diagnosticOrderRecords(orders) {
+  return orders.map(order => ({ orderId: String(order.order_id), provider: String(order.provider || ""),
+    accountId: Number(order.player_id), linkId: Number(order.link) || 0, status: String(order.status || ""),
+    shares: Number.isFinite(Number(order.raw?.pmShares)) ? Number(order.raw.pmShares) || undefined : undefined,
+    side: ["buy", "sell"].includes(order.raw?.pmSide) ? order.raw.pmSide : undefined,
+  }));
+}
+
+function directObservationResult(user, anchor, link, query, orders, ordersQueried) {
+  const observation = summarizeOrderObservations(query, diagnosticOrderRecords(orders));
+  const times = observation.events.map(event => event.occurredAt);
+  return { ok: true, user: { id: user.id, userName: user.user_name }, anchor, link,
+    linkType: linkTypeLabel(link), groupLabel: "执行记录诊断", observation,
+    diagnosticSource: "events", legacyLogsLoaded: false, ordersQueried,
+    logWindow: { fromMs: Math.min(...times), toMs: Math.max(...times) },
+    orders: orders.map(normalizeOrderRow).filter(Boolean), logs: [], unrelatedLogs: [], logsRaw: [],
+    logStats: { total: 0, related: 0, unrelated: 0, truncated: false, limit: 0 } };
+}
+
+async function lookupObservationOnly(user, anchor, link = 0, selector = {}, preferDirect = false) {
+  const query = await fetchOrderObservations(user.id, link, 2000, [], selector);
+  const observation = summarizeOrderObservations(query);
   if (!observation.events?.length)
     return { ok: false, error: observation.status === "unavailable" ? "执行观察记录暂不可用" : "未找到订单或执行记录（可能尚未上传）" };
-  const times = observation.events.map(event => event.occurredAt);
-  return { ok: true, user: { id: user.id, userName: user.user_name }, anchor, link, linkType: linkTypeLabel(link), groupLabel: "执行观察记录", observation, logWindow: { fromMs: Math.min(...times), toMs: Math.max(...times) }, orders: [], logs: [], unrelatedLogs: [], logsRaw: [], logStats: { total: 0, related: 0, unrelated: 0, truncated: false, limit: 2000 } };
+  // [changmen 扩展] 按事件的明确身份批量读取当前订单，不通过时间或平台相同猜测关联。
+  const refs = observation.events.filter(event => event.provider && event.orderId && event.accountId !== undefined);
+  const links = [...new Set(refs.map(event => event.linkId).filter(value => Number.isSafeInteger(value) && value !== 0))];
+  const candidates = preferDirect && links.length ? await fetchOrdersByLinks(user.id, links) : [];
+  const orders = candidates.filter(order => refs.some(event => String(order.order_id) === event.orderId
+    && order.provider === event.provider && Number(order.player_id) === event.accountId && Number(order.link) === event.linkId));
+  const resolvedLink = link || (new Set(observation.events.map(event => event.linkId)).size === 1 ? observation.events[0].linkId : 0);
+  return directObservationResult(user, anchor, resolvedLink, query, orders, Boolean(link) || (preferDirect && links.length > 0));
 }
 
 export async function lookupOrderLogs(opts) {
@@ -1062,7 +1092,7 @@ export async function lookupOrderLogs(opts) {
     const value = String(opts[key]);
     if (!/^[\w-]{8,160}$/.test(value))
       return { ok: false, error: "无效执行编号" };
-    return lookupObservationOnly(user, { type: key, value }, 0, { [key]: value });
+    return lookupObservationOnly(user, { type: key, value }, 0, { [key]: value }, opts.preferDirect === true);
   }
   let orders = [];
   let anchor = { type: "user", value: user.user_name };
@@ -1075,7 +1105,7 @@ export async function lookupOrderLogs(opts) {
     orders = await fetchOrdersByLink(user.id, linkVal);
     anchor = { type: "link", value: linkVal };
     if (!orders.length) {
-      return lookupObservationOnly(user, anchor, linkVal);
+      return lookupObservationOnly(user, anchor, linkVal, {}, opts.preferDirect === true);
     }
   }
   else if (opts?.orderId) {
@@ -1109,6 +1139,11 @@ export async function lookupOrderLogs(opts) {
 
   const normalized = orders.map(normalizeOrderRow).filter(Boolean);
   const link = normalized[0]?.link ?? 0;
+  const observationQuery = await fetchOrderObservations(user.id, link, 2000, normalized.map(order => ({
+    provider: order.provider, accountId: String(order.playerId), orderId: order.orderId,
+  })));
+  if (opts.preferDirect === true && observationQuery.status === "available" && observationQuery.events.length)
+    return directObservationResult(user, anchor, link, observationQuery, orders, true);
   const window = computeLogWindow(orders, opts?.paddingMs);
   if (!window) {
     return { ok: false, error: "无法计算日志时间窗" };
@@ -1125,12 +1160,7 @@ export async function lookupOrderLogs(opts) {
   const summarizedLogs = logs.map(summarizeUserLog);
   const { relevant, unrelated } = filterRelevantLogs(normalized, summarizedLogs);
   // [changmen 扩展] 当前订单只读白名单，原始 raw 不进入判定依据。
-  const evidenceRecords = orders.map(order => ({ orderId: String(order.order_id), provider: String(order.provider || ""),
-    accountId: Number(order.player_id), linkId: Number(order.link) || 0, status: String(order.status || ""),
-    shares: Number.isFinite(Number(order.raw?.pmShares)) ? Number(order.raw.pmShares) || undefined : undefined,
-    side: ["buy", "sell"].includes(order.raw?.pmSide) ? order.raw.pmSide : undefined,
-  }));
-  const observation = summarizeOrderObservations(await fetchOrderObservations(user.id, link, 2000, normalized.map(order => ({ provider: order.provider, accountId: String(order.playerId), orderId: order.orderId }))), evidenceRecords);
+  const observation = summarizeOrderObservations(observationQuery, diagnosticOrderRecords(orders));
   return {
     ok: true,
     user: { id: user.id, userName: user.user_name },
@@ -1138,6 +1168,9 @@ export async function lookupOrderLogs(opts) {
     link,
     linkType: linkTypeLabel(link),
     observation,
+    diagnosticSource: "legacy",
+    legacyLogsLoaded: true,
+    ordersQueried: true,
     groupLabel: groupMetaLabel(link, normalized.length),
     logWindow: window,
     orders: normalized,

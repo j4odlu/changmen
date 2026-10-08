@@ -310,6 +310,7 @@ export async function listAdminOrderLogs(body = {}, caller = null) {
     executionId: body.executionId,
     attemptId: body.attemptId,
     eventId: body.eventId,
+    preferDirect: body.preferDirect === true,
     orderId: orderId ? String(orderId) : undefined,
     domain: body.domain,
     sport: body.sport,

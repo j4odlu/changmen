@@ -1,5 +1,7 @@
 import { notePmTickFrame, clearPmTickStateForTests } from "./pmTickState";
 import { createPmTickBufferQuote, clearPmTickBufferMetadata, notePmTickBufferBook } from "./pmTickBuffer";
+import { transformPmPrice } from "./priceQuote";
+import { pmBuyOrderShares } from "./pmBuyOrderShares";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { isPolymarketFokBuyFilled, isPolymarketOrderAccepted, polymarketProvider } from "./bet";
@@ -1897,6 +1899,159 @@ describe("PM +1 tick frozen quote", () => {
     expect(checked.odds).toBe(2);
     expect((await polymarketProvider.betting(pmBettingAccount(), checked)).success).toBe(true);
     expect((pmSubmitOrder.mock.calls[0]![1] as any).order).toMatchObject({ makerAmount: "10000000", takerAmount: "20000000" });
+  });
+  test.each(["percent", "tick"] as const)("unified %s quote retains UI odds, exact cap and SDK price through dispatch", async mode => {
+    const result = transformPmPrice("123456789", 0.5, { enabled: true, mode, multiplier: 1.01 }, "0.01");
+    if (result.status !== "ready") throw new Error("quote unavailable");
+    const quote = result.quote;
+    const account = pmBettingAccount();
+    const checked = await polymarketProvider.checkBet(account, {
+      itemId: quote.tokenId, odds: quote.displayOdds, betMoney: 10,
+      data: { pmPriceQuote: quote,
+        ...(mode === "tick" ? { pmBufferMode: "tick", pmTickQuote: quote } : {}),
+        detectionOdds: quote.displayOdds, detectionMaxPrice: quote.cap, detectionClobPrice: quote.cap },
+    } as any);
+    expect(checked.checkError).toBeUndefined();
+    expect(checked.odds).toBe(quote.displayOdds);
+    expect(checked.data).toMatchObject({ pmPriceQuote: quote, detectionMaxPrice: quote.cap,
+      limitPrice: mode === "tick" ? 0.51 : 0.5 });
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(true);
+    expect((pmSubmitOrder.mock.calls[0]![1] as any).order).toMatchObject({ makerAmount: "10000000",
+      takerAmount: mode === "tick" ? "19607800" : "20000000" });
+  });
+  test.each([
+    ["percent", "0.001", 2.5, false, 0.505],
+    ["percent", "0.001", 2.52, false, 0.505],
+    ["percent", "0.001", 2.53, true, 0.505],
+    ["percent", "0.01", 2.5, true, 0.5],
+    ["tick", "0.001", 2.5, false, 0.501],
+    ["tick", "0.001", 2.51, true, 0.501],
+  ] as const)("%s / tick %s / %s USDC checks the minimum at the actual signed limit", async (mode, tick, amount, ready, limit) => {
+    mockPluginGetWithBook({ tick_size: tick, min_order_size: "5", neg_risk: false,
+      asks: [{ price: "0.5", size: "1000" }] });
+    const result = transformPmPrice("123456789", 0.5, { enabled: true, mode, multiplier: 1.01 }, tick);
+    if (result.status !== "ready") throw new Error("quote unavailable");
+    const quote = result.quote; const account = pmBettingAccount();
+    const checked = await polymarketProvider.checkBet(account, { itemId: quote.tokenId,
+      odds: quote.displayOdds, betMoney: amount, data: { pmPriceQuote: quote,
+        detectionOdds: quote.displayOdds, detectionMaxPrice: quote.cap } } as any);
+    expect(Boolean(checked.data)).toBe(ready);
+    expect(checked.betMoney).toBe(amount);
+    if (!ready) {
+      expect(checked.checkError).toContain("最小份数");
+      expect(pmSubmitOrder).not.toHaveBeenCalled();
+      return;
+    }
+    expect(checked.checkError).toBeUndefined();
+    expect(checked.data?.limitPrice).toBe(limit);
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(true);
+    const signed = (pmSubmitOrder.mock.calls[0]![1] as any).order;
+    expect(Number(signed.takerAmount) / 1_000_000).toBeGreaterThanOrEqual(5);
+    expect(Number(signed.takerAmount) / 1_000_000).toBe(pmBuyOrderShares(amount, limit, tick));
+    expect(Number(signed.makerAmount) / 1_000_000).toBe(amount);
+  });
+  test.each(["percent", "tick"] as const)("%s signs defensively recheck the SDK's actual shares before any POST", async mode => {
+    const result = transformPmPrice("123456789", 0.5, { enabled: true, mode, multiplier: 1.01 }, "0.01");
+    if (result.status !== "ready") throw new Error("quote unavailable");
+    const quote = result.quote; const account = pmBettingAccount();
+    const checked = await polymarketProvider.checkBet(account, { itemId: quote.tokenId,
+      odds: quote.displayOdds, betMoney: 10, data: { pmPriceQuote: quote,
+        detectionOdds: quote.displayOdds, detectionMaxPrice: quote.cap } } as any);
+    expect(checked.checkError).toBeUndefined();
+    const { OrderBuilder } = await import("@polymarket/clob-client-v2");
+    const original = OrderBuilder.prototype.buildMarketOrder;
+    const signing = vi.spyOn(OrderBuilder.prototype, "buildMarketOrder").mockImplementationOnce(async function (...args) {
+      const signed = await original.apply(this, args);
+      return { ...signed, takerAmount: "4999999" };
+    });
+    try {
+      const result = await polymarketProvider.betting(account, checked);
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("最小份数");
+      expect(pmSubmitOrder).not.toHaveBeenCalled();
+    } finally { signing.mockRestore(); }
+  });
+  test("percentage precision boundaries keep frozen caps identical in precheck, signing and submission metrics", async () => {
+    clearPmExecutionMetrics();
+    mockPluginGetWithBook({ tick_size: "0.0001", min_order_size: "5", neg_risk: false,
+      asks: [{ price: "0.956", size: "1000" }, { price: "0.987", size: "1000" }] });
+    const result = transformPmPrice("123456789", 0.956, { enabled: true, mode: "percent", multiplier: 1.032 });
+    if (result.status !== "ready") throw new Error("quote unavailable");
+    const quote = result.quote; const account = pmBettingAccount();
+    expect(quote).toMatchObject({ cap: 0.9866, displayOdds: 1.013 });
+    const checked = await polymarketProvider.checkBet(account, { itemId: quote.tokenId,
+      odds: quote.displayOdds, betMoney: 10, data: { pmPriceQuote: quote,
+        detectionOdds: quote.displayOdds, detectionMaxPrice: quote.cap, detectionClobPrice: quote.cap } } as any);
+    expect(checked.checkError).toBeUndefined();
+    expect(checked.data).toMatchObject({ detectionMaxPrice: 0.9866, limitPrice: 0.9866 });
+    pmGetBook.mockClear();
+    expect((await polymarketProvider.betting(account, checked)).success).toBe(true);
+    expect(pmGetBook).not.toHaveBeenCalled();
+    expect((pmSubmitOrder.mock.calls[0]![1] as any).order).toMatchObject({ makerAmount: "10000000", takerAmount: "10135819" });
+    for (const kind of ["check", "submit", "betting"] as const) {
+      expect(getPmExecutionMetrics().find(row => row.kind === kind && row.success)).toMatchObject({
+        detectionOdds: 1.013, detectionMaxPrice: 0.9866, depthAvailableAtCap: 956,
+        ...(kind === "check" ? {} : { limitPrice: 0.9866 }),
+      });
+    }
+  });
+  test("a unified tick quote alone cannot bypass current book tick validation", async () => {
+    const result = transformPmPrice("123456789", 0.5, { enabled: true, mode: "tick", multiplier: 1.01 }, "0.01");
+    if (result.status !== "ready") throw new Error("quote unavailable");
+    const quote = result.quote;
+    mockPluginGetWithBook({ tick_size: "0.001", min_order_size: "5", neg_risk: false, asks: [{ price: "0.5", size: "1000" }] });
+    const checked = await polymarketProvider.checkBet(pmBettingAccount(), { itemId: quote.tokenId,
+      odds: quote.displayOdds, betMoney: 10, data: { pmPriceQuote: quote,
+        detectionOdds: quote.displayOdds, detectionMaxPrice: quote.cap } } as any);
+    expect(checked.data).toBeNull();
+    expect(checked.checkError).toContain("tick 已改变");
+    expect(pmSubmitOrder).not.toHaveBeenCalled();
+  });
+  test.each([
+    ["percent", 0.97, "0.01", false],
+    ["tick", 0.97, "0.01", false],
+    ["none", 0.975, "0.01", false],
+    ["percent", 0.97, "0.0001", true],
+  ] as const)("%s / ask %s / new tick %s revalidates frozen limits after waiting for the submit lock", async (mode, ask, newTick, allowed) => {
+    const tokenId = "123456789";
+    const bookTimestamp = Date.now();
+    mockPluginGetWithBook({ tick_size: "0.001", timestamp: bookTimestamp, min_order_size: "5", neg_risk: false,
+      asks: [{ price: String(ask), size: "1000" }] });
+    const result = transformPmPrice(tokenId, ask, { enabled: mode !== "none", mode: mode === "tick" ? "tick" : "percent", multiplier: 1.01 }, "0.001");
+    if (result.status !== "ready") throw new Error("quote unavailable");
+    const quote = result.quote; const account = pmBettingAccount();
+    const checked = await polymarketProvider.checkBet(account, { itemId: tokenId, odds: quote.displayOdds, betMoney: 10,
+      data: { ...(mode !== "none" ? { pmPriceQuote: quote } : {}),
+        detectionOdds: quote.displayOdds, detectionMaxPrice: quote.cap, detectionClobPrice: quote.cap } } as any);
+    expect(checked.checkError).toBeUndefined();
+    const frozen = checked.data!;
+    const limit = Number(frozen.limitPrice);
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const entered = vi.fn();
+    vi.stubGlobal("navigator", { locks: { request: async (_name: string, callback: () => Promise<unknown>) => {
+      entered(); await gate; return callback();
+    } } });
+    pmGetBook.mockClear();
+    try {
+      const task = polymarketProvider.betting(account, checked);
+      await vi.waitFor(() => expect(entered).toHaveBeenCalledOnce());
+      notePmTickFrame(JSON.stringify({ event_type: "tick_size_change", asset_id: tokenId, new_tick_size: newTick, timestamp: bookTimestamp + 1 }));
+      release();
+      const submitted = await task;
+      expect(submitted.success).toBe(allowed);
+      expect(checked.data).toBe(frozen);
+      expect(frozen).toMatchObject({ detectionMaxPrice: quote.cap, limitPrice: limit });
+      expect(pmGetBook).not.toHaveBeenCalled();
+      if (allowed) {
+        expect(pmSubmitOrder).toHaveBeenCalledOnce();
+        const signed = (pmSubmitOrder.mock.calls[0]![1] as any).order;
+        expect(Number(signed.takerAmount) / 1_000_000).toBe(pmBuyOrderShares(10, limit, "0.001"));
+      } else {
+        expect(submitted.message).toContain("tick 已改变");
+        expect(pmSubmitOrder).not.toHaveBeenCalled();
+      }
+    } finally { release(); vi.unstubAllGlobals(); }
   });
 });
 

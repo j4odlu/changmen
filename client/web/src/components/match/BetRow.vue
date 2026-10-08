@@ -154,6 +154,10 @@ function itemOdds(item: ViewBet["items"][0], side: BetSide) {
   return side === "Home" ? row.home : row.away;
 }
 
+function itemQuotePending(item: ViewBet["items"][0], side: BetSide): boolean {
+  return props.allowBetting && oddsStore.isQuotePending(item.type, side === "Home" ? item.homeId : item.awayId);
+}
+
 /** [changmen 扩展] PB WS 影子价旁显；可点选 target / 双击按旁显价下限手动下单；不写 fo */
 const pbWsShadowTick = ref(0);
 let unsubPbWsShadow: (() => void) | undefined;
@@ -468,7 +472,7 @@ function onBetTitleDblClick() {
           class="item-odds home"
           :data-pb-home-id="item.type === 'PB' ? item.homeId : undefined"
           :class="{
-            'lock': !itemOdds(item, 'Home'),
+            'lock': !itemOdds(item, 'Home') && !itemQuotePending(item, 'Home'),
             'target': matchStore.getBetTarget(item.type, bet.id) === 'Home',
             'arb-leg': isArbLeg(item, 'Home'),
             ...oddsCellClasses(item, 'Home'),
@@ -478,7 +482,7 @@ function onBetTitleDblClick() {
           @click="onTarget(item.type, 'Home')"
           @dblclick.stop="onOddsDblClick(item, 'Home')"
         >
-          {{ itemOdds(item, "Home") || ""
+          {{ itemOdds(item, "Home") || (itemQuotePending(item, 'Home') ? '等待报价' : '')
           }}<span
             v-if="pbShadowLabel(item, 'Home')"
             class="pb-ws-shadow"
@@ -506,7 +510,7 @@ function onBetTitleDblClick() {
           class="item-odds away"
           :data-pb-home-id="item.type === 'PB' ? item.awayId : undefined"
           :class="{
-            'lock': !itemOdds(item, 'Away'),
+            'lock': !itemOdds(item, 'Away') && !itemQuotePending(item, 'Away'),
             'target': matchStore.getBetTarget(item.type, bet.id) === 'Away',
             'arb-leg': isArbLeg(item, 'Away'),
             ...oddsCellClasses(item, 'Away'),
@@ -516,7 +520,7 @@ function onBetTitleDblClick() {
           @click="onTarget(item.type, 'Away')"
           @dblclick.stop="onOddsDblClick(item, 'Away')"
         >
-          {{ itemOdds(item, "Away") || ""
+          {{ itemOdds(item, "Away") || (itemQuotePending(item, 'Away') ? '等待报价' : '')
           }}<span
             v-if="pbShadowLabel(item, 'Away')"
             class="pb-ws-shadow"

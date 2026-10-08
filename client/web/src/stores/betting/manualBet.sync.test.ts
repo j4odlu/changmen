@@ -1,5 +1,10 @@
 import type { ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createPinia, setActivePinia } from "pinia";
+import { useOddsStore } from "@/stores/oddsStore";
+import { attachPolymarketDetectionQuote } from "@/domain/polymarket/attachDetectionQuote";
+import { clearPmTickBufferMetadata, clearPmTickStateForTests, notePmTickBufferBook,
+  resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs } from "@changmen/venue-adapter/polymarket";
 
 const updateVenueOrders = vi.hoisted(() => vi.fn(async () => []));
 const refreshBalance = vi.hoisted(() => vi.fn(async () => undefined));
@@ -65,6 +70,8 @@ import { runManualBet } from "@/stores/betting/manualBet";
 
 describe("runManualBet post-success sync", () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
+    clearPmTickStateForTests(); clearPmTickBufferMetadata(); resetPmArbPriceBufferPrefsForTests();
     updateVenueOrders.mockClear();
     refreshBalance.mockClear();
     refreshOrderListAfterBind.mockClear();
@@ -113,6 +120,33 @@ describe("runManualBet post-success sync", () => {
     expect(refreshOrderListAfterBind).toHaveBeenCalledOnce();
     expect(refreshBalance).toHaveBeenCalledOnce();
     expect(markSuccessfulBet).toHaveBeenCalledOnce();
+  });
+
+  it.each(["percent", "tick"] as const)("%s quote is frozen before the amount prompt despite later asks and settings", async mode => {
+    setPmArbPriceBufferPrefs({ enabled: true, mode, multiplier: 1.01 });
+    const oddsStore = useOddsStore();
+    oddsStore.save("Polymarket", { id: "i1", odds: 2, clobPrice: 0.5, isLock: false, time: Date.now() });
+    notePmTickBufferBook("i1", { asset_id: "i1", tick_size: "0.01" });
+    const initialOdds = oddsStore.getOdds("Polymarket", "i1");
+    prompt.mockImplementationOnce(async () => {
+      oddsStore.save("Polymarket", { id: "i1", odds: 1 / 0.49, clobPrice: 0.49, isLock: false, time: Date.now() });
+      setPmArbPriceBufferPrefs({ enabled: false, multiplier: 1.02 });
+      return { value: "25" };
+    });
+    checkBetting.mockImplementationOnce(async (_account, opt) => {
+      attachPolymarketDetectionQuote(opt as import("@changmen/client-core/models/betOption").BetOption);
+      return opt as any;
+    });
+    const match = { title: "A vs B", game: "Valorant" } as unknown as ViewMatch;
+    const bet = { id: 1, homeName: "A", awayName: "B", getBetName: () => "Map 1" } as unknown as ViewBet;
+    const item = { type: "Polymarket", matchId: "m1", betId: "b1", getOdds: () => oddsStore.getOdds("Polymarket", "i1"),
+      getItemId: () => "i1" } as unknown as ViewBetItem;
+    await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
+    expect(ElMessageBox.alert).not.toHaveBeenCalled();
+    expect(betting).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ odds: initialOdds,
+      betMoney: 25, data: expect.objectContaining({ pmPriceQuote: expect.objectContaining({ mode, rawAsk: 0.5 }),
+        detectionMaxPrice: mode === "tick" ? 0.51 : 0.505 }) }), expect.any(Number));
+    resetPmArbPriceBufferPrefsForTests();
   });
 
   it.each(["Polymarket", "PredictFun"] as const)("%s 比例 9999 手动下单只换算币种，不放大金额", async (provider) => {

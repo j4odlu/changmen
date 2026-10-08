@@ -1,5 +1,8 @@
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 import { isValidClobPrice, polymarketClobMatchesOdds } from "./pmDetection";
+import { transformPmPrice, type PmPriceQuoteResult } from "./priceQuote";
+import { pmTickBufferTick } from "./pmTickMetadata";
+export * from "./priceQuote";
 
 /** [changmen 扩展] Extensions `pmArbPriceBuffer` 运行时镜像（web userStore 同步） */
 export interface PmArbPriceBufferPrefs {
@@ -12,6 +15,7 @@ export interface PmArbPriceBufferPrefs {
 
 const DEFAULT_MULTIPLIER = 1.01;
 const modeListeners = new Set<(enabled: boolean) => void>();
+const policyListeners = new Set<() => void>();
 export * from "./pmTickBuffer";
 export function isPmTickBufferActive(prefs: PmArbPriceBufferPrefs = runtimePrefs): boolean {
   return prefs.enabled === true && prefs.mode === "tick";
@@ -19,6 +23,11 @@ export function isPmTickBufferActive(prefs: PmArbPriceBufferPrefs = runtimePrefs
 export function onPmTickBufferModeChange(listener: (enabled: boolean) => void): () => void {
   modeListeners.add(listener);
   return () => { modeListeners.delete(listener); };
+}
+/** [changmen 扩展] 转换规则更新后统一通知报价消费者；与 tick 元数据预取分开。 */
+export function onPmPricePolicyChange(listener: () => void): () => void {
+  policyListeners.add(listener);
+  return () => { policyListeners.delete(listener); };
 }
 
 let runtimePrefs: PmArbPriceBufferPrefs = {
@@ -28,6 +37,7 @@ let runtimePrefs: PmArbPriceBufferPrefs = {
 
 export function setPmArbPriceBufferPrefs(prefs: PmArbPriceBufferPrefs): void {
   const wasTick = isPmTickBufferActive();
+  const previous = runtimePrefs;
   runtimePrefs = {
     enabled: prefs.enabled === true,
     multiplier: normalizePmArbPriceBufferMultiplier(prefs.multiplier),
@@ -35,6 +45,9 @@ export function setPmArbPriceBufferPrefs(prefs: PmArbPriceBufferPrefs): void {
   };
   const tick = isPmTickBufferActive();
   if (tick !== wasTick) for (const listener of modeListeners) listener(tick);
+  if (previous.enabled !== runtimePrefs.enabled || previous.mode !== runtimePrefs.mode
+    || previous.multiplier !== runtimePrefs.multiplier)
+    for (const listener of policyListeners) listener();
 }
 
 export function getPmArbPriceBufferPrefs(): PmArbPriceBufferPrefs {
@@ -84,7 +97,19 @@ export function pmExecCapFromRawAsk(
 ): number {
   if (!isPmArbPriceBufferActive(prefs) || !isValidClobPrice(rawAsk))
     return rawAsk;
-  return Math.min(0.9999, round4(rawAsk * prefs.multiplier));
+  const result = transformPmPrice("", rawAsk, prefs);
+  return result.status === "ready" ? result.quote.cap : rawAsk;
+}
+
+/** [changmen 扩展] 原始行情 + 配置 + 独立元数据 → 统一报价，不写回原始行情。 */
+export function resolvePmDisplayQuote(
+  tokenId: string,
+  entry: { clobPrice?: number; odds?: number; isLock?: boolean } | undefined,
+  prefs: PmArbPriceBufferPrefs = runtimePrefs,
+): PmPriceQuoteResult {
+  if (!entry || entry.isLock) return { status: "locked" };
+  const rawAsk = isPmTickBufferActive(prefs) ? Number(entry.clobPrice) : rawAskFromFoEntry(entry);
+  return transformPmPrice(tokenId, rawAsk, prefs, isPmTickBufferActive(prefs) ? pmTickBufferTick(tokenId) : undefined);
 }
 
 export function pmEffectiveOddsFromRawAsk(
@@ -106,14 +131,12 @@ export function pmEffectiveOddsFromFoEntry(
     return 0;
   if (!isPmArbPriceBufferActive(prefs))
     return truncateOddsTo3(Number(entry.odds) || 0);
-  const raw = rawAskFromFoEntry(entry);
-  if (!isValidClobPrice(raw))
-    return truncateOddsTo3(Number(entry.odds) || 0);
-  return pmEffectiveOddsFromRawAsk(raw, prefs);
+  const result = resolvePmDisplayQuote("", entry, prefs);
+  return result.status === "ready" ? result.quote.displayOdds : truncateOddsTo3(Number(entry.odds) || 0);
 }
 
 /**
- * 预检/下单 FOK 上限辅助（可选）。**bet.ts 不调用**——FOK 仍走 resolvePolymarketDetectionMaxPrice。
+ * 旧调用方的上限辅助（可选）。**bet.ts 不调用**——统一报价使用精确 cap，提交使用预检冻结上限。
  * 关：原样返回。开：resolved 已不优于 detectionOdds 则不再乘；仅 raw 卖一才 × multiplier。
  */
 export function resolvePolymarketExecMaxPrice(

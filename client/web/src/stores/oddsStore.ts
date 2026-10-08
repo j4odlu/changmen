@@ -19,7 +19,7 @@ import {
   isPmArbPriceBufferActive,
   pmEffectiveOddsFromFoEntry,
   isPmTickBufferActive,
-  createPmTickBufferQuote,
+  resolvePmDisplayQuote,
 } from "@changmen/venue-adapter/polymarket/pmArbPriceBufferMode";
 import {
   isPfArbPriceBufferActive,
@@ -75,6 +75,13 @@ export const useOddsStore = defineStore("odds", {
     data: new Map<PlatformId, Map<string, OddsEntry>>(),
 
     /**
+     * [changmen 扩展] PM 缓存重建时保留完整原始行情，报价仍由同一转换模块生成。
+     * null 表示已按原有 1h 规则清理，防止 ViewBetItem 的旧数字复活该报价。
+     * 不回写 data，不改变采集器的 isOdds/getEntry 语义。
+     */
+    pmQuoteSnapshots: new Map<string, Readonly<OddsEntry> | null>(),
+
+    /**
      * 盘口索引：`platform → betId → oddId[]`。
      * 用于 MQTT 盘口级锁盘推送时，批量更新该盘口下所有 oddId 的锁盘状态。
      */
@@ -98,7 +105,7 @@ export const useOddsStore = defineStore("odds", {
     flash: new Map<string, { dir: OddsFlashDir; until: number; source: OddsSaveSource }>(),
 
     _limitsCleanedAt: 0,
-    /** [changmen 扩展] 仅新模式的显示失效通知，不重写原始赔率。 */
+    /** [changmen 扩展] 报价规则/元数据的显示失效通知，不重写原始赔率。 */
     pmTickBufferEnabled: false,
     pmTickBufferVersion: 0,
   }),
@@ -176,21 +183,31 @@ export const useOddsStore = defineStore("odds", {
       return this.data.get(platform)?.get(String(oddsId));
     },
 
+    /** [changmen 扩展] 报价消费者共用的原始卖一入口；实时行情优先于重建快照。 */
+    getPmQuoteEntry(oddsId: string): Readonly<OddsEntry> | undefined {
+      const id = String(oddsId);
+      return this.getEntry(PLATFORMS.Polymarket, id) ?? this.pmQuoteSnapshots.get(id) ?? undefined;
+    },
+
     /**
      * 按 oddId 取展示赔率（对齐 A8 `Qn().getOdds` / `p.getOdds`）。
      * - 无缓存：返回 fallback（经平台格式化）
      * - 有缓存且 isLock：返回 0（**不用** fallback 顶替锁盘）
      * - 有缓存且未锁：返回格式化后的 row.odds
      * - Polymarket / PredictFun：truncateOddsTo3（1/price 截断）；其它馆 formatDisplayOdds（四舍五入）
-     * - [changmen 扩展] 仅 PM/PF + 有 fo + 各自开关开：读打折档；**写入仍是真价**。无 fo 不打折
+     * - [changmen 扩展] PM 可读缓存重建前的完整卖一快照，再按当前规则转换；写入仍是真价。
      */
     getOdds(platform: PlatformId, oddsId: string, fallback = 0): number {
-      const row = this.data.get(platform)?.get(String(oddsId));
+      if (platform === PLATFORMS.Polymarket) void this.pmTickBufferVersion;
+      const row = platform === PLATFORMS.Polymarket
+        ? this.getPmQuoteEntry(oddsId) : this.getEntry(platform, oddsId);
       if (platform === PLATFORMS.Polymarket && (this.pmTickBufferEnabled || isPmTickBufferActive())) {
-        void this.pmTickBufferVersion;
-        return row && !row.isLock ? createPmTickBufferQuote(String(oddsId), Number(row.clobPrice))?.displayOdds ?? 0 : 0;
+        const result = resolvePmDisplayQuote(String(oddsId), row);
+        return result.status === "ready" ? result.quote.displayOdds : 0;
       }
       const useTrunc = platform === PLATFORMS.Polymarket || platform === PLATFORMS.PredictFun;
+      if (!row && platform === PLATFORMS.Polymarket && this.pmQuoteSnapshots.get(String(oddsId)) === null)
+        return 0;
       if (row === undefined)
         return useTrunc ? truncateOddsTo3(fallback) : formatDisplayOdds(fallback);
       if (row.isLock)
@@ -202,12 +219,24 @@ export const useOddsStore = defineStore("odds", {
       return useTrunc ? truncateOddsTo3(row.odds) : formatDisplayOdds(row.odds);
     },
 
+    /** [changmen 扩展] 行情正常但报价尚未就绪；UI 不将其误标为场馆封盘。 */
+    isQuotePending(platform: PlatformId, oddsId: string): boolean {
+      if (platform !== PLATFORMS.Polymarket || !isPmTickBufferActive()) return false;
+      void this.pmTickBufferVersion;
+      return resolvePmDisplayQuote(String(oddsId), this.getPmQuoteEntry(oddsId)).status === "waiting-tick";
+    },
+
     /** 更新单条 odd 锁盘（对齐 A8 `updateOddsLock`：仅改已有行） */
     updateOddsLock(platform: PlatformId, oddsId: string, locked: boolean) {
       const key = String(oddsId);
       const row = this.data.get(platform)?.get(key);
       if (row && row.isLock !== locked) {
         row.isLock = locked;
+      }
+      if (!row && platform === PLATFORMS.Polymarket) {
+        const snapshot = this.pmQuoteSnapshots.get(key);
+        if (snapshot && snapshot.isLock !== locked)
+          this.pmQuoteSnapshots.set(key, Object.freeze({ ...snapshot, isLock: locked }));
       }
     },
 
@@ -216,6 +245,13 @@ export const useOddsStore = defineStore("odds", {
       const key = String(betId);
 
       const indexed = this.betIndex.get(platform)?.get(key);
+      if (platform === PLATFORMS.Polymarket) {
+        const ids = new Set(indexed ?? []);
+        for (const row of this.data.get(platform)?.values() ?? []) if (row.betId === key) ids.add(row.id);
+        for (const row of this.pmQuoteSnapshots.values()) if (row?.betId === key) ids.add(row.id);
+        for (const id of ids) this.updateOddsLock(platform, id, locked);
+        return;
+      }
       if (indexed?.length) {
         for (const id of indexed) this.updateOddsLock(platform, id, locked);
         return;
@@ -266,19 +302,26 @@ export const useOddsStore = defineStore("odds", {
      * - 不传：全局扫描，删除 time 超过 1 小时的 stale odd（不碰 betIndex 孤儿索引，靠 save 重建）
      */
     clean(platform?: PlatformId) {
+      const cutoff = Date.now() - 3_600_000;
       if (platform) {
+        if (platform === PLATFORMS.Polymarket) {
+          for (const [id, row] of this.data.get(platform) ?? [])
+            this.pmQuoteSnapshots.set(id, row.time < cutoff ? null : Object.freeze({ ...row }));
+          for (const [id, row] of this.pmQuoteSnapshots) if (row && row.time < cutoff) this.pmQuoteSnapshots.set(id, null);
+        }
         this.data.set(platform, new Map());
         this.betIndex.set(platform, new Map());
         return;
       }
-      const cutoff = Date.now() - 3_600_000;
-      for (const bucket of this.data.values()) {
+      for (const [provider, bucket] of this.data) {
         for (const [id, row] of [...bucket.entries()]) {
           if (row.time < cutoff) {
             bucket.delete(id);
+            if (provider === PLATFORMS.Polymarket) this.pmQuoteSnapshots.set(id, null);
           }
         }
       }
+      for (const [id, row] of this.pmQuoteSnapshots) if (row && row.time < cutoff) this.pmQuoteSnapshots.set(id, null);
     },
 
     maybeCleanExpiredLimits(platform?: PlatformId) {

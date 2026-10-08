@@ -18,6 +18,7 @@ import { markSuccessfulBet } from "@/stores/betting/successMarkers";
 import { useUserStore } from "@/stores/userStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
+import { capturePmPriceQuote } from "@/domain/polymarket/tickBufferQuote";
 
 /** 手动下单默认金额：优先正EV金额，未配置时回退套利 betMoney */
 export function defaultManualBetAmount(
@@ -80,6 +81,16 @@ export async function runManualBet(
     oddsOverride != null && Number.isFinite(oddsOverride) && oddsOverride > 0
       ? oddsOverride
       : fromItem;
+  let frozenPmOption: BetOption | undefined;
+  if (item.type === "Polymarket") {
+    frozenPmOption = new BetOption(match, bet, item, side, 0);
+    frozenPmOption.odds = odds;
+    try { capturePmPriceQuote(frozenPmOption); }
+    catch (err) {
+      await ElMessageBox.alert(err instanceof Error ? err.message : String(err), "PM 报价不可用");
+      return;
+    }
+  }
   let amount: number;
   try {
     const { value } = await ElMessageBox.prompt(
@@ -102,7 +113,8 @@ export async function runManualBet(
     return;
   }
 
-  let option = new BetOption(match, bet, item, side, amount);
+  let option = frozenPmOption ?? new BetOption(match, bet, item, side, amount);
+  if (frozenPmOption) option.betMoney = Math.round(amount * 100) / 100;
   option.odds = odds;
   // [changmen 扩展] 比例 9999 仅控制自动下单；手动下单使用用户输入金额。
   if (!accountPassesMainBetFilter(account, bet, match, option, matchStore)) {

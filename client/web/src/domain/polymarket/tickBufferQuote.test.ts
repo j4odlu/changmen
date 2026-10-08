@@ -58,16 +58,17 @@ it("a rejected tick quote clears data so the orchestration cannot mistake it for
   expect(() => attachPolymarketDetectionQuote(leg)).toThrow();
   expect(leg.data).toBeNull();
 });
-it("percentage data, fallback and cap are unchanged even with quote tick metadata", () => {
+it("percentage display and cap are frozen through the same module independently of tick metadata", () => {
   for (const mode of [undefined, "percent"] as const) {
     setPmArbPriceBufferPrefs({ enabled: true, multiplier: 1.01, mode }); seed();
     notePmTickBufferBook("t", { asset_id: "t", tick_size: "0.001" });
     expect(useOddsStore().getOdds("Polymarket", "t")).toBe(1.980);
     expect(useOddsStore().getOdds("Polymarket", "missing", 2)).toBe(2);
     const leg = option(1.980); capturePmTickBufferQuote(leg);
-    expect(leg.data).toBeNull();
+    expect(leg.data).toMatchObject({ pmPriceQuote: { mode: "percent", rawAsk: 0.5, cap: 0.505 } });
+    seed(0.49);
     attachPolymarketDetectionQuote(leg);
-    expect(leg.data).toEqual({ detectionClobPrice: 0.505, detectionMaxPrice: 0.505 });
+    expect(leg.data).toMatchObject({ detectionOdds: 1.980, detectionClobPrice: 0.505, detectionMaxPrice: 0.505 });
   }
 });
 it("changing the setting does not convert an already built percentage attempt to ticks", () => {
@@ -75,7 +76,7 @@ it("changing the setting does not convert an already built percentage attempt to
   const leg = option(1.980); capturePmTickBufferQuote(leg);
   setPmArbPriceBufferPrefs({ enabled: true, multiplier: 1.01, mode: "tick" });
   attachPolymarketDetectionQuote(leg);
-  expect(leg.data).toEqual({ detectionClobPrice: 0.505, detectionMaxPrice: 0.505 });
+  expect(leg.data).toMatchObject({ pmPriceQuote: { mode: "percent" }, detectionClobPrice: 0.505, detectionMaxPrice: 0.505 });
 });
 it("real arbitrage leg construction sizes both legs using the displayed buffered odds", () => {
   const fo = useOddsStore();
@@ -100,7 +101,7 @@ it("real arbitrage leg construction sizes both legs using the displayed buffered
   for (const mode of percentRuns) {
     setPmArbPriceBufferPrefs({ enabled: true, multiplier: 1.01, mode });
     const percent = buildOrderOptions(bet, match, config, [], ["Polymarket", "PB"])!;
-    expect(percent[0]).toMatchObject({ type: "Polymarket", odds: 1.980, betMoney: 100, data: null });
+    expect(percent[0]).toMatchObject({ type: "Polymarket", odds: 1.980, betMoney: 100, data: { pmPriceQuote: { mode: "percent", cap: 0.505 } } });
     expect(percent[1]).toMatchObject({ type: "PB", odds: 2.1, betMoney: 94.29 });
   }
 });

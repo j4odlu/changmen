@@ -54,12 +54,39 @@ describe("isolated tick metadata", () => {
     expect(pmTickBufferTick("t")).toBe("0.001");
     expect(currentPmTick("t")).toBe("0.001");
   });
-  it("expires metadata and ignores a stale book", () => {
+  it("retains confirmed metadata and ignores a stale book even after clearing the quote cache", () => {
     vi.useFakeTimers(); vi.setSystemTime(100_000);
     notePmTickFrame(JSON.stringify({ event_type: "tick_size_change", asset_id: "t", new_tick_size: "0.001", timestamp: 200 }));
     notePmTickBufferBook("t", { asset_id: "t", tick_size: "0.01", timestamp: 100 });
     expect(pmTickBufferTick("t")).toBe("0.001");
     vi.advanceTimersByTime(60_000);
-    expect(pmTickBufferTick("t")).toBeUndefined();
+    expect(pmTickBufferTick("t")).toBe("0.001");
+    clearPmTickBufferMetadata();
+    notePmTickBufferBook("t", { asset_id: "t", tick_size: "0.01", timestamp: 100 });
+    expect(createPmTickBufferQuote("t", 0.5)?.cap).toBe(0.501);
+  });
+  it("reset and repeated toggles cannot release concurrency slots occupied by real requests", async () => {
+    vi.useFakeTimers();
+    let active = 0; let maxActive = 0;
+    const releases: Array<() => void> = [];
+    const load = vi.fn((id: string) => new Promise<{ asset_id: string; tick_size: string }>(resolve => {
+      active++; maxActive = Math.max(maxActive, active);
+      releases.push(() => { active--; resolve({ asset_id: id, tick_size: "0.01" }); });
+    }));
+    setPmTickBufferLoader(load);
+    for (let i = 0; i < 8; i++) requestPmTickBufferTick(`first-${i}`);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(active).toBe(4);
+    clearPmTickBufferMetadata();
+    setPmTickBufferLoader(undefined); setPmTickBufferLoader(load);
+    for (let i = 0; i < 4; i++) requestPmTickBufferTick(`second-${i}`);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(active).toBe(4); expect(load).toHaveBeenCalledTimes(4);
+    for (const release of releases.splice(0)) release();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(active).toBe(4);
+    for (const release of releases.splice(0)) release();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(maxActive).toBe(4); expect(active).toBe(0);
   });
 });

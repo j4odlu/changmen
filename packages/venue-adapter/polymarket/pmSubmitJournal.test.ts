@@ -86,6 +86,27 @@ test("storage failure stops before POST", async () => {
   expect(submit).not.toHaveBeenCalled();
 });
 
+test("the BUY retry policy does not disable SELL uncertainty persistence or repeat-submit protection", async () => {
+  const order = await body("SELL");
+  const retryContext = { ...context, buyFailurePolicy: "retry" as const };
+  const submit = vi.fn(async () => { throw new Error("lost SELL ACK"); });
+  await expect(guardedPmSubmit(account, order, retryContext, submit)).rejects.toBeInstanceOf(PmSubmitUnknownError);
+  expect(pmAccountSubmitAttempts(account)[0]).toMatchObject({ side: "SELL", state: "submit_unknown" });
+  await expect(guardedPmSubmit(account, await body("SELL"), retryContext, submit)).rejects.toBeInstanceOf(PmSubmitUnknownError);
+  expect(submit).toHaveBeenCalledOnce();
+});
+
+test("BUY retry policy releases the transient lock after an exception without writing a journal", async () => {
+  const order = await body();
+  const retryContext = { ...context, buyFailurePolicy: "retry" as const };
+  const error = new Error("network timeout");
+  vi.spyOn(localStorage, "setItem").mockImplementation(() => { throw new Error("quota"); });
+  await expect(guardedPmSubmit(account, order, retryContext, async () => { throw error; })).rejects.toBe(error);
+  const ack = { success: true, orderID: "retry-id", status: "matched" };
+  await expect(guardedPmSubmit(account, await body(), retryContext, async () => ack)).resolves.toBe(ack);
+  expect(pmAccountSubmitAttempts(account)).toHaveLength(0);
+});
+
 test("an empty success response stays unknown; explicit FOK rejection releases the attempt", async () => {
   const submit = vi.fn().mockResolvedValue({ success: false, errorMsg: "FOK_ORDER_NOT_FILLED_ERROR" });
   await guardedPmSubmit(account, await body(), context, submit);

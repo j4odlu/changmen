@@ -16,6 +16,8 @@ const PREFIX = "changmen:pm:submission:v1:";
 export interface PmSubmitContext {
   version: 2 | 3; negRisk: boolean; parentBuyId?: string;
   validateBeforeDispatch?: () => void;
+  /** [changmen 扩展] BUY 恢复普通失败/重试，仅保留发送期间互斥，不建立持久未知锁。SELL 不适用。 */
+  buyFailurePolicy?: "retry";
   /** 仅业务恢复字段；不接受凭证或完整签名。 */
   recovery?: { matchId: string; venueBetId: string; itemId: string; target: string;
     betMoney: number; odds: number; linkId?: number; betRowId?: number; recoveryOnly?: boolean };
@@ -133,6 +135,11 @@ export async function guardedPmSubmit<T>(account: PlatformAccount, body: unknown
   const lockKey = `${scope}:${side}:${tokenId}`;
   const perform = async (): Promise<T> => {
     if (scopeFor(account) !== scope) throw new Error("PM 用户或钱包已改变，请重新预检");
+    if (side === "BUY" && context.buyFailurePolicy === "retry") {
+      if (resolvePmOrderSubmitHttpMode() !== mode) throw new Error("PM 下单方式已改变，请重新预检");
+      context.validateBeforeDispatch?.();
+      return submit();
+    }
     const unresolved = all().find(row => row.scope === scope && row.side === side && row.tokenId === tokenId
       && (row.state === "dispatching" || row.state === "submit_unknown" || side === "SELL" && row.state === "accepted"));
     if (unresolved) {

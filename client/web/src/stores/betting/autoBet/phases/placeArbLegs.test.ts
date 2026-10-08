@@ -157,6 +157,26 @@ describe("placeArbLegs two-leg report contract", () => {
     expect(retryFailedLeg).not.toHaveBeenCalled();
   });
 
+  it("a PM first-leg submission failure returns api_failed without entering pending confirmation", async () => {
+    betting.mockResolvedValueOnce(new BetResult("Polymarket", false, "Polymarket 下单请求超时（未确认是否送达）"));
+    const out = await placeArbLegs(params, checked({ accountA: account("Polymarket"), legA: leg("Polymarket") }));
+    expect(betting).toHaveBeenCalledOnce();
+    expect(out.placeOutcomeA).toBe("api_failed");
+    expect(out.placeOutcomeB).toBe("not_attempted");
+    expect(out.resultA?.pending).toBe(false);
+  });
+
+  it.each(["Serial", "Parallel"])("%s PM submission failure after the other leg succeeds enters existing retry and makeup", async betSorting => {
+    betting.mockResolvedValueOnce(new BetResult("OB", true))
+      .mockResolvedValueOnce(new BetResult("Polymarket", false, "Network Error"));
+    const input = checked({ accountB: account("Polymarket"), legB: leg("Polymarket", "Away") });
+    const out = await placeArbLegs({ ...params, config: { ...params.config, betSorting } as never }, input);
+    expect(out.placeOutcomeA).toBe("filled_pending_settle");
+    expect(out.placeOutcomeB).toBe("api_failed");
+    expect(retryFailedLeg).toHaveBeenCalledOnce();
+    expect(enqueueMakeUpOrder).toHaveBeenCalledOnce();
+  });
+
   it("an unknown PM second leg cannot trigger anyOdds replacement or makeup before settlement", async () => {
     betting.mockResolvedValueOnce(new BetResult("OB", true))
       .mockResolvedValueOnce(Object.assign(new BetResult("Polymarket", false),

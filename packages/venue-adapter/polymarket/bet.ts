@@ -63,7 +63,7 @@ import { resolvePolymarketVenueIdentityFromToken } from "./profile";
 import { polymarketPluginGet } from "./transport";
 import { pmSubmitClockReady, pmPrepareSubmit, pmGetBook, pmSubmitOrder } from "./pmClientApi";
 import { polymarketMarketOrderOptions } from "./pmMarketOrderOptions";
-import { guardedPmSubmit, PmSubmitUnknownError, finishPmSubmitAttempt } from "./pmSubmitJournal";
+import { guardedPmSubmit } from "./pmSubmitJournal";
 import { measurePmExecution, recordPmExecutionMetric } from "./pmExecutionMetrics";
 import {
   getPolymarketOrderClientRuntime,
@@ -906,8 +906,11 @@ export const polymarketProvider: PlatformProvider = {
       warmPolymarketUserWs(account, String(option.betId ?? "").trim());
       const submittedAt = Date.now();
       tracePolymarketOrder(account.accountId, null, "submit", { submittedAt, linkId: option.diagnosticLinkId });
+      // [changmen 扩展] 按用户要求恢复 BUY 提交异常的普通失败/重试语义；
+      // 不创建未知提交锁。有效受理回执仍进入原有成交核验。
       const result = await measurePmExecution("submit", executionSubmitFields, () =>
-        guardedPmSubmit(account, orderBody, { version: orderOptions.version, negRisk: orderOptions.negRisk,
+        guardedPmSubmit(account, orderBody, {
+          version: orderOptions.version, negRisk: orderOptions.negRisk, buyFailurePolicy: "retry",
           validateBeforeDispatch: () => {
             validatePreparedPrice(frozen);
             if (prepared.generation !== polymarketSigningGeneration()
@@ -915,21 +918,17 @@ export const polymarketProvider: PlatformProvider = {
               throw new Error("PM 签名准备已失效");
             if (!pmSubmitClockReady(account)) throw new Error("PM 提交校时未就绪，请重新预检");
           },
-          recovery: { matchId: option.matchId, venueBetId: option.betId, itemId: option.itemId,
-            target: option.target, betMoney: option.betMoney, odds: option.odds,
-            linkId: option.diagnosticLinkId, betRowId: Number(option.bet?.id ?? 0),
-            recoveryOnly: Boolean(option.deferPostAcceptSettlement || option.loseOrder) } },
-          async () => {
-            const response = await pmSubmitOrder<PolymarketOrderResponse>(account, orderBody);
-            if (isPolymarketOrderAccepted(response)) {
-              acceptedBet = Object.assign(new BetResult("Polymarket", true,
-                `${response.orderID} / ${response.status} / 已受理待确认`, orderBody, response), {
-                orderId: String(response.orderID), pending: !isPolymarketFokBuyFilled(response),
-                beginTime: submittedAt, pmSubmittedAt: submittedAt,
-              });
-            }
-            return response;
-          }),
+        }, async () => {
+          const response = await pmSubmitOrder<PolymarketOrderResponse>(account, orderBody);
+          if (isPolymarketOrderAccepted(response)) {
+            acceptedBet = Object.assign(new BetResult("Polymarket", true,
+              `${response.orderID} / ${response.status} / 已受理待确认`, orderBody, response), {
+              orderId: String(response.orderID), pending: !isPolymarketFokBuyFilled(response),
+              beginTime: submittedAt, pmSubmittedAt: submittedAt,
+            });
+          }
+          return response;
+        }),
       );
       tracePolymarketOrder(account.accountId, result.orderID || null, "ack", {
         submittedAt, linkId: option.diagnosticLinkId, status: result.success ? result.status : "rejected",
@@ -997,9 +996,6 @@ export const polymarketProvider: PlatformProvider = {
       bet.beginTime = submittedAt;
       bet.pmSubmittedAt = submittedAt;
       acceptedBet = bet;
-      if (filled && bet.orderId) {
-        try { finishPmSubmitAttempt(account, bet.orderId); } catch { /* ACK 不改变 */ }
-      }
       if (bet.orderId)
         markPolymarketChangmenOrder(account.accountId, bet.orderId);
       bumpPolymarketOrderSyncAfterBet(account.accountId);
@@ -1036,15 +1032,6 @@ export const polymarketProvider: PlatformProvider = {
       return bet;
     } catch (err) {
       if (acceptedBet) return acceptedBet;
-      if (err instanceof PmSubmitUnknownError) {
-        const attempt = err.attempt;
-        return Object.assign(new BetResult("Polymarket", false, err.message,
-          { order: { side: "BUY", makerAmount: attempt.makerAmount, takerAmount: attempt.takerAmount } }), {
-          orderId: attempt.orderHash, pmSubmitUnknown: true, pending: true,
-          pmSubmittedAt: attempt.submittedAt, beginTime: attempt.submittedAt,
-          link: attempt.recovery?.linkId ?? 0,
-        });
-      }
       if (isPolymarketPriceAboveDetectionError(err)) {
         try {
           syncPolymarketFoOnPriceAboveDetection(option, err);

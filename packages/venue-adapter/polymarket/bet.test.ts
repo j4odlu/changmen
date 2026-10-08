@@ -15,7 +15,8 @@ import { POLYMARKET_CLOB_API } from "./api";
 import { resetPolymarketOrderSyncForTest } from "./pmOrderSync";
 import { clearPmExecutionMetrics, getPmExecutionMetrics } from "./pmExecutionMetrics";
 import { clearPolymarketOrderClientCacheForTests } from "./pmOrderClientCache";
-import { clearPmSubmitJournalForTests } from "./pmSubmitJournal";
+import { clearPmSubmitJournalForTests, guardedPmSubmit, pmAccountSubmitAttempts } from "./pmSubmitJournal";
+import * as pmOrigin from "./pmOrigin";
 
 const polymarketPluginGet = vi.hoisted(() => vi.fn());
 const polymarketPluginPost = vi.hoisted(() => vi.fn());
@@ -2063,6 +2064,66 @@ describe("PM phase 1 frozen attempt", () => {
     pmSubmitOrder.mockResolvedValue({ success: true, status: "matched", orderID: "one", takingAmount: "20", makingAmount: "10" });
   });
   const option = () => ({ itemId: "123456789", odds: 1 / 0.505, betMoney: 10 }) as any;
+  test.each(["local", "vps"] as const)("%s BUY submission exceptions return ordinary failures and permit a freshly checked retry", async mode => {
+    setPmOrderSubmitMode(mode);
+    const account = pmBettingAccount();
+    for (const message of ["timeout of 30000ms exceeded", "Network Error", "upstream 502"]) {
+      pmSubmitOrder.mockClear();
+      pmSubmitOrder.mockRejectedValueOnce(new Error(message));
+      const checked = await polymarketProvider.checkBet(account, option());
+      const failed = await polymarketProvider.betting(account, checked);
+      expect(failed).toMatchObject({ success: false, pending: false, orderId: null, reject: null });
+      expect(failed.pmSubmitUnknown).not.toBe(true);
+      expect(failed.message).not.toContain("正在核对原单");
+      expect(pmAccountSubmitAttempts(account)).toHaveLength(0);
+      expect(pmSubmitOrder).toHaveBeenCalledOnce();
+      // A consumed quote still cannot be reused; the existing retry path must precheck again.
+      expect((await polymarketProvider.betting(account, checked)).success).toBe(false);
+      expect(pmSubmitOrder).toHaveBeenCalledOnce();
+      const retry = await polymarketProvider.checkBet(account, option());
+      expect((await polymarketProvider.betting(account, retry)).success).toBe(true);
+      expect(pmSubmitOrder).toHaveBeenCalledTimes(2);
+    }
+  });
+  test.each([
+    { success: true, status: "matched", takingAmount: "20" },
+    { success: false, errorMsg: "INVALID_ORDER_DUPLICATED" },
+    { error: "Bad Gateway" },
+  ])("BUY responses without an acceptance receipt return ordinary failures: %j", async response => {
+    pmSubmitOrder.mockResolvedValueOnce(response);
+    const account = pmBettingAccount();
+    const checked = await polymarketProvider.checkBet(account, option());
+    const failed = await polymarketProvider.betting(account, checked);
+    expect(failed).toMatchObject({ success: false, pending: false, orderId: null });
+    expect(failed.pmSubmitUnknown).not.toBe(true);
+    expect(pmAccountSubmitAttempts(account)).toHaveLength(0);
+    const retry = await polymarketProvider.checkBet(account, option());
+    expect((await polymarketProvider.betting(account, retry)).success).toBe(true);
+    expect(pmSubmitOrder).toHaveBeenCalledTimes(2);
+  });
+  test("a legacy unknown BUY journal does not block a new checked BUY or discard original recovery evidence", async () => {
+    const account = pmBettingAccount();
+    const checked = await polymarketProvider.checkBet(account, option());
+    await polymarketProvider.betting(account, checked);
+    const body = pmSubmitOrder.mock.calls[0][1];
+    await expect(guardedPmSubmit(account, body, { version: 2, negRisk: false }, async () => {
+      throw new Error("legacy lost ACK");
+    })).rejects.toThrow("正在核对原单");
+    const original = pmAccountSubmitAttempts(account)[0];
+    const retry = await polymarketProvider.checkBet(account, option());
+    expect((await polymarketProvider.betting(account, retry)).success).toBe(true);
+    expect(pmSubmitOrder).toHaveBeenCalledTimes(2);
+    expect(pmAccountSubmitAttempts(account)).toEqual([original]);
+  });
+  test("post-acceptance bookkeeping failure preserves the actual fill instead of enabling a retry", async () => {
+    const account = pmBettingAccount();
+    const checked = await polymarketProvider.checkBet(account, option());
+    vi.spyOn(pmOrigin, "markPolymarketChangmenOrder").mockImplementation(() => { throw new Error("bookkeeping failed"); });
+    const result = await polymarketProvider.betting(account, checked);
+    expect(result).toMatchObject({ success: true, pending: false, orderId: "one" });
+    expect(result.pmSubmitUnknown).not.toBe(true);
+    expect(pmSubmitOrder).toHaveBeenCalledOnce();
+  });
   test.each(["accountId", "target", "depth"])("changing %s before wallet preparation cannot bind unchecked inputs", async field => {
     const account = pmBettingAccount(); account.accountId = 47;
     const raw = option();

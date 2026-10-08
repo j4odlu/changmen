@@ -59,6 +59,8 @@ import {
 } from "@/runtime/podPmFollowPlace";
 import {
   buildPodFollowLogRow,
+  buildPodFollowVenueLog,
+  markPodFollowVenueSubmitted,
   buildPodFollowPlaceSnap,
   clearPodFollowLog,
   markPodFollowLogPlaced,
@@ -439,15 +441,6 @@ function decisionShadowTitle(ticket: (typeof tickets.value)[number]): string {
 const followObEnabled = computed(() => betSettings.value.followAccountIds.length > 0);
 const followRayEnabled = computed(() => betSettings.value.rayFollowAccountIds.length > 0);
 const followPmEnabled = computed(() => betSettings.value.pmFollowAccountIds.length > 0);
-const selectedFollowAccounts = computed(() => {
-  const venues: [string, number[]][] = [
-    ["OB", betSettings.value.followAccountIds],
-    ["RAY", betSettings.value.rayFollowAccountIds],
-    ["PM", betSettings.value.pmFollowAccountIds],
-  ];
-  return venues.filter(([, ids]) => ids.length)
-    .map(([venue, ids]) => `${venue} ${ids.map(id => `#${id}`).join("、")}`).join(" / ");
-});
 
 function refreshLog() {
   logRows.value = readPodFollowLog();
@@ -458,7 +451,16 @@ function recordLiveTickets() {
   for (const ticket of tickets.value) {
     if (!ticketHasAnyVenueMatch(ticket))
       continue;
-    const next = upsertPodFollowEv(buildPodFollowLogRow(displayLogTicket(ticket), nowTick.value));
+    const row = buildPodFollowLogRow(displayLogTicket(ticket), nowTick.value);
+    row.venues = {};
+    for (const venueTicket of [ticket,
+      { ...ticket, fixtureMatch: ticket.pmFixtureMatch, marketMatch: ticket.pmMarketMatch, obQuote: ticket.pmQuote },
+      { ...ticket, fixtureMatch: ticket.rayFixtureMatch, marketMatch: ticket.rayMarketMatch, obQuote: ticket.rayQuote }]) {
+      if (!ticketHasPodFollowMatch(venueTicket)) continue;
+      const venueRow = buildPodFollowVenueLog(venueTicket);
+      row.venues[venueRow.venue] = venueRow;
+    }
+    const next = upsertPodFollowEv(row);
     if (next.added || next.wrote)
       wrote = true;
   }
@@ -499,17 +501,22 @@ watch(() => ({ rows: tickets.value, ready: autoReady.value, enabled: betSettings
 }, { immediate: true });
 
 function jumpToTicket(ticket: (typeof tickets.value)[number]) {
-  if (ticket.fixtureMatch.status !== "matched") {
+  const candidates = [ticket,
+    { ...ticket, fixtureMatch: ticket.pmFixtureMatch, marketMatch: ticket.pmMarketMatch },
+    { ...ticket, fixtureMatch: ticket.rayFixtureMatch, marketMatch: ticket.rayMarketMatch }];
+  const target = candidates.find(row => row.fixtureMatch.status === "matched" && row.marketMatch.status === "matched")
+    || candidates.find(row => row.fixtureMatch.status === "matched");
+  if (!target) {
     // 手动点击仍可按需补场；关闭自动时不后台扫描所有警报。
     void searchPodObMissFixture(ticket.alert);
     return;
   }
-  const hit = ticket.fixtureMatch.hits[0];
+  const hit = target.fixtureMatch.hits[0];
   if (!hit)
     return;
-  if (ticket.marketMatch.status !== "matched" && hit.fixture.obMid)
+  if (target.marketMatch.status !== "matched" && hit.fixture.obMid)
     void prefetchObSportMatchMarkets(hit.fixture.obMid);
-  requestPodBoardFocus(buildPodBoardFocus(hit.fixture, ticket.marketMatch));
+  requestPodBoardFocus(buildPodBoardFocus(hit.fixture, target.marketMatch));
 }
 
 function followStakeFor(venue: "OB" | "Polymarket" | "RAY"): number {
@@ -963,13 +970,29 @@ const displayRows = computed(() => {
   void footballOrders.todayProfit;
   void footballOrders.todayOpenStake;
   return logRows.value
-    .filter(log => log.obMid)
     .map(log => {
       const live = liveById.value.get(log.id);
       return {
         log,
         live,
         pending: pendingStateFor(live, log),
+        venueStates: Object.fromEntries(["OB", "Polymarket", "RAY"].map(venue => {
+          const saved = log.venues?.[venue];
+          const submitted = !!saved?.submittedAt || isVenuePlaced(log.id, venue as "OB" | "Polymarket" | "RAY");
+          const ids = venue === "OB" ? betSettings.value.followAccountIds : venue === "RAY" ? betSettings.value.rayFollowAccountIds : betSettings.value.pmFollowAccountIds;
+          const placing = (venue === "RAY" ? placingRayId.value : placingPmId.value) === log.id;
+          const reason = saved?.note || placeNote.value[venuePlaceKey(venue as "OB" | "Polymarket" | "RAY", log.id)]
+            || (live ? venue === "RAY" ? rayPlaceBlock(live) : venue === "Polymarket" ? pmPlaceBlock(live) : null : "已离线");
+          const state = venue === "OB" ? pendingStateFor(live, log) : {
+            placed: submitted, label: submitted ? "已提交" : placing ? "提交中" : "未下",
+            detail: placing ? "" : reason || "可手点",
+            tone: submitted ? "ok" : placing ? "wait" : reason ? "block" : "ready",
+          };
+          return [venue, { ...state, placed: submitted || state.placed, accountIds: ids,
+            plannedStake: formatPodStake(followStakeFor(venue as "OB" | "Polymarket" | "RAY")),
+            submittedAt: saved?.submittedAt || (venue === "OB" ? log.placedAt : 0),
+          }];
+        })),
       };
     });
 });
@@ -985,6 +1008,8 @@ async function placeTicket(ticket: (typeof tickets.value)[number], auto: boolean
   if (placingId.value)
     return;
   const payload = ticketPlacePayload(ticket, auto);
+  const displaySnapshot = buildPodFollowVenueLog(ticket);
+  const displayReference = buildPodFollowLogRow(ticket);
   recordObAttempt(ticket, auto ? "auto_attempt" : "manual_click", { stake: payload.stake });
   const block = placeBlock(ticket) || podFollowPlaceBlock(payload);
   if (block) {
@@ -1023,6 +1048,7 @@ async function placeTicket(ticket: (typeof tickets.value)[number], auto: boolean
         Date.now(),
         buildPodFollowPlaceSnap(ticket),
       );
+      logRows.value = markPodFollowVenueSubmitted(ticket.id, displaySnapshot, result.message, Date.now(), displayReference);
       ElMessage.success(result.message);
       return;
     }
@@ -1041,6 +1067,8 @@ async function placePmTicket(ticket: (typeof tickets.value)[number], auto = fals
   if (placingPmId.value)
     return;
   const payload = pmTicketPlacePayload(ticket, auto);
+  const displaySnapshot = buildPodFollowVenueLog({ ...ticket, fixtureMatch: ticket.pmFixtureMatch, marketMatch: ticket.pmMarketMatch, obQuote: ticket.pmQuote });
+  const displayReference = buildPodFollowLogRow(ticket);
   const block = venueDailyOrderBlock("Polymarket") || podPmFollowPlaceBlock(payload);
   if (block) {
     if (!auto)
@@ -1059,6 +1087,7 @@ async function placePmTicket(ticket: (typeof tickets.value)[number], auto = fals
     placeNote.value = { ...placeNote.value, [key]: result.message };
     if (result.ok) {
       placed.value = { ...placed.value, [key]: true };
+      logRows.value = markPodFollowVenueSubmitted(ticket.id, displaySnapshot, result.message, Date.now(), displayReference);
       ElMessage.success(result.message);
       return;
     }
@@ -1087,11 +1116,13 @@ async function placeRayTicket(ticket: (typeof tickets.value)[number], auto = fal
   const block = rayPlaceBlock(ticket);
   if (block) { if (!auto) ElMessage.warning(block); return; }
   placingRayId.value = ticket.id;
+  const displaySnapshot = buildPodFollowVenueLog({ ...ticket, fixtureMatch: ticket.rayFixtureMatch, marketMatch: ticket.rayMarketMatch, obQuote: ticket.rayQuote });
+  const displayReference = buildPodFollowLogRow(ticket);
   try {
     const result = await placePodRayFollowBet(rayTicketPlacePayload(ticket, auto));
     const key = venuePlaceKey("RAY", ticket.id);
     placeNote.value = { ...placeNote.value, [key]: result.message };
-    if (result.ok) { placed.value = { ...placed.value, [key]: true }; ElMessage.success(result.message); }
+    if (result.ok) { placed.value = { ...placed.value, [key]: true }; logRows.value = markPodFollowVenueSubmitted(ticket.id, displaySnapshot, result.message, Date.now(), displayReference); ElMessage.success(result.message); }
     else ElMessage.warning(result.message);
     await refreshRayOrders();
   }
@@ -1487,6 +1518,12 @@ function openPodSettings() {
 }
 
 function jumpToLog(row: PodFollowLogRow) {
+  const venue = Object.values(row.venues || {}).find(record => record.matchId && record.fixtureId);
+  if (venue) {
+    requestPodBoardFocus({ matchId: venue.fixtureId, obMid: venue.obMid,
+      marketCode: venue.marketCode, side: venue.side, line: venue.line, oid: venue.oid });
+    return;
+  }
   if (!row.obMid)
     return;
   requestPodBoardFocus({
@@ -1699,33 +1736,27 @@ onUnmounted(() => {
           还没有跟单机会。对上足球板的场和盘才会进来，并标有没有下单。
         </p>
         <PodFollowTable
-          :rows="displayRows" :now="nowTick" :planned-stakes="formatEnabledVenueStakes()"
-          :selected-accounts="selectedFollowAccounts" :show-diagnostics="followV2.showDiagnostics"
+          :rows="displayRows" :now="nowTick"
+          :show-diagnostics="followV2.showDiagnostics"
           empty-text="还没有跟单机会。匹配到比赛和盘口后显示在这里。" @locate="onDisplayClick"
         >
-          <template #venueNotes="{ row }">
-            <template v-if="row.live">
-              <div v-if="placeNote[venuePlaceKey('RAY', row.live.id)]" class="pod-follow-venue-note">RAY · {{ placeNote[venuePlaceKey('RAY', row.live.id)] }}</div>
-              <div v-if="placeNote[venuePlaceKey('Polymarket', row.live.id)]" class="pod-follow-venue-note">PM · {{ placeNote[venuePlaceKey('Polymarket', row.live.id)] }}</div>
-            </template>
-          </template>
           <template #diagnostics="{ row }">
-            <div v-if="row.live" class="pod-follow-row__diag"
+            <div v-if="row.live?.fixtureMatch.status === 'matched'" class="pod-follow-row__diag"
               :class="`is-${decisionShadowTone(row.live)}`" :title="decisionShadowTitle(row.live)">
-              诊断 {{ decisionShadowText(row.live) }}
+              OB 诊断 {{ decisionShadowText(row.live) }}
             </div>
           </template>
           <template #actions="{ row }">
             <template v-if="row.live">
-              <button v-if="!isVenuePlaced(row.live.id, 'OB') && followObEnabled" type="button" class="pod-follow-row__place"
+              <button v-if="row.live.fixtureMatch.status === 'matched' && !isVenuePlaced(row.live.id, 'OB') && followObEnabled" type="button" class="pod-follow-row__place"
                 :disabled="!!placeBlock(row.live) || placingId === row.live.id" :title="placeButtonTitle(row.live)"
-                @click="onPlaceClick($event, row.live)">{{ placeLabel(row.live) }}</button>
-              <button v-if="followRayEnabled" type="button" class="pod-follow-row__place"
+                @click="onPlaceClick($event, row.live)">OB · {{ placeLabel(row.live) }}</button>
+              <button v-if="row.live.rayFixtureMatch.status === 'matched' && followRayEnabled" type="button" class="pod-follow-row__place"
                 :disabled="!!rayPlaceBlock(row.live) || placingRayId === row.live.id"
                 :title="rayPlaceBlock(row.live) || undefined" @click="onRayPlaceClick($event, row.live)">
                 {{ isVenuePlaced(row.live.id, 'RAY') ? 'RAY已提交' : placingRayId === row.live.id ? 'RAY中' : '下RAY' }}
               </button>
-              <button v-if="!isVenuePlaced(row.live.id, 'Polymarket') && followPmEnabled" type="button" class="pod-follow-row__place"
+              <button v-if="row.live.pmFixtureMatch.status === 'matched' && !isVenuePlaced(row.live.id, 'Polymarket') && followPmEnabled" type="button" class="pod-follow-row__place"
                 :disabled="!!pmPlaceBlock(row.live) || placingPmId === row.live.id" :title="pmPlaceButtonTitle(row.live)"
                 @click="onPmPlaceClick($event, row.live)">{{ pmPlaceLabel(row.live) }}</button>
             </template>

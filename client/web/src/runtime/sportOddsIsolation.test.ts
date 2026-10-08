@@ -189,6 +189,7 @@ describe("sport / esport UI isolation", () => {
     expect(workspace).toMatch(/show-football-settings/);
     const followPanel = readFileSync(join(root, "components/football/PodFollowPanel.vue"), "utf8");
     const followTable = readFileSync(join(root, "components/football/PodFollowTable.vue"), "utf8");
+    const followTableProjection = readFileSync(join(root, "runtime/podFollowTableRow.ts"), "utf8");
     expect(followPanel).toMatch(/POD 降赔/);
     expect(followPanel).toMatch(/仅已匹配/);
     expect(followPanel).toMatch(/pod-follow-panel__columns/);
@@ -202,7 +203,7 @@ describe("sport / esport UI isolation", () => {
     expect(venuePlugins).toMatch(/return scorePodYaboFollow\(ticket/);
     expect(venuePlugins).not.toMatch(/from\s+["']@\/stores\/(?:matchStore|oddsStore)["']/);
     expect(venuePlugins).not.toMatch(/from\s+["'][^"']*mainBetLoop[^"']*["']/);
-    expect(followTable).toMatch(/formatPodFixtureMatch/);
+    expect(followTableProjection).toMatch(/formatPodFixtureMatch/);
     expect(followPanel).toMatch(/peekObEnglishNames/);
     expect(followPanel).toMatch(/from ["']@\/runtime\/podYabo["']/);
     expect(followPanel).not.toMatch(/scorePodYaboFollow/);
@@ -212,8 +213,8 @@ describe("sport / esport UI isolation", () => {
     expect(followPanel).toMatch(/followAccountIds/);
     expect(followPanel).not.toMatch(/PodFollowAccountPicker/);
     expect(followPanel).toMatch(/fetchObSportAmount/);
-    expect(followTable).toMatch(/formatPodMarketMatch/);
-    expect(followTable).toMatch(/values\.quote/);
+    expect(followTableProjection).toMatch(/formatPodMarketMatch/);
+    expect(followTable).toMatch(/quote\.quote/);
     expect(followTable).toMatch(/formatPodEv/);
     expect(followPanel).not.toMatch(/pickPodFollowAutoTicket/);
     expect(followPanel).not.toMatch(/matchPodAlertToMarket/);
@@ -253,8 +254,8 @@ describe("sport / esport UI isolation", () => {
     expect(followPanel).toMatch(/未下/);
     expect(followPanel).toMatch(/已下/);
     expect(followPanel).toMatch(/resolvePodFollowPending/);
-    expect(followTable).toMatch(/row\.pending\.label/);
-    expect(followTable).toMatch(/row\.pending\.detail/);
+    expect(followTable).toMatch(/venue\.stateLabel/);
+    expect(followTable).toMatch(/venue\.stateDetail/);
     expect(followPanel).not.toMatch(/历史/);
     expect(followPanel).not.toMatch(/panelTab/);
     expect(followPanel).toMatch(/maxAgeSec: 0/);

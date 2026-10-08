@@ -13,9 +13,9 @@ export const POD_FOLLOW_LOG_MAX = 200;
 
 export type PodFollowLiveTicket = PodBetTicket & {
   fixtureMatch: Pick<PodFixtureMatch, "status"> & {
-    hits?: Array<{ fixture?: { obMid?: string } }>;
+    hits?: Array<{ fixture?: { id?: number; obMid?: string; pmMid?: string; providers?: Record<string, string> } }>;
   };
-  marketMatch: Pick<PodMarketMatch, "status" | "oid" | "marketCode" | "boardLine" | "boardSide" | "nvp">;
+  marketMatch: Pick<PodMarketMatch, "status" | "oid" | "marketCode" | "boardLine" | "boardSide" | "nvp"> & { venue?: string };
   obQuote: PodObQuoteCompare;
 };
 
@@ -43,7 +43,46 @@ export type PodFollowLogRow = {
   placed: boolean;
   placedAt: number;
   placeNote: string;
+  starts?: number;
+  alertedAt?: number;
+  venues?: Record<string, PodFollowVenueLog>;
 };
+
+/** [changmen 扩展] 展示日志按场馆保留参考价和提交回执；不参与下单防重判定。 */
+export type PodFollowVenueLog = {
+  venue: string; fixtureId: number; matchId: string; obMid: string; oid: string;
+  marketCode: string; side: PodMarketSide | null; line: number | null;
+  quote: number; ev: number; nvp: number; minOdds: number; maxOdds: number;
+  submittedAt: number; note: string;
+};
+
+function parseVenueLogs(raw: unknown): Record<string, PodFollowVenueLog> | undefined {
+  const records = asRecord(raw);
+  if (!records) return undefined;
+  const out: Record<string, PodFollowVenueLog> = {};
+  for (const venue of ["OB", "Polymarket", "RAY"]) {
+    const row = asRecord(records[venue]);
+    if (!row) continue;
+    const side = str(row.side);
+    out[venue] = { venue, fixtureId: num(row.fixtureId), matchId: str(row.matchId), obMid: str(row.obMid), oid: str(row.oid),
+      marketCode: str(row.marketCode), side: ["home", "away", "draw", "over", "under"].includes(side) ? side as PodMarketSide : null,
+      line: optNum(row.line), quote: num(row.quote), ev: num(row.ev), nvp: num(row.nvp),
+      minOdds: num(row.minOdds), maxOdds: num(row.maxOdds), submittedAt: num(row.submittedAt), note: str(row.note) };
+  }
+  return out;
+}
+
+export function buildPodFollowVenueLog(ticket: PodFollowLiveTicket): PodFollowVenueLog {
+  const venue = ticket.marketMatch.venue || "OB";
+  const fixture = ticket.fixtureMatch.hits?.[0]?.fixture;
+  return { venue, fixtureId: fixture?.id || 0,
+    matchId: fixture?.providers?.[venue] || (venue === "OB" ? fixture?.obMid : venue === "Polymarket" ? fixture?.pmMid : "") || "",
+    obMid: fixture?.obMid || "", oid: ticket.marketMatch.oid, marketCode: ticket.marketMatch.marketCode,
+    side: ticket.marketMatch.boardSide, line: ticket.marketMatch.boardLine,
+    quote: ticket.obQuote.quote, ev: ticket.obQuote.evPercent,
+    nvp: ticket.marketMatch.nvp > 1 ? ticket.marketMatch.nvp : ticket.nvp,
+    minOdds: ticket.obQuote.minObOdds, maxOdds: ticket.obQuote.maxObOdds, submittedAt: 0, note: "" };
+}
 
 /** 下单成功时写入日志的盘口快照（冻住当时价，不再跟 live） */
 export type PodFollowPlaceSnap = Partial<Pick<
@@ -117,6 +156,9 @@ export function parsePodFollowLogRow(raw: unknown): PodFollowLogRow | null {
     placed: row.placed === true,
     placedAt: num(row.placedAt),
     placeNote: str(row.placeNote),
+    ...(row.starts != null ? { starts: num(row.starts) } : {}),
+    ...(row.alertedAt != null ? { alertedAt: num(row.alertedAt) } : {}),
+    ...(row.venues ? { venues: parseVenueLogs(row.venues) } : {}),
   };
 }
 
@@ -163,6 +205,9 @@ export function buildPodFollowLogRow(ticket: PodFollowLiveTicket, now = Date.now
     placed: false,
     placedAt: 0,
     placeNote: "",
+    starts: ticket.starts,
+    alertedAt: ticket.alert.alertedAt,
+    venues: { [ticket.marketMatch.venue || "OB"]: buildPodFollowVenueLog(ticket) },
   };
 }
 
@@ -207,19 +252,21 @@ export function upsertPodFollowEv(row: PodFollowLogRow): { rows: PodFollowLogRow
   const rows = readPodFollowLog();
   const idx = rows.findIndex(item => item.id === parsed.id);
   if (idx < 0) {
-    if (!parsed.obMid || !parsed.oid)
+    if ((!parsed.obMid || !parsed.oid) && !Object.values(parsed.venues || {}).some(row => row.matchId && row.oid))
       return { rows, added: false, wrote: false };
     return { rows: writeLog([parsed, ...rows]), added: true, wrote: true };
   }
   const cur = rows[idx];
-  if (cur.placed)
-    return { rows, added: false, wrote: false };
+  const venues = { ...cur.venues, ...parsed.venues };
+  for (const [venue, record] of Object.entries(cur.venues || {}))
+    if (record.submittedAt > 0) venues[venue] = record;
   const next: PodFollowLogRow = {
-    ...parsed,
+    ...(cur.placed || Object.values(cur.venues || {}).some(record => record.submittedAt > 0) ? cur : parsed),
     at: cur.at || parsed.at,
-    placed: false,
+    placed: cur.placed,
     placedAt: cur.placedAt,
     placeNote: cur.placeNote,
+    ...(Object.keys(venues).length ? { venues } : {}),
   };
   if (JSON.stringify(next) === JSON.stringify(cur))
     return { rows, added: false, wrote: false };
@@ -272,6 +319,20 @@ export function markPodFollowLogPlaced(
 
 export function clearPodFollowLog(): PodFollowLogRow[] {
   return writeLog([]);
+}
+
+export function markPodFollowVenueSubmitted(id: string, snapshot: PodFollowVenueLog, note: string, now = Date.now(), reference?: PodFollowLogRow): PodFollowLogRow[] {
+  const rows = readPodFollowLog();
+  return writeLog(rows.map(row => row.id !== id ? row : {
+    ...row,
+    ...(reference && !row.placed && !Object.values(row.venues || {}).some(venue => venue.submittedAt > 0) ? {
+      home: reference.home, away: reference.away, league: reference.league, sideLabel: reference.sideLabel,
+      marketLabel: reference.marketLabel, pinPrevious: reference.pinPrevious, pinCurrent: reference.pinCurrent,
+      dropPct: reference.dropPct, starts: reference.starts, alertedAt: reference.alertedAt,
+    } : {}),
+    venues: { ...row.venues, [snapshot.venue]: row.venues?.[snapshot.venue]?.submittedAt
+      ? row.venues[snapshot.venue] : { ...snapshot, submittedAt: now, note } },
+  }));
 }
 
 export function formatPodFollowLogWhen(at: number, now = Date.now()): string {

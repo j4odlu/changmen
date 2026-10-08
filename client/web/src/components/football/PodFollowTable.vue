@@ -1,22 +1,18 @@
 <script setup lang="ts" generic="T extends PodFollowTableRow">
 import { computed } from "vue";
 import { formatPodAgo, formatPodDropPct, formatPodPrice } from "@/runtime/podAlerts";
-import { formatPodFixtureMatch } from "@/runtime/podFixtureMatch";
-import { formatPodMarketMatch } from "@/runtime/podMarketMatch";
 import { formatPodEv } from "@/runtime/podYabo/ev";
-import { formatPodTableDate, podFollowTableValues, type PodFollowTableRow } from "@/runtime/podFollowTableRow";
+import { formatPodTableDate, podFollowTableValues, podFollowTableVenues, type PodFollowTableRow } from "@/runtime/podFollowTableRow";
 
 const props = defineProps<{
   rows: T[];
   now: number;
-  plannedStakes: string;
-  selectedAccounts: string;
   showDiagnostics: boolean;
   emptyText: string;
 }>();
 const emit = defineEmits<{ locate: [row: T] }>();
-defineSlots<{ actions(props: { row: T }): unknown; diagnostics(props: { row: T }): unknown; venueNotes(props: { row: T }): unknown }>();
-const entries = computed(() => props.rows.map(row => ({ row, values: podFollowTableValues(row) })));
+defineSlots<{ actions(props: { row: T }): unknown; diagnostics(props: { row: T }): unknown }>();
+const entries = computed(() => props.rows.map(row => ({ row, values: podFollowTableValues(row), quotes: podFollowTableVenues(row) })));
 </script>
 
 <template>
@@ -30,7 +26,7 @@ const entries = computed(() => props.rows.map(row => ({ row, values: podFollowTa
         <th scope="col" class="frozen-match">比赛 / 时间</th>
         <th scope="col">盘口 / 匹配</th>
         <th scope="col" class="numeric">PIN / 降幅</th>
-        <th scope="col" class="numeric">OB / EV</th>
+        <th scope="col" class="numeric">场馆报价 / EV</th>
         <th scope="col">账号 / 注额</th>
         <th scope="col">执行状态</th>
         <th scope="col">操作</th>
@@ -38,10 +34,10 @@ const entries = computed(() => props.rows.map(row => ({ row, values: podFollowTa
     </thead>
     <tbody>
       <tr v-if="!entries.length"><td colspan="7" class="empty">{{ emptyText }}</td></tr>
-      <tr v-for="({ row, values }, index) in entries" :key="row.log.id" class="data-row"
-        :class="{ 'is-placed': row.pending.placed, 'is-ready': row.pending.tone === 'ready' }">
+      <tr v-for="({ row, values, quotes }, index) in entries" :key="row.log.id" class="data-row"
+        :class="{ 'is-placed': quotes.some(venue => venue.submitted), 'is-ready': quotes.some(venue => venue.stateTone === 'ready') }">
         <td class="frozen-match">
-          <button type="button" class="match-link" :disabled="!values.obMid" @click="emit('locate', row)">
+          <button type="button" class="match-link" :disabled="!quotes.some(venue => venue.matchId || venue.fixtureId)" @click="emit('locate', row)">
             <span class="row-number">{{ index + 1 }}.</span> {{ values.home }} <span class="versus">vs</span> {{ values.away }}
           </button>
           <span class="secondary">{{ values.league || '—' }}</span>
@@ -49,25 +45,19 @@ const entries = computed(() => props.rows.map(row => ({ row, values: podFollowTa
           <details class="details" @click.stop>
             <summary>时间 / 比赛 ID</summary>
             <span class="secondary">{{ row.live ? '警报' : '记录' }} {{ formatPodTableDate(values.at) }}</span>
-            <span class="secondary">OB {{ values.obMid || '—' }}</span>
+            <span v-for="venue in quotes" :key="venue.venue" class="secondary">{{ venue.label }} {{ venue.matchId || '—' }}</span>
           </details>
         </td>
         <td>
           <strong class="selection">{{ values.side || '—' }}</strong>
           <span class="secondary">{{ values.market || '—' }}</span>
-          <span class="secondary">{{ row.live ? formatPodMarketMatch(row.live.marketMatch) : '历史记录 · 当前盘口已离线' }}</span>
+          <span v-for="venue in quotes" :key="venue.venue" class="secondary">{{ venue.label }} · {{ venue.marketText }}</span>
           <details class="details" @click.stop>
             <summary>匹配详情</summary>
-            <span v-if="row.live" class="secondary">{{ formatPodFixtureMatch(row.live.fixtureMatch) }}</span>
-            <span class="secondary">oid {{ values.oid || '—' }}</span>
-            <template v-if="row.live">
-              <span v-if="row.live.pmFixtureMatch.status === 'matched'" class="secondary">
-                PM · {{ formatPodMarketMatch(row.live.pmMarketMatch) }} · @{{ formatPodPrice(row.live.pmQuote.quote) }} · {{ formatPodEv(row.live.pmQuote.evPercent) }}
-              </span>
-              <span v-if="row.live.rayFixtureMatch.status === 'matched'" class="secondary">
-                RAY · {{ formatPodMarketMatch(row.live.rayMarketMatch) }} · @{{ formatPodPrice(row.live.rayQuote.quote) }} · {{ formatPodEv(row.live.rayQuote.evPercent) }}
-              </span>
-            </template>
+            <div v-for="venue in quotes" :key="venue.venue">
+              <span class="secondary">{{ venue.label }} · {{ venue.fixtureText }}</span>
+              <span class="secondary">oid {{ venue.oid || '—' }}</span>
+            </div>
           </details>
         </td>
         <td class="numeric">
@@ -75,27 +65,34 @@ const entries = computed(() => props.rows.map(row => ({ row, values: podFollowTa
           <span class="secondary positive">降 {{ formatPodDropPct(values.dropPct) }}</span>
         </td>
         <td class="numeric">
-          <strong :class="{ positive: row.pending.placed || values.quoteStatus === 'ok' }">@{{ formatPodPrice(values.quote) }}</strong>
-          <span class="secondary" :class="{ positive: values.ev > 0, negative: values.ev < 0 }">EV {{ formatPodEv(values.ev) }}</span>
-          <span class="secondary">{{ row.pending.placed ? '下单快照' : !row.live ? '历史快照' : values.quoteStatus === 'locked' ? '锁盘' : values.quoteStatus === 'short' ? '低于门槛' : values.quoteStatus === 'spike' ? 'EV异常' : values.quoteStatus === 'none' ? '缺价' : '当前报价' }}</span>
+          <div v-for="quote in quotes" :key="quote.venue" class="venue-quote">
+            <strong :class="{ positive: quote.snapshot || quote.status === 'ok' }">{{ quote.label }} @{{ formatPodPrice(quote.quote) }}</strong>
+            <span class="secondary" :class="{ positive: quote.ev > 0, negative: quote.ev < 0 }">{{ formatPodEv(quote.ev) }}</span>
+            <span class="secondary">{{ quote.snapshot ? '提交参考' : quote.historical ? '历史参考' : quote.status === 'locked' ? '锁盘' : quote.status === 'short' ? '低于门槛' : quote.status === 'spike' ? 'EV异常' : quote.status === 'none' ? '缺价' : '当前报价' }}</span>
+          </div>
+          <span v-if="!quotes.length" class="secondary">暂无场馆报价</span>
           <details class="details" @click.stop>
             <summary>NVP / 赔率范围</summary>
-            <span class="secondary">NVP {{ formatPodPrice(values.nvp) }}</span>
-            <span class="secondary">≥ {{ formatPodPrice(values.minOdds) }}<template v-if="values.maxOdds > 0"> · ≤ {{ formatPodPrice(values.maxOdds) }}</template></span>
+            <div v-for="quote in quotes" :key="quote.venue">
+              <span class="secondary">{{ quote.venue }} · NVP {{ formatPodPrice(quote.nvp) }}</span>
+              <span class="secondary">≥ {{ formatPodPrice(quote.minOdds) }}<template v-if="quote.maxOdds > 0"> · ≤ {{ formatPodPrice(quote.maxOdds) }}</template></span>
+            </div>
           </details>
         </td>
         <td>
-          <span>{{ values.accounts || (row.pending.placed ? '回执未记录' : selectedAccounts || '未选择账号') }}</span>
-          <span class="secondary">
-            <template v-if="row.pending.placed">已下注额 {{ row.log.stake > 0 ? row.log.stake : '—' }}</template>
-            <template v-else>计划 {{ plannedStakes || '未设注额' }}</template>
-          </span>
-          <span v-if="row.pending.receipt" class="secondary">{{ row.pending.receipt.clock }} · {{ row.pending.receipt.ago }}</span>
+          <div v-for="venue in quotes" :key="venue.venue" class="venue-quote">
+            <strong>{{ venue.label }}</strong>
+            <span class="secondary">{{ venue.submitted ? '回执见执行状态' : venue.historical ? '账号未记录' : venue.accountIds.length ? venue.accountIds.map(id => '#' + id).join('、') : '未选择账号' }}</span>
+            <span v-if="!venue.submitted && !venue.historical" class="secondary" title="配置金额；自动跟单策略可能调整，实际金额以订单为准">配置单注 {{ venue.plannedStake || '未设' }}</span>
+            <span v-else class="secondary">实际注额见订单</span>
+          </div>
         </td>
         <td class="execution">
-          <span class="status" :class="`is-${row.pending.tone}`">{{ row.pending.label }}</span>
-          <span v-if="!row.pending.placed && row.pending.detail" class="status-detail">{{ row.pending.detail }}</span>
-          <slot name="venueNotes" :row="row" />
+          <div v-for="venue in quotes" :key="venue.venue" class="venue-quote">
+            <span class="status" :class="`is-${venue.stateTone}`">{{ venue.label }} · {{ venue.stateLabel }}</span>
+            <span v-if="venue.stateDetail" class="status-detail">{{ venue.stateDetail }}</span>
+            <span v-if="venue.submittedAt" class="secondary">回执记录 {{ formatPodTableDate(venue.submittedAt) }}</span>
+          </div>
           <slot v-if="showDiagnostics && row.live" name="diagnostics" :row="row" />
         </td>
         <td><div class="actions"><slot name="actions" :row="row" /></div><span v-if="!row.live" class="secondary">历史记录</span></td>
@@ -126,4 +123,5 @@ th.frozen-match { z-index: 4; }
 .status-detail { display: block; margin-top: 6px; color: #fdba74; white-space: normal; overflow-wrap: anywhere; }
 .actions { display: flex; flex-wrap: wrap; gap: 5px; }.details { margin-top: 6px; }.details summary { color: #93c5fd; cursor: pointer; font-size: 11px; }
 .empty { padding: 24px; color: #94a3b8; text-align: left; }
+.venue-quote + .venue-quote { margin-top: 7px; padding-top: 6px; border-top: 1px solid #334155; }
 </style>

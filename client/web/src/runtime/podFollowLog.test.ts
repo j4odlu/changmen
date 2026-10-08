@@ -12,6 +12,8 @@ import {
   ticketHasPodFollowMatch,
   upsertPodFollowEv,
   markPodFollowLogPlaced,
+  markPodFollowVenueSubmitted,
+  readPodFollowLog,
 } from "@/runtime/podFollowLog";
 
 function alert(over: Partial<PodDropAlert> = {}): PodDropAlert {
@@ -69,6 +71,36 @@ beforeEach(() => {
 });
 
 describe("podFollowLog", () => {
+  it("persists a PM-only opportunity and freezes its submission without marking OB placed", () => {
+    const ticket = liveTicket();
+    const pm = { ...ticket, fixtureMatch: { status: "matched" as const,
+      hits: [{ fixture: { id: 88, obMid: "", providers: { Polymarket: "pm-88" } } }] },
+      marketMatch: { ...ticket.marketMatch, venue: "Polymarket" } };
+    const row = buildPodFollowLogRow(pm, 1_970_000);
+    expect(upsertPodFollowEv(row).added).toBe(true);
+    markPodFollowVenueSubmitted(row.id, row.venues!.Polymarket, "PM已下 1/1 alice:order-1", 1_980_000, { ...row, pinCurrent: 1.88 });
+    const changed = buildPodFollowLogRow({ ...pm, pinCurrent: 1.2,
+      obQuote: { ...pm.obQuote, quote: 4 } }, 1_990_000);
+    upsertPodFollowEv(changed);
+    const saved = readPodFollowLog()[0];
+    expect(saved.placed).toBe(false);
+    expect(saved.pinCurrent).toBe(1.88);
+    expect(saved.venues?.Polymarket).toMatchObject({ quote: 1.95, matchId: "pm-88", fixtureId: 88,
+      submittedAt: 1_980_000, note: "PM已下 1/1 alice:order-1" });
+  });
+
+  it("updates another venue's reference quote without overwriting a submitted venue", () => {
+    const row = buildPodFollowLogRow(liveTicket(), 1_970_000);
+    upsertPodFollowEv(row);
+    markPodFollowVenueSubmitted(row.id, row.venues!.OB, "已下 1/1 bob:o1", 1_980_000);
+    const changed = { ...row, venues: { OB: { ...row.venues!.OB, quote: 4 },
+      RAY: { ...row.venues!.OB, venue: "RAY", matchId: "ray-1", quote: 2.2 } } };
+    upsertPodFollowEv(changed);
+    const saved = readPodFollowLog()[0];
+    expect(saved.venues?.OB.quote).toBe(1.95);
+    expect(saved.venues?.RAY.quote).toBe(2.2);
+  });
+
   it("only treats matched fixtures and markets as follow tickets", () => {
     expect(ticketHasPodFollowMatch(liveTicket())).toBe(true);
     expect(ticketHasPodFollowEv(liveTicket())).toBe(true);

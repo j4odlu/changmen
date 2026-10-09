@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PlatformId } from "@/types/esport";
 import { betPlatformIds } from "@changmen/venue-adapter/registry";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { storeToRefs } from "pinia";
 import { computed, ref } from "vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
@@ -46,6 +46,8 @@ else {
   );
 }
 extensionPrefs.value.singleLeg9999MaxPerMap ??= 1;
+// [changmen 扩展] 旧内存态默认 FOK；此字段仅保存偏好，不接入下注。
+extensionPrefs.value.pmArbOrderMode ??= "FOK";
 if (!extensionPrefs.value.rayLateRejectAutoMakeup) {
   extensionPrefs.value.rayLateRejectAutoMakeup = {
     enabled: false,
@@ -90,6 +92,21 @@ function toggleArbAllowed(platform: PlatformId) {
     platform,
     arbPlatformOptions,
   );
+}
+
+async function onPmArbOrderModeChange(value: unknown) {
+  if (value !== "GTC")
+    return;
+  try {
+    await ElMessageBox.alert(
+      "GTC 为测试版本，尚未接入。当前仅保存配置选项，实际下注仍沿用现有 FOK 流程。",
+      "GTC 测试版本",
+      { type: "warning", confirmButtonText: "知道了" },
+    );
+  }
+  catch {
+    // 关闭提示不改变配置，也不触发任何交易操作。
+  }
 }
 
 async function save() {
@@ -169,6 +186,36 @@ async function save() {
           </button>
         </div>
       </div>
+    </section>
+
+    <section class="extensions-tab__panel extensions-tab__pm-mode">
+      <div class="extensions-tab__section-head">
+        <div>
+          <h3 class="extensions-tab__heading">
+            PM 自动套利下单模式
+          </h3>
+          <p class="extensions-tab__section-desc">
+            GTC 为测试版本，尚未接入；当前两种选择均沿用现有 FOK 下单流程。
+          </p>
+        </div>
+        <span class="extensions-tab__badge">changmen 扩展</span>
+      </div>
+      <el-form label-position="left" label-width="190px">
+        <el-form-item label="下单模式">
+          <el-radio-group
+            v-model="extensionPrefs.pmArbOrderMode"
+            aria-label="PM 自动套利下单模式"
+            @change="onPmArbOrderModeChange"
+          >
+            <el-radio-button value="FOK">
+              FOK
+            </el-radio-button>
+            <el-radio-button value="GTC">
+              GTC（测试版本）
+            </el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
     </section>
 
     <section class="extensions-tab__panel extensions-tab__ray-reject">
@@ -476,6 +523,11 @@ async function save() {
 }
 
 .extensions-tab__venues {
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+}
+
+.extensions-tab__panel.extensions-tab__pm-mode {
   margin-bottom: 16px;
   padding-bottom: 14px;
 }

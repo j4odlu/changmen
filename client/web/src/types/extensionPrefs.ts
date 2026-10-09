@@ -98,6 +98,9 @@ export interface ArbEarlyLockSellPrefs {
   minExtraProfitPct: number;
 }
 
+/** [changmen 扩展] PM 自动套利模式偏好；当前仅配置占位，不接入交易执行。 */
+export type PmArbOrderMode = "FOK" | "GTC";
+
 /** [changmen 扩展] PM 套利：卖一 × multiplier（展示 + FOK；见 PM_ARB_PRICE_BUFFER_PLAN.md） */
 export interface PmArbPriceBufferPrefs {
   enabled: boolean;
@@ -252,6 +255,8 @@ export interface ExtensionPrefs extends Record<string, unknown> {
   rayLateRejectAutoMakeup: RayLateRejectAutoMakeupPrefs;
   /** 双边预测市场：同卖净利优于锁定利润时两边一起卖 */
   arbEarlyLockSell: ArbEarlyLockSellPrefs;
+  /** [changmen 扩展] 仅保存模式偏好；GTC 未接入，实际下注仍走原 FOK 路径。 */
+  pmArbOrderMode: PmArbOrderMode;
   /** PM 套利：有 fo 时读打折档（展示/扫描/对冲/FOK）；无 fo 不打折；默认关 = 现网 */
   pmArbPriceBuffer: PmArbPriceBufferPrefs;
   /** PM FOK：成交价及更优档深度倍数；默认关 = 现网 1× */
@@ -397,6 +402,7 @@ export function createDefaultExtensionPrefs(): ExtensionPrefs {
     arbFailAutoSell: createDefaultArbFailAutoSell(),
     rayLateRejectAutoMakeup: createDefaultRayLateRejectAutoMakeup(),
     arbEarlyLockSell: createDefaultArbEarlyLockSell(),
+    pmArbOrderMode: "FOK",
     pmArbPriceBuffer: createDefaultPmArbPriceBufferPrefs(),
     pmFokDepthBuffer: createDefaultPmFokDepthBufferPrefs(),
     pfArbPriceBuffer: createDefaultPfArbPriceBufferPrefs(),
@@ -555,6 +561,7 @@ export function normalizeExtensionPrefs(raw: unknown): ExtensionPrefs {
     arbFailAutoSell: normalizeArbFailAutoSell(row.arbFailAutoSell),
     rayLateRejectAutoMakeup: normalizeRayLateRejectAutoMakeup(row.rayLateRejectAutoMakeup),
     arbEarlyLockSell: normalizeArbEarlyLockSell(row.arbEarlyLockSell),
+    pmArbOrderMode: row.pmArbOrderMode === "GTC" ? "GTC" : "FOK",
     pmArbPriceBuffer: normalizePmArbPriceBuffer(row.pmArbPriceBuffer),
     pmFokDepthBuffer: normalizePmFokDepthBuffer(row.pmFokDepthBuffer),
     pfArbPriceBuffer: normalizePfArbPriceBuffer(row.pfArbPriceBuffer),

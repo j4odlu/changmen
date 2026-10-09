@@ -3,6 +3,7 @@ import {
   createDefaultExtensionPrefs,
   isArbAllowedPlatformOn,
   normalizeExtensionPrefs,
+  serializeExtensionPrefsForSave,
   toggleArbAllowedPlatform,
 } from "@/types/extensionPrefs";
 
@@ -38,6 +39,7 @@ const defaultPrefs = {
   arbFailAutoSell: { enabled: false },
   rayLateRejectAutoMakeup: { enabled: false, monitorMinutes: 5 },
   arbEarlyLockSell: { enabled: false, mode: "floor" as const, minExtraProfitPct: 0 },
+  pmArbOrderMode: "FOK" as const,
   pmArbPriceBuffer: { enabled: false, multiplier: 1.01 },
   pmFokDepthBuffer: { enabled: false, multiplier: 1.5 },
   pfArbPriceBuffer: { enabled: false, multiplier: 1.01 },
@@ -55,6 +57,19 @@ const defaultPrefs = {
 describe("extensionPrefs", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("defaults old or invalid PM mode preferences to FOK without changing other settings", () => {
+    for (const raw of [{}, { pmArbOrderMode: "FOK" }, { pmArbOrderMode: "gtc" }, { pmArbOrderMode: "invalid" }, { pmArbOrderMode: null }]) {
+      expect(normalizeExtensionPrefs(raw)).toEqual(defaultPrefs);
+    }
+  });
+
+  it("round-trips the GTC placeholder through Extensions without changing other preferences", () => {
+    const prefs = normalizeExtensionPrefs({ ...defaultPrefs, pmArbOrderMode: "GTC" });
+    expect(prefs).toEqual({ ...defaultPrefs, pmArbOrderMode: "GTC" });
+    expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs))))
+      .toEqual(prefs);
   });
 
   it("defaults valueBet marker prefs to PB / 3%", () => {

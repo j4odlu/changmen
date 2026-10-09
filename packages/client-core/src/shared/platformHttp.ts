@@ -222,7 +222,7 @@ export async function changmenPmEsportCall<T>(
 
   let res;
   try {
-    res = await a8Axios.post<{ success?: number; msg?: string; info?: T }>(
+    res = await a8Axios.post<{ success?: number; msg?: string; info?: T; upstreamStatus?: number }>(
       buildEsportUrl(action, "", requireHttpCtx().getApiBase()),
       toEsportPostBody(body),
       {
@@ -239,7 +239,12 @@ export async function changmenPmEsportCall<T>(
   const json = res.data;
   if (json?.success !== 1) {
     // 业务失败：原样抛 msg，供进行中订单 / 弹窗展示（勿包成「API 不可用」）
-    throw new Error(String(json?.msg || `${action} failed`).slice(0, 160));
+    const error = new Error(String(json?.msg || `${action} failed`).slice(0, 160));
+    const status = Number(json?.upstreamStatus);
+    if (["Pm_GetOrder", "Pm_GetOpenOrders", "Pm_GetTrades"].includes(action)
+      && Number.isInteger(status) && status >= 400 && status <= 599)
+      Object.assign(error, { status });
+    throw error;
   }
   return json.info as T;
 }

@@ -80,6 +80,7 @@ const {
   handlePmSubmitOrder,
   handlePmPrepareSubmit,
   handlePmGetTrades,
+  handlePmGetOrder,
   handlePmHeartbeat,
   handlePmGetOpenOrders,
   handlePmCancelOrder,
@@ -88,6 +89,22 @@ const {
 } = await import("./pm_client_handlers.js");
 
 describe("pm_client_handlers", () => {
+  test.each([404, 401, 429, 503])("Pm_GetOrder preserves upstream status %s", async (status) => {
+    const { executePolymarketHttpRequest } = await import("./clob_proxy.js");
+    executePolymarketHttpRequest.mockResolvedValueOnce({ status, text: '{"error":"upstream failed"}' });
+    expect(await handlePmGetOrder({ playerId: 47, orderId: "original" }, "user-1")).toMatchObject({ ok: false, upstreamStatus: status });
+  });
+  test("Pm_GetTrades preserves typed upstream errors", async () => {
+    const { fetchPolymarketTradesSince } = await import("./clob_l2.js");
+    fetchPolymarketTradesSince.mockRejectedValueOnce(Object.assign(new Error("CLOB busy"), { status: 429 }));
+    expect(await handlePmGetTrades({ playerId: 47, after: 1700000000 }, "user-1")).toMatchObject({ ok: false, upstreamStatus: 429 });
+  });
+  test("PM read error status survives action routing", async () => {
+    const { executePolymarketHttpRequest } = await import("./clob_proxy.js");
+    const { handlePmPfAction } = await import("../../esport-api/pm_pf_routes.ts");
+    executePolymarketHttpRequest.mockResolvedValueOnce({ status: 404, text: '{"error":"No order"}' });
+    expect(await handlePmPfAction("Pm_GetOrder", { playerId: 47, orderId: "original" }, { user: { id: "user-1", userName: "test" } })).toMatchObject({ success: 0, upstreamStatus: 404, info: null });
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });

@@ -1,5 +1,5 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import { tracePolymarketOrder } from "./orderTrace";
+import { tracePolymarketOrder, tracePolymarketWsMessage } from "./orderTrace";
 import { reportVenueWsStatus } from "../shared/venueWsStatus";
 import type { PolymarketOrderRow } from "./orderTypes";
 import { polymarketUserSubscribeMessage } from "./api";
@@ -179,9 +179,9 @@ function dispatchUserWsMessage(session: UserWsSession, raw: string) {
     for (const [orderId, entry] of orderWatches) {
       if (entry.accountKey !== session.accountKey)
         continue;
-      if (polymarketUserOrderIdsFromMessage(msg).some(id => id.toLowerCase() === orderId.toLowerCase()))
-        tracePolymarketOrder(entry.accountId, orderId, "ws_event", { receivedAt: Date.now(), status: String(msg.status ?? msg.type ?? ""), replayed: false });
       const outcome = interpretPolymarketUserWsMessage(msg, orderId);
+      if (polymarketUserOrderIdsFromMessage(msg).some(id => id.toLowerCase() === orderId.toLowerCase()))
+        tracePolymarketWsMessage(entry.accountId, orderId, msg, outcome, Date.now(), false);
       if (outcome)
         settleWatch(orderId, { source: "ws", outcome, row: polymarketOrderRowFromUserWsMessage(msg, outcome) });
     }
@@ -330,8 +330,9 @@ export function registerPolymarketOrderWatch(
     if (Date.now() - cached.at >= 120_000)
       continue;
     const outcome = interpretPolymarketUserWsMessage(cached.message, id);
+    if (polymarketUserOrderIdsFromMessage(cached.message).some(orderId => orderId.toLowerCase() === id.toLowerCase()))
+      tracePolymarketWsMessage(entry.accountId, id, cached.message, outcome, cached.at, true);
     if (outcome) {
-      tracePolymarketOrder(account.accountId, id, "ws_event", { receivedAt: cached.at, outcome, replayed: true });
       settleWatch(id, { source: "ws", outcome, row: polymarketOrderRowFromUserWsMessage(cached.message, outcome) });
     }
   }

@@ -39,6 +39,7 @@ interface ApiFailure {
   success: 0;
   msg: string;
   info: null;
+  upstreamStatus?: number;
 }
 
 type ApiEnvelope<T = unknown> = ApiSuccess<T> | ApiFailure;
@@ -60,6 +61,11 @@ function ok<T>(info: T, msg = "ok"): ApiEnvelope<T> {
 
 function fail(msg: string, info = null): ApiEnvelope {
   return { success: 0, msg, info };
+}
+
+/** [changmen 扩展] 仅 PM 查询错误透传上游 HTTP 状态，不改变提交/撤单协议。 */
+function pmReadFail(result: { msg: string; upstreamStatus?: number }): ApiEnvelope {
+  return { ...fail(result.msg), ...(result.upstreamStatus ? { upstreamStatus: result.upstreamStatus } : {}) };
 }
 
 export function isPmPfAction(action: string): boolean {
@@ -112,11 +118,11 @@ export async function handlePmPfAction(
     }
     case "Pm_GetTrades": {
       const trades = await handlePmGetTrades(body, ctx.user.id);
-      return trades.ok ? ok(trades.info) : fail(trades.msg);
+      return trades.ok ? ok(trades.info) : pmReadFail(trades);
     }
     case "Pm_GetOrder": {
       const order = await handlePmGetOrder(body, ctx.user.id);
-      return order.ok ? ok(order.info) : fail(order.msg);
+      return order.ok ? ok(order.info) : pmReadFail(order);
     }
     case "Pm_GetBook": {
       const book = await handlePmGetBook(body, ctx.user.id);
@@ -128,7 +134,7 @@ export async function handlePmPfAction(
     }
     case "Pm_GetOpenOrders": {
       const openOrders = await handlePmGetOpenOrders(body, ctx.user.id);
-      return openOrders.ok ? ok(openOrders.info) : fail(openOrders.msg);
+      return openOrders.ok ? ok(openOrders.info) : pmReadFail(openOrders);
     }
     case "Pf_CheckBet": {
       const checked = await handlePfCheckBet(body, ctx.user.id);

@@ -247,7 +247,7 @@ export async function fetchPolymarketTradesSince({
       signal: AbortSignal.timeout(60_000),
     });
     if (!res.ok)
-      throw new Error(`CLOB ${res.status} ${host}${TRADES_PATH}`);
+      throw Object.assign(new Error(`CLOB ${res.status} ${host}${TRADES_PATH}`), { status: res.status });
     const data = await res.json();
     const batch = Array.isArray(data?.data) ? data.data : [];
     all.push(...batch);
@@ -278,7 +278,7 @@ export async function fetchPolymarketTradesById({
     signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok)
-    throw new Error(`CLOB ${res.status} ${host}${TRADES_PATH}`);
+    throw Object.assign(new Error(`CLOB ${res.status} ${host}${TRADES_PATH}`), { status: res.status });
   const data = await res.json();
   return Array.isArray(data?.data) ? data.data : [];
 }

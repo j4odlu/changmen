@@ -12,6 +12,8 @@ import {
 } from "./userWs";
 import { POLYMARKET_USER_WS } from "./api";
 import { resetPmUserWsSourceModeForTests } from "./pmUserWsMode";
+const diagnosticLog = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("@changmen/client-core/bridge/clientApi", () => ({ saveUserLog: diagnosticLog }));
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
@@ -69,9 +71,31 @@ describe("polymarket user ws", () => {
     expect(readPolymarketOrderWatch("partial", account)?.row?.size_matched).toBe("10");
   });
   beforeEach(() => {
+    diagnosticLog.mockClear();
     MockWebSocket.instances = [];
     resetPmUserWsSourceModeForTests("changmen");
     vi.stubGlobal("WebSocket", Object.assign(MockWebSocket, { OPEN: 1 }) as unknown as typeof WebSocket);
+  });
+
+  it("records unknown related WS messages while keeping the original order pending", () => {
+    const account = pmAccount();
+    registerPolymarketOrderWatch(account, "unknown", { conditionId: "market" });
+    const socket = MockWebSocket.instances[0]!;
+    socket.open();
+    socket.onmessage?.({ data: JSON.stringify({ id: "unknown", errorMsg: "FOK_ORDER_NOT_FILLED_ERROR", secret: "must-not-leak" }) });
+    expect(readPolymarketOrderWatch("unknown", account)).toBeNull();
+    expect(diagnosticLog).toHaveBeenCalledWith("PM 原单时序 / ws_event", expect.objectContaining({ interpretation: "missing_event_type", errorCategory: "fok_not_filled", replayed: false }));
+    expect(JSON.stringify(diagnosticLog.mock.calls)).not.toContain("must-not-leak");
+  });
+  it("records cached FAILED trade evidence registered after ACK without inventing a rejection", () => {
+    const account = pmAccount();
+    warmPolymarketUserWs(account);
+    const socket = MockWebSocket.instances[0]!;
+    socket.open();
+    socket.onmessage?.({ data: JSON.stringify({ event_type: "trade", type: "TRADE", status: "FAILED", taker_order_id: "failed" }) });
+    registerPolymarketOrderWatch(account, "failed", { conditionId: "market" });
+    expect(readPolymarketOrderWatch("failed", account)).toBeNull();
+    expect(diagnosticLog).toHaveBeenCalledWith("PM 原单时序 / ws_event", expect.objectContaining({ interpretation: "trade_failed", replayed: true, status: "FAILED" }));
   });
 
   afterEach(() => {

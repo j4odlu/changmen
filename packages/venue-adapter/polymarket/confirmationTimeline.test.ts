@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ order: vi.fn(), trade: vi.fn(), cancel: vi.fn(), trace: vi.fn() }));
 vi.mock("./orders", () => ({ fetchPolymarketConfirmedTradeForOrder: mocks.trade }));
 vi.mock("./pmClientApi", () => ({ pmCancelOrder: mocks.cancel }));
-vi.mock("./orderTrace", () => ({ tracePolymarketOrder: mocks.trace }));
+vi.mock("./orderTrace", async original => ({ ...await original<typeof import("./orderTrace")>(), tracePolymarketOrder: mocks.trace }));
 vi.mock("./orderStatus", async (original) => ({
   ...await original<typeof import("./orderStatus")>(), fetchPolymarketOrderRow: mocks.order,
 }));

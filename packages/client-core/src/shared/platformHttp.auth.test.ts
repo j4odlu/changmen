@@ -14,6 +14,16 @@ beforeEach(() => {
 });
 afterEach(clearPlatformHttpContext);
 describe("platform request credential bridge", () => {
+  it.each([404, 401, 429, 503])("preserves PM private-read upstream status %s", async (status) => {
+    mocks.post.mockResolvedValue({ data: { success: 0, msg: "upstream failed", upstreamStatus: status } });
+    await expect(changmenPmEsportCall("Pm_GetOrder", {})).rejects.toMatchObject({ status, message: "upstream failed" });
+  });
+  it("does not mistake gateway errors or submit errors for an upstream order 404", async () => {
+    mocks.post.mockRejectedValueOnce({ response: { status: 404 } });
+    await expect(changmenPmEsportCall("Pm_GetOrder", {})).rejects.not.toHaveProperty("status");
+    mocks.post.mockResolvedValue({ data: { success: 0, msg: "submit failed", upstreamStatus: 404 } });
+    await expect(changmenPmEsportCall("Pm_SubmitOrder", {})).rejects.not.toHaveProperty("status");
+  });
   it("preserves upstream PM error status, body and Retry-After through the VPS wrapper", async () => {
     const data = { code: "rate_limited", error: "busy", retryable: true, trace_id: "trace" };
     mocks.post.mockResolvedValue({ data: { success: 1, info: {

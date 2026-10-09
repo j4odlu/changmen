@@ -70,6 +70,13 @@ function parseUpstreamJson(result) {
   return text;
 }
 
+/** [changmen 扩展] 私有读接口保留上游状态码，供客户端区分查空兜底与鉴权/服务错误。 */
+function pmReadFailure(err) {
+  const status = Number(err?.status);
+  return { ok: false, msg: err instanceof Error ? err.message : String(err),
+    ...(Number.isInteger(status) && status >= 400 && status <= 599 ? { upstreamStatus: status } : {}) };
+}
+
 function extractHeartbeatId(raw) {
   if (!raw || typeof raw !== "object")
     return "";
@@ -277,7 +284,7 @@ export async function handlePmGetTrades(body, userId) {
     return { ok: true, info: trades };
   }
   catch (err) {
-    return { ok: false, msg: err instanceof Error ? err.message : String(err) };
+    return pmReadFailure(err);
   }
 }
 
@@ -301,7 +308,7 @@ export async function handlePmGetOrder(body, userId) {
     return { ok: true, info: parseUpstreamJson(result) };
   }
   catch (err) {
-    return { ok: false, msg: err instanceof Error ? err.message : String(err) };
+    return pmReadFailure(err);
   }
 }
 
@@ -368,7 +375,7 @@ export async function handlePmGetOpenOrders(body, userId) {
     return { ok: true, info: parseUpstreamJson(result) };
   }
   catch (err) {
-    return { ok: false, msg: err instanceof Error ? err.message : String(err) };
+    return pmReadFailure(err);
   }
 }
 

@@ -1,5 +1,5 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import { tracePolymarketOrder } from "./orderTrace";
+import { tracePolymarketOrder, polymarketReadErrorDetails } from "./orderTrace";
 import type { PolymarketOrderRow, PolymarketPollOutcome } from "./orderTypes";
 import { fetchPolymarketConfirmedTradeForOrder } from "./orders";
 import { pmCancelOrder } from "./pmClientApi";
@@ -48,10 +48,14 @@ async function readEvidence(account: PlatformAccount, id: string, side: "BUY" | 
   ]);
   const row = order.status === "fulfilled" ? order.value : null;
   const fill = trade.status === "fulfilled" ? trade.value : null;
+  const orderError = order.status === "rejected" ? polymarketReadErrorDetails(order.reason) : undefined;
+  const tradeError = trade.status === "rejected" ? polymarketReadErrorDetails(trade.reason) : undefined;
   tracePolymarketOrder(account.accountId, id, "lookup", { startedAt,
     orderRead: order.status === "rejected" ? "error" : row ? "found" : "empty",
     tradeRead: trade.status === "rejected" ? "error" : fill ? "found" : "empty",
     status: row?.status,
+    orderHttpStatus: orderError?.upstreamStatus, tradeHttpStatus: tradeError?.upstreamStatus,
+    orderErrorCategory: orderError?.errorCategory, tradeErrorCategory: tradeError?.errorCategory,
   });
   if (interpretPolymarketOrderRow(row) === "matched")
     return { outcome: "matched" as const, row, healthy: order.status === "fulfilled" && trade.status === "fulfilled" };

@@ -4,6 +4,7 @@ import { scaleUsdtToCnyDisplay } from "@changmen/shared/currency";
 import type { VenueOrder } from "../contract";
 import { parseTokenConfig, resolveApiCreds } from "./l2Auth";
 import { pmGetOrder, pmGetOpenOrders } from "./pmClientApi";
+import { tracePolymarketOrder, polymarketReadErrorDetails } from "./orderTrace";
 import type {
   PolymarketOrderResponseLike,
   PolymarketOrderRow,
@@ -140,10 +141,13 @@ export async function fetchPolymarketOrderRow(
   if (!creds.apiKey || !creds.secret || !creds.passphrase || !creds.address)
     throw new Error("PM 订单核验缺少鉴权信息");
   let data: PolymarketOrderRow | null;
+  const startedAt = Date.now();
   try {
     data = await pmGetOrder<PolymarketOrderRow | null>(account, id);
+    tracePolymarketOrder(account.accountId, id, "order_read", { startedAt, endpoint: "single_order", orderRead: data == null ? "empty" : "found", status: data?.status });
   }
   catch (error) {
+    tracePolymarketOrder(account.accountId, id, "order_read", { startedAt, endpoint: "single_order", orderRead: "error", ...polymarketReadErrorDetails(error) });
     const status = (error as { status?: number; response?: { status?: number } })?.response?.status
       ?? (error as { status?: number })?.status;
     if (status !== 404)
@@ -151,11 +155,20 @@ export async function fetchPolymarketOrderRow(
     data = null;
   }
   if (data == null) {
-    const response = await pmGetOpenOrders<PolymarketOrderRow[] | { data: PolymarketOrderRow[] }>(account, undefined, id);
+    const listStartedAt = Date.now();
+    let response: PolymarketOrderRow[] | { data: PolymarketOrderRow[] };
+    try {
+      response = await pmGetOpenOrders<PolymarketOrderRow[] | { data: PolymarketOrderRow[] }>(account, undefined, id);
+    }
+    catch (error) {
+      tracePolymarketOrder(account.accountId, id, "order_read", { startedAt: listStartedAt, endpoint: "order_list_by_id", orderRead: "error", ...polymarketReadErrorDetails(error) });
+      throw error;
+    }
     const rows = Array.isArray(response) ? response : response?.data;
     if (!Array.isArray(rows))
       throw new Error("PM 订单列表查询返回非列表响应");
     data = rows.find(row => String(row.id).toLowerCase() === id.toLowerCase()) ?? null;
+    tracePolymarketOrder(account.accountId, id, "order_read", { startedAt: listStartedAt, endpoint: "order_list_by_id", orderRead: data == null ? "empty" : "found", status: data?.status });
   }
   if (data != null && (typeof data !== "object" || !("status" in data)))
     throw new Error("PM 订单查询返回非订单响应");

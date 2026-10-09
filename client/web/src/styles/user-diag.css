@@ -48,11 +48,11 @@
 }
 
 .user-diag-dialog .el-tabs__nav-wrap {
-  overflow: visible;
+  overflow: hidden;
 }
 
 .user-diag-dialog .el-tabs__nav-scroll {
-  overflow: visible;
+  overflow: hidden;
 }
 
 .user-diag-dialog .el-tabs__nav {
@@ -60,6 +60,9 @@
 }
 
 .user-diag-dialog .el-tabs__content {
+  /* fit-content 只按标签栏定宽，避免平台选项/长说明的 max-content 撑大弹窗。 */
+  contain: inline-size;
+  min-width: 0;
   max-height: min(70vh, 640px);
   overflow-y: auto;
 }
@@ -131,6 +134,7 @@
   margin-bottom: 10px;
 }
 .user-diag-trade .trade-account-fieldset {
+  min-width: 0;
   margin-bottom: 0;
   height: 100%;
 }

@@ -2,7 +2,7 @@
 import type { Component } from "vue";
 import { storeToRefs } from "pinia";
 /**
- * 用户中心弹窗：`border-card` tabs；宽度随 Tab/内容自适应（勿写死 880，主题下 Tab 易挤）。
+ * 用户中心弹窗：`border-card` tabs；宽度由标签栏自适应，内容在框内换行。
  */
 import { computed, onMounted, ref, watch } from "vue";
 import UserDiagChatTab from "@/components/user/tabs/UserDiagChatTab.vue";

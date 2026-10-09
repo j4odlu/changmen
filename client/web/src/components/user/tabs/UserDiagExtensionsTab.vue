@@ -5,7 +5,6 @@ import { ElMessage } from "element-plus";
 import { storeToRefs } from "pinia";
 import { computed, ref } from "vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
-import PmPfBufferSettings from "@/components/user/PmPfBufferSettings.vue";
 import {
   normalizeValueBetSoftPlatforms,
   VALUE_BET_SOFT_CANDIDATES,
@@ -171,8 +170,6 @@ async function save() {
         </div>
       </div>
     </section>
-
-    <PmPfBufferSettings />
 
     <section class="extensions-tab__panel extensions-tab__ray-reject">
       <div class="extensions-tab__section-head">

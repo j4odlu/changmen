@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * [changmen 扩展] PM / PF 卖一缓冲 + PM FOK 深度。
- * PM 可选择原百分比或固定加 1 tick；保存仍走父级 Extensions。
+ * PM 可选择原百分比或固定加 1 tick；由界面 Tab 保存到 Extensions 配置。
  */
 import { storeToRefs } from "pinia";
 import { computed } from "vue";
@@ -184,6 +184,7 @@ const pmBufferMode = computed({
 
 .pm-pf-buffer__grid {
   display: grid;
+  overflow-x: auto;
   grid-template-columns: minmax(118px, 1.05fr) minmax(148px, 1fr) minmax(148px, 1fr);
   column-gap: 12px;
   row-gap: 10px;

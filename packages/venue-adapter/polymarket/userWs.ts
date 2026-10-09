@@ -2,6 +2,7 @@ import type { PlatformAccount } from "@changmen/client-core/models/platformAccou
 import { tracePolymarketOrder, tracePolymarketWsMessage } from "./orderTrace";
 import { reportVenueWsStatus } from "../shared/venueWsStatus";
 import type { PolymarketOrderRow } from "./orderTypes";
+import { isPolymarketTradeFailureRow, polymarketFailedBuyTradeRow } from "./tradeFailure";
 import { polymarketUserSubscribeMessage } from "./api";
 import { resolvePolymarketUserWsUrl } from "./wsConfig";
 import {
@@ -28,6 +29,8 @@ export interface PolymarketWsSettleResult {
 }
 
 interface WatchEntry {
+  tradeIds: Set<string>;
+  confirmedTradeIds: Set<string>;
   listeners: Set<(event: "update" | "connected") => void>;
   accountId?: number;
   accountKey: string;
@@ -140,6 +143,9 @@ function settleWatch(orderId: string, result: PolymarketWsSettleResult) {
   const entry = orderWatches.get(orderId);
   if (!entry)
     return;
+  // 永久失败不被同一 trade 迟到的 MATCHED / RETRYING 覆盖。
+  if (isPolymarketTradeFailureRow(entry.result?.row))
+    return;
   if (entry.result?.outcome === "matched") {
     if (result.outcome !== "matched")
       return;
@@ -157,6 +163,38 @@ function settleWatch(orderId: string, result: PolymarketWsSettleResult) {
     listener("update");
 }
 
+function recordOrderTradeIds(orderId: string, entry: WatchEntry, msg: Record<string, unknown>) {
+  if (!polymarketUserOrderIdsFromMessage(msg).some(id => id.toLowerCase() === orderId.toLowerCase()))
+    return;
+  const isTrade = String(msg.event_type ?? "").trim().toLowerCase() === "trade"
+    || String(msg.type ?? "").trim().toUpperCase() === "TRADE";
+  const ids = isTrade ? [msg.id] : Array.isArray(msg.associate_trades) ? msg.associate_trades : [];
+  for (const id of ids) {
+    const tradeId = String(id ?? "").trim().toLowerCase();
+    if (tradeId) {
+      entry.tradeIds.add(tradeId);
+      if (isTrade && /^(TRADE_STATUS_)?CONFIRMED$/i.test(String(msg.status ?? "").trim()))
+        entry.confirmedTradeIds.add(tradeId);
+    }
+  }
+}
+
+function consumeOrderMessage(orderId: string, entry: WatchEntry, msg: Record<string, unknown>) {
+  recordOrderTradeIds(orderId, entry, msg);
+  const outcome = interpretPolymarketUserWsMessage(msg, orderId);
+  if (!outcome)
+    return null;
+  const row = polymarketOrderRowFromUserWsMessage(msg, outcome);
+  if (isPolymarketTradeFailureRow(row)
+    && (!polymarketFailedBuyTradeRow(msg, orderId, entry.tradeIds)
+      || entry.confirmedTradeIds.size > 0 || entry.result?.outcome === "matched"))
+    return null;
+  // 将累计关联交给 REST 核验，不能各通道分别“只看到一条”就判唯一。
+  settleWatch(orderId, { source: "ws", outcome, row: outcome === "matched" && entry.tradeIds.size
+    ? { ...row, associate_trades: [...entry.tradeIds] } : row });
+  return outcome;
+}
+
 function dispatchUserWsMessage(session: UserWsSession, raw: string) {
   if (raw === "PONG" || !/^[\[{]/.test(raw.trim()))
     return;
@@ -168,10 +206,16 @@ function dispatchUserWsMessage(session: UserWsSession, raw: string) {
     return;
   }
 
-  for (const message of Array.isArray(parsed) ? parsed : [parsed]) {
-    if (!message || typeof message !== "object")
-      continue;
-    const msg = message as Record<string, unknown>;
+  const messages = (Array.isArray(parsed) ? parsed : [parsed])
+    .filter((message): message is Record<string, unknown> => !!message && typeof message === "object");
+  // 一批事件先汇总关联，再按原顺序处理，避免首条 FAILED 漏掉同批其它 tradeId。
+  for (const [orderId, entry] of orderWatches) {
+    if (entry.accountKey === session.accountKey) {
+      for (const msg of messages)
+        recordOrderTradeIds(orderId, entry, msg);
+    }
+  }
+  for (const msg of messages) {
     // [changmen 扩展] 缓存 ACK 前到达的事件；只存当前鉴权会话，且限制容量。
     session.recentMessages = session.recentMessages.filter(x => Date.now() - x.at < 120_000);
     session.recentMessages.push({ at: Date.now(), message: msg });
@@ -179,11 +223,9 @@ function dispatchUserWsMessage(session: UserWsSession, raw: string) {
     for (const [orderId, entry] of orderWatches) {
       if (entry.accountKey !== session.accountKey)
         continue;
-      const outcome = interpretPolymarketUserWsMessage(msg, orderId);
+      const outcome = consumeOrderMessage(orderId, entry, msg);
       if (polymarketUserOrderIdsFromMessage(msg).some(id => id.toLowerCase() === orderId.toLowerCase()))
         tracePolymarketWsMessage(entry.accountId, orderId, msg, outcome, Date.now(), false);
-      if (outcome)
-        settleWatch(orderId, { source: "ws", outcome, row: polymarketOrderRowFromUserWsMessage(msg, outcome) });
     }
   }
 }
@@ -316,6 +358,8 @@ export function registerPolymarketOrderWatch(
   });
 
   const entry: WatchEntry = {
+    tradeIds: new Set(),
+    confirmedTradeIds: new Set(),
     listeners: new Set(),
     accountId: account.accountId,
     accountKey: session.accountKey,
@@ -326,15 +370,17 @@ export function registerPolymarketOrderWatch(
   };
   orderWatches.set(id, entry);
   tracePolymarketOrder(account.accountId, id, "watch", { status: session.connected ? "connected" : "connecting" });
+  // 先收集整个有效缓存的 tradeId，避免回放首条 FAILED 时漏掉已缓存的其它 trade。
+  for (const cached of session.recentMessages) {
+    if (Date.now() - cached.at < 120_000)
+      recordOrderTradeIds(id, entry, cached.message);
+  }
   for (const cached of session.recentMessages) {
     if (Date.now() - cached.at >= 120_000)
       continue;
-    const outcome = interpretPolymarketUserWsMessage(cached.message, id);
+    const outcome = consumeOrderMessage(id, entry, cached.message);
     if (polymarketUserOrderIdsFromMessage(cached.message).some(orderId => orderId.toLowerCase() === id.toLowerCase()))
       tracePolymarketWsMessage(entry.accountId, id, cached.message, outcome, cached.at, true);
-    if (outcome) {
-      settleWatch(id, { source: "ws", outcome, row: polymarketOrderRowFromUserWsMessage(cached.message, outcome) });
-    }
   }
 
   const timeoutMs = opts.timeoutMs ?? DEFAULT_WATCH_TIMEOUT_MS;
@@ -393,6 +439,12 @@ export function clearPolymarketOrderWatch(orderId: string): void {
 export function readPolymarketOrderWatch(orderId: string, account: PlatformAccount): PolymarketWsSettleResult | null {
   const entry = orderWatches.get(orderId);
   return entry?.accountKey === sessionKeyFromAccount(account) ? entry?.result ?? null : null;
+}
+
+/** FAILED 唯一性核验也需要尚未形成终态的 WS 关联，且按账号隔离。 */
+export function readPolymarketOrderTradeIds(orderId: string, account: PlatformAccount): string[] {
+  const entry = orderWatches.get(orderId);
+  return entry?.accountKey === sessionKeyFromAccount(account) ? [...entry.tradeIds] : [];
 }
 
 export { getPmUserWsSourceMode, pmUserWsSourceModeLabel };

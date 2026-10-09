@@ -19,6 +19,7 @@ import { applyPolymarketOrderOrigins, isPolymarketChangmenOrder } from "./pmOrig
 import { enrichPolymarketBuyOrdersWithFees } from "./pmFee";
 import { polymarketPluginGet } from "./transport";
 import { pmGetTrades } from "./pmClientApi";
+import { polymarketFailedBuyTradeRow } from "./tradeFailure";
 
 const TOKEN_MICRO = 1_000_000;
 /** 订单 sync + 迟结算缓冲（Phase 2b） */
@@ -476,13 +477,14 @@ export function polymarketTradeNotionalUsdc(trade: PolymarketTradeRow): number {
   return Math.round(polymarketBuyStakeUsdc(trade.size, price) * 10000) / 10000;
 }
 
-/** 近窗内按 orderId 查已确认成交（体育 delayed 订单状态滞后时的兜底） */
+/** 近窗内按 orderId 查成交；拒单核验可显式启用唯一 BUY taker trade 的 FAILED 证据。 */
 export async function fetchPolymarketConfirmedTradeForOrder(
   account: PlatformAccount,
   orderId: string,
   lookbackMs = 10 * 60 * 1000,
   side: "BUY" | "SELL" = "BUY",
   strict = false,
+  includeFailedBuy = false,
 ): Promise<PolymarketTradeRow | null> {
   const id = String(orderId ?? "").trim();
   if (!id)
@@ -501,6 +503,16 @@ export async function fetchPolymarketConfirmedTradeForOrder(
   }
   const flattened = flattenPolymarketTrades(rawTrades, userAddresses);
   const wantSide = side.toUpperCase();
+  if (includeFailedBuy && wantSide === "BUY") {
+    // 唯一性按原始 tradeId 核对，maker_orders 多条并不等于多笔 trade。
+    const related = rawTrades.filter(trade => polymarketTradeRefsOrderId(trade, id));
+    const ids = related.map(trade => String(trade.id ?? "").trim());
+    if (ids.every(Boolean) && !related.some(trade => /^(TRADE_STATUS_)?CONFIRMED$/i.test(String(trade.status ?? "").trim()))) {
+      const failed = related.find(trade => polymarketFailedBuyTradeRow(trade, id, ids));
+      if (failed)
+        return failed;
+    }
+  }
   for (const trade of flattened) {
     if (!polymarketTradeRefsOrderId(trade, id))
       continue;

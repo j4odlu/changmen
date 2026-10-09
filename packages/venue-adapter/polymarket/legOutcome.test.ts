@@ -79,6 +79,29 @@ describe("resolvePolymarketLegOutcome", () => {
     fetchVenueOrders.mockResolvedValue([]);
   });
 
+  it("consumes official FAILED from the job while the original order remains unconfirmed", async () => {
+    awaitPolymarketSettlementJob.mockResolvedValue({ outcome: "unfilled", row: { status: "FAILED",
+      size_matched: "0", associate_trades: ["failed-trade"], confirmationBasis: "trade_failed" } });
+    const result = Object.assign(new BetResult("Polymarket", true), { pending: true, orderId: "failed-order" });
+    const out = await resolvePolymarketLegOutcome(account(), result, { fetchVenueOrders });
+    expect(out.settlement).toBe("unfilled");
+    expect(result).toMatchObject({ pending: false, reject: "unfilled" });
+    expect(result.message).toContain("官方 trade FAILED");
+    expect(out.orders[0]?.status).toBe("reject");
+    expect(settlePolymarketDelayedOrder).not.toHaveBeenCalled();
+  });
+
+  it("does not replace an already matched job with a later FAILED snapshot", async () => {
+    awaitPolymarketSettlementJob.mockResolvedValue({ outcome: "matched",
+      row: { status: "MATCHED", size_matched: "10", original_size: "10" } });
+    readPolymarketOrderWatch.mockReturnValue({ outcome: "unfilled", row: { status: "FAILED",
+      size_matched: "0", associate_trades: ["trade-1"], confirmationBasis: "trade_failed" } });
+    const result = Object.assign(new BetResult("Polymarket", true), { pending: true, orderId: "already-matched" });
+    const out = await resolvePolymarketLegOutcome(account(), result, { fetchVenueOrders });
+    expect(out.settlement).toBe("filled");
+    expect(result).toMatchObject({ pending: false, reject: null });
+  });
+
   it.each(["timeout", "unfilled"] as const)("prefers a late full fill over cached %s", async (outcome) => {
     awaitPolymarketSettlementJob.mockResolvedValue({ outcome, row: null });
     readPolymarketOrderWatch.mockReturnValue({ outcome: "matched", row: { size_matched: "10", original_size: "10" } });

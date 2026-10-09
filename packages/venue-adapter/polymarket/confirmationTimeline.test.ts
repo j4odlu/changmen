@@ -7,7 +7,8 @@ vi.mock("./orderStatus", async (original) => ({
   ...await original<typeof import("./orderStatus")>(), fetchPolymarketOrderRow: mocks.order,
 }));
 import { settlePolymarketDelayedOrder } from "./orderSettlement";
-import { registerPolymarketOrderWatch, stopAllPolymarketUserWs } from "./userWs";
+import { registerPolymarketOrderWatch, stopAllPolymarketUserWs, readPolymarketOrderWatch } from "./userWs";
+import { resetPmUserWsSourceModeForTests } from "./pmUserWsMode";
 
 class Socket {
   static OPEN = 1;
@@ -33,10 +34,73 @@ beforeEach(() => {
   vi.stubGlobal("WebSocket", Socket);
   mocks.order.mockResolvedValue(null);
   mocks.trade.mockResolvedValue(null);
+  resetPmUserWsSourceModeForTests("changmen");
 });
 afterEach(() => { stopAllPolymarketUserWs(); vi.clearAllTimers(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe("delayed confirmation with real WS watcher and settlement coordinator", () => {
+  it.each([0, 1])("does not claim a sole FAILED when WS already knows two tradeIds (poll attempts: %s)", async (maxAttempts) => {
+    registerPolymarketOrderWatch(account, "multiple-trades", { conditionId: "market" });
+    const socket = Socket.instances[0]!;
+    socket.open();
+    socket.emit({ event_type: "order", type: "PLACEMENT", id: "multiple-trades", size_matched: "0",
+      associate_trades: ["trade-1", "trade-2"] });
+    expect(readPolymarketOrderWatch("multiple-trades", account)).toBeNull();
+    mocks.trade.mockResolvedValue({ id: "trade-1", status: "FAILED", side: "BUY", taker_order_id: "multiple-trades" });
+    const job = settlePolymarketDelayedOrder(account, "multiple-trades", {
+      poll: { initialDelayMs: 0, maxAttempts }, tradeConfirm: { maxRetries: 1 },
+      fokGrace: { graceMs: 0, postCancelAttempts: 0 },
+    });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await job).toMatchObject({ outcome: "timeout" });
+    expect(mocks.cancel).not.toHaveBeenCalled();
+  });
+
+  it.each(["changmen", "official"] as const)("rejects immediately on official FAILED via %s while REST hangs", async (mode) => {
+    resetPmUserWsSourceModeForTests(mode);
+    registerPolymarketOrderWatch(account, "failed-now", { conditionId: "market" });
+    const socket = Socket.instances[0]!;
+    socket.open();
+    mocks.order.mockImplementation(() => new Promise(() => {}));
+    mocks.trade.mockImplementation(() => new Promise(() => {}));
+    const job = settlePolymarketDelayedOrder(account, "failed-now", { poll: { initialDelayMs: 30_000 } });
+    socket.emit({ event_type: "trade", type: "TRADE", id: "failed-trade", side: "BUY",
+      status: "FAILED", taker_order_id: "failed-now", size: "10" });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await job).toMatchObject({ outcome: "unfilled", row: { status: "FAILED", confirmationBasis: "trade_failed" } });
+    expect(Date.now()).toBe(100_001);
+    expect(mocks.order).not.toHaveBeenCalled();
+    expect(mocks.cancel).not.toHaveBeenCalled();
+    expect(mocks.trace).toHaveBeenCalledWith(285, "failed-now", "decision",
+      expect.objectContaining({ outcome: "unfilled", interpretation: "trade_failed" }));
+  });
+
+  it("keeps MATCHED terminal and ignores subsequent FAILED", async () => {
+    registerPolymarketOrderWatch(account, "cached-failure", { conditionId: "market" });
+    const socket = Socket.instances[0]!;
+    socket.open();
+    const msg = { event_type: "trade", type: "TRADE", id: "trade-1", side: "BUY",
+      taker_order_id: "cached-failure", size: "10" };
+    socket.emit({ ...msg, status: "MATCHED" });
+    socket.emit({ ...msg, status: "FAILED" });
+    const job = settlePolymarketDelayedOrder(account, "cached-failure");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await job).toMatchObject({ outcome: "matched", row: { status: "MATCHED" } });
+    expect(readPolymarketOrderWatch("cached-failure", account)).toBeNull();
+  });
+
+  it("recognizes FAILED during ongoing verification after the first WS timeout", async () => {
+    registerPolymarketOrderWatch(account, "late-failure", { conditionId: "market", timeoutMs: 100 });
+    const socket = Socket.instances[0]!;
+    socket.open();
+    const job = settlePolymarketDelayedOrder(account, "late-failure", { poll: { initialDelayMs: 30_000 } });
+    await vi.advanceTimersByTimeAsync(200);
+    socket.emit({ event_type: "trade", type: "TRADE", id: "trade-1", side: "BUY",
+      status: "TRADE_STATUS_FAILED", taker_order_id: "late-failure" });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await job).toMatchObject({ outcome: "unfilled", row: { confirmationBasis: "trade_failed" } });
+    expect(mocks.cancel).not.toHaveBeenCalled();
+  });
   it("receives a late zero-fill cancellation after the first watch timeout", async () => {
     registerPolymarketOrderWatch(account, "late", { conditionId: "market", timeoutMs: 100 });
     const socket = Socket.instances[0]!;

@@ -21,6 +21,7 @@ import type { PolymarketOrderResponseLike, PolymarketPollOutcome } from "./order
 import { buildPolymarketMatchedBuyVenueOrderForSaveAsync } from "./pmPostFillOrder";
 import { readPolymarketOrderWatch } from "./userWs";
 import { tracePolymarketOrder } from "./orderTrace";
+import { isPolymarketTradeFailureRow } from "./tradeFailure";
 import { recoverPmUnknownSubmission } from "./pmUnknownSubmitRecovery";
 import { finishPmSubmitAttempt, pmSubmitAttemptForOrder } from "./pmSubmitJournal";
 
@@ -71,6 +72,10 @@ async function settlePolymarketWithJobFallback(
   const finish = (raw: Awaited<ReturnType<typeof settlePolymarketDelayedOrder>>) => {
     const latest = readPolymarketOrderWatch(orderId, account);
     let evidence = raw;
+    // 尚未确认成交时消费官方 FAILED；保留既有成交证据优先逻辑。
+    if (raw.outcome !== "matched" && interpretPolymarketOrderRow(recoveredRow) !== "matched"
+      && latest?.outcome === "unfilled" && isPolymarketTradeFailureRow(latest.row))
+      return { outcome: "unfilled" as const, row: latest.row };
     if (interpretPolymarketOrderRow(recoveredRow) === "matched") {
       const incomplete = Number(recoveredRow?.original_size) > Number(recoveredRow?.size_matched);
       evidence = incomplete ? { outcome: "timeout", row: recoveredRow ?? null }

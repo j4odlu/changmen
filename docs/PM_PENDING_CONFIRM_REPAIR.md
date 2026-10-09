@@ -12,7 +12,7 @@ changmen 的 PM 下注使用 FOK，业务结果只有整笔成交或整笔未成
 - 原始提交时间随待确认队列持久化。刷新或重试按原时间计算剩余延迟与成交查询范围，不重复等待整段 delay。
 - 官方延迟窗口结束后，按有限次数轮询和复查收尾，不设 15 秒总截止；单次读取最多等待 3 秒，避免网络请求永久挂起。订单和成交记录并行查询，HTTP/鉴权错误保留为错误，不伪装成空记录。
 - delayed 不撤单。明确 live/unmatched 且无成交时，才尝试撤销原单，并复核撤单回执、订单和成交记录。取消回执必须对应原订单 ID。
-- FOK 回执数量不一致时归入确认异常，继续核验整笔结果；单条 trade FAILED、查空、404、本地超时均不能单独证明整笔未成交。
+- FOK 回执数量不一致时归入确认异常，继续核验整笔结果。当前买入 FOK 对应的唯一 taker trade 返回 FAILED 时，按官方永久失败确认 unfilled；查空、404、本地超时仍不是官方拒单证据。
 - 买入腿核验耗尽后按已授权的超时策略退出待确认；后台 Job 和刷新恢复后的 fallback 使用同一个策略入口。已知成交证据优先，不能覆盖为拒单。
 - 原单 ID、提交时间、赔率、金额和异常信息持久化；日志不再把其它订单当作本单证据。
 
@@ -46,3 +46,34 @@ changmen 的 PM 下注使用 FOK，业务结果只有整笔成交或整笔未成
 当前无 15 秒总预算，也没有“提交后固定 8 秒拒单”。实际时长由官方延迟、有限重试次数和网络耗时决定。超时策略允许补单不代表已证明原单未成交，仍存在原单迟到成交导致重复敞口的风险，这是本次用户授权恢复的策略取舍。MATCHED 表示已撮合敞口，不等于链上 CONFIRMED。本次未增加链上最终性追踪。
 
 本次只修改代码和离线测试；未部署、未发起真实下注或撤单、未强制修改历史订单状态。
+
+## 2026-10-09：唯一 BUY FOK trade 的 FAILED 拒单依据
+
+[changmen 扩展] 按用户授权，把原订单唯一 trade 的官方永久失败纳入 PM 拒单检测。此处的业务“拒单”包含撮合后的交易永久失败；不把 FAILED 描述为“从未撮合”。
+
+### 依据与实际查询发现
+
+- [官方订单生命周期](https://docs.polymarket.com/concepts/order-lifecycle#trade-statuses)：FAILED 是 trade 永久失败终态，MATCHED / MINED / RETRYING 尚非链上最终成功；CONFIRMED 是成功终态。
+- [官方下单说明](https://docs.polymarket.com/trading/place-orders)：FOK 要求全部成交或不成交。
+- [官方用户流](https://docs.polymarket.com/trading/realtime-order-updates)：trade 帧包含 id、taker_order_id、side、status，可精确关联原订单；FAILED / TRADE_STATUS_FAILED 采用同一语义。
+- 2026-10-09 全历史只读查询：12,157 个格式有效订单号中，10,481 个各查到一个 trade（10,479 CONFIRMED、2 FAILED）；没有查到同订单多个 tradeId。买入成交的 9,501 个订单各有一个 trade，全部 CONFIRMED。两笔 FAILED 样本属于卖出，尚无买入 FAILED 实际样本。maker_orders 可有多条，但它们不等于多个 tradeId。
+- 另有 1,676 个订单在 CLOB 查询没有 trade，其中 10 个通过官方钱包活动和链上 OrderFilled 的精确 orderHash 证实成交，剩余 1,666 个没有取得官方终态。查空不能当作官方失败。
+- “当前买入模式观察到一单一 trade”是实证，不是官方保证所有 FOK 永远只有一个 trade 的接口契约。
+
+### 检测规则与实现范围
+
+1. 使用现有原单 WS 监听和 REST 拒单核验，不新增独立编排或补单流程。下单类型保持 BUY FOK。
+2. FAILED 必须带非空 tradeId，side=BUY，taker_order_id 精确等于本单 orderId。只有 maker 关联、缺字段、其它订单或 SELL，不使用此规则。
+3. REST 核验在现有成交查询中保留失败记录，按关联 tradeId 去重后只允许唯一 trade 的 FAILED。订单行另有其它 associate_trades 时也不能套用此规则。普通订单列表、成交金额和手动卖出查询继续过滤 FAILED。
+4. WS 核验期间累计本单已知 tradeId，先汇总有效缓存及同批消息的 tradeId，再按顺序处理；REST 同时核对尚未形成终态的 WS 关联。尚未确认成交时，唯一 FAILED 立即返回 unfilled，不等轮询延迟或核验耗尽，也不额外撤单。同一 trade 的旧 MATCHED / RETRYING 不覆盖已确认的 FAILED；先收到 MATCHED 则按现有逻辑结束核验，不再检测其后 FAILED，也不把已经确认的 matched 改判拒单。
+5. 保留 status=FAILED、associate_trades=[tradeId]、confirmationBasis=trade_failed，size_matched=0 表示最终没有有效成交份额，不抹掉发生过撮合的事实。订单行解读先识别该依据，避免非空 associate_trades 被旧逻辑误认作成交；展示“官方 trade FAILED”，与 timeout_policy 区分。
+6. 后台 Job 和恢复续查消费同一个结果。保持原有 MATCHED 收尾、监听清理和 Job 缓存生命周期，不新增成交后的监控。FAILED 判拒返回现有 reject=unfilled，后续由现有编排层决定另一条腿和补单。超时判拒的次数、间隔和策略保持原设定。
+7. 直连 PM 与 VPS 中转共用相同客户端解析、REST 核验和收尾函数，不改运输方式、服务端接口或 RAY 逻辑。
+
+边界：唯一性判断基于当前核验窗口和已知证据，沿用现有 REST 分页上限；不能由此宣称历史查询永远完整。本次覆盖尚未确认成交的 delayed 原单核验和 ACK 前缓存。按用户明确要求，收到 MATCHED 后不继续检测 FAILED；页面关闭后的对账与历史订单纠正不在本次实现范围。不会因此宣称所有 delayed 最终状态一定都能取得。
+
+新增模拟覆盖 WS 官方源/中转源、ACK 前 FAILED 缓存、首次监听超时后的 FAILED、REST FAILED 与旧订单行竞争、跨 WS/REST 已知 tradeId 核对、先收到 MATCHED 后忽略 FAILED，以及官方失败不会显示为本地核验耗尽。未部署、未进行真实下注/撤单、未改历史订单。
+
+提交前审查补修：REST 读取期间收到的 MATCHED 和已成交 Job 不会被迟到 FAILED 覆盖；WS 同批多 tradeId 不会在首条 FAILED 时过早判拒；尚未形成 WS 终态的关联也参与 REST 唯一性判断。新增 6 项回归先复现问题，再验证修复。
+
+本地最终验证：PM 全模块及套利腿收尾、补单订单、手动卖出恢复相关回归，72 个文件通过、1 个跳过，802 项通过、1 项跳过。vue-tsc、客户端/服务端边界和 adapter 检查通过。`settlementJob.ts` 已恢复到本轮修改前，没有新增 MATCHED 后监听或缓存生命周期改动。均为离线验证，尚未部署或用真实买入 FAILED 回执验收。

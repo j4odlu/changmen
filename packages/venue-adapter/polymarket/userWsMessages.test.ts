@@ -18,6 +18,17 @@ describe("polymarketUserOrderIdsFromMessage", () => {
 });
 
 describe("interpretPolymarketUserWsMessage", () => {
+  it.each(["FAILED", "TRADE_STATUS_FAILED"])("recognizes %s for an exact BUY taker trade", (status) => {
+    const msg = { event_type: "trade", type: "TRADE", id: "trade-1", status,
+      side: "BUY", taker_order_id: ORDER_ID, size: "10" };
+    expect(interpretPolymarketUserWsMessage(msg, ORDER_ID)).toBe("unfilled");
+    expect(polymarketOrderRowFromUserWsMessage(msg, "unfilled")).toMatchObject({
+      status, size_matched: "0", associate_trades: ["trade-1"], confirmationBasis: "trade_failed",
+    });
+    expect(interpretPolymarketUserWsMessage({ ...msg, side: "SELL" }, ORDER_ID)).toBeNull();
+    expect(interpretPolymarketUserWsMessage({ ...msg, taker_order_id: "other",
+      maker_orders: [{ order_id: ORDER_ID }] }, ORDER_ID)).toBeNull();
+  });
   it("preserves a partial fill when the remaining quantity is canceled", () => {
     const msg = { event_type: "order", type: "CANCELLATION", id: ORDER_ID,
       status: "CANCELED", size_matched: "3", original_size: "10" };

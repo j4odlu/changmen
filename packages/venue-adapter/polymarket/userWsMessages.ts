@@ -1,4 +1,5 @@
 import type { PolymarketOrderRow } from "./orderTypes";
+import { polymarketFailedBuyTradeRow } from "./tradeFailure";
 
 /** User WS 帧里与本订单相关的 order id（taker / maker / order 自身） */
 export function polymarketUserOrderIdsFromMessage(msg: Record<string, unknown>): string[] {
@@ -74,7 +75,7 @@ export function interpretPolymarketUserWsMessage(
   if (eventType === "trade" || type === "TRADE") {
     const status = String(msg.status ?? "").trim().toUpperCase();
     if (status === "FAILED" || status === "TRADE_STATUS_FAILED")
-      return null; // 单条 trade 失败不是整张订单未成交的证明。
+      return polymarketFailedBuyTradeRow(msg, watchOrderId) ? "unfilled" : null;
     if (
       status === "MATCHED"
       || status === "MINED"
@@ -96,8 +97,12 @@ export function polymarketOrderRowFromUserWsMessage(
   msg: Record<string, unknown>,
   outcome: "matched" | "unfilled",
 ): PolymarketOrderRow {
-  if (outcome === "unfilled")
+  if (outcome === "unfilled") {
+    const failed = polymarketFailedBuyTradeRow(msg, String(msg.taker_order_id ?? ""));
+    if (failed)
+      return failed;
     return { status: "cancelled", size_matched: "0" };
+  }
   const size = msg.size_matched ?? msg.size;
   return {
     status: String(msg.status ?? "MATCHED"),

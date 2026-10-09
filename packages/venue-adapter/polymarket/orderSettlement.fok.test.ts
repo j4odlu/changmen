@@ -20,6 +20,7 @@ vi.mock("./pmClientApi", () => ({
 }));
 
 vi.mock("./userWs", () => ({
+  readPolymarketOrderTradeIds: vi.fn(() => []),
   observePolymarketOrderWatch: vi.fn(() => () => {}),
   awaitPolymarketOrderWatch: (...args: unknown[]) => awaitPolymarketOrderWatch(...args),
   clearPolymarketOrderWatch: vi.fn(),
@@ -49,6 +50,18 @@ describe("finalizePolymarketFokRestingOrder", () => {
     fetchPolymarketOrderRow.mockReset();
     pmCancelOrder.mockReset();
     fetchPolymarketConfirmedTradeForOrder.mockResolvedValue(null);
+  });
+
+  it("does not reject a previously observed MATCHED when REST later returns the same trade FAILED", async () => {
+    fetchPolymarketOrderRow.mockResolvedValue(null);
+    readPolymarketOrderWatch.mockReturnValue({ outcome: "matched",
+      row: { status: "MATCHED", size_matched: "10", associate_trades: ["trade-1"] } });
+    fetchPolymarketConfirmedTradeForOrder.mockResolvedValue({ id: "trade-1", status: "FAILED",
+      taker_order_id: "already-matched", side: "BUY" });
+    const out = await finalizePolymarketFokRestingOrder(acc, "already-matched", null,
+      { graceMs: 50, graceIntervalMs: 0, postCancelAttempts: 1 });
+    expect(out.outcome).toBe("matched");
+    expect(pmCancelOrder).not.toHaveBeenCalled();
   });
 
   it("uses explicit cancellation ACK when subsequent healthy lookups return no row", async () => {
@@ -204,6 +217,63 @@ describe("settlePolymarketDelayedOrder FOK resting", () => {
   });
   afterEach(() => vi.useRealTimers());
 
+  it.each([null, { status: "MATCHED", size_matched: "10", associate_trades: ["failed-trade"] }])(
+    "uses terminal FAILED over an absent or stale matched order row: %j", async (row) => {
+      fetchPolymarketOrderRow.mockResolvedValue(row);
+      fetchPolymarketConfirmedTradeForOrder.mockResolvedValue({ id: "failed-trade", status: "FAILED",
+        taker_order_id: "failed-order", side: "BUY", size: "10" });
+      const out = await settlePolymarketDelayedOrder(acc, "failed-order", { poll: { initialDelayMs: 0 } });
+      expect(out).toMatchObject({ outcome: "unfilled", row: { confirmationBasis: "trade_failed",
+        status: "FAILED", size_matched: "0", associate_trades: ["failed-trade"] } });
+      expect(pmCancelOrder).not.toHaveBeenCalled();
+    });
+
+  it("consumes a FAILED first discovered during trade retries", async () => {
+    fetchPolymarketOrderRow.mockResolvedValue(null);
+    fetchPolymarketConfirmedTradeForOrder.mockResolvedValueOnce(null).mockResolvedValue({
+      id: "failed-trade", status: "TRADE_STATUS_FAILED", taker_order_id: "failed-retry", side: "BUY" });
+    const out = await settlePolymarketDelayedOrder(acc, "failed-retry", {
+      poll: { initialDelayMs: 0, maxAttempts: 1 }, tradeConfirm: { retryMs: 0, maxRetries: 1 },
+    });
+    expect(out).toMatchObject({ outcome: "unfilled", row: { confirmationBasis: "trade_failed" } });
+    expect(pmCancelOrder).not.toHaveBeenCalled();
+  });
+
+  it("keeps a MATCHED received during an in-flight trade retry ahead of REST FAILED", async () => {
+    fetchPolymarketOrderRow.mockResolvedValue(null);
+    fetchPolymarketConfirmedTradeForOrder.mockResolvedValueOnce(null).mockImplementationOnce(async () => {
+      readPolymarketOrderWatch.mockReturnValue({ outcome: "matched",
+        row: { status: "MATCHED", size_matched: "10", associate_trades: ["trade-1"] } });
+      return { id: "trade-1", status: "FAILED", taker_order_id: "retry-race", side: "BUY" };
+    });
+    const out = await settlePolymarketDelayedOrder(acc, "retry-race", {
+      poll: { initialDelayMs: 0, maxAttempts: 1 }, tradeConfirm: { maxRetries: 1, retryMs: 0 },
+    });
+    expect(out.outcome).toBe("matched");
+  });
+
+  it("cross-checks REST FAILED against tradeIds already known from WS", async () => {
+    fetchPolymarketOrderRow.mockResolvedValue(null);
+    readPolymarketOrderWatch.mockReturnValue({ outcome: "matched",
+      row: { status: "MATCHED", size_matched: "10", associate_trades: ["other-trade"] } });
+    fetchPolymarketConfirmedTradeForOrder.mockResolvedValue({ id: "failed-trade", status: "FAILED",
+      taker_order_id: "cross-source", side: "BUY" });
+    const out = await settlePolymarketDelayedOrder(acc, "cross-source", { poll: { initialDelayMs: 0 } });
+    expect(out.outcome).toBe("matched");
+    expect(out.row?.confirmationBasis).not.toBe("trade_failed");
+  });
+
+  it("does not turn a conflicting failed trade into a positive fill", async () => {
+    fetchPolymarketOrderRow.mockResolvedValue({ status: "delayed", associate_trades: ["other-trade"] });
+    fetchPolymarketConfirmedTradeForOrder.mockResolvedValue({
+      id: "failed-trade", status: "FAILED", taker_order_id: "conflict", side: "BUY" });
+    const out = await settlePolymarketDelayedOrder(acc, "conflict", {
+      poll: { initialDelayMs: 0, maxAttempts: 1 },
+    });
+    expect(out.row?.confirmationBasis).not.toBe("trade_failed");
+    expect(out.row?.status).not.toBe("FAILED");
+  });
+
   it("finishes finite retries despite hanging reads without a 15-second cutoff", async () => {
     vi.useFakeTimers();
     fetchPolymarketOrderRow.mockImplementation(() => new Promise(() => {}));
@@ -232,7 +302,7 @@ describe("settlePolymarketDelayedOrder FOK resting", () => {
     const pending = settlePolymarketDelayedOrder(acc, "old", { submittedAt, poll: { initialDelayMs: 30_000 } });
     await vi.advanceTimersByTimeAsync(1);
     expect((await pending).outcome).toBe("matched");
-    expect(fetchPolymarketConfirmedTradeForOrder).toHaveBeenCalledWith(acc, "old", 31 * 60_000, "BUY", true);
+    expect(fetchPolymarketConfirmedTradeForOrder).toHaveBeenCalledWith(acc, "old", 31 * 60_000, "BUY", true, true);
   });
 
   it("accepts a late WS cancellation after healthy REST/trade reconciliation", async () => {

@@ -58,6 +58,55 @@ function pmAccount(): PlatformAccount {
 }
 
 describe("polymarket user ws", () => {
+  it("checks all tradeIds in one WS batch before accepting a sole FAILED", () => {
+    const account = pmAccount();
+    registerPolymarketOrderWatch(account, "batch-failed", { conditionId: "market" });
+    const ws = MockWebSocket.instances[0]!;
+    ws.open();
+    const trade = { event_type: "trade", type: "TRADE", taker_order_id: "batch-failed", side: "BUY", status: "FAILED" };
+    ws.onmessage?.({ data: JSON.stringify([{ ...trade, id: "trade-1" }, { ...trade, id: "trade-2" }]) });
+    expect(readPolymarketOrderWatch("batch-failed", account)).toBeNull();
+  });
+  it("replays a cached sole FAILED as official rejection and ignores stale MATCHED", () => {
+    const account = pmAccount();
+    warmPolymarketUserWs(account);
+    const ws = MockWebSocket.instances[0]!;
+    ws.open();
+    const msg = { event_type: "trade", type: "TRADE", id: "trade-1", taker_order_id: "failed-buy",
+      side: "BUY", status: "FAILED", size: "10" };
+    ws.onmessage?.({ data: JSON.stringify(msg) });
+    registerPolymarketOrderWatch(account, "failed-buy", { conditionId: "market" });
+    expect(readPolymarketOrderWatch("failed-buy", account)).toMatchObject({ outcome: "unfilled",
+      row: { confirmationBasis: "trade_failed", associate_trades: ["trade-1"] } });
+    ws.onmessage?.({ data: JSON.stringify({ ...msg, status: "MATCHED" }) });
+    expect(readPolymarketOrderWatch("failed-buy", account)?.outcome).toBe("unfilled");
+  });
+
+  it.each([false, true])("keeps the known multiple-trade case out of the sole-trade rule (cached: %s)", (cached) => {
+    const account = pmAccount();
+    warmPolymarketUserWs(account);
+    const ws = MockWebSocket.instances[0]!;
+    ws.open();
+    if (!cached)
+      registerPolymarketOrderWatch(account, "multiple", { conditionId: "market" });
+    const msg = { event_type: "trade", type: "TRADE", taker_order_id: "multiple", side: "BUY", size: "10" };
+    ws.onmessage?.({ data: JSON.stringify({ ...msg, id: "trade-1", status: "MATCHED" }) });
+    ws.onmessage?.({ data: JSON.stringify({ ...msg, id: "trade-2", status: "FAILED" }) });
+    if (cached)
+      registerPolymarketOrderWatch(account, "multiple", { conditionId: "market" });
+    expect(readPolymarketOrderWatch("multiple", account)?.outcome).toBe("matched");
+  });
+
+  it.each(["MATCHED", "CONFIRMED"])("handles %s followed by FAILED for the same trade", (status) => {
+    const account = pmAccount();
+    registerPolymarketOrderWatch(account, "changed", { conditionId: "market" });
+    const ws = MockWebSocket.instances[0]!;
+    ws.open();
+    const msg = { event_type: "trade", type: "TRADE", id: "trade-1", taker_order_id: "changed", side: "BUY", size: "10" };
+    ws.onmessage?.({ data: JSON.stringify({ ...msg, status }) });
+    ws.onmessage?.({ data: JSON.stringify({ ...msg, status: "FAILED" }) });
+    expect(readPolymarketOrderWatch("changed", account)?.outcome).toBe("matched");
+  });
   it("retains cumulative fills after an initial partial fill", async () => {
     const account = pmAccount();
     registerPolymarketOrderWatch(account, "partial", { conditionId: "market" });

@@ -1,5 +1,6 @@
 import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
+import { isPolymarketTradeFailureRow } from "./tradeFailure";
 import { scaleUsdtToCnyDisplay } from "@changmen/shared/currency";
 import type { VenueOrder } from "../contract";
 import { parseTokenConfig, resolveApiCreds } from "./l2Auth";
@@ -103,6 +104,8 @@ export function interpretPolymarketOrderRow(
     return "pending";
   if (Object.keys(row).length === 0)
     return "pending";
+  if (isPolymarketTradeFailureRow(row))
+    return "unfilled";
   const status = String(row.status ?? "").trim().toLowerCase();
   if (parseMatchedSize(row) > 0)
     return "matched";
@@ -269,6 +272,8 @@ export function formatPolymarketSettlementMessage(
   }
   if (outcome === "unfilled" && row?.confirmationBasis === "timeout_policy")
     return `${id} / 按未成交处理 / 核验耗尽，按超时策略判拒（非官方拒单回执）`;
+  if (outcome === "unfilled" && isPolymarketTradeFailureRow(row))
+    return `${id} / 下单失败 / 官方 trade FAILED（${row?.associate_trades?.[0]}）`;
   if (outcome === "unfilled")
     return `${id} / 未成交 / 延迟后未吃到`;
   return `${id} / 待确认 / 核验诊断：${row?.lookupError || "本轮超时，未取得成交或取消终态"}`;

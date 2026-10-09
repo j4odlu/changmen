@@ -2,9 +2,10 @@ import type { PlatformAccount } from "@changmen/client-core/models/platformAccou
 import { tracePolymarketOrder, polymarketReadErrorDetails } from "./orderTrace";
 import type { PolymarketOrderRow, PolymarketPollOutcome } from "./orderTypes";
 import { fetchPolymarketConfirmedTradeForOrder } from "./orders";
+import { isPolymarketTradeFailureRow, polymarketFailedBuyTradeRow } from "./tradeFailure";
 import { pmCancelOrder } from "./pmClientApi";
 import { fetchPolymarketOrderRow, interpretPolymarketOrderRow, isPolymarketRestingNoFill, POLYMARKET_WS_FALLBACK_POLL_OPTS, POLYMARKET_WS_FALLBACK_TRADE_CONFIRM_OPTS } from "./orderStatus";
-import { awaitPolymarketOrderWatch, clearPolymarketOrderWatch, readPolymarketOrderWatch, observePolymarketOrderWatch } from "./userWs";
+import { awaitPolymarketOrderWatch, clearPolymarketOrderWatch, readPolymarketOrderWatch, readPolymarketOrderTradeIds, observePolymarketOrderWatch } from "./userWs";
 
 export const POLYMARKET_FOK_RESTING_GRACE_MS = 4_000;
 export const POLYMARKET_FOK_RESTING_GRACE_INTERVAL_MS = 1_000;
@@ -44,7 +45,7 @@ async function readEvidence(account: PlatformAccount, id: string, side: "BUY" | 
   const startedAt = Date.now();
   const [order, trade] = await Promise.allSettled([
     bounded(() => fetchPolymarketOrderRow(account, id), deadline),
-    bounded(() => fetchPolymarketConfirmedTradeForOrder(account, id, lookbackMs, side, true), deadline),
+    bounded(() => fetchPolymarketConfirmedTradeForOrder(account, id, lookbackMs, side, true, side === "BUY"), deadline),
   ]);
   const row = order.status === "fulfilled" ? order.value : null;
   const fill = trade.status === "fulfilled" ? trade.value : null;
@@ -53,13 +54,23 @@ async function readEvidence(account: PlatformAccount, id: string, side: "BUY" | 
   tracePolymarketOrder(account.accountId, id, "lookup", { startedAt,
     orderRead: order.status === "rejected" ? "error" : row ? "found" : "empty",
     tradeRead: trade.status === "rejected" ? "error" : fill ? "found" : "empty",
-    status: row?.status,
+    status: fill?.status ?? row?.status,
     orderHttpStatus: orderError?.upstreamStatus, tradeHttpStatus: tradeError?.upstreamStatus,
     orderErrorCategory: orderError?.errorCategory, tradeErrorCategory: tradeError?.errorCategory,
   });
+  const observed = readPolymarketOrderWatch(id, account);
+  // 已收到 MATCHED 时保持既有收尾，不消费查询期间迟到的 FAILED。
+  if (observed?.outcome === "matched" && /^(TRADE_STATUS_)?FAILED$/i.test(String(fill?.status ?? "").trim()))
+    return { outcome: "matched" as const, row: observed.row, healthy: true };
+  const failed = fill && side === "BUY"
+    && observed?.outcome !== "matched"
+    ? polymarketFailedBuyTradeRow(fill, id, [...row?.associate_trades ?? [], ...observed?.row?.associate_trades ?? [],
+      ...readPolymarketOrderTradeIds(id, account)]) : null;
+  if (failed)
+    return { outcome: "unfilled" as const, row: failed, healthy: true };
   if (interpretPolymarketOrderRow(row) === "matched")
     return { outcome: "matched" as const, row, healthy: order.status === "fulfilled" && trade.status === "fulfilled" };
-  if (fill) {
+  if (fill && !/^(TRADE_STATUS_)?FAILED$/i.test(String(fill.status ?? "").trim())) {
     return { outcome: "matched" as const, row: {
       ...row,
       status: String(fill.status ?? "MATCHED"), size_matched: String(fill.size ?? ""),
@@ -175,8 +186,15 @@ export async function settlePolymarketDelayedOrder(
     // 恢复原成交复查次数和间隔，同时继续接收迟到的原单回执。
     for (let i = 0; i < tradeConfirm.maxRetries && !stopped; i++) {
       try {
-        const trade = await bounded(() => fetchPolymarketConfirmedTradeForOrder(account, orderId, lookbackMs, side, true), deadline);
-        if (trade)
+        const trade = await bounded(() => fetchPolymarketConfirmedTradeForOrder(account, orderId, lookbackMs, side, true, side === "BUY"), deadline);
+        const snapshot = readPolymarketOrderWatch(orderId, account);
+        const failed = trade && side === "BUY"
+          && snapshot?.outcome !== "matched"
+          ? polymarketFailedBuyTradeRow(trade, orderId, [...last?.associate_trades ?? [], ...snapshot?.row?.associate_trades ?? [],
+            ...readPolymarketOrderTradeIds(orderId, account)]) : null;
+        if (failed)
+          return { outcome: "unfilled", row: failed };
+        if (trade && !/^(TRADE_STATUS_)?FAILED$/i.test(String(trade.status ?? "").trim()))
           return { outcome: "matched", row: { ...last, status: String(trade.status ?? "MATCHED"), size_matched: String(trade.size ?? ""), associate_trades: trade.id ? [String(trade.id)] : undefined } };
       }
       catch (error) {
@@ -192,6 +210,8 @@ export async function settlePolymarketDelayedOrder(
         if (evidence.outcome === "matched")
           return { outcome: "matched", row: evidence.row };
         const latest = readPolymarketOrderWatch(orderId, account);
+        if (side === "BUY" && latest?.outcome === "unfilled" && isPolymarketTradeFailureRow(latest.row))
+          return { outcome: "unfilled", row: latest.row };
         return latest?.outcome === "matched" ? { outcome: latest.outcome, row: latest.row }
           : { outcome: "unfilled", row: observed.row };
       }
@@ -224,6 +244,10 @@ export async function settlePolymarketDelayedOrder(
         if (stopped)
           return;
         const latest = readPolymarketOrderWatch(orderId, account);
+        if (side === "BUY" && latest?.outcome === "unfilled" && isPolymarketTradeFailureRow(latest.row)) {
+          resolveWs({ outcome: "unfilled", row: latest.row });
+          return;
+        }
         if (evidence.outcome === "matched") {
           resolveWs({ outcome: "matched", row: evidence.row });
           return;
@@ -249,6 +273,12 @@ export async function settlePolymarketDelayedOrder(
   const onResult = (value: Awaited<typeof ws>) => {
     if (stopped)
       return;
+    // 首次 Promise 可能仍是旧取消回执；读取核验期间的最新快照。
+    value = readPolymarketOrderWatch(orderId, account) ?? value;
+    if (side === "BUY" && value?.outcome === "unfilled" && isPolymarketTradeFailureRow(value.row)) {
+      resolveWs({ outcome: "unfilled", row: value.row });
+      return;
+    }
     if (value?.outcome === "matched" && !(Number(value.row?.original_size) > Number(value.row?.size_matched)))
       resolveWs({ outcome: "matched", row: value.row });
     if (value?.outcome === "unfilled" && value.row?.size_matched != null
@@ -278,7 +308,8 @@ export async function settlePolymarketDelayedOrder(
   // FOK 业务只有整笔成交/未成交；数量不一致的回执属于核验异常，不创建部分成交状态。
   if (result.outcome === "matched" && filled > 0 && original > filled)
     result = { outcome: "timeout", row: { ...result.row, lookupError: "FOK 回执数量不一致，尚未确认整笔成交或未成交" } };
-  tracePolymarketOrder(account.accountId, orderId, "decision", { submittedAt, startedAt, outcome: result.outcome, status: result.row?.status });
+  tracePolymarketOrder(account.accountId, orderId, "decision", { submittedAt, startedAt, outcome: result.outcome, status: result.row?.status,
+    interpretation: result.row?.confirmationBasis });
   if (result.outcome !== "timeout")
     clearPolymarketOrderWatch(orderId);
   return result;

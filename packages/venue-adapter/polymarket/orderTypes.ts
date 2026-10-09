@@ -14,8 +14,8 @@ export interface PolymarketOrderRow {
   order_type?: string;
   /** [changmen 扩展] 本地核验诊断，不是场馆订单状态。 */
   lookupError?: string;
-  /** [changmen 扩展] 用户授权的本地超时判拒策略，不是官方取消回执。 */
-  confirmationBasis?: "timeout_policy";
+  /** [changmen 扩展] 区分本地超时策略与官方 trade 永久失败证据。 */
+  confirmationBasis?: "timeout_policy" | "trade_failed";
 }
 
 export type PolymarketPollOutcome = "matched" | "unfilled" | "timeout";

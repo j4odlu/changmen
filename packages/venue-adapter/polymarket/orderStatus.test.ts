@@ -52,6 +52,7 @@ vi.mock("./orders", () => ({
 }));
 
 vi.mock("./userWs", () => ({
+  readPolymarketOrderTradeIds: vi.fn(() => []),
   observePolymarketOrderWatch: vi.fn(() => () => {}),
   awaitPolymarketOrderWatch: (...args: unknown[]) => awaitPolymarketOrderWatch(...args),
   clearPolymarketOrderWatch: vi.fn(),
@@ -344,7 +345,7 @@ describe("settlePolymarketDelayedOrder", () => {
 
     expect(out.outcome).toBe("matched");
     expect(out.row?.status).toBe("MINED");
-    expect(fetchPolymarketConfirmedTradeForOrder).toHaveBeenCalledWith(acc, "0xlate", expect.any(Number), "BUY", true);
+    expect(fetchPolymarketConfirmedTradeForOrder).toHaveBeenCalledWith(acc, "0xlate", expect.any(Number), "BUY", true, true);
   });
 
   it("does not trust ws unfilled alone — confirms via trades", async () => {

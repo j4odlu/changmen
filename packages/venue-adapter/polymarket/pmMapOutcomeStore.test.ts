@@ -25,7 +25,7 @@ describe("pmMapOutcomeStore", () => {
         awayOdds: 50,
         status: "Normal",
         mapOutcome: "home",
-        outcomeKind: "price",
+        outcomeKind: "official",
         resolutionSource: "https://www.twitch.tv/valorantesports_cn",
       }],
     });
@@ -41,42 +41,70 @@ describe("pmMapOutcomeStore", () => {
     expect(lookupResolutionSourceBySourceMatchId("e1")).toBeNull();
   });
 
-  it("ignores legacy price outcomes on match winner until an official winner arrives", () => {
+  it.each([0, 1, 3])("requires an official winner for map %s and clears obsolete price outcomes", (map) => {
+    for (const outcomeKind of ["price", undefined] as const) {
+      replacePmMapOutcomesFromIndex({
+        updatedAt: 1,
+        assetIds: ["h0", "a0"],
+        entries: [{
+          sourceMatchId: "e1",
+          marketId: "c0",
+          homeTokenId: "h0",
+          awayTokenId: "a0",
+          sourceBetId: "c0",
+          map,
+          homeName: "T1",
+          awayName: "GEN",
+          homeOdds: 1.01,
+          awayOdds: 50,
+          status: "Normal",
+          mapOutcome: "away",
+          outcomeKind,
+        }],
+      });
+      expect(lookupPmMapOutcomeByToken("h0")).toBeNull();
+      expect(lookupPmMapOutcomeByToken("a0")).toBeNull();
+    }
     replacePmMapOutcomesFromIndex({
-      updatedAt: 1,
+      updatedAt: 2,
       assetIds: ["h0", "a0"],
       entries: [{
         sourceMatchId: "e1",
         marketId: "c0",
+        sourceBetId: "c0",
         homeTokenId: "h0",
         awayTokenId: "a0",
-        sourceBetId: "c0",
-        map: 0,
+        map,
         homeName: "T1",
         awayName: "GEN",
         homeOdds: 1.01,
         awayOdds: 50,
         status: "Normal",
         mapOutcome: "away",
-        outcomeKind: "price",
-      }],
-    });
-    expect(lookupPmMapOutcomeByToken("h0")).toBeNull();
-    expect(lookupPmMapOutcomeByToken("a0")).toBeNull();
-    replacePmMapOutcomesFromIndex({
-      updatedAt: 2,
-      assetIds: ["h0", "a0"],
-      entries: [{
-        sourceMatchId: "e1", marketId: "c0", sourceBetId: "c0",
-        homeTokenId: "h0", awayTokenId: "a0", map: 0,
-        homeName: "T1", awayName: "GEN", homeOdds: 1.01, awayOdds: 50,
-        status: "Normal", mapOutcome: "away", outcomeKind: "official",
+        outcomeKind: "official",
       }],
     });
     const hit = lookupPmMapOutcomeByToken("h0");
-    expect(hit?.map).toBe(0);
+    expect(hit?.map).toBe(map);
     expect(hit?.mapOutcome).toBe("away");
     expect(pmMapOutcomeWinnerLabel(hit!, "T1", "GEN")).toBe("GEN");
+    replacePmMapOutcomesFromIndex({ updatedAt: 3, assetIds: ["h0", "a0"], entries: [{
+      sourceMatchId: "e1",
+      marketId: "c0",
+      sourceBetId: "c0",
+      homeTokenId: "h0",
+      awayTokenId: "a0",
+      map,
+      homeName: "T1",
+      awayName: "GEN",
+      homeOdds: 1.01,
+      awayOdds: 50,
+      status: "Normal",
+      mapOutcome: "away",
+      outcomeKind: "price",
+    }] });
+    expect(lookupPmMapOutcomeByToken("h0")).toBeNull();
+    expect(lookupPmMapOutcomeByToken("a0")).toBeNull();
   });
 
   it("keeps first resolutionSource per sourceMatchId across map entries", () => {

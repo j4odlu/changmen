@@ -21,12 +21,13 @@ VPS 守护进程：Polymarket **Gamma + CLOB /prices discovery（唯一权威）
 3. `GET /events/keyset`（官方 `closed=false` + `series_id` + cursor）：
    - **主 pass**：`start_time` ∈ [now-6h, now+1h]
    - **补 pass**：`live=true`（开赛早于 6h 但仍标 live 的长局）
-   - **本地**：丢弃 `ended===true` / market `closed|archived`
+   - **本地**：丢弃 `ended===true` / market `archived`；活跃赛事内的已关闭地图保留以查询官方结果
 4. 类型 allowlist → 双 token / 可解析 / 开赛 ≤ now+1h
-5. `POST /prices` `SELL` 种子价
-6. 按 SourceMatchID 整场截断（默认最多 400 盘）
-7. **写库**：upsert 本轮场次 + bets；**prune** 仅 `ended/closed` ∪ `synced_at` 过旧（**不**按 start 窗外删；窗只约束拉取体积）
-8. 写 MarketIndex（与 DB 同生命周期：空窗不硬清空，只剔 ended）；浏览器禁止 `API_SaveMatch` / `API_SaveBet` / `API_SaveLiveTimer`
+5. [changmen 扩展] 对数量受限的候选市场读取 CLOB `GET /markets/{condition_id}` 的 `tokens[].winner`。比赛卡 WIN 只认单一官方胜方，不用价格判赢，也不复用订单输赢机制；失败时不生成 WIN。整批 10 秒截止、最多 8 个并发。已关闭且官方胜方明确的地图以 Locked/零赔率保留；未确认的关盘不生成盘口。
+6. `POST /prices` `SELL` 种子价（只查未关闭盘口）
+7. 按 SourceMatchID 整场截断（默认最多 400 盘；官方查询前也执行上限）
+8. **写库**：upsert 本轮场次 + bets；**prune** 仅 `ended/closed` ∪ `synced_at` 过旧（**不**按 start 窗外删；窗只约束拉取体积）
+9. 写 MarketIndex（与 DB 同生命周期：空窗不硬清空，只剔 ended）；浏览器禁止 `API_SaveMatch` / `API_SaveBet` / `API_SaveLiveTimer`
 
 ## 运行
 

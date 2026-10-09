@@ -112,7 +112,7 @@ async function fetchJson(url, init) {
       accept: "application/json",
       ...(init?.headers || {}),
     },
-    signal: AbortSignal.timeout(25_000),
+    signal: init?.signal ?? AbortSignal.timeout(25_000),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -273,7 +273,8 @@ async function fetchEsportsKeysetPass(
       }
       const markets = Array.isArray(event.markets) ? event.markets : [];
       for (const market of markets) {
-        if (market?.closed === true || market?.archived === true)
+        // [changmen 扩展] 活跃赛事的已关闭地图仍需查官方胜方，供比赛卡展示结果。
+        if (market?.archived === true)
           continue;
         const marketKey = marketKeyOf(market);
         if (marketKey && seenMarketIds.has(marketKey))
@@ -370,6 +371,49 @@ export async function fetchBatchBuyPrices(assetIds) {
 }
 
 /**
+ * [changmen 扩展] 比赛卡胜负独立读取 CLOB tokens[].winner；Gamma 价格不参与。
+ * 保留 Gamma 的 token 顺序和赛事上下文，避免 CLOB 主客顺序变化导致胜方反转。
+ * 全批共享 10s 截止、最多 8 个并发；查询失败不生成胜方，也不阻断行情采集。
+ * @param {object[]} markets 已通过形状/时间窗校验并限制数量的市场
+ * @returns {Promise<object[]>}
+ */
+export async function fetchPolymarketOfficialMarkets(markets) {
+  if (!markets.length)
+    return [];
+  const signal = AbortSignal.timeout(10_000);
+  const enriched = Array.from({ length: markets.length });
+  let cursor = 0;
+  let failed = 0;
+  await Promise.all(Array.from({ length: Math.min(8, markets.length) }, async () => {
+    while (cursor < markets.length) {
+      const i = cursor++;
+      const market = markets[i];
+      const id = marketKeyOf(market);
+      enriched[i] = { ...market, tokens: [] };
+      if (!id || signal.aborted) {
+        failed++;
+        continue;
+      }
+      try {
+        const clob = await fetchJson(`${POLYMARKET_CLOB_API}/markets/${encodeURIComponent(id)}`, { signal });
+        // [changmen 扩展] 拒绝错盘响应；仅 overlay 官方 token 结果，不覆盖 Gamma 赛事归属。
+        if (String(clob?.condition_id ?? "") !== id || !Array.isArray(clob?.tokens)) {
+          failed++;
+          continue;
+        }
+        enriched[i] = { ...market, tokens: clob.tokens };
+      }
+      catch {
+        failed++;
+      }
+    }
+  }));
+  if (failed)
+    console.warn(`[polymarket-esports] official outcomes unavailable: ${failed}/${markets.length}; no price fallback`);
+  return enriched;
+}
+
+/**
  * 按 SourceMatchID 整场截断：凑不下整场则停，避免同场只剩一半地图盘。
  * @template T
  * @param {T[]} ordered
@@ -412,4 +456,3 @@ export function resetPolymarketEsportsApiCachesForTests() {
   esportsSeriesCache = null;
   marketTypesCache = null;
 }
-

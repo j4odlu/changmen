@@ -1,23 +1,22 @@
 /**
- * VPS MarketIndex 下发的地图胜负 + 直播来源（以 PM Gamma 为准）；浏览器只读展示。
+ * [changmen 扩展] VPS MarketIndex 下发的官方地图/全场胜负 + 直播来源；浏览器只读展示。
  */
 import type {
-  PolymarketMapOutcomeKind,
   PolymarketMapOutcomeSide,
   PolymarketMarketIndex,
   PolymarketMarketIndexEntry,
 } from "@changmen/api-contract";
 import { shallowRef } from "vue";
 
-export type PmMapOutcomeHit = {
+export interface PmMapOutcomeHit {
   winningTokenId: string;
   mapOutcome: PolymarketMapOutcomeSide;
-  outcomeKind: PolymarketMapOutcomeKind;
+  outcomeKind: "official";
   homeName: string;
   awayName: string;
   map: number;
   marketId: string;
-};
+}
 
 /** BetRow / MatchCard 依赖此 tick 在 Index 刷新后重算 */
 export const pmMapOutcomeTick = shallowRef(0);
@@ -30,14 +29,13 @@ function hitFromEntry(entry: PolymarketMarketIndexEntry): PmMapOutcomeHit | null
   const side = entry.mapOutcome;
   if (side !== "home" && side !== "away")
     return null;
-  const kind = entry.outcomeKind === "official" ? "official" : "price";
-  // [changmen 扩展] 兼容旧 VPS Index：全场价格决出不能显示为整场获胜。
-  if ((Number(entry.map) || 0) === 0 && kind !== "official")
+  // [changmen 扩展] 地图与全场 WIN 均只认官方胜方；忽略旧 Index 的价格判赢及缺失依据。
+  if (entry.outcomeKind !== "official")
     return null;
   return {
     winningTokenId: String(side === "home" ? entry.homeTokenId ?? "" : entry.awayTokenId ?? ""),
     mapOutcome: side,
-    outcomeKind: kind,
+    outcomeKind: "official",
     homeName: String(entry.homeName ?? ""),
     awayName: String(entry.awayName ?? ""),
     map: Number(entry.map) || 0,

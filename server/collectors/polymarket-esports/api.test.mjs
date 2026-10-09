@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   fetchPolymarketEsportsMarkets,
+  fetchPolymarketOfficialMarkets,
   normalizeSportsMarketType,
   polymarketEventForceDeletable,
   polymarketEventOpenForCollect,
@@ -11,6 +12,80 @@ import {
 } from "./api.js";
 
 describe("polymarket-esports api helpers", () => {
+  it("loads official token winners without using Gamma prices or token order", async () => {
+    const realFetch = globalThis.fetch;
+    const requests = [];
+    const rows = [{ conditionId: "cond-1", clobTokenIds: "[\"h\",\"a\"]", outcomePrices: "[\"0.999\",\"0.001\"]", events: [{ id: "evt" }] }];
+    globalThis.fetch = async (url, init) => {
+      requests.push({ url: String(url), signal: init.signal });
+      return { ok: true, json: async () => ({ condition_id: "cond-1", tokens: [
+        { token_id: "a", winner: true },
+        { token_id: "h", winner: false },
+      ] }) };
+    };
+    try {
+      const [market] = await fetchPolymarketOfficialMarkets(rows);
+      assert.equal(requests[0].url, "https://clob.polymarket.com/markets/cond-1");
+      assert.ok(requests[0].signal instanceof AbortSignal);
+      assert.deepEqual(market.events, rows[0].events);
+      assert.equal(market.clobTokenIds, rows[0].clobTokenIds);
+      assert.equal(market.tokens[0].token_id, "a");
+      assert.equal(rows[0].tokens, undefined, "input is not mutated");
+    }
+    finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it("does not fall back to price or unrelated winners on failed/mismatched CLOB responses", async () => {
+    const realFetch = globalThis.fetch;
+    const rows = ["failed", "wrong", "malformed"].map(conditionId => ({
+      conditionId,
+      clobTokenIds: "[\"h\",\"a\"]",
+      outcomePrices: "[\"1\",\"0\"]",
+      tokens: [{ token_id: "h", winner: true }],
+    }));
+    globalThis.fetch = async (url) => {
+      if (String(url).endsWith("/failed"))
+        throw new Error("network unavailable");
+      return { ok: true, json: async () => String(url).endsWith("/wrong")
+        ? { condition_id: "other", tokens: [{ token_id: "h", winner: true }] }
+        : { condition_id: "malformed", tokens: null } };
+    };
+    try {
+      const markets = await fetchPolymarketOfficialMarkets(rows);
+      assert.deepEqual(markets.map(m => m.tokens), [[], [], []]);
+      assert.deepEqual(markets.map(m => m.outcomePrices), ["[\"1\",\"0\"]", "[\"1\",\"0\"]", "[\"1\",\"0\"]"]);
+    }
+    finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it("limits official result queries to eight concurrent requests", async () => {
+    const realFetch = globalThis.fetch;
+    let active = 0;
+    let maximum = 0;
+    const signals = new Set();
+    globalThis.fetch = async (url, init) => {
+      signals.add(init.signal);
+      active++;
+      maximum = Math.max(maximum, active);
+      await new Promise(resolve => setImmediate(resolve));
+      active--;
+      return { ok: true, json: async () => ({ condition_id: String(url).split("/").at(-1), tokens: [] }) };
+    };
+    try {
+      const rows = Array.from({ length: 20 }, (_, i) => ({ conditionId: `cond-${i}` }));
+      const markets = await fetchPolymarketOfficialMarkets(rows);
+      assert.equal(markets.length, 20);
+      assert.equal(maximum, 8);
+      assert.equal(signals.size, 1, "the entire batch shares one deadline");
+    }
+    finally {
+      globalThis.fetch = realFetch;
+    }
+  });
   it("normalizeSportsMarketType never defaults to moneyline", () => {
     assert.equal(normalizeSportsMarketType({}), "");
     assert.equal(normalizeSportsMarketType({ sports_market_type: "spread" }), "spread");
@@ -131,8 +206,8 @@ describe("polymarket-esports api helpers", () => {
                 markets: [{
                   condition_id: "c-ended",
                   sportsMarketType: "moneyline",
-                  clob_token_ids: '["h","a"]',
-                  outcomes: '["A","B"]',
+                  clob_token_ids: "[\"h\",\"a\"]",
+                  outcomes: "[\"A\",\"B\"]",
                   closed: false,
                 }],
               },
@@ -146,8 +221,8 @@ describe("polymarket-esports api helpers", () => {
                 markets: [{
                   condition_id: "c-closed",
                   sportsMarketType: "moneyline",
-                  clob_token_ids: '["hc","ac"]',
-                  outcomes: '["A","B"]',
+                  clob_token_ids: "[\"hc\",\"ac\"]",
+                  outcomes: "[\"A\",\"B\"]",
                   closed: true,
                 }],
               },
@@ -160,9 +235,18 @@ describe("polymarket-esports api helpers", () => {
                 markets: [{
                   condition_id: "c-open",
                   sportsMarketType: "moneyline",
-                  clob_token_ids: '["h2","a2"]',
-                  outcomes: '["A","B"]',
+                  clob_token_ids: "[\"h2\",\"a2\"]",
+                  outcomes: "[\"A\",\"B\"]",
                   closed: false,
+                }, {
+                  condition_id: "c-map-closed",
+                  sportsMarketType: "child_moneyline",
+                  clob_token_ids: "[\"hm\",\"am\"]",
+                  outcomes: "[\"A\",\"B\"]",
+                  closed: true,
+                }, {
+                  condition_id: "c-archived",
+                  archived: true,
                 }],
               },
             ],
@@ -178,8 +262,9 @@ describe("polymarket-esports api helpers", () => {
     try {
       const out = await fetchPolymarketEsportsMarkets();
       assert.equal(out.rawEventCount, 3);
-      assert.equal(out.rawMarketCount, 1);
+      assert.equal(out.rawMarketCount, 2);
       assert.equal(out.markets[0].condition_id, "c-open");
+      assert.equal(out.markets[1].condition_id, "c-map-closed", "closed maps of active events still need official results");
       // ended-1 不进 exclude；只有 closed-1 进
       assert.deepEqual(out.excludeSourceMatchIds, ["closed-1"]);
     }
@@ -190,4 +275,3 @@ describe("polymarket-esports api helpers", () => {
     }
   });
 });
-

@@ -13,9 +13,7 @@
 
 import {
   prunePolymarketPlatformMatches,
-  replacePlatformBetsForMatch,
   replacePlatformBetsForMatchAsync,
-  writePlatformMatches,
   writePlatformMatchesAsync,
 } from "@changmen/db";
 import { formatBetOdds } from "@changmen/shared/odds_format";
@@ -23,6 +21,7 @@ import { formatBetOdds } from "@changmen/shared/odds_format";
 import {
   fetchBatchBuyPrices,
   fetchPolymarketEsportsMarkets,
+  fetchPolymarketOfficialMarkets,
   normalizeSportsMarketType,
   polymarketCollectStartTimeAllowed,
   resolveCollectMarketTypes,
@@ -49,9 +48,10 @@ export function isPolymarketCollectorPlatformWriteEnabled() {
  * @param {{
  *   fetchMarkets?: typeof fetchPolymarketEsportsMarkets,
  *   fetchPrices?: typeof fetchBatchBuyPrices,
+ *   fetchOfficialMarkets?: typeof fetchPolymarketOfficialMarkets,
  *   resolveTypes?: typeof resolveCollectMarketTypes,
- *   writeMatches?: typeof writePlatformMatches | typeof writePlatformMatchesAsync,
- *   replaceBets?: typeof replacePlatformBetsForMatch | typeof replacePlatformBetsForMatchAsync,
+ *   writeMatches?: typeof writePlatformMatchesAsync,
+ *   replaceBets?: typeof replacePlatformBetsForMatchAsync,
  *   persistIndex?: typeof persistPolymarketMarketIndex,
  *   pruneMatches?: typeof prunePolymarketPlatformMatches,
  *   writePlatform?: boolean,
@@ -62,6 +62,7 @@ export function isPolymarketCollectorPlatformWriteEnabled() {
 export async function runPolymarketEsportsDiscoveryCycle(deps = {}) {
   const fetchMarkets = deps.fetchMarkets ?? fetchPolymarketEsportsMarkets;
   const fetchPrices = deps.fetchPrices ?? fetchBatchBuyPrices;
+  const fetchOfficialMarkets = deps.fetchOfficialMarkets ?? fetchPolymarketOfficialMarkets;
   const resolveTypes = deps.resolveTypes ?? resolveCollectMarketTypes;
   const writeMatches = deps.writeMatches ?? writePlatformMatchesAsync;
   const replaceBets = deps.replaceBets ?? replacePlatformBetsForMatchAsync;
@@ -95,7 +96,7 @@ export async function runPolymarketEsportsDiscoveryCycle(deps = {}) {
 
   const filtered = [];
   for (const raw of typedMlRaw) {
-    const initial = buildPolymarketMappedMarket(raw);
+    const initial = buildPolymarketMappedMarket(raw, {}, { includeClosed: true });
     if (!initial)
       continue;
     if (!polymarketCollectStartTimeAllowed(initial.match.StartTime))
@@ -103,13 +104,19 @@ export async function runPolymarketEsportsDiscoveryCycle(deps = {}) {
     filtered.push(raw);
   }
 
-  const allAssetIds = filtered.flatMap(raw =>
+  const tracked = takeWholeMatchesUpTo(
+    filtered,
+    raw => String(raw.events?.[0]?.id ?? raw.events?.[0]?.slug ?? raw.condition_id ?? raw.conditionId ?? raw.market ?? raw.id),
+    maxTracked,
+  );
+  const officialMarkets = await fetchOfficialMarkets(tracked);
+  const allAssetIds = officialMarkets.filter(raw => !raw.closed && !raw.archived).flatMap(raw =>
     parseJsonArray(raw.clob_token_ids ?? raw.clobTokenIds));
   const buyPrices = await fetchPrices(allAssetIds);
 
   /** @type {ReturnType<typeof buildPolymarketMappedMarket>[]} */
   const mappedAll = [];
-  for (const raw of filtered) {
+  for (const raw of officialMarkets) {
     const mapped = buildPolymarketMappedMarket(raw, buyPrices);
     if (mapped)
       mappedAll.push(mapped);

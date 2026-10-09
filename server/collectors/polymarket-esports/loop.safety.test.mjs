@@ -1,11 +1,56 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { runPolymarketEsportsDiscoveryCycle } from "./loop.js";
+import { runPolymarketEsportsDiscoveryCycle as runDiscovery } from "./loop.js";
+
+// 现有写库安全测试不访问外部服务；官方结果入口由下方集成用例单独验证。
+function runPolymarketEsportsDiscoveryCycle(deps) {
+  return runDiscovery({
+    fetchOfficialMarkets: async markets => markets,
+    ...deps,
+  });
+}
 
 const MONEYLINE_TYPES = new Set(["moneyline", "child_moneyline"]);
 
 describe("polymarket-esports write safety", () => {
+  it("queries CLOB before mapping, preserves closed map winners, and prices only open markets", async () => {
+    const base = { sportsMarketType: "child_moneyline", groupItemTitle: "Map 1 Winner", gameStartTime: Date.now() - 3600_000, clobTokenIds: "[\"h\",\"a\"]", outcomes: "[\"STATE\",\"Teletubisie\"]", events: [{ id: "evt", slug: "cs2-sta-ttbs" }], outcomePrices: "[\"1\",\"0\"]" };
+    let queried;
+    let indexed;
+    let bets;
+    const stats = await runPolymarketEsportsDiscoveryCycle({
+      writePlatform: true,
+      resolveTypes: async () => MONEYLINE_TYPES,
+      fetchMarkets: async () => ({ markets: [
+        { ...base, conditionId: "closed-map", closed: true },
+        { ...base, conditionId: "unresolved-closed", closed: true },
+        { ...base, conditionId: "open-map", closed: false, clobTokenIds: "[\"h2\",\"a2\"]" },
+      ], rawEventCount: 1, rawMarketCount: 3 }),
+      fetchOfficialMarkets: async (markets) => {
+        queried = markets.map(m => m.conditionId);
+        return markets.map(m => ({ ...m, tokens: m.conditionId === "closed-map"
+          ? [{ token_id: "a", winner: true }]
+          : [] }));
+      },
+      fetchPrices: async (ids) => {
+        assert.deepEqual(ids, ["h2", "a2"]);
+        return { h2: 0.999, a2: 0.001 };
+      },
+      writeMatches: () => {},
+      replaceBets: (_p, _sid, rows) => { bets = rows; },
+      pruneMatches: async () => [],
+      persistIndex: (rows) => { indexed = rows; },
+    });
+    assert.equal(stats.bets, 2);
+    assert.deepEqual(queried, ["closed-map", "unresolved-closed", "open-map"]);
+    assert.equal(indexed[0].mapOutcome, "away");
+    assert.equal(indexed[0].outcomeKind, "official");
+    assert.equal(indexed[1].mapOutcome, undefined, "price 1 does not generate a winner");
+    assert.equal(bets[0].Status, "Locked");
+    assert.equal(bets[0].HomeOdds, 0);
+  });
+
   it("shadow mode never writes platform_*", async () => {
     const writes = [];
     const stats = await runPolymarketEsportsDiscoveryCycle({
@@ -42,8 +87,8 @@ describe("polymarket-esports write safety", () => {
         markets: [{
           condition_id: "x",
           sportsMarketType: "spread",
-          clob_token_ids: '["a","b"]',
-          outcomes: '["A","B"]',
+          clob_token_ids: "[\"a\",\"b\"]",
+          outcomes: "[\"A\",\"B\"]",
           active: true,
           events: [{ id: "e1" }],
           tags: [{ slug: "lol" }],
@@ -86,8 +131,8 @@ describe("polymarket-esports write safety", () => {
           condition_id: "x",
           sportsMarketType: "moneyline",
           groupItemTitle: "Match Winner",
-          clob_token_ids: '["a","b"]',
-          outcomes: '["Yes","No"]',
+          clob_token_ids: "[\"a\",\"b\"]",
+          outcomes: "[\"Yes\",\"No\"]",
           active: true,
           events: [{ id: "e1" }],
           tags: [{ slug: "lol" }],
@@ -127,8 +172,8 @@ describe("polymarket-esports write safety", () => {
           active: true,
           closed: false,
           gameStartTime: now + 600_000,
-          clob_token_ids: '["h","a"]',
-          outcomes: '["Alpha","Beta"]',
+          clob_token_ids: "[\"h\",\"a\"]",
+          outcomes: "[\"Alpha\",\"Beta\"]",
           events: [{ id: "evt-keep" }],
           tags: [{ slug: "lol" }],
         }],
@@ -173,8 +218,8 @@ describe("polymarket-esports write safety", () => {
           active: true,
           closed: false,
           gameStartTime: now + 600_000,
-          clob_token_ids: '["h","a"]',
-          outcomes: '["Alpha","Beta"]',
+          clob_token_ids: "[\"h\",\"a\"]",
+          outcomes: "[\"Alpha\",\"Beta\"]",
           events: [{ id: "evt-flutter" }],
           tags: [{ slug: "lol" }],
         }],
@@ -218,16 +263,16 @@ describe("polymarket-esports write safety", () => {
           {
             ...base,
             condition_id: "cond-ml",
-            clob_token_ids: '["h1","a1"]',
-            outcomes: '["Alpha","Beta"]',
+            clob_token_ids: "[\"h1\",\"a1\"]",
+            outcomes: "[\"Alpha\",\"Beta\"]",
           },
           {
             ...base,
             condition_id: "cond-m1",
             sportsMarketType: "child_moneyline",
             groupItemTitle: "Map 1 Winner",
-            clob_token_ids: '["h2","a2"]',
-            outcomes: '["Alpha","Beta"]',
+            clob_token_ids: "[\"h2\",\"a2\"]",
+            outcomes: "[\"Alpha\",\"Beta\"]",
           },
         ],
         rawEventCount: 1,
@@ -265,8 +310,8 @@ describe("polymarket-esports write safety", () => {
           active: true,
           closed: false,
           gameStartTime: now,
-          clob_token_ids: '["h","a"]',
-          outcomes: '["A","B"]',
+          clob_token_ids: "[\"h\",\"a\"]",
+          outcomes: "[\"A\",\"B\"]",
           events: [{ id: "evt-shadow" }],
           tags: [{ slug: "lol" }],
         }],

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { ViewBet, ViewMatch } from "@/models/match";
-import { computed } from "vue";
 import { formatOrderTime } from "@changmen/client-core/shared/format";
-import { readPrematchProbability } from "@/shared/pmPrematchProbability";
 import { lookupPmMapOutcomeByToken, pmMapOutcomeTick } from "@changmen/venue-adapter/polymarket";
+import { computed } from "vue";
+import { readPrematchProbability } from "@/shared/pmPrematchProbability";
 
 const props = defineProps<{ bet: ViewBet; match: ViewMatch }>();
 const pm = computed(() => props.bet.items.find(item => item.type === "Polymarket"));
@@ -17,7 +17,7 @@ const outcome = computed(() => {
 const homeWon = computed(() => !!outcome.value?.winningTokenId && outcome.value.winningTokenId === pm.value?.homeId);
 const awayWon = computed(() => !!outcome.value?.winningTokenId && outcome.value.winningTokenId === pm.value?.awayId);
 const outcomeDetail = computed(() => outcome.value
-  ? `${homeWon.value ? props.bet.homeName : props.bet.awayName} · ${outcome.value.outcomeKind === "official" ? "PM 官方胜负" : "PM 价格决出"}`
+  ? `${homeWon.value ? props.bet.homeName : props.bet.awayName} · PM 官方胜负`
   : undefined);
 const status = computed(() => {
   switch (result.value.status) {
@@ -37,7 +37,9 @@ const detail = computed(() => value.value
 
 <template>
   <div v-if="pm" class="item flex pm-prematch" :title="detail" @dblclick.stop>
-    <div class="item-type pm-prematch-badge" aria-label="C：PM 登记开赛时间前胜率">C</div>
+    <div class="item-type pm-prematch-badge" aria-label="C：PM 登记开赛时间前胜率">
+      C
+    </div>
     <div class="item-odds home" :class="{ 'pm-map-won': homeWon, 'pm-map-lost': awayWon }" :title="homeWon ? outcomeDetail : undefined" :aria-label="`${bet.homeName}：${value ? `${value.home.toFixed(1)}%` : status}${homeWon ? '，WIN' : ''}`">
       <span v-if="homeWon" class="pm-map-win-badge">WIN</span>
       {{ value ? `${value.home.toFixed(1)}%` : "—" }}
@@ -48,6 +50,7 @@ const detail = computed(() => value.value
     </div>
   </div>
 </template>
+
 <style scoped>
 .matchs .bet .bet-items .pm-prematch.item .item-odds {
   /* 沿用赔率格和当前主题背景，仅用主题强调色区分赛前参考值。 */

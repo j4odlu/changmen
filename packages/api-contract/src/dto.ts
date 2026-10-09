@@ -84,6 +84,7 @@ export interface PredictFunMarketIndex {
 
 /** [changmen 扩展] 地图/全场市场胜负（以 PM 为准） */
 export type PolymarketMapOutcomeSide = "home" | "away";
+/** [changmen 扩展] price 仅兼容旧 Index；比赛卡 WIN 不消费价格判赢。 */
 export type PolymarketMapOutcomeKind = "official" | "price";
 
 /** [changmen 扩展] VPS polymarket-esports-collector 写入，浏览器 WS 订阅用 */
@@ -108,7 +109,7 @@ export interface PolymarketMarketIndexEntry {
   startTime?: number;
   /**
    * [changmen 扩展] 该市场胜负（home/away 相对 Index 的 homeToken/awayToken）。
-   * official = tokens[].winner；price = outcomePrices ≥ 0.99。
+   * official = tokens[].winner；旧 price 数据不作为比赛卡 WIN 依据。
    */
   mapOutcome?: PolymarketMapOutcomeSide;
   outcomeKind?: PolymarketMapOutcomeKind;

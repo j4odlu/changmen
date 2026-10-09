@@ -1,6 +1,6 @@
 /**
  * Polymarket 电竞 discovery 解析（**唯一权威**）。
- * VPS collector：Gamma → platform_* + MarketIndex。
+ * VPS collector：Gamma 赛事 + CLOB 官方胜方 → platform_* + MarketIndex。
  * 浏览器不跑本文件；`packages/venue-adapter/polymarket/parse.ts` **只**保留报价/订单工具，
  * 禁止再镜像 `buildPolymarketMappedMarket`。
  */
@@ -8,7 +8,7 @@
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 
 const PLATFORM = "Polymarket";
-const YES_NO = /^(yes|no|是|否)$/i;
+const YES_NO = /^(?:yes|no|是|否)$/i;
 const WINNER_RE = /winner|win|胜者|获胜|moneyline/i;
 
 export function parseJsonArray(raw) {
@@ -166,13 +166,11 @@ export function decimalOddsFromProbability(price) {
   return truncateOddsTo3(1 / value);
 }
 
-/** 与浏览器订单结算一致：价决阈值 0.99 */
-const WINNER_PRICE_MIN = 0.99;
-
 /**
- * 以 PM 为准解析该市场胜负（相对 clob_token_ids[0]=home / [1]=away）。
+ * [changmen 扩展] 比赛卡只认 PM 官方胜方，不复用订单输赢的价格判断。
+ * 胜方相对 clob_token_ids[0]=home / [1]=away。
  * @param {object} market
- * @returns {{ mapOutcome: "home"|"away", outcomeKind: "official"|"price" } | null}
+ * @returns {{ mapOutcome: "home"|"away", outcomeKind: "official" } | null}
  */
 export function resolvePolymarketMapMarketOutcome(market) {
   const assetIds = parseJsonArray(market?.clob_token_ids ?? market?.clobTokenIds);
@@ -184,7 +182,9 @@ export function resolvePolymarketMapMarketOutcome(market) {
     return null;
 
   const tokens = Array.isArray(market?.tokens) ? market.tokens : [];
-  const winning = tokens.find(t => t?.winner === true);
+  const winners = tokens.filter(t => t?.winner === true);
+  // [changmen 扩展] 双胜方等异常响应不能被解释为一方 WIN。
+  const winning = winners.length === 1 ? winners[0] : null;
   if (winning) {
     const id = String(winning.token_id ?? winning.tokenId ?? "").trim();
     if (id && id === homeId)
@@ -193,29 +193,18 @@ export function resolvePolymarketMapMarketOutcome(market) {
       return { mapOutcome: "away", outcomeKind: "official" };
   }
 
-  // [changmen 扩展] 全场高价格只表示预期，不能代替官方胜负（例如 BO5 仍为 2–0）。
-  if (mapNumberOf(market) === 0)
-    return null;
-
-  const prices = parseJsonArray(market?.outcomePrices ?? market?.outcome_prices).map(Number);
-  for (let i = 0; i < prices.length; i++) {
-    const price = prices[i];
-    if (!Number.isFinite(price) || price < WINNER_PRICE_MIN)
-      continue;
-    if (i === 0)
-      return { mapOutcome: "home", outcomeKind: "price" };
-    if (i === 1)
-      return { mapOutcome: "away", outcomeKind: "price" };
-  }
   return null;
 }
 
 /**
  * @param {object} market
  * @param {Record<string, number|string>} [buyPrices]
+ * @param {{ includeClosed?: boolean }} [options] 仅用于官方结果查询前的形状校验
  */
-export function buildPolymarketMappedMarket(market, buyPrices = {}) {
-  if (!isOpenMarket(market))
+export function buildPolymarketMappedMarket(market, buyPrices = {}, options = {}) {
+  const open = isOpenMarket(market);
+  const outcome = resolvePolymarketMapMarketOutcome(market);
+  if (!open && !outcome && !options.includeClosed)
     return null;
   const map = mapNumberOf(market);
   if (map === null)
@@ -240,12 +229,11 @@ export function buildPolymarketMappedMarket(market, buyPrices = {}) {
   const matchHomeId = sourceTeamId(gameId, homeName);
   const matchAwayId = sourceTeamId(gameId, awayName);
 
-  const homeOdds = decimalOddsFromProbability(buyPrices[homeId]);
-  const awayOdds = decimalOddsFromProbability(buyPrices[awayId]);
+  const homeOdds = open ? decimalOddsFromProbability(buyPrices[homeId]) : 0;
+  const awayOdds = open ? decimalOddsFromProbability(buyPrices[awayId]) : 0;
   const locked = !homeOdds || !awayOdds;
   const event = eventOf(market);
   const pandascoreId = event?.gameId ? Number(event.gameId) : undefined;
-  const outcome = resolvePolymarketMapMarketOutcome(market);
   const resolutionSourceRaw = event?.resolutionSource ?? market?.resolutionSource;
   const resolutionSource = resolutionSourceRaw != null && String(resolutionSourceRaw).trim()
     ? String(resolutionSourceRaw).trim()

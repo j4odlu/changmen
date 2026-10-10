@@ -7,5 +7,5 @@ const GtcDetails = defineAsyncComponent(() => import("./gtc/OrderDetails.vue"));
 </script>
 
 <template>
-  <GtcDetails v-if="row.PmGtcExecutionId" :row="row" :readonly="readonly" />
+  <GtcDetails v-if="row.Type === 'Polymarket' && row.PmSide !== 'sell' && row.PmGtcExecutionId" :row="row" :readonly="readonly" />
 </template>

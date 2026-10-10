@@ -6,15 +6,6 @@ import { gtcOrderCardView } from "./orderCardView";
 
 const props = defineProps<{ execution: GtcExecution }>();
 const view = computed(() => gtcOrderCardView(props.execution));
-const otherStateLabels = {
-  not_attempted: "未提交",
-  authorized: "提交准备中",
-  accepted: "已受理",
-  pending: "待确认",
-  filled: "已成交",
-  rejected: "下单失败",
-  unknown: "结果待核实",
-};
 async function cancel() {
   try {
     await ElMessageBox.confirm("只取消这笔 PM 原挂单的剩余份额。已成交部分保留，本组继续由您处理。", "取消PM挂单", { type: "warning" });
@@ -48,12 +39,6 @@ async function cancel() {
     </div>
     <div v-if="view.detailError" class="gtc-order-extra__notice">
       {{ view.detailError }}
-    </div>
-    <div v-if="execution.plan.source !== 'manual'">
-      {{ execution.plan.otherProvider }}：{{ otherStateLabels[execution.other.state] }}<span v-if="execution.other.message"> · {{ execution.other.message }}</span>
-      <div v-if="execution.manual">
-        本组由您处理；不会自动补单或卖出。
-      </div>
     </div>
     <div v-if="execution.cancel" class="gtc-order-extra__notice">
       {{ execution.cancel.message }}

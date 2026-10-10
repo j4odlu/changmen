@@ -69,6 +69,8 @@ function onToggleFullMatchMuteGlobal() {
 const prematchModeRef = prematchFullMode();
 const prematchFullOn = computed(() => prematchModeRef.value !== "off");
 const prematchMode = computed(() => prematchModeRef.value);
+// [changmen 扩展] 展示全部盘口供手动下注，自动下注仍按赛前全场设置过滤。
+const showAllMarketsForManual = ref(false);
 
 function onTogglePrematchFull() {
   if (prematchModeRef.value === "off")
@@ -82,6 +84,7 @@ const startAtTick = ref(0);
 let startAtTickTimer: ReturnType<typeof setInterval> | null = null;
 
 watch(prematchModeRef, (mode) => {
+  showAllMarketsForManual.value = false;
   if (mode === "startAt") {
     startAtTick.value = Date.now();
     if (!startAtTickTimer)
@@ -107,17 +110,17 @@ const filteredMatchs = computed(() => {
   const searched = !q
     ? matchs.value
     : matchs.value.filter((m) => {
-      if (String(m.id).includes(q))
-        return true;
-      if (m.title.toLowerCase().includes(q))
-        return true;
-      if (m.game.toLowerCase().includes(q))
-        return true;
-      return m.bets.some(
-        b => b.homeName.toLowerCase().includes(q) || b.awayName.toLowerCase().includes(q),
-      );
-    });
-  return filterMatchesForPrematchFull(searched);
+        if (String(m.id).includes(q))
+          return true;
+        if (m.title.toLowerCase().includes(q))
+          return true;
+        if (m.game.toLowerCase().includes(q))
+          return true;
+        return m.bets.some(
+          b => b.homeName.toLowerCase().includes(q) || b.awayName.toLowerCase().includes(q),
+        );
+      });
+  return showAllMarketsForManual.value ? searched : filterMatchesForPrematchFull(searched);
 });
 
 const matchCountLabel = computed(() => {
@@ -234,11 +237,21 @@ async function logout() {
                 :class="{ 'is-on': prematchFullOn }"
                 :title="prematchFullOn
                   ? '关闭后恢复显示全部盘口；不改折叠、不拦补单'
-                  : '只显示未开赛的全场盘口，地图与滚球不展示、不新开仓。无 OB 时「OB开打」无法判断是否已开赛'"
+                  : '默认只显示未开赛的全场盘口；自动下注仅允许这些盘口，手动可查看全部。无 OB 时「OB开打」无法判断是否已开赛'"
                 :aria-pressed="prematchFullOn"
                 @click="onTogglePrematchFull"
               >
                 {{ prematchFullOn ? "开" : "关" }} 赛前全场
+              </button>
+              <button
+                v-if="prematchFullOn"
+                type="button"
+                class="map-mute-global-toggle"
+                :aria-pressed="showAllMarketsForManual"
+                title="只改变显示范围，自动下注仍按赛前全场过滤"
+                @click="showAllMarketsForManual = !showAllMarketsForManual"
+              >
+                {{ showAllMarketsForManual ? "只看赛前全场" : "查看全部盘口（手动）" }}
               </button>
               <span
                 v-if="prematchFullOn"

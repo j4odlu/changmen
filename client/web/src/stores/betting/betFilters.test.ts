@@ -34,6 +34,11 @@ const bet = { id: 1 } as never;
 const match = { game: "英雄联盟", gameId: 1 } as never;
 
 describe("accountPassesMainBetFilter", () => {
+  it.each([{ minOdds: 2 }, { maxOdds: 1.5 }])("automatic filtering retains account odds bounds: %j", (bounds) => {
+    const acc = makeAccount(bounds);
+    expect(accountPassesMainBetFilter(acc, bet, match, makeLeg(), matchStore)).toBe(false);
+  });
+
   it("比例 9999 仍通过主过滤（单边模式逻辑在 extensions/arbBet）", () => {
     const acc = makeAccount({
       rateConfig: [{ minOdds: 0, maxOdds: 0, rate: 9999 }],

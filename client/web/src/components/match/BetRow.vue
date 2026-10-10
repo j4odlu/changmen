@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import type { BetSide, ViewBet, ViewMatch } from "@/models/match";
 import type { PlatformId } from "@/types/esport";
+import { arbPercent, formatSecond, percent, toFixed } from "@changmen/client-core/shared/format";
+import {
+  getPbWsShadowRevision,
+  isPbWsShadowUiAllowed,
+  resolvePbWsShadow,
+  subscribePbWsShadow,
+} from "@changmen/venue-adapter/pb";
+import { getPolymarketPmSportBlockReason } from "@changmen/venue-adapter/polymarket";
+import { storeToRefs } from "pinia";
 import { computed, onUnmounted, ref, watch } from "vue";
 import LimitDiagDialog from "@/components/match/LimitDiagDialog.vue";
-import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import PmPrematchProbability from "@/components/match/PmPrematchProbability.vue";
+import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { useBetRowExtensionUiEnabled } from "@/composables/useExtensionPrefs";
-import { useUserStore } from "@/stores/userStore";
-import { storeToRefs } from "pinia";
 import { ArbLineOverlay, useBetRowArbUi } from "@/extensions/arbBet/ui";
 import {
   canFoldMap,
@@ -20,17 +27,10 @@ import {
   toggleMapMute,
 } from "@/extensions/mapBetMute";
 import { useEvMarker } from "@/extensions/valueBet";
-import { arbPercent, formatSecond, percent, toFixed } from "@changmen/client-core/shared/format";
 import { useCreateLoseDialogStore } from "@/stores/createLoseDialogStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { useOddsStore } from "@/stores/oddsStore";
-import { getPolymarketPmSportBlockReason } from "@changmen/venue-adapter/polymarket";
-import {
-  getPbWsShadowRevision,
-  isPbWsShadowUiAllowed,
-  resolvePbWsShadow,
-  subscribePbWsShadow,
-} from "@changmen/venue-adapter/pb";
+import { useUserStore } from "@/stores/userStore";
 
 /** allowBetting 须 withDefaults(true)：裸 `?: boolean` 缺省会被 Vue 铸成 false，电竞双击会静默失效 */
 const props = withDefaults(
@@ -91,6 +91,8 @@ const mapMuted = computed(() => {
   return isMapMuteActive(props.match.id, props.bet.round, props.match.liveRound);
 });
 const bettingEnabled = computed(() => props.allowBetting && !mapMuted.value);
+// [changmen 扩展] 仅展开赔率供手动下注，不改变静音状态或自动下注开关。
+const showManualOdds = ref(false);
 
 function onToggleMapMute(e: MouseEvent) {
   e.stopPropagation();
@@ -244,7 +246,8 @@ function pbShadowLabel(item: ViewBet["items"][0], side: BetSide): string | undef
 
 /** 旁显 CSS：H/M 区分来源；蓝下划线表示可点 */
 function pbShadowClass(item: ViewBet["items"][0], side: BetSide): Record<string, boolean> {
-  if (!pbSourceSplitActive(item)) return {};
+  if (!pbSourceSplitActive(item))
+    return {};
   void pbWsShadowTick.value;
   const oddId = side === "Home" ? item.homeId : item.awayId;
   const shadow = resolvePbWsShadow({ oddId, matchId: item.matchId, map: props.bet.round });
@@ -265,7 +268,8 @@ function pbShadowOddId(item: ViewBet["items"][0], side: BetSide): string {
 }
 
 function pbShadowSrcAttr(item: ViewBet["items"][0], side: BetSide): string | undefined {
-  if (!pbSourceSplitActive(item)) return undefined;
+  if (!pbSourceSplitActive(item))
+    return undefined;
   void pbWsShadowTick.value;
   return pbWsShadowEntry(item, side)?.source;
 }
@@ -279,7 +283,7 @@ function onPbShadowClick(item: ViewBet["items"][0], side: BetSide, e: MouseEvent
 /** 双击影子价：打开手动下单（主价/fo 路径不变；旁显只负责同步官网展示） */
 function onPbShadowDblClick(item: ViewBet["items"][0], side: BetSide, e: MouseEvent) {
   e.stopPropagation();
-  if (!bettingEnabled.value)
+  if (!props.allowBetting)
     return;
   void matchStore.manualBet(props.match, props.bet, item, side);
 }
@@ -413,7 +417,7 @@ function openLimit(item: ViewBet["items"][0]) {
 }
 
 function onOddsDblClick(item: ViewBet["items"][0], side: BetSide) {
-  if (!bettingEnabled.value || (item.type === "Polymarket" && pmQuoteBlocked.value))
+  if (!props.allowBetting || (item.type === "Polymarket" && pmQuoteBlocked.value))
     return;
   void matchStore.manualBet(props.match, props.bet, item, side);
 }
@@ -455,16 +459,26 @@ function onBetTitleDblClick() {
       :disabled="bet.round === 0 && muteFullMatchGlobalRef"
       :title="bet.round === 0 && muteFullMatchGlobalRef
         ? '已由全场胜负总开关关闭'
-        : mapMuted ? '展开并允许下注' : '折叠并禁止下注'"
+        : mapMuted ? '展开并允许自动下注' : '折叠并禁止自动下注（手动可查看盘口）'"
       :aria-pressed="mapMuted"
       @click="onToggleMapMute"
     >
       {{ bet.round === 0 && muteFullMatchGlobalRef ? "总关" : mapMuted ? "开" : "关" }}
     </button>
+    <button
+      v-if="mapMuted && allowBetting"
+      type="button"
+      class="map-mute-toggle manual-odds-toggle"
+      title="查看赔率后双击手动下注，自动下注仍关闭"
+      :aria-pressed="showManualOdds"
+      @click.stop="showManualOdds = !showManualOdds"
+    >
+      {{ showManualOdds ? "收起赔率" : "手动下注" }}
+    </button>
     <div class="bet-title" @dblclick="onBetTitleDblClick">
       {{ bet.getBetName() }} - {{ arb }}
     </div>
-    <div v-show="!mapMuted" ref="itemsContainerRef" class="bet-items">
+    <div v-show="!mapMuted || showManualOdds" ref="itemsContainerRef" class="bet-items">
       <PmPrematchProbability v-if="!bet.marketCode && bet.round >= 0" :bet="bet" :match="match" />
       <div v-if="showDefaultOdds" class="item flex defaultOdds">
         <div class="item-type default" />

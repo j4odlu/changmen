@@ -8,7 +8,8 @@ import { assertGtcHistoryAllowsLeg } from "./successMarkers";
 
 export function gtcAccountAllows(account: PlatformAccount, leg: BetOption, bet: ViewBet, match: ViewMatch, owner: string, noSameBet: boolean, manual = false): boolean {
   const matches = useMatchStore();
-  if (account.isPause() || account.markupOnly || !account.checkOdds(leg.odds, match.gameId)
+  // [changmen 扩展] 手动下单跳过账号最低/最高赔率；自动下单仍检查。
+  if (account.isPause() || account.markupOnly || (!manual && !account.checkOdds(leg.odds, match.gameId))
     || !passesDefaultOddsAt(account, matches.getDefaultOdds?.(bet.id, leg.target))) {
     return false;
   }

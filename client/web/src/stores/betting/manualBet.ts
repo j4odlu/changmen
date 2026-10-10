@@ -4,7 +4,6 @@ import { BetOption } from "@changmen/client-core/models/betOption";
 import { ElMessageBox } from "element-plus";
 import { h, ref } from "vue";
 import PmManualOrderPrompt from "@/components/betting/PmManualOrderPrompt.vue";
-import { accountPassesMainBetFilter } from "@/domain/betting/betFilters";
 import { capturePmPriceQuote } from "@/domain/polymarket/tickBufferQuote";
 import { isMapMuteActive } from "@/extensions/mapBetMute";
 import { isPrematchFullMarketAllowed } from "@/extensions/prematchFullOnly";
@@ -15,7 +14,6 @@ import { captureManualExecutionSelection } from "@/stores/betting/execution/sele
 import {
   buildManualBetContextLines,
 } from "@/stores/betting/manualBetAlert";
-import { useMatchStore } from "@/stores/matchStore";
 import { useUserStore } from "@/stores/userStore";
 
 /** 手动下单默认金额：优先正EV金额，未配置时回退套利 betMoney */
@@ -59,14 +57,7 @@ export async function runManualBet(
 ): Promise<void> {
   const accountStore = useAccountStore();
   const user = useUserStore();
-  const matchStore = useMatchStore();
   const { setMessage } = ctx;
-
-  // [changmen 扩展] 折叠/总关盘口与赛前全场过滤均不得绕过核心手动下注入口
-  if (isMapMuteActive(match.id, bet.round, match.liveRound)
-    || !isPrematchFullMarketAllowed(match, bet)) {
-    return;
-  }
 
   // 先 getAccount(type, 0)，无账号再提示；有账号才 prompt 金额
   const account = accountStore.getAccount(item.type, 0);
@@ -123,14 +114,18 @@ export async function runManualBet(
   option.odds = odds;
   // [changmen 扩展] 比例 9999 仅控制自动下单；手动下单使用用户输入金额。
   const selection = captureManualExecutionSelection(pmOrderMode.value);
-  if (selection.orderMode === "FOK" && !accountPassesMainBetFilter(account, bet, match, option, matchStore)) {
-    await ElMessageBox.alert(`当前 ${item.type} 账号不满足买入条件`, "提示");
-    return;
-  }
-  const bal = account.getBalance();
-  if (bal !== undefined && bal < amount) {
-    await ElMessageBox.alert(`余额不足（${bal} < ${amount}）`, String(item.type));
-    return;
+  // [A8 可证实] index0706.js 手动入口 p：选账号、输入金额后直接平台预检，不套用自动筛选或余额门控。
+  if (item.type === "Polymarket" && selection.orderMode === "GTC") {
+    // [changmen 扩展] 模式在金额弹窗中确定；PM GTC 保留原有盘口开关和本金余额检查。
+    if (isMapMuteActive(match.id, bet.round, match.liveRound)
+      || !isPrematchFullMarketAllowed(match, bet)) {
+      return;
+    }
+    const bal = account.getBalance();
+    if (bal !== undefined && bal < amount) {
+      await ElMessageBox.alert(`余额不足（${bal} < ${amount}）`, String(item.type));
+      return;
+    }
   }
   await executeManualOrder(account, option, selection, {
     match,

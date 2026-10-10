@@ -31,6 +31,13 @@
 .matchs .bet:has(.map-mute-toggle) .bet-title {
   padding-right:28px;
 }
+/* [changmen 扩展] 查看手动赔率与自动开关分置两侧，避免按钮重叠。 */
+.matchs .bet .manual-odds-toggle {
+  left:4px;right:auto;
+}
+.matchs .bet:has(.manual-odds-toggle) .bet-title {
+  padding-left:68px;
+}
 .matchs .bet.is-map-muted {
   opacity:.72;
 }

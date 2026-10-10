@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from "pinia";
 import type { BetSide, ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useMatchStore } from "@/stores/matchStore";
+import { isMapMuteActive, resetMapBetMuteForTests, setFullMatchMuteGlobal } from "@/extensions/mapBetMute";
 import {
   clearPmTickStateForTests, resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs,
 } from "@changmen/venue-adapter/polymarket";
@@ -41,6 +42,7 @@ type State = {
   itemQuotePending: (item: ViewBetItem, side: BetSide) => boolean;
   evMarker: { evLabel: (item: ViewBetItem, side: BetSide) => string | undefined };
   onOddsDblClick: (item: ViewBetItem, side: BetSide) => void;
+  onPbShadowDblClick: (item: ViewBetItem, side: BetSide, e: MouseEvent) => void;
   onTarget: (platform: ViewBetItem["type"], side: BetSide) => void;
 };
 function item(type: ViewBetItem["type"]): ViewBetItem {
@@ -67,10 +69,12 @@ function mount(pmSport?: ViewMatch["pmSport"], round = 3, allowBetting = true) {
 }
 beforeEach(() => {
   setActivePinia(createPinia()); clearPmTickStateForTests(); resetPmArbPriceBufferPrefsForTests();
+  resetMapBetMuteForTests();
 });
 afterEach(() => {
   for (const app of apps.splice(0)) app.unmount();
   resetPmArbPriceBufferPrefsForTests(); vi.restoreAllMocks();
+  resetMapBetMuteForTests();
 });
 
 it("missing tick is pending for an open match, then locks immediately when the match finishes", async () => {
@@ -121,4 +125,25 @@ it("missing PM match status does not block an otherwise valid quote", () => {
   const { state, pm } = mount();
   expect(state.itemOdds(pm, "Home")).toBe(3);
   expect(state.itemQuotePending(pm, "Home")).toBe(false);
+});
+
+it("muted rows allow manual double-clicks while target selection and automatic mute stay unchanged", () => {
+  setFullMatchMuteGlobal(true);
+  const { state, match, bet, pb } = mount(undefined, 0);
+  const manual = vi.spyOn(useMatchStore(), "manualBet").mockResolvedValue(undefined);
+  const target = vi.spyOn(useMatchStore(), "setBetTarget").mockResolvedValue(true);
+  state.onOddsDblClick(pb, "Away");
+  state.onPbShadowDblClick(pb, "Home", { stopPropagation: vi.fn() } as unknown as MouseEvent);
+  state.onTarget("PB", "Away");
+  expect(manual).toHaveBeenCalledTimes(2);
+  expect(target).not.toHaveBeenCalled();
+  expect(isMapMuteActive(match.id, bet.round, match.liveRound)).toBe(true);
+});
+
+it("sports read-only rows still reject manual double-clicks", () => {
+  const { state, pb } = mount(undefined, 0, false);
+  const manual = vi.spyOn(useMatchStore(), "manualBet").mockResolvedValue(undefined);
+  state.onOddsDblClick(pb, "Away");
+  state.onPbShadowDblClick(pb, "Home", { stopPropagation: vi.fn() } as unknown as MouseEvent);
+  expect(manual).not.toHaveBeenCalled();
 });

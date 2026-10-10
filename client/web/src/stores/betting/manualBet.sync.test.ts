@@ -1,14 +1,16 @@
 import type { ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
-import { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { resolveVenueStakeFromPlanCny } from "@changmen/venue-adapter/adaptation";
 import { clearPmTickBufferMetadata, clearPmTickStateForTests, notePmTickBufferBook, resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs } from "@changmen/venue-adapter/polymarket";
 import { ElMessageBox } from "element-plus";
 import { createPinia, setActivePinia } from "pinia";
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { accountPassesMainBetFilter } from "@/domain/betting/betFilters";
 import { attachPolymarketDetectionQuote } from "@/domain/polymarket/attachDetectionQuote";
 import { resetMapBetMuteForTests, setFullMatchMuteGlobal } from "@/extensions/mapBetMute";
 import { resetPrematchFullOnlyForTests, setPrematchFullMode } from "@/extensions/prematchFullOnly";
+import { PlatformAccount } from "@/models/platformAccount";
+import { incrementBetCount, setLastBetOdds } from "@/shared/betTiming";
 import { runManualBet } from "@/stores/betting/manualBet";
 import { useOddsStore } from "@/stores/oddsStore";
 
@@ -50,7 +52,7 @@ vi.mock("@/stores/userStore", () => ({
   useUserStore: () => ({ config: { betMoney: 10 } }),
 }));
 vi.mock("@/stores/matchStore", () => ({
-  useMatchStore: () => ({}),
+  useMatchStore: () => ({ getBetTarget: () => undefined }),
 }));
 vi.mock("@/stores/betting/arbOrderBind", () => ({
   refreshOrderListAfterBind,
@@ -59,9 +61,6 @@ vi.mock("@/stores/betting/successMarkers", () => ({
   markSuccessfulBet,
 }));
 vi.mock("@/orderModes/gtc/accountFilter", () => ({ gtcAccountAllows: () => true }));
-vi.mock("@/domain/betting/betFilters", () => ({
-  accountPassesMainBetFilter: () => true,
-}));
 vi.mock("@changmen/client-core/shared/wait", () => ({ wait }));
 vi.mock("element-plus", () => ({
   ElMessageBox: {
@@ -69,6 +68,12 @@ vi.mock("element-plus", () => ({
     alert: vi.fn(async () => undefined),
   },
 }));
+
+function manualTestAccount(provider: "Polymarket" | "RAY" = "Polymarket", balance = 1000) {
+  const account = new PlatformAccount({ accountId: 1, playerName: "manual", provider });
+  account.balance = balance;
+  return account;
+}
 
 describe("runManualBet post-success sync", () => {
   beforeEach(() => {
@@ -84,10 +89,7 @@ describe("runManualBet post-success sync", () => {
     betting.mockClear();
     checkBetting.mockClear();
     getAccount.mockReset();
-    getAccount.mockReturnValue({
-      provider: "Polymarket",
-      getBalance: () => 1000,
-    });
+    getAccount.mockReturnValue(manualTestAccount());
     betting.mockResolvedValue({
       success: true,
       orderId: "0xabc",
@@ -249,7 +251,7 @@ describe("runManualBet post-success sync", () => {
     );
   });
 
-  it("[changmen 扩展] 赛前全场模式下地图不弹 prompt", async () => {
+  it("[A8 可证实] manual FOK still opens and executes on maps excluded by prematch-full mode", async () => {
     setPrematchFullMode("liveRound");
     const match = {
       id: 1,
@@ -268,17 +270,21 @@ describe("runManualBet post-success sync", () => {
     } as unknown as ViewBet;
     const item = {
       type: "Polymarket",
+      matchId: "m1",
+      betId: "b1",
+      getItemId: () => "i1",
       getOdds: () => 1.8,
     } as unknown as ViewBetItem;
 
     await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
 
-    expect(ElMessageBox.prompt).not.toHaveBeenCalled();
+    expect(ElMessageBox.prompt).toHaveBeenCalledOnce();
     expect(ElMessageBox.alert).not.toHaveBeenCalled();
-    expect(getAccount).not.toHaveBeenCalled();
+    expect(checkBetting).toHaveBeenCalledOnce();
+    expect(betting).toHaveBeenCalledOnce();
   });
 
-  it("[changmen 扩展] 全场胜负总关不能绕过手动下注核心入口", async () => {
+  it("[A8 可证实] manual FOK executes while full-match automatic betting is muted", async () => {
     setFullMatchMuteGlobal(true);
     const match = {
       id: 1,
@@ -297,14 +303,129 @@ describe("runManualBet post-success sync", () => {
     } as unknown as ViewBet;
     const item = {
       type: "Polymarket",
+      matchId: "m1",
+      betId: "b1",
+      getItemId: () => "i1",
       getOdds: () => 1.8,
     } as unknown as ViewBetItem;
 
     await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
 
-    expect(ElMessageBox.prompt).not.toHaveBeenCalled();
+    expect(ElMessageBox.prompt).toHaveBeenCalledOnce();
     expect(ElMessageBox.alert).not.toHaveBeenCalled();
-    expect(getAccount).not.toHaveBeenCalled();
+    expect(checkBetting).toHaveBeenCalledOnce();
+    expect(betting).toHaveBeenCalledOnce();
+  });
+});
+
+describe("[A8 可证实] RAY manual bypasses automatic account filters", () => {
+  const match = { id: 1, title: "A vs B", bets: [], game: "CS" } as unknown as ViewMatch;
+  const bet = { id: 1, homeName: "A", awayName: "B", getBetName: () => "Full Match", items: [] } as unknown as ViewBet;
+  const item = { type: "RAY", matchId: "m1", betId: "b1", getOdds: () => 1.2, getItemId: () => "i1" } as unknown as ViewBetItem;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setActivePinia(createPinia());
+    resetMapBetMuteForTests();
+    resetPrematchFullOnlyForTests();
+    prompt.mockResolvedValue({ value: "25" });
+    sessionStorage.removeItem("BETCOUNT:1:1:Away");
+  });
+
+  it.each([
+    { minOdds: 1.5 },
+    { minOdds: 0, maxBalance: 500, maxBalanceOdds: 2 },
+    { maxOdds: 1.1 },
+  ])("allows Away @ 1.2 outside the account odds bounds: %j", async (restriction) => {
+    const account = new PlatformAccount({ accountId: 1, playerName: "manual-ray", provider: "RAY", ...restriction });
+    account.balance = 1000;
+    expect(account.checkOdds(1.2)).toBe(false);
+    getAccount.mockReturnValue(account);
+
+    await runManualBet(match, bet, item, "Away", { setMessage: vi.fn() });
+
+    expect(getAccount).toHaveBeenCalledWith("RAY", 0);
+    expect(checkBetting).toHaveBeenCalledWith(account, expect.objectContaining({ target: "Away", odds: 1.2, betMoney: 25 }), { skipAccountRate: true });
+    expect(betting).toHaveBeenCalledOnce();
+    expect(ElMessageBox.alert).not.toHaveBeenCalled();
+  });
+
+  it.each([{ pause: true }, { markupOnly: true }])("bypasses automatic pause/markup restrictions: %j", async (restriction) => {
+    const account = new PlatformAccount({ accountId: 1, playerName: "manual-ray", provider: "RAY", ...restriction });
+    account.balance = 1000;
+    getAccount.mockReturnValue(account);
+
+    await runManualBet(match, bet, item, "Away", { setMessage: vi.fn() });
+
+    expect(checkBetting).toHaveBeenCalledOnce();
+    expect(betting).toHaveBeenCalledOnce();
+    expect(ElMessageBox.alert).not.toHaveBeenCalled();
+  });
+
+  it("delegates insufficient local balance to the venue", async () => {
+    const account = manualTestAccount("RAY", 5);
+    account.minOdds = 1.5;
+    getAccount.mockReturnValue(account);
+    await runManualBet(match, bet, item, "Away", { setMessage: vi.fn() });
+    expect(checkBetting).toHaveBeenCalledOnce();
+    expect(betting).toHaveBeenCalledOnce();
+    expect(ElMessageBox.alert).not.toHaveBeenCalled();
+  });
+
+  it.each(["initial", "count", "last", "target"] as const)("bypasses %s gate while the automatic account filter still rejects it", async (gate) => {
+    const account = manualTestAccount("RAY");
+    const context = {
+      getDefaultOdds: () => 2,
+      getBetTarget: () => gate === "target" ? "Home" as const : undefined,
+    };
+    if (gate === "initial")
+      account.minDefault = 3;
+    if (gate === "count") {
+      account.maxBetCount = 1;
+      incrementBetCount(account.accountId, bet.id, "Away");
+    }
+    if (gate === "last") {
+      account.lastOdds = true;
+      setLastBetOdds(account.accountId, bet.id, "Away", 1.5);
+    }
+    expect(accountPassesMainBetFilter(account, bet, match, { odds: 1.2, target: "Away" } as never, context)).toBe(false);
+    getAccount.mockReturnValue(account);
+    await runManualBet(match, bet, item, "Away", { setMessage: vi.fn() });
+    expect(checkBetting).toHaveBeenCalledOnce();
+    expect(betting).toHaveBeenCalledOnce();
+    expect(ElMessageBox.alert).not.toHaveBeenCalled();
+  });
+
+  it.each([2, 9999])("uses the entered CNY amount without applying account rate %s", async (rate) => {
+    const account = manualTestAccount("RAY");
+    account.rateConfig = [{ minOdds: 0, maxOdds: 0, rate }];
+    getAccount.mockReturnValue(account);
+    checkBetting.mockImplementationOnce(async (_account, opt, opts) => {
+      const option = opt as { betMoney: number; odds: number; data?: unknown };
+      option.betMoney = resolveVenueStakeFromPlanCny(account, option.betMoney, option.odds, opts);
+      option.data = {};
+      return option;
+    });
+    await runManualBet(match, bet, item, "Away", { setMessage: vi.fn() });
+    expect(betting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 25 }), expect.any(Number));
+  });
+
+  it("stops when the venue precheck fails", async () => {
+    const account = new PlatformAccount({ accountId: 1, playerName: "manual-ray", provider: "RAY", minOdds: 1.5 });
+    account.balance = 1000;
+    getAccount.mockReturnValue(account);
+    checkBetting.mockImplementationOnce(async (_account, opt) => {
+      const option = opt as { data?: unknown; checkError?: string };
+      option.data = null;
+      option.checkError = "平台最低投注金额为 50";
+      return option;
+    });
+
+    await runManualBet(match, bet, item, "Away", { setMessage: vi.fn() });
+
+    expect(checkBetting).toHaveBeenCalledOnce();
+    expect(betting).not.toHaveBeenCalled();
+    expect(ElMessageBox.alert).toHaveBeenCalledWith(expect.stringContaining("平台最低投注金额为 50"), "RAY 预检未通过", expect.anything());
   });
 });
 
@@ -314,7 +435,7 @@ describe("pM manual mode selection", () => {
   const item = { type: "Polymarket", matchId: "m1", betId: "b1", getOdds: () => 1.8, getItemId: () => "i1" } as unknown as ViewBetItem;
   beforeEach(() => {
     vi.clearAllMocks(); setActivePinia(createPinia()); resetMapBetMuteForTests(); resetPrematchFullOnlyForTests();
-    getAccount.mockReturnValue({ provider: "Polymarket", getBalance: () => 1000 });
+    getAccount.mockReturnValue(manualTestAccount());
     prompt.mockResolvedValue({ value: "25" });
   });
   it("explicit GTC invokes the separate manual module and never old check/place/settlement", async () => {
@@ -325,6 +446,34 @@ describe("pM manual mode selection", () => {
     await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
     expect(executeManualGtc).toHaveBeenCalledOnce(); expect(checkBetting).not.toHaveBeenCalled();
     expect(betting).not.toHaveBeenCalled(); expect(updateVenueOrders).not.toHaveBeenCalled();
+  });
+  it("[changmen 扩展] GTC retains its principal balance check", async () => {
+    const account = manualTestAccount();
+    vi.spyOn(account, "getBalance").mockReturnValue(5);
+    getAccount.mockReturnValue(account);
+    prompt.mockImplementationOnce(async (...args: unknown[]) => {
+      (args[0] as { props: { "onUpdate:modelValue": (value: string) => void } }).props["onUpdate:modelValue"]("GTC");
+      return { value: "25" };
+    });
+    await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
+    expect(executeManualGtc).not.toHaveBeenCalled();
+    expect(checkBetting).not.toHaveBeenCalled();
+    expect(betting).not.toHaveBeenCalled();
+    expect(ElMessageBox.alert).toHaveBeenCalledWith("余额不足（5 < 25）", "Polymarket");
+  });
+  it.each(["muted", "prematch"] as const)("[changmen 扩展] GTC retains the %s market gate", async (gate) => {
+    if (gate === "muted")
+      setFullMatchMuteGlobal(true);
+    else setPrematchFullMode("liveRound");
+    prompt.mockImplementationOnce(async (...args: unknown[]) => {
+      (args[0] as { props: { "onUpdate:modelValue": (value: string) => void } }).props["onUpdate:modelValue"]("GTC");
+      return { value: "25" };
+    });
+    await runManualBet({ ...match, liveRound: 0 } as ViewMatch, { ...bet, round: gate === "muted" ? 0 : 1 } as ViewBet, item, "Home", { setMessage: vi.fn() });
+    expect(executeManualGtc).not.toHaveBeenCalled();
+    expect(checkBetting).not.toHaveBeenCalled();
+    expect(betting).not.toHaveBeenCalled();
+    expect(ElMessageBox.alert).not.toHaveBeenCalled();
   });
   it("opening another prompt resets to FOK after a GTC selection", async () => {
     prompt.mockImplementationOnce(async (...args: unknown[]) => {
@@ -354,7 +503,7 @@ describe("pM manual mode selection", () => {
     expect(betting).not.toHaveBeenCalled(); expect(ElMessageBox.alert).toHaveBeenCalledWith("GTC unavailable", "PM GTC 手动下单");
   });
   it("other venues retain the plain amount prompt", async () => {
-    getAccount.mockReturnValue({ provider: "RAY", getBalance: () => 1000 });
+    getAccount.mockReturnValue(manualTestAccount("RAY"));
     await runManualBet(match, bet, { ...item, type: "RAY" } as ViewBetItem, "Home", { setMessage: vi.fn() });
     expect(prompt.mock.calls[0]?.[0]).toEqual(expect.any(String)); expect(executeManualGtc).not.toHaveBeenCalled();
   });

@@ -6,6 +6,7 @@
  * 字段契约：id, at, shares, proceeds；可选 price, pnl, origin, status
  * Incoming 也可带 o.sells / o.positionEvents.sells（仅 upsert，空数组不清空）。
  */
+import { Currency, getExchange } from "@changmen/shared/currency";
 
 function asObj(v) {
   return v && typeof v === "object" && !Array.isArray(v) ? v : {};
@@ -191,7 +192,9 @@ export function sellDbRowToPositionEvent(row) {
       at,
       shares: raw.pmShares,
       price: raw.pmFillPrice,
-      proceeds: raw.pmStakeUsdc,
+      // [changmen 扩展] GTC 卖单 stake 是摊销成本，回填也必须取卖单现金。
+      proceeds: raw.pmGtcExecutionId && Number.isFinite(Number(row.bet_money))
+        ? Math.round(Number(row.bet_money) / getExchange(Currency.USDT) * 10000) / 10000 : raw.pmStakeUsdc,
       pnl: raw.pmRealizedPnlUsdc,
       origin: raw.pmOrigin === "external" ? "external" : "changmen",
     });

@@ -30,12 +30,28 @@ describe("gTC independent coordination handler", () => {
     await expect(handlePmGtc("Pm_GtcCreate", { ...body(), plan: { ...plan, source: "unsupported" } }, "owner")).rejects.toThrow("来源无效");
     expect(mocks.create).not.toHaveBeenCalled();
   });
-  it("blocks unsupported aliases before either venue POST without affecting FOK routes", async () => {
+  it("another account on the same wallet does not block creation for the selected owned account", async () => {
     const accounts = mocks.accounts(); mocks.accounts.mockReturnValue([...accounts, { ...accounts[0], accountId: 3 }]);
-    await expect(handlePmGtc("Pm_GtcCreate", body(), "owner")).rejects.toThrow("多个账号别名"); expect(mocks.create).not.toHaveBeenCalled();
+    await handlePmGtc("Pm_GtcCreate", body(), "owner");
+    expect(mocks.create).toHaveBeenCalledOnce();
+    expect(mocks.create.mock.calls[0][0]).toMatchObject({ maker, plan: { playerId: 1, otherPlayerId: 2 } });
+    expect(mocks.owned.mock.calls).toEqual([[1, "owner"], [2, "owner"]]);
+  });
+  it("malformed credentials in an unrelated account cannot block the selected account", async () => {
+    mocks.accounts.mockReturnValue([...mocks.accounts(), { accountId: 3, provider: "Polymarket", token: "broken old credential" }]);
+    await handlePmGtc("Pm_GtcCreate", body(), "owner");
+    expect(mocks.create).toHaveBeenCalledOnce();
   });
   it("requires authentication", async () => { await expect(handlePmGtc("Pm_GtcList", {}, null)).rejects.toThrow("登录"); expect(mocks.list).not.toHaveBeenCalled(); });
   it("lists only authenticated owner", async () => { await handlePmGtc("Pm_GtcList", { owner: "other" }, "owner"); expect(mocks.list).toHaveBeenCalledWith("owner"); });
+  it("scopes history by the current bet while ignoring a supplied foreign owner", async () => {
+    await handlePmGtc("Pm_GtcList", { owner: "foreign", betRowId: 42 }, "owner");
+    expect(mocks.list).toHaveBeenCalledExactlyOnceWith("owner", 42);
+  });
+  it.each([0, -1, "bad", 1.5])("rejects an invalid scoped bet ID: %s", async (betRowId) => {
+    await expect(handlePmGtc("Pm_GtcList", { betRowId }, "owner")).rejects.toThrow("盘口 ID");
+    expect(mocks.list).not.toHaveBeenCalled();
+  });
   it("derives real wallet from owned account and never persists credentials", async () => {
     await handlePmGtc("Pm_GtcCreate", { ...body(), plan: { ...plan, privateKey: "do-not-store", token: "do-not-store" } }, "owner");
     const saved = mocks.create.mock.calls[0][0]; expect(saved.walletKey).toBe(`137:polymarket-collateral:${maker}`);
@@ -43,6 +59,13 @@ describe("gTC independent coordination handler", () => {
   });
   it("refuses a different client wallet identity", async () => { await expect(handlePmGtc("Pm_GtcCreate", { ...body(), maker: `0x${"c".repeat(40)}` }, "owner")).rejects.toThrow("钱包不一致"); expect(mocks.create).not.toHaveBeenCalled(); });
   it("refuses foreign accounts before reservation", async () => { mocks.owned.mockResolvedValueOnce({ ok: false, msg: "foreign" }); await expect(handlePmGtc("Pm_GtcCreate", body(), "owner")).rejects.toThrow("foreign"); expect(mocks.create).not.toHaveBeenCalled(); });
-  it("rejects unknown fee curve before persistence", async () => { await expect(handlePmGtc("Pm_GtcCreate", { ...body(), plan: { ...plan, feeProof: { rate: "0" } } }, "owner")).rejects.toThrow("费用规则"); expect(mocks.create).not.toHaveBeenCalled(); });
+  it.each([undefined, { rate: "0" }, { rate: "0.05", exponent: 2, takerOnly: true, observedAt: 1 }])("fee evidence is not required to create an order: %s", async (feeProof) => {
+    await handlePmGtc("Pm_GtcCreate", { ...body(), plan: { ...plan, feeProof } }, "owner");
+    expect(mocks.create).toHaveBeenCalledOnce(); expect(mocks.create.mock.calls[0][0].plan.feeProof).toBeUndefined();
+  });
+  it("retains valid legacy fee evidence without applying a fee budget gate", async () => {
+    await handlePmGtc("Pm_GtcCreate", { ...body(), plan: { ...plan, feeProof: { ...plan.feeProof, rate: "0.5" } } }, "owner");
+    expect(mocks.create.mock.calls[0][0].plan).toMatchObject({ shares: "10", maxPrincipal: "5", allInBudget: "5", feeProof: { rate: "0.5" } });
+  });
   it("commands carry authenticated owner and revision", async () => { await handlePmGtc("Pm_GtcCommand", { id: body().id, revision: 4, command: JSON.stringify({ kind: "close" }), owner: "foreign" }, "owner"); expect(mocks.command).toHaveBeenCalledWith("owner", body().id, 4, { kind: "close" }); });
 });

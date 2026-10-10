@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { ElMessage } from "element-plus";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { OrderRow } from "@/types/order";
 
 const mocks = vi.hoisted(() => ({
-  save: vi.fn(), final: vi.fn(), sell: vi.fn(), finish: vi.fn(),
+  save: vi.fn(), gtcSave: vi.fn(), final: vi.fn(), sell: vi.fn(), finish: vi.fn(),
   scope: "user-one-wallet-one", session: "session-one",
   orders: new Map<number, OrderRow[]>(), fetch: vi.fn(),
   account: { accountId: 9, provider: "Polymarket", token: "{}" } as PlatformAccount,
 }));
 vi.mock("@/api/order", () => ({ saveOrders: mocks.save }));
+vi.mock("@/orderModes/gtc/ordersApi", () => ({ saveOrders: mocks.gtcSave }));
 vi.mock("@/shared/orderLink", () => ({ groupOrdersByEffectiveLink: (rows: OrderRow[]) => new Map([[11, rows]]) }));
 vi.mock("@/shared/pmOrderDisplay", () => ({ formatPolymarketApiDecimal: String }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => mocks.session, isAuthSessionCurrent: (v: string) => v === mocks.session }));
@@ -86,4 +88,33 @@ test.each([true, false])("only the exact sell accounting event releases a restor
   expect(mocks.final).not.toHaveBeenCalled();
   expect(mocks.finish).toHaveBeenCalledTimes(sameSell ? 1 : 0);
   expect(api.isPmManualSellClosing("buy-one")).toBe(!sameSell);
+});
+
+test("a GTC manual sale uses its own cash reconciliation and retains the execution identity", async () => {
+  mocks.gtcSave.mockResolvedValue(undefined);
+  mocks.sell.mockImplementation(async ({ onSubmitted }) => {
+    onSubmitted({ sellOrderId: "sell-one", fallbackPrice: 0.6, sharesWanted: 10 });
+    return { ok: true, ordersToSave: patch, sharesSold: 10 };
+  });
+  const api = await import("./pmManualSell");
+  await api.confirmAndSellPmBuyOrder({ ...row, PmGtcExecutionId: "own-gtc" });
+  expect(mocks.gtcSave).toHaveBeenCalledWith(mocks.account, patch.map(item => ({ ...item, pmGtcExecutionId: "own-gtc" })));
+  expect(mocks.save).not.toHaveBeenCalled();
+  expect(api.isPmManualSellClosing("buy-one")).toBe(false);
+});
+
+test("missing GTC net cash keeps the original sell pending and retries without falling through to FOK", async () => {
+  mocks.gtcSave.mockRejectedValue(new Error("GTC 原卖单净回款待核实"));
+  mocks.sell.mockImplementation(async ({ onSubmitted }) => {
+    onSubmitted({ sellOrderId: "sell-one", fallbackPrice: 0.6, sharesWanted: 10 });
+    return { ok: true, ordersToSave: patch, sharesSold: 10 };
+  });
+  const api = await import("./pmManualSell");
+  await api.confirmAndSellPmBuyOrder({ ...row, PmGtcExecutionId: "own-gtc" });
+  expect(mocks.gtcSave).toHaveBeenCalledTimes(2);
+  expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.finish).not.toHaveBeenCalled();
+  expect(api.isPmManualSellClosing("buy-one")).toBe(true);
+  expect(ElMessage.warning).toHaveBeenCalledWith(expect.stringContaining("成交确认、净回款核对或订单保存尚未完成"));
+  expect(ElMessage.warning).toHaveBeenCalledWith(expect.stringContaining("自动重试，请勿重复卖出"));
+  expect(ElMessage.error).not.toHaveBeenCalled();
 });

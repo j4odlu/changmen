@@ -10,6 +10,7 @@ import {
 } from "@/extensions/prematchFullOnly";
 import { executeArbBet } from "@/stores/betting/autoBet/executeArbBet";
 import { createDefaultUserConfig } from "@/types/userConfig";
+import { syncActiveBetFail } from "@/stores/betting/activeBetRunSync";
 
 const prepareArbAttempt = vi.hoisted(() => vi.fn());
 const checkArbLegs = vi.hoisted(() => vi.fn());
@@ -18,6 +19,7 @@ const finalizeArbBet = vi.hoisted(() => vi.fn());
 const recordArbAttemptMetric = vi.hoisted(() => vi.fn());
 const releaseSingleLeg9999MapFill = vi.hoisted(() => vi.fn());
 const releaseSingleLeg9999MapFillKeys = vi.hoisted(() => vi.fn());
+vi.mock("@/stores/betting/activeBetRunSync", () => ({ syncActiveBetFail: vi.fn() }));
 
 vi.mock("@/stores/betting/autoBet/phases/prepareArbAttempt", () => ({
   prepareArbAttempt,
@@ -194,6 +196,7 @@ describe("executeArbBet orchestration", () => {
 
     expect(releaseSingleLeg9999MapFillKeys).toHaveBeenCalledWith(["m:1", "source:Polymarket:pm:bet"]);
     expect(setMessage).toHaveBeenCalledWith("自动下单异常：check boom");
+    expect(syncActiveBetFail).toHaveBeenCalledWith(10, "check boom", "预检");
     expect(recordArbAttemptMetric).toHaveBeenCalledWith(
       expect.objectContaining({ stop: "error" }),
     );
@@ -220,6 +223,19 @@ describe("executeArbBet orchestration", () => {
     expect(releaseSingleLeg9999MapFillKeys).not.toHaveBeenCalled();
     expect(releaseSingleLeg9999MapFill).not.toHaveBeenCalled();
     expect(setMessage).toHaveBeenCalledWith("自动下单异常：place boom");
+    expect(syncActiveBetFail).toHaveBeenCalledWith(10, "place boom", "下单");
+  });
+
+  it("失败进度记录异常不能中断 FOK 指标收尾或向主循环冒泡", async () => {
+    prepareArbAttempt.mockResolvedValue({ linkId: 1 });
+    checkArbLegs.mockResolvedValue({ linkId: 1 });
+    placeArbLegs.mockRejectedValue(new Error("place boom"));
+    vi.mocked(syncActiveBetFail).mockImplementationOnce(() => { throw new Error("progress unavailable"); });
+    const setMessage = vi.fn();
+    await expect(executeArbBet({ match: { id: 1 } as never, bet: { id: 10, round: 2 } as never,
+      config: createDefaultUserConfig(), setMessage })).resolves.toBeUndefined();
+    expect(setMessage).toHaveBeenCalledWith("自动下单异常：place boom");
+    expect(recordArbAttemptMetric).toHaveBeenCalledWith(expect.objectContaining({ stop: "error" }));
   });
 
   it("[changmen 扩展] 赛前全场 off 时未折叠的地图仍进 prepare", async () => {

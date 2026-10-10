@@ -28,6 +28,11 @@ export function rayRejectFailureEvidence(reason: unknown): Partial<OrderObservat
 }
 /** [changmen 扩展] 只保留已知原因和白名单数值，不复制错误全文、资产 ID 或凭证。 */
 function specificFailure(text: string, headline: string): FailureReason | undefined {
+  if (/^超时时间：\d+ms，大于设定值：\d+ms$/.test(headline)) {
+    const elapsed = diagnosticNumber(headline, "超时时间：", "ms");
+    const limit = diagnosticNumber(headline, "大于设定值：", "ms");
+    return ["timeout", "precheck_timeout", `双腿预检总耗时超过设定上限，未提交${elapsed && limit ? `（耗时 ${elapsed}ms，上限 ${limit}ms）` : ""}`];
+  }
   if (/盘口无卖单|无 asks 卖单|no asks|no sell orders/i.test(headline)
     || /盘口价高于检测价/.test(headline) && /盘口无卖单/.test(text))
     return ["liquidity", "no_sell_orders", "盘口没有可成交卖单"];
@@ -40,6 +45,9 @@ function specificFailure(text: string, headline: string): FailureReason | undefi
     const price = diagnosticNumber(headline, "无效检测价\\s+");
     return ["quote", "invalid_detection_price", `检测价格无效，无法校验订单${price ? `（价格 ${price}）` : ""}`];
   }
+  // [changmen 扩展] GTC 自动双腿预检使用独立文案，保留整对未提交的事实。
+  if (/^GTC 自动套利限价内深度不足，未发送双腿$/.test(headline.trim()))
+    return ["liquidity", "insufficient_depth", "限价内可成交深度不足，未发送双腿"];
   if (/盘口深度不足|insufficient liquidity|insufficient depth/i.test(headline)) {
     const need = diagnosticNumber(text, "需要\\s+", "\\s+USDC");
     const available = diagnosticNumber(text, "可立即成交(?:约|：|:)?\\s*", "\\s+USDC");
@@ -51,6 +59,43 @@ function specificFailure(text: string, headline: string): FailureReason | undefi
     return ["order_size", "below_minimum_size", `买入份数低于场馆最小要求${minimum ? `（${shares ? `预计 ${shares} 份，` : ""}至少 ${minimum} 份）` : ""}`];
   }
   const rules: Array<[RegExp, FailureReason]> = [
+    [/^GTC 签单舍入与含费预算后利润不足：/, ["profit", "gtc_profit_below_threshold", "GTC 签单舍入及费用计入后利润不足，未发送双腿"]],
+    [/^GTC 签单本金与份数舍入后利润不足：/, ["profit", "gtc_profit_below_threshold", "GTC 签单本金与份数舍入后利润不足，未发送双腿"]],
+    [/^GTC 无法确认市场费率或不支持当前费用曲线$/, ["market_data", "gtc_fee_unavailable", "GTC 市场费率未确认或费用曲线不受支持，无法准备签单"]],
+    [/^GTC 含费用预算不足最小份数$/, ["order_size", "gtc_below_minimum_size", "GTC 扣除费用预留后买入份数不足场馆最小要求"]],
+    [/^GTC 实际签单数量或预算越界$/, ["order_size", "gtc_signed_budget_exceeded", "GTC 实际签单数量或含费预算超出允许范围"]],
+    [/^GTC SDK 未生成受支持签单$/, ["signing", "gtc_signed_order_invalid", "GTC SDK 未生成受支持的签单"]],
+    [/^GTC 数值无效$/, ["order_size", "gtc_invalid_value", "GTC 数量或预算数值无效"]],
+    [/^GTC 预检金额单位与场馆原币不一致，禁止发送双腿$/, ["order_size", "gtc_currency_mismatch", "GTC 预检金额单位与场馆原币不一致，未发送双腿"]],
+    [/^GTC 已达同场同边盘口订单上限$/, ["account", "gtc_order_limit", "GTC 已达同场同边盘口订单上限"]],
+    [/^GTC 赔率不大于上笔成功单$/, ["quote", "gtc_previous_odds_limit", "GTC 当前赔率不高于上笔成功单，不满足账号要求"]],
+    [/^GTC 同场反向下注账号已排除$/, ["account", "gtc_opposite_account_excluded", "GTC 账号已有同场反向下注，不满足账号要求"]],
+    [/^(?:此 PM 钱包有待处理 GTC，请先核实原单|此 PM 钱包已有 GTC 未完结记录，请先核实原单并恢复自动下注)$/, ["account", "gtc_pending_original", "PM 钱包存在未完结 GTC 原单，暂停新增自动套利"]],
+    [/^GTC 持久化协调未就绪$/, ["persistence", "gtc_persistence_unready", "GTC 持久化协调尚未就绪，禁止提交"]],
+    [/^GTC 本盘口成交历史恢复失败$/, ["persistence", "gtc_bet_history_unavailable", "GTC 本盘口成交历史未能恢复，无法核验用户启用的历史限制"]],
+    [/^GTC V1 仅支持一条 PM 腿的双边自动套利$/, ["provider", "gtc_pair_unsupported", "GTC 自动套利要求恰有一条 PM 腿及一条对侧下单腿"]],
+    [/^GTC 对侧平台不支持$/, ["provider", "gtc_counterpart_unsupported", "GTC 对侧平台不支持提交"]],
+    [/^GTC 对侧(?:冻结预检或账号已改变|缺少冻结预检，未发送订单)$/, ["preparation", "gtc_counterpart_changed", "GTC 对侧冻结预检缺失或账号参数已改变"]],
+    [/^PM 手动 GTC 预检已失效或已消费，禁止重发$/, ["preparation", "gtc_preparation_invalid", "GTC 预检已失效或已消费，禁止重复提交"]],
+    [/^PM 手动 GTC 每次预检须新建投注尝试$/, ["preparation", "gtc_attempt_reused", "GTC 投注尝试已被使用，请新建尝试"]],
+    [/^PM 手动 GTC 冻结报价已改变$/, ["quote", "gtc_frozen_quote_changed", "GTC 冻结报价在预检后发生变化，请新建尝试"]],
+    [/^PM 手动 GTC 金额不足，不能放大用户输入金额$/, ["order_size", "gtc_amount_insufficient", "GTC 输入金额不足，无法按原金额准备订单"]],
+    [/^PM 手动 GTC 预检未完成$/, ["preparation", "gtc_precheck_incomplete", "GTC 预检未完成，无法准备订单"]],
+    [/^PM 手动 GTC 限价或订单簿无效$/, ["market_data", "gtc_book_invalid", "GTC 限价或订单簿无效，无法准备订单"]],
+    [/^PM 手动 GTC 预检参数或钱包会话已失效$/, ["preparation", "gtc_binding_invalid", "GTC 预检参数或钱包会话已失效，请新建尝试"]],
+    [/^PM 钱包或 API 凭据未就绪$/, ["authentication", "pm_credentials_unready", "PM 钱包或 API 凭据未就绪"]],
+    [/^PM 预检期间钱包凭据已改变$/, ["authentication", "pm_credentials_changed", "PM 钱包凭据在预检期间发生变化，请新建尝试"]],
+    [/^PM 缺少本轮预检结果$/, ["preparation", "pm_preparation_missing", "PM 缺少本轮有效预检结果"]],
+    [/^PM 本轮预检结果已消费$/, ["preparation", "pm_preparation_consumed", "PM 本轮预检结果已消费，禁止重复提交"]],
+    [/^PM 此腿仅预检$/, ["preparation", "pm_precheck_only", "PM 此腿仅预检，不允许真实提交"]],
+    [/^PM 提交校时(?:准备已失效|未就绪)$/, ["preparation", "pm_submit_clock_invalid", "PM 提交校时准备未就绪或已失效"]],
+    [/^PM 钱包会话已失效$/, ["authentication", "pm_wallet_session_invalid", "PM 钱包会话已失效，请重新解锁后新建尝试"]],
+    [/^PM 下单参数或账号已改变，请新建尝试$/, ["preparation", "pm_preparation_changed", "PM 下单参数或账号在预检后发生变化，请新建尝试"]],
+    [/^PM tick 已改变/, ["quote", "pm_tick_changed", "PM 最小价格步长已改变，冻结报价失效，请新建尝试"]],
+    [/^双侧预检未齐，不提交订单$/, ["preparation", "pair_quote_missing", "双腿提交前缺少完整预检结果，未发送双腿"]],
+    [/^首腿提交返回失败，未发送第二腿$/, ["orchestration", "serial_first_leg_failed", "首腿提交返回失败，未发送第二腿"]],
+    [/^首腿提交结果未知，未发送第二腿$/, ["orchestration", "serial_first_leg_unknown", "首腿提交结果未知，未发送第二腿"]],
+    [/^自动下注或用户会话已停止$|^GTC 会话已变更$/, ["session", "execution_session_stopped", "自动下注已停止或用户会话已变更"]],
     [/^RAY 盘口请求失败$/, ["market_data", "market_request_failed", "RAY 盘口接口返回失败，无法准备订单"]],
     [/无效买入金额/i, ["order_size", "invalid_amount", "买入金额无效，必须为大于零的有效金额"]],
     [/无盘口数据/i, ["market_data", "no_market_data", "未获取到可用盘口数据，无法准备订单"]],

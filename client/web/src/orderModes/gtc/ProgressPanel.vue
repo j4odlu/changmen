@@ -3,9 +3,20 @@ import type { GtcExecution } from "@changmen/shared/pm_gtc";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed } from "vue";
 import { gtcOrderCardView } from "./orderCardView";
+import { gtcProgress } from "./gtcProgressState";
+import { gtcSyncNotice } from "./syncStatus";
+import { gtcPmReconciled } from "./pollingPolicy";
 
 const props = defineProps<{ execution: GtcExecution }>();
 const view = computed(() => gtcOrderCardView(props.execution));
+const syncNotice = computed(() => {
+  const issue = gtcProgress.queryIssues[props.execution.id];
+  if (issue) return gtcSyncNotice(issue);
+  const kind = view.value.queryErrorKind;
+  if (kind && !(kind === "auth" && gtcProgress.recoveredAt > props.execution.observedAt))
+    return gtcSyncNotice({ kind, message: props.execution.error, at: props.execution.observedAt });
+  return "";
+});
 async function cancel() {
   try {
     await ElMessageBox.confirm("只取消这笔 PM 原挂单的剩余份额。已成交部分保留，本组继续由您处理。", "取消PM挂单", { type: "warning" });
@@ -40,6 +51,12 @@ async function cancel() {
     <div v-if="view.detailError" class="gtc-order-extra__notice">
       {{ view.detailError }}
     </div>
+    <div v-if="syncNotice" role="status" class="gtc-order-extra__sync-notice">
+      {{ syncNotice }}
+    </div>
+    <div v-else-if="gtcPmReconciled(execution)" class="gtc-order-extra__sync-state">
+      原单成交核对已完成，已停止挂单查询。
+    </div>
     <div v-if="execution.cancel" class="gtc-order-extra__notice">
       {{ execution.cancel.message }}
     </div>
@@ -65,6 +82,7 @@ async function cancel() {
   overflow-wrap: anywhere;
 }
 .gtc-order-extra__notice { color: var(--cm-color-warning, #e6a23c); }
+.gtc-order-extra__sync-notice, .gtc-order-extra__sync-state { color: var(--cm-text-secondary, #909399); }
 .gtc-order-extra details { color: var(--el-text-color-secondary, #909399); }
 .gtc-order-extra summary { cursor: pointer; }
 </style>

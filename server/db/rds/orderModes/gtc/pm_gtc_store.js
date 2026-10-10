@@ -2,6 +2,7 @@ import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
 /** [changmen 扩展] GTC V1 持久化/一次性授权；不参与原 FOK 存储路径。 */
 import { getPgPool } from "../../common.js";
 import { resolveGtcFinancialOrder } from "./pm_gtc_financial.js";
+import { syncPmGtcSettledOrderFinancials } from "./pm_gtc_settlement.js";
 
 let schema;
 async function poolReady() {
@@ -16,8 +17,15 @@ async function poolReady() {
     .catch((error) => { schema = undefined; throw error; });
   await schema; return pool;
 }
-export async function listPmGtc(owner) {
+export async function listPmGtc(owner, betRowId) {
   const pool = await poolReady();
+  // [changmen 扩展] 新套利只恢复本盘口的用户计次规则；不扫描/修订无关旧单。
+  if (betRowId != null) {
+    if (!Number.isSafeInteger(betRowId) || betRowId <= 0)
+      throw new Error("GTC 盘口 ID 无效");
+    const scoped = await pool.query("SELECT record FROM pm_gtc_executions WHERE owner=$1 AND record->'plan'->>'betRowId'=$2 ORDER BY updated_at DESC", [owner, String(betRowId)]);
+    return scoped.rows.map(r => r.record);
+  }
   const result = await pool.query("SELECT record FROM pm_gtc_executions WHERE owner=$1 AND (active OR id IN (SELECT id FROM pm_gtc_executions WHERE owner=$1 ORDER BY updated_at DESC LIMIT 500)) ORDER BY updated_at DESC", [owner]);
   // [changmen 扩展] Historical mode repair belongs to GTC recovery. Ordinary reads never query this table.
   // Match the exact owned original (or its sell parent), never a Link or current preference.
@@ -33,24 +41,28 @@ export async function listPmGtc(owner) {
       AND NULLIF(o.raw->>'pmGtcExecutionId','') IS NULL`, [owner]);
   return result.rows.map(r => r.record);
 }
+/** [changmen 扩展] 保存/核对只读取本批原单，旧单全量恢复与元数据修复不参与。 */
+export async function listPmGtcByIds(owner, ids) {
+  if (!Array.isArray(ids) || ids.some(id => typeof id !== "string" || !id))
+    throw new Error("GTC 执行身份无效");
+  if (!ids.length)
+    return [];
+  const pool = await poolReady();
+  const result = await pool.query("SELECT record FROM pm_gtc_executions WHERE owner=$1 AND id::text=ANY($2::text[])", [owner, [...new Set(ids)]]);
+  return result.rows.map(r => r.record);
+}
 export async function createPmGtc({ id, owner, walletKey, maker, plan }) {
   const pool = await poolReady(); const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [walletKey]);
+    // [changmen 扩展] 同执行 ID 创建幂等；不同原单不占用整个钱包执行权。
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [id]);
     const existing = await client.query("SELECT record FROM pm_gtc_executions WHERE id=$1", [id]);
     if (existing.rows.length) {
       const row = existing.rows[0].record;
       if (row.owner !== owner || row.walletKey !== walletKey || JSON.stringify(row.plan) !== JSON.stringify(plan))
         throw new Error("GTC 执行身份冲突");
       await client.query("COMMIT"); return row;
-    }
-    // [changmen 扩展] 手动下单由用户逐次决定；同钱包可保存多笔独立原单。
-    // 自动双腿执行仍使用原钱包门控；每个执行 ID 的幂等与一次性授权均保留。
-    if (plan.source !== "manual") {
-      const active = await client.query("SELECT id FROM pm_gtc_executions WHERE wallet_key=$1 AND active", [walletKey]);
-      if (active.rows.length)
-        throw new Error("此 PM 钱包已有 GTC 未完结记录，请先核实原单并恢复自动下注");
     }
     const row = createGtcExecution(id, owner, walletKey, maker, plan, Date.now());
     await client.query("INSERT INTO pm_gtc_executions(id,owner,wallet_key,record,updated_at) VALUES($1,$2,$3,$4,$5)", [id, owner, walletKey, row, Date.now()]);
@@ -63,12 +75,11 @@ export async function mutatePmGtc(owner, id, revision, command) {
   const pool = await poolReady(); const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    // 与同钱包创建共用事务锁；逐笔更新事实，手动多单仍按执行 ID 隔离。
-    const lookup = await client.query("SELECT wallet_key FROM pm_gtc_executions WHERE id=$1 AND owner=$2", [id, owner]);
-    if (!lookup.rows.length)
-      throw new Error("GTC 记录不存在或无权操作");
-    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [lookup.rows[0].wallet_key]);
+    // [changmen 扩展] 只串行化同一执行，原单之间独立核对及授权。
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [id]);
     const result = await client.query("SELECT record FROM pm_gtc_executions WHERE id=$1 AND owner=$2 FOR UPDATE", [id, owner]);
+    if (!result.rows.length)
+      throw new Error("GTC 记录不存在或无权操作");
     const old = result.rows[0].record;
     if (old.revision !== revision)
       throw new Error("GTC 记录已更新，请重新读取；禁止重放提交授权");
@@ -98,6 +109,7 @@ export async function mutatePmGtc(owner, id, revision, command) {
         raw=COALESCE(orders.raw,'{}'::jsonb) || EXCLUDED.raw || jsonb_build_object(
           'pmShares', $12::float8,
           'pmStakeUsdc', CASE WHEN $12::float8>0 THEN greatest(0,$13-COALESCE((orders.raw->>'pmSellProceeds')::float8,0)+COALESCE((orders.raw->>'pmRealizedPnlUsdc')::float8,0)) ELSE 0 END)`, [owner, row.plan.playerId, row.orderId, row.plan.linkId, row.plan.match, row.plan.bet, row.plan.item, financial.odds, financial.betMoney, row.createdAt, raw, shares, cost]);
+      await syncPmGtcSettledOrderFinancials(client, owner, row.plan.playerId, row.orderId, id);
     }
     await client.query("COMMIT"); return row;
   }

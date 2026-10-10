@@ -10,6 +10,7 @@ import {
 import { isMapMuteActive } from "@/extensions/mapBetMute";
 import { isPrematchFullMarketAllowed } from "@/extensions/prematchFullOnly";
 import { beginExecutionObservation, finishExecutionObservation } from "@/services/orderExecutionObservation";
+import { syncActiveBetFail } from "@/stores/betting/activeBetRunSync";
 import {
   recordArbAttemptMetric,
 } from "@/stores/betting/autoBet/arbAttemptMetrics";
@@ -105,6 +106,12 @@ export async function executeArbBet(params: {
     }
     const msg = errorMessage(err);
     params.setMessage(`自动下单异常：${msg}`);
+    // [changmen 扩展] 预检成功不代表提交成功；异常须结束实时进度并保留实际失败阶段。
+    try {
+      if (ready)
+        syncActiveBetFail(params.bet.id, msg, phase === "check" ? "预检" : phase === "place" ? "下单" : "拒单");
+    }
+    catch { /* [changmen 扩展] 进度记录失败不得中断 FOK 原有异常收尾。 */ }
     attempt.trace?.finish("fail", msg);
     recordArbAttemptMetric({ ...base, phaseMs: phaseMsMap, stop: "error" });
   }

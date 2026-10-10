@@ -29,8 +29,15 @@ export async function handlePmGtc(action, body, owner) {
       throw new Error(result.msg);
     return result.info;
   }
-  if (action === "Pm_GtcList")
+  if (action === "Pm_GtcList") {
+    if (body.betRowId != null) {
+      const betRowId = Number(body.betRowId);
+      if (!Number.isSafeInteger(betRowId) || betRowId <= 0)
+        throw new Error("GTC 盘口 ID 无效");
+      return listPmGtc(owner, betRowId);
+    }
     return listPmGtc(owner);
+  }
   const id = String(body.id || "");
   if (!/^[0-9a-f-]{36}$/i.test(id))
     throw new Error("GTC 执行 ID 无效");
@@ -59,7 +66,11 @@ export async function handlePmGtc(action, body, owner) {
     }
   }
   const fee = submittedPlan.feeProof;
-  plan.feeProof = fee && { rate: fee.rate, exponent: fee.exponent, takerOnly: fee.takerOnly, observedAt: fee.observedAt };
+  // [changmen 扩展] 兼容旧单的财务证明；费用缺失或未知不阻止新订单发送。
+  if (fee?.exponent === 1 && fee.takerOnly === true && typeof fee.rate === "string"
+    && /^\d+(?:\.\d{1,6})?$/.test(fee.rate) && Number.isFinite(fee.observedAt) && fee.observedAt > 0) {
+    plan.feeProof = { rate: fee.rate, exponent: fee.exponent, takerOnly: fee.takerOnly, observedAt: fee.observedAt };
+  }
   if (!plan || !["A", "B"].includes(plan.originalPmLeg) || !["Home", "Away"].includes(plan.target)
     || !["Home", "Away"].includes(plan.otherTarget) || ![2, 3].includes(plan.protocol)
     || !/^0x[0-9a-f]{64}$/i.test(plan.orderHash)) {
@@ -73,9 +84,6 @@ export async function handlePmGtc(action, body, owner) {
     || !Number.isFinite(plan.fx) || !Number.isFinite(plan.otherStake)) {
     throw new Error("GTC 价格/另一腿参数无效");
   }
-  if (plan.feeProof?.exponent !== 1 || plan.feeProof?.takerOnly !== true)
-    throw new Error("GTC 费用规则无效");
-  gtcUnits(plan.feeProof.rate);
   if (gtcUnits(plan.shares) > gtcUnits(plan.targetShares) || gtcUnits(plan.maxPrincipal) > gtcUnits(plan.allInBudget)
     || typeof plan.parallel !== "boolean" || typeof plan.negRisk !== "boolean"
     || !Number.isFinite(plan.otherOdds)) {
@@ -100,9 +108,6 @@ export async function handlePmGtc(action, body, owner) {
     throw new Error("PM 钱包身份不确定，不能进入 GTC");
   if (String(body.maker).toLowerCase() !== maker)
     throw new Error("GTC 客户端与持久化钱包不一致");
-  for (const alias of accounts.filter(row => row.provider === "Polymarket" && Number(row.accountId) !== plan.playerId)) {
-    if (walletMaker(alias.token) === maker)
-      throw new Error("GTC V1 暂不支持同钱包多个账号别名，请先合并账号，防止旧同步重复记账；FOK 不受此限制");
-  }
+  // [changmen 扩展] 只验证本次所选账号；其它账号/原单不占用该钱包的执行权。
   return createPmGtc({ id, owner, walletKey: `137:polymarket-collateral:${maker}`, maker, plan });
 }

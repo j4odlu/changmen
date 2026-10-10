@@ -71,6 +71,16 @@ describe("manual GTC source", () => {
     const row = mergeGtcFacts(manual(), facts("5", "CANCELED"));
     expect(row.released).toBe(true); expect(row.matched).toBe("5"); expect(row.open).toBe("0");
   });
+  it("official MATCHED terminates a rounded remainder but waits for confirmed fills before releasing", () => {
+    const pending = mergeGtcFacts(manual(), facts("9.990001", "MATCHED", [fill("9.990001", "MINED")]));
+    expect(pending).toMatchObject({ matched: "9.990001", open: "0", terminal: true, released: false });
+    expect(gtcCanCancel(pending)).toBe(false);
+    const confirmed = mergeGtcFacts(pending, facts("9.990001", "MATCHED", [fill("9.990001", "CONFIRMED", 5)]));
+    expect(confirmed).toMatchObject({ complete: true, released: true, groupComplete: false });
+    const live = mergeGtcFacts(manual(), facts("9.990001", "LIVE", [fill("9.990001")]));
+    expect(live).toMatchObject({ open: "0.009999", terminal: false, released: false });
+    expect(gtcCanCancel(live)).toBe(true);
+  });
   it("late correction after release restores hold", () => {
     const completed = mergeGtcFacts(manual(), facts("10", "MATCHED", [fill("10", "CONFIRMED", 4)]));
     const failed = mergeGtcFacts(completed, facts("0", "LIVE", [fill("10", "FAILED", 5)]));

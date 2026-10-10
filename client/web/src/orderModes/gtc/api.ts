@@ -3,7 +3,7 @@ import { mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { post, unwrap } from "@/api/client";
 import { gtcFinancialOrder } from "./financialOrder";
 
-export async function listGtc(): Promise<GtcExecution[]> { return unwrap(await post<GtcExecution[]>("Pm_GtcList")); }
+export async function listGtc(betRowId?: number): Promise<GtcExecution[]> { return unwrap(await post<GtcExecution[]>("Pm_GtcList", betRowId == null ? undefined : { betRowId })); }
 export async function createGtc(id: string, maker: string, plan: GtcPlan): Promise<GtcExecution> {
   return unwrap(await post<GtcExecution>("Pm_GtcCreate", { id, maker, plan }));
 }

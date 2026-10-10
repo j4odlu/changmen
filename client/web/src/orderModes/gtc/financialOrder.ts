@@ -8,7 +8,12 @@ export function gtcMatchedOrder(row: GtcExecution, fee: number) {
     status: "matched",
     takingAmount: row.matched,
   }, { fallbackStakeUsdc: Number(row.principal), feeUsdc: fee });
-  return usdc ? scalePolymarketVenueOrdersForDisplay([usdc])[0]! : null;
+  if (!usdc)
+    return null;
+  // [changmen 扩展] 普通 PM 助手的成交份数会舍入到四位；GTC 事实及持久化须保留官方六位数量。
+  // 金额、费用和赔率仍使用普通助手的结果。
+  usdc.pmShares = Number(row.matched);
+  return scalePolymarketVenueOrdersForDisplay([usdc])[0]!;
 }
 
 export function gtcFinancialOrder(row: GtcExecution): GtcFinancialOrder | undefined {

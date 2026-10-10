@@ -77,14 +77,14 @@ describe("configuration save FOK isolation", () => {
     user.extensionPrefs.pmGtcV1Participant = true; user.extensionPrefs.pmGtcV1Activation = activation;
     await saveDialog(); expect(mocks.save).toHaveBeenCalledOnce(); expect(mocks.refresh).not.toHaveBeenCalled();
   });
-  it("activated GTC still requires manual review before enabling new groups", async () => {
+  it("activated GTC saves without requiring review or mutation of previous orders", async () => {
     const user = useUserStore(); user.extensionPrefs.pmArbOrderMode = "GTC"; user.extensionPrefs.pmGtcV1Activation = "1:12";
-    await saveDialog(); expect(mocks.refresh).toHaveBeenCalledOnce(); expect(mocks.confirm).toHaveBeenCalledOnce(); expect(mocks.resume).toHaveBeenCalledOnce(); expect(mocks.save).toHaveBeenCalledOnce();
+    await saveDialog(); expect(mocks.refresh).not.toHaveBeenCalled(); expect(mocks.confirm).not.toHaveBeenCalled(); expect(mocks.resume).not.toHaveBeenCalled(); expect(mocks.save).toHaveBeenCalledOnce();
   });
-  it("unavailable activated GTC blocks only GTC saving", async () => {
+  it("unavailable previous GTC records do not block configuration saving", async () => {
     const user = useUserStore(); user.extensionPrefs.pmArbOrderMode = "GTC"; user.extensionPrefs.pmGtcV1Activation = "1:12";
     mocks.refresh.mockRejectedValue(new Error("GTC unavailable"));
-    await saveDialog(); expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.error).toHaveBeenCalledWith("GTC unavailable");
+    await saveDialog(); expect(mocks.save).toHaveBeenCalledOnce(); expect(mocks.refresh).not.toHaveBeenCalled(); expect(mocks.error).not.toHaveBeenCalled();
   });
   it("turning off automatic betting never waits on GTC", async () => {
     const user = useUserStore(); user.config.betting = false; user.extensionPrefs.pmArbOrderMode = "GTC"; user.extensionPrefs.pmGtcV1Activation = "1:12";

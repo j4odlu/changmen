@@ -255,14 +255,24 @@ async function persistFilledSell(
   const sessionVersion = getAuthSessionVersion();
   const scope = pmSubmitScope(account);
   const current = () => isAuthSessionCurrent(sessionVersion) && scope === pmSubmitScope(account);
+  const persist = async () => {
+    if (buyRow.PmGtcExecutionId) {
+      // [changmen 扩展] 仅这张 GTC 原单的平仓核对净回款，FOK 保留原保存路径。
+      const { saveOrders: saveGtcOrders } = await import("@/orderModes/gtc/ordersApi");
+      await saveGtcOrders(account, ordersToSave.map(row => ({ ...row, pmGtcExecutionId: buyRow.PmGtcExecutionId })));
+    }
+    else {
+      await saveOrders(account, ordersToSave);
+    }
+  };
   try {
-    await saveOrders(account, ordersToSave);
+    await persist();
     return current();
   }
   catch (saveErr) {
     if (!current()) return false;
     try {
-      await saveOrders(account, ordersToSave);
+      await persist();
       return current();
     }
     catch {
@@ -277,9 +287,14 @@ async function persistFilledSell(
       // 勿立刻 fetchOrders：会冲掉本地乐观已平仓，导致按钮可再卖 → 双卖
       applyManualSellOrdersLocally(buyRow, ordersToSave);
       scheduleResumePmManualSellClosings();
-      ElMessage.error(
-        `链上已平仓，但订单落库失败：${saveErr instanceof Error ? saveErr.message : String(saveErr)}。已按已平仓展示，请稍后刷新。`,
-      );
+      const reason = saveErr instanceof Error ? saveErr.message : String(saveErr);
+      if (buyRow.PmGtcExecutionId) {
+        // GTC 保存包含 CONFIRMED 成交及净回款核对；撮合回执不能证明链上结算已完成。
+        ElMessage.warning(`卖单已返回成交，成交确认、净回款核对或订单保存尚未完成：${reason}。已保留原卖单并自动重试，请勿重复卖出。`);
+      }
+      else {
+        ElMessage.error(`链上已平仓，但订单落库失败：${reason}。已按已平仓展示，请稍后刷新。`);
+      }
       return false;
     }
   }

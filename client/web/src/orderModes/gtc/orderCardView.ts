@@ -2,6 +2,7 @@ import type { GtcExecution } from "@changmen/shared/pm_gtc";
 import { gtcDecimal, gtcPmNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc";
 import { resolveGtcFillFee } from "@changmen/venue-adapter/polymarket/gtc";
 import { gtcOriginalOrderActions } from "@/orderModes/gtc/executionIdentity";
+import { legacyGtcQueryIssue } from "./syncStatus";
 
 /** [changmen 扩展] 只整理 GTC 附加信息，普通订单字段由 OrderList 显示。 */
 export function gtcOrderCardView(row: GtcExecution) {
@@ -16,6 +17,7 @@ export function gtcOrderCardView(row: GtcExecution) {
     ? gtcDecimal(fees.reduce<bigint>((sum, value) => sum + gtcUnits(value!.toFixed(6)), 0n))
     : null;
   const confirmedFull = matched === total && matched > 0n && quantitiesAgree && fills.every(fill => fill.status === "CONFIRMED");
+  const queryErrorKind = legacyGtcQueryIssue(row.error);
   let state = "提交待核实";
   let tone = "default";
   if (unsubmitted) {
@@ -55,7 +57,8 @@ export function gtcOrderCardView(row: GtcExecution) {
     quantitiesAgree,
     principal: quantitiesAgree ? row.principal : null,
     fee,
-    detailError: row.error === "成交费用待核实" || (confirmedFull && /GTC (?:原单尚未查到|本次原单查询未返回记录)/.test(row.error)) ? "" : row.error,
+    detailError: row.error === "成交费用待核实" || queryErrorKind ? "" : row.error,
+    queryErrorKind,
     queryDiagnostic: confirmedFull && /GTC (?:原单尚未查到|本次原单查询未返回记录)/.test(row.error) ? row.error : "",
     showCancel: actions.showCancel && !row.terminal && (row.open == null || gtcUnits(row.open) > 0n),
     canCancel: actions.canCancel,

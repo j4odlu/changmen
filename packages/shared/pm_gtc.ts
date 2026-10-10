@@ -65,8 +65,10 @@ export interface GtcPlan {
   targetShares: string;
   price: string;
   maxPrincipal: string;
+  /** 兼容既有持久化字段名；新订单保存用户下注本金上限，不含费用预留。 */
   allInBudget: string;
-  feeProof: GtcFeeProof;
+  /** 旧订单的费用证明；新订单在成交后查询，不作为发送前提。 */
+  feeProof?: GtcFeeProof;
   fx: number;
   parallel: boolean;
   protocol: 2 | 3;
@@ -121,6 +123,21 @@ export function gtcDecimal(value: bigint): string {
   return String(value / UNIT) + (fraction ? `.${fraction}` : "");
 }
 export function gtcNumber(value: unknown): number { return Number(gtcDecimal(gtcUnits(value))); }
+/** [changmen 扩展] 成交价是金额/份数的比值，CLOB maker 明细可超过六位；数量和预算仍严格使用 gtcUnits。 */
+export function gtcFillPrice(value: unknown): string {
+  const s = String(value ?? "").trim();
+  if (!/^\d+(?:\.\d+)?$/.test(s))
+    throw new Error("GTC 成交价格须为非负十进制");
+  const [integer, fraction = ""] = s.split(".");
+  const a = BigInt(integer!).toString();
+  const b = fraction.replace(/0+$/, "");
+  return a + (b ? `.${b}` : "");
+}
+function fillPriceRatio(value: unknown): { numerator: bigint; denominator: bigint } {
+  const [a, b = ""] = gtcFillPrice(value).split(".");
+  const denominator = 10n ** BigInt(b.length);
+  return { numerator: BigInt(a!) * denominator + BigInt(b || "0"), denominator };
+}
 /** [changmen 扩展] 兼容旧版把未授权 PM 腿写成 rejected 的记录；有任何订单证据就不能据此结束。 */
 export function gtcPmNeverSubmitted(row: GtcExecution): boolean {
   return !row.pmAuthorized && !row.orderId && !row.order && !row.cancel
@@ -210,7 +227,7 @@ export function mergeGtcFacts(previous: GtcExecution, facts: GtcFacts): GtcExecu
       continue;
     if (old?.status === "CONFIRMED" && fill.status !== "CONFIRMED" && fill.status !== "FAILED")
       continue;
-    if (old && (gtcUnits(old.shares) !== gtcUnits(fill.shares) || gtcUnits(old.price) !== gtcUnits(fill.price))) {
+    if (old && (gtcUnits(old.shares) !== gtcUnits(fill.shares) || gtcFillPrice(old.price) !== gtcFillPrice(fill.price))) {
       errors.push("同一成交明细数量或价格冲突"); continue;
     }
     row.fills[fill.key] = fill;
@@ -222,9 +239,9 @@ export function mergeGtcFacts(previous: GtcExecution, facts: GtcFacts): GtcExecu
   for (const fill of Object.values(row.fills)) {
     if (fill.status === "FAILED")
       continue;
-    const q = gtcUnits(fill.shares); const p = gtcUnits(fill.price);
-    if (p <= 0n || p >= UNIT || q <= 0n) { errors.push("成交数量或价格异常"); continue; }
-    quantity += q; principal += q * p / UNIT;
+    const q = gtcUnits(fill.shares); const p = fillPriceRatio(fill.price);
+    if (p.numerator <= 0n || p.numerator >= p.denominator || q <= 0n) { errors.push("成交数量或价格异常"); continue; }
+    quantity += q; principal += q * p.numerator / p.denominator;
     if (fill.fee == null)
       feeUnknown = true;
     else fee += gtcUnits(fill.fee);
@@ -245,8 +262,10 @@ export function mergeGtcFacts(previous: GtcExecution, facts: GtcFacts): GtcExecu
   const status = row.order?.status ?? "";
   const canceled = ["CANCELED", "CANCELLED", "EXPIRED", "REJECTED"].includes(status);
   const full = orderMatched != null && orderMatched === total && quantity === total;
-  row.terminal = canceled || full || row.submit === "rejected";
-  row.open = canceled || full
+  // 官方原单 MATCHED 已退出挂单；结算舍入可能留下签单数量差额，不能虚构成交或可撤余量。
+  const matchedTerminal = status === "MATCHED";
+  row.terminal = canceled || matchedTerminal || full || row.submit === "rejected";
+  row.open = canceled || matchedTerminal || full
     ? "0"
     : row.order && ["LIVE", "DELAYED", "UNMATCHED", "MATCHED"].includes(status)
       && orderMatched != null && orderMatched <= total
@@ -259,8 +278,11 @@ export function mergeGtcFacts(previous: GtcExecution, facts: GtcFacts): GtcExecu
   row.error = facts.error || errors.join("；");
   row.observedAt = Math.max(row.observedAt, facts.observedAt);
   row.groupComplete = !row.manual && full && row.complete && row.other.state === "filled";
-  if (row.cancel && row.terminal)
+  if (row.cancel && row.terminal) {
     row.cancel.state = "acknowledged";
+    row.cancel.message = canceled ? "原单余量已终止，已成交部分保留"
+      : "原单已撮合结束，无可取消挂单；已成交部分保留";
+  }
   if (row.released && (!row.complete || row.error || !row.terminal)) {
     row.released = false; row.manual = true;
   }

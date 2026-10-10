@@ -3,6 +3,7 @@ import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { post, unwrap } from "@/api/client";
 import { tagKnownGtcVenueOrders } from "./executionProjection";
+import { reconcileGtcSellFinancials } from "./sellFinancials";
 
 export async function getPmSubmission(playerId: number, orderId: string): Promise<PmSubmission | null> {
   const response = await post<PmSubmission>("Pm_GetSubmission", { playerId, orderId }, "", { errorTip: false });
@@ -12,7 +13,7 @@ export async function getPmSubmission(playerId: number, orderId: string): Promis
 export async function saveOrders(account: PlatformAccount, orders: VenueOrder[]): Promise<void> {
   if (account.provider === "PredictFun")
     return;
-  const tagged = tagKnownGtcVenueOrders(account.accountId, orders);
+  const tagged = await reconcileGtcSellFinancials(account, tagKnownGtcVenueOrders(account.accountId, orders));
   const groups = new Map<string, VenueOrder[]>();
   for (const order of tagged) {
     const type = String(order.provider ?? account.provider);

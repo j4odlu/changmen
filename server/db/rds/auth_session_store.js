@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
 import { getPgPool } from "./common.js";
+import { querySessionWithReconnect } from "./connection_retry.js";
 import { certificateRegistryEnabled, authorizeClientCertificate } from './client_certificate_store.js';
 
 const BROWSER_SESSION_PREFIX = "bs1";
@@ -125,12 +126,13 @@ export async function getBrowserSession(value, context = {}) {
     return { temporary: true };
   try {
     const now = Date.now();
-    const { rows } = await pool.query(
+    const { rows } = await querySessionWithReconnect(pool,
       `SELECT id, user_id, jwt_session_id, secret_hash, cert_cn, idle_expires_at, absolute_expires_at,
               revoked_at, revoke_reason, last_seen_at${certificateRegistryEnabled() ? ', cert_fingerprint' : ''}
        FROM auth_sessions
        WHERE id = $1`,
       [parsed.id],
+      "getBrowserSession.read",
     );
     const row = rows[0];
     if (!row || !hashMatches(row.secret_hash, secretHash(parsed.secret)))
@@ -152,11 +154,12 @@ export async function getBrowserSession(value, context = {}) {
     const nextIdle = cookieOnlyAuth() ? PERSISTENT_EXPIRES_AT : Math.min(now + BROWSER_IDLE_MS, nextAbsolute);
     const touch = now - Number(row.last_seen_at || 0) >= 60_000 || cookieOnlyAuth() && Number(row.absolute_expires_at) !== PERSISTENT_EXPIRES_AT;
     if (touch) {
-      const updated = await pool.query(
+      const updated = await querySessionWithReconnect(pool,
         `UPDATE auth_sessions SET last_seen_at = GREATEST(last_seen_at, $2),
           idle_expires_at = GREATEST(idle_expires_at, $3), absolute_expires_at = $4
           WHERE id = $1 AND revoked_at IS NULL RETURNING id`,
         [parsed.id, now, nextIdle, nextAbsolute],
+        "getBrowserSession.touch",
       );
       if (updated.rowCount === 0)
         return { revoked: true, userId: String(row.user_id), reasonCode: "SESSION_REVOKED" };

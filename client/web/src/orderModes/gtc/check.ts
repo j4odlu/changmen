@@ -10,6 +10,7 @@ import { PLATFORMS } from "@changmen/venue-adapter/shared";
 import { isSingleLegPrecheckOnly } from "@/domain/betting/singleLegRate";
 import { shouldSkipAccountRateOnStakeScale } from "@/extensions/arbBet/stakeScaleByProfit";
 import { createObservationContext, observeOption } from "@/services/orderObservation";
+import { observeArbSubmissionBlocked } from "@/services/orderExecutionObservation";
 import { a8Tip } from "@/shared/a8Notify";
 import { buildArbProgressLegPair } from "@/shared/arbProgressLegMeta";
 import { arbBetToastSeconds } from "@/shared/betTiming";
@@ -207,6 +208,7 @@ export async function checkArbLegs(
   if (config.checkTimeout && Date.now() - checkStart > config.checkTimeout) {
     const elapsed = Date.now() - checkStart;
     const msg = `超时时间：${elapsed}ms，大于设定值：${config.checkTimeout}ms`;
+    observeArbSubmissionBlocked({ ...ready, legA, legB }, "precheck_timeout", msg);
     setMessage(`前置检查超时 ${elapsed}ms`);
     a8Tip("前置检查超时", msg, 3000);
     trace?.finish("fail", msg);

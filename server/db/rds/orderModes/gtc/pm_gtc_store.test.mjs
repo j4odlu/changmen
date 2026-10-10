@@ -1,6 +1,6 @@
 import { createGtcExecution } from "@changmen/shared/pm_gtc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createPmGtc, listPmGtc, mutatePmGtc } from "./pm_gtc_store.js";
+import { createPmGtc, listPmGtc, listPmGtcByIds, mutatePmGtc } from "./pm_gtc_store.js";
 
 const mocks = vi.hoisted(() => ({ pool: vi.fn(), query: vi.fn(), connection: vi.fn(), release: vi.fn(), noDb: false }));
 vi.mock("../../common.js", () => ({ getPgPool: () => mocks.noDb ? null : { query: mocks.pool, connect: mocks.connection } }));
@@ -8,6 +8,27 @@ const plan = { shares: "10", orderHash: "hash", originalPmLeg: "A" };
 const created = () => createGtcExecution("id", "owner", "wallet", "maker", plan, 1);
 beforeEach(() => { vi.clearAllMocks(); mocks.noDb = false; mocks.pool.mockResolvedValue({ rows: [] }); mocks.query.mockResolvedValue({ rows: [] }); mocks.connection.mockResolvedValue({ query: mocks.query, release: mocks.release }); });
 describe("gTC persistence fails before venue dispatch without durable coordination", () => {
+  it("saving original evidence reads only the requested owned executions without historical repair", async () => {
+    mocks.pool.mockImplementation(async sql => {
+      if (sql.startsWith("UPDATE orders"))
+        throw new Error("unrelated legacy repair failed");
+      return { rows: sql.startsWith("SELECT record") ? [{ record: created() }] : [] };
+    });
+    expect(await listPmGtcByIds("owner", ["id", "id"])).toEqual([created()]);
+    const queries = mocks.pool.mock.calls.filter(([sql]) => !sql.startsWith("CREATE"));
+    expect(queries).toHaveLength(1); expect(queries[0][1]).toEqual(["owner", ["id"]]);
+    expect(queries[0][0]).toContain("owner=$1 AND id::text=ANY($2::text[])");
+  });
+  it("scoped history never repairs or scans unrelated executions or limits history to 500 records", async () => {
+    mocks.pool.mockImplementation(async sql => ({ rows: sql.startsWith("SELECT record") ? [{ record: created() }] : [] }));
+    expect(await listPmGtc("owner", 42)).toEqual([created()]);
+    const queries = mocks.pool.mock.calls.filter(([sql]) => !sql.startsWith("CREATE"));
+    expect(queries).toHaveLength(1);
+    expect(queries[0][1]).toEqual(["owner", "42"]);
+    expect(queries[0][0]).toContain("record->'plan'->>'betRowId'=$2");
+    expect(queries[0][0]).not.toContain("LIMIT");
+    expect(queries[0][0]).not.toContain("::bigint");
+  });
   it("GTC recovery repairs only mode metadata using owned original order identities", async () => {
     mocks.pool.mockImplementation(async sql => ({ rows: sql.startsWith("SELECT record") ? [{ record: created() }] : [] }));
     expect(await listPmGtc("owner")).toEqual([created()]);
@@ -35,17 +56,24 @@ describe("gTC persistence fails before venue dispatch without durable coordinati
     expect(insertion[1][7]).toBe(1.2821);
     expect(insertion[1][8]).toBe(7.3259 * 6.7);
     expect(insertion[1][10]).toMatchObject({ pmShares: 9.29, pmStakeUsdc: 7.3259, pmFeeUsdc: 0.0797, pmGtcExecutionId: "id" });
+    const queries = mocks.query.mock.calls;
+    const settlement = queries.findIndex(([sql]) => sql.startsWith("SELECT id,bet_money"));
+    expect(settlement).toBeGreaterThan(queries.findIndex(([sql]) => sql.startsWith("INSERT INTO orders")));
+    expect(queries[settlement][1]).toEqual(["owner", 1, "hash", "id"]);
+    expect(queries.at(-1)[0]).toBe("COMMIT");
   });
   it("unavailable DB does not yield local authorization", async () => { mocks.noDb = true; await expect(listPmGtc("owner")).rejects.toThrow("RDS"); expect(mocks.connection).not.toHaveBeenCalled(); });
-  it("reserves wallet in advisory-locked transaction", async () => {
+  it("creates an execution under its own advisory lock", async () => {
     await createPmGtc({ id: "id", owner: "owner", walletKey: "wallet", maker: "maker", plan });
     const calls = mocks.query.mock.calls; expect(calls[0][0]).toBe("BEGIN"); expect(calls[1][0]).toContain("pg_advisory_xact_lock");
+    expect(calls[1][1]).toEqual(["id"]);
     expect(calls.find(([sql]) => sql.startsWith("INSERT INTO pm_gtc_executions"))[1][3].pmAuthorized).toBe(false); expect(calls.at(-1)[0]).toBe("COMMIT");
   });
-  it("another active wallet execution rolls back rather than dispatching", async () => {
+  it("another active wallet execution does not block a new automatic execution", async () => {
     mocks.query.mockImplementation(async sql => ({ rows: sql.includes("SELECT id FROM pm_gtc_executions") ? [{ id: "active" }] : [] }));
-    await expect(createPmGtc({ id: "id", owner: "owner", walletKey: "wallet", maker: "maker", plan })).rejects.toThrow("未完结");
-    expect(mocks.query.mock.calls.at(-1)[0]).toBe("ROLLBACK"); expect(mocks.query.mock.calls.some(([sql]) => sql.startsWith("INSERT"))).toBe(false);
+    expect(await createPmGtc({ id: "id", owner: "owner", walletKey: "wallet", maker: "maker", plan })).toMatchObject({ id: "id", pmAuthorized: false });
+    expect(mocks.query.mock.calls.at(-1)[0]).toBe("COMMIT");
+    expect(mocks.query.mock.calls.some(([sql]) => sql.includes("SELECT id FROM pm_gtc_executions"))).toBe(false);
   });
   it("new manual execution commits despite an existing active wallet execution", async () => {
     mocks.query.mockImplementation(async sql => ({ rows: sql.includes("SELECT id FROM pm_gtc_executions") ? [{ id: "active" }] : [] }));
@@ -54,7 +82,7 @@ describe("gTC persistence fails before venue dispatch without durable coordinati
     expect(mocks.query.mock.calls.at(-1)[0]).toBe("COMMIT");
     expect(mocks.query.mock.calls.some(([sql]) => sql.includes("SELECT id FROM pm_gtc_executions"))).toBe(false);
   });
-  it("multiple manual orders remain separate and each can only be authorized once", async () => {
+  it.each([undefined, "manual"])("multiple source=%s orders remain separate and each can only be authorized once", async (source) => {
     const records = new Map();
     mocks.query.mockImplementation(async (sql, params = []) => {
       const row = records.get(params[0]);
@@ -71,7 +99,7 @@ describe("gTC persistence fails before venue dispatch without durable coordinati
       return { rows: [] };
     });
     for (const id of ["first", "second"]) {
-      const manualPlan = { ...plan, source: "manual", orderHash: id };
+      const manualPlan = { ...plan, ...(source ? { source } : {}), orderHash: id };
       await createPmGtc({ id, owner: "owner", walletKey: "wallet", maker: "maker", plan: manualPlan });
       await mutatePmGtc("owner", id, 0, { kind: "authorize_pm" });
       await mutatePmGtc("owner", id, 1, { kind: "ack", state: "accepted", orderId: id });

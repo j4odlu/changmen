@@ -164,6 +164,26 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(mocks.betting).not.toHaveBeenCalled();
   });
 
+  it.each([false, true])("records automatic PM GTC depth rejection when adapter throws=%s", async throws => {
+    const pm = { ...account, provider: "Polymarket" } as PlatformAccount;
+    const option = new BetOption("Polymarket", "m", "b", "i", 10, "Home", 3.03);
+    option.diagnosticLinkId = 123;
+    const message = "GTC 自动套利限价内深度不足，未发送双腿";
+    mocks.check.mockImplementation(async (_account, checked) => {
+      checked.data = null;
+      checked.checkError = message;
+      if (throws) throw new Error(message);
+      return checked;
+    });
+    expect(await checkBetting(store, pm, option)).toBe(option);
+    const check = useOrderObservationStore().forLink("u1", 123).find(row => row.kind === "precheck_result");
+    expect(check).toMatchObject({ outcome: "blocked", errorCategory: "liquidity", reasonCode: "insufficient_depth",
+      safeSummary: "限价内可成交深度不足，未发送双腿" });
+    expect(option.checkError).toBe(message);
+    expect(option.data).toBeNull();
+    expect(mocks.betting).not.toHaveBeenCalled();
+  });
+
   it("PM repeating gateway check never converts the already converted venue amount again", async () => {
     const pm = { ...account, provider: "Polymarket", currency: "USDT" } as PlatformAccount;
     const option = new BetOption("Polymarket", "m", "b", "i", 67, "Home", 2);

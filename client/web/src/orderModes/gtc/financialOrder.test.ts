@@ -28,6 +28,18 @@ describe("gTC uses the ordinary PM financial chain", () => {
   it("keeps fee rounding and currency conversion identical for the reported order", () => {
     expect(gtcFinancialOrder(mergeGtcFacts(accepted(), facts("0.07971")))).toEqual({ pmShares: 9.29, pmFillPrice: 0.78, pmStakeUsdc: 7.3259, pmFeeUsdc: 0.0797, odds: 1.2821, betMoney: 7.3259 * 6.7 });
   });
+  it("preserves six-decimal official shares in the financial command instead of the ordinary four-decimal quantity", async () => {
+    const row = accepted(); row.plan.shares = "29.27";
+    const incoming = {
+      order: { id: hash, original: "29.27", matched: "29.260001", status: "MATCHED", tradeIds: ["trade"] },
+      fills: [{ key: "trade:maker", tradeId: "trade", bucket: "maker", role: "MAKER" as const, shares: "29.260001", price: "0.5100000167464197", fee: "0", status: "CONFIRMED", updatedAt: 3 }],
+      complete: true, observedAt: 3,
+    };
+    await commandGtc(row, { kind: "facts", facts: incoming });
+    const financial = mocks.post.mock.calls[0]![1].command.financialOrder;
+    expect(financial).toMatchObject({ pmShares: 29.260001, pmStakeUsdc: 14.9226, pmFeeUsdc: 0, pmFillPrice: 0.51 });
+    expect(financial.betMoney).toBe(14.9226 * 6.7);
+  });
   it("does not turn accepted zero or unknown fees into a financial order", () => {
     expect(gtcFinancialOrder(accepted())).toBeUndefined();
     expect(gtcFinancialOrder(mergeGtcFacts(accepted(), facts(null)))).toBeUndefined();

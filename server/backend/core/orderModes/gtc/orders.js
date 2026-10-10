@@ -20,7 +20,9 @@ export async function saveGtcOrders(body, owner) {
     return { ok: false, msg: "GTC orders 必须为数组" };
   if (String(body.type || owned.player?.provider) === "PredictFun")
     return { ok: false, msg: "PredictFun 订单只允许服务端场馆路径写入" };
-  const records = await db.listPmGtc(owner);
+  if (rows.some(row => !row || typeof row.pmGtcExecutionId !== "string" || !row.pmGtcExecutionId))
+    return { ok: false, msg: "GTC 原单执行身份或账号归属无效" };
+  const records = await db.listPmGtcByIds(owner, [...new Set(rows.map(row => row.pmGtcExecutionId))]);
   const executions = new Map(records.map(row => [row.id, row]));
   const existing = await db.fetchOrdersByPlayerOrderIdsStrict(playerId, owner, rows.flatMap(row => [row.orderId, row.pmBuyOrderId ?? row.pfBuyOrderId].filter(Boolean)));
   const known = new Map(existing.map(row => [String(row.order_id).toLowerCase(), row.raw?.pmGtcExecutionId]));

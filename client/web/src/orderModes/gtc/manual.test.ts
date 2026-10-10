@@ -33,6 +33,11 @@ beforeEach(() => {
 });
 
 describe("isolated manual GTC execution", () => {
+  it("old recovery unavailable does not block a newly persisted manual order", async () => {
+    mocks.progress.ready = false; mocks.refresh.mockRejectedValue(new Error("old list unavailable"));
+    await executeManualGtc(account, input(), context());
+    expect(mocks.refresh).not.toHaveBeenCalled(); expect(mocks.create).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
+  });
   it("submits exactly once with automatic betting off and persists manual source", async () => {
     const ctx = context(); const result = await executeManualGtc(account, input(), ctx);
     expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.check).toHaveBeenCalledWith(account, expect.anything(), { skipAccountRate: true, manual: true });
@@ -47,10 +52,10 @@ describe("isolated manual GTC execution", () => {
     expect(mocks.create.mock.calls[0]?.[2]).not.toHaveProperty("submit");
     expect(mocks.create.mock.calls[0]?.[2]).not.toHaveProperty("validate");
   });
-  it("unavailable coordination blocks before precheck/signing/POST", async () => {
-    mocks.refresh.mockRejectedValueOnce(new Error("backend unavailable"));
+  it("failure to persist this new execution blocks before POST", async () => {
+    mocks.create.mockRejectedValueOnce(new Error("backend unavailable"));
     await expect(executeManualGtc(account, input(), context())).rejects.toThrow("backend unavailable");
-    expect(mocks.check).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled();
+    expect(mocks.check).toHaveBeenCalledOnce(); expect(mocks.submit).not.toHaveBeenCalled();
   });
   it.each(["prepared", "accepted", "unknown"] as const)("existing %s execution does not block a new manual order", async (submit) => {
     const old = { id: "old", released: false, maker: "maker", submit, orderId: submit === "accepted" ? "old-order" : null } as GtcExecution;

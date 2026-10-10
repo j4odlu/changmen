@@ -4,7 +4,7 @@ import type { PlatformAccount } from "@changmen/client-core/models/platformAccou
 import type { GtcFacts, GtcFeeProof, GtcFill, GtcPlan } from "@changmen/shared/pm_gtc";
 import type { PolymarketOrderClientRuntime } from "../pmOrderClientCache";
 import type { GtcBuyCheckData } from "./contract";
-import { gtcDecimal, gtcUnits } from "@changmen/shared/pm_gtc";
+import { gtcDecimal, gtcFillPrice, gtcUnits } from "@changmen/shared/pm_gtc";
 import { POLYMARKET_CLOB_API } from "../api";
 import { parseTokenConfig, resolveApiCreds } from "../l2Auth";
 import { pmCancelOrder, pmGetOrder, pmSubmitOrder } from "../pmClientApi";
@@ -17,6 +17,7 @@ import { prepareManualGtcBuy } from "./preparation";
 
 export { pmCancelOrder, pmSubmitMaker };
 export { resolveGtcFillFee } from "./fee";
+export { readGtcSellCash, exactGtcSellCash } from "./sellCash";
 export { checkGtcBuy, checkManualGtcBuy, prepareManualGtcBuy } from "./preparation";
 
 function decimal(n: number) {
@@ -36,27 +37,22 @@ export async function buildPreparedGtcBuy(account: PlatformAccount, option: BetO
 }) {
   warmPolymarketUserWs(account, option.betId);
   const { data, runtime } = prepared;
-  const market = await polymarketPluginGet<{ fd?: { r?: unknown; e?: unknown; to?: unknown } }>(`${POLYMARKET_CLOB_API}/clob-markets/${encodeURIComponent(option.betId)}`);
-  const fd = market?.fd;
-  if (!fd || fd.r == null || !Number.isFinite(Number(fd.r)) || Number(fd.r) < 0 || Number(fd.e) !== 1 || fd.to !== true)
-    throw new Error("GTC 无法确认市场费率或不支持当前费用曲线");
-  const feeProof: GtcFeeProof = { rate: decimal(Number(fd.r)), exponent: 1, takerOnly: true, observedAt: Date.now() };
   const budget = data.apiBetMoney;
-  // p(1-p) ≤ 1/4；预留每份五位小数舍入上界，固定份数只向下取两位。
+  // [changmen 扩展] 份数只按本金预算签定；成交后的实际 maker/taker 费用另记成本。
   const target = budget / data.limitPrice;
-  const size = Math.floor(budget / (data.limitPrice + Number(fd.r) / 4 + 0.00001) * 100) / 100;
+  const size = Number(gtcUnits(budget.toFixed(6)) * 100n / gtcUnits(data.limitPrice.toFixed(6))) / 100;
   if (!(size >= data.orderOptions.minOrderSize))
-    throw new Error("GTC 含费用预算不足最小份数");
+    throw new Error("GTC 下单金额低于最小份数");
   const signed = await runtime.builder.buildOrder({ tokenID: data.tokenId, price: data.limitPrice, size, side: runtime.clob.Side.BUY, builderCode: runtime.builderCode }, { tickSize: data.orderOptions.tickSize, negRisk: data.orderOptions.negRisk } as Parameters<typeof runtime.builder.buildOrder>[1], data.orderOptions.version);
   if (!runtime.clob.isV2Order(signed))
     throw new Error("GTC SDK 未生成受支持签单");
   const shares = gtcDecimal(BigInt(signed.takerAmount));
   const maxPrincipal = gtcDecimal(BigInt(signed.makerAmount));
-  if (Number(shares) !== size || Number(maxPrincipal) + size * (Number(fd.r) / 4 + 0.00001) > budget + 0.000001)
+  if (Number(shares) !== size || gtcUnits(maxPrincipal) > gtcUnits(budget.toFixed(6)))
     throw new Error("GTC 实际签单数量或预算越界");
   const hash = pmSignedOrderHash(signed, { version: data.orderOptions.version, negRisk: data.orderOptions.negRisk });
   const body = runtime.clob.orderToJsonV2(signed, resolveApiCreds(parseTokenConfig(account.token)).apiKey, runtime.clob.OrderType.GTC, false, false);
-  return { shares, targetShares: decimal(target), price: decimal(data.limitPrice), maxPrincipal, allInBudget: decimal(budget), feeProof, protocol: data.orderOptions.version, negRisk: data.orderOptions.negRisk, orderHash: hash, route: resolvePmOrderSubmitHttpMode(), validate: prepared.validate, submit: async () => { prepared.consume(); return pmSubmitOrder<GtcAck>(account, body); } };
+  return { shares, targetShares: decimal(target), price: decimal(data.limitPrice), maxPrincipal, allInBudget: decimal(budget), protocol: data.orderOptions.version, negRisk: data.orderOptions.negRisk, orderHash: hash, route: resolvePmOrderSubmitHttpMode(), validate: prepared.validate, submit: async () => { prepared.consume(); return pmSubmitOrder<GtcAck>(account, body); } };
 }
 export interface GtcAck { success?: boolean; orderID?: string; status?: string; errorMsg?: string; pmSubmitNotSent?: boolean }
 interface Trade { id?: string; taker_order_id?: string; asset_id?: string; side?: string; size?: string; price?: string; status?: string; last_update?: string; match_time?: string; fee_rate_bps?: string; maker_orders?: Array<{ order_id?: string; asset_id?: string; side?: string; matched_amount?: string; price?: string }> }
@@ -74,7 +70,7 @@ export function gtcTradeFills(trade: Trade, plan: GtcPlan, id: string): GtcFill[
   return own.map((part) => {
     if (part.asset !== plan.tokenId || part.side?.toUpperCase() !== "BUY")
       throw new Error("GTC 原单成交 token/方向不一致");
-    const shares = gtcDecimal(gtcUnits(part.shares)); const price = gtcDecimal(gtcUnits(part.price));
+    const shares = gtcDecimal(gtcUnits(part.shares)); const price = gtcFillPrice(part.price);
     const q = Number(shares); const p = Number(price);
     const status = String(trade.status ?? "").toUpperCase();
     if (!["MATCHED", "MINED", "CONFIRMED", "RETRYING", "FAILED"].includes(status))
@@ -117,6 +113,19 @@ export async function readGtcFacts(account: PlatformAccount, plan: GtcPlan, id: 
     if (cursor === "LTE=") { complete = true; break; }
   }
   const ownFills = [...fills.values()];
+  if (ownFills.some(fill => fill.role === "TAKER" && fill.status !== "FAILED" && fill.fee == null)) {
+    try {
+      const market = await polymarketPluginGet<{ fd?: { r?: unknown; e?: unknown; to?: unknown } }>(`${POLYMARKET_CLOB_API}/clob-markets/${encodeURIComponent(plan.conditionId)}`);
+      const fd = market?.fd;
+      if (fd && fd.r != null && Number.isFinite(Number(fd.r)) && Number(fd.r) >= 0 && Number(fd.e) === 1 && fd.to === true) {
+        const proof: GtcFeeProof = { rate: decimal(Number(fd.r)), exponent: 1, takerOnly: true, observedAt: Date.now() };
+        for (const fill of ownFills.filter(fill => fill.role === "TAKER" && fill.fee == null)) {
+          const fee = resolveGtcFillFee(proof, fill.role, Number(fill.shares), Number(fill.price));
+          if (fee != null) fill.fee = decimal(fee);
+        }
+      }
+    } catch { /* 本单费用保持未知，不能以零费用或预留费用替代。 */ }
+  }
   if (!order) {
     const confirmed = ownFills.filter(fill => fill.status !== "FAILED");
     const quantity = confirmed.reduce((sum, fill) => sum + gtcUnits(fill.shares), 0n);

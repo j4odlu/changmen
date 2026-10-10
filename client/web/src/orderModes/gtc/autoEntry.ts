@@ -7,6 +7,7 @@ import { isMapMuteActive } from "@/extensions/mapBetMute";
 import { isPrematchFullMarketAllowed } from "@/extensions/prematchFullOnly";
 import { ExecutionError } from "@/orderModes/gtc/executionResult";
 import { beginExecutionObservation, finishExecutionObservation } from "@/services/orderExecutionObservation";
+import { syncActiveBetFail } from "@/stores/betting/activeBetRunSync";
 import {
   recordArbAttemptMetric,
 } from "@/stores/betting/autoBet/arbAttemptMetrics";
@@ -86,6 +87,12 @@ export async function executeGtcAttempt(params: {
     observationMessage = err instanceof Error ? err.message : "";
     const msg = errorMessage(err);
     params.setMessage(`自动下单异常：${msg}`);
+    // [changmen 扩展] 签单、利润或持久化门控失败时也必须收尾，不能滞留在“预检通过”。
+    try {
+      if (ready && !(err instanceof ExecutionError))
+        syncActiveBetFail(params.bet.id, msg, phase === "check" ? "预检" : "下单");
+    }
+    catch { /* [changmen 扩展] 进度记录失败不能打断原始异常收尾。 */ }
     attempt.trace?.finish("fail", msg);
     recordArbAttemptMetric({ ...base, phaseMs: phaseMsMap, stop: "error" });
   }

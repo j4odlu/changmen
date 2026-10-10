@@ -53,6 +53,8 @@ const RUNTIME_DEEP = new Map([
   ["orderModes/gtc/manual.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/gateway.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/orderCardView.ts", new Set(["polymarket/gtc"])],
+  ["orderModes/gtc/pollingPolicy.ts", new Set(["polymarket/gtc"])],
+  ["orderModes/gtc/sellFinancials.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/financialOrder.ts", new Set(["polymarket/orders"])],
   ["runtime/venueAdapters.ts", new Set(["registry/adapters"])],
   // vitest setup → oddsStore：勿经 polymarket/predictfun barrel 预加载 CLOB transport，否则场馆单测 vi.mock 失效

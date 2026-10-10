@@ -9,6 +9,8 @@ import {
   shouldPlaceLegsInParallel,
 } from "@/stores/betting/autoBet/phases/placeArbLegs";
 import { createDefaultUserConfig } from "@/types/userConfig";
+import { observeArbSubmissionBlocked } from "@/services/orderExecutionObservation";
+vi.mock("@/services/orderExecutionObservation", () => ({ observeArbSubmissionBlocked: vi.fn() }));
 
 const validatePrepared = vi.hoisted(() => vi.fn((): string | null => null));
 vi.mock("@changmen/venue-adapter/polymarket", () => ({ validatePolymarketPreparedBuy: validatePrepared, recordPmExecutionMetric: vi.fn() }));
@@ -95,6 +97,7 @@ describe("shouldPlaceLegsInParallel", () => {
     expect(checkBetting).not.toHaveBeenCalled();
     expect(out.placeOutcomeA).toBe("not_attempted");
     expect(out.placeOutcomeB).toBe("not_attempted");
+    expect(observeArbSubmissionBlocked).toHaveBeenCalledWith(expect.anything(), "pair_submit_blocked", "钱包会话已失效");
   });
   it("A8↔A8 Parallel 仍并发", () => {
     expect(shouldPlaceLegsInParallel("Parallel")).toBe(true);
@@ -135,6 +138,8 @@ describe("placeArbLegs two-leg report contract", () => {
     expect(out.placeOutcomeB).toBe("not_attempted");
     expect(out.resultA?.success).toBe(false);
     expect(out.resultB).toBeUndefined();
+    expect(observeArbSubmissionBlocked).toHaveBeenCalledWith(expect.objectContaining({ accountA: undefined, accountB: expect.anything() }),
+      "serial_first_leg_failed", "首腿提交返回失败，未发送第二腿");
     expect(syncActiveBetPlaceResults).toHaveBeenCalledWith(
       10,
       expect.anything(),
@@ -155,6 +160,8 @@ describe("placeArbLegs two-leg report contract", () => {
     expect(out.placeOutcomeA).toBe("submit_unknown");
     expect(out.placeOutcomeB).toBe("not_attempted");
     expect(retryFailedLeg).not.toHaveBeenCalled();
+    expect(observeArbSubmissionBlocked).toHaveBeenCalledWith(expect.objectContaining({ accountA: undefined }),
+      "serial_first_leg_failed", "首腿提交结果未知，未发送第二腿");
   });
 
   it("a PM first-leg submission failure returns api_failed without entering pending confirmation", async () => {

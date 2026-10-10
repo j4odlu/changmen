@@ -14,8 +14,9 @@ import { placeOtherLeg } from "./gateway";
 import { findGtcOtherOrder } from "./otherFacts";
 import { settleGtcOtherLeg } from "./otherOrders";
 import { gtcExecutionResult } from "./result";
-import { acceptGtc, currentGtc, gtcProgress, markGtcLegOnce, mutateGtc, pollGtc, refreshGtcRecords, startGtcRuntime } from "./runtime";
+import { acceptGtc, currentGtc, markGtcLegOnce, mutateGtc, pollGtc, refreshGtcRecords, startGtcRuntime } from "./runtime";
 import { assertGtcHistoryAllowsLeg } from "./successMarkers";
+import { gtcProgress } from "./gtcProgressState";
 
 export function isGtcPair(checked: ArbBetChecked): boolean {
   return checked.betBothLegs && !checked.singleLegByRate && Boolean(checked.accountA && checked.accountB)
@@ -26,20 +27,21 @@ export async function executeGtc(params: ArbBetAttemptParams, checked: ArbBetChe
     throw new Error("GTC V1 仅支持一条 PM 腿的双边自动套利");
   const user = useUserStore(); const owner = String(user.userId);
   const session = getAuthSessionVersion();
-  startGtcRuntime(owner); await refreshGtcRecords();
-  if (!gtcProgress.ready)
-    throw new Error("GTC 持久化协调未就绪");
+  startGtcRuntime(owner);
   const pmA = checked.legA.type === "Polymarket";
   const pm = pmA ? checked.legA : checked.legB;
   const other = pmA ? checked.legB : checked.legA;
   const account = (pmA ? checked.accountA : checked.accountB)!;
   const otherAccount = (pmA ? checked.accountB : checked.accountA)!;
+  // [changmen 扩展] 用户启用同盘口历史规则才读取该盘口；旧单全量恢复不决定新执行是否就绪。
+  const historyAccounts = [account, otherAccount].filter(row => params.config.noSameBet || row.maxBetCount || row.lastOdds);
+  if (historyAccounts.length)
+    await refreshGtcRecords(params.bet.id, historyAccounts.map(row => row.accountId));
   assertGtcHistoryAllowsLeg(owner, account, params.bet.id, pm.target, pm.odds, params.config.noSameBet);
   assertGtcHistoryAllowsLeg(owner, otherAccount, params.bet.id, other.target, other.odds, params.config.noSameBet);
   const { prepareGtcBuy, pmSubmitMaker } = await import("@changmen/venue-adapter/polymarket/gtc");
   const maker = pmSubmitMaker(account);
-  if (gtcProgress.records.some(row => !row.released && row.maker === maker))
-    throw new Error("此 PM 钱包有待处理 GTC，请先核实原单");
+  // [changmen 扩展] 原单状态仅约束自身；同钱包已有挂单不阻止新的独立套利。
   const prepared = await prepareGtcBuy(account, pm);
   const otherBinding = () => JSON.stringify([otherAccount.accountId, otherAccount.provider, otherAccount.token, otherAccount.gateway, otherAccount.currency, other.betMoney, other.odds, other.matchId, other.betId, other.itemId, other.target, other.data]);
   const frozenOther = otherBinding();
@@ -53,10 +55,10 @@ export async function executeGtc(params: ArbBetAttemptParams, checked: ArbBetChe
     || (other.stakeExchange != null && other.stakeExchange !== otherFx)) {
     throw new Error("GTC 预检金额单位与场馆原币不一致，禁止发送双腿");
   }
-  const costs = Number(prepared.allInBudget) * fx + other.betMoney * otherFx;
+  const costs = Number(prepared.maxPrincipal) * fx + other.betMoney * otherFx;
   const ratio = Math.min(Number(prepared.shares) * fx, other.betMoney * otherFx * other.odds) / costs;
   if (!Number.isFinite(ratio) || ratio < params.config.profit)
-    throw new Error(`GTC 签单舍入与含费预算后利润不足：${ratio.toFixed(6)}`);
+    throw new Error(`GTC 签单本金与份数舍入后利润不足：${ratio.toFixed(6)}`);
   const plan: GtcPlan = { ...prepared, playerId: Number(account.accountId), otherPlayerId: Number(otherAccount.accountId), originalPmLeg: pmA ? "A" : "B", otherProvider: otherAccount.provider, otherTarget: other.target, otherOdds: other.odds, otherStake: other.betMoney, matchId: params.match.id, betRowId: params.bet.id, otherVenueMatchId: other.matchId, otherVenueItemId: other.itemId, linkId: checked.linkId, tokenId: pm.itemId, conditionId: pm.betId, target: pm.target, match: params.match.title, bet: params.bet.getBetName(), item: pm.target, fx, parallel: params.config.betSorting === "Parallel" };
   // 持久化计划不含签名/凭证/函数。
   const { submit: _submit, validate: _validate, ...persistedPlan } = plan as GtcPlan & { submit?: unknown; validate?: unknown };
@@ -97,7 +99,7 @@ export async function executeGtc(params: ArbBetAttemptParams, checked: ArbBetChe
       result.orderId = ack.orderID ?? null; result.link = checked.linkId; result.pending = accepted;
       result.observation = pm.observation; result.saveLog(account);
       if (accepted)
-        await pollGtc(id);
+        await pollGtc(id).catch(() => {}); // 查询失败不改写已收到的 accepted 回执。
       const row = currentGtc(id);
       syncActiveBetLeg(params.bet.id, pmA ? "A" : "B", accepted ? gtcUnits(row.matched) > 0n ? "confirmed" : "submitted" : row.submit === "rejected" ? "rejected" : "pending_confirm", gtcStateLabel(row));
     }
@@ -117,7 +119,7 @@ export async function executeGtc(params: ArbBetAttemptParams, checked: ArbBetChe
       await submitPm();
       const row = currentGtc(id);
       // 首轮可靠正成交才允许原始第二腿；零成交/未知不等待未来 maker 成交再补。
-      if (row.submit === "accepted" && row.complete && !row.error && gtcUnits(row.matched) > 0n && row.deadlineAt > Date.now())
+      if (row.submit === "accepted" && row.complete && !row.error && !gtcProgress.queryIssues[id] && gtcUnits(row.matched) > 0n && row.deadlineAt > Date.now())
         await submitOther();
     }
     else {

@@ -15,6 +15,7 @@ import {
   syncActiveBetPlaceResults,
   syncActiveBetPhase,
   syncActiveBetPrecheckResults,
+  syncActiveBetFail,
 } from "@/stores/betting/activeBetRunSync";
 
 vi.mock("@/stores/accountStore", () => ({
@@ -31,6 +32,22 @@ describe("activeBetRunStore", () => {
     const store = useActiveBetRunStore();
     store.$reset();
     store.runs.clear();
+  });
+
+  it("closes a post-precheck exception at the submission layer without replacing passed prechecks", () => {
+    const store = useActiveBetRunStore();
+    syncActiveBetBegin({ match: { id: 1, title: "A vs B" }, bet: { id: 100, getBetName: () => "全场" },
+      legA: { type: "RAY", target: "Home" }, legB: { type: "Polymarket", target: "Away" },
+      accountA: { playerName: "ray" }, accountB: { playerName: "pm" }, linkId: 1000, betBothLegs: true } as never);
+    syncActiveBetPrecheckResults(100, { hasA: true, hasB: true, okA: true, okB: true });
+    syncActiveBetFail(100, "GTC 实际签单数量或预算越界", "下单");
+    const run = store.runs.get(100)!;
+    expect(run.terminalAt).toBeTypeOf("number");
+    expect(run.overallLabel).toBe("GTC 实际签单数量或预算越界");
+    for (const leg of run.legs) {
+      expect(leg.events.some(event => event.stage === "预检" && event.detail === "预检通过")).toBe(true);
+      expect(leg.events.at(-1)).toMatchObject({ stage: "下单", detail: "GTC 实际签单数量或预算越界" });
+    }
   });
 
   it("tracks arb begin through dual-leg success and removes terminal run after a short linger", () => {

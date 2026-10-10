@@ -588,16 +588,16 @@ export function syncActiveBetAfterRejectSync(
   store.setPhase(betId, "settling", "部分成功，等待后续");
 }
 
-export function syncActiveBetFail(betId: number, reason: string) {
+export function syncActiveBetFail(betId: number, reason: string, layer?: "预检" | "下单" | "拒单") {
   const store = activeStore();
   if (!store)
     return;
   const run = store.runs.get(betId);
-  const failLayer = run?.phase === "checking" || run?.phase === "preparing"
+  const failLayer = layer ?? (run?.phase === "checking" || run?.phase === "preparing"
     ? "预检"
     : run?.phase === "settling" || run?.phase === "syncing"
       ? "拒单"
-      : "下单";
+      : "下单");
   const parts = reason.split(" · ").map(s => s.trim()).filter(Boolean);
   if (run && parts.length > 1) {
     for (const part of parts) {

@@ -218,4 +218,22 @@ describe("browser session lifetime and concurrent tabs", () => {
     mocks.poolQuery.mockResolvedValueOnce({ rows: [row()] }).mockRejectedValueOnce(new Error("write timeout"));
     expect(await getBrowserSession(cookie, { certCn: "gb14" })).toEqual({ temporary: true });
   });
+  it("restores a valid cookie after a stale pooled connection fails its lookup", async () => {
+    mocks.poolQuery.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"))
+      .mockResolvedValueOnce({ rows: [row({ last_seen_at: Date.now() })] });
+    expect(await getBrowserSession(cookie, { certCn: "gb14" })).toMatchObject({ userId: "u1", jwtSessionId: "s1" });
+    expect(mocks.poolQuery).toHaveBeenCalledTimes(2);
+  });
+  it("retries only the idempotent session touch and still respects a concurrent logout", async () => {
+    mocks.poolQuery.mockResolvedValueOnce({ rows: [row()] })
+      .mockRejectedValueOnce(new Error("Connection terminated unexpectedly"))
+      .mockResolvedValueOnce({ rowCount: 0 });
+    expect(await getBrowserSession(cookie, { certCn: "gb14" })).toMatchObject({ revoked: true });
+    expect(mocks.poolQuery).toHaveBeenCalledTimes(3);
+  });
+  it("keeps repeated transport disconnects temporary and never reclassifies them as invalid credentials", async () => {
+    mocks.poolQuery.mockRejectedValue(new Error("Connection terminated unexpectedly"));
+    expect(await getBrowserSession(cookie, { certCn: "gb14" })).toEqual({ temporary: true });
+    expect(mocks.poolQuery).toHaveBeenCalledTimes(2);
+  });
 });

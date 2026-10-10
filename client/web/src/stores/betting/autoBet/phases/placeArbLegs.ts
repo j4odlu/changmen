@@ -11,6 +11,7 @@ import type {
 } from "@/stores/betting/autoBet/phases/types";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
 import { legStakeCny } from "@/domain/polymarket/pmArbStake";
+import { observeArbSubmissionBlocked } from "@/services/orderExecutionObservation";
 import { formatBetResult } from "@/shared/arbBetTraceFormat";
 import { useAccountStore } from "@/stores/accountStore";
 import {
@@ -108,6 +109,8 @@ export async function placeArbLegs(
     trace?.event("预检", mixedBlockReason);
     mixedBlocked = true;
   }
+  if (mixedBlocked)
+    observeArbSubmissionBlocked(checked, "pair_submit_blocked", mixedBlockReason);
 
   if (!mixedBlocked && !betBothLegs) {
     if (accountA) {
@@ -150,6 +153,11 @@ export async function placeArbLegs(
     if (resultA.success) {
       attemptedB = true;
       resultB = await submitLeg(accountB!, legB);
+    }
+    else {
+      // [changmen 扩展] 首腿未成功时 A8 不发第二腿；单独记录第二腿未提交，不覆盖首腿回执。
+      const reason = resultA.pmSubmitUnknown ? "首腿提交结果未知，未发送第二腿" : "首腿提交返回失败，未发送第二腿";
+      observeArbSubmissionBlocked({ ...checked, accountA: undefined }, "serial_first_leg_failed", reason);
     }
     // A 失败：B 保持 not_attempted，仍回传编排层
   }

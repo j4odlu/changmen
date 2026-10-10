@@ -45,3 +45,30 @@ GTC 查询、历史模式修复和挂单恢复只在 GTC 模块中执行。前�
 这里保证的是相同账号、订单、行情、配置和场馆响应输入下，FOK 原有算法与上述 VPS 版本一致；不是保证不同行情、余额或网络状态下的结果数值相同。模式选择和历史订单身份路由属于新增边界，单独验证，不能用核心文件一致代替这些边界的验证。
 
 本轮前端 3,199 项、后端正式 367 项、订单业务 194 项通过，前端类型检查及构建通过。完整结果为 `output/fok-release-verdict.json`（PASS），核心结果为 `output/vps-fok-verification.json`。保留与接入前 `219535c8` 的对比，可继续运行 `npm run check:fok-parity`。结果仅针对本次工作区，不替未来改动或实际部署作保证。
+
+## 2026-10-10 16:32 GTC 财务修改后的再次检查
+
+[changmen 扩展] 上文 13:34 的 PASS 是当时工作区的历史验收。本轮重新检查后，**原严格源码快照仍然 FAIL**：`check:fok-parity` 首个差异是 `checkArbLegs.ts`，`check:fok-vps` 首个差异是 `account/pmManualSell.ts`。没有更新固定 VPS 哈希清单，也没有修改这两个检查器放宽检查。
+
+完整比对 551 个受保护文件，修改前 543 个一致、8 个有差异；本轮恢复共享财务函数后 544 个一致、7 个有差异。每个差异均单独检查，补充业务验证脚本是 `node scripts/verification/verify-fok-reviewed-differences.mjs`。它不是严格源码快照的替代品：先核对不可变基线来源，逐段精确匹配已审查扩展，再比较整个模块的 FOK 专门化结果；任何其他受保护文件或语句改变均报错。
+
+| 文件 | 差异及本轮处理 | 对 FOK 的结论 |
+| --- | --- | --- |
+| `server/backend/core/account/order/save_pm.js` | 上轮无模式条件的四位小数校准会影响 FOK；已恢复到 VPS 基线，精确校准由 GTC 专属账本完成 | 原成本、手续费、盈亏与 reward 处理全部恢复 |
+| `autoBet/phases/checkArbLegs.ts` | 新增明确超时门控的原因记录 | 原预检、金额、超时判断及返回不变 |
+| `autoBet/phases/placeArbLegs.ts` | 新增整对未提交、串行首腿失败后第二腿未发送记录 | 原门控、串并行顺序、POST 参数及回执不变 |
+| `autoBet/executeArbBet.ts` | 新增失败进度标记；发现其自身异常可能中断收尾，已加 try/catch 隔离 | 原返回、释放规则、指标和收尾轨迹一致，包括记录器抛错 |
+| `stores/betting/activeBetRunSync.ts` | 失败提示可显式指定预检/下单/拒单阶段 | 只影响进度展示，不读写成本或调用下注 |
+| `stores/account/pmManualSell.ts` | 仅有 `PmGtcExecutionId` 的买单平仓进入专属净回款保存；确认/现金查询/保存未完成显示原卖单待核对提示 | FOK 保存、原两次重试参数及错误文案不变，不进行 GTC 净回款查询 |
+| `server/backend/core/account/order/position_events.js` | 仅带 GTC 执行 ID 的历史卖出事件按现金回填 | FOK 历史事件继续使用基线字段 |
+| `server/backend/core/account/order_store.js` | 之前已接入的模式身份保护与分流 | 原完整 FOK 保存专门化及正常/失败读取边界仍通过 |
+
+另有一个不在上述哈希保护列表中的**已提交独立变化**：`89b87779 fix(web): align manual betting gates with A8` 移除了 FOK 手动入口的余额、账号自动筛选、盘口静音和赛前全场门控，GTC 自身的手动门控仍保留。当前入口与该提交完全一致；对旧 VPS 基线的行为差异严格限于这四项。保留已提交的 A8 对齐行为，不将其归因于本次 GTC 修改或声称与旧 VPS 全部一致。FOK 手动执行器本身仍与 VPS 原执行体一致。
+
+验证结果：480 组实际共享财务合并函数基线/当前输出逐字段一致；18 组自动执行与 4 组收尾对比 VPS 一致；19 组手动执行与独立 A8 对齐提交一致；四种手动门控差异也已对旧 VPS 单独核实。PM FOK 下单 adapter 的完整源文件与 VPS 相同。公共入口、读取失败边界和 GTC 模块隔离均通过。
+
+本轮前端 3328 项通过（1 项跳过，包含类型检查）、后端正式 381 项通过（16 项跳过）、订单业务 183 项通过；不同套件有重叠，不合计为独立用例数。16 项 PostgreSQL GTC 生命周期验证仅使用会话临时表，仍全部通过。前端构建、团队边界及 adapter 检查通过。
+
+本地前后端于 16:31:49 重启，3700 与 5576 健康检查及数据库连接正常，Vite 实际返回的代码含隔离后的失败进度记录。页面仍显示 GTC 买入 50、盈亏 -50、组合 +15，另一张买入 49、盈亏 +13。只读复核当前用户 3 个 GTC 执行、2 张买单，成本/盈亏不一致数为 0；没有实际部分成交、撤单或卖单样本，相关场景以临时表回归验证。本轮没有发真实下注、卖出或撤单。
+
+本轮证据：`output/fok-reviewed-differences.json`、`output/fok-audit-runtime.json`、`output/fok-audit-original-strict.log`、`output/fok-audit-vps-strict.log`。这些结果不代表重新执行了包含 VPS 重新捕获和发布清单检查的完整 `check:fok-release`。

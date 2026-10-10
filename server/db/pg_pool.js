@@ -52,12 +52,29 @@ function requirePg() {
   return require(require.resolve("pg", { paths: searchPaths }));
 }
 
-function attachClientErrorHandler(client) {
+export function attachClientErrorHandler(client) {
   if (!client || _clientErrorHandled.has(client))
     return;
   _clientErrorHandled.add(client);
+  const connectedAt = Date.now();
+  const socket = client.connection?.stream;
+  const path = { host: client.host, localAddress: socket?.localAddress, localPort: socket?.localPort,
+    remoteAddress: socket?.remoteAddress, remotePort: socket?.remotePort };
+  let lastError;
   client.on("error", (err) => {
-    console.warn("[db] RDS client error:", err.message);
+    lastError = { code: err.code || "CONNECTION_ERROR", message: err.message };
+    console.warn("[db] RDS client error:", JSON.stringify({ at: new Date().toISOString(),
+      code: err.code || "CONNECTION_ERROR", message: err.message, backendPid: client.processID,
+      connectionAgeMs: Date.now() - connectedAt, application: applicationName(), path }));
+  });
+  client.on("end", () => {
+    // pg 主动 client.end()/池内到期淘汰会设置 _ending；只有意外断开才报警。
+    // 活跃查询遇到 EOF 时 pg 会直接拒绝查询并发出 end，不一定再发 client.error。
+    if (client._ending || client.connection?._ending) return;
+    console.warn("[db] RDS unexpected disconnect:", JSON.stringify({ at: new Date().toISOString(),
+      backendPid: client.processID, connectionAgeMs: Date.now() - connectedAt,
+      application: applicationName(), path, ...(lastError || { code: "UNEXPECTED_END" }),
+      total: _pgPool?.totalCount, idle: _pgPool?.idleCount, waiting: _pgPool?.waitingCount }));
   });
 }
 
@@ -93,7 +110,9 @@ export function getPgPool(reason = "") {
     });
     _pgPool.on("connect", attachClientErrorHandler);
     _pgPool.on("error", (err) => {
-      console.warn("[db] RDS idle client error:", err.message);
+      console.warn("[db] RDS idle client error:", JSON.stringify({ at: new Date().toISOString(),
+        code: err.code || "CONNECTION_ERROR", message: err.message,
+        total: _pgPool.totalCount, idle: _pgPool.idleCount, waiting: _pgPool.waitingCount }));
     });
     if (!_logged) {
       _logged = true;

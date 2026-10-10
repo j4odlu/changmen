@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { executeArbBet } from "@/orderModes/router";
 import { finishExecutionObservation } from "@/services/orderExecutionObservation";
 import { recordArbAttemptMetric } from "@/stores/betting/autoBet/arbAttemptMetrics";
+import { syncActiveBetFail } from "@/stores/betting/activeBetRunSync";
 
 const mocks = vi.hoisted(() => ({ prepare: vi.fn(), check: vi.fn(), place: vi.fn(), finalize: vi.fn(), gtc: vi.fn(), user: { userId: "owner", extensionPrefs: { pmArbOrderMode: "FOK", pmGtcV1Activation: undefined as string | undefined } } }));
 vi.mock("pinia", () => ({ getActivePinia: () => ({}) }));
@@ -67,6 +68,7 @@ describe("fOK and GTC module dispatch isolation", () => {
     mocks.gtc.mockRejectedValueOnce(new Error("DB unavailable"));
     await executeArbBet(params());
     expect(finishExecutionObservation).toHaveBeenCalledWith(undefined, 3, "exception", "place", "DB unavailable");
+    expect(syncActiveBetFail).toHaveBeenCalledWith(2, "DB unavailable", "下单");
     expect(mocks.place).not.toHaveBeenCalled();
   });
   it("gTC completion records its execution time without invoking FOK finalize", async () => {
@@ -74,5 +76,14 @@ describe("fOK and GTC module dispatch isolation", () => {
     await executeArbBet(params());
     expect(recordArbAttemptMetric).toHaveBeenCalledWith(expect.objectContaining({ stop: "complete", phaseMs: expect.objectContaining({ place: expect.any(Number) }) }));
     expect(mocks.finalize).not.toHaveBeenCalled();
+  });
+  it("a failed progress observer cannot interrupt GTC error metrics or hide the original failure", async () => {
+    mocks.user.extensionPrefs = { pmArbOrderMode: "GTC", pmGtcV1Activation: "1:owner" };
+    mocks.gtc.mockRejectedValueOnce(new Error("DB unavailable"));
+    vi.mocked(syncActiveBetFail).mockImplementationOnce(() => { throw new Error("progress unavailable"); });
+    await expect(executeArbBet(params())).resolves.toBeUndefined();
+    expect(recordArbAttemptMetric).toHaveBeenCalledWith(expect.objectContaining({ stop: "error" }));
+    expect(finishExecutionObservation).toHaveBeenCalledWith(undefined, 3, "exception", "place", "DB unavailable");
+    expect(mocks.place).not.toHaveBeenCalled(); expect(mocks.finalize).not.toHaveBeenCalled();
   });
 });

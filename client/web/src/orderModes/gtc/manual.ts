@@ -10,7 +10,7 @@ import { useUserStore } from "@/stores/userStore";
 import { createGtc } from "./api";
 import { checkBetting } from "./gateway";
 import { gtcExecutionResult } from "./result";
-import { acceptGtc, currentGtc, gtcProgress, mutateGtc, pollGtc, refreshGtcRecords, startGtcRuntime } from "./runtime";
+import { acceptGtc, currentGtc, mutateGtc, pollGtc, startGtcRuntime } from "./runtime";
 
 /** [changmen 扩展] 单次手动 GTC，不依赖自动下注开关、不触发另一腿或旧 FOK 编排。 */
 export async function executeManualGtc(account: PlatformAccount, input: BetOption, context: {
@@ -30,9 +30,7 @@ export async function executeManualGtc(account: PlatformAccount, input: BetOptio
     user.extensionPrefs.pmGtcV1Participant = true;
     await user.saveExtensionPrefs();
   }
-  checkSession(); startGtcRuntime(owner); await refreshGtcRecords(); checkSession();
-  if (!gtcProgress.ready)
-    throw new Error("GTC 订单协调未就绪，未发送订单");
+  checkSession(); startGtcRuntime(owner); checkSession();
   const { pmSubmitMaker, prepareManualGtcBuy } = await import("@changmen/venue-adapter/polymarket/gtc");
   const maker = pmSubmitMaker(account);
   // [changmen 扩展] 每次人工下单是独立订单；历史执行或现有挂单不限制新手动单。

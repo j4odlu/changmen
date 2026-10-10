@@ -111,4 +111,12 @@ describe("gTC history never changes FOK filters", () => {
     expect(() => assertGtcHistoryAllowsLeg("owner", account, betId, "Away", 3, true)).toThrow("反向");
     expect(() => assertGtcHistoryAllowsLeg("another-owner", account, betId, "Home", 1.2, true)).not.toThrow();
   });
+  it("history on unrelated markets or accounts never limits a new bet even on the same wallet", () => {
+    const account = mocks.accounts[0]!; account.maxBetCount = 1;
+    markGtcSuccess("owner", account.accountId, betId + 1, "Home", 100);
+    markGtcSuccess("owner", account.accountId, betId + 1, "Away", 100);
+    markGtcSuccess("owner", 999, betId, "Home", 100);
+    markGtcSuccess("owner", 999, betId, "Away", 100);
+    expect(() => assertGtcHistoryAllowsLeg("owner", account, betId, "Home", 1.2, true)).not.toThrow();
+  });
 });

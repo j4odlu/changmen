@@ -1,5 +1,7 @@
 /** [changmen 扩展] GTC 原单专用保存。旧 FOK upsert SQL/事务独立保留。 */
 import { _jsonb, getPgPool } from "../../common.js";
+import { gtcSellRowEvent, mergeGtcSellEvents } from "./pm_gtc_ledger.js";
+import { syncPmGtcSettledOrderFinancials } from "./pm_gtc_settlement.js";
 
 const UPSERT_ORDERS_BATCH_SQL = `
   INSERT INTO orders (
@@ -51,6 +53,9 @@ const UPSERT_ORDERS_BATCH_SQL = `
         'betMoney', orders.bet_money,
         'pmFillPrice', orders.raw->'pmFillPrice', 'pmFeeUsdc', orders.raw->'pmFeeUsdc',
         'pmOrigin', 'changmen', 'pmSide', 'buy',
+        'pmMatchResult', CASE WHEN lower(COALESCE(EXCLUDED.raw->>'pmMatchResult','')) IN ('win','lose','lost') THEN EXCLUDED.raw->'pmMatchResult'
+          ELSE COALESCE(NULLIF(orders.raw->'pmMatchResult','null'::jsonb), CASE WHEN lower(orders.status) IN ('win','lose','lost') THEN to_jsonb(orders.status) END) END,
+        'pmSellState', COALESCE(EXCLUDED.raw->'pmSellState', orders.raw->'pmSellState'),
         'pmShares', (orders.raw->>'pmGtcBuyShares')::float8,
         'pmAttributedSellShares', greatest(COALESCE((orders.raw->>'pmAttributedSellShares')::float8,0),COALESCE((EXCLUDED.raw->>'pmAttributedSellShares')::float8,0)),
         'pmSellProceeds', greatest(COALESCE((orders.raw->>'pmSellProceeds')::float8,0),COALESCE((EXCLUDED.raw->>'pmSellProceeds')::float8,0)),
@@ -118,15 +123,16 @@ function _dedupeUpsertRows(rows) {
   return [...byKey.values()];
 }
 
-async function _rdsUpsertOrders(pool, rows) {
+export async function _rdsUpsertOrders(pool, rows) {
   if (!rows?.length)
     return [];
   const deduped = _dedupeUpsertRows(rows);
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    const originals = new Map();
     // 只有 GTC 分支查询执行记录；FOK 不增加查询或等待。
-    for (const row of deduped) {
+    for (const row of [...deduped].sort((a,b) => String(a.raw.pmGtcExecutionId).localeCompare(String(b.raw.pmGtcExecutionId)))) {
       const found = await client.query("SELECT record FROM pm_gtc_executions WHERE id=$1 AND owner=$2 FOR SHARE", [row.raw.pmGtcExecutionId, row.user_id]);
       const execution = found.rows[0]?.record;
       const parentId = String(row.raw.pmBuyOrderId ?? row.raw.pfBuyOrderId ?? row.order_id).toLowerCase();
@@ -137,8 +143,39 @@ async function _rdsUpsertOrders(pool, rows) {
         && (!execution.other.orderId || String(execution.other.orderId).toLowerCase() === parentId);
       if (!pm && !other)
         throw new Error("GTC 原单执行身份不一致");
+      if (pm)
+        originals.set(`${row.user_id}:${row.player_id}:${parentId}`, { owner: row.user_id, player: row.player_id, order: parentId, execution: row.raw.pmGtcExecutionId });
+    }
+    for (const original of [...originals.values()].sort((a,b) => a.order.localeCompare(b.order))) {
+      const current = await client.query(`SELECT * FROM orders WHERE user_id=$1 AND player_id=$2
+        AND lower(order_id)=lower($3) AND raw->>'pmGtcExecutionId'=$4 FOR UPDATE`,
+      [original.owner, original.player, original.order, original.execution]);
+      const canonical = current.rows[0];
+      const old = canonical?.raw;
+      const related = deduped.filter(r => String(r.user_id)===String(original.owner) && Number(r.player_id)===Number(original.player));
+      const sellEvents = related.filter(r => String(r.raw.pmBuyOrderId ?? "").toLowerCase()===original.order).map(gtcSellRowEvent).filter(Boolean);
+      let parent = related.find(r => r.order_id.toLowerCase()===original.order);
+      if (!parent && sellEvents.length && canonical) {
+        parent = { ...canonical, raw: { ...old } };
+        deduped.push(parent);
+      }
+      for (const row of parent ? [parent] : []) {
+        let events = mergeGtcSellEvents(old, row.raw);
+        events = mergeGtcSellEvents({ positionEvents: events }, { positionEvents: { sells: sellEvents } });
+        if (events) {
+          row.raw.positionEvents = { ...old?.positionEvents, ...row.raw.positionEvents, ...events };
+          const eventShares = events.sells.reduce((sum,e) => sum+Number(e.shares),0);
+          const priorAttr = Math.max(Number(old?.pmAttributedSellShares)||0,Number(row.raw.pmAttributedSellShares)||0,eventShares);
+          if (Math.abs(eventShares-priorAttr)<=0.0101) {
+            row.raw.pmSellProceeds = events.sells.reduce((sum,e) => sum+Number(e.proceeds),0);
+            row.raw.pmAttributedSellShares = priorAttr;
+          }
+        }
+      }
     }
     const res = await client.query(UPSERT_ORDERS_BATCH_SQL, _orderRowToUpsertArrays(deduped));
+    for (const original of originals.values())
+      await syncPmGtcSettledOrderFinancials(client, original.owner, original.player, original.order, original.execution);
     await client.query("COMMIT");
     const inserted = [];
     for (const row of res.rows || []) {

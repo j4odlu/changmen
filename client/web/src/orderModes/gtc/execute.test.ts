@@ -8,7 +8,7 @@ import { syncActiveBetFail, syncActiveBetLeg } from "@/stores/betting/activeBetR
 import { executeGtc } from "./execute";
 import { markGtcSuccess } from "./successMarkers";
 
-const mocks = vi.hoisted(() => ({ submit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), poll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "" }));
+const mocks = vi.hoisted(() => ({ submit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), refresh: vi.fn(), poll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, existing: [] as GtcExecution[], initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "" }));
 vi.mock("@changmen/client-core/models/betResult", () => ({ BetResult: class { orderId = null; constructor(public provider: string, public success: boolean) {} saveLog = mocks.log; } }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: mocks.owner, config: { betting: true } }) }));
@@ -20,9 +20,9 @@ vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ prepareGtcBuy: mocks.
 vi.mock("./api", () => ({ createGtc: mocks.create }));
 vi.mock("./runtime", () => ({
   startGtcRuntime: vi.fn(),
-  refreshGtcRecords: vi.fn(),
+  refreshGtcRecords: mocks.refresh,
   markGtcLegOnce: mocks.count,
-  gtcProgress: { get ready() { return mocks.ready; }, get records() { return mocks.record ? [mocks.record] : []; } },
+  gtcProgress: { get ready() { return mocks.ready; }, get records() { return [...mocks.existing, ...(mocks.record ? [mocks.record] : [])]; } },
   acceptGtc: (row: GtcExecution) => { mocks.record = row; return row; },
   currentGtc: () => mocks.record!,
   mutateGtc: async (_id: string, command: GtcCommand) => { mocks.commands.push(command); mocks.record = applyGtcCommand(mocks.record!, command, Date.now()); return mocks.record; },
@@ -38,7 +38,8 @@ function params(parallel = false) {
   return { match: { id: 1, title: "match" }, bet: { id: 2, getBetName: () => "market" }, config: { profit: mocks.ratio, betSorting: parallel ? "Parallel" : "Auto" }, setMessage: vi.fn(), trace: { finish: vi.fn() } } as never;
 }
 beforeEach(() => {
-  vi.clearAllMocks(); sessionStorage.clear(); mocks.record = null; mocks.commands = []; mocks.initial = "0"; mocks.ready = true; mocks.ratio = 0.99;
+  vi.clearAllMocks(); sessionStorage.clear(); mocks.record = null; mocks.existing = []; mocks.commands = []; mocks.initial = "0"; mocks.ready = true; mocks.ratio = 0.99;
+  mocks.refresh.mockResolvedValue(undefined);
   mocks.prepare.mockResolvedValue({ shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", feeProof: { rate: "0", exponent: 1, takerOnly: true, observedAt: 1 }, protocol: 2, negRisk: false, orderHash: hash, route: "direct", submit: mocks.submit, validate: () => {} });
   mocks.submit.mockResolvedValue({ success: true, orderID: hash, status: "live" });
   mocks.betting.mockResolvedValue({ provider: "RAY", success: true, pending: false, orderId: "ray-order" });
@@ -51,6 +52,21 @@ beforeEach(() => {
   mocks.settle.mockResolvedValue({ rejected: false, pendingConfirm: false, orders: [{ provider: "RAY", orderId: "ray-order", status: "none" }] });
 });
 describe("gTC original pair orchestration", () => {
+  it("unavailable global recovery does not gate a new independently persisted pair", async () => {
+    mocks.ready = false; mocks.refresh.mockRejectedValue(new Error("old recovery unavailable"));
+    await executeGtc(params(), checked(false));
+    expect(mocks.refresh).not.toHaveBeenCalled();
+    expect(mocks.create).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.betting).toHaveBeenCalledOnce();
+  });
+  it.each(["prepared", "accepted", "unknown", "manual"])("an existing %s order on the same maker does not block a new independent pair", async (state) => {
+    const old = createGtcExecution("old", "owner", "wallet", "maker", { orderHash: "old-hash", shares: "10" } as GtcPlan, 1);
+    old.submit = state === "manual" ? "accepted" : state as GtcExecution["submit"];
+    old.manual = state === "manual"; old.released = false;
+    mocks.existing = [old]; const snapshot = structuredClone(old); mocks.initial = "10";
+    await executeGtc(params(), checked(false));
+    expect(mocks.create).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.betting).toHaveBeenCalledOnce();
+    expect(mocks.record?.id).not.toBe(old.id); expect(old).toEqual(snapshot);
+  });
   it("a failed frozen preparation returns durable cleanup facts without any POST", async () => {
     mocks.prepare.mockResolvedValueOnce({ ...await mocks.prepare(), validate: () => { throw new Error("frozen quote changed"); } });
     const error = await executeGtc(params(), checked()).catch(error => error);
@@ -64,6 +80,7 @@ describe("gTC original pair orchestration", () => {
     pair.accountA!.maxBetCount = 1;
     markGtcSuccess("owner", pair.accountA!.accountId, 2, "Home", 2);
     await expect(executeGtc(params(), pair)).rejects.toThrow("GTC 已达");
+    expect(mocks.refresh).toHaveBeenCalledExactlyOnceWith(2, [pair.accountA!.accountId]);
     expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled(); expect(mocks.betting).not.toHaveBeenCalled();
   });
   it("checks the other leg's independent GTC odds history before sending PM", async () => {
@@ -118,7 +135,16 @@ describe("gTC original pair orchestration", () => {
   });
   it("profit or persistence gate failure occurs before either POST", async () => {
     mocks.ratio = 1.03; await expect(executeGtc(params(), checked())).rejects.toThrow("利润不足"); expect(mocks.submit).not.toHaveBeenCalled(); expect(mocks.betting).not.toHaveBeenCalled();
-    mocks.ready = false; await expect(executeGtc(params(), checked())).rejects.toThrow("持久化");
+    mocks.ratio = 0.99; mocks.create.mockRejectedValueOnce(new Error("本次持久化失败"));
+    await expect(executeGtc(params(), checked())).rejects.toThrow("持久化");
+    expect(mocks.submit).not.toHaveBeenCalled(); expect(mocks.betting).not.toHaveBeenCalled();
+  });
+  it("profit uses signed principal, independent of fee proof and legacy all-in budget", async () => {
+    const prepared = await mocks.prepare();
+    mocks.prepare.mockResolvedValueOnce({ ...prepared, maxPrincipal: "4.9", allInBudget: "6", feeProof: undefined });
+    mocks.ratio = 1.005;
+    await executeGtc(params(), checked());
+    expect(mocks.submit).toHaveBeenCalledOnce();
   });
   it("unbound other outcome remains pending rather than claiming filled", async () => {
     mocks.initial = "5"; mocks.settle.mockResolvedValue({ rejected: false, pendingConfirm: false, orders: [] });

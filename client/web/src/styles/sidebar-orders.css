@@ -706,16 +706,13 @@
   transform: scale(1.12);
 }
 
-.orders.loading::before {
+/* [changmen 扩展] 刷新时保留已有订单；仅首次空列表加载展示占位，避免 GTC 轮询闪动及滚动跳位。 */
+.orders.loading:not(:has(.orderlink))::before {
   content: "订单数据加载中";
   color: #ffffff80;
   display: block;
   text-align: center;
   padding: 20px;
-}
-
-.orders.loading .orderlink {
-  visibility: hidden;
 }
 
 /* [changmen 扩展] 场馆徽章拖放改绑 Link */

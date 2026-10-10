@@ -17,6 +17,8 @@ import { gtcExecutionResult } from "./result";
 import { acceptGtc, currentGtc, markGtcLegOnce, mutateGtc, pollGtc, refreshGtcRecords, startGtcRuntime } from "./runtime";
 import { assertGtcHistoryAllowsLeg } from "./successMarkers";
 import { gtcProgress } from "./gtcProgressState";
+import { notifyBet } from "@/shared/betNotification";
+import { gtcPmNotice } from "./notifications";
 
 export function isGtcPair(checked: ArbBetChecked): boolean {
   return checked.betBothLegs && !checked.singleLegByRate && Boolean(checked.accountA && checked.accountB)
@@ -88,6 +90,12 @@ export async function executeGtc(params: ArbBetAttemptParams, checked: ArbBetChe
     }
   }
   async function submitPm() {
+    await notifyBet(account, pm, async () => {
+      await submitPmCore();
+      return gtcExecutionResult(currentGtc(id));
+    }, gtcPmNotice, checked.waitSec, { matchTitle: params.match.title, betName: params.bet.getBetName() });
+  }
+  async function submitPmCore() {
     checkSession();
     await mutateGtc(id, { kind: "authorize_pm" });
     checkSession();

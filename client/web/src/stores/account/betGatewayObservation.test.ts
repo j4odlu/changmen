@@ -30,6 +30,7 @@ describe("下注主链路与旁路故障隔离", () => {
   const account = { accountId: 1, provider: "OB", currency: "CNY", playerName: "p", platformId: 1, platformName: "OB" } as PlatformAccount;
   const store = { getPlatformName: () => "OB" } as unknown as AccountStoreContext;
   beforeEach(() => {
+    mocks.notify.mockClear();
     setActivePinia(createPinia());
     vi.useFakeTimers();
     mocks.post.mockReset();
@@ -57,6 +58,8 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(mocks.post).toHaveBeenCalled();
     expect(mocks.betting).toHaveBeenCalledTimes(1);
     expect(mocks.check).not.toHaveBeenCalled();
+    expect(mocks.notify).toHaveBeenNthCalledWith(1, expect.objectContaining({ position: "top-right", customClass: "notification loading OB", duration: 10_000 }));
+    expect(mocks.notify).toHaveBeenNthCalledWith(2, expect.objectContaining({ position: "top-right", customClass: "notification OB", type: "success", duration: 10_000 }));
   });
 
   it("preserves prepared-quote rejection and never submits when precheck failed", async () => {

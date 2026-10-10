@@ -7,7 +7,6 @@ import { BetResult } from "@changmen/client-core/models/betResult";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
 import { getExchange } from "@changmen/shared/currency";
 import { resolveVenueStakeFromPlanCny } from "@changmen/venue-adapter/adaptation";
-import { ElNotification } from "element-plus";
 import { attachPolymarketDetectionQuote } from "@/domain/polymarket/attachDetectionQuote";
 import { attachPredictFunDetectionQuote } from "@/domain/predictfun/attachDetectionQuote";
 import { publishBettingEvent } from "@/realtime/publishBetting";
@@ -17,10 +16,9 @@ import { observationFailureEvidence } from "@/services/orderObservationEvidence"
 import { submissionVenueStatus } from "@/services/venueSettlementEvidence";
 import {
   bettingDetailHtml,
-  bettingLoadingMessageHtml,
   bettingNotifyAccountLine,
-  bettingResultMessageHtml,
 } from "@/shared/a8Notify";
+import { showBetResultNotification, startBetNotification } from "@/shared/betNotification";
 import { playOrderSuccessSound } from "@/shared/orderSound";
 import { persistPolymarketMatchedBuyOrder } from "@/stores/account/pmOptimisticOrder";
 import { persistPolymarketExecutionReject } from "@/stores/account/pmRejectOrder";
@@ -306,20 +304,11 @@ async function runPendingVenueBetConfirmation(
     pendingVenueBetConfirmations.delete(task.key);
     persistPendingVenueBetConfirmations();
     const titleSuffix = rejected ? "未成交" : "已成交";
-    ElNotification({
-      title: "",
-      message: bettingResultMessageHtml(
-        account.provider,
-        task.accountLine,
-        task.detailHtml,
-        `<p>${result.message || ""}</p>`,
-        titleSuffix,
-      ),
+    showBetResultNotification({ provider: account.provider, accountLine: task.accountLine, detailHtml: task.detailHtml }, {
+      messageHtml: `<p>${result.message || ""}</p>`,
+      statusSuffix: titleSuffix,
       type: rejected ? "error" : "success",
-      dangerouslyUseHTMLString: true,
-      duration: task.toastSeconds === 0 ? 3000 : task.toastSeconds * 1000,
-      customClass: `notification ${account.provider}`,
-    });
+    }, task.toastSeconds);
     if (!rejected && !task.recoveryOnly) {
       void playOrderSuccessSound({ betRowId: task.betRowId || task.venueBetId });
       void publishBettingEvent(option);
@@ -509,13 +498,8 @@ export async function placeBet(
     betCount: option.betCount,
   });
 
-  const loading = ElNotification({
-    title: "",
-    message: bettingLoadingMessageHtml(account.provider, accountLine, detailHtml),
-    dangerouslyUseHTMLString: true,
-    duration: 10_000,
-    customClass: `notification loading ${account.provider}`,
-  });
+  const notificationDisplay = { provider: account.provider, accountLine, detailHtml };
+  const loading = startBetNotification(notificationDisplay);
 
   const beginTime = Date.now();
   let result: BetResult = new BetResult(account.provider, false, "未知错误");
@@ -606,20 +590,11 @@ export async function placeBet(
     loading.close();
     const notifyType = result.pending ? "warning" : result.success ? "success" : "error";
     const statusSuffix = result.pending ? "确认中" : "";
-    ElNotification({
-      title: "",
-      message: bettingResultMessageHtml(
-        account.provider,
-        accountLine,
-        detailHtml,
-        `<p>${result.message || ""}</p>`,
-        statusSuffix,
-      ),
+    showBetResultNotification(notificationDisplay, {
+      messageHtml: `<p>${result.message || ""}</p>`,
+      statusSuffix,
       type: notifyType,
-      dangerouslyUseHTMLString: true,
-      customClass: `notification ${account.provider}`,
-      duration: toastSeconds === 0 ? 3000 : toastSeconds * 1000,
-    });
+    }, toastSeconds);
     useMessageStore().delayMessage(account, Date.now() - beginTime);
     result.saveLog(account, beginTime);
     if (result.success && !result.pending) {

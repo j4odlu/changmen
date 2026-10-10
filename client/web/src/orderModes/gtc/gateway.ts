@@ -11,6 +11,8 @@ import { createObservationContext, observeOption } from "@/services/orderObserva
 import { observationFailureEvidence } from "@/services/orderObservationEvidence";
 import { submissionVenueStatus } from "@/services/venueSettlementEvidence";
 import { useUserStore } from "@/stores/userStore";
+import { notifyBet } from "@/shared/betNotification";
+import { gtcOtherNotice } from "./notifications";
 
 export type GtcCheckOptions = ResolveVenueStakeOpts & { manual?: boolean; role?: "execute" | "precheckOnly"; skipStakeResolve?: boolean; pmQuoteScope?: "esport" | "sport" };
 
@@ -21,21 +23,23 @@ export async function placeOtherLeg(account: PlatformAccount, option: BetOption,
   const provider = getProvider(account);
   if (!provider)
     throw new Error("GTC 对侧平台不支持");
-  const startedAt = Date.now();
-  observeOption(option, account, "submission_started", { source: "adapter_call" });
-  const result = await provider.betting(account, option);
-  result.link = linkId;
-  result.diagnosticAttempt = option.diagnosticAttempt;
-  result.observation = option.observation;
-  observeOption(option, account, "submission_result", {
-    orderId: result.orderId || undefined,
-    outcome: result.pmSubmitUnknown ? "unknown" : result.success ? "accepted" : "adapter_failed",
-    source: "adapter_result",
-    observedStatus: submissionVenueStatus(result),
-    durationMs: Date.now() - startedAt,
-  });
-  result.saveLog(account, startedAt);
-  return result;
+  return notifyBet(account, option, async () => {
+    const startedAt = Date.now();
+    observeOption(option, account, "submission_started", { source: "adapter_call" });
+    const result = await provider.betting(account, option);
+    result.link = linkId;
+    result.diagnosticAttempt = option.diagnosticAttempt;
+    result.observation = option.observation;
+    observeOption(option, account, "submission_result", {
+      orderId: result.orderId || undefined,
+      outcome: result.pmSubmitUnknown ? "unknown" : result.success ? "accepted" : "adapter_failed",
+      source: "adapter_result",
+      observedStatus: submissionVenueStatus(result),
+      durationMs: Date.now() - startedAt,
+    });
+    result.saveLog(account, startedAt);
+    return result;
+  }, gtcOtherNotice);
 }
 async function ensureSharedVaultKeyForAccount(account: PlatformAccount | undefined): Promise<boolean> {
   if (!account)

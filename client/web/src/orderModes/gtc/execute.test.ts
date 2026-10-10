@@ -8,6 +8,9 @@ import { syncActiveBetFail, syncActiveBetLeg } from "@/stores/betting/activeBetR
 import { executeGtc } from "./execute";
 import { markGtcSuccess } from "./successMarkers";
 
+const notices = vi.hoisted(() => ({ notify: vi.fn(), close: vi.fn() }));
+vi.mock("element-plus", () => ({ ElNotification: notices.notify }));
+
 const mocks = vi.hoisted(() => ({ submit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), refresh: vi.fn(), poll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, existing: [] as GtcExecution[], initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "" }));
 vi.mock("@changmen/client-core/models/betResult", () => ({ BetResult: class { orderId = null; constructor(public provider: string, public success: boolean) {} saveLog = mocks.log; } }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
@@ -39,6 +42,7 @@ function params(parallel = false) {
 }
 beforeEach(() => {
   vi.clearAllMocks(); sessionStorage.clear(); mocks.record = null; mocks.existing = []; mocks.commands = []; mocks.initial = "0"; mocks.ready = true; mocks.ratio = 0.99;
+  notices.notify.mockReturnValue({ close: notices.close });
   mocks.refresh.mockResolvedValue(undefined);
   mocks.prepare.mockResolvedValue({ shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", feeProof: { rate: "0", exponent: 1, takerOnly: true, observedAt: 1 }, protocol: 2, negRisk: false, orderHash: hash, route: "direct", submit: mocks.submit, validate: () => {} });
   mocks.submit.mockResolvedValue({ success: true, orderID: hash, status: "live" });
@@ -93,6 +97,9 @@ describe("gTC original pair orchestration", () => {
   it("serial PM-first accepted zero closes to manual without second POST", async () => {
     await executeGtc(params(), checked()); expect(mocks.submit).toHaveBeenCalledTimes(1); expect(mocks.betting).not.toHaveBeenCalled();
     expect(mocks.record).toMatchObject({ submit: "accepted", matched: "0", manual: true, decision: "closed", counted: false });
+    expect(notices.notify).toHaveBeenNthCalledWith(1, expect.objectContaining({ position: "top-right", customClass: "notification loading Polymarket" }));
+    expect(notices.close).toHaveBeenCalledOnce();
+    expect(notices.notify).toHaveBeenLastCalledWith(expect.objectContaining({ type: "warning", duration: 30_000, message: expect.stringContaining("未成交挂单中") }));
   });
   it("serial positive partial sends original other quantity once and closes manual", async () => {
     mocks.initial = "5"; await executeGtc(params(), checked()); expect(mocks.betting).toHaveBeenCalledTimes(1);
@@ -106,6 +113,7 @@ describe("gTC original pair orchestration", () => {
   it("explicit rejection does not become accepted zero", async () => {
     mocks.submit.mockResolvedValue({ success: false, errorMsg: "market closed" }); await executeGtc(params(), checked());
     expect(mocks.record?.submit).toBe("rejected"); expect(mocks.betting).not.toHaveBeenCalled();
+    expect(notices.notify).toHaveBeenLastCalledWith(expect.objectContaining({ type: "error", message: expect.stringContaining("market closed") }));
   });
   it("parallel submits original pair once even if initial PM fill is zero", async () => {
     await executeGtc(params(true), checked(true, true)); expect(mocks.submit).toHaveBeenCalledTimes(1); expect(mocks.betting).toHaveBeenCalledTimes(1); expect(mocks.record?.manual).toBe(true);

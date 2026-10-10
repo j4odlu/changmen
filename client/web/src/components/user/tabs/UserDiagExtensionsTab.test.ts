@@ -26,7 +26,7 @@ vi.mock("@/stores/userStore", async () => {
   const { createDefaultExtensionPrefs } = await import("@/types/extensionPrefs");
   return {
     useUserStore: defineStore("extension-tab-test", {
-      state: () => ({ extensionPrefs: createDefaultExtensionPrefs(), config: { makeUp: false } }),
+      state: () => ({ userId: 12, extensionPrefs: createDefaultExtensionPrefs(), config: { makeUp: false } }),
       actions: { saveExtensionPrefs: mocks.save },
     }),
   };
@@ -34,7 +34,7 @@ vi.mock("@/stores/userStore", async () => {
 vi.mock("@/components/platform/PlatformIcon.vue", () => ({ default: { render: () => null } }));
 vi.mock("element-plus", () => ({
   ElMessage: { success: vi.fn(), error: vi.fn() },
-  ElMessageBox: { alert: mocks.alert },
+  ElMessageBox: { confirm: mocks.alert },
 }));
 vi.mock("element-plus/es", async () => {
   const { defineComponent, h } = await import("vue");
@@ -43,7 +43,7 @@ vi.mock("element-plus/es", async () => {
   });
   return {
     ElMessage: { success: vi.fn(), error: vi.fn() },
-    ElMessageBox: { alert: mocks.alert },
+    ElMessageBox: { confirm: mocks.alert },
     ElForm: container,
     ElFormItem: container,
     ElTooltip: container,
@@ -74,7 +74,7 @@ async function mount() {
   const html = await renderToString(createSSRApp(Tab));
   expect(html).toContain("data-mode=\"FOK\"");
   expect(html).toContain("data-mode=\"GTC\"");
-  expect(html).toContain("当前两种选择均沿用现有 FOK 下单流程");
+  expect(html).toContain("FOK 沿用现有流程");
   return {
     select(mode: string) {
       expect(mocks.select).toBeDefined();
@@ -90,7 +90,7 @@ beforeEach(() => {
   mocks.select = undefined;
 });
 
-describe("pm mode placeholder in Extensions", () => {
+describe("pm GTC V1 explicit activation in Extensions", () => {
   it("defaults to FOK and selecting FOK does not show a dialog or save", async () => {
     const tab = await mount();
     expect(useUserStore().extensionPrefs.pmArbOrderMode).toBe("FOK");
@@ -99,30 +99,30 @@ describe("pm mode placeholder in Extensions", () => {
     expect(mocks.save).not.toHaveBeenCalled();
   });
 
-  it("selects GTC through the rendered control and warns without changing other settings", async () => {
+  it("requires confirmation and saves recovery marker before enabling real GTC", async () => {
     const tab = await mount();
     const user = useUserStore();
     const before = JSON.parse(JSON.stringify(user.extensionPrefs));
     tab.select("GTC");
-    await Promise.resolve();
-    expect(user.extensionPrefs).toEqual({ ...before, pmArbOrderMode: "GTC" });
+    for (let n = 0; n < 8; n++) await Promise.resolve();
+    expect(user.extensionPrefs).toEqual({ ...before, pmArbOrderMode: "GTC", pmGtcV1Activation: "1:12", pmGtcV1Participant: true });
     expect(mocks.alert).toHaveBeenCalledExactlyOnceWith(
-      expect.stringContaining("GTC 为测试版本，尚未接入"),
-      "GTC 测试版本",
+      expect.stringContaining("确认保存并启用"),
+      "启用真实 GTC V1",
       expect.objectContaining({ type: "warning" }),
     );
-    expect(mocks.save).not.toHaveBeenCalled();
+    expect(mocks.save).toHaveBeenCalledTimes(2);
     tab.select("FOK");
-    expect(user.extensionPrefs).toEqual(before);
+    expect(user.extensionPrefs).toEqual({ ...before, pmGtcV1Participant: true });
     expect(mocks.alert).toHaveBeenCalledTimes(1);
   });
 
-  it("closing the GTC warning preserves the preference without saving or throwing", async () => {
+  it("canceling activation leaves actual mode FOK without saving", async () => {
     mocks.alert.mockRejectedValueOnce("close");
     const tab = await mount();
     tab.select("GTC");
     await Promise.resolve();
-    expect(useUserStore().extensionPrefs.pmArbOrderMode).toBe("GTC");
+    expect(useUserStore().extensionPrefs.pmArbOrderMode).toBe("FOK");
     expect(mocks.save).not.toHaveBeenCalled();
   });
 });

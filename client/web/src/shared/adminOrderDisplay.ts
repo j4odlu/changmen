@@ -91,6 +91,7 @@ export function adminOrderToOrderRow(
     PmLastSellOrderId: row.pmLastSellOrderId,
     PmSellState: row.pmSellState,
     PmSide: row.pmSide,
+    ...(row.pmGtcExecutionId ? { PmGtcExecutionId: row.pmGtcExecutionId, PmGtcBuyShares: row.pmGtcBuyShares } : {}),
     PmBuyOrderId: row.pmBuyOrderId,
     PfSide: row.pfSide,
     PfBuyOrderId: row.pfBuyOrderId,

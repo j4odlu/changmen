@@ -4,6 +4,7 @@ import type { UserConfig } from "@/types/userConfig";
 import { getAdminOrdersAll } from "@/api/admin";
 import { adminAccountToPlatformAccount } from "@/components/admin/adminAccountDisplay";
 import { PlatformAccount } from "@/models/platformAccount";
+import { gtcOrderProjection, projectGtcOrderRows } from "@/orderModes/gtc/executionProjection";
 import { adminOrderToOrderRow } from "@/shared/adminOrderDisplay";
 import { todayKey } from "@/shared/dateKey";
 import {
@@ -12,8 +13,8 @@ import {
   groupOrdersByEffectiveLink,
 } from "@/shared/orderLink";
 import { useAccountStore } from "@/stores/accountStore";
-import { useUserStore } from "@/stores/userStore";
 import { useOrderStore } from "@/stores/orderStore";
+import { useUserStore } from "@/stores/userStore";
 import { mergeUserConfig } from "@/types/userConfig";
 
 interface WorkspaceSnapshot {
@@ -88,7 +89,9 @@ export async function loadEmbeddedUserOrders(userId: string, date: string) {
   const raw = (page.list ?? []).map(row => adminOrderToOrderRow(row, accountStore.accounts));
   const dateKey = date || page.date || todayKey();
   // 后端已 enrich 并对 Link 开弓日过滤；此处再滤一次 + Link 对齐，与侧栏一致
-  const list = filterOrdersBelongingToDate(raw, dateKey);
+  projectGtcOrderRows(raw, userId, dateKey);
+  const byId = new Map(gtcOrderProjection.rows.map(row => [JSON.stringify([row.PlayerID, row.Type, row.OrderID]), row]));
+  const list = filterOrdersBelongingToDate(raw.map(row => byId.get(JSON.stringify([row.PlayerID, row.Type, row.OrderID])) ?? row), dateKey);
   orderStore.orders = dropOrphanPolymarketSellGroups(groupOrdersByEffectiveLink(list));
   orderStore.orderDate = dateKey;
   orderStore.updateTodayProfit(list);
@@ -110,6 +113,8 @@ export function mountAdminUserWorkspace(user: AdminUserRow): void {
   const orderStore = useOrderStore();
 
   accountStore.stopBalanceRefreshLoop();
+  const gtcSnapshot = { ...gtcOrderProjection, rows: [...gtcOrderProjection.rows] };
+  gtcOrderProjection.rows = [];
 
   const snap: WorkspaceSnapshot = {
     accounts: cloneAccounts(accountStore.accounts),
@@ -140,6 +145,7 @@ export function mountAdminUserWorkspace(user: AdminUserRow): void {
   orderStore.filterAccountId = 0;
 
   activeRestore = () => {
+    Object.assign(gtcOrderProjection, gtcSnapshot);
     accountStore.$patch({
       accounts: snap.accounts,
       loaded: snap.accountLoaded,

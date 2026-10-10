@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { UserConfigFormState } from "@/components/user/userConfigFormState";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { storeToRefs } from "pinia";
 /**
  * 用户配置弹窗，组件使用 Element Plus。
@@ -106,6 +106,22 @@ onMounted(async () => {
 async function save() {
   if (props.readonly || !extrasSynced.value)
     return;
+  // [changmen 扩展] 恢复门仅属于已激活的自动 GTC；历史/手动 GTC 不改变 FOK 保存。
+  if (form.betting && userStore.extensionPrefs.pmArbOrderMode === "GTC"
+    && userStore.extensionPrefs.pmGtcV1Activation === `1:${userStore.userId}`) {
+    try {
+      const runtime = await import("@/orderModes/gtc/runtime");
+      await runtime.refreshGtcRecords();
+      if (runtime.gtcProgress.records.some(row => !row.released && row.manual)) {
+        await ElMessageBox.confirm("请先在官方平台核对原挂单已终止、实际成交和另一腿已确定，并自行处理本组敞口。确认后只恢复新组自动下注，不会继续原组或自动补单。", "核对 GTC 后恢复自动下注", { type: "warning", confirmButtonText: "已核对，恢复新组" });
+        await runtime.resumeGtcAfterManualReview();
+      }
+    }
+    catch (error) {
+      if (error instanceof Error)
+        ElMessage.error(error.message); return;
+    }
+  }
   Object.assign(userStore.config, {
     ...form,
     profit: Number(form.profit),

@@ -91,6 +91,14 @@ export function rowToOrder(r) {
     Game: raw.game ? String(raw.game) : undefined,
     PmTokenId: raw.pmTokenId ? String(raw.pmTokenId) : undefined,
     PmShares: parseNum(raw.pmShares, 0) || undefined,
+    ...(raw.pmGtcExecutionId ? {
+      PmGtcExecutionId: String(raw.pmGtcExecutionId),
+      PmGtcBuyShares: raw.pmGtcBuyShares != null ? parseNum(raw.pmGtcBuyShares, 0) : undefined,
+      ...(r.provider === "Polymarket" && raw.pmSide !== "sell" ? {
+        ...(raw.pmGtcBuyShares != null ? { PmShares: parseNum(raw.pmGtcBuyShares, 0) } : {}),
+        ...(parseNum(raw.pmFillPrice, 0) > 0 ? { Odds: undefined } : {}),
+      } : {}),
+    } : {}),
     PmFillPrice: (() => {
       const price = parseNum(raw.pmFillPrice, 0);
       return price > 0 && price < 1 ? price : undefined;

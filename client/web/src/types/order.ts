@@ -41,6 +41,8 @@ export interface OrderRow {
   Game?: string;
   /** [changmen 扩展] Polymarket 持仓，来自 orders.raw */
   PmTokenId?: string;
+  PmGtcExecutionId?: string;
+  PmGtcBuyShares?: number;
   PmShares?: number;
   /** CLOB trade.price / 成交概率价（0–1）；不含手续费 */
   PmFillPrice?: number;

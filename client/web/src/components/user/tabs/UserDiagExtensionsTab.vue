@@ -46,7 +46,7 @@ else {
   );
 }
 extensionPrefs.value.singleLeg9999MaxPerMap ??= 1;
-// [changmen 扩展] 旧内存态默认 FOK；此字段仅保存偏好，不接入下注。
+// [changmen 扩展] 历史测试偏好没有 V1 激活凭据时不切换实际下单。
 extensionPrefs.value.pmArbOrderMode ??= "FOK";
 if (!extensionPrefs.value.rayLateRejectAutoMakeup) {
   extensionPrefs.value.rayLateRejectAutoMakeup = {
@@ -95,23 +95,36 @@ function toggleArbAllowed(platform: PlatformId) {
 }
 
 async function onPmArbOrderModeChange(value: unknown) {
-  if (value !== "GTC")
+  if (value !== "GTC") {
+    delete extensionPrefs.value.pmGtcV1Activation;
     return;
+  }
   try {
-    await ElMessageBox.alert(
-      "GTC 为测试版本，尚未接入。当前仅保存配置选项，实际下注仍沿用现有 FOK 流程。",
-      "GTC 测试版本",
-      { type: "warning", confirmButtonText: "知道了" },
+    await ElMessageBox.confirm(
+      "启用 GTC V1 后，PM 受理即为下单成功，零成交或部分成交的余量可能持续挂单。本组剩余操作由您处理，系统不会自动补单或卖出；可使用‘取消PM挂单’。历史测试选项不会自动启用。确认保存并启用？",
+      "启用真实 GTC V1",
+      { type: "warning", confirmButtonText: "确认启用", cancelButtonText: "取消" },
     );
+    if (!user.userId)
+      throw new Error("请先登录");
+    extensionPrefs.value.pmGtcV1Participant = true;
+    // 先保存恢复标记；正式激活前关闭/刷新仍能发现已存在的 GTC 原单。
+    delete extensionPrefs.value.pmGtcV1Activation;
+    await user.saveExtensionPrefs();
+    extensionPrefs.value.pmGtcV1Activation = `1:${user.userId}`;
+    await user.saveExtensionPrefs();
   }
   catch {
-    // 关闭提示不改变配置，也不触发任何交易操作。
+    extensionPrefs.value.pmArbOrderMode = "FOK";
+    delete extensionPrefs.value.pmGtcV1Activation;
   }
 }
 
 async function save() {
   saving.value = true;
   try {
+    if (extensionPrefs.value.pmArbOrderMode === "GTC" && extensionPrefs.value.pmGtcV1Activation !== `1:${user.userId}`)
+      await onPmArbOrderModeChange("GTC");
     await user.saveExtensionPrefs();
     ElMessage.success("保存成功");
   }
@@ -195,7 +208,7 @@ async function save() {
             PM 自动套利下单模式
           </h3>
           <p class="extensions-tab__section-desc">
-            GTC 为测试版本，尚未接入；当前两种选择均沿用现有 FOK 下单流程。
+            FOK 沿用现有流程。GTC V1 需明确确认启用，未完成的本组转人工处理；历史测试偏好仍按 FOK 执行。
           </p>
         </div>
         <span class="extensions-tab__badge">changmen 扩展</span>
@@ -211,7 +224,7 @@ async function save() {
               FOK
             </el-radio-button>
             <el-radio-button value="GTC">
-              GTC（测试版本）
+              GTC V1（人工接管）
             </el-radio-button>
           </el-radio-group>
         </el-form-item>

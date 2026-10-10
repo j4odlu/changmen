@@ -4,7 +4,6 @@
  * 勿 import router 运行时符号，以免 ESM 环。
  */
 import { isAdminUser } from "../auth/admin_auth.js";
-import { handlePmGetSubmission } from "../integrations/polymarket/submission_handler.js";
 import {
   handlePmCancelOrder,
   handlePmGetBook,
@@ -17,6 +16,7 @@ import {
   handlePmSubmitOrder,
   handleRefreshPmBalance,
 } from "../integrations/polymarket/pm_client_handlers.js";
+import { handlePmGetSubmission } from "../integrations/polymarket/submission_handler.js";
 import {
   handlePfCheckBet,
   handlePfGetOrder,
@@ -28,6 +28,7 @@ import {
   handlePfSubmitOrder,
   handlePfSubmitSell,
 } from "../integrations/predictfun/pf_client_handlers.js";
+import { handlePmGtc } from "../orderModes/gtc/handler.js";
 
 interface ApiSuccess<T = unknown> {
   success: 1;
@@ -53,7 +54,7 @@ interface EsportUser {
   setting?: Record<string, unknown>;
 }
 
-type PmPfCtx = { user: EsportUser };
+interface PmPfCtx { user: EsportUser }
 
 function ok<T>(info: T, msg = "ok"): ApiEnvelope<T> {
   return { success: 1, msg, info: info ?? null };
@@ -83,6 +84,16 @@ export async function handlePmPfAction(
 ): Promise<ApiEnvelope | null> {
   if (!isPmPfAction(action))
     return null;
+
+  // [changmen 扩展] GTC 协调使用独立 action，原 PM/FOK 分支保持不变。
+  if (["Pm_GtcCreate", "Pm_GtcCommand", "Pm_GtcList", "Pm_GtcOrders", "Pm_GtcSaveOrders"].includes(action)) {
+    try {
+      return ok(await handlePmGtc(action, body, ctx.user.id));
+    }
+    catch (error) {
+      return fail(error instanceof Error ? error.message : "GTC 协调服务不可用");
+    }
+  }
 
   switch (action) {
     case "Pm_GetSubmission": {

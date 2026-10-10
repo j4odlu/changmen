@@ -6,6 +6,7 @@ import * as accountService from "../account/account_service.js";
 import * as accountStore from "../account/account_store.js";
 import { getMonthReport } from "../account/report_service.js";
 import * as dbStore from "../db/store.js";
+import { getOrders, saveOrders } from "../orderModes/router.js";
 
 interface ApiSuccess<T = unknown> {
   success: 1;
@@ -30,7 +31,7 @@ interface EsportUser {
   setting?: Record<string, unknown>;
 }
 
-type AccountCtx = { user: EsportUser | null };
+interface AccountCtx { user: EsportUser | null }
 
 /** GetData 偶发直接返回 JSON 数组/对象（非 envelope） */
 type AccountActionResult = ApiEnvelope | unknown[] | Record<string, unknown>;
@@ -122,11 +123,11 @@ export async function handleAccountClientAction(
     case "Client_GetUserDetail":
       return ok({ Id: ctx.user!.id });
     case "Client_GetOrderList": {
-      const page = await accountService.handleGetOrderList(body, ctx.user!.id);
+      const page = await getOrders(body, ctx.user!.id);
       return page.ok ? ok(page.info) : fail(page.msg);
     }
     case "Client_SaveOrder": {
-      const saved = await accountService.handleSaveOrder(body, ctx.user!.id);
+      const saved = await saveOrders(body, ctx.user!.id);
       return saved.ok ? ok(saved.info) : fail(saved.msg);
     }
     case "Client_SaveOrderBind": {

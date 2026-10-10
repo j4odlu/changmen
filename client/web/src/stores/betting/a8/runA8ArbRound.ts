@@ -1,4 +1,4 @@
-import { executeArbBet } from "@/stores/betting/autoBet/executeArbBet";
+import { executeArbBet } from "@/orderModes/router";
 import { useUserStore } from "@/stores/userStore";
 import { useMatchStore } from "@/stores/matchStore";
 

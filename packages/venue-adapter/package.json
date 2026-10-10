@@ -25,6 +25,7 @@
     "./ob": "./ob/index.ts",
     "./pb": "./pb/index.ts",
     "./polymarket": "./polymarket/index.ts",
+    "./polymarket/gtc": "./polymarket/gtc/index.ts",
     "./polymarket/marketDelay": "./polymarket/marketDelay.ts",
     "./polymarket/orderSettlement": "./polymarket/orderSettlement.ts",
     "./polymarket/orders": "./polymarket/orders.ts",

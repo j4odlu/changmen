@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import UserInfoPanel from "@/components/user/UserInfoPanel.vue";
-import OrderView from "@/components/order/OrderView.vue";
 import FootballOrderView from "@/components/football/FootballOrderView.vue";
+import UserInfoPanel from "@/components/user/UserInfoPanel.vue";
+import OrderView from "@/orderModes/OrderHost.vue";
 
 withDefaults(
   defineProps<{

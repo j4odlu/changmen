@@ -3,6 +3,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import type { OrderRow } from "@/types/order";
 import { onMounted, onUnmounted, computed, ref } from "vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
+import OrderModeDetails from "@/orderModes/OrderDetails.vue";
 import { rebindOrderLink } from "@/api/order";
 import { formatDisplayOdds, formatLinkId, formatOrderTime, toFixed } from "@changmen/client-core/shared/format";
 import {
@@ -783,7 +784,7 @@ function badgeTitle(row: OrderRow): string {
                   <span v-if="pmOrderFillPriceText(block.row)">赔率：<span class="order__odds">{{ pmOrderOddsText(block.row) }}</span></span>
                 </div>
                 <div class="order__profit-line">
-                  {{ pmStakeLabel(block.row) }}：{{ toFixed(pmOrderStakeDisplayCny(block.row), 0) }}
+                  {{ pmStakeLabel(block.row) }}：<slot name="buy-amount" :row="block.row">{{ toFixed(pmOrderStakeDisplayCny(block.row), 0) }}</slot>
                   <template v-if="isPendingRow(block.row) && !pmBuyLifecycleTagText(block.row)">
                     盈亏：待结算
                   </template>
@@ -891,6 +892,7 @@ function badgeTitle(row: OrderRow): string {
           <div v-if="$slots['row-actions']" class="order-list__row-actions">
             <slot name="row-actions" :row="block.row" :link="link" :rows="rows" />
           </div>
+          <OrderModeDetails v-if="block.row.PmGtcExecutionId && !$slots['row-actions']" :row="block.row" :readonly="!allowPmSell && !allowPfSell" />
         </div>
         <div v-if="$slots['group-monitor']" class="order-list__group-monitor">
           <slot name="group-monitor" :link="link" :rows="rows" />

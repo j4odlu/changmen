@@ -4,10 +4,13 @@ import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { storeToRefs } from "pinia";
 import { watchEffect } from "vue";
 import PmVaultDialogs from "@/components/account/PmVaultDialogs.vue";
+import { setupGtcLifecycle } from "@/orderModes/gtc/lifecycle";
 import { applyUiTheme } from "@/shared/applyUiTheme";
 import { useUserStore } from "@/stores/userStore";
 
-const { extensionPrefs } = storeToRefs(useUserStore());
+const user = useUserStore();
+const { extensionPrefs } = storeToRefs(user);
+setupGtcLifecycle();
 
 watchEffect(() => {
   applyUiTheme(extensionPrefs.value.uiTheme);

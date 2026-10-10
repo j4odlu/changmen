@@ -119,6 +119,7 @@ export function mapAdminOrderRow(r, startIndex = null) {
     pmLastSellOrderId: o.PmLastSellOrderId,
     pmSellState: o.PmSellState,
     pmSide: o.PmSide,
+    ...(o.PmGtcExecutionId ? { pmGtcExecutionId: o.PmGtcExecutionId, pmGtcBuyShares: o.PmGtcBuyShares } : {}),
     pmBuyOrderId: o.PmBuyOrderId,
     pfSide: o.PfSide,
     pfBuyOrderId: o.PfBuyOrderId,

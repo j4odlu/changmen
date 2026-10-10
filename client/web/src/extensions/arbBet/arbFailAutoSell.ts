@@ -31,7 +31,7 @@ import { saveOrders } from "@/api/order";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { a8Tip } from "@/shared/a8Notify";
 import { useAccountStore } from "@/stores/accountStore";
-import { useOrderStore } from "@/stores/orderStore";
+import { useOrderStore } from "@/orderModes/fok/financialOrders";
 import { useUserStore } from "@/stores/userStore";
 import { canManualSellPfBuy } from "@/stores/account/pfManualSell";
 import { canManualSellPmBuy } from "@/stores/account/pmManualSell";

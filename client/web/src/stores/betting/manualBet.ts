@@ -1,24 +1,22 @@
 import type { BetSide, ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
-import { ElMessageBox } from "element-plus";
-import { accountPassesMainBetFilter } from "@/domain/betting/betFilters";
-import { BetOption } from "@changmen/client-core/models/betOption";
-import { wait } from "@changmen/client-core/shared/wait";
-import { isPrematchFullMarketAllowed } from "@/extensions/prematchFullOnly";
-import { isMapMuteActive } from "@/extensions/mapBetMute";
 import type { UserConfig } from "@/types/userConfig";
+import { BetOption } from "@changmen/client-core/models/betOption";
+import { ElMessageBox } from "element-plus";
+import { h, ref } from "vue";
+import PmManualOrderPrompt from "@/components/betting/PmManualOrderPrompt.vue";
+import { accountPassesMainBetFilter } from "@/domain/betting/betFilters";
+import { capturePmPriceQuote } from "@/domain/polymarket/tickBufferQuote";
+import { isMapMuteActive } from "@/extensions/mapBetMute";
+import { isPrematchFullMarketAllowed } from "@/extensions/prematchFullOnly";
 import { readValueBetMoney } from "@/extensions/valueBet/valueBetStake";
-import { manualBetToastSeconds } from "@/shared/betTiming";
 import { useAccountStore } from "@/stores/accountStore";
+import { executeManualOrder } from "@/stores/betting/execution/manual";
+import { captureManualExecutionSelection } from "@/stores/betting/execution/selection";
 import {
-  buildManualBetCheckFailureHtml,
   buildManualBetContextLines,
 } from "@/stores/betting/manualBetAlert";
-import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
-import { markSuccessfulBet } from "@/stores/betting/successMarkers";
-import { useUserStore } from "@/stores/userStore";
 import { useMatchStore } from "@/stores/matchStore";
-import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
-import { capturePmPriceQuote } from "@/domain/polymarket/tickBufferQuote";
+import { useUserStore } from "@/stores/userStore";
 
 /** 手动下单默认金额：优先正EV金额，未配置时回退套利 betMoney */
 export function defaultManualBetAmount(
@@ -66,8 +64,9 @@ export async function runManualBet(
 
   // [changmen 扩展] 折叠/总关盘口与赛前全场过滤均不得绕过核心手动下注入口
   if (isMapMuteActive(match.id, bet.round, match.liveRound)
-    || !isPrematchFullMarketAllowed(match, bet))
+    || !isPrematchFullMarketAllowed(match, bet)) {
     return;
+  }
 
   // 先 getAccount(type, 0)，无账号再提示；有账号才 prompt 金额
   const account = accountStore.getAccount(item.type, 0);
@@ -77,8 +76,8 @@ export async function runManualBet(
   }
 
   const fromItem = item.getOdds(side);
-  const odds =
-    oddsOverride != null && Number.isFinite(oddsOverride) && oddsOverride > 0
+  const odds
+    = oddsOverride != null && Number.isFinite(oddsOverride) && oddsOverride > 0
       ? oddsOverride
       : fromItem;
   let frozenPmOption: BetOption | undefined;
@@ -92,9 +91,14 @@ export async function runManualBet(
     }
   }
   let amount: number;
+  // [changmen 扩展] 仅本次 PM 手动单选择模式，不继承/修改自动套利偏好。
+  const pmOrderMode = ref<"FOK" | "GTC">("FOK");
   try {
+    const promptMessage = buildManualBetPromptMessage(match, bet, item, side, odds);
     const { value } = await ElMessageBox.prompt(
-      buildManualBetPromptMessage(match, bet, item, side, odds),
+      item.type === "Polymarket"
+        ? h(PmManualOrderPrompt, { "context": promptMessage, "onUpdate:modelValue": (mode: "FOK" | "GTC") => { pmOrderMode.value = mode; } })
+        : promptMessage,
       "手动下单",
       {
         confirmButtonText: "确定",
@@ -113,11 +117,13 @@ export async function runManualBet(
     return;
   }
 
-  let option = frozenPmOption ?? new BetOption(match, bet, item, side, amount);
-  if (frozenPmOption) option.betMoney = Math.round(amount * 100) / 100;
+  const option = frozenPmOption ?? new BetOption(match, bet, item, side, amount);
+  if (frozenPmOption)
+    option.betMoney = Math.round(amount * 100) / 100;
   option.odds = odds;
   // [changmen 扩展] 比例 9999 仅控制自动下单；手动下单使用用户输入金额。
-  if (!accountPassesMainBetFilter(account, bet, match, option, matchStore)) {
+  const selection = captureManualExecutionSelection(pmOrderMode.value);
+  if (selection.orderMode === "FOK" && !accountPassesMainBetFilter(account, bet, match, option, matchStore)) {
     await ElMessageBox.alert(`当前 ${item.type} 账号不满足买入条件`, "提示");
     return;
   }
@@ -126,68 +132,14 @@ export async function runManualBet(
     await ElMessageBox.alert(`余额不足（${bal} < ${amount}）`, String(item.type));
     return;
   }
-  const toastSec = manualBetToastSeconds();
-  // [changmen 扩展] 手动金额仅换算币种，不应用自动下注的账号比例（含 9999）。
-  option = await accountStore.checkBetting(account, option, { skipAccountRate: true });
-  if (!option.data) {
-    await ElMessageBox.alert(
-      buildManualBetCheckFailureHtml(match, bet, item, side, odds, amount, option.checkError),
-      `${item.type} 预检未通过`,
-      {
-        dangerouslyUseHTMLString: true,
-        customClass: "manual-bet-result-box",
-        confirmButtonText: "知道了",
-      },
-    );
-    return;
-  }
-  const result = await accountStore.betting(account, option, toastSec);
-  if (result?.success) {
-    // PM/PF pending：受理≠成交，等 settle 确认后再 mark
-    const skipMark = isPendingConfirmVenueProvider(account.provider) && result.pending;
-    if (!skipMark)
-      markSuccessfulBet(account, bet.id, side, option.odds);
-    setMessage(
-      result.pending
-        ? `手动下单确认中 ${item.type}@${option.odds}`
-        : `手动下单成功 ${item.type}@${option.odds}`,
-    );
-    // [changmen 扩展] PM matched 已在 placeBet 用 POST 乐观落库；此处刷侧栏 + 后台校正
-    try {
-      const provider = String(account.provider ?? "");
-      const optimisticOk = Boolean(
-        (result.tip as { pmOptimisticSaved?: boolean } | null | undefined)?.pmOptimisticSaved,
-      );
-      if (result.pending || provider !== "Polymarket") {
-        await wait(result.orderId ? 400 : 1500);
-        await accountStore.updateVenueOrders(account);
-      }
-      else if (!optimisticOk) {
-        // matched 但乐观落库失败：短重试等 trades，避免侧栏空窗
-        await wait(400);
-        await accountStore.updateVenueOrders(account, {
-          waitForOrderId: String(result.orderId ?? "").trim() || undefined,
-        });
-      }
-      else {
-        void accountStore.updateVenueOrders(account);
-      }
-      refreshOrderListAfterBind();
-    }
-    catch {
-      // updateVenueOrders 已吞错；此处仅兜底 wait/刷新异常，不影响成功提示
-    }
-    // delayed：由 notifyPendingVenueConfirm 在 settle 确认后刷，避免早刷盖回旧余额
-    if (!result.pending)
-      void accountStore.refreshBalance(account);
-  }
-  else {
-    const message = result?.message || "下单失败";
-    await ElMessageBox.alert(
-      buildManualBetCheckFailureHtml(match, bet, item, side, odds, amount, message, "order"), "下单失败", {
-        dangerouslyUseHTMLString: true,
-        customClass: "manual-bet-result-box",
-        confirmButtonText: "知道了",
-      });
-  }
+  await executeManualOrder(account, option, selection, {
+    match,
+    bet,
+    item,
+    side,
+    odds,
+    amount,
+    setMessage,
+    accountStore,
+  });
 }

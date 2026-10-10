@@ -49,6 +49,9 @@ describe("管理后台直接执行诊断", () => {
     expect(comparison).toContain("仅预检 994");
     expect(html).toContain("计数仅代表本次查询结果");
     expect(html).not.toContain("994 次尝试");
+    const evidence = html.slice(html.indexOf('<details class="evidence-browser"'));
+    expect(evidence).not.toContain("check-993");
+    expect(evidence.match(/class="attempt-card"/g)).toHaveLength(1);
   });
   it("compares only attempts sharing a unique execution and preserves unknown directions", () => {
     const data = payload();
@@ -108,10 +111,73 @@ describe("管理后台直接执行诊断", () => {
     const data = payload();
     data.observation!.attempts[0]!.events[1]!.safeSummary = "<script>unsafe</script>";
     const html = await renderToString(createSSRApp(AdminOrderExecutionRecords, { data }));
-    for (const expected of ["预检赔率 @1.9", "10 USDC", "耗时 0ms", "HTTP 200", "pm-original", "exec-123", "attempt-123", "Pending", "订单待确认", "&lt;script&gt;unsafe&lt;/script&gt;"])
+    for (const expected of ["预检赔率 @1.9", "10 USDC", "耗时 0ms", "HTTP 200", "pm-original", "exec-123", "attempt-123", "订单状态 delayed", "订单待确认", "&lt;script&gt;unsafe&lt;/script&gt;"])
       expect(html).toContain(expected);
     expect(html).not.toContain("查看依据");
     expect(html).not.toContain("<script>unsafe</script>");
+  });
+  it("paginates full attempt records and leaves each event in a single timeline", async () => {
+    const data = payload();
+    const original = data.observation!.attempts[0]!;
+    for (let index = 1; index < 25; index++) {
+      const attemptId = `submission-${index}`;
+      data.observation!.attempts.push({ ...original, attemptId, events: original.events.map(event => ({ ...event,
+        attemptId, eventId: `${attemptId}:${event.eventId}` })) });
+    }
+    const html = await renderToString(createSSRApp(AdminOrderExecutionRecords, { data }));
+    const evidence = html.slice(html.indexOf('<details class="evidence-browser"'));
+    expect(evidence.match(/class="attempt-card"/g)).toHaveLength(20);
+    expect(evidence).toContain("第 1 / 2 页");
+    expect(evidence.match(/>submit-123</g)).toHaveLength(1);
+    expect(evidence).not.toContain("submission-24:");
+  });
+  it("keeps both legs visible with independent pagination and separates unknown directions", async () => {
+    const data = payload();
+    const original = data.observation!.attempts[0]!;
+    const copy = (attemptId: string, target?: string) => ({ ...original, attemptId,
+      events: original.events.map(event => ({ ...event, attemptId, target, eventId: `${attemptId}:${event.eventId}` })) });
+    for (let index = 1; index < 25; index++) data.observation!.attempts.push(copy(`away-${index}`, "Away"));
+    data.observation!.attempts.push(copy("home-visible", "Home"), copy("missing-direction"));
+    const conflict = copy("conflicting-direction", "Home");
+    conflict.events[1]!.target = "Away";
+    data.observation!.attempts.push(conflict);
+    const html = await renderToString(createSSRApp(AdminOrderExecutionRecords, { data }));
+    const evidence = html.slice(html.indexOf('<details class="evidence-browser"'));
+    const home = evidence.slice(evidence.indexOf('data-leg="Home"'), evidence.indexOf('data-leg="Away"'));
+    const away = evidence.slice(evidence.indexOf('data-leg="Away"'), evidence.indexOf('data-leg="unknown"'));
+    const unknown = evidence.slice(evidence.indexOf('data-leg="unknown"'));
+    expect(home).toContain('data-attempt-id="home-visible"');
+    expect(home).not.toContain('data-attempt-id="conflicting-direction"');
+    expect(away.match(/class="attempt-card"/g)).toHaveLength(20);
+    expect(away).toContain("客队腿记录分页");
+    expect(away).not.toContain('data-attempt-id="away-24"');
+    expect(unknown).toContain('data-attempt-id="missing-direction"');
+    expect(unknown).toContain('data-attempt-id="conflicting-direction"');
+    expect(unknown).toContain("方向待核查");
+  });
+  it("marks monitoring and main-flow rejection separately in the same attempt", async () => {
+    const data = payload();
+    const attempt = data.observation!.attempts[0]!;
+    const rejection = { ...attempt.events[1]!, provider: "RAY", kind: "settlement_observed" as const,
+      outcome: "unfilled", observedStatus: "reject", safeSummary: "场馆拒单" };
+    attempt.events.push({ ...rejection, eventId: "monitor-reject", sequence: 4, occurredAt: 4000,
+      source: "ray_monitor", phase: "ray_order_monitor" },
+    { ...rejection, eventId: "detection-reject", sequence: 5, occurredAt: 6000,
+      source: "adapter", phase: "reject_detection" });
+    const html = await renderToString(createSSRApp(AdminOrderExecutionRecords, { data }));
+    const evidence = html.slice(html.indexOf('<details class="evidence-browser"'));
+    expect(evidence).toContain('data-path="monitor"');
+    expect(evidence).toContain("RAY 旁路监控");
+    expect(evidence).toContain('data-path="detection"');
+    expect(evidence).toContain("主流程拒单检测");
+    expect(evidence.match(/>monitor-reject</g)).toHaveLength(1);
+    expect(evidence.match(/>detection-reject</g)).toHaveLength(1);
+    const overview = html.slice(0, html.indexOf('<details class="evidence-browser"'));
+    expect(overview).toContain("查看本次完整记录");
+    expect(overview).not.toContain("RAY订单监控");
+    expect(overview).not.toContain("执行时间线");
+    expect(overview).not.toContain("整单编排记录");
+    expect(evidence).not.toContain("本次尝试阶段摘要");
   });
   it("copies a direct diagnostic report without inventing a complete execution or omitting the unknown state", () => {
     const data = payload();

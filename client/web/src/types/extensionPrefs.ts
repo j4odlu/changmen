@@ -255,8 +255,11 @@ export interface ExtensionPrefs extends Record<string, unknown> {
   rayLateRejectAutoMakeup: RayLateRejectAutoMakeupPrefs;
   /** 双边预测市场：同卖净利优于锁定利润时两边一起卖 */
   arbEarlyLockSell: ArbEarlyLockSellPrefs;
-  /** [changmen 扩展] 仅保存模式偏好；GTC 未接入，实际下注仍走原 FOK 路径。 */
+  /** [changmen 扩展] GTC 必须另有本版本明确确认；历史测试偏好不自动激活。 */
   pmArbOrderMode: PmArbOrderMode;
+  pmGtcV1Activation?: string;
+  /** 曾正式启用的用户继续恢复未完结记录，包括切回 FOK。 */
+  pmGtcV1Participant?: boolean;
   /** PM 套利：有 fo 时读打折档（展示/扫描/对冲/FOK）；无 fo 不打折；默认关 = 现网 */
   pmArbPriceBuffer: PmArbPriceBufferPrefs;
   /** PM FOK：成交价及更优档深度倍数；默认关 = 现网 1× */
@@ -562,6 +565,8 @@ export function normalizeExtensionPrefs(raw: unknown): ExtensionPrefs {
     rayLateRejectAutoMakeup: normalizeRayLateRejectAutoMakeup(row.rayLateRejectAutoMakeup),
     arbEarlyLockSell: normalizeArbEarlyLockSell(row.arbEarlyLockSell),
     pmArbOrderMode: row.pmArbOrderMode === "GTC" ? "GTC" : "FOK",
+    ...(typeof row.pmGtcV1Activation === "string" ? { pmGtcV1Activation: row.pmGtcV1Activation } : {}),
+    ...(row.pmGtcV1Participant === true ? { pmGtcV1Participant: true } : {}),
     pmArbPriceBuffer: normalizePmArbPriceBuffer(row.pmArbPriceBuffer),
     pmFokDepthBuffer: normalizePmFokDepthBuffer(row.pmFokDepthBuffer),
     pfArbPriceBuffer: normalizePfArbPriceBuffer(row.pfArbPriceBuffer),

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { AdminOrderLogLookup } from "@/types/admin";
-import { observationEventLabel, observationEventStage, orderObservationTimeline } from "@changmen/shared/order_observation_view";
+import { observationEventLabel } from "@changmen/shared/order_observation_view";
 import { computed, ref } from "vue";
 import { adminObservationAttemptKind, adminObservationExecutions } from "@/shared/adminOrderObservation";
 
 /** [changmen 扩展] 借鉴实时进度的双腿对照，只展示已有记录与服务端结论。 */
 const props = defineProps<{ data: AdminOrderLogLookup }>();
+const emit = defineEmits<{ inspectAttempt: [attemptId: string] }>();
 const executions = computed(() => adminObservationExecutions(props.data));
 const selectedExecution = ref("");
 const selection = ref<Record<string, string>>({});
@@ -33,8 +34,6 @@ const lanes = computed(() => current.value?.lanes.map(lane => {
   } : undefined };
 }) || []);
 const phases = ["预检", "提交下注", "绑定订单", "场馆确认 / 当前状态"];
-const orchestration = computed(() => orderObservationTimeline((props.data.observation?.events || []).filter(event =>
-  !event.attemptId && !event.queueId && (!current.value || event.executionId === current.value.executionId))));
 function selectAttempt(key: string, attemptId: string) {
   if (current.value) selection.value[`${current.value.key}:${key}`] = attemptId;
 }
@@ -60,7 +59,7 @@ function tone(label: string) {
 <template>
   <section class="diagnosis-progress" aria-label="下单执行进度">
     <header class="diagnosis-progress__heading">
-      <div><h4>下单执行进度</h4><p>两腿按阶段对照 · 预检轮询与提交记录分开查看</p></div>
+      <div><h4>下单执行进度</h4><p>两腿结果与阶段对照 · 完整过程在下方记录区查看</p></div>
       <div class="diagnosis-progress__counts">
         <small v-if="data.observation?.truncated">本次查询</small>
         <span v-for="(count, kind) in counts" :key="kind" v-show="count" class="diagnosis-progress__badge">{{ categoryLabels[kind] }} {{ count }} 组</span>
@@ -89,6 +88,7 @@ function tone(label: string) {
               </select>
               <p v-if="lane.latestCheck" class="diagnosis-progress__check-summary">最近预检 · {{ lane.latestCheck.safeSummary || observationEventLabel(lane.latestCheck) }}</p>
               <code class="diagnosis-progress__attempt-id">{{ lane.selected.attemptId }}</code>
+              <button class="diagnosis-progress__inspect" type="button" @click="emit('inspectAttempt', lane.selected.attemptId)">查看本次完整记录 ↓</button>
             </template>
             <p v-else class="diagnosis-progress__account">暂无此方向的尝试记录</p>
           </th>
@@ -117,36 +117,13 @@ function tone(label: string) {
       </table>
     </div>
     <p v-if="current" class="diagnosis-progress__mobile-hint">左右滑动查看两腿，阶段列固定显示</p>
-    <div v-if="current" class="diagnosis-progress__timelines" :style="{ '--diagnosis-lanes': lanes.length }">
-      <section v-for="lane in lanes" :key="lane.key" class="diagnosis-progress__timeline">
-        <template v-if="lane.selected">
-          <header><strong>{{ lane.label }} · 执行时间线</strong><span>{{ lane.selected.events.length }} 条记录</span></header>
-          <p v-for="issue in lane.selected.findings" :key="issue" class="diagnosis-progress__issue">{{ issue }}</p>
-          <details>
-            <summary>查看本次尝试时间线</summary>
-            <ol>
-              <li v-for="event in orderObservationTimeline(lane.selected.events)" :key="event.eventId">
-                <div><time>{{ clock(event.occurredAt) }}</time><span>{{ observationEventStage(event) }}</span></div>
-                <p>{{ observationEventLabel(event) }}</p>
-                <code v-if="event.orderId">订单 {{ event.orderId }}</code>
-              </li>
-            </ol>
-          </details>
-        </template>
-        <p v-else class="diagnosis-progress__empty">此方向未提供执行记录，不能据此认定未下单。</p>
-      </section>
-    </div>
-    <details v-if="orchestration.length" class="diagnosis-progress__orchestration">
-      <summary>整单编排记录 <span>{{ orchestration.length }} 条</span></summary>
-      <p v-for="event in orchestration" :key="event.eventId"><time>{{ clock(event.occurredAt) }}</time> {{ observationEventLabel(event) }}</p>
-    </details>
     <p class="diagnosis-progress__note">提交阶段指已记录下注处理过程，不等于下单成功。仅预检记录未包含提交事件。{{ data.observation?.truncated ? '记录已截断，计数仅代表本次查询结果。' : '' }}缺少记录不代表未发生。</p>
   </section>
 </template>
 
 <style scoped>
 .diagnosis-progress { --progress-success: #34d399; --progress-danger: #fb7185; --progress-warning: #fbbf24; --progress-pending: #93c5fd; margin-top: 18px; color: var(--adm-text); font-size: 12px; }
-.diagnosis-progress__heading, .diagnosis-progress__leg-heading, .diagnosis-progress__timeline header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.diagnosis-progress__heading, .diagnosis-progress__leg-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 h4 { margin: 0; font-size: 16px; } p { margin: 5px 0; line-height: 1.6; } .diagnosis-progress__heading p, .diagnosis-progress__account, .diagnosis-progress__identity, .diagnosis-progress__empty, .diagnosis-progress__note { color: var(--adm-text-secondary); }
 .diagnosis-progress__badge { padding: 4px 10px; border-radius: 20px; background: rgba(96, 165, 250, .1); color: #93c5fd; white-space: nowrap; }
 .diagnosis-progress__counts { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 5px; } .diagnosis-progress__counts small { color: var(--adm-text-secondary); }
@@ -155,7 +132,7 @@ select { max-width: 100%; padding: 6px 8px; font: inherit; color: var(--adm-text
 .diagnosis-progress__executions, .diagnosis-progress__attempts { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
 button { font: inherit; color: var(--adm-text-secondary); background: transparent; border: 1px solid var(--adm-border); border-radius: 5px; padding: 5px 9px; cursor: pointer; }
 button[aria-pressed="true"] { color: #93c5fd; background: rgba(96, 165, 250, .12); border-color: rgba(96, 165, 250, .5); } button:hover { border-color: #93c5fd; }
-button:focus-visible, summary:focus-visible { outline: 2px solid #93c5fd; outline-offset: 3px; } small { margin-left: 5px; }
+button:focus-visible { outline: 2px solid #93c5fd; outline-offset: 3px; } small { margin-left: 5px; }
 code { font-size: 11px; overflow-wrap: anywhere; } .diagnosis-progress__identity { margin: 12px 0; } .diagnosis-progress__identity code { color: var(--adm-text); margin-left: 6px; }
 .diagnosis-progress__scroll { overflow-x: auto; border: 1px solid var(--adm-border); border-radius: 8px; }
 .diagnosis-progress__comparison { border-collapse: collapse; table-layout: fixed; width: 100%; min-width: 590px; }
@@ -169,10 +146,7 @@ thead th { background: var(--adm-surface-2); font-weight: 400; } .diagnosis-prog
 [data-tone="success"] { color: var(--progress-success); } [data-tone="danger"] { color: var(--progress-danger); } [data-tone="warning"] { color: var(--progress-warning); } [data-tone="pending"] { color: var(--progress-pending); }
 .diagnosis-progress__step { display: inline-grid; place-items: center; width: 19px; height: 19px; border: 1px solid var(--adm-border); border-radius: 50%; margin-right: 6px; }
 .diagnosis-progress__quote { display: flex; gap: 5px 12px; flex-wrap: wrap; margin-top: 7px; font-size: 11px; } .diagnosis-progress__basis { color: var(--adm-text-secondary); font-size: 11px; }
-.diagnosis-progress__timelines { display: grid; grid-template-columns: repeat(var(--diagnosis-lanes, 2), minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
-.diagnosis-progress__timeline { padding: 12px; border: 1px solid var(--adm-border); border-radius: 8px; min-width: 0; } .diagnosis-progress__timeline header span { color: var(--adm-text-secondary); font-size: 10px; }
-.diagnosis-progress__issue { color: var(--progress-warning); font-size: 11px; } summary { cursor: pointer; padding: 8px 0; color: #93c5fd; }
-ol { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow: auto; } li { padding: 8px 0 8px 12px; margin-left: 3px; border-left: 1px solid var(--adm-border); position: relative; overflow-wrap: anywhere; } li::before { content: ''; position: absolute; left: -3px; top: 13px; width: 5px; height: 5px; border-radius: 50%; background: #93c5fd; } li div { display: flex; gap: 8px; color: #93c5fd; font-size: 10px; }
-.diagnosis-progress__orchestration { border-top: 1px solid var(--adm-border); } .diagnosis-progress__orchestration span { color: var(--adm-text-secondary); margin-left: 8px; } .diagnosis-progress__note { font-size: 11px; margin: 8px 0 0; }
-@media (max-width: 700px) { .diagnosis-progress__timelines { grid-template-columns: 1fr; } .diagnosis-progress__mobile-hint { display: block; } }
+.diagnosis-progress__inspect { margin-top: 8px; color: #93c5fd; font-size: 11px; }
+.diagnosis-progress__note { font-size: 11px; margin: 8px 0 0; }
+@media (max-width: 700px) { .diagnosis-progress__mobile-hint { display: block; } }
 </style>

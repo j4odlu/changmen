@@ -23,6 +23,8 @@ import { mergeOtherProviderLogicalSave } from "./order/save_non_pm.js";
 import { mergePredictFunLogicalSave } from "./order/save_pf.js";
 import { mergePolymarketProviderSave } from "./order/save_pm.js";
 import { applyPositionEventsOnSave } from "./order/position_events.js";
+import { preserveOrderMode } from "../orderModes/orderMetadata.js";
+import { saveRowsByExecution } from "../orderModes/saveRows.js";
 
 export { toDateKey } from "./order/date_key.js";
 export {
@@ -247,6 +249,7 @@ export async function saveOrder(playerId, orders, userId, typeFallback = "") {
       orderForMerge,
       pmOrigin,
     );
+    preserveOrderMode(raw, prevRaw, o, existingByOrderId);
     rows.push({
       user_id: String(userId),
       player_id: Number(playerId),
@@ -264,6 +267,8 @@ export async function saveOrder(playerId, orders, userId, typeFallback = "") {
       raw,
     });
   }
+  if (rows.some(row => row.raw?.pmGtcExecutionId))
+    return saveRowsByExecution(rows);
   return rows.length ? await sb.upsertOrders(rows) : true;
 }
 

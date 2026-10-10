@@ -37,6 +37,7 @@ const BARREL_TOPS = new Set([
  * 仅测试文件可使用下列深路径。
  */
 const MOCK_ONLY_DEEP = new Set([
+  "polymarket/gtc",
   "polymarket/orderSettlement",
   "polymarket/settlementJob",
   "polymarket/orders",
@@ -46,6 +47,13 @@ const MOCK_ONLY_DEEP = new Set([
 
 /** 运行时单点深 import（避免 registry barrel 拉起全平台 adapters） */
 const RUNTIME_DEEP = new Map([
+  // GTC V1 独立入口，仅正式启用后动态加载，避免并入 FOK adapter barrel。
+  ["orderModes/gtc/execute.ts", new Set(["polymarket/gtc"])],
+  ["orderModes/gtc/runtime.ts", new Set(["polymarket/gtc"])],
+  ["orderModes/gtc/manual.ts", new Set(["polymarket/gtc"])],
+  ["orderModes/gtc/gateway.ts", new Set(["polymarket/gtc"])],
+  ["orderModes/gtc/orderCardView.ts", new Set(["polymarket/gtc"])],
+  ["orderModes/gtc/financialOrder.ts", new Set(["polymarket/orders"])],
   ["runtime/venueAdapters.ts", new Set(["registry/adapters"])],
   // vitest setup → oddsStore：勿经 polymarket/predictfun barrel 预加载 CLOB transport，否则场馆单测 vi.mock 失效
   ["stores/oddsStore.ts", new Set([

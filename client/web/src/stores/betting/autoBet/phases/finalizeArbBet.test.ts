@@ -1,17 +1,20 @@
+import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import type { ArbBetAttemptParams, ArbBetPlaced } from "./types";
-import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { ViewBet, ViewMatch } from "@/models/match";
 import type { PlatformId } from "@/types/esport";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetResult } from "@changmen/client-core/models/betResult";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 
-import { createDefaultUserConfig } from "@/types/userConfig";
 import { createArbExecutionTrace } from "@/stores/betting/autoBet/arbExecutionTrace";
+import { createDefaultUserConfig } from "@/types/userConfig";
 import { finalizeArbBet } from "./finalizeArbBet";
 
 const shouldSendArbProgress = vi.hoisted(() => vi.fn(() => false));
+const registerRayRejectMonitor = vi.hoisted(() => vi.fn());
+const rejectWait = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("@/extensions/arbBet/rayRejectMonitor/runtime", () => ({ registerRayRejectMonitor }));
 
 const loseOrderStore = vi.hoisted(() => ({
   orders: new Map<number, {
@@ -74,7 +77,7 @@ vi.mock("@/stores/betting/autoBet/rejectWait", () => ({
 }));
 
 vi.mock("@changmen/client-core/shared/wait", () => ({
-  wait: vi.fn(async () => {}),
+  wait: rejectWait,
 }));
 
 vi.mock("@/stores/betting/autoBet/arbLegSettle", () => ({
@@ -260,6 +263,7 @@ describe("finalizeArbBet makeup enqueue", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    rejectWait.mockReset().mockResolvedValue(undefined);
     maxLegRejectWaitSec.mockReturnValue(3);
     saveOrderBind.mockResolvedValue(true);
     applyArbMakeUpFromRejects.mockResolvedValue({
@@ -278,7 +282,31 @@ describe("finalizeArbBet makeup enqueue", () => {
     loseOrderStore.removeOrder.mockClear();
   });
 
-  it("API 成功锚腿确认拒单后撤销同 Link 的提前补单队列", async () => {
+  it("registers RAY only after the original wait and first detection have finished", async () => {
+    const rayOrder = venueOrder("ray-1", "none", Date.now());
+    mockDualLegVenueSync(
+      { orders: [venueOrder("ob-1", "none", Date.now())], rejected: false },
+      { orders: [rayOrder], rejected: false },
+    );
+    rejectWait.mockImplementationOnce(async () => {
+      expect(registerRayRejectMonitor).not.toHaveBeenCalled();
+      expect(settleArbLeg).not.toHaveBeenCalled();
+      expect(applyArbMakeUpFromRejects).not.toHaveBeenCalled();
+    });
+    await finalizeArbBet(params, makePlaced());
+    expect(registerRayRejectMonitor).toHaveBeenCalledOnce();
+    expect(registerRayRejectMonitor).toHaveBeenCalledWith(expect.objectContaining({
+      side: "B",
+      anchorConfirmed: true,
+      initialOrders: [rayOrder],
+    }));
+    expect(settleArbLeg.mock.invocationCallOrder.at(-1)).toBeLessThan(registerRayRejectMonitor.mock.invocationCallOrder[0]!);
+    expect(registerRayRejectMonitor.mock.invocationCallOrder[0]).toBeLessThan(applyArbMakeUpFromRejects.mock.invocationCallOrder[0]!);
+    expect(rejectWait).toHaveBeenCalledWith(3_000);
+    expect(applyArbMakeUpFromRejects).toHaveBeenCalledOnce();
+  });
+
+  it("aPI 成功锚腿确认拒单后撤销同 Link 的提前补单队列", async () => {
     const linkId = 1_790_352_533_196;
     const accountA = makeAccount("RAY");
     const accountB = makeAccount("Polymarket");
@@ -639,7 +667,7 @@ describe("finalizeArbBet makeup enqueue", () => {
     expect(saveOrderBind).not.toHaveBeenCalled();
   });
 
-  it("PM delayed 且场馆 sync 为空时用 result.orderId 绑单", async () => {
+  it("pM delayed 且场馆 sync 为空时用 result.orderId 绑单", async () => {
     const linkId = 1_700_000_000_000;
     settleArbLeg.mockResolvedValueOnce(packLegSync({
       orders: [],
@@ -669,7 +697,7 @@ describe("finalizeArbBet makeup enqueue", () => {
     });
   });
 
-  it("PM delayed 且 sync 仍返回历史首条时用 result.orderId 绑单", async () => {
+  it("pM delayed 且 sync 仍返回历史首条时用 result.orderId 绑单", async () => {
     const linkId = 1_783_199_338_220;
     mockDualLegVenueSync(
       { orders: [venueOrder("ob-1", "none", 2.4)], rejected: false },
@@ -722,7 +750,7 @@ describe("finalizeArbBet makeup enqueue", () => {
     expect(settleArbLeg).toHaveBeenCalledTimes(2);
   });
 
-  it("PM delayed 腿跳过早刷，仅在 settle 确认后补刷", async () => {
+  it("pM delayed 腿跳过早刷，仅在 settle 确认后补刷", async () => {
     const accountA = makeAccount("OB");
     const accountB = makeAccount("Polymarket");
     mockDualLegVenueSync(
@@ -749,7 +777,7 @@ describe("finalizeArbBet makeup enqueue", () => {
     expect(refreshBalance).toHaveBeenNthCalledWith(2, accountB);
   });
 
-  it("PF 仍 pendingConfirm 时不补刷（避免旧余额）", async () => {
+  it("pF 仍 pendingConfirm 时不补刷（避免旧余额）", async () => {
     const accountA = makeAccount("OB");
     const accountB = makeAccount("PredictFun");
     mockDualLegVenueSync(

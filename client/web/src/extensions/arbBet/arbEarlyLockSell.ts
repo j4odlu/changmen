@@ -31,7 +31,7 @@ import { beginArbAutoSell, endArbAutoSell } from "@/extensions/arbBet/arbAutoSel
 import { useAccountStore } from "@/stores/accountStore";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { useOddsStore } from "@/stores/oddsStore";
-import { useOrderStore } from "@/stores/orderStore";
+import { useOrderStore } from "@/orderModes/fok/financialOrders";
 import { useUserStore } from "@/stores/userStore";
 
 export const ARB_EARLY_LOCK_SCAN_MS = 5_000;

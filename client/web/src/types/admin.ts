@@ -202,6 +202,8 @@ export interface AdminOrderRow {
   pmLastSellOrderId?: string;
   pmSellState?: "open" | "partial" | "closed" | "settled";
   pmSide?: "buy" | "sell";
+  pmGtcExecutionId?: string;
+  pmGtcBuyShares?: number;
   pmBuyOrderId?: string;
   /** [changmen 扩展] PredictFun — 与工作台 OrderRow.Pf* 对齐 */
   pfSide?: "buy" | "sell";

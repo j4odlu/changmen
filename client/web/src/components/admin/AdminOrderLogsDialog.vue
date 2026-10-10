@@ -858,7 +858,7 @@ defineExpose({ open, openExecution });
               </p>
             </section>
 
-            <details v-if="data.observation" class="admin-order-log-technical">
+            <details v-if="data.observation && !directDiagnosis" class="admin-order-log-technical">
               <summary class="admin-order-log-technical__summary">
                 原始执行时间线 · {{ data.observation.events.length }} 条事件
               </summary>

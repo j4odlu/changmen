@@ -19,7 +19,7 @@ export interface ProgressComparisonGroup {
 }
 
 /** [changmen 扩展] 按同类尝试的轮次和阶段横向对齐；单腿补单不借用对腿首轮结果。 */
-export function activeBetRunComparison(run: ActiveBetRun, facts: ReadonlyMap<ActiveBetLeg["side"], readonly OrderObservationEvent[]>, orders: readonly OrderRow[] = [], executionEvents: readonly OrderObservationEvent[] = []): ProgressComparisonGroup[] {
+export function activeBetRunComparison(run: ActiveBetRun, facts: ReadonlyMap<ActiveBetLeg["side"], readonly OrderObservationEvent[]>, orders: readonly OrderRow[] = [], executionEvents: readonly OrderObservationEvent[] = [], currentStages?: ReadonlyMap<ActiveBetLeg["side"], BetProgressStage[]>): ProgressComparisonGroup[] {
   const legs = [...run.legs].sort((a, b) => a.side.localeCompare(b.side));
   const views = legs.map(leg => activeBetLegAttemptViews(run, leg, facts.get(leg.side) || []));
   const definitions = new Map<string, string>();
@@ -35,6 +35,14 @@ export function activeBetRunComparison(run: ActiveBetRun, facts: ReadonlyMap<Act
         label: side ? "不适用" : "本腿无此轮尝试", tone: "neutral" as const,
       }) }));
     groups.push({ key, label, providers, rows });
+  }
+  // [changmen 扩展] 原单当前状态独立于观察事件是否齐全，不能挂到另一轮历史尝试上。
+  if (currentStages) {
+    const current = legs.map(leg => currentStages.get(leg.side)
+      || activeBetLegStages(run, leg, facts.get(leg.side) || [], orders, executionEvents));
+    build("current", "当前原单进度", current, legs.map(leg => leg.platform), STAGES.slice(0, 5).map(([id]) => id));
+    build("orchestration", "补单与编排", current, [], ["makeup", "result"]);
+    return groups;
   }
   const order = (key: string) => ["initial", "retry", "makeup", "unknown"].indexOf(key.split(":")[0]!);
   const keys = [...definitions.keys()].sort((a, b) => order(a) - order(b) || a.localeCompare(b, undefined, { numeric: true }));

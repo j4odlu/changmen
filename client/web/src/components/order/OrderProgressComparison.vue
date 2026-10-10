@@ -2,14 +2,15 @@
 import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import type { ActiveBetLeg, ActiveBetRun } from "@/types/activeBetRun";
 import type { OrderRow } from "@/types/order";
+import type { BetProgressStage } from "@/shared/activeBetRunStages";
 import { computed } from "vue";
 import { activeBetRunComparison } from "@/shared/activeBetRunComparison";
 import { activeBetLegRole } from "@/shared/activeBetRunPresentation";
 
 /** [changmen 扩展] 原生表格共享行高，错误说明换行时双腿仍按阶段对齐。 */
-const props = defineProps<{ run: ActiveBetRun; facts: ReadonlyMap<ActiveBetLeg["side"], readonly OrderObservationEvent[]>; orders?: readonly OrderRow[]; executionEvents?: readonly OrderObservationEvent[] }>();
+const props = defineProps<{ run: ActiveBetRun; facts: ReadonlyMap<ActiveBetLeg["side"], readonly OrderObservationEvent[]>; orders?: readonly OrderRow[]; executionEvents?: readonly OrderObservationEvent[]; currentStages?: ReadonlyMap<ActiveBetLeg["side"], BetProgressStage[]> }>();
 const legs = computed(() => [...props.run.legs].sort((a, b) => a.side.localeCompare(b.side)));
-const groups = computed(() => activeBetRunComparison(props.run, props.facts, props.orders, props.executionEvents));
+const groups = computed(() => activeBetRunComparison(props.run, props.facts, props.orders, props.executionEvents, props.currentStages));
 function eventTime(at: number) { return new Date(at).toLocaleTimeString("zh-CN", { hour12: false }); }
 </script>
 

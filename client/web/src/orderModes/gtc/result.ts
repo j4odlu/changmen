@@ -24,7 +24,9 @@ export function gtcExecutionResult(row: GtcExecution): GtcExecutionResult {
     ? `PM 手动 GTC：${gtcStateLabel(row)}；成交 ${row.matched}/${row.plan.shares} 份；挂单 ${row.open ?? "待核实"} 份`
     : noOrders
       ? `${row.other.state === "rejected" ? `${row.plan.otherProvider} 下单失败：${row.other.message || "场馆未受理"}；` : ""}PM 未提交；本次执行已结束，无订单或挂单`
-      : `${gtcStateLabel(row)}；${row.groupComplete ? "本组已完成" : "本组转人工处理，后续成交仅更新原单"}`;
+      : `PM ${gtcStateLabel(row)}；${row.plan.otherProvider} ${row.other.state === "filled" ? "原单已确认"
+        : row.other.state === "rejected" ? "下单失败 / 拒单" : row.other.state === "not_attempted" ? "未提交" : "原单待核实"}；${row.groupComplete
+        ? "本组已完成" : row.decision === "open" ? "双腿核对中" : row.released ? "本轮已收尾" : "本轮已收尾，本组由人工处理"}`;
   return {
     executionKind: "pm-gtc-v1",
     executionId: row.id,

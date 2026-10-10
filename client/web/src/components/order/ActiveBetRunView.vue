@@ -18,6 +18,9 @@ import { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { useOrderObservationStore } from "@/stores/orderObservationStore";
 import { useOrderStore } from "@/stores/orderStore";
 import { useUserStore } from "@/stores/userStore";
+import { gtcProgress } from "@/orderModes/gtc/gtcProgressState";
+import { findRealtimeGtc, mergeRealtimeGtcStages, realtimeGtcLeg, realtimeGtcMessage } from "@/orderModes/gtc/realtimeProgress";
+import { gtcSyncNotice } from "@/orderModes/gtc/syncStatus";
 import "@/styles/active-bet-run.css";
 
 const PANEL_POS_KEY = "changmen:active-bet-run:pos:v4";
@@ -55,15 +58,29 @@ let dragCleanup: (() => void) | undefined;
 let resizeCleanup: (() => void) | undefined;
 
 const runCount = computed(() => displayRuns.value.length);
-const runOrders = computed(() => userStore.isLoggedIn ? orderStore.orders.get(activeRun.value?.linkId || 0) || [] : []);
+function ordersForRun(run: ActiveBetRun) { return userStore.isLoggedIn ? orderStore.orders.get(run.linkId || 0) || [] : []; }
+const runOrders = computed(() => activeRun.value ? ordersForRun(activeRun.value) : []);
 const runFacts = computed(() => userStore.isLoggedIn
   ? observationStore.forLink(String(userStore.userId || ""), activeRun.value?.linkId)
   : []);
 const factGroups = computed(() => observationLegGroups(runFacts.value, activeRun.value?.legs || []));
 function legFacts(leg: ActiveBetLeg) { return factGroups.value.groups.get(leg.side) || []; }
-const legSummaries = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, observationLegSummary(legFacts(leg), leg.status, leg.precheckOnly, runOrders.value)])));
+function gtcForRun(run: ActiveBetRun) { return userStore.isLoggedIn && gtcProgress.owner === String(userStore.userId)
+  ? findRealtimeGtc(run, String(userStore.userId), gtcProgress.records) : undefined; }
+const activeGtc = computed(() => activeRun.value && gtcForRun(activeRun.value));
+const gtcLegs = computed(() => new Map((activeRun.value?.legs || []).flatMap(leg => activeGtc.value
+  ? [[leg.side, realtimeGtcLeg(activeGtc.value, leg, runOrders.value)] as const] : [])));
+const legSummaries = computed(() => new Map((activeRun.value?.legs || []).map(leg => {
+  const base = observationLegSummary(legFacts(leg), leg.status, leg.precheckOnly, runOrders.value);
+  const gtc = gtcLegs.value.get(leg.side);
+  return [leg.side, gtc ? { ...base, ...gtc, odds: gtc.odds ?? base.odds, amount: gtc.amount ?? base.amount } : base];
+})));
 function legSummary(leg: ActiveBetLeg) { return legSummaries.value.get(leg.side)!; }
-const legStages = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, activeBetLegStages(activeRun.value!, leg, legFacts(leg), runOrders.value, factGroups.value.unassigned)])));
+const legStages = computed(() => new Map((activeRun.value?.legs || []).map(leg => {
+  const base = activeBetLegStages(activeRun.value!, leg, legFacts(leg), runOrders.value, factGroups.value.unassigned);
+  const gtc = gtcLegs.value.get(leg.side);
+  return [leg.side, gtc ? mergeRealtimeGtcStages(base, gtc) : base];
+})));
 const legAttempts = computed(() => new Map((activeRun.value?.legs || []).map(leg => [leg.side, activeBetLegAttemptViews(activeRun.value!, leg, legFacts(leg))])));
 function legAttemptLabel(leg: ActiveBetLeg) { return legAttempts.value.get(leg.side)?.latestLabel || "尝试类型未记录"; }
 function legProvider(leg: ActiveBetLeg) { return legSummary(leg).provider || leg.platform; }
@@ -71,8 +88,15 @@ function legAccountName(leg: ActiveBetLeg) { return accountProgressDisplayName(a
 const unassignedFacts = computed(() => factGroups.value.unassigned);
 const hasMoreTimeline = computed(() => unassignedFacts.value.length > 6
   || (activeRun.value?.legs || []).some(leg => legFacts(leg).length > 6));
-const evidenceWarnings = computed(() => progressEvidenceWarnings(runFacts.value));
-function legPlacementLabel(leg: ActiveBetLeg) { return progressOrchestrationLabel(leg, legFacts(leg), activeStore.legPlacementLabel(leg, activeRun.value ?? undefined), runOrders.value); }
+const evidenceWarnings = computed(() => [...progressEvidenceWarnings(runFacts.value), ...(activeGtc.value
+  ? [gtcProgress.queryIssues[activeGtc.value.id] && `PM ${gtcSyncNotice(gtcProgress.queryIssues[activeGtc.value.id]!)}`,
+      gtcProgress.otherQueryIssues[activeGtc.value.id] && `${activeGtc.value.plan.otherProvider} ${gtcSyncNotice(gtcProgress.otherQueryIssues[activeGtc.value.id]!)}`]
+      .filter((notice): notice is string => Boolean(notice)) : [])]);
+function legPlacementLabel(leg: ActiveBetLeg) { return gtcLegs.value.get(leg.side)?.label || progressOrchestrationLabel(leg, legFacts(leg), activeStore.legPlacementLabel(leg, activeRun.value ?? undefined), runOrders.value); }
+function summaryLegLabel(run: ActiveBetRun, leg: ActiveBetLeg) {
+  const gtc = gtcForRun(run);
+  return gtc ? realtimeGtcLeg(gtc, leg, ordersForRun(run)).label : leg.precheckOnly ? "仅预检" : activeStore.legStatusLabel(leg.status);
+}
 const executionId = computed(() => [...runFacts.value].reverse().find(event => event.executionId)?.executionId);
 const elapsedLabel = computed(() => {
   const run = activeRun.value;
@@ -352,6 +376,12 @@ function stripHtml(html: string): string {
 }
 
 function colToneClass(run: ActiveBetRun): string {
+  const gtc = gtcForRun(run);
+  if (gtc) {
+    const tones = run.legs.map(leg => realtimeGtcLeg(gtc, leg, ordersForRun(run)).tone);
+    return tones.includes("danger") ? "active-bet-run__col--danger" : gtc.groupComplete
+      ? "active-bet-run__col--success" : "active-bet-run__col--pending";
+  }
   const active = run.legs.filter(l => l.status !== "skipped" && !l.precheckOnly);
   const hasRejected = active.some(l => l.status === "rejected" || l.status === "failed");
   if (hasRejected)
@@ -368,6 +398,8 @@ function colToneClass(run: ActiveBetRun): string {
 }
 
 function phaseLabel(run: ActiveBetRun): string {
+  const gtc = gtcForRun(run);
+  if (gtc) return realtimeGtcMessage(gtc, ordersForRun(run));
   if (run.terminalAt)
     return run.overallLabel;
   if (!isTracking(run))
@@ -393,7 +425,7 @@ function flowLabels(run: ActiveBetRun): string[] {
   const stages = run.legs.filter(leg => !leg.precheckOnly && leg.status !== "skipped")
     .flatMap(leg => legStages.value.get(leg.side) || []);
   const confirmation = stages.some(stage => stage.stage === "拒单检测") ? "拒单检测"
-    : stages.some(stage => stage.id === "confirmation") ? "成交确认" : undefined;
+    : activeGtc.value ? "GTC 成交核对" : stages.some(stage => stage.id === "confirmation") ? "成交确认" : undefined;
   return ["预检", "提交下注", "绑定订单", ...(confirmation ? [confirmation] : []),
     ...(hasMakeupFlow(run) ? ["补单"] : []), "编排收尾"];
 }
@@ -416,12 +448,13 @@ function currentFlowIndex(run: ActiveBetRun): number {
 function flowStepClass(run: ActiveBetRun, index: number): string {
   const label = flowLabels(run)[index];
   if (label === "编排收尾") {
+    if (activeGtc.value && [...gtcLegs.value.values()].some(leg => leg.tone === "danger")) return "danger";
     if (!run.terminalAt)
       return "pending";
     return run.legs.some(leg => !leg.precheckOnly && (leg.status === "failed" || leg.status === "rejected")) ? "danger" : "current";
   }
   const stageId = label === "预检" ? "precheck" : label === "提交下注" ? "submission" : label === "绑定订单" ? "binding"
-    : label === "拒单检测" || label === "成交确认" ? "confirmation" : "makeup";
+    : label === "拒单检测" || label === "成交确认" || label === "GTC 成交核对" ? "confirmation" : "makeup";
   const rows = run.legs.flatMap(leg => legStages.value.get(leg.side)?.filter(stage => stage.id === stageId) || []);
   if (rows.some(stage => stage.tone === "danger"))
     return "danger";
@@ -429,12 +462,19 @@ function flowStepClass(run: ActiveBetRun, index: number): string {
     return "warning";
   if (rows.some(stage => stage.tone === "pending"))
     return "current";
+  if (activeGtc.value && rows.length > 0 && rows.every(stage => stage.tone === "success"))
+    return "done";
   if (rows.some(stage => stage.at !== undefined))
     return "done";
   return !run.terminalAt && index === currentFlowIndex(run) ? "current" : "pending";
 }
 
 function nextAction(run: ActiveBetRun): string {
+  const gtc = gtcForRun(run);
+  if (gtc) return run.legs.some(leg => realtimeGtcLeg(gtc, leg, ordersForRun(run)).tone === "danger")
+    ? "原单出现拒单或退回，请核查本组订单。" : gtc.groupComplete ? "双腿原单已确认，本组已完成。"
+    : gtc.decision === "open" ? "正在核对 GTC 原单与对侧订单。"
+      : "本轮提交已结束；继续展示原单核对结果，GTC 不自动补单。";
   const mode = activeBetRunMode(run);
   if (mode === "single9999") {
     if (run.terminalAt)
@@ -505,7 +545,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
               <span class="active-bet-run__summary-match" :title="stripHtml(run.matchTitle)">{{ stripHtml(run.matchTitle) || '未记录比赛' }}</span>
               <span class="active-bet-run__phase">{{ phaseLabel(run) }}</span>
               <span class="active-bet-run__summary-legs">
-                <span v-for="leg in run.legs" :key="leg.side">{{ legSideLabel(leg.side) }} · {{ leg.platform }} · {{ leg.precheckOnly ? '仅预检' : activeStore.legStatusLabel(leg.status) }}</span>
+                <span v-for="leg in run.legs" :key="leg.side">{{ legSideLabel(leg.side) }} · {{ leg.platform }} · {{ summaryLegLabel(run, leg) }}</span>
               </span>
             </button>
           </div>
@@ -530,11 +570,11 @@ function orderLabel(run: ActiveBetRun, index: number): string {
               {{ stripHtml(activeRun.betName) }}
             </div>
             <div class="active-bet-run__mode" :data-mode="activeBetRunMode(activeRun)">
-              下单模式 · <strong>{{ activeBetRunModeLabel(activeRun) }}</strong>
+              下单模式 · <strong>{{ activeBetRunModeLabel(activeRun) }}{{ activeGtc ? ' · PM GTC' : '' }}</strong>
               <span v-if="activeBetRunMode(activeRun) === 'single9999'">只提交下单腿，9999 侧不下单</span>
             </div>
             <div class="active-bet-run__run-meta">
-              <span>完整 Link {{ activeRun.linkId || '未记录' }}</span><span v-if="executionId">执行 {{ executionId }}</span>
+              <span>完整 Link {{ activeRun.linkId || '未记录' }}</span><span v-if="executionId">执行 {{ executionId }}</span><span v-if="activeGtc">GTC {{ activeGtc.id }} · 原单核对 {{ activeGtc.observedAt ? eventTime(activeGtc.observedAt) : '尚未返回' }}</span>
               <span>开始 {{ eventTime(activeRun.startedAt) }}</span><span>已用时 {{ elapsedLabel }}</span><span>更新 {{ eventTime(activeRun.updatedAt) }}</span>
             </div>
             <ol class="active-bet-run__flow" aria-label="编排流程">
@@ -551,7 +591,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 {{ expandedTimeline ? '每组最近 6 条' : '展开全部记录' }}
               </button>
             </header>
-            <OrderProgressComparison :run="activeRun" :facts="factGroups.groups" :orders="runOrders" :execution-events="factGroups.unassigned" />
+            <OrderProgressComparison :run="activeRun" :facts="factGroups.groups" :orders="runOrders" :execution-events="factGroups.unassigned" :current-stages="activeGtc ? legStages : undefined" />
             <header class="active-bet-run__section-head"><strong>每腿摘要与时间线</strong></header>
             <div class="active-bet-run__legs">
               <section v-for="leg in activeRun.legs" :key="leg.side" class="active-bet-run__leg" :data-tone="legSummary(leg).tone">
@@ -593,7 +633,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                     <dt>订单</dt><dd :title="legSummary(leg).orderId">
                       {{ shortOrderId(legSummary(leg).orderId) }}
                     </dd>
-                    <dt>落库回执</dt><dd>{{ legSummary(leg).bound ? '已记录保存成功' : '尚未记录成功' }}</dd>
+                    <dt>{{ activeGtc ? '原单落库' : '落库回执' }}</dt><dd>{{ legSummary(leg).bound ? activeGtc ? '原单已落库' : '已记录保存成功' : '尚未记录成功' }}</dd>
                   </dl>
                 </details>
                 <footer class="active-bet-run__leg-footer">

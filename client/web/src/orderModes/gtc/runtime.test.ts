@@ -2,9 +2,9 @@ import type { GtcCommand, GtcExecution, GtcPlan } from "@changmen/shared/pm_gtc"
 import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { gtcOrderProjection } from "@/orderModes/gtc/executionProjection";
-import { acceptGtc, cancelGtc, currentGtc, gtcProgress, pollGtc, refreshGtcRecords, startGtcRuntime, stopGtcRuntime } from "./runtime";
+import { acceptGtc, cancelGtc, currentGtc, gtcProgress, pollGtc, pollGtcOther, refreshGtcRecords, startGtcRuntime, stopGtcRuntime } from "./runtime";
 
-const mocks = vi.hoisted(() => ({ cancel: vi.fn(), read: vi.fn(), command: vi.fn(), list: vi.fn(), mark: vi.fn(), calls: [] as string[] }));
+const mocks = vi.hoisted(() => ({ cancel: vi.fn(), read: vi.fn(), otherRead: vi.fn(), command: vi.fn(), list: vi.fn(), mark: vi.fn(), calls: [] as string[] }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: "owner", extensionPrefs: {} }) }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ findAccount: () => ({ provider: "Polymarket", accountId: 1 }) }) }));
@@ -12,8 +12,9 @@ vi.mock("@/stores/betting/successMarkers", () => ({ markSuccessfulBet: mocks.mar
 vi.mock("./successMarkers", () => ({ markGtcSuccess: mocks.mark }));
 vi.mock("./api", () => ({ listGtc: mocks.list, commandGtc: mocks.command }));
 vi.mock("./ordersApi", () => ({ refreshGtcOrders: vi.fn().mockResolvedValue(undefined), saveOrders: vi.fn() }));
+vi.mock("./otherOrders", () => ({ readGtcOtherOrders: mocks.otherRead }));
 vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ readGtcFacts: mocks.read, pmCancelOrder: mocks.cancel }));
-vi.mock("@changmen/venue-adapter/polymarket", async (importOriginal) => ({ ...await importOriginal<typeof import("@changmen/venue-adapter/polymarket")>(), observePolymarketOrderWatch: () => () => {} }));
+vi.mock("@changmen/venue-adapter/polymarket", () => ({ observePolymarketOrderWatch: () => () => {} }));
 const hash = `0x${"a".repeat(64)}`;
 const plan = { playerId: 1, otherPlayerId: 2, shares: "10", tokenId: "token", orderHash: hash, betRowId: 2, target: "Home", otherTarget: "Away", otherOdds: 2, originalPmLeg: "A" } as GtcPlan;
 function row() {
@@ -28,9 +29,95 @@ beforeEach(() => {
     mocks.calls.push(command.kind); return applyGtcCommand(JSON.parse(JSON.stringify(previous)), command, Date.now());
   });
   mocks.read.mockResolvedValue(facts()); mocks.cancel.mockResolvedValue({ canceled: [hash] }); mocks.list.mockResolvedValue([row()]);
+  mocks.otherRead.mockResolvedValue([]);
 });
 afterEach(() => { stopGtcRuntime(); vi.useRealTimers(); });
 describe("gTC independent progress and cancellation", () => {
+  function counterpartRow() {
+    const original = row();
+    original.plan = { ...plan, otherProvider: "RAY", otherStake: 100, otherVenueMatchId: "38452903", otherVenueItemId: "76482018", linkId: 1791627619164 };
+    original.other = { state: "accepted", orderId: null, submittedAt: Date.now() - 1000, message: "当前余额:1499.63" };
+    return original;
+  }
+  function counterpartOrder() {
+    return { provider: "RAY", orderId: "40764f62796e6acdb186", createAt: Date.now(), odds: 1.66, betMoney: 100,
+      money: 0, reward: 0, status: "none" as const, game: "CS2", match: "FaZe - VS - NAVI Junior", bet: "map1 获胜者", item: "FaZe",
+      venueMatchId: "38452903", venueItemId: "76482018", link: 1791627619164 };
+  }
+  it("an empty venue snapshot preserves acceptance and the next read can still identify the original", async () => {
+    gtcProgress.records = [counterpartRow()];
+    const accepted = { ...currentGtc("id").other };
+    mocks.otherRead.mockResolvedValueOnce([]).mockResolvedValueOnce([counterpartOrder()]);
+    expect(await pollGtcOther("id")).toEqual([]);
+    expect(currentGtc("id").other).toEqual(accepted);
+    expect(mocks.command).not.toHaveBeenCalled();
+    expect(gtcProgress.otherQueryIssues.id?.message).toContain("继续查询");
+    await pollGtcOther("id");
+    expect(currentGtc("id").other).toMatchObject({ state: "filled", orderId: "40764f62796e6acdb186" });
+    expect(gtcProgress.otherQueryIssues.id).toBeUndefined();
+  });
+  it("accepted orders become visible without treating the first snapshot as completed reject detection", async () => {
+    gtcProgress.records = [counterpartRow()];
+    mocks.otherRead.mockResolvedValue([counterpartOrder()]);
+    await pollGtcOther("id", false);
+    expect(currentGtc("id").other).toMatchObject({ state: "accepted", orderId: "40764f62796e6acdb186" });
+    expect(mocks.mark).not.toHaveBeenCalled();
+    await pollGtcOther("id");
+    expect(currentGtc("id").other.state).toBe("filled");
+    expect(mocks.mark).toHaveBeenCalledOnce();
+  });
+  it("venue/save failures retain accepted identity and are retried without resubmitting either leg", async () => {
+    gtcProgress.records = [counterpartRow()];
+    const accepted = { ...currentGtc("id").other };
+    mocks.otherRead.mockRejectedValueOnce(new Error("Network Error")).mockResolvedValue([counterpartOrder()]);
+    await expect(pollGtcOther("id")).rejects.toThrow("Network Error");
+    expect(currentGtc("id").other).toEqual(accepted);
+    expect(gtcProgress.otherQueryIssues.id?.message).toBe("Network Error");
+    await Promise.all([pollGtcOther("id"), pollGtcOther("id")]);
+    expect(mocks.otherRead).toHaveBeenCalledTimes(2);
+    expect(mocks.calls).toEqual(["other"]);
+    expect(gtcProgress.otherQueryIssues.id).toBeUndefined();
+  });
+  it.each(["pending", "reject", "return"] as const)("early %s evidence does not count a successful RAY fill", async (status) => {
+    gtcProgress.records = [counterpartRow()];
+    mocks.otherRead.mockResolvedValue([{ ...counterpartOrder(), status }]);
+    await pollGtcOther("id", false);
+    expect(currentGtc("id").other).toMatchObject({ state: status === "pending" ? "pending" : "rejected", orderId: "40764f62796e6acdb186" });
+    expect(mocks.mark).not.toHaveBeenCalled();
+  });
+  it("a slow PM query cannot block RAY polling or the next retry across executions", async () => {
+    await import("@changmen/venue-adapter/polymarket/gtc");
+    vi.useFakeTimers(); stopGtcRuntime();
+    const slow = row(); slow.id = "slow-pm";
+    const ray = mergeGtcFacts(counterpartRow(), { ...facts(), order: { ...facts().order, status: "CANCELED" } });
+    ray.decision = "closed";
+    let release!: (value: ReturnType<typeof facts>) => void;
+    const pendingPm = new Promise<ReturnType<typeof facts>>(resolve => { release = resolve; });
+    mocks.read.mockReturnValue(pendingPm);
+    mocks.otherRead.mockResolvedValueOnce([]).mockResolvedValue([counterpartOrder()]);
+    mocks.list.mockResolvedValue([slow, ray]);
+    startGtcRuntime("owner");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.read).toHaveBeenCalledOnce();
+    expect(mocks.otherRead).toHaveBeenCalledOnce();
+    expect(currentGtc("id").other.state).toBe("accepted");
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(mocks.read).toHaveBeenCalledOnce();
+    expect(mocks.otherRead).toHaveBeenCalledTimes(2);
+    expect(currentGtc("id").other.orderId).toBe("40764f62796e6acdb186");
+    release(facts());
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  it("stopping recovery while the venue read is pending prevents late commands or notices for a new session", async () => {
+    gtcProgress.records = [counterpartRow()];
+    let release!: (value: ReturnType<typeof counterpartOrder>[]) => void;
+    mocks.otherRead.mockImplementation(() => new Promise(resolve => { release = resolve; }));
+    const task = pollGtcOther("id");
+    stopGtcRuntime(); release([counterpartOrder()]);
+    await expect(task).rejects.toThrow("会话已变更");
+    expect(mocks.command).not.toHaveBeenCalled();
+    expect(gtcProgress.otherQueryIssues).toEqual({});
+  });
   it("a malformed unrelated legacy row does not stop healthy records from restoring", async () => {
     mocks.list.mockResolvedValue([{ id: "broken", owner: "owner" }, row()]);
     await refreshGtcRecords();

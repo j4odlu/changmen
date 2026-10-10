@@ -11,7 +11,7 @@ import { markGtcSuccess } from "./successMarkers";
 const notices = vi.hoisted(() => ({ notify: vi.fn(), close: vi.fn() }));
 vi.mock("element-plus", () => ({ ElNotification: notices.notify }));
 
-const mocks = vi.hoisted(() => ({ submit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), refresh: vi.fn(), poll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, existing: [] as GtcExecution[], initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "" }));
+const mocks = vi.hoisted(() => ({ submit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), refresh: vi.fn(), poll: vi.fn(), otherPoll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, existing: [] as GtcExecution[], initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "" }));
 vi.mock("@changmen/client-core/models/betResult", () => ({ BetResult: class { orderId = null; constructor(public provider: string, public success: boolean) {} saveLog = mocks.log; } }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: mocks.owner, config: { betting: true } }) }));
@@ -30,6 +30,7 @@ vi.mock("./runtime", () => ({
   currentGtc: () => mocks.record!,
   mutateGtc: async (_id: string, command: GtcCommand) => { mocks.commands.push(command); mocks.record = applyGtcCommand(mocks.record!, command, Date.now()); return mocks.record; },
   pollGtc: mocks.poll,
+  pollGtcOther: mocks.otherPoll,
 }));
 const hash = `0x${"a".repeat(64)}`;
 function checked(pmFirst = true, parallel = false) {
@@ -44,6 +45,7 @@ beforeEach(() => {
   vi.clearAllMocks(); sessionStorage.clear(); mocks.record = null; mocks.existing = []; mocks.commands = []; mocks.initial = "0"; mocks.ready = true; mocks.ratio = 0.99;
   notices.notify.mockReturnValue({ close: notices.close });
   mocks.refresh.mockResolvedValue(undefined);
+  mocks.otherPoll.mockResolvedValue([]);
   mocks.prepare.mockResolvedValue({ shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", feeProof: { rate: "0", exponent: 1, takerOnly: true, observedAt: 1 }, protocol: 2, negRisk: false, orderHash: hash, route: "direct", submit: mocks.submit, validate: () => {} });
   mocks.submit.mockResolvedValue({ success: true, orderID: hash, status: "live" });
   mocks.betting.mockResolvedValue({ provider: "RAY", success: true, pending: false, orderId: "ray-order" });
@@ -56,6 +58,23 @@ beforeEach(() => {
   mocks.settle.mockResolvedValue({ rejected: false, pendingConfirm: false, orders: [{ provider: "RAY", orderId: "ray-order", status: "none" }] });
 });
 describe("gTC original pair orchestration", () => {
+  it("other-first RAY starts original-order synchronization before a slow PM submission or reject wait", async () => {
+    let release!: (value: { success: boolean; orderID: string }) => void;
+    mocks.submit.mockImplementation(() => new Promise(resolve => { release = resolve; }));
+    const task = executeGtc(params(), checked(false));
+    await vi.waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
+    expect(mocks.otherPoll).toHaveBeenCalledExactlyOnceWith(mocks.record!.id, false);
+    expect(mocks.settle).not.toHaveBeenCalled();
+    release({ success: true, orderID: hash }); await task;
+    expect(mocks.betting).toHaveBeenCalledOnce();
+    expect(mocks.settle).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.any(Function), 30);
+  });
+  it("early original sync failure does not change a successful submission or send another order", async () => {
+    mocks.otherPoll.mockRejectedValueOnce(new Error("Network Error"));
+    await executeGtc(params(), checked(false));
+    expect(mocks.betting).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
+    expect(mocks.record?.other.state).toBe("filled");
+  });
   it("unavailable global recovery does not gate a new independently persisted pair", async () => {
     mocks.ready = false; mocks.refresh.mockRejectedValue(new Error("old recovery unavailable"));
     await executeGtc(params(), checked(false));

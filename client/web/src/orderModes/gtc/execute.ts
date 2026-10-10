@@ -14,7 +14,7 @@ import { placeOtherLeg } from "./gateway";
 import { findGtcOtherOrder } from "./otherFacts";
 import { settleGtcOtherLeg } from "./otherOrders";
 import { gtcExecutionResult } from "./result";
-import { acceptGtc, currentGtc, markGtcLegOnce, mutateGtc, pollGtc, refreshGtcRecords, startGtcRuntime } from "./runtime";
+import { acceptGtc, currentGtc, markGtcLegOnce, mutateGtc, pollGtc, pollGtcOther, refreshGtcRecords, startGtcRuntime } from "./runtime";
 import { assertGtcHistoryAllowsLeg } from "./successMarkers";
 import { gtcProgress } from "./gtcProgressState";
 import { notifyBet } from "@/shared/betNotification";
@@ -84,6 +84,9 @@ export async function executeGtc(params: ArbBetAttemptParams, checked: ArbBetChe
       const unknown = otherResult.pmSubmitUnknown || (!otherResult.success && !otherResult.response);
       await mutateGtc(id, { kind: "other", state: unknown ? "unknown" : otherResult.success ? "accepted" : "rejected", orderId: otherResult.orderId ?? undefined, message: otherResult.message ?? "" });
       syncActiveBetLeg(params.bet.id, pmA ? "B" : "A", unknown ? "pending_confirm" : otherResult.success ? "submitted" : "rejected", otherResult.message ?? "");
+      // [changmen 扩展] 受理即拉原单展示，不等 PM 查询或拒单等待；终态仍由 settle 核对。
+      if (otherResult.success)
+        void pollGtcOther(id, false).catch(() => {});
     }
     catch (error) {
       await mutateGtc(id, { kind: "other", state: "unknown", message: error instanceof Error ? error.message : "对侧提交结果未知" });

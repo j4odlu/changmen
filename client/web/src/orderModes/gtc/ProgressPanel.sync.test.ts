@@ -13,7 +13,16 @@ const execution = () => ({ ...createGtcExecution("own", "owner", "wallet", "make
   order: { id: "order", original: "1", matched: "1", status: "MATCHED", tradeIds: ["trade"] },
   fills: { trade: { key: "trade", tradeId: "trade", bucket: "maker", role: "MAKER" as const, shares: "1", price: "0.5", fee: "0", status: "CONFIRMED" as const, updatedAt: 1 } } });
 const render = (row = execution()) => renderToString(createSSRApp({ render: () => h(ProgressPanel, { execution: row }) }));
-afterEach(() => { gtcProgress.queryIssues = {}; gtcProgress.recoveredAt = 0; });
+afterEach(() => { gtcProgress.queryIssues = {}; gtcProgress.otherQueryIssues = {}; gtcProgress.recoveredAt = 0; });
+it("RAY synchronization failures remain separate from completed PM fills and clear after retry", async () => {
+  const row = execution(); row.plan.otherProvider = "RAY";
+  gtcProgress.otherQueryIssues.own = { kind: "query", message: "Network Error", at: 20 };
+  const html = await render(row);
+  expect(html).toContain("全部成交"); expect(html).toContain("已停止挂单查询");
+  expect(html).toContain("RAY 同步提示"); expect(html).toContain("Network Error");
+  delete gtcProgress.otherQueryIssues.own;
+  expect(await render(row)).not.toContain("Network Error");
+});
 it("a synchronization failure keeps confirmed status visible and disappears once the successful retry clears it", async () => {
   gtcProgress.queryIssues.own = { kind: "auth", message: "登录服务暂时不可用，请稍后重试", at: 20 };
   let html = await render();

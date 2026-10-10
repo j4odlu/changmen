@@ -17,6 +17,10 @@ const syncNotice = computed(() => {
     return gtcSyncNotice({ kind, message: props.execution.error, at: props.execution.observedAt });
   return "";
 });
+const otherSyncNotice = computed(() => {
+  const issue = gtcProgress.otherQueryIssues[props.execution.id];
+  return issue ? `${props.execution.plan.otherProvider} ${gtcSyncNotice(issue)}` : "";
+});
 async function cancel() {
   try {
     await ElMessageBox.confirm("只取消这笔 PM 原挂单的剩余份额。已成交部分保留，本组继续由您处理。", "取消PM挂单", { type: "warning" });
@@ -56,6 +60,9 @@ async function cancel() {
     </div>
     <div v-else-if="gtcPmReconciled(execution)" class="gtc-order-extra__sync-state">
       原单成交核对已完成，已停止挂单查询。
+    </div>
+    <div v-if="otherSyncNotice" role="status" class="gtc-order-extra__sync-notice">
+      {{ otherSyncNotice }}
     </div>
     <div v-if="execution.cancel" class="gtc-order-extra__notice">
       {{ execution.cancel.message }}

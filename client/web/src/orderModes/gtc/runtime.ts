@@ -1,5 +1,6 @@
 /** [changmen 扩展] 页面级原单核对；生命周期与订单筛选、组件挂载无关。 */
 import type { GtcCommand, GtcExecution } from "@changmen/shared/pm_gtc";
+import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import { gtcCanCancel, gtcCanFinishWithoutOrders, gtcUnits } from "@changmen/shared/pm_gtc";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { gtcOrderProjection, rememberGtcOrderIdentity, resetGtcOrderProjection } from "@/orderModes/gtc/executionProjection";
@@ -18,6 +19,8 @@ import { gtcSyncIssue } from "./syncStatus";
 export { gtcProgress } from "@/orderModes/gtc/gtcProgressState";
 const queues = new Map<string, Promise<unknown>>();
 const polls = new Map<string, Promise<GtcExecution>>();
+const otherPolls = new Map<string, Promise<VenueOrder[]>>();
+const recoveries = new Map<string, Promise<void>>();
 let timer: ReturnType<typeof setTimeout> | undefined;
 let generation = 0;
 let dormantTimer = false;
@@ -188,6 +191,99 @@ export async function cancelGtc(id: string): Promise<void> {
   }
   await pollGtc(id);
 }
+
+/** [changmen 扩展] 场馆拉单失败/缺失不撤销已收到的受理回执；两腿分别去重和重试。 */
+export async function pollGtcOther(id: string, confirm = true): Promise<VenueOrder[]> {
+  const existing = otherPolls.get(id);
+  if (existing)
+    return existing;
+  const stamp = generation; const session = getAuthSessionVersion();
+  const task = (async () => {
+    try {
+      const row = currentGtc(id);
+      const account = useAccountStore().findAccount(row.plan.otherPlayerId);
+      if (!account)
+        throw new Error("GTC 原对侧账号暂不可用");
+      const orders = await readGtcOtherOrders(account, row);
+      if (stamp !== generation || !isAuthSessionCurrent(session))
+        throw new Error("GTC 会话已变更");
+      const current = currentGtc(id);
+      const original = findGtcOtherOrder(current, orders);
+      if (!original) {
+        gtcProgress.otherQueryIssues[id] = gtcSyncIssue(new Error("对侧原单暂未唯一核实，继续查询"));
+        return [];
+      }
+      const state = ["reject", "return"].includes(original.status) ? "rejected"
+        : original.status === "pending" ? "pending"
+          : confirm || current.other.state === "filled" ? "filled" : "accepted";
+      if (state !== current.other.state || original.orderId !== current.other.orderId)
+        await mutateGtc(id, { kind: "other", state, orderId: original.orderId, message: "" });
+      if (stamp !== generation || !isAuthSessionCurrent(session))
+        throw new Error("GTC 会话已变更");
+      delete gtcProgress.otherQueryIssues[id];
+      markGtcLegOnce(currentGtc(id), "OTHER");
+      return orders;
+    }
+    catch (error) {
+      if (stamp === generation && isAuthSessionCurrent(session))
+        gtcProgress.otherQueryIssues[id] = gtcSyncIssue(error);
+      throw error;
+    }
+  })();
+  otherPolls.set(id, task);
+  try { return await task; }
+  finally {
+    if (otherPolls.get(id) === task)
+      otherPolls.delete(id);
+  }
+}
+
+function recoverGtcRecord(id: string, stamp: number): Promise<void> {
+  const existing = recoveries.get(id);
+  if (existing)
+    return existing;
+  const task = (async () => {
+    if (stamp !== generation)
+      return;
+    const row = currentGtc(id);
+    // 已受理的场馆单立即同步展示；关闭执行轮次后再核对成交/拒单。
+    if (gtcNeedsOtherPolling(row, gtcOrderProjection.rows))
+      void pollGtcOther(id, row.decision === "closed").catch(() => {});
+    // PM 查询与对侧拉单互不等待，旧单的慢请求也不阻塞其它执行。
+    if (!gtcPmReconciled(row) || gtcProgress.queryIssues[id])
+      void pollGtc(id).catch(() => {});
+    if (!row.released && gtcCanFinishWithoutOrders(row)) {
+      await mutateGtc(id, { kind: "close" });
+      return;
+    }
+    if (!row.released && row.decision === "open"
+      && (row.deadlineAt ? Date.now() > row.deadlineAt : Date.now() - row.createdAt > 10000))
+      await mutateGtc(id, { kind: "close" }).catch(() => {});
+    if (stamp !== generation)
+      return;
+    if (gtcPmReconciled(currentGtc(id))) {
+      listeners.get(id)?.(); listeners.delete(id);
+    }
+    else if (!row.released && row.pmAuthorized && !listeners.has(id)) {
+      const account = useAccountStore().findAccount(row.plan.playerId);
+      if (account) {
+        const ws = await import("@changmen/venue-adapter/polymarket");
+        if (stamp !== generation)
+          return;
+        listeners.set(id, ws.observePolymarketOrderWatch(account, row.orderId || row.plan.orderHash, () => {
+          if (stamp === generation && !gtcPmReconciled(currentGtc(id)))
+            void pollGtc(id).catch(() => {});
+        }));
+      }
+    }
+  })().catch(() => {
+    if (stamp === generation)
+      gtcProgress.error = "有旧 GTC 原单核对失败，其他订单继续独立核对";
+  });
+  recoveries.set(id, task);
+  void task.finally(() => { if (recoveries.get(id) === task) recoveries.delete(id); });
+  return task;
+}
 async function tick(stamp: number): Promise<void> {
   if (stamp !== generation)
     return;
@@ -200,57 +296,8 @@ async function tick(stamp: number): Promise<void> {
     await refreshGtcOrders().catch(() => {});
     if (stamp !== generation)
       return;
-    for (const row of [...gtcProgress.records]) {
-      if (stamp !== generation)
-        break;
-      try {
-        // 旧版未提交记录只修正终态；不授权或发送任何场馆订单。
-        if (!row.released && gtcCanFinishWithoutOrders(row)) {
-          await mutateGtc(row.id, { kind: "close" });
-          continue;
-        }
-        if (!row.released && row.decision === "open"
-          && (row.deadlineAt ? Date.now() > row.deadlineAt : Date.now() - row.createdAt > 10000)) {
-          await mutateGtc(row.id, { kind: "close" }).catch(() => {});
-        }
-        if (!gtcPmReconciled(currentGtc(row.id)) || gtcProgress.queryIssues[row.id])
-          await pollGtc(row.id).catch(() => {});
-        if (row.decision === "closed" && ["authorized", "accepted", "pending", "filled", "unknown"].includes(row.other.state)
-          && gtcNeedsOtherPolling(currentGtc(row.id), gtcOrderProjection.rows)) {
-          try {
-            const account = useAccountStore().findAccount(row.plan.otherPlayerId);
-            if (account) {
-              const orders = await readGtcOtherOrders(account, currentGtc(row.id));
-              const original = findGtcOtherOrder(currentGtc(row.id), orders ?? []);
-              const state = !original ? "unknown" : ["reject", "return"].includes(original.status) ? "rejected" : original.status === "pending" ? "pending" : "filled";
-              if (state !== currentGtc(row.id).other.state || (original?.orderId && !row.other.orderId))
-                await mutateGtc(row.id, { kind: "other", state, orderId: original?.orderId, message: state === "unknown" ? "对侧原单暂未唯一核实，请人工核对" : "" });
-              markGtcLegOnce(currentGtc(row.id), "OTHER");
-            }
-          }
-          catch { /* 查失败不推断拒单、不重发 */ }
-        }
-        if (gtcPmReconciled(currentGtc(row.id))) {
-          listeners.get(row.id)?.(); listeners.delete(row.id);
-        }
-        else if (!row.released && row.pmAuthorized && !listeners.has(row.id)) {
-          const account = useAccountStore().findAccount(row.plan.playerId);
-          if (account) {
-            const ws = await import("@changmen/venue-adapter/polymarket");
-            if (stamp !== generation)
-              return;
-            listeners.set(row.id, ws.observePolymarketOrderWatch(account, row.orderId || row.plan.orderHash, () => {
-              if (stamp === generation && !gtcPmReconciled(currentGtc(row.id)))
-                void pollGtc(row.id).catch(() => {});
-            }));
-          }
-        }
-      }
-      catch {
-        if (stamp === generation)
-          gtcProgress.error = "有旧 GTC 原单核对失败，其他订单继续独立核对";
-      }
-    }
+    for (const row of [...gtcProgress.records])
+      void recoverGtcRecord(row.id, stamp);
   }
   catch (error) {
     if (stamp === generation)
@@ -258,7 +305,7 @@ async function tick(stamp: number): Promise<void> {
   }
   finally {
     if (stamp === generation) {
-      dormantTimer = gtcProgress.ready && gtcProgress.records.every(row => !gtcProgress.queryIssues[row.id] && gtcExecutionDormant(row, gtcOrderProjection.rows));
+      dormantTimer = gtcProgress.ready && gtcProgress.records.every(row => !gtcProgress.queryIssues[row.id] && !gtcProgress.otherQueryIssues[row.id] && gtcExecutionDormant(row, gtcOrderProjection.rows));
       timer = setTimeout(() => { void tick(stamp); }, dormantTimer ? 60000 : 5000);
     }
   }
@@ -280,8 +327,8 @@ function resetRuntime(preserveProjection: boolean): void {
   generation++; if (timer)
     clearTimeout(timer); timer = undefined;
   for (const dispose of listeners.values()) dispose(); listeners.clear();
-  polls.clear(); queues.clear(); gtcProgress.owner = ""; gtcProgress.records = []; gtcProgress.ready = false; gtcProgress.error = "";
-  gtcProgress.queryIssues = {}; gtcProgress.recoveredAt = 0;
+  polls.clear(); otherPolls.clear(); recoveries.clear(); queues.clear(); gtcProgress.owner = ""; gtcProgress.records = []; gtcProgress.ready = false; gtcProgress.error = "";
+  gtcProgress.queryIssues = {}; gtcProgress.otherQueryIssues = {}; gtcProgress.recoveredAt = 0;
   dormantTimer = false;
 }
 /** [changmen 扩展] 兼容旧记录人工确认；只修订旧组，新执行和配置保存不依赖此操作。 */

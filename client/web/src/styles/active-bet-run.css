@@ -17,7 +17,7 @@
 .active-bet-run button:hover:not(:disabled) { color: #fff; background: rgba(255, 255, 255, .08); }
 .active-bet-run button:disabled { color: #4f6078; cursor: default; }
 .active-bet-run button:focus-visible, .active-bet-run summary:focus-visible { outline: 2px solid #60a5fa; outline-offset: -2px; }
-.active-bet-run__chrome { display: flex; align-items: center; justify-content: space-between; min-height: 42px; padding: 0 10px 0 12px; flex: none; background: linear-gradient(90deg, rgba(21, 35, 52, .98), rgba(25, 31, 45, .98)); border-bottom: 1px solid rgba(91, 112, 145, .35); cursor: grab; touch-action: none; }
+.active-bet-run__chrome { display: flex; align-items: center; justify-content: space-between; min-height: 42px; padding: 0 10px 0 12px; flex: none; background: linear-gradient(90deg, rgba(21, 128, 61, .98), rgba(22, 101, 52, .98)); border-bottom: 1px solid rgba(91, 112, 145, .35); cursor: grab; touch-action: none; }
 .active-bet-run--collapsed .active-bet-run__chrome { border-bottom: 0; }
 .active-bet-run__heading { display: flex; align-items: center; gap: 8px; white-space: nowrap; font-size: 13px; }
 .active-bet-run__live-dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }

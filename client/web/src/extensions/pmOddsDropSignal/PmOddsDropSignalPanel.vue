@@ -19,10 +19,10 @@ import {
 const PANEL_POS_KEY = "changmen:pm-odds-drop:panel-pos:v1";
 const PANEL_COLLAPSED_KEY = "changmen:pm-odds-drop:panel-collapsed:v1";
 const PANEL_SIZE_KEY = "changmen:pm-odds-drop:panel-size:v1";
-const PANEL_WIDTH = 390;
-const PANEL_HEIGHT = 480;
-const PANEL_MIN_WIDTH = 320;
-const PANEL_MIN_HEIGHT = 240;
+const PANEL_WIDTH = 500;
+const PANEL_HEIGHT = 560;
+const PANEL_MIN_WIDTH = 360;
+const PANEL_MIN_HEIGHT = 260;
 
 const matchStore = useMatchStore();
 const { matchs } = storeToRefs(matchStore);
@@ -72,7 +72,7 @@ const maxReferenceOdds = computed({
 
 const panelStyle = computed<Record<string, string>>(() => {
   const style: Record<string, string> = {
-    width: collapsed.value ? "auto" : `${panelSize.value.width}px`,
+    width: `${panelSize.value.width}px`,
     height: collapsed.value ? "auto" : `${panelSize.value.height}px`,
   };
   if (offset.value) {
@@ -207,21 +207,24 @@ function clampPanelSize(width: number, height: number, left: number, top: number
   return {
     width: Math.min(
       Math.max(PANEL_MIN_WIDTH, width),
-      Math.max(PANEL_MIN_WIDTH, window.innerWidth - left),
+      Math.max(1, window.innerWidth - left),
     ),
     height: Math.min(
       Math.max(PANEL_MIN_HEIGHT, height),
-      Math.max(PANEL_MIN_HEIGHT, window.innerHeight - top),
+      Math.max(1, window.innerHeight - top),
     ),
   };
 }
 
 function normalizePanelGeometry() {
-  if (collapsed.value)
+  if (collapsed.value) {
+    if (offset.value)
+      offset.value = clampOffset(offset.value.left, offset.value.top);
     return;
+  }
   const rect = panelEl.value?.getBoundingClientRect();
-  const left = offset.value?.left ?? rect?.left ?? 0;
-  const top = offset.value?.top ?? rect?.top ?? 0;
+  const left = Math.min(Math.max(0, offset.value?.left ?? rect?.left ?? 0), Math.max(0, window.innerWidth - PANEL_MIN_WIDTH));
+  const top = Math.min(Math.max(0, offset.value?.top ?? rect?.top ?? 0), Math.max(0, window.innerHeight - PANEL_MIN_HEIGHT));
   panelSize.value = clampPanelSize(panelSize.value.width, panelSize.value.height, left, top);
   offset.value = {
     left: Math.min(Math.max(0, left), Math.max(0, window.innerWidth - panelSize.value.width)),
@@ -390,6 +393,7 @@ function locateSignalMatch(signal: SignalDisplay) {
 }
 
 onMounted(() => {
+  window.addEventListener("resize", normalizePanelGeometry);
   restorePanelPrefs();
   startMonitor();
   clockTimer = setInterval(() => {
@@ -401,6 +405,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener("resize", normalizePanelGeometry);
   stopMonitorNow();
   clearPmOddsDropSignals();
   dragCleanup?.();
@@ -430,39 +435,37 @@ watch(monitorEnabled, (enabled) => {
     <header class="pm-drop-panel__header" title="按住拖动" @pointerdown="onDragPointerDown">
       <div class="pm-drop-panel__heading">
         <span class="pm-drop-panel__live-dot" :class="{ 'is-active': monitorEnabled }" />
-        <strong>{{ venueLabel(referenceVenue) }}降赔率信号</strong>
+        <strong>{{ venueLabel(referenceVenue) }} 降赔率信号</strong>
         <span class="pm-drop-panel__count">{{ pmOddsDropSignals.length }}</span>
       </div>
-      <div class="pm-drop-panel__header-actions">
-        <button
-          type="button"
-          class="pm-drop-panel__monitor-button"
-          :class="{ 'is-active': monitorEnabled }"
-          :title="monitorEnabled ? '关闭全部降赔监测' : '开启降赔监测'"
-          @click="toggleMonitor"
-        >
-          {{ monitorEnabled ? "监测开" : "监测关" }}
-        </button>
-        <button
-          v-if="!collapsed && pmOddsDropSignals.length"
-          type="button"
-          class="pm-drop-panel__text-button"
-          @click="clearPmOddsDropSignals"
-        >
-          清空
-        </button>
-        <button
-          type="button"
-          class="pm-drop-panel__icon-button"
-          :title="collapsed ? '展开' : '收起'"
-          @click="toggleCollapsed"
-        >
-          {{ collapsed ? "展开" : "—" }}
-        </button>
-      </div>
+      <button
+        type="button"
+        class="pm-drop-panel__icon-button"
+        :title="collapsed ? '展开' : '收起'"
+        :aria-expanded="!collapsed"
+        @click.stop="toggleCollapsed"
+      >
+        {{ collapsed ? "展开" : "—" }}
+      </button>
     </header>
 
     <template v-if="!collapsed">
+      <nav class="pm-drop-panel__toolbar" aria-label="降赔率监测操作">
+        <span>{{ monitorEnabled ? '正在监听实时赔率' : '监测已关闭' }}</span>
+        <div class="pm-drop-panel__toolbar-actions">
+          <button
+            type="button"
+            class="pm-drop-panel__monitor-button"
+            :class="{ 'is-active': monitorEnabled }"
+            :aria-pressed="monitorEnabled"
+            :title="monitorEnabled ? '关闭全部降赔监测' : '开启降赔监测'"
+            @click="toggleMonitor"
+          >
+            {{ monitorEnabled ? "监测开" : "监测关" }}
+          </button>
+          <button type="button" :disabled="!pmOddsDropSignals.length" @click="clearPmOddsDropSignals">清空</button>
+        </div>
+      </nav>
       <div class="pm-drop-panel__settings">
         <label>
           <span>基准</span>
@@ -483,7 +486,6 @@ watch(monitorEnabled, (enabled) => {
           <input v-model.number="windowSeconds" type="number" min="0.5" max="60" step="0.5">
           <em>秒</em>
         </label>
-        <span class="pm-drop-panel__observe-only">仅观察</span>
       </div>
       <div class="pm-drop-panel__settings pm-drop-panel__settings--range">
         <label title="只过滤开启后产生的新信号">
@@ -517,11 +519,11 @@ watch(monitorEnabled, (enabled) => {
           @dblclick="locateSignalMatch(signal)"
         >
           <div class="pm-drop-signal__topline">
-            <strong>{{ signal.sideLabel }}</strong>
+            <strong>{{ venueLabel(signal.referenceVenue) }} · {{ signal.sideLabel }}</strong>
             <span class="pm-drop-signal__drop">↓ {{ signal.dropPct.toFixed(2) }}%</span>
           </div>
           <div class="pm-drop-signal__match" :title="signal.matchTitle">
-            {{ signal.matchTitle }}
+            <strong>{{ signal.matchTitle }}</strong>
           </div>
           <div class="pm-drop-signal__market">
             {{ signal.marketTitle }}
@@ -565,9 +567,15 @@ watch(monitorEnabled, (enabled) => {
           </footer>
         </article>
       </div>
-      <span
+      <footer class="pm-drop-panel__footer">
+        <span>{{ displayedSignals.length }} 条信号 · 双击卡片定位比赛</span>
+        <span class="pm-drop-panel__observe-only">仅观察 · 不自动下注</span>
+      </footer>
+      <button
+        type="button"
         class="pm-drop-panel__resize-handle"
         title="拖动调整窗口大小"
+        aria-label="调整降赔率信号框大小"
         @pointerdown="onResizePointerDown"
       />
     </template>
@@ -575,6 +583,7 @@ watch(monitorEnabled, (enabled) => {
 </template>
 
 <style scoped>
+/* [changmen 扩展] 与实时下单进度统一窗口、工具栏和卡片层级。 */
 .pm-drop-panel {
   position: fixed;
   z-index: 1250;
@@ -582,6 +591,8 @@ watch(monitorEnabled, (enabled) => {
   flex-direction: column;
   overflow: hidden;
   color: #e7edf7;
+  font: 12px/1.5 system-ui, sans-serif;
+  box-sizing: border-box;
   background: rgba(14, 20, 31, 0.96);
   border: 1px solid rgba(91, 112, 145, 0.65);
   border-radius: 10px;
@@ -604,7 +615,8 @@ watch(monitorEnabled, (enabled) => {
   justify-content: space-between;
   min-height: 42px;
   padding: 0 10px 0 12px;
-  background: linear-gradient(90deg, rgba(21, 35, 52, 0.98), rgba(25, 31, 45, 0.98));
+  flex: none;
+  background: linear-gradient(90deg, rgba(21, 128, 61, 0.98), rgba(22, 101, 52, 0.98));
   border-bottom: 1px solid rgba(91, 112, 145, 0.35);
   cursor: grab;
   touch-action: none;
@@ -615,7 +627,8 @@ watch(monitorEnabled, (enabled) => {
 }
 
 .pm-drop-panel__heading,
-.pm-drop-panel__header-actions,
+.pm-drop-panel__toolbar,
+.pm-drop-panel__toolbar-actions,
 .pm-drop-panel__settings,
 .pm-drop-signal__topline,
 .pm-drop-signal__prices,
@@ -627,6 +640,7 @@ watch(monitorEnabled, (enabled) => {
 .pm-drop-panel__heading {
   gap: 8px;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .pm-drop-panel__live-dot {
@@ -648,9 +662,22 @@ watch(monitorEnabled, (enabled) => {
   text-align: center;
   background: #2b384d;
   border-radius: 10px;
+  font-size: 11px;
+  box-sizing: border-box;
 }
 
-.pm-drop-panel__header-actions {
+.pm-drop-panel__toolbar {
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 12px;
+  flex: none;
+  color: #7f91aa;
+  background: rgba(10, 15, 24, 0.55);
+  border-bottom: 1px solid rgba(91, 112, 145, 0.15);
+  font-size: 11px;
+}
+
+.pm-drop-panel__toolbar-actions {
   gap: 4px;
 }
 
@@ -659,12 +686,22 @@ watch(monitorEnabled, (enabled) => {
   font: inherit;
   background: transparent;
   border: 0;
+  border-radius: 5px;
   cursor: pointer;
 }
 
-.pm-drop-panel__text-button {
-  padding: 5px 7px;
-  font-size: 12px;
+.pm-drop-panel button:disabled {
+  color: #4f6078;
+  cursor: default;
+}
+
+.pm-drop-panel button:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: -2px;
+}
+
+.pm-drop-panel__toolbar-actions button {
+  padding: 3px 6px;
 }
 
 .pm-drop-panel__icon-button {
@@ -685,26 +722,28 @@ watch(monitorEnabled, (enabled) => {
   border-color: rgba(52, 211, 153, 0.45) !important;
 }
 
-.pm-drop-panel button:hover {
+.pm-drop-panel button:hover:not(:disabled) {
   color: #fff;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 5px;
 }
 
 .pm-drop-panel__settings {
+  flex: none;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 9px 12px;
-  font-size: 12px;
+  gap: 8px 12px;
+  padding: 7px 12px;
+  font-size: 11px;
   color: #9fb0c7;
   background: rgba(10, 15, 24, 0.55);
 }
 
 .pm-drop-panel__settings--range {
   padding-top: 0;
+  border-bottom: 1px solid rgba(91, 112, 145, 0.15);
 }
 
-.pm-drop-panel__settings--range input {
+.pm-drop-panel__settings--range input[type="number"] {
   width: 58px;
 }
 
@@ -729,6 +768,7 @@ watch(monitorEnabled, (enabled) => {
   border: 1px solid #394b66;
   border-radius: 4px;
   outline: none;
+  font: inherit;
 }
 
 .pm-drop-panel__settings select {
@@ -746,19 +786,17 @@ watch(monitorEnabled, (enabled) => {
 }
 
 .pm-drop-panel__observe-only {
-  margin-left: auto;
-  padding: 2px 6px;
   color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.25);
-  border-radius: 4px;
 }
 
 .pm-drop-panel__body {
   flex: 1;
-  min-height: 92px;
+  min-height: 0;
+  padding: 10px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #394b66 transparent;
 }
 
 .pm-drop-panel__empty {
@@ -767,27 +805,34 @@ watch(monitorEnabled, (enabled) => {
   gap: 6px;
   align-items: center;
   justify-content: center;
-  min-height: 100px;
+  min-height: 160px;
+  padding: 0 10px;
+  text-align: center;
   color: #71829a;
   font-size: 12px;
 }
 
 .pm-drop-panel__notice {
-  padding: 7px 12px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
   color: #fbbf24;
-  font-size: 12px;
+  font-size: 11px;
   background: rgba(251, 191, 36, 0.08);
-  border-bottom: 1px solid rgba(251, 191, 36, 0.18);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 5px;
 }
 
 .pm-drop-panel__empty strong {
-  color: #aebdd0;
+  color: #c6d2e3;
   font-size: 13px;
 }
 
 .pm-drop-signal {
-  padding: 10px 12px;
-  border-top: 1px solid rgba(91, 112, 145, 0.25);
+  margin-bottom: 8px;
+  padding: 10px;
+  background: rgba(23, 32, 47, 0.65);
+  border: 1px solid rgba(91, 112, 145, 0.3);
+  border-radius: 7px;
 }
 
 .pm-drop-signal.is-locatable {
@@ -798,9 +843,13 @@ watch(monitorEnabled, (enabled) => {
   background: rgba(96, 165, 250, 0.08);
 }
 
-.pm-drop-signal:first-child {
-  border-top: 0;
-  background: rgba(239, 68, 68, 0.055);
+.pm-drop-signal:last-child {
+  margin-bottom: 0;
+}
+
+.pm-drop-signal:first-of-type {
+  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(96, 165, 250, 0.07);
 }
 
 .pm-drop-signal__topline {
@@ -810,7 +859,8 @@ watch(monitorEnabled, (enabled) => {
 
 .pm-drop-signal__topline strong {
   overflow: hidden;
-  font-size: 14px;
+  color: #9fb0c7;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -819,19 +869,21 @@ watch(monitorEnabled, (enabled) => {
   flex: none;
   color: #fb7185;
   font-weight: 700;
+  padding: 2px 6px;
+  font-size: 11px;
+  background: rgba(251, 113, 133, 0.1);
+  border-radius: 4px;
 }
 
 .pm-drop-signal__match,
 .pm-drop-signal__market {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .pm-drop-signal__match {
-  margin-top: 4px;
-  color: #b8c6d9;
-  font-size: 12px;
+  margin-top: 7px;
+  color: #d7e2f0;
+  font-size: 13px;
 }
 
 .pm-drop-signal__market {
@@ -841,6 +893,7 @@ watch(monitorEnabled, (enabled) => {
 }
 
 .pm-drop-signal__prices {
+  flex-wrap: wrap;
   gap: 7px;
   margin-top: 8px;
   font-variant-numeric: tabular-nums;
@@ -856,7 +909,7 @@ watch(monitorEnabled, (enabled) => {
 }
 
 .pm-drop-signal__prices small {
-  margin-left: auto;
+  flex-basis: 100%;
   color: #6f8098;
 }
 
@@ -883,8 +936,8 @@ watch(monitorEnabled, (enabled) => {
 }
 
 .pm-drop-signal__ev-grid .is-header {
-  color: #70829b;
-  background: rgba(34, 47, 67, 0.38);
+  color: #9fb0c7;
+  background: rgba(21, 35, 52, 0.98);
 }
 
 .pm-drop-signal__ev-grid .is-benchmark,
@@ -906,10 +959,26 @@ watch(monitorEnabled, (enabled) => {
   margin-top: 7px;
   color: #65768e;
   font-size: 11px;
+  flex-wrap: wrap;
+  padding-top: 5px;
+  border-top: 1px solid rgba(91, 112, 145, 0.2);
 }
 
 .pm-drop-signal footer time {
   margin-left: auto;
+}
+
+.pm-drop-panel__footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  flex: none;
+  gap: 4px 8px;
+  padding: 7px 20px 7px 12px;
+  color: #7f91aa;
+  font-size: 10px;
+  background: rgba(10, 15, 24, 0.55);
+  border-top: 1px solid rgba(91, 112, 145, 0.2);
 }
 
 .pm-drop-panel__resize-handle {
@@ -918,7 +987,7 @@ watch(monitorEnabled, (enabled) => {
   bottom: 1px;
   width: 18px;
   height: 18px;
-  cursor: nwse-resize;
+  cursor: nwse-resize !important;
   touch-action: none;
 }
 

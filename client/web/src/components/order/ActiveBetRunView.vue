@@ -86,16 +86,9 @@ const panelStyle = computed(() => {
     position: "fixed",
     zIndex: "1200",
     boxSizing: "border-box",
+    width: `${panelSize.value.width}px`,
+    height: collapsed.value ? "auto" : `${panelSize.value.height}px`,
   };
-  if (!collapsed.value) {
-    style.width = `${panelSize.value.width}px`;
-    style.height = `${panelSize.value.height}px`;
-  }
-  else {
-    style.width = "auto";
-    style.minWidth = "200px";
-    style.height = "auto";
-  }
   if (offset.value) {
     style.left = `${offset.value.left}px`;
     style.top = `${offset.value.top}px`;

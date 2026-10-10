@@ -75,7 +75,10 @@ describe("PM delayed 后按原订单状态展示", () => {
     expect(rows[0]).toContain("订单状态 none");
     expect(rows[1]).toContain("订单待确认");
     expect(html).toContain("delayed · 已受理待检测");
-    expect(html).not.toContain("观察到成交");
+    const results = [...html.matchAll(/class="active-bet-run__comparison-result">([\s\S]*?)<\/div>/g)].map(match => match[1]!).join("");
+    expect(results).not.toContain("观察到成交");
+    // [changmen 扩展] 原始观察保留在阶段时间线中，不替代当前订单确认状态。
+    expect(rows[1]).toContain("确认观察 · 观察到成交");
     const updated = await renderToString(createSSRApp({ render: () => h(OrderProgressComparison, { run, facts: new Map<"A" | "B", OrderObservationEvent[]>([["B", [delayed]]]), orders: [{ ...record, Status: "Win" }] }) }));
     expect(updated).toContain("已结算 · 赢");
     expect(updated).toContain("当前订单状态 Win");

@@ -1,6 +1,7 @@
 import type { GtcPlan } from "@changmen/shared/pm_gtc";
 import type { ActiveBetRun } from "@/types/activeBetRun";
 import type { OrderRow } from "@/types/order";
+import type { OrderObservationEvent } from "@changmen/shared/order_observation";
 import { createGtcExecution } from "@changmen/shared/pm_gtc";
 import { createPinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +10,7 @@ import { renderToString } from "@vue/server-renderer";
 import { gtcProgress } from "@/orderModes/gtc/gtcProgressState";
 import ActiveBetRunView from "./ActiveBetRunView.vue";
 
-const mocks = vi.hoisted(() => ({ runs: [] as ActiveBetRun[], orders: new Map<number, OrderRow[]>() }));
+const mocks = vi.hoisted(() => ({ runs: [] as ActiveBetRun[], orders: new Map<number, OrderRow[]>(), facts: [] as OrderObservationEvent[] }));
 vi.mock("@/stores/activeBetRunStore", async () => {
   const { defineStore } = await import("pinia");
   return { useActiveBetRunStore: defineStore("activeBetRunTest", { state: () => ({ visibleRuns: mocks.runs }),
@@ -18,10 +19,9 @@ vi.mock("@/stores/activeBetRunStore", async () => {
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ findAccount: () => undefined }) }));
 vi.mock("@/stores/loseOrderStore", () => ({ useLoseOrderStore: () => ({ orders: new Map() }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ isLoggedIn: true, userId: "owner", config: { makeUp: false } }) }));
-vi.mock("@/stores/orderObservationStore", () => ({ useOrderObservationStore: () => ({ forLink: () => [], truncatedOwners: [] }) }));
+vi.mock("@/stores/orderObservationStore", () => ({ useOrderObservationStore: () => ({ forLink: () => mocks.facts, truncatedOwners: [] }) }));
 vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: mocks.orders }) }));
 vi.mock("@/components/platform/PlatformIcon.vue", () => ({ default: { render: () => null } }));
-vi.mock("@/components/order/OrderExecutionTimeline.vue", () => ({ default: { render: () => null } }));
 
 function record() {
   const row = createGtcExecution("g", "owner", "wallet", "maker", { linkId: 1791627407669, betRowId: 1, matchId: 2,
@@ -46,8 +46,34 @@ beforeEach(() => {
   gtcProgress.owner = "owner"; gtcProgress.records = [record()]; gtcProgress.queryIssues = {};
   gtcProgress.otherQueryIssues = {};
   mocks.orders.clear();
+  mocks.facts = [];
 });
 describe("实时浮窗接入 GTC 原单状态", () => {
+  it("integrates FOK leg summaries and timelines into the original comparison table", async () => {
+    gtcProgress.records = [];
+    mocks.facts = mocks.runs[0]!.legs.flatMap((leg, index) => {
+      const base = { version: 1 as const, ownerUserId: "owner", linkId: 1791627407669,
+        attemptId: `initial-${leg.side}`, phase: "initial", target: leg.target, provider: leg.platform,
+        occurredAt: 1100, sequence: 1 };
+      return [{ ...base, eventId: `start-${leg.side}`, kind: "precheck_started" as const },
+        { ...base, eventId: `result-${leg.side}`, kind: "precheck_result" as const, sequence: 2, occurredAt: 1250,
+          outcome: index ? "blocked" : "prepared", odds: index ? 2.631 : 1.76, amount: index ? 9.98 : 100,
+          currency: index ? "USDT" : "CNY", safeSummary: index ? "GTC 预检参数或钱包会话已失效，请新建尝试" : undefined }];
+    });
+    const html = await panel();
+    const header = html.match(/<thead>([\s\S]*?)<\/thead>/)![1]!;
+    expect(header).toContain("100 CNY");
+    expect(header).toContain("9.98 USDT");
+    expect(header).toContain("失败原因 · GTC 预检参数或钱包会话已失效，请新建尝试");
+    expect(header).toContain("诊断详情");
+    expect(html).toContain("双腿实时进度");
+    expect(html).not.toContain("每腿摘要与时间线");
+    const precheck = html.match(/<tr data-stage="precheck">([\s\S]*?)<\/tr>/)![1]!;
+    expect(precheck.match(/执行时间线 · 2 条/g)).toHaveLength(2);
+    expect(precheck).toContain("开始预检");
+    expect(precheck).toContain("预检赔率 @1.76");
+    expect(precheck).toContain("预检赔率 @2.631");
+  });
   it("uses current GTC status throughout summary, comparison and final orchestration after the local run ends", async () => {
     const html = await panel();
     expect(html).toContain("双边套利 · PM GTC");

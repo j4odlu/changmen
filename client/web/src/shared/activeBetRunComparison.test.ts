@@ -5,6 +5,7 @@ import { createSSRApp, h } from "vue";
 import { renderToString } from "@vue/server-renderer";
 import OrderProgressComparison from "@/components/order/OrderProgressComparison.vue";
 import { activeBetRunComparison } from "./activeBetRunComparison";
+import { activeBetRunComparisonTimeline } from "./activeBetRunComparisonTimeline";
 
 const run: ActiveBetRun = {
   betId: 1, matchId: 1, matchTitle: "A vs B", betName: "获胜", phase: "makeup", overallLabel: "补单中", startedAt: 1000, updatedAt: 2000,
@@ -25,6 +26,59 @@ const facts = () => new Map<"A" | "B", OrderObservationEvent[]>([
 ]);
 
 describe("双腿按阶段对照", () => {
+  it("keeps timeline events in their own leg, attempt and stage, including late receipts and unscoped facts", () => {
+    const events = facts();
+    const late = event("bind_result", { eventId: "late-bind", provider: "Polymarket", outcome: "saved" });
+    const queue = event("queue_created", { eventId: "queue", attemptId: undefined, queueId: "q", phase: "makeup" });
+    const gap = event("transport_gap", { eventId: "gap", attemptId: undefined });
+    const unscoped = event("precheck_result", { eventId: "unscoped", attemptId: undefined });
+    const monitor = event("settlement_observed", { eventId: "monitor", source: "ray_monitor", provider: "RAY", outcome: "unfilled" });
+    events.get("B")!.push(late, queue, gap, unscoped);
+    events.get("A")!.push(monitor);
+    const groups = activeBetRunComparison(run, events);
+    const timelines = activeBetRunComparisonTimeline(run, events, groups);
+    expect(timelines.get("initial:1")?.get("binding")?.get("B")).toEqual([late]);
+    expect(timelines.get("makeup:1")?.get("precheck")?.get("B")?.[0]?.attemptId).toBe("makeup-1");
+    expect(timelines.get("makeup:1")?.get("precheck")?.get("A")).toBeUndefined();
+    expect(timelines.get("initial:1")?.get("ray_monitor")?.get("A")).toEqual([monitor]);
+    expect(timelines.get("orchestration")?.get("makeup")?.get("B")).toEqual([queue]);
+    expect(timelines.get("orchestration")?.get("result")?.get("B")).toEqual([gap, unscoped]);
+    const assigned = [...timelines.values()].flatMap(rows => [...rows.values()].flatMap(sides => [...sides.values()].flat()));
+    expect(assigned).toHaveLength([...events.values()].flat().length);
+    expect(new Set(assigned)).toEqual(new Set([...events.values()].flat()));
+  });
+  it("adds stage timeline controls with timestamps, account names and complete history on expansion", async () => {
+    const events = Array.from({ length: 8 }, (_, index) => event("precheck_started", {
+      eventId: `check-${index}`, occurredAt: 1000 + index * 10, accountId: 42,
+      safeSummary: `预检过程 ${index}`, sequence: index + 1,
+    }));
+    const props = { run, facts: new Map<"A" | "B", OrderObservationEvent[]>([["A", events]]), accountName: () => "测试账号" };
+    const html = await renderToString(createSSRApp({ render: () => h(OrderProgressComparison, props) }));
+    const precheck = html.match(/<tr data-stage="precheck">([\s\S]*?)<\/tr>/)![1]!;
+    expect(precheck).toContain("执行时间线 · 8 条");
+    expect(precheck).toContain("账号 测试账号");
+    expect(precheck).toContain("+70ms");
+    expect(precheck).not.toContain("预检过程 0");
+    const expanded = await renderToString(createSSRApp({ render: () => h(OrderProgressComparison, { ...props, expandedTimeline: true }) }));
+    expect(expanded).toContain('active-bet-run__comparison-events" open');
+    expect(expanded).toContain("预检过程 0");
+    expect(expanded).toContain("预检过程 7");
+  });
+  it("keeps GTC current stages intact while retaining every historical event", async () => {
+    const events = facts();
+    const baseline = activeBetRunComparison(run, events);
+    const currentStages = new Map(run.legs.map((leg, index) => [leg.side, baseline[0]!.rows.map(row => row.cells[index]!)]));
+    const groups = activeBetRunComparison(run, events, [], [], currentStages);
+    const before = JSON.stringify(groups);
+    const timelines = activeBetRunComparisonTimeline(run, events, groups);
+    expect(timelines.get("current")?.get("precheck")?.get("B")?.map(event => event.attemptId)).toEqual(["initial", "makeup-1"]);
+    expect(JSON.stringify(groups)).toBe(before);
+    expect([...timelines.values()].flatMap(rows => [...rows.values()].flatMap(sides => [...sides.values()].flat()))).toHaveLength([...events.values()].flat().length);
+    const html = await renderToString(createSSRApp({ render: () => h(OrderProgressComparison, { run, facts: events, currentStages }) }));
+    const precheck = html.match(/<tr data-stage="precheck">([\s\S]*?)<\/tr>/)![1]!;
+    expect(precheck).toContain("首轮尝试 ·");
+    expect(precheck).toContain("补单第 1 次 ·");
+  });
   it("shows both legs unsubmitted when the same execution is blocked in precheck", async () => {
     const events = new Map<"A" | "B", OrderObservationEvent[]>([
       ["A", [event("precheck_result", { executionId: "blocked-run", provider: "RAY", outcome: "prepared", odds: 2.48 })]],

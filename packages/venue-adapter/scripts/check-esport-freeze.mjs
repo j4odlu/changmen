@@ -13,6 +13,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkPmFolderFreeze } from "../../../scripts/verification/pm-folder-release-boundary.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = path.resolve(__dirname, "..");
@@ -25,12 +26,14 @@ const allowEnv = "ALLOW_ESPORT_TOUCH";
 
 function git(args, opts = {}) {
   try {
-    return execFileSync("git", args, {
+    const output = execFileSync("git", args, {
       cwd: REPO_ROOT,
       encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
       stdio: ["ignore", "pipe", "pipe"],
       ...opts,
-    }).trim();
+    });
+    return opts.trim === false ? output : output.trim();
   }
   catch (err) {
     if (opts.allowFail)
@@ -69,11 +72,12 @@ function changedFiles(base) {
     }
   };
   // 已提交相对 base
-  addLines(git(["diff", "--name-only", `${base}...HEAD`], { allowFail: true }));
+  addLines(git(["diff", "--name-only", `${base}...HEAD`]));
   // 工作区相对 base（含未提交）
-  addLines(git(["diff", "--name-only", base], { allowFail: true }));
+  addLines(git(["diff", "--name-only", base]));
+  addLines(git(["ls-files", "--others", "--exclude-standard", "--", "packages"]));
   // 暂存区
-  addLines(git(["diff", "--name-only", "--cached"], { allowFail: true }));
+  addLines(git(["diff", "--name-only", "--cached"]));
   return [...out];
 }
 
@@ -95,7 +99,9 @@ function main() {
 
   const base = detectBase();
   const changed = changedFiles(base);
-  const hits = changed.filter(f => isFrozen(f, manifest.paths));
+  const { hits } = checkPmFolderFreeze(changed, fs.readFileSync(MANIFEST, "utf8"),
+    file => fs.readFileSync(path.join(REPO_ROOT, file), "utf8"),
+    (ref, file) => git(["show", `${ref}:${file}`], { trim: false }));
 
   if (!hits.length) {
     console.log(`[esport-freeze] ok (base=${base}, changed=${changed.length}, frozen hits=0)`);

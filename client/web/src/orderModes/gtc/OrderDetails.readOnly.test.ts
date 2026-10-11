@@ -27,13 +27,13 @@ async function render(readonly = false) {
 beforeEach(() => { gtcProgress.owner = "owner"; gtcProgress.records = []; gtcProgress.error = ""; });
 it("displays a read-only loaded zero-fill card with cancellation disabled until its executor has loaded it", async () => {
   const html = await render();
-  expect(html).toContain("成交：0 / 10 份"); expect(html).toContain("取消PM挂单");
+  expect(html).toMatch(/<dt[^>]*>成交<\/dt><dd[^>]*>0 \/ 10 份<\/dd>/); expect(html).toContain("取消 PM 剩余挂单");
   expect(html).toMatch(/<button[^>]*\sdisabled(?:=""|="disabled")?(?:\s|>)/);
   expect(gtcProgress.records).toEqual([]);
 });
 it("preserves the existing cancellation button for the current executor's record", async () => {
   gtcProgress.records = [row()]; const html = await render();
-  expect(html).toContain("取消PM挂单"); expect(html).not.toMatch(/<button[^>]*\sdisabled(?:=""|="disabled")?(?:\s|>)/);
+  expect(html).toContain("取消 PM 剩余挂单"); expect(html).not.toMatch(/<button[^>]*\sdisabled(?:=""|="disabled")?(?:\s|>)/);
 });
 it.each(["foreign owner", "stale revision", "different account", "different original"])("never enables a control from a %s executor record", async (kind) => {
   if (kind === "foreign owner") { gtcProgress.owner = "foreign"; gtcProgress.records = [{ ...row(), owner: "foreign" }]; }
@@ -44,5 +44,5 @@ it.each(["foreign owner", "stale revision", "different account", "different orig
 });
 it("keeps embedded read-only details from exposing runtime controls", async () => {
   gtcProgress.records = [row()]; const html = await render(true);
-  expect(html).toContain("GTC"); expect(html).not.toContain("取消PM挂单");
+  expect(html).toContain("GTC"); expect(html).not.toContain("取消 PM 剩余挂单");
 });

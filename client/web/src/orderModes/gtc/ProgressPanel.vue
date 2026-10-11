@@ -3,12 +3,23 @@ import type { GtcExecution } from "@changmen/shared/pm_gtc";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed } from "vue";
 import { gtcOrderCardView } from "./orderCardView";
+import { pmGtcMonitorCardView } from "./monitorCardView";
+import { formatOrderTime } from "@changmen/client-core/shared/format";
 import { gtcProgress } from "./gtcProgressState";
 import { gtcSyncNotice } from "./syncStatus";
 import { gtcPmReconciled } from "./pollingPolicy";
 
 const props = defineProps<{ execution: GtcExecution; readOnly?: boolean }>();
-const view = computed(() => gtcOrderCardView(props.execution));
+const syncIssue = computed(() => {
+  const issue = gtcProgress.queryIssues[props.execution.id];
+  if (issue) return issue;
+  const kind = gtcOrderCardView(props.execution).queryErrorKind;
+  if (kind && !(kind === "auth" && gtcProgress.recoveredAt > props.execution.observedAt))
+    return { kind, message: props.execution.error, at: props.execution.observedAt };
+  return undefined;
+});
+const view = computed(() => pmGtcMonitorCardView(props.execution, syncIssue.value));
+const observedTime = computed(() => props.execution.observedAt > 0 ? formatOrderTime(props.execution.observedAt) : "尚未取得核对结果");
 const syncNotice = computed(() => {
   const issue = gtcProgress.queryIssues[props.execution.id];
   if (issue) return gtcSyncNotice(issue);
@@ -35,61 +46,108 @@ async function cancel() {
 </script>
 
 <template>
-  <div class="gtc-order-extra" :data-execution-id="execution.id">
-    <div role="status">
-      GTC · {{ execution.plan.source === 'manual' ? '手动' : '套利' }} · {{ view.state }}
+  <section class="pm-gtc-monitor" :class="`pm-gtc-monitor--${view.monitorTone}`" :data-execution-id="execution.id" aria-label="PM GTC 订单监控">
+    <div class="pm-gtc-monitor__header">
+      <span class="pm-gtc-monitor__signal" aria-hidden="true" />
+      <strong>PM GTC 订单监控</strong>
+      <em :title="view.reconciled && !syncNotice ? '原单成交核对已完成，已停止挂单查询。' : undefined">{{ view.monitorLabel }}</em>
     </div>
-    <div v-if="view.unsubmitted">
+    <div v-if="view.unsubmitted" class="pm-gtc-monitor__notice">
       PM 未提交，无挂单；计划 {{ execution.plan.shares }} 份
     </div>
-    <template v-else-if="execution.submit !== 'rejected'">
-      <div>
-        成交：{{ execution.matched }} / {{ execution.plan.shares }} 份；挂单：{{ execution.open ?? '待核实' }}<template v-if="execution.open != null">
-          份
-        </template>
+    <dl v-else-if="execution.submit !== 'rejected'" class="pm-gtc-monitor__facts">
+      <div><dt>成交</dt><dd>{{ execution.matched }} / {{ execution.plan.shares }} 份</dd></div>
+      <div><dt>挂单</dt><dd>{{ execution.open == null ? '待核实' : `${execution.open} 份` }}</dd></div>
+      <div title="吃单成交份额"><dt>TAKER</dt><dd>{{ view.takerShares == null ? '待核实' : `${view.takerShares} 份` }}</dd></div>
+      <div title="买入限价（USDC / 份）">
+        <dt>限价</dt><dd>{{ execution.plan.price }}</dd>
       </div>
-    </template>
-    <div v-if="view.verification.length" class="gtc-order-extra__notice">
+      <div title="挂单成交份额"><dt>MAKER</dt><dd>{{ view.makerShares == null ? '待核实' : `${view.makerShares} 份` }}</dd></div>
+      <div title="成交均价（USDC / 份）">
+        <dt>均价</dt><dd>{{ view.averagePrice == null ? Number(execution.matched) > 0 ? '待核实' : '—' : view.averagePrice }}</dd>
+      </div>
+    </dl>
+    <div class="pm-gtc-monitor__footer">
+      <span role="status">GTC · {{ execution.plan.source === 'manual' ? '手动' : '套利' }} · {{ view.state }}</span>
+      <span :title="`最近核对：${observedTime}；价格单位：USDC / 份`">核对 {{ execution.observedAt > 0 ? observedTime.slice(-8) : '待核实' }}</span>
+    </div>
+    <div v-if="view.verification.length" class="pm-gtc-monitor__notice">
       {{ view.verification.join(' · ') }}
     </div>
-    <div v-if="view.detailError" class="gtc-order-extra__notice">
+    <div v-if="view.detailError" class="pm-gtc-monitor__notice">
       {{ view.detailError }}
     </div>
-    <div v-if="syncNotice" role="status" class="gtc-order-extra__sync-notice">
+    <div v-if="syncNotice" role="status" class="pm-gtc-monitor__notice">
       {{ syncNotice }}
     </div>
-    <div v-else-if="gtcPmReconciled(execution)" class="gtc-order-extra__sync-state">
+    <div v-else-if="gtcPmReconciled(execution)" class="pm-gtc-monitor__sync-state">
       原单成交核对已完成，已停止挂单查询。
     </div>
-    <div v-if="otherSyncNotice" role="status" class="gtc-order-extra__sync-notice">
+    <div v-if="otherSyncNotice" role="status" class="pm-gtc-monitor__notice">
       {{ otherSyncNotice }}
     </div>
-    <div v-if="execution.cancel" class="gtc-order-extra__notice">
+    <div v-if="view.cancelLabel" role="status" class="pm-gtc-monitor__notice">
+      {{ view.cancelLabel }}
+    </div>
+    <button v-if="view.showCancel" type="button" class="pm-gtc-monitor__cancel" title="仅取消剩余挂单，已成交部分保留。" :disabled="readOnly || !view.canCancel" @click="cancel">
+      {{ view.cancelLabel || '取消 PM 剩余挂单' }}
+    </button>
+    <div v-if="execution.cancel?.message" class="pm-gtc-monitor__notice">
       {{ execution.cancel.message }}
     </div>
-    <details>
-      <summary>GTC 详情</summary>
-      <div>订单号：{{ execution.orderId ?? (execution.submit === 'rejected' ? '官方未受理' : view.unsubmitted ? '未提交' : '官方受理待核实') }}</div>
-      <div>买入限价：{{ execution.plan.price }} USDC / 份</div>
-      <div v-if="view.queryDiagnostic">
-        最近查询：{{ view.queryDiagnostic }}；已确认成交记录仍有效。
-      </div>
-    </details>
-    <el-button v-if="view.showCancel" size="small" type="warning" :disabled="readOnly || !view.canCancel" @click="cancel">
-      取消PM挂单
-    </el-button>
-  </div>
+    <div v-if="view.queryDiagnostic" class="pm-gtc-monitor__notice">
+      最近查询：{{ view.queryDiagnostic }}；已确认成交记录仍有效。
+    </div>
+  </section>
 </template>
 
 <style scoped>
-.gtc-order-extra {
+.pm-gtc-monitor {
+  --monitor-accent: #4ca5ff;
+  margin: 4px 0 2px;
+  padding: 5px 8px 5px 10px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--monitor-accent) 44%, transparent);
+  border-radius: 7px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--monitor-accent) 9%, transparent), rgba(14, 21, 35, 0.34));
+  box-shadow: inset 3px 0 0 var(--monitor-accent);
   font-size: 11px;
-  line-height: 18px;
+  line-height: 14px;
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.gtc-order-extra__notice { color: var(--cm-color-warning, #e6a23c); }
-.gtc-order-extra__sync-notice, .gtc-order-extra__sync-state { color: var(--cm-text-secondary, #909399); }
-.gtc-order-extra details { color: var(--el-text-color-secondary, #909399); }
-.gtc-order-extra summary { cursor: pointer; }
+.pm-gtc-monitor--success { --monitor-accent: #67c23a; }
+.pm-gtc-monitor--warning { --monitor-accent: #e6a23c; }
+.pm-gtc-monitor--danger { --monitor-accent: #f56c6c; }
+.pm-gtc-monitor__header { display: flex; align-items: center; gap: 6px; color: #dfe8f6; }
+.pm-gtc-monitor__signal { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--monitor-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--monitor-accent) 17%, transparent); }
+.pm-gtc-monitor__header strong { font-size: 11px; }
+.pm-gtc-monitor__header em { flex-shrink: 0; margin-left: auto; padding: 0 5px; color: var(--monitor-accent); font-size: 10px; font-style: normal; border-radius: 8px; background: color-mix(in srgb, var(--monitor-accent) 12%, transparent); }
+.pm-gtc-monitor__facts { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 2px 8px; margin: 4px 0 3px; font-size: 10px; }
+.pm-gtc-monitor__facts > div { display: flex; align-items: baseline; gap: 4px; }
+.pm-gtc-monitor__facts dt { flex-shrink: 0; color: rgba(205, 217, 235, 0.55); }
+.pm-gtc-monitor__facts dd { margin: 0; color: rgba(230, 238, 250, 0.9); font-variant-numeric: tabular-nums; }
+.pm-gtc-monitor__footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0 6px; color: var(--cm-text-secondary, #909399); font-size: 10px; }
+.pm-gtc-monitor__notice { margin-top: 3px; color: var(--cm-color-warning, #e6a23c); font-size: 10px; }
+.pm-gtc-monitor__sync-state { margin-top: 3px; color: var(--cm-text-secondary, #909399); font-size: 10px; }
+.pm-gtc-monitor__cancel {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  margin: 7px 0 0;
+  padding: 7px 12px;
+  color: #241707;
+  border: 1px solid #f3ba62;
+  border-radius: 6px;
+  background: #e6a23c;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+}
+.pm-gtc-monitor__cancel:hover:not(:disabled) { background: #f0b653; }
+.pm-gtc-monitor__cancel:disabled { opacity: 0.55; box-shadow: none; cursor: not-allowed; }
+.pm-gtc-monitor__cancel:focus-visible { outline: 2px solid #fff1d6; outline-offset: -4px; }
 </style>

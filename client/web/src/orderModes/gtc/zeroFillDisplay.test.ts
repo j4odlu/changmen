@@ -52,10 +52,10 @@ describe("[changmen 扩展] zero-fill GTC display without financial persistence"
     expect(gtcFinancialOrder(record)).toBeUndefined();
     const html = await render([record]);
     expect(html.match(/class="order"/g)).toHaveLength(1);
-    expect(html).toContain("成交：0 / 10 份");
+    expect(html).toMatch(/<dt[^>]*>成交<\/dt><dd[^>]*>0 \/ 10 份<\/dd>/);
     expect(html).toContain("余量已终止");
     expect(html).toMatch(/买入金额：\s*(?:<!--[\s\S]*?-->\s*)*0/);
-    expect(html).not.toContain("取消PM挂单");
+    expect(html).not.toContain("取消 PM 剩余挂单");
     expect(html).not.toContain("卖出</");
     expect(useOrderStore().orders.size).toBe(0);
     const pending = gtcOrderDisplayGroups([], [record], date, 0)[0]!.pending!;
@@ -68,7 +68,7 @@ describe("[changmen 扩展] zero-fill GTC display without financial persistence"
     const record = { ...acceptedZero("CANCELED", "arb"), released: true };
     const html = await render([record]);
     expect(html).toContain("GTC · 套利");
-    expect(html).toContain("成交：0 / 10 份");
+    expect(html).toMatch(/<dt[^>]*>成交<\/dt><dd[^>]*>0 \/ 10 份<\/dd>/);
   });
 
   it("uses the ordinary Link date for active zero-fill originals without changing the cancel action", async () => {
@@ -76,7 +76,7 @@ describe("[changmen 扩展] zero-fill GTC display without financial persistence"
     expect(record.released).toBe(false);
     const html = await render([record]);
     expect(html).toContain("挂单中");
-    expect(html).toContain("取消PM挂单");
+    expect(html).toContain("取消 PM 剩余挂单");
     expect(gtcOrderDisplayGroups([], [record], date, 0)[0]!.pending!.Status).toBe("None");
     expect(await render([record], [], 0, "2026-10-11")).not.toContain('class="order"');
   });

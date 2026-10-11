@@ -72,7 +72,7 @@ describe("one original produces one ordinary order card", () => {
     expect(html).not.toContain("PM GTC 挂单"); expect(html).toContain("0 / 10 份"); expect(html).toContain("挂单中");
     expect(html.match(/class="order"/g)).toHaveLength(2);
     expect(html.match(/data-link-id=/g)).toHaveLength(1);
-    expect(html).toContain("取消PM挂单"); expect(html.match(/data-execution-id="id"/g)).toHaveLength(1);
+    expect(html).toContain("取消 PM 剩余挂单"); expect(html.match(/data-execution-id="id"/g)).toHaveLength(1);
     expect(useOrderStore().orders.get(now)).toEqual([ray]);
     expect(gtcOrderDisplayGroups([ray], [pending], "2026-10-09", 1)).toEqual([]);
     const stored = { ...row, Link: now, Status: "None" };
@@ -112,7 +112,7 @@ describe("one original produces one ordinary order card", () => {
       const html = await render(financial);
       expect(html.match(/class="order"/g)).toHaveLength(2); expect(html.match(/data-link-id=/g)).toHaveLength(1);
       expect(html.match(/data-execution-id="id"/g)).toHaveLength(1);
-      expect(html.includes("取消PM挂单")).toBe(shares !== "10");
+      expect(html.includes("取消 PM 剩余挂单")).toBe(shares !== "10");
       expect(useOrderStore().orders.get(now)).toEqual(financial);
     }
   });
@@ -143,7 +143,7 @@ describe("one original produces one ordinary order card", () => {
     gtcProgress.records = [current];
     const html = await render([stored, fok]);
     expect(html.match(/data-execution-id="id"/g)).toHaveLength(1);
-    expect(html).toContain("取消PM挂单");
+    expect(html).toContain("取消 PM 剩余挂单");
     expect(html.match(/class="order"/g)).toHaveLength(2);
     expect(mergeGtcPendingDisplayEntries(base, [], [{ ...current, plan: { ...current.plan, playerId: 2 } }])).toBe(base);
     expect(mergeGtcPendingDisplayEntries(base, [], [{ ...current, orderId: "different" }]).find(([link]) => link === -now)![1][0]!.PmGtcExecutionId).toBe(current.id);
@@ -201,7 +201,7 @@ describe("one original produces one ordinary order card", () => {
     const pending = gtcPendingDisplayRows([], [current], date, 0);
     expect(pending).toHaveLength(1); expect(pending[0]!.Status).toBe("Return");
     gtcProgress.records = [current]; const html = await render([]);
-    expect(html).toContain("余量已终止"); expect(html).not.toContain("盈亏：待结算"); expect(html).not.toContain("取消PM挂单");
+    expect(html).toContain("余量已终止"); expect(html).not.toContain("盈亏：待结算"); expect(html).not.toContain("取消 PM 剩余挂单");
   });
   it("uses the original token for live quotes and keeps unpersisted display rows out of rebind and sell actions", async () => {
     const current = execution(); current.plan.tokenId = "token"; current.plan.conditionId = "condition";

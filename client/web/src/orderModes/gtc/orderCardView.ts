@@ -12,6 +12,8 @@ export function gtcOrderCardView(row: GtcExecution) {
   const fills = Object.values(row.fills).filter(fill => fill.status !== "FAILED");
   const detailMatched = fills.reduce((quantity, fill) => quantity + gtcUnits(fill.shares), 0n);
   const quantitiesAgree = Boolean(row.order) && gtcUnits(row.order!.matched) === matched && detailMatched === matched;
+  const takerShares = fills.filter(fill => fill.role === "TAKER").reduce((quantity, fill) => quantity + gtcUnits(fill.shares), 0n);
+  const makerShares = fills.filter(fill => fill.role === "MAKER").reduce((quantity, fill) => quantity + gtcUnits(fill.shares), 0n);
   const fees = fills.map(fill => fill.fee == null ? resolveGtcFillFee(row.plan.feeProof, fill.role, Number(fill.shares), Number(fill.price)) : Number(fill.fee));
   const fee = quantitiesAgree && fees.every(value => value != null)
     ? gtcDecimal(fees.reduce<bigint>((sum, value) => sum + gtcUnits(value!.toFixed(6)), 0n))
@@ -55,6 +57,8 @@ export function gtcOrderCardView(row: GtcExecution) {
     unsubmitted,
     verification,
     quantitiesAgree,
+    takerShares: quantitiesAgree ? gtcDecimal(takerShares) : null,
+    makerShares: quantitiesAgree ? gtcDecimal(makerShares) : null,
     principal: quantitiesAgree ? row.principal : null,
     fee,
     detailError: row.error === "成交费用待核实" || queryErrorKind ? "" : row.error,

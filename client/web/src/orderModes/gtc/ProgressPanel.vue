@@ -7,7 +7,7 @@ import { gtcProgress } from "./gtcProgressState";
 import { gtcSyncNotice } from "./syncStatus";
 import { gtcPmReconciled } from "./pollingPolicy";
 
-const props = defineProps<{ execution: GtcExecution }>();
+const props = defineProps<{ execution: GtcExecution; readOnly?: boolean }>();
 const view = computed(() => gtcOrderCardView(props.execution));
 const syncNotice = computed(() => {
   const issue = gtcProgress.queryIssues[props.execution.id];
@@ -75,7 +75,7 @@ async function cancel() {
         最近查询：{{ view.queryDiagnostic }}；已确认成交记录仍有效。
       </div>
     </details>
-    <el-button v-if="view.showCancel" size="small" type="warning" :disabled="!view.canCancel" @click="cancel">
+    <el-button v-if="view.showCancel" size="small" type="warning" :disabled="readOnly || !view.canCancel" @click="cancel">
       取消PM挂单
     </el-button>
   </div>

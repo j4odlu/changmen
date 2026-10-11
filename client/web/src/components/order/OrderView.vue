@@ -169,6 +169,8 @@ async function onLinkRebindDone() {
       />
     </div>
 
+    <slot name="before-orders" />
+
     <p v-if="showFilteredEmpty" class="order-filter-empty">
       当前账号筛选下无订单，请选「全部」或点刷新
     </p>

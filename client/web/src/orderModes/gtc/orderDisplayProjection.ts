@@ -25,7 +25,9 @@ function pendingOrderRow(execution: GtcExecution): OrderRow {
     Bet: plan.bet,
     Item: plan.item,
     CreateAt: execution.createdAt,
-    Status: execution.submit === "rejected" && !view.unsubmitted ? "Reject" : "None",
+    Status: execution.submit === "rejected" && !view.unsubmitted ? "Reject"
+      : execution.released && execution.terminal && execution.complete && !execution.error
+        && view.quantitiesAgree && matched === 0 ? "Return" : "None",
     PmSide: "buy",
     // 普通 PM 成交显示助手负责金额、成交价和赔率；无明细不使用计划量/限价。
     ...(view.quantitiesAgree ? { PmShares: matched } : {}),
@@ -62,9 +64,14 @@ export function gtcOrderDisplayGroups(financialRows: OrderRow[], executions: Gtc
     byExecution.set(identity.executionId, group);
   }
   for (const execution of executions) {
+    // [changmen 扩展] 零成交原单没有财务行；释放只结束执行占用，不删除当天的订单展示。
+    // 活跃原单仍按原规则持续可见，已释放记录沿用普通订单的 Link 日期归属。
+    const releasedZeroFill = execution.released && execution.submit === "accepted" && Number(execution.matched) === 0
+      && filterOrdersBelongingToDate([{ CreateAt: execution.createdAt, Link: execution.plan.linkId }], date).length > 0;
+    const showMissingOriginal = !gtcCanFinishWithoutOrders(execution) && (!execution.released || releasedZeroFill);
     let group = byExecution.get(execution.id);
     if (!group) {
-      if (execution.released || gtcCanFinishWithoutOrders(execution))
+      if (!showMissingOriginal)
         continue;
       group = { rows: [] };
       byExecution.set(execution.id, group);
@@ -73,7 +80,7 @@ export function gtcOrderDisplayGroups(financialRows: OrderRow[], executions: Gtc
     const hasOriginal = group.rows.some(row => row.Type === "Polymarket" && row.PmSide !== "sell"
       && row.PlayerID === execution.plan.playerId
       && String(row.OrderID).toLowerCase() === String(execution.orderId ?? execution.plan.orderHash).toLowerCase());
-    if (!hasOriginal && !execution.released && !gtcCanFinishWithoutOrders(execution)) {
+    if (!hasOriginal && showMissingOriginal) {
       group.pending = pendingOrderRow(execution);
       group.rows.push(group.pending);
     }

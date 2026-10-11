@@ -3,9 +3,22 @@ import type { OrderRow } from "@/types/order";
 import { gtcCanFinishWithoutOrders } from "@changmen/shared/pm_gtc";
 import { orderExecutionIdentity } from "@/orderModes/gtc/executionIdentity";
 import { isFootballOrderRow } from "@/shared/orderDomain";
-import { dropOrphanPolymarketSellGroups, filterOrdersBelongingToDate, groupOrdersByEffectiveLink, orderLinkMapEntries } from "@/shared/orderLink";
+import { resolveOrderItemLabel } from "@/shared/orderItemDisplay";
+import { compareOrderLinkDesc, dropOrphanPolymarketSellGroups, filterOrdersBelongingToDate, groupOrdersByEffectiveLink, orderLinkMapEntries } from "@/shared/orderLink";
 import { gtcMatchedOrder } from "./financialOrder";
 import { gtcOrderCardView } from "./orderCardView";
+
+function originalItemText(execution: GtcExecution): string {
+  const entities: Record<string, string> = { apos: "'", quot: "\"", amp: "&", lt: "<", gt: ">", nbsp: " " };
+  // Match 在普通列表中按 HTML 展示，Item 是纯文本，先解码以避免实体字面量泄漏。
+  return resolveOrderItemLabel(execution.plan.item, execution.plan.match)
+    .replace(/&(?:#(\d+)|#x([\da-f]+)|(apos|quot|amp|lt|gt|nbsp));/gi, (entity, decimal: string | undefined, hex: string | undefined, named: string | undefined) => {
+      if (named)
+        return entities[named.toLowerCase()]!;
+      const point = decimal ? Number(decimal) : Number.parseInt(hex!, 16);
+      return point > 0 && point <= 0x10FFFF && !(point >= 0xD800 && point <= 0xDFFF) ? String.fromCodePoint(point) : entity;
+    });
+}
 
 /** [changmen 扩展] 未落财务库的原单仅适配为展示行，不写 OrderStore/统计/数据库。 */
 function pendingOrderRow(execution: GtcExecution): OrderRow {
@@ -17,17 +30,21 @@ function pendingOrderRow(execution: GtcExecution): OrderRow {
     : null;
   return {
     OrderID: execution.orderId ?? `gtc-pending:${execution.id}`,
+    DisplayOnly: true,
     PmGtcExecutionId: execution.id,
+    PmTokenId: plan.tokenId,
+    PmConditionId: plan.conditionId,
+    PmOrigin: "changmen",
     Link: plan.linkId,
     Type: "Polymarket",
     PlayerID: plan.playerId,
     Match: plan.match,
     Bet: plan.bet,
-    Item: plan.item,
+    Item: originalItemText(execution),
     CreateAt: execution.createdAt,
-    Status: execution.submit === "rejected" && !view.unsubmitted ? "Reject"
-      : execution.released && execution.terminal && execution.complete && !execution.error
-        && view.quantitiesAgree && matched === 0 ? "Return" : "None",
+    Status: execution.submit === "rejected" && !view.unsubmitted
+      ? "Reject"
+      : execution.submit === "accepted" && execution.terminal && execution.complete && !execution.error && view.quantitiesAgree && matched === 0 ? "Return" : "None",
     PmSide: "buy",
     // 普通 PM 成交显示助手负责金额、成交价和赔率；无明细不使用计划量/限价。
     ...(view.quantitiesAgree ? { PmShares: matched } : {}),
@@ -64,11 +81,10 @@ export function gtcOrderDisplayGroups(financialRows: OrderRow[], executions: Gtc
     byExecution.set(identity.executionId, group);
   }
   for (const execution of executions) {
-    // [changmen 扩展] 零成交原单没有财务行；释放只结束执行占用，不删除当天的订单展示。
-    // 活跃原单仍按原规则持续可见，已释放记录沿用普通订单的 Link 日期归属。
-    const releasedZeroFill = execution.released && execution.submit === "accepted" && Number(execution.matched) === 0
-      && filterOrdersBelongingToDate([{ CreateAt: execution.createdAt, Link: execution.plan.linkId }], date).length > 0;
-    const showMissingOriginal = !gtcCanFinishWithoutOrders(execution) && (!execution.released || releasedZeroFill);
+    // [changmen 扩展] 临时原单也只住 Link 归属日；未释放执行不能绕过日期筛选。
+    const belongsToDate = filterOrdersBelongingToDate([{ CreateAt: execution.createdAt, Link: execution.plan.linkId }], date).length > 0;
+    const showMissingOriginal = belongsToDate && !gtcCanFinishWithoutOrders(execution)
+      && (!execution.released || (execution.submit === "accepted" && Number(execution.matched) === 0));
     let group = byExecution.get(execution.id);
     if (!group) {
       if (!showMissingOriginal)
@@ -88,7 +104,7 @@ export function gtcOrderDisplayGroups(financialRows: OrderRow[], executions: Gtc
   return [...byExecution].map(([id, group]) => ({
     id,
     ...group,
-    // 保留活跃原单原有的持续可见性；财务行继续使用普通日期分组。
+    // 临时原单与财务行均使用普通日期归属，不影响独立监控恢复。
     entries: orderLinkMapEntries(dropOrphanPolymarketSellGroups(groupOrdersByEffectiveLink([
       ...filterOrdersBelongingToDate(group.rows.filter(row => row !== group.pending), date),
       ...(group.pending ? [group.pending] : []),
@@ -98,6 +114,50 @@ export function gtcOrderDisplayGroups(financialRows: OrderRow[], executions: Gtc
 
 export function isGtcOriginalBuy(row: OrderRow, execution: GtcExecution): boolean {
   return row.Type === "Polymarket" && row.PmSide !== "sell" && row.PlayerID === execution.plan.playerId
-    && [execution.orderId ?? execution.plan.orderHash, `gtc-pending:${execution.id}`]
-      .some(id => String(row.OrderID).toLowerCase() === String(id).toLowerCase());
+    && [execution.orderId, execution.plan.orderHash, `gtc-pending:${execution.id}`].filter(Boolean).some(id => String(row.OrderID).trim().toLowerCase() === String(id).trim().toLowerCase());
+}
+
+/** [changmen 扩展] 仅提供尚无财务行的展示原单；账号筛选及精确身份去重不改财务数据。 */
+export function gtcPendingDisplayRows(financialRows: OrderRow[], executions: GtcExecution[], date: string, accountId: number): OrderRow[] {
+  return gtcOrderDisplayGroups(financialRows, executions, date, accountId)
+    .flatMap(group => group.pending && (!accountId || group.pending.PlayerID === accountId)
+      && !financialRows.some(row => isGtcOriginalBuy(row, group.execution!)
+        && (!row.PmGtcExecutionId || row.PmGtcExecutionId === group.id))
+      ? [group.pending]
+      : []);
+}
+
+/** [changmen 扩展] 精确原单恢复监控标识，再合入同 Link 展示行；FOK 原组保持原对象。 */
+export function mergeGtcPendingDisplayEntries(entries: readonly (readonly [number, OrderRow[]])[], pendingRows: OrderRow[], executions: GtcExecution[] = []) {
+  if (!pendingRows.length && !executions.length)
+    return entries;
+  const groups = new Map(entries);
+  let changed = false;
+  for (const [link, rows] of groups) {
+    let tagged = false;
+    const next = rows.map((row) => {
+      if (row.PmGtcExecutionId || row.Type !== "Polymarket" || row.PmSide === "sell")
+        return row;
+      const originals = executions.filter(execution => isGtcOriginalBuy(row, execution));
+      // 身份冲突保持原行，不按 Link 猜测来源，也不覆盖财务字段。
+      if (originals.length !== 1)
+        return row;
+      tagged = true;
+      return { ...row, PmGtcExecutionId: originals[0]!.id };
+    });
+    if (tagged) {
+      groups.set(link, next);
+      changed = true;
+    }
+  }
+  for (const pending of pendingRows) {
+    if ([...groups.values()].some(rows => rows.some(row => row.Type === "Polymarket" && row.PmSide !== "sell"
+      && row.PlayerID === pending.PlayerID && String(row.OrderID).trim().toLowerCase() === String(pending.OrderID).trim().toLowerCase()))) {
+      continue;
+    }
+    const link = Number(pending.Link);
+    groups.set(link, [...(groups.get(link) ?? []), pending]);
+    changed = true;
+  }
+  return changed ? orderLinkMapEntries(groups).sort(([a], [b]) => compareOrderLinkDesc({ Link: a }, { Link: b })) : entries;
 }

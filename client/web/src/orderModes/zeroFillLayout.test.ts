@@ -35,7 +35,8 @@ async function render(embedded = false, rows?: OrderRow[]) {
   const orders = useOrderStore(); orders.orderDate = date;
   const financial: OrderRow = { OrderID: "fok", Type: "RAY", PlayerID: 2, Link: now + 1000, CreateAt: now,
     Match: "financial-fok-match", Bet: "Full", Item: "Away", BetMoney: 50, Odds: 2, Status: "None" };
-  orders.orders = new Map([[now + 1000, rows ?? [financial]]]);
+  financial.Link = -now;
+  orders.orders = new Map([[-now, rows ?? [financial]]]);
   useUserStore().userId = 1;
   const before = JSON.stringify([...orders.orders]);
   const app = createSSRApp({ render: () => h(OrderHost, { embedded }) }).use(pinia);
@@ -46,14 +47,18 @@ async function render(embedded = false, rows?: OrderRow[]) {
   return html;
 }
 beforeEach(() => { gtcProgress.owner = "owner"; gtcProgress.records = [zero()]; gtcProgress.error = ""; });
-it("puts the zero-fill original after date controls and before financial orders, exactly once", async () => {
-  const positive = { ...zero(), id: "positive", matched: "1", orderId: "positive-original", plan: { ...zero().plan, match: "legacy-positive-match" } };
+it("renders the zero-fill original once in the ordinary list and the same Link group as its other leg", async () => {
+  const positive = { ...zero(), id: "positive", matched: "1", orderId: "positive-original", plan: { ...zero().plan, linkId: -(now - 1000), match: "legacy-positive-match" } };
   gtcProgress.records.push(positive);
   const html = await render();
-  expect(html.indexOf("order-date-bar")).toBeLessThan(html.indexOf("零成交 GTC 订单"));
-  expect(html.indexOf("zero-original-match")).toBeLessThan(html.indexOf("financial-fok-match"));
+  expect(html.indexOf("order-date-bar")).toBeLessThan(html.indexOf('class="orders"'));
+  expect(html.indexOf('class="orders"')).toBeLessThan(html.indexOf("zero-original-match"));
   expect(html.indexOf("financial-fok-match")).toBeLessThan(html.indexOf("legacy-positive-match"));
   expect(html.match(/data-execution-id="zero"/g)).toHaveLength(1);
+  expect(html.match(new RegExp(`data-link-id="${-now}"`, "g"))).toHaveLength(1);
+  expect(html.match(/class="orders"/g)).toHaveLength(1);
+  expect(html).not.toContain("零成交 GTC 订单");
+  expect(html).not.toContain("尚未入库的 GTC 挂单");
 });
 it("leaves ordinary FOK rows alone when there is no zero-fill execution", async () => {
   gtcProgress.records = []; const html = await render();

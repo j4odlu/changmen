@@ -9,7 +9,9 @@ import { useOrderStore } from "@/stores/orderStore";
 import { gtcFinancialOrder } from "./financialOrder";
 import { gtcProgress } from "./gtcProgressState";
 import { gtcOrderDisplayGroups } from "./orderDisplayProjection";
-import PendingOrders from "./PendingOrders.vue";
+import OrderList from "@/components/order/OrderList.vue";
+import { groupOrdersByEffectiveLink, orderLinkMapEntries } from "@/shared/orderLink";
+import { gtcPendingDisplayRows, mergeGtcPendingDisplayEntries } from "./orderDisplayProjection";
 
 vi.mock("element-plus/es/components/base/style/css", () => ({}));
 vi.mock("element-plus/es/components/button/style/css", () => ({}));
@@ -34,7 +36,9 @@ async function render(executions: GtcExecution[], rows: OrderRow[] = [], account
   orders.orders = new Map(rows.length ? [[-now, rows]] : []);
   gtcProgress.records = executions;
   const before = JSON.stringify({ orders: [...orders.orders], executions });
-  const html = await renderToString(createSSRApp({ render: () => h(PendingOrders, { date: selectedDate, accountId }) }).use(pinia));
+  const pending = gtcPendingDisplayRows(rows, executions, selectedDate, accountId);
+  const entries = mergeGtcPendingDisplayEntries(orderLinkMapEntries(groupOrdersByEffectiveLink(rows)), pending, executions);
+  const html = await renderToString(createSSRApp({ render: () => h(OrderList, { orderEntries: entries, allowPmSell: true, allowLinkRebind: true }) }).use(pinia));
   expect(JSON.stringify({ orders: [...orders.orders], executions })).toBe(before);
   return html;
 }
@@ -67,13 +71,14 @@ describe("[changmen 扩展] zero-fill GTC display without financial persistence"
     expect(html).toContain("成交：0 / 10 份");
   });
 
-  it("preserves active zero-fill visibility across the old date filter and its cancel action", async () => {
+  it("uses the ordinary Link date for active zero-fill originals without changing the cancel action", async () => {
     const record = acceptedZero("LIVE");
     expect(record.released).toBe(false);
-    const html = await render([record], [], 0, "2026-10-11");
+    const html = await render([record]);
     expect(html).toContain("挂单中");
     expect(html).toContain("取消PM挂单");
     expect(gtcOrderDisplayGroups([], [record], date, 0)[0]!.pending!.Status).toBe("None");
+    expect(await render([record], [], 0, "2026-10-11")).not.toContain('class="order"');
   });
 
   it("filters released history by Link date and account", async () => {
@@ -89,7 +94,7 @@ describe("[changmen 扩展] zero-fill GTC display without financial persistence"
     const record = acceptedZero();
     const stored: OrderRow = { OrderID: hash.toUpperCase(), PmGtcExecutionId: record.id, Type: "Polymarket",
       PlayerID: 1, Link: -now, CreateAt: now, PmSide: "buy", Status: "Return", BetMoney: 0 };
-    expect(await render([record], [stored])).not.toContain('class="order"');
+    expect((await render([record], [stored])).match(/class="order"/g)).toHaveLength(1);
     expect(gtcOrderDisplayGroups([stored], [record], date, 0)[0]!.pending).toBeUndefined();
   });
 

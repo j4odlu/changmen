@@ -185,7 +185,7 @@ function statusClass(row: OrderRow): string {
 }
 
 function showPmSellButton(row: OrderRow): boolean {
-  return props.allowPmSell && canManualSellPmBuy(row);
+  return props.allowPmSell && !row.DisplayOnly && canManualSellPmBuy(row);
 }
 
 function showPfSellButton(row: OrderRow): boolean {
@@ -312,6 +312,8 @@ function pmLivePriceText(row: OrderRow): string {
 }
 
 function pmLiveUnrealizedPnlCny(row: OrderRow): number | null {
+  if (row.DisplayOnly && row.BetMoney == null)
+    return null;
   return pmUnrealizedPnlAtLiveCny(row, pmLiveClobPrice(row));
 }
 
@@ -386,6 +388,8 @@ function pfLastLineOddsText(row: OrderRow): string {
 }
 
 async function onPmSell(row: OrderRow) {
+  if (row.DisplayOnly)
+    return;
   await confirmAndSellPmBuyOrder(row);
 }
 

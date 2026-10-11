@@ -586,6 +586,8 @@ export function isSameOrderMatchMap(a: OrderMatchMapFields, b: OrderMatchMapFiel
 
 /** 真实 RDS 订单行（可拖场馆徽章改绑）；PM/PF 卖单跟买单走，不可单独改绑 */
 export function isRebindableOrderRow(row: OrderRow): boolean {
+  if (row.DisplayOnly)
+    return false;
   if (isMakeupSyntheticOrderRow(row))
     return false;
   if (isPredictionSellRow(row))

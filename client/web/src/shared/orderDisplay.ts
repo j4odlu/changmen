@@ -30,6 +30,9 @@ export function orderLegendModifier(rows: OrderRow[]): "default" | "success" | "
 }
 
 export function orderLegendText(rows: OrderRow[]) {
+  // [changmen 扩展] 展示原单成本未知时，不能按零成本预估整组盈亏。
+  if (rows.some(row => row.DisplayOnly && row.BetMoney == null))
+    return "盈亏待核实";
   return orderLinkLegend(rows);
 }
 

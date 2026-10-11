@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { OrderListEntry } from "@/components/order/OrderList.vue";
 import type { OrderRow } from "@/types/order";
 import { wait } from "@changmen/client-core/shared/wait";
 import { storeToRefs } from "pinia";
@@ -22,6 +23,8 @@ const props = withDefaults(
     embedded?: boolean;
     embeddedUserId?: string;
     workspace?: "esport" | "sports";
+    /** [changmen 扩展] 可选的只读显示投影；缺省沿用普通订单与补单列表。 */
+    projectOrderEntries?: (entries: ReadonlyArray<OrderListEntry>) => ReadonlyArray<OrderListEntry>;
   }>(),
   { embedded: false, workspace: "esport" },
 );
@@ -56,6 +59,7 @@ const mergedOrderEntries = computed(() => {
   );
   return orderLinkMapEntries(merged);
 });
+const displayOrderEntries = computed(() => props.projectOrderEntries?.(mergedOrderEntries.value) ?? mergedOrderEntries.value);
 
 const viewLoading = ref(false);
 
@@ -91,7 +95,7 @@ async function reload(date?: string) {
 const showFilteredEmpty = computed(
   () =>
     filterAccountId.value !== 0
-    && mergedOrderEntries.value.length === 0
+    && displayOrderEntries.value.length === 0
     && domainFilteredOrders.value.size > 0,
 );
 
@@ -99,7 +103,7 @@ const showDomainEmpty = computed(
   () =>
     !loading.value
     && !viewLoading.value
-    && mergedOrderEntries.value.length === 0
+    && displayOrderEntries.value.length === 0
     && domainFilteredOrders.value.size === 0
     && orders.value.size > 0,
 );
@@ -169,8 +173,6 @@ async function onLinkRebindDone() {
       />
     </div>
 
-    <slot name="before-orders" />
-
     <p v-if="showFilteredEmpty" class="order-filter-empty">
       当前账号筛选下无订单，请选「全部」或点刷新
     </p>
@@ -183,7 +185,7 @@ async function onLinkRebindDone() {
     <OrderMakeupStatusBar />
 
     <OrderList
-      :order-entries="mergedOrderEntries"
+      :order-entries="displayOrderEntries"
       :loading="loading || viewLoading"
       :player-label="playerLabel"
       :platform-class="platformClass"
@@ -193,6 +195,12 @@ async function onLinkRebindDone() {
       @cancel-makeup="onCancelMakeup"
       @link-rebind-done="onLinkRebindDone"
     >
+      <template v-if="$slots['buy-amount']" #buy-amount="{ row }">
+        <slot name="buy-amount" :row="row" />
+      </template>
+      <template v-if="$slots['row-actions']" #row-actions="{ row, link, rows }">
+        <slot name="row-actions" :row="row" :link="link" :rows="rows" />
+      </template>
       <template #group-monitor="{ link, rows }">
         <RayLinkMonitorCard
           v-if="!embedded"

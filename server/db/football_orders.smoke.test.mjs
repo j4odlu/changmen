@@ -19,7 +19,7 @@ const routesSrc = readFileSync(
   "utf8",
 ).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const accountRoutes = readFileSync(
-  join(__dirname, "../backend/core/esport-api/account_client_routes.js"),
+  join(__dirname, "../backend/core/esport-api/account_client_routes.ts"),
   "utf8",
 );
 const migration = readFileSync(

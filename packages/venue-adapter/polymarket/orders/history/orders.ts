@@ -293,32 +293,15 @@ export async function resolvePolymarketSellFillWithRetry(
   };
 }
 
-function gammaOutcomePrices(market: PolymarketRawMarket): number[] {
-  return parseJsonArray(market.outcomePrices ?? market.outcome_prices).map(Number);
-}
-
 function gammaTokenIds(market: PolymarketRawMarket): string[] {
   return parseJsonArray(market.clobTokenIds ?? market.clob_token_ids);
 }
 
-/** outcomePrices 贴端判定阈值（启发式结算；卖出按钮仍显示） */
-const WINNER_PRICE_MIN = 0.99;
-
-/** outcomePrices ≥ WINNER_PRICE_MIN 的赢家下标；无则 -1 */
-export function findPolymarketWinnerIndex(prices: number[]): number {
-  for (let i = 0; i < prices.length; i++) {
-    const price = prices[i];
-    if (Number.isFinite(price) && price >= WINNER_PRICE_MIN)
-      return i;
-  }
-  return -1;
-}
-
-export type PolymarketSettlementKind = "official" | "price";
+export type PolymarketSettlementKind = "official";
 
 export type PolymarketSettlementResolution = {
   winningAssetId: string;
-  /** official：隐藏卖出；price：判赢但保留卖出 */
+  /** 官方赢家确认后结算并隐藏卖出。 */
   kind: PolymarketSettlementKind;
 };
 
@@ -336,7 +319,7 @@ export function resolvePolymarketOfficialWinningAssetId(
 }
 
 /**
- * 解析赢家 token：优先官方 `tokens[].winner`，否则 outcomePrices ≥ 0.99。
+ * [changmen 扩展] 只按官方 `tokens[].winner` 结算；报价和 proposed 状态均不是赛果。
  */
 export function resolvePolymarketSettlement(
   market: PolymarketRawMarket | undefined,
@@ -346,15 +329,10 @@ export function resolvePolymarketSettlement(
   if (official)
     return { winningAssetId: official, kind: "official" };
 
-  const prices = gammaOutcomePrices(market);
-  const idx = findPolymarketWinnerIndex(prices);
-  if (idx < 0) return null;
-  const id = String(gammaTokenIds(market)[idx] ?? "").trim();
-  if (!id) return null;
-  return { winningAssetId: id, kind: "price" };
+  return null;
 }
 
-/** 市场是否已可结算（官方 winner 或价格贴端） */
+/** 市场是否已有官方赢家，可结算。 */
 export function isPolymarketMarketResolved(market: PolymarketRawMarket | undefined): boolean {
   return resolvePolymarketSettlement(market) != null;
 }
@@ -378,7 +356,6 @@ function tradeHeldAssetId(trade: PolymarketTradeRow, market?: PolymarketRawMarke
 /**
  * 持有买单结算 → win/lose + money/reward；并始终写入 pmMatchResult（赛果）。
  * - official：`pmSellState=settled`（侧栏隐藏卖出）；已 closed/partial 不改卖出状态
- * - price（≥0.99）：判赢/输但保持可卖（不写 settled）
  * - 已卖光（剩余份额≈0）：只写 pmMatchResult，不动 status/money（盈亏已在卖出路径）
  * 已部分卖出时按剩余份数/剩余本金计盈亏，避免用满仓份额虚增。
  */
@@ -409,9 +386,7 @@ export function applyPolymarketSettlement(
     ? Number(order.pmStakeUsdc)
     : order.betMoney;
 
-  const nextSellState = resolved.kind === "official"
-    ? (order.pmSellState === "closed" ? "closed" : "settled")
-    : (order.pmSellState === "settled" ? "settled" : (order.pmSellState ?? "open"));
+  const nextSellState = order.pmSellState === "closed" ? "closed" : "settled";
 
   const base: VenueOrder = {
     ...order,
@@ -965,7 +940,7 @@ function mergeChangmenStoredWithClob(stored: VenueOrder, clob: VenueOrder): Venu
   }
   const blockGammaSettlement = changmenSoldOutBlocksGammaSettlement(base);
   const gammaSettled = clob.status !== "none";
-  // 仅官方 winner 写 settled（隐藏卖出）；0.99 启发式判赢仍保持可卖
+  // 官方 winner 写 settled（隐藏卖出）。
   const officialSettled = clob.pmSellState === "settled";
   const nextSellState = officialSettled && !blockGammaSettlement
     ? "settled"
@@ -1244,7 +1219,7 @@ async function fetchMarketsByConditionIds(
       });
     }
     catch {
-      // 单条 CLOB 失败：保留 Gamma（若有），结算可走价格兜底
+      // 单条 CLOB 失败：保留 Gamma（若有）；缺官方 winner 时继续待结算。
     }
   }
   return out;

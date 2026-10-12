@@ -27,6 +27,28 @@ export function formatPmMatchStatus(snapshot: PmSportSnapshot | undefined): PmMa
   return { label: "状态待更新", kind: "unknown" };
 }
 
+/** [changmen 扩展] PM 当前地图局内比分；scoreRaw 按比赛 Reverse 对齐，阶段编号不另行推测。 */
+export function readPmMapRoundScore(snapshot: PmSportSnapshot | undefined, map: number, reversed = false): { home: number; away: number } | null {
+  if (!snapshot || formatPmMatchStatus(snapshot).kind !== "live" || !Number.isInteger(map) || map <= 0)
+    return null;
+  const period = /^(\d+)\/(\d+)$/.exec(String(snapshot.period ?? "").trim());
+  const currentMap = snapshot.currentMap ?? (period ? Number(period[1]) : null);
+  if (currentMap !== map)
+    return null;
+  const raw = String(snapshot.scoreRaw ?? "").trim();
+  if (!raw.includes("|"))
+    return null;
+  const match = /^(\d+)\s*-\s*(\d+)$/.exec(raw.split("|")[0]?.trim() ?? "");
+  if (!match)
+    return null;
+  const home = Number(match[1]);
+  const away = Number(match[2]);
+  // PM 的 000-000 / 0-0 可能只是占位，不能当成已观测到的局内比分。
+  if (!Number.isSafeInteger(home) || !Number.isSafeInteger(away) || (home === 0 && away === 0))
+    return null;
+  return reversed ? { home: away, away: home } : { home, away };
+}
+
 function formatPmMapPeriod(snapshot: PmSportSnapshot): string {
   const period = String(snapshot.period ?? "").trim();
   const match = /^(\d+)\/(\d+)$/.exec(period);

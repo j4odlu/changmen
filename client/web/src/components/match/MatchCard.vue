@@ -90,7 +90,7 @@ const pmMatchStatus = computed(() => props.match.pmSport || props.match.provider
         v-if="pmMatchStatus"
         class="pm-match-status"
         :class="`pm-match-status--${pmMatchStatus.kind}`"
-        title="PM 整场比赛状态；不代表开赛清单已完成"
+        title="PM 实时赛况；比分按标题左右队伍排列，地图阶段沿用 PM 编号"
       >PM · {{ pmMatchStatus.label }}</span>
       <span v-if="resolutionLabel && resolutionHref" class="pm-sport">
         <a

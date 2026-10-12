@@ -459,25 +459,27 @@ describe("mapPolymarketTradesToVenueOrders", () => {
     expect(order?.status).toBe("none");
   });
 
-  test("price ≥0.99 settles as win but keeps sell open (pmSellState not settled)", () => {
+  test.each([["0.99", "0.01"], ["0.9995", "0.0005"], ["1", "0"]])("endpoint prices do not settle without an official winner: %j", (home, away) => {
     const priceMarket: PolymarketRawMarket = {
       ...ilbirsMarket,
       closed: false,
-      outcomePrices: "[\"0.9995\", \"0.0005\"]",
+      outcomePrices: JSON.stringify([home, away]),
       tokens: undefined,
     };
-    expect(isPolymarketMarketResolved(priceMarket)).toBe(true);
+    expect(isPolymarketMarketResolved(priceMarket)).toBe(false);
+    expect(resolvePolymarketWinningAssetId(priceMarket)).toBeNull();
 
     const [order] = mapPolymarketTradesToVenueOrders(
       [ilbirsTrade],
       new Map([[String(priceMarket.condition_id), priceMarket]]),
     );
     expect(order).toMatchObject({
-      status: "win",
+      status: "none",
       betMoney: 5,
-      reward: 6.7568,
+      money: 0,
       pmSellState: "open",
     });
+    expect(order?.pmMatchResult).toBeUndefined();
   });
 
   test("official tokens[].winner settles as win and hides sell (pmSellState settled)", () => {
@@ -872,7 +874,7 @@ describe("applyPolymarketSettlement", () => {
     expect(settled.pmSellState).toBe("closed");
   });
 
-  test("price ≥0.99 win keeps pmSellState open for sell button", () => {
+  test("endpoint price never changes pending order status, money or match result", () => {
     const market: PolymarketRawMarket = {
       closed: false,
       outcomes: "[\"Team A\", \"Team B\"]",
@@ -902,7 +904,9 @@ describe("applyPolymarketSettlement", () => {
       outcome: "Team A",
     }, market);
 
-    expect(settled.status).toBe("win");
+    expect(settled).toBe(base);
+    expect(settled.status).toBe("none");
+    expect(settled.pmMatchResult).toBeUndefined();
     expect(settled.pmSellState).toBe("open");
   });
 

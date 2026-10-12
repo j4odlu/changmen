@@ -6,13 +6,16 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { rebasePmFokImports } from "./pm-fok-source-relocation.mjs";
 import { PM_FUNCTIONAL_RELOCATIONS, pmFunctionalCompatibilitySource, readRelocatedPmFunctionalSource } from "./pm-functional-source-relocation.mjs";
+import { verifyPmOfficialSettlementSource } from "./pm-settlement-policy-boundary.mjs";
 
 const base = "e901bb596952256284cd8a9eb8b73b572c963915";
 describe("pM functional relocation preserves complete implementations", () => {
   for (const [file, target] of Object.entries(PM_FUNCTIONAL_RELOCATIONS)) {
     it(`${file}: matches the fixed original implementation and dependency targets`, () => {
       const original = execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" }).replace(/\r\n/g, "\n");
-      expect(readRelocatedPmFunctionalSource(file, fs.readFileSync(file, "utf8"))).toBe(original);
+      const current = readRelocatedPmFunctionalSource(file, fs.readFileSync(file, "utf8"));
+      if (!verifyPmOfficialSettlementSource(file, current))
+        expect(current).toBe(original);
     });
     it(`${file}: rejects added facade side effects and incorrect targets`, () => {
       const facade = pmFunctionalCompatibilitySource(file);

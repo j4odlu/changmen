@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPmSportDisplayParts,
+  readPmMapRoundScore,
   formatPmMatchStatus,
   formatResolutionSourceLabel,
   normalizeResolutionSourceHref,
@@ -29,8 +30,38 @@ describe("pmSportDisplay", () => {
   it("shows final series score without a stale map or clock", () => {
     expect(formatPmMatchStatus({
       status: "finished", period: "3/3", elapsed: "35:00",
-      scoreRaw: "000-000|2-1|Bo3", mapScore: { home: 2, away: 1 },
+      scoreRaw: "13-8|2-1|Bo3", mapScore: { home: 2, away: 1 },
     }).label).toBe("已结束 · 最终大比分2–1");
+  });
+
+  it("shows observed in-map score separately from the series score", () => {
+    const snapshot = {
+      status: "running", period: "3/5", scoreRaw: "8-6|1-1|Bo5",
+      mapScore: { home: 1, away: 1 },
+    };
+    expect(readPmMapRoundScore(snapshot, 3)).toEqual({ home: 8, away: 6 });
+    expect(formatPmMatchStatus(snapshot).label).toBe("进行中 · 地图3/5 · 大比分1–1");
+  });
+
+  it("aligns raw in-map score even when the series score is tied and the push is already aligned", () => {
+    expect(readPmMapRoundScore({
+      status: "running", period: "3/5", scoreRaw: "8-6|1-1|Bo5",
+      mapScore: { home: 1, away: 1 }, homeTeam: "DENDELE CS", awayTeam: "Wildcard",
+    }, 3, true)).toEqual({ home: 6, away: 8 });
+  });
+
+  it.each(["000-000|1-1|Bo5", "0-0|1-1|Bo5", "invalid|1-1|Bo5", "1-1"])(
+    "does not show placeholder, malformed or series-only score as an in-map score: %s", scoreRaw => {
+      expect(readPmMapRoundScore({ status: "running", currentMap: 3, scoreRaw }, 3)).toBeNull();
+    },
+  );
+
+  it("never copies the current score to full-match, previous or future map titles", () => {
+    const snapshot = { live: true, currentMap: 3, scoreRaw: "8-6|1-1|Bo5" };
+    for (const map of [0, 1, 2, 4])
+      expect(readPmMapRoundScore(snapshot, map)).toBeNull();
+    expect(readPmMapRoundScore(snapshot, 3)).toEqual({ home: 8, away: 6 });
+    expect(readPmMapRoundScore({ ...snapshot, ended: true }, 3)).toBeNull();
   });
 
   it("does not expose parser-default zero scores as observed scores", () => {

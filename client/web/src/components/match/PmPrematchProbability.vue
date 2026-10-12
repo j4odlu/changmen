@@ -4,11 +4,22 @@ import { formatOrderTime } from "@changmen/client-core/shared/format";
 import { lookupPmMapOutcomeByToken, pmMapOutcomeTick } from "@changmen/venue-adapter/polymarket";
 import { computed } from "vue";
 import { readPrematchProbability } from "@/shared/pmPrematchProbability";
+import { readPmMapRoundScore } from "@/shared/pmSportDisplay";
 
 const props = defineProps<{ bet: ViewBet; match: ViewMatch }>();
 const pm = computed(() => props.bet.items.find(item => item.type === "Polymarket"));
 const result = computed(() => readPrematchProbability(pm.value?.homeId ?? "", pm.value?.awayId ?? "", props.match.pmPrematch));
 const value = computed(() => result.value.status === "ready" ? result.value.value : null);
+const roundScore = computed(() => readPmMapRoundScore(
+  props.match.pmSport, props.bet.round, props.match.reverse?.includes("Polymarket") ?? false,
+));
+function cellLabel(side: "home" | "away"): string {
+  const name = side === "home" ? props.bet.homeName : props.bet.awayName;
+  const probability = value.value ? `${value.value[side].toFixed(1)}%` : status.value;
+  const score = roundScore.value ? `局内比分${roundScore.value[side]}，赛前` : "";
+  const won = side === "home" ? homeWon.value : awayWon.value;
+  return `${name}：${score}${probability}${won ? '，WIN' : ''}`;
+}
 /** [changmen 扩展] 胜者按 token 对齐比赛卡，避免 PM 原始主客方向与合场方向相反。 */
 const outcome = computed(() => {
   void pmMapOutcomeTick.value;
@@ -37,16 +48,18 @@ const detail = computed(() => value.value
 
 <template>
   <div v-if="pm" class="item flex pm-prematch" :title="detail" @dblclick.stop>
-    <div class="item-type pm-prematch-badge" aria-label="C：PM 登记开赛时间前胜率">
+    <div class="item-type pm-prematch-badge" :aria-label="roundScore ? 'C：PM 局内比分及登记开赛时间前胜率' : 'C：PM 登记开赛时间前胜率'">
       C
     </div>
-    <div class="item-odds home" :class="{ 'pm-map-won': homeWon, 'pm-map-lost': awayWon }" :title="homeWon ? outcomeDetail : undefined" :aria-label="`${bet.homeName}：${value ? `${value.home.toFixed(1)}%` : status}${homeWon ? '，WIN' : ''}`">
+    <div class="item-odds home" :class="{ 'pm-map-won': homeWon, 'pm-map-lost': awayWon, 'pm-prematch-live-score': roundScore }" :title="roundScore ? 'PM 实时主队局内比分' : homeWon ? outcomeDetail : undefined" :aria-label="cellLabel('home')">
       <span v-if="homeWon" class="pm-map-win-badge">WIN</span>
-      {{ value ? `${value.home.toFixed(1)}%` : "—" }}
+      <span v-if="roundScore" class="pm-round-score">{{ roundScore.home }}</span>
+      <span :class="{ 'pm-round-probability': roundScore }">{{ value ? `${value.home.toFixed(1)}%` : "—" }}</span>
     </div>
-    <div class="item-odds away" :class="{ 'pm-map-won': awayWon, 'pm-map-lost': homeWon }" :title="awayWon ? outcomeDetail : undefined" :aria-label="`${bet.awayName}：${value ? `${value.away.toFixed(1)}%` : status}${awayWon ? '，WIN' : ''}`">
+    <div class="item-odds away" :class="{ 'pm-map-won': awayWon, 'pm-map-lost': homeWon, 'pm-prematch-live-score': roundScore }" :title="roundScore ? 'PM 实时客队局内比分' : awayWon ? outcomeDetail : undefined" :aria-label="cellLabel('away')">
       <span v-if="awayWon" class="pm-map-win-badge">WIN</span>
-      {{ value ? `${value.away.toFixed(1)}%` : "—" }}
+      <span v-if="roundScore" class="pm-round-score">{{ roundScore.away }}</span>
+      <span :class="{ 'pm-round-probability': roundScore }">{{ value ? `${value.away.toFixed(1)}%` : "—" }}</span>
     </div>
   </div>
 </template>
@@ -68,5 +81,21 @@ const detail = computed(() => value.value
   color: var(--cm-color-warning, #e6a23c);
   font-size: 12px;
   font-weight: 600;
+}
+/* [changmen 扩展] C 行左右格分别显示本队比分，概率作为同格的小字参考。 */
+.matchs .bet .bet-items .pm-prematch.item .item-odds.pm-prematch-live-score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.matchs .bet .bet-items .pm-prematch.item .pm-round-score {
+  font-size: 15px;
+  font-weight: 700;
+}
+.matchs .bet .bet-items .pm-prematch.item .pm-round-probability {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: .75;
 }
 </style>

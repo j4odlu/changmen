@@ -7,14 +7,15 @@ import {
 import type { PolymarketRawMarket } from "../../parse";
 
 describe("getPolymarketMarketBlockReason", () => {
-  test("blocks buying loser when winner price >= 0.99", () => {
+  test("endpoint prices only apply the underdog guard and do not declare an official result", () => {
     const market: PolymarketRawMarket = {
       clob_token_ids: JSON.stringify(["token-home", "token-away"]),
       outcomePrices: JSON.stringify(["0.0005", "0.9995"]),
       closed: false,
     };
     const reason = getPolymarketMarketBlockReason(market, "token-home");
-    expect(reason).toContain("市场已决出胜负");
+    expect(reason).toContain("几乎不可能");
+    expect(reason).not.toContain("市场已决出胜负");
   });
 
   test("soft-blocks heavy underdog without resolved market", () => {

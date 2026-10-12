@@ -46,7 +46,7 @@ export function isPolymarketSubmitTimeoutError(err: unknown): boolean {
 }
 
 /**
- * 已决出胜负（官方 winner 或 outcomePrices≥0.99）时拒买败方。
+ * 官方 winner 已确认时拒买败方。
  * 另：盘口极冷门时软拒。
  */
 export function getPolymarketMarketBlockReason(

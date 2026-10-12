@@ -26,10 +26,17 @@ const ilbirsTrade = {
 };
 
 describe("polymarket settlement (server)", () => {
-  it("resolves via outcomePrices ≥0.99 (kind=price)", () => {
-    expect(isPolymarketMarketResolved(ilbirsMarket)).toBe(true);
-    const out = computePolymarketSettlement(ilbirsTrade, ilbirsMarket, 5);
-    expect(out).toMatchObject({ status: "win", money: 1.7568, kind: "price" });
+  it.each([["0.99", "0.01"], ["0.9995", "0.0005"], ["1", "0"]])("ignores endpoint prices without an official winner: %j", (home, away) => {
+    const market = { ...ilbirsMarket, closed: true, umaResolutionStatus: "proposed",
+      outcomePrices: JSON.stringify([home, away]),
+      tokens: [{ token_id: ilbirsTokenWin, winner: false }, { token_id: ilbirsTokenLose, winner: false }] };
+    expect(isPolymarketMarketResolved(market)).toBe(false);
+    for (const asset_id of [ilbirsTokenWin, ilbirsTokenLose]) {
+      expect(computePolymarketSettlement({ ...ilbirsTrade, asset_id }, market, 5))
+        .toEqual({ status: "none", money: 0, reward: 0 });
+      expect(computePolymarketSettlementFromOrderRaw({ pmTokenId: asset_id, pmShares: 6.756753 }, market, 5))
+        .toEqual({ status: "none", money: 0, reward: 0 });
+    }
   });
 
   it("resolves via official tokens[].winner (kind=official)", () => {
@@ -70,7 +77,8 @@ describe("polymarket settlement (server)", () => {
       pmShares: 6.756753,
       pmStakeUsdc: 5,
     };
-    const out = computePolymarketSettlementFromOrderRaw(raw, ilbirsMarket, 5);
-    expect(out).toMatchObject({ status: "win", money: 1.7568, kind: "price" });
+    const official = { ...ilbirsMarket, tokens: [{ token_id: ilbirsTokenWin, winner: true }] };
+    const out = computePolymarketSettlementFromOrderRaw(raw, official, 5);
+    expect(out).toMatchObject({ status: "win", money: 1.7568, kind: "official" });
   });
 });

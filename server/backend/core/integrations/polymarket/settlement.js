@@ -1,14 +1,13 @@
 /**
  * Polymarket 订单结算（服务端 / 运维脚本；对齐 venue-adapter/polymarket/orders.ts）
  * - 官方 tokens[].winner：判赢/输
- * - outcomePrices ≥0.99：同样判赢/输（侧栏卖出按钮由客户端 pmSellState 区分）
+ * [changmen 扩展] 只按官方 tokens[].winner 判赢/输，报价不作为赛果。
  */
 
 import { fetchClobMarketByConditionId } from "./clob_l2.js";
 
 const POLYMARKET_GAMMA_API = "https://gamma-api.polymarket.com";
 const TOKEN_MICRO = 1_000_000;
-const WINNER_PRICE_MIN = 0.99;
 
 export function parseJsonArray(value) {
   if (Array.isArray(value))
@@ -29,10 +28,6 @@ export function parseJsonArray(value) {
 
 export function normalizeConditionId(id) {
   return String(id ?? "").trim().toLowerCase();
-}
-
-function gammaOutcomePrices(market) {
-  return parseJsonArray(market?.outcomePrices ?? market?.outcome_prices).map(Number);
 }
 
 function gammaTokenIds(market) {
@@ -57,15 +52,6 @@ export function polymarketBuyStakeUsdc(sizeRaw, price) {
   return size * price;
 }
 
-export function findPolymarketWinnerIndex(prices) {
-  for (let i = 0; i < prices.length; i++) {
-    const price = prices[i];
-    if (Number.isFinite(price) && price >= WINNER_PRICE_MIN)
-      return i;
-  }
-  return -1;
-}
-
 /** 官方：CLOB tokens[].winner === true 的 token_id */
 export function resolvePolymarketOfficialWinningAssetId(market) {
   const tokens = market?.tokens;
@@ -77,7 +63,7 @@ export function resolvePolymarketOfficialWinningAssetId(market) {
 }
 
 /**
- * @returns {{ winningAssetId: string, kind: 'official'|'price' } | null}
+ * @returns {{ winningAssetId: string, kind: 'official' } | null}
  */
 export function resolvePolymarketSettlement(market) {
   if (!market)
@@ -85,14 +71,7 @@ export function resolvePolymarketSettlement(market) {
   const official = resolvePolymarketOfficialWinningAssetId(market);
   if (official)
     return { winningAssetId: official, kind: "official" };
-  const prices = gammaOutcomePrices(market);
-  const idx = findPolymarketWinnerIndex(prices);
-  if (idx < 0)
-    return null;
-  const id = String(gammaTokenIds(market)[idx] ?? "").trim();
-  if (!id)
-    return null;
-  return { winningAssetId: id, kind: "price" };
+  return null;
 }
 
 export function isPolymarketMarketResolved(market) {
@@ -118,7 +97,7 @@ function tradeHeldAssetId(trade, market) {
 }
 
 /**
- * @returns {{ status: 'win'|'lose'|'none', money: number, reward: number, kind?: 'official'|'price' } | null}
+ * @returns {{ status: 'win'|'lose'|'none', money: number, reward: number, kind?: 'official' } | null}
  */
 export function computePolymarketSettlement(trade, market, stakeRaw) {
   const resolved = resolvePolymarketSettlement(market);

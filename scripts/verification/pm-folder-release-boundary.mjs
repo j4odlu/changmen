@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { PM_FOK_RELOCATIONS, readRelocatedPmFokSource } from "./pm-fok-source-relocation.mjs";
 import { PM_FUNCTIONAL_RELOCATIONS, readRelocatedPmFunctionalSource } from "./pm-functional-source-relocation.mjs";
+import { verifyPmOfficialSettlementSource } from "./pm-settlement-policy-boundary.mjs";
 
 export const PM_FOLDER_SOURCE_BASE = "e901bb596952256284cd8a9eb8b73b572c963915";
 export const PM_FOLDER_FREEZE_SHA = "f0b521cba45430c9e6d4842abe29c1fd560df6209d4efe1ade4a833dba278ddb";
@@ -16,7 +17,9 @@ export function certifyPmFolderRelease(manifestText, read, baselineRead) {
   const certified = new Set();
   for (const [file, target] of Object.entries(PM_FOLDER_RELOCATIONS)) {
     const restored = (PM_FOK_RELOCATIONS[file] ? readRelocatedPmFokSource : readRelocatedPmFunctionalSource)(file, read(file), read);
-    assert.equal(restored, normalize(baselineRead(PM_FOLDER_SOURCE_BASE, file)), `${target}: complete implementation and dependencies unchanged`);
+    // [changmen 扩展] 两个明确登记的官方结算策略模块另做完整源码核验，其余仍逐字锁定迁移前基线。
+    if (!verifyPmOfficialSettlementSource(file, restored))
+      assert.equal(restored, normalize(baselineRead(PM_FOLDER_SOURCE_BASE, file)), `${target}: complete implementation and dependencies unchanged`);
     if (PM_FOK_RELOCATIONS[file]) {
       for (const base of ["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"])
         assert.equal(restored, normalize(baselineRead(base, file)), `${target}: fixed FOK/VPS baseline`);

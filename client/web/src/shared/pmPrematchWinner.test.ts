@@ -7,6 +7,27 @@ import PmPrematchProbability from "@/components/match/PmPrematchProbability.vue"
 
 afterEach(() => replacePmMapOutcomesFromIndex(null));
 
+it.each([false, true])("puts each team's live score inside its own C cell (reversed=%s)", async (reversed) => {
+  const bet = { round: 3, homeName: "Home", awayName: "Away", getBetName: () => "地图3",
+    items: [{ type: "Polymarket", homeId: "a", awayId: "b" }] } as unknown as ViewBet;
+  const point = (tokenId: string) => ({ tokenId, marketId: "m", status: "ready" as const,
+    registeredStart: 101000, cutoff: 100, checkedAt: 102000, nextCheckAt: 702000,
+    observationTime: 100000, resolution: 0, price: .5 });
+  const match = { reverse: reversed ? ["Polymarket"] : [], pmPrematch: { a: point("a"), b: point("b") },
+    pmSport: { live: true, currentMap: 3, scoreRaw: "11-8|1-1|Bo5" } } as unknown as ViewMatch;
+  const render = () => renderToString(createSSRApp(PmPrematchProbability, { bet, match }));
+  const html = await render();
+  expect(html).toContain(`aria-label="Home：局内比分${reversed ? 8 : 11}，赛前50.0%"`);
+  expect(html).toContain(`aria-label="Away：局内比分${reversed ? 11 : 8}，赛前50.0%"`);
+  expect(html.match(/class="pm-round-score"/g)).toHaveLength(2);
+  expect(html.match(/class="pm-round-probability"/g)).toHaveLength(2);
+  bet.round = 2;
+  expect(await render()).not.toContain('class="pm-round-score"');
+  bet.round = 3;
+  match.pmSport!.ended = true;
+  expect(await render()).not.toContain('class="pm-round-score"');
+});
+
 it.each([false, true])("places WIN beside the C price for the winning token (reversed=%s)", async (reversed) => {
   replacePmMapOutcomesFromIndex({ updatedAt: 1, assetIds: ["a", "b"], entries: [{
     sourceMatchId: "e",

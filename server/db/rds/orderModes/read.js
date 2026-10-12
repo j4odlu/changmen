@@ -1,3 +1,4 @@
+import { financialOrdersRelation } from "../orders_execution_compat.js";
 import { sqlOrderBelongsToRange } from "../../order_link_filter.js";
 import { getPgPool } from "../common.js";
 import { localDayBounds } from "../time_bounds.js";
@@ -32,13 +33,13 @@ export async function fetchOrdersByExecutionPage(date, owner, mode, anchors, pag
       WHERE identity.player_id=orders.player_id AND identity.provider=orders.provider
         AND (identity.order_id=LOWER(orders.order_id)
           OR identity.order_id=LOWER(COALESCE(orders.raw->>'pmBuyOrderId',orders.raw->>'pfBuyOrderId',''))))
-    OR EXISTS (SELECT 1 FROM orders parent WHERE parent.user_id=orders.user_id
+    OR EXISTS (SELECT 1 FROM ${financialOrdersRelation("parent")} WHERE parent.user_id=orders.user_id
       AND parent.player_id=orders.player_id AND parent.provider=orders.provider
       AND LOWER(parent.order_id)=LOWER(COALESCE(orders.raw->>'pmBuyOrderId',orders.raw->>'pfBuyOrderId',''))
       AND NULLIF(parent.raw->>'pmGtcExecutionId','') IS NOT NULL))`;
   const predicate = `user_id=$1 AND ${sqlOrderBelongsToRange(2, 3)} AND (${match})=$4::boolean`;
   const params = [String(owner), dayStart, dayEnd, mode === "GTC", JSON.stringify(anchors)];
-  const count = await pool.query(`SELECT COUNT(*)::int AS n FROM orders WHERE ${predicate}`, params);
-  const result = await pool.query(`SELECT * FROM orders WHERE ${predicate} ORDER BY create_at DESC LIMIT $6 OFFSET $7`, [...params, size, (page - 1) * size]);
+  const count = await pool.query(`SELECT COUNT(*)::int AS n FROM ${financialOrdersRelation()} WHERE ${predicate}`, params);
+  const result = await pool.query(`SELECT * FROM ${financialOrdersRelation()} WHERE ${predicate} ORDER BY create_at DESC LIMIT $6 OFFSET $7`, [...params, size, (page - 1) * size]);
   return { rows: result.rows ?? [], total: count.rows[0]?.n ?? 0 };
 }

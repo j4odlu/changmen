@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 // 一次性探针：对比足球订单「按操盘账号」分列在 不同排序规则 下的左右顺序，定位 gb12 的位置
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 
@@ -90,7 +91,7 @@ const { rows: gbPlayers } = await pool.query(
           u.user_name AS owner, COUNT(o.id)::int AS orders_30d
    FROM players pl
    LEFT JOIN users u ON u.id = pl.owner_user_id
-   LEFT JOIN orders o ON o.player_id = pl.id
+   LEFT JOIN ${financialOrdersRelation("o")} ON o.player_id = pl.id
      AND o.create_at >= ((extract(epoch from now() - interval '30 days')) * 1000)::bigint
    WHERE pl.owner_user_id = $1::uuid AND pl.deleted_at IS NULL
    GROUP BY pl.id, pl.provider, pl.platform_name, pl.player_name, u.user_name
@@ -105,7 +106,7 @@ const { rows: orows } = await pool.query(
   `SELECT o.player_id, pl.player_name,
           COALESCE(NULLIF(pl.platform_name, ''), NULLIF(pl.provider, ''), '') AS provider,
           u.user_name AS owner, COUNT(*)::int AS n
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN players pl ON pl.id = o.player_id
    LEFT JOIN users u ON u.id = pl.owner_user_id
    WHERE o.create_at >= ((extract(epoch from now() - interval '30 days')) * 1000)::bigint

@@ -1,3 +1,4 @@
+import { DELETE_FINANCIAL_ORDERS_SQL, financialDeletionIds, financialOrdersHookRow, financialOrdersRelation, ordersExecutionCompatibilityEnabled, ordinaryOrdersUpsertSql } from "./orders_execution_compat.js";
 /**
  * orders 表读写 — upsert、查询、管理端、SaveOrderBind。
  */
@@ -186,13 +187,13 @@ async function _rdsUpsertOrders(pool, rows) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const res = await client.query(UPSERT_ORDERS_BATCH_SQL, _orderRowToUpsertArrays(deduped));
+    const res = await client.query(ordinaryOrdersUpsertSql(UPSERT_ORDERS_BATCH_SQL), _orderRowToUpsertArrays(deduped));
     await client.query("COMMIT");
     const inserted = [];
     for (const row of res.rows || []) {
       if (row?.was_inserted) {
         const { was_inserted: _wi, ...clean } = row;
-        inserted.push(clean);
+        inserted.push(financialOrdersHookRow(clean));
       }
     }
     return inserted;
@@ -268,7 +269,7 @@ export async function claimCreditPfPendingOrderRow(playerId, orderId, ownerUserI
     await client.query("BEGIN");
     const sel = await client.query(
       `SELECT status, raw
-       FROM orders
+       FROM ${financialOrdersRelation()}
        WHERE user_id = $1::uuid AND player_id = $2 AND order_id = $3
        FOR UPDATE`,
       [uid, pid, oid],
@@ -322,7 +323,7 @@ export async function claimCreditPfPendingOrderRow(playerId, orderId, ownerUserI
       patch.pfRefundedAt = Date.now();
 
     await client.query(
-      `UPDATE orders
+      `UPDATE ${financialOrdersRelation()}
        SET raw = COALESCE(raw, '{}'::jsonb) || $4::jsonb
        WHERE user_id = $1::uuid AND player_id = $2 AND order_id = $3
          AND lower(COALESCE(raw->>'pfLedgerState', '')) = 'pending_credit'`,
@@ -331,7 +332,7 @@ export async function claimCreditPfPendingOrderRow(playerId, orderId, ownerUserI
     // FOR UPDATE 下应必然命中；若未命中则回滚，避免已入账却仍 pending
     const check = await client.query(
       `SELECT lower(COALESCE(raw->>'pfLedgerState', '')) AS ledger
-       FROM orders
+       FROM ${financialOrdersRelation()}
        WHERE user_id = $1::uuid AND player_id = $2 AND order_id = $3`,
       [uid, pid, oid],
     );
@@ -393,7 +394,7 @@ export async function adjustPfSellProceedsAfterFeeRow(playerId, ownerUserId, par
     await client.query("BEGIN");
     const buySel = await client.query(
       `SELECT order_id, bet_money, money, status, raw
-       FROM orders
+       FROM ${financialOrdersRelation()}
        WHERE user_id = $1::uuid AND player_id = $2 AND order_id = $3
        FOR UPDATE`,
       [uid, pid, buyOrderId],
@@ -417,7 +418,7 @@ export async function adjustPfSellProceedsAfterFeeRow(playerId, ownerUserId, par
     if (sellOrderId) {
       const sellSel = await client.query(
         `SELECT order_id, bet_money, money, status, raw
-         FROM orders
+         FROM ${financialOrdersRelation()}
          WHERE user_id = $1::uuid AND player_id = $2 AND order_id = $3
          FOR UPDATE`,
         [uid, pid, sellOrderId],
@@ -523,7 +524,7 @@ export async function adjustPfSellProceedsAfterFeeRow(playerId, ownerUserId, par
     }
 
     await client.query(
-      `UPDATE orders
+      `UPDATE ${financialOrdersRelation()}
        SET money = $4,
            raw = COALESCE(raw, '{}'::jsonb) || $5::jsonb
        WHERE user_id = $1::uuid AND player_id = $2 AND order_id = $3`,
@@ -540,7 +541,7 @@ export async function adjustPfSellProceedsAfterFeeRow(playerId, ownerUserId, par
         pfSellFeeAdjustedAt: Date.now(),
       };
       await client.query(
-        `UPDATE orders
+        `UPDATE ${financialOrdersRelation()}
          SET bet_money = $4,
              money = 0,
              raw = COALESCE(raw, '{}'::jsonb) || $5::jsonb
@@ -581,7 +582,7 @@ export async function fetchOrdersByDate(date, userId) {
     return [];
   try {
     const { rows } = await pool.query(
-      `SELECT * FROM orders
+      `SELECT * FROM ${financialOrdersRelation()}
        WHERE user_id = $1 AND ${sqlOrderBelongsToRange(2, 3)}
        ORDER BY create_at DESC`,
       [String(userId), dayStart, dayEnd],
@@ -606,14 +607,14 @@ export async function fetchOrdersByDatePage(date, userId, pageIndex = 1, pageSiz
   try {
     const params = [String(userId), dayStart, dayEnd];
     const countRes = await pool.query(
-      `SELECT COUNT(*)::int AS n FROM orders
+      `SELECT COUNT(*)::int AS n FROM ${financialOrdersRelation()}
        WHERE user_id = $1 AND ${sqlOrderBelongsToRange(2, 3)}`,
       params,
     );
     const total = countRes.rows[0]?.n ?? 0;
     params.push(size, offset);
     const { rows } = await pool.query(
-      `SELECT * FROM orders
+      `SELECT * FROM ${financialOrdersRelation()}
        WHERE user_id = $1 AND ${sqlOrderBelongsToRange(2, 3)}
        ORDER BY create_at DESC
        LIMIT $4 OFFSET $5`,
@@ -644,7 +645,7 @@ export async function fetchOrdersByPlayerStrict(playerId, userId, opts = undefin
   const useSince = Number.isFinite(since) && since > 0;
   const { rows } = await pool.query(
     useSince
-      ? `SELECT * FROM orders
+      ? `SELECT * FROM ${financialOrdersRelation()}
          WHERE user_id = $1 AND player_id = $2
            AND (
              create_at >= $3
@@ -660,7 +661,7 @@ export async function fetchOrdersByPlayerStrict(playerId, userId, opts = undefin
              )
            )
          ORDER BY create_at DESC`
-      : `SELECT * FROM orders
+      : `SELECT * FROM ${financialOrdersRelation()}
          WHERE user_id = $1 AND player_id = $2
          ORDER BY create_at DESC`,
     useSince
@@ -691,7 +692,7 @@ export async function fetchOrdersByPlayerAll(playerId, userId) {
     return [];
   try {
     const { rows } = await pool.query(
-      "SELECT * FROM orders WHERE user_id = $1 AND player_id = $2 ORDER BY create_at DESC",
+      `SELECT * FROM ${financialOrdersRelation()} WHERE user_id = $1 AND player_id = $2 ORDER BY create_at DESC`,
       [String(userId), Number(playerId)],
     );
     return rows || [];
@@ -718,7 +719,7 @@ export async function fetchOrdersByPlayerOrderIdsStrict(playerId, userId, orderI
   if (!ids.length)
     return [];
   const { rows } = await pool.query(
-    `SELECT * FROM orders
+    `SELECT * FROM ${financialOrdersRelation()}
      WHERE user_id = $1 AND player_id = $2 AND lower(order_id) = ANY($3::text[])`,
     [String(userId), Number(playerId), ids],
   );
@@ -747,7 +748,7 @@ export async function fetchOrdersByLink(userId, link) {
     const { rows } = await pool.query(
       `SELECT order_id, user_id, player_id, link, provider, match, bet, item,
               odds, bet_money, money, status, create_at
-       FROM orders WHERE user_id = $1 AND link = $2
+       FROM ${financialOrdersRelation()} WHERE user_id = $1 AND link = $2
        ORDER BY create_at ASC`,
       [uid, linkVal],
     );
@@ -775,7 +776,7 @@ export async function fetchOrdersByLinks(userId, links) {
     return [];
   try {
     const { rows } = await pool.query(
-      `SELECT * FROM orders
+      `SELECT * FROM ${financialOrdersRelation()}
        WHERE user_id = $1 AND link = ANY($2::bigint[])
        ORDER BY create_at DESC`,
       [uid, linkVals],
@@ -814,7 +815,7 @@ export async function fetchOrdersByUserOrderIds(userId, orderIds, userIds = null
       where += ` AND user_id = ANY($${params.length}::uuid[])`;
     }
     const { rows } = await pool.query(
-      `SELECT * FROM orders WHERE ${where} ORDER BY create_at DESC`,
+      `SELECT * FROM ${financialOrdersRelation()} WHERE ${where} ORDER BY create_at DESC`,
       params,
     );
     return rows || [];
@@ -854,7 +855,7 @@ export async function fetchPredictionSellsByBuyOrderIds(userId, buyOrderIds, use
       where += ` AND user_id = ANY($${params.length}::uuid[])`;
     }
     const { rows } = await pool.query(
-      `SELECT * FROM orders WHERE ${where} ORDER BY create_at DESC`,
+      `SELECT * FROM ${financialOrdersRelation()} WHERE ${where} ORDER BY create_at DESC`,
       params,
     );
     return rows || [];
@@ -876,7 +877,7 @@ export async function fetchOrderByOrderId(userId, orderId) {
     const { rows } = await pool.query(
       `SELECT order_id, user_id, player_id, link, provider, match, bet, item,
               odds, bet_money, money, status, create_at
-       FROM orders WHERE user_id = $1 AND order_id = $2
+       FROM ${financialOrdersRelation()} WHERE user_id = $1 AND order_id = $2
        LIMIT 1`,
       [uid, oid],
     );
@@ -932,7 +933,7 @@ export async function fetchOrdersAdminStats(dateKey) {
     return { count: 0, money: 0, betMoney: 0 };
   try {
     const { rows } = await pool.query(
-      `SELECT money, bet_money, status, provider, raw FROM orders WHERE ${sqlOrderBelongsToRange(1, 2)}`,
+      `SELECT money, bet_money, status, provider, raw FROM ${financialOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`,
       [dayStart, dayEnd],
     );
     const fx = getExchange(Currency.USDT);
@@ -1003,11 +1004,11 @@ export async function fetchOrdersAdminPage({
       params.push(pid);
       where += ` AND player_id = $${params.length}`;
     }
-    const countRes = await pool.query(`SELECT COUNT(*)::int AS n FROM orders WHERE ${where}`, params);
+    const countRes = await pool.query(`SELECT COUNT(*)::int AS n FROM ${financialOrdersRelation()} WHERE ${where}`, params);
     const total = countRes.rows[0]?.n ?? 0;
     params.push(pageSize, from);
     const { rows } = await pool.query(
-      `SELECT * FROM orders WHERE ${where} ORDER BY create_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      `SELECT * FROM ${financialOrdersRelation()} WHERE ${where} ORDER BY create_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params,
     );
     return { rows: rows || [], total };
@@ -1037,7 +1038,7 @@ export async function fetchUnifiedFootballOrdersAdmin({ dateKey, userId, limit =
     params.push(Math.min(Math.max(Number(limit) || 2000, 1), 5000));
     const { rows } = await pool.query(
       `SELECT o.*, p.user_name
-       FROM orders o
+       FROM ${financialOrdersRelation("o")}
        LEFT JOIN profiles p ON p.id = o.user_id
        WHERE ${where}
        ORDER BY o.create_at DESC, o.id DESC
@@ -1059,13 +1060,13 @@ export async function deleteOrdersByIds(ids) {
   const pool = getPgPool();
   if (!pool)
     return 0;
-  const clean = ids
+  const clean = ordersExecutionCompatibilityEnabled() ? financialDeletionIds(ids) : ids
     .map(id => Number(id))
     .filter(n => Number.isFinite(n) && n > 0);
   if (!clean.length)
     return 0;
   try {
-    const res = await pool.query("DELETE FROM orders WHERE id = ANY($1::bigint[])", [clean]);
+    const res = await pool.query(ordersExecutionCompatibilityEnabled() ? DELETE_FINANCIAL_ORDERS_SQL : "DELETE FROM orders WHERE id = ANY($1::bigint[])", [clean]);
     return res.rowCount ?? 0;
   }
   catch (err) {
@@ -1096,7 +1097,7 @@ export async function deletePolymarketSellOrders(scope = {}) {
       where += ` AND player_id = $${params.length}`;
     }
     const res = await pool.query(
-      `DELETE FROM orders WHERE ${where} RETURNING id`,
+      `DELETE FROM ${financialOrdersRelation()} WHERE ${where} RETURNING id`,
       params,
     );
     const ids = (res.rows || []).map(r => Number(r.id)).filter(n => Number.isFinite(n) && n > 0);
@@ -1128,7 +1129,7 @@ export async function fetchOrdersAdminAll({ dateKey, provider, limit = 5000, use
     }
     params.push(cap);
     const { rows } = await pool.query(
-      `SELECT * FROM orders WHERE ${where} ORDER BY create_at ASC LIMIT $${params.length}`,
+      `SELECT * FROM ${financialOrdersRelation()} WHERE ${where} ORDER BY create_at ASC LIMIT $${params.length}`,
       params,
     );
     return rows || [];
@@ -1148,7 +1149,7 @@ export async function fetchOrdersForMonthAggregate(monthKey, userId, userIds) {
   try {
     const params = [monthStart, monthEnd];
     let sql = `SELECT id, user_id, order_id, link, create_at, money, bet_money, status, provider, raw
-               FROM orders WHERE ${sqlOrderBelongsToRange(1, 2)}`;
+               FROM ${financialOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`;
     if (userId) {
       params.push(String(userId));
       sql += ` AND user_id = $${params.length}`;
@@ -1175,7 +1176,7 @@ export async function fetchOrdersForProfitAggregate(dateKey) {
   try {
     const { rows } = await pool.query(
       `SELECT id, user_id, player_id, order_id, link, create_at, money, bet_money, status, provider, raw
-       FROM orders WHERE ${sqlOrderBelongsToRange(1, 2)}`,
+       FROM ${financialOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`,
       [dayStart, dayEnd],
     );
     return rows || [];
@@ -1220,7 +1221,7 @@ export async function updateOrderBind(orderId, userId, link, opts = {}) {
     return false;
   try {
     const { where, params } = buildOrderBindMatch(userId, orderId, opts);
-    const sel = await pool.query(`SELECT * FROM orders WHERE ${where}`, params);
+    const sel = await pool.query(`SELECT * FROM ${financialOrdersRelation()} WHERE ${where}`, params);
     const prev = sel.rows?.[0];
     if (!prev)
       return false;
@@ -1233,7 +1234,7 @@ export async function updateOrderBind(orderId, userId, link, opts = {}) {
     }
     const updateWhere = offsetSqlPlaceholders(where, 1);
     const res = await pool.query(
-      `UPDATE orders SET link = $1 WHERE ${updateWhere}`,
+      `UPDATE ${financialOrdersRelation()} SET link = $1 WHERE ${updateWhere}`,
       [linkVal, ...params],
     );
     if (res.rowCount > 0 && shouldFireOrderBoundHook(prev, linkVal) && _ordersBoundHook) {
@@ -1306,7 +1307,7 @@ export async function rebindOrderLink(userId, orderId, toLinkId) {
     }
 
     const res = await pool.query(
-      `UPDATE orders SET link = $1 WHERE user_id = $2 AND order_id = $3`,
+      `UPDATE ${financialOrdersRelation()} SET link = $1 WHERE user_id = $2 AND order_id = $3`,
       [toLink, uid, oid],
     );
     if (!(res.rowCount > 0))
@@ -1339,7 +1340,7 @@ function appendUserIdsFilter(params, userIds) {
 function sqlArbUniqCtes(userFilterOnO = "") {
   return `legs AS (
         SELECT o.*
-        FROM orders o
+        FROM ${financialOrdersRelation("o")}
         WHERE ABS(o.link) >= 1000000000000
           AND o.create_at >= $1 AND o.create_at < $2
           AND o.provider IS NOT NULL AND o.provider != ''
@@ -1383,7 +1384,7 @@ export async function fetchPlatformAnalytics(startMs, endMs, userIds) {
         COUNT(*) FILTER (WHERE ${pending})::int AS pending,
         COALESCE(SUM(${betCny}), 0)::float AS total_bet,
         COALESCE(SUM(${moneyCny}), 0)::float AS total_profit
-       FROM orders
+       FROM ${financialOrdersRelation()}
        WHERE create_at >= $1 AND create_at < $2 AND provider IS NOT NULL AND provider != ''
          AND NOT ${sqlIsPredictionSell("")}${uf}
        GROUP BY provider
@@ -1505,7 +1506,7 @@ export async function fetchGameAnalytics(startMs, endMs, userIds) {
         COUNT(*) FILTER (WHERE o.status = 'Reject')::int AS rejects,
         COALESCE(SUM(${betCny}), 0)::float AS total_bet,
         COALESCE(SUM(${moneyCny}), 0)::float AS total_profit
-       FROM orders o
+       FROM ${financialOrdersRelation("o")}
        LEFT JOIN LATERAL (
          SELECT game FROM client_matches
          WHERE title = o.match
@@ -1545,7 +1546,7 @@ export async function fetchHourlyAnalytics(startMs, endMs, userIds) {
         COUNT(*) FILTER (WHERE status = 'Lose')::int AS losses,
         COALESCE(SUM(${moneyCny}), 0)::float AS total_profit,
         COALESCE(SUM(${betCny}), 0)::float AS total_bet
-       FROM orders
+       FROM ${financialOrdersRelation()}
        WHERE create_at >= $1 AND create_at < $2
          AND provider IS NOT NULL AND provider != ''
          AND NOT ${sqlIsPredictionSell("")}${uf}
@@ -1608,7 +1609,7 @@ export async function fetchValueBetOrderAnalytics(startMs, endMs, userIds) {
         AVG(odds)::float AS avg_odds`;
     const { rows: byProvider } = await pool.query(
       `SELECT provider,${aggSelect}
-       FROM orders
+       FROM ${financialOrdersRelation()}
        WHERE ${where}
        GROUP BY provider
        ORDER BY total_orders DESC`,
@@ -1616,7 +1617,7 @@ export async function fetchValueBetOrderAnalytics(startMs, endMs, userIds) {
     );
     const { rows: byOddsBucket } = await pool.query(
       `SELECT ${oddsBucket} AS odds_bucket, provider,${aggSelect}
-       FROM orders
+       FROM ${financialOrdersRelation()}
        WHERE ${where}
        GROUP BY odds_bucket, provider
        ORDER BY odds_bucket, provider`,
@@ -1774,7 +1775,7 @@ export async function fetchPolymarketOrderAnalytics(startMs, endMs, userIds) {
               THEN LOWER(pm.status)
             ELSE NULL
           END AS match_result
-        FROM orders pm
+        FROM ${financialOrdersRelation("pm")}
         WHERE pm.provider = 'Polymarket'
           AND LOWER(COALESCE(pm.raw->>'pmSide', '')) IS DISTINCT FROM 'sell'
           AND pm.create_at >= $1 AND pm.create_at < $2
@@ -1827,7 +1828,7 @@ export async function fetchPolymarketOrderAnalytics(startMs, endMs, userIds) {
               AND o.provider <> ''
           )::int AS other_venue_count
         FROM anchors a
-        LEFT JOIN orders o
+        LEFT JOIN ${financialOrdersRelation("o")}
           ON o.user_id = a.user_id
           AND ABS(o.link) = a.link_abs
         GROUP BY a.user_id, a.link_abs, a.pm_bet, a.hold_profit, a.fill_price,
@@ -1877,7 +1878,7 @@ export async function fetchPolymarketOrderAnalytics(startMs, endMs, userIds) {
           g.match_result,
           other.provider AS other_provider
         FROM groups g
-        JOIN orders other
+        JOIN ${financialOrdersRelation("other")}
           ON other.user_id = g.user_id
           AND ABS(other.link) = g.link_abs
           AND other.provider IS DISTINCT FROM 'Polymarket'
@@ -1996,7 +1997,7 @@ export async function fetchPolymarketOrderStatsInRange(startMs, endMs, userIds) 
         COUNT(*) FILTER (WHERE o.status IS DISTINCT FROM 'Win'
           AND o.status IS DISTINCT FROM 'Lose'
           AND o.status IS DISTINCT FROM 'Reject')::int AS pending
-       FROM orders o
+       FROM ${financialOrdersRelation("o")}
        WHERE ${where}`,
       params,
     );
@@ -2034,7 +2035,7 @@ export async function fetchPolymarketOrdersInRange(startMs, endMs, userIds, limi
               COALESCE(o.raw->>'pmSide', '') AS pm_side,
               NULLIF(o.raw->>'pmFillPrice', '')::float AS fill_price,
               p.user_name
-       FROM orders o
+       FROM ${financialOrdersRelation("o")}
        LEFT JOIN profiles p ON p.id = o.user_id
        WHERE ${where}
        ORDER BY o.create_at DESC
@@ -2070,7 +2071,7 @@ export async function fetchAccountAnalytics(startMs, endMs, userIds) {
         COUNT(*) FILTER (WHERE o.status = 'Reject')::int AS rejects,
         COALESCE(SUM(${betCny}), 0)::float AS total_bet,
         COALESCE(SUM(${moneyCny}), 0)::float AS total_profit
-       FROM orders o
+       FROM ${financialOrdersRelation("o")}
        WHERE o.create_at >= $1 AND o.create_at < $2
          AND o.provider IS NOT NULL AND o.provider != ''
          AND NOT ${sqlIsPredictionSell("o")}${uf ? uf.replace("user_id", "o.user_id") : ""}

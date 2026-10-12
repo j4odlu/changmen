@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import {
   backendBindLinkFromCreateAt,
   getPgPool,
@@ -58,7 +59,7 @@ async function pickProbeUser(pool) {
 
 async function cleanupProbe(pool, userId, orderId, playerId) {
   await pool.query(
-    `DELETE FROM orders WHERE user_id = $1::uuid AND order_id = $2 AND player_id = $3`,
+    `DELETE FROM ${financialOrdersRelation()} WHERE user_id = $1::uuid AND order_id = $2 AND player_id = $3`,
     [userId, orderId, playerId],
   );
 }
@@ -104,7 +105,7 @@ async function checkUpsertAndBind(pool, userId, userName) {
   }
 
   const { rows: inserted } = await pool.query(
-    `SELECT order_id, link, create_at FROM orders
+    `SELECT order_id, link, create_at FROM ${financialOrdersRelation()}
      WHERE user_id = $1::uuid AND order_id = $2 AND player_id = $3`,
     [userId, orderId, playerId],
   );
@@ -132,7 +133,7 @@ async function checkUpsertAndBind(pool, userId, userName) {
   }
   else {
     const { rows: bound } = await pool.query(
-      `SELECT link::text FROM orders
+      `SELECT link::text FROM ${financialOrdersRelation()}
        WHERE user_id = $1::uuid AND order_id = $2 AND player_id = $3`,
       [userId, orderId, playerId],
     );
@@ -204,7 +205,7 @@ async function checkTelegram(userName) {
 async function checkAccountInvariants(pool) {
   const { rows: orderOwnerMismatch } = await pool.query(`
     SELECT o.player_id, o.user_id, p.owner_user_id, o.status
-    FROM orders o
+    FROM ${financialOrdersRelation("o")}
     JOIN players p ON p.id = o.player_id AND p.deleted_at IS NULL
     WHERE p.owner_user_id IS NOT NULL AND o.user_id::uuid <> p.owner_user_id
     LIMIT 5

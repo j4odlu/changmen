@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 将 GB12 / GB13 活跃 OB 投注账号转移到 GB14（只改 players.owner_user_id）。
  * 不迁移 orders / money_logs。
@@ -117,7 +118,7 @@ console.log("conflicts: 0");
 
 const { rows: orderCounts } = await pool.query(
   `SELECT player_id, COUNT(*)::int AS n
-   FROM orders WHERE player_id = ANY($1::bigint[])
+   FROM ${financialOrdersRelation()} WHERE player_id = ANY($1::bigint[])
    GROUP BY player_id ORDER BY player_id`,
   [ids],
 );

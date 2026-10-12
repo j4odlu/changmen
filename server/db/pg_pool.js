@@ -5,6 +5,7 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { prepareOrdersExecutionCompatibility } from "./rds/orders_execution_compat.js";
 import {
   buildPgClientConfig,
   getResolvedDatabaseUrl,
@@ -128,5 +129,7 @@ export function getPgPool(reason = "") {
 /** 启动前解析内网/外网 DATABASE_URL（start-db 等入口调用） */
 export async function ensurePgPoolReady() {
   await initDatabaseUrl();
-  return getPgPool();
+  const pool = getPgPool();
+  await prepareOrdersExecutionCompatibility(pool);
+  return pool;
 }

@@ -1,3 +1,4 @@
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * 回填 PredictFun 买单 raw.pfHoldShares（官网持仓口径）
  * 默认 dry-run；加 --execute 才写库
@@ -26,10 +27,11 @@ const c = new pg.Client({
   ssl: /sslmode=require/i.test(url) ? { rejectUnauthorized: false } : undefined,
 });
 await c.connect();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(c);
 
 const { rows } = await c.query(`
   SELECT id, order_id, status, raw
-  FROM orders
+  FROM ${financialOrdersRelation()}
   WHERE provider = 'PredictFun'
     AND COALESCE(raw->>'pfSide', 'buy') <> 'sell'
     AND raw ? 'pfShares'
@@ -66,7 +68,7 @@ for (const row of rows) {
   if (!execute)
     continue;
   raw.pfHoldShares = hold;
-  await c.query(`UPDATE orders SET raw = $1::jsonb WHERE id = $2`, [
+  await c.query(`UPDATE ${financialOrdersRelation()} SET raw = $1::jsonb WHERE id = $2`, [
     JSON.stringify(raw),
     row.id,
   ]);

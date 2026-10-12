@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * 一次性：把 Polymarket 卖单 money 累加到对应买单，卖单 money 置 0。
  *
@@ -63,6 +64,7 @@ async function main() {
 
   initDatabaseUrl();
   const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
   if (!pool) {
     console.error("No DATABASE_URL / pool");
     process.exit(1);
@@ -83,7 +85,7 @@ async function main() {
 
   const sql = `
     SELECT order_id, user_id, player_id, provider, money, bet_money, create_at, raw
-    FROM orders
+    FROM ${financialOrdersRelation()}
     WHERE LOWER(TRIM(provider)) = 'polymarket'
       ${userIds ? "AND user_id = ANY($1::text[])" : ""}
     ORDER BY create_at ASC
@@ -157,6 +159,7 @@ async function main() {
   }
 
   const client = await pool.connect();
+
   let updatedBuys = 0;
   let updatedSells = 0;
   try {
@@ -171,7 +174,7 @@ async function main() {
       const raw = rawObj(buy);
       raw.money = nextMoney;
       await client.query(
-        `UPDATE orders SET money = $2, raw = $3::jsonb WHERE order_id = $1`,
+        `UPDATE ${financialOrdersRelation()} SET money = $2, raw = $3::jsonb WHERE order_id = $1`,
         [buy.order_id, nextMoney, JSON.stringify(raw)],
       );
       updatedBuys += 1;
@@ -187,7 +190,7 @@ async function main() {
       }
       raw.money = 0;
       await client.query(
-        `UPDATE orders SET money = 0, raw = $2::jsonb WHERE order_id = $1`,
+        `UPDATE ${financialOrdersRelation()} SET money = 0, raw = $2::jsonb WHERE order_id = $1`,
         [sell.order_id, JSON.stringify(raw)],
       );
       updatedSells += 1;

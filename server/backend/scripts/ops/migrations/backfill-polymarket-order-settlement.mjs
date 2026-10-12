@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 补结算 RDS 中 Polymarket + None 的老订单（超出客户端 30 天 sync 窗口）
  *
@@ -105,7 +106,7 @@ async function fetchPolymarketOrdersForBackfill(pool, { sinceMs, userName, playe
   const params = [sinceMs];
   let sql = `
     SELECT o.*, p.user_name
-    FROM orders o
+    FROM ${financialOrdersRelation("o")}
     LEFT JOIN profiles p ON p.id = o.user_id
     WHERE LOWER(o.provider) = 'polymarket'
       AND o.create_at >= $1

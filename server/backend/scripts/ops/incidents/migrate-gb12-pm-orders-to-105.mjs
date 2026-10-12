@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * GB12 PM：将 player 76/102 订单归属到 105。
  * - 同一 order_id 只保留一行（优先 link 与 OB 等套利腿一致的行）
@@ -21,6 +22,7 @@ loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 await initDatabaseUrl();
 const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
 if (!pool) {
   console.error("DATABASE_URL 未配置");
   process.exit(1);
@@ -40,18 +42,18 @@ const plan = await pool.query(
   `
   WITH candidates AS (
     SELECT o.id, o.user_id, o.player_id, o.order_id, o.link, o.status, o.create_at
-    FROM orders o
+    FROM ${financialOrdersRelation("o")}
     WHERE o.user_id = $1::uuid
       AND o.provider = $2
       AND o.player_id = ANY($3::bigint[])
   ),
   on105 AS (
-    SELECT order_id FROM orders
+    SELECT order_id FROM ${financialOrdersRelation()}
     WHERE user_id = $1::uuid AND provider = $2 AND player_id = $4
   ),
   arb_links AS (
     SELECT DISTINCT link
-    FROM orders
+    FROM ${financialOrdersRelation()}
     WHERE user_id = $1::uuid
       AND provider <> $2
       AND link IS NOT NULL
@@ -121,23 +123,24 @@ const migrateIds = migrateRows.map(r => Number(r.id)).filter(n => Number.isFinit
 const backupIds = [...new Set([...deleteIds, ...migrateIds])];
 
 const client = await pool.connect();
+
 try {
   await client.query("BEGIN");
 
   await client.query(`DROP TABLE IF EXISTS ${BACKUP_TABLE}`);
   await client.query(
     `CREATE TABLE ${BACKUP_TABLE} AS
-     SELECT * FROM orders WHERE id = ANY($1::bigint[])`,
+     SELECT * FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`,
     [backupIds],
   );
 
   if (deleteIds.length) {
-    await client.query(`DELETE FROM orders WHERE id = ANY($1::bigint[])`, [deleteIds]);
+    await client.query(`DELETE FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`, [deleteIds]);
   }
 
   if (migrateIds.length) {
     const upd = await client.query(
-      `UPDATE orders SET player_id = $1
+      `UPDATE ${financialOrdersRelation()} SET player_id = $1
        WHERE id = ANY($2::bigint[]) AND user_id = $3::uuid`,
       [TO_PLAYER, migrateIds, userId],
     );

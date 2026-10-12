@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 
 loadChangmenEnv();
@@ -36,7 +37,7 @@ const playerIds = [180, 182, 184, 191, 193, 195, 235];
 const { rows: vol } = await pool.query(
   `SELECT u.user_name, date_trunc('day', to_timestamp(o.create_at/1000.0)) AS day,
           COUNT(*)::int AS n, ROUND(AVG(o.bet_money)::numeric,1) AS avg_stake
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN users u ON u.id = o.user_id
    WHERE o.player_id = ANY($1::bigint[])
      AND o.create_at >= $2

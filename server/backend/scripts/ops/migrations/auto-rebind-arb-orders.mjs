@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 为指定用户补绑近 N 天未关联的套利订单（SaveOrderBind 失败后的运维脚本）
  *
@@ -244,7 +245,7 @@ const userName = users[0].user_name;
 const [{ rows: orders }, { rows: logs }] = await Promise.all([
   pool.query(
     `SELECT order_id, provider, link, create_at, match, bet, item, player_id, bet_money, odds
-     FROM orders WHERE user_id = $1 AND create_at >= $2
+     FROM ${financialOrdersRelation()} WHERE user_id = $1 AND create_at >= $2
      ORDER BY create_at`,
     [userId, since],
   ),

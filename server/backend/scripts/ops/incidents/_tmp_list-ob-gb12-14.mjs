@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * One-off: list OB players for GB12/GB13/GB14 (read-only).
  */
@@ -67,7 +68,7 @@ if (players.length) {
   if (pids.length) {
     const { rows: oc } = await pool.query(
       `SELECT o.user_id, u.user_name, o.player_id, COUNT(*)::int AS n
-       FROM orders o
+       FROM ${financialOrdersRelation("o")}
        JOIN users u ON u.id = o.user_id
        WHERE o.player_id = ANY($1::bigint[])
        GROUP BY o.user_id, u.user_name, o.player_id

@@ -1,3 +1,4 @@
+import { financialOrdersRelation } from "@changmen/db";
 import fs from "node:fs";
 import path from "node:path";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
@@ -26,7 +27,7 @@ try {
   await client.query(apply?"BEGIN":"BEGIN READ ONLY");
   await client.query("SET LOCAL statement_timeout='20s'");
   const records=(await client.query("SELECT id,record FROM pm_gtc_executions WHERE owner=$1 ORDER BY id"+(apply?" FOR UPDATE":""),[owner])).rows;
-  const rows=(await client.query(`SELECT o.* FROM orders o WHERE o.user_id=$1 AND o.provider='Polymarket'
+  const rows=(await client.query(`SELECT o.* FROM ${financialOrdersRelation("o")} WHERE o.user_id=$1 AND o.provider='Polymarket'
     AND lower(coalesce(o.raw->>'pmSide','buy'))<>'sell'
     AND (o.raw->>'pmGtcExecutionId' IS NOT NULL OR EXISTS(
       SELECT 1 FROM pm_gtc_executions e WHERE e.owner=$1
@@ -64,12 +65,12 @@ try {
     fs.writeFileSync(path.join(outputDir,`gtc-financial-backup-${stamp}.json`),JSON.stringify({owner,rows:rows.filter(r=>candidates.some(c=>c.id===r.id))},null,2),{flag:"wx"});
     for(const f of candidates) {
       const e=records.find(r=>r.id===f.executionId); const financial=resolveGtcFinancialOrder(e.record);
-      await client.query(`UPDATE orders SET bet_money=$3,
+      await client.query(`UPDATE ${financialOrdersRelation()} SET bet_money=$3,
         raw=raw||jsonb_build_object('pmGtcExecutionId',$4::text,'betMoney',$3::float8,'pmStakeUsdc',$5::float8,
           'pmGtcBuyCost',$5::float8,'pmGtcBuyShares',$6::float8,'pmShares',$6::float8,'pmFeeUsdc',$7::float8)
         WHERE id=$1 AND user_id=$2`,[f.id,owner,financial.betMoney,e.id,financial.pmStakeUsdc,financial.pmShares,financial.pmFeeUsdc]);
       await syncPmGtcSettledOrderFinancials(client,owner,e.record.plan.playerId,f.orderId,e.id);
-      const actual=(await client.query("SELECT bet_money,money,raw->>'money' AS raw_money FROM orders WHERE id=$1 AND user_id=$2",[f.id,owner])).rows[0];
+      const actual=(await client.query(`SELECT bet_money,money,raw->>'money' AS raw_money FROM ${financialOrdersRelation()} WHERE id=$1 AND user_id=$2`,[f.id,owner])).rows[0];
       if(Math.abs(Number(actual.money)-f.expectedMoney)>0.000001||Math.abs(Number(actual.raw_money)-f.expectedMoney)>0.000001)
         throw new Error(`Financial verification failed for ${f.orderId}`);
     }

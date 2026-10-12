@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 
 loadChangmenEnv();
@@ -24,7 +25,7 @@ const { rows: links } = await pool.query(
           to_timestamp(o.create_at/1000.0) AS created,
           o.raw->>'match' AS match_name,
           o.raw->>'bet' AS bet_name
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN players pl ON pl.id = o.player_id
    WHERE o.user_id = $1::uuid
      AND (

@@ -1,3 +1,4 @@
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * 清理 GB17 因删号重加产生的 OB order_id 重复行：
  * - 把活跃账号(255)行的 link 改成与套利对腿一致（取自已删账号 200）
@@ -26,6 +27,7 @@ const c = new pg.Client({
   ssl: String(url).includes("sslmode=require") ? { rejectUnauthorized: false } : undefined,
 });
 await c.connect();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(c);
 
 const pairs = [
   {
@@ -56,7 +58,7 @@ for (const p of pairs) {
   const { rows } = await c.query(
     `
     select id, player_id, link, money, status, match
-    from orders
+    from ${financialOrdersRelation()}
     where user_id = $1::uuid and order_id = $2
     order by player_id
   `,
@@ -73,7 +75,7 @@ for (const p of pairs) {
   if (String(keep.link) !== String(betterLink)) {
     console.log(`update id=${keep.id} link ${keep.link} -> ${betterLink}`);
     if (apply) {
-      await c.query(`update orders set link = $1 where id = $2`, [betterLink, keep.id]);
+      await c.query(`update ${financialOrdersRelation()} set link = $1 where id = $2`, [betterLink, keep.id]);
     }
   }
   else {
@@ -81,14 +83,14 @@ for (const p of pairs) {
   }
   console.log(`delete id=${drop.id} player_id=${drop.player_id}`);
   if (apply) {
-    await c.query(`delete from orders where id = $1`, [drop.id]);
+    await c.query(`delete from ${financialOrdersRelation()} where id = $1`, [drop.id]);
   }
 }
 
 const left = await c.query(
   `
   select order_id, count(*) as n, array_agg(player_id) as players
-  from orders
+  from ${financialOrdersRelation()}
   where user_id = $1::uuid
     and order_id = any($2::text[])
   group by order_id

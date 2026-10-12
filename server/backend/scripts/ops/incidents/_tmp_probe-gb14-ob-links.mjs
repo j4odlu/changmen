@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 
 loadChangmenEnv();
@@ -31,7 +32,7 @@ const { rows: links } = await pool.query(
   `SELECT o.link, o.player_id, pl.provider, pl.platform_name, o.status,
           to_timestamp(o.create_at/1000.0) AS created,
           left(coalesce(o.order_id,''), 40) AS oid
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN players pl ON pl.id = o.player_id
    WHERE o.user_id = $1::uuid
      AND o.create_at >= $2

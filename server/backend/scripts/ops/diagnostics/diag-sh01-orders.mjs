@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 import { ensurePgPoolReady } from "@changmen/db";
 
@@ -14,7 +15,7 @@ console.log("user:", users[0]);
 if (uid) {
   const { rows: orderPlayers } = await pool.query(
     `SELECT DISTINCT player_id, provider, COUNT(*)::int AS n
-     FROM orders WHERE user_id = $1
+     FROM ${financialOrdersRelation()} WHERE user_id = $1
      GROUP BY player_id, provider ORDER BY player_id`,
     [uid],
   );

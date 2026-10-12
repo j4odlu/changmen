@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * Probe why GB14 OB accounts may not bet.
  */
@@ -69,7 +70,7 @@ const { rows: recentUser } = await pool.query(
   `SELECT o.player_id, pl.provider, pl.platform_name, pl.player_name, o.status,
           o.create_at, to_timestamp(o.create_at/1000.0) AS created,
           left(coalesce(o.order_id,''), 48) AS oid
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN players pl ON pl.id = o.player_id
    WHERE o.user_id = $1::uuid
    ORDER BY o.create_at DESC NULLS LAST
@@ -82,7 +83,7 @@ for (const r of recentUser) console.log(r);
 const { rows: recentPlayers } = await pool.query(
   `SELECT o.user_id::text, u.user_name, o.player_id, pl.platform_name, o.status,
           to_timestamp(o.create_at/1000.0) AS created
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN players pl ON pl.id = o.player_id
    LEFT JOIN users u ON u.id = o.user_id
    WHERE o.player_id = ANY($1::bigint[])

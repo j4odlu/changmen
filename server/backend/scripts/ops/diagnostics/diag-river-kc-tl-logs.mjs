@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 import { ensurePgPoolReady, fetchUserLogsInRange, getPgPool } from "@changmen/db";
 
@@ -24,7 +25,7 @@ for (const row of logs) {
 const pool = getPgPool();
 const orders = await pool.query(
   `SELECT order_id, item, bet_money, status, create_at, link, changmen_bet
-   FROM orders WHERE user_id=$1 AND player_id=47 AND match ILIKE $2 ORDER BY create_at`,
+   FROM ${financialOrdersRelation()} WHERE user_id=$1 AND player_id=47 AND match ILIKE $2 ORDER BY create_at`,
   [uid, "%Karmine Corp%Game 1%"],
 );
 console.log("\nfull order_ids:");

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 import { ensurePgPoolReady } from "@changmen/db";
 
@@ -26,7 +27,7 @@ const { rows: samples } = await pool.query(
   `SELECT o.player_id, o.provider,
           o.raw->>'PlatformName' AS pn,
           o.raw->>'PlayerName' AS pl
-   FROM orders o JOIN users u ON u.id = o.user_id
+   FROM ${financialOrdersRelation("o")} JOIN users u ON u.id = o.user_id
    WHERE u.user_name = 'River' AND o.player_id = ANY($1::bigint[])
    LIMIT 3`,
   [[45, 47, 48, 53, 14, 46]],

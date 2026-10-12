@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * River：硬删除全部软删 player（含其 orders 备份后删除）。
  *
@@ -16,6 +17,7 @@ loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 await initDatabaseUrl();
 const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
 if (!pool) {
   console.error("DATABASE_URL 未配置");
   process.exit(1);
@@ -33,7 +35,7 @@ if (!userId) {
 
 const { rows: softPlayers } = await pool.query(
   `SELECT pl.id, pl.platform_name, pl.player_name, pl.provider, pl.deleted_at,
-          (SELECT COUNT(*)::int FROM orders o WHERE o.user_id = $1::uuid AND o.player_id = pl.id) AS orders,
+          (SELECT COUNT(*)::int FROM ${financialOrdersRelation("o")} WHERE o.user_id = $1::uuid AND o.player_id = pl.id) AS orders,
           (SELECT COUNT(*)::int FROM money_logs m WHERE m.user_id = $1::uuid AND m.player_id = pl.id) AS money_logs
    FROM players pl
    WHERE pl.owner_user_id = $1::uuid AND pl.deleted_at IS NOT NULL
@@ -67,6 +69,7 @@ if (dryRun) {
 }
 
 const client = await pool.connect();
+
 try {
   await client.query("BEGIN");
 
@@ -80,12 +83,12 @@ try {
   await client.query(`DROP TABLE IF EXISTS ${BACKUP_ORDERS}`);
   await client.query(
     `CREATE TABLE ${BACKUP_ORDERS} AS
-     SELECT * FROM orders WHERE user_id = $1::uuid AND player_id = ANY($2::bigint[])`,
+     SELECT * FROM ${financialOrdersRelation()} WHERE user_id = $1::uuid AND player_id = ANY($2::bigint[])`,
     [userId, playerIds],
   );
 
   const delOrders = await client.query(
-    `DELETE FROM orders WHERE user_id = $1::uuid AND player_id = ANY($2::bigint[])`,
+    `DELETE FROM ${financialOrdersRelation()} WHERE user_id = $1::uuid AND player_id = ANY($2::bigint[])`,
     [userId, playerIds],
   );
 

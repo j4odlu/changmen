@@ -1,3 +1,4 @@
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 验证未绑单占位 Link：新单 link = RDS 入库时刻；legacy 可能 link=create_at 或 hash。
  * 用法：cd changmen/server/backend && node scripts/verify-order-link-placeholder.mjs
@@ -21,7 +22,7 @@ const since = Date.now() - days * 24 * 60 * 60 * 1000;
 
 const { rows } = await pool.query(
   `SELECT order_id, provider, link, create_at, user_id
-   FROM orders
+   FROM ${financialOrdersRelation()}
    WHERE create_at >= $1
    ORDER BY create_at DESC
    LIMIT 500`,

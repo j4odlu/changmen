@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import ts from "typescript";
+import { gitSource, moduleTokens } from "./fok-exact-boundaries.mjs";
+import { verifyActualPublicModule } from "./public-release-boundaries.mjs";
 
 // [changmen 扩展] Compare entire existing public modules, not just selected functions.
-// The old source is captured from the running release; only explicit mode additions
-// may be removed. All original imports and executable statements must remain.
+// Both the captured actual release and the original immutable FOK baseline are checked;
+// only the already registered explicit mode additions may be removed. All original imports and executable statements must remain.
 const snapshot = JSON.parse(fs.readFileSync("output/vps-fok-baseline.json", "utf8"));
 const printer = ts.createPrinter({ removeComments: true });
 const normalize = text => text.replace(/\s+/g, " ").trim();
@@ -19,21 +21,22 @@ const files = [
 for (const file of files) {
   assert.equal(typeof snapshot.sources[file], "string", `Missing actual VPS source: ${file}`);
   const parse = text => ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  const previous = parse(snapshot.sources[file]);
+  verifyActualPublicModule(file, fs.readFileSync(file, "utf8"), snapshot.sources[file]);
+  const previous = parse(gitSource(snapshot.immutableBaseline, file));
   const current = parse(fs.readFileSync(file, "utf8"));
   let removedImports = 0;
   let removedBranches = 0;
   let replacedCalls = 0;
   let removedSpreads = 0;
-  const transformed = ts.transform(current, [context => {
-    const visit = node => {
+  const transformed = ts.transform(current, [(context) => {
+    const visit = (node) => {
       if (ts.isImportDeclaration(node)) {
         const target = node.moduleSpecifier.text;
         if ((file.endsWith("account_client_routes.ts") && target === "../orderModes/router.js")
           || (file.endsWith("pm_pf_routes.ts") && target === "../orderModes/gtc/handler.js")) {
           const expected = file.endsWith("account_client_routes.ts")
-            ? 'import { getOrders, saveOrders } from "../orderModes/router.js";'
-            : 'import { handlePmGtc } from "../orderModes/gtc/handler.js";';
+            ? "import { getOrders, saveOrders } from \"../orderModes/router.js\";"
+            : "import { handlePmGtc } from \"../orderModes/gtc/handler.js\";";
           assert.equal(normalize(node.getText(current)), expected);
           removedImports++;
           return undefined;
@@ -43,13 +46,10 @@ for (const file of files) {
         && ts.isIdentifier(node.expression) && ["getOrders", "saveOrders"].includes(node.expression.text)) {
         assert.equal(normalize(node.arguments.map(arg => arg.getText(current)).join(", ")), "body, ctx.user!.id");
         replacedCalls++;
-        return context.factory.updateCallExpression(node,
-          context.factory.createPropertyAccessExpression(context.factory.createIdentifier("accountService"),
-            node.expression.text === "getOrders" ? "handleGetOrderList" : "handleSaveOrder"),
-          node.typeArguments, node.arguments);
+        return context.factory.updateCallExpression(node, context.factory.createPropertyAccessExpression(context.factory.createIdentifier("accountService"), node.expression.text === "getOrders" ? "handleGetOrderList" : "handleSaveOrder"), node.typeArguments, node.arguments);
       }
       if (file.endsWith("pm_pf_routes.ts") && ts.isIfStatement(node)
-        && normalize(node.expression.getText(current)) === '["Pm_GtcCreate", "Pm_GtcCommand", "Pm_GtcList", "Pm_GtcOrders", "Pm_GtcSaveOrders"].includes(action)') {
+        && normalize(node.expression.getText(current)) === "[\"Pm_GtcCreate\", \"Pm_GtcCommand\", \"Pm_GtcList\", \"Pm_GtcOrders\", \"Pm_GtcSaveOrders\"].includes(action)") {
         assert(!node.elseStatement, "GTC action extension cannot change the existing fallback");
         removedBranches++;
         return undefined;
@@ -57,13 +57,15 @@ for (const file of files) {
       if (ts.isSpreadAssignment(node)) {
         const addition = normalize(node.getText(current));
         const allowed = file.endsWith("admin_orders.js")
-          ? ['...(o.PmGtcExecutionId ? { pmGtcExecutionId: o.PmGtcExecutionId, pmGtcBuyShares: o.PmGtcBuyShares } : {})']
+          ? ["...(o.PmGtcExecutionId ? { pmGtcExecutionId: o.PmGtcExecutionId, pmGtcBuyShares: o.PmGtcBuyShares } : {})"]
           : file.endsWith("adminOrderDisplay.ts")
-            ? ['...(row.pmGtcExecutionId ? { PmGtcExecutionId: row.pmGtcExecutionId, PmGtcBuyShares: row.pmGtcBuyShares } : {})']
-            : file.endsWith("extensionPrefs.ts") ? [
-                '...(typeof row.pmGtcV1Activation === "string" ? { pmGtcV1Activation: row.pmGtcV1Activation } : {})',
-                '...(row.pmGtcV1Participant === true ? { pmGtcV1Participant: true } : {})',
-              ] : [];
+            ? ["...(row.pmGtcExecutionId ? { PmGtcExecutionId: row.pmGtcExecutionId, PmGtcBuyShares: row.pmGtcBuyShares } : {})"]
+            : file.endsWith("extensionPrefs.ts")
+              ? [
+                  "...(typeof row.pmGtcV1Activation === \"string\" ? { pmGtcV1Activation: row.pmGtcV1Activation } : {})",
+                  "...(row.pmGtcV1Participant === true ? { pmGtcV1Participant: true } : {})",
+                ]
+              : [];
         if (allowed.includes(addition)) {
           removedSpreads++;
           return undefined;
@@ -75,22 +77,25 @@ for (const file of files) {
   }]);
   const specialized = transformed.transformed[0];
   const imports = sf => sf.statements.filter(ts.isImportDeclaration)
-    .map(node => normalize(printer.printNode(ts.EmitHint.Unspecified, node, sf))).sort();
+    .map(node => JSON.stringify(moduleTokens(printer.printNode(ts.EmitHint.Unspecified, node, sf))))
+    .sort();
   assert.deepEqual(imports(specialized), imports(previous), `${file}: original imports`);
-  const body = sf => {
+  const body = (sf) => {
     const text = sf.statements.filter(node => !ts.isImportDeclaration(node))
-      .map(node => printer.printNode(ts.EmitHint.Unspecified, node, sf)).join("\n");
-    return normalize(ts.transpileModule(text, { compilerOptions: { target: ts.ScriptTarget.ES2022,
-      module: ts.ModuleKind.ESNext, removeComments: true } }).outputText);
+      .map(node => printer.printNode(ts.EmitHint.Unspecified, node, sf))
+      .join("\n");
+    return JSON.stringify(moduleTokens(ts.transpileModule(text, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, removeComments: true } }).outputText));
   };
   assert.equal(body(specialized), body(previous), `${file}: complete existing executable module`);
-  const expected = file.endsWith("account_client_routes.ts") ? [1, 0, 2, 0]
-    : file.endsWith("pm_pf_routes.ts") ? [1, 1, 0, 0]
+  const expected = file.endsWith("account_client_routes.ts")
+    ? [1, 0, 2, 0]
+    : file.endsWith("pm_pf_routes.ts")
+      ? [1, 1, 0, 0]
       : file.endsWith("extensionPrefs.ts") ? [0, 0, 0, 2] : [0, 0, 0, 1];
   assert.deepEqual([removedImports, removedBranches, replacedCalls, removedSpreads], expected, `${file}: bounded mode additions`);
   transformed.dispose();
   results.push({ file, originalImportsIdentical: true, completeExistingModuleIdentical: true });
 }
-const report = { checkedAt: new Date().toISOString(), version: snapshot.version, passed: true, results };
+const report = { checkedAt: new Date().toISOString(), captureId: snapshot.captureId, frontendVersion: snapshot.frontendVersion, backendVersion: snapshot.backendVersion, immutableBaseline: snapshot.immutableBaseline, passed: true, results };
 fs.writeFileSync("output/fok-public-entry-comparison.json", `${JSON.stringify(report, null, 2)}\n`);
 process.stdout.write(`${JSON.stringify(report)}\n`);

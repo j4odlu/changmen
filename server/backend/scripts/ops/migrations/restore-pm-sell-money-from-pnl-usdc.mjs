@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * 恢复被 sync 清零的 PM 卖单 money（从 raw.pmRealizedPnlUsdc × 汇率还原 CNY）。
  *
@@ -45,6 +46,7 @@ async function main() {
 
   initDatabaseUrl();
   const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
   if (!pool) {
     console.error("No pool");
     process.exit(1);
@@ -53,8 +55,8 @@ async function main() {
   const { rows: sells } = await pool.query(`
     SELECT s.order_id, s.money, s.raw,
            b.order_id AS buy_id, b.money AS buy_money
-    FROM orders s
-    LEFT JOIN orders b
+    FROM ${financialOrdersRelation("s")}
+    LEFT JOIN ${financialOrdersRelation("b")}
       ON LOWER(b.order_id) = LOWER(COALESCE(s.raw->>'pmBuyOrderId', ''))
      AND LOWER(TRIM(b.provider)) = 'polymarket'
     WHERE LOWER(TRIM(s.provider)) = 'polymarket'
@@ -92,12 +94,13 @@ async function main() {
   }
 
   const client = await pool.connect();
+
   let n = 0;
   try {
     await client.query("BEGIN");
     for (const item of plan) {
       const { rows } = await client.query(
-        `SELECT order_id, money, raw FROM orders WHERE order_id = $1 FOR UPDATE`,
+        `SELECT order_id, money, raw FROM ${financialOrdersRelation()} WHERE order_id = $1 FOR UPDATE`,
         [item.sellId],
       );
       const row = rows[0];
@@ -107,7 +110,7 @@ async function main() {
       raw.money = item.restoreMoney;
       raw.pmSellMoneyRestoredFromPnlUsdc = item.pnlUsdc;
       await client.query(
-        `UPDATE orders SET money = $2, raw = $3::jsonb WHERE order_id = $1`,
+        `UPDATE ${financialOrdersRelation()} SET money = $2, raw = $3::jsonb WHERE order_id = $1`,
         [item.sellId, item.restoreMoney, JSON.stringify(raw)],
       );
       n += 1;

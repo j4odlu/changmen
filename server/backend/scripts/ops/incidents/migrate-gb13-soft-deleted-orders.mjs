@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * GB13：软删 player 订单迁到活跃 successor；player 77（米兰）按方案 A 保留不动。
  *
@@ -48,6 +49,7 @@ loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 await initDatabaseUrl();
 const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
 if (!pool) {
   console.error("DATABASE_URL 未配置");
   process.exit(1);
@@ -85,7 +87,7 @@ async function loadRows(ids) {
   const { rows } = await pool.query(
     `SELECT o.id, o.player_id, o.order_id, o.provider, o.link, o.match, o.bet_money,
             pl.platform_name, pl.player_name, pl.deleted_at IS NOT NULL AS soft
-     FROM orders o
+     FROM ${financialOrdersRelation("o")}
      JOIN players pl ON pl.id = o.player_id
      WHERE o.user_id = $1::uuid AND o.id = ANY($2::bigint[])
      ORDER BY o.id`,
@@ -119,7 +121,7 @@ for (const row of MIGRATE_ROWS) {
     process.exit(1);
   }
   const conflict = await pool.query(
-    `SELECT id FROM orders
+    `SELECT id FROM ${financialOrdersRelation()}
      WHERE user_id = $1::uuid AND player_id = $2 AND order_id = $3 AND provider = $4`,
     [userId, row.to, cur.order_id, cur.provider],
   );
@@ -146,7 +148,7 @@ for (const id of DELETE_IDS) {
 }
 
 const p77 = await pool.query(
-  `SELECT COUNT(*)::int AS n FROM orders o
+  `SELECT COUNT(*)::int AS n FROM ${financialOrdersRelation("o")}
    JOIN players pl ON pl.id = o.player_id
    WHERE o.user_id = $1::uuid AND o.player_id = 77 AND pl.deleted_at IS NOT NULL`,
   [userId],
@@ -161,23 +163,24 @@ if (dryRun) {
 }
 
 const client = await pool.connect();
+
 try {
   await client.query("BEGIN");
 
   await client.query(`DROP TABLE IF EXISTS ${BACKUP_TABLE}`);
   await client.query(
     `CREATE TABLE ${BACKUP_TABLE} AS
-     SELECT * FROM orders WHERE user_id = $1::uuid AND id = ANY($2::bigint[])`,
+     SELECT * FROM ${financialOrdersRelation()} WHERE user_id = $1::uuid AND id = ANY($2::bigint[])`,
     [userId, allIds],
   );
 
   if (DELETE_IDS.length) {
-    await client.query(`DELETE FROM orders WHERE id = ANY($1::bigint[])`, [DELETE_IDS]);
+    await client.query(`DELETE FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`, [DELETE_IDS]);
   }
 
   for (const row of MIGRATE_ROWS) {
     await client.query(
-      `UPDATE orders SET player_id = $1::bigint WHERE id = $2 AND user_id = $3::uuid`,
+      `UPDATE ${financialOrdersRelation()} SET player_id = $1::bigint WHERE id = $2 AND user_id = $3::uuid`,
       [row.to, row.id, userId],
     );
   }

@@ -1,3 +1,4 @@
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 一次性：查 RIVER 今日 PredictFun 订单，从官方 GET /v1/account/activity
  * 的 MATCH_SUCCESS.fee 匹配手续费并写回 orders.raw
@@ -68,7 +69,7 @@ async function fetchRiverPfOrdersToday(pool, userId, dateKey) {
   const { start, end } = localDayBounds(dateKey);
   const { rows } = await pool.query(
     `SELECT id, order_id, player_id, create_at, bet_money, money, status, match, bet, item, odds, raw
-     FROM orders
+     FROM ${financialOrdersRelation()}
      WHERE user_id = $1
        AND provider = 'PredictFun'
        AND create_at >= $2 AND create_at < $3
@@ -190,7 +191,7 @@ async function applyFee(pool, row, fee) {
     ...(fee.usdt != null ? { pfFeeUsdt: fee.usdt } : {}),
   };
   await pool.query(
-    `UPDATE orders SET raw = $2::jsonb WHERE id = $1`,
+    `UPDATE ${financialOrdersRelation()} SET raw = $2::jsonb WHERE id = $1`,
     [row.id, JSON.stringify(next)],
   );
 }

@@ -92,7 +92,7 @@ async function manualSequence(deployed, cancelFirst) {
     executeManualOrder: (...args) => fok.executeManualFok(args[0], args[1], args[3]),
   };
   picker = load(modules.picker, () => dependencies, deployed);
-  fok = deployed ? null : load(modules.fok, () => dependencies);
+  fok = load(modules.fok, () => dependencies, deployed);
   const entry = load(modules.manual, () => dependencies, deployed);
   const run = () => entry.runManualBet({ id: 1, title: "match", liveRound: 0 }, { id: 2, round: 1 }, { type: "Polymarket", getOdds: () => 2 }, "Home", { setMessage: () => {} });
   if (cancelFirst)
@@ -198,7 +198,7 @@ const findings = [
     return { id: `order-transport-${kind}`, evidence, passed: evidence.equal };
   })),
 ];
-const report = { version: snapshot.version, scope: "Actual manual entry + actual account picker and transport router; offline mocked external boundaries; no real submission or database mutation.", passed: findings.every(item => item.passed), findings };
+const report = { captureId: snapshot.captureId, frontendVersion: snapshot.frontendVersion, backendVersion: snapshot.backendVersion, immutableBaseline: snapshot.immutableBaseline, scope: "Actual manual entry + actual account picker and transport router; offline mocked external boundaries; no real submission or database mutation.", passed: findings.every(item => item.passed), findings };
 fs.writeFileSync("output/fok-runtime-boundary-audit.json", `${JSON.stringify(report, null, 2)}\n`);
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 if (!report.passed)

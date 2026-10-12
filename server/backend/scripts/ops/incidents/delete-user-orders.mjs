@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * Delete all orders for a user.
  * Usage: node scripts/delete-user-orders.mjs <userName> [--dry-run]
@@ -29,7 +30,7 @@ if (!user) {
 
 const uid = user.id;
 const { rows: countRows } = await pool.query(
-  `SELECT COUNT(*)::int AS n FROM orders WHERE user_id = $1`,
+  `SELECT COUNT(*)::int AS n FROM ${financialOrdersRelation()} WHERE user_id = $1`,
   [uid],
 );
 const n = countRows[0]?.n ?? 0;
@@ -47,11 +48,11 @@ if (n === 0) {
   process.exit(0);
 }
 
-const res = await pool.query(`DELETE FROM orders WHERE user_id = $1`, [uid]);
+const res = await pool.query(`DELETE FROM ${financialOrdersRelation()} WHERE user_id = $1`, [uid]);
 console.log(`deleted ${res.rowCount} rows`);
 
 const { rows: left } = await pool.query(
-  `SELECT COUNT(*)::int AS n FROM orders WHERE user_id = $1`,
+  `SELECT COUNT(*)::int AS n FROM ${financialOrdersRelation()} WHERE user_id = $1`,
   [uid],
 );
 console.log(`remaining: ${left[0]?.n ?? 0}`);

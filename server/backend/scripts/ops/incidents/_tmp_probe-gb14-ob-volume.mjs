@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 
 loadChangmenEnv();
@@ -16,7 +17,7 @@ const { rows } = await pool.query(
           COUNT(*)::int AS n,
           ROUND(AVG(o.bet_money)::numeric,1) AS avg_stake,
           to_timestamp(MAX(o.create_at)/1000.0) AS last_ts
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN players pl ON pl.id = o.player_id
    JOIN users u ON u.id = o.user_id
    WHERE u.user_name ILIKE ANY(ARRAY['gb12','gb13','gb14'])

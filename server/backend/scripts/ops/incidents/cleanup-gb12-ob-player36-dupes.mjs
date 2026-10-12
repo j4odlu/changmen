@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * GB12 OB：删除 player 36（旧九游）上与 player 23 重复的订单副本。
  *
@@ -19,6 +20,7 @@ loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 await initDatabaseUrl();
 const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
 if (!pool) {
   console.error("DATABASE_URL 未配置");
   process.exit(1);
@@ -37,12 +39,12 @@ if (!userId) {
 const preview = await pool.query(
   `SELECT o.id, o.order_id, o.player_id, o.link, o.status, o.bet_money, o.match,
           to_char(to_timestamp(o.create_at / 1000.0), 'YYYY-MM-DD HH24:MI:SS') AS create_at_local
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    WHERE o.user_id = $1::uuid
      AND o.provider = $2
      AND o.player_id = $3
      AND EXISTS (
-       SELECT 1 FROM orders k
+       SELECT 1 FROM ${financialOrdersRelation("k")}
        WHERE k.user_id = o.user_id
          AND k.player_id = $4
          AND k.order_id = o.order_id
@@ -54,12 +56,12 @@ const preview = await pool.query(
 
 const orphan36 = await pool.query(
   `SELECT COUNT(*)::int AS n
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    WHERE o.user_id = $1::uuid
      AND o.player_id = $2
      AND o.provider = $3
      AND NOT EXISTS (
-       SELECT 1 FROM orders k
+       SELECT 1 FROM ${financialOrdersRelation("k")}
        WHERE k.user_id = o.user_id
          AND k.player_id = $4
          AND k.order_id = o.order_id
@@ -91,16 +93,17 @@ if (dryRun) {
 
 const ids = preview.rows.map((r) => Number(r.id)).filter((n) => Number.isFinite(n) && n > 0);
 const client = await pool.connect();
+
 try {
   await client.query("BEGIN");
 
   await client.query(`DROP TABLE IF EXISTS ${BACKUP_TABLE}`);
   const backup = await client.query(
-    `CREATE TABLE ${BACKUP_TABLE} AS SELECT * FROM orders WHERE id = ANY($1::bigint[])`,
+    `CREATE TABLE ${BACKUP_TABLE} AS SELECT * FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`,
     [ids],
   );
 
-  const del = await client.query(`DELETE FROM orders WHERE id = ANY($1::bigint[])`, [ids]);
+  const del = await client.query(`DELETE FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`, [ids]);
 
   await client.query("COMMIT");
   console.log(`backup table: ${BACKUP_TABLE} (${backup.rowCount ?? ids.length} rows)`);

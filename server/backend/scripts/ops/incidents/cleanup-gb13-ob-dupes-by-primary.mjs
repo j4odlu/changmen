@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * GB13 OB 重复：场馆 506 时用主账号规则删副本（仅重复 order_id 组）。
  * - 79(5-OD) > 83(OD-好博)
@@ -24,6 +25,7 @@ loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 await initDatabaseUrl();
 const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
 if (!pool) {
   console.error("DATABASE_URL 未配置");
   process.exit(1);
@@ -42,7 +44,7 @@ if (!userId) {
 const orderIds = [...KEEP_OWNER.keys()];
 const { rows: dupRows } = await pool.query(
   `SELECT o.id, o.order_id, o.player_id, pl.platform_name, pl.player_name
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN players pl ON pl.id = o.player_id
    WHERE o.user_id = $1::uuid AND o.provider = 'OB' AND o.order_id = ANY($2::text[])
    ORDER BY o.order_id, o.player_id`,
@@ -89,10 +91,10 @@ for (const d of toDelete) {
 
 const nonDup = await pool.query(
   `SELECT COUNT(*)::int AS n
-     FROM orders o
+     FROM ${financialOrdersRelation("o")}
      WHERE o.user_id = $1::uuid AND o.provider = 'OB'
        AND (o.user_id, o.provider, o.order_id) NOT IN (
-         SELECT user_id, provider, order_id FROM orders
+         SELECT user_id, provider, order_id FROM ${financialOrdersRelation()}
          WHERE user_id = $1::uuid AND provider = 'OB'
          GROUP BY user_id, provider, order_id HAVING COUNT(*) > 1
        )`,
@@ -109,14 +111,15 @@ if (dryRun) {
 
 const deleteIds = toDelete.map(d => d.id);
 const client = await pool.connect();
+
 try {
   await client.query("BEGIN");
   await client.query(`DROP TABLE IF EXISTS ${BACKUP_TABLE}`);
   await client.query(
-    `CREATE TABLE ${BACKUP_TABLE} AS SELECT * FROM orders WHERE id = ANY($1::bigint[])`,
+    `CREATE TABLE ${BACKUP_TABLE} AS SELECT * FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`,
     [deleteIds],
   );
-  const del = await client.query(`DELETE FROM orders WHERE id = ANY($1::bigint[])`, [deleteIds]);
+  const del = await client.query(`DELETE FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`, [deleteIds]);
   await client.query("COMMIT");
   console.log(`\n已删 ${del.rowCount ?? 0} 条，备份 ${BACKUP_TABLE}`);
 }

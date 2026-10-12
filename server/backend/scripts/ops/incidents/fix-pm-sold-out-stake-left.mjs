@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 清 PM 卖光买单残留 pmStakeUsdc（巡检 pm_sold_out_but_stake_left）
  *
@@ -80,7 +81,7 @@ async function main() {
   const wantUser = args.userName.toLowerCase();
   const { rows } = await pool.query(`
     SELECT id, user_id, player_id, order_id, match, item, money, bet_money, status, create_at, raw
-    FROM orders
+    FROM ${financialOrdersRelation()}
     WHERE LOWER(COALESCE(provider, '')) = 'polymarket'
       AND LOWER(COALESCE(raw->>'pmSide', 'buy')) <> 'sell'
   `);
@@ -155,7 +156,7 @@ async function main() {
   for (const i of issues) {
     const nextRaw = { ...i.raw, pmStakeUsdc: 0 };
     await pool.query(
-      `UPDATE orders SET raw = $2::jsonb WHERE id = $1`,
+      `UPDATE ${financialOrdersRelation()} SET raw = $2::jsonb WHERE id = $1`,
       [i.id, JSON.stringify(nextRaw)],
     );
     updated += 1;

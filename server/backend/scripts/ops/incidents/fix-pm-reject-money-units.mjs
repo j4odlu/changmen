@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 回填 PM Reject 金额单位错误：
  * - bug：persist 把 checkBetting 后的 USDC 写进 bet_money，再被 ÷汇率当成 pmStakeUsdc
@@ -161,7 +162,7 @@ async function main() {
   const wantUser = args.userName.toLowerCase();
   const { rows } = await pool.query(`
     SELECT id, user_id, order_id, bet_money, money, odds, status, raw, create_at
-    FROM orders
+    FROM ${financialOrdersRelation()}
     WHERE provider = 'Polymarket'
       AND lower(status) = 'reject'
     ORDER BY create_at
@@ -207,7 +208,7 @@ async function main() {
   let updated = 0;
   for (const c of list) {
     const r = await pool.query(
-      `UPDATE orders
+      `UPDATE ${financialOrdersRelation()}
        SET bet_money = $1,
            money = 0,
            raw = $2::jsonb

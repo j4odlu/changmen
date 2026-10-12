@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * 扫描 / 修复 PM 买单卖出盈亏双计：
  * - 0.99 纸面 win money + 卖出 PnL 累加 → money ≈ 2× 真实卖出盈亏
@@ -179,6 +180,7 @@ async function main() {
 
   initDatabaseUrl();
   const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
   if (!pool) {
     console.error("No DATABASE_URL / pool");
     process.exit(1);
@@ -211,7 +213,7 @@ async function main() {
   const sql = `
     SELECT order_id, user_id, player_id, provider, link, match, bet, item,
            money, bet_money, status, create_at, raw
-    FROM orders
+    FROM ${financialOrdersRelation()}
     WHERE ${filters.join(" AND ")}
     ORDER BY create_at DESC
   `;
@@ -285,12 +287,13 @@ async function main() {
   }
 
   const client = await pool.connect();
+
   try {
     await client.query("BEGIN");
     let updated = 0;
     for (const item of toFix) {
       const { rows: found } = await client.query(
-        `SELECT order_id, money, raw FROM orders WHERE order_id = $1 FOR UPDATE`,
+        `SELECT order_id, money, raw FROM ${financialOrdersRelation()} WHERE order_id = $1 FOR UPDATE`,
         [item.orderId],
       );
       const row = found[0];
@@ -312,7 +315,7 @@ async function main() {
           raw.pmRealizedPnlUsdc = Math.round(pnlSum * 10000) / 10000;
       }
       await client.query(
-        `UPDATE orders SET money = $2, raw = $3::jsonb WHERE order_id = $1`,
+        `UPDATE ${financialOrdersRelation()} SET money = $2, raw = $3::jsonb WHERE order_id = $1`,
         [item.orderId, item.suggestedMoneyCny, JSON.stringify(raw)],
       );
       updated += 1;

@@ -1,7 +1,7 @@
 /**
  * 管理端「订单和用户维护」只读诊断：共用投注账号、order_id 重复。
  */
-import { ensurePgPoolReady, getPgPool } from "@changmen/db";
+import { ensurePgPoolReady, financialOrdersRelation, getPgPool } from "@changmen/db";
 
 function dayKeyShanghai(ms) {
   const n = Number(ms) || 0;
@@ -65,7 +65,7 @@ export async function listSharedVenueAccounts() {
       (p.deleted_at IS NOT NULL) AS deleted,
       p.created_at,
       p.deleted_at,
-      (SELECT COUNT(*)::int FROM orders o WHERE o.player_id = p.id) AS order_count
+      (SELECT COUNT(*)::int FROM ${financialOrdersRelation("o")} WHERE o.player_id = p.id) AS order_count
     FROM players p
     JOIN profiles pr ON pr.id = p.owner_user_id
     JOIN multi m ON m.venue_account_key = p.venue_account_key
@@ -152,7 +152,7 @@ export async function listDuplicateOrderIds() {
            array_agg(o.money ORDER BY o.id) AS moneys,
            MIN(o.create_at) AS min_at,
            MAX(o.create_at) AS max_at
-    FROM orders o
+    FROM ${financialOrdersRelation("o")}
     LEFT JOIN profiles pr ON pr.id = o.user_id
     WHERE o.order_id IS NOT NULL AND trim(o.order_id) <> ''
     GROUP BY lower(o.order_id), o.user_id, pr.user_name
@@ -175,7 +175,7 @@ export async function listDuplicateOrderIds() {
            array_agg(o.money ORDER BY o.id) AS moneys,
            MIN(o.create_at) AS min_at,
            MAX(o.create_at) AS max_at
-    FROM orders o
+    FROM ${financialOrdersRelation("o")}
     LEFT JOIN profiles pr ON pr.id = o.user_id
     WHERE o.order_id IS NOT NULL AND trim(o.order_id) <> ''
     GROUP BY lower(o.order_id)

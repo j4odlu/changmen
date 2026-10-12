@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 
 loadChangmenEnv();
@@ -48,7 +49,7 @@ const { rows: since } = await pool.query(
   `SELECT pl.id, pl.platform_name, pl.player_name, COUNT(*)::int AS n,
           MAX(o.create_at) AS last_at,
           to_timestamp(MAX(o.create_at)/1000.0) AS last_ts
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN players pl ON pl.id = o.player_id
    WHERE o.user_id = $1::uuid
      AND UPPER(COALESCE(pl.provider,'')) = 'OB'
@@ -62,7 +63,7 @@ for (const r of since) console.log(r);
 
 const { rows: byProv } = await pool.query(
   `SELECT UPPER(COALESCE(pl.provider,'')) AS prov, COUNT(*)::int AS n
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN players pl ON pl.id = o.player_id
    WHERE o.user_id = $1::uuid AND o.create_at >= $2
    GROUP BY 1 ORDER BY n DESC`,

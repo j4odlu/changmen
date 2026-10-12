@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * 修复：closed 买单 money=0，但关联卖单 raw.pmRealizedPnlUsdc 非 0。
  *   node scripts/ops/migrations/restore-pm-buy-money-from-sell-pnl.mjs --dry-run
@@ -13,12 +14,13 @@ const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 const dryRun = !process.argv.includes("--execute");
 initDatabaseUrl();
 const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
 
 const { rows } = await pool.query(`
   SELECT b.order_id AS buy_id, b.money AS buy_money, b.raw AS buy_raw,
          s.order_id AS sell_id, s.raw AS sell_raw
-  FROM orders b
-  JOIN orders s
+  FROM ${financialOrdersRelation("b")}
+  JOIN ${financialOrdersRelation("s")}
     ON LOWER(s.raw->>'pmBuyOrderId') = LOWER(b.order_id)
    AND s.raw->>'pmSide' = 'sell'
    AND LOWER(TRIM(s.provider)) = 'polymarket'
@@ -51,11 +53,12 @@ if (dryRun) {
 }
 
 const client = await pool.connect();
+
 try {
   await client.query("BEGIN");
   for (const item of plan) {
     const { rows: buys } = await client.query(
-      `SELECT order_id, money, raw FROM orders WHERE order_id = $1 FOR UPDATE`,
+      `SELECT order_id, money, raw FROM ${financialOrdersRelation()} WHERE order_id = $1 FOR UPDATE`,
       [item.buyId],
     );
     const buy = buys[0];
@@ -65,7 +68,7 @@ try {
     raw.money = item.restoreMoney;
     raw.pmBuyMoneyRestoredFromSellPnlUsdc = item.pnlUsdc;
     await client.query(
-      `UPDATE orders SET money = $2, raw = $3::jsonb WHERE order_id = $1`,
+      `UPDATE ${financialOrdersRelation()} SET money = $2, raw = $3::jsonb WHERE order_id = $1`,
       [item.buyId, item.restoreMoney, JSON.stringify(raw)],
     );
   }

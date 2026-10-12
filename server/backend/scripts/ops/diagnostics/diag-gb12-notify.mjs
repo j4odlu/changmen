@@ -1,3 +1,4 @@
+import { financialOrdersRelation } from "@changmen/db";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,7 +43,7 @@ console.log("user:", userRes.rows[0]);
 
 const orders = await pool.query(
   `SELECT order_id, player_id, link, provider, match, bet, item, status, create_at
-   FROM orders WHERE user_id = $1 ORDER BY create_at DESC LIMIT 40`,
+   FROM ${financialOrdersRelation()} WHERE user_id = $1 ORDER BY create_at DESC LIMIT 40`,
   [userId],
 );
 console.log("recent orders:", orders.rows.length);
@@ -105,7 +106,7 @@ console.log({ insert_would_notify: insertWouldNotify, insert_blocked: insertBloc
 
 const groups = await pool.query(
   `SELECT link::text, count(*)::int as cnt, max(create_at) as max_ca
-   FROM orders WHERE user_id = $1 AND create_at >= $2
+   FROM ${financialOrdersRelation()} WHERE user_id = $1 AND create_at >= $2
    GROUP BY link ORDER BY max(create_at) DESC LIMIT 15`,
   [userId, now - 24 * 3600 * 1000],
 );

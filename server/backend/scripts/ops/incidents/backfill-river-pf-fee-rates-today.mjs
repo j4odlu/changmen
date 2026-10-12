@@ -1,3 +1,4 @@
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 一次性：RIVER 今日 PredictFun 订单，按 pfMarketId 拉官方 feeRateBps 写回 orders.raw
  *
@@ -49,7 +50,7 @@ async function fetchRiverPfOrdersToday(pool, userId, dateKey) {
   const { start, end } = localDayBounds(dateKey);
   const { rows } = await pool.query(
     `SELECT id, order_id, create_at, status, match, raw
-     FROM orders
+     FROM ${financialOrdersRelation()}
      WHERE user_id = $1
        AND provider = 'PredictFun'
        AND create_at >= $2 AND create_at < $3
@@ -115,7 +116,7 @@ async function main() {
     console.log(`  SET  #${row.id} pfFeeRateBps ${prev ?? "—"} → ${bps}`);
     if (APPLY) {
       const next = { ...raw, pfFeeRateBps: bps };
-      await pool.query(`UPDATE orders SET raw = $2::jsonb WHERE id = $1`, [
+      await pool.query(`UPDATE ${financialOrdersRelation()} SET raw = $2::jsonb WHERE id = $1`, [
         row.id,
         JSON.stringify(next),
       ]);

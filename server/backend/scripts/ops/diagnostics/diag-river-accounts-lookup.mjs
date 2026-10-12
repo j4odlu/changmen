@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 import { ensurePgPoolReady } from "@changmen/db";
 
@@ -26,7 +27,7 @@ for (const row of profiles) {
 
 const { rows: riverOrders } = await pool.query(
   `SELECT DISTINCT o.player_id, o.provider, COUNT(*)::int AS n
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN users u ON u.id = o.user_id
    WHERE u.user_name ILIKE 'River'
    GROUP BY o.player_id, o.provider ORDER BY o.player_id`,

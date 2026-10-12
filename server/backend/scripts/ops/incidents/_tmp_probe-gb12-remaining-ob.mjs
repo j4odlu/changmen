@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 
 loadChangmenEnv();
@@ -40,7 +41,7 @@ for (const r of softOb) console.log(r);
 const { rows: orphanOrders } = await pool.query(
   `SELECT o.player_id, pl.provider, pl.platform_name, pl.player_name,
           u.user_name AS player_owner, COUNT(*)::int AS n
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    JOIN players pl ON pl.id = o.player_id
    LEFT JOIN users u ON u.id = pl.owner_user_id
    WHERE o.user_id = $1::uuid

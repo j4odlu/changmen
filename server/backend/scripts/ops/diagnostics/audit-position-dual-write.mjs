@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * Phase 0 — 仓位双写覆盖率只读巡检（不写库）
  *
@@ -128,7 +129,7 @@ async function main() {
 
   const { rows } = await pool.query(
     `SELECT id, user_id, player_id, order_id, provider, money, bet_money, create_at, raw
-     FROM orders
+     FROM ${financialOrdersRelation()}
      WHERE create_at >= $1
        AND provider IN ('Polymarket', 'PredictFun')
        ${userClause}
@@ -178,7 +179,7 @@ async function main() {
     if (!parent) {
       // 父仓位可能在窗口外：再查一次全库该 order_id（只读）
       const { rows: found } = await pool.query(
-        `SELECT order_id, raw FROM orders
+        `SELECT order_id, raw FROM ${financialOrdersRelation()}
          WHERE user_id = $1::uuid AND provider = $2
            AND lower(order_id) = $3
          LIMIT 1`,

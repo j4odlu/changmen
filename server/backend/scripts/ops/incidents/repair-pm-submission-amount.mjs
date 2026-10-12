@@ -1,3 +1,4 @@
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /** [changmen 扩展] 单笔拒单申请金额修复；默认只读，原始 POST 为唯一证据。 */
 import fs from "node:fs";
 import path from "node:path";
@@ -35,13 +36,15 @@ async function main() {
   const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
   await initDatabaseUrl();
   const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
   if (!pool) throw new Error("数据库不可用");
   const client = await pool.connect();
+
   try {
     await client.query(args.includes("--execute") ? "BEGIN" : "BEGIN READ ONLY");
     await client.query("SET LOCAL statement_timeout = '15s'");
     const { rows } = await client.query(
-      `SELECT * FROM orders WHERE order_id=$1 AND player_id=$2${args.includes("--execute") ? " FOR UPDATE" : ""}`,
+      `SELECT * FROM ${financialOrdersRelation()} WHERE order_id=$1 AND player_id=$2${args.includes("--execute") ? " FOR UPDATE" : ""}`,
       [orderId, playerId]);
     if (rows.length !== 1) throw new Error("必须唯一命中目标订单");
     const row = rows[0];
@@ -60,7 +63,7 @@ async function main() {
       fs.mkdirSync(backupDir, { recursive: true });
       const backup = path.join(backupDir, `${orderId}-${Date.now()}.json`);
       fs.writeFileSync(backup, JSON.stringify({ before: row, after: plan }, null, 2), { flag: "wx", mode: 0o600 });
-      const update = await client.query("UPDATE orders SET bet_money=$1, raw=$2::jsonb WHERE id=$3 AND bet_money=$4 RETURNING bet_money,raw->>'pmStakeUsdc' AS stake",
+      const update = await client.query(`UPDATE ${financialOrdersRelation()} SET bet_money=$1, raw=$2::jsonb WHERE id=$3 AND bet_money=$4 RETURNING bet_money,raw->>'pmStakeUsdc' AS stake`,
         [plan.betMoney, JSON.stringify(plan.raw), row.id, expected]);
       if (update.rowCount !== 1 || Math.abs(Number(update.rows[0].bet_money) - plan.betMoney) > 0.000001)
         throw new Error("写入结果不符合计划，回滚");

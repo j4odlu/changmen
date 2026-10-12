@@ -1,47 +1,57 @@
-import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import fs from "node:fs";
-
-// [changmen 扩展] A release verdict includes transport/state boundaries. Core
-// parity alone cannot authorize publication. All VPS access below is read-only.
-assert(process.env.npm_execpath, "Run with npm run check:fok-release");
-fs.mkdirSync("output", { recursive: true });
-const phases = [
-  ["capture", ["scripts/verification/capture-vps-fok-baseline.mjs"]],
-  ["release-files", ["scripts/verification/audit-fok-release-files.mjs"]],
-  ["core", [process.env.npm_execpath, "run", "check:fok-vps"]],
-  ["public-entries", ["scripts/verification/verify-fok-public-entries.mjs"]],
-  ["checks", [process.env.npm_execpath, "run", "test:checks"]],
-  ["frontend", [process.env.npm_execpath, "run", "test:frontend"]],
-  ["backend", [process.env.npm_execpath, "run", "test", "--workspace=@changmen/backend"]],
-  ["order-business", [process.env.npm_execpath, "exec", "--", "vitest", "run", "server/backend/core/orderModes", "server/backend/core/account/order", "server/backend/core/account/order_store.test.mjs", "server/backend/core/account/order_store_link.test.mjs", "server/backend/core/account/report_service.test.mjs", "server/backend/core/account/player_ownership.test.mjs", "server/db/rds/orders_store.test.mjs", "server/db/rds/orderModes"]],
-  ["build", [process.env.npm_execpath, "run", "app:build"]],
-  ["runtime-boundaries", ["scripts/verification/audit-fok-runtime-boundaries.mjs"]],
+// [changmen 扩展] 第二阶段独立候选的完整保护入口。只读线上代码/版本；无数据库、交易或部署调用。
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {assertCaptureEvidence} from './release-provenance.mjs';
+assert(process.env.npm_execpath,'Run with npm run check:fok-release');
+assert.equal(process.argv.length,2,'This candidate accepts no alternate release plan or baseline');
+fs.mkdirSync('output/orders-phase2-protection',{recursive:true});
+const npm=(...args)=>[process.env.npm_execpath,...args];
+const vitest=(...args)=>npm('exec','--','vitest',...args);
+const phases=[
+  ['capture',['scripts/verification/capture-vps-fok-baseline.mjs']],
+  ['release-files',['scripts/verification/audit-fok-release-files.mjs']],
+  ['candidate-scope',['scripts/verification/verify-orders-phase2-release.mjs']],
+  ['fok-core',npm('run','check:fok-parity')],
+  ['vps-core',npm('run','check:fok-vps')],
+  ['public-entries',['scripts/verification/verify-fok-public-entries.mjs']],
+  ['protection-negative',vitest('run','scripts/verification','--maxWorkers=4','--reporter=json','--outputFile=output/orders-phase2-protection/negative.json')],
+  ['checks',npm('run','test:checks')],
+  ['router-compile',npm('run','compile:router','--workspace=@changmen/backend')],
+  ['backend',npm('run','test:backend','--','--force')],
+  ['order-business',vitest('run','server/db/rds','server/backend/core/account','server/backend/core/orderModes','--exclude','server/backend/core/account/user_login_meta.test.mjs','--exclude','server/backend/core/account/user_presence.test.mjs','--reporter=json','--outputFile=output/orders-phase2-protection/order-business.json')],
+  ['compatibility',vitest('run','server/db/rds/orders_execution_compat.test.mjs','server/backend/core/account/admin_maintenance.ordersCompat.test.mjs','scripts/verification/orders-consumer-boundary.test.mjs','scripts/migrations/pm-gtc-orders/plan.test.mjs','scripts/migrations/pm-gtc-orders/phase2-schema.test.mjs','scripts/migrations/pm-gtc-orders/backfill.test.mjs','scripts/migrations/pm-gtc-orders/integration/preparation.test.mjs','--reporter=json','--outputFile=output/orders-phase2-protection/compatibility.json')],
+  ['frontend-typecheck',npm('run','typecheck:frontend')],
+  ['frontend',vitest('run','--maxWorkers=1','--reporter=json','--outputFile=../../output/orders-phase2-protection/frontend.json'),'client/web'],
+  ['build',npm('run','app:build')],
+  ['node-tests',['--test','server/backend/core/account/user_login_meta.test.mjs','server/backend/core/account/user_presence.test.mjs','scripts/deploy/classify-deploy-scope.test.mjs','scripts/deploy/workflows.test.mjs','scripts/deploy/deploy-plan.test.mjs','scripts/deploy/compare-deployed-files.test.mjs','scripts/deploy/wait-for-backend.test.mjs']],
+  ['runtime-boundaries',['scripts/verification/audit-fok-runtime-boundaries.mjs']],
+  ['release-stability',['scripts/verification/verify-fok-release-stability.mjs']],
 ];
-const results = [];
-for (const [phase, args] of phases) {
-  const started = Date.now();
-  const result = spawnSync(process.execPath, args, { encoding: "utf8", timeout: 300000, maxBuffer: 20 * 1024 * 1024 });
-  const log = `output/fok-release-${phase}.log`;
-  fs.writeFileSync(log, `${result.stdout ?? ""}${result.stderr ?? ""}${result.error ? `\n${result.error.message}\n` : ""}`);
-  results.push({ phase, passed: result.status === 0, exitCode: result.status, log, elapsedMs: Date.now() - started });
-  process.stdout.write(`${phase}: ${result.status === 0 ? "PASS" : "FAIL"} (${log})\n`);
-  // A failed provenance capture cannot be replaced with an earlier snapshot.
-  if (result.status !== 0 && ["capture", "release-files"].includes(phase))
-    break;
+const results=[];
+for(const [phase,args,cwd] of phases) {
+  const started=Date.now();const result=spawnSync(process.execPath,args,{cwd:cwd?path.resolve(cwd):process.cwd(),encoding:'utf8',timeout:300000,maxBuffer:30*1024*1024,windowsHide:true});
+  const log=`output/orders-phase2-protection/${phase}.log`;
+  fs.writeFileSync(log,(result.stdout??'')+(result.stderr??'')+(result.error?'\n'+result.error.message:''));
+  results.push({phase,passed:result.status===0,exitCode:result.status,elapsedMs:Date.now()-started,log});
+  console.log(`${phase}: ${result.status===0?'PASS':'FAIL'} (${log})`);
+  if(result.status!==0&&['capture','release-files'].includes(phase))break;
 }
-const evidence = results.some(row => row.phase === "runtime-boundaries")
-  ? JSON.parse(fs.readFileSync("output/fok-runtime-boundary-audit.json", "utf8"))
-  : null;
-const report = {
-  checkedAt: new Date().toISOString(),
-  passed: results.length === phases.length && results.every(row => row.passed),
-  baseline: evidence?.version ?? null,
-  results,
-  failedBoundaries: evidence?.findings.filter(row => !row.passed).map(row => row.id) ?? [],
-  scope: "Current workspace compared to a freshly captured VPS release. No commit, push, deployment, real bet, sell, cancel or database mutation. New GTC-specific UI is an intentional addition, not byte-for-byte VPS UI parity.",
-};
-fs.writeFileSync("output/fok-release-verdict.json", `${JSON.stringify(report, null, 2)}\n`);
-process.stdout.write(`FOK release verdict: ${report.passed ? "PASS" : "FAIL"}\n`);
-if (!report.passed)
-  process.exitCode = 1;
+const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
+const capture=results.find(row=>row.phase==='capture')?.passed?read('output/vps-fok-baseline.json'):null;
+const captureReport=capture?read('output/vps-fok-release-verification.json'):null;
+const runtime=results.find(row=>row.phase==='runtime-boundaries')?.passed?read('output/fok-runtime-boundary-audit.json'):null;
+const publicEntry=results.find(row=>row.phase==='public-entries')?.passed?read('output/fok-public-entry-comparison.json'):null;
+let evidenceConsistent=false;
+if(capture&&runtime&&publicEntry&&results.find(row=>row.phase==='release-stability')?.passed) {
+  assertCaptureEvidence(capture,captureReport);
+  for(const report of [runtime,publicEntry])for(const key of ['captureId','frontendVersion','backendVersion','immutableBaseline'])assert.equal(report[key],capture[key],`fresh evidence mismatch: ${key}`);
+  evidenceConsistent=true;
+}
+const passed=results.length===phases.length&&results.every(row=>row.passed)&&evidenceConsistent;
+const report={checkedAt:new Date().toISOString(),passed,fullReleaseAccepted:passed,releaseScope:'orders-phase2-compatibility-backend-only-default-off',immutableBaselines:['219535c8','75b1efac66625e5f2bc9884a965b244bfaf337ed'],captureId:capture?.captureId,frontendVersion:capture?.frontendVersion,backendVersion:capture?.backendVersion,results,evidenceConsistent,oldControlSource:'pm_gtc_executions',compatDefault:'off',productionDatabaseConnected:false,productionWrites:false,realTrading:false,committed:false,pushed:false,deployed:false,failedBoundaries:results.filter(row=>!row.passed).map(row=>row.phase)};
+fs.writeFileSync('output/fok-release-verdict.json',JSON.stringify(report,null,2));
+fs.writeFileSync('output/orders-phase2-protection/release-verdict.json',JSON.stringify(report,null,2));
+console.log(`FOK/VPS complete release protection: ${passed?'PASS':'FAIL'}`);
+if(!passed)process.exitCode=1;

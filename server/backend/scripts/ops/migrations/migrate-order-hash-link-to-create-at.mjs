@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 将旧 changmen hash 占位 link 批量改为 create_at（下单时间 ms），便于侧栏按 Link 降序排序。
  *
@@ -26,13 +27,13 @@ const WHERE_HASH = `
 `;
 
 const countRes = await pool.query(
-  `SELECT count(*)::int AS cnt FROM orders WHERE ${WHERE_HASH}`,
+  `SELECT count(*)::int AS cnt FROM ${financialOrdersRelation()} WHERE ${WHERE_HASH}`,
 );
 const toUpdate = countRes.rows[0]?.cnt ?? 0;
 
 const sampleRes = await pool.query(
   `SELECT user_id, order_id, player_id, provider, link, create_at
-   FROM orders
+   FROM ${financialOrdersRelation()}
    WHERE ${WHERE_HASH}
    ORDER BY create_at DESC
    LIMIT 5`,
@@ -66,20 +67,20 @@ if (toUpdate === 0) {
 }
 
 const upd = await pool.query(
-  `UPDATE orders
+  `UPDATE ${financialOrdersRelation()}
    SET link = create_at
    WHERE ${WHERE_HASH}`,
 );
 console.log({ updated: upd.rowCount });
 
 const remainRes = await pool.query(
-  `SELECT count(*)::int AS cnt FROM orders WHERE ${WHERE_HASH}`,
+  `SELECT count(*)::int AS cnt FROM ${financialOrdersRelation()} WHERE ${WHERE_HASH}`,
 );
 console.log({ hash_placeholder_remaining: remainRes.rows[0]?.cnt ?? 0 });
 
 const afterRes = await pool.query(
   `SELECT user_id, order_id, player_id, provider, link, create_at
-   FROM orders
+   FROM ${financialOrdersRelation()}
    WHERE link = create_at AND create_at >= ${ARB_LINK_MIN}
    ORDER BY create_at DESC
    LIMIT 5`,

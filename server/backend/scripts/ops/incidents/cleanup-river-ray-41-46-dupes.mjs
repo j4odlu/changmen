@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * River：删除软删 player 41 上与活跃 player 46 重复的 RAY 订单（5 组）。
  *
@@ -18,6 +19,7 @@ loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 await initDatabaseUrl();
 const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
 if (!pool) {
   console.error("DATABASE_URL 未配置");
   process.exit(1);
@@ -53,12 +55,12 @@ if (!fromPlayer.length || !fromPlayer[0].deleted_at) {
 
 const toDelete = await pool.query(
   `SELECT o.id, o.order_id, o.player_id, o.link, o.match, o.bet_money
-   FROM orders o
+   FROM ${financialOrdersRelation("o")}
    WHERE o.user_id = $1::uuid
      AND o.provider = $2
      AND o.player_id = $3
      AND EXISTS (
-       SELECT 1 FROM orders k
+       SELECT 1 FROM ${financialOrdersRelation("k")}
        JOIN players pk ON pk.id = k.player_id
        WHERE k.user_id = o.user_id
          AND k.order_id = o.order_id
@@ -89,14 +91,15 @@ if (dryRun) {
 
 const deleteIds = toDelete.rows.map(r => Number(r.id));
 const client = await pool.connect();
+
 try {
   await client.query("BEGIN");
   await client.query(`DROP TABLE IF EXISTS ${BACKUP_TABLE}`);
   await client.query(
-    `CREATE TABLE ${BACKUP_TABLE} AS SELECT * FROM orders WHERE id = ANY($1::bigint[])`,
+    `CREATE TABLE ${BACKUP_TABLE} AS SELECT * FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`,
     [deleteIds],
   );
-  const del = await client.query(`DELETE FROM orders WHERE id = ANY($1::bigint[])`, [deleteIds]);
+  const del = await client.query(`DELETE FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`, [deleteIds]);
   await client.query("COMMIT");
   console.log(`\n已删 ${del.rowCount ?? 0} 条，备份 ${BACKUP_TABLE}`);
 }

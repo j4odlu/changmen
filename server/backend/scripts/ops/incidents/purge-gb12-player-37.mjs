@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * 硬删除 GB12 已废弃 OB 操盘账号 player 37（米兰/5，已由 13 接管）。
  * 前置：orders/money_logs 无引用。
@@ -18,6 +19,7 @@ loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 await initDatabaseUrl();
 const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
 if (!pool) {
   console.error("DATABASE_URL 未配置");
   process.exit(1);
@@ -52,7 +54,7 @@ for (const p of players) {
 }
 
 const { rows: refs } = await pool.query(
-  `SELECT 'orders' AS src, COUNT(*)::int AS n FROM orders WHERE player_id = ANY($1::bigint[])
+  `SELECT 'orders' AS src, COUNT(*)::int AS n FROM ${financialOrdersRelation()} WHERE player_id = ANY($1::bigint[])
    UNION ALL
    SELECT 'money_logs', COUNT(*)::int FROM money_logs WHERE player_id = ANY($1::bigint[])`,
   [PLAYER_IDS],
@@ -77,6 +79,7 @@ if (dryRun) {
 }
 
 const client = await pool.connect();
+
 try {
   await client.query("BEGIN");
   await client.query(`DROP TABLE IF EXISTS ${BACKUP_TABLE}`);

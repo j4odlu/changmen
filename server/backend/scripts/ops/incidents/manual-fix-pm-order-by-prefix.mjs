@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 按 order_id 前缀手动补结算单笔 PM 订单（Gamma raw 路径，无需 CLOB trade）
  *
@@ -84,7 +85,7 @@ if (!pool) {
 const params = [`${args.orderPrefix}%`];
 let sql = `
   SELECT o.*, p.user_name, p.accounts
-  FROM orders o
+  FROM ${financialOrdersRelation("o")}
   JOIN profiles p ON p.id = o.user_id
   WHERE LOWER(o.provider) = 'polymarket'
     AND LOWER(o.order_id) LIKE $1

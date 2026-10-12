@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 从场馆 API 拉取指定用户活跃 player 某月订单，经 saveOrder 写入 RDS。
  *
@@ -510,7 +511,7 @@ async function loadActivePlayers(pool, userName, playerIdFilter) {
 async function countRdsOrdersInMonth(pool, userId, playerId, range) {
   const { rows } = await pool.query(
     `SELECT COUNT(*)::int AS n
-     FROM orders
+     FROM ${financialOrdersRelation()}
      WHERE user_id = $1::uuid
        AND player_id = $2
        AND create_at >= $3

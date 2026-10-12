@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * Delete Polymarket sell orders (raw.pmSide = 'sell' only).
  * Usage: node scripts/delete-polymarket-sell-orders.mjs [--dry-run] [--player-id=N] [--user=NAME]
@@ -48,7 +49,7 @@ if (Number.isFinite(playerId) && playerId > 0) {
 }
 
 const { rows: preview } = await pool.query(
-  `SELECT id, order_id, player_id, item, create_at FROM orders WHERE ${where} ORDER BY create_at DESC`,
+  `SELECT id, order_id, player_id, item, create_at FROM ${financialOrdersRelation()} WHERE ${where} ORDER BY create_at DESC`,
   params,
 );
 console.log(`matched sell orders: ${preview.length}`);

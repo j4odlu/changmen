@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 import { ensurePgPoolReady } from "@changmen/db";
 
@@ -9,7 +10,7 @@ if (!pool) process.exit(1);
 const userId = "6ae8c38e-c4a2-4b2d-9896-733196115322";
 const orders = await pool.query(
   `SELECT id, order_id, bet_money, odds, link, status, create_at, changmen_bet, raw
-   FROM orders
+   FROM ${financialOrdersRelation()}
    WHERE user_id = $1 AND player_id = 47 AND match ILIKE '%Game 2 Winner%Ilbirs%Habibis%'
    ORDER BY create_at, bet_money DESC`,
   [userId],

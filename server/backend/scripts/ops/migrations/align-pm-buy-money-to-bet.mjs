@@ -1,3 +1,4 @@
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * 回填：订单栏可见的 PM 买单 Money → 与 bet_money 含费口径对齐
  *
@@ -18,6 +19,7 @@ const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 const dryRun = !process.argv.includes("--execute");
 initDatabaseUrl();
 const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
 const FX = getExchange(Currency.USDT);
 
 const { rows } = await pool.query(`
@@ -31,7 +33,7 @@ const { rows } = await pool.query(`
     NULLIF(COALESCE(raw->>'pmShares', raw->>'PmShares'),'')::float8 AS shares,
     COALESCE(p.user_name, o.user_id::text) AS user_name,
     to_char(to_timestamp(o.create_at/1000.0) AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD') AS day_cst
-  FROM orders o
+  FROM ${financialOrdersRelation("o")}
   LEFT JOIN profiles p ON p.id = o.user_id
   WHERE o.provider = 'Polymarket'
     AND COALESCE(raw->>'pmSide', raw->>'PmSide', 'buy') ILIKE 'buy'
@@ -123,6 +125,7 @@ if (dryRun) {
 }
 
 const client = await pool.connect();
+
 let updated = 0;
 const BATCH = 50;
 try {
@@ -148,7 +151,7 @@ try {
             raw.pmRealizedPnlUsdc = Math.round((item.nextMoney / FX) * 10000) / 10000;
 
           const res = await client.query(
-            `UPDATE orders
+            `UPDATE ${financialOrdersRelation()}
              SET money = $2,
                  raw = $3::jsonb
              WHERE id = $1

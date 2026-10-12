@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 只读：gb18 / gb19 因 PB 登录交叉产生的重复订单归属。
  *
@@ -165,7 +166,7 @@ const { rows: dupGroups } = await pool.query(
   `
   SELECT lower(order_id) AS oid, COUNT(*) AS n, COUNT(DISTINCT user_id) AS users,
          COUNT(DISTINCT player_id) AS players, array_agg(DISTINCT provider) AS providers
-  FROM orders
+  FROM ${financialOrdersRelation()}
   WHERE user_id IN ($1::uuid, $2::uuid)
     AND order_id IS NOT NULL AND trim(order_id) <> ''
   GROUP BY lower(order_id)
@@ -187,7 +188,7 @@ if (oids.length) {
     `
     SELECT o.id, o.user_id, o.player_id, o.order_id, o.provider, o.match, o.bet, o.item,
            o.status, o.odds, o.bet_money, o.money, o.link, o.create_at, o.raw
-    FROM orders o
+    FROM ${financialOrdersRelation("o")}
     WHERE o.user_id IN ($1::uuid, $2::uuid)
       AND lower(o.order_id) = ANY($3::text[])
     ORDER BY lower(o.order_id), o.create_at, o.id
@@ -275,7 +276,7 @@ if (intra.length > 40)
 const { rows: pbToday } = await pool.query(
   `
   SELECT u.user_name, o.player_id, o.order_id, o.status, o.bet_money, o.money, o.match, o.create_at, o.link
-  FROM orders o
+  FROM ${financialOrdersRelation("o")}
   JOIN profiles u ON u.id = o.user_id
   WHERE o.user_id IN ($1::uuid, $2::uuid)
     AND upper(o.provider) = 'PB'
@@ -296,7 +297,7 @@ const { rows: pbCounts } = await pool.query(
   `
   SELECT u.user_name, o.player_id, COUNT(*) AS n,
          MIN(o.create_at) AS first_at, MAX(o.create_at) AS last_at
-  FROM orders o
+  FROM ${financialOrdersRelation("o")}
   JOIN profiles u ON u.id = o.user_id
   WHERE o.user_id IN ($1::uuid, $2::uuid)
     AND upper(o.provider) = 'PB'
@@ -320,7 +321,7 @@ if (crossLinks.length) {
     `
     SELECT u.user_name, o.player_id, o.order_id, o.provider, o.link, o.status,
            o.bet_money, o.money, o.match, o.item, o.bet, o.create_at
-    FROM orders o
+    FROM ${financialOrdersRelation("o")}
     JOIN profiles u ON u.id = o.user_id
     WHERE o.link = ANY($1::bigint[])
     ORDER BY o.link, o.create_at, u.user_name, o.provider

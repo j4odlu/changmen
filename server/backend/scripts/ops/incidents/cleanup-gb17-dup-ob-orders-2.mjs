@@ -1,3 +1,4 @@
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * 清理 GB17 剩余 OB 重复（ffengjie1 删号重加）：
  * order_id 1788709582432881644 — player 203(已删) / 273(活跃)
@@ -19,6 +20,7 @@ const c = new pg.Client({
   ssl: String(url).includes("sslmode=require") ? { rejectUnauthorized: false } : undefined,
 });
 await c.connect();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(c);
 
 const uid = (await c.query(`select id from profiles where user_name ilike 'GB17'`)).rows[0].id;
 const orderId = "1788709582432881644";
@@ -26,7 +28,7 @@ const keepPlayerId = 273;
 const dropPlayerId = 203;
 
 const { rows } = await c.query(
-  `select id, player_id, link, money, status from orders
+  `select id, player_id, link, money, status from ${financialOrdersRelation()}
    where user_id=$1::uuid and order_id=$2 order by player_id`,
   [uid, orderId],
 );
@@ -43,14 +45,14 @@ if (!keep || !drop) {
 if (String(keep.link) !== String(drop.link)) {
   console.log(`update id=${keep.id} link ${keep.link} -> ${drop.link}`);
   if (apply)
-    await c.query(`update orders set link=$1 where id=$2`, [drop.link, keep.id]);
+    await c.query(`update ${financialOrdersRelation()} set link=$1 where id=$2`, [drop.link, keep.id]);
 }
 console.log(`delete id=${drop.id} player=${drop.player_id}`);
 if (apply)
-  await c.query(`delete from orders where id=$1`, [drop.id]);
+  await c.query(`delete from ${financialOrdersRelation()} where id=$1`, [drop.id]);
 
 const left = await c.query(
-  `select id, player_id, link, money from orders where user_id=$1::uuid and order_id=$2`,
+  `select id, player_id, link, money from ${financialOrdersRelation()} where user_id=$1::uuid and order_id=$2`,
   [uid, orderId],
 );
 console.log("after", left.rows);

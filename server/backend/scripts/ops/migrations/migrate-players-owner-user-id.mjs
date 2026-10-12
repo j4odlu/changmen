@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 存量 players 回填 owner_user_id，并拆分多用户共用的 playerId。
  *
@@ -52,7 +53,7 @@ async function loadPlayerOwners() {
   }
 
   const { rows: orderOwners } = await pool.query(
-    `SELECT DISTINCT user_id, player_id FROM orders WHERE player_id > 0`,
+    `SELECT DISTINCT user_id, player_id FROM ${financialOrdersRelation()} WHERE player_id > 0`,
   );
   for (const row of orderOwners) {
     add(row.player_id, row.user_id);
@@ -71,7 +72,7 @@ async function loadPlayerOwners() {
 async function orderCountByUser(playerId) {
   const { rows } = await pool.query(
     `SELECT user_id, COUNT(*)::int AS cnt
-     FROM orders WHERE player_id = $1
+     FROM ${financialOrdersRelation()} WHERE player_id = $1
      GROUP BY user_id`,
     [playerId],
   );
@@ -198,7 +199,7 @@ async function main() {
 
         await updateProfileAccountId(client, otherUserId, playerId, newId);
         await client.query(
-          `UPDATE orders SET player_id = $3 WHERE user_id = $1 AND player_id = $2`,
+          `UPDATE ${financialOrdersRelation()} SET player_id = $3 WHERE user_id = $1 AND player_id = $2`,
           [otherUserId, playerId, newId],
         );
         await client.query(

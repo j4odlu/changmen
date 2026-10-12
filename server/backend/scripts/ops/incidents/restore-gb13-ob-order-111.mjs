@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
 /**
  * GB13：order_id=1721979623053562828
  * - 删除误挂在 RAY 86 / PB 87 上的 OB 副本
@@ -23,6 +24,7 @@ loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 await initDatabaseUrl();
 const pool = getPgPool();
+if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
 if (!pool) {
   console.error("DATABASE_URL 未配置");
   process.exit(1);
@@ -49,14 +51,14 @@ if (!targetPlayer.length || targetPlayer[0].deleted_at) {
 }
 
 const toDelete = await pool.query(
-  `SELECT id, player_id, provider, link, bet_money, match FROM orders
+  `SELECT id, player_id, provider, link, bet_money, match FROM ${financialOrdersRelation()}
    WHERE user_id = $1::uuid AND order_id = $2 AND player_id = ANY($3::bigint[])
    ORDER BY player_id`,
   [userId, ORDER_ID, DROP_PLAYERS],
 );
 
 const existing111 = await pool.query(
-  `SELECT id FROM orders WHERE user_id = $1::uuid AND order_id = $2 AND player_id = $3`,
+  `SELECT id FROM ${financialOrdersRelation()} WHERE user_id = $1::uuid AND order_id = $2 AND player_id = $3`,
   [userId, ORDER_ID, TO_PLAYER],
 );
 
@@ -99,19 +101,20 @@ if (dryRun) {
 
 const deleteIds = toDelete.rows.map((r) => Number(r.id)).filter((n) => Number.isFinite(n) && n > 0);
 const client = await pool.connect();
+
 try {
   await client.query("BEGIN");
 
   await client.query(`DROP TABLE IF EXISTS ${BACKUP_TABLE}`);
   if (deleteIds.length) {
     await client.query(
-      `CREATE TABLE ${BACKUP_TABLE} AS SELECT * FROM orders WHERE id = ANY($1::bigint[])`,
+      `CREATE TABLE ${BACKUP_TABLE} AS SELECT * FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`,
       [deleteIds],
     );
   }
 
   if (deleteIds.length) {
-    await client.query(`DELETE FROM orders WHERE id = ANY($1::bigint[])`, [deleteIds]);
+    await client.query(`DELETE FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`, [deleteIds]);
   }
 
   const ins = await client.query(

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * GB18 ↔ GB19 平博交叉同步：9 个相同 order_id 各写两份。
  * 真单在 GB19 player 252（jiayu1 / RMB54556WIJ，有 PM/RAY 对家腿）。
@@ -54,7 +55,7 @@ if (!keepUserId || !dropUserId) {
 const keepRows = await pool.query(
   `
   SELECT o.id, o.order_id, o.player_id, o.provider, o.status, o.money, o.bet_money, o.link, o.create_at
-  FROM orders o
+  FROM ${financialOrdersRelation("o")}
   WHERE o.user_id = $1::uuid
     AND o.player_id = $2
     AND upper(o.provider) = 'PB'
@@ -66,7 +67,7 @@ const keepRows = await pool.query(
 const dropRows = await pool.query(
   `
   SELECT o.id, o.order_id, o.player_id, o.provider, o.status, o.money, o.bet_money, o.link, o.create_at
-  FROM orders o
+  FROM ${financialOrdersRelation("o")}
   WHERE o.user_id = $1::uuid
     AND o.player_id = $2
     AND upper(o.provider) = 'PB'
@@ -121,11 +122,11 @@ try {
   await client.query(`DROP TABLE IF EXISTS ${BACKUP_KEEP}`);
   await client.query(`DROP TABLE IF EXISTS ${BACKUP_DROP}`);
   await client.query(
-    `CREATE TABLE ${BACKUP_KEEP} AS SELECT * FROM orders WHERE id = ANY($1::bigint[])`,
+    `CREATE TABLE ${BACKUP_KEEP} AS SELECT * FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`,
     [keepIds],
   );
   await client.query(
-    `CREATE TABLE ${BACKUP_DROP} AS SELECT * FROM orders WHERE id = ANY($1::bigint[])`,
+    `CREATE TABLE ${BACKUP_DROP} AS SELECT * FROM ${financialOrdersRelation()} WHERE id = ANY($1::bigint[])`,
     [dropIds],
   );
   const bakKeep = await client.query(`SELECT COUNT(*)::int AS n FROM ${BACKUP_KEEP}`);
@@ -134,7 +135,7 @@ try {
     throw new Error(`备份行数不对 keep=${bakKeep.rows[0].n} drop=${bakDrop.rows[0].n}`);
   }
   const del = await client.query(
-    `DELETE FROM orders
+    `DELETE FROM ${financialOrdersRelation()}
      WHERE id = ANY($1::bigint[])
        AND user_id = $2::uuid
        AND player_id = $3
@@ -161,7 +162,7 @@ finally {
 const left = await pool.query(
   `
   SELECT pr.user_name, o.player_id, COUNT(*)::int AS n
-  FROM orders o
+  FROM ${financialOrdersRelation("o")}
   JOIN profiles pr ON pr.id = o.user_id
   WHERE o.order_id = ANY($1::text[])
     AND o.user_id IN ($2::uuid, $3::uuid)
@@ -174,7 +175,7 @@ const stillCross = await pool.query(
   `
   SELECT COUNT(*)::int AS n FROM (
     SELECT lower(order_id)
-    FROM orders
+    FROM ${financialOrdersRelation()}
     WHERE order_id = ANY($1::text[])
       AND user_id IN ($2::uuid, $3::uuid)
     GROUP BY lower(order_id)

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /** 诊断指定用户/账号/比赛的 orders + user_logs */
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 import { ensurePgPoolReady } from "@changmen/db";
@@ -62,13 +63,13 @@ const orders = await pool.query(
     ? `SELECT id, player_id, order_id, provider, match, bet, item,
               odds, bet_money, money, status, create_at, link,
               changmen_bet, raw
-       FROM orders
+       FROM ${financialOrdersRelation()}
        WHERE user_id = $1 AND match ILIKE $2
        ORDER BY create_at ASC`
     : `SELECT id, player_id, order_id, provider, match, bet, item,
               odds, bet_money, money, status, create_at, link,
               changmen_bet, raw
-       FROM orders
+       FROM ${financialOrdersRelation()}
        WHERE user_id = $1 AND player_id = ANY($2::bigint[]) AND match ILIKE $3
        ORDER BY create_at ASC`,
   allAccounts ? [userId, `%${matchHint}%`] : [userId, playerIds, `%${matchHint}%`],

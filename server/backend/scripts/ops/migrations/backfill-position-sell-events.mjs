@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 回填历史 PM/PF 卖单 → 买单 raw.positionEvents.sells[]（仓位事件镜像）。
  *
@@ -70,7 +71,7 @@ async function fetchSellRows(pool, { sinceMs, userName, limit }) {
   let sql = `
     SELECT o.order_id, o.user_id, o.player_id, o.provider, o.bet_money,
            o.create_at, o.raw, p.user_name
-    FROM orders o
+    FROM ${financialOrdersRelation("o")}
     LEFT JOIN profiles p ON p.id = o.user_id
     WHERE o.create_at >= $1
       AND (
@@ -91,7 +92,7 @@ async function fetchSellRows(pool, { sinceMs, userName, limit }) {
 async function fetchBuyRow(pool, userId, buyOrderId) {
   const { rows } = await pool.query(
     `SELECT order_id, user_id, provider, raw
-     FROM orders
+     FROM ${financialOrdersRelation()}
      WHERE user_id = $1
        AND lower(order_id) = lower($2)
      LIMIT 1`,
@@ -111,7 +112,7 @@ async function writeBuyEvents(pool, dryRun, buyRow, nextSells) {
     sells: nextSells,
   };
   await pool.query(
-    `UPDATE orders SET raw = $1::jsonb WHERE user_id = $2 AND order_id = $3`,
+    `UPDATE ${financialOrdersRelation()} SET raw = $1::jsonb WHERE user_id = $2 AND order_id = $3`,
     [JSON.stringify(raw), buyRow.user_id, buyRow.order_id],
   );
 }

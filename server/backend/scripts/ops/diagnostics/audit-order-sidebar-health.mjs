@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 订单栏相关 RDS 只读全面巡检（不写库）
  *
@@ -101,7 +102,7 @@ async function main() {
   const { rows } = await pool.query(`
     SELECT order_id, user_id, player_id, provider, link, match, bet, item,
            money, bet_money, status, create_at, raw
-    FROM orders
+    FROM ${financialOrdersRelation()}
     WHERE ${filters.join(" AND ")}
     ORDER BY create_at DESC
   `, params);

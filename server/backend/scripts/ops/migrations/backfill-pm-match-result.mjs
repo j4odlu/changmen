@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 回填 Polymarket **买单** raw.pmMatchResult（赛果 win/lose）。
  *
@@ -85,7 +86,7 @@ async function fetchCandidateBuys(pool, { sinceMs, userName, limit }) {
   let sql = `
     SELECT o.order_id, o.user_id, o.player_id, o.status, o.bet_money, o.money,
            o.odds, o.create_at, o.raw, p.user_name
-    FROM orders o
+    FROM ${financialOrdersRelation("o")}
     LEFT JOIN profiles p ON p.id = o.user_id
     WHERE o.provider = 'Polymarket'
       AND o.create_at >= $1
@@ -109,7 +110,7 @@ async function writeMatchResult(pool, dryRun, row, result, via) {
   if (dryRun)
     return;
   await pool.query(
-    `UPDATE orders
+    `UPDATE ${financialOrdersRelation()}
      SET raw = jsonb_set(
        COALESCE(raw, '{}'::jsonb),
        '{pmMatchResult}',

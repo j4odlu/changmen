@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * changmen 仓位双写一致性巡检（只读，不写库）
  *
@@ -91,7 +92,7 @@ async function fetchSellRows(pool, { sinceMs, userName, limit }) {
   let sql = `
     SELECT o.order_id, o.user_id, o.player_id, o.provider, o.create_at, o.raw,
            p.user_name
-    FROM orders o
+    FROM ${financialOrdersRelation("o")}
     LEFT JOIN profiles p ON p.id = o.user_id
     WHERE o.create_at >= $1
       AND (
@@ -112,7 +113,7 @@ async function fetchSellRows(pool, { sinceMs, userName, limit }) {
 async function fetchBuyRow(pool, userId, buyOrderId) {
   const { rows } = await pool.query(
     `SELECT order_id, user_id, provider, raw
-     FROM orders
+     FROM ${financialOrdersRelation()}
      WHERE user_id = $1 AND lower(order_id) = lower($2)
      LIMIT 1`,
     [userId, buyOrderId],

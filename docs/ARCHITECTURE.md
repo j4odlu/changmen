@@ -55,6 +55,7 @@ changmen/
 | I3c | **删 client-core shim**：web 薄 re-export → 直连 `@changmen/client-core/*`；`arbOpportunity` 仅保留 `syncArbRuntime` | ✅ 完成 |
 | I3d | **venue 包内聚**：`@venue/*` → `@changmen/venue-adapter/*`；web 移除 `@venue` tsconfig/vite alias | ✅ 完成 |
 | I3e | **exports 白名单**：`sync-package-exports` + web barrel 校验；删 `shared/platform` shim | ✅ 完成 |
+| M0 | **模块化再分析**：热点去重 / 破环 / 可选新包 — 见 [MODULARIZATION_PLAN.md](./MODULARIZATION_PLAN.md) | 📋 方案已入库；执行按该文档 P0→P1 |
 
 旧路径 `platform_adapter/`、`gamebet_*` 仅出现在历史章节或迁移对照中；**以本表与代码 `package.json` / `adapter_paths` 为准**。
 
@@ -73,6 +74,8 @@ changmen/
 | 事故修复 | `server/backend/scripts/ops/incidents/` |
 | 临时探针 | `*/archive/` 或 `backend/scripts/archive/` |
 | 新运动 VPS collector | `server/collectors/{name}/` |
+
+包内去重、新 workspace、以及须改本表后再做的 ops/域拆分，统一跟 [MODULARIZATION_PLAN.md](./MODULARIZATION_PLAN.md)，勿在未更新本表的情况下大规模物理搬家。
 
 ## 依赖方向
 
@@ -172,6 +175,7 @@ embedded：SaveLiveTimer debounce ~3s 触发 matchMerge（`MATCHER_TIMER_DEBOUNC
 
 ## 相关文档
 
+- [MODULARIZATION_PLAN.md](./MODULARIZATION_PLAN.md) — **模块化再分析与落地清单**（P0 hub 去重 / ops 治理；P1 破环与域包）
 - [TEAM_BOUNDARIES.md](./TEAM_BOUNDARIES.md) — 两团队 monorepo 边界
 - [SPORTS_PRODUCT_LINES.md](./SPORTS_PRODUCT_LINES.md) — 产品线分层与棒球路线
 - [../lines/README.md](../lines/README.md) — 产品线锚点 `lines/{code}/`

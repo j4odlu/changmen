@@ -67,7 +67,7 @@ export function createReadonlyGitScope(cwd = process.cwd()) {
   };
 }
 
-export function verifyGitScope({ scope, scopeText, fixedBase, git = createReadonlyGitScope(), readFile = file => {
+export function verifyGitScope({ scope, scopeText, fixedBase, metadataPath = scopePath, git = createReadonlyGitScope(), readFile = file => {
   assert(fs.lstatSync(file).isFile(), `${file}: candidate source must be a regular file`);
   return fs.readFileSync(file, 'utf8');
 } }) {
@@ -75,8 +75,8 @@ export function verifyGitScope({ scope, scopeText, fixedBase, git = createReadon
   assert.equal(scope.base, fixedBase, 'candidate base cannot be replaced');
   assert.deepEqual(JSON.parse(scopeText), scope, 'scope text and parsed manifest disagree');
   const approved = Object.keys(scope.allowedFiles);
-  for (const file of [...approved, scopePath]) parseGitPaths(file + '\0');
-  assert(!approved.includes(scopePath), 'scope metadata is checked separately');
+  for (const file of [...approved, metadataPath]) parseGitPaths(file + '\0');
+  assert(!approved.includes(metadataPath), 'scope metadata is checked separately');
   assert(approved.length > 0, 'candidate file list cannot be empty');
   for (const digest of Object.values(scope.allowedFiles)) assert(/^[a-f0-9]{64}$/.test(digest), 'invalid candidate digest');
   const head = git.head();
@@ -87,14 +87,14 @@ export function verifyGitScope({ scope, scopeText, fixedBase, git = createReadon
   const working = git.workingPaths(fixedBase);
   // 唯一既有例外：未跟踪的本机 output 验收产物。已提交/暂存/跟踪的 output 不豁免。
   const untracked = git.untrackedPaths().filter(file => !file.startsWith('output/'));
-  const expected = sorted([...approved, scopePath]);
+  const expected = sorted([...approved, metadataPath]);
   const observed = sorted([...committed, ...staged, ...working, ...untracked]);
   assert.deepEqual(observed, expected, 'candidate changed path set must equal the explicit release manifest');
   assert.deepEqual(sorted([...working, ...untracked]), expected, 'working candidate must contain the complete fixed-base package');
   const verifyContent = (files, read, source) => {
     for (const file of files) {
       const content = read(file);
-      if (file === scopePath) assert.equal(normal(content), normal(scopeText), `${source}: scope metadata changed`);
+      if (file === metadataPath) assert.equal(normal(content), normal(scopeText), `${source}: scope metadata changed`);
       else assert.equal(normalizedSha(content), scope.allowedFiles[file], `${source}:${file}: candidate content changed`);
     }
   };

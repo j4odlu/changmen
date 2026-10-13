@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import ts from "typescript";
 import { specializeFokSource } from "./fok-source-specialization.mjs";
+import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
 
 const base = process.env.FOK_PARITY_BASELINE ?? "219535c8";
 const printer = ts.createPrinter({ removeComments: true });
@@ -36,7 +37,7 @@ const results = [];
 for (const file of ["client/web/src/api/order.ts", "client/web/src/stores/account/pmManualSell.ts", "server/backend/core/account/order_store.js", "server/backend/core/account/order/dto.js"]) {
   const previous = parse(file, execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" }));
   const current = parse(file, file === "client/web/src/stores/account/pmManualSell.ts"
-    ? specializeFokSource(file, fs.readFileSync(file, "utf8")) : fs.readFileSync(file, "utf8"));
+    ? specializeFokSource(file, fs.readFileSync(file, "utf8")) : restoreMinimalOrdersSource(file, fs.readFileSync(file, "utf8"), target => fs.readFileSync(target, "utf8")));
   const transformed = specialize(current);
   if (file === "server/backend/core/account/order_store.js") {
     const print = (nodes, sf) => normalize(nodes.map(node => printer.printNode(ts.EmitHint.Unspecified, node, sf)).join("\n"));

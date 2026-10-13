@@ -1,7 +1,9 @@
 /** [changmen 扩展] 阶段二财务消费者兼容。只读验证后显式启用，不创建 schema。 */
+import { minimalFinancialSql, minimalHookRow, pmOrdersMinimalEnabled, preparePmOrdersMinimal } from "./pm_orders_minimal.js";
 let readyPool;
 
 export function ordersExecutionCompatibilityEnabled() {
+  if (pmOrdersMinimalEnabled()) return true;
   const mode = process.env.ORDERS_EXECUTION_COMPAT;
   if (mode != null && mode !== "" && mode !== "0" && mode !== "1")
     throw new Error("ORDERS_EXECUTION_COMPAT 只能是 0 或 1");
@@ -13,6 +15,7 @@ export function ordersExecutionCompatibilityEnabled() {
 }
 
 export async function prepareOrdersExecutionCompatibility(pool) {
+  await preparePmOrdersMinimal(pool);
   if (process.env.ORDERS_EXECUTION_COMPAT !== "1") {
     ordersExecutionCompatibilityEnabled();
     return;
@@ -57,6 +60,7 @@ ${returnBoundary}`);
 
 /** 保持普通首次财务入库 hook 的原列形状，控制 payload 不进入旧消费者。 */
 export function financialOrdersHookRow(row) {
+  row = minimalHookRow(row);
   const control = new Set(["execution_kind", "execution_id", "execution_wallet_key", "execution_active", "execution_record", "execution_updated_at", "financial_ready"]);
   // 空扩展 schema、兼容尚未启用时 RETURNING * 也会多出 NULL 控制列。
   if (![...control].some(key => Object.hasOwn(row, key)))
@@ -85,6 +89,7 @@ export function financialDeletionIds(ids) {
 
 /** 真正切换控制源前仍锁旧表，使用 UPDATE 避免后续合表产生 SHARE→UPDATE 升级。 */
 export function gtcExecutionLockSql() {
+  if (pmOrdersMinimalEnabled()) return "SELECT record FROM pm_gtc_executions WHERE id=$1 AND owner=$2 FOR SHARE";
   return ordersExecutionCompatibilityEnabled()
     ? "SELECT record FROM pm_gtc_executions WHERE id=$1 AND owner=$2 FOR UPDATE"
     : "SELECT record FROM pm_gtc_executions WHERE id=$1 AND owner=$2 FOR SHARE";
@@ -114,5 +119,6 @@ export function gtcFinancialUpsertSql(sql) {
   sql = sql.replace(values, `SELECT $1,$2,${originalId},$4,'Polymarket',$5,$6,$7,$8,$9,0,'None',$10,$11`);
   const columns = ["link", "provider", "match", "bet", "item", "money", "status", "create_at", "changmen_bet"];
   const promotion = columns.map(column => `${column}=CASE WHEN orders.financial_ready THEN orders.${column} ELSE EXCLUDED.${column} END,`).join("\n        ");
-  return prefix + sql.replace(conflict, `${conflict}\n        financial_ready=true,\n        ${promotion}`);
+  const result = prefix + sql.replace(conflict, `${conflict}\n        financial_ready=true,\n        ${promotion}`);
+  return pmOrdersMinimalEnabled() ? minimalFinancialSql(result) : result;
 }

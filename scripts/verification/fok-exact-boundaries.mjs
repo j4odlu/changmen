@@ -6,6 +6,7 @@ import ts from "typescript";
 import { checkOrdinaryOrderView } from "./fok-order-view-fixture.mjs";
 import { specializeFokSource } from "./fok-source-specialization.mjs";
 import { restoreOrdersConsumerCompatibility } from "./orders-consumer-boundary.mjs";
+import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
 
 export const notificationCommit = "23f2846bee1ff0a91811f49f9a5d5ac2d78fccdf";
 const root = "client/web/src/stores/betting/autoBet/";
@@ -105,7 +106,7 @@ function restoreGateway(source) {
 }
 
 export function verifyProtectedSource(file, current, original, readSource = target => fs.readFileSync(target, "utf8"), baselineRead) {
-  const specialized = specializeFokSource(file, current, readSource);
+  const specialized = specializeFokSource(file, restoreMinimalOrdersSource(file, current, readSource), readSource);
   const source = specialized;
   const unifiedRestored = false;
   if (file === "server/db/rds/orders_store.js") {

@@ -149,6 +149,11 @@ export async function listByDatePage(date, userId, pageIndex = 1, pageSize = 102
   const target = date || toDateKey(Date.now());
   const page = Math.max(1, Number(pageIndex) || 1);
   const size = Math.max(1, Number(pageSize) || 1024);
+  if (sb.pmOrdersMinimalEnabled()) {
+    const result = await sb.fetchMinimalOrderListPage(target, userId, page, size);
+    const visible = await enrichOrdersBelongingToDate(result.rows, target, { userId });
+    return { list: await attachPlayerDisplayToClientOrders(visible.map(toClientOrder)), total: result.total };
+  }
   const { rows } = await sb.fetchOrdersByDatePage(target, userId, page, size);
   // [changmen 扩展] 同 Link + buyId 跨日并入；整组只留在 Link 开弓日
   const merged = await enrichOrdersBelongingToDate(rows || [], target, { userId });

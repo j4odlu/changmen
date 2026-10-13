@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import ts from 'typescript';
 import { restoreOrdersConsumerCompatibility, restoreGtcOrdersCompatibility, verifyOrdersCompatHelper } from './orders-consumer-boundary.mjs';
+import { restoreMinimalOrdersSource } from './pm-orders-minimal-boundary.mjs';
 
 export const deployedSource = '113db6ff4e59dd615f8dd867e11d859b05766b7d';
 export const immutableBaselines = ['219535c8','75b1efac66625e5f2bc9884a965b244bfaf337ed'];
@@ -28,6 +29,7 @@ export function verifyProtectedSource(file,current,original,readSource=read) {
 }
 function once(source,before,after='') { assert.equal(source.split(before).length,2,`exact phase2 wiring: ${before}`);return source.replace(before,after); }
 export function restorePhase2Module(file,source,readSource=read) {
+  source=restoreMinimalOrdersSource(file,source,readSource);
   verifyOrdersCompatHelper(readSource);
   if(file==='server/db/rds/orders_store.js') return restoreOrdersConsumerCompatibility(source,readSource);
   if(['server/db/rds/orderModes/gtc/pm_gtc_store.js','server/db/rds/orderModes/gtc/pm_gtc_orders_store.js'].includes(file)) return restoreGtcOrdersCompatibility(file,source,readSource);

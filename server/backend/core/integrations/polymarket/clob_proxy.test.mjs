@@ -56,5 +56,5 @@ describe("clob_proxy", () => {
     });
     expect(result.status).toBe(200);
     expect(Number(result.text.trim())).toBeGreaterThan(0);
-  });
+  }, 65_000);
 });

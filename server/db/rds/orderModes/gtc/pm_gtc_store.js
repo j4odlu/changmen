@@ -1,3 +1,4 @@
+import { persistMinimalGtcOrder } from "../../pm_orders_minimal.js";
 import { financialOrdersRelation, gtcFinancialUpsertSql } from "../../orders_execution_compat.js";
 import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
 /** [changmen 扩展] GTC V1 持久化/一次性授权；不参与原 FOK 存储路径。 */
@@ -112,6 +113,8 @@ export async function mutatePmGtc(owner, id, revision, command) {
           'pmStakeUsdc', CASE WHEN $12::float8>0 THEN greatest(0,$13-COALESCE((orders.raw->>'pmSellProceeds')::float8,0)+COALESCE((orders.raw->>'pmRealizedPnlUsdc')::float8,0)) ELSE 0 END)`), [owner, row.plan.playerId, row.orderId, row.plan.linkId, row.plan.match, row.plan.bet, row.plan.item, financial.odds, financial.betMoney, row.createdAt, raw, shares, cost]);
       await syncPmGtcSettledOrderFinancials(client, owner, row.plan.playerId, row.orderId, id);
     }
+    if (row.decision === "closed" && command.kind === "facts")
+      await persistMinimalGtcOrder(client, row);
     await client.query("COMMIT"); return row;
   }
   catch (error) { await client.query("ROLLBACK"); throw error; }

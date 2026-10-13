@@ -1,3 +1,4 @@
+import { minimalFinancialDeletionSql } from "./pm_orders_minimal.js";
 import { DELETE_FINANCIAL_ORDERS_SQL, financialDeletionIds, financialOrdersHookRow, financialOrdersRelation, ordersExecutionCompatibilityEnabled, ordinaryOrdersUpsertSql } from "./orders_execution_compat.js";
 /**
  * orders 表读写 — upsert、查询、管理端、SaveOrderBind。
@@ -1066,7 +1067,7 @@ export async function deleteOrdersByIds(ids) {
   if (!clean.length)
     return 0;
   try {
-    const res = await pool.query(ordersExecutionCompatibilityEnabled() ? DELETE_FINANCIAL_ORDERS_SQL : "DELETE FROM orders WHERE id = ANY($1::bigint[])", [clean]);
+    const res = await pool.query(ordersExecutionCompatibilityEnabled() ? minimalFinancialDeletionSql(DELETE_FINANCIAL_ORDERS_SQL) : "DELETE FROM orders WHERE id = ANY($1::bigint[])", [clean]);
     return res.rowCount ?? 0;
   }
   catch (err) {

@@ -2,12 +2,13 @@
 // 固定原 FOK/VPS 基线不变；新增兼容 helper 全文单独保护，不按文件豁免。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
 
 export const ordersCompatPath = "server/db/rds/orders_execution_compat.js";
 export const ordersCompatDigest = "bfe79069c035b61970c73411877042bfac6aecc2b93891bce9acb3235cfa977d";
 
 export function verifyOrdersCompatHelper(readSource) {
-  const source = readSource(ordersCompatPath).replaceAll("\r\n", "\n");
+  const source = restoreMinimalOrdersSource(ordersCompatPath, readSource(ordersCompatPath), readSource).replaceAll("\r\n", "\n");
   assert.equal(createHash("sha256").update(source).digest("hex"), ordersCompatDigest, "complete reviewed orders compatibility helper");
 }
 
@@ -16,6 +17,7 @@ function once(source, before, after) {
   return source.replace(before, after);
 }
 export function restoreOrdersConsumerCompatibility(source, readSource) {
+  source = restoreMinimalOrdersSource("server/db/rds/orders_store.js", source, readSource);
   verifyOrdersCompatHelper(readSource);
   source = once(source, "import { DELETE_FINANCIAL_ORDERS_SQL, financialDeletionIds, financialOrdersHookRow, financialOrdersRelation, ordersExecutionCompatibilityEnabled, ordinaryOrdersUpsertSql } from \"./orders_execution_compat.js\";\n", "");
   for (const [args, count, relation] of [["", 33, "orders"], ["\"o\"", 7, "orders o"], ["\"pm\"", 1, "orders pm"], ["\"other\"", 1, "orders other"]]) {
@@ -33,6 +35,7 @@ export function restoreOrdersConsumerCompatibility(source, readSource) {
 }
 
 export function restoreGtcOrdersCompatibility(file, source, readSource) {
+  source = restoreMinimalOrdersSource(file, source, readSource);
   verifyOrdersCompatHelper(readSource);
   if (file === "server/db/rds/orderModes/gtc/pm_gtc_store.js") {
     source = once(source, "import { financialOrdersRelation, gtcFinancialUpsertSql } from \"../../orders_execution_compat.js\";\n", "");

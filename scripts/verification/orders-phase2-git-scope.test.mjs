@@ -6,14 +6,17 @@ import { createReadonlyGitScope, verifyGitScope, parseGitPaths, normalizedSha, s
 import { deployedSource } from './orders-phase2-release-boundary.mjs';
 
 const base = 'a'.repeat(40), committedHead = 'b'.repeat(40);
+let publishedCandidateContents;
 function fixture(mode = 'before', actual = false) {
   const source = actual
     ? JSON.parse(fs.readFileSync(scopePath, 'utf8'))
     : { base, allowedFiles: { 'server/new helper.js': normalizedSha('safe\n'), 'scripts/check.mjs': normalizedSha('guard\n') } };
   const scope = structuredClone(source), scopeText = JSON.stringify(scope, null, 2);
   const expected = [...Object.keys(scope.allowedFiles), scopePath];
+  // 原 149 路径候选固定到实际已发布提交；新最小包另有自己的清单和负向测试。
+  if (actual && !publishedCandidateContents) publishedCandidateContents = createReadonlyGitScope().readBlobs('313c19e8afc30d62b54363830974b6738eab84d8', Object.keys(scope.allowedFiles));
   const contents = actual
-    ? Object.fromEntries(Object.keys(scope.allowedFiles).map(file => [file, fs.readFileSync(file, 'utf8')]))
+    ? { ...publishedCandidateContents }
     : { 'server/new helper.js': 'safe\n', 'scripts/check.mjs': 'guard\n' };
   contents[scopePath] = scopeText;
   const state = {

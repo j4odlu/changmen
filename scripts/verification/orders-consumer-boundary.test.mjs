@@ -18,7 +18,7 @@ describe("whole FOK order writer and finance protection retain fixed original ba
       ["upsert amount", "bet_money = EXCLUDED.bet_money", "bet_money = 0"],
       ["missing finance relation", `FROM \${financialOrdersRelation("pm")}`, "FROM orders pm"],
       ["ordinary target bypass", "ordinaryOrdersUpsertSql(UPSERT_ORDERS_BATCH_SQL)", "UPSERT_ORDERS_BATCH_SQL"],
-      ["deletion bypass", "? DELETE_FINANCIAL_ORDERS_SQL :", "? \"DELETE FROM orders\" :"],
+      ["deletion bypass", "? minimalFinancialDeletionSql(DELETE_FINANCIAL_ORDERS_SQL) :", "? \"DELETE FROM orders\" :"],
     ])(`${base}: rejects %s changes`, (_, before, after) => {
       expect(read(path)).toContain(before);
       expect(() => check(read(path).replace(before, after))).toThrow();
@@ -41,6 +41,6 @@ describe("whole FOK order writer and finance protection retain fixed original ba
     ["hook payload leak", "!control.has(key)", "true"],
   ])("rejects %s changes inside the full new helper", (_, before, after) => {
     expect(read(ordersCompatPath)).toContain(before);
-    expect(() => verifyOrdersCompatHelper(file => read(file).replace(before, after))).toThrow("complete reviewed orders compatibility helper");
+    expect(() => verifyOrdersCompatHelper(file => file === ordersCompatPath ? read(file).replace(before, after) : read(file))).toThrow("complete reviewed orders compatibility helper");
   });
 });

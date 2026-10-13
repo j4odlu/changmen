@@ -6,19 +6,22 @@ import { BetResult } from "@changmen/client-core/models/betResult";
 import { getExchange, resolveAccountCurrency } from "@changmen/shared/currency";
 import { gtcStateLabel, gtcUnits } from "@changmen/shared/pm_gtc";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
+import { registerRayRejectMonitor } from "@/extensions/arbBet/rayRejectMonitor/runtime";
 import { ExecutionError } from "@/orderModes/gtc/executionResult";
+import { notifyBet } from "@/shared/betNotification";
 import { syncActiveBetLeg, syncActiveBetPhase } from "@/stores/betting/activeBetRunSync";
+import { resolveMakeUpSuccessReference } from "@/stores/betting/makeUpReference";
 import { useUserStore } from "@/stores/userStore";
 import { createGtc } from "./api";
+import { gtcMatchedOrder } from "./financialOrder";
 import { placeOtherLeg } from "./gateway";
+import { gtcProgress } from "./gtcProgressState";
+import { gtcPmNotice } from "./notifications";
 import { findGtcOtherOrder } from "./otherFacts";
 import { settleGtcOtherLeg } from "./otherOrders";
 import { gtcExecutionResult } from "./result";
 import { acceptGtc, currentGtc, markGtcLegOnce, mutateGtc, pollGtc, pollGtcOther, refreshGtcRecords, startGtcRuntime } from "./runtime";
 import { assertGtcHistoryAllowsLeg } from "./successMarkers";
-import { gtcProgress } from "./gtcProgressState";
-import { notifyBet } from "@/shared/betNotification";
-import { gtcPmNotice } from "./notifications";
 
 export function isGtcPair(checked: ArbBetChecked): boolean {
   return checked.betBothLegs && !checked.singleLegByRate && Boolean(checked.accountA && checked.accountB)
@@ -147,6 +150,41 @@ export async function executeGtc(params: ArbBetAttemptParams, checked: ArbBetChe
       syncActiveBetLeg(params.bet.id, pmA ? "B" : "A", rejected ? "rejected" : pending ? "pending_confirm" : "confirmed");
       if (!rejected && !pending)
         markGtcLegOnce(currentGtc(id), "OTHER");
+      // [changmen 扩展] 原编排拒单确认完成后，将 RAY 单交给既有独立模块；不另设查询周期。
+      if (otherAccount.provider === "RAY") {
+        const row = currentGtc(id);
+        let pmOrder: ReturnType<typeof gtcMatchedOrder> = null;
+        let anchor = { betMoney: 0, betOdds: 0 };
+        try {
+          pmOrder = row.fee != null && row.complete && !row.error ? gtcMatchedOrder(row, Number(row.fee)) : null;
+          anchor = resolveMakeUpSuccessReference(pm, pmOrder ? [pmOrder] : [], false, account, row.orderId);
+        }
+        catch { /* [changmen 扩展] PM 锚点读取失败不阻断 RAY 登记；沿用原补单的无锚点门控。 */ }
+        registerRayRejectMonitor({
+          observation: other.observation,
+          linkId: checked.linkId,
+          matchId: params.match.id,
+          betId: params.bet.id,
+          side: pmA ? "B" : "A",
+          accountId: otherAccount.accountId,
+          submittedAt: Number(otherResult.beginTime) || row.other.submittedAt,
+          match: String(other.match?.title || params.match.title || ""),
+          bet: String(other.bet?.getBetName() || params.bet.getBetName() || ""),
+          item: String(other.target === "Home"
+            ? other.bet?.homeName || params.bet.homeName || other.target
+            : other.bet?.awayName || params.bet.awayName || other.target),
+          target: other.target,
+          odds: Number(other.odds) || 0,
+          betMoney: Number(other.betMoney) || 0,
+          anchorConfirmed: Boolean(pmOrder && row.submit === "accepted" && gtcUnits(row.matched) >= gtcUnits(row.plan.shares)),
+          anchorProvider: "POLYMARKET",
+          anchorAccountId: account.accountId,
+          anchorBetMoney: anchor.betMoney,
+          anchorOdds: anchor.betOdds,
+          initialOrders: outcome.orders,
+          initialRejected: rejected,
+        });
+      }
     }
   }
   catch (error) {

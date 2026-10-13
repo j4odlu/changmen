@@ -2,12 +2,14 @@ import type { GtcCommand, GtcExecution, GtcPlan } from "@changmen/shared/pm_gtc"
 import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { gtcOrderProjection } from "@/orderModes/gtc/executionProjection";
+import { beginRayOrderObservation } from "@/runtime/orderMonitoring/rayOrders";
+import { useAccountStore } from "@/stores/accountStore";
 import { acceptGtc, cancelGtc, currentGtc, gtcProgress, pollGtc, pollGtcOther, refreshGtcRecords, startGtcRuntime, stopGtcRuntime } from "./runtime";
 
 const mocks = vi.hoisted(() => ({ cancel: vi.fn(), read: vi.fn(), otherRead: vi.fn(), command: vi.fn(), list: vi.fn(), mark: vi.fn(), calls: [] as string[] }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: "owner", extensionPrefs: {} }) }));
-vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ findAccount: () => ({ provider: "Polymarket", accountId: 1 }) }) }));
+vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ findAccount: (id: number) => ({ provider: id === 2 ? "RAY" : "Polymarket", accountId: id }) }) }));
 vi.mock("@/stores/betting/successMarkers", () => ({ markSuccessfulBet: mocks.mark }));
 vi.mock("./successMarkers", () => ({ markGtcSuccess: mocks.mark }));
 vi.mock("./api", () => ({ listGtc: mocks.list, commandGtc: mocks.command }));
@@ -39,10 +41,8 @@ describe("gTC independent progress and cancellation", () => {
     original.other = { state: "accepted", orderId: null, submittedAt: Date.now() - 1000, message: "当前余额:1499.63" };
     return original;
   }
-  function counterpartOrder() {
-    return { provider: "RAY", orderId: "40764f62796e6acdb186", createAt: Date.now(), odds: 1.66, betMoney: 100,
-      money: 0, reward: 0, status: "none" as const, game: "CS2", match: "FaZe - VS - NAVI Junior", bet: "map1 获胜者", item: "FaZe",
-      venueMatchId: "38452903", venueItemId: "76482018", link: 1791627619164 };
+  function counterpartOrder(): import("@changmen/venue-adapter/contract").VenueOrder {
+    return { provider: "RAY", orderId: "40764f62796e6acdb186", createAt: Date.now(), odds: 1.66, betMoney: 100, money: 0, reward: 0, status: "none" as const, game: "CS2", match: "FaZe - VS - NAVI Junior", bet: "map1 获胜者", item: "FaZe", venueMatchId: "38452903", venueItemId: "76482018", link: 1791627619164 };
   }
   it("an empty venue snapshot preserves acceptance and the next read can still identify the original", async () => {
     gtcProgress.records = [counterpartRow()];
@@ -85,24 +85,30 @@ describe("gTC independent progress and cancellation", () => {
     expect(currentGtc("id").other).toMatchObject({ state: status === "pending" ? "pending" : "rejected", orderId: "40764f62796e6acdb186" });
     expect(mocks.mark).not.toHaveBeenCalled();
   });
-  it("a slow PM query cannot block RAY polling or the next retry across executions", async () => {
+  it("a slow PM query cannot block consuming original RAY results, and never schedules RAY queries", async () => {
     await import("@changmen/venue-adapter/polymarket/gtc");
     vi.useFakeTimers(); stopGtcRuntime();
     const slow = row(); slow.id = "slow-pm";
     const ray = mergeGtcFacts(counterpartRow(), { ...facts(), order: { ...facts().order, status: "CANCELED" } });
     ray.decision = "closed";
     let release!: (value: ReturnType<typeof facts>) => void;
-    const pendingPm = new Promise<ReturnType<typeof facts>>(resolve => { release = resolve; });
+    const pendingPm = new Promise<ReturnType<typeof facts>>((resolve) => { release = resolve; });
     mocks.read.mockReturnValue(pendingPm);
     mocks.otherRead.mockResolvedValueOnce([]).mockResolvedValue([counterpartOrder()]);
     mocks.list.mockResolvedValue([slow, ray]);
     startGtcRuntime("owner");
     await vi.advanceTimersByTimeAsync(0);
     expect(mocks.read).toHaveBeenCalledOnce();
+    expect(mocks.otherRead).not.toHaveBeenCalled();
+    beginRayOrderObservation(useAccountStore().findAccount(2)!)([counterpartOrder()]);
+    await vi.advanceTimersByTimeAsync(0);
     expect(mocks.otherRead).toHaveBeenCalledOnce();
     expect(currentGtc("id").other.state).toBe("accepted");
     await vi.advanceTimersByTimeAsync(5000);
     expect(mocks.read).toHaveBeenCalledOnce();
+    expect(mocks.otherRead).toHaveBeenCalledOnce();
+    beginRayOrderObservation(useAccountStore().findAccount(2)!)([counterpartOrder()]);
+    await vi.advanceTimersByTimeAsync(0);
     expect(mocks.otherRead).toHaveBeenCalledTimes(2);
     expect(currentGtc("id").other.orderId).toBe("40764f62796e6acdb186");
     release(facts());
@@ -111,7 +117,7 @@ describe("gTC independent progress and cancellation", () => {
   it("stopping recovery while the venue read is pending prevents late commands or notices for a new session", async () => {
     gtcProgress.records = [counterpartRow()];
     let release!: (value: ReturnType<typeof counterpartOrder>[]) => void;
-    mocks.otherRead.mockImplementation(() => new Promise(resolve => { release = resolve; }));
+    mocks.otherRead.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
     const task = pollGtcOther("id");
     stopGtcRuntime(); release([counterpartOrder()]);
     await expect(task).rejects.toThrow("会话已变更");
@@ -236,7 +242,8 @@ describe("gTC independent progress and cancellation", () => {
     const terminal = applyGtcCommand(mergeGtcFacts({ ...row(), plan: { ...plan, source: "manual" } }, {
       order: { id: hash, original: "10", matched: "10", status: "MATCHED", tradeIds: ["trade"] },
       fills: [{ key: "trade:maker", tradeId: "trade", bucket: "maker", role: "MAKER", shares: "10", price: "0.5", fee: "0", status: "CONFIRMED", updatedAt: 1 }],
-      complete: true, observedAt: Date.now(),
+      complete: true,
+      observedAt: Date.now(),
     }), { kind: "close" }, Date.now());
     gtcOrderProjection.owner = "owner";
     gtcOrderProjection.rows = [{ Type: "Polymarket", PlayerID: 1, OrderID: hash, PmGtcExecutionId: "id", Status: "Win" }];

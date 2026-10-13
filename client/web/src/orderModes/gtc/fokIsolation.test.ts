@@ -4,13 +4,14 @@ import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 import { gtcProgress, startGtcRuntime, stopGtcRuntime } from "@/orderModes/gtc/runtime";
+import { getProvider } from "@/runtime/providers";
 import { updateVenueOrders } from "@/stores/account/venueOrders";
 
 const mocks = vi.hoisted(() => ({ list: vi.fn(), command: vi.fn(), getOrders: vi.fn(), save: vi.fn(), update: vi.fn(), mark: vi.fn(), accounts: [] as unknown[] }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
 vi.mock("./ordersApi", () => ({ saveOrders: mocks.save, refreshGtcOrders: vi.fn(async () => {}) }));
 vi.mock("@/stores/betting/arbOrderBind", () => ({ refreshOrderListAfterBind: vi.fn() }));
-vi.mock("@/runtime/providers", () => ({ getProvider: () => ({ getOrders: mocks.getOrders }) }));
+vi.mock("@/runtime/venueAdapters", () => ({ getProvider: () => ({ getOrders: mocks.getOrders }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: "owner", extensionPrefs: { pmArbOrderMode: "FOK", pmGtcV1Participant: true } }) }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ findAccount: (id: number) => mocks.accounts.find(a => (a as { accountId: number }).accountId === id), updateVenueOrders: mocks.update }) }));
 vi.mock("@/stores/betting/successMarkers", () => ({ markSuccessfulBet: mocks.mark }));
@@ -37,6 +38,10 @@ beforeEach(() => {
 afterEach(() => stopGtcRuntime());
 it("unresolved old GTC cannot save or bind a newer unrelated FOK order while current mode is FOK", async () => {
   mocks.list.mockResolvedValue([record()]); startGtcRuntime("owner");
+  await vi.waitFor(() => expect(gtcProgress.ready).toBe(true));
+  expect(mocks.getOrders).not.toHaveBeenCalled();
+  const account = mocks.accounts[0] as PlatformAccount;
+  await getProvider(account)!.getOrders!(account);
   await vi.waitFor(() => expect(mocks.getOrders).toHaveBeenCalledOnce());
   expect(mocks.save).not.toHaveBeenCalled();
   expect(mocks.update).not.toHaveBeenCalled();
@@ -47,6 +52,10 @@ it("known GTC ID selects only its own order and preserves every FOK row", async 
   const fok = newFokOrder(); const original = { ...newFokOrder(), orderId: "old-gtc-ray-leg", link: 123 };
   mocks.getOrders.mockResolvedValue([fok, original]);
   mocks.list.mockResolvedValue([row]); startGtcRuntime("owner");
+  await vi.waitFor(() => expect(gtcProgress.ready).toBe(true));
+  expect(mocks.getOrders).not.toHaveBeenCalled();
+  const account = mocks.accounts[0] as PlatformAccount;
+  await getProvider(account)!.getOrders!(account);
   await vi.waitFor(() => expect(mocks.save).toHaveBeenCalledOnce());
   expect(mocks.save.mock.calls[0]![1]).toEqual([{ ...original, link: gtcLink, pmGtcExecutionId: row.id }]);
   expect(fok.link).toBe(fokLink); expect(original.link).toBe(123);

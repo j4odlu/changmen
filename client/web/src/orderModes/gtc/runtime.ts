@@ -5,21 +5,24 @@ import { gtcCanCancel, gtcCanFinishWithoutOrders, gtcUnits } from "@changmen/sha
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { gtcOrderProjection, rememberGtcOrderIdentity, resetGtcOrderProjection } from "@/orderModes/gtc/executionProjection";
 import { gtcProgress } from "@/orderModes/gtc/gtcProgressState";
+import { resetRayOrderResults } from "@/runtime/orderMonitoring/rayOrders";
 import { useAccountStore } from "@/stores/accountStore";
 import { useUserStore } from "@/stores/userStore";
 import { commandGtc, listGtc } from "./api";
-import { refreshGtcOrders } from "./ordersApi";
 
+import { refreshGtcOrders } from "./ordersApi";
 import { findGtcOtherOrder } from "./otherFacts";
 import { readGtcOtherOrders } from "./otherOrders";
-import { markGtcSuccess } from "./successMarkers";
 import { gtcExecutionDormant, gtcNeedsOtherPolling, gtcPmReconciled } from "./pollingPolicy";
+import { findRayFinalOrder, startRayResultConsumer, stopRayResultConsumer } from "./rayResults";
+import { markGtcSuccess } from "./successMarkers";
 import { gtcSyncIssue } from "./syncStatus";
 
 export { gtcProgress } from "@/orderModes/gtc/gtcProgressState";
 const queues = new Map<string, Promise<unknown>>();
 const polls = new Map<string, Promise<GtcExecution>>();
 const otherPolls = new Map<string, Promise<VenueOrder[]>>();
+const raySettlements = new Map<string, VenueOrder>();
 const recoveries = new Map<string, Promise<void>>();
 let timer: ReturnType<typeof setTimeout> | undefined;
 let generation = 0;
@@ -123,7 +126,8 @@ export async function refreshGtcRecords(betRowId?: number, playerIds?: readonly 
     gtcProgress.ready = true;
     gtcProgress.recoveredAt = Date.now();
     for (const [id, issue] of Object.entries(gtcProgress.queryIssues)) {
-      if (issue.kind === "auth") delete gtcProgress.queryIssues[id];
+      if (issue.kind === "auth")
+        delete gtcProgress.queryIssues[id];
     }
     gtcProgress.error = failures ? `有 ${failures} 条旧 GTC 记录恢复失败，其他订单继续独立核对` : "";
   }
@@ -143,13 +147,16 @@ export async function pollGtc(id: string): Promise<GtcExecution> {
     let result: GtcExecution;
     try {
       const facts = await readGtcFacts(account, row.plan, row.orderId || row.plan.orderHash, row.createdAt);
-      if (stamp !== generation || !isAuthSessionCurrent(session)) throw new Error("GTC 会话已变更");
+      if (stamp !== generation || !isAuthSessionCurrent(session))
+        throw new Error("GTC 会话已变更");
       result = await mutateGtc(id, { kind: "facts", facts });
-      if (stamp === generation) delete gtcProgress.queryIssues[id];
+      if (stamp === generation)
+        delete gtcProgress.queryIssues[id];
     }
     catch (error) {
       // 查询/保存失败不是订单事实，不向数据库写空事实，不覆写 accepted/complete/费用或释放状态。
-      if (stamp === generation && isAuthSessionCurrent(session)) gtcProgress.queryIssues[id] = gtcSyncIssue(error);
+      if (stamp === generation && isAuthSessionCurrent(session))
+        gtcProgress.queryIssues[id] = gtcSyncIssue(error);
       throw error;
     }
     if (!result.counted && result.complete && gtcUnits(result.matched) > 0n) {
@@ -201,6 +208,19 @@ export async function pollGtcOther(id: string, confirm = true): Promise<VenueOrd
   const task = (async () => {
     try {
       const row = currentGtc(id);
+      // [changmen 扩展] 已保存的原单终态只更新执行投影，不重新查询场馆。
+      const final = findRayFinalOrder(row);
+      const settled = raySettlements.get(id);
+      if (final || settled) {
+        const status = String(final?.Status ?? settled!.status).toLowerCase();
+        const state = ["reject", "return"].includes(status) ? "rejected" : "filled";
+        if (row.other.state !== state)
+          await mutateGtc(id, { kind: "other", state, orderId: row.other.orderId! });
+        if (stamp !== generation || !isAuthSessionCurrent(session))
+          throw new Error("GTC 会话已变更");
+        delete gtcProgress.otherQueryIssues[id]; markGtcLegOnce(currentGtc(id), "OTHER");
+        return [];
+      }
       const account = useAccountStore().findAccount(row.plan.otherPlayerId);
       if (!account)
         throw new Error("GTC 原对侧账号暂不可用");
@@ -213,14 +233,18 @@ export async function pollGtcOther(id: string, confirm = true): Promise<VenueOrd
         gtcProgress.otherQueryIssues[id] = gtcSyncIssue(new Error("对侧原单暂未唯一核实，继续查询"));
         return [];
       }
-      const state = ["reject", "return"].includes(original.status) ? "rejected"
-        : original.status === "pending" ? "pending"
+      const state = ["reject", "return"].includes(original.status)
+        ? "rejected"
+        : original.status === "pending"
+          ? "pending"
           : confirm || current.other.state === "filled" ? "filled" : "accepted";
       if (state !== current.other.state || original.orderId !== current.other.orderId)
         await mutateGtc(id, { kind: "other", state, orderId: original.orderId, message: "" });
       if (stamp !== generation || !isAuthSessionCurrent(session))
         throw new Error("GTC 会话已变更");
       delete gtcProgress.otherQueryIssues[id];
+      if (row.plan.otherProvider === "RAY" && ["win", "lose", "return", "reject"].includes(original.status))
+        raySettlements.set(id, original);
       markGtcLegOnce(currentGtc(id), "OTHER");
       return orders;
     }
@@ -247,7 +271,7 @@ function recoverGtcRecord(id: string, stamp: number): Promise<void> {
       return;
     const row = currentGtc(id);
     // 已受理的场馆单立即同步展示；关闭执行轮次后再核对成交/拒单。
-    if (gtcNeedsOtherPolling(row, gtcOrderProjection.rows))
+    if (row.plan.otherProvider !== "RAY" && gtcNeedsOtherPolling(row, gtcOrderProjection.rows))
       void pollGtcOther(id, row.decision === "closed").catch(() => {});
     // PM 查询与对侧拉单互不等待，旧单的慢请求也不阻塞其它执行。
     if (!gtcPmReconciled(row) || gtcProgress.queryIssues[id])
@@ -257,8 +281,9 @@ function recoverGtcRecord(id: string, stamp: number): Promise<void> {
       return;
     }
     if (!row.released && row.decision === "open"
-      && (row.deadlineAt ? Date.now() > row.deadlineAt : Date.now() - row.createdAt > 10000))
+      && (row.deadlineAt ? Date.now() > row.deadlineAt : Date.now() - row.createdAt > 10000)) {
       await mutateGtc(id, { kind: "close" }).catch(() => {});
+    }
     if (stamp !== generation)
       return;
     if (gtcPmReconciled(currentGtc(id))) {
@@ -281,7 +306,10 @@ function recoverGtcRecord(id: string, stamp: number): Promise<void> {
       gtcProgress.error = "有旧 GTC 原单核对失败，其他订单继续独立核对";
   });
   recoveries.set(id, task);
-  void task.finally(() => { if (recoveries.get(id) === task) recoveries.delete(id); });
+  void task.finally(() => {
+    if (recoveries.get(id) === task)
+      recoveries.delete(id);
+  });
   return task;
 }
 async function tick(stamp: number): Promise<void> {
@@ -315,12 +343,14 @@ export function startGtcRuntime(owner: string): void {
     return;
   // 已加载的同用户财务订单是恢复依据；启动核对不能清掉它们。
   resetRuntime(gtcOrderProjection.owner === owner); gtcProgress.owner = owner;
+  startRayResultConsumer();
   void tick(generation);
 }
 export function stopGtcRuntime(): void {
   resetRuntime(false);
 }
 function resetRuntime(preserveProjection: boolean): void {
+  stopRayResultConsumer(); resetRayOrderResults(); raySettlements.clear();
   if (!preserveProjection) {
     resetGtcOrderProjection();
   }

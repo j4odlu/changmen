@@ -12,6 +12,11 @@ const notices = vi.hoisted(() => ({ notify: vi.fn(), close: vi.fn() }));
 vi.mock("element-plus", () => ({ ElNotification: notices.notify }));
 
 const mocks = vi.hoisted(() => ({ submit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), refresh: vi.fn(), poll: vi.fn(), otherPoll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, existing: [] as GtcExecution[], initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "" }));
+const rayMonitor = vi.hoisted(() => vi.fn());
+const pmMatchedOrder = vi.hoisted(() => vi.fn());
+vi.mock("@/extensions/arbBet/rayRejectMonitor/runtime", () => ({ registerRayRejectMonitor: rayMonitor }));
+vi.mock("@/stores/betting/makeUpReference", () => ({ resolveMakeUpSuccessReference: () => ({ betMoney: 5, betOdds: 2 }) }));
+vi.mock("./financialOrder", () => ({ gtcMatchedOrder: pmMatchedOrder }));
 vi.mock("@changmen/client-core/models/betResult", () => ({ BetResult: class { orderId = null; constructor(public provider: string, public success: boolean) {} saveLog = mocks.log; } }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: mocks.owner, config: { betting: true } }) }));
@@ -42,6 +47,7 @@ function params(parallel = false) {
   return { match: { id: 1, title: "match" }, bet: { id: 2, getBetName: () => "market" }, config: { profit: mocks.ratio, betSorting: parallel ? "Parallel" : "Auto" }, setMessage: vi.fn(), trace: { finish: vi.fn() } } as never;
 }
 beforeEach(() => {
+  pmMatchedOrder.mockReset().mockImplementation(() => ({ orderId: "pm", pmShares: Number(mocks.initial), betMoney: 5, odds: 2 }));
   vi.clearAllMocks(); sessionStorage.clear(); mocks.record = null; mocks.existing = []; mocks.commands = []; mocks.initial = "0"; mocks.ready = true; mocks.ratio = 0.99;
   notices.notify.mockReturnValue({ close: notices.close });
   mocks.refresh.mockResolvedValue(undefined);
@@ -58,9 +64,30 @@ beforeEach(() => {
   mocks.settle.mockResolvedValue({ rejected: false, pendingConfirm: false, orders: [{ provider: "RAY", orderId: "ray-order", status: "none" }] });
 });
 describe("gTC original pair orchestration", () => {
+  it("unavailable PM reference evidence does not fail a successful RAY order or disable its independent monitor", async () => {
+    mocks.initial = "10"; pmMatchedOrder.mockImplementationOnce(() => { throw new Error("reference unavailable"); });
+    const result = await executeGtc(params(), checked(false));
+    expect(result.other?.submission).toBe("accepted");
+    expect(rayMonitor).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ accountId: 2, anchorConfirmed: false, anchorBetMoney: 0 }));
+    expect(mocks.betting).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
+  });
+  it.each(["5", "10"])("rAY uses the existing independent monitor after first confirmation when PM matched %s shares", async (quantity) => {
+    mocks.initial = quantity;
+    await executeGtc(params(), checked(false));
+    expect(rayMonitor).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      accountId: 2,
+      side: "A",
+      anchorProvider: "POLYMARKET",
+      anchorConfirmed: quantity === "10",
+      initialOrders: [{ provider: "RAY", orderId: "ray-order", status: "none" }],
+      initialRejected: false,
+    }));
+    expect(mocks.settle.mock.invocationCallOrder[0]).toBeLessThan(rayMonitor.mock.invocationCallOrder[0]!);
+    expect(mocks.betting).toHaveBeenCalledOnce();
+  });
   it("other-first RAY starts original-order synchronization before a slow PM submission or reject wait", async () => {
     let release!: (value: { success: boolean; orderID: string }) => void;
-    mocks.submit.mockImplementation(() => new Promise(resolve => { release = resolve; }));
+    mocks.submit.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
     const task = executeGtc(params(), checked(false));
     await vi.waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
     expect(mocks.otherPoll).toHaveBeenCalledExactlyOnceWith(mocks.record!.id, false);

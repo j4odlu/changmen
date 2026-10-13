@@ -8,18 +8,27 @@ import { isPendingConfirmVenueProvider, isPredictFunProvider } from "@changmen/s
 import { isVenueLegConfirmedUnfilled, isVenueLegPendingConfirm } from "@changmen/venue-adapter/contract";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { resolveVenueLegOutcome } from "@/domain/betting/resolveVenueLegOutcome";
+import { observedRayOrders } from "@/runtime/orderMonitoring/rayOrders";
 import { getProvider } from "@/runtime/providers";
 import { refreshGtcOrders, saveOrders } from "./ordersApi";
 import { findGtcOtherOrder } from "./otherFacts";
 
-export async function readGtcOtherOrders(account: PlatformAccount, row: GtcExecution): Promise<VenueOrder[]> {
+export async function readGtcOtherOrders(account: PlatformAccount, row: GtcExecution, options: { fresh?: boolean } = {}): Promise<VenueOrder[]> {
   if (Number(account.accountId) !== row.plan.otherPlayerId || account.provider !== row.plan.otherProvider)
     throw new Error("GTC 原对侧账号身份不一致");
   const session = getAuthSessionVersion();
-  const orders = await getProvider(account)?.getOrders?.(account);
+  // [changmen 扩展] RAY 后台只读取原监控结果；首单拒单确认仍在原等待后独立查询。
+  const snapshot = account.provider === "RAY" ? observedRayOrders(account) : undefined;
+  const orders = account.provider === "RAY" && !options.fresh
+    ? snapshot && snapshot.startedAt >= row.other.submittedAt ? snapshot.orders : []
+    : await getProvider(account)?.getOrders?.(account);
   if (!isAuthSessionCurrent(session))
     throw new Error("GTC 会话已变更");
-  const original = findGtcOtherOrder(row, orders ?? []);
+  // [changmen 扩展] 被动结果可能早于普通订单绑 Link；无单号时不能抢认相似的新 FOK 单。
+  const evidence = account.provider === "RAY" && !options.fresh && !row.other.orderId
+    ? (orders ?? []).filter(order => ("pmGtcExecutionId" in order && order.pmGtcExecutionId === row.id) || Number(order.link) === row.plan.linkId)
+    : orders;
+  const original = findGtcOtherOrder(row, evidence ?? []);
   if (!original || !String(original.orderId ?? "").trim())
     return [];
   // 不修改场馆返回对象，不更新账号全局统计，不保存无关订单。
@@ -27,7 +36,9 @@ export async function readGtcOtherOrders(account: PlatformAccount, row: GtcExecu
   await saveOrders(account, [matched]);
   if (!isAuthSessionCurrent(session))
     throw new Error("GTC 会话已变更");
-  void refreshGtcOrders();
+  if (account.provider === "RAY" && !options.fresh && observedRayOrders(account) !== snapshot)
+    throw new Error("RAY 旧订单结果已被新查询替代");
+  void refreshGtcOrders().catch(() => {});
   return [matched];
 }
 
@@ -40,7 +51,7 @@ export async function settleGtcOtherLeg(
 ): Promise<{ orders: VenueOrder[]; rejected: boolean; pendingConfirm: boolean }> {
   const rounds = isPredictFunProvider(account.provider) ? 6 : 1;
   for (let round = 0; ; round++) {
-    const outcome = await resolveVenueLegOutcome(account, result, () => readGtcOtherOrders(account, current()), {
+    const outcome = await resolveVenueLegOutcome(account, result, () => readGtcOtherOrders(account, current(), { fresh: true }), {
       confirmPostAccepted: isPendingConfirmVenueProvider(account.provider),
       rejectWaitSec,
     });

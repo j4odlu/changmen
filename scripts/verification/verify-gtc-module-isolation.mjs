@@ -27,6 +27,15 @@ for (const file of files("packages/venue-adapter/polymarket/gtc")) {
   assert(!/from\s+["']\.\.\/bet["']/.test(fs.readFileSync(file, "utf8")), `${file}: GTC cannot borrow FOK preparation or its contract`);
   checked++;
 }
+// [changmen 扩展] 独立监控只恢复、读取、核对和撤原单；不拥有首次发送或 RAY 生命周期。
+for (const file of files("client/web/src/runtime/gtcOrderMonitor")) {
+  if (!file.endsWith(".ts") || file.endsWith(".test.ts")) continue;
+  const source = fs.readFileSync(file, "utf8");
+  assert(!forbidden.test(source), `${file}: GTC monitor cannot import FOK private state/actions`);
+  assert(!/\b(?:pmPostGtc|prepareGtcBuy|checkGtcBuy|placeOtherLeg|prepareOtherLeg|startRayOrderMonitoring|stopRayOrderMonitoring|resetRayOrderResults)\s*\(/.test(source), `${file}: GTC monitor cannot submit orders or control RAY`);
+  assert(!/kind:\s*["'](?:authorize_pm|authorize_other|submit)["']/.test(source), `${file}: GTC monitor cannot authorize or replay original sends`);
+  checked++;
+}
 const gateway = fs.readFileSync("client/web/src/orderModes/gtc/gateway.ts", "utf8");
 assert(!/publishBettingEvent|notifyPendingVenueConfirm|markSuccessfulBet|updateVenueOrders/.test(gateway), "GTC counterpart gateway cannot enter FOK follow-copy/count/settlement/snapshot paths");
 for (const obsolete of ["autoEntry.ts", "execute.ts", "prepare.ts", "check.ts"])

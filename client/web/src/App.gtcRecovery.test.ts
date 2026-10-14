@@ -24,7 +24,7 @@ vi.mock("pinia", async () => {
   const { toRefs } = await import("vue");
   return { storeToRefs: toRefs };
 });
-vi.mock("@/runtime/orderMonitoring/session", () => ({ startOrderMonitoring: mocks.start, stopOrderMonitoring: mocks.stop }));
+vi.mock("@/runtime/gtcOrderMonitor/runtime", () => ({ startGtcOrderMonitoring: mocks.start, stopGtcOrderMonitoring: mocks.stop }));
 vi.mock("@/runtime/rayOrderMonitor/runtime", () => ({ startRayOrderMonitoring: mocks.rayStart, stopRayOrderMonitoring: rayStop }));
 vi.mock("@/shared/applyUiTheme", () => ({ applyUiTheme: vi.fn() }));
 vi.mock("@/components/account/PmVaultDialogs.vue", () => ({ default: { render: () => null } }));
@@ -73,6 +73,8 @@ describe("gTC recovery follows owned original orders", () => {
     (await user()).extensionPrefs.pmArbOrderMode = "GTC"; await flush();
     (await user()).extensionPrefs.pmArbOrderMode = "FOK"; await flush();
     expect(mocks.rayStart).toHaveBeenCalledOnce();
+    expect(mocks.start).toHaveBeenCalledExactlyOnceWith("owner");
+    expect(mocks.stop).not.toHaveBeenCalled();
   });
   it("login always discovers durable monitors even with FOK selected and no participant hint", async () => {
     mount(); await flush(); expect(mocks.start).toHaveBeenCalledWith("owner"); expect(mocks.stop).not.toHaveBeenCalled();
@@ -100,5 +102,20 @@ describe("gTC recovery follows owned original orders", () => {
     (await orders()).orders.set(1, [{ OrderID: "preview", PmGtcExecutionId: "g" } as never]);
     mount(); await flush(); expect(mocks.start).not.toHaveBeenCalled();
     expect(mocks.rayStart).not.toHaveBeenCalled();
+  });
+  it("owner changes, preview and unmount manage both parallel module lifecycles", async () => {
+    mount(); await flush();
+    (await user()).userId = "next-owner"; await flush();
+    expect(mocks.start.mock.calls).toEqual([["owner"], ["next-owner"]]);
+    expect(mocks.rayStart).toHaveBeenCalledTimes(2);
+    (await accounts()).adminWorkspacePreview = true; await flush();
+    expect(mocks.stop).toHaveBeenCalledOnce();
+    expect(rayStop).toHaveBeenCalledTimes(3);
+    app!.unmount(); app = undefined; await flush();
+    expect(mocks.stop).toHaveBeenCalledTimes(2);
+    expect(rayStop).toHaveBeenCalledTimes(4);
+    (await accounts()).adminWorkspacePreview = false; await flush();
+    expect(mocks.start).toHaveBeenCalledTimes(2);
+    expect(mocks.rayStart).toHaveBeenCalledTimes(2);
   });
 });

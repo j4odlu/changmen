@@ -51,8 +51,8 @@ const RUNTIME_DEEP = new Map([
   ["orderModes/gtc/arbLeg.ts", new Set(["polymarket/gtc"])],
   ["stores/account/betGateway.ts", new Set(["polymarket/gtc"])],
   // [changmen 扩展] 独立 PM 监控承接原 GTC 核对；编排入口不再读场馆。
-  ["runtime/orderMonitoring/pm.ts", new Set(["polymarket/gtc"])],
-  ["runtime/orderMonitoring/pmPolling.ts", new Set(["polymarket/gtc"])],
+  ["runtime/gtcOrderMonitor/pm.ts", new Set(["polymarket/gtc"])],
+  ["runtime/gtcOrderMonitor/pmPolling.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/manual.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/gateway.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/orderCardView.ts", new Set(["polymarket/gtc"])],

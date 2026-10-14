@@ -2,8 +2,8 @@ import type { GtcCommand, GtcExecution, GtcPlan } from "@changmen/shared/pm_gtc"
 import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createOrderMonitorLoop } from "@/runtime/orderMonitoring/loop";
-import { createGtcPmOrderPolling } from "@/runtime/orderMonitoring/pmPolling";
-import { recoverMonitorRecords, resetMonitorRecovery } from "@/runtime/orderMonitoring/recovery";
+import { createGtcPmOrderPolling } from "@/runtime/gtcOrderMonitor/pmPolling";
+import { recoverMonitorRecords, resetMonitorRecovery } from "@/runtime/gtcOrderMonitor/recovery";
 import { acceptGtc, captureGtcSession, currentGtc, flushGtcCopies, gtcProgress, initializeGtcState, mutateGtc, refreshGtcRecords, resetGtcState } from "./executionState";
 import { pmGtcMonitorCardView } from "./monitorCardView";
 

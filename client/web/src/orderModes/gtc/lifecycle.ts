@@ -1,1 +1,1 @@
-export { setupOrderMonitoring as setupGtcLifecycle } from "@/runtime/orderMonitoring/lifecycle";
+export { setupGtcOrderMonitoring as setupGtcLifecycle } from "@/runtime/gtcOrderMonitor/lifecycle";

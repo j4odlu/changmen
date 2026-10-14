@@ -19,7 +19,7 @@ beforeEach(() => {
   mock.post.mockResolvedValue({ success: 1, info: result() });
 });
 afterEach(() => vi.useRealTimers());
-it("restores terminal manually rebound evidence with one unified request and retains the ordinary selected date", async () => {
+it("GTC restores terminal manually rebound evidence with one unified request and retains the ordinary selected date", async () => {
   const first = recoverMonitorRecords(); expect(recoverMonitorRecords()).toBe(first); await first;
   expect(mock.evidence!.rows([])).toEqual([original]); expect(mock.refresh).not.toHaveBeenCalled();
   expect(mock.post).toHaveBeenCalledOnce(); expect(mock.post.mock.calls[0]![0]).toBe("Pm_GtcRecover");

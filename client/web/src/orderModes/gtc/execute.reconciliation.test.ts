@@ -4,7 +4,7 @@ import type { ArbBetAttemptParams, ArbBetChecked } from "@/stores/betting/autoBe
 import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
-import { startPmGtcMonitoring, stopPmGtcMonitoring } from "@/runtime/orderMonitoring/pm";
+import { startPmGtcMonitoring, stopPmGtcMonitoring } from "@/runtime/gtcOrderMonitor/pm";
 import { executeGtc } from "@/test/executeOriginalPair";
 import { currentGtc, gtcInitialDispatches, gtcProgress, initializeGtcState, resetGtcState } from "./executionState";
 
@@ -48,11 +48,11 @@ vi.mock("./api", () => ({
 }));
 vi.mock("./runtime", async () => ({
   ...await import("./executionState"),
-  pollGtc: (await import("@/runtime/orderMonitoring/pm")).pollGtc,
+  pollGtc: (await import("@/runtime/gtcOrderMonitor/pm")).pollGtc,
   startGtcRuntime: vi.fn(),
   pollGtcOther: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("@/runtime/orderMonitoring/recovery", () => ({ recoverMonitorRecords: async () => {} }));
+vi.mock("@/runtime/gtcOrderMonitor/recovery", () => ({ recoverMonitorRecords: async () => {} }));
 vi.mock("@changmen/venue-adapter/polymarket", () => ({ recordPmExecutionMetric: vi.fn(), observePolymarketOrderWatch: () => () => {} }));
 // [changmen 扩展] 仅模拟公开 HTTP 边界，保留真实 PM 查询、分页与 transport；未知请求直接失败。
 vi.mock("@changmen/client-core/shared/platformHttp", async importOriginal => ({

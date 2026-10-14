@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 import { acceptGtc, currentGtc, gtcProgress, initializeGtcState, resetGtcState } from "@/orderModes/gtc/executionState";
 import { pollGtc, startPmGtcMonitoring, stopPmGtcMonitoring } from "./pm";
+import { createGtcPmOrderPolling } from "./pmPolling";
 
 const mocks = vi.hoisted(() => ({ history: vi.fn(), facts: vi.fn(), dispose: vi.fn(), watch: vi.fn(), accounts: [] as PlatformAccount[] }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "owner", isAuthSessionCurrent: () => true }));
@@ -34,7 +35,7 @@ beforeEach(async () => {
   gtcProgress.ready = true;
 });
 afterEach(() => { stopPmGtcMonitoring(); resetGtcState(); vi.useRealTimers(); });
-it("pM monitors run without the GTC coordinator, share account history and dispose terminal watches", async () => {
+it("PM monitors run without the GTC coordinator, share account history and dispose terminal watches", async () => {
   record("old"); record("new");
   expect(gtcProgress.records.map(row => [row.id, row.pmAuthorized])).toEqual([["new", true], ["old", true]]);
   startPmGtcMonitoring(); await vi.advanceTimersByTimeAsync(0); await vi.dynamicImportSettled(); await vi.advanceTimersByTimeAsync(0);
@@ -79,4 +80,33 @@ it("background polling of an open execution cannot start shared history before t
   startPmGtcMonitoring(); await vi.advanceTimersByTimeAsync(0); await vi.dynamicImportSettled(); await vi.advanceTimersByTimeAsync(0);
   expect(mocks.history).not.toHaveBeenCalled();
   expect(mocks.facts.mock.calls[0]).toHaveLength(4);
+});
+
+it("discarding a session during facts application cannot mark an order in the next session", async () => {
+  record("session");
+  let active = true;
+  const mark = vi.fn();
+  const mutate = vi.fn(async (_id: string, command: GtcCommand) => {
+    const result = applyGtcCommand(JSON.parse(JSON.stringify(currentGtc("session"))), command, Date.now());
+    active = false;
+    return result;
+  });
+  const polling = createGtcPmOrderPolling({ current: currentGtc, mutate, mark, captureCurrent: () => () => active });
+  await expect(polling.poll("session")).rejects.toThrow("会话已变更");
+  expect(mark).not.toHaveBeenCalled();
+  expect(mutate).toHaveBeenCalledOnce();
+});
+
+it("replacing PM account credentials during a read discards that account's late facts", async () => {
+  record("account");
+  const mutate = vi.fn(async (id: string) => currentGtc(id));
+  const mark = vi.fn();
+  const polling = createGtcPmOrderPolling({ current: currentGtc, mutate, mark, captureCurrent: () => () => true,
+    read: async () => {
+      mocks.accounts[0] = new PlatformAccount({ accountId: 1, provider: "Polymarket", token: "replacement", playerName: "PM" });
+      return { order: null, fills: [], complete: false, observedAt: Date.now() };
+    } });
+  await expect(polling.poll("account")).rejects.toThrow("会话已变更");
+  expect(mutate).not.toHaveBeenCalled();
+  expect(mark).not.toHaveBeenCalled();
 });

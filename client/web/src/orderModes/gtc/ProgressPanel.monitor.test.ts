@@ -10,7 +10,7 @@ import ProgressPanel from "./ProgressPanel.vue";
 
 const mocks = vi.hoisted(() => ({ confirm: vi.fn(), error: vi.fn(), cancel: vi.fn(), poll: vi.fn() }));
 vi.mock("element-plus", () => ({ ElMessage: { error: mocks.error }, ElMessageBox: { confirm: mocks.confirm } }));
-vi.mock("@/runtime/orderMonitoring/pm", () => ({ cancelGtc: mocks.cancel, pollGtc: mocks.poll }));
+vi.mock("@/runtime/gtcOrderMonitor/pm", () => ({ cancelGtc: mocks.cancel, pollGtc: mocks.poll }));
 const hash = `0x${"a".repeat(64)}`;
 function execution(): GtcExecution {
   const row = createGtcExecution("original", "owner", "wallet", "maker", { playerId: 1, shares: "10", price: "0.6", orderHash: hash } as GtcPlan, 1);

@@ -2,7 +2,7 @@ import type { GtcCommand, GtcExecution, GtcPlan } from "@changmen/shared/pm_gtc"
 import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { gtcOrderProjection } from "@/orderModes/gtc/executionProjection";
-import { beginRayOrderObservation } from "@/runtime/orderMonitoring/rayOrders";
+import { beginRayOrderObservation, resetRayOrderResults } from "@/runtime/orderMonitoring/rayOrders";
 import { useAccountStore } from "@/stores/accountStore";
 import { acceptGtc, cancelGtc, currentGtc, gtcProgress, pollGtc, pollGtcOther, refreshGtcRecords, startGtcRuntime, stopGtcRuntime } from "./runtime";
 import { mockUnifiedGtcRecovery } from "@/test/gtcRecoverFixture";
@@ -32,7 +32,7 @@ function row() {
 }
 const facts = () => ({ order: { id: hash, original: "10", matched: "0", status: "LIVE", tradeIds: [] }, fills: [], complete: true, observedAt: Date.now() });
 beforeEach(() => {
-  stopGtcRuntime(); vi.clearAllMocks(); sessionStorage.clear(); mocks.calls = []; mocks.orders.clear();
+  stopGtcRuntime(); resetRayOrderResults(); vi.clearAllMocks(); sessionStorage.clear(); mocks.calls = []; mocks.orders.clear();
   gtcProgress.owner = "owner"; gtcProgress.records = [row()];
   mocks.command.mockImplementation(async (previous: GtcExecution, command: GtcCommand) => {
     mocks.calls.push(command.kind); return applyGtcCommand(JSON.parse(JSON.stringify(previous)), command, Date.now());

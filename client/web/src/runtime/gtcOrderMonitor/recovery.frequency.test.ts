@@ -1,3 +1,4 @@
+/** [changmen 扩展] GTC 模块恢复频率与退避回归。 */
 import type { GtcExecution, GtcPlan } from "@changmen/shared/pm_gtc";
 import type { OrderRow } from "@/types/order";
 import { createGtcExecution } from "@changmen/shared/pm_gtc";

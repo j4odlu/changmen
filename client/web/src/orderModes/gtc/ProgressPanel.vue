@@ -32,7 +32,7 @@ async function cancel() {
   cancelBusy.value = true;
   try {
     await ElMessageBox.confirm("只取消这笔 PM 原挂单的剩余份额。已成交部分保留。", "取消 PM 剩余挂单", { type: "warning" });
-    const { cancelGtc } = await import("@/runtime/orderMonitoring/pm");
+    const { cancelGtc } = await import("@/runtime/gtcOrderMonitor/pm");
     if (props.execution.id !== id || props.execution.owner !== owner || gtcProgress.owner !== owner || !view.value.canCancel)
       throw new Error("原单状态或用户会话已变更，请重新核对");
     await cancelGtc(id);

@@ -4,14 +4,14 @@ import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { storeToRefs } from "pinia";
 import { watchEffect } from "vue";
 import PmVaultDialogs from "@/components/account/PmVaultDialogs.vue";
-import { setupOrderMonitoring } from "@/runtime/orderMonitoring/lifecycle";
+import { setupGtcOrderMonitoring } from "@/runtime/gtcOrderMonitor/lifecycle";
 import { setupRayOrderMonitoring } from "@/runtime/rayOrderMonitor/lifecycle";
 import { applyUiTheme } from "@/shared/applyUiTheme";
 import { useUserStore } from "@/stores/userStore";
 
 const user = useUserStore();
 const { extensionPrefs } = storeToRefs(user);
-setupOrderMonitoring();
+setupGtcOrderMonitoring();
 setupRayOrderMonitoring();
 
 watchEffect(() => {

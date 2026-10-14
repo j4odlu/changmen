@@ -9,6 +9,7 @@ import { isVenueLegConfirmedUnfilled, isVenueLegPendingConfirm } from "@changmen
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { resolveVenueLegOutcome } from "@/domain/betting/resolveVenueLegOutcome";
 import { observedRayOrders } from "@/runtime/orderMonitoring/rayOrders";
+import { readRayAccountOrders } from "@/runtime/orderPolling/ray";
 import { getProvider } from "@/runtime/providers";
 import { refreshGtcOrders, saveOrders } from "./ordersApi";
 import { findGtcOtherOrder } from "./otherFacts";
@@ -17,10 +18,12 @@ export async function readGtcOtherOrders(account: PlatformAccount, row: GtcExecu
   if (Number(account.accountId) !== row.plan.otherPlayerId || account.provider !== row.plan.otherProvider)
     throw new Error("GTC 原对侧账号身份不一致");
   const session = getAuthSessionVersion();
-  // [changmen 扩展] RAY 后台只读取原监控结果；首单拒单确认仍在原等待后独立查询。
+  // [changmen 扩展] 后台只消费原有查询结果；fresh 仅用于原下单流程等待后的拒单确认。
   const snapshot = account.provider === "RAY" ? observedRayOrders(account) : undefined;
-  const orders = account.provider === "RAY" && !options.fresh
-    ? snapshot && snapshot.startedAt >= row.other.submittedAt ? snapshot.orders : []
+  const orders = account.provider === "RAY"
+    ? options.fresh
+      ? await readRayAccountOrders(account, options)
+      : snapshot && snapshot.startedAt >= row.other.submittedAt ? snapshot.orders : []
     : await getProvider(account)?.getOrders?.(account);
   if (!isAuthSessionCurrent(session))
     throw new Error("GTC 会话已变更");
@@ -51,6 +54,7 @@ export async function settleGtcOtherLeg(
 ): Promise<{ orders: VenueOrder[]; rejected: boolean; pendingConfirm: boolean }> {
   const rounds = isPredictFunProvider(account.provider) ? 6 : 1;
   for (let round = 0; ; round++) {
+    // [changmen 扩展] 保持原等待后再查回执，不复用等待前开始的后台查询。
     const outcome = await resolveVenueLegOutcome(account, result, () => readGtcOtherOrders(account, current(), { fresh: true }), {
       confirmPostAccepted: isPendingConfirmVenueProvider(account.provider),
       rejectWaitSec,

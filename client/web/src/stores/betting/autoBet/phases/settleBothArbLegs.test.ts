@@ -1,4 +1,5 @@
 import type { ArbBetAttemptParams, ArbBetPlaced } from "./types";
+import type { OriginalLegExecution } from "@/domain/betting/originalLegExecution";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { BetResult } from "@changmen/client-core/models/betResult";
@@ -144,5 +145,24 @@ describe("settleBothArbLegs A8 wait", () => {
     expect(out).toMatchObject({ pendingConfirmA: true, rejectA: false });
     expect(bindArbLegOrder).not.toHaveBeenCalled();
     expect(refreshBalance).not.toHaveBeenCalled();
+  });
+  it("original PF counterpart waits once in common settle while PM facts confirm immediately", async () => {
+    const input = placed("Polymarket", "PredictFun");
+    const order: string[] = [];
+    const execution = (provider: string, seconds: number): OriginalLegExecution => ({
+      validate: () => {}, submit: vi.fn(), canContinueOriginalPair: () => true,
+      confirm: async () => { order.push(provider); return { orders: [], rejected: false, pendingConfirm: true }; },
+      facts: () => ({ submission: "accepted", fill: "partial" }), markConfirmed: () => {}, rejectWaitSec: seconds,
+    });
+    input.originalExecution = {
+      legs: new Map([[input.legA, execution("PM", 0)], [input.legB, execution("PF", 30)]]),
+      actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
+      close: async () => {}, summary: () => ({ message: "pending", traceStatus: "partial", failed: false }),
+    };
+    wait.mockImplementation(async () => { order.push("wait"); });
+    await settleBothArbLegs(params(), input);
+    expect(order).toEqual(["PM", "wait", "PF"]);
+    expect(wait).toHaveBeenCalledExactlyOnceWith(30_000);
+    expect(settleArbLegUntilTerminal).not.toHaveBeenCalled();
   });
 });

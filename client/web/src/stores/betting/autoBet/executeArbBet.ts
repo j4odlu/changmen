@@ -18,6 +18,7 @@ import { checkArbLegs } from "@/stores/betting/autoBet/phases/checkArbLegs";
 import { finalizeArbBet } from "@/stores/betting/autoBet/phases/finalizeArbBet";
 import { placeArbLegs } from "@/stores/betting/autoBet/phases/placeArbLegs";
 import { prepareArbAttempt } from "@/stores/betting/autoBet/phases/prepareArbAttempt";
+import { captureArbExecutionSelection } from "@/stores/betting/execution/selection";
 
 async function timed<T>(run: () => Promise<T>): Promise<{ value: T; ms: number }> {
   const startedAt = performance.now();
@@ -51,7 +52,8 @@ export async function executeArbBet(params: {
   if (isMapMuteActive(params.match.id, params.bet.round, params.match.liveRound))
     return;
 
-  const attempt: ArbBetAttemptParams = { ...params };
+  const mode = captureArbExecutionSelection().orderMode;
+  const attempt: ArbBetAttemptParams = { ...params, ...(mode === "GTC" ? { pmOrderMode: mode } : {}) };
 
   const phaseMsMap: Partial<Record<ArbAttemptPhase, number>> = {};
   const base = { at: Date.now(), matchId: params.match.id, betId: params.bet.id };
@@ -116,6 +118,15 @@ export async function executeArbBet(params: {
     recordArbAttemptMetric({ ...base, phaseMs: phaseMsMap, stop: "error" });
   }
   finally {
+    // [changmen 扩展] 关闭发送窗口不取消原挂单；异常和正常收尾共用同一个幂等关闭。
+    if (attempt.originalExecution) {
+      try { await attempt.originalExecution.close(); }
+      catch (error) {
+        observationOutcome = "exception";
+        observationMessage = errorMessage(error);
+        params.setMessage(`原单发送窗口收尾失败：${errorMessage(error)}`);
+      }
+    }
     finishExecutionObservation(observation, ready?.linkId, observationOutcome, phase, observationMessage);
   }
 }

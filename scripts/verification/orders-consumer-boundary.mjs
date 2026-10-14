@@ -1,6 +1,7 @@
 // [changmen 扩展] 精确恢复本轮已审查的消费者接线，再比较完整原 FOK 模块。
 // 固定原 FOK/VPS 基线不变；新增兼容 helper 全文单独保护，不按文件豁免。
 import assert from "node:assert/strict";
+import { restoreRayOrderMonitorSource } from "./ray-order-monitor-boundary.mjs";
 import { createHash } from "node:crypto";
 import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
 
@@ -20,6 +21,7 @@ export function restoreOrdersConsumerCompatibility(source, readSource) {
   source = restoreMinimalOrdersSource("server/db/rds/orders_store.js", source, readSource);
   verifyOrdersCompatHelper(readSource);
   source = once(source, "import { DELETE_FINANCIAL_ORDERS_SQL, financialDeletionIds, financialOrdersHookRow, financialOrdersRelation, ordersExecutionCompatibilityEnabled, ordinaryOrdersUpsertSql } from \"./orders_execution_compat.js\";\n", "");
+  source = restoreRayOrderMonitorSource(source);
   for (const [args, count, relation] of [["", 33, "orders"], ["\"o\"", 7, "orders o"], ["\"pm\"", 1, "orders pm"], ["\"other\"", 1, "orders other"]]) {
     const exact = `\${financialOrdersRelation(${args})}`;
     assert.equal(source.split(exact).length - 1, count, `fixed financial relation occurrences: ${args}`);

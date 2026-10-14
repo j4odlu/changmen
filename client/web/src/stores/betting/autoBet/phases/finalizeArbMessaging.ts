@@ -130,6 +130,11 @@ export function finishArbExecutionTrace(
   outcome: ArbFinalizeOutcome,
 ): void {
   const { trace } = params;
+  if (placed.originalExecution) {
+    const summary = placed.originalExecution.summary();
+    trace?.finish(summary.traceStatus, summary.message);
+    return;
+  }
   const { legA, legB, resultA, resultB } = placed;
   const { okA, okB, makeupQueued } = outcome;
 

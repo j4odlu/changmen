@@ -93,6 +93,8 @@ export async function finalizeArbBet(
   const { linkId } = placed;
 
   const settle = await settleBothArbLegs(params, placed);
+  const actions = placed.originalExecution?.actions;
+  await placed.originalExecution?.close();
   cancelQueuedMakeUpForRejectedAnchor(params, placed, settle);
 
   const registerRayLeg = (side: "A" | "B") => {
@@ -155,10 +157,12 @@ export async function finalizeArbBet(
     });
   };
   // [changmen 扩展] 只向独立订单监控交接上下文；同步返回，不参与本轮 settle/makeup 判断。
-  registerRayLeg("A");
-  registerRayLeg("B");
+  if (actions?.registerRejectMonitor !== false) {
+    registerRayLeg("A");
+    registerRayLeg("B");
+  }
 
-  const makeup = await applyArbMakeUpFromRejects(
+  const makeup = actions?.makeup === false ? { enqueuedForLegA: false, enqueuedForLegB: false } : await applyArbMakeUpFromRejects(
     params,
     placed,
     settle.rejectA,
@@ -205,10 +209,13 @@ export async function finalizeArbBet(
     finishArbExecutionTrace(params, placed, settle, outcome);
   }
   catch { /* 进度报告不参与下注结果处理 */ }
-  sendArbBettingMessageIfNeeded(params, placed, settle);
+  if (actions?.broadcast !== false)
+    sendArbBettingMessageIfNeeded(params, placed, settle);
+  if (placed.originalExecution)
+    params.setMessage(placed.originalExecution.summary().message);
 
   // [changmen 扩展] 仅开启时加载；关闭时与改前 finalize 路径一致（无额外 await）
-  if (useUserStore().extensionPrefs?.arbFailAutoSell?.enabled === true) {
+  if (actions?.autoSell !== false && useUserStore().extensionPrefs?.arbFailAutoSell?.enabled === true) {
     try {
       const { maybeArbFailAutoSellAfterFinalize } = await import(
         "@/extensions/arbBet/arbFailAutoSell",

@@ -47,10 +47,10 @@ const MOCK_ONLY_DEEP = new Set([
 
 /** 运行时单点深 import（避免 registry barrel 拉起全平台 adapters） */
 const RUNTIME_DEEP = new Map([
-  // GTC V1 独立入口，仅正式启用后动态加载，避免并入 FOK adapter barrel。
-  ["orderModes/gtc/execute.ts", new Set(["polymarket/gtc"])],
-  ["orderModes/gtc/runtime.ts", new Set(["polymarket/gtc"])],
-  // [changmen 扩展] 官方原单核对迁到独立 PM 监控模块，保持 GTC 专用入口。
+  // [changmen 扩展] 公共套利按 PM 单腿模式懒加载 GTC；兼容桥只封装原单身份。
+  ["orderModes/gtc/arbLeg.ts", new Set(["polymarket/gtc"])],
+  ["stores/account/betGateway.ts", new Set(["polymarket/gtc"])],
+  // [changmen 扩展] 独立 PM 监控承接原 GTC 核对；编排入口不再读场馆。
   ["runtime/orderMonitoring/pm.ts", new Set(["polymarket/gtc"])],
   ["runtime/orderMonitoring/pmPolling.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/manual.ts", new Set(["polymarket/gtc"])],

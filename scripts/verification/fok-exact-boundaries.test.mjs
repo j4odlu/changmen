@@ -45,7 +45,7 @@ describe("execution gates and observation placement", () => {
     const changed = source.replace(line, "").replace("  if (config.checkTimeout", `  ${line}\n  if (config.checkTimeout`);
     expect(() => check(file, changed)).toThrow();
   });
-  it("rejects changed second-leg conditions", () => mutate(files[1], "if (resultA.success)", "if (true)"));
+  it("rejects changed second-leg conditions", () => mutate(files[1], "if (resultA.success && (original?.legs.get(legA)?.canContinueOriginalPair() ?? true))", "if (true)"));
   it("rejects different second-leg POST arguments", () => mutate(files[1], "await submitLeg(accountB!, legB)", "await submitLeg(accountA!, legB)"));
   it("rejects widened pair observation gate", () => mutate(files[1], "if (mixedBlocked)", "if (mixedBlocked || accountA)"));
   it("rejects an observer mutating the original leg", () => {

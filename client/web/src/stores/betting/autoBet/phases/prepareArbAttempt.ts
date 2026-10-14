@@ -78,6 +78,8 @@ export async function prepareArbAttempt(
 
   const legA = options[0];
   const legB = options[1];
+  const pmOrderMode = params.pmOrderMode === "GTC" && options.some(leg => leg.type === "Polymarket") ? "GTC" : undefined;
+  // [changmen 扩展] 模式只影响 PM；保留现有 GTC 双腿支持范围，不扩大 9999 组合。
   const implied = 1 / options.reduce((sum, o) => sum + 1 / o.odds, 0);
   // [changmen 扩展] 高利润加仓：仅放大两腿注码，不改 config.betMoney / 对冲比例
   const stakeScale = applyStakeScaleByProfit(
@@ -135,6 +137,10 @@ export async function prepareArbAttempt(
   });
 
   const betBothLegs = Boolean(accountA) && Boolean(accountB);
+  if (pmOrderMode === "GTC" && (!betBothLegs || options.filter(leg => leg.type === "Polymarket").length !== 1)) {
+    trace?.finish("skip", "PM GTC 当前只支持一条 PM 腿的双边套利");
+    return null;
+  }
   const excludeA = config.noSameBet ? readUsedAccounts(bet.id, opponentSide(legA.target)) : [];
   const excludeB = config.noSameBet ? readUsedAccounts(bet.id, opponentSide(legB.target)) : [];
   const singleLegByRate = resolveSingleLegByRate({
@@ -277,6 +283,7 @@ export async function prepareArbAttempt(
   });
 
   return {
+    ...(pmOrderMode ? { pmOrderMode } : {}),
     legA,
     legB,
     accountA,

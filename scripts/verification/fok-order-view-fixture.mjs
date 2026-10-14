@@ -1,8 +1,10 @@
 // [changmen 扩展] 仅审查已存在的可选显示入口；不接入或放宽原严格发布保护。
 import assert from "node:assert/strict";
+import { restoreRayOrderViewSource } from "./ray-frontend-boundary.mjs";
 
 export function checkOrdinaryOrderView(current, original) {
   let source = current.replace(/\r\n/g, "\n");
+  if (source.includes("useRayOrderContextStore")) source = restoreRayOrderViewSource(source);
   function remove(statement) {
     assert.equal(source.split(statement).length - 1, 1, `exact OrderView extension: ${statement}`);
     source = source.replace(statement, "");

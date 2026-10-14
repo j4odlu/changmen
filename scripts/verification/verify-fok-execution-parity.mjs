@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { restoreUnifiedArbitrageSource, verifyUnifiedArbitrageContract } from "./unified-arb-boundaries.mjs";
+import { verifyRayFrontendSources } from "./ray-frontend-boundary.mjs";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -17,7 +19,6 @@ const exactFiles = [
   "server/backend/core/account/order/link.js",
   "client/web/src/shared/orderLink.ts",
   "client/web/src/stores/betting/autoBet/phases/finalizeArbBet.ts",
-  ...["runtime.ts", "match.ts", "autoMakeup.ts", "types.ts"].map(file => `client/web/src/extensions/arbBet/rayRejectMonitor/${file}`),
   "client/web/src/stores/betting/successMarkers.ts",
   "client/web/src/shared/betTiming.ts",
   "client/web/src/domain/betting/betFilters.ts",
@@ -50,6 +51,8 @@ const exactFiles = [
   "client/web/src/domain/polymarket/tickBufferQuote.ts",
 ];
 
+verifyRayFrontendSources(target => fs.readFileSync(target, "utf8"));
+const unifiedContract = verifyUnifiedArbitrageContract(target => fs.readFileSync(target, "utf8"), replaceExact);
 for (const file of exactFiles)
   verifyProtectedSource(file, normalizeSource(fs.readFileSync(file, "utf8")), gitSource(base, file), undefined, target => gitSource(base, target));
 // OrderList is shared by both modes. Optional details and amount slot preserve the original fallback.
@@ -134,8 +137,9 @@ const combinedStatements = specialized.transformed[0].body.statements.map(node =
 assert.deepEqual(combinedStatements, oldStatements, "complete manual entry under FOK selection matches VPS, including all preparation and failure gates");
 specialized.dispose();
 const orchestration = fs.readFileSync(executePath, "utf8");
-assert(!orchestration.includes("useUserStore") && !orchestration.includes("\"GTC\"") && !orchestration.includes("pmGtc/"), "orchestration cannot choose PM mode or import its execution module");
-process.stdout.write(`${JSON.stringify({ baseline: base, exactCoreFiles: exactFiles.length, pmFunctionBodies: beforePm.size, manualFokBodyIdentical: true })}\n`);
+const fixedOrchestration = restoreUnifiedArbitrageSource(executePath, orchestration, replaceExact, true);
+assert(!fixedOrchestration.includes("useUserStore") && !fixedOrchestration.includes("\"GTC\"") && !fixedOrchestration.includes("pmGtc/"), "orchestration cannot choose PM mode or import its execution module");
+process.stdout.write(`${JSON.stringify({ baseline: base, unifiedContract, exactCoreFiles: exactFiles.length, pmFunctionBodies: beforePm.size, manualFokBodyIdentical: true })}\n`);
 
 function load(file, old, context) {
   const source = old ? execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
@@ -209,8 +213,8 @@ const scenarios = [
   ["muted map", { mute: true }],
   ["single 9999 check rejected", { single: true, noCheck: true }],
   ["single 9999 check exception", { single: true, throw: "check" }],
-  ["direct FOK executor ignores GTC preference for single 9999", { mode: "GTC", activation: "1:owner", single: true }],
-  ["direct FOK executor ignores GTC preference for non-PM pairs", { mode: "GTC", activation: "1:owner", noPm: true }],
+  ["unified FOK executor with single 9999", { mode: "FOK", activation: "1:owner", single: true }],
+  ["unified FOK executor with non-PM pairs", { mode: "FOK", activation: "1:owner", noPm: true }],
 ];
 const rows = [];
 for (const [name, scenario] of scenarios) {
@@ -230,6 +234,7 @@ async function finalize(old, providers) {
   const funcs = {
     settleBothArbLegs: async () => { push("settle"); return settled; },
     registerRayRejectMonitor: x => push("register_ray", { side: x.side, initialDetectionPending: x.initialDetectionPending ?? false, anchorConfirmed: x.anchorConfirmed }),
+    registerRayOrderContext: x => push("register_ray", { side: x.side, initialDetectionPending: x.initialDetectionPending ?? false, anchorConfirmed: x.anchorConfirmed }),
     resolveArbMakeUpSuccessRef: () => ({ betMoney: 100, betOdds: 2 }),
     applyArbMakeUpFromRejects: async () => { push("makeup"); return {}; },
     logArbFinalizeTraceEvents: () => push("trace"),
@@ -258,7 +263,22 @@ const markers = load("client/web/src/stores/betting/successMarkers.ts", false, {
 const gtcMarkers = load("client/web/src/orderModes/gtc/successMarkers.ts", false, context);
 const account = { accountId: 91, provider: "Polymarket", maxBetCount: 1, lastOdds: true };
 const gtc = load("packages/shared/pm_gtc.ts", false, context);
-const runtime = load("client/web/src/orderModes/gtc/runtime.ts", false, { ...context, require: (name) => {
+// [changmen 扩展] 验证拆分后的真实状态模块；调度 facade 不负责历史计次。
+// 状态/证据依赖加载真实源码，仅模拟应用与传输边界，未知依赖直接失败。
+const stateModules = new Map();
+const statePaths = {
+  "./copyKey": "client/web/src/orderModes/gtc/copyKey.ts",
+  "./syncStatus": "client/web/src/orderModes/gtc/syncStatus.ts",
+  "./executionProjection": "client/web/src/orderModes/gtc/executionProjection.ts",
+  "./gtcProgressState": "client/web/src/orderModes/gtc/gtcProgressState.ts",
+  "./settlementEvidence": "client/web/src/orderModes/gtc/settlementEvidence.ts",
+};
+function requireState(name) {
+  if (statePaths[name]) {
+    if (!stateModules.has(name))
+      stateModules.set(name, load(statePaths[name], false, { ...context, require: requireState }));
+    return stateModules.get(name);
+  }
   if (name === "@changmen/shared/pm_gtc")
     return gtc;
   if (name === "vue")
@@ -271,8 +291,15 @@ const runtime = load("client/web/src/orderModes/gtc/runtime.ts", false, { ...con
     return gtcMarkers;
   if (name === "@/stores/userStore")
     return { useUserStore: () => ({ userId: "owner", extensionPrefs: { pmArbOrderMode: "FOK", pmGtcV1Participant: true } }) };
-  return {};
-} });
+  if (name === "@/stores/orderStore")
+    return { useOrderStore: () => ({ orders: new Map() }) };
+  if (name === "@/api/client")
+    return { getAuthSessionVersion: () => "fixture-session", isAuthSessionCurrent: () => true };
+  if (name === "./api")
+    return { commandGtc: () => { throw new Error("Unexpected GTC command in state fixture"); }, listGtc: () => { throw new Error("Unexpected GTC query in state fixture"); } };
+  throw new Error(`Unexpected state fixture dependency: ${name}`);
+}
+const runtime = load("client/web/src/orderModes/gtc/executionState.ts", false, { ...context, require: requireState });
 function gates() {
   return { betCount: timing.readBetCount(91, 92, "Home"), lastOdds: timing.getLastBetOdds(91, 92, "Home") ?? null, maxBetCountPasses: timing.passesMaxBetCount(account, 92, "Home"), lastOddsPasses: timing.passesLastOddsGate(account, 92, "Home", 1.8), usedAccounts: markers.readUsedAccounts(92, "Home") };
 }

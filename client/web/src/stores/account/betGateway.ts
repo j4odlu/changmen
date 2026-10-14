@@ -32,6 +32,8 @@ import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { getPmSubmission } from "@/api/order";
 
 export type CheckBettingOpts = ResolveVenueStakeOpts & {
+  /** [changmen 扩展] 本次 PM 单腿模式，非 PM provider 忽略。 */
+  pmOrderMode?: "FOK" | "GTC";
   role?: "execute" | "precheckOnly";
   /** 场馆额已换过：再预检只验盘口，不改 betMoney（勿用 skipAccountRate，USDT 会二次÷汇率） */
   skipStakeResolve?: boolean;
@@ -424,7 +426,9 @@ export async function checkBetting(
       option.stakeCurrency = String(account.currency || "CNY");
       option.betMoney = venueBetMoney;
     }
-    const checked = await provider.checkBet(account, option, { role: opts?.role ?? "execute", prepareSigning: signingTask });
+    const checked = pm && opts?.pmOrderMode === "GTC"
+      ? await (await import("@changmen/venue-adapter/polymarket/gtc")).checkGtcBuy(account, option, signingTask, true)
+      : await provider.checkBet(account, option, { role: opts?.role ?? "execute", prepareSigning: signingTask });
     // [changmen 扩展] adapter 返回新对象时只传递观察元数据，原业务返回值不变。
     try { checked.observation ??= option.observation; }
     catch { /* 观察字段写入失败不改变返回值 */ }

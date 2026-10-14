@@ -1,27 +1,37 @@
 import type { GtcCommand, GtcExecution, GtcPlan } from "@changmen/shared/pm_gtc";
 import type { ArbBetChecked } from "@/stores/betting/autoBet/phases/types";
+import { wait } from "@changmen/client-core/shared/wait";
 import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ExecutionError } from "@/orderModes/gtc/executionResult";
 import { presentArbExecution } from "@/orderModes/gtc/presentation";
-import { syncActiveBetFail, syncActiveBetLeg } from "@/stores/betting/activeBetRunSync";
-import { executeGtc } from "./execute";
+import { syncActiveBetFail, syncActiveBetLeg, syncActiveBetPhase, syncActiveBetPlaceResults } from "@/stores/betting/activeBetRunSync";
+import { showRejectDetectionTip } from "@/stores/betting/autoBet/rejectWait";
+import { executeGtc } from "@/test/executeOriginalPair";
+import { prepareGtcLegExecution } from "./arbLeg";
 import { markGtcSuccess } from "./successMarkers";
 
 const notices = vi.hoisted(() => ({ notify: vi.fn(), close: vi.fn() }));
 vi.mock("element-plus", () => ({ ElNotification: notices.notify }));
 
 const mocks = vi.hoisted(() => ({ submit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), refresh: vi.fn(), poll: vi.fn(), otherPoll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, existing: [] as GtcExecution[], initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "" }));
-const rayMonitor = vi.hoisted(() => vi.fn());
-const pmMatchedOrder = vi.hoisted(() => vi.fn());
-vi.mock("@/runtime/rayOrderMonitor/contexts", () => ({ registerRayOrderContext: rayMonitor }));
-vi.mock("@/stores/betting/makeUpReference", () => ({ resolveMakeUpSuccessReference: () => ({ betMoney: 5, betOdds: 2 }) }));
-vi.mock("./financialOrder", () => ({ gtcMatchedOrder: pmMatchedOrder }));
 vi.mock("@changmen/client-core/models/betResult", () => ({ BetResult: class { orderId = null; constructor(public provider: string, public success: boolean) {} saveLog = mocks.log; } }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: mocks.owner, config: { betting: true } }) }));
 vi.mock("./gateway", () => ({ placeOtherLeg: mocks.betting }));
-vi.mock("@/stores/betting/activeBetRunSync", () => ({ syncActiveBetPhase: vi.fn(), syncActiveBetFail: vi.fn(), syncActiveBetLeg: vi.fn(), scheduleActiveBetRunRemoval: vi.fn() }));
+vi.mock("@changmen/venue-adapter/polymarket", () => ({ recordPmExecutionMetric: vi.fn(), validatePolymarketPreparedBuy: vi.fn() }));
+vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ refreshBalance: vi.fn() }) }));
+vi.mock("@/stores/betting/autoBet/retryFailedLeg", () => ({ retryFailedLeg: vi.fn(() => { throw new Error("unexpected retry"); }) }));
+vi.mock("@/stores/betting/autoBet/makeUp", () => ({ enqueueMakeUpOrder: vi.fn(() => { throw new Error("unexpected makeup"); }) }));
+vi.mock("@/stores/loseOrderStore", () => ({ useLoseOrderStore: () => ({ orders: new Map() }) }));
+vi.mock("@/services/bettingLog", () => ({ saveVenueSettlementLog: vi.fn() }));
+vi.mock("@/services/orderExecutionObservation", () => ({ observeArbSubmissionBlocked: vi.fn() }));
+vi.mock("@/stores/betting/arbOrderBind", () => ({ bindArbLegOrder: vi.fn(), resolveArbBindOrderId: vi.fn() }));
+vi.mock("@/stores/betting/pendingOrderBind", () => ({ enqueuePendingOrderBind: vi.fn() }));
+vi.mock("@/stores/betting/autoBet/arbLegSettle", () => ({ settleArbLegUntilTerminal: vi.fn(() => { throw new Error("unexpected FOK settlement"); }) }));
+vi.mock("@changmen/client-core/shared/wait", () => ({ wait: vi.fn(async () => {}) }));
+vi.mock("@/stores/betting/autoBet/rejectWait", () => ({ maxLegRejectWaitSec: vi.fn(), showRejectDetectionTip: vi.fn() }));
+vi.mock("@/stores/betting/activeBetRunSync", () => ({ syncActiveBetPhase: vi.fn(), syncActiveBetFail: vi.fn(), syncActiveBetLeg: vi.fn(), syncActiveBetPlaceResults: vi.fn(), syncActiveBetLegSettleResult: vi.fn(), scheduleActiveBetRunRemoval: vi.fn() }));
 vi.mock("./otherOrders", () => ({ settleGtcOtherLeg: mocks.settle }));
 vi.mock("@/stores/betting/successMarkers", () => ({ markSuccessfulBet: mocks.count }));
 vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ prepareGtcBuy: mocks.prepare, pmSubmitMaker: () => "maker" }));
@@ -39,15 +49,14 @@ vi.mock("./runtime", () => ({
 }));
 const hash = `0x${"a".repeat(64)}`;
 function checked(pmFirst = true, parallel = false) {
-  const pm = { type: "Polymarket", betMoney: 5, odds: 2, betId: "condition", itemId: "token", target: "Home" };
+  const pm = { type: "Polymarket", betMoney: 5, odds: 2, betId: "condition", itemId: "token", target: "Home", data: {} };
   const other = { type: "RAY", betMoney: 33.5, odds: 2, matchId: "match", itemId: "away", target: "Away", data: {} };
   return { betBothLegs: true, singleLegByRate: false, legA: pmFirst ? pm : other, legB: pmFirst ? other : pm, accountA: { accountId: pmFirst ? 1 : 2, provider: pmFirst ? "Polymarket" : "RAY" }, accountB: { accountId: pmFirst ? 2 : 1, provider: pmFirst ? "RAY" : "Polymarket" }, waitSec: 30, linkId: 3, parallel } as never;
 }
 function params(parallel = false) {
-  return { match: { id: 1, title: "match" }, bet: { id: 2, getBetName: () => "market" }, config: { profit: mocks.ratio, betSorting: parallel ? "Parallel" : "Auto" }, setMessage: vi.fn(), trace: { finish: vi.fn() } } as never;
+  return { match: { id: 1, title: "match" }, bet: { id: 2, getBetName: () => "market" }, config: { profit: mocks.ratio, betSorting: parallel ? "Parallel" : "Auto" }, setMessage: vi.fn(), trace: { finish: vi.fn(), event: vi.fn() } } as never;
 }
 beforeEach(() => {
-  pmMatchedOrder.mockReset().mockImplementation(() => ({ orderId: "pm", pmShares: Number(mocks.initial), betMoney: 5, odds: 2 }));
   vi.clearAllMocks(); sessionStorage.clear(); mocks.record = null; mocks.existing = []; mocks.commands = []; mocks.initial = "0"; mocks.ready = true; mocks.ratio = 0.99;
   notices.notify.mockReturnValue({ close: notices.close });
   mocks.refresh.mockResolvedValue(undefined);
@@ -64,26 +73,50 @@ beforeEach(() => {
   mocks.settle.mockResolvedValue({ rejected: false, pendingConfirm: false, orders: [{ provider: "RAY", orderId: "ray-order", status: "none" }] });
 });
 describe("gTC original pair orchestration", () => {
-  it("unavailable PM reference evidence does not fail a successful RAY order or disable its independent monitor", async () => {
-    mocks.initial = "10"; pmMatchedOrder.mockImplementationOnce(() => { throw new Error("reference unavailable"); });
-    const result = await executeGtc(params(), checked(false));
-    expect(result.other?.submission).toBe("accepted");
-    expect(rayMonitor).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ accountId: 2, anchorConfirmed: false, anchorBetMoney: 0 }));
-    expect(mocks.betting).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
+  it.each([true, false])("gTC keeps rejection remedies disabled while retaining original-order polling when pmFirst=%s", async (pmFirst) => {
+    const lifecycle = await prepareGtcLegExecution(params(), checked(pmFirst));
+    expect(lifecycle.actions).toEqual({ retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false });
+    expect(mocks.betting).not.toHaveBeenCalled(); expect(mocks.settle).not.toHaveBeenCalled();
   });
-  it.each(["5", "10"])("rAY uses the existing independent monitor after first confirmation when PM matched %s shares", async (quantity) => {
-    mocks.initial = quantity;
+  it.each(["pending", "filled"] as const)("other-first monitor advancing to %s still sends PM exactly once", async (state) => {
+    mocks.otherPoll.mockImplementationOnce(async () => {
+      mocks.record = applyGtcCommand(mocks.record!, { kind: "other", state }, Date.now());
+      return [];
+    });
     await executeGtc(params(), checked(false));
-    expect(rayMonitor).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
-      accountId: 2,
-      side: "A",
-      anchorProvider: "POLYMARKET",
-      anchorConfirmed: quantity === "10",
-      initialOrders: [{ provider: "RAY", orderId: "ray-order", status: "none" }],
-      initialRejected: false,
-    }));
-    expect(mocks.settle.mock.invocationCallOrder[0]).toBeLessThan(rayMonitor.mock.invocationCallOrder[0]!);
     expect(mocks.betting).toHaveBeenCalledOnce();
+    expect(mocks.submit).toHaveBeenCalledOnce();
+    expect(mocks.commands.filter(command => command.kind === "authorize_pm")).toHaveLength(1);
+    expect(mocks.commands.filter(command => command.kind === "authorize_other")).toHaveLength(1);
+    expect(showRejectDetectionTip).toHaveBeenCalledExactlyOnceWith(30);
+    expect(wait).toHaveBeenCalledExactlyOnceWith(30_000);
+  });
+  it.each(["rejected", "unknown", "manual"] as const)("other-first monitor entering %s blocks PM", async (state) => {
+    mocks.otherPoll.mockImplementationOnce(async () => {
+      mocks.record = applyGtcCommand(mocks.record!, state === "manual"
+        ? { kind: "close" }
+        : { kind: "other", state }, Date.now());
+      return [];
+    });
+    await executeGtc(params(), checked(false));
+    expect(mocks.betting).toHaveBeenCalledOnce();
+    expect(mocks.submit).not.toHaveBeenCalled();
+    expect(mocks.commands.filter(command => command.kind === "authorize_pm")).toHaveLength(0);
+  });
+  it("shared settle restores one countdown and one wait before fresh original rejection confirmation", async () => {
+    mocks.initial = "5";
+    let release!: () => void;
+    vi.mocked(wait).mockImplementationOnce(() => new Promise<void>((resolve) => { release = resolve; }));
+    mocks.settle.mockResolvedValueOnce({ rejected: true, pendingConfirm: false, orders: [{ provider: "RAY", orderId: "ray-order", status: "reject" }] });
+    const task = executeGtc(params(), checked());
+    await vi.waitFor(() => expect(wait).toHaveBeenCalledExactlyOnceWith(30_000));
+    expect(showRejectDetectionTip).toHaveBeenCalledExactlyOnceWith(30);
+    expect(syncActiveBetPhase).toHaveBeenCalledWith(2, "settling", "拒单检测", 30);
+    expect(mocks.settle).not.toHaveBeenCalled();
+    release(); const result = await task;
+    expect(mocks.settle).toHaveBeenCalledExactlyOnceWith(expect.anything(), expect.anything(), expect.any(Function), 0);
+    expect(result.pm.fill).toBe("partial"); expect(result.other?.submission).toBe("rejected");
+    expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.betting).toHaveBeenCalledOnce();
   });
   it("other-first RAY starts original-order synchronization before a slow PM submission or reject wait", async () => {
     let release!: (value: { success: boolean; orderID: string }) => void;
@@ -94,7 +127,7 @@ describe("gTC original pair orchestration", () => {
     expect(mocks.settle).not.toHaveBeenCalled();
     release({ success: true, orderID: hash }); await task;
     expect(mocks.betting).toHaveBeenCalledOnce();
-    expect(mocks.settle).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.any(Function), 30);
+    expect(mocks.settle).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.any(Function), 0);
   });
   it("early original sync failure does not change a successful submission or send another order", async () => {
     mocks.otherPoll.mockRejectedValueOnce(new Error("Network Error"));
@@ -164,6 +197,14 @@ describe("gTC original pair orchestration", () => {
   it("parallel submits original pair once even if initial PM fill is zero", async () => {
     await executeGtc(params(true), checked(true, true)); expect(mocks.submit).toHaveBeenCalledTimes(1); expect(mocks.betting).toHaveBeenCalledTimes(1); expect(mocks.record?.manual).toBe(true);
   });
+  it("parallel other rejection preserves PM on its persisted original B side", async () => {
+    mocks.betting.mockResolvedValueOnce({ provider: "RAY", success: false, message: "rejected", response: { code: 501 } });
+    const result = await executeGtc(params(true), checked(false, true));
+    expect(mocks.record?.plan.originalPmLeg).toBe("B");
+    expect(syncActiveBetPlaceResults).toHaveBeenCalledWith(2, expect.objectContaining({ provider: "RAY", success: false }), expect.objectContaining({ provider: "Polymarket", success: true }), true, true, "api_failed", "accepted_pending_confirm", undefined);
+    expect(result.pm.submission).toBe("accepted");
+    expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.betting).toHaveBeenCalledOnce();
+  });
   it("other-first rejection never sends PM", async () => {
     mocks.betting.mockResolvedValue({ success: false, message: "赔率下降至1.84", response: { code: 501 } }); const args = params(); const result = await executeGtc(args, checked(false));
     expect(result).toMatchObject({ pm: { submission: "not_attempted", orderType: "GTC" }, responsibility: "none", failed: true });
@@ -182,7 +223,7 @@ describe("gTC original pair orchestration", () => {
   it("gateway failure without a venue response is unknown even if success=false has no unknown flag", async () => {
     mocks.betting.mockResolvedValue({ success: false, message: "Network Error" }); await executeGtc(params(), checked(false));
     expect(mocks.submit).not.toHaveBeenCalled(); expect(mocks.record).toMatchObject({ other: { state: "unknown" }, released: false, manual: true });
-    expect(syncActiveBetLeg).toHaveBeenCalledWith(2, "A", "pending_confirm", "Network Error");
+    expect(mocks.record?.other.message).toBe("Network Error");
   });
   it("both full verified completes without entering a retry queue", async () => {
     mocks.initial = "10"; await executeGtc(params(), checked()); expect(mocks.record?.groupComplete).toBe(true); expect(mocks.record?.released).toBe(true);

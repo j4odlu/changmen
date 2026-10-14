@@ -1,19 +1,13 @@
 import type { ViewBet, ViewMatch } from "@/models/match";
 import type { UserConfig } from "@/types/userConfig";
-import { executeArbBet as executeFok } from "@/stores/betting/autoBet/executeArbBet";
-import { captureArbExecutionSelection } from "@/stores/betting/execution/selection";
+import { executeArbBet as executeUnified } from "@/stores/betting/autoBet/executeArbBet";
 
-/** [changmen 扩展] Select once, before preparation. No state, recovery, or fallback here. */
+/** [changmen 扩展] 所有套利共享阶段；PM 模式由公共入口冻结并传给单腿。 */
 export async function executeArbBet(params: {
   match: ViewMatch;
   bet: ViewBet;
   config: UserConfig;
   setMessage: (message: string) => void;
 }): Promise<void> {
-  const selection = captureArbExecutionSelection();
-  if (selection.orderMode === "GTC") {
-    const { executeGtcAttempt } = await import("./gtc/autoEntry");
-    return executeGtcAttempt(params);
-  }
-  return executeFok(params);
+  return executeUnified(params);
 }

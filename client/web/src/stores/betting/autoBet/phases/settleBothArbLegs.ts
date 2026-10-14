@@ -1,5 +1,6 @@
 import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
+import type { OriginalLegFacts } from "@/domain/betting/originalLegExecution";
 import type {
   ArbBetAttemptParams,
   ArbBetPlaced,
@@ -20,6 +21,8 @@ import {
 import { enqueuePendingOrderBind } from "@/stores/betting/pendingOrderBind";
 
 export interface ArbLegSettleSnapshot {
+  factsA?: OriginalLegFacts;
+  factsB?: OriginalLegFacts;
   ordersA: VenueOrder[];
   ordersB: VenueOrder[];
   rejectA: boolean;
@@ -97,7 +100,10 @@ export async function settleBothArbLegs(
   }
 
   const snapshot = emptySettleSnapshot(placeOutcomeA, placeOutcomeB);
-  const maxWait = maxLegRejectWaitSec(config, successAccounts);
+  const original = placed.originalExecution;
+  const maxWait = original
+    ? Math.max(0, ...[placed.legA, placed.legB].map((leg, index) => (index === 0 ? resultA : resultB)?.success ? original.legs.get(leg)?.rejectWaitSec ?? 0 : 0))
+    : maxLegRejectWaitSec(config, successAccounts);
   // [A8 可证实] 普通场馆只要有 API 成功腿就弹 tip，检测等待为 0 也保留原有提示。
   const hasA8Success = successAccounts.some(account => !isPendingConfirmVenueProvider(account.provider));
   if (hasA8Success)
@@ -125,7 +131,8 @@ export async function settleBothArbLegs(
     const placeOutcome = side === "A" ? placeOutcomeA : placeOutcomeB;
     if (!account || !result)
       return;
-    const synced = await settleArbLegUntilTerminal(account, result, {
+    const execution = original?.legs.get(leg);
+    const synced = execution ? await execution.confirm(result) : await settleArbLegUntilTerminal(account, result, {
       // 编排层已空等 max；场馆层不再 sleep（A8 一次 wait 后立刻 updateOrders）
       rejectWaitSec: 0,
       pendingBindLinkId: linkId,
@@ -155,6 +162,13 @@ export async function settleBothArbLegs(
       provider: account.provider,
       pendingDetail: placeOutcome === "accepted_pending_confirm" ? "已挂单待确认" : "delayed 待确认",
     });
+    // [changmen 扩展] 兼容桥已保存精确原单及最终 Link，不再使用普通最新单绑定或 FOK 落库。
+    if (execution) {
+      if (side === "A") snapshot.factsA = execution.facts();
+      else snapshot.factsB = execution.facts();
+      if (synced.orders.length) snapshot.boundLegLabels.push(leg.type);
+      return;
+    }
     if (result.pmSubmitUnknown) return;
     const orderId = resolveArbBindOrderId(synced.orders, result, rejected);
     if (await bindArbLegOrder(linkId, account, result, synced.orders, rejected)) {
@@ -185,8 +199,11 @@ export async function settleBothArbLegs(
 
   const settleA = Boolean((resultA?.success || resultA?.pmSubmitUnknown) && accountA);
   const settleB = Boolean((resultB?.success || resultB?.pmSubmitUnknown) && accountB);
-  const pendingA = settleA && isPendingConfirmVenueProvider(accountA!.provider);
-  const pendingB = settleB && isPendingConfirmVenueProvider(accountB!.provider);
+  // [changmen 扩展] 原腿的等待由公共流程完成；含 PF 等确认型场馆，不能提前核对后跳过原等待。
+  const pendingA = settleA && isPendingConfirmVenueProvider(accountA!.provider)
+    && (!original || (original.legs.get(legA)?.rejectWaitSec ?? 0) === 0);
+  const pendingB = settleB && isPendingConfirmVenueProvider(accountB!.provider)
+    && (!original || (original.legs.get(legB)?.rejectWaitSec ?? 0) === 0);
   const a8A = settleA && !pendingA;
   const a8B = settleB && !pendingB;
 

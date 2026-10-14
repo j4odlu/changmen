@@ -74,10 +74,16 @@ export async function placeArbLegs(
   const placeOpts = { linkId, requirePreparedQuote: true };
   const dispatchStart = checked.precheckCompletedAt ?? performance.now();
   const hasPm = [legA.type, legB.type].includes("Polymarket");
+  // [changmen 扩展] 单腿能力接入同一发送阶段，GTC 不拥有双腿排序或收尾循环。
+  if (checked.pmOrderMode === "GTC" && hasPm) {
+    const { prepareGtcLegExecution } = await import("@/orderModes/gtc/arbLeg");
+    checked.originalExecution = params.originalExecution = await prepareGtcLegExecution(params, checked);
+  }
+  const original = checked.originalExecution;
   function submitLeg(account: PlatformAccount, leg: BetOption) {
     if (hasPm) recordPmExecutionMetric({ kind: "dispatch", tokenId: leg.itemId,
       stage: leg.type, linkId, ms: performance.now() - dispatchStart, success: true });
-    return accountStore.betting(account, leg, waitSec, placeOpts);
+    return original?.legs.get(leg)?.submit() ?? accountStore.betting(account, leg, waitSec, placeOpts);
   }
 
   if (isPendingConfirmVenueProvider(legA.type))
@@ -100,6 +106,8 @@ export async function placeArbLegs(
   let mixedBlocked = false;
   let mixedBlockReason = "";
   for (const [account, leg] of [[accountA, legA], [accountB, legB]] as const) {
+    const execution = original?.legs.get(leg);
+    if (execution) { execution.validate(); continue; }
     if (account?.provider !== "Polymarket") continue;
     const reason = validatePolymarketPreparedBuy(account, leg);
     if (reason) { mixedBlocked = true; mixedBlockReason = reason; trace?.event("预检", reason); }
@@ -128,13 +136,15 @@ export async function placeArbLegs(
     trace?.event("下单", `并行 ${legA.type} + ${legB.type}`);
     attemptedA = true;
     attemptedB = true;
-    const pair = await Promise.all([
+    const tasks = [
       submitLeg(accountA!, legA),
       submitLeg(accountB!, legB),
-    ]);
+    ];
+    // [changmen 扩展] 一次性原腿必须都结束后才能关闭发送窗口。
+    const pair = original ? (await Promise.allSettled(tasks)).map(row => row.status === "fulfilled" ? row.value : undefined) : await Promise.all(tasks);
     resultA = pair[0];
     resultB = pair[1];
-    if (resultA?.success || !pair.some(r => r?.success)) {
+    if (original || resultA?.success || !pair.some(r => r?.success)) {
       // keep leg/account assignment
     }
     else if (resultB?.success) {
@@ -150,19 +160,21 @@ export async function placeArbLegs(
     const firstStart = performance.now();
     resultA = await submitLeg(accountA!, legA);
     if (hasPm) recordPmExecutionMetric({ kind: "serial_wait", linkId, ms: performance.now() - firstStart, success: resultA.success });
-    if (resultA.success) {
+    if (resultA.success && (original?.legs.get(legA)?.canContinueOriginalPair() ?? true)) {
       attemptedB = true;
       resultB = await submitLeg(accountB!, legB);
     }
     else {
       // [changmen 扩展] 首腿未成功时 A8 不发第二腿；单独记录第二腿未提交，不覆盖首腿回执。
-      const reason = resultA.pmSubmitUnknown ? "首腿提交结果未知，未发送第二腿" : "首腿提交返回失败，未发送第二腿";
+      const reason = resultA.success ? "首腿已受理，原单事实或发送窗口不允许继续第二腿"
+        : resultA.pmSubmitUnknown ? "首腿提交结果未知，未发送第二腿" : "首腿提交返回失败，未发送第二腿";
       observeArbSubmissionBlocked({ ...checked, accountA: undefined }, "serial_first_leg_failed", reason);
     }
     // A 失败：B 保持 not_attempted，仍回传编排层
   }
 
-  if (resultB?.success && !resultA?.success) {
+  // [changmen 扩展] 持久化原腿的 A/B 身份供挂单监控关联，不随回执成功换位。
+  if (!original && resultB?.success && !resultA?.success) {
     [legA, legB] = [legB, legA];
     [accountA, accountB] = [accountB, accountA];
     [resultA, resultB] = [resultB, resultA];
@@ -183,7 +195,7 @@ export async function placeArbLegs(
       .join(" · "),
   );
 
-  if (betBothLegs && resultA?.success && !resultB?.success && !resultB?.pmSubmitUnknown && attemptedB) {
+  if (original?.actions.retry !== false && betBothLegs && resultA?.success && !resultB?.success && !resultB?.pmSubmitUnknown && attemptedB) {
     trace?.event("重试", `anyOdds 换腿补 ${legB.type} ${legB.target}`);
     const retry = await retryFailedLeg(
       match,

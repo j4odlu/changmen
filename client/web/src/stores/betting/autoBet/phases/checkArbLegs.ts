@@ -133,12 +133,14 @@ export async function checkArbLegs(
     ? accountStore.checkBetting(checkAccountA, legA, {
         role: isSingleLegPrecheckOnly("A", accountA, accountB, checkAccountA, checkAccountB) ? "precheckOnly" : "execute",
         skipAccountRate: resolveSkipAccountRate("A", ready),
+        ...(legA.type === "Polymarket" && ready.pmOrderMode === "GTC" ? { pmOrderMode: ready.pmOrderMode } : {}),
       })
     : undefined;
   const taskB = checkAccountB
     ? accountStore.checkBetting(checkAccountB, legB, {
         role: isSingleLegPrecheckOnly("B", accountA, accountB, checkAccountA, checkAccountB) ? "precheckOnly" : "execute",
         skipAccountRate: resolveSkipAccountRate("B", ready),
+        ...(legB.type === "Polymarket" && ready.pmOrderMode === "GTC" ? { pmOrderMode: ready.pmOrderMode } : {}),
       })
     : undefined;
 

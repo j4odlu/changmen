@@ -5,6 +5,7 @@ import { createGtcExecution } from "@changmen/shared/pm_gtc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 import { beginRayOrderObservation, resetRayOrderResults } from "@/runtime/orderMonitoring/rayOrders";
+import { readRayAccountOrders, resetRayOrderPolling } from "@/runtime/orderPolling/ray";
 import { readGtcOtherOrders, settleGtcOtherLeg } from "./otherOrders";
 
 const mocks = vi.hoisted(() => ({ getOrders: vi.fn(), save: vi.fn(), refresh: vi.fn(), outcome: vi.fn(), valid: true }));
@@ -28,7 +29,7 @@ function original(): VenueOrder {
   return { provider: "RAY", orderId: "gtc-ray", createAt: Date.now(), odds: 2, betMoney: 100, money: 0, reward: 0, status: "none", game: "", match: "", bet: "", item: "", venueMatchId: "gtc-match", venueItemId: "gtc-away", link: 123 };
 }
 beforeEach(() => {
-  resetRayOrderResults(); vi.resetAllMocks(); mocks.valid = true; mocks.getOrders.mockResolvedValue([]); mocks.save.mockResolvedValue(undefined); mocks.refresh.mockResolvedValue(undefined);
+  resetRayOrderResults(); resetRayOrderPolling(); vi.resetAllMocks(); mocks.valid = true; mocks.getOrders.mockResolvedValue([]); mocks.save.mockResolvedValue(undefined); mocks.refresh.mockResolvedValue(undefined);
   mocks.outcome.mockImplementation(async (_account: unknown, _result: unknown, pull: () => Promise<VenueOrder[]>) => ({ orders: await pull(), settlement: "filled" }));
 });
 describe("gTC consumes original RAY monitoring results", () => {
@@ -117,12 +118,13 @@ describe("gTC consumes original RAY monitoring results", () => {
       const orders = await pull();
       return { orders, settlement: orders[0]?.status === "reject" ? "unfilled" : "filled" };
     });
-    const background = mocks.getOrders(acc);
+    const background = readRayAccountOrders(acc);
+    const discarded = expect(background).rejects.toThrow("新的回执确认替代");
     await Promise.resolve(); await Promise.resolve();
     const confirmation = settleGtcOtherLeg(acc, { provider: "RAY", success: true } as BetResult, () => row, 30);
     await Promise.resolve(); await Promise.resolve();
     expect(await confirmation).toMatchObject({ rejected: true, pendingConfirm: false, orders: [{ orderId: "gtc-ray", status: "reject" }] });
-    release([original()]); await background;
+    release([original()]); await discarded;
     expect(mocks.getOrders).toHaveBeenCalledTimes(2);
     expect(mocks.save).toHaveBeenCalledTimes(1);
     expect(mocks.save.mock.calls[0]![1]).toMatchObject([{ orderId: "gtc-ray", status: "reject" }]);

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { replaceExact } from "./fok-exact-boundaries.mjs";
+import { restoreRayBackendDispatch } from "./ray-backend-dispatch-boundary.mjs";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import ts from "typescript";
@@ -37,7 +39,7 @@ const results = [];
 for (const file of ["client/web/src/api/order.ts", "client/web/src/stores/account/pmManualSell.ts", "server/backend/core/account/order_store.js", "server/backend/core/account/order/dto.js"]) {
   const previous = parse(file, execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" }));
   const current = parse(file, file === "client/web/src/stores/account/pmManualSell.ts"
-    ? specializeFokSource(file, fs.readFileSync(file, "utf8")) : restoreMinimalOrdersSource(file, fs.readFileSync(file, "utf8"), target => fs.readFileSync(target, "utf8")));
+    ? specializeFokSource(file, fs.readFileSync(file, "utf8")) : restoreRayBackendDispatch(file, restoreMinimalOrdersSource(file, fs.readFileSync(file, "utf8"), target => fs.readFileSync(target, "utf8")), replaceExact));
   const transformed = specialize(current);
   if (file === "server/backend/core/account/order_store.js") {
     const print = (nodes, sf) => normalize(nodes.map(node => printer.printNode(ts.EmitHint.Unspecified, node, sf)).join("\n"));

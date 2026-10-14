@@ -1,4 +1,5 @@
 import type { BetSide, ViewBet } from "@/models/match";
+import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { ArbBetPlaced } from "@/stores/betting/autoBet/phases/types";
 import type { ArbLegSettleSnapshot } from "@/stores/betting/autoBet/phases/settleBothArbLegs";
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
@@ -16,6 +17,7 @@ export function markArbSuccessLegs(
 ): void {
   const { legA, legB, accountA, accountB, resultA, resultB } = placed;
   const markLeg = (
+    leg: BetOption,
     result: typeof resultA,
     account: typeof accountA,
     reject: boolean,
@@ -23,12 +25,14 @@ export function markArbSuccessLegs(
     target: BetSide,
     odds: number,
   ) => {
+    const execution = placed.originalExecution?.legs.get(leg);
+    if (execution) { execution.markConfirmed(); return; }
     if (!result?.success || reject || !account)
       return;
     if (isPendingConfirmVenueProvider(account.provider) && pendingConfirm)
       return;
     markSuccessfulBet(account, bet.id, target, odds);
   };
-  markLeg(resultA, accountA, settle.rejectA, settle.pendingConfirmA, legA.target, legA.odds);
-  markLeg(resultB, accountB, settle.rejectB, settle.pendingConfirmB, legB.target, legB.odds);
+  markLeg(legA, resultA, accountA, settle.rejectA, settle.pendingConfirmA, legA.target, legA.odds);
+  markLeg(legB, resultB, accountB, settle.rejectB, settle.pendingConfirmB, legB.target, legB.odds);
 }

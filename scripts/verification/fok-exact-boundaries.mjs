@@ -1,5 +1,8 @@
 // [changmen 扩展] 逐项完整保护已审查差异；不改变基线，也不提供按名字/前缀剥离的通用豁免。
 import assert from "node:assert/strict";
+import { restoreUnifiedArbitrageSource } from "./unified-arb-boundaries.mjs";
+import { restoreRayBackendDispatch } from "./ray-backend-dispatch-boundary.mjs";
+import { restoreRayProviderSource, restoreRayFinalizeSource } from "./ray-frontend-boundary.mjs";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import ts from "typescript";
@@ -107,8 +110,9 @@ function restoreGateway(source) {
 
 export function verifyProtectedSource(file, current, original, readSource = target => fs.readFileSync(target, "utf8"), baselineRead) {
   const specialized = specializeFokSource(file, restoreMinimalOrdersSource(file, current, readSource), readSource);
-  const source = specialized;
-  const unifiedRestored = false;
+  const unified = restoreUnifiedArbitrageSource(file, specialized, replaceExact);
+  const source = restoreRayBackendDispatch(file, restoreRayProviderSource(file, restoreRayFinalizeSource(file, unified, replaceExact), readSource), replaceExact);
+  const unifiedRestored = source !== specialized;
   if (file === "server/db/rds/orders_store.js") {
     sameModule(restoreOrdersConsumerCompatibility(source, readSource), original, file);
     return { file, fixedSourceEqual: false, exactBoundaryVerified: true, kind: "explicit orders financial compatibility with complete fixed-baseline module" };

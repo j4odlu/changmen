@@ -29,8 +29,10 @@ for (const file of files("packages/venue-adapter/polymarket/gtc")) {
 }
 const gateway = fs.readFileSync("client/web/src/orderModes/gtc/gateway.ts", "utf8");
 assert(!/publishBettingEvent|notifyPendingVenueConfirm|markSuccessfulBet|updateVenueOrders/.test(gateway), "GTC counterpart gateway cannot enter FOK follow-copy/count/settlement/snapshot paths");
-const automatic = fs.readFileSync("client/web/src/orderModes/gtc/autoEntry.ts", "utf8");
-assert(!/placeArbLegs|finalizeArbBet|singleLeg9999Map/.test(automatic), "GTC automatic execution cannot finalize/retry/reserve FOK work");
+for (const obsolete of ["autoEntry.ts", "execute.ts", "prepare.ts", "check.ts"])
+  assert(!fs.existsSync(`client/web/src/orderModes/gtc/${obsolete}`), `obsolete GTC pair pipeline must be removed: ${obsolete}`);
+const bridge = fs.readFileSync("client/web/src/orderModes/gtc/arbLeg.ts", "utf8");
+assert(!/placeArbLegs|finalizeArbBet|settleBothArbLegs|showRejectDetectionTip|syncActiveBetPhase/.test(bridge), "GTC bridge cannot own public phases");
 for (const removed of ["report.ts", "orderStore.ts", "orderStats.ts", "financialStatistics.ts", "FinancialOrders.vue", "OrderList.vue"])
   assert(!fs.existsSync(`client/web/src/orderModes/gtc/${removed}`), `GTC execution mode must not create a second ordinary order/statistics/report pipeline: ${removed}`);
 // [changmen 扩展] Shared order transport must not require GTC recovery or duplicate its writer.

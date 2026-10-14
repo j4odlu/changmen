@@ -1,7 +1,7 @@
 import type { ArbBetPlaced } from "@/stores/betting/autoBet/phases/types";
 import type { ArbLegSettleSnapshot } from "@/stores/betting/autoBet/phases/settleBothArbLegs";
 import type { ArbMakeUpEnqueueResult } from "@/stores/betting/autoBet/arbMakeUpFromRejects";
-import { syncActiveBetAfterRejectSync } from "@/stores/betting/activeBetRunSync";
+import { scheduleActiveBetRunRemoval, syncActiveBetAfterRejectSync, syncActiveBetFail, syncActiveBetPhase } from "@/stores/betting/activeBetRunSync";
 
 export interface ArbFinalizeOutcome {
   okA: boolean;
@@ -24,6 +24,13 @@ export function syncArbFinalizeActiveBet(
     resultB?.success && accountB && !settle.rejectB && !settle.pendingConfirmB,
   );
   const makeupQueued = makeup.enqueuedForLegA || makeup.enqueuedForLegB;
+  if (placed.originalExecution) {
+    const summary = placed.originalExecution.summary();
+    if (summary.failed) syncActiveBetFail(betId, summary.message);
+    else syncActiveBetPhase(betId, "syncing", summary.message);
+    scheduleActiveBetRunRemoval(betId);
+    return { okA, okB, makeupQueued };
+  }
 
   let makeupTarget: "A" | "B" | undefined;
   let makeupPlatform: string | undefined;

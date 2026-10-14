@@ -5,6 +5,7 @@ import { PLATFORMS } from "../../../shared/platforms";
 import { isPolymarketBetResultFillConfirmed } from "../../orderStatus";
 import { parsePolymarketBuyOrderFill, scalePolymarketVenueOrdersForDisplay } from "../../orders";
 import type { PolymarketOrderResponseLike } from "../../orderTypes";
+import { lookupPolymarketOrderBetLabel } from "../../markets/orderBetLabel";
 import {
   computePolymarketBuyAllInStakeUsdc,
   fetchPolymarketMarketFeeDetails,
@@ -197,7 +198,7 @@ export async function buildPolymarketMatchedBuyVenueOrderFromBet(
       createAt: Number(result.beginTime) > 0 ? Number(result.beginTime) : Date.now(),
       game: option.match?.game ?? "",
       match: option.match?.title ?? "",
-      bet: option.bet?.getBetName?.() ?? option.bet?.name ?? "",
+      bet: lookupPolymarketOrderBetLabel(option.betId, option.itemId) || "盘口待核实",
       item: String(itemName ?? "").trim(),
       pmTokenId: String(option.itemId ?? "").trim(),
       pmConditionId: String(option.betId ?? "").trim(),

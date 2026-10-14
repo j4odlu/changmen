@@ -177,11 +177,15 @@ function mapNumberOf(market: PolymarketRawMarket): number | null {
   ].filter(Boolean).join(" ");
   if (type === "moneyline" && WINNER_RE.test(text))
     return 0;
-  if (type === "child_moneyline") {
+  if (type === "child_moneyline" || !type) {
     const questionMap = /\b(?:map|game)\s*(\d+)\s+winner\b/i.exec(text);
     if (questionMap)
       return Number(questionMap[1]);
   }
+  // [changmen 扩展] CLOB 历史市场不带 Gamma 的盘口类型；只解析明确的电竞全场标题。
+  if (!type && mapPolymarketGameId(market) && /\bvs\.?\s+.+\(BO\d+\)/i.test(text)
+    && !/\b(?:total|handicap|spread|over|under|kills)\b/i.test(text))
+    return 0;
   return null;
 }
 

@@ -20,6 +20,9 @@ import { enrichPolymarketBuyOrdersWithFees } from "../../pmFee";
 import { polymarketPluginGet } from "../../transport";
 import { pmGetTrades } from "../../pmClientApi";
 import { polymarketFailedBuyTradeRow } from "../../tradeFailure";
+import { lookupPolymarketOrderBetLabel, rememberPolymarketMarketBetLabel } from "../../markets/orderBetLabel";
+
+export { lookupPolymarketOrderBetLabel } from "../../markets/orderBetLabel";
 
 const TOKEN_MICRO = 1_000_000;
 /** 订单 sync + 迟结算缓冲（Phase 2b） */
@@ -951,7 +954,7 @@ function mergeChangmenStoredWithClob(stored: VenueOrder, clob: VenueOrder): Venu
       money: 0,
       status: base.status !== "none" ? base.status : clob.status,
       match: base.match || clob.match,
-      bet: base.bet || clob.bet,
+      bet: lookupPolymarketOrderBetLabel(clob.pmConditionId, clob.pmTokenId) || clob.bet || base.bet,
       item: base.item || clob.item,
       game: base.game || clob.game,
       link: base.link ?? clob.link,
@@ -1063,7 +1066,7 @@ function mergeChangmenStoredWithClob(stored: VenueOrder, clob: VenueOrder): Venu
     money: nextMoney,
     reward: nextReward,
     match: base.match || clob.match,
-    bet: base.bet || clob.bet,
+    bet: lookupPolymarketOrderBetLabel(clob.pmConditionId, clob.pmTokenId) || clob.bet || base.bet,
     item: base.item || clob.item,
     game: base.game || clob.game,
     pmConditionId: base.pmConditionId ?? clob.pmConditionId,
@@ -1120,7 +1123,7 @@ export function mergePolymarketClobWithStoredOrders(
     if (usedStored.has(stored.orderId))
       continue;
     if (stored.pmOrigin === "changmen" || (playerId > 0 && isPolymarketChangmenOrder(playerId, stored.orderId)))
-      merged.push(storedVenueOrderToUsdc(stored));
+      merged.push({ ...storedVenueOrderToUsdc(stored), bet: lookupPolymarketOrderBetLabel(stored.pmConditionId, stored.pmTokenId) || stored.bet });
   }
 
   return merged;
@@ -1161,6 +1164,7 @@ async function fetchGammaMarketsChunk(params: URLSearchParams): Promise<Polymark
 }
 
 function rememberGammaMarket(out: Map<string, PolymarketRawMarket>, market: PolymarketRawMarket): void {
+  rememberPolymarketMarketBetLabel(market);
   const key = marketConditionId(market);
   if (key) out.set(key, market);
   for (const tokenId of gammaTokenIds(market)) {
@@ -1289,6 +1293,7 @@ async function fetchTradesSince(
 export async function fetchPolymarketVenueOrdersBundle(
   account: PlatformAccount,
   lookbackMs = ORDER_LOOKBACK_MS,
+  storedOrders: VenueOrder[] = [],
 ): Promise<PolymarketVenueOrdersBundle> {
   const gateway = account.gateway || POLYMARKET_CLOB_API;
   const windowMs = Math.min(Math.max(Number(lookbackMs) || ORDER_LOOKBACK_MS, 60_000), ORDER_LOOKBACK_MS);
@@ -1307,9 +1312,11 @@ export async function fetchPolymarketVenueOrdersBundle(
   const preview = [...buyPreview, ...sellPreview].filter(
     trade => (Number(trade.match_time) || 0) >= afterSec,
   );
+  // [changmen 扩展] 增量成交窗口以外的存量订单也补 PM 盘口名称；已知元数据不重复查询。
+  const missingLabels = storedOrders.filter(order => !lookupPolymarketOrderBetLabel(order.pmConditionId, order.pmTokenId));
   const marketMap = await fetchMarketsByConditionIds(
-    preview.map(trade => String(trade.market ?? "")).filter(Boolean),
-    preview.map(trade => String(trade.asset_id ?? "")).filter(Boolean),
+    [...preview.map(trade => String(trade.market ?? "")), ...missingLabels.map(order => String(order.pmConditionId ?? ""))].filter(Boolean),
+    [...preview.map(trade => String(trade.asset_id ?? "")), ...missingLabels.map(order => String(order.pmTokenId ?? ""))].filter(Boolean),
   );
   return {
     orders: mapPolymarketTradesToVenueOrders(rawTrades, marketMap, afterSec, userAddresses),
@@ -1339,7 +1346,7 @@ export async function fetchPolymarketVenueOrdersMerged(
   const stored = await loadPolymarketStoredVenueOrders(account);
   const hasOpenStored = stored.some(o => hasOpenPolymarketPosition(o));
   const lookbackMs = resolvePolymarketTradeLookbackMs(account.accountId, hasOpenStored);
-  const { orders, flattenedTrades } = await fetchPolymarketVenueOrdersBundle(account, lookbackMs);
+  const { orders, flattenedTrades } = await fetchPolymarketVenueOrdersBundle(account, lookbackMs, stored);
   markPolymarketOrdersSynced(account.accountId, lookbackMs);
   const finalized = finalizePolymarketVenueOrders(orders, account.accountId, stored);
   // delayed / trades 同步：CLOB orderId→txHash→activity.usdcSize（1:1）；再公式回退；再 scale 成 CNY

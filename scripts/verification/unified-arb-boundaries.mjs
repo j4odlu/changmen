@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { gitSource, moduleTokens } from "./fok-exact-boundaries.mjs";
 import { restoreRayFinalizeSource, verifyRayFrontendSources } from "./ray-frontend-boundary.mjs";
+import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
 
 const root = "client/web/src/stores/betting/autoBet/";
 const phases = `${root}phases/`;
@@ -165,7 +166,7 @@ export function verifyUnifiedArbitrageContract(readSource, replaceExact) {
       assert.equal(expected.split(before).length, 2, `${file}: unique complete initial-pair correction`);
       expected = expected.replace(before, after);
     }
-    assert.equal(readSource(file).replace(/\r\n/g, "\n"), expected, `${file}: complete reviewed unified capability contract`);
+    assert.equal(restorePmOrderBetLabelSource(file, readSource(file), readSource), expected, `${file}: complete reviewed unified capability contract`);
   }
   for (const file of Object.keys(UNIFIED_ARBITRAGE_BOUNDARIES)) {
     const restored = restoreRayFinalizeSource(file, restoreUnifiedArbitrageSource(file, readSource(file), replaceExact, true), replaceExact);

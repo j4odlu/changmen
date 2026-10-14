@@ -2,6 +2,7 @@ import type { PolymarketMarketIndex, PolymarketMarketIndexEntry } from "@changme
 import type { CollectBetDto } from "@changmen/client-core/types/collect";
 
 import type { PolymarketMappedMarket } from "../parse";
+import { rememberPolymarketIndexBetLabel } from "./orderBetLabel";
 
 export function isPolymarketMarketIndex(value: unknown): value is PolymarketMarketIndex {
   if (!value || typeof value !== "object")
@@ -66,6 +67,7 @@ export function applyPolymarketMarketIndex(
     return [];
 
   for (const entry of index.entries) {
+    rememberPolymarketIndexBetLabel(entry);
     const mapped = indexEntryToMappedMarket(entry);
     maps.marketsById.set(mapped.marketId, mapped);
     maps.assetToMarket.set(mapped.assetIds[0]!, mapped.marketId);

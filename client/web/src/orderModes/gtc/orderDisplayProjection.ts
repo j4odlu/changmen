@@ -7,6 +7,7 @@ import { resolveOrderItemLabel } from "@/shared/orderItemDisplay";
 import { compareOrderLinkDesc, dropOrphanPolymarketSellGroups, filterOrdersBelongingToDate, groupOrdersByEffectiveLink, orderLinkMapEntries } from "@/shared/orderLink";
 import { gtcMatchedOrder } from "./financialOrder";
 import { gtcOrderCardView } from "./orderCardView";
+import { lookupPolymarketOrderBetLabel } from "@changmen/venue-adapter/polymarket/orders";
 
 function originalItemText(execution: GtcExecution): string {
   const entities: Record<string, string> = { apos: "'", quot: "\"", amp: "&", lt: "<", gt: ">", nbsp: " " };
@@ -39,7 +40,7 @@ function pendingOrderRow(execution: GtcExecution): OrderRow {
     Type: "Polymarket",
     PlayerID: plan.playerId,
     Match: plan.match,
-    Bet: plan.bet,
+    Bet: lookupPolymarketOrderBetLabel(plan.conditionId, plan.tokenId) || "盘口待核实",
     Item: originalItemText(execution),
     CreateAt: execution.createdAt,
     Status: execution.submit === "rejected" && !view.unsubmitted
@@ -75,9 +76,10 @@ export function gtcOrderDisplayGroups(financialRows: OrderRow[], executions: Gtc
       continue;
     const group = byExecution.get(identity.executionId) ?? { rows: [] };
     // 旧 GTC 入库赔率曾误用含费成本；展示沿用普通 PM 的成交价赔率回退。
-    group.rows.push(row.Type === "Polymarket" && row.PmSide !== "sell" && Number(row.PmFillPrice) > 0
-      ? { ...row, Odds: undefined }
-      : row);
+    const pmLabel = row.Type === "Polymarket" ? lookupPolymarketOrderBetLabel(row.PmConditionId, row.PmTokenId) : "";
+    group.rows.push({ ...row, ...(pmLabel ? { Bet: pmLabel } : {}),
+      ...(row.Type === "Polymarket" && row.PmSide !== "sell" && Number(row.PmFillPrice) > 0 ? { Odds: undefined } : {}),
+    });
     byExecution.set(identity.executionId, group);
   }
   for (const execution of executions) {

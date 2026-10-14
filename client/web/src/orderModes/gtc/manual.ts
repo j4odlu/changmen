@@ -13,6 +13,7 @@ import { gtcExecutionResult } from "./result";
 import { acceptGtc, currentGtc, mutateGtc, pollGtc, startGtcRuntime } from "./runtime";
 import { notifyBet } from "@/shared/betNotification";
 import { gtcPmNotice } from "./notifications";
+import { lookupPolymarketOrderBetLabel } from "@changmen/venue-adapter/polymarket/orders";
 
 /** [changmen 扩展] 单次手动 GTC，不依赖自动下注开关、不触发另一腿或旧 FOK 编排。 */
 export async function executeManualGtc(account: PlatformAccount, input: BetOption, context: {
@@ -47,7 +48,7 @@ export async function executeManualGtc(account: PlatformAccount, input: BetOptio
     if (option.stakeExchange != null && option.stakeExchange !== fx)
       throw new Error("PM 手动 GTC 金额币种不一致，未发送订单");
     const { submit, validate, prepareSubmit, ...frozen } = prepared;
-    const plan: GtcPlan = { ...frozen, source: "manual", playerId: Number(account.accountId), otherPlayerId: 0, originalPmLeg: "A", otherProvider: "", otherTarget: option.target === "Home" ? "Away" : "Home", otherOdds: 0, otherStake: 0, otherVenueMatchId: "", otherVenueItemId: "", parallel: false, matchId: context.match.id, betRowId: context.bet.id, linkId: -Date.now(), tokenId: option.itemId, conditionId: option.betId, target: option.target, match: context.match.title, bet: context.bet.getBetName(), item: option.target === "Home" ? context.bet.homeName : context.bet.awayName, fx };
+    const plan: GtcPlan = { ...frozen, source: "manual", playerId: Number(account.accountId), otherPlayerId: 0, originalPmLeg: "A", otherProvider: "", otherTarget: option.target === "Home" ? "Away" : "Home", otherOdds: 0, otherStake: 0, otherVenueMatchId: "", otherVenueItemId: "", parallel: false, matchId: context.match.id, betRowId: context.bet.id, linkId: -Date.now(), tokenId: option.itemId, conditionId: option.betId, target: option.target, match: context.match.title, bet: lookupPolymarketOrderBetLabel(option.betId, option.itemId) || "盘口待核实", item: option.target === "Home" ? context.bet.homeName : context.bet.awayName, fx };
     const id = crypto.randomUUID();
     validate(); checkSession();
     acceptGtc(await createGtc(id, maker, plan));

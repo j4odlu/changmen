@@ -4,6 +4,7 @@ import { BetResult } from "@changmen/client-core/models/betResult";
 import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { executeManualGtc } from "./manual";
+import * as pmOrders from "@changmen/venue-adapter/polymarket/orders";
 
 const notices = vi.hoisted(() => ({ notify: vi.fn(), close: vi.fn() }));
 
@@ -42,6 +43,15 @@ beforeEach(() => {
 });
 
 describe("isolated manual GTC execution", () => {
+  it("saves the native PM label for a manual bet launched from a decider row", async () => {
+    const label = vi.spyOn(pmOrders, "lookupPolymarketOrderBetLabel").mockReturnValueOnce("全场");
+    const ctx = context();
+    ctx.bet = { id: 2, homeName: "A", awayName: "B", getBetName: () => "[地图3] 获胜" } as never;
+    await executeManualGtc(account, input(), ctx);
+    expect(label).toHaveBeenCalledWith("condition", "token");
+    expect(mocks.create.mock.calls[0]![2]).toMatchObject({ bet: "全场", betRowId: 2 });
+    label.mockRestore();
+  });
   it("old recovery unavailable does not block a newly persisted manual order", async () => {
     mocks.progress.ready = false; mocks.refresh.mockRejectedValue(new Error("old list unavailable"));
     await executeManualGtc(account, input(), context());

@@ -16,6 +16,7 @@ import { gtcPmNotice } from "./notifications";
 import { acceptGtc, beginGtcInitialDispatch, currentGtc, markGtcLegOnce, mutateGtc, pollGtc, refreshGtcRecords, startGtcRuntime } from "./runtime";
 import { assertGtcHistoryAllowsLeg } from "./successMarkers";
 import { gtcProgress } from "./gtcProgressState";
+import { lookupPolymarketOrderBetLabel } from "@changmen/venue-adapter/polymarket/orders";
 
 /** [changmen 扩展] 旧持久化双腿身份的兼容桥；只提供单腿操作，不编排 prepare/place/settle/finalize。 */
 export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checked: ArbBetChecked): Promise<OriginalExecutionLifecycle> {
@@ -64,7 +65,7 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
   validateOther(); prepared.validate();
   const { submit: _submit, validate: _validate, prepareSubmit: _prepareSubmit, ...frozenPm } = prepared;
   void _submit; void _validate; void _prepareSubmit;
-  const plan: GtcPlan = { ...frozenPm, playerId: Number(account.accountId), otherPlayerId: Number(otherAccount.accountId), originalPmLeg: pmA ? "A" : "B", otherProvider: otherAccount.provider, otherTarget: other.target, otherOdds: other.odds, otherStake: other.betMoney, matchId: params.match.id, betRowId: params.bet.id, otherVenueMatchId: other.matchId, otherVenueItemId: other.itemId, linkId: checked.linkId, tokenId: pm.itemId, conditionId: pm.betId, target: pm.target, match: params.match.title, bet: params.bet.getBetName(), item: pm.target, fx, parallel: params.config.betSorting === "Parallel" };
+  const plan: GtcPlan = { ...frozenPm, playerId: Number(account.accountId), otherPlayerId: Number(otherAccount.accountId), originalPmLeg: pmA ? "A" : "B", otherProvider: otherAccount.provider, otherTarget: other.target, otherOdds: other.odds, otherStake: other.betMoney, matchId: params.match.id, betRowId: params.bet.id, otherVenueMatchId: other.matchId, otherVenueItemId: other.itemId, linkId: checked.linkId, tokenId: pm.itemId, conditionId: pm.betId, target: pm.target, match: params.match.title, bet: lookupPolymarketOrderBetLabel(pm.betId, pm.itemId) || "盘口待核实", item: pm.target, fx, parallel: params.config.betSorting === "Parallel" };
   const id = crypto.randomUUID();
   acceptGtc(await createGtc(id, pmSubmitMaker(account), plan));
   const finishSubmission = beginGtcInitialDispatch(id);

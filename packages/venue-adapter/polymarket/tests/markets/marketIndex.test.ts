@@ -4,6 +4,7 @@ import {
   applyPolymarketMarketIndex,
   isPolymarketMarketIndex,
 } from "../../marketIndex";
+import { lookupPolymarketOrderBetLabel } from "../../orders";
 
 describe("polymarket marketIndex", () => {
   test("isPolymarketMarketIndex", () => {
@@ -37,5 +38,6 @@ describe("polymarket marketIndex", () => {
     expect(ids).toEqual(["h", "a"]);
     expect(marketsById.get("cond-1")?.bet.SourceHomeID).toBe("h");
     expect(assetToMarket.get("a")).toBe("cond-1");
+    expect(lookupPolymarketOrderBetLabel("cond-1", "a")).toBe("全场");
   });
 });

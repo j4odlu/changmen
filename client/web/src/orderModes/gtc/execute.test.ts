@@ -9,6 +9,7 @@ import { showRejectDetectionTip } from "@/stores/betting/autoBet/rejectWait";
 import { executeGtc } from "@/test/executeOriginalPair";
 import { prepareGtcLegExecution } from "./arbLeg";
 import { markGtcSuccess } from "./successMarkers";
+import * as pmOrders from "@changmen/venue-adapter/polymarket/orders";
 
 const notices = vi.hoisted(() => ({ notify: vi.fn(), close: vi.fn() }));
 vi.mock("element-plus", () => ({ ElNotification: notices.notify }));
@@ -74,6 +75,25 @@ beforeEach(() => {
   mocks.settle.mockResolvedValue({ rejected: false, pendingConfirm: false, orders: [{ provider: "RAY", orderId: "ray-order", status: "none" }] });
 });
 describe("gTC original pair orchestration", () => {
+  it("stores PM's native full-match label while retaining the decider row for orchestration", async () => {
+    const label = vi.spyOn(pmOrders, "lookupPolymarketOrderBetLabel").mockReturnValueOnce("全场");
+    const input = params() as unknown as Parameters<typeof prepareGtcLegExecution>[0];
+    input.bet.getBetName = () => "[地图3] 获胜";
+    await prepareGtcLegExecution(input, checked());
+    expect(label).toHaveBeenCalledWith("condition", "token");
+    expect(mocks.record!.plan).toMatchObject({ bet: "全场", betRowId: 2, conditionId: "condition", tokenId: "token" });
+    expect(input.bet.getBetName()).toBe("[地图3] 获胜");
+    label.mockRestore();
+  });
+  it("does not save the composer map label when native PM metadata is unavailable", async () => {
+    const label = vi.spyOn(pmOrders, "lookupPolymarketOrderBetLabel").mockReturnValueOnce("");
+    const input = params() as unknown as Parameters<typeof prepareGtcLegExecution>[0];
+    input.bet.getBetName = () => "[地图3] 获胜";
+    await prepareGtcLegExecution(input, checked());
+    expect(mocks.record!.plan.bet).toBe("盘口待核实");
+    expect(mocks.submit).not.toHaveBeenCalled();
+    label.mockRestore();
+  });
   it.each([true, false])("gTC keeps rejection remedies disabled while retaining original-order polling when pmFirst=%s", async (pmFirst) => {
     const lifecycle = await prepareGtcLegExecution(params(), checked(pmFirst));
     expect(lifecycle.actions).toEqual({ retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false });

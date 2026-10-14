@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import { getExchange, Currency } from "@changmen/shared/currency";
+import { rememberPolymarketMarketBetLabel } from "../../markets/orderBetLabel";
 import {
   buildPolymarketMatchedBuyVenueOrderFromBet,
   buildPolymarketMatchedBuyVenueOrderUsdc,
@@ -129,6 +130,7 @@ describe("buildPolymarketMatchedBuyVenueOrderFromBet", () => {
     option.target = "Home";
     option.itemId = "tok";
     option.betId = "cond";
+    rememberPolymarketMarketBetLabel({ conditionId: "cond", groupItemTitle: "Match Winner", clobTokenIds: ["tok"] });
 
     const delayed = new BetResult("Polymarket", true, "delayed", {}, {
       success: true,
@@ -156,6 +158,7 @@ describe("buildPolymarketMatchedBuyVenueOrderFromBet", () => {
     expect(order?.pmStakeUsdc).toBe(10.3);
     expect(order?.betMoney).toBeCloseTo(10.3 * fx, 4);
     expect(order?.item).toBe("A");
+    expect(order?.bet).toBe("全场");
     expect(order?.match).toBe("A vs B");
     expect(order?.createAt).toBe(1_700_000_000_000);
   });

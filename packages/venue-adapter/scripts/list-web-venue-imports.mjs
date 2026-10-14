@@ -48,17 +48,19 @@ const MOCK_ONLY_DEEP = new Set([
 /** 运行时单点深 import（避免 registry barrel 拉起全平台 adapters） */
 const RUNTIME_DEEP = new Map([
   // [changmen 扩展] 公共套利按 PM 单腿模式懒加载 GTC；兼容桥只封装原单身份。
-  ["orderModes/gtc/arbLeg.ts", new Set(["polymarket/gtc"])],
+  ["orderModes/gtc/arbLeg.ts", new Set(["polymarket/gtc", "polymarket/orders"])],
   ["stores/account/betGateway.ts", new Set(["polymarket/gtc"])],
   // [changmen 扩展] 独立 PM 监控承接原 GTC 核对；编排入口不再读场馆。
   ["runtime/gtcOrderMonitor/pm.ts", new Set(["polymarket/gtc"])],
   ["runtime/gtcOrderMonitor/pmPolling.ts", new Set(["polymarket/gtc"])],
-  ["orderModes/gtc/manual.ts", new Set(["polymarket/gtc"])],
+  ["orderModes/gtc/manual.ts", new Set(["polymarket/gtc", "polymarket/orders"])],
   ["orderModes/gtc/gateway.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/orderCardView.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/pollingPolicy.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/sellFinancials.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/financialOrder.ts", new Set(["polymarket/orders"])],
+  // [changmen 扩展] 订单盘口名复用 PM 原生元数据缓存，不从合场 Map 推断。
+  ["orderModes/gtc/orderDisplayProjection.ts", new Set(["polymarket/orders"])],
   ["runtime/venueAdapters.ts", new Set(["registry/adapters"])],
   // vitest setup → oddsStore：勿经 polymarket/predictfun barrel 预加载 CLOB transport，否则场馆单测 vi.mock 失效
   ["stores/oddsStore.ts", new Set([

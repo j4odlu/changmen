@@ -2,12 +2,15 @@
 import type { ArbBetAttemptParams, ArbBetChecked } from "@/stores/betting/autoBet/phases/types";
 import type { GtcExecutionResult } from "@/orderModes/gtc/executionResult";
 import { ExecutionError } from "@/orderModes/gtc/executionResult";
+import { prepareGtcLegExecution } from "@/orderModes/gtc/arbLeg";
 import { placeArbLegs } from "@/stores/betting/autoBet/phases/placeArbLegs";
 import { settleBothArbLegs } from "@/stores/betting/autoBet/phases/settleBothArbLegs";
 
 export async function executeGtc(params: ArbBetAttemptParams, checked: ArbBetChecked): Promise<GtcExecutionResult> {
   checked.pmOrderMode = "GTC";
   try {
+    checked.originalExecution = params.originalExecution = await prepareGtcLegExecution(params, checked);
+    for (const execution of checked.originalExecution.legs.values()) execution.validate();
     const placed = await placeArbLegs(params, checked);
     await settleBothArbLegs(params, placed);
     await placed.originalExecution!.close();

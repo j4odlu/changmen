@@ -5,6 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetOption as BetOptionClass } from "@changmen/client-core/models/betOption";
 import { checkArbLegs } from "@/stores/betting/autoBet/phases/checkArbLegs";
 import { createDefaultUserConfig } from "@/types/userConfig";
+import { syncActiveBetPrecheckResults } from "@/stores/betting/activeBetRunSync";
+
+const prepareGtc = vi.hoisted(() => vi.fn());
+vi.mock("@/orderModes/gtc/arbLeg", () => ({ prepareGtcLegExecution: prepareGtc }));
+vi.mock("@/stores/betting/activeBetRunSync", () => ({
+  syncActiveBetPrecheckResults: vi.fn(), syncActiveBetPhase: vi.fn(), syncActiveBetFail: vi.fn(), scheduleActiveBetRunRemoval: vi.fn(),
+}));
 
 const checkBetting = vi.hoisted(() => vi.fn());
 const getEntry = vi.hoisted(() => vi.fn());
@@ -67,6 +74,7 @@ const params: ArbBetAttemptParams = {
 describe("checkArbLegs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prepareGtc.mockReset();
     pendingOrders.clear();
     extensionPrefs.stakeScaleByProfit.skipAccountRateOnScale = false;
     getEntry.mockReturnValue(undefined);
@@ -74,6 +82,31 @@ describe("checkArbLegs", () => {
       option.data = { ok: true };
       return option;
     });
+  });
+
+  it("GTC 完成发送准备和冻结校验后才报告双腿通过，准备期间不能进入 place", async () => {
+    const input = ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125)); input.pmOrderMode = "GTC";
+    const validate = vi.fn();
+    const lifecycle = { legs: new Map([[input.legA, { validate }], [input.legB, { validate }]]) } as never;
+    let release!: (value: typeof lifecycle) => void;
+    prepareGtc.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+    const args = { ...params };
+    const task = checkArbLegs(args, input);
+    await vi.waitFor(() => expect(prepareGtc).toHaveBeenCalledOnce());
+    expect(syncActiveBetPrecheckResults).not.toHaveBeenCalled();
+    release(lifecycle);
+    const result = await task;
+    expect(result?.originalExecution).toBe(lifecycle); expect(args.originalExecution).toBe(lifecycle);
+    expect(validate).toHaveBeenCalledTimes(2);
+    expect(syncActiveBetPrecheckResults).toHaveBeenCalledOnce();
+  });
+
+  it.each(["历史读取失败", "签单失败", "利润不足", "执行持久化失败", "时钟未就绪"])("GTC %s 归为预检失败，不宣称通过", async (message) => {
+    const input = ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125)); input.pmOrderMode = "GTC";
+    prepareGtc.mockRejectedValueOnce(new Error(message));
+    expect(await checkArbLegs({ ...params }, input)).toBeNull();
+    expect(syncActiveBetPrecheckResults).not.toHaveBeenCalled();
+    expect(params.setMessage).toHaveBeenCalledWith(message);
   });
 
   it("核验异常账号阻止新增套利，原单解除后恢复预检", async () => {

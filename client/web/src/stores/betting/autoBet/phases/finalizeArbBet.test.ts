@@ -298,10 +298,10 @@ describe("finalizeArbBet makeup enqueue", () => {
     placed.originalExecution = {
       close,
       summary: () => summary,
-      actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
+      finishSubmission: vi.fn(), actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
       legs: new Map([
-        [placed.legA, { validate() {}, submit: vi.fn(), canContinueOriginalPair: () => true, confirm: pmConfirm, facts: () => facts, markConfirmed: pmMark, rejectWaitSec: 0 }],
-        [placed.legB, { validate() {}, submit: vi.fn(), canContinueOriginalPair: () => true, confirm: otherConfirm, facts: () => ({ submission: "rejected" as const, fill: "none" as const }), markConfirmed: otherMark, rejectWaitSec: 30 }],
+        [placed.legA, { validate() {}, submit: vi.fn(), confirm: pmConfirm, facts: () => facts, markConfirmed: pmMark, rejectWaitSec: 0 }],
+        [placed.legB, { validate() {}, submit: vi.fn(), confirm: otherConfirm, facts: () => ({ submission: "rejected" as const, fill: "none" as const }), markConfirmed: otherMark, rejectWaitSec: 30 }],
       ]),
     } as OriginalExecutionLifecycle;
     await finalizeArbBet(params, placed);
@@ -326,10 +326,10 @@ describe("finalizeArbBet makeup enqueue", () => {
     placed.originalExecution = {
       close: vi.fn(async () => {}),
       summary: () => ({ message: "PM GTC", traceStatus: "partial", failed: false }),
-      actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
+      finishSubmission: vi.fn(), actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
       legs: new Map([
-        [placed.legA, { validate() {}, submit: vi.fn(), canContinueOriginalPair: () => true, confirm: pmConfirm, facts: () => ({ submission: "accepted", fill: pending ? "partial" : "full" }), markConfirmed: vi.fn(), rejectWaitSec: 0 }],
-        [placed.legB, { validate() {}, submit: vi.fn(), canContinueOriginalPair: () => true, confirm: rayConfirm, facts: () => ({ submission: "accepted", fill: "full" }), markConfirmed: vi.fn(), rejectWaitSec: 30 }],
+        [placed.legA, { validate() {}, submit: vi.fn(), confirm: pmConfirm, facts: () => ({ submission: "accepted", fill: pending ? "partial" : "full" }), markConfirmed: vi.fn(), rejectWaitSec: 0 }],
+        [placed.legB, { validate() {}, submit: vi.fn(), confirm: rayConfirm, facts: () => ({ submission: "accepted", fill: "full" }), markConfirmed: vi.fn(), rejectWaitSec: 30 }],
       ]),
     } as OriginalExecutionLifecycle;
     rejectWait.mockImplementationOnce(async () => { expect(registerRayOrderContext).not.toHaveBeenCalled(); });

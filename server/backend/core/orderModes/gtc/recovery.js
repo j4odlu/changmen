@@ -1,6 +1,6 @@
 /** [changmen 扩展] 只读恢复聚合：两张表、两个读取分区，任何分区失败不抹掉另一分区结果。 */
 import { listPmGtc } from "@changmen/db";
-import { gtcUnits } from "@changmen/shared/pm_gtc";
+import { gtcPmNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc";
 import { GTC_RECOVERY_KNOWN_LIMIT, gtcRecoveryFinancialKey } from "@changmen/shared/pm_gtc_recovery";
 import { getGtcMonitorOrders } from "./orders.js";
 
@@ -33,7 +33,7 @@ function mayHaveFinancialOriginal(row) {
   const zeroComplete = row.terminal && row.complete && !row.error && row.open === "0" && gtcUnits(row.matched) === 0n
     && !Object.keys(row.fills).length && (!row.order || (gtcUnits(row.order.matched) === 0n && !row.order.tradeIds.length))
     && (row.submit === "rejected" || (row.submit === "accepted" && row.order && row.orderId));
-  const pmMayExist = row.pmAuthorized || row.orderId || !["prepared", "not_attempted"].includes(row.submit)
+  const pmMayExist = !gtcPmNeverSubmitted(row) && (row.pmAuthorized || row.orderId || !["prepared", "not_attempted"].includes(row.submit))
     || Number(row.financialOrder?.pmShares) > 0;
   return Boolean(pmMayExist && (row.orderId || row.plan.orderHash) && !zeroComplete)
     || Boolean(row.other.orderId && ["authorized", "accepted", "pending", "unknown", "filled"].includes(row.other.state));

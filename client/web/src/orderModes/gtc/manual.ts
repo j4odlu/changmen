@@ -59,7 +59,9 @@ export async function executeManualGtc(account: PlatformAccount, input: BetOptio
       try {
         const ack = await submit();
         const accepted = ack.success === true && Boolean(ack.orderID);
-        await mutateGtc(id, { kind: "ack", state: accepted ? "accepted" : ack.success === false ? "rejected" : "unknown", orderId: ack.orderID, message: accepted ? "" : ack.errorMsg || "官方受理结果待核实，请勿重复下单" });
+        await mutateGtc(id, ack.pmSubmitNotSent && ack.success === false && !ack.orderID
+          ? { kind: "not_sent", leg: "PM", message: ack.errorMsg || "发送前检查失败，未提交" }
+          : { kind: "ack", state: accepted ? "accepted" : ack.success === false ? "rejected" : "unknown", orderId: ack.orderID, message: accepted ? "" : ack.errorMsg || "官方受理结果待核实，请勿重复下单" });
         const result = new BetResult("Polymarket", accepted, accepted ? "手动 GTC 已受理，成交继续核对" : "手动 GTC 未确认受理", { orderType: "GTC", source: "manual" }, ack);
         result.orderId = ack.orderID ?? null; result.link = plan.linkId; result.pending = accepted;
         result.saveLog(account, submittedAt);

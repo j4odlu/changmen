@@ -18,26 +18,35 @@ export type GtcCheckOptions = ResolveVenueStakeOpts & { manual?: boolean; role?:
 
 /** [changmen 扩展] One original counterpart submission. No FOK queue, binding, retry, or follow-copy event. */
 export async function placeOtherLeg(account: PlatformAccount, option: BetOption, linkId: number): Promise<BetResult> {
+  return prepareOtherLeg(account, option, linkId)();
+}
+
+/** [changmen 扩展] 发送能力及冻结盘口在预检阶段解析，返回原腿单次调用。 */
+export function prepareOtherLeg(account: PlatformAccount, option: BetOption, linkId: number): () => Promise<BetResult> {
   if (account.provider === "Polymarket" || !option.data || option.checkError)
     throw new Error("GTC 对侧缺少冻结预检，未发送订单");
   const provider = getProvider(account);
   if (!provider)
     throw new Error("GTC 对侧平台不支持");
-  return notifyBet(account, option, async () => {
+  return () => notifyBet(account, option, async () => {
     const startedAt = Date.now();
-    observeOption(option, account, "submission_started", { source: "adapter_call" });
+    try { observeOption(option, account, "submission_started", { source: "adapter_call" }); }
+    catch { /* 观察异常不阻断已预检的发送。 */ }
     const result = await provider.betting(account, option);
     result.link = linkId;
     result.diagnosticAttempt = option.diagnosticAttempt;
     result.observation = option.observation;
-    observeOption(option, account, "submission_result", {
-      orderId: result.orderId || undefined,
-      outcome: result.pmSubmitUnknown ? "unknown" : result.success ? "accepted" : "adapter_failed",
-      source: "adapter_result",
-      observedStatus: submissionVenueStatus(result),
-      durationMs: Date.now() - startedAt,
-    });
-    result.saveLog(account, startedAt);
+    try {
+      observeOption(option, account, "submission_result", {
+        orderId: result.orderId || undefined,
+        outcome: result.pmSubmitUnknown ? "unknown" : result.success ? "accepted" : "adapter_failed",
+        source: "adapter_result",
+        observedStatus: submissionVenueStatus(result),
+        durationMs: Date.now() - startedAt,
+      });
+      result.saveLog(account, startedAt);
+    }
+    catch { /* 已取得场馆回执，观察或日志失败不改变结果。 */ }
     return result;
   }, gtcOtherNotice);
 }

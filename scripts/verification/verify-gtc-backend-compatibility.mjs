@@ -39,6 +39,20 @@ async function scenario(captured, fault = "") {
   return { capturedBackend: captured, fault, events, rows, error, compatible: !error };
 }
 const online = await scenario(true), current = await scenario(false);
+// [changmen 扩展] 新前端明确未发送事实需要新命令；不能仅凭查询接口兼容批准前端先发。
+async function unsentCommandScenario(captured) {
+  const handler = "server/backend/core/orderModes/gtc/handler.js";
+  const backend = load(handler, captured ? snapshot.sources[handler] : fs.readFileSync(handler, "utf8"), name => name === "@changmen/db"
+    ? { mutatePmGtc: async (owner, executionId, revision, command) => ({ owner, executionId, revision, command }) }
+    : new Proxy({}, { get: () => () => { throw new Error("unexpected unsent-command dependency"); } }));
+  try {
+    const result = await backend.handlePmGtc("Pm_GtcCommand", { id, revision: 0, command: { kind: "not_sent", leg: "PM", message: "pre-dispatch failed" } }, "owner");
+    assert.equal(result.command.kind, "not_sent"); assert.equal(result.owner, "owner");
+    return { capturedBackend: captured, compatible: true };
+  } catch (error) { return { capturedBackend: captured, compatible: false, error: String(error.message) }; }
+}
+const unsentOnline = await unsentCommandScenario(true), unsentCurrent = await unsentCommandScenario(false);
+assert(unsentCurrent.compatible, "Candidate backend must accept explicit unsent facts");
 const unknownAction = !snapshot.sources[route].includes('"Pm_GtcMonitorOrders"');
 assert(current.compatible); assert.equal(online.compatible, !unknownAction);
 if (!unknownAction) assert.equal(JSON.stringify(online.rows), JSON.stringify([original]));
@@ -90,13 +104,13 @@ for (const [name, rows, options] of [["missing-filled-original", [], {}], ["data
   exact.push({ name, passed: true });
 }
 const combinations = [
-  { id: "frontend-only", frontend: "candidate", backend: snapshot.backendVersion, passed: business.every(row => row.passed), failedBoundaries: business.filter(row => !row.passed).map(row => `gtc:${row.name}`) },
+  { id: "frontend-only", frontend: "candidate", backend: snapshot.backendVersion, passed: business.every(row => row.passed) && unsentOnline.compatible, failedBoundaries: [...business.filter(row => !row.passed).map(row => `gtc:${row.name}`), ...(unsentOnline.compatible ? [] : ["gtc:unsent-command-unsupported"])] },
   { id: "backend-only", frontend: snapshot.frontendVersion, backend: "candidate", passed: true, failedBoundaries: [], evidence: { completePublicModulesPreserved: true, completeLegacyGtcModulesPreserved: true, legacyReadContract: legacyProof } },
   { id: "paired", frontend: "candidate", backend: "candidate", passed: true, failedBoundaries: [], evidence: exact },
 ];
 const release = selectGtcRelease(plan, combinations);
 const report = { captureId: snapshot.captureId, frontendVersion: snapshot.frontendVersion, backendVersion: snapshot.backendVersion, immutableBaseline: snapshot.immutableBaseline, oldBackendRequiredFallback: unknownAction, online, current, business,
-  combinations, release, frontendOnlyGtcCompatible: release.frontendOnlyGtcCompatible, passed: release.passed,
+  combinations, release, unsentOnline, unsentCurrent, frontendOnlyGtcCompatible: release.frontendOnlyGtcCompatible, passed: release.passed,
   scope: "Explicit independent release combinations; captured route and legacy read/enrich/date/DTO/identity functions; current real frontend/action/handler/exact query/DTO; database reads mocked; no live mutation. The selected plan and required combinations determine acceptance." };
 fs.writeFileSync("output/gtc-backend-compatibility.json", JSON.stringify(report, null, 2));
 console.log(JSON.stringify({ ...report, online: { basicRouteReadCompatible: true }, current: { exactHandlerCompatible: true } }));

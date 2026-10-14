@@ -23,6 +23,12 @@ const hash = `0x${"a".repeat(64)}`;
 const account = { accountId: 1, provider: "Polymarket", currency: "USDT" } as never;
 const input = () => ({ type: "Polymarket", betId: "condition", itemId: "token", target: "Home", betMoney: 50, odds: 2 } as BetOption);
 const context = () => ({ match: { id: 1, title: "A vs B" } as never, bet: { id: 2, homeName: "A", awayName: "B", getBetName: () => "全场" } as never, setMessage: vi.fn() });
+it("shared submit preparation failure is explicitly unsent for manual GTC too", async () => {
+  mocks.submit.mockResolvedValueOnce({ success: false, pmSubmitNotSent: true, errorMsg: "pre-dispatch failed" });
+  const result = await executeManualGtc(account, input(), context());
+  expect(result.pm.submission).toBe("not_attempted"); expect(result.pm.orderId).toBeNull();
+  expect(mocks.row).toMatchObject({ pmAuthorized: true, submitNotSent: true, decision: "closed", released: true });
+});
 beforeEach(() => {
   vi.clearAllMocks(); mocks.valid = true; mocks.row = undefined; mocks.progress.ready = true; mocks.progress.records = [];
   notices.notify.mockReturnValue({ close: notices.close });

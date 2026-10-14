@@ -1,4 +1,4 @@
-import { createGtcExecution } from "@changmen/shared/pm_gtc";
+import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
 import { gtcRecoveryFinancialKey } from "@changmen/shared/pm_gtc_recovery";
 import { beforeEach, expect, it, vi } from "vitest";
 import { recoverPmGtc } from "./recovery.js";
@@ -24,6 +24,14 @@ it("first recovery returns discovered executions and exact financial originals i
   expect(response.orders).toEqual([{ ok: true, ids: [id], unchangedIds: [], rows: [{ PmGtcExecutionId: id, OrderID: "buy", PlayerID: 1, Type: "Polymarket", Status: "Win", Money: 10 }] }]);
   expect(mocks.list).toHaveBeenCalledExactlyOnceWith("owner", undefined, {});
   expect(mocks.records).not.toHaveBeenCalled(); expect(mocks.orders).toHaveBeenCalledExactlyOnceWith(1, "owner", ["buy"]);
+});
+it("explicit authorized-but-unsent PM never recovers a signed hash as a financial order", async () => {
+  execution = createGtcExecution(id, "owner", "wallet", "maker", { playerId: 1, orderHash: "buy", shares: "10", otherPlayerId: 2, otherProvider: "RAY" }, 0);
+  execution = applyGtcCommand(applyGtcCommand(execution, { kind: "authorize_pm" }, 1), { kind: "not_sent", leg: "PM", message: "pre-dispatch failed" }, 2);
+  mocks.list.mockResolvedValue([execution]);
+  const response = await recoverPmGtc(request(), "owner");
+  expect(response.executions.rows).toEqual([execution]); expect(response.orders).toEqual([]);
+  expect(mocks.orders).not.toHaveBeenCalled();
 });
 it("execution read failure preserves successful financial recovery for requested originals", async () => {
   mocks.list.mockRejectedValue(new Error("execution unavailable"));

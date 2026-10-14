@@ -7,6 +7,7 @@ import { useAccountStore } from "@/stores/accountStore";
 import { acceptGtc, cancelGtc, currentGtc, gtcProgress, pollGtc, pollGtcOther, refreshGtcRecords, startGtcRuntime, stopGtcRuntime } from "./runtime";
 import { mockUnifiedGtcRecovery } from "@/test/gtcRecoverFixture";
 import { loadGtcMonitorOrders } from "./ordersApi";
+import { beginGtcInitialDispatch } from "./executionState";
 
 const mocks = vi.hoisted(() => ({ cancel: vi.fn(), read: vi.fn(), otherRead: vi.fn(), command: vi.fn(), list: vi.fn(), mark: vi.fn(), calls: [] as string[], orders: new Map<number, import("@/types/order").OrderRow[]>() }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true,
@@ -86,6 +87,21 @@ describe("gTC independent progress and cancellation", () => {
     await pollGtcOther("id");
     expect(currentGtc("id").other.state).toBe("filled");
     expect(mocks.mark).toHaveBeenCalledOnce();
+  });
+  it("passive RAY rejection is processed after first dispatch, without closing the pair between its POSTs", async () => {
+    vi.useFakeTimers(); stopGtcRuntime(); startGtcRuntime("owner");
+    await vi.advanceTimersByTimeAsync(0); mocks.command.mockClear(); mocks.otherRead.mockClear();
+    const original = { ...counterpartRow(), id: "active-ray" };
+    const finish = beginGtcInitialDispatch(original.id); acceptGtc(original);
+    const rejected = { ...counterpartOrder(), status: "reject" as const };
+    mocks.otherRead.mockResolvedValue([rejected]);
+    beginRayOrderObservation(useAccountStore().findAccount(2)!)([rejected]);
+    await vi.advanceTimersByTimeAsync(11000);
+    expect(mocks.otherRead).not.toHaveBeenCalled();
+    expect(currentGtc(original.id)).toMatchObject({ decision: "open", other: { state: "accepted" } });
+    finish(); await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.otherRead).toHaveBeenCalledOnce();
+    expect(currentGtc(original.id).other.state).toBe("rejected");
   });
   it("venue/save failures retain accepted identity and are retried without resubmitting either leg", async () => {
     gtcProgress.records = [counterpartRow()];

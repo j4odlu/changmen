@@ -2,7 +2,7 @@
 import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import type { OrderRow } from "@/types/order";
 import { watch } from "vue";
-import { captureGtcSession, currentGtc, financialOrders, gtcProgress, markGtcLegOnce, mutateGtc, settlement } from "@/orderModes/gtc/executionState";
+import { captureGtcSession, currentGtc, financialOrders, gtcInitialDispatches, gtcProgress, markGtcLegOnce, mutateGtc, settlement } from "@/orderModes/gtc/executionState";
 import { findGtcOtherOrder } from "@/orderModes/gtc/otherFacts";
 import { readGtcOtherOrders } from "@/orderModes/gtc/otherOrders";
 import { findGtcFinalOrder, gtcNeedsOtherPolling } from "@/orderModes/gtc/pollingPolicy";
@@ -90,6 +90,7 @@ const loop = createOrderMonitorLoop({
   active: () => !gtcProgress.ready || gtcProgress.records.some(row => row.plan.otherProvider !== "RAY" && needsMonitoring(row)),
   tick() {
     for (const row of [...gtcProgress.records]) {
+      if (gtcInitialDispatches.has(row.id)) continue;
       if (row.plan.otherProvider !== "RAY" && needsMonitoring(row))
         void pollGtcOther(row.id, row.decision === "closed").catch(() => {});
     }
@@ -107,7 +108,7 @@ function consumeRayResults(): void {
   if (!dispose)
     return;
   for (const row of [...gtcProgress.records]) {
-    if (row.plan.otherProvider !== "RAY" || otherPolls.has(row.id))
+    if (row.plan.otherProvider !== "RAY" || otherPolls.has(row.id) || gtcInitialDispatches.has(row.id))
       continue;
     const final = findGtcFinalOrder(row, financialOrders(), false);
     if (final) {
@@ -132,7 +133,7 @@ function consumeRayResults(): void {
 export function startRayGtcMonitoring(): void {
   if (dispose)
     return;
-  dispose = watch(() => [rayOrderResults.revision, gtcProgress.records, financialOrders(), gtcProgress.otherQueryIssues], consumeRayResults, { deep: true });
+  dispose = watch(() => [rayOrderResults.revision, gtcProgress.records, financialOrders(), gtcProgress.otherQueryIssues, gtcInitialDispatches], consumeRayResults, { deep: true });
   consumeRayResults();
   loop.start();
 }

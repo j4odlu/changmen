@@ -150,13 +150,13 @@ describe("settleBothArbLegs A8 wait", () => {
     const input = placed("Polymarket", "PredictFun");
     const order: string[] = [];
     const execution = (provider: string, seconds: number): OriginalLegExecution => ({
-      validate: () => {}, submit: vi.fn(), canContinueOriginalPair: () => true,
+      validate: () => {}, submit: vi.fn(),
       confirm: async () => { order.push(provider); return { orders: [], rejected: false, pendingConfirm: true }; },
       facts: () => ({ submission: "accepted", fill: "partial" }), markConfirmed: () => {}, rejectWaitSec: seconds,
     });
     input.originalExecution = {
       legs: new Map([[input.legA, execution("PM", 0)], [input.legB, execution("PF", 30)]]),
-      actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
+      finishSubmission: vi.fn(), actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
       close: async () => {}, summary: () => ({ message: "pending", traceStatus: "partial", failed: false }),
     };
     wait.mockImplementation(async () => { order.push("wait"); });

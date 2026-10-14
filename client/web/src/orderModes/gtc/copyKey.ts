@@ -5,11 +5,13 @@ export function gtcCopyKey(row: GtcExecution): string {
   const order = row.order;
   return JSON.stringify([
     row.pmAuthorized,
+    row.submitNotSent ?? false,
     row.submit,
     row.orderId,
     row.decision,
     row.deadlineAt,
     row.other.state,
+    row.other.notSent ?? false,
     row.other.orderId,
     row.other.submittedAt,
     row.other.message,

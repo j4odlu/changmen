@@ -1,5 +1,5 @@
 import type { GtcFacts, GtcFill, GtcPlan } from "@changmen/shared/pm_gtc";
-import { applyGtcCommand, createGtcExecution, gtcCanAuthorizeOther, gtcCanCancel, gtcCanFinishWithoutOrders, gtcCanRelease, gtcStateLabel, gtcUnits, mergeGtcFacts } from "@changmen/shared/pm_gtc";
+import { applyGtcCommand, createGtcExecution, gtcCanAuthorizeOther, gtcCanCancel, gtcCanFinishWithoutOrders, gtcCanRelease, gtcPmNeverSubmitted, gtcStateLabel, gtcUnits, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { describe, expect, it } from "vitest";
 
 export const plan: GtcPlan = {
@@ -43,11 +43,38 @@ export function facts(q = "5", status = "LIVE", fills: GtcFill[] = [fill(q)]): G
 }
 function accepted() { return applyGtcCommand(applyGtcCommand(create(), { kind: "authorize_pm" }, 1), { kind: "ack", state: "accepted", orderId: plan.orderHash }, 2); }
 
+describe("GTC explicit pre-dispatch failures", () => {
+  it("PM 授权后尚未 POST 保留一次性授权，不虚构订单，不重发", () => {
+    const granted = applyGtcCommand(create(), { kind: "authorize_pm" }, 2);
+    const failed = applyGtcCommand(granted, { kind: "not_sent", leg: "PM", message: "签单失效" }, 3);
+    expect(failed).toMatchObject({ pmAuthorized: true, submit: "not_attempted", submitNotSent: true, orderId: null });
+    expect(gtcPmNeverSubmitted(failed)).toBe(true);
+    expect(() => applyGtcCommand(failed, { kind: "authorize_pm" }, 4)).toThrow("禁止重发");
+    expect(gtcCanFinishWithoutOrders(applyGtcCommand(failed, { kind: "close" }, 4))).toBe(true);
+  });
+  it("对侧授权后尚未 POST 不重置授权供再次发送", () => {
+    const granted = applyGtcCommand(accepted(), { kind: "authorize_other" }, 3);
+    const failed = applyGtcCommand(granted, { kind: "not_sent", leg: "OTHER", message: "会话停止" }, 4);
+    expect(failed.other).toMatchObject({ state: "not_attempted", notSent: true, orderId: null });
+    expect(gtcCanAuthorizeOther(failed)).toBe(false);
+    expect(() => applyGtcCommand(failed, { kind: "authorize_other" }, 5)).toThrow();
+    expect(failed.submit).toBe("accepted"); expect(failed.orderId).toBe(plan.orderHash);
+  });
+  it.each(["accepted", "unknown", "rejected"])("PM %s 不能改为未发送，避免抹掉真实或未知敞口", (state) => {
+    const row = applyGtcCommand(applyGtcCommand(create(), { kind: "authorize_pm" }, 2), { kind: "ack", state: state as "accepted" | "unknown" | "rejected", orderId: plan.orderHash }, 3);
+    expect(() => applyGtcCommand(row, { kind: "not_sent", leg: "PM", message: "late" }, 4)).toThrow();
+  });
+  it.each(["accepted", "unknown", "filled"])("对侧 %s 不能改为未发送", (state) => {
+    const row = applyGtcCommand(applyGtcCommand(accepted(), { kind: "authorize_other" }, 3), { kind: "other", state: state as "accepted" | "unknown" | "filled", orderId: "ray-order" }, 4);
+    expect(() => applyGtcCommand(row, { kind: "not_sent", leg: "OTHER", message: "late" }, 5)).toThrow();
+  });
+});
+
 describe("manual GTC source", () => {
   function manual() { const row = accepted(); row.plan.source = "manual"; return applyGtcCommand(row, { kind: "close" }, 3); }
   it("never authorizes a second leg, including parallel/source-role variants", () => {
     const row = manual(); row.plan.parallel = true; row.plan.originalPmLeg = "B";
-    expect(gtcCanAuthorizeOther(row, 4)).toBe(false);
+    expect(gtcCanAuthorizeOther(row)).toBe(false);
     expect(() => applyGtcCommand(row, { kind: "authorize_other" }, 4)).toThrow();
     expect(() => applyGtcCommand(row, { kind: "other", state: "filled" }, 4)).toThrow("手动 GTC");
   });
@@ -122,10 +149,10 @@ describe("gTC V1 durable state decisions", () => {
     const row = applyGtcCommand(applyGtcCommand(dispatched, { kind: "ack", state: "rejected", message: "market closed" }, 3), { kind: "close" }, 4);
     expect(row.submit).toBe("rejected"); expect(gtcStateLabel(row)).toBe("下单失败 · 明确拒单"); expect(gtcCanFinishWithoutOrders(row)).toBe(false);
   });
-  it("accepted zero is successful placement, not a fill and not second-leg permission", () => {
+  it("accepted zero permits the original second leg without pretending it is filled", () => {
     const row = mergeGtcFacts(accepted(), facts("0", "LIVE", []));
     expect(gtcStateLabel(row)).toBe("下单成功 · 未成交挂单中"); expect(row.open).toBe("10");
-    expect(gtcCanAuthorizeOther(row, 3)).toBe(false); expect(row.counted).toBe(false);
+    expect(gtcCanAuthorizeOther(row)).toBe(true); expect(row.counted).toBe(false);
   });
   it("positive initial execution authorizes original second leg exactly once", () => {
     const row = mergeGtcFacts(accepted(), facts());
@@ -139,10 +166,15 @@ describe("gTC V1 durable state decisions", () => {
   it("late full maker fill never opens a manually closed second leg", () => {
     const closed = applyGtcCommand(mergeGtcFacts(accepted(), facts("0", "LIVE", [])), { kind: "close" }, 3);
     const late = mergeGtcFacts(closed, facts("10", "MATCHED", [fill("10")]));
-    expect(gtcCanAuthorizeOther(late, 4)).toBe(false); expect(late.manual).toBe(true); expect(late.groupComplete).toBe(false);
+    expect(gtcCanAuthorizeOther(late)).toBe(false); expect(late.manual).toBe(true); expect(late.groupComplete).toBe(false);
   });
-  it("decision deadline is independent of notification wait", () => {
-    const row = mergeGtcFacts(accepted(), facts()); expect(gtcCanAuthorizeOther(row, 10001)).toBe(false);
+  it("historical decision deadline no longer blocks an accepted first leg", () => {
+    const row = mergeGtcFacts(accepted(), facts()); row.deadlineAt = 0; expect(gtcCanAuthorizeOther(row)).toBe(true);
+  });
+  it.each(["prepared", "dispatching", "rejected", "unknown"] as const)("a PM-first %s record cannot authorize the other original", (submit) => {
+    const row = { ...accepted(), submit };
+    expect(gtcCanAuthorizeOther(row)).toBe(false);
+    expect(() => applyGtcCommand(row, { kind: "authorize_other" }, 3)).toThrow();
   });
   it("cancel intent wins before later second-leg authorization", () => {
     const row = applyGtcCommand(mergeGtcFacts(accepted(), facts()), { kind: "cancel", commandId: "c" }, 3);

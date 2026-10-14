@@ -120,6 +120,40 @@ describe("[changmen 扩展] zero-fill GTC display without financial persistence"
     const rejected = { ...acceptedZero(), submit: "rejected" as const };
     expect(await render([unsubmitted, rejected])).not.toContain('class="order"');
   });
+  it.each(["prepared", "not_attempted", "rejected"] as const)("does not create a PM order card for an unsubmitted %s execution", async (submit) => {
+    const record = { ...createGtcExecution("not-sent", "owner", "wallet", "maker", plan, now), submit };
+    expect(gtcPendingDisplayRows([], [record], date, 0)).toEqual([]);
+    expect(await render([record])).not.toContain('class="order"');
+  });
+  it("authorized-but-unsent PM keeps the real first order and never renders a signed-hash placeholder", async () => {
+    let record = createGtcExecution("ray-only", "owner", "wallet", "maker", { ...plan, source: undefined,
+      originalPmLeg: "B", otherProvider: "RAY", otherPlayerId: 2 }, now);
+    record = applyGtcCommand(record, { kind: "authorize_other" }, now);
+    record = applyGtcCommand(record, { kind: "other", state: "accepted", orderId: "ray-real-order" }, now);
+    record = applyGtcCommand(record, { kind: "authorize_pm" }, now);
+    record = applyGtcCommand(record, { kind: "not_sent", leg: "PM", message: "签单失效" }, now);
+    record = applyGtcCommand(record, { kind: "close" }, now);
+    const ray: OrderRow = { OrderID: "ray-real-order", PmGtcExecutionId: record.id, PlayerID: 2,
+      Type: "RAY", Link: -now, CreateAt: now, Status: "None", Odds: 2.26, BetMoney: 43 };
+    expect(gtcPendingDisplayRows([ray], [record], date, 0)).toEqual([]);
+    const html = await render([record], [ray]);
+    expect(html.match(/class="order"/g)).toHaveLength(1); expect(html).not.toContain("PM GTC 订单监控");
+  });
+  it.each(["accepted", "pending", "filled", "unknown"] as const)("keeps the actual RAY order without a fake PM card when its state is %s", async (state) => {
+    let record = createGtcExecution("ray-only", "owner", "wallet", "maker", { ...plan, source: undefined,
+      originalPmLeg: "B", otherProvider: "RAY", otherPlayerId: 2 }, now);
+    record.other = { state, orderId: "ray-real-order", submittedAt: now, message: "" };
+    record = applyGtcCommand(record, { kind: "close" }, now);
+    expect(record.released).toBe(false);
+    const ray: OrderRow = { OrderID: "ray-real-order", PmGtcExecutionId: record.id, PlayerID: 2,
+      Type: "RAY", Link: -now, CreateAt: now, Status: "None", Match: plan.match, Bet: plan.bet, Item: "Away", Odds: 2.26, BetMoney: 43 };
+    expect(gtcPendingDisplayRows([ray], [record], date, 0)).toEqual([]);
+    expect(gtcOrderDisplayGroups([ray], [record], date, 0)[0]!.rows).toEqual([ray]);
+    const html = await render([record], [ray]);
+    expect(html.match(/class="order"/g)).toHaveLength(1);
+    expect(html).not.toContain("PM GTC 订单监控");
+    expect(html).not.toContain("gtc-pending:");
+  });
 
   it("keeps unreleased rejection and uncertain-submit displays unchanged", async () => {
     const base = acceptedZero();

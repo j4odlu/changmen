@@ -3,7 +3,6 @@ import type { ArbBetChecked } from "@/stores/betting/autoBet/phases/types";
 import { wait } from "@changmen/client-core/shared/wait";
 import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ExecutionError } from "@/orderModes/gtc/executionResult";
 import { presentArbExecution } from "@/orderModes/gtc/presentation";
 import { syncActiveBetFail, syncActiveBetLeg, syncActiveBetPhase, syncActiveBetPlaceResults } from "@/stores/betting/activeBetRunSync";
 import { showRejectDetectionTip } from "@/stores/betting/autoBet/rejectWait";
@@ -14,11 +13,11 @@ import { markGtcSuccess } from "./successMarkers";
 const notices = vi.hoisted(() => ({ notify: vi.fn(), close: vi.fn() }));
 vi.mock("element-plus", () => ({ ElNotification: notices.notify }));
 
-const mocks = vi.hoisted(() => ({ submit: vi.fn(), prepareSubmit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), refresh: vi.fn(), poll: vi.fn(), otherPoll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, existing: [] as GtcExecution[], initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "" }));
+const mocks = vi.hoisted(() => ({ submit: vi.fn(), prepareSubmit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), refresh: vi.fn(), poll: vi.fn(), otherPoll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, existing: [] as GtcExecution[], initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "", failAuthorization: "" }));
 vi.mock("@changmen/client-core/models/betResult", () => ({ BetResult: class { orderId = null; constructor(public provider: string, public success: boolean) {} saveLog = mocks.log; } }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: mocks.owner, config: { betting: true } }) }));
-vi.mock("./gateway", () => ({ placeOtherLeg: mocks.betting }));
+vi.mock("./gateway", () => ({ prepareOtherLeg: (...args: unknown[]) => () => mocks.betting(...args) }));
 vi.mock("@changmen/venue-adapter/polymarket", () => ({ recordPmExecutionMetric: vi.fn(), validatePolymarketPreparedBuy: vi.fn() }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ refreshBalance: vi.fn() }) }));
 vi.mock("@/stores/betting/autoBet/retryFailedLeg", () => ({ retryFailedLeg: vi.fn(() => { throw new Error("unexpected retry"); }) }));
@@ -37,13 +36,13 @@ vi.mock("@/stores/betting/successMarkers", () => ({ markSuccessfulBet: mocks.cou
 vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ prepareGtcBuy: mocks.prepare, pmSubmitMaker: () => "maker" }));
 vi.mock("./api", () => ({ createGtc: mocks.create }));
 vi.mock("./runtime", () => ({
-  startGtcRuntime: vi.fn(),
+  startGtcRuntime: vi.fn(), beginGtcInitialDispatch: () => vi.fn(),
   refreshGtcRecords: mocks.refresh,
   markGtcLegOnce: mocks.count,
   gtcProgress: { get ready() { return mocks.ready; }, get records() { return [...mocks.existing, ...(mocks.record ? [mocks.record] : [])]; } },
   acceptGtc: (row: GtcExecution) => { mocks.record = row; return row; },
   currentGtc: () => mocks.record!,
-  mutateGtc: async (_id: string, command: GtcCommand) => { mocks.commands.push(command); mocks.record = applyGtcCommand(mocks.record!, command, Date.now()); return mocks.record; },
+  mutateGtc: async (_id: string, command: GtcCommand) => { mocks.commands.push(command); if (command.kind === mocks.failAuthorization) throw new Error("授权失败"); mocks.record = applyGtcCommand(mocks.record!, command, Date.now()); return mocks.record; },
   pollGtc: mocks.poll,
   pollGtcOther: mocks.otherPoll,
 }));
@@ -58,6 +57,7 @@ function params(parallel = false) {
 }
 beforeEach(() => {
   vi.clearAllMocks(); sessionStorage.clear(); mocks.record = null; mocks.existing = []; mocks.commands = []; mocks.initial = "0"; mocks.ready = true; mocks.ratio = 0.99;
+  mocks.failAuthorization = "";
   mocks.prepareSubmit.mockResolvedValue(undefined);
   notices.notify.mockReturnValue({ close: notices.close });
   mocks.refresh.mockResolvedValue(undefined);
@@ -79,18 +79,16 @@ describe("gTC original pair orchestration", () => {
     expect(lifecycle.actions).toEqual({ retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false });
     expect(mocks.betting).not.toHaveBeenCalled(); expect(mocks.settle).not.toHaveBeenCalled();
   });
-  it.each(["pending", "filled"] as const)("other-first monitor advancing to %s still sends PM exactly once", async (state) => {
-    mocks.otherPoll.mockImplementationOnce(async () => {
-      mocks.record = applyGtcCommand(mocks.record!, { kind: "other", state }, Date.now());
-      return [];
+  it.each(["0", "5", "10"])("PM-first acceptance sends the other leg once before querying its %s-share result", async (quantity) => {
+    mocks.initial = quantity;
+    mocks.betting.mockImplementationOnce(async () => {
+      expect(mocks.poll).not.toHaveBeenCalled();
+      return { provider: "RAY", success: true, orderId: "ray-order" };
     });
-    await executeGtc(params(), checked(false));
-    expect(mocks.betting).toHaveBeenCalledOnce();
-    expect(mocks.submit).toHaveBeenCalledOnce();
-    expect(mocks.commands.filter(command => command.kind === "authorize_pm")).toHaveLength(1);
+    await executeGtc(params(), checked());
+    expect(mocks.betting).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
+    expect(mocks.poll).toHaveBeenCalledOnce();
     expect(mocks.commands.filter(command => command.kind === "authorize_other")).toHaveLength(1);
-    expect(showRejectDetectionTip).toHaveBeenCalledExactlyOnceWith(30);
-    expect(wait).toHaveBeenCalledExactlyOnceWith(30_000);
   });
   it("renews PM submission readiness after RAY accepts and before authorizing the original PM order", async () => {
     const calls: string[] = [];
@@ -98,8 +96,8 @@ describe("gTC original pair orchestration", () => {
       calls.push("RAY accepted");
       return { provider: "RAY", success: true, orderId: "ray-order" };
     });
-    mocks.prepareSubmit.mockImplementationOnce(async () => {
-      expect(mocks.record?.pmAuthorized).toBe(false);
+    mocks.prepareSubmit.mockImplementation(async () => {
+      expect(mocks.record?.pmAuthorized).not.toBe(true);
       calls.push("PM clock ready");
     });
     mocks.submit.mockImplementationOnce(async () => {
@@ -108,22 +106,57 @@ describe("gTC original pair orchestration", () => {
       return { success: true, orderID: hash };
     });
     await executeGtc(params(), checked(false));
-    expect(calls).toEqual(["RAY accepted", "PM clock ready", "PM submit"]);
-    expect(mocks.prepareSubmit).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
+    expect(calls).toEqual(["PM clock ready", "RAY accepted", "PM clock ready", "PM submit"]);
+    expect(mocks.prepareSubmit).toHaveBeenCalledTimes(2); expect(mocks.submit).toHaveBeenCalledOnce();
     expect(mocks.record?.submit).toBe("accepted");
     expect(mocks.create.mock.calls[0]?.[2]).not.toHaveProperty("prepareSubmit");
   });
-  it.each(["rejected", "unknown", "manual"] as const)("other-first monitor entering %s blocks PM", async (state) => {
-    mocks.otherPoll.mockImplementationOnce(async () => {
-      mocks.record = applyGtcCommand(mocks.record!, state === "manual"
-        ? { kind: "close" }
-        : { kind: "other", state }, Date.now());
-      return [];
-    });
-    await executeGtc(params(), checked(false));
-    expect(mocks.betting).toHaveBeenCalledOnce();
-    expect(mocks.submit).not.toHaveBeenCalled();
-    expect(mocks.commands.filter(command => command.kind === "authorize_pm")).toHaveLength(0);
+  it("a post-submission query failure cannot prevent the second leg or trigger a duplicate POST", async () => {
+    mocks.poll.mockRejectedValueOnce(new Error("Network Error"));
+    const result = await executeGtc(params(), checked());
+    expect(mocks.betting).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
+    expect(result.pm.submission).toBe("accepted"); expect(result.groupComplete).toBe(false);
+  });
+
+  it.each(["prepare", "authorize", "consume"])("RAY 首腿成功，PM 第二腿 %s 异常仍核对首腿并正常收尾", async (stage) => {
+    if (stage === "prepare") mocks.prepareSubmit.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("冻结签单失效"));
+    if (stage === "authorize") mocks.failAuthorization = "authorize_pm";
+    if (stage === "consume") mocks.submit.mockResolvedValueOnce({ success: false, pmSubmitNotSent: true, errorMsg: "签单已消费，未发送" });
+    const result = await executeGtc(params(), checked(false));
+    expect(result).toMatchObject({ pm: { submission: "not_attempted", orderId: null }, other: { submission: "accepted", orderId: "ray-order", fill: "full" }, responsibility: "manual" });
+    expect(mocks.settle).toHaveBeenCalledOnce(); expect(mocks.betting).toHaveBeenCalledOnce();
+    if (stage !== "consume") expect(mocks.submit).not.toHaveBeenCalled();
+    expect(mocks.record).toMatchObject({ decision: "closed", submitNotSent: true });
+    expect(syncActiveBetPlaceResults).toHaveBeenCalledWith(2, expect.objectContaining({ success: true }), expect.objectContaining({ success: false, pmSubmitUnknown: false }), true, true, "filled_pending_settle", "api_failed", undefined);
+  });
+
+  it.each(["validate", "authorize"])("PM 首腿已受理，第二腿 %s 异常仍核对 PM 并正常收尾", async (stage) => {
+    const pair = checked() as ArbBetChecked;
+    if (stage === "validate") mocks.submit.mockImplementationOnce(async () => { pair.legB.data = null; return { success: true, orderID: hash }; });
+    else mocks.failAuthorization = "authorize_other";
+    const result = await executeGtc(params(), pair);
+    expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.betting).not.toHaveBeenCalled();
+    expect(mocks.poll).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ pm: { submission: "accepted", orderId: hash }, other: { submission: "not_attempted" }, responsibility: "manual" });
+    expect(mocks.record).toMatchObject({ decision: "closed", other: { notSent: true, orderId: null } });
+  });
+
+  it("时钟准备失败发生在首腿发送之前，不创建占位执行", async () => {
+    mocks.prepareSubmit.mockRejectedValueOnce(new Error("时钟未就绪"));
+    await expect(executeGtc(params(), checked(false))).rejects.toThrow("时钟未就绪");
+    expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.betting).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled();
+  });
+
+  it("首腿日志抛错保留已受理回执并发送第二腿", async () => {
+    mocks.log.mockImplementationOnce(() => { throw new Error("日志不可用"); });
+    const result = await executeGtc(params(), checked());
+    expect(result.pm.submission).toBe("accepted"); expect(mocks.betting).toHaveBeenCalledOnce();
+  });
+  it("矛盾的未发送标记不能覆盖真实 PM 受理回执", async () => {
+    mocks.submit.mockResolvedValueOnce({ success: true, orderID: hash, pmSubmitNotSent: true });
+    const result = await executeGtc(params(), checked());
+    expect(result.pm).toMatchObject({ submission: "accepted", orderId: hash });
+    expect(mocks.betting).toHaveBeenCalledOnce(); expect(mocks.record?.submitNotSent).not.toBe(true);
   });
   it("shared settle restores one countdown and one wait before fresh original rejection confirmation", async () => {
     mocks.initial = "5";
@@ -140,22 +173,16 @@ describe("gTC original pair orchestration", () => {
     expect(result.pm.fill).toBe("partial"); expect(result.other?.submission).toBe("rejected");
     expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.betting).toHaveBeenCalledOnce();
   });
-  it("other-first RAY starts original-order synchronization before a slow PM submission or reject wait", async () => {
+  it("other-first RAY does not query orders between its acceptance and a slow PM submission", async () => {
     let release!: (value: { success: boolean; orderID: string }) => void;
     mocks.submit.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
     const task = executeGtc(params(), checked(false));
     await vi.waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
-    expect(mocks.otherPoll).toHaveBeenCalledExactlyOnceWith(mocks.record!.id, false);
+    expect(mocks.otherPoll).not.toHaveBeenCalled();
     expect(mocks.settle).not.toHaveBeenCalled();
     release({ success: true, orderID: hash }); await task;
     expect(mocks.betting).toHaveBeenCalledOnce();
     expect(mocks.settle).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.any(Function), 0);
-  });
-  it("early original sync failure does not change a successful submission or send another order", async () => {
-    mocks.otherPoll.mockRejectedValueOnce(new Error("Network Error"));
-    await executeGtc(params(), checked(false));
-    expect(mocks.betting).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
-    expect(mocks.record?.other.state).toBe("filled");
   });
   it("unavailable global recovery does not gate a new independently persisted pair", async () => {
     mocks.ready = false; mocks.refresh.mockRejectedValue(new Error("old recovery unavailable"));
@@ -172,11 +199,11 @@ describe("gTC original pair orchestration", () => {
     expect(mocks.create).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.betting).toHaveBeenCalledOnce();
     expect(mocks.record?.id).not.toBe(old.id); expect(old).toEqual(snapshot);
   });
-  it("a failed frozen preparation returns durable cleanup facts without any POST", async () => {
+  it("a failed frozen preparation rejects preflight before creating any execution or POST", async () => {
     mocks.prepare.mockResolvedValueOnce({ ...await mocks.prepare(), validate: () => { throw new Error("frozen quote changed"); } });
     const error = await executeGtc(params(), checked()).catch(error => error);
-    expect(error).toBeInstanceOf(ExecutionError);
-    expect(error.result).toMatchObject({ failed: true, pm: { submission: "not_attempted" }, responsibility: "none" });
+    expect(error).toBeInstanceOf(Error);
+    expect(mocks.create).not.toHaveBeenCalled();
     expect(error.message).toBe("frozen quote changed");
     expect(mocks.submit).not.toHaveBeenCalled(); expect(mocks.betting).not.toHaveBeenCalled();
   });
@@ -195,12 +222,12 @@ describe("gTC original pair orchestration", () => {
     await expect(executeGtc(params(), pair)).rejects.toThrow("GTC 赔率");
     expect(mocks.submit).not.toHaveBeenCalled(); expect(mocks.betting).not.toHaveBeenCalled();
   });
-  it("serial PM-first accepted zero closes to manual without second POST", async () => {
-    await executeGtc(params(), checked()); expect(mocks.submit).toHaveBeenCalledTimes(1); expect(mocks.betting).not.toHaveBeenCalled();
+  it("serial PM-first accepted zero sends the other leg once and preserves its hanging-order facts", async () => {
+    await executeGtc(params(), checked()); expect(mocks.submit).toHaveBeenCalledTimes(1); expect(mocks.betting).toHaveBeenCalledOnce();
     expect(mocks.record).toMatchObject({ submit: "accepted", matched: "0", manual: true, decision: "closed", counted: false });
     expect(notices.notify).toHaveBeenNthCalledWith(1, expect.objectContaining({ position: "top-right", customClass: "notification loading Polymarket" }));
     expect(notices.close).toHaveBeenCalledOnce();
-    expect(notices.notify).toHaveBeenLastCalledWith(expect.objectContaining({ type: "warning", duration: 30_000, message: expect.stringContaining("未成交挂单中") }));
+    expect(notices.notify).toHaveBeenLastCalledWith(expect.objectContaining({ type: "warning", duration: 30_000, message: expect.stringContaining("成交待核实") }));
   });
   it("serial positive partial sends original other quantity once and closes manual", async () => {
     mocks.initial = "5"; await executeGtc(params(), checked()); expect(mocks.betting).toHaveBeenCalledTimes(1);

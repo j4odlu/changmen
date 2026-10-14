@@ -1,6 +1,6 @@
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
 import type { OrderRow } from "@/types/order";
-import { gtcCanFinishWithoutOrders } from "@changmen/shared/pm_gtc";
+import { gtcPmNeverSubmitted } from "@changmen/shared/pm_gtc";
 import { orderExecutionIdentity } from "@/orderModes/gtc/executionIdentity";
 import { isFootballOrderRow } from "@/shared/orderDomain";
 import { resolveOrderItemLabel } from "@/shared/orderItemDisplay";
@@ -86,7 +86,8 @@ export function gtcOrderDisplayGroups(financialRows: OrderRow[], executions: Gtc
     // [changmen 扩展] 副本缺失时可展示完整、相互一致的官方成交事实；不从旧累计量复活已释放历史。
     const releasedFactsCanDisplay = execution.submit === "accepted" && (Number(execution.matched) === 0
       || (execution.complete && !execution.error && gtcOrderCardView(execution).quantitiesAgree));
-    const showMissingOriginal = belongsToDate && !gtcCanFinishWithoutOrders(execution)
+    // [changmen 扩展] 未提交的是执行记录；即使对腿已受理，也不能生成 PM 订单占位行。
+    const showMissingOriginal = belongsToDate && !gtcPmNeverSubmitted(execution)
       && (!execution.released || releasedFactsCanDisplay);
     let group = byExecution.get(execution.id);
     if (!group) {

@@ -31,13 +31,26 @@ export function selectGtcRelease(plan, combinations) {
 export function verifyLegacyGtcBackendModules(source, captured) {
   const handler = "server/backend/core/orderModes/gtc/handler.js";
   let specialized = source(handler);
+  // [changmen 扩展] 只登记明确未发送的新增命令，原命令顺序、授权与 handler 全文继续核对。
+  if (specialized.includes('"not_sent"')) {
+    specialized = replaceExact(specialized,
+      '["authorize_pm", "authorize_other", "ack", "other", "not_sent", "facts", "close", "cancel", "cancel_result", "resume", "counted"]',
+      '["authorize_pm", "authorize_other", "ack", "other", "facts", "close", "cancel", "cancel_result", "resume", "counted"]');
+  }
   if (JSON.stringify(moduleTokens(specialized)) !== JSON.stringify(moduleTokens(captured(handler)))) {
     if (specialized.includes('"Pm_GtcRecover"')) {
       assert.deepEqual(moduleTokens(specialized), moduleTokens(gitSource("adb333bf24b6ba6aa3e441009b56f874a23f6ed9", handler)), "complete committed recovery handler");
       specialized = replaceExact(specialized, 'import { recoverPmGtc } from "./recovery.js";');
       specialized = replaceExact(specialized, 'if (action === "Pm_GtcRecover") return recoverPmGtc(body, owner);');
       const recovery="server/backend/core/orderModes/gtc/recovery.js";
-      assert.deepEqual(moduleTokens(source(recovery)),moduleTokens(gitSource("adb333bf24b6ba6aa3e441009b56f874a23f6ed9",recovery)),"complete committed unified recovery module");
+      let recoverySource = source(recovery);
+      if (recoverySource.includes('gtcPmNeverSubmitted')) {
+        recoverySource = replaceExact(recoverySource, 'import { gtcPmNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc";', 'import { gtcUnits } from "@changmen/shared/pm_gtc";');
+        recoverySource = replaceExact(recoverySource,
+          'const pmMayExist = !gtcPmNeverSubmitted(row) && (row.pmAuthorized || row.orderId || !["prepared", "not_attempted"].includes(row.submit)) || Number(row.financialOrder?.pmShares) > 0;',
+          'const pmMayExist = row.pmAuthorized || row.orderId || !["prepared", "not_attempted"].includes(row.submit) || Number(row.financialOrder?.pmShares) > 0;');
+      }
+      assert.deepEqual(moduleTokens(recoverySource),moduleTokens(gitSource("adb333bf24b6ba6aa3e441009b56f874a23f6ed9",recovery)),"complete committed unified recovery module");
       specialized = replaceExact(specialized, `if (body.knownRevisions != null) {
         let known;
         try { known = parse(body.knownRevisions); }

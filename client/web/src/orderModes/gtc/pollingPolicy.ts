@@ -1,11 +1,13 @@
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
 import type { OrderRow } from "@/types/order";
-import { gtcCanFinishWithoutOrders, gtcUnits } from "@changmen/shared/pm_gtc";
+import { gtcCanFinishWithoutOrders, gtcPmNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc";
 import { resolveGtcFillFee } from "@changmen/venue-adapter/polymarket/gtc";
 
 /** [changmen 扩展] 只依据原单终态、完整成交/费用证据；比赛结束本身不能证明挂单已终止。 */
 export function gtcPmReconciled(row: GtcExecution): boolean {
   if (gtcCanFinishWithoutOrders(row))
+    return true;
+  if (row.decision === "closed" && gtcPmNeverSubmitted(row))
     return true;
   if (!row.terminal || !row.complete || row.error || row.open !== "0")
     return false;

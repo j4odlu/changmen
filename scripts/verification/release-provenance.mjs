@@ -54,7 +54,30 @@ export function assertPublicAsset(asset, status, bytes) {
   assert(status >= 200 && status < 300, `Public asset HTTP failure: ${asset.file}`);
   assert.equal(rawSha(bytes), asset.sha256, `Public asset differs from actual frontend: ${asset.file}`);
 }
-export function sshRead(program, { spawn = spawnSync } = {}) {
+// [changmen 扩展] 大资源传输允许有限等待与重试；官方 HTTP/完整字节校验不被重试掩盖。
+export const PUBLIC_ASSET_TIMEOUT_MS = 60_000;
+export async function readPublicAsset(frontendUrl, asset, { fetchAsset = globalThis.fetch } = {}) {
+  const url = frontendUrl + '/' + asset.file.split('/').map(encodeURIComponent).join('/');
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    let response, bytes;
+    try {
+      response = await fetchAsset(url, { cache: 'no-store', signal: AbortSignal.timeout(PUBLIC_ASSET_TIMEOUT_MS) });
+      if (response.status < 200 || response.status >= 300)
+        assertPublicAsset(asset, response.status, Buffer.alloc(0));
+      bytes = Buffer.from(await response.arrayBuffer());
+    } catch (error) {
+      const retryable = error?.name === 'TimeoutError' || error?.name === 'AbortError' || error instanceof TypeError;
+      if (attempt < 2 && retryable) continue;
+      throw new Error(`Public asset capture failed: ${asset.file} (attempt ${attempt}/2): ${error.message}`, { cause: error });
+    }
+    // 内容不同或缺失绝不重试，避免把发布中途变化当成稳定证据。
+    assertPublicAsset(asset, response.status, bytes);
+    return bytes;
+  }
+}
+export const CAPTURE_TRANSFER_TIMEOUT_MS = 180_000;
+export function sshRead(program, { spawn = spawnSync, timeoutMs = 45_000 } = {}) {
+  assert([45_000, CAPTURE_TRANSFER_TIMEOUT_MS].includes(timeoutMs), "Unsupported capture timeout budget");
   const remote = process.env.FOK_BASELINE_SSH_TARGET ?? "root@47.57.10.202";
   const key = process.env.FOK_BASELINE_SSH_KEY ?? path.join(os.homedir(), ".ssh/id_ed25519_gamebet");
   // [changmen 扩展] 压缩原 JSON 后发送；不依赖 SSH 压缩协商，不删减捕获内容。
@@ -63,7 +86,7 @@ console.log = value => {
   if (typeof value !== 'string') throw new Error('Capture must output one JSON string');
   process.stdout.write('CHANGMEN_CAPTURE_GZIP_V1:' + __captureGzip(Buffer.from(value)).toString('base64') + '\\n');
 };\n` + program;
-  const result = spawn("ssh", ["-C", "-i", key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", remote, "node --input-type=module"], { input, encoding: "utf8", timeout: 45000, maxBuffer: 45 * 1024 * 1024 });
+  const result = spawn("ssh", ["-C", "-i", key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", remote, "node --input-type=module"], { input, encoding: "utf8", timeout: timeoutMs, maxBuffer: 45 * 1024 * 1024 });
   assert.equal(result.status, 0, result.stderr || `VPS read-only capture failed (${result.error?.code ?? result.status}; received ${Buffer.byteLength(result.stdout ?? "")} bytes)`);
   const match = result.stdout.trim().match(/^CHANGMEN_CAPTURE_GZIP_V1:((?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)$/);
   assert(match && match[1], "Missing/incomplete compressed capture");

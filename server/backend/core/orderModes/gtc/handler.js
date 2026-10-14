@@ -59,7 +59,7 @@ export async function handlePmGtc(action, body, owner) {
     throw new Error("GTC 执行 ID 无效");
   if (action === "Pm_GtcCommand") {
     const command = parse(body.command);
-    if (!command || !["authorize_pm", "authorize_other", "ack", "other", "facts", "close", "cancel", "cancel_result", "resume", "counted"].includes(command.kind))
+    if (!command || !["authorize_pm", "authorize_other", "ack", "other", "not_sent", "facts", "close", "cancel", "cancel_result", "resume", "counted"].includes(command.kind))
       throw new Error("GTC 命令不支持");
     if (JSON.stringify(command).length > 2000000)
       throw new Error("GTC 事实过大");

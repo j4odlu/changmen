@@ -1,4 +1,4 @@
-/** [changmen 扩展] 真实首单 → PM polling → adapter，在模拟 HTTP 和可控时钟下保护原截止裁决。 */
+/** [changmen 扩展] 真实首单 → PM polling → adapter，在模拟 HTTP 和可控时钟下验证首腿受理后第二腿发送不依赖原单核对。 */
 import type { GtcCommand, GtcPlan } from "@changmen/shared/pm_gtc";
 import type { ArbBetAttemptParams, ArbBetChecked } from "@/stores/betting/autoBet/phases/types";
 import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 import { startPmGtcMonitoring, stopPmGtcMonitoring } from "@/runtime/orderMonitoring/pm";
 import { executeGtc } from "@/test/executeOriginalPair";
-import { currentGtc, gtcProgress, initializeGtcState, resetGtcState } from "./executionState";
+import { currentGtc, gtcInitialDispatches, gtcProgress, initializeGtcState, resetGtcState } from "./executionState";
 
 const mocks = vi.hoisted(() => ({
   submit: vi.fn(),
@@ -38,7 +38,7 @@ vi.mock("@/stores/betting/pendingOrderBind", () => ({ enqueuePendingOrderBind: v
 vi.mock("@/stores/betting/autoBet/arbLegSettle", () => ({ settleArbLegUntilTerminal: vi.fn(() => { throw new Error("unexpected FOK settlement"); }) }));
 vi.mock("@/stores/betting/autoBet/rejectWait", () => ({ maxLegRejectWaitSec: vi.fn(), showRejectDetectionTip: vi.fn() }));
 vi.mock("@/shared/betNotification", () => ({ notifyBet: async (_account: unknown, _option: unknown, run: () => Promise<unknown>) => run() }));
-vi.mock("./gateway", () => ({ placeOtherLeg: mocks.other }));
+vi.mock("./gateway", () => ({ prepareOtherLeg: (...args: unknown[]) => () => mocks.other(...args) }));
 vi.mock("./otherOrders", () => ({ settleGtcOtherLeg: mocks.settle }));
 vi.mock("./api", () => ({
   createGtc: async (id: string, maker: string, plan: GtcPlan) => {
@@ -130,31 +130,30 @@ beforeEach(async () => {
 });
 afterEach(() => { stopPmGtcMonitoring(); resetGtcState(); vi.useRealTimers(); });
 
-it.each([249, 250, 300, 301])("pM-first serial keeps the original strict deadline with %sms remaining", async (remaining) => {
+it.each([-1000, 0, 249, 250, 300, 301])("PM-first acceptance sends the original other leg even with %sms on the historical clock", async (remaining) => {
   mocks.remaining = remaining;
-  const { params, checked } = inputs();
-  const task = executeGtc(params, checked);
+  const { params, checked } = inputs(); const task = executeGtc(params, checked);
   await finishAttempt(task);
+  expect(mocks.other).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
+  expect(mocks.trace[0]).toEqual(["submit", 0]);
+  expect(mocks.trace[1]).toEqual(["other", 10000 - remaining]);
   expect(mocks.trace.filter(([name]) => name === "order" || name === "trades")).toEqual([["order", 10000 - remaining], ["trades", 10100 - remaining]]);
-  expect(mocks.other).toHaveBeenCalledTimes(remaining > 300 ? 1 : 0);
-  if (remaining > 300)
-    expect(mocks.trace.at(-1)).toEqual(["other", 10300 - remaining]);
-  expect(mocks.submit).toHaveBeenCalledOnce(); expect(currentGtc(gtcProgress.records[0]!.id).decision).toBe("closed");
+  expect(currentGtc(gtcProgress.records[0]!.id).decision).toBe("closed");
+  expect(gtcInitialDispatches.size).toBe(0);
 });
-it.each(["0", "5"])("pM-first serial keeps the existing zero/partial rule for %s shares", async (quantity) => {
+it.each(["0", "5"])("PM-first acceptance sends the original other quantity without waiting for %s shares", async (quantity) => {
   mocks.quantity = quantity; mocks.remaining = 1000;
   const { params, checked } = inputs(); const task = executeGtc(params, checked);
   await finishAttempt(task);
-  expect(mocks.other).toHaveBeenCalledTimes(quantity === "0" ? 0 : 1);
+  expect(mocks.other).toHaveBeenCalledExactlyOnceWith(mocks.accounts[1], expect.objectContaining({ betMoney: 33.5, deferPostAcceptSettlement: true }), 3);
   expect(mocks.submit).toHaveBeenCalledOnce();
-  if (quantity === "5")
-    expect(mocks.other).toHaveBeenCalledWith(mocks.accounts[1], expect.objectContaining({ betMoney: 33.5, deferPostAcceptSettlement: true }), 3);
+  expect(gtcProgress.records[0]!.matched).toBe(quantity); expect(gtcProgress.records[0]!.groupComplete).toBe(false);
 });
-it("a failed initial history query preserves acceptance and cannot send the traditional leg", async () => {
+it("a failed order-history query preserves both submissions and records only a query issue", async () => {
   mocks.failHistory = true; mocks.remaining = 1000;
   const { params, checked } = inputs(); const task = executeGtc(params, checked);
   await finishAttempt(task);
-  expect(gtcProgress.records[0]!.submit).toBe("accepted"); expect(mocks.other).not.toHaveBeenCalled(); expect(mocks.submit).toHaveBeenCalledOnce();
+  expect(gtcProgress.records[0]!.submit).toBe("accepted"); expect(mocks.other).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
   expect(gtcProgress.queryIssues[gtcProgress.records[0]!.id]?.message).toBe("Network Error");
 });
 it.each([[false, false], [true, true]])("other-first/parallel sends each original once (%s, %s)", async (pmFirst, parallel) => {
@@ -162,7 +161,7 @@ it.each([[false, false], [true, true]])("other-first/parallel sends each origina
   await finishAttempt(task);
   expect(mocks.other).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.settle).toHaveBeenCalledOnce();
 });
-it("an overlapping background tick during the open first attempt keeps sequential polling and one POST", async () => {
+it("an overlapping background tick cannot query or close the first attempt before its other POST", async () => {
   mocks.submit.mockImplementationOnce(async () => {
     await new Promise(r => setTimeout(r, 10000 - mocks.remaining));
     startPmGtcMonitoring(); await vi.dynamicImportSettled();
@@ -171,5 +170,24 @@ it("an overlapping background tick during the open first attempt keeps sequentia
   const { params, checked } = inputs(); const task = executeGtc(params, checked);
   await finishAttempt(task);
   expect(mocks.trace.filter(([name]) => name === "order" || name === "trades")).toEqual([["order", 9750], ["trades", 9850]]);
-  expect(mocks.other).not.toHaveBeenCalled(); expect(mocks.submit).toHaveBeenCalledOnce();
+  expect(mocks.other).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
+});
+it("the real coordinator cannot expire a slow active first dispatch, but still closes abandoned records", async () => {
+  const coordinator = await vi.importActual<typeof import("./runtime")>("./runtime");
+  mocks.remaining = -1000;
+  coordinator.startGtcCoordinator();
+  try {
+    const { params, checked } = inputs(); const task = executeGtc(params, checked);
+    await vi.dynamicImportSettled(); await vi.advanceTimersByTimeAsync(10500);
+    expect(currentGtc(gtcProgress.records[0]!.id).decision).toBe("open");
+    expect(mocks.other).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(500); await vi.dynamicImportSettled();
+    await vi.advanceTimersByTimeAsync(30300); await task;
+    expect(mocks.other).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
+    const abandoned = createGtcExecution("abandoned", "owner", "wallet", "maker", gtcProgress.records[0]!.plan, 0);
+    (await import("./executionState")).acceptGtc(abandoned);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(currentGtc("abandoned").decision).toBe("closed");
+  }
+  finally { coordinator.stopGtcCoordinator(); }
 });

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { checkArbLegs as checkGtc } from "@/stores/betting/autoBet/phases/checkArbLegs";
 import { checkArbLegs as checkFok } from "@/stores/betting/autoBet/phases/checkArbLegs";
 const mocks = vi.hoisted(() => ({ check: vi.fn(), blocked: vi.fn(), results: vi.fn(), fail: vi.fn() }));
+vi.mock("./arbLeg", () => ({ prepareGtcLegExecution: async () => ({ legs: new Map(), close: vi.fn() }) }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ checkBetting: mocks.check }) }));
 vi.mock("@/stores/loseOrderStore", () => ({ useLoseOrderStore: () => ({ orders: new Map() }) }));
 vi.mock("@/stores/oddsStore", () => ({ useOddsStore: () => ({ getEntry: () => undefined }) }));

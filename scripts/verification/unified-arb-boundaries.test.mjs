@@ -45,6 +45,14 @@ describe("reviewed single-leg capabilities are completely protected", () => {
   it("requires all eleven public modules and four complete capability files", () => {
     expect(verifyUnifiedArbitrageContract(read, replaceExact)).toEqual({ precisePublicModules: 11, completeCapabilityContracts: 4 });
   });
+  it("rejects reintroducing a mode-specific second-leg decision or losing submission cleanup", () => {
+    const file = "client/web/src/domain/betting/originalLegExecution.ts";
+    const source = read(file).replace("  submit: () => Promise<BetResult>;", "  submit: () => Promise<BetResult>;\n  canContinueOriginalPair: () => boolean;");
+    expect(() => verifyUnifiedArbitrageContract(target => target === file ? source : read(target), replaceExact)).toThrow("complete reviewed unified capability contract");
+    const bridge = "client/web/src/orderModes/gtc/arbLeg.ts";
+    const leaked = read(bridge).replace("    finishSubmission,", "");
+    expect(() => verifyUnifiedArbitrageContract(target => target === bridge ? leaked : read(target), replaceExact)).toThrow("complete reviewed unified capability contract");
+  });
   it.each([
     ["clock renewal", "await prepared.prepareSubmit();", "prepared.validate();"],
     ["post-renewal session check", "await prepared.prepareSubmit(); checkSession();", "await prepared.prepareSubmit();"],
@@ -68,8 +76,8 @@ describe("reviewed single-leg capabilities are completely protected", () => {
     });
   }
   for (const [name, suffix, before, after] of [
-    ["first-leg qualification", "phases/placeArbLegs.ts", "resultA.success && (", "true && ("],
-    ["GTC-only lifecycle", "phases/placeArbLegs.ts", "checked.pmOrderMode === \"GTC\" && hasPm", "hasPm"],
+    ["first-leg qualification", "phases/placeArbLegs.ts", "if (resultA.success)", "if (true)"],
+    ["GTC-only lifecycle", "phases/checkArbLegs.ts", "ready.pmOrderMode === \"GTC\" &&", "true &&"],
     ["FOK retry permit", "phases/placeArbLegs.ts", "original?.actions.retry !== false", "true"],
     ["FOK money/check arguments", "phases/checkArbLegs.ts", "legA.type === \"Polymarket\" &&", "true &&"],
     ["reject countdown", "phases/settleBothArbLegs.ts", "Math.max(0,", "Math.min(0,"],

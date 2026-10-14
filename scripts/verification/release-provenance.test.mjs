@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import { gzipSync } from "node:zlib";
-import { assertLayout, assertStable, assertSourceHashes, assertPublicAsset, assertCaptureEvidence, sha, rawSha, runtime, sshRead } from "./release-provenance.mjs";
+import { assertLayout, assertStable, assertSourceHashes, assertPublicAsset, assertCaptureEvidence, sha, rawSha, runtime, sshRead, readPublicAsset, PUBLIC_ASSET_TIMEOUT_MS, CAPTURE_TRANSFER_TIMEOUT_MS } from "./release-provenance.mjs";
 import { publicFiles, verifyActualPublicModule } from "./public-release-boundaries.mjs";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 const frontend = "e901bb596952256284cd8a9eb8b73b572c963915", backend = "832f3f76c30d6ad741ce850a68cd6ba1da7d06f9";
@@ -22,6 +22,15 @@ it("compressed capture requires one complete gzip stream and valid complete JSON
     'CHANGMEN_CAPTURE_GZIP_V1:' + gzipSync(Buffer.from('{"source":')).toString('base64')])
     expect(() => sshRead('read only', { spawn: () => ({ status: 0, stdout, stderr: '' }) })).toThrow();
 });
+it("only the full source capture gets a bounded transfer allowance; connection and byte limits remain fixed", () => {
+  const result = sshRead("full capture", { timeoutMs: CAPTURE_TRANSFER_TIMEOUT_MS, spawn: (_command, args, options) => {
+    expect(options.timeout).toBe(180000); expect(options.maxBuffer).toBe(45 * 1024 * 1024);
+    expect(args).toContain("ConnectTimeout=15");
+    return { status: 0, stdout: wire({ complete: true }), stderr: "" };
+  } });
+  expect(result).toEqual({ complete: true });
+  expect(() => sshRead("capture", { timeoutMs: 0 })).toThrow("Unsupported capture timeout budget");
+});
 it("compressed transfer cannot evade the original decoded capture size bound", () => {
   const stdout = wire({ source: 'x'.repeat(45 * 1024 * 1024) });
   expect(() => sshRead('read only', { spawn: () => ({ status: 0, stdout, stderr: '' }) })).toThrow();
@@ -29,6 +38,45 @@ it("compressed transfer cannot evade the original decoded capture size bound", (
 it("timeouts and incomplete JSON still fail; a partial capture is never accepted", () => {
   expect(() => sshRead("read only", { spawn: () => ({ status: null, stdout: '{"sources":', stderr: "", error: { code: "ETIMEDOUT" } }) })).toThrow("ETIMEDOUT");
   expect(() => sshRead("read only", { spawn: () => ({ status: 0, stdout: '{"sources":', stderr: "" }) })).toThrow();
+});
+describe("complete public asset reads with bounded transport retry", () => {
+  const bytes = Buffer.from("complete 中国 asset");
+  const asset = { file: "assets/a b.js", sha256: rawSha(bytes) };
+  const response = () => ({ status: 200, arrayBuffer: async () => bytes });
+  it("reads the same public path without cache and validates the complete payload", async () => {
+    const fetchAsset = vi.fn().mockResolvedValue(response());
+    expect(await readPublicAsset("https://example.test", asset, { fetchAsset })).toEqual(bytes);
+    expect(fetchAsset).toHaveBeenCalledOnce();
+    expect(fetchAsset.mock.calls[0][0]).toBe("https://example.test/assets/a%20b.js");
+    expect(fetchAsset.mock.calls[0][1].cache).toBe("no-store");
+    expect(PUBLIC_ASSET_TIMEOUT_MS).toBe(60000);
+  });
+  it.each([new DOMException("late", "TimeoutError"), new TypeError("socket closed")])("retries transport failure only once: %s", async error => {
+    const fetchAsset = vi.fn().mockRejectedValueOnce(error).mockResolvedValueOnce(response());
+    expect(await readPublicAsset("https://example.test", asset, { fetchAsset })).toEqual(bytes);
+    expect(fetchAsset).toHaveBeenCalledTimes(2);
+    expect(fetchAsset.mock.calls[0][1].signal).not.toBe(fetchAsset.mock.calls[1][1].signal);
+  });
+  it("reports the exact asset after the finite retry budget is exhausted", async () => {
+    const fetchAsset = vi.fn().mockRejectedValue(new DOMException("late", "TimeoutError"));
+    await expect(readPublicAsset("https://example.test", asset, { fetchAsset })).rejects.toThrow("assets/a b.js (attempt 2/2)");
+    expect(fetchAsset).toHaveBeenCalledTimes(2);
+  });
+  it("a failed body transfer never turns a partial response into accepted evidence", async () => {
+    const fetchAsset = vi.fn().mockResolvedValue({ status: 200, arrayBuffer: async () => { throw new TypeError("body truncated"); } });
+    await expect(readPublicAsset("https://example.test", asset, { fetchAsset })).rejects.toThrow("body truncated");
+    expect(fetchAsset).toHaveBeenCalledTimes(2);
+  });
+  it.each([404, 503])("HTTP %s fails immediately without retrying a missing resource", async status => {
+    const fetchAsset = vi.fn().mockResolvedValue({ ...response(), status });
+    await expect(readPublicAsset("https://example.test", asset, { fetchAsset })).rejects.toThrow("Public asset HTTP failure");
+    expect(fetchAsset).toHaveBeenCalledOnce();
+  });
+  it("wrong complete bytes fail immediately, even if a later response would match", async () => {
+    const fetchAsset = vi.fn().mockResolvedValueOnce({ status: 200, arrayBuffer: async () => Buffer.from("different") }).mockResolvedValueOnce(response());
+    await expect(readPublicAsset("https://example.test", asset, { fetchAsset })).rejects.toThrow("Public asset differs");
+    expect(fetchAsset).toHaveBeenCalledOnce();
+  });
 });
 function layout() {
   const b = `/root/changmen/.releases/backend/backend-${backend}-123-1`;

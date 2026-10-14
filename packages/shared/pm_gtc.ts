@@ -90,7 +90,9 @@ export interface GtcExecution {
   decision: "open" | "closed";
   deadlineAt: number;
   pmAuthorized: boolean;
-  other: { state: GtcOtherState; orderId: string | null; submittedAt: number; message: string };
+  /** [changmen 扩展] 已获一次性授权但尚未调用场馆发送；保留授权，禁止重发。 */
+  submitNotSent?: boolean;
+  other: { state: GtcOtherState; orderId: string | null; submittedAt: number; message: string; notSent?: boolean };
   manual: boolean;
   released: boolean;
   releaseRevision?: number;
@@ -140,7 +142,7 @@ function fillPriceRatio(value: unknown): { numerator: bigint; denominator: bigin
 }
 /** [changmen 扩展] 兼容旧版把未授权 PM 腿写成 rejected 的记录；有任何订单证据就不能据此结束。 */
 export function gtcPmNeverSubmitted(row: GtcExecution): boolean {
-  return !row.pmAuthorized && !row.orderId && !row.order && !row.cancel
+  return (!row.pmAuthorized || row.submitNotSent === true) && !row.orderId && !row.order && !row.cancel
     && ["prepared", "not_attempted", "rejected"].includes(row.submit)
     && !Object.keys(row.fills).length && gtcUnits(row.matched) === 0n && gtcUnits(row.principal) === 0n;
 }
@@ -168,15 +170,15 @@ export function gtcStateLabel(row: GtcExecution): string {
 export function createGtcExecution(id: string, owner: string, walletKey: string, maker: string, plan: GtcPlan, now: number): GtcExecution {
   return { id, owner, walletKey, maker, plan, createdAt: now, revision: 0, submit: "prepared", orderId: null, decision: "open", deadlineAt: 0, pmAuthorized: false, other: { state: "not_attempted", orderId: null, submittedAt: 0, message: "" }, manual: false, released: false, cancel: null, fills: {}, order: null, matched: "0", principal: "0", fee: "0", open: null, terminal: false, complete: false, groupComplete: false, observedAt: 0, error: "", counted: false };
 }
-export function gtcCanAuthorizeOther(row: GtcExecution, now: number): boolean {
+export function gtcCanAuthorizeOther(row: GtcExecution): boolean {
   if (row.plan.source === "manual")
     return false;
-  if (row.manual || row.cancel || row.decision !== "open" || row.other.state !== "not_attempted")
+  if (row.manual || row.cancel || row.decision !== "open" || row.other.state !== "not_attempted" || row.other.notSent)
     return false;
   if (row.plan.parallel || row.plan.originalPmLeg === "B")
     return true;
-  return row.pmAuthorized && row.submit === "accepted" && gtcUnits(row.matched) > 0n
-    && row.complete && !row.error && row.deadlineAt > now;
+  // [A8 可证实] 顺序首腿成功后发送第二腿；[changmen 扩展] GTC 保留一次性授权与主动关闭检查。
+  return row.pmAuthorized && row.submit === "accepted";
 }
 export function gtcCanCancel(row: GtcExecution): boolean {
   return row.submit === "accepted" && Boolean(row.orderId) && !row.terminal
@@ -214,6 +216,7 @@ export function mergeGtcFacts(previous: GtcExecution, facts: GtcFacts): GtcExecu
         row.order.status = "CANCELED";
     }
     row.orderId ||= facts.order.id;
+    row.submitNotSent = false;
     row.submit = "accepted";
   }
   for (const fill of facts.fills) {
@@ -298,6 +301,7 @@ type GtcCommandBody
   = | { kind: "authorize_pm" | "authorize_other" | "close" | "resume" | "counted" }
     | { kind: "ack"; state: "accepted" | "rejected" | "unknown"; orderId?: string; message?: string }
     | { kind: "other"; state: GtcOtherState; orderId?: string; message?: string }
+    | { kind: "not_sent"; leg: "PM" | "OTHER"; message: string }
     | { kind: "facts"; facts: GtcFacts }
     | { kind: "cancel"; commandId: string }
     | { kind: "cancel_result"; commandId: string; state: "unknown" | "failed" | "acknowledged"; message: string };
@@ -309,13 +313,29 @@ export function applyGtcCommand(previous: GtcExecution, command: GtcCommand, now
   let row = structuredClone(previous);
   switch (command.kind) {
     case "authorize_pm":
-      if (row.pmAuthorized || row.decision !== "open" || row.manual)
+      if (row.pmAuthorized || row.submitNotSent || row.decision !== "open" || row.manual)
         throw new Error("GTC 原单已授权或已结束；禁止重发");
       row.pmAuthorized = true; row.submit = "dispatching"; row.deadlineAt = now + PM_GTC_INITIAL_MS; break;
     case "authorize_other":
-      if (!gtcCanAuthorizeOther(row, now))
+      if (!gtcCanAuthorizeOther(row))
         throw new Error("GTC 第二腿不可再次提交");
       row.other.state = "authorized"; row.other.submittedAt = now; break;
+    case "not_sent":
+      if (command.leg === "PM") {
+        if (!["prepared", "not_attempted", "dispatching"].includes(row.submit)
+          || row.orderId || row.order || row.cancel || Object.keys(row.fills).length
+          || gtcUnits(row.matched) !== 0n || gtcUnits(row.principal) !== 0n)
+          throw new Error("GTC 已有提交或订单证据，不能标为未发送");
+        row.submitNotSent = true; row.submit = "not_attempted"; row.error = command.message;
+        row.terminal = true; row.complete = true; row.open = "0";
+      }
+      else if (command.leg === "OTHER" && row.plan.source !== "manual") {
+        if (!["not_attempted", "authorized"].includes(row.other.state) || row.other.orderId)
+          throw new Error("GTC 对侧已有提交证据，不能标为未发送");
+        row.other = { ...row.other, state: "not_attempted", notSent: true, message: command.message };
+      }
+      else throw new Error("GTC 未发送腿无效");
+      break;
     case "ack":
       if (!["accepted", "rejected", "unknown"].includes(command.state))
         throw new Error("GTC 回执状态无效");

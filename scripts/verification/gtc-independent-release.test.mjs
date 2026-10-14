@@ -22,6 +22,8 @@ it.each([["--allow"], ["--release-plan=paired"], ["--release-plan=backend-first"
   expect(() => releasePlan(args)).toThrow("release plan");
 });
 it.each([
+  ["handler.js", text => text.replace('"not_sent",', '"unexpected_send",')],
+  ["recovery.js", text => text.replace('!gtcPmNeverSubmitted(row)', 'true')],
   rows => rows.slice(1),
   rows => [rows[0], rows[0], rows[2]],
   rows => rows.map(row => row.id === "paired" ? { ...row, passed: undefined } : row),

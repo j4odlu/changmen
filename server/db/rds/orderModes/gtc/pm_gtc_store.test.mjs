@@ -156,6 +156,36 @@ describe("gTC persistence fails before venue dispatch without durable coordinati
     expect(mocks.query.mock.calls.some(([sql]) => sql.includes("FOR UPDATE"))).toBe(true); expect(mocks.query.mock.calls.at(-1)[0]).toBe("COMMIT");
     expect(mocks.query.mock.calls.some(([sql]) => sql.startsWith("INSERT INTO orders"))).toBe(false);
   });
+  it("persists authorized-but-unsent evidence without an order, and retains single-use authorization", async () => {
+    let stored = created();
+    mocks.query.mockImplementation(async (sql, args) => {
+      if (sql.startsWith("UPDATE pm_gtc_executions")) stored = args[2];
+      return { rows: sql.includes("SELECT wallet_key") ? [{ wallet_key: stored.walletKey }] : sql.includes("SELECT record") ? [{ record: stored }] : [] };
+    });
+    await mutatePmGtc("owner", "id", 0, { kind: "authorize_pm" });
+    await mutatePmGtc("owner", "id", 1, { kind: "not_sent", leg: "PM", message: "pre-dispatch failed" });
+    await mutatePmGtc("owner", "id", 2, { kind: "close" });
+    expect(stored).toMatchObject({ pmAuthorized: true, submitNotSent: true, orderId: null, submit: "not_attempted", released: true });
+    expect(mocks.query.mock.calls.some(([sql]) => sql.startsWith("INSERT INTO orders"))).toBe(false);
+    await expect(mutatePmGtc("owner", "id", 3, { kind: "authorize_pm" })).rejects.toThrow("禁止重发");
+  });
+  it.each(["zero", "incomplete", "query-error", "expired"])("accepted PM permits the other original once with %s facts and creates no fake financial order", async (scenario) => {
+    let record = { ...created(), pmAuthorized: true, submit: "accepted", orderId: "hash", revision: 2 };
+    if (scenario === "incomplete") record.matched = "5";
+    if (scenario === "query-error") record.error = "query failed";
+    if (scenario === "expired") record.deadlineAt = 1;
+    mocks.query.mockImplementation(async (sql, params = []) => {
+      if (sql.startsWith("SELECT record")) return { rows: [{ record }] };
+      if (sql.startsWith("UPDATE pm_gtc_executions")) record = params[2];
+      return { rows: [] };
+    });
+    const authorized = await mutatePmGtc("owner", "id", 2, { kind: "authorize_other" });
+    expect(authorized.other.state).toBe("authorized");
+    expect(mocks.query.mock.calls.some(([sql]) => sql.includes("FOR UPDATE"))).toBe(true);
+    expect(mocks.query.mock.calls.at(-1)[0]).toBe("COMMIT");
+    expect(mocks.query.mock.calls.some(([sql]) => sql.startsWith("INSERT INTO orders"))).toBe(false);
+    await expect(mutatePmGtc("owner", "id", 3, { kind: "authorize_other" })).rejects.toThrow("不可再次提交");
+  });
   it("closing legacy unsubmitted PM after other-leg rejection clears active reservation without a financial order", async () => {
     const legacy = created(); legacy.submit = "rejected"; legacy.decision = "closed"; legacy.manual = true;
     legacy.other = { state: "rejected", orderId: null, submittedAt: 2, message: "赔率下降至1.84" };

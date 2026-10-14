@@ -208,6 +208,25 @@ export async function checkArbLegs(
     return null;
   }
 
+  // [changmen 扩展] GTC 历史、签单、利润及执行准备属于预检，完成后才报告双腿通过。
+  if (ready.pmOrderMode === "GTC" && [legA.type, legB.type].includes("Polymarket")) {
+    try {
+      const { prepareGtcLegExecution } = await import("@/orderModes/gtc/arbLeg");
+      ready.originalExecution = params.originalExecution = await prepareGtcLegExecution(params, {
+        ...ready, legA, legB, accountA, accountB, scanOddsA, scanOddsB,
+        precheckCompletedAt: performance.now(),
+        waitSec: arbBetToastSeconds(config, [accountA?.provider, accountB?.provider].filter(Boolean) as string[]),
+      });
+      for (const execution of ready.originalExecution.legs.values()) execution.validate();
+    }
+    catch (error) {
+      const reason = error instanceof Error ? error.message : "GTC 发送准备失败";
+      observeArbSubmissionBlocked({ ...ready, legA, legB }, "pair_preparation_failed", reason);
+      setMessage(reason); trace?.finish("fail", reason); syncActiveBetFail(bet.id, reason);
+      return null;
+    }
+  }
+
   syncActiveBetPrecheckResults(bet.id, {
     hasA: Boolean(checkAccountA),
     okA: true,

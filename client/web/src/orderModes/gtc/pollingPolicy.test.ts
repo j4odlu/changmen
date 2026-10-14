@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
 import type { OrderRow } from "@/types/order";
-import { createGtcExecution } from "@changmen/shared/pm_gtc";
+import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
 import { gtcExecutionDormant, gtcPmReconciled, gtcNeedsOtherPolling } from "./pollingPolicy";
 import { gtcOrderCardView } from "./orderCardView";
 import { gtcSyncIssue, gtcSyncNotice } from "./syncStatus";
@@ -15,6 +15,16 @@ function done(): GtcExecution {
 }
 const settled = (): OrderRow[] => [{ Type: "Polymarket", PlayerID: 1, OrderID: "buy", PmGtcExecutionId: "own", Status: "Win" }];
 describe("GTC synchronization status and stopping policy", () => {
+  it("PM 已获授权但明确未发送时停止 PM 轮询，首腿仍独立核对", () => {
+    let row = createGtcExecution("own", "owner", "wallet", "maker", { shares: "10", originalPmLeg: "B" } as GtcExecution["plan"], 1);
+    row = applyGtcCommand(row, { kind: "authorize_other" }, 2);
+    row = applyGtcCommand(row, { kind: "other", state: "accepted", orderId: "ray-order" }, 3);
+    row = applyGtcCommand(row, { kind: "authorize_pm" }, 4);
+    row = applyGtcCommand(row, { kind: "not_sent", leg: "PM", message: "校验失效" }, 5);
+    row = applyGtcCommand(row, { kind: "close" }, 6);
+    expect(gtcPmReconciled(row)).toBe(true); expect(gtcNeedsOtherPolling(row, [])).toBe(true);
+    expect(gtcExecutionDormant(row, [])).toBe(false);
+  });
   it("login/query errors are labeled as sync issues while actual fill conflicts remain order evidence errors", () => {
     const row = done(); row.error = "登录服务暂时不可用，请稍后重试";
     expect(gtcOrderCardView(row)).toMatchObject({ state: "全部成交", detailError: "", queryErrorKind: "auth" });

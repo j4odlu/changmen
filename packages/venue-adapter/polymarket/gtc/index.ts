@@ -53,7 +53,11 @@ export async function buildPreparedGtcBuy(account: PlatformAccount, option: BetO
     throw new Error("GTC 实际签单数量或预算越界");
   const hash = pmSignedOrderHash(signed, { version: data.orderOptions.version, negRisk: data.orderOptions.negRisk });
   const body = runtime.clob.orderToJsonV2(signed, resolveApiCreds(parseTokenConfig(account.token)).apiKey, runtime.clob.OrderType.GTC, false, false);
-  return { shares, targetShares: decimal(target), price: decimal(data.limitPrice), maxPrincipal, allInBudget: decimal(budget), protocol: data.orderOptions.version, negRisk: data.orderOptions.negRisk, orderHash: hash, route: resolvePmOrderSubmitHttpMode(), validate: prepared.validate, prepareSubmit: prepared.prepareSubmit, submit: async () => { await prepared.prepareSubmit(); prepared.consume(); return pmSubmitOrder<GtcAck>(account, body); } };
+  return { shares, targetShares: decimal(target), price: decimal(data.limitPrice), maxPrincipal, allInBudget: decimal(budget), protocol: data.orderOptions.version, negRisk: data.orderOptions.negRisk, orderHash: hash, route: resolvePmOrderSubmitHttpMode(), validate: prepared.validate, prepareSubmit: prepared.prepareSubmit, submit: async (): Promise<GtcAck> => {
+    try { await prepared.prepareSubmit(); prepared.consume(); }
+    catch (error) { return { success: false, pmSubmitNotSent: true, errorMsg: error instanceof Error ? error.message : String(error) }; }
+    return pmSubmitOrder<GtcAck>(account, body);
+  } };
 }
 export interface GtcAck { success?: boolean; orderID?: string; status?: string; errorMsg?: string; pmSubmitNotSent?: boolean }
 interface Trade { id?: string; taker_order_id?: string; asset_id?: string; side?: string; size?: string; price?: string; status?: string; last_update?: string; match_time?: string; fee_rate_bps?: string; maker_orders?: Array<{ order_id?: string; asset_id?: string; side?: string; matched_amount?: string; price?: string }> }

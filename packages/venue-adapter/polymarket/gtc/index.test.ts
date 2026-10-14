@@ -81,7 +81,7 @@ describe("isolated GTC adapter", () => {
     const input = preparation();
     input.prepareSubmit = async () => { throw new Error("clock unavailable"); };
     const prepared = await buildPreparedGtcBuy({} as never, {} as never, input as never);
-    await expect(prepared.submit()).rejects.toThrow("clock unavailable");
+    await expect(prepared.submit()).resolves.toMatchObject({ success: false, pmSubmitNotSent: true, errorMsg: "clock unavailable" });
     expect(mocks.consume).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled();
   });
   it("concurrent readiness calls still consume and submit the original signed body only once", async () => {
@@ -92,7 +92,8 @@ describe("isolated GTC adapter", () => {
     };
     const prepared = await buildPreparedGtcBuy({} as never, {} as never, input as never);
     const attempts = await Promise.allSettled([prepared.submit(), prepared.submit()]);
-    expect(attempts.map(attempt => attempt.status).sort()).toEqual(["fulfilled", "rejected"]);
+    expect(attempts.every(attempt => attempt.status === "fulfilled")).toBe(true);
+    expect(attempts.filter(attempt => attempt.status === "fulfilled" && attempt.value?.pmSubmitNotSent)).toHaveLength(1);
     expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.build).toHaveBeenCalledOnce();
   });
   it.each([{}, { fd: { r: 0.5, e: 1, to: true } }, new Error("fee lookup unavailable")])("fee availability or rate does not affect preparation: %s", async (market) => {

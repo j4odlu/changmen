@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { frontendSource, filesAt, gitSources, assertLayout, assertStable, assertSourceHashes, assertPublicAsset, sshRead, layoutProgram, readLayout } from "./release-provenance.mjs";
+import { frontendSource, filesAt, gitSources, assertLayout, assertStable, assertSourceHashes, readPublicAsset, sshRead, layoutProgram, readLayout, CAPTURE_TRANSFER_TIMEOUT_MS } from "./release-provenance.mjs";
 fs.mkdirSync("output", { recursive: true });
 // 失败不能使用上一次成功的证据。
 for (const file of ["output/vps-fok-baseline.json", "output/vps-fok-release-verification.json"])
@@ -27,7 +27,7 @@ while(queue.length){const file=queue.shift();if(!/\\.(html|js|css|svg)$/.test(fi
 const checkedAssets=allAssets.filter(row=>reachable.has(row.file)).map(row=>{const target=path.join(frontend,row.file);return {...row,sha256:sha(fs.readFileSync(target)),bytes:fs.statSync(target).size};});
 console.log(JSON.stringify({...layout,capturedAt:new Date().toISOString(),hashes,sources,storedAssetCount:allAssets.length,assets:checkedAssets,reachableAssets:checkedAssets}));
 `;
-const captured = sshRead(remoteProgram);
+const captured = sshRead(remoteProgram, { timeoutMs: CAPTURE_TRANSFER_TIMEOUT_MS });
 assertStable(layout, captured);
 const backendGit = gitSources(backendVersion, backendFiles), frontendGit = gitSources(frontendVersion, frontendFiles);
 assertSourceHashes(backendGit, captured.hashes);
@@ -36,14 +36,13 @@ const queue = [...captured.reachableAssets], probes = [];
 async function worker() {
   while (queue.length) {
     const asset = queue.shift();
-    const response = await fetch(frontendUrl + "/" + asset.file.split("/").map(encodeURIComponent).join("/"), { cache: "no-store", signal: AbortSignal.timeout(20000) });
-    const bytes = Buffer.from(await response.arrayBuffer());
-    assertPublicAsset(asset, response.status, bytes);
+    const bytes = await readPublicAsset(frontendUrl, asset);
     if (asset.file === "deploy-version.txt") assert.equal(bytes.toString().trim(), frontendVersion);
     probes.push({ file: asset.file, sha256: asset.sha256, matched: true });
   }
 }
-// [changmen 扩展] 避免大文件同时争抢带宽；每个资源仍须完整匹配。
+// [changmen 扩展] Avoid competing large downloads within the bounded per-asset deadline.
+// Every reachable asset still has to pass the same public byte-for-byte check.
 await Promise.all(Array.from({ length: 1 }, worker));
 assert(probes.some(row => row.file === "index.html") && probes.some(row => row.file === "deploy-version.txt"));
 const manifest = JSON.parse(fs.readFileSync("scripts/verification/vps-fok-baseline.json", "utf8"));

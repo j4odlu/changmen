@@ -3,9 +3,9 @@ import { gtcCanFinishWithoutOrders } from "@changmen/shared/pm_gtc";
 import { watch } from "vue";
 import { createOrderMonitorLoop } from "@/runtime/orderMonitoring/loop";
 import { pollGtc } from "@/runtime/orderMonitoring/pm";
-import { captureGtcSession, gtcProgress, mutateGtc, refreshGtcRecords } from "./executionState";
+import { captureGtcSession, gtcInitialDispatches, gtcProgress, mutateGtc, refreshGtcRecords } from "./executionState";
 
-export { acceptGtc, currentGtc, gtcActivated, gtcProgress, markGtcLegOnce, mutateGtc, refreshGtcRecords } from "./executionState";
+export { acceptGtc, beginGtcInitialDispatch, currentGtc, gtcActivated, gtcProgress, markGtcLegOnce, mutateGtc, refreshGtcRecords } from "./executionState";
 export { cancelGtc, pollGtc } from "@/runtime/orderMonitoring/pm";
 export { pollGtcOther } from "@/runtime/orderMonitoring/ray";
 const closures = new Map<string, Promise<unknown>>();
@@ -14,7 +14,7 @@ const coordinator = createOrderMonitorLoop({
   active: () => gtcProgress.records.some(row => !row.released && row.decision === "open"),
   tick() {
     for (const row of [...gtcProgress.records]) {
-      if (row.released || closures.has(row.id))
+      if (row.released || closures.has(row.id) || gtcInitialDispatches.has(row.id))
         continue;
       if (gtcCanFinishWithoutOrders(row) || (row.decision === "open"
         && (row.deadlineAt ? Date.now() > row.deadlineAt : Date.now() - row.createdAt > 10000))) {
@@ -35,7 +35,7 @@ export { startOrderMonitoring as startGtcRuntime, stopOrderMonitoring as stopGtc
 export function startGtcCoordinator(): void {
   coordinator.start();
   dispose?.();
-  dispose = watch(() => gtcProgress.records.map(row => `${row.id}:${row.revision}`).join(","), () => coordinator.consume(), { flush: "post" });
+  dispose = watch(() => `${gtcInitialDispatches.size}:${gtcProgress.records.map(row => `${row.id}:${row.revision}`).join(",")}`, () => coordinator.consume(), { flush: "post" });
 }
 export function stopGtcCoordinator(): void {
   coordinator.stop(); dispose?.(); dispose = undefined; closures.clear();

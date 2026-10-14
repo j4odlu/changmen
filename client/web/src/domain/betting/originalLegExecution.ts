@@ -13,7 +13,6 @@ export interface OriginalLegFacts {
 export interface OriginalLegExecution {
   validate: () => void;
   submit: () => Promise<BetResult>;
-  canContinueOriginalPair: () => boolean;
   /** 等待由公共 settle 承担，原单确认不再重复等待。 */
   confirm: (result: BetResult) => Promise<{
     orders: VenueOrder[];
@@ -28,6 +27,8 @@ export interface OriginalLegExecution {
 export interface OriginalExecutionLifecycle {
   legs: ReadonlyMap<BetOption, OriginalLegExecution>;
   actions: { retry: boolean; makeup: boolean; autoSell: boolean; registerRejectMonitor: boolean; broadcast: boolean };
+  /** [changmen 扩展] 结束首次发送的本地占用，后台核对不参与两腿发送裁决。 */
+  finishSubmission: () => void;
   close: () => Promise<void>;
   summary: () => { message: string; traceStatus: "success" | "partial" | "fail"; failed: boolean };
 }

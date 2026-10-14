@@ -1,6 +1,7 @@
 /** [changmen 扩展] 官方状态立即采用；执行授权与后台结果副本分别串行化。 */
 import type { GtcCommand, GtcExecution, GtcFacts } from "@changmen/shared/pm_gtc";
 import { applyGtcCommand, gtcUnits, mergeGtcFacts } from "@changmen/shared/pm_gtc";
+import { reactive } from "vue";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { useAccountStore } from "@/stores/accountStore";
 import { useOrderStore } from "@/stores/orderStore";
@@ -14,6 +15,12 @@ import { markGtcSuccess } from "./successMarkers";
 import { gtcSyncIssue } from "./syncStatus";
 
 export { gtcProgress } from "./gtcProgressState";
+/** [changmen 扩展] 仅保护当前会话正在发送的原腿；不持久化、不为恢复记录重新发单。 */
+export const gtcInitialDispatches = reactive(new Set<string>());
+export function beginGtcInitialDispatch(id: string): () => void {
+  gtcInitialDispatches.add(id);
+  return () => { gtcInitialDispatches.delete(id); };
+}
 const queues = new Map<string, Promise<unknown>>();
 const persisted = new Map<string, GtcExecution>();
 const copies = new Map<string, GtcCommand[]>();
@@ -78,7 +85,7 @@ function alreadySaved(row: GtcExecution, command: GtcCommand): boolean {
     || gtcCopyKey(row) === gtcCopyKey(applyGtcCommand(clone(row), command, Date.now()));
 }
 function urgentCopy(command: GtcCommand): boolean {
-  return ["ack", "other", "cancel", "cancel_result"].includes(command.kind);
+  return ["ack", "other", "not_sent", "cancel", "cancel_result"].includes(command.kind);
 }
 /** [changmen 扩展] 官方结果立即采用；后台副本按执行串行重试，授权仍须持久化成功。 */
 export function flushGtcCopies(id: string, immediate = false): Promise<void> {
@@ -345,6 +352,7 @@ export function resetGtcState(preserveProjection = false): void {
   if (!preserveProjection)
     resetGtcOrderProjection();
   generation++; queues.clear(); settlement.reset();
+  gtcInitialDispatches.clear();
   clearTimeout(retryTimer); retryTimer = undefined;
   persisted.clear(); copies.clear(); official.clear(); reloadBeforeRetry.clear(); retries.clear(); inFlightCopies.clear();
   gtcProgress.owner = ""; gtcProgress.records = []; gtcProgress.ready = false; gtcProgress.error = "";

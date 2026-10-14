@@ -20,6 +20,8 @@ export function gtcExecutionResult(row: GtcExecution): GtcExecutionResult {
   const otherSubmission: ExecutionLegFact["submission"] = row.other.state === "authorized"
     ? "in_flight"
     : row.other.state === "pending" || row.other.state === "filled" ? "accepted" : row.other.state;
+  const unsentReason = [row.submitNotSent && row.error ? `PM 未发送：${row.error}` : "",
+    row.other.notSent && row.other.message ? `${row.plan.otherProvider} 未发送：${row.other.message}` : ""].filter(Boolean).join("；");
   const message = manual
     ? `PM 手动 GTC：${gtcStateLabel(row)}；成交 ${row.matched}/${row.plan.shares} 份；挂单 ${row.open ?? "待核实"} 份`
     : noOrders
@@ -36,9 +38,9 @@ export function gtcExecutionResult(row: GtcExecution): GtcExecutionResult {
     other: manual ? null : { provider: row.plan.otherProvider, orderType: "venue-default", orderId: row.other.orderId, submission: otherSubmission, fill: row.other.state === "filled" ? "full" : row.other.state === "not_attempted" || row.other.state === "rejected" ? "none" : "unknown" },
     groupComplete: row.groupComplete,
     responsibility: row.groupComplete ? "complete" : row.released ? "none" : "manual",
-    message,
+    message: unsentReason ? `${message}；${unsentReason}` : message,
     errorMessage: row.error,
-    traceStatus: row.groupComplete ? "success" : row.submit === "accepted" ? "partial" : "fail",
+    traceStatus: row.groupComplete ? "success" : row.submit === "accepted" || ["accepted", "pending", "filled"].includes(row.other.state) ? "partial" : "fail",
     failed: noOrders || (row.submit === "rejected" && row.other.state !== "filled"),
     ...(neverSubmitted ? { skippedLeg: row.plan.originalPmLeg } : {}),
   };

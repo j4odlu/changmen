@@ -2,7 +2,7 @@
 import type { GtcCommand, GtcExecution, GtcFacts } from "@changmen/shared/pm_gtc";
 import type { GtcTradeHistory } from "@changmen/venue-adapter/polymarket/gtc";
 import type { PlatformAccount } from "@/models/platformAccount";
-import { gtcCanCancel, gtcUnits } from "@changmen/shared/pm_gtc";
+import { gtcCanCancel, gtcPmNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc";
 import { gtcProgress } from "@/orderModes/gtc/gtcProgressState";
 import { gtcPmReconciled } from "@/orderModes/gtc/pollingPolicy";
 import { gtcSyncIssue } from "@/orderModes/gtc/syncStatus";
@@ -30,7 +30,7 @@ export function createGtcPmOrderPolling(context: Context) {
     const isCurrent = captureCurrent();
     const task = (async () => {
       const row = current(id);
-      if (!row.pmAuthorized || row.submit === "rejected")
+      if (!row.pmAuthorized || gtcPmNeverSubmitted(row) || row.submit === "rejected")
         return row;
       const account = useAccountStore().findAccount(row.plan.playerId);
       if (!account)
@@ -132,7 +132,7 @@ export function createGtcPmOrderPolling(context: Context) {
         listeners.get(id)?.(); listeners.delete(id);
         return;
       }
-      if (row.released || !row.pmAuthorized || listeners.has(id))
+      if (row.released || !row.pmAuthorized || gtcPmNeverSubmitted(row) || listeners.has(id))
         return;
       const account = useAccountStore().findAccount(row.plan.playerId);
       if (!account)

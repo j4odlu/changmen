@@ -1,7 +1,7 @@
 // [changmen 扩展] 完整检查末尾再核验两端版本、进程、公开入口与本地检查输入没有漂移。
 import fs from "node:fs";
 import assert from "node:assert/strict";
-import { sshRead, layoutProgram, readLayout, assertStable, assertPublicAsset, checkInputHashes, localHashes } from "./release-provenance.mjs";
+import { sshRead, layoutProgram, readLayout, assertStable, readPublicAsset, checkInputHashes, localHashes } from "./release-provenance.mjs";
 const snapshot = JSON.parse(fs.readFileSync("output/vps-fok-baseline.json", "utf8"));
 const audit = JSON.parse(fs.readFileSync("output/fok-release-file-audit.json", "utf8"));
 assert.equal(audit.captureId, snapshot.captureId);
@@ -17,11 +17,10 @@ const queue = [...snapshot.reachableAssets];
 async function worker() {
   while (queue.length) {
     const asset = queue.shift();
-    const response = await fetch(snapshot.servedFrontend.url + "/" + asset.file.split("/").map(encodeURIComponent).join("/"), { cache: "no-store", signal: AbortSignal.timeout(20000) });
-    assertPublicAsset(asset, response.status, Buffer.from(await response.arrayBuffer()));
+    await readPublicAsset(snapshot.servedFrontend.url, asset);
   }
 }
-// [changmen 扩展] Match initial capture's serial reads; preserve every check and deadline.
+// [changmen 扩展] Match initial capture's bounded serial reads and complete byte checks.
 await Promise.all(Array.from({ length: 1 }, worker));
 assertStable(snapshot, readLayout());
 assert.deepEqual(localHashes(), audit.localHashes, "Local release inputs changed during checks");

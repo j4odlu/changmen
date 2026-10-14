@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { restoreUnifiedArbitrageSource } from "./unified-arb-boundaries.mjs";
 import { restoreRayBackendDispatch } from "./ray-backend-dispatch-boundary.mjs";
 import { restoreRayProviderSource, restoreRayFinalizeSource } from "./ray-frontend-boundary.mjs";
+import { restoreRayOrderSyncSource } from "./ray-client-monitor-boundary.mjs";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import ts from "typescript";
@@ -111,7 +112,7 @@ function restoreGateway(source) {
 
 export function verifyProtectedSource(file, current, original, readSource = target => fs.readFileSync(target, "utf8"), baselineRead) {
   const specialized = specializeFokSource(file, restoreMinimalOrdersSource(file, current, readSource), readSource);
-  const unified = restoreUnifiedArbitrageSource(file, specialized, replaceExact);
+  const unified = restoreRayOrderSyncSource(file, restoreUnifiedArbitrageSource(file, specialized, replaceExact), readSource, replaceExact);
   const source = restoreRayBackendDispatch(file, restoreRayProviderSource(file, restoreRayFinalizeSource(file, unified, replaceExact), readSource), replaceExact);
   const unifiedRestored = source !== specialized;
   if (file === "server/db/rds/orders_store.js") {

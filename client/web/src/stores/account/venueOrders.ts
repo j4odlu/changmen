@@ -194,6 +194,12 @@ export async function syncVenueOrders(
   applyUnsettledStats(account, orders);
   if (String(account.provider ?? "").trim() !== "PredictFun")
     await saveOrders(account, orders);
+  // [changmen 扩展] RAY 监控只确认客户端身份；持久化关联跟随本次正常订单同步。
+  if (account.provider === "RAY") {
+    void import("./rayOrderBindings")
+      .then(({ syncRayOrderBindings }) => syncRayOrderBindings(account, orders))
+      .catch(error => console.error("[RAY] 订单关联同步失败", error));
+  }
   return orders;
 }
 

@@ -263,8 +263,14 @@ function buildSellAndBuyPatchOrders(params: {
   const hasPriorSellRealization = priorAttr > 0.0001
     || buy.pmSellState === "partial"
     || buy.pmSellState === "closed";
-  const prevRealizedCny = hasPriorSellRealization ? (Number(buy.money) || 0) : 0;
   const prevRealizedUsdc = hasPriorSellRealization ? (Number(buy.pmRealizedPnlUsdc) || 0) : 0;
+  // [changmen 扩展] 部分卖出后可能再次写入价格赛果；money 含纸面余仓盈亏，不能带入下一次卖出。
+  const hasPaperResult = buy.pmMatchResult === "win" || buy.pmMatchResult === "lose"
+    || buy.status === "win" || buy.status === "lose";
+  const hasKnownRealized = buy.pmRealizedPnlUsdc != null && Number.isFinite(Number(buy.pmRealizedPnlUsdc));
+  const prevRealizedCny = hasPriorSellRealization
+    ? (hasPaperResult && hasKnownRealized ? Math.round(polymarketCnyFromUsdt(prevRealizedUsdc)) : (Number(buy.money) || 0))
+    : 0;
   const originalBetMoney = Number(buy.betMoney) > 0
     ? Number(buy.betMoney)
     : Math.round(polymarketCnyFromUsdt(costUsdc) * 100) / 100;

@@ -15,6 +15,7 @@ import {
   polymarketTradeRefsOrderId,
   parsePolymarketMicroUsdc,
   resolvePolymarketWinningAssetId,
+  resolvePolymarketSettlement,
   scalePolymarketVenueOrdersForDisplay,
   type PolymarketTradeRow,
 } from "../../orders";
@@ -459,27 +460,46 @@ describe("mapPolymarketTradesToVenueOrders", () => {
     expect(order?.status).toBe("none");
   });
 
-  test.each([["0.99", "0.01"], ["0.9995", "0.0005"], ["1", "0"]])("endpoint prices do not settle without an official winner: %j", (home, away) => {
+  test.each([["0.99", "0.01"], ["0.9995", "0.0005"], ["1", "0"]])("endpoint prices settle early while retaining sell access: %j", (home, away) => {
     const priceMarket: PolymarketRawMarket = {
       ...ilbirsMarket,
       closed: false,
       outcomePrices: JSON.stringify([home, away]),
       tokens: undefined,
     };
-    expect(isPolymarketMarketResolved(priceMarket)).toBe(false);
-    expect(resolvePolymarketWinningAssetId(priceMarket)).toBeNull();
+    expect(isPolymarketMarketResolved(priceMarket)).toBe(true);
+    expect(resolvePolymarketSettlement(priceMarket)).toEqual({ winningAssetId: ilbirsTokenWin, kind: "price" });
 
     const [order] = mapPolymarketTradesToVenueOrders(
       [ilbirsTrade],
       new Map([[String(priceMarket.condition_id), priceMarket]]),
     );
     expect(order).toMatchObject({
-      status: "none",
+      status: "win",
       betMoney: 5,
-      money: 0,
+      money: 1.7568,
+      reward: 6.7568,
       pmSellState: "open",
     });
-    expect(order?.pmMatchResult).toBeUndefined();
+    expect(order?.pmMatchResult).toBe("win");
+  });
+
+  test.each([
+    { outcomePrices: '["0.9899", "0.0101"]' },
+    { outcomePrices: '["0.99", "0.99"]' },
+    { outcomePrices: '["1.01", "0"]' },
+    { outcomePrices: '["0.99", "NaN"]' },
+    { outcomePrices: '["0.99"]' },
+    { clobTokenIds: '["same", "same"]' },
+    { clobTokenIds: '[]' },
+  ])("does not infer a result from invalid or subthreshold data: %j", (patch) => {
+    expect(resolvePolymarketSettlement({ ...ilbirsMarket, tokens: undefined, ...patch })).toBeNull();
+  });
+
+  test("official winner overrides an opposite price result", () => {
+    const market = { ...ilbirsMarket, tokens: [{ token_id: ilbirsTokenLose, winner: true }] };
+    const [order] = mapPolymarketTradesToVenueOrders([ilbirsTrade], new Map([[String(market.condition_id), market]]));
+    expect(order).toMatchObject({ status: "lose", pmMatchResult: "lose", money: -5, pmSellState: "settled" });
   });
 
   test("official tokens[].winner settles as win and hides sell (pmSellState settled)", () => {
@@ -790,6 +810,36 @@ describe("mapPolymarketTradesToVenueOrders", () => {
 });
 
 describe("applyPolymarketSettlement", () => {
+  test.each(["realized", "proceeds", "legacy"])("repeated price sync and opposite official result do not accumulate residual profit (%s)", (source) => {
+    const market: PolymarketRawMarket = {
+      condition_id: "partial-condition", outcomePrices: '["0.99", "0.01"]',
+      clobTokenIds: '["token-a", "token-b"]',
+    };
+    const trade: PolymarketTradeRow = {
+      taker_order_id: "partial-buy", side: "BUY", status: "CONFIRMED",
+      asset_id: "token-a", market: "partial-condition", size: "20", price: "0.5",
+    };
+    const stored = {
+      ...mapPolymarketTradeToVenueOrder(trade)!,
+      betMoney: 67, money: 6.7, pmStakeUsdc: 5,
+      pmAttributedSellShares: 10,
+      pmRealizedPnlUsdc: source === "realized" ? 1 : undefined,
+      pmSellProceeds: source === "legacy" ? undefined : 6,
+      pmSellState: "partial" as const, pmOrigin: "changmen" as const,
+    };
+    const refresh = (previous: typeof stored, resultMarket: PolymarketRawMarket) => {
+      const incoming = mapPolymarketTradesToVenueOrders([trade], new Map([["partial-condition", resultMarket]]));
+      return finalizePolymarketVenueOrders(incoming, 0, [previous])[0]!;
+    };
+    const first = refresh(stored, market);
+    expect(first.money).toBe(6);
+    const second = refresh(scalePolymarketVenueOrdersForDisplay([first])[0]! as typeof stored, market);
+    expect(second.money).toBe(6);
+    const official = { ...market, tokens: [{ token_id: "token-b", winner: true }] };
+    expect(refresh(scalePolymarketVenueOrdersForDisplay([second])[0]! as typeof stored, official))
+      .toMatchObject({ money: -4, status: "lose", pmSellState: "settled" });
+  });
+
   test("falls back to outcome name when asset_id missing", () => {
     const market: PolymarketRawMarket = {
       closed: true,
@@ -829,7 +879,7 @@ describe("applyPolymarketSettlement", () => {
     expect(settled.pmMatchResult).toBe("win");
   });
 
-  test("sold-out closed buy still writes pmMatchResult without changing money/status", () => {
+  test.each(["official", "price"] as const)("sold-out closed buy accepts %s result without changing money/status", (kind) => {
     const market: PolymarketRawMarket = {
       closed: true,
       outcomes: "[\"Team A\", \"Team B\"]",
@@ -860,6 +910,7 @@ describe("applyPolymarketSettlement", () => {
       pmOrigin: "changmen" as const,
       pmSide: "buy" as const,
     };
+    if (kind === "price") market.tokens = undefined;
     const settled = applyPolymarketSettlement(base, {
       side: "BUY",
       size: "20",
@@ -874,7 +925,7 @@ describe("applyPolymarketSettlement", () => {
     expect(settled.pmSellState).toBe("closed");
   });
 
-  test("endpoint price never changes pending order status, money or match result", () => {
+  test("endpoint price sets an early result and preserves sell access", () => {
     const market: PolymarketRawMarket = {
       closed: false,
       outcomes: "[\"Team A\", \"Team B\"]",
@@ -904,13 +955,13 @@ describe("applyPolymarketSettlement", () => {
       outcome: "Team A",
     }, market);
 
-    expect(settled).toBe(base);
-    expect(settled.status).toBe("none");
-    expect(settled.pmMatchResult).toBeUndefined();
+    expect(settled.status).toBe("win");
+    expect(settled.money).toBe(10);
+    expect(settled.pmMatchResult).toBe("win");
     expect(settled.pmSellState).toBe("open");
   });
 
-  test("partial sell then settle uses remaining shares only", () => {
+  test.each(["official", "price"] as const)("partial sell then %s result uses remaining shares only", (kind) => {
     const market: PolymarketRawMarket = {
       closed: true,
       outcomes: "[\"Team A\", \"Team B\"]",
@@ -939,6 +990,7 @@ describe("applyPolymarketSettlement", () => {
       pmAttributedSellShares: 10,
       pmSellState: "partial" as const,
     };
+    if (kind === "price") market.tokens = undefined;
     const settled = applyPolymarketSettlement(base, {
       side: "BUY",
       size: "20",
@@ -950,7 +1002,7 @@ describe("applyPolymarketSettlement", () => {
     expect(settled.status).toBe("win");
     expect(settled.reward).toBe(10);
     expect(settled.money).toBe(5);
-    expect(settled.pmSellState).toBe("settled");
+    expect(settled.pmSellState).toBe(kind === "official" ? "settled" : "partial");
   });
 
   test("finalize applies official win when changmen buy has full attr but pmSellState open", () => {

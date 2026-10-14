@@ -1,13 +1,14 @@
 /**
  * Polymarket 订单结算（服务端 / 运维脚本；对齐 venue-adapter/polymarket/orders.ts）
  * - 官方 tokens[].winner：判赢/输
- * [changmen 扩展] 只按官方 tokens[].winner 判赢/输，报价不作为赛果。
+ * [changmen 扩展] 官方赢家优先；用户授权恢复 outcomePrices ≥0.99 的提前判定。
  */
 
 import { fetchClobMarketByConditionId } from "./clob_l2.js";
 
 const POLYMARKET_GAMMA_API = "https://gamma-api.polymarket.com";
 const TOKEN_MICRO = 1_000_000;
+const WINNER_PRICE_MIN = 0.99;
 
 export function parseJsonArray(value) {
   if (Array.isArray(value))
@@ -62,8 +63,15 @@ export function resolvePolymarketOfficialWinningAssetId(market) {
   return id || null;
 }
 
+export function findPolymarketWinnerIndex(prices) {
+  if (prices.length < 2 || prices.some(price => !Number.isFinite(price) || price < 0 || price > 1))
+    return -1;
+  const winners = prices.flatMap((price, index) => price >= WINNER_PRICE_MIN ? [index] : []);
+  return winners.length === 1 ? winners[0] : -1;
+}
+
 /**
- * @returns {{ winningAssetId: string, kind: 'official' } | null}
+ * @returns {{ winningAssetId: string, kind: 'official'|'price' } | null}
  */
 export function resolvePolymarketSettlement(market) {
   if (!market)
@@ -71,7 +79,13 @@ export function resolvePolymarketSettlement(market) {
   const official = resolvePolymarketOfficialWinningAssetId(market);
   if (official)
     return { winningAssetId: official, kind: "official" };
-  return null;
+  const prices = parseJsonArray(market.outcomePrices ?? market.outcome_prices).map(Number);
+  const ids = gammaTokenIds(market);
+  if (prices.length !== ids.length || ids.some(id => !id.trim()) || new Set(ids).size !== ids.length)
+    return null;
+  const index = findPolymarketWinnerIndex(prices);
+  const winningAssetId = index >= 0 ? ids[index]?.trim() : undefined;
+  return winningAssetId ? { winningAssetId, kind: "price" } : null;
 }
 
 export function isPolymarketMarketResolved(market) {
@@ -97,7 +111,7 @@ function tradeHeldAssetId(trade, market) {
 }
 
 /**
- * @returns {{ status: 'win'|'lose'|'none', money: number, reward: number, kind?: 'official' } | null}
+ * @returns {{ status: 'win'|'lose'|'none', money: number, reward: number, kind?: 'official'|'price' } | null}
  */
 export function computePolymarketSettlement(trade, market, stakeRaw) {
   const resolved = resolvePolymarketSettlement(market);
@@ -269,11 +283,15 @@ export function clobMarketToGammaShape(clob, base) {
   if (!tokens.length)
     return base || null;
   const hasWinner = tokens.some(t => t?.winner === true);
+  const existingPrices = base?.outcomePrices ?? base?.outcome_prices;
   const outcomePrices = hasWinner
     ? JSON.stringify(tokens.map(t => (t?.winner === true ? "1" : "0")))
-    : (base?.outcomePrices
-      ?? base?.outcome_prices
+    : (existingPrices
       ?? JSON.stringify(tokens.map(t => String(t?.price ?? 0))));
+  // [changmen 扩展] Gamma 价格必须保留其 token 顺序，缺映射时不借 CLOB 顺序猜赢家。
+  const priceTokenIds = !hasWinner && existingPrices != null
+    ? gammaTokenIds(base)
+    : tokens.map(t => String(t?.token_id ?? ""));
   return {
     ...(base || {}),
     condition_id: clob?.condition_id || base?.condition_id,
@@ -282,9 +300,11 @@ export function clobMarketToGammaShape(clob, base) {
     slug: base?.slug ?? clob?.market_slug,
     closed: Boolean(base?.closed) || clob?.closed === true || hasWinner,
     tokens,
-    outcomes: JSON.stringify(tokens.map(t => String(t?.outcome ?? ""))),
+    outcomes: JSON.stringify(!hasWinner && existingPrices != null
+      ? parseJsonArray(base?.outcomes)
+      : tokens.map(t => String(t?.outcome ?? ""))),
     outcomePrices,
-    clobTokenIds: JSON.stringify(tokens.map(t => String(t?.token_id ?? ""))),
+    clobTokenIds: JSON.stringify(priceTokenIds),
     umaResolutionStatus: hasWinner
       ? (base?.umaResolutionStatus || base?.uma_resolution_status || "settled_normal")
       : (base?.umaResolutionStatus ?? base?.uma_resolution_status),

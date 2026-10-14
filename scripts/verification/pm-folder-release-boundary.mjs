@@ -17,7 +17,7 @@ export function certifyPmFolderRelease(manifestText, read, baselineRead) {
   const certified = new Set();
   for (const [file, target] of Object.entries(PM_FOLDER_RELOCATIONS)) {
     const restored = (PM_FOK_RELOCATIONS[file] ? readRelocatedPmFokSource : readRelocatedPmFunctionalSource)(file, read(file), read);
-    // [changmen 扩展] 两个明确登记的官方结算策略模块另做完整源码核验，其余仍逐字锁定迁移前基线。
+    // [changmen 扩展] 明确登记的结算策略及卖出盈亏保护模块另做完整源码核验，其余仍逐字锁定迁移前基线。
     if (!verifyPmOfficialSettlementSource(file, restored))
       assert.equal(restored, normalize(baselineRead(PM_FOLDER_SOURCE_BASE, file)), `${target}: complete implementation and dependencies unchanged`);
     if (PM_FOK_RELOCATIONS[file]) {

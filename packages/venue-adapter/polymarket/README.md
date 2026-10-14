@@ -1,6 +1,6 @@
 # Polymarket 场馆模块
 
-[changmen 扩展] 2026-10-12 按用户授权取消价格贴端的提前结算：客户端和服务端只认 CLOB `tokens[].winner === true`。`outcomePrices` 即使达到 0.99 或 1.00，也不能判赢/输；市场关闭或 `proposed` 不能代替官方赢家。成交、卖出现金盈亏和价格风控仍按各自事实处理。
+[changmen 扩展] 2026-10-14 按用户授权，在现有官方判定上恢复价格提前判定（覆盖 10-12 的仅官方策略）：客户端和服务端优先认 CLOB `tokens[].winner === true`；缺少官方赢家时，`outcomePrices` 中唯一价格 ≥0.99 的 token 提前判赢、其它 token 判输。价格必须在 [0,1] 内且与 token 完整一一对应。价格判定沿用原输赢/盈亏回写，但不写 `pmSellState=settled`，保持卖出能力；官方结果到达后可覆盖价格结果并正式结算。部分卖出按剩余仓位核算，卖光只更新赛果、不覆盖卖出盈亏。市场关闭或 `proposed` 本身不能判赛果；现有下单价格风控不变。
 
 这次策略修改独立于下述目录迁移，两个受影响完整模块由 `scripts/verification/pm-settlement-policy-boundary.mjs` 精确核验。其余模块继续使用原迁移、FOK/VPS 基线；原冻结清单和基线提交不变。
 

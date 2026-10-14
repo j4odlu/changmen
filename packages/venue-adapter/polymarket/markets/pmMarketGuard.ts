@@ -1,7 +1,4 @@
-import {
-  isPolymarketMarketResolved,
-  resolvePolymarketWinningAssetId,
-} from "../orders";
+import { resolvePolymarketOfficialWinningAssetId } from "../orders";
 import { parseJsonArray, type PolymarketRawMarket } from "../parse";
 
 const LOSER_PRICE_MAX = 0.10;
@@ -68,11 +65,10 @@ export function getPolymarketMarketBlockReason(
   const asset = String(tokenId || "").trim();
   if (!asset) return null;
 
-  if (isPolymarketMarketResolved(market)) {
-    const winning = resolvePolymarketWinningAssetId(market);
-    if (winning && winning !== asset)
-      return "Polymarket 市场已决出胜负";
-  }
+  // [changmen 扩展] 价格提前判定不改变现有下单闸；此处仍只认官方赢家。
+  const winning = resolvePolymarketOfficialWinningAssetId(market);
+  if (winning && winning !== asset)
+    return "Polymarket 市场已决出胜负";
 
   const tokens = parseJsonArray(market.clobTokenIds ?? market.clob_token_ids);
   const prices = parseJsonArray(market.outcomePrices ?? market.outcome_prices).map(Number);

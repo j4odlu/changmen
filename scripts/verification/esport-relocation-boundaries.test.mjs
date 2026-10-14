@@ -60,7 +60,7 @@ it("real default freeze CLI passes certified relocation without a flag", () => {
 for (const file of ["packages/venue-adapter/polymarket/bet.ts", "packages/venue-adapter/polymarket/fok/bet.ts", "packages/venue-adapter/polymarket/orders/history/orders.ts"]) {
   it(`real default CLI rejects added actions in ${file}`, () => {
     const result = cli({ file, change: 'source => source + "\\nvoid unexpectedTradingAction();\\n"' });
-    expect(result.status).toBe(1); expect(result.stderr).toMatch(/compatibility entry|complete implementation and dependencies unchanged|exact reviewed official-only settlement implementation/);
+    expect(result.status).toBe(1); expect(result.stderr).toMatch(/compatibility entry|complete implementation and dependencies unchanged|exact reviewed settlement implementation/);
   }, 30_000);
 }
 it("real default CLI detects a new untracked frozen implementation", () => {

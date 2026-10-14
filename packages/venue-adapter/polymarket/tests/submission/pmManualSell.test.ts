@@ -26,6 +26,24 @@ describe("calculateSellMarketLimitPrice", () => {
 });
 
 describe("buildSellAndBuyPatchOrders dust close", () => {
+  it.each(["win", "lose", "none"] as const)("selling a partial position after a price result (%s) excludes paper PnL", (status) => {
+    const [buy] = buildSellAndBuyPatchOrders({
+      buy: {
+        provider: "Polymarket", orderId: "partial-price", odds: 2, createAt: 1,
+        betMoney: 67, reward: 0, money: status === "lose" ? -26.8 : 40.2, status,
+        pmMatchResult: status === "lose" ? "lose" : "win",
+        pmShares: 20, pmStakeUsdc: 5, pmAttributedSellShares: 10,
+        pmRealizedPnlUsdc: 1, pmSellProceeds: 6, pmSellState: "partial",
+        pmSide: "buy", pmOrigin: "changmen",
+      },
+      sellOrderId: "final-sell", sharesSold: 10, proceedsUsdc: 6,
+      fillPrice: 0.6, createAt: 2,
+    });
+    expect(buy.pmRealizedPnlUsdc).toBe(2);
+    expect(buy.money).toBe(2 * Math.round(getExchange(Currency.USDT)));
+    expect(buy.pmSellState).toBe("closed");
+  });
+
   it("marks closed when sold shares leave dust below 0.0001", () => {
     const [buy, sell] = buildSellAndBuyPatchOrders({
       buy: {

@@ -104,6 +104,7 @@ describe("旁路失败证据", () => {
     ["GTC 对侧冻结预检或账号已改变", "gtc_counterpart_changed"],
     ["GTC 对侧缺少冻结预检，未发送订单", "gtc_counterpart_changed"],
     ["PM 手动 GTC 预检已失效或已消费，禁止重发", "gtc_preparation_invalid"],
+    ["PM 手动 GTC 预检已失效或已消费，禁止重发：钱包会话已改变", "gtc_preparation_invalid"],
     ["PM 手动 GTC 每次预检须新建投注尝试", "gtc_attempt_reused"],
     ["PM 手动 GTC 冻结报价已改变", "gtc_frozen_quote_changed"],
     ["PM 手动 GTC 金额不足，不能放大用户输入金额", "gtc_amount_insufficient"],

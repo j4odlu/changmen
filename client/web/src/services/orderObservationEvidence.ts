@@ -28,6 +28,10 @@ export function rayRejectFailureEvidence(reason: unknown): Partial<OrderObservat
 }
 /** [changmen 扩展] 只保留已知原因和白名单数值，不复制错误全文、资产 ID 或凭证。 */
 function specificFailure(text: string, headline: string): FailureReason | undefined {
+  // [changmen 扩展] 只保留固定校验原因，不复制账号凭证或冻结参数。
+  const gtcPreparation = /^PM 手动 GTC 预检已失效或已消费，禁止重发：(缺少本轮预检|本轮签单已消费|预检数据已改变|钱包会话已改变|下单参数或账号已改变)$/.exec(headline.trim());
+  if (gtcPreparation)
+    return ["preparation", "gtc_preparation_invalid", `GTC 提交前校验失败：${gtcPreparation[1]}`];
   if (/^超时时间：\d+ms，大于设定值：\d+ms$/.test(headline)) {
     const elapsed = diagnosticNumber(headline, "超时时间：", "ms");
     const limit = diagnosticNumber(headline, "大于设定值：", "ms");

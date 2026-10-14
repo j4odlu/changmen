@@ -5,7 +5,7 @@ import { buildPreparedGtcBuy, gtcTradeFills, readGtcFacts, readGtcTradeHistory }
 
 const mocks = vi.hoisted(() => ({ market: vi.fn(), getOrder: vi.fn(), trades: vi.fn(), submit: vi.fn(), build: vi.fn(), consume: vi.fn(), json: vi.fn() }));
 vi.mock("../userWs", () => ({ warmPolymarketUserWs: vi.fn() }));
-const preparation = () => ({ data: { apiBetMoney: 5, limitPrice: 0.5, tokenId: "token", orderOptions: { tickSize: "0.01", minOrderSize: 5, version: 2, negRisk: false } }, runtime: { builder: { buildOrder: mocks.build }, clob: { isV2Order: () => true, Side: { BUY: "BUY" }, OrderType: { GTC: "GTC" }, orderToJsonV2: mocks.json }, builderCode: "builder" }, consume: mocks.consume, validate: () => {} });
+const preparation = () => ({ data: { apiBetMoney: 5, limitPrice: 0.5, tokenId: "token", orderOptions: { tickSize: "0.01", minOrderSize: 5, version: 2, negRisk: false } }, runtime: { builder: { buildOrder: mocks.build }, clob: { isV2Order: () => true, Side: { BUY: "BUY" }, OrderType: { GTC: "GTC" }, orderToJsonV2: mocks.json }, builderCode: "builder" }, consume: mocks.consume, prepareSubmit: async () => {}, validate: () => {} });
 const prepareGtcBuy = (account: Parameters<typeof buildPreparedGtcBuy>[0], option: Parameters<typeof buildPreparedGtcBuy>[1]) => buildPreparedGtcBuy(account, option, preparation() as never);
 vi.mock("../transport", () => ({ polymarketPluginGet: mocks.market, polymarketL2Get: mocks.trades }));
 vi.mock("../pmClientApi", () => ({ pmSubmitOrder: mocks.submit, pmGetOrder: mocks.getOrder, pmCancelOrder: vi.fn() }));
@@ -76,6 +76,24 @@ describe("isolated GTC adapter", () => {
     expect(mocks.json).toHaveBeenCalledWith(expect.anything(), "api", "GTC", false, false);
     expect(mocks.submit).not.toHaveBeenCalled(); expect(mocks.consume).not.toHaveBeenCalled();
     await prepared.submit(); expect(mocks.consume).toHaveBeenCalledTimes(1); expect(mocks.submit).toHaveBeenCalledTimes(1);
+  });
+  it("never consumes or posts the original order when submission preparation fails", async () => {
+    const input = preparation();
+    input.prepareSubmit = async () => { throw new Error("clock unavailable"); };
+    const prepared = await buildPreparedGtcBuy({} as never, {} as never, input as never);
+    await expect(prepared.submit()).rejects.toThrow("clock unavailable");
+    expect(mocks.consume).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled();
+  });
+  it("concurrent readiness calls still consume and submit the original signed body only once", async () => {
+    const input = preparation(); let consumed = false;
+    input.consume = () => {
+      if (consumed) throw new Error("already consumed");
+      consumed = true;
+    };
+    const prepared = await buildPreparedGtcBuy({} as never, {} as never, input as never);
+    const attempts = await Promise.allSettled([prepared.submit(), prepared.submit()]);
+    expect(attempts.map(attempt => attempt.status).sort()).toEqual(["fulfilled", "rejected"]);
+    expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.build).toHaveBeenCalledOnce();
   });
   it.each([{}, { fd: { r: 0.5, e: 1, to: true } }, new Error("fee lookup unavailable")])("fee availability or rate does not affect preparation: %s", async (market) => {
     if (market instanceof Error)

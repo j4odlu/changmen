@@ -45,6 +45,16 @@ describe("reviewed single-leg capabilities are completely protected", () => {
   it("requires all eleven public modules and four complete capability files", () => {
     expect(verifyUnifiedArbitrageContract(read, replaceExact)).toEqual({ precisePublicModules: 11, completeCapabilityContracts: 4 });
   });
+  it.each([
+    ["clock renewal", "await prepared.prepareSubmit();", "prepared.validate();"],
+    ["post-renewal session check", "await prepared.prepareSubmit(); checkSession();", "await prepared.prepareSubmit();"],
+    ["exclude runtime preparation from persisted plan", "prepareSubmit: _prepareSubmit,", ""],
+  ])("rejects removing the GTC %s correction while retaining the immutable snapshot", (_name, before, after) => {
+    const file = "client/web/src/orderModes/gtc/arbLeg.ts";
+    const changed = read(file).replace(before, after);
+    expect(changed).not.toBe(read(file));
+    expect(() => verifyUnifiedArbitrageContract(target => target === file ? changed : read(target), replaceExact)).toThrow("complete reviewed unified capability contract");
+  });
   it.each(["retry", "makeup", "autoSell", "registerRejectMonitor", "broadcast"])("rejects enabling the GTC %s action against the unchanged review contract", (action) => {
     const file = "client/web/src/orderModes/gtc/arbLeg.ts";
     const source = read(file).replace(`${action}: false`, `${action}: true`);

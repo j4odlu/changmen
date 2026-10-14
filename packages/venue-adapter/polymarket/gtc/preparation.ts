@@ -127,15 +127,24 @@ export function checkManualGtcBuy(account: PlatformAccount, option: BetOption, p
 export async function prepareManualGtcBuy(account: PlatformAccount, option: BetOption) {
   const prepared = preparations.get(option);
   const validate = () => {
-    if (!prepared || prepared.consumed || prepared.data !== option.data || option.checkError
-      || prepared.generation !== polymarketSigningGeneration() || prepared.binding !== binding(account, option) || !pmSubmitClockReady(account)) {
-      throw new Error("PM 手动 GTC 预检已失效或已消费，禁止重发");
-    }
-    const { orderOptions, limitPrice } = prepared.data;
+    const fail = (reason: string): never => { throw new Error(`PM 手动 GTC 预检已失效或已消费，禁止重发：${reason}`); };
+    if (!prepared) fail("缺少本轮预检");
+    if (prepared!.consumed) fail("本轮签单已消费");
+    if (prepared!.data !== option.data || option.checkError) fail("预检数据已改变");
+    if (prepared!.generation !== polymarketSigningGeneration()) fail("钱包会话已改变");
+    if (prepared!.binding !== binding(account, option)) fail("下单参数或账号已改变");
+    const { orderOptions, limitPrice } = prepared!.data;
     const tick = currentPmTick(option.itemId, orderOptions.bookTimestamp) ?? orderOptions.tickSize;
     if (tick !== orderOptions.tickSize || !isPolymarketPriceOnTick(limitPrice, tick))
       throw new Error("PM tick 已改变，请新建手动订单");
   };
   validate();
-  return buildPreparedGtcBuy(account, option, { data: prepared!.data, runtime: prepared!.runtime, validate, consume: () => { validate(); prepared!.consumed = true; } });
+  // [changmen 扩展] 校时租约可在等待首腿时到期；刷新传输校时，不重签或重发原单。
+  const prepareSubmit = async () => {
+    validate();
+    if (!pmSubmitClockReady(account)) await pmPrepareSubmit(account);
+    validate();
+    if (!pmSubmitClockReady(account)) throw new Error("PM 提交校时未就绪");
+  };
+  return buildPreparedGtcBuy(account, option, { data: prepared!.data, runtime: prepared!.runtime, validate, prepareSubmit, consume: () => { validate(); prepared!.consumed = true; } });
 }

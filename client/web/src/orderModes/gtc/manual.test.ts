@@ -28,7 +28,7 @@ beforeEach(() => {
   notices.notify.mockReturnValue({ close: notices.close });
   mocks.user.extensionPrefs = { pmGtcV1Participant: false, pmArbOrderMode: "FOK" };
   mocks.check.mockImplementation(async (_account, option) => { option.betMoney = 5; option.stakeExchange = 6.7; option.data = {}; return option; });
-  mocks.prepare.mockResolvedValue({ shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", feeProof: { rate: "0", exponent: 1, takerOnly: true, observedAt: 1 }, protocol: 2, negRisk: false, orderHash: hash, route: "direct", submit: mocks.submit, validate: mocks.validate });
+  mocks.prepare.mockResolvedValue({ shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", feeProof: { rate: "0", exponent: 1, takerOnly: true, observedAt: 1 }, protocol: 2, negRisk: false, orderHash: hash, route: "direct", submit: mocks.submit, prepareSubmit: async () => { mocks.validate(); }, validate: mocks.validate });
   mocks.submit.mockResolvedValue({ success: true, orderID: hash, status: "live" });
   mocks.create.mockImplementation(async (id: string, maker: string, plan: GtcPlan) => createGtcExecution(id, "owner", "wallet", maker, plan, Date.now()));
   mocks.save.mockResolvedValue(undefined); mocks.refresh.mockResolvedValue(undefined); mocks.balance.mockResolvedValue(undefined);

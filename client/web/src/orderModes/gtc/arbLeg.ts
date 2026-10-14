@@ -57,8 +57,8 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
   const ratio = Math.min(Number(prepared.shares) * fx, other.betMoney * otherFx * other.odds) / costs;
   if (!Number.isFinite(ratio) || ratio < params.config.profit)
     throw new Error(`GTC 签单本金与份数舍入后利润不足：${ratio.toFixed(6)}`);
-  const { submit: _submit, validate: _validate, ...frozenPm } = prepared;
-  void _submit; void _validate;
+  const { submit: _submit, validate: _validate, prepareSubmit: _prepareSubmit, ...frozenPm } = prepared;
+  void _submit; void _validate; void _prepareSubmit;
   const plan: GtcPlan = { ...frozenPm, playerId: Number(account.accountId), otherPlayerId: Number(otherAccount.accountId), originalPmLeg: pmA ? "A" : "B", otherProvider: otherAccount.provider, otherTarget: other.target, otherOdds: other.odds, otherStake: other.betMoney, matchId: params.match.id, betRowId: params.bet.id, otherVenueMatchId: other.matchId, otherVenueItemId: other.itemId, linkId: checked.linkId, tokenId: pm.itemId, conditionId: pm.betId, target: pm.target, match: params.match.title, bet: params.bet.getBetName(), item: pm.target, fx, parallel: params.config.betSorting === "Parallel" };
   const id = crypto.randomUUID();
   acceptGtc(await createGtc(id, pmSubmitMaker(account), plan));
@@ -68,7 +68,7 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
   const summary = () => gtcExecutionResult(current());
 
   async function submitPmCore(): Promise<BetResult> {
-    checkSession(); prepared.validate();
+    checkSession(); await prepared.prepareSubmit(); checkSession();
     await mutateGtc(id, { kind: "authorize_pm" });
     checkSession();
     try {

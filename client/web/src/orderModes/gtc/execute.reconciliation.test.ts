@@ -83,7 +83,7 @@ vi.mock("@changmen/client-core/shared/http", () => ({
 vi.mock("@changmen/venue-adapter/polymarket/gtc", async importOriginal => ({
   ...await importOriginal<typeof import("@changmen/venue-adapter/polymarket/gtc")>(),
   pmSubmitMaker: () => "maker",
-  prepareGtcBuy: async () => ({ shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", protocol: 2, negRisk: false, orderHash: "pm-original", route: "direct", validate() {}, submit: mocks.submit }),
+  prepareGtcBuy: async () => ({ shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", protocol: 2, negRisk: false, orderHash: "pm-original", route: "direct", prepareSubmit: async () => {}, validate() {}, submit: mocks.submit }),
 }));
 
 function inputs(pmFirst = true, parallel = false) {

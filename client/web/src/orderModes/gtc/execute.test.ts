@@ -14,7 +14,7 @@ import { markGtcSuccess } from "./successMarkers";
 const notices = vi.hoisted(() => ({ notify: vi.fn(), close: vi.fn() }));
 vi.mock("element-plus", () => ({ ElNotification: notices.notify }));
 
-const mocks = vi.hoisted(() => ({ submit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), refresh: vi.fn(), poll: vi.fn(), otherPoll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, existing: [] as GtcExecution[], initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "" }));
+const mocks = vi.hoisted(() => ({ submit: vi.fn(), prepareSubmit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), refresh: vi.fn(), poll: vi.fn(), otherPoll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, existing: [] as GtcExecution[], initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "" }));
 vi.mock("@changmen/client-core/models/betResult", () => ({ BetResult: class { orderId = null; constructor(public provider: string, public success: boolean) {} saveLog = mocks.log; } }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: mocks.owner, config: { betting: true } }) }));
@@ -58,10 +58,11 @@ function params(parallel = false) {
 }
 beforeEach(() => {
   vi.clearAllMocks(); sessionStorage.clear(); mocks.record = null; mocks.existing = []; mocks.commands = []; mocks.initial = "0"; mocks.ready = true; mocks.ratio = 0.99;
+  mocks.prepareSubmit.mockResolvedValue(undefined);
   notices.notify.mockReturnValue({ close: notices.close });
   mocks.refresh.mockResolvedValue(undefined);
   mocks.otherPoll.mockResolvedValue([]);
-  mocks.prepare.mockResolvedValue({ shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", feeProof: { rate: "0", exponent: 1, takerOnly: true, observedAt: 1 }, protocol: 2, negRisk: false, orderHash: hash, route: "direct", submit: mocks.submit, validate: () => {} });
+  mocks.prepare.mockResolvedValue({ shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", feeProof: { rate: "0", exponent: 1, takerOnly: true, observedAt: 1 }, protocol: 2, negRisk: false, orderHash: hash, route: "direct", submit: mocks.submit, prepareSubmit: mocks.prepareSubmit, validate: () => {} });
   mocks.submit.mockResolvedValue({ success: true, orderID: hash, status: "live" });
   mocks.betting.mockResolvedValue({ provider: "RAY", success: true, pending: false, orderId: "ray-order" });
   mocks.create.mockImplementation(async (id: string, maker: string, plan: GtcPlan) => createGtcExecution(id, "owner", "wallet", maker, plan, Date.now()));
@@ -90,6 +91,27 @@ describe("gTC original pair orchestration", () => {
     expect(mocks.commands.filter(command => command.kind === "authorize_other")).toHaveLength(1);
     expect(showRejectDetectionTip).toHaveBeenCalledExactlyOnceWith(30);
     expect(wait).toHaveBeenCalledExactlyOnceWith(30_000);
+  });
+  it("renews PM submission readiness after RAY accepts and before authorizing the original PM order", async () => {
+    const calls: string[] = [];
+    mocks.betting.mockImplementationOnce(async () => {
+      calls.push("RAY accepted");
+      return { provider: "RAY", success: true, orderId: "ray-order" };
+    });
+    mocks.prepareSubmit.mockImplementationOnce(async () => {
+      expect(mocks.record?.pmAuthorized).toBe(false);
+      calls.push("PM clock ready");
+    });
+    mocks.submit.mockImplementationOnce(async () => {
+      expect(mocks.record?.pmAuthorized).toBe(true);
+      calls.push("PM submit");
+      return { success: true, orderID: hash };
+    });
+    await executeGtc(params(), checked(false));
+    expect(calls).toEqual(["RAY accepted", "PM clock ready", "PM submit"]);
+    expect(mocks.prepareSubmit).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();
+    expect(mocks.record?.submit).toBe("accepted");
+    expect(mocks.create.mock.calls[0]?.[2]).not.toHaveProperty("prepareSubmit");
   });
   it.each(["rejected", "unknown", "manual"] as const)("other-first monitor entering %s blocks PM", async (state) => {
     mocks.otherPoll.mockImplementationOnce(async () => {

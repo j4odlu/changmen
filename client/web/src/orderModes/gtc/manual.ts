@@ -46,13 +46,13 @@ export async function executeManualGtc(account: PlatformAccount, input: BetOptio
     const fx = getExchange(resolveAccountCurrency(account.provider, account.currency));
     if (option.stakeExchange != null && option.stakeExchange !== fx)
       throw new Error("PM 手动 GTC 金额币种不一致，未发送订单");
-    const { submit, validate, ...frozen } = prepared;
+    const { submit, validate, prepareSubmit, ...frozen } = prepared;
     const plan: GtcPlan = { ...frozen, source: "manual", playerId: Number(account.accountId), otherPlayerId: 0, originalPmLeg: "A", otherProvider: "", otherTarget: option.target === "Home" ? "Away" : "Home", otherOdds: 0, otherStake: 0, otherVenueMatchId: "", otherVenueItemId: "", parallel: false, matchId: context.match.id, betRowId: context.bet.id, linkId: -Date.now(), tokenId: option.itemId, conditionId: option.betId, target: option.target, match: context.match.title, bet: context.bet.getBetName(), item: option.target === "Home" ? context.bet.homeName : context.bet.awayName, fx };
     const id = crypto.randomUUID();
     validate(); checkSession();
     acceptGtc(await createGtc(id, maker, plan));
     try {
-      validate(); checkSession();
+      await prepareSubmit(); checkSession();
       await mutateGtc(id, { kind: "authorize_pm" });
       checkSession();
       const submittedAt = Date.now();

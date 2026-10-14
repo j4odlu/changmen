@@ -8,6 +8,12 @@ import { restoreRayFinalizeSource, verifyRayFrontendSources } from "./ray-fronte
 const root = "client/web/src/stores/betting/autoBet/";
 const phases = `${root}phases/`;
 const contractPath = "scripts/verification/unified-arb-capability-contracts.json";
+// [changmen 扩展] 2026-10-14 校时续租修复：仅变更 GTC 首次发送准备，原快照与 FOK 基线保持固定。
+const gtcClockCorrection = [
+  ["const { submit: _submit, validate: _validate, ...frozenPm } = prepared;", "const { submit: _submit, validate: _validate, prepareSubmit: _prepareSubmit, ...frozenPm } = prepared;"],
+  ["void _submit; void _validate;", "void _submit; void _validate; void _prepareSubmit;"],
+  ["async function submitPmCore(): Promise<BetResult> {\n    checkSession(); prepared.validate();", "async function submitPmCore(): Promise<BetResult> {\n    checkSession(); await prepared.prepareSubmit(); checkSession();"],
+];
 
 // 每一项完整条件、正文、参数、上下文和出现次数均受保护；不按名字/模式批量删除。
 export const UNIFIED_ARBITRAGE_BOUNDARIES = Object.freeze({
@@ -109,8 +115,13 @@ export function verifyUnifiedArbitrageContract(readSource, replaceExact) {
     "client/web/src/orderModes/router.ts",
     "client/web/src/stores/betting/execution/selection.ts",
   ].sort(), "only four complete reviewed capability contracts");
-  for (const [file, source] of Object.entries(contracts))
-    assert.equal(readSource(file).replace(/\r\n/g, "\n"), source, `${file}: complete reviewed unified capability contract`);
+  for (const [file, source] of Object.entries(contracts)) {
+    let expected = source;
+    if (file === "client/web/src/orderModes/gtc/arbLeg.ts") {
+      for (const [before, after] of gtcClockCorrection) expected = replaceExact(expected, before, after);
+    }
+    assert.equal(readSource(file).replace(/\r\n/g, "\n"), expected, `${file}: complete reviewed unified capability contract`);
+  }
   for (const file of Object.keys(UNIFIED_ARBITRAGE_BOUNDARIES)) {
     const restored = restoreRayFinalizeSource(file, restoreUnifiedArbitrageSource(file, readSource(file), replaceExact, true), replaceExact);
     assert.deepEqual(moduleTokens(restored), moduleTokens(gitSource("e901bb596952256284cd8a9eb8b73b572c963915", file)), `${file}: complete fixed-baseline module at pre-unification served source after exact restoration`);

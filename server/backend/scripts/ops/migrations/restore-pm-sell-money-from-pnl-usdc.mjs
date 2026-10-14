@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 恢复被 sync 清零的 PM 卖单 money（从 raw.pmRealizedPnlUsdc × 汇率还原 CNY）。
  *
@@ -46,7 +46,7 @@ async function main() {
 
   initDatabaseUrl();
   const pool = getPgPool();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
+
   if (!pool) {
     console.error("No pool");
     process.exit(1);

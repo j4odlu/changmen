@@ -1,3 +1,5 @@
+> [changmen 扩展] 2026-10-14：旧存储模式已退役，以下为历史方案。当前运行代码不读取旧开关，仍使用 orders 与 pm_gtc_executions。最小模式生产迁移入口拒绝执行；隔离验收仅运行固定 Git 27d51b200889c962b7bc21f2733ecd895fa3a1e9 的历史 writer。当前数据整理使用 scripts/migrations/river-gtc/result-copies.mjs。
+
 # 最小 PM 订单：生产工具执行顺序
 
 [changmen 扩展] 工具已在本机实现；本轮只在独立、有标记的本机测试库演练。这里的命令供后续单独授权的操作使用，不代表已经执行或获准执行生产操作。

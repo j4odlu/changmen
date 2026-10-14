@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
-import { minimalClientOrder } from "../../server/db/rds/pm_orders_minimal.js";
+import { historicalMinimal } from "./historical-order-storage.mjs";
+const { minimalClientOrder } = historicalMinimal;
 import { gitSource } from "./fok-exact-boundaries.mjs";
 export const legacyBusinessFiles = ["server/backend/core/orderModes/readOrders.js", "server/backend/core/orderModes/identity.js",
   ...["link", "group_home", "kinds", "date_key", "dto"].map(name => `server/backend/core/account/order/${name}.js`)];

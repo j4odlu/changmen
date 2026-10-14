@@ -1,4 +1,4 @@
-import { financialOrdersRelation } from "../../orders_execution_compat.js";
+import { financialOrdersRelation } from "../../native_orders.js";
 import { gtcOrderLedger } from "./pm_gtc_ledger.js";
 
 /** [changmen 扩展] 同事务校准本原单；卖出与余仓结算按现金事实幂等计算。 */

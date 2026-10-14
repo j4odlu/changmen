@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * GB12 PB：删除 player 32（旧平博）上与 player 53 重复的订单副本。
  *
@@ -20,7 +20,7 @@ loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 await initDatabaseUrl();
 const pool = getPgPool();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
+
 if (!pool) {
   console.error("DATABASE_URL 未配置");
   process.exit(1);

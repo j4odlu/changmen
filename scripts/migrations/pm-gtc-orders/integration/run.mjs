@@ -5,6 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { EXECUTION_TOKEN, isolatedConnection, TEST_DATABASE, TEST_ROLE } from "./guard.mjs";
 
+import { gitSource } from "../../../verification/fok-exact-boundaries.mjs";
+import { retirementBase } from "../../../verification/gtc-compat-retirement.mjs";
 const args = process.argv.slice(2);
 if (args.length > 1 || (args.length === 1 && !["--plan", "--execute-isolated"].includes(args[0]))) {
   console.error("用法: node scripts/migrations/pm-gtc-orders/integration/run.mjs [--plan | --execute-isolated]");
@@ -27,7 +29,8 @@ else {
     const evidence = path.join(root, "output", "pm-gtc-phase2-postgres-integration", `${Date.now()}-${crypto.randomUUID()}`);
     fs.mkdirSync(evidence, { recursive: true });
     env.PM_GTC_TEST_EVIDENCE_DIR = evidence;
-    const hash = name => crypto.createHash("sha256").update(fs.readFileSync(path.join(root, name))).digest("hex");
+    // [changmen 扩展] 当前代码不再运行旧模式；这里只复验不可变 Git 中的历史存储实现。
+    const hash = name => crypto.createHash("sha256").update(name.startsWith("server/db/rds/") ? gitSource(retirementBase,name) : fs.readFileSync(path.join(root, name))).digest("hex");
     const sources = ["scripts/migrations/pm-gtc-orders/phase2-schema.sql", "scripts/migrations/pm-gtc-orders/phase2-rollback.sql", "scripts/migrations/pm-gtc-orders/integration/postgres.integration.mjs", "scripts/migrations/pm-gtc-orders/integration/bootstrap.sql", "scripts/migrations/pm-gtc-orders/backfill-pending.mjs", "scripts/migrations/pm-gtc-orders/backfill.mjs", "scripts/migrations/pm-gtc-orders/plan.mjs", "server/db/rds/orders_execution_compat.js", "server/db/rds/orders_store.js", "server/db/rds/orderModes/gtc/pm_gtc_store.js", "server/db/rds/orderModes/gtc/pm_gtc_orders_store.js"];
     const hashes = Object.fromEntries(sources.map(name => [name, hash(name)]));
     const result = spawnSync(process.execPath, [cli, "run", "--config", "scripts/migrations/pm-gtc-orders/integration/postgres.config.mjs", "--reporter=default", "--reporter=json", `--outputFile=${path.join(evidence, "vitest.json")}`], { cwd: root, env, stdio: "inherit", shell: false });
@@ -37,7 +40,7 @@ else {
     const sourceUnchanged = sources.every(name => hash(name) === hashes[name]);
     const accepted = result.status === 0 && report?.success === true && report.numTotalTests === 64
       && report.numPassedTests === 64 && report.numPendingTests === 0 && sourceUnchanged;
-    fs.writeFileSync(path.join(evidence, "acceptance.json"), JSON.stringify({ capturedAt: new Date().toISOString(), mode: "isolated-postgres", testDatabase: TEST_DATABASE, testRole: TEST_ROLE, expectedCases: 64, passedCases: report?.numPassedTests ?? 0, skippedCases: report?.numPendingTests ?? null, sourceHashes: hashes, sourceUnchanged, databaseIntegrationAccepted: accepted, productionDatabaseVerified: false, fullPhase2Accepted: false, fullReleaseAccepted: false, committed: false, deployed: false, exitCode: result.status ?? 1 }, null, 2));
+    fs.writeFileSync(path.join(evidence, "acceptance.json"), JSON.stringify({ capturedAt: new Date().toISOString(), mode: "isolated-historical-postgres", historicalCommit: retirementBase, testDatabase: TEST_DATABASE, testRole: TEST_ROLE, expectedCases: 64, passedCases: report?.numPassedTests ?? 0, skippedCases: report?.numPendingTests ?? null, sourceHashes: hashes, sourceUnchanged, databaseIntegrationAccepted: accepted, productionDatabaseVerified: false, fullPhase2Accepted: false, fullReleaseAccepted: false, committed: false, deployed: false, exitCode: result.status ?? 1 }, null, 2));
     if (result.error)
       throw new Error("无法启动隔离测试进程");
     process.exitCode = accepted ? 0 : 1;

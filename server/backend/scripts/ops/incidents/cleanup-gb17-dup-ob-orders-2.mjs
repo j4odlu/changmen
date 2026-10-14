@@ -1,4 +1,4 @@
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 清理 GB17 剩余 OB 重复（ffengjie1 删号重加）：
  * order_id 1788709582432881644 — player 203(已删) / 273(活跃)
@@ -20,7 +20,7 @@ const c = new pg.Client({
   ssl: String(url).includes("sslmode=require") ? { rejectUnauthorized: false } : undefined,
 });
 await c.connect();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(c);
+
 
 const uid = (await c.query(`select id from profiles where user_name ilike 'GB17'`)).rows[0].id;
 const orderId = "1788709582432881644";

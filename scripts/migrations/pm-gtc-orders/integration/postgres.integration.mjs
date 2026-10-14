@@ -3,17 +3,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { _rdsUpsertOrders as saveGtc } from "../../../../server/db/rds/orderModes/gtc/pm_gtc_orders_store.js";
-import { listPmGtc, listPmGtcByIds, mutatePmGtc } from "../../../../server/db/rds/orderModes/gtc/pm_gtc_store.js";
-import { fetchOrdersByExecutionPage } from "../../../../server/db/rds/orderModes/read.js";
-import { DELETE_FINANCIAL_ORDERS_SQL, prepareOrdersExecutionCompatibility } from "../../../../server/db/rds/orders_execution_compat.js";
-import * as orders from "../../../../server/db/rds/orders_store.js";
+import { historicalCompatibility, loadHistoricalOrderStorage } from "../../../verification/historical-order-storage.mjs";
+const { _rdsUpsertOrders: saveGtc } = loadHistoricalOrderStorage("server/db/rds/orderModes/gtc/pm_gtc_orders_store.js");
+const { listPmGtc, listPmGtcByIds, mutatePmGtc } = loadHistoricalOrderStorage("server/db/rds/orderModes/gtc/pm_gtc_store.js");
+const { fetchOrdersByExecutionPage } = loadHistoricalOrderStorage("server/db/rds/orderModes/read.js");
+const { DELETE_FINANCIAL_ORDERS_SQL, prepareOrdersExecutionCompatibility } = historicalCompatibility;
+const orders = loadHistoricalOrderStorage("server/db/rds/orders_store.js");
 import { accepted, EXECUTION, facts, financialRow, HASH, OWNER, seedControl } from "./fixtures.mjs";
 import { isolatedConnection, verifyIsolatedDatabase } from "./guard.mjs";
 import { backfillPendingControl } from "../backfill-pending.mjs";
 import { jsonHash, planGtcOrdersMerge } from "../plan.mjs";
 
-// 唯一替换连接池入口；真实 pg.query、事务、writer、状态机、资格和结算代码均执行原实现。
+// [changmen 扩展] 唯一替换连接池入口；固定 Git 历史 writer 使用真实 pg.query，不进入当前应用。
 const state = vi.hoisted(() => ({ pool: null, beforeQuery: null, afterQuery: null, trace: [] }));
 vi.mock("../../../../server/db/rds/common.js", () => ({
   getPgPool: () => state.pool,

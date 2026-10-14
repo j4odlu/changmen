@@ -1,7 +1,7 @@
 // [changmen 扩展] RIVER 存量结果副本补齐；两表、执行状态与原订单财务字段保持不变。
 import assert from "node:assert/strict";
 import { gtcOrderSnapshot } from "../../../server/db/rds/orderModes/gtc/pm_gtc_order_snapshot.js";
-import { digest } from "../pm-orders-minimal/production-tools.mjs";
+import { digest } from "./jsonDigest.mjs";
 export { digest };
 export function planResultCopies(owner, executions, orders) {
   assert(/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(owner), "explicit owner required");

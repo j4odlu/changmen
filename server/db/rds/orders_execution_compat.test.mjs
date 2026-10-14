@@ -1,9 +1,10 @@
-import fs from "node:fs";
+import { gitSource } from "../../../scripts/verification/fok-exact-boundaries.mjs";
+import { retirementBase } from "../../../scripts/verification/gtc-compat-retirement.mjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { _rdsUpsertOrders as saveGtc } from "./orderModes/gtc/pm_gtc_orders_store.js";
-import { fetchOrdersByExecutionPage } from "./orderModes/read.js";
-import * as compat from "./orders_execution_compat.js";
-import * as orders from "./orders_store.js";
+import { historicalCompatibility as compat, loadHistoricalOrderStorage } from "../../../scripts/verification/historical-order-storage.mjs";
+const orders = loadHistoricalOrderStorage("server/db/rds/orders_store.js");
+const { _rdsUpsertOrders: saveGtc } = loadHistoricalOrderStorage("server/db/rds/orderModes/gtc/pm_gtc_orders_store.js");
+const { fetchOrdersByExecutionPage } = loadHistoricalOrderStorage("server/db/rds/orderModes/read.js");
 
 const mock = vi.hoisted(() => ({ query: vi.fn(), clientQuery: vi.fn(), release: vi.fn(), connect: vi.fn() }));
 vi.mock("./common.js", () => ({ getPgPool: () => ({ query: mock.query, connect: mock.connect }), _jsonb: (v, fallback) => JSON.stringify(v ?? fallback) }));
@@ -217,7 +218,7 @@ describe("ordinary inserts, locks and first-insert hooks", () => {
 });
 
 describe("gTC promotion is part of the original single financial write", () => {
-  const source = fs.readFileSync("server/db/rds/orderModes/gtc/pm_gtc_store.js", "utf8");
+  const source = gitSource(retirementBase, "server/db/rds/orderModes/gtc/pm_gtc_store.js");
   const sql = source.match(/gtcFinancialUpsertSql\(`(INSERT[\s\S]*?)`\)/)[1];
   it("disabled mode keeps the whole original SQL and adds no await or lock", () => {
     expect(compat.gtcFinancialUpsertSql(sql)).toBe(sql);

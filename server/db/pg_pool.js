@@ -5,7 +5,7 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { prepareOrdersExecutionCompatibility } from "./rds/orders_execution_compat.js";
+
 import {
   buildPgClientConfig,
   getResolvedDatabaseUrl,
@@ -130,6 +130,5 @@ export function getPgPool(reason = "") {
 export async function ensurePgPoolReady() {
   await initDatabaseUrl();
   const pool = getPgPool();
-  await prepareOrdersExecutionCompatibility(pool);
   return pool;
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 一次性：把 Polymarket 卖单 money 累加到对应买单，卖单 money 置 0。
  *
@@ -64,7 +64,7 @@ async function main() {
 
   initDatabaseUrl();
   const pool = getPgPool();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
+
   if (!pool) {
     console.error("No DATABASE_URL / pool");
     process.exit(1);

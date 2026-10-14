@@ -1,5 +1,4 @@
-import { minimalFinancialDeletionSql } from "./pm_orders_minimal.js";
-import { DELETE_FINANCIAL_ORDERS_SQL, financialDeletionIds, financialOrdersHookRow, financialOrdersRelation, ordersExecutionCompatibilityEnabled, ordinaryOrdersUpsertSql } from "./orders_execution_compat.js";
+import { financialOrdersHookRow, financialOrdersRelation } from "./native_orders.js";
 /**
  * orders 表读写 — upsert、查询、管理端、SaveOrderBind。
  */
@@ -188,7 +187,7 @@ async function _rdsUpsertOrders(pool, rows) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const res = await client.query(ordinaryOrdersUpsertSql(UPSERT_ORDERS_BATCH_SQL), _orderRowToUpsertArrays(deduped));
+    const res = await client.query(UPSERT_ORDERS_BATCH_SQL, _orderRowToUpsertArrays(deduped));
     await client.query("COMMIT");
     const inserted = [];
     for (const row of res.rows || []) {
@@ -265,7 +264,7 @@ export async function patchRayMonitorOrders(rows) {
       WHERE o.user_id=t.user_id AND o.player_id=t.player_id AND o.order_id=t.order_id
         AND o.provider='RAY' AND t.provider='RAY'
         AND lower(coalesce(o.status,'none')) NOT IN ('win','lose','lost','return','reject')
-        ${ordersExecutionCompatibilityEnabled() ? "AND o.financial_ready" : ""}`,
+        `,
     _orderRowToUpsertArrays(_dedupeUpsertRows(rows)));
     return true;
   }
@@ -1102,13 +1101,13 @@ export async function deleteOrdersByIds(ids) {
   const pool = getPgPool();
   if (!pool)
     return 0;
-  const clean = ordersExecutionCompatibilityEnabled() ? financialDeletionIds(ids) : ids
+  const clean = ids
     .map(id => Number(id))
     .filter(n => Number.isFinite(n) && n > 0);
   if (!clean.length)
     return 0;
   try {
-    const res = await pool.query(ordersExecutionCompatibilityEnabled() ? minimalFinancialDeletionSql(DELETE_FINANCIAL_ORDERS_SQL) : "DELETE FROM orders WHERE id = ANY($1::bigint[])", [clean]);
+    const res = await pool.query("DELETE FROM orders WHERE id = ANY($1::bigint[])", [clean]);
     return res.rowCount ?? 0;
   }
   catch (err) {

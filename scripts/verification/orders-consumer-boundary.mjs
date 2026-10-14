@@ -5,12 +5,13 @@ import { restoreRayOrderMonitorSource } from "./ray-order-monitor-boundary.mjs";
 import { createHash } from "node:crypto";
 import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
 import { execFileSync } from "node:child_process";
+import { readRetiredHistoricalSource } from "./gtc-compat-retirement.mjs";
 
 export const ordersCompatPath = "server/db/rds/orders_execution_compat.js";
 export const ordersCompatDigest = "bfe79069c035b61970c73411877042bfac6aecc2b93891bce9acb3235cfa977d";
 
 export function verifyOrdersCompatHelper(readSource) {
-  const source = restoreMinimalOrdersSource(ordersCompatPath, readSource(ordersCompatPath), readSource).replaceAll("\r\n", "\n");
+  const source = restoreMinimalOrdersSource(ordersCompatPath, readRetiredHistoricalSource(ordersCompatPath,readSource), readSource).replaceAll("\r\n", "\n");
   assert.equal(createHash("sha256").update(source).digest("hex"), ordersCompatDigest, "complete reviewed orders compatibility helper");
 }
 

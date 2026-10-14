@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 用场馆 API 判定重复 order_id 的真实归属 player，仅删除重复组内的多余副本。
  * 非重复 order_id 的订单一律不碰。
@@ -152,7 +152,7 @@ async function main() {
 
   await initDatabaseUrl();
   const pool = getPgPool();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
+
   if (!pool) {
     console.error("DATABASE_URL 未配置");
     process.exit(1);

@@ -4,11 +4,12 @@ import { fileURLToPath } from "node:url";
 import { beforeAll,beforeEach,afterEach,afterAll,describe,it,expect,vi } from "vitest";
 import { isolatedConnection,verifyIsolatedDatabase } from "../pm-gtc-orders/integration/guard.mjs";
 import { accepted,facts,financialRow,OWNER,EXECUTION,HASH } from "../pm-gtc-orders/integration/fixtures.mjs";
-import { prepareOrdersExecutionCompatibility } from "../../../server/db/rds/orders_execution_compat.js";
-import { mutatePmGtc,createPmGtc,listPmGtc,listPmGtcByIds } from "../../../server/db/rds/orderModes/gtc/pm_gtc_store.js";
-import { fetchMinimalOrderListPage,minimalClientOrder,pmOrdersMinimalEnabled } from "../../../server/db/rds/pm_orders_minimal.js";
-import * as orders from "../../../server/db/rds/orders_store.js";
-import { fetchOrdersByExecutionPage } from "../../../server/db/rds/orderModes/read.js";
+import { historicalCompatibility, historicalMinimal, loadHistoricalOrderStorage } from "../../verification/historical-order-storage.mjs";
+const { prepareOrdersExecutionCompatibility } = historicalCompatibility;
+const { mutatePmGtc,createPmGtc,listPmGtc,listPmGtcByIds } = loadHistoricalOrderStorage("server/db/rds/orderModes/gtc/pm_gtc_store.js");
+const { fetchMinimalOrderListPage,minimalClientOrder,pmOrdersMinimalEnabled } = historicalMinimal;
+const orders = loadHistoricalOrderStorage("server/db/rds/orders_store.js");
+const { fetchOrdersByExecutionPage } = loadHistoricalOrderStorage("server/db/rds/orderModes/read.js");
 import { applyBatch,digest,installSchema,planBatch,planSchema,readTarget,reconcileReceipt,rollbackBatch,seal } from "./production-tools.mjs";
 import { registerProductionCases } from "./postgres-tools-cases.mjs";
 

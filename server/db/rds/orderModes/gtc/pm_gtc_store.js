@@ -1,8 +1,7 @@
-import { persistMinimalGtcOrder } from "../../pm_orders_minimal.js";
 import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
 /** [changmen 扩展] GTC V1 持久化/一次性授权；不参与原 FOK 存储路径。 */
 import { getPgPool } from "../../common.js";
-import { financialOrdersRelation, gtcFinancialUpsertSql } from "../../orders_execution_compat.js";
+import { financialOrdersRelation } from "../../native_orders.js";
 import { resolveGtcFinancialOrder } from "./pm_gtc_financial.js";
 import { gtcOrderSnapshot } from "./pm_gtc_order_snapshot.js";
 import { syncPmGtcSettledOrderFinancials } from "./pm_gtc_settlement.js";
@@ -108,18 +107,16 @@ export async function mutatePmGtc(owner, id, revision, command) {
       const snapshot = gtcOrderSnapshot(row);
       const raw = { pmGtcExecutionId: id, pmGtcRevision: row.revision, pmTokenId: row.plan.tokenId, pmConditionId: row.plan.conditionId, pmSide: "buy", pmOrigin: "changmen", pmShares: shares, pmFillPrice: financial.pmFillPrice, pmStakeUsdc: cost, pmFeeUsdc: financial.pmFeeUsdc, pmGtcBuyShares: shares, pmGtcBuyCost: cost, betMoney: financial.betMoney, ...(snapshot ? { pmGtcOrderSnapshot: snapshot } : {}) };
       // 保留人工卖出/赛果等已有字段；历史买入量与剩余净持仓分开。
-      await client.query(gtcFinancialUpsertSql(`INSERT INTO orders(user_id,player_id,order_id,link,provider,match,bet,item,odds,bet_money,money,status,create_at,raw)
+      await client.query(`INSERT INTO orders(user_id,player_id,order_id,link,provider,match,bet,item,odds,bet_money,money,status,create_at,raw)
         VALUES($1,$2,$3,$4,'Polymarket',$5,$6,$7,$8,$9,0,'None',$10,$11)
         ON CONFLICT(user_id,order_id,player_id) DO UPDATE SET
         odds=EXCLUDED.odds,
         bet_money=EXCLUDED.bet_money,
         raw=COALESCE(orders.raw,'{}'::jsonb) || EXCLUDED.raw || jsonb_build_object(
           'pmShares', $12::float8,
-          'pmStakeUsdc', CASE WHEN $12::float8>0 THEN greatest(0,$13-COALESCE((orders.raw->>'pmSellProceeds')::float8,0)+COALESCE((orders.raw->>'pmRealizedPnlUsdc')::float8,0)) ELSE 0 END)`), [owner, row.plan.playerId, row.orderId, row.plan.linkId, row.plan.match, row.plan.bet, row.plan.item, financial.odds, financial.betMoney, row.createdAt, raw, shares, cost]);
+          'pmStakeUsdc', CASE WHEN $12::float8>0 THEN greatest(0,$13-COALESCE((orders.raw->>'pmSellProceeds')::float8,0)+COALESCE((orders.raw->>'pmRealizedPnlUsdc')::float8,0)) ELSE 0 END)`, [owner, row.plan.playerId, row.orderId, row.plan.linkId, row.plan.match, row.plan.bet, row.plan.item, financial.odds, financial.betMoney, row.createdAt, raw, shares, cost]);
       await syncPmGtcSettledOrderFinancials(client, owner, row.plan.playerId, row.orderId, id);
     }
-    if (row.decision === "closed" && command.kind === "facts")
-      await persistMinimalGtcOrder(client, row);
     await client.query("COMMIT"); return row;
   }
   catch (error) { await client.query("ROLLBACK"); throw error; }

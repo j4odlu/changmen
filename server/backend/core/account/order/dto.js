@@ -2,7 +2,7 @@
  * 订单读路径 DTO：RDS 行 → 工作台 / 管理端形状。
  * 不写库。由 order_store.js re-export，对外路径不变。
  */
-import { minimalClientOrder, placeholderLinkFromCreateAt } from "@changmen/db";
+import { placeholderLinkFromCreateAt } from "@changmen/db";
 import { computePfHoldShares } from "../../integrations/predictfun/pf_fee.js";
 import { isPredictionSellForCount } from "./kinds.js";
 import { readPositionSellEvents } from "./position_events.js";
@@ -226,5 +226,5 @@ export function scrubClientOrder(order) {
 }
 
 export function toClientOrder(r) {
-  return minimalClientOrder(r, scrubClientOrder(rowToOrder(r)));
+  return scrubClientOrder(rowToOrder(r));
 }

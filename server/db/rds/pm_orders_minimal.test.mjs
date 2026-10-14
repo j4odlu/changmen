@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { accepted, facts } from "../../../scripts/migrations/pm-gtc-orders/integration/fixtures.mjs";
 import { applyGtcCommand } from "@changmen/shared/pm_gtc";
-import { minimalClientOrder, minimalFinancialDeletionSql, minimalFinancialSql, minimalGtcSnapshot, minimalHookRow, persistMinimalGtcOrder, pmOrdersMinimalEnabled, preparePmOrdersMinimal } from "./pm_orders_minimal.js";
-import { pmOrdersMinimalProjectionWritesEnabled } from "./pm_orders_minimal.js";
-import { DELETE_FINANCIAL_ORDERS_SQL } from "./orders_execution_compat.js";
+import { historicalMinimal, historicalCompatibility } from "../../../scripts/verification/historical-order-storage.mjs";
+const { minimalClientOrder, minimalFinancialDeletionSql, minimalFinancialSql, minimalGtcSnapshot, minimalHookRow, persistMinimalGtcOrder, pmOrdersMinimalEnabled, preparePmOrdersMinimal, pmOrdersMinimalProjectionWritesEnabled } = historicalMinimal;
+const { DELETE_FINANCIAL_ORDERS_SQL } = historicalCompatibility;
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import ts from "typescript";

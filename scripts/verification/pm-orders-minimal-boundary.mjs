@@ -1,10 +1,14 @@
 // [changmen 扩展] 仅撤销精确新增接线，随后仍比较完整原 FOK/VPS 模块。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { restoreRetiredOrdersCompatibility, readRetiredHistoricalSource } from "./gtc-compat-retirement.mjs";
 export const minimalPath="server/db/rds/pm_orders_minimal.js";
 export const minimalDigest="f355afb41dd4ec4b575852dcacb382072b66d1ecead2b553e7f250dcd42621e5";
 function once(s,a,b=""){assert.equal(s.split(a).length,2,`exact minimal orders boundary: ${a}`);return s.replace(a,b);}
 export function restoreMinimalOrdersSource(file,input,readSource){
+ return stripMinimalOrdersSource(file,restoreRetiredOrdersCompatibility(file,input,readSource),path=>readRetiredHistoricalSource(path,readSource));
+}
+export function stripMinimalOrdersSource(file,input,readSource){
  let s=input.replaceAll("\r\n","\n");
  const marker={
   "server/db/rds/orders_execution_compat.js":"import { minimalFinancialSql, minimalHookRow, pmOrdersMinimalEnabled, preparePmOrdersMinimal }",

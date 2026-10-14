@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * GB13：order_id=1721979623053562828
  * - 删除误挂在 RAY 86 / PB 87 上的 OB 副本
@@ -24,7 +24,7 @@ loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 await initDatabaseUrl();
 const pool = getPgPool();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
+
 if (!pool) {
   console.error("DATABASE_URL 未配置");
   process.exit(1);

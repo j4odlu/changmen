@@ -1,4 +1,4 @@
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /** [changmen 扩展] 单笔拒单申请金额修复；默认只读，原始 POST 为唯一证据。 */
 import fs from "node:fs";
 import path from "node:path";
@@ -36,7 +36,7 @@ async function main() {
   const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
   await initDatabaseUrl();
   const pool = getPgPool();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
+
   if (!pool) throw new Error("数据库不可用");
   const client = await pool.connect();
 

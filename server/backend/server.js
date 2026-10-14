@@ -8,7 +8,6 @@ import {
   fetchPlatformBets,
   fetchPlatformMatches,
   initLastWrittenIds,
-  ensurePgPoolReady,
 } from "@changmen/db";
 import { attachWsForward } from "@changmen/ws-forward";
 import { attachChangmenRealtimeHub } from "@changmen/realtime-hub";
@@ -24,10 +23,6 @@ import { createStaticHandler } from "./static_files.js";
 import { setEmbeddedMatcher } from "./core/shared/matcher_mode.js";
 
 ensureWinConsoleUtf8();
-
-// [changmen 扩展] 仅显式启用并表兼容时，监听与后台任务开始前验证；无自动 DDL。
-if (process.env.ORDERS_EXECUTION_COMPAT && process.env.ORDERS_EXECUTION_COMPAT !== "0")
-  await ensurePgPoolReady();
 
 setupAdminTools();
 

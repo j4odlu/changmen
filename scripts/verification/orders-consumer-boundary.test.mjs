@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { gitSource, verifyProtectedSource } from "./orders-phase2-release-boundary.mjs";
 import { ordersCompatPath, verifyOrdersCompatHelper } from "./orders-consumer-boundary.mjs";
+import { retirementBase, retiredHelpers } from "./gtc-compat-retirement.mjs";
 
 const path = "server/db/rds/orders_store.js";
 const read = file => fs.readFileSync(file, "utf8");
@@ -20,14 +21,17 @@ describe("whole FOK order writer and finance protection retain fixed original ba
       ["ordinary target bypass", "ordinaryOrdersUpsertSql(UPSERT_ORDERS_BATCH_SQL)", "UPSERT_ORDERS_BATCH_SQL"],
       ["deletion bypass", "? minimalFinancialDeletionSql(DELETE_FINANCIAL_ORDERS_SQL) :", "? \"DELETE FROM orders\" :"],
     ])(`${base}: rejects %s changes`, (_, before, after) => {
-      expect(read(path)).toContain(before);
-      expect(() => check(read(path).replace(before, after))).toThrow();
+      const historical = /ordinaryOrdersUpsertSql|minimalFinancialDeletionSql/.test(before);
+      const source = historical ? gitSource(retirementBase, path) : read(path);
+      const reader = historical ? file => gitSource(retirementBase, file) : read;
+      expect(source).toContain(before);
+      expect(() => check(source.replace(before, after), reader)).toThrow();
     });
     it(`${base}: rejects extra actions elsewhere in the full module`, () => {
       expect(() => check(`${read(path)}\nvoid performUnexpectedBet();\n`)).toThrow();
     });
     it(`${base}: restoring the whole old module cannot bypass required compatibility wiring`, () => {
-      expect(() => check(gitSource(base, path))).toThrow("exact orders compatibility boundary");
+      expect(() => check(gitSource(base, path))).toThrow("complete native module after retirement");
     });
   }
   it.each([
@@ -39,8 +43,9 @@ describe("whole FOK order writer and finance protection retain fixed original ba
     ["identity conflict", "execution_id=($11::jsonb->>'pmGtcExecutionId')::uuid", "true"],
     ["schema fallback", "if (result.rows?.[0]?.valid !== true)", "if (false)"],
     ["hook payload leak", "!control.has(key)", "true"],
-  ])("rejects %s changes inside the full new helper", (_, before, after) => {
-    expect(read(ordersCompatPath)).toContain(before);
-    expect(() => verifyOrdersCompatHelper(file => file === ordersCompatPath ? read(file).replace(before, after) : read(file))).toThrow("complete reviewed orders compatibility helper");
+  ])("rejects %s changes inside the full historical helper", (_, before, after) => {
+    const reader = file => retiredHelpers.includes(file) ? gitSource(retirementBase, file) : read(file);
+    expect(reader(ordersCompatPath)).toContain(before);
+    expect(() => verifyOrdersCompatHelper(file => file === ordersCompatPath ? reader(file).replace(before, after) : reader(file))).toThrow("complete reviewed orders compatibility helper");
   });
 });

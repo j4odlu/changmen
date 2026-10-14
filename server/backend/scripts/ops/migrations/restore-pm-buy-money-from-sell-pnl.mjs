@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 修复：closed 买单 money=0，但关联卖单 raw.pmRealizedPnlUsdc 非 0。
  *   node scripts/ops/migrations/restore-pm-buy-money-from-sell-pnl.mjs --dry-run
@@ -14,7 +14,7 @@ const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 const dryRun = !process.argv.includes("--execute");
 initDatabaseUrl();
 const pool = getPgPool();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
+
 
 const { rows } = await pool.query(`
   SELECT b.order_id AS buy_id, b.money AS buy_money, b.raw AS buy_raw,

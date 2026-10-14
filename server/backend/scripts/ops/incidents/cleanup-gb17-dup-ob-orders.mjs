@@ -1,4 +1,4 @@
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 清理 GB17 因删号重加产生的 OB order_id 重复行：
  * - 把活跃账号(255)行的 link 改成与套利对腿一致（取自已删账号 200）
@@ -27,7 +27,7 @@ const c = new pg.Client({
   ssl: String(url).includes("sslmode=require") ? { rejectUnauthorized: false } : undefined,
 });
 await c.connect();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(c);
+
 
 const pairs = [
   {

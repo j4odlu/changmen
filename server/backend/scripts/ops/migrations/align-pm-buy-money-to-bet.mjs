@@ -1,4 +1,4 @@
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 回填：订单栏可见的 PM 买单 Money → 与 bet_money 含费口径对齐
  *
@@ -19,7 +19,7 @@ const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 const dryRun = !process.argv.includes("--execute");
 initDatabaseUrl();
 const pool = getPgPool();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
+
 const FX = getExchange(Currency.USDT);
 
 const { rows } = await pool.query(`

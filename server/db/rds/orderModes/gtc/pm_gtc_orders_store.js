@@ -1,11 +1,11 @@
-import { financialOrdersRelation, gtcExecutionLockSql, ordinaryOrdersUpsertSql } from "../../orders_execution_compat.js";
+import { financialOrdersRelation } from "../../native_orders.js";
 /** [changmen 扩展] GTC 原单专用保存。旧 FOK upsert SQL/事务独立保留。 */
 import { _jsonb, getPgPool } from "../../common.js";
 import { gtcSellRowEvent, mergeGtcSellEvents } from "./pm_gtc_ledger.js";
 import { syncPmGtcSettledOrderFinancials } from "./pm_gtc_settlement.js";
 
 function ordersUpsertSql() {
-  return ordinaryOrdersUpsertSql(`
+  return `
   INSERT INTO orders (
     user_id, player_id, order_id, link, provider, match, bet, item,
     odds, bet_money, money, status, create_at, raw
@@ -67,7 +67,7 @@ function ordersUpsertSql() {
         'pmStakeUsdc', greatest(0,COALESCE((orders.raw->>'pmGtcBuyCost')::float8,0)-greatest(COALESCE((orders.raw->>'pmSellProceeds')::float8,0),COALESCE((EXCLUDED.raw->>'pmSellProceeds')::float8,0))+(CASE WHEN COALESCE((EXCLUDED.raw->>'pmAttributedSellShares')::float8,0)>=COALESCE((orders.raw->>'pmAttributedSellShares')::float8,0) THEN COALESCE((EXCLUDED.raw->>'pmRealizedPnlUsdc')::float8,(orders.raw->>'pmRealizedPnlUsdc')::float8,0) ELSE COALESCE((orders.raw->>'pmRealizedPnlUsdc')::float8,0) END)))
       END
   RETURNING *, (xmax = 0) AS was_inserted
-`, true);
+`;
 }
 
 function _orderRowToUpsertArrays(rows) {
@@ -138,7 +138,7 @@ export async function _rdsUpsertOrders(pool, rows) {
     const originals = new Map();
     // 只有 GTC 分支查询执行记录；FOK 不增加查询或等待。
     for (const row of [...deduped].sort((a,b) => String(a.raw.pmGtcExecutionId).localeCompare(String(b.raw.pmGtcExecutionId)))) {
-      const found = await client.query(gtcExecutionLockSql(), [row.raw.pmGtcExecutionId, row.user_id]);
+      const found = await client.query("SELECT record FROM pm_gtc_executions WHERE id=$1 AND owner=$2 FOR SHARE", [row.raw.pmGtcExecutionId, row.user_id]);
       const execution = found.rows[0]?.record;
       const parentId = String(row.raw.pmBuyOrderId ?? row.raw.pfBuyOrderId ?? row.order_id).toLowerCase();
       const pm = execution && row.provider === "Polymarket" && Number(row.player_id) === Number(execution.plan.playerId)

@@ -8,6 +8,11 @@ const target={database:"migration-db",role:"migration-role",address:"10.0.0.1",p
 const config={version:1,urlEnv:"PM_MIGRATION_URL",expectedTarget:target,tlsCaFile:ca};
 describe("explicit migration guard",()=>{
  it("default invocation does not inspect credentials or connect",async()=>{const log=vi.spyOn(console,"log").mockImplementation(()=>{});try{await main([]);expect(JSON.parse(log.mock.calls[0][0]).databaseConnected).toBe(false);}finally{log.mockRestore();}});
+ it("retired storage mode rejects explicit execution before reading config or creating output",async()=>{
+   const output="output/retired-minimal-must-not-exist-"+Date.now();
+   await expect(main(["--execute","--command","schema-plan","--config","missing-secret-config.json","--out",output])).rejects.toThrow("RETIRED_STORAGE_MODE_USE_TWO_TABLE_GTC");
+   expect(fs.existsSync(output)).toBe(false);
+ });
  it.each(["--command bad","--execute","--execute --command batch-apply --config c --out x","--out x --out y","--database-url secret"])("rejects incomplete or unsafe args %s",args=>expect(()=>parseArgs(args.split(" "))).toThrow());
  it("requires explicit migration URL rather than DATABASE_URL",()=>expect(()=>connectionOptions(config,{DATABASE_URL:"postgresql://migration-role:secret@db/migration-db"})).toThrow("MIGRATION_URL_NOT_SET"));
  it.each(["?sslmode=disable","?options=-csearch_path%3Devil","#fragment"])("rejects URL override %s",suffix=>expect(()=>connectionOptions(config,{PM_MIGRATION_URL:"postgresql://migration-role:secret@db/migration-db"+suffix})).toThrow("PLAIN_EXPLICIT"));

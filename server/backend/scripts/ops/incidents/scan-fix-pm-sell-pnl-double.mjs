@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 扫描 / 修复 PM 买单卖出盈亏双计：
  * - 0.99 纸面 win money + 卖出 PnL 累加 → money ≈ 2× 真实卖出盈亏
@@ -180,7 +180,7 @@ async function main() {
 
   initDatabaseUrl();
   const pool = getPgPool();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
+
   if (!pool) {
     console.error("No DATABASE_URL / pool");
     process.exit(1);

@@ -1,4 +1,4 @@
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 回填 PredictFun 买单 raw.pfNotionalUsdt（名义金额 = 成交份额 × 限价）
  * 默认 dry-run；加 --execute 才写库
@@ -27,7 +27,7 @@ const c = new pg.Client({
   ssl: /sslmode=require/i.test(url) ? { rejectUnauthorized: false } : undefined,
 });
 await c.connect();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(c);
+
 
 const { rows } = await c.query(`
   SELECT id, order_id, status, bet_money, odds, raw

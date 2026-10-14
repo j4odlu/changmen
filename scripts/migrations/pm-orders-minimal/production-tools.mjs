@@ -2,7 +2,8 @@
 import fs from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
-import { minimalGtcSnapshot } from "../../../server/db/rds/pm_orders_minimal.js";
+import { historicalMinimal } from "../../verification/historical-order-storage.mjs";
+const { minimalGtcSnapshot } = historicalMinimal;
 import { resolveGtcFinancialOrder } from "../../../server/db/rds/orderModes/gtc/pm_gtc_financial.js";
 
 export const MAX_BATCH = 25;

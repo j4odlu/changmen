@@ -7,8 +7,8 @@ import * as contract from "@changmen/shared/pm_gtc";
 import * as financial from "./pm_gtc_financial.js";
 import * as settlement from "./pm_gtc_settlement.js";
 import * as snapshot from "./pm_gtc_order_snapshot.js";
-import * as ordersCompatibility from "../../orders_execution_compat.js";
-import * as minimalOrders from "../../pm_orders_minimal.js";
+import { historicalCompatibility as ordersCompatibility, historicalMinimal as minimalOrders } from "../../../../../scripts/verification/historical-order-storage.mjs";
+import * as nativeOrders from "../../native_orders.js";
 
 // [changmen 扩展] 本阶段之前的 mutatePmGtc 与此固定提交相同；不重录旧保护基线。
 const path = "server/db/rds/orderModes/gtc/pm_gtc_store.js";
@@ -33,6 +33,7 @@ async function run(source, row, command, failAt, onSnapshot, pending) {
     "./pm_gtc_settlement.js": settlement,
     "./pm_gtc_order_snapshot.js": snapshot,
     "../../orders_execution_compat.js": ordersCompatibility,
+    "../../native_orders.js": nativeOrders,
     "../../pm_orders_minimal.js": minimalOrders,
   };
   const exports = {};
@@ -116,20 +117,20 @@ describe("phase 2 preserves actual pre-phase mutation SQL, results and errors", 
 });
 
 afterEach(() => vi.unstubAllEnvs());
-it("enabled minimal order projection keeps the committed transaction and failure behavior", async () => {
+it("historical enabled minimal projection retains its original transaction and failure evidence", async () => {
   vi.stubEnv("ORDERS_EXECUTION_COMPAT", "0");
   vi.stubEnv("PM_ORDERS_MINIMAL", "1");
   await minimalOrders.preparePmOrdersMinimal({ query: async () => ({ rows: [{ valid: true }] }) });
   const row = accepted(); row.decision = "closed";
-  const result = await run(after, row, facts());
+  const result = await run(compatibleBefore, row, facts());
   expect(result).toEqual(await run(compatibleBefore, row, facts()));
   expect(result.error).toBeUndefined();
   expect(result.queries.some(event => event.sql?.startsWith("SELECT updated_at FROM pm_gtc_executions"))).toBe(true);
   expect(result.queries.at(-2).sql).toBe("COMMIT");
-  expect(await run(after, row, facts(), "SELECT updated_at FROM pm_gtc_executions"))
+  expect(await run(compatibleBefore, row, facts(), "SELECT updated_at FROM pm_gtc_executions"))
     .toEqual(await run(compatibleBefore, row, facts(), "SELECT updated_at FROM pm_gtc_executions"));
 });
-describe("orders merge preserves actual GTC eligibility with no extra database round trips", () => {
+describe("historical orders merge preserves original GTC eligibility with no extra database round trips", () => {
   async function enable() {
     vi.stubEnv("ORDERS_EXECUTION_COMPAT", "1");
     await ordersCompatibility.prepareOrdersExecutionCompatibility({ query: async () => ({ rows: [{ valid: true }] }) });
@@ -137,7 +138,7 @@ describe("orders merge preserves actual GTC eligibility with no extra database r
   it("promotes within the original write and retains complete command result, query count and parameters", async () => {
     const original = await run(before, accepted(), facts());
     await enable();
-    const current = await run(after, accepted(), facts());
+    const current = await run(compatibleBefore, accepted(), facts());
     expect(current.error).toBeUndefined();
     expect(current.result).toEqual(original.result);
     expect(current.queries.length).toBe(original.queries.length);
@@ -156,7 +157,7 @@ describe("orders merge preserves actual GTC eligibility with no extra database r
     command.financialOrder = { pmShares: 0, pmFillPrice: 0, pmStakeUsdc: 0, pmFeeUsdc: 0, odds: 0, betMoney: 0 };
     const original = await run(before, row, command);
     await enable();
-    const current = await run(after, row, command);
+    const current = await run(compatibleBefore, row, command);
     expect(current.result).toEqual(original.result);
     expect(current.queries.length).toBe(original.queries.length);
     const insert = current.queries.find(q => q.sql?.includes("INSERT INTO orders"));
@@ -170,7 +171,7 @@ describe("orders merge preserves actual GTC eligibility with no extra database r
     if (scenario === "invalid helper") command.financialOrder.betMoney += 1;
     const original = await run(before, accepted(), command);
     await enable();
-    const current = await run(after, accepted(), command);
+    const current = await run(compatibleBefore, accepted(), command);
     expect(current.result).toEqual(original.result);
     expect(current.error).toEqual(original.error);
     expect(current.queries.length).toBe(original.queries.length);
@@ -178,10 +179,18 @@ describe("orders merge preserves actual GTC eligibility with no extra database r
   });
   it.each(["INSERT INTO orders", "UPDATE pm_gtc_executions", "COMMIT"])("failure at %s keeps rollback and release behavior", async (failAt) => {
     await enable();
-    const current = await run(after, accepted(), facts(), failAt);
+    const current = await run(compatibleBefore, accepted(), facts(), failAt);
     expect(current.result).toBeUndefined();
     expect(current.error).toBe("injected original writer failure");
     expect(current.queries.at(-2).sql).toBe("ROLLBACK");
     expect(current.queries.at(-1)).toEqual({ release: true });
   });
+});
+it.each(["1", "invalid"])("retired flags=%s cannot alter current financial SQL, results or rollback", async value => {
+  vi.stubEnv("ORDERS_EXECUTION_COMPAT", "0"); vi.stubEnv("PM_ORDERS_MINIMAL", "0");
+  const original = await run(compatibleBefore, accepted(), facts());
+  const originalFailure = await run(compatibleBefore, accepted(), facts(), "INSERT INTO orders");
+  vi.stubEnv("ORDERS_EXECUTION_COMPAT", value); vi.stubEnv("PM_ORDERS_MINIMAL", value); vi.stubEnv("PM_ORDERS_MINIMAL_PROJECTION_WRITE", value);
+  expect(await run(after, accepted(), facts())).toEqual(original);
+  expect(await run(after, accepted(), facts(), "INSERT INTO orders")).toEqual(originalFailure);
 });

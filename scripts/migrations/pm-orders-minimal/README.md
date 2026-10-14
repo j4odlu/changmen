@@ -1,3 +1,5 @@
+> [changmen 扩展] 2026-10-14：旧存储模式已退役，以下为历史方案。当前运行代码不读取旧开关，仍使用 orders 与 pm_gtc_executions。最小模式生产迁移入口拒绝执行；隔离验收仅运行固定 Git 27d51b200889c962b7bc21f2733ecd895fa3a1e9 的历史 writer。当前数据整理使用 scripts/migrations/river-gtc/result-copies.mjs。
+
 # PM FOK/GTC 最小订单兼容：本机及显式迁移工具
 
 [changmen 扩展] 保留 pm_gtc_executions 的完整记录及原执行来源，只向 orders 添加 PM 模式、小投影和非财务订单资格。不新建执行控制表，不把计划、授权、成交明细完整复制进订单行。

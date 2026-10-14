@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { financialOrdersRelation, prepareOrdersExecutionCompatibility } from "@changmen/db";
+import { financialOrdersRelation } from "@changmen/db";
 /**
  * 硬删除 GB12 已废弃 PM 操盘账号 player 76 / 102。
  * 前置：订单已迁到 105，且无 orders/money_logs 引用。
@@ -19,7 +19,7 @@ loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");
 await initDatabaseUrl();
 const pool = getPgPool();
-if (process.env.ORDERS_EXECUTION_COMPAT === "1") await prepareOrdersExecutionCompatibility(pool);
+
 if (!pool) {
   console.error("DATABASE_URL 未配置");
   process.exit(1);

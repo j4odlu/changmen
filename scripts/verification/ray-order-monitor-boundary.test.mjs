@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { moduleTokens } from "./fok-exact-boundaries.mjs";
 import { rayMonitorReviewedCommit, restoreRayOrderMonitorSource } from "./ray-order-monitor-boundary.mjs";
+import { restoreRetiredOrdersCompatibility } from "./gtc-compat-retirement.mjs";
 
 const path = "server/db/rds/orders_store.js";
 const git = ref => execFileSync("git", ["show", `${ref}:${path}`], { encoding: "utf8" }).replaceAll("\r\n", "\n");
@@ -16,7 +17,7 @@ describe("exact RAY monitoring extensions retain whole FOK source protection", (
     expect(reviewed.split(relation).length - 1).toBe(34);
   });
   it("current RAY extensions retain the reviewed complete implementations", () => {
-    expect(() => restoreRayOrderMonitorSource(fs.readFileSync(path, "utf8"))).not.toThrow();
+    expect(() => restoreRayOrderMonitorSource(restoreRetiredOrdersCompatibility(path, fs.readFileSync(path, "utf8")))).not.toThrow();
   });
   it.each([
     ["reader owner", "WHERE user_id = $1 AND player_id = $2 AND provider = 'RAY'", "WHERE player_id = $2 AND provider = 'RAY'"],

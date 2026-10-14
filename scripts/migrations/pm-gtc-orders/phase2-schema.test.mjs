@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CONTROL_COLUMNS } from "./plan.mjs";
+import { gitSource } from "../../verification/fok-exact-boundaries.mjs";
+import { retirementBase } from "../../verification/gtc-compat-retirement.mjs";
 
 const read = file => fs.readFileSync(file, "utf8");
 const schema = read("scripts/migrations/pm-gtc-orders/phase2-schema.sql");
@@ -62,13 +64,15 @@ describe("reviewable migration boundaries, without executing any DDL", () => {
   it("has no automatic integration with startup/deployment DDL", () => {
     expect(read("server/backend/scripts/apply-rds-schema.mjs")).not.toContain("phase2-schema");
     expect(read("server/backend/server.js")).not.toContain("phase2-schema");
-    expect(read("server/db/rds/orders_execution_compat.js")).not.toMatch(/(?:CREATE|ALTER|DROP) (?:TABLE|VIEW|FUNCTION)/);
+    expect(gitSource(retirementBase, "server/db/rds/orders_execution_compat.js")).not.toMatch(/(?:CREATE|ALTER|DROP) (?:TABLE|VIEW|FUNCTION)/);
+    expect(read("server/db/rds/native_orders.js")).not.toMatch(/(?:CREATE|ALTER|DROP) (?:TABLE|VIEW|FUNCTION)/);
   });
-  it("schema validation occurs before HTTP listening or background account/collector work when explicitly enabled", () => {
-    const startup = read("server/backend/server.js");
+  it("historical schema validation preceded startup; current startup has no retired mode", () => {
+    const startup = gitSource(retirementBase, "server/backend/server.js");
     const validated = startup.indexOf("await ensurePgPoolReady()");
     expect(validated).toBeGreaterThan(0);
     for (const later of ["setupAdminTools();", "ensurePlatformCredentials()", "server.listen("])
       expect(validated).toBeLessThan(startup.indexOf(later));
+    expect(read("server/backend/server.js")).not.toMatch(/ORDERS_EXECUTION_COMPAT|PM_ORDERS_MINIMAL|ensurePgPoolReady/);
   });
 });

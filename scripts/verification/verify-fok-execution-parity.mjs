@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { verifyGtcCompatibilityRetirement } from "./gtc-compat-retirement.mjs";
 import { restoreUnifiedArbitrageSource, verifyUnifiedArbitrageContract } from "./unified-arb-boundaries.mjs";
 import { verifyRayFrontendSources } from "./ray-frontend-boundary.mjs";
 import { execFileSync } from "node:child_process";
@@ -12,6 +13,7 @@ import { specializeFokSource } from "./fok-source-specialization.mjs";
 const base = process.env.FOK_PARITY_BASELINE ?? "219535c8";
 assert(["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"].includes(base), "FOK protection accepts only the two original immutable baselines");
 fs.mkdirSync("output", { recursive: true });
+verifyGtcCompatibilityRetirement();
 const executePath = "client/web/src/stores/betting/autoBet/executeArbBet.ts";
 const normalizeSource = text => text.replace(/\r\n/g, "\n");
 const exactFiles = [

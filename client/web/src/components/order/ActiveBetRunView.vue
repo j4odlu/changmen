@@ -6,6 +6,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import OrderExecutionTimeline from "@/components/order/OrderExecutionTimeline.vue";
 import OrderProgressComparison from "@/components/order/OrderProgressComparison.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
+import FloatingPanelLauncher from "@/components/FloatingPanelLauncher.vue";
 import { useRecentBetProgress } from "./useRecentBetProgress";
 import { accountProgressDisplayName } from "@/shared/accountDisplayName";
 import { activeBetLegAttemptViews, activeBetLegStages } from "@/shared/activeBetRunStages";
@@ -25,7 +26,6 @@ import { gtcSyncNotice } from "@/orderModes/gtc/syncStatus";
 import "@/styles/active-bet-run.css";
 
 const PANEL_POS_KEY = "changmen:active-bet-run:pos:v4";
-const PANEL_COLLAPSED_KEY = "changmen:active-bet-run:collapsed";
 const PANEL_SIZE_KEY = "changmen:active-bet-run:size:v1";
 /** [changmen 扩展] 双腿阶段、摘要与时间线共用可滚动舞台。 */
 const PANEL_W = 500;
@@ -43,7 +43,7 @@ const { visibleRuns } = storeToRefs(activeStore);
 
 const now = ref(Date.now());
 const panelEl = ref<HTMLElement | null>(null);
-const collapsed = ref(false);
+const collapsed = ref(true);
 const offset = ref<{ left: number; top: number } | null>(null);
 const panelSize = ref({ width: PANEL_W, height: PANEL_H });
 const dragging = ref(false);
@@ -112,10 +112,10 @@ const panelStyle = computed(() => {
     position: "fixed",
     zIndex: "1200",
     boxSizing: "border-box",
-    width: `${panelSize.value.width}px`,
-    height: collapsed.value ? "auto" : `${panelSize.value.height}px`,
+    width: collapsed.value ? "56px" : `${panelSize.value.width}px`,
+    height: collapsed.value ? "56px" : `${panelSize.value.height}px`,
   };
-  if (offset.value) {
+  if (offset.value && !collapsed.value) {
     style.left = `${offset.value.left}px`;
     style.top = `${offset.value.top}px`;
     style.right = "auto";
@@ -163,7 +163,6 @@ watch(
 
 function restorePanelPrefs() {
   try {
-    collapsed.value = localStorage.getItem(PANEL_COLLAPSED_KEY) === "1";
     const raw = localStorage.getItem(PANEL_POS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as { left?: unknown; top?: unknown };
@@ -180,15 +179,6 @@ function restorePanelPrefs() {
       if (Number.isFinite(width) && Number.isFinite(height))
         panelSize.value = { width, height };
     }
-  }
-  catch {
-    /* ignore */
-  }
-}
-
-function persistCollapsed() {
-  try {
-    localStorage.setItem(PANEL_COLLAPSED_KEY, collapsed.value ? "1" : "0");
   }
   catch {
     /* ignore */
@@ -217,7 +207,6 @@ function persistSize() {
 
 function toggleCollapsed() {
   collapsed.value = !collapsed.value;
-  persistCollapsed();
   if (!collapsed.value)
     void nextTick(normalizePanelGeometry);
 }
@@ -241,8 +230,6 @@ function clampPanelSize(width: number, height: number, maxWidth: number, maxHeig
 
 function normalizePanelGeometry() {
   if (collapsed.value) {
-    if (offset.value)
-      offset.value = clampOffset(offset.value.left, offset.value.top);
     return;
   }
   const rect = panelEl.value?.getBoundingClientRect();
@@ -517,17 +504,26 @@ function orderLabel(run: ActiveBetRun, index: number): string {
 <template>
   <Teleport to="body">
     <aside ref="panelEl" class="active-bet-run" :class="{ 'active-bet-run--collapsed': collapsed, 'active-bet-run--dragging': dragging, 'active-bet-run--resizing': resizing }" :style="panelStyle" aria-label="实时下单进度">
-      <header class="active-bet-run__chrome" title="按住拖动" @pointerdown="onDragHandlePointerDown">
+      <FloatingPanelLauncher
+        v-if="collapsed"
+        label="实时下单进度"
+        caption="进度"
+        kind="progress"
+        :count="runCount"
+        :active="displayRuns.some(run => !run.terminalAt && isTracking(run))"
+        @open="toggleCollapsed"
+      />
+      <header v-else class="active-bet-run__chrome" title="按住拖动" @pointerdown="onDragHandlePointerDown">
         <div class="active-bet-run__heading">
           <span class="active-bet-run__live-dot" :class="{ 'is-active': displayRuns.some(run => !run.terminalAt && isTracking(run)) }" />
           <strong>实时下单进度</strong>
           <span class="active-bet-run__count">{{ runCount }}</span>
         </div>
-        <button type="button" class="active-bet-run__fold" :title="collapsed ? '展开' : '收起'" :aria-expanded="!collapsed" @click.stop="toggleCollapsed">
-          {{ collapsed ? '展开' : '—' }}
+        <button type="button" class="active-bet-run__fold" title="收起" aria-label="收起实时下单进度" :aria-expanded="true" @click.stop="toggleCollapsed">
+          —
         </button>
       </header>
-      <template v-if="!collapsed">
+      <div v-show="!collapsed" class="active-bet-run__content">
         <nav class="active-bet-run__toolbar" aria-label="切换执行任务">
           <span>最近三单 · 点击摘要查看详情</span>
           <button type="button" @click="showLatest">{{ unseenLatest ? '有新单 · 查看最新' : '最新' }}</button>
@@ -591,7 +587,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 {{ expandedTimeline ? '每阶段最近 6 条' : '展开全部记录' }}
               </button>
             </header>
-            <OrderProgressComparison :run="activeRun" :facts="factGroups.groups" :orders="runOrders" :execution-events="factGroups.unassigned" :current-stages="activeGtc ? legStages : undefined" :expanded-timeline="expandedTimeline" :account-name="eventAccountName">
+            <OrderProgressComparison :run="activeRun" :facts="factGroups.groups" :orders="runOrders" :execution-events="factGroups.unassigned" :current-stages="activeGtc ? legStages : undefined" :expanded-timeline="expandedTimeline" :visible="!collapsed" :account-name="eventAccountName">
               <template #leg-summary="{ leg }">
                 <div class="active-bet-run__comparison-summary">
                   <p v-if="legFacts(leg).length" class="active-bet-run__attempt-heading"><PlatformIcon :platform="legProvider(leg)" />最近尝试 · {{ legAttemptLabel(leg) }}</p>
@@ -635,6 +631,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
                 :key="`${activeRun.betId}-unassigned`"
                 title="整单 / 归属待核查" subtitle="未分配到主客方向"
                 :events="unassignedFacts" :started-at="activeRun.startedAt" :expanded="true"
+                :visible="!collapsed"
               />
             </details>
             <details class="active-bet-run__orchestration">
@@ -658,7 +655,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
           <span>当前页面保留最近三单</span><span title="后台展示已接收的记录，上传可能存在延迟">后台可能延迟</span>
         </footer>
         <button type="button" class="active-bet-run__resize-handle" title="拖动调整窗口大小" aria-label="调整实时下单进度框大小" @pointerdown="onResizePointerDown" />
-      </template>
+      </div>
     </aside>
   </Teleport>
 </template>

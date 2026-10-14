@@ -93,6 +93,7 @@ declare module 'vue' {
     ElTimeline: typeof import('element-plus/es')['ElTimeline']
     ElTimelineItem: typeof import('element-plus/es')['ElTimelineItem']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    FloatingPanelLauncher: typeof import('./src/components/FloatingPanelLauncher.vue')['default']
     FootballBoard: typeof import('./src/components/match/FootballBoard.vue')['default']
     FootballLazyBook: typeof import('./src/components/football/FootballLazyBook.vue')['default']
     FootballLineLabel: typeof import('./src/components/football/FootballLineLabel.vue')['default']

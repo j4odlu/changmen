@@ -18,6 +18,7 @@ const props = defineProps<{
   executionEvents?: readonly OrderObservationEvent[];
   currentStages?: ReadonlyMap<ActiveBetLeg["side"], BetProgressStage[]>;
   expandedTimeline?: boolean;
+  visible?: boolean;
   accountName?: (event: OrderObservationEvent) => string;
 }>();
 const legs = computed(() => [...props.run.legs].sort((a, b) => a.side.localeCompare(b.side)));
@@ -73,7 +74,7 @@ function eventTime(at: number) { return new Date(at).toLocaleTimeString("zh-CN",
               <OrderExecutionTimeline
                 compact :title="`${legs[index]!.side}腿 · ${row.stage}`" :events="stageEvents(group.key, row.id, index)"
                 :started-at="run.startedAt" :expanded="Boolean(expandedTimeline)" :account-name="timelineAccountName"
-                :visible="openTimelines[timelineKey(group.key, row.id, index)] ?? Boolean(expandedTimeline)"
+                :visible="visible !== false && (openTimelines[timelineKey(group.key, row.id, index)] ?? Boolean(expandedTimeline))"
                 :attempt-labels="group.key === 'current' || row.id === 'result' || row.id === 'makeup' ? attemptLabels.get(legs[index]!.side) : undefined"
               />
               <small v-if="!expandedTimeline && stageEvents(group.key, row.id, index).length > 6">显示最近 6 条，可展开全部记录</small>

@@ -107,7 +107,9 @@
 .active-bet-run__resize-handle::after { content: ""; position: absolute; right: 4px; bottom: 4px; width: 8px; height: 8px; border-right: 2px solid #71829a; border-bottom: 2px solid #71829a; }
 @container (max-width: 410px) { .active-bet-run__legs { grid-template-columns: minmax(0, 1fr); } .active-bet-run__leg-basis { min-height: 0; } }
 
-.active-bet-run--collapsed { container-type: normal; }
+.active-bet-run__content { display: contents; }
+/* [changmen 扩展] 收起时仅保留圆形入口及状态角标。 */
+.active-bet-run--collapsed { container-type: normal; overflow: visible; background: transparent; border: 0; border-radius: 50%; box-shadow: none; backdrop-filter: none; }
 
 .active-bet-run__order-heading { display: flex; align-items: center; gap: 6px; }
 .active-bet-run__order-heading button { font-size: 10px; color: #7f91aa; padding: 2px 4px; }

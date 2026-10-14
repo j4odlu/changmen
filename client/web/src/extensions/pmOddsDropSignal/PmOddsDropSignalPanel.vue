@@ -4,6 +4,7 @@ import type { PmOddsDropVenueQuote } from "./venueSnapshot";
 import { storeToRefs } from "pinia";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useMatchStore } from "@/stores/matchStore";
+import FloatingPanelLauncher from "@/components/FloatingPanelLauncher.vue";
 import {
   clearPmOddsDropSignals,
   pmOddsDropSettings,
@@ -17,7 +18,6 @@ import {
 } from "./venueSnapshot";
 
 const PANEL_POS_KEY = "changmen:pm-odds-drop:panel-pos:v1";
-const PANEL_COLLAPSED_KEY = "changmen:pm-odds-drop:panel-collapsed:v1";
 const PANEL_SIZE_KEY = "changmen:pm-odds-drop:panel-size:v1";
 const PANEL_WIDTH = 500;
 const PANEL_HEIGHT = 560;
@@ -27,7 +27,7 @@ const PANEL_MIN_HEIGHT = 260;
 const matchStore = useMatchStore();
 const { matchs } = storeToRefs(matchStore);
 const panelEl = ref<HTMLElement | null>(null);
-const collapsed = ref(false);
+const collapsed = ref(true);
 const offset = ref<{ left: number; top: number } | null>(null);
 const panelSize = ref({ width: PANEL_WIDTH, height: PANEL_HEIGHT });
 const dragging = ref(false);
@@ -72,10 +72,10 @@ const maxReferenceOdds = computed({
 
 const panelStyle = computed<Record<string, string>>(() => {
   const style: Record<string, string> = {
-    width: `${panelSize.value.width}px`,
-    height: collapsed.value ? "auto" : `${panelSize.value.height}px`,
+    width: collapsed.value ? "56px" : `${panelSize.value.width}px`,
+    height: collapsed.value ? "56px" : `${panelSize.value.height}px`,
   };
-  if (offset.value) {
+  if (offset.value && !collapsed.value) {
     style.left = `${offset.value.left}px`;
     style.top = `${offset.value.top}px`;
   }
@@ -218,8 +218,6 @@ function clampPanelSize(width: number, height: number, left: number, top: number
 
 function normalizePanelGeometry() {
   if (collapsed.value) {
-    if (offset.value)
-      offset.value = clampOffset(offset.value.left, offset.value.top);
     return;
   }
   const rect = panelEl.value?.getBoundingClientRect();
@@ -234,7 +232,6 @@ function normalizePanelGeometry() {
 
 function restorePanelPrefs() {
   try {
-    collapsed.value = localStorage.getItem(PANEL_COLLAPSED_KEY) === "1";
     const raw = localStorage.getItem(PANEL_POS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as { left?: unknown; top?: unknown };
@@ -279,12 +276,8 @@ function persistPosition() {
 
 function toggleCollapsed() {
   collapsed.value = !collapsed.value;
-  try {
-    localStorage.setItem(PANEL_COLLAPSED_KEY, collapsed.value ? "1" : "0");
-  }
-  catch {
-    /* ignore */
-  }
+  if (collapsed.value)
+    return;
   void nextTick(() => {
     normalizePanelGeometry();
     persistPosition();
@@ -432,7 +425,16 @@ watch(monitorEnabled, (enabled) => {
     :style="panelStyle"
     aria-label="降赔率信号"
   >
-    <header class="pm-drop-panel__header" title="按住拖动" @pointerdown="onDragPointerDown">
+    <FloatingPanelLauncher
+      v-if="collapsed"
+      :label="`${venueLabel(referenceVenue)} 降赔率信号`"
+      :caption="venueLabel(referenceVenue)"
+      kind="odds"
+      :count="pmOddsDropSignals.length"
+      :active="monitorEnabled"
+      @open="toggleCollapsed"
+    />
+    <header v-else class="pm-drop-panel__header" title="按住拖动" @pointerdown="onDragPointerDown">
       <div class="pm-drop-panel__heading">
         <span class="pm-drop-panel__live-dot" :class="{ 'is-active': monitorEnabled }" />
         <strong>{{ venueLabel(referenceVenue) }} 降赔率信号</strong>
@@ -441,15 +443,16 @@ watch(monitorEnabled, (enabled) => {
       <button
         type="button"
         class="pm-drop-panel__icon-button"
-        :title="collapsed ? '展开' : '收起'"
-        :aria-expanded="!collapsed"
+        title="收起"
+        aria-label="收起降赔率信号"
+        :aria-expanded="true"
         @click.stop="toggleCollapsed"
       >
-        {{ collapsed ? "展开" : "—" }}
+        —
       </button>
     </header>
 
-    <template v-if="!collapsed">
+    <div v-show="!collapsed" class="pm-drop-panel__content">
       <nav class="pm-drop-panel__toolbar" aria-label="降赔率监测操作">
         <span>{{ monitorEnabled ? '正在监听实时赔率' : '监测已关闭' }}</span>
         <div class="pm-drop-panel__toolbar-actions">
@@ -578,7 +581,7 @@ watch(monitorEnabled, (enabled) => {
         aria-label="调整降赔率信号框大小"
         @pointerdown="onResizePointerDown"
       />
-    </template>
+    </div>
   </aside>
 </template>
 
@@ -607,6 +610,17 @@ watch(monitorEnabled, (enabled) => {
 
 .pm-drop-panel.is-dragging {
   cursor: grabbing;
+}
+
+.pm-drop-panel__content { display: contents; }
+/* [changmen 扩展] 收起时仅保留圆形入口及状态角标。 */
+.pm-drop-panel.is-collapsed {
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .pm-drop-panel__header {

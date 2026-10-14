@@ -19,11 +19,13 @@ const files=${JSON.stringify(backendFiles)};
 const sourceFiles=new Set(${JSON.stringify(backendSourceFiles)});
 const sources={}, hashes={};
 for(const file of files){const target=path.join(backend,file);if(!fs.existsSync(target)){hashes[file]=null;continue;}const text=fs.readFileSync(target,'utf8');hashes[file]=sha(text.replace(/\\r\\n/g,'\\n'));if(sourceFiles.has(file))sources[file]=text;}
-function assets(folder,prefix=''){return fs.readdirSync(folder,{withFileTypes:true}).flatMap(entry=>{const rel=prefix+entry.name,p=path.join(folder,entry.name);return entry.isDirectory()?assets(p,rel+'/'):[{file:rel,sha256:sha(fs.readFileSync(p)),bytes:fs.statSync(p).size}];});}
+function assets(folder,prefix=''){return fs.readdirSync(folder,{withFileTypes:true}).flatMap(entry=>{const rel=prefix+entry.name,p=path.join(folder,entry.name);return entry.isDirectory()?assets(p,rel+'/'):[{file:rel}];});}
 const allAssets=assets(frontend),byName=new Map();for(const row of allAssets){const name=path.basename(row.file);byName.set(name,[...(byName.get(name)||[]),row.file]);}
 const reachable=new Set(['index.html','deploy-version.txt']),queue=['index.html'];
 while(queue.length){const file=queue.shift();if(!/\\.(html|js|css|svg)$/.test(file))continue;const text=fs.readFileSync(path.join(frontend,file),'utf8');for(const name of text.match(/[A-Za-z0-9_-]+(?:\\.[a-zA-Z0-9_-]+)*\\.(?:js|css|png|svg|webp|woff2?|ttf|jpg|jpeg|gif|ico)/g)||[]){for(const asset of byName.get(name)||[]){if(!reachable.has(asset)){reachable.add(asset);queue.push(asset);}}}}
-console.log(JSON.stringify({...layout,capturedAt:new Date().toISOString(),hashes,sources,assets:allAssets,reachableAssets:allAssets.filter(row=>reachable.has(row.file))}));
+// [changmen 扩展] 历史 chunks 只列文件名；原先实际核验的全部可达资源仍读取完整字节并计算指纹。
+const checkedAssets=allAssets.filter(row=>reachable.has(row.file)).map(row=>{const target=path.join(frontend,row.file);return {...row,sha256:sha(fs.readFileSync(target)),bytes:fs.statSync(target).size};});
+console.log(JSON.stringify({...layout,capturedAt:new Date().toISOString(),hashes,sources,storedAssetCount:allAssets.length,assets:checkedAssets,reachableAssets:checkedAssets}));
 `;
 const captured = sshRead(remoteProgram);
 assertStable(layout, captured);
@@ -41,7 +43,8 @@ async function worker() {
     probes.push({ file: asset.file, sha256: asset.sha256, matched: true });
   }
 }
-await Promise.all(Array.from({ length: 6 }, worker));
+// [changmen 扩展] 避免大文件同时争抢带宽；每个资源仍须完整匹配。
+await Promise.all(Array.from({ length: 1 }, worker));
 assert(probes.some(row => row.file === "index.html") && probes.some(row => row.file === "deploy-version.txt"));
 const manifest = JSON.parse(fs.readFileSync("scripts/verification/vps-fok-baseline.json", "utf8"));
 const oldSources = gitSources(manifest.version, Object.keys(manifest.protectedFiles));

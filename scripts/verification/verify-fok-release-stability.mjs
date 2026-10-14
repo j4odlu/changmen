@@ -21,7 +21,8 @@ async function worker() {
     assertPublicAsset(asset, response.status, Buffer.from(await response.arrayBuffer()));
   }
 }
-await Promise.all(Array.from({ length: 6 }, worker));
+// [changmen 扩展] Match initial capture's serial reads; preserve every check and deadline.
+await Promise.all(Array.from({ length: 1 }, worker));
 assertStable(snapshot, readLayout());
 assert.deepEqual(localHashes(), audit.localHashes, "Local release inputs changed during checks");
 assert.deepEqual(checkInputHashes(), audit.checkInputHashes, "Local verification/test inputs changed during checks");

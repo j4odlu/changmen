@@ -49,6 +49,14 @@ beforeEach(() => {
   mocks.facts = [];
 });
 describe("实时浮窗接入 GTC 原单状态", () => {
+  it("shows the public reject countdown alongside GTC original fill facts", async () => {
+    Object.assign(mocks.runs[0]!, { phase: "settling", terminalAt: undefined, countdownUntil: Date.now() + 30_000 });
+    Object.assign(gtcProgress.records[0]!, { matched: "5", open: "20.97", terminal: false });
+    const html = await panel();
+    expect(html).toMatch(/等待确认 (?:29|30)s/);
+    expect(html).toContain("部分成交挂单中");
+    expect(html).toContain("成交 5 / 25.97 份；挂单 20.97 份");
+  });
   it("integrates FOK leg summaries and timelines into the original comparison table", async () => {
     gtcProgress.records = [];
     mocks.facts = mocks.runs[0]!.legs.flatMap((leg, index) => {

@@ -5,8 +5,8 @@ const DIAGNOSTIC_NUMBER = "(\\d{1,8}(?:\\.\\d{1,8})?)(?![\\d.])";
 function diagnosticNumber(text: string, prefix: string, suffix = "") {
   return new RegExp(`${prefix}${DIAGNOSTIC_NUMBER}${suffix}`).exec(text)?.[1];
 }
-/** [changmen 扩展] RAY desc 是场馆错误说明，仅允许简短人类文本进入观察记录。 */
-function rayFailureDescription(response: unknown): { text?: string; supplied: boolean } {
+/** [changmen 扩展] 场馆错误说明仅允许简短人类文本进入观察记录。 */
+function failureDescription(response: unknown): { text?: string; supplied: boolean } {
   if (!response || typeof response !== "object") return { supplied: false };
   const desc = (response as Record<string, unknown>).desc;
   if (desc == null || desc === "") return { supplied: false };
@@ -22,7 +22,7 @@ function rayFailureDescription(response: unknown): { text?: string; supplied: bo
 }
 /** [changmen 扩展] 拒单 comment 沿用场馆说明白名单，不依赖 POST 的业务码。 */
 export function rayRejectFailureEvidence(reason: unknown): Partial<OrderObservationEvent> {
-  const description = rayFailureDescription({ desc: reason });
+  const description = failureDescription({ desc: reason });
   return { reasonCode: "venue_rejected", errorCategory: "venue_reject", safeSummary: description.text
     ? `RAY 拒单原因：${description.text}` : "RAY 已拒单，未记录可安全展示的场馆说明" };
 }
@@ -58,6 +58,10 @@ function specificFailure(text: string, headline: string): FailureReason | undefi
     const minimum = diagnosticNumber(text, "最小下单份数：\\s*");
     return ["order_size", "below_minimum_size", `买入份数低于场馆最小要求${minimum ? `（${shares ? `预计 ${shares} 份，` : ""}至少 ${minimum} 份）` : ""}`];
   }
+  // [changmen 扩展] PB 的比较式只提取白名单数值，其他赔率错误保留安全的原始说明。
+  const oddsComparison = new RegExp(`^赔率(?:下降|降低)\\s+${DIAGNOSTIC_NUMBER}\\s*<\\s*${DIAGNOSTIC_NUMBER}$`).exec(headline.trim());
+  if (oddsComparison)
+    return ["quote", "odds_changed", `赔率下降：当前赔率 ${oddsComparison[1]}，低于检测赔率 ${oddsComparison[2]}，已阻止提交`];
   const rules: Array<[RegExp, FailureReason]> = [
     [/^GTC 签单舍入与含费预算后利润不足：/, ["profit", "gtc_profit_below_threshold", "GTC 签单舍入及费用计入后利润不足，未发送双腿"]],
     [/^GTC 签单本金与份数舍入后利润不足：/, ["profit", "gtc_profit_below_threshold", "GTC 签单本金与份数舍入后利润不足，未发送双腿"]],
@@ -105,16 +109,25 @@ function specificFailure(text: string, headline: string): FailureReason | undefi
     [/凭证缺少.*API Key/i, ["authentication", "missing_api_credentials", "缺少场馆 API 凭证，请重新通过插件采集"]],
     [/凭证缺少 walletAddress/i, ["authentication", "missing_wallet_address", "账号凭证缺少钱包地址，请检查账号设置"]],
     [/suspend|closed|盘口.*关闭|封盘|停盘/i, ["market_closed", "market_closed", "盘口已关闭或暂停，暂不可下单"]],
-    [/赔率.*(?:降低|下降|变化|不在|不符合)|(?:降低|下降).*赔率/i, ["quote", "odds_changed", "当前赔率发生变化或不满足策略要求，已阻止提交"]],
   ];
-  return rules.find(([pattern]) => pattern.test(headline))?.[1];
+  const specific = rules.find(([pattern]) => pattern.test(headline))?.[1];
+  if (specific)
+    return specific;
+  if (/赔率.*(?:降低|下降|变化|不在|不符合)|(?:降低|下降).*赔率/i.test(headline)) {
+    const description = failureDescription({ desc: headline }).text;
+    const fallback = /降低|下降/.test(headline) ? "当前赔率下降"
+      : /不在/.test(headline) ? "当前赔率不在要求范围内"
+        : /不符合/.test(headline) ? "当前赔率不符合要求" : "当前赔率发生变化";
+    return ["quote", "odds_changed", description || `${fallback}，原始错误未提供可展示的具体数值`];
+  }
+  return undefined;
 }
 
-/** [changmen 扩展] 明确原因优先；未知错误仍只分类，防止敏感信息进入事实记录。 */
+/** [changmen 扩展] 明确原因优先；其他错误保留安全的简短说明，不复制诊断全文或凭证。 */
 export function observationFailureEvidence(message: unknown, response?: unknown, error?: unknown, provider?: string): Partial<OrderObservationEvent> {
   try {
     const text = typeof message === "string" ? message : "";
-    const rayDescription = provider === "RAY" ? rayFailureDescription(response) : undefined;
+    const rayDescription = provider === "RAY" ? failureDescription(response) : undefined;
     // 诊断段可能包含“赔率、tokenId”等字段，不能反过来改变主错误的分类。
     const headline = text.split(/\r?\n/).find(line => line.trim()) || "";
     const classificationHeadline = rayDescription?.text || headline;
@@ -132,7 +145,7 @@ export function observationFailureEvidence(message: unknown, response?: unknown,
     ];
     const matched = cases.find(([pattern]) => pattern.test(classificationHeadline));
     const fields: Partial<OrderObservationEvent> = { errorCategory: specific?.[0] || matched?.[1] || "unclassified",
-      safeSummary: specific?.[2] || matched?.[2] || "执行失败，未记录可识别的具体原因",
+      safeSummary: specific?.[2] || failureDescription({ desc: classificationHeadline }).text || matched?.[2] || "执行失败，未记录可识别的具体原因",
       ...(specific ? { reasonCode: specific[1] } : {}) };
     if (response && typeof response === "object") {
       const code = (response as Record<string, unknown>).code;

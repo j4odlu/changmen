@@ -26,7 +26,7 @@ vi.mock("@/components/order/OrderMakeupStatusBar.vue", () => ({ default: { rende
 vi.mock("@/components/order/RayLinkMonitorCard.vue", () => ({ default: { render: () => null } }));
 const date = "2026-10-11";
 const now = new Date(`${date}T10:00:00+08:00`).getTime();
-const zero = () => ({ ...createGtcExecution("zero", "owner", "wallet", "maker", { playerId: 1, shares: "10", price: "0.5", linkId: -now,
+const zero = () => ({ ...createGtcExecution("zero", "1", "wallet", "maker", { playerId: 1, shares: "10", price: "0.5", linkId: -now,
   orderHash: "zero-original", match: "zero-original-match", bet: "Full", item: "Home" } as GtcPlan, now),
   submit: "accepted" as const, pmAuthorized: true, orderId: "zero-original", open: "10",
   order: { id: "zero-original", original: "10", matched: "0", status: "LIVE", tradeIds: [] } });
@@ -46,7 +46,7 @@ async function render(embedded = false, rows?: OrderRow[]) {
   expect(JSON.stringify([...orders.orders])).toBe(before);
   return html;
 }
-beforeEach(() => { gtcProgress.owner = "owner"; gtcProgress.records = [zero()]; gtcProgress.error = ""; });
+beforeEach(() => { gtcProgress.owner = "1"; gtcProgress.records = [zero()]; gtcProgress.error = ""; });
 it("renders the zero-fill original once in the ordinary list and the same Link group as its other leg", async () => {
   const positive = { ...zero(), id: "positive", matched: "1", orderId: "positive-original", plan: { ...zero().plan, linkId: -(now - 1000), match: "legacy-positive-match" } };
   gtcProgress.records.push(positive);
@@ -66,4 +66,11 @@ it("leaves ordinary FOK rows alone when there is no zero-fill execution", async 
 });
 it("does not add current-user zero-fill cards to an embedded account view", async () => {
   const html = await render(true); expect(html).toContain("financial-fok-match"); expect(html).not.toContain("zero-original-match");
+});
+it("never adds a different user's execution beside the ordinary FOK rows", async () => {
+  gtcProgress.owner = "foreign";
+  gtcProgress.records = [{ ...zero(), owner: "foreign" }];
+  const html = await render();
+  expect(html).toContain("financial-fok-match");
+  expect(html).not.toContain("zero-original-match");
 });

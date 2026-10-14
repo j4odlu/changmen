@@ -10,6 +10,7 @@ import { checkOrdinaryOrderView } from "./fok-order-view-fixture.mjs";
 import { specializeFokSource } from "./fok-source-specialization.mjs";
 import { restoreOrdersConsumerCompatibility } from "./orders-consumer-boundary.mjs";
 import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
+import { restoreGtcSnapshotMetadata } from "./pm-manual-sell-split-boundary.mjs";
 
 export const notificationCommit = "23f2846bee1ff0a91811f49f9a5d5ac2d78fccdf";
 const root = "client/web/src/stores/betting/autoBet/";
@@ -124,7 +125,7 @@ export function verifyProtectedSource(file, current, original, readSource = targ
     for (const [name, module] of [["preserveOrderMode", "orderMetadata"], ["saveRowsByExecution", "saveRows"]]) {
       restored = replaceExact(restored, `import { ${name} } from "../orderModes/${module}.js";`);
       const helper = `server/backend/core/orderModes/${module}.js`;
-      assert.equal(normalize(readSource(helper)), gitSource("4dd2c5e967fbd2101e3c848f2d48c221ec7c4e72", helper), "complete existing committed mode helper");
+      assert.equal(normalize(module === "orderMetadata" ? restoreGtcSnapshotMetadata(readSource(helper)) : readSource(helper)), gitSource("4dd2c5e967fbd2101e3c848f2d48c221ec7c4e72", helper), "complete existing committed mode helper");
     }
     restored = replaceExact(restored, "preserveOrderMode(raw, prevRaw, o, existingByOrderId);");
     restored = replaceExact(restored, "if (rows.some(row => row.raw?.pmGtcExecutionId)) return saveRowsByExecution(rows);");

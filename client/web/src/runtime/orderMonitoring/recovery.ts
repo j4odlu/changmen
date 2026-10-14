@@ -4,7 +4,7 @@ import type { GtcRecoverOrders, GtcRecoverSection } from "@changmen/shared/pm_gt
 import type { OrderRow } from "@/types/order";
 import { GTC_RECOVERY_KNOWN_LIMIT } from "@changmen/shared/pm_gtc_recovery";
 import { applyRecoveredGtcRecords, captureGtcSession, financialOrders, gtcProgress, knownGtcRevisions, settlement } from "@/orderModes/gtc/executionState";
-import { recoverGtc, resetGtcRecoveryApi } from "@/orderModes/gtc/recoveryApi";
+import { recoverGtc } from "@/orderModes/gtc/recoveryApi";
 import { financialRecoveryKey, financialResultKey, needsFinancialRecovery, recoveryRetryDelay, unchangedDelay } from "./recoveryPolicy";
 
 interface RecoveryRead { key: string; result?: string; at: number; unchanged: number; failures: number }
@@ -129,6 +129,5 @@ export function recoverMonitorRecords(): Promise<void> {
 }
 export function resetMonitorRecovery(): void {
   generation++; pending = undefined; reads.clear(); readIssues.clear();
-  resetGtcRecoveryApi();
   discoverAt = 0; discoveryFailures = 0; discoveryUnchanged = 0; discovered = false; discoveryIssue = "";
 }

@@ -21,9 +21,9 @@ const files = [
 for (const file of files) {
   assert.equal(typeof snapshot.sources[file], "string", `Missing actual VPS source: ${file}`);
   const parse = text => ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  verifyActualPublicModule(file, fs.readFileSync(file, "utf8"), snapshot.sources[file]);
+  const verified = verifyActualPublicModule(file, fs.readFileSync(file, "utf8"), snapshot.sources[file]);
   const previous = parse(gitSource(snapshot.immutableBaseline, file));
-  const current = parse(fs.readFileSync(file, "utf8"));
+  const current = parse(verified.source);
   let removedImports = 0;
   let removedBranches = 0;
   let replacedCalls = 0;

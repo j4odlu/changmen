@@ -1,37 +1,8 @@
-import type { GtcExecution } from "@changmen/shared/pm_gtc";
-/** [changmen 扩展] 正常恢复只调用聚合接口；旧后台明确不支持时才使用兼容读取。 */
-import type { GtcRecoverRequest, GtcRecoverResult, GtcRecoverSection } from "@changmen/shared/pm_gtc_recovery";
+/** [changmen 扩展] 配套前后端只使用聚合恢复；不支持或失败由各分区退避，不降级扫描旧列表。 */
+import type { GtcRecoverRequest, GtcRecoverResult } from "@changmen/shared/pm_gtc_recovery";
 import type { OrderRow } from "@/types/order";
 import { getAuthSessionVersion, isAuthSessionCurrent, post, unwrap } from "@/api/client";
-import { needsFinancialRecovery } from "@/runtime/orderMonitoring/recoveryPolicy";
-import { listGtc } from "./api";
-import { loadGtcMonitorOrders } from "./ordersApi";
-
-let legacySession: string | number | undefined;
 const failure = (error: unknown) => ({ ok: false as const, message: error instanceof Error ? error.message : "GTC 恢复响应无效" });
-
-async function legacy(request: GtcRecoverRequest, isCurrent: () => boolean): Promise<GtcRecoverResult<OrderRow>> {
-  const executionsTask: Promise<GtcRecoverSection<GtcExecution> | null> = request.discover
-    ? listGtc(undefined, Object.fromEntries(Object.entries(request.knownRevisions).slice(0, 1000)))
-        .then(rows => ({ ok: true as const, rows }))
-        .catch(failure)
-    : Promise.resolve(null);
-  const ordersTask = request.monitorIds.length
-    ? loadGtcMonitorOrders(request.monitorIds, isCurrent).then(rows => ({ ok: true as const, ids: request.monitorIds, unchangedIds: [], rows })).catch(error => ({ ...failure(error), ids: request.monitorIds, unchangedIds: [] }))
-    : Promise.resolve(null);
-  const [executions, requestedOrders] = await Promise.all([executionsTask, ordersTask]);
-  const orders = requestedOrders ? [requestedOrders] : [];
-  if (isCurrent() && request.recoverDiscovered && executions?.ok) {
-    const skipped = new Set([...request.monitorIds, ...request.skipMonitorIds]);
-    const ids = executions.rows.filter(row => !skipped.has(row.id) && needsFinancialRecovery(row, [])).map(row => row.id);
-    for (let offset = 0; offset < ids.length; offset += 1000) {
-      const batch = ids.slice(offset, offset + 1000);
-      try { orders.push({ ok: true, ids: batch, unchangedIds: [], rows: await loadGtcMonitorOrders(batch, isCurrent) }); }
-      catch (error) { orders.push({ ...failure(error), ids: batch, unchangedIds: [] }); }
-    }
-  }
-  return { executions, orders };
-}
 
 function validate(result: GtcRecoverResult<OrderRow>, request: GtcRecoverRequest): GtcRecoverResult<OrderRow> {
   let executions = request.discover ? result?.executions : null;
@@ -72,25 +43,9 @@ export async function recoverGtc(request: GtcRecoverRequest, isCurrent: () => bo
   const current = () => isAuthSessionCurrent(session) && isCurrent();
   if (!current())
     throw new Error("GTC 恢复登录状态已变更");
-  let result: GtcRecoverResult<OrderRow>;
-  if (legacySession === session) {
-    result = await legacy(request, current);
-  }
-  else {
-    const response = await post<GtcRecoverResult<OrderRow>>("Pm_GtcRecover", { ...request }, "", { errorTip: false });
-    if (!current())
-      throw new Error("GTC 恢复登录状态已变更");
-    if (response.success === 0 && response.msg === "未知预测市场 action: Pm_GtcRecover" && !response.code) {
-      legacySession = session;
-      result = await legacy(request, current);
-    }
-    else {
-      result = unwrap(response);
-    }
-  }
+  const response = await post<GtcRecoverResult<OrderRow>>("Pm_GtcRecover", { ...request }, "", { errorTip: false });
   if (!current())
     throw new Error("GTC 恢复登录状态已变更");
+  const result = unwrap(response);
   return validate(result, request);
 }
-
-export function resetGtcRecoveryApi(): void { legacySession = undefined; }

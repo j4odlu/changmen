@@ -5,9 +5,13 @@ import { gtcOrderProjection } from "@/orderModes/gtc/executionProjection";
 import { beginRayOrderObservation } from "@/runtime/orderMonitoring/rayOrders";
 import { useAccountStore } from "@/stores/accountStore";
 import { acceptGtc, cancelGtc, currentGtc, gtcProgress, pollGtc, pollGtcOther, refreshGtcRecords, startGtcRuntime, stopGtcRuntime } from "./runtime";
+import { mockUnifiedGtcRecovery } from "@/test/gtcRecoverFixture";
+import { loadGtcMonitorOrders } from "./ordersApi";
 
 const mocks = vi.hoisted(() => ({ cancel: vi.fn(), read: vi.fn(), otherRead: vi.fn(), command: vi.fn(), list: vi.fn(), mark: vi.fn(), calls: [] as string[], orders: new Map<number, import("@/types/order").OrderRow[]>() }));
-vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true, post: async () => ({ success: 0, msg: "未知预测市场 action: Pm_GtcRecover" }) }));
+vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true,
+  post: (action: string, request: import("@changmen/shared/pm_gtc_recovery").GtcRecoverRequest) => mockUnifiedGtcRecovery(action, request, mocks.list, loadGtcMonitorOrders),
+  unwrap: (response: { info: unknown }) => response.info }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: "owner", extensionPrefs: {} }) }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ findAccount: (id: number) => ({ provider: id === 2 ? "RAY" : "Polymarket", accountId: id }) }) }));
 vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: mocks.orders }) }));

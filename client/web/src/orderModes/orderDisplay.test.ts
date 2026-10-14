@@ -96,10 +96,10 @@ describe("one original produces one ordinary order card", () => {
         current.released = true;
         gtcProgress.records = [current];
         const beforeListRefresh = await render([ray]);
-        // 独立显示发布沿用已释放正成交历史的现有排除规则，不扩大其它 GTC 展示范围。
-        expect(beforeListRefresh.match(/class="order"/g)).toHaveLength(1);
+        // 完整官方正成交事实在副本尚未到达时保留展示，仍不改变 FOK 或财务行。
+        expect(beforeListRefresh.match(/class="order"/g)).toHaveLength(2);
         expect(beforeListRefresh.match(/data-link-id=/g)).toHaveLength(1);
-        expect(beforeListRefresh).not.toContain("全部成交");
+        expect(beforeListRefresh).toContain("全部成交");
         expect(gtcPendingDisplayRows([], [current], "2026-10-09", 0)).toEqual([]);
       }
       gtcProgress.records = [current];

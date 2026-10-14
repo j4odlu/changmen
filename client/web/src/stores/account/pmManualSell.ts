@@ -252,6 +252,47 @@ async function persistFilledSell(
   buyRow: OrderRow,
   ordersToSave: VenueOrder[],
 ): Promise<boolean> {
+  // [changmen 扩展] 只有带持久 GTC 身份的原单使用专用保存；普通卖出保留原函数体。
+  if (buyRow.PmGtcExecutionId)
+    return persistGtcFilledSell(account, buyRow, ordersToSave);
+  const sessionVersion = getAuthSessionVersion();
+  const scope = pmSubmitScope(account);
+  const current = () => isAuthSessionCurrent(sessionVersion) && scope === pmSubmitScope(account);
+  try {
+    await saveOrders(account, ordersToSave);
+    return current();
+  }
+  catch (saveErr) {
+    if (!current()) return false;
+    try {
+      await saveOrders(account, ordersToSave);
+      return current();
+    }
+    catch {
+      if (!current()) return false;
+      const id = String(buyRow.OrderID ?? "");
+      const closing = closingByBuyId.value.get(id);
+      if (closing) {
+        const next = new Map(closingByBuyId.value);
+        next.set(id, { ...closing, ordersToSave });
+        setClosingMap(next);
+      }
+      // 勿立刻 fetchOrders：会冲掉本地乐观已平仓，导致按钮可再卖 → 双卖
+      applyManualSellOrdersLocally(buyRow, ordersToSave);
+      scheduleResumePmManualSellClosings();
+      ElMessage.error(
+        `链上已平仓，但订单落库失败：${saveErr instanceof Error ? saveErr.message : String(saveErr)}。已按已平仓展示，请稍后刷新。`,
+      );
+      return false;
+    }
+  }
+}
+
+async function persistGtcFilledSell(
+  account: PlatformAccount,
+  buyRow: OrderRow,
+  ordersToSave: VenueOrder[],
+): Promise<boolean> {
   const sessionVersion = getAuthSessionVersion();
   const scope = pmSubmitScope(account);
   const current = () => isAuthSessionCurrent(sessionVersion) && scope === pmSubmitScope(account);

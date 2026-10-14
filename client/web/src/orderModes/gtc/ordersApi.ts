@@ -5,11 +5,11 @@ import type { OrderRow } from "@/types/order";
 import { getAuthSessionVersion, isAuthSessionCurrent, post, unwrap } from "@/api/client";
 import { tagKnownGtcVenueOrders } from "./executionProjection";
 import { reconcileGtcSellFinancials } from "./sellFinancials";
-import { readLegacyGtcMonitorOrders, validateMonitorIds } from "./legacyMonitorOrders";
 
 /** [changmen 扩展] 监控恢复按原单身份取数，不受侧栏日期限制，不建立第二份财务列表。 */
 export async function loadGtcMonitorOrders(ids: string[], isCurrent: () => boolean = () => true): Promise<OrderRow[]> {
-  validateMonitorIds(ids);
+  if (!Array.isArray(ids) || ids.some(id => typeof id !== "string" || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)))
+    throw new Error("GTC 监控恢复执行 ID 无效");
   const session = getAuthSessionVersion();
   const checkCurrent = () => {
     if (!isAuthSessionCurrent(session) || !isCurrent())
@@ -25,16 +25,10 @@ export async function loadGtcMonitorOrders(ids: string[], isCurrent: () => boole
   for (let offset = 0; offset < ids.length; offset += 1000) {
     const batch = ids.slice(offset, offset + 1000);
     const response = await read<OrderRow[]>("Pm_GtcMonitorOrders", { ids: batch });
-    if (response.success === 0 && response.msg === "未知预测市场 action: Pm_GtcMonitorOrders" && !response.code) {
-      rows.push(...await readLegacyGtcMonitorOrders(batch, async (action, body) =>
-        unwrap(await read(action, body))));
-    }
-    else {
-      const orders = unwrap(response);
-      if (!Array.isArray(orders))
-        throw new Error("GTC 监控恢复订单响应无效");
-      rows.push(...orders);
-    }
+    const orders = unwrap(response);
+    if (!Array.isArray(orders))
+      throw new Error("GTC 监控恢复订单响应无效");
+    rows.push(...orders);
   }
   checkCurrent();
   return rows;

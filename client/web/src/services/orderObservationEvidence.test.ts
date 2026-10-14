@@ -45,6 +45,30 @@ describe("旁路失败证据", () => {
     expect(JSON.stringify(failure)).not.toContain("SECRET");
     const decline = observationFailureEvidence("RAY 赔率下降：检测赔率 1.65，当前赔率 1.6，超过允许差值 0.01");
     expect(decline.reasonCode).toBe("odds_changed");
+    expect(decline.safeSummary).toBe("RAY 赔率下降：检测赔率 1.65，当前赔率 1.6，超过允许差值 0.01");
+  });
+  it.each([
+    ["赔率下降 2 < 2.05", "赔率下降：当前赔率 2，低于检测赔率 2.05，已阻止提交"],
+    ["赔率下降至 1.8", "赔率下降至 1.8"],
+    ["赔率不在允许范围 1.5 至 2.5，当前赔率 1.4", "赔率不在允许范围 1.5 至 2.5，当前赔率 1.4"],
+    ["赔率不符合最低赔率 1.6 的要求", "赔率不符合最低赔率 1.6 的要求"],
+    ["赔率发生变化：检测赔率 2.1，当前赔率 2", "赔率发生变化：检测赔率 2.1，当前赔率 2"],
+  ])("preserves the concrete odds failure: %s", (message, summary) => {
+    const evidence = observationFailureEvidence(`${message}\nprivateKey=SECRET signature=PRIVATE`);
+    expect(evidence).toMatchObject({ reasonCode: "odds_changed", errorCategory: "quote", safeSummary: summary });
+    expect(JSON.stringify(evidence)).not.toMatch(/SECRET|PRIVATE|signature/);
+  });
+  it("keeps a safe venue error instead of replacing it with a broad category", () => {
+    expect(observationFailureEvidence("平台最低投注金额为 50").safeSummary).toBe("平台最低投注金额为 50");
+    expect(observationFailureEvidence("当前赔率:1.55").safeSummary).toBe("当前赔率:1.55");
+  });
+  it.each([
+    "赔率下降 token=SECRET", "赔率变化 https://venue.example/auth", "赔率不符合 <html>PRIVATE</html>",
+    "赔率下降 12345678901234567890 < 2.05", "赔率下降 2 < 12345678901234567890",
+  ])("does not expose unsafe details or partially extract oversized odds: %s", message => {
+    const evidence = observationFailureEvidence(message);
+    expect(evidence.safeSummary).toContain("原始错误未提供可展示的具体数值");
+    expect(evidence.safeSummary).not.toMatch(/SECRET|PRIVATE|https|123456789|当前赔率 2，/);
   });
   it("explains depth and minimum size with whitelisted numeric diagnostics", () => {
     expect(observationFailureEvidence("Polymarket FOK 盘口深度不足\n- 需要 20.00 USDC（金额 10.00 × 2）\n- 成交价 0.44 及更优可立即成交约 8.50 USDC").safeSummary)

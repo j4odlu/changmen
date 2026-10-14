@@ -71,6 +71,7 @@ beforeEach(() => {
   setActivePinia(createPinia()); clearPmTickStateForTests(); resetPmArbPriceBufferPrefsForTests();
   resetMapBetMuteForTests();
 });
+
 afterEach(() => {
   for (const app of apps.splice(0)) app.unmount();
   resetPmArbPriceBufferPrefsForTests(); vi.restoreAllMocks();

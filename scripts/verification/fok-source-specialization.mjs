@@ -5,11 +5,12 @@ import { readRelocatedPmFokSource } from "./pm-fok-source-relocation.mjs";
 import { readRelocatedPmFunctionalSource } from "./pm-functional-source-relocation.mjs";
 import { replaceExact } from "./fok-exact-boundaries.mjs";
 import { restorePublishedPmSettlement } from "./pm-published-settlement-boundary.mjs";
+import { restorePmManualSellSplit } from "./pm-manual-sell-split-boundary.mjs";
 
 // [changmen 扩展] 业务特化只识别两个完整隔离边界；登记的 PM 移动模块恢复路径后仍全文比较，固定基线不变。
 export function specializeFokSource(file, source, readSource) {
   const readPublished = target => restorePublishedPmSettlement(target, (readSource ?? (path => fs.readFileSync(path, 'utf8')))(target));
-  const text = readRelocatedPmFokSource(file, readRelocatedPmFunctionalSource(file, restorePublishedPmSettlement(file, source), readPublished), readPublished);
+  const text = restorePmManualSellSplit(file, readRelocatedPmFokSource(file, readRelocatedPmFunctionalSource(file, restorePublishedPmSettlement(file, source), readPublished), readPublished));
   function removeOnce(value, fragment) {
     assert.equal(value.split(fragment).length, 2, `${file}: expected exactly one known extension`);
     return value.replace(fragment, "");

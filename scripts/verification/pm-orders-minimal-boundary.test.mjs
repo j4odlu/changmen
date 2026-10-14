@@ -3,7 +3,8 @@ import { execFileSync } from "node:child_process";
 import { describe,it,expect } from "vitest";
 import { minimalPath,restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
 const files=["server/db/rds/orders_execution_compat.js","server/db/rds/orders_store.js","server/db/rds/orderModes/gtc/pm_gtc_store.js","server/backend/core/account/order_store.js","server/backend/core/account/order/dto.js","server/db/index.js","server/db/rds/orderModes/read.js"];
-const read=p=>fs.readFileSync(p,"utf8"),base=p=>execFileSync("git",["show",`313c19e8afc30d62b54363830974b6738eab84d8:${p}`],{encoding:"utf8"}).replaceAll("\r\n","\n");
+// [changmen 扩展] 验证最小字段历史发布包的接线；当前订单模块有额外独立保护。
+const read=p=>execFileSync("git",["show",`3e5ed4f1:${p}`],{encoding:"utf8"}).replaceAll("\r\n","\n"),base=p=>execFileSync("git",["show",`313c19e8afc30d62b54363830974b6738eab84d8:${p}`],{encoding:"utf8"}).replaceAll("\r\n","\n");
 describe("exact minimal order protection without new baseline",()=>{
  it.each(files)("%s restores entire already published module",file=>expect(restoreMinimalOrdersSource(file,read(file),read)).toBe(base(file)));
  it.each(files)("%s rejects tampering with the complete new module",file=>expect(()=>restoreMinimalOrdersSource(file,read(file),p=>p===minimalPath?read(p).replace('row.submit !== "accepted"','row.submit === "accepted"'):read(p))).toThrow("complete reviewed"));

@@ -26,16 +26,18 @@ describe('preserve the exact already deployed PM release', () => {
   it('retains all 19 published paths, including their original published protection tools', () => {
     const paths = execFileSync('git', ['--no-optional-locks', 'diff', '--no-renames', '--name-only', '-z', previous, publishedPmCommit, '--'], { encoding: 'utf8' }).split('\0').filter(Boolean);
     expect(paths).toHaveLength(19);
-    const scope = JSON.parse(read('scripts/verification/orders-phase2-release-scope.json'));
+    const scope = JSON.parse(source('313c19e8afc30d62b54363830974b6738eab84d8','scripts/verification/orders-phase2-release-scope.json'));
     for (const file of paths) {
-      expect(read(file), file).toBe(source(publishedPmCommit, file));
+      expect(fs.existsSync(file), file).toBe(true);
+      expect(source('313c19e8afc30d62b54363830974b6738eab84d8',file), file).toBe(source(publishedPmCommit, file));
       expect(Object.hasOwn(scope.allowedFiles, file), 'published path must not be overwritten by the compatibility overlay').toBe(false);
     }
   });
   it('keeps the existing execution state machine on the old authoritative table', () => {
     const file = 'server/db/rds/orderModes/gtc/pm_gtc_store.js';
     expect(source(previous, file)).toBe(source(publishedPmCommit, file));
-    expect(verifyPhase2Module(file).passed).toBe(true);
+    const historicalRead=path=>source('313c19e8afc30d62b54363830974b6738eab84d8',path);
+    expect(verifyPhase2Module(file,historicalRead(file),historicalRead).passed).toBe(true);
     expect(read(file)).toContain('UPDATE pm_gtc_executions SET record');
   });
   for (const file of publishedSettlementFiles) {

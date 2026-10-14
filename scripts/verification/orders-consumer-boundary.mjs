@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { restoreRayOrderMonitorSource } from "./ray-order-monitor-boundary.mjs";
 import { createHash } from "node:crypto";
 import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
+import { execFileSync } from "node:child_process";
 
 export const ordersCompatPath = "server/db/rds/orders_execution_compat.js";
 export const ordersCompatDigest = "bfe79069c035b61970c73411877042bfac6aecc2b93891bce9acb3235cfa977d";
@@ -17,11 +18,18 @@ function once(source, before, after) {
   assert.equal(source.split(before).length, 2, `exact orders compatibility boundary: ${before}`);
   return source.replace(before, after);
 }
-export function restoreOrdersConsumerCompatibility(source, readSource) {
+export function restoreOrdersConsumerCompatibility(source, readSource, historicalVersion) {
   source = restoreMinimalOrdersSource("server/db/rds/orders_store.js", source, readSource);
   verifyOrdersCompatHelper(readSource);
   source = once(source, "import { DELETE_FINANCIAL_ORDERS_SQL, financialDeletionIds, financialOrdersHookRow, financialOrdersRelation, ordersExecutionCompatibilityEnabled, ordinaryOrdersUpsertSql } from \"./orders_execution_compat.js\";\n", "");
-  source = restoreRayOrderMonitorSource(source);
+  if (historicalVersion) {
+    assert.equal(historicalVersion, "313c19e8afc30d62b54363830974b6738eab84d8", "only the original phase2 package may use the pre-RAY decoder");
+    const fixed = execFileSync("git", ["show", `${historicalVersion}:server/db/rds/orders_store.js`], { encoding: "utf8" }).replaceAll("\r\n", "\n");
+    // import removal above is deterministic and must also be applied to the immutable historical module.
+    const original = once(fixed, "import { DELETE_FINANCIAL_ORDERS_SQL, financialDeletionIds, financialOrdersHookRow, financialOrdersRelation, ordersExecutionCompatibilityEnabled, ordinaryOrdersUpsertSql } from \"./orders_execution_compat.js\";\n", "");
+    assert.equal(source, original, "complete original phase2 orders module before RAY migration");
+  }
+  else source = restoreRayOrderMonitorSource(source);
   for (const [args, count, relation] of [["", 33, "orders"], ["\"o\"", 7, "orders o"], ["\"pm\"", 1, "orders pm"], ["\"other\"", 1, "orders other"]]) {
     const exact = `\${financialOrdersRelation(${args})}`;
     assert.equal(source.split(exact).length - 1, count, `fixed financial relation occurrences: ${args}`);

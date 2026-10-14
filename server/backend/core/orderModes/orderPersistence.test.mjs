@@ -79,4 +79,28 @@ describe("order mode metadata reuses the ordinary strict read", () => {
     expect(row).toMatchObject({ PmGtcExecutionId: "execution", PmShares: 9.29, PmGtcBuyShares: 9.29, BetMoney: 49.08353 });
     expect(row.Odds).toBeUndefined(); expect(mocks.identities).not.toHaveBeenCalled();
   });
+  it("native refresh retains the persisted snapshot rather than trusting client metadata", async () => {
+    const previous = canonical();
+    previous.raw.pmGtcOrderSnapshot = { version: 1, executionRevision: 4, cumulativeMatchedShares: "9.29", openShares: "0", feeUsdc: "0" };
+    mocks.previous.mockResolvedValue([previous]);
+    await saveOrder(1, [{ ...buy("gtc"), pmGtcOrderSnapshot: { executionRevision: 999, cumulativeMatchedShares: "999" } }], "owner");
+    const saved = mocks.gtc.mock.calls[0][0][0];
+    expect(saved.raw.pmGtcOrderSnapshot).toEqual(previous.raw.pmGtcOrderSnapshot);
+    expect(mocks.previous).toHaveBeenCalledOnce(); expect(mocks.identities).not.toHaveBeenCalled();
+    expect(rowToOrder({ ...previous, raw: { ...previous.raw, pmGtcOrderSnapshot: undefined } })).toEqual(rowToOrder(previous));
+  });
+  it("ordinary inputs cannot create a snapshot, including a verified GTC identity without one", async () => {
+    const incoming = { ...buy(), pmGtcOrderSnapshot: { version: 1, cumulativeMatchedShares: "999" } };
+    await saveOrder(1, [incoming], "owner");
+    expect(mocks.ordinary.mock.calls[0][0][0].raw).not.toHaveProperty("pmGtcOrderSnapshot");
+    verifyOrderExecution(incoming, "execution");
+    await saveOrder(1, [incoming], "owner");
+    expect(mocks.ordinary.mock.calls[1][0][0].raw).not.toHaveProperty("pmGtcOrderSnapshot");
+  });
+  it("a sell inherits identity but not the parent buy snapshot", async () => {
+    const previous = canonical(); previous.raw.pmGtcOrderSnapshot = { version: 1, requestedShares: "20" };
+    mocks.previous.mockResolvedValue([previous]);
+    await saveOrder(1, [{ ...buy("sell"), pmSide: "sell", pmBuyOrderId: "gtc", pmShares: 1, pmGtcOrderSnapshot: previous.raw.pmGtcOrderSnapshot }], "owner");
+    expect(mocks.ordinary.mock.calls[0][0][0].raw).not.toHaveProperty("pmGtcOrderSnapshot");
+  });
 });

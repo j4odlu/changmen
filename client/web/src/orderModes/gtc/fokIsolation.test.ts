@@ -6,9 +6,12 @@ import { PlatformAccount } from "@/models/platformAccount";
 import { gtcProgress, startGtcRuntime, stopGtcRuntime } from "@/orderModes/gtc/runtime";
 import { getProvider } from "@/runtime/providers";
 import { updateVenueOrders } from "@/stores/account/venueOrders";
+import { mockUnifiedGtcRecovery } from "@/test/gtcRecoverFixture";
 
 const mocks = vi.hoisted(() => ({ list: vi.fn(), command: vi.fn(), getOrders: vi.fn(), save: vi.fn(), update: vi.fn(), mark: vi.fn(), accounts: [] as unknown[] }));
-vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true, post: async () => ({ success: 0, msg: "未知预测市场 action: Pm_GtcRecover" }) }));
+vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true,
+  post: (action: string, request: import("@changmen/shared/pm_gtc_recovery").GtcRecoverRequest) => mockUnifiedGtcRecovery(action, request, mocks.list, async () => []),
+  unwrap: (response: { info: unknown }) => response.info }));
 vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: new Map() }) }));
 vi.mock("./ordersApi", () => ({ loadGtcMonitorOrders: vi.fn().mockResolvedValue([]), saveOrders: mocks.save, refreshGtcOrders: vi.fn(async () => {}) }));
 vi.mock("@/stores/betting/arbOrderBind", () => ({ refreshOrderListAfterBind: vi.fn() }));

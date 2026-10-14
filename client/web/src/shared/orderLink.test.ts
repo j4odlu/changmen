@@ -706,6 +706,15 @@ describe("orderLink A8 parity", () => {
     })).toBe(true);
   });
 
+  it.each(["Polymarket", "PredictFun", "RAY", "OB"])("only a display-only row loses rebind eligibility; ordinary %s rows retain it", (Type) => {
+    const row = { OrderID: "accepted-original", Link: 200, Type };
+    expect(isRebindableOrderRow(row)).toBe(true);
+    expect(isRebindableOrderRow({ ...row, DisplayOnly: undefined })).toBe(true);
+    expect(isRebindableOrderRow({ ...row, DisplayOnly: true })).toBe(false);
+    expect(isRebindableOrderRow({ ...row, Link: 0 })).toBe(false);
+    expect(isRebindableOrderRow({ ...row, OrderID: "" })).toBe(false);
+  });
+
   it("PM sell belongs to buy day for display and day profit", () => {
     const buyAt = Date.parse("2026-07-18T15:36:00+08:00");
     const sellAt = Date.parse("2026-07-19T00:24:00+08:00");

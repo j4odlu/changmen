@@ -1,0 +1,74 @@
+// [changmen 扩展] 显式核验独立发布组合；默认仍拒绝不兼容的前端单独发布。
+import assert from "node:assert/strict";
+import ts from "typescript";
+import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mjs";
+
+export function releasePlan(args) {
+  assert(args.length === 0 || (args.length === 1 && ["--release-plan=frontend-only", "--release-plan=backend-first"].includes(args[0])), "Unknown or conflicting release plan");
+  return args[0]?.split("=")[1] ?? "frontend-only";
+}
+
+export function selectGtcRelease(plan, combinations) {
+  assert(["frontend-only", "backend-first"].includes(plan), "Unknown release plan");
+  assert.equal(combinations.length, 3, "All independent release combinations are required");
+  const ids = ["frontend-only", "backend-only", "paired"];
+  const rows = new Map(combinations.map(row => [row.id, row]));
+  assert.equal(rows.size, 3, "Duplicate release combinations");
+  for (const id of ids) {
+    const row = rows.get(id);
+    assert(row && typeof row.passed === "boolean" && Array.isArray(row.failedBoundaries), `Missing evidence: ${id}`);
+    assert.equal(row.passed, row.failedBoundaries.length === 0, `Inconsistent evidence: ${id}`);
+  }
+  const required = plan === "backend-first" ? ["backend-only", "paired"] : ["frontend-only"];
+  return { plan, passed: required.every(id => rows.get(id).passed),
+    frontendOnlyGtcCompatible: rows.get("frontend-only").passed,
+    requiredCombinations: required, deploymentOrder: plan === "backend-first" ? ["backend", "frontend"] : ["frontend"],
+    failedBoundaries: required.flatMap(id => rows.get(id).failedBoundaries),
+    blockedCombinations: combinations.filter(row => !row.passed).map(row => row.id) };
+}
+
+/** 仅增加精确查询入口；既有 GTC handler 与读写函数也逐模块核验，不删掉检查。 */
+export function verifyLegacyGtcBackendModules(source, captured) {
+  const handler = "server/backend/core/orderModes/gtc/handler.js";
+  let specialized = source(handler);
+  if (JSON.stringify(moduleTokens(specialized)) !== JSON.stringify(moduleTokens(captured(handler)))) {
+    if (specialized.includes('"Pm_GtcRecover"')) {
+      assert.deepEqual(moduleTokens(specialized), moduleTokens(gitSource("adb333bf24b6ba6aa3e441009b56f874a23f6ed9", handler)), "complete committed recovery handler");
+      specialized = replaceExact(specialized, 'import { recoverPmGtc } from "./recovery.js";');
+      specialized = replaceExact(specialized, 'if (action === "Pm_GtcRecover") return recoverPmGtc(body, owner);');
+      const recovery="server/backend/core/orderModes/gtc/recovery.js";
+      assert.deepEqual(moduleTokens(source(recovery)),moduleTokens(gitSource("adb333bf24b6ba6aa3e441009b56f874a23f6ed9",recovery)),"complete committed unified recovery module");
+      specialized = replaceExact(specialized, `if (body.knownRevisions != null) {
+        let known;
+        try { known = parse(body.knownRevisions); }
+        catch { throw new Error("GTC 已知版本无效"); }
+        if (!known || typeof known !== "object" || Array.isArray(known) || Object.keys(known).length > 1000
+          || Object.entries(known).some(([id, revision]) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+            || !Number.isSafeInteger(revision) || revision < 0)) {
+          throw new Error("GTC 已知版本无效");
+        }
+        return listPmGtc(owner, undefined, known);
+      }`);
+    }
+    specialized = replaceExact(specialized, 'import { getGtcMonitorOrders, getGtcOrders, saveGtcOrders } from "./orders.js";', 'import { getGtcOrders, saveGtcOrders } from "./orders.js";');
+    specialized = replaceExact(specialized, 'if (action === "Pm_GtcMonitorOrders") return getGtcMonitorOrders(body, owner);');
+  }
+  assert.deepEqual(moduleTokens(specialized), moduleTokens(captured(handler)), "complete legacy GTC handler");
+  const orders = "server/backend/core/orderModes/gtc/orders.js";
+  const parse = text => ts.createSourceFile(orders, text, ts.ScriptTarget.Latest, true);
+  const current = parse(source(orders)), previous = parse(captured(orders));
+  const added = current.statements.filter(node => ts.isFunctionDeclaration(node) && node.name?.text === "getGtcMonitorOrders");
+  assert.equal(added.length, 1, "Exactly one GTC monitor function is required");
+  const reviewed = parse(gitSource("adb333bf24b6ba6aa3e441009b56f874a23f6ed9",orders));
+  const monitor = reviewed.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="getGtcMonitorOrders");
+  assert.deepEqual(moduleTokens(added[0].getText(current)),moduleTokens(monitor.getText(reviewed)),"complete committed exact GTC monitor function");
+  const imports = tree => tree.statements.filter(ts.isImportDeclaration).map(node => node.getText(tree));
+  const extraImport = 'import { toClientOrder } from "../../account/order/dto.js";';
+  assert.equal(imports(current).filter(text => text === extraImport).length, 1);
+  const tokenized = items => items.map(text => JSON.stringify(moduleTokens(text))).sort();
+  assert.deepEqual(tokenized(imports(current).filter(text => imports(previous).includes(extraImport) || text !== extraImport)), tokenized(imports(previous)), "complete legacy GTC imports");
+  const body = tree => tree.statements.filter(node => !ts.isImportDeclaration(node) && !(ts.isFunctionDeclaration(node) && node.name?.text === "getGtcMonitorOrders"))
+    .map(node => node.getText(tree)).join("\n");
+  assert.deepEqual(moduleTokens(body(current)), moduleTokens(body(previous)), "complete legacy GTC orders module");
+  return true;
+}

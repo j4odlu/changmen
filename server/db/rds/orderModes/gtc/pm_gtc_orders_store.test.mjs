@@ -34,4 +34,12 @@ describe("dedicated GTC persistence", () => {
     expect(await upsertPmGtcOrders([])).toBe(false); mock.ready = false;
     expect(await upsertPmGtcOrders([row()])).toBe(false); expect(mock.connect).not.toHaveBeenCalled();
   });
+  it("the locked canonical buy snapshot survives stale or forged incoming metadata", async () => {
+    await upsertPmGtcOrders([row({ raw: { pmGtcExecutionId: "g", pmSide: "buy", pmGtcOrderSnapshot: { executionRevision: 999 } } })]);
+    const sql = mock.query.mock.calls.find(([sql]) => sql.includes("INSERT INTO orders"))[0];
+    expect(sql).toContain("- 'pmGtcOrderSnapshot'");
+    expect(sql).toContain("WHEN orders.raw ? 'pmGtcOrderSnapshot'");
+    expect(sql).toContain("jsonb_build_object('pmGtcOrderSnapshot', orders.raw->'pmGtcOrderSnapshot')");
+    expect(mock.query.mock.calls.filter(([sql]) => sql.includes("INSERT INTO orders"))).toHaveLength(1);
+  });
 });

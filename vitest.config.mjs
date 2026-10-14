@@ -5,6 +5,8 @@ export default defineConfig({
     exclude: [
       ...configDefaults.exclude,
       ".claude/worktrees/**",
+      // Generated release checkouts are evidence artifacts, not this workspace's source tests.
+      "output/**",
     ],
   },
 });

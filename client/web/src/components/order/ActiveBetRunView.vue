@@ -384,7 +384,9 @@ function colToneClass(run: ActiveBetRun): string {
 
 function phaseLabel(run: ActiveBetRun): string {
   const gtc = gtcForRun(run);
-  if (gtc) return realtimeGtcMessage(gtc, ordersForRun(run));
+  // [changmen 扩展] 公共拒单阶段倒计时优先显示，PM 单腿成交/挂单事实仍独立展示。
+  if (gtc && !(run.phase === "settling" && run.countdownUntil && run.countdownUntil > now.value))
+    return realtimeGtcMessage(gtc, ordersForRun(run));
   if (run.terminalAt)
     return run.overallLabel;
   if (!isTracking(run))

@@ -2,7 +2,7 @@ import type { GtcPlan } from "@changmen/shared/pm_gtc";
 import type { GtcRecoverRequest } from "@changmen/shared/pm_gtc_recovery";
 import { createGtcExecution } from "@changmen/shared/pm_gtc";
 import { beforeEach, expect, it, vi } from "vitest";
-import { recoverGtc, resetGtcRecoveryApi } from "./recoveryApi";
+import { recoverGtc } from "./recoveryApi";
 
 const mock = vi.hoisted(() => ({ post: vi.fn(), list: vi.fn(), monitor: vi.fn(), session: 1, current: true }));
 vi.mock("@/api/client", () => ({ post: mock.post, getAuthSessionVersion: () => mock.session, isAuthSessionCurrent: (session: number) => mock.current && session === mock.session, unwrap: (response: { success: number; msg: string; info: unknown }) => {
@@ -17,7 +17,7 @@ const order = { PmGtcExecutionId: id, PlayerID: 1, Type: "Polymarket", OrderID: 
 const request = (): GtcRecoverRequest => ({ discover: true, knownRevisions: {}, monitorIds: [id], recoverDiscovered: true, skipMonitorIds: [], knownOrders: {} });
 const response = () => ({ executions: { ok: true, rows: [row] }, orders: [{ ok: true, ids: [id], unchangedIds: [], rows: [order] }] });
 beforeEach(() => {
-  vi.clearAllMocks(); resetGtcRecoveryApi(); mock.session = 1; mock.current = true;
+  vi.clearAllMocks(); mock.session = 1; mock.current = true;
   mock.post.mockResolvedValue({ success: 1, info: response() }); mock.list.mockResolvedValue([row]); mock.monitor.mockResolvedValue([order]);
 });
 it("uses one recovery HTTP request and does not call either old endpoint", async () => {
@@ -47,11 +47,11 @@ it("does not accept missing, foreign or unverified unchanged financial identitie
     expect(result.executions).toEqual(response().executions); expect(result.orders[0]).toMatchObject({ ok: false, ids: [id] });
   }
 });
-it("falls back only for an explicit unsupported action and caches compatibility for the current session", async () => {
+it("an unsupported unified action fails without caching or calling old endpoints", async () => {
   mock.post.mockResolvedValue({ success: 0, msg: "未知预测市场 action: Pm_GtcRecover" });
-  await recoverGtc(request(), () => true); await recoverGtc(request(), () => true);
-  expect(mock.post).toHaveBeenCalledOnce(); expect(mock.list).toHaveBeenCalledTimes(2); expect(mock.monitor).toHaveBeenCalledTimes(2);
-  resetGtcRecoveryApi(); await recoverGtc(request(), () => true); expect(mock.post).toHaveBeenCalledTimes(2);
+  await expect(recoverGtc(request(), () => true)).rejects.toThrow("Pm_GtcRecover");
+  await expect(recoverGtc(request(), () => true)).rejects.toThrow("Pm_GtcRecover");
+  expect(mock.post).toHaveBeenCalledTimes(2); expect(mock.list).not.toHaveBeenCalled(); expect(mock.monitor).not.toHaveBeenCalled();
 });
 it("does not hide database, authorization or transport failures behind compatibility calls", async () => {
   mock.post.mockResolvedValue({ success: 0, msg: "database offline" });

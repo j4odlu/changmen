@@ -44,6 +44,9 @@ test("failed accounting survives reload despite optimistic closed display and re
   });
   let api = await import("./pmManualSell");
   await api.confirmAndSellPmBuyOrder(row);
+  expect(mocks.save).toHaveBeenCalledTimes(2);
+  expect(mocks.gtcSave).not.toHaveBeenCalled();
+  expect(ElMessage.error).toHaveBeenCalledWith("链上已平仓，但订单落库失败：DB unavailable。已按已平仓展示，请稍后刷新。");
   expect(api.isPmManualSellClosing("buy-one")).toBe(true);
   expect([...mocks.orders.values()].flat().find(r => r.OrderID === "buy-one")?.PmSellState).toBe("closed");
   expect(mocks.finish).not.toHaveBeenCalled();
@@ -53,6 +56,20 @@ test("failed accounting survives reload despite optimistic closed display and re
   expect(mocks.save).toHaveBeenLastCalledWith(mocks.account, patch);
   expect(mocks.final).not.toHaveBeenCalled();
   expect(mocks.finish).toHaveBeenCalledWith(mocks.account, "sell-one");
+  expect(api.isPmManualSellClosing("buy-one")).toBe(false);
+});
+
+test("an ordinary PM sale keeps the direct save path and its original retry payload", async () => {
+  mocks.save.mockRejectedValueOnce(new Error("temporary failure")).mockResolvedValue(undefined);
+  mocks.sell.mockImplementation(async ({ onSubmitted }) => {
+    onSubmitted({ sellOrderId: "sell-one", fallbackPrice: 0.6, sharesWanted: 10 });
+    return { ok: true, ordersToSave: patch, sharesSold: 10 };
+  });
+  const api = await import("./pmManualSell");
+  await api.confirmAndSellPmBuyOrder(row);
+  expect(mocks.save.mock.calls).toEqual([[mocks.account, patch], [mocks.account, patch]]);
+  expect(mocks.gtcSave).not.toHaveBeenCalled();
+  expect(ElMessage.error).not.toHaveBeenCalled();
   expect(api.isPmManualSellClosing("buy-one")).toBe(false);
 });
 

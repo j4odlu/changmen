@@ -5,10 +5,12 @@ import { BetResult } from "@changmen/client-core/models/betResult";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useOrderObservationStore } from "../orderObservationStore";
+import { observationEventLabel } from "@changmen/shared/order_observation_view";
 import { startOrderObservation } from "@/services/orderObservation";
 import { checkBetting, placeBet } from "./betGateway";
 
-const mocks = vi.hoisted(() => ({ stake: vi.fn((_account: unknown, amount: number) => amount), betting: vi.fn(), check: vi.fn(), post: vi.fn(), user: { isLoggedIn: true, userId: "u1" }, notify: vi.fn(() => ({ close: vi.fn() })) }));
+const mocks = vi.hoisted(() => ({ gtcCheck: vi.fn(), stake: vi.fn((_account: unknown, amount: number) => amount), betting: vi.fn(), check: vi.fn(), post: vi.fn(), user: { isLoggedIn: true, userId: "u1" }, notify: vi.fn(() => ({ close: vi.fn() })) }));
+vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ checkGtcBuy: mocks.gtcCheck }));
 vi.mock("@/services/orderObservationTransport", () => ({ uploadObservationBatch: mocks.post }));
 vi.mock("@/runtime/providers", () => ({ getProvider: () => ({ checkBet: mocks.check, betting: mocks.betting }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => mocks.user }));
@@ -36,6 +38,7 @@ describe("下注主链路与旁路故障隔离", () => {
     mocks.post.mockReset();
     mocks.betting.mockReset();
     mocks.check.mockReset();
+    mocks.gtcCheck.mockReset();
     mocks.stake.mockReset().mockImplementation((_account: unknown, amount: number) => amount);
     mocks.user.userId = "u1";
     mocks.post.mockImplementation(async () => { throw new Error("observer offline"); });
@@ -70,6 +73,22 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(result.message).toBe("closed");
     expect(mocks.betting).not.toHaveBeenCalled();
     expect(mocks.check).not.toHaveBeenCalled();
+  });
+  it("shows concrete odds and tolerance in the blocked precheck timeline", async () => {
+    const option = new BetOption("RAY", "m", "b", "i", 100, "Home", 1.65);
+    option.diagnosticLinkId = 123;
+    mocks.check.mockImplementation(async (_account, checked) => {
+      await vi.advanceTimersByTimeAsync(608);
+      checked.checkError = "RAY 赔率下降：检测赔率 1.65，当前赔率 1.6，超过允许差值 0.01";
+      return checked;
+    });
+    const rayAccount = { ...account, provider: "RAY" } as PlatformAccount;
+    expect(await checkBetting(store, rayAccount, option)).toBe(option);
+    const check = useOrderObservationStore().forLink("u1", 123).find(row => row.kind === "precheck_result");
+    expect(check).toMatchObject({ outcome: "blocked", reasonCode: "odds_changed", durationMs: 608 });
+    expect(observationEventLabel(check!)).toBe("预检结果 · 被拦截 · 原因：RAY 赔率下降：检测赔率 1.65，当前赔率 1.6，超过允许差值 0.01 · 608ms");
+    expect((await placeBet(store, rayAccount, option, 10, { requirePreparedQuote: true })).success).toBe(false);
+    expect(mocks.betting).not.toHaveBeenCalled();
   });
   it.each([false, true])("records contradictory precheck data as inconsistent when adapter throws=%s", async throws => {
     const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
@@ -209,4 +228,16 @@ describe("下注主链路与旁路故障隔离", () => {
   });
 
 
+  it("shared precheck selects GTC only for the frozen PM leg and converts stake once", async () => {
+    const option = new BetOption("Polymarket", "m", "b", "i", 100, "Home", 2);
+    const pm = { ...account, provider: "Polymarket" } as PlatformAccount;
+    mocks.gtcCheck.mockImplementation(async (_account, checked) => { checked.data = { orderType: "GTC" }; return checked; });
+    expect(await checkBetting(store, pm, option, { pmOrderMode: "GTC" })).toBe(option);
+    expect(mocks.gtcCheck).toHaveBeenCalledExactlyOnceWith(pm, option, expect.any(Promise), true);
+    expect(mocks.check).not.toHaveBeenCalled(); expect(mocks.stake).toHaveBeenCalledOnce();
+    const ray = new BetOption("RAY", "m", "b", "i", 100, "Away", 2);
+    mocks.check.mockResolvedValue(ray);
+    await checkBetting(store, { ...account, provider: "RAY" } as PlatformAccount, ray, { pmOrderMode: "GTC" });
+    expect(mocks.check).toHaveBeenCalledOnce(); expect(mocks.gtcCheck).toHaveBeenCalledOnce();
+  });
 });

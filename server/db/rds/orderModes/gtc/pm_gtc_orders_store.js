@@ -49,7 +49,9 @@ function ordersUpsertSql() {
     status = EXCLUDED.status,
     create_at = EXCLUDED.create_at,
     raw = CASE WHEN NOT (orders.provider='Polymarket' AND LOWER(COALESCE(orders.raw->>'pmSide',''))<>'sell' AND orders.raw->>'pmGtcExecutionId' IS NOT NULL) THEN EXCLUDED.raw ELSE
-      (EXCLUDED.raw - 'pmRejectReason' - 'pmRejectMoneyFixedAt') || jsonb_build_object(
+      (EXCLUDED.raw - 'pmRejectReason' - 'pmRejectMoneyFixedAt' - 'pmGtcOrderSnapshot')
+      || CASE WHEN orders.raw ? 'pmGtcOrderSnapshot' THEN jsonb_build_object('pmGtcOrderSnapshot', orders.raw->'pmGtcOrderSnapshot') ELSE '{}'::jsonb END
+      || jsonb_build_object(
         'pmGtcExecutionId', orders.raw->'pmGtcExecutionId', 'pmGtcRevision', orders.raw->'pmGtcRevision',
         'pmGtcBuyShares', orders.raw->'pmGtcBuyShares', 'pmGtcBuyCost', orders.raw->'pmGtcBuyCost',
         'betMoney', orders.bet_money,

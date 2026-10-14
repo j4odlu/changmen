@@ -132,6 +132,14 @@ describe("gTC persistence fails before venue dispatch without durable coordinati
     expect(await createPmGtc({ id: "manual", owner: "owner", walletKey: "wallet", maker: "maker", plan: manualPlan })).toEqual(existing);
     expect(mocks.query.mock.calls.some(([sql]) => sql.startsWith("INSERT"))).toBe(false);
   });
+  it("retrying an already closed execution commits without evaluating mutation-only commands", async () => {
+    const row = created(); row.decision = "closed";
+    mocks.query.mockImplementation(async sql => ({ rows: sql.startsWith("SELECT record") ? [{ record: row }] : [] }));
+    expect(await createPmGtc({ id: "id", owner: "owner", walletKey: "wallet", maker: "maker", plan })).toEqual(row);
+    expect(mocks.query.mock.calls.at(-1)[0]).toBe("COMMIT");
+    expect(mocks.query.mock.calls.some(([sql]) => sql.startsWith("UPDATE") || sql.startsWith("INSERT"))).toBe(false);
+    expect(mocks.release).toHaveBeenCalledOnce();
+  });
   it("manual source cannot overwrite another execution identity", async () => {
     mocks.query.mockImplementation(async sql => ({ rows: sql.startsWith("SELECT record") ? [{ record: created() }] : [] }));
     await expect(createPmGtc({ id: "id", owner: "owner", walletKey: "wallet", maker: "maker", plan: { ...plan, source: "manual" } })).rejects.toThrow("身份冲突");

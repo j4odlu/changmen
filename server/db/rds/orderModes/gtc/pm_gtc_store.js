@@ -1,9 +1,10 @@
 import { persistMinimalGtcOrder } from "../../pm_orders_minimal.js";
-import { financialOrdersRelation, gtcFinancialUpsertSql } from "../../orders_execution_compat.js";
 import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
 /** [changmen 扩展] GTC V1 持久化/一次性授权；不参与原 FOK 存储路径。 */
 import { getPgPool } from "../../common.js";
+import { financialOrdersRelation, gtcFinancialUpsertSql } from "../../orders_execution_compat.js";
 import { resolveGtcFinancialOrder } from "./pm_gtc_financial.js";
+import { gtcOrderSnapshot } from "./pm_gtc_order_snapshot.js";
 import { syncPmGtcSettledOrderFinancials } from "./pm_gtc_settlement.js";
 
 let schema;
@@ -104,7 +105,8 @@ export async function mutatePmGtc(owner, id, revision, command) {
     // 接受零成交只建执行记录，真实买单有完整成交/费用事实后才进入财务订单表。
     if (financial && (financial.pmShares > 0 || Object.values(row.fills).some(fill => fill.status === "FAILED"))) {
       const shares = financial.pmShares; const cost = financial.pmStakeUsdc;
-      const raw = { pmGtcExecutionId: id, pmGtcRevision: row.revision, pmTokenId: row.plan.tokenId, pmConditionId: row.plan.conditionId, pmSide: "buy", pmOrigin: "changmen", pmShares: shares, pmFillPrice: financial.pmFillPrice, pmStakeUsdc: cost, pmFeeUsdc: financial.pmFeeUsdc, pmGtcBuyShares: shares, pmGtcBuyCost: cost, betMoney: financial.betMoney };
+      const snapshot = gtcOrderSnapshot(row);
+      const raw = { pmGtcExecutionId: id, pmGtcRevision: row.revision, pmTokenId: row.plan.tokenId, pmConditionId: row.plan.conditionId, pmSide: "buy", pmOrigin: "changmen", pmShares: shares, pmFillPrice: financial.pmFillPrice, pmStakeUsdc: cost, pmFeeUsdc: financial.pmFeeUsdc, pmGtcBuyShares: shares, pmGtcBuyCost: cost, betMoney: financial.betMoney, ...(snapshot ? { pmGtcOrderSnapshot: snapshot } : {}) };
       // 保留人工卖出/赛果等已有字段；历史买入量与剩余净持仓分开。
       await client.query(gtcFinancialUpsertSql(`INSERT INTO orders(user_id,player_id,order_id,link,provider,match,bet,item,odds,bet_money,money,status,create_at,raw)
         VALUES($1,$2,$3,$4,'Polymarket',$5,$6,$7,$8,$9,0,'None',$10,$11)

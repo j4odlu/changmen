@@ -11,10 +11,13 @@ import { registerRayOrderContext } from "@/runtime/rayOrderMonitor/contexts";
 import { useRayOrderContextStore } from "@/runtime/rayOrderMonitor/contextStore";
 import { startRayOrderMonitoring, stopRayOrderMonitoring } from "@/runtime/rayOrderMonitor/runtime";
 import { gtcProgress, startGtcRuntime, stopGtcRuntime } from "./runtime";
+import { mockUnifiedGtcRecovery } from "@/test/gtcRecoverFixture";
 
 vi.mock("@/runtime/rayOrderMonitor/api", () => ({ loadRayMonitorOrders: vi.fn().mockResolvedValue([]), saveRayMonitorOrders: mocks.ordinarySave }));
 const mocks = vi.hoisted(() => ({ read: vi.fn(), pmRead: vi.fn(), save: vi.fn(), ordinarySave: vi.fn(), refresh: vi.fn(), records: new Map<string, GtcExecution>(), orders: new Map<number, OrderRow[]>(), accounts: [] as PlatformAccount[] }));
-vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "session", isAuthSessionCurrent: () => true, post: async () => ({ success: 0, msg: "未知预测市场 action: Pm_GtcRecover" }) }));
+vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "session", isAuthSessionCurrent: () => true,
+  post: (action: string, request: import("@changmen/shared/pm_gtc_recovery").GtcRecoverRequest) => mockUnifiedGtcRecovery(action, request, async () => [...mocks.records.values()], async () => []),
+  unwrap: (response: { info: unknown }) => response.info }));
 vi.mock("@/runtime/venueAdapters", () => ({ getProvider: () => ({ getOrders: mocks.read }) }));
 vi.mock("@/api/chat", () => ({ saveUserLog: vi.fn().mockResolvedValue(true) }));
 vi.mock("@/api/order", () => ({ saveOrders: mocks.ordinarySave }));

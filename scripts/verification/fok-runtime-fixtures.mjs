@@ -57,7 +57,7 @@ export async function runFokDifferentials(base) {
   const execute = slice(source, "async function execute(old, scenario)", "const rows = [];")
     .replace("const functions = {", "const functions = { syncActiveBetFail: () => { throw new Error(\"observation unavailable\"); },");
   const finalize = slice(source, "async function finalize(old, providers)", "const finalizeRows = [];");
-  const manual = slice(source, "async function manual(old, scenario)", "const manualResults = [];");
+  const manual = slice(source, "async function manual(old, scenario)", "const manualResults = [], knownManualDifferences = [];");
   const checks = `
     const autoRows = [], finalRows = [], manualRows = [], historicalManualRows = [];
     for (const [name, scenario] of scenarios) {

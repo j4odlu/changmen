@@ -83,8 +83,11 @@ export function gtcOrderDisplayGroups(financialRows: OrderRow[], executions: Gtc
   for (const execution of executions) {
     // [changmen 扩展] 临时原单也只住 Link 归属日；未释放执行不能绕过日期筛选。
     const belongsToDate = filterOrdersBelongingToDate([{ CreateAt: execution.createdAt, Link: execution.plan.linkId }], date).length > 0;
+    // [changmen 扩展] 副本缺失时可展示完整、相互一致的官方成交事实；不从旧累计量复活已释放历史。
+    const releasedFactsCanDisplay = execution.submit === "accepted" && (Number(execution.matched) === 0
+      || (execution.complete && !execution.error && gtcOrderCardView(execution).quantitiesAgree));
     const showMissingOriginal = belongsToDate && !gtcCanFinishWithoutOrders(execution)
-      && (!execution.released || (execution.submit === "accepted" && Number(execution.matched) === 0));
+      && (!execution.released || releasedFactsCanDisplay);
     let group = byExecution.get(execution.id);
     if (!group) {
       if (!showMissingOriginal)

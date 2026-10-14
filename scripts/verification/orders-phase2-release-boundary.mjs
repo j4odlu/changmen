@@ -31,7 +31,7 @@ function once(source,before,after='') { assert.equal(source.split(before).length
 export function restorePhase2Module(file,source,readSource=read) {
   source=restoreMinimalOrdersSource(file,source,readSource);
   verifyOrdersCompatHelper(readSource);
-  if(file==='server/db/rds/orders_store.js') return restoreOrdersConsumerCompatibility(source,readSource);
+  if(file==='server/db/rds/orders_store.js') return restoreOrdersConsumerCompatibility(source,readSource,source.includes('patchRayMonitorOrders')?undefined:'313c19e8afc30d62b54363830974b6738eab84d8');
   if(['server/db/rds/orderModes/gtc/pm_gtc_store.js','server/db/rds/orderModes/gtc/pm_gtc_orders_store.js'].includes(file)) return restoreGtcOrdersCompatibility(file,source,readSource);
   if(file==='server/db/pg_pool.js') {
     source=once(source,'import { prepareOrdersExecutionCompatibility } from "./rds/orders_execution_compat.js";\n');

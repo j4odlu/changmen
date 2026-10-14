@@ -22,6 +22,20 @@ evidence="output/release-validation/evidence.json"
 archive="output/release-validation/$scope.tgz"
 # Reject missing, failed, stale acceptance or changed build inputs before network/key use.
 node scripts/deploy/release-evidence.mjs verify "$scope" "$evidence" "$archive" "$sha"
+if [[ "$scope" == frontend ]]; then
+  # A fresh publication job receives the sealed archive, not the validation job's dist.
+  mkdir "$work/frontend"
+  tar -xzf "$archive" -C "$work/frontend"
+  if ! test -f "$work/frontend/index.html" \
+    || ! test -d "$work/frontend/assets" \
+    || ! grep -Rql 'https://api.changmen.fun' "$work/frontend/assets"; then
+    echo 'Verified frontend archive lacks the production entry or API assets' >&2
+    exit 1
+  fi
+else
+  # The backend archive is HEAD, so its activation script must support releases.
+  git show HEAD:deploy/scripts/deploy-server-remote.sh | grep 'DEPLOY_RELEASE_MODE' >/dev/null
+fi
 ssh_args=(-p "$port" -o BatchMode=yes -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=8)
 if [[ -n "${SSH_IDENTITY:-}" ]]; then ssh_args+=(-i "$SSH_IDENTITY"); fi
 if [[ -n "${DEPLOY_SSH_KEY:-}" ]]; then
@@ -32,14 +46,6 @@ fi
 mkdir -p ~/.ssh
 ssh-keyscan -p "$port" -H "$host" >> ~/.ssh/known_hosts
 remote="$user@$host"
-if [[ "$scope" == frontend ]]; then
-  test -f client/web/dist/index.html
-  test -d client/web/dist/assets
-  grep -Rql 'https://api.changmen.fun' client/web/dist/assets
-else
-  # The backend archive is HEAD, so its activation script must support releases.
-  git show HEAD:deploy/scripts/deploy-server-remote.sh | grep 'DEPLOY_RELEASE_MODE' >/dev/null
-fi
 digest="$(sha256sum "$archive" | cut -d ' ' -f1)"
 remote_work="/tmp/changmen-${id}"
 ssh "${ssh_args[@]}" "$remote" "mkdir -m 700 '$remote_work'"

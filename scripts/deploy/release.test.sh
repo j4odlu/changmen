@@ -180,4 +180,57 @@ test ! -L "$DEPLOY_REPO/backend-current"
 test ! -f "$DEPLOY_REPO/.deploy-state/backend"
 grep -q 'bootstrap: true' "$DEPLOY_REPO/deploy/ecosystem.config.cjs"
 grep -q "$DEPLOY_REPO 0" "$TEST_ACTIVATE_LOG"
-echo 'PASS release integration: legacy adoption, old chunks, stale refusal, retry, frontend/backend rollback and storage isolation'
+# Fresh Actions publication checkouts have the sealed artifact and no local dist.
+publish_root="$fixture/publish"
+mkdir -p "$publish_root/scripts/deploy" "$publish_root/deploy/scripts" "$publish_root/output/release-validation" "$fixture/publish-bin"
+cp "$source_root/scripts/deploy/publish.sh" "$publish_root/scripts/deploy/"
+cp "$source_root/deploy/scripts/"release-{common,frontend}.sh "$publish_root/deploy/scripts/"
+cp "$fixture/dist.tgz" "$publish_root/output/release-validation/frontend.tgz"
+printf '{}' > "$publish_root/output/release-validation/evidence.json"
+printf '// verifier fixture' > "$publish_root/output/release-validation/verify-runtime.mjs"
+cat > "$fixture/publish-bin/node" <<'SH'
+#!/usr/bin/env bash
+# The real evidence/hash validator is covered by release-evidence.test.mjs.
+test "$2" = verify
+test -f "$5"
+printf 'verified\n' >> "$TEST_PUBLISH_LOG"
+SH
+cat > "$fixture/publish-bin/ssh-keyscan" <<'SH'
+#!/usr/bin/env bash
+printf 'keyscan\n' >> "$TEST_PUBLISH_LOG"
+SH
+cat > "$fixture/publish-bin/ssh" <<'SH'
+#!/usr/bin/env bash
+printf 'ssh\n' >> "$TEST_PUBLISH_LOG"
+case "${!#}" in
+  "cat > "*"/app.tgz'") cat > "$TEST_PUBLISH_UPLOAD" ;;
+  "cat > "*) cat >/dev/null ;;
+esac
+SH
+chmod +x "$fixture/publish-bin/"*
+export TEST_PUBLISH_LOG="$fixture/publish.log" TEST_PUBLISH_UPLOAD="$fixture/published.tgz"
+publish_fixture() {
+  (cd "$publish_root"; PATH="$fixture/publish-bin:$PATH" GITHUB_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+    GITHUB_RUN_ID=99 DEPLOY_HOST=fixture.invalid DEPLOY_REPO=/test/changmen DEPLOY_SSH_KEY='' \
+    bash scripts/deploy/publish.sh frontend)
+}
+test ! -e "$publish_root/client/web/dist"
+publish_fixture
+test "$(sha256sum "$TEST_PUBLISH_UPLOAD" | cut -d ' ' -f1)" = "$(sha256sum "$publish_root/output/release-validation/frontend.tgz" | cut -d ' ' -f1)"
+test "$(head -1 "$TEST_PUBLISH_LOG")" = verified
+grep -q '^ssh$' "$TEST_PUBLISH_LOG"
+# An unrelated local build must neither be required nor mask a broken archive.
+mkdir -p "$publish_root/client/web/dist/assets" "$fixture/bad-dist/assets"
+cp "$fixture/dist/index.html" "$publish_root/client/web/dist/"
+cp "$fixture/dist/assets/index-new.js" "$publish_root/client/web/dist/assets/"
+cp "$fixture/dist/index.html" "$fixture/bad-dist/"
+printf 'https://wrong.invalid' > "$fixture/bad-dist/assets/index-bad.js"
+tar -C "$fixture/bad-dist" -czf "$publish_root/output/release-validation/frontend.tgz" .
+: > "$TEST_PUBLISH_LOG"
+if publish_fixture; then echo 'wrong API archive accepted'; exit 1; fi
+test "$(cat "$TEST_PUBLISH_LOG")" = verified
+tar -C "$fixture/bad-dist/assets" -czf "$publish_root/output/release-validation/frontend.tgz" .
+: > "$TEST_PUBLISH_LOG"
+if publish_fixture; then echo 'missing entry archive accepted'; exit 1; fi
+test "$(cat "$TEST_PUBLISH_LOG")" = verified
+echo 'PASS release integration: adoption, stale refusal, retries, rollback, storage isolation and artifact-only publication'

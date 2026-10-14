@@ -53,11 +53,11 @@ export function assertPublicAsset(asset, status, bytes) {
   assert(status >= 200 && status < 300, `Public asset HTTP failure: ${asset.file}`);
   assert.equal(rawSha(bytes), asset.sha256, `Public asset differs from actual frontend: ${asset.file}`);
 }
-export function sshRead(program) {
+export function sshRead(program, { spawn = spawnSync } = {}) {
   const remote = process.env.FOK_BASELINE_SSH_TARGET ?? "root@47.57.10.202";
   const key = process.env.FOK_BASELINE_SSH_KEY ?? path.join(os.homedir(), ".ssh/id_ed25519_gamebet");
-  const result = spawnSync("ssh", ["-i", key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", remote, "node --input-type=module"], { input: program, encoding: "utf8", timeout: 45000, maxBuffer: 45 * 1024 * 1024 });
-  assert.equal(result.status, 0, result.stderr || "VPS read-only capture failed");
+  const result = spawn("ssh", ["-C", "-i", key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", remote, "node --input-type=module"], { input: program, encoding: "utf8", timeout: 45000, maxBuffer: 45 * 1024 * 1024 });
+  assert.equal(result.status, 0, result.stderr || `VPS read-only capture failed (${result.error?.code ?? result.status}; received ${Buffer.byteLength(result.stdout ?? "")} bytes)`);
   return JSON.parse(result.stdout);
 }
 export const layoutProgram = `

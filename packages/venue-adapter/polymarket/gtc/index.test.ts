@@ -1,7 +1,7 @@
 import type { GtcPlan } from "@changmen/shared/pm_gtc";
 import { createGtcExecution, gtcCanCancel, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buildPreparedGtcBuy, gtcTradeFills, readGtcFacts } from "./index";
+import { buildPreparedGtcBuy, gtcTradeFills, readGtcFacts, readGtcTradeHistory } from "./index";
 
 const mocks = vi.hoisted(() => ({ market: vi.fn(), getOrder: vi.fn(), trades: vi.fn(), submit: vi.fn(), build: vi.fn(), consume: vi.fn(), json: vi.fn() }));
 vi.mock("../userWs", () => ({ warmPolymarketUserWs: vi.fn() }));
@@ -14,6 +14,15 @@ vi.mock("../pmOrderSubmitMode", () => ({ resolvePmOrderSubmitHttpMode: () => "di
 vi.mock("../l2Auth", () => ({ parseTokenConfig: () => ({}), resolveApiCreds: () => ({ apiKey: "api" }) }));
 const plan = { tokenId: "token", conditionId: "condition", shares: "10", feeProof: { rate: "0.1", exponent: 1, takerOnly: true, observedAt: 1 } } as GtcPlan;
 const trade = { id: "t", taker_order_id: "other", asset_id: "token", side: "SELL", size: "100", price: "0.6", status: "CONFIRMED", last_update: "1000", maker_orders: [{ order_id: "order", asset_id: "token", side: "BUY", matched_amount: "3", price: "0.5" }, { order_id: "unrelated", asset_id: "token", side: "BUY", matched_amount: "97", price: "0.5" }] };
+it("shares one complete account history across originals while retaining exact fill identities", async () => {
+  mocks.getOrder.mockImplementation(async (_account, id: string) => ({ id, asset_id: "token", side: "BUY", original_size: "10", size_matched: "3", status: "LIVE", associate_trades: [id === "order" ? "t" : "t2"] }));
+  const second = { ...trade, id: "t2", maker_orders: [{ ...trade.maker_orders[0]!, order_id: "second" }] };
+  mocks.trades.mockResolvedValue({ data: [trade, second], next_cursor: "LTE=" });
+  const history = readGtcTradeHistory({} as never, 100000);
+  const facts = await Promise.all([readGtcFacts({} as never, plan, "order", 100000, history), readGtcFacts({} as never, plan, "second", 101000, history)]);
+  expect(mocks.trades).toHaveBeenCalledOnce(); expect(mocks.getOrder).toHaveBeenCalledTimes(2);
+  expect(facts.map(row => row.fills.map(fill => [fill.tradeId, fill.shares]))).toEqual([[["t", "3"]], [["t2", "3"]]]);
+});
 beforeEach(() => { vi.clearAllMocks(); mocks.market.mockResolvedValue({ fd: { r: 0, e: 1, to: true } }); mocks.build.mockImplementation(async ({ size, price }: { size: number; price: number }) => ({ makerAmount: String(Math.round(size * price * 1_000_000)), takerAmount: String(Math.round(size * 1_000_000)) })); mocks.json.mockReturnValue({ orderType: "GTC", order: {} }); });
 describe("isolated GTC adapter", () => {
   it("reconciles confirmed maker fills with long ratio prices and a MATCHED rounding remainder", async () => {

@@ -4,6 +4,7 @@ import { gtcOrderProjection, resetGtcOrderProjection } from "@/orderModes/gtc/ex
 import App from "./App.vue";
 
 const mocks = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn(), rayStart: vi.fn(), user: { isLoggedIn: true, userId: "owner", extensionPrefs: { pmGtcV1Participant: false, pmArbOrderMode: "FOK", uiTheme: "default" } } }));
+const rayStop = vi.hoisted(() => vi.fn());
 vi.mock("@/stores/orderStore", async () => {
   const { reactive } = await import("vue");
   const orders = reactive({ orders: new Map<number, { OrderID: string; PmGtcExecutionId?: string }[]>() });
@@ -23,8 +24,7 @@ vi.mock("pinia", async () => {
   const { toRefs } = await import("vue");
   return { storeToRefs: toRefs };
 });
-vi.mock("@/orderModes/gtc/runtime", () => ({ startGtcRuntime: mocks.start, stopGtcRuntime: mocks.stop }));
-const rayStop = vi.hoisted(() => vi.fn());
+vi.mock("@/runtime/orderMonitoring/session", () => ({ startOrderMonitoring: mocks.start, stopOrderMonitoring: mocks.stop }));
 vi.mock("@/runtime/rayOrderMonitor/runtime", () => ({ startRayOrderMonitoring: mocks.rayStart, stopRayOrderMonitoring: rayStop }));
 vi.mock("@/shared/applyUiTheme", () => ({ applyUiTheme: vi.fn() }));
 vi.mock("@/components/account/PmVaultDialogs.vue", () => ({ default: { render: () => null } }));
@@ -74,8 +74,8 @@ describe("gTC recovery follows owned original orders", () => {
     (await user()).extensionPrefs.pmArbOrderMode = "FOK"; await flush();
     expect(mocks.rayStart).toHaveBeenCalledOnce();
   });
-  it("ordinary FOK starts no GTC runtime", async () => {
-    mount(); await flush(); expect(mocks.start).not.toHaveBeenCalled(); expect(mocks.stop).not.toHaveBeenCalled();
+  it("login always discovers durable monitors even with FOK selected and no participant hint", async () => {
+    mount(); await flush(); expect(mocks.start).toHaveBeenCalledWith("owner"); expect(mocks.stop).not.toHaveBeenCalled();
   });
   it("loaded originals recover with FOK selected and the participant hint absent", async () => {
     mount(); await flush();
@@ -89,14 +89,16 @@ describe("gTC recovery follows owned original orders", () => {
     state.extensionPrefs.pmGtcV1Participant = false; (await orders()).orders.clear();
     await flush(); expect(mocks.stop).not.toHaveBeenCalled();
     state.isLoggedIn = false; await flush(); expect(mocks.stop).toHaveBeenCalledOnce();
+    expect(rayStop).toHaveBeenCalledTimes(2);
   });
-  it("a different owner's projection cannot start recovery", async () => {
+  it("a different owner's projection is never used as the recovery owner", async () => {
     gtcOrderProjection.owner = "foreign"; gtcOrderProjection.rows = [{ OrderID: "foreign", PmGtcExecutionId: "g" }];
-    mount(); await flush(); expect(mocks.start).not.toHaveBeenCalled();
+    mount(); await flush(); expect(mocks.start).toHaveBeenCalledExactlyOnceWith("owner");
   });
   it("admin preview rows cannot start an account execution runtime", async () => {
     (await accounts()).adminWorkspacePreview = true;
     (await orders()).orders.set(1, [{ OrderID: "preview", PmGtcExecutionId: "g" } as never]);
     mount(); await flush(); expect(mocks.start).not.toHaveBeenCalled();
+    expect(mocks.rayStart).not.toHaveBeenCalled();
   });
 });

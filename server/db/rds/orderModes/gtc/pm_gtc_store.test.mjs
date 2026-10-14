@@ -9,7 +9,7 @@ const created = () => createGtcExecution("id", "owner", "wallet", "maker", plan,
 beforeEach(() => { vi.clearAllMocks(); mocks.noDb = false; mocks.pool.mockResolvedValue({ rows: [] }); mocks.query.mockResolvedValue({ rows: [] }); mocks.connection.mockResolvedValue({ query: mocks.query, release: mocks.release }); });
 describe("gTC persistence fails before venue dispatch without durable coordination", () => {
   it("saving original evidence reads only the requested owned executions without historical repair", async () => {
-    mocks.pool.mockImplementation(async sql => {
+    mocks.pool.mockImplementation(async (sql) => {
       if (sql.startsWith("UPDATE orders"))
         throw new Error("unrelated legacy repair failed");
       return { rows: sql.startsWith("SELECT record") ? [{ record: created() }] : [] };
@@ -29,17 +29,30 @@ describe("gTC persistence fails before venue dispatch without durable coordinati
     expect(queries[0][0]).not.toContain("LIMIT");
     expect(queries[0][0]).not.toContain("::bigint");
   });
-  it("GTC recovery repairs only mode metadata using owned original order identities", async () => {
-    mocks.pool.mockImplementation(async sql => ({ rows: sql.startsWith("SELECT record") ? [{ record: created() }] : [] }));
+  it("gTC recovery is read-only even when historical metadata repair would fail", async () => {
+    mocks.pool.mockImplementation(async (sql) => {
+      if (!sql.startsWith("SELECT record"))
+        throw new Error("unexpected write during recovery");
+      return { rows: [{ record: created() }] };
+    });
     expect(await listPmGtc("owner")).toEqual([created()]);
-    const [sql, params] = mocks.pool.mock.calls.find(([query]) => query.startsWith("UPDATE orders"));
-    expect(params).toEqual(["owner"]);
-    expect(sql).toContain("e.owner=$1 AND o.user_id=$1");
-    expect(sql).toContain("o.player_id=anchor.player_id AND o.provider=anchor.provider");
-    expect(sql).toContain("pmBuyOrderId"); expect(sql).toContain("pfBuyOrderId");
-    expect(sql).toContain("LOWER(anchor.order_id)");
-    expect(sql).not.toMatch(/SET\s+(bet_money|money|link)/);
-    expect(sql).not.toContain("pmGtcBuyCost");
+    expect(mocks.pool).toHaveBeenCalledOnce();
+  });
+  it("an unused execution table reads as empty without creating a schema", async () => {
+    mocks.pool.mockRejectedValue(Object.assign(new Error("relation \"pm_gtc_executions\" does not exist"), { code: "42P01" }));
+    expect(await listPmGtc("owner")).toEqual([]);
+    expect(mocks.pool).toHaveBeenCalledOnce();
+  });
+  it("incremental discovery filters by version in the owned query and performs no writes", async () => {
+    const versions = { "11111111-1111-4111-8111-111111111111": 3 };
+    await listPmGtc("owner", undefined, versions);
+    expect(mocks.pool).toHaveBeenCalledOnce();
+    expect(mocks.pool.mock.calls[0][0]).toContain("IS DISTINCT FROM ($2::jsonb->>id::text)");
+    expect(mocks.pool.mock.calls[0][1]).toEqual(["owner", versions]);
+  });
+  it("does not hide failures in other tables as empty GTC history", async () => {
+    mocks.pool.mockRejectedValue(Object.assign(new Error("relation \"orders\" does not exist"), { code: "42P01" }));
+    await expect(listPmGtc("owner")).rejects.toThrow("\"orders\"");
   });
   it("stores ordinary PM price odds while recording the fee-inclusive buy amount", async () => {
     const row = created();

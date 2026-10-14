@@ -50,6 +50,9 @@ const RUNTIME_DEEP = new Map([
   // GTC V1 独立入口，仅正式启用后动态加载，避免并入 FOK adapter barrel。
   ["orderModes/gtc/execute.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/runtime.ts", new Set(["polymarket/gtc"])],
+  // [changmen 扩展] 官方原单核对迁到独立 PM 监控模块，保持 GTC 专用入口。
+  ["runtime/orderMonitoring/pm.ts", new Set(["polymarket/gtc"])],
+  ["runtime/orderMonitoring/pmPolling.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/manual.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/gateway.ts", new Set(["polymarket/gtc"])],
   ["orderModes/gtc/orderCardView.ts", new Set(["polymarket/gtc"])],

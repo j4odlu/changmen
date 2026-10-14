@@ -19,29 +19,34 @@ async function poolReady() {
     .catch((error) => { schema = undefined; throw error; });
   await schema; return pool;
 }
-export async function listPmGtc(owner, betRowId) {
-  const pool = await poolReady();
+async function readRecords(sql, params) {
+  const pool = getPgPool();
+  if (!pool)
+    throw new Error("GTC 需要可用的 RDS 持久化");
+  try { return (await pool.query(sql, params)).rows.map(r => r.record); }
+  catch (error) {
+    // 首次使用前没有执行表，读取返回空；只有创建/写入才初始化表。
+    if (error.code === "42P01" && /"pm_gtc_executions"/.test(error.message))
+      return [];
+    throw error;
+  }
+}
+export async function listPmGtc(owner, betRowId, knownRevisions) {
   // [changmen 扩展] 新套利只恢复本盘口的用户计次规则；不扫描/修订无关旧单。
   if (betRowId != null) {
     if (!Number.isSafeInteger(betRowId) || betRowId <= 0)
       throw new Error("GTC 盘口 ID 无效");
-    const scoped = await pool.query("SELECT record FROM pm_gtc_executions WHERE owner=$1 AND record->'plan'->>'betRowId'=$2 ORDER BY updated_at DESC", [owner, String(betRowId)]);
-    return scoped.rows.map(r => r.record);
+    return readRecords("SELECT record FROM pm_gtc_executions WHERE owner=$1 AND record->'plan'->>'betRowId'=$2 ORDER BY updated_at DESC", [owner, String(betRowId)]);
   }
-  const result = await pool.query("SELECT record FROM pm_gtc_executions WHERE owner=$1 AND (active OR id IN (SELECT id FROM pm_gtc_executions WHERE owner=$1 ORDER BY updated_at DESC LIMIT 500)) ORDER BY updated_at DESC", [owner]);
-  // [changmen 扩展] Historical mode repair belongs to GTC recovery. Ordinary reads never query this table.
-  // Match the exact owned original (or its sell parent), never a Link or current preference.
-  await pool.query(`UPDATE ${financialOrdersRelation("o")} SET raw=COALESCE(o.raw,'{}'::jsonb) || jsonb_build_object('pmGtcExecutionId',e.id::text)
-    FROM pm_gtc_executions e CROSS JOIN LATERAL (VALUES
-      ((e.record->'plan'->>'playerId')::bigint,'Polymarket',e.record->>'orderId'),
-      ((e.record->'plan'->>'playerId')::bigint,'Polymarket',e.record->'plan'->>'orderHash'),
-      ((e.record->'plan'->>'otherPlayerId')::bigint,e.record->'plan'->>'otherProvider',e.record->'other'->>'orderId')
-    ) AS anchor(player_id,provider,order_id)
-    WHERE e.owner=$1 AND o.user_id=$1 AND o.player_id=anchor.player_id AND o.provider=anchor.provider
-      AND NULLIF(anchor.order_id,'') IS NOT NULL
-      AND LOWER(COALESCE(NULLIF(o.raw->>'pmBuyOrderId',''),NULLIF(o.raw->>'pfBuyOrderId',''),o.order_id))=LOWER(anchor.order_id)
-      AND NULLIF(o.raw->>'pmGtcExecutionId','') IS NULL`, [owner]);
-  return result.rows.map(r => r.record);
+  // [changmen 扩展] 已成交的双腿会释放执行窗口，RAY 仍可能待结；恢复不能被最近 500 条历史截断。
+  return readRecords(`SELECT record FROM pm_gtc_executions e WHERE owner=$1 AND (
+    active OR id IN (SELECT id FROM pm_gtc_executions WHERE owner=$1 ORDER BY updated_at DESC LIMIT 500)
+    OR EXISTS (SELECT 1 FROM ${financialOrdersRelation("o")} WHERE o.user_id=$1 AND o.provider='RAY'
+      AND o.player_id::text=e.record->'plan'->>'otherPlayerId'
+      AND LOWER(o.order_id)=LOWER(e.record->'other'->>'orderId')
+      AND LOWER(o.status) IN ('none','pending'))
+  ) ${knownRevisions ? "AND COALESCE(record->>'revision','0') IS DISTINCT FROM ($2::jsonb->>id::text)" : ""}
+  ORDER BY updated_at DESC`, knownRevisions ? [owner, knownRevisions] : [owner]);
 }
 /** [changmen 扩展] 保存/核对只读取本批原单，旧单全量恢复与元数据修复不参与。 */
 export async function listPmGtcByIds(owner, ids) {
@@ -49,9 +54,7 @@ export async function listPmGtcByIds(owner, ids) {
     throw new Error("GTC 执行身份无效");
   if (!ids.length)
     return [];
-  const pool = await poolReady();
-  const result = await pool.query("SELECT record FROM pm_gtc_executions WHERE owner=$1 AND id::text=ANY($2::text[])", [owner, [...new Set(ids)]]);
-  return result.rows.map(r => r.record);
+  return readRecords("SELECT record FROM pm_gtc_executions WHERE owner=$1 AND id::text=ANY($2::text[])", [owner, [...new Set(ids)]]);
 }
 export async function createPmGtc({ id, owner, walletKey, maker, plan }) {
   const pool = await poolReady(); const client = await pool.connect();

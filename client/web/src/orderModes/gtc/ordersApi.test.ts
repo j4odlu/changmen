@@ -3,10 +3,10 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { refreshGtcOrders, saveOrders } from "./ordersApi";
 
-const mock = vi.hoisted(() => ({ post: vi.fn(), fetch: vi.fn(), date: "2026-10-09" }));
-vi.mock("@/api/client", () => ({ post: mock.post, unwrap: (value: unknown) => value }));
+const mock = vi.hoisted(() => ({ post: vi.fn(), fetch: vi.fn(), date: "2026-10-09", current: true }));
+vi.mock("@/api/client", () => ({ post: mock.post, unwrap: (value: unknown) => value, getAuthSessionVersion: () => "session", isAuthSessionCurrent: () => mock.current }));
 vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ fetchOrders: mock.fetch, orderDate: mock.date }) }));
-beforeEach(() => { vi.clearAllMocks(); mock.fetch.mockResolvedValue(true); mock.post.mockResolvedValue({ success: 1, info: true }); });
+beforeEach(() => { vi.clearAllMocks(); mock.current = true; mock.fetch.mockResolvedValue(true); mock.post.mockResolvedValue({ success: 1, info: true }); });
 describe("gTC results feed the ordinary order pipeline", () => {
   it("refreshes the common order list rather than fetching a second GTC list", async () => {
     await refreshGtcOrders("2026-10-10");
@@ -14,6 +14,15 @@ describe("gTC results feed the ordinary order pipeline", () => {
   });
   it("preserves the user's selected date when GTC recovery refreshes ordinary orders", async () => {
     await refreshGtcOrders(); expect(mock.fetch).toHaveBeenCalledExactlyOnceWith(mock.date);
+  });
+  it("does not refresh the next user's common order list after a delayed import", async () => {
+    const task = refreshGtcOrders("2026-10-08"); mock.current = false;
+    await task; expect(mock.fetch).not.toHaveBeenCalled();
+  });
+  it("does not refresh after monitor reset with the same login session", async () => {
+    let current = true;
+    const task = refreshGtcOrders(undefined, () => current); current = false;
+    await task; expect(mock.fetch).not.toHaveBeenCalled();
   });
   it("saves GTC execution snapshots through the identity-checked GTC writer", async () => {
     const account = { accountId: 1, provider: "Polymarket" } as PlatformAccount;

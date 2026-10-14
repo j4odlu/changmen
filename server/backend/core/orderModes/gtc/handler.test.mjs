@@ -43,7 +43,22 @@ describe("gTC independent coordination handler", () => {
     expect(mocks.create).toHaveBeenCalledOnce();
   });
   it("requires authentication", async () => { await expect(handlePmGtc("Pm_GtcList", {}, null)).rejects.toThrow("登录"); expect(mocks.list).not.toHaveBeenCalled(); });
+  it("routes the aggregate recovery action to authenticated incremental reads", async () => {
+    mocks.list.mockResolvedValueOnce([]);
+    expect(await handlePmGtc("Pm_GtcRecover", { discover: true, owner: "foreign", knownRevisions: {}, monitorIds: [], recoverDiscovered: false }, "owner"))
+      .toEqual({ executions: { ok: true, rows: [] }, orders: [] });
+    expect(mocks.list).toHaveBeenCalledExactlyOnceWith("owner", undefined, {});
+  });
   it("lists only authenticated owner", async () => { await handlePmGtc("Pm_GtcList", { owner: "other" }, "owner"); expect(mocks.list).toHaveBeenCalledWith("owner"); });
+  it("incremental discovery forwards validated versions while retaining authenticated ownership", async () => {
+    const knownRevisions = { [body().id]: 3 };
+    await handlePmGtc("Pm_GtcList", { owner: "other", knownRevisions: JSON.stringify(knownRevisions) }, "owner");
+    expect(mocks.list).toHaveBeenCalledExactlyOnceWith("owner", undefined, knownRevisions);
+  });
+  it.each(["invalid-json", [], { bad: 1 }, { "11111111-1111-4111-8111-111111111111": -1 }])("rejects malformed incremental discovery: %s", async (knownRevisions) => {
+    await expect(handlePmGtc("Pm_GtcList", { knownRevisions }, "owner")).rejects.toThrow("已知版本");
+    expect(mocks.list).not.toHaveBeenCalled();
+  });
   it("scopes history by the current bet while ignoring a supplied foreign owner", async () => {
     await handlePmGtc("Pm_GtcList", { owner: "foreign", betRowId: 42 }, "owner");
     expect(mocks.list).toHaveBeenCalledExactlyOnceWith("owner", 42);

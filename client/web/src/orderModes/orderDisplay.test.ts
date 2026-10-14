@@ -201,7 +201,7 @@ describe("one original produces one ordinary order card", () => {
     const pending = gtcPendingDisplayRows([], [current], date, 0);
     expect(pending).toHaveLength(1); expect(pending[0]!.Status).toBe("Return");
     gtcProgress.records = [current]; const html = await render([]);
-    expect(html).toContain("余量已终止"); expect(html).not.toContain("盈亏：待结算"); expect(html).not.toContain("取消 PM 剩余挂单");
+    expect(html).toContain("已取消"); expect(html).not.toContain("盈亏：待结算"); expect(html).not.toContain("取消 PM 剩余挂单");
   });
   it("uses the original token for live quotes and keeps unpersisted display rows out of rebind and sell actions", async () => {
     const current = execution(); current.plan.tokenId = "token"; current.plan.conditionId = "condition";

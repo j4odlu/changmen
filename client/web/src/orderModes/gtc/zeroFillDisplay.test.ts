@@ -53,7 +53,7 @@ describe("[changmen 扩展] zero-fill GTC display without financial persistence"
     const html = await render([record]);
     expect(html.match(/class="order"/g)).toHaveLength(1);
     expect(html).toMatch(/<dt[^>]*>成交<\/dt><dd[^>]*>0 \/ 10 份<\/dd>/);
-    expect(html).toContain("余量已终止");
+    expect(html).toContain(status === "EXPIRED" ? "余量已终止" : "已取消");
     expect(html).toMatch(/买入金额：\s*(?:<!--[\s\S]*?-->\s*)*0/);
     expect(html).not.toContain("取消 PM 剩余挂单");
     expect(html).not.toContain("卖出</");

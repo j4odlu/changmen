@@ -17,8 +17,8 @@ import { prepareManualGtcBuy } from "./preparation";
 
 export { pmCancelOrder, pmSubmitMaker };
 export { resolveGtcFillFee } from "./fee";
-export { readGtcSellCash, exactGtcSellCash } from "./sellCash";
 export { checkGtcBuy, checkManualGtcBuy, prepareManualGtcBuy } from "./preparation";
+export { exactGtcSellCash, readGtcSellCash } from "./sellCash";
 
 function decimal(n: number) {
   if (!Number.isFinite(n) || n < 0)
@@ -84,8 +84,27 @@ export function gtcTradeFills(trade: Trade, plan: GtcPlan, id: string): GtcFill[
   });
 }
 
+/** [changmen 扩展] 同账号 GTC 共享一轮完整成交分页；每张原单仍独立核对身份。 */
+export interface GtcTradeHistory { trades: Trade[]; complete: boolean }
+export async function readGtcTradeHistory(account: PlatformAccount, since: number): Promise<GtcTradeHistory> {
+  const trades: Trade[] = []; const seen = new Set<string>();
+  let cursor = "MA=="; let complete = false;
+  for (let page = 0; page < 50; page++) {
+    if (seen.has(cursor))
+      throw new Error("GTC 成交分页游标重复");
+    seen.add(cursor);
+    const query = new URLSearchParams({ after: String(Math.floor(since / 1000) - 60), next_cursor: cursor });
+    const result = await polymarketL2Get<{ data?: Trade[]; next_cursor?: string }>(account, `${String(account.gateway || POLYMARKET_CLOB_API).replace(/\/+$/, "")}/data/trades?${query}`, "/data/trades");
+    if (!Array.isArray(result?.data) || typeof result.next_cursor !== "string")
+      throw new Error("GTC 成交分页响应不完整");
+    trades.push(...result.data); cursor = result.next_cursor;
+    if (cursor === "LTE=") { complete = true; break; }
+  }
+  return { trades, complete };
+}
+
 /** 不完整分页、查单失败都保持未知；只按 exact orderId 聚合 maker 明细。 */
-export async function readGtcFacts(account: PlatformAccount, plan: GtcPlan, id: string, since: number): Promise<GtcFacts> {
+export async function readGtcFacts(account: PlatformAccount, plan: GtcPlan, id: string, since: number, sharedHistory?: Promise<GtcTradeHistory>): Promise<GtcFacts> {
   let order: Record<string, unknown> | null = null;
   let orderError = "GTC 本次原单查询未返回记录";
   try { order = await pmGetOrder<Record<string, unknown> | null>(account, id); }
@@ -96,21 +115,11 @@ export async function readGtcFacts(account: PlatformAccount, plan: GtcPlan, id: 
     throw new Error("GTC 原单资产或方向不一致");
   if (order && !["LIVE", "DELAYED", "MATCHED", "UNMATCHED", "CANCELED", "CANCELLED", "EXPIRED", "REJECTED"].includes(String(order.status).toUpperCase()))
     throw new Error("GTC 原单状态不支持，需人工核实");
-  const fills = new Map<string, GtcFill>(); const seen = new Set<string>();
-  let cursor = "MA=="; let complete = false;
-  for (let page = 0; page < 50; page++) {
-    if (seen.has(cursor))
-      throw new Error("GTC 成交分页游标重复");
-    seen.add(cursor);
-    const query = new URLSearchParams({ after: String(Math.floor(since / 1000) - 60), next_cursor: cursor });
-    const result = await polymarketL2Get<{ data?: Trade[]; next_cursor?: string }>(account, `${String(account.gateway || POLYMARKET_CLOB_API).replace(/\/+$/, "")}/data/trades?${query}`, "/data/trades");
-    if (!Array.isArray(result?.data) || typeof result.next_cursor !== "string")
-      throw new Error("GTC 成交分页响应不完整");
-    for (const trade of result.data) {
-      for (const fill of gtcTradeFills(trade, plan, id)) fills.set(fill.key, fill);
-    }
-    cursor = result.next_cursor;
-    if (cursor === "LTE=") { complete = true; break; }
+  const history = await (sharedHistory ?? readGtcTradeHistory(account, since));
+  const { complete } = history;
+  const fills = new Map<string, GtcFill>();
+  for (const trade of history.trades) {
+    for (const fill of gtcTradeFills(trade, plan, id)) fills.set(fill.key, fill);
   }
   const ownFills = [...fills.values()];
   if (ownFills.some(fill => fill.role === "TAKER" && fill.status !== "FAILED" && fill.fee == null)) {
@@ -121,10 +130,12 @@ export async function readGtcFacts(account: PlatformAccount, plan: GtcPlan, id: 
         const proof: GtcFeeProof = { rate: decimal(Number(fd.r)), exponent: 1, takerOnly: true, observedAt: Date.now() };
         for (const fill of ownFills.filter(fill => fill.role === "TAKER" && fill.fee == null)) {
           const fee = resolveGtcFillFee(proof, fill.role, Number(fill.shares), Number(fill.price));
-          if (fee != null) fill.fee = decimal(fee);
+          if (fee != null)
+            fill.fee = decimal(fee);
         }
       }
-    } catch { /* 本单费用保持未知，不能以零费用或预留费用替代。 */ }
+    }
+    catch { /* 本单费用保持未知，不能以零费用或预留费用替代。 */ }
   }
   if (!order) {
     const confirmed = ownFills.filter(fill => fill.status !== "FAILED");

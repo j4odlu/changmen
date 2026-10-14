@@ -180,8 +180,7 @@ export function gtcCanAuthorizeOther(row: GtcExecution, now: number): boolean {
 }
 export function gtcCanCancel(row: GtcExecution): boolean {
   return row.submit === "accepted" && Boolean(row.orderId) && !row.terminal
-    && row.order?.status !== "DELAYED" && row.open !== "0"
-    && row.cancel?.state !== "dispatching";
+    && row.order?.status !== "DELAYED" && row.open !== "0";
 }
 export function gtcCanRelease(row: GtcExecution): boolean {
   return row.decision === "closed" && row.terminal && row.complete && !row.error
@@ -280,7 +279,8 @@ export function mergeGtcFacts(previous: GtcExecution, facts: GtcFacts): GtcExecu
   row.groupComplete = !row.manual && full && row.complete && row.other.state === "filled";
   if (row.cancel && row.terminal) {
     row.cancel.state = "acknowledged";
-    row.cancel.message = canceled ? "原单余量已终止，已成交部分保留"
+    row.cancel.message = canceled
+      ? "原单余量已终止，已成交部分保留"
       : "原单已撮合结束，无可取消挂单；已成交部分保留";
   }
   if (row.released && (!row.complete || row.error || !row.terminal)) {

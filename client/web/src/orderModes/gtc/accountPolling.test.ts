@@ -5,17 +5,16 @@ import type { OrderRow } from "@/types/order";
 import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { PlatformAccount } from "@/models/platformAccount";
+import { getProvider } from "@/runtime/providers";
 import { registerRayOrderContext } from "@/runtime/rayOrderMonitor/contexts";
 import { useRayOrderContextStore } from "@/runtime/rayOrderMonitor/contextStore";
 import { startRayOrderMonitoring, stopRayOrderMonitoring } from "@/runtime/rayOrderMonitor/runtime";
-import { PlatformAccount } from "@/models/platformAccount";
-import { getProvider } from "@/runtime/providers";
-import { gtcOrderProjection } from "./executionProjection";
 import { gtcProgress, startGtcRuntime, stopGtcRuntime } from "./runtime";
 
 vi.mock("@/runtime/rayOrderMonitor/api", () => ({ loadRayMonitorOrders: vi.fn().mockResolvedValue([]), saveRayMonitorOrders: mocks.ordinarySave }));
 const mocks = vi.hoisted(() => ({ read: vi.fn(), pmRead: vi.fn(), save: vi.fn(), ordinarySave: vi.fn(), refresh: vi.fn(), records: new Map<string, GtcExecution>(), orders: new Map<number, OrderRow[]>(), accounts: [] as PlatformAccount[] }));
-vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "session", isAuthSessionCurrent: () => true }));
+vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "session", isAuthSessionCurrent: () => true, post: async () => ({ success: 0, msg: "未知预测市场 action: Pm_GtcRecover" }) }));
 vi.mock("@/runtime/venueAdapters", () => ({ getProvider: () => ({ getOrders: mocks.read }) }));
 vi.mock("@/api/chat", () => ({ saveUserLog: vi.fn().mockResolvedValue(true) }));
 vi.mock("@/api/order", () => ({ saveOrders: mocks.ordinarySave }));
@@ -45,8 +44,6 @@ function execution(id: string, accountId = 2) {
   row.decision = "closed";
   mocks.records.set(id, row);
   mocks.orders.set(mocks.orders.size, [{ Type: "Polymarket", PlayerID: 1, OrderID: hash, PmGtcExecutionId: id, Status: "Win" }, { Type: "RAY", PlayerID: accountId, OrderID: `ray-${id}`, PmGtcExecutionId: id, Status: "None" }]);
-  gtcOrderProjection.owner = "owner";
-  gtcOrderProjection.rows = [...mocks.orders.values()].flat();
 }
 function venue(id: string, status: VenueOrder["status"]): VenueOrder {
   return { provider: "RAY", orderId: `ray-${id}`, status, odds: 2, betMoney: 100, money: status === "lose" ? -100 : 0, reward: 0, createAt: Date.now(), game: "CS2", match: "match", bet: "map1", item: "Away" };
@@ -61,16 +58,13 @@ beforeEach(() => {
 });
 afterEach(() => { stopRayOrderMonitoring(); stopGtcRuntime(); vi.useRealTimers(); });
 
-it("FOK and GTC contexts consume one independent account poll and keep GTC as a facts consumer", async () => {
+it("fOK and GTC contexts consume one independent account poll and keep GTC as a facts consumer", async () => {
   execution("gtc");
   const pendingGtc = venue("gtc", "none"); const pendingFok = venue("fok", "none");
   startGtcRuntime("owner"); await vi.advanceTimersByTimeAsync(0);
   const store = useRayOrderContextStore();
   for (const [index, original] of [pendingGtc, pendingFok].entries()) {
-    registerRayOrderContext({ linkId: 100 + index, matchId: 1, betId: 2 + index, side: "B", accountId: 2,
-      submittedAt: original.createAt, match: original.match, bet: original.bet, item: original.item, target: "Away",
-      odds: original.odds, betMoney: original.betMoney, anchorProvider: "Polymarket", anchorAccountId: 1,
-      anchorBetMoney: 5, anchorOdds: 2, anchorConfirmed: false, initialOrders: [original], initialRejected: false });
+    registerRayOrderContext({ linkId: 100 + index, matchId: 1, betId: 2 + index, side: "B", accountId: 2, submittedAt: original.createAt, match: original.match, bet: original.bet, item: original.item, target: "Away", odds: original.odds, betMoney: original.betMoney, anchorProvider: "Polymarket", anchorAccountId: 1, anchorBetMoney: 5, anchorOdds: 2, anchorConfirmed: false, initialOrders: [original], initialRejected: false });
   }
   mocks.read.mockResolvedValue([pendingGtc, pendingFok]); startRayOrderMonitoring(); await vi.advanceTimersByTimeAsync(0);
   expect(mocks.read).toHaveBeenCalledOnce(); expect(store.activeTasks).toHaveLength(2);

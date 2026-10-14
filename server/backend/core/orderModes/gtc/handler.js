@@ -4,7 +4,8 @@ import { gtcUnits } from "@changmen/shared/pm_gtc";
 import { assertPlayerOwnedByUser } from "../../account/player_ownership.js";
 import { refreshAccountsFromRdsIfEmpty } from "../../db/store.js";
 import store from "../../esport-api/store.js";
-import { getGtcOrders, saveGtcOrders } from "./orders.js";
+import { getGtcMonitorOrders, getGtcOrders, saveGtcOrders } from "./orders.js";
+import { recoverPmGtc } from "./recovery.js";
 
 const parse = value => typeof value === "string" ? JSON.parse(value) : value;
 function walletMaker(raw) {
@@ -21,8 +22,12 @@ function walletMaker(raw) {
 export async function handlePmGtc(action, body, owner) {
   if (!owner)
     throw new Error("请先登录");
+  if (action === "Pm_GtcRecover")
+    return recoverPmGtc(body, owner);
   if (action === "Pm_GtcOrders")
     return getGtcOrders(body, owner);
+  if (action === "Pm_GtcMonitorOrders")
+    return getGtcMonitorOrders(body, owner);
   if (action === "Pm_GtcSaveOrders") {
     const result = await saveGtcOrders(body, owner);
     if (!result.ok)
@@ -35,6 +40,17 @@ export async function handlePmGtc(action, body, owner) {
       if (!Number.isSafeInteger(betRowId) || betRowId <= 0)
         throw new Error("GTC 盘口 ID 无效");
       return listPmGtc(owner, betRowId);
+    }
+    if (body.knownRevisions != null) {
+      let known;
+      try { known = parse(body.knownRevisions); }
+      catch { throw new Error("GTC 已知版本无效"); }
+      if (!known || typeof known !== "object" || Array.isArray(known) || Object.keys(known).length > 1000
+        || Object.entries(known).some(([id, revision]) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+          || !Number.isSafeInteger(revision) || revision < 0)) {
+        throw new Error("GTC 已知版本无效");
+      }
+      return listPmGtc(owner, undefined, known);
     }
     return listPmGtc(owner);
   }

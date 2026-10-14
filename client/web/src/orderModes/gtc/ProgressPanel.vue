@@ -1,47 +1,47 @@
 <script setup lang="ts">
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
-import { ElMessage, ElMessageBox } from "element-plus";
-import { computed } from "vue";
-import { gtcOrderCardView } from "./orderCardView";
-import { pmGtcMonitorCardView } from "./monitorCardView";
 import { formatOrderTime } from "@changmen/client-core/shared/format";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { computed, ref } from "vue";
 import { gtcProgress } from "./gtcProgressState";
+import { pmGtcMonitorCardView } from "./monitorCardView";
+import { gtcOrderCardView } from "./orderCardView";
 import { gtcSyncNotice } from "./syncStatus";
-import { gtcPmReconciled } from "./pollingPolicy";
 
 const props = defineProps<{ execution: GtcExecution; readOnly?: boolean }>();
+const cancelBusy = ref(false);
 const syncIssue = computed(() => {
   const issue = gtcProgress.queryIssues[props.execution.id];
-  if (issue) return issue;
+  if (issue)
+    return issue;
   const kind = gtcOrderCardView(props.execution).queryErrorKind;
   if (kind && !(kind === "auth" && gtcProgress.recoveredAt > props.execution.observedAt))
     return { kind, message: props.execution.error, at: props.execution.observedAt };
   return undefined;
 });
 const view = computed(() => pmGtcMonitorCardView(props.execution, syncIssue.value));
+const syncNotice = computed(() => syncIssue.value ? gtcSyncNotice(syncIssue.value) : "");
+const saveNotice = computed(() => gtcProgress.saveIssues[props.execution.id]
+  ? "后台副本同步失败，正在重试；当前订单状态按 PM 官方结果显示。"
+  : "");
 const observedTime = computed(() => props.execution.observedAt > 0 ? formatOrderTime(props.execution.observedAt) : "尚未取得核对结果");
-const syncNotice = computed(() => {
-  const issue = gtcProgress.queryIssues[props.execution.id];
-  if (issue) return gtcSyncNotice(issue);
-  const kind = view.value.queryErrorKind;
-  if (kind && !(kind === "auth" && gtcProgress.recoveredAt > props.execution.observedAt))
-    return gtcSyncNotice({ kind, message: props.execution.error, at: props.execution.observedAt });
-  return "";
-});
-const otherSyncNotice = computed(() => {
-  const issue = gtcProgress.otherQueryIssues[props.execution.id];
-  return issue ? `${props.execution.plan.otherProvider} ${gtcSyncNotice(issue)}` : "";
-});
 async function cancel() {
+  if (props.readOnly || cancelBusy.value || !view.value.canCancel)
+    return;
+  const { id, owner } = props.execution;
+  cancelBusy.value = true;
   try {
-    await ElMessageBox.confirm("只取消这笔 PM 原挂单的剩余份额。已成交部分保留，本组继续由您处理。", "取消PM挂单", { type: "warning" });
-    const { cancelGtc } = await import("./runtime");
-    await cancelGtc(props.execution.id);
+    await ElMessageBox.confirm("只取消这笔 PM 原挂单的剩余份额。已成交部分保留。", "取消 PM 剩余挂单", { type: "warning" });
+    const { cancelGtc } = await import("@/runtime/orderMonitoring/pm");
+    if (props.execution.id !== id || props.execution.owner !== owner || gtcProgress.owner !== owner || !view.value.canCancel)
+      throw new Error("原单状态或用户会话已变更，请重新核对");
+    await cancelGtc(id);
   }
   catch (error) {
     if (error instanceof Error)
       ElMessage.error(error.message);
   }
+  finally { cancelBusy.value = false; }
 }
 </script>
 
@@ -58,11 +58,15 @@ async function cancel() {
     <dl v-else-if="execution.submit !== 'rejected'" class="pm-gtc-monitor__facts">
       <div><dt>成交</dt><dd>{{ execution.matched }} / {{ execution.plan.shares }} 份</dd></div>
       <div><dt>挂单</dt><dd>{{ execution.open == null ? '待核实' : `${execution.open} 份` }}</dd></div>
-      <div title="吃单成交份额"><dt>TAKER</dt><dd>{{ view.takerShares == null ? '待核实' : `${view.takerShares} 份` }}</dd></div>
+      <div title="吃单成交份额">
+        <dt>TAKER</dt><dd>{{ view.takerShares == null ? '待核实' : `${view.takerShares} 份` }}</dd>
+      </div>
       <div title="买入限价（USDC / 份）">
         <dt>限价</dt><dd>{{ execution.plan.price }}</dd>
       </div>
-      <div title="挂单成交份额"><dt>MAKER</dt><dd>{{ view.makerShares == null ? '待核实' : `${view.makerShares} 份` }}</dd></div>
+      <div title="挂单成交份额">
+        <dt>MAKER</dt><dd>{{ view.makerShares == null ? '待核实' : `${view.makerShares} 份` }}</dd>
+      </div>
       <div title="成交均价（USDC / 份）">
         <dt>均价</dt><dd>{{ view.averagePrice == null ? Number(execution.matched) > 0 ? '待核实' : '—' : view.averagePrice }}</dd>
       </div>
@@ -80,19 +84,16 @@ async function cancel() {
     <div v-if="syncNotice" role="status" class="pm-gtc-monitor__notice">
       {{ syncNotice }}
     </div>
-    <div v-else-if="gtcPmReconciled(execution)" class="pm-gtc-monitor__sync-state">
-      原单成交核对已完成，已停止挂单查询。
-    </div>
-    <div v-if="otherSyncNotice" role="status" class="pm-gtc-monitor__notice">
-      {{ otherSyncNotice }}
+    <div v-if="saveNotice" role="status" class="pm-gtc-monitor__notice">
+      {{ saveNotice }}
     </div>
     <div v-if="view.cancelLabel" role="status" class="pm-gtc-monitor__notice">
       {{ view.cancelLabel }}
     </div>
-    <button v-if="view.showCancel" type="button" class="pm-gtc-monitor__cancel" title="仅取消剩余挂单，已成交部分保留。" :disabled="readOnly || !view.canCancel" @click="cancel">
-      {{ view.cancelLabel || '取消 PM 剩余挂单' }}
+    <button v-if="view.showCancel" type="button" class="pm-gtc-monitor__cancel" title="仅取消剩余挂单，已成交部分保留。" :disabled="readOnly || !view.canCancel || cancelBusy" @click="cancel">
+      {{ cancelBusy || view.cancelInFlight ? '取消中' : view.cancelPending ? '重试取消 PM 剩余挂单' : '取消 PM 剩余挂单' }}
     </button>
-    <div v-if="execution.cancel?.message" class="pm-gtc-monitor__notice">
+    <div v-if="execution.cancel?.message && !view.cancelLabel" class="pm-gtc-monitor__notice">
       {{ execution.cancel.message }}
     </div>
     <div v-if="view.queryDiagnostic" class="pm-gtc-monitor__notice">
@@ -129,7 +130,6 @@ async function cancel() {
 .pm-gtc-monitor__facts dd { margin: 0; color: rgba(230, 238, 250, 0.9); font-variant-numeric: tabular-nums; }
 .pm-gtc-monitor__footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0 6px; color: var(--cm-text-secondary, #909399); font-size: 10px; }
 .pm-gtc-monitor__notice { margin-top: 3px; color: var(--cm-color-warning, #e6a23c); font-size: 10px; }
-.pm-gtc-monitor__sync-state { margin-top: 3px; color: var(--cm-text-secondary, #909399); font-size: 10px; }
 .pm-gtc-monitor__cancel {
   display: block;
   box-sizing: border-box;

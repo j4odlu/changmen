@@ -1,8 +1,65 @@
 import * as db from "@changmen/db";
-import { assertPlayerOwnedByUser } from "../../account/player_ownership.js";
-import { readOrdersForMode } from "../readOrders.js";
+import { toClientOrder } from "../../account/order/dto.js";
 import * as orders from "../../account/order_store.js";
+import { assertPlayerOwnedByUser } from "../../account/player_ownership.js";
 import { verifyOrderExecution } from "../orderMetadata.js";
+import { readOrdersForMode } from "../readOrders.js";
+
+/** [changmen 扩展] 仅返回认证用户持久化执行的 exact 原单，不依赖日期或前端提供的账号。 */
+export async function getGtcMonitorOrders(body, owner, recoveredRecords) {
+  if (!owner)
+    throw new Error("请先登录");
+  let ids = body.ids;
+  if (typeof ids === "string") {
+    try { ids = JSON.parse(ids); }
+    catch { throw new Error("GTC 监控恢复身份无效"); }
+  }
+  if (!Array.isArray(ids) || ids.length > 1000 || ids.some(id => typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))
+    throw new Error("GTC 监控恢复身份无效");
+  if (!ids.length)
+    return [];
+  const requested = new Set(ids.map(id => id.toLowerCase()));
+  const records = recoveredRecords ?? await db.listPmGtcByIds(owner, [...requested]);
+  const accounts = new Map();
+  for (const row of records) {
+    if (row.owner !== owner || !requested.has(row.id))
+      throw new Error("GTC 监控恢复执行归属无效");
+    for (const [playerId, provider, orderId] of [[row.plan.playerId, "Polymarket", row.orderId], [row.plan.playerId, "Polymarket", row.plan.orderHash], [row.plan.otherPlayerId, row.plan.otherProvider, row.other.orderId]]) {
+      if (!playerId || !orderId)
+        continue;
+      const list = accounts.get(playerId) ?? [];
+      if (!list.some(anchor => anchor.provider === provider && anchor.orderId.toLowerCase() === orderId.toLowerCase() && anchor.executionId === row.id))
+        list.push({ provider, orderId, executionId: row.id });
+      accounts.set(playerId, list);
+    }
+  }
+  const result = [];
+  for (const [playerId, anchors] of accounts) {
+    const orders = await db.fetchOrdersByPlayerOrderIdsStrict(playerId, owner, [...new Set(anchors.map(anchor => anchor.orderId))]);
+    for (const order of orders) {
+      if (String(order.player_id) !== String(playerId) || order.user_id !== owner)
+        throw new Error("GTC 监控恢复订单账号归属无效");
+      if (order.provider === "Polymarket" && order.raw?.pmSide === "sell")
+        continue;
+      const matching = new Set(anchors.filter(anchor => anchor.provider === order.provider && anchor.orderId.toLowerCase() === String(order.order_id).toLowerCase()).map(anchor => anchor.executionId));
+      if (!matching.size)
+        continue;
+      const storedIdentity = order.raw?.pmGtcExecutionId ? String(order.raw.pmGtcExecutionId) : undefined;
+      // [changmen 扩展] 保留可信库内身份；无身份旧行只有唯一 exact 关联才补返回标识，冲突保持查询问题。
+      if (storedIdentity ? !matching.has(storedIdentity) : matching.size !== 1)
+        throw new Error("GTC 监控恢复订单执行身份冲突，请核对原单归属");
+      result.push({ ...toClientOrder(order), PmGtcExecutionId: storedIdentity ?? [...matching][0] });
+    }
+  }
+  // [changmen 扩展] 已持久化的成交与财务买单同事务提交；缺失不能被解释为未成交或已成功恢复。
+  for (const row of records) {
+    if (Number(row.financialOrder?.pmShares) > 0 && !result.some(order => order.PmGtcExecutionId === row.id
+      && String(order.PlayerID) === String(row.plan.playerId) && order.Type === "Polymarket")) {
+      throw new Error("GTC 监控恢复原单财务记录缺失，请核对原单身份");
+    }
+  }
+  return result;
+}
 
 export async function getGtcOrders(body, owner) {
   return readOrdersForMode(body, owner, "GTC", await db.listPmGtc(owner));

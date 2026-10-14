@@ -6,16 +6,18 @@ import { beginRayOrderObservation } from "@/runtime/orderMonitoring/rayOrders";
 import { useAccountStore } from "@/stores/accountStore";
 import { acceptGtc, cancelGtc, currentGtc, gtcProgress, pollGtc, pollGtcOther, refreshGtcRecords, startGtcRuntime, stopGtcRuntime } from "./runtime";
 
-const mocks = vi.hoisted(() => ({ cancel: vi.fn(), read: vi.fn(), otherRead: vi.fn(), command: vi.fn(), list: vi.fn(), mark: vi.fn(), calls: [] as string[] }));
-vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
+const mocks = vi.hoisted(() => ({ cancel: vi.fn(), read: vi.fn(), otherRead: vi.fn(), command: vi.fn(), list: vi.fn(), mark: vi.fn(), calls: [] as string[], orders: new Map<number, import("@/types/order").OrderRow[]>() }));
+vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true, post: async () => ({ success: 0, msg: "未知预测市场 action: Pm_GtcRecover" }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: "owner", extensionPrefs: {} }) }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ findAccount: (id: number) => ({ provider: id === 2 ? "RAY" : "Polymarket", accountId: id }) }) }));
+vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: mocks.orders }) }));
 vi.mock("@/stores/betting/successMarkers", () => ({ markSuccessfulBet: mocks.mark }));
 vi.mock("./successMarkers", () => ({ markGtcSuccess: mocks.mark }));
 vi.mock("./api", () => ({ listGtc: mocks.list, commandGtc: mocks.command }));
-vi.mock("./ordersApi", () => ({ refreshGtcOrders: vi.fn().mockResolvedValue(undefined), saveOrders: vi.fn() }));
+vi.mock("./ordersApi", () => ({ loadGtcMonitorOrders: vi.fn().mockResolvedValue([]), refreshGtcOrders: vi.fn().mockResolvedValue(undefined), saveOrders: vi.fn() }));
 vi.mock("./otherOrders", () => ({ readGtcOtherOrders: mocks.otherRead }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ readGtcFacts: mocks.read, pmCancelOrder: mocks.cancel }));
+vi.mock("@/runtime/orderPolling/ray", () => ({ resetRayOrderPolling: vi.fn() }));
+vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ readGtcTradeHistory: vi.fn().mockResolvedValue({ trades: [], complete: true }), readGtcFacts: mocks.read, pmCancelOrder: mocks.cancel }));
 vi.mock("@changmen/venue-adapter/polymarket", () => ({ observePolymarketOrderWatch: () => () => {} }));
 const hash = `0x${"a".repeat(64)}`;
 const plan = { playerId: 1, otherPlayerId: 2, shares: "10", tokenId: "token", orderHash: hash, betRowId: 2, target: "Home", otherTarget: "Away", otherOdds: 2, originalPmLeg: "A" } as GtcPlan;
@@ -25,7 +27,7 @@ function row() {
 }
 const facts = () => ({ order: { id: hash, original: "10", matched: "0", status: "LIVE", tradeIds: [] }, fills: [], complete: true, observedAt: Date.now() });
 beforeEach(() => {
-  stopGtcRuntime(); vi.clearAllMocks(); sessionStorage.clear(); mocks.calls = [];
+  stopGtcRuntime(); vi.clearAllMocks(); sessionStorage.clear(); mocks.calls = []; mocks.orders.clear();
   gtcProgress.owner = "owner"; gtcProgress.records = [row()];
   mocks.command.mockImplementation(async (previous: GtcExecution, command: GtcCommand) => {
     mocks.calls.push(command.kind); return applyGtcCommand(JSON.parse(JSON.stringify(previous)), command, Date.now());
@@ -35,6 +37,21 @@ beforeEach(() => {
 });
 afterEach(() => { stopGtcRuntime(); vi.useRealTimers(); });
 describe("gTC independent progress and cancellation", () => {
+  it("discovering an empty GTC history does not refresh ordinary FOK orders or touch account statistics", async () => {
+    stopGtcRuntime(); vi.useFakeTimers(); mocks.list.mockResolvedValue([]);
+    startGtcRuntime("owner"); await vi.advanceTimersByTimeAsync(0);
+    expect(gtcProgress.ready).toBe(true);
+    expect((await import("./ordersApi")).refreshGtcOrders).not.toHaveBeenCalled();
+    expect(mocks.command).not.toHaveBeenCalled(); expect(mocks.read).not.toHaveBeenCalled(); expect(mocks.otherRead).not.toHaveBeenCalled();
+  });
+  it("empty history discovery backs off for five minutes without delaying new local PM orders", async () => {
+    stopGtcRuntime(); vi.useFakeTimers(); mocks.list.mockResolvedValue([]);
+    startGtcRuntime("owner"); await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(240000); expect(mocks.list).toHaveBeenCalledOnce();
+    acceptGtc(row()); await vi.advanceTimersByTimeAsync(5000);
+    expect(mocks.read).toHaveBeenCalledOnce(); expect(mocks.list).toHaveBeenCalledOnce();
+    expect((await import("./ordersApi")).loadGtcMonitorOrders).toHaveBeenCalledOnce();
+  });
   function counterpartRow() {
     const original = row();
     original.plan = { ...plan, otherProvider: "RAY", otherStake: 100, otherVenueMatchId: "38452903", otherVenueItemId: "76482018", linkId: 1791627619164 };
@@ -85,7 +102,7 @@ describe("gTC independent progress and cancellation", () => {
     expect(currentGtc("id").other).toMatchObject({ state: status === "pending" ? "pending" : "rejected", orderId: "40764f62796e6acdb186" });
     expect(mocks.mark).not.toHaveBeenCalled();
   });
-  it("a slow PM query cannot block consuming original RAY results, and never schedules RAY queries", async () => {
+  it("a slow PM query cannot block consuming original RAY results and never schedules RAY queries", async () => {
     await import("@changmen/venue-adapter/polymarket/gtc");
     vi.useFakeTimers(); stopGtcRuntime();
     const slow = row(); slow.id = "slow-pm";
@@ -161,8 +178,8 @@ describe("gTC independent progress and cancellation", () => {
     });
     startGtcRuntime("owner");
     await vi.waitFor(() => expect(mocks.read).toHaveBeenCalledOnce());
-    expect(currentGtc("legacy").released).toBe(false); expect(currentGtc("id").orderId).toBe(hash);
-    expect(gtcProgress.error).toContain("其他订单继续独立核对");
+    expect(currentGtc("legacy").released).toBe(true); expect(currentGtc("id").orderId).toBe(hash);
+    expect(gtcProgress.saveIssues.legacy?.message).toContain("old closure unavailable");
   });
   it("starting recovery preserves financial rows already loaded for this owner", async () => {
     stopGtcRuntime();
@@ -195,13 +212,15 @@ describe("gTC independent progress and cancellation", () => {
     await vi.waitFor(() => expect(gtcProgress.ready).toBe(true));
     expect(currentGtc("legacy").released).toBe(false); expect(mocks.command).not.toHaveBeenCalled();
   });
-  it("durably takes over original group before cancellation HTTP", async () => {
+  it("locally takes over original group before cancellation HTTP and adopts the official cancel result", async () => {
     mocks.cancel.mockImplementation(async () => { expect(currentGtc("id").manual).toBe(true); expect(currentGtc("id").decision).toBe("closed"); mocks.calls.push("HTTP_CANCEL"); return { canceled: [hash] }; });
     await cancelGtc("id"); expect(mocks.calls.indexOf("cancel")).toBeLessThan(mocks.calls.indexOf("HTTP_CANCEL"));
-    expect(mocks.cancel).toHaveBeenCalledExactlyOnceWith(expect.anything(), hash); expect(currentGtc("id").open).toBe("10"); expect(currentGtc("id").released).toBe(false);
+    expect(mocks.cancel).toHaveBeenCalledExactlyOnceWith(expect.anything(), hash); expect(currentGtc("id").open).toBe("0");
   });
-  it("failed durable cancellation intent prevents venue HTTP", async () => {
-    mocks.command.mockRejectedValueOnce(new Error("database lost")); await expect(cancelGtc("id")).rejects.toThrow("database lost"); expect(mocks.cancel).not.toHaveBeenCalled();
+  it("failed copy persistence cannot prevent venue cancellation", async () => {
+    mocks.command.mockRejectedValue(new Error("database lost")); await cancelGtc("id");
+    expect(mocks.cancel).toHaveBeenCalledOnce(); expect(currentGtc("id").open).toBe("0");
+    expect(gtcProgress.saveIssues.id?.message).toBe("database lost");
   });
   it("cancel timeout remains manual and does not resend a BUY", async () => {
     mocks.cancel.mockRejectedValueOnce(new Error("timeout")); await cancelGtc("id");
@@ -222,13 +241,12 @@ describe("gTC independent progress and cancellation", () => {
     expect(gtcProgress.queryIssues.id).toBeUndefined();
     expect(currentGtc("id").error).toBe("");
   });
-  it("a login failure saving facts cannot overwrite confirmed quantities or retry as empty facts", async () => {
-    const original = JSON.parse(JSON.stringify(currentGtc("id")));
+  it("a login failure saving facts keeps official facts and reports a separate copy failure", async () => {
     mocks.command.mockRejectedValueOnce(new Error("登录服务暂时不可用，请稍后重试"));
-    await expect(pollGtc("id")).rejects.toThrow("登录服务");
-    expect(mocks.command).toHaveBeenCalledOnce(); expect(currentGtc("id")).toEqual(original);
-    expect(gtcProgress.queryIssues.id?.kind).toBe("auth");
-    await refreshGtcRecords(); expect(gtcProgress.queryIssues.id).toBeUndefined();
+    await pollGtc("id");
+    expect(mocks.command).toHaveBeenCalledOnce(); expect(currentGtc("id").order?.status).toBe("LIVE");
+    expect(gtcProgress.queryIssues.id).toBeUndefined(); expect(gtcProgress.saveIssues.id?.kind).toBe("auth");
+    await refreshGtcRecords(); expect(currentGtc("id").order?.status).toBe("LIVE");
   });
   it("first positive fill restores each local session count once", async () => {
     mocks.read.mockResolvedValue({ ...facts(), order: { ...facts().order, matched: "5", tradeIds: ["trade"] }, fills: [{ key: "trade:maker", tradeId: "trade", bucket: "maker", role: "MAKER", shares: "5", price: "0.5", fee: "0", status: "CONFIRMED", updatedAt: Date.now() }] });
@@ -246,7 +264,7 @@ describe("gTC independent progress and cancellation", () => {
       observedAt: Date.now(),
     }), { kind: "close" }, Date.now());
     gtcOrderProjection.owner = "owner";
-    gtcOrderProjection.rows = [{ Type: "Polymarket", PlayerID: 1, OrderID: hash, PmGtcExecutionId: "id", Status: "Win" }];
+    mocks.orders.set(1, [{ Type: "Polymarket", PlayerID: 1, OrderID: hash, PmGtcExecutionId: "id", Status: "Win" }]);
     mocks.list.mockResolvedValue([terminal]); startGtcRuntime("owner");
     await vi.advanceTimersByTimeAsync(0);
     expect(mocks.read).not.toHaveBeenCalled(); expect(mocks.command).not.toHaveBeenCalled();
@@ -268,5 +286,29 @@ describe("gTC independent progress and cancellation", () => {
     const pending = { ...row(), id: "new" }; acceptGtc(pending); mocks.list.mockResolvedValue([terminal, pending]);
     await vi.advanceTimersByTimeAsync(5000);
     expect(mocks.read).toHaveBeenCalledOnce();
+  });
+  it("settled RAY originals use the ordinary list, clear old errors and remain stopped after changing the sidebar date", async () => {
+    vi.useFakeTimers(); stopGtcRuntime();
+    const ray = counterpartRow(); ray.decision = "closed";
+    ray.other = { ...ray.other, state: "filled", orderId: "40764f62796e6acdb186" };
+    mocks.orders.set(1, [{ Type: "RAY", PlayerID: 2, OrderID: ray.other.orderId!, PmGtcExecutionId: ray.id, Status: "Lose" }]);
+    mocks.list.mockResolvedValue([ray]); startGtcRuntime("owner");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(gtcOrderProjection.rows).toEqual([]);
+    expect(mocks.otherRead).not.toHaveBeenCalled();
+    gtcProgress.otherQueryIssues.id = { kind: "query", message: "Network Error", at: 1 };
+    mocks.orders.clear();
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(mocks.otherRead).not.toHaveBeenCalled();
+    expect(gtcProgress.otherQueryIssues.id).toBeUndefined();
+    expect(currentGtc("id").other.state).toBe("filled");
+  });
+  it("a newly saved RAY settlement stops reads even while an older ordinary snapshot still says None", async () => {
+    const ray = counterpartRow(); ray.other = { ...ray.other, state: "filled", orderId: "40764f62796e6acdb186" };
+    gtcProgress.records = [ray];
+    mocks.orders.set(1, [{ Type: "RAY", PlayerID: 2, OrderID: ray.other.orderId!, PmGtcExecutionId: ray.id, Status: "None" }]);
+    mocks.otherRead.mockResolvedValue([{ ...counterpartOrder(), status: "lose" }]);
+    await pollGtcOther("id"); await pollGtcOther("id");
+    expect(mocks.otherRead).toHaveBeenCalledOnce();
   });
 });

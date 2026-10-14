@@ -30,20 +30,21 @@ export function selectGtcRelease(plan, combinations) {
 /** 仅增加精确查询入口；既有 GTC handler 与读写函数也逐模块核验，不删掉检查。 */
 export function verifyLegacyGtcBackendModules(source, captured) {
   const handler = "server/backend/core/orderModes/gtc/handler.js";
-  let specialized = source(handler);
-  // [changmen 扩展] 只登记明确未发送的新增命令，原命令顺序、授权与 handler 全文继续核对。
-  if (specialized.includes('"not_sent"')) {
-    specialized = replaceExact(specialized,
-      '["authorize_pm", "authorize_other", "ack", "other", "not_sent", "facts", "close", "cancel", "cancel_result", "resume", "counted"]',
-      '["authorize_pm", "authorize_other", "ack", "other", "facts", "close", "cancel", "cancel_result", "resume", "counted"]');
-  }
-  if (JSON.stringify(moduleTokens(specialized)) !== JSON.stringify(moduleTokens(captured(handler)))) {
+  // [changmen 扩展] 两端分别核对已登记扩展，再比较原契约；线上已升级时不能只还原候选一端。
+  const normalizeHandler = read => {
+    let specialized = read(handler);
+    // [changmen 扩展] 只登记明确未发送的新增命令，原命令顺序、授权与 handler 全文继续核对。
+    if (specialized.includes('"not_sent"')) {
+      specialized = replaceExact(specialized,
+        '["authorize_pm", "authorize_other", "ack", "other", "not_sent", "facts", "close", "cancel", "cancel_result", "resume", "counted"]',
+        '["authorize_pm", "authorize_other", "ack", "other", "facts", "close", "cancel", "cancel_result", "resume", "counted"]');
+    }
     if (specialized.includes('"Pm_GtcRecover"')) {
       assert.deepEqual(moduleTokens(specialized), moduleTokens(gitSource("adb333bf24b6ba6aa3e441009b56f874a23f6ed9", handler)), "complete committed recovery handler");
       specialized = replaceExact(specialized, 'import { recoverPmGtc } from "./recovery.js";');
       specialized = replaceExact(specialized, 'if (action === "Pm_GtcRecover") return recoverPmGtc(body, owner);');
       const recovery="server/backend/core/orderModes/gtc/recovery.js";
-      let recoverySource = source(recovery);
+      let recoverySource = read(recovery);
       if (recoverySource.includes('gtcPmNeverSubmitted')) {
         recoverySource = replaceExact(recoverySource, 'import { gtcPmNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc";', 'import { gtcUnits } from "@changmen/shared/pm_gtc";');
         recoverySource = replaceExact(recoverySource,
@@ -63,10 +64,13 @@ export function verifyLegacyGtcBackendModules(source, captured) {
         return listPmGtc(owner, undefined, known);
       }`);
     }
-    specialized = replaceExact(specialized, 'import { getGtcMonitorOrders, getGtcOrders, saveGtcOrders } from "./orders.js";', 'import { getGtcOrders, saveGtcOrders } from "./orders.js";');
-    specialized = replaceExact(specialized, 'if (action === "Pm_GtcMonitorOrders") return getGtcMonitorOrders(body, owner);');
-  }
-  assert.deepEqual(moduleTokens(specialized), moduleTokens(captured(handler)), "complete legacy GTC handler");
+    if (specialized.includes('"Pm_GtcMonitorOrders"')) {
+      specialized = replaceExact(specialized, 'import { getGtcMonitorOrders, getGtcOrders, saveGtcOrders } from "./orders.js";', 'import { getGtcOrders, saveGtcOrders } from "./orders.js";');
+      specialized = replaceExact(specialized, 'if (action === "Pm_GtcMonitorOrders") return getGtcMonitorOrders(body, owner);');
+    }
+    return specialized;
+  };
+  assert.deepEqual(moduleTokens(normalizeHandler(source)), moduleTokens(normalizeHandler(captured)), "complete legacy GTC handler");
   const orders = "server/backend/core/orderModes/gtc/orders.js";
   const parse = text => ts.createSourceFile(orders, text, ts.ScriptTarget.Latest, true);
   const current = parse(source(orders)), previous = parse(captured(orders));
@@ -75,6 +79,9 @@ export function verifyLegacyGtcBackendModules(source, captured) {
   const reviewed = parse(gitSource("adb333bf24b6ba6aa3e441009b56f874a23f6ed9",orders));
   const monitor = reviewed.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="getGtcMonitorOrders");
   assert.deepEqual(moduleTokens(added[0].getText(current)),moduleTokens(monitor.getText(reviewed)),"complete committed exact GTC monitor function");
+  const previousAdded = previous.statements.filter(node => ts.isFunctionDeclaration(node) && node.name?.text === "getGtcMonitorOrders");
+  assert(previousAdded.length <= 1, "At most one captured GTC monitor function is allowed");
+  if (previousAdded.length) assert.deepEqual(moduleTokens(previousAdded[0].getText(previous)), moduleTokens(monitor.getText(reviewed)), "complete captured exact GTC monitor function");
   const imports = tree => tree.statements.filter(ts.isImportDeclaration).map(node => node.getText(tree));
   const extraImport = 'import { toClientOrder } from "../../account/order/dto.js";';
   assert.equal(imports(current).filter(text => text === extraImport).length, 1);

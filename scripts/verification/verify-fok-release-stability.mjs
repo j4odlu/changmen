@@ -1,7 +1,7 @@
 // [changmen 扩展] 完整检查末尾再核验两端版本、进程、公开入口与本地检查输入没有漂移。
 import fs from "node:fs";
 import assert from "node:assert/strict";
-import { sshRead, layoutProgram, readLayout, assertStable, readPublicAsset, checkInputHashes, localHashes } from "./release-provenance.mjs";
+import { sshRead, layoutProgram, readLayout, assertStable, readPublicAsset, checkInputHashes, localHashes, PUBLIC_ASSET_WORKERS } from "./release-provenance.mjs";
 const snapshot = JSON.parse(fs.readFileSync("output/vps-fok-baseline.json", "utf8"));
 const audit = JSON.parse(fs.readFileSync("output/fok-release-file-audit.json", "utf8"));
 assert.equal(audit.captureId, snapshot.captureId);
@@ -20,8 +20,8 @@ async function worker() {
     await readPublicAsset(snapshot.servedFrontend.url, asset);
   }
 }
-// [changmen 扩展] Match initial capture's bounded serial reads and complete byte checks.
-await Promise.all(Array.from({ length: 1 }, worker));
+// [changmen 扩展] 与初始捕获共用有限并发和完整字节校验。
+await Promise.all(Array.from({ length: PUBLIC_ASSET_WORKERS }, worker));
 assertStable(snapshot, readLayout());
 assert.deepEqual(localHashes(), audit.localHashes, "Local release inputs changed during checks");
 assert.deepEqual(checkInputHashes(), audit.checkInputHashes, "Local verification/test inputs changed during checks");

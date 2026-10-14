@@ -41,7 +41,7 @@ for(const [phase,args,cwd] of phases) {
   fs.writeFileSync(log,(result.stdout??'')+(result.stderr??'')+(result.error?'\n'+result.error.message:''));
   results.push({phase,passed:result.status===0,exitCode:result.status,elapsedMs:Date.now()-started,log});
   console.log(`${phase}: ${result.status===0?'PASS':'FAIL'} (${log})`);
-  if(result.status!==0&&['capture','release-files'].includes(phase))break;
+  if(result.status!==0)break;
 }
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
 const capture=results.find(row=>row.phase==='capture')?.passed?read('output/vps-fok-baseline.json'):null;
@@ -56,7 +56,8 @@ if(capture&&runtime&&publicEntry&&results.find(row=>row.phase==='release-stabili
 }
 const compatibility=results.find(row=>row.phase==='gtc-backend-compatibility')&&fs.existsSync('output/gtc-backend-compatibility.json')?read('output/gtc-backend-compatibility.json'):null;
 let selectedRelease=null;
-if(compatibility&&capture&&runtime&&compatibility.release?.plan===plan) {
+// 独立保留已核对的兼容失败原因；完整成功仍要求全部阶段与来源一致性通过。
+if(compatibility&&capture&&compatibility.release?.plan===plan) {
   try {
     for(const key of ['captureId','frontendVersion','backendVersion','immutableBaseline'])assert.equal(compatibility[key],capture[key]);
     const selected=selectGtcRelease(plan,compatibility.combinations);

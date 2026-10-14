@@ -58,3 +58,10 @@ it.each(["capture-vps-fok-baseline", "audit-fok-release-files"])("stops at faile
   expect(result.report.passed).toBe(false);
   expect(result.calls.some(command => command.includes("--release-plan=backend-first"))).toBe(false);
 });
+it.each(["verify-gtc-backend-compatibility", "test:backend", "app:build"])("stops immediately at a failed required stage %s", failPhase => {
+  const result = run({ failPhase });
+  expect(result.report.passed).toBe(false);
+  expect(result.report.results.at(-1).passed).toBe(false);
+  expect(result.calls.at(-1).join(" ")).toContain(failPhase);
+  expect(result.calls.some(command => command.join(" ").includes("verify-fok-release-stability"))).toBe(false);
+});

@@ -56,6 +56,7 @@ export function assertPublicAsset(asset, status, bytes) {
 }
 // [changmen 扩展] 大资源传输允许有限等待与重试；官方 HTTP/完整字节校验不被重试掩盖。
 export const PUBLIC_ASSET_TIMEOUT_MS = 60_000;
+export const PUBLIC_ASSET_WORKERS = 4;
 export async function readPublicAsset(frontendUrl, asset, { fetchAsset = globalThis.fetch } = {}) {
   const url = frontendUrl + '/' + asset.file.split('/').map(encodeURIComponent).join('/');
   for (let attempt = 1; attempt <= 2; attempt++) {

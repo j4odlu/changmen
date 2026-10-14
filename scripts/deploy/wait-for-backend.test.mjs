@@ -1,17 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import YAML from 'yaml';
 import { needsBackendRelease, waitForBackend } from './wait-for-backend.mjs';
 
 const sha = 'a'.repeat(40);
 const run = (extra = {}) => ({ databaseId: 1, headSha: sha, headBranch: 'master', status: 'completed', conclusion: 'success', ...extra });
-const patterns = YAML.parse(readFileSync(new URL('../../.github/workflows/deploy-backend.yml', import.meta.url), 'utf8')).on.push.paths;
 test('frontend-only stays independent; shared/API/deployment changes wait', () => {
-  assert.equal(needsBackendRelease(['client/web/src/App.vue', 'docs/README.md'], patterns), false);
+  assert.equal(needsBackendRelease(['client/web/src/App.vue', 'docs/README.md']), false);
   for (const path of ['packages/venue-adapter/polymarket/bet.ts', 'server/backend/server.js',
-    'scripts/deploy/wait-for-backend.mjs', 'package-lock.json', '.github/workflows/deploy-backend.yml'])
-    assert.equal(needsBackendRelease([path], patterns), true, path);
+    'scripts/deploy/wait-for-backend.mjs', 'package-lock.json', 'server/storage/runtime_version.js'])
+    assert.equal(needsBackendRelease([path]), true, path);
 });
 test('absent, queued and running backend are awaited before success', async () => {
   let time = 0;

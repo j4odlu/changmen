@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { expect, it, vi } from "vitest";
-import { assertStagedSource, changedValidationPaths, runChangeValidation } from "./verify-change.mjs";
+import { assertCommittedSource, assertStagedSource, changedValidationPaths, runChangeValidation } from "./verify-change.mjs";
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-validation-"));
@@ -32,4 +32,13 @@ it("staged-only validation rejects unrelated source and actual unstaged changes"
 it("plan-only execution never invokes a check or claims it passed", () => {
   const run = vi.fn(), report = runChangeValidation(["--plan"], { cwd: fixture(), run });
   expect(report.planOnly).toBe(true); expect(report.passed).toBe(false); expect(run).not.toHaveBeenCalled();
+});
+it("publication rejects both staged and untracked source before running checks", () => {
+  const cwd = fixture(), run = vi.fn(() => ({ status: 0 }));
+  fs.writeFileSync(path.join(cwd, "pending.js"), "pending");
+  expect(() => assertCommittedSource(cwd)).toThrow("Uncommitted");
+  expect(() => runChangeValidation(["--publish=backend"], { cwd, npm: "npm-cli.js", run })).toThrow("Uncommitted");
+  git(cwd, "add", "pending.js");
+  expect(() => runChangeValidation(["--publish=frontend"], { cwd, npm: "npm-cli.js", run })).toThrow("Uncommitted");
+  expect(run).not.toHaveBeenCalled();
 });

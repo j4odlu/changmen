@@ -37,6 +37,17 @@ export function classifyDeployScope(paths) {
 
     sawDeployRelevant = true;
 
+    // [changmen 扩展] This Node helper is also consumed by the frontend build.
+    // Publication/evidence plumbing is shared by both component transports.
+    if (p.startsWith("server/storage/runtime_version.")
+      || p === "scripts/deploy/publish.sh"
+      || /^scripts\/deploy\/(?:release-evidence|verify-runtime|change-plan|check-controls)\./.test(p)
+      || p.startsWith("sh/deploy-")) {
+      frontend = true;
+      backend = true;
+      continue;
+    }
+
     if (p === "package.json" || p === "package-lock.json" || p === "turbo.json") {
       frontend = true;
       backend = true;

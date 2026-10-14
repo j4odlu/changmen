@@ -14,11 +14,20 @@ cat > "$fixture/bin/curl" <<'SH'
 test ! -f "$TEST_FAIL_HEALTH" || exit 22
 for arg in "$@"; do
   if [[ "$arg" == */deploy-version.txt ]]; then cat "$DEPLOY_REPO/client/web/dist/deploy-version.txt"; fi
+  if [[ "$arg" == */runtime-version.json ]]; then
+    if [[ -f "$TEST_WRONG_RUNTIME" ]]; then echo '{"frontend":{"role":"frontend","commit":"wrong"}}'
+    else cat "$DEPLOY_REPO/client/web/dist/runtime-version.json"; fi
+  fi
+  if [[ "$arg" == */api/runtime-version ]]; then
+    bad=0; test ! -f "$TEST_WRONG_RUNTIME" || bad=1
+    "$TEST_REAL_NODE" -e 'const bad=process.argv[1]==="1"; console.log(JSON.stringify({backend:{role:"backend",commit:(bad?"b":"a").repeat(40),sourceFingerprint:"f".repeat(64),contractFingerprint:"c".repeat(64),startedAt:"2026-10-14T00:00:00Z"},restartRequired:false,database:{status:"observed"}}))' "$bad"
+  fi
 done
 SH
 cat > "$fixture/bin/node" <<'SH'
 #!/usr/bin/env bash
 if [[ "${1:-}" == */compare-deployed-files.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
+if [[ "${1:-}" == */verify-runtime.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 cat >/dev/null
 SH
 cat > "$fixture/bin/npm" <<'SH'
@@ -32,10 +41,17 @@ SH
 chmod +x "$fixture/bin/"*
 export PATH="$fixture/bin:$PATH"
 export TEST_FAIL_HEALTH="$fixture/fail-health" TEST_NPM_LOG="$fixture/npm.log"
+export TEST_WRONG_RUNTIME="$fixture/wrong-runtime"
+export DEPLOY_RUNTIME_VERIFIER="$source_root/scripts/deploy/verify-runtime.mjs" DEPLOY_EVIDENCE_FILE="$fixture/evidence.json"
+evidence_for() {
+  "$real_node" -e 'const fs=require("node:fs"),crypto=require("node:crypto"),scope=process.argv[1],archive=process.argv[2],file=process.argv[3]; const runtime={commit:"a".repeat(40),sourceFingerprint:"f".repeat(64),contractFingerprint:"c".repeat(64),dirty:false}; fs.writeFileSync(file,JSON.stringify({format:1,commit:runtime.commit,report:{passed:true,sourceStable:true,immutableFokEntries:551,plan:{deployment:{components:["frontend","backend"]}}},archives:{[scope]:crypto.createHash("sha256").update(fs.readFileSync(archive)).digest("hex")},expectedRuntime:{frontend:runtime,backend:runtime}}));' "$1" "$2" "$DEPLOY_EVIDENCE_FILE"
+}
 export DEPLOY_REPO="$fixture/app" DEPLOY_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa DEPLOY_SEQUENCE=2 DEPLOY_RELEASE_ID=fe-first
 printf '<script src="/assets/index-new.js"></script>' > "$fixture/dist/index.html"
 printf 'https://api.changmen.fun' > "$fixture/dist/assets/index-new.js"
+printf '{"frontend":{"role":"frontend","commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","sourceFingerprint":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","contractFingerprint":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","startedAt":"2026-10-14T00:00:00Z","dirty":false}}' > "$fixture/dist/runtime-version.json"
 tar -C "$fixture/dist" -czf "$fixture/dist.tgz" .
+evidence_for frontend "$fixture/dist.tgz"
 mkdir -p "$DEPLOY_REPO/client/web/dist/assets"
 echo legacy > "$DEPLOY_REPO/client/web/dist/index.html"
 echo old-chunk > "$DEPLOY_REPO/client/web/dist/assets/index-old.js"
@@ -54,6 +70,13 @@ rm "$TEST_FAIL_HEALTH"
 export DEPLOY_RELEASE_ID=fe-retry
 bash deploy/scripts/release-frontend.sh "$fixture/dist.tgz"
 grep -q '^3 ' "$DEPLOY_REPO/.deploy-state/frontend"
+front_current="$(readlink -f "$DEPLOY_REPO/client/web/dist")"
+export DEPLOY_SEQUENCE=4 DEPLOY_RELEASE_ID=fe-wrong-runtime
+touch "$TEST_WRONG_RUNTIME"
+if bash deploy/scripts/release-frontend.sh "$fixture/dist.tgz"; then echo 'wrong frontend runtime accepted'; exit 1; fi
+test "$(readlink -f "$DEPLOY_REPO/client/web/dist")" = "$front_current"
+grep -q '^3 ' "$DEPLOY_REPO/.deploy-state/frontend"
+rm "$TEST_WRONG_RUNTIME"
 
 # Backend fixture keeps the full workspace tree and compiles before activation.
 mkdir -p "$fixture/backend/server/backend/db/migrations" "$fixture/backend/server/backend/scripts/ops/migrations" "$fixture/backend/client/web" "$fixture/backend/deploy/scripts"
@@ -72,6 +95,7 @@ test "$DEPLOY_FULL" = 0
 if [[ "$DEPLOY_REPO" != "$TEST_BASE_REPO" && -f "$TEST_FAIL_ACTIVATE" ]]; then exit 1; fi
 SH
 tar -C "$fixture/backend" -czf "$fixture/backend.tgz" .
+evidence_for backend "$fixture/backend.tgz"
 echo secret-fixture > "$DEPLOY_REPO/server/backend/.env"
 mkdir -p "$DEPLOY_REPO/server/backend/storage"
 mkdir -p "$DEPLOY_REPO/server/backend/public/extensions"
@@ -90,6 +114,12 @@ grep -q 'backend-current/deploy/ecosystem.config.cjs' "$DEPLOY_REPO/deploy/ecosy
 test "$(readlink -f "$DEPLOY_REPO/client/web/dist")" = "$frontend_before"
 grep -q ':ci' "$TEST_NPM_LOG"
 grep -q ':run compile:router' "$TEST_NPM_LOG"
+export DEPLOY_SEQUENCE=6 DEPLOY_RELEASE_ID=be-wrong-runtime
+touch "$TEST_WRONG_RUNTIME"
+if bash deploy/scripts/release-backend.sh "$fixture/backend.tgz"; then echo 'wrong backend runtime accepted'; exit 1; fi
+test "$(readlink -f "$DEPLOY_REPO/backend-current")" = "$backend_first"
+grep -q '^5 ' "$DEPLOY_REPO/.deploy-state/backend"
+rm "$TEST_WRONG_RUNTIME"
 export DEPLOY_SEQUENCE=6 DEPLOY_RELEASE_ID=be-fail
 touch "$TEST_FAIL_ACTIVATE"
 # Only fail the candidate, allowing the previous release to recover.

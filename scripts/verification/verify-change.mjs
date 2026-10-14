@@ -4,7 +4,8 @@ import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { parseValidationArgs, validationPlan } from "./validation-plan.mjs";
+import { parseValidationArgs } from "./validation-plan.mjs";
+import { changePlan, eventSelection, planHash } from "../deploy/change-plan.mjs";
 
 const binary = file => /\.(?:png|jpe?g|webp|gif|woff2?)$/.test(file);
 const code = file => /\.(?:[cm]?js|tsx?|vue|json|ya?ml|sh|sql|toml|css|scss|less|html|svg|png|jpe?g|webp|gif|woff2?)$/.test(file)
@@ -27,8 +28,13 @@ export function assertStagedSource(root = process.cwd()) {
   const unstaged = [...split(git(root, "diff", "--no-renames", "--name-only", "-z")), ...split(git(root, "ls-files", "--others", "--exclude-standard", "-z"))].filter(code);
   assert.equal(unstaged.length, 0, "Unstaged source would contaminate staged validation; use a clean candidate checkout");
 }
+export function assertCommittedSource(root = process.cwd()) {
+  const pending = [...split(git(root, "diff", "HEAD", "--no-renames", "--name-only", "-z")),
+    ...split(git(root, "ls-files", "--others", "--exclude-standard", "-z"))].filter(code);
+  assert.equal(pending.length, 0, "Uncommitted source cannot represent a HEAD release archive");
+}
 const digest = value => createHash("sha256").update(value).digest("hex");
-function inputs(root) {
+export function validationInputs(root) {
   return Object.fromEntries([...new Set(split(git(root, "ls-files", "--cached", "--others", "--exclude-standard", "-z")))].filter(code).sort()
     .map(file => {
       if (!fs.existsSync(path.join(root, file))) return [file, null];
@@ -39,6 +45,7 @@ function inputs(root) {
 export function validationCommands(plan, npm, releasePlan) {
   const cmd = (...args) => [process.execPath, npm, ...args];
   return {
+    "deployment-control": { command: [process.execPath, "scripts/deploy/check-controls.mjs"] },
     "complete-release": { command: cmd("run", "check:fok-release", "--", `--release-plan=${releasePlan}`) },
     "fok-551": { command: cmd("run", "check:fok-vps") },
     "validation-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification/validation-plan.test.mjs", "scripts/verification/verify-change.test.mjs", "server/storage/runtime_version.test.mjs", "server/backend/core/shared/runtime_version.test.mjs", "client/web/vite/plugins/runtimeVersion.test.ts", "--maxWorkers=4") },
@@ -51,21 +58,32 @@ export function validationCommands(plan, npm, releasePlan) {
   };
 }
 export function runChangeValidation(args, { run = spawnSync, npm = process.env.npm_execpath, cwd = process.cwd() } = {}) {
-  const options = parseValidationArgs(args), plan = validationPlan(changedValidationPaths(options, cwd));
+  const options = parseValidationArgs(args);
+  const selection = options.event
+    ? eventSelection(JSON.parse(fs.readFileSync(path.resolve(cwd, options.event), "utf8")), cwd, process.env.GITHUB_SHA,
+      process.env.CI_DEPLOYED_VERSIONS_FILE ? JSON.parse(fs.readFileSync(path.resolve(cwd, process.env.CI_DEPLOYED_VERSIONS_FILE), "utf8")) : null)
+    : { paths: changedValidationPaths(options, cwd), requestedScope: options.publish, unknownBase: false };
+  const plan = changePlan(selection.paths, selection);
+  if (args.some(arg => arg.startsWith("--release-plan=")) && options.releasePlan !== plan.releasePlan)
+    throw Error("Release plan conflicts with publication dependencies");
   if (options.planOnly) { console.log(JSON.stringify({ mode: "plan-only", accepted: false, ...plan }, null, 2)); return { passed: false, planOnly: true, plan }; }
   assert(npm, "Run with npm run check:change");
   if (options.staged) assertStagedSource(cwd);
-  const before = inputs(cwd), commands = validationCommands(plan, npm, options.releasePlan), results = [];
+  if (options.publish || options.event) assertCommittedSource(cwd);
+  const before = validationInputs(cwd), commands = validationCommands(plan, npm, plan.releasePlan), results = [];
+  const identity = { commit: options.staged ? null : git(cwd, "rev-parse", "HEAD").trim(),
+    candidateTree: git(cwd, options.staged ? "write-tree" : "rev-parse", ...(options.staged ? [] : ["HEAD^{tree}"])).trim(),
+    inputFingerprint: digest(JSON.stringify(before)) };
   for (const check of plan.checks) {
     const selected = commands[check], started = Date.now();
     const result = run(selected.command[0], selected.command.slice(1), { cwd: selected.cwd ? path.resolve(cwd, selected.cwd) : cwd, stdio: "inherit", timeout: check === "complete-release" ? 30 * 60000 : 5 * 60000, windowsHide: true });
     results.push({ check, passed: result.status === 0, elapsedMs: Date.now() - started });
     if (result.status !== 0) break;
   }
-  const sourceStable = JSON.stringify(inputs(cwd)) === JSON.stringify(before);
+  const sourceStable = JSON.stringify(validationInputs(cwd)) === JSON.stringify(before);
   const passed = results.length === plan.checks.length && results.every(row => row.passed) && sourceStable;
   const report = { checkedAt: new Date().toISOString(), passed, tier: plan.tier, paths: plan.paths, immutableFokEntries: 551, sourceStable,
-    completeRelease: plan.tier === "full" && passed, results };
+    completeRelease: plan.tier === "full" && passed, results, identity, plan, planFingerprint: planHash(plan) };
   fs.mkdirSync(path.join(cwd, "output/change-validation"), { recursive: true });
   fs.writeFileSync(path.join(cwd, "output/change-validation/verdict.json"), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report)); return report;

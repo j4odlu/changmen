@@ -31,11 +31,15 @@ record_success() {
   mv -f "$state.tmp" "$state"
 }
 validate_archive() {
+  node "${DEPLOY_RUNTIME_VERIFIER:?Runtime verifier required}" archive "${DEPLOY_EVIDENCE_FILE:?Acceptance evidence required}" "$1" "$sha" "$scope"
   tar -tzf "$1" > "$repo/.deploy-state/$scope.members"
   if grep -Eq '(^/|(^|/)\.\.(/|$))' "$repo/.deploy-state/$scope.members"; then
     echo 'Unsafe archive paths' >&2
     exit 1
   fi
+}
+verify_runtime() {
+  node "$DEPLOY_RUNTIME_VERIFIER" "$scope" "$DEPLOY_EVIDENCE_FILE" "$repo/.deploy-state/$scope-verification.$id.json"
 }
 switch_link() {
   local target="$1" link="$2"

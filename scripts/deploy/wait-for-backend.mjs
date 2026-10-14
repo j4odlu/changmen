@@ -4,11 +4,10 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import YAML from 'yaml';
+import { classifyDeployScope } from './classify-deploy-scope.mjs';
 
-export function needsBackendRelease(paths, patterns) {
-  return paths.some(path => patterns.some(pattern => pattern.endsWith('/**')
-    ? path.startsWith(pattern.slice(0, -2)) : path === pattern));
+export function needsBackendRelease(paths) {
+  return ['backend', 'full'].includes(classifyDeployScope(paths));
 }
 
 export async function waitForBackend({ sha, listRuns, sleep, now = Date.now, log = console.log,
@@ -35,18 +34,17 @@ async function main() {
   if (!/^[a-f0-9]{40}$/.test(sha || '') || !/^[\w.-]+\/[\w.-]+$/.test(repo || ''))
     throw new Error('GITHUB_SHA and GITHUB_REPOSITORY are required');
   const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
-  const workflow = YAML.parse(readFileSync(new URL('../../.github/workflows/deploy-backend.yml', import.meta.url), 'utf8'));
   const before = event.before;
   const paths = execFileSync('git', /^[a-f0-9]{40}$/.test(before || '') && !/^0+$/.test(before)
     ? ['diff', '--name-only', before, sha] : ['ls-tree', '-r', '--name-only', sha], { encoding: 'utf8' })
     .trim().split(/\r?\n/).filter(Boolean);
-  if (!needsBackendRelease(paths, workflow.on.push.paths)) {
+  if (!needsBackendRelease(paths)) {
     console.log('Frontend-only change: no backend release required');
     return;
   }
   await waitForBackend({ sha,
     listRuns: () => JSON.parse(execFileSync('gh', ['run', 'list', '--repo', repo,
-      '--workflow', 'deploy-backend.yml', '--commit', sha, '--branch', 'master', '--limit', '100',
+      '--workflow', 'release.yml', '--commit', sha, '--branch', 'master', '--limit', '100',
       '--json', 'databaseId,headSha,headBranch,status,conclusion'], { encoding: 'utf8', timeout: 30_000 })),
     sleep: ms => new Promise(done => setTimeout(done, ms)),
   });

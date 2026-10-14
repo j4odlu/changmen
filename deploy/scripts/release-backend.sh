@@ -69,6 +69,8 @@ for attempt in $(seq 1 45); do
 done
 node --input-type=module -e 'import {loadChangmenEnv} from "@changmen/storage/load_env.js"; loadChangmenEnv(); const {initDatabaseUrl,buildPgClientConfig}=await import("@changmen/db"); const {default:pg}=await import("@changmen/db/pg.js"); await initDatabaseUrl(); const c=new pg.Client(buildPgClientConfig(process.env.DATABASE_URL,10000)); await c.connect(); try {await c.query("SELECT 1")} finally {await c.end()}'
 pm2 jlist | node --input-type=module -e 'let s=""; for await (const b of process.stdin) s+=b; const apps=JSON.parse(s); const names=["changmen-esport","changmen-pm-sports","changmen-polymarket-collector","changmen-pm-football-collector","changmen-predictfun-collector","changmen-pm-market-hub","changmen-pm-sport-market-hub","changmen-predictfun-market-hub"]; for(const name of names) {if(!apps.some(a=>a.name===name && a.pm2_env.status==="online" && a.pm2_env.pm_cwd.startsWith(process.cwd()+"/"))) throw new Error("Unhealthy/wrong release: "+name)}'
+curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3456/api/runtime-version | verify_runtime
+cp "$DEPLOY_EVIDENCE_FILE" "$repo/.deploy-state/backend-evidence.$id.json"
 switch_link "$release" "$repo/backend-current"
 # Legacy watchdog fallback uses this stable path. Route it to the successful
 # release instead of allowing it to restart stale source in the original root.

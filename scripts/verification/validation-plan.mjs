@@ -32,7 +32,7 @@ export function validationPlan(changedPaths) {
       ...(backend ? ["router-compile", "backend"] : []), ...(frontend ? ["frontend-typecheck", "frontend", "build"] : [])] };
 }
 export function parseValidationArgs(args) {
-  const options = { planOnly: false, staged: false, base: null, releasePlan: "backend-first" };
+  const options = { planOnly: false, staged: false, base: null, releasePlan: "backend-first", event: null, publish: null };
   const seen = new Set();
   for (const arg of args) {
     const key = arg.split("=")[0];
@@ -40,9 +40,13 @@ export function parseValidationArgs(args) {
     if (arg === "--plan") options.planOnly = true;
     else if (arg === "--staged") options.staged = true;
     else if (arg.startsWith("--base=") && arg.slice(7) && !arg.slice(7).startsWith("-")) options.base = arg.slice(7);
+    else if (arg.startsWith("--event=") && arg.slice(8)) options.event = arg.slice(8);
+    else if (["--publish=frontend", "--publish=backend", "--publish=full"].includes(arg)) options.publish = arg.slice(10);
     else if (["--release-plan=backend-first", "--release-plan=frontend-only"].includes(arg)) options.releasePlan = arg.split("=")[1];
     else throw Error("Unknown validation option; forced downgrade is not supported");
   }
   if (options.staged && options.base) throw Error("Choose staged changes or a base commit");
+  if (options.event && (options.staged || options.base || options.publish)) throw Error("CI event supplies the entire selection");
+  if (options.publish && options.staged) throw Error("Publication requires a committed candidate");
   return options;
 }

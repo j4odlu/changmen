@@ -1,0 +1,93 @@
+name: Validate and release
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Publication component (manual runs retain complete acceptance)
+        type: choice
+        default: full
+        options: [full, backend, frontend]
+permissions:
+  contents: read
+# Complete acceptance captures a stable live release; serialize capture through publication.
+concurrency:
+  group: changmen-release-production
+  cancel-in-progress: false
+  queue: max
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      CI_DEPLOYED_VERSIONS_FILE: output/change-validation/deployed-versions.json
+    outputs:
+      backend: ${{ steps.plan.outputs.backend }}
+      frontend: ${{ steps.plan.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Prepare read-only release capture
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          CAPTURE_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          test -n "$CAPTURE_SSH_KEY"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$CAPTURE_SSH_KEY" > "$RUNNER_TEMP/release-capture-key"
+          chmod 600 "$RUNNER_TEMP/release-capture-key"
+          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H 47.57.10.202 >> ~/.ssh/known_hosts
+          printf 'Host 47.57.10.202\n  Port %s\n' "${DEPLOY_PORT:-22}" >> ~/.ssh/config
+          printf 'FOK_BASELINE_SSH_KEY=%s\nFOK_BASELINE_SSH_TARGET=%s@47.57.10.202\n' "$RUNNER_TEMP/release-capture-key" "${DEPLOY_USER:-root}" >> "$GITHUB_ENV"
+      - name: Read active release baselines
+        run: node scripts/deploy/read-deployed-versions.mjs
+      - name: Resolve shared change plan
+        id: plan
+        run: node scripts/deploy/change-plan.mjs
+      - name: Install dependencies
+        run: npm ci
+      - name: Run shared acceptance
+        env:
+          VITE_PREDICT_FUN_API_BASE: https://api.predict.fun
+        run: npm run check:change -- --event="$GITHUB_EVENT_PATH"
+      - name: Seal commit and artifacts
+        run: node scripts/deploy/release-evidence.mjs seal
+      - name: Store acceptance and exact release archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-release
+          path: output/release-validation/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Store failed acceptance report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-acceptance
+          path: output/change-validation/
+          retention-days: 7
+      - name: Remove capture key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release-capture-key"
+  backend:
+    needs: validate
+    if: needs.validate.outputs.backend == 'true'
+    uses: ./.github/workflows/deploy-backend.yml
+    secrets: inherit
+  frontend:
+    needs: [validate, backend]
+    if: >-
+      ${{ !cancelled() && needs.validate.result == 'success' &&
+          needs.validate.outputs.frontend == 'true' &&
+          (needs.backend.result == 'success' || needs.backend.result == 'skipped') }}
+    uses: ./.github/workflows/deploy-frontend.yml
+    secrets: inherit

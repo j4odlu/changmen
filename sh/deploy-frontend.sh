@@ -6,5 +6,6 @@ require_npm
 load_deploy_local
 export DEPLOY_HOST DEPLOY_USER DEPLOY_PORT DEPLOY_REPO SSH_IDENTITY
 cd "$ROOT"
-npm run app:build
+npm run check:change -- --publish=frontend
+node scripts/deploy/release-evidence.mjs seal
 exec bash scripts/deploy/publish.sh frontend

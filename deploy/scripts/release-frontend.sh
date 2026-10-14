@@ -48,6 +48,12 @@ test "$(curl "${check_args[@]}" "$base/deploy-version.txt")" = "$sha"
 asset="$(grep -oE 'assets/index-[^" ]+\.js' "$release/index.html" | head -1)"
 test -n "$asset"
 curl "${check_args[@]}" -o /dev/null "$base/$asset"
+curl "${check_args[@]}" "$base/runtime-version.json" | verify_runtime
+if node "$DEPLOY_RUNTIME_VERIFIER" needs-backend "$DEPLOY_EVIDENCE_FILE"; then
+  curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3456/api/runtime-version \
+    | node "$DEPLOY_RUNTIME_VERIFIER" backend "$DEPLOY_EVIDENCE_FILE" "$repo/.deploy-state/frontend-backend-verification.$id.json"
+fi
+cp "$DEPLOY_EVIDENCE_FILE" "$repo/.deploy-state/frontend-evidence.$id.json"
 record_success
 trap - ERR
 echo "Published frontend $sha; previous=${previous:-none}; PM2 untouched"

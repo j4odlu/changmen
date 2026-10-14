@@ -13,6 +13,8 @@
 
 前端独立记录 Vite 启动/构建身份；开发态另列当前源码，构建产物保留构建身份。前后端可独立发布，commit 不同本身不证明不兼容；契约指纹只是契约输入是否相同，不替代交易验收。指纹是选定代码输入的摘要，不能证明某个依赖已经执行。前端图片按原始字节摘要，文本统一换行；凭证、数据文件、文档、测试与编译生成的 router.js 不计入运行源码摘要。
 
+同一套编译生成的 `account_client_routes.js`、`action_registry.js`、`admin_routes.js`、`pm_pf_routes.js` 由对应 TS 源码代表；matcher 的 `.composer-heartbeat.json` / `.matcher-heartbeat.json` 是运行数据。Git checkout 与无 Git 发布包使用一致的输入范围，避免启动生成文件造成“需重启”误报。
+
 数据库只读观察 public 表的列、约束和索引，返回结构摘要，不返回表数据、结构明细、地址或凭证。单次查询超时 1.5 秒；并发请求合并，结果缓存 60 秒，没有定时轮询。现有数据库没有统一迁移版本记录，返回 `migrationVersion:null / migrationTracking:untracked`；不把源码迁移清单冒充已执行的数据库版本。
 
 ## 验收入口

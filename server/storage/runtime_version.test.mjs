@@ -57,10 +57,18 @@ describe("actual runtime source identity", () => {
   it("a checkout and pristine release have identical source identity, including binary assets and generated router exclusion", () => {
     const root = fixture(); write(root, ".gitignore", "server/backend/core/esport-api/router.js\n");
     write(root, "client/web/src/style.css", "body { color: red; }\n"); write(root, "client/web/src/icon.png", Buffer.from([0xff, 0x01]));
+    write(root, "client/web/public/logo.png", Buffer.from([0xff, 0x02]));
     git(root, "add", "."); commit(root);
     const head = git(root, "rev-parse", "HEAD"), release = path.join(root, `backend-${head}-1-1`);
     for (const file of git(root, "ls-files", "-z").split("\0").filter(Boolean)) write(release, file, fs.readFileSync(path.join(root, file)));
-    write(root, "server/backend/core/esport-api/router.js", "compiled source"); write(release, "server/backend/core/esport-api/router.js", "compiled source");
+    for (const name of ["router", "account_client_routes", "action_registry", "admin_routes", "pm_pf_routes"]) {
+      write(root, `server/backend/core/esport-api/${name}.js`, "compiled source");
+      write(release, `server/backend/core/esport-api/${name}.js`, "compiled source");
+    }
+    const beforeHeartbeat = readSourceVersion(release, "backend");
+    write(release, "server/match/matcher/.composer-heartbeat.json", '{"timestamp":1}');
+    write(release, "server/match/matcher/.matcher-heartbeat.json", '{"timestamp":2}');
+    expect(readSourceVersion(release, "backend")).toEqual(beforeHeartbeat);
     for (const role of ["frontend", "backend"]) expect(readSourceVersion(release, role).sourceFingerprint).toBe(readSourceVersion(root, role).sourceFingerprint);
     const before = readSourceVersion(root, "frontend").sourceFingerprint;
     write(root, "client/web/src/icon.png", Buffer.from([0xfe, 0x01])); expect(readSourceVersion(root, "frontend").sourceFingerprint).not.toBe(before);

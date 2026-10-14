@@ -11,11 +11,12 @@ const excluded = /(?:^|\/)(?:node_modules|dist|docs|output|test|tests|__tests__|
 const sourceExtension = /\.(?:[cm]?js|tsx?|vue|json|ya?ml|sql|toml)$/;
 const frontendAsset = /\.(?:css|scss|less|html|svg|png|jpe?g|webp|gif|woff2?)$/;
 const binaryAsset = /\.(?:png|jpe?g|webp|gif|woff2?)$/;
+const generatedRoutes = new Set(["router", "account_client_routes", "action_registry", "admin_routes", "pm_pf_routes"].map(name => `server/backend/core/esport-api/${name}.js`));
 export function isVersionSource(file, role) {
   if (!["frontend", "backend"].includes(role)) throw Error("Unknown runtime role");
   if (excluded.test(file) || !(sourceExtension.test(file) || (role === "frontend" && frontendAsset.test(file))) || /(?:^|\/)\.env(?:\.|$)/.test(file)) return false;
-  // router.js is generated from the tracked TS source, and is absent from pristine Git archives.
-  if (file === "server/backend/core/esport-api/router.js") return false;
+  // Compiled routes are represented by tracked TS; heartbeats are runtime data.
+  if (generatedRoutes.has(file) || /^server\/match\/matcher\/\.(?:composer|matcher)-heartbeat\.json$/.test(file)) return false;
   if (/^server\/backend\/(?:storage|scripts\/ops)\//.test(file)) return false;
   if (["package.json", "package-lock.json", "server/storage/runtime_version.js"].includes(file)) return true;
   return role === "frontend"
@@ -37,7 +38,7 @@ function walk(root) {
       else if (item.isFile()) files.push(file);
     }
   };
-  for (const dir of ["client/web/src", "client/web/vite", "client/web/scripts", "packages", "server", "devtools/platform-probes"])
+  for (const dir of ["client/web/src", "client/web/public", "client/web/vite", "client/web/scripts", "packages", "server", "devtools/platform-probes"])
     if (fs.existsSync(path.join(root, dir))) visit(dir);
   for (const file of ["package.json", "package-lock.json", "client/web/package.json", "client/web/vite.config.ts"])
     if (fs.existsSync(path.join(root, file))) files.push(file);

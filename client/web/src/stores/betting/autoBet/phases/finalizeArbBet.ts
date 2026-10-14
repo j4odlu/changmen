@@ -1,5 +1,5 @@
 import type { ArbBetAttemptParams, ArbBetPlaced } from "@/stores/betting/autoBet/phases/types";
-import { registerRayRejectMonitor } from "@/extensions/arbBet/rayRejectMonitor/runtime";
+import { registerRayOrderContext } from "@/runtime/rayOrderMonitor/contexts";
 import {
   recordSingleLeg9999MapFill,
   recordSingleLeg9999MapFillKeys,
@@ -119,7 +119,7 @@ export async function finalizeArbBet(
         )
       : { betMoney: 0, betOdds: 0 };
     const anchorProvider = String(anchorAccount?.provider || "").toUpperCase();
-    registerRayRejectMonitor({
+    registerRayOrderContext({
       observation: leg.observation,
       linkId,
       matchId: match.id,
@@ -154,7 +154,7 @@ export async function finalizeArbBet(
       initialRejected,
     });
   };
-  // [changmen 扩展] 只登记旁路监控；同步返回，不参与本轮 settle/makeup 判断。
+  // [changmen 扩展] 只向独立订单监控交接上下文；同步返回，不参与本轮 settle/makeup 判断。
   registerRayLeg("A");
   registerRayLeg("B");
 

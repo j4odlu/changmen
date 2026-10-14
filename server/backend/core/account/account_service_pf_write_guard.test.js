@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("./ray_monitor_orders.js", () => ({ listRayMonitorOrders: vi.fn(async () => []) }));
 
 vi.mock("../esport-api/store.js", () => ({
   default: {
@@ -226,6 +227,21 @@ describe("PredictFun client write guard", () => {
     expect(out.info.orders).toEqual([{ orderId: "pm1", Type: "Polymarket" }]);
     expect(accountStore.listMoneyLogs).not.toHaveBeenCalled();
     expect(orderStore.listByPlayer).toHaveBeenCalledWith(42, "u1", { sinceCreateAt: 1_700_000_000_000 });
+  });
+
+  it("RAY recovery enforces ownership before its strict read and bypasses logs and normal account history", async () => {
+    const { handleGetPlayerOrder } = await import("./account_service.js");
+    const { listRayMonitorOrders } = await import("./ray_monitor_orders.js");
+    const { assertPlayerOwnedByUser } = await import("./player_ownership.js");
+    const { listMoneyLogs } = await import("./account_store.js");
+    const { listByPlayer } = await import("./order_store.js");
+    const body = { playerId: 42, rayMonitorOnly: true, orderIds: ["original"] };
+    assertPlayerOwnedByUser.mockResolvedValueOnce({ ok: false, msg: "not owned" });
+    expect(await handleGetPlayerOrder(body, "foreign")).toMatchObject({ ok: false });
+    expect(listRayMonitorOrders).not.toHaveBeenCalled();
+    expect(await handleGetPlayerOrder(body, "owner")).toMatchObject({ ok: true, info: { logs: [], orders: [] } });
+    expect(listRayMonitorOrders).toHaveBeenCalledWith(42, "owner", ["original"]);
+    expect(listMoneyLogs).not.toHaveBeenCalled(); expect(listByPlayer).not.toHaveBeenCalled();
   });
 
   it("handleGetPlayerOrder default still loads money logs and full orders", async () => {

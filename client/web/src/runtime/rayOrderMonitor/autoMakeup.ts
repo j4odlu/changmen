@@ -1,15 +1,15 @@
-import type { RayLateRejectMakeupStatus, RayRejectMonitorTask } from "./types";
+import type { RayLateRejectMakeupStatus, RayOrderContext } from "./types";
 import { saveUserLog } from "@/api/chat";
 import { enqueueMakeUpOrder } from "@/stores/betting/autoBet/makeUp";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { useUserStore } from "@/stores/userStore";
-import { useRayRejectMonitorStore } from "./store";
+import { useRayOrderContextStore } from "./contextStore";
 
 const inflight = new Set<string>();
 
 function writeActionLog(
-  task: RayRejectMonitorTask,
+  task: RayOrderContext,
   status: RayLateRejectMakeupStatus,
   reason: string,
 ): void {
@@ -36,12 +36,12 @@ function writeActionLog(
 }
 
 function finish(
-  task: RayRejectMonitorTask,
+  task: RayOrderContext,
   status: RayLateRejectMakeupStatus,
   reason: string,
 ): void {
   const now = Date.now();
-  useRayRejectMonitorStore().patch(task.key, {
+  useRayOrderContextStore().patch(task.key, {
     autoMakeupStatus: status,
     autoMakeupReason: reason,
     autoMakeupAt: now,
@@ -54,12 +54,14 @@ function finish(
  * [changmen 扩展] 将唯一确认的 RAY 延迟拒单交给现有补单队列。
  * 本模块不计算补单金额/赔率、不直接下注；所有规则继续由 enqueueMakeUpOrder + jb 消费链负责。
  */
-export async function handleRayLateRejectAutoMakeup(task: RayRejectMonitorTask): Promise<void> {
+export async function handleRayLateRejectAutoMakeup(task: RayOrderContext, current: () => boolean = () => true): Promise<void> {
   if (inflight.has(task.key))
     return;
   inflight.add(task.key);
   try {
-    const monitorStore = useRayRejectMonitorStore();
+    if (!current())
+      return;
+    const monitorStore = useRayOrderContextStore();
     const latest = monitorStore.tasks.get(task.key);
     if (!latest || latest.status !== "rejected")
       return;
@@ -123,6 +125,8 @@ export async function handleRayLateRejectAutoMakeup(task: RayRejectMonitorTask):
       failedLegOdds: latest.odds,
       failedPlatformLabel: "RAY(延迟拒单)",
     });
+    if (!current())
+      return;
     finish(
       latest,
       enqueued ? "enqueued" : "skipped",
@@ -130,7 +134,8 @@ export async function handleRayLateRejectAutoMakeup(task: RayRejectMonitorTask):
     );
   }
   catch (error) {
-    finish(task, "failed", error instanceof Error ? error.message : String(error));
+    if (current())
+      finish(task, "failed", error instanceof Error ? error.message : String(error));
   }
   finally {
     inflight.delete(task.key);

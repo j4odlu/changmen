@@ -1,4 +1,5 @@
-import type { RayRejectMonitorTask } from "@/extensions/arbBet/rayRejectMonitor/types";
+import type { RayOrderContext } from "@/runtime/rayOrderMonitor/types";
+import type { RayMonitoringState } from "@/runtime/orderMonitoring/rayState";
 import type { ActiveBetRun } from "@/types/activeBetRun";
 import type { OrderRow } from "@/types/order";
 
@@ -14,6 +15,7 @@ export interface RayLinkMonitorModel {
   observedAt: number;
   detail?: string;
   isLive: boolean;
+  timeLabel?: string;
 }
 
 function isRayProvider(value: unknown): boolean {
@@ -41,20 +43,24 @@ function statusText(value: unknown): string {
   return String(value ?? "未知");
 }
 
+export function rayLinkMonitorOrder(rows: readonly OrderRow[]): OrderRow | undefined {
+  const rayRows = rows.filter(row => isRayProvider(row.Type))
+    .sort((a, b) => (Number(b.CreateAt) || 0) - (Number(a.CreateAt) || 0));
+  return rayRows.find(row => normalizedStatus(row.Status) === "reject") ?? rayRows[0];
+}
+
 /**
  * [changmen 扩展] 用户订单栏 RAY 监控卡片的只读展示模型。
- * 优先展示旁路监控状态；没有监控任务时，只陈述订单表和当前编排内存中可证实的状态。
+ * 状态和关联/补单上下文均来自同一独立订单监控；无任务时展示已知订单事实。
  */
 export function buildRayLinkMonitorModel(
   rows: readonly OrderRow[],
   run?: ActiveBetRun | null,
-  monitor?: RayRejectMonitorTask | null,
+  monitor?: RayOrderContext | null,
+  monitoring?: RayMonitoringState,
 ): RayLinkMonitorModel {
   const link = Number(rows[0]?.Link) || 0;
-  const rayRows = rows
-    .filter(row => isRayProvider(row.Type))
-    .sort((a, b) => (Number(b.CreateAt) || 0) - (Number(a.CreateAt) || 0));
-  const row = rayRows.find(item => normalizedStatus(item.Status) === "reject") ?? rayRows[0];
+  const row = rayLinkMonitorOrder(rows);
   if ((!row && !monitor) || link <= 0) {
     return {
       visible: false,
@@ -73,6 +79,23 @@ export function buildRayLinkMonitorModel(
   const observedAt = Number(monitor?.updatedAt) || Number(run?.updatedAt) || Number(row?.CreateAt) || 0;
   const rayLeg = run?.legs.find(leg => isRayProvider(leg.platform));
   const rowStatus = normalizedStatus(row?.Status);
+
+  // [changmen 扩展] 查询事实决定监控状态，同一模块记录的拒单补单交接结果单独展示。
+  if (monitoring && row && monitor?.status !== "rejected") {
+    const rejected = normalizedStatus(monitoring.status) === "reject";
+    return {
+      visible: true,
+      tone: rejected ? "danger" : monitoring.error ? "warning" : monitoring.phase === "closed" ? "success" : "info",
+      label: monitoring.phase === "closed" ? "监控已结束" : monitoring.error ? "监控重试中" : "持续监控中",
+      summary: monitoring.phase === "closed" ? `RAY 场馆结果：${statusText(monitoring.status)}` : "原单状态独立核对，终态后自动停止",
+      orderId: String(row.OrderID ?? ""),
+      venueStatus: statusText(monitoring.status ?? row.Status),
+      observedAt: monitoring.updatedAt,
+      timeLabel: "最近核对",
+      detail: monitoring.error,
+      isLive: monitoring.phase === "watching",
+    };
+  }
 
   if (monitor) {
     const delaySec = Math.max(0, Math.round(Number(monitor.rejectDelayMs) / 1000));
@@ -125,18 +148,6 @@ export function buildRayLinkMonitorModel(
         venueStatus,
         observedAt,
         isLive: true,
-      };
-    }
-    if (monitor.status === "expired") {
-      return {
-        visible: true,
-        tone: "warning",
-        label: "监控超时",
-        summary: "观察窗口结束，未确认延迟拒单",
-        orderId,
-        venueStatus,
-        observedAt,
-        isLive: false,
       };
     }
     if (monitor.status === "closed") {
@@ -239,7 +250,7 @@ export function buildRayLinkMonitorModel(
   return {
     visible: true,
     tone: "neutral",
-    label: "持续监控待接入",
+    label: "等待恢复监控",
     summary: "场馆订单已落库，当前仅展示最新订单状态",
     orderId,
     venueStatus,

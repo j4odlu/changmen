@@ -10,7 +10,7 @@ import OrderList from "@/components/order/OrderList.vue";
 import OrderMakeupStatusBar from "@/components/order/OrderMakeupStatusBar.vue";
 import RayLinkMonitorCard from "@/components/order/RayLinkMonitorCard.vue";
 import { loadEmbeddedUserOrders } from "@/composables/adminUserWorkspaceMount";
-import { useRayRejectMonitorStore } from "@/extensions/arbBet/rayRejectMonitor/store";
+import { useRayOrderContextStore } from "@/runtime/rayOrderMonitor/contextStore";
 import { isFootballOrderRow } from "@/shared/orderDomain";
 import { mergePendingMakeupIntoOrderGroups, orderLinkMapEntries } from "@/shared/orderLink";
 import { useActiveBetRunStore } from "@/stores/activeBetRunStore";
@@ -31,7 +31,7 @@ const props = withDefaults(
 
 const orderStore = useOrderStore();
 const activeBetRunStore = useActiveBetRunStore();
-const rayRejectMonitorStore = useRayRejectMonitorStore();
+const rayOrderContextStore = useRayOrderContextStore();
 const loseStore = useLoseOrderStore();
 const userStore = useUserStore();
 const { orderDate, loading, filterAccountId, accountOptions, orders, filteredOrders }
@@ -65,7 +65,7 @@ const viewLoading = ref(false);
 
 onMounted(() => {
   if (!props.embedded && userStore.userId)
-    rayRejectMonitorStore.restore(String(userStore.userId));
+    rayOrderContextStore.restore(String(userStore.userId));
   if (props.embedded && props.embeddedUserId && !orderStore.orders.size) {
     void loadEmbeddedUserOrders(props.embeddedUserId, orderDate.value);
   }
@@ -130,7 +130,7 @@ function activeRunForLink(link: number) {
 }
 
 function rayMonitorForLink(link: number) {
-  return rayRejectMonitorStore.taskForLink(link);
+  return rayOrderContextStore.taskForLink(link);
 }
 
 async function onLinkRebindDone() {

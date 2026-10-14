@@ -14,7 +14,7 @@ vi.mock("element-plus", () => ({ ElNotification: notices.notify }));
 const mocks = vi.hoisted(() => ({ submit: vi.fn(), betting: vi.fn(), prepare: vi.fn(), settle: vi.fn(), create: vi.fn(), refresh: vi.fn(), poll: vi.fn(), otherPoll: vi.fn(), count: vi.fn(), log: vi.fn(), ratio: 0.99, record: null as GtcExecution | null, existing: [] as GtcExecution[], initial: "0", ready: true, owner: "owner", commands: [] as GtcCommand[], error: "" }));
 const rayMonitor = vi.hoisted(() => vi.fn());
 const pmMatchedOrder = vi.hoisted(() => vi.fn());
-vi.mock("@/extensions/arbBet/rayRejectMonitor/runtime", () => ({ registerRayRejectMonitor: rayMonitor }));
+vi.mock("@/runtime/rayOrderMonitor/contexts", () => ({ registerRayOrderContext: rayMonitor }));
 vi.mock("@/stores/betting/makeUpReference", () => ({ resolveMakeUpSuccessReference: () => ({ betMoney: 5, betOdds: 2 }) }));
 vi.mock("./financialOrder", () => ({ gtcMatchedOrder: pmMatchedOrder }));
 vi.mock("@changmen/client-core/models/betResult", () => ({ BetResult: class { orderId = null; constructor(public provider: string, public success: boolean) {} saveLog = mocks.log; } }));

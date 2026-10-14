@@ -22,6 +22,7 @@ import {
   validateSportObMemberBinding,
 } from "./ob_sport_account.js";
 import * as orderStore from "./order_store.js";
+import { listRayMonitorOrders } from "./ray_monitor_orders.js";
 import { assertPlayerOwnedByUser, assertPlayersOwnedByUser, isPredictFunPlayerRow } from "./player_ownership.js";
 import { enforcePolymarketPersistDto, stripPrivateKeysFromAccountList } from "./pm_token_strip.js";
 import { resolvePresenceState } from "./user_presence.js";
@@ -170,6 +171,16 @@ async function handleGetPlayerOrder(body, userId) {
   const owned = await assertPlayerOwnedByUser(playerId, userId);
   if (!owned.ok)
     return owned;
+  // [changmen 扩展] 独立 RAY 原单恢复，不取流水或侧栏日期，不改变旧请求语义。
+  if (body.rayMonitorOnly === true) {
+    try {
+      const orders = await listRayMonitorOrders(playerId, userId, body.orderIds ?? []);
+      return { ok: true, info: { logs: [], orders } };
+    }
+    catch (error) {
+      return { ok: false, msg: error instanceof Error ? error.message : "RAY 监控恢复失败" };
+    }
+  }
   // [changmen 扩展] includeLogs=false：PM getOrders 合并不需要流水，避免每次拉 1 万条
   const includeLogs = body?.includeLogs !== false && body?.includeLogs !== 0 && body?.includeLogs !== "0";
   let logs = [];
@@ -220,6 +231,7 @@ async function handleSaveOrder(body, userId) {
     orders,
     userId,
     body.type || body.Type || "",
+    body.rayMonitorOnly === true ? { rayMonitorOnly: true } : undefined,
   );
   if (!saved)
     return { ok: false, msg: "保存订单失败" };

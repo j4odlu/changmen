@@ -1,5 +1,4 @@
 import { wait } from "@changmen/client-core/shared/wait";
-import { runRayRejectMonitorTick } from "@/extensions/arbBet/rayRejectMonitor/runtime";
 /**
  * [A8 可证实] 对齐 bundle `Vg` 内 `P()`：单主循环 — 拉列表门控、每轮 updateOdds、当场套利下单、补单、初赔门控。
  * 轮间 `wait(100ms)` 再调度（不用 `betInterval`）。
@@ -30,9 +29,6 @@ export async function runMainBetLoopTick(state: MainBetLoopState): Promise<void>
   matchStore.tickBettingAutoOpen();
   if (!user.userId)
     return;
-
-  // [changmen 扩展] RAY 延迟拒单影子监控；不 await，不改变主循环控制流。
-  runRayRejectMonitorTick();
 
   const now = Date.now();
 

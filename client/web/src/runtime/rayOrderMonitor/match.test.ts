@@ -1,9 +1,9 @@
 import type { VenueOrder } from "@changmen/venue-adapter/contract";
-import type { RayRejectMonitorTask } from "./types";
+import type { RayOrderContext } from "./types";
 import { describe, expect, it } from "vitest";
 import { matchRayVenueOrder } from "./match";
 
-function task(overrides: Partial<RayRejectMonitorTask> = {}): RayRejectMonitorTask {
+function task(overrides: Partial<RayOrderContext> = {}): RayOrderContext {
   return {
     key: "u1:100:B:2",
     userId: "u1",
@@ -13,7 +13,6 @@ function task(overrides: Partial<RayRejectMonitorTask> = {}): RayRejectMonitorTa
     side: "B",
     accountId: 2,
     submittedAt: 10_000,
-    expiresAt: 310_000,
     match: "Alpha vs Beta",
     bet: "[地图1] 获胜",
     item: "Beta",
@@ -28,10 +27,8 @@ function task(overrides: Partial<RayRejectMonitorTask> = {}): RayRejectMonitorTa
     status: "binding",
     candidateCount: 0,
     pollCount: 0,
-    nextPollAt: 11_000,
     updatedAt: 10_000,
     ...overrides,
-    monitorMinutes: overrides.monitorMinutes ?? 5,
   };
 }
 

@@ -2,7 +2,7 @@ import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import type {
   RayOrderCandidate,
   RayOrderMatchResult,
-  RayRejectMonitorTask,
+  RayOrderContext,
 } from "./types";
 
 const MAX_ORDER_TIME_DRIFT_MS = 120_000;
@@ -26,7 +26,7 @@ function textMatches(expected: string, actual: string): boolean {
   return left === right || left.includes(right) || right.includes(left);
 }
 
-function scoreCandidate(task: RayRejectMonitorTask, order: VenueOrder): RayOrderCandidate | null {
+function scoreCandidate(task: RayOrderContext, order: VenueOrder): RayOrderCandidate | null {
   if (String(order.provider).toUpperCase() !== "RAY")
     return null;
 
@@ -80,7 +80,7 @@ function scoreCandidate(task: RayRejectMonitorTask, order: VenueOrder): RayOrder
 
 /** 只在候选唯一且分数足够时绑定；模糊结果宁可等待，不猜单。 */
 export function matchRayVenueOrder(
-  task: RayRejectMonitorTask,
+  task: RayOrderContext,
   orders: readonly VenueOrder[],
 ): RayOrderMatchResult {
   const candidates = orders

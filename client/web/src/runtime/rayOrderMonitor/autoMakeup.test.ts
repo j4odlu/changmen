@@ -1,8 +1,8 @@
-import type { RayRejectMonitorTask } from "./types";
+import type { RayOrderContext } from "./types";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handleRayLateRejectAutoMakeup } from "./autoMakeup";
-import { useRayRejectMonitorStore } from "./store";
+import { useRayOrderContextStore } from "./contextStore";
 
 const state = vi.hoisted(() => ({
   enabled: false,
@@ -37,7 +37,7 @@ vi.mock("@/stores/betting/autoBet/makeUp", () => ({
   enqueueMakeUpOrder: state.enqueue,
 }));
 
-function task(overrides: Partial<RayRejectMonitorTask> = {}): RayRejectMonitorTask {
+function task(overrides: Partial<RayOrderContext> = {}): RayOrderContext {
   return {
     key: "u1:100:B:2",
     userId: "u1",
@@ -47,7 +47,6 @@ function task(overrides: Partial<RayRejectMonitorTask> = {}): RayRejectMonitorTa
     side: "B",
     accountId: 2,
     submittedAt: 10_000,
-    expiresAt: 310_000,
     match: "Alpha vs Beta",
     bet: "[地图1] 获胜",
     item: "Beta",
@@ -63,11 +62,9 @@ function task(overrides: Partial<RayRejectMonitorTask> = {}): RayRejectMonitorTa
     boundOrderId: "ray-1",
     candidateCount: 1,
     pollCount: 2,
-    nextPollAt: 12_000,
     rejectDelayMs: 2_000,
     updatedAt: 12_000,
     ...overrides,
-    monitorMinutes: overrides.monitorMinutes ?? 5,
   };
 }
 
@@ -84,18 +81,18 @@ describe("rAY late-reject auto makeup bridge", () => {
 
   it("does nothing by default when the extension switch is off", async () => {
     const row = task();
-    useRayRejectMonitorStore().upsert(row);
+    useRayOrderContextStore().upsert(row);
 
     await handleRayLateRejectAutoMakeup(row);
 
     expect(state.enqueue).not.toHaveBeenCalled();
-    expect(useRayRejectMonitorStore().tasks.get(row.key)?.autoMakeupStatus).toBe("disabled");
+    expect(useRayOrderContextStore().tasks.get(row.key)?.autoMakeupStatus).toBe("disabled");
   });
 
   it("passes the confirmed late reject to the existing makeup queue unchanged", async () => {
     state.enabled = true;
     const row = task();
-    useRayRejectMonitorStore().upsert(row);
+    useRayOrderContextStore().upsert(row);
 
     await handleRayLateRejectAutoMakeup(row);
 
@@ -108,19 +105,40 @@ describe("rAY late-reject auto makeup bridge", () => {
       betOdds: 2.2,
       failedLegOdds: 2.06,
     }));
-    expect(useRayRejectMonitorStore().tasks.get(row.key)?.autoMakeupStatus).toBe("enqueued");
+    expect(useRayOrderContextStore().tasks.get(row.key)?.autoMakeupStatus).toBe("enqueued");
   });
 
   it("never overwrites an existing different makeup task", async () => {
     state.enabled = true;
     state.orders.set(10, { linkId: 999, target: "Home" });
     const row = task();
-    useRayRejectMonitorStore().upsert(row);
+    useRayOrderContextStore().upsert(row);
 
     await handleRayLateRejectAutoMakeup(row);
 
     expect(state.enqueue).not.toHaveBeenCalled();
-    expect(useRayRejectMonitorStore().tasks.get(row.key)?.autoMakeupStatus).toBe("skipped");
-    expect(useRayRejectMonitorStore().tasks.get(row.key)?.autoMakeupReason).toContain("未覆盖");
+    expect(useRayOrderContextStore().tasks.get(row.key)?.autoMakeupStatus).toBe("skipped");
+    expect(useRayOrderContextStore().tasks.get(row.key)?.autoMakeupReason).toContain("未覆盖");
+  });
+
+  it.each(["makeup_off", "unconfirmed_anchor", "cancelled"])("retains the original %s gate", async reason => {
+    state.enabled = true;
+    if (reason === "makeup_off") state.makeUp = false;
+    if (reason === "cancelled") state.cancelledOrders.set(10, {});
+    const row = task({ anchorConfirmed: reason !== "unconfirmed_anchor" });
+    useRayOrderContextStore().upsert(row);
+    await handleRayLateRejectAutoMakeup(row);
+    expect(state.enqueue).not.toHaveBeenCalled();
+    expect(useRayOrderContextStore().tasks.get(row.key)?.autoMakeupStatus).toBe("skipped");
+  });
+  it("a saved disposition prevents repeat enqueueing", async () => {
+    state.enabled = true; const row = task(); useRayOrderContextStore().upsert(row);
+    await handleRayLateRejectAutoMakeup(row); await handleRayLateRejectAutoMakeup(row);
+    expect(state.enqueue).toHaveBeenCalledOnce();
+  });
+  it("expired session callbacks cannot enqueue or update the context", async () => {
+    state.enabled = true; const row = task(); useRayOrderContextStore().upsert(row);
+    await handleRayLateRejectAutoMakeup(row, () => false);
+    expect(state.enqueue).not.toHaveBeenCalled(); expect(useRayOrderContextStore().tasks.get(row.key)?.autoMakeupStatus).toBeUndefined();
   });
 });

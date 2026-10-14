@@ -6,7 +6,7 @@ import { BetResult } from "@changmen/client-core/models/betResult";
 import { getExchange, resolveAccountCurrency } from "@changmen/shared/currency";
 import { gtcStateLabel, gtcUnits } from "@changmen/shared/pm_gtc";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
-import { registerRayRejectMonitor } from "@/extensions/arbBet/rayRejectMonitor/runtime";
+import { registerRayOrderContext } from "@/runtime/rayOrderMonitor/contexts";
 import { ExecutionError } from "@/orderModes/gtc/executionResult";
 import { notifyBet } from "@/shared/betNotification";
 import { syncActiveBetLeg, syncActiveBetPhase } from "@/stores/betting/activeBetRunSync";
@@ -160,7 +160,7 @@ export async function executeGtc(params: ArbBetAttemptParams, checked: ArbBetChe
           anchor = resolveMakeUpSuccessReference(pm, pmOrder ? [pmOrder] : [], false, account, row.orderId);
         }
         catch { /* [changmen 扩展] PM 锚点读取失败不阻断 RAY 登记；沿用原补单的无锚点门控。 */ }
-        registerRayRejectMonitor({
+        registerRayOrderContext({
           observation: other.observation,
           linkId: checked.linkId,
           matchId: params.match.id,

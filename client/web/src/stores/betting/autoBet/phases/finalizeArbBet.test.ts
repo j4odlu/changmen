@@ -12,9 +12,9 @@ import { createDefaultUserConfig } from "@/types/userConfig";
 import { finalizeArbBet } from "./finalizeArbBet";
 
 const shouldSendArbProgress = vi.hoisted(() => vi.fn(() => false));
-const registerRayRejectMonitor = vi.hoisted(() => vi.fn());
+const registerRayOrderContext = vi.hoisted(() => vi.fn());
 const rejectWait = vi.hoisted(() => vi.fn(async () => {}));
-vi.mock("@/extensions/arbBet/rayRejectMonitor/runtime", () => ({ registerRayRejectMonitor }));
+vi.mock("@/runtime/rayOrderMonitor/contexts", () => ({ registerRayOrderContext }));
 
 const loseOrderStore = vi.hoisted(() => ({
   orders: new Map<number, {
@@ -289,19 +289,19 @@ describe("finalizeArbBet makeup enqueue", () => {
       { orders: [rayOrder], rejected: false },
     );
     rejectWait.mockImplementationOnce(async () => {
-      expect(registerRayRejectMonitor).not.toHaveBeenCalled();
+      expect(registerRayOrderContext).not.toHaveBeenCalled();
       expect(settleArbLeg).not.toHaveBeenCalled();
       expect(applyArbMakeUpFromRejects).not.toHaveBeenCalled();
     });
     await finalizeArbBet(params, makePlaced());
-    expect(registerRayRejectMonitor).toHaveBeenCalledOnce();
-    expect(registerRayRejectMonitor).toHaveBeenCalledWith(expect.objectContaining({
+    expect(registerRayOrderContext).toHaveBeenCalledOnce();
+    expect(registerRayOrderContext).toHaveBeenCalledWith(expect.objectContaining({
       side: "B",
       anchorConfirmed: true,
       initialOrders: [rayOrder],
     }));
-    expect(settleArbLeg.mock.invocationCallOrder.at(-1)).toBeLessThan(registerRayRejectMonitor.mock.invocationCallOrder[0]!);
-    expect(registerRayRejectMonitor.mock.invocationCallOrder[0]).toBeLessThan(applyArbMakeUpFromRejects.mock.invocationCallOrder[0]!);
+    expect(settleArbLeg.mock.invocationCallOrder.at(-1)).toBeLessThan(registerRayOrderContext.mock.invocationCallOrder[0]!);
+    expect(registerRayOrderContext.mock.invocationCallOrder[0]).toBeLessThan(applyArbMakeUpFromRejects.mock.invocationCallOrder[0]!);
     expect(rejectWait).toHaveBeenCalledWith(3_000);
     expect(applyArbMakeUpFromRejects).toHaveBeenCalledOnce();
   });

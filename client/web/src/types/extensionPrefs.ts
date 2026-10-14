@@ -56,22 +56,15 @@ export interface ArbFailAutoSellPrefs {
 
 /**
  * [changmen 扩展] RAY 接口受理后发生延迟拒单时，交给现有补单队列处理。
- * 仅控制旁路监控的后续动作；监控本身始终开启。默认关闭。
+ * 仅控制独立订单监控发现拒单后的补单交接，默认关闭。
  */
 export interface RayLateRejectAutoMakeupPrefs {
   enabled: boolean;
-  /** 从 RAY 官网订单买入时间起计算的延迟拒单观察窗口（分钟）。 */
-  monitorMinutes: number;
 }
-
-export const RAY_REJECT_MONITOR_DEFAULT_MINUTES = 5;
-export const RAY_REJECT_MONITOR_MIN_MINUTES = 1;
-export const RAY_REJECT_MONITOR_MAX_MINUTES = 60;
 
 export function createDefaultRayLateRejectAutoMakeup(): RayLateRejectAutoMakeupPrefs {
   return {
     enabled: false,
-    monitorMinutes: RAY_REJECT_MONITOR_DEFAULT_MINUTES,
   };
 }
 
@@ -522,15 +515,8 @@ function normalizeRayLateRejectAutoMakeup(raw: unknown): RayLateRejectAutoMakeup
   if (!raw || typeof raw !== "object" || Array.isArray(raw))
     return defaults;
   const row = raw as Record<string, unknown>;
-  const monitorMinutes = Number(row.monitorMinutes);
   return {
     enabled: row.enabled === true,
-    monitorMinutes: Number.isFinite(monitorMinutes)
-      ? Math.round(Math.min(
-          RAY_REJECT_MONITOR_MAX_MINUTES,
-          Math.max(RAY_REJECT_MONITOR_MIN_MINUTES, monitorMinutes),
-        ))
-      : defaults.monitorMinutes,
   };
 }
 

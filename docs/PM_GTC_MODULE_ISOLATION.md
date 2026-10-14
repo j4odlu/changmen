@@ -93,3 +93,11 @@ GTC 手动卖出在原人工卖出保存步骤选择 GTC 专用保存：本卖�
 数据库旧日志的 `getBrowserSession: Connection terminated unexpectedly` 确认是数据库连接中断使本系统会话读取失败；历史日志不足以逐次归因。新增仅针对幂等会话读取/续活的断连重试一次及带时间、错误码、连接龄和池计数的日志；下注、财务写入和事务均不自动重放。持续故障仍返回临时服务异常，不撤销登录会话。本机 TUN/Bitz 配置属于项目外部运行环境，项目启动和运行均不读取、检查或修改代理软件配置。
 
 本地前后端已更新。只读运行核验 65 秒内三笔旧执行版本号不再增长，没有数据库/会话断连日志；同时观察到用户新开的独立 GTC 套利双腿成交。四张现有 GTC 买单成本和盈亏审计无差异。验证记录见 `output/gtc-sync-runtime-audit.json` 与 `output/gtc-lifecycle-audit.json`。测试涵盖故障恢复、并发注销、完整成交/部分成交撤单的停止条件、结算身份和新单唤醒；未发送测试买入、卖出或撤单。
+
+## 2026-10-14 RAY 旁路整合为唯一订单监控
+
+[changmen 扩展] 旧 `extensions/arbBet/rayRejectMonitor/` 已整合进 `runtime/rayOrderMonitor/`。`runtime.ts` 是唯一后台定时器和场馆订单查询入口；`contexts.ts` 只消费同次查询结果，沿用原单唯一候选匹配、业务日志及补单交接。`stores/match/mainBetLoop.ts` 的旁路 tick 已移除，普通、GTC、体育及待关联原单共用账号请求。
+
+[changmen 扩展] 弃用旧 `monitorMinutes` 偏好和到期退出条件，界面不再提供“订单监控时长”。旧 sessionStorage 任务迁移到统一模块的业务上下文，保存成功后删除旧键；移除 expiresAt/nextPollAt 等旧调度字段。所有未终态订单继续监控，不因旧观察时长结束。
+
+[changmen 扩展] 首次拒单检测仍按原下注等待和查单确认流程执行，未改检测时序或判断。首次确认完成后只交接关联和成功腿锚点。统一监控发现并保存拒单事实后，按原两个补单开关、锚点、用户取消、盘口可用及队列冲突条件交给现有补单队列，不另建补单策略。

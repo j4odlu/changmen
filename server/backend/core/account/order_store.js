@@ -166,7 +166,7 @@ export async function listByPlayer(playerId, userId, opts = undefined) {
   return rows.map(rowToOrder);
 }
 
-export async function saveOrder(playerId, orders, userId, typeFallback = "") {
+export async function saveOrder(playerId, orders, userId, typeFallback = "", options = undefined) {
   if (!userId || !Array.isArray(orders))
     return false;
   if (!orders.length)
@@ -209,11 +209,20 @@ export async function saveOrder(playerId, orders, userId, typeFallback = "") {
     existing.map(r => [String(r.order_id), r]),
   );
 
+  // [changmen 扩展] 独立监控只能更新已有 RAY 原单，不能恢复已删除订单或跨场馆保存。
+  if (options?.rayMonitorOnly && incomingResolved.some(({ o, orderId }) => {
+    const previous = findOrderRowById(existingByOrderId, orderId);
+    return !previous || previous.provider !== "RAY" || o.provider !== "RAY";
+  }))
+    return false;
+
   const assignedInBatch = new Map();
   const rows = [];
   for (const { o, orderId, parsed, fallbackAt } of incomingResolved) {
     // 本单 prev：order_id 大小写不敏感；命中后 upsert 主键用库内形态，避免 ON CONFLICT 插出重复行
     const prevRow = findOrderRowById(existingByOrderId, orderId);
+    if (options?.rayMonitorOnly && ["win", "lose", "lost", "return", "reject"].includes(String(prevRow.status).toLowerCase()))
+      continue;
     const storedOrderId = prevRow?.order_id != null && String(prevRow.order_id).trim()
       ? String(prevRow.order_id).trim()
       : orderId;
@@ -272,6 +281,8 @@ export async function saveOrder(playerId, orders, userId, typeFallback = "") {
       raw,
     });
   }
+  if (options?.rayMonitorOnly)
+    return sb.patchRayMonitorOrders(rows);
   if (rows.some(row => row.raw?.pmGtcExecutionId))
     return saveRowsByExecution(rows);
   return rows.length ? await sb.upsertOrders(rows) : true;

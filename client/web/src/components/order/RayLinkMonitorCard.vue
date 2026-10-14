@@ -1,19 +1,29 @@
 <script setup lang="ts">
-import type { RayRejectMonitorTask } from "@/extensions/arbBet/rayRejectMonitor/types";
+import type { RayOrderContext } from "@/runtime/rayOrderMonitor/types";
 import type { ActiveBetRun } from "@/types/activeBetRun";
 import type { OrderRow } from "@/types/order";
 import { formatOrderTime } from "@changmen/client-core/shared/format";
 import { computed, ref } from "vue";
-import { buildRayLinkMonitorModel } from "@/shared/rayLinkMonitor";
+import { rayMonitoring } from "@/runtime/orderMonitoring/rayState";
+import { buildRayLinkMonitorModel, rayLinkMonitorOrder } from "@/shared/rayLinkMonitor";
+import { useAccountStore } from "@/stores/accountStore";
+import { useUserStore } from "@/stores/userStore";
 
 const props = defineProps<{
   rows: OrderRow[];
   run?: ActiveBetRun | null;
-  monitor?: RayRejectMonitorTask | null;
+  monitor?: RayOrderContext | null;
 }>();
 
 const expanded = ref(false);
-const model = computed(() => buildRayLinkMonitorModel(props.rows, props.run, props.monitor));
+const user = useUserStore(); const accounts = useAccountStore();
+const model = computed(() => {
+  const row = rayLinkMonitorOrder(props.rows);
+  const monitoring = user.isLoggedIn && !accounts.adminWorkspacePreview && rayMonitoring.owner === String(user.userId)
+    ? rayMonitoring.orders.get(`${row?.PlayerID}:${row?.OrderID}`)
+    : undefined;
+  return buildRayLinkMonitorModel(props.rows, props.run, props.monitor, monitoring);
+});
 </script>
 
 <template>
@@ -49,7 +59,7 @@ const model = computed(() => buildRayLinkMonitorModel(props.rows, props.run, pro
         <strong>{{ model.venueStatus || "未知" }}</strong>
       </div>
       <div class="ray-link-monitor__fact">
-        <span>{{ model.isLive ? "最近更新" : "订单时间" }}</span>
+        <span>{{ model.timeLabel ?? (model.isLive ? "最近更新" : "订单时间") }}</span>
         <strong>{{ model.observedAt ? formatOrderTime(model.observedAt) : "—" }}</strong>
       </div>
       <p v-if="model.detail" class="ray-link-monitor__note">

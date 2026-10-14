@@ -3,7 +3,7 @@ import { createRenderer, nextTick, ssrContextKey } from "vue";
 import { gtcOrderProjection, resetGtcOrderProjection } from "@/orderModes/gtc/executionProjection";
 import App from "./App.vue";
 
-const mocks = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn(), user: { isLoggedIn: true, userId: "owner", extensionPrefs: { pmGtcV1Participant: false, pmArbOrderMode: "FOK", uiTheme: "default" } } }));
+const mocks = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn(), rayStart: vi.fn(), user: { isLoggedIn: true, userId: "owner", extensionPrefs: { pmGtcV1Participant: false, pmArbOrderMode: "FOK", uiTheme: "default" } } }));
 vi.mock("@/stores/orderStore", async () => {
   const { reactive } = await import("vue");
   const orders = reactive({ orders: new Map<number, { OrderID: string; PmGtcExecutionId?: string }[]>() });
@@ -24,6 +24,8 @@ vi.mock("pinia", async () => {
   return { storeToRefs: toRefs };
 });
 vi.mock("@/orderModes/gtc/runtime", () => ({ startGtcRuntime: mocks.start, stopGtcRuntime: mocks.stop }));
+const rayStop = vi.hoisted(() => vi.fn());
+vi.mock("@/runtime/rayOrderMonitor/runtime", () => ({ startRayOrderMonitoring: mocks.rayStart, stopRayOrderMonitoring: rayStop }));
 vi.mock("@/shared/applyUiTheme", () => ({ applyUiTheme: vi.fn() }));
 vi.mock("@/components/account/PmVaultDialogs.vue", () => ({ default: { render: () => null } }));
 vi.mock("element-plus", () => ({ ElConfigProvider: { render: () => null } }));
@@ -60,6 +62,18 @@ function mount() {
 }
 
 describe("gTC recovery follows owned original orders", () => {
+  it("changing owner restarts the RAY monitor and entering preview stops it", async () => {
+    mount(); await flush(); expect(mocks.rayStart).toHaveBeenCalledOnce();
+    (await user()).userId = "next-owner"; await flush(); expect(mocks.rayStart).toHaveBeenCalledTimes(2);
+    (await accounts()).adminWorkspacePreview = true; await flush();
+    expect(mocks.rayStart).toHaveBeenCalledTimes(2); expect(rayStop).toHaveBeenCalledTimes(3);
+  });
+  it("login starts the independent RAY monitor once and PM mode changes do not restart it", async () => {
+    mount(); await flush();
+    (await user()).extensionPrefs.pmArbOrderMode = "GTC"; await flush();
+    (await user()).extensionPrefs.pmArbOrderMode = "FOK"; await flush();
+    expect(mocks.rayStart).toHaveBeenCalledOnce();
+  });
   it("ordinary FOK starts no GTC runtime", async () => {
     mount(); await flush(); expect(mocks.start).not.toHaveBeenCalled(); expect(mocks.stop).not.toHaveBeenCalled();
   });

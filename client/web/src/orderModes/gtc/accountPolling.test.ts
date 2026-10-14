@@ -5,13 +5,15 @@ import type { OrderRow } from "@/types/order";
 import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { registerRayRejectMonitor, runRayRejectMonitorTick } from "@/extensions/arbBet/rayRejectMonitor/runtime";
-import { useRayRejectMonitorStore } from "@/extensions/arbBet/rayRejectMonitor/store";
+import { registerRayOrderContext } from "@/runtime/rayOrderMonitor/contexts";
+import { useRayOrderContextStore } from "@/runtime/rayOrderMonitor/contextStore";
+import { startRayOrderMonitoring, stopRayOrderMonitoring } from "@/runtime/rayOrderMonitor/runtime";
 import { PlatformAccount } from "@/models/platformAccount";
 import { getProvider } from "@/runtime/providers";
 import { gtcOrderProjection } from "./executionProjection";
 import { gtcProgress, startGtcRuntime, stopGtcRuntime } from "./runtime";
 
+vi.mock("@/runtime/rayOrderMonitor/api", () => ({ loadRayMonitorOrders: vi.fn().mockResolvedValue([]), saveRayMonitorOrders: mocks.ordinarySave }));
 const mocks = vi.hoisted(() => ({ read: vi.fn(), pmRead: vi.fn(), save: vi.fn(), ordinarySave: vi.fn(), refresh: vi.fn(), records: new Map<string, GtcExecution>(), orders: new Map<number, OrderRow[]>(), accounts: [] as PlatformAccount[] }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "session", isAuthSessionCurrent: () => true }));
 vi.mock("@/runtime/venueAdapters", () => ({ getProvider: () => ({ getOrders: mocks.read }) }));
@@ -19,8 +21,8 @@ vi.mock("@/api/chat", () => ({ saveUserLog: vi.fn().mockResolvedValue(true) }));
 vi.mock("@/api/order", () => ({ saveOrders: mocks.ordinarySave }));
 vi.mock("@/services/orderObservation", () => ({ observeOrder: vi.fn() }));
 vi.mock("@/stores/betting/arbOrderBind", () => ({ bindArbOrderId: vi.fn().mockResolvedValue(true), refreshOrderListAfterBind: vi.fn() }));
-vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ findAccount: (id: number) => mocks.accounts.find(a => a.accountId === id) }) }));
-vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: mocks.orders }) }));
+vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ accounts: mocks.accounts, findAccount: (id: number) => mocks.accounts.find(a => a.accountId === id) }) }));
+vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: mocks.orders, orderDate: "2026-10-14", fetchOrders: mocks.refresh }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: "owner", extensionPrefs: {} }) }));
 vi.mock("./successMarkers", () => ({ markGtcSuccess: vi.fn() }));
 vi.mock("./ordersApi", () => ({ loadGtcMonitorOrders: vi.fn().mockResolvedValue([]), saveOrders: mocks.save, refreshGtcOrders: mocks.refresh }));
@@ -51,47 +53,34 @@ function venue(id: string, status: VenueOrder["status"]): VenueOrder {
 }
 beforeEach(() => {
   setActivePinia(createPinia());
-  stopGtcRuntime(); vi.useFakeTimers(); vi.clearAllMocks(); sessionStorage.clear();
+  stopGtcRuntime(); stopRayOrderMonitoring(); vi.useFakeTimers(); vi.clearAllMocks(); sessionStorage.clear();
   mocks.records.clear(); mocks.orders.clear();
   mocks.accounts = [new PlatformAccount({ accountId: 1, provider: "Polymarket", playerName: "PM" }), new PlatformAccount({ accountId: 2, provider: "RAY", playerName: "RAY" }), new PlatformAccount({ accountId: 3, provider: "RAY", playerName: "other RAY" })];
   mocks.save.mockResolvedValue(undefined); mocks.refresh.mockResolvedValue(undefined);
   mocks.ordinarySave.mockResolvedValue(undefined);
 });
-afterEach(() => { stopGtcRuntime(); vi.useRealTimers(); });
+afterEach(() => { stopRayOrderMonitoring(); stopGtcRuntime(); vi.useRealTimers(); });
 
-it("fOK and GTC RAY originals share the original account monitor, intervals and rejection handling", async () => {
+it("FOK and GTC contexts consume one independent account poll and keep GTC as a facts consumer", async () => {
   execution("gtc");
   const pendingGtc = venue("gtc", "none"); const pendingFok = venue("fok", "none");
   startGtcRuntime("owner"); await vi.advanceTimersByTimeAsync(0);
-  const store = useRayRejectMonitorStore();
+  const store = useRayOrderContextStore();
   for (const [index, original] of [pendingGtc, pendingFok].entries()) {
-    registerRayRejectMonitor({ linkId: 100 + index, matchId: 1, betId: 2 + index, side: "B", accountId: 2, submittedAt: original.createAt, match: original.match, bet: original.bet, item: original.item, target: "Away", odds: original.odds, betMoney: original.betMoney, anchorProvider: "Polymarket", anchorAccountId: 1, anchorBetMoney: 5, anchorOdds: 2, anchorConfirmed: false, initialOrders: [original], initialRejected: false });
+    registerRayOrderContext({ linkId: 100 + index, matchId: 1, betId: 2 + index, side: "B", accountId: 2,
+      submittedAt: original.createAt, match: original.match, bet: original.bet, item: original.item, target: "Away",
+      odds: original.odds, betMoney: original.betMoney, anchorProvider: "Polymarket", anchorAccountId: 1,
+      anchorBetMoney: 5, anchorOdds: 2, anchorConfirmed: false, initialOrders: [original], initialRejected: false });
   }
-  expect(store.activeTasks).toHaveLength(2);
-  mocks.read.mockResolvedValue([pendingGtc, pendingFok]);
-  await vi.advanceTimersByTimeAsync(1000); runRayRejectMonitorTick(); await vi.advanceTimersByTimeAsync(0);
-  expect(mocks.read).toHaveBeenCalledOnce();
-  expect(store.taskForLink(100)!.nextPollAt - Date.now()).toBe(1000);
-  expect(store.taskForLink(101)!.nextPollAt - Date.now()).toBe(1000);
-  await vi.advanceTimersByTimeAsync(15001); runRayRejectMonitorTick(); await vi.advanceTimersByTimeAsync(0);
+  mocks.read.mockResolvedValue([pendingGtc, pendingFok]); startRayOrderMonitoring(); await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.read).toHaveBeenCalledOnce(); expect(store.activeTasks).toHaveLength(2);
+  mocks.read.mockResolvedValue([venue("gtc", "reject"), pendingFok]); await vi.advanceTimersByTimeAsync(5000);
   expect(mocks.read).toHaveBeenCalledTimes(2);
-  expect(store.taskForLink(100)!.nextPollAt - Date.now()).toBe(3000);
-  expect(store.taskForLink(101)!.nextPollAt - Date.now()).toBe(3000);
-  await vi.advanceTimersByTimeAsync(2999); runRayRejectMonitorTick(); await vi.advanceTimersByTimeAsync(0);
-  expect(mocks.read).toHaveBeenCalledTimes(2);
-  mocks.read.mockResolvedValue([venue("gtc", "reject"), pendingFok]);
-  await vi.advanceTimersByTimeAsync(1); runRayRejectMonitorTick(); await vi.advanceTimersByTimeAsync(0);
-  expect(mocks.read).toHaveBeenCalledTimes(3);
-  expect(store.taskForLink(100)).toMatchObject({ status: "rejected", lastObservedStatus: "reject", autoMakeupStatus: "disabled" });
-  expect(store.taskForLink(101)!.status).toBe("watching");
-  expect(gtcProgress.records[0]!.other.state).toBe("rejected");
-  await vi.advanceTimersByTimeAsync(60000);
-  expect(mocks.read).toHaveBeenCalledTimes(3);
-  runRayRejectMonitorTick(); await vi.advanceTimersByTimeAsync(0);
-  expect(mocks.read).toHaveBeenCalledTimes(4);
-  expect(store.taskForLink(101)!.nextPollAt - Date.now()).toBe(10000);
+  expect(store.taskForLink(100)).toMatchObject({ status: "rejected", autoMakeupStatus: "disabled" });
+  expect(store.taskForLink(101)?.status).toBe("watching"); expect(gtcProgress.records[0]!.other.state).toBe("rejected");
+  await vi.advanceTimersByTimeAsync(60000); expect(mocks.read).toHaveBeenCalledTimes(14);
+  stopRayOrderMonitoring(); await vi.advanceTimersByTimeAsync(60000); expect(mocks.read).toHaveBeenCalledTimes(14);
 });
-
 it("three originals consume one existing query; background rounds never query RAY and unrelated FOK orders are never saved", async () => {
   execution("one"); execution("two"); execution("pending");
   mocks.records.get("one")!.other.state = "accepted";

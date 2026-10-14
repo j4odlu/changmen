@@ -1,15 +1,14 @@
 import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { VenueOrder, VenueOrderStatus } from "@changmen/venue-adapter/contract";
 
-export type RayRejectMonitorSide = "A" | "B";
+export type RayOrderSide = "A" | "B";
 
-export type RayRejectMonitorStatus
+export type RayOrderContextStatus
   = | "binding"
     | "watching"
     | "ambiguous"
     | "rejected"
-    | "closed"
-    | "expired";
+    | "closed";
 
 export type RayLateRejectMakeupStatus
   = | "disabled"
@@ -18,18 +17,16 @@ export type RayLateRejectMakeupStatus
     | "skipped"
     | "failed";
 
-export interface RayRejectMonitorTask {
+export interface RayOrderContext {
   observation?: ObservationContext;
   key: string;
   userId: string;
   linkId: number;
   matchId: number;
   betId: number;
-  side: RayRejectMonitorSide;
+  side: RayOrderSide;
   accountId: number;
   submittedAt: number;
-  monitorMinutes: number;
-  expiresAt: number;
   match: string;
   bet: string;
   item: string;
@@ -42,12 +39,15 @@ export interface RayRejectMonitorTask {
   anchorAccountId: number;
   anchorBetMoney: number;
   anchorOdds: number;
-  status: RayRejectMonitorStatus;
+  status: RayOrderContextStatus;
   boundOrderId?: string;
   boundAt?: number;
   candidateCount: number;
   pollCount: number;
-  nextPollAt: number;
+  /** 原单已保存并确认归属当前 Link；关联失败时由同一轮询重试。 */
+  bindingSaved?: boolean;
+  /** 已完成首次原单保存；Link 绑定失败后的重试使用受保护更新。 */
+  orderSaved?: boolean;
   lastPollAt?: number;
   lastObservedStatus?: VenueOrderStatus | "missing";
   lastError?: string;
@@ -59,12 +59,12 @@ export interface RayRejectMonitorTask {
   updatedAt: number;
 }
 
-export interface RegisterRayRejectMonitorInput {
+export interface RegisterRayOrderContextInput {
   observation?: ObservationContext;
   linkId: number;
   matchId: number;
   betId: number;
-  side: RayRejectMonitorSide;
+  side: RayOrderSide;
   accountId: number;
   submittedAt: number;
   match: string;

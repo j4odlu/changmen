@@ -131,6 +131,7 @@ export const {
   fetchOrdersByDatePage,
   fetchOrdersByPlayer,
   fetchOrdersByPlayerStrict,
+  patchRayMonitorOrders,
   fetchOrdersByPlayerAll,
   fetchOrdersByPlayerOrderIds,
   fetchOrdersByPlayerOrderIdsStrict,

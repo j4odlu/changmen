@@ -2,6 +2,23 @@ import { describe, expect, it } from "vitest";
 import { buildRayLinkMonitorModel } from "./rayLinkMonitor";
 
 describe("buildRayLinkMonitorModel", () => {
+  it("independent order facts take priority over an old rejection observer or makeup run", () => {
+    const model = buildRayLinkMonitorModel([{ Link: 12, Type: "RAY", OrderID: "original", Status: "None" }],
+      { phase: "makeup", legs: [] } as never,
+      { status: "watching", boundOrderId: "other", pollCount: 99 } as never,
+      { phase: "watching", status: "pending", error: "network down", updatedAt: 500 });
+    expect(model).toMatchObject({ label: "监控重试中", orderId: "original", observedAt: 500, detail: "network down" });
+    const rejected = buildRayLinkMonitorModel([{ Link: 12, Type: "RAY", OrderID: "original" }], null, null,
+      { phase: "closed", status: "reject", updatedAt: 600 });
+    expect(rejected).toMatchObject({ label: "监控已结束", tone: "danger", venueStatus: "拒单", isLive: false });
+  });
+  it("shows the independent monitor instead of an old first-confirmation label", () => {
+    const rows = [{ Link: 12, Type: "RAY", OrderID: "original", Status: "None" }];
+    const model = buildRayLinkMonitorModel(rows, { legs: [{ platform: "RAY", status: "confirmed" }] } as never, null, { phase: "watching", status: "none", updatedAt: 200 });
+    expect(model.label).toBe("持续监控中"); expect(model.isLive).toBe(true);
+    const closed = buildRayLinkMonitorModel(rows, null, null, { phase: "closed", status: "lose", updatedAt: 300 });
+    expect(closed.label).toBe("监控已结束"); expect(closed.venueStatus).toBe("输"); expect(closed.isLive).toBe(false);
+  });
   it("only shows for positive links containing a RAY order", () => {
     expect(buildRayLinkMonitorModel([{ Link: 12, Type: "OB" }]).visible).toBe(false);
     expect(buildRayLinkMonitorModel([{ Link: -12, Type: "RAY" }]).visible).toBe(false);
@@ -21,7 +38,7 @@ describe("buildRayLinkMonitorModel", () => {
     const model = buildRayLinkMonitorModel([
       { Link: 12, Type: "RAY", OrderID: "ray-1", Status: "None", CreateAt: 100 },
     ]);
-    expect(model.label).toBe("持续监控待接入");
+    expect(model.label).toBe("等待恢复监控");
     expect(model.isLive).toBe(false);
   });
 

@@ -247,6 +247,34 @@ export async function upsertOrders(rows) {
   }
 }
 
+/** [changmen 扩展] 原单监控只 UPDATE；写入时再次检查终态，避免读写间竞态回退或重建删单。 */
+export async function patchRayMonitorOrders(rows) {
+  if (!rows?.length)
+    return true;
+  const pool = getPgPool();
+  if (!pool)
+    return false;
+  try {
+    await pool.query(`UPDATE orders AS o SET
+      match=t.match, bet=t.bet, item=t.item, odds=t.odds, bet_money=t.bet_money,
+      money=t.money, status=t.status,
+      raw=coalesce(o.raw, '{}'::jsonb) || (t.raw - ARRAY['pmGtcExecutionId','pmGtcRevision','pmGtcBuyShares','pmGtcBuyCost','pmGtcOrderSnapshot']::text[])
+      FROM UNNEST($1::text[], $2::bigint[], $3::text[], $4::bigint[], $5::text[], $6::text[],
+        $7::text[], $8::text[], $9::float8[], $10::float8[], $11::float8[], $12::text[], $13::bigint[], $14::jsonb[])
+        AS t(user_id,player_id,order_id,link,provider,match,bet,item,odds,bet_money,money,status,create_at,raw)
+      WHERE o.user_id=t.user_id AND o.player_id=t.player_id AND o.order_id=t.order_id
+        AND o.provider='RAY' AND t.provider='RAY'
+        AND lower(coalesce(o.status,'none')) NOT IN ('win','lose','lost','return','reject')
+        ${ordersExecutionCompatibilityEnabled() ? "AND o.financial_ready" : ""}`,
+    _orderRowToUpsertArrays(_dedupeUpsertRows(rows)));
+    return true;
+  }
+  catch (error) {
+    console.warn("[rds] patchRayMonitorOrders:", error.message);
+    return false;
+  }
+}
+
 /**
  * PredictFun pending_credit → 入账 + 标 credited（同事务，防双付）。
  * 仅当 raw.pfLedgerState === pending_credit 时生效；amount 以库内 pfPendingCreditUsdt 为准。
@@ -642,6 +670,19 @@ export async function fetchOrdersByPlayerStrict(playerId, userId, opts = undefin
   const pool = getPgPool();
   if (!pool || !userId)
     return [];
+  // [changmen 扩展] RAY 监控只恢复未结原单，已知单号额外返回终态以结束旧任务。
+  if (Array.isArray(opts?.rayMonitorOrderIds)) {
+    const ids = [...new Set(opts.rayMonitorOrderIds.map(id => String(id).trim().toLowerCase()).filter(Boolean))];
+    const { rows } = await pool.query(
+      `SELECT * FROM ${financialOrdersRelation()}
+       WHERE user_id = $1 AND player_id = $2 AND provider = 'RAY'
+         AND (lower(coalesce(status, 'none')) NOT IN ('win', 'lose', 'lost', 'return', 'reject')
+              OR lower(order_id) = ANY($3::text[]))
+       ORDER BY create_at DESC`,
+      [String(userId), Number(playerId), ids],
+    );
+    return rows || [];
+  }
   const since = Number(opts?.sinceCreateAt);
   const useSince = Number.isFinite(since) && since > 0;
   const { rows } = await pool.query(

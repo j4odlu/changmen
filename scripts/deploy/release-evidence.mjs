@@ -23,7 +23,6 @@ export function assertAccepted(report) {
   assert.equal(planHash(plan), report.planFingerprint, "Acceptance plan mismatch");
   assert.equal(report.tier, plan.tier);
   assert.equal(report.completeRelease, plan.checks.includes("complete-release"));
-  if (plan.deployment.components.length) assert.equal(report.completeRelease, true, "Complete publication acceptance required");
   assert.deepEqual(report.results.map(row => ({ check: row.check, passed: row.passed })),
     plan.checks.map(check => ({ check, passed: true })), "Incomplete acceptance");
   assert.match(report.identity.candidateTree, /^[a-f0-9]{40}$/);
@@ -52,7 +51,7 @@ export function sealEvidence(root = process.cwd()) {
   const verifier = fs.readFileSync(path.join(root, "scripts/deploy/verify-runtime.mjs"));
   fs.writeFileSync(path.join(directory, "verify-runtime.mjs"), verifier);
   let fullAcceptanceSha256 = null;
-  if (plan.tier === "full") {
+  if (report.completeRelease) {
     const bytes = fs.readFileSync(path.join(root, "output/fok-release-verdict.json"));
     const full = JSON.parse(bytes.toString("utf8"));
     assert.equal(full.passed, true); assert.equal(full.fullReleaseAccepted, true);
@@ -109,7 +108,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       const evidence = JSON.parse(fs.readFileSync(evidenceFile, "utf8"));
       assertCandidate(evidence.report, process.cwd());
       assertArchiveEvidence(evidence, scope, archive, expectedCommit);
-      if (evidence.report.plan.tier === "full") {
+      if (evidence.report.completeRelease) {
         const bytes = fs.readFileSync(path.join(path.dirname(evidenceFile), "full-acceptance.json"));
         assert.equal(sha256(bytes), evidence.fullAcceptanceSha256);
         const full = JSON.parse(bytes.toString("utf8"));

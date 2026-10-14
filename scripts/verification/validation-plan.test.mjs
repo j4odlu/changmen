@@ -24,12 +24,19 @@ it("core changes retain both local suites without contacting a live release", ()
   expect(plan.checks).not.toContain("boundaries"); // backend already runs these checks
   expect(plan.checks).not.toContain("complete-release");
 });
-it("explicit publication runs the original complete gate; tools alone need no application build", () => {
-  expect(validationPlan(["client/web/src/components/admin/Report.vue"], { publication: true }).checks)
-    .toEqual(["validation-control", "complete-release"]);
+it("publication runs component tests and builds; full audit is not implicit", () => {
+  expect(validationPlan(["client/web/src/components/admin/Report.vue"], { publication: true, components: ["frontend"] }).checks)
+    .toEqual(["fok-551", "boundaries", "frontend", "build"]);
+  expect(validationPlan([], { publication: true, components: ["backend"] }).checks)
+    .toEqual(["fok-551", "router-compile", "backend"]);
   const tools = validationPlan(["scripts/deploy/publish.sh"]);
   expect(tools.checks).toContain("verification-control");
   for (const check of ["frontend", "backend", "build", "complete-release"]) expect(tools.checks).not.toContain(check);
+});
+it("deploy-only changes require build and control tests without repeating unchanged application suites", () => {
+  const plan = validationPlan(["scripts/deploy/publish.sh", "deploy/scripts/release-backend.sh"], { publication: true });
+  expect(plan.checks).toEqual(["fok-551", "validation-control", "router-compile", "build"]);
+  for (const check of ["backend", "frontend", "complete-release", "verification-control"]) expect(plan.checks).not.toContain(check);
 });
 it("a critical deleted or renamed path cannot be hidden by unrelated documents", () => {
   expect(validationPlan(["docs/plan.md", "server/db/old.js", "client/web/src/components/admin/new.vue"]).tier).toBe("full");

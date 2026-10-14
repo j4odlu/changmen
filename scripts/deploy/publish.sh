@@ -66,7 +66,8 @@ done
 ssh "${ssh_args[@]}" "$remote" "cat > '$remote_work/evidence.json'" < "$evidence"
 verifier_digest="$(sha256sum output/release-validation/verify-runtime.mjs | cut -d ' ' -f1)"
 ssh "${ssh_args[@]}" "$remote" "cat > '$remote_work/verify-runtime.mjs'" < output/release-validation/verify-runtime.mjs
+ssh "${ssh_args[@]}" "$remote" "cat > '$remote_work/release-retention.mjs'" < scripts/deploy/release-retention.mjs
 ssh "${ssh_args[@]}" "$remote" "echo '$verifier_digest  $remote_work/verify-runtime.mjs' | sha256sum -c -"
 ssh "${ssh_args[@]}" "$remote" \
-  "DEPLOY_REPO='$repo' DEPLOY_SHA='$sha' DEPLOY_SEQUENCE='$sequence' DEPLOY_RELEASE_ID='$id' DEPLOY_EVIDENCE_FILE='$remote_work/evidence.json' DEPLOY_RUNTIME_VERIFIER='$remote_work/verify-runtime.mjs' bash '$remote_work/release-${scope}.sh' '$remote_work/app.tgz'"
+  "DEPLOY_REPO='$repo' DEPLOY_SHA='$sha' DEPLOY_SEQUENCE='$sequence' DEPLOY_RELEASE_ID='$id' DEPLOY_EVIDENCE_FILE='$remote_work/evidence.json' DEPLOY_RUNTIME_VERIFIER='$remote_work/verify-runtime.mjs' DEPLOY_RELEASE_RETENTION='$remote_work/release-retention.mjs' bash '$remote_work/release-${scope}.sh' '$remote_work/app.tgz'"
 ssh "${ssh_args[@]}" "$remote" "rm -rf '$remote_work'"

@@ -28,6 +28,7 @@ cat > "$fixture/bin/node" <<'SH'
 #!/usr/bin/env bash
 if [[ "${1:-}" == */compare-deployed-files.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 if [[ "${1:-}" == */verify-runtime.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
+if [[ "${1:-}" == */release-retention.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 cat >/dev/null
 SH
 cat > "$fixture/bin/npm" <<'SH'
@@ -43,6 +44,7 @@ export PATH="$fixture/bin:$PATH"
 export TEST_FAIL_HEALTH="$fixture/fail-health" TEST_NPM_LOG="$fixture/npm.log"
 export TEST_WRONG_RUNTIME="$fixture/wrong-runtime"
 export DEPLOY_RUNTIME_VERIFIER="$source_root/scripts/deploy/verify-runtime.mjs" DEPLOY_EVIDENCE_FILE="$fixture/evidence.json"
+export DEPLOY_RELEASE_RETENTION="$source_root/scripts/deploy/release-retention.mjs"
 evidence_for() {
   "$real_node" -e 'const fs=require("node:fs"),crypto=require("node:crypto"),scope=process.argv[1],archive=process.argv[2],file=process.argv[3]; const runtime={commit:"a".repeat(40),sourceFingerprint:"f".repeat(64),contractFingerprint:"c".repeat(64),dirty:false}; fs.writeFileSync(file,JSON.stringify({format:1,commit:runtime.commit,report:{passed:true,sourceStable:true,immutableFokEntries:551,completeRelease:true,plan:{purpose:"release",deployment:{components:["frontend","backend"]}}},archives:{[scope]:crypto.createHash("sha256").update(fs.readFileSync(archive)).digest("hex")},expectedRuntime:{frontend:runtime,backend:runtime}}));' "$1" "$2" "$DEPLOY_EVIDENCE_FILE"
 }
@@ -55,6 +57,7 @@ evidence_for frontend "$fixture/dist.tgz"
 mkdir -p "$DEPLOY_REPO/client/web/dist/assets"
 echo legacy > "$DEPLOY_REPO/client/web/dist/index.html"
 echo old-chunk > "$DEPLOY_REPO/client/web/dist/assets/index-old.js"
+printf '<script src="/assets/index-old.js"></script>' > "$DEPLOY_REPO/client/web/dist/index.html"
 bash deploy/scripts/release-frontend.sh "$fixture/dist.tgz"
 test -L "$DEPLOY_REPO/client/web/dist"
 test -f "$DEPLOY_REPO/client/web/dist/assets/index-old.js"
@@ -184,6 +187,7 @@ grep -q "$DEPLOY_REPO 0" "$TEST_ACTIVATE_LOG"
 publish_root="$fixture/publish"
 mkdir -p "$publish_root/scripts/deploy" "$publish_root/deploy/scripts" "$publish_root/output/release-validation" "$fixture/publish-bin"
 cp "$source_root/scripts/deploy/publish.sh" "$publish_root/scripts/deploy/"
+cp "$source_root/scripts/deploy/release-retention.mjs" "$publish_root/scripts/deploy/"
 cp "$source_root/deploy/scripts/"release-{common,frontend}.sh "$publish_root/deploy/scripts/"
 cp "$fixture/dist.tgz" "$publish_root/output/release-validation/frontend.tgz"
 printf '{}' > "$publish_root/output/release-validation/evidence.json"

@@ -41,10 +41,15 @@ export function classifyDeployScope(paths) {
     // Publication/evidence plumbing is shared by both component transports.
     if (p.startsWith("server/storage/runtime_version.")
       || p === "scripts/deploy/publish.sh"
-      || /^scripts\/deploy\/(?:release-evidence|verify-runtime|change-plan|check-controls)\./.test(p)
+      || /^scripts\/deploy\/(?:release-evidence|release-retention|verify-runtime|change-plan|check-controls)\./.test(p)
+      || p === "deploy/scripts/release-common.sh"
       || p.startsWith("sh/deploy-")) {
       frontend = true;
       backend = true;
+      continue;
+    }
+    if (p === "deploy/scripts/release-frontend.sh") {
+      frontend = true;
       continue;
     }
 

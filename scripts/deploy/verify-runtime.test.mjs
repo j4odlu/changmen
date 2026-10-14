@@ -22,18 +22,16 @@ test("frontend independently matches its own sealed build identity", () => {
   assert.equal(assertRuntime("frontend", { frontend: { ...runtime, role: "frontend" } }, evidence).passed, true);
   assert.throws(() => assertRuntime("frontend", {}, evidence));
 });
-test("transport refuses daily approval even when commit and archive match", () => {
+test("transport accepts explicit scoped publication but refuses local checks", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-transport-"));
   try {
     const archive = path.join(root, "artifact.tgz"); fs.writeFileSync(archive, "exact artifact");
     const proof = { format: 1, commit: runtime.commit,
       archives: { backend: createHash("sha256").update(fs.readFileSync(archive)).digest("hex") },
-      report: { passed: true, sourceStable: true, immutableFokEntries: 551, completeRelease: true,
+      report: { passed: true, sourceStable: true, immutableFokEntries: 551, completeRelease: false,
         plan: { purpose: "release", deployment: { components: ["backend"] } } } };
     assertTransport("backend", proof, archive, runtime.commit);
-    proof.report.completeRelease = false;
-    assert.throws(() => assertTransport("backend", proof, archive, runtime.commit), /Daily validation/);
-    proof.report.completeRelease = true; proof.report.plan.purpose = "change";
+    proof.report.plan.purpose = "change";
     assert.throws(() => assertTransport("backend", proof, archive, runtime.commit));
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

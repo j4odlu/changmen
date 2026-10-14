@@ -5,13 +5,13 @@ on:
   workflow_dispatch:
     inputs:
       component:
-        description: Publication component (manual runs retain complete acceptance)
+        description: Component to publish
         type: choice
         default: full
         options: [full, backend, frontend]
 permissions:
   contents: read
-# Complete acceptance captures a stable live release; serialize capture through publication.
+# Keep production publications ordered; full audits have a separate manual entry.
 concurrency:
   group: changmen-release-production
   cancel-in-progress: false
@@ -20,7 +20,7 @@ jobs:
   validate:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 25
     env:
       TZ: Asia/Shanghai
       CI_DEPLOYED_VERSIONS_FILE: output/change-validation/deployed-versions.json
@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - name: Prepare read-only release capture
+      - name: Prepare read-only version check
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
@@ -56,7 +56,7 @@ jobs:
         run: node scripts/deploy/change-plan.mjs
       - name: Install dependencies
         run: npm ci
-      - name: Run shared acceptance
+      - name: Check selected components and build
         env:
           VITE_PREDICT_FUN_API_BASE: https://api.predict.fun
         run: npm run check:change -- --event="$GITHUB_EVENT_PATH"

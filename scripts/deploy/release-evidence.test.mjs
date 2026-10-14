@@ -44,13 +44,13 @@ test("real Git archives and frontend build metadata seal successfully; an old bu
     fs.copyFileSync(new URL("./verify-runtime.mjs", import.meta.url), path.join(root, "scripts/deploy/verify-runtime.mjs"));
     git(root, "add", "."); git(root, "-c", "user.name=Evidence", "-c", "user.email=evidence@example.invalid", "commit", "-qm", "sources");
     runChangeValidation(["--publish=full"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
-    fs.writeFileSync(path.join(root, "output/fok-release-verdict.json"), JSON.stringify({ passed: true, fullReleaseAccepted: true,
-      releasePlan: "backend-first", results: Array.from({ length: 22 }, (_, i) => ({ phase: `fixture-${i}`, passed: true })) }));
     const dist = path.join(root, "client/web/dist"); fs.mkdirSync(dist, { recursive: true });
     const metadata = { frontend: { ...readSourceVersion(root, "frontend"), role: "frontend", startedAt: "2026-10-14T00:00:00Z" },
       backendUrl: "https://api.changmen.fun/api/runtime-version" };
     fs.writeFileSync(path.join(dist, "runtime-version.json"), JSON.stringify(metadata));
     const evidence = sealEvidence(root);
+    assert.equal(evidence.fullAcceptanceSha256, null, "A routine release does not need a full audit artifact");
+    assert.equal(evidence.report.completeRelease, false);
     for (const scope of ["frontend", "backend"])
       assertArchiveEvidence(evidence, scope, path.join(root, `output/release-validation/${scope}.tgz`), evidence.commit);
     metadata.frontend.commit = "b".repeat(40); fs.writeFileSync(path.join(dist, "runtime-version.json"), JSON.stringify(metadata));

@@ -4,6 +4,7 @@ scope=frontend
 source "$(dirname "$0")/release-common.sh"
 archive="${1:?archive required}"
 validate_archive "$archive"
+prune_releases
 release="$repo/.releases/frontend/$id"
 test ! -e "$release"
 mkdir -p "$release"
@@ -32,10 +33,8 @@ elif [[ -d "$app/dist" ]]; then
   mv "$app/dist" "$previous"
   ln -s "$previous" "$app/dist"
 fi
-# Retain old hashed chunks for already-open pages, without overwriting new files.
-if [[ -n "$previous" && -d "$previous/assets" ]]; then
-  cp -an "$previous/assets/." "$release/assets/"
-fi
+# Keep only the previous successful build's own chunks for already-open pages.
+node "$DEPLOY_RELEASE_RETENTION" assets "$release" "$previous"
 printf '%s\n' "$sha" > "$release/deploy-version.txt"
 chmod -R a+rX "$release"
 if [[ "$repo" == /root/* ]]; then chmod 711 /root; fi
@@ -56,4 +55,5 @@ fi
 cp "$DEPLOY_EVIDENCE_FILE" "$repo/.deploy-state/frontend-evidence.$id.json"
 record_success
 trap - ERR
+retain_success
 echo "Published frontend $sha; previous=${previous:-none}; PM2 untouched"

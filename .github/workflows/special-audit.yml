@@ -1,0 +1,52 @@
+name: Special release audit
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+# An explicitly requested live audit needs a stable version during its checks.
+concurrency:
+  group: changmen-release-production
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TZ: Asia/Shanghai
+      VITE_PREDICT_FUN_API_BASE: https://api.predict.fun
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Prepare read-only audit
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          CAPTURE_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          test -n "$CAPTURE_SSH_KEY"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$CAPTURE_SSH_KEY" > "$RUNNER_TEMP/audit-key"
+          chmod 600 "$RUNNER_TEMP/audit-key"
+          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H 47.57.10.202 >> ~/.ssh/known_hosts
+          printf 'Host 47.57.10.202\n  Port %s\n' "${DEPLOY_PORT:-22}" >> ~/.ssh/config
+          printf 'FOK_BASELINE_SSH_KEY=%s\nFOK_BASELINE_SSH_TARGET=%s@47.57.10.202\n' "$RUNNER_TEMP/audit-key" "${DEPLOY_USER:-root}" >> "$GITHUB_ENV"
+      - run: npm ci
+      - name: Run all 22 audit stages
+        run: npm run check:fok-release -- --release-plan=backend-first
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: special-audit-report
+          path: |
+            output/orders-phase2-protection/*.log
+            output/orders-phase2-protection/*.json
+            output/fok-release-verdict.json
+          retention-days: 14
+      - name: Remove audit key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/audit-key"

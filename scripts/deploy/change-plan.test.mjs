@@ -39,11 +39,13 @@ test("unpublished changes survive failed/partial earlier pushes and documentatio
     assert.equal(changePlan(partial.paths, partial).releasePlan, "frontend-only");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
-test("manual and unknown-base publication retain complete acceptance", () => {
+test("manual publication checks exactly the requested components without a live audit", () => {
   for (const scope of ["frontend", "backend", "full"]) {
     const plan = changePlan(["docs/note.md"], { requestedScope: scope });
-    assert.equal(plan.tier, "full"); assert.equal(plan.deployment.scope, scope);
-    assert.equal(plan.purpose, "release"); assert(plan.checks.includes("complete-release"));
+    assert.equal(plan.tier, scope === "full" ? "integration" : scope); assert.equal(plan.deployment.scope, scope);
+    assert.equal(plan.purpose, "release"); assert(!plan.checks.includes("complete-release"));
+    assert.equal(plan.checks.includes("backend"), scope !== "frontend");
+    assert.equal(plan.checks.includes("build"), scope !== "backend");
     assert.equal(plan.releasePlan, scope === "frontend" ? "frontend-only" : "backend-first");
   }
   assert.equal(changePlan([], { unknownBase: true }).deployment.scope, "full");
@@ -51,7 +53,8 @@ test("manual and unknown-base publication retain complete acceptance", () => {
 });
 test("release intent is separate from risk; no deployment needs no live acceptance", () => {
   const release = changePlan(["client/web/src/components/admin/Report.vue"], { purpose: "release" });
-  assert.equal(release.tier, "full"); assert(release.checks.includes("complete-release"));
+  assert.equal(release.tier, "frontend"); assert(!release.checks.includes("complete-release"));
+  assert(!release.checks.includes("deployment-control"));
   const workflowOnly = changePlan([".github/workflows/release.yml"], { purpose: "release" });
   assert.equal(workflowOnly.deployment.scope, "noop"); assert.equal(workflowOnly.tier, "controls");
   assert(!workflowOnly.checks.includes("complete-release"));

@@ -1,4 +1,4 @@
-/** [changmen 扩展] 日常检查按风险分层且离线；完整发布验收只用于发布。 */
+/** [changmen 扩展] 日常检查和发布按范围离线验证；完整专项审计保留独立入口。 */
 const controlPatterns = [
   /^scripts\/(?:verification|deploy)\//,
   /^\.github\//,
@@ -20,7 +20,7 @@ function normalize(file) {
   if (!clean || clean.startsWith("/") || clean.split("/").some(p => p === "..") || clean.includes("\0")) throw Error("Invalid changed path");
   return clean;
 }
-export function validationPlan(changedPaths, { publication = false } = {}) {
+export function validationPlan(changedPaths, { publication = false, components = ["backend", "frontend"] } = {}) {
   if (!Array.isArray(changedPaths) || changedPaths.some(p => typeof p !== "string")) throw Error("Changed paths required");
   const paths = [...new Set(changedPaths.map(normalize))].sort();
   const relevant = paths.filter(p => !/\.md$/i.test(p) && !/^(?:docs\/|output\/|\.playwright-cli\/)/.test(p));
@@ -35,11 +35,17 @@ export function validationPlan(changedPaths, { publication = false } = {}) {
   // 同时影响客户端和服务端的独立工具也不能冒充单端检查。
   if (relevant.some(p => /^server\/storage\/runtime_version\./.test(p))) { frontend = true; backend = true; }
   const full = fullReasons.length > 0 || !paths.length;
-  const tier = publication || full ? "full" : frontend && backend ? "integration" : frontend ? "frontend" : backend ? "backend" : controls ? "controls" : "docs";
+  const testsNeeded = !relevant.length || !relevant.every(file => controlPatterns.some(pattern => pattern.test(file))
+    || /^deploy\/scripts\/release-(?:common|frontend|backend)\.sh$/.test(file));
+  const tier = publication ? components.length === 2 ? "integration" : components[0]
+    : full ? "full" : frontend && backend ? "integration" : frontend ? "frontend" : backend ? "backend" : controls ? "controls" : "docs";
   // 后端入口本身含 test:checks，避免再串联一次相同边界检查。
   const checkBackend = backend || full, checkFrontend = frontend || full;
   return { tier, paths, fullReasons, immutableFokEntries: 551, snapshotOverridesAllowed: false,
-    checks: publication ? ["validation-control", "complete-release"] : ["fok-551", "validation-control",
+    checks: publication ? ["fok-551", ...(controls ? ["validation-control"] : []),
+      ...(components.includes("frontend") && !components.includes("backend") ? ["boundaries"] : []),
+      ...(components.includes("backend") ? ["router-compile", ...(testsNeeded ? ["backend"] : [])] : []),
+      ...(components.includes("frontend") ? [...(testsNeeded ? ["frontend"] : []), "build"] : [])] : ["fok-551", "validation-control",
       ...(controls || full ? ["verification-control", "verification-node"] : []),
       ...(checkFrontend && !checkBackend ? ["boundaries"] : []),
       ...(checkBackend ? ["router-compile", "backend"] : []), ...(checkFrontend ? ["frontend-typecheck", "frontend", "build"] : [])] };

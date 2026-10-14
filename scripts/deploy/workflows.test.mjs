@@ -22,7 +22,7 @@ test("one push entry covers every path and validates before either component", (
   for (const part of ["needs.validate.result == 'success'", "needs.backend.result == 'success'", "needs.backend.result == 'skipped'", "!cancelled()"])
     assert.ok(condition.includes(part), part);
 });
-test("shared acceptance is run once, and artifacts are sealed only after success", () => {
+test("component checks run once, and artifacts are sealed only after success", () => {
   const steps = release.jobs.validate.steps;
   const checks = steps.findIndex(s => s.run?.startsWith("npm run check:change "));
   const seal = steps.findIndex(s => s.run === "node scripts/deploy/release-evidence.mjs seal");
@@ -36,6 +36,16 @@ test("shared acceptance is run once, and artifacts are sealed only after success
   assert.equal(steps.filter(s => s.run?.includes("check:change --")).length, 1);
   assert.equal(steps.find(s => s.uses?.startsWith("actions/checkout@")).with["fetch-depth"], 0);
   assert.deepEqual(release.on.workflow_dispatch.inputs.component.options, ["full", "backend", "frontend"]);
+});
+test("the full 22-stage live audit is manual and cannot publish components", () => {
+  const audit = workflow("special-audit");
+  assert.equal(audit.on.push, undefined);
+  assert(Object.hasOwn(audit.on, "workflow_dispatch"));
+  assert.equal(audit.concurrency.group, release.concurrency.group);
+  assert.equal(Object.keys(audit.jobs).length, 1);
+  assert(audit.jobs.audit.steps.some(s => s.run === "npm run check:fok-release -- --release-plan=backend-first"));
+  assert(!JSON.stringify(release).includes("check:fok-release"));
+  assert(!JSON.stringify(audit).includes("publish.sh"));
 });
 test("component transports consume the same checked artifact and never rebuild", () => {
   for (const scope of ["frontend", "backend"]) {

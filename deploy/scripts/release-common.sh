@@ -30,6 +30,14 @@ record_success() {
   printf '%s %s\n' "$(( sequence > 0 ? sequence : ${last_sequence:-0} ))" "$sha" > "$state.tmp"
   mv -f "$state.tmp" "$state"
 }
+prune_releases() {
+  node "${DEPLOY_RELEASE_RETENTION:?Release retention helper required}" prune "$repo" "$scope" \
+    || echo 'WARNING: old release cleanup failed; inspect retained versions' >&2
+}
+retain_success() {
+  node "$DEPLOY_RELEASE_RETENTION" record "$repo" "$scope" "$release" "$previous" \
+    || echo 'WARNING: retention recording/cleanup failed; active release is healthy' >&2
+}
 validate_archive() {
   node "${DEPLOY_RUNTIME_VERIFIER:?Runtime verifier required}" archive "${DEPLOY_EVIDENCE_FILE:?Acceptance evidence required}" "$1" "$sha" "$scope"
   tar -tzf "$1" > "$repo/.deploy-state/$scope.members"

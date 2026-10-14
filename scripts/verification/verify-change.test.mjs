@@ -52,9 +52,10 @@ it("daily core checks stay offline and cannot claim complete release approval", 
   expect(run.mock.calls.every(call => !call[1].includes("check:fok-release"))).toBe(true);
 });
 it("a publication gate failure stops immediately and does not restart acceptance", () => {
-  const cwd = fixture(); const run = vi.fn((_command, args) => ({ status: args.includes("check:fok-release") ? 1 : 0 }));
+  const cwd = fixture(); const run = vi.fn((_command, args) => ({ status: args.includes("test:backend") ? 1 : 0 }));
   const report = runChangeValidation(["--publish=backend"], { cwd, npm: "npm-cli.js", run });
   expect(report.passed).toBe(false); expect(report.completeRelease).toBe(false);
   expect(report.plan.purpose).toBe("release");
-  expect(run.mock.calls.filter(call => call[1].includes("check:fok-release"))).toHaveLength(1);
+  expect(run.mock.calls.filter(call => call[1].includes("test:backend"))).toHaveLength(1);
+  expect(run.mock.calls.some(call => call[1].includes("check:fok-release"))).toBe(false);
 });

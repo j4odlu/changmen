@@ -4,6 +4,7 @@ scope=backend
 source "$(dirname "$0")/release-common.sh"
 archive="${1:?archive required}"
 validate_archive "$archive"
+prune_releases
 release="$repo/.releases/backend/$id"
 test ! -e "$release"
 mkdir -p "$release"
@@ -78,4 +79,5 @@ printf '%s\n' 'module.exports = require("../backend-current/deploy/ecosystem.con
 mv -f "$repo/deploy/ecosystem.config.cjs.next" "$repo/deploy/ecosystem.config.cjs"
 record_success
 trap - ERR
+retain_success
 echo "Published backend $sha; previous=$previous; frontend dist untouched"

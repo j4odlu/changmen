@@ -22,8 +22,8 @@ export function changePlan(paths, { unknownBase = false, requestedScope = null, 
   const scope = requestedScope ?? (unknownBase ? "full" : liveScope ?? classifyDeployScope(paths));
   const components = scope === "full" ? ["backend", "frontend"] : scope === "noop" ? [] : [scope];
   const publication = purpose === "release" && components.length > 0;
-  const validation = validationPlan(unknownBase || requestedScope ? [] : paths, { publication });
-  if (publication || paths.some(file => /^(?:scripts\/deploy\/|\.github\/|deploy\/|sh\/(?:deploy-|_common\.sh))/.test(file)))
+  const validation = validationPlan(unknownBase || requestedScope ? [] : paths, { publication, components });
+  if (paths.some(file => /^(?:scripts\/deploy\/|\.github\/|deploy\/|sh\/(?:deploy-|_common\.sh))/.test(file)))
     validation.checks = ["deployment-control", ...validation.checks];
   return { ...validation, changedPaths: [...new Set(paths)].sort(), unknownBase, requestedScope, deployedVersions, liveComponents, eventPaths,
     purpose, deployment: { scope, components }, releasePlan: components.length === 1 && components[0] === "frontend" ? "frontend-only" : "backend-first" };

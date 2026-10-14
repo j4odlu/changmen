@@ -40,6 +40,11 @@ describe("classifyDeployScope", () => {
     for (const p of ["package.json", "package-lock.json", "turbo.json"])
       assert.equal(classifyDeployScope([p]), "full");
   });
+  it("shared retention and common transport affect both components; frontend activation stays frontend", () => {
+    assert.equal(classifyDeployScope(["scripts/deploy/release-retention.mjs"]), "full");
+    assert.equal(classifyDeployScope(["deploy/scripts/release-common.sh"]), "full");
+    assert.equal(classifyDeployScope(["deploy/scripts/release-frontend.sh"]), "frontend");
+  });
 });
 
 describe("resolveDeployScope", () => {

@@ -14,6 +14,7 @@ test("one push entry covers every path and validates before either component", (
   assert.equal(release.on.push.paths, undefined, "Unknown dependencies must reach classification");
   assert.equal(release.concurrency["cancel-in-progress"], false);
   assert.equal(release.concurrency.queue, "max");
+  assert.equal(release.jobs.validate.env.TZ, "Asia/Shanghai", "Date attribution must match production");
   assert.ok(release.jobs.validate.steps.some(s => s.run === "node scripts/deploy/read-deployed-versions.mjs"));
   assert.deepEqual(release.jobs.backend.needs, "validate");
   assert.deepEqual(release.jobs.frontend.needs, ["validate", "backend"]);
@@ -30,6 +31,7 @@ test("shared acceptance is run once, and artifacts are sealed only after success
   assert.equal(steps[seal].if, undefined);
   assert.equal(steps[seal]["continue-on-error"], undefined);
   assert.equal(steps[upload].with["if-no-files-found"], "error");
+  assert.ok(steps.find(s => s.with?.name === "failed-acceptance").with.path.includes("output/orders-phase2-protection/*.log"));
   assert.ok(!JSON.stringify(steps[checks]).includes("secrets."));
   assert.equal(steps.filter(s => s.run?.includes("check:change --")).length, 1);
   assert.equal(steps.find(s => s.uses?.startsWith("actions/checkout@")).with["fetch-depth"], 0);

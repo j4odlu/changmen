@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { publishedPmCommit, publishedSettlementFiles, restorePublishedPmSettlement } from './pm-published-settlement-boundary.mjs';
+import { priceFallbackCommit, priceFallbackFiles, publishedPmCommit, publishedSettlementFiles, restorePublishedPmSettlement } from './pm-published-settlement-boundary.mjs';
 import { verifyProtectedSource } from './fok-exact-boundaries.mjs';
 import { deployedSource, immutableBaselines, verifyPhase2Module } from './orders-phase2-release-boundary.mjs';
 const previous = '5eb63ba7f49156a4a98a1357a0888e1dcc0e9924';
@@ -44,7 +44,8 @@ describe('preserve the exact already deployed PM release', () => {
     it(`${file}: restores every reviewed hunk and the complete preceding module`, () => {
       expect(restorePublishedPmSettlement(file, read(file))).toBe(source(previous, file));
       expect(restorePublishedPmSettlement(file, read(file).replaceAll('\n', '\r\n'))).toBe(source(previous, file));
-      expect(read(file)).toBe(source(publishedPmCommit, file));
+      expect(read(file)).toBe(source(priceFallbackCommit, file));
+      expect(restorePublishedPmSettlement(file, source(publishedPmCommit, file))).toBe(source(previous, file));
     });
     it(`${file}: rejects an appended action`, () => expect(() => restorePublishedPmSettlement(file, read(file) + '\nvoid unexpectedOrderWrite();\n')).toThrow('complete actual published'));
     it(`${file}: rejects an action before the known reviewed fragments`, () => expect(() => restorePublishedPmSettlement(file, 'void unexpectedOrderWrite();\n' + read(file))).toThrow('complete actual published'));
@@ -54,6 +55,7 @@ describe('preserve the exact already deployed PM release', () => {
   const logical = [
     ['packages/venue-adapter/polymarket/orders.ts', 'packages/venue-adapter/polymarket/orders/history/orders.ts'],
     ['packages/venue-adapter/polymarket/pmMarketGuard.ts', 'packages/venue-adapter/polymarket/markets/pmMarketGuard.ts'],
+    ['packages/venue-adapter/polymarket/pmManualSell.ts', 'packages/venue-adapter/polymarket/submission/pmManualSell.ts'],
     ['server/backend/core/integrations/polymarket/settlement.js', 'server/backend/core/integrations/polymarket/settlement.js'],
   ];
   for (const [file, implementation] of logical) for (const base of immutableBaselines) {
@@ -66,6 +68,25 @@ describe('preserve the exact already deployed PM release', () => {
     });
   }
   it('supports exactly the three reviewed physical modules', () => expect(publishedSettlementFiles).toHaveLength(3));
+  it('registers exactly four complete price-fallback modules without widening the historical baseline', () => {
+    expect(priceFallbackFiles).toEqual([...publishedSettlementFiles, 'packages/venue-adapter/polymarket/submission/pmManualSell.ts']);
+    for (const file of priceFallbackFiles) {
+      const restored = restorePublishedPmSettlement(file, read(file));
+      expect(restored).toBe(source(publishedSettlementFiles.includes(file) ? previous : publishedPmCommit, file));
+      expect(() => restorePublishedPmSettlement(file, read(file) + '\nvoid unexpectedTradingAction();\n')).toThrow('complete actual published');
+    }
+  });
+  it('manual-sell realization edits remain blocked by both original FOK/VPS baselines', () => {
+    const file = 'packages/venue-adapter/polymarket/pmManualSell.ts';
+    const implementation = 'packages/venue-adapter/polymarket/submission/pmManualSell.ts';
+    const original = read(implementation);
+    expect(original).toContain('const prevRealizedUsdc');
+    const modified = original.replace('const prevRealizedUsdc', 'const unreviewedRealizedUsdc');
+    for (const base of immutableBaselines) {
+      const mutatedRead = target => target === implementation ? modified : read(target);
+      expect(() => verifyProtectedSource(file, read(file), source(base, file), mutatedRead, target => source(base, target))).toThrow();
+    }
+  });
   it('leaves unrelated changes visible to their original protection', () => {
     const file = 'packages/venue-adapter/polymarket/gtc/index.ts';
     const text = 'void unexpectedOrderWrite();\n';

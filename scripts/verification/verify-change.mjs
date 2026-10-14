@@ -48,12 +48,14 @@ export function validationCommands(plan, npm, releasePlan) {
     "deployment-control": { command: [process.execPath, "scripts/deploy/check-controls.mjs"] },
     "complete-release": { command: cmd("run", "check:fok-release", "--", `--release-plan=${releasePlan}`) },
     "fok-551": { command: cmd("run", "check:fok-vps") },
+    "verification-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification", "--exclude", "scripts/verification/fok-source-specialization.test.mjs", "--maxWorkers=4") },
+    "verification-node": { command: [process.execPath, "--test", "scripts/verification/fok-source-specialization.test.mjs"] },
     "validation-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification/validation-plan.test.mjs", "scripts/verification/verify-change.test.mjs", "server/storage/runtime_version.test.mjs", "server/backend/core/shared/runtime_version.test.mjs", "client/web/vite/plugins/runtimeVersion.test.ts", "--maxWorkers=4") },
     "boundaries": { command: cmd("run", "test:checks") },
     "router-compile": { command: cmd("run", "compile:router", "--workspace=@changmen/backend") },
     backend: { command: cmd("run", "test:backend", "--", "--force") },
     "frontend-typecheck": { command: cmd("run", "typecheck:frontend") },
-    frontend: { command: cmd("exec", "--", "vitest", "run", "--maxWorkers=4"), cwd: "client/web" },
+    frontend: { command: cmd("exec", "--", "vitest", "run", "--maxWorkers=2"), cwd: "client/web" },
     build: { command: cmd("run", "app:build") },
   };
 }
@@ -63,7 +65,7 @@ export function runChangeValidation(args, { run = spawnSync, npm = process.env.n
     ? eventSelection(JSON.parse(fs.readFileSync(path.resolve(cwd, options.event), "utf8")), cwd, process.env.GITHUB_SHA,
       process.env.CI_DEPLOYED_VERSIONS_FILE ? JSON.parse(fs.readFileSync(path.resolve(cwd, process.env.CI_DEPLOYED_VERSIONS_FILE), "utf8")) : null)
     : { paths: changedValidationPaths(options, cwd), requestedScope: options.publish, unknownBase: false };
-  const plan = changePlan(selection.paths, selection);
+  const plan = changePlan(selection.paths, { ...selection, purpose: options.event || options.publish ? "release" : "change" });
   if (args.some(arg => arg.startsWith("--release-plan=")) && options.releasePlan !== plan.releasePlan)
     throw Error("Release plan conflicts with publication dependencies");
   if (options.planOnly) { console.log(JSON.stringify({ mode: "plan-only", accepted: false, ...plan }, null, 2)); return { passed: false, planOnly: true, plan }; }
@@ -83,7 +85,7 @@ export function runChangeValidation(args, { run = spawnSync, npm = process.env.n
   const sourceStable = JSON.stringify(validationInputs(cwd)) === JSON.stringify(before);
   const passed = results.length === plan.checks.length && results.every(row => row.passed) && sourceStable;
   const report = { checkedAt: new Date().toISOString(), passed, tier: plan.tier, paths: plan.paths, immutableFokEntries: 551, sourceStable,
-    completeRelease: plan.tier === "full" && passed, results, identity, plan, planFingerprint: planHash(plan) };
+    completeRelease: plan.checks.includes("complete-release") && passed, results, identity, plan, planFingerprint: planHash(plan) };
   fs.mkdirSync(path.join(cwd, "output/change-validation"), { recursive: true });
   fs.writeFileSync(path.join(cwd, "output/change-validation/verdict.json"), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report)); return report;

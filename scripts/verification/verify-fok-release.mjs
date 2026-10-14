@@ -28,7 +28,7 @@ const phases=[
   ['compatibility',vitest('run','server/db/rds/orders_execution_compat.test.mjs','server/backend/core/account/admin_maintenance.ordersCompat.test.mjs','scripts/verification/orders-consumer-boundary.test.mjs','scripts/migrations/pm-gtc-orders/plan.test.mjs','scripts/migrations/pm-gtc-orders/phase2-schema.test.mjs','scripts/migrations/pm-gtc-orders/backfill.test.mjs','scripts/migrations/pm-gtc-orders/integration/preparation.test.mjs','--reporter=json','--outputFile=output/orders-phase2-protection/compatibility.json')],
   ['frontend-typecheck',npm('run','typecheck:frontend')],
   ['native-copy-migration',vitest('run','scripts/migrations/river-gtc','--reporter=json','--outputFile=output/orders-phase2-protection/native-copy-migration.json')],
-  ['frontend',vitest('run','--maxWorkers=4','--reporter=json','--outputFile=../../output/orders-phase2-protection/frontend.json'),'client/web'],
+  ['frontend',vitest('run','--maxWorkers=2','--reporter=json','--outputFile=../../output/orders-phase2-protection/frontend.json'),'client/web'],
   ['build',npm('run','app:build')],
   ['node-tests',['--test','server/backend/core/account/user_login_meta.test.mjs','server/backend/core/account/user_presence.test.mjs','scripts/deploy/classify-deploy-scope.test.mjs','scripts/deploy/workflows.test.mjs','scripts/deploy/deploy-plan.test.mjs','scripts/deploy/compare-deployed-files.test.mjs','scripts/deploy/wait-for-backend.test.mjs']],
   ['runtime-boundaries',['scripts/verification/audit-fok-runtime-boundaries.mjs']],

@@ -11,14 +11,14 @@ test("one plan preserves risk while accounting for cross-component dependencies"
     [["client/web/src/components/admin/Report.vue"], "frontend", "frontend"],
     [["server/backend/core/observability/memory.js"], "backend", "backend"],
     [["server/storage/runtime_version.js"], "integration", "full"],
-    [["scripts/deploy/publish.sh"], "full", "full"],
+    [["scripts/deploy/publish.sh"], "controls", "full"],
     [["client/web/src/orderModes/gtc/api.ts"], "full", "frontend"],
     [["mystery/file.js"], "full", "full"],
   ]) {
     const plan = changePlan(paths);
     assert.equal(plan.tier, tier); assert.equal(plan.deployment.scope, scope); assert.equal(plan.immutableFokEntries, 551);
     assert.equal(plan.releasePlan, scope === "frontend" ? "frontend-only" : "backend-first");
-    assert(plan.checks.includes(tier === "full" ? "complete-release" : "fok-551"));
+    assert(plan.checks.includes("fok-551")); assert(!plan.checks.includes("complete-release"));
   }
 });
 test("unpublished changes survive failed/partial earlier pushes and documentation-only followups", () => {
@@ -43,10 +43,20 @@ test("manual and unknown-base publication retain complete acceptance", () => {
   for (const scope of ["frontend", "backend", "full"]) {
     const plan = changePlan(["docs/note.md"], { requestedScope: scope });
     assert.equal(plan.tier, "full"); assert.equal(plan.deployment.scope, scope);
+    assert.equal(plan.purpose, "release"); assert(plan.checks.includes("complete-release"));
     assert.equal(plan.releasePlan, scope === "frontend" ? "frontend-only" : "backend-first");
   }
   assert.equal(changePlan([], { unknownBase: true }).deployment.scope, "full");
   assert.throws(() => changePlan([], { requestedScope: "noop" }));
+});
+test("release intent is separate from risk; no deployment needs no live acceptance", () => {
+  const release = changePlan(["client/web/src/components/admin/Report.vue"], { purpose: "release" });
+  assert.equal(release.tier, "full"); assert(release.checks.includes("complete-release"));
+  const workflowOnly = changePlan([".github/workflows/release.yml"], { purpose: "release" });
+  assert.equal(workflowOnly.deployment.scope, "noop"); assert.equal(workflowOnly.tier, "controls");
+  assert(!workflowOnly.checks.includes("complete-release"));
+  assert(!changePlan(["client/web/src/components/admin/Report.vue"]).checks.includes("deployment-control"));
+  assert.throws(() => changePlan([], { purpose: "fast" }));
 });
 test("real CI diffs include both sides of renames/deletions, wrong commits fail, unknown base escalates", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-event-plan-"));

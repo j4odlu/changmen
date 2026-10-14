@@ -18,10 +18,12 @@ export function assertAccepted(report) {
   assert.equal(report.immutableFokEntries, 551, "Original FOK protection is required");
   assert.equal(planHash(report.plan), report.planFingerprint, "Recorded acceptance plan changed");
   const plan = changePlan(report.plan.changedPaths, report.plan);
+  assert.equal(plan.purpose, "release", "Daily validation is not publication approval");
   assert.equal(report.plan.releasePlan, plan.releasePlan, "Release plan conflicts with component dependencies");
   assert.equal(planHash(plan), report.planFingerprint, "Acceptance plan mismatch");
   assert.equal(report.tier, plan.tier);
-  assert.equal(report.completeRelease, plan.tier === "full");
+  assert.equal(report.completeRelease, plan.checks.includes("complete-release"));
+  if (plan.deployment.components.length) assert.equal(report.completeRelease, true, "Complete publication acceptance required");
   assert.deepEqual(report.results.map(row => ({ check: row.check, passed: row.passed })),
     plan.checks.map(check => ({ check, passed: true })), "Incomplete acceptance");
   assert.match(report.identity.candidateTree, /^[a-f0-9]{40}$/);
@@ -36,7 +38,7 @@ export function assertCandidate(report, root) {
   if (report.identity.commit !== null) assert.equal(report.identity.commit, commit, "Acceptance belongs to another commit");
   if (plan.deployedVersions) {
     const selection = deployedSelection(plan.deployedVersions, root, commit, plan.eventPaths);
-    const actual = changePlan(selection.paths, selection);
+    const actual = changePlan(selection.paths, { ...selection, purpose: plan.purpose });
     assert.equal(planHash(actual), report.planFingerprint, "Actual deployed diff differs from acceptance");
   }
   return { plan, commit };
@@ -49,6 +51,17 @@ export function sealEvidence(root = process.cwd()) {
   const { plan, commit } = assertCandidate(report, root);
   const verifier = fs.readFileSync(path.join(root, "scripts/deploy/verify-runtime.mjs"));
   fs.writeFileSync(path.join(directory, "verify-runtime.mjs"), verifier);
+  let fullAcceptanceSha256 = null;
+  if (plan.tier === "full") {
+    const bytes = fs.readFileSync(path.join(root, "output/fok-release-verdict.json"));
+    const full = JSON.parse(bytes.toString("utf8"));
+    assert.equal(full.passed, true); assert.equal(full.fullReleaseAccepted, true);
+    assert.equal(full.results.length, 22, "Original complete acceptance evidence required");
+    assert(full.results.every(row => row.passed === true));
+    assert.equal(full.releasePlan, plan.releasePlan, "Complete acceptance publication plan mismatch");
+    fullAcceptanceSha256 = sha256(bytes);
+    fs.writeFileSync(path.join(directory, "full-acceptance.json"), bytes);
+  }
   const archives = {}, expectedRuntime = {};
   for (const scope of plan.deployment.components) {
     expectedRuntime[scope] = readSourceVersion(root, scope);
@@ -67,7 +80,7 @@ export function sealEvidence(root = process.cwd()) {
     archives[scope] = sha256(fs.readFileSync(archive));
   }
   const evidence = { format: 1, commit, candidateTree: report.identity.candidateTree, inputFingerprint: report.identity.inputFingerprint,
-    planFingerprint: report.planFingerprint, report, archives, expectedRuntime, verifierSha256: sha256(verifier), sealedAt: new Date().toISOString() };
+    planFingerprint: report.planFingerprint, report, archives, expectedRuntime, fullAcceptanceSha256, verifierSha256: sha256(verifier), sealedAt: new Date().toISOString() };
   fs.writeFileSync(path.join(directory, "evidence.json"), JSON.stringify(evidence, null, 2));
   return evidence;
 }
@@ -96,6 +109,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       const evidence = JSON.parse(fs.readFileSync(evidenceFile, "utf8"));
       assertCandidate(evidence.report, process.cwd());
       assertArchiveEvidence(evidence, scope, archive, expectedCommit);
+      if (evidence.report.plan.tier === "full") {
+        const bytes = fs.readFileSync(path.join(path.dirname(evidenceFile), "full-acceptance.json"));
+        assert.equal(sha256(bytes), evidence.fullAcceptanceSha256);
+        const full = JSON.parse(bytes.toString("utf8"));
+        assert.equal(full.passed, true); assert.equal(full.results.length, 22);
+        assert(full.results.every(row => row.passed === true));
+      }
       assert.equal(sha256(fs.readFileSync("scripts/deploy/verify-runtime.mjs")), evidence.verifierSha256);
       assert.equal(sha256(fs.readFileSync(path.join(path.dirname(evidenceFile), "verify-runtime.mjs"))), evidence.verifierSha256);
       console.log(`Verified ${scope} archive and acceptance for ${expectedCommit}`);

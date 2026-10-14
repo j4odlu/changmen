@@ -1,10 +1,17 @@
-/** [changmen 扩展] 验收范围只由真实改动决定；未知范围与交易核心一律完整验收。 */
+/** [changmen 扩展] 日常检查按风险分层且离线；完整发布验收只用于发布。 */
+const controlPatterns = [
+  /^scripts\/(?:verification|deploy)\//,
+  /^\.github\//,
+  /^sh\/(?:deploy-[^/]+\.sh|_common\.sh)$/,
+  /^deploy\/release-(?:common|backend|frontend)\.sh$/,
+];
 const fullPatterns = [
   /^(?:package(?:-lock)?\.json|turbo\.json)$/,
   /^(?:packages\/|server\/db\/|server\/backend\/db\/)/,
   /^server\/backend\/core\/(?:account|auth|certificates|integrations|orderModes|esport-api|http)\//,
   /^server\/backend\/(?:http_routes\.js|server\.js|proxy\/|scripts\/)/,
-  /^client\/web\/src\/(?:api|lib|stores|runtime|orderModes|services|models|types)\//,
+  /^client\/web\/src\/(?:api|lib|stores|runtime|orderModes|services|models|types|domain)\//,
+  /^client\/web\/src\/App(?:\.[^/]+)?\.(?:vue|ts)$/,
   /^client\/web\/src\/components\/(?:account|betting)\//,
   /^(?:scripts\/(?:verification|migrations|deploy)\/|deploy\/|\.github\/|chrome-extension\/|lines\/)/,
 ];
@@ -13,12 +20,13 @@ function normalize(file) {
   if (!clean || clean.startsWith("/") || clean.split("/").some(p => p === "..") || clean.includes("\0")) throw Error("Invalid changed path");
   return clean;
 }
-export function validationPlan(changedPaths) {
+export function validationPlan(changedPaths, { publication = false } = {}) {
   if (!Array.isArray(changedPaths) || changedPaths.some(p => typeof p !== "string")) throw Error("Changed paths required");
   const paths = [...new Set(changedPaths.map(normalize))].sort();
   const relevant = paths.filter(p => !/\.md$/i.test(p) && !/^(?:docs\/|output\/|\.playwright-cli\/)/.test(p));
-  let frontend = false, backend = false; const fullReasons = [];
+  let frontend = false, backend = false, controls = false; const fullReasons = [];
   for (const file of relevant) {
+    if (controlPatterns.some(p => p.test(file))) { controls = true; continue; }
     if (fullPatterns.some(p => p.test(file))) { fullReasons.push(file); continue; }
     if (/^client\/web\//.test(file)) frontend = true;
     else if (/^server\/backend\/core\/observability\//.test(file) || /^server\/backend\/core\/shared\/runtime_version(?:\.test)?\.mjs$/.test(file) || file === "server/backend/core/shared/runtime_version.js" || /^server\/storage\/runtime_version\./.test(file)) backend = true;
@@ -26,10 +34,15 @@ export function validationPlan(changedPaths) {
   }
   // 同时影响客户端和服务端的独立工具也不能冒充单端检查。
   if (relevant.some(p => /^server\/storage\/runtime_version\./.test(p))) { frontend = true; backend = true; }
-  const tier = fullReasons.length || !paths.length ? "full" : frontend && backend ? "integration" : frontend ? "frontend" : backend ? "backend" : "docs";
+  const full = fullReasons.length > 0 || !paths.length;
+  const tier = publication || full ? "full" : frontend && backend ? "integration" : frontend ? "frontend" : backend ? "backend" : controls ? "controls" : "docs";
+  // 后端入口本身含 test:checks，避免再串联一次相同边界检查。
+  const checkBackend = backend || full, checkFrontend = frontend || full;
   return { tier, paths, fullReasons, immutableFokEntries: 551, snapshotOverridesAllowed: false,
-    checks: tier === "full" ? ["validation-control", "complete-release"] : ["fok-551", "validation-control", ...(tier === "docs" ? [] : ["boundaries"]),
-      ...(backend ? ["router-compile", "backend"] : []), ...(frontend ? ["frontend-typecheck", "frontend", "build"] : [])] };
+    checks: publication ? ["validation-control", "complete-release"] : ["fok-551", "validation-control",
+      ...(controls || full ? ["verification-control", "verification-node"] : []),
+      ...(checkFrontend && !checkBackend ? ["boundaries"] : []),
+      ...(checkBackend ? ["router-compile", "backend"] : []), ...(checkFrontend ? ["frontend-typecheck", "frontend", "build"] : [])] };
 }
 export function parseValidationArgs(args) {
   const options = { planOnly: false, staged: false, base: null, releasePlan: "backend-first", event: null, publish: null };

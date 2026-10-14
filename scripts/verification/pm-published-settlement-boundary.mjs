@@ -4,11 +4,17 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 
 export const publishedPmCommit = '113db6ff4e59dd615f8dd867e11d859b05766b7d';
+// [changmen 扩展] 精确登记已提交的官方优先/价格回退修复，含手动卖出已实现盈亏保护。
+export const priceFallbackCommit = '109eff8d70f7f41e6a0374b9f5bef431548779b5';
 const previousPmCommit = '5eb63ba7f49156a4a98a1357a0888e1dcc0e9924';
 export const publishedSettlementFiles = Object.freeze([
   'packages/venue-adapter/polymarket/orders/history/orders.ts',
   'packages/venue-adapter/polymarket/markets/pmMarketGuard.ts',
   'server/backend/core/integrations/polymarket/settlement.js',
+]);
+export const priceFallbackFiles = Object.freeze([
+  ...publishedSettlementFiles,
+  'packages/venue-adapter/polymarket/submission/pmManualSell.ts',
 ]);
 const normal = source => source.replaceAll('\r\n', '\n');
 const cache = new Map();
@@ -16,11 +22,12 @@ const git = args => execFileSync('git', ['--no-optional-locks', ...args], {
   encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, windowsHide: true,
 });
 
-function reviewedModule(file) {
-  if (!cache.has(file)) {
-    const original = normal(git(['show', `${previousPmCommit}:${file}`]));
-    const published = normal(git(['show', `${publishedPmCommit}:${file}`]));
-    const diff = git(['diff', '--no-ext-diff', '--no-textconv', '--no-renames', '--no-color', '--text', '--unified=0', previousPmCommit, publishedPmCommit, '--', file]);
+function reviewedModule(file, before = previousPmCommit, after = publishedPmCommit) {
+  const key = `${before}:${after}:${file}`;
+  if (!cache.has(key)) {
+    const original = normal(git(['show', `${before}:${file}`]));
+    const published = normal(git(['show', `${after}:${file}`]));
+    const diff = git(['diff', '--no-ext-diff', '--no-textconv', '--no-renames', '--no-color', '--text', '--unified=0', before, after, '--', file]);
     const hunks = []; let hunk;
     for (const line of normal(diff).split('\n')) {
       const match = line.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
@@ -36,14 +43,12 @@ function reviewedModule(file) {
       assert.equal(h.before.length, h.oldCount, `${file}: complete original hunk`);
       assert.equal(h.after.length, h.newCount, `${file}: complete published hunk`);
     }
-    cache.set(file, { original, published, hunks });
+    cache.set(key, { original, published, hunks });
   }
-  return cache.get(file);
+  return cache.get(key);
 }
 
-export function restorePublishedPmSettlement(file, source) {
-  if (!publishedSettlementFiles.includes(file)) return source;
-  const { original, published, hunks } = reviewedModule(file);
+function restoreReviewedModule(file, source, { original, published, hunks }) {
   assert.equal(normal(source), published, `${file}: complete actual published PM module must remain unchanged`);
   const lines = normal(source).split('\n');
   for (const hunk of [...hunks].reverse()) {
@@ -54,4 +59,15 @@ export function restorePublishedPmSettlement(file, source) {
   const restored = lines.join('\n');
   assert.equal(restored, original, `${file}: complete original module after all reviewed hunks`);
   return restored;
+}
+
+export function restorePublishedPmSettlement(file, source) {
+  if (priceFallbackFiles.includes(file)) {
+    const reviewed = reviewedModule(file, publishedPmCommit, priceFallbackCommit);
+    // 历史包仍按原登记核验；当前包先完整证明新修复，再逐 hunk 恢复旧登记。
+    if (normal(source) !== reviewed.original)
+      source = restoreReviewedModule(file, source, reviewed);
+  }
+  if (!publishedSettlementFiles.includes(file)) return source;
+  return restoreReviewedModule(file, source, reviewedModule(file));
 }

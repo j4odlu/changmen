@@ -42,3 +42,19 @@ it("publication rejects both staged and untracked source before running checks",
   expect(() => runChangeValidation(["--publish=frontend"], { cwd, npm: "npm-cli.js", run })).toThrow("Uncommitted");
   expect(run).not.toHaveBeenCalled();
 });
+it("daily core checks stay offline and cannot claim complete release approval", () => {
+  const cwd = fixture(); fs.mkdirSync(path.join(cwd, "server/db"), { recursive: true });
+  fs.writeFileSync(path.join(cwd, "server/db/order.js"), "changed");
+  const run = vi.fn(() => ({ status: 0 }));
+  const report = runChangeValidation([], { cwd, npm: "npm-cli.js", run });
+  expect(report.tier).toBe("full"); expect(report.passed).toBe(true); expect(report.completeRelease).toBe(false);
+  expect(report.plan.purpose).toBe("change");
+  expect(run.mock.calls.every(call => !call[1].includes("check:fok-release"))).toBe(true);
+});
+it("a publication gate failure stops immediately and does not restart acceptance", () => {
+  const cwd = fixture(); const run = vi.fn((_command, args) => ({ status: args.includes("check:fok-release") ? 1 : 0 }));
+  const report = runChangeValidation(["--publish=backend"], { cwd, npm: "npm-cli.js", run });
+  expect(report.passed).toBe(false); expect(report.completeRelease).toBe(false);
+  expect(report.plan.purpose).toBe("release");
+  expect(run.mock.calls.filter(call => call[1].includes("check:fok-release"))).toHaveLength(1);
+});

@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 65
     env:
+      TZ: Asia/Shanghai
       CI_DEPLOYED_VERSIONS_FILE: output/change-validation/deployed-versions.json
     outputs:
       backend: ${{ steps.plan.outputs.backend }}
@@ -73,7 +74,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: failed-acceptance
-          path: output/change-validation/
+          path: |
+            output/change-validation/
+            output/orders-phase2-protection/*.log
+            output/orders-phase2-protection/*.json
+            output/fok-release-verdict.json
           retention-days: 7
       - name: Remove capture key
         if: always()

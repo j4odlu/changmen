@@ -8,12 +8,10 @@ import { validationPlan } from "../verification/validation-plan.mjs";
 import { classifyDeployScope } from "./classify-deploy-scope.mjs";
 
 export const planHash = plan => createHash("sha256").update(JSON.stringify(plan)).digest("hex");
-export function changePlan(paths, { unknownBase = false, requestedScope = null, deployedVersions = null, liveComponents = null, eventPaths = null } = {}) {
+export function changePlan(paths, { unknownBase = false, requestedScope = null, deployedVersions = null, liveComponents = null, eventPaths = null, purpose = requestedScope ? "release" : "change" } = {}) {
   if (requestedScope !== null && !["frontend", "backend", "full"].includes(requestedScope))
     throw Error("Invalid requested publication scope");
-  // Manual publication has no trustworthy deployed diff: retain complete acceptance.
-  const validation = validationPlan(unknownBase || requestedScope ? [] : paths);
-  if (validation.tier !== "docs") validation.checks = ["deployment-control", ...validation.checks];
+  if (!["change", "release"].includes(purpose)) throw Error("Invalid validation purpose");
   if (liveComponents !== null) {
     if (!deployedVersions || !["frontend", "backend"].every(role => /^[a-f0-9]{40}$/.test(deployedVersions[role] ?? "")))
       throw Error("Verified deployed versions required");
@@ -23,8 +21,12 @@ export function changePlan(paths, { unknownBase = false, requestedScope = null, 
   const liveScope = liveComponents === null ? null : liveComponents.length === 2 ? "full" : liveComponents[0] ?? "noop";
   const scope = requestedScope ?? (unknownBase ? "full" : liveScope ?? classifyDeployScope(paths));
   const components = scope === "full" ? ["backend", "frontend"] : scope === "noop" ? [] : [scope];
+  const publication = purpose === "release" && components.length > 0;
+  const validation = validationPlan(unknownBase || requestedScope ? [] : paths, { publication });
+  if (publication || paths.some(file => /^(?:scripts\/deploy\/|\.github\/|deploy\/|sh\/(?:deploy-|_common\.sh))/.test(file)))
+    validation.checks = ["deployment-control", ...validation.checks];
   return { ...validation, changedPaths: [...new Set(paths)].sort(), unknownBase, requestedScope, deployedVersions, liveComponents, eventPaths,
-    deployment: { scope, components }, releasePlan: components.length === 1 && components[0] === "frontend" ? "frontend-only" : "backend-first" };
+    purpose, deployment: { scope, components }, releasePlan: components.length === 1 && components[0] === "frontend" ? "frontend-only" : "backend-first" };
 }
 export function deployedSelection(versions, root, head, eventPaths = []) {
   const paths = [...eventPaths], liveComponents = [];
@@ -58,7 +60,7 @@ export function eventSelection(event, root, expectedSha, versions = null) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const versions = process.env.CI_DEPLOYED_VERSIONS_FILE ? JSON.parse(fs.readFileSync(process.env.CI_DEPLOYED_VERSIONS_FILE, "utf8")) : null;
   const selected = eventSelection(JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")), process.cwd(), process.env.GITHUB_SHA, versions);
-  const plan = changePlan(selected.paths, selected);
+  const plan = changePlan(selected.paths, { ...selected, purpose: "release" });
   fs.mkdirSync("output/change-validation", { recursive: true });
   fs.writeFileSync("output/change-validation/plan.json", JSON.stringify(plan, null, 2));
   if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT,

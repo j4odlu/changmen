@@ -18,7 +18,7 @@ function fixture() {
 test("failed, missing or downgraded checks cannot produce publication proof", () => {
   const root = fixture();
   try {
-    const report = runChangeValidation([], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
+    const report = runChangeValidation(["--publish=backend"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
     assertAccepted(report);
     for (const mutate of [
       p => { p.passed = false; }, p => { p.sourceStable = false; }, p => { p.immutableFokEntries = 550; },
@@ -43,7 +43,9 @@ test("real Git archives and frontend build metadata seal successfully; an old bu
     fs.writeFileSync(path.join(root, "packages/api-contract/package.json"), '{"version":"1"}');
     fs.copyFileSync(new URL("./verify-runtime.mjs", import.meta.url), path.join(root, "scripts/deploy/verify-runtime.mjs"));
     git(root, "add", "."); git(root, "-c", "user.name=Evidence", "-c", "user.email=evidence@example.invalid", "commit", "-qm", "sources");
-    runChangeValidation([], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
+    runChangeValidation(["--publish=full"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
+    fs.writeFileSync(path.join(root, "output/fok-release-verdict.json"), JSON.stringify({ passed: true, fullReleaseAccepted: true,
+      releasePlan: "backend-first", results: Array.from({ length: 22 }, (_, i) => ({ phase: `fixture-${i}`, passed: true })) }));
     const dist = path.join(root, "client/web/dist"); fs.mkdirSync(dist, { recursive: true });
     const metadata = { frontend: { ...readSourceVersion(root, "frontend"), role: "frontend", startedAt: "2026-10-14T00:00:00Z" },
       backendUrl: "https://api.changmen.fun/api/runtime-version" };
@@ -59,7 +61,7 @@ test("real Git archives and frontend build metadata seal successfully; an old bu
 test("post-check edits and other commits cannot reuse acceptance", () => {
   const root = fixture();
   try {
-    const report = runChangeValidation([], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
+    const report = runChangeValidation(["--publish=backend"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
     assertCandidate(report, root);
     fs.writeFileSync(path.join(root, "runtime.js"), "changed");
     assert.throws(() => assertCandidate(report, root), /Uncommitted|inputs/);
@@ -70,7 +72,7 @@ test("post-check edits and other commits cannot reuse acceptance", () => {
 test("the exact archive, component and source identity are bound to acceptance", () => {
   const root = fixture();
   try {
-    const report = runChangeValidation([], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
+    const report = runChangeValidation(["--publish=backend"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
     const archive = path.join(root, "artifact.tgz"); fs.writeFileSync(archive, "artifact");
     const commit = report.identity.commit;
     const evidence = { format: 1, commit, candidateTree: report.identity.candidateTree, inputFingerprint: report.identity.inputFingerprint,
@@ -80,5 +82,14 @@ test("the exact archive, component and source identity are bound to acceptance",
     assert.throws(() => assertArchiveEvidence(evidence, "backend", archive, "c".repeat(40)));
     assert.throws(() => assertArchiveEvidence(evidence, "frontend", archive, commit));
     fs.writeFileSync(archive, "changed"); assert.throws(() => assertArchiveEvidence(evidence, "backend", archive, commit), /Archive/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+test("passing daily checks cannot seal or authorize a release", () => {
+  const root = fixture();
+  try {
+    const report = runChangeValidation([], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
+    assert.equal(report.passed, true); assert.equal(report.completeRelease, false);
+    assert.throws(() => assertAccepted(report), /Daily validation/);
+    assert.throws(() => sealEvidence(root), /Daily validation/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

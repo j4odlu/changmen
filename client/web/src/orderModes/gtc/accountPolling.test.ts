@@ -24,7 +24,7 @@ vi.mock("@/api/order", () => ({ saveOrders: mocks.ordinarySave }));
 vi.mock("@/services/orderObservation", () => ({ observeOrder: vi.fn() }));
 vi.mock("@/stores/betting/arbOrderBind", () => ({ bindArbOrderId: vi.fn().mockResolvedValue(true), refreshOrderListAfterBind: vi.fn() }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ accounts: mocks.accounts, findAccount: (id: number) => mocks.accounts.find(a => a.accountId === id) }) }));
-vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: mocks.orders, orderDate: "2026-10-14", fetchOrders: mocks.refresh }) }));
+vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: mocks.orders, orderDate: "2026-10-14", fetchOrders: mocks.refresh, updateTodayProfit: vi.fn() }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: "owner", extensionPrefs: {} }) }));
 vi.mock("./successMarkers", () => ({ markGtcSuccess: vi.fn() }));
 vi.mock("./ordersApi", () => ({ loadGtcMonitorOrders: vi.fn().mockResolvedValue([]), saveOrders: mocks.save, refreshGtcOrders: mocks.refresh }));

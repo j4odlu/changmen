@@ -1,29 +1,52 @@
+import { BetOption } from "@changmen/client-core/models/betOption";
+import type { PlatformAccount } from "@/models/platformAccount";
 import { beforeEach, expect, it, vi } from "vitest";
-import { prepareOtherLeg } from "./gateway";
+import { checkBetting, prepareOtherLeg } from "./gateway";
 
-const mocks = vi.hoisted(() => ({ provider: vi.fn(), betting: vi.fn(), observe: vi.fn() }));
+const mocks = vi.hoisted(() => ({ provider: vi.fn(), check: vi.fn(), place: vi.fn() }));
 vi.mock("@/runtime/providers", () => ({ getProvider: mocks.provider }));
-vi.mock("@/services/orderObservation", () => ({ observeOption: mocks.observe, createObservationContext: vi.fn() }));
-vi.mock("@/shared/betNotification", () => ({ notifyBet: async (_account: unknown, _option: unknown, run: () => Promise<unknown>) => run() }));
-const account = { provider: "RAY", accountId: 2 } as never;
-const option = () => ({ type: "RAY", data: { odds: 2.26 }, diagnosticAttempt: "initial" }) as never;
-beforeEach(() => { vi.resetAllMocks(); mocks.provider.mockReturnValue({ betting: mocks.betting }); });
+vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ checkBetting: mocks.check, betting: mocks.place }) }));
+const account = { provider: "RAY", accountId: 2 } as PlatformAccount;
+const option = () => {
+  const input = new BetOption("RAY", "match", "bet", "item", 100, "Away", 2.26);
+  input.data = { odds: 2.26 }; input.diagnosticAttempt = "initial";
+  return input;
+};
+beforeEach(() => {
+  vi.resetAllMocks(); mocks.provider.mockReturnValue({ betting: vi.fn() });
+  mocks.check.mockImplementation(async (_account, input) => input);
+});
 
-it("resolves the counterpart provider before preflight succeeds without submitting an order", async () => {
-  const result = { success: true, orderId: "ray-order", saveLog: vi.fn() };
-  mocks.betting.mockResolvedValueOnce(result);
-  const submit = prepareOtherLeg(account, option(), 3);
-  expect(mocks.provider).toHaveBeenCalledOnce(); expect(mocks.betting).not.toHaveBeenCalled();
-  expect(await submit()).toBe(result); expect(mocks.betting).toHaveBeenCalledOnce(); expect(mocks.provider).toHaveBeenCalledOnce();
+it("checks counterpart support before dispatch and uses the common gateway with the original link and wait", async () => {
+  const result = { success: true, orderId: "ray-order" };
+  const input = option(); mocks.place.mockResolvedValue(result);
+  const submit = prepareOtherLeg(account, input, 3, 30);
+  expect(mocks.provider).toHaveBeenCalledOnce(); expect(mocks.place).not.toHaveBeenCalled();
+  expect(await submit()).toBe(result);
+  expect(mocks.place).toHaveBeenCalledExactlyOnceWith(account, input, 30, { linkId: 3, requirePreparedQuote: true });
+  expect(input.deferPostAcceptSettlement).toBe(true);
 });
 it("an unsupported counterpart fails during preparation before any POST", () => {
   mocks.provider.mockReturnValueOnce(null);
   expect(() => prepareOtherLeg(account, option(), 3)).toThrow("平台不支持");
-  expect(mocks.betting).not.toHaveBeenCalled();
+  expect(mocks.place).not.toHaveBeenCalled();
 });
-it("observation and log exceptions cannot discard a real venue receipt", async () => {
-  mocks.observe.mockImplementation(() => { throw new Error("observation unavailable"); });
-  const result = { success: true, orderId: "ray-order", saveLog: () => { throw new Error("log unavailable"); } };
-  mocks.betting.mockResolvedValueOnce(result);
-  expect(await prepareOtherLeg(account, option(), 3)()).toBe(result);
+it("missing or inconsistent frozen precheck prevents common gateway dispatch", () => {
+  for (const data of [null, { odds: 2 }]) {
+    const input = option(); input.data = data; input.checkError = "closed";
+    expect(() => prepareOtherLeg(account, input, 3)).toThrow("冻结预检");
+  }
+  expect(mocks.place).not.toHaveBeenCalled();
+});
+it.each([false, true])("PM manual=%s reuses common precheck and only carries its mode policy", async (manual) => {
+  const pm = { ...account, provider: "Polymarket" } as PlatformAccount;
+  const input = option(); input.type = "Polymarket";
+  expect(await checkBetting(pm, input, { manual, skipAccountRate: true, pmQuoteScope: "sport" })).toBe(input);
+  expect(mocks.check).toHaveBeenCalledExactlyOnceWith(pm, input, {
+    skipAccountRate: true, pmQuoteScope: "sport", pmOrderMode: "GTC", pmGtcAllowResting: manual,
+  });
+});
+it("a traditional counterpart retains ordinary precheck arguments", async () => {
+  const input = option(); await checkBetting(account, input, { skipStakeResolve: true, role: "precheckOnly" });
+  expect(mocks.check).toHaveBeenCalledExactlyOnceWith(account, input, { skipStakeResolve: true, role: "precheckOnly" });
 });

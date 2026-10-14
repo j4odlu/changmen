@@ -36,6 +36,25 @@ describe("precise whole-module release protection", () => {
     expect(() => verifyProtectedSource("unknown.ts", "observeArbSubmissionBlocked();", "")).toThrow("unregistered");
   });
 });
+
+describe("shared account gateway keeps exact mode and auxiliary-failure boundaries", () => {
+  const file = "client/web/src/stores/account/betGateway.ts";
+  for (const [before, after] of [
+    ["opts?.pmOrderMode === \"GTC\"", "true"],
+    ["opts?.pmGtcAllowResting !== true", "false"],
+    ["try { result.saveLog(account, beginTime); }", "try { result.saveLog(account, beginTime); void unexpectedTradingAction(); }"],
+    ["playOrderSuccessSound({ betRowId: option.betId }).catch(() => {})", "playOrderSuccessSound({ betRowId: option.betId }).catch(() => { void unexpectedTradingAction(); })"],
+    ["publishBettingEvent(option).catch(() => {})", "publishBettingEvent(option).catch(() => { void unexpectedTradingAction(); })"],
+    ["&& !opts?.requirePreparedQuote) await ensureSharedVaultKeyForAccount(account)", ") await ensureSharedVaultKeyForAccount(account)"],
+    ["checkedOption = checked;", "checkedOption = option;"],
+    ["try { checkedOption.saveLog(account); }", "try { checkedOption.saveLog(account); void unexpectedTradingAction(); }"],
+    ["展示数据读取失败不能阻断已经预检的场馆发送。 */ }", "展示数据读取失败不能阻断已经预检的场馆发送。 */ void unexpectedTradingAction(); }"],
+  ]) {
+    for (const base of [core, vps]) {
+      it(`rejects changed shared gateway boundary ${before}/${base}`, () => mutate(file, before, after, base));
+    }
+  }
+});
 describe("execution gates and observation placement", () => {
   it("rejects changed deadline inequality", () => mutate(files[0], "> config.checkTimeout", ">= config.checkTimeout"));
   it("rejects observer moved out of the original timeout gate", () => {

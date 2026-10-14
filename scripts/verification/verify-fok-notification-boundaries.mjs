@@ -5,7 +5,7 @@ import { gitSource, notificationCommit, verifyProtectedSource } from "./fok-exac
 import { gateway } from "./fok-notification-fixture.mjs";
 
 function business(row) {
-  return { result: row.result, error: row.error, queued: row.queued, trace: row.trace.filter(event => !["loading", "close", "result_notice"].includes(event)) };
+  return { result: row.result, error: row.error, queued: row.queued.map(({ accountLine: _line, detailHtml: _html, ...task }) => task), trace: row.trace.filter(event => !["loading", "close", "result_notice"].includes(event)) };
 }
 const file = "client/web/src/stores/account/betGateway.ts";
 const baselines = ["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"];
@@ -20,11 +20,15 @@ for (const base of [...baselines, notificationCommit]) {
         const previous = await gateway(base, provider, failure, { outcome });
         const current = await gateway(null, provider, failure, { outcome });
         const equal = JSON.stringify(previous) === JSON.stringify(current);
-        assert.equal(equal, base === notificationCommit || !failure || failure === "format", `${base}/${provider}/${outcome}/${failure}`);
-        if (failure !== "format") {
-          assert.deepEqual(business(current), business(normal), "notification faults must preserve actual business trace");
-          assert.equal(current.trace.filter(event => event.bet).length, 1, "exactly one POST");
+        // [changmen 扩展] 已审查的展示准备异常隔离；旧异常零发送、新版只发送原单一次。
+        if (failure === "format") {
+          assert.equal(previous.error, "UI unavailable");
+          assert.equal(previous.trace.filter(event => event.bet).length, 0);
+          assert.equal(equal, false);
         }
+        else assert.equal(equal, base === notificationCommit || !failure, `${base}/${provider}/${outcome}/${failure}`);
+        assert.deepEqual(business(current), business(normal), "notification faults must preserve actual business trace");
+        assert.equal(current.trace.filter(event => event.bet).length, 1, "exactly one POST");
         cases.push({ base, provider, outcome, failure, equal, previous, current });
       }
     }
@@ -45,7 +49,7 @@ for (const confirmation of ["filled", "rejected", "pending", "throw"]) {
 }
 const guards = [];
 for (const provider of ["OB", "RAY", "Polymarket"]) {
-  for (const failure of [null, "loading", "close", "result"]) {
+  for (const failure of [null, "loading", "close", "result", "format"]) {
     const unprepared = await gateway(null, provider, failure, { unprepared: true });
     assert.equal(unprepared.trace.filter(event => event.bet).length, 0);
     assert.equal(unprepared.queued.length, 0);

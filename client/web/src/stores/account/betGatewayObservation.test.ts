@@ -8,19 +8,22 @@ import { useOrderObservationStore } from "../orderObservationStore";
 import { observationEventLabel } from "@changmen/shared/order_observation_view";
 import { startOrderObservation } from "@/services/orderObservation";
 import { checkBetting, placeBet } from "./betGateway";
+import { checkBetting as checkGtcBetting, prepareOtherLeg } from "@/orderModes/gtc/gateway";
+import * as observation from "@/services/orderObservation";
 
-const mocks = vi.hoisted(() => ({ gtcCheck: vi.fn(), stake: vi.fn((_account: unknown, amount: number) => amount), betting: vi.fn(), check: vi.fn(), post: vi.fn(), user: { isLoggedIn: true, userId: "u1" }, notify: vi.fn(() => ({ close: vi.fn() })) }));
+const mocks = vi.hoisted(() => ({ vaultProvider: vi.fn(), sharedCheck: vi.fn(), sharedPlace: vi.fn(), delay: vi.fn(), sound: vi.fn(), publish: vi.fn(), gtcCheck: vi.fn(), stake: vi.fn((_account: unknown, amount: number) => amount), betting: vi.fn(), check: vi.fn(), post: vi.fn(), user: { isLoggedIn: true, userId: "u1" }, notify: vi.fn(() => ({ close: vi.fn() })) }));
+vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ checkBetting: mocks.sharedCheck, betting: mocks.sharedPlace }) }));
 vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ checkGtcBuy: mocks.gtcCheck }));
 vi.mock("@/services/orderObservationTransport", () => ({ uploadObservationBatch: mocks.post }));
 vi.mock("@/runtime/providers", () => ({ getProvider: () => ({ checkBet: mocks.check, betting: mocks.betting }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => mocks.user }));
-vi.mock("@/stores/messageStore", () => ({ useMessageStore: () => ({ delayMessage: () => {} }) }));
+vi.mock("@/stores/messageStore", () => ({ useMessageStore: () => ({ delayMessage: mocks.delay }) }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "session-1", isAuthSessionCurrent: () => true, isAuthTransitionPending: () => false, post: mocks.post, unwrap: (data: { info: unknown }) => data.info }));
 vi.mock("element-plus", () => ({ ElNotification: mocks.notify }));
 vi.mock("@/shared/a8Notify", () => ({ bettingNotifyAccountLine: () => "account", bettingDetailHtml: () => "detail", bettingLoadingMessageHtml: () => "loading", bettingResultMessageHtml: () => "result" }));
-vi.mock("@/security/pmVault", () => ({ accountTokenHasPrivateKey: () => false, ensurePmVaultUnlocked: async () => false, ensurePmVaultForAccounts: async () => false, hasVault: async () => false, isVaultKeyProvider: () => false, mergeVaultKeysIntoAccounts: () => {}, normalizePmVaultUserId: () => "" }));
-vi.mock("@/realtime/publishBetting", () => ({ publishBettingEvent: async () => {} }));
-vi.mock("@/shared/orderSound", () => ({ playOrderSuccessSound: async () => {} }));
+vi.mock("@/security/pmVault", () => ({ accountTokenHasPrivateKey: () => false, ensurePmVaultUnlocked: async () => false, ensurePmVaultForAccounts: async () => false, hasVault: async () => false, isVaultKeyProvider: mocks.vaultProvider, mergeVaultKeysIntoAccounts: () => {}, normalizePmVaultUserId: () => "" }));
+vi.mock("@/realtime/publishBetting", () => ({ publishBettingEvent: mocks.publish }));
+vi.mock("@/shared/orderSound", () => ({ playOrderSuccessSound: mocks.sound }));
 vi.mock("@/stores/account/pmOptimisticOrder", () => ({ persistPolymarketMatchedBuyOrder: vi.fn() }));
 vi.mock("@/stores/account/pmRejectOrder", () => ({ persistPolymarketExecutionReject: vi.fn() }));
 vi.mock("@/stores/betting/autoBet/arbLegSettle", () => ({ settleArbLegUntilTerminal: vi.fn() }));
@@ -39,12 +42,18 @@ describe("下注主链路与旁路故障隔离", () => {
     mocks.betting.mockReset();
     mocks.check.mockReset();
     mocks.gtcCheck.mockReset();
+    mocks.vaultProvider.mockReset().mockReturnValue(false);
+    mocks.sharedCheck.mockReset().mockImplementation((account, option, opts) => checkBetting(store, account, option, opts));
+    mocks.sharedPlace.mockReset().mockImplementation((account, option, seconds, opts) => placeBet(store, account, option, seconds, opts));
+    mocks.delay.mockReset();
+    mocks.sound.mockReset().mockResolvedValue(undefined);
+    mocks.publish.mockReset().mockResolvedValue(undefined);
     mocks.stake.mockReset().mockImplementation((_account: unknown, amount: number) => amount);
     mocks.user.userId = "u1";
     mocks.post.mockImplementation(async () => { throw new Error("observer offline"); });
     startOrderObservation();
   });
-  afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
+  afterEach(() => { vi.restoreAllMocks(); vi.clearAllTimers(); vi.useRealTimers(); });
   it("makes exactly one adapter bet with unchanged inputs despite upload failures", async () => {
     const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
     option.data = { quote: "prepared" };
@@ -239,5 +248,141 @@ describe("下注主链路与旁路故障隔离", () => {
     mocks.check.mockResolvedValue(ray);
     await checkBetting(store, { ...account, provider: "RAY" } as PlatformAccount, ray, { pmOrderMode: "GTC" });
     expect(mocks.check).toHaveBeenCalledOnce(); expect(mocks.gtcCheck).toHaveBeenCalledOnce();
+  });
+
+  it("manual GTC uses common stake conversion once and allows its resting-order precheck", async () => {
+    const pm = { ...account, provider: "Polymarket", currency: "USDT" } as PlatformAccount;
+    const option = new BetOption("Polymarket", "m", "b", "i", 67, "Home", 2);
+    mocks.stake.mockReturnValue(10);
+    mocks.gtcCheck.mockImplementation(async (_account, checked) => { checked.data = { orderType: "GTC" }; return checked; });
+    expect(await checkGtcBetting(pm, option, { manual: true, skipAccountRate: true })).toBe(option);
+    expect(mocks.stake).toHaveBeenCalledExactlyOnceWith(pm, 67, 2, expect.objectContaining({ skipAccountRate: true }));
+    expect(option.betMoney).toBe(10); expect(option.planBetMoney).toBe(67);
+    expect(mocks.gtcCheck).toHaveBeenCalledExactlyOnceWith(pm, option, expect.any(Promise), false);
+    expect(mocks.check).not.toHaveBeenCalled();
+  });
+
+  it("the GTC resting flag cannot change FOK or traditional venue prechecks", async () => {
+    const pm = { ...account, provider: "Polymarket" } as PlatformAccount;
+    mocks.check.mockImplementation(async (_account, option) => option);
+    await checkBetting(store, pm, new BetOption("Polymarket", "m", "b", "i", 100, "Home", 2), { pmOrderMode: "FOK", pmGtcAllowResting: true });
+    await checkGtcBetting(account, new BetOption("OB", "m", "b", "i", 100, "Home", 2), { manual: true });
+    expect(mocks.check).toHaveBeenCalledTimes(2); expect(mocks.gtcCheck).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("ordinary/GTC counterpart=%s keeps the real receipt when observation and log fail", async (gtc) => {
+    const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
+    option.data = { quote: "prepared" };
+    const expected = new BetResult("OB", true); expected.orderId = "original";
+    vi.spyOn(expected, "saveLog").mockImplementation(() => { throw new Error("log offline"); });
+    vi.spyOn(observation, "observeOption").mockImplementation(() => { throw new Error("observer offline"); });
+    mocks.delay.mockImplementation(() => { throw new Error("stats offline"); });
+    mocks.betting.mockResolvedValue(expected);
+    const result = gtc ? await prepareOtherLeg(account, option, 123, 30)()
+      : await placeBet(store, account, option, 30, { linkId: 123, requirePreparedQuote: true });
+    expect(result).toBe(expected); expect(result.success).toBe(true); expect(result.link).toBe(123);
+    expect(mocks.betting).toHaveBeenCalledExactlyOnceWith(account, option);
+    expect(mocks.check).not.toHaveBeenCalled();
+    expect(mocks.publish).toHaveBeenCalledExactlyOnceWith(option);
+    expect(mocks.sound).toHaveBeenCalledOnce();
+    expect(mocks.notify).toHaveBeenLastCalledWith(expect.objectContaining({ type: "success", duration: 30_000 }));
+  });
+
+  it.each(["throw", "reject"])("sound and publishing %s cannot discard a successful original", async (fault) => {
+    const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2); option.data = {};
+    const result = new BetResult("OB", true); mocks.betting.mockResolvedValue(result);
+    for (const effect of [mocks.sound, mocks.publish]) {
+      if (fault === "throw") effect.mockImplementation(() => { throw new Error("effect offline"); });
+      else effect.mockRejectedValue(new Error("effect offline"));
+    }
+    expect(await prepareOtherLeg(account, option, 123)()).toBe(result);
+    expect(mocks.betting).toHaveBeenCalledOnce();
+    await Promise.resolve();
+  });
+
+  it("an accepted pending GTC counterpart does not start a second confirmation or publish a fill", async () => {
+    const ray = { ...account, provider: "RAY" } as PlatformAccount;
+    const option = new BetOption("RAY", "m", "b", "i", 100, "Away", 2); option.data = {};
+    const expected = new BetResult("RAY", true); expected.pending = true; expected.orderId = "pending-original";
+    mocks.betting.mockResolvedValue(expected);
+    const result = await prepareOtherLeg(ray, option, 123)();
+    expect(result).toBe(expected); expect(result.pending).toBe(true);
+    expect(option.deferPostAcceptSettlement).toBe(true);
+    expect(mocks.betting).toHaveBeenCalledOnce(); expect(mocks.check).not.toHaveBeenCalled();
+    expect(mocks.publish).not.toHaveBeenCalled(); expect(mocks.sound).not.toHaveBeenCalled();
+    expect(mocks.notify).toHaveBeenLastCalledWith(expect.objectContaining({ type: "warning" }));
+  });
+
+  it.each([false, true])("prepared ordinary/GTC=%s sends directly without restarting wallet preparation", async (gtc) => {
+    const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
+    mocks.check.mockImplementation(async (_account, checked) => { checked.data = { frozen: true }; return checked; });
+    await checkBetting(store, account, option);
+    expect(mocks.vaultProvider).toHaveBeenCalledOnce();
+    mocks.vaultProvider.mockImplementation(() => { throw new Error("late wallet preparation"); });
+    const receipt = new BetResult("OB", true); receipt.orderId = "prepared-original";
+    mocks.betting.mockResolvedValue(receipt);
+    const result = gtc ? await prepareOtherLeg(account, option, 123)()
+      : await placeBet(store, account, option, 10, { linkId: 123, requirePreparedQuote: true });
+    expect(result).toBe(receipt);
+    expect(mocks.vaultProvider).toHaveBeenCalledOnce();
+    expect(mocks.check).toHaveBeenCalledOnce();
+    expect(mocks.betting).toHaveBeenCalledExactlyOnceWith(account, option);
+  });
+
+  it("a precheck log failure preserves the successful quote for the original send", async () => {
+    const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
+    vi.spyOn(option, "saveLog").mockImplementation(() => { throw new Error("log unavailable"); });
+    mocks.check.mockImplementation(async (_account, checked) => { checked.data = { frozen: true }; return checked; });
+    expect(await checkBetting(store, account, option)).toBe(option);
+    const receipt = new BetResult("OB", true); mocks.betting.mockResolvedValue(receipt);
+    expect(await prepareOtherLeg(account, option, 123)()).toBe(receipt);
+    expect(mocks.betting).toHaveBeenCalledOnce();
+  });
+
+  it("logs the adapter's returned precheck object without logging the outdated input", async () => {
+    const input = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
+    const checked = new BetOption("OB", "m", "b", "i", 100, "Home", 2); checked.data = { frozen: true };
+    const oldLog = vi.spyOn(input, "saveLog"); const newLog = vi.spyOn(checked, "saveLog");
+    mocks.check.mockResolvedValue(checked);
+    expect(await checkBetting(store, account, input)).toBe(checked);
+    expect(newLog).toHaveBeenCalledExactlyOnceWith(account);
+    expect(oldLog).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("broken display data cannot stop a prepared ordinary/GTC=%s POST", async (gtc) => {
+    const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2); option.data = { frozen: true };
+    Object.defineProperty(option, "match", { get: () => { throw new Error("display unavailable"); } });
+    const receipt = new BetResult("OB", true); receipt.orderId = "original"; mocks.betting.mockResolvedValue(receipt);
+    const result = gtc ? await prepareOtherLeg(account, option, 123)()
+      : await placeBet(store, account, option, 10, { linkId: 123, requirePreparedQuote: true });
+    expect(result).toBe(receipt);
+    expect(mocks.betting).toHaveBeenCalledOnce();
+    expect(mocks.betting.mock.calls[0]![0]).toBe(account);
+    expect(mocks.betting.mock.calls[0]![1]).toBe(option);
+    expect(mocks.check).not.toHaveBeenCalled();
+  });
+
+  it("manual ordinary fallback still prepares and prechecks once before one adapter call", async () => {
+    const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
+    mocks.check.mockImplementation(async (_account, checked) => { checked.data = { frozen: true }; return checked; });
+    const receipt = new BetResult("OB", true); mocks.betting.mockResolvedValue(receipt);
+    expect(await placeBet(store, account, option)).toBe(receipt);
+    expect(mocks.vaultProvider).toHaveBeenCalled();
+    expect(mocks.check).toHaveBeenCalledOnce();
+    expect(mocks.betting).toHaveBeenCalledExactlyOnceWith(account, option);
+  });
+
+  it("auxiliary failures also preserve a real rejected receipt without retrying it", async () => {
+    const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2); option.data = { frozen: true };
+    const receipt = new BetResult("OB", false, "venue rejected"); receipt.orderId = "rejected-original";
+    vi.spyOn(receipt, "saveLog").mockImplementation(() => { throw new Error("log unavailable"); });
+    mocks.delay.mockImplementation(() => { throw new Error("stats unavailable"); });
+    mocks.betting.mockResolvedValue(receipt);
+    expect(await prepareOtherLeg(account, option, 123)()).toBe(receipt);
+    expect(receipt.orderId).toBe("rejected-original");
+    expect(receipt.success).toBe(false);
+    expect(mocks.betting).toHaveBeenCalledOnce();
+    expect(mocks.sound).not.toHaveBeenCalled();
+    expect(mocks.publish).not.toHaveBeenCalled();
   });
 });

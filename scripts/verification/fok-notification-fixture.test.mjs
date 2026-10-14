@@ -3,13 +3,13 @@ import { it } from "vitest";
 import { gateway } from "./fok-notification-fixture.mjs";
 
 function business(result) {
-  return { result: result.result, queued: result.queued, events: result.trace.filter(event => !["loading", "close", "result_notice"].includes(event)) };
+  return { result: result.result, queued: result.queued.map(({ accountLine: _line, detailHtml: _html, ...task }) => task), events: result.trace.filter(event => !["loading", "close", "result_notice"].includes(event)) };
 }
 for (const provider of ["OB", "RAY", "Polymarket"]) {
   for (const outcome of ["accepted", "rejected", "throw", "pending"]) {
     it(`${provider}/${outcome}: each notification fault preserves the submission and business trace`, async () => {
       const normal = await gateway(null, provider, null, { outcome });
-      for (const failure of ["loading", "close", "result"]) {
+      for (const failure of ["loading", "close", "result", "format"]) {
         const faulty = await gateway(null, provider, failure, { outcome });
         assert.deepEqual(business(faulty), business(normal));
         assert.equal(faulty.trace.filter(event => event.bet).length, 1, "one POST, no notification retry");
@@ -23,17 +23,18 @@ for (const provider of ["OB", "RAY", "Polymarket"]) {
     });
   }
   it(`${provider}: unprepared quote never posts, even with broken notification`, async () => {
-    for (const failure of [null, "loading", "close", "result"]) {
+    for (const failure of [null, "loading", "close", "result", "format"]) {
       const result = await gateway(null, provider, failure, { unprepared: true });
       assert.equal(result.result.success, false);
       assert.equal(result.trace.filter(event => event.bet).length, 0);
       assert.equal(result.queued.length, 0);
     }
   });
-  it(`${provider}: formatting error before loading retains the current no-POST boundary`, async () => {
+  it(`${provider}: formatting error preserves one prepared POST and the receipt`, async () => {
     const result = await gateway(null, provider, "format");
-    assert.equal(result.error, "UI unavailable");
-    assert.equal(result.trace.filter(event => event.bet).length, 0);
+    assert.equal(result.error, undefined);
+    assert.equal(result.result.success, true);
+    assert.equal(result.trace.filter(event => event.bet).length, 1);
   });
 }
 for (const provider of ["RAY", "Polymarket"]) {

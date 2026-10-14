@@ -21,7 +21,7 @@ describe("account betGateway", () => {
     const placeAt = source.indexOf("export async function placeBet");
     const placeHydrateAt = source.indexOf("await ensureSharedVaultKeyForAccount(account);", placeAt);
     const placeProviderAt = source.indexOf("const provider = getProvider(account);", placeAt);
-    expect(source).toContain('if (account.provider !== "Polymarket") await ensureSharedVaultKeyForAccount(account);');
+    expect(source).toContain('if (account.provider !== "Polymarket" && !opts?.requirePreparedQuote) await ensureSharedVaultKeyForAccount(account);');
     expect(placeHydrateAt).toBeGreaterThan(placeAt);
     expect(placeHydrateAt).toBeLessThan(placeProviderAt);
   });

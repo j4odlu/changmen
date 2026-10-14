@@ -115,8 +115,31 @@ export const UNIFIED_ARBITRAGE_BOUNDARIES = Object.freeze({
     ["export interface ArbBetAttemptParams { pmOrderMode?: \"FOK\" | \"GTC\"; originalExecution?: OriginalExecutionLifecycle;", "export interface ArbBetAttemptParams {"],
   ],
   "client/web/src/stores/account/betGateway.ts": [
-    ["export type CheckBettingOpts = ResolveVenueStakeOpts & { pmOrderMode?: \"FOK\" | \"GTC\";", "export type CheckBettingOpts = ResolveVenueStakeOpts & {"],
-    ["const checked = pm && opts?.pmOrderMode === \"GTC\" ? await (await import(\"@changmen/venue-adapter/polymarket/gtc\")).checkGtcBuy(account, option, signingTask, true) : await provider.checkBet(account, option, { role: opts?.role ?? \"execute\", prepareSigning: signingTask });", "const checked = await provider.checkBet(account, option, { role: opts?.role ?? \"execute\", prepareSigning: signingTask });"],
+    ["export type CheckBettingOpts = ResolveVenueStakeOpts & { pmOrderMode?: \"FOK\" | \"GTC\"; pmGtcAllowResting?: boolean;", "export type CheckBettingOpts = ResolveVenueStakeOpts & {"],
+    ["const checked = pm && opts?.pmOrderMode === \"GTC\" ? await (await import(\"@changmen/venue-adapter/polymarket/gtc\")).checkGtcBuy(account, option, signingTask, opts?.pmGtcAllowResting !== true) : await provider.checkBet(account, option, { role: opts?.role ?? \"execute\", prepareSigning: signingTask });", "const checked = await provider.checkBet(account, option, { role: opts?.role ?? \"execute\", prepareSigning: signingTask });"],
+    // [changmen 扩展] 公共下单的旁路异常隔离、预检日志和冻结发送准备；逐段还原后仍比较整个固定基线模块。
+    ["try { observeOption(option, account, \"submission_started\", { source: \"adapter_call\" }); } catch {}", "observeOption(option, account, \"submission_started\", { source: \"adapter_call\" });"],
+    ["try { useMessageStore().delayMessage(account, Date.now() - beginTime); } catch {}", "useMessageStore().delayMessage(account, Date.now() - beginTime);"],
+    ["try { result.saveLog(account, beginTime); } catch {}", "result.saveLog(account, beginTime);"],
+    ["try { void playOrderSuccessSound({ betRowId: option.betId }).catch(() => {}); } catch {}", "void playOrderSuccessSound({ betRowId: option.betId });"],
+    ["try { void publishBettingEvent(option).catch(() => {}); } catch {}", "void publishBettingEvent(option);"],
+    ["let observedPrecheckResult = false; let checkedOption = option;", "let observedPrecheckResult = false;"],
+    ["checkedOption = checked;", ""],
+    ["try { checkedOption.saveLog(account); } catch {}", "option.saveLog(account);"],
+    ["if (account.provider !== \"Polymarket\" && !opts?.requirePreparedQuote) await ensureSharedVaultKeyForAccount(account);", "if (account.provider !== \"Polymarket\") await ensureSharedVaultKeyForAccount(account);"],
+    [
+      `let accountLine = "", detailHtml = "";
+       try {
+         const platformLabel = store.getPlatformName(account.platformId, account.platformName);
+         accountLine = bettingNotifyAccountLine(account, platformLabel);
+         detailHtml = bettingDetailHtml({ matchTitle: option.match?.title, betName: option.bet?.getBetName(), target: option.target,
+           itemOdds: option.item?.getOdds(option.target), betMoney: option.betMoney, odds: option.odds, betCount: option.betCount, });
+       } catch {}`,
+      `const platformLabel = store.getPlatformName(account.platformId, account.platformName);
+       const accountLine = bettingNotifyAccountLine(account, platformLabel);
+       const detailHtml = bettingDetailHtml({ matchTitle: option.match?.title, betName: option.bet?.getBetName(), target: option.target,
+         itemOdds: option.item?.getOdds(option.target), betMoney: option.betMoney, odds: option.odds, betCount: option.betCount, });`,
+    ],
   ],
   [`${root}executeArbBet.ts`]: [
     ["import { captureArbExecutionSelection } from \"@/stores/betting/execution/selection\";", ""],
@@ -165,6 +188,10 @@ export function verifyUnifiedArbitrageContract(readSource, replaceExact) {
     for (const [before, after] of gtcInitialPairCorrection[file] ?? []) {
       assert.equal(expected.split(before).length, 2, `${file}: unique complete initial-pair correction`);
       expected = expected.replace(before, after);
+    }
+    if (file === "client/web/src/orderModes/gtc/arbLeg.ts") {
+      // [changmen 扩展] 公共账号下单沿用该原腿的等待参数，原不可变契约不重写。
+      expected = replaceExact(expected, "const submitOther = prepareOtherLeg(otherAccount, other, checked.linkId);", "const submitOther = prepareOtherLeg(otherAccount, other, checked.linkId, checked.waitSec);");
     }
     assert.equal(restorePmOrderBetLabelSource(file, readSource(file), readSource), expected, `${file}: complete reviewed unified capability contract`);
   }

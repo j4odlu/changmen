@@ -34,6 +34,8 @@ import { getPmSubmission } from "@/api/order";
 export type CheckBettingOpts = ResolveVenueStakeOpts & {
   /** [changmen 扩展] 本次 PM 单腿模式，非 PM provider 忽略。 */
   pmOrderMode?: "FOK" | "GTC";
+  /** [changmen 扩展] 仅 PM GTC 人工挂单允许无即时深度；自动套利默认仍检查深度。 */
+  pmGtcAllowResting?: boolean;
   role?: "execute" | "precheckOnly";
   /** 场馆额已换过：再预检只验盘口，不改 betMoney（勿用 skipAccountRate，USDT 会二次÷汇率） */
   skipStakeResolve?: boolean;
@@ -410,6 +412,7 @@ export async function checkBetting(
     return option;
   }
   let observedPrecheckResult = false;
+  let checkedOption = option;
   const observationStartedAt = Date.now();
   let observationError: unknown;
   try {
@@ -427,8 +430,9 @@ export async function checkBetting(
       option.betMoney = venueBetMoney;
     }
     const checked = pm && opts?.pmOrderMode === "GTC"
-      ? await (await import("@changmen/venue-adapter/polymarket/gtc")).checkGtcBuy(account, option, signingTask, true)
+      ? await (await import("@changmen/venue-adapter/polymarket/gtc")).checkGtcBuy(account, option, signingTask, opts?.pmGtcAllowResting !== true)
       : await provider.checkBet(account, option, { role: opts?.role ?? "execute", prepareSigning: signingTask });
+    checkedOption = checked;
     // [changmen 扩展] adapter 返回新对象时只传递观察元数据，原业务返回值不变。
     try { checked.observation ??= option.observation; }
     catch { /* 观察字段写入失败不改变返回值 */ }
@@ -462,7 +466,8 @@ export async function checkBetting(
       }
       catch { /* 旁路证据读取失败不阻断预检收尾 */ }
     }
-    option.saveLog(account);
+    try { checkedOption.saveLog(account); }
+    catch { /* 预检日志失败不能改变冻结盘口或阻断原单发送。 */ }
   }
 }
 
@@ -483,24 +488,29 @@ export async function placeBet(
     observeOption(option, account, "submission_result", { outcome: "not_submitted", reasonCode: "no_account" });
     return new BetResult(option.type, false, "无可用账号");
   }
-  if (account.provider !== "Polymarket") await ensureSharedVaultKeyForAccount(account);
+  // [changmen 扩展] 冻结预检已完成钱包准备，首腿成功后不再重启解锁链路。
+  if (account.provider !== "Polymarket" && !opts?.requirePreparedQuote) await ensureSharedVaultKeyForAccount(account);
   const provider = getProvider(account);
   if (!provider) {
     observeOption(option, account, "submission_result", { outcome: "not_submitted", reasonCode: "unsupported_provider" });
     return new BetResult(option.type, false, "平台不支持");
   }
 
-  const platformLabel = store.getPlatformName(account.platformId, account.platformName);
-  const accountLine = bettingNotifyAccountLine(account, platformLabel);
-  const detailHtml = bettingDetailHtml({
-    matchTitle: option.match?.title,
-    betName: option.bet?.getBetName(),
-    target: option.target,
-    itemOdds: option.item?.getOdds(option.target),
-    betMoney: option.betMoney,
-    odds: option.odds,
-    betCount: option.betCount,
-  });
+  let accountLine = "", detailHtml = "";
+  try {
+    const platformLabel = store.getPlatformName(account.platformId, account.platformName);
+    accountLine = bettingNotifyAccountLine(account, platformLabel);
+    detailHtml = bettingDetailHtml({
+      matchTitle: option.match?.title,
+      betName: option.bet?.getBetName(),
+      target: option.target,
+      itemOdds: option.item?.getOdds(option.target),
+      betMoney: option.betMoney,
+      odds: option.odds,
+      betCount: option.betCount,
+    });
+  }
+  catch { /* 展示数据读取失败不能阻断已经预检的场馆发送。 */ }
 
   const notificationDisplay = { provider: account.provider, accountLine, detailHtml };
   const loading = startBetNotification(notificationDisplay);
@@ -524,7 +534,8 @@ export async function placeBet(
       }
     }
     if (option.data) {
-      observeOption(option, account, "submission_started", { source: "adapter_call" });
+      try { observeOption(option, account, "submission_started", { source: "adapter_call" }); }
+      catch { /* 观察失败不阻断已预检的场馆发送。 */ }
       observationSubmitted = true;
       observationCallAt = Date.now();
       result = await provider.betting(account, option);
@@ -599,11 +610,15 @@ export async function placeBet(
       statusSuffix,
       type: notifyType,
     }, toastSeconds);
-    useMessageStore().delayMessage(account, Date.now() - beginTime);
-    result.saveLog(account, beginTime);
+    try { useMessageStore().delayMessage(account, Date.now() - beginTime); }
+    catch { /* 延迟统计失败不改变已取得的场馆回执。 */ }
+    try { result.saveLog(account, beginTime); }
+    catch { /* 日志失败不丢弃真实回执或触发重复下单。 */ }
     if (result.success && !result.pending) {
-      void playOrderSuccessSound({ betRowId: option.betId });
-      void publishBettingEvent(option);
+      try { void playOrderSuccessSound({ betRowId: option.betId }).catch(() => {}); }
+      catch { /* 成功音效失败不改变成交结果。 */ }
+      try { void publishBettingEvent(option).catch(() => {}); }
+      catch { /* 广播失败不改变成交结果。 */ }
     }
     if (
       result.pending

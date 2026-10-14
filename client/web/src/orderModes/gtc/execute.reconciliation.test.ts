@@ -145,7 +145,7 @@ it.each(["0", "5"])("PM-first acceptance sends the original other quantity witho
   mocks.quantity = quantity; mocks.remaining = 1000;
   const { params, checked } = inputs(); const task = executeGtc(params, checked);
   await finishAttempt(task);
-  expect(mocks.other).toHaveBeenCalledExactlyOnceWith(mocks.accounts[1], expect.objectContaining({ betMoney: 33.5, deferPostAcceptSettlement: true }), 3);
+  expect(mocks.other).toHaveBeenCalledExactlyOnceWith(mocks.accounts[1], expect.objectContaining({ betMoney: 33.5, deferPostAcceptSettlement: true }), 3, checked.waitSec);
   expect(mocks.submit).toHaveBeenCalledOnce();
   expect(gtcProgress.records[0]!.matched).toBe(quantity); expect(gtcProgress.records[0]!.groupComplete).toBe(false);
 });

@@ -251,7 +251,7 @@ describe("gTC original pair orchestration", () => {
   });
   it("serial positive partial sends original other quantity once and closes manual", async () => {
     mocks.initial = "5"; await executeGtc(params(), checked()); expect(mocks.betting).toHaveBeenCalledTimes(1);
-    expect(mocks.betting).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ betMoney: 33.5, deferPostAcceptSettlement: true }), 3);
+    expect(mocks.betting).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ betMoney: 33.5, deferPostAcceptSettlement: true }), 3, 30);
     expect(mocks.record).toMatchObject({ manual: true, matched: "5", groupComplete: false });
   });
   it("unknown PM POST is never retried or followed by another leg", async () => {

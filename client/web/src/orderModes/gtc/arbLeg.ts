@@ -31,7 +31,7 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
   const other = pmA ? checked.legB : checked.legA;
   const account = (pmA ? checked.accountA : checked.accountB)!;
   const otherAccount = (pmA ? checked.accountB : checked.accountA)!;
-  const submitOther = prepareOtherLeg(otherAccount, other, checked.linkId);
+  const submitOther = prepareOtherLeg(otherAccount, other, checked.linkId, checked.waitSec);
   const otherBinding = () => JSON.stringify([otherAccount.accountId, otherAccount.provider, otherAccount.token, otherAccount.gateway, otherAccount.currency, other.betMoney, other.odds, other.matchId, other.betId, other.itemId, other.target, other.data]);
   const frozenOther = otherBinding();
   const checkSession = () => {

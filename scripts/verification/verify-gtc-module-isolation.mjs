@@ -37,7 +37,9 @@ for (const file of files("client/web/src/runtime/gtcOrderMonitor")) {
   checked++;
 }
 const gateway = fs.readFileSync("client/web/src/orderModes/gtc/gateway.ts", "utf8");
-assert(!/publishBettingEvent|notifyPendingVenueConfirm|markSuccessfulBet|updateVenueOrders/.test(gateway), "GTC counterpart gateway cannot enter FOK follow-copy/count/settlement/snapshot paths");
+// [changmen 扩展] 账号预检与传统对侧发送共用公共入口；GTC 不复制旁路或自行调度确认。
+assert(/useAccountStore\(\)\.checkBetting\(/.test(gateway) && /accounts\.betting\(/.test(gateway), "GTC account operations must reuse the common gateway");
+assert(!/ensureSharedVaultKeyForAccount|resolveVenueStakeFromPlanCny|provider\.betting|publishBettingEvent|notifyPendingVenueConfirm|markSuccessfulBet|updateVenueOrders/.test(gateway), "GTC compatibility gateway cannot duplicate common account actions");
 for (const obsolete of ["autoEntry.ts", "execute.ts", "prepare.ts", "check.ts"])
   assert(!fs.existsSync(`client/web/src/orderModes/gtc/${obsolete}`), `obsolete GTC pair pipeline must be removed: ${obsolete}`);
 const bridge = fs.readFileSync("client/web/src/orderModes/gtc/arbLeg.ts", "utf8");
@@ -51,4 +53,4 @@ assert.equal(transport.match(/from\s+["']([^"']+)["']/)?.[1], "../account/accoun
 assert(!/\b(?:import|await|db|listPmGtc|fetchOrderExecutionIdentities)\b/.test(transport), "shared order endpoints must directly export their original handlers");
 const metadata = fs.readFileSync("server/backend/core/orderModes/orderMetadata.js", "utf8");
 assert(!/\b(?:import|await|fetch|query)\b/.test(metadata), "mode metadata must reuse the ordinary writer's prefetched rows without I/O");
-process.stdout.write(`${JSON.stringify({ independentGtcModuleFiles: checked, noFokPrivateImports: true, noFokActionHooks: true, independentPreparation: true })}\n`);
+process.stdout.write(`${JSON.stringify({ independentGtcModuleFiles: checked, noFokPrivateImports: true, noFokActionHooks: true, sharedAccountGateway: true, modeSpecificPreparation: true })}\n`);

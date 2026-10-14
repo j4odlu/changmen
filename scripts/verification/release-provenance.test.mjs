@@ -1,16 +1,30 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
+import { gzipSync } from "node:zlib";
 import { assertLayout, assertStable, assertSourceHashes, assertPublicAsset, assertCaptureEvidence, sha, rawSha, runtime, sshRead } from "./release-provenance.mjs";
 import { publicFiles, verifyActualPublicModule } from "./public-release-boundaries.mjs";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 const frontend = "e901bb596952256284cd8a9eb8b73b572c963915", backend = "832f3f76c30d6ad741ce850a68cd6ba1da7d06f9";
+const wire = value => 'CHANGMEN_CAPTURE_GZIP_V1:' + gzipSync(Buffer.from(JSON.stringify(value))).toString('base64') + '\n';
 it("compressed transport preserves the entire decoded payload and original deadline", () => {
   const payload = { sources: { "module.ts": "中国😀\n".repeat(200000) } };
   const actual = sshRead("read only", { spawn: (command, args, options) => {
     expect(command).toBe("ssh"); expect(args).toContain("-C"); expect(options.timeout).toBe(45000);
-    return { status: 0, stdout: JSON.stringify(payload), stderr: "" };
+    expect(options.input).toContain('gzipSync'); expect(options.input).toContain('read only');
+    expect(Buffer.byteLength(wire(payload))).toBeLessThan(Buffer.byteLength(JSON.stringify(payload)) / 10);
+    return { status: 0, stdout: wire(payload), stderr: "" };
   } });
   expect(actual).toEqual(payload);
+});
+it("compressed capture requires one complete gzip stream and valid complete JSON", () => {
+  const valid = wire({ source: 'exact code' });
+  for (const stdout of [valid.slice(0, -8), valid + 'unexpected output', '{"source":',
+    'CHANGMEN_CAPTURE_GZIP_V1:' + gzipSync(Buffer.from('{"source":')).toString('base64')])
+    expect(() => sshRead('read only', { spawn: () => ({ status: 0, stdout, stderr: '' }) })).toThrow();
+});
+it("compressed transfer cannot evade the original decoded capture size bound", () => {
+  const stdout = wire({ source: 'x'.repeat(45 * 1024 * 1024) });
+  expect(() => sshRead('read only', { spawn: () => ({ status: 0, stdout, stderr: '' }) })).toThrow();
 });
 it("timeouts and incomplete JSON still fail; a partial capture is never accepted", () => {
   expect(() => sshRead("read only", { spawn: () => ({ status: null, stdout: '{"sources":', stderr: "", error: { code: "ETIMEDOUT" } }) })).toThrow("ETIMEDOUT");

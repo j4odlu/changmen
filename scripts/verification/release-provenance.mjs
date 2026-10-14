@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
+import { gunzipSync } from "node:zlib";
 export const runtime = file => /\.(?:[cm]?js|tsx?|vue|json|ya?ml|sh|sql|toml)$/.test(file)
   && !/\.(?:test|spec)\./.test(file)
   && !/(?:^|\/)(?:docs|test|tests|__tests__|output|\.ai|\.claude|\.playwright-cli)\//.test(file);
@@ -56,9 +57,18 @@ export function assertPublicAsset(asset, status, bytes) {
 export function sshRead(program, { spawn = spawnSync } = {}) {
   const remote = process.env.FOK_BASELINE_SSH_TARGET ?? "root@47.57.10.202";
   const key = process.env.FOK_BASELINE_SSH_KEY ?? path.join(os.homedir(), ".ssh/id_ed25519_gamebet");
-  const result = spawn("ssh", ["-C", "-i", key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", remote, "node --input-type=module"], { input: program, encoding: "utf8", timeout: 45000, maxBuffer: 45 * 1024 * 1024 });
+  // [changmen 扩展] 压缩原 JSON 后发送；不依赖 SSH 压缩协商，不删减捕获内容。
+  const input = `import { gzipSync as __captureGzip } from 'node:zlib';
+console.log = value => {
+  if (typeof value !== 'string') throw new Error('Capture must output one JSON string');
+  process.stdout.write('CHANGMEN_CAPTURE_GZIP_V1:' + __captureGzip(Buffer.from(value)).toString('base64') + '\\n');
+};\n` + program;
+  const result = spawn("ssh", ["-C", "-i", key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", remote, "node --input-type=module"], { input, encoding: "utf8", timeout: 45000, maxBuffer: 45 * 1024 * 1024 });
   assert.equal(result.status, 0, result.stderr || `VPS read-only capture failed (${result.error?.code ?? result.status}; received ${Buffer.byteLength(result.stdout ?? "")} bytes)`);
-  return JSON.parse(result.stdout);
+  const match = result.stdout.trim().match(/^CHANGMEN_CAPTURE_GZIP_V1:((?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)$/);
+  assert(match && match[1], "Missing/incomplete compressed capture");
+  const bytes = gunzipSync(Buffer.from(match[1], 'base64'), { maxOutputLength: 45 * 1024 * 1024 });
+  return JSON.parse(bytes.toString('utf8'));
 }
 export const layoutProgram = `
 import fs from 'node:fs'; import path from 'node:path'; import crypto from 'node:crypto'; import {execFileSync} from 'node:child_process';

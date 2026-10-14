@@ -14,6 +14,7 @@ import { fileURLToPath, URL } from "node:url";
 import { browserNodeBuiltins } from "./vite/plugins/browserNodeBuiltins";
 import { backendPublicAssets } from "./vite/plugins/backendPublicAssets";
 import { matcherDevRedirect } from "./vite/plugins/matcherDevRedirect";
+import { runtimeVersionPlugin } from "./vite/plugins/runtimeVersion";
 import { resolveDevWebPort } from "../../server/storage/dev_web_config.js";
 import {
   VENUE_ADAPTER_REL,
@@ -194,6 +195,7 @@ export default defineConfig(({ command, mode }) => {
     // 须靠前：alias/optimizeDeps 影响 builder-relayer-client 预构建
     browserNodeBuiltins(),
     backendPublicAssets(),
+    runtimeVersionPlugin(path.resolve(WEB_ROOT, "../.."), env.VITE_API_BASE || process.env.VITE_API_BASE || ""),
     vue(),
     AutoImport({
       resolvers: [elementPlusResolver],

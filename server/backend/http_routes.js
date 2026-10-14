@@ -27,6 +27,7 @@ import { tryPbHttpProxy } from "./proxy/pb_http_proxy.js";
 import { tryRayHttpProxy } from "./proxy/ray_http_proxy.js";
 import { isFastStaticRequest } from "./static_files.js";
 import { getEsportRequestTimingSnapshot } from "./core/shared/esport_request_timing.js";
+import { backendRuntimeVersion, readRuntimeVersion } from "./core/shared/runtime_version.js";
 import {
   buildMemoryDiagSnapshot,
   getProcessMemorySnapshot,
@@ -152,6 +153,12 @@ async function handleAppRoutes(req, res, serveStatic) {
   const url = req.pathname || String(req.url || "").split("?")[0];
   if (url === "/api/ob/demo-login") {
     await handleObDemoLogin(req, res);
+    return;
+  }
+  if (url === "/api/runtime-version") {
+    if (req.method !== "GET") { jsonResponse(res, 405, { message: "GET required" }); return; }
+    res.setHeader("Cache-Control", "no-store");
+    jsonResponse(res, 200, await readRuntimeVersion());
     return;
   }
   if (url === "/api/a8/defaults") {
@@ -445,6 +452,7 @@ async function buildHealthData() {
     status: db ? "ok" : "degraded",
     uptime: Math.floor(process.uptime()),
     version: "1.0.2",
+    runtimeVersion: backendRuntimeVersion,
     db: { connected: db, latencyMs: dbLatencyMs, pool: poolStats },
     memory: mem,
     data: {
@@ -610,7 +618,7 @@ body{font-family:-apple-system,system-ui,sans-serif;background:#0f172a;color:#e2
 <div class="header">
   <div class="dot" style="background:${statusColor}"></div>
   <div class="title">changmen</div>
-  <div class="meta">v${esc(d.version)} &middot; uptime ${esc(uptimeStr)}</div>
+  <div class="meta">v${esc(d.version)} &middot; ${esc(d.runtimeVersion?.commit?.slice(0, 8) ?? "unknown")} &middot; uptime ${esc(uptimeStr)}</div>
 </div>
 <div class="grid">
   <div class="card">

@@ -14,6 +14,8 @@ export function retirementFiles() {
     .trim().split(/\r?\n/).map(line => line.slice(retirementBase.length + 1));
 }
 const oldRead = file => gitSource(retirementBase, file);
+// Git/JS 把物理 CRLF 视为同一换行；不改变转义字符或 SQL 其它内容。
+const sourceText = value => value.replaceAll("\r\n", "\n");
 export function readRetiredHistoricalSource(file, readSource) {
   try { return readSource(file); }
   catch (error) { if (retiredHelpers.includes(file) && error.code === "ENOENT") return oldRead(file); throw error; }
@@ -71,16 +73,17 @@ export function removeGtcStorageModes(file, source) {
   return text;
 }
 export function restoreRetiredOrdersCompatibility(file, source, readSource) {
+  source = sourceText(source);
   if (!retirementFiles().includes(file) || retiredHelpers.includes(file)) return source;
   if (/PM_ORDERS_MINIMAL|ORDERS_EXECUTION_COMPAT|orders_execution_compat|pm_orders_minimal|minimalClientOrder|pmOrdersMinimalEnabled/.test(source)) return source;
   assert.deepEqual(moduleTokens(source), moduleTokens(removeGtcStorageModes(file, oldRead(file))), `${file}: complete native module after retirement`);
-  if (readSource) assert.deepEqual(moduleTokens(readSource(nativeOrdersPath)), moduleTokens(nativeOrdersSource()), "complete native orders helper");
+  if (readSource) assert.deepEqual(moduleTokens(sourceText(readSource(nativeOrdersPath))), moduleTokens(nativeOrdersSource()), "complete native orders helper");
   return oldRead(file);
 }
 export function verifyGtcCompatibilityRetirement(readSource = file => fs.readFileSync(file, "utf8")) {
   for (const file of retiredHelpers) assert(!fs.existsSync(file), `${file}: retired runtime helper must be absent`);
-  assert.deepEqual(moduleTokens(readSource(nativeOrdersPath)), moduleTokens(nativeOrdersSource()), "complete native orders helper");
+  assert.deepEqual(moduleTokens(sourceText(readSource(nativeOrdersPath))), moduleTokens(nativeOrdersSource()), "complete native orders helper");
   const files = retirementFiles().filter(file => !retiredHelpers.includes(file));
-  for (const file of files) assert.deepEqual(moduleTokens(readSource(file)), moduleTokens(removeGtcStorageModes(file, oldRead(file))), `${file}: complete native retirement boundary`);
+  for (const file of files) assert.deepEqual(moduleTokens(sourceText(readSource(file))), moduleTokens(removeGtcStorageModes(file, oldRead(file))), `${file}: complete native retirement boundary`);
   return { files: files.length, switchesRemoved: 3, nativeHelperVerified: true, fixedBefore: retirementBase };
 }

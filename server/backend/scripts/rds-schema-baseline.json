@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "provenance": "42 explicit numbered migrations applied only to an empty temporary PostgreSQL 18 database; no business data",
+  "provenance": "Canonical schema from empty PostgreSQL 18 initialization; reconciliation preserves these requirements; migration checksums are explicit",
   "migrations": {
     "001_baseline.sql": "380ac96ea8e8b21fa84894037419dd58df84fd9b66bac609de85b3eb2316aab3",
     "003_money_logs.sql": "d754838c6a601ac6655aa5dd287b1a18421aabaaee28c62cad53266649867a6c",
@@ -43,7 +43,8 @@
     "044_auth_sessions.sql": "3c1ec94ddcdd7e3c3af767cc500665792c10ad2629b918fac85cde548799089a",
     "045_pod_ray_execution.sql": "54245dc8341d510aa4ad3ea0abd3c2b8b5883f6a16daf29a040888dff3d24253",
     "20261002_order_observations.sql": "b881676624b1beab21562f614b28deb478a0f6d357400dae8cc402f050046b79",
-    "20261003_order_observation_execution_index.sql": "7882c4c2acf1e9eac2295dbe5ad97c65549c77d7c617e5c9fe5d9c59a49c8554"
+    "20261003_order_observation_execution_index.sql": "7882c4c2acf1e9eac2295dbe5ad97c65549c77d7c617e5c9fe5d9c59a49c8554",
+    "20261015_reconcile_archive_schema.sql": "0a84b3b1c870a59885a70ac4ab55121542b6757618b7cf07453209acc231dd1f"
   },
   "schema": {
     "tables": {

@@ -49,6 +49,7 @@ export const RDS_MIGRATIONS = [
   "044_auth_sessions.sql",
   "045_pod_ray_execution.sql",
   ...ORDER_OBSERVATION_MIGRATIONS,
+  "20261015_reconcile_archive_schema.sql",
 ];
 
 async function hasExistingTables(client) {

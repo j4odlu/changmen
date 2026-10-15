@@ -32,7 +32,16 @@ if [[ "${1:-}" == */compare-deployed-files.mjs ]]; then exec "$TEST_REAL_NODE" "
 if [[ "${1:-}" == */verify-runtime.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 if [[ "${1:-}" == */release-retention.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 if [[ "${1:-}" == */verify-backend-processes.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
-if [[ "$*" == *'c.query("SELECT 1")'* && -f "${TEST_FAIL_DB:-/nonexistent}" ]]; then exit 44; fi
+if [[ "$*" == *'checkConfiguredRdsSchema()'* ]]; then
+  printf '%s\n' "$PWD" >> "$TEST_PREFLIGHT_LOG"
+  test ! -f "${TEST_FAIL_DB:-/nonexistent}" || exit 44
+  if [[ -f "${TEST_FAIL_SCHEMA:-/nonexistent}" ]]; then
+    if [[ -n "${TEST_SCHEMA_RUNNER:-}" ]]; then TEST_EXPECT_SCHEMA_FAILURE=1 exec "$TEST_REAL_NODE" "$TEST_SCHEMA_RUNNER"; fi
+    exit 45
+  fi
+  if [[ -n "${TEST_SCHEMA_RUNNER:-}" ]]; then exec "$TEST_REAL_NODE" "$TEST_SCHEMA_RUNNER"; fi
+  exit 0
+fi
 if [[ "$*" == *apply-rds-schema* || "$*" == *check-rds-schema* || "$*" == *ops/migrations/* || "$*" == *purge* ]]; then echo 'unexpected database maintenance' >&2; exit 79; fi
 cat >/dev/null
 SH
@@ -49,6 +58,7 @@ SH
 chmod +x "$fixture/bin/"*
 export PATH="$fixture/bin:$PATH"
 export TEST_FAIL_HEALTH="$fixture/fail-health" TEST_NPM_LOG="$fixture/npm.log" TEST_FAIL_DB="$fixture/fail-db"
+export TEST_FAIL_SCHEMA="$fixture/fail-schema" TEST_PREFLIGHT_LOG="$fixture/preflight.log"
 export TEST_WRONG_RUNTIME="$fixture/wrong-runtime"
 export TEST_SIGNAL_FRONTEND="$fixture/signal-frontend" TEST_SIGNAL_BACKEND="$fixture/signal-backend"
 export TEST_ACTIVE_ROOT="$fixture/active-root" TEST_BAD_PROCESSES="$fixture/bad-processes"
@@ -129,6 +139,9 @@ echo observation > "$fixture/backend/server/backend/scripts/apply-order-observat
 echo 'module.exports = { marker: __dirname };' > "$fixture/backend/deploy/ecosystem.config.cjs"
 cat > "$fixture/backend/deploy/scripts/deploy-server-remote.sh" <<'SH'
 #!/usr/bin/env bash
+set -euo pipefail
+# A candidate may only activate after its own requirements have passed.
+if [[ "$DEPLOY_REPO" != "$TEST_BASE_REPO" ]]; then grep -Fxq "$DEPLOY_REPO" "$TEST_PREFLIGHT_LOG"; fi
 printf '%s %s\n' "$DEPLOY_REPO" 0 >> "$TEST_ACTIVATE_LOG"
 test "$DEPLOY_FULL" = 0
 test "$DEPLOY_RELEASE_MODE" = 1
@@ -164,6 +177,15 @@ test "$(cat "$TEST_ACTIVATE_LOG")" = "$before_activation"
 test "$(readlink -f "$DEPLOY_REPO/backend-current")" = "$backend_first"
 grep -q '^5 ' "$DEPLOY_REPO/.deploy-state/backend"
 rm "$TEST_FAIL_DB"
+export DEPLOY_RELEASE_ID=be-schema-fail
+touch "$TEST_FAIL_SCHEMA"
+if bash deploy/scripts/release-backend.sh "$fixture/backend.tgz"; then echo 'incompatible schema accepted'; exit 1; fi
+test "$(cat "$TEST_ACTIVATE_LOG")" = "$before_activation"
+test "$(readlink -f "$DEPLOY_REPO/backend-current")" = "$backend_first"
+test "$(cat "$TEST_ACTIVE_ROOT")" = "$backend_first"
+test "$(readlink -f "$DEPLOY_REPO/client/web/dist")" = "$frontend_before"
+grep -q '^5 ' "$DEPLOY_REPO/.deploy-state/backend"
+rm "$TEST_FAIL_SCHEMA"
 export DEPLOY_RELEASE_ID=be-missing-proof
 proof="$DEPLOY_REPO/.deploy-state/backend-evidence.be-first.json"
 mv "$proof" "$proof.saved"

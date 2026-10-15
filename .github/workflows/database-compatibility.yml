@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/database-compatibility.yml'
       - 'scripts/testing/**'
+      - 'deploy/scripts/release-*.sh'
+      - 'scripts/deploy/**'
       - 'server/db/**'
       - 'server/backend/db/**'
       - 'server/backend/scripts/*rds*'
@@ -16,6 +18,8 @@ on:
     paths:
       - '.github/workflows/database-compatibility.yml'
       - 'scripts/testing/**'
+      - 'deploy/scripts/release-*.sh'
+      - 'scripts/deploy/**'
       - 'server/db/**'
       - 'server/backend/db/**'
       - 'server/backend/scripts/*rds*'
@@ -49,6 +53,10 @@ jobs:
           set -o pipefail
           mkdir -p output/schema-compatibility
           npm run test:schema-compat:postgres 2>&1 | tee output/schema-compatibility/postgres.log
+      - name: Exercise canonical reconciliation and publication preflight
+        run: |
+          set -o pipefail
+          npm run test:history-schema:postgres 2>&1 | tee output/schema-compatibility/history.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -23,7 +23,7 @@ await withTemporaryPostgres(async ({ temporary }) => {
   const oldRoot = path.join(temporary, "published-reference");
   const oldSources = materializeReference(root, oldRoot);
   const oldBaseline = JSON.parse(oldSources["server/backend/scripts/rds-schema-baseline.json"]);
-  const baseline = readSchemaBaseline(), expanded = expandedRequirements(oldBaseline);
+  const baseline = readSchemaBaseline(), expanded = expandedRequirements(baseline);
   const owner = "00000000-0000-0000-0000-000000000041";
   const env = { ...process.env, NODE_PATH: path.join(root, "node_modules"), NODE_OPTIONS: "" };
   async function consumer(source, mode = "read") {

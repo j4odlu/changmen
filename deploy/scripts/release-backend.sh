@@ -41,9 +41,10 @@ cd "$release"
 npm ci --include=dev
 npm run compile:router --workspace=@changmen/backend
 command -v pm2 >/dev/null
-# Only verify database connectivity before touching running processes. Schema
-# migrations and data maintenance have a separate, explicitly reviewed lifecycle.
-node --input-type=module -e 'import {loadChangmenEnv} from "@changmen/storage/load_env.js"; loadChangmenEnv(); const {initDatabaseUrl,buildPgClientConfig}=await import("@changmen/db"); const {default:pg}=await import("@changmen/db/pg.js"); await initDatabaseUrl(); const c=new pg.Client(buildPgClientConfig(process.env.DATABASE_URL,10000)); await c.connect(); try {await c.query("SELECT 1")} finally {await c.end()}'
+# Candidate requirements, read-only, before activation or rollback traps: failure
+# must leave the running processes, links and success marker untouched.
+# Migrations/data maintenance remain a separate, explicitly reviewed lifecycle.
+node --input-type=module -e 'import {loadChangmenEnv} from "@changmen/storage/load_env.js"; loadChangmenEnv(); const {checkConfiguredRdsSchema}=await import("./server/backend/scripts/check-rds-schema.mjs"); await checkConfiguredRdsSchema()'
 # Managed releases already retain their sealed identity. Refuse to replace one
 # without the evidence needed to verify recovery, before changing any process.
 rollback_evidence="$repo/.deploy-state/backend-evidence.$(basename "$previous").json"

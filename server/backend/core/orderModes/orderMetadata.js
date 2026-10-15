@@ -14,12 +14,12 @@ export function preserveOrderMode(raw, previous, incoming, existingById) {
   const identity = previous.pmGtcExecutionId || parent?.raw?.pmGtcExecutionId || incoming[verifiedExecution];
   if (!identity) {
     // JSON input cannot relabel an ordinary order or invent canonical GTC costs.
-    for (const key of ["pmGtcExecutionId", "pmGtcRevision", "pmGtcBuyShares", "pmGtcBuyCost", "pmGtcOrderSnapshot"])
+    for (const key of ["pmGtcExecutionId", "pmGtcRevision", "pmGtcBuyShares", "pmGtcBuyCost", "pmGtcOrderSnapshot", "pmGtcResultRevision", "pmGtcConfirmedFills"])
       delete raw[key];
     return;
   }
   raw.pmGtcExecutionId = String(identity);
-  for (const key of ["pmGtcRevision", "pmGtcBuyShares", "pmGtcBuyCost", "pmGtcOrderSnapshot"]) {
+  for (const key of ["pmGtcRevision", "pmGtcBuyShares", "pmGtcBuyCost", "pmGtcOrderSnapshot", "pmGtcResultRevision", "pmGtcConfirmedFills"]) {
     if (previous[key] != null)
       raw[key] = previous[key];
     else

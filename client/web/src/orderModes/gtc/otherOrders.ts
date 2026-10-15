@@ -36,11 +36,19 @@ export async function readGtcOtherOrders(account: PlatformAccount, row: GtcExecu
     return [];
   // 不修改场馆返回对象，不更新账号全局统计，不保存无关订单。
   const matched = { ...original, link: row.plan.linkId, pmGtcExecutionId: row.id };
+  // [changmen 扩展] 后台监控只供客户端事实判断；保存仍由正常同步或首次确认负责。
+  if (!options.fresh) {
+    // 保留异步消费前的会话及快照复核，不再通过等待订单保存来完成这道检查。
+    await Promise.resolve();
+    if (!isAuthSessionCurrent(session))
+      throw new Error("GTC 会话已变更");
+    if (account.provider === "RAY" && observedRayOrders(account) !== snapshot)
+      throw new Error("RAY 旧订单结果已被新查询替代");
+    return [matched];
+  }
   await saveOrders(account, [matched]);
   if (!isAuthSessionCurrent(session))
     throw new Error("GTC 会话已变更");
-  if (account.provider === "RAY" && !options.fresh && observedRayOrders(account) !== snapshot)
-    throw new Error("RAY 旧订单结果已被新查询替代");
   void refreshGtcOrders().catch(() => {});
   return [matched];
 }

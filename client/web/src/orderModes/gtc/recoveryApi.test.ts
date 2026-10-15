@@ -20,45 +20,43 @@ beforeEach(() => {
   vi.clearAllMocks(); mock.session = 1; mock.current = true;
   mock.post.mockResolvedValue({ success: 1, info: response() }); mock.list.mockResolvedValue([row]); mock.monitor.mockResolvedValue([order]);
 });
-it("uses one recovery HTTP request and does not call either old endpoint", async () => {
+it("combines local execution discovery and exact result reads without execution RPC", async () => {
   expect(await recoverGtc(request(), () => true)).toEqual(response());
-  expect(mock.post).toHaveBeenCalledExactlyOnceWith("Pm_GtcRecover", request(), "", { errorTip: false });
-  expect(mock.list).not.toHaveBeenCalled(); expect(mock.monitor).not.toHaveBeenCalled();
+  expect(mock.list).toHaveBeenCalledWith(undefined, {});
+  expect(mock.monitor).toHaveBeenCalledWith([id], expect.any(Function));
+  expect(mock.post).not.toHaveBeenCalled();
 });
-it("preserves successful financial rows when execution reads fail", async () => {
-  const result = { ...response(), executions: { ok: false, message: "execution offline" } };
-  mock.post.mockResolvedValue({ success: 1, info: result });
-  expect(await recoverGtc(request(), () => true)).toEqual(result);
+it("preserves financial rows when local storage reads fail", async () => {
+  mock.list.mockRejectedValue(new Error("execution offline"));
+  expect(await recoverGtc(request(), () => true)).toEqual({ ...response(), executions: { ok: false, message: "execution offline" } });
 });
-it("preserves successful execution rows when financial reads fail", async () => {
-  const result = { ...response(), orders: [{ ok: false, message: "finance offline", ids: [id], unchangedIds: [] }] };
-  mock.post.mockResolvedValue({ success: 1, info: result });
-  expect(await recoverGtc(request(), () => true)).toEqual(result);
+it("preserves local executions when financial reads fail", async () => {
+  mock.monitor.mockRejectedValue(new Error("finance offline"));
+  expect(await recoverGtc(request(), () => true)).toEqual({ ...response(), orders: [{ ok: false, message: "finance offline", ids: [id], unchangedIds: [] }] });
 });
-it("validates the two partitions separately without discarding valid financial rows", async () => {
-  mock.post.mockResolvedValue({ success: 1, info: { ...response(), executions: { ok: true, rows: null } } });
+it("rejects malformed local discovery without discarding financial rows", async () => {
+  mock.list.mockResolvedValue(null);
   const result = await recoverGtc(request(), () => true);
   expect(result.executions).toMatchObject({ ok: false }); expect(result.orders).toEqual(response().orders);
 });
-it("does not accept missing, foreign or unverified unchanged financial identities", async () => {
-  for (const orders of [[], [{ ok: true, ids: ["foreign"], unchangedIds: [], rows: [] }], [{ ok: true, ids: [id], unchangedIds: [id], rows: [] }]]) {
-    mock.post.mockResolvedValue({ success: 1, info: { ...response(), orders } });
-    const result = await recoverGtc(request(), () => true);
-    expect(result.executions).toEqual(response().executions); expect(result.orders[0]).toMatchObject({ ok: false, ids: [id] });
-  }
+it("rejects foreign financial identities", async () => {
+  mock.monitor.mockResolvedValue([{ ...order, PmGtcExecutionId: "foreign" }]);
+  const result = await recoverGtc(request(), () => true);
+  expect(result.executions).toEqual(response().executions); expect(result.orders[0]).toMatchObject({ ok: false, ids: [id] });
 });
-it("an unsupported unified action fails without caching or calling old endpoints", async () => {
-  mock.post.mockResolvedValue({ success: 0, msg: "未知预测市场 action: Pm_GtcRecover" });
-  await expect(recoverGtc(request(), () => true)).rejects.toThrow("Pm_GtcRecover");
-  await expect(recoverGtc(request(), () => true)).rejects.toThrow("Pm_GtcRecover");
-  expect(mock.post).toHaveBeenCalledTimes(2); expect(mock.list).not.toHaveBeenCalled(); expect(mock.monitor).not.toHaveBeenCalled();
+it("unchanged results use the existing financial fingerprint", async () => {
+  const { gtcRecoveryFinancialKey } = await import("@changmen/shared/pm_gtc_recovery");
+  const req = request(); req.knownOrders[id] = gtcRecoveryFinancialKey([order]);
+  expect((await recoverGtc(req, () => true)).orders).toEqual([{ ok: true, ids: [id], unchangedIds: [id], rows: [] }]);
 });
-it("does not hide database, authorization or transport failures behind compatibility calls", async () => {
-  mock.post.mockResolvedValue({ success: 0, msg: "database offline" });
-  await expect(recoverGtc(request(), () => true)).rejects.toThrow("database offline");
-  expect(mock.list).not.toHaveBeenCalled(); expect(mock.monitor).not.toHaveBeenCalled();
+it("known financial reads start while local discovery is pending", async () => {
+  let finish!: (rows: typeof row[]) => void;
+  mock.list.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+  const task = recoverGtc(request(), () => true);
+  await Promise.resolve(); expect(mock.monitor).toHaveBeenCalledOnce();
+  finish([row]); await task;
 });
 it("discards a previous session's recovery response", async () => {
-  mock.post.mockImplementation(async () => { mock.session++; return { success: 1, info: response() }; });
+  mock.monitor.mockImplementation(async () => { mock.session++; return [order]; });
   await expect(recoverGtc(request(), () => true)).rejects.toThrow("登录状态已变更");
 });

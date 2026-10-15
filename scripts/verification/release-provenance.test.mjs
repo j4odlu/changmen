@@ -1,11 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
+import * as provenance from "./release-provenance.mjs";
 import { gzipSync } from "node:zlib";
-import { assertLayout, assertStable, assertSourceHashes, assertPublicAsset, assertCaptureEvidence, sha, rawSha, runtime, sshRead, readPublicAsset, PUBLIC_ASSET_TIMEOUT_MS, CAPTURE_TRANSFER_TIMEOUT_MS } from "./release-provenance.mjs";
+import { assertLayout, assertStable, assertSourceHashes, assertPublicAsset, assertCaptureEvidence, sha, rawSha, runtime, sshRead, readPublicAsset, PUBLIC_ASSET_TIMEOUT_MS } from "./release-provenance.mjs";
 import { publicFiles, verifyActualPublicModule } from "./public-release-boundaries.mjs";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 const frontend = "e901bb596952256284cd8a9eb8b73b572c963915", backend = "832f3f76c30d6ad741ce850a68cd6ba1da7d06f9";
 const wire = value => 'CHANGMEN_CAPTURE_GZIP_V1:' + gzipSync(Buffer.from(JSON.stringify(value))).toString('base64') + '\n';
+it.each(["capture-vps-fok-baseline.mjs", "verify-fok-release-stability.mjs"])("real %s entry imports only available provenance exports", file => {
+  const source = fs.readFileSync(`scripts/verification/${file}`, "utf8");
+  const imports = [...source.matchAll(/import\s*\{([^}]+)\}\s*from\s*["']\.\/release-provenance\.mjs["']/g)];
+  expect(imports).toHaveLength(1);
+  for (const name of imports[0][1].split(",").map(name => name.trim().split(/\s+as\s+/)[0]))
+    expect(provenance).toHaveProperty(name);
+  expect(source).toContain("length: PUBLIC_ASSET_WORKERS");
+  expect(provenance.PUBLIC_ASSET_WORKERS).toBe(1);
+});
 it("compressed transport preserves the entire decoded payload and original deadline", () => {
   const payload = { sources: { "module.ts": "中国😀\n".repeat(200000) } };
   const actual = sshRead("read only", { spawn: (command, args, options) => {
@@ -21,15 +31,6 @@ it("compressed capture requires one complete gzip stream and valid complete JSON
   for (const stdout of [valid.slice(0, -8), valid + 'unexpected output', '{"source":',
     'CHANGMEN_CAPTURE_GZIP_V1:' + gzipSync(Buffer.from('{"source":')).toString('base64')])
     expect(() => sshRead('read only', { spawn: () => ({ status: 0, stdout, stderr: '' }) })).toThrow();
-});
-it("only the full source capture gets a bounded transfer allowance; connection and byte limits remain fixed", () => {
-  const result = sshRead("full capture", { timeoutMs: CAPTURE_TRANSFER_TIMEOUT_MS, spawn: (_command, args, options) => {
-    expect(options.timeout).toBe(180000); expect(options.maxBuffer).toBe(45 * 1024 * 1024);
-    expect(args).toContain("ConnectTimeout=15");
-    return { status: 0, stdout: wire({ complete: true }), stderr: "" };
-  } });
-  expect(result).toEqual({ complete: true });
-  expect(() => sshRead("capture", { timeoutMs: 0 })).toThrow("Unsupported capture timeout budget");
 });
 it("compressed transfer cannot evade the original decoded capture size bound", () => {
   const stdout = wire({ source: 'x'.repeat(45 * 1024 * 1024) });
@@ -139,7 +140,7 @@ describe("complete actual public entry boundary in addition to fixed FOK parity"
   }
   const file = publicFiles[1], actual = gitSource(backend, file), current = fs.readFileSync(file, "utf8");
   for (const [name, before, after] of [
-    ["extra action", '"Pm_GtcSaveOrders"].includes', '"Pm_GtcSaveOrders", "Pm_UnexpectedTrade"].includes'],
+    ["extra action", '"Pm_GtcReadResults"].includes', '"Pm_GtcReadResults", "Pm_UnexpectedTrade"].includes'],
     ["dispatch arguments", "handlePmGtc(action, body, ctx.user.id)", "handlePmGtc(action, body, \"other-owner\")"],
     ["GTC branch side effect", "return ok(await handlePmGtc", "void unexpectedTrade(); return ok(await handlePmGtc"],
     ["unknown fallback", "未知预测市场 action:", "未知 预测市场 action:"],

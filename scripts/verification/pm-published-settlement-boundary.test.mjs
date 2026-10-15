@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { priceFallbackCommit, priceFallbackFiles, publishedPmCommit, publishedSettlementFiles, restorePublishedPmSettlement } from './pm-published-settlement-boundary.mjs';
 import { verifyProtectedSource } from './fok-exact-boundaries.mjs';
 import { deployedSource, immutableBaselines, verifyPhase2Module } from './orders-phase2-release-boundary.mjs';
+import { restorePmOrderBetLabelSource } from './pm-order-bet-label-boundary.mjs';
 const previous = '5eb63ba7f49156a4a98a1357a0888e1dcc0e9924';
 const normal = text => text.replaceAll('\r\n', '\n');
 const read = file => normal(fs.readFileSync(file, 'utf8'));
@@ -44,7 +45,7 @@ describe('preserve the exact already deployed PM release', () => {
     it(`${file}: restores every reviewed hunk and the complete preceding module`, () => {
       expect(restorePublishedPmSettlement(file, read(file))).toBe(source(previous, file));
       expect(restorePublishedPmSettlement(file, read(file).replaceAll('\n', '\r\n'))).toBe(source(previous, file));
-      expect(read(file)).toBe(source(priceFallbackCommit, file));
+      expect(restorePmOrderBetLabelSource(file, read(file), read)).toBe(source(priceFallbackCommit, file));
       expect(restorePublishedPmSettlement(file, source(publishedPmCommit, file))).toBe(source(previous, file));
     });
     it(`${file}: rejects an appended action`, () => expect(() => restorePublishedPmSettlement(file, read(file) + '\nvoid unexpectedOrderWrite();\n')).toThrow('complete actual published'));

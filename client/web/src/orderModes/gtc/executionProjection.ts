@@ -36,7 +36,8 @@ export function resetGtcOrderProjection(): void {
   gtcOrderProjection.date = "";
   gtcOrderProjection.rows = [];
 }
-export function tagKnownGtcVenueOrders(playerId: number, rows: VenueOrder[]): VenueOrder[] {
+export function tagKnownGtcVenueOrders(playerId: number, rows: VenueOrder[], owner = identityOwner): VenueOrder[] {
+  if (owner !== identityOwner) return rows;
   let changed = false;
   const tagged = rows.map((row) => {
     const id = identities.get(key(playerId, row.provider, row.pmBuyOrderId ?? row.orderId));
@@ -46,6 +47,14 @@ export function tagKnownGtcVenueOrders(playerId: number, rows: VenueOrder[]): Ve
     return { ...row, pmGtcExecutionId: id };
   });
   return changed ? tagged : rows;
+}
+/** [changmen 扩展] 已知 GTC 买单仅由确认结果同步写入，普通同步仍保存其它原单及卖单。 */
+export function filterKnownGtcBuyOrders(playerId: number, rows: VenueOrder[], owner: string): VenueOrder[] {
+  if (owner !== identityOwner) return rows;
+  const filtered = rows.filter(row => row.provider !== "Polymarket" || row.pmSide === "sell"
+    || ["win", "lose", "lost", "return"].includes(String(row.status).toLowerCase())
+    || !identities.has(key(playerId, row.provider, row.orderId)));
+  return filtered.length === rows.length ? rows : filtered;
 }
 export function partitionGtcOrderRows(rows: OrderRow[], owner = identityOwner): { fok: OrderRow[]; gtc: OrderRow[] } {
   const sourceByOrder = new Map<string, string>();

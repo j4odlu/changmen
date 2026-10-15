@@ -3,7 +3,7 @@ import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/sh
 import { buildPolymarketMatchedBuyVenueOrderForSave } from "@changmen/venue-adapter/polymarket";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { reactive } from "vue";
-import { commandGtc } from "./api";
+import { confirmedGtcResult } from "./confirmedResult";
 import { gtcFinancialOrder } from "./financialOrder";
 
 const mocks = vi.hoisted(() => ({ post: vi.fn() }));
@@ -35,8 +35,7 @@ describe("gTC uses the ordinary PM financial chain", () => {
       fills: [{ key: "trade:maker", tradeId: "trade", bucket: "maker", role: "MAKER" as const, shares: "29.260001", price: "0.5100000167464197", fee: "0", status: "CONFIRMED", updatedAt: 3 }],
       complete: true, observedAt: 3,
     };
-    await commandGtc(row, { kind: "facts", facts: incoming });
-    const financial = mocks.post.mock.calls[0]![1].command.financialOrder;
+    const financial = confirmedGtcResult(mergeGtcFacts(row, incoming))!.financial;
     expect(financial).toMatchObject({ pmShares: 29.260001, pmStakeUsdc: 14.9226, pmFeeUsdc: 0, pmFillPrice: 0.51 });
     expect(financial.betMoney).toBe(14.9226 * 6.7);
   });
@@ -46,10 +45,9 @@ describe("gTC uses the ordinary PM financial chain", () => {
   });
   it("submits ordinary financial output with facts without changing the reactive original", async () => {
     const row = reactive(accepted()); const before = JSON.stringify(row);
-    await commandGtc(row, { kind: "facts", facts: facts("0.07971") });
-    const [action, body] = mocks.post.mock.calls[0]!;
-    expect(action).toBe("Pm_GtcCommand");
-    expect(body.command.financialOrder).toEqual(gtcFinancialOrder(mergeGtcFacts(accepted(), facts("0.07971"))));
+    const result = confirmedGtcResult(mergeGtcFacts(JSON.parse(before), facts("0.07971")));
+    expect(result!.financial).toEqual(gtcFinancialOrder(mergeGtcFacts(accepted(), facts("0.07971"))));
+    expect(mocks.post).not.toHaveBeenCalled();
     expect(JSON.stringify(row)).toBe(before);
   });
 });

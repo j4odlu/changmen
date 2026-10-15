@@ -4,6 +4,13 @@ import type { OrderRow, PageResult } from "@/types/esport";
 import { post, unwrap } from "@/api/client";
 import type { PmSubmission } from "@changmen/shared/pm_submission";
 
+/** [changmen 扩展] 同步专用投影；未注册或没有匹配原单时沿用原保存数组。 */
+let orderSyncProjection: ((account: PlatformAccount, orders: VenueOrder[]) => VenueOrder[] | Promise<VenueOrder[]>) | undefined;
+export function registerOrderSyncProjection(project: NonNullable<typeof orderSyncProjection>): () => void {
+  orderSyncProjection = project;
+  return () => { if (orderSyncProjection === project) orderSyncProjection = undefined; };
+}
+
 /** [changmen 扩展] 旧待确认队列按原单恢复申请额，不能从当前赔率推算。 */
 export async function getPmSubmission(playerId: number, orderId: string): Promise<PmSubmission | null> {
   const response = await post<PmSubmission>("Pm_GetSubmission", { playerId, orderId }, "", { errorTip: false });
@@ -27,6 +34,7 @@ export async function saveOrder(body: Record<string, unknown>) {
  * [changmen 扩展] PredictFun 禁止客户端回写：订单只经 Pf_* 服务端落库。
  */
 export async function saveOrders(account: PlatformAccount, orders: VenueOrder[]): Promise<void> {
+  orders = await (orderSyncProjection?.(account, orders) ?? orders);
   if (String(account.provider ?? "").trim() === "PredictFun")
     return;
   const byProvider = new Map<string, VenueOrder[]>();

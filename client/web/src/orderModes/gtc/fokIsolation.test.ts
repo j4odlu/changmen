@@ -60,8 +60,8 @@ it("known GTC ID selects only its own order and preserves every FOK row", async 
   expect(mocks.getOrders).not.toHaveBeenCalled();
   const account = mocks.accounts[0] as PlatformAccount;
   await getProvider(account)!.getOrders!(account);
-  await vi.waitFor(() => expect(mocks.save).toHaveBeenCalledOnce());
-  expect(mocks.save.mock.calls[0]![1]).toEqual([{ ...original, link: gtcLink, pmGtcExecutionId: row.id }]);
+  await vi.waitFor(() => expect(gtcProgress.records[0]!.other.state).toBe("filled"));
+  expect(mocks.save).not.toHaveBeenCalled();
   expect(fok.link).toBe(fokLink); expect(original.link).toBe(123);
   expect(mocks.update).not.toHaveBeenCalled();
 });

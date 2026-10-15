@@ -8,6 +8,7 @@ import { rebasePmFokImports } from "./pm-fok-source-relocation.mjs";
 import { PM_FUNCTIONAL_RELOCATIONS, pmFunctionalCompatibilitySource, readRelocatedPmFunctionalSource } from "./pm-functional-source-relocation.mjs";
 import { verifyPmOfficialSettlementSource } from "./pm-settlement-policy-boundary.mjs";
 import { restorePmTickRefreshSource } from "./pm-tick-refresh-boundary.mjs";
+import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
 
 const base = "e901bb596952256284cd8a9eb8b73b572c963915";
 describe("pM functional relocation preserves complete implementations", () => {
@@ -27,15 +28,14 @@ describe("pM functional relocation preserves complete implementations", () => {
       const facade = pmFunctionalCompatibilitySource(file);
       const original = readRelocatedPmFunctionalSource(file, facade);
       const mutated = readRelocatedPmFunctionalSource(file, facade, (requested) => {
-        assert.equal(requested, target);
-        return `${fs.readFileSync(target, "utf8")}\nthrow new Error('changed implementation');\n`;
+        return fs.readFileSync(requested, "utf8") + (requested === target ? "\nthrow new Error('changed implementation');\n" : "");
       });
       expect(mutated).not.toBe(original);
       expect(mutated).toContain("changed implementation");
     });
     it(`${file}: resolves every relative dependency to its original module`, () => {
       const original = execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" });
-      const moved = restorePmTickRefreshSource(target, fs.readFileSync(target, "utf8"));
+      const moved = restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, fs.readFileSync(target, "utf8"), file => fs.readFileSync(file, "utf8")));
       const imports = (source, filename) => {
         const sf = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true);
         const result = [];

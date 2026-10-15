@@ -44,6 +44,10 @@ export function restorePmManualSellSplit(target, source) {
 }
 
 export function restoreGtcSnapshotMetadata(source) {
+  if (source.includes("pmGtcResultRevision") || source.includes("pmGtcConfirmedFills")) {
+    source = replaceExact(source, '["pmGtcExecutionId", "pmGtcRevision", "pmGtcBuyShares", "pmGtcBuyCost", "pmGtcOrderSnapshot", "pmGtcResultRevision", "pmGtcConfirmedFills"]', '["pmGtcExecutionId", "pmGtcRevision", "pmGtcBuyShares", "pmGtcBuyCost", "pmGtcOrderSnapshot"]');
+    source = replaceExact(source, '["pmGtcRevision", "pmGtcBuyShares", "pmGtcBuyCost", "pmGtcOrderSnapshot", "pmGtcResultRevision", "pmGtcConfirmedFills"]', '["pmGtcRevision", "pmGtcBuyShares", "pmGtcBuyCost", "pmGtcOrderSnapshot"]');
+  }
   if (!source.includes("pmGtcOrderSnapshot"))
     return source;
   let restored = replaceExact(source, "[\"pmGtcExecutionId\", \"pmGtcRevision\", \"pmGtcBuyShares\", \"pmGtcBuyCost\", \"pmGtcOrderSnapshot\"]", "[\"pmGtcExecutionId\", \"pmGtcRevision\", \"pmGtcBuyShares\", \"pmGtcBuyCost\"]");

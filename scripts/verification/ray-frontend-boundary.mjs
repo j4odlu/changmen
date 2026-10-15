@@ -10,6 +10,7 @@ export const rayFrontendSources = Object.freeze([
   ...["api", "autoMakeup", "contextStore", "contexts", "lifecycle", "match", "runtime", "state", "types"].map(name => `client/web/src/runtime/rayOrderMonitor/${name}.ts`),
   "client/web/src/runtime/rayOrderMonitor/localOrders.ts",
   "client/web/src/stores/account/rayOrderBindings.ts",
+  "client/web/src/orderModes/gtc/otherOrders.ts",
 ]);
 export function verifyRayFrontendSources(readSource) {
   for (const file of rayFrontendSources) {

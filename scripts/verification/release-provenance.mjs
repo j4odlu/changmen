@@ -56,7 +56,7 @@ export function assertPublicAsset(asset, status, bytes) {
 }
 // [changmen 扩展] 大资源传输允许有限等待与重试；官方 HTTP/完整字节校验不被重试掩盖。
 export const PUBLIC_ASSET_TIMEOUT_MS = 60_000;
-export const PUBLIC_ASSET_WORKERS = 4;
+export const PUBLIC_ASSET_WORKERS = 1;
 export async function readPublicAsset(frontendUrl, asset, { fetchAsset = globalThis.fetch } = {}) {
   const url = frontendUrl + '/' + asset.file.split('/').map(encodeURIComponent).join('/');
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -76,9 +76,7 @@ export async function readPublicAsset(frontendUrl, asset, { fetchAsset = globalT
     return bytes;
   }
 }
-export const CAPTURE_TRANSFER_TIMEOUT_MS = 180_000;
-export function sshRead(program, { spawn = spawnSync, timeoutMs = 45_000 } = {}) {
-  assert([45_000, CAPTURE_TRANSFER_TIMEOUT_MS].includes(timeoutMs), "Unsupported capture timeout budget");
+export function sshRead(program, { spawn = spawnSync } = {}) {
   const remote = process.env.FOK_BASELINE_SSH_TARGET ?? "root@47.57.10.202";
   const key = process.env.FOK_BASELINE_SSH_KEY ?? path.join(os.homedir(), ".ssh/id_ed25519_gamebet");
   // [changmen 扩展] 压缩原 JSON 后发送；不依赖 SSH 压缩协商，不删减捕获内容。
@@ -87,7 +85,7 @@ console.log = value => {
   if (typeof value !== 'string') throw new Error('Capture must output one JSON string');
   process.stdout.write('CHANGMEN_CAPTURE_GZIP_V1:' + __captureGzip(Buffer.from(value)).toString('base64') + '\\n');
 };\n` + program;
-  const result = spawn("ssh", ["-C", "-i", key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", remote, "node --input-type=module"], { input, encoding: "utf8", timeout: timeoutMs, maxBuffer: 45 * 1024 * 1024 });
+  const result = spawn("ssh", ["-C", "-i", key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", remote, "node --input-type=module"], { input, encoding: "utf8", timeout: 45000, maxBuffer: 45 * 1024 * 1024 });
   assert.equal(result.status, 0, result.stderr || `VPS read-only capture failed (${result.error?.code ?? result.status}; received ${Buffer.byteLength(result.stdout ?? "")} bytes)`);
   const match = result.stdout.trim().match(/^CHANGMEN_CAPTURE_GZIP_V1:((?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)$/);
   assert(match && match[1], "Missing/incomplete compressed capture");

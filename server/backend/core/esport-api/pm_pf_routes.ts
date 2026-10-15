@@ -86,7 +86,7 @@ export async function handlePmPfAction(
     return null;
 
   // [changmen 扩展] GTC 协调使用独立 action，原 PM/FOK 分支保持不变。
-  if (["Pm_GtcCreate", "Pm_GtcCommand", "Pm_GtcList", "Pm_GtcRecover", "Pm_GtcOrders", "Pm_GtcMonitorOrders", "Pm_GtcSaveOrders"].includes(action)) {
+  if (["Pm_GtcCreate", "Pm_GtcCommand", "Pm_GtcList", "Pm_GtcRecover", "Pm_GtcOrders", "Pm_GtcMonitorOrders", "Pm_GtcSaveOrders", "Pm_GtcSyncResult", "Pm_GtcReadResults"].includes(action)) {
     try {
       return ok(await handlePmGtc(action, body, ctx.user.id));
     }

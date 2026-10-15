@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { frontendSource, filesAt, gitSources, assertLayout, assertStable, assertSourceHashes, readPublicAsset, sshRead, layoutProgram, readLayout, CAPTURE_TRANSFER_TIMEOUT_MS, PUBLIC_ASSET_WORKERS } from "./release-provenance.mjs";
+import { frontendSource, filesAt, gitSources, assertLayout, assertStable, assertSourceHashes, readPublicAsset, sshRead, layoutProgram, readLayout, PUBLIC_ASSET_WORKERS } from "./release-provenance.mjs";
 fs.mkdirSync("output", { recursive: true });
 // 失败不能使用上一次成功的证据。
 for (const file of ["output/vps-fok-baseline.json", "output/vps-fok-release-verification.json"])
@@ -27,7 +27,7 @@ while(queue.length){const file=queue.shift();if(!/\\.(html|js|css|svg)$/.test(fi
 const checkedAssets=allAssets.filter(row=>reachable.has(row.file)).map(row=>{const target=path.join(frontend,row.file);return {...row,sha256:sha(fs.readFileSync(target)),bytes:fs.statSync(target).size};});
 console.log(JSON.stringify({...layout,capturedAt:new Date().toISOString(),hashes,sources,storedAssetCount:allAssets.length,assets:checkedAssets,reachableAssets:checkedAssets}));
 `;
-const captured = sshRead(remoteProgram, { timeoutMs: CAPTURE_TRANSFER_TIMEOUT_MS });
+const captured = sshRead(remoteProgram);
 assertStable(layout, captured);
 const backendGit = gitSources(backendVersion, backendFiles), frontendGit = gitSources(frontendVersion, frontendFiles);
 assertSourceHashes(backendGit, captured.hashes);
@@ -41,7 +41,8 @@ async function worker() {
     probes.push({ file: asset.file, sha256: asset.sha256, matched: true });
   }
 }
-// [changmen 扩展] 有限并发摊薄跨区往返耗时；每个资源仍须逐字节校验。
+// [changmen 扩展] Avoid competing large downloads within the bounded per-asset deadline.
+// Every reachable asset still has to pass the same public byte-for-byte check.
 await Promise.all(Array.from({ length: PUBLIC_ASSET_WORKERS }, worker));
 assert(probes.some(row => row.file === "index.html") && probes.some(row => row.file === "deploy-version.txt"));
 const manifest = JSON.parse(fs.readFileSync("scripts/verification/vps-fok-baseline.json", "utf8"));

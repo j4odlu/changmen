@@ -1,4 +1,4 @@
-/** [changmen 扩展] 官方状态立即采用；执行授权与后台结果副本分别串行化。 */
+/** [changmen 扩展] 官方状态立即采用；执行授权与客户端事实副本分别串行化。 */
 import type { GtcCommand, GtcExecution, GtcFacts } from "@changmen/shared/pm_gtc";
 import { applyGtcCommand, gtcUnits, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { reactive } from "vue";
@@ -13,6 +13,7 @@ import { gtcProgress } from "./gtcProgressState";
 import { createGtcSettlementEvidence } from "./settlementEvidence";
 import { markGtcSuccess } from "./successMarkers";
 import { gtcSyncIssue } from "./syncStatus";
+import { importLocalGtc } from "./localStore";
 
 export { gtcProgress } from "./gtcProgressState";
 /** [changmen 扩展] 仅保护当前会话正在发送的原腿；不持久化、不为恢复记录重新发单。 */
@@ -87,7 +88,7 @@ function alreadySaved(row: GtcExecution, command: GtcCommand): boolean {
 function urgentCopy(command: GtcCommand): boolean {
   return ["ack", "other", "not_sent", "cancel", "cancel_result"].includes(command.kind);
 }
-/** [changmen 扩展] 官方结果立即采用；后台副本按执行串行重试，授权仍须持久化成功。 */
+/** [changmen 扩展] 官方结果立即采用；客户端副本按执行串行重试，授权仍须持久化成功。 */
 export function flushGtcCopies(id: string, immediate = false): Promise<void> {
   const prior = queues.get(id);
   if (prior)
@@ -202,7 +203,7 @@ export function markGtcLegOnce(row: GtcExecution, leg: "PM" | "OTHER"): void {
 }
 export async function mutateGtc(id: string, command: GtcCommand): Promise<GtcExecution> {
   command = clone(command);
-  if (command.kind !== "authorize_pm" && command.kind !== "authorize_other") {
+  if (command.kind !== "authorize_pm" && command.kind !== "authorize_other" && command.kind !== "not_sent") {
     const previous = currentGtc(id);
     if (command.kind === "cancel_result" && previous.cancel?.commandId !== command.commandId)
       return previous;
@@ -242,12 +243,12 @@ export async function mutateGtc(id: string, command: GtcCommand): Promise<GtcExe
   const session = getAuthSessionVersion(); const runGeneration = generation;
   await flushGtcCopies(id, true);
   if (copies.has(id))
-    throw new Error("GTC 执行授权需要可用的持久化；官方订单状态仍保留");
+    throw new Error("GTC 发送许可需要可用的客户端持久化；官方订单状态仍保留");
   const prior = queues.get(id) ?? Promise.resolve();
   const next = prior.catch(() => {}).then(async () => {
     if (!isAuthSessionCurrent(session) || generation !== runGeneration)
       throw new Error("GTC 会话已变更");
-    // 本地关闭/取消意图仍参与准入；不把后台副本版本当成新的发送授权。
+    // 本地关闭/取消意图仍参与准入；不把客户端副本版本当成新的发送授权。
     applyGtcCommand(clone(currentGtc(id)), command, Date.now());
     const row = await commandGtc(persisted.get(id) ?? currentGtc(id), command);
     if (!isAuthSessionCurrent(session) || generation !== runGeneration)
@@ -272,7 +273,7 @@ export async function refreshGtcRecords(betRowId?: number, playerIds?: readonly 
   const session = getAuthSessionVersion(); const owner = gtcProgress.owner; const stamp = generation;
   let rows: GtcExecution[];
   try {
-    // 后台发现只读取新执行/新副本版本；盘口计次与失败重试仍读取完整所需记录。
+    // 本地发现只读取新执行/新副本版本；盘口计次与失败重试仍读取完整所需记录。
     const known = knownGtcRevisions();
     rows = betRowId == null && Object.keys(known).length ? await listGtc(undefined, known) : await listGtc(betRowId);
   }
@@ -341,11 +342,12 @@ export function initializeGtcState(owner: string): boolean {
         retries.set(entry.row.id, retry);
       else retries.set(entry.row.id, { failures: 0, at: Date.now() + 5000 });
       reloadBeforeRetry.add(entry.row.id); acceptGtc(entry.row);
-      gtcProgress.saveIssues[entry.row.id] = gtcSyncIssue("官方结果副本等待后台同步");
+      void importLocalGtc(owner, [entry.row]).catch(() => {});
+      gtcProgress.saveIssues[entry.row.id] = gtcSyncIssue("执行事实等待客户端持久化");
     }
     scheduleRetry();
   }
-  catch { /* 损坏的本地副本不阻止从后台和官方恢复。 */ }
+  catch { /* 损坏的会话副本不阻止从本地数据库和官方恢复。 */ }
   return true;
 }
 export function resetGtcState(preserveProjection = false): void {

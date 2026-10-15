@@ -2,6 +2,8 @@
 
 changmen 是 **客户端 + 服务端** 系统。`localhost` 与 `.bat` 仅用于开发联调；生产环境客户端连**远程 API**，服务端与 RDS 跑在服务器/云上。
 
+> [changmen 扩展] 2026-10-15 用户明确要求：所有生产部署统一通过 GitHub Actions **Validate and release**（`.github/workflows/release.yml`）执行。本机只进行开发、验证、commit/push 和只读状态核验，不执行生产部署。推送 `master` 后由 Actions 验收并发布；前后端同时变更时先部署后端，再部署前端。
+
 最后更新：2026-06-14
 
 ---

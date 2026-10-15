@@ -39,19 +39,16 @@ describe("gTC consumes original RAY monitoring results", () => {
     expect(await readGtcOtherOrders(acc, row)).toEqual([]);
     expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.getOrders).not.toHaveBeenCalled();
   });
-  it("a slow save of old RAY evidence cannot advance execution after a newer result arrives", async () => {
+  it("old RAY evidence cannot advance execution after a newer snapshot arrives, without saving orders", async () => {
     const acc = account(); const row = record();
     row.other.orderId = "gtc-ray";
     beginRayOrderObservation(acc)([original()]);
-    let release!: () => void;
-    mocks.save.mockImplementationOnce(() => new Promise<void>((resolve) => { release = resolve; }));
     const read = readGtcOtherOrders(acc, row);
     const discarded = expect(read).rejects.toThrow("新查询替代");
-    await Promise.resolve();
     beginRayOrderObservation(acc)([{ ...original(), status: "reject" }]);
-    release(); await discarded;
+    await discarded;
     expect(await readGtcOtherOrders(acc, row)).toMatchObject([{ status: "reject" }]);
-    expect(mocks.getOrders).not.toHaveBeenCalled();
+    expect(mocks.getOrders).not.toHaveBeenCalled(); expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.refresh).not.toHaveBeenCalled();
   });
   it("a snapshot started before this submission cannot confirm its order or trigger a replacement query", async () => {
     const acc = account(); const row = record();
@@ -65,7 +62,7 @@ describe("gTC consumes original RAY monitoring results", () => {
     const fok = { ...original(), orderId: "fok-ray", venueMatchId: "fok-match", link: 1791559000999 };
     beginRayOrderObservation(acc)([fok, own]);
     expect(await readGtcOtherOrders(acc, row)).toEqual([{ ...own, link: row.plan.linkId, pmGtcExecutionId: row.id }]);
-    expect(mocks.save).toHaveBeenCalledExactlyOnceWith(acc, [{ ...own, link: row.plan.linkId, pmGtcExecutionId: row.id }]);
+    expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.refresh).not.toHaveBeenCalled();
     expect(own.link).toBe(123); expect(fok.link).toBe(1791559000999);
     expect([acc.balance, acc.unsettle, acc.winBalance, acc.loadingBalance]).toEqual([500, 3, 999, false]);
     expect(mocks.getOrders).not.toHaveBeenCalled();
@@ -102,6 +99,7 @@ describe("gTC consumes original RAY monitoring results", () => {
     expect(await settleGtcOtherLeg(acc, result, () => row, 30)).toMatchObject({ rejected: false, pendingConfirm: false, orders: [{ orderId: "gtc-ray" }] });
     expect(mocks.outcome).toHaveBeenCalledWith(acc, result, expect.any(Function), { confirmPostAccepted: false, rejectWaitSec: 30 });
     expect(mocks.save.mock.calls[0]![1]).toHaveLength(1);
+    expect(mocks.refresh).toHaveBeenCalledOnce();
   });
   it("missing original is pending even if the generic outcome reports filled or rejected", async () => {
     mocks.outcome.mockResolvedValue({ orders: [], settlement: "unfilled" });

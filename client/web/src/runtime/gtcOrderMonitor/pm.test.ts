@@ -64,7 +64,8 @@ it("shared history failures preserve order identities and retry once per account
   expect(mocks.history).toHaveBeenCalledOnce(); expect(Object.keys(gtcProgress.queryIssues)).toHaveLength(2);
   expect(currentGtc("old").orderId).toBe("old");
   await vi.advanceTimersByTimeAsync(5000); await vi.dynamicImportSettled(); await vi.advanceTimersByTimeAsync(0);
-  expect(mocks.history).toHaveBeenCalledTimes(2); expect(gtcProgress.queryIssues).toEqual({});
+  expect(mocks.history).toHaveBeenCalledTimes(2);
+  await vi.waitFor(() => expect(gtcProgress.queryIssues).toEqual({}));
 });
 
 // [changmen 扩展] 执行窗口内默认核对不能提前创建共享成交历史。

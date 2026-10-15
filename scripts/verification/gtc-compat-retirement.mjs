@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import ts from "typescript";
 import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mjs";
 import { stripMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
+import { restoreGtcClientStateSource } from "./gtc-client-state-boundary.mjs";
 export const retirementBase = "27d51b200889c962b7bc21f2733ecd895fa3a1e9";
 export const retiredHelpers = ["server/db/rds/orders_execution_compat.js", "server/db/rds/pm_orders_minimal.js"];
 export const nativeOrdersPath = "server/db/rds/native_orders.js";
@@ -74,6 +75,7 @@ export function removeGtcStorageModes(file, source) {
 }
 export function restoreRetiredOrdersCompatibility(file, source, readSource) {
   source = sourceText(source);
+  source = restoreGtcClientStateSource(file, source, readSource, replaceExact);
   if (!retirementFiles().includes(file) || retiredHelpers.includes(file)) return source;
   if (/PM_ORDERS_MINIMAL|ORDERS_EXECUTION_COMPAT|orders_execution_compat|pm_orders_minimal|minimalClientOrder|pmOrdersMinimalEnabled/.test(source)) return source;
   assert.deepEqual(moduleTokens(source), moduleTokens(removeGtcStorageModes(file, oldRead(file))), `${file}: complete native module after retirement`);
@@ -84,6 +86,6 @@ export function verifyGtcCompatibilityRetirement(readSource = file => fs.readFil
   for (const file of retiredHelpers) assert(!fs.existsSync(file), `${file}: retired runtime helper must be absent`);
   assert.deepEqual(moduleTokens(sourceText(readSource(nativeOrdersPath))), moduleTokens(nativeOrdersSource()), "complete native orders helper");
   const files = retirementFiles().filter(file => !retiredHelpers.includes(file));
-  for (const file of files) assert.deepEqual(moduleTokens(sourceText(readSource(file))), moduleTokens(removeGtcStorageModes(file, oldRead(file))), `${file}: complete native retirement boundary`);
+  for (const file of files) assert.deepEqual(moduleTokens(restoreGtcClientStateSource(file, sourceText(readSource(file)), readSource, replaceExact)), moduleTokens(removeGtcStorageModes(file, oldRead(file))), `${file}: complete native retirement boundary`);
   return { files: files.length, switchesRemoved: 3, nativeHelperVerified: true, fixedBefore: retirementBase };
 }

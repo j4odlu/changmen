@@ -299,6 +299,8 @@ function requireState(name) {
     return { getAuthSessionVersion: () => "fixture-session", isAuthSessionCurrent: () => true };
   if (name === "./api")
     return { commandGtc: () => { throw new Error("Unexpected GTC command in state fixture"); }, listGtc: () => { throw new Error("Unexpected GTC query in state fixture"); } };
+  if (name === "./localStore")
+    return { importLocalGtc: () => { throw new Error("Unexpected GTC import in state fixture"); } };
   throw new Error(`Unexpected state fixture dependency: ${name}`);
 }
 const runtime = load("client/web/src/orderModes/gtc/executionState.ts", false, { ...context, require: requireState });

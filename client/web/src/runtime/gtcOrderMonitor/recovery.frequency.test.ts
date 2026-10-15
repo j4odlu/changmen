@@ -8,6 +8,13 @@ import { recoverMonitorRecords, resetMonitorRecovery } from "./recovery";
 import { needsFinancialRecovery } from "./recoveryPolicy";
 
 const mock = vi.hoisted(() => ({ post: vi.fn(), finance: vi.fn(), list: vi.fn(), refresh: vi.fn(), session: true, records: [] as GtcExecution[], orders: [] as OrderRow[], error: "", evidence: undefined as ReturnType<typeof createGtcSettlementEvidence> | undefined }));
+// 这里验证恢复调度策略；本地发现/精确读取的真实组合在 recoveryApi.test.ts 覆盖。
+vi.mock("@/orderModes/gtc/recoveryApi", () => ({ recoverGtc: async (request: unknown, current: () => boolean) => {
+  const response = await mock.post("local-recovery", request);
+  if (!mock.session || !current()) throw new Error("GTC 恢复登录状态已变更");
+  if (response.success !== 1) throw new Error(response.msg);
+  return response.info;
+} }));
 vi.mock("@/api/client", () => ({ post: mock.post, getAuthSessionVersion: () => "owner", isAuthSessionCurrent: () => mock.session, unwrap: (response: { success: number; msg?: string; info: unknown }) => {
   if (response.success !== 1)
     throw new Error(response.msg);
@@ -36,7 +43,7 @@ beforeEach(() => {
   mock.list.mockResolvedValue(undefined); mock.refresh.mockResolvedValue(undefined);
   mock.finance.mockResolvedValue({ success: 1, info: [] });
   mock.post.mockImplementation(async (action, body) => {
-    if (action !== "Pm_GtcRecover")
+    if (action !== "local-recovery")
       throw new Error("normal recovery must use the unified endpoint");
     const finance = async (ids: string[]) => {
       try {

@@ -5,7 +5,7 @@ import { resolvePmRemainingShares } from "@changmen/venue-adapter/polymarket";
 import { beforeEach, describe, expect, it } from "vitest";
 import { isDualPredictionArbGroup } from "@/extensions/arbBet/arbEarlyLockSell";
 import { groupOrdersByEffectiveLink } from "@/shared/orderLink";
-import { applyGtcLocalSell, gtcOrderProjection, partitionGtcOrderRows, projectGtcOrderRows, rememberGtcOrderIdentity, resetGtcOrderProjection, tagKnownGtcVenueOrders } from "./executionProjection";
+import { applyGtcLocalSell, filterKnownGtcBuyOrders, gtcOrderProjection, partitionGtcOrderRows, projectGtcOrderRows, rememberGtcOrderIdentity, resetGtcOrderProjection, tagKnownGtcVenueOrders } from "./executionProjection";
 
 const row = (patch: Partial<OrderRow> = {}): OrderRow => ({ OrderID: "fok", PlayerID: 1, Type: "Polymarket", Link: 1791558222471, PmSide: "buy", PmTokenId: "token", PmShares: 10, PmStakeUsdc: 5, Status: "None", ...patch });
 const execution = (): GtcExecution => ({ id: "gtc", owner: "owner", orderId: "gtc-pm", plan: { playerId: 1, orderHash: "hash", otherPlayerId: 2, otherProvider: "RAY" }, other: { orderId: "gtc-ray" } } as GtcExecution);
@@ -61,6 +61,7 @@ describe("gTC source isolation before original FOK grouping", () => {
     expect(tagKnownGtcVenueOrders(1, [own])[0]).toMatchObject({ pmGtcExecutionId: "gtc" });
     expect(own).not.toHaveProperty("pmGtcExecutionId");
     expect(tagKnownGtcVenueOrders(99, [own])[0]).toBe(own);
+    expect(tagKnownGtcVenueOrders(1, [own], "another-owner")[0]).toBe(own);
   });
   it("failed GTC manual-sell persistence updates only the independent projection", () => {
     const buy = row({ PmGtcExecutionId: "g" });
@@ -74,6 +75,19 @@ describe("gTC source isolation before original FOK grouping", () => {
     resetGtcOrderProjection();
     expect(gtcOrderProjection.rows).toEqual([]);
     expect(partitionGtcOrderRows([row({ OrderID: "gtc-pm" })]).gtc).toEqual([]);
+  });
+  it("ordinary sync retains FOK, other legs and sells, excluding only this user's exact PM GTC buy", () => {
+    rememberGtcOrderIdentity(execution());
+    const fok = { orderId: "fok", provider: "Polymarket" } as VenueOrder;
+    const buy = { orderId: "GTC-PM", provider: "Polymarket" } as VenueOrder;
+    const sell = { orderId: "sell", provider: "Polymarket", pmSide: "sell", pmBuyOrderId: "gtc-pm" } as VenueOrder;
+    const other = { orderId: "gtc-ray", provider: "RAY" } as VenueOrder;
+    const settled = { ...buy, status: "win" } as VenueOrder;
+    const rows = [fok, buy, sell, other, settled];
+    expect(filterKnownGtcBuyOrders(1, rows, "owner")).toEqual([fok, sell, other, settled]);
+    expect(filterKnownGtcBuyOrders(1, rows, "another-owner")).toBe(rows);
+    expect(filterKnownGtcBuyOrders(99, rows, "owner")).toBe(rows);
+    expect(filterKnownGtcBuyOrders(1, [fok], "owner")[0]).toBe(fok);
   });
   it("adapts GTC net shares once for the unchanged gross-minus-sales PM helpers", () => {
     const raw = row({ PmGtcExecutionId: "g", PmGtcBuyShares: 10, PmShares: 6, PmAttributedSellShares: 4 });

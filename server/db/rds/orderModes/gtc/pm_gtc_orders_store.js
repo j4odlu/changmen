@@ -3,6 +3,7 @@ import { financialOrdersRelation } from "../../native_orders.js";
 import { _jsonb, getPgPool } from "../../common.js";
 import { gtcSellRowEvent, mergeGtcSellEvents } from "./pm_gtc_ledger.js";
 import { syncPmGtcSettledOrderFinancials } from "./pm_gtc_settlement.js";
+import { readGtcResultIdentity } from "./pm_gtc_result_identity.js";
 
 function ordersUpsertSql() {
   return `
@@ -138,6 +139,11 @@ export async function _rdsUpsertOrders(pool, rows) {
     const originals = new Map();
     // 只有 GTC 分支查询执行记录；FOK 不增加查询或等待。
     for (const row of [...deduped].sort((a,b) => String(a.raw.pmGtcExecutionId).localeCompare(String(b.raw.pmGtcExecutionId)))) {
+      if (await readGtcResultIdentity(client, row)) {
+        const parent = String(row.raw.pmBuyOrderId ?? row.order_id).toLowerCase();
+        originals.set(`${row.user_id}:${row.player_id}:${parent}`, { owner: row.user_id, player: row.player_id, order: parent, execution: row.raw.pmGtcExecutionId });
+        continue;
+      }
       const found = await client.query("SELECT record FROM pm_gtc_executions WHERE id=$1 AND owner=$2 FOR SHARE", [row.raw.pmGtcExecutionId, row.user_id]);
       const execution = found.rows[0]?.record;
       const parentId = String(row.raw.pmBuyOrderId ?? row.raw.pfBuyOrderId ?? row.order_id).toLowerCase();

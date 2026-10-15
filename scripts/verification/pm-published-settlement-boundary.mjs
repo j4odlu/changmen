@@ -2,6 +2,8 @@
 // 原 FOK/VPS 基线及清单独立保留；不提供任意提交、文件或模式的豁免。
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import { restorePmOrderBetLabelSource } from './pm-order-bet-label-boundary.mjs';
 
 export const publishedPmCommit = '113db6ff4e59dd615f8dd867e11d859b05766b7d';
 // [changmen 扩展] 精确登记已提交的官方优先/价格回退修复，含手动卖出已实现盈亏保护。
@@ -62,6 +64,7 @@ function restoreReviewedModule(file, source, { original, published, hunks }) {
 }
 
 export function restorePublishedPmSettlement(file, source) {
+  source = restorePmOrderBetLabelSource(file, source, target => fs.readFileSync(target, 'utf8'));
   if (priceFallbackFiles.includes(file)) {
     const reviewed = reviewedModule(file, publishedPmCommit, priceFallbackCommit);
     // 历史包仍按原登记核验；当前包先完整证明新修复，再逐 hunk 恢复旧登记。

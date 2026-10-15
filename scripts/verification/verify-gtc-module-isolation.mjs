@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { verifyGtcClientStateSources } from "./gtc-client-state-boundary.mjs";
+verifyGtcClientStateSources(file => fs.readFileSync(file, "utf8"));
 
 function files(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

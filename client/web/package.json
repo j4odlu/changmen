@@ -54,6 +54,7 @@
     "@types/node": "^25.9.1",
     "@types/three": "^0.185.1",
     "@vitejs/plugin-vue": "^5.2.3",
+    "fake-indexeddb": "^6.2.5",
     "rollup-plugin-visualizer": "^5.14.0",
     "typescript": "~6.0.3",
     "unplugin-auto-import": "^19.1.2",

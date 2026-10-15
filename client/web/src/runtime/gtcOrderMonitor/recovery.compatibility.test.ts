@@ -4,6 +4,12 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createGtcSettlementEvidence } from "@/orderModes/gtc/settlementEvidence";
 import { recoverMonitorRecords, resetMonitorRecovery } from "./recovery";
 const mock = vi.hoisted(() => ({ post: vi.fn(), refresh: vi.fn(), session: true, records: [] as GtcExecution[], error: "", evidence: undefined as ReturnType<typeof createGtcSettlementEvidence> | undefined }));
+vi.mock("@/orderModes/gtc/recoveryApi", () => ({ recoverGtc: async (request: unknown, current: () => boolean) => {
+  const response = await mock.post("local-recovery", request);
+  if (!mock.session || !current()) throw new Error("GTC 恢复登录状态已变更");
+  if (response.success !== 1) throw new Error(response.msg);
+  return response.info;
+} }));
 vi.mock("@/api/client", () => ({ post: mock.post, getAuthSessionVersion: () => "owner", isAuthSessionCurrent: () => mock.session,
   unwrap: (response: { success: number; msg?: string; info: unknown }) => { if (response.success !== 1) throw new Error(response.msg); return response.info; } }));
 vi.mock("@/orderModes/gtc/executionState", () => ({ captureGtcSession: () => () => mock.session, knownGtcRevisions: () => ({}), applyRecoveredGtcRecords: () => 0,
@@ -19,18 +25,18 @@ beforeEach(() => {
   mock.post.mockResolvedValue({ success: 1, info: result() });
 });
 afterEach(() => vi.useRealTimers());
-it("GTC restores terminal manually rebound evidence with one unified request and retains the ordinary selected date", async () => {
+it("GTC restores terminal manually rebound evidence with one combined recovery and retains the ordinary selected date", async () => {
   const first = recoverMonitorRecords(); expect(recoverMonitorRecords()).toBe(first); await first;
   expect(mock.evidence!.rows([])).toEqual([original]); expect(mock.refresh).not.toHaveBeenCalled();
-  expect(mock.post).toHaveBeenCalledOnce(); expect(mock.post.mock.calls[0]![0]).toBe("Pm_GtcRecover");
+  expect(mock.post).toHaveBeenCalledOnce(); expect(mock.post.mock.calls[0]![0]).toBe("local-recovery");
   await recoverMonitorRecords(); expect(mock.post).toHaveBeenCalledOnce();
 });
-it("unsupported old backend fails and backs off without legacy list/date calls", async () => {
-  mock.post.mockResolvedValue({ success: 0, msg: "未知预测市场 action: Pm_GtcRecover" });
-  await expect(recoverMonitorRecords()).rejects.toThrow("Pm_GtcRecover");
+it("unavailable result reader fails and backs off without legacy list/date calls", async () => {
+  mock.post.mockResolvedValue({ success: 0, msg: "未知预测市场 action: local-recovery" });
+  await expect(recoverMonitorRecords()).rejects.toThrow("local-recovery");
   expect(mock.evidence!.rows([])).toEqual([]); await recoverMonitorRecords(); expect(mock.post).toHaveBeenCalledOnce();
   mock.post.mockResolvedValue({ success: 1, info: result() }); await vi.advanceTimersByTimeAsync(5000); await recoverMonitorRecords();
-  expect(mock.evidence!.rows([])).toEqual([original]); expect(mock.post.mock.calls.every(call => call[0] === "Pm_GtcRecover")).toBe(true);
+  expect(mock.evidence!.rows([])).toEqual([original]); expect(mock.post.mock.calls.every(call => call[0] === "local-recovery")).toBe(true);
 });
 it("financial read failures publish no terminal evidence and retry independently", async () => {
   mock.post.mockResolvedValue({ success: 1, info: { ...result(), orders: [{ ok: false, message: "original missing", ids: [id], unchangedIds: [] }] } });

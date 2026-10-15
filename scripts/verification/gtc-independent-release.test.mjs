@@ -30,12 +30,13 @@ it.each([
 ])("rejects incomplete, duplicated or inconsistent matrix evidence %o", change => {
   expect(() => selectGtcRelease("backend-first", change(matrix()))).toThrow();
 });
-it("new backend keeps complete legacy GTC handler/imports/read/write behavior", () => expect(verifyLegacyGtcBackendModules(source, captured)).toBe(true));
+it("new backend preserves complete legacy reads and exactly registered client-control retirement", () => expect(verifyLegacyGtcBackendModules(source, captured)).toBe(true));
 const upgraded = file => gitSource("3d7562687f8bc81da7c138ddb1a93f48a7c8a7bf", file);
 it("backend-first continuation accepts an already upgraded captured backend", () => expect(verifyLegacyGtcBackendModules(source, upgraded)).toBe(true));
 it("reviewed recovery backend before the unsent command remains compatible", () => expect(verifyLegacyGtcBackendModules(source, file => gitSource("adb333bf24b6ba6aa3e441009b56f874a23f6ed9", file))).toBe(true));
+it("continuation checks both sides when the captured backend already has the client/result split", () => expect(verifyLegacyGtcBackendModules(source, source)).toBe(true));
 it.each([
-  ["handler.js", text => text.replace('"not_sent",', '"unexpected_send",')],
+  ["handler.js", text => text.replace('"Pm_GtcCommand"', '"Pm_GtcUnexpected"')],
   ["recovery.js", text => text.replace('!gtcPmNeverSubmitted(row)', 'true')],
   ["handler.js", text => text.replace('return getGtcOrders(body, owner);', 'return [];')],
   ["handler.js", text => text.replace('if (action === "Pm_GtcMonitorOrders")', 'if (action === "Pm_GtcUnexpected")')],

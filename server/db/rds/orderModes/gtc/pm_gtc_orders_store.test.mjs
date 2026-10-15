@@ -9,13 +9,27 @@ beforeEach(() => { vi.clearAllMocks(); mock.ready = true; mock.connect.mockResol
 describe("dedicated GTC persistence", () => {
   it("checks durable owner/original identity under a record lock before writing", async () => {
     expect(await upsertPmGtcOrders([row()])).toBe(true);
-    expect(mock.query.mock.calls[1]).toEqual(["SELECT record FROM pm_gtc_executions WHERE id=$1 AND owner=$2 FOR SHARE", ["g", "owner"]]);
+    expect(mock.query.mock.calls.find(([sql]) => sql.startsWith("SELECT record"))).toEqual(["SELECT record FROM pm_gtc_executions WHERE id=$1 AND owner=$2 FOR SHARE", ["g", "owner"]]);
     expect(mock.query.mock.calls.at(-1)[0]).toBe("COMMIT"); expect(mock.release).toHaveBeenCalledOnce();
   });
   it("wrong original player rolls back without financial writes", async () => {
     expect(await upsertPmGtcOrders([row({ player_id: 99 })])).toBe(false);
     expect(mock.query.mock.calls.some(([sql]) => sql.includes("INSERT INTO orders"))).toBe(false);
     expect(mock.query.mock.calls.at(-1)[0]).toBe("ROLLBACK");
+  });
+  it("new confirmed result settles and sells with no execution-table dependency", async () => {
+    mock.query.mockImplementation(async sql => {
+      if (sql.includes("pm_gtc_executions")) throw new Error("retired execution table is unavailable");
+      return { rows: sql.startsWith("SELECT provider,raw") ? [{ provider: "Polymarket", raw: { pmGtcExecutionId: "g", pmGtcResultRevision: 4, pmSide: "buy" } }] : [] };
+    });
+    expect(await upsertPmGtcOrders([row({ status: "Win" })])).toBe(true);
+    expect(await upsertPmGtcOrders([row({ order_id: "sell", raw: { pmGtcExecutionId: "g", pmSide: "sell", pmBuyOrderId: "buy" } })])).toBe(true);
+    expect(mock.query.mock.calls.some(([sql]) => sql.includes("pm_gtc_executions"))).toBe(false);
+  });
+  it("confirmed result anchors reject wrong execution identity before any writes", async () => {
+    mock.query.mockImplementation(async sql => ({ rows: sql.startsWith("SELECT provider,raw") ? [{ provider: "Polymarket", raw: { pmGtcExecutionId: "other", pmGtcResultRevision: 4 } }] : [] }));
+    expect(await upsertPmGtcOrders([row()])).toBe(false);
+    expect(mock.query.mock.calls.some(([sql]) => sql.includes("INSERT INTO orders") || sql.includes("pm_gtc_executions"))).toBe(false);
   });
   it("zero fill snapshots require an existing authoritative financial order", async () => {
     await upsertPmGtcOrders([row()]);

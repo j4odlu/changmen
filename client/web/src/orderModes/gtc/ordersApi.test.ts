@@ -6,6 +6,7 @@ import { refreshGtcOrders, saveOrders } from "./ordersApi";
 const mock = vi.hoisted(() => ({ post: vi.fn(), fetch: vi.fn(), date: "2026-10-09", current: true }));
 vi.mock("@/api/client", () => ({ post: mock.post, unwrap: (value: unknown) => value, getAuthSessionVersion: () => "session", isAuthSessionCurrent: () => mock.current }));
 vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ fetchOrders: mock.fetch, orderDate: mock.date }) }));
+vi.mock("./api", () => ({ listGtc: async () => [{ id: "execution", plan: { playerId: 1, otherPlayerId: 2 } }] }));
 beforeEach(() => { vi.clearAllMocks(); mock.current = true; mock.fetch.mockResolvedValue(true); mock.post.mockResolvedValue({ success: 1, info: true }); });
 describe("gTC results feed the ordinary order pipeline", () => {
   it("refreshes the common order list rather than fetching a second GTC list", async () => {
@@ -28,6 +29,11 @@ describe("gTC results feed the ordinary order pipeline", () => {
     const account = { accountId: 1, provider: "Polymarket" } as PlatformAccount;
     const rows: (VenueOrder & { pmGtcExecutionId: string })[] = [{ orderId: "buy", provider: "Polymarket", pmGtcExecutionId: "execution", odds: 2, createAt: Date.now(), betMoney: 5, reward: 0, money: 0, status: "none", game: "CS2", match: "match", bet: "winner", item: "Home" }];
     await saveOrders(account, rows);
-    expect(mock.post).toHaveBeenCalledExactlyOnceWith("Pm_GtcSaveOrders", { type: "Polymarket", playerId: 1, orders: JSON.stringify(rows) });
+    expect(mock.post).toHaveBeenCalledExactlyOnceWith("Pm_GtcSaveOrders", { type: "Polymarket", playerId: 1, orders: JSON.stringify(rows), origins: [{ executionId: "execution", playerId: 1, provider: "Polymarket", orderId: "buy" }] });
+  });
+  it("does not save results after login changes", async () => {
+    mock.current = false;
+    await expect(saveOrders({ accountId: 1, provider: "Polymarket" } as PlatformAccount, [])).rejects.toThrow("登录状态已变更");
+    expect(mock.post).not.toHaveBeenCalled();
   });
 });

@@ -12,6 +12,7 @@ import { createOrderMonitorLoop } from "@/runtime/orderMonitoring/loop";
 import { observedRayOrders, rayOrderResults } from "@/runtime/orderMonitoring/rayOrders";
 import { recoverMonitorRecords } from "./recovery";
 import { recoveryRetryDelay } from "./recoveryPolicy";
+import { updateGtcCounterpartLocally } from "./localOrders";
 
 const otherPolls = new Map<string, Promise<VenueOrder[]>>();
 export async function pollGtcOther(id: string, confirm = true): Promise<VenueOrder[]> {
@@ -50,6 +51,7 @@ export async function pollGtcOther(id: string, confirm = true): Promise<VenueOrd
         : original.status === "pending"
           ? "pending"
           : confirm || current.other.state === "filled" ? "filled" : "accepted";
+      updateGtcCounterpartLocally(account.accountId, original);
       if (state !== current.other.state || original.orderId !== current.other.orderId)
         await mutateGtc(id, { kind: "other", state, orderId: original.orderId, message: "" });
       if (!isCurrent())

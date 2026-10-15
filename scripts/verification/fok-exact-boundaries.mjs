@@ -4,6 +4,7 @@ import { restoreUnifiedArbitrageSource } from "./unified-arb-boundaries.mjs";
 import { restoreRayBackendDispatch } from "./ray-backend-dispatch-boundary.mjs";
 import { restoreRayProviderSource, restoreRayFinalizeSource } from "./ray-frontend-boundary.mjs";
 import { restoreRayOrderSyncSource } from "./ray-client-monitor-boundary.mjs";
+import { restoreGtcClientStateSource } from "./gtc-client-state-boundary.mjs";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import ts from "typescript";
@@ -111,10 +112,13 @@ function restoreGateway(source) {
 }
 
 export function verifyProtectedSource(file, current, original, readSource = target => fs.readFileSync(target, "utf8"), baselineRead) {
+  const clientStateSource = restoreGtcClientStateSource(file, current, readSource, replaceExact);
+  const clientStateRestored = clientStateSource !== current;
+  current = clientStateSource;
   const specialized = specializeFokSource(file, restoreMinimalOrdersSource(file, current, readSource), readSource);
   const unified = restoreRayOrderSyncSource(file, restoreUnifiedArbitrageSource(file, specialized, replaceExact), readSource, replaceExact);
   const source = restoreRayBackendDispatch(file, restoreRayProviderSource(file, restoreRayFinalizeSource(file, unified, replaceExact), readSource), replaceExact);
-  const unifiedRestored = source !== specialized;
+  const unifiedRestored = clientStateRestored || source !== specialized;
   if (file === "server/db/rds/orders_store.js") {
     sameModule(restoreOrdersConsumerCompatibility(source, readSource), original, file);
     return { file, fixedSourceEqual: false, exactBoundaryVerified: true, kind: "explicit orders financial compatibility with complete fixed-baseline module" };
@@ -126,7 +130,7 @@ export function verifyProtectedSource(file, current, original, readSource = targ
     for (const [name, module] of [["preserveOrderMode", "orderMetadata"], ["saveRowsByExecution", "saveRows"]]) {
       restored = replaceExact(restored, `import { ${name} } from "../orderModes/${module}.js";`);
       const helper = `server/backend/core/orderModes/${module}.js`;
-      assert.equal(normalize(module === "orderMetadata" ? restoreGtcSnapshotMetadata(readSource(helper)) : readSource(helper)), gitSource("4dd2c5e967fbd2101e3c848f2d48c221ec7c4e72", helper), "complete existing committed mode helper");
+      assert.equal(normalize(module === "orderMetadata" ? restoreGtcSnapshotMetadata(restoreGtcClientStateSource(helper, readSource(helper), readSource, replaceExact)) : readSource(helper)), gitSource("4dd2c5e967fbd2101e3c848f2d48c221ec7c4e72", helper), "complete existing committed mode helper");
     }
     restored = replaceExact(restored, "preserveOrderMode(raw, prevRaw, o, existingByOrderId);");
     restored = replaceExact(restored, "if (rows.some(row => row.raw?.pmGtcExecutionId)) return saveRowsByExecution(rows);");

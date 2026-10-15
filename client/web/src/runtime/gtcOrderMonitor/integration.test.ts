@@ -10,7 +10,7 @@ import { getProvider } from "@/runtime/providers";
 import { registerRayOrderContext } from "@/runtime/rayOrderMonitor/contexts";
 import { useRayOrderContextStore } from "@/runtime/rayOrderMonitor/contextStore";
 import { startRayOrderMonitoring, stopRayOrderMonitoring } from "@/runtime/rayOrderMonitor/runtime";
-import { gtcProgress } from "@/orderModes/gtc/executionState";
+import { financialOrders, gtcProgress } from "@/orderModes/gtc/executionState";
 import { observedRayOrders, resetRayOrderResults } from "@/runtime/orderMonitoring/rayOrders";
 import { rayMonitoring } from "@/runtime/rayOrderMonitor/state";
 import { startGtcOrderMonitoring as startGtcRuntime, stopGtcOrderMonitoring as stopGtcRuntime } from "./runtime";
@@ -92,14 +92,13 @@ it("three originals consume one existing query; background rounds never query RA
   expect(mocks.read).not.toHaveBeenCalled();
   await getProvider(mocks.accounts[1]!)!.getOrders!(mocks.accounts[1]!); await vi.advanceTimersByTimeAsync(0);
   expect(mocks.read).toHaveBeenCalledOnce(); expect(mocks.pmRead).not.toHaveBeenCalled();
-  expect(mocks.save).toHaveBeenCalledTimes(3);
+  expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.refresh).not.toHaveBeenCalled();
   expect(gtcProgress.records.find(row => row.id === "one")!.other.state).toBe("filled");
   await vi.advanceTimersByTimeAsync(5000);
-  expect(mocks.read).toHaveBeenCalledOnce(); expect(mocks.save).toHaveBeenCalledTimes(3);
+  expect(mocks.read).toHaveBeenCalledOnce(); expect(mocks.save).not.toHaveBeenCalled();
   await getProvider(mocks.accounts[1]!)!.getOrders!(mocks.accounts[1]!); await vi.advanceTimersByTimeAsync(0);
-  expect(mocks.read).toHaveBeenCalledTimes(2); expect(mocks.save).toHaveBeenCalledTimes(4);
-  expect(mocks.save.mock.calls.map(call => call[1][0].orderId).sort()).toEqual(["ray-one", "ray-two", "ray-pending", "ray-pending"].sort());
-  // 普通列表故意仍为旧 None，切换日期后也不能重新拉已保存的结算单。
+  expect(mocks.read).toHaveBeenCalledTimes(2); expect(mocks.save).not.toHaveBeenCalled();
+  // 普通列表故意仍为旧 None，切换日期后也不能重新拉已观察到终态的原单。
   mocks.orders.clear(); await vi.advanceTimersByTimeAsync(120000);
   expect(mocks.read).toHaveBeenCalledTimes(2);
   expect(gtcProgress.otherQueryIssues).toEqual({});
@@ -127,18 +126,14 @@ it("GTC consumes RAY results into its own facts without writing the RAY monitor 
   expect(rayMonitoring.orders.size).toBe(0);
 });
 
-it("results arriving during an earlier save are consumed afterwards without another venue request", async () => {
+it("successive RAY snapshots advance client facts without involving order persistence", async () => {
   execution("one");
-  let release!: () => void;
-  mocks.save.mockImplementationOnce(() => new Promise<void>((resolve) => { release = resolve; }));
   mocks.read.mockResolvedValueOnce([venue("one", "none")]).mockResolvedValueOnce([venue("one", "reject")]);
   startGtcRuntime("owner"); await vi.advanceTimersByTimeAsync(0);
   const account = mocks.accounts[1]!;
   await getProvider(account)!.getOrders!(account); await vi.advanceTimersByTimeAsync(0);
   await getProvider(account)!.getOrders!(account); await vi.advanceTimersByTimeAsync(0);
-  expect(mocks.save).toHaveBeenCalledOnce();
-  release(); await vi.advanceTimersByTimeAsync(0);
-  expect(mocks.save).toHaveBeenCalledTimes(2);
+  expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.refresh).not.toHaveBeenCalled();
   expect(gtcProgress.records[0]!.other.state).toBe("rejected");
   await vi.advanceTimersByTimeAsync(60000);
   expect(mocks.read).toHaveBeenCalledTimes(2);
@@ -152,9 +147,12 @@ it("separate accounts only consume their own existing query results", async () =
   startGtcRuntime("owner"); await vi.advanceTimersByTimeAsync(0);
   expect(mocks.read).not.toHaveBeenCalled();
   await getProvider(mocks.accounts[1]!)!.getOrders!(mocks.accounts[1]!); await vi.advanceTimersByTimeAsync(0);
-  expect(mocks.save).toHaveBeenCalledTimes(2);
+  expect(financialOrders().find(row => row.OrderID === "ray-one")?.Status).toBe("Lose");
+  expect(financialOrders().find(row => row.OrderID === "ray-two")?.Status).toBe("Win");
+  expect(financialOrders().find(row => row.OrderID === "ray-other")?.Status).toBe("None");
+  expect(mocks.save).not.toHaveBeenCalled();
   await getProvider(mocks.accounts[2]!)!.getOrders!(mocks.accounts[2]!); await vi.advanceTimersByTimeAsync(0);
-  expect(mocks.read).toHaveBeenCalledTimes(2); expect(mocks.save).toHaveBeenCalledTimes(3);
+  expect(mocks.read).toHaveBeenCalledTimes(2); expect(mocks.save).not.toHaveBeenCalled();
 });
 
 it("an existing query failure preserves original identities without starting GTC retries", async () => {
@@ -169,7 +167,7 @@ it("an existing query failure preserves original identities without starting GTC
   await vi.advanceTimersByTimeAsync(5000);
   expect(mocks.read).toHaveBeenCalledOnce(); expect(mocks.save).not.toHaveBeenCalled();
   await getProvider(mocks.accounts[1]!)!.getOrders!(mocks.accounts[1]!); await vi.advanceTimersByTimeAsync(0);
-  expect(mocks.read).toHaveBeenCalledTimes(2); expect(mocks.save).toHaveBeenCalledTimes(2);
+  expect(mocks.read).toHaveBeenCalledTimes(2); expect(mocks.save).not.toHaveBeenCalled();
   expect(gtcProgress.otherQueryIssues).toEqual({});
   await vi.advanceTimersByTimeAsync(65000);
   expect(mocks.read).toHaveBeenCalledTimes(2);

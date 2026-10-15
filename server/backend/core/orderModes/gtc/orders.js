@@ -4,6 +4,7 @@ import * as orders from "../../account/order_store.js";
 import { assertPlayerOwnedByUser } from "../../account/player_ownership.js";
 import { verifyOrderExecution } from "../orderMetadata.js";
 import { readOrdersForMode } from "../readOrders.js";
+import { saveClientGtcOrders } from "./results.js";
 
 /** [changmen 扩展] 仅返回认证用户持久化执行的 exact 原单，不依赖日期或前端提供的账号。 */
 export async function getGtcMonitorOrders(body, owner, recoveredRecords) {
@@ -66,6 +67,7 @@ export async function getGtcOrders(body, owner) {
 }
 
 export async function saveGtcOrders(body, owner) {
+  if (body.origins != null) return saveClientGtcOrders(body, owner);
   const playerId = Number(body.playerId);
   const owned = await assertPlayerOwnedByUser(playerId, owner);
   if (!owned.ok)

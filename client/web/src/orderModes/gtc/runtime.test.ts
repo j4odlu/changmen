@@ -15,7 +15,7 @@ vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCu
   unwrap: (response: { info: unknown }) => response.info }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: "owner", extensionPrefs: {} }) }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ findAccount: (id: number) => ({ provider: id === 2 ? "RAY" : "Polymarket", accountId: id }) }) }));
-vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: mocks.orders }) }));
+vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: mocks.orders, updateTodayProfit: vi.fn() }) }));
 vi.mock("@/stores/betting/successMarkers", () => ({ markSuccessfulBet: mocks.mark }));
 vi.mock("./successMarkers", () => ({ markGtcSuccess: mocks.mark }));
 vi.mock("./api", () => ({ listGtc: mocks.list, commandGtc: mocks.command }));

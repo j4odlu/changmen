@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import ts from "typescript";
 import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mjs";
+import { verifyGtcClientStateSource } from "./gtc-client-state-boundary.mjs";
 
 export function releasePlan(args) {
   assert(args.length === 0 || (args.length === 1 && ["--release-plan=frontend-only", "--release-plan=backend-first"].includes(args[0])), "Unknown or conflicting release plan");
@@ -27,12 +28,18 @@ export function selectGtcRelease(plan, combinations) {
     blockedCombinations: combinations.filter(row => !row.passed).map(row => row.id) };
 }
 
-/** 仅增加精确查询入口；既有 GTC handler 与读写函数也逐模块核验，不删掉检查。 */
+/** 逐模块核验历史读取与旧存储分支；客户端分工增量先核对完整固定指纹，再还原比较。 */
 export function verifyLegacyGtcBackendModules(source, captured) {
   const handler = "server/backend/core/orderModes/gtc/handler.js";
   // [changmen 扩展] 两端分别核对已登记扩展，再比较原契约；线上已升级时不能只还原候选一端。
   const normalizeHandler = read => {
     let specialized = read(handler);
+    // [changmen 扩展] 新版只读兼容旧历史，旧写命令明确拒绝。完整新模块须先通过固定源码登记。
+    if (specialized.includes('"Pm_GtcSyncResult"')) {
+      for (const file of [handler, "server/backend/core/orderModes/gtc/results.js"])
+        verifyGtcClientStateSource(file, read(file));
+      return normalizeHandler(file => file === handler ? gitSource("3a88e886ad897d0bf06ee81c2aa761f7ae194738", file) : read(file));
+    }
     // [changmen 扩展] 只登记明确未发送的新增命令，原命令顺序、授权与 handler 全文继续核对。
     if (specialized.includes('"not_sent"')) {
       specialized = replaceExact(specialized,
@@ -73,7 +80,14 @@ export function verifyLegacyGtcBackendModules(source, captured) {
   assert.deepEqual(moduleTokens(normalizeHandler(source)), moduleTokens(normalizeHandler(captured)), "complete legacy GTC handler");
   const orders = "server/backend/core/orderModes/gtc/orders.js";
   const parse = text => ts.createSourceFile(orders, text, ts.ScriptTarget.Latest, true);
-  const current = parse(source(orders)), previous = parse(captured(orders));
+  const normalizeOrders = read => {
+    const text = read(orders);
+    if (!text.includes('if (body.origins != null)')) return text;
+    verifyGtcClientStateSource(orders, text);
+    verifyGtcClientStateSource("server/backend/core/orderModes/gtc/results.js", read("server/backend/core/orderModes/gtc/results.js"));
+    return gitSource("3a88e886ad897d0bf06ee81c2aa761f7ae194738", orders);
+  };
+  const current = parse(normalizeOrders(source)), previous = parse(normalizeOrders(captured));
   const added = current.statements.filter(node => ts.isFunctionDeclaration(node) && node.name?.text === "getGtcMonitorOrders");
   assert.equal(added.length, 1, "Exactly one GTC monitor function is required");
   const reviewed = parse(gitSource("adb333bf24b6ba6aa3e441009b56f874a23f6ed9",orders));

@@ -12,6 +12,6 @@
 - 旧旁路查询及主循环 tick 已移除；`contexts.ts`、`contextStore.ts`、`match.ts` 不设置定时器或查询场馆，只消费唯一查询返回值。旧监控时长偏好已弃用，所有原单持续观察至终态。
 - `contextStore.ts` 从旧 `changmen:ray-reject-monitor:v1:<user>` 迁移关联和补单依据，移除旧时间限制，保存成功后删除旧缓存键；普通原单缓存也继续兼容恢复。
 
-`lifecycle.ts` 管理自身登录生命周期，`api.ts` 只负责读取恢复数据，`state.ts` 为共享展示状态。`orderMonitoring/rayState.ts`、`raySettlement.ts`、`rayLifecycle.ts` 仅兼容旧导入。本次 RAY 独立发布保持 GTC 消费已有查询快照的流程不变；GTC 职责拆分另行发布。首次下注确认链路保持原保存及刷新。
+`lifecycle.ts` 管理自身登录生命周期，`api.ts` 只负责读取恢复数据，`state.ts` 为共享展示状态。`orderMonitoring/rayState.ts`、`raySettlement.ts`、`rayLifecycle.ts` 仅兼容旧导入。GTC 消费已有 RAY 查询快照时不再保存订单或刷新列表；首次下注后的 fresh 确认链路保持原保存及刷新。
 
 这是客户端模块，持续运行期间需要保持页面会话。RDS 的订单状态在正常订单同步时更新，不随五秒监控查询写入。

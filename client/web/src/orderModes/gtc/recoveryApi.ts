@@ -1,7 +1,11 @@
-/** [changmen 扩展] 配套前后端只使用聚合恢复；不支持或失败由各分区退避，不降级扫描旧列表。 */
+/** [changmen 扩展] 本地执行恢复与精确财务读取独立进行，各分区沿用原退避。 */
 import type { GtcRecoverRequest, GtcRecoverResult } from "@changmen/shared/pm_gtc_recovery";
 import type { OrderRow } from "@/types/order";
-import { getAuthSessionVersion, isAuthSessionCurrent, post, unwrap } from "@/api/client";
+import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
+import { listGtc } from "./api";
+import { loadGtcMonitorOrders } from "./ordersApi";
+import { gtcRecoveryFinancialKey } from "@changmen/shared/pm_gtc_recovery";
+import { needsFinancialRecovery } from "@/runtime/gtcOrderMonitor/recoveryPolicy";
 const failure = (error: unknown) => ({ ok: false as const, message: error instanceof Error ? error.message : "GTC 恢复响应无效" });
 
 function validate(result: GtcRecoverResult<OrderRow>, request: GtcRecoverRequest): GtcRecoverResult<OrderRow> {
@@ -43,9 +47,30 @@ export async function recoverGtc(request: GtcRecoverRequest, isCurrent: () => bo
   const current = () => isAuthSessionCurrent(session) && isCurrent();
   if (!current())
     throw new Error("GTC 恢复登录状态已变更");
-  const response = await post<GtcRecoverResult<OrderRow>>("Pm_GtcRecover", { ...request }, "", { errorTip: false });
-  if (!current())
-    throw new Error("GTC 恢复登录状态已变更");
-  const result = unwrap(response);
+  const orders: GtcRecoverResult<OrderRow>["orders"] = [];
+  const read = async (ids: string[]) => {
+    for (let offset = 0; offset < ids.length; offset += 1000) {
+      const batch = ids.slice(offset, offset + 1000);
+      try {
+        const rows = await loadGtcMonitorOrders(batch, current);
+        const unchangedIds = batch.filter(id => request.knownOrders[id] === gtcRecoveryFinancialKey(rows.filter(row => row.PmGtcExecutionId === id)));
+        orders.push({ ok: true, ids: batch, unchangedIds, rows: rows.filter(row => !unchangedIds.includes(row.PmGtcExecutionId!)) });
+      }
+      catch (error) { orders.push({ ...failure(error), ids: batch, unchangedIds: [] }); }
+    }
+  };
+  const discovery = (async (): Promise<GtcRecoverResult<OrderRow>["executions"]> => {
+    if (!request.discover) return null;
+    try { return { ok: true, rows: await listGtc(undefined, request.knownRevisions) }; }
+    catch (error) { return failure(error); }
+  })();
+  const [executions] = await Promise.all([discovery, read([...new Set(request.monitorIds)])]);
+  if (!current()) throw new Error("GTC 恢复登录状态已变更");
+  if (request.recoverDiscovered && executions?.ok && Array.isArray(executions.rows)) {
+    const skipped = new Set([...request.skipMonitorIds, ...request.monitorIds]);
+    await read(executions.rows.filter(row => row && !skipped.has(row.id) && needsFinancialRecovery(row, [])).map(row => row.id));
+  }
+  if (!current()) throw new Error("GTC 恢复登录状态已变更");
+  const result = { executions, orders };
   return validate(result, request);
 }

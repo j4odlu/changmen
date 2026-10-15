@@ -28,11 +28,17 @@ test("one push entry covers every path and validates before either component", (
   assert.equal(release.concurrency["cancel-in-progress"], false);
   assert.equal(release.concurrency.queue, "max");
   assert.equal(release.jobs.validate.env.TZ, "Asia/Shanghai", "Date attribution must match production");
-  assert.ok(release.jobs.validate.steps.some(s => s.run === "node scripts/deploy/read-deployed-versions.mjs"));
+  const baseline = release.jobs.validate.steps.find(s => s.run?.includes("node scripts/deploy/read-deployed-versions.mjs"));
+  assert.equal(baseline.if, "github.event_name == 'push'");
+  assert.equal(release.jobs.validate.env.CI_DEPLOYED_VERSIONS_FILE, undefined);
+  assert.match(baseline.run, /CI_DEPLOYED_VERSIONS_FILE=.*GITHUB_ENV/);
   assert.deepEqual(release.jobs.backend.needs, "validate");
-  assert.deepEqual(release.jobs.frontend.needs, ["validate", "backend"]);
-  const condition = release.jobs.frontend.if;
-  for (const part of ["needs.validate.result == 'success'", "needs.backend.result == 'success'", "needs.backend.result == 'skipped'", "!cancelled()"])
+  assert.equal(release.jobs.frontend.needs, "validate");
+  assert.match(release.jobs.frontend.if, /backend-first != 'true'/);
+  assert.deepEqual(release.jobs.frontend_after_backend.needs, ["validate", "backend"]);
+  assert.match(release.jobs.frontend_after_backend.if, /backend-first == 'true'/);
+  const condition = release.jobs.frontend_after_backend.if;
+  for (const part of ["needs.validate.result == 'success'", "needs.backend.result == 'success'", "!cancelled()"])
     assert.ok(condition.includes(part), part);
 });
 test("component checks run once, and artifacts are sealed only after success", () => {

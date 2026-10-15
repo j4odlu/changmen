@@ -20,12 +20,6 @@ PM2_SXBET="${PM2_SXBET:-changmen-sxbet-collector}"
 PM2_MATCHER="${PM2_MATCHER:-changmen-matcher}"
 DEPLOY_FULL="${DEPLOY_FULL:-0}"
 DEPLOY_SKIP_APP_BUILD="${DEPLOY_SKIP_APP_BUILD:-0}"
-# [changmen 扩展] Internal activation phase of release-backend.sh. Its mandatory
-# candidate preflight runs first; rollback only restores the old runtime.
-if [ "${DEPLOY_RUNTIME_ONLY:-0}" = "1" ] && [ "${DEPLOY_RELEASE_MODE:-0}" != "1" ]; then
-  echo 'ERROR: runtime-only activation requires an isolated release'
-  exit 1
-fi
 
 t0=$SECONDS
 log() { echo "==> $*"; }
@@ -123,18 +117,15 @@ DO_PM2_WEB=0
 DO_PM2_PM_SPORTS=0
 DO_PM2_PM_FOOTBALL=0
 NEED_DIST_UPLOAD=0
-LIVE_TIMER_TOUCHED=0
-RDS_SCHEMA_TOUCHED=0
-PLAYERS_RDS_TOUCHED=0
-PLAYERS_OWNER_MIGRATION_TOUCHED=0
-# [changmen 扩展] Retired plan fields remain zero for callers. Historical data
-# import/ownership repair is an explicit maintenance operation, never a deploy.
 
 classify() {
   local raw="$1"
   local p="${raw#changmen/}"
 
   case "$p" in
+    server/backend/db/migrations/*|server/db/schema/*|server/backend/scripts/ops/migrations/*|server/backend/scripts/apply-rds-schema.mjs|server/backend/scripts/apply-order-observation-schema.mjs|server/backend/scripts/ops/diagnostics/check-rds-schema.mjs)
+      # RDS maintenance is never an application release operation.
+      ;;
     package.json|package-lock.json)
       DO_INSTALL_ROOT=1
       DO_PM2_WEB=1
@@ -208,7 +199,6 @@ if [ "${DEPLOY_RELEASE_MODE:-0}" = "1" ]; then
   DO_PM2_WEB=1
   DO_PM2_PM_SPORTS=1
   DO_PM2_PM_FOOTBALL=1
-  RDS_SCHEMA_TOUCHED="${DEPLOY_SCHEMA_CHANGED:-0}"
 elif [ "$DEPLOY_FULL" = "1" ]; then
   DO_INSTALL_ROOT=1
   DO_INSTALL_FRONTEND=1
@@ -232,7 +222,6 @@ elif [ "$OLD_HEAD" = "$NEW_HEAD" ]; then
     DO_PM2_PM_SPORTS=1
     DO_PM2_PM_FOOTBALL=1
     DO_COMPILE_ROUTER=1
-    RDS_SCHEMA_TOUCHED=1
   else
     log "already up to date, skip install/build"
   fi
@@ -257,24 +246,8 @@ if [ "$DEPLOY_SKIP_APP_BUILD" = "1" ]; then
   DO_APP_BUILD=0
 fi
 
-CERTIFICATE_SCHEMA_TOUCHED=0
-if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ] || { [ "${DEPLOY_RELEASE_MODE:-0}" != "1" ] && [ "$OLD_HEAD" != "$NEW_HEAD" ]; }; then
-  while IFS= read -r path; do
-    case "$path" in
-      server/db/schema/client_certificates.sql|*apply-client-certificate-schema.mjs)
-        CERTIFICATE_SCHEMA_TOUCHED=1
-        ;;
-      changmen/server/backend/db/migrations/*|server/backend/db/migrations/*|*scripts/apply-rds-schema.mjs|*scripts/apply-order-observation-schema.mjs|*scripts/check-rds-schema.mjs|*scripts/rds-schema-check.mjs|*scripts/rds-schema-baseline.json)
-        RDS_SCHEMA_TOUCHED=1
-        ;;
-      *live_timer*|changmen/server/db/rds/platform_collector_store.js|server/db/rds/platform_collector_store.js)
-        LIVE_TIMER_TOUCHED=1
-        ;;
-    esac
-  done < <(if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ]; then cat "$DEPLOY_CHANGED_PATHS_FILE"; else git -C "$GIT_ROOT" diff --name-only "$OLD_HEAD" "$NEW_HEAD"; fi)
-fi
 if [ "${DEPLOY_PLAN_ONLY:-0}" = "1" ]; then
-  printf "DEPLOY_PLAN full=%s install=%s compile=%s web=%s schema=%s players=%s owner=%s timers=%s certificates=%s\n" "$DEPLOY_FULL" "$DO_INSTALL_ROOT" "$DO_COMPILE_ROUTER" "$DO_PM2_WEB" "$RDS_SCHEMA_TOUCHED" "$PLAYERS_RDS_TOUCHED" "$PLAYERS_OWNER_MIGRATION_TOUCHED" "$LIVE_TIMER_TOUCHED" "$CERTIFICATE_SCHEMA_TOUCHED"
+  printf "DEPLOY_PLAN full=%s install=%s compile=%s web=%s\n" "$DEPLOY_FULL" "$DO_INSTALL_ROOT" "$DO_COMPILE_ROUTER" "$DO_PM2_WEB"
   exit 0
 fi
 
@@ -309,17 +282,9 @@ else
   log "skip compile:router"
 fi
 
-# [changmen 扩展] SQL preconditions fail closed. An orphan/legacy installation
-# needs a separately reviewed maintenance migration, not an automatic rewrite.
-if [ "${DEPLOY_RUNTIME_ONLY:-0}" != "1" ] && { [ "$DO_PM2_WEB" = "1" ] || [ "$RDS_SCHEMA_TOUCHED" = "1" ] || [ "$CERTIFICATE_SCHEMA_TOUCHED" = "1" ] || [ "$DEPLOY_FULL" = "1" ]; }; then
-  log "RDS schema: read-only verification (no historical SQL or ledger writes)"
-  (cd server/backend && node scripts/check-rds-schema.mjs)
-fi
-if [ "$CERTIFICATE_SCHEMA_TOUCHED" = "1" ] || [ "$LIVE_TIMER_TOUCHED" = "1" ]; then
-  log "schema maintenance and timer cleanup are separate operations; deploy does not write database data"
-fi
-
-if command -v pm2 >/dev/null 2>&1; then
+if [ "$DO_PM2_WEB" = "0" ] && [ "$DO_PM2_PM_SPORTS" = "0" ] && [ "$DO_PM2_PM_FOOTBALL" = "0" ]; then
+  log "skip pm2 operations (no backend changes)"
+elif command -v pm2 >/dev/null 2>&1; then
   LEGACY_PM2_DELETED=0
   migrate_legacy_pm2_names() {
     local pair old new

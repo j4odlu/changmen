@@ -31,7 +31,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   try {
     const [scope, evidenceFile, output, commit, component] = process.argv.slice(2);
     const evidence = JSON.parse(fs.readFileSync(evidenceFile, "utf8"));
-    if (scope === "needs-backend") process.exit(evidence.report.plan.deployment.components.includes("backend") ? 0 : 1);
+    if (scope === "needs-backend") process.exit(evidence.report.plan.deployment.backendFirst ? 0 : 1);
     if (scope === "archive") { assertTransport(component, evidence, output, commit); process.exit(0); }
     let text = ""; for await (const chunk of process.stdin) text += chunk;
     const report = assertRuntime(scope, JSON.parse(text), evidence);

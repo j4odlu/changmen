@@ -23,10 +23,10 @@ jobs:
     timeout-minutes: 25
     env:
       TZ: Asia/Shanghai
-      CI_DEPLOYED_VERSIONS_FILE: output/change-validation/deployed-versions.json
     outputs:
       backend: ${{ steps.plan.outputs.backend }}
       frontend: ${{ steps.plan.outputs.frontend }}
+      backend-first: ${{ steps.plan.outputs.backend-first }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -37,6 +37,7 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Prepare read-only version check
+        if: github.event_name == 'push'
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
@@ -50,7 +51,10 @@ jobs:
           printf 'Host 47.57.10.202\n  Port %s\n' "${DEPLOY_PORT:-22}" >> ~/.ssh/config
           printf 'FOK_BASELINE_SSH_KEY=%s\nFOK_BASELINE_SSH_TARGET=%s@47.57.10.202\n' "$RUNNER_TEMP/release-capture-key" "${DEPLOY_USER:-root}" >> "$GITHUB_ENV"
       - name: Read active release baselines
-        run: node scripts/deploy/read-deployed-versions.mjs
+        if: github.event_name == 'push'
+        run: |
+          node scripts/deploy/read-deployed-versions.mjs
+          echo 'CI_DEPLOYED_VERSIONS_FILE=output/change-validation/deployed-versions.json' >> "$GITHUB_ENV"
       - name: Resolve shared change plan
         id: plan
         run: node scripts/deploy/change-plan.mjs
@@ -89,10 +93,15 @@ jobs:
     uses: ./.github/workflows/deploy-backend.yml
     secrets: inherit
   frontend:
+    needs: validate
+    if: needs.validate.outputs.frontend == 'true' && needs.validate.outputs.backend-first != 'true'
+    uses: ./.github/workflows/deploy-frontend.yml
+    secrets: inherit
+  frontend_after_backend:
     needs: [validate, backend]
     if: >-
       ${{ !cancelled() && needs.validate.result == 'success' &&
           needs.validate.outputs.frontend == 'true' &&
-          (needs.backend.result == 'success' || needs.backend.result == 'skipped') }}
+          needs.validate.outputs.backend-first == 'true' && needs.backend.result == 'success' }}
     uses: ./.github/workflows/deploy-frontend.yml
     secrets: inherit

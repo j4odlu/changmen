@@ -31,28 +31,28 @@ function plan(paths, overrides = {}) {
 }
 test("auth-only archive release compiles and restarts without rerunning schema/backfills", () => {
   const result = plan(["server/backend/core/auth/login_service.js", "server/db/rds/auth_store.js", "server/db/impl_rds.js", "server/realtime-hub/hub.js"]);
-  assert.match(result, /install=1 compile=1 web=1 schema=0 players=0 owner=0 timers=0/);
+  assert.match(result, /install=1 compile=1 web=1/);
 });
-test("an actual migration requests schema verification", () => {
-  assert.match(plan(["server/backend/db/migrations/044_auth_browser_sessions.sql"]), /schema=1/);
+test("database migrations do not deploy applications", () => {
+  assert.match(plan(["server/backend/db/migrations/044_auth_browser_sessions.sql"]), /install=0 compile=0 web=0/);
 });
 test("frontend-only changes do not restart the backend or migrate", () => {
-  assert.match(plan(["client/web/src/api/auth.ts"]), /compile=0 web=0 schema=0/);
+  assert.match(plan(["client/web/src/api/auth.ts"]), /compile=0 web=0/);
 });
 test("explicit full release retains full-deploy behavior", () => {
   assert.match(plan(["server/backend/core/auth/identity.js"], { DEPLOY_FULL: "1" }), /full=1 install=1 compile=1 web=1/);
 });
-test('certificate schema requests verification independently of account/order migrations', () => {
-  assert.match(plan(['server/db/schema/client_certificates.sql']), /schema=0 players=0 owner=0 timers=0 certificates=1/);
+test('certificate schema does not deploy applications', () => {
+  assert.match(plan(['server/db/schema/client_certificates.sql']), /install=0 compile=0 web=0/);
 });
 
 test('isolated release identifies certificate changes and skips install/compile', () => {
   assert.match(plan(['server/db/schema/client_certificates.sql'], { DEPLOY_RELEASE_MODE: '1' }),
-    /install=0 compile=0 web=1 schema=0 players=0 owner=0 timers=0 certificates=1/);
+    /install=0 compile=0 web=1/);
 });
 
 test('isolated release still identifies actual account schema changes', () => {
-  assert.match(plan(['server/backend/db/migrations/044_auth_browser_sessions.sql'], { DEPLOY_RELEASE_MODE: '1' }), /schema=1/);
+  assert.match(plan(['server/backend/db/migrations/044_auth_browser_sessions.sql'], { DEPLOY_RELEASE_MODE: '1' }), /install=0 compile=0 web=1/);
 });
 
 for (const file of [
@@ -60,12 +60,14 @@ for (const file of [
   "server/db/rds/player_store.js", "server/db/player_account_record.js",
 ]) {
   test(`ordinary account code change never requests legacy data backfill: ${file}`, () => {
-    assert.match(plan([file]), /schema=0 players=0 owner=0/);
-    assert.match(plan([file], { DEPLOY_RELEASE_MODE: "1" }), /schema=0 players=0 owner=0/);
+    assert.match(plan([file]), new RegExp(`install=1 compile=${file.startsWith("server/backend/") ? 1 : 0} web=1`));
+    assert.match(plan([file], { DEPLOY_RELEASE_MODE: "1" }), /install=0 compile=0 web=1/);
   });
 }
-test("schema helpers and legacy SQL request verification without JSON import or ownership rewrites", () => {
+test("schema helpers and legacy SQL do not request application deployment", () => {
   for (const file of ["server/backend/scripts/apply-rds-schema.mjs", "server/backend/db/migrations/028_players_account_data.sql",
-    "server/backend/scripts/check-rds-schema.mjs", "server/backend/scripts/rds-schema-check.mjs", "server/backend/scripts/rds-schema-baseline.json"])
-    assert.match(plan([file]), /schema=1 players=0 owner=0/);
+    "server/backend/scripts/apply-order-observation-schema.mjs", "server/backend/scripts/ops/migrations/backfill.mjs", "server/backend/scripts/ops/diagnostics/check-rds-schema.mjs"]) {
+    assert.match(plan([file]), /install=0 compile=0 web=0/);
+    assert.match(plan([file, "server/backend/core/auth/login_service.js"]), /install=1 compile=1 web=1/);
+  }
 });

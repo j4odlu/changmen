@@ -18,9 +18,6 @@ test -f "$repo/server/backend/.env"
 mkdir -p "$repo/server/backend/storage"
 previous="$repo"
 if [[ -L "$repo/backend-current" ]]; then previous="$(readlink -f "$repo/backend-current")"; fi
-changes="$repo/.deploy-state/backend-changes.$id"
-# Compare pristine archive files before adding runtime links/dependencies.
-node "$release/scripts/deploy/compare-deployed-files.mjs" "$release" "$previous" "$changes"
 ln -s "$repo/server/backend/.env" "$release/server/backend/.env"
 ln -s "$repo/server/backend/storage" "$release/server/backend/storage"
 # [changmen 扩展] Published extension ZIPs are runtime assets, excluded from git archives.
@@ -44,9 +41,9 @@ cd "$release"
 npm ci --include=dev
 npm run compile:router --workspace=@changmen/backend
 command -v pm2 >/dev/null
-# [changmen 扩展] Fail before touching running processes. Recovery must not depend
-# on a schema helper that only exists in the candidate being rolled back.
-node server/backend/scripts/check-rds-schema.mjs
+# Only verify database connectivity before touching running processes. Schema
+# migrations and data maintenance have a separate, explicitly reviewed lifecycle.
+node --input-type=module -e 'import {loadChangmenEnv} from "@changmen/storage/load_env.js"; loadChangmenEnv(); const {initDatabaseUrl,buildPgClientConfig}=await import("@changmen/db"); const {default:pg}=await import("@changmen/db/pg.js"); await initDatabaseUrl(); const c=new pg.Client(buildPgClientConfig(process.env.DATABASE_URL,10000)); await c.connect(); try {await c.query("SELECT 1")} finally {await c.end()}'
 # Managed releases already retain their sealed identity. Refuse to replace one
 # without the evidence needed to verify recovery, before changing any process.
 rollback_evidence="$repo/.deploy-state/backend-evidence.$(basename "$previous").json"
@@ -55,7 +52,7 @@ verify_processes() {
   pm2 jlist | node "$release/scripts/deploy/verify-backend-processes.mjs" "$1"
 }
 activate() {
-  DEPLOY_REPO="$1" DEPLOY_RELEASE_MODE=1 DEPLOY_RUNTIME_ONLY=1 DEPLOY_SCHEMA_CHANGED="$2" DEPLOY_FULL=0 DEPLOY_CHANGED_PATHS_FILE="${3:-}" DEPLOY_SKIP_GIT_PULL=1 \
+  DEPLOY_REPO="$1" DEPLOY_RELEASE_MODE=1 DEPLOY_FULL=0 DEPLOY_SKIP_GIT_PULL=1 \
     DEPLOY_SKIP_APP_BUILD=1 DEPLOY_SKIP_POSTCHECK=1 bash "$release/deploy/scripts/deploy-server-remote.sh"
 }
 rollback() {
@@ -68,7 +65,7 @@ rollback() {
   elif [[ -L "$repo/backend-current" ]]; then
     switch_link "$previous" "$repo/backend-current"
   fi
-  activate "$previous" 0 || { echo 'ERROR: backend rollback failed; inspect PM2 immediately' >&2; return 1; }
+  activate "$previous" || { echo 'ERROR: backend rollback failed; inspect PM2 immediately' >&2; return 1; }
   # PM2 start success alone does not prove that the previous HTTP server recovered.
   local recovered=0
   for attempt in $(seq 1 45); do
@@ -85,14 +82,13 @@ rollback() {
   echo "Backend rollback verified: $previous"
 }
 install_rollback_traps
-activate "$release" 0 "$changes"
+activate "$release"
 for attempt in $(seq 1 45); do
   if curl --fail --silent --max-time 5 http://127.0.0.1:3456/health >/dev/null \
     && node --input-type=module -e 'import {isMatcherRunning,readMatcherHeartbeat} from "./server/match/matcher/lib/heartbeat.js"; const h=readMatcherHeartbeat(); process.exit(h?.mode === "embedded" && isMatcherRunning(h) ? 0 : 1)'; then break; fi
   test "$attempt" != 45
   sleep 3
 done
-node --input-type=module -e 'import {loadChangmenEnv} from "@changmen/storage/load_env.js"; loadChangmenEnv(); const {initDatabaseUrl,buildPgClientConfig}=await import("@changmen/db"); const {default:pg}=await import("@changmen/db/pg.js"); await initDatabaseUrl(); const c=new pg.Client(buildPgClientConfig(process.env.DATABASE_URL,10000)); await c.connect(); try {await c.query("SELECT 1")} finally {await c.end()}'
 verify_processes "$release"
 curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3456/api/runtime-version | verify_runtime
 cp "$DEPLOY_EVIDENCE_FILE" "$repo/.deploy-state/backend-evidence.$id.json"

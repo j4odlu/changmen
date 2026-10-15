@@ -24,7 +24,7 @@ function fixture(run) {
     const invoke = extra => spawnSync(bash, ["-c", 'export PATH="$RECOVERY_BIN:/usr/bin:/bin:$PATH"; exec bash "$RECOVERY_SCRIPT"'], {
       encoding: "utf8", windowsHide: true, timeout: 15000,
       env: { ...process.env, DEPLOY_REPO: shellPath(path.join(root, "previous")), DEPLOY_RELEASE_MODE: "1",
-        DEPLOY_RUNTIME_ONLY: "1", DEPLOY_SCHEMA_CHANGED: "0", DEPLOY_FULL: "0", DEPLOY_CHANGED_PATHS_FILE: "",
+        DEPLOY_FULL: "0", DEPLOY_CHANGED_PATHS_FILE: "",
         DEPLOY_SKIP_GIT_PULL: "1", DEPLOY_SKIP_APP_BUILD: "1", DEPLOY_SKIP_POSTCHECK: "1", DEPLOY_PLAN_ONLY: "0",
         RECOVERY_BIN: shellPath(path.join(root, "bin")), RECOVERY_SCRIPT: shellPath(script),
         RECOVERY_PM2_LOG: shellPath(path.join(root, "pm2.log")), ...extra },
@@ -45,15 +45,16 @@ test("candidate activation restores a previous release with no new checker or mi
   assert(starts.every(line => line.includes("previous/deploy/ecosystem.config.cjs")));
   assert.equal(starts.filter(line => line.includes("--only changmen-esport ")).length, 1);
 }));
-test("normal activation must fail its schema preflight before touching PM2", () => fixture(({ invoke, log }) => {
-  const result = invoke({ DEPLOY_RUNTIME_ONLY: "0" });
-  assert.notEqual(result.status, 0);
-  assert.match(result.stdout, /read-only verification/);
+test("maintenance-only legacy entry performs no process or build operations", () => fixture(({ root, invoke, log }) => {
+  const manifest = path.join(root, "changes.txt");
+  fs.writeFileSync(manifest, "server/backend/db/migrations/044_auth_browser_sessions.sql\n");
+  const result = invoke({ DEPLOY_RELEASE_MODE: "0", DEPLOY_CHANGED_PATHS_FILE: shellPath(manifest) });
+  assert.equal(result.status, 0, result.stderr + result.stdout);
   assert.equal(log(), "");
 }));
-test("runtime-only phase cannot bypass the normal non-release entry", () => fixture(({ invoke, log }) => {
-  const result = invoke({ DEPLOY_RELEASE_MODE: "0" });
-  assert.notEqual(result.status, 0);
-  assert.match(result.stdout, /requires an isolated release/);
-  assert.equal(log(), "");
+
+test("managed activation invokes no database or build tools even with full flag", () => fixture(({ invoke, log }) => {
+  const result = invoke({ DEPLOY_FULL: "1" });
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+  assert.equal(log().split("\n").filter(line => line.startsWith("start ")).length, 8);
 }));

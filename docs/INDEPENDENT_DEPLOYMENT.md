@@ -1,58 +1,72 @@
-# 独立前后端发布
+# 前端、后端与 RDS 独立发布
 
-GitHub Actions：`Deploy frontend` / `Deploy backend`。两者仅发布 `master`，均可手动运行，前端不等待后端。每端一个 job，无 dist artifact 上传/下载中转。
+[changmen 扩展] 生产统一从 GitHub Actions **Validate and release** 发布。本机只开发、验证、commit/push 和只读核验。部署层保持三项职责：
 
-| 变更 | 自动发布 |
+| 组件 | 发布动作 | 失败处理 |
+|---|---|---|
+| 前端 | 验证已验收的静态制品，原子切换 `dist`，检查页面及版本 | 恢复上一版静态入口 |
+| 后端 | 独立版本目录安装、编译，数据库 `SELECT 1`，启动既有 8 个进程并检查健康/版本 | 恢复上一版进程并核验恢复结果 |
+| RDS | 另行评审并执行具体结构或数据维护 | 按该项维护方案处理，不随应用回滚 |
+
+## Actions 入口与发布范围
+
+推送 `master` 后，由一个 validate job 生成发布计划、执行所需检查并封存同一提交的制品。两个可复用 workflow 只消费已验收制品，不重复构建。
+
+| 变更 | 发布选择 |
 |---|---|
-| `client/web/**` | 前端 |
-| `server/**`、`devtools/**`、`lines/**` | 后端 |
-| `packages/**`、根 package/lock、`turbo.json` | 两端，独立执行 |
-| `chrome-extension/**` | 扩展另行分发；若同时改变根 lock，会触发两端 |
+| 仅 `client/web/**` | 前端 |
+| 仅后端运行代码 | 后端 |
+| 前后端各自独立的变更 | 两端独立发布 |
+| 共享包、根依赖、跨端 API 或部署运行脚本的联动变更 | 涉及两端时，后端成功后再发布前端 |
+| RDS SQL、历史迁移/回填脚本、数据库维护入口 | 不自动发布应用，也不自动执行维护 |
+| 仅文档或 workflow 配置 | 不因此发布应用；仍执行适用验证 |
 
-共享包初期保守触发两端，尚未按包内部文件细分。纯文档也可能触发发布。`paths` 只判断本次 push，不会自动补发上次失败的一端；失败应重跑对应 workflow，或在 Actions 手动发布最新 master。更大范围的变更有 GitHub 路径过滤限制，必要时手动运行。
+分类保守处理未知路径。共享包同时用于浏览器和 Node，属于合法共享依赖，不因部署拆分而复制或修改业务代码。
 
-## 配置与布局
+自动计划读取 VPS 已发布目录和成功记录，对比每端已发布提交，补足上次失败/部分发布留下的差异。它不请求后端 HTTP、PM2 或 RDS；记录缺失/不一致时停止，避免猜测版本。共享验证仍需 SSH 读取这些文件。手动入口：Actions → **Validate and release** → Run workflow → `frontend` / `backend` / `full`，仅允许 master；手动单端发布不读取另一端基线。`full` 明确按后端、前端顺序执行。
 
-继续使用 `DEPLOY_SSH_KEY`、`DEPLOY_USER`、`DEPLOY_PORT`、`DEPLOY_REPO` Secrets；默认 root、22、`/root/changmen`，目标香港 47.57.10.202。现网必须已完成旧目录迁移；新脚本不会自动搬 `/root/gamebet` 或嵌套目录。若旧 Secret 仍指向 `/root/gamebet`、实际 `/root/changmen/server/backend` 已存在，会沿用原逻辑纠正别名。首次启用前确认真实应用根存在 `server/backend/.env`，服务器具备 Node 24+、npm、PM2、GNU tar/coreutils、flock、curl。
+不相关的前端发布不检查后端是否在线；涉及双方联动时才核对后端候选版本。API 仍须兼容旧前端：先增加兼容能力，再发布前端，最后另行清理旧接口。先后顺序本身不能使破坏性接口变更安全。
 
-前端构建不接收私钥或平台 API Key。私钥来自运行时账号/钱包，平台 relay 配置和 Key 由服务器 `.env` 管理。日常发布不改 relay env，也不发送 Telegram 自检消息；业务链路探针仍可独立运行。
+## 必要检查与回滚
 
-每次发布使用独立上传目录和 SHA256 校验。服务器端各端独立 flock 锁，GHA 和 `sh/deploy-{frontend,backend}.sh` 共用相同入口。状态位于 `<root>/.deploy-state/{frontend,backend}`，包含成功的 GHA run number 与 SHA。旧 run 重跑会被拒绝；同一次失败 run 可以重试。两端 run number 不能互相比较。本机发布保留 GHA 水位，但不提供 Git 祖先关系校验，操作员需确认当前 HEAD。
+发布前保留现有 FOK 551 项保护、边界检查，以及变更范围要求的后端测试、前端类型检查/测试/构建。提交、源码指纹和制品哈希绑定验收结果，运输阶段不能替换为未验证代码。完整在线审计另用手动 `special-audit`，不参与普通应用发布。
 
-| 项目 | 路径 |
+前端检查实际页面、主 JS 和构建身份；切换保留上一版自身的 hashed assets，供已打开页面继续懒加载。后端在触碰运行进程前完成安装、编译和只读连接检查；不再做整库结构快照比较、历史 SQL 重放、账号导入/owner 回填、证书建表或 timer 清理。发布后检查 HTTP、内嵌 matcher 心跳、8 个进程各一个实例、PID/状态/准确 cwd 和入口，以及运行版本身份。保持单实例 esport，不启动独立 matcher 或暂停的 SXBet。
+
+后端失败使用已安装的上一版恢复，不重新构建、不迁移数据库。受管旧版本必须有保存的验收身份；缺失时在替换进程前停止。恢复后再次核对健康、进程和旧版本身份，不能把 PM2 命令成功等同于恢复成功。首次接管旧目录没有历史制品证据，只能核对健康和进程路径。
+
+TERM、HUP、INT 在切换期间触发恢复；SIGKILL/主机断电无法由 shell trap 恢复，需要运维处理。每端有独立 flock 锁，Actions 发布代次排队，旧代次不能覆盖较新成功版本。失败同代次可重试。
+
+## RDS 维护
+
+RDS 是独立持久层。普通应用发布及回滚均不修改数据库结构，也不运行维护脚本。仅修改维护文件不会重启应用；同时修改业务代码时，仍按业务代码选择应用组件。
+
+有实际结构需求时，先评审具体 SQL、现状、备份和验证方法，确保新旧应用均兼容，再单独执行所需迁移。数据回填也单独执行和验收。历史 `apply-rds-schema.mjs` 包含历史迁移逻辑，不能作为日常生产发布步骤重复运行。
+
+后端既有 `npm run check:rds-schema` 是离线 SQL 覆盖诊断，不是线上结构验收，也不代表 RDS 已执行某次迁移。应用健康检查无法替代有意变更数据库时的专项验证。
+
+## 配置与版本目录
+
+保持现有 `DEPLOY_SSH_KEY`、`DEPLOY_USER`、`DEPLOY_PORT`、`DEPLOY_REPO`；目标 VPS 47.57.10.202，应用根 `/root/changmen`，Node 24、PM2、GNU tar/coreutils、flock、curl。版本基线读取使用现网固定应用根。
+
+| 内容 | 路径 |
 |---|---|
 | 前端版本 | `<root>/.releases/frontend/<release-id>` |
-| 页面入口（Caddy 路径不变） | `<root>/client/web/dist` → 前端版本 |
-| 后端版本（完整 workspace 布局） | `<root>/.releases/backend/<release-id>` |
-| 成功后端版本 | `<root>/backend-current` → 后端版本 |
-| 持久配置/热缓存 | 原 `<root>/server/backend/.env`、`storage`，后端版本通过符号链接引用 |
+| Caddy 静态入口 | `<root>/client/web/dist` → 前端版本 |
+| 后端版本 | `<root>/.releases/backend/<release-id>` |
+| 成功后端入口 | `<root>/backend-current` → 后端版本 |
+| 成功记录/验收证据 | `<root>/.deploy-state/` |
+| 持久配置与 storage | 原 `<root>/server/backend/.env`、`storage`，版本目录通过链接引用 |
 
-后端源码仍为整仓包，安装使用每个版本独立的 `npm ci`；尚未优化成瘦包或细粒度进程重启。CI 和服务器都编译 router，前者阻止错误代码发布，后者验证实际安装环境。PM2 的 cwd 是具体版本目录，`backend-current` 用于成功版本记录和回滚；运维查看正在运行的源码以 PM2 cwd 为准，原根目录源码不再随 Actions 更新。
+后端保留完整 workspace 包和每版本独立依赖，尚未拆成最小服务包。原根目录源码不随 Actions 更新，正在运行的源码以 PM2 cwd 为准。根 ecosystem 入口指向成功版本，避免 watchdog 拉起旧源码。发布不修改平台凭证、relay 配置或业务数据。
 
-后端 CI 使用 `npm run test:backend`：公共边界、共享包和契约检查执行一次，测试覆盖所有 `server/` workspace 及其依赖，不执行 web 测试。前端 workflow 负责 web 测试和带类型检查的构建。根 `npm test` 仍运行全仓测试。matcher 的 identity 测试由 Turbo 依赖图调度一次；`npm run composer:test` 包含依赖测试，在 matcher 目录直接运行 `npm test` 只测本包，需包含 identity 时用 `npm run test:with-deps`。
+每端保留当前及上一成功版本；清理只作用于受管版本目录，并保护运行进程引用的路径和共享数据。首次接管的原目录受保护。旧 fast/BAT 或原地覆盖脚本不用于生产；现有本地运输入口保留在仓库，日常操作仍统一用 Actions。
 
-两端仍各自运行部署脚本测试，保证单端发布、手动发布和失败重跑都有独立检查。该检查耗时约两秒，暂不引入跨 workflow 的等待或共享成功状态。
-
-成功发布后，原根目录 `deploy/ecosystem.config.cjs` 改为指向 `backend-current` 的入口，保证旧 watchdog 的 start 兜底不会启动过期源码。首次切换保存原配置到 `.deploy-state/backend-bootstrap-ecosystem.cjs`；首次失败时恢复该配置，并清掉失败的版本入口。
-
-## 首次切换、验收与回滚
-
-前端第一次把实际 dist 目录搬到版本目录并建立链接，会有短暂目录切换空窗；后续均原子替换链接。新版本保留旧 hashed assets，避免已打开页面的懒加载资源丢失。通过 HTTPS `changmen.fun`（curl resolve 到本机 Caddy，保留域名/TLS）检查 `deploy-version.txt` 为本次 SHA，并请求主 JS；失败恢复上一版。首次无上一版时撤销失败入口，无法恢复旧页面。
-
-后端先将干净归档与实际运行版本逐文件比较，生成变更清单，再在版本目录安装和编译，并用既有 PM2 清单激活。数据库迁移维持 master 的备份、owner 回填、schema 顺序；仅实际变化的迁移输入触发相应步骤，证书 schema 独立应用，不触发账号/订单回填。首次采用也比较原应用根实际文件。等待 API 和内嵌 matcher 心跳，检查数据库 SELECT 1，以及八个启用进程的状态和 cwd。失败重新激活上一版，回滚不传迁移清单；首次回退到原应用根。暂停的 SXBet 与独立 matcher 不会启动。
-
-**数据库变化不随代码回滚。** schema 变更须兼容上一版。跨端接口按「兼容后端 → 前端切换 → 后端清理」分步提交/发布，不能把有先后依赖的破坏性改动放进一次并发发布。需要严格顺序时分别手动运行并确认上一端成功。
-
-保留所有版本供回滚，当前不自动清理；需定期检查磁盘占用。清理前确认 PM2 cwd、前端入口和上一版，不能删正在运行的后端版本或共享 `.env`/storage。后台热数据、collector 同步不停止；单实例 esport 原则保持。
-
-旧 `apply-repo-archive.sh` / `apply-dist-archive.sh` 在检测到受管版本入口时拒绝原地部署。其它直接写源文件的历史 fast/BAT 工具不能用于受管后端，应改用上述入口；迁移/诊断脚本可在 `backend-current` 内执行。本机后端归档只打包已提交 HEAD，需先提交包含新发布脚本的代码。
-
-## 离线验证
+## 验证
 
 ```bash
-node --test scripts/deploy/classify-deploy-scope.test.mjs scripts/deploy/workflows.test.mjs
-bash scripts/deploy/release.test.sh
-npm run check:boundaries
+node scripts/deploy/check-controls.mjs
+npm run check:change -- --base=<本次修改前的提交>
 ```
 
-集成检查使用临时目录和模拟网络/PM2，覆盖旧目录接管、旧 chunk 保留、旧 run 拒绝、失败重试、两端回滚和 storage 隔离。真实服务器的权限、Caddy/mTLS、RDS、外部平台连接须在首次发布验收。
+离线集成覆盖原子切换、静态资源保留、旧代次拒绝、失败重试、数据库连接失败不触碰进程、后端不可用时的独立前端发布、联动发布阻断、错误版本拒绝、进程恢复和中断回滚。模拟测试通过不等于真实 Actions/VPS 发布已验收；上线后仍需检查实际健康与版本记录。

@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { validationPlan } from "../verification/validation-plan.mjs";
-import { classifyDeployScope } from "./classify-deploy-scope.mjs";
+import { classifyDeployScope, isDatabaseMaintenancePath } from "./classify-deploy-scope.mjs";
 
 export const planHash = plan => createHash("sha256").update(JSON.stringify(plan)).digest("hex");
 export function changePlan(paths, { unknownBase = false, requestedScope = null, deployedVersions = null, liveComponents = null, eventPaths = null, purpose = requestedScope ? "release" : "change" } = {}) {
@@ -21,12 +21,16 @@ export function changePlan(paths, { unknownBase = false, requestedScope = null, 
   const liveScope = liveComponents === null ? null : liveComponents.length === 2 ? "full" : liveComponents[0] ?? "noop";
   const scope = requestedScope ?? (unknownBase ? "full" : liveScope ?? classifyDeployScope(paths));
   const components = scope === "full" ? ["backend", "frontend"] : scope === "noop" ? [] : [scope];
+  // Shared runtime/API changes retain ordering; unrelated app changes are independent.
+  const backendFirst = components.length === 2 && (unknownBase || requestedScope === "full" || paths.some(file =>
+    !isDatabaseMaintenancePath(file) && (classifyDeployScope([file]) === "full"
+      || /^(?:client\/web\/src\/api\/|server\/backend\/core\/esport-api\/|server\/backend\/http_routes\.js$)/.test(file))));
   const publication = purpose === "release" && components.length > 0;
   const validation = validationPlan(unknownBase || requestedScope ? [] : paths, { publication, components });
   if (paths.some(file => /^(?:scripts\/deploy\/|\.github\/|deploy\/|sh\/(?:deploy-|_common\.sh))/.test(file)))
     validation.checks = ["deployment-control", ...validation.checks];
   return { ...validation, changedPaths: [...new Set(paths)].sort(), unknownBase, requestedScope, deployedVersions, liveComponents, eventPaths,
-    purpose, deployment: { scope, components }, releasePlan: components.length === 1 && components[0] === "frontend" ? "frontend-only" : "backend-first" };
+    purpose, deployment: { scope, components, backendFirst }, releasePlan: components.length === 1 && components[0] === "frontend" ? "frontend-only" : "backend-first" };
 }
 export function deployedSelection(versions, root, head, eventPaths = []) {
   const paths = [...eventPaths], liveComponents = [];
@@ -64,6 +68,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   fs.mkdirSync("output/change-validation", { recursive: true });
   fs.writeFileSync("output/change-validation/plan.json", JSON.stringify(plan, null, 2));
   if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT,
-    `tier=${plan.tier}\nbackend=${plan.deployment.components.includes("backend")}\nfrontend=${plan.deployment.components.includes("frontend")}\n`);
+    `tier=${plan.tier}\nbackend=${plan.deployment.components.includes("backend")}\nfrontend=${plan.deployment.components.includes("frontend")}\nbackend-first=${plan.deployment.backendFirst}\n`);
   console.log(JSON.stringify(plan));
 }

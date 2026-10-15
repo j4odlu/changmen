@@ -2,7 +2,7 @@
 
 changmen 是 **客户端 + 服务端** 系统。`localhost` 与 `.bat` 仅用于开发联调；生产环境客户端连**远程 API**，服务端与 RDS 跑在服务器/云上。
 
-> [changmen 扩展] 2026-10-15 用户明确要求：所有生产部署统一通过 GitHub Actions **Validate and release**（`.github/workflows/release.yml`）执行。本机只进行开发、验证、commit/push 和只读状态核验，不执行生产部署。推送 `master` 后由 Actions 验收并发布；前后端同时变更时先部署后端，再部署前端。
+> [changmen 扩展] 2026-10-15 用户明确要求：所有生产部署统一通过 GitHub Actions **Validate and release**（`.github/workflows/release.yml`）执行。本机只进行开发、验证、commit/push 和只读状态核验，不执行生产部署。推送 `master` 后由 Actions 验收并发布；前后端独立变更分别发布；共享依赖或接口联动变更才先发布后端，再发布前端。RDS 维护不随应用发布执行。
 
 最后更新：2026-06-14
 
@@ -152,6 +152,8 @@ HTTP 代理（按需，见 [server/backend/proxy/README.md](./server/backend/pro
 
 ### 3.2 数据库
 
+RDS 结构/数据维护独立执行。下面命令仅说明新空库初始化入口；它包含历史迁移，不能作为现网日常发布步骤重跑。现网应评审并执行具体所需迁移，先保证新旧应用兼容。普通 Action 只做连接检查，不重放 SQL 或回填账号。
+
 ```bash
 cd changmen/server/backend
 node scripts/apply-rds-schema.mjs
@@ -198,7 +200,7 @@ pm2 start deploy/ecosystem.config.cjs --only changmen-esport,changmen-pm-market-
 
 Node 探针在 **`@changmen/platform-probes`**（`devtools/platform-probes/`，瘦包同步为 `server/backend/platform_node`），与 `platform_adapter` 并列。**日常开发可不使用。**
 
-**标准部署**（整仓 `git pull` + `npm install`）：[`deploy/scripts/deploy-server-remote.sh`](./deploy/scripts/deploy-server-remote.sh) 负责增量步骤；香港扁平同步见 [`deploy/scripts/sync-git-to-flat-app.sh`](./deploy/scripts/sync-git-to-flat-app.sh)。脚本索引：[deploy/scripts/README.md](./deploy/scripts/README.md)；生产部署说明：[deploy/README.md](./deploy/README.md)。
+**标准部署**：GitHub Actions **Validate and release** 统一验收并运输制品，按组件切换独立版本目录。后端在候选目录安装/编译后激活现有进程；原地 `git pull` 不再用于受管生产发布。详见 [独立部署](./docs/INDEPENDENT_DEPLOYMENT.md)。
 
 **瘦包部署**（仅发布 `server/backend`、无 `packages/` 目录时）：
 
@@ -282,43 +284,24 @@ npm run build
 | **2** | API CORS（允许 `changmen.fun` / `www` Origin） | ✅ backend `core/http/cors.js`；`CORS_ALLOWED_ORIGINS` 可覆盖 |
 | **3** | `VITE_API_BASE` 试包验收 | ✅ 已验收（正式切流前） |
 | **4** | 正式前端打 API 域 | ✅ `client/web/.env.production` + 生产 `dist` 已切；Caddy 仍双挂；回滚目录 `dist.prev.step4` |
-| **5** | 拆发布流水线（FE 只换 `dist` / BE 只 `pm2`） | ✅ 两个独立 workflow；[版本目录、验收与回滚](docs/INDEPENDENT_DEPLOYMENT.md) |
+| **5** | 拆发布流水线（FE 只换 `dist` / BE 只 `pm2`） | 统一验收、两个组件发布入口；[版本目录、验收与回滚](docs/INDEPENDENT_DEPLOYMENT.md) |
 | 6 | 收掉页面站 API 反代（真正拆开） | 未做 |
 
 ### 步骤 5 操作（独立发版）
 
-| 变更范围 | GHA / 本机 | 是否 `pm2 restart` |
-|----------|------------|-------------------|
-| 仅 `client/web/**` | 只 build + 上传 `dist` | **否** |
-| 仅 `server/**` / `deploy/**` 等 | 后端版本目录安装、编译、重启和验收，保留页面入口 | 是 |
-| `venue-adapter` / `packages/*` / 根依赖文件 / 两侧都有 | 两条 workflow 各自发布；接口变更须分步兼容 | 是 |
+Actions → **Validate and release** → Run workflow → 选择 `frontend` / `backend` / `full`（仅 master）。推送 master 则对比各端已发布版本自动选择组件；失败留下的未发布变化会继续纳入计划。
 
-本机紧急：
+| 变更范围 | 发布动作 | 是否重启后端 |
+|---|---|---|
+| 仅前端 | 验收后切换静态制品 | 否 |
+| 仅后端运行代码 | 安装、编译、连接检查、激活及健康验收 | 是 |
+| 双方独立改动 | 两个组件独立发布 | 是 |
+| 共享依赖/API 联动，或手动 full | 后端成功后再发布前端 | 是 |
+| 仅 RDS 维护文件 | 不触发应用发布；另行评审维护 | 否 |
 
-```bash
-./sh/deploy-frontend.sh   # 只换静态，不动 PM2
-./sh/deploy-backend.sh    # 只后端，保留现网 dist
-```
+前端独立发布不要求后端在线。普通后端发布不做整库结构比较、历史迁移/账号回填或数据清理。两端分别保留必要的版本/健康检查和应用回滚；数据库不随应用回滚。FOK 保护与 A8 前端语义不变。
 
-GHA 使用各自 workflow 的 `paths`，不再运行分类 job。手动发布：Actions → `Deploy frontend` / `Deploy backend` → Run workflow（仅 master）；失败重跑对应端。首次切换、发布版本、数据库迁移及回滚限制见 [INDEPENDENT_DEPLOYMENT.md](docs/INDEPENDENT_DEPLOYMENT.md)。本机分类工具 `scripts/deploy/classify-deploy-scope.mjs` 保留供历史调用方使用。
-
-
-### 步骤 1 操作
-
-1. DNS 添加 **A 记录**：`api.changmen.fun` → `47.57.10.202`（与 `changmen.fun` 相同）。  
-2. 本机执行：
-
-```bash
-./sh/step1-enable-api-subdomain.sh
-```
-
-脚本会：`certbot --expand` 把 `api` 写入现有 LE 证书 → 安装 `certificate/Caddyfile.dual.example` → `caddy reload`。  
-3. 验收：`curl --cert …/RIVER.crt --key …/RIVER.key https://api.changmen.fun/health` → `ok`。  
-4. **可停**：用户继续只用 `https://changmen.fun`，无感。
-
-回滚：恢复 VPS 上 `/etc/caddy/Caddyfile.bak.step1.*` 并 `caddy reload`。
-
----
+本机不直接执行生产部署。版本目录、检查及回滚边界见 [INDEPENDENT_DEPLOYMENT.md](docs/INDEPENDENT_DEPLOYMENT.md)。
 
 ## 6. 开发联调 vs 生产（对照）
 

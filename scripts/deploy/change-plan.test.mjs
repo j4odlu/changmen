@@ -5,6 +5,27 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { changePlan, eventSelection, deployedSelection } from "./change-plan.mjs";
+
+test("unrelated component changes publish independently; shared/API changes coordinate", () => {
+  const frontend = "client/web/src/components/admin/Report.vue";
+  const backend = "server/backend/core/observability/memory.js";
+  assert.equal(changePlan([frontend, backend]).deployment.backendFirst, false);
+  for (const paths of [["packages/shared/contract.js"], [frontend, "server/backend/core/esport-api/router.js"],
+    [backend, "client/web/src/api/auth.ts"]]) {
+    assert.equal(changePlan(paths).deployment.backendFirst, true, paths.join(","));
+  }
+  assert.equal(changePlan([], { requestedScope: "frontend" }).deployment.backendFirst, false);
+  assert.equal(changePlan([], { requestedScope: "full" }).deployment.backendFirst, true);
+  assert.equal(changePlan([], { unknownBase: true }).deployment.backendFirst, true);
+});
+test("RDS maintenance does not select either application", () => {
+  for (const maintenance of ["server/backend/db/migrations/044_auth_browser_sessions.sql", "server/db/schema/client_certificates.sql",
+    "server/backend/scripts/apply-rds-schema.mjs", "server/backend/scripts/ops/migrations/backfill.mjs"]) {
+    assert.equal(changePlan([maintenance]).deployment.scope, "noop");
+    assert.equal(changePlan([maintenance, "client/web/src/components/admin/Report.vue"]).deployment.scope, "frontend");
+    assert.equal(changePlan([maintenance, "server/db/rds/player_store.js"]).deployment.scope, "backend");
+  }
+});
 test("one plan preserves risk while accounting for cross-component dependencies", () => {
   for (const [paths, tier, scope] of [
     [["docs/note.md"], "docs", "noop"],

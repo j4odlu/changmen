@@ -28,8 +28,27 @@ beforeEach(async () => {
   base = `http://127.0.0.1:${server.address().port}`;
 });
 afterEach(async () => { process.env = { ...saved }; server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+// OS-assigned ports can fall on fetch's forbidden-port list. These tests exercise
+// the real HTTP protocol, so use Node's HTTP transport without that browser rule.
+function requestHttp(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const req = http.request(url, { method: options.method, headers: options.headers }, (res) => {
+      const chunks = [];
+      res.on("data", chunk => chunks.push(chunk));
+      res.on("error", reject);
+      res.on("end", () => {
+        const headers = new Headers();
+        for (let i = 0; i < res.rawHeaders.length; i += 2) headers.append(res.rawHeaders[i], res.rawHeaders[i + 1]);
+        const body = Buffer.concat(chunks);
+        resolve(new Response(body.length ? body : null, { status: res.statusCode, headers }));
+      });
+    });
+    req.on("error", reject);
+    req.end(options.body);
+  });
+}
 async function request(path, body, csrf = sessionCsrf(session)) {
-  return fetch(base + path, {
+  return requestHttp(base + path, {
     method: body ? "POST" : "GET",
     headers: { cookie: "cm_session=opaque-cookie", origin: "https://changmen.fun", "content-type": "application/json", "x-csrf-token": csrf },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -49,7 +68,7 @@ describe("real HTTP Cookie protocol", () => {
   it("does not expose access or refresh JWT on native Cookie login", async () => {
     process.env.WEB_AUTH_COOKIE_ENABLED = "1";
     mocks.login.mockResolvedValue({ success: 1, info: { token: "jwt-secret", refreshToken: "refresh-secret", ID: "u", userName: "river", sessionMode: "cookie" } });
-    const res = await fetch(base + "/auth/login", { method: "POST", headers: { origin: "https://changmen.fun", "x-changmen-auth": "cookie", "content-type": "application/json" }, body: JSON.stringify({ userName: "river", password: "password" }) });
+    const res = await requestHttp(base + "/auth/login", { method: "POST", headers: { origin: "https://changmen.fun", "x-changmen-auth": "cookie", "content-type": "application/json" }, body: JSON.stringify({ userName: "river", password: "password" }) });
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.info).toEqual({ ID: "u", userName: "river", sessionMode: "cookie" });

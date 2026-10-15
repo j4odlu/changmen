@@ -191,3 +191,7 @@ Predict.fun 体育 relay 的用户查询归 `@changmen/db/relay_identity.js`：�
 | `server/db/rds/common.js` | `_writeRds` 写队列 |
 | `server/match/matcher/ops/rds_snapshot_cache.js` | matchMerge 读路径（内嵌优先内存） |
 | `server/storage/platform_storage.js` | `platforms.json` |
+
+### 第四轮兼容演练与包边界
+
+数据库升级流程与隔离 PostgreSQL 演练见 [DATABASE_UPGRADE_COMPATIBILITY.md](DATABASE_UPGRADE_COMPATIBILITY.md)。共享包保留统一协议和纯逻辑，环境专属能力按入口隔离；当前消费者证据与后续拆分顺序见 [SHARED_PACKAGE_BOUNDARIES.md](SHARED_PACKAGE_BOUNDARIES.md)。本轮未修改生产结构或业务协议，也未改变发布分类。

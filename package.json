@@ -89,7 +89,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test:admin-users:postgres": "node scripts/testing/admin-users-postgres.mjs",
-    "test:query-boundaries:postgres": "node scripts/testing/query-boundaries-postgres.mjs"
+    "test:query-boundaries:postgres": "node scripts/testing/query-boundaries-postgres.mjs",
+    "test:schema-compat:postgres": "node scripts/testing/schema-compatibility-postgres.mjs"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.0.0",

@@ -1,0 +1,250 @@
+{
+  "checkedAt": "2026-10-15T13:58:41.570Z",
+  "scope": "Database upgrade compatibility and shared package dependency review",
+  "referenceCommit": "9aa9159ce6b531153bd5321f89f2fcd19002671e",
+  "branch": "codex/decoupling-round4",
+  "businessRuntimeChanged": false,
+  "productionSchemaChanged": false,
+  "published": false,
+  "postgres": {
+    "passed": true,
+    "localOnly": true,
+    "referenceCommit": "9aa9159ce6b531153bd5321f89f2fcd19002671e",
+    "checks": 16,
+    "cases": [
+      "empty database fails read-only requirements without creating any tables",
+      "candidate empty initialization uses a separate database and refuses a second initialization",
+      "legacy schema is initialized only from fixed published SQL and verified by the old checker",
+      "fixed published consumers and candidate read identical legacy rows and wire field types",
+      "candidate writes legacy rows without requiring future optional fields",
+      "future required fields fail before upgrade without changing business data or the ledger",
+      "explicit additive upgrade applies only the requested SQL and one atomic ledger record",
+      "old checker accepts compatible additions and old/new consumers preserve legacy results",
+      "code rollback retains the expansion and future data while old code still writes",
+      "rerunning the same explicit upgrade is a no-op for rows, sequence and ledger timestamps",
+      "old and candidate user creation remain valid with the new nullable field",
+      "changed migration checksum blocks every pending migration",
+      "failed upgrade rolls back both DDL and DML without recording success",
+      "lock timeout rolls back the upgrade and releases its advisory lock",
+      "real preflight CLI exits nonzero on missing required structure and leaves data untouched",
+      "missing or empty migration ledger is never adopted by read-only checks"
+    ]
+  },
+  "deploymentPreservation": {
+    "passed": true,
+    "localOnly": true,
+    "checks": 12,
+    "cases": [
+      "ordinary runtime activation does not access schema or change players, roles, profiles or sequences",
+      "activation without a migration ledger does not replay or adopt migrations",
+      "activation with an empty ledger does not write migration records",
+      "explicit full activation also does not invoke database maintenance",
+      "standalone check rejects a missing column while activation remains independent",
+      "wrong field type fails without an automatic ALTER",
+      "missing owner constraint fails without repairing or deleting accounts",
+      "missing unique account index fails without deduplicating accounts",
+      "disabled identity trigger is rejected without reenabling it automatically",
+      "explicit initialization refuses existing tables",
+      "PostgreSQL itself rejects an injected data write inside verification and the next check recovers",
+      "compatibility schema entry checks existing databases without replaying role or sequence SQL"
+    ]
+  },
+  "referenceTests": {
+    "passed": true,
+    "tests": 5
+  },
+  "cookieHttpRegression": {
+    "passed": true,
+    "tests": 10,
+    "firstAttemptFailure": "Existing HTTP test used fetch on an OS-assigned forbidden port (bad port). Test-only transport changed to node:http; business code unchanged."
+  },
+  "ciWorkflow": {
+    "yamlParsed": true,
+    "bashSyntaxChecked": true,
+    "remoteRun": false,
+    "independentOfRelease": true
+  },
+  "fullValidation": {
+    "checkedAt": "2026-10-15T13:58:41.570Z",
+    "passed": true,
+    "tier": "full",
+    "paths": [
+      ".github/workflows/database-compatibility.yml",
+      "docs/DATABASE_UPGRADE_COMPATIBILITY.md",
+      "docs/DATA_STORAGE.md",
+      "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+      "docs/SHARED_PACKAGE_BOUNDARIES.md",
+      "docs/TEAM_BOUNDARIES.md",
+      "docs/audits/2026-10-15-decoupling-round4/ACCEPTANCE.md",
+      "docs/audits/2026-10-15-decoupling-round4/verification.json",
+      "package.json",
+      "scripts/testing/schema-compatibility-postgres.mjs",
+      "scripts/testing/schema-compatibility/consumer.mjs",
+      "scripts/testing/schema-compatibility/expand.sql",
+      "scripts/testing/schema-compatibility/reference.json",
+      "scripts/testing/schema-compatibility/reference.mjs",
+      "scripts/verification/schema-compatibility.test.mjs",
+      "server/backend/core/auth/web_session_routes.test.mjs"
+    ],
+    "immutableFokEntries": 551,
+    "sourceStable": true,
+    "completeRelease": false,
+    "results": [
+      {
+        "check": "deployment-control",
+        "passed": true,
+        "elapsedMs": 33715
+      },
+      {
+        "check": "fok-551",
+        "passed": true,
+        "elapsedMs": 23343
+      },
+      {
+        "check": "validation-control",
+        "passed": true,
+        "elapsedMs": 5854
+      },
+      {
+        "check": "verification-control",
+        "passed": true,
+        "elapsedMs": 54020
+      },
+      {
+        "check": "verification-node",
+        "passed": true,
+        "elapsedMs": 718
+      },
+      {
+        "check": "router-compile",
+        "passed": true,
+        "elapsedMs": 1052
+      },
+      {
+        "check": "backend",
+        "passed": true,
+        "elapsedMs": 31536
+      },
+      {
+        "check": "frontend-typecheck",
+        "passed": true,
+        "elapsedMs": 300
+      },
+      {
+        "check": "frontend",
+        "passed": true,
+        "elapsedMs": 187393
+      },
+      {
+        "check": "build",
+        "passed": true,
+        "elapsedMs": 37611
+      }
+    ],
+    "identity": {
+      "commit": null,
+      "candidateTree": "c52b9f7ea7f0eb92e73a6a36d832a7221ad1f618",
+      "inputFingerprint": "dfc4e7ae12706ea6cb9494ed190a2f258e8a8f9597b068edde31ddc0721190d1"
+    },
+    "plan": {
+      "tier": "full",
+      "paths": [
+        ".github/workflows/database-compatibility.yml",
+        "docs/DATABASE_UPGRADE_COMPATIBILITY.md",
+        "docs/DATA_STORAGE.md",
+        "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+        "docs/SHARED_PACKAGE_BOUNDARIES.md",
+        "docs/TEAM_BOUNDARIES.md",
+        "docs/audits/2026-10-15-decoupling-round4/ACCEPTANCE.md",
+        "docs/audits/2026-10-15-decoupling-round4/verification.json",
+        "package.json",
+        "scripts/testing/schema-compatibility-postgres.mjs",
+        "scripts/testing/schema-compatibility/consumer.mjs",
+        "scripts/testing/schema-compatibility/expand.sql",
+        "scripts/testing/schema-compatibility/reference.json",
+        "scripts/testing/schema-compatibility/reference.mjs",
+        "scripts/verification/schema-compatibility.test.mjs",
+        "server/backend/core/auth/web_session_routes.test.mjs"
+      ],
+      "fullReasons": [
+        "package.json",
+        "scripts/testing/schema-compatibility-postgres.mjs",
+        "scripts/testing/schema-compatibility/consumer.mjs",
+        "scripts/testing/schema-compatibility/expand.sql",
+        "scripts/testing/schema-compatibility/reference.json",
+        "scripts/testing/schema-compatibility/reference.mjs",
+        "server/backend/core/auth/web_session_routes.test.mjs"
+      ],
+      "immutableFokEntries": 551,
+      "snapshotOverridesAllowed": false,
+      "checks": [
+        "deployment-control",
+        "fok-551",
+        "validation-control",
+        "verification-control",
+        "verification-node",
+        "router-compile",
+        "backend",
+        "frontend-typecheck",
+        "frontend",
+        "build"
+      ],
+      "changedPaths": [
+        ".github/workflows/database-compatibility.yml",
+        "docs/DATABASE_UPGRADE_COMPATIBILITY.md",
+        "docs/DATA_STORAGE.md",
+        "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+        "docs/SHARED_PACKAGE_BOUNDARIES.md",
+        "docs/TEAM_BOUNDARIES.md",
+        "docs/audits/2026-10-15-decoupling-round4/ACCEPTANCE.md",
+        "docs/audits/2026-10-15-decoupling-round4/verification.json",
+        "package.json",
+        "scripts/testing/schema-compatibility-postgres.mjs",
+        "scripts/testing/schema-compatibility/consumer.mjs",
+        "scripts/testing/schema-compatibility/expand.sql",
+        "scripts/testing/schema-compatibility/reference.json",
+        "scripts/testing/schema-compatibility/reference.mjs",
+        "scripts/verification/schema-compatibility.test.mjs",
+        "server/backend/core/auth/web_session_routes.test.mjs"
+      ],
+      "unknownBase": false,
+      "requestedScope": null,
+      "deployedVersions": null,
+      "liveComponents": null,
+      "eventPaths": null,
+      "purpose": "change",
+      "deployment": {
+        "scope": "full",
+        "components": [
+          "backend",
+          "frontend"
+        ],
+        "backendFirst": true
+      },
+      "releasePlan": "backend-first"
+    },
+    "planFingerprint": "fb6f2e7c0f4d65d6f5e47b27d9d2039b6d94b84c4fc48ad84aada0b71c432651"
+  },
+  "logs": {
+    "directory": "output/decoupling-round4",
+    "firstAttempt": "check-change-first-attempt.log",
+    "final": "review/check-change.log",
+    "postReview": "output/decoupling-round4/review"
+  },
+  "postReview": {
+    "fixed": [
+      "CI logging pipeline swallowed nonzero test status; pipefail plus real shell success/failure regressions.",
+      "Legacy schema was initialized by candidate code; now pinned migration blobs initialize it and candidate initialization uses a separate database."
+    ],
+    "pipelineBefore": {
+      "testExit": 23,
+      "pipelineExit": 0
+    },
+    "pipelineAfter": {
+      "testExit": 23,
+      "pipelineExit": 23
+    },
+    "remainingBlockingFindings": [],
+    "remoteCiExecuted": false
+  }
+}

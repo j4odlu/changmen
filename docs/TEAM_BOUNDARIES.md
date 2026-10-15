@@ -162,3 +162,7 @@ copy changmen\docs\CODEOWNERS.example .github\CODEOWNERS
 | 1 | `@changmen/api-contract`（OpenAPI + TS 类型）、`VITE_API_BASE` | ✅ 完成（monorepo workspace） |
 | 2 | `packages/client-shared` 从 `shared` 拆出并 semver |
 | 3 | `changmen-client` / `changmen-server` 双仓库 |
+
+### 第四轮兼容演练与包边界
+
+数据库升级流程与隔离 PostgreSQL 演练见 [DATABASE_UPGRADE_COMPATIBILITY.md](DATABASE_UPGRADE_COMPATIBILITY.md)。共享包保留统一协议和纯逻辑，环境专属能力按入口隔离；当前消费者证据与后续拆分顺序见 [SHARED_PACKAGE_BOUNDARIES.md](SHARED_PACKAGE_BOUNDARIES.md)。本轮未修改生产结构或业务协议，也未改变发布分类。

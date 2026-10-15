@@ -1,0 +1,58 @@
+name: Database compatibility
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/database-compatibility.yml'
+      - 'scripts/testing/**'
+      - 'server/db/**'
+      - 'server/backend/db/**'
+      - 'server/backend/scripts/*rds*'
+      - 'server/backend/scripts/*order-observation-schema*'
+      - 'package.json'
+      - 'package-lock.json'
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/database-compatibility.yml'
+      - 'scripts/testing/**'
+      - 'server/db/**'
+      - 'server/backend/db/**'
+      - 'server/backend/scripts/*rds*'
+      - 'server/backend/scripts/*order-observation-schema*'
+      - 'package.json'
+      - 'package-lock.json'
+permissions:
+  contents: read
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Install local PostgreSQL tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql
+          SCHEMA_TEST_PG_BIN="$(dirname "$(find /usr/lib/postgresql -type f -name initdb | sort -V | tail -n 1)")"
+          test -x "$SCHEMA_TEST_PG_BIN/pg_ctl"
+          echo "CHANGMEN_TEST_PG_BIN=$SCHEMA_TEST_PG_BIN" >> "$GITHUB_ENV"
+      - name: Exercise isolated upgrade and code rollback
+        run: |
+          set -o pipefail
+          mkdir -p output/schema-compatibility
+          npm run test:schema-compat:postgres 2>&1 | tee output/schema-compatibility/postgres.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: database-compatibility-report
+          path: output/schema-compatibility/
+          if-no-files-found: ignore
+          retention-days: 14

@@ -9,6 +9,8 @@ export const migratedDatabaseConsumers = [
   "server/backend/core/account/user_login_meta.js",
   "server/backend/core/account/user_presence.js",
   "server/backend/core/account/admin_service.js",
+  "server/backend/core/esport-api/value_bet_service.js",
+  "server/backend/core/esport-api/sport_predictfun_fetch.js",
 ];
 const lowLevel = new Set(["getPgPool", "ensurePgPoolReady", "Pool", "Client", "query"]);
 const hash = text => createHash("sha256").update(text).digest("hex");

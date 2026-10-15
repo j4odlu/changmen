@@ -128,6 +128,12 @@ changmen 使用 **RDS（PostgreSQL）** 与 **本机 JSON**。数据层入口为
 
 全部 **R**（`Client_Admin*`）：报表与运维写操作直读写 RDS；`Client_AdminUsers` 在线状态可读内存 profile。
 
+### 正 EV 仪表盘与体育中继身份
+
+`Client_AdminValueBet` 的 `value_signals` 查询归 `@changmen/db/value_signals.js`。读函数在等待比赛快照前捕获连接池，之后并发读取前三组原查询；比赛诊断继续缓存 8 秒，信号每次读取。仅缺表（`42P01`）返回 `dbAvailable=false`，其它错误继续上抛；不增加表创建、连接初始化、事务或字段转换。
+
+Predict.fun 体育 relay 的用户查询归 `@changmen/db/relay_identity.js`：保留原按 profile ID 排序取首行、空配置/空用户返回空身份及错误交由调用方降级的行为。入口保留原数据库包的延迟初始化；JWT 的签发器经公开入口转导出，原 claims、TTL、环境 token 优先级、60 秒缓存刷新余量及直连/relay 顺序均不变。没有启用已停用的 PF 足球采集，也没有新增生产写入。
+
 ### 其它
 
 | Action | 模式 |
@@ -148,7 +154,7 @@ changmen 使用 **RDS（PostgreSQL）** 与 **本机 JSON**。数据层入口为
 
 ```text
 高频采集/列表（Save* / GetMatchs）     → M→A / M+R   ✅ 已基本实现
-用户配置/KV（SaveData / GetData）      → M→A         ✅ 已实现
+用户配置/KV（SaveData / GetData）      → R→M / M+R   ✅ 写入确认后更新缓存
 订单/资金/鉴权                         → M→S / R     ❌ 勿改 fire-and-forget
 管理报表                               → R           只读 DB
 场馆凭证                               → J           platforms.json（非 RDS）

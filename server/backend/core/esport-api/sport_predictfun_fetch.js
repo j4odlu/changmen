@@ -197,20 +197,11 @@ async function resolveRelayAuthToken() {
     return "";
 
   try {
-    const { hasDatabaseUrlConfig, initDatabaseUrl, getPgPool } = await import("@changmen/db");
-    if (!hasDatabaseUrlConfig())
-      return "";
-    await initDatabaseUrl();
-    const pool = getPgPool("sport-pf-relay");
-    if (!pool)
-      return "";
-    const { rows } = await pool.query(
-      `SELECT p.id::text AS id FROM profiles p ORDER BY p.id LIMIT 1`,
-    );
-    const userId = String(rows[0]?.id || "").trim();
+    const { findSportRelayUserId } = await import("@changmen/db/relay_identity.js");
+    const userId = await findSportRelayUserId();
     if (!userId)
       return "";
-    const { signJwt, JWT_ACCESS_TTL_SEC } = await import("../../../db/rds/jwt.js");
+    const { signJwt, JWT_ACCESS_TTL_SEC } = await import("@changmen/db/jwt.js");
     const ttl = Math.min(Number(JWT_ACCESS_TTL_SEC) || 3600, 3600);
     const token = signJwt(
       { sub: userId, typ: "access", session_id: "sport-predictfun-fetch" },

@@ -1,6 +1,8 @@
 # 前端 后端 RDS 解耦执行方案
 
-日期：2026-10-15。状态：第一轮已以 `d3fd4a0a` 发布；第二轮管理用户 SQL 收口及防回退检查已完成本地验收（未发布），验收见 [第二轮验收](audits/2026-10-15-decoupling-round2/ACCEPTANCE.md)。
+日期：2026-10-15。状态：第一轮已以 `d3fd4a0a` 发布；第二轮管理用户 SQL 收口及防回退检查已以 `87b96fde` 发布，验收见 [第二轮验收](audits/2026-10-15-decoupling-round2/ACCEPTANCE.md)。
+
+第三轮已完成剩余业务查询收口及本地验收（未发布）：正 EV 仪表盘与 Predict.fun 体育 relay 身份查询。冻结的维护诊断与只读运行版本观察单列保留；本轮验收见 [第三轮验收](audits/2026-10-15-decoupling-round3/ACCEPTANCE.md)。
 
 目标是让内部实现变化留在所属层，减少无必要的跨端修改和同步发布。保留 Vue 客户端、Node 服务端、PostgreSQL 与现有 monorepo，依次完成核心接口兼容测试、数据库访问收口、数据库升级兼容验证和发布范围细化。
 

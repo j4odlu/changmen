@@ -1,0 +1,281 @@
+{
+  "date": "2026-10-15",
+  "status": "local-implementation-verified",
+  "baseCommit": "87b96fde9984a1d0645679a77c3b682f3c6cdf41",
+  "branch": "codex/decoupling-round3",
+  "implementationScope": [
+    "docs/DATA_STORAGE.md",
+    "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+    "docs/TEAM_BOUNDARIES.md",
+    "package.json",
+    "scripts/testing/query-boundaries-postgres.mjs",
+    "scripts/verification/backend-db-access-exceptions.json",
+    "scripts/verification/backend-db-boundary.mjs",
+    "scripts/verification/backend-db-boundary.test.mjs",
+    "server/backend/core/esport-api/value_bet_service.js",
+    "server/backend/core/esport-api/sport_predictfun_fetch.js",
+    "server/backend/core/esport-api/value_bet_contract.test.mjs",
+    "server/backend/core/esport-api/sport_relay_contract.test.mjs",
+    "server/backend/package.json",
+    "server/db/package.json",
+    "server/db/value_signals.js",
+    "server/db/relay_identity.js",
+    "server/db/jwt.js",
+    "server/db/rds/value_signals_store.js",
+    "server/db/rds/relay_identity_store.js"
+  ],
+  "compatibility": {
+    "baselineTestsPassed": 37,
+    "afterExtractionPassed": 37,
+    "realPostgresPassed": 11,
+    "boundaryTestsPassed": 29,
+    "sportSmokePassed": true,
+    "defaultBackendTestsIncludeNewSuites": true,
+    "frontendBusinessChanges": false,
+    "schemaChanges": false,
+    "productionWrites": false
+  },
+  "boundaries": {
+    "remainingFiles": [
+      "server/backend/core/account/admin_maintenance.js",
+      "server/backend/core/shared/runtime_version.js"
+    ],
+    "remainingSites": 10,
+    "removedSites": 10,
+    "immutableBaseline": "d3fd4a0a02794c3826b8f56a131ceed4bc249caf"
+  },
+  "fullValidation": {
+    "checkedAt": "2026-10-15T12:54:42.038Z",
+    "passed": true,
+    "tier": "full",
+    "paths": [
+      "docs/DATA_STORAGE.md",
+      "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+      "docs/TEAM_BOUNDARIES.md",
+      "package.json",
+      "scripts/testing/query-boundaries-postgres.mjs",
+      "scripts/verification/backend-db-access-exceptions.json",
+      "scripts/verification/backend-db-boundary.mjs",
+      "scripts/verification/backend-db-boundary.test.mjs",
+      "server/backend/core/esport-api/sport_predictfun_fetch.js",
+      "server/backend/core/esport-api/sport_relay_contract.test.mjs",
+      "server/backend/core/esport-api/value_bet_contract.test.mjs",
+      "server/backend/core/esport-api/value_bet_service.js",
+      "server/backend/package.json",
+      "server/db/jwt.js",
+      "server/db/package.json",
+      "server/db/rds/relay_identity_store.js",
+      "server/db/rds/value_signals_store.js",
+      "server/db/relay_identity.js",
+      "server/db/value_signals.js"
+    ],
+    "immutableFokEntries": 551,
+    "sourceStable": true,
+    "completeRelease": false,
+    "results": [
+      {
+        "check": "fok-551",
+        "passed": true,
+        "elapsedMs": 24482
+      },
+      {
+        "check": "validation-control",
+        "passed": true,
+        "elapsedMs": 5908
+      },
+      {
+        "check": "verification-control",
+        "passed": true,
+        "elapsedMs": 55543
+      },
+      {
+        "check": "verification-node",
+        "passed": true,
+        "elapsedMs": 699
+      },
+      {
+        "check": "router-compile",
+        "passed": true,
+        "elapsedMs": 1033
+      },
+      {
+        "check": "backend",
+        "passed": true,
+        "elapsedMs": 32576
+      },
+      {
+        "check": "frontend-typecheck",
+        "passed": true,
+        "elapsedMs": 15130
+      },
+      {
+        "check": "frontend",
+        "passed": true,
+        "elapsedMs": 186957
+      },
+      {
+        "check": "build",
+        "passed": true,
+        "elapsedMs": 37101
+      }
+    ],
+    "identity": {
+      "commit": null,
+      "candidateTree": "1dfb9c3d7f62b011abd8ac3d285bb755df247540",
+      "inputFingerprint": "675f7b97cc8c83265bc58fa54b43c93c5a4548ca2d52c1b070e25d7c50ee5338"
+    },
+    "plan": {
+      "tier": "full",
+      "paths": [
+        "docs/DATA_STORAGE.md",
+        "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+        "docs/TEAM_BOUNDARIES.md",
+        "package.json",
+        "scripts/testing/query-boundaries-postgres.mjs",
+        "scripts/verification/backend-db-access-exceptions.json",
+        "scripts/verification/backend-db-boundary.mjs",
+        "scripts/verification/backend-db-boundary.test.mjs",
+        "server/backend/core/esport-api/sport_predictfun_fetch.js",
+        "server/backend/core/esport-api/sport_relay_contract.test.mjs",
+        "server/backend/core/esport-api/value_bet_contract.test.mjs",
+        "server/backend/core/esport-api/value_bet_service.js",
+        "server/backend/package.json",
+        "server/db/jwt.js",
+        "server/db/package.json",
+        "server/db/rds/relay_identity_store.js",
+        "server/db/rds/value_signals_store.js",
+        "server/db/relay_identity.js",
+        "server/db/value_signals.js"
+      ],
+      "fullReasons": [
+        "package.json",
+        "scripts/testing/query-boundaries-postgres.mjs",
+        "server/backend/core/esport-api/sport_predictfun_fetch.js",
+        "server/backend/core/esport-api/sport_relay_contract.test.mjs",
+        "server/backend/core/esport-api/value_bet_contract.test.mjs",
+        "server/backend/core/esport-api/value_bet_service.js",
+        "server/backend/package.json",
+        "server/db/jwt.js",
+        "server/db/package.json",
+        "server/db/rds/relay_identity_store.js",
+        "server/db/rds/value_signals_store.js",
+        "server/db/relay_identity.js",
+        "server/db/value_signals.js"
+      ],
+      "immutableFokEntries": 551,
+      "snapshotOverridesAllowed": false,
+      "checks": [
+        "fok-551",
+        "validation-control",
+        "verification-control",
+        "verification-node",
+        "router-compile",
+        "backend",
+        "frontend-typecheck",
+        "frontend",
+        "build"
+      ],
+      "changedPaths": [
+        "docs/DATA_STORAGE.md",
+        "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+        "docs/TEAM_BOUNDARIES.md",
+        "package.json",
+        "scripts/testing/query-boundaries-postgres.mjs",
+        "scripts/verification/backend-db-access-exceptions.json",
+        "scripts/verification/backend-db-boundary.mjs",
+        "scripts/verification/backend-db-boundary.test.mjs",
+        "server/backend/core/esport-api/sport_predictfun_fetch.js",
+        "server/backend/core/esport-api/sport_relay_contract.test.mjs",
+        "server/backend/core/esport-api/value_bet_contract.test.mjs",
+        "server/backend/core/esport-api/value_bet_service.js",
+        "server/backend/package.json",
+        "server/db/jwt.js",
+        "server/db/package.json",
+        "server/db/rds/relay_identity_store.js",
+        "server/db/rds/value_signals_store.js",
+        "server/db/relay_identity.js",
+        "server/db/value_signals.js"
+      ],
+      "unknownBase": false,
+      "requestedScope": null,
+      "deployedVersions": null,
+      "liveComponents": null,
+      "eventPaths": null,
+      "purpose": "change",
+      "deployment": {
+        "scope": "full",
+        "components": [
+          "backend",
+          "frontend"
+        ],
+        "backendFirst": true
+      },
+      "releasePlan": "backend-first"
+    },
+    "planFingerprint": "d8e7c2d53881f2be988a2bcec758e840983f242917b130e83b014f3d0e714da6"
+  },
+  "limitations": [
+    "Existing parallel queries retain independent database snapshots; no new transaction semantics.",
+    "Existing first-profile relay identity and JWT policy remain unchanged.",
+    "Offline backend gate retains 16 existing skipped login integration tests; frontend retains one skipped test.",
+    "No live upstream requests, commit, push or deployment in this round."
+  ],
+  "logs": {
+    "before-extraction.log": {
+      "path": "output/decoupling-round3/before-extraction.log",
+      "sha256": "ba99c2a880769ea6fa5e8d5c166a2eb56631167426c1e9480dfafc46bc43c5e6"
+    },
+    "after-extraction.log": {
+      "path": "output/decoupling-round3/after-extraction.log",
+      "sha256": "9a70ecf3f386e73c54d954fdca0703ec149251d717e76f12209b110f6a3be240"
+    },
+    "postgres.log": {
+      "path": "output/decoupling-round3/postgres.log",
+      "sha256": "316d2a3f169db43b7f69f4f94c8d61eb0f1d165939ccadb4f0dcecdd55d44625"
+    },
+    "boundaries.log": {
+      "path": "output/decoupling-round3/boundaries.log",
+      "sha256": "6af833862fe68edb30194081f056399df07bde145b15537d0bb8325975b2358d"
+    },
+    "boundary-tests.log": {
+      "path": "output/decoupling-round3/boundary-tests.log",
+      "sha256": "477467cc18efa4a6dddba3900d6291d11d160c8ae510b2dec8f8b652bbd41ae9"
+    },
+    "sport-smoke.log": {
+      "path": "output/decoupling-round3/sport-smoke.log",
+      "sha256": "6e0868dad30bed2298014c4674f87b2918b703ebabbdb41b98cc61b67b4e2e05"
+    },
+    "check-change.log": {
+      "path": "output/decoupling-round3/check-change.log",
+      "sha256": "1ddedae9d612473361730d6f08e81456cf7a427a6601e96c8aae05bb64e37723"
+    }
+  },
+  "finalSourceVerification": {
+    "passed": true,
+    "inputFingerprint": "675f7b97cc8c83265bc58fa54b43c93c5a4548ca2d52c1b070e25d7c50ee5338",
+    "documentationOnlyAfterValidation": true
+  },
+  "finalCandidatePaths": [
+    "docs/DATA_STORAGE.md",
+    "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+    "docs/TEAM_BOUNDARIES.md",
+    "docs/audits/2026-10-15-decoupling-round3/ACCEPTANCE.md",
+    "docs/audits/2026-10-15-decoupling-round3/verification.json",
+    "package.json",
+    "scripts/testing/query-boundaries-postgres.mjs",
+    "scripts/verification/backend-db-access-exceptions.json",
+    "scripts/verification/backend-db-boundary.mjs",
+    "scripts/verification/backend-db-boundary.test.mjs",
+    "server/backend/core/esport-api/sport_predictfun_fetch.js",
+    "server/backend/core/esport-api/sport_relay_contract.test.mjs",
+    "server/backend/core/esport-api/value_bet_contract.test.mjs",
+    "server/backend/core/esport-api/value_bet_service.js",
+    "server/backend/package.json",
+    "server/db/jwt.js",
+    "server/db/package.json",
+    "server/db/rds/relay_identity_store.js",
+    "server/db/rds/value_signals_store.js",
+    "server/db/relay_identity.js",
+    "server/db/value_signals.js"
+  ]
+}

@@ -1,4 +1,5 @@
-import { fetchClientMatches, getPgPool } from "@changmen/db";
+import { fetchClientMatches } from "@changmen/db";
+import { createValueSignalDashboardReader } from "@changmen/db/value_signals.js";
 
 const SHARP = process.env.VB_SHARP_PLATFORM || "PB";
 const SOFT = (process.env.VB_SOFT_PLATFORMS || "OB,IM,RAY,TF,IA,SABA,IMT,HG").split(",").map(s => s.trim()).filter(Boolean);
@@ -120,31 +121,12 @@ async function refreshMatchCache() {
 }
 
 export async function getValueBetDashboard() {
-  const pool = getPgPool();
+  const readSignals = createValueSignalDashboardReader();
 
   await refreshMatchCache();
   const diagnostics = buildDiagnostics();
 
-  let signals = []; let stats = []; let platformDist = [];
-  let dbAvailable = false;
-
-  if (pool) {
-    try {
-      const [signalsRes, statsRes, distRes] = await Promise.all([
-        pool.query(`SELECT * FROM value_signals WHERE status = 'open' ORDER BY edge DESC LIMIT 100`),
-        pool.query(`SELECT status, COUNT(*)::int AS count, ROUND(AVG(edge)::numeric, 5) AS avg_edge, ROUND(MAX(edge)::numeric, 5) AS max_edge FROM value_signals GROUP BY status ORDER BY status`),
-        pool.query(`SELECT soft_platform, COUNT(*)::int AS count, ROUND(AVG(edge)::numeric, 5) AS avg_edge FROM value_signals WHERE status = 'open' GROUP BY soft_platform ORDER BY count DESC`),
-      ]);
-      signals = signalsRes.rows;
-      stats = statsRes.rows;
-      platformDist = distRes.rows;
-      dbAvailable = true;
-    }
-    catch (err) {
-      if (err.code !== "42P01")
-        throw err;
-    }
-  }
+  const { dbAvailable, signals, stats, platformDist } = await readSignals();
 
   return {
     available: true,

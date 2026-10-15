@@ -11,7 +11,10 @@
     "./pg.js": "./pg.js",
     "./client_match_snapshot.js": "./client_match_snapshot.js",
     "./profile_metadata.js": "./profile_metadata.js",
-    "./admin_users.js": "./admin_users.js"
+    "./admin_users.js": "./admin_users.js",
+    "./value_signals.js": "./value_signals.js",
+    "./relay_identity.js": "./relay_identity.js",
+    "./jwt.js": "./jwt.js"
   },
   "main": "./index.js",
   "scripts": {

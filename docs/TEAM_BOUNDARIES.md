@@ -118,9 +118,11 @@ changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check
 
 已收口的登录元数据、在线信息和管理用户业务通过 `@changmen/db/profile_metadata.js`、`@changmen/db/admin_users.js` 及既有公开业务方法访问数据。验证输入、权限、API 错误文本和缓存刷新属于 backend；连接池、SQL 和既有事务实现属于 `server/db`。
 
-`npm run check:boundaries` 用 TypeScript AST 检查 backend core 的连接池导入、数据库内部路径、SQL 执行、别名、动态导入及 re-export。历史例外精确登记在 `scripts/verification/backend-db-access-exceptions.json`，每处必须可追溯到固定已发布提交 `d3fd4a0a` 的原语法节点；允许减少，不允许新位置或新增次数。三个已迁移模块不能登记例外。
+`npm run check:boundaries` 用 TypeScript AST 检查 backend core 的连接池导入、数据库内部路径、SQL 执行、别名、动态导入及 re-export。历史例外精确登记在 `scripts/verification/backend-db-access-exceptions.json`，每处必须可追溯到固定已发布提交 `d3fd4a0a` 的原语法节点；允许减少，不允许新位置或新增次数。五个已迁移模块不能登记例外。
 
-当前剩余例外仅涉及维护诊断、value-bet 查询、Predict.fun 体育 relay 身份查询和只读运行版本观察。`admin_maintenance.js` 受订单冻结保护，保留原实现；其余按后续批次迁移。边界规则是工程门禁，不替代运行时鉴权。
+正 EV 仪表盘通过 `@changmen/db/value_signals.js` 读取信号与聚合，诊断计算仍在业务层。Predict.fun 体育 relay 通过 `@changmen/db/relay_identity.js` 选择原有用户身份，通过公开 `@changmen/db/jwt.js` 使用原签发器；token 优先级、缓存和请求策略不变。
+
+当前仅剩 2 个诊断文件、10 个历史访问位置：`admin_maintenance.js` 受订单冻结保护，`runtime_version.js` 保留只读运行版本观察。边界规则是工程门禁，不替代运行时鉴权。
 
 ### 探针（`devtools/platform-probes`）
 

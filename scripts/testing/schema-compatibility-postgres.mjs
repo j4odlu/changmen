@@ -49,6 +49,10 @@ await withTemporaryPostgres(async ({ temporary }) => {
   const migrate = (names, sources) => connection(client => runRdsMigrations(client, names,
     { readSql: name => { assert(Object.hasOwn(sources, name)); return sources[name]; }, log: quiet }));
   try {
+    await check("isolated cluster uses only loopback TCP without a system Unix socket directory", async () => {
+      assert.equal((await pool.query("SHOW unix_socket_directories")).rows[0].unix_socket_directories, "");
+      assert.equal((await pool.query("SHOW listen_addresses")).rows[0].listen_addresses, "127.0.0.1");
+    });
     await check("empty database fails read-only requirements without creating any tables", async () => {
       await assert.rejects(verify(), /数据库结构核验失败/);
       assert.equal((await pool.query("SELECT to_regclass('public.changmen_schema_migrations') AS name")).rows[0].name, null);

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -26,9 +26,18 @@ export async function withTemporaryPostgres(run) {
     });
     execFileSync(initdb, ["-D", data, "-U", "changmen_test", "--auth=trust", "--no-locale", "--encoding=UTF8", "--no-sync"],
       { windowsHide: true, stdio: "pipe", timeout: 60000 });
+    // Clients use loopback TCP. Linux packages may default to a socket directory
+    // owned by postgres (/var/run/postgresql), which the CI runner cannot write.
+    appendFileSync(path.join(data, "postgresql.conf"), "\nunix_socket_directories = ''\n");
     startAttempted = true;
-    execFileSync(pgctl, ["-D", data, "-l", path.join(temporary, "postgres.log"), "-o", `-h 127.0.0.1 -p ${port}`, "-w", "start"],
-      { windowsHide: true, stdio: "ignore", timeout: 60000 });
+    const logFile = path.join(temporary, "postgres.log");
+    try {
+      execFileSync(pgctl, ["-D", data, "-l", logFile, "-o", `-h 127.0.0.1 -p ${port}`, "-w", "start"],
+        { windowsHide: true, stdio: "ignore", timeout: 60000 });
+    } catch (error) {
+      const detail = existsSync(logFile) ? readFileSync(logFile, "utf8").slice(-12000) : String(error.stderr || error.message);
+      throw new Error(`Temporary PostgreSQL startup failed:\n${detail}`, { cause: error });
+    }
     // Set all alternatives before loading application modules. dotenv cannot select RDS.
     process.env.DATABASE_URL = `postgresql://changmen_test@127.0.0.1:${port}/postgres`;
     process.env.DATABASE_URL_PUBLIC = ""; process.env.DATABASE_URL_INTERNAL = "";

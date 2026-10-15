@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { restorePmStoredSettlementSource } from "./pm-stored-settlement-boundary.mjs";
 
 // [changmen 扩展] 用户要求订单盘口名来自 PM；只登记名称来源及补元数据查询，原执行/财务基线保留。
 export const PM_ORDER_LABEL_HELPER = "packages/venue-adapter/polymarket/markets/orderBetLabel.ts";
@@ -13,7 +14,7 @@ function replace(source, before, after = "", count = 1) {
 
 /** 验证登记的新模块，然后精确恢复名称差异，供完整旧源码比较；其它语句仍逐字受保护。 */
 export function restorePmOrderBetLabelSource(file, input, read) {
-  let source = normalize(input);
+  let source = restorePmStoredSettlementSource(file, normalize(input));
   if (file === "client/web/src/orderModes/gtc/arbLeg.ts" && source.includes("lookupPolymarketOrderBetLabel")) {
     assert.equal(createHash("sha256").update(normalize(read(PM_ORDER_LABEL_HELPER))).digest("hex"), helperSha, "exact PM order label helper");
     source = replace(source, 'import { lookupPolymarketOrderBetLabel } from "@changmen/venue-adapter/polymarket/orders";\n');

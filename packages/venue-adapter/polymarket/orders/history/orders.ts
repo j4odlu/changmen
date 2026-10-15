@@ -1084,6 +1084,34 @@ function isChangmenPolymarketOrder(
     || (playerId > 0 && isPolymarketChangmenOrder(playerId, order.orderId));
 }
 
+/** [changmen 扩展] 已确认买单的赛果不能依赖近期成交列表再次返回该单。 */
+function needsStoredMarketSettlement(order: VenueOrder): boolean {
+  return order.pmSide !== "sell"
+    && !["reject", "return", "pending"].includes(String(order.status).toLowerCase())
+    && Number(order.pmShares) > 0.0001
+    && !!String(order.pmTokenId ?? "").trim()
+    && order.pmSellState !== "settled";
+}
+
+function settleStoredOrderFromMarket(
+  stored: VenueOrder,
+  marketMap: Map<string, PolymarketRawMarket>,
+): VenueOrder {
+  const base = storedVenueOrderToUsdc(stored);
+  if (!needsStoredMarketSettlement(stored)) return base;
+  const market = lookupGammaMarket(marketMap, { market: stored.pmConditionId, asset_id: stored.pmTokenId });
+  const resolved = resolvePolymarketSettlement(market);
+  if (!resolved || !market) return base;
+  const tokens = [...gammaTokenIds(market), ...(market.tokens ?? []).map(t => String(t.token_id ?? ""))];
+  if (!tokens.includes(String(stored.pmTokenId))) return base;
+  const result = stored.pmTokenId === resolved.winningAssetId ? "win" : "lose";
+  // 只提供盘口赛果；复用既有全成本/部分卖出/卖光保护，不捏造新成交。
+  return mergeChangmenStoredWithClob(stored, {
+    ...base, status: result, pmMatchResult: result,
+    pmSellState: resolved.kind === "official" ? "settled" : base.pmSellState,
+  });
+}
+
 /**
  * CLOB 同步与 RDS changmen 行合并：
  * - changmen 买卖：以 RDS 绑定为准，CLOB 只刷新 fill/赛果
@@ -1094,6 +1122,7 @@ export function mergePolymarketClobWithStoredOrders(
   clobOrders: VenueOrder[],
   storedOrders: VenueOrder[],
   playerId: number,
+  marketMap: Map<string, PolymarketRawMarket> = new Map(),
 ): VenueOrder[] {
   const storedById = new Map(storedOrders.map(o => [o.orderId, o]));
   const merged: VenueOrder[] = [];
@@ -1123,7 +1152,7 @@ export function mergePolymarketClobWithStoredOrders(
     if (usedStored.has(stored.orderId))
       continue;
     if (stored.pmOrigin === "changmen" || (playerId > 0 && isPolymarketChangmenOrder(playerId, stored.orderId)))
-      merged.push({ ...storedVenueOrderToUsdc(stored), bet: lookupPolymarketOrderBetLabel(stored.pmConditionId, stored.pmTokenId) || stored.bet });
+      merged.push({ ...settleStoredOrderFromMarket(stored, marketMap), bet: lookupPolymarketOrderBetLabel(stored.pmConditionId, stored.pmTokenId) || stored.bet });
   }
 
   return merged;
@@ -1134,6 +1163,7 @@ export function finalizePolymarketVenueOrders(
   clobOrders: VenueOrder[],
   playerId: number,
   storedOrders: VenueOrder[] = [],
+  marketMap: Map<string, PolymarketRawMarket> = new Map(),
 ): VenueOrder[] {
   const account = { accountId: playerId } as PlatformAccount;
   const tagged = playerId > 0
@@ -1143,6 +1173,7 @@ export function finalizePolymarketVenueOrders(
     tagged,
     stripPolymarketSellOrders(storedOrders),
     playerId,
+    marketMap,
   );
   return stripPolymarketSellOrders(reconcilePolymarketBuySellOrders(merged));
 }
@@ -1304,7 +1335,7 @@ export async function fetchPolymarketVenueOrdersBundle(
     rawTrades = await fetchTradesSince(account, gateway, afterSec);
   }
   catch {
-    return { orders: [], flattenedTrades: [] };
+    rawTrades = [];
   }
   const flattened = flattenPolymarketTrades(rawTrades, userAddresses);
   const buyPreview = aggregatePolymarketTrades(flattened);
@@ -1313,20 +1344,23 @@ export async function fetchPolymarketVenueOrdersBundle(
     trade => (Number(trade.match_time) || 0) >= afterSec,
   );
   // [changmen 扩展] 增量成交窗口以外的存量订单也补 PM 盘口名称；已知元数据不重复查询。
-  const missingLabels = storedOrders.filter(order => !lookupPolymarketOrderBetLabel(order.pmConditionId, order.pmTokenId));
+  const storedMarketReads = storedOrders.filter(order => needsStoredMarketSettlement(order)
+    || !lookupPolymarketOrderBetLabel(order.pmConditionId, order.pmTokenId));
   const marketMap = await fetchMarketsByConditionIds(
-    [...preview.map(trade => String(trade.market ?? "")), ...missingLabels.map(order => String(order.pmConditionId ?? ""))].filter(Boolean),
-    [...preview.map(trade => String(trade.asset_id ?? "")), ...missingLabels.map(order => String(order.pmTokenId ?? ""))].filter(Boolean),
+    [...preview.map(trade => String(trade.market ?? "")), ...storedMarketReads.map(order => String(order.pmConditionId ?? ""))].filter(Boolean),
+    [...preview.map(trade => String(trade.asset_id ?? "")), ...storedMarketReads.map(order => String(order.pmTokenId ?? ""))].filter(Boolean),
   );
   return {
     orders: mapPolymarketTradesToVenueOrders(rawTrades, marketMap, afterSec, userAddresses),
     flattenedTrades: flattened,
+    marketMap,
   };
 }
 
 export interface PolymarketVenueOrdersBundle {
   orders: VenueOrder[];
   flattenedTrades: PolymarketTradeRow[];
+  marketMap: Map<string, PolymarketRawMarket>;
 }
 
 /** CLOB /data/trades → VenueOrder（近 3 天；Gamma resolve → win/lose） */
@@ -1346,9 +1380,9 @@ export async function fetchPolymarketVenueOrdersMerged(
   const stored = await loadPolymarketStoredVenueOrders(account);
   const hasOpenStored = stored.some(o => hasOpenPolymarketPosition(o));
   const lookbackMs = resolvePolymarketTradeLookbackMs(account.accountId, hasOpenStored);
-  const { orders, flattenedTrades } = await fetchPolymarketVenueOrdersBundle(account, lookbackMs, stored);
+  const { orders, flattenedTrades, marketMap } = await fetchPolymarketVenueOrdersBundle(account, lookbackMs, stored);
   markPolymarketOrdersSynced(account.accountId, lookbackMs);
-  const finalized = finalizePolymarketVenueOrders(orders, account.accountId, stored);
+  const finalized = finalizePolymarketVenueOrders(orders, account.accountId, stored, marketMap);
   // delayed / trades 同步：CLOB orderId→txHash→activity.usdcSize（1:1）；再公式回退；再 scale 成 CNY
   const { parseTokenConfig, resolveFunder, normalizeEthAddress, collectPolymarketUserAddresses } =
     await import("../../l2Auth");

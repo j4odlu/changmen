@@ -19,6 +19,10 @@ test("pull requests validate offline without deployment credentials or publicati
   for (const forbidden of ["secrets.", "publish.sh", "release-evidence.mjs seal", "read-deployed-versions.mjs"])
     assert(!serialized.includes(forbidden), forbidden);
   assert.match(pr.jobs.check.env.DATABASE_URL, /127\.0\.0\.1:1\//);
+  assert(!JSON.stringify(pr.jobs.check.env).includes("runner."), "Runner context is unavailable in job env");
+  const check = pr.jobs.check.steps.find(s => s.run?.includes("check:change --"));
+  assert.equal(check.env.CHANGMEN_STORAGE_DIR, "${{ runner.temp }}/changmen-pr-storage");
+  assert.equal(check.env.ESPORT_DATA_DIR, "${{ runner.temp }}/changmen-pr-storage/esport");
   assert(pr.jobs.check.steps.some(s => s.run?.includes('check:change -- --base="$PR_BASE_SHA"')));
 });
 

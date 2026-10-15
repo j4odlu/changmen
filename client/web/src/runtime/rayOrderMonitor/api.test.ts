@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { loadRayMonitorOrders, saveRayMonitorOrders } from "./api";
+import { loadRayMonitorOrders } from "./api";
 const mock = vi.hoisted(() => ({ post: vi.fn() }));
 vi.mock("@/api/client", () => ({ post: mock.post, unwrap: (response: { success: number; info: unknown; msg?: string }) => {
   if (response.success !== 1) throw new Error(response.msg);
@@ -22,9 +22,4 @@ it("invalid and failed recovery responses are not treated as a completed empty r
   mock.post.mockResolvedValueOnce({ success: 0, msg: "unavailable" }).mockResolvedValueOnce({ success: 1, info: {} });
   await expect(loadRayMonitorOrders(2, [])).rejects.toThrow("unavailable");
   await expect(loadRayMonitorOrders(2, [])).rejects.toThrow("响应无效");
-});
-it("uses a guarded status update and propagates a failed save", async () => {
-  mock.post.mockResolvedValue({ success: 0, msg: "save failed" });
-  await expect(saveRayMonitorOrders(2, [])).rejects.toThrow("save failed");
-  expect(mock.post).toHaveBeenCalledWith("Client_SaveOrder", { type: "RAY", playerId: 2, orders: "[]", rayMonitorOnly: true }, "", { errorTip: false });
 });

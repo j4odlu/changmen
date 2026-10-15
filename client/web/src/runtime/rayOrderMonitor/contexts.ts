@@ -60,9 +60,8 @@ export function registerRayOrderContext(input: RegisterRayOrderContextInput): vo
   }
   catch { /* 登记失败不能改变首次下注收尾。 */ }
 }
-/** 消费唯一查询返回值，关联完成后交由调用者统一保存；本函数不拉单。 */
-export async function bindRayOrderContexts(account: PlatformAccount, orders: readonly VenueOrder[], current: () => boolean,
-  onBound: (task: RayOrderContext, order: VenueOrder) => Promise<void>): Promise<void> {
+/** [changmen 扩展] 只确认用户端原单身份；数据库保存及 Link 绑定由订单同步负责。 */
+export function bindRayOrderContexts(account: PlatformAccount, orders: readonly VenueOrder[], current: () => boolean): void {
   const store = useRayOrderContextStore();
   for (const original of store.activeTasks.filter(task => task.accountId === account.accountId)) {
     if (!current())
@@ -84,18 +83,10 @@ export async function bindRayOrderContexts(account: PlatformAccount, orders: rea
     task.candidateCount = match?.candidates.length ?? task.candidateCount;
     task.status = "watching";
     store.upsert(task);
-    if (!task.bindingSaved) {
-      try {
-        await onBound(task, order);
-        if (!current())
-          return;
-        store.patch(task.key, { bindingSaved: true, boundAt: Date.now(), lastError: undefined });
-        log(task, "bound", order);
-      }
-      catch (error) {
-        if (current())
-          store.patch(task.key, { lastError: error instanceof Error ? error.message : String(error), updatedAt: Date.now() });
-      }
+    store.patch(task.key, { monitorBound: true, lastError: undefined });
+    if (!original.monitorBound) {
+      store.patch(task.key, { boundAt: Date.now() });
+      log(task, "bound", order);
     }
   }
 }
@@ -108,12 +99,12 @@ function dispatchMakeup(task: RayOrderContext, current: () => boolean): void {
       useRayOrderContextStore().patch(task.key, { autoMakeupStatus: "failed", autoMakeupReason: String(error), updatedAt: Date.now() });
   });
 }
-/** 只接纳已保存的原单事实，拒单后的业务处置继续使用原补单策略。 */
+/** [changmen 扩展] 消费唯一确认的场馆原单事实，拒单仍交给原补单策略。 */
 export function observeRayOrderContexts(player: number, orders: readonly RayOrderFact[], current: () => boolean): void {
   if (!current())
     return;
   const store = useRayOrderContextStore();
-  for (const task of store.activeTasks.filter(task => task.accountId === player && task.boundOrderId && task.bindingSaved)) {
+  for (const task of store.activeTasks.filter(task => task.accountId === player && task.boundOrderId && (task.monitorBound || task.bindingSaved))) {
     const order = orders.find(order => order.orderId === task.boundOrderId);
     if (!order)
       continue;

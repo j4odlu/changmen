@@ -10,7 +10,7 @@ const writer = "server/backend/core/account/order_store.js";
 const service = "server/backend/core/account/account_service.js";
 describe("complete committed RAY migration preserves fixed public FOK modules", () => {
   it("requires all committed monitoring implementations", () => {
-    expect(verifyRayFrontendSources(read).completeModules).toBe(11);
+    expect(verifyRayFrontendSources(read).completeModules).toBe(13);
   });
   it.each(rayFrontendSources)("rejects any added action in %s", (file) => {
     expect(() => verifyRayFrontendSources(target => read(target) + (target === file ? "\nvoid unexpectedTradingAction();" : ""))).toThrow("complete committed RAY monitor source");

@@ -44,9 +44,11 @@ export interface RayOrderContext {
   boundAt?: number;
   candidateCount: number;
   pollCount: number;
-  /** 原单已保存并确认归属当前 Link；关联失败时由同一轮询重试。 */
+  /** [changmen 扩展] 用户端已唯一确认原单身份；不代表订单已落库。 */
+  monitorBound?: boolean;
+  /** 原单已保存并确认归属当前 Link；仅订单同步或数据库恢复置位。 */
   bindingSaved?: boolean;
-  /** 已完成首次原单保存；Link 绑定失败后的重试使用受保护更新。 */
+  /** 正常同步已完成原单保存；Link 绑定失败后由后续正常同步重试。 */
   orderSaved?: boolean;
   lastPollAt?: number;
   lastObservedStatus?: VenueOrderStatus | "missing";

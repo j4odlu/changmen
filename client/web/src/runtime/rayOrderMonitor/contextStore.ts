@@ -12,7 +12,7 @@ function readTasks(userId: string): RayOrderContext[] {
     const rows: RayOrderContext[] = [];
     for (const raw of parsed) {
       if (!raw || typeof raw !== "object" || !raw.key || raw.userId !== userId || !Number(raw.linkId) || !Number(raw.accountId)) continue;
-      if (raw.status === "closed") continue;
+      if (raw.status === "closed" && raw.bindingSaved) continue;
       if (raw.status === "rejected" && Date.now() - Number(raw.updatedAt || 0) > REJECTED_RETENTION_MS) continue;
       const task = { ...raw };
       delete task.monitorMinutes; delete task.expiresAt; delete task.nextPollAt;
@@ -47,7 +47,7 @@ export const useRayOrderContextStore = defineStore("rayOrderContexts", {
     persist() {
       try {
         if (!this.ownerUserId) return;
-        const rows = [...this.tasks.values()].filter(task => task.status !== "closed")
+        const rows = [...this.tasks.values()].filter(task => task.status !== "closed" || !task.bindingSaved)
           .filter(task => task.status !== "rejected" || Date.now() - task.updatedAt <= REJECTED_RETENTION_MS);
         sessionStorage.setItem(`${STORAGE_PREFIX}:${this.ownerUserId}`, JSON.stringify(rows));
         sessionStorage.removeItem(`${LEGACY_PREFIX}:${this.ownerUserId}`);

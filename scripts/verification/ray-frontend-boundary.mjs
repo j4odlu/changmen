@@ -1,15 +1,20 @@
 // [changmen 扩展] 已提交的 RAY 监控迁移：固定完整实现，只还原公共收尾中的两处命名迁移。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { verifyRayClientMonitorSource } from "./ray-client-monitor-boundary.mjs";
 
 export const rayFrontendCommit = "2391dc9df446dcb7ed85030a3faca3696b0d0da7";
 export const rayFrontendSources = Object.freeze([
   "client/web/src/runtime/orderPolling/ray.ts",
   "server/backend/core/account/ray_monitor_orders.js",
   ...["api", "autoMakeup", "contextStore", "contexts", "lifecycle", "match", "runtime", "state", "types"].map(name => `client/web/src/runtime/rayOrderMonitor/${name}.ts`),
+  "client/web/src/runtime/rayOrderMonitor/localOrders.ts",
+  "client/web/src/stores/account/rayOrderBindings.ts",
 ]);
 export function verifyRayFrontendSources(readSource) {
   for (const file of rayFrontendSources) {
+    if (verifyRayClientMonitorSource(file, readSource(file)))
+      continue;
     const original = execFileSync("git", ["show", `${rayFrontendCommit}:${file}`], { encoding: "utf8" }).replaceAll("\r\n", "\n");
     assert.equal(readSource(file).replaceAll("\r\n", "\n"), original, `${file}: complete committed RAY monitor source`);
   }

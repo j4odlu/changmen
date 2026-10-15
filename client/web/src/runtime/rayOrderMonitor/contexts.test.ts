@@ -19,22 +19,23 @@ it("registration hands over context synchronously without querying or repeating 
   registerRayOrderContext(input()); registerRayOrderContext(input()); expect(useRayOrderContextStore().tasks.size).toBe(1);
 });
 it("consumes supplied facts and closes the original exactly once after a reject", async () => {
-  registerRayOrderContext(input()); const bind = vi.fn(async () => {});
-  await bindRayOrderContexts({ accountId: 2 } as never, [order()], () => true, bind);
+  registerRayOrderContext(input());
+  bindRayOrderContexts({ accountId: 2 } as never, [order()], () => true);
   observeRayOrderContexts(2, [order("reject")], () => true); observeRayOrderContexts(2, [order("reject")], () => true);
-  expect(bind).toHaveBeenCalledOnce(); expect(useRayOrderContextStore().taskForLink(100)).toMatchObject({ status: "rejected", autoMakeupStatus: "disabled" });
+  expect(useRayOrderContextStore().taskForLink(100)).toMatchObject({ status: "rejected", autoMakeupStatus: "disabled", monitorBound: true });
+  expect(useRayOrderContextStore().taskForLink(100)?.bindingSaved).not.toBe(true);
   expect(mocks.logs.mock.calls.filter(call => call[1].monitorEvent === "rejected")).toHaveLength(1);
 });
 it("ambiguous candidates remain unbound and cannot enter makeup", async () => {
-  registerRayOrderContext({ ...input(), initialOrders: [] }); const bind = vi.fn(async () => {});
-  await bindRayOrderContexts({ accountId: 2 } as never, [order(), { ...order(), orderId: "two" }], () => true, bind);
-  expect(bind).not.toHaveBeenCalled(); expect(useRayOrderContextStore().taskForLink(100)).toMatchObject({ status: "ambiguous", candidateCount: 2 });
+  registerRayOrderContext({ ...input(), initialOrders: [] });
+  bindRayOrderContexts({ accountId: 2 } as never, [order(), { ...order(), orderId: "two" }], () => true);
+  observeRayOrderContexts(2, [order("reject")], () => true);
+  expect(useRayOrderContextStore().taskForLink(100)).toMatchObject({ status: "ambiguous", candidateCount: 2 });
 });
-it("failed binding remains retryable even when the matched order is already rejected", async () => {
-  registerRayOrderContext({ ...input(), initialOrders: [] }); const bind = vi.fn().mockRejectedValueOnce(new Error("failed")).mockResolvedValue(undefined);
-  await bindRayOrderContexts({ accountId: 2 } as never, [order("reject")], () => true, bind);
-  observeRayOrderContexts(2, [order("reject")], () => true); expect(useRayOrderContextStore().taskForLink(100)?.status).toBe("watching");
-  await bindRayOrderContexts({ accountId: 2 } as never, [order("reject")], () => true, bind);
+it("reject events require a uniquely identified original, independent of database synchronization", () => {
+  registerRayOrderContext({ ...input(), initialOrders: [] });
+  observeRayOrderContexts(2, [order("reject")], () => true); expect(useRayOrderContextStore().taskForLink(100)?.status).toBe("binding");
+  bindRayOrderContexts({ accountId: 2 } as never, [order("reject")], () => true);
   observeRayOrderContexts(2, [order("reject")], () => true); expect(useRayOrderContextStore().taskForLink(100)?.status).toBe("rejected");
 });
 it("migrates expired legacy time limits into continuing contexts and removes the old storage key", () => {

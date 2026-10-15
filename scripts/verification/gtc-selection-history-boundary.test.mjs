@@ -3,13 +3,14 @@ import { describe, expect, it } from "vitest";
 import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mjs";
 import { restoreGtcSelectionHistorySource } from "./gtc-selection-history-boundary.mjs";
 import { restoreUnifiedArbitrageSource } from "./unified-arb-boundaries.mjs";
+import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
 
 const read = file => fs.readFileSync(file, "utf8");
 const picker = "client/web/src/stores/betting/autoBet/phases/prepareArbAttempt.ts";
 const execution = "client/web/src/orderModes/gtc/arbLeg.ts";
 describe("GTC history move keeps the original FOK boundary", () => {
   it.each([picker, execution])("restores only the authorized changes in %s", file => {
-    expect(moduleTokens(restoreGtcSelectionHistorySource(file, read(file), replaceExact, true)))
+    expect(moduleTokens(restoreGtcSelectionHistorySource(file, restorePmPreflightSource(file, read(file)), replaceExact, true)))
       .toEqual(moduleTokens(gitSource("2ab5e37f", file)));
   });
   it.each([

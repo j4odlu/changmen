@@ -8,17 +8,11 @@ import type { PodFixtureMatchBasis } from "@/runtime/podFixtureMatch";
 import type { PodMarketMatch, PodObQuoteCompare } from "@/runtime/podMarketMatch";
 import { evaluatePodOutcomeGate, podOutcomeGateEntryFrom, type PodOutcomeGateEntry } from "@/runtime/podYabo/gate";
 import { podYaboDailyLossBlocked } from "@/runtime/podYabo/loss";
-import { useUserStore } from "@/stores/userStore";
 import { useAccountStore } from "@/stores/accountStore";
 import { useFootballOrderStore } from "@/stores/footballOrderStore";
 import { finalizePodBetExecution, reservePodBetExecution } from "@/api/podBetExecution";
-import {
-  ensurePmVaultForAccounts,
-  hasVault,
-  mergeVaultKeysIntoAccounts,
-  migrateTokenPrivateKeysToVault,
-  normalizePmVaultUserId,
-} from "@/security/pmVault";
+import { accountTokenHasPrivateKey } from "@/security/pmVault";
+import { getRetainedPmPrivateKey } from "@/security/pmVault/retainedPmSession";
 
 const PM = "Polymarket" as const;
 
@@ -149,19 +143,11 @@ function pickPmAccounts(ticket: PodPmFollowPlaceTicket): PlatformAccount[] {
 
 export async function ensurePmFootballAccountsHaveVaultKeys(): Promise<string | null> {
   const store = useAccountStore();
-  const user = useUserStore();
-  if (!user.userId && user.isLoggedIn)
-    await user.fetchUserInfo();
-  const uid = normalizePmVaultUserId(user.userId);
-  if (!uid || !(await hasVault(uid)))
-    return null;
-  const unlocked = await ensurePmVaultForAccounts(uid, store.accounts.filter(a => String(a.provider) === "Polymarket"));
-  if (!unlocked)
-    return "请先解锁本机钱包";
-  mergeVaultKeysIntoAccounts(store.accounts, uid);
-  const migrated = await migrateTokenPrivateKeysToVault(store.accounts, uid);
-  if (migrated > 0)
-    void store.saveAccounts();
+  // [changmen 扩展] 跟单/体育下单同样只检查，不在交易流程恢复或解锁钱包。
+  const accounts = store.accounts.filter(a => String(a.provider) === "Polymarket");
+  for (const account of accounts) getRetainedPmPrivateKey(account.accountId);
+  if (accounts.length && !accounts.some(a => accountTokenHasPrivateKey(a.token)))
+    return "请先在账号页加载账号或解锁本机钱包";
   return null;
 }
 

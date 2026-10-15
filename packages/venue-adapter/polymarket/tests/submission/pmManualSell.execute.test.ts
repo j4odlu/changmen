@@ -4,7 +4,7 @@ import { pmGetBook, pmPrepareSubmit, pmSubmitClockReady, pmSubmitOrder } from ".
 import { estimatePolymarketManualSellProceedsUsdc, sellPolymarketBuyPosition } from "../../pmManualSell";
 import { resolvePolymarketBuilderCode } from "../../builder";
 import { PM_ORDER_SUBMIT_MODE_KEY, setPmOrderSubmitMode } from "../../pmOrderSubmitMode";
-import { clearPolymarketOrderClientCache } from "../../pmOrderClientCache";
+import { preparePolymarketAccountRuntimes, clearPolymarketOrderClientCache } from "../../pmOrderClientCache";
 import { clearPmSubmitJournalForTests } from "../../pmSubmitJournal";
 vi.mock("../../pmClientApi", () => ({
   pmGetBook: vi.fn(), pmPrepareSubmit: vi.fn(), pmSubmitClockReady: vi.fn(), pmSubmitOrder: vi.fn(),
@@ -23,8 +23,9 @@ const buy = {
   pmTokenId: "123", pmShares: 10, pmStakeUsdc: 5, pmFillPrice: 0.5,
   pmSide: "buy" as const, pmOrigin: "changmen" as const, pmSellState: "open" as const,
 };
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear(); clearPmSubmitJournalForTests();
+  await preparePolymarketAccountRuntimes([account()]);
   globalThis.localStorage.removeItem(PM_ORDER_SUBMIT_MODE_KEY);
   vi.mocked(pmGetBook).mockReset().mockResolvedValue({ asset_id: "123", bids: [{ price: "0.5", size: "100" }], tick_size: "0.01", min_order_size: 1, neg_risk: false });
   vi.mocked(pmPrepareSubmit).mockReset().mockResolvedValue(undefined);
@@ -80,7 +81,7 @@ describe("manual sell submission preparation", () => {
       else clearPolymarketOrderClientCache();
     });
     const result = await sellPolymarketBuyPosition({ account: a, buyRow: buy });
-    expect(result.error).toContain("账号或钱包会话已改变");
+    expect(result.error).toMatch(/账号或钱包会话已改变|签名器未就绪/);
     expect(pmSubmitOrder).not.toHaveBeenCalled();
   });
 
@@ -90,7 +91,9 @@ describe("manual sell submission preparation", () => {
     config.walletAddress = "0x0000000000000000000000000000000000000001";
     a.token = JSON.stringify(config);
     const result = await sellPolymarketBuyPosition({ account: a, buyRow: buy });
-    expect(result.error).toContain("私钥与 walletAddress 不匹配");
+    const results = await preparePolymarketAccountRuntimes([a]);
+    expect(results[0]).toMatchObject({ status: "rejected", reason: new Error("PM 私钥与 walletAddress 不匹配") });
+    expect(result.error).toContain("签名器未就绪");
     expect(pmSubmitOrder).not.toHaveBeenCalled();
   });
 
@@ -114,6 +117,7 @@ describe("manual sell submission preparation", () => {
     setPmOrderSubmitMode(mode);
     const a = account(); const config = JSON.parse(a.token!);
     a.token = JSON.stringify({ ...config, signatureType: 3, funder: "0x8ed24e533d24c2f381983eda8f97c2358f8d65e5" });
+    await preparePolymarketAccountRuntimes([a]);
     vi.mocked(pmGetBook).mockResolvedValue({ asset_id: "123", version: "v2",
       bids: [{ price: "0.5", size: "100" }], tick_size: "0.01", min_order_size: 1, neg_risk: false });
     await sellPolymarketBuyPosition({ account: a, buyRow: buy });

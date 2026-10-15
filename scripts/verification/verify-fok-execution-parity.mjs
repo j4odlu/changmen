@@ -9,6 +9,7 @@ import ts from "typescript";
 import { gitSource, manualBaselineAfterKnownCorrection, replaceExact, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { checkOrdinaryOrderList } from "./fok-order-list-boundary.mjs";
 import { specializeFokSource } from "./fok-source-specialization.mjs";
+import { verifyPmPreflightContract } from "./pm-preflight-boundary.mjs";
 // [changmen 扩展] 永久固定到加入 GTC 配置前；需要本地 Git 保留此基线提交。
 const base = process.env.FOK_PARITY_BASELINE ?? "219535c8";
 assert(["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"].includes(base), "FOK protection accepts only the two original immutable baselines");
@@ -54,6 +55,7 @@ const exactFiles = [
 ];
 
 verifyRayFrontendSources(target => fs.readFileSync(target, "utf8"));
+const pmPreflightContract = verifyPmPreflightContract(target => fs.readFileSync(target, "utf8"));
 const unifiedContract = verifyUnifiedArbitrageContract(target => fs.readFileSync(target, "utf8"), replaceExact);
 for (const file of exactFiles)
   verifyProtectedSource(file, normalizeSource(fs.readFileSync(file, "utf8")), gitSource(base, file), undefined, target => gitSource(base, target));
@@ -141,7 +143,7 @@ specialized.dispose();
 const orchestration = fs.readFileSync(executePath, "utf8");
 const fixedOrchestration = restoreUnifiedArbitrageSource(executePath, orchestration, replaceExact, true);
 assert(!fixedOrchestration.includes("useUserStore") && !fixedOrchestration.includes("\"GTC\"") && !fixedOrchestration.includes("pmGtc/"), "orchestration cannot choose PM mode or import its execution module");
-process.stdout.write(`${JSON.stringify({ baseline: base, unifiedContract, exactCoreFiles: exactFiles.length, pmFunctionBodies: beforePm.size, manualFokBodyIdentical: true })}\n`);
+process.stdout.write(`${JSON.stringify({ baseline: base, unifiedContract, pmPreflightContract, exactCoreFiles: exactFiles.length, pmFunctionBodies: beforePm.size, manualFokBodyIdentical: true })}\n`);
 
 function load(file, old, context) {
   const source = old ? execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");

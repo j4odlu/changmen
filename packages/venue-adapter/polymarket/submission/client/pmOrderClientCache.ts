@@ -1,6 +1,6 @@
 import type { Hex } from "viem";
-import type { PolymarketTokenConfig, resolveApiCreds } from "../../l2Auth";
-import { resolveFunder } from "../../l2Auth";
+import type { PolymarketTokenConfig } from "../../l2Auth";
+import { parseTokenConfig, resolveApiCreds, resolvePrivateKey, resolveFunder } from "../../l2Auth";
 import { resolvePolymarketBuilderCode } from "../../builder";
 
 export interface PolymarketOrderClientRuntime {
@@ -22,9 +22,8 @@ export interface PolymarketOrderClientRuntimeResult {
   cacheHit: boolean;
 }
 
-const MAX_CLIENTS = 8;
 const runtimes = new Map<string, PolymarketOrderClientRuntime>();
-const flights = new Map<string, Promise<PolymarketOrderClientRuntimeResult>>();
+const flights = new Map<string, { task: Promise<PolymarketOrderClientRuntimeResult>; token: object }>();
 let generation = 0;
 export function polymarketSigningGeneration(): number { return generation; }
 
@@ -44,14 +43,10 @@ function runtimeKey(input: PolymarketOrderClientInput, builderCode: string): str
 
 function rememberRuntime(key: string, runtime: PolymarketOrderClientRuntime): void {
   runtimes.set(key, runtime);
-  if (runtimes.size <= MAX_CLIENTS)
-    return;
-  const oldest = runtimes.keys().next().value;
-  if (oldest)
-    runtimes.delete(oldest);
 }
 
-export async function getPolymarketOrderClientRuntime(
+/** [changmen 扩展] 仅账号加载/钱包解锁生命周期可创建 signer。 */
+export async function preparePolymarketOrderClientRuntime(
   input: PolymarketOrderClientInput,
 ): Promise<PolymarketOrderClientRuntimeResult> {
   const builderCode = resolvePolymarketBuilderCode();
@@ -63,9 +58,9 @@ export async function getPolymarketOrderClientRuntime(
     return { runtime: cached, cacheHit: true };
   }
   const pending = flights.get(key);
-  if (pending) return pending;
-  const startedGeneration = generation;
-  const task = (async (): Promise<PolymarketOrderClientRuntimeResult> => {
+  if (pending) return pending.task;
+  const token = {};
+  const task: Promise<PolymarketOrderClientRuntimeResult> = (async () => {
     const [
       clob,
       viem,
@@ -86,14 +81,59 @@ export async function getPolymarketOrderClientRuntime(
     });
     const builder = new clob.OrderBuilder(signer, clob.Chain.POLYGON,
       input.signatureType as any, resolveFunder(input.config) || undefined);
-    if (startedGeneration !== generation) throw new Error("钱包会话已失效");
+    if (flights.get(key)?.token !== token) throw new Error("钱包会话已失效");
     const runtime = { builder, clob, builderCode };
     rememberRuntime(key, runtime);
     return { runtime, cacheHit: false };
   })();
-  flights.set(key, task);
+  flights.set(key, { task, token });
   try { return await task; }
-  finally { if (flights.get(key) === task) flights.delete(key); }
+  finally { if (flights.get(key)?.token === token) flights.delete(key); }
+}
+
+/** [changmen 扩展] 交易路径只读；不等待在途初始化，也不兜底创建。 */
+export function getPolymarketOrderClientRuntime(input: PolymarketOrderClientInput): PolymarketOrderClientRuntimeResult {
+  const runtime = runtimes.get(runtimeKey(input, resolvePolymarketBuilderCode()));
+  if (!runtime) throw new Error("PM 钱包签名器未就绪，请在账号页重新加载账号或解锁钱包");
+  return { runtime, cacheHit: true };
+}
+
+interface SigningAccount { provider?: string; token?: string; gateway?: string }
+
+function accountInput(account: SigningAccount): PolymarketOrderClientInput {
+  const config = parseTokenConfig(account.token);
+  const creds = resolveApiCreds(config);
+  const privateKey = resolvePrivateKey(config);
+  if (!privateKey || !creds.address || !creds.apiKey || !creds.secret || !creds.passphrase)
+    throw new Error("PM 钱包或 API 凭据未就绪");
+  const signatureType = Number(creds.signatureType ?? 0);
+  return { gateway: account.gateway || "https://clob.polymarket.com", config, creds, privateKey,
+    signatureType: [1, 2, 3].includes(signatureType) ? signatureType : 0 };
+}
+
+/** [changmen 扩展] 同步撤销不再属于当前账号列表的 signer；不创建或等待初始化。 */
+export function retainPolymarketAccountRuntimes(accounts: readonly SigningAccount[]): void {
+  const allowed = new Set<string>();
+  for (const account of accounts) {
+    if (account.provider !== "Polymarket") continue;
+    try { allowed.add(runtimeKey(accountInput(account), resolvePolymarketBuilderCode())); }
+    catch { /* 未解锁或无效凭据不能保留旧 signer。 */ }
+  }
+  let removed = false;
+  for (const key of new Set([...runtimes.keys(), ...flights.keys()])) {
+    if (allowed.has(key)) continue;
+    runtimes.delete(key);
+    flights.delete(key);
+    removed = true;
+  }
+  if (removed) generation++;
+}
+
+/** [changmen 扩展] 按签名凭据同步完整账号列表，保留未变化账号（包括在途初始化）。 */
+export async function preparePolymarketAccountRuntimes(accounts: readonly SigningAccount[]) {
+  retainPolymarketAccountRuntimes(accounts);
+  return Promise.allSettled(accounts.filter(account => account.provider === "Polymarket")
+    .map(async account => preparePolymarketOrderClientRuntime(accountInput(account))));
 }
 
 export function hasPolymarketOrderClientRuntime(input: PolymarketOrderClientInput): boolean {

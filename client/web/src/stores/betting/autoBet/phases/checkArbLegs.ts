@@ -131,6 +131,7 @@ export async function checkArbLegs(
 
   const taskA = checkAccountA
     ? accountStore.checkBetting(checkAccountA, legA, {
+        ...(legA.type === "Polymarket" ? { requireClobConfirmation: true } : {}),
         role: isSingleLegPrecheckOnly("A", accountA, accountB, checkAccountA, checkAccountB) ? "precheckOnly" : "execute",
         skipAccountRate: resolveSkipAccountRate("A", ready),
         ...(legA.type === "Polymarket" && ready.pmOrderMode === "GTC" ? { pmOrderMode: ready.pmOrderMode } : {}),
@@ -138,6 +139,7 @@ export async function checkArbLegs(
     : undefined;
   const taskB = checkAccountB
     ? accountStore.checkBetting(checkAccountB, legB, {
+        ...(legB.type === "Polymarket" ? { requireClobConfirmation: true } : {}),
         role: isSingleLegPrecheckOnly("B", accountA, accountB, checkAccountA, checkAccountB) ? "precheckOnly" : "execute",
         skipAccountRate: resolveSkipAccountRate("B", ready),
         ...(legB.type === "Polymarket" && ready.pmOrderMode === "GTC" ? { pmOrderMode: ready.pmOrderMode } : {}),

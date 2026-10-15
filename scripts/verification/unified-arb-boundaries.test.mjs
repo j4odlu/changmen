@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { gitSource, moduleTokens, replaceExact, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { restoreRayFinalizeSource } from "./ray-frontend-boundary.mjs";
+import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
 import { readReviewedCapabilityContracts, restoreUnifiedArbitrageSource, UNIFIED_ARBITRAGE_BOUNDARIES, verifyUnifiedArbitrageContract } from "./unified-arb-boundaries.mjs";
 
 const read = file => fs.readFileSync(file, "utf8");
@@ -25,9 +26,10 @@ describe("unified public phases preserve complete immutable baselines", () => {
     }
     boundaries.forEach(([before, after], index) => {
       it(`${file} boundary ${index}: rejects a missing or duplicated reviewed fragment`, () => {
-        const absent = replaceExact(read(file), before, after);
+        const previous = restorePmPreflightSource(file, read(file));
+        const absent = replaceExact(previous, before, after);
         expect(() => restoreUnifiedArbitrageSource(file, absent, replaceExact, true)).toThrow();
-        const duplicate = replaceExact(read(file), before, `${before}\n${before}`);
+        const duplicate = replaceExact(previous, before, `${before}\n${before}`);
         expect(() => verifyUnifiedArbitrageContract(target => target === file ? duplicate : read(target), replaceExact)).toThrow();
       });
     });

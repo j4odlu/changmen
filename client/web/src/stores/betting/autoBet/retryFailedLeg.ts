@@ -146,7 +146,7 @@ export async function retryFailedLeg(
     if (isPendingConfirmVenueProvider(pickedAccount.provider))
       retryLeg.deferPostAcceptSettlement = true;
     trace?.event("重试", `第 ${round + 1} 轮 ${pickedAccount.provider}@${retryLeg.odds}`);
-    retryLeg = await accountStore.checkBetting(pickedAccount, retryLeg);
+    retryLeg = await accountStore.checkBetting(pickedAccount, retryLeg, pickedAccount.provider === "Polymarket" ? { requireClobConfirmation: true } : undefined);
     if (!retryLeg.data)
       continue;
 

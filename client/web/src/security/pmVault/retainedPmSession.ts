@@ -1,5 +1,6 @@
 /** [changmen 扩展] PM work-session recovery. No password/KEK, no PredictFun keys. */
 import { reactive } from "vue";
+import { clearPolymarketOrderClientCache as clearSignerCache, retainPolymarketAccountRuntimes } from "@changmen/venue-adapter/polymarket";
 import { a8PluginSend } from "@changmen/client-core/chrome-plugin/bridge";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { getAuthSessionVersion, getToken, isAuthSessionCurrent } from "@/lib/authSession";
@@ -19,11 +20,11 @@ let accountsRef: PlatformAccount[] = [];
 // Cleanup retains all object references; eligibility uses the latest account per ID.
 const currentPmAccounts = new Map<number, PlatformAccount>();
 let epoch = 0;
+export function getRetainedPmSessionEpoch(): number { return epoch; }
 let timer: ReturnType<typeof setTimeout> | undefined;
 let expiryTimer: ReturnType<typeof setTimeout> | undefined;
 let saveRevision: { userId: string; authVersion: string; revision: string } | null = null;
 let cleanupKeys: (ids: number[], wallets: string[]) => void = () => {};
-let clearSignerCache: () => void = () => {};
 let pending: Promise<boolean> | null = null;
 let saveSequence = 0;
 let lastUserId = "";
@@ -79,7 +80,8 @@ function binding(meta: unknown, row: unknown) { return JSON.stringify([meta, row
 function address(account: PlatformAccount) {
   return tokenWalletAddress(account.token);
 }
-function trackAccounts(accounts: PlatformAccount[], userId: string) {
+/** [changmen 扩展] 在任何持钥异步初始化之前登记清理对象，不触发插件请求。 */
+export function trackPmAccounts(accounts: PlatformAccount[], userId: string) {
   if (lastUserId && lastUserId !== userId) {
     clearRetainedPmMemory();
     retainedPmSessionUi.error = "";
@@ -179,10 +181,6 @@ function accept(reply: Reply, userId: string, version: string, entries: Entry[])
     const entry = entries.find(e => e.accountId === Number(account.accountId) && e.walletAddress === address(account));
     if (entry) account.token = mergePrivateKeyIntoToken(account.token, entry.privateKey, account.provider);
   }
-  void import("@changmen/venue-adapter/polymarket").then(m => {
-    clearSignerCache = m.clearPolymarketOrderClientCache;
-    if (!cache) clearSignerCache();
-  }).catch(() => {});
   if (timer) clearTimeout(timer);
   if (expiryTimer) clearTimeout(expiryTimer);
   expiryTimer = cache.expiresAt > 0 ? setTimeout(clearRetainedPmMemory, Math.max(1, cache.expiresAt - Date.now())) : undefined;
@@ -223,7 +221,7 @@ async function checkSession() {
   scheduleSessionCheck();
 }
 export async function restoreRetainedPmSession(accounts: PlatformAccount[], userId: string): Promise<boolean> {
-  trackAccounts(accounts, userId);
+  trackPmAccounts(accounts, userId);
   if (!retainedPmSessionUi.enabled || !userId) return false;
   if (pendingRevoke(userId)) {
     await confirmRevocation(userId);
@@ -252,7 +250,7 @@ export async function restoreRetainedPmSession(accounts: PlatformAccount[], user
     && entries.some(entry => entry.accountId === Number(account.accountId) && entry.walletAddress === address(account)));
 }
 export async function saveRetainedPmSession(accounts: PlatformAccount[], userId: string): Promise<boolean> {
-  trackAccounts(accounts, userId);
+  trackPmAccounts(accounts, userId);
   if (!retainedPmSessionUi.enabled || !userId) return false;
   if (pendingRevoke(userId)) return false;
   if (!accounts.some(a => isPolymarketProvider(a.provider) && extractPrivateKeyFromToken(a.token))) return false;
@@ -327,7 +325,7 @@ function pruneAccounts(ids: number[]) {
   }
   accountsRef = accountsRef.filter(a => !affected.includes(a));
   retainedPmSessionUi.active = Boolean(cache?.entries.length);
-  clearSignerCache();
+  retainPolymarketAccountRuntimes([...currentPmAccounts.values()]);
   // Invalidating an in-flight poll must still leave a poll for the surviving keys.
   scheduleSessionCheck();
 }

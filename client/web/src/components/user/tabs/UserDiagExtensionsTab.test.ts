@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   alert: vi.fn(),
   save: vi.fn(),
   select: undefined as ((value: string) => void) | undefined,
+  selectPreflight: undefined as ((value: string) => void) | undefined,
 }));
 
 vi.mock("element-plus/es/components/base/style/css", () => ({}));
@@ -53,11 +54,13 @@ vi.mock("element-plus/es", async () => {
     ElRadioGroup: defineComponent({
       props: ["modelValue"],
       emits: ["update:modelValue", "change"],
-      setup(_props, { emit, slots }) {
-        mocks.select = (value: string) => {
+      setup(props, { emit, slots }) {
+        const select = (value: string) => {
           emit("update:modelValue", value);
           emit("change", value);
         };
+        if (props.modelValue === "FOK" || props.modelValue === "GTC") mocks.select = select;
+        else mocks.selectPreflight = select;
         return () => h("div", slots.default?.());
       },
     }),
@@ -88,9 +91,22 @@ beforeEach(() => {
   mocks.alert.mockReset().mockResolvedValue("confirm");
   mocks.save.mockReset().mockResolvedValue(undefined);
   mocks.select = undefined;
+  mocks.selectPreflight = undefined;
 });
 
 describe("pm GTC V1 explicit activation in Extensions", () => {
+  it("renders legacy as the FOK default and edits the independent preference without activating GTC", async () => {
+    const html = await renderToString(createSSRApp(Tab));
+    expect(html).toContain("原有预检（默认）");
+    expect(html).toContain("优化预检");
+    const user = useUserStore();
+    expect(user.extensionPrefs.pmFokPreflightMode).toBe("legacy");
+    mocks.selectPreflight!("optimized");
+    expect(user.extensionPrefs.pmFokPreflightMode).toBe("optimized");
+    expect(user.extensionPrefs.pmArbOrderMode).toBe("FOK");
+    expect(mocks.alert).not.toHaveBeenCalled();
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
   it("defaults to FOK and selecting FOK does not show a dialog or save", async () => {
     const tab = await mount();
     expect(useUserStore().extensionPrefs.pmArbOrderMode).toBe("FOK");

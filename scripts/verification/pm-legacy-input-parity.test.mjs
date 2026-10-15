@@ -1,0 +1,121 @@
+// [changmen 扩展] 原有预检兼容性同时覆盖上游输入和提取后的公共任务，不能只比判断函数。
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
+import ts from "typescript";
+import { describe, expect, it } from "vitest";
+import { gitSource, moduleTokens } from "./fok-exact-boundaries.mjs";
+
+const baseline = "a233e20534395b31401828e754432407b109053d";
+const pm = "packages/venue-adapter/polymarket/";
+const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const online = file => gitSource(baseline, file).replaceAll("\r\n", "\n");
+
+describe("legacy FOK retains the deployed sports input pipeline", () => {
+  it.each([
+    "server/collectors/polymarket-sports/index.js",
+    "server/collectors/polymarket-sports/gamma_poll.js",
+    "server/collectors/polymarket-sports/sport_state.js",
+    "server/collectors/polymarket-sports/parse_sport.js",
+    "server/collectors/polymarket-sports/package.json",
+    "server/db/rds/pm_sport_store.js",
+    "server/db/package.json",
+    "packages/api-contract/src/dto.ts",
+    "packages/client-core/src/models/match.ts",
+    "packages/shared/package.json",
+    "package-lock.json",
+  ])("%s is unchanged from the verified online version", file => {
+    expect(read(file)).toBe(online(file));
+  });
+
+  it.each(["markets/pmSportGamma.ts", "submission/preflight/pmBetGuard.ts"])("legacy %s still matches the current online module", file => {
+    const legacyFile = file.endsWith("pmSportGamma.ts") ? "pmSportGamma.ts" : "pmBetGuard.ts";
+    const tokens = source => moduleTokens(source.replace(/from\s+(["'])(?:\.\.\/|\.\/)[^"']+\1/g, 'from "relative-import"'));
+    expect(tokens(read(pm + "submission/preflight/legacy/" + legacyFile))).toEqual(tokens(online(pm + file)));
+  });
+
+  it("keeps WS ownership and delayed-frame freshness identical for legacy inputs", () => {
+    // Native Node executes both real state writers; no DB, WS, or platform requests.
+    const stateFile = "server/collectors/polymarket-sports/sport_state.js";
+    const parser = pathToFileURL(path.resolve("server/collectors/polymarket-sports/parse_sport.js")).href;
+    const source = online(stateFile).replace('"./parse_sport.js"', JSON.stringify(parser));
+    const program = `
+      import assert from 'node:assert/strict';
+      const old = await import('data:text/javascript;base64,' + Buffer.from(${JSON.stringify(source)}).toString('base64'));
+      const current = await import(${JSON.stringify(pathToFileURL(path.resolve(stateFile)).href)});
+      const now = 1800000000000;
+      const frame = {gameId:1,status:'running',live:true,ended:false,period:'1/3',score:'000-000|0-0|Bo3'};
+      async function scenario(module, delayed) {
+        let stored = null;
+        const apply = module.createPmSportStateWriter(async()=>stored);
+        const write = async(_id,s)=>{stored=s;return true;};
+        Date.now=()=>now;
+        await apply(1,frame,'ws',write,delayed ? now-60000 : now);
+        if (delayed) return {updatedAt:stored.updatedAt, stale:now-stored.updatedAt>45000};
+        Date.now=()=>now+1000;
+        const accepted=await apply(1,{...frame,ended:true,live:false,status:'finished'},'gamma',write,now+1000);
+        return {accepted,ended:stored.ended,source:stored.source};
+      }
+      for (const delayed of [false,true]) {
+        const expected=await scenario(old,delayed);
+        assert.deepEqual(await scenario(current,delayed),expected);
+        assert.deepEqual(expected,delayed ? {updatedAt:now,stale:false} : {accepted:false,ended:false,source:'ws'});
+      }
+    `;
+    expect(() => execFileSync(process.execPath, ["--input-type=module", "-e", program], { stdio: "pipe", windowsHide: true })).not.toThrow();
+  });
+});
+
+function compile(source, bindings) {
+  const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const exports = {};
+  new Function(...Object.keys(bindings), "exports", code)(...Object.values(bindings), exports);
+  return exports;
+}
+
+// Read the actual deployed parallel block rather than reproducing its algorithm in the test.
+const deployedFok = online(pm + "fok/bet.ts");
+const start = deployedFok.indexOf("      const buyP =");
+const end = deployedFok.indexOf('      if (guardSettled.status === "fulfilled"', start);
+if (start < 0 || end < start) throw new Error("Deployed preflight task block missing");
+const deployedTasks = `export async function run() { ${deployedFok.slice(start, end)}
+  return {market:buySettled,guard:guardSettled,clock:clockSettled,runtime:runtimeSettled}; }`;
+const commonSource = read(pm + "submission/preflight/pmBuyPreflight.ts");
+const commonAst = ts.createSourceFile("common.ts", commonSource, ts.ScriptTarget.Latest, true);
+const commonTasks = commonAst.statements.filter(node => !ts.isImportDeclaration(node)).map(node => node.getText(commonAst)).join("\n");
+
+async function runTasks(version, role, failure) {
+  const calls = [];
+  const account = { token: "ready-token" }, option = { itemId: "token" };
+  const action = name => async () => {
+    calls.push(name);
+    if (failure === name || failure === "all") throw new Error(name + " failed");
+    return name === "guard" ? "market blocked" : name === "clock" ? undefined : { price: 0.5 };
+  };
+  const market = action("market"), guard = action("guard"), clock = action("clock");
+  const bindings = {
+    account, option, context: { role }, gateway: "gateway", tokenId: "token", detectionOdds: 2, apiBetMoney: 10, maxPrice: 0.5,
+    resolvePolymarketExecutableBuy: market, resolvePolymarketBetBlockReason: version === "online" ? guard : () => { throw new Error("optimized guard must not run"); },
+    resolveLegacyBlockReason: guard, pmPrepareSubmit: clock,
+    measurePmExecution: (_kind, _fields, action) => action(),
+    parseTokenConfig: () => ({}), resolveApiCreds: () => ({ address: "a", apiKey: "k", secret: "s", passphrase: "p", signatureType: 2 }),
+    resolvePrivateKey: () => "private", preparationBinding: () => "bound", polymarketSigningGeneration: () => 7,
+    resolveSdkSignatureType: value => [1, 2, 3].includes(Number(value)) ? Number(value) : 0,
+    getPolymarketOrderClientRuntime: () => { calls.push("runtime"); if (failure === "runtime" || failure === "all") throw new Error("runtime failed"); return { runtime: "prepared", cacheHit: true }; },
+    getPolymarketPmSportBlockReasonFromOption: () => { throw new Error("legacy must not add a post-await sport check"); },
+  };
+  const loaded = compile(version === "online" ? deployedTasks : commonTasks, bindings);
+  const result = version === "online" ? await loaded.run() : await loaded.runPmBuyPreflight(account, option, {
+    gateway: "gateway", market, role, sportMode: "legacy", requireClobConfirmation: true,
+    runtimeBinding: () => "bound", missingCredentialsMessage: "missing", measureStages: true,
+  });
+  return { calls, result: Object.fromEntries(Object.entries(result).map(([key, value]) => [key,
+    value.status === "rejected" ? { status: value.status, reason: value.reason.message } : value])) };
+}
+
+describe.each(["execute", "precheckOnly"])("legacy common tasks match the deployed %s path with a ready wallet", role => {
+  it.each(["none", "market", "guard", "clock", "runtime", "all"])("preserves start order and settled outcomes when %s fails", async failure => {
+    expect(await runTasks("candidate", role, failure)).toEqual(await runTasks("online", role, failure));
+  });
+});

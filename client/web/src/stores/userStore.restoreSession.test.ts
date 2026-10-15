@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useUserStore } from "@/stores/userStore";
 import { SessionRestoreConfigurationError } from "@/lib/sessionRestoreError";
+import { capturePmFokPreflightMode, setPmFokPreflightMode } from "@changmen/venue-adapter/polymarket";
+import { getClientData, getClientDataArray, saveClientDataDetailed } from "@/api/esport";
 
 const auth = vi.hoisted(() => ({
   clearAuthSession: vi.fn(),
@@ -41,6 +43,57 @@ vi.mock("@/lib/sessionRefresh", () => ({
   startTokenRefresh: vi.fn(),
   stopTokenRefresh: vi.fn(),
 }));
+
+describe("FOK preflight preference persistence", () => {
+  const modeForNewAttempt = () => capturePmFokPreflightMode({} as any);
+  beforeEach(() => {
+    setActivePinia(createPinia()); setPmFokPreflightMode("legacy");
+    const user = useUserStore(); user.userId = 12;
+    vi.spyOn(user, "syncPbCollectModeFromLocal").mockResolvedValue();
+    vi.spyOn(user, "syncPmArbPriceBufferFromPrefs").mockResolvedValue();
+    vi.spyOn(user, "syncPmFokDepthBufferFromPrefs").mockResolvedValue();
+    vi.spyOn(user, "syncPfArbPriceBufferFromPrefs").mockResolvedValue();
+    vi.mocked(saveClientDataDetailed).mockReset();
+    vi.mocked(getClientDataArray).mockResolvedValue([]);
+  });
+  it("loads the saved mode and resets old accounts without the field to legacy", async () => {
+    vi.mocked(getClientData).mockResolvedValue({ pmFokPreflightMode: "optimized" });
+    await useUserStore().loadExtras(true);
+    expect(modeForNewAttempt()).toBe("optimized");
+    vi.mocked(getClientData).mockResolvedValue({});
+    await useUserStore().loadExtras(true);
+    expect(modeForNewAttempt()).toBe("legacy");
+  });
+  it("does not activate an unsaved edit or a failed save", async () => {
+    useUserStore().extensionPrefs.pmFokPreflightMode = "optimized";
+    expect(modeForNewAttempt()).toBe("legacy");
+    vi.mocked(saveClientDataDetailed).mockResolvedValue({ ok: false, msg: "offline" });
+    await expect(useUserStore().saveExtensionPrefs()).rejects.toThrow("offline");
+    expect(modeForNewAttempt()).toBe("legacy");
+  });
+  it("applies exactly the persisted selection after success, leaving pending edits for the next save", async () => {
+    const user = useUserStore(); user.extensionPrefs.pmFokPreflightMode = "optimized";
+    let finish!: (value: any) => void;
+    vi.mocked(saveClientDataDetailed).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    const saving = user.saveExtensionPrefs();
+    await vi.waitFor(() => expect(saveClientDataDetailed).toHaveBeenCalledOnce());
+    user.extensionPrefs.pmFokPreflightMode = "legacy";
+    expect(modeForNewAttempt()).toBe("legacy");
+    expect(JSON.parse(vi.mocked(saveClientDataDetailed).mock.calls[0]![1]).pmFokPreflightMode).toBe("optimized");
+    finish({ ok: true }); await saving;
+    expect(modeForNewAttempt()).toBe("optimized");
+  });
+  it("does not apply a prior user's pending save to a different login", async () => {
+    const user = useUserStore(); user.extensionPrefs.pmFokPreflightMode = "optimized";
+    let finish!: (value: any) => void;
+    vi.mocked(saveClientDataDetailed).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    const saving = user.saveExtensionPrefs();
+    await vi.waitFor(() => expect(saveClientDataDetailed).toHaveBeenCalledOnce());
+    user.userId = 13;
+    finish({ ok: true }); await saving;
+    expect(modeForNewAttempt()).toBe("legacy");
+  });
+});
 
 describe("userStore.restoreSession", () => {
   afterEach(() => vi.unstubAllGlobals());

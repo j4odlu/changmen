@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlatformAccount } from "@/models/platformAccount";
 const mocks = vi.hoisted(() => ({ send: vi.fn(), meta: { userId: "u", updatedAt: 1 },
   row: { accountId: 12, cipher: { ivB64: "iv", ctB64: "ct" } },
-  version: "login-1", clear: vi.fn(), extraRows: [] as Array<{ accountId: number; cipher: { ivB64: string; ctB64: string } }> }));
+  version: "login-1", clear: vi.fn(), retain: vi.fn(), extraRows: [] as Array<{ accountId: number; cipher: { ivB64: string; ctB64: string } }> }));
 const storageHooks = vi.hoisted(() => {
   const hooks: Array<(event: { key: string; newValue: string | null }) => void> = [];
   vi.stubGlobal("window", { addEventListener: (name: string, handler: (event: { key: string; newValue: string | null }) => void) => {
@@ -16,7 +16,7 @@ vi.mock("@changmen/client-core/chrome-plugin/bridge", () => ({ a8PluginSend: moc
 vi.mock("@/lib/authSession", () => ({ getToken: () => "test-token", getAuthSessionVersion: () => mocks.version,
   isAuthSessionCurrent: (version: string) => version === mocks.version }));
 vi.mock("./store", () => ({ getVaultMeta: async () => mocks.meta, listVaultKeys: async () => [mocks.row, ...mocks.extraRows] }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ clearPolymarketOrderClientCache: mocks.clear }));
+vi.mock("@changmen/venue-adapter/polymarket", () => ({ clearPolymarketOrderClientCache: mocks.clear, retainPolymarketAccountRuntimes: mocks.retain }));
 import { clearRetainedPmMemory, getRetainedPmPrivateKey, prepareRetainedPmSession, registerRetainedPmCleanup,
   restoreRetainedPmSession, retainedPmSessionUi, revokeRetainedPmSession, saveRetainedPmSession, setRetainedPmHours, removeRetainedPmAccount } from "./retainedPmSession";
 const pk = `0x${"ab".repeat(32)}`;
@@ -54,6 +54,7 @@ describe("PM-only session recovery", () => {
     const healthy = { ...reply(), expiresAt: -1, entries: [...reply().entries, second] };
     mocks.send.mockResolvedValueOnce(healthy);
     await restoreRetainedPmSession([account(), account("Polymarket", 14)], "u");
+    mocks.clear.mockClear();
     let release!: () => void;
     mocks.send.mockImplementation(message => {
       if (message.type === "pmWalletSession:remove") return Promise.resolve({ ok: true, revision: "removed" });
@@ -63,6 +64,8 @@ describe("PM-only session recovery", () => {
     expect(release).toBeTypeOf("function");
     if (source === "local") await removeRetainedPmAccount("u", 12);
     else for (const hook of storageHooks) hook({ key: "changmen:pm-session-lock", newValue: JSON.stringify({ userId: "u", accountId: 12 }) });
+    expect(mocks.clear).not.toHaveBeenCalled();
+    expect(mocks.retain).toHaveBeenCalledWith([expect.objectContaining({ accountId: 14 })]);
     release();
     await vi.advanceTimersByTimeAsync(0);
     expect(getRetainedPmPrivateKey(14)).toBe(pk);

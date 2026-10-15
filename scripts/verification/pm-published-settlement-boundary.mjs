@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { restorePmOrderBetLabelSource } from './pm-order-bet-label-boundary.mjs';
+import { restorePmPreflightSource } from './pm-preflight-boundary.mjs';
 
 export const publishedPmCommit = '113db6ff4e59dd615f8dd867e11d859b05766b7d';
 // [changmen 扩展] 精确登记已提交的官方优先/价格回退修复，含手动卖出已实现盈亏保护。
@@ -64,6 +65,7 @@ function restoreReviewedModule(file, source, { original, published, hunks }) {
 }
 
 export function restorePublishedPmSettlement(file, source) {
+  if (priceFallbackFiles.includes(file)) source = restorePmPreflightSource(file, source);
   source = restorePmOrderBetLabelSource(file, source, target => fs.readFileSync(target, 'utf8'));
   if (priceFallbackFiles.includes(file)) {
     const reviewed = reviewedModule(file, publishedPmCommit, priceFallbackCommit);

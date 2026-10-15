@@ -6,6 +6,9 @@ const mocks = vi.hoisted(() => ({
   checkBetting: vi.fn(),
   betting: vi.fn(),
   append: vi.fn(),
+  hasPrivateKey: vi.fn(),
+  unlockWallet: vi.fn(),
+  fetchUserInfo: vi.fn(),
   account: { accountId: 9, playerName: "PM-9", provider: "Polymarket" },
 }));
 
@@ -24,10 +27,11 @@ vi.mock("@/stores/footballOrderStore", () => ({
   useFootballOrderStore: () => ({ appendVenuePlaced: mocks.append }),
 }));
 vi.mock("@/stores/userStore", () => ({
-  useUserStore: () => ({ userId: "u1", isLoggedIn: true, fetchUserInfo: vi.fn() }),
+  useUserStore: () => ({ userId: "u1", isLoggedIn: true, fetchUserInfo: mocks.fetchUserInfo }),
 }));
 vi.mock("@/security/pmVault", () => ({
-  ensurePmVaultForAccounts: vi.fn(),
+  accountTokenHasPrivateKey: mocks.hasPrivateKey,
+  ensurePmVaultForAccounts: mocks.unlockWallet,
   hasVault: vi.fn().mockResolvedValue(false),
   mergeVaultKeysIntoAccounts: vi.fn(),
   migrateTokenPrivateKeysToVault: vi.fn().mockResolvedValue(0),
@@ -63,10 +67,24 @@ function ticket(): PodPmFollowPlaceTicket {
 describe("POD Polymarket auto execution reservation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.hasPrivateKey.mockReturnValue(true);
     mocks.checkBetting.mockResolvedValue({ data: { prepared: true }, checkError: "" });
     mocks.reserve.mockResolvedValue({ acquired: true, leaseToken: "lease-pm", state: "reserved", venueOrderId: "" });
     mocks.finalize.mockResolvedValue(undefined);
     mocks.append.mockResolvedValue(undefined);
+  });
+
+  it.each([false, true])("blocks an unready wallet without initialization or order calls (auto=%s)", async auto => {
+    mocks.hasPrivateKey.mockReturnValue(false);
+    const result = await placePodPmFollowBet({ ...ticket(), auto });
+    expect(result).toEqual({ ok: false, message: "请先在账号页加载账号或解锁本机钱包" });
+    expect(mocks.fetchUserInfo).not.toHaveBeenCalled();
+    expect(mocks.unlockWallet).not.toHaveBeenCalled();
+    expect(mocks.checkBetting).not.toHaveBeenCalled();
+    expect(mocks.reserve).not.toHaveBeenCalled();
+    expect(mocks.betting).not.toHaveBeenCalled();
+    expect(mocks.finalize).not.toHaveBeenCalled();
+    expect(mocks.append).not.toHaveBeenCalled();
   });
 
   it("does not submit when another page already owns the execution", async () => {

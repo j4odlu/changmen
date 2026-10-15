@@ -84,7 +84,7 @@ describe("supplementary FOK audit reads full relocated source without exemptions
     const file = "packages/venue-adapter/polymarket/bet.ts";
     expect(fs.readFileSync(relocations[file], "utf8")).toContain("from \"../pmClientApi\"");
     expect(() => check([file], change(relocations[file], (source, matched) => matched ? source.replace("from \"../pmClientApi\"", "from \"../otherApi\"") : source)))
-      .toThrow(`unregistered protected source difference`);
+      .toThrow(`exact unified PM preflight increment`);
   });
   it("accepts only the precise notification wrapper and rejects changed POST arguments", () => {
     const file = "client/web/src/stores/account/betGateway.ts";

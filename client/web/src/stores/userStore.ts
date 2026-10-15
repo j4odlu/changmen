@@ -1,4 +1,5 @@
 import type { UserInfo } from "@/types/esport";
+import { setPmFokPreflightMode } from "@changmen/venue-adapter/polymarket";
 import type { FollowConfig } from "@/types/order";
 import type { ExtensionPrefs } from "@/types/extensionPrefs";
 import type { MessageConfig, ProxyRow } from "@/types/userExtras";
@@ -224,6 +225,7 @@ export const useUserStore = defineStore("user", {
       this.proxyList = [];
       this.message = {};
       this.extensionPrefs = createDefaultExtensionPrefs();
+      setPmFokPreflightMode(this.extensionPrefs.pmFokPreflightMode);
       // 本机影子价偏好保留在 localStorage；登出只关运行时门控，下次登录再按本地值恢复
       try {
         const { setPbWsShadowUiAllowed, setPbChangmenExtensions } = await import("@changmen/venue-adapter/pb");
@@ -276,6 +278,7 @@ export const useUserStore = defineStore("user", {
         return;
       this.message = msg ?? {};
       this.extensionPrefs = normalizeExtensionPrefs(ext);
+      setPmFokPreflightMode(this.extensionPrefs.pmFokPreflightMode);
       await this.syncPbCollectModeFromLocal();
       await this.syncPmArbPriceBufferFromPrefs();
       await this.syncPmFokDepthBufferFromPrefs();
@@ -360,15 +363,21 @@ export const useUserStore = defineStore("user", {
       this.extrasLoadGen += 1;
       // 失败减仓暂锁死：保存前再归一化，避免内存/旧 KV 把 enabled:true 写回
       this.extensionPrefs = normalizeExtensionPrefs(this.extensionPrefs);
+      const savedPreflightMode = this.extensionPrefs.pmFokPreflightMode;
+      const savedForUserId = this.userId;
+      const saveGeneration = this.extrasLoadGen;
       await this.syncPmArbPriceBufferFromPrefs();
       await this.syncPmFokDepthBufferFromPrefs();
       await this.syncPfArbPriceBufferFromPrefs();
       const result = await saveClientDataDetailed(
         "Extensions",
-        serializeExtensionPrefsForSave(this.extensionPrefs),
+        serializeExtensionPrefsForSave({ ...this.extensionPrefs, pmFokPreflightMode: savedPreflightMode }),
       );
       if (!result.ok)
         throw new Error(result.msg || "保存扩展配置失败");
+      // [changmen 扩展] 保存成功才应用；异步保存期间的编辑不能改变本次持久化的选择。
+      if (this.userId === savedForUserId && this.extrasLoadGen === saveGeneration)
+        setPmFokPreflightMode(savedPreflightMode);
     },
 
     async deleteProxy(proxyId: number) {

@@ -23,7 +23,9 @@ import {
   stripPrivateKeysForPersist,
 } from "@/security/pmVault";
 import { useUserStore } from "@/stores/userStore";
-import { removeRetainedPmAccount, saveRetainedPmSession } from "@/security/pmVault/retainedPmSession";
+import { getRetainedPmSessionEpoch, removeRetainedPmAccount, saveRetainedPmSession, trackPmAccounts } from "@/security/pmVault/retainedPmSession";
+import { preparePolymarketAccountRuntimes } from "@changmen/venue-adapter/polymarket";
+import { getAuthSessionVersion, isAuthSessionCurrent } from "@/lib/authSession";
 
 async function warmPolymarketUserWsFromAccounts(accounts: PlatformAccount[]) {
   try {
@@ -59,11 +61,13 @@ export async function loadTagPlatforms(store: AccountStoreContext) {
 }
 
 export async function loadAccounts(store: AccountStoreContext, refreshBalances = false) {
+  const authVersion = getAuthSessionVersion();
   store.loading = true;
   try {
     if (refreshBalances)
       await loadTagPlatforms(store);
     const list = await getAccounts();
+    if (!isAuthSessionCurrent(authVersion)) return;
     store.accounts = list
       .filter(row => row.accountId)
       .map((row) => {
@@ -81,6 +85,8 @@ export async function loadAccounts(store: AccountStoreContext, refreshBalances =
       });
     store.loaded = true;
     const userId = normalizePmVaultUserId(useUserStore().userId);
+    if (userId) trackPmAccounts(store.accounts, userId);
+    const walletEpoch = getRetainedPmSessionEpoch();
     if (userId) {
       mergeVaultKeysIntoAccounts(store.accounts, userId);
       try {
@@ -112,6 +118,9 @@ export async function loadAccounts(store: AccountStoreContext, refreshBalances =
     catch {
       /* adapter 未就绪 */
     }
+    if (!isAuthSessionCurrent(authVersion) || walletEpoch !== getRetainedPmSessionEpoch()) return;
+    await preparePolymarketAccountRuntimes(store.accounts);
+    if (!isAuthSessionCurrent(authVersion) || walletEpoch !== getRetainedPmSessionEpoch()) return;
     void warmPolymarketUserWsFromAccounts(store.accounts);
     if (userId) void saveRetainedPmSession(store.accounts, userId);
     void import("@/stores/account/betGateway")
@@ -263,6 +272,7 @@ export async function createAccount(
   if (acc && record.sportOb?.token && String(record.provider || acc.provider) === "OB")
     await persistSportAccount(store, acc.accountId, record.sportOb);
   if (acc) {
+    await preparePolymarketAccountRuntimes(store.accounts);
     await acc.updateBalance();
     await acc.updateOrders();
     void warmPolymarketUserWsFromAccounts(store.accounts);
@@ -305,6 +315,7 @@ export async function deleteAccount(store: AccountStoreContext, accountId: numbe
   await deletePlayer(accountId);
   if (pm) await removeRetainedPmAccount(normalizePmVaultUserId(useUserStore().userId), accountId);
   store.accounts = store.accounts.filter(a => a.accountId !== accountId);
+  if (pm) await preparePolymarketAccountRuntimes(store.accounts);
   void persistAccounts(store);
 }
 

@@ -3,9 +3,11 @@
  */
 
 import { reactive, ref } from "vue";
+import { getAuthSessionVersion, isAuthSessionCurrent } from "@/lib/authSession";
+import { preparePolymarketAccountRuntimes } from "@changmen/venue-adapter/polymarket";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { isPolymarketProvider, isVaultKeyProvider, tokenWalletAddress } from "./tokenStrip";
-import { clearRetainedPmMemory, getRetainedPmPrivateKey, prepareRetainedPmSession, registerRetainedPmCleanup, removeRetainedPmAccount, restoreRetainedPmSession, revokeRetainedPmSession, saveRetainedPmSession } from "./retainedPmSession";
+import { clearRetainedPmMemory, getRetainedPmSessionEpoch, getRetainedPmPrivateKey, prepareRetainedPmSession, registerRetainedPmCleanup, removeRetainedPmAccount, restoreRetainedPmSession, revokeRetainedPmSession, saveRetainedPmSession } from "./retainedPmSession";
 import {
   base64ToBytes,
   bytesToBase64,
@@ -368,16 +370,23 @@ export async function putPrivateKeyInVault(
 
 /** [changmen 扩展] PM 恢复不伪装为共享 vault 完整解锁，导入/改密仍需密码。 */
 export async function ensurePmVaultForAccounts(userId: string, accounts: PlatformAccount[]): Promise<boolean> {
+  const epoch = sessionEpoch;
+  const authVersion = getAuthSessionVersion();
+  const current = () => epoch === sessionEpoch && isAuthSessionCurrent(authVersion);
   try { await restoreRetainedPmSession(accounts, userId); } catch { /* password fallback */ }
   const ids = new Set((await listVaultKeys(userId)).map(row => Number(row.accountId)));
+  if (!current()) return false;
   const required = accounts.filter(a => isVaultKeyProvider(a.provider) && ids.has(Number(a.accountId)));
   const hasKey = (account: PlatformAccount) => Boolean(getCachedPrivateKey(account.accountId, tokenWalletAddress(account.token)));
-  if (isPmVaultUnlocked(userId) && required.every(hasKey)) return true;
-  if (required.length && required.every(a => isPolymarketProvider(a.provider) && getRetainedPmPrivateKey(a.accountId, userId, tokenWalletAddress(a.token))))
-    return true;
+  const finish = async () => current() && await syncUnlockedKeysIntoAccountStore(userId) && current() && required.every(hasKey);
+  if (isPmVaultUnlocked(userId) && required.every(hasKey)) return finish();
+  if (required.length && required.every(a => isPolymarketProvider(a.provider) && getRetainedPmPrivateKey(a.accountId, userId, tokenWalletAddress(a.token)))) {
+    return finish();
+  }
   const unlocked = await ensurePmVaultUnlocked(userId, { force: isPmVaultUnlocked(userId) && required.some(a => !hasKey(a)) });
   // A correct vault password cannot make an old wallet's key valid for a new address.
-  return unlocked && required.every(hasKey);
+  if (!unlocked || !current() || !required.every(hasKey)) return false;
+  return finish();
 }
 
 export async function vaultHasKey(userId: string, accountId: number): Promise<boolean> {
@@ -441,24 +450,35 @@ export async function ensurePmVaultSetup(userId: string): Promise<boolean> {
 }
 
 /** 解锁成功后把本机钥合并进账号内存（供自动下注） */
-export async function syncUnlockedKeysIntoAccountStore(): Promise<void> {
-  const uid = session?.userId;
-  if (!uid)
-    return;
+export async function syncUnlockedKeysIntoAccountStore(userId?: string): Promise<boolean> {
+  const epoch = sessionEpoch;
+  const retainedEpoch = getRetainedPmSessionEpoch();
+  const authVersion = getAuthSessionVersion();
+  const uid = userId ?? session?.userId;
+  const current = () => epoch === sessionEpoch && retainedEpoch === getRetainedPmSessionEpoch()
+    && isAuthSessionCurrent(authVersion) && (!session || session.userId === uid);
+  if (!uid) return false;
   try {
     const { useAccountStore } = await import("@/stores/accountStore");
     const { mergeVaultKeysIntoAccounts, migrateTokenPrivateKeysToVault } = await import("./accounts");
+    if (!current()) return false;
     const store = useAccountStore();
-    if (!store.accounts.length)
-      return;
-    mergeVaultKeysIntoAccounts(store.accounts, uid);
-    const migrated = await migrateTokenPrivateKeysToVault(store.accounts, uid);
+    const accounts = store.accounts;
+    if (!accounts.length) return true;
+    mergeVaultKeysIntoAccounts(accounts, uid);
+    if (!current()) return false;
+    const migrated = await migrateTokenPrivateKeysToVault(accounts, uid);
+    if (!current() || store.accounts !== accounts) return false;
+    await preparePolymarketAccountRuntimes(accounts);
+    if (!current() || store.accounts !== accounts) return false;
     if (migrated > 0)
       void store.saveAccounts();
-    void saveRetainedPmSession(store.accounts, uid);
+    void saveRetainedPmSession(accounts, uid);
+    return true;
   }
   catch {
     /* store 未就绪时忽略 */
+    return false;
   }
 }
 

@@ -226,6 +226,8 @@ export interface PlatformProvider {
   checkBet(account: PlatformAccount, option: BetOption, context?: {
     role?: "execute" | "precheckOnly";
     prepareSigning?: Promise<boolean>;
+    /** [changmen 扩展] 自动套利须取得明确 CLOB 接单状态。 */
+    requireClobConfirmation?: boolean;
   }): Promise<BetOption>;
   betting(account: PlatformAccount, option: BetOption): Promise<BetResult>;
   /** 订单状态层：POST 之后判定 filled / unfilled / timeout（拒单检测） */

@@ -242,7 +242,7 @@ describe("下注主链路与旁路故障隔离", () => {
     const pm = { ...account, provider: "Polymarket" } as PlatformAccount;
     mocks.gtcCheck.mockImplementation(async (_account, checked) => { checked.data = { orderType: "GTC" }; return checked; });
     expect(await checkBetting(store, pm, option, { pmOrderMode: "GTC" })).toBe(option);
-    expect(mocks.gtcCheck).toHaveBeenCalledExactlyOnceWith(pm, option, expect.any(Promise), true);
+    expect(mocks.gtcCheck).toHaveBeenCalledExactlyOnceWith(pm, option, undefined, true);
     expect(mocks.check).not.toHaveBeenCalled(); expect(mocks.stake).toHaveBeenCalledOnce();
     const ray = new BetOption("RAY", "m", "b", "i", 100, "Away", 2);
     mocks.check.mockResolvedValue(ray);
@@ -258,7 +258,7 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(await checkGtcBetting(pm, option, { manual: true, skipAccountRate: true })).toBe(option);
     expect(mocks.stake).toHaveBeenCalledExactlyOnceWith(pm, 67, 2, expect.objectContaining({ skipAccountRate: true }));
     expect(option.betMoney).toBe(10); expect(option.planBetMoney).toBe(67);
-    expect(mocks.gtcCheck).toHaveBeenCalledExactlyOnceWith(pm, option, expect.any(Promise), false);
+    expect(mocks.gtcCheck).toHaveBeenCalledExactlyOnceWith(pm, option, undefined, false);
     expect(mocks.check).not.toHaveBeenCalled();
   });
 

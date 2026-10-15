@@ -30,12 +30,14 @@ import { pmSubmissionFromResult, validatePmSubmission, type PmSubmission } from 
 import { pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-adapter/polymarket";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { getPmSubmission } from "@/api/order";
+import { getRetainedPmPrivateKey } from "@/security/pmVault/retainedPmSession";
 
 export type CheckBettingOpts = ResolveVenueStakeOpts & {
   /** [changmen 扩展] 本次 PM 单腿模式，非 PM provider 忽略。 */
   pmOrderMode?: "FOK" | "GTC";
   /** [changmen 扩展] 仅 PM GTC 人工挂单允许无即时深度；自动套利默认仍检查深度。 */
   pmGtcAllowResting?: boolean;
+  requireClobConfirmation?: boolean;
   role?: "execute" | "precheckOnly";
   /** 场馆额已换过：再预检只验盘口，不改 betMoney（勿用 skipAccountRate，USDT 会二次÷汇率） */
   skipStakeResolve?: boolean;
@@ -54,12 +56,11 @@ export interface PlaceBetOpts {
 }
 
 async function ensureSharedVaultKeyForAccount(account: PlatformAccount | undefined): Promise<boolean> {
-  if (!account)
+  if (!account || account.provider === "Polymarket")
     return false;
   const {
     accountTokenHasPrivateKey,
     ensurePmVaultUnlocked,
-    ensurePmVaultForAccounts,
     hasVault,
     isVaultKeyProvider,
     mergeVaultKeysIntoAccounts,
@@ -67,10 +68,6 @@ async function ensureSharedVaultKeyForAccount(account: PlatformAccount | undefin
   } = await import("@/security/pmVault");
   if (!isVaultKeyProvider(account.provider))
     return true;
-  if (String(account.provider) === "Polymarket") {
-    const { getRetainedPmPrivateKey } = await import("@/security/pmVault/retainedPmSession");
-    getRetainedPmPrivateKey(account.accountId);
-  }
   if (accountTokenHasPrivateKey(account.token))
     return true;
 
@@ -80,8 +77,7 @@ async function ensureSharedVaultKeyForAccount(account: PlatformAccount | undefin
   const uid = normalizePmVaultUserId(user.userId);
   if (!uid || !(await hasVault(uid)))
     return false;
-  const unlocked = String(account.provider) === "Polymarket"
-    ? await ensurePmVaultForAccounts(uid, [account]) : await ensurePmVaultUnlocked(uid);
+  const unlocked = await ensurePmVaultUnlocked(uid);
   if (!unlocked)
     return false;
 
@@ -402,9 +398,9 @@ export async function checkBetting(
     return option;
   }
   const pm = account.provider === "Polymarket";
-  const signingTask = pm && opts?.role === "precheckOnly"
-    ? Promise.resolve(true) : ensureSharedVaultKeyForAccount(account).catch(() => false);
-  if (!pm) await signingTask;
+  // [changmen 扩展] PM 交易路径只检查会话有效性；解锁与 signer 初始化由账号生命周期完成。
+  if (pm) getRetainedPmPrivateKey(account.accountId);
+  else await ensureSharedVaultKeyForAccount(account).catch(() => false);
   const provider = getProvider(account);
   if (!provider) {
     option.checkError = `场馆${option.type}不被支持`;
@@ -430,8 +426,8 @@ export async function checkBetting(
       option.betMoney = venueBetMoney;
     }
     const checked = pm && opts?.pmOrderMode === "GTC"
-      ? await (await import("@changmen/venue-adapter/polymarket/gtc")).checkGtcBuy(account, option, signingTask, opts?.pmGtcAllowResting !== true)
-      : await provider.checkBet(account, option, { role: opts?.role ?? "execute", prepareSigning: signingTask });
+      ? await (await import("@changmen/venue-adapter/polymarket/gtc")).checkGtcBuy(account, option, undefined, opts?.pmGtcAllowResting !== true)
+      : await provider.checkBet(account, option, { role: opts?.role ?? "execute", ...(opts?.requireClobConfirmation ? { requireClobConfirmation: true } : {}) });
     checkedOption = checked;
     // [changmen 扩展] adapter 返回新对象时只传递观察元数据，原业务返回值不变。
     try { checked.observation ??= option.observation; }

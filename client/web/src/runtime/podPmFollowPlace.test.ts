@@ -146,9 +146,9 @@ describe("podPmFollowPlace", () => {
     expect(panelSource).toMatch(/PodPmMatchId/);
   });
 
-  it("does not skip PM vault sync before user id is ready", () => {
+  it("keeps football wallet checks read-only during order execution", () => {
     const source = readFileSync(join(process.cwd(), "src/runtime/podPmFollowPlace.ts"), "utf8");
-    expect(source).toMatch(/if \(!user\.userId && user\.isLoggedIn\)/);
-    expect(source).toMatch(/await user\.fetchUserInfo\(\)/);
+    expect(source).toContain("accountTokenHasPrivateKey(a.token)");
+    expect(source).not.toMatch(/fetchUserInfo|ensurePmVaultForAccounts|mergeVaultKeysIntoAccounts|migrateTokenPrivateKeysToVault|preparePolymarketAccountRuntimes/);
   });
 });

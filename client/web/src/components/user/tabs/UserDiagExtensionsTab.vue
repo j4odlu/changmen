@@ -45,6 +45,7 @@ else {
 extensionPrefs.value.singleLeg9999MaxPerMap ??= 1;
 // [changmen 扩展] 历史测试偏好没有 V1 激活凭据时不切换实际下单。
 extensionPrefs.value.pmArbOrderMode ??= "FOK";
+extensionPrefs.value.pmFokPreflightMode ??= "legacy";
 if (!extensionPrefs.value.rayLateRejectAutoMakeup) {
   extensionPrefs.value.rayLateRejectAutoMakeup = {
     enabled: false,
@@ -220,6 +221,27 @@ async function save() {
             <el-radio-button value="GTC">
               GTC V1（人工接管）
             </el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+    </section>
+
+    <section class="extensions-tab__panel">
+      <div class="extensions-tab__section-head">
+        <div>
+          <h3 class="extensions-tab__heading">PM FOK 预检方式</h3>
+          <p class="extensions-tab__section-desc">
+            原有预检沿用线上检查流程；优化预检减少重复赛况查询并更新过期判断。
+            两种方式的钱包均在账号加载、解锁时准备。保存后对新 FOK 尝试生效，GTC 不受此选项影响。
+          </p>
+        </div>
+        <span class="extensions-tab__badge">changmen 扩展</span>
+      </div>
+      <el-form label-position="left" label-width="190px">
+        <el-form-item label="预检方式">
+          <el-radio-group v-model="extensionPrefs.pmFokPreflightMode" aria-label="PM FOK 预检方式">
+            <el-radio-button value="legacy">原有预检（默认）</el-radio-button>
+            <el-radio-button value="optimized">优化预检</el-radio-button>
           </el-radio-group>
         </el-form-item>
       </el-form>

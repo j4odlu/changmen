@@ -12,6 +12,7 @@ import { useOrderStore } from "@/stores/orderStore";
 import { useUserStore } from "@/stores/userStore";
 import { lockPmVault, resetPmVaultAccountUi } from "@/security/pmVault";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
+import { preparePolymarketAccountRuntimes } from "@changmen/venue-adapter/polymarket";
 
 async function applyPmTransportRoutingOnLogin(): Promise<void> {
   try {
@@ -107,6 +108,9 @@ export async function mountAppSession(): Promise<void> {
     if (import.meta.env?.DEV)
       console.warn("[pmVault] unlock skipped", err);
   }
+  if (!isAuthSessionCurrent(sessionVersion)) return;
+  await preparePolymarketAccountRuntimes(accountStore.accounts);
+  if (!isAuthSessionCurrent(sessionVersion)) return;
   await bootSessionRuntime();
   if (!isAuthSessionCurrent(sessionVersion))
     return;

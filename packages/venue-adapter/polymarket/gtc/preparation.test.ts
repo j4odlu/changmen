@@ -3,25 +3,36 @@ import type { PlatformAccount } from "@changmen/client-core/models/platformAccou
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { checkGtcBuy, checkManualGtcBuy, prepareManualGtcBuy } from "./preparation";
 
-const mocks = vi.hoisted(() => ({ book: vi.fn(), guard: vi.fn(), prepareClock: vi.fn(), clock: true, tick: undefined as string | undefined, generation: 1, build: vi.fn(), runtime: {} }));
+const mocks = vi.hoisted(() => ({ book: vi.fn(), guard: vi.fn(), prepareClock: vi.fn(), clock: true, tick: undefined as string | undefined, generation: 1, build: vi.fn(), runtime: {}, ready: true }));
 vi.mock("./index", () => ({ buildPreparedGtcBuy: mocks.build }));
 vi.mock("../builder", () => ({ resolvePolymarketBuilderCode: () => "builder" }));
 vi.mock("../pmClientApi", () => ({ pmGetBook: mocks.book, pmPrepareSubmit: mocks.prepareClock, pmSubmitClockReady: () => mocks.clock }));
 vi.mock("../pmBetGuard", () => ({ resolvePolymarketBetBlockReason: mocks.guard }));
-vi.mock("../pmSportGuard", () => ({ getPolymarketPmSportBlockReasonFromOption: () => null }));
 vi.mock("../pmTickState", () => ({ currentPmTick: () => mocks.tick }));
-vi.mock("../pmOrderClientCache", () => ({ getPolymarketOrderClientRuntime: async () => ({ runtime: mocks.runtime }), polymarketSigningGeneration: () => mocks.generation }));
+vi.mock("../pmOrderClientCache", () => ({ getPolymarketOrderClientRuntime: () => { if (!mocks.ready) throw new Error("PM 钱包签名器未就绪"); return { runtime: mocks.runtime }; }, polymarketSigningGeneration: () => mocks.generation }));
 vi.mock("../pmOrderSubmitMode", () => ({ resolvePmOrderSubmitHttpMode: () => "direct" }));
 vi.mock("../l2Auth", () => ({ parseTokenConfig: () => ({}), resolvePrivateKey: () => "key", resolveApiCreds: () => ({ address: "address", apiKey: "key", secret: "secret", passphrase: "passphrase" }) }));
 const account = { accountId: 1, provider: "Polymarket", token: "vault", currency: "USDT" } as PlatformAccount;
 const option = () => ({ type: "Polymarket", itemId: "token", betId: "condition", matchId: "match", target: "Home", betMoney: 5, odds: 2, data: null } as BetOption);
 beforeEach(() => {
-  vi.clearAllMocks(); mocks.clock = true; mocks.tick = undefined; mocks.generation = 1;
+  vi.clearAllMocks(); mocks.ready = true; mocks.clock = true; mocks.tick = undefined; mocks.generation = 1;
   mocks.prepareClock.mockImplementation(async () => { mocks.clock = true; });
   mocks.book.mockResolvedValue({ asset_id: "token", min_order_size: "5", tick_size: "0.01", neg_risk: false, asks: [], timestamp: "100" });
   mocks.guard.mockResolvedValue(null); mocks.build.mockImplementation(async (_account, _option, prepared) => prepared);
 });
 describe("manual GTC independent precheck", () => {
+  it("checks sport again after signing and clock renewal, before consuming", async () => {
+    const input = option();
+    input.match = { pmSport: { live: true } } as NonNullable<BetOption["match"]>;
+    await checkManualGtcBuy(account, input);
+    const prepared = await prepareManualGtcBuy(account, input);
+    mocks.clock = false;
+    mocks.prepareClock.mockImplementationOnce(async () => {
+      mocks.clock = true; input.match!.pmSport = { ended: true };
+    });
+    await expect(prepared.prepareSubmit()).rejects.toThrow("比赛已结束");
+    expect(() => prepared.consume()).toThrow("比赛已结束");
+  });
   it("automatic pairs retain a depth check without using the FOK cache", async () => {
     const input = option(); await checkGtcBuy(account, input, Promise.resolve(true), true);
     expect(input.data).toBeNull(); expect(input.checkError).toContain("自动套利限价内深度不足");
@@ -101,11 +112,30 @@ describe("manual GTC independent precheck", () => {
     expect(input.data).toBeNull(); expect(input.checkError).toBe("market closed"); expect(mocks.build).not.toHaveBeenCalled();
   });
   it("failed signing preparation never makes a ready option", async () => {
-    const input = option(); await checkManualGtcBuy(account, input, Promise.resolve(false));
-    expect(input.data).toBeNull(); expect(input.checkError).toContain("解锁");
+    mocks.ready = false;
+    const input = option(); await checkManualGtcBuy(account, input, new Promise(() => {}));
+    expect(input.data).toBeNull(); expect(input.checkError).toContain("未就绪");
+    await expect(prepareManualGtcBuy(account, input)).rejects.toThrow("缺少本轮预检");
+    expect(mocks.build).not.toHaveBeenCalled();
   });
   it("repeated precheck invalidates the prior prepared attempt", async () => {
     const input = option(); await checkManualGtcBuy(account, input); await checkManualGtcBuy(account, input);
     expect(input.data).toBeNull(); await expect(prepareManualGtcBuy(account, input)).rejects.toThrow();
   });
+});
+
+
+it("rejects credentials changed while the GTC book is pending", async () => {
+  let release!: (book: unknown) => void;
+  mocks.book.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+  const changed = { ...account } as PlatformAccount;
+  const input = option();
+  const pending = checkManualGtcBuy(changed, input);
+  changed.token = "replacement-wallet-and-api-credentials";
+  release({ asset_id: "token", min_order_size: "5", tick_size: "0.01", neg_risk: false, asks: [] });
+  await pending;
+  expect(input.data).toBeNull();
+  expect(input.checkError).toContain("已失效");
+  await expect(prepareManualGtcBuy(changed, input)).rejects.toThrow("缺少本轮预检");
+  expect(mocks.build).not.toHaveBeenCalled();
 });

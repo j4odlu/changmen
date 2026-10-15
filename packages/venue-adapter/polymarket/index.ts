@@ -21,6 +21,7 @@ export {
 export * from "./parse";
 export * from "./pmSportGuard";
 export * from "./pmSportGamma";
+export { prewarmPmSportForCandidate } from "./markets/pmSportPrewarm";
 export * from "./pmMarketGuard";
 export * from "./pmBetGuard";
 export * from "./pmDetection";
@@ -59,10 +60,12 @@ export * from "./marketQuoteHub";
 export * from "./sportQuoteHub";
 export * from "./pmFootballDiscovery";
 export * from "./wsQuotes";
-export { clearPolymarketOrderClientCache } from "./pmOrderClientCache";
+export { clearPolymarketOrderClientCache, preparePolymarketAccountRuntimes, retainPolymarketAccountRuntimes } from "./pmOrderClientCache";
 
 export const polymarketAdapter: PlatformAdapter = {
   id: "Polymarket",
   collector: startPolymarketCollector,
   provider: polymarketProvider,
 };
+
+export { setPmFokPreflightMode, capturePmFokPreflightMode } from "./submission/preflight/pmFokPreflightMode";

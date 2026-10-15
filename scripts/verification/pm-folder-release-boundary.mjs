@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { PM_FOK_RELOCATIONS, readRelocatedPmFokSource } from "./pm-fok-source-relocation.mjs";
 import { PM_FUNCTIONAL_RELOCATIONS, readRelocatedPmFunctionalSource } from "./pm-functional-source-relocation.mjs";
 import { verifyPmOfficialSettlementSource } from "./pm-settlement-policy-boundary.mjs";
+import { PM_UNIFIED_PREFLIGHT_HELPERS, verifyPmUnifiedPreflightHelpers } from "./pm-unified-preflight-boundary.mjs";
 
 export const PM_FOLDER_SOURCE_BASE = "e901bb596952256284cd8a9eb8b73b572c963915";
 export const PM_FOLDER_FREEZE_SHA = "f0b521cba45430c9e6d4842abe29c1fd560df6209d4efe1ade4a833dba278ddb";
@@ -15,6 +16,8 @@ const fokDocSha = "6c178d10abbd140e66725c1a51bc569dbdcdd29d38c7e56ebd15615471e78
 export function certifyPmFolderRelease(manifestText, read, baselineRead) {
   assert.equal(createHash("sha256").update(normalize(manifestText)).digest("hex"), PM_FOLDER_FREEZE_SHA, "original freeze manifest unchanged");
   const certified = new Set();
+  verifyPmUnifiedPreflightHelpers(read);
+  for (const file of Object.keys(PM_UNIFIED_PREFLIGHT_HELPERS)) certified.add(file);
   for (const [file, target] of Object.entries(PM_FOLDER_RELOCATIONS)) {
     const restored = (PM_FOK_RELOCATIONS[file] ? readRelocatedPmFokSource : readRelocatedPmFunctionalSource)(file, read(file), read);
     // [changmen 扩展] 明确登记的结算策略及卖出盈亏保护模块另做完整源码核验，其余仍逐字锁定迁移前基线。

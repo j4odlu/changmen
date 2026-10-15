@@ -9,6 +9,7 @@ import { PM_FUNCTIONAL_RELOCATIONS, pmFunctionalCompatibilitySource, readRelocat
 import { verifyPmOfficialSettlementSource } from "./pm-settlement-policy-boundary.mjs";
 import { restorePmTickRefreshSource } from "./pm-tick-refresh-boundary.mjs";
 import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
+import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
 
 const base = "e901bb596952256284cd8a9eb8b73b572c963915";
 describe("pM functional relocation preserves complete implementations", () => {
@@ -35,7 +36,7 @@ describe("pM functional relocation preserves complete implementations", () => {
     });
     it(`${file}: resolves every relative dependency to its original module`, () => {
       const original = execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" });
-      const moved = restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, fs.readFileSync(target, "utf8"), file => fs.readFileSync(file, "utf8")));
+      const moved = restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, fs.readFileSync(target, "utf8")), file => fs.readFileSync(file, "utf8")));
       const imports = (source, filename) => {
         const sf = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true);
         const result = [];

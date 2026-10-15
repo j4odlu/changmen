@@ -93,6 +93,7 @@ describe("checkArbLegs", () => {
     const args = { ...params };
     const task = checkArbLegs(args, input);
     await vi.waitFor(() => expect(prepareGtc).toHaveBeenCalledOnce());
+    expect(checkBetting).toHaveBeenCalledWith(input.accountB, input.legB, expect.objectContaining({ requireClobConfirmation: true }));
     expect(syncActiveBetPrecheckResults).not.toHaveBeenCalled();
     release(lifecycle);
     const result = await task;

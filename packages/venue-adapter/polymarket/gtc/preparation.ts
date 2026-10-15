@@ -4,12 +4,11 @@ import type { PolymarketOrderClientRuntime } from "../pmOrderClientCache";
 import type { GtcBuyCheckData } from "./contract";
 import { POLYMARKET_CLOB_API } from "../api";
 import { resolvePolymarketBuilderCode } from "../builder";
-import { parseTokenConfig, resolveApiCreds, resolvePrivateKey } from "../l2Auth";
-import { resolvePolymarketBetBlockReason } from "../pmBetGuard";
 import { pmGetBook, pmPrepareSubmit, pmSubmitClockReady } from "../pmClientApi";
 import { resolvePolymarketDetectionMaxPrice } from "../pmDetection";
 import { polymarketMarketOrderOptions } from "../pmMarketOrderOptions";
-import { getPolymarketOrderClientRuntime, polymarketSigningGeneration } from "../pmOrderClientCache";
+import { polymarketSigningGeneration } from "../pmOrderClientCache";
+import { runPmBuyPreflight, capturePmPreflightBinding, matchesPmPreflightBinding } from "../submission/preflight/pmBuyPreflight";
 import { resolvePmOrderSubmitHttpMode } from "../pmOrderSubmitMode";
 import { getPolymarketPmSportBlockReasonFromOption } from "../pmSportGuard";
 import { resolvePolymarketVenueStakeUsdc } from "../pmStake";
@@ -44,7 +43,8 @@ function binding(account: PlatformAccount, option: BetOption): string {
 }
 
 /** [changmen 扩展] 手动 GTC 允许限价内零深度；不调用/改变 FOK 预检。 */
-export async function checkGtcBuy(account: PlatformAccount, option: BetOption, prepareSigning?: Promise<boolean>, requireImmediateDepth = false): Promise<BetOption> {
+// 第三参仅保留调用兼容；PM 不再在预检中等待或触发钱包初始化。
+export async function checkGtcBuy(account: PlatformAccount, option: BetOption, _prepareSigning?: Promise<boolean>, requireImmediateDepth = false): Promise<BetOption> {
   try {
     if (account.provider !== "Polymarket" || option.type !== "Polymarket" || checked.has(option))
       throw new Error("PM 手动 GTC 每次预检须新建投注尝试");
@@ -53,8 +53,8 @@ export async function checkGtcBuy(account: PlatformAccount, option: BetOption, p
     if (local)
       throw new Error(local);
     option.checkError = undefined;
-    const frozenInputs = inputs(account, option);
-    const generation = polymarketSigningGeneration();
+    const snapshot = capturePmPreflightBinding(() => binding(account, option));
+    const generation = snapshot.generation;
     const prior = option.data;
     const quote = prior?.pmPriceQuote ? validatePmPriceQuote(prior.pmPriceQuote, option.itemId, option.odds) : undefined;
     if (quote && prior?.detectionMaxPrice !== quote.cap)
@@ -64,29 +64,19 @@ export async function checkGtcBuy(account: PlatformAccount, option: BetOption, p
     if (!Number.isFinite(option.betMoney) || option.betMoney <= 0 || apiBetMoney > option.betMoney + 1e-9)
       throw new Error("PM 手动 GTC 金额不足，不能放大用户输入金额");
     const gateway = account.gateway || POLYMARKET_CLOB_API;
-    const tasks = await Promise.allSettled([
-      pmGetBook<Book>(option.itemId, gateway),
-      resolvePolymarketBetBlockReason(option),
-      pmPrepareSubmit(account),
-      (async () => {
-        if (prepareSigning && !await prepareSigning)
-          throw new Error("请先解锁本机钱包");
-        const config = parseTokenConfig(account.token); const creds = resolveApiCreds(config); const privateKey = resolvePrivateKey(config);
-        if (!privateKey || !creds.address || !creds.apiKey || !creds.secret || !creds.passphrase)
-          throw new Error("PM 钱包或 API 凭据未就绪");
-        const token = account.token;
-        const signatureType = Number(creds.signatureType ?? 0);
-        const prepared = await getPolymarketOrderClientRuntime({ gateway, config, creds, privateKey, signatureType: [1, 2, 3].includes(signatureType) ? signatureType : 0 });
-        if (account.token !== token)
-          throw new Error("PM 预检期间钱包凭据已改变");
-        return prepared.runtime;
-      })(),
-    ] as const);
-    for (const task of tasks) {
+    const checks = await runPmBuyPreflight(account, option, {
+      gateway,
+      market: () => pmGetBook<Book>(option.itemId, gateway),
+      requireClobConfirmation: requireImmediateDepth,
+      runtimeBinding: () => snapshot.binding,
+      missingCredentialsMessage: "PM 钱包或 API 凭据未就绪",
+      runtimeTokenChangedMessage: "PM 预检期间钱包凭据已改变",
+    });
+    for (const task of [checks.market, checks.guard, checks.clock, checks.runtime]) {
       if (task.status === "rejected")
         throw task.reason;
     }
-    const [bookTask, guardTask, , runtimeTask] = tasks;
+    const { market: bookTask, guard: guardTask, runtime: runtimeTask } = checks;
     if (bookTask.status !== "fulfilled" || guardTask.status !== "fulfilled" || runtimeTask.status !== "fulfilled")
       throw new Error("PM 手动 GTC 预检未完成");
     if (guardTask.value)
@@ -100,7 +90,7 @@ export async function checkGtcBuy(account: PlatformAccount, option: BetOption, p
     const limitPrice = alignPolymarketPriceToTick(maxPrice, tick, "floor");
     if (!(limitPrice > 0 && limitPrice < 1) || !Array.isArray(book.asks))
       throw new Error("PM 手动 GTC 限价或订单簿无效");
-    if (frozenInputs !== inputs(account, option) || generation !== polymarketSigningGeneration() || !pmSubmitClockReady(account))
+    if (!matchesPmPreflightBinding(snapshot, () => binding(account, option)) || !pmSubmitClockReady(account))
       throw new Error("PM 手动 GTC 预检参数或钱包会话已失效");
     const asks = book.asks.map(row => ({ price: Number(row.price), size: Number(row.size) }))
       .filter(row => Number.isFinite(row.price) && Number.isFinite(row.size) && row.price > 0 && row.price < 1 && row.size > 0);
@@ -111,7 +101,7 @@ export async function checkGtcBuy(account: PlatformAccount, option: BetOption, p
     for (const row of asks) Object.freeze(row);
     Object.freeze(asks); Object.freeze(data.orderOptions); Object.freeze(data);
     option.data = data;
-    preparations.set(option, { data, runtime: runtimeTask.value, binding: binding(account, option), generation, consumed: false });
+    preparations.set(option, { data, runtime: runtimeTask.value!.runtime, binding: binding(account, option), generation, consumed: false });
   }
   catch (error) {
     preparations.delete(option); option.data = null;
@@ -127,6 +117,8 @@ export function checkManualGtcBuy(account: PlatformAccount, option: BetOption, p
 export async function prepareManualGtcBuy(account: PlatformAccount, option: BetOption) {
   const prepared = preparations.get(option);
   const validate = () => {
+    const sportBlock = getPolymarketPmSportBlockReasonFromOption(option);
+    if (sportBlock) throw new Error(sportBlock);
     const fail = (reason: string): never => { throw new Error(`PM 手动 GTC 预检已失效或已消费，禁止重发：${reason}`); };
     if (!prepared) fail("缺少本轮预检");
     if (prepared!.consumed) fail("本轮签单已消费");

@@ -2,6 +2,7 @@ import { describe, expect, test, vi, beforeEach } from "vitest";
 import { BetOption as BetOptionClass } from "@changmen/client-core/models/betOption";
 import { resolvePolymarketBetBlockReason } from "../../pmBetGuard";
 import { polymarketPluginGet } from "../../transport";
+import { clearPmGammaCacheForTests } from "../../pmSportGamma";
 
 vi.mock("../../transport", () => ({
   polymarketPluginGet: vi.fn(),
@@ -28,7 +29,53 @@ function option(extra: Record<string, unknown> = {}): BetOptionClass {
 
 describe("resolvePolymarketBetBlockReason", () => {
   beforeEach(() => {
+    clearPmGammaCacheForTests();
     vi.mocked(polymarketPluginGet).mockReset();
+  });
+
+  test("metadata-only Gamma event cannot mask an embedded ended state", async () => {
+    vi.mocked(polymarketPluginGet).mockImplementation(async url => {
+      if (url.includes("/events/")) return { id: "650650", title: "metadata only" };
+      if (url.includes("/markets?")) return [{ events: [{ ended: true }] }];
+      return { accepting_orders: true };
+    });
+    expect(await resolvePolymarketBetBlockReason(option())).toContain("比赛已结束");
+  });
+
+  test.each([0, 1_000, 44_000, 46_000])("WS received %d ms ago never exempts the Gamma sport check", async age => {
+    vi.mocked(polymarketPluginGet).mockImplementation(async url => {
+      if (url.includes("/events/")) return { ended: true };
+      if (url.includes("/markets?")) return [{ active: true }];
+      return { accepting_orders: true };
+    });
+    const input = option(); input.match!.pmSport = { live: true, receivedAt: Date.now() - age };
+    expect(await resolvePolymarketBetBlockReason(input)).toContain("比赛已结束");
+    expect(vi.mocked(polymarketPluginGet).mock.calls.some(([url]) => url.includes("/events/"))).toBe(true);
+  });
+
+  test("WS ending a match while HTTP is pending invalidates the result", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    vi.mocked(polymarketPluginGet).mockImplementation(async url => {
+      await gate;
+      if (url.includes("/events/")) return { live: true, ended: false };
+      if (url.includes("/markets?")) return [{ active: true }];
+      return { accepting_orders: true };
+    });
+    const input = option(); const task = resolvePolymarketBetBlockReason(input);
+    input.match!.pmSport = { ended: true, status: "finished" }; release();
+    expect(await task).toContain("比赛已结束");
+  });
+
+  test.each([null, {}, { accepting_orders: "true" }, new Error("timeout")])("automatic checks reject unknown CLOB state %j", async clob => {
+    vi.mocked(polymarketPluginGet).mockImplementation(async url => {
+      if (url.includes("/events/")) return { live: true, ended: false };
+      if (url.includes("/markets?")) return [{ active: true }];
+      if (clob instanceof Error) throw clob;
+      return clob;
+    });
+    expect(await resolvePolymarketBetBlockReason(option(), true)).toContain("接单状态未知");
+    expect(await resolvePolymarketBetBlockReason(option(), false)).toBeNull();
   });
 
   test("event failure cannot mask a closed CLOB market; all guard requests start together", async () => {

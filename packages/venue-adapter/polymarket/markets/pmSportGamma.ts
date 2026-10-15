@@ -2,11 +2,9 @@ import type { BetOption } from "@changmen/client-core/models/betOption";
 import { POLYMARKET_CLOB_API, POLYMARKET_GAMMA_API } from "../api";
 import { parsePeriodHead, type PmSportLike } from "../pmSportGuard";
 import { parseEsportsScore } from "../parseEsportsScore";
-import { type PolymarketRawMarket } from "../parse";
+import { parseJsonArray, type PolymarketRawMarket } from "../parse";
 import { polymarketPluginGet } from "../transport";
-
-/** pm_sport 超过该时长则下单前拉 Gamma 兜底 */
-export const PM_SPORT_STALE_MS = 45_000;
+import { createPmGammaReader } from "./pmGammaCache";
 
 export interface GammaEventLike {
   id?: string | number;
@@ -28,10 +26,14 @@ function unwrapArray<T>(data: unknown): T[] {
 }
 
 export function gammaEventToPmSportLike(event: GammaEventLike | null | undefined): PmSportLike | null {
-  if (!event || typeof event !== "object")
+  if (!event || typeof event !== "object" || Array.isArray(event))
     return null;
 
   const parsed = parseEsportsScore(event.score);
+  if (typeof event.live !== "boolean" && typeof event.ended !== "boolean"
+    && !(typeof event.score === "string" && /^\d+\s*-\s*\d+(?:\||$)/.test(event.score.trim()))
+    && !parsePeriodHead(event.period))
+    return null;
   const live = event.live === true;
   const ended = event.ended === true;
   const status = ended
@@ -51,42 +53,27 @@ export function gammaEventToPmSportLike(event: GammaEventLike | null | undefined
   };
 }
 
-export function isPmSportSnapshotStale(
-  updatedAt: number | undefined,
-  now = Date.now(),
-): boolean {
-  const ts = Number(updatedAt) || 0;
-  if (!ts)
-    return true;
-  return now - ts > PM_SPORT_STALE_MS;
-}
-
-/** 已开赛或临近开赛时需要新鲜赛况 */
-export function shouldRefreshPmSportForBet(option: BetOption, now = Date.now()): boolean {
-  const pm = option.match?.pmSport;
-  if (!pm)
-    return true;
-  if (!isPmSportSnapshotStale(pm.updatedAt, now))
-    return false;
-
-  const startAt = Number(option.match?.startAt) || 0;
-  if (startAt > 0 && startAt <= now + 5 * 60_000)
-    return true;
-  if (pm.live === true || pm.ended === true)
-    return true;
-  return false;
-}
-
-export async function fetchGammaMarketByTokenId(tokenId: string): Promise<PolymarketRawMarket | null> {
-  const id = String(tokenId ?? "").trim();
-  if (!id)
-    return null;
+const gammaMarkets = createPmGammaReader<PolymarketRawMarket>(async id => {
   const params = new URLSearchParams({ clob_token_ids: id });
   const data = await polymarketPluginGet<unknown>(
     `${POLYMARKET_GAMMA_API}/markets?${params.toString()}`,
   );
   const rows = unwrapArray<PolymarketRawMarket>(data);
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+  // [changmen 扩展] 错误/纯元数据不能占据短缓存，下一轮应立即重查交易状态。
+  const hasStatus = [row.active, row.closed, row.archived, row.acceptingOrders, row.accepting_orders,
+    row.enableOrderBook, row.enable_order_book].some(value => typeof value === "boolean");
+  const hasPrices = parseJsonArray(row.clobTokenIds ?? row.clob_token_ids).length > 0
+    && parseJsonArray(row.outcomePrices ?? row.outcome_prices).length > 0;
+  const hasWinner = Array.isArray(row.tokens) && row.tokens.some(token => token?.winner === true && token.token_id);
+  const hasSport = Array.isArray(row.events) && row.events.some(event => gammaEventToPmSportLike(event as GammaEventLike));
+  return hasStatus || hasPrices || hasSport || hasWinner ? row : null;
+});
+
+export async function fetchGammaMarketByTokenId(tokenId: string): Promise<PolymarketRawMarket | null> {
+  const id = String(tokenId ?? "").trim();
+  return id ? gammaMarkets.read(id) : null;
 }
 
 /** CLOB 市场行：`accepting_orders` / closed 比 Gamma 更接近 POST /order 闸门 */
@@ -105,14 +92,21 @@ export async function fetchClobMarketByConditionId(conditionId: string): Promise
   }
 }
 
-export async function fetchGammaEventById(eventId: string): Promise<GammaEventLike | null> {
-  const id = String(eventId ?? "").trim();
-  if (!id)
-    return null;
+const gammaEvents = createPmGammaReader<GammaEventLike>(async id => {
   const data = await polymarketPluginGet<GammaEventLike>(
     `${POLYMARKET_GAMMA_API}/events/${encodeURIComponent(id)}`,
   );
-  return data && typeof data === "object" ? data : null;
+  return gammaEventToPmSportLike(data) ? data : null;
+});
+
+export async function fetchGammaEventById(eventId: string): Promise<GammaEventLike | null> {
+  const id = String(eventId ?? "").trim();
+  return id ? gammaEvents.read(id) : null;
+}
+
+export function clearPmGammaCacheForTests(): void {
+  gammaMarkets.clear();
+  gammaEvents.clear();
 }
 
 export async function fetchPmSportLikeForOption(option: BetOption): Promise<PmSportLike | null> {

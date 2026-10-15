@@ -81,6 +81,7 @@ export async function gateway(base, providerName, failure, scenario = {}, readSo
     "@/api/order": empty,
     "element-plus": { ElNotification: notify },
     "@/security/pmVault": { isVaultKeyProvider: () => false },
+    "@/security/pmVault/retainedPmSession": { getRetainedPmPrivateKey: () => { throw new Error("prepared notification fixture must not enter wallet preflight"); } },
   };
   const notifications = load("client/web/src/shared/betNotification.ts", readSource("client/web/src/shared/betNotification.ts"), {
     "element-plus": modules["element-plus"],

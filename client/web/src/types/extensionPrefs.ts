@@ -250,6 +250,8 @@ export interface ExtensionPrefs extends Record<string, unknown> {
   arbEarlyLockSell: ArbEarlyLockSellPrefs;
   /** [changmen 扩展] GTC 必须另有本版本明确确认；历史测试偏好不自动激活。 */
   pmArbOrderMode: PmArbOrderMode;
+  /** [changmen 扩展] FOK 预检方式；未配置时沿用线上原有检查（钱包初始化前移）。 */
+  pmFokPreflightMode: "legacy" | "optimized";
   pmGtcV1Activation?: string;
   /** 曾正式启用的用户继续恢复未完结记录，包括切回 FOK。 */
   pmGtcV1Participant?: boolean;
@@ -399,6 +401,7 @@ export function createDefaultExtensionPrefs(): ExtensionPrefs {
     rayLateRejectAutoMakeup: createDefaultRayLateRejectAutoMakeup(),
     arbEarlyLockSell: createDefaultArbEarlyLockSell(),
     pmArbOrderMode: "FOK",
+    pmFokPreflightMode: "legacy",
     pmArbPriceBuffer: createDefaultPmArbPriceBufferPrefs(),
     pmFokDepthBuffer: createDefaultPmFokDepthBufferPrefs(),
     pfArbPriceBuffer: createDefaultPfArbPriceBufferPrefs(),
@@ -551,6 +554,7 @@ export function normalizeExtensionPrefs(raw: unknown): ExtensionPrefs {
     rayLateRejectAutoMakeup: normalizeRayLateRejectAutoMakeup(row.rayLateRejectAutoMakeup),
     arbEarlyLockSell: normalizeArbEarlyLockSell(row.arbEarlyLockSell),
     pmArbOrderMode: row.pmArbOrderMode === "GTC" ? "GTC" : "FOK",
+    pmFokPreflightMode: row.pmFokPreflightMode === "optimized" ? "optimized" : "legacy",
     ...(typeof row.pmGtcV1Activation === "string" ? { pmGtcV1Activation: row.pmGtcV1Activation } : {}),
     ...(row.pmGtcV1Participant === true ? { pmGtcV1Participant: true } : {}),
     pmArbPriceBuffer: normalizePmArbPriceBuffer(row.pmArbPriceBuffer),

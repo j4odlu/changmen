@@ -30,7 +30,7 @@ describe("pM FOK relocation preserves the complete immutable source", () => {
     const moved = fs.readFileSync(PM_FOK_RELOCATIONS[file], "utf8");
     assert(moved.includes("from \"../pmClientApi\""));
     const wrapper = pmFokCompatibilitySource(file);
-    assert.notEqual(readRelocatedPmFokSource(file, wrapper, () => moved.replace("from \"../pmClientApi\"", "from \"../otherApi\"")), readRelocatedPmFokSource(file, wrapper));
+    assert.throws(() => readRelocatedPmFokSource(file, wrapper, () => moved.replace("from \"../pmClientApi\"", "from \"../otherApi\"")), /exact unified PM preflight increment/);
   });
   it("does not exempt unrelated files", () => {
     const source = "export * from \"./fok/bet\";\n";

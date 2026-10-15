@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlatformAccount } from "@/models/platformAccount";
 const mocks = vi.hoisted(() => ({ meta: { userId: "u", saltB64: "AA==", iterations: 1 },
   rows: [{ accountId: 12, walletAddress: `0x${"1".repeat(40)}`, cipher: { ivB64: "iv", ctB64: "pm" } },
-    { accountId: 13, walletAddress: `0x${"2".repeat(40)}`, cipher: { ivB64: "iv", ctB64: "pf" } }], send: vi.fn(), derive: vi.fn() }));
+    { accountId: 13, walletAddress: `0x${"2".repeat(40)}`, cipher: { ivB64: "iv", ctB64: "pf" } }], send: vi.fn(), derive: vi.fn(), prepare: vi.fn(), clear: vi.fn(), retain: vi.fn(), authVersion: "login-1", accounts: [] as PlatformAccount[] }));
 vi.mock("@changmen/client-core/chrome-plugin/bridge", () => ({ a8PluginSend: mocks.send }));
-vi.mock("@/lib/authSession", () => ({ getToken: () => "token", getAuthSessionVersion: () => "login-1", isAuthSessionCurrent: () => true }));
+vi.mock("@/lib/authSession", () => ({ getToken: () => "token", getAuthSessionVersion: () => mocks.authVersion, isAuthSessionCurrent: (version: string) => version === mocks.authVersion }));
 vi.mock("./crypto", () => ({ deriveKek: mocks.derive, base64ToBytes: () => new Uint8Array(), verifyKek: async () => true,
   decryptUtf8: async (_key: unknown, cipher: { ctB64: string }) => `0x${(cipher.ctB64 === "pm" ? "ab" : "cd").repeat(32)}`,
   bytesToBase64: vi.fn(), createVerifier: vi.fn(), encryptUtf8: vi.fn(), randomBytes: vi.fn() }));
@@ -12,21 +12,23 @@ vi.mock("./store", () => ({ getVaultMeta: async () => mocks.meta, listVaultKeys:
   defaultMetaIterations: () => 1, defaultMetaVersion: () => 1, getVaultKey: vi.fn(), putVaultKey: vi.fn(), putVaultMeta: vi.fn(),
   replaceVaultPasswordAtomic: vi.fn(), vaultKeyId: vi.fn() }));
 vi.mock("./accountUiStatus", () => ({ touchPmVaultAccountUiSession: vi.fn(), refreshPmVaultAccountUiFromStore: vi.fn() }));
-vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ accounts: [] }) }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ clearPolymarketOrderClientCache: vi.fn() }));
+vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ accounts: mocks.accounts }) }));
+vi.mock("@changmen/venue-adapter/polymarket", () => ({ clearPolymarketOrderClientCache: mocks.clear, preparePolymarketAccountRuntimes: mocks.prepare, retainPolymarketAccountRuntimes: mocks.retain }));
 import { completePmVaultUnlock, ensurePmVaultForAccounts, getCachedPrivateKey, isPmVaultUnlocked, lockPmVault, pmVaultUi, unlockPmVault, putPrivateKeyInVault } from "./session";
+import * as retained from "./retainedPmSession";
 import { retainedPmSessionUi, revokeRetainedPmSession } from "./retainedPmSession";
 function account(provider: string, id: number): PlatformAccount {
   return { provider, accountId: id, token: JSON.stringify({ walletAddress: mocks.rows[id === 12 ? 0 : 1].walletAddress }) } as PlatformAccount;
 }
 beforeEach(() => {
   lockPmVault({ preservePmSession: true }); vi.clearAllMocks(); retainedPmSessionUi.enabled = true;
+  mocks.authVersion = "login-1"; mocks.accounts = []; mocks.prepare.mockReset().mockResolvedValue([]);
   mocks.derive.mockResolvedValue({});
   mocks.send.mockResolvedValue({ ok: true, revision: "r", lockHandle: "l", expiresAt: Date.now() + 3600000,
     entries: [{ accountId: 12, walletAddress: mocks.rows[0].walletAddress, privateKey: `0x${"ab".repeat(32)}`,
       binding: JSON.stringify([mocks.meta, mocks.rows[0]]) }] });
 });
-afterEach(() => lockPmVault({ preservePmSession: true }));
+afterEach(() => { lockPmVault({ preservePmSession: true }); vi.restoreAllMocks(); });
 describe("shared vault / PM recovery separation", () => {
   it.each(["full-vault", "retained"])("%s readiness checks the current wallet and rejects a mismatch even after password unlock", async mode => {
     if (mode === "full-vault") await unlockPmVault("u", "password");
@@ -83,4 +85,31 @@ describe("shared vault / PM recovery separation", () => {
     completePmVaultUnlock(false);
     expect(await waiting).toBe(false);
   });
+});
+
+
+it("retained unlock prepares the complete account list after merging keys; lock clears signers synchronously", async () => {
+  const pm = account("Polymarket", 12);
+  mocks.accounts = [pm];
+  expect(await ensurePmVaultForAccounts("u", mocks.accounts)).toBe(true);
+  expect(mocks.prepare).toHaveBeenCalledWith(mocks.accounts);
+  expect(JSON.parse(mocks.prepare.mock.calls[0][0][0].token).privateKey).toBe(`0x${"ab".repeat(32)}`);
+  mocks.clear.mockClear();
+  lockPmVault({ preservePmSession: true });
+  expect(mocks.clear).toHaveBeenCalledOnce();
+});
+
+
+it.each(["lock", "login-change"])("%s during signer initialization cannot report unlock success or save a stale session", async change => {
+  let release!: () => void;
+  mocks.accounts = [account("Polymarket", 12)];
+  mocks.prepare.mockImplementationOnce(() => new Promise(resolve => { release = () => resolve([]); }));
+  const save = vi.spyOn(retained, "saveRetainedPmSession");
+  const pending = ensurePmVaultForAccounts("u", mocks.accounts);
+  await vi.waitFor(() => expect(mocks.prepare).toHaveBeenCalledOnce());
+  if (change === "lock") lockPmVault({ preservePmSession: true });
+  else mocks.authVersion = "login-2";
+  release();
+  expect(await pending).toBe(false);
+  expect(save).not.toHaveBeenCalled();
 });

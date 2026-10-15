@@ -217,7 +217,7 @@ async function createPolymarketFokSellOrderBody(
   shares: number,
   orderOptions: { tickSize: PolymarketTickSize; negRisk: boolean; version: 2 | 3 },
 ) {
-  const { runtime: { clob, builder, builderCode } } = await getPolymarketOrderClientRuntime({
+  const { runtime: { clob, builder, builderCode } } = getPolymarketOrderClientRuntime({
     gateway, privateKey, creds, config, signatureType: resolveSdkSignatureType(creds.signatureType),
   });
   const signedOrder = await builder.buildMarketOrder({

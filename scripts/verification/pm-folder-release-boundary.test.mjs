@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { PM_FOLDER_RELOCATIONS, certifyPmFolderRelease, checkPmFolderFreeze } from "./pm-folder-release-boundary.mjs";
+import { PM_UNIFIED_PREFLIGHT_HELPERS } from "./pm-unified-preflight-boundary.mjs";
 const manifestFile = "packages/venue-adapter/esport-freeze.json";
 const read = file => fs.readFileSync(file, "utf8");
 const manifest = read(manifestFile);
@@ -14,7 +15,8 @@ const gitRead = (base, file) => {
 describe("independent PM folder release protection", () => {
   it("certifies all 83 complete implementations against immutable source and FOK/VPS references", () => {
     expect(Object.keys(PM_FOLDER_RELOCATIONS)).toHaveLength(83);
-    expect(certifyPmFolderRelease(manifest, read, gitRead).size).toBe(167);
+    expect(Object.keys(PM_UNIFIED_PREFLIGHT_HELPERS)).toHaveLength(5);
+    expect(certifyPmFolderRelease(manifest, read, gitRead).size).toBe(167 + 5);
   });
   for (const [file, target] of Object.entries(PM_FOLDER_RELOCATIONS)) {
     it(`${target}: rejects an execution statement change`, () => {

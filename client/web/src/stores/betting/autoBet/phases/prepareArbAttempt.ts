@@ -1,4 +1,6 @@
 import type { ArbBetAttemptParams, ArbBetReady } from "@/stores/betting/autoBet/phases/types";
+import { prewarmPmSportForCandidate } from "@changmen/venue-adapter/polymarket";
+import { capturePmFokPreflightMode } from "@changmen/venue-adapter/polymarket";
 import type { PlatformId } from "@/types/esport";
 import {
   allowArbBetExecution,
@@ -78,6 +80,11 @@ export async function prepareArbAttempt(
 
   const legA = options[0];
   const legB = options[1];
+  // [changmen 扩展] 在选号/历史检查期间预热候选，与 FOK/GTC 预检共享同一短缓存。
+  for (const leg of options) {
+    if (leg.type === "Polymarket" && (params.pmOrderMode === "GTC" || capturePmFokPreflightMode(leg) === "optimized"))
+      prewarmPmSportForCandidate(leg);
+  }
   const pmOrderMode = params.pmOrderMode === "GTC" && options.some(leg => leg.type === "Polymarket") ? "GTC" : undefined;
   // [changmen 扩展] 仅 PM GTC 读取独立历史；原选号过滤和 FOK 状态保持不变。
   let gtcHistoryFilter: ((account: typeof accounts[number], leg: typeof legA) => boolean) | undefined;

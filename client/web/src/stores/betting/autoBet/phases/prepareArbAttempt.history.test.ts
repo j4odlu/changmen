@@ -9,6 +9,9 @@ import { getProviders, pickAccount } from "@/stores/account/accountPicker";
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
 import { createDefaultUserConfig } from "@/types/userConfig";
 import { prepareArbAttempt } from "./prepareArbAttempt";
+import { prewarmPmSportForCandidate } from "@changmen/venue-adapter/polymarket";
+import { capturePmFokPreflightMode, setPmFokPreflightMode } from "@changmen/venue-adapter/polymarket";
+vi.mock("@changmen/venue-adapter/polymarket", async importOriginal => ({ ...await importOriginal<typeof import("@changmen/venue-adapter/polymarket")>(), prewarmPmSportForCandidate: vi.fn() }));
 
 const state = vi.hoisted(() => ({ store: null as unknown as AccountStoreContext, historyStatus: vi.fn() }));
 vi.mock("@/orderModes/gtc/selectionHistory", () => ({
@@ -40,7 +43,20 @@ const combinations = [
 ] as const;
 const histories = ["count", "odds", "opposite"] as const;
 
-beforeEach(() => { sessionStorage.clear(); state.historyStatus.mockReset(); });
+beforeEach(() => { sessionStorage.clear(); state.historyStatus.mockReset(); setPmFokPreflightMode("legacy"); vi.mocked(prewarmPmSportForCandidate).mockClear(); });
+it.each(["legacy", "optimized"] as const)("prewarms only optimized FOK candidates and freezes %s before account selection", async mode => {
+  setPmFokPreflightMode(mode);
+  const fixture = makeFixture(["Polymarket", "RAY"], "FOK", "count");
+  await prepareArbAttempt(fixture.params);
+  expect(prewarmPmSportForCandidate).toHaveBeenCalledTimes(mode === "optimized" ? 1 : 0);
+  setPmFokPreflightMode(mode === "legacy" ? "optimized" : "legacy");
+  expect(capturePmFokPreflightMode(fixture.legs[0]!)).toBe(mode);
+});
+it("keeps GTC prewarm independent of the default legacy FOK preference", async () => {
+  const fixture = makeFixture(["Polymarket", "RAY"], "GTC", "count");
+  await prepareArbAttempt(fixture.params);
+  expect(prewarmPmSportForCandidate).toHaveBeenCalledTimes(1);
+});
 describe.each(combinations)("$name preserves VPS account selection", ({ providers, mode }) => {
   it.each(histories)("GTC %s history filters only a PM GTC pair", async (history) => {
     const fixture = makeFixture(providers, mode, history);

@@ -40,6 +40,7 @@ const defaultPrefs = {
   rayLateRejectAutoMakeup: { enabled: false },
   arbEarlyLockSell: { enabled: false, mode: "floor" as const, minExtraProfitPct: 0 },
   pmArbOrderMode: "FOK" as const,
+  pmFokPreflightMode: "legacy" as const,
   pmArbPriceBuffer: { enabled: false, multiplier: 1.01 },
   pmFokDepthBuffer: { enabled: false, multiplier: 1.5 },
   pfArbPriceBuffer: { enabled: false, multiplier: 1.01 },
@@ -55,6 +56,14 @@ const defaultPrefs = {
 };
 
 describe("extensionPrefs", () => {
+  it("defaults missing or invalid FOK preflight preferences to legacy and round-trips both modes", () => {
+    for (const mode of [undefined, null, "unknown", "OPTIMIZED", false])
+      expect(normalizeExtensionPrefs({ pmFokPreflightMode: mode }).pmFokPreflightMode).toBe("legacy");
+    for (const mode of ["legacy", "optimized"] as const) {
+      const prefs = { ...createDefaultExtensionPrefs(), pmFokPreflightMode: mode };
+      expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);
+    }
+  });
   afterEach(() => {
     vi.unstubAllEnvs();
   });

@@ -2,7 +2,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { clearPmSubmitJournalForTests, finishPmSubmitAttempt, guardedPmSubmit,
   pmAccountSubmitAttempts, pmSubmitScope, PmSubmitUnknownError } from "../../pmSubmitJournal";
-import { getPolymarketOrderClientRuntime } from "../../pmOrderClientCache";
+import { preparePolymarketOrderClientRuntime } from "../../pmOrderClientCache";
 import { resolveApiCreds } from "../../l2Auth";
 const owner = vi.hoisted(() => ({ userId: 1 as unknown }));
 vi.mock("../../../shared/webBridge", () => ({ useUserStore: () => owner }));
@@ -15,7 +15,7 @@ const account = { accountId: 9001, provider: "Polymarket", gateway: "https://clo
   token: JSON.stringify(config) } as PlatformAccount;
 const context = { version: 2 as const, negRisk: false };
 async function body(side: "BUY" | "SELL" = "BUY", tokenID = "123") {
-  const { runtime: { builder, builderCode, clob } } = await getPolymarketOrderClientRuntime({ gateway: account.gateway,
+  const { runtime: { builder, builderCode, clob } } = await preparePolymarketOrderClientRuntime({ gateway: account.gateway,
     privateKey: config.privateKey as `0x${string}`, config, creds: resolveApiCreds(config), signatureType: 3 });
   return clob.orderToJsonV2(await builder.buildMarketOrder({ tokenID, price: 0.5, amount: 10, side, builderCode },
     { tickSize: "0.01", negRisk: false }, 2) as any, "api-key", clob.OrderType.FOK);

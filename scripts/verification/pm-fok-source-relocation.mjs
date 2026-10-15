@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
+import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
 
 // [changmen 扩展] 只允许这四个原模块迁入 PM/fok；比较时恢复原相对 import，完整实现仍与固定基线比较。
 const root = "packages/venue-adapter/polymarket";
@@ -55,5 +56,5 @@ export function readRelocatedPmFokSource(file, source, readSource = target => fs
   if (!target)
     return source.replace(/\r\n/g, "\n");
   assert.equal(source.replace(/\r\n/g, "\n"), pmFokCompatibilitySource(file), `${file}: compatibility entry must only re-export the registered FOK module`);
-  return rebasePmFokImports(readSource(target), target, file).replace(/\r\n/g, "\n");
+  return rebasePmFokImports(restorePmPreflightSource(target, readSource(target)), target, file).replace(/\r\n/g, "\n");
 }

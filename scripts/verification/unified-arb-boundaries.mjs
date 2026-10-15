@@ -6,6 +6,7 @@ import { gitSource, moduleTokens } from "./fok-exact-boundaries.mjs";
 import { restoreRayFinalizeSource, verifyRayFrontendSources } from "./ray-frontend-boundary.mjs";
 import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
 import { restoreGtcSelectionHistorySource } from "./gtc-selection-history-boundary.mjs";
+import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
 
 const root = "client/web/src/stores/betting/autoBet/";
 const phases = `${root}phases/`;
@@ -155,6 +156,7 @@ for (const replacements of Object.values(UNIFIED_ARBITRAGE_BOUNDARIES)) {
 }
 
 export function restoreUnifiedArbitrageSource(file, source, replaceExact, required = false) {
+  source = restorePmPreflightSource(file, source);
   source = restoreGtcSelectionHistorySource(file, source, replaceExact, required);
   const replacements = UNIFIED_ARBITRAGE_BOUNDARIES[file];
   if (!replacements)

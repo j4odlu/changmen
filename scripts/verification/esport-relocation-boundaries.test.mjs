@@ -25,7 +25,7 @@ describe("default freeze verifies exact full relocation instead of an exemption"
   it("rejects a redirected relative dependency", () => {
     const file = FROZEN_PM_RELOCATIONS["packages/venue-adapter/polymarket/bet.ts"];
     expect(read(file)).toContain('from "../pmClientApi"');
-    expect(() => certifyEsportRelocations({ ...options, readSource: path => path === file ? read(path).replace('from "../pmClientApi"', 'from "../gtc/client"') : read(path) })).toThrow("complete implementation and dependencies unchanged");
+    expect(() => certifyEsportRelocations({ ...options, readSource: path => path === file ? read(path).replace('from "../pmClientApi"', 'from "../gtc/client"') : read(path) })).toThrow("exact unified PM preflight increment");
   });
   it("rejects a changed manifest and changed immutable source", () => {
     expect(() => certifyEsportRelocations({ ...options, manifestText: JSON.stringify({ paths: [] }) })).toThrow("original freeze manifest unchanged");

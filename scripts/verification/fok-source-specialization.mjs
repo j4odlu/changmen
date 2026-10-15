@@ -8,11 +8,14 @@ import { restorePublishedPmSettlement } from "./pm-published-settlement-boundary
 import { restorePmManualSellSplit } from "./pm-manual-sell-split-boundary.mjs";
 import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
 import { restorePmTickRefreshSource } from "./pm-tick-refresh-boundary.mjs";
+import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
+import { restorePmUnifiedPreflightSource } from "./pm-unified-preflight-boundary.mjs";
 
 // [changmen 扩展] 业务特化只识别两个完整隔离边界；登记的 PM 移动模块恢复路径后仍全文比较，固定基线不变。
 export function specializeFokSource(file, source, readSource) {
+  source = restorePmUnifiedPreflightSource(file, source);
   const readActual = readSource ?? (path => fs.readFileSync(path, 'utf8'));
-  const readPublished = target => restorePublishedPmSettlement(target, restorePmOrderBetLabelSource(target, readActual(target), readActual));
+  const readPublished = target => restorePublishedPmSettlement(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, readActual(target)), readActual));
   const text = restorePmTickRefreshSource(file, restorePmManualSellSplit(file, readRelocatedPmFokSource(file, readRelocatedPmFunctionalSource(file, restorePublishedPmSettlement(file, source), readPublished), readPublished)));
   function removeOnce(value, fragment) {
     assert.equal(value.split(fragment).length, 2, `${file}: expected exactly one known extension`);

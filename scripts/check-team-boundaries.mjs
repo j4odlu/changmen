@@ -4,6 +4,7 @@
  * 规则见 docs/TEAM_BOUNDARIES.md
  */
 import fs from "node:fs";
+import { checkDatabaseAccessBoundaries } from "./verification/backend-db-boundary.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CHANGMEN_LAYOUT, VENUE_ADAPTER_REL } from "../server/storage/paths.js";
@@ -229,7 +230,7 @@ function checkLegacyDirs(violations) {
 }
 
 function main() {
-  const violations = [];
+  const violations = checkDatabaseAccessBoundaries(CHANGMEN_ROOT);
 
   checkLegacyDirs(violations);
 

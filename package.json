@@ -87,7 +87,8 @@
     "value-bet": "npm run start --prefix server/value-bet",
     "value-bet:scan": "npm run scan:once --prefix server/value-bet",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test:admin-users:postgres": "node scripts/testing/admin-users-postgres.mjs"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.0.0",

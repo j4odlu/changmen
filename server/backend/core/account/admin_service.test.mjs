@@ -91,18 +91,6 @@ vi.mock("@changmen/db", () => ({
       updated_at: 20,
     },
   ]),
-  getPgPool: vi.fn(() => ({
-    query: vi.fn(async (sql, params) => {
-      const q = String(sql);
-      if (q.includes("FROM users WHERE id = $1")) {
-        return { rows: [{ user_name: "alice" }] };
-      }
-      if (q.includes("lower(user_name) = lower($1) AND id <> $2")) {
-        return { rows: params[0] === "bob" ? [{ id: "other" }] : [] };
-      }
-      return { rows: [] };
-    }),
-  })),
   updateUserName: vi.fn(async () => true),
   deleteOrdersByIds: vi.fn(async ids => ids.length),
   fetchOrdersByLinks: vi.fn(async () => []),
@@ -113,6 +101,11 @@ vi.mock("@changmen/db", () => ({
   placeholderLinkFromCreateAt: (ca) => Number(ca) || 0,
   backendBindLinkFromCreateAt: (ca) => Number(ca) || 0,
   isArbBindLink: () => false,
+}));
+
+vi.mock("@changmen/db/admin_users.js", () => ({
+  readManagedUserIdentity: vi.fn(async () => ({ user_name: "alice" })),
+  hasManagedUserName: vi.fn(async name => name === "bob"),
 }));
 
 const mockProfileRow = vi.hoisted(() => ({

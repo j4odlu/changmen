@@ -10,7 +10,8 @@
     "./venue_account_key.js": "./venue_account_key.js",
     "./pg.js": "./pg.js",
     "./client_match_snapshot.js": "./client_match_snapshot.js",
-    "./profile_metadata.js": "./profile_metadata.js"
+    "./profile_metadata.js": "./profile_metadata.js",
+    "./admin_users.js": "./admin_users.js"
   },
   "main": "./index.js",
   "scripts": {

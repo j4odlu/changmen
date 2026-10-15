@@ -1,0 +1,259 @@
+{
+  "date": "2026-10-15",
+  "status": "local-implementation-verified",
+  "baseCommit": "d3fd4a0a02794c3826b8f56a131ceed4bc249caf",
+  "branch": "codex/decoupling-round2",
+  "implementationScope": [
+    "docs/DATA_STORAGE.md",
+    "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+    "docs/TEAM_BOUNDARIES.md",
+    "package.json",
+    "scripts/check-team-boundaries.mjs",
+    "scripts/testing/admin-users-postgres.mjs",
+    "scripts/verification/backend-db-access-exceptions.json",
+    "scripts/verification/backend-db-boundary.mjs",
+    "scripts/verification/backend-db-boundary.test.mjs",
+    "server/backend/core/account/admin_service.js",
+    "server/backend/core/account/admin_service.test.mjs",
+    "server/backend/core/account/admin_user_contract.test.mjs",
+    "server/db/admin_users.js",
+    "server/db/package.json",
+    "server/db/rds/admin_users_store.js"
+  ],
+  "compatibility": {
+    "baselineContractPassed": 45,
+    "candidateContractPassed": 45,
+    "existingAdminServicePassed": 21,
+    "realPostgresAdminPassed": 12,
+    "realPostgresMetadataPassed": 7,
+    "boundaryRegressionPassed": 27,
+    "frontendBusinessChanges": false,
+    "schemaChanges": false
+  },
+  "fullValidation": {
+    "checkedAt": "2026-10-15T12:16:10.445Z",
+    "passed": true,
+    "tier": "full",
+    "paths": [
+      "docs/DATA_STORAGE.md",
+      "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+      "docs/TEAM_BOUNDARIES.md",
+      "package.json",
+      "scripts/check-team-boundaries.mjs",
+      "scripts/testing/admin-users-postgres.mjs",
+      "scripts/verification/backend-db-access-exceptions.json",
+      "scripts/verification/backend-db-boundary.mjs",
+      "scripts/verification/backend-db-boundary.test.mjs",
+      "server/backend/core/account/admin_service.js",
+      "server/backend/core/account/admin_service.test.mjs",
+      "server/backend/core/account/admin_user_contract.test.mjs",
+      "server/db/admin_users.js",
+      "server/db/package.json",
+      "server/db/rds/admin_users_store.js"
+    ],
+    "immutableFokEntries": 551,
+    "sourceStable": true,
+    "completeRelease": false,
+    "results": [
+      {
+        "check": "fok-551",
+        "passed": true,
+        "elapsedMs": 23931
+      },
+      {
+        "check": "validation-control",
+        "passed": true,
+        "elapsedMs": 5808
+      },
+      {
+        "check": "verification-control",
+        "passed": true,
+        "elapsedMs": 52115
+      },
+      {
+        "check": "verification-node",
+        "passed": true,
+        "elapsedMs": 677
+      },
+      {
+        "check": "router-compile",
+        "passed": true,
+        "elapsedMs": 1018
+      },
+      {
+        "check": "backend",
+        "passed": true,
+        "elapsedMs": 31324
+      },
+      {
+        "check": "frontend-typecheck",
+        "passed": true,
+        "elapsedMs": 14425
+      },
+      {
+        "check": "frontend",
+        "passed": true,
+        "elapsedMs": 181220
+      },
+      {
+        "check": "build",
+        "passed": true,
+        "elapsedMs": 42820
+      }
+    ],
+    "identity": {
+      "commit": null,
+      "candidateTree": "1e2da9914c633deab074b90b91bc07eeb72de320",
+      "inputFingerprint": "bbdd0cb9e111f8d85af87ec11b6c9e33f3817219794e78553b174d94216321ed"
+    },
+    "plan": {
+      "tier": "full",
+      "paths": [
+        "docs/DATA_STORAGE.md",
+        "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+        "docs/TEAM_BOUNDARIES.md",
+        "package.json",
+        "scripts/check-team-boundaries.mjs",
+        "scripts/testing/admin-users-postgres.mjs",
+        "scripts/verification/backend-db-access-exceptions.json",
+        "scripts/verification/backend-db-boundary.mjs",
+        "scripts/verification/backend-db-boundary.test.mjs",
+        "server/backend/core/account/admin_service.js",
+        "server/backend/core/account/admin_service.test.mjs",
+        "server/backend/core/account/admin_user_contract.test.mjs",
+        "server/db/admin_users.js",
+        "server/db/package.json",
+        "server/db/rds/admin_users_store.js"
+      ],
+      "fullReasons": [
+        "package.json",
+        "scripts/check-team-boundaries.mjs",
+        "scripts/testing/admin-users-postgres.mjs",
+        "server/backend/core/account/admin_service.js",
+        "server/backend/core/account/admin_service.test.mjs",
+        "server/backend/core/account/admin_user_contract.test.mjs",
+        "server/db/admin_users.js",
+        "server/db/package.json",
+        "server/db/rds/admin_users_store.js"
+      ],
+      "immutableFokEntries": 551,
+      "snapshotOverridesAllowed": false,
+      "checks": [
+        "fok-551",
+        "validation-control",
+        "verification-control",
+        "verification-node",
+        "router-compile",
+        "backend",
+        "frontend-typecheck",
+        "frontend",
+        "build"
+      ],
+      "changedPaths": [
+        "docs/DATA_STORAGE.md",
+        "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+        "docs/TEAM_BOUNDARIES.md",
+        "package.json",
+        "scripts/check-team-boundaries.mjs",
+        "scripts/testing/admin-users-postgres.mjs",
+        "scripts/verification/backend-db-access-exceptions.json",
+        "scripts/verification/backend-db-boundary.mjs",
+        "scripts/verification/backend-db-boundary.test.mjs",
+        "server/backend/core/account/admin_service.js",
+        "server/backend/core/account/admin_service.test.mjs",
+        "server/backend/core/account/admin_user_contract.test.mjs",
+        "server/db/admin_users.js",
+        "server/db/package.json",
+        "server/db/rds/admin_users_store.js"
+      ],
+      "unknownBase": false,
+      "requestedScope": null,
+      "deployedVersions": null,
+      "liveComponents": null,
+      "eventPaths": null,
+      "purpose": "change",
+      "deployment": {
+        "scope": "full",
+        "components": [
+          "backend",
+          "frontend"
+        ],
+        "backendFirst": true
+      },
+      "releasePlan": "backend-first"
+    },
+    "planFingerprint": "7f6a4b99041c22548fd6398ab99a5ef8b8b4bc79fe692aaf419972e57c3219d5"
+  },
+  "boundaries": {
+    "passed": true,
+    "remainingFiles": [
+      "server/backend/core/account/admin_maintenance.js",
+      "server/backend/core/esport-api/sport_predictfun_fetch.js",
+      "server/backend/core/esport-api/value_bet_service.js",
+      "server/backend/core/shared/runtime_version.js"
+    ],
+    "remainingSites": 20,
+    "baseline": "d3fd4a0a02794c3826b8f56a131ceed4bc249caf"
+  },
+  "limitations": [
+    "Existing user/profile creation and role/team writes retain their separate write sequence.",
+    "Last-administrator checks retain existing behavior; no new cross-request serialization guarantee.",
+    "Existing login integration suite has 16 skipped tests in the offline gate; separate local PostgreSQL suites passed.",
+    "Existing frontend suite has one skipped test; existing build chunk-size warnings remain.",
+    "This round is not committed, pushed or deployed. Full change verification is not a complete release acceptance."
+  ],
+  "logs": {
+    "baseline-contract.log": {
+      "path": "output/decoupling-round2/baseline-contract.log",
+      "sha256": "dd13c284fc1dfe0b6e792f99ffd6ded8c14af0d3bb5932da2f3a1434de3c0199"
+    },
+    "final-admin-contract.log": {
+      "path": "output/decoupling-round2/final-admin-contract.log",
+      "sha256": "bf80c567301175f88d4185afc3249ba486a749f5b2affd99e5b3c0d89cded4c2"
+    },
+    "admin-postgres.log": {
+      "path": "output/decoupling-round2/admin-postgres.log",
+      "sha256": "5d267d77c5c82ca6d7a1c7f4eac56dbf50defda35c770f6d6667e5869cbeddfd"
+    },
+    "metadata-postgres.log": {
+      "path": "output/decoupling-round2/metadata-postgres.log",
+      "sha256": "6903304f44146beb711c8ac3a1d882f8bbba0fc6aaf2718517c3d7eda15a5643"
+    },
+    "boundary-tests.log": {
+      "path": "output/decoupling-round2/boundary-tests.log",
+      "sha256": "78854063aef69e0c7697970647fd51b9780e850d0ab1c366203ee018b33de6ce"
+    },
+    "final-boundaries.log": {
+      "path": "output/decoupling-round2/final-boundaries.log",
+      "sha256": "6af833862fe68edb30194081f056399df07bde145b15537d0bb8325975b2358d"
+    },
+    "check-change.log": {
+      "path": "output/decoupling-round2/check-change.log",
+      "sha256": "383e3e653e687d321cfb5fc664bd83787b5c373a19b34f86b815e328cd0429d2"
+    }
+  },
+  "finalSourceVerification": {
+    "passed": true,
+    "inputFingerprint": "bbdd0cb9e111f8d85af87ec11b6c9e33f3817219794e78553b174d94216321ed",
+    "documentationOnlyAfterValidation": true
+  },
+  "finalCandidatePaths": [
+    "docs/DATA_STORAGE.md",
+    "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+    "docs/TEAM_BOUNDARIES.md",
+    "docs/audits/2026-10-15-decoupling-round2/ACCEPTANCE.md",
+    "docs/audits/2026-10-15-decoupling-round2/verification.json",
+    "package.json",
+    "scripts/check-team-boundaries.mjs",
+    "scripts/testing/admin-users-postgres.mjs",
+    "scripts/verification/backend-db-access-exceptions.json",
+    "scripts/verification/backend-db-boundary.mjs",
+    "scripts/verification/backend-db-boundary.test.mjs",
+    "server/backend/core/account/admin_service.js",
+    "server/backend/core/account/admin_service.test.mjs",
+    "server/backend/core/account/admin_user_contract.test.mjs",
+    "server/db/admin_users.js",
+    "server/db/package.json",
+    "server/db/rds/admin_users_store.js"
+  ]
+}

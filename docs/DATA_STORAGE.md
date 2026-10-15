@@ -62,6 +62,7 @@ changmen 使用 **RDS（PostgreSQL）** 与 **本机 JSON**。数据层入口为
 | **M→A** | Memory-first + Async persist | 改完内存即返回 | 后台队列 / fire-and-forget（`rds/common.js` `_writeRds`） |
 | **M→S** | Memory-first + Sync persist | 等 RDS 成功再返回 | 强一致写入 |
 | **M+R** | Memory 读 + RDS 校验 | 优先内存；可能轻量查 meta | 持久化 +  occasional 校验 |
+| **R→M** | RDS commit then Memory | 数据库确认后再发布缓存并返回 | 不发布未确认快照 |
 | **R** | RDS-direct | 查/写完库再返回 | 唯一数据源 |
 | **J** | Local JSON | 读写在 `storage/*.json` | 文件持久化，不进 RDS |
 | **—** | 非数据 / 转发 | — | — |
@@ -95,15 +96,21 @@ changmen 使用 **RDS（PostgreSQL）** 与 **本机 JSON**。数据层入口为
 | `Client_Login` | R | 必须 RDS 验密；成功后 `loadProfileById` 灌内存 |
 | `Client_Logout` / `Client_RefreshToken` | R | token 会话在 RDS |
 | `Client_GetUserInfo` | M | JWT 后纯内存 profile |
-| `Client_UpdateSetting` | M→A | 内存 + `writeProfile` fire-and-forget |
-| `Client_SaveData` / `Client_GetData` | M→A / M | KV、CollectConfig 等走 `core/db/store.js` 内存 |
+| `Client_UpdateSetting` | R→M | 等待 `writeProfileAsync` 确认后发布配置缓存；失败不发布 |
+| `Client_SaveData` / `Client_GetData` | R→M / M | 配置按用户协调，写 RDS 确认后发布缓存；ACCOUNT 单独走 players 事务路径 |
+
+### 管理用户与元数据
+
+[changmen 扩展] 管理用户的直接 SQL 通过 `@changmen/db/admin_users.js` 进入 `rds/admin_users_store.js`；改名、角色等已存在的数据方法继续复用。业务层保留输入校验、操作者限制、最后管理员检查、错误文本和缓存刷新时序；本轮不改变原有创建和角色/团队分步写入策略。改名继续使用原 users + profiles 事务，失败回滚后不刷新缓存。
+
+登录只 patch `lastLoginIp/lastLoginAt`；在线状态只 patch `lastActiveAt`，保留 30 分钟窗口、60 秒防抖及旧 sessions 导入策略。配置保存仍由 `core/db/store.js` 组装 preferences 后调用已确认写入，不能把现有每用户队列理解为跨进程字段合并保证。管理模块内未调用的整 preferences 覆盖函数已删除；本轮没有新增偏好整体替换入口。
 
 ### 账号 / Player
 
 | Action | 模式 | 说明 |
 |--------|------|------|
-| `Client_GetAccounts` | M | `profiles.accounts` 内存 |
-| `Client_SaveAccounts` | M→A | 内存 + 异步 RDS；创建前校验 player Exist（R） |
+| `Client_GetAccounts` | M+R | players 为唯一持久化真相，按现有逻辑回源并发布已确认缓存 |
+| `Client_SaveAccounts` | R→M | 归属和空覆盖校验；players 事务确认后发布缓存 |
 | `Client_CreateTagPlatform` | M→S | 必须等 RDS 建 player 成功 |
 | `Client_UpdateBalance` / `DeletePlayer` | M→S | 余额与删除须 RDS ACK |
 

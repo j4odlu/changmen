@@ -1,0 +1,146 @@
+{
+  "baseline": "d3fd4a0a02794c3826b8f56a131ceed4bc249caf",
+  "policy": "Exact released locations only; may be reduced, never broadened. admin_maintenance remains frozen by orders-phase2.",
+  "sites": [
+    {
+      "file": "server/backend/core/account/admin_maintenance.js",
+      "kind": "database-pool-import",
+      "context": "module",
+      "signature": "042a167826d89a6347486c4882175fa2f7ed28aeccced7f90b2c8cb6ffa7c6a9",
+      "line": 4
+    },
+    {
+      "file": "server/backend/core/account/admin_maintenance.js",
+      "kind": "database-execution",
+      "context": "listSharedVenueAccounts",
+      "signature": "8c2972a071433d8dbf2d016ea19264ffabd87f7da5c7e46d67b0cb21fc6e10ee",
+      "line": 42
+    },
+    {
+      "file": "server/backend/core/account/admin_maintenance.js",
+      "kind": "database-execution",
+      "context": "listSharedVenueAccounts/pool",
+      "signature": "2af95631424de91b470a39908372b2bf5874638babba96a289f472b9ffef39ef",
+      "line": 43
+    },
+    {
+      "file": "server/backend/core/account/admin_maintenance.js",
+      "kind": "database-execution",
+      "context": "listSharedVenueAccounts/{ rows }",
+      "signature": "4420306db3d393658daa3db5b6bf0b43b362d7754236bbbcf7499bcfdeedf7c1",
+      "line": 47
+    },
+    {
+      "file": "server/backend/core/account/admin_maintenance.js",
+      "kind": "database-execution",
+      "context": "listDuplicateOrderIds",
+      "signature": "8c2972a071433d8dbf2d016ea19264ffabd87f7da5c7e46d67b0cb21fc6e10ee",
+      "line": 138
+    },
+    {
+      "file": "server/backend/core/account/admin_maintenance.js",
+      "kind": "database-execution",
+      "context": "listDuplicateOrderIds/pool",
+      "signature": "2af95631424de91b470a39908372b2bf5874638babba96a289f472b9ffef39ef",
+      "line": 139
+    },
+    {
+      "file": "server/backend/core/account/admin_maintenance.js",
+      "kind": "database-execution",
+      "context": "listDuplicateOrderIds/sameUser",
+      "signature": "c0590a0fbccfc4b7d26a0159d7804f28e827a573478a0ef82037f7b8ff1f1718",
+      "line": 143
+    },
+    {
+      "file": "server/backend/core/account/admin_maintenance.js",
+      "kind": "database-execution",
+      "context": "listDuplicateOrderIds/crossUser",
+      "signature": "46afbc7828d4d0e55d0939100995a7294ecfd42120fb7b50ce10167be0a95b59",
+      "line": 164
+    },
+    {
+      "file": "server/backend/core/esport-api/sport_predictfun_fetch.js",
+      "kind": "database-capability-alias",
+      "context": "resolveRelayAuthToken",
+      "signature": "b5308af0a69f302a0ccd29c23da5d97dd989835110c056928d3f69627b7cb3a3",
+      "line": 200
+    },
+    {
+      "file": "server/backend/core/esport-api/sport_predictfun_fetch.js",
+      "kind": "database-pool-import",
+      "context": "resolveRelayAuthToken/{ hasDatabaseUrlConfig, initDatabaseUrl, getPgPool }",
+      "signature": "0c5475d2fff8c6cdd581055859a8c055288034ad8cd20ceb87e1d1983d609667",
+      "line": 200
+    },
+    {
+      "file": "server/backend/core/esport-api/sport_predictfun_fetch.js",
+      "kind": "database-execution",
+      "context": "resolveRelayAuthToken/pool",
+      "signature": "45b77cceb7392e81761c2cd6f06fb39cbbf41409f199ebac0ec2eeb32cdddfff",
+      "line": 204
+    },
+    {
+      "file": "server/backend/core/esport-api/sport_predictfun_fetch.js",
+      "kind": "database-execution",
+      "context": "resolveRelayAuthToken/{ rows }",
+      "signature": "c6da40f9584dca543349984c7a8fed8eace219f52326c01d3188c467c6bc4d48",
+      "line": 207
+    },
+    {
+      "file": "server/backend/core/esport-api/sport_predictfun_fetch.js",
+      "kind": "database-internal-import",
+      "context": "resolveRelayAuthToken/{ signJwt, JWT_ACCESS_TTL_SEC }",
+      "signature": "bf8ce09dfbaba555871db5fd0885bac984f10f20c109b01ee4d022aa509d2a8c",
+      "line": 213
+    },
+    {
+      "file": "server/backend/core/esport-api/value_bet_service.js",
+      "kind": "database-pool-import",
+      "context": "module",
+      "signature": "9b201fe27cd0732c5c16ed6b229709933d57550986b05e2e57d773e29300a3f3",
+      "line": 1
+    },
+    {
+      "file": "server/backend/core/esport-api/value_bet_service.js",
+      "kind": "database-execution",
+      "context": "getValueBetDashboard/pool",
+      "signature": "2af95631424de91b470a39908372b2bf5874638babba96a289f472b9ffef39ef",
+      "line": 123
+    },
+    {
+      "file": "server/backend/core/esport-api/value_bet_service.js",
+      "kind": "database-execution",
+      "context": "getValueBetDashboard/[signalsRes, statsRes, distRes]",
+      "signature": "ded6d39443970531326e34b5b5cadfa38af312da59a349f39d7db067fdff3fba",
+      "line": 134
+    },
+    {
+      "file": "server/backend/core/esport-api/value_bet_service.js",
+      "kind": "database-execution",
+      "context": "getValueBetDashboard/[signalsRes, statsRes, distRes]",
+      "signature": "4cff80c525429d6de3872fab4e9835125b9a089bfe4d68cdce2a5f19e942f5fb",
+      "line": 135
+    },
+    {
+      "file": "server/backend/core/esport-api/value_bet_service.js",
+      "kind": "database-execution",
+      "context": "getValueBetDashboard/[signalsRes, statsRes, distRes]",
+      "signature": "4e264bd4d681393e330f336509074c35fdfe99306b7b8b0cbd757fb800494d7d",
+      "line": 136
+    },
+    {
+      "file": "server/backend/core/shared/runtime_version.js",
+      "kind": "database-pool-import",
+      "context": "module",
+      "signature": "ea06ead14c90f72d23e5273ef51b6bf2fd6e9e4d56d3e3a907073dffb202c5fb",
+      "line": 5
+    },
+    {
+      "file": "server/backend/core/shared/runtime_version.js",
+      "kind": "database-execution",
+      "context": "createRuntimeVersionReader/database/task/result",
+      "signature": "a396732bdceba579a2f719aec5950f619c99ce6d87cb4507f6243e73ee23a7ff",
+      "line": 27
+    }
+  ]
+}

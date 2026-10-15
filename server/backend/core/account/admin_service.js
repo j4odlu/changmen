@@ -1,6 +1,5 @@
-import crypto from "node:crypto";
 import * as sb from "@changmen/db";
-import { ensurePgPoolReady, getPgPool, insertProfile } from "@changmen/db";
+import * as adminUsers from "@changmen/db/admin_users.js";
 import { accountProviderKey, resolveAccountMultiply } from "@changmen/shared/account_multiply";
 import { isAdminUser } from "../auth/admin_auth.js";
 import { filterProfiles, getVisibleUserIds, resolveVisibleUserIds } from "../auth/role_filter.js";
@@ -439,41 +438,27 @@ function validateUserName(userName) {
   return name;
 }
 
+// [changmen 扩展] Persistence reports stable codes; existing API error text stays here.
+async function adminUserData(run, unavailable = "RDS 未配置") {
+  try { return await run(); }
+  catch (error) {
+    const messages = {
+      ADMIN_USER_STORAGE_UNAVAILABLE: unavailable,
+      ADMIN_USER_NAME_EXISTS: "用户名已存在",
+      ADMIN_USER_PROFILE_CREATE_FAILED: "profiles 创建失败",
+    };
+    if (Object.hasOwn(messages, error?.code)) throw new Error(messages[error.code]);
+    throw error;
+  }
+}
+
 /** 管理端创建登录用户（RDS users + profiles） */
 export async function createAdminUser(userName, password) {
   const name = validateUserName(userName);
   const pwd = validateNewPassword(password);
   const now = Date.now();
 
-  await ensurePgPoolReady();
-  const pool = getPgPool();
-  if (!pool)
-    throw new Error("RDS 未配置，无法创建用户");
-  const existing = await pool.query(
-    "SELECT id FROM users WHERE lower(user_name) = lower($1)",
-    [name],
-  );
-  if (existing.rows.length)
-    throw new Error("用户名已存在");
-  const userId = crypto.randomUUID();
-  await pool.query(
-    `INSERT INTO users (id, user_name, password_hash, metadata, created_at, updated_at)
-     VALUES ($1, $2, crypt($3, gen_salt('bf', 12)), '{}', $4, $4)`,
-    [userId, name, pwd, now],
-  );
-  const ok = await insertProfile(userId, {
-    id: userId,
-    user_name: name,
-    accounts: [],
-    betting_config: {},
-    collect_config: {},
-    preferences: {},
-    created_at: now,
-    updated_at: now,
-  });
-  if (!ok)
-    throw new Error("profiles 创建失败");
-  return { id: userId, userName: name };
+  return adminUserData(() => adminUsers.createManagedUser(name, pwd, now), "RDS 未配置，无法创建用户");
 }
 
 /** 管理端删除用户（profiles ON DELETE CASCADE 自动级联） */
@@ -484,22 +469,12 @@ export async function deleteAdminUser(userId, operatorUserId) {
   if (id === String(operatorUserId || "").trim()) {
     throw new Error("不能删除当前登录账号");
   }
-  await ensurePgPoolReady();
-  const pool = getPgPool();
-  if (!pool)
-    throw new Error("RDS 未配置");
-  const { rows } = await pool.query("SELECT user_name, is_admin FROM users WHERE id = $1", [id]);
-  if (!rows[0])
-    throw new Error("用户不存在");
-  if (rows[0].is_admin) {
-    const { rows: admins } = await pool.query(
-      "SELECT COUNT(*)::int AS n FROM users WHERE is_admin = true",
-    );
-    if ((admins[0]?.n ?? 0) <= 1)
-      throw new Error("至少保留一名管理员");
-  }
-  await pool.query("DELETE FROM users WHERE id = $1", [id]);
-  return { id, userName: String(rows[0].user_name) };
+  const user = await adminUserData(() => adminUsers.readManagedUserIdentity(id));
+  if (!user) throw new Error("用户不存在");
+  if (user.is_admin && await adminUserData(() => adminUsers.countManagedAdministrators()) <= 1)
+    throw new Error("至少保留一名管理员");
+  await adminUserData(() => adminUsers.deleteManagedUser(id));
+  return { id, userName: String(user.user_name) };
 }
 
 /** 管理端更改登录用户名 */
@@ -511,18 +486,9 @@ export async function renameAdminUser(userId, userName, caller = null) {
     throw new Error("仅管理员可更改用户名");
   const name = validateUserName(userName);
 
-  await ensurePgPoolReady();
-  const pool = getPgPool();
-  if (!pool)
-    throw new Error("RDS 未配置");
-
-  const { rows } = await pool.query(
-    "SELECT user_name FROM users WHERE id = $1",
-    [id],
-  );
-  if (!rows[0])
-    throw new Error("用户不存在");
-  const current = String(rows[0].user_name || "");
+  const user = await adminUserData(() => adminUsers.readManagedUserIdentity(id));
+  if (!user) throw new Error("用户不存在");
+  const current = String(user.user_name || "");
   if (current.toLowerCase() === name.toLowerCase()) {
     if (current === name)
       return { id, userName: name };
@@ -533,11 +499,7 @@ export async function renameAdminUser(userId, userName, caller = null) {
     return { id, userName: name };
   }
 
-  const existing = await pool.query(
-    "SELECT id FROM users WHERE lower(user_name) = lower($1) AND id <> $2",
-    [name, id],
-  );
-  if (existing.rows.length)
+  if (await adminUserData(() => adminUsers.hasManagedUserName(name, id)))
     throw new Error("用户名已存在");
 
   const ok = await sb.updateUserName(id, name);
@@ -560,36 +522,9 @@ export async function resetAdminUserPassword(userId, password, caller = null) {
   const pwd = validateNewPassword(password);
   const now = Date.now();
 
-  await ensurePgPoolReady();
-  const pool = getPgPool();
-  if (!pool)
-    throw new Error("RDS 未配置");
-  const { rows } = await pool.query(
-    "SELECT user_name FROM users WHERE id = $1",
-    [id],
-  );
-  if (!rows[0])
-    throw new Error("用户不存在");
-  await pool.query(
-    `UPDATE users SET password_hash = crypt($2, gen_salt('bf', 12)), updated_at = $3 WHERE id = $1`,
-    [id, pwd, now],
-  );
-  return { id, userName: String(rows[0].user_name) };
-}
-
-async function writeProfilePreferencesAwait(uid, preferences) {
-  const id = String(uid);
-  const now = Date.now();
-  await ensurePgPoolReady();
-  const pool = getPgPool();
-  if (!pool)
-    throw new Error("RDS 未配置");
-  const { rowCount } = await pool.query(
-    `UPDATE profiles SET preferences = $2::jsonb, updated_at = $3 WHERE id = $1`,
-    [id, JSON.stringify(preferences || {}), now],
-  );
-  if (!rowCount)
-    throw new Error("用户不存在");
+  const user = await adminUserData(() => adminUsers.resetManagedUserPassword(id, pwd, now));
+  if (!user) throw new Error("用户不存在");
+  return { id, userName: user.userName };
 }
 
 /** 操盘 Tab：远程 query 失败时，管理端从 RDS 读取账号快照（对齐 TradeRemoteAccount 形状） */
@@ -824,14 +759,7 @@ export async function setAdminUserAdmin(userId, isAdmin, operatorUserId) {
   }
 
   if (wasAdmin && !wantAdmin) {
-    await ensurePgPoolReady();
-    const pool = getPgPool();
-    if (!pool)
-      throw new Error("RDS 未配置");
-    const { rows } = await pool.query(
-      "SELECT COUNT(*)::int AS n FROM users WHERE is_admin = true",
-    );
-    if ((rows[0]?.n ?? 0) <= 1) {
+    if (await adminUserData(() => adminUsers.countManagedAdministrators()) <= 1) {
       throw new Error("至少保留一名管理员");
     }
   }
@@ -865,14 +793,7 @@ export async function setAdminUserRole(userId, role, teamId, operatorUserId) {
   const wasAdmin = Boolean(row.is_admin) || row.role === "admin";
 
   if (wasAdmin && role !== "admin") {
-    await ensurePgPoolReady();
-    const pool = getPgPool();
-    if (!pool)
-      throw new Error("RDS 未配置");
-    const { rows } = await pool.query(
-      "SELECT COUNT(*)::int AS n FROM users WHERE is_admin = true",
-    );
-    if ((rows[0]?.n ?? 0) <= 1) {
+    if (await adminUserData(() => adminUsers.countManagedAdministrators()) <= 1) {
       throw new Error("至少保留一名管理员");
     }
   }
@@ -922,17 +843,9 @@ export async function deleteTeam(id) {
   const tid = String(id || "").trim();
   if (!tid)
     throw new Error("团队 ID 必填");
-  await ensurePgPoolReady();
-  const pool = getPgPool();
-  if (pool) {
-    const { rows } = await pool.query(
-      "SELECT COUNT(*)::int AS n FROM users WHERE team_id = $1",
-      [tid],
-    );
-    if ((rows[0]?.n ?? 0) > 0) {
-      throw new Error(`团队内还有 ${rows[0].n} 个成员，请先移除`);
-    }
-  }
+  const members = await adminUserData(() => adminUsers.countManagedTeamMembers(tid));
+  if (members > 0)
+    throw new Error(`团队内还有 ${members} 个成员，请先移除`);
   const ok = await sb.deleteTeam(tid);
   if (!ok)
     throw new Error("删除团队失败或不存在");

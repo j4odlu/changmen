@@ -13,12 +13,14 @@ import { PM_MARKET_WS_URL } from "../platforms/pm.js";
 import { recordConnect, recordDisconnect, recordError } from "./forward_stats.js";
 import { attachHubUpstreamBackpressure, createWsRelayGuard } from "./ws_backpressure.js";
 import { splitPmControlFrames, isPmHubThinFramesEnabled, pmHubQuoteTimestampMs, thinPmMarketFrames } from "./pm_hub_thin_frame.js";
+import { notifyPmTickResync } from "./pm_tick_resync.js";
 
 /** @typedef {(token: string) => Promise<{ userId?: string, userName?: string } | null | undefined>} PmMarketIdentityResolver */
 
 /** @type {PmMarketIdentityResolver | null} */
 let identityResolver = null;
 let hubAttached = false;
+let upstreamHasOpened = false;
 
 export const PM_MARKET_HUB_PATH = "/esport/ws-forward/PM-MARKET";
 const HUB_ID = "PM-MARKET";
@@ -566,6 +568,8 @@ function ensureUpstream() {
     upstreamConnecting = false;
     upstream = ws;
     startUpstreamPing();
+    if (upstreamHasOpened) notifyPmTickResync(clients, toClientGuard);
+    upstreamHasOpened = true;
     const merged = mergeHubAssetIds(clients);
     const initial = upstreamInitialPending || merged.size > 0;
     if (merged.size) {

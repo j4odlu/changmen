@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { rebasePmFokImports } from "./pm-fok-source-relocation.mjs";
 import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
+import { restorePmTickRefreshSource } from "./pm-tick-refresh-boundary.mjs";
 
 // [changmen 扩展] 精确登记本次纯位置迁移；旧入口只能再导出，核验仍读取完整实现。
 export const PM_FUNCTIONAL_GROUPS = Object.freeze({
@@ -46,5 +47,5 @@ export function readRelocatedPmFunctionalSource(file, source, readSource = targe
   if (!target)
     return source.replace(/\r\n/g, "\n");
   assert.equal(source.replace(/\r\n/g, "\n"), pmFunctionalCompatibilitySource(file), `${file}: compatibility entry must only re-export its registered implementation`);
-  return rebasePmFokImports(restorePmOrderBetLabelSource(target, readSource(target), readSource), target, file).replace(/\r\n/g, "\n");
+  return rebasePmFokImports(restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, readSource(target), readSource)), target, file).replace(/\r\n/g, "\n");
 }

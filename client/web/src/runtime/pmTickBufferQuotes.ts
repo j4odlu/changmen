@@ -1,7 +1,7 @@
 import { computed, watch } from "vue";
 import { isPmTickBufferActive, onPmTickBufferModeChange, onPmPricePolicyChange, onPmTickBufferChange,
   requestPmTickBufferTick, setPmTickBufferLoader, clearPmTickBufferMetadata,
-  retainPmTickBufferRequests, fetchPmTickBufferBook, isValidClobPrice,
+  retainPmTickBufferRequests, fetchPmTickBufferTickSize, isValidClobPrice,
   getPolymarketPmSportBlockReason } from "@changmen/venue-adapter/polymarket";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useMatchStore } from "@/stores/matchStore";
@@ -36,7 +36,7 @@ export function installPmTickBufferQuotes(): void {
   const applyMode = (enabled: boolean) => {
     odds.pmTickBufferEnabled = enabled;
     if (timer) clearInterval(timer);
-    setPmTickBufferLoader(enabled ? fetchPmTickBufferBook : undefined);
+    setPmTickBufferLoader(enabled ? fetchPmTickBufferTickSize : undefined);
     timer = enabled ? setInterval(prefetch, 5_000) : undefined;
     // 模式切换仅改变转换规则，已确认的公开 tick 与在途请求不被销毁。
     prefetch();

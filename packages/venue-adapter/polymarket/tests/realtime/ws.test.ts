@@ -16,6 +16,7 @@ import { resetPmRoutingPreferenceForTests, setPmRoutingPreference } from "../../
 import { setChangmenAuthTokenGetter } from "../../../shared/changmenAuthToken";
 import { PM_MARKET_WS_FORWARD_PATH } from "../../wsConfig";
 import { listVenueWsStatuses } from "../../../shared/venueWsStatus";
+import { onPmTickReconnect } from "../../pmTickState";
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
@@ -49,6 +50,20 @@ class MockWebSocket {
 }
 
 describe("polymarket market ws", () => {
+  it("announces each socket recovery and relay upstream resync to tick metadata", () => {
+    const recover = vi.fn(); const off = onPmTickReconnect(recover);
+    const handle = startPolymarketMarketWs({ onMessage() {}, onOpen() {} });
+    try {
+      MockWebSocket.instances[0]!.open();
+      expect(recover).toHaveBeenCalledOnce();
+      MockWebSocket.instances[0]!.close();
+      vi.advanceTimersByTime(5_000);
+      MockWebSocket.instances[1]!.open();
+      expect(recover).toHaveBeenCalledTimes(2);
+      MockWebSocket.instances[1]!.onmessage?.({ data: '{"event_type":"changmen_tick_resync"}' });
+      expect(recover).toHaveBeenCalledTimes(3);
+    } finally { off(); handle.stop(); }
+  });
   beforeEach(() => {
     MockWebSocket.instances = [];
     const storage = new Map<string, string>();

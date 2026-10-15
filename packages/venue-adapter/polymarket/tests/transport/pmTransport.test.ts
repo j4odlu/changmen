@@ -8,6 +8,7 @@ import { changmenPmEsportCall, changmenPmHttpRequest } from "@changmen/client-co
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchPolymarketActivityV2 } from "../../pmActivityV2";
+import { fetchPmTickBufferTickSize } from "../../pmTickMetadata";
 
 import { resetPmMarketWsSourceModeForTests } from "../../pmMarketWsMode";
 import {
@@ -84,6 +85,27 @@ const pmAccount = {
 };
 
 describe("pmTransport mode", () => {
+  it.each(["direct", "extension", "vps"] as const)("background tick refresh uses /tick-size through %s without fetching a book", async mode => {
+    setPmHttpModeForTests(mode);
+    const body = { minimum_tick_size: 0.0025 };
+    vi.mocked(directGet).mockResolvedValue(body);
+    vi.mocked(a8PluginGet).mockResolvedValue({ status: 200, data: body });
+    vi.mocked(changmenPmHttpRequest).mockResolvedValue({ status: 200, text: JSON.stringify(body) });
+    expect(await fetchPmTickBufferTickSize(" 123 ")).toEqual(body);
+    const url = "https://clob.polymarket.com/tick-size?token_id=123";
+    if (mode === "direct") expect(directGet).toHaveBeenCalledWith(url, {});
+    if (mode === "extension") expect(a8PluginGet).toHaveBeenCalledWith(url, undefined);
+    if (mode === "vps") expect(changmenPmHttpRequest).toHaveBeenCalledWith({ method: "GET", url });
+    expect(changmenPmEsportCall).not.toHaveBeenCalled();
+  });
+  it("official background tick refresh falls back to VPS on network failure, still using /tick-size", async () => {
+    setPmHttpModeForTests("vps"); resetPmMarketWsSourceModeForTests("official");
+    vi.mocked(directGet).mockRejectedValue(Object.assign(new Error("Network Error"), { code: "ERR_NETWORK" }));
+    vi.mocked(changmenPmHttpRequest).mockResolvedValue({ status: 200, text: '{"minimum_tick_size":0.001}' });
+    expect(await fetchPmTickBufferTickSize("123")).toEqual({ minimum_tick_size: 0.001 });
+    expect(changmenPmHttpRequest).toHaveBeenCalledWith({ method: "GET", url: "https://clob.polymarket.com/tick-size?token_id=123" });
+    expect(changmenPmEsportCall).not.toHaveBeenCalled();
+  });
   it.each(["data-api", "gamma-api", "clob"])("official mode reads %s directly without a VPS hop", async (host) => {
     setPmHttpModeForTests("vps");
     resetPmMarketWsSourceModeForTests("official");

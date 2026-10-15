@@ -1,4 +1,4 @@
-import { notePmTickFrame } from "../pmTickState";
+import { notePmTickFrame, notePmTickReconnect } from "../pmTickState";
 /**
  * Polymarket 体育 MARKET WS（独立于电竞 `ws.ts`）。
  * - 官方可达时直连 PM，否则连 PM-SPORT-MARKET hub；不读写电竞 singleton
@@ -91,6 +91,7 @@ function createSportMarketWs(opts: SportMarketWsOpts): PolymarketSportMarketWsHa
         return;
       setSportStatus("connected");
       opts.onOpen();
+      notePmTickReconnect();
       clearPing();
       pingTimer = setInterval(() => {
         if (ws?.readyState === WebSocket.OPEN)

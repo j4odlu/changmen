@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { rebasePmFokImports } from "./pm-fok-source-relocation.mjs";
 import { PM_FUNCTIONAL_RELOCATIONS, pmFunctionalCompatibilitySource, readRelocatedPmFunctionalSource } from "./pm-functional-source-relocation.mjs";
 import { verifyPmOfficialSettlementSource } from "./pm-settlement-policy-boundary.mjs";
+import { restorePmTickRefreshSource } from "./pm-tick-refresh-boundary.mjs";
 
 const base = "e901bb596952256284cd8a9eb8b73b572c963915";
 describe("pM functional relocation preserves complete implementations", () => {
@@ -34,7 +35,7 @@ describe("pM functional relocation preserves complete implementations", () => {
     });
     it(`${file}: resolves every relative dependency to its original module`, () => {
       const original = execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" });
-      const moved = fs.readFileSync(target, "utf8");
+      const moved = restorePmTickRefreshSource(target, fs.readFileSync(target, "utf8"));
       const imports = (source, filename) => {
         const sf = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true);
         const result = [];

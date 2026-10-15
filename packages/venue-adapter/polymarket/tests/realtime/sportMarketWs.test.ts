@@ -3,6 +3,7 @@ import { POLYMARKET_MARKET_WS } from "../../api";
 import { getPmMarketWsSourceMode, resetPmMarketWsSourceModeForTests, setPmMarketWsSourceMode } from "../../pmMarketWsMode";
 import { startPolymarketSportMarketWs } from "../../sportMarketWs";
 import { PM_SPORT_MARKET_WS_FORWARD_PATH } from "../../sportWsConfig";
+import { onPmTickReconnect } from "../../pmTickState";
 
 class FakeWebSocket {
   static OPEN = 1;
@@ -38,6 +39,19 @@ afterEach(() => {
 });
 
 describe("pM football market WS fallback", () => {
+  it("announces sport reconnect and relay upstream recovery to tick metadata", () => {
+    const recover = vi.fn(); const off = onPmTickReconnect(recover);
+    const handle = startPolymarketSportMarketWs({ onMessage() {}, onOpen() {} });
+    try {
+      FakeWebSocket.instances[0]!.onopen?.();
+      expect(recover).toHaveBeenCalledOnce();
+      FakeWebSocket.instances[0]!.close(); vi.advanceTimersByTime(5_000);
+      FakeWebSocket.instances[1]!.onopen?.();
+      expect(recover).toHaveBeenCalledTimes(2);
+      FakeWebSocket.instances[1]!.onmessage?.({ data: '{"event_type":"changmen_tick_resync"}' });
+      expect(recover).toHaveBeenCalledTimes(3);
+    } finally { off(); handle.stop(); }
+  });
   it("falls back to the isolated sport relay without changing esport mode", () => {
     const handle = startPolymarketSportMarketWs({ onMessage() {}, onOpen() {} });
     expect(FakeWebSocket.instances[0]?.url).toBe(POLYMARKET_MARKET_WS);

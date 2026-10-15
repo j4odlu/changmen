@@ -1,4 +1,4 @@
-import { notePmTickFrame } from "../pmTickState";
+import { notePmTickFrame, notePmTickReconnect } from "../pmTickState";
 import { reportVenueWsMeta, reportVenueWsStatus } from "../../shared/venueWsStatus";
 import { resolvePolymarketMarketWsUrl } from "../wsConfig";
 import {
@@ -281,6 +281,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
       notePmMarketClientConnected(getPmMarketWsSourceMode() === "official" ? "official_connected" : "changmen_connected");
       setPolymarketWsStatus("connected", getPmMarketWsSourceMode() === "official" ? "official_connected" : "changmen_connected");
       opts.onOpen();
+      notePmTickReconnect();
       updateSubscriptionWatchdog();
       clearPing();
       pingTimer = setInterval(() => {

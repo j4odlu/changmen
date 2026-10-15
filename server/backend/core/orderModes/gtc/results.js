@@ -7,10 +7,16 @@ import * as orderStore from "../../account/order_store.js";
 import { verifyOrderExecution } from "../orderMetadata.js";
 
 const uuid = value => typeof value === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value);
+// [changmen 扩展] 浏览器沿用 A8 表单协议，嵌套字段是 JSON 字符串；仅在 GTC 边界解码一次。
+function jsonField(value, name) {
+  if (typeof value !== "string") return value;
+  try { return JSON.parse(value); }
+  catch { throw new Error(`GTC ${name} JSON 无效`); }
+}
 export function validateGtcConfirmedResult(input, owner) {
   const allowed = new Set(["executionId", "orderId", "playerId", "linkId", "createdAt", "revision", "match", "bet", "item", "tokenId", "conditionId", "buyShares", "principalUsdc", "feeUsdc", "fills", "financial"]);
   const fillFields = new Set(["key", "tradeId", "bucket", "role", "shares", "price", "fee", "status", "updatedAt"]);
-  if (!input || Object.keys(input).some(key => !allowed.has(key)) || !uuid(input.executionId)
+  if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some(key => !allowed.has(key)) || !uuid(input.executionId)
     || typeof input.orderId !== "string" || !/^0x[0-9a-f]{64}$/i.test(input.orderId)
     || !Number.isSafeInteger(input.playerId) || input.playerId <= 0 || !Number.isSafeInteger(input.linkId)
     || !Number.isSafeInteger(input.revision) || input.revision < 0 || !Number.isFinite(input.createdAt) || input.createdAt <= 0
@@ -30,14 +36,14 @@ export function validateGtcConfirmedResult(input, owner) {
   return { ...input, financial };
 }
 export async function syncGtcConfirmedResult(body, owner) {
-  const result = validateGtcConfirmedResult(body.result, owner);
+  const result = validateGtcConfirmedResult(jsonField(body.result, "result"), owner);
   const owned = await assertPlayerOwnedByUser(result.playerId, owner);
   if (!owned.ok || owned.player?.provider !== "Polymarket") throw new Error(owned.msg || "GTC 结果账号归属或场馆无效");
   return db.savePmGtcConfirmedResult(owner, result);
 }
 export async function readGtcConfirmedResults(body, owner) {
-  const anchors = body.anchors;
-  if (!Array.isArray(anchors) || anchors.length > 1000 || anchors.some(anchor => !uuid(anchor.executionId)
+  const anchors = jsonField(body.anchors, "anchors");
+  if (!Array.isArray(anchors) || anchors.length > 1000 || anchors.some(anchor => !anchor || !uuid(anchor.executionId)
     || !Number.isSafeInteger(anchor.playerId) || anchor.playerId <= 0 || typeof anchor.provider !== "string"
     || typeof anchor.orderId !== "string" || !anchor.orderId.trim())) throw new Error("GTC 原单结果读取身份无效");
   const grouped = new Map();
@@ -63,8 +69,12 @@ export async function saveClientGtcOrders(body, owner) {
   if (!owned.ok) return owned;
   let rows;
   try { rows = JSON.parse(body.orders || "[]"); } catch { return { ok: false, msg: "GTC orders JSON 无效" }; }
-  const origins = body.origins;
-  if (!Array.isArray(rows) || !Array.isArray(origins) || origins.length !== rows.length)
+  let origins;
+  try { origins = jsonField(body.origins, "origins"); }
+  catch (error) { return { ok: false, msg: error.message }; }
+  if (!Array.isArray(rows) || !Array.isArray(origins) || origins.length !== rows.length
+    || rows.some(row => !row || typeof row !== "object" || Array.isArray(row))
+    || origins.some(origin => !origin || typeof origin !== "object" || Array.isArray(origin)))
     return { ok: false, msg: "GTC 原单结果身份缺失" };
   const existing = await db.fetchOrdersByPlayerOrderIdsStrict(playerId, owner, rows.flatMap(row => [row.orderId, row.pmBuyOrderId ?? row.pfBuyOrderId].filter(Boolean)));
   const bindings = [];

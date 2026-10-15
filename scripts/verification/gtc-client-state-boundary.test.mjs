@@ -3,6 +3,17 @@ import { expect, it } from "vitest";
 import { gitSource, moduleTokens, replaceExact, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { gtcClientStateHashes, restoreGtcClientStateSource, verifyGtcClientStateSource } from "./gtc-client-state-boundary.mjs";
 const read = path => fs.readFileSync(path, "utf8");
+it.each([
+  ["results.js", 'jsonField(body.result, "result")', "body.result"],
+  ["results.js", 'jsonField(body.anchors, "anchors")', "body.anchors"],
+  ["results.js", 'jsonField(body.origins, "origins")', "body.origins"],
+  ["results.js", "const owned = await assertPlayerOwnedByUser(result.playerId, owner);", "const owned = { ok: true };"],
+  ["handler.js", 'body.clientImport === "true"', "Boolean(body.clientImport)"],
+])("rejects altered form decoding or ownership: %s / %s", (name, before, after) => {
+  const file = `server/backend/core/orderModes/gtc/${name}`;
+  expect(read(file)).toContain(before);
+  expect(() => verifyGtcClientStateSource(file, read(file).replace(before, after))).toThrow();
+});
 it.each(Object.keys(gtcClientStateHashes))("requires the complete reviewed GTC client/results module %s", file => {
   expect(() => verifyGtcClientStateSource(file, read(file))).not.toThrow();
   expect(() => verifyGtcClientStateSource(file, read(file) + "\nvoid unexpectedTradingAction();")).toThrow("complete reviewed");

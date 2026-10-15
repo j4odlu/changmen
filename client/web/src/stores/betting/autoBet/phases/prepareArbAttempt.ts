@@ -79,6 +79,20 @@ export async function prepareArbAttempt(
   const legA = options[0];
   const legB = options[1];
   const pmOrderMode = params.pmOrderMode === "GTC" && options.some(leg => leg.type === "Polymarket") ? "GTC" : undefined;
+  // [changmen 扩展] 仅 PM GTC 读取独立历史；原选号过滤和 FOK 状态保持不变。
+  let gtcHistoryFilter: ((account: typeof accounts[number], leg: typeof legA) => boolean) | undefined;
+  if (pmOrderMode === "GTC") {
+    const { gtcSelectionHistoryStatus, gtcHistoryAllowsAccount } = await import("@/orderModes/gtc/selectionHistory");
+    const owner = String(userStore.userId);
+    const candidates = accounts.filter(account => options.some(leg => leg.type === account.provider));
+    const historyStatus = gtcSelectionHistoryStatus(owner, bet.id, candidates, config.noSameBet);
+    if (historyStatus) {
+      params.setMessage(historyStatus);
+      trace?.finish("skip", historyStatus);
+      return null;
+    }
+    gtcHistoryFilter = (account, leg) => gtcHistoryAllowsAccount(owner, account, bet.id, leg.target, leg.odds, config.noSameBet);
+  }
   // [changmen 扩展] 模式只影响 PM；保留现有 GTC 双腿支持范围，不扩大 9999 组合。
   const implied = 1 / options.reduce((sum, o) => sum + 1 / o.odds, 0);
   // [changmen 扩展] 高利润加仓：仅放大两腿注码，不改 config.betMoney / 对冲比例
@@ -111,14 +125,14 @@ export async function prepareArbAttempt(
     legA.type,
     legA.betMoney,
     config.noSameBet ? readUsedAccounts(bet.id, opponentSide(legA.target)) : [],
-    acc => arbAccountPickerFilter(acc, bet, match, legA, matchStore, implied),
+    acc => arbAccountPickerFilter(acc, bet, match, legA, matchStore, implied) && (!gtcHistoryFilter || gtcHistoryFilter(acc, legA)),
     options,
   );
   const accountB = accountStore.getAccount(
     legB.type,
     legB.betMoney,
     config.noSameBet ? readUsedAccounts(bet.id, opponentSide(legB.target)) : [],
-    acc => arbAccountPickerFilter(acc, bet, match, legB, matchStore, implied),
+    acc => arbAccountPickerFilter(acc, bet, match, legB, matchStore, implied) && (!gtcHistoryFilter || gtcHistoryFilter(acc, legB)),
     options,
   );
   if (!accountA && !accountB) {

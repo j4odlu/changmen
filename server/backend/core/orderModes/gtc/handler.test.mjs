@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handlePmGtc } from "./handler.js";
 
-const mocks = vi.hoisted(() => ({ sync: vi.fn(), read: vi.fn(),  create: vi.fn(), list: vi.fn(), command: vi.fn(), owned: vi.fn(), accounts: vi.fn() }));
-vi.mock("@changmen/db", () => ({ createPmGtc: mocks.create, listPmGtc: mocks.list, listPmGtcClientImport: mocks.list, mutatePmGtc: mocks.command }));
+const mocks = vi.hoisted(() => ({ sync: vi.fn(), read: vi.fn(), create: vi.fn(), list: vi.fn(), import: vi.fn(), command: vi.fn(), owned: vi.fn(), accounts: vi.fn() }));
+vi.mock("@changmen/db", () => ({ createPmGtc: mocks.create, listPmGtc: mocks.list, listPmGtcClientImport: mocks.import, mutatePmGtc: mocks.command }));
 vi.mock("../../account/player_ownership.js", () => ({ assertPlayerOwnedByUser: mocks.owned }));
 vi.mock("../../db/store.js", () => ({ refreshAccountsFromRdsIfEmpty: vi.fn() }));
 vi.mock("../../esport-api/store.js", () => ({ default: { getAccountsForUser: mocks.accounts } }));
@@ -30,9 +30,15 @@ describe("GTC client control and read-only legacy recovery", () => {
     await handlePmGtc("Pm_GtcList", { owner: "foreign" }, "owner");
     expect(mocks.list).toHaveBeenCalledExactlyOnceWith("owner");
   });
-  it("client migration reads full history with authenticated ownership", async () => {
-    await handlePmGtc("Pm_GtcList", { clientImport: true, owner: "foreign" }, "owner");
-    expect(mocks.list).toHaveBeenCalledExactlyOnceWith("owner");
+  it.each([true, "true"])("client migration %s reads full history with authenticated ownership", async clientImport => {
+    await handlePmGtc("Pm_GtcList", { clientImport, owner: "foreign" }, "owner");
+    expect(mocks.import).toHaveBeenCalledExactlyOnceWith("owner");
+    expect(mocks.list).not.toHaveBeenCalled();
+  });
+  it.each([false, "false", "1", "yes"])("does not treat %s as a full-history import request", async clientImport => {
+    await handlePmGtc("Pm_GtcList", { clientImport, betRowId: "42" }, "owner");
+    expect(mocks.list).toHaveBeenCalledExactlyOnceWith("owner", 42);
+    expect(mocks.import).not.toHaveBeenCalled();
   });
   it("keeps legacy scoped and incremental read compatibility", async () => {
     await handlePmGtc("Pm_GtcList", { owner: "foreign", betRowId: 42 }, "owner");

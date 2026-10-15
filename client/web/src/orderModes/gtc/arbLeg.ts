@@ -13,7 +13,7 @@ import { findGtcOtherOrder } from "./otherFacts";
 import { settleGtcOtherLeg } from "./otherOrders";
 import { gtcExecutionResult } from "./result";
 import { gtcPmNotice } from "./notifications";
-import { acceptGtc, beginGtcInitialDispatch, currentGtc, markGtcLegOnce, mutateGtc, pollGtc, refreshGtcRecords, startGtcRuntime } from "./runtime";
+import { acceptGtc, beginGtcInitialDispatch, currentGtc, markGtcLegOnce, mutateGtc, pollGtc, startGtcRuntime } from "./runtime";
 import { assertGtcHistoryAllowsLeg } from "./successMarkers";
 import { gtcProgress } from "./gtcProgressState";
 import { lookupPolymarketOrderBetLabel } from "@changmen/venue-adapter/polymarket/orders";
@@ -43,11 +43,14 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
     if (otherBinding() !== frozenOther || !other.data || other.checkError)
       throw new Error("GTC 对侧冻结预检或账号已改变");
   };
-  const historyAccounts = [account, otherAccount].filter(row => params.config.noSameBet || row.maxBetCount || row.lastOdds);
-  if (historyAccounts.length)
-    await refreshGtcRecords(params.bet.id, historyAccounts.map(row => row.accountId));
-  assertGtcHistoryAllowsLeg(owner, account, params.bet.id, pm.target, pm.odds, params.config.noSameBet);
-  assertGtcHistoryAllowsLeg(owner, otherAccount, params.bet.id, other.target, other.odds, params.config.noSameBet);
+  let pairStarted = false;
+  // [changmen 扩展] 历史在选号前恢复；发送前只读本地标记。首腿发出后不以历史变化截断对侧。
+  const validateHistory = () => {
+    if (pairStarted) return;
+    assertGtcHistoryAllowsLeg(owner, account, params.bet.id, pm.target, pm.odds, params.config.noSameBet);
+    assertGtcHistoryAllowsLeg(owner, otherAccount, params.bet.id, other.target, other.odds, params.config.noSameBet);
+  };
+  validateHistory();
   const { prepareGtcBuy, pmSubmitMaker } = await import("@changmen/venue-adapter/polymarket/gtc");
   const prepared = await prepareGtcBuy(account, pm);
 
@@ -62,7 +65,7 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
     throw new Error(`GTC 签单本金与份数舍入后利润不足：${ratio.toFixed(6)}`);
   // [changmen 扩展] 签单、时钟和冻结输入全部就绪后才创建执行；提交时只复核失效或已消费。
   await prepared.prepareSubmit();
-  validateOther(); prepared.validate();
+  validateOther(); prepared.validate(); validateHistory();
   const { submit: _submit, validate: _validate, prepareSubmit: _prepareSubmit, ...frozenPm } = prepared;
   void _submit; void _validate; void _prepareSubmit;
   const plan: GtcPlan = { ...frozenPm, playerId: Number(account.accountId), otherPlayerId: Number(otherAccount.accountId), originalPmLeg: pmA ? "A" : "B", otherProvider: otherAccount.provider, otherTarget: other.target, otherOdds: other.odds, otherStake: other.betMoney, matchId: params.match.id, betRowId: params.bet.id, otherVenueMatchId: other.matchId, otherVenueItemId: other.itemId, linkId: checked.linkId, tokenId: pm.itemId, conditionId: pm.betId, target: pm.target, match: params.match.title, bet: lookupPolymarketOrderBetLabel(pm.betId, pm.itemId) || "盘口待核实", item: pm.target, fx, parallel: params.config.betSorting === "Parallel" };
@@ -99,10 +102,10 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
     let sent = false;
     let received: BetResult | undefined;
     try {
-      checkSession(); await prepared.prepareSubmit(); checkSession();
+      checkSession(); validateHistory(); await prepared.prepareSubmit(); checkSession(); validateHistory();
       await mutateGtc(id, { kind: "authorize_pm" });
-      checkSession();
-      sent = true;
+      checkSession(); validateHistory();
+      pairStarted = true; sent = true;
       const ack = await prepared.submit();
       if (ack.pmSubmitNotSent && ack.success === false && !ack.orderID)
         return submissionFailure("PM", new Error(ack.errorMsg || "PM 发送前检查失败"), false);
@@ -131,7 +134,7 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
     summary,
     legs: new Map([
       [pm, {
-        validate: () => { checkSession(); prepared.validate(); },
+        validate: () => { checkSession(); prepared.validate(); validateHistory(); },
         async submit() {
           let placed!: BetResult;
           await notifyBet(account, pm, async () => { placed = await submitPmCore(); return summary(); }, gtcPmNotice, checked.waitSec, { matchTitle: params.match.title, betName: params.bet.getBetName() });
@@ -148,14 +151,14 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
         rejectWaitSec: 0,
       }],
       [other, {
-        validate: validateOther,
+        validate: () => { validateOther(); validateHistory(); },
         async submit() {
           let sent = false;
           let received: BetResult | undefined;
           try {
-            validateOther(); await mutateGtc(id, { kind: "authorize_other" }); checkSession();
+            validateOther(); validateHistory(); await mutateGtc(id, { kind: "authorize_other" }); checkSession(); validateHistory();
             other.deferPostAcceptSettlement = true;
-            sent = true;
+            pairStarted = true; sent = true;
             const result = await submitOther();
             received = result;
             const unknown = result.pmSubmitUnknown || (!result.success && !result.response);

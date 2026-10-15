@@ -15,7 +15,39 @@ const fill = { key: "trade:maker", tradeId: "trade", bucket: "maker", role: "MAK
 const result = () => ({ executionId: id, orderId: hash, playerId: 1, linkId: -100, createdAt: 1, revision: 4,
   match: "m", bet: "b", item: "i", tokenId: "t", conditionId: "c", buyShares: "3.000001", principalUsdc: "1.5", feeUsdc: "0", fills: [fill],
   financial: { pmShares: 3.000001, pmFillPrice: 0.5, pmStakeUsdc: 1.5, pmFeeUsdc: 0, odds: 2, betMoney: 1.5 * 6.7 } });
+// 与 api/client.ts 的 toA8PostBody + urlencoded HTTP 传输一致。
+const formBody = body => Object.fromEntries(new URLSearchParams(Object.entries(body)
+  .map(([key, value]) => [key, value && typeof value === "object" ? JSON.stringify(value) : String(value)])));
 beforeEach(() => { vi.clearAllMocks(); mock.owned.mockResolvedValue({ ok: true, player: { provider: "Polymarket" } }); mock.fetch.mockResolvedValue([]); mock.save.mockResolvedValue(true); mock.ordinary.mockResolvedValue(true); mock.bind.mockResolvedValue(true); });
+it("accepts the browser form-encoded confirmed result without weakening its validation", async () => {
+  await expect(syncGtcConfirmedResult(formBody({ result: result() }), "owner")).resolves.toBe(true);
+  expect(mock.save).toHaveBeenCalledExactlyOnceWith("owner", result());
+  mock.save.mockClear();
+  await expect(syncGtcConfirmedResult(formBody({ result: { ...result(), buyShares: "4" } }), "owner")).rejects.toThrow("不一致");
+  expect(mock.save).not.toHaveBeenCalled();
+});
+it("reads exact financial originals from browser form-encoded anchors", async () => {
+  await expect(readGtcConfirmedResults(formBody({ anchors: [{ executionId: id, playerId: 1, provider: "Polymarket", orderId: hash }] }), "owner")).resolves.toEqual([]);
+  expect(mock.fetch).toHaveBeenCalledExactlyOnceWith(1, "owner", [hash]);
+});
+it("binds the screenshot's RAY placeholder through browser form-encoded origins", async () => {
+  mock.owned.mockResolvedValue({ ok: true, player: { provider: "RAY" } });
+  const order = { orderId: "ray-original", provider: "RAY", link: 1792058633922, pmGtcExecutionId: id };
+  mock.fetch.mockResolvedValue([{ order_id: order.orderId, provider: "RAY", link: 1792058632999, create_at: 1792058633000, raw: {} }]);
+  const body = formBody({ playerId: 2, type: "RAY", orders: [order], origins: [{ executionId: id, playerId: 2, provider: "RAY", orderId: order.orderId }] });
+  expect(await saveClientGtcOrders(body, "owner")).toEqual({ ok: true, info: true });
+  expect(mock.bind).toHaveBeenCalledExactlyOnceWith([{ OrderID: order.orderId, PlayerID: 2, Provider: "RAY", LinkID: order.link }], "owner");
+  expect(mock.ordinary).toHaveBeenCalledExactlyOnceWith(2, [order], "owner", "RAY");
+});
+it.each(["{", "null", "[]", '"nested string"'])("rejects invalid form result %s before persistence", async value => {
+  await expect(syncGtcConfirmedResult({ result: value }, "owner")).rejects.toThrow();
+  expect(mock.save).not.toHaveBeenCalled(); expect(mock.owned).not.toHaveBeenCalled();
+});
+it.each(["{", "null", "{}", "[null]"])("rejects invalid form identity lists %s before order access", async value => {
+  await expect(readGtcConfirmedResults({ anchors: value }, "owner")).rejects.toThrow();
+  expect(await saveClientGtcOrders({ playerId: 1, orders: "[]", origins: value }, "owner")).toMatchObject({ ok: false });
+  expect(mock.fetch).not.toHaveBeenCalled(); expect(mock.ordinary).not.toHaveBeenCalled(); expect(mock.bind).not.toHaveBeenCalled();
+});
 it("accepts confirmed partial fills with six-decimal shares and saves no control record", async () => {
   await expect(syncGtcConfirmedResult({ result: result() }, "owner")).resolves.toBe(true);
   expect(mock.owned).toHaveBeenCalledExactlyOnceWith(1, "owner"); expect(mock.save).toHaveBeenCalledExactlyOnceWith("owner", result());

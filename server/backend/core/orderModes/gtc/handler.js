@@ -25,7 +25,7 @@ export async function handlePmGtc(action, body, owner) {
     return result.info;
   }
   if (action === "Pm_GtcList") {
-    if (body.clientImport === true) return listPmGtcClientImport(owner);
+    if (body.clientImport === true || body.clientImport === "true") return listPmGtcClientImport(owner);
     if (body.betRowId != null) {
       const betRowId = Number(body.betRowId);
       if (!Number.isSafeInteger(betRowId) || betRowId <= 0)

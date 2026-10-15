@@ -1,6 +1,7 @@
 // [changmen 扩展] 精确登记客户端 GTC 状态/结果同步增量；两个原 FOK 基线保持不变。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { restoreGtcFormWireSource } from "./gtc-form-wire-boundary.mjs";
 export const gtcClientStateHashes = Object.freeze({
   "client/web/src/stores/account/gtcCounterpartSync.ts": "bfcd0c550aa9d28bb1e031330734134a2865cd5428a4537559c0322f787f6387",
   "server/db/rds/orderModes/gtc/pm_gtc_client_import.js": "dffcc39636638f86ef1ef9f6134dd97de49818f86f60e8bcc0353b7e91381f70",
@@ -26,6 +27,7 @@ export const gtcClientStateHashes = Object.freeze({
 export function verifyGtcClientStateSource(file, source) {
   const expected = gtcClientStateHashes[file];
   assert(expected, `${file}: registered GTC client state source`);
+  source = restoreGtcFormWireSource(file, source);
   assert.equal(createHash("sha256").update(source.replaceAll("\r\n", "\n")).digest("hex"), expected,
     `${file}: complete reviewed GTC client state and result synchronization module`);
 }

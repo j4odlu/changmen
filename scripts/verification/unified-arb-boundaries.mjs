@@ -5,6 +5,7 @@ import fs from "node:fs";
 import { gitSource, moduleTokens } from "./fok-exact-boundaries.mjs";
 import { restoreRayFinalizeSource, verifyRayFrontendSources } from "./ray-frontend-boundary.mjs";
 import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
+import { restoreGtcSelectionHistorySource } from "./gtc-selection-history-boundary.mjs";
 
 const root = "client/web/src/stores/betting/autoBet/";
 const phases = `${root}phases/`;
@@ -154,6 +155,7 @@ for (const replacements of Object.values(UNIFIED_ARBITRAGE_BOUNDARIES)) {
 }
 
 export function restoreUnifiedArbitrageSource(file, source, replaceExact, required = false) {
+  source = restoreGtcSelectionHistorySource(file, source, replaceExact, required);
   const replacements = UNIFIED_ARBITRAGE_BOUNDARIES[file];
   if (!replacements)
     return source;
@@ -193,7 +195,10 @@ export function verifyUnifiedArbitrageContract(readSource, replaceExact) {
       // [changmen 扩展] 公共账号下单沿用该原腿的等待参数，原不可变契约不重写。
       expected = replaceExact(expected, "const submitOther = prepareOtherLeg(otherAccount, other, checked.linkId);", "const submitOther = prepareOtherLeg(otherAccount, other, checked.linkId, checked.waitSec);");
     }
-    assert.equal(restorePmOrderBetLabelSource(file, readSource(file), readSource), expected, `${file}: complete reviewed unified capability contract`);
+    let actual;
+    try { actual = restoreGtcSelectionHistorySource(file, readSource(file), replaceExact, true); }
+    catch (error) { throw new Error(`${file}: complete reviewed unified capability contract: ${error.message}`); }
+    assert.equal(restorePmOrderBetLabelSource(file, actual, readSource), expected, `${file}: complete reviewed unified capability contract`);
   }
   for (const file of Object.keys(UNIFIED_ARBITRAGE_BOUNDARIES)) {
     const restored = restoreRayFinalizeSource(file, restoreUnifiedArbitrageSource(file, readSource(file), replaceExact, true), replaceExact);

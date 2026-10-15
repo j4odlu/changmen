@@ -208,7 +208,7 @@ export async function checkArbLegs(
     return null;
   }
 
-  // [changmen 扩展] GTC 历史、签单、利润及执行准备属于预检，完成后才报告双腿通过。
+  // [changmen 扩展] 历史在选号前恢复；GTC 签单、利润及执行准备完成后才报告双腿通过。
   if (ready.pmOrderMode === "GTC" && [legA.type, legB.type].includes("Polymarket")) {
     try {
       const { prepareGtcLegExecution } = await import("@/orderModes/gtc/arbLeg");

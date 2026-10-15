@@ -1,0 +1,30 @@
+{
+  "server/backend/core/orderModes/gtc/results.js": [
+    [
+      "",
+      "// [changmen 扩展] 浏览器沿用 A8 表单协议，嵌套字段是 JSON 字符串；仅在 GTC 边界解码一次。\nfunction jsonField(value, name) {\n  if (typeof value !== \"string\") return value;\n  try { return JSON.parse(value); }\n  catch { throw new Error(`GTC ${name} JSON 无效`); }\n}"
+    ],
+    [
+      "  if (!input || Object.keys(input).some(key => !allowed.has(key)) || !uuid(input.executionId)",
+      "  if (!input || typeof input !== \"object\" || Array.isArray(input) || Object.keys(input).some(key => !allowed.has(key)) || !uuid(input.executionId)"
+    ],
+    [
+      "  const result = validateGtcConfirmedResult(body.result, owner);",
+      "  const result = validateGtcConfirmedResult(jsonField(body.result, \"result\"), owner);"
+    ],
+    [
+      "  const anchors = body.anchors;\n  if (!Array.isArray(anchors) || anchors.length > 1000 || anchors.some(anchor => !uuid(anchor.executionId)",
+      "  const anchors = jsonField(body.anchors, \"anchors\");\n  if (!Array.isArray(anchors) || anchors.length > 1000 || anchors.some(anchor => !anchor || !uuid(anchor.executionId)"
+    ],
+    [
+      "  const origins = body.origins;\n  if (!Array.isArray(rows) || !Array.isArray(origins) || origins.length !== rows.length)",
+      "  let origins;\n  try { origins = jsonField(body.origins, \"origins\"); }\n  catch (error) { return { ok: false, msg: error.message }; }\n  if (!Array.isArray(rows) || !Array.isArray(origins) || origins.length !== rows.length\n    || rows.some(row => !row || typeof row !== \"object\" || Array.isArray(row))\n    || origins.some(origin => !origin || typeof origin !== \"object\" || Array.isArray(origin)))"
+    ]
+  ],
+  "server/backend/core/orderModes/gtc/handler.js": [
+    [
+      "    if (body.clientImport === true) return listPmGtcClientImport(owner);",
+      "    if (body.clientImport === true || body.clientImport === \"true\") return listPmGtcClientImport(owner);"
+    ]
+  ]
+}

@@ -4,13 +4,19 @@ import type { AccountStoreContext } from "@/stores/account/context";
 import type { PlatformId } from "@/types/esport";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
-import { markGtcSuccess } from "@/orderModes/gtc/successMarkers";
+import { assertGtcHistoryAllowsLeg, markGtcSuccess } from "@/orderModes/gtc/successMarkers";
 import { getProviders, pickAccount } from "@/stores/account/accountPicker";
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
 import { createDefaultUserConfig } from "@/types/userConfig";
 import { prepareArbAttempt } from "./prepareArbAttempt";
 
-const state = vi.hoisted(() => ({ store: null as unknown as AccountStoreContext }));
+const state = vi.hoisted(() => ({ store: null as unknown as AccountStoreContext, historyStatus: vi.fn() }));
+vi.mock("@/orderModes/gtc/selectionHistory", () => ({
+  gtcSelectionHistoryStatus: state.historyStatus,
+  gtcHistoryAllowsAccount: (...args: Parameters<typeof assertGtcHistoryAllowsLeg>) => {
+    try { assertGtcHistoryAllowsLeg(...args); return true; } catch { return false; }
+  },
+}));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({
   ...state.store,
   getProviders: (amount: number) => getProviders(state.store, amount),
@@ -34,12 +40,17 @@ const combinations = [
 ] as const;
 const histories = ["count", "odds", "opposite"] as const;
 
-beforeEach(() => { sessionStorage.clear(); });
+beforeEach(() => { sessionStorage.clear(); state.historyStatus.mockReset(); });
 describe.each(combinations)("$name preserves VPS account selection", ({ providers, mode }) => {
-  it.each(histories)("GTC %s history does not add a shared picker restriction", async (history) => {
+  it.each(histories)("GTC %s history filters only a PM GTC pair", async (history) => {
     const fixture = makeFixture(providers, mode, history);
     seedHistory(fixture, history, true);
     const ready = await prepareArbAttempt(fixture.params);
+    if (mode === "GTC" && providers[0] === "Polymarket") {
+      expect(ready).toBeNull();
+      return;
+    }
+    expect(state.historyStatus).not.toHaveBeenCalled();
     expect(ready?.accountA).toBe(fixture.accounts[0]);
     expect(ready?.accountB).toBe(fixture.accounts[1]);
     expect(ready?.betBothLegs).toBe(true);
@@ -49,6 +60,30 @@ describe.each(combinations)("$name preserves VPS account selection", ({ provider
     const fixture = makeFixture(providers, mode, history);
     seedHistory(fixture, history, false);
     expect(await prepareArbAttempt(fixture.params)).toBeNull();
+  });
+});
+
+describe("GTC history before account selection", () => {
+  it.each(histories)("selects another eligible account instead of failing after precheck: %s", async (history) => {
+    const fixture = makeFixture(["Polymarket", "RAY"], "GTC", history);
+    seedHistory(fixture, history, true);
+    const alternatives = fixture.accounts.map(account => {
+      const other = new PlatformAccount({ provider: account.provider, accountId: account.accountId + 10, playerName: "alternative", currency: "CNY", maxBetCount: account.maxBetCount, lastOdds: account.lastOdds });
+      other.balance = 1000; return other;
+    });
+    state.store.accounts.push(...alternatives);
+    const ready = await prepareArbAttempt(fixture.params);
+    expect(ready?.accountA).toBe(alternatives[0]);
+    expect(ready?.accountB).toBe(alternatives[1]);
+  });
+  it("skips selection while recovery is pending, then uses newly scanned odds", async () => {
+    const fixture = makeFixture(["Polymarket", "RAY"], "GTC", "odds");
+    state.historyStatus.mockReturnValueOnce("GTC 本盘口历史恢复中，等待重新选号");
+    expect(await prepareArbAttempt(fixture.params)).toBeNull();
+    expect(state.store.providerPickIndex.size).toBe(0);
+    fixture.legs[0]!.odds = 2.5;
+    markGtcSuccess("owner", 1, fixture.params.bet.id, "Home", 2.1);
+    expect((await prepareArbAttempt(fixture.params))?.legA.odds).toBe(2.5);
   });
 });
 

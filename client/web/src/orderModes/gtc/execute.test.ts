@@ -232,7 +232,7 @@ describe("gTC original pair orchestration", () => {
     pair.accountA!.maxBetCount = 1;
     markGtcSuccess("owner", pair.accountA!.accountId, 2, "Home", 2);
     await expect(executeGtc(params(), pair)).rejects.toThrow("GTC 已达");
-    expect(mocks.refresh).toHaveBeenCalledExactlyOnceWith(2, [pair.accountA!.accountId]);
+    expect(mocks.refresh).not.toHaveBeenCalled();
     expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.submit).not.toHaveBeenCalled(); expect(mocks.betting).not.toHaveBeenCalled();
   });
   it("checks the other leg's independent GTC odds history before sending PM", async () => {
@@ -241,6 +241,27 @@ describe("gTC original pair orchestration", () => {
     markGtcSuccess("owner", pair.accountB!.accountId, 2, "Away", 2.1);
     await expect(executeGtc(params(), pair)).rejects.toThrow("GTC 赔率");
     expect(mocks.submit).not.toHaveBeenCalled(); expect(mocks.betting).not.toHaveBeenCalled();
+  });
+  it.each([true, false])("lightweight recheck blocks both legs when history changes after preparation (PM first: %s)", async (pmFirst) => {
+    const pair = checked(pmFirst) as ArbBetChecked;
+    pair.accountA!.maxBetCount = 1;
+    const execution = await prepareGtcLegExecution(params(), pair);
+    markGtcSuccess("owner", pair.accountA!.accountId, 2, pair.legA.target, 2);
+    await execution.legs.get(pair.legA)!.submit();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+    expect(mocks.submit).not.toHaveBeenCalled(); expect(mocks.betting).not.toHaveBeenCalled();
+    await execution.close();
+  });
+  it.each([true, false])("does not interrupt the second original leg after the first dispatch (PM first: %s)", async (pmFirst) => {
+    const pair = checked(pmFirst) as ArbBetChecked;
+    pair.accountB!.maxBetCount = 1;
+    const execution = await prepareGtcLegExecution(params(), pair);
+    await execution.legs.get(pair.legA)!.submit();
+    markGtcSuccess("owner", pair.accountB!.accountId, 2, pair.legB.target, 2);
+    await execution.legs.get(pair.legB)!.submit();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+    expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.betting).toHaveBeenCalledOnce();
+    await execution.close();
   });
   it("serial PM-first accepted zero sends the other leg once and preserves its hanging-order facts", async () => {
     await executeGtc(params(), checked()); expect(mocks.submit).toHaveBeenCalledTimes(1); expect(mocks.betting).toHaveBeenCalledOnce();

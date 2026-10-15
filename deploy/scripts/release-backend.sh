@@ -47,6 +47,13 @@ command -v pm2 >/dev/null
 # [changmen 扩展] Fail before touching running processes. Recovery must not depend
 # on a schema helper that only exists in the candidate being rolled back.
 node server/backend/scripts/check-rds-schema.mjs
+# Managed releases already retain their sealed identity. Refuse to replace one
+# without the evidence needed to verify recovery, before changing any process.
+rollback_evidence="$repo/.deploy-state/backend-evidence.$(basename "$previous").json"
+if [[ "$previous" != "$repo" ]]; then test -s "$rollback_evidence"; fi
+verify_processes() {
+  pm2 jlist | node "$release/scripts/deploy/verify-backend-processes.mjs" "$1"
+}
 activate() {
   DEPLOY_REPO="$1" DEPLOY_RELEASE_MODE=1 DEPLOY_RUNTIME_ONLY=1 DEPLOY_SCHEMA_CHANGED="$2" DEPLOY_FULL=0 DEPLOY_CHANGED_PATHS_FILE="${3:-}" DEPLOY_SKIP_GIT_PULL=1 \
     DEPLOY_SKIP_APP_BUILD=1 DEPLOY_SKIP_POSTCHECK=1 bash "$release/deploy/scripts/deploy-server-remote.sh"
@@ -65,12 +72,19 @@ rollback() {
   # PM2 start success alone does not prove that the previous HTTP server recovered.
   local recovered=0
   for attempt in $(seq 1 45); do
-    if curl --fail --silent --max-time 5 http://127.0.0.1:3456/health >/dev/null; then recovered=1; break; fi
+    if curl --fail --silent --max-time 5 http://127.0.0.1:3456/health >/dev/null \
+      && (cd "$previous" && node --input-type=module -e 'import {isMatcherRunning,readMatcherHeartbeat} from "./server/match/matcher/lib/heartbeat.js"; const h=readMatcherHeartbeat(); process.exit(h?.mode === "embedded" && isMatcherRunning(h) ? 0 : 1)'); then recovered=1; break; fi
     sleep 3
   done
-  test "$recovered" = 1 || { echo 'ERROR: previous backend health did not recover' >&2; return 1; }
+  test "$recovered" = 1 || { echo 'ERROR: previous backend health/matcher did not recover' >&2; return 1; }
+  verify_processes "$previous"
+  if [[ "$previous" != "$repo" ]]; then
+    curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3456/api/runtime-version \
+      | node "$DEPLOY_RUNTIME_VERIFIER" backend "$rollback_evidence" "$repo/.deploy-state/backend-rollback-verification.$id.json"
+  fi
+  echo "Backend rollback verified: $previous"
 }
-trap rollback ERR
+install_rollback_traps
 activate "$release" 0 "$changes"
 for attempt in $(seq 1 45); do
   if curl --fail --silent --max-time 5 http://127.0.0.1:3456/health >/dev/null \
@@ -79,7 +93,7 @@ for attempt in $(seq 1 45); do
   sleep 3
 done
 node --input-type=module -e 'import {loadChangmenEnv} from "@changmen/storage/load_env.js"; loadChangmenEnv(); const {initDatabaseUrl,buildPgClientConfig}=await import("@changmen/db"); const {default:pg}=await import("@changmen/db/pg.js"); await initDatabaseUrl(); const c=new pg.Client(buildPgClientConfig(process.env.DATABASE_URL,10000)); await c.connect(); try {await c.query("SELECT 1")} finally {await c.end()}'
-pm2 jlist | node --input-type=module -e 'let s=""; for await (const b of process.stdin) s+=b; const apps=JSON.parse(s); const names=["changmen-esport","changmen-pm-sports","changmen-polymarket-collector","changmen-pm-football-collector","changmen-predictfun-collector","changmen-pm-market-hub","changmen-pm-sport-market-hub","changmen-predictfun-market-hub"]; for(const name of names) {if(!apps.some(a=>a.name===name && a.pm2_env.status==="online" && a.pm2_env.pm_cwd.startsWith(process.cwd()+"/"))) throw new Error("Unhealthy/wrong release: "+name)}'
+verify_processes "$release"
 curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3456/api/runtime-version | verify_runtime
 cp "$DEPLOY_EVIDENCE_FILE" "$repo/.deploy-state/backend-evidence.$id.json"
 switch_link "$release" "$repo/backend-current"
@@ -88,6 +102,6 @@ switch_link "$release" "$repo/backend-current"
 printf '%s\n' 'module.exports = require("../backend-current/deploy/ecosystem.config.cjs");' > "$repo/deploy/ecosystem.config.cjs.next"
 mv -f "$repo/deploy/ecosystem.config.cjs.next" "$repo/deploy/ecosystem.config.cjs"
 record_success
-trap - ERR
+clear_rollback_traps
 retain_success
 echo "Published backend $sha; previous=$previous; frontend dist untouched"

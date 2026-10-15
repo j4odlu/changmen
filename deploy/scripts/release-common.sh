@@ -30,6 +30,24 @@ record_success() {
   printf '%s %s\n' "$(( sequence > 0 ? sequence : ${last_sequence:-0} ))" "$sha" > "$state.tmp"
   mv -f "$state.tmp" "$state"
 }
+# Catch ordinary command failures and catchable termination during live changes.
+# Repeated TERM/HUP must not interrupt recovery; SIGKILL/host loss cannot be trapped.
+fail_release() {
+  local status="$1"
+  trap - ERR
+  trap '' HUP INT TERM
+  rollback
+  exit "$status"
+}
+install_rollback_traps() {
+  trap 'fail_release $?' ERR
+  trap 'fail_release 129' HUP
+  trap 'fail_release 130' INT
+  trap 'fail_release 143' TERM
+}
+clear_rollback_traps() {
+  trap - ERR HUP INT TERM
+}
 prune_releases() {
   node "${DEPLOY_RELEASE_RETENTION:?Release retention helper required}" prune "$repo" "$scope" \
     || echo 'WARNING: old release cleanup failed; inspect retained versions' >&2

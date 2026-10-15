@@ -24,7 +24,7 @@ rollback() {
     rm "$app/dist"
   fi
 }
-trap rollback ERR
+install_rollback_traps
 if [[ -L "$app/dist" ]]; then
   previous="$(readlink -f "$app/dist")"
 elif [[ -d "$app/dist" ]]; then
@@ -54,6 +54,6 @@ if node "$DEPLOY_RUNTIME_VERIFIER" needs-backend "$DEPLOY_EVIDENCE_FILE"; then
 fi
 cp "$DEPLOY_EVIDENCE_FILE" "$repo/.deploy-state/frontend-evidence.$id.json"
 record_success
-trap - ERR
+clear_rollback_traps
 retain_success
 echo "Published frontend $sha; previous=${previous:-none}; PM2 untouched"

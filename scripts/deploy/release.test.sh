@@ -15,6 +15,7 @@ test ! -f "$TEST_FAIL_HEALTH" || exit 22
 for arg in "$@"; do
   if [[ "$arg" == */deploy-version.txt ]]; then cat "$DEPLOY_REPO/client/web/dist/deploy-version.txt"; fi
   if [[ "$arg" == */runtime-version.json ]]; then
+    if [[ -f "${TEST_SIGNAL_FRONTEND:-/nonexistent}" ]]; then kill -s "$(cat "$TEST_SIGNAL_FRONTEND")" "$PPID"; fi
     if [[ -f "$TEST_WRONG_RUNTIME" ]]; then echo '{"frontend":{"role":"frontend","commit":"wrong"}}'
     else cat "$DEPLOY_REPO/client/web/dist/runtime-version.json"; fi
   fi
@@ -29,6 +30,7 @@ cat > "$fixture/bin/node" <<'SH'
 if [[ "${1:-}" == */compare-deployed-files.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 if [[ "${1:-}" == */verify-runtime.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 if [[ "${1:-}" == */release-retention.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
+if [[ "${1:-}" == */verify-backend-processes.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 if [[ "${1:-}" == server/backend/scripts/check-rds-schema.mjs && -f "${TEST_FAIL_SCHEMA:-/nonexistent}" ]]; then exit 44; fi
 cat >/dev/null
 SH
@@ -38,12 +40,18 @@ printf '%s\n' "$PWD:$*" >> "$TEST_NPM_LOG"
 SH
 cat > "$fixture/bin/pm2" <<'SH'
 #!/usr/bin/env bash
-echo '[]'
+if [[ "$1" == jlist ]]; then
+  "$TEST_REAL_NODE" --input-type=module -e 'import path from "node:path"; import fs from "node:fs"; import {pathToFileURL} from "node:url"; const {backendProcesses}=await import(pathToFileURL(process.argv[2])); const apps=Object.entries(backendProcesses).map(([name,[directory,script]],i)=>({name,pid:i+1,pm2_env:{status:"online",pm_cwd:path.resolve(process.argv[3],directory),pm_exec_path:path.resolve(process.argv[3],directory,script)}})); if(fs.existsSync(process.argv[4])) apps.pop(); console.log(JSON.stringify(apps));' fixture "$TEST_PROCESS_CHECKER" "$(cat "$TEST_ACTIVE_ROOT")" "$TEST_BAD_PROCESSES"
+fi
 SH
 chmod +x "$fixture/bin/"*
 export PATH="$fixture/bin:$PATH"
 export TEST_FAIL_HEALTH="$fixture/fail-health" TEST_NPM_LOG="$fixture/npm.log" TEST_FAIL_SCHEMA="$fixture/fail-schema"
 export TEST_WRONG_RUNTIME="$fixture/wrong-runtime"
+export TEST_SIGNAL_FRONTEND="$fixture/signal-frontend" TEST_SIGNAL_BACKEND="$fixture/signal-backend"
+export TEST_ACTIVE_ROOT="$fixture/active-root" TEST_BAD_PROCESSES="$fixture/bad-processes"
+export TEST_PROCESS_CHECKER="$source_root/scripts/deploy/verify-backend-processes.mjs"
+printf '%s\n' "$fixture/app" > "$TEST_ACTIVE_ROOT"
 export DEPLOY_RUNTIME_VERIFIER="$source_root/scripts/deploy/verify-runtime.mjs" DEPLOY_EVIDENCE_FILE="$fixture/evidence.json"
 export DEPLOY_RELEASE_RETENTION="$source_root/scripts/deploy/release-retention.mjs"
 evidence_for() {
@@ -82,10 +90,23 @@ test "$(readlink -f "$DEPLOY_REPO/client/web/dist")" = "$front_current"
 grep -q '^3 ' "$DEPLOY_REPO/.deploy-state/frontend"
 rm "$TEST_WRONG_RUNTIME"
 
+# Cancellation after the frontend link changed must restore the previous build.
+for signal in TERM:143 HUP:129 INT:130; do
+  export DEPLOY_RELEASE_ID="fe-signal-${signal%%:*}"
+  printf '%s\n' "${signal%%:*}" > "$TEST_SIGNAL_FRONTEND"
+  signal_status=0
+  bash deploy/scripts/release-frontend.sh "$fixture/dist.tgz" > "$fixture/frontend-signal.log" 2>&1 || signal_status=$?
+  test "$signal_status" = "${signal##*:}"
+  test "$(readlink -f "$DEPLOY_REPO/client/web/dist")" = "$front_current"
+  grep -q '^3 ' "$DEPLOY_REPO/.deploy-state/frontend"
+done
+rm "$TEST_SIGNAL_FRONTEND"
+
 # Backend fixture keeps the full workspace tree and compiles before activation.
 mkdir -p "$fixture/backend/server/backend/db/migrations" "$fixture/backend/server/backend/scripts/ops/migrations" "$fixture/backend/client/web" "$fixture/backend/deploy/scripts"
 mkdir -p "$fixture/backend/scripts/deploy"
 cp "$source_root/scripts/deploy/compare-deployed-files.mjs" "$fixture/backend/scripts/deploy/"
+cp "$TEST_PROCESS_CHECKER" "$fixture/backend/scripts/deploy/"
 echo '{}' > "$fixture/backend/package-lock.json"
 echo '{}' > "$fixture/backend/package.json"
 echo select > "$fixture/backend/server/backend/db/migrations/001.sql"
@@ -96,6 +117,9 @@ cat > "$fixture/backend/deploy/scripts/deploy-server-remote.sh" <<'SH'
 #!/usr/bin/env bash
 printf '%s %s\n' "$DEPLOY_REPO" "$DEPLOY_SCHEMA_CHANGED" >> "$TEST_ACTIVATE_LOG"
 test "$DEPLOY_FULL" = 0
+test "$DEPLOY_RUNTIME_ONLY" = 1
+printf '%s\n' "$DEPLOY_REPO" > "$TEST_ACTIVE_ROOT"
+if [[ "$DEPLOY_REPO" != "$TEST_BASE_REPO" && -f "$TEST_SIGNAL_BACKEND" ]]; then kill -s "$(cat "$TEST_SIGNAL_BACKEND")" "$PPID"; exit 0; fi
 if [[ "$DEPLOY_REPO" != "$TEST_BASE_REPO" && -f "$TEST_FAIL_ACTIVATE" ]]; then exit 1; fi
 SH
 tar -C "$fixture/backend" -czf "$fixture/backend.tgz" .
@@ -126,9 +150,17 @@ test "$(cat "$TEST_ACTIVATE_LOG")" = "$before_activation"
 test "$(readlink -f "$DEPLOY_REPO/backend-current")" = "$backend_first"
 grep -q '^5 ' "$DEPLOY_REPO/.deploy-state/backend"
 rm "$TEST_FAIL_SCHEMA"
+export DEPLOY_RELEASE_ID=be-missing-proof
+proof="$DEPLOY_REPO/.deploy-state/backend-evidence.be-first.json"
+mv "$proof" "$proof.saved"
+if bash deploy/scripts/release-backend.sh "$fixture/backend.tgz"; then echo 'missing recovery identity accepted'; exit 1; fi
+test "$(cat "$TEST_ACTIVATE_LOG")" = "$before_activation"
+mv "$proof.saved" "$proof"
 export DEPLOY_SEQUENCE=6 DEPLOY_RELEASE_ID=be-wrong-runtime
 touch "$TEST_WRONG_RUNTIME"
-if bash deploy/scripts/release-backend.sh "$fixture/backend.tgz"; then echo 'wrong backend runtime accepted'; exit 1; fi
+if bash deploy/scripts/release-backend.sh "$fixture/backend.tgz" > "$fixture/wrong-runtime.log" 2>&1; then echo 'wrong backend runtime accepted'; exit 1; fi
+grep -q 'Old/wrong runtime commit' "$fixture/wrong-runtime.log"
+if grep -q 'Backend rollback verified' "$fixture/wrong-runtime.log"; then echo 'wrong recovery identity accepted'; exit 1; fi
 test "$(readlink -f "$DEPLOY_REPO/backend-current")" = "$backend_first"
 grep -q '^5 ' "$DEPLOY_REPO/.deploy-state/backend"
 rm "$TEST_WRONG_RUNTIME"
@@ -142,6 +174,27 @@ grep -q '^5 ' "$DEPLOY_REPO/.deploy-state/backend"
 grep -q "$backend_first 0" "$TEST_ACTIVATE_LOG"
 test "$(cat "$DEPLOY_REPO/server/backend/storage/live.json")" = hot-data
 rm "$TEST_FAIL_ACTIVATE"
+
+export DEPLOY_RELEASE_ID=be-bad-processes
+touch "$TEST_FAIL_ACTIVATE" "$TEST_BAD_PROCESSES"
+if bash deploy/scripts/release-backend.sh "$fixture/backend.tgz" > "$fixture/bad-processes.log" 2>&1; then echo 'missing rollback process accepted'; exit 1; fi
+grep -q 'Expected exactly one process' "$fixture/bad-processes.log"
+if grep -q 'Backend rollback verified' "$fixture/bad-processes.log"; then echo 'incomplete recovery accepted'; exit 1; fi
+rm "$TEST_FAIL_ACTIVATE" "$TEST_BAD_PROCESSES"
+
+for signal in TERM:143 HUP:129 INT:130; do
+  export DEPLOY_RELEASE_ID="be-signal-${signal%%:*}"
+  printf '%s\n' "${signal%%:*}" > "$TEST_SIGNAL_BACKEND"
+  signal_status=0
+  bash deploy/scripts/release-backend.sh "$fixture/backend.tgz" > "$fixture/backend-signal.log" 2>&1 || signal_status=$?
+  test "$signal_status" = "${signal##*:}"
+  grep -q 'Backend rollback verified' "$fixture/backend-signal.log"
+  test "$(readlink -f "$DEPLOY_REPO/backend-current")" = "$backend_first"
+  test "$(cat "$TEST_ACTIVE_ROOT")" = "$backend_first"
+  grep -q '^5 ' "$DEPLOY_REPO/.deploy-state/backend"
+  test -f "$DEPLOY_REPO/.deploy-state/backend-rollback-verification.$DEPLOY_RELEASE_ID.json"
+done
+rm "$TEST_SIGNAL_BACKEND"
 export DEPLOY_RELEASE_ID=be-retry
 bash deploy/scripts/release-backend.sh "$fixture/backend.tgz"
 grep -q '^6 ' "$DEPLOY_REPO/.deploy-state/backend"

@@ -4,6 +4,18 @@
 
 受管版本发布统一使用 [`publish.sh`](publish.sh)，GHA 与 `sh/deploy-frontend.sh` / `sh/deploy-backend.sh` 共用。下面历史 BAT/fast 工具不适用于新的版本目录后端；详见 [独立部署](../../docs/INDEPENDENT_DEPLOYMENT.md)。
 
+## 发布与数据库维护分离
+
+普通后端发布在切换 PM2 前执行 `check-rds-schema.mjs`，在只读事务中核对数据库结构及 SQL 校验和。发布不再执行历史账号导入、owner 回填、证书建表或 OB timer 清理；需要结构或数据维护时，应单独评审并执行。基线由空 PostgreSQL 18 数据库执行 42 个编号迁移和证书补充 SQL 生成，不是线上数据快照。
+
+只兼容已核实的 13 处历史归档字段定义及 4 处旧对象名称；兼容规则仍核对完整定义、约束有效性和序列归属，实际缺失或未知差异阻断发布。兼容过程不改库、不写迁移账本。
+
+回滚只恢复旧版本运行进程，并等待 HTTP 健康恢复，不依赖旧版本包含新预检脚本。`DEPLOY_RUNTIME_ONLY=1` 仅用于受管发布控制器，必须同时设置 `DEPLOY_RELEASE_MODE=1`。它不提供数据迁移的逆向回滚。
+
+PR workflow 在无生产密钥、不可用的本地数据库地址下执行 `check:change`；现有生产发布仍保留制品校验、串行发布与原子切换。FOK 保护规则、A8 前端、账号读写和投注逻辑均不属于本次部署改动。
+
+验证：`node scripts/deploy/check-controls.mjs`。真实数据库回归另用 `node scripts/deploy/check-schema-postgres.mjs`，需要本机 PostgreSQL 18 的 `initdb`、`pg_ctl` 位于 PATH 或 `CHANGMEN_TEST_PG_BIN`；只创建并销毁临时本地集群，不读取应用 `.env`。
+
 ## 脚本
 
 | 文件 | 用途 |

@@ -29,6 +29,7 @@ cat > "$fixture/bin/node" <<'SH'
 if [[ "${1:-}" == */compare-deployed-files.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 if [[ "${1:-}" == */verify-runtime.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 if [[ "${1:-}" == */release-retention.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
+if [[ "${1:-}" == server/backend/scripts/check-rds-schema.mjs && -f "${TEST_FAIL_SCHEMA:-/nonexistent}" ]]; then exit 44; fi
 cat >/dev/null
 SH
 cat > "$fixture/bin/npm" <<'SH'
@@ -41,7 +42,7 @@ echo '[]'
 SH
 chmod +x "$fixture/bin/"*
 export PATH="$fixture/bin:$PATH"
-export TEST_FAIL_HEALTH="$fixture/fail-health" TEST_NPM_LOG="$fixture/npm.log"
+export TEST_FAIL_HEALTH="$fixture/fail-health" TEST_NPM_LOG="$fixture/npm.log" TEST_FAIL_SCHEMA="$fixture/fail-schema"
 export TEST_WRONG_RUNTIME="$fixture/wrong-runtime"
 export DEPLOY_RUNTIME_VERIFIER="$source_root/scripts/deploy/verify-runtime.mjs" DEPLOY_EVIDENCE_FILE="$fixture/evidence.json"
 export DEPLOY_RELEASE_RETENTION="$source_root/scripts/deploy/release-retention.mjs"
@@ -117,6 +118,14 @@ grep -q 'backend-current/deploy/ecosystem.config.cjs' "$DEPLOY_REPO/deploy/ecosy
 test "$(readlink -f "$DEPLOY_REPO/client/web/dist")" = "$frontend_before"
 grep -q ':ci' "$TEST_NPM_LOG"
 grep -q ':run compile:router' "$TEST_NPM_LOG"
+export DEPLOY_SEQUENCE=6 DEPLOY_RELEASE_ID=be-schema-fail
+before_activation="$(cat "$TEST_ACTIVATE_LOG")"
+touch "$TEST_FAIL_SCHEMA"
+if bash deploy/scripts/release-backend.sh "$fixture/backend.tgz"; then echo 'failed preflight accepted'; exit 1; fi
+test "$(cat "$TEST_ACTIVATE_LOG")" = "$before_activation"
+test "$(readlink -f "$DEPLOY_REPO/backend-current")" = "$backend_first"
+grep -q '^5 ' "$DEPLOY_REPO/.deploy-state/backend"
+rm "$TEST_FAIL_SCHEMA"
 export DEPLOY_SEQUENCE=6 DEPLOY_RELEASE_ID=be-wrong-runtime
 touch "$TEST_WRONG_RUNTIME"
 if bash deploy/scripts/release-backend.sh "$fixture/backend.tgz"; then echo 'wrong backend runtime accepted'; exit 1; fi

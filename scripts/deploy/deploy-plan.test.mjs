@@ -33,7 +33,7 @@ test("auth-only archive release compiles and restarts without rerunning schema/b
   const result = plan(["server/backend/core/auth/login_service.js", "server/db/rds/auth_store.js", "server/db/impl_rds.js", "server/realtime-hub/hub.js"]);
   assert.match(result, /install=1 compile=1 web=1 schema=0 players=0 owner=0 timers=0/);
 });
-test("an actual migration still requests schema application", () => {
+test("an actual migration requests schema verification", () => {
   assert.match(plan(["server/backend/db/migrations/044_auth_browser_sessions.sql"]), /schema=1/);
 });
 test("frontend-only changes do not restart the backend or migrate", () => {
@@ -42,15 +42,30 @@ test("frontend-only changes do not restart the backend or migrate", () => {
 test("explicit full release retains full-deploy behavior", () => {
   assert.match(plan(["server/backend/core/auth/identity.js"], { DEPLOY_FULL: "1" }), /full=1 install=1 compile=1 web=1/);
 });
-test('certificate schema is applied independently of account/order migrations', () => {
+test('certificate schema requests verification independently of account/order migrations', () => {
   assert.match(plan(['server/db/schema/client_certificates.sql']), /schema=0 players=0 owner=0 timers=0 certificates=1/);
 });
 
-test('isolated release preserves certificate-only migration and skips install/compile', () => {
+test('isolated release identifies certificate changes and skips install/compile', () => {
   assert.match(plan(['server/db/schema/client_certificates.sql'], { DEPLOY_RELEASE_MODE: '1' }),
     /install=0 compile=0 web=1 schema=0 players=0 owner=0 timers=0 certificates=1/);
 });
 
-test('isolated release still applies actual account schema changes', () => {
+test('isolated release still identifies actual account schema changes', () => {
   assert.match(plan(['server/backend/db/migrations/044_auth_browser_sessions.sql'], { DEPLOY_RELEASE_MODE: '1' }), /schema=1/);
+});
+
+for (const file of [
+  "server/backend/core/db/store.js", "server/backend/core/account/account_store.js",
+  "server/db/rds/player_store.js", "server/db/player_account_record.js",
+]) {
+  test(`ordinary account code change never requests legacy data backfill: ${file}`, () => {
+    assert.match(plan([file]), /schema=0 players=0 owner=0/);
+    assert.match(plan([file], { DEPLOY_RELEASE_MODE: "1" }), /schema=0 players=0 owner=0/);
+  });
+}
+test("schema helpers and legacy SQL request verification without JSON import or ownership rewrites", () => {
+  for (const file of ["server/backend/scripts/apply-rds-schema.mjs", "server/backend/db/migrations/028_players_account_data.sql",
+    "server/backend/scripts/check-rds-schema.mjs", "server/backend/scripts/rds-schema-check.mjs", "server/backend/scripts/rds-schema-baseline.json"])
+    assert.match(plan([file]), /schema=1 players=0 owner=0/);
 });

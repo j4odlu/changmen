@@ -44,13 +44,16 @@ cd "$release"
 npm ci --include=dev
 npm run compile:router --workspace=@changmen/backend
 command -v pm2 >/dev/null
+# [changmen 扩展] Fail before touching running processes. Recovery must not depend
+# on a schema helper that only exists in the candidate being rolled back.
+node server/backend/scripts/check-rds-schema.mjs
 activate() {
-  DEPLOY_REPO="$1" DEPLOY_RELEASE_MODE=1 DEPLOY_SCHEMA_CHANGED="$2" DEPLOY_FULL=0 DEPLOY_CHANGED_PATHS_FILE="${3:-}" DEPLOY_SKIP_GIT_PULL=1 \
+  DEPLOY_REPO="$1" DEPLOY_RELEASE_MODE=1 DEPLOY_RUNTIME_ONLY=1 DEPLOY_SCHEMA_CHANGED="$2" DEPLOY_FULL=0 DEPLOY_CHANGED_PATHS_FILE="${3:-}" DEPLOY_SKIP_GIT_PULL=1 \
     DEPLOY_SKIP_APP_BUILD=1 DEPLOY_SKIP_POSTCHECK=1 bash "$release/deploy/scripts/deploy-server-remote.sh"
 }
 rollback() {
   trap - ERR
-  echo "Backend activation failed; restoring $previous (database changes are not reverted)" >&2
+  echo "Backend activation failed; restoring runtime $previous (no database migration)" >&2
   if [[ "$previous" == "$repo" ]]; then
     cp "$bootstrap_config" "$repo/deploy/ecosystem.config.cjs.rollback"
     mv -f "$repo/deploy/ecosystem.config.cjs.rollback" "$repo/deploy/ecosystem.config.cjs"
@@ -59,6 +62,13 @@ rollback() {
     switch_link "$previous" "$repo/backend-current"
   fi
   activate "$previous" 0 || { echo 'ERROR: backend rollback failed; inspect PM2 immediately' >&2; return 1; }
+  # PM2 start success alone does not prove that the previous HTTP server recovered.
+  local recovered=0
+  for attempt in $(seq 1 45); do
+    if curl --fail --silent --max-time 5 http://127.0.0.1:3456/health >/dev/null; then recovered=1; break; fi
+    sleep 3
+  done
+  test "$recovered" = 1 || { echo 'ERROR: previous backend health did not recover' >&2; return 1; }
 }
 trap rollback ERR
 activate "$release" 0 "$changes"

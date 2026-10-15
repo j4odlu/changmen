@@ -20,6 +20,12 @@ PM2_SXBET="${PM2_SXBET:-changmen-sxbet-collector}"
 PM2_MATCHER="${PM2_MATCHER:-changmen-matcher}"
 DEPLOY_FULL="${DEPLOY_FULL:-0}"
 DEPLOY_SKIP_APP_BUILD="${DEPLOY_SKIP_APP_BUILD:-0}"
+# [changmen 扩展] Internal activation phase of release-backend.sh. Its mandatory
+# candidate preflight runs first; rollback only restores the old runtime.
+if [ "${DEPLOY_RUNTIME_ONLY:-0}" = "1" ] && [ "${DEPLOY_RELEASE_MODE:-0}" != "1" ]; then
+  echo 'ERROR: runtime-only activation requires an isolated release'
+  exit 1
+fi
 
 t0=$SECONDS
 log() { echo "==> $*"; }
@@ -121,6 +127,8 @@ LIVE_TIMER_TOUCHED=0
 RDS_SCHEMA_TOUCHED=0
 PLAYERS_RDS_TOUCHED=0
 PLAYERS_OWNER_MIGRATION_TOUCHED=0
+# [changmen 扩展] Retired plan fields remain zero for callers. Historical data
+# import/ownership repair is an explicit maintenance operation, never a deploy.
 
 classify() {
   local raw="$1"
@@ -196,7 +204,7 @@ classify() {
 
 if [ "${DEPLOY_RELEASE_MODE:-0}" = "1" ]; then
   # release-backend.sh has already installed and compiled in an isolated tree.
-  # Preserve the existing migration ordering without archive/Git fallback guesses.
+  # Select runtime targets; SQL/data maintenance is not part of activation.
   DO_PM2_WEB=1
   DO_PM2_PM_SPORTS=1
   DO_PM2_PM_FOOTBALL=1
@@ -256,22 +264,11 @@ if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ] || { [ "${DEPLOY_RELEASE_MODE:-0}" !=
       server/db/schema/client_certificates.sql|*apply-client-certificate-schema.mjs)
         CERTIFICATE_SCHEMA_TOUCHED=1
         ;;
-      *028_players_account*|*migrate-accounts-jsonb*|*player_account_record*)
+      changmen/server/backend/db/migrations/*|server/backend/db/migrations/*|*scripts/apply-rds-schema.mjs|*scripts/apply-order-observation-schema.mjs|*scripts/check-rds-schema.mjs|*scripts/rds-schema-check.mjs|*scripts/rds-schema-baseline.json)
         RDS_SCHEMA_TOUCHED=1
-        PLAYERS_RDS_TOUCHED=1
-        ;;
-      changmen/server/backend/db/migrations/*|server/backend/db/migrations/*|*scripts/apply-rds-schema.mjs|*scripts/apply-order-observation-schema.mjs)
-        RDS_SCHEMA_TOUCHED=1
-        ;;
-      *026_players_owner_user_id*|*027_players_active_owner*|*migrate-players-owner*|*finalize-players-owner*)
-        PLAYERS_OWNER_MIGRATION_TOUCHED=1
         ;;
       *live_timer*|changmen/server/db/rds/platform_collector_store.js|server/db/rds/platform_collector_store.js)
         LIVE_TIMER_TOUCHED=1
-        ;;
-      *006_tag_platforms_players*|*players_json_migrate*|changmen/server/backend/core/account/account_store.js|server/backend/core/account/account_store.js|changmen/server/db/rds/player_store.js|server/db/rds/player_store.js|changmen/server/backend/core/db/store.js|server/backend/core/db/store.js)
-        PLAYERS_RDS_TOUCHED=1
-        PLAYERS_OWNER_MIGRATION_TOUCHED=1
         ;;
     esac
   done < <(if [ -n "${DEPLOY_CHANGED_PATHS_FILE:-}" ]; then cat "$DEPLOY_CHANGED_PATHS_FILE"; else git -C "$GIT_ROOT" diff --name-only "$OLD_HEAD" "$NEW_HEAD"; fi)
@@ -312,42 +309,14 @@ else
   log "skip compile:router"
 fi
 
-if [ "$CERTIFICATE_SCHEMA_TOUCHED" = "1" ]; then
-  log "apply additive certificate registry only (no account/order backfills)"
-  (cd server/backend && node scripts/ops/migrations/apply-client-certificate-schema.mjs)
+# [changmen 扩展] SQL preconditions fail closed. An orphan/legacy installation
+# needs a separately reviewed maintenance migration, not an automatic rewrite.
+if [ "${DEPLOY_RUNTIME_ONLY:-0}" != "1" ] && { [ "$DO_PM2_WEB" = "1" ] || [ "$RDS_SCHEMA_TOUCHED" = "1" ] || [ "$CERTIFICATE_SCHEMA_TOUCHED" = "1" ] || [ "$DEPLOY_FULL" = "1" ]; }; then
+  log "RDS schema: read-only verification (no historical SQL or ledger writes)"
+  (cd server/backend && node scripts/check-rds-schema.mjs)
 fi
-if [ "$LIVE_TIMER_TOUCHED" = "1" ]; then
-  log "live_timer code changed — purge stale OB live_timers rows"
-  node server/backend/scripts/ops/incidents/purge-platform-live-timers.mjs OB || echo "WARN: purge live_timers failed"
-fi
-# owner 回填必须在 027 CHECK 之前（否则 apply-rds-schema 因 orphan player 失败）
-if [ "$PLAYERS_OWNER_MIGRATION_TOUCHED" = "1" ] || [ "$RDS_SCHEMA_TOUCHED" = "1" ] || [ "$PLAYERS_RDS_TOUCHED" = "1" ] || [ "$DEPLOY_FULL" = "1" ]; then
-  log "profiles.accounts backup (pre-migration)"
-  (cd server/backend && node scripts/ops/migrations/backup-profiles-accounts.mjs) || {
-    echo "FAIL: backup-profiles-accounts — 中止 deploy 以免无回滚点"
-    exit 1
-  }
-  log "players owner_user_id: backfill + finalize (pre-027)"
-  (cd server/backend && node scripts/ops/migrations/migrate-players-owner-user-id.mjs) || echo "WARN: migrate-players-owner failed"
-  (cd server/backend && node scripts/ops/migrations/finalize-players-owner-user-id.mjs) || {
-    echo "FAIL: finalize-players-owner — 勿 apply 027，请人工处理 orphan players"
-    exit 1
-  }
-fi
-if [ "$RDS_SCHEMA_TOUCHED" = "1" ] || [ "$PLAYERS_RDS_TOUCHED" = "1" ] || [ "$DEPLOY_FULL" = "1" ]; then
-  log "RDS schema: apply migrations"
-  (cd server/backend && node scripts/apply-rds-schema.mjs)
-fi
-if [ "$PLAYERS_RDS_TOUCHED" = "1" ] || [ "$DEPLOY_FULL" = "1" ]; then
-  log "profiles.accounts → players.account_data backfill"
-  (cd server/backend && node scripts/ops/migrations/migrate-accounts-jsonb-to-players.mjs) || {
-    echo "FAIL: migrate-accounts-jsonb-to-players"
-    exit 1
-  }
-fi
-if [ "$PLAYERS_RDS_TOUCHED" = "1" ] || [ "$DEPLOY_FULL" = "1" ]; then
-  log "players/tag_platforms → RDS: migrate JSON from storage/"
-  (cd server/backend && node scripts/ops/migrations/migrate-players-to-rds.mjs) || echo "WARN: migrate-players failed"
+if [ "$CERTIFICATE_SCHEMA_TOUCHED" = "1" ] || [ "$LIVE_TIMER_TOUCHED" = "1" ]; then
+  log "schema maintenance and timer cleanup are separate operations; deploy does not write database data"
 fi
 
 if command -v pm2 >/dev/null 2>&1; then

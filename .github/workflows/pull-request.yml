@@ -1,0 +1,42 @@
+name: Pull request checks
+on:
+  pull_request:
+    branches: [master]
+permissions:
+  contents: read
+concurrency:
+  group: changmen-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TZ: Asia/Shanghai
+      DATABASE_URL: postgresql://offline:offline@127.0.0.1:1/changmen_offline
+      DATABASE_URL_PUBLIC: ''
+      DATABASE_URL_INTERNAL: ''
+      DATABASE_POOL_CONNECT_TIMEOUT_MS: '100'
+      CHANGMEN_STORAGE_DIR: ${{ runner.temp }}/changmen-pr-storage
+      ESPORT_DATA_DIR: ${{ runner.temp }}/changmen-pr-storage/esport
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Verify changed scope and FOK protection
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          VITE_PREDICT_FUN_API_BASE: https://api.predict.fun
+        run: npm run check:change -- --base="$PR_BASE_SHA"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pull-request-validation
+          path: output/change-validation/verdict.json
+          retention-days: 7

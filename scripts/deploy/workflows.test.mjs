@@ -9,6 +9,19 @@ const read = p => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
 const workflow = name => YAML.parse(read(`.github/workflows/${name}.yml`));
 const release = workflow("release");
 
+test("pull requests validate offline without deployment credentials or publication", () => {
+  const pr = workflow("pull-request");
+  assert.deepEqual(pr.on.pull_request.branches, ["master"]);
+  assert.equal(pr.on.pull_request_target, undefined);
+  assert.deepEqual(pr.permissions, { contents: "read" });
+  assert.equal(pr.concurrency["cancel-in-progress"], true);
+  const serialized = JSON.stringify(pr);
+  for (const forbidden of ["secrets.", "publish.sh", "release-evidence.mjs seal", "read-deployed-versions.mjs"])
+    assert(!serialized.includes(forbidden), forbidden);
+  assert.match(pr.jobs.check.env.DATABASE_URL, /127\.0\.0\.1:1\//);
+  assert(pr.jobs.check.steps.some(s => s.run?.includes('check:change -- --base="$PR_BASE_SHA"')));
+});
+
 test("one push entry covers every path and validates before either component", () => {
   assert.deepEqual(release.on.push.branches, ["master"]);
   assert.equal(release.on.push.paths, undefined, "Unknown dependencies must reach classification");

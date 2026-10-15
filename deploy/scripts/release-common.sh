@@ -26,6 +26,9 @@ if [[ -f "$state" ]]; then
   fi
 fi
 record_success() {
+  # Health checks are complete. Keep the marker commit and rollback disarm
+  # indivisible with respect to catchable termination; write errors still roll back.
+  trap '' HUP INT TERM
   # Local emergency publishes must not reset the GHA high-water mark.
   printf '%s %s\n' "$(( sequence > 0 ? sequence : ${last_sequence:-0} ))" "$sha" > "$state.tmp"
   mv -f "$state.tmp" "$state"

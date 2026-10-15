@@ -313,4 +313,37 @@ tar -C "$fixture/bad-dist/assets" -czf "$publish_root/output/release-validation/
 : > "$TEST_PUBLISH_LOG"
 if publish_fixture; then echo 'missing entry archive accepted'; exit 1; fi
 test "$(cat "$TEST_PUBLISH_LOG")" = verified
+# Once the success marker is committed, a termination must not roll back only
+# the runtime and leave the marker pointing to a different version.
+for signal in TERM HUP INT; do
+  DEPLOY_REPO="$fixture/commit-$signal" DEPLOY_SEQUENCE=7 DEPLOY_RELEASE_ID="commit-$signal" TEST_COMMIT_SIGNAL="$signal" \
+    bash -c '
+      set -E
+      scope=frontend
+      source "$1/deploy/scripts/release-common.sh"
+      rollback() { touch "$repo/rolled-back"; }
+      mv() { command mv "$@"; kill -s "$TEST_COMMIT_SIGNAL" "$$"; }
+      install_rollback_traps
+      record_success
+      clear_rollback_traps
+      test ! -e "$repo/rolled-back"
+      test "$(cat "$state")" = "7 $sha"
+    ' _ "$source_root"
+done
+# Ignoring termination in the commit window must not hide marker write errors.
+commit_status=0
+DEPLOY_REPO="$fixture/commit-write-error" DEPLOY_SEQUENCE=7 DEPLOY_RELEASE_ID=commit-write-error \
+  bash -c '
+    set -E
+    scope=frontend
+    source "$1/deploy/scripts/release-common.sh"
+    printf "6 %s\n" "$sha" > "$state"
+    rollback() { touch "$repo/rolled-back"; }
+    mv() { return 41; }
+    install_rollback_traps
+    record_success
+  ' _ "$source_root" || commit_status=$?
+test "$commit_status" = 41
+test -f "$fixture/commit-write-error/rolled-back"
+grep -q '^6 ' "$fixture/commit-write-error/.deploy-state/frontend"
 echo 'PASS release integration: adoption, stale refusal, retries, rollback, storage isolation and artifact-only publication'

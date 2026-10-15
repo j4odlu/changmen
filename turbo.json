@@ -11,7 +11,7 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!**/docs/**"]
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/testing/offline-env.mjs", "!**/*.md", "!**/docs/**"]
     },
     "@changmen/matcher#test": {
       "dependsOn": ["^test", "^build"],

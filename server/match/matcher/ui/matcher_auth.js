@@ -1,20 +1,5 @@
-import * as sb from "@changmen/db";
-import { getProfileById, loadProfileById } from "../../../backend/core/db/store.js";
-import { resolveRequestAuth } from "../../../backend/core/auth/request_auth.js";
-import { validSessionCsrf } from "../../../backend/core/auth/web_session_security.js";
-import { canAccessAdminPanel } from "../../../backend/core/account/admin_auth.js";
-import {
-  browserSessionEnabled,
-  readBrowserSessionCookie,
-} from "../../../backend/core/auth/browser_session.js";
-import store from "../../../backend/core/esport-api/store.js";
-import {
-  clientCertCnFromSubject,
-  clientCertificateAudit,
-  readClientCertStatus,
-} from "../../../backend/core/shared/client_cert_gate.js";
-import { isMatcherSkipAuthEnabled } from "../lib/config.js";
-
+import { matcherAuthPort } from "../runtime_ports.js";
+import { isMatcherSkipAuthEnabled } from "../lib/auth_config.js";
 export function isMatcherAuthBypassed() {
   return isMatcherSkipAuthEnabled();
 }
@@ -49,46 +34,11 @@ function parseCookies(req) {
   return out;
 }
 
-function matcherAuditContext(req) {
-  const cert = readClientCertStatus(req);
-  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
-  return {
-    clientIp: forwarded || String(req.socket?.remoteAddress || ""),
-    ...clientCertificateAudit(req),
-    userAgent: String(req.headers["user-agent"] || ""),
-  };
+export async function resolveMatcherUser(req, dependencies) {
+  if (isMatcherAuthBypassed()) return { user: { userName: "__skip_auth__" }, bypassed: true };
+  return matcherAuthPort().resolveMatcherUser(req, dependencies);
 }
-
-export async function resolveMatcherUser(req, dependencies = {}) {
-  if (isMatcherAuthBypassed())
-    return { user: { userName: "__skip_auth__" }, bypassed: true };
-  const token = getRequestToken(req);
-  if (!dependencies.authBrowserSession && !dependencies.getUserByToken) {
-    const resolved = await resolveRequestAuth({
-      token, browserSessionToken: browserSessionEnabled() ? readBrowserSessionCookie(req) : "",
-      action: "Matcher", audit: matcherAuditContext(req), protocol: req.headers["x-changmen-auth"],
-    }, { authResolveBrowserSession: sb.authResolveBrowserSession, authGetUserStatus: sb.authGetUserStatus, authorizeClientCertificate: sb.authorizeClientCertificate, getProfileById, loadProfileById });
-    return { user: resolved.user, bypassed: false, temporary: resolved.failure?.code === "TEMPORARY_UNAVAILABLE", session: resolved.session };
-  }
-  const getUserByToken = dependencies.getUserByToken || store.getUserByToken.bind(store);
-  if (token) {
-    const user = await getUserByToken(token);
-    return { user, bypassed: false };
-  }
-
-  const browserSessionToken = browserSessionEnabled() ? readBrowserSessionCookie(req) : "";
-  if (!browserSessionToken)
-    return { user: null, bypassed: false };
-  const authBrowserSession = dependencies.authBrowserSession || sb.authBrowserSession;
-  const restored = await authBrowserSession(browserSessionToken, matcherAuditContext(req));
-  if (restored?.temporary)
-    return { user: null, bypassed: false, temporary: true };
-  if (!restored || !("accessToken" in restored))
-    return { user: null, bypassed: false };
-  const user = await getUserByToken(restored.accessToken);
-  return { user, bypassed: false };
-}
-
+export function canAccessMatcherUi(user) { return matcherAuthPort().canAccessMatcherUi(user); }
 export async function isMatcherAuthed(req) {
   const { user, bypassed } = await resolveMatcherUser(req);
   if (bypassed)
@@ -96,10 +46,6 @@ export async function isMatcherAuthed(req) {
   if (!user)
     return false;
   return canAccessMatcherUi(user);
-}
-
-export function canAccessMatcherUi(user) {
-  return canAccessAdminPanel(user);
 }
 
 export function createMatcherAuthMiddleware() {
@@ -125,7 +71,7 @@ export function createMatcherAuthMiddleware() {
       if (!canAccessMatcherUi(user)) {
         return res.status(403).json({ ok: false, error: "forbidden", message: "需要团队长或管理员权限" });
       }
-      if (session && !["GET", "HEAD"].includes(req.method) && !validSessionCsrf(req, session))
+      if (session && !["GET", "HEAD"].includes(req.method) && !matcherAuthPort().validSessionCsrf(req, session))
         return res.status(403).json({ ok: false, error: "CSRF_INVALID" });
       return next();
     }

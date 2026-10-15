@@ -10,7 +10,7 @@ import {
 } from "@changmen/match-identity";
 import { getGameCodeForPlatformId, getPlatformGameId, resolveClientGame } from "@changmen/shared/catalog/game_catalog";
 import { formatPbTeamPlatformId, resolvePlatformTeamId } from "@changmen/shared/catalog/pb_team_platform_id";
-import store from "../../../backend/core/esport-api/store.js";
+import { collectorRuntime as store } from "../runtime_ports.js";
 import { ensureTeamPlugin, invalidateTeamPlugin, matchMergeOnce } from "../ops/match_merge_once.js";
 import { invalidateMatcherRdsSnapshot } from "../ops/rds_snapshot_cache.js";
 import { resetMatcherUiTeamPlugin } from "../ui/merge_mode.js";

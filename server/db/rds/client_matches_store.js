@@ -172,7 +172,38 @@ async function _rdsWriteClientMatchesLifecycle(pool, payload) {
   }
 }
 
-async function _rdsFetchClientMatches(pool) {
+const CLIENT_MATCH_META_SQL = `SELECT COUNT(*)::int AS count,
+  COALESCE(MAX(built_at), 0)::bigint AS built_at,
+  COALESCE(MAX((pm_sport->>'updatedAt')::bigint), 0)::bigint AS pm_sport_rev,
+  md5(COALESCE(string_agg(id::text || ':' || row_revision, ',' ORDER BY id), '')) AS version
+  FROM active`;
+
+function clientMatchMeta(row = {}) {
+  return {
+    builtAt: Number(row.built_at) || 0, count: Number(row.count) || 0,
+    pmSportRev: Number(row.pm_sport_rev) || 0,
+    version: row.version || "d41d8cd98f00b204e9800998ecf8427e",
+  };
+}
+
+async function _rdsFetchClientMatches(pool, snapshot = false, includeEnded = false) {
+  if (snapshot) {
+    // One MVCC statement: metadata can never describe a later set of rows.
+    // Keep pg's bigint string decoding (JSON aggregation would lose precision).
+    const { rows } = await pool.query(`WITH active AS MATERIALIZED (
+      SELECT *, xmin::text AS row_revision FROM client_matches ${includeEnded ? "" : "WHERE ended_at IS NULL"}
+    ), meta AS (${CLIENT_MATCH_META_SQL})
+    SELECT active.*, meta.count AS _snapshot_count, meta.built_at AS _snapshot_built_at,
+      meta.pm_sport_rev AS _snapshot_pm_sport_rev, meta.version AS _snapshot_version
+    FROM active CROSS JOIN meta ORDER BY start_time ASC NULLS LAST`);
+    const first = rows[0];
+    const meta = clientMatchMeta(first && {
+      count: first._snapshot_count, built_at: first._snapshot_built_at,
+      pm_sport_rev: first._snapshot_pm_sport_rev, version: first._snapshot_version,
+    });
+    return { ...meta, rows: rows.map(({ row_revision, _snapshot_count, _snapshot_built_at,
+      _snapshot_pm_sport_rev, _snapshot_version, ...row }) => row) };
+  }
   const { rows } = await pool.query(
     `SELECT * FROM client_matches
      WHERE ended_at IS NULL
@@ -192,18 +223,10 @@ async function _rdsFetchClientMatchesAll(pool) {
 
 async function _rdsFetchClientMatchesMeta(pool) {
   const { rows } = await pool.query(
-    `SELECT COUNT(*)::int AS count,
-            COALESCE(MAX(built_at), 0)::bigint AS built_at,
-            COALESCE(MAX((pm_sport->>'updatedAt')::bigint), 0)::bigint AS pm_sport_rev
-     FROM client_matches
-     WHERE ended_at IS NULL`,
+    `WITH active AS (SELECT id, built_at, pm_sport, xmin::text AS row_revision
+     FROM client_matches WHERE ended_at IS NULL) ${CLIENT_MATCH_META_SQL}`,
   );
-  const row = rows[0] || {};
-  return {
-    builtAt: Number(row.built_at) || 0,
-    count: Number(row.count) || 0,
-    pmSportRev: Number(row.pm_sport_rev) || 0,
-  };
+  return clientMatchMeta(rows[0]);
 }
 
 async function _rdsInitLastWrittenIds(pool) {
@@ -328,12 +351,12 @@ export async function fetchClientMatchesMeta() {
 /**
  * 从 RDS 读取活跃 client_matches（ended_at IS NULL），供 Client_GetMatchs。
  */
-export async function fetchClientMatches() {
+export async function fetchClientMatches({ snapshot = false } = {}) {
   const pool = getPgPool();
   if (!pool)
     return null;
   try {
-    return await _rdsFetchClientMatches(pool);
+    return await _rdsFetchClientMatches(pool, snapshot);
   }
   catch (err) {
     console.warn("[rds] fetchClientMatches 失败:", err.message);
@@ -344,12 +367,12 @@ export async function fetchClientMatches() {
 /**
  * 合场 / 身份：含已结束行。
  */
-export async function fetchClientMatchesAll() {
+export async function fetchClientMatchesAll({ snapshot = false } = {}) {
   const pool = getPgPool();
   if (!pool)
     return null;
   try {
-    return await _rdsFetchClientMatchesAll(pool);
+    return snapshot ? await _rdsFetchClientMatches(pool, true, true) : await _rdsFetchClientMatchesAll(pool);
   }
   catch (err) {
     console.warn("[rds] fetchClientMatchesAll 失败:", err.message);

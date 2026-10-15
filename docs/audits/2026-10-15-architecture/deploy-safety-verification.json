@@ -1,0 +1,232 @@
+{
+  "checkedAt": "2026-10-15T06:59:38.937Z",
+  "head": "1f9ca758959a24d947439bc42be6ae2ce5c3661e",
+  "localOnly": true,
+  "committed": false,
+  "pushed": false,
+  "deployed": false,
+  "productionDatabaseAccess": false,
+  "resolvedLocalReleaseBlockers": [
+    "ordinary activation no longer imports historical account JSON or repairs ownership",
+    "original 551-entry protection accepts only exact reviewed persistence increments and still compares the full original modules"
+  ],
+  "deploy": {
+    "removedAutomaticOperations": [
+      "profiles.accounts backup and legacy ownership backfill/finalize",
+      "profiles.accounts to players import",
+      "storage players/tag_platforms JSON import"
+    ],
+    "sqlSchemaApplicationPreserved": true,
+    "sqlPreconditionsFailClosed": true,
+    "legacyToolsRemainSeparate": true,
+    "planRegression": {
+      "beforeFailed": 5,
+      "afterPassed": 12
+    },
+    "postgres": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 3,
+      "cases": [
+        "ordinary account runtime release preserves current players and never imports legacy JSON",
+        "first migration-ledger adoption preserves current data despite stale profiles.accounts",
+        "explicit full activation still never invokes historical account imports or ownership repair"
+      ]
+    },
+    "orphanPrecondition": {
+      "passed": true,
+      "localOnly": true,
+      "orphanSchemaRejected": true,
+      "ownerRewritten": false,
+      "accountSoftDeleted": false,
+      "balance": 77
+    }
+  },
+  "protection": {
+    "originalManifestVersion": "75b1efac66625e5f2bc9884a965b244bfaf337ed",
+    "originalManifestEntries": 551,
+    "originalManifestUnchanged": true,
+    "exactProtectedFiles": 551,
+    "reviewedContract": "scripts/verification/account-persistence-increments.json",
+    "contractSha256": "eb6acaa6496e781871e21ca6a99e458762c4b49409743c25bdf12c009ceadc45",
+    "newNegativeAndProvenanceTests": 29,
+    "mechanism": "Restore 12 exact reviewed top-level statements, then use the existing full-module comparison against unchanged original hashes; reject changed bodies, partial rollbacks, extra work and modified contract.",
+    "noFileExemptions": true,
+    "noRuntimeSourceChangedForProtection": true
+  },
+  "formalLocalValidation": {
+    "passed": true,
+    "tier": "full",
+    "sourceStable": true,
+    "completeRelease": false,
+    "checks": [
+      {
+        "check": "deployment-control",
+        "passed": true,
+        "elapsedMs": 16134
+      },
+      {
+        "check": "fok-551",
+        "passed": true,
+        "elapsedMs": 18463
+      },
+      {
+        "check": "validation-control",
+        "passed": true,
+        "elapsedMs": 4454
+      },
+      {
+        "check": "verification-control",
+        "passed": true,
+        "elapsedMs": 42769
+      },
+      {
+        "check": "verification-node",
+        "passed": true,
+        "elapsedMs": 635
+      },
+      {
+        "check": "router-compile",
+        "passed": true,
+        "elapsedMs": 928
+      },
+      {
+        "check": "backend",
+        "passed": true,
+        "elapsedMs": 23063
+      },
+      {
+        "check": "frontend-typecheck",
+        "passed": true,
+        "elapsedMs": 220
+      },
+      {
+        "check": "frontend",
+        "passed": true,
+        "elapsedMs": 142506
+      },
+      {
+        "check": "build",
+        "passed": true,
+        "elapsedMs": 30081
+      }
+    ],
+    "identity": {
+      "commit": "1f9ca758959a24d947439bc42be6ae2ce5c3661e",
+      "candidateTree": "2dfc06a06f35471d1d218b73d02624b591a0001e",
+      "inputFingerprint": "29390de05673c8fb4a501ff00f798a9f87e4b6b89135ded40a5290f9f4ff38ec"
+    },
+    "log": "output/deploy-safety-change.log"
+  },
+  "repeatedAccountAndMatcherPostgres": {
+    "concurrency": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 7,
+      "cases": [
+        "S1: delayed balance metadata sync cannot overwrite newer Client_UpdateBalance",
+        "S1/PF: late ledger publication keeps the latest amount and settled profit",
+        "S2: recharge and account patch both commit without profile/FK deadlock",
+        "S2/reverse: recharge waits before locking players when ACCOUNT already owns the profile",
+        "S2/atomicity: concurrent recharges add once each; a failed log insert rolls back the amount",
+        "S2/create: full replacement keeps the profile lock and cannot prune a concurrent new account",
+        "S3: delayed committed snapshot cannot resurrect a deleted account in cache"
+      ]
+    },
+    "review": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 12,
+      "cases": [
+        "default batch rolls back all existing rows when one requested row is missing",
+        "A8 full ACCOUNT save preserves the newer confirmed balance and still accepts changed config",
+        "unchanged ACCOUNT still validates ownership but avoids a redundant player UPDATE",
+        "concurrent partial edits read current rows inside the lock and preserve both updates",
+        "legacy DB partial-patch entry also serializes concurrent changes to the same record",
+        "concurrent actual sport-account requests preserve each credential and the esport token",
+        "failed partial edit rolls back, keeps the cache, and does not poison the next edit",
+        "a partial edit never UPDATEs unrelated player rows",
+        "older profile read finishes before a queued commit and cannot erase its fields",
+        "cold list outage fails instead of returning successful empty, then recovers to confirmed empty",
+        "empty and foreign ACCOUNT saves remain rejected; explicit removal still prunes",
+        "partial PF edit publishes SQL-protected balance instead of an uncommitted planned balance"
+      ]
+    },
+    "phase1": {
+      "passed": true,
+      "localOnly": true,
+      "postgres": "18.6",
+      "checks": 12,
+      "cases": [
+        "fresh schema includes every numbered migration and both collector fields",
+        "upgrade a legacy schema without 034/039 or migration records",
+        "concurrent migration runs execute a pending migration once",
+        "migration failure rolls back DDL and leaves no success record",
+        "prune failure rolls back earlier account updates and keeps the cache",
+        "write failure cannot report a successful save or prune another account",
+        "empty overwrite and foreign player remain rejected",
+        "successful A8 ACCOUNT save commits updates and prune together",
+        "an incomplete account UPDATE rolls back the whole replacement",
+        "database owner lock serializes concurrent replacement snapshots",
+        "missing profile persistence fails without publishing a configuration cache",
+        "a failed configuration write cannot undo or contaminate the next successful write"
+      ]
+    },
+    "phase2": {
+      "passed": true,
+      "localOnly": true,
+      "postgres": "18.6",
+      "checks": 12,
+      "cases": [
+        "confirmed empty list shares the same version across backend and standalone matcher",
+        "one-statement rows and version retain native bigint strings and full matcher fields",
+        "same-count and same-builtAt manual reversal invalidates the shared snapshot",
+        "PM update below the global maximum timestamp still refreshes both consumers",
+        "embedded matcher uses the same PM and identity rows as standalone",
+        "successful writer publishes once after commit and preserves independently updated PM fields",
+        "write rollback neither publishes nor patches collector links",
+        "sticky ended row cannot return through composer publication",
+        "composer identity and align share full lifecycle rows including ended and PM fields",
+        "deletion down to empty clears backend and matcher caches",
+        "a fresh process reloads the same committed snapshot without backend hydration",
+        "assembled matcher HTTP API rejects unauthenticated local requests"
+      ]
+    },
+    "boundaries": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 8,
+      "cases": [
+        "COMMIT failure rolls back recharge amount and money log, then the next recharge succeeds",
+        "COMMIT failure rolls back ACCOUNT edits and pruning without publishing cache or poisoning its queue",
+        "profile lock timeout aborts recharge without partial writes and releases the transaction",
+        "a blocked owner does not serialize another owner's account mutation",
+        "actual strict read delivered after deletion cannot restore the deleted row",
+        "failed soft delete leaves a delayed committed snapshot and active account intact",
+        "deletion during a completed rollback stays deleted and the next queued mutation succeeds",
+        "metadata patch serializes with a later direct balance write without losing either database update"
+      ]
+    }
+  },
+  "repeatedSnapshotBoundaryChecks": 5,
+  "deploymentControls": {
+    "nodeTestsPassed": 53,
+    "shellReleaseIntegration": "passed, fake network/process commands and temporary files only"
+  },
+  "a8": {
+    "trackedClientAndExtensionChanges": [],
+    "referenceSha256": "33b8a5e586f55564ac5483c723cc613b144726985daaa45c936d90fa038c4279",
+    "oldReviewedFilesChanged": [
+      "package.json"
+    ],
+    "clientCallOrderEdited": false,
+    "clientTimingEdited": false
+  },
+  "limits": [
+    "Formal local validation is not the complete 22-stage production release acceptance. completeRelease remains false.",
+    "No push or production action; master push still triggers Validate and release.",
+    "Working tree still includes unrelated user changes and untracked files; select a clean commit candidate before push.",
+    "Historical standalone data-import tools are retained for deliberate maintenance and are not made safe for unrestricted manual reuse.",
+    "Existing backend 16 skips, frontend 1 skip and resolver 1 expected fail retained."
+  ]
+}

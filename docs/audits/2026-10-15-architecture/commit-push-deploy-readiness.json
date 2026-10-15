@@ -1,0 +1,105 @@
+{
+  "checkedAt": "2026-10-15T06:18:04.268Z",
+  "head": "1f9ca758959a24d947439bc42be6ae2ce5c3661e",
+  "branch": "master",
+  "localOnly": true,
+  "committed": false,
+  "pushed": false,
+  "deployed": false,
+  "productionDatabaseAccess": false,
+  "readiness": {
+    "localWipCommit": "Possible after selecting the intended scope; not a release approval",
+    "pushMaster": "blocked for release",
+    "deploy": "not approved"
+  },
+  "requiredValidation": {
+    "tier": "full",
+    "passed": false,
+    "sourceStable": true,
+    "completeRelease": false,
+    "results": [
+      {
+        "check": "fok-551",
+        "passed": false,
+        "elapsedMs": 3307
+      }
+    ],
+    "note": "Formal offline check stops at fok-551. Later checks were not executed in this run; prior local tests are separate evidence."
+  },
+  "original551": {
+    "passed": 548,
+    "failed": 3,
+    "total": 551,
+    "failures": [
+      {
+        "file": "server/backend/core/account/account_service.js",
+        "reason": "server/backend/core/account/account_service.js: complete fixed-baseline module"
+      },
+      {
+        "file": "server/backend/core/integrations/polymarket/pm_client_handlers.js",
+        "reason": "server/backend/core/integrations/polymarket/pm_client_handlers.js: unregistered protected source difference"
+      },
+      {
+        "file": "server/backend/core/integrations/predictfun/pf_player_account.js",
+        "reason": "server/backend/core/integrations/predictfun/pf_player_account.js: unregistered protected source difference"
+      }
+    ],
+    "diagnosticOnly": true,
+    "protectionRulesChanged": false
+  },
+  "deploymentDataRisk": {
+    "triggerFiles": [
+      "server/backend/core/db/store.js",
+      "server/db/rds/player_store.js",
+      "server/backend/scripts/apply-rds-schema.mjs"
+    ],
+    "deploymentScript": "deploy/scripts/deploy-server-remote.sh",
+    "triggerLine": 271,
+    "automaticBackfillLine": 343,
+    "legacyScript": "server/backend/scripts/ops/migrations/migrate-accounts-jsonb-to-players.mjs",
+    "reproduction": {
+      "localOnly": true,
+      "riskReproduced": true,
+      "productionDatabaseAccess": false,
+      "scenario": "Deployment-triggered legacy profiles.accounts backfill replaces current players values when historical JSON remains",
+      "before": {
+        "balance": 200,
+        "token": "synthetic-current"
+      },
+      "after": {
+        "balance": 1,
+        "token": "synthetic-legacy"
+      },
+      "productionOccurrenceUnknown": true
+    },
+    "productionOccurrenceKnown": false,
+    "rollbackLimit": "Deployment rollback explicitly does not revert database changes"
+  },
+  "workingTree": {
+    "stagedPaths": [],
+    "changedTrackedCount": 54,
+    "scopeWarning": "Existing unrelated PM/GTC docs, deleted docs, an untracked frontend file and scratch/output coexist; do not stage everything.",
+    "requiredNewModules": [
+      "server/backend/core/db/user_write_queue.js",
+      "server/backend/core/matcher/runtime.js",
+      "server/backend/core/matcher/auth.js",
+      "server/db/client_match_snapshot.js",
+      "server/db/versioned_snapshot_cache.js",
+      "server/match/matcher/runtime_ports.js",
+      "server/backend/scripts/rds-migrations.mjs",
+      "scripts/testing/offline-env.mjs"
+    ]
+  },
+  "releaseMechanism": {
+    "workflow": ".github/workflows/release.yml",
+    "pushBranch": "master",
+    "pushTriggersValidationAndProductionRelease": true,
+    "fullReleaseEvidence": "22-stage complete acceptance remains required; earlier check:fok-parity is insufficient"
+  },
+  "nextRequired": [
+    "Resolve the three original source-protection failures through reviewed implementation boundaries, retaining immutable baselines and protection strength.",
+    "Prevent replay of obsolete profiles.accounts / storage data over authoritative players on an ordinary code deployment; add real regression coverage.",
+    "Select only the intended commit scope, include required new runtime modules and test dependencies, and exclude local scratch/captures/output.",
+    "Run formal validation on the exact clean candidate, then let Validate and release produce complete release evidence before production activation."
+  ]
+}

@@ -50,11 +50,19 @@ describe("clob_proxy", () => {
   });
 
   it("executePolymarketHttpRequest public GET /time", async () => {
-    const result = await executePolymarketHttpRequest({
-      method: "GET",
-      url: "https://clob.polymarket.com/time",
-    });
-    expect(result.status).toBe(200);
-    expect(Number(result.text.trim())).toBeGreaterThan(0);
-  }, 65_000);
+    const mock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("1792036800", { status: 200 }));
+    try {
+      const result = await executePolymarketHttpRequest({
+        method: "GET",
+        url: "https://clob.polymarket.com/time",
+      });
+      expect(mock).toHaveBeenCalledOnce();
+      expect(mock).toHaveBeenCalledWith("https://clob.polymarket.com/time", expect.objectContaining({
+        method: "GET", headers: expect.objectContaining({ "User-Agent": "@polymarket/clob-client" }),
+      }));
+      expect(result.status).toBe(200);
+      expect(result.text).toBe("1792036800");
+    }
+    finally { mock.mockRestore(); }
+  });
 });

@@ -120,14 +120,13 @@ async function resolveOwnedPmAccount(playerId, userId) {
   return { ok: true, account: row };
 }
 
-function syncAccountRowInKv(accountId, updates, userId) {
-  const list = userId ? store.getAccountsForUser(userId) : accountStore.getAccountsFromKv();
+async function syncAccountRowInKv(accountId, updates, userId) {
+  if (userId) return store.updateAccountForUser(userId, accountId, updates, { preserveBalance: true });
+  const list = (userId ? store.getAccountsForUser(userId) : accountStore.getAccountsFromKv()).map(row => ({ ...row }));
   const idx = list.findIndex(row => String(row.accountId) === String(accountId));
   if (idx < 0)
     return null;
   list[idx] = { ...list[idx], ...updates, updateTime: Date.now() };
-  if (userId)
-    store.setAccountsForUser(userId, list);
   return list[idx];
 }
 
@@ -201,12 +200,12 @@ export async function handleRefreshPmBalance(body, userId) {
     const balance = Number(bal.balance) || 0;
     const credit = Number(row.credit) || 0;
     await accountStore.updatePlayerBalance(playerId, balance, userId);
-    const synced = syncAccountRowInKv(playerId, {
+    const synced = await syncAccountRowInKv(playerId, {
       balance,
       currency: bal.currency || "USDT",
       totalProfit: balance - credit,
     }, userId);
-    return { ok: true, info: { ...synced, balance } };
+    return synced ? { ok: true, info: synced } : { ok: false, msg: "PM 账号不存在" };
   }
   catch (err) {
     return { ok: false, msg: err instanceof Error ? err.message : String(err) };

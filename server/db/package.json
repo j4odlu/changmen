@@ -8,9 +8,14 @@
     ".": "./index.js",
     "./order_link_filter.js": "./order_link_filter.js",
     "./venue_account_key.js": "./venue_account_key.js",
-    "./pg.js": "./pg.js"
+    "./pg.js": "./pg.js",
+    "./client_match_snapshot.js": "./client_match_snapshot.js",
+    "./profile_metadata.js": "./profile_metadata.js"
   },
   "main": "./index.js",
+  "scripts": {
+    "test": "vitest run && node --import ../../scripts/testing/offline-env.mjs --test football_orders.smoke.test.mjs pod_bet_execution.smoke.test.mjs sport_matcher_tables.smoke.test.mjs"
+  },
   "dependencies": {
     "@changmen/storage": "file:../storage",
     "pg": "^8.21.0"

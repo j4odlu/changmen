@@ -11,7 +11,8 @@
     "./sport_team_plugin.js": "./sport_team_plugin.js"
   },
   "scripts": {
-    "test": "node test.js",
+    "test": "vitest run resolver.offline.test.mjs && node --test sport_team_plugin.smoke.test.mjs",
+    "probe:live": "node test.js",
     "seed": "node seed.js",
     "scrape:ray": "node scrapers/ray_scraper.js",
     "scrape:ray:dry": "node scrapers/ray_scraper.js --dry-run",

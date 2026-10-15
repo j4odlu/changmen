@@ -1,123 +1,38 @@
-import assert from "node:assert/strict";
-import { afterEach, describe, it } from "vitest";
-import { isMatcherSkipAuthEnabled } from "../lib/config.js";
-import {
-  canAccessMatcherUi,
-  getRequestToken,
-  isMatcherAuthBypassed,
-  resolveMatcherUser,
-} from "./matcher_auth.js";
-
-const saved = { ...process.env };
-
-afterEach(() => {
-  process.env = { ...saved };
+import { afterEach, expect, it, vi } from "vitest";
+import { configureMatcherRuntime } from "../runtime_ports.js";
+import { createMatcherAuthMiddleware, resolveMatcherUser } from "./matcher_auth.js";
+afterEach(() => { configureMatcherRuntime(); vi.unstubAllEnvs(); });
+it("rejects access when no host auth was installed", async () => {
+  vi.stubEnv("MATCHER_SKIP_AUTH", "0");
+  await expect(resolveMatcherUser({ headers: {} })).rejects.toThrow("not configured");
 });
-
-describe("isMatcherSkipAuthEnabled", () => {
-  it("默认关闭", () => {
-    delete process.env.MATCHER_SKIP_AUTH;
-    delete process.env.NODE_ENV;
-    assert.equal(isMatcherSkipAuthEnabled(), false);
-  });
-
-  it("显式 SKIP_AUTH=1 且 NODE_ENV=development 时开启", () => {
-    process.env.MATCHER_SKIP_AUTH = "1";
-    process.env.NODE_ENV = "development";
-    assert.equal(isMatcherSkipAuthEnabled(), true);
-  });
-
-  it("sKIP_AUTH=1 但 NODE_ENV 未设置时不开启", () => {
-    process.env.MATCHER_SKIP_AUTH = "1";
-    delete process.env.NODE_ENV;
-    assert.equal(isMatcherSkipAuthEnabled(), false);
-  });
-
-  it("production 下忽略 SKIP_AUTH", () => {
-    process.env.MATCHER_SKIP_AUTH = "1";
-    process.env.NODE_ENV = "production";
-    assert.equal(isMatcherSkipAuthEnabled(), false);
-  });
+it("delegates user, permissions and CSRF to host without dropping session checks", async () => {
+  vi.stubEnv("MATCHER_SKIP_AUTH", "0");
+  const next = vi.fn(); const req = { path: "/api/end", method: "POST", headers: {} };
+  const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+  const session = { id: "s" };
+  const csrf = vi.fn().mockReturnValue(false);
+  configureMatcherRuntime({ auth: {
+    resolveMatcherUser: async () => ({ user: { role: "admin" }, session }),
+    canAccessMatcherUi: () => true, validSessionCsrf: csrf,
+  } });
+  await createMatcherAuthMiddleware()(req, res, next);
+  expect(csrf).toHaveBeenCalledWith(req, session);
+  expect(res.status).toHaveBeenCalledWith(403);
+  expect(res.json).toHaveBeenCalledWith({ ok: false, error: "CSRF_INVALID" });
+  expect(next).not.toHaveBeenCalled();
 });
-
-describe("isMatcherAuthBypassed", () => {
-  it("与 isMatcherSkipAuthEnabled 一致", () => {
-    process.env.MATCHER_SKIP_AUTH = "1";
-    process.env.NODE_ENV = "test";
-    assert.equal(isMatcherAuthBypassed(), isMatcherSkipAuthEnabled());
-  });
-});
-
-describe("getRequestToken", () => {
-  it("读取 token 头与 Bearer", () => {
-    assert.equal(getRequestToken({ headers: { token: "abc" } }), "abc");
-    assert.equal(getRequestToken({ headers: { authorization: "Bearer xyz" } }), "xyz");
-    assert.equal(getRequestToken({ headers: { cookie: "app_token=tok%201" } }), "tok 1");
-    assert.equal(getRequestToken({ headers: {} }), "");
-  });
-});
-
-describe("resolveMatcherUser", () => {
-  it("通过 HttpOnly 浏览器会话恢复 matcher 用户", async () => {
-    delete process.env.AUTH_MODE;
-    delete process.env.NODE_ENV;
-    const calls = [];
-    const req = {
-      headers: {
-        cookie: "cm_session=bs_test.secret",
-        "user-agent": "matcher-test",
-      },
-      socket: { remoteAddress: "127.0.0.1" },
-    };
-    const result = await resolveMatcherUser(req, {
-      authBrowserSession: async (sessionToken, audit) => {
-        calls.push({ sessionToken, audit });
-        return { accessToken: "restored-access" };
-      },
-      getUserByToken: async token => ({ userName: token, role: "admin" }),
-    });
-
-    assert.equal(result.user.userName, "restored-access");
-    assert.equal(calls[0].sessionToken, "bs_test.secret");
-    assert.equal(calls[0].audit.userAgent, "matcher-test");
-  });
-
-  it("保留显式 token 的旧版兼容路径", async () => {
-    const result = await resolveMatcherUser(
-      { headers: { token: "legacy-access", cookie: "cm_session=ignored" } },
-      {
-        authBrowserSession: async () => assert.fail("不应恢复浏览器会话"),
-        getUserByToken: async token => ({ userName: token, role: "leader" }),
-      },
-    );
-    assert.equal(result.user.userName, "legacy-access");
-  });
-
-  it("登录服务临时不可用时不会误报会话失效", async () => {
-    delete process.env.AUTH_MODE;
-    delete process.env.NODE_ENV;
-    const result = await resolveMatcherUser(
-      { headers: { cookie: "cm_session=bs_test.secret" }, socket: {} },
-      {
-        authBrowserSession: async () => ({ temporary: true }),
-        getUserByToken: async () => assert.fail("不应查询用户"),
-      },
-    );
-    assert.equal(result.temporary, true);
-    assert.equal(result.user, null);
-  });
-});
-
-describe("canAccessMatcherUi", () => {
-  it("允许管理员和团队长访问 matcher", () => {
-    assert.equal(canAccessMatcherUi({ role: "admin" }), true);
-    assert.equal(canAccessMatcherUi({ role: "leader" }), true);
-    assert.equal(canAccessMatcherUi({ isAdmin: true }), true);
-  });
-
-  it("拒绝普通用户访问 matcher", () => {
-    assert.equal(canAccessMatcherUi({ role: "user" }), false);
-    assert.equal(canAccessMatcherUi({}), false);
-    assert.equal(canAccessMatcherUi(null), false);
-  });
+it.each([
+  [{ user: null }, true, 401],
+  [{ user: null, temporary: true }, true, 503],
+  [{ user: { role: "user" } }, false, 403],
+  [{ user: { role: "admin" } }, true, null],
+])("preserves host authentication result %j", async (resolved, permitted, status) => {
+  vi.stubEnv("MATCHER_SKIP_AUTH", "0");
+  const next = vi.fn(); const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+  configureMatcherRuntime({ auth: { resolveMatcherUser: async () => resolved,
+    canAccessMatcherUi: () => permitted, validSessionCsrf: () => true } });
+  await createMatcherAuthMiddleware()({ path: "/api/debug", method: "GET", headers: {} }, res, next);
+  if (status) { expect(res.status).toHaveBeenCalledWith(status); expect(next).not.toHaveBeenCalled(); }
+  else expect(next).toHaveBeenCalledOnce();
 });

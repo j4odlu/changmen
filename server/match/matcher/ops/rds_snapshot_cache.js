@@ -1,7 +1,6 @@
 import * as db from "@changmen/db";
-import { getClientMatchRowsForSnapshot } from "../../../backend/core/db/store.js";
-import { isEmbeddedMatcher } from "../../../backend/core/shared/matcher_mode.js";
-import store from "../../../backend/core/esport-api/store.js";
+import { loadClientMatchSnapshot, invalidateClientMatchSnapshot } from "@changmen/db/client_match_snapshot.js";
+import { collectorRuntime as store, isEmbeddedMatcher } from "../runtime_ports.js";
 
 const entries = new Map();
 let lastStatsLogAt = 0;
@@ -184,25 +183,15 @@ function logCacheStats() {
 }
 
 export function invalidateMatcherRdsSnapshot(keys = []) {
+  if (!keys?.length || keys.includes("clientMatches")) invalidateClientMatchSnapshot();
   const targetKeys = Array.isArray(keys) && keys.length ? keys : [...entries.keys()];
   for (const key of targetKeys) entries.delete(key);
 }
 
 async function resolveClientRowsForSnapshot() {
-  const memRows = getClientMatchRowsForSnapshot();
-  const [meta, rdsRows] = await Promise.all([
-    db.fetchClientMatchesMeta(),
-    db.fetchClientMatches(),
-  ]);
-  const rows = rdsRows || [];
-  if (!memRows.length)
-    return rows;
-  const memBuiltAt = Math.max(...memRows.map(r => Number(r.built_at) || 0), 0);
-  const rdsBuiltAt = Number(meta?.builtAt) || 0;
-  const rdsCount = Number(meta?.count) || 0;
-  if (rdsBuiltAt > memBuiltAt || rdsCount !== memRows.length)
-    return rows;
-  return memRows;
+  const snapshot = await loadClientMatchSnapshot();
+  if (!snapshot) throw new Error("clientMatches RDS snapshot unavailable; abort matchMerge");
+  return snapshot;
 }
 
 async function fetchEmbeddedMemorySnapshot() {
@@ -210,12 +199,9 @@ async function fetchEmbeddedMemorySnapshot() {
   if (!full?.hasMatches && !full?.hasBets)
     return null;
 
-  const [platformMeta, clientMeta] = await Promise.all([
-    db.fetchPlatformCollectorMeta(),
-    db.fetchClientMatchesMeta(),
-  ]);
+  const platformMeta = await db.fetchPlatformCollectorMeta();
 
-  const [rdsMatchesRaw, rdsBets, rdsTimers, clientRows] = await Promise.all([
+  const [rdsMatchesRaw, rdsBets, rdsTimers, clientSnapshot] = await Promise.all([
     readCached("platformMatches", platformMeta?.platformMatches, db.fetchPlatformMatches, { critical: true }),
     readCached("platformBets", platformMeta?.platformBets, db.fetchPlatformBets),
     readCached("liveTimers", platformMeta?.liveTimers, db.fetchLiveTimers),
@@ -231,12 +217,13 @@ async function fetchEmbeddedMemorySnapshot() {
   const timers = full?.hasTimers
     ? mergeObjectSnapshot(rdsTimers, full.timers)
     : (rdsTimers || {});
-  const clientRowsSnap = cloneSnapshot(clientRows);
+  const clientRowsSnap = cloneSnapshot(clientSnapshot.rows);
 
   return {
     matchesRaw,
     bets,
     timers,
+    clientMatchVersion: clientSnapshot.version,
     clientRows: clientRowsSnap,
     alignClientRows: clientRowsSnap,
     hotCollector: {
@@ -258,16 +245,13 @@ export async function fetchMatcherRdsSnapshot() {
   }
 
   const hot = store.getCollectorHotSnapshot?.();
-  const [platformMeta, clientMeta] = await Promise.all([
-    db.fetchPlatformCollectorMeta(),
-    db.fetchClientMatchesMeta(),
-  ]);
+  const platformMeta = await db.fetchPlatformCollectorMeta();
 
-  const [rdsMatchesRaw, rdsBets, rdsTimers, clientRows] = await Promise.all([
+  const [rdsMatchesRaw, rdsBets, rdsTimers, clientSnapshot] = await Promise.all([
     readCached("platformMatches", platformMeta?.platformMatches, db.fetchPlatformMatches, { critical: true }),
     readCached("platformBets", platformMeta?.platformBets, db.fetchPlatformBets),
     readCached("liveTimers", platformMeta?.liveTimers, db.fetchLiveTimers),
-    readCached("clientMatches", clientMeta, db.fetchClientMatches, { critical: true }),
+    resolveClientRowsForSnapshot(),
   ]);
 
   const matchesRaw = hot?.hasMatches
@@ -285,8 +269,9 @@ export async function fetchMatcherRdsSnapshot() {
     matchesRaw,
     bets,
     timers,
-    clientRows: clientRows || [],
-    alignClientRows: clientRows || [],
+    clientMatchVersion: clientSnapshot.version,
+    clientRows: clientSnapshot.rows,
+    alignClientRows: clientSnapshot.rows,
     hotCollector: {
       matches: !!hot?.hasMatches,
       bets: !!hot?.hasBets,

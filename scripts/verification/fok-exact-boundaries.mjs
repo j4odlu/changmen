@@ -13,6 +13,7 @@ import { specializeFokSource } from "./fok-source-specialization.mjs";
 import { restoreOrdersConsumerCompatibility } from "./orders-consumer-boundary.mjs";
 import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
 import { restoreGtcSnapshotMetadata } from "./pm-manual-sell-split-boundary.mjs";
+import { restoreAccountPersistenceSource } from "./account-persistence-boundary.mjs";
 
 export const notificationCommit = "23f2846bee1ff0a91811f49f9a5d5ac2d78fccdf";
 const root = "client/web/src/stores/betting/autoBet/";
@@ -112,6 +113,7 @@ function restoreGateway(source) {
 }
 
 export function verifyProtectedSource(file, current, original, readSource = target => fs.readFileSync(target, "utf8"), baselineRead) {
+  current = restoreAccountPersistenceSource(file, current, readSource, replaceExact);
   const clientStateSource = restoreGtcClientStateSource(file, current, readSource, replaceExact);
   const clientStateRestored = clientStateSource !== current;
   current = clientStateSource;

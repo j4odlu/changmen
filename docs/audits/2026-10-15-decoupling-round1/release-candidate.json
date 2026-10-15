@@ -1,0 +1,993 @@
+{
+  "kind": "local pre-publication acceptance",
+  "baseCommit": "ebbcc398c00352b9b6e7e460622283a95639e8af",
+  "validation": {
+    "checkedAt": "2026-10-15T11:38:35.553Z",
+    "passed": true,
+    "tier": "full",
+    "paths": [
+      ".gitattributes",
+      "PRODUCTION_DEPLOYMENT.md",
+      "deploy/scripts/deploy-server-remote.sh",
+      "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+      "docs/TEAM_BOUNDARIES.md",
+      "docs/audits/2026-10-15-architecture/COMMIT_SCOPE.json",
+      "docs/audits/2026-10-15-architecture/CONVERSATION_REVIEW.md",
+      "docs/audits/2026-10-15-architecture/FINAL_RELEASE_REVIEW.md",
+      "docs/audits/2026-10-15-architecture/PHASE1_LOCAL_ACCEPTANCE.md",
+      "docs/audits/2026-10-15-architecture/PHASE2_LOCAL_ACCEPTANCE.md",
+      "docs/audits/2026-10-15-architecture/README.md",
+      "docs/audits/2026-10-15-architecture/REVIEW_FIXES_LOCAL_ACCEPTANCE.md",
+      "docs/audits/2026-10-15-architecture/REVIEW_FIXES_SECOND_AUDIT.md",
+      "docs/audits/2026-10-15-architecture/account-boundary-audit-verification.json",
+      "docs/audits/2026-10-15-architecture/account-concurrency-verification.json",
+      "docs/audits/2026-10-15-architecture/audit.mjs",
+      "docs/audits/2026-10-15-architecture/commit-push-deploy-readiness.json",
+      "docs/audits/2026-10-15-architecture/deploy-safety-verification.json",
+      "docs/audits/2026-10-15-architecture/evidence.json",
+      "docs/audits/2026-10-15-architecture/final-release-review.json",
+      "docs/audits/2026-10-15-architecture/phase1-verification.json",
+      "docs/audits/2026-10-15-architecture/phase2-verification.json",
+      "docs/audits/2026-10-15-architecture/review-fixes-second-audit.json",
+      "docs/audits/2026-10-15-architecture/review-fixes-verification.json",
+      "docs/audits/2026-10-15-decoupling-round1/ACCEPTANCE.md",
+      "docs/audits/2026-10-15-decoupling-round1/REVIEW.md",
+      "docs/audits/2026-10-15-decoupling-round1/review-readiness.json",
+      "docs/audits/2026-10-15-decoupling-round1/verification.json",
+      "package.json",
+      "scripts/check-team-boundaries.mjs",
+      "scripts/deploy/change-plan.test.mjs",
+      "scripts/deploy/classify-deploy-scope.mjs",
+      "scripts/deploy/deploy-plan.test.mjs",
+      "scripts/testing/account-boundary-audit-postgres.mjs",
+      "scripts/testing/account-concurrency-postgres.mjs",
+      "scripts/testing/deploy-account-preservation-postgres.mjs",
+      "scripts/testing/offline-env.mjs",
+      "scripts/testing/phase1-postgres.mjs",
+      "scripts/testing/phase2-postgres.mjs",
+      "scripts/testing/review-fixes-postgres.mjs",
+      "scripts/testing/snapshot-boundary-audit.mjs",
+      "scripts/testing/temporary-postgres.mjs",
+      "scripts/testing/user-metadata-postgres.mjs",
+      "scripts/verification/account-persistence-boundary.mjs",
+      "scripts/verification/account-persistence-boundary.test.mjs",
+      "scripts/verification/account-persistence-increments.json",
+      "scripts/verification/fok-exact-boundaries.mjs",
+      "server/backend/core/account/account_service.js",
+      "server/backend/core/account/account_service_pf_write_guard.test.js",
+      "server/backend/core/account/player_ownership.js",
+      "server/backend/core/account/user_login_meta.js",
+      "server/backend/core/account/user_metadata_contract.test.mjs",
+      "server/backend/core/account/user_presence.js",
+      "server/backend/core/db/store.js",
+      "server/backend/core/db/store.matches.test.mjs",
+      "server/backend/core/db/store.settings.test.mjs",
+      "server/backend/core/db/user_write_queue.js",
+      "server/backend/core/esport-api/core_contract.test.mjs",
+      "server/backend/core/esport-api/store.js",
+      "server/backend/core/integrations/polymarket/clob_proxy.test.mjs",
+      "server/backend/core/integrations/polymarket/pm_client_handlers.js",
+      "server/backend/core/integrations/polymarket/pm_client_handlers.test.mjs",
+      "server/backend/core/integrations/predictfun/pf_player_account.js",
+      "server/backend/core/matcher/auth.js",
+      "server/backend/core/matcher/auth.test.mjs",
+      "server/backend/core/matcher/runtime.js",
+      "server/backend/core/shared/matcher_mode.js",
+      "server/backend/package.json",
+      "server/backend/scripts/apply-order-observation-schema.mjs",
+      "server/backend/scripts/apply-rds-schema.mjs",
+      "server/backend/scripts/check-rds-schema.mjs",
+      "server/backend/scripts/matcher-ui.mjs",
+      "server/backend/scripts/rds-migrations.mjs",
+      "server/backend/scripts/rds-migrations.test.mjs",
+      "server/backend/scripts/rds-schema-baseline.json",
+      "server/backend/scripts/rds-schema-check.mjs",
+      "server/backend/scripts/rds-schema-check.test.mjs",
+      "server/backend/vitest.config.mjs",
+      "server/db/client_match_snapshot.js",
+      "server/db/package.json",
+      "server/db/profile_metadata.js",
+      "server/db/rds/client_matches_store.js",
+      "server/db/rds/orderModes/gtc/pm_gtc_snapshot_parity.test.mjs",
+      "server/db/rds/player_store.js",
+      "server/db/rds/player_store.test.mjs",
+      "server/db/rds/profile_store.js",
+      "server/db/rds/profile_store.test.mjs",
+      "server/db/versioned_snapshot_cache.js",
+      "server/db/versioned_snapshot_cache.test.mjs",
+      "server/db/vitest.config.mjs",
+      "server/match/matcher/README.md",
+      "server/match/matcher/compose/io/snapshot.js",
+      "server/match/matcher/compose/io/snapshot.test.mjs",
+      "server/match/matcher/compose/io/write.js",
+      "server/match/matcher/lib/auth_config.js",
+      "server/match/matcher/lib/config.js",
+      "server/match/matcher/lib/heartbeat.js",
+      "server/match/matcher/lib/heartbeat.test.mjs",
+      "server/match/matcher/link/index.js",
+      "server/match/matcher/ops/delete_client_match.js",
+      "server/match/matcher/ops/match_merge_once.js",
+      "server/match/matcher/ops/merge_client_matches.js",
+      "server/match/matcher/ops/rds_snapshot_cache.js",
+      "server/match/matcher/package.json",
+      "server/match/matcher/runtime_ports.js",
+      "server/match/matcher/runtime_ports.test.mjs",
+      "server/match/matcher/ui/matcher_auth.js",
+      "server/match/matcher/ui/matcher_auth.test.mjs",
+      "server/match/matcher/ui/matcher_process.js",
+      "server/match/resolver/README.md",
+      "server/match/resolver/package.json",
+      "server/match/resolver/resolver.offline.test.mjs",
+      "turbo.json"
+    ],
+    "immutableFokEntries": 551,
+    "sourceStable": true,
+    "completeRelease": false,
+    "results": [
+      {
+        "check": "deployment-control",
+        "passed": true,
+        "elapsedMs": 35436
+      },
+      {
+        "check": "fok-551",
+        "passed": true,
+        "elapsedMs": 24547
+      },
+      {
+        "check": "validation-control",
+        "passed": true,
+        "elapsedMs": 6111
+      },
+      {
+        "check": "verification-control",
+        "passed": true,
+        "elapsedMs": 53114
+      },
+      {
+        "check": "verification-node",
+        "passed": true,
+        "elapsedMs": 724
+      },
+      {
+        "check": "router-compile",
+        "passed": true,
+        "elapsedMs": 1070
+      },
+      {
+        "check": "backend",
+        "passed": true,
+        "elapsedMs": 32397
+      },
+      {
+        "check": "frontend-typecheck",
+        "passed": true,
+        "elapsedMs": 20216
+      },
+      {
+        "check": "frontend",
+        "passed": true,
+        "elapsedMs": 188535
+      },
+      {
+        "check": "build",
+        "passed": true,
+        "elapsedMs": 43149
+      }
+    ],
+    "identity": {
+      "commit": null,
+      "candidateTree": "63a01262d447e43a9db2cd26bf8a3a50eaa3776a",
+      "inputFingerprint": "7a7461f32b6b85205fd912e824b6f03e2d9e3344106821456d3a65b5f9ab9368"
+    },
+    "plan": {
+      "tier": "full",
+      "paths": [
+        ".gitattributes",
+        "PRODUCTION_DEPLOYMENT.md",
+        "deploy/scripts/deploy-server-remote.sh",
+        "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+        "docs/TEAM_BOUNDARIES.md",
+        "docs/audits/2026-10-15-architecture/COMMIT_SCOPE.json",
+        "docs/audits/2026-10-15-architecture/CONVERSATION_REVIEW.md",
+        "docs/audits/2026-10-15-architecture/FINAL_RELEASE_REVIEW.md",
+        "docs/audits/2026-10-15-architecture/PHASE1_LOCAL_ACCEPTANCE.md",
+        "docs/audits/2026-10-15-architecture/PHASE2_LOCAL_ACCEPTANCE.md",
+        "docs/audits/2026-10-15-architecture/README.md",
+        "docs/audits/2026-10-15-architecture/REVIEW_FIXES_LOCAL_ACCEPTANCE.md",
+        "docs/audits/2026-10-15-architecture/REVIEW_FIXES_SECOND_AUDIT.md",
+        "docs/audits/2026-10-15-architecture/account-boundary-audit-verification.json",
+        "docs/audits/2026-10-15-architecture/account-concurrency-verification.json",
+        "docs/audits/2026-10-15-architecture/audit.mjs",
+        "docs/audits/2026-10-15-architecture/commit-push-deploy-readiness.json",
+        "docs/audits/2026-10-15-architecture/deploy-safety-verification.json",
+        "docs/audits/2026-10-15-architecture/evidence.json",
+        "docs/audits/2026-10-15-architecture/final-release-review.json",
+        "docs/audits/2026-10-15-architecture/phase1-verification.json",
+        "docs/audits/2026-10-15-architecture/phase2-verification.json",
+        "docs/audits/2026-10-15-architecture/review-fixes-second-audit.json",
+        "docs/audits/2026-10-15-architecture/review-fixes-verification.json",
+        "docs/audits/2026-10-15-decoupling-round1/ACCEPTANCE.md",
+        "docs/audits/2026-10-15-decoupling-round1/REVIEW.md",
+        "docs/audits/2026-10-15-decoupling-round1/review-readiness.json",
+        "docs/audits/2026-10-15-decoupling-round1/verification.json",
+        "package.json",
+        "scripts/check-team-boundaries.mjs",
+        "scripts/deploy/change-plan.test.mjs",
+        "scripts/deploy/classify-deploy-scope.mjs",
+        "scripts/deploy/deploy-plan.test.mjs",
+        "scripts/testing/account-boundary-audit-postgres.mjs",
+        "scripts/testing/account-concurrency-postgres.mjs",
+        "scripts/testing/deploy-account-preservation-postgres.mjs",
+        "scripts/testing/offline-env.mjs",
+        "scripts/testing/phase1-postgres.mjs",
+        "scripts/testing/phase2-postgres.mjs",
+        "scripts/testing/review-fixes-postgres.mjs",
+        "scripts/testing/snapshot-boundary-audit.mjs",
+        "scripts/testing/temporary-postgres.mjs",
+        "scripts/testing/user-metadata-postgres.mjs",
+        "scripts/verification/account-persistence-boundary.mjs",
+        "scripts/verification/account-persistence-boundary.test.mjs",
+        "scripts/verification/account-persistence-increments.json",
+        "scripts/verification/fok-exact-boundaries.mjs",
+        "server/backend/core/account/account_service.js",
+        "server/backend/core/account/account_service_pf_write_guard.test.js",
+        "server/backend/core/account/player_ownership.js",
+        "server/backend/core/account/user_login_meta.js",
+        "server/backend/core/account/user_metadata_contract.test.mjs",
+        "server/backend/core/account/user_presence.js",
+        "server/backend/core/db/store.js",
+        "server/backend/core/db/store.matches.test.mjs",
+        "server/backend/core/db/store.settings.test.mjs",
+        "server/backend/core/db/user_write_queue.js",
+        "server/backend/core/esport-api/core_contract.test.mjs",
+        "server/backend/core/esport-api/store.js",
+        "server/backend/core/integrations/polymarket/clob_proxy.test.mjs",
+        "server/backend/core/integrations/polymarket/pm_client_handlers.js",
+        "server/backend/core/integrations/polymarket/pm_client_handlers.test.mjs",
+        "server/backend/core/integrations/predictfun/pf_player_account.js",
+        "server/backend/core/matcher/auth.js",
+        "server/backend/core/matcher/auth.test.mjs",
+        "server/backend/core/matcher/runtime.js",
+        "server/backend/core/shared/matcher_mode.js",
+        "server/backend/package.json",
+        "server/backend/scripts/apply-order-observation-schema.mjs",
+        "server/backend/scripts/apply-rds-schema.mjs",
+        "server/backend/scripts/check-rds-schema.mjs",
+        "server/backend/scripts/matcher-ui.mjs",
+        "server/backend/scripts/rds-migrations.mjs",
+        "server/backend/scripts/rds-migrations.test.mjs",
+        "server/backend/scripts/rds-schema-baseline.json",
+        "server/backend/scripts/rds-schema-check.mjs",
+        "server/backend/scripts/rds-schema-check.test.mjs",
+        "server/backend/vitest.config.mjs",
+        "server/db/client_match_snapshot.js",
+        "server/db/package.json",
+        "server/db/profile_metadata.js",
+        "server/db/rds/client_matches_store.js",
+        "server/db/rds/orderModes/gtc/pm_gtc_snapshot_parity.test.mjs",
+        "server/db/rds/player_store.js",
+        "server/db/rds/player_store.test.mjs",
+        "server/db/rds/profile_store.js",
+        "server/db/rds/profile_store.test.mjs",
+        "server/db/versioned_snapshot_cache.js",
+        "server/db/versioned_snapshot_cache.test.mjs",
+        "server/db/vitest.config.mjs",
+        "server/match/matcher/README.md",
+        "server/match/matcher/compose/io/snapshot.js",
+        "server/match/matcher/compose/io/snapshot.test.mjs",
+        "server/match/matcher/compose/io/write.js",
+        "server/match/matcher/lib/auth_config.js",
+        "server/match/matcher/lib/config.js",
+        "server/match/matcher/lib/heartbeat.js",
+        "server/match/matcher/lib/heartbeat.test.mjs",
+        "server/match/matcher/link/index.js",
+        "server/match/matcher/ops/delete_client_match.js",
+        "server/match/matcher/ops/match_merge_once.js",
+        "server/match/matcher/ops/merge_client_matches.js",
+        "server/match/matcher/ops/rds_snapshot_cache.js",
+        "server/match/matcher/package.json",
+        "server/match/matcher/runtime_ports.js",
+        "server/match/matcher/runtime_ports.test.mjs",
+        "server/match/matcher/ui/matcher_auth.js",
+        "server/match/matcher/ui/matcher_auth.test.mjs",
+        "server/match/matcher/ui/matcher_process.js",
+        "server/match/resolver/README.md",
+        "server/match/resolver/package.json",
+        "server/match/resolver/resolver.offline.test.mjs",
+        "turbo.json"
+      ],
+      "fullReasons": [
+        ".gitattributes",
+        "deploy/scripts/deploy-server-remote.sh",
+        "package.json",
+        "scripts/check-team-boundaries.mjs",
+        "scripts/testing/account-boundary-audit-postgres.mjs",
+        "scripts/testing/account-concurrency-postgres.mjs",
+        "scripts/testing/deploy-account-preservation-postgres.mjs",
+        "scripts/testing/offline-env.mjs",
+        "scripts/testing/phase1-postgres.mjs",
+        "scripts/testing/phase2-postgres.mjs",
+        "scripts/testing/review-fixes-postgres.mjs",
+        "scripts/testing/snapshot-boundary-audit.mjs",
+        "scripts/testing/temporary-postgres.mjs",
+        "scripts/testing/user-metadata-postgres.mjs",
+        "server/backend/core/account/account_service.js",
+        "server/backend/core/account/account_service_pf_write_guard.test.js",
+        "server/backend/core/account/player_ownership.js",
+        "server/backend/core/account/user_login_meta.js",
+        "server/backend/core/account/user_metadata_contract.test.mjs",
+        "server/backend/core/account/user_presence.js",
+        "server/backend/core/db/store.js",
+        "server/backend/core/db/store.matches.test.mjs",
+        "server/backend/core/db/store.settings.test.mjs",
+        "server/backend/core/db/user_write_queue.js",
+        "server/backend/core/esport-api/core_contract.test.mjs",
+        "server/backend/core/esport-api/store.js",
+        "server/backend/core/integrations/polymarket/clob_proxy.test.mjs",
+        "server/backend/core/integrations/polymarket/pm_client_handlers.js",
+        "server/backend/core/integrations/polymarket/pm_client_handlers.test.mjs",
+        "server/backend/core/integrations/predictfun/pf_player_account.js",
+        "server/backend/core/matcher/auth.js",
+        "server/backend/core/matcher/auth.test.mjs",
+        "server/backend/core/matcher/runtime.js",
+        "server/backend/core/shared/matcher_mode.js",
+        "server/backend/package.json",
+        "server/backend/scripts/apply-order-observation-schema.mjs",
+        "server/backend/scripts/apply-rds-schema.mjs",
+        "server/backend/scripts/check-rds-schema.mjs",
+        "server/backend/scripts/matcher-ui.mjs",
+        "server/backend/scripts/rds-migrations.mjs",
+        "server/backend/scripts/rds-migrations.test.mjs",
+        "server/backend/scripts/rds-schema-baseline.json",
+        "server/backend/scripts/rds-schema-check.mjs",
+        "server/backend/scripts/rds-schema-check.test.mjs",
+        "server/backend/vitest.config.mjs",
+        "server/db/client_match_snapshot.js",
+        "server/db/package.json",
+        "server/db/profile_metadata.js",
+        "server/db/rds/client_matches_store.js",
+        "server/db/rds/orderModes/gtc/pm_gtc_snapshot_parity.test.mjs",
+        "server/db/rds/player_store.js",
+        "server/db/rds/player_store.test.mjs",
+        "server/db/rds/profile_store.js",
+        "server/db/rds/profile_store.test.mjs",
+        "server/db/versioned_snapshot_cache.js",
+        "server/db/versioned_snapshot_cache.test.mjs",
+        "server/db/vitest.config.mjs",
+        "server/match/matcher/compose/io/snapshot.js",
+        "server/match/matcher/compose/io/snapshot.test.mjs",
+        "server/match/matcher/compose/io/write.js",
+        "server/match/matcher/lib/auth_config.js",
+        "server/match/matcher/lib/config.js",
+        "server/match/matcher/lib/heartbeat.js",
+        "server/match/matcher/lib/heartbeat.test.mjs",
+        "server/match/matcher/link/index.js",
+        "server/match/matcher/ops/delete_client_match.js",
+        "server/match/matcher/ops/match_merge_once.js",
+        "server/match/matcher/ops/merge_client_matches.js",
+        "server/match/matcher/ops/rds_snapshot_cache.js",
+        "server/match/matcher/package.json",
+        "server/match/matcher/runtime_ports.js",
+        "server/match/matcher/runtime_ports.test.mjs",
+        "server/match/matcher/ui/matcher_auth.js",
+        "server/match/matcher/ui/matcher_auth.test.mjs",
+        "server/match/matcher/ui/matcher_process.js",
+        "server/match/resolver/package.json",
+        "server/match/resolver/resolver.offline.test.mjs",
+        "turbo.json"
+      ],
+      "immutableFokEntries": 551,
+      "snapshotOverridesAllowed": false,
+      "checks": [
+        "deployment-control",
+        "fok-551",
+        "validation-control",
+        "verification-control",
+        "verification-node",
+        "router-compile",
+        "backend",
+        "frontend-typecheck",
+        "frontend",
+        "build"
+      ],
+      "changedPaths": [
+        ".gitattributes",
+        "PRODUCTION_DEPLOYMENT.md",
+        "deploy/scripts/deploy-server-remote.sh",
+        "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+        "docs/TEAM_BOUNDARIES.md",
+        "docs/audits/2026-10-15-architecture/COMMIT_SCOPE.json",
+        "docs/audits/2026-10-15-architecture/CONVERSATION_REVIEW.md",
+        "docs/audits/2026-10-15-architecture/FINAL_RELEASE_REVIEW.md",
+        "docs/audits/2026-10-15-architecture/PHASE1_LOCAL_ACCEPTANCE.md",
+        "docs/audits/2026-10-15-architecture/PHASE2_LOCAL_ACCEPTANCE.md",
+        "docs/audits/2026-10-15-architecture/README.md",
+        "docs/audits/2026-10-15-architecture/REVIEW_FIXES_LOCAL_ACCEPTANCE.md",
+        "docs/audits/2026-10-15-architecture/REVIEW_FIXES_SECOND_AUDIT.md",
+        "docs/audits/2026-10-15-architecture/account-boundary-audit-verification.json",
+        "docs/audits/2026-10-15-architecture/account-concurrency-verification.json",
+        "docs/audits/2026-10-15-architecture/audit.mjs",
+        "docs/audits/2026-10-15-architecture/commit-push-deploy-readiness.json",
+        "docs/audits/2026-10-15-architecture/deploy-safety-verification.json",
+        "docs/audits/2026-10-15-architecture/evidence.json",
+        "docs/audits/2026-10-15-architecture/final-release-review.json",
+        "docs/audits/2026-10-15-architecture/phase1-verification.json",
+        "docs/audits/2026-10-15-architecture/phase2-verification.json",
+        "docs/audits/2026-10-15-architecture/review-fixes-second-audit.json",
+        "docs/audits/2026-10-15-architecture/review-fixes-verification.json",
+        "docs/audits/2026-10-15-decoupling-round1/ACCEPTANCE.md",
+        "docs/audits/2026-10-15-decoupling-round1/REVIEW.md",
+        "docs/audits/2026-10-15-decoupling-round1/review-readiness.json",
+        "docs/audits/2026-10-15-decoupling-round1/verification.json",
+        "package.json",
+        "scripts/check-team-boundaries.mjs",
+        "scripts/deploy/change-plan.test.mjs",
+        "scripts/deploy/classify-deploy-scope.mjs",
+        "scripts/deploy/deploy-plan.test.mjs",
+        "scripts/testing/account-boundary-audit-postgres.mjs",
+        "scripts/testing/account-concurrency-postgres.mjs",
+        "scripts/testing/deploy-account-preservation-postgres.mjs",
+        "scripts/testing/offline-env.mjs",
+        "scripts/testing/phase1-postgres.mjs",
+        "scripts/testing/phase2-postgres.mjs",
+        "scripts/testing/review-fixes-postgres.mjs",
+        "scripts/testing/snapshot-boundary-audit.mjs",
+        "scripts/testing/temporary-postgres.mjs",
+        "scripts/testing/user-metadata-postgres.mjs",
+        "scripts/verification/account-persistence-boundary.mjs",
+        "scripts/verification/account-persistence-boundary.test.mjs",
+        "scripts/verification/account-persistence-increments.json",
+        "scripts/verification/fok-exact-boundaries.mjs",
+        "server/backend/core/account/account_service.js",
+        "server/backend/core/account/account_service_pf_write_guard.test.js",
+        "server/backend/core/account/player_ownership.js",
+        "server/backend/core/account/user_login_meta.js",
+        "server/backend/core/account/user_metadata_contract.test.mjs",
+        "server/backend/core/account/user_presence.js",
+        "server/backend/core/db/store.js",
+        "server/backend/core/db/store.matches.test.mjs",
+        "server/backend/core/db/store.settings.test.mjs",
+        "server/backend/core/db/user_write_queue.js",
+        "server/backend/core/esport-api/core_contract.test.mjs",
+        "server/backend/core/esport-api/store.js",
+        "server/backend/core/integrations/polymarket/clob_proxy.test.mjs",
+        "server/backend/core/integrations/polymarket/pm_client_handlers.js",
+        "server/backend/core/integrations/polymarket/pm_client_handlers.test.mjs",
+        "server/backend/core/integrations/predictfun/pf_player_account.js",
+        "server/backend/core/matcher/auth.js",
+        "server/backend/core/matcher/auth.test.mjs",
+        "server/backend/core/matcher/runtime.js",
+        "server/backend/core/shared/matcher_mode.js",
+        "server/backend/package.json",
+        "server/backend/scripts/apply-order-observation-schema.mjs",
+        "server/backend/scripts/apply-rds-schema.mjs",
+        "server/backend/scripts/check-rds-schema.mjs",
+        "server/backend/scripts/matcher-ui.mjs",
+        "server/backend/scripts/rds-migrations.mjs",
+        "server/backend/scripts/rds-migrations.test.mjs",
+        "server/backend/scripts/rds-schema-baseline.json",
+        "server/backend/scripts/rds-schema-check.mjs",
+        "server/backend/scripts/rds-schema-check.test.mjs",
+        "server/backend/vitest.config.mjs",
+        "server/db/client_match_snapshot.js",
+        "server/db/package.json",
+        "server/db/profile_metadata.js",
+        "server/db/rds/client_matches_store.js",
+        "server/db/rds/orderModes/gtc/pm_gtc_snapshot_parity.test.mjs",
+        "server/db/rds/player_store.js",
+        "server/db/rds/player_store.test.mjs",
+        "server/db/rds/profile_store.js",
+        "server/db/rds/profile_store.test.mjs",
+        "server/db/versioned_snapshot_cache.js",
+        "server/db/versioned_snapshot_cache.test.mjs",
+        "server/db/vitest.config.mjs",
+        "server/match/matcher/README.md",
+        "server/match/matcher/compose/io/snapshot.js",
+        "server/match/matcher/compose/io/snapshot.test.mjs",
+        "server/match/matcher/compose/io/write.js",
+        "server/match/matcher/lib/auth_config.js",
+        "server/match/matcher/lib/config.js",
+        "server/match/matcher/lib/heartbeat.js",
+        "server/match/matcher/lib/heartbeat.test.mjs",
+        "server/match/matcher/link/index.js",
+        "server/match/matcher/ops/delete_client_match.js",
+        "server/match/matcher/ops/match_merge_once.js",
+        "server/match/matcher/ops/merge_client_matches.js",
+        "server/match/matcher/ops/rds_snapshot_cache.js",
+        "server/match/matcher/package.json",
+        "server/match/matcher/runtime_ports.js",
+        "server/match/matcher/runtime_ports.test.mjs",
+        "server/match/matcher/ui/matcher_auth.js",
+        "server/match/matcher/ui/matcher_auth.test.mjs",
+        "server/match/matcher/ui/matcher_process.js",
+        "server/match/resolver/README.md",
+        "server/match/resolver/package.json",
+        "server/match/resolver/resolver.offline.test.mjs",
+        "turbo.json"
+      ],
+      "unknownBase": false,
+      "requestedScope": null,
+      "deployedVersions": null,
+      "liveComponents": null,
+      "eventPaths": null,
+      "purpose": "change",
+      "deployment": {
+        "scope": "full",
+        "components": [
+          "backend",
+          "frontend"
+        ],
+        "backendFirst": true
+      },
+      "releasePlan": "backend-first"
+    },
+    "planFingerprint": "954d1885e88a79889f7104f0afd0592f6bf752e5b45d5264a60effac8eafec50"
+  },
+  "temporaryPostgres": {
+    "passed": true,
+    "checks": 62
+  },
+  "files": [
+    {
+      "file": ".gitattributes",
+      "sha256NormalizedLf": "218b5d51ceb77ff30d588d186a7a655d817899b7a0aa5f3c0b0be187e22a6e46"
+    },
+    {
+      "file": "PRODUCTION_DEPLOYMENT.md",
+      "sha256NormalizedLf": "015cff8e52a2467d32603853cee1963fd7b17aff9b6ddfe472a35c59ac1df9c3"
+    },
+    {
+      "file": "deploy/scripts/deploy-server-remote.sh",
+      "sha256NormalizedLf": "b44674d19e4480849b7427f06d882d4b816c9673fdcf827b2e5c450d58737b1c"
+    },
+    {
+      "file": "docs/FRONTEND_BACKEND_RDS_DECOUPLING_PLAN.md",
+      "sha256NormalizedLf": "03cc6c9af5a7569c3006f08b8f0a6f305f42268a72be86e3129335d09141d455"
+    },
+    {
+      "file": "docs/TEAM_BOUNDARIES.md",
+      "sha256NormalizedLf": "7263a580df2522ef110528b675b623bfaa172779833aa0535cb983a0f5a8a253"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/COMMIT_SCOPE.json",
+      "sha256NormalizedLf": "c1fa9efdc71543b0c06c0d893b50ea1dfd37e133c3f0fcd50be57ac9e80a435c"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/CONVERSATION_REVIEW.md",
+      "sha256NormalizedLf": "072aa36c888ec1f5166aed6fb3845965188734fc4910976bcc466b147e91630a"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/FINAL_RELEASE_REVIEW.md",
+      "sha256NormalizedLf": "175b3ed87f2d95773d557bb4216ee0d8aad8634423d565c503939bea0f78b0f2"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/PHASE1_LOCAL_ACCEPTANCE.md",
+      "sha256NormalizedLf": "4cba9d57eb6590b960643e90e29c8242063eca264bce7202c12b13ec6d3aa7a1"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/PHASE2_LOCAL_ACCEPTANCE.md",
+      "sha256NormalizedLf": "7c2f979babad772571c5d898ec6a01976079d3cc8f57419f76868bf5dcaaf978"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/README.md",
+      "sha256NormalizedLf": "5871d70ad000e99d6db6130f0967168b68c4b8f5615c02c9b51ba564092e49f3"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/REVIEW_FIXES_LOCAL_ACCEPTANCE.md",
+      "sha256NormalizedLf": "3611a2aaedf71d8ca2a54ed50cb2dd356c53b9b3a8d65c6fb5f58d475274ddbb"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/REVIEW_FIXES_SECOND_AUDIT.md",
+      "sha256NormalizedLf": "0d6255e6e30c4206bac15bedc860bd5d9525787cb3ad45022172af9976f14b67"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/account-boundary-audit-verification.json",
+      "sha256NormalizedLf": "57b35d10d6275fa4601ecb6bf8bcc63b1796e115de83cb3e671cc0f00f396535"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/account-concurrency-verification.json",
+      "sha256NormalizedLf": "a5ad05fd828669e8ad0c12e151b12fc193888a81d6d57ffaa2892f0b0e057794"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/audit.mjs",
+      "sha256NormalizedLf": "f14ea6fc0fd64a1e3a128d10339112cd57e27ca69a107c2cbbed9ca966003b6b"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/commit-push-deploy-readiness.json",
+      "sha256NormalizedLf": "f3d734ee621829fa180bb4f4aee40d10fb514b92548f5455076206970479b514"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/deploy-safety-verification.json",
+      "sha256NormalizedLf": "0983db5a3aab875882b3fc2224ddce3229594402fdbabea50b8106551c196649"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/evidence.json",
+      "sha256NormalizedLf": "29bc6daf1745515474940bdb48c70a605c9501f1f4aeb5c27483a595765adb3f"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/final-release-review.json",
+      "sha256NormalizedLf": "d00c50c413d7db8dc513db1f2f6d6eab9ec4777995162b1051e6479cb4bdc5f8"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/phase1-verification.json",
+      "sha256NormalizedLf": "8596032406ef3948e9591c2b4fa90f75dfdb7c7cce72c6b53e75df0435dc108c"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/phase2-verification.json",
+      "sha256NormalizedLf": "5d26318317662c37beb52bb24a6c63555478d917a73e2f89d1db1fbde3511b0d"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/review-fixes-second-audit.json",
+      "sha256NormalizedLf": "bcc8099a59299810dac041a8f1d391fde223fccf577aee85d9fd17cf6c53c069"
+    },
+    {
+      "file": "docs/audits/2026-10-15-architecture/review-fixes-verification.json",
+      "sha256NormalizedLf": "a8fe4a59ddda2031d9378783401156e618a197e092e274bb3c39b1a38cad8aa7"
+    },
+    {
+      "file": "docs/audits/2026-10-15-decoupling-round1/ACCEPTANCE.md",
+      "sha256NormalizedLf": "dca9064ddde18fdf9e3383154d90b61e49d6b9ca3a815e50ada49d9cf4539094"
+    },
+    {
+      "file": "docs/audits/2026-10-15-decoupling-round1/RELEASE_CANDIDATE.md",
+      "sha256NormalizedLf": "96525c98f3f3bc5d323307d7a00d98d1f0ebf8e8e8b35b6d4dc80094f5471e97"
+    },
+    {
+      "file": "docs/audits/2026-10-15-decoupling-round1/REVIEW.md",
+      "sha256NormalizedLf": "3f09253503cebd23bca1184fbbfcdb0ee48350fad940d51ecc81ac79a9c17a10"
+    },
+    {
+      "file": "docs/audits/2026-10-15-decoupling-round1/review-readiness.json",
+      "sha256NormalizedLf": "c230f99edbfe5d898417559a2afb72b19bc2e74497074043bb44a962f61fe620"
+    },
+    {
+      "file": "docs/audits/2026-10-15-decoupling-round1/verification.json",
+      "sha256NormalizedLf": "e2f13829e88f2f762e5c7b45b4e8f0e1040fa6ca4cc8d767c728033b6c20b311"
+    },
+    {
+      "file": "package.json",
+      "sha256NormalizedLf": "c7a8d0dc296630cd374643b9d33cceccf0ac1295b2155852258352dcb6e8b3db"
+    },
+    {
+      "file": "scripts/check-team-boundaries.mjs",
+      "sha256NormalizedLf": "1e0433f75bb4b2a79cec3e0a9e2fa6719b3c032cec2c9fbfb0873e8eb30ca387"
+    },
+    {
+      "file": "scripts/deploy/change-plan.test.mjs",
+      "sha256NormalizedLf": "14ed558befc40980b0b10cfd7a6686da258d0f9f58b5bfca567a9b5f7c377916"
+    },
+    {
+      "file": "scripts/deploy/classify-deploy-scope.mjs",
+      "sha256NormalizedLf": "0c1711858e97ee381f929ee28650eb1cf981e7585f16eeb77c64116d5b7ef8c5"
+    },
+    {
+      "file": "scripts/deploy/deploy-plan.test.mjs",
+      "sha256NormalizedLf": "57432cc1900e2b104af4b0c6d19d6218a63863fac3bf71ca63df54f5f5e193e9"
+    },
+    {
+      "file": "scripts/testing/account-boundary-audit-postgres.mjs",
+      "sha256NormalizedLf": "3a30d03ae3e166c40afa1d2342b8b3619d7c7250bbdfda7a7c7aad0b76fdf037"
+    },
+    {
+      "file": "scripts/testing/account-concurrency-postgres.mjs",
+      "sha256NormalizedLf": "9a983c75bc7e3ba1058bd3e37b1171a82a5224b535e8c0cb59e905b21e61f349"
+    },
+    {
+      "file": "scripts/testing/deploy-account-preservation-postgres.mjs",
+      "sha256NormalizedLf": "f659ff8eaeb5e777a5d1560985be6ff8f5175579356eccf39181e2fb7309ca6d"
+    },
+    {
+      "file": "scripts/testing/offline-env.mjs",
+      "sha256NormalizedLf": "44c614f0d0e0ff9bf14fa0c3029d0ce59070e2155ecbf06043241ccf133b07bb"
+    },
+    {
+      "file": "scripts/testing/phase1-postgres.mjs",
+      "sha256NormalizedLf": "bb2082966c133887ecd91f26aaf87ceae2c941311cdd09136fa522e2a5229ef7"
+    },
+    {
+      "file": "scripts/testing/phase2-postgres.mjs",
+      "sha256NormalizedLf": "50024c1cacfe3b96fdeb4755762f69c63f3e717934f3f0f82bb46041b46a8888"
+    },
+    {
+      "file": "scripts/testing/review-fixes-postgres.mjs",
+      "sha256NormalizedLf": "a81c871990d48e1342a0d8ec8b225afcd911172acf0c783bf29548986cc2d4b5"
+    },
+    {
+      "file": "scripts/testing/snapshot-boundary-audit.mjs",
+      "sha256NormalizedLf": "c2314c5d58b470e4f22d001c40b3eff1a94d4a00ac35b4f1e56f71b7b1543a63"
+    },
+    {
+      "file": "scripts/testing/temporary-postgres.mjs",
+      "sha256NormalizedLf": "9e3b22797a62d8a3d3a61a2ac3438d822e525d5782634ba41b98fa8396b7b163"
+    },
+    {
+      "file": "scripts/testing/user-metadata-postgres.mjs",
+      "sha256NormalizedLf": "93e4c1ab46a3de830f845535fa77bcf99be5b20e985491000c54e97403e99909"
+    },
+    {
+      "file": "scripts/verification/account-persistence-boundary.mjs",
+      "sha256NormalizedLf": "5cbc134bd70670ff59a6222ac17b86fe4c97afe79e0d7887db9ccc70f66729e9"
+    },
+    {
+      "file": "scripts/verification/account-persistence-boundary.test.mjs",
+      "sha256NormalizedLf": "e0bfad8a4360ca8442c82be83d9ad214dd7a52c5c9639b8f113460d0cb39c420"
+    },
+    {
+      "file": "scripts/verification/account-persistence-increments.json",
+      "sha256NormalizedLf": "eb6acaa6496e781871e21ca6a99e458762c4b49409743c25bdf12c009ceadc45"
+    },
+    {
+      "file": "scripts/verification/fok-exact-boundaries.mjs",
+      "sha256NormalizedLf": "840d8f5971605bc6bee425214f9731a86d417c7eacdb395d70a69b142e881682"
+    },
+    {
+      "file": "server/backend/core/account/account_service.js",
+      "sha256NormalizedLf": "01ed63377be249198385eb9b0da3bb1a963603faa8358d7a7f5f0e58c8cf0410"
+    },
+    {
+      "file": "server/backend/core/account/account_service_pf_write_guard.test.js",
+      "sha256NormalizedLf": "e8c5e865111abe8d4d64a2983efcbadb41f7ce51a7714dfd7f0dbd83e48df8f4"
+    },
+    {
+      "file": "server/backend/core/account/player_ownership.js",
+      "sha256NormalizedLf": "9b58fe85b9716c72c50a5724d00de6a08669c87bdd0b5e52ff05440b05db1108"
+    },
+    {
+      "file": "server/backend/core/account/user_login_meta.js",
+      "sha256NormalizedLf": "b4ba3c88602d543d202e733a380f8a2b3fcf1d97332ceed974e05c0b275c30d6"
+    },
+    {
+      "file": "server/backend/core/account/user_metadata_contract.test.mjs",
+      "sha256NormalizedLf": "5bcb7bf699788bb463e7f35e8a096218deb6a4924240f84975a28afa5617da46"
+    },
+    {
+      "file": "server/backend/core/account/user_presence.js",
+      "sha256NormalizedLf": "a3fbd3419b2123129132ea416b9131265a7accab26b1185ab3f514996030fa42"
+    },
+    {
+      "file": "server/backend/core/db/store.js",
+      "sha256NormalizedLf": "44bd645199916397b4b571d6021a7edfab9e6a8e3469ae0f502fbf020ad3f7a2"
+    },
+    {
+      "file": "server/backend/core/db/store.matches.test.mjs",
+      "sha256NormalizedLf": "2905331601d1ed085e1d7453efce005bf0e576ec7cabdf8f955f704e922ef6ee"
+    },
+    {
+      "file": "server/backend/core/db/store.settings.test.mjs",
+      "sha256NormalizedLf": "3e31378f3386d0b6261646735b942aaaa871c03932b06db89519d5872dfc343c"
+    },
+    {
+      "file": "server/backend/core/db/user_write_queue.js",
+      "sha256NormalizedLf": "2d8758ec78887077c7af4fe18762a922a9dcac6a2694ba6721feac96439d0a9c"
+    },
+    {
+      "file": "server/backend/core/esport-api/core_contract.test.mjs",
+      "sha256NormalizedLf": "00db413100ec1f2aa83e0ea0cf0ae0df1d4588a2a4e7313ae3c32806ce41ed49"
+    },
+    {
+      "file": "server/backend/core/esport-api/store.js",
+      "sha256NormalizedLf": "076d3b284768542420dadf0ea41d4c4c0f2648f749ba15183a0024ae24481961"
+    },
+    {
+      "file": "server/backend/core/integrations/polymarket/clob_proxy.test.mjs",
+      "sha256NormalizedLf": "2551e781df2ebb249b1cac77859f59466a672470f29d2eb587f5333da4f0a253"
+    },
+    {
+      "file": "server/backend/core/integrations/polymarket/pm_client_handlers.js",
+      "sha256NormalizedLf": "41db1349acb1e5d0345cd6b103afed5b90efc198fe9f48c444022d71b6766257"
+    },
+    {
+      "file": "server/backend/core/integrations/polymarket/pm_client_handlers.test.mjs",
+      "sha256NormalizedLf": "0868f19dbedfb8a5339ba61b26d529977a6dc1b7945191dfe7d2d938c904c2af"
+    },
+    {
+      "file": "server/backend/core/integrations/predictfun/pf_player_account.js",
+      "sha256NormalizedLf": "952793bf0384c3714ed135f0064cac40ad9521a11ee32dd33a93be608393ccf8"
+    },
+    {
+      "file": "server/backend/core/matcher/auth.js",
+      "sha256NormalizedLf": "10d1d7cb3fdf3146a55e9caca17dc31b02481cde151b7dc41c5d799da2863517"
+    },
+    {
+      "file": "server/backend/core/matcher/auth.test.mjs",
+      "sha256NormalizedLf": "1abce3adda7e7155b3cb972d8488722e048ce03262b3a171afdb52756e80ec1c"
+    },
+    {
+      "file": "server/backend/core/matcher/runtime.js",
+      "sha256NormalizedLf": "8345b8583f50a692416345de1b2fe6b97da6922bab7f118e851041fcd6c15105"
+    },
+    {
+      "file": "server/backend/core/shared/matcher_mode.js",
+      "sha256NormalizedLf": "248d3860775d8bb5aa01687c60907dbe6ef8d50d530f52c24abddebe0f1493d0"
+    },
+    {
+      "file": "server/backend/package.json",
+      "sha256NormalizedLf": "177cf86bd5ca11e4a2968624a3865bbaa5ddb469ac56173d6e8fecbcc141d57a"
+    },
+    {
+      "file": "server/backend/scripts/apply-order-observation-schema.mjs",
+      "sha256NormalizedLf": "8ca2ef117668aee92ed4bd387086c2f7bed9d3d08a889a006033b61ca7b17ea8"
+    },
+    {
+      "file": "server/backend/scripts/apply-rds-schema.mjs",
+      "sha256NormalizedLf": "9b4fdc19c0165e0a22be9884abebf145745cd7fc3cd290314bb19d17f1170456"
+    },
+    {
+      "file": "server/backend/scripts/check-rds-schema.mjs",
+      "sha256NormalizedLf": "c6354d892983e3657ee66d8ead323d08220168fdc4d12f68650b3f2056d1dc34"
+    },
+    {
+      "file": "server/backend/scripts/matcher-ui.mjs",
+      "sha256NormalizedLf": "c21fa4b7ed94eef4cf58f2841f2c9ceffdb363a33bc98d34b7bba1f300fd3666"
+    },
+    {
+      "file": "server/backend/scripts/rds-migrations.mjs",
+      "sha256NormalizedLf": "e6abb0418cd49780d016c258cdb0a4132f31f79c4b5d5e1865922b80a16a7ca2"
+    },
+    {
+      "file": "server/backend/scripts/rds-migrations.test.mjs",
+      "sha256NormalizedLf": "407a470b52afb0e5c683dae35e6fa45ef8f6e636e8411f8f2259d51912dc4758"
+    },
+    {
+      "file": "server/backend/scripts/rds-schema-baseline.json",
+      "sha256NormalizedLf": "ba2831431b41547ca7f90c19e71744f9a880ecc9972c5a949028e644b5b65f0f"
+    },
+    {
+      "file": "server/backend/scripts/rds-schema-check.mjs",
+      "sha256NormalizedLf": "4e9f6774e1df2d40425c66c66f2dbabb165a12dadf05555698110a5b88ac4205"
+    },
+    {
+      "file": "server/backend/scripts/rds-schema-check.test.mjs",
+      "sha256NormalizedLf": "d2d82a2bd8bc92ecc0aad68c8c426deaed697b047ff8093f1c7b36de51d0bc97"
+    },
+    {
+      "file": "server/backend/vitest.config.mjs",
+      "sha256NormalizedLf": "07a853cc3af577dfdec55ee92c6a51ead904f86d6070ac5817b945f321b79014"
+    },
+    {
+      "file": "server/db/client_match_snapshot.js",
+      "sha256NormalizedLf": "6b17cee420d52754c27720104fdc1899ab75bedcea0b6fbddf923ab1d385d435"
+    },
+    {
+      "file": "server/db/package.json",
+      "sha256NormalizedLf": "ab5ceccc061f0a414299bb6423b9a8846db8c1e784e8f0850ed6de730f35fcbb"
+    },
+    {
+      "file": "server/db/profile_metadata.js",
+      "sha256NormalizedLf": "8185d6d6cbdd8faa0a3d994c997a434bc14e32b7e41efb102b32baa8b7d5c987"
+    },
+    {
+      "file": "server/db/rds/client_matches_store.js",
+      "sha256NormalizedLf": "8f8fa1a5722f3b731a5e4243d1df8715f59c323140e326cfe5883f6fbe8836c8"
+    },
+    {
+      "file": "server/db/rds/orderModes/gtc/pm_gtc_snapshot_parity.test.mjs",
+      "sha256NormalizedLf": "57ba3ac3c90ce982dc1d711c3c2cb77d27df5c150f517a7c07e8fbf5c13995ce"
+    },
+    {
+      "file": "server/db/rds/player_store.js",
+      "sha256NormalizedLf": "9f2a5ba84c62c360ab60c9c7b8f6c6fed28598e50017ac338b5bb1a3da276721"
+    },
+    {
+      "file": "server/db/rds/player_store.test.mjs",
+      "sha256NormalizedLf": "97f69652d94a0e774a26b68b02d8304dff9485c9f869a2f5b50932580997020c"
+    },
+    {
+      "file": "server/db/rds/profile_store.js",
+      "sha256NormalizedLf": "b3fa94f222db2fcf2c980128a85f81e22f5f5141db3b4fe5227bf84c3a708824"
+    },
+    {
+      "file": "server/db/rds/profile_store.test.mjs",
+      "sha256NormalizedLf": "561ba780d966d94fb5b1eab793a24c11e74656dda1b0cdce95dd6ceaa673f199"
+    },
+    {
+      "file": "server/db/versioned_snapshot_cache.js",
+      "sha256NormalizedLf": "779e038b633c796407ca5b30b45b69ba3ba417c969332a97367e85acbbb8c78c"
+    },
+    {
+      "file": "server/db/versioned_snapshot_cache.test.mjs",
+      "sha256NormalizedLf": "ace213ab76327145373b55eb595cc4a862ef6fdeecb3c10368977d074c70fcb3"
+    },
+    {
+      "file": "server/db/vitest.config.mjs",
+      "sha256NormalizedLf": "e4b74ea650a2f015ad38bedf9dbbf40d3f6b9cefcc226821ea6223fdbdc81851"
+    },
+    {
+      "file": "server/match/matcher/README.md",
+      "sha256NormalizedLf": "bef09cf60aa01aee2e64b9f03e1bcf611e893572365e6a2c5231d18c2a01ddcd"
+    },
+    {
+      "file": "server/match/matcher/compose/io/snapshot.js",
+      "sha256NormalizedLf": "3248c194460e60ebb6513b4e59633aaf807a3cf7e016a21669c618273ff4cdad"
+    },
+    {
+      "file": "server/match/matcher/compose/io/snapshot.test.mjs",
+      "sha256NormalizedLf": "91a6ec5066dfdab7ef57148d2fc81255d0078e01faa8f723fef85d93eb836a1c"
+    },
+    {
+      "file": "server/match/matcher/compose/io/write.js",
+      "sha256NormalizedLf": "009317d08972ed48941a7737c1f8489f55373f7df036ca7c750783d4b92e7543"
+    },
+    {
+      "file": "server/match/matcher/lib/auth_config.js",
+      "sha256NormalizedLf": "49d95b48a24d48923c16fe3885d55a04c9b80f45252dfa584c4d0648692a102b"
+    },
+    {
+      "file": "server/match/matcher/lib/config.js",
+      "sha256NormalizedLf": "97283d5295ad5c30b0e17ab773f1fa404cb0461fb3ab46b7a10c3312c2f0f7dc"
+    },
+    {
+      "file": "server/match/matcher/lib/heartbeat.js",
+      "sha256NormalizedLf": "44d22c658b6ede9fb43cd0f627796bed1f5f17792c0d2a740575c7e86b0eae22"
+    },
+    {
+      "file": "server/match/matcher/lib/heartbeat.test.mjs",
+      "sha256NormalizedLf": "c3a0729792009c7ac3ab4ada98b4ca885dd97fd2f7d15a9d03a6432f90fc9536"
+    },
+    {
+      "file": "server/match/matcher/link/index.js",
+      "sha256NormalizedLf": "8633b81f0f78f7be1b17463213891fae95fb76a83040aaacbcdbb4841b08651f"
+    },
+    {
+      "file": "server/match/matcher/ops/delete_client_match.js",
+      "sha256NormalizedLf": "3d3fcd1355bde3ab9894544279cc9618cf430fac5865070a47189eccda854637"
+    },
+    {
+      "file": "server/match/matcher/ops/match_merge_once.js",
+      "sha256NormalizedLf": "7dfbd6c540f8e27118459b272c3c0bde386a93c39d330654409467561d744ffe"
+    },
+    {
+      "file": "server/match/matcher/ops/merge_client_matches.js",
+      "sha256NormalizedLf": "c3e5db3276434a9c5aa00f68c696b685d021816e077995a64edc1e4952f8efe9"
+    },
+    {
+      "file": "server/match/matcher/ops/rds_snapshot_cache.js",
+      "sha256NormalizedLf": "44d892fd38eb98c3a0f24c3b0291ed2141d68fc17c0a78bcadfc9fa416774af3"
+    },
+    {
+      "file": "server/match/matcher/package.json",
+      "sha256NormalizedLf": "e08b3cbb4610c37b8331178346a3da0f054d779e921ceb18b96f90606b93db10"
+    },
+    {
+      "file": "server/match/matcher/runtime_ports.js",
+      "sha256NormalizedLf": "c1cecb3f76cddf4d2db2dce74976f88197879c42d6c0714674fcf845763ff207"
+    },
+    {
+      "file": "server/match/matcher/runtime_ports.test.mjs",
+      "sha256NormalizedLf": "24a058ebff7dfa0c5fa2443b58764a8ccfb16e74edec37b4fb400aedc9f3e74c"
+    },
+    {
+      "file": "server/match/matcher/ui/matcher_auth.js",
+      "sha256NormalizedLf": "3853982410fcf455aa3a46212232eaa4e54a9642e0b103ee48ebb4cc2f52ae21"
+    },
+    {
+      "file": "server/match/matcher/ui/matcher_auth.test.mjs",
+      "sha256NormalizedLf": "73dd9dbc7677404c1174cbe3003aa76be725892ef21660c566429a2283c8b16f"
+    },
+    {
+      "file": "server/match/matcher/ui/matcher_process.js",
+      "sha256NormalizedLf": "9ae3de0744cd73bba3e4f7ebfed2d913a31c0a22fb480764dce53f5bc60d2fe5"
+    },
+    {
+      "file": "server/match/resolver/README.md",
+      "sha256NormalizedLf": "c6cb4c8ce35689776249c840e7e362885355c76f9b98d340ee7fb5d34f726aec"
+    },
+    {
+      "file": "server/match/resolver/package.json",
+      "sha256NormalizedLf": "61da5aa63a8a2db83619486d5a9541a775dccc9f6372b1495a0f8872e329aad4"
+    },
+    {
+      "file": "server/match/resolver/resolver.offline.test.mjs",
+      "sha256NormalizedLf": "29ffe35b8fd74347fc04e8cad1d067931d1da3bb310b19cd04267b8517fa2a48"
+    },
+    {
+      "file": "turbo.json",
+      "sha256NormalizedLf": "256d8a878c384eb59f9c70d1c421989c4c95f66d9ae0951bcadb87a2ac01f380"
+    }
+  ],
+  "totalFilesIncludingManifest": 115,
+  "manifestFile": "docs/audits/2026-10-15-decoupling-round1/release-candidate.json",
+  "productionDatabaseAccess": false,
+  "productionReleaseConfirmed": false
+}

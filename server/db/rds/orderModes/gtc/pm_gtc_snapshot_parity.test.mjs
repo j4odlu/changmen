@@ -13,7 +13,7 @@ import * as nativeOrders from "../../native_orders.js";
 // [changmen 扩展] 本阶段之前的 mutatePmGtc 与此固定提交相同；不重录旧保护基线。
 const path = "server/db/rds/orderModes/gtc/pm_gtc_store.js";
 const before = execFileSync("git", ["show", `e901bb596952256284cd8a9eb8b73b572c963915:${path}`], { encoding: "utf8" });
-const after = fs.readFileSync(path, "utf8");
+const after = fs.readFileSync(new URL("./pm_gtc_store.js", import.meta.url), "utf8");
 const compatibleBefore = execFileSync("git", ["show", `3465fe5d3089e3935778e3e8eb4f8dd9709aa36d:${path}`], { encoding: "utf8" });
 const json = value => JSON.parse(JSON.stringify(value));
 

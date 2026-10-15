@@ -1,0 +1,179 @@
+{
+  "checkedAt": "2026-10-15T06:03:55.361Z",
+  "head": "1f9ca758959a24d947439bc42be6ae2ce5c3661e",
+  "localOnly": true,
+  "deployed": false,
+  "productionDatabaseAccess": false,
+  "realBetting": false,
+  "resolvedFindings": [
+    "S1",
+    "S2",
+    "S3"
+  ],
+  "unresolvedFindingsFromSecondAudit": [],
+  "testFirst": {
+    "command": "npm run test:account-concurrency:postgres",
+    "before": {
+      "tests": 3,
+      "failed": 3,
+      "log": "output/account-concurrency-before.log"
+    }
+  },
+  "postgres": {
+    "accountConcurrency": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 7,
+      "cases": [
+        "S1: delayed balance metadata sync cannot overwrite newer Client_UpdateBalance",
+        "S1/PF: late ledger publication keeps the latest amount and settled profit",
+        "S2: recharge and account patch both commit without profile/FK deadlock",
+        "S2/reverse: recharge waits before locking players when ACCOUNT already owns the profile",
+        "S2/atomicity: concurrent recharges add once each; a failed log insert rolls back the amount",
+        "S2/create: full replacement keeps the profile lock and cannot prune a concurrent new account",
+        "S3: delayed committed snapshot cannot resurrect a deleted account in cache"
+      ]
+    },
+    "phase1": {
+      "passed": true,
+      "localOnly": true,
+      "postgres": "18.6",
+      "checks": 12,
+      "cases": [
+        "fresh schema includes every numbered migration and both collector fields",
+        "upgrade a legacy schema without 034/039 or migration records",
+        "concurrent migration runs execute a pending migration once",
+        "migration failure rolls back DDL and leaves no success record",
+        "prune failure rolls back earlier account updates and keeps the cache",
+        "write failure cannot report a successful save or prune another account",
+        "empty overwrite and foreign player remain rejected",
+        "successful A8 ACCOUNT save commits updates and prune together",
+        "an incomplete account UPDATE rolls back the whole replacement",
+        "database owner lock serializes concurrent replacement snapshots",
+        "missing profile persistence fails without publishing a configuration cache",
+        "a failed configuration write cannot undo or contaminate the next successful write"
+      ]
+    },
+    "phase2": {
+      "passed": true,
+      "localOnly": true,
+      "postgres": "18.6",
+      "checks": 12,
+      "cases": [
+        "confirmed empty list shares the same version across backend and standalone matcher",
+        "one-statement rows and version retain native bigint strings and full matcher fields",
+        "same-count and same-builtAt manual reversal invalidates the shared snapshot",
+        "PM update below the global maximum timestamp still refreshes both consumers",
+        "embedded matcher uses the same PM and identity rows as standalone",
+        "successful writer publishes once after commit and preserves independently updated PM fields",
+        "write rollback neither publishes nor patches collector links",
+        "sticky ended row cannot return through composer publication",
+        "composer identity and align share full lifecycle rows including ended and PM fields",
+        "deletion down to empty clears backend and matcher caches",
+        "a fresh process reloads the same committed snapshot without backend hydration",
+        "assembled matcher HTTP API rejects unauthenticated local requests"
+      ]
+    },
+    "previousReview": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 12,
+      "cases": [
+        "default batch rolls back all existing rows when one requested row is missing",
+        "A8 full ACCOUNT save preserves the newer confirmed balance and still accepts changed config",
+        "unchanged ACCOUNT still validates ownership but avoids a redundant player UPDATE",
+        "concurrent partial edits read current rows inside the lock and preserve both updates",
+        "legacy DB partial-patch entry also serializes concurrent changes to the same record",
+        "concurrent actual sport-account requests preserve each credential and the esport token",
+        "failed partial edit rolls back, keeps the cache, and does not poison the next edit",
+        "a partial edit never UPDATEs unrelated player rows",
+        "older profile read finishes before a queued commit and cannot erase its fields",
+        "cold list outage fails instead of returning successful empty, then recovers to confirmed empty",
+        "empty and foreign ACCOUNT saves remain rejected; explicit removal still prunes",
+        "partial PF edit publishes SQL-protected balance instead of an uncommitted planned balance"
+      ]
+    },
+    "totalPassed": 43
+  },
+  "rootTest": {
+    "command": "npm test -- --force",
+    "tasksPassed": 14,
+    "cached": 0,
+    "summaries": [
+      "@changmen/team-resolver:test:       Tests  6 passed | 1 expected fail (7)",
+      "@changmen/db:test:       Tests  359 passed (359)",
+      "@changmen/backend:test:       Tests  705 passed | 16 skipped (721)",
+      "@changmen/matcher:test:       Tests  188 passed (188)",
+      "@changmen/web:test:       Tests  3938 passed | 1 skipped (3939)"
+    ],
+    "log": "output/account-concurrency-all-tests-local.log"
+  },
+  "frontendTypecheck": "passed (vue-tsc -b)",
+  "backendRouterCompile": "passed",
+  "fok": [
+    {
+      "baseline": "219535c8",
+      "unifiedContract": {
+        "completeCapabilityContracts": 4,
+        "precisePublicModules": 11
+      },
+      "exactCoreFiles": 40,
+      "pmFunctionBodies": 29,
+      "manualFokBodyIdentical": true
+    },
+    {
+      "baseline": "219535c8",
+      "orderStoreBodyIdentical": true,
+      "functionsIdenticalUnderFokInputs": 49
+    },
+    {
+      "passed": true,
+      "comparisons": 180,
+      "historicalDifferences": 108,
+      "confirmationFaultCases": 20,
+      "originalGateCases": 45,
+      "fullReleaseAccepted": false
+    },
+    {
+      "independentGtcModuleFiles": 51,
+      "noFokPrivateImports": true,
+      "noFokActionHooks": true,
+      "sharedAccountGateway": true,
+      "modeSpecificPreparation": true
+    }
+  ],
+  "diffCheck": "passed: git -c core.whitespace=cr-at-eol diff --check (preserves existing CRLF files)",
+  "manualReview": [
+    "All five queued account read/write publication paths use a shared in-flight deletion fence; synchronous normalization only uses current cache.",
+    "Fence covers deletion on empty cache and multiple deleted IDs, releases on success or failure, and permits a later authoritative same-ID result.",
+    "Balance helpers preserve locked canonical balances and keep PF settled PNL independent; returned balances use synchronized records.",
+    "Recharge acquires profile KEY SHARE before player FOR UPDATE and money_logs FK; full ACCOUNT retains its strong profile lock.",
+    "Failed recharge log insertion rolls back both balance and log; queued account errors preserve cache and allow later operations.",
+    "Matcher cache/version/invalidation, empty-list behavior, PM fields and ended lifecycle rechecked through the existing PostgreSQL suite."
+  ],
+  "a8Evidence": {
+    "trackedFrontendAndExtensionDiff": [],
+    "referenceBundleSha256": "33b8a5e586f55564ac5483c723cc613b144726985daaa45c936d90fa038c4279",
+    "protectedUnchanged": [
+      "server/backend/server.js",
+      "server/db/index.js",
+      "server/db/impl_rds.js",
+      "deploy",
+      "packages/venue-adapter/esport-freeze.json"
+    ],
+    "clientCallOrderAndTimingEdited": false,
+    "requestSuppressionAdded": false,
+    "protectionRulesEdited": false
+  },
+  "validationIssueResolved": {
+    "description": "Existing default clob_proxy public GET /time test attempted an external public read and failed TLS. Replaced with a local response fixture and explicit transport assertions; full suite rerun passed.",
+    "initialFailureLog": "output/account-concurrency-all-tests.log",
+    "productionRdsAccess": false
+  },
+  "limits": [
+    "No production deployment or production RDS validation",
+    "No authenticated live-venue E2E or real betting",
+    "Existing backend 16 skips, frontend 1 skip and resolver 1 expected fail retained",
+    "Local regression coverage does not establish absence of all defects"
+  ]
+}

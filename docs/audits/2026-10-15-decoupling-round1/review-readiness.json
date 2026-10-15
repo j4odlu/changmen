@@ -1,0 +1,115 @@
+{
+  "checkedAt": "2026-10-15T11:20:04.311Z",
+  "head": "1f9ca758959a24d947439bc42be6ae2ce5c3661e",
+  "branch": "master",
+  "sourceMatchesPriorValidation": true,
+  "files": [
+    {
+      "file": "package.json",
+      "unchanged": true
+    },
+    {
+      "file": "server/backend/package.json",
+      "unchanged": true
+    },
+    {
+      "file": "server/backend/core/account/user_login_meta.js",
+      "unchanged": true
+    },
+    {
+      "file": "server/backend/core/account/user_presence.js",
+      "unchanged": true
+    },
+    {
+      "file": "server/backend/core/account/user_metadata_contract.test.mjs",
+      "unchanged": true
+    },
+    {
+      "file": "server/backend/core/esport-api/core_contract.test.mjs",
+      "unchanged": true
+    },
+    {
+      "file": "server/db/package.json",
+      "unchanged": true
+    },
+    {
+      "file": "server/db/profile_metadata.js",
+      "unchanged": true
+    },
+    {
+      "file": "server/db/rds/profile_store.js",
+      "unchanged": true
+    },
+    {
+      "file": "scripts/testing/user-metadata-postgres.mjs",
+      "unchanged": true
+    }
+  ],
+  "round1OnlyCandidateTree": "81f9c85d0fefe2128ed4233aee76c113622aee4e",
+  "missingDependencies": [
+    {
+      "from": "package.json",
+      "target": "scripts/testing/phase1-postgres.mjs"
+    },
+    {
+      "from": "package.json",
+      "target": "scripts/testing/phase2-postgres.mjs"
+    },
+    {
+      "from": "package.json",
+      "target": "scripts/testing/review-fixes-postgres.mjs"
+    },
+    {
+      "from": "package.json",
+      "target": "scripts/testing/account-concurrency-postgres.mjs"
+    },
+    {
+      "from": "package.json",
+      "target": "scripts/testing/deploy-account-preservation-postgres.mjs"
+    },
+    {
+      "from": "server/backend/package.json",
+      "target": "scripts/testing/offline-env.mjs"
+    },
+    {
+      "from": "server/backend/package.json",
+      "target": "server/backend/scripts/check-rds-schema.mjs"
+    },
+    {
+      "from": "server/backend/package.json",
+      "target": "server/backend/scripts/rds-migrations.test.mjs"
+    },
+    {
+      "from": "server/backend/package.json",
+      "target": "server/backend/scripts/rds-schema-check.test.mjs"
+    },
+    {
+      "from": "server/db/package.json",
+      "target": "server/db/client_match_snapshot.js"
+    },
+    {
+      "from": "scripts/testing/user-metadata-postgres.mjs",
+      "target": "scripts/testing/temporary-postgres.mjs"
+    }
+  ],
+  "missingTestIsolationConfig": [
+    "server/backend/vitest.config.mjs",
+    "server/db/vitest.config.mjs"
+  ],
+  "priorScopeCodeDrift": [
+    "server/db/rds/profile_store.js",
+    "package.json",
+    "server/backend/package.json",
+    "server/db/package.json"
+  ],
+  "actualIndexUnchanged": true,
+  "commitReady": false,
+  "pushReady": false,
+  "deployReady": false,
+  "reason": "Round-1 whole-file candidate omits pending prerequisite changes; combined exact candidate has not been isolated and validated.",
+  "reviewTests": {
+    "httpAndMetadataPassed": 42,
+    "temporaryPostgresPassed": 7
+  },
+  "newRuntimeDefectsFound": []
+}

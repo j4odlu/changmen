@@ -52,6 +52,11 @@ const accounts = [{
 vi.mock("../../esport-api/store.js", () => ({
   default: {
     getAccountsForUser: () => accounts,
+    updateAccountForUser: vi.fn(async (_uid, id, updates) => {
+      const row = accounts.find(row => row.accountId === id);
+      Object.assign(row, updates);
+      return row;
+    }),
     setAccountsForUser: vi.fn((_uid, list) => {
       accounts.splice(0, accounts.length, ...list);
     }),
@@ -258,6 +263,17 @@ describe("pm_client_handlers", () => {
     expect(res.ok).toBe(true);
     expect(res.info).toMatchObject({ balance: 12.5, currency: "USDT" });
     expect(updatePlayerBalance).toHaveBeenCalledWith(47, 12.5, "user-1");
+  });
+
+  test("Pm_RefreshBalance returns the current synchronized amount instead of replaying its earlier sample", async () => {
+    const store = (await import("../../esport-api/store.js")).default;
+    store.updateAccountForUser.mockResolvedValueOnce({ ...accounts[0], balance: 30, totalProfit: 20, currency: "USDT" });
+    const result = await handleRefreshPmBalance({ playerId: 47 }, "user-1");
+    expect(result.info).toMatchObject({ balance: 30, totalProfit: 20 });
+    expect(store.updateAccountForUser).toHaveBeenCalledWith("user-1", 47,
+      expect.objectContaining({ balance: 12.5 }), { preserveBalance: true });
+    store.updateAccountForUser.mockResolvedValueOnce(null);
+    expect((await handleRefreshPmBalance({ playerId: 47 }, "user-1")).ok).toBe(false);
   });
 
   test("Pm_RefreshBalance 拒绝非 PM 账号", async () => {

@@ -120,10 +120,11 @@ async function handleDeletePlayer(body, userId) {
   if (!owned.ok)
     return owned;
   const ok = await accountStore.deletePlayer(playerId, body.description || "", userId);
-  if (ok)
+  if (ok) {
+    if (userId)
+      store.removeAccountForUser(userId, playerId);
     await accountStore.deletePlayerData(playerId, userId);
-  if (userId)
-    store.removeAccountForUser(userId, playerId);
+  }
   return ok ? { ok: true, info: true } : { ok: false, msg: "player 不存在" };
 }
 
@@ -257,7 +258,7 @@ function enrichAccountRowFromPlayer(row) {
 }
 
 /** [A8 可证实] accountId = CreateTagPlatform 返回的 playerId，禁止客户端自增 */
-async function validateAccountRows(accounts, userId) {
+async function validateAccountRows(accounts, userId, snapshotRows) {
   if (!Array.isArray(accounts))
     return { ok: false, msg: "ACCOUNT 必须是数组" };
   const seen = new Set();
@@ -274,27 +275,25 @@ async function validateAccountRows(accounts, userId) {
   }
   if (!ids.length)
     return { ok: true };
-  return assertPlayersOwnedByUser(ids, userId);
+  return assertPlayersOwnedByUser(ids, userId, snapshotRows);
 }
 
-async function handleSaveAccounts(accounts, userId) {
-  let existing;
-  try {
-    existing = await dbStore.prepareAccountsForSave(userId);
+class AccountSaveRejected extends Error {
+  constructor(result) {
+    super(result.msg);
+    this.result = result;
   }
-  catch (err) {
-    // RDS 读失败：绝不能用"空 existing"去合并/prune（会丢服务端字段、误软删账号）→ 中止保存
-    console.error("[account] prepareAccountsForSave 读失败，已中止保存以防误删账号:", err?.message);
-    return { ok: false, msg: "账号读取失败，请稍后重试（已阻止覆盖）" };
-  }
+}
+
+async function prepareAccountSave(accounts, userId, { existing, players }) {
   if (Array.isArray(accounts) && accounts.length === 0 && existing.length > 0) {
-    return { ok: false, msg: "禁止用空列表覆盖已有账号，请刷新页面后重试" };
+    throw new AccountSaveRejected({ ok: false, msg: "禁止用空列表覆盖已有账号，请刷新页面后重试" });
   }
-  const checked = await validateAccountRows(accounts, userId);
+  const checked = await validateAccountRows(accounts, userId, players);
   if (!checked.ok)
-    return checked;
+    throw new AccountSaveRejected(checked);
   const existingById = new Map(
-    store.getAccountsForUser(userId).map(a => [Number(a.accountId ?? a.AccountId), a]),
+    existing.map(a => [Number(a.accountId ?? a.AccountId), a]),
   );
   // players 平台身份（含 provider）不可由客户端 ACCOUNT 覆盖
   const playerById = new Map(
@@ -315,6 +314,13 @@ async function handleSaveAccounts(accounts, userId) {
     else if (prev?.provider)
       locked.provider = prev.provider;
     const withSport = preserveSportObOnAccountSave(locked, prev);
+    // [changmen 扩展] ACCOUNT config saves cannot replace a newer Client_UpdateBalance result.
+    if (player && !isPredictFunPlayerRow(player)) {
+      withSport.balance = Number(player.totalBalance) || 0;
+      if (Object.hasOwn(withSport, "totalBalance")) withSport.totalBalance = withSport.balance;
+      if (Object.hasOwn(withSport, "Balance")) withSport.Balance = withSport.balance;
+      if (Object.hasOwn(withSport, "TotalBalance")) withSport.TotalBalance = withSport.balance;
+    }
     if (isPredictFunPlayerRow(player || prev || withSport)) {
       withSport.provider = "PredictFun";
       // PF 余额真相在 players.total_balance（debit/credit/充值）；
@@ -334,18 +340,21 @@ async function handleSaveAccounts(accounts, userId) {
   });
   const dto = enforcePolymarketPersistDto(normalized);
   if (!dto.ok)
-    return dto;
+    throw new AccountSaveRejected(dto);
+  return normalized;
+}
+
+async function handleSaveAccounts(accounts, userId) {
   try {
-    await store.setAccountsForUser(userId, normalized);
+    await dbStore.saveAccountsTransactionForUser(userId, Array.isArray(accounts) ? accounts : [],
+      snapshot => prepareAccountSave(accounts, userId, snapshot));
   }
   catch (err) {
+    if (err instanceof AccountSaveRejected)
+      return err.result;
     if (err instanceof VenueAccountKeyConflictError || isVenueAccountKeyUniqueViolation(err))
       return { ok: false, msg: err.message || "该场馆操盘账号已被其他用户使用" };
     throw err;
-  }
-  const keepIds = normalized.map(r => Number(r?.accountId ?? r?.AccountId)).filter(Boolean);
-  if (keepIds.length > 0) {
-    await accountStore.prunePlayersNotInList(userId, keepIds);
   }
   return { ok: true, info: true };
 }
@@ -392,60 +401,53 @@ async function handleSaveSportAccount(body, userId) {
   const parsed = parseSaveSportAccountRows(body);
   if (!parsed.ok)
     return parsed;
-  try {
-    await dbStore.loadAccountsForUser(userId);
-  }
-  catch (err) {
-    console.error("[account] SaveSportAccount 读失败:", err?.message);
-    return { ok: false, msg: "账号读取失败，请稍后重试" };
-  }
   const ids = parsed.rows.map(row => row.accountId);
-  const owned = await assertPlayersOwnedByUser(ids, userId);
-  if (!owned.ok)
-    return owned;
-  const list = (store.getAccountsForUser(userId) || []).map(row => (
-    row && typeof row === "object" ? { ...row } : row
-  ));
-  const byId = new Map(list.map(row => [Number(row?.accountId ?? row?.AccountId), row]));
-  for (const patch of parsed.rows) {
-    const current = byId.get(patch.accountId);
-    if (!current)
-      return { ok: false, msg: `账号 ${patch.accountId} 不存在` };
-    if (String(current.provider || "").trim().toUpperCase() !== "OB")
-      return { ok: false, msg: "仅 OB 账号可保存体育 token" };
-    if (patch.clear) {
-      delete current.sportOb;
-      continue;
-    }
-    const token = String(patch.token || "").trim();
-    const gateway = String(patch.gateway || "").trim();
-    const venueMemberId = String(patch.venueMemberId || "").trim();
-    const venueAccountName = String(patch.venueAccountName || "").trim();
-    if (!isObSportBetToken(token))
-      return { ok: false, msg: "体育 token 格式无效" };
-    if (!/^\d{18,}$/.test(venueMemberId))
-      return { ok: false, msg: "体育账号 UID 无效" };
-    const bindingError = validateSportObMemberBinding(current, { venueAccountName });
-    if (bindingError)
-      return { ok: false, msg: bindingError };
-    try {
-      const url = new URL(gateway);
-      if (!/^https?:$/.test(url.protocol))
-        return { ok: false, msg: "体育网关无效" };
-    }
-    catch {
-      return { ok: false, msg: "体育网关无效" };
-    }
-    const merged = mergeSportObPatch(current.sportOb, patch);
-    if (merged)
-      current.sportOb = merged;
-    else
-      delete current.sportOb;
-  }
   try {
-    await store.setAccountsForUser(userId, list);
+    await dbStore.mutateAccountsForUser(userId, ids, async ({ existing, players }) => {
+      const owned = await assertPlayersOwnedByUser(ids, userId, players);
+      if (!owned.ok) throw new AccountSaveRejected(owned);
+      const list = existing.map(row => ({ ...row }));
+      const byId = new Map(list.map(row => [Number(row?.accountId ?? row?.AccountId), row]));
+      for (const patch of parsed.rows) {
+        const current = byId.get(patch.accountId);
+        if (!current)
+          throw new AccountSaveRejected({ ok: false, msg: `账号 ${patch.accountId} 不存在` });
+        if (String(current.provider || "").trim().toUpperCase() !== "OB")
+          throw new AccountSaveRejected({ ok: false, msg: "仅 OB 账号可保存体育 token" });
+        if (patch.clear) {
+          delete current.sportOb;
+          continue;
+        }
+        const token = String(patch.token || "").trim();
+        const gateway = String(patch.gateway || "").trim();
+        const venueMemberId = String(patch.venueMemberId || "").trim();
+        const venueAccountName = String(patch.venueAccountName || "").trim();
+        if (!isObSportBetToken(token))
+          throw new AccountSaveRejected({ ok: false, msg: "体育 token 格式无效" });
+        if (!/^\d{18,}$/.test(venueMemberId))
+          throw new AccountSaveRejected({ ok: false, msg: "体育账号 UID 无效" });
+        const bindingError = validateSportObMemberBinding(current, { venueAccountName });
+        if (bindingError)
+          throw new AccountSaveRejected({ ok: false, msg: bindingError });
+        try {
+          const url = new URL(gateway);
+          if (!/^https?:$/.test(url.protocol))
+            throw new AccountSaveRejected({ ok: false, msg: "体育网关无效" });
+        }
+        catch {
+          throw new AccountSaveRejected({ ok: false, msg: "体育网关无效" });
+        }
+        const merged = mergeSportObPatch(current.sportOb, patch);
+        if (merged)
+          current.sportOb = merged;
+        else
+          delete current.sportOb;
+      }
+      return list;
+    });
   }
   catch (err) {
+    if (err instanceof AccountSaveRejected) return err.result;
     if (err instanceof VenueAccountKeyConflictError || isVenueAccountKeyUniqueViolation(err))
       return { ok: false, msg: err.message || "该场馆操盘账号已被其他用户使用" };
     throw err;
@@ -604,14 +606,13 @@ async function handleRebindOrderLink(body, userId) {
   };
 }
 
-function syncAccountRowInKv(accountId, updates, userId) {
-  const list = userId ? store.getAccountsForUser(userId) : accountStore.getAccountsFromKv();
+async function syncAccountRowInKv(accountId, updates, userId) {
+  if (userId) return store.updateAccountForUser(userId, accountId, updates, { preserveBalance: true });
+  const list = (userId ? store.getAccountsForUser(userId) : accountStore.getAccountsFromKv()).map(row => ({ ...row }));
   const idx = list.findIndex(row => String(row.accountId) === String(accountId));
   if (idx < 0)
     return null;
   list[idx] = { ...list[idx], ...updates, updateTime: Date.now() };
-  if (userId)
-    store.setAccountsForUser(userId, list);
   return list[idx];
 }
 
@@ -632,12 +633,12 @@ async function handleRefreshAccountBalance(body, userId) {
   if (result.balance != null) {
     const balance = Number(result.balance.balance) || 0;
     const credit = Number(row.credit) || 0;
-    const synced = syncAccountRowInKv(playerId, {
+    const synced = await syncAccountRowInKv(playerId, {
       balance,
       currency: result.balance.currency || row.currency || "CNY",
       totalProfit: balance - credit,
     }, userId);
-    return { ok: true, info: { ...synced, balance } };
+    return synced ? { ok: true, info: synced } : { ok: false, msg: "account 不存在" };
   }
   return { ok: true, info: { ...row, balance: undefined } };
 }

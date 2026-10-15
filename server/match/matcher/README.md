@@ -20,7 +20,7 @@ matchMerge 循环**内嵌在 `changmen-esport`**（`npm run web` / PM2 `changmen
 | 入口 | 命令 | 端口 | 作用 |
 |------|------|------|------|
 | **内嵌合并循环** | `npm run web`（backend 启动时自动） | 无独立端口 | 每 30s（`MATCHER_INTERVAL_MS`）matchMerge + 每小时 client_matches archive |
-| **人工 UI** | `npm run matcher:ui` → `ui/server.js` | `4567`（`MATCHER_UI_PORT`） | 拖线关联、画布；**非生产必需** |
+| **人工 UI** | `npm run matcher:ui` → backend `scripts/matcher-ui.mjs` → `ui/server.js` | `4567`（`MATCHER_UI_PORT`） | 装配鉴权及采集端口后启动；**非生产必需** |
 | **主站桥接** | 随 `npm run web` | 同源 `/matcher/`、`/matcher/api/*` | backend `http_bridge.js` 把 API 转给 matcher Express |
 | **对照页** | `npm run composer:ui` → `ui/compare/server.js` | `4568`（`COMPOSER_UI_PORT`） | 左 RDS `client_matches` / 右 `fromVenuesOnly` 模拟；**禁止写库** |
 | **独立合场循环** | `npm run composer:start` → `compose/loop.js` | 无 | 默认 dry-run，WRITE 会被互斥守卫拒绝 |
@@ -51,6 +51,13 @@ platform_matches / bets / timers / client_matches / overrides
 - `server/match/identity`（`@changmen/match-identity`）— 队名、时间窗与 client_match ID 共享工具
 - `server/db` — 读写 `platform_matches` / `client_matches` 等（`@changmen/db`）
 - `server/match/resolver`（`@changmen/team-resolver`）— 可选队名 canonical 插件
+
+matcher 源码不导入 backend。backend 经 `runtime_ports.js` 注入采集热快照、提交发布、人工结束缓存移除及鉴权；缺少宿主鉴权时拒绝访问。
+独立 compose 只使用 DB，不会为读取或写后通知隐式加载 backend store。
+
+backend 列表与 matcher 面板共用 DB 包的活跃列表快照缓存。行与版本在同一 SQL 语句中读取，版本覆盖人工修改及 PM 附加状态；失效会阻止在途旧读取发布。
+合场的身份和 align 则复用一次含 ended 行的完整生命周期快照，保留 gb 锁与 PM 状态。
+这些内部快照字段不进入 `Client_*` 线协议。
 
 环境变量：与 backend 共用 `server/backend/.env`（或本目录 `.env`）。`CHANGMEN_DB_SCRIPT` 与 backend 保持一致（兼容 `GAMEBET_DB_SCRIPT`）。
 

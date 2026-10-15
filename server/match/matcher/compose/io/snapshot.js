@@ -2,7 +2,7 @@
  * 读取合场输入快照；挂 team plugin；可选 autoRegister。
  *
  * clientRows = 全量（含 home_gb / pm_sport），供 sticky + ended
- * alignClientRows = 瘦行（ForAlign），供挂靠索引；若取不到则回落全量
+ * alignClientRows 与 clientRows 来自同一次含 ended 的版本化读取。
  */
 import * as db from "@changmen/db";
 import { setTeamPlugin } from "@changmen/match-identity/teams/team_key.js";
@@ -108,6 +108,7 @@ export async function loadSnapshot({ registerTeams = true } = {}) {
   let clientRows = [];
   /** @type {object[]} align 挂靠专用（可等于 clientRows） */
   let alignClientRows = [];
+  let clientMatchSnapshotVersion = null;
   let teamReg = null;
   let nameSync = null;
 
@@ -115,22 +116,12 @@ export async function loadSnapshot({ registerTeams = true } = {}) {
     matchesRaw = (await db.fetchPlatformMatches()) || {};
     bets = (await db.fetchPlatformBets()) || {};
     timers = (await db.fetchLiveTimers()) || {};
-    clientRows = typeof db.fetchClientMatchesAll === "function"
-      ? (await db.fetchClientMatchesAll()) || []
-      : (await db.fetchClientMatches()) || [];
-    alignClientRows = typeof db.fetchClientMatchesForAlign === "function"
-      ? (await db.fetchClientMatchesForAlign()) || []
-      : [];
-    // 双向回落：瘦行空 ← 全量；全量空 ← 瘦行（并打日志，sticky/pm_sport 会退化）
-    if (!alignClientRows.length && clientRows.length)
-      alignClientRows = clientRows;
-    if (!clientRows.length && alignClientRows.length) {
-      console.warn(
-        "[match-composer] fetchClientMatchesAll 空但 ForAlign 有数据；"
-        + "sticky/pm_sport 将退化，请检查全量查询",
-      );
-      clientRows = alignClientRows;
-    }
+    const lifecycleSnapshot = await db.fetchClientMatchesAll({ snapshot: true });
+    if (!lifecycleSnapshot)
+      throw new Error("client_matches lifecycle snapshot unavailable; abort compose");
+    clientRows = lifecycleSnapshot.rows;
+    alignClientRows = clientRows;
+    clientMatchSnapshotVersion = lifecycleSnapshot.version;
   }
 
   const platformBindingsByClientId = db.isMatcherStoreReady()
@@ -173,6 +164,8 @@ export async function loadSnapshot({ registerTeams = true } = {}) {
     timers,
     clientRows,
     alignClientRows,
+    clientMatchSnapshotVersion,
+    clientMatchSnapshotScope: "all",
     platformOverrides,
     platformBindingsByClientId,
     teamReg,

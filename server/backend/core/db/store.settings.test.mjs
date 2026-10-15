@@ -3,13 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const writeProfileAsync = vi.hoisted(() => vi.fn(async () => {}));
 const fetchAccountRecordsByOwnerStrict = vi.hoisted(() => vi.fn(async () => []));
 const fetchAccountRecordsByOwner = vi.hoisted(() => vi.fn(async () => []));
-const saveAccountRecordsForOwner = vi.hoisted(() => vi.fn(async () => {}));
+const replaceAccountRecordsForOwner = vi.hoisted(() => vi.fn());
+const saveAccountRecordsForOwner = vi.hoisted(() => vi.fn(async (_uid, records, options) =>
+  options?.replaceWith ? replaceAccountRecordsForOwner(_uid, records, options) : records.length));
 const patchPlayerAccountRecord = vi.hoisted(() => vi.fn(async () => null));
+const fetchProfileById = vi.hoisted(() => vi.fn(async () => null));
 
 vi.mock("@changmen/db", () => ({
   writeProfileAsync,
   writeProfile: vi.fn(),
-  fetchProfileById: vi.fn(async () => null),
+  fetchProfileById,
   saveAccountRecordsForOwner,
   fetchAccountRecordsByOwner,
   fetchAccountRecordsByOwnerStrict,
@@ -47,6 +50,167 @@ describe("core/db/store setUserSetting 写库可靠化 (P0-2)", () => {
     ).rejects.toThrow("rds down");
     expect(store.getProfileById("u3")).toBeNull();
     expect(store.getUserSetting("u3", "CollectConfig")).toBeNull();
+  });
+});
+
+function deferred() {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+describe("account deletion publication fence", () => {
+  beforeEach(() => {
+    saveAccountRecordsForOwner.mockReset().mockImplementation(async (_uid, records, options) =>
+      options?.replaceWith ? replaceAccountRecordsForOwner(_uid, records, options) : records.length);
+    replaceAccountRecordsForOwner.mockReset();
+    fetchAccountRecordsByOwner.mockReset();
+    fetchAccountRecordsByOwnerStrict.mockReset();
+  });
+
+  it.each(["load", "strict", "replace", "save", "patch"])("fences both deleted IDs during %s, then permits a fresh authoritative read", async mode => {
+    const uid = `deletion-${mode}`, gate = deferred();
+    const rows = [{ accountId: 1 }, { accountId: 2 }, { accountId: 3 }];
+    await store.replaceAccountsForUser(uid, rows);
+    const source = mode === "load" ? fetchAccountRecordsByOwner
+      : mode === "strict" ? fetchAccountRecordsByOwnerStrict
+        : mode === "replace" ? saveAccountRecordsForOwner : replaceAccountRecordsForOwner;
+    source.mockClear().mockReturnValueOnce(gate.promise);
+    const pending = mode === "load" ? store.loadAccountsForUser(uid)
+      : mode === "strict" ? store.loadAccountsForUserStrict(uid)
+        : mode === "replace" ? store.replaceAccountsForUser(uid, rows.map(row => ({ ...row, token: "new" })))
+          : mode === "save" ? store.saveAccountsTransactionForUser(uid, rows, async () => rows)
+            : store.updateAccountForUser(uid, 1, { currency: "USDT" });
+    await vi.waitFor(() => expect(source).toHaveBeenCalledOnce());
+    store.removeAccountForUser(uid, 1);
+    store.removeAccountForUser(uid, 2);
+    gate.resolve(mode === "replace" ? 3 : rows);
+    const result = await pending;
+    expect(store.listAccountsForUser(uid).map(row => row.accountId)).toEqual([3]);
+    if (mode === "patch") expect(result).toBeNull();
+    else expect(result.map(row => row.accountId)).toEqual([3]);
+    fetchAccountRecordsByOwnerStrict.mockResolvedValueOnce(rows);
+    expect((await store.loadAccountsForUserStrict(uid)).map(row => row.accountId)).toEqual([1, 2, 3]);
+  });
+
+  it("records deletion while the cache is empty and clears the fence after a failed operation", async () => {
+    const gate = deferred();
+    fetchAccountRecordsByOwnerStrict.mockReturnValueOnce(gate.promise);
+    const pending = store.loadAccountsForUserStrict("empty-deletion");
+    await vi.waitFor(() => expect(fetchAccountRecordsByOwnerStrict).toHaveBeenCalledOnce());
+    expect(store.removeAccountForUser("empty-deletion", 7)).toBe(false);
+    gate.resolve([{ accountId: 7 }, { accountId: 8 }]);
+    expect((await pending).map(row => row.accountId)).toEqual([8]);
+    const failureGate = deferred();
+    fetchAccountRecordsByOwnerStrict.mockReturnValueOnce(failureGate.promise);
+    const failure = store.loadAccountsForUserStrict("empty-deletion");
+    const rejected = expect(failure).rejects.toThrow("read failed");
+    await vi.waitFor(() => expect(fetchAccountRecordsByOwnerStrict).toHaveBeenCalledTimes(2));
+    store.removeAccountForUser("empty-deletion", 8);
+    failureGate.reject(new Error("read failed")); await rejected;
+    expect(store.listAccountsForUser("empty-deletion")).toEqual([]);
+    fetchAccountRecordsByOwnerStrict.mockResolvedValueOnce([{ accountId: 8 }]);
+    expect((await store.loadAccountsForUserStrict("empty-deletion"))[0].accountId).toBe(8);
+  });
+});
+
+describe("balance metadata uses the locked authoritative amount", () => {
+  it.each(["OB", "polymarket", "PredictFun"])("preserves %s balance and its profit semantics", async provider => {
+    saveAccountRecordsForOwner.mockImplementation(async (_uid, records, options) =>
+      options.replaceWith({ existing: [{ accountId: 7, provider, balance: 20, credit: 5 }], players: [] }));
+    const row = await store.updateAccountForUser(`balance-${provider}`, 7,
+      { balance: 10, Balance: 11, totalBalance: 12, TotalBalance: 13, totalProfit: 3, currency: "USDT" },
+      { preserveBalance: true });
+    expect(row.balance).toBe(20);
+    expect(row.credit).toBe(5);
+    expect(row.totalProfit).toBe(provider === "PredictFun" ? 3 : 15);
+    expect(row.currency).toBe("USDT");
+    expect(row).not.toHaveProperty("Balance");
+    expect(row).not.toHaveProperty("totalBalance");
+    expect(row).not.toHaveProperty("TotalBalance");
+  });
+});
+
+describe("commit before cache publication", () => {
+  beforeEach(() => {
+    writeProfileAsync.mockReset().mockResolvedValue(undefined);
+    saveAccountRecordsForOwner.mockReset().mockImplementation(async (_uid, records, options) =>
+      options?.replaceWith ? replaceAccountRecordsForOwner(_uid, records, options) : records.length);
+    replaceAccountRecordsForOwner.mockReset();
+  });
+
+  it("does not publish pending configuration or let a failed write contaminate its successor", async () => {
+    await store.updateProfileSetting("serial-profile", { base: 1 });
+    const gate = deferred();
+    writeProfileAsync.mockReturnValueOnce(gate.promise);
+    const first = store.updateProfileSetting("serial-profile", { failed: true });
+    const failure = expect(first).rejects.toThrow("injected");
+    const second = store.updateProfileSetting("serial-profile", { second: true });
+    await vi.waitFor(() => expect(writeProfileAsync).toHaveBeenCalledTimes(2));
+    expect(store.getProfileById("serial-profile").setting).toEqual({ base: 1 });
+    gate.reject(new Error("injected"));
+    await failure;
+    await second;
+    expect(store.getProfileById("serial-profile").setting).toEqual({ base: 1, second: true });
+    expect(writeProfileAsync.mock.calls.at(-1)[1]).toEqual({ betting_config: { base: 1, second: true } });
+  });
+
+  it("serializes USERCONFIG with setting patches, and preserves separate preference keys", async () => {
+    await Promise.all([
+      store.setUserSetting("shared-profile", "USERCONFIG", JSON.stringify({ initial: 1 })),
+      store.updateProfileSetting("shared-profile", { appended: 2 }),
+      store.setUserSetting("shared-profile", "Follow", "first"),
+      store.setUserSetting("shared-profile", "PROXY", "second"),
+    ]);
+    expect(store.getProfileById("shared-profile").setting).toEqual({ initial: 1, appended: 2 });
+    expect(store.getUserSetting("shared-profile", "Follow")).toBe("first");
+    expect(store.getUserSetting("shared-profile", "PROXY")).toBe("second");
+  });
+
+  it("coordinates an older profile read with subsequent configuration commits", async () => {
+    const gate = deferred();
+    fetchProfileById.mockReturnValueOnce(gate.promise);
+    const loading = store.loadProfileById("profile-read-race");
+    await vi.waitFor(() => expect(fetchProfileById).toHaveBeenCalled());
+    const writing = store.updateProfileSetting("profile-read-race", { saved: 2 });
+    gate.resolve({ id: "profile-read-race", betting_config: { base: 1 } });
+    await Promise.all([loading, writing]);
+    await store.updateProfileSetting("profile-read-race", { next: 3 });
+    expect(store.getProfileById("profile-read-race").setting).toEqual({ base: 1, saved: 2, next: 3 });
+  });
+
+  it("does not serialize unrelated users behind a stalled user", async () => {
+    const gate = deferred();
+    writeProfileAsync.mockReturnValueOnce(gate.promise);
+    const first = store.updateProfileSetting("slow-user", { first: true });
+    await vi.waitFor(() => expect(writeProfileAsync).toHaveBeenCalledTimes(1));
+    await store.updateProfileSetting("other-user", { independent: true });
+    expect(store.getProfileById("other-user").setting.independent).toBe(true);
+    gate.resolve(); await first;
+  });
+
+  it("rejects a zero-row account save and keeps the old cache", async () => {
+    await store.replaceAccountsForUser("zero-confirmation", [{ accountId: 7, token: "old" }]);
+    saveAccountRecordsForOwner.mockResolvedValueOnce(0);
+    await expect(store.replaceAccountsForUser("zero-confirmation", [{ accountId: 7, token: "new" }]))
+      .rejects.toThrow("账号保存未全部确认");
+    expect(store.listAccountsForUser("zero-confirmation")[0].token).toBe("old");
+  });
+
+  it("publishes a full ACCOUNT replacement only when the transaction finishes", async () => {
+    await store.replaceAccountsForUser("transaction-cache", [{ accountId: 7, token: "old" }]);
+    const gate = deferred();
+    replaceAccountRecordsForOwner.mockReturnValueOnce(gate.promise);
+    const saving = store.saveAccountsTransactionForUser("transaction-cache", [7], async () => []);
+    await vi.waitFor(() => expect(replaceAccountRecordsForOwner).toHaveBeenCalledTimes(1));
+    expect(store.listAccountsForUser("transaction-cache")[0].token).toBe("old");
+    gate.resolve([{ accountId: 7, token: "committed" }]);
+    await saving;
+    expect(store.listAccountsForUser("transaction-cache")[0].token).toBe("committed");
+    replaceAccountRecordsForOwner.mockRejectedValueOnce(new Error("prune failed"));
+    await expect(store.saveAccountsTransactionForUser("transaction-cache", [7], async () => []))
+      .rejects.toThrow("prune failed");
+    expect(store.listAccountsForUser("transaction-cache")[0].token).toBe("committed");
   });
 });
 
@@ -112,13 +276,10 @@ describe("core/db/store listAccountsForUser 读路径无写 (P0-3)", () => {
       { accountId: 1, provider: "Polymarket", multiply: 1, playerName: "pm" },
     ]);
     // 模拟余额刷新等写回未规范化的 account_data（读路径曾因此 fire-and-forget save）
-    patchPlayerAccountRecord.mockResolvedValueOnce({
-      accountId: 1,
-      provider: "Polymarket",
-      multiply: 7,
-      playerName: "pm",
-    });
-    await store.updateAccountForUser("p0-3-user", 1, { balance: 10 });
+    replaceAccountRecordsForOwner.mockImplementationOnce((_uid, _records, options) => options.replaceWith({
+      existing: [{ accountId: 1, provider: "Polymarket", multiply: 1, playerName: "pm" }], players: [],
+    }));
+    await store.updateAccountForUser("p0-3-user", 1, { balance: 10, multiply: 7 });
     saveAccountRecordsForOwner.mockClear();
 
     const list = store.listAccountsForUser("p0-3-user");

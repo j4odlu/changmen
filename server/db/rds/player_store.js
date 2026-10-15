@@ -193,11 +193,11 @@ export async function fetchPlayerByProviderAndVenueMemberId(
  * strict：查询失败向上抛（供 CreateTagPlatform / SaveData 等写路径 fail-closed）。
  * 无 key / 无 pool → `null`（非失败）；无占用行 → `null`。
  */
-export async function findVenueAccountKeyConflictStrict(venueAccountKey, { playerId } = {}) {
+export async function findVenueAccountKeyConflictStrict(venueAccountKey, { playerId, client } = {}) {
   const key = String(venueAccountKey || "").trim();
   if (!key)
     return null;
-  const pool = getPgPool();
+  const pool = client || getPgPool();
   if (!pool)
     return null;
   const id = Number(playerId) || 0;
@@ -777,6 +777,9 @@ export async function rechargePlayerBalanceWithMoneyLogRow(opts = {}) {
   const now = Date.now();
   try {
     await client.query("BEGIN");
+    // Match ACCOUNT's owner -> player lock order. money_logs' profile FK
+    // needs this lock; acquiring it after the player lock creates a cycle.
+    await client.query("SELECT id FROM profiles WHERE id=$1::uuid FOR KEY SHARE", [ownerUserId]);
     const sel = await client.query(
       `SELECT ${PLAYER_SELECT}
        FROM players
@@ -874,12 +877,12 @@ export async function softDeletePlayerRow(playerId, description, ownerUserId) {
   }
 }
 
-export async function softDeletePlayersNotInList(ownerUserId, keepPlayerIds, description = "pruned: not in ACCOUNT list") {
+export async function softDeletePlayersNotInList(ownerUserId, keepPlayerIds, description = "pruned: not in ACCOUNT list", { client } = {}) {
   const uid = String(ownerUserId || "").trim();
   const keep = [...new Set((keepPlayerIds || []).map(id => Number(id)).filter(id => id > 0))];
   if (!uid || !keep.length)
     return 0;
-  const pool = getPgPool();
+  const pool = client || getPgPool();
   if (!pool)
     return 0;
   const now = Date.now();
@@ -896,6 +899,8 @@ export async function softDeletePlayersNotInList(ownerUserId, keepPlayerIds, des
   }
   catch (err) {
     console.warn("[rds] softDeletePlayersNotInList:", err.message);
+    if (client)
+      throw err;
     return 0;
   }
 }
@@ -1085,8 +1090,12 @@ export async function savePlayerAccountRecord(ownerUserId, record) {
   }
 }
 
-/** SaveData ACCOUNT：落库并抛出场馆账号冲突 */
-export async function saveAccountRecordsForOwner(ownerUserId, records) {
+/** SaveData ACCOUNT: default is a confirmed batch; replaceWith adds locked merge + prune. */
+export async function saveAccountRecordsForOwner(ownerUserId, records, { replaceWith, prune = true, skipUnchanged } = {}) {
+  if (replaceWith) {
+    return replaceAccountRecordsForOwner(ownerUserId,
+      (records || []).map(row => row?.accountId ?? row?.AccountId), replaceWith, { prune, skipUnchanged });
+  }
   const uid = String(ownerUserId || "").trim();
   if (!uid || !Array.isArray(records) || !records.length)
     return 0;
@@ -1094,18 +1103,32 @@ export async function saveAccountRecordsForOwner(ownerUserId, records) {
 }
 
 /** 批量 UPDATE players（SaveData ACCOUNT 落库） */
-export async function batchSavePlayerAccountRecords(ownerUserId, records) {
+export async function batchSavePlayerAccountRecords(ownerUserId, records, { client } = {}) {
   const uid = String(ownerUserId || "").trim();
   if (!uid || !Array.isArray(records) || !records.length)
     return 0;
   const patches = records
     .map(r => accountRecordToPlayerPatch(r))
     .filter(p => Number.isFinite(p.playerId) && p.playerId > 0);
-  if (!patches.length)
-    return 0;
-  const pool = getPgPool();
+  if (patches.length !== records.length || new Set(patches.map(p => p.playerId)).size !== patches.length)
+    throw new Error("账号保存包含无效或重复的 accountId");
+  const pool = client || getPgPool();
   if (!pool)
-    return 0;
+    throw new Error("数据库不可用，账号未保存");
+  if (!client) {
+    const connection = await pool.connect();
+    try {
+      await connection.query("BEGIN");
+      const count = await batchSavePlayerAccountRecords(uid, records, { client: connection });
+      await connection.query("COMMIT");
+      return count;
+    }
+    catch (err) {
+      await connection.query("ROLLBACK").catch(() => {});
+      throw err;
+    }
+    finally { connection.release(); }
+  }
   const now = Date.now();
   const ids = [];
   const platformNames = [];
@@ -1141,7 +1164,7 @@ export async function batchSavePlayerAccountRecords(ownerUserId, records) {
       continue;
     let conflict;
     try {
-      conflict = await findVenueAccountKeyConflictStrict(key, { playerId: patch.playerId });
+      conflict = await findVenueAccountKeyConflictStrict(key, { playerId: patch.playerId, client });
     }
     catch (err) {
       console.error("[rds] findVenueAccountKeyConflictStrict 失败，已中止 SaveData:", err?.message);
@@ -1220,13 +1243,75 @@ export async function batchSavePlayerAccountRecords(ownerUserId, records) {
         uid,
       ],
     );
-    return rowCount ?? 0;
+    if (rowCount !== ids.length)
+      throw new Error("账号保存未全部确认：账号不存在、已删除或归属已变更");
+    return rowCount;
   }
   catch (err) {
     if (isVenueAccountKeyUniqueViolation(err))
       throw new VenueAccountKeyConflictError("该场馆操盘账号已被其他用户使用");
     console.warn("[rds] batchSavePlayerAccountRecords:", err.message);
-    return 0;
+    throw err;
+  }
+}
+
+/**
+ * One ACCOUNT replacement: lock owner, read authoritative rows, validate/merge, write and prune.
+ * prepare is a side-effect-free business transformation; no cache is published before COMMIT.
+ */
+export async function replaceAccountRecordsForOwner(ownerUserId, accountIds, prepare, { prune = true, skipUnchanged } = {}) {
+  const uid = String(ownerUserId || "").trim();
+  if (!uid)
+    throw new Error("请先登录");
+  const pool = getPgPool();
+  if (!pool)
+    throw new Error("数据库不可用，账号未保存");
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    // Owner-level serialization also protects the empty-owned-list case across processes.
+    const owner = await client.query("SELECT id FROM profiles WHERE id=$1::uuid FOR UPDATE", [uid]);
+    if (!owner.rows.length)
+      throw new Error("用户 profile 不存在");
+    const owned = await client.query(
+      `SELECT ${PLAYER_SELECT} FROM players
+       WHERE owner_user_id=$1::uuid AND deleted_at IS NULL ORDER BY id FOR UPDATE`, [uid],
+    );
+    const ids = [...new Set((accountIds || []).map(Number).filter(id => Number.isSafeInteger(id) && id > 0))];
+    const foreign = ids.length ? await client.query(
+      `SELECT ${PLAYER_SELECT} FROM players
+       WHERE id=ANY($1::bigint[]) AND owner_user_id IS DISTINCT FROM $2::uuid AND deleted_at IS NULL`,
+      [ids, uid],
+    ) : { rows: [] };
+    const players = [...owned.rows, ...foreign.rows].map(_mapPlayerRow);
+    const existing = owned.rows.map(row => playerRowToAccountRecord(_mapPlayerRow(row)));
+    const records = await prepare({ existing: structuredClone(existing), players });
+    if (!Array.isArray(records))
+      throw new Error("ACCOUNT 必须是数组");
+    if (!records.length && existing.length)
+      throw new Error("禁止用空列表覆盖已有账号，请刷新页面后重试");
+    if (records.length) {
+      const requested = new Set(ids);
+      const writeRows = prune ? records : records.filter(row => requested.has(Number(row.accountId ?? row.AccountId)));
+      if (writeRows.length && !skipUnchanged?.(existing, records))
+        await batchSavePlayerAccountRecords(uid, writeRows, { client });
+      if (prune)
+        await softDeletePlayersNotInList(uid, records.map(row => row.accountId ?? row.AccountId), undefined, { client });
+    }
+    // SQL guards (notably the PF balance ledger) may retain values from the database.
+    // Publish the committed representation, never an unconfirmed planned patch.
+    const saved = await client.query(
+      `SELECT ${PLAYER_SELECT} FROM players WHERE owner_user_id=$1::uuid AND deleted_at IS NULL ORDER BY id`, [uid],
+    );
+    await client.query("COMMIT");
+    return saved.rows.map(row => playerRowToAccountRecord(_mapPlayerRow(row)));
+  }
+  catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  }
+  finally {
+    client.release();
   }
 }
 
@@ -1236,14 +1321,11 @@ export async function patchPlayerAccountRecord(ownerUserId, playerId, updates) {
   const id = Number(playerId);
   if (!uid || !Number.isFinite(id) || id <= 0)
     return null;
-  const existing = await fetchPlayerById(id);
-  if (!existing || String(existing.ownerUserId) !== uid)
-    return null;
-  const merged = playerRowToAccountRecord(existing);
-  Object.assign(merged, updates, { accountId: id, updateTime: Date.now() });
-  const ok = await savePlayerAccountRecord(uid, merged);
-  if (!ok)
-    return null;
-  const refreshed = await fetchPlayerById(id);
-  return playerRowToAccountRecord(refreshed);
+  let found = false;
+  const saved = await replaceAccountRecordsForOwner(uid, [id], ({ existing }) => existing.map(row => {
+    if (Number(row.accountId) !== id) return row;
+    found = true;
+    return { ...row, ...updates, accountId: id, updateTime: Date.now() };
+  }), { prune: false });
+  return found ? saved.find(row => Number(row.accountId) === id) : null;
 }

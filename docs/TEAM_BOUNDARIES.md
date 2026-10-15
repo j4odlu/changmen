@@ -102,6 +102,18 @@ changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check
 
 `server/collectors/`（`@changmen/polymarket-sports` 等）、`server/value-bet` 为独立 Node 进程，**只**通过 `@changmen/db` 与 HTTP 通知 backend 集成，不得 `import` `client/*`。
 
+### matcher 与 backend 的内部边界
+
+`server/match/**` 禁止导入 backend 源码或 `@changmen/backend`。backend 通过
+`@changmen/matcher/runtime_ports.js` 注入采集快照、提交后发布、人工结束的内存失效和面板鉴权。
+适配器归属 `server/backend/core/matcher/`，在 backend 采集 store 构造完成后安装。
+独立人工 UI 由 `server/backend/scripts/matcher-ui.mjs` 装配后启动；直接运行 matcher UI
+却未装配鉴权时拒绝访问，开发环境仍保留原有显式跳过开关。
+
+列表读取共用 `@changmen/db/client_match_snapshot.js`，仅缓存已确认的活跃行及其不透明版本。
+合场身份与关联需要已结束行，使用一次 `fetchClientMatchesAll({ snapshot: true })` 的完整生命周期视图。
+两个视图范围不同，不能按 `built_at` 大小互相替换。版本只用于判断相等，进程内失效代次负责阻止旧请求覆盖新状态。
+
 ### 探针（`devtools/platform-probes`）
 
 | 允许 | 禁止 |

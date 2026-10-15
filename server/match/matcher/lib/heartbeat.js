@@ -1,11 +1,24 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const HEARTBEAT_PATH = path.join(__dirname, "..", ".matcher-heartbeat.json");
-export const COMPOSER_HEARTBEAT_PATH = path.join(__dirname, "..", ".composer-heartbeat.json");
+// Tests must never overwrite a running backend's single-writer heartbeat.
+const testHeartbeat = process.env.VITEST === "true" || process.env.NODE_ENV === "test";
+const heartbeatDirectory = testHeartbeat
+  ? fs.mkdtempSync(path.join(os.tmpdir(), "changmen-test-heartbeat-"))
+  : path.join(__dirname, "..");
+if (testHeartbeat) {
+  process.on("exit", () => {
+    if (path.dirname(path.resolve(heartbeatDirectory)) === path.resolve(os.tmpdir())
+      && path.basename(heartbeatDirectory).startsWith("changmen-test-heartbeat-"))
+      fs.rmSync(heartbeatDirectory, { recursive: true, force: true });
+  });
+}
+export const HEARTBEAT_PATH = path.join(heartbeatDirectory, ".matcher-heartbeat.json");
+export const COMPOSER_HEARTBEAT_PATH = path.join(heartbeatDirectory, ".composer-heartbeat.json");
 export const STALE_FACTOR = 2.5;
 
 export function isPidAlive(pid) {

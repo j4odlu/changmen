@@ -123,7 +123,7 @@ classify() {
   local p="${raw#changmen/}"
 
   case "$p" in
-    server/backend/db/migrations/*|server/db/schema/*|server/backend/scripts/ops/migrations/*|server/backend/scripts/apply-rds-schema.mjs|server/backend/scripts/apply-order-observation-schema.mjs|server/backend/scripts/ops/diagnostics/check-rds-schema.mjs)
+    server/backend/db/migrations/*|server/db/schema/*|server/backend/scripts/ops/migrations/*|server/backend/scripts/apply-rds-schema.mjs|server/backend/scripts/apply-order-observation-schema.mjs|server/backend/scripts/ops/diagnostics/check-rds-schema.mjs|server/backend/scripts/check-rds-schema.mjs|server/backend/scripts/rds-schema-*|server/backend/scripts/rds-migrations.mjs|server/backend/scripts/rds-migrations.test.mjs)
       # RDS maintenance is never an application release operation.
       ;;
     package.json|package-lock.json)

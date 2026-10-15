@@ -6,6 +6,8 @@
  * 不用「本拍未合出」整表差量归档（M1 / #1669）。
  */
 import * as db from "@changmen/db";
+import { invalidateClientMatchSnapshot } from "@changmen/db/client_match_snapshot.js";
+import { collectorRuntime, publishCommittedClientMatches } from "../../runtime_ports.js";
 import { clientMatchWriteRow } from "../write_payload.js";
 
 /**
@@ -44,28 +46,11 @@ export async function writeClientMatches(info, builtAt = Date.now(), opts = {}) 
     builtAt,
   });
 
-  try {
-    const { setClientMatchesFromMatchMerge } = await import(
-      "../../../../backend/core/db/store.js"
-    );
-    const { isEmbeddedMatcher } = await import(
-      "../../../../backend/core/shared/matcher_mode.js"
-    );
-    if (isEmbeddedMatcher())
-      setClientMatchesFromMatchMerge(info, builtAt);
-  }
-  catch {
-    /* 独立进程可不注入 */
-  }
-
-  try {
-    const store = (await import("../../../../backend/core/esport-api/store.js")).default;
-    const forPatch = [...(info || []), ...endedRowsRaw];
-    store.patchCollectorMatchClientIds?.(forPatch);
-  }
-  catch (err) {
-    console.warn("[match-composer] patchCollectorMatchClientIds:", err.message);
-  }
+  invalidateClientMatchSnapshot();
+  try { await publishCommittedClientMatches(); }
+  catch (err) { console.warn("[match-composer] publish committed snapshot:", err.message); }
+  try { collectorRuntime.patchCollectorMatchClientIds([...(info || []), ...endedRowsRaw]); }
+  catch (err) { console.warn("[match-composer] patchCollectorMatchClientIds:", err.message); }
 
   return { wrote: true, builtAt };
 }

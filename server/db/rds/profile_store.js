@@ -3,6 +3,7 @@
  */
 
 import { _jsonb, getPgPool } from "./common.js";
+import { ensurePgPoolReady } from "../pg_pool.js";
 
 const PROFILE_WITH_ADMIN_FROM = `
   FROM profiles p
@@ -44,6 +45,53 @@ export async function fetchProfileById(uid) {
 
 const PROFILE_JSONB_COLS = new Set(["accounts", "betting_config", "collect_config", "preferences"]);
 
+/** [changmen 扩展] Presence remains best effort and must not initialize storage. */
+export function hasProfileMetadataStorage() {
+  return Boolean(getPgPool());
+}
+
+/** [changmen 扩展] Preserve login confirmation semantics; merge only login-owned fields. */
+export async function recordUserLoginMetadata(userId, clientIp) {
+  const row = await fetchProfileById(userId);
+  if (!row)
+    return false;
+  const preferences = { lastLoginIp: clientIp, lastLoginAt: Date.now() };
+  const updatedAt = Date.now();
+  await ensurePgPoolReady();
+  const pool = getPgPool();
+  if (!pool)
+    return false;
+  const { rowCount } = await pool.query(
+    `UPDATE profiles
+     SET preferences = (CASE WHEN jsonb_typeof(preferences) = 'object' THEN preferences ELSE '{}'::jsonb END) || $2::jsonb,
+         updated_at = $3
+     WHERE id = $1`,
+    [String(userId), JSON.stringify(preferences), updatedAt],
+  );
+  return rowCount > 0;
+}
+
+/**
+ * [changmen 扩展] Live flush retains its existing last-write behavior. Legacy import
+ * alone uses onlyIfNewer. Scheduling, memory state and error policy belong to the caller.
+ */
+export async function persistUserPresence(userId, lastActiveAt, updatedAt, { onlyIfNewer = false } = {}) {
+  const pool = getPgPool();
+  if (!pool)
+    return false;
+  const values = [userId, JSON.stringify({ lastActiveAt }), updatedAt];
+  if (onlyIfNewer)
+    values.push(lastActiveAt);
+  const { rowCount } = await pool.query(
+    `UPDATE profiles
+     SET preferences = COALESCE(preferences, '{}'::jsonb) || $2::jsonb,
+         updated_at = $3
+     WHERE id = $1${onlyIfNewer ? " AND COALESCE((preferences->>'lastActiveAt')::bigint, 0) < $4" : ""}`,
+    values,
+  );
+  return rowCount > 0;
+}
+
 /** 由 patch 构建 `UPDATE profiles` 的 SQL + 参数；无可写列时返回 null */
 function buildProfileUpdate(uid, patch) {
   const keys = Object.keys(patch).filter(k => k !== "updated_at");
@@ -75,16 +123,18 @@ export function writeProfile(uid, patch) {
 
 /**
  * await 版：更新 profile 字段，失败向上抛（关键写路径用，供上层回滚内存 / 反馈失败）。
- * 无 pool（未接 RDS）或无可写列时视为 no-op，正常返回。
+ * 无 pool 或目标 profile 未被更新时必须失败，不能向调用方确认持久化。
  */
 export async function writeProfileAsync(uid, patch) {
   const pool = getPgPool();
   if (!pool)
-    return;
+    throw new Error("数据库不可用，配置未保存");
   const q = buildProfileUpdate(uid, patch);
   if (!q)
     return;
-  await pool.query(q.sql, q.vals);
+  const { rowCount } = await pool.query(q.sql, q.vals);
+  if (rowCount !== 1)
+    throw new Error("配置保存未确认：用户 profile 不存在");
 }
 
 /** 在 profiles 表中创建新用户行（首次登录触发器未执行时的兜底） */

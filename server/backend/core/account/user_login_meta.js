@@ -1,4 +1,4 @@
-import * as sb from "@changmen/db";
+import { recordUserLoginMetadata } from "@changmen/db/profile_metadata.js";
 
 export function readPreferences(row) {
   const prefs = row?.preferences;
@@ -33,33 +33,11 @@ export function lastLoginFieldsFromProfile(row) {
   };
 }
 
-async function persistProfilePreferences(uid, preferences) {
-  const id = String(uid);
-  const now = Date.now();
-  await sb.ensurePgPoolReady();
-  const pool = sb.getPgPool();
-  if (!pool)
-    return false;
-  const { rowCount } = await pool.query(
-    `UPDATE profiles SET preferences = $2::jsonb, updated_at = $3 WHERE id = $1`,
-    [id, JSON.stringify(preferences || {}), now],
-  );
-  return rowCount > 0;
-}
-
 /** 登录成功时写入 profiles.preferences */
 export async function recordUserLastLogin(userId, clientIp) {
   const uid = String(userId || "").trim();
   const ip = normalizeClientIp(clientIp);
   if (!uid || !ip)
     return false;
-  const row = await sb.fetchProfileById(uid);
-  if (!row)
-    return false;
-  const prefs = {
-    ...readPreferences(row),
-    lastLoginIp: ip,
-    lastLoginAt: Date.now(),
-  };
-  return persistProfilePreferences(uid, prefs);
+  return recordUserLoginMetadata(uid, ip);
 }

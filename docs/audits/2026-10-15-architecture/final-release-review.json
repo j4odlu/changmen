@@ -1,0 +1,257 @@
+{
+  "checkedAt": "2026-10-15T07:29:45.615Z",
+  "head": "1f9ca758959a24d947439bc42be6ae2ce5c3661e",
+  "localOnly": true,
+  "productionAccountInventoryRead": false,
+  "productionDatabaseAccess": false,
+  "committed": false,
+  "pushed": false,
+  "deployed": false,
+  "reviewPassed": true,
+  "isolatedCandidateValidated": false,
+  "approvedForPush": false,
+  "historicalFinding": {
+    "localOnly": true,
+    "productionAccountInventoryRead": false,
+    "fixtureUsernameOnly": "tj01",
+    "confirmedDefect": true,
+    "scenario": "first migration-ledger adoption regrants a revoked administrator",
+    "before": {
+      "user_name": "tj01",
+      "is_admin": false,
+      "role": "user",
+      "updated_at": "1"
+    },
+    "after": {
+      "user_name": "tj01",
+      "is_admin": true,
+      "role": "admin",
+      "updated_at": "1792048240480"
+    },
+    "failedUpgradeAlsoCommitsEarlierRoleReplay": true,
+    "afterFailedUpgrade": {
+      "user_name": "tj01",
+      "is_admin": true,
+      "role": "admin",
+      "updated_at": "1792048240543"
+    },
+    "nowResolved": true,
+    "resolution": "Activation verifies schema in a READ ONLY transaction; existing-schema compatibility entry also verifies without replay. Explicit initialization refuses existing business tables."
+  },
+  "schemaVerification": {
+    "readOnly": true,
+    "historyReplayed": false,
+    "ledgerWritten": false,
+    "requiredTables": 33,
+    "requiredColumns": 373,
+    "requiredConstraints": 68,
+    "requiredIndexes": 124,
+    "requiredSequences": 19,
+    "requiredFunctions": 4,
+    "requiredTriggers": 2,
+    "fixtureFromFreshLocalDatabase": true,
+    "existingLedgerOptional": true
+  },
+  "protection": {
+    "originalManifestUnchanged": true,
+    "immutableEntries": 551,
+    "exactProtectedFiles": 551,
+    "exactPersistenceIncrementNegativeTests": 29,
+    "noFileExemptions": true,
+    "workflowAndSealingUnchanged": true
+  },
+  "a8": {
+    "trackedFrontendChanged": false,
+    "trackedExtensionChanged": false,
+    "accountCallOrderUnchanged": true,
+    "emptySaveStillSentByFrontend": true,
+    "balanceRefreshMs": [
+      120000,
+      180000
+    ],
+    "matcherMs": 30000,
+    "timerDebounceMs": 3000,
+    "bundleSha256": "33b8a5e586f55564ac5483c723cc613b144726985daaa45c936d90fa038c4279"
+  },
+  "localValidation": {
+    "checkedAt": "2026-10-15T07:28:40.580Z",
+    "passed": true,
+    "tier": "full",
+    "sourceStable": true,
+    "completeRelease": false,
+    "identity": {
+      "commit": "1f9ca758959a24d947439bc42be6ae2ce5c3661e",
+      "candidateTree": "2dfc06a06f35471d1d218b73d02624b591a0001e",
+      "inputFingerprint": "527773c17a85820548a903007aa52ae62893a97f7c44e8f1f4396111f50d04ee"
+    },
+    "results": [
+      {
+        "check": "deployment-control",
+        "passed": true,
+        "elapsedMs": 19189
+      },
+      {
+        "check": "fok-551",
+        "passed": true,
+        "elapsedMs": 21351
+      },
+      {
+        "check": "validation-control",
+        "passed": true,
+        "elapsedMs": 5358
+      },
+      {
+        "check": "verification-control",
+        "passed": true,
+        "elapsedMs": 48808
+      },
+      {
+        "check": "verification-node",
+        "passed": true,
+        "elapsedMs": 684
+      },
+      {
+        "check": "router-compile",
+        "passed": true,
+        "elapsedMs": 975
+      },
+      {
+        "check": "backend",
+        "passed": true,
+        "elapsedMs": 26372
+      },
+      {
+        "check": "frontend-typecheck",
+        "passed": true,
+        "elapsedMs": 257
+      },
+      {
+        "check": "frontend",
+        "passed": true,
+        "elapsedMs": 156041
+      },
+      {
+        "check": "build",
+        "passed": true,
+        "elapsedMs": 30657
+      }
+    ],
+    "log": "output/readonly-final-change.log"
+  },
+  "postgres": {
+    "phase1": {
+      "passed": true,
+      "localOnly": true,
+      "postgres": "18.6",
+      "checks": 12,
+      "cases": [
+        "fresh schema includes every numbered migration and both collector fields",
+        "legacy schema missing 034/039 fails read-only until those fields are explicitly maintained",
+        "concurrent migration runs execute a pending migration once",
+        "migration failure rolls back DDL and leaves no success record",
+        "prune failure rolls back earlier account updates and keeps the cache",
+        "write failure cannot report a successful save or prune another account",
+        "empty overwrite and foreign player remain rejected",
+        "successful A8 ACCOUNT save commits updates and prune together",
+        "an incomplete account UPDATE rolls back the whole replacement",
+        "database owner lock serializes concurrent replacement snapshots",
+        "missing profile persistence fails without publishing a configuration cache",
+        "a failed configuration write cannot undo or contaminate the next successful write"
+      ]
+    },
+    "phase2": {
+      "passed": true,
+      "localOnly": true,
+      "postgres": "18.6",
+      "checks": 12,
+      "cases": [
+        "confirmed empty list shares the same version across backend and standalone matcher",
+        "one-statement rows and version retain native bigint strings and full matcher fields",
+        "same-count and same-builtAt manual reversal invalidates the shared snapshot",
+        "PM update below the global maximum timestamp still refreshes both consumers",
+        "embedded matcher uses the same PM and identity rows as standalone",
+        "successful writer publishes once after commit and preserves independently updated PM fields",
+        "write rollback neither publishes nor patches collector links",
+        "sticky ended row cannot return through composer publication",
+        "composer identity and align share full lifecycle rows including ended and PM fields",
+        "deletion down to empty clears backend and matcher caches",
+        "a fresh process reloads the same committed snapshot without backend hydration",
+        "assembled matcher HTTP API rejects unauthenticated local requests"
+      ]
+    },
+    "review": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 12,
+      "cases": [
+        "default batch rolls back all existing rows when one requested row is missing",
+        "A8 full ACCOUNT save preserves the newer confirmed balance and still accepts changed config",
+        "unchanged ACCOUNT still validates ownership but avoids a redundant player UPDATE",
+        "concurrent partial edits read current rows inside the lock and preserve both updates",
+        "legacy DB partial-patch entry also serializes concurrent changes to the same record",
+        "concurrent actual sport-account requests preserve each credential and the esport token",
+        "failed partial edit rolls back, keeps the cache, and does not poison the next edit",
+        "a partial edit never UPDATEs unrelated player rows",
+        "older profile read finishes before a queued commit and cannot erase its fields",
+        "cold list outage fails instead of returning successful empty, then recovers to confirmed empty",
+        "empty and foreign ACCOUNT saves remain rejected; explicit removal still prunes",
+        "partial PF edit publishes SQL-protected balance instead of an uncommitted planned balance"
+      ]
+    },
+    "concurrency": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 7,
+      "cases": [
+        "S1: delayed balance metadata sync cannot overwrite newer Client_UpdateBalance",
+        "S1/PF: late ledger publication keeps the latest amount and settled profit",
+        "S2: recharge and account patch both commit without profile/FK deadlock",
+        "S2/reverse: recharge waits before locking players when ACCOUNT already owns the profile",
+        "S2/atomicity: concurrent recharges add once each; a failed log insert rolls back the amount",
+        "S2/create: full replacement keeps the profile lock and cannot prune a concurrent new account",
+        "S3: delayed committed snapshot cannot resurrect a deleted account in cache"
+      ]
+    },
+    "accountBoundaries": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 8,
+      "cases": [
+        "COMMIT failure rolls back recharge amount and money log, then the next recharge succeeds",
+        "COMMIT failure rolls back ACCOUNT edits and pruning without publishing cache or poisoning its queue",
+        "profile lock timeout aborts recharge without partial writes and releases the transaction",
+        "a blocked owner does not serialize another owner's account mutation",
+        "actual strict read delivered after deletion cannot restore the deleted row",
+        "failed soft delete leaves a delayed committed snapshot and active account intact",
+        "deletion during a completed rollback stays deleted and the next queued mutation succeeds",
+        "metadata patch serializes with a later direct balance write without losing either database update"
+      ]
+    },
+    "deployment": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 12,
+      "cases": [
+        "ordinary runtime activation checks schema without changing players, user roles, profile or sequence",
+        "correct schema without a migration ledger passes without replay or ledger adoption",
+        "correct schema with an empty ledger passes without replay or writing records",
+        "explicit full activation also performs only read-only schema checks",
+        "missing required column rejects activation before PM2 and leaves accounts and roles intact",
+        "wrong field type fails without an automatic ALTER",
+        "missing owner constraint fails without repairing or deleting accounts",
+        "missing unique account index fails without deduplicating accounts",
+        "disabled identity trigger is rejected without reenabling it automatically",
+        "explicit initialization refuses existing tables",
+        "PostgreSQL itself rejects an injected data write inside verification and the next check recovers",
+        "compatibility schema entry checks existing databases without replaying role or sequence SQL"
+      ]
+    }
+  },
+  "snapshotBoundaryChecks": 5,
+  "limits": [
+    "Local working-tree acceptance; original unrelated changes are present.",
+    "No isolated/staged candidate acceptance and no production completeRelease.",
+    "Missing or incompatible production schema now blocks release and requires separate explicit maintenance.",
+    "Historical acceptance reports describe earlier code and are retained as evidence."
+  ]
+}

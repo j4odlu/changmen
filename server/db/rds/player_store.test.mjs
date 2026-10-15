@@ -11,14 +11,14 @@ import {
 const queryMock = vi.fn();
 
 vi.mock("./common.js", () => ({
-  getPgPool: () => ({ query: queryMock }),
+  getPgPool: () => ({ query: queryMock, connect: async () => ({ query: queryMock, release: vi.fn() }) }),
   _jsonb: (val, fallback) => JSON.stringify(val ?? fallback ?? null),
 }));
 
 describe("player_store batch SQL", () => {
   beforeEach(() => {
     queryMock.mockReset();
-    queryMock.mockResolvedValue({ rows: [], rowCount: 2 });
+    queryMock.mockResolvedValue({ rows: [], rowCount: 1 });
   });
 
   it("fetchPlayersByIds uses ANY($1::bigint[])", async () => {
@@ -72,8 +72,9 @@ describe("player_store batch SQL", () => {
         token: "x",
       },
     ]);
-    expect(queryMock).toHaveBeenCalledTimes(2);
-    const [sql, params] = queryMock.mock.calls[1];
+    expect(queryMock.mock.calls[0][0]).toBe("BEGIN");
+    expect(queryMock.mock.calls.at(-1)[0]).toBe("COMMIT");
+    const [sql, params] = queryMock.mock.calls.find(([sql]) => sql.includes("UPDATE players AS p"));
     expect(sql).toMatch(/\$9::jsonb\[\]/);
     expect(sql).toMatch(/venue_account_key/);
     // PF 守卫只认库内 p.provider（禁止 OR u.provider，避免伪造清 OB credit）
@@ -89,5 +90,19 @@ describe("player_store batch SQL", () => {
   it("saveAccountRecordsForOwner delegates to batch save", async () => {
     await saveAccountRecordsForOwner("user-1", [{ accountId: 7, provider: "OB", balance: 1 }]);
     expect(queryMock.mock.calls.some(([sql]) => /unnest\(/.test(sql))).toBe(true);
+  });
+
+  it("propagates SQL failures instead of confirming a zero-row save", async () => {
+    queryMock.mockRejectedValueOnce(new Error("injected write failure"));
+    await expect(saveAccountRecordsForOwner("user-1", [{ accountId: 7, provider: "OB" }]))
+      .rejects.toThrow("injected write failure");
+  });
+
+  it("rejects incomplete UPDATE results", async () => {
+    queryMock.mockImplementation(async sql => ({ rowCount: sql.includes("UPDATE players AS p") ? 0 : 1, rows: [] }));
+    await expect(saveAccountRecordsForOwner("user-1", [{ accountId: 7, provider: "OB" }]))
+      .rejects.toThrow("账号保存未全部确认");
+    expect(queryMock.mock.calls.at(-1)[0]).toBe("ROLLBACK");
+    expect(queryMock.mock.calls.some(([sql]) => sql === "COMMIT")).toBe(false);
   });
 });

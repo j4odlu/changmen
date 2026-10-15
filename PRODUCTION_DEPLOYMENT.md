@@ -4,6 +4,10 @@ changmen 是 **客户端 + 服务端** 系统。`localhost` 与 `.bat` 仅用于
 
 > [changmen 扩展] 2026-10-15 用户明确要求：所有生产部署统一通过 GitHub Actions **Validate and release**（`.github/workflows/release.yml`）执行。本机只进行开发、验证、commit/push 和只读状态核验，不执行生产部署。推送 `master` 后由 Actions 验收并发布；前后端独立变更分别发布；共享依赖或接口联动变更才先发布后端，再发布前端。RDS 维护不随应用发布执行。
 
+> [changmen 扩展] 独立的数据库检查命令只核验结构，不执行历史编号 SQL，不补写迁移账本，不运行 `profiles.accounts → players`、storage JSON 导入、owner 回填/孤儿软删除。显式运行 `npm run check:rds-schema` 时，使用只读事务核对字段类型、空值限制、默认值、约束、索引、序列、函数和触发器；缺失或不兼容时检查命令失败，列出差异，不自动修复。应用发布不调用该检查命令。正确的存量库无论有没有迁移账本都可核验。
+>
+> 历史迁移工具只供单独的数据维护使用，运行前需检查具体数据范围、备份和 dry-run。下文新机初始化/历史迁移步骤不应当作存量生产的日常发布动作。代码版本回退不撤销已提交的数据库修改。
+
 最后更新：2026-06-14
 
 ---
@@ -158,6 +162,10 @@ RDS 结构/数据维护独立执行。下面命令仅说明新空库初始化入
 cd changmen/server/backend
 node scripts/apply-rds-schema.mjs
 ```
+
+上述兼容命令现在默认只读核验；也可用 `npm run check:rds-schema`。核验清单来自空白临时 PostgreSQL 按显式 42 项编号 SQL 创建的结构，不是从线上数据库录制；各 SQL 的校验值同时固定在清单中。新增/更改结构时必须更新核验要求，不能删掉缺失项以通过检查。独立运行时表不要求从编号迁移创建。
+
+**只有全新空库初始化**使用 `npm run db:initialize`（即 `node scripts/apply-rds-schema.mjs --initialize`）；已有业务表时拒绝执行。存量库若缺字段或索引，应单独准备并审核具体修复，不把全部历史 SQL 当成补齐方法。日常发布不会调用初始化命令。
 
 POD 足球自动跟单上线前必须确认 `042_pod_bet_executions.sql` 已执行；前端自动下注依赖该表做跨标签页、跨设备幂等。完整发布顺序见 [docs/POD_AUTO_FOLLOW.md](./docs/POD_AUTO_FOLLOW.md)。
 

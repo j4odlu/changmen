@@ -97,6 +97,8 @@ const RULES = [
     id: "server-match",
     roots: ["server/match"],
     forbid: [
+      /@changmen\/backend\b/,
+      /(?:^|[/\\])backend(?:[/\\]|$)/,
       /(?:^|[/\\])client[/\\]web(?:[/\\]|$)/,
       /venue-adapter[/\\](?!registry|loader|shared|contract|backend|scripts|_template)[^/\\]+[/\\](?!shared(?:[/\\]|$))/,
       /match-(?:engine|identity)[/\\]merge/,

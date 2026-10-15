@@ -1,8 +1,5 @@
 import * as db from "@changmen/db";
 import { setTeamPlugin } from "@changmen/match-identity";
-import { setClientMatchesFromMatchMerge } from "../../../backend/core/db/store.js";
-import store from "../../../backend/core/esport-api/store.js";
-import { isEmbeddedMatcher } from "../../../backend/core/shared/matcher_mode.js";
 import {
   invalidateMatcherRdsSnapshot,
 } from "./rds_snapshot_cache.js";
@@ -81,9 +78,6 @@ async function matchMergeOnceImpl() {
     viaMatcherWriter: true,
   });
   const now = result.builtAt || Date.now();
-  if (isEmbeddedMatcher())
-    setClientMatchesFromMatchMerge(result.info, now);
-  store.patchCollectorMatchClientIds(result.info);
   invalidateMatcherRdsSnapshot(["clientMatches"]);
   if (result.matchIdBackfill?.updated)
     invalidateMatcherRdsSnapshot(["platformMatches"]);

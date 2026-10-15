@@ -5,8 +5,13 @@ import {
 } from "@changmen/shared/account_multiply";
 import { accountsPersistUnchanged } from "@changmen/shared/account_persist";
 import { normalizeEpochMs } from "@changmen/shared/time/match_time";
-import { isEmbeddedMatcher } from "../shared/matcher_mode.js";
+import { loadClientMatchSnapshot, invalidateClientMatchSnapshot,
+  getClientMatchSnapshotStats } from "@changmen/db/client_match_snapshot.js";
 import { parseFormBool } from "../shared/parse_form_bool.js";
+import { createUserWriteQueue } from "./user_write_queue.js";
+
+const runProfileWrite = createUserWriteQueue();
+const runAccountWrite = createUserWriteQueue();
 
 // ─── 内存 profile 缓存 ───────────────────────────────────────────────
 const _cache = new Map();
@@ -17,14 +22,6 @@ function _set(uid, row) {
 function _get(uid) {
   return _cache.get(String(uid)) || null;
 }
-/** 写库失败时把内存恢复到写前快照（prevRow 为 null 表示写前无该行，直接删除） */
-function _restoreRow(uid, prevRow) {
-  if (prevRow)
-    _cache.set(String(uid), prevRow);
-  else
-    _cache.delete(String(uid));
-}
-
 function _toProfile(row) {
   if (!row)
     return null;
@@ -88,37 +85,30 @@ export function upsertProfile(profile) {
 }
 
 export async function updateProfileSetting(uid, patch) {
-  const prevRow = _get(uid);
-  const row = prevRow || {};
-  const bc
-    = typeof row.betting_config === "object" && row.betting_config !== null
-      ? { ...row.betting_config }
-      : {};
-  Object.assign(bc, patch || {});
-  const now = Date.now();
-  _set(uid, { ...row, betting_config: bc, updated_at: now });
-  try {
+  return runProfileWrite(uid, async () => {
+    const row = _get(uid) || {};
+    const bc = { ...(row.betting_config && typeof row.betting_config === "object" ? row.betting_config : {}), ...patch };
+    const now = Date.now();
     await sb.writeProfileAsync(uid, { betting_config: bc });
-  }
-  catch (err) {
-    _restoreRow(uid, prevRow);
-    throw err;
-  }
-  return getProfileById(uid);
+    _set(uid, { ...(_get(uid) || {}), betting_config: bc, updated_at: now });
+    return getProfileById(uid);
+  });
 }
 
 export async function loadProfileById(uid) {
-  const data = await sb.fetchProfileById(uid);
-  if (!data)
-    return null;
-  _set(data.id, data);
-  return _toProfile(data);
+  return runProfileWrite(uid, async () => {
+    const data = await sb.fetchProfileById(uid);
+    if (!data)
+      return null;
+    _set(data.id, data);
+    return _toProfile(data);
+  });
 }
 
 export async function pullProfilesFromDb() {
   const profiles = await sb.fetchProfiles();
   if (profiles.length) {
-    for (const p of profiles) _set(p.id, p);
+    await Promise.all(profiles.map(p => loadProfileById(p.id)));
     console.log("[db] 加载 profiles:", profiles.length, "条");
     await refreshAllAccountsFromPlayers();
   }
@@ -127,6 +117,22 @@ export async function pullProfilesFromDb() {
 // ─── accounts（唯一真相：players 表）────────────────────────────────────
 
 const _accountsCache = new Map();
+// Only the current queued operation can publish an older snapshot. Keep its
+// deletion fence until it finishes (including failure), then release it.
+const _accountPublications = new Map();
+function runAccountOperation(uid, task) {
+  return runAccountWrite(uid, async () => {
+    const id = String(uid), deleted = new Set();
+    _accountPublications.set(id, deleted);
+    const publish = records => {
+      const current = records.filter(row => !deleted.has(String(row.accountId)));
+      _accountsCache.set(id, current);
+      return current;
+    };
+    try { return await task(publish); }
+    finally { _accountPublications.delete(id); }
+  });
+}
 
 /**
  * 读内存账号（规范化乘网等）。
@@ -146,11 +152,12 @@ export function listAccountsForUser(uid) {
 }
 
 export async function loadAccountsForUser(uid) {
-  const id = String(uid);
-  const records = await sb.fetchAccountRecordsByOwner(id);
-  const normalized = normalizeAccountList(records);
-  _accountsCache.set(id, normalized);
-  return normalized;
+  return runAccountOperation(uid, async publish => {
+    const id = String(uid);
+    const records = await sb.fetchAccountRecordsByOwner(id);
+    const normalized = normalizeAccountList(records);
+    return publish(normalized);
+  });
 }
 
 /**
@@ -158,11 +165,12 @@ export async function loadAccountsForUser(uid) {
  * 供管理端 ensurePredictFunHouseAccount 等「读失败不能当空」路径使用。
  */
 export async function loadAccountsForUserStrict(uid) {
-  const id = String(uid);
-  const records = await sb.fetchAccountRecordsByOwnerStrict(id);
-  const normalized = normalizeAccountList(records);
-  _accountsCache.set(id, normalized);
-  return normalized;
+  return runAccountOperation(uid, async publish => {
+    const id = String(uid);
+    const records = await sb.fetchAccountRecordsByOwnerStrict(id);
+    const normalized = normalizeAccountList(records);
+    return publish(normalized);
+  });
 }
 
 /** 内存 accounts 为空时从 players 回源 */
@@ -184,10 +192,7 @@ export async function prepareAccountsForSave(uid) {
   const current = listAccountsForUser(id);
   if (current.length > 0)
     return current;
-  const records = await sb.fetchAccountRecordsByOwnerStrict(id);
-  const normalized = normalizeAccountList(records);
-  _accountsCache.set(id, normalized);
-  return normalized;
+  return loadAccountsForUserStrict(id);
 }
 
 async function refreshAllAccountsFromPlayers() {
@@ -202,36 +207,68 @@ export function countAccounts() {
   return total;
 }
 
+/** Explicit full replacement compatibility helper. Partial callers must use mutate/update. */
 export async function replaceAccountsForUser(uid, accounts) {
-  const id = String(uid);
-  const normalized = normalizeAccountList(accounts);
-  const prev = _accountsCache.get(id);
-  if (prev && accountsPersistUnchanged(prev, normalized))
-    return normalized;
-  await sb.saveAccountRecordsForOwner(id, normalized);
-  _accountsCache.set(id, normalized);
-  return normalized;
+  return runAccountOperation(uid, async publish => {
+    const id = String(uid);
+    const normalized = normalizeAccountList(accounts);
+    const prev = _accountsCache.get(id);
+    if (prev && accountsPersistUnchanged(prev, normalized))
+      return normalized;
+    const written = await sb.saveAccountRecordsForOwner(id, normalized);
+    if (written !== normalized.length)
+      throw new Error("账号保存未全部确认，已阻止更新缓存");
+    return publish(normalized);
+  });
 }
 
-export async function updateAccountForUser(uid, accountId, updates) {
-  const patched = await sb.patchPlayerAccountRecord(uid, accountId, updates);
-  if (!patched)
-    return null;
-  const id = String(uid);
-  const list = listAccountsForUser(id);
-  const idx = list.findIndex(a => String(a.accountId) === String(accountId));
-  if (idx >= 0) {
-    list[idx] = patched;
-    _accountsCache.set(id, list);
-  }
-  else {
-    await loadAccountsForUser(id);
-  }
-  return patched;
+/** ACCOUNT full saves validate/merge against locked RDS rows and publish only after COMMIT. */
+export function saveAccountsTransactionForUser(uid, accounts, prepare) {
+  return runAccountOperation(uid, async publish => {
+    const id = String(uid);
+    const records = await sb.saveAccountRecordsForOwner(id, accounts, {
+      replaceWith: async snapshot => normalizeAccountList(await prepare(snapshot)),
+      skipUnchanged: (before, after) => accountsPersistUnchanged(normalizeAccountList(before), after),
+    });
+    return publish(records);
+  });
+}
+
+export async function updateAccountForUser(uid, accountId, updates, { preserveBalance = false } = {}) {
+  let patched = false;
+  const records = await mutateAccountsForUser(uid, [accountId], ({ existing }) => existing.map(row => {
+    if (String(row.accountId) !== String(accountId)) return row;
+    patched = true;
+    const patch = { ...updates };
+    if (preserveBalance) {
+      // The balance write already committed. A delayed metadata sync must use
+      // the authoritative amount read under the player lock, not replay it.
+      for (const key of ["balance", "Balance", "totalBalance", "TotalBalance"])
+        delete patch[key];
+      if (String(row.provider).toLowerCase() !== "predictfun" && Object.hasOwn(patch, "totalProfit"))
+        patch.totalProfit = (Number(row.balance) || 0) - (Number(row.credit) || 0);
+    }
+    return { ...row, ...patch, accountId: row.accountId, updateTime: Date.now() };
+  }));
+  return patched ? records.find(row => String(row.accountId) === String(accountId)) ?? null : null;
+}
+
+/** Internal partial edits read and merge under the owner lock; never prune unrelated accounts. */
+export function mutateAccountsForUser(uid, accountIds, transform) {
+  return runAccountOperation(uid, async publish => {
+    const id = String(uid);
+    const records = await sb.saveAccountRecordsForOwner(id, accountIds.map(accountId => ({ accountId })), {
+      replaceWith: async snapshot => normalizeAccountList(await transform(snapshot)),
+      prune: false,
+      skipUnchanged: (before, after) => JSON.stringify(normalizeAccountList(before)) === JSON.stringify(after),
+    });
+    return publish(records);
+  });
 }
 
 export function removeAccountForUser(uid, accountId) {
   const id = String(uid);
+  _accountPublications.get(id)?.add(String(accountId));
   const before = listAccountsForUser(id);
   const next = before.filter(a => String(a.accountId) !== String(accountId));
   if (next.length === before.length)
@@ -251,38 +288,32 @@ function _colForKey(key) {
 }
 
 export async function setUserSetting(uid, key, content) {
-  const col = _colForKey(key);
-  const prevRow = _get(uid);
-  const row = prevRow || {};
-  const now = Date.now();
-  let patch;
-  if (col !== "preferences") {
-    let parsed = {};
-    try {
-      parsed = JSON.parse(String(content ?? "{}"));
+  return runProfileWrite(uid, async () => {
+    const col = _colForKey(key);
+    const row = _get(uid) || {};
+    const now = Date.now();
+    let patch;
+    if (col !== "preferences") {
+      let parsed = {};
+      try {
+        parsed = JSON.parse(String(content ?? "{}"));
+      }
+      catch {
+        /* ignore */
+      }
+      patch = { [col]: parsed };
     }
-    catch {
-      /* ignore */
+    else {
+      const prefs
+        = typeof row.preferences === "object" && row.preferences !== null
+          ? { ...row.preferences }
+          : {};
+      prefs[String(key)] = String(content ?? "");
+      patch = { preferences: prefs };
     }
-    _set(uid, { ...row, [col]: parsed, updated_at: now });
-    patch = { [col]: parsed };
-  }
-  else {
-    const prefs
-      = typeof row.preferences === "object" && row.preferences !== null
-        ? { ...row.preferences }
-        : {};
-    prefs[String(key)] = String(content ?? "");
-    _set(uid, { ...row, preferences: prefs, updated_at: now });
-    patch = { preferences: prefs };
-  }
-  try {
     await sb.writeProfileAsync(uid, patch);
-  }
-  catch (err) {
-    _restoreRow(uid, prevRow);
-    throw err;
-  }
+    _set(uid, { ...(_get(uid) || {}), ...patch, updated_at: now });
+  });
 }
 
 export function getUserSetting(uid, key) {
@@ -305,25 +336,11 @@ export function countUserSettings() {
   return 0;
 }
 
-// ─── client_matches（内存 + built_at 快照缓存）────────────────────────
+// ─── client_matches（版本化 RDS 快照的线协议投影）────────────────────
 
 const _clientMatches = new Map();
-/** matcher matchMerge 写入的 built_at + 行数；未变则 Client_GetMatchs 跳过重载 */
-let _matchesCacheKey = "";
-let _matchesCacheLoadedAt = 0;
-/** archive 删行等 built_at 不变时的兜底全量刷新 */
-const MATCHES_CACHE_MAX_AGE_MS = 90_000;
-
-function _matchesCacheSignature(meta) {
-  if (!meta)
-    return "";
-  const rev = Number(meta.pmSportRev) || 0;
-  return `${meta.builtAt}:${meta.count}:${rev}`;
-}
-
 function _invalidateClientMatchesCache() {
-  _matchesCacheKey = "";
-  _matchesCacheLoadedAt = 0;
+  invalidateClientMatchSnapshot();
 }
 
 function _applyClientMatchRows(data) {
@@ -355,74 +372,12 @@ function _applyClientMatchRows(data) {
   return getClientMatches();
 }
 
-export function saveClientMatches(info) {
-  if (!Array.isArray(info) || !info.length)
-    return;
-  const now = Date.now();
-  _invalidateClientMatchesCache();
-  _clientMatches.clear();
-  for (const m of info) _clientMatches.set(Number(m.ID), { ...m, built_at: now });
-  sb.writeClientMatches(
-    info.map(m => ({
-      id: Number(m.ID),
-      merge_key: m.MergeKey ? String(m.MergeKey) : null,
-      title: String(m.Title || ""),
-      game: String(m.Game || ""),
-      game_id: String(m.GameID || ""),
-      start_time: Number(m.StartTime) || 0,
-      bo: Number(m.BO) || 0,
-      round: Number(m.Round) || 0,
-      round_start: Number(m.RoundStart) || 0,
-      reverse: Array.isArray(m.Reverse) ? m.Reverse : [],
-      matchs: m.Matchs || {},
-      bets: m.Bets || [],
-      home_gb_team_id: m.HomeGbTeamId ?? null,
-      away_gb_team_id: m.AwayGbTeamId ?? null,
-      built_at: now,
-    })),
-  );
-}
-
-export function dropOrphanClientMatchesFromMemory(activeIds) {
-  if (!activeIds?.length) {
-    _clientMatches.clear();
-    _invalidateClientMatchesCache();
-    return;
-  }
-  const active = new Set(activeIds.map(Number));
-  for (const id of _clientMatches.keys()) {
-    if (!active.has(id))
-      _clientMatches.delete(id);
-  }
-}
-
 export function getClientMatches() {
   if (!_clientMatches.size)
     return null;
   return [..._clientMatches.values()].sort(
     (a, b) => (a.StartTime || 0) - (b.StartTime || 0),
   );
-}
-
-/** embedded matchMerge 完成后同步内存（RDS 已由 writeClientMatchesAsync 写入） */
-export function setClientMatchesFromMatchMerge(info, builtAt = Date.now()) {
-  const ts = Number(builtAt) || Date.now();
-  const list = Array.isArray(info) ? info : [];
-  const pmById = new Map();
-  for (const [id, m] of _clientMatches) {
-    if (m.PmSport)
-      pmById.set(id, m.PmSport);
-  }
-  _clientMatches.clear();
-  for (const m of list) {
-    const id = Number(m.ID);
-    _clientMatches.set(id, {
-      ...m,
-      PmSport: m.PmSport ?? pmById.get(id),
-      built_at: ts,
-    });
-  }
-  _invalidateClientMatchesCache();
 }
 
 /** 人工强制结束后从内存移除，避免 embedded 仍读到已结束行 */
@@ -434,92 +389,19 @@ export function removeClientMatchFromMemory(clientMatchId) {
   _invalidateClientMatchesCache();
 }
 
-/** 人工主客反转后同步内存，避免 embedded 快照 / matchMerge 仍用旧 Reverse */
-export function patchClientMatchPlatformReverseInMemory(clientMatchId, platform, reversed) {
-  const id = Number(clientMatchId);
-  const plat = String(platform || "").trim();
-  if (!Number.isFinite(id) || !plat)
-    return false;
-  const m = _clientMatches.get(id);
-  if (!m)
-    return false;
-  const reverseSet = new Set(Array.isArray(m.Reverse) ? m.Reverse.map(String) : []);
-  if (reversed)
-    reverseSet.add(plat);
-  else
-    reverseSet.delete(plat);
-  const matchPlatforms = new Set(Object.keys(m.Matchs || {}));
-  m.Reverse = [...reverseSet].filter(p => matchPlatforms.has(p));
-  _invalidateClientMatchesCache();
-  return true;
-}
-
-/** matcher align / 内存快照：RDS 行形状 */
-export function getClientMatchRowsForSnapshot() {
-  if (!_clientMatches.size)
-    return [];
-  return [..._clientMatches.values()].map(m => ({
-    id: Number(m.ID),
-    merge_key: m.MergeKey != null ? String(m.MergeKey) : null,
-    title: String(m.Title || ""),
-    game: String(m.Game || ""),
-    game_id: String(m.GameID || ""),
-    start_time: Number(m.StartTime) || 0,
-    bo: Number(m.BO) || 0,
-    round: Number(m.Round) || 0,
-    round_start: Number(m.RoundStart) || 0,
-    reverse: Array.isArray(m.Reverse) ? m.Reverse : [],
-    matchs: m.Matchs || {},
-    bets: m.Bets || [],
-    home_gb_team_id: m.HomeGbTeamId ?? null,
-    away_gb_team_id: m.AwayGbTeamId ?? null,
-    built_at: Number(m.built_at) || 0,
-  }));
-}
-
-/**
- * 从 RDS 加载 client_matches。
- * built_at + 行数未变时复用内存快照，避免多用户轮询重复 SELECT *。
- */
+/** backend and matcher consume the same committed, versioned RDS rows. */
 export async function loadClientMatchesFromDb() {
-  const now = Date.now();
-  const cacheStale
-    = !_matchesCacheLoadedAt || now - _matchesCacheLoadedAt > MATCHES_CACHE_MAX_AGE_MS;
-
-  if (isEmbeddedMatcher() && _clientMatches.size && _matchesCacheKey && !cacheStale) {
-    const meta = await sb.fetchClientMatchesMeta();
-    if (meta && _matchesCacheSignature(meta) === _matchesCacheKey)
-      return getClientMatches();
-  }
-
-  if (_clientMatches.size && _matchesCacheKey && !cacheStale) {
-    const meta = await sb.fetchClientMatchesMeta();
-    if (meta && _matchesCacheSignature(meta) === _matchesCacheKey) {
-      return getClientMatches();
+  for (;;) {
+    const generation = getClientMatchSnapshotStats().generation;
+    const snapshot = await loadClientMatchSnapshot();
+    if (generation !== getClientMatchSnapshotStats().generation) continue;
+    if (!snapshot) {
+      const previous = getClientMatches();
+      if (previous) return previous;
+      throw new Error("赛事列表暂不可用，请稍后重试");
     }
+    return _applyClientMatchRows(snapshot.rows);
   }
-
-  const data = await sb.fetchClientMatches();
-  // null = 查询失败，暂用内存兜底；[] = 库确认为空，清掉遗留内存（避免 archive 后仍返回旧列表）
-  if (data === null)
-    return _clientMatches.size ? getClientMatches() : null;
-  if (!data.length) {
-    _clientMatches.clear();
-    _matchesCacheKey = "0:0";
-    _matchesCacheLoadedAt = now;
-    return null;
-  }
-
-  const builtAt = data.reduce(
-    (max, row) => Math.max(max, Number(row.built_at) || 0),
-    0,
-  );
-  const meta = await sb.fetchClientMatchesMeta();
-  _matchesCacheKey = meta
-    ? _matchesCacheSignature(meta)
-    : `${builtAt}:${data.length}:0`;
-  _matchesCacheLoadedAt = now;
-  return _applyClientMatchRows(data);
 }
 
 /** /health/diag：profile / client_matches 内存缓存体积 */
@@ -531,9 +413,9 @@ export function getMemoryCacheStats() {
     profiles: _cache.size,
     accountsCache: _accountsCache.size,
     clientMatches: _clientMatches.size,
-    clientMatchesCacheKey: _matchesCacheKey || "",
-    clientMatchesCacheAgeMs: _matchesCacheLoadedAt
-      ? Date.now() - _matchesCacheLoadedAt
+    clientMatchesCacheKey: getClientMatchSnapshotStats().version,
+    clientMatchesCacheAgeMs: getClientMatchSnapshotStats().loadedAt
+      ? Date.now() - getClientMatchSnapshotStats().loadedAt
       : 0,
     approxJsonBytes: {
       clientMatches: clientRows.length,

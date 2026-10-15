@@ -1,0 +1,129 @@
+{
+  "checkedAt": "2026-10-15T05:49:01.827Z",
+  "localOnly": true,
+  "deployed": false,
+  "productionDatabaseAccess": false,
+  "businessCodeEditedThisReview": false,
+  "reviewPassed": false,
+  "unresolvedFindings": [
+    {
+      "id": "S1",
+      "reproduced": true,
+      "case": "older balance refresh sync overwrites a newer successful Client_UpdateBalance",
+      "beforeDelayedSync": 20,
+      "afterDelayedSync": 10,
+      "severity": "P1"
+    },
+    {
+      "id": "S2",
+      "reproduced": true,
+      "case": "partial patch profile/player lock order conflicts with recharge player/profile-FK lock order",
+      "outcome": [
+        {
+          "ok": false,
+          "msg": "deadlock detected"
+        },
+        {
+          "token": "synthetic",
+          "currency": "USDT",
+          "totalProfit": 10,
+          "accountId": 1,
+          "platformId": 1,
+          "platformName": "",
+          "playerName": "one",
+          "provider": "OB",
+          "credit": 0,
+          "balance": 10,
+          "updateTime": 1792043087232
+        }
+      ],
+      "severity": "P1"
+    },
+    {
+      "id": "S3",
+      "reproduced": true,
+      "case": "delayed post-COMMIT publication resurrects a successfully deleted account in cache",
+      "deletedAt": "1792043087238",
+      "presentInCache": true,
+      "severity": "P2"
+    }
+  ],
+  "existingChecks": {
+    "root": {
+      "tasks": 14,
+      "cached": 0,
+      "totals": {
+        "backend": "@changmen/backend:test:       Tests  694 passed | 16 skipped (710)",
+        "db": "@changmen/db:test:       Tests  359 passed (359)",
+        "matcher": "@changmen/matcher:test:       Tests  188 passed (188)",
+        "web": "@changmen/web:test:       Tests  3938 passed | 1 skipped (3939)",
+        "team-resolver": "@changmen/team-resolver:test:       Tests  6 passed | 1 expected fail (7)"
+      }
+    },
+    "priorPostgres": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 12,
+      "cases": [
+        "default batch rolls back all existing rows when one requested row is missing",
+        "A8 full ACCOUNT save preserves the newer confirmed balance and still accepts changed config",
+        "unchanged ACCOUNT still validates ownership but avoids a redundant player UPDATE",
+        "concurrent partial edits read current rows inside the lock and preserve both updates",
+        "legacy DB partial-patch entry also serializes concurrent changes to the same record",
+        "concurrent actual sport-account requests preserve each credential and the esport token",
+        "failed partial edit rolls back, keeps the cache, and does not poison the next edit",
+        "a partial edit never UPDATEs unrelated player rows",
+        "older profile read finishes before a queued commit and cannot erase its fields",
+        "cold list outage fails instead of returning successful empty, then recovers to confirmed empty",
+        "empty and foreign ACCOUNT saves remain rejected; explicit removal still prunes",
+        "partial PF edit publishes SQL-protected balance instead of an uncommitted planned balance"
+      ]
+    },
+    "frontendTypecheck": "passed",
+    "fok": [
+      {
+        "passed": true,
+        "comparisons": 180,
+        "historicalDifferences": 108,
+        "confirmationFaultCases": 20,
+        "originalGateCases": 45,
+        "fullReleaseAccepted": false
+      },
+      {
+        "independentGtcModuleFiles": 51,
+        "noFokPrivateImports": true,
+        "noFokActionHooks": true,
+        "sharedAccountGateway": true,
+        "modeSpecificPreparation": true
+      }
+    ]
+  },
+  "a8Evidence": {
+    "trackedFrontendAndExtensionDiff": [],
+    "referenceBundleSha256": "33b8a5e586f55564ac5483c723cc613b144726985daaa45c936d90fa038c4279",
+    "baselineRecords": [
+      "docs/audits/2026-10-15-architecture/review-fixes-verification.json",
+      "docs/audits/2026-10-15-architecture/phase2-verification.json"
+    ],
+    "protectedUnchanged": [
+      "server/backend/server.js",
+      "server/db/index.js",
+      "server/db/impl_rds.js"
+    ],
+    "conclusion": "Client source and timing parameters unchanged; backend data regressions prevent end-to-end compatibility approval"
+  },
+  "limits": [
+    "Review does not establish absence of all defects",
+    "No production or live-venue E2E validation",
+    "Existing backend 16 skips, frontend 1 skip, resolver 1 expected fail retained"
+  ],
+  "artifacts": [
+    "output/review-fix-second-audit-20261015/reproduce.mjs",
+    "output/review-fix-second-audit-20261015/reproduce.log",
+    "output/review-fix-second-audit-20261015/reproductions.json",
+    "output/review-fix-second-audit-20261015/all-tests.log",
+    "output/review-fix-second-audit-20261015/existing-postgres.log",
+    "output/review-fix-second-audit-20261015/fok.log",
+    "output/review-fix-second-audit-20261015/typecheck.log"
+  ]
+}

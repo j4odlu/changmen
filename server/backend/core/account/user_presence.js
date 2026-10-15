@@ -1,4 +1,4 @@
-import * as sb from "@changmen/db";
+import { hasProfileMetadataStorage, persistUserPresence } from "@changmen/db/profile_metadata.js";
 import { readJsonFile } from "@changmen/storage/json_file_store.js";
 
 /** 与 A8 Client_GetUsers 一致：30 分钟内活跃视为在线 */
@@ -25,8 +25,7 @@ function readPrefLastActiveAt(profileRow) {
 }
 
 async function flushPresenceToRds(userIds) {
-  const pool = sb.getPgPool?.();
-  if (!pool || !userIds.length)
+  if (!hasProfileMetadataStorage() || !userIds.length)
     return;
   const now = Date.now();
   for (const uid of userIds) {
@@ -34,13 +33,7 @@ async function flushPresenceToRds(userIds) {
     if (!ts)
       continue;
     try {
-      await pool.query(
-        `UPDATE profiles
-         SET preferences = COALESCE(preferences, '{}'::jsonb) || $2::jsonb,
-             updated_at = $3
-         WHERE id = $1`,
-        [uid, JSON.stringify({ lastActiveAt: ts }), now],
-      );
+      await persistUserPresence(uid, ts, now);
     }
     catch {
       /* RDS 写入失败不影响内存在线判定 */
@@ -70,8 +63,7 @@ export async function migrateLegacySessionsJsonToRds() {
     return { migrated: 0, skipped: true };
   legacySessionsMigrated = true;
 
-  const pool = sb.getPgPool?.();
-  if (!pool)
+  if (!hasProfileMetadataStorage())
     return { migrated: 0, skipped: true, reason: "no_db" };
 
   const sessions = readJsonFile("sessions", {});
@@ -87,15 +79,8 @@ export async function migrateLegacySessionsJsonToRds() {
     if (!uid || !ts)
       continue;
     try {
-      const { rowCount } = await pool.query(
-        `UPDATE profiles
-         SET preferences = COALESCE(preferences, '{}'::jsonb) || $2::jsonb,
-             updated_at = $3
-         WHERE id = $1
-           AND COALESCE((preferences->>'lastActiveAt')::bigint, 0) < $4`,
-        [uid, JSON.stringify({ lastActiveAt: ts }), now, ts],
-      );
-      if (rowCount > 0)
+      const changed = await persistUserPresence(uid, ts, now, { onlyIfNewer: true });
+      if (changed)
         migrated += 1;
       const prev = lastActive.get(uid) || 0;
       if (ts > prev)

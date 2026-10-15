@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const persistSnapshot = vi.hoisted(() => vi.fn());
 vi.mock("./ray_monitor_orders.js", () => ({ listRayMonitorOrders: vi.fn(async () => []) }));
 
 vi.mock("../esport-api/store.js", () => ({
@@ -71,6 +72,11 @@ vi.mock("../db/store.js", () => ({
   listProfileRows: vi.fn(() => []),
   loadAccountsForUser: vi.fn(),
   prepareAccountsForSave: vi.fn(async () => [{ accountId: 42 }]),
+  saveAccountsTransactionForUser: vi.fn(async (uid, _ids, prepare) => {
+    const records = await prepare({ existing: [{ accountId: 42, provider: "OB" }], players: [] });
+    persistSnapshot(uid, records);
+    return records;
+  }),
 }));
 
 vi.mock("@changmen/shared/account_multiply", () => ({
@@ -114,6 +120,22 @@ vi.mock("./user_presence.js", () => ({
 describe("PredictFun client write guard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("removes a successfully deleted account before asynchronous log cleanup, even if cleanup fails", async () => {
+    const { handleDeletePlayer } = await import("./account_service.js");
+    const accountStore = await import("./account_store.js");
+    const store = (await import("../esport-api/store.js")).default;
+    accountStore.deletePlayer.mockResolvedValueOnce(true);
+    accountStore.deletePlayerData.mockImplementationOnce(async () => {
+      expect(store.removeAccountForUser).toHaveBeenCalledWith("u1", 42);
+      throw new Error("cleanup failed");
+    });
+    await expect(handleDeletePlayer({ playerId: 42 }, "u1")).rejects.toThrow("cleanup failed");
+    store.removeAccountForUser.mockClear();
+    accountStore.deletePlayer.mockResolvedValueOnce(false);
+    expect((await handleDeletePlayer({ playerId: 42 }, "u1")).ok).toBe(false);
+    expect(store.removeAccountForUser).not.toHaveBeenCalled();
   });
 
   it("isPredictFunClientSaveOrderRequest uses players identity even if ACCOUNT.provider forged", async () => {
@@ -176,8 +198,8 @@ describe("PredictFun client write guard", () => {
     ], "u1");
 
     expect(saved.ok).toBe(true);
-    expect(store.setAccountsForUser).toHaveBeenCalled();
-    const payload = store.setAccountsForUser.mock.calls[0][1];
+    expect(persistSnapshot).toHaveBeenCalled();
+    const payload = persistSnapshot.mock.calls[0][1];
     expect(payload[0].provider).toBe("PredictFun");
     expect(payload[0].balance).toBe(100);
     expect(payload[0].totalBalance).toBe(100);
@@ -205,7 +227,7 @@ describe("PredictFun client write guard", () => {
     ], "u1");
 
     expect(saved.ok).toBe(true);
-    const payload = store.setAccountsForUser.mock.calls.at(-1)[1];
+    const payload = persistSnapshot.mock.calls.at(-1)[1];
     expect(payload[0].balance).toBe(88.5);
     expect(payload[0].credit).toBe(0);
   });

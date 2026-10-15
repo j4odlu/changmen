@@ -8,6 +8,7 @@ import {
   setPlatform as setPlatformRow,
 } from "@changmen/storage/platform_storage.js";
 import * as dbStore from "../db/store.js";
+import { installBackendMatcherRuntime } from "../matcher/runtime.js";
 import { adapterRequire } from "../shared/adapter_paths.js";
 import { isEmbeddedMatcher } from "../shared/matcher_mode.js";
 import { ESPORT_DATA_DIR } from "../shared/storage_paths.js";
@@ -404,8 +405,8 @@ export function getAccountsForUser(userId) {
 export function setAccountsForUser(userId, accounts) {
   return dbStore.replaceAccountsForUser(userId, accounts);
 }
-export function updateAccountForUser(userId, accountId, updates) {
-  return dbStore.updateAccountForUser(userId, accountId, updates);
+export function updateAccountForUser(userId, accountId, updates, options) {
+  return dbStore.updateAccountForUser(userId, accountId, updates, options);
 }
 export function removeAccountForUser(userId, accountId) {
   return dbStore.removeAccountForUser(userId, accountId);
@@ -733,4 +734,5 @@ const store = {
   writeJson,
 };
 
+installBackendMatcherRuntime(store);
 export default store;

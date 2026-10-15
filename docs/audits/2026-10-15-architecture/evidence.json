@@ -1,0 +1,471 @@
+{
+  "scope": "working tree; static evidence and synthetic port failures; no production or DB calls",
+  "commit": "1f9ca758959a24d947439bc42be6ae2ce5c3661e",
+  "sourceFingerprints": {
+    "server/backend/core/db/store.js": "282fcbed2dd69f8b503a622a589f627fe8eb1762f8cec6364da6ecd6c63a481d",
+    "server/backend/core/account/account_service.js": "f0f5363f59539bf00947a7ea3941ff4c080a3e8728abb718e8ac19591ea7fa61",
+    "server/db/rds/player_store.js": "c7032f1c8ff98dab2b51d07e06457bca1ca877f47ca2300b7ad5307a2e1265fa",
+    "server/db/rds/common.js": "03e0dafabd28e34b0162b75443c11f6f18986153c2eca6ba3bb8fb7cb27b53d0",
+    "server/backend/scripts/apply-rds-schema.mjs": "6673c1dca91023a18c0ed4e1e568eff6cd9e75abfc80fb2c9c070c17bf522393",
+    "server/backend/server.js": "218744e4f62d01f23831295aa893b04b4d76fc2361fe520eeb35209986c882ef",
+    "server/match/matcher/ops/match_merge_once.js": "a952e048b9cbbedf809b8f3861e02b9f7ec94645fb4db856d56ec8c089c59ebe",
+    "server/match/matcher/ops/rds_snapshot_cache.js": "79d4ba981521042278b2046424f3f4e7011cc91027caffc59ad64a16d9adfd0a",
+    "scripts/deploy/classify-deploy-scope.mjs": "1ae3e3bd679e32187fac573b7f1b023bbf31ce1a195d4d5d0895d80eaf5574ca",
+    "scripts/verification/validation-plan.mjs": "050cf7cb55d208e4230e5337b8b1a098b4027ad1894ed4e78d720abf6075d8eb",
+    "server/backend/package.json": "aec16dbe7a1acd3919ab32467c0b55ec648879f5cdbc09a577b950681c93cf5c",
+    "server/db/package.json": "eb031a9f99a1ee488093b4299065fc1c147b72523e2943caa532fab2e11f13a2"
+  },
+  "sourceInventory": [
+    {
+      "root": "client/web/src",
+      "files": 560
+    },
+    {
+      "root": "server/backend",
+      "files": 187
+    },
+    {
+      "root": "server/db",
+      "files": 50
+    },
+    {
+      "root": "server/match",
+      "files": 73
+    },
+    {
+      "root": "packages",
+      "files": 426
+    },
+    {
+      "root": "chrome-extension/src",
+      "files": 49
+    },
+    {
+      "root": "server/collectors",
+      "files": 25
+    },
+    {
+      "root": "server/ws_forward",
+      "files": 25
+    },
+    {
+      "root": "server/realtime-hub",
+      "files": 7
+    }
+  ],
+  "inventoryExcludes": [
+    "node_modules",
+    "dist",
+    "storage",
+    "archive",
+    "public",
+    "platform_adapter",
+    "platform_node",
+    "docs",
+    "scripts",
+    "*.test.*",
+    "*.spec.*",
+    "*.smoke.*",
+    "test/",
+    "tests/",
+    "*.d.ts"
+  ],
+  "limits": [
+    "web graph resolves only relative and @/ imports within selected production files",
+    "external workspace modules, nonliteral imports and runtime bridge calls are not resolved",
+    "Vue import line numbers are relative to extracted script content",
+    "SCC proves structural coupling, not an initialization crash or production performance issue",
+    "backend source inventory includes available generated router JS alongside TS"
+  ],
+  "a8": {
+    "file": "A8/index0706.js",
+    "sha256": "33b8a5e586f55564ac5483c723cc613b144726985daaa45c936d90fa038c4279"
+  },
+  "webStaticComponents": [
+    {
+      "count": 54,
+      "members": [
+        "client/web/src/domain/betting/describeArbPrepareSkip.ts",
+        "client/web/src/domain/betting/resolveVenueLegOutcome.ts",
+        "client/web/src/extensions/arbMarketWatch/formatMarketWatch.ts",
+        "client/web/src/extensions/arbMarketWatch/watchSinks.ts",
+        "client/web/src/extensions/notify/arbOpportunityConfig.ts",
+        "client/web/src/orderModes/fok/manual.ts",
+        "client/web/src/orderModes/router.ts",
+        "client/web/src/realtime/betTargetChannel.ts",
+        "client/web/src/realtime/publishBetting.ts",
+        "client/web/src/realtime/publishChannel.ts",
+        "client/web/src/realtime/userChannel.ts",
+        "client/web/src/runtime/rayOrderMonitor/contexts.ts",
+        "client/web/src/services/bettingLog.ts",
+        "client/web/src/services/orderExecutionObservation.ts",
+        "client/web/src/services/orderObservation.ts",
+        "client/web/src/stores/account/accountCrud.ts",
+        "client/web/src/stores/account/accountPicker.ts",
+        "client/web/src/stores/account/betGateway.ts",
+        "client/web/src/stores/account/pmRejectOrder.ts",
+        "client/web/src/stores/accountStore.ts",
+        "client/web/src/stores/activeBetRunStore.ts",
+        "client/web/src/stores/betting/a8/runA8ArbRound.ts",
+        "client/web/src/stores/betting/activeBetRunSync.ts",
+        "client/web/src/stores/betting/arbOrderBind.ts",
+        "client/web/src/stores/betting/autoBet/arbLegSettle.ts",
+        "client/web/src/stores/betting/autoBet/arbMakeUpFromRejects.ts",
+        "client/web/src/stores/betting/autoBet/arbProgressTrace.ts",
+        "client/web/src/stores/betting/autoBet/executeArbBet.ts",
+        "client/web/src/stores/betting/autoBet/makeUp.ts",
+        "client/web/src/stores/betting/autoBet/phases/checkArbLegs.ts",
+        "client/web/src/stores/betting/autoBet/phases/finalizeArbBet.ts",
+        "client/web/src/stores/betting/autoBet/phases/finalizeArbMessaging.ts",
+        "client/web/src/stores/betting/autoBet/phases/placeArbLegs.ts",
+        "client/web/src/stores/betting/autoBet/phases/prepareArbAttempt.ts",
+        "client/web/src/stores/betting/autoBet/phases/settleBothArbLegs.ts",
+        "client/web/src/stores/betting/autoBet/phases/syncArbFinalizeUi.ts",
+        "client/web/src/stores/betting/autoBet/retryFailedLeg.ts",
+        "client/web/src/stores/betting/betFilters.ts",
+        "client/web/src/stores/betting/execution/manual.ts",
+        "client/web/src/stores/betting/execution/selection.ts",
+        "client/web/src/stores/betting/loseOrder.ts",
+        "client/web/src/stores/betting/loseOrderPm.ts",
+        "client/web/src/stores/betting/loseOrderPmPending.ts",
+        "client/web/src/stores/betting/loseOrderRegular.ts",
+        "client/web/src/stores/betting/manualBet.ts",
+        "client/web/src/stores/betting/pendingOrderBind.ts",
+        "client/web/src/stores/betting/placeValueBet.ts",
+        "client/web/src/stores/betting/runArbBetRound.ts",
+        "client/web/src/stores/betting/valueBetConfirm.ts",
+        "client/web/src/stores/loseOrderStore.ts",
+        "client/web/src/stores/match/mainBetLoop.ts",
+        "client/web/src/stores/matchStore.ts",
+        "client/web/src/stores/messageStore.ts",
+        "client/web/src/stores/userStore.ts"
+      ]
+    },
+    {
+      "count": 4,
+      "members": [
+        "client/web/src/shared/orderDisplay.ts",
+        "client/web/src/shared/orderLink.ts",
+        "client/web/src/shared/pfOrderDisplay.ts",
+        "client/web/src/shared/pmOrderDisplay.ts"
+      ]
+    }
+  ],
+  "webStaticAndDynamicComponents": [
+    {
+      "count": 91,
+      "members": [
+        "client/web/src/domain/betting/describeArbPrepareSkip.ts",
+        "client/web/src/domain/betting/resolveVenueLegOutcome.ts",
+        "client/web/src/extensions/arbBet/arbEarlyLockSell.ts",
+        "client/web/src/extensions/arbBet/arbFailAutoSell.ts",
+        "client/web/src/extensions/arbMarketWatch/formatMarketWatch.ts",
+        "client/web/src/extensions/arbMarketWatch/watchSinks.ts",
+        "client/web/src/extensions/notify/arbOpportunityConfig.ts",
+        "client/web/src/extensions/valueBet/valueBetAutoBet.ts",
+        "client/web/src/models/platformAccount.ts",
+        "client/web/src/orderModes/fok/financialOrders.ts",
+        "client/web/src/orderModes/fok/manual.ts",
+        "client/web/src/orderModes/gtc/accountFilter.ts",
+        "client/web/src/orderModes/gtc/api.ts",
+        "client/web/src/orderModes/gtc/arbLeg.ts",
+        "client/web/src/orderModes/gtc/executionState.ts",
+        "client/web/src/orderModes/gtc/gateway.ts",
+        "client/web/src/orderModes/gtc/manual.ts",
+        "client/web/src/orderModes/gtc/manualEntry.ts",
+        "client/web/src/orderModes/gtc/ordersApi.ts",
+        "client/web/src/orderModes/gtc/otherOrders.ts",
+        "client/web/src/orderModes/gtc/recoveryApi.ts",
+        "client/web/src/orderModes/gtc/runtime.ts",
+        "client/web/src/orderModes/router.ts",
+        "client/web/src/realtime/betTargetChannel.ts",
+        "client/web/src/realtime/publishBetting.ts",
+        "client/web/src/realtime/publishChannel.ts",
+        "client/web/src/realtime/userChannel.ts",
+        "client/web/src/runtime/gtcOrderMonitor/coordinator.ts",
+        "client/web/src/runtime/gtcOrderMonitor/counterpart.ts",
+        "client/web/src/runtime/gtcOrderMonitor/localOrders.ts",
+        "client/web/src/runtime/gtcOrderMonitor/pm.ts",
+        "client/web/src/runtime/gtcOrderMonitor/pmPolling.ts",
+        "client/web/src/runtime/gtcOrderMonitor/recovery.ts",
+        "client/web/src/runtime/gtcOrderMonitor/runtime.ts",
+        "client/web/src/runtime/obSportAmount.ts",
+        "client/web/src/runtime/obSportBetRecord.ts",
+        "client/web/src/runtime/rayOrderMonitor/autoMakeup.ts",
+        "client/web/src/runtime/rayOrderMonitor/contexts.ts",
+        "client/web/src/services/bettingLog.ts",
+        "client/web/src/services/orderExecutionObservation.ts",
+        "client/web/src/services/orderObservation.ts",
+        "client/web/src/shared/orderDisplay.ts",
+        "client/web/src/shared/orderLink.ts",
+        "client/web/src/shared/pfOrderDisplay.ts",
+        "client/web/src/shared/pmOrderDisplay.ts",
+        "client/web/src/stores/account/accountCrud.ts",
+        "client/web/src/stores/account/accountPicker.ts",
+        "client/web/src/stores/account/balanceRefresh.ts",
+        "client/web/src/stores/account/betGateway.ts",
+        "client/web/src/stores/account/pfManualSell.ts",
+        "client/web/src/stores/account/pmManualSell.ts",
+        "client/web/src/stores/account/pmRejectOrder.ts",
+        "client/web/src/stores/account/rayOrderBindings.ts",
+        "client/web/src/stores/account/venueOrders.ts",
+        "client/web/src/stores/accountStore.ts",
+        "client/web/src/stores/activeBetRunStore.ts",
+        "client/web/src/stores/betting/a8/runA8ArbRound.ts",
+        "client/web/src/stores/betting/activeBetRunSync.ts",
+        "client/web/src/stores/betting/arbOrderBind.ts",
+        "client/web/src/stores/betting/autoBet/arbLegSettle.ts",
+        "client/web/src/stores/betting/autoBet/arbMakeUpFromRejects.ts",
+        "client/web/src/stores/betting/autoBet/arbProgressTrace.ts",
+        "client/web/src/stores/betting/autoBet/executeArbBet.ts",
+        "client/web/src/stores/betting/autoBet/makeUp.ts",
+        "client/web/src/stores/betting/autoBet/phases/checkArbLegs.ts",
+        "client/web/src/stores/betting/autoBet/phases/finalizeArbBet.ts",
+        "client/web/src/stores/betting/autoBet/phases/finalizeArbMessaging.ts",
+        "client/web/src/stores/betting/autoBet/phases/placeArbLegs.ts",
+        "client/web/src/stores/betting/autoBet/phases/prepareArbAttempt.ts",
+        "client/web/src/stores/betting/autoBet/phases/settleBothArbLegs.ts",
+        "client/web/src/stores/betting/autoBet/phases/syncArbFinalizeUi.ts",
+        "client/web/src/stores/betting/autoBet/retryFailedLeg.ts",
+        "client/web/src/stores/betting/betFilters.ts",
+        "client/web/src/stores/betting/execution/manual.ts",
+        "client/web/src/stores/betting/execution/selection.ts",
+        "client/web/src/stores/betting/loseOrder.ts",
+        "client/web/src/stores/betting/loseOrderPm.ts",
+        "client/web/src/stores/betting/loseOrderPmPending.ts",
+        "client/web/src/stores/betting/loseOrderRegular.ts",
+        "client/web/src/stores/betting/manualBet.ts",
+        "client/web/src/stores/betting/pendingOrderBind.ts",
+        "client/web/src/stores/betting/placeValueBet.ts",
+        "client/web/src/stores/betting/runArbBetRound.ts",
+        "client/web/src/stores/betting/valueBetConfirm.ts",
+        "client/web/src/stores/footballOrderStore.ts",
+        "client/web/src/stores/loseOrderStore.ts",
+        "client/web/src/stores/match/mainBetLoop.ts",
+        "client/web/src/stores/matchStore.ts",
+        "client/web/src/stores/messageStore.ts",
+        "client/web/src/stores/orderStore.ts",
+        "client/web/src/stores/userStore.ts"
+      ]
+    },
+    {
+      "count": 3,
+      "members": [
+        "client/web/src/security/pmVault/accountUiStatus.ts",
+        "client/web/src/security/pmVault/accounts.ts",
+        "client/web/src/security/pmVault/session.ts"
+      ]
+    },
+    {
+      "count": 2,
+      "members": [
+        "client/web/src/api/client.ts",
+        "client/web/src/lib/jwtRefresh.ts"
+      ]
+    }
+  ],
+  "runtimeInbound": [
+    {
+      "file": "client/web/src/stores/userStore.ts",
+      "consumers": 102
+    },
+    {
+      "file": "client/web/src/stores/accountStore.ts",
+      "consumers": 70
+    },
+    {
+      "file": "client/web/src/api/client.ts",
+      "consumers": 45
+    },
+    {
+      "file": "client/web/src/stores/matchStore.ts",
+      "consumers": 23
+    },
+    {
+      "file": "client/web/src/api/esport.ts",
+      "consumers": 21
+    },
+    {
+      "file": "client/web/src/stores/orderStore.ts",
+      "consumers": 19
+    },
+    {
+      "file": "client/web/src/stores/loseOrderStore.ts",
+      "consumers": 19
+    },
+    {
+      "file": "client/web/src/api/admin.ts",
+      "consumers": 18
+    },
+    {
+      "file": "client/web/src/runtime/podBetSettings.ts",
+      "consumers": 16
+    },
+    {
+      "file": "client/web/src/stores/oddsStore.ts",
+      "consumers": 15
+    },
+    {
+      "file": "client/web/src/components/admin/AdminLayout.vue",
+      "consumers": 15
+    },
+    {
+      "file": "client/web/src/config/apiBase.ts",
+      "consumers": 14
+    },
+    {
+      "file": "client/web/src/components/platform/PlatformIcon.vue",
+      "consumers": 14
+    },
+    {
+      "file": "client/web/src/runtime/obSportBetAccount.ts",
+      "consumers": 14
+    },
+    {
+      "file": "client/web/src/services/orderObservation.ts",
+      "consumers": 14
+    }
+  ],
+  "cacheFailureReproductions": {
+    "zeroRowsPublished": true,
+    "laterCacheWriteRolledBack": true,
+    "method": "actual function bodies with synthetic dependencies, no DB; validates cache behavior only"
+  },
+  "missedNumberedMigrations": [
+    "002_prune_pg_cron.sql",
+    "034_platform_bets_market_id.sql",
+    "039_platform_bets_line_id.sql"
+  ],
+  "testTopology": {
+    "dbTestCommand": null,
+    "backendTestCommand": "vitest run core/shared core/http core/auth core/certificates core/integrations/polymarket core/orderModes core/admin_tools/user_log_lookup.test.mjs core/admin_tools/user_log_lookup.observation.test.mjs core/admin_tools/order_observation.test.mjs scripts/apply-order-observation-schema.test.mjs core/esport-api/action_registry.test.mjs core/football/pod_bet_execution.test.js && npm run test:adapter",
+    "rootChecks": "npm run check:boundaries && npm run check:venue-adapter && npm run check:client-core && npm run test:api-contract && npm run test:catalog-smoke"
+  },
+  "scopeExamples": [
+    {
+      "file": "packages/venue-adapter/ob/bet.ts",
+      "localValidationTier": "full",
+      "publication": "full",
+      "localChecks": [
+        "fok-551",
+        "validation-control",
+        "verification-control",
+        "verification-node",
+        "router-compile",
+        "backend",
+        "frontend-typecheck",
+        "frontend",
+        "build"
+      ],
+      "releaseChecks": [
+        "fok-551",
+        "router-compile",
+        "backend",
+        "frontend",
+        "build"
+      ]
+    },
+    {
+      "file": "client/web/src/runtime/collectors.ts",
+      "localValidationTier": "full",
+      "publication": "frontend",
+      "localChecks": [
+        "fok-551",
+        "validation-control",
+        "verification-control",
+        "verification-node",
+        "router-compile",
+        "backend",
+        "frontend-typecheck",
+        "frontend",
+        "build"
+      ],
+      "releaseChecks": [
+        "fok-551",
+        "boundaries",
+        "frontend",
+        "build"
+      ]
+    },
+    {
+      "file": "server/match/matcher/ops/match_merge_once.js",
+      "localValidationTier": "full",
+      "publication": "backend",
+      "localChecks": [
+        "fok-551",
+        "validation-control",
+        "verification-control",
+        "verification-node",
+        "router-compile",
+        "backend",
+        "frontend-typecheck",
+        "frontend",
+        "build"
+      ],
+      "releaseChecks": [
+        "fok-551",
+        "router-compile",
+        "backend"
+      ]
+    },
+    {
+      "file": "server/db/rds/player_store.js",
+      "localValidationTier": "full",
+      "publication": "backend",
+      "localChecks": [
+        "fok-551",
+        "validation-control",
+        "verification-control",
+        "verification-node",
+        "router-compile",
+        "backend",
+        "frontend-typecheck",
+        "frontend",
+        "build"
+      ],
+      "releaseChecks": [
+        "fok-551",
+        "router-compile",
+        "backend"
+      ]
+    }
+  ],
+  "domainStoreEdges": [
+    {
+      "from": "client/web/src/domain/betting/describeArbPrepareSkip.ts",
+      "to": "client/web/src/stores/account/accountPicker.ts",
+      "kind": "static",
+      "scriptLine": 7
+    },
+    {
+      "from": "client/web/src/domain/polymarket/arbProgressPmMeta.ts",
+      "to": "client/web/src/stores/betting/autoBet/arbExecutionTrace.ts",
+      "kind": "type",
+      "scriptLine": 2
+    },
+    {
+      "from": "client/web/src/domain/polymarket/arbProgressPmMeta.ts",
+      "to": "client/web/src/stores/oddsStore.ts",
+      "kind": "static",
+      "scriptLine": 4
+    },
+    {
+      "from": "client/web/src/domain/polymarket/attachDetectionQuote.ts",
+      "to": "client/web/src/stores/oddsStore.ts",
+      "kind": "static",
+      "scriptLine": 4
+    },
+    {
+      "from": "client/web/src/domain/polymarket/tickBufferQuote.ts",
+      "to": "client/web/src/stores/oddsStore.ts",
+      "kind": "static",
+      "scriptLine": 4
+    },
+    {
+      "from": "client/web/src/domain/predictfun/attachDetectionQuote.ts",
+      "to": "client/web/src/stores/oddsStore.ts",
+      "kind": "static",
+      "scriptLine": 3
+    }
+  ]
+}

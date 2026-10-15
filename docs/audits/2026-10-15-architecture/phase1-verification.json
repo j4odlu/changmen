@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-15",
+  "stage": 1,
+  "workingTree": true,
+  "deployed": false,
+  "productionDatabaseAccess": false,
+  "frontendRuntimeChanges": false,
+  "protectionBaselineChanges": false,
+  "checks": {
+    "backend": {
+      "passed": true,
+      "turboTasks": 12,
+      "cachedOnFinalRun": 9,
+      "vitestPassed": 681,
+      "dedicatedAuthPostgresSkipped": 16,
+      "nodePassed": 2
+    },
+    "db": {
+      "vitestPassed": 352,
+      "nodePassed": 3
+    },
+    "matcher": {
+      "passed": 188
+    },
+    "resolver": {
+      "passed": 6,
+      "expectedFailure": 1,
+      "nodePassed": 1
+    },
+    "frontend": {
+      "selectedFiles": 21,
+      "passed": 187,
+      "typecheck": true
+    },
+    "temporaryPostgres": {
+      "version": "18.6",
+      "casesPassed": 12,
+      "managedMigrations": 42
+    },
+    "fok": {
+      "passed": true,
+      "exactCoreFiles": 40,
+      "pmFunctionBodies": 29,
+      "executionScenarios": 18,
+      "comparisons": 180,
+      "confirmationFaultCases": 20,
+      "originalGateCases": 45,
+      "fullReleaseAccepted": false
+    },
+    "routerCompile": true,
+    "boundariesAndChecks": true,
+    "diffWhitespace": true
+  },
+  "limitations": [
+    "Dedicated auth integration remains gated and skipped",
+    "Resolver reversed-pair defect is tracked as an expected failure; runtime unchanged",
+    "Five existing frontend layer violations and stage 2 architecture issues remain",
+    "Cleanup of one stopped early temporary cluster directory was blocked by automatic approval review"
+  ],
+  "sourceSha256": {
+    "server/backend/core/account/account_service.js": "b789486384d6f29539bd41d15aa6f8f43ae02e62dfe3d56f55f900bd31567d58",
+    "server/backend/core/account/player_ownership.js": "f35a147bbea1b8cb225275779c731c18da559598d3e54fc210ca7134c9818747",
+    "server/backend/core/db/store.js": "33a3fbc30e1ed9f5d0684dea34bddee77e9477d7da1ad700ea9b98e92e4a9fb5",
+    "server/backend/core/db/user_write_queue.js": "2d8758ec78887077c7af4fe18762a922a9dcac6a2694ba6721feac96439d0a9c",
+    "server/backend/core/integrations/polymarket/pm_client_handlers.js": "5f2a8f823d955c6727fe09ed46f325ad9c8ffe0245cafa983440ff8d0dd1f316",
+    "server/db/rds/player_store.js": "a830528f96baa248a07d4d9c8501eae09296d2dcbc03922dd750d2859fb0a8ba",
+    "server/db/rds/profile_store.js": "7d72354f58214eb441b55643fc2b901663ab5ac80c8c3de14008acfa1362efe4",
+    "server/backend/scripts/rds-migrations.mjs": "e6abb0418cd49780d016c258cdb0a4132f31f79c4b5d5e1865922b80a16a7ca2",
+    "server/backend/scripts/apply-rds-schema.mjs": "19c20fbfdf3c802b076380ccd6fd9c85aff03ce0966f8a155af85516a27c05b1",
+    "server/backend/scripts/apply-order-observation-schema.mjs": "8ca2ef117668aee92ed4bd387086c2f7bed9d3d08a889a006033b61ca7b17ea8"
+  }
+}

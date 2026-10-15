@@ -19,13 +19,12 @@ import { toUserPfBalanceInfo } from "./pf_user_dto.js";
 
 /** 避免与 account_service 循环依赖：就地写 ACCOUNT 缓存行 */
 export async function syncAccountRowInKv(accountId, updates, userId) {
+  if (userId) return store.updateAccountForUser(userId, accountId, updates, { preserveBalance: true });
   const list = userId ? store.getAccountsForUser(userId) : accountStore.getAccountsFromKv();
   const idx = list.findIndex(row => String(row.accountId) === String(accountId));
   if (idx < 0)
     return null;
   list[idx] = { ...list[idx], ...updates, updateTime: Date.now() };
-  if (userId)
-    await store.setAccountsForUser(userId, list);
   return list[idx];
 }
 
@@ -124,7 +123,7 @@ export async function publishPfBalanceKnown(playerId, userId, balance) {
   const stats = summarizePfOrders(orders);
   const bal = roundUsdt(balance);
   // KV 仍更新侧栏需要的统计；HTTP 回包不整行 ACCOUNT（中转只回账本字段）
-  await syncAccountRowInKv(playerId, {
+  const synced = await syncAccountRowInKv(playerId, {
     balance: bal,
     credit: 0,
     currency: "USDT",
@@ -133,11 +132,13 @@ export async function publishPfBalanceKnown(playerId, userId, balance) {
     orderCount: stats.orderCount,
   }, userId);
 
+  if (!synced)
+    return { ok: false, msg: "PF 账号不存在" };
   return {
     ok: true,
     info: toUserPfBalanceInfo({
       accountId: Number(playerId),
-      balance: bal,
+      balance: synced.balance,
       currency: "USDT",
       totalProfit: stats.settledPnl,
       unsettle: stats.unsettle,

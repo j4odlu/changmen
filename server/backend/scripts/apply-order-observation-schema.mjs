@@ -8,13 +8,9 @@ const EXPECTED_INDEXES = [
   "order_observations_user_execution",
 ];
 
-/** [changmen 扩展] 先建旁路表，再建执行索引；失败时阻止部署继续。 */
-export async function applyOrderObservationSchema(client) {
-  for (const name of ["20261002_order_observations.sql", "20261003_order_observation_execution_index.sql"]) {
-    console.log(`[rds] 执行 ${name} …`);
-    const sql = readFileSync(new URL(`../db/migrations/${name}`, import.meta.url), "utf8");
-    await client.query(sql);
-  }
+export const ORDER_OBSERVATION_MIGRATIONS = ["20261002_order_observations.sql", "20261003_order_observation_execution_index.sql"];
+
+export async function verifyOrderObservationSchema(client) {
   const result = await client.query(
     "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename='order_observations' AND indexname=ANY($1::text[])",
     [EXPECTED_INDEXES],
@@ -24,4 +20,14 @@ export async function applyOrderObservationSchema(client) {
   if (missing.length)
     throw new Error(`旁路观察索引缺失: ${missing.join(", ")}`);
   console.log("[rds] 旁路观察表及 5 个查询索引已核验");
+}
+
+/** [changmen 扩展] 专项调用仍先建表再建索引；统一迁移入口只复用其核验。 */
+export async function applyOrderObservationSchema(client) {
+  for (const name of ORDER_OBSERVATION_MIGRATIONS) {
+    console.log(`[rds] 执行 ${name} …`);
+    const sql = readFileSync(new URL(`../db/migrations/${name}`, import.meta.url), "utf8");
+    await client.query(sql);
+  }
+  await verifyOrderObservationSchema(client);
 }

@@ -11,13 +11,13 @@ export async function assertPlayerOwnedByUser(playerId, userId) {  const batch =
 }
 
 /** SaveData ACCOUNT：一次 RDS 查询校验全部 accountId */
-export async function assertPlayersOwnedByUser(playerIds, userId) {
+export async function assertPlayersOwnedByUser(playerIds, userId, snapshotRows) {
   if (!userId)
     return { ok: false, msg: "请先登录" };
   const ids = [...new Set((playerIds || []).map(id => Number(id)).filter(id => id > 0))];
   if (!ids.length)
     return { ok: false, msg: "accountId 无效，请先调用 Client_CreateTagPlatform" };
-  const rows = await sb.fetchPlayersByIds(ids);
+  const rows = snapshotRows ?? await sb.fetchPlayersByIds(ids);
   const byId = new Map(rows.map(r => [Number(r.id ?? r.playerId), r]));
   const players = [];
   for (const id of ids) {

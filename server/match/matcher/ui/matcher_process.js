@@ -4,7 +4,7 @@ import {
   readMatcherHeartbeat,
   sanitizeMatcherHeartbeat,
 } from "../lib/heartbeat.js";
-import { isEmbeddedMatcher } from "../../../backend/core/shared/matcher_mode.js";
+import { isEmbeddedMatcher } from "../runtime_ports.js";
 import {
   getMatcherLoopState,
   startMatcherLoop,

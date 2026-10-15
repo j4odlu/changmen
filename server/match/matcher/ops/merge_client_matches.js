@@ -1,5 +1,5 @@
 import * as db from "@changmen/db";
-import store from "../../../backend/core/esport-api/store.js";
+import { collectorRuntime as store } from "../runtime_ports.js";
 import { matchMergeOnce } from "./match_merge_once.js";
 import { invalidateMatcherRdsSnapshot } from "./rds_snapshot_cache.js";
 

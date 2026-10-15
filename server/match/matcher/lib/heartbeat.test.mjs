@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 import { afterEach, describe, it } from "vitest";
 import {
   clearMatcherHeartbeat,
@@ -24,6 +26,10 @@ function resolveDeadPid() {
 }
 
 describe("sanitizeMatcherHeartbeat", () => {
+  it("isolates heartbeat files in an owned temporary directory", () => {
+    assert.equal(path.dirname(path.dirname(HEARTBEAT_PATH)), path.resolve(os.tmpdir()));
+    assert.match(path.basename(path.dirname(HEARTBEAT_PATH)), /^changmen-test-heartbeat-/);
+  });
   it("保留内嵌 matcher 心跳", () => {
     writeMatcherHeartbeat({ matchCount: 3, intervalMs: 30_000, pid: process.pid });
     assert.equal(isPanelProcessHeartbeat(), false);

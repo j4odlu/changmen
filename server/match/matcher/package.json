@@ -6,6 +6,10 @@
   "exports": {
     ".": "./index.js",
     "./loop.js": "./loop.js",
+    "./runtime_ports.js": "./runtime_ports.js",
+    "./ui/matcher_auth.js": "./ui/matcher_auth.js",
+    "./ui/server.js": "./ui/server.js",
+    "./lib/config.js": "./lib/config.js",
     "./lib/heartbeat.js": "./lib/heartbeat.js",
     "./link/index.js": "./link/index.js",
     "./ops/match_merge_once.js": "./ops/match_merge_once.js",
@@ -19,7 +23,7 @@
   },
   "main": "./index.js",
   "scripts": {
-    "start": "node ui/server.js",
+    "start": "node ../../backend/scripts/matcher-ui.mjs",
     "ui:compare": "node ui/compare/server.js",
     "compose": "node compose/loop.js",
     "compose:once": "node scripts/once.mjs",

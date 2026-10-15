@@ -7,6 +7,7 @@
 export function isDatabaseMaintenancePath(p) {
   return /^(?:server\/backend\/db\/migrations\/|server\/db\/schema\/|server\/backend\/scripts\/ops\/migrations\/)/.test(p)
     || /^server\/backend\/scripts\/(?:apply-rds-schema|apply-order-observation-schema)\.mjs$/.test(p)
+    || /^server\/backend\/scripts\/(?:check-rds-schema\.mjs|rds-schema-[^/]+|rds-migrations(?:\.test)?\.mjs)$/.test(p)
     || p === "server/backend/scripts/ops/diagnostics/check-rds-schema.mjs";
 }
 

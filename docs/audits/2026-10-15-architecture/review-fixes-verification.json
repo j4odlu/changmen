@@ -1,0 +1,133 @@
+{
+  "checkedAt": "2026-10-15T05:41:43.954Z",
+  "localOnly": true,
+  "deployed": false,
+  "productionDatabaseAccess": false,
+  "findings": {
+    "R1": "default batch atomic rollback",
+    "R2": "lock-scoped partial edits; explicit full replacement semantics retained",
+    "R3": "profile read/write serialization",
+    "R4": "authoritative balance plus unchanged-config skip",
+    "R5": "cold query failure rejects via existing envelope",
+    "heartbeat": "tests isolated; production path unchanged"
+  },
+  "tests": {
+    "root": {
+      "command": "npm test -- --force",
+      "passed": 14,
+      "cached": 0,
+      "workspaces": {
+        "backend": "Tests  694 passed | 16 skipped (710)",
+        "db": "Tests  359 passed (359)",
+        "matcher": "Tests  188 passed (188)",
+        "web": "Tests  3938 passed | 1 skipped (3939)",
+        "team-resolver": "Tests  6 passed | 1 expected fail (7)"
+      }
+    },
+    "postgres": {
+      "reviewFixes": {
+        "passed": true,
+        "localOnly": true,
+        "checks": 12,
+        "cases": [
+          "default batch rolls back all existing rows when one requested row is missing",
+          "A8 full ACCOUNT save preserves the newer confirmed balance and still accepts changed config",
+          "unchanged ACCOUNT still validates ownership but avoids a redundant player UPDATE",
+          "concurrent partial edits read current rows inside the lock and preserve both updates",
+          "legacy DB partial-patch entry also serializes concurrent changes to the same record",
+          "concurrent actual sport-account requests preserve each credential and the esport token",
+          "failed partial edit rolls back, keeps the cache, and does not poison the next edit",
+          "a partial edit never UPDATEs unrelated player rows",
+          "older profile read finishes before a queued commit and cannot erase its fields",
+          "cold list outage fails instead of returning successful empty, then recovers to confirmed empty",
+          "empty and foreign ACCOUNT saves remain rejected; explicit removal still prunes",
+          "partial PF edit publishes SQL-protected balance instead of an uncommitted planned balance"
+        ]
+      },
+      "phase1": {
+        "passed": true,
+        "localOnly": true,
+        "postgres": "18.6",
+        "checks": 12,
+        "cases": [
+          "fresh schema includes every numbered migration and both collector fields",
+          "upgrade a legacy schema without 034/039 or migration records",
+          "concurrent migration runs execute a pending migration once",
+          "migration failure rolls back DDL and leaves no success record",
+          "prune failure rolls back earlier account updates and keeps the cache",
+          "write failure cannot report a successful save or prune another account",
+          "empty overwrite and foreign player remain rejected",
+          "successful A8 ACCOUNT save commits updates and prune together",
+          "an incomplete account UPDATE rolls back the whole replacement",
+          "database owner lock serializes concurrent replacement snapshots",
+          "missing profile persistence fails without publishing a configuration cache",
+          "a failed configuration write cannot undo or contaminate the next successful write"
+        ]
+      },
+      "phase2": {
+        "passed": true,
+        "localOnly": true,
+        "postgres": "18.6",
+        "checks": 12,
+        "cases": [
+          "confirmed empty list shares the same version across backend and standalone matcher",
+          "one-statement rows and version retain native bigint strings and full matcher fields",
+          "same-count and same-builtAt manual reversal invalidates the shared snapshot",
+          "PM update below the global maximum timestamp still refreshes both consumers",
+          "embedded matcher uses the same PM and identity rows as standalone",
+          "successful writer publishes once after commit and preserves independently updated PM fields",
+          "write rollback neither publishes nor patches collector links",
+          "sticky ended row cannot return through composer publication",
+          "composer identity and align share full lifecycle rows including ended and PM fields",
+          "deletion down to empty clears backend and matcher caches",
+          "a fresh process reloads the same committed snapshot without backend hydration",
+          "assembled matcher HTTP API rejects unauthenticated local requests"
+        ]
+      }
+    },
+    "typecheckFrontend": "passed",
+    "backendRouterCompile": "passed"
+  },
+  "protection": [
+    {
+      "passed": true,
+      "comparisons": 180,
+      "historicalDifferences": 108,
+      "confirmationFaultCases": 20,
+      "originalGateCases": 45,
+      "fullReleaseAccepted": false
+    },
+    {
+      "independentGtcModuleFiles": 51,
+      "noFokPrivateImports": true,
+      "noFokActionHooks": true,
+      "sharedAccountGateway": true,
+      "modeSpecificPreparation": true
+    }
+  ],
+  "protectedUnchanged": [
+    "server/backend/server.js",
+    "server/db/index.js",
+    "server/db/impl_rds.js"
+  ],
+  "trackedClientDiff": [],
+  "productionHeartbeatPaths": {
+    "matcher": "E:\\River\\arb\\changmen\\server\\match\\matcher\\.matcher-heartbeat.json",
+    "composer": "E:\\River\\arb\\changmen\\server\\match\\matcher\\.composer-heartbeat.json"
+  },
+  "a8BundleSha256": "33b8a5e586f55564ac5483c723cc613b144726985daaa45c936d90fa038c4279",
+  "limitations": [
+    "existing backend 16 PG tests skipped; explicit temporary-PG suites run",
+    "existing frontend 1 test skipped",
+    "resolver 1 expected fail unchanged",
+    "no production or real-venue E2E acceptance"
+  ],
+  "logs": [
+    "output/review-fix-all-tests.log",
+    "output/review-fix-postgres.log",
+    "output/review-fix-phase1.log",
+    "output/review-fix-phase2.log",
+    "output/review-fix-fok.log",
+    "output/review-fix-typecheck.log"
+  ]
+}

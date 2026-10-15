@@ -66,7 +66,7 @@ for (const file of [
 }
 test("schema helpers and legacy SQL do not request application deployment", () => {
   for (const file of ["server/backend/scripts/apply-rds-schema.mjs", "server/backend/db/migrations/028_players_account_data.sql",
-    "server/backend/scripts/apply-order-observation-schema.mjs", "server/backend/scripts/ops/migrations/backfill.mjs", "server/backend/scripts/ops/diagnostics/check-rds-schema.mjs"]) {
+    "server/backend/scripts/apply-order-observation-schema.mjs", "server/backend/scripts/ops/migrations/backfill.mjs", "server/backend/scripts/ops/diagnostics/check-rds-schema.mjs", "server/backend/scripts/check-rds-schema.mjs", "server/backend/scripts/rds-schema-check.mjs", "server/backend/scripts/rds-schema-baseline.json", "server/backend/scripts/rds-migrations.mjs"]) {
     assert.match(plan([file]), /install=0 compile=0 web=0/);
     assert.match(plan([file, "server/backend/core/auth/login_service.js"]), /install=1 compile=1 web=1/);
   }

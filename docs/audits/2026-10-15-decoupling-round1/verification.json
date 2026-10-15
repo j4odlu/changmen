@@ -1,0 +1,88 @@
+{
+  "checkedAt": "2026-10-15T11:16:27.368Z",
+  "scope": "Round 1 core HTTP contracts and login/presence database access; existing dirty workspace retained",
+  "passed": true,
+  "sourceStable": true,
+  "completeRelease": false,
+  "results": [
+    {
+      "check": "deployment-control",
+      "passed": true,
+      "elapsedMs": 21576
+    },
+    {
+      "check": "fok-551",
+      "passed": true,
+      "elapsedMs": 22423
+    },
+    {
+      "check": "validation-control",
+      "passed": true,
+      "elapsedMs": 6120
+    },
+    {
+      "check": "verification-control",
+      "passed": true,
+      "elapsedMs": 52524
+    },
+    {
+      "check": "verification-node",
+      "passed": true,
+      "elapsedMs": 655
+    },
+    {
+      "check": "router-compile",
+      "passed": true,
+      "elapsedMs": 1081
+    },
+    {
+      "check": "backend",
+      "passed": true,
+      "elapsedMs": 31676
+    },
+    {
+      "check": "frontend-typecheck",
+      "passed": true,
+      "elapsedMs": 18846
+    },
+    {
+      "check": "frontend",
+      "passed": true,
+      "elapsedMs": 163241
+    },
+    {
+      "check": "build",
+      "passed": true,
+      "elapsedMs": 35859
+    }
+  ],
+  "identity": {
+    "commit": "1f9ca758959a24d947439bc42be6ae2ce5c3661e",
+    "candidateTree": "2dfc06a06f35471d1d218b73d02624b591a0001e",
+    "inputFingerprint": "562946bc8eb852ed71465644da14fb3394bf157de23a8b0f95024329aa947e04"
+  },
+  "tests": {
+    "newHttp": 34,
+    "newMetadataBehavior": 8,
+    "temporaryPostgres": 7,
+    "backendPassed": 784,
+    "backendSkipped": 16,
+    "databasePackagePassed": 359,
+    "frontendPassed": 3952,
+    "frontendSkipped": 1
+  },
+  "productionDatabaseAccess": false,
+  "deployed": false,
+  "files": {
+    "package.json": "c7a8d0dc296630cd374643b9d33cceccf0ac1295b2155852258352dcb6e8b3db",
+    "server/backend/package.json": "177cf86bd5ca11e4a2968624a3865bbaa5ddb469ac56173d6e8fecbcc141d57a",
+    "server/backend/core/account/user_login_meta.js": "b4ba3c88602d543d202e733a380f8a2b3fcf1d97332ceed974e05c0b275c30d6",
+    "server/backend/core/account/user_presence.js": "a3fbd3419b2123129132ea416b9131265a7accab26b1185ab3f514996030fa42",
+    "server/backend/core/account/user_metadata_contract.test.mjs": "5bcb7bf699788bb463e7f35e8a096218deb6a4924240f84975a28afa5617da46",
+    "server/backend/core/esport-api/core_contract.test.mjs": "00db413100ec1f2aa83e0ea0cf0ae0df1d4588a2a4e7313ae3c32806ce41ed49",
+    "server/db/package.json": "ab5ceccc061f0a414299bb6423b9a8846db8c1e784e8f0850ed6de730f35fcbb",
+    "server/db/profile_metadata.js": "8185d6d6cbdd8faa0a3d994c997a434bc14e32b7e41efb102b32baa8b7d5c987",
+    "server/db/rds/profile_store.js": "b3fa94f222db2fcf2c980128a85f81e22f5f5141db3b4fe5227bf84c3a708824",
+    "scripts/testing/user-metadata-postgres.mjs": "93e4c1ab46a3de830f845535fa77bcf99be5b20e985491000c54e97403e99909"
+  }
+}

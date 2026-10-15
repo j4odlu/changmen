@@ -1,5 +1,5 @@
 import * as db from "@changmen/db";
-import { removeClientMatchFromMemory } from "../../../backend/core/db/store.js";
+import { removeClientMatchFromMemory } from "../runtime_ports.js";
 import { invalidateMatcherRdsSnapshot } from "./rds_snapshot_cache.js";
 import { matchMergeOnce } from "./match_merge_once.js";
 import "../lib/env.js";

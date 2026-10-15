@@ -1,0 +1,251 @@
+{
+  "checkedAt": "2026-10-15T06:13:14.493Z",
+  "head": "1f9ca758959a24d947439bc42be6ae2ce5c3661e",
+  "localOnly": true,
+  "deployed": false,
+  "productionDatabaseAccess": false,
+  "liveVenueAccess": false,
+  "realBetting": false,
+  "businessCodeChangedThisReview": false,
+  "frontendCodeChangedThisReview": false,
+  "newBusinessFindings": [],
+  "conclusion": "No new business regression found within the reviewed and locally tested scope; not a proof of absence of all defects.",
+  "newPostgresBoundaryCases": {
+    "passed": true,
+    "localOnly": true,
+    "checks": 8,
+    "cases": [
+      "COMMIT failure rolls back recharge amount and money log, then the next recharge succeeds",
+      "COMMIT failure rolls back ACCOUNT edits and pruning without publishing cache or poisoning its queue",
+      "profile lock timeout aborts recharge without partial writes and releases the transaction",
+      "a blocked owner does not serialize another owner's account mutation",
+      "actual strict read delivered after deletion cannot restore the deleted row",
+      "failed soft delete leaves a delayed committed snapshot and active account intact",
+      "deletion during a completed rollback stays deleted and the next queued mutation succeeds",
+      "metadata patch serializes with a later direct balance write without losing either database update"
+    ]
+  },
+  "newSnapshotBoundaryCases": {
+    "passed": true,
+    "checks": 5,
+    "log": "output/account-boundary-audit-snapshot.log"
+  },
+  "priorPostgresReruns": {
+    "concurrency": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 7,
+      "cases": [
+        "S1: delayed balance metadata sync cannot overwrite newer Client_UpdateBalance",
+        "S1/PF: late ledger publication keeps the latest amount and settled profit",
+        "S2: recharge and account patch both commit without profile/FK deadlock",
+        "S2/reverse: recharge waits before locking players when ACCOUNT already owns the profile",
+        "S2/atomicity: concurrent recharges add once each; a failed log insert rolls back the amount",
+        "S2/create: full replacement keeps the profile lock and cannot prune a concurrent new account",
+        "S3: delayed committed snapshot cannot resurrect a deleted account in cache"
+      ]
+    },
+    "previousReviewFixes": {
+      "passed": true,
+      "localOnly": true,
+      "checks": 12,
+      "cases": [
+        "default batch rolls back all existing rows when one requested row is missing",
+        "A8 full ACCOUNT save preserves the newer confirmed balance and still accepts changed config",
+        "unchanged ACCOUNT still validates ownership but avoids a redundant player UPDATE",
+        "concurrent partial edits read current rows inside the lock and preserve both updates",
+        "legacy DB partial-patch entry also serializes concurrent changes to the same record",
+        "concurrent actual sport-account requests preserve each credential and the esport token",
+        "failed partial edit rolls back, keeps the cache, and does not poison the next edit",
+        "a partial edit never UPDATEs unrelated player rows",
+        "older profile read finishes before a queued commit and cannot erase its fields",
+        "cold list outage fails instead of returning successful empty, then recovers to confirmed empty",
+        "empty and foreign ACCOUNT saves remain rejected; explicit removal still prunes",
+        "partial PF edit publishes SQL-protected balance instead of an uncommitted planned balance"
+      ]
+    },
+    "phase1": {
+      "passed": true,
+      "localOnly": true,
+      "postgres": "18.6",
+      "checks": 12,
+      "cases": [
+        "fresh schema includes every numbered migration and both collector fields",
+        "upgrade a legacy schema without 034/039 or migration records",
+        "concurrent migration runs execute a pending migration once",
+        "migration failure rolls back DDL and leaves no success record",
+        "prune failure rolls back earlier account updates and keeps the cache",
+        "write failure cannot report a successful save or prune another account",
+        "empty overwrite and foreign player remain rejected",
+        "successful A8 ACCOUNT save commits updates and prune together",
+        "an incomplete account UPDATE rolls back the whole replacement",
+        "database owner lock serializes concurrent replacement snapshots",
+        "missing profile persistence fails without publishing a configuration cache",
+        "a failed configuration write cannot undo or contaminate the next successful write"
+      ]
+    },
+    "phase2": {
+      "passed": true,
+      "localOnly": true,
+      "postgres": "18.6",
+      "checks": 12,
+      "cases": [
+        "confirmed empty list shares the same version across backend and standalone matcher",
+        "one-statement rows and version retain native bigint strings and full matcher fields",
+        "same-count and same-builtAt manual reversal invalidates the shared snapshot",
+        "PM update below the global maximum timestamp still refreshes both consumers",
+        "embedded matcher uses the same PM and identity rows as standalone",
+        "successful writer publishes once after commit and preserves independently updated PM fields",
+        "write rollback neither publishes nor patches collector links",
+        "sticky ended row cannot return through composer publication",
+        "composer identity and align share full lifecycle rows including ended and PM fields",
+        "deletion down to empty clears backend and matcher caches",
+        "a fresh process reloads the same committed snapshot without backend hydration",
+        "assembled matcher HTTP API rejects unauthenticated local requests"
+      ]
+    }
+  },
+  "totalPostgresCases": 51,
+  "totalExtraSnapshotCases": 5,
+  "fullTest": {
+    "command": "npm test -- --force",
+    "passed": true,
+    "tasks": 14,
+    "cached": 0,
+    "summaries": [
+      "@changmen/team-resolver:test:       Tests  6 passed | 1 expected fail (7)",
+      "@changmen/db:test:       Tests  359 passed (359)",
+      "@changmen/backend:test:       Tests  705 passed | 16 skipped (721)",
+      "@changmen/matcher:test:       Tests  188 passed (188)",
+      "@changmen/web:test:       Tests  3938 passed | 1 skipped (3939)"
+    ],
+    "finalLog": "output/account-boundary-audit-all-tests-recheck.log"
+  },
+  "existingTestIssues": [
+    {
+      "file": "server/backend/core/auth/web_session_routes.test.mjs",
+      "line": 52,
+      "observed": "First full run failed in fetch with bad port; the test binds a random local port using listen(0). Exact allocated port was not logged.",
+      "attribution": "Not a new account fix regression; neither auth test nor auth runtime was edited in this work.",
+      "fixedThisReview": false,
+      "isolatedRerun": "10 passed",
+      "fullRerun": "14 tasks passed",
+      "logs": [
+        "output/account-boundary-audit-all-tests.log",
+        "output/account-boundary-audit-cookie-recheck.log",
+        "output/account-boundary-audit-all-tests-recheck.log"
+      ]
+    }
+  ],
+  "checks": {
+    "frontendTypecheck": "passed, vue-tsc -b forced",
+    "backendRouterCompile": "passed",
+    "diff": "passed, cr-at-eol",
+    "fok": [
+      {
+        "baseline": "219535c8",
+        "unifiedContract": {
+          "completeCapabilityContracts": 4,
+          "precisePublicModules": 11
+        },
+        "exactCoreFiles": 40,
+        "pmFunctionBodies": 29,
+        "manualFokBodyIdentical": true
+      },
+      {
+        "baseline": "219535c8",
+        "orderStoreBodyIdentical": true,
+        "functionsIdenticalUnderFokInputs": 49
+      },
+      {
+        "passed": true,
+        "comparisons": 180,
+        "historicalDifferences": 108,
+        "confirmationFaultCases": 20,
+        "originalGateCases": 45,
+        "fullReleaseAccepted": false
+      },
+      {
+        "independentGtcModuleFiles": 51,
+        "noFokPrivateImports": true,
+        "noFokActionHooks": true,
+        "sharedAccountGateway": true,
+        "modeSpecificPreparation": true
+      }
+    ]
+  },
+  "sourceEvidence": {
+    "checkedExistingFiles": 46,
+    "changedExistingFiles": [],
+    "a8BundleSha256": "33b8a5e586f55564ac5483c723cc613b144726985daaa45c936d90fa038c4279",
+    "a8VerifiedFragments": [
+      {
+        "fragment": "await Ut.saveData(B5,JSON.stringify(t.value.filter(P=>P.accountId)))",
+        "found": true
+      },
+      {
+        "fragment": "await _.updateBalance()",
+        "found": true
+      },
+      {
+        "fragment": "await _.updateOrders()",
+        "found": true
+      },
+      {
+        "fragment": "await E()",
+        "found": true
+      },
+      {
+        "fragment": "await u()",
+        "found": true
+      },
+      {
+        "fragment": "await dt.wait(120*1e3+Math.random()*6e4)",
+        "found": true
+      }
+    ],
+    "unchangedFrontendFragments": [
+      {
+        "fragment": "120_000 + Math.random() * 60_000",
+        "found": true
+      },
+      {
+        "fragment": "await acc.updateBalance()",
+        "found": true
+      },
+      {
+        "fragment": "await acc.updateOrders()",
+        "found": true
+      },
+      {
+        "fragment": "await store.saveAccounts()",
+        "found": true
+      },
+      {
+        "fragment": "const ok = await saveAccounts(payload)",
+        "found": true
+      }
+    ]
+  },
+  "protectedUnchanged": [
+    "server/backend/server.js",
+    "server/db/index.js",
+    "server/db/impl_rds.js",
+    "deploy",
+    "packages/venue-adapter/esport-freeze.json"
+  ],
+  "manuallyReviewed": [
+    "Owner/profile, player and FK lock ordering across account patch, recharge, delete and create.",
+    "Deferred constraint COMMIT rejection and lock timeout release; edits, prune and money log rollback; queue recovery.",
+    "All five queued account snapshot publication paths, failed deletes and delete during rollback.",
+    "Versioned snapshot generation fences, shared rejection recovery, clone isolation, cold outage and confirmed empty.",
+    "A8 bundle ACCOUNT save and refresh sequence, matching existing frontend call order and 120-180 second delay."
+  ],
+  "limits": [
+    "Existing backend 16 skips, frontend 1 skip, resolver 1 expected fail retained.",
+    "No production or authenticated live-venue E2E validation.",
+    "Explicit database COMMIT rejection tested; ambiguous network failure at commit needs separate idempotency/reconciliation design.",
+    "Existing stale-read fallback and intermediate balance-cache refresh semantics preserved; no global strong consistency claim.",
+    "Existing random-port Cookie test instability recorded and not fixed in this review."
+  ]
+}

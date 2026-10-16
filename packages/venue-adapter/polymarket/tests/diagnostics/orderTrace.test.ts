@@ -5,6 +5,21 @@ import { tracePolymarketOrder, tracePolymarketWsMessage, polymarketReadErrorDeta
 
 afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
 describe("PM order timeline", () => {
+  it("keeps invalid quantity shape without exposing arbitrary payload text", () => {
+    const secret = "must-not-leak";
+    tracePolymarketWsMessage(292, "cancel", { event_type: "order", type: "CANCELLATION", id: "cancel",
+      size_matched: secret, order_type: secret, secret, payload: { apiKey: secret } }, null, 100, false);
+    const data = saveUserLog.mock.calls[0]?.[1];
+    expect(data).toMatchObject({ sizeMatchedField: { kind: "invalid_string", length: secret.length, redacted: true } });
+    expect(JSON.stringify(data)).not.toContain(secret);
+    expect(data).not.toHaveProperty("wireOrderType");
+  });
+  it.each([false, [], { secret: "must-not-leak" }, "0".repeat(100)])("bounds nonstandard quantity evidence %j", (value) => {
+    tracePolymarketWsMessage(292, "cancel", { event_type: "order", type: "CANCELLATION", id: "cancel", size_matched: value }, null, 100, false);
+    const data = saveUserLog.mock.calls[0]?.[1];
+    expect(data).toHaveProperty("sizeMatchedField");
+    expect(JSON.stringify(data)).not.toMatch(/must-not-leak|0{100}/);
+  });
   it("records an unrecognized correlated WS frame without its secret or error body", () => {
     tracePolymarketWsMessage(285, "original", { id: "original", event_type: "order", status: "rejected: details", reason: "private-text", secret: "must-not-leak", size_matched: "0" }, null, 100, false);
     const data = saveUserLog.mock.calls[0]?.[1];

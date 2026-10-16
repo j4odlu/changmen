@@ -275,6 +275,11 @@ export async function settlePolymarketDelayedOrder(
       return;
     // 首次 Promise 可能仍是旧取消回执；读取核验期间的最新快照。
     value = readPolymarketOrderWatch(orderId, account) ?? value;
+    // [changmen 扩展] 已绑定实际 FOK 的官方取消且无成交冲突，直接收尾。
+    if (value?.fokCancellation && value.outcome === "unfilled") {
+      resolveWs({ outcome: "unfilled", row: value.row });
+      return;
+    }
     if (side === "BUY" && value?.outcome === "unfilled" && isPolymarketTradeFailureRow(value.row)) {
       resolveWs({ outcome: "unfilled", row: value.row });
       return;

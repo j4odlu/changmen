@@ -456,6 +456,7 @@ export const polymarketProvider: PlatformProvider = {
         const watchTimeoutMs = buildPolymarketWatchTimeoutMs(sd);
         if (conditionId) {
           registerPolymarketOrderWatch(account, bet.orderId, {
+            submittedOrderType: "FOK",
             conditionId,
             timeoutMs: watchTimeoutMs,
           });

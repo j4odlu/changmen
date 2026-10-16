@@ -10,6 +10,7 @@ import { verifyPmOfficialSettlementSource } from "./pm-settlement-policy-boundar
 import { restorePmTickRefreshSource } from "./pm-tick-refresh-boundary.mjs";
 import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
 import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
+import { restorePmWsQuantityEvidenceSource } from "./pm-ws-quantity-evidence-boundary.mjs";
 
 const base = "e901bb596952256284cd8a9eb8b73b572c963915";
 describe("pM functional relocation preserves complete implementations", () => {
@@ -28,15 +29,20 @@ describe("pM functional relocation preserves complete implementations", () => {
     it(`${file}: exposes changes in the implementation behind the facade`, () => {
       const facade = pmFunctionalCompatibilitySource(file);
       const original = readRelocatedPmFunctionalSource(file, facade);
-      const mutated = readRelocatedPmFunctionalSource(file, facade, (requested) => {
+      const readMutated = () => readRelocatedPmFunctionalSource(file, facade, (requested) => {
         return fs.readFileSync(requested, "utf8") + (requested === target ? "\nthrow new Error('changed implementation');\n" : "");
       });
+      if (target === "packages/venue-adapter/polymarket/diagnostics/orderTrace.ts") {
+        expect(readMutated).toThrow("exact diagnostic-only WS change");
+        return;
+      }
+      const mutated = readMutated();
       expect(mutated).not.toBe(original);
       expect(mutated).toContain("changed implementation");
     });
     it(`${file}: resolves every relative dependency to its original module`, () => {
       const original = execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" });
-      const moved = restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, fs.readFileSync(target, "utf8")), file => fs.readFileSync(file, "utf8")));
+      const moved = restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, restorePmWsQuantityEvidenceSource(target, fs.readFileSync(target, "utf8"))), file => fs.readFileSync(file, "utf8")));
       const imports = (source, filename) => {
         const sf = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true);
         const result = [];

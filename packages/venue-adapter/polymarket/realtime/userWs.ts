@@ -1,4 +1,5 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
+import { interpretFokCancellation } from "./fokCancellation";
 import { tracePolymarketOrder, tracePolymarketWsMessage } from "../orderTrace";
 import { reportVenueWsStatus } from "../../shared/venueWsStatus";
 import type { PolymarketOrderRow } from "../orderTypes";
@@ -23,12 +24,15 @@ const WS_PING_MS = 10_000;
 const DEFAULT_WATCH_TIMEOUT_MS = 45_000;
 
 export interface PolymarketWsSettleResult {
+  fokCancellation?: true;
   source: "ws";
   outcome: "matched" | "unfilled";
   row: PolymarketOrderRow | null;
 }
 
 interface WatchEntry {
+  submittedOrderType?: "FOK" | "GTC" | "GTD" | "FAK";
+  hasFillEvidence: boolean;
   tradeIds: Set<string>;
   confirmedTradeIds: Set<string>;
   listeners: Set<(event: "update" | "connected") => void>;
@@ -166,6 +170,11 @@ function settleWatch(orderId: string, result: PolymarketWsSettleResult) {
 function recordOrderTradeIds(orderId: string, entry: WatchEntry, msg: Record<string, unknown>) {
   if (!polymarketUserOrderIdsFromMessage(msg).some(id => id.toLowerCase() === orderId.toLowerCase()))
     return;
+  // [changmen 扩展] 预扫描同批/回放帧中的成交，取消不得抢先释放 FOK 等待。
+  if (entry.submittedOrderType === "FOK" && (interpretPolymarketUserWsMessage(msg, orderId) === "matched"
+    || (String(msg.event_type ?? "").trim().toLowerCase() === "order"
+      && String(msg.status ?? "").trim().toUpperCase() === "MATCHED")))
+    entry.hasFillEvidence = true;
   const isTrade = String(msg.event_type ?? "").trim().toLowerCase() === "trade"
     || String(msg.type ?? "").trim().toUpperCase() === "TRADE";
   const ids = isTrade ? [msg.id] : Array.isArray(msg.associate_trades) ? msg.associate_trades : [];
@@ -181,7 +190,11 @@ function recordOrderTradeIds(orderId: string, entry: WatchEntry, msg: Record<str
 
 function consumeOrderMessage(orderId: string, entry: WatchEntry, msg: Record<string, unknown>) {
   recordOrderTradeIds(orderId, entry, msg);
-  const outcome = interpretPolymarketUserWsMessage(msg, orderId);
+  let outcome = interpretPolymarketUserWsMessage(msg, orderId);
+  const fokCancellation = entry.submittedOrderType === "FOK"
+    && String(msg.type ?? "").trim().toUpperCase() === "CANCELLATION";
+  if (fokCancellation && outcome !== "matched")
+    outcome = interpretFokCancellation(msg, orderId, entry.hasFillEvidence || entry.result?.outcome === "matched", entry.tradeIds.size > 0);
   if (!outcome)
     return null;
   const row = polymarketOrderRowFromUserWsMessage(msg, outcome);
@@ -190,7 +203,9 @@ function consumeOrderMessage(orderId: string, entry: WatchEntry, msg: Record<str
       || entry.confirmedTradeIds.size > 0 || entry.result?.outcome === "matched"))
     return null;
   // 将累计关联交给 REST 核验，不能各通道分别“只看到一条”就判唯一。
-  settleWatch(orderId, { source: "ws", outcome, row: outcome === "matched" && entry.tradeIds.size
+  settleWatch(orderId, { source: "ws", outcome,
+    ...(fokCancellation && outcome === "unfilled" ? { fokCancellation: true as const } : {}),
+    row: outcome === "matched" && entry.tradeIds.size
     ? { ...row, associate_trades: [...entry.tradeIds] } : row });
   return outcome;
 }
@@ -339,7 +354,7 @@ export function warmAllPolymarketUserWs(accounts: readonly PlatformAccount[]): v
 export function registerPolymarketOrderWatch(
   account: PlatformAccount,
   orderId: string,
-  opts: { conditionId: string; timeoutMs?: number },
+  opts: { conditionId: string; timeoutMs?: number; submittedOrderType?: "FOK" | "GTC" | "GTD" | "FAK" },
 ): void {
   const id = String(orderId ?? "").trim();
   const conditionId = String(opts.conditionId ?? "").trim();
@@ -358,6 +373,8 @@ export function registerPolymarketOrderWatch(
   });
 
   const entry: WatchEntry = {
+    submittedOrderType: opts.submittedOrderType,
+    hasFillEvidence: false,
     tradeIds: new Set(),
     confirmedTradeIds: new Set(),
     listeners: new Set(),

@@ -1,4 +1,5 @@
 import { saveUserLog } from "@changmen/client-core/bridge/clientApi";
+import { polymarketWsQuantityEvidence } from "./wsQuantityEvidence";
 
 type Stage = "submit" | "ack" | "watch" | "ws_event" | "ws_open" | "ws_close" | "ws_timeout" | "order_read" | "lookup" | "decision";
 interface Details {
@@ -27,6 +28,9 @@ interface Details {
   associatedTradeCount?: number;
   unknownFieldCount?: number;
   messageFields?: string[];
+  wsSizeMatchedPresent?: boolean;
+  wsSizeMatched?: unknown;
+  wsOrderType?: unknown;
 }
 
 /** [changmen 扩展] 只分类错误，不记录错误正文、响应体或凭证。 */
@@ -64,6 +68,8 @@ export function tracePolymarketWsMessage(accountId: number | undefined, orderId:
     receivedAt, replayed, status, outcome: outcome ?? undefined, eventType, eventAction: String(msg.type ?? ""), interpretation,
     statusFormat: !status ? "missing" : /^[a-z_]{1,40}$/i.test(status) ? "enum" : "non_enum",
     sizeMatched: number(msg.size_matched), originalSize: number(msg.original_size),
+    wsSizeMatchedPresent: Object.prototype.hasOwnProperty.call(msg, "size_matched"),
+    wsSizeMatched: msg.size_matched, wsOrderType: msg.order_type,
     associatedTradeCount: Array.isArray(msg.associate_trades) ? msg.associate_trades.length : undefined,
     messageFields: Object.keys(msg).filter(key => WS_FIELDS.has(key)),
     unknownFieldCount: Object.keys(msg).filter(key => !WS_FIELDS.has(key)).length,
@@ -91,6 +97,12 @@ export function tracePolymarketOrder(accountId: number | undefined, orderId: str
     data.messageFields = details.messageFields.filter(key => WS_FIELDS.has(key));
   if (details.submittedAt)
     data.sinceSubmitMs = Math.max(0, at - details.submittedAt);
+  // [changmen 扩展] 诊断保留“缺字段/空值/非法值”的区别，不参与任何成交判定。
+  if (stage === "ws_event" && typeof details.wsSizeMatchedPresent === "boolean") {
+    data.sizeMatchedField = polymarketWsQuantityEvidence(details.wsSizeMatched, details.wsSizeMatchedPresent);
+    if (typeof details.wsOrderType === "string" && ["FOK", "GTC", "GTD", "FAK"].includes(details.wsOrderType))
+      data.wireOrderType = details.wsOrderType;
+  }
   if (details.startedAt)
     data.durationMs = Math.max(0, at - details.startedAt);
   void saveUserLog(`PM 原单时序 / ${stage}`, data).catch(() => {});

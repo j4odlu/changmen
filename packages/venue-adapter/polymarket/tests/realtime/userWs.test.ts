@@ -12,7 +12,7 @@ import {
 } from "../../userWs";
 import { POLYMARKET_USER_WS } from "../../api";
 import { resetPmUserWsSourceModeForTests } from "../../pmUserWsMode";
-const diagnosticLog = vi.hoisted(() => vi.fn(async () => {}));
+const diagnosticLog = vi.hoisted(() => vi.fn(async (_title: string, _data?: unknown) => {}));
 vi.mock("@changmen/client-core/bridge/clientApi", () => ({ saveUserLog: diagnosticLog }));
 
 class MockWebSocket {
@@ -58,6 +58,35 @@ function pmAccount(): PlatformAccount {
 }
 
 describe("polymarket user ws", () => {
+  it.each(["FOK", "GTC"])("retains wire quantity evidence without changing %s cancellation outcomes", (orderType) => {
+    const account = pmAccount();
+    const cases = [
+      { present: false, value: undefined, field: { kind: "missing" }, outcome: null },
+      { present: true, value: null, field: { kind: "null", raw: null }, outcome: null },
+      { present: true, value: "", field: { kind: "blank_string", raw: "" }, outcome: null },
+      { present: true, value: "  ", field: { kind: "blank_string", raw: "  " }, outcome: null },
+      { present: true, value: "NaN", field: { kind: "invalid_string", raw: "NaN" }, outcome: null },
+      { present: true, value: 0, field: { kind: "number", raw: 0 }, outcome: "unfilled" },
+      { present: true, value: "0", field: { kind: "numeric_string", raw: "0" }, outcome: "unfilled" },
+      { present: true, value: " 0.0000 ", field: { kind: "numeric_string", raw: " 0.0000 " }, outcome: "unfilled" },
+      { present: true, value: "0e0", field: { kind: "numeric_string", raw: "0e0" }, outcome: "unfilled" },
+      { present: true, value: "3", field: { kind: "numeric_string", raw: "3" }, outcome: "matched" },
+    ];
+    for (const [index, row] of cases.entries()) {
+      const id = `wire-${orderType}-${index}`;
+      registerPolymarketOrderWatch(account, id, {});
+      const ws = MockWebSocket.instances[0]!;
+      if (!ws.readyState) ws.open();
+      const msg = { event_type: "order", type: "CANCELLATION", id, order_type: orderType,
+        original_size: "10", associate_trades: [], ...(row.present ? { size_matched: row.value } : {}) };
+      ws.onmessage?.({ data: JSON.stringify(msg) });
+      expect(readPolymarketOrderWatch(id, account)?.outcome ?? null).toBe(row.outcome);
+      const trace = diagnosticLog.mock.calls.filter(([title]) => title === "PM 原单时序 / ws_event").at(-1)?.[1];
+      expect(trace).toMatchObject({ orderId: id, sizeMatchedField: row.field, wireOrderType: orderType });
+      if (row.outcome === "unfilled") expect(trace).toMatchObject({ sizeMatched: 0, outcome: "unfilled" });
+      if (row.outcome === "matched") expect(readPolymarketOrderWatch(id, account)?.row?.size_matched).toBe("3");
+    }
+  });
   it("checks all tradeIds in one WS batch before accepting a sole FAILED", () => {
     const account = pmAccount();
     registerPolymarketOrderWatch(account, "batch-failed", { conditionId: "market" });

@@ -1,0 +1,13 @@
+{
+  "file": "packages/venue-adapter/polymarket/diagnostics/orderTrace.ts",
+  "helper": "packages/venue-adapter/polymarket/diagnostics/wsQuantityEvidence.ts",
+  "helperSha": "b23eb1fbc59e5a2c7773e826924105d722d07cdf39cb3c705dfe15a49a1f738c",
+  "beforeSha": "1ef121c840ae2ef954291c6057f35f47cbce585941ae428514ee76d2cbda71b9",
+  "afterSha": "259b5dd6ee337c742b67bfa17d2f4db70f576b4a640976ebe3d2cf9f85fad696",
+  "additions": [
+    "import { polymarketWsQuantityEvidence } from \"./wsQuantityEvidence\";\n",
+    "  wsSizeMatchedPresent?: boolean;\n  wsSizeMatched?: unknown;\n  wsOrderType?: unknown;\n",
+    "    wsSizeMatchedPresent: Object.prototype.hasOwnProperty.call(msg, \"size_matched\"),\n    wsSizeMatched: msg.size_matched, wsOrderType: msg.order_type,\n",
+    "  // [changmen 扩展] 诊断保留“缺字段/空值/非法值”的区别，不参与任何成交判定。\n  if (stage === \"ws_event\" && typeof details.wsSizeMatchedPresent === \"boolean\") {\n    data.sizeMatchedField = polymarketWsQuantityEvidence(details.wsSizeMatched, details.wsSizeMatchedPresent);\n    if (typeof details.wsOrderType === \"string\" && [\"FOK\", \"GTC\", \"GTD\", \"FAK\"].includes(details.wsOrderType))\n      data.wireOrderType = details.wsOrderType;\n  }\n"
+  ]
+}

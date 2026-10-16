@@ -18,6 +18,7 @@ import { clearPmExecutionMetrics, getPmExecutionMetrics } from "../../pmExecutio
 import { preparePolymarketAccountRuntimes, clearPolymarketOrderClientCacheForTests } from "../../pmOrderClientCache";
 import { clearPmSubmitJournalForTests, guardedPmSubmit, pmAccountSubmitAttempts } from "../../pmSubmitJournal";
 import * as pmOrigin from "../../pmOrigin";
+import * as userWs from "../../userWs";
 import { clearPmGammaCacheForTests } from "../../pmSportGamma";
 import { checkGtcBuy, prepareManualGtcBuy } from "../../gtc/preparation";
 
@@ -956,6 +957,7 @@ describe("polymarketProvider.betting", () => {
   });
 
   test("succeeds when API returns delayed with orderID (chain pending)", async () => {
+    const watch = vi.spyOn(userWs, "registerPolymarketOrderWatch").mockImplementation(() => {});
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     mockPluginGetWithBook({
       tick_size: "0.01",
@@ -980,6 +982,7 @@ describe("polymarketProvider.betting", () => {
 
     const result = await checkedBetting(account, {
       itemId: "123456789",
+      betId: "condition-1",
       odds: 2,
       betMoney: 10,
     } as any);
@@ -987,6 +990,8 @@ describe("polymarketProvider.betting", () => {
     expect(result.success).toBe(true);
     expect(result.pending).toBe(true);
     expect(result.orderId).toBe("0xdelayed-order");
+    expect(watch).toHaveBeenCalledWith(account, "0xdelayed-order", expect.objectContaining({ submittedOrderType: "FOK" }));
+    watch.mockRestore();
     expect(result.message).toContain("待确认");
   });
 

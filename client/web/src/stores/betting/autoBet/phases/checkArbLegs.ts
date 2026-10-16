@@ -1,4 +1,5 @@
 import { recordPmExecutionMetric } from "@changmen/venue-adapter/polymarket";
+import { capturePmFokPreflightMode, prepareOptimizedFokExecution } from "@changmen/venue-adapter/polymarket";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type {
   ArbBetAttemptParams,
@@ -89,6 +90,20 @@ export async function checkArbLegs(
     return null;
   }
 
+  // [changmen 扩展] 只为动态 FOK 的真实执行腿准备；此时传统腿尚未检查，不占用其报价有效窗口。
+  const preparing = ready.pmOrderMode === "GTC" ? [] : [[accountA, legA], [accountB, legB]] as const;
+  const dynamicAccounts = preparing.flatMap(([account, leg]) => account?.provider === "Polymarket"
+    && capturePmFokPreflightMode(leg) === "optimized" ? [account] : []);
+  if (dynamicAccounts.length) {
+    syncActiveBetPhase(bet.id, "checking", "准备 PM 提交环境");
+    try { await Promise.all(dynamicAccounts.map(account => prepareOptimizedFokExecution(account, ready.linkId))); }
+    catch (error) {
+      const reason = error instanceof Error ? error.message : "PM 提交准备失败";
+      observeArbSubmissionBlocked(ready, "pm_preparation_failed", reason);
+      setMessage(reason); trace?.finish("fail", reason); syncActiveBetFail(bet.id, reason);
+      return null;
+    }
+  }
   syncActiveBetPhase(bet.id, "checking", "正在预检");
 
   if (checkAccountA)
@@ -132,6 +147,7 @@ export async function checkArbLegs(
   const taskA = checkAccountA
     ? accountStore.checkBetting(checkAccountA, legA, {
         ...(legA.type === "Polymarket" ? { requireClobConfirmation: true } : {}),
+        ...(dynamicAccounts.includes(checkAccountA) ? { pmDynamicPrepared: true as const } : {}),
         role: isSingleLegPrecheckOnly("A", accountA, accountB, checkAccountA, checkAccountB) ? "precheckOnly" : "execute",
         skipAccountRate: resolveSkipAccountRate("A", ready),
         ...(legA.type === "Polymarket" && ready.pmOrderMode === "GTC" ? { pmOrderMode: ready.pmOrderMode } : {}),
@@ -140,6 +156,7 @@ export async function checkArbLegs(
   const taskB = checkAccountB
     ? accountStore.checkBetting(checkAccountB, legB, {
         ...(legB.type === "Polymarket" ? { requireClobConfirmation: true } : {}),
+        ...(dynamicAccounts.includes(checkAccountB) ? { pmDynamicPrepared: true as const } : {}),
         role: isSingleLegPrecheckOnly("B", accountA, accountB, checkAccountA, checkAccountB) ? "precheckOnly" : "execute",
         skipAccountRate: resolveSkipAccountRate("B", ready),
         ...(legB.type === "Polymarket" && ready.pmOrderMode === "GTC" ? { pmOrderMode: ready.pmOrderMode } : {}),

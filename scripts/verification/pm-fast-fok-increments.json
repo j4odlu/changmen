@@ -1,0 +1,101 @@
+{
+  "changes": {
+    "packages/venue-adapter/polymarket/submission/preflight/pmBuyPreflight.ts": {
+      "beforeSha": "c49e5f675e91386e6ffb7a55b54e25aa52272d07f5dd06a6789990ff31da6092",
+      "increments": [
+        [
+          "import type { PmFokPreflightMode } from \"./pmFokPreflightMode\";\nimport { getPolymarketPmSportBlockReasonFromOption } from \"../../pmSportGuard\";\nimport { measurePmExecution } from \"../../pmExecutionMetrics\";\nimport { resolveOptimizedFokBlockReason } from \"./optimized/pmBetGuard\";\n\nexport interface PmPreflightBinding {\n  binding: string;\n",
+          "import type { PmFokPreflightMode } from \"./pmFokPreflightMode\";\nimport { getPolymarketPmSportBlockReasonFromOption } from \"../../pmSportGuard\";\nimport { measurePmExecution } from \"../../pmExecutionMetrics\";\nimport { runOptimizedFokPreflight } from \"./optimized/pmFastPreflight\";\n\nexport interface PmPreflightBinding {\n  binding: string;\n"
+        ],
+        [
+          "  if (reason) throw new Error(reason);\n}\n\ninterface PmBuyPreflightTasks<T> {\n  gateway: string;\n  /** 每轮只调用一次；FOK/GTC 自己保留报价、份数和深度语义。 */\n  market: () => Promise<T>;\n",
+          "  if (reason) throw new Error(reason);\n}\n\nexport interface PmBuyPreflightTasks<T> {\n  gateway: string;\n  /** 每轮只调用一次；FOK/GTC 自己保留报价、份数和深度语义。 */\n  market: () => Promise<T>;\n"
+        ],
+        [
+          " * 本地终局在所有异步阶段返回后再次核验；提交前的核验仍由各执行器保留。\n */\nexport async function runPmBuyPreflight<T>(account: PlatformAccount, option: BetOption, tasks: PmBuyPreflightTasks<T>) {\n  const measure = <R>(kind: \"guard\" | \"clock\" | \"runtime\", action: () => Promise<R>) =>\n    tasks.measureStages ? measurePmExecution(kind, { tokenId: option.itemId, preflightMode: tasks.sportMode ?? \"gtc\" }, action) : action();\n  const market = tasks.market();\n  const guard = measure(\"guard\", () => tasks.sportMode === \"legacy\"\n    ? resolveLegacyBlockReason(option)\n    : tasks.sportMode === \"optimized\"\n      ? resolveOptimizedFokBlockReason(option, tasks.requireClobConfirmation)\n        .catch(() => \"PM 动态复核预检状态校验失败，请新建投注尝试\")\n      : resolvePolymarketBetBlockReason(option, tasks.requireClobConfirmation));\n  const clock = tasks.role === \"precheckOnly\" ? Promise.resolve()\n    : measure(\"clock\", () => pmPrepareSubmit(account));\n  const runtime = tasks.role === \"precheckOnly\" ? Promise.resolve(null) : measure(\"runtime\", async () => {\n",
+          " * 本地终局在所有异步阶段返回后再次核验；提交前的核验仍由各执行器保留。\n */\nexport async function runPmBuyPreflight<T>(account: PlatformAccount, option: BetOption, tasks: PmBuyPreflightTasks<T>) {\n  if (tasks.sportMode === \"optimized\") return runOptimizedFokPreflight(account, option, tasks);\n  const measure = <R>(kind: \"guard\" | \"clock\" | \"runtime\", action: () => Promise<R>) =>\n    tasks.measureStages ? measurePmExecution(kind, { tokenId: option.itemId, preflightMode: tasks.sportMode ?? \"gtc\" }, action) : action();\n  const market = tasks.market();\n  const guard = measure(\"guard\", () => tasks.sportMode === \"legacy\"\n    ? resolveLegacyBlockReason(option)\n    : resolvePolymarketBetBlockReason(option, tasks.requireClobConfirmation));\n  const clock = tasks.role === \"precheckOnly\" ? Promise.resolve()\n    : measure(\"clock\", () => pmPrepareSubmit(account));\n  const runtime = tasks.role === \"precheckOnly\" ? Promise.resolve(null) : measure(\"runtime\", async () => {\n"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/submission/preflight/optimized/pmBetGuard.ts": {
+      "beforeSha": "beb2d78406215453bcb114a43a79ced335bb822ff64b4ad4743c3daa0e80adad",
+      "increments": [
+        [
+          "import type { BetOption } from \"@changmen/client-core/models/betOption\";\nimport type { PolymarketRawMarket } from \"../../../parse\";\nimport { getPolymarketMarketBlockReason } from \"../../../pmMarketGuard\";\nimport { getPolymarketPmSportBlockReason, getPolymarketPmSportBlockReasonFromOption } from \"../../../pmSportGuard\";\nimport { fetchClobMarketByConditionId, fetchGammaEventById, fetchGammaMarketByTokenId, gammaEventToPmSportLike } from \"../../../pmSportGamma\";\nimport { getPmGammaEvidence } from \"../../../markets/pmGammaCache\";\nimport { recordPmExecutionMetric } from \"../../../pmExecutionMetrics\";\n\n/** [changmen 扩展] 只供优化 FOK 使用。市场状态与冷门价格风控分开，价格/深度由本轮 book 决定。 */\nfunction tradingBlock(market: PolymarketRawMarket | null, tokenId: string) {\n  return market ? getPolymarketMarketBlockReason({ ...market, outcomePrices: undefined, outcome_prices: undefined }, tokenId) : null;\n}\n\nexport async function resolveOptimizedFokBlockReason(option: BetOption, automatic = false): Promise<string | null> {\n  const local = getPolymarketPmSportBlockReasonFromOption(option);\n  if (local) return local;\n  const conditionId = String(option.betId ?? \"\").trim();\n  const eventId = String(option.match?.providers?.Polymarket ?? \"\").trim();\n  const query = async <T extends object>(stage: string, load: () => Promise<T | null>, gamma = true) => {\n    const started = performance.now();\n    try {\n      const value = await load();\n      const evidence = gamma ? getPmGammaEvidence(value) : null;\n      recordPmExecutionMetric({ kind: \"gamma\", stage, tokenId: option.itemId, preflightMode: \"optimized\",\n        ms: performance.now() - started, success: value !== null,\n        ...(evidence ? { gammaSource: evidence.source, requestStartedAt: evidence.requestedAt,\n          responseReceivedAt: evidence.receivedAt, requestMs: evidence.requestMs, evidenceAgeMs: evidence.ageMs,\n          evidenceFresh: evidence.fresh } : {}),\n      });\n      return value;\n    } catch (error) {\n      recordPmExecutionMetric({ kind: \"gamma\", stage, tokenId: option.itemId, preflightMode: \"optimized\",\n        ms: performance.now() - started, success: false, error: error instanceof Error ? error.message : String(error) });\n      return null;\n    }\n  };\n  const [market, clob, event] = await Promise.all([\n    query(\"gamma_market\", () => fetchGammaMarketByTokenId(option.itemId)),\n    conditionId ? query(\"clob_market\", () => fetchClobMarketByConditionId(conditionId), false) : null,\n    eventId ? query(\"gamma_event\", () => fetchGammaEventById(eventId)) : null,\n  ]);\n  const latest = getPolymarketPmSportBlockReasonFromOption(option);\n  if (latest) return latest;\n\n  // 即使响应已超过复用窗口，明确的拒单/结束证据也不能被忽略。\n  const clobBlock = tradingBlock(clob, option.itemId);\n  if (clobBlock) return clobBlock;\n  const marketBlock = tradingBlock(market, option.itemId);\n  if (marketBlock) return marketBlock;\n  const sports = [gammaEventToPmSportLike(event), ...(Array.isArray(market?.events)\n    ? market.events.map(row => gammaEventToPmSportLike(row)) : [])];\n  for (const sport of sports) {\n    const reason = getPolymarketPmSportBlockReason(sport, option.bet?.round);\n    if (reason) return `${reason}（Gamma）`;\n  }\n\n  // 低概率价格并不证明不可成交。保留诊断信号，不代替真实订单簿检查。\n  const riskSignal = getPolymarketMarketBlockReason(market, option.itemId);\n  if (riskSignal) recordPmExecutionMetric({ kind: \"guard\", stage: \"price_risk_signal\", preflightMode: \"optimized\",\n    tokenId: option.itemId, riskSignal });\n\n  if (automatic && (clob?.accepting_orders ?? clob?.acceptingOrders) !== true)\n    return \"PM CLOB 接单状态未知，跳过本轮自动套利\";\n  const hasFreshSport = (getPmGammaEvidence(event)?.fresh && sports[0] !== null)\n    || (getPmGammaEvidence(market)?.fresh && sports.slice(1).some(Boolean));\n  if (automatic && (eventId || option.match?.pmSport) && !hasFreshSport)\n    return \"PM 赛况查询失败或证据已过期，跳过本轮自动套利\";\n  return null;\n}\n",
+          "import type { BetOption } from \"@changmen/client-core/models/betOption\";\nimport { getVenueOddsEntry } from \"@changmen/client-core/bridge/oddsAccess\";\nimport { getPolymarketPmSportBlockReasonFromOption } from \"../../../pmSportGuard\";\n\n/** [changmen 扩展] 动态 FOK 只消费本地已知否决信息；价格及整笔深度由本轮 /book 判断。 */\nexport function resolveOptimizedFokBlockReason(option: BetOption): string | null {\n  const local = getPolymarketPmSportBlockReasonFromOption(option);\n  if (local) return local;\n  if (getVenueOddsEntry(\"Polymarket\", option.itemId)?.isLock) return \"PM 当前盘口已锁定，请新建投注尝试\";\n  return null;\n}\n"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/index.ts": {
+      "beforeSha": "ff0bf3e470bc582f4a2cdcc4d5a957c5685ccd5e3dc319d2d1d9328b9f35b890",
+      "increments": [
+        [
+          "export * from \"./pmSportGuard\";\nexport * from \"./pmSportGamma\";\nexport { prewarmPmSportForCandidate } from \"./markets/pmSportPrewarm\";\nexport * from \"./pmMarketGuard\";\nexport * from \"./pmBetGuard\";\nexport * from \"./pmDetection\";\n",
+          "export * from \"./pmSportGuard\";\nexport * from \"./pmSportGamma\";\nexport { prewarmPmSportForCandidate } from \"./markets/pmSportPrewarm\";\nexport { prepareOptimizedFokExecution } from \"./submission/preflight/optimized/pmFastPreflight\";\nexport * from \"./pmMarketGuard\";\nexport * from \"./pmBetGuard\";\nexport * from \"./pmDetection\";\n"
+        ]
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/prepareArbAttempt.ts": {
+      "beforeSha": "cc35fa1602e9cc366e9a259f06bba96c680a5746582823de70dba25c6cd59844",
+      "increments": [
+        [
+          "\n  const legA = options[0];\n  const legB = options[1];\n  // [changmen 扩展] 在选号/历史检查期间预热候选，与 FOK/GTC 预检共享同一短缓存。\n  for (const leg of options) {\n    if (leg.type === \"Polymarket\" && (params.pmOrderMode === \"GTC\" || capturePmFokPreflightMode(leg) === \"optimized\"))\n      prewarmPmSportForCandidate(leg);\n  }\n  const pmOrderMode = params.pmOrderMode === \"GTC\" && options.some(leg => leg.type === \"Polymarket\") ? \"GTC\" : undefined;\n  // [changmen 扩展] 仅 PM GTC 读取独立历史；原选号过滤和 FOK 状态保持不变。\n",
+          "\n  const legA = options[0];\n  const legB = options[1];\n  // [changmen 扩展] FOK 冻结方式；只有 GTC 仍需 Gamma 候选预热。\n  for (const leg of options) {\n    if (leg.type !== \"Polymarket\") continue;\n    if (params.pmOrderMode === \"GTC\") prewarmPmSportForCandidate(leg);\n    else capturePmFokPreflightMode(leg);\n  }\n  const pmOrderMode = params.pmOrderMode === \"GTC\" && options.some(leg => leg.type === \"Polymarket\") ? \"GTC\" : undefined;\n  // [changmen 扩展] 仅 PM GTC 读取独立历史；原选号过滤和 FOK 状态保持不变。\n"
+        ]
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/checkArbLegs.ts": {
+      "beforeSha": "516fc36e90850e3e7f611ac1ceaa754cd7c7cc9ff1b33bb65c882c5820ad5fe7",
+      "increments": [
+        [
+          "import { recordPmExecutionMetric } from \"@changmen/venue-adapter/polymarket\";\nimport type { BetOption } from \"@changmen/client-core/models/betOption\";\nimport type {\n  ArbBetAttemptParams,\n",
+          "import { recordPmExecutionMetric } from \"@changmen/venue-adapter/polymarket\";\nimport { capturePmFokPreflightMode, prepareOptimizedFokExecution } from \"@changmen/venue-adapter/polymarket\";\nimport type { BetOption } from \"@changmen/client-core/models/betOption\";\nimport type {\n  ArbBetAttemptParams,\n"
+        ],
+        [
+          "    return null;\n  }\n\n  syncActiveBetPhase(bet.id, \"checking\", \"正在预检\");\n\n  if (checkAccountA)\n",
+          "    return null;\n  }\n\n  // [changmen 扩展] 只为动态 FOK 的真实执行腿准备；此时传统腿尚未检查，不占用其报价有效窗口。\n  const preparing = ready.pmOrderMode === \"GTC\" ? [] : [[accountA, legA], [accountB, legB]] as const;\n  const dynamicAccounts = preparing.flatMap(([account, leg]) => account?.provider === \"Polymarket\"\n    && capturePmFokPreflightMode(leg) === \"optimized\" ? [account] : []);\n  if (dynamicAccounts.length) {\n    syncActiveBetPhase(bet.id, \"checking\", \"准备 PM 提交环境\");\n    try { await Promise.all(dynamicAccounts.map(account => prepareOptimizedFokExecution(account, ready.linkId))); }\n    catch (error) {\n      const reason = error instanceof Error ? error.message : \"PM 提交准备失败\";\n      observeArbSubmissionBlocked(ready, \"pm_preparation_failed\", reason);\n      setMessage(reason); trace?.finish(\"fail\", reason); syncActiveBetFail(bet.id, reason);\n      return null;\n    }\n  }\n  syncActiveBetPhase(bet.id, \"checking\", \"正在预检\");\n\n  if (checkAccountA)\n"
+        ],
+        [
+          "        ...(legA.type === \"Polymarket\" ? { requireClobConfirmation: true } : {}),\n",
+          "        ...(legA.type === \"Polymarket\" ? { requireClobConfirmation: true } : {}),\n        ...(dynamicAccounts.includes(checkAccountA) ? { pmDynamicPrepared: true as const } : {}),\n"
+        ],
+        [
+          "        ...(legB.type === \"Polymarket\" ? { requireClobConfirmation: true } : {}),\n",
+          "        ...(legB.type === \"Polymarket\" ? { requireClobConfirmation: true } : {}),\n        ...(dynamicAccounts.includes(checkAccountB) ? { pmDynamicPrepared: true as const } : {}),\n"
+        ]
+      ]
+    },
+    "client/web/src/stores/account/betGateway.ts": {
+      "beforeSha": "c17ad28439b3918797ceff61efad6f549f7fc66ef88c9ff1942b114ed4115ccf",
+      "increments": [
+        [
+          "import { getAuthSessionVersion, isAuthSessionCurrent } from \"@/api/client\";\nimport { getPmSubmission } from \"@/api/order\";\nimport { getRetainedPmPrivateKey } from \"@/security/pmVault/retainedPmSession\";\n\nexport type CheckBettingOpts = ResolveVenueStakeOpts & {\n  /** [changmen 扩展] 本次 PM 单腿模式，非 PM provider 忽略。 */\n",
+          "import { getAuthSessionVersion, isAuthSessionCurrent } from \"@/api/client\";\nimport { getPmSubmission } from \"@/api/order\";\nimport { getRetainedPmPrivateKey } from \"@/security/pmVault/retainedPmSession\";\nimport { capturePmFokPreflightMode, prepareOptimizedFokExecution } from \"@changmen/venue-adapter/polymarket\";\n\nexport type CheckBettingOpts = ResolveVenueStakeOpts & {\n  /** [changmen 扩展] 本次 PM 单腿模式，非 PM provider 忽略。 */\n"
+        ],
+        [
+          "  const observationStartedAt = Date.now();\n  let observationError: unknown;\n  try {\n    attachPolymarketDetectionQuote(option, opts?.pmQuoteScope);\n    attachPredictFunDetectionQuote(option);\n    // [A8 适配] 编排 Plan CNY → 场馆原币（CNY / U / PM）；预检后不改，跌价由各场馆 checkBet 拒单\n",
+          "  const observationStartedAt = Date.now();\n  let observationError: unknown;\n  try {\n    // [changmen 扩展] 人工及重试动态 FOK 在冻结报价前准备；双腿已提前准备，不能在此补等。\n    if (pm && opts?.pmOrderMode !== \"GTC\" && opts?.role !== \"precheckOnly\" && !opts?.pmDynamicPrepared\n      && capturePmFokPreflightMode(option) === \"optimized\") await prepareOptimizedFokExecution(account);\n    attachPolymarketDetectionQuote(option, opts?.pmQuoteScope);\n    attachPredictFunDetectionQuote(option);\n    // [A8 适配] 编排 Plan CNY → 场馆原币（CNY / U / PM）；预检后不改，跌价由各场馆 checkBet 拒单\n"
+        ],
+        [
+          "  requireClobConfirmation?: boolean;\n",
+          "  requireClobConfirmation?: boolean;\n  /** [changmen 扩展] 双腿编排已完成动态 FOK 准备；与 CLOB 状态确认无关。 */\n  pmDynamicPrepared?: true;\n"
+        ]
+      ]
+    },
+    "client/web/src/components/user/tabs/UserDiagExtensionsTab.vue": {
+      "beforeSha": "fc3ca8e8502cd57fb6bfdf9e07449e6165cfb514b5b553ddb4096febd53efec3",
+      "increments": [
+        [
+          "        <div>\n          <h3 class=\"extensions-tab__heading\">PM FOK 预检方式</h3>\n          <p class=\"extensions-tab__section-desc\">\n            经典预检沿用线上检查流程；动态复核预检减少重复赛况查询并更新过期判断。\n            两种方式的钱包均在账号加载、解锁时准备。保存后对新 FOK 尝试生效，GTC 不受此选项影响。\n          </p>\n        </div>\n        <span class=\"extensions-tab__badge\">changmen 扩展</span>\n",
+          "        <div>\n          <h3 class=\"extensions-tab__heading\">PM FOK 预检方式</h3>\n          <p class=\"extensions-tab__section-desc\">\n            经典预检沿用线上检查流程；动态复核预检只等待最新订单簿，检查限价与足额深度，并保留本地锁盘、赛况复核。\n            钱包在账号加载、解锁时准备；动态复核的校时在双腿预检前完成。保存后对新 FOK 尝试生效，GTC 不受此选项影响。\n          </p>\n        </div>\n        <span class=\"extensions-tab__badge\">changmen 扩展</span>\n"
+        ]
+      ]
+    }
+  },
+  "helpers": {
+    "packages/venue-adapter/polymarket/submission/preflight/optimized/pmFastPreflight.ts": "629641398b0d3f6cff314bad5de16f1ce74eea795d942f73fbe22930abf19f3a",
+    "packages/venue-adapter/polymarket/tests/submission/fixtures/pmBeforeFastGuard.ts": "beb2d78406215453bcb114a43a79ced335bb822ff64b4ad4743c3daa0e80adad",
+    "packages/venue-adapter/polymarket/tests/submission/fixtures/pmBeforeFastPreflight.ts": "dddb3bc6807be25d1b4541313307662cc5f13a50a8ad2629e452cd8ec0ac497b",
+    "packages/venue-adapter/polymarket/tests/submission/fixtures/pmBeforeFastFok.ts": "fab24af50cad65f1c3a82cb5df020e210896220225097c5570d0b44bb26c6d51"
+  }
+}

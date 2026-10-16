@@ -80,10 +80,11 @@ export async function prepareArbAttempt(
 
   const legA = options[0];
   const legB = options[1];
-  // [changmen 扩展] 在选号/历史检查期间预热候选，与 FOK/GTC 预检共享同一短缓存。
+  // [changmen 扩展] FOK 冻结方式；只有 GTC 仍需 Gamma 候选预热。
   for (const leg of options) {
-    if (leg.type === "Polymarket" && (params.pmOrderMode === "GTC" || capturePmFokPreflightMode(leg) === "optimized"))
-      prewarmPmSportForCandidate(leg);
+    if (leg.type !== "Polymarket") continue;
+    if (params.pmOrderMode === "GTC") prewarmPmSportForCandidate(leg);
+    else capturePmFokPreflightMode(leg);
   }
   const pmOrderMode = params.pmOrderMode === "GTC" && options.some(leg => leg.type === "Polymarket") ? "GTC" : undefined;
   // [changmen 扩展] 仅 PM GTC 读取独立历史；原选号过滤和 FOK 状态保持不变。

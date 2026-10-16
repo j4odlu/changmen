@@ -19,7 +19,7 @@ describe("reviewed PM preflight increments retain FOK baseline protection", () =
   it.each(["pmGammaCache", "pmSportPrewarm"])("protects the complete new %s dependency", name => {
     const helper = `packages/venue-adapter/polymarket/markets/${name}.ts`;
     expect(() => verifyPmPreflightContract(file => read(file) + (file === helper ? "\nvoid unexpectedTradingAction();" : "")))
-      .toThrow("complete reviewed PM preflight helper");
+      .toThrow(/complete reviewed PM preflight helper|original implementation unchanged outside optimized increments/);
   });
   it.each([
     [gateway, 'checkGtcBuy(account, option, undefined,', 'checkGtcBuy(account, option, ensureSharedVaultKeyForAccount(account),'],

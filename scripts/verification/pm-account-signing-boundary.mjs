@@ -2,15 +2,17 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
-import { restorePmLegacyFokRuntimeSource, verifyPmLegacyFokRuntimeContract } from "./pm-legacy-fok-runtime-boundary.mjs";
+import { restorePmPreflightLabels } from "./pm-preflight-labels-boundary.mjs";
+import { restorePmFastFokSource, verifyPmFastFokContract } from "./pm-fast-fok-boundary.mjs";
 const normalize = value => value.replaceAll("\r\n", "\n");
 const digest = value => createHash("sha256").update(normalize(value)).digest("hex");
 const text = normalize(fs.readFileSync(new URL("./pm-account-signing-increments.json", import.meta.url), "utf8"));
-assert.equal(digest(text), "72e90d8829327e3cfdd139c15285b26039fb509414997c380dc1df1da30c3bd0", "account signing isolation increments stay fixed");
+assert.equal(digest(text), "f3b171df1c0fc0346c51e1835d2e6b18e3e7d43f47bc6f4424a9877a175ebad0", "account signing isolation increments stay fixed");
 const { changes } = JSON.parse(text);
 
 export function restorePmAccountSigningSource(file, source, required = false) {
-  source = restorePmLegacyFokRuntimeSource(file, source);
+  source = restorePmFastFokSource(file, source);
+  source = restorePmPreflightLabels(file, source);
   const row = changes[file];
   if (!row) return source;
   let restored = normalize(source);
@@ -23,7 +25,7 @@ export function restorePmAccountSigningSource(file, source, required = false) {
 }
 
 export function verifyPmAccountSigningContract(read) {
-  verifyPmLegacyFokRuntimeContract(read);
+  verifyPmFastFokContract(read);
   for (const [file, row] of Object.entries(changes))
     assert.equal(digest(restorePmAccountSigningSource(file, read(file), true)), row.beforeSha,
       file + ": original implementation unchanged outside account signing isolation");

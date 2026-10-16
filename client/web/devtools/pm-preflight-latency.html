@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>PM 只读预检计时</title>
+<style>body{font:16px system-ui;margin:32px;max-width:1100px}button,input{padding:8px;margin:5px}pre{white-space:pre-wrap;background:#f4f5f7;padding:20px}</style>
+<h1>PM 只读预检计时</h1>
+<p>使用当前浏览器查询路由和真实 FOK 预检。无下注账号，不签单、不提交订单；预检本体不含钱包及校时，公开校时单独计时。仅供 Vite 开发环境。</p>
+<label>赛事 ID <input id="event" value="1165026"></label>
+<label>市场 ID <input id="market" value="5504916"></label>
+<button id="run" disabled>运行 12 次前后对比</button><button id="download" disabled>下载结果</button>
+<pre id="result">加载中</pre>
+<script type="module">
+import { checkFokBuy } from '../../../packages/venue-adapter/polymarket/fok/preflight.ts';
+import { checkFokBuy as beforeFastCheck } from '../../../packages/venue-adapter/polymarket/tests/submission/fixtures/pmBeforeFastFok.ts';
+import { setPmFokPreflightMode } from '../../../packages/venue-adapter/polymarket/submission/preflight/pmFokPreflightMode.ts';
+import { clearPmGammaCacheForTests, fetchGammaEventById, fetchGammaMarketByTokenId } from '../../../packages/venue-adapter/polymarket/pmSportGamma.ts';
+import { clearPmExecutionMetrics, getPmExecutionMetrics } from '../../../packages/venue-adapter/polymarket/pmExecutionMetrics.ts';
+import { polymarketPluginGet } from '../../../packages/venue-adapter/polymarket/transport.ts';
+import { pmGetBook } from '../../../packages/venue-adapter/polymarket/pmClientApi.ts';
+import { resolvePmHttpMode } from '../../../packages/venue-adapter/polymarket/pmTransportMode.ts';
+import { getPmMarketWsSourceMode } from '../../../packages/venue-adapter/polymarket/pmMarketWsMode.ts';
+import { prepareBrowserSubmitClock, clearBrowserSubmitClockForTests } from '../../../packages/venue-adapter/polymarket/pmBrowserSubmitClock.ts';
+import { registerPlatformHttpContext, changmenPmHttpRequest } from '@changmen/client-core/shared/platformHttp';
+import { a8Axios } from '@changmen/client-core/shared/a8Axios';
+import { getToken, setCookieSessionInfo } from '../src/lib/authSession.ts';
+import { getRequestAuthHeaders } from '../src/lib/authCredentials.ts';
+import { getApiBase } from '../src/config/apiBase.ts';
+const result = document.querySelector('#result'), run = document.querySelector('#run'), download = document.querySelector('#download');
+if (!import.meta.env.DEV) throw new Error('Development only');
+registerPlatformHttpContext({ getToken, getAuthHeaders: getRequestAuthHeaders, getApiBase, getProxyUrl: () => undefined });
+// 最后一道只读约束：允许官方公开 GET，以及应用的两种公开查询中继。
+a8Axios.interceptors.request.use(config => {
+  const url = new URL(config.url, location.origin), method = (config.method || 'get').toUpperCase();
+  if (method === 'GET' && ['gamma-api.polymarket.com', 'clob.polymarket.com'].includes(url.hostname)
+    && (/^\/markets(?:\/|$)/.test(url.pathname) || /^\/events\//.test(url.pathname) || ['/book', '/time'].includes(url.pathname))) return config;
+  if (method === 'POST' && /\/Pm_GetBook$/.test(url.pathname)) return config;
+  if (method === 'POST' && /\/Pm_HttpRequest$/.test(url.pathname)) {
+    const data = typeof config.data === 'string' ? Object.fromEntries(new URLSearchParams(config.data)) : config.data;
+    const target = new URL(data.url);
+    if (data.method === 'GET' && ['gamma-api.polymarket.com', 'clob.polymarket.com'].includes(target.hostname)) return config;
+  }
+  throw new Error('只读探针禁止此请求');
+});
+let report;
+const ms = value => Math.round(value * 10) / 10;
+run.disabled = false; result.textContent = JSON.stringify({ ready: true, httpMode: resolvePmHttpMode(), wsSource: getPmMarketWsSourceMode() });
+run.onclick = async () => {
+  run.disabled = true; download.disabled = true;
+  report = { startedAt: new Date().toISOString(), route: { httpMode: resolvePmHttpMode(), wsSource: getPmMarketWsSourceMode() },
+    scope: 'Actual browser query route + checkFokBuy(precheckOnly); no wallet, signing, orders or live odds-store snapshot. Public clock measured separately.', samples: [], vpsPublicReads: [], clockReads: [] };
+  const show = () => { result.textContent = JSON.stringify(report, null, 2); };
+  try {
+    if (resolvePmHttpMode() !== 'vps') throw new Error('本探针要求现有 HTTP 为 vps，以免直连失败触发应用自动改设置');
+    if (import.meta.env.VITE_WEB_COOKIE_AUTH === '1') {
+      const session = await fetch(`${getApiBase()}/auth/session`, { credentials: 'include', cache: 'no-store', signal: AbortSignal.timeout(10_000) });
+      if (!session.ok) throw new Error('当前浏览器登录不可用');
+      const payload = await session.json();
+      if (!payload.cookieEnabled || !payload.csrfToken) throw new Error('当前浏览器 Cookie 会话不可用');
+      setCookieSessionInfo(payload);
+    }
+    const eventId = document.querySelector('#event').value.trim(), marketId = document.querySelector('#market').value.trim();
+    if (!/^\d+$/.test(eventId) || !/^\d+$/.test(marketId)) throw new Error('ID 必须是数字');
+    const event = await polymarketPluginGet(`https://gamma-api.polymarket.com/events/${eventId}`);
+    const market = event.markets.find(row => String(row.id) === marketId);
+    if (!market || !market.acceptingOrders || event.ended) throw new Error('请选择仍在接单的未结束盘口');
+    const tokenId = JSON.parse(market.clobTokenIds)[0], book = await pmGetBook(tokenId);
+    const ask = Math.min(...book.asks.map(row => Number(row.price))), tick = Number(book.tick_size);
+    const limit = Math.min(1 - tick, Math.ceil((ask + 2 * tick) / tick - 1e-9) * tick);
+    report.market = { eventId, marketId, title: market.question, tokenId, conditionId: market.conditionId, amount: 10, limit };
+    for (let round = 0; round < 6; round++) {
+      for (const scenario of (round % 2 ? ['after_fast', 'before_fast'] : ['before_fast', 'after_fast'])) {
+        setPmFokPreflightMode('optimized');
+        clearPmGammaCacheForTests();
+        const warmupMs = 0;
+        clearPmExecutionMetrics();
+        const option = { type: 'Polymarket', itemId: tokenId, betId: market.conditionId, betMoney: 10, odds: 1 / limit,
+          target: 'readonly-latency-probe', bet: { round: 0 }, match: { providers: { Polymarket: eventId } } };
+        const at = performance.now();
+        const checked = await (scenario === 'before_fast' ? beforeFastCheck : checkFokBuy)({ provider: 'Polymarket', accountId: 0, token: '', gateway: 'https://clob.polymarket.com', currency: 'USDT' }, option,
+          { role: 'precheckOnly', requireClobConfirmation: true });
+        report.samples.push({ scenario, round, ms: ms(performance.now() - at), warmupMs, passed: Boolean(checked.data) && !checked.checkError,
+          error: checked.checkError, metrics: getPmExecutionMetrics() }); show();
+      }
+    }
+    for (let round = 0; round < 3; round++) {
+      clearBrowserSubmitClockForTests();
+      const at = performance.now();
+      try {
+        await prepareBrowserSubmitClock(); const coldMs = ms(performance.now() - at);
+        const warmAt = performance.now(); await prepareBrowserSubmitClock();
+        report.clockReads.push({ round, coldMs, warmMs: ms(performance.now() - warmAt), passed: true });
+      } catch (e) { report.clockReads.push({ round, coldMs: ms(performance.now() - at), passed: false, error: String(e) }); }
+      show();
+    }
+    // 对照只测公开 GET 中继，不修改浏览器现有路由配置，不把它冒充整轮预检。
+    for (let round = 0; round < 3; round++) {
+      const values = await Promise.all([['book', `https://clob.polymarket.com/book?token_id=${tokenId}`],
+        ['clob_market', `https://clob.polymarket.com/markets/${market.conditionId}`]].map(async ([stage, url]) => {
+        const at = performance.now();
+        try { const value = await changmenPmHttpRequest({ method: 'GET', url }); return { stage, ms: ms(performance.now() - at), status: value.status }; }
+        catch (e) { return { stage, ms: ms(performance.now() - at), error: String(e) }; }
+      })); report.vpsPublicReads.push({ round, values }); show();
+    }
+  } catch (error) { report.error = String(error); }
+  finally { report.finishedAt = new Date().toISOString(); setPmFokPreflightMode('legacy'); clearPmGammaCacheForTests(); show(); run.disabled = false; download.disabled = false; }
+};
+download.onclick = () => {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a'); a.href = url; a.download = `pm-browser-preflight-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
+};
+</script></html>

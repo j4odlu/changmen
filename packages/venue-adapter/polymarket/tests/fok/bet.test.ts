@@ -1211,7 +1211,7 @@ describe("polymarketProvider.checkBet", () => {
     expect(pmGetBook).toHaveBeenCalled();
   });
 
-  test("Gamma 拦盘时即使 /book 已回也不写 data", async () => {
+  test("经典保留 Gamma 拦盘；动态只读取本轮 book 与本地状态", async () => {
     vi.mocked(polymarketPluginGet).mockImplementation(async (url: string) => {
       if (url.includes("gamma-api.polymarket.com/markets")) {
         return [{
@@ -1235,8 +1235,11 @@ describe("polymarketProvider.checkBet", () => {
       { itemId: "123456789", odds: 5, betMoney: 5 } as any,
     );
 
-    expect(out.data).toBeNull();
-    expect(out.checkError).toContain("已停止交易");
+    if (preflightMode === "legacy") {
+      expect(out.data).toBeNull(); expect(out.checkError).toContain("已停止交易");
+    } else {
+      expect(out.data).toBeTruthy(); expect(polymarketPluginGet).not.toHaveBeenCalled();
+    }
   });
 
   test("rejects when pm_sport shows series decided", async () => {
@@ -1374,6 +1377,9 @@ describe("polymarketProvider.checkBet", () => {
       { itemId: "123456789", betId: "", odds: 5, betMoney: 5 } as any,
     );
 
+    if (preflightMode === "optimized") {
+      expect(out.checkError).toContain("已锁定"); expect(saveVenueOdds).not.toHaveBeenCalled(); return;
+    }
     expect(out.checkError).toContain("盘口价高于检测价");
     expect(saveVenueOdds).toHaveBeenCalledWith(
       "Polymarket",
@@ -2160,6 +2166,46 @@ describe("selected FOK preflight behavior", () => {
     expect(pmSubmitOrder).toHaveBeenCalledTimes(preflightMode === "legacy" ? 1 : 0);
     expect(input.data).toBe(frozen); expect(pmGetBook).toHaveBeenCalledOnce();
   });
+  test.each(["before-submit", "dispatch-lock", "lock-without-timestamp"])("new adverse quote at %s only invalidates optimized attempts, even after a mode switch", async when => {
+    const account = pmBettingAccount(); const input = option();
+    getVenueOddsEntry.mockReturnValue(undefined);
+    await polymarketProvider.checkBet(account, input);
+    expect(input.checkError).toBeUndefined();
+    const frozen = input.data;
+    const worsen = () => getVenueOddsEntry.mockReturnValue({ id: input.itemId,
+      time: frozen.bookFetchedAt + (when === "lock-without-timestamp" ? 0 : 1),
+      clobPrice: .6, odds: 1 / .6, isLock: when === "lock-without-timestamp" });
+    setPmFokPreflightMode(preflightMode === "legacy" ? "optimized" : "legacy");
+    if (when !== "dispatch-lock") worsen();
+    else vi.stubGlobal("navigator", { locks: { request: async (_key: string, action: () => Promise<unknown>) => {
+      worsen(); return action();
+    } } });
+    try {
+      const result = await polymarketProvider.betting(account, input);
+      expect(result.success).toBe(preflightMode === "legacy");
+      expect(pmSubmitOrder).toHaveBeenCalledTimes(preflightMode === "legacy" ? 1 : 0);
+      expect(pmGetBook).toHaveBeenCalledOnce();
+      expect(input.data).toBe(frozen);
+    } finally { vi.unstubAllGlobals(); getVenueOddsEntry.mockReturnValue(undefined); }
+  });
+  test.each([100, 200])("low-priced FOK still requires the full amount of executable depth (%s shares)", async size => {
+    const input = option(); input.odds = 12.5;
+    getVenueOddsEntry.mockReturnValue(undefined);
+    pmGetBook.mockResolvedValue({ asset_id: input.itemId, tick_size: "0.01", min_order_size: "5", neg_risk: false,
+      asks: [{ price: "0.08", size: String(size) }] });
+    polymarketPluginGet.mockImplementation(async (url: string) => url.includes("/markets?")
+      ? [{ clobTokenIds: JSON.stringify([input.itemId, "other"]), outcomePrices: '["0.08","0.92"]' }]
+      : url.includes("/events/") ? { live: true } : { accepting_orders: true });
+    const checked = await polymarketProvider.checkBet(pmBettingAccount(), input, { requireClobConfirmation: true });
+    if (preflightMode === "legacy") expect(checked.checkError).toContain("几乎不可能");
+    else if (size === 100) expect(checked.checkError).toContain("深度不足");
+    else {
+      expect(checked.checkError).toBeUndefined();
+      expect(checked.data).toMatchObject({ limitPrice: .08, apiBetMoney: 10 });
+    }
+    expect(pmSubmitOrder).not.toHaveBeenCalled();
+    expect(pmGetBook).toHaveBeenCalledOnce();
+  });
   test("unprepared input keeps the online missing-preflight error and never adopts a current policy", async () => {
     const input = option(); input.match.pmSport = { ended: true };
     const result = await polymarketProvider.betting(pmBettingAccount(), input);
@@ -2223,32 +2269,35 @@ describe("selected FOK preflight behavior", () => {
     await expect(prepareManualGtcBuy(account, input)).rejects.toThrow("比赛已结束");
     expect(pmSubmitOrder).not.toHaveBeenCalled();
   });
-  test("keeps the online request policy for legacy and deduplicates only optimized Gamma", async () => {
+  test("keeps the online request policy for legacy and removes optimized status HTTP", async () => {
     for (let i = 0; i < 2; i++) {
       const checked = await polymarketProvider.checkBet(pmBettingAccount(), option(), { requireClobConfirmation: true });
       expect(checked.checkError).toBeUndefined();
       expect(checked.data?.pmPreflightMode).toBe(preflightMode);
     }
     const urls = polymarketPluginGet.mock.calls.map(([url]) => String(url));
-    expect(urls.filter(url => url.includes("gamma-api.polymarket.com/markets?"))).toHaveLength(preflightMode === "legacy" ? 2 : 1);
-    expect(urls.filter(url => url.includes("/events/"))).toHaveLength(preflightMode === "legacy" ? 0 : 1);
-    expect(urls.filter(url => url.includes("clob.polymarket.com/markets/"))).toHaveLength(2);
+    expect(urls.filter(url => url.includes("gamma-api.polymarket.com/markets?"))).toHaveLength(preflightMode === "legacy" ? 2 : 0);
+    expect(urls.filter(url => url.includes("/events/"))).toHaveLength(0);
+    expect(urls.filter(url => url.includes("clob.polymarket.com/markets/"))).toHaveLength(preflightMode === "legacy" ? 2 : 0);
   });
-  test("checks explicit CLOB rejection in both modes", async () => {
+  test("classic queries CLOB rejection while dynamic performs no additional status request", async () => {
     polymarketPluginGet.mockImplementation(async (url: string) => url.includes("/markets?")
       ? [{ closed: false }] : url.includes("/events/") ? { live: true } : { accepting_orders: false });
     const checked = await polymarketProvider.checkBet(pmBettingAccount(), option(), { requireClobConfirmation: true });
-    expect(checked.checkError).toContain("已停止交易");
-    expect(checked.data).toBeNull();
+    if (preflightMode === "legacy") {
+      expect(checked.checkError).toContain("已停止交易"); expect(checked.data).toBeNull();
+    } else {
+      expect(checked.data).toBeTruthy(); expect(polymarketPluginGet).not.toHaveBeenCalled();
+    }
   });
-  test("preserves online unknown-CLOB semantics only for legacy", async () => {
+  test("preserves classic unknown-CLOB semantics and dynamic does not request it", async () => {
     polymarketPluginGet.mockImplementation(async (url: string) => {
       if (url.includes("clob.polymarket.com/markets/")) throw new Error("timeout");
       return url.includes("/markets?") ? [{ closed: false }] : { live: true };
     });
     const checked = await polymarketProvider.checkBet(pmBettingAccount(), option(), { requireClobConfirmation: true });
-    if (preflightMode === "legacy") expect(checked.checkError).toBeUndefined();
-    else expect(checked.checkError).toContain("接单状态未知");
+    expect(checked.checkError).toBeUndefined();
+    if (preflightMode === "optimized") expect(polymarketPluginGet).not.toHaveBeenCalled();
   });
   test("switching preferences during preflight leaves this attempt unchanged", async () => {
     let release!: (value: unknown) => void;
@@ -2295,14 +2344,15 @@ describe("FOK / GTC shared sport preflight", () => {
     else await expect(prepareManualGtcBuy(pmBettingAccount(), fresh)).rejects.toThrow("比赛已结束");
     expect(pmSubmitOrder).not.toHaveBeenCalled();
   });
-  test.each(["FOK", "GTC-auto"])("%s blocks automatic orders when CLOB cannot confirm accepting orders", async mode => {
+  test.each(["FOK", "GTC-auto"])("%s uses its own policy for unknown CLOB state", async mode => {
     polymarketPluginGet.mockImplementation(async (url: string) => {
       if (url.includes("/markets?")) return [{ active: true }];
       if (url.includes("/events/")) return { live: true };
       throw new Error("CLOB timeout");
     });
     const result = await check(mode, option());
-    expect(result.data).toBeNull(); expect(result.checkError).toContain("接单状态未知");
+    if (mode === "FOK") { expect(result.data).toBeTruthy(); expect(polymarketPluginGet).not.toHaveBeenCalled(); }
+    else { expect(result.data).toBeNull(); expect(result.checkError).toContain("接单状态未知"); }
     expect(pmSubmitOrder).not.toHaveBeenCalled();
   });
   test("FOK rechecks sport after waiting for the actual dispatch lock", async () => {
@@ -2323,7 +2373,7 @@ describe("FOK / GTC shared sport preflight", () => {
       expect(pmSubmitOrder).not.toHaveBeenCalled();
     } finally { release(); vi.unstubAllGlobals(); }
   });
-  test.each(["FOK", "GTC-manual", "GTC-auto"])("%s reuses Gamma but rechecks CLOB, then refreshes expired Gamma", async mode => {
+  test.each(["GTC-manual", "GTC-auto"])("%s reuses Gamma but rechecks CLOB, then refreshes expired Gamma", async mode => {
     let now = Date.now(); vi.spyOn(Date, "now").mockImplementation(() => now);
     let accepting = true; let ended = false;
     polymarketPluginGet.mockImplementation(async (url: string) => {
@@ -2348,7 +2398,7 @@ describe("FOK / GTC shared sport preflight", () => {
       expect(pmSubmitOrder).not.toHaveBeenCalled();
     } finally { vi.restoreAllMocks(); }
   });
-  test("FOK and both GTC entry points check Gamma even with fresh receivedAt, sharing one result", async () => {
+  test("dynamic FOK skips Gamma; both GTC entry points retain shared Gamma queries", async () => {
     polymarketPluginGet.mockImplementation(async (url: string) => {
       if (url.includes("/events/")) return { live: true, ended: false };
       if (url.includes("gamma-api.polymarket.com/markets?")) return [{ closed: false }];
@@ -2359,10 +2409,10 @@ describe("FOK / GTC shared sport preflight", () => {
     const calls = polymarketPluginGet.mock.calls.map(([url]) => String(url));
     expect(calls.filter(url => url.includes("/events/"))).toHaveLength(1);
     expect(calls.filter(url => url.includes("gamma-api.polymarket.com/markets?"))).toHaveLength(1);
-    expect(calls.filter(url => url.includes("clob.polymarket.com/markets/"))).toHaveLength(3);
+    expect(calls.filter(url => url.includes("clob.polymarket.com/markets/"))).toHaveLength(2);
   });
 
-  test.each(["FOK", "GTC-manual", "GTC-auto"])("%s retries Gamma immediately after an error payload and blocks a closed market", async mode => {
+  test.each(["GTC-manual", "GTC-auto"])("%s retries Gamma immediately after an error payload and blocks a closed market", async mode => {
     let marketReads = 0;
     polymarketPluginGet.mockImplementation(async (url: string) => {
       if (url.includes("/events/")) return { live: true };
@@ -2376,7 +2426,7 @@ describe("FOK / GTC shared sport preflight", () => {
     expect(marketReads).toBe(2); expect(pmSubmitOrder).not.toHaveBeenCalled();
   });
 
-  test.each(["FOK", "GTC-manual", "GTC-auto"])("%s refreshes Gamma after monotonic expiry despite wall clock correction", async mode => {
+  test.each(["GTC-manual", "GTC-auto"])("%s refreshes Gamma after monotonic expiry despite wall clock correction", async mode => {
     const now = Date.now(); vi.spyOn(Date, "now").mockReturnValue(now);
     const tick = vi.spyOn(performance, "now").mockReturnValue(100);
     let ended = false;

@@ -9,7 +9,8 @@ vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ checkBetting
 vi.mock("@/stores/loseOrderStore", () => ({ useLoseOrderStore: () => ({ orders: new Map() }) }));
 vi.mock("@/stores/oddsStore", () => ({ useOddsStore: () => ({ getEntry: () => undefined }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ extensionPrefs: { stakeScaleByProfit: { enabled: false } } }) }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ getPolymarketPmSportBlockReasonFromOption: () => null, recordPmExecutionMetric: vi.fn() }));
+vi.mock("@changmen/venue-adapter/polymarket", () => ({ getPolymarketPmSportBlockReasonFromOption: () => null,
+  recordPmExecutionMetric: vi.fn(), capturePmFokPreflightMode: () => "legacy", prepareOptimizedFokExecution: vi.fn() }));
 vi.mock("@/services/orderObservation", () => ({ createObservationContext: vi.fn(), observeOption: vi.fn() }));
 vi.mock("@/services/orderExecutionObservation", () => ({ observeArbSubmissionBlocked: mocks.blocked }));
 vi.mock("@/stores/betting/autoBet/arbProgressTrace", () => ({ setArbExecutionTraceMeta: vi.fn() }));

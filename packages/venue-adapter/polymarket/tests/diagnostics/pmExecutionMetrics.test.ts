@@ -12,6 +12,19 @@ import { setPmHttpModeForTests } from "../../pmTransportMode";
 import { setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "../../pmOrderSubmitMode";
 
 describe("pmExecutionMetrics", () => {
+  test("summarizes frozen FOK modes separately without assigning untagged samples", () => {
+    clearPmExecutionMetrics();
+    recordPmExecutionMetric({ kind: "check", preflightMode: "legacy", ms: 100, success: true });
+    recordPmExecutionMetric({ kind: "check", preflightMode: "optimized", ms: 20, success: false, error: "depth" });
+    recordPmExecutionMetric({ kind: "check", ms: 999, success: true });
+    recordPmExecutionMetric({ kind: "gamma", preflightMode: "optimized", gammaSource: "cache", stage: "gamma_event" });
+    recordPmExecutionMetric({ kind: "submit", preflightMode: "optimized", bookAgeMs: 40 });
+    const summary = getPmExecutionMetricsSummary();
+    expect(summary.preflightModes.legacy).toMatchObject({ checks: 1, passed: 1, p95Ms: 100 });
+    expect(summary.preflightModes.optimized).toMatchObject({ checks: 1, failed: 1, p50Ms: 20,
+      gammaCacheHits: 1, bookAgeP95Ms: 40, rejectReasons: { depth: 1 } });
+    expect(getPmExecutionMetricsSummary("legacy").total).toBe(1);
+  });
   beforeEach(() => {
     globalThis.localStorage.removeItem(PM_ORDER_SUBMIT_MODE_KEY);
     clearPmExecutionMetrics();

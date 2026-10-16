@@ -97,8 +97,8 @@ beforeEach(() => {
 describe("pm GTC V1 explicit activation in Extensions", () => {
   it("renders legacy as the FOK default and edits the independent preference without activating GTC", async () => {
     const html = await renderToString(createSSRApp(Tab));
-    expect(html).toContain("原有预检（默认）");
-    expect(html).toContain("优化预检");
+    expect(html).toContain("经典预检（默认）");
+    expect(html).toContain("动态复核预检");
     const user = useUserStore();
     expect(user.extensionPrefs.pmFokPreflightMode).toBe("legacy");
     mocks.selectPreflight!("optimized");

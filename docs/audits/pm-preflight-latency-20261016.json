@@ -1,0 +1,86 @@
+{
+  "description": "[changmen 扩展] 只读实测摘要。毫秒保留一位；browser rows 从独立诊断页可见结果提取。未签单、未提交订单。",
+  "dateAsiaTaipei": "2026-10-16",
+  "market": {
+    "eventId": "1165026",
+    "marketId": "5504916",
+    "title": "Valorant: Team Vitality vs LOUD (BO3) - VCT Champions Playoffs",
+    "slug": "val-vit-loud-2026-10-16",
+    "tokenId": "41558402846100433905941279701532348286802841380654283303407937770794440486916",
+    "conditionId": "0x05ebb1c772ac18b5c4b2270e3d5551ee0d8e88010291817d333acbca60d928b0",
+    "amountUsdc": 10
+  },
+  "scope": "实际 checkFokBuy，role=precheckOnly；排除真实账号、钱包、提交、原标签页的实时赔率缓存及双腿编排。另测公开校时。cold_gamma 只清应用 Gamma 缓存，未清浏览器 HTTP/CDN 缓存。预热耗时不计入 warm_gamma 的正式检查耗时。不同轮的时差不能解释为优化收益。",
+  "browser": {
+    "application": "http://localhost:5576/",
+    "httpMode": "vps",
+    "wsSource": "official",
+    "bookRoute": "direct-live for all 15 samples, no fallback observed",
+    "columns": ["scenario", "round", "totalMs", "bookMs", "clobMarketMs", "gammaMarketMs", "gammaEventMs", "warmupMs"],
+    "runs": [
+      {
+        "startedAt": "2026-10-16T07:15:47.690Z",
+        "finishedAt": "2026-10-16T07:15:53.519Z",
+        "rawReport": "output/pm-preflight-latency/browser-2026-10-16T07-15-47.690Z.json",
+        "limit": 0.71,
+        "allPassed": true,
+        "rows": [
+          ["cold_gamma", 0, 400.1, 297.7, 298.5, 398.1, 9.2, 0],
+          ["warm_gamma", 0, 365.6, 365.4, 365.2, 0.5, 0.6, 7],
+          ["cold_gamma", 1, 281.6, 281, 281.3, 7.5, 8.5, 0],
+          ["warm_gamma", 1, 258.6, 258.3, 251.2, 0.5, 0.6, 6.3],
+          ["cold_gamma", 2, 316.1, 315.9, 289.7, 4.8, 6, 0],
+          ["warm_gamma", 2, 531.3, 304.8, 531, 0.4, 0.5, 5.1]
+        ],
+        "vpsPublicReadColumns": ["round", "bookMs", "clobMarketMs"],
+        "vpsPublicReads": [[0, 1599.2, 608.1], [1, 385.5, 569.1], [2, 372.5, 898.3]]
+      },
+      {
+        "startedAt": "2026-10-16T07:19:17.888Z",
+        "finishedAt": "2026-10-16T07:19:26.726Z",
+        "limit": 0.7,
+        "allPassed": true,
+        "rows": [
+          ["legacy", 0, 496.5, 495.4, 495, 5, 7, 0],
+          ["cold_gamma", 0, 465.1, 464.8, 464.3, 7.1, 8, 0],
+          ["warm_gamma", 0, 355.6, 355.2, 355.4, 0.5, 0.6, 5.5],
+          ["legacy", 1, 288.6, 288.4, 264, 5, 7, 0],
+          ["cold_gamma", 1, 320.3, 271.9, 319.8, 4.7, 7.4, 0],
+          ["warm_gamma", 1, 279.8, 279.6, 279.3, 0.8, 0.8, 12.3],
+          ["legacy", 2, 290.1, 289.9, 290, 5, 6, 0],
+          ["cold_gamma", 2, 337.9, 337.6, 337.9, 5.5, 7.3, 0],
+          ["warm_gamma", 2, 269.6, 261.6, 269.4, 0.4, 0.5, 6.1]
+        ],
+        "vpsPublicReadColumns": ["round", "bookMs", "clobMarketMs"],
+        "vpsPublicReads": [[0, 661.9, 469.9], [1, 450.3, 487.9], [2, 373.1, 369.9]],
+        "clockColumns": ["round", "coldMs", "warmMs"],
+        "clockReads": [[0, 279.1, 0.1], [1, 311.1, 0], [2, 282.1, 0]]
+      }
+    ]
+  },
+  "node": {
+    "scope": "真实 FOK 判断，transport 替换为官方 GET；不等于浏览器真实路由。",
+    "directClob": { "attempts": 2, "outcome": "ECONNRESET during TLS", "observedFailureMs": [5033.4] },
+    "proxyRoute": "existing local proxy 127.0.0.1:7897; process-only environment, no persistent network configuration changes",
+    "rawReport": "output/pm-preflight-latency/2026-10-16T07-11-02.046Z.json",
+    "coldMs": [293.3, 367.4, 270.7, 268.7, 811.7, 492.1],
+    "warmMs": [269.7, 261.7, 285.4, 713.4, 446.4, 1472.6],
+    "passed": 11,
+    "failed": 1,
+    "failure": "warm round 5: Gamma evidence expired after waiting for CLOB; correctly rejected"
+  },
+  "conclusions": [
+    "本次浏览器样本主要耗时是 CLOB /book 和 /markets/{conditionId}，Gamma 缓存命中无法移除这两次并行网络等待。",
+    "VPS 单独查询未显示优于直连；不支持据此统一切换 VPS 或缩短直连超时。",
+    "没有复现多数真实双腿执行预检耗时很长；需要按 linkId 对齐实际 execute 的 book/guard/clock/runtime/pair_check，不能把 precheckOnly 当全链路。",
+    "要显著降低正常成功预检耗时，需要减少触发后的 CLOB 网络往返，例如独立且可验证的本地完整订单簿快路径；仅缓存 Gamma 或优化本地循环收益有限。",
+    "提前校时或预热只可能隐藏与其他准备重叠的耗时，不能把提前等待从统计中抹去后宣称整体加速。",
+    "未更改生产预检逻辑、双腿提交时序、经典预检或默认模式。"
+  ],
+  "officialSources": [
+    "https://docs.polymarket.com/market-data/prices-order-books",
+    "https://docs.polymarket.com/market-data/market-details",
+    "https://docs.polymarket.com/market-data/realtime-data",
+    "https://docs.polymarket.com/trading/place-orders"
+  ]
+}

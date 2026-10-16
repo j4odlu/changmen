@@ -22,6 +22,7 @@ export * from "./parse";
 export * from "./pmSportGuard";
 export * from "./pmSportGamma";
 export { prewarmPmSportForCandidate } from "./markets/pmSportPrewarm";
+export { prepareOptimizedFokExecution } from "./submission/preflight/optimized/pmFastPreflight";
 export * from "./pmMarketGuard";
 export * from "./pmBetGuard";
 export * from "./pmDetection";

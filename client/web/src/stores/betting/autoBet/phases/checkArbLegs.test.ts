@@ -6,6 +6,11 @@ import { BetOption as BetOptionClass } from "@changmen/client-core/models/betOpt
 import { checkArbLegs } from "@/stores/betting/autoBet/phases/checkArbLegs";
 import { createDefaultUserConfig } from "@/types/userConfig";
 import { syncActiveBetPrecheckResults } from "@/stores/betting/activeBetRunSync";
+import { setPmFokPreflightMode } from "@changmen/venue-adapter/polymarket";
+const prepareFast = vi.hoisted(() => vi.fn());
+vi.mock("@changmen/venue-adapter/polymarket", async importOriginal => ({
+  ...await importOriginal<typeof import("@changmen/venue-adapter/polymarket")>(), prepareOptimizedFokExecution: prepareFast,
+}));
 
 const prepareGtc = vi.hoisted(() => vi.fn());
 vi.mock("@/orderModes/gtc/arbLeg", () => ({ prepareGtcLegExecution: prepareGtc }));
@@ -74,6 +79,7 @@ const params: ArbBetAttemptParams = {
 describe("checkArbLegs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setPmFokPreflightMode("legacy"); prepareFast.mockReset();
     prepareGtc.mockReset();
     pendingOrders.clear();
     extensionPrefs.stakeScaleByProfit.skipAccountRateOnScale = false;
@@ -82,6 +88,43 @@ describe("checkArbLegs", () => {
       option.data = { ok: true };
       return option;
     });
+  });
+
+  it("dynamic cold preparation finishes before either leg starts; classic/GTC never use it", async () => {
+    setPmFokPreflightMode("optimized");
+    const input = ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125));
+    let release!: () => void;
+    prepareFast.mockImplementationOnce(() => new Promise<void>(resolve => { release = resolve; }));
+    const pending = checkArbLegs(params, input);
+    await vi.waitFor(() => expect(prepareFast).toHaveBeenCalledOnce());
+    expect(checkBetting).not.toHaveBeenCalled();
+    release(); expect(await pending).not.toBeNull(); expect(checkBetting).toHaveBeenCalledTimes(2);
+    expect(checkBetting).toHaveBeenCalledWith(input.accountB, input.legB,
+      expect.objectContaining({ pmDynamicPrepared: true }));
+    prepareFast.mockClear(); setPmFokPreflightMode("legacy");
+    await checkArbLegs(params, ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125)));
+    expect(prepareFast).not.toHaveBeenCalled();
+  });
+
+  it("dynamic preference does not prepare GTC or a PM precheck-only leg", async () => {
+    setPmFokPreflightMode("optimized");
+    const gtc = ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125));
+    gtc.pmOrderMode = "GTC";
+    prepareGtc.mockResolvedValue({ legs: new Map() });
+    await checkArbLegs({ ...params }, gtc);
+    expect(prepareFast).not.toHaveBeenCalled();
+    const input = ready(leg("Polymarket", 22, 3.125), leg("RAY", 80, 1.36));
+    input.checkAccountA = input.accountA; input.accountA = undefined;
+    input.betBothLegs = false; input.singleLegByRate = true;
+    expect(await checkArbLegs(params, input)).not.toBeNull();
+    expect(prepareFast).not.toHaveBeenCalled();
+    expect(checkBetting).toHaveBeenLastCalledWith(input.accountB, input.legB, expect.not.objectContaining({ pmDynamicPrepared: true }));
+  });
+
+  it("failed dynamic preparation never starts the traditional precheck", async () => {
+    setPmFokPreflightMode("optimized"); prepareFast.mockRejectedValueOnce(new Error("clock unavailable"));
+    expect(await checkArbLegs(params, ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125)))).toBeNull();
+    expect(checkBetting).not.toHaveBeenCalled(); expect(syncActiveBetPrecheckResults).not.toHaveBeenCalled();
   });
 
   it("GTC 完成发送准备和冻结校验后才报告双腿通过，准备期间不能进入 place", async () => {

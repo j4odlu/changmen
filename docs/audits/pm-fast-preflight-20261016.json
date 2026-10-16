@@ -1,0 +1,439 @@
+{
+  "description": "[changmen 扩展] 动态 FOK 单次拉簿改造前后交替实测；公开 GET，只读，无签单或真实下单。",
+  "startedAt": "2026-10-16T07:48:56.921Z",
+  "finishedAt": "2026-10-16T07:49:00.974Z",
+  "market": {
+    "eventId": "1165026",
+    "marketId": "5504916",
+    "title": "Valorant: Team Vitality vs LOUD (BO3) - VCT Champions Playoffs",
+    "slug": "val-vit-loud-2026-10-16",
+    "tokenId": "41558402846100433905941279701532348286802841380654283303407937770794440486916",
+    "conditionId": "0x05ebb1c772ac18b5c4b2270e3d5551ee0d8e88010291817d333acbca60d928b0"
+  },
+  "amountUsdc": 10,
+  "limit": 0.72,
+  "route": "Alternating frozen-before vs fast-after; Node through existing local proxy 127.0.0.1:7897",
+  "scope": "真实 checkFokBuy(precheckOnly)，Node fetch 经现有本机代理；不包含真实账号、校时、浏览器/VPS回退或双腿执行。每轮清 Gamma 应用缓存，交替前后顺序；修改前为本轮开始保存的冻结实现。",
+  "rawReport": "output/pm-preflight-latency/2026-10-16T07-48-56.921Z.json",
+  "summary": {
+    "before_fast": {
+      "totalMs": {
+        "n": 6,
+        "min": 251.3,
+        "median": 256,
+        "max": 552.9
+      },
+      "stages": {
+        "book": {
+          "n": 6,
+          "min": 239.9,
+          "median": 248.2,
+          "max": 256.2
+        },
+        "clob_market": {
+          "n": 6,
+          "min": 246.8,
+          "median": 253.7,
+          "max": 552
+        },
+        "gamma_market": {
+          "n": 6,
+          "min": 58,
+          "median": 71.7,
+          "max": 89.9
+        },
+        "gamma_event": {
+          "n": 6,
+          "min": 74.4,
+          "median": 78.8,
+          "max": 86.8
+        }
+      }
+    },
+    "after_fast": {
+      "totalMs": {
+        "n": 6,
+        "min": 241.9,
+        "median": 261.4,
+        "max": 274.9
+      },
+      "stages": {
+        "book": {
+          "n": 6,
+          "min": 241.7,
+          "median": 261.1,
+          "max": 274.6
+        },
+        "clob_market": {
+          "n": 0
+        },
+        "gamma_market": {
+          "n": 0
+        },
+        "gamma_event": {
+          "n": 0
+        }
+      }
+    }
+  },
+  "samples": [
+    {
+      "scenario": "before_fast",
+      "round": 0,
+      "totalMs": 251.3,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 239.9,
+          "headersMs": 239.5,
+          "bytes": 2981,
+          "status": 200
+        },
+        {
+          "stage": "gamma_market",
+          "ms": 89.9,
+          "headersMs": 86.8,
+          "bytes": 9611,
+          "status": 200
+        },
+        {
+          "stage": "clob_market",
+          "ms": 248.6,
+          "headersMs": 248.2,
+          "bytes": 3677,
+          "status": 200
+        },
+        {
+          "stage": "gamma_event",
+          "ms": 86.8,
+          "headersMs": 74.2,
+          "bytes": 150236,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "after_fast",
+      "round": 0,
+      "totalMs": 265.7,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 265.4,
+          "headersMs": 265,
+          "bytes": 2951,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "after_fast",
+      "round": 1,
+      "totalMs": 241.9,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 241.7,
+          "headersMs": 241.3,
+          "bytes": 2952,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "before_fast",
+      "round": 1,
+      "totalMs": 260.9,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 241.4,
+          "headersMs": 241.1,
+          "bytes": 2950,
+          "status": 200
+        },
+        {
+          "stage": "gamma_market",
+          "ms": 82,
+          "headersMs": 81.6,
+          "bytes": 9611,
+          "status": 200
+        },
+        {
+          "stage": "clob_market",
+          "ms": 260,
+          "headersMs": 259,
+          "bytes": 3677,
+          "status": 200
+        },
+        {
+          "stage": "gamma_event",
+          "ms": 79,
+          "headersMs": 66.2,
+          "bytes": 150236,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "before_fast",
+      "round": 2,
+      "totalMs": 256.4,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 256.2,
+          "headersMs": 255.3,
+          "bytes": 2950,
+          "status": 200
+        },
+        {
+          "stage": "gamma_market",
+          "ms": 58,
+          "headersMs": 57.5,
+          "bytes": 9611,
+          "status": 200
+        },
+        {
+          "stage": "clob_market",
+          "ms": 254.6,
+          "headersMs": 254.2,
+          "bytes": 3677,
+          "status": 200
+        },
+        {
+          "stage": "gamma_event",
+          "ms": 76.5,
+          "headersMs": 64.1,
+          "bytes": 150236,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "after_fast",
+      "round": 2,
+      "totalMs": 257.1,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 256.8,
+          "headersMs": 256.5,
+          "bytes": 2947,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "after_fast",
+      "round": 3,
+      "totalMs": 274.9,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 274.6,
+          "headersMs": 274.2,
+          "bytes": 2947,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "before_fast",
+      "round": 3,
+      "totalMs": 255.6,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 255.3,
+          "headersMs": 254.6,
+          "bytes": 2918,
+          "status": 200
+        },
+        {
+          "stage": "gamma_market",
+          "ms": 67.1,
+          "headersMs": 66.6,
+          "bytes": 9611,
+          "status": 200
+        },
+        {
+          "stage": "clob_market",
+          "ms": 246.8,
+          "headersMs": 246.2,
+          "bytes": 3677,
+          "status": 200
+        },
+        {
+          "stage": "gamma_event",
+          "ms": 83.6,
+          "headersMs": 74.5,
+          "bytes": 150236,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "before_fast",
+      "round": 4,
+      "totalMs": 552.9,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 248.3,
+          "headersMs": 247.8,
+          "bytes": 2919,
+          "status": 200
+        },
+        {
+          "stage": "gamma_market",
+          "ms": 61.3,
+          "headersMs": 59.7,
+          "bytes": 9611,
+          "status": 200
+        },
+        {
+          "stage": "clob_market",
+          "ms": 552,
+          "headersMs": 551.7,
+          "bytes": 3679,
+          "status": 200
+        },
+        {
+          "stage": "gamma_event",
+          "ms": 78.5,
+          "headersMs": 66.9,
+          "bytes": 150236,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "after_fast",
+      "round": 4,
+      "totalMs": 255.1,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 254.9,
+          "headersMs": 254.5,
+          "bytes": 2923,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "after_fast",
+      "round": 5,
+      "totalMs": 266,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 265.8,
+          "headersMs": 265,
+          "bytes": 2978,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "before_fast",
+      "round": 5,
+      "totalMs": 253.3,
+      "passed": true,
+      "requests": [
+        {
+          "stage": "book",
+          "ms": 248.1,
+          "headersMs": 247.7,
+          "bytes": 2918,
+          "status": 200
+        },
+        {
+          "stage": "gamma_market",
+          "ms": 76.3,
+          "headersMs": 76,
+          "bytes": 9611,
+          "status": 200
+        },
+        {
+          "stage": "clob_market",
+          "ms": 252.7,
+          "headersMs": 252.4,
+          "bytes": 3677,
+          "status": 200
+        },
+        {
+          "stage": "gamma_event",
+          "ms": 74.4,
+          "headersMs": 62.7,
+          "bytes": 150236,
+          "status": 200
+        }
+      ]
+    }
+  ],
+  "deterministicReplay": {
+    "source": "packages/venue-adapter/polymarket/tests/submission/pmFastPreflight.test.ts",
+    "inputs": {
+      "bookMs": 250,
+      "gammaMs": 1800,
+      "clobMarketMs": 1200
+    },
+    "beforeHotPathMs": 1800,
+    "afterHotPathMs": 250,
+    "separateColdClockMs": 600,
+    "afterColdTotalMs": 850,
+    "note": "模拟固定时延验证依赖关系，不是线上性能承诺；冷准备不能从总耗时中省略。"
+  },
+  "browserAttempt": {
+    "at": "2026-10-16T07:52:08.270Z",
+    "status": "not_run",
+    "reason": "独立诊断页未取得当前浏览器登录会话；未进行登录或改变账号。"
+  },
+  "findings": [
+    "每轮依赖的公开行情查询由4项降为1项；预热后旧版为2项，新版仍为1项。",
+    "这组正常网络样本中位耗时256.0ms→261.4ms，没有证明中位数改善。",
+    "样本最大值552.9ms→274.9ms；旧版第4轮等待552ms CLOB状态查询，新版不再调用该接口。样本少，不能视为P95或稳定上界。",
+    "订单簿HTTP本身仍会慢或回退；这次未引入完整WS订单簿，未改变经典和默认模式。"
+  ],
+  "validation": {
+    "frontend": {
+      "passed": 4266,
+      "skipped": 2,
+      "typecheck": "passed"
+    },
+    "verificationVitest": {
+      "passed": 1851,
+      "files": 52,
+      "workers": 2,
+      "testTimeoutMs": 30000
+    },
+    "verificationNode": {
+      "passed": 9
+    },
+    "fokParity": "passed",
+    "gtcIsolation": "passed",
+    "vpsBaseline": {
+      "passed": true,
+      "protectedFiles": 551
+    },
+    "teamBoundaries": "passed",
+    "notes": [
+      "首次全量发现一处测试 mock 缺少新增导出，已补齐并全量复跑通过。",
+      "保护规则的故障注入提前由新增量层拦截，已更新两个精确错误断言；不放宽保护。",
+      "保护测试与全量前端并跑时部分 Git 对照超过默认5秒；改用2个worker、30秒单测上限后全量通过。node:test文件用Node独立运行。"
+    ]
+  }
+}

@@ -7,6 +7,15 @@ export type PmQuoteSource = "ws" | "http-seed" | "book-correct";
 export type PmExecutionMetricKind = "submit_ack" | "clock_sample" | "outbound_prepare" | "prepared_wait" | "serial_wait" | "gamma" | "upstream_auth" | "upstream_post" | "runtime" | "guard" | "clock" | "pair_check" | "dispatch" | "quote_to_fo" | "book" | "check" | "sign" | "submit" | "betting";
 
 export interface PmExecutionMetricEntry {
+  /** [changmen 扩展] 从本轮冻结方式记录，不读当前配置；未标记的公共数据不猜测归属。 */
+  preflightMode?: "legacy" | "optimized" | "gtc";
+  gammaSource?: "network" | "inflight" | "cache";
+  requestStartedAt?: number;
+  responseReceivedAt?: number;
+  requestMs?: number;
+  evidenceAgeMs?: number;
+  evidenceFresh?: boolean;
+  riskSignal?: string;
   at: number;
   kind: PmExecutionMetricKind;
   tokenId?: string;
@@ -64,6 +73,11 @@ export interface PmExecutionKindSummary {
 }
 
 export interface PmExecutionMetricsSummary {
+  preflightModes: Record<"legacy" | "optimized", {
+    checks: number; passed: number; failed: number; p50Ms: number | null; p95Ms: number | null;
+    gammaReads: number; gammaCacheHits: number; gammaInflightHits: number;
+    bookAgeP95Ms: number | null; rejectReasons: Record<string, number>;
+  }>;
   generatedAt: number;
   windowSize: number;
   total: number;
@@ -242,8 +256,8 @@ function increment(map: Record<string, number>, key: string | undefined): void {
   map[safeKey] = (map[safeKey] ?? 0) + 1;
 }
 
-export function getPmExecutionMetricsSummary(): PmExecutionMetricsSummary {
-  const snapshot = [...getPmExecutionMetrics()];
+export function getPmExecutionMetricsSummary(preflightMode?: PmExecutionMetricEntry["preflightMode"]): PmExecutionMetricsSummary {
+  const snapshot = [...getPmExecutionMetrics()].filter(row => !preflightMode || row.preflightMode === preflightMode);
   const byKind = Object.fromEntries(metricKinds().map(kind => [kind, emptyKindSummary()])) as Record<PmExecutionMetricKind, PmExecutionKindSummary>;
   const durations = Object.fromEntries(metricKinds().map(kind => [kind, [] as number[]])) as Record<PmExecutionMetricKind, number[]>;
   const book = {
@@ -411,6 +425,20 @@ export function getPmExecutionMetricsSummary(): PmExecutionMetricsSummary {
   quoteToFo.successRate = rate(quoteToFo.success, quoteToFo.total);
 
   return {
+    preflightModes: Object.fromEntries((["legacy", "optimized"] as const).map(mode => {
+      const rows = snapshot.filter(row => row.preflightMode === mode);
+      const checks = rows.filter(row => row.kind === "check");
+      const times = checks.flatMap(row => typeof row.ms === "number" ? [row.ms] : []);
+      const rejectReasons: Record<string, number> = {};
+      for (const row of checks) if (row.success === false) increment(rejectReasons, row.error || row.rejectReason);
+      return [mode, { checks: checks.length, passed: checks.filter(row => row.success).length,
+        failed: checks.filter(row => row.success === false).length, p50Ms: percentile(times, 50), p95Ms: percentile(times, 95),
+        gammaReads: rows.filter(row => row.kind === "gamma" && row.stage !== "clob_market").length,
+        gammaCacheHits: rows.filter(row => row.gammaSource === "cache").length,
+        gammaInflightHits: rows.filter(row => row.gammaSource === "inflight").length,
+        bookAgeP95Ms: percentile(rows.flatMap(row => row.kind === "submit" && typeof row.bookAgeMs === "number" ? [row.bookAgeMs] : []), 95),
+        rejectReasons }];
+    })) as PmExecutionMetricsSummary["preflightModes"],
     generatedAt: Date.now(),
     windowSize: MAX_ENTRIES,
     total: snapshot.length,

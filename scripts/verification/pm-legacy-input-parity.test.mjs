@@ -94,6 +94,12 @@ async function runTasks(version, role, failure) {
     return name === "guard" ? "market blocked" : name === "clock" ? undefined : { price: 0.5 };
   };
   const market = action("market"), guard = action("guard"), clock = action("clock");
+  const readyRuntime = { runtime: "prepared", cacheHit: true };
+  const prepareRuntime = () => {
+    calls.push("runtime");
+    if (failure === "runtime" || failure === "all") throw new Error("runtime failed");
+    return readyRuntime;
+  };
   const bindings = {
     account, option, context: { role }, gateway: "gateway", tokenId: "token", detectionOdds: 2, apiBetMoney: 10, maxPrice: 0.5,
     resolvePolymarketExecutableBuy: market, resolvePolymarketBetBlockReason: version === "online" ? guard : () => { throw new Error("optimized guard must not run"); },
@@ -101,8 +107,11 @@ async function runTasks(version, role, failure) {
     measurePmExecution: (_kind, _fields, action) => action(),
     parseTokenConfig: () => ({}), resolveApiCreds: () => ({ address: "a", apiKey: "k", secret: "s", passphrase: "p", signatureType: 2 }),
     resolvePrivateKey: () => "private", preparationBinding: () => "bound", polymarketSigningGeneration: () => 7,
+    polymarketSigningSessionGeneration: () => 7,
+    preparePolymarketOrderClientRuntime: prepareRuntime,
     resolveSdkSignatureType: value => [1, 2, 3].includes(Number(value)) ? Number(value) : 0,
-    getPolymarketOrderClientRuntime: () => { calls.push("runtime"); if (failure === "runtime" || failure === "all") throw new Error("runtime failed"); return { runtime: "prepared", cacheHit: true }; },
+    // The legacy cold-signer compatibility fix prepares once, then verifies that the same cached runtime survived.
+    getPolymarketOrderClientRuntime: version === "online" ? prepareRuntime : () => readyRuntime,
     getPolymarketPmSportBlockReasonFromOption: () => { throw new Error("legacy must not add a post-await sport check"); },
   };
   const loaded = compile(version === "online" ? deployedTasks : commonTasks, bindings);

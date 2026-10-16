@@ -231,8 +231,8 @@ async function save() {
         <div>
           <h3 class="extensions-tab__heading">PM FOK 预检方式</h3>
           <p class="extensions-tab__section-desc">
-            原有预检沿用线上检查流程；优化预检减少重复赛况查询并更新过期判断。
-            两种方式的钱包均在账号加载、解锁时准备。保存后对新 FOK 尝试生效，GTC 不受此选项影响。
+            经典预检沿用线上检查流程；动态复核预检只等待最新订单簿，检查限价与足额深度，并保留本地锁盘、赛况复核。
+            钱包在账号加载、解锁时准备；动态复核的校时在双腿预检前完成。保存后对新 FOK 尝试生效，GTC 不受此选项影响。
           </p>
         </div>
         <span class="extensions-tab__badge">changmen 扩展</span>
@@ -240,8 +240,8 @@ async function save() {
       <el-form label-position="left" label-width="190px">
         <el-form-item label="预检方式">
           <el-radio-group v-model="extensionPrefs.pmFokPreflightMode" aria-label="PM FOK 预检方式">
-            <el-radio-button value="legacy">原有预检（默认）</el-radio-button>
-            <el-radio-button value="optimized">优化预检</el-radio-button>
+            <el-radio-button value="legacy">经典预检（默认）</el-radio-button>
+            <el-radio-button value="optimized">动态复核预检</el-radio-button>
           </el-radio-group>
         </el-form-item>
       </el-form>

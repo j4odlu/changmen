@@ -44,11 +44,11 @@ const combinations = [
 const histories = ["count", "odds", "opposite"] as const;
 
 beforeEach(() => { sessionStorage.clear(); state.historyStatus.mockReset(); setPmFokPreflightMode("legacy"); vi.mocked(prewarmPmSportForCandidate).mockClear(); });
-it.each(["legacy", "optimized"] as const)("prewarms only optimized FOK candidates and freezes %s before account selection", async mode => {
+it.each(["legacy", "optimized"] as const)("FOK skips Gamma prewarm and freezes %s before account selection", async mode => {
   setPmFokPreflightMode(mode);
   const fixture = makeFixture(["Polymarket", "RAY"], "FOK", "count");
   await prepareArbAttempt(fixture.params);
-  expect(prewarmPmSportForCandidate).toHaveBeenCalledTimes(mode === "optimized" ? 1 : 0);
+  expect(prewarmPmSportForCandidate).not.toHaveBeenCalled();
   setPmFokPreflightMode(mode === "legacy" ? "optimized" : "legacy");
   expect(capturePmFokPreflightMode(fixture.legs[0]!)).toBe(mode);
 });

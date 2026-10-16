@@ -2,6 +2,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import { verifyPmAccountSigningContract } from "./pm-account-signing-boundary.mjs";
+import { restorePmOptimizedFokSource } from "./pm-optimized-fok-boundary.mjs";
 import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mjs";
 import { restoreGtcSelectionHistorySource } from "./gtc-selection-history-boundary.mjs";
 import { restorePmUnifiedPreflightSource, verifyPmUnifiedPreflightContract } from "./pm-unified-preflight-boundary.mjs";
@@ -62,8 +64,9 @@ export function restorePmPreflightSource(file, source, required = false) {
 
 export function verifyPmPreflightContract(readSource) {
   verifyPmUnifiedPreflightContract(readSource);
+  verifyPmAccountSigningContract(readSource);
   for (const [file, expected] of Object.entries(helpers)) {
-    const digest = createHash("sha256").update(readSource(file).replaceAll("\r\n", "\n")).digest("hex");
+    const digest = createHash("sha256").update(restorePmOptimizedFokSource(file, readSource(file)).replaceAll("\r\n", "\n")).digest("hex");
     assert.equal(digest, expected, `${file}: complete reviewed PM preflight helper`);
   }
   for (const file of Object.keys(changes)) {

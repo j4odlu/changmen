@@ -26,7 +26,7 @@
       ]
     },
     "packages/venue-adapter/polymarket/submission/preflight/pmBuyPreflight.ts": {
-      "beforeSha": "05194a5c8208044876151df197f6024a4eabbfca0a9bdecd0d1caa513e0cebb5",
+      "beforeSha": "58d23ab91131f799437b4cdeeb55dacb2bca82943ca58eb1f980550998f5745c",
       "increments": [
         [
           "}\n\n/** [changmen 扩展] 凭据绑定只留在内存；各模式决定额外参与绑定的字段。 */\nexport function capturePmPreflightBinding(binding: () => string): PmPreflightBinding {\n  return { binding: binding(), generation: polymarketSigningGeneration() };\n}\n\nexport function matchesPmPreflightBinding(snapshot: PmPreflightBinding, binding: () => string): boolean {\n  return snapshot.binding === binding() && snapshot.generation === polymarketSigningGeneration();\n}\n\nexport function assertPmPreflightSportAllowed(option: BetOption): void {\n",
@@ -39,20 +39,20 @@
       ]
     },
     "packages/venue-adapter/polymarket/fok/preflight.ts": {
-      "beforeSha": "3eaad22e7778f13da1d20c15f8d8614c83267f18186cc96e89ec2f6b9c807d9b",
+      "beforeSha": "45df5f55fb434af54055466a27ac1a8b09f00116ec92f4b2bd4f38ebbe47c48c",
       "increments": [
         [
-          "      if (invalidatedChecks.has(option)) throw new Error(\"PM 每次预检须新建投注尝试\");\n      if (initialInputs !== checkInputBinding(account, option))\n        throw new Error(\"PM 预检期间投注参数已改变，请新建尝试\");\n      if (runtimeSettled.value && (!matchesPmPreflightBinding(runtimeSettled.value, () => preparationBinding(account, option)))) throw new Error(\"PM 预检期间钱包或账号已改变\");\n      const limitPrice = polymarketFokLimitFromDetection(maxPrice, orderOptions.tickSize, price);\n      // [changmen 扩展] 在实际限价确定后统一校验 SDK 编码份数，不自动增加用户注码。\n      const shares = pmBuyOrderShares(apiBetMoney, limitPrice, orderOptions.tickSize);\n",
-          "      if (invalidatedChecks.has(option)) throw new Error(\"PM 每次预检须新建投注尝试\");\n      if (initialInputs !== checkInputBinding(account, option))\n        throw new Error(\"PM 预检期间投注参数已改变，请新建尝试\");\n      if (runtimeSettled.value && (!matchesPmPreflightBinding(account, runtimeSettled.value, () => preparationBinding(account, option)))) throw new Error(\"PM 预检期间钱包或账号已改变\");\n      const limitPrice = polymarketFokLimitFromDetection(maxPrice, orderOptions.tickSize, price);\n      // [changmen 扩展] 在实际限价确定后统一校验 SDK 编码份数，不自动增加用户注码。\n      const shares = pmBuyOrderShares(apiBetMoney, limitPrice, orderOptions.tickSize);\n"
+          "      if (invalidatedChecks.has(option)) throw new Error(\"PM 每次预检须新建投注尝试\");\n      if (initialInputs !== checkInputBinding(account, option))\n        throw new Error(\"PM 预检期间投注参数已改变，请新建尝试\");\n      if (runtimeSettled.value && (!matchesPmPreflightBinding(runtimeSettled.value, () => preparationBinding(account, option)))) throw new Error(\"PM 预检期间钱包或账号已改变\");\n      const limitPrice = polymarketFokLimitFromDetection(maxPrice, orderOptions.tickSize, price);\n      if (preflightMode === \"optimized\") {\n        const quoteBlock = optimizedFokQuoteBlock(tokenId, limitPrice, bookFetchedAt);\n",
+          "      if (invalidatedChecks.has(option)) throw new Error(\"PM 每次预检须新建投注尝试\");\n      if (initialInputs !== checkInputBinding(account, option))\n        throw new Error(\"PM 预检期间投注参数已改变，请新建尝试\");\n      if (runtimeSettled.value && (!matchesPmPreflightBinding(account, runtimeSettled.value, () => preparationBinding(account, option)))) throw new Error(\"PM 预检期间钱包或账号已改变\");\n      const limitPrice = polymarketFokLimitFromDetection(maxPrice, orderOptions.tickSize, price);\n      if (preflightMode === \"optimized\") {\n        const quoteBlock = optimizedFokQuoteBlock(tokenId, limitPrice, bookFetchedAt);\n"
         ],
         [
-          "      } satisfies PolymarketBuyCheckData;\n      Object.freeze(option.data);\n      preparedBuys.set(option, { preflightMode, data: option.data as PolymarketBuyCheckData, runtime: runtimeSettled.value?.runtime ?? null,\n        binding: context?.role === \"precheckOnly\" ? \"\" : preparationBinding(account, option), generation: polymarketSigningGeneration(),\n        consumed: false, readyAt: performance.now(), cacheHit: runtimeSettled.value?.cacheHit ?? false, role: context?.role ?? \"execute\" });\n      recordPmExecutionMetric({\n        kind: \"check\",\n",
-          "      } satisfies PolymarketBuyCheckData;\n      Object.freeze(option.data);\n      preparedBuys.set(option, { preflightMode, data: option.data as PolymarketBuyCheckData, runtime: runtimeSettled.value?.runtime ?? null,\n        binding: context?.role === \"precheckOnly\" ? \"\" : preparationBinding(account, option), generation: polymarketSigningGeneration(account),\n        consumed: false, readyAt: performance.now(), cacheHit: runtimeSettled.value?.cacheHit ?? false, role: context?.role ?? \"execute\" });\n      recordPmExecutionMetric({\n        kind: \"check\",\n"
+          "      } satisfies PolymarketBuyCheckData;\n      Object.freeze(option.data);\n      preparedBuys.set(option, { preflightMode, data: option.data as PolymarketBuyCheckData, runtime: runtimeSettled.value?.runtime ?? null,\n        binding: context?.role === \"precheckOnly\" ? \"\" : preparationBinding(account, option), generation: polymarketSigningGeneration(),\n        consumed: false, readyAt: performance.now(), cacheHit: runtimeSettled.value?.cacheHit ?? false, role: context?.role ?? \"execute\" });\n      recordPmExecutionMetric({ preflightMode,\n        kind: \"check\",\n",
+          "      } satisfies PolymarketBuyCheckData;\n      Object.freeze(option.data);\n      preparedBuys.set(option, { preflightMode, data: option.data as PolymarketBuyCheckData, runtime: runtimeSettled.value?.runtime ?? null,\n        binding: context?.role === \"precheckOnly\" ? \"\" : preparationBinding(account, option), generation: polymarketSigningGeneration(account),\n        consumed: false, readyAt: performance.now(), cacheHit: runtimeSettled.value?.cacheHit ?? false, role: context?.role ?? \"execute\" });\n      recordPmExecutionMetric({ preflightMode,\n        kind: \"check\",\n"
         ]
       ]
     },
     "packages/venue-adapter/polymarket/fok/bet.ts": {
-      "beforeSha": "c10969d188ab8d047d191ccb3c852ef02b2c58ddaae43be54fb53c4dc2a3350a",
+      "beforeSha": "73fac3a53b915a73e99bc3e8da9e19b6e91209c7845ee68e28d5f9a2b2a2db11",
       "increments": [
         [
           "  if (prepared.role !== \"execute\" || !prepared.runtime) return \"PM 此腿仅预检\";\n  if (option.checkError) return option.checkError;\n  if (!pmSubmitClockReady(account)) return \"PM 提交校时准备已失效\";\n  if (prepared.generation !== polymarketSigningGeneration()) return \"PM 钱包会话已失效\";\n  try { validatePreparedPrice(prepared.data); }\n  catch (err) { return err instanceof Error ? err.message : \"PM 冻结报价失效\"; }\n  try {\n",
@@ -63,8 +63,8 @@
           "      );\n      // 签名期间若收到已知 tick 变更，只做本地有效性核验。\n      validatePreparedPrice(frozen);\n      if (prepared.generation !== polymarketSigningGeneration(account)\n        || option.data !== frozen || prepared.binding !== preparationBinding(account, option)) throw new Error(\"PM 签名准备已失效\");\n      warmPolymarketUserWs(account, String(option.betId ?? \"\").trim());\n      const submittedAt = Date.now();\n"
         ],
         [
-          "              if (sportBlock) throw new Error(sportBlock);\n            }\n            validatePreparedPrice(frozen);\n            if (prepared.generation !== polymarketSigningGeneration()\n              || option.data !== frozen || prepared.binding !== preparationBinding(account, option))\n              throw new Error(\"PM 签名准备已失效\");\n            if (!pmSubmitClockReady(account)) throw new Error(\"PM 提交校时未就绪，请重新预检\");\n",
-          "              if (sportBlock) throw new Error(sportBlock);\n            }\n            validatePreparedPrice(frozen);\n            if (prepared.generation !== polymarketSigningGeneration(account)\n              || option.data !== frozen || prepared.binding !== preparationBinding(account, option))\n              throw new Error(\"PM 签名准备已失效\");\n            if (!pmSubmitClockReady(account)) throw new Error(\"PM 提交校时未就绪，请重新预检\");\n"
+          "              if (quoteBlock) throw new Error(quoteBlock);\n            }\n            validatePreparedPrice(frozen);\n            if (prepared.generation !== polymarketSigningGeneration()\n              || option.data !== frozen || prepared.binding !== preparationBinding(account, option))\n              throw new Error(\"PM 签名准备已失效\");\n            if (!pmSubmitClockReady(account)) throw new Error(\"PM 提交校时未就绪，请重新预检\");\n",
+          "              if (quoteBlock) throw new Error(quoteBlock);\n            }\n            validatePreparedPrice(frozen);\n            if (prepared.generation !== polymarketSigningGeneration(account)\n              || option.data !== frozen || prepared.binding !== preparationBinding(account, option))\n              throw new Error(\"PM 签名准备已失效\");\n            if (!pmSubmitClockReady(account)) throw new Error(\"PM 提交校时未就绪，请重新预检\");\n"
         ]
       ]
     },

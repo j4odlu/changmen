@@ -20,6 +20,7 @@ import { UNKNOWN_SPORTS_SECONDS_DELAY, buildPolymarketDelayedPollOpts, buildPoly
 import { resolvePolymarketProviderLegOutcome } from "../legOutcome";
 import { isPolymarketSubmitTimeoutError, isPolymarketTradingDisabledError, POLYMARKET_SUBMIT_TIMEOUT_MESSAGE, POLYMARKET_TRADING_DISABLED_MESSAGE } from "../pmMarketGuard";
 import { getPolymarketPmSportBlockReasonFromOption } from "../pmSportGuard";
+import { optimizedFokQuoteBlock } from "../submission/preflight/optimized/pmExecutableQuote";
 import { isPolymarketPriceAboveDetectionError, syncPolymarketFoOnPriceAboveDetection } from "../pmTokenQuote";
 import { isPolymarketPriceOnTick } from "../pmTickPrice";
 import { resolvePolymarketVenueIdentityFromToken } from "../profile";
@@ -141,6 +142,8 @@ export function validatePolymarketPreparedBuy(account: PlatformAccount, option: 
   if (prepared?.preflightMode === "optimized") {
     const sportBlock = getPolymarketPmSportBlockReasonFromOption(option);
     if (sportBlock) return sportBlock;
+    const quoteBlock = optimizedFokQuoteBlock(prepared.data.tokenId, prepared.data.limitPrice, prepared.data.bookFetchedAt);
+    if (quoteBlock) return quoteBlock;
   }
   if (!prepared || prepared.data !== option.data) return "PM 缺少本轮预检结果";
   if (prepared.consumed) return "PM 本轮预检结果已消费";
@@ -277,6 +280,7 @@ export const polymarketProvider: PlatformProvider = {
     const creds = resolveApiCreds(config);
     const privateKey = resolvePrivateKey(config);
     const readiness = {
+      preflightMode: prepared.preflightMode,
       accountId: Number(account.accountId) || undefined,
       tokenId: option.itemId,
       linkId: option.diagnosticLinkId,
@@ -357,6 +361,8 @@ export const polymarketProvider: PlatformProvider = {
             if (prepared.preflightMode === "optimized") {
               const sportBlock = getPolymarketPmSportBlockReasonFromOption(option);
               if (sportBlock) throw new Error(sportBlock);
+              const quoteBlock = optimizedFokQuoteBlock(frozen.tokenId, frozen.limitPrice, frozen.bookFetchedAt);
+              if (quoteBlock) throw new Error(quoteBlock);
             }
             validatePreparedPrice(frozen);
             if (prepared.generation !== polymarketSigningGeneration(account)

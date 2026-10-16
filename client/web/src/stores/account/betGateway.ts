@@ -31,6 +31,7 @@ import { pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { getPmSubmission } from "@/api/order";
 import { getRetainedPmPrivateKey } from "@/security/pmVault/retainedPmSession";
+import { capturePmFokPreflightMode, prepareOptimizedFokExecution } from "@changmen/venue-adapter/polymarket";
 
 export type CheckBettingOpts = ResolveVenueStakeOpts & {
   /** [changmen 扩展] 本次 PM 单腿模式，非 PM provider 忽略。 */
@@ -38,6 +39,8 @@ export type CheckBettingOpts = ResolveVenueStakeOpts & {
   /** [changmen 扩展] 仅 PM GTC 人工挂单允许无即时深度；自动套利默认仍检查深度。 */
   pmGtcAllowResting?: boolean;
   requireClobConfirmation?: boolean;
+  /** [changmen 扩展] 双腿编排已完成动态 FOK 准备；与 CLOB 状态确认无关。 */
+  pmDynamicPrepared?: true;
   role?: "execute" | "precheckOnly";
   /** 场馆额已换过：再预检只验盘口，不改 betMoney（勿用 skipAccountRate，USDT 会二次÷汇率） */
   skipStakeResolve?: boolean;
@@ -412,6 +415,9 @@ export async function checkBetting(
   const observationStartedAt = Date.now();
   let observationError: unknown;
   try {
+    // [changmen 扩展] 人工及重试动态 FOK 在冻结报价前准备；双腿已提前准备，不能在此补等。
+    if (pm && opts?.pmOrderMode !== "GTC" && opts?.role !== "precheckOnly" && !opts?.pmDynamicPrepared
+      && capturePmFokPreflightMode(option) === "optimized") await prepareOptimizedFokExecution(account);
     attachPolymarketDetectionQuote(option, opts?.pmQuoteScope);
     attachPredictFunDetectionQuote(option);
     // [A8 适配] 编排 Plan CNY → 场馆原币（CNY / U / PM）；预检后不改，跌价由各场馆 checkBet 拒单

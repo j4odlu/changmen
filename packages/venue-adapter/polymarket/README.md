@@ -2,7 +2,7 @@
 
 [changmen 扩展] 2026-10-16：钱包 signer 在账号加载／解锁阶段预热；经典 FOK 预检恢复原有自动准备能力，凭据有效而缓存为空时不会直接拒绝。初始化期间的锁定或账号撤销仍拒绝本轮。动态 FOK、GTC 及提交阶段仍只读已准备的 runtime。经典 FOK/GTC 的公共并发预检位于 `submission/preflight/pmBuyPreflight.ts`，管理赛况、校时及钱包准备；FOK 的价格、份数、深度及准备状态在 `fok/preflight.ts`，GTC 在 `gtc/preparation.ts`，各自保留提交语义。
 
-[changmen 扩展] 扩展 Tab 的 `pmFokPreflightMode` 默认 `legacy`（原有预检），可选择 `optimized`（优化预检）。原有赛况策略按实际线上前端 `1632d6905061f56fcc7af7039914ca26d743ed48` 原文保存在 `submission/preflight/legacy/`，不包含钱包初始化。优化方式及 GTC 使用 `pmBetGuard.ts`：候选预热与预检共享 Gamma 在途请求及从请求开始计龄的 2 秒短缓存，无效响应不缓存，每轮仍查 CLOB；自动套利无法确认接单时停止本轮。优化交易检查不因 WS 较新而跳过 Gamma。具体差异、配置生效与兼容说明见 [预检方式](../../../docs/PM_PREFLIGHT_MODES.md)。
+[changmen 扩展] 扩展 Tab 的 `pmFokPreflightMode` 默认 `legacy`（经典预检），可选择 `optimized`（动态复核预检）。经典查询、判断及默认设置保持不变。动态 FOK 的 `optimized/pmFastPreflight.ts` 仅等待最新 HTTP 订单簿并计算限价与足额深度，不再查询 Gamma 或额外 CLOB 市场状态；保留本地已知锁盘、终局、更新卖价的否决。自动套利在启动双腿预检前完成校时并读取已有 signer，准备耗时单独记录；准备不足不会在热路径补等。GTC 沿用原 Gamma 短缓存、候选预热和接单状态检查。完整流程、时效边界及测试对比见 [预检方式](../../../docs/PM_PREFLIGHT_MODES.md)。
 
 [changmen 扩展] 原有钱包/Gamma 增量登记保持不变；公共预检提取与配置新增登记在 `scripts/verification/pm-unified-preflight-increments.json`，完整依赖另做哈希保护。精确还原后继续对照原 FOK/VPS 基线，不重录基线或豁免目录。
 

@@ -1,6 +1,7 @@
 // [changmen 扩展] FOK 预检与准备状态；公共异步检查由 submission/preflight 承担。
 import { runPmBuyPreflight, matchesPmPreflightBinding } from "../submission/preflight/pmBuyPreflight";
 import { capturePmFokPreflightMode, type PmFokPreflightMode } from "../submission/preflight/pmFokPreflightMode";
+import { optimizedFokQuoteBlock } from "../submission/preflight/optimized/pmExecutableQuote";
 import type { PlatformProvider } from "../../contract";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
@@ -358,7 +359,7 @@ export async function checkFokBuy(account: PlatformAccount, option: BetOption, c
     if (localBlock) {
       option.checkError = localBlock;
       option.data = null;
-      recordPmExecutionMetric({
+      recordPmExecutionMetric({ preflightMode,
         kind: "check",
         tokenId: option.itemId,
         accountId: Number(account.accountId) || undefined,
@@ -423,7 +424,7 @@ export async function checkFokBuy(account: PlatformAccount, option: BetOption, c
       if (guardSettled.status === "fulfilled" && guardSettled.value) {
         option.checkError = guardSettled.value;
         option.data = null;
-        recordPmExecutionMetric({
+        recordPmExecutionMetric({ preflightMode,
           kind: "check",
           tokenId,
           accountId: Number(account.accountId) || undefined,
@@ -455,6 +456,10 @@ export async function checkFokBuy(account: PlatformAccount, option: BetOption, c
         throw new Error("PM 预检期间投注参数已改变，请新建尝试");
       if (runtimeSettled.value && (!matchesPmPreflightBinding(account, runtimeSettled.value, () => preparationBinding(account, option)))) throw new Error("PM 预检期间钱包或账号已改变");
       const limitPrice = polymarketFokLimitFromDetection(maxPrice, orderOptions.tickSize, price);
+      if (preflightMode === "optimized") {
+        const quoteBlock = optimizedFokQuoteBlock(tokenId, limitPrice, bookFetchedAt);
+        if (quoteBlock) throw new Error(quoteBlock);
+      }
       // [changmen 扩展] 在实际限价确定后统一校验 SDK 编码份数，不自动增加用户注码。
       const shares = pmBuyOrderShares(apiBetMoney, limitPrice, orderOptions.tickSize);
       if (!Number.isFinite(shares) || shares < orderOptions.minOrderSize)
@@ -488,7 +493,7 @@ export async function checkFokBuy(account: PlatformAccount, option: BetOption, c
       preparedBuys.set(option, { preflightMode, data: option.data as PolymarketBuyCheckData, runtime: runtimeSettled.value?.runtime ?? null,
         binding: context?.role === "precheckOnly" ? "" : preparationBinding(account, option), generation: polymarketSigningGeneration(account),
         consumed: false, readyAt: performance.now(), cacheHit: runtimeSettled.value?.cacheHit ?? false, role: context?.role ?? "execute" });
-      recordPmExecutionMetric({
+      recordPmExecutionMetric({ preflightMode,
         kind: "check",
         tokenId,
         accountId: Number(account.accountId) || undefined,
@@ -518,7 +523,7 @@ export async function checkFokBuy(account: PlatformAccount, option: BetOption, c
       option.data = null;
     }
     if (!option.data) {
-      recordPmExecutionMetric({
+      recordPmExecutionMetric({ preflightMode,
         kind: "check",
         tokenId,
         accountId: Number(account.accountId) || undefined,

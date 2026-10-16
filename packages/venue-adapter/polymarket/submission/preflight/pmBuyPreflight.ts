@@ -8,6 +8,7 @@ import { resolvePolymarketBetBlockReason as resolveLegacyBlockReason } from "./l
 import type { PmFokPreflightMode } from "./pmFokPreflightMode";
 import { getPolymarketPmSportBlockReasonFromOption } from "../../pmSportGuard";
 import { measurePmExecution } from "../../pmExecutionMetrics";
+import { runOptimizedFokPreflight } from "./optimized/pmFastPreflight";
 
 export interface PmPreflightBinding {
   binding: string;
@@ -28,7 +29,7 @@ export function assertPmPreflightSportAllowed(option: BetOption): void {
   if (reason) throw new Error(reason);
 }
 
-interface PmBuyPreflightTasks<T> {
+export interface PmBuyPreflightTasks<T> {
   gateway: string;
   /** 每轮只调用一次；FOK/GTC 自己保留报价、份数和深度语义。 */
   market: () => Promise<T>;
@@ -49,8 +50,9 @@ interface PmBuyPreflightTasks<T> {
  * 本地终局在所有异步阶段返回后再次核验；提交前的核验仍由各执行器保留。
  */
 export async function runPmBuyPreflight<T>(account: PlatformAccount, option: BetOption, tasks: PmBuyPreflightTasks<T>) {
+  if (tasks.sportMode === "optimized") return runOptimizedFokPreflight(account, option, tasks);
   const measure = <R>(kind: "guard" | "clock" | "runtime", action: () => Promise<R>) =>
-    tasks.measureStages ? measurePmExecution(kind, { tokenId: option.itemId }, action) : action();
+    tasks.measureStages ? measurePmExecution(kind, { tokenId: option.itemId, preflightMode: tasks.sportMode ?? "gtc" }, action) : action();
   const market = tasks.market();
   const guard = measure("guard", () => tasks.sportMode === "legacy"
     ? resolveLegacyBlockReason(option)

@@ -93,9 +93,9 @@ test("account loading prepares every account, shares overlapping unlocks and rem
   const accounts = Array.from({ length: 12 }, (_, id) => ({ provider: "Polymarket", gateway: input.gateway,
     token: JSON.stringify({ ...config, apiCreds: { ...config.apiCreds, apiKey: `key-${id}` } }) }));
   const first = preparePolymarketAccountRuntimes(accounts);
-  const generation = polymarketSigningGeneration();
+  const generation = polymarketSigningGeneration(accounts[0]);
   const second = preparePolymarketAccountRuntimes(accounts);
-  expect(polymarketSigningGeneration()).toBe(generation);
+  expect(polymarketSigningGeneration(accounts[0])).toBe(generation);
   for (const batch of await Promise.all([first, second])) expect(batch.every(result => result.status === "fulfilled")).toBe(true);
   for (let id = 0; id < 12; id++) expect(getPolymarketOrderClientRuntime({ ...input, creds: { ...input.creds, apiKey: `key-${id}` } }).runtime).toBeTruthy();
   await preparePolymarketAccountRuntimes(accounts.slice(1));
@@ -108,10 +108,10 @@ test("reordering accounts or changing non-signing metadata preserves prepared wa
   const a = { provider: "Polymarket", gateway: input.gateway, token: JSON.stringify(config) };
   const b = { ...a, token: JSON.stringify({ ...config, apiCreds: { ...config.apiCreds, apiKey: "second" } }) };
   await preparePolymarketAccountRuntimes([a, b]);
-  const generation = polymarketSigningGeneration();
+  const generation = polymarketSigningGeneration(a);
   const runtime = getPolymarketOrderClientRuntime(input).runtime;
   await preparePolymarketAccountRuntimes([b, { ...a, token: JSON.stringify({ ...config, displayName: "new name" }) }]);
-  expect(polymarketSigningGeneration()).toBe(generation);
+  expect(polymarketSigningGeneration(a)).toBe(generation);
   expect(getPolymarketOrderClientRuntime(input).runtime).toBe(runtime);
 });
 
@@ -127,6 +127,32 @@ test("partial revocation cancels only the removed in-flight signer, without init
   retainPolymarketAccountRuntimes(accounts);
   expect(getPolymarketOrderClientRuntime(other).runtime).toBe(runtime);
   expect(() => getPolymarketOrderClientRuntime(input)).toThrow("未就绪");
+});
+
+test.each([true, false])("account revocation is isolated even with shared credentials=%s and cannot revive old snapshots", async shared => {
+  const a = { accountId: 1, provider: "Polymarket", gateway: input.gateway, token: JSON.stringify(config) };
+  const b = { ...a, accountId: 2, token: JSON.stringify({ ...config, apiCreds: { ...config.apiCreds, apiKey: shared ? "key" : "second" } }) };
+  await preparePolymarketAccountRuntimes([a, b]);
+  const aVersion = polymarketSigningGeneration(a), bVersion = polymarketSigningGeneration(b);
+  retainPolymarketAccountRuntimes([b]);
+  expect(polymarketSigningGeneration(a)).not.toBe(aVersion);
+  expect(polymarketSigningGeneration(b)).toBe(bVersion);
+  await preparePolymarketAccountRuntimes([{ ...a }, { ...b }]);
+  expect(polymarketSigningGeneration(a)).not.toBe(aVersion);
+  expect(polymarketSigningGeneration(b)).toBe(bVersion);
+  const restoredVersion = polymarketSigningGeneration(a);
+  const changed = { ...a, token: JSON.stringify({ ...config, apiCreds: { ...config.apiCreds, apiKey: "replacement" } }) };
+  await preparePolymarketAccountRuntimes([changed, b]);
+  // The in-flight attempt still holds the old account object.
+  expect(polymarketSigningGeneration(a)).not.toBe(restoredVersion);
+  expect(polymarketSigningGeneration(b)).toBe(bVersion);
+  await preparePolymarketAccountRuntimes([a, b]);
+  expect(polymarketSigningGeneration(a)).not.toBe(restoredVersion);
+  expect(polymarketSigningGeneration(b)).toBe(bVersion);
+  const finalVersion = polymarketSigningGeneration(a);
+  clearPolymarketOrderClientCacheForTests();
+  expect(polymarketSigningGeneration(a)).not.toBe(finalVersion);
+  expect(polymarketSigningGeneration(b)).not.toBe(bVersion);
 });
 
 test("bad PM configuration cannot break non-PM account loading", async () => {

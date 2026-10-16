@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { restorePmAccountSigningSource } from "./pm-account-signing-boundary.mjs";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { gitSource, moduleTokens } from "./fok-exact-boundaries.mjs";
@@ -17,7 +18,8 @@ function functions(source) {
   visit(file); return result;
 }
 const online = functions(gitSource(baseline, root + "fok/bet.ts"));
-const current = functions(fs.readFileSync(root + "fok/preflight.ts", "utf8") + "\n" + fs.readFileSync(root + "fok/bet.ts", "utf8"));
+const current = functions(["fok/preflight.ts", "fok/bet.ts"].map(file =>
+  restorePmAccountSigningSource(root + file, fs.readFileSync(root + file, "utf8"), true)).join("\n"));
 function replaceOne(text, before, after = "") {
   expect(text.split(before)).toHaveLength(2);
   return text.replace(before, after);

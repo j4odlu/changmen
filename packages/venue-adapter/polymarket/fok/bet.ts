@@ -147,7 +147,7 @@ export function validatePolymarketPreparedBuy(account: PlatformAccount, option: 
   if (prepared.role !== "execute" || !prepared.runtime) return "PM 此腿仅预检";
   if (option.checkError) return option.checkError;
   if (!pmSubmitClockReady(account)) return "PM 提交校时准备已失效";
-  if (prepared.generation !== polymarketSigningGeneration()) return "PM 钱包会话已失效";
+  if (prepared.generation !== polymarketSigningGeneration(account)) return "PM 钱包会话已失效";
   try { validatePreparedPrice(prepared.data); }
   catch (err) { return err instanceof Error ? err.message : "PM 冻结报价失效"; }
   try {
@@ -343,7 +343,7 @@ export const polymarketProvider: PlatformProvider = {
       );
       // 签名期间若收到已知 tick 变更，只做本地有效性核验。
       validatePreparedPrice(frozen);
-      if (prepared.generation !== polymarketSigningGeneration()
+      if (prepared.generation !== polymarketSigningGeneration(account)
         || option.data !== frozen || prepared.binding !== preparationBinding(account, option)) throw new Error("PM 签名准备已失效");
       warmPolymarketUserWs(account, String(option.betId ?? "").trim());
       const submittedAt = Date.now();
@@ -359,7 +359,7 @@ export const polymarketProvider: PlatformProvider = {
               if (sportBlock) throw new Error(sportBlock);
             }
             validatePreparedPrice(frozen);
-            if (prepared.generation !== polymarketSigningGeneration()
+            if (prepared.generation !== polymarketSigningGeneration(account)
               || option.data !== frozen || prepared.binding !== preparationBinding(account, option))
               throw new Error("PM 签名准备已失效");
             if (!pmSubmitClockReady(account)) throw new Error("PM 提交校时未就绪，请重新预检");

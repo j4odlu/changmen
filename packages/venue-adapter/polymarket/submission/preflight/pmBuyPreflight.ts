@@ -15,12 +15,12 @@ export interface PmPreflightBinding {
 }
 
 /** [changmen 扩展] 凭据绑定只留在内存；各模式决定额外参与绑定的字段。 */
-export function capturePmPreflightBinding(binding: () => string): PmPreflightBinding {
-  return { binding: binding(), generation: polymarketSigningGeneration() };
+export function capturePmPreflightBinding(account: PlatformAccount, binding: () => string): PmPreflightBinding {
+  return { binding: binding(), generation: polymarketSigningGeneration(account) };
 }
 
-export function matchesPmPreflightBinding(snapshot: PmPreflightBinding, binding: () => string): boolean {
-  return snapshot.binding === binding() && snapshot.generation === polymarketSigningGeneration();
+export function matchesPmPreflightBinding(account: PlatformAccount, snapshot: PmPreflightBinding, binding: () => string): boolean {
+  return snapshot.binding === binding() && snapshot.generation === polymarketSigningGeneration(account);
 }
 
 export function assertPmPreflightSportAllowed(option: BetOption): void {
@@ -63,7 +63,7 @@ export async function runPmBuyPreflight<T>(account: PlatformAccount, option: Bet
     if (!privateKey || !creds.address || !creds.apiKey || !creds.secret || !creds.passphrase)
       throw new Error(tasks.missingCredentialsMessage);
     const token = account.token;
-    const snapshot = capturePmPreflightBinding(tasks.runtimeBinding);
+    const snapshot = capturePmPreflightBinding(account, tasks.runtimeBinding);
     const signatureType = Number(creds.signatureType ?? 0);
     const prepared = getPolymarketOrderClientRuntime({ gateway: tasks.gateway, config, creds, privateKey,
       signatureType: [1, 2, 3].includes(signatureType) ? signatureType : 0 });

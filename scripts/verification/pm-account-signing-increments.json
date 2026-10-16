@@ -1,0 +1,102 @@
+{
+  "changes": {
+    "packages/venue-adapter/polymarket/submission/client/pmOrderClientCache.ts": {
+      "beforeSha": "0b3c3f643bcb98d237084a0b809dffe333003ad76881787d6818727b065aae2b",
+      "increments": [
+        [
+          "const runtimes = new Map<string, PolymarketOrderClientRuntime>();\nconst flights = new Map<string, { task: Promise<PolymarketOrderClientRuntimeResult>; token: object }>();\nlet generation = 0;\nexport function polymarketSigningGeneration(): number { return generation; }\n\nfunction runtimeKey(input: PolymarketOrderClientInput, builderCode: string): string {\n  return JSON.stringify([\n    String(input.gateway || \"\").replace(/\\/+$/, \"\"),\n",
+          "const runtimes = new Map<string, PolymarketOrderClientRuntime>();\nconst flights = new Map<string, { task: Promise<PolymarketOrderClientRuntimeResult>; token: object }>();\nlet generation = 0;\nlet clearedGeneration = 0;\nconst runtimeGenerations = new Map<string, number>();\nconst accountSessions = new Map<string, { key: string | null; generation: number }>();\n\n/** [changmen 扩展] 账号撤销独立计龄；整页锁定仍使全部账号的旧预检失效。 */\nexport function polymarketSigningGeneration(account: SigningAccount): number {\n  let runtimeGeneration = 0;\n  try {\n    runtimeGeneration = runtimeGenerations.get(runtimeKey(accountInput(account), resolvePolymarketBuilderCode())) ?? 0;\n  } catch { /* 仅预检腿允许没有签名凭据。 */ }\n  const accountGeneration = account.accountId == null ? 0 : accountSessions.get(String(account.accountId))?.generation ?? 0;\n  return Math.max(clearedGeneration, accountGeneration, runtimeGeneration);\n}\n\nfunction runtimeKey(input: PolymarketOrderClientInput, builderCode: string): string {\n  return JSON.stringify([\n    String(input.gateway || \"\").replace(/\\/+$/, \"\"),\n"
+        ],
+        [
+          "\nfunction rememberRuntime(key: string, runtime: PolymarketOrderClientRuntime): void {\n  runtimes.set(key, runtime);\n}\n\n/** [changmen 扩展] 仅账号加载/钱包解锁生命周期可创建 signer。 */\n",
+          "\nfunction rememberRuntime(key: string, runtime: PolymarketOrderClientRuntime): void {\n  runtimes.set(key, runtime);\n  runtimeGenerations.set(key, ++generation);\n}\n\n/** [changmen 扩展] 仅账号加载/钱包解锁生命周期可创建 signer。 */\n"
+        ],
+        [
+          "  return { runtime, cacheHit: true };\n}\n\ninterface SigningAccount { provider?: string; token?: string; gateway?: string }\n\nfunction accountInput(account: SigningAccount): PolymarketOrderClientInput {\n  const config = parseTokenConfig(account.token);\n",
+          "  return { runtime, cacheHit: true };\n}\n\ninterface SigningAccount { accountId?: number | string; provider?: string; token?: string; gateway?: string }\n\nfunction accountInput(account: SigningAccount): PolymarketOrderClientInput {\n  const config = parseTokenConfig(account.token);\n"
+        ],
+        [
+          "/** [changmen 扩展] 同步撤销不再属于当前账号列表的 signer；不创建或等待初始化。 */\nexport function retainPolymarketAccountRuntimes(accounts: readonly SigningAccount[]): void {\n  const allowed = new Set<string>();\n  for (const account of accounts) {\n    if (account.provider !== \"Polymarket\") continue;\n    try { allowed.add(runtimeKey(accountInput(account), resolvePolymarketBuilderCode())); }\n    catch { /* 未解锁或无效凭据不能保留旧 signer。 */ }\n  }\n  let removed = false;\n  for (const key of new Set([...runtimes.keys(), ...flights.keys()])) {\n    if (allowed.has(key)) continue;\n    runtimes.delete(key);\n    flights.delete(key);\n    removed = true;\n  }\n  if (removed) generation++;\n}\n\n/** [changmen 扩展] 按签名凭据同步完整账号列表，保留未变化账号（包括在途初始化）。 */\n",
+          "/** [changmen 扩展] 同步撤销不再属于当前账号列表的 signer；不创建或等待初始化。 */\nexport function retainPolymarketAccountRuntimes(accounts: readonly SigningAccount[]): void {\n  const allowed = new Set<string>();\n  const current = new Map<string, string | null>();\n  for (const account of accounts) {\n    if (account.provider !== \"Polymarket\") continue;\n    let key: string | null = null;\n    try {\n      key = runtimeKey(accountInput(account), resolvePolymarketBuilderCode());\n      allowed.add(key);\n    }\n    catch { /* 未解锁或无效凭据不能保留旧 signer。 */ }\n    if (account.accountId != null) current.set(String(account.accountId), key);\n  }\n  for (const id of new Set([...accountSessions.keys(), ...current.keys()])) {\n    const key = current.get(id) ?? null;\n    if (accountSessions.get(id)?.key !== key)\n      accountSessions.set(id, { key, generation: ++generation });\n  }\n  for (const key of new Set([...runtimes.keys(), ...flights.keys()])) {\n    if (allowed.has(key)) continue;\n    runtimes.delete(key);\n    flights.delete(key);\n    runtimeGenerations.delete(key);\n  }\n}\n\n/** [changmen 扩展] 按签名凭据同步完整账号列表，保留未变化账号（包括在途初始化）。 */\n"
+        ],
+        [
+          "}\n\nexport function clearPolymarketOrderClientCacheForTests(): void {\n  generation++;\n  flights.clear();\n  runtimes.clear();\n}\n\n/** [changmen 扩展] 主动锁定/会话到期同时销毁持钥 signer 缓存。 */\n",
+          "}\n\nexport function clearPolymarketOrderClientCacheForTests(): void {\n  clearedGeneration = ++generation;\n  flights.clear();\n  runtimes.clear();\n  runtimeGenerations.clear();\n  accountSessions.clear();\n}\n\n/** [changmen 扩展] 主动锁定/会话到期同时销毁持钥 signer 缓存。 */\n"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/submission/preflight/pmBuyPreflight.ts": {
+      "beforeSha": "05194a5c8208044876151df197f6024a4eabbfca0a9bdecd0d1caa513e0cebb5",
+      "increments": [
+        [
+          "}\n\n/** [changmen 扩展] 凭据绑定只留在内存；各模式决定额外参与绑定的字段。 */\nexport function capturePmPreflightBinding(binding: () => string): PmPreflightBinding {\n  return { binding: binding(), generation: polymarketSigningGeneration() };\n}\n\nexport function matchesPmPreflightBinding(snapshot: PmPreflightBinding, binding: () => string): boolean {\n  return snapshot.binding === binding() && snapshot.generation === polymarketSigningGeneration();\n}\n\nexport function assertPmPreflightSportAllowed(option: BetOption): void {\n",
+          "}\n\n/** [changmen 扩展] 凭据绑定只留在内存；各模式决定额外参与绑定的字段。 */\nexport function capturePmPreflightBinding(account: PlatformAccount, binding: () => string): PmPreflightBinding {\n  return { binding: binding(), generation: polymarketSigningGeneration(account) };\n}\n\nexport function matchesPmPreflightBinding(account: PlatformAccount, snapshot: PmPreflightBinding, binding: () => string): boolean {\n  return snapshot.binding === binding() && snapshot.generation === polymarketSigningGeneration(account);\n}\n\nexport function assertPmPreflightSportAllowed(option: BetOption): void {\n"
+        ],
+        [
+          "    if (!privateKey || !creds.address || !creds.apiKey || !creds.secret || !creds.passphrase)\n      throw new Error(tasks.missingCredentialsMessage);\n    const token = account.token;\n    const snapshot = capturePmPreflightBinding(tasks.runtimeBinding);\n    const signatureType = Number(creds.signatureType ?? 0);\n    const prepared = getPolymarketOrderClientRuntime({ gateway: tasks.gateway, config, creds, privateKey,\n      signatureType: [1, 2, 3].includes(signatureType) ? signatureType : 0 });\n",
+          "    if (!privateKey || !creds.address || !creds.apiKey || !creds.secret || !creds.passphrase)\n      throw new Error(tasks.missingCredentialsMessage);\n    const token = account.token;\n    const snapshot = capturePmPreflightBinding(account, tasks.runtimeBinding);\n    const signatureType = Number(creds.signatureType ?? 0);\n    const prepared = getPolymarketOrderClientRuntime({ gateway: tasks.gateway, config, creds, privateKey,\n      signatureType: [1, 2, 3].includes(signatureType) ? signatureType : 0 });\n"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/fok/preflight.ts": {
+      "beforeSha": "3eaad22e7778f13da1d20c15f8d8614c83267f18186cc96e89ec2f6b9c807d9b",
+      "increments": [
+        [
+          "      if (invalidatedChecks.has(option)) throw new Error(\"PM 每次预检须新建投注尝试\");\n      if (initialInputs !== checkInputBinding(account, option))\n        throw new Error(\"PM 预检期间投注参数已改变，请新建尝试\");\n      if (runtimeSettled.value && (!matchesPmPreflightBinding(runtimeSettled.value, () => preparationBinding(account, option)))) throw new Error(\"PM 预检期间钱包或账号已改变\");\n      const limitPrice = polymarketFokLimitFromDetection(maxPrice, orderOptions.tickSize, price);\n      // [changmen 扩展] 在实际限价确定后统一校验 SDK 编码份数，不自动增加用户注码。\n      const shares = pmBuyOrderShares(apiBetMoney, limitPrice, orderOptions.tickSize);\n",
+          "      if (invalidatedChecks.has(option)) throw new Error(\"PM 每次预检须新建投注尝试\");\n      if (initialInputs !== checkInputBinding(account, option))\n        throw new Error(\"PM 预检期间投注参数已改变，请新建尝试\");\n      if (runtimeSettled.value && (!matchesPmPreflightBinding(account, runtimeSettled.value, () => preparationBinding(account, option)))) throw new Error(\"PM 预检期间钱包或账号已改变\");\n      const limitPrice = polymarketFokLimitFromDetection(maxPrice, orderOptions.tickSize, price);\n      // [changmen 扩展] 在实际限价确定后统一校验 SDK 编码份数，不自动增加用户注码。\n      const shares = pmBuyOrderShares(apiBetMoney, limitPrice, orderOptions.tickSize);\n"
+        ],
+        [
+          "      } satisfies PolymarketBuyCheckData;\n      Object.freeze(option.data);\n      preparedBuys.set(option, { preflightMode, data: option.data as PolymarketBuyCheckData, runtime: runtimeSettled.value?.runtime ?? null,\n        binding: context?.role === \"precheckOnly\" ? \"\" : preparationBinding(account, option), generation: polymarketSigningGeneration(),\n        consumed: false, readyAt: performance.now(), cacheHit: runtimeSettled.value?.cacheHit ?? false, role: context?.role ?? \"execute\" });\n      recordPmExecutionMetric({\n        kind: \"check\",\n",
+          "      } satisfies PolymarketBuyCheckData;\n      Object.freeze(option.data);\n      preparedBuys.set(option, { preflightMode, data: option.data as PolymarketBuyCheckData, runtime: runtimeSettled.value?.runtime ?? null,\n        binding: context?.role === \"precheckOnly\" ? \"\" : preparationBinding(account, option), generation: polymarketSigningGeneration(account),\n        consumed: false, readyAt: performance.now(), cacheHit: runtimeSettled.value?.cacheHit ?? false, role: context?.role ?? \"execute\" });\n      recordPmExecutionMetric({\n        kind: \"check\",\n"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/fok/bet.ts": {
+      "beforeSha": "c10969d188ab8d047d191ccb3c852ef02b2c58ddaae43be54fb53c4dc2a3350a",
+      "increments": [
+        [
+          "  if (prepared.role !== \"execute\" || !prepared.runtime) return \"PM 此腿仅预检\";\n  if (option.checkError) return option.checkError;\n  if (!pmSubmitClockReady(account)) return \"PM 提交校时准备已失效\";\n  if (prepared.generation !== polymarketSigningGeneration()) return \"PM 钱包会话已失效\";\n  try { validatePreparedPrice(prepared.data); }\n  catch (err) { return err instanceof Error ? err.message : \"PM 冻结报价失效\"; }\n  try {\n",
+          "  if (prepared.role !== \"execute\" || !prepared.runtime) return \"PM 此腿仅预检\";\n  if (option.checkError) return option.checkError;\n  if (!pmSubmitClockReady(account)) return \"PM 提交校时准备已失效\";\n  if (prepared.generation !== polymarketSigningGeneration(account)) return \"PM 钱包会话已失效\";\n  try { validatePreparedPrice(prepared.data); }\n  catch (err) { return err instanceof Error ? err.message : \"PM 冻结报价失效\"; }\n  try {\n"
+        ],
+        [
+          "      );\n      // 签名期间若收到已知 tick 变更，只做本地有效性核验。\n      validatePreparedPrice(frozen);\n      if (prepared.generation !== polymarketSigningGeneration()\n        || option.data !== frozen || prepared.binding !== preparationBinding(account, option)) throw new Error(\"PM 签名准备已失效\");\n      warmPolymarketUserWs(account, String(option.betId ?? \"\").trim());\n      const submittedAt = Date.now();\n",
+          "      );\n      // 签名期间若收到已知 tick 变更，只做本地有效性核验。\n      validatePreparedPrice(frozen);\n      if (prepared.generation !== polymarketSigningGeneration(account)\n        || option.data !== frozen || prepared.binding !== preparationBinding(account, option)) throw new Error(\"PM 签名准备已失效\");\n      warmPolymarketUserWs(account, String(option.betId ?? \"\").trim());\n      const submittedAt = Date.now();\n"
+        ],
+        [
+          "              if (sportBlock) throw new Error(sportBlock);\n            }\n            validatePreparedPrice(frozen);\n            if (prepared.generation !== polymarketSigningGeneration()\n              || option.data !== frozen || prepared.binding !== preparationBinding(account, option))\n              throw new Error(\"PM 签名准备已失效\");\n            if (!pmSubmitClockReady(account)) throw new Error(\"PM 提交校时未就绪，请重新预检\");\n",
+          "              if (sportBlock) throw new Error(sportBlock);\n            }\n            validatePreparedPrice(frozen);\n            if (prepared.generation !== polymarketSigningGeneration(account)\n              || option.data !== frozen || prepared.binding !== preparationBinding(account, option))\n              throw new Error(\"PM 签名准备已失效\");\n            if (!pmSubmitClockReady(account)) throw new Error(\"PM 提交校时未就绪，请重新预检\");\n"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/gtc/preparation.ts": {
+      "beforeSha": "4b9526253782466a6ae4ae8f987225e196180dd2b401e750d0a9b671f812b15e",
+      "increments": [
+        [
+          "    if (local)\n      throw new Error(local);\n    option.checkError = undefined;\n    const snapshot = capturePmPreflightBinding(() => binding(account, option));\n    const generation = snapshot.generation;\n    const prior = option.data;\n    const quote = prior?.pmPriceQuote ? validatePmPriceQuote(prior.pmPriceQuote, option.itemId, option.odds) : undefined;\n",
+          "    if (local)\n      throw new Error(local);\n    option.checkError = undefined;\n    const snapshot = capturePmPreflightBinding(account, () => binding(account, option));\n    const generation = snapshot.generation;\n    const prior = option.data;\n    const quote = prior?.pmPriceQuote ? validatePmPriceQuote(prior.pmPriceQuote, option.itemId, option.odds) : undefined;\n"
+        ],
+        [
+          "    const limitPrice = alignPolymarketPriceToTick(maxPrice, tick, \"floor\");\n    if (!(limitPrice > 0 && limitPrice < 1) || !Array.isArray(book.asks))\n      throw new Error(\"PM 手动 GTC 限价或订单簿无效\");\n    if (!matchesPmPreflightBinding(snapshot, () => binding(account, option)) || !pmSubmitClockReady(account))\n      throw new Error(\"PM 手动 GTC 预检参数或钱包会话已失效\");\n    const asks = book.asks.map(row => ({ price: Number(row.price), size: Number(row.size) }))\n      .filter(row => Number.isFinite(row.price) && Number.isFinite(row.size) && row.price > 0 && row.price < 1 && row.size > 0);\n",
+          "    const limitPrice = alignPolymarketPriceToTick(maxPrice, tick, \"floor\");\n    if (!(limitPrice > 0 && limitPrice < 1) || !Array.isArray(book.asks))\n      throw new Error(\"PM 手动 GTC 限价或订单簿无效\");\n    if (!matchesPmPreflightBinding(account, snapshot, () => binding(account, option)) || !pmSubmitClockReady(account))\n      throw new Error(\"PM 手动 GTC 预检参数或钱包会话已失效\");\n    const asks = book.asks.map(row => ({ price: Number(row.price), size: Number(row.size) }))\n      .filter(row => Number.isFinite(row.price) && Number.isFinite(row.size) && row.price > 0 && row.price < 1 && row.size > 0);\n"
+        ],
+        [
+          "    if (!prepared) fail(\"缺少本轮预检\");\n    if (prepared!.consumed) fail(\"本轮签单已消费\");\n    if (prepared!.data !== option.data || option.checkError) fail(\"预检数据已改变\");\n    if (prepared!.generation !== polymarketSigningGeneration()) fail(\"钱包会话已改变\");\n    if (prepared!.binding !== binding(account, option)) fail(\"下单参数或账号已改变\");\n    const { orderOptions, limitPrice } = prepared!.data;\n    const tick = currentPmTick(option.itemId, orderOptions.bookTimestamp) ?? orderOptions.tickSize;\n",
+          "    if (!prepared) fail(\"缺少本轮预检\");\n    if (prepared!.consumed) fail(\"本轮签单已消费\");\n    if (prepared!.data !== option.data || option.checkError) fail(\"预检数据已改变\");\n    if (prepared!.generation !== polymarketSigningGeneration(account)) fail(\"钱包会话已改变\");\n    if (prepared!.binding !== binding(account, option)) fail(\"下单参数或账号已改变\");\n    const { orderOptions, limitPrice } = prepared!.data;\n    const tick = currentPmTick(option.itemId, orderOptions.bookTimestamp) ?? orderOptions.tickSize;\n"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/submission/pmManualSell.ts": {
+      "beforeSha": "0cc99088a87db904e53ff5c77ad266bb3ccfbbf96409a81f495be41a8632b100",
+      "increments": [
+        [
+          "  let sellLimitPrice = 0;\n  try {\n    const submitMode = resolvePmOrderSubmitHttpMode();\n    const signingGeneration = polymarketSigningGeneration();\n    const accountBinding = JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]);\n    const [book] = await Promise.all([\n      pmGetBook<PolymarketOrderBookResponse>(tokenId, gateway),\n",
+          "  let sellLimitPrice = 0;\n  try {\n    const submitMode = resolvePmOrderSubmitHttpMode();\n    const signingGeneration = polymarketSigningGeneration(params.account);\n    const accountBinding = JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]);\n    const [book] = await Promise.all([\n      pmGetBook<PolymarketOrderBookResponse>(tokenId, gateway),\n"
+        ],
+        [
+          "    );\n    if (resolvePmOrderSubmitHttpMode() !== submitMode)\n      throw new Error(\"PM 下单方式已改变，请重新卖出\");\n    if (polymarketSigningGeneration() !== signingGeneration\n      || JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]) !== accountBinding)\n      throw new Error(\"PM 账号或钱包会话已改变，请重新卖出\");\n    if (!pmSubmitClockReady(params.account))\n      throw new Error(\"PM 提交校时未就绪，请重新卖出\");\n    const result = await guardedPmSubmit(params.account, orderBody,\n      { version, negRisk, parentBuyId: String(buy.orderId), validateBeforeDispatch: () => {\n        if (polymarketSigningGeneration() !== signingGeneration\n          || JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]) !== accountBinding)\n          throw new Error(\"PM 账号或钱包会话已改变，请重新卖出\");\n        if (!pmSubmitClockReady(params.account)) throw new Error(\"PM 提交校时未就绪，请重新卖出\");\n",
+          "    );\n    if (resolvePmOrderSubmitHttpMode() !== submitMode)\n      throw new Error(\"PM 下单方式已改变，请重新卖出\");\n    if (polymarketSigningGeneration(params.account) !== signingGeneration\n      || JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]) !== accountBinding)\n      throw new Error(\"PM 账号或钱包会话已改变，请重新卖出\");\n    if (!pmSubmitClockReady(params.account))\n      throw new Error(\"PM 提交校时未就绪，请重新卖出\");\n    const result = await guardedPmSubmit(params.account, orderBody,\n      { version, negRisk, parentBuyId: String(buy.orderId), validateBeforeDispatch: () => {\n        if (polymarketSigningGeneration(params.account) !== signingGeneration\n          || JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]) !== accountBinding)\n          throw new Error(\"PM 账号或钱包会话已改变，请重新卖出\");\n        if (!pmSubmitClockReady(params.account)) throw new Error(\"PM 提交校时未就绪，请重新卖出\");\n"
+        ]
+      ]
+    }
+  }
+}

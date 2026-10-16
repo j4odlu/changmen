@@ -678,7 +678,7 @@ export async function sellPolymarketBuyPosition(params: {
   let sellLimitPrice = 0;
   try {
     const submitMode = resolvePmOrderSubmitHttpMode();
-    const signingGeneration = polymarketSigningGeneration();
+    const signingGeneration = polymarketSigningGeneration(params.account);
     const accountBinding = JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]);
     const [book] = await Promise.all([
       pmGetBook<PolymarketOrderBookResponse>(tokenId, gateway),
@@ -706,14 +706,14 @@ export async function sellPolymarketBuyPosition(params: {
     );
     if (resolvePmOrderSubmitHttpMode() !== submitMode)
       throw new Error("PM 下单方式已改变，请重新卖出");
-    if (polymarketSigningGeneration() !== signingGeneration
+    if (polymarketSigningGeneration(params.account) !== signingGeneration
       || JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]) !== accountBinding)
       throw new Error("PM 账号或钱包会话已改变，请重新卖出");
     if (!pmSubmitClockReady(params.account))
       throw new Error("PM 提交校时未就绪，请重新卖出");
     const result = await guardedPmSubmit(params.account, orderBody,
       { version, negRisk, parentBuyId: String(buy.orderId), validateBeforeDispatch: () => {
-        if (polymarketSigningGeneration() !== signingGeneration
+        if (polymarketSigningGeneration(params.account) !== signingGeneration
           || JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]) !== accountBinding)
           throw new Error("PM 账号或钱包会话已改变，请重新卖出");
         if (!pmSubmitClockReady(params.account)) throw new Error("PM 提交校时未就绪，请重新卖出");

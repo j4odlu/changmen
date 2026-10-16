@@ -1686,8 +1686,11 @@ function unlockRate() {
               :disabled="polyRelayerConfigured === false"
               @click="onPreparePolymarketWallet"
             >
-              Deposit Wallet 初始化
+              部署钱包并授权交易
             </el-button>
+            <span class="poly-credential-hint">
+              钱包未部署时自动部署，并完成买卖所需授权。
+            </span>
             <span class="poly-credential-hint">
               {{ polyApiCreds ? "已生成，保存时会写入 token（signatureType=3）" : "保存时也会自动生成 apiCreds" }}
               <template v-if="polyRelayerConfigured === false">

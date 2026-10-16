@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import { restorePmAccountSigningSource, verifyPmAccountSigningContract } from "./pm-account-signing-boundary.mjs";
 import { restorePmPreflightModeIsolation, verifyPmPreflightModeIsolation } from "./pm-preflight-mode-isolation-boundary.mjs";
 const normalize = value => value.replaceAll("\r\n", "\n");
 const digest = value => createHash("sha256").update(normalize(value)).digest("hex");
@@ -34,6 +35,7 @@ const markers = {
   "client/web/src/stores/betting/autoBet/phases/prepareArbAttempt.ts": "capturePmFokPreflightMode",
 };
 export function restorePmUnifiedPreflightSource(file, source, required = false) {
+  source = restorePmAccountSigningSource(file, source);
   source = restorePmPreflightModeIsolation(file, source);
   if (!changes[file] || (!required && !source.includes(markers[file]))) return source;
   let restored = normalize(source);
@@ -44,9 +46,12 @@ export function restorePmUnifiedPreflightSource(file, source, required = false) 
   return restored;
 }
 export function verifyPmUnifiedPreflightHelpers(read) {
+  const currentRead = read;
+  read = file => restorePmAccountSigningSource(file, currentRead(file));
   verifyPmPreflightModeIsolation(read);
   for (const [file, expected] of Object.entries(PM_UNIFIED_PREFLIGHT_HELPERS))
     assert.equal(digest(restorePmPreflightModeIsolation(file, read(file))), expected, file + ": complete reviewed unified PM preflight helper");
+  verifyPmAccountSigningContract(currentRead);
 }
 export function verifyPmUnifiedPreflightContract(read) {
   verifyPmUnifiedPreflightHelpers(read);

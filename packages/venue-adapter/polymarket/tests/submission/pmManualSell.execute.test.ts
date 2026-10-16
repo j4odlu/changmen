@@ -85,6 +85,33 @@ describe("manual sell submission preparation", () => {
     expect(pmSubmitOrder).not.toHaveBeenCalled();
   });
 
+  it.each(["other", "own", "all"])("sell checks account-scoped revocation during preparation: %s", async target => {
+    const a = account(); const b = { ...a, accountId: 9002 };
+    await preparePolymarketAccountRuntimes([a, b]);
+    vi.mocked(pmPrepareSubmit).mockImplementationOnce(async () => {
+      if (target === "all") clearPolymarketOrderClientCache();
+      else await preparePolymarketAccountRuntimes(target === "other" ? [a] : [b]);
+    });
+    const result = await sellPolymarketBuyPosition({ account: a, buyRow: buy });
+    expect(result.error).toMatch(target === "other" ? /FOK 未成交/ : /账号或钱包会话已改变|签名器未就绪/);
+    expect(pmSubmitOrder).toHaveBeenCalledTimes(target === "other" ? 1 : 0);
+  });
+
+  it.each(["other", "own", "all"])("sell rechecks account revocation at dispatch: %s", async target => {
+    const a = account(); const b = { ...a, accountId: 9002 };
+    await preparePolymarketAccountRuntimes([a, b]);
+    vi.stubGlobal("navigator", { locks: { request: async (_key: string, action: () => Promise<unknown>) => {
+      if (target === "all") clearPolymarketOrderClientCache();
+      else await preparePolymarketAccountRuntimes(target === "other" ? [a] : [b]);
+      return action();
+    } } });
+    try {
+      const result = await sellPolymarketBuyPosition({ account: a, buyRow: buy });
+      expect(result.error).toMatch(target === "other" ? /FOK 未成交/ : /账号或钱包会话已改变/);
+      expect(pmSubmitOrder).toHaveBeenCalledTimes(target === "other" ? 1 : 0);
+    } finally { vi.unstubAllGlobals(); }
+  });
+
   it("a mismatched signing wallet is rejected locally", async () => {
     const a = account();
     const config = JSON.parse(a.token!);

@@ -25,7 +25,19 @@ export interface PolymarketOrderClientRuntimeResult {
 const runtimes = new Map<string, PolymarketOrderClientRuntime>();
 const flights = new Map<string, { task: Promise<PolymarketOrderClientRuntimeResult>; token: object }>();
 let generation = 0;
-export function polymarketSigningGeneration(): number { return generation; }
+let clearedGeneration = 0;
+const runtimeGenerations = new Map<string, number>();
+const accountSessions = new Map<string, { key: string | null; generation: number }>();
+
+/** [changmen 扩展] 账号撤销独立计龄；整页锁定仍使全部账号的旧预检失效。 */
+export function polymarketSigningGeneration(account: SigningAccount): number {
+  let runtimeGeneration = 0;
+  try {
+    runtimeGeneration = runtimeGenerations.get(runtimeKey(accountInput(account), resolvePolymarketBuilderCode())) ?? 0;
+  } catch { /* 仅预检腿允许没有签名凭据。 */ }
+  const accountGeneration = account.accountId == null ? 0 : accountSessions.get(String(account.accountId))?.generation ?? 0;
+  return Math.max(clearedGeneration, accountGeneration, runtimeGeneration);
+}
 
 function runtimeKey(input: PolymarketOrderClientInput, builderCode: string): string {
   return JSON.stringify([
@@ -43,6 +55,7 @@ function runtimeKey(input: PolymarketOrderClientInput, builderCode: string): str
 
 function rememberRuntime(key: string, runtime: PolymarketOrderClientRuntime): void {
   runtimes.set(key, runtime);
+  runtimeGenerations.set(key, ++generation);
 }
 
 /** [changmen 扩展] 仅账号加载/钱包解锁生命周期可创建 signer。 */
@@ -98,7 +111,7 @@ export function getPolymarketOrderClientRuntime(input: PolymarketOrderClientInpu
   return { runtime, cacheHit: true };
 }
 
-interface SigningAccount { provider?: string; token?: string; gateway?: string }
+interface SigningAccount { accountId?: number | string; provider?: string; token?: string; gateway?: string }
 
 function accountInput(account: SigningAccount): PolymarketOrderClientInput {
   const config = parseTokenConfig(account.token);
@@ -114,19 +127,28 @@ function accountInput(account: SigningAccount): PolymarketOrderClientInput {
 /** [changmen 扩展] 同步撤销不再属于当前账号列表的 signer；不创建或等待初始化。 */
 export function retainPolymarketAccountRuntimes(accounts: readonly SigningAccount[]): void {
   const allowed = new Set<string>();
+  const current = new Map<string, string | null>();
   for (const account of accounts) {
     if (account.provider !== "Polymarket") continue;
-    try { allowed.add(runtimeKey(accountInput(account), resolvePolymarketBuilderCode())); }
+    let key: string | null = null;
+    try {
+      key = runtimeKey(accountInput(account), resolvePolymarketBuilderCode());
+      allowed.add(key);
+    }
     catch { /* 未解锁或无效凭据不能保留旧 signer。 */ }
+    if (account.accountId != null) current.set(String(account.accountId), key);
   }
-  let removed = false;
+  for (const id of new Set([...accountSessions.keys(), ...current.keys()])) {
+    const key = current.get(id) ?? null;
+    if (accountSessions.get(id)?.key !== key)
+      accountSessions.set(id, { key, generation: ++generation });
+  }
   for (const key of new Set([...runtimes.keys(), ...flights.keys()])) {
     if (allowed.has(key)) continue;
     runtimes.delete(key);
     flights.delete(key);
-    removed = true;
+    runtimeGenerations.delete(key);
   }
-  if (removed) generation++;
 }
 
 /** [changmen 扩展] 按签名凭据同步完整账号列表，保留未变化账号（包括在途初始化）。 */
@@ -147,9 +169,11 @@ export function hasPolymarketOrderClientRuntime(input: PolymarketOrderClientInpu
 }
 
 export function clearPolymarketOrderClientCacheForTests(): void {
-  generation++;
+  clearedGeneration = ++generation;
   flights.clear();
   runtimes.clear();
+  runtimeGenerations.clear();
+  accountSessions.clear();
 }
 
 /** [changmen 扩展] 主动锁定/会话到期同时销毁持钥 signer 缓存。 */

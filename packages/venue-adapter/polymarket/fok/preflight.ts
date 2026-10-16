@@ -453,7 +453,7 @@ export async function checkFokBuy(account: PlatformAccount, option: BetOption, c
       if (invalidatedChecks.has(option)) throw new Error("PM 每次预检须新建投注尝试");
       if (initialInputs !== checkInputBinding(account, option))
         throw new Error("PM 预检期间投注参数已改变，请新建尝试");
-      if (runtimeSettled.value && (!matchesPmPreflightBinding(runtimeSettled.value, () => preparationBinding(account, option)))) throw new Error("PM 预检期间钱包或账号已改变");
+      if (runtimeSettled.value && (!matchesPmPreflightBinding(account, runtimeSettled.value, () => preparationBinding(account, option)))) throw new Error("PM 预检期间钱包或账号已改变");
       const limitPrice = polymarketFokLimitFromDetection(maxPrice, orderOptions.tickSize, price);
       // [changmen 扩展] 在实际限价确定后统一校验 SDK 编码份数，不自动增加用户注码。
       const shares = pmBuyOrderShares(apiBetMoney, limitPrice, orderOptions.tickSize);
@@ -486,7 +486,7 @@ export async function checkFokBuy(account: PlatformAccount, option: BetOption, c
       } satisfies PolymarketBuyCheckData;
       Object.freeze(option.data);
       preparedBuys.set(option, { preflightMode, data: option.data as PolymarketBuyCheckData, runtime: runtimeSettled.value?.runtime ?? null,
-        binding: context?.role === "precheckOnly" ? "" : preparationBinding(account, option), generation: polymarketSigningGeneration(),
+        binding: context?.role === "precheckOnly" ? "" : preparationBinding(account, option), generation: polymarketSigningGeneration(account),
         consumed: false, readyAt: performance.now(), cacheHit: runtimeSettled.value?.cacheHit ?? false, role: context?.role ?? "execute" });
       recordPmExecutionMetric({
         kind: "check",

@@ -53,7 +53,7 @@ export async function checkGtcBuy(account: PlatformAccount, option: BetOption, _
     if (local)
       throw new Error(local);
     option.checkError = undefined;
-    const snapshot = capturePmPreflightBinding(() => binding(account, option));
+    const snapshot = capturePmPreflightBinding(account, () => binding(account, option));
     const generation = snapshot.generation;
     const prior = option.data;
     const quote = prior?.pmPriceQuote ? validatePmPriceQuote(prior.pmPriceQuote, option.itemId, option.odds) : undefined;
@@ -90,7 +90,7 @@ export async function checkGtcBuy(account: PlatformAccount, option: BetOption, _
     const limitPrice = alignPolymarketPriceToTick(maxPrice, tick, "floor");
     if (!(limitPrice > 0 && limitPrice < 1) || !Array.isArray(book.asks))
       throw new Error("PM 手动 GTC 限价或订单簿无效");
-    if (!matchesPmPreflightBinding(snapshot, () => binding(account, option)) || !pmSubmitClockReady(account))
+    if (!matchesPmPreflightBinding(account, snapshot, () => binding(account, option)) || !pmSubmitClockReady(account))
       throw new Error("PM 手动 GTC 预检参数或钱包会话已失效");
     const asks = book.asks.map(row => ({ price: Number(row.price), size: Number(row.size) }))
       .filter(row => Number.isFinite(row.price) && Number.isFinite(row.size) && row.price > 0 && row.price < 1 && row.size > 0);
@@ -123,7 +123,7 @@ export async function prepareManualGtcBuy(account: PlatformAccount, option: BetO
     if (!prepared) fail("缺少本轮预检");
     if (prepared!.consumed) fail("本轮签单已消费");
     if (prepared!.data !== option.data || option.checkError) fail("预检数据已改变");
-    if (prepared!.generation !== polymarketSigningGeneration()) fail("钱包会话已改变");
+    if (prepared!.generation !== polymarketSigningGeneration(account)) fail("钱包会话已改变");
     if (prepared!.binding !== binding(account, option)) fail("下单参数或账号已改变");
     const { orderOptions, limitPrice } = prepared!.data;
     const tick = currentPmTick(option.itemId, orderOptions.bookTimestamp) ?? orderOptions.tickSize;

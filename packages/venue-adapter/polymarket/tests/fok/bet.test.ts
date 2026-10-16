@@ -2076,6 +2076,74 @@ describe("selected FOK preflight behavior", () => {
       ? [{ closed: false }] : url.includes("/events/") ? { live: true } : { accepting_orders: true });
     pmSubmitOrder.mockResolvedValue({ success: true, status: "matched", orderID: "mode-switch", takingAmount: "20", makingAmount: "10" });
   });
+  test.each(["remove", "replace"])("%s another account preserves FOK and GTC preparations; own account remains revoked", async change => {
+    const a = { ...pmBettingAccount(), accountId: 8101 };
+    const b = { ...pmBettingAccount(), accountId: 8102 };
+    await preparePolymarketAccountRuntimes([a, b]);
+    const own = await polymarketProvider.checkBet(a, option());
+    const other = await polymarketProvider.checkBet(b, option());
+    const ownGtc = await checkGtcBuy(a, option());
+    const otherGtc = await checkGtcBuy(b, option());
+    for (const checked of [own, other, ownGtc, otherGtc]) expect(checked.checkError).toBeUndefined();
+    const changed = { ...a, token: JSON.stringify({ ...JSON.parse(a.token!), apiCreds: { apiKey: "replacement", secret: "c2VjcmV0", passphrase: "pass" } }) };
+    await preparePolymarketAccountRuntimes(change === "remove" ? [b] : [changed, b]);
+    expect((await polymarketProvider.betting(a, own)).success).toBe(false);
+    await expect(prepareManualGtcBuy(a, ownGtc)).rejects.toThrow("钱包会话已改变");
+    expect(pmSubmitOrder).not.toHaveBeenCalled();
+    const gtc = await prepareManualGtcBuy(b, otherGtc);
+    expect(gtc).toBeTruthy();
+    expect((await polymarketProvider.betting(b, other)).success).toBe(true);
+    expect(pmSubmitOrder).toHaveBeenCalledOnce();
+  });
+  test.each(["other", "own", "all"])("signed GTC rechecks only its account before submit: %s", async target => {
+    const a = { ...pmBettingAccount(), accountId: 8401 };
+    const b = { ...pmBettingAccount(), accountId: 8402 };
+    await preparePolymarketAccountRuntimes([a, b]);
+    const checked = await checkGtcBuy(b, option());
+    expect(checked.checkError).toBeUndefined();
+    const prepared = await prepareManualGtcBuy(b, checked);
+    if (target === "all") clearPolymarketOrderClientCacheForTests();
+    else await preparePolymarketAccountRuntimes(target === "other" ? [b] : [a]);
+    const result = await prepared.submit();
+    expect(result.success).toBe(target === "other");
+    if (target !== "other") expect(result.pmSubmitNotSent).toBe(true);
+    expect(pmSubmitOrder).toHaveBeenCalledTimes(target === "other" ? 1 : 0);
+  });
+  test.each(["other", "own", "all"])("account isolation survives async FOK/GTC preflight reads: %s", async target => {
+    const a = { ...pmBettingAccount(), accountId: 8301 };
+    const b = { ...pmBettingAccount(), accountId: 8302 };
+    await preparePolymarketAccountRuntimes([a, b]);
+    const book = await pmGetBook();
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    pmGetBook.mockImplementation(() => gate.then(() => book));
+    const fok = polymarketProvider.checkBet(b, option());
+    const gtc = checkGtcBuy(b, option());
+    if (target === "all") clearPolymarketOrderClientCacheForTests();
+    else await preparePolymarketAccountRuntimes(target === "other" ? [b] : [a]);
+    release();
+    for (const checked of await Promise.all([fok, gtc])) {
+      if (target === "other") expect(checked.checkError).toBeUndefined();
+      else { expect(checked.data).toBeNull(); expect(checked.checkError).toMatch(/钱包|账号/); }
+    }
+    expect(pmSubmitOrder).not.toHaveBeenCalled();
+  });
+  test.each(["other", "own", "all"])("account isolation is rechecked at the dispatch lock: %s", async target => {
+    const a = { ...pmBettingAccount(), accountId: 8201 };
+    const b = { ...pmBettingAccount(), accountId: 8202 };
+    await preparePolymarketAccountRuntimes([a, b]);
+    const checked = await polymarketProvider.checkBet(b, option());
+    expect(checked.checkError).toBeUndefined();
+    vi.stubGlobal("navigator", { locks: { request: async (_key: string, action: () => Promise<unknown>) => {
+      if (target === "all") clearPolymarketOrderClientCacheForTests();
+      else await preparePolymarketAccountRuntimes(target === "other" ? [b] : [a]);
+      return action();
+    } } });
+    try {
+      expect((await polymarketProvider.betting(b, checked)).success).toBe(target === "other");
+      expect(pmSubmitOrder).toHaveBeenCalledTimes(target === "other" ? 1 : 0);
+    } finally { vi.unstubAllGlobals(); }
+  });
   test("a preference switch after precheck cannot add or remove the attempt's sport checks", async () => {
     const account = pmBettingAccount(); const input = option();
     await polymarketProvider.checkBet(account, input);

@@ -1,7 +1,7 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { parseTokenConfig, resolveApiCreds, resolvePrivateKey } from "../../l2Auth";
-import { getPolymarketOrderClientRuntime, polymarketSigningGeneration } from "../../pmOrderClientCache";
+import { getPolymarketOrderClientRuntime, preparePolymarketOrderClientRuntime, polymarketSigningGeneration, polymarketSigningSessionGeneration } from "../../pmOrderClientCache";
 import { pmPrepareSubmit } from "../../pmClientApi";
 import { resolvePolymarketBetBlockReason } from "../../pmBetGuard";
 import { resolvePolymarketBetBlockReason as resolveLegacyBlockReason } from "./legacy/pmBetGuard";
@@ -43,7 +43,8 @@ interface PmBuyPreflightTasks<T> {
 }
 
 /**
- * [changmen 扩展] PM 公共买入预检的并发阶段。只读取钱包模块已有 signer，绝不初始化。
+ * [changmen 扩展] PM 公共买入预检的并发阶段。经典 FOK 保留原有 signer 自动准备能力。
+ * GTC 与动态 FOK 仍由各自准备阶段提供 signer。
  * 保留各模式的错误优先级：返回具名 settled 结果，由模式层按原顺序解释。
  * 本地终局在所有异步阶段返回后再次核验；提交前的核验仍由各执行器保留。
  */
@@ -64,9 +65,19 @@ export async function runPmBuyPreflight<T>(account: PlatformAccount, option: Bet
       throw new Error(tasks.missingCredentialsMessage);
     const token = account.token;
     const snapshot = capturePmPreflightBinding(account, tasks.runtimeBinding);
+    const sessionGeneration = tasks.sportMode === "legacy" ? polymarketSigningSessionGeneration(account) : 0;
     const signatureType = Number(creds.signatureType ?? 0);
-    const prepared = getPolymarketOrderClientRuntime({ gateway: tasks.gateway, config, creds, privateKey,
-      signatureType: [1, 2, 3].includes(signatureType) ? signatureType : 0 });
+    const input = { gateway: tasks.gateway, config, creds, privateKey,
+      signatureType: [1, 2, 3].includes(signatureType) ? signatureType : 0 };
+    const prepared = tasks.sportMode === "legacy"
+      ? await preparePolymarketOrderClientRuntime(input) : getPolymarketOrderClientRuntime(input);
+    if (tasks.sportMode === "legacy") {
+      // 初始化会产生新的账号版本；只接受仍在缓存中的同一实例，不能复活已撤销的 signer。
+      if (sessionGeneration !== polymarketSigningSessionGeneration(account)
+        || getPolymarketOrderClientRuntime(input).runtime !== prepared.runtime)
+        throw new Error("PM 钱包会话已失效");
+      snapshot.generation = polymarketSigningGeneration(account);
+    }
     if (tasks.runtimeTokenChangedMessage && token !== account.token)
       throw new Error(tasks.runtimeTokenChangedMessage);
     return { ...prepared, ...snapshot };

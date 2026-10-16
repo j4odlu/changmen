@@ -1,0 +1,35 @@
+{
+  "changes": {
+    "packages/venue-adapter/polymarket/submission/preflight/pmBuyPreflight.ts": {
+      "beforeShas": [
+        "8b9002a4b2cba2445ac487a9a5d83c5853332d9375044ddafa182165af09863e",
+        "b9057dce7452f5032be7dab94b3c22f7c90c94f290fde0585d82fe65540539ae"
+      ],
+      "increments": [
+        [
+          "import { getPolymarketOrderClientRuntime, polymarketSigningGeneration } from \"../../pmOrderClientCache\";",
+          "import { getPolymarketOrderClientRuntime, preparePolymarketOrderClientRuntime, polymarketSigningGeneration, polymarketSigningSessionGeneration } from \"../../pmOrderClientCache\";"
+        ],
+        [
+          " * [changmen 扩展] PM 公共买入预检的并发阶段。只读取钱包模块已有 signer，绝不初始化。\n",
+          " * [changmen 扩展] PM 公共买入预检的并发阶段。经典 FOK 保留原有 signer 自动准备能力。\n * GTC 与动态 FOK 仍由各自准备阶段提供 signer。\n"
+        ],
+        [
+          "    const token = account.token;\n    const snapshot = capturePmPreflightBinding(account, tasks.runtimeBinding);\n    const signatureType = Number(creds.signatureType ?? 0);\n    const prepared = getPolymarketOrderClientRuntime({ gateway: tasks.gateway, config, creds, privateKey,\n      signatureType: [1, 2, 3].includes(signatureType) ? signatureType : 0 });\n",
+          "    const token = account.token;\n    const snapshot = capturePmPreflightBinding(account, tasks.runtimeBinding);\n    const sessionGeneration = tasks.sportMode === \"legacy\" ? polymarketSigningSessionGeneration(account) : 0;\n    const signatureType = Number(creds.signatureType ?? 0);\n    const input = { gateway: tasks.gateway, config, creds, privateKey,\n      signatureType: [1, 2, 3].includes(signatureType) ? signatureType : 0 };\n    const prepared = tasks.sportMode === \"legacy\"\n      ? await preparePolymarketOrderClientRuntime(input) : getPolymarketOrderClientRuntime(input);\n    if (tasks.sportMode === \"legacy\") {\n      // 初始化会产生新的账号版本；只接受仍在缓存中的同一实例，不能复活已撤销的 signer。\n      if (sessionGeneration !== polymarketSigningSessionGeneration(account)\n        || getPolymarketOrderClientRuntime(input).runtime !== prepared.runtime)\n        throw new Error(\"PM 钱包会话已失效\");\n      snapshot.generation = polymarketSigningGeneration(account);\n    }\n"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/submission/client/pmOrderClientCache.ts": {
+      "beforeShas": [
+        "5dfbe526cea2c308a6de581c3aa20b2523d68f630b752a1de3d759dae0cfc2e4"
+      ],
+      "increments": [
+        [
+          "/** [changmen 扩展] 账号撤销独立计龄",
+          "/** [changmen 扩展] 只记录撤销/账号变更；正常创建 signer 不得掩盖预检期间的会话失效。 */\nexport function polymarketSigningSessionGeneration(account: SigningAccount): number {\n  return Math.max(clearedGeneration, account.accountId == null ? 0 : accountSessions.get(String(account.accountId))?.generation ?? 0);\n}\n\n/** [changmen 扩展] 账号撤销独立计龄"
+        ]
+      ]
+    }
+  }
+}

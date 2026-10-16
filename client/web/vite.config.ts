@@ -280,6 +280,7 @@ export default defineConfig(({ command, mode }) => {
     setupFiles: ["src/test/vitestPolyfillLocalStorage.ts", "src/test/vitestSetupCore.ts"],
     include: [
       "src/**/*.{test,spec}.{js,mjs,ts}",
+      "tests/integration/**/*.{test,spec}.{js,mjs,ts}",
       `${venueAdapterVitestGlob}/**/*.{test,spec}.{js,mjs,ts}`,
       `${venueAdapterVitestGlob}/**/shared/**/*.{test,spec}.{js,mjs,ts}`,
       `${clientCoreVitestGlob}/src/**/*.{test,spec}.{js,mjs,ts}`,

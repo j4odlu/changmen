@@ -2545,13 +2545,21 @@ describe("PM phase 1 frozen attempt", () => {
     expect((await polymarketProvider.betting(account, checked)).success).toBe(false);
     expect(pmSubmitOrder).not.toHaveBeenCalled();
   });
-  test("precheck never waits for wallet initialization and never initializes a cold runtime", async () => {
+  test("legacy FOK recovers a cold signer; optimized FOK keeps explicit preparation", async () => {
     clearPolymarketOrderClientCacheForTests();
     const account = pmBettingAccount();
     const checked = await polymarketProvider.checkBet(account, option(), { prepareSigning: new Promise(() => {}) });
-    expect(checked.data).toBeNull(); expect(checked.checkError).toContain("签名器未就绪");
-    expect((await polymarketProvider.betting(account, checked)).success).toBe(false);
-    expect(pmSubmitOrder).not.toHaveBeenCalled();
+    if (preflightMode === "legacy") {
+      expect(checked.checkError).toBeUndefined();
+      expect(checked.data).toBeTruthy();
+      expect((await polymarketProvider.betting(account, checked)).success).toBe(true);
+      expect(pmSubmitOrder).toHaveBeenCalledOnce();
+      expect(pmSubmitOrder.mock.calls[0][1]).toMatchObject({ orderType: "FOK" });
+    } else {
+      expect(checked.data).toBeNull(); expect(checked.checkError).toContain("签名器未就绪");
+      expect((await polymarketProvider.betting(account, checked)).success).toBe(false);
+      expect(pmSubmitOrder).not.toHaveBeenCalled();
+    }
     await preparePolymarketAccountRuntimes([account]);
     expect((await polymarketProvider.checkBet(account, option())).data).toBeTruthy();
   });

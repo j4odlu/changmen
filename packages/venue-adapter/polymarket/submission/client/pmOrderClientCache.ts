@@ -29,6 +29,11 @@ let clearedGeneration = 0;
 const runtimeGenerations = new Map<string, number>();
 const accountSessions = new Map<string, { key: string | null; generation: number }>();
 
+/** [changmen 扩展] 只记录撤销/账号变更；正常创建 signer 不得掩盖预检期间的会话失效。 */
+export function polymarketSigningSessionGeneration(account: SigningAccount): number {
+  return Math.max(clearedGeneration, account.accountId == null ? 0 : accountSessions.get(String(account.accountId))?.generation ?? 0);
+}
+
 /** [changmen 扩展] 账号撤销独立计龄；整页锁定仍使全部账号的旧预检失效。 */
 export function polymarketSigningGeneration(account: SigningAccount): number {
   let runtimeGeneration = 0;

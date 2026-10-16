@@ -21,6 +21,7 @@ import { polymarketPluginGet } from "../../transport";
 import { pmGetTrades } from "../../pmClientApi";
 import { polymarketFailedBuyTradeRow } from "../../tradeFailure";
 import { lookupPolymarketOrderBetLabel, rememberPolymarketMarketBetLabel } from "../../markets/orderBetLabel";
+import { storedMarketRefresh } from "./storedMarketRefresh";
 
 export { lookupPolymarketOrderBetLabel } from "../../markets/orderBetLabel";
 
@@ -1343,13 +1344,33 @@ export async function fetchPolymarketVenueOrdersBundle(
   const preview = [...buyPreview, ...sellPreview].filter(
     trade => (Number(trade.match_time) || 0) >= afterSec,
   );
-  // [changmen 扩展] 增量成交窗口以外的存量订单也补 PM 盘口名称；已知元数据不重复查询。
-  const storedMarketReads = storedOrders.filter(order => needsStoredMarketSettlement(order)
-    || !lookupPolymarketOrderBetLabel(order.pmConditionId, order.pmTokenId));
-  const marketMap = await fetchMarketsByConditionIds(
-    [...preview.map(trade => String(trade.market ?? "")), ...storedMarketReads.map(order => String(order.pmConditionId ?? ""))].filter(Boolean),
-    [...preview.map(trade => String(trade.asset_id ?? "")), ...storedMarketReads.map(order => String(order.pmTokenId ?? ""))].filter(Boolean),
+  // [changmen 扩展] trades 窗口会重复返回已确认旧单；它们的赛果同样只能走后台。
+  // 新单、拒单翻正及新增成交份额仍保留原来的前台元数据确认。
+  const storedById = new Map(storedOrders.map(order => [order.orderId, order]));
+  const currentPreview = preview.filter(trade => {
+    const stored = storedById.get(String(trade.taker_order_id ?? "").trim());
+    return !stored || ["reject", "return", "pending"].includes(String(stored.status).toLowerCase())
+      || !stored.pmTokenId || stored.pmTokenId !== String(trade.asset_id ?? "").trim()
+      || normalizeConditionId(stored.pmConditionId) !== normalizeConditionId(trade.market)
+      || !(Number(stored.pmShares) > 0)
+      || polymarketShareCount(trade.size) > Number(stored.pmShares) + 0.0001;
+  });
+  const currentConditions = new Set(currentPreview.map(trade => normalizeConditionId(trade.market)).filter(Boolean));
+  const currentTokens = new Set(currentPreview.map(trade => String(trade.asset_id ?? "").trim()).filter(Boolean));
+  // [changmen 扩展] 历史赛果/名称后台补查；正常订单同步消费已取得的事实，不等待历史盘口。
+  const storedMarketReads = storedOrders.filter(order => (needsStoredMarketSettlement(order)
+    || !lookupPolymarketOrderBetLabel(order.pmConditionId, order.pmTokenId))
+    && !currentConditions.has(normalizeConditionId(order.pmConditionId))
+    && !currentTokens.has(String(order.pmTokenId ?? "").trim()));
+  const historicalMarkets = storedMarketRefresh.read(storedMarketReads.map(order => ({
+    conditionId: order.pmConditionId, tokenId: order.pmTokenId,
+  })), fetchMarketsByConditionIds);
+  const currentMarkets = await fetchMarketsByConditionIds(
+    currentPreview.map(trade => String(trade.market ?? "")).filter(Boolean),
+    currentPreview.map(trade => String(trade.asset_id ?? "")).filter(Boolean),
   );
+  // 本轮成交查询优先于后台旧快照；不改变成交确认、费用和买卖归因。
+  const marketMap = new Map([...historicalMarkets, ...currentMarkets]);
   return {
     orders: mapPolymarketTradesToVenueOrders(rawTrades, marketMap, afterSec, userAddresses),
     flattenedTrades: flattened,

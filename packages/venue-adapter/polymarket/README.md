@@ -1,6 +1,6 @@
 # Polymarket 场馆模块
 
-[changmen 扩展] 2026-10-15：钱包 signer 在账号加载／解锁阶段初始化，FOK/GTC 预检及提交只读就绪 runtime，不兜底初始化。公共并发预检位于 `submission/preflight/pmBuyPreflight.ts`，管理赛况、校时及钱包就绪读取；FOK 的价格、份数、深度及准备状态在 `fok/preflight.ts`，GTC 在 `gtc/preparation.ts`，各自保留提交语义。
+[changmen 扩展] 2026-10-16：钱包 signer 在账号加载／解锁阶段预热；经典 FOK 预检恢复原有自动准备能力，凭据有效而缓存为空时不会直接拒绝。初始化期间的锁定或账号撤销仍拒绝本轮。动态 FOK、GTC 及提交阶段仍只读已准备的 runtime。经典 FOK/GTC 的公共并发预检位于 `submission/preflight/pmBuyPreflight.ts`，管理赛况、校时及钱包准备；FOK 的价格、份数、深度及准备状态在 `fok/preflight.ts`，GTC 在 `gtc/preparation.ts`，各自保留提交语义。
 
 [changmen 扩展] 扩展 Tab 的 `pmFokPreflightMode` 默认 `legacy`（原有预检），可选择 `optimized`（优化预检）。原有赛况策略按实际线上前端 `1632d6905061f56fcc7af7039914ca26d743ed48` 原文保存在 `submission/preflight/legacy/`，不包含钱包初始化。优化方式及 GTC 使用 `pmBetGuard.ts`：候选预热与预检共享 Gamma 在途请求及从请求开始计龄的 2 秒短缓存，无效响应不缓存，每轮仍查 CLOB；自动套利无法确认接单时停止本轮。优化交易检查不因 WS 较新而跳过 Gamma。具体差异、配置生效与兼容说明见 [预检方式](../../../docs/PM_PREFLIGHT_MODES.md)。
 

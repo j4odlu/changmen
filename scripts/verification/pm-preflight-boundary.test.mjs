@@ -30,7 +30,7 @@ describe("reviewed PM preflight increments retain FOK baseline protection", () =
     [common, 'if (tasks.sportMode !== "legacy") assertPmPreflightSportAllowed(option);', ''],
     [fok, 'if (sportBlock) throw new Error(sportBlock);', ''],
     [common, 'resolvePolymarketBetBlockReason(option, tasks.requireClobConfirmation)', 'resolvePolymarketBetBlockReason(option)'],
-    [common, 'const prepared = getPolymarketOrderClientRuntime(', 'const prepared = await preparePolymarketOrderClientRuntime('],
+    [common, '? await preparePolymarketOrderClientRuntime(input) : getPolymarketOrderClientRuntime(input)', ': await preparePolymarketOrderClientRuntime(input)'],
     [legs, '...(legA.type === "Polymarket" ? { requireClobConfirmation: true } : {}),', ''],
     [legs, '...(legB.type === "Polymarket" ? { requireClobConfirmation: true } : {}),', ''],
     [retry, 'pickedAccount.provider === "Polymarket" ? { requireClobConfirmation: true } : undefined', 'undefined'],

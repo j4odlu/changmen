@@ -86,7 +86,7 @@ export const UNIFIED_ARBITRAGE_BOUNDARIES = Object.freeze({
     ["export interface ArbLegSettleSnapshot { factsA?: OriginalLegFacts; factsB?: OriginalLegFacts;", "export interface ArbLegSettleSnapshot {"],
     ["const original = placed.originalExecution; const maxWait = original ? Math.max(0, ...[placed.legA, placed.legB].map((leg, index) => (index === 0 ? resultA : resultB)?.success ? original.legs.get(leg)?.rejectWaitSec ?? 0 : 0)) : maxLegRejectWaitSec(config, successAccounts);", "const maxWait = maxLegRejectWaitSec(config, successAccounts);"],
     ["const execution = original?.legs.get(leg); const synced = execution ? await execution.confirm(result) : await settleArbLegUntilTerminal(account, result, {", "const synced = await settleArbLegUntilTerminal(account, result, {"],
-    ["if (execution) { if (side === \"A\") snapshot.factsA = execution.facts(); else snapshot.factsB = execution.facts(); if (synced.orders.length) snapshot.boundLegLabels.push(leg.type); return; }", ""],
+    ["if (execution) { if (side === \"A\") snapshot.factsA = execution.facts(); else snapshot.factsB = execution.facts(); if (account.provider !== \"RAY\") { if (synced.orders.length) snapshot.boundLegLabels.push(leg.type); return; } }", ""],
     ["const pendingA = settleA && isPendingConfirmVenueProvider(accountA!.provider) && (!original || (original.legs.get(legA)?.rejectWaitSec ?? 0) === 0);", "const pendingA = settleA && isPendingConfirmVenueProvider(accountA!.provider);"],
     ["const pendingB = settleB && isPendingConfirmVenueProvider(accountB!.provider) && (!original || (original.legs.get(legB)?.rejectWaitSec ?? 0) === 0);", "const pendingB = settleB && isPendingConfirmVenueProvider(accountB!.provider);"],
   ],
@@ -196,11 +196,15 @@ export function verifyUnifiedArbitrageContract(readSource, replaceExact) {
     if (file === "client/web/src/orderModes/gtc/arbLeg.ts") {
       // [changmen 扩展] 公共账号下单沿用该原腿的等待参数，原不可变契约不重写。
       expected = replaceExact(expected, "const submitOther = prepareOtherLeg(otherAccount, other, checked.linkId);", "const submitOther = prepareOtherLeg(otherAccount, other, checked.linkId, checked.waitSec);");
+      // [changmen 扩展] 用户要求 RAY 恢复公共订单生命周期；只登记这三处接线，PM 发送契约保持原基线。
+      expected = replaceExact(expected, 'import { findGtcOtherOrder } from "./otherFacts";', 'import { findGtcOtherOrder } from "./otherFacts";\nimport { resolveArbBindOrderId } from "@/stores/betting/arbOrderBind";');
+      expected = replaceExact(expected, 'registerRejectMonitor: false', 'registerRejectMonitor: otherAccount.provider === "RAY"');
+      expected = replaceExact(expected, 'const original = findGtcOtherOrder(current(), outcome.orders);', 'const original = otherAccount.provider === "RAY" ? outcome.orders.find(order => order.orderId === resolveArbBindOrderId(outcome.orders, result, outcome.rejected)) : findGtcOtherOrder(current(), outcome.orders);');
     }
     let actual;
     try { actual = restoreGtcSelectionHistorySource(file, readSource(file), replaceExact, true); }
     catch (error) { throw new Error(`${file}: complete reviewed unified capability contract: ${error.message}`); }
-    assert.equal(restorePmOrderBetLabelSource(file, actual, readSource), expected, `${file}: complete reviewed unified capability contract`);
+    assert.deepEqual(moduleTokens(restorePmOrderBetLabelSource(file, actual, readSource)), moduleTokens(expected), `${file}: complete reviewed unified capability contract`);
   }
   for (const file of Object.keys(UNIFIED_ARBITRAGE_BOUNDARIES)) {
     const restored = restoreRayFinalizeSource(file, restoreUnifiedArbitrageSource(file, readSource(file), replaceExact, true), replaceExact);

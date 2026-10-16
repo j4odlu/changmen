@@ -13,7 +13,8 @@ export async function synchronizeGtcCounterparts(
   account: PlatformAccount, orders: VenueOrder[], owner: string, current: () => boolean,
 ): Promise<VenueOrder[]> {
   const ordinary = filterKnownGtcBuyOrders(account.accountId, orders, owner);
-  if (["Polymarket", "PredictFun"].includes(account.provider)) return ordinary;
+  // [changmen 扩展] RAY 拉单、保存和绑定与 PM 下单模式无关，统一走 Client_SaveOrder。
+  if (["Polymarket", "PredictFun", "RAY"].includes(account.provider)) return ordinary;
   const tagged = tagKnownGtcVenueOrders(account.accountId, ordinary, owner);
   const candidates = tagged.filter((order): order is GtcVenueOrder => order.provider === account.provider
     && "pmGtcExecutionId" in order && typeof order.pmGtcExecutionId === "string" && Boolean(order.pmGtcExecutionId));

@@ -10,7 +10,7 @@ export const rayClientMonitorHashes = Object.freeze({
   "client/web/src/runtime/rayOrderMonitor/types.ts": "66904040d717b06ad64f240e0ace52ebf8457fdd2541517c83310ff56a9cb96d",
   "client/web/src/runtime/rayOrderMonitor/localOrders.ts": "61150ea31c1471dcba3368b6f62b70973e0367fc0ced7d82cd85d13c34f83aea",
   "client/web/src/stores/account/rayOrderBindings.ts": "3696d51c940bf97b477455007c001b2fa08754873a2ba194d487f2338b92b6fd",
-  "client/web/src/orderModes/gtc/otherOrders.ts": "5761fd9d111827883bd9413e9491b0fe0897721f48d3e7ae278f292a5ee03fcf",
+  "client/web/src/orderModes/gtc/otherOrders.ts": "df493d7586cbf258de43aaf0356bf9ae724134b10fc8049e57ed64d6271a4a6f",
 });
 export function verifyRayClientMonitorSource(file, source) {
   const expected = rayClientMonitorHashes[file];

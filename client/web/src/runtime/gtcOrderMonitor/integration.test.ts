@@ -7,7 +7,8 @@ import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 import { getProvider } from "@/runtime/providers";
-import { registerRayOrderContext } from "@/runtime/rayOrderMonitor/contexts";
+import { registerRayOrderContext, bindRayOrderContexts } from "@/runtime/rayOrderMonitor/contexts";
+import { pollGtcOther } from "./counterpart";
 import { useRayOrderContextStore } from "@/runtime/rayOrderMonitor/contextStore";
 import { startRayOrderMonitoring, stopRayOrderMonitoring } from "@/runtime/rayOrderMonitor/runtime";
 import { financialOrders, gtcProgress } from "@/orderModes/gtc/executionState";
@@ -64,6 +65,27 @@ beforeEach(() => {
   mocks.mark.mockReset();
 });
 afterEach(() => { stopRayOrderMonitoring(); stopGtcRuntime(); resetRayOrderResults(); vi.useRealTimers(); });
+
+it("GTC consumes a late identity from the common RAY monitor without applying its old one-second matcher again", async () => {
+  execution("late");
+  const row = mocks.records.get("late")!;
+  row.plan.linkId = Date.now(); row.other.orderId = null; row.other.state = "pending";
+  const late = { ...venue("late", "none"), createAt: Date.now() - 1122 };
+  mocks.orders.clear();
+  registerRayOrderContext({ linkId: row.plan.linkId, accountId: 2, side: "B", submittedAt: Date.now(), matchId: 1, betId: 2,
+    match: late.match, bet: late.bet, item: late.item, target: "Away", odds: late.odds, betMoney: late.betMoney,
+    anchorConfirmed: false, anchorProvider: "Polymarket", anchorAccountId: 1, anchorBetMoney: 0, anchorOdds: 0,
+    initialOrders: [], initialRejected: false });
+  bindRayOrderContexts(mocks.accounts[1]!, [late], () => true);
+  mocks.read.mockResolvedValue([late]);
+  startGtcRuntime("owner"); await vi.advanceTimersByTimeAsync(0);
+  await getProvider(mocks.accounts[1]!)!.getOrders!(mocks.accounts[1]!);
+  await vi.advanceTimersByTimeAsync(0);
+  await pollGtcOther("late");
+  expect(gtcProgress.records.find(record => record.id === "late")?.other).toMatchObject({ state: "filled", orderId: late.orderId });
+  expect(mocks.read).toHaveBeenCalledOnce();
+  expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.ordinarySave).not.toHaveBeenCalled();
+});
 
 it("fOK and GTC contexts consume one independent account poll and keep GTC as a facts consumer", async () => {
   execution("gtc");

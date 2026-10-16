@@ -3,7 +3,6 @@ import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import type { OrderRow } from "@/types/order";
 import { watch } from "vue";
 import { captureGtcSession, currentGtc, financialOrders, gtcInitialDispatches, gtcProgress, markGtcLegOnce, mutateGtc, settlement } from "@/orderModes/gtc/executionState";
-import { findGtcOtherOrder } from "@/orderModes/gtc/otherFacts";
 import { readGtcOtherOrders } from "@/orderModes/gtc/otherOrders";
 import { findGtcFinalOrder, gtcNeedsOtherPolling } from "@/orderModes/gtc/pollingPolicy";
 import { gtcSyncIssue } from "@/orderModes/gtc/syncStatus";
@@ -41,7 +40,8 @@ export async function pollGtcOther(id: string, confirm = true): Promise<VenueOrd
       if (!isCurrent())
         throw new Error("GTC 会话已变更");
       const current = currentGtc(id);
-      const original = findGtcOtherOrder(current, orders);
+      // [changmen 扩展] 读取入口已返回唯一原单，展示消费不再重复识别。
+      const original = orders[0];
       if (!original) {
         gtcProgress.otherQueryIssues[id] = gtcSyncIssue(new Error("对侧原单暂未唯一核实，继续查询"));
         return [];

@@ -26,7 +26,10 @@ vi.mock("@/stores/betting/autoBet/makeUp", () => ({ enqueueMakeUpOrder: vi.fn(()
 vi.mock("@/stores/loseOrderStore", () => ({ useLoseOrderStore: () => ({ orders: new Map() }) }));
 vi.mock("@/services/bettingLog", () => ({ saveVenueSettlementLog: vi.fn() }));
 vi.mock("@/services/orderExecutionObservation", () => ({ observeArbSubmissionBlocked: vi.fn() }));
-vi.mock("@/stores/betting/arbOrderBind", () => ({ bindArbLegOrder: vi.fn(), resolveArbBindOrderId: vi.fn() }));
+vi.mock("@/stores/betting/arbOrderBind", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/stores/betting/arbOrderBind")>(),
+  bindArbLegOrder: vi.fn(async () => true),
+}));
 vi.mock("@/stores/betting/pendingOrderBind", () => ({ enqueuePendingOrderBind: vi.fn() }));
 vi.mock("@/stores/betting/autoBet/arbLegSettle", () => ({ settleArbLegUntilTerminal: vi.fn(() => { throw new Error("unexpected FOK settlement"); }) }));
 vi.mock("@changmen/client-core/shared/wait", () => ({ wait: vi.fn(async () => {}) }));
@@ -96,7 +99,7 @@ describe("gTC original pair orchestration", () => {
   });
   it.each([true, false])("gTC keeps rejection remedies disabled while retaining original-order polling when pmFirst=%s", async (pmFirst) => {
     const lifecycle = await prepareGtcLegExecution(params(), checked(pmFirst));
-    expect(lifecycle.actions).toEqual({ retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false });
+    expect(lifecycle.actions).toEqual({ retry: false, makeup: false, autoSell: false, registerRejectMonitor: true, broadcast: false });
     expect(mocks.betting).not.toHaveBeenCalled(); expect(mocks.settle).not.toHaveBeenCalled();
   });
   it.each(["0", "5", "10"])("PM-first acceptance sends the other leg once before querying its %s-share result", async (quantity) => {

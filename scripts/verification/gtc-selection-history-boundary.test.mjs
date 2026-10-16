@@ -10,7 +10,16 @@ const picker = "client/web/src/stores/betting/autoBet/phases/prepareArbAttempt.t
 const execution = "client/web/src/orderModes/gtc/arbLeg.ts";
 describe("GTC history move keeps the original FOK boundary", () => {
   it.each([picker, execution])("restores only the authorized changes in %s", file => {
-    expect(moduleTokens(restoreGtcSelectionHistorySource(file, restorePmPreflightSource(file, read(file)), replaceExact, true)))
+    let restored = restoreGtcSelectionHistorySource(file, restorePmPreflightSource(file, read(file)), replaceExact, true);
+    // [changmen 扩展] 历史前移与 RAY 公共接线独立；精确还原后仍对照原固定版本。
+    if (file === execution) {
+      restored = replaceExact(restored, 'import { resolveArbBindOrderId } from "@/stores/betting/arbOrderBind";', "");
+      restored = replaceExact(restored, 'registerRejectMonitor: otherAccount.provider === "RAY"', 'registerRejectMonitor: false');
+      restored = replaceExact(restored,
+        'const original = otherAccount.provider === "RAY" ? outcome.orders.find(order => order.orderId === resolveArbBindOrderId(outcome.orders, result, outcome.rejected)) : findGtcOtherOrder(current(), outcome.orders);',
+        'const original = findGtcOtherOrder(current(), outcome.orders);');
+    }
+    expect(moduleTokens(restored))
       .toEqual(moduleTokens(gitSource("2ab5e37f", file)));
   });
   it.each([

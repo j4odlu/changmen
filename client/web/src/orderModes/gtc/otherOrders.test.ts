@@ -5,10 +5,10 @@ import { createGtcExecution } from "@changmen/shared/pm_gtc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 import { beginRayOrderObservation, resetRayOrderResults } from "@/runtime/orderMonitoring/rayOrders";
-import { readRayAccountOrders, resetRayOrderPolling } from "@/runtime/orderPolling/ray";
 import { readGtcOtherOrders, settleGtcOtherLeg } from "./otherOrders";
 
-const mocks = vi.hoisted(() => ({ getOrders: vi.fn(), save: vi.fn(), refresh: vi.fn(), outcome: vi.fn(), valid: true }));
+const mocks = vi.hoisted(() => ({ getOrders: vi.fn(), save: vi.fn(), refresh: vi.fn(), outcome: vi.fn(), commonSettle: vi.fn(), valid: true }));
+vi.mock("@/stores/betting/autoBet/arbLegSettle", () => ({ settleArbLegUntilTerminal: mocks.commonSettle }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => mocks.valid }));
 vi.mock("./ordersApi", () => ({ loadGtcMonitorOrders: vi.fn().mockResolvedValue([]), saveOrders: mocks.save, refreshGtcOrders: mocks.refresh }));
 vi.mock("@/runtime/providers", () => ({ getProvider: () => ({ getOrders: mocks.getOrders }) }));
@@ -29,7 +29,7 @@ function original(): VenueOrder {
   return { provider: "RAY", orderId: "gtc-ray", createAt: Date.now(), odds: 2, betMoney: 100, money: 0, reward: 0, status: "none", game: "", match: "", bet: "", item: "", venueMatchId: "gtc-match", venueItemId: "gtc-away", link: 123 };
 }
 beforeEach(() => {
-  resetRayOrderResults(); resetRayOrderPolling(); vi.resetAllMocks(); mocks.valid = true; mocks.getOrders.mockResolvedValue([]); mocks.save.mockResolvedValue(undefined); mocks.refresh.mockResolvedValue(undefined);
+  resetRayOrderResults(); vi.resetAllMocks(); mocks.valid = true; mocks.getOrders.mockResolvedValue([]); mocks.save.mockResolvedValue(undefined); mocks.refresh.mockResolvedValue(undefined);
   mocks.outcome.mockImplementation(async (_account: unknown, _result: unknown, pull: () => Promise<VenueOrder[]>) => ({ orders: await pull(), settlement: "filled" }));
 });
 describe("gTC consumes original RAY monitoring results", () => {
@@ -89,43 +89,34 @@ describe("gTC consumes original RAY monitoring results", () => {
     expect(mocks.getOrders).not.toHaveBeenCalled();
   });
   it("a changed login during venue read prevents persistence", async () => {
+    const acc = account(); acc.provider = "IM"; const row = record(); row.plan.otherProvider = "IM";
     mocks.getOrders.mockImplementation(async () => { mocks.valid = false; return [original()]; });
-    await expect(readGtcOtherOrders(account(), record(), { fresh: true })).rejects.toThrow("会话已变更");
+    await expect(readGtcOtherOrders(acc, row, { fresh: true })).rejects.toThrow("会话已变更");
     expect(mocks.save).not.toHaveBeenCalled();
   });
   it("first-round confirmation receives only original GTC evidence and keeps the configured wait", async () => {
-    mocks.getOrders.mockResolvedValue([original(), { ...original(), orderId: "fok", venueMatchId: "different-match", status: "reject" }]);
-    const acc = account(); const row = record(); const result = { provider: "RAY", success: true } as BetResult;
+    mocks.getOrders.mockResolvedValue([{ ...original(), provider: "IM" }, { ...original(), provider: "IM", orderId: "fok", venueMatchId: "different-match", status: "reject" }]);
+    const acc = account(); acc.provider = "IM"; const row = record(); row.plan.otherProvider = "IM";
+    const result = { provider: "IM", success: true } as BetResult;
     expect(await settleGtcOtherLeg(acc, result, () => row, 30)).toMatchObject({ rejected: false, pendingConfirm: false, orders: [{ orderId: "gtc-ray" }] });
     expect(mocks.outcome).toHaveBeenCalledWith(acc, result, expect.any(Function), { confirmPostAccepted: false, rejectWaitSec: 30 });
     expect(mocks.save.mock.calls[0]![1]).toHaveLength(1);
     expect(mocks.refresh).toHaveBeenCalledOnce();
   });
   it("missing original is pending even if the generic outcome reports filled or rejected", async () => {
+    const acc = account(); acc.provider = "IM"; const row = record(); row.plan.otherProvider = "IM";
     mocks.outcome.mockResolvedValue({ orders: [], settlement: "unfilled" });
-    expect(await settleGtcOtherLeg(account(), { success: true } as BetResult, record, 30)).toEqual({ orders: [], rejected: false, pendingConfirm: true });
+    expect(await settleGtcOtherLeg(acc, { success: true } as BetResult, () => row, 30)).toEqual({ orders: [], rejected: false, pendingConfirm: true });
     expect(mocks.save).not.toHaveBeenCalled();
   });
 
-  it("post-submission confirmation reads fresh evidence while an older monitor query is pending", async () => {
+  it("RAY confirmation delegates the complete order lifecycle to the common flow", async () => {
     const acc = account(); const row = record();
-    let release!: (orders: VenueOrder[]) => void;
-    mocks.getOrders.mockImplementationOnce(() => new Promise<VenueOrder[]>((resolve) => { release = resolve; }))
-      .mockResolvedValueOnce([{ ...original(), status: "reject" }]);
-    mocks.outcome.mockImplementation(async (_account: unknown, _result: unknown, pull: () => Promise<VenueOrder[]>) => {
-      const orders = await pull();
-      return { orders, settlement: orders[0]?.status === "reject" ? "unfilled" : "filled" };
-    });
-    const background = readRayAccountOrders(acc);
-    const discarded = expect(background).rejects.toThrow("新的回执确认替代");
-    await Promise.resolve(); await Promise.resolve();
-    const confirmation = settleGtcOtherLeg(acc, { provider: "RAY", success: true } as BetResult, () => row, 30);
-    await Promise.resolve(); await Promise.resolve();
-    expect(await confirmation).toMatchObject({ rejected: true, pendingConfirm: false, orders: [{ orderId: "gtc-ray", status: "reject" }] });
-    release([original()]); await discarded;
-    expect(mocks.getOrders).toHaveBeenCalledTimes(2);
-    expect(mocks.save).toHaveBeenCalledTimes(1);
-    expect(mocks.save.mock.calls[0]![1]).toMatchObject([{ orderId: "gtc-ray", status: "reject" }]);
-    expect(mocks.outcome).toHaveBeenCalledWith(acc, expect.anything(), expect.any(Function), { confirmPostAccepted: false, rejectWaitSec: 30 });
+    const result = { provider: "RAY", success: true } as BetResult;
+    const outcome = { orders: [original()], rejected: false, pendingConfirm: false };
+    mocks.commonSettle.mockResolvedValue(outcome);
+    expect(await settleGtcOtherLeg(acc, result, () => row, 30)).toBe(outcome);
+    expect(mocks.commonSettle).toHaveBeenCalledExactlyOnceWith(acc, result, { rejectWaitSec: 30, pendingBindLinkId: row.plan.linkId });
+    expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.getOrders).not.toHaveBeenCalled();
   });
 });

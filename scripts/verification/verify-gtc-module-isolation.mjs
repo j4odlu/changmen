@@ -17,7 +17,12 @@ for (const file of files("client/web/src/orderModes/gtc")) {
   if (!/\.(?:ts|vue)$/.test(file) || file.endsWith(".test.ts"))
     continue;
   const source = fs.readFileSync(file, "utf8");
-  const runtimeImports = source.split("\n").filter(line => !/^import type\b/.test(line)).join("\n");
+  let runtimeImports = source.split("\n").filter(line => !/^import type\b/.test(line)).join("\n");
+  // [changmen 扩展] RAY 复用两项公共订单操作；完整接线另由固定源码/契约校验，其他私有动作仍禁止。
+  if (file.replaceAll("\\", "/") === "client/web/src/orderModes/gtc/arbLeg.ts")
+    runtimeImports = runtimeImports.replace('import { resolveArbBindOrderId } from "@/stores/betting/arbOrderBind";', "");
+  if (file.replaceAll("\\", "/") === "client/web/src/orderModes/gtc/otherOrders.ts")
+    runtimeImports = runtimeImports.replace('import { settleArbLegUntilTerminal } from "@/stores/betting/autoBet/arbLegSettle";', "");
   assert(!forbidden.test(runtimeImports), `${file}: GTC cannot import FOK private state/actions`);
   const actionHooks = source.match(/[\w.]+\.\$onAction/g) ?? [];
   assert(actionHooks.every(hook => ["oddsStore.$onAction", "sportOddsStore.$onAction"].includes(hook)), `${file}: GTC cannot intercept FOK actions`);

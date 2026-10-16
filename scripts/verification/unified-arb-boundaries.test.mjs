@@ -65,11 +65,19 @@ describe("reviewed single-leg capabilities are completely protected", () => {
     expect(changed).not.toBe(read(file));
     expect(() => verifyUnifiedArbitrageContract(target => target === file ? changed : read(target), replaceExact)).toThrow("complete reviewed unified capability contract");
   });
-  it.each(["retry", "makeup", "autoSell", "registerRejectMonitor", "broadcast"])("rejects enabling the GTC %s action against the unchanged review contract", (action) => {
+  it.each(["retry", "makeup", "autoSell", "broadcast"])("rejects enabling the GTC %s action against the unchanged review contract", (action) => {
     const file = "client/web/src/orderModes/gtc/arbLeg.ts";
     const source = read(file).replace(`${action}: false`, `${action}: true`);
     expect(source).not.toBe(read(file));
     expect(() => verifyUnifiedArbitrageContract(target => target === file ? source : read(target), replaceExact)).toThrow("complete reviewed unified capability contract");
+  });
+  it("rejects disabling common RAY monitoring or enabling it for unrelated venues", () => {
+    const file = "client/web/src/orderModes/gtc/arbLeg.ts";
+    for (const replacement of ["true", "false"]) {
+      const source = read(file).replace('registerRejectMonitor: otherAccount.provider === "RAY"', `registerRejectMonitor: ${replacement}`);
+      expect(source).not.toBe(read(file));
+      expect(() => verifyUnifiedArbitrageContract(target => target === file ? source : read(target), replaceExact)).toThrow("complete reviewed unified capability contract");
+    }
   });
   for (const file of Object.keys(contracts)) {
     it(`${file}: rejects additional actions and rollback to an empty module`, () => {

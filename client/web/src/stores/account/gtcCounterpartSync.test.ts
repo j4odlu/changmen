@@ -7,7 +7,7 @@ import { createLocalGtc, listLocalGtc, mutateLocalGtc } from "@/orderModes/gtc/l
 import { rememberGtcOrderIdentity, resetGtcOrderProjection, tagKnownGtcVenueOrders } from "@/orderModes/gtc/executionProjection";
 import { gtcProgress } from "@/orderModes/gtc/gtcProgressState";
 import { readGtcOtherOrders } from "@/orderModes/gtc/otherOrders";
-import { beginRayOrderObservation, resetRayOrderResults } from "@/runtime/orderMonitoring/rayOrders";
+import { resetRayOrderResults } from "@/runtime/orderMonitoring/rayOrders";
 import { syncVenueOrders } from "./venueOrders";
 import { flushGtcResults, startGtcOrderSync, stopGtcOrderSync } from "./gtcOrderSync";
 
@@ -38,14 +38,12 @@ beforeEach(() => {
   mock.post.mockResolvedValue({ success: 1, info: true }); mock.getOrders.mockResolvedValue([]);
 });
 afterEach(stopGtcOrderSync);
-it.each(["RAY", "IM"] as const)("normal %s synchronization saves late monitor-confirmed attribution and the latest outcome once", async provider => {
+it.each(["IM"] as const)("normal %s synchronization saves late monitor-confirmed attribution and the latest outcome once", async provider => {
   let row = await execution(provider); rememberGtcOrderIdentity(row);
   const account = new PlatformAccount({ accountId: 2, provider, playerName: "other" });
-  if (provider === "RAY") beginRayOrderObservation(account)([]);
   expect(await readGtcOtherOrders(account, row)).toEqual([]);
   const original = order(provider);
   mock.getOrders.mockResolvedValue([original]);
-  if (provider === "RAY") beginRayOrderObservation(account)([original]);
   expect(await readGtcOtherOrders(account, row)).toMatchObject([{ link, pmGtcExecutionId: id }]);
   expect(mock.post).not.toHaveBeenCalled();
   row = await mutateLocalGtc("owner", id, row.revision, { kind: "other", state: "filled", orderId: original.orderId });
@@ -63,6 +61,18 @@ it.each(["RAY", "IM"] as const)("normal %s synchronization saves late monitor-co
   const ordinary = mock.post.mock.calls.filter(call => call[0] === "Client_SaveOrder");
   expect(ordinary).toHaveLength(1); expect(JSON.parse(ordinary[0]![1].orders)).toEqual([fok]);
   expect(latest).not.toHaveProperty("pmGtcExecutionId"); expect(latest).not.toHaveProperty("link");
+});
+it("RAY always saves through the common order API, even with a known GTC identity and unavailable GTC storage", async () => {
+  rememberGtcOrderIdentity(await execution("RAY"));
+  startGtcOrderSync("owner"); await flushGtcResults();
+  vi.stubGlobal("indexedDB", undefined);
+  const original = order("RAY"); const unrelated = order("RAY", "unrelated");
+  mock.getOrders.mockResolvedValue([original, unrelated]);
+  await syncVenueOrders(new PlatformAccount({ accountId: 2, provider: "RAY", playerName: "other" }), {
+    pendingBindLinkId: link, pendingBindOrderId: original.orderId,
+  });
+  expect(mock.post.mock.calls.map(call => call[0])).toEqual(["Client_SaveOrder"]);
+  expect(JSON.parse(mock.post.mock.calls[0]![1].orders)).toEqual(expect.arrayContaining([{ ...original, link }, unrelated]));
 });
 it("restores exact counterpart identity from durable client records after a refresh", async () => {
   await execution("IM"); resetGtcOrderProjection();

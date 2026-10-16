@@ -10,6 +10,7 @@ import { notifyBet } from "@/shared/betNotification";
 import { createGtc } from "./api";
 import { prepareOtherLeg } from "./gateway";
 import { findGtcOtherOrder } from "./otherFacts";
+import { resolveArbBindOrderId } from "@/stores/betting/arbOrderBind";
 import { settleGtcOtherLeg } from "./otherOrders";
 import { gtcExecutionResult } from "./result";
 import { gtcPmNotice } from "./notifications";
@@ -128,7 +129,7 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
 
   return {
     // [changmen 扩展] 原 GTC V1 许可范围保持：首次原腿一次发送，未完结由人工处理。
-    actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
+    actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: otherAccount.provider === "RAY", broadcast: false },
     finishSubmission,
     close,
     summary,
@@ -176,7 +177,10 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
           if (!result.success)
             return { orders: [], rejected: false, pendingConfirm: true };
           const outcome = await settleGtcOtherLeg(otherAccount, result, current, 0);
-          const original = findGtcOtherOrder(current(), outcome.orders);
+          // [changmen 扩展] RAY 使用公共绑单结果，不再套用 PM GTC 专属时间/盘口匹配。
+          const original = otherAccount.provider === "RAY"
+            ? outcome.orders.find(order => order.orderId === resolveArbBindOrderId(outcome.orders, result, outcome.rejected))
+            : findGtcOtherOrder(current(), outcome.orders);
           const rejected = outcome.rejected || original?.status === "reject" || original?.status === "return";
           const pendingConfirm = outcome.pendingConfirm || !original || original.status === "pending";
           await mutateGtc(id, { kind: "other", state: rejected ? "rejected" : pendingConfirm ? "pending" : "filled", orderId: original?.orderId || result.orderId || undefined, message: pendingConfirm ? "对侧原单成交待确认，禁止补单" : "" });

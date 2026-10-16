@@ -162,12 +162,14 @@ export async function settleBothArbLegs(
       provider: account.provider,
       pendingDetail: placeOutcome === "accepted_pending_confirm" ? "已挂单待确认" : "delayed 待确认",
     });
-    // [changmen 扩展] 兼容桥已保存精确原单及最终 Link，不再使用普通最新单绑定或 FOK 落库。
+    // [changmen 扩展] RAY 始终使用公共绑单及失败重试；PM 执行副本只记录配对事实。
     if (execution) {
       if (side === "A") snapshot.factsA = execution.facts();
       else snapshot.factsB = execution.facts();
-      if (synced.orders.length) snapshot.boundLegLabels.push(leg.type);
-      return;
+      if (account.provider !== "RAY") {
+        if (synced.orders.length) snapshot.boundLegLabels.push(leg.type);
+        return;
+      }
     }
     if (result.pmSubmitUnknown) return;
     const orderId = resolveArbBindOrderId(synced.orders, result, rejected);

@@ -310,13 +310,13 @@ describe("finalizeArbBet makeup enqueue", () => {
     expect(close).toHaveBeenCalledOnce(); expect(pmConfirm).toHaveBeenCalledOnce(); expect(otherConfirm).toHaveBeenCalledOnce();
     expect(close.mock.invocationCallOrder[0]).toBeGreaterThan(otherConfirm.mock.invocationCallOrder[0]!);
     expect(params.setMessage).toHaveBeenCalledWith(summary.message);
-    expect(settleArbLeg).not.toHaveBeenCalled(); expect(saveOrderBind).not.toHaveBeenCalled();
+    expect(settleArbLeg).not.toHaveBeenCalled(); expect(saveOrderBind).toHaveBeenCalledOnce();
     expect(markSuccessfulBet).not.toHaveBeenCalled(); expect(pmMark).toHaveBeenCalledOnce(); expect(otherMark).toHaveBeenCalledOnce();
     expect(applyArbMakeUpFromRejects).not.toHaveBeenCalled(); expect(registerRayOrderContext).not.toHaveBeenCalled();
     expect(autoSell).not.toHaveBeenCalled(); expect(bettingMessage).not.toHaveBeenCalled();
   });
 
-  it.each([false, true])("pM GTC pending=%s confirms the RAY original without registering late-reject makeup", async (pending) => {
+  it.each([false, true])("PM GTC pending=%s preserves common RAY binding and monitoring", async (pending) => {
     const placed = makePlaced();
     placed.legA.type = "Polymarket"; placed.accountA = makeAccount("Polymarket");
     placed.resultA = new BetResult("Polymarket", true); placed.resultA.pending = true;
@@ -326,7 +326,7 @@ describe("finalizeArbBet makeup enqueue", () => {
     placed.originalExecution = {
       close: vi.fn(async () => {}),
       summary: () => ({ message: "PM GTC", traceStatus: "partial", failed: false }),
-      finishSubmission: vi.fn(), actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
+      finishSubmission: vi.fn(), actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: true, broadcast: false },
       legs: new Map([
         [placed.legA, { validate() {}, submit: vi.fn(), confirm: pmConfirm, facts: () => ({ submission: "accepted", fill: pending ? "partial" : "full" }), markConfirmed: vi.fn(), rejectWaitSec: 0 }],
         [placed.legB, { validate() {}, submit: vi.fn(), confirm: rayConfirm, facts: () => ({ submission: "accepted", fill: "full" }), markConfirmed: vi.fn(), rejectWaitSec: 30 }],
@@ -336,7 +336,8 @@ describe("finalizeArbBet makeup enqueue", () => {
     await finalizeArbBet(params, placed);
     expect(rejectWait).toHaveBeenCalledExactlyOnceWith(30000);
     expect(rayConfirm).toHaveBeenCalledOnce();
-    expect(registerRayOrderContext).not.toHaveBeenCalled();
+    expect(registerRayOrderContext).toHaveBeenCalledWith(expect.objectContaining({ initialOrders: [original], anchorConfirmed: !pending }));
+    expect(saveOrderBind).toHaveBeenCalledOnce();
     expect(applyArbMakeUpFromRejects).not.toHaveBeenCalled(); expect(settleArbLeg).not.toHaveBeenCalled();
   });
 

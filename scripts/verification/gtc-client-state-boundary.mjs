@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { restoreGtcFormWireSource } from "./gtc-form-wire-boundary.mjs";
 export const gtcClientStateHashes = Object.freeze({
-  "client/web/src/stores/account/gtcCounterpartSync.ts": "bfcd0c550aa9d28bb1e031330734134a2865cd5428a4537559c0322f787f6387",
+  "client/web/src/stores/account/gtcCounterpartSync.ts": "5342c6193e91bef63ed401616d95e923e74762a482e3e014af8145290ea3a1b7",
   "server/db/rds/orderModes/gtc/pm_gtc_client_import.js": "dffcc39636638f86ef1ef9f6134dd97de49818f86f60e8bcc0353b7e91381f70",
   "server/db/rds/orderModes/gtc/pm_gtc_result_identity.js": "37b362fc5b4d871cf8f8bef9797ca0980b5a4d08c405ace0bfd4217b36013ec2",
   "client/web/src/orderModes/gtc/api.ts": "ba95bf44bc43beb75bd3433b224a7cda361903080876ade10a12a4ea56309936",
@@ -14,7 +14,7 @@ export const gtcClientStateHashes = Object.freeze({
   "client/web/src/orderModes/gtc/recoveryApi.ts": "3b6ee0cc6c69c7d51fc43f411ca6119082c4fb4f13e17abe36d91210c0f5cf96",
   "client/web/src/orderModes/gtc/ordersApi.ts": "02bad46b5a6761e6ec6314c63a93cdb902bbe12fb4df4603b749ae7434c0db2b",
   "client/web/src/orderModes/gtc/executionProjection.ts": "5ec966ed127e0580454c526d5837300dae3fa117cfa215b8402593f6c032796e",
-  "client/web/src/runtime/gtcOrderMonitor/counterpart.ts": "7343e87e61a183543c2384fda66dae90edc8c2b4bfafd2ec0328eb66f474bbe0",
+  "client/web/src/runtime/gtcOrderMonitor/counterpart.ts": "18b6b3d0ec8536e5a5ef6a15cab136d5db2f84f8bf4743955989e80691499f78",
   "client/web/src/runtime/gtcOrderMonitor/localOrders.ts": "a291626e811a27805dcd8ccf47cfcd74e9e5ebaa5caeb89fa82a17e53efbaa1c",
   "client/web/src/runtime/gtcOrderMonitor/runtime.ts": "7828e90f2d27721654222b9deb134f23d18eda852acee5fb8ee61a9cca2554ed",
   "client/web/src/stores/account/gtcOrderSync.ts": "203ce1d549f32a0fcfeb96abe428d163de707e24fcda47f0ddcf2e5593f32021",

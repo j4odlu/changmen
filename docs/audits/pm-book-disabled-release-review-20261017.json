@@ -1,0 +1,68 @@
+{
+  "at": "2026-10-17T07:54:39.015Z",
+  "scope": "default-off delivery only",
+  "localReviewAccepted": true,
+  "sourceStable": true,
+  "inputFingerprint": "59d53c5cb0b36732f0fb945e0b97c551bc76668ea586a4b684590052bf6b0db8",
+  "originalReportPassed": false,
+  "originalReportRetained": true,
+  "controls": [
+    {
+      "check": "fok-551",
+      "passed": true,
+      "elapsedMs": 23243
+    },
+    {
+      "check": "validation-control",
+      "passed": true,
+      "elapsedMs": 5398
+    },
+    {
+      "check": "verification-control",
+      "passed": true,
+      "elapsedMs": 61684
+    },
+    {
+      "check": "verification-node",
+      "passed": true,
+      "elapsedMs": 683
+    },
+    {
+      "check": "router-compile",
+      "passed": true,
+      "elapsedMs": 1209
+    },
+    {
+      "check": "backend",
+      "passed": true,
+      "elapsedMs": 30011
+    },
+    {
+      "check": "frontend-typecheck",
+      "passed": true,
+      "elapsedMs": 15051
+    }
+  ],
+  "frontend": {
+    "filesPassed": 510,
+    "testsPassed": 4518,
+    "skipped": 3,
+    "workers": 1,
+    "timeoutChanged": false
+  },
+  "buildPassed": true,
+  "unchangedBrowserSources": 4,
+  "logs": {
+    "output/pm-book-disabled-release-check.log": "77366dc6cc23b03e1b512fb7f3a4deb036913c003381db6e3959374484393316",
+    "output/pm-book-disabled-release-isolated.log": "168cf4490c2246006fa5bedd712f791b23bd73f22f1f27ca1d7071a957038550",
+    "output/pm-book-disabled-release-frontend-serial.log": "666e5a07fc0e3ae3f5e1b708ef8c9d86b35ac4a5bf6ddc0c1bf712936e23dae0",
+    "output/pm-book-disabled-release-build.log": "72f569c89ac2eaae9719a5765fd047e245cd6f946178f29510904875be55aff0"
+  },
+  "productionShadowAllowed": false,
+  "activeLocalPreflightAllowed": false,
+  "actualPreflight": "HTTP",
+  "defaultMode": "legacy",
+  "localBookDefault": false,
+  "shadowDefault": false,
+  "ciReleaseAccepted": false
+}

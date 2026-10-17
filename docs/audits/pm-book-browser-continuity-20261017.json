@@ -1,0 +1,2623 @@
+{
+  "at": "2026-10-17T06:06:52.915Z",
+  "verdict": "NO_GO_PRODUCTION_SHADOW",
+  "deploymentAuthorized": false,
+  "checks": {
+    "sameCurrentWorker": true,
+    "fixedCandidates": true,
+    "coldAndLateFifteenMinutes": true,
+    "workersSurvived": true,
+    "realHidden": true,
+    "recoveredFreshBooks": true,
+    "noExtraLateConnection": true,
+    "sameOriginalSubscriptions": true,
+    "assetFaultIsolation": true,
+    "sameReplayQuotes": true,
+    "quoteP95NoRegression": true,
+    "noAlignedDifference": false,
+    "consumerDetachKeepsOwner": true,
+    "detachedDepthAdvanced": false,
+    "reconnectRecovered": true,
+    "classicHttpGates": true,
+    "resourcesReleased": true,
+    "freshFollowupEvidence": true,
+    "defaultsAndHttpRemain": true
+  },
+  "blockers": [
+    "noAlignedDifference",
+    "detachedDepthAdvanced"
+  ],
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+  "workerUrl": "/client/web/dist/assets/marketData.worker-Dhj0aiZm.js",
+  "workerSha256": "1bc49e56e265b37b8ccfc1c36044b4a48dfb373b490f9a834eec1df588d4cdf0",
+  "sourceHashes": {
+    "packages/venue-adapter/polymarket/realtime/ws.ts": "a22eceac2c230d33d515464f4aebf9bb0c6d7c0575a5bf48d71038948ca2a9f3",
+    "packages/venue-adapter/polymarket/realtime/orderBook/service.ts": "1425f96c39c7c7e2f5c0c6455dda2a79f10ea051770e234cf6b7bf71175a2a6e",
+    "packages/venue-adapter/polymarket/realtime/orderedWorkerMailbox.ts": "06fd9687db0ef6c532ff97d17393e986bb55bd93a11934636437000ce07ba052",
+    "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/shadowWorkerClient.ts": "0c86a743d319cfa39e6513fff7be384e82512af90e2c663c6e2d649ce6980fd9"
+  },
+  "candidatesSha256": "073132b97c7636d32c0c2bc95ca13cea494b7507f7648b784f976a1298ec04cb",
+  "sourceAssets": 34,
+  "watchedAssets": 16,
+  "previousRetired": {
+    "durationMs": 102525.79999998212,
+    "quotes": {
+      "count": 0,
+      "hashedCount": 0,
+      "completeHash": true,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "health": {
+      "404": 16
+    }
+  },
+  "live": [
+    {
+      "name": "live-cold",
+      "startedAt": "2026-10-17T05:32:08.772Z",
+      "durationMs": 900339.5,
+      "frames": 179704,
+      "quotes": {
+        "count": 348940,
+        "hashedCount": 10000,
+        "completeHash": false,
+        "sha256": "5c6de62abeb7bc7636a4421c63363ea4be4ddc1c18f7c68d3f7622e41037c577"
+      },
+      "handlers": {
+        "n": 179704,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 2.5,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 348940,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 2.5,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 12759,
+        "p50": 0,
+        "p95": 1.1,
+        "p99": 980.1,
+        "max": 59977.90000000596,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 21.195448000000003,
+        "ScriptDuration": 10.989441,
+        "LayoutDuration": 0.057214,
+        "RecalcStyleDuration": 0.005189
+      },
+      "processCpuSeconds": {
+        "delta": 80.329495,
+        "exitedPids": []
+      },
+      "workerAlive": true,
+      "failure": null,
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 1835.5999999940395,
+          "sha256": "710a9d9c80929a423678f206886b7819a4e21bb7aa3a2507c8484342af79b85e",
+          "assets": 34
+        }
+      ],
+      "coverage": {
+        "samples": 438,
+        "assetObservations": 7008,
+        "snapshots": 3128,
+        "eligible": 2013,
+        "missing": 1,
+        "stale": 0,
+        "snapshotRatio": 0.4463470319634703,
+        "eligibleRatio": 0.2872431506849315,
+        "reasons": {
+          "no_snapshot": 200,
+          "metadata_unknown_or_stale": 163,
+          "source_clock_or_age": 6,
+          "stale_book": 4610
+        }
+      },
+      "after60s": {
+        "samples": 380,
+        "assetObservations": 6080,
+        "snapshots": 2232,
+        "eligible": 1686,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 0.3671052631578947,
+        "eligibleRatio": 0.27730263157894736,
+        "reasons": {
+          "stale_book": 4210,
+          "no_snapshot": 184
+        }
+      },
+      "hiddenCoverage": {
+        "samples": 189,
+        "assetObservations": 3024,
+        "snapshots": 1248,
+        "eligible": 988,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 0.4126984126984127,
+        "eligibleRatio": 0.32671957671957674,
+        "reasons": {
+          "stale_book": 1876,
+          "no_snapshot": 160
+        }
+      },
+      "nativeWindows": [
+        {
+          "hiddenAt": 56119.70000001788,
+          "visibleAt": 109822.80000001192,
+          "durationMs": 53703.09999999404,
+          "priorSession": 1,
+          "recoveredSession": 1,
+          "firstFreshSnapshotMs": 0.29999998211860657,
+          "firstEligibleMs": 0.29999998211860657,
+          "framesBefore": 15952,
+          "framesAfter": 179642
+        },
+        {
+          "hiddenAt": 111673.70000001788,
+          "visibleAt": 251694.09999999404,
+          "durationMs": 140020.39999997616,
+          "priorSession": 1,
+          "recoveredSession": 1,
+          "firstFreshSnapshotMs": 0.7000000178813934,
+          "firstEligibleMs": 0.7000000178813934,
+          "framesBefore": 29049,
+          "framesAfter": 179642
+        },
+        {
+          "hiddenAt": 254592.80000001192,
+          "visibleAt": 255447.5,
+          "durationMs": 854.6999999880791,
+          "priorSession": 1,
+          "recoveredSession": 1,
+          "firstFreshSnapshotMs": 0.5999999940395355,
+          "firstEligibleMs": 0.5999999940395355,
+          "framesBefore": 29049,
+          "framesAfter": 179642
+        },
+        {
+          "hiddenAt": 257740.09999999404,
+          "visibleAt": 430365.59999999404,
+          "durationMs": 172625.5,
+          "priorSession": 1,
+          "recoveredSession": 1,
+          "firstFreshSnapshotMs": 1.300000011920929,
+          "firstEligibleMs": 1.300000011920929,
+          "framesBefore": 54657,
+          "framesAfter": 179642
+        },
+        {
+          "hiddenAt": 440637.59999999404,
+          "visibleAt": 568250.900000006,
+          "durationMs": 127613.30000001192,
+          "priorSession": 1,
+          "recoveredSession": 1,
+          "firstFreshSnapshotMs": 2.300000011920929,
+          "firstEligibleMs": 2.300000011920929,
+          "framesBefore": 78802,
+          "framesAfter": 179642
+        },
+        {
+          "hiddenAt": 569200.099999994,
+          "visibleAt": 726996.2000000179,
+          "durationMs": 157796.10000002384,
+          "priorSession": 1,
+          "recoveredSession": 1,
+          "firstFreshSnapshotMs": 0.5,
+          "firstEligibleMs": 0.5,
+          "framesBefore": 114388,
+          "framesAfter": 179642
+        }
+      ],
+      "maxSampleGapMs": 59997.29999998212,
+      "invalidationCount": 6,
+      "recordedInvalidations": 6,
+      "unscopedInvalidations": 2,
+      "scopedInvalidations": {
+        "114791916497375122879738354339146361318863789800056310827616105854978038138447": 2,
+        "114997689241990036953485616321406561630795228983902948357452376179974113317666": 2
+      },
+      "probeOutcomes": {
+        "aligned_equal": 240,
+        "unaligned_or_changed": 32,
+        "ambiguous_timestamp": 13,
+        "no_snapshot": 14
+      },
+      "workerCounters": {
+        "snapshot_received": 156,
+        "increment_state_received": 155410,
+        "stream_changed": 2,
+        "attempt_seen": 3488,
+        "http_shape_unknown": 3488,
+        "aligned_equal": 240,
+        "unaligned_or_changed": 32,
+        "ambiguous_timestamp": 13,
+        "tick_changed": 4,
+        "no_snapshot": 14
+      },
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 125027,
+        "highEntries": 126,
+        "highChars": 150897,
+        "scheduler": "message-task",
+        "maxQueueMs": 9.199999988079071,
+        "maxAckMs": 10.900000005960464,
+        "oldestQueuedMs": 0,
+        "oldestInflightMs": 0,
+        "oldestAckMs": 0
+      },
+      "differenceSamples": [],
+      "failedObservations": 0,
+      "maxLongTaskMs": 0,
+      "longTaskCount": 0
+    },
+    {
+      "name": "live-off",
+      "startedAt": "2026-10-17T05:47:09.163Z",
+      "durationMs": 15212.299999982119,
+      "frames": 3619,
+      "quotes": {
+        "count": 7060,
+        "hashedCount": 7060,
+        "completeHash": true,
+        "sha256": "d9b2679d950cfdcc9db1f937b087979232c1714c7b70ecc329073f3e8901537e"
+      },
+      "handlers": {
+        "n": 3619,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 0.4000000059604645,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 7060,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 0.20000001788139343,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 761,
+        "p50": 0,
+        "p95": 1,
+        "p99": 1.3,
+        "max": 1.5,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 0.2656080000000003,
+        "ScriptDuration": 0.11305699999999952,
+        "LayoutDuration": 0.002038999999999999,
+        "RecalcStyleDuration": 0.00031999999999999997
+      },
+      "processCpuSeconds": {
+        "delta": 1.119690999999989,
+        "exitedPids": []
+      },
+      "failure": null,
+      "wsCreated": 0,
+      "wsClosed": 0,
+      "workerCreated": 0,
+      "workerTerminated": 0,
+      "subscriptions": [],
+      "coverage": {
+        "samples": 16,
+        "assetObservations": 256,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 16,
+        "stale": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "reasons": {}
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "nativeWindows": [],
+      "maxSampleGapMs": 1014.5999999940395,
+      "invalidationCount": 0,
+      "recordedInvalidations": 0,
+      "unscopedInvalidations": 0,
+      "scopedInvalidations": {},
+      "probeOutcomes": {},
+      "differenceSamples": [],
+      "failedObservations": 0,
+      "maxLongTaskMs": 0,
+      "longTaskCount": 0
+    },
+    {
+      "name": "live-late",
+      "startedAt": "2026-10-17T05:47:24.378Z",
+      "durationMs": 901101.5,
+      "frames": 281037,
+      "quotes": {
+        "count": 547501,
+        "hashedCount": 10000,
+        "completeHash": false,
+        "sha256": "6fc75190510da3653d245a31a15ce4005f651508f6c0ed8a3142e3a2057a77f8"
+      },
+      "handlers": {
+        "n": 281037,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 4.200000017881393,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 547501,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 4.200000017881393,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 8217,
+        "p50": 0,
+        "p95": 1.1,
+        "p99": 976.9,
+        "max": 59986,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 29.243402999999997,
+        "ScriptDuration": 15.30115,
+        "LayoutDuration": 0.037903000000000006,
+        "RecalcStyleDuration": 0.0032070000000000006
+      },
+      "processCpuSeconds": {
+        "delta": 105.30690700000001,
+        "exitedPids": []
+      },
+      "workerAlive": true,
+      "failure": null,
+      "wsCreated": 0,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "subscriptions": [],
+      "coverage": {
+        "samples": 254,
+        "assetObservations": 4064,
+        "snapshots": 1484,
+        "eligible": 968,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 0.36515748031496065,
+        "eligibleRatio": 0.23818897637795275,
+        "reasons": {
+          "no_snapshot": 1514,
+          "metadata_unknown_or_stale": 36,
+          "stale_book": 1546
+        }
+      },
+      "after60s": {
+        "samples": 195,
+        "assetObservations": 3120,
+        "snapshots": 1218,
+        "eligible": 845,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 0.3903846153846154,
+        "eligibleRatio": 0.2708333333333333,
+        "reasons": {
+          "no_snapshot": 836,
+          "stale_book": 1418,
+          "metadata_unknown_or_stale": 21
+        }
+      },
+      "hiddenCoverage": {
+        "samples": 92,
+        "assetObservations": 1472,
+        "snapshots": 664,
+        "eligible": 424,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 0.45108695652173914,
+        "eligibleRatio": 0.28804347826086957,
+        "reasons": {
+          "no_snapshot": 432,
+          "stale_book": 616
+        }
+      },
+      "nativeWindows": [
+        {
+          "hiddenAt": 74548.69999998808,
+          "visibleAt": 481625,
+          "durationMs": 407076.3000000119,
+          "priorSession": 2,
+          "recoveredSession": 2,
+          "firstFreshSnapshotMs": 0.5999999940395355,
+          "firstEligibleMs": 0.5999999940395355,
+          "framesBefore": 113600,
+          "framesAfter": 280995
+        },
+        {
+          "hiddenAt": 501637.7999999821,
+          "visibleAt": 834496.7999999821,
+          "durationMs": 332859,
+          "priorSession": 2,
+          "recoveredSession": 2,
+          "firstFreshSnapshotMs": 2.0999999940395355,
+          "firstEligibleMs": 2.0999999940395355,
+          "framesBefore": 244998,
+          "framesAfter": 280995
+        }
+      ],
+      "maxSampleGapMs": 60011.30000001192,
+      "invalidationCount": 6,
+      "recordedInvalidations": 6,
+      "unscopedInvalidations": 1,
+      "scopedInvalidations": {
+        "91096798245852340005407668631462765742543919716130338815327356496797062296382": 1,
+        "63135027906155608867793695617743433183354965317879513660914952549873614836027": 2,
+        "24882627447765167419798601737069158781861566767023041462229664245773226575297": 2
+      },
+      "probeOutcomes": {
+        "no_snapshot": 90,
+        "unaligned_or_changed": 41,
+        "aligned_equal": 151,
+        "ambiguous_timestamp": 2,
+        "aligned_difference": 1
+      },
+      "workerCounters": {
+        "snapshot_received": 224,
+        "increment_state_received": 411980,
+        "attempt_seen": 2016,
+        "http_shape_unknown": 2016,
+        "no_snapshot": 90,
+        "unaligned_or_changed": 41,
+        "aligned_equal": 151,
+        "ambiguous_timestamp": 2,
+        "aligned_difference": 2,
+        "tick_changed": 4,
+        "probe_failed": 15
+      },
+      "mailbox": {
+        "pendingBatches": 1,
+        "queuedEntries": 2,
+        "pendingEntries": 3,
+        "pendingChars": 1842,
+        "batchesSent": 181438,
+        "highEntries": 122,
+        "highChars": 152182,
+        "scheduler": "message-task",
+        "maxQueueMs": 12.700000017881393,
+        "maxAckMs": 10.100000023841858,
+        "oldestQueuedMs": 0.20000001788139343,
+        "oldestInflightMs": 0.30000001192092896,
+        "oldestAckMs": 0.20000001788139343
+      },
+      "differenceSamples": [
+        {
+          "at": 1792216281646,
+          "source": "probe",
+          "tokenId": "91096798245852340005407668631462765742543919716130338815327356496797062296382",
+          "outcome": "aligned_difference",
+          "comparisonEvidence": "timestamp_and_observed_depth",
+          "httpMs": 256
+        }
+      ],
+      "failedObservations": 0,
+      "maxLongTaskMs": 0,
+      "longTaskCount": 0
+    }
+  ],
+  "replay": [
+    {
+      "name": "replay-off-1",
+      "startedAt": "2026-10-17T06:02:43.690Z",
+      "durationMs": 7996.700000017881,
+      "frames": 3000,
+      "quotes": {
+        "count": 5865,
+        "hashedCount": 5865,
+        "completeHash": true,
+        "sha256": "17eb56d7d6c5496aa71206f2c519a58f0d97344a193a1e7a6e7c5bca67dc292e"
+      },
+      "handlers": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 0.9000000059604645,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 5865,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 0.9000000059604645,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 400,
+        "p50": 0,
+        "p95": 1,
+        "p99": 1.4,
+        "max": 13,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 0.10528500000000207,
+        "ScriptDuration": 0.005877999999999162,
+        "LayoutDuration": 0.0005350000000000077,
+        "RecalcStyleDuration": 0.000019999999999999185
+      },
+      "processCpuSeconds": {
+        "delta": 0.17470600000001468,
+        "exitedPids": []
+      },
+      "failure": null,
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 0,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 14,
+          "sha256": "710a9d9c80929a423678f206886b7819a4e21bb7aa3a2507c8484342af79b85e",
+          "assets": 34
+        }
+      ],
+      "coverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 1,
+        "stale": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "reasons": {}
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "nativeWindows": [],
+      "maxSampleGapMs": 0,
+      "invalidationCount": 0,
+      "recordedInvalidations": 0,
+      "unscopedInvalidations": 0,
+      "scopedInvalidations": {},
+      "probeOutcomes": {},
+      "differenceSamples": [],
+      "failedObservations": 0,
+      "maxLongTaskMs": 0,
+      "longTaskCount": 0
+    },
+    {
+      "name": "replay-on-1",
+      "startedAt": "2026-10-17T06:02:51.689Z",
+      "durationMs": 8087.200000017881,
+      "frames": 3000,
+      "quotes": {
+        "count": 5865,
+        "hashedCount": 5865,
+        "completeHash": true,
+        "sha256": "17eb56d7d6c5496aa71206f2c519a58f0d97344a193a1e7a6e7c5bca67dc292e"
+      },
+      "handlers": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 1.699999988079071,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 5865,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 1.699999988079071,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 405,
+        "p50": 0,
+        "p95": 1.1,
+        "p99": 1.4,
+        "max": 1.5999999940395355,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 0.17497000000000185,
+        "ScriptDuration": 0.037981999999999516,
+        "LayoutDuration": 0.00022300000000000098,
+        "RecalcStyleDuration": 0.000018000000000000654
+      },
+      "processCpuSeconds": {
+        "delta": 0.42766299999999546,
+        "exitedPids": []
+      },
+      "workerAlive": true,
+      "failure": null,
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 0.7000000178813934,
+          "sha256": "710a9d9c80929a423678f206886b7819a4e21bb7aa3a2507c8484342af79b85e",
+          "assets": 34
+        }
+      ],
+      "coverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshots": 16,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 1,
+        "eligibleRatio": 0,
+        "reasons": {
+          "stale_book": 16
+        }
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "nativeWindows": [],
+      "maxSampleGapMs": 0,
+      "invalidationCount": 3,
+      "recordedInvalidations": 3,
+      "unscopedInvalidations": 3,
+      "scopedInvalidations": {},
+      "probeOutcomes": {
+        "unaligned_or_changed": 2
+      },
+      "workerCounters": {
+        "snapshot_received": 20,
+        "increment_state_received": 3776,
+        "stream_changed": 2,
+        "unaligned_or_changed": 2
+      },
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 752,
+        "highEntries": 6,
+        "highChars": 57353,
+        "scheduler": "message-task",
+        "maxQueueMs": 0.4000000059604645,
+        "maxAckMs": 6.4000000059604645,
+        "oldestQueuedMs": 0,
+        "oldestInflightMs": 0,
+        "oldestAckMs": 0
+      },
+      "differenceSamples": [],
+      "failedObservations": 0,
+      "maxLongTaskMs": 0,
+      "longTaskCount": 0
+    },
+    {
+      "name": "replay-on-2",
+      "startedAt": "2026-10-17T06:02:59.779Z",
+      "durationMs": 8017.100000023842,
+      "frames": 3000,
+      "quotes": {
+        "count": 5865,
+        "hashedCount": 5865,
+        "completeHash": true,
+        "sha256": "17eb56d7d6c5496aa71206f2c519a58f0d97344a193a1e7a6e7c5bca67dc292e"
+      },
+      "handlers": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 0.800000011920929,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 5865,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 0.7000000178813934,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 401,
+        "p50": 0,
+        "p95": 1,
+        "p99": 1.3,
+        "max": 1.699999988079071,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 0.17376900000000006,
+        "ScriptDuration": 0.03306700000000262,
+        "LayoutDuration": 0.00016499999999999848,
+        "RecalcStyleDuration": 0.000015999999999998654
+      },
+      "processCpuSeconds": {
+        "delta": 0.3990190000000098,
+        "exitedPids": []
+      },
+      "workerAlive": true,
+      "failure": null,
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 0.6000000238418579,
+          "sha256": "710a9d9c80929a423678f206886b7819a4e21bb7aa3a2507c8484342af79b85e",
+          "assets": 34
+        }
+      ],
+      "coverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshots": 16,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 1,
+        "eligibleRatio": 0,
+        "reasons": {
+          "stale_book": 16
+        }
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "nativeWindows": [],
+      "maxSampleGapMs": 0,
+      "invalidationCount": 3,
+      "recordedInvalidations": 3,
+      "unscopedInvalidations": 3,
+      "scopedInvalidations": {},
+      "probeOutcomes": {
+        "unaligned_or_changed": 2
+      },
+      "workerCounters": {
+        "snapshot_received": 20,
+        "increment_state_received": 3776,
+        "stream_changed": 2,
+        "unaligned_or_changed": 2
+      },
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 752,
+        "highEntries": 6,
+        "highChars": 57353,
+        "scheduler": "message-task",
+        "maxQueueMs": 0.4000000059604645,
+        "maxAckMs": 5.100000023841858,
+        "oldestQueuedMs": 0,
+        "oldestInflightMs": 0,
+        "oldestAckMs": 0
+      },
+      "differenceSamples": [],
+      "failedObservations": 0,
+      "maxLongTaskMs": 0,
+      "longTaskCount": 0
+    },
+    {
+      "name": "replay-off-2",
+      "startedAt": "2026-10-17T06:03:07.799Z",
+      "durationMs": 7996,
+      "frames": 3000,
+      "quotes": {
+        "count": 5865,
+        "hashedCount": 5865,
+        "completeHash": true,
+        "sha256": "17eb56d7d6c5496aa71206f2c519a58f0d97344a193a1e7a6e7c5bca67dc292e"
+      },
+      "handlers": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 0.5,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 5865,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 0.5,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 400,
+        "p50": 0,
+        "p95": 1,
+        "p99": 1.4,
+        "max": 1.699999988079071,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 0.10906499999999397,
+        "ScriptDuration": 0.005799000000003218,
+        "LayoutDuration": 0.00021899999999999697,
+        "RecalcStyleDuration": 0.00002599999999999998
+      },
+      "processCpuSeconds": {
+        "delta": 0.1770360000000153,
+        "exitedPids": []
+      },
+      "failure": null,
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 0,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 0.19999998807907104,
+          "sha256": "710a9d9c80929a423678f206886b7819a4e21bb7aa3a2507c8484342af79b85e",
+          "assets": 34
+        }
+      ],
+      "coverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 1,
+        "stale": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "reasons": {}
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "nativeWindows": [],
+      "maxSampleGapMs": 0,
+      "invalidationCount": 0,
+      "recordedInvalidations": 0,
+      "unscopedInvalidations": 0,
+      "scopedInvalidations": {},
+      "probeOutcomes": {},
+      "differenceSamples": [],
+      "failedObservations": 0,
+      "maxLongTaskMs": 0,
+      "longTaskCount": 0
+    },
+    {
+      "name": "replay-overflow",
+      "startedAt": "2026-10-17T06:03:15.798Z",
+      "durationMs": 1480.2000000178814,
+      "frames": 100,
+      "quotes": {
+        "count": 219,
+        "hashedCount": 219,
+        "completeHash": true,
+        "sha256": "0d00c8f95305e059ac3edeb233191948608723f6bcf19a19fcf68269332ec275"
+      },
+      "handlers": {
+        "n": 100,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 1.300000011920929,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 219,
+        "p50": 0,
+        "p95": 1.3,
+        "p99": 1.3,
+        "max": 1.300000011920929,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 74,
+        "p50": 0.1,
+        "p95": 1,
+        "p99": 1.5,
+        "max": 1.5,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 0.010131000000001222,
+        "ScriptDuration": 0.001426999999999623,
+        "LayoutDuration": 0.0004989999999999994,
+        "RecalcStyleDuration": 0.000028000000000000247
+      },
+      "processCpuSeconds": {
+        "delta": 0.03626199999999358,
+        "exitedPids": []
+      },
+      "workerAlive": true,
+      "failure": null,
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 0.30000001192092896,
+          "sha256": "710a9d9c80929a423678f206886b7819a4e21bb7aa3a2507c8484342af79b85e",
+          "assets": 34
+        }
+      ],
+      "coverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshots": 16,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 1,
+        "eligibleRatio": 0,
+        "reasons": {
+          "source_clock_or_age": 16
+        }
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshots": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "reasons": {}
+      },
+      "nativeWindows": [],
+      "maxSampleGapMs": 0,
+      "invalidationCount": 3,
+      "recordedInvalidations": 3,
+      "unscopedInvalidations": 3,
+      "scopedInvalidations": {},
+      "probeOutcomes": {},
+      "workerCounters": {
+        "snapshot_received": 16,
+        "increment_state_received": 132,
+        "stream_changed": 2
+      },
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 5,
+        "highEntries": 100,
+        "highChars": 113563,
+        "scheduler": "message-task",
+        "maxQueueMs": 1.7999999821186066,
+        "maxAckMs": 5.699999988079071,
+        "oldestQueuedMs": 0,
+        "oldestInflightMs": 0,
+        "oldestAckMs": 0
+      },
+      "differenceSamples": [],
+      "failedObservations": 0,
+      "maxLongTaskMs": 0,
+      "longTaskCount": 0
+    }
+  ],
+  "assetIsolation": {
+    "at": "2026-10-17T06:05:49.298Z",
+    "workerUrl": "/client/web/dist/assets/marketData.worker-Dhj0aiZm.js",
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "scope": "synthetic asset faults in actual browser production Worker; no PM-M, accounts or orders",
+    "checks": [
+      {
+        "name": "two books initialized",
+        "pass": true
+      },
+      {
+        "name": "both metadata initialized",
+        "pass": true
+      },
+      {
+        "name": "tick: target revoked, peer preserved",
+        "pass": true,
+        "details": [
+          {
+            "asset": "1",
+            "generation": 1,
+            "status": "waiting_snapshot",
+            "processedSequence": 2,
+            "sessionId": 1,
+            "streamEpoch": 1
+          },
+          {
+            "asset": "2",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 2,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148749,
+            "receivedWallAt": 1792217148749,
+            "snapshotAgeMs": 83.99985349178314,
+            "receivedAgeMs": 83.99985349178314,
+            "receivedClockAt": 1792217148749.7002,
+            "snapshotClockAt": 1792217148749.7002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 2,
+            "sessionId": 1,
+            "streamEpoch": 1
+          }
+        ]
+      },
+      {
+        "name": "tick: peer metadata original age preserved",
+        "pass": true
+      },
+      {
+        "name": "tick: delta cannot revive target",
+        "pass": true
+      },
+      {
+        "name": "tick: fresh snapshot new asset generation",
+        "pass": true
+      },
+      {
+        "name": "bad-depth: target revoked, peer preserved",
+        "pass": true,
+        "details": [
+          {
+            "asset": "1",
+            "generation": 1,
+            "status": "waiting_snapshot",
+            "processedSequence": 5,
+            "sessionId": 1,
+            "streamEpoch": 1
+          },
+          {
+            "asset": "2",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 2,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148749,
+            "receivedWallAt": 1792217148749,
+            "snapshotAgeMs": 170.69985350966454,
+            "receivedAgeMs": 170.69985350966454,
+            "receivedClockAt": 1792217148749.7002,
+            "snapshotClockAt": 1792217148749.7002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 5,
+            "sessionId": 1,
+            "streamEpoch": 1
+          }
+        ]
+      },
+      {
+        "name": "bad-depth: peer metadata original age preserved",
+        "pass": true
+      },
+      {
+        "name": "bad-depth: delta cannot revive target",
+        "pass": true
+      },
+      {
+        "name": "bad-depth: fresh snapshot new asset generation",
+        "pass": true
+      },
+      {
+        "name": "missing-timestamp: target revoked, peer preserved",
+        "pass": true,
+        "details": [
+          {
+            "asset": "1",
+            "generation": 1,
+            "status": "waiting_snapshot",
+            "processedSequence": 8,
+            "sessionId": 1,
+            "streamEpoch": 1
+          },
+          {
+            "asset": "2",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 2,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148749,
+            "receivedWallAt": 1792217148749,
+            "snapshotAgeMs": 255.19985350966454,
+            "receivedAgeMs": 255.19985350966454,
+            "receivedClockAt": 1792217148749.7002,
+            "snapshotClockAt": 1792217148749.7002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 8,
+            "sessionId": 1,
+            "streamEpoch": 1
+          }
+        ]
+      },
+      {
+        "name": "missing-timestamp: peer metadata original age preserved",
+        "pass": true
+      },
+      {
+        "name": "missing-timestamp: delta cannot revive target",
+        "pass": true
+      },
+      {
+        "name": "missing-timestamp: fresh snapshot new asset generation",
+        "pass": true
+      },
+      {
+        "name": "mixed bad frame revokes all involved assets",
+        "pass": true
+      },
+      {
+        "name": "removing target preserves healthy peer",
+        "pass": true
+      },
+      {
+        "name": "readding target cannot revive old book",
+        "pass": true
+      },
+      {
+        "name": "readded target gets new generation",
+        "pass": true
+      },
+      {
+        "name": "unscoped bad frame fails globally",
+        "pass": true
+      },
+      {
+        "name": "disconnect revokes all books",
+        "pass": true
+      },
+      {
+        "name": "reconnect waits for snapshots",
+        "pass": true
+      },
+      {
+        "name": "reconnect fresh snapshots recover",
+        "pass": true
+      },
+      {
+        "name": "diagnostic detach preserves owner and advancing depth",
+        "pass": true
+      },
+      {
+        "name": "all owned resources released",
+        "pass": true
+      }
+    ],
+    "captures": [
+      {
+        "fault": "tick",
+        "before": [
+          {
+            "asset": "1",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 1,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148749,
+            "receivedWallAt": 1792217148749,
+            "snapshotAgeMs": 63.29985350370407,
+            "receivedAgeMs": 63.29985350370407,
+            "receivedClockAt": 1792217148749.7002,
+            "snapshotClockAt": 1792217148749.7002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 1,
+            "sessionId": 1,
+            "streamEpoch": 1
+          },
+          {
+            "asset": "2",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 2,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148749,
+            "receivedWallAt": 1792217148749,
+            "snapshotAgeMs": 63.39985349774361,
+            "receivedAgeMs": 63.39985349774361,
+            "receivedClockAt": 1792217148749.7002,
+            "snapshotClockAt": 1792217148749.7002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 1,
+            "sessionId": 1,
+            "streamEpoch": 1
+          }
+        ],
+        "after": [
+          {
+            "asset": "1",
+            "generation": 1,
+            "status": "waiting_snapshot",
+            "processedSequence": 2,
+            "sessionId": 1,
+            "streamEpoch": 1
+          },
+          {
+            "asset": "2",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 2,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148749,
+            "receivedWallAt": 1792217148749,
+            "snapshotAgeMs": 83.99985349178314,
+            "receivedAgeMs": 83.99985349178314,
+            "receivedClockAt": 1792217148749.7002,
+            "snapshotClockAt": 1792217148749.7002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 2,
+            "sessionId": 1,
+            "streamEpoch": 1
+          }
+        ],
+        "recovered": {
+          "asset": "1",
+          "market": "m",
+          "generation": 1,
+          "assetGeneration": 3,
+          "epoch": 1,
+          "revision": 1,
+          "status": "ready",
+          "snapshotEvidence": true,
+          "sourceAt": 1792217148855,
+          "receivedWallAt": 1792217148855,
+          "snapshotAgeMs": 21.199853509664536,
+          "receivedAgeMs": 21.199853509664536,
+          "receivedClockAt": 1792217148855.2002,
+          "snapshotClockAt": 1792217148855.2002,
+          "bids": [
+            {
+              "price": "0.4",
+              "size": "10"
+            }
+          ],
+          "asks": [
+            {
+              "price": "0.5",
+              "size": "20"
+            }
+          ],
+          "viewTruncated": false,
+          "processedSequence": 4,
+          "sessionId": 1,
+          "streamEpoch": 1
+        }
+      },
+      {
+        "fault": "bad-depth",
+        "before": [
+          {
+            "asset": "1",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 3,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148855,
+            "receivedWallAt": 1792217148855,
+            "snapshotAgeMs": 42.79985350370407,
+            "receivedAgeMs": 42.79985350370407,
+            "receivedClockAt": 1792217148855.2002,
+            "snapshotClockAt": 1792217148855.2002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 4,
+            "sessionId": 1,
+            "streamEpoch": 1
+          },
+          {
+            "asset": "2",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 2,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148749,
+            "receivedWallAt": 1792217148749,
+            "snapshotAgeMs": 148.49985349178314,
+            "receivedAgeMs": 148.49985349178314,
+            "receivedClockAt": 1792217148749.7002,
+            "snapshotClockAt": 1792217148749.7002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 4,
+            "sessionId": 1,
+            "streamEpoch": 1
+          }
+        ],
+        "after": [
+          {
+            "asset": "1",
+            "generation": 1,
+            "status": "waiting_snapshot",
+            "processedSequence": 5,
+            "sessionId": 1,
+            "streamEpoch": 1
+          },
+          {
+            "asset": "2",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 2,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148749,
+            "receivedWallAt": 1792217148749,
+            "snapshotAgeMs": 170.69985350966454,
+            "receivedAgeMs": 170.69985350966454,
+            "receivedClockAt": 1792217148749.7002,
+            "snapshotClockAt": 1792217148749.7002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 5,
+            "sessionId": 1,
+            "streamEpoch": 1
+          }
+        ],
+        "recovered": {
+          "asset": "1",
+          "market": "m",
+          "generation": 1,
+          "assetGeneration": 4,
+          "epoch": 1,
+          "revision": 1,
+          "status": "ready",
+          "snapshotEvidence": true,
+          "sourceAt": 1792217148941,
+          "receivedWallAt": 1792217148941,
+          "snapshotAgeMs": 21.79985350370407,
+          "receivedAgeMs": 21.79985350370407,
+          "receivedClockAt": 1792217148941.7002,
+          "snapshotClockAt": 1792217148941.7002,
+          "bids": [
+            {
+              "price": "0.4",
+              "size": "10"
+            }
+          ],
+          "asks": [
+            {
+              "price": "0.5",
+              "size": "20"
+            }
+          ],
+          "viewTruncated": false,
+          "processedSequence": 7,
+          "sessionId": 1,
+          "streamEpoch": 1
+        }
+      },
+      {
+        "fault": "missing-timestamp",
+        "before": [
+          {
+            "asset": "1",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 4,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148941,
+            "receivedWallAt": 1792217148941,
+            "snapshotAgeMs": 42.49985349178314,
+            "receivedAgeMs": 42.49985349178314,
+            "receivedClockAt": 1792217148941.7002,
+            "snapshotClockAt": 1792217148941.7002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 7,
+            "sessionId": 1,
+            "streamEpoch": 1
+          },
+          {
+            "asset": "2",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 2,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148749,
+            "receivedWallAt": 1792217148749,
+            "snapshotAgeMs": 234.69985350966454,
+            "receivedAgeMs": 234.69985350966454,
+            "receivedClockAt": 1792217148749.7002,
+            "snapshotClockAt": 1792217148749.7002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 7,
+            "sessionId": 1,
+            "streamEpoch": 1
+          }
+        ],
+        "after": [
+          {
+            "asset": "1",
+            "generation": 1,
+            "status": "waiting_snapshot",
+            "processedSequence": 8,
+            "sessionId": 1,
+            "streamEpoch": 1
+          },
+          {
+            "asset": "2",
+            "market": "m",
+            "generation": 1,
+            "assetGeneration": 2,
+            "epoch": 1,
+            "revision": 1,
+            "status": "ready",
+            "snapshotEvidence": true,
+            "sourceAt": 1792217148749,
+            "receivedWallAt": 1792217148749,
+            "snapshotAgeMs": 255.19985350966454,
+            "receivedAgeMs": 255.19985350966454,
+            "receivedClockAt": 1792217148749.7002,
+            "snapshotClockAt": 1792217148749.7002,
+            "bids": [
+              {
+                "price": "0.4",
+                "size": "10"
+              }
+            ],
+            "asks": [
+              {
+                "price": "0.5",
+                "size": "20"
+              }
+            ],
+            "viewTruncated": false,
+            "processedSequence": 8,
+            "sessionId": 1,
+            "streamEpoch": 1
+          }
+        ],
+        "recovered": {
+          "asset": "1",
+          "market": "m",
+          "generation": 1,
+          "assetGeneration": 5,
+          "epoch": 1,
+          "revision": 1,
+          "status": "ready",
+          "snapshotEvidence": true,
+          "sourceAt": 1792217149026,
+          "receivedWallAt": 1792217149026,
+          "snapshotAgeMs": 20.300048828125,
+          "receivedAgeMs": 20.300048828125,
+          "receivedClockAt": 1792217149026,
+          "snapshotClockAt": 1792217149026,
+          "bids": [
+            {
+              "price": "0.4",
+              "size": "10"
+            }
+          ],
+          "asks": [
+            {
+              "price": "0.5",
+              "size": "20"
+            }
+          ],
+          "viewTruncated": false,
+          "processedSequence": 10,
+          "sessionId": 1,
+          "streamEpoch": 1
+        }
+      }
+    ],
+    "invalidations": [
+      {
+        "type": "book_invalidated"
+      },
+      {
+        "type": "book_invalidated",
+        "assets": [
+          "1"
+        ]
+      },
+      {
+        "type": "book_invalidated",
+        "assets": [
+          "1"
+        ]
+      },
+      {
+        "type": "book_invalidated",
+        "assets": [
+          "1"
+        ]
+      },
+      {
+        "type": "book_invalidated",
+        "assets": [
+          "1",
+          "2"
+        ]
+      },
+      {
+        "type": "book_invalidated",
+        "assets": [
+          "1"
+        ]
+      },
+      {
+        "type": "book_invalidated"
+      },
+      {
+        "type": "book_invalidated",
+        "assets": [
+          "2",
+          "1"
+        ]
+      },
+      {
+        "type": "book_invalidated"
+      },
+      {
+        "type": "book_invalidated"
+      }
+    ],
+    "metadata": [
+      {
+        "type": "metadata",
+        "generation": 1,
+        "revision": 1,
+        "entries": []
+      },
+      {
+        "type": "metadata",
+        "generation": 1,
+        "revision": 2,
+        "entries": [
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 130.900146484375,
+            "asset": "1",
+            "bookGeneration": 1,
+            "assetGeneration": 1,
+            "clockAt": 1792217148771.2002
+          }
+        ]
+      },
+      {
+        "type": "metadata",
+        "generation": 1,
+        "revision": 3,
+        "entries": [
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 130.900146484375,
+            "asset": "1",
+            "bookGeneration": 1,
+            "assetGeneration": 1,
+            "clockAt": 1792217148771.2002
+          },
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 151.60009765625,
+            "asset": "2",
+            "bookGeneration": 1,
+            "assetGeneration": 2,
+            "clockAt": 1792217148791.9001
+          }
+        ]
+      },
+      {
+        "type": "metadata",
+        "generation": 1,
+        "revision": 4,
+        "entries": [
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 151.60009765625,
+            "asset": "2",
+            "bookGeneration": 1,
+            "assetGeneration": 2,
+            "clockAt": 1792217148791.9001
+          }
+        ]
+      },
+      {
+        "type": "metadata",
+        "generation": 1,
+        "revision": 5,
+        "entries": [
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 151.60009765625,
+            "asset": "2",
+            "bookGeneration": 1,
+            "assetGeneration": 2,
+            "clockAt": 1792217148791.9001
+          },
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 236.300048828125,
+            "asset": "1",
+            "bookGeneration": 1,
+            "assetGeneration": 3,
+            "clockAt": 1792217148876.6
+          }
+        ]
+      },
+      {
+        "type": "metadata",
+        "generation": 1,
+        "revision": 6,
+        "entries": [
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 151.60009765625,
+            "asset": "2",
+            "bookGeneration": 1,
+            "assetGeneration": 2,
+            "clockAt": 1792217148791.9001
+          }
+        ]
+      },
+      {
+        "type": "metadata",
+        "generation": 1,
+        "revision": 7,
+        "entries": [
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 151.60009765625,
+            "asset": "2",
+            "bookGeneration": 1,
+            "assetGeneration": 2,
+            "clockAt": 1792217148791.9001
+          },
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 323.300048828125,
+            "asset": "1",
+            "bookGeneration": 1,
+            "assetGeneration": 4,
+            "clockAt": 1792217148963.6
+          }
+        ]
+      },
+      {
+        "type": "metadata",
+        "generation": 1,
+        "revision": 8,
+        "entries": [
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 151.60009765625,
+            "asset": "2",
+            "bookGeneration": 1,
+            "assetGeneration": 2,
+            "clockAt": 1792217148791.9001
+          }
+        ]
+      },
+      {
+        "type": "metadata",
+        "generation": 1,
+        "revision": 9,
+        "entries": [
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 151.60009765625,
+            "asset": "2",
+            "bookGeneration": 1,
+            "assetGeneration": 2,
+            "clockAt": 1792217148791.9001
+          },
+          {
+            "version": 3,
+            "tick": "0.01",
+            "minSize": 1,
+            "negRisk": false,
+            "market": "m",
+            "at": 406.10009765625,
+            "asset": "1",
+            "bookGeneration": 1,
+            "assetGeneration": 5,
+            "clockAt": 1792217149046.4001
+          }
+        ]
+      },
+      {
+        "type": "metadata",
+        "generation": 1,
+        "revision": 10,
+        "entries": []
+      },
+      {
+        "type": "metadata",
+        "generation": 2,
+        "revision": 11,
+        "entries": []
+      },
+      {
+        "type": "metadata",
+        "generation": 3,
+        "revision": 12,
+        "entries": []
+      }
+    ],
+    "final": {
+      "sessionId": 1,
+      "worker": false,
+      "failure": "service_stopped",
+      "assets": 0,
+      "ids": [],
+      "generation": 3,
+      "streamEpoch": 2,
+      "streamOpen": true,
+      "consumers": 0,
+      "diagnostics": 0,
+      "pendingReads": 0,
+      "fullReads": {
+        "catchups": 0,
+        "recovered": 0,
+        "exhausted": 0,
+        "timeouts": 0
+      },
+      "streamFrames": 17,
+      "streamChars": 3237,
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 67,
+        "highEntries": 4,
+        "highChars": 32768,
+        "scheduler": "message-task",
+        "maxQueueMs": 12.399999976158142,
+        "maxAckMs": 1,
+        "oldestQueuedMs": 0,
+        "oldestInflightMs": 0,
+        "oldestAckMs": 0
+      },
+      "activeSupported": false
+    }
+  },
+  "lifecycle": {
+    "name": "lifecycle",
+    "startedAt": "2026-10-17T06:03:42.406Z",
+    "durationMs": 121391,
+    "frames": 46312,
+    "quotes": {
+      "count": 89616,
+      "hashedCount": 10000,
+      "completeHash": false,
+      "sha256": "6cce3b2f439370fae059653553fa248984c69795dc6f2aba7a39c3e9062f5069"
+    },
+    "handlers": {
+      "n": 46312,
+      "p50": 0,
+      "p95": 0.1,
+      "p99": 0.1,
+      "max": 1.4000000059604645,
+      "resolutionMs": 0.01
+    },
+    "quoteLatency": {
+      "n": 89616,
+      "p50": 0,
+      "p95": 0.1,
+      "p99": 0.1,
+      "max": 1.4000000059604645,
+      "resolutionMs": 0.01
+    },
+    "jitter": {
+      "n": 6070,
+      "p50": 0,
+      "p95": 1,
+      "p99": 1.4,
+      "max": 9.699999988079071,
+      "resolutionMs": 0.01
+    },
+    "cpuSeconds": {
+      "TaskDuration": 3.782174000000005,
+      "ScriptDuration": 1.7623770000000007,
+      "LayoutDuration": 0.02697999999999999,
+      "RecalcStyleDuration": 0.0022400000000000007
+    },
+    "processCpuSeconds": {
+      "delta": 15.136818999999974,
+      "exitedPids": []
+    },
+    "workerAlive": true,
+    "failure": null,
+    "wsCreated": 2,
+    "wsClosed": 1,
+    "workerCreated": 1,
+    "workerTerminated": 0,
+    "subscriptions": [
+      {
+        "at": 1478.800000011921,
+        "sha256": "710a9d9c80929a423678f206886b7819a4e21bb7aa3a2507c8484342af79b85e",
+        "assets": 34
+      },
+      {
+        "at": 68379.5,
+        "sha256": "710a9d9c80929a423678f206886b7819a4e21bb7aa3a2507c8484342af79b85e",
+        "assets": 34
+      }
+    ],
+    "coverage": {
+      "samples": 125,
+      "assetObservations": 2000,
+      "snapshots": 1368,
+      "eligible": 410,
+      "missing": 14,
+      "stale": 0,
+      "snapshotRatio": 0.684,
+      "eligibleRatio": 0.205,
+      "reasons": {
+        "metadata_unknown_or_stale": 212,
+        "source_clock_or_age": 12,
+        "no_snapshot": 208,
+        "stale_book": 734
+      }
+    },
+    "after60s": {
+      "samples": 63,
+      "assetObservations": 1008,
+      "snapshots": 742,
+      "eligible": 256,
+      "missing": 3,
+      "stale": 0,
+      "snapshotRatio": 0.7361111111111112,
+      "eligibleRatio": 0.25396825396825395,
+      "reasons": {
+        "metadata_unknown_or_stale": 88,
+        "source_clock_or_age": 8,
+        "no_snapshot": 106,
+        "stale_book": 390
+      }
+    },
+    "hiddenCoverage": {
+      "samples": 0,
+      "assetObservations": 0,
+      "snapshots": 0,
+      "eligible": 0,
+      "missing": 0,
+      "stale": 0,
+      "snapshotRatio": null,
+      "eligibleRatio": null,
+      "reasons": {}
+    },
+    "nativeWindows": [],
+    "maxSampleGapMs": 1020,
+    "invalidationCount": 7,
+    "recordedInvalidations": 7,
+    "unscopedInvalidations": 6,
+    "scopedInvalidations": {
+      "84488125897198750771559591210010954683816555746994288825801335621217514363832,114791916497375122879738354339146361318863789800056310827616105854978038138447,114997689241990036953485616321406561630795228983902948357452376179974113317666,39015473906067160952527723059841344368324698130546842099956241486572630278730,77756713270224241344269863777507977086180674555276030396157403721050324247388,84294029826336378327625835721122464055175748709962664641767247326406279038608,9008556232510106282418346707366659337768538983151867915575845511113344191981,9182032870254540217350000260811134285415457342678487213407966128373864036672,107206714261346415741096498699296338629478117991004495454641918672804927276452,13478322126392162507139383026863072530149198719238403699146758749090580633960,16950773531650616103154611155354472886568058835764398730553295548334746613521,24882627447765167419798601737069158781861566767023041462229664245773226575297,27623563286452489249938543242340018767666771671864888784058646202925403429218,46379157906562420026463497064018892396177981892842523910274129727946966493024,63135027906155608867793695617743433183354965317879513660914952549873614836027,91096798245852340005407668631462765742543919716130338815327356496797062296382": 1
+    },
+    "probeOutcomes": {
+      "unaligned_or_changed": 7,
+      "aligned_equal": 19
+    },
+    "workerCounters": {
+      "snapshot_received": 42,
+      "increment_state_received": 75684,
+      "asset_removed": 1,
+      "stream_changed": 3,
+      "attempt_seen": 464,
+      "http_shape_unknown": 464,
+      "aligned_equal": 10,
+      "unaligned_or_changed": 4,
+      "probe_failed": 3
+    },
+    "mailbox": {
+      "pendingBatches": 0,
+      "queuedEntries": 0,
+      "pendingEntries": 0,
+      "pendingChars": 0,
+      "batchesSent": 22744,
+      "highEntries": 92,
+      "highChars": 148799,
+      "scheduler": "message-task",
+      "maxQueueMs": 13.400000005960464,
+      "maxAckMs": 8.699999988079071,
+      "oldestQueuedMs": 0,
+      "oldestInflightMs": 0,
+      "oldestAckMs": 0
+    },
+    "differenceSamples": [],
+    "failedObservations": 0,
+    "maxLongTaskMs": 0,
+    "longTaskCount": 0
+  },
+  "gates": {
+    "at": "2026-10-17T06:06:47.561Z",
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "scope": "gate with explicit store/consumer fixtures; actual precheckOnly entry with public HTTP; no signer or order",
+    "identityCandidates": [
+      {
+        "asset": "84488125897198750771559591210010954683816555746994288825801335621217514363832",
+        "status": 404
+      },
+      {
+        "asset": "9182032870254540217350000260811134285415457342678487213407966128373864036672",
+        "status": 200
+      }
+    ],
+    "results": [
+      {
+        "name": "classic gate legacy",
+        "pass": true,
+        "details": {
+          "created": 0,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "classic gate undefined",
+        "pass": true,
+        "details": {
+          "created": 0,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "classic gate invalid",
+        "pass": true,
+        "details": {
+          "created": 0,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "optimized defaults off",
+        "pass": true,
+        "details": {
+          "created": 0
+        }
+      },
+      {
+        "name": "explicit dynamic starts isolated worker",
+        "pass": true,
+        "details": {
+          "created": 1,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "classic switch synchronously terminates",
+        "pass": true,
+        "details": {
+          "terminated": 1
+        }
+      },
+      {
+        "name": "late import cannot restart classic",
+        "pass": true,
+        "details": {
+          "created": 1
+        }
+      },
+      {
+        "name": "logout prevents start",
+        "pass": true,
+        "details": {
+          "created": 1
+        }
+      },
+      {
+        "name": "legacy HTTP identity observerThrows=false",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 0,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      },
+      {
+        "name": "legacy HTTP identity observerThrows=true",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 0,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      },
+      {
+        "name": "optimized HTTP identity observerThrows=false",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 1,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      },
+      {
+        "name": "optimized HTTP identity observerThrows=true",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 1,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      }
+    ],
+    "publicBookHealth": [
+      {
+        "asset": "84488125897198750771559591210010954683816555746994288825801335621217514363832",
+        "status": 404
+      },
+      {
+        "asset": "39015473906067160952527723059841344368324698130546842099956241486572630278730",
+        "status": 404
+      },
+      {
+        "asset": "9182032870254540217350000260811134285415457342678487213407966128373864036672",
+        "status": 200,
+        "asks": 0,
+        "bids": 67,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "9008556232510106282418346707366659337768538983151867915575845511113344191981",
+        "status": 200,
+        "asks": 67,
+        "bids": 0,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "114791916497375122879738354339146361318863789800056310827616105854978038138447",
+        "status": 200,
+        "asks": 73,
+        "bids": 32,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "114997689241990036953485616321406561630795228983902948357452376179974113317666",
+        "status": 200,
+        "asks": 32,
+        "bids": 72,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "84294029826336378327625835721122464055175748709962664641767247326406279038608",
+        "status": 200,
+        "asks": 0,
+        "bids": 84,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "77756713270224241344269863777507977086180674555276030396157403721050324247388",
+        "status": 200,
+        "asks": 84,
+        "bids": 0,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "107206714261346415741096498699296338629478117991004495454641918672804927276452",
+        "status": 200,
+        "asks": 5,
+        "bids": 68,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "27623563286452489249938543242340018767666771671864888784058646202925403429218",
+        "status": 200,
+        "asks": 68,
+        "bids": 5,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "63135027906155608867793695617743433183354965317879513660914952549873614836027",
+        "status": 200,
+        "asks": 83,
+        "bids": 2,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "24882627447765167419798601737069158781861566767023041462229664245773226575297",
+        "status": 200,
+        "asks": 2,
+        "bids": 83,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "46379157906562420026463497064018892396177981892842523910274129727946966493024",
+        "status": 200,
+        "asks": 19,
+        "bids": 32,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "91096798245852340005407668631462765742543919716130338815327356496797062296382",
+        "status": 200,
+        "asks": 32,
+        "bids": 19,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "13478322126392162507139383026863072530149198719238403699146758749090580633960",
+        "status": 200,
+        "asks": 49,
+        "bids": 0,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "16950773531650616103154611155354472886568058835764398730553295548334746613521",
+        "status": 200,
+        "asks": 0,
+        "bids": 49,
+        "validBook": true,
+        "metadata": true
+      }
+    ]
+  },
+  "resource": {
+    "runs": [
+      {
+        "at": "2026-10-17T06:05:45.175Z",
+        "requested": 20,
+        "settled": 20,
+        "workerCreated": 20,
+        "workerTerminated": 20,
+        "wsCreated": 1,
+        "scope": "Synthetic replay socket; repeated owner/consumer/depth leases; no orders, dynamic public probes retain their normal consumer lifecycle"
+      },
+      {
+        "at": "2026-10-17T06:05:46.737Z",
+        "requested": 20,
+        "settled": 20,
+        "workerCreated": 20,
+        "workerTerminated": 20,
+        "wsCreated": 1,
+        "scope": "Synthetic replay socket; repeated owner/consumer/depth leases; no orders, dynamic public probes retain their normal consumer lifecycle"
+      },
+      {
+        "at": "2026-10-17T06:05:48.287Z",
+        "requested": 20,
+        "settled": 20,
+        "workerCreated": 20,
+        "workerTerminated": 20,
+        "wsCreated": 1,
+        "scope": "Synthetic replay socket; repeated owner/consumer/depth leases; no orders, dynamic public probes retain their normal consumer lifecycle"
+      }
+    ],
+    "snapshots": [
+      {
+        "at": "2026-10-17T06:05:45.399Z",
+        "heap": {
+          "usedSize": 10712172,
+          "totalSize": 11964416,
+          "embedderHeapUsedSize": 930992,
+          "backingStorageSize": 20792500
+        },
+        "workers": 0
+      },
+      {
+        "at": "2026-10-17T06:05:46.959Z",
+        "heap": {
+          "usedSize": 10744656,
+          "totalSize": 11964416,
+          "embedderHeapUsedSize": 909192,
+          "backingStorageSize": 20792500
+        },
+        "workers": 0
+      },
+      {
+        "at": "2026-10-17T06:05:48.504Z",
+        "heap": {
+          "usedSize": 10761548,
+          "totalSize": 11964416,
+          "embedderHeapUsedSize": 889808,
+          "backingStorageSize": 20792500
+        },
+        "workers": 0
+      }
+    ],
+    "scope": "60 controlled replay owner/consumer cycles, idle GC page heap, zero Worker targets; excludes Worker heap peak"
+  },
+  "limits": [
+    "single native Chrome profile and local fixture, not full logged-in production app or 24h",
+    "coverage is fixed asset-observations, not time weighted or fill rate; hidden sampling is throttled",
+    "retired prior cohort is separate; current live cohort never replaces failed assets",
+    "controlled synthetic asset faults prove browser Worker isolation, not live fault incidence",
+    "aligned_difference counter includes both sample recording and invalidation; use distinct probe samples for discrepancy incidence",
+    "ABBA is paced same-message replay; raw process CPU deltas require no exited PID to compare",
+    "page GC heap excludes Worker heap; Worker target release separately checked",
+    "HTTP is authoritative; no signer, order submission or active fast path tested",
+    "no new 160-attempt source simulation: this audit measures fixed snapshot coverage, actual HTTP identity gates and behavioral regressions, not candidate hit rate"
+  ],
+  "review": {
+    "actualPreflight": "existing-http",
+    "defaultEnabled": false,
+    "deployed": false,
+    "independentDifferenceSamples": 1,
+    "aggregateDifferenceCounter": 2,
+    "missingLiveDepthAdvance": "fixed first asset waiting_snapshot; HTTP 404 at end",
+    "deterministicBrowserChecks": 24,
+    "behavior": {
+      "files": 27,
+      "passed": 630
+    },
+    "sourceBoundaries": {
+      "files": 6,
+      "passed": 58
+    },
+    "nodeBoundaries": {
+      "passed": 8
+    },
+    "fokManifest": {
+      "passed": true,
+      "entries": 551,
+      "fullReleaseAccepted": false
+    },
+    "note": "17/19 browser checks passed; no production implementation edits in this turn; original failed checks preserved"
+  },
+  "regressionLogHashes": {
+    "behavior-tests": "981e7cab235b8505a040c2dd0708e003cb425b3a18b3040fc1ad10d03808d2e4",
+    "node-boundaries": "3260d576f562ef61ed987aff741b6aae43739088ff901b12c141aaa237c802e1",
+    "source-boundaries": "a98705f7046ccc8196e6a2125b318cb0a5cfd22fc461f92372bc7ae6cfbc4cf2",
+    "team-boundaries": "9480f6973419dce8bb7c1699b4f2b627b7760826d068396c40c2b39d18d69cbc",
+    "adapter-boundaries": "6c0750a33a571e920aadd7f4bcc036c9202702164e5679a51f6111ee6d6f19fc",
+    "fok-parity": "09ccdfdd74977c6ee9476fb4526cbc203f879cd08d6446860206b3f99d70c32a",
+    "fok-vps": "68f691b05c5526a194d495f4669f73367dd99b0057ad4dfffc8acf07389e00e3"
+  }
+}

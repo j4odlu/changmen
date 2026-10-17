@@ -1,0 +1,280 @@
+{
+  "at": "2026-10-16T17:50:16.271Z",
+  "candidateSha256": "587b852209d84102bae4814d1b6b589197d692046cb10a1eb75f3b6fc9b01242",
+  "checks": {
+    "controlledComplete": true,
+    "disconnectRecovery": true,
+    "released": true,
+    "completeDenominator": true,
+    "httpOnce": true,
+    "httpSuccessIdentity": true,
+    "httpFailuresObserved": true,
+    "bothDecisions": true,
+    "noComparableDifference": true,
+    "liveWorkerHealthy": true,
+    "oneOriginalConnection": true,
+    "classicAndHttpGates": true,
+    "latestGates": true
+  },
+  "controlled": {
+    "cases": 200,
+    "levels": 100,
+    "latencyMs": {
+      "count": 200,
+      "p50": 0.199951171875,
+      "p95": 0.5,
+      "max": 1.400146484375
+    }
+  },
+  "worker": {
+    "url": "/client/web/dist/assets/marketData.worker-K4no3O4o.js",
+    "sha256": "080f7eeb71d92e86e2cff3956abc7db67e06794ea99d4eb578241a6e7785579b"
+  },
+  "previous": {
+    "durationMs": 126625,
+    "frames": 80779,
+    "quotes": 154649,
+    "sourceConnections": 1,
+    "sourceCloses": 0,
+    "subscriptionMessages": 1,
+    "subscriptionSha256": "afb5c74e6a8650d390979c0f10c3cced03d251986b188cfebf94952f6ae64177",
+    "attempts": 160,
+    "httpRequests": 160,
+    "decisions": {
+      "http_fallback": 114,
+      "local_candidate": 46
+    },
+    "reasons": {
+      "metadata_unknown": 48,
+      "validated": 46,
+      "stream_advanced": 47,
+      "stale_book": 9,
+      "waiting_snapshot": 10
+    },
+    "comparisons": {
+      "not_candidate": 114,
+      "aligned_equal": 16,
+      "unaligned_or_changed": 30
+    },
+    "localLatencyMs": {
+      "count": 46,
+      "p50": 0.699951171875,
+      "p95": 1.199951171875,
+      "max": 1.39990234375
+    },
+    "httpLatencyMs": {
+      "count": 160,
+      "p50": 249.90000000596046,
+      "p95": 267.40000000596046,
+      "max": 462.5
+    },
+    "mailbox": {
+      "pendingBatches": 0,
+      "queuedEntries": 0,
+      "pendingEntries": 0,
+      "pendingChars": 0,
+      "batchesSent": 48686,
+      "highEntries": 243,
+      "highChars": 153140,
+      "scheduler": "message-task",
+      "maxQueueMs": 6.700000017881393,
+      "maxAckMs": 7,
+      "oldestQueuedMs": 0,
+      "oldestInflightMs": 0,
+      "oldestAckMs": 0
+    }
+  },
+  "current": {
+    "durationMs": 126586.59999999404,
+    "frames": 101808,
+    "quotes": 194810,
+    "sourceConnections": 1,
+    "sourceCloses": 0,
+    "subscriptionMessages": 1,
+    "subscriptionSha256": "afb5c74e6a8650d390979c0f10c3cced03d251986b188cfebf94952f6ae64177",
+    "attempts": 160,
+    "httpRequests": 160,
+    "httpSucceeded": 150,
+    "httpFailed": 10,
+    "decisions": {
+      "http_fallback": 75,
+      "local_candidate": 85
+    },
+    "reasons": {
+      "metadata_unknown": 12,
+      "stale_book": 37,
+      "validated": 85,
+      "local_rejected_or_error": 1,
+      "snapshot_expired": 1,
+      "waiting_snapshot": 24
+    },
+    "comparisons": {
+      "not_candidate": 75,
+      "unaligned_or_changed": 52,
+      "aligned_equal": 32,
+      "ambiguous_timestamp": 1
+    },
+    "localLatencyMs": {
+      "count": 85,
+      "p50": 0.699951171875,
+      "p95": 1.300048828125,
+      "max": 2.400146484375
+    },
+    "httpLatencyMs": {
+      "count": 160,
+      "p50": 250.80000001192093,
+      "p95": 272.90000000596046,
+      "max": 577.8000000119209
+    },
+    "mailbox": {
+      "pendingBatches": 0,
+      "queuedEntries": 0,
+      "pendingEntries": 0,
+      "pendingChars": 0,
+      "batchesSent": 66183,
+      "highEntries": 174,
+      "highChars": 175435,
+      "scheduler": "message-task",
+      "maxQueueMs": 3.199999988079071,
+      "maxAckMs": 5.899999976158142,
+      "oldestQueuedMs": 0,
+      "oldestInflightMs": 0,
+      "oldestAckMs": 0
+    },
+    "fullReads": {
+      "catchups": 81,
+      "recovered": 46,
+      "exhausted": 0,
+      "timeouts": 0
+    },
+    "workerCounters": {
+      "snapshot_received": 76,
+      "increment_state_received": 33192,
+      "stream_changed": 1,
+      "aligned_equal": 111,
+      "attempt_seen": 160,
+      "metadata_reused_http": 125,
+      "unaligned_or_changed": 32,
+      "ambiguous_timestamp": 6,
+      "http_market_rejected": 10,
+      "snapshot_expired": 3,
+      "attempt_discarded_epoch_or_route": 1,
+      "epoch_or_route_changed": 1,
+      "no_snapshot": 42
+    }
+  },
+  "candidateRate": {
+    "previous": 0.2875,
+    "current": 0.53125
+  },
+  "networkRecovery": {
+    "at": "2026-10-16T17:47:46.288Z",
+    "durationMs": 126917.19999998808,
+    "attempts": 160,
+    "connections": 2,
+    "closes": 1,
+    "frames": 73642,
+    "quotes": 140026,
+    "decisions": {
+      "http_fallback": 83,
+      "canceled": 1,
+      "local_candidate": 76
+    },
+    "reasons": {
+      "metadata_unknown": 37,
+      "scope_or_stream_changed": 1,
+      "validated": 76,
+      "stale_book": 40,
+      "local_rejected_or_error": 2,
+      "waiting_snapshot": 4
+    },
+    "comparisons": {
+      "not_candidate": 84,
+      "aligned_equal": 26,
+      "unaligned_or_changed": 48,
+      "ambiguous_timestamp": 2
+    },
+    "httpSucceeded": 150,
+    "httpFailed": 10,
+    "fullReads": {
+      "catchups": 66,
+      "recovered": 40,
+      "exhausted": 0,
+      "timeouts": 0
+    },
+    "workerCounters": {
+      "snapshot_received": 132,
+      "increment_state_received": 34570,
+      "attempt_seen": 160,
+      "no_snapshot": 28,
+      "http_market_rejected": 9,
+      "stream_changed": 2,
+      "attempt_discarded_epoch_or_route": 2,
+      "epoch_or_route_changed": 2,
+      "unaligned_or_changed": 42,
+      "aligned_equal": 109,
+      "metadata_reused_http": 123,
+      "ambiguous_timestamp": 5,
+      "snapshot_expired": 1
+    },
+    "mailbox": {
+      "pendingBatches": 1,
+      "queuedEntries": 0,
+      "pendingEntries": 5,
+      "pendingChars": 3075,
+      "batchesSent": 46682,
+      "highEntries": 262,
+      "highChars": 177571,
+      "scheduler": "message-task",
+      "maxQueueMs": 6.199999988079071,
+      "maxAckMs": 6.699999988079071,
+      "oldestQueuedMs": 0,
+      "oldestInflightMs": 0.5,
+      "oldestAckMs": 0.5
+    }
+  },
+  "allRuns": {
+    "attempts": 320,
+    "decisions": {
+      "http_fallback": 158,
+      "canceled": 1,
+      "local_candidate": 161
+    },
+    "reasons": {
+      "metadata_unknown": 49,
+      "scope_or_stream_changed": 1,
+      "validated": 161,
+      "stale_book": 77,
+      "local_rejected_or_error": 3,
+      "waiting_snapshot": 28,
+      "snapshot_expired": 1
+    },
+    "comparisons": {
+      "not_candidate": 159,
+      "aligned_equal": 58,
+      "unaligned_or_changed": 100,
+      "ambiguous_timestamp": 3
+    },
+    "candidateRate": 0.503125
+  },
+  "observations": {
+    "samples": 160,
+    "totalAssets": 2560,
+    "snapshotFresh": 2190,
+    "eligible": 1366,
+    "snapshotCoverage": 0.85546875,
+    "eligibility": 0.53359375,
+    "metadataPresence": 0.95390625
+  },
+  "limits": [
+    "synthetic attempts, not user execution or fills",
+    "headless foreground; no new native-background or 24-hour evidence",
+    "HTTP remains authoritative; fallback simulation reuses the same HTTP observation, not a second network request",
+    "local timing includes full read and math, not signing/order/paired-fill latency",
+    "exact same-input 10000-case math regression is synthetic, not 10000 live comparable books",
+    "same fixed assets, different live periods: observed rate change is not a causal A/B estimate",
+    "recovered full reads are catch-up successes, not necessarily successful execution simulation candidates"
+  ],
+  "verdict": "BOUNDED_SHADOW_ONLY_ACTIVE_NO_GO",
+  "deploymentAuthorized": false
+}

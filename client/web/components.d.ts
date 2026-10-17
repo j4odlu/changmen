@@ -129,6 +129,7 @@ declare module 'vue' {
     PbCollectModeSettings: typeof import('./src/components/user/PbCollectModeSettings.vue')['default']
     PlatformIcon: typeof import('./src/components/platform/PlatformIcon.vue')['default']
     PluginIntroShell: typeof import('./src/components/layout/PluginIntroShell.vue')['default']
+    PmBookSettings: typeof import('./src/components/user/tabs/PmBookSettings.vue')['default']
     PmManualOrderPrompt: typeof import('./src/components/betting/PmManualOrderPrompt.vue')['default']
     PmPfBufferSettings: typeof import('./src/components/user/PmPfBufferSettings.vue')['default']
     PmPrematchProbability: typeof import('./src/components/match/PmPrematchProbability.vue')['default']

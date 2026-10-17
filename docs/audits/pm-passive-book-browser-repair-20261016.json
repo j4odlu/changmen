@@ -1,0 +1,1518 @@
+{
+  "at": "2026-10-16T14:51:49.272Z",
+  "verdict": "NO_GO_PRODUCTION_SHADOW",
+  "deploymentAuthorized": false,
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+  "workerUrl": "/client/web/dist/assets/shadow.worker-D0IkiuOX.js",
+  "workerSha256": "2b35ddcce97fe076d9548d5445d5c3532467e0968c62060564b50f13f7936ef2",
+  "live": [
+    {
+      "name": "live-cold",
+      "startedAt": "2026-10-16T14:13:22.833Z",
+      "durationMs": 900233.200000003,
+      "frames": 1004875,
+      "chars": 607753507,
+      "quotes": {
+        "count": 1955229,
+        "hashedCount": 10000,
+        "completeHash": false,
+        "sha256": "8294278e352e8e00a380d54b888384ae26c946fb3e3b14e528e929714cfe2cda"
+      },
+      "handlerMs": {
+        "n": 1004875,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 2.3999999910593033,
+        "resolutionMs": 0.01
+      },
+      "quoteLatencyMs": {
+        "n": 1955229,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 2.2999999970197678,
+        "resolutionMs": 0.01
+      },
+      "timerJitterMs": {
+        "n": 45012,
+        "p50": 0,
+        "p95": 0.9,
+        "p99": 1.3,
+        "max": 17.700000002980232,
+        "resolutionMs": 0.01
+      },
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 807.7999999970198,
+          "hash": "d0b8136c0ebe001abf0d32153f0dac0895342c523c6c6d4483f21aefc0396304",
+          "assets": 118
+        }
+      ],
+      "failure": null,
+      "workerAliveAtEnd": true,
+      "workerFailedObservations": 0,
+      "visibleObservations": 894,
+      "hiddenObservations": 0,
+      "coverage": {
+        "observations": 894,
+        "requestedAssetObservations": 14304,
+        "snapshotFreshAssetObservations": 5364,
+        "eligibleAssetObservations": 4831,
+        "snapshotRatio": 0.375,
+        "eligibleRatio": 0.33773769574944074,
+        "missingReportObservations": 1,
+        "staleReports": 0,
+        "reasons": {
+          "metadata_unknown_or_stale": 201,
+          "no_snapshot": 8924,
+          "stale_book": 332
+        }
+      },
+      "after60s": {
+        "observations": 835,
+        "requestedAssetObservations": 13360,
+        "snapshotFreshAssetObservations": 4900,
+        "eligibleAssetObservations": 4659,
+        "snapshotRatio": 0.36676646706586824,
+        "eligibleRatio": 0.34872754491017965,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {
+          "stale_book": 208,
+          "no_snapshot": 8460,
+          "metadata_unknown_or_stale": 33
+        }
+      },
+      "syntheticReads": {
+        "recorded": 7136,
+        "ready": 2405,
+        "pending": 0,
+        "outcomes": {
+          "http_shape_unknown": 7136
+        },
+        "misses": {
+          "metadata_unknown_or_stale": 101,
+          "no_snapshot": 4456,
+          "stale_book": 174
+        }
+      },
+      "syntheticBeginQueueMs": {
+        "count": 7136,
+        "p50": 16.89990234375,
+        "p95": 17.89990234375
+      },
+      "syntheticFinishQueueMs": {
+        "count": 7136,
+        "p50": 16.89990234375,
+        "p95": 17.89990234375
+      },
+      "counters": {
+        "stream_frames": 1004786,
+        "stream_chars": 607753151,
+        "attempt_seen": 7136,
+        "attempt_completed": 7136,
+        "http_resolved": 7136
+      },
+      "workerCounters": {
+        "stream_changed": 2,
+        "snapshot_received": 754,
+        "increment_state_received": 291916,
+        "attempt_seen": 7136,
+        "http_shape_unknown": 7136,
+        "aligned_equal": 52,
+        "probe_failed": 148,
+        "unaligned_or_changed": 60,
+        "snapshot_expired": 6,
+        "no_snapshot": 37,
+        "ambiguous_timestamp": 2
+      },
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 1,
+        "pendingEntries": 1,
+        "pendingChars": 614,
+        "batchesSent": 31063,
+        "highEntries": 481,
+        "highChars": 286010
+      }
+    },
+    {
+      "name": "live-off",
+      "startedAt": "2026-10-16T14:28:23.203Z",
+      "durationMs": 15183.60000000894,
+      "frames": 14930,
+      "chars": 9058081,
+      "quotes": {
+        "count": 29084,
+        "hashedCount": 10000,
+        "completeHash": false,
+        "sha256": "d7252354304f13744424d40ed4958e0b1342779e133e305a93c4c23a668e88a0"
+      },
+      "handlerMs": {
+        "n": 14930,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 0.3999999910593033,
+        "resolutionMs": 0.01
+      },
+      "quoteLatencyMs": {
+        "n": 29084,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 0.3999999910593033,
+        "resolutionMs": 0.01
+      },
+      "timerJitterMs": {
+        "n": 760,
+        "p50": 0,
+        "p95": 0.9,
+        "p99": 1.4,
+        "max": 4.9000000059604645,
+        "resolutionMs": 0.01
+      },
+      "wsCreated": 0,
+      "wsClosed": 0,
+      "workerCreated": 0,
+      "workerTerminated": 0,
+      "subscriptions": [],
+      "failure": null,
+      "workerAliveAtEnd": null,
+      "workerFailedObservations": 0,
+      "visibleObservations": 16,
+      "hiddenObservations": 0,
+      "coverage": {
+        "observations": 16,
+        "requestedAssetObservations": 256,
+        "snapshotFreshAssetObservations": 0,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "missingReportObservations": 16,
+        "staleReports": 0,
+        "reasons": {}
+      },
+      "after60s": {
+        "observations": 0,
+        "requestedAssetObservations": 0,
+        "snapshotFreshAssetObservations": 0,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {}
+      },
+      "syntheticReads": {
+        "recorded": 0,
+        "ready": 0,
+        "pending": 0,
+        "outcomes": {},
+        "misses": {}
+      },
+      "syntheticBeginQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      },
+      "syntheticFinishQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      }
+    },
+    {
+      "name": "live-late",
+      "startedAt": "2026-10-16T14:28:38.391Z",
+      "durationMs": 900580.200000003,
+      "frames": 802025,
+      "chars": 486298505,
+      "quotes": {
+        "count": 1557638,
+        "hashedCount": 10000,
+        "completeHash": false,
+        "sha256": "0630d7d820a8acab7e1f70469304f9ad7634ea0ca30152755be121fe1086984f"
+      },
+      "handlerMs": {
+        "n": 802025,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 2.5,
+        "resolutionMs": 0.01
+      },
+      "quoteLatencyMs": {
+        "n": 1557638,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 2.5,
+        "resolutionMs": 0.01
+      },
+      "timerJitterMs": {
+        "n": 45029,
+        "p50": 0,
+        "p95": 0.8,
+        "p99": 1.2,
+        "max": 12.5,
+        "resolutionMs": 0.01
+      },
+      "wsCreated": 0,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "subscriptions": [],
+      "failure": null,
+      "workerAliveAtEnd": true,
+      "workerFailedObservations": 0,
+      "visibleObservations": 894,
+      "hiddenObservations": 0,
+      "coverage": {
+        "observations": 894,
+        "requestedAssetObservations": 14304,
+        "snapshotFreshAssetObservations": 4726,
+        "eligibleAssetObservations": 4271,
+        "snapshotRatio": 0.33039709172259507,
+        "eligibleRatio": 0.29858780760626397,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {
+          "no_snapshot": 9578,
+          "metadata_unknown_or_stale": 191,
+          "stale_book": 264
+        }
+      },
+      "after60s": {
+        "observations": 835,
+        "requestedAssetObservations": 13360,
+        "snapshotFreshAssetObservations": 4524,
+        "eligibleAssetObservations": 4124,
+        "snapshotRatio": 0.338622754491018,
+        "eligibleRatio": 0.3086826347305389,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {
+          "no_snapshot": 8836,
+          "stale_book": 262,
+          "metadata_unknown_or_stale": 138
+        }
+      },
+      "syntheticReads": {
+        "recorded": 7136,
+        "ready": 2129,
+        "pending": 0,
+        "outcomes": {
+          "http_shape_unknown": 7136
+        },
+        "misses": {
+          "no_snapshot": 4776,
+          "metadata_unknown_or_stale": 95,
+          "stale_book": 136
+        }
+      },
+      "syntheticBeginQueueMs": {
+        "count": 7136,
+        "p50": 16.800048828125,
+        "p95": 17.89990234375
+      },
+      "syntheticFinishQueueMs": {
+        "count": 7136,
+        "p50": 16.800048828125,
+        "p95": 17.89990234375
+      },
+      "counters": {
+        "stream_frames": 801935,
+        "stream_chars": 486298145,
+        "attempt_seen": 7136,
+        "attempt_completed": 7136,
+        "http_resolved": 7136
+      },
+      "workerCounters": {
+        "stream_changed": 1,
+        "attempt_seen": 7136,
+        "http_shape_unknown": 7136,
+        "no_snapshot": 50,
+        "probe_failed": 148,
+        "snapshot_received": 316,
+        "increment_state_received": 218390,
+        "unaligned_or_changed": 44,
+        "aligned_equal": 54,
+        "snapshot_expired": 7,
+        "tick_changed": 4,
+        "ambiguous_timestamp": 2
+      },
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 34263,
+        "highEntries": 429,
+        "highChars": 273604
+      }
+    }
+  ],
+  "replay": [
+    {
+      "name": "replay-off-1",
+      "startedAt": "2026-10-16T14:44:15.545Z",
+      "durationMs": 7959.399999991059,
+      "frames": 3000,
+      "chars": 2021347,
+      "quotes": {
+        "count": 5867,
+        "hashedCount": 5867,
+        "completeHash": true,
+        "sha256": "565eef7765811c921712bd450b2c11c0d1c92ebcbb11a23994cfcd6ec42edff8"
+      },
+      "handlerMs": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 4,
+        "resolutionMs": 0.01
+      },
+      "quoteLatencyMs": {
+        "n": 5867,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 3.8,
+        "max": 4,
+        "resolutionMs": 0.01
+      },
+      "timerJitterMs": {
+        "n": 399,
+        "p50": 0,
+        "p95": 1,
+        "p99": 1.3,
+        "max": 11.400000005960464,
+        "resolutionMs": 0.01
+      },
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 0,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 8,
+          "hash": "d0b8136c0ebe001abf0d32153f0dac0895342c523c6c6d4483f21aefc0396304",
+          "assets": 118
+        }
+      ],
+      "failure": null,
+      "workerAliveAtEnd": null,
+      "workerFailedObservations": 0,
+      "visibleObservations": 1,
+      "hiddenObservations": 0,
+      "coverage": {
+        "observations": 1,
+        "requestedAssetObservations": 16,
+        "snapshotFreshAssetObservations": 0,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "missingReportObservations": 1,
+        "staleReports": 0,
+        "reasons": {}
+      },
+      "after60s": {
+        "observations": 0,
+        "requestedAssetObservations": 0,
+        "snapshotFreshAssetObservations": 0,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {}
+      },
+      "syntheticReads": {
+        "recorded": 0,
+        "ready": 0,
+        "pending": 0,
+        "outcomes": {},
+        "misses": {}
+      },
+      "syntheticBeginQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      },
+      "syntheticFinishQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      }
+    },
+    {
+      "name": "replay-on-1",
+      "startedAt": "2026-10-16T14:44:23.512Z",
+      "durationMs": 7953.29999999702,
+      "frames": 3000,
+      "chars": 2021347,
+      "quotes": {
+        "count": 5867,
+        "hashedCount": 5867,
+        "completeHash": true,
+        "sha256": "565eef7765811c921712bd450b2c11c0d1c92ebcbb11a23994cfcd6ec42edff8"
+      },
+      "handlerMs": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 1.5999999940395355,
+        "resolutionMs": 0.01
+      },
+      "quoteLatencyMs": {
+        "n": 5867,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 1.5,
+        "max": 1.5999999940395355,
+        "resolutionMs": 0.01
+      },
+      "timerJitterMs": {
+        "n": 398,
+        "p50": 0,
+        "p95": 0.9,
+        "p99": 1.4,
+        "max": 1.9000000059604645,
+        "resolutionMs": 0.01
+      },
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 0.3999999910593033,
+          "hash": "d0b8136c0ebe001abf0d32153f0dac0895342c523c6c6d4483f21aefc0396304",
+          "assets": 118
+        }
+      ],
+      "failure": null,
+      "workerAliveAtEnd": true,
+      "workerFailedObservations": 0,
+      "visibleObservations": 1,
+      "hiddenObservations": 0,
+      "coverage": {
+        "observations": 1,
+        "requestedAssetObservations": 16,
+        "snapshotFreshAssetObservations": 8,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": 0.5,
+        "eligibleRatio": 0,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {
+          "stale_book": 4,
+          "no_snapshot": 8,
+          "source_clock_or_age": 4
+        }
+      },
+      "after60s": {
+        "observations": 0,
+        "requestedAssetObservations": 0,
+        "snapshotFreshAssetObservations": 0,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {}
+      },
+      "syntheticReads": {
+        "recorded": 0,
+        "ready": 0,
+        "pending": 0,
+        "outcomes": {},
+        "misses": {}
+      },
+      "syntheticBeginQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      },
+      "syntheticFinishQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      },
+      "counters": {
+        "stream_frames": 3000,
+        "stream_chars": 2021347
+      },
+      "workerCounters": {
+        "stream_changed": 3,
+        "snapshot_received": 8,
+        "increment_state_received": 220,
+        "unaligned_or_changed": 1,
+        "probe_failed": 1
+      },
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 376,
+        "highEntries": 12,
+        "highChars": 192923
+      }
+    },
+    {
+      "name": "replay-on-2",
+      "startedAt": "2026-10-16T14:44:31.475Z",
+      "durationMs": 8010,
+      "frames": 3000,
+      "chars": 2021347,
+      "quotes": {
+        "count": 5867,
+        "hashedCount": 5867,
+        "completeHash": true,
+        "sha256": "565eef7765811c921712bd450b2c11c0d1c92ebcbb11a23994cfcd6ec42edff8"
+      },
+      "handlerMs": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 2.4000000059604645,
+        "resolutionMs": 0.01
+      },
+      "quoteLatencyMs": {
+        "n": 5867,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 2.2,
+        "max": 2.4000000059604645,
+        "resolutionMs": 0.01
+      },
+      "timerJitterMs": {
+        "n": 401,
+        "p50": 0,
+        "p95": 1,
+        "p99": 1.4,
+        "max": 1.9000000059604645,
+        "resolutionMs": 0.01
+      },
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 0.5,
+          "hash": "d0b8136c0ebe001abf0d32153f0dac0895342c523c6c6d4483f21aefc0396304",
+          "assets": 118
+        }
+      ],
+      "failure": null,
+      "workerAliveAtEnd": true,
+      "workerFailedObservations": 0,
+      "visibleObservations": 1,
+      "hiddenObservations": 0,
+      "coverage": {
+        "observations": 1,
+        "requestedAssetObservations": 16,
+        "snapshotFreshAssetObservations": 8,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": 0.5,
+        "eligibleRatio": 0,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {
+          "stale_book": 4,
+          "no_snapshot": 8,
+          "source_clock_or_age": 4
+        }
+      },
+      "after60s": {
+        "observations": 0,
+        "requestedAssetObservations": 0,
+        "snapshotFreshAssetObservations": 0,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {}
+      },
+      "syntheticReads": {
+        "recorded": 0,
+        "ready": 0,
+        "pending": 0,
+        "outcomes": {},
+        "misses": {}
+      },
+      "syntheticBeginQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      },
+      "syntheticFinishQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      },
+      "counters": {
+        "stream_frames": 3000,
+        "stream_chars": 2021347
+      },
+      "workerCounters": {
+        "stream_changed": 3,
+        "snapshot_received": 8,
+        "increment_state_received": 220,
+        "unaligned_or_changed": 1,
+        "probe_failed": 1
+      },
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 376,
+        "highEntries": 12,
+        "highChars": 192923
+      }
+    },
+    {
+      "name": "replay-off-2",
+      "startedAt": "2026-10-16T14:44:39.493Z",
+      "durationMs": 7991.79999999702,
+      "frames": 3000,
+      "chars": 2021347,
+      "quotes": {
+        "count": 5867,
+        "hashedCount": 5867,
+        "completeHash": true,
+        "sha256": "565eef7765811c921712bd450b2c11c0d1c92ebcbb11a23994cfcd6ec42edff8"
+      },
+      "handlerMs": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 3.0999999940395355,
+        "resolutionMs": 0.01
+      },
+      "quoteLatencyMs": {
+        "n": 5867,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 3,
+        "max": 3.0999999940395355,
+        "resolutionMs": 0.01
+      },
+      "timerJitterMs": {
+        "n": 400,
+        "p50": 0,
+        "p95": 0.8,
+        "p99": 1.1,
+        "max": 1.5999999940395355,
+        "resolutionMs": 0.01
+      },
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 0,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 0.4000000059604645,
+          "hash": "d0b8136c0ebe001abf0d32153f0dac0895342c523c6c6d4483f21aefc0396304",
+          "assets": 118
+        }
+      ],
+      "failure": null,
+      "workerAliveAtEnd": null,
+      "workerFailedObservations": 0,
+      "visibleObservations": 1,
+      "hiddenObservations": 0,
+      "coverage": {
+        "observations": 1,
+        "requestedAssetObservations": 16,
+        "snapshotFreshAssetObservations": 0,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "missingReportObservations": 1,
+        "staleReports": 0,
+        "reasons": {}
+      },
+      "after60s": {
+        "observations": 0,
+        "requestedAssetObservations": 0,
+        "snapshotFreshAssetObservations": 0,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {}
+      },
+      "syntheticReads": {
+        "recorded": 0,
+        "ready": 0,
+        "pending": 0,
+        "outcomes": {},
+        "misses": {}
+      },
+      "syntheticBeginQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      },
+      "syntheticFinishQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      }
+    },
+    {
+      "name": "replay-overflow",
+      "startedAt": "2026-10-16T14:44:47.493Z",
+      "durationMs": 1470,
+      "frames": 100,
+      "chars": 247471,
+      "quotes": {
+        "count": 273,
+        "hashedCount": 273,
+        "completeHash": true,
+        "sha256": "9e8deb116e5674566a32556c573d363ae7779922b94ff25bcc5f4918ff8d0396"
+      },
+      "handlerMs": {
+        "n": 100,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 2.2999999970197678,
+        "resolutionMs": 0.01
+      },
+      "quoteLatencyMs": {
+        "n": 273,
+        "p50": 0,
+        "p95": 2.3,
+        "p99": 2.3,
+        "max": 2.2999999970197678,
+        "resolutionMs": 0.01
+      },
+      "timerJitterMs": {
+        "n": 74,
+        "p50": 0.1,
+        "p95": 0.7,
+        "p99": 0.9,
+        "max": 0.9000000059604645,
+        "resolutionMs": 0.01
+      },
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "subscriptions": [
+        {
+          "at": 0.20000000298023224,
+          "hash": "d0b8136c0ebe001abf0d32153f0dac0895342c523c6c6d4483f21aefc0396304",
+          "assets": 118
+        }
+      ],
+      "failure": null,
+      "workerAliveAtEnd": true,
+      "workerFailedObservations": 0,
+      "visibleObservations": 1,
+      "hiddenObservations": 0,
+      "coverage": {
+        "observations": 1,
+        "requestedAssetObservations": 16,
+        "snapshotFreshAssetObservations": 8,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": 0.5,
+        "eligibleRatio": 0,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {
+          "source_clock_or_age": 8,
+          "no_snapshot": 8
+        }
+      },
+      "after60s": {
+        "observations": 0,
+        "requestedAssetObservations": 0,
+        "snapshotFreshAssetObservations": 0,
+        "eligibleAssetObservations": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "missingReportObservations": 0,
+        "staleReports": 0,
+        "reasons": {}
+      },
+      "syntheticReads": {
+        "recorded": 0,
+        "ready": 0,
+        "pending": 0,
+        "outcomes": {},
+        "misses": {}
+      },
+      "syntheticBeginQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      },
+      "syntheticFinishQueueMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      },
+      "counters": {
+        "stream_frames": 100,
+        "stream_chars": 247471
+      },
+      "workerCounters": {
+        "stream_changed": 3,
+        "snapshot_received": 8,
+        "increment_state_received": 2
+      },
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 3,
+        "highEntries": 100,
+        "highChars": 247471
+      }
+    }
+  ],
+  "lifecycle": {
+    "name": "lifecycle",
+    "startedAt": "2026-10-16T14:45:26.432Z",
+    "durationMs": 121433.89999999106,
+    "frames": 71229,
+    "chars": 43767851,
+    "quotes": {
+      "count": 137930,
+      "hashedCount": 10000,
+      "completeHash": false,
+      "sha256": "060d11a7afdfea211a2955a9cd2f71ae252a201699a4886175c4abac5f8b8838"
+    },
+    "handlerMs": {
+      "n": 71229,
+      "p50": 0,
+      "p95": 0.1,
+      "p99": 0.1,
+      "max": 3.4000000059604645,
+      "resolutionMs": 0.01
+    },
+    "quoteLatencyMs": {
+      "n": 137930,
+      "p50": 0,
+      "p95": 0.1,
+      "p99": 0.1,
+      "max": 3.2999999970197678,
+      "resolutionMs": 0.01
+    },
+    "timerJitterMs": {
+      "n": 6071,
+      "p50": 0.1,
+      "p95": 0.9,
+      "p99": 1.3,
+      "max": 21.799999997019768,
+      "resolutionMs": 0.01
+    },
+    "wsCreated": 2,
+    "wsClosed": 1,
+    "workerCreated": 1,
+    "workerTerminated": 0,
+    "subscriptions": [
+      {
+        "at": 1729,
+        "hash": "d0b8136c0ebe001abf0d32153f0dac0895342c523c6c6d4483f21aefc0396304",
+        "assets": 118
+      },
+      {
+        "at": 68331.59999999404,
+        "hash": "d0b8136c0ebe001abf0d32153f0dac0895342c523c6c6d4483f21aefc0396304",
+        "assets": 118
+      }
+    ],
+    "failure": null,
+    "workerAliveAtEnd": true,
+    "workerFailedObservations": 0,
+    "visibleObservations": 124,
+    "hiddenObservations": 0,
+    "coverage": {
+      "observations": 124,
+      "requestedAssetObservations": 1984,
+      "snapshotFreshAssetObservations": 552,
+      "eligibleAssetObservations": 248,
+      "snapshotRatio": 0.2782258064516129,
+      "eligibleRatio": 0.125,
+      "missingReportObservations": 4,
+      "staleReports": 0,
+      "reasons": {
+        "no_snapshot": 1200,
+        "metadata_unknown_or_stale": 180,
+        "stale_book": 124
+      }
+    },
+    "after60s": {
+      "observations": 63,
+      "requestedAssetObservations": 1008,
+      "snapshotFreshAssetObservations": 324,
+      "eligibleAssetObservations": 170,
+      "snapshotRatio": 0.32142857142857145,
+      "eligibleRatio": 0.16865079365079366,
+      "missingReportObservations": 3,
+      "staleReports": 0,
+      "reasons": {
+        "no_snapshot": 572,
+        "stale_book": 78,
+        "metadata_unknown_or_stale": 76
+      }
+    },
+    "syntheticReads": {
+      "recorded": 960,
+      "ready": 106,
+      "pending": 0,
+      "outcomes": {
+        "http_shape_unknown": 960
+      },
+      "misses": {
+        "no_snapshot": 690,
+        "metadata_unknown_or_stale": 90,
+        "stale_book": 74
+      }
+    },
+    "syntheticBeginQueueMs": {
+      "count": 960,
+      "p50": 16.900146484375,
+      "p95": 18.10009765625
+    },
+    "syntheticFinishQueueMs": {
+      "count": 960,
+      "p50": 16.900146484375,
+      "p95": 18.10009765625
+    },
+    "counters": {
+      "attempt_seen": 960,
+      "attempt_completed": 960,
+      "http_resolved": 960,
+      "stream_frames": 71219,
+      "stream_chars": 43767811
+    },
+    "workerCounters": {
+      "stream_changed": 5,
+      "attempt_seen": 944,
+      "http_shape_unknown": 944,
+      "snapshot_received": 102,
+      "invalid_frame": 1,
+      "probe_failed": 24,
+      "increment_state_received": 12840,
+      "aligned_equal": 6,
+      "unaligned_or_changed": 7,
+      "asset_removed": 2,
+      "ambiguous_timestamp": 1
+    },
+    "mailbox": {
+      "pendingBatches": 1,
+      "queuedEntries": 0,
+      "pendingEntries": 10,
+      "pendingChars": 6118,
+      "batchesSent": 3574,
+      "highEntries": 557,
+      "highChars": 344279
+    },
+    "marks": [
+      {
+        "label": "initial",
+        "at": 30371.39999999106,
+        "worker": true,
+        "epoch": 1,
+        "open": true,
+        "assets": 16,
+        "coverage": {
+          "at": 1792161956446,
+          "assets": 16,
+          "snapshotFresh": 4,
+          "eligible": 1,
+          "misses": {
+            "no_snapshot": 12,
+            "stale_book": 2,
+            "metadata_unknown_or_stale": 1
+          }
+        }
+      },
+      {
+        "label": "eight-candidates",
+        "at": 40567.79999999702,
+        "worker": true,
+        "epoch": 1,
+        "open": true,
+        "assets": 8,
+        "coverage": {
+          "at": 1792161966441,
+          "assets": 8,
+          "snapshotFresh": 4,
+          "eligible": 2,
+          "misses": {
+            "no_snapshot": 4,
+            "metadata_unknown_or_stale": 2
+          }
+        }
+      },
+      {
+        "label": "sixteen-restored",
+        "at": 60857.89999999106,
+        "worker": true,
+        "epoch": 1,
+        "open": true,
+        "assets": 16,
+        "coverage": {
+          "at": 1792161986441,
+          "assets": 16,
+          "snapshotFresh": 4,
+          "eligible": 2,
+          "misses": {
+            "no_snapshot": 12,
+            "stale_book": 2
+          }
+        }
+      },
+      {
+        "label": "source-close-requested",
+        "at": 60858,
+        "worker": true,
+        "epoch": 1,
+        "open": true,
+        "assets": 16,
+        "coverage": {
+          "at": 1792161986441,
+          "assets": 16,
+          "snapshotFresh": 4,
+          "eligible": 2,
+          "misses": {
+            "no_snapshot": 12,
+            "stale_book": 2
+          }
+        }
+      },
+      {
+        "label": "recovered",
+        "at": 121430.59999999404,
+        "worker": true,
+        "epoch": 2,
+        "open": true,
+        "assets": 16,
+        "coverage": {
+          "at": 1792162047441,
+          "assets": 16,
+          "snapshotFresh": 6,
+          "eligible": 4,
+          "misses": {
+            "no_snapshot": 10,
+            "stale_book": 2
+          }
+        }
+      }
+    ]
+  },
+  "background": {
+    "name": "background",
+    "startedAt": "2026-10-16T14:49:20.900Z",
+    "durationMs": 90940.19999998808,
+    "frames": 81730,
+    "chars": 49758054,
+    "quotes": {
+      "count": 158599,
+      "hashedCount": 10000,
+      "completeHash": false,
+      "sha256": "932a285b0af6d2f920cacaaa243f65f8c556c5a78ee7d44a12dc936bc24782d8"
+    },
+    "handlerMs": {
+      "n": 81730,
+      "p50": 0,
+      "p95": 0.1,
+      "p99": 0.1,
+      "max": 2.2000000029802322,
+      "resolutionMs": 0.01
+    },
+    "quoteLatencyMs": {
+      "n": 158599,
+      "p50": 0,
+      "p95": 0.1,
+      "p99": 0.1,
+      "max": 2.2000000029802322,
+      "resolutionMs": 0.01
+    },
+    "timerJitterMs": {
+      "n": 4547,
+      "p50": 0.1,
+      "p95": 0.8,
+      "p99": 1.4,
+      "max": 41.900000005960464,
+      "resolutionMs": 0.01
+    },
+    "wsCreated": 1,
+    "wsClosed": 0,
+    "workerCreated": 1,
+    "workerTerminated": 0,
+    "subscriptions": [
+      {
+        "at": 1314.8999999910593,
+        "hash": "d0b8136c0ebe001abf0d32153f0dac0895342c523c6c6d4483f21aefc0396304",
+        "assets": 118
+      }
+    ],
+    "failure": null,
+    "workerAliveAtEnd": true,
+    "workerFailedObservations": 0,
+    "visibleObservations": 91,
+    "hiddenObservations": 0,
+    "coverage": {
+      "observations": 91,
+      "requestedAssetObservations": 1456,
+      "snapshotFreshAssetObservations": 528,
+      "eligibleAssetObservations": 252,
+      "snapshotRatio": 0.3626373626373626,
+      "eligibleRatio": 0.17307692307692307,
+      "missingReportObservations": 2,
+      "staleReports": 0,
+      "reasons": {
+        "no_snapshot": 896,
+        "metadata_unknown_or_stale": 132,
+        "stale_book": 144
+      }
+    },
+    "after60s": {
+      "observations": 32,
+      "requestedAssetObservations": 512,
+      "snapshotFreshAssetObservations": 192,
+      "eligibleAssetObservations": 138,
+      "snapshotRatio": 0.375,
+      "eligibleRatio": 0.26953125,
+      "missingReportObservations": 0,
+      "staleReports": 0,
+      "reasons": {
+        "no_snapshot": 320,
+        "stale_book": 54
+      }
+    },
+    "syntheticReads": {
+      "recorded": 720,
+      "ready": 109,
+      "pending": 0,
+      "outcomes": {
+        "http_shape_unknown": 720
+      },
+      "misses": {
+        "no_snapshot": 456,
+        "metadata_unknown_or_stale": 65,
+        "stale_book": 90
+      }
+    },
+    "syntheticBeginQueueMs": {
+      "count": 720,
+      "p50": 16.800048828125,
+      "p95": 17.89990234375
+    },
+    "syntheticFinishQueueMs": {
+      "count": 720,
+      "p50": 16.800048828125,
+      "p95": 17.89990234375
+    },
+    "counters": {
+      "attempt_seen": 720,
+      "attempt_completed": 720,
+      "http_resolved": 720,
+      "stream_frames": 81722,
+      "stream_chars": 49758022
+    },
+    "workerCounters": {
+      "stream_changed": 2,
+      "attempt_seen": 704,
+      "http_shape_unknown": 704,
+      "snapshot_received": 52,
+      "increment_state_received": 6408,
+      "probe_failed": 18,
+      "ambiguous_timestamp": 2,
+      "aligned_equal": 5,
+      "unaligned_or_changed": 4
+    },
+    "mailbox": {
+      "pendingBatches": 0,
+      "queuedEntries": 8,
+      "pendingEntries": 8,
+      "pendingChars": 10069,
+      "batchesSent": 2662,
+      "highEntries": 705,
+      "highChars": 425968
+    }
+  },
+  "gates": {
+    "at": "2026-10-16T14:51:40.312Z",
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "scope": "gate with explicit store/consumer fixtures; actual precheckOnly entry with public HTTP; no signer or order",
+    "results": [
+      {
+        "name": "classic gate legacy",
+        "pass": true,
+        "details": {
+          "created": 0,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "classic gate undefined",
+        "pass": true,
+        "details": {
+          "created": 0,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "classic gate invalid",
+        "pass": true,
+        "details": {
+          "created": 0,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "optimized defaults off",
+        "pass": true,
+        "details": {
+          "created": 0
+        }
+      },
+      {
+        "name": "explicit dynamic starts isolated worker",
+        "pass": true,
+        "details": {
+          "created": 1,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "classic switch synchronously terminates",
+        "pass": true,
+        "details": {
+          "terminated": 1
+        }
+      },
+      {
+        "name": "late import cannot restart classic",
+        "pass": true,
+        "details": {
+          "created": 1
+        }
+      },
+      {
+        "name": "logout prevents start",
+        "pass": true,
+        "details": {
+          "created": 1
+        }
+      },
+      {
+        "name": "legacy HTTP identity observerThrows=false",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 0,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      },
+      {
+        "name": "legacy HTTP identity observerThrows=true",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 0,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      },
+      {
+        "name": "optimized HTTP identity observerThrows=false",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 1,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      },
+      {
+        "name": "optimized HTTP identity observerThrows=true",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 1,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      }
+    ],
+    "publicBookHealth": [
+      {
+        "asset": "78375709349390362396705836138040366448567989574607141941303213545950025063685",
+        "status": 200,
+        "asks": 22,
+        "bids": 54,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "98518759788146414583726246195443498385353396482551185756037481392359232681428",
+        "status": 200,
+        "asks": 54,
+        "bids": 22,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "69103495984149807544850050849363164650581020413656446275066607130373241681007",
+        "status": 200,
+        "asks": 17,
+        "bids": 61,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "773046305496941355931256210613926858794988843177648888627004067835396134332",
+        "status": 200,
+        "asks": 60,
+        "bids": 17,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "12779767260007654159870637048873535476679349664639234804146083914742271243013",
+        "status": 404
+      },
+      {
+        "asset": "89006753911384181161890747467865110106757511481482227593169546473849004723241",
+        "status": 404
+      },
+      {
+        "asset": "59177046144453601927120434550595213181667432907340234613634498853783278620595",
+        "status": 404
+      },
+      {
+        "asset": "101567585202825501540852288403390113584973904318424618167325539059268413230879",
+        "status": 404
+      },
+      {
+        "asset": "78645380634894089335962469240994695939081276074060467399226021836944516454743",
+        "status": 404
+      },
+      {
+        "asset": "5546487395128235043067648746398656164340790195211682649353143544008663720547",
+        "status": 404
+      },
+      {
+        "asset": "70273079696269397478668992274377809564429930023671209205254449877823451920090",
+        "status": 200,
+        "asks": 0,
+        "bids": 84,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "67407862620736977792317544829110794147964165981448128298574008418672750194353",
+        "status": 200,
+        "asks": 84,
+        "bids": 0,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "91981221112673037991315008598832348972303468953241224769714813656576509935032",
+        "status": 404
+      },
+      {
+        "asset": "96571113009785673930638988461083485671308860547641084209185142949741584919370",
+        "status": 404
+      },
+      {
+        "asset": "42749810669476436790840284290167412053476121506771549193434008073826424930339",
+        "status": 404
+      },
+      {
+        "asset": "67868459777094806866393679795030744935202798000459836523047516813058608354579",
+        "status": 404
+      }
+    ]
+  },
+  "checks": {
+    "liveThirtyMinutes": true,
+    "liveWorkersSurvived": true,
+    "sameReplayQuotes": true,
+    "gatesPass": true,
+    "noAlignedDifference": true,
+    "backgroundActuallyHidden": false,
+    "backgroundWorkerSurvived": true
+  },
+  "limits": [
+    "Fixed prior-discovered 118 source tokens / 16 candidates; discovery refresh failed, not river production portfolio.",
+    "Live quote hashes cover only first 10000 outputs; only replay hashes are complete.",
+    "Diagnostic reads are synthetic, public probes and precheckOnly checks do not submit orders.",
+    "Coverage is sampled asset-observations, not exact time integration or production fill rate.",
+    "One Brave browser/device; fixture uses actual source modules and built Worker, not full logged-in app.",
+    "Bounded raw recording may skip oversized-to-remaining-budget frames; only initial replay prefix used.",
+    "Lifecycle intentionally closes its fixture-owned connection; recovery uses original PM-M implementation."
+  ],
+  "blockers": [
+    "No actual hidden observations: background scheduling was not exercised",
+    "Fixed candidates ended with 10 of 16 HTTP 404; current active-candidate coverage needs validation"
+  ],
+  "remediated": [
+    "Per-frame eight-message overflow replaced with bounded ordered batches and ACK credits",
+    "Shared-stream frame-count quota replaced with asset filtering and measured processing budget"
+  ],
+  "productionFlagEnabled": false,
+  "published": false,
+  "regression": {
+    "frontend": {
+      "filesPassed": 502,
+      "testsPassed": 4420,
+      "testsSkipped": 3,
+      "note": "before final observer-admission cleanup"
+    },
+    "finalTargeted": {
+      "files": 9,
+      "tests": 98
+    },
+    "finalBuild": true,
+    "fokParity": {
+      "comparisons": 180,
+      "confirmationFaultCases": 20,
+      "originalGateCases": 45,
+      "functionsIdentical": 49
+    },
+    "immutableFokFiles": 551
+  }
+}

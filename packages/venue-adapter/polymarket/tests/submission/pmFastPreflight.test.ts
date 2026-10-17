@@ -5,6 +5,7 @@ import { runPmBuyPreflight } from "../../submission/preflight/pmBuyPreflight";
 import { runPmBuyPreflight as before } from "./fixtures/pmBeforeFastPreflight";
 import { prepareOptimizedFokExecution } from "../../submission/preflight/optimized/pmFastPreflight";
 import { clearPmGammaCacheForTests } from "../../pmSportGamma";
+import { registerWsBookShadowObserver } from "../../submission/preflight/optimized/wsBook/shadowObserver";
 
 const io = vi.hoisted(() => ({ ready: true, generation: 1, quote: undefined as unknown, get: vi.fn(), prepare: vi.fn(), runtime: vi.fn() }));
 vi.mock("../../transport", () => ({ polymarketPluginGet: io.get }));
@@ -81,4 +82,31 @@ test("precheck-only skips wallet and clock; book failures still reject", async (
   expect((await runPmBuyPreflight(account, option(), opts)).runtime.value).toBeNull();
   await expect(runPmBuyPreflight(account, option(), { ...opts, market: async () => { throw new Error("trading is disabled"); } })).rejects.toThrow("trading is disabled");
   expect(io.runtime).not.toHaveBeenCalled(); expect(io.prepare).not.toHaveBeenCalled();
+});
+
+test("shadow success, failure and observer exceptions never substitute HTTP or add another market call", async () => {
+  for (const throwing of [false, true]) {
+    const finish = vi.fn(() => { if (throwing) throw new Error("diagnostics failed"); });
+    const begin = vi.fn(() => finish), release = registerWsBookShadowObserver(begin);
+    try {
+      const value = Object.freeze({ price: .51, asks: Object.freeze([]) });
+      const market = vi.fn(async () => value);
+      expect((await runPmBuyPreflight(account, option(), tasks(market as never))).market.value).toBe(value);
+      expect(market).toHaveBeenCalledOnce(); expect(begin).toHaveBeenCalledOnce(); expect(finish).toHaveBeenCalledWith(value, false);
+      const error = new Error("HTTP failed"); const reject = vi.fn(async () => { throw error; });
+      await expect(runPmBuyPreflight(account, option(), tasks(reject))).rejects.toBe(error);
+      expect(reject).toHaveBeenCalledOnce(); expect(finish).toHaveBeenLastCalledWith(undefined, true);
+    } finally { release(); }
+  }
+});
+
+test.each(["legacy", undefined])("%s does not invoke a registered dynamic shadow observer", async mode => {
+  const begin = vi.fn(), release = registerWsBookShadowObserver(begin);
+  try {
+    // No role/signing changes: precheck-only exercises the original orchestration branch.
+    io.get.mockResolvedValue({ active: true, accepting_orders: true, events: [{ live: true }] });
+    const market = vi.fn(async () => "http");
+    await runPmBuyPreflight(account, option(), { ...tasks(market), sportMode: mode, role: "precheckOnly" });
+    expect(begin).not.toHaveBeenCalled(); expect(market).toHaveBeenCalledOnce();
+  } finally { release(); }
 });

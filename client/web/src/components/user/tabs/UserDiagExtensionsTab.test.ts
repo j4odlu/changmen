@@ -1,6 +1,8 @@
 import { renderToString } from "@vue/server-renderer";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setPmFokPreflightMode } from "@changmen/venue-adapter/polymarket/pmFokPreflightMode";
+import { PM_BOOK_KEYS, readPmBookSettings } from "@/runtime/pmBookSettings";
 import { createSSRApp } from "vue";
 import { useUserStore } from "@/stores/userStore";
 import Tab from "./UserDiagExtensionsTab.vue";
@@ -10,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   save: vi.fn(),
   select: undefined as ((value: string) => void) | undefined,
   selectPreflight: undefined as ((value: string) => void) | undefined,
+  switches: new Map<string, { disabled: boolean; value: boolean; change: (value: boolean) => void }>(),
 }));
 
 vi.mock("element-plus/es/components/base/style/css", () => ({}));
@@ -49,7 +52,15 @@ vi.mock("element-plus/es", async () => {
     ElFormItem: container,
     ElTooltip: container,
     ElInputNumber: container,
-    ElSwitch: container,
+    ElSwitch: defineComponent({
+      props: ["modelValue", "disabled"], emits: ["change"],
+      setup(props, { attrs, emit }) {
+        if (attrs["aria-label"]) mocks.switches.set(String(attrs["aria-label"]), {
+          disabled: !!props.disabled, value: !!props.modelValue, change: value => emit("change", value),
+        });
+        return () => h("span");
+      },
+    }),
     ElButton: defineComponent({ setup: (_props, { slots }) => () => h("button", slots.default?.()) }),
     ElRadioGroup: defineComponent({
       props: ["modelValue"],
@@ -92,9 +103,43 @@ beforeEach(() => {
   mocks.save.mockReset().mockResolvedValue(undefined);
   mocks.select = undefined;
   mocks.selectPreflight = undefined;
+  mocks.switches.clear();
+  setPmFokPreflightMode("legacy");
+  for (const key of Object.values(PM_BOOK_KEYS)) localStorage.removeItem(key);
+});
+afterEach(() => {
+  setPmFokPreflightMode("legacy");
+  for (const key of Object.values(PM_BOOK_KEYS)) localStorage.removeItem(key);
 });
 
 describe("pm GTC V1 explicit activation in Extensions", () => {
+  it("keeps local observation switches off and disabled for saved classic despite an unsaved dynamic form", async () => {
+    useUserStore().extensionPrefs.pmFokPreflightMode = "optimized";
+    const html = await renderToString(createSSRApp(Tab));
+    expect(html).toContain("实际预检仍走 HTTP"); expect(html).toContain("仅当前浏览器、当前站点生效");
+    expect(mocks.switches.get("本地订单簿")).toMatchObject({ disabled: true, value: false });
+    expect(mocks.switches.get("动态预检对照")).toMatchObject({ disabled: true, value: false });
+    mocks.switches.get("本地订单簿")!.change(true);
+    expect(readPmBookSettings().localBook).toBe(false);
+  });
+  it("saves browser switches immediately without saving account preferences and permits rollback in classic", async () => {
+    setPmFokPreflightMode("optimized");
+    await renderToString(createSSRApp(Tab));
+    mocks.switches.get("本地订单簿")!.change(true);
+    expect(readPmBookSettings().localBook).toBe(true);
+    await renderToString(createSSRApp(Tab));
+    expect(mocks.switches.get("动态预检对照")!.disabled).toBe(false);
+    mocks.switches.get("动态预检对照")!.change(true);
+    expect(readPmBookSettings().shadow).toBe(true);
+    expect(mocks.save).not.toHaveBeenCalled();
+    setPmFokPreflightMode("legacy"); await renderToString(createSSRApp(Tab));
+    expect(mocks.switches.get("本地订单簿")!.disabled).toBe(false);
+    mocks.switches.get("本地订单簿")!.change(false);
+    expect(readPmBookSettings()).toEqual({ localBook: false, shadow: true });
+    mocks.switches.get("动态预检对照")!.change(false);
+    expect(readPmBookSettings().shadow).toBe(false);
+    expect(useUserStore().extensionPrefs.pmFokPreflightMode).toBe("legacy");
+  });
   it("renders legacy as the FOK default and edits the independent preference without activating GTC", async () => {
     const html = await renderToString(createSSRApp(Tab));
     expect(html).toContain("经典预检（默认）");

@@ -1,4 +1,5 @@
 import { notePmTickFrame, notePmTickReconnect } from "../pmTickState";
+import { notePmStreamConnecting, notePmStreamOpen, notePmStreamFrame, capturePmStreamTime } from "./marketStream";
 import { reportVenueWsMeta, reportVenueWsStatus } from "../../shared/venueWsStatus";
 import { resolvePolymarketMarketWsUrl } from "../wsConfig";
 import {
@@ -154,6 +155,7 @@ function isPolymarketQuoteFrame(raw: string): boolean {
 
 function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
   let stopped = false;
+  let streamEpoch = 0;
   let ws: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let pingTimer: ReturnType<typeof setInterval> | null = null;
@@ -223,6 +225,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
     clearConnectionTimers();
     const socket = ws;
     ws = null;
+    notePmStreamOpen(streamEpoch, false);
     try {
       socket?.close();
     }
@@ -237,6 +240,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
     if (stopped || ws !== socket) return;
     clearConnectionTimers();
     ws = null;
+    notePmStreamOpen(streamEpoch, false);
     notePmMarketClientError(reason, error);
     setPolymarketWsStatus("error", reason);
     reportPmMarketMeta({ lastError: error });
@@ -253,6 +257,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
     connectedAt = 0;
     lastReceivedAt = 0;
     connectionMode = getPmMarketWsSourceMode();
+    streamEpoch = notePmStreamConnecting(connectionMode);
     let socket: WebSocket;
     try {
       socket = new WebSocket(resolvePolymarketMarketWsUrl());
@@ -280,6 +285,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
       lastHeartbeatCheckAt = heartbeatGraceAt = connectedAt;
       notePmMarketClientConnected(getPmMarketWsSourceMode() === "official" ? "official_connected" : "changmen_connected");
       setPolymarketWsStatus("connected", getPmMarketWsSourceMode() === "official" ? "official_connected" : "changmen_connected");
+      notePmStreamOpen(streamEpoch, true);
       opts.onOpen();
       notePmTickReconnect();
       updateSubscriptionWatchdog();
@@ -304,13 +310,17 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
       if (ws !== socket)
         return;
       const raw = String(event.data);
+      const streamReceivedAt = capturePmStreamTime();
       lastReceivedAt = Date.now();
       // [changmen 扩展] 握手成功不等于线路稳定，短暂连接仍累计失败以触发自动回退。
       if (connectionMode === "official" && Date.now() - connectedAt >= WS_STABLE_CONNECTION_MS)
         officialFailStreak = 0;
       notePmTickFrame(raw);
       if (raw === "PONG") return;
-      if (!raw.trim().startsWith("{") && !raw.trim().startsWith("[")) return;
+      if (!raw.trim().startsWith("{") && !raw.trim().startsWith("[")) {
+        notePmStreamFrame(streamEpoch, raw, lastReceivedAt, streamReceivedAt);
+        return;
+      }
       notePmMarketClientFrame();
       if (isPolymarketQuoteFrame(raw)) {
         receivedQuote = true;
@@ -322,6 +332,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
       } catch (err) {
         console.warn("[Polymarket WS] parse error", err);
       }
+      notePmStreamFrame(streamEpoch, raw, lastReceivedAt, streamReceivedAt);
     };
 
     socket.onclose = (event) => {
@@ -353,6 +364,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
       clearConnectionTimers();
       const socket = ws;
       ws = null;
+      notePmStreamOpen(streamEpoch, false);
       // 必须先取出再 close：若先 cleanup 置空，旧连接会成 hub 僵尸客户端
       try {
         socket?.close();

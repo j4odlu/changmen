@@ -1,0 +1,31 @@
+{
+  "changes": {
+    "packages/venue-adapter/polymarket/fok/preflight.ts": {
+      "beforeSha": "eea319c6b21c379185da44ca5d9979c7f0889aa57a7a062ff525cf3dcf232351",
+      "increments": [
+        [
+          "        market: () => resolvePolymarketExecutableBuy(gateway, tokenId, detectionOdds, apiBetMoney, maxPrice),",
+          "        market: () => resolvePolymarketExecutableBuy(gateway, tokenId, detectionOdds, apiBetMoney, maxPrice),\n        ...(preflightMode === \"optimized\" ? { shadowInput: { tokenId, detectionOdds, apiBetMoney, maxPrice, depth: getPmFokDepthBufferPrefs() } } : {}),"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/submission/preflight/pmBuyPreflight.ts": {
+      "beforeSha": "42d08528768c1a603efc70dae4e09f1778f4def738923a6e411032194b25518e",
+      "increments": [
+        [
+          "  market: () => Promise<T>;",
+          "  market: () => Promise<T>;\n  shadowInput?: import(\"./optimized/wsBook/executionMath\").SimulationInput;"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/submission/preflight/optimized/pmFastPreflight.ts": {
+      "beforeSha": "12959bb1f84b1de859477344850df4184aca5170ac555e2de048909047d019b1",
+      "increments": [
+        [
+          "  const finishShadow = beginWsBookShadow({ tokenId: option.itemId, gateway: tasks.gateway,",
+          "  const finishShadow = beginWsBookShadow({ tokenId: option.itemId, gateway: tasks.gateway,\n    simulation: tasks.shadowInput,"
+        ]
+      ]
+    }
+  }
+}

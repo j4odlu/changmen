@@ -32,6 +32,7 @@ import { startOrderObservation } from "@/services/orderObservation";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useUserStore } from "@/stores/userStore";
 import { installPmTickBufferQuotes, stopPmTickBufferQuotes } from "@/runtime/pmTickBufferQuotes";
+import { installPmDynamicWsPreflight, stopPmDynamicWsPreflight } from "@/runtime/pmDynamicWsPreflight";
 
 /** 注册 client-core 桥接（须在 createPinia 之后、采集/下注启动前调用） */
 export function installClientCoreBridges() {
@@ -53,6 +54,7 @@ export function installClientCoreBridges() {
 
   const odds = useOddsStore();
   installPmTickBufferQuotes();
+  installPmDynamicWsPreflight();
   registerOddsAccess({
     read: (provider, itemId, fallback) =>
       odds.getOdds(provider, itemId, fallback) || 0,
@@ -105,6 +107,7 @@ export function installClientCoreBridges() {
 
 export function clearClientCoreBridges() {
   stopPmTickBufferQuotes();
+  stopPmDynamicWsPreflight();
   clearClientApi();
   clearOddsAccess();
   clearPlatformHttpContext();

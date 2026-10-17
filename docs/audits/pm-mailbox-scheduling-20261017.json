@@ -1,0 +1,2086 @@
+{
+  "at": "2026-10-16T16:48:31.568Z",
+  "verdict": "ELIGIBLE_FOR_LIMITED_SHADOW_REVIEW",
+  "deploymentAuthorized": false,
+  "worker": {
+    "url": "/client/web/dist/assets/marketData.worker-JWsc7rVY.js",
+    "sha256": "62676c135757ca4de8ddb51c5c72a2c4c8f56e198e7b81ece64941d86830ffbf"
+  },
+  "mailboxSourceSha256": "06fd9687db0ef6c532ff97d17393e986bb55bd93a11934636437000ce07ba052",
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+  "native": {
+    "at": "2026-10-16T16:12:37.312Z",
+    "source": {
+      "visibility": "hidden",
+      "focus": false,
+      "hidden": true
+    },
+    "cover": {
+      "visibility": "visible",
+      "focus": true
+    }
+  },
+  "live": [
+    {
+      "name": "live-cold",
+      "startedAt": "2026-10-16T16:12:08.515Z",
+      "durationMs": 901063,
+      "frames": 594296,
+      "quotes": {
+        "count": 1150275,
+        "hashedCount": 10000,
+        "completeHash": false,
+        "sha256": "f1ed0dced75a1f00b0518a6c3c1e171424096ac44665987db284670901f3fea3"
+      },
+      "handlers": {
+        "n": 594296,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 5.300000011920929,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 1150275,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 5.300000011920929,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 26250,
+        "p50": 0,
+        "p95": 0.9,
+        "p99": 1.3,
+        "max": 59989.09999999404,
+        "resolutionMs": 0.01
+      },
+      "wsCreated": 3,
+      "wsClosed": 2,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "workerAlive": true,
+      "failure": null,
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 215017,
+        "highEntries": 356,
+        "highChars": 230424,
+        "scheduler": "message-task",
+        "maxQueueMs": 13.199999988079071,
+        "maxAckMs": 13.700000017881393,
+        "oldestQueuedMs": 0,
+        "oldestInflightMs": 0,
+        "oldestAckMs": 0
+      },
+      "workerCounters": {
+        "snapshot_received": 1116,
+        "increment_state_received": 276936,
+        "stream_changed": 8,
+        "attempt_seen": 4576,
+        "http_shape_unknown": 4576,
+        "unaligned_or_changed": 67,
+        "aligned_equal": 160,
+        "snapshot_expired": 27,
+        "no_snapshot": 57,
+        "ambiguous_timestamp": 9,
+        "tick_changed": 12,
+        "asset_removed": 2
+      },
+      "mainCounters": {
+        "attempt_seen": 4576,
+        "attempt_completed": 4576,
+        "http_resolved": 4576
+      },
+      "subscriptionMessages": [
+        {
+          "at": 1297.5999999940395,
+          "sha256": "eee84430d02880d5773c42a8cf3a03e1e35c925f37bb64d439a6e17daf9074da",
+          "assets": 100
+        },
+        {
+          "at": 405460,
+          "sha256": "eee84430d02880d5773c42a8cf3a03e1e35c925f37bb64d439a6e17daf9074da",
+          "assets": 100
+        },
+        {
+          "at": 452642.7999999821,
+          "sha256": "eee84430d02880d5773c42a8cf3a03e1e35c925f37bb64d439a6e17daf9074da",
+          "assets": 100
+        }
+      ],
+      "coverage": {
+        "samples": 573,
+        "assetObservations": 9168,
+        "snapshot": 7132,
+        "eligible": 3465,
+        "missing": 5,
+        "stale": 0,
+        "snapshotRatio": 0.7779232111692844,
+        "eligibleRatio": 0.37794502617801046,
+        "misses": {
+          "metadata_unknown_or_stale": 682,
+          "stale_book": 2887,
+          "no_snapshot": 1796,
+          "source_clock_or_age": 98
+        }
+      },
+      "after60s": {
+        "samples": 526,
+        "assetObservations": 8416,
+        "snapshot": 6412,
+        "eligible": 3138,
+        "missing": 3,
+        "stale": 0,
+        "snapshotRatio": 0.7618821292775665,
+        "eligibleRatio": 0.372861216730038,
+        "misses": {
+          "stale_book": 2773,
+          "no_snapshot": 1796,
+          "metadata_unknown_or_stale": 403,
+          "source_clock_or_age": 98
+        }
+      },
+      "hiddenCoverage": {
+        "samples": 53,
+        "assetObservations": 848,
+        "snapshot": 758,
+        "eligible": 594,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 0.8938679245283019,
+        "eligibleRatio": 0.7004716981132075,
+        "misses": {
+          "stale_book": 122,
+          "metadata_unknown_or_stale": 34,
+          "no_snapshot": 90,
+          "source_clock_or_age": 8
+        }
+      },
+      "visibleCoverage": {
+        "samples": 520,
+        "assetObservations": 8320,
+        "snapshot": 6374,
+        "eligible": 2871,
+        "missing": 5,
+        "stale": 0,
+        "snapshotRatio": 0.7661057692307692,
+        "eligibleRatio": 0.3450721153846154,
+        "misses": {
+          "metadata_unknown_or_stale": 648,
+          "stale_book": 2765,
+          "source_clock_or_age": 90,
+          "no_snapshot": 1706
+        }
+      },
+      "maxSampleGapMs": 60009.39999997616,
+      "visibilityEvents": [
+        {
+          "at": 27197.40000000596,
+          "state": "hidden",
+          "trusted": true
+        },
+        {
+          "at": 393930.5,
+          "state": "visible",
+          "trusted": true
+        },
+        {
+          "at": 600923.599999994,
+          "state": "hidden",
+          "trusted": true
+        },
+        {
+          "at": 612041.599999994,
+          "state": "visible",
+          "trusted": true
+        }
+      ],
+      "nativeWindows": [
+        {
+          "hiddenAt": 27197.40000000596,
+          "visibleAt": 393930.5,
+          "durationMs": 366733.09999999404,
+          "priorSession": 1,
+          "recoveredSession": 1,
+          "firstFreshSnapshotMs": 761.5,
+          "firstEligibleMs": 18883,
+          "recoveredStreamEpoch": 1,
+          "priorStreamEpoch": 1,
+          "incrementBefore": 182824,
+          "incrementAfter": 276936
+        },
+        {
+          "hiddenAt": 600923.599999994,
+          "visibleAt": 612041.599999994,
+          "durationMs": 11118,
+          "priorSession": 1,
+          "recoveredSession": 1,
+          "firstFreshSnapshotMs": 631.5,
+          "firstEligibleMs": 631.5,
+          "recoveredStreamEpoch": 3,
+          "priorStreamEpoch": 3,
+          "incrementBefore": 208280,
+          "incrementAfter": 276936
+        }
+      ],
+      "probeOutcomes": {
+        "unaligned_or_changed": 67,
+        "aligned_equal": 160,
+        "no_snapshot": 57,
+        "ambiguous_timestamp": 9
+      }
+    },
+    {
+      "name": "live-off",
+      "startedAt": "2026-10-16T16:27:09.653Z",
+      "durationMs": 15197.899999976158,
+      "frames": 7490,
+      "quotes": {
+        "count": 14090,
+        "hashedCount": 10000,
+        "completeHash": false,
+        "sha256": "7ec21f1d1e543f60c5450a6c8ecd137cdb29d34e64557cce17ad582cd2397b65"
+      },
+      "handlers": {
+        "n": 7490,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 0.30000001192092896,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 14090,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 0.30000001192092896,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 760,
+        "p50": 0,
+        "p95": 0.9,
+        "p99": 1.2,
+        "max": 1.5999999940395355,
+        "resolutionMs": 0.01
+      },
+      "wsCreated": 0,
+      "wsClosed": 0,
+      "workerCreated": 0,
+      "workerTerminated": 0,
+      "failure": null,
+      "subscriptionMessages": [],
+      "coverage": {
+        "samples": 16,
+        "assetObservations": 256,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 16,
+        "stale": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "misses": {}
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "visibleCoverage": {
+        "samples": 16,
+        "assetObservations": 256,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 16,
+        "stale": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "misses": {}
+      },
+      "maxSampleGapMs": 1015.0999999940395,
+      "visibilityEvents": [],
+      "nativeWindows": [],
+      "probeOutcomes": {}
+    },
+    {
+      "name": "live-late",
+      "startedAt": "2026-10-16T16:27:24.853Z",
+      "durationMs": 900807,
+      "frames": 511984,
+      "quotes": {
+        "count": 990240,
+        "hashedCount": 10000,
+        "completeHash": false,
+        "sha256": "fe493454a1fee75792b11a3dae4533950d2de1e3247bcf3db46dcf7ade0437f7"
+      },
+      "handlers": {
+        "n": 511984,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 3,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 990240,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 3,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 26201,
+        "p50": 0.1,
+        "p95": 0.9,
+        "p99": 1.3,
+        "max": 59981.59999999404,
+        "resolutionMs": 0.01
+      },
+      "wsCreated": 0,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "workerAlive": true,
+      "failure": null,
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 155295,
+        "highEntries": 268,
+        "highChars": 216622,
+        "scheduler": "message-task",
+        "maxQueueMs": 12.599999994039536,
+        "maxAckMs": 9.699999988079071,
+        "oldestQueuedMs": 0,
+        "oldestInflightMs": 0,
+        "oldestAckMs": 0
+      },
+      "workerCounters": {
+        "snapshot_received": 806,
+        "increment_state_received": 307366,
+        "attempt_seen": 4496,
+        "http_shape_unknown": 4496,
+        "aligned_equal": 114,
+        "no_snapshot": 137,
+        "unaligned_or_changed": 43,
+        "snapshot_expired": 14,
+        "ambiguous_timestamp": 4,
+        "tick_changed": 4
+      },
+      "mainCounters": {
+        "attempt_seen": 4496,
+        "attempt_completed": 4496,
+        "http_resolved": 4496
+      },
+      "subscriptionMessages": [],
+      "coverage": {
+        "samples": 564,
+        "assetObservations": 9024,
+        "snapshot": 4580,
+        "eligible": 2607,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 0.5075354609929078,
+        "eligibleRatio": 0.2888962765957447,
+        "misses": {
+          "metadata_unknown_or_stale": 259,
+          "no_snapshot": 4442,
+          "stale_book": 1716
+        }
+      },
+      "after60s": {
+        "samples": 506,
+        "assetObservations": 8096,
+        "snapshot": 4330,
+        "eligible": 2459,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 0.5348320158102767,
+        "eligibleRatio": 0.3037302371541502,
+        "misses": {
+          "no_snapshot": 3764,
+          "stale_book": 1706,
+          "metadata_unknown_or_stale": 167
+        }
+      },
+      "hiddenCoverage": {
+        "samples": 44,
+        "assetObservations": 704,
+        "snapshot": 310,
+        "eligible": 198,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 0.4403409090909091,
+        "eligibleRatio": 0.28125,
+        "misses": {
+          "no_snapshot": 394,
+          "stale_book": 112
+        }
+      },
+      "visibleCoverage": {
+        "samples": 520,
+        "assetObservations": 8320,
+        "snapshot": 4270,
+        "eligible": 2409,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 0.5132211538461539,
+        "eligibleRatio": 0.28954326923076923,
+        "misses": {
+          "metadata_unknown_or_stale": 259,
+          "no_snapshot": 4048,
+          "stale_book": 1604
+        }
+      },
+      "maxSampleGapMs": 60001.40000000596,
+      "visibilityEvents": [
+        {
+          "at": 57838.19999998808,
+          "state": "hidden",
+          "trusted": true
+        },
+        {
+          "at": 436142.59999999404,
+          "state": "visible",
+          "trusted": true
+        }
+      ],
+      "nativeWindows": [
+        {
+          "hiddenAt": 57838.19999998808,
+          "visibleAt": 436142.59999999404,
+          "durationMs": 378304.40000000596,
+          "priorSession": 2,
+          "recoveredSession": 2,
+          "firstFreshSnapshotMs": 0.4000000059604645,
+          "firstEligibleMs": 0.4000000059604645,
+          "recoveredStreamEpoch": 3,
+          "priorStreamEpoch": 3,
+          "incrementBefore": 86456,
+          "incrementAfter": 307366
+        }
+      ],
+      "probeOutcomes": {
+        "aligned_equal": 114,
+        "no_snapshot": 137,
+        "unaligned_or_changed": 43,
+        "ambiguous_timestamp": 4
+      }
+    }
+  ],
+  "replay": [
+    {
+      "name": "replay-off-1",
+      "startedAt": "2026-10-16T16:43:35.298Z",
+      "durationMs": 7965.5,
+      "frames": 3000,
+      "quotes": {
+        "count": 5852,
+        "hashedCount": 5852,
+        "completeHash": true,
+        "sha256": "f6b171f68ca1abacb201f553cc4678077a3eb3ec37012497294c78979786eb53"
+      },
+      "handlers": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 2.300000011920929,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 5852,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 2.1,
+        "max": 2.300000011920929,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 399,
+        "p50": 0,
+        "p95": 0.9,
+        "p99": 1.5,
+        "max": 24.200000017881393,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 0.118826,
+        "ScriptDuration": 0.006348,
+        "LayoutDuration": 0.0004050000000000001,
+        "RecalcStyleDuration": 0.00002500000000000001
+      },
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 0,
+      "workerTerminated": 0,
+      "failure": null,
+      "subscriptionMessages": [
+        {
+          "at": 1.5,
+          "sha256": "eee84430d02880d5773c42a8cf3a03e1e35c925f37bb64d439a6e17daf9074da",
+          "assets": 100
+        }
+      ],
+      "coverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 1,
+        "stale": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "misses": {}
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "visibleCoverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 1,
+        "stale": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "misses": {}
+      },
+      "maxSampleGapMs": 0,
+      "visibilityEvents": [],
+      "nativeWindows": [],
+      "probeOutcomes": {}
+    },
+    {
+      "name": "replay-on-1",
+      "startedAt": "2026-10-16T16:43:43.266Z",
+      "durationMs": 8014.899999976158,
+      "frames": 3000,
+      "quotes": {
+        "count": 5852,
+        "hashedCount": 5852,
+        "completeHash": true,
+        "sha256": "f6b171f68ca1abacb201f553cc4678077a3eb3ec37012497294c78979786eb53"
+      },
+      "handlers": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 4.5,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 5852,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 4.3,
+        "max": 4.4000000059604645,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 401,
+        "p50": 0,
+        "p95": 0.9,
+        "p99": 1.3,
+        "max": 1.9000000059604645,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 0.18134,
+        "ScriptDuration": 0.040953,
+        "LayoutDuration": 0.00026099999999999995,
+        "RecalcStyleDuration": 0.000022999999999999963
+      },
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "workerAlive": true,
+      "failure": null,
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 752,
+        "highEntries": 6,
+        "highChars": 180314,
+        "scheduler": "message-task",
+        "maxQueueMs": 0.800000011920929,
+        "maxAckMs": 4.0999999940395355,
+        "oldestQueuedMs": 0,
+        "oldestInflightMs": 0,
+        "oldestAckMs": 0
+      },
+      "workerCounters": {
+        "snapshot_received": 16,
+        "increment_state_received": 1306,
+        "stream_changed": 2,
+        "unaligned_or_changed": 2
+      },
+      "mainCounters": {},
+      "subscriptionMessages": [
+        {
+          "at": 1.2999999821186066,
+          "sha256": "eee84430d02880d5773c42a8cf3a03e1e35c925f37bb64d439a6e17daf9074da",
+          "assets": 100
+        }
+      ],
+      "coverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshot": 16,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 1,
+        "eligibleRatio": 0,
+        "misses": {
+          "stale_book": 16
+        }
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "visibleCoverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshot": 16,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 1,
+        "eligibleRatio": 0,
+        "misses": {
+          "stale_book": 16
+        }
+      },
+      "maxSampleGapMs": 0,
+      "visibilityEvents": [],
+      "nativeWindows": [],
+      "probeOutcomes": {
+        "unaligned_or_changed": 2
+      }
+    },
+    {
+      "name": "replay-on-2",
+      "startedAt": "2026-10-16T16:43:51.284Z",
+      "durationMs": 8027.0999999940395,
+      "frames": 3000,
+      "quotes": {
+        "count": 5852,
+        "hashedCount": 5852,
+        "completeHash": true,
+        "sha256": "f6b171f68ca1abacb201f553cc4678077a3eb3ec37012497294c78979786eb53"
+      },
+      "handlers": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 1.699999988079071,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 5852,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 1.7,
+        "max": 1.699999988079071,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 401,
+        "p50": 0,
+        "p95": 0.9,
+        "p99": 1.3,
+        "max": 1.5,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 0.16627199999999998,
+        "ScriptDuration": 0.033124999999999995,
+        "LayoutDuration": 0.00018099999999999995,
+        "RecalcStyleDuration": 0.000018000000000000004
+      },
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "workerAlive": true,
+      "failure": null,
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 752,
+        "highEntries": 6,
+        "highChars": 180314,
+        "scheduler": "message-task",
+        "maxQueueMs": 0.5,
+        "maxAckMs": 4.5999999940395355,
+        "oldestQueuedMs": 0,
+        "oldestInflightMs": 0,
+        "oldestAckMs": 0
+      },
+      "workerCounters": {
+        "snapshot_received": 16,
+        "increment_state_received": 1306,
+        "stream_changed": 2,
+        "unaligned_or_changed": 2
+      },
+      "mainCounters": {},
+      "subscriptionMessages": [
+        {
+          "at": 0.699999988079071,
+          "sha256": "eee84430d02880d5773c42a8cf3a03e1e35c925f37bb64d439a6e17daf9074da",
+          "assets": 100
+        }
+      ],
+      "coverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshot": 16,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 1,
+        "eligibleRatio": 0,
+        "misses": {
+          "stale_book": 16
+        }
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "visibleCoverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshot": 16,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": 1,
+        "eligibleRatio": 0,
+        "misses": {
+          "stale_book": 16
+        }
+      },
+      "maxSampleGapMs": 0,
+      "visibilityEvents": [],
+      "nativeWindows": [],
+      "probeOutcomes": {
+        "unaligned_or_changed": 2
+      }
+    },
+    {
+      "name": "replay-off-2",
+      "startedAt": "2026-10-16T16:43:59.314Z",
+      "durationMs": 8006.800000011921,
+      "frames": 3000,
+      "quotes": {
+        "count": 5852,
+        "hashedCount": 5852,
+        "completeHash": true,
+        "sha256": "f6b171f68ca1abacb201f553cc4678077a3eb3ec37012497294c78979786eb53"
+      },
+      "handlers": {
+        "n": 3000,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.2,
+        "max": 1.9000000059604645,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 5852,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 1.5,
+        "max": 1.9000000059604645,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 401,
+        "p50": 0,
+        "p95": 0.9,
+        "p99": 1.2,
+        "max": 1.5999999940395355,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 0.11251900000000004,
+        "ScriptDuration": 0.005276000000000003,
+        "LayoutDuration": 0.00008400000000000009,
+        "RecalcStyleDuration": 0.00001600000000000001
+      },
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 0,
+      "workerTerminated": 0,
+      "failure": null,
+      "subscriptionMessages": [
+        {
+          "at": 0.10000002384185791,
+          "sha256": "eee84430d02880d5773c42a8cf3a03e1e35c925f37bb64d439a6e17daf9074da",
+          "assets": 100
+        }
+      ],
+      "coverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 1,
+        "stale": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "misses": {}
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "visibleCoverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 1,
+        "stale": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "misses": {}
+      },
+      "maxSampleGapMs": 0,
+      "visibilityEvents": [],
+      "nativeWindows": [],
+      "probeOutcomes": {}
+    },
+    {
+      "name": "replay-overflow",
+      "startedAt": "2026-10-16T16:44:07.324Z",
+      "durationMs": 1461.4000000059605,
+      "frames": 100,
+      "quotes": {
+        "count": 289,
+        "hashedCount": 289,
+        "completeHash": true,
+        "sha256": "f1278107a910569668c27ac1e3de4d30e1061598ea0e15234eebfa784eccd884"
+      },
+      "handlers": {
+        "n": 100,
+        "p50": 0,
+        "p95": 0.1,
+        "p99": 0.1,
+        "max": 1.7000000178813934,
+        "resolutionMs": 0.01
+      },
+      "quoteLatency": {
+        "n": 289,
+        "p50": 0,
+        "p95": 1.7,
+        "p99": 1.7,
+        "max": 1.7000000178813934,
+        "resolutionMs": 0.01
+      },
+      "jitter": {
+        "n": 73,
+        "p50": 0.2,
+        "p95": 1,
+        "p99": 1.8,
+        "max": 1.800000011920929,
+        "resolutionMs": 0.01
+      },
+      "cpuSeconds": {
+        "TaskDuration": 0.007340999999999931,
+        "ScriptDuration": 0.0011929999999999996,
+        "LayoutDuration": 0.00023899999999999985,
+        "RecalcStyleDuration": 0.000019000000000000028
+      },
+      "wsCreated": 1,
+      "wsClosed": 0,
+      "workerCreated": 1,
+      "workerTerminated": 0,
+      "workerAlive": true,
+      "failure": null,
+      "mailbox": {
+        "pendingBatches": 0,
+        "queuedEntries": 0,
+        "pendingEntries": 0,
+        "pendingChars": 0,
+        "batchesSent": 5,
+        "highEntries": 100,
+        "highChars": 238388,
+        "scheduler": "message-task",
+        "maxQueueMs": 0.699999988079071,
+        "maxAckMs": 5,
+        "oldestQueuedMs": 0,
+        "oldestInflightMs": 0,
+        "oldestAckMs": 0
+      },
+      "workerCounters": {},
+      "mainCounters": {},
+      "subscriptionMessages": [
+        {
+          "at": 0.29999998211860657,
+          "sha256": "eee84430d02880d5773c42a8cf3a03e1e35c925f37bb64d439a6e17daf9074da",
+          "assets": 100
+        }
+      ],
+      "coverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 1,
+        "stale": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "misses": {}
+      },
+      "after60s": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "hiddenCoverage": {
+        "samples": 0,
+        "assetObservations": 0,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 0,
+        "stale": 0,
+        "snapshotRatio": null,
+        "eligibleRatio": null,
+        "misses": {}
+      },
+      "visibleCoverage": {
+        "samples": 1,
+        "assetObservations": 16,
+        "snapshot": 0,
+        "eligible": 0,
+        "missing": 1,
+        "stale": 0,
+        "snapshotRatio": 0,
+        "eligibleRatio": 0,
+        "misses": {}
+      },
+      "maxSampleGapMs": 0,
+      "visibilityEvents": [],
+      "nativeWindows": [],
+      "probeOutcomes": {}
+    }
+  ],
+  "lifecycle": {
+    "name": "lifecycle",
+    "startedAt": "2026-10-16T16:44:51.390Z",
+    "durationMs": 121492.30000001192,
+    "frames": 98487,
+    "quotes": {
+      "count": 190504,
+      "hashedCount": 10000,
+      "completeHash": false,
+      "sha256": "5c91f5832247ccc5bfa35e570cd3e6806eee48c27b1ba6746d2db6fbc32f7933"
+    },
+    "handlers": {
+      "n": 98487,
+      "p50": 0,
+      "p95": 0.1,
+      "p99": 0.1,
+      "max": 2,
+      "resolutionMs": 0.01
+    },
+    "quoteLatency": {
+      "n": 190504,
+      "p50": 0,
+      "p95": 0.1,
+      "p99": 0.1,
+      "max": 2.0999999940395355,
+      "resolutionMs": 0.01
+    },
+    "jitter": {
+      "n": 6075,
+      "p50": 0.1,
+      "p95": 0.8,
+      "p99": 1.2,
+      "max": 7.0999999940395355,
+      "resolutionMs": 0.01
+    },
+    "cpuSeconds": {
+      "TaskDuration": 4.282528,
+      "ScriptDuration": 2.0300909999999996,
+      "LayoutDuration": 0.025297,
+      "RecalcStyleDuration": 0.002215
+    },
+    "wsCreated": 2,
+    "wsClosed": 1,
+    "workerCreated": 1,
+    "workerTerminated": 0,
+    "workerAlive": true,
+    "failure": null,
+    "mailbox": {
+      "pendingBatches": 0,
+      "queuedEntries": 0,
+      "pendingEntries": 0,
+      "pendingChars": 0,
+      "batchesSent": 20143,
+      "highEntries": 367,
+      "highChars": 222624,
+      "scheduler": "message-task",
+      "maxQueueMs": 12.100000023841858,
+      "maxAckMs": 7.299999982118607,
+      "oldestQueuedMs": 0,
+      "oldestInflightMs": 0,
+      "oldestAckMs": 0
+    },
+    "workerCounters": {
+      "snapshot_received": 140,
+      "increment_state_received": 41040,
+      "asset_removed": 1,
+      "stream_changed": 3,
+      "attempt_seen": 464,
+      "http_shape_unknown": 464,
+      "aligned_equal": 14,
+      "unaligned_or_changed": 3
+    },
+    "mainCounters": {
+      "attempt_seen": 480,
+      "attempt_completed": 480,
+      "http_resolved": 480
+    },
+    "subscriptionMessages": [
+      {
+        "at": 1082.4000000059605,
+        "sha256": "eee84430d02880d5773c42a8cf3a03e1e35c925f37bb64d439a6e17daf9074da",
+        "assets": 100
+      },
+      {
+        "at": 68801.09999999404,
+        "sha256": "eee84430d02880d5773c42a8cf3a03e1e35c925f37bb64d439a6e17daf9074da",
+        "assets": 100
+      }
+    ],
+    "coverage": {
+      "samples": 125,
+      "assetObservations": 2000,
+      "snapshot": 1096,
+      "eligible": 205,
+      "missing": 15,
+      "stale": 0,
+      "snapshotRatio": 0.548,
+      "eligibleRatio": 0.1025,
+      "misses": {
+        "no_snapshot": 496,
+        "metadata_unknown_or_stale": 331,
+        "stale_book": 558,
+        "source_clock_or_age": 2
+      }
+    },
+    "after60s": {
+      "samples": 63,
+      "assetObservations": 1008,
+      "snapshot": 856,
+      "eligible": 164,
+      "missing": 4,
+      "stale": 0,
+      "snapshotRatio": 0.8492063492063492,
+      "eligibleRatio": 0.1626984126984127,
+      "misses": {
+        "no_snapshot": 8,
+        "stale_book": 516,
+        "source_clock_or_age": 2,
+        "metadata_unknown_or_stale": 174
+      }
+    },
+    "hiddenCoverage": {
+      "samples": 0,
+      "assetObservations": 0,
+      "snapshot": 0,
+      "eligible": 0,
+      "missing": 0,
+      "stale": 0,
+      "snapshotRatio": null,
+      "eligibleRatio": null,
+      "misses": {}
+    },
+    "visibleCoverage": {
+      "samples": 125,
+      "assetObservations": 2000,
+      "snapshot": 1096,
+      "eligible": 205,
+      "missing": 15,
+      "stale": 0,
+      "snapshotRatio": 0.548,
+      "eligibleRatio": 0.1025,
+      "misses": {
+        "no_snapshot": 496,
+        "metadata_unknown_or_stale": 331,
+        "stale_book": 558,
+        "source_clock_or_age": 2
+      }
+    },
+    "maxSampleGapMs": 1019.7999999821186,
+    "visibilityEvents": [],
+    "nativeWindows": [],
+    "probeOutcomes": {
+      "no_snapshot": 11,
+      "aligned_equal": 17,
+      "unaligned_or_changed": 5
+    },
+    "depthBefore": {
+      "asset": "78375709349390362396705836138040366448567989574607141941303213545950025063685",
+      "generation": 4,
+      "status": "ready",
+      "epoch": 4,
+      "revision": 9994,
+      "sourceAt": 1792169141652,
+      "receivedWallAt": 1792169142076,
+      "snapshotAgeMs": 1730.39990234375,
+      "bids": [
+        {
+          "price": "0.44",
+          "size": "235.59"
+        },
+        {
+          "price": "0.43",
+          "size": "86.98"
+        },
+        {
+          "price": "0.42",
+          "size": "380"
+        },
+        {
+          "price": "0.41",
+          "size": "991"
+        },
+        {
+          "price": "0.4",
+          "size": "309"
+        },
+        {
+          "price": "0.39",
+          "size": "1652"
+        },
+        {
+          "price": "0.38",
+          "size": "1294.04"
+        },
+        {
+          "price": "0.37",
+          "size": "1746"
+        },
+        {
+          "price": "0.36",
+          "size": "245.5"
+        },
+        {
+          "price": "0.35",
+          "size": "1039"
+        },
+        {
+          "price": "0.34",
+          "size": "221"
+        },
+        {
+          "price": "0.33",
+          "size": "477"
+        },
+        {
+          "price": "0.32",
+          "size": "686.89"
+        },
+        {
+          "price": "0.31",
+          "size": "230"
+        },
+        {
+          "price": "0.3",
+          "size": "1693.29"
+        },
+        {
+          "price": "0.29",
+          "size": "12"
+        },
+        {
+          "price": "0.28",
+          "size": "71"
+        },
+        {
+          "price": "0.26",
+          "size": "76"
+        },
+        {
+          "price": "0.25",
+          "size": "536.61"
+        },
+        {
+          "price": "0.23",
+          "size": "174.69"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.45",
+          "size": "106.34"
+        },
+        {
+          "price": "0.46",
+          "size": "830"
+        },
+        {
+          "price": "0.47",
+          "size": "556"
+        },
+        {
+          "price": "0.48",
+          "size": "1802.85"
+        },
+        {
+          "price": "0.49",
+          "size": "403.19"
+        },
+        {
+          "price": "0.5",
+          "size": "704"
+        },
+        {
+          "price": "0.51",
+          "size": "515.68"
+        },
+        {
+          "price": "0.52",
+          "size": "2495.68"
+        },
+        {
+          "price": "0.53",
+          "size": "339"
+        },
+        {
+          "price": "0.54",
+          "size": "1105"
+        },
+        {
+          "price": "0.55",
+          "size": "210"
+        },
+        {
+          "price": "0.57",
+          "size": "213.51"
+        },
+        {
+          "price": "0.59",
+          "size": "236.87"
+        },
+        {
+          "price": "0.6",
+          "size": "20"
+        },
+        {
+          "price": "0.63",
+          "size": "34.03"
+        },
+        {
+          "price": "0.66",
+          "size": "229.98"
+        },
+        {
+          "price": "0.67",
+          "size": "187.87"
+        },
+        {
+          "price": "0.68",
+          "size": "1184.98"
+        },
+        {
+          "price": "0.69",
+          "size": "21.7"
+        },
+        {
+          "price": "0.7",
+          "size": "283.33"
+        }
+      ],
+      "viewTruncated": true,
+      "sessionId": 4,
+      "streamEpoch": 6
+    },
+    "depthAfter": {
+      "asset": "78375709349390362396705836138040366448567989574607141941303213545950025063685",
+      "generation": 4,
+      "status": "ready",
+      "epoch": 4,
+      "revision": 13906,
+      "sourceAt": 1792169152791,
+      "receivedWallAt": 1792169152218,
+      "snapshotAgeMs": 6321.4000488221645,
+      "bids": [
+        {
+          "price": "0.38",
+          "size": "583.24"
+        },
+        {
+          "price": "0.37",
+          "size": "10"
+        },
+        {
+          "price": "0.36",
+          "size": "155"
+        },
+        {
+          "price": "0.35",
+          "size": "649.52"
+        },
+        {
+          "price": "0.34",
+          "size": "941"
+        },
+        {
+          "price": "0.33",
+          "size": "2393"
+        },
+        {
+          "price": "0.32",
+          "size": "1091.17"
+        },
+        {
+          "price": "0.31",
+          "size": "540"
+        },
+        {
+          "price": "0.3",
+          "size": "1476.29"
+        },
+        {
+          "price": "0.29",
+          "size": "137"
+        },
+        {
+          "price": "0.28",
+          "size": "15"
+        },
+        {
+          "price": "0.27",
+          "size": "196"
+        },
+        {
+          "price": "0.26",
+          "size": "178"
+        },
+        {
+          "price": "0.25",
+          "size": "1211.85"
+        },
+        {
+          "price": "0.24",
+          "size": "519"
+        },
+        {
+          "price": "0.23",
+          "size": "311"
+        },
+        {
+          "price": "0.21",
+          "size": "115"
+        },
+        {
+          "price": "0.19",
+          "size": "70"
+        },
+        {
+          "price": "0.18",
+          "size": "120"
+        },
+        {
+          "price": "0.17",
+          "size": "10"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.39",
+          "size": "1231"
+        },
+        {
+          "price": "0.4",
+          "size": "2769.96"
+        },
+        {
+          "price": "0.41",
+          "size": "692.87"
+        },
+        {
+          "price": "0.42",
+          "size": "4399.52"
+        },
+        {
+          "price": "0.43",
+          "size": "4096.34"
+        },
+        {
+          "price": "0.44",
+          "size": "524.87"
+        },
+        {
+          "price": "0.45",
+          "size": "405.87"
+        },
+        {
+          "price": "0.46",
+          "size": "236.87"
+        },
+        {
+          "price": "0.47",
+          "size": "200"
+        },
+        {
+          "price": "0.48",
+          "size": "10"
+        },
+        {
+          "price": "0.49",
+          "size": "436"
+        },
+        {
+          "price": "0.5",
+          "size": "258"
+        },
+        {
+          "price": "0.51",
+          "size": "1581"
+        },
+        {
+          "price": "0.52",
+          "size": "4050.53"
+        },
+        {
+          "price": "0.53",
+          "size": "3708"
+        },
+        {
+          "price": "0.54",
+          "size": "43"
+        },
+        {
+          "price": "0.57",
+          "size": "213.51"
+        },
+        {
+          "price": "0.59",
+          "size": "48"
+        },
+        {
+          "price": "0.6",
+          "size": "55"
+        },
+        {
+          "price": "0.61",
+          "size": "420"
+        }
+      ],
+      "viewTruncated": true,
+      "sessionId": 4,
+      "streamEpoch": 6
+    },
+    "marks": [
+      {
+        "label": "initial",
+        "at": 30326.59999999404,
+        "worker": true,
+        "diagnostics": 1,
+        "sessionId": 4
+      },
+      {
+        "label": "eight-candidates",
+        "at": 40526,
+        "worker": true,
+        "diagnostics": 1,
+        "sessionId": 4
+      },
+      {
+        "label": "sixteen-restored",
+        "at": 50713.30000001192,
+        "worker": true,
+        "diagnostics": 1,
+        "sessionId": 4
+      },
+      {
+        "label": "consumer-detached-owner-alive",
+        "at": 50715,
+        "worker": true,
+        "diagnostics": 0,
+        "sessionId": 4
+      },
+      {
+        "label": "consumer-reattached",
+        "at": 60888,
+        "worker": true,
+        "diagnostics": 1,
+        "sessionId": 4
+      },
+      {
+        "label": "source-close-requested",
+        "at": 60888.09999999404,
+        "worker": true,
+        "diagnostics": 1,
+        "sessionId": 4
+      },
+      {
+        "label": "recovered",
+        "at": 121486.30000001192,
+        "worker": true,
+        "diagnostics": 1,
+        "sessionId": 4
+      }
+    ]
+  },
+  "gates": {
+    "at": "2026-10-16T16:48:19.637Z",
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "scope": "gate with explicit store/consumer fixtures; actual precheckOnly entry with public HTTP; no signer or order",
+    "results": [
+      {
+        "name": "classic gate legacy",
+        "pass": true,
+        "details": {
+          "created": 0,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "classic gate undefined",
+        "pass": true,
+        "details": {
+          "created": 0,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "classic gate invalid",
+        "pass": true,
+        "details": {
+          "created": 0,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "optimized defaults off",
+        "pass": true,
+        "details": {
+          "created": 0
+        }
+      },
+      {
+        "name": "explicit dynamic starts isolated worker",
+        "pass": true,
+        "details": {
+          "created": 1,
+          "sockets": 0
+        }
+      },
+      {
+        "name": "classic switch synchronously terminates",
+        "pass": true,
+        "details": {
+          "terminated": 1
+        }
+      },
+      {
+        "name": "late import cannot restart classic",
+        "pass": true,
+        "details": {
+          "created": 1
+        }
+      },
+      {
+        "name": "logout prevents start",
+        "pass": true,
+        "details": {
+          "created": 1
+        }
+      },
+      {
+        "name": "legacy HTTP identity observerThrows=false",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 0,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      },
+      {
+        "name": "legacy HTTP identity observerThrows=true",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 0,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      },
+      {
+        "name": "optimized HTTP identity observerThrows=false",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 1,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      },
+      {
+        "name": "optimized HTTP identity observerThrows=true",
+        "pass": true,
+        "details": {
+          "calls": 1,
+          "observed": 1,
+          "status": "fulfilled",
+          "identity": true,
+          "guard": {
+            "status": "fulfilled",
+            "value": null
+          }
+        }
+      }
+    ],
+    "publicBookHealth": [
+      {
+        "asset": "78375709349390362396705836138040366448567989574607141941303213545950025063685",
+        "status": 200,
+        "asks": 45,
+        "bids": 31,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "98518759788146414583726246195443498385353396482551185756037481392359232681428",
+        "status": 200,
+        "asks": 32,
+        "bids": 44,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "16826792563180462106458200878401984526758091253108502626381642546183435292943",
+        "status": 200,
+        "asks": 31,
+        "bids": 41,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "82072476920028370167332644775881276458777865297413797798530427578352985816061",
+        "status": 200,
+        "asks": 41,
+        "bids": 31,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "96877760198143446195174111201893849021999251948560952820316315912850096844363",
+        "status": 200,
+        "asks": 0,
+        "bids": 64,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "2304926556355129202357152328699538536188846760559487234972543842110574683962",
+        "status": 200,
+        "asks": 64,
+        "bids": 0,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "22436660167229199622812781382892881227285275488305322380149283413858899737258",
+        "status": 200,
+        "asks": 24,
+        "bids": 47,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "901941919348734784069710710719182508439372678484476674593302935929025563199",
+        "status": 200,
+        "asks": 47,
+        "bids": 24,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "115324378096646264609194975831771452006812605390916733093909185141958269386655",
+        "status": 200,
+        "asks": 0,
+        "bids": 76,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "15855557931976156833682845989472379904445041528532993222859970019746639206587",
+        "status": 200,
+        "asks": 76,
+        "bids": 0,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "28015111677077189503170989580897845092805465996436168202108837598813585710721",
+        "status": 200,
+        "asks": 12,
+        "bids": 63,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "19723479345843245303674319123977178014450480517049937054197327509360728413725",
+        "status": 200,
+        "asks": 63,
+        "bids": 12,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "38689761401274980328359386084470001668316797040504877815721107507976292826202",
+        "status": 200,
+        "asks": 0,
+        "bids": 57,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "21553868431897410551980278329426753636618259508747759208728815836079339903569",
+        "status": 200,
+        "asks": 57,
+        "bids": 0,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "32717148017235783933389874775262218839268008780699102195994975147855907201750",
+        "status": 200,
+        "asks": 70,
+        "bids": 0,
+        "validBook": true,
+        "metadata": true
+      },
+      {
+        "asset": "4529511413888382746985551733984828606193107652637720916117372114193809398232",
+        "status": 200,
+        "asks": 0,
+        "bids": 70,
+        "validBook": true,
+        "metadata": true
+      }
+    ]
+  },
+  "resources": {
+    "runs": [
+      {
+        "at": "2026-10-16T16:47:31.903Z",
+        "requested": 20,
+        "settled": 20,
+        "workerCreated": 20,
+        "workerTerminated": 20,
+        "wsCreated": 1,
+        "scope": "Synthetic replay socket; repeated owner/consumer/depth leases; no orders, dynamic public probes retain their normal consumer lifecycle"
+      },
+      {
+        "at": "2026-10-16T16:47:33.500Z",
+        "requested": 20,
+        "settled": 20,
+        "workerCreated": 20,
+        "workerTerminated": 20,
+        "wsCreated": 1,
+        "scope": "Synthetic replay socket; repeated owner/consumer/depth leases; no orders, dynamic public probes retain their normal consumer lifecycle"
+      },
+      {
+        "at": "2026-10-16T16:47:35.066Z",
+        "requested": 20,
+        "settled": 20,
+        "workerCreated": 20,
+        "workerTerminated": 20,
+        "wsCreated": 1,
+        "scope": "Synthetic replay socket; repeated owner/consumer/depth leases; no orders, dynamic public probes retain their normal consumer lifecycle"
+      }
+    ],
+    "snapshots": [
+      {
+        "at": "2026-10-16T16:47:32.127Z",
+        "heap": {
+          "usedSize": 26279492,
+          "totalSize": 27344896,
+          "embedderHeapUsedSize": 816960,
+          "backingStorageSize": 681058
+        },
+        "workers": 0
+      },
+      {
+        "at": "2026-10-16T16:47:33.721Z",
+        "heap": {
+          "usedSize": 26308756,
+          "totalSize": 27344896,
+          "embedderHeapUsedSize": 804552,
+          "backingStorageSize": 681058
+        },
+        "workers": 0
+      },
+      {
+        "at": "2026-10-16T16:47:35.281Z",
+        "heap": {
+          "usedSize": 26328300,
+          "totalSize": 27344896,
+          "embedderHeapUsedSize": 732272,
+          "backingStorageSize": 681058
+        },
+        "workers": 0
+      }
+    ],
+    "scope": "60 explicit local replay start/stop cycles; full GC at idle checkpoints; page heap excludes Worker memory, zero surviving Worker targets checked separately"
+  },
+  "schedulerControl": {
+    "durationMs": 361935.59999999404,
+    "counts": {
+      "old": 18046,
+      "current": 18096
+    },
+    "orderErrors": {
+      "old": 0,
+      "current": 0
+    },
+    "hiddenSamples": 64,
+    "currentMailbox": {
+      "pendingBatches": 0,
+      "queuedEntries": 0,
+      "pendingEntries": 0,
+      "pendingChars": 0,
+      "batchesSent": 18096,
+      "highEntries": 1,
+      "highChars": 100,
+      "scheduler": "message-task",
+      "maxQueueMs": 0.9000000059604645,
+      "maxAckMs": 1.5,
+      "oldestQueuedMs": 0,
+      "oldestInflightMs": 0,
+      "oldestAckMs": 0
+    },
+    "visibilityEvents": [
+      {
+        "at": 2276.5999999940395,
+        "state": "hidden",
+        "trusted": true
+      }
+    ],
+    "scope": "Synthetic echo Worker, frozen pre-repair timer algorithm versus production mailbox; no PM-M or HTTP"
+  },
+  "schedulerStress": {
+    "durationMs": 143892.80000001192,
+    "counts": {
+      "old": 744,
+      "current": 7194
+    },
+    "orderErrors": {
+      "old": 0,
+      "current": 0
+    },
+    "oldFailure": {
+      "reason": "stream_ack_timeout",
+      "at": 23243.69999998808,
+      "queued": 54,
+      "inflight": 0,
+      "oldestQueuedMs": 1070.0999999940395
+    },
+    "stalls": [
+      {
+        "at": 15724.200000017881,
+        "old": {
+          "sent": 125,
+          "queued": 42,
+          "inflight": 0,
+          "oldestQueuedMs": 819.3000000119209
+        },
+        "current": {
+          "pendingBatches": 0,
+          "queuedEntries": 1,
+          "pendingEntries": 1,
+          "pendingChars": 100,
+          "batchesSent": 785,
+          "highEntries": 1,
+          "highChars": 100,
+          "scheduler": "message-task",
+          "maxQueueMs": 1,
+          "maxAckMs": 1.2999999821186066,
+          "oldestQueuedMs": 0.10000002384185791,
+          "oldestInflightMs": 0,
+          "oldestAckMs": 0
+        },
+        "durationMs": 250
+      }
+    ],
+    "currentMailbox": {
+      "pendingBatches": 0,
+      "queuedEntries": 0,
+      "pendingEntries": 0,
+      "pendingChars": 0,
+      "batchesSent": 7183,
+      "highEntries": 13,
+      "highChars": 1300,
+      "scheduler": "message-task",
+      "maxQueueMs": 250.10000002384186,
+      "maxAckMs": 1.800000011920929,
+      "oldestQueuedMs": 0,
+      "oldestInflightMs": 0,
+      "oldestAckMs": 0
+    },
+    "hiddenSamples": 60,
+    "scope": "Synthetic echo Worker, frozen pre-repair timer algorithm versus production mailbox; no PM-M or HTTP; optional explicitly recorded 250ms renderer stall"
+  },
+  "checks": {
+    "liveThirtyMinutes": true,
+    "workersSurvived": true,
+    "nativeHidden": true,
+    "foregroundRecovery": true,
+    "oldSchedulerReproduced": true,
+    "newSchedulerControlPassed": true,
+    "quoteSequenceIdentical": true,
+    "quoteP95NoRegression": true,
+    "gatesPass": true,
+    "currentCandidatesValid": true,
+    "noAlignedDifference": true,
+    "consumerIndependent": true,
+    "resourcesReleased": true,
+    "nativeSubscriptionsUnchanged": true
+  },
+  "limits": [
+    "Public-market fixture, not a logged-in river production session; no orders or fill-rate evidence.",
+    "Native hidden timers are sparse: coverage is sample observations, not a time-weighted continuous percentage.",
+    "Original PM-M may reconnect in hidden/foreground transitions; no new network authority in the book module.",
+    "Scheduler echo control overlaps live run, including one recorded 250ms control-renderer stall; replay and lifecycle follow soak. No full-build/test load overlaps soak.",
+    "Replay keeps recorded timestamps; it checks original quote output and main-thread transport costs, not fresh-book eligibility or live Worker reduction cost.",
+    "CPU metrics, when available, measure page tasks/scripts and exclude Worker CPU; they are not whole-browser CPU."
+  ],
+  "blockers": []
+}

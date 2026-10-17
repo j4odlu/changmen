@@ -1,0 +1,43 @@
+{
+  "changes": {
+    "client/web/src/runtime/installClientCore.ts": {
+      "beforeSha": "d6ea989ef341e469a262c7b525164c78d6405705aadbe2484ce8702dbb6eaae3",
+      "increments": [
+        [
+          "import { useOddsStore } from \"@/stores/oddsStore\";\nimport { useUserStore } from \"@/stores/userStore\";\nimport { installPmTickBufferQuotes, stopPmTickBufferQuotes } from \"@/runtime/pmTickBufferQuotes\";\n\n/** 注册 client-core 桥接（须在 createPinia 之后、采集/下注启动前调用） */\nexport function installClientCoreBridges() {\n",
+          "import { useOddsStore } from \"@/stores/oddsStore\";\nimport { useUserStore } from \"@/stores/userStore\";\nimport { installPmTickBufferQuotes, stopPmTickBufferQuotes } from \"@/runtime/pmTickBufferQuotes\";\nimport { installPmDynamicWsPreflight, stopPmDynamicWsPreflight } from \"@/runtime/pmDynamicWsPreflight\";\n\n/** 注册 client-core 桥接（须在 createPinia 之后、采集/下注启动前调用） */\nexport function installClientCoreBridges() {\n"
+        ],
+        [
+          "\n  const odds = useOddsStore();\n  installPmTickBufferQuotes();\n  registerOddsAccess({\n    read: (provider, itemId, fallback) =>\n      odds.getOdds(provider, itemId, fallback) || 0,\n",
+          "\n  const odds = useOddsStore();\n  installPmTickBufferQuotes();\n  installPmDynamicWsPreflight();\n  registerOddsAccess({\n    read: (provider, itemId, fallback) =>\n      odds.getOdds(provider, itemId, fallback) || 0,\n"
+        ],
+        [
+          "\nexport function clearClientCoreBridges() {\n  stopPmTickBufferQuotes();\n  clearClientApi();\n  clearOddsAccess();\n  clearPlatformHttpContext();\n",
+          "\nexport function clearClientCoreBridges() {\n  stopPmTickBufferQuotes();\n  stopPmDynamicWsPreflight();\n  clearClientApi();\n  clearOddsAccess();\n  clearPlatformHttpContext();\n"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/submission/preflight/pmFokPreflightMode.ts": {
+      "beforeSha": "236e18550eb99dfc3a142457ef54488fa586b16f8641f9f6c5a7e409525d85ef",
+      "increments": [
+        [
+          "export type PmFokPreflightMode = \"legacy\" | \"optimized\";\nlet configuredMode: PmFokPreflightMode = \"legacy\";\nconst attempts = new WeakMap<BetOption, PmFokPreflightMode>();\n\nexport function setPmFokPreflightMode(value: unknown): void {\n  configuredMode = value === \"optimized\" ? \"optimized\" : \"legacy\";\n}\n\nexport function capturePmFokPreflightMode(option: BetOption): PmFokPreflightMode {\n",
+          "export type PmFokPreflightMode = \"legacy\" | \"optimized\";\nlet configuredMode: PmFokPreflightMode = \"legacy\";\nconst attempts = new WeakMap<BetOption, PmFokPreflightMode>();\nconst modeListeners = new Set<(mode: PmFokPreflightMode) => void>();\n/** [changmen 扩展] 读取已应用的偏好，不能用尚未保存的表单值启动影子任务。 */\nexport const getPmFokPreflightMode = (): PmFokPreflightMode => configuredMode;\nexport function onPmFokPreflightModeChange(listener: (mode: PmFokPreflightMode) => void): () => void {\n  modeListeners.add(listener);\n  return () => { modeListeners.delete(listener); };\n}\n\nexport function setPmFokPreflightMode(value: unknown): void {\n  configuredMode = value === \"optimized\" ? \"optimized\" : \"legacy\";\n  for (const listener of modeListeners) { try { listener(configuredMode); } catch { /* optional observer */ } }\n}\n\nexport function capturePmFokPreflightMode(option: BetOption): PmFokPreflightMode {\n"
+        ]
+      ]
+    },
+    "packages/venue-adapter/polymarket/submission/preflight/optimized/pmFastPreflight.ts": {
+      "beforeSha": "629641398b0d3f6cff314bad5de16f1ce74eea795d942f73fbe22930abf19f3a",
+      "increments": [
+        [
+          "import { pmPrepareSubmit, pmSubmitClockReady } from \"../../../pmClientApi\";\nimport { measurePmExecution, recordPmExecutionMetric } from \"../../../pmExecutionMetrics\";\nimport { resolveOptimizedFokBlockReason } from \"./pmBetGuard\";\n\nfunction readRuntime(account: PlatformAccount, gateway: string, missing = \"PM 钱包或 API 凭据未就绪，请解锁钱包并检查账号\") {\n  const config = parseTokenConfig(account.token);\n",
+          "import { pmPrepareSubmit, pmSubmitClockReady } from \"../../../pmClientApi\";\nimport { measurePmExecution, recordPmExecutionMetric } from \"../../../pmExecutionMetrics\";\nimport { resolveOptimizedFokBlockReason } from \"./pmBetGuard\";\nimport { beginWsBookShadow } from \"./wsBook/shadowObserver\";\n\nfunction readRuntime(account: PlatformAccount, gateway: string, missing = \"PM 钱包或 API 凭据未就绪，请解锁钱包并检查账号\") {\n  const config = parseTokenConfig(account.token);\n"
+        ],
+        [
+          "    ms: performance.now() - started, success: true });\n  if (tasks.role !== \"precheckOnly\" && !pmSubmitClockReady(account))\n    throw new Error(\"PM 提交准备未完成，请先完成校时再新建投注尝试\");\n  const market = await tasks.market();\n  const latest = resolveOptimizedFokBlockReason(option);\n  if (latest) throw new Error(latest);\n  return { market: { status: \"fulfilled\" as const, value: market },\n",
+          "    ms: performance.now() - started, success: true });\n  if (tasks.role !== \"precheckOnly\" && !pmSubmitClockReady(account))\n    throw new Error(\"PM 提交准备未完成，请先完成校时再新建投注尝试\");\n  const finishShadow = beginWsBookShadow({ tokenId: option.itemId, gateway: tasks.gateway,\n    tick: option.data?.pmBufferMode === \"tick\" || Boolean(option.data?.pmTickQuote)\n      || (option.data?.pmPriceQuote as { mode?: string } | undefined)?.mode === \"tick\",\n    proxied: Boolean(account.proxyId), role: tasks.role ?? \"execute\", linkId: option.diagnosticLinkId,\n    attemptId: option.observation?.attemptId, executionId: option.observation?.executionId,\n    leg: `${option.type}:${option.target}:${option.itemId}` });\n  let market: T;\n  try { market = await tasks.market(); }\n  catch (error) { finishShadow(undefined, true); throw error; }\n  finishShadow(market, false);\n  const latest = resolveOptimizedFokBlockReason(option);\n  if (latest) throw new Error(latest);\n  return { market: { status: \"fulfilled\" as const, value: market },\n"
+        ]
+      ]
+    }
+  }
+}

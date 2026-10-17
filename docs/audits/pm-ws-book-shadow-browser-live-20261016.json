@@ -1,0 +1,304 @@
+{
+  "validation": "Local Chromium actual final production Worker shadow.worker-Bi5hPK0h.js; active Lula election token; public-only synthetic HTTP attempt, no account/signing/orders",
+  "result": {
+    "report": {
+      "mode": "shadow",
+      "executionSource": "existing-http",
+      "activeSupported": false,
+      "worker": true,
+      "assets": 1,
+      "pendingComparisons": 0,
+      "pendingHttp": 0,
+      "routes": {
+        "marketWs": "official",
+        "http": "direct",
+        "submit": "direct"
+      },
+      "limits": {
+        "assets": 16,
+        "levels": 2000,
+        "frameChars": 1000000,
+        "events": 128,
+        "history": 4,
+        "comparisons": 32,
+        "observerTimeoutMs": 10000,
+        "recentAttempts": 256
+      },
+      "snapshotsInMemory": 1,
+      "metadataInMemory": 1,
+      "counters": {
+        "attempt_seen": 1,
+        "attempt_completed": 1,
+        "http_resolved": 1
+      },
+      "workerCounters": {
+        "stopped": 1,
+        "snapshot_received": 3,
+        "aligned_equal": 22,
+        "increment_state_received": 62,
+        "ambiguous_timestamp": 4,
+        "unaligned_or_changed": 2,
+        "periodic_resnapshot": 1,
+        "no_snapshot": 1,
+        "attempt_seen": 1
+      },
+      "httpMarketMs": {
+        "count": 1,
+        "p50": 258.29999999701977,
+        "p95": 258.29999999701977
+      },
+      "precheckOnlyHttpMs": {
+        "count": 0,
+        "p50": null,
+        "p95": null
+      },
+      "localReadMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0
+      },
+      "compareMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0
+      },
+      "observerQueueMs": {
+        "count": 1,
+        "p50": 0.10009765625,
+        "p95": 0.10009765625
+      },
+      "beginQueueMs": {
+        "count": 1,
+        "p50": 0.199951171875,
+        "p95": 0.199951171875
+      },
+      "samples": [
+        {
+          "at": 1792155568189,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 289.09999999403954
+        },
+        {
+          "at": 1792155571218,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 327.20000000298023
+        },
+        {
+          "at": 1792155574309,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 415.70000000298023
+        },
+        {
+          "at": 1792155577162,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 259.6000000089407
+        },
+        {
+          "at": 1792155580166,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 264.79999999701977
+        },
+        {
+          "at": 1792155583159,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 258.19999998807907
+        },
+        {
+          "at": 1792155586150,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 249.29999999701977
+        },
+        {
+          "at": 1792155589163,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 269.5
+        },
+        {
+          "at": 1792155592154,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "ambiguous_timestamp",
+          "httpMs": 258.70000000298023
+        },
+        {
+          "at": 1792155595140,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "ambiguous_timestamp",
+          "httpMs": 249.5
+        },
+        {
+          "at": 1792155598157,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 267.09999999403954
+        },
+        {
+          "at": 1792155601171,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 269.80000001192093
+        },
+        {
+          "at": 1792155604145,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 247.30000001192093
+        },
+        {
+          "at": 1792155607396,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 503.30000001192093
+        },
+        {
+          "at": 1792155610158,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 262.8999999910593
+        },
+        {
+          "at": 1792155614067,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 1178.0999999940395
+        },
+        {
+          "at": 1792155616152,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 250.70000000298023
+        },
+        {
+          "at": 1792155619134,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "unaligned_or_changed",
+          "httpMs": 244.70000000298023
+        },
+        {
+          "at": 1792155622152,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 261.90000000596046
+        },
+        {
+          "at": 1792155628146,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "no_snapshot",
+          "httpMs": 255.59999999403954
+        },
+        {
+          "at": 1792155631157,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 254.19999998807907
+        },
+        {
+          "at": 1792155634197,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 295.29999999701977
+        },
+        {
+          "at": 1792155637162,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 265.5
+        },
+        {
+          "at": 1792155640181,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "ambiguous_timestamp",
+          "httpMs": 278.09999999403954
+        },
+        {
+          "at": 1792155643153,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "ambiguous_timestamp",
+          "httpMs": 262.09999999403954
+        },
+        {
+          "at": 1792155646228,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 340.20000000298023
+        },
+        {
+          "at": 1792155649143,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 250.20000000298023
+        },
+        {
+          "at": 1792155652150,
+          "source": "probe",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "outcome": "aligned_equal",
+          "httpMs": 248.90000000596046
+        },
+        {
+          "at": 1792155636833,
+          "source": "attempt",
+          "tokenId": "30630994248667897740988010928640156931882346081873066002335460180076741328029",
+          "role": "execute",
+          "attemptId": "public-harness",
+          "leg": "PUBLIC-SYNTHETIC",
+          "observerId": 1,
+          "outcome": "unaligned_or_changed",
+          "httpMs": 258.29999999701977,
+          "httpFailed": false,
+          "httpFillPrice": 0.5,
+          "miss": "stale_book",
+          "epoch": 4,
+          "revision": 5,
+          "ageMs": 2598.4000000059605,
+          "sourceAt": 1792155634333,
+          "receivedWallAt": 1792155633977,
+          "metadataVersion": 2,
+          "metadataTick": "0.01",
+          "depthAtHttpFillPrice": 170934.28650000002,
+          "localReadMs": 0,
+          "compareMs": 0,
+          "observerQueueMs": 0.10009765625,
+          "beginQueueMs": 0.199951171875
+        }
+      ],
+      "note": "HTTP denominator includes failed/invalidated/capacity attempts; percentiles cover last 256 completions. No fill-rate evidence."
+    },
+    "longTasks": [],
+    "elapsed": 89012
+  }
+}

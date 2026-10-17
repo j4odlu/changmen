@@ -1,0 +1,212 @@
+{
+  "startedAt": "2026-10-16T12:15:35.472Z",
+  "finishedAt": "2026-10-16T12:16:47.493Z",
+  "token": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+  "route": "Node native HTTPS agent:false + ws without proxy; not a browser CORS or user-line benchmark",
+  "submittedOrders": 0,
+  "accountUsed": false,
+  "report": {
+    "mode": "shadow",
+    "executionSource": "existing-http",
+    "activeSupported": false,
+    "assets": 1,
+    "routes": {
+      "marketWs": "official",
+      "http": "direct",
+      "submit": "direct"
+    },
+    "pendingAttempts": 0,
+    "snapshotsInMemory": 1,
+    "metadataInMemory": 0,
+    "counters": {
+      "stopped": 1,
+      "snapshot_received": 17,
+      "increment_state_received": 3140,
+      "aligned_equal": 8,
+      "tick_changed": 1,
+      "no_snapshot": 1,
+      "unaligned_or_changed": 13,
+      "periodic_resnapshot": 1
+    },
+    "httpMarketMs": {
+      "count": 0,
+      "p50": null,
+      "p95": null
+    },
+    "localReadMs": {
+      "count": 0,
+      "p50": null,
+      "p95": null
+    },
+    "precheckOnlyHttpMs": {
+      "count": 0,
+      "p50": null,
+      "p95": null
+    },
+    "samples": [
+      {
+        "at": 1792152938932,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "aligned_equal",
+        "httpMs": 447.9405999999999
+      },
+      {
+        "at": 1792152941891,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "aligned_equal",
+        "httpMs": 399.77109999999993
+      },
+      {
+        "at": 1792152944901,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "no_snapshot",
+        "httpMs": 397.4967000000015
+      },
+      {
+        "at": 1792152947911,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 396.6735000000008
+      },
+      {
+        "at": 1792152950917,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "aligned_equal",
+        "httpMs": 403.5446000000011
+      },
+      {
+        "at": 1792152953937,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 411.3626000000004
+      },
+      {
+        "at": 1792152956922,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 395.4511999999995
+      },
+      {
+        "at": 1792152959948,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 415.7534000000014
+      },
+      {
+        "at": 1792152963118,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 578.3608999999997
+      },
+      {
+        "at": 1792152965939,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 393.045900000001
+      },
+      {
+        "at": 1792152968950,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "aligned_equal",
+        "httpMs": 403.34619999999995
+      },
+      {
+        "at": 1792152971959,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 403.53600000000006
+      },
+      {
+        "at": 1792152974963,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 395.57470000000467
+      },
+      {
+        "at": 1792152977961,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 386.8793000000005
+      },
+      {
+        "at": 1792152981258,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 683.9946999999956
+      },
+      {
+        "at": 1792152984003,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "aligned_equal",
+        "httpMs": 415.0037000000011
+      },
+      {
+        "at": 1792152987033,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "aligned_equal",
+        "httpMs": 435.2514999999985
+      },
+      {
+        "at": 1792152989986,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "aligned_equal",
+        "httpMs": 373.6019000000015
+      },
+      {
+        "at": 1792152993013,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 395.18559999999707
+      },
+      {
+        "at": 1792152996014,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 384.6929999999993
+      },
+      {
+        "at": 1792152999026,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "unaligned_or_changed",
+        "httpMs": 384.5758999999962
+      },
+      {
+        "at": 1792153002917,
+        "source": "probe",
+        "tokenId": "110708529615315935570159860749875594852726156979453433884273897043825256543816",
+        "outcome": "aligned_equal",
+        "httpMs": 1273.912400000001
+      }
+    ],
+    "limits": {
+      "assets": 16,
+      "levels": 2000,
+      "frameChars": 1000000,
+      "events": 128,
+      "history": 4
+    },
+    "note": "Shadow timings are diagnostic only; localReadMs excludes full executable-price validation. No fill-rate evidence."
+  },
+  "note": "Public read-only shadow run before moving identical core files into realtime/orderBook; core replay tests rerun after relocation. No actual FOK attempt or order submission."
+}

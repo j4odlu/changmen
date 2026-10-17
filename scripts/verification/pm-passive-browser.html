@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>PM-M passive browser verification</title>
+<style>body{font:15px system-ui;max-width:1100px;margin:24px auto}button{padding:12px;margin:5px}pre{white-space:pre-wrap;background:#eee;padding:16px}</style>
+<h1>PM-M 被动旁路 · 本机验证</h1>
+<p>公开电竞行情；实际生产 Worker；不登录、不签名、不下单。仅改变本测试源的设置。</p>
+<button id="live">实时验证：冷接入 90s / 关闭 15s / 晚接入 90s</button>
+<button id="replay">相同消息回放 ABBA + 100 帧突发</button><button id="lifecycle">候选切换及受控断线验证（约 2 分钟）</button><button id="stop">停止</button>
+<button id="background">前台→真实后台→恢复前台（8 分钟，外部切标签）</button>
+<pre id="status">正在加载当前模块…</pre>
+<script type="module" src="./pm-passive-browser.ts"></script>

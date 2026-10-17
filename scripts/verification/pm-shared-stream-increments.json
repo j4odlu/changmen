@@ -1,0 +1,49 @@
+{
+  "changes": {
+    "packages/venue-adapter/polymarket/realtime/ws.ts": {
+      "beforeSha": "d2fe7d079fb1d30411fd11c88654c1a5266c98814229ca2471d218a5f8fd7378",
+      "increments": [
+        [
+          "import { notePmTickFrame, notePmTickReconnect } from \"../pmTickState\";",
+          "import { notePmTickFrame, notePmTickReconnect } from \"../pmTickState\";\nimport { notePmStreamConnecting, notePmStreamOpen, notePmStreamFrame, capturePmStreamTime } from \"./marketStream\";"
+        ],
+        [
+          "  let stopped = false;\n  let ws:",
+          "  let stopped = false;\n  let streamEpoch = 0;\n  let ws:"
+        ],
+        [
+          "    const socket = ws;\n    ws = null;\n    try {",
+          "    const socket = ws;\n    ws = null;\n    notePmStreamOpen(streamEpoch, false);\n    try {"
+        ],
+        [
+          "    ws = null;\n    notePmMarketClientError(reason, error);",
+          "    ws = null;\n    notePmStreamOpen(streamEpoch, false);\n    notePmMarketClientError(reason, error);"
+        ],
+        [
+          "    connectionMode = getPmMarketWsSourceMode();\n    let socket:",
+          "    connectionMode = getPmMarketWsSourceMode();\n    streamEpoch = notePmStreamConnecting(connectionMode);\n    let socket:"
+        ],
+        [
+          "      opts.onOpen();\n      notePmTickReconnect();",
+          "      notePmStreamOpen(streamEpoch, true);\n      opts.onOpen();\n      notePmTickReconnect();"
+        ],
+        [
+          "      if (!raw.trim().startsWith(\"{\") && !raw.trim().startsWith(\"[\")) return;",
+          "      if (!raw.trim().startsWith(\"{\") && !raw.trim().startsWith(\"[\")) {\n        notePmStreamFrame(streamEpoch, raw, lastReceivedAt, streamReceivedAt);\n        return;\n      }"
+        ],
+        [
+          "        console.warn(\"[Polymarket WS] parse error\", err);\n      }\n    };",
+          "        console.warn(\"[Polymarket WS] parse error\", err);\n      }\n      notePmStreamFrame(streamEpoch, raw, lastReceivedAt, streamReceivedAt);\n    };"
+        ],
+        [
+          "      const socket = ws;\n      ws = null;\n      //",
+          "      const socket = ws;\n      ws = null;\n      notePmStreamOpen(streamEpoch, false);\n      //"
+        ],
+        [
+          "      const raw = String(event.data);\n      lastReceivedAt = Date.now();",
+          "      const raw = String(event.data);\n      const streamReceivedAt = capturePmStreamTime();\n      lastReceivedAt = Date.now();"
+        ]
+      ]
+    }
+  }
+}

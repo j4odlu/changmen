@@ -3,13 +3,14 @@ import fs from "node:fs";
 import { expect, it } from "vitest";
 import { restorePmTickRefreshSource } from "./pm-tick-refresh-boundary.mjs";
 import { rebasePmFokImports } from "./pm-fok-source-relocation.mjs";
+import { restorePmSharedStreamSource } from "./pm-shared-stream-boundary.mjs";
 
 const files = ["packages/venue-adapter/polymarket/quotes/pmTickMetadata.ts", "client/web/src/runtime/pmTickBufferQuotes.ts",
   "packages/venue-adapter/polymarket/quotes/pmTickState.ts", "packages/venue-adapter/polymarket/realtime/ws.ts",
   "packages/venue-adapter/polymarket/realtime/sportMarketWs.ts"];
 for (const file of files) {
   it(`${file}: restores only the authorized tick refresh delta`, () => {
-    const source = fs.readFileSync(file, "utf8");
+    const source = restorePmSharedStreamSource(file, fs.readFileSync(file, "utf8"));
     const originalFile = file.replace("/quotes/", "/").replace("/realtime/", "/");
     const original = execFileSync("git", ["show", `e901bb596952256284cd8a9eb8b73b572c963915:${originalFile}`], { encoding: "utf8" }).replace(/\r\n/g, "\n");
     expect(rebasePmFokImports(restorePmTickRefreshSource(file, source), file, originalFile)).toBe(original);

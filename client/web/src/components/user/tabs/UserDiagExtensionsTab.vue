@@ -5,6 +5,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { storeToRefs } from "pinia";
 import { computed, ref } from "vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
+import PmBookSettings from "./PmBookSettings.vue";
 import {
   normalizeValueBetSoftPlatforms,
   VALUE_BET_SOFT_CANDIDATES,
@@ -245,6 +246,7 @@ async function save() {
           </el-radio-group>
         </el-form-item>
       </el-form>
+      <PmBookSettings />
     </section>
 
     <section class="extensions-tab__panel extensions-tab__ray-reject">

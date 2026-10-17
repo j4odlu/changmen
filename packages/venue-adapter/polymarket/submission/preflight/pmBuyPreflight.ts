@@ -33,6 +33,7 @@ export interface PmBuyPreflightTasks<T> {
   gateway: string;
   /** 每轮只调用一次；FOK/GTC 自己保留报价、份数和深度语义。 */
   market: () => Promise<T>;
+  shadowInput?: import("./optimized/wsBook/executionMath").SimulationInput;
   role?: "execute" | "precheckOnly";
   requireClobConfirmation?: boolean;
   /** GTC 固定使用优化检查；只有 FOK 调用方可指定线上原有检查。 */

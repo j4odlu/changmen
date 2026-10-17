@@ -415,6 +415,7 @@ export async function checkFokBuy(account: PlatformAccount, option: BetOption, c
         sportMode: preflightMode,
         gateway,
         market: () => resolvePolymarketExecutableBuy(gateway, tokenId, detectionOdds, apiBetMoney, maxPrice),
+        ...(preflightMode === "optimized" ? { shadowInput: { tokenId, detectionOdds, apiBetMoney, maxPrice, depth: getPmFokDepthBufferPrefs() } } : {}),
         role: context?.role,
         requireClobConfirmation: context?.requireClobConfirmation,
         runtimeBinding: () => preparationBinding(account, option),

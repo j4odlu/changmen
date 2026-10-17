@@ -1,0 +1,92 @@
+{
+  "at": "2026-10-16T17:25:50.330Z",
+  "scope": "160 synthetic precheckOnly attempts on public live markets, real PM-M and HTTP; no accounts/signers/orders; HTTP calculator separately differential-tested",
+  "checks": {
+    "controlledComplete": true,
+    "disconnectRecovery": true,
+    "released": true,
+    "completeDenominator": true,
+    "httpIdentityOnce": true,
+    "bothDecisions": true,
+    "noComparableDifference": true,
+    "liveWorkerHealthy": true,
+    "oneOriginalConnection": true,
+    "classicAndHttpGates": true,
+    "latestGates": true
+  },
+  "controlled": {
+    "cases": 200,
+    "levels": 100,
+    "latencyMs": {
+      "count": 200,
+      "p50": 0.199951171875,
+      "p95": 0.5,
+      "max": 1
+    }
+  },
+  "live": {
+    "durationMs": 126625,
+    "frames": 80779,
+    "quotes": 154649,
+    "sourceConnections": 1,
+    "sourceCloses": 0,
+    "subscriptionMessages": 1,
+    "subscriptionSha256": "afb5c74e6a8650d390979c0f10c3cced03d251986b188cfebf94952f6ae64177",
+    "attempts": 160,
+    "httpRequests": 160,
+    "decisions": {
+      "http_fallback": 114,
+      "local_candidate": 46
+    },
+    "reasons": {
+      "metadata_unknown": 48,
+      "validated": 46,
+      "stream_advanced": 47,
+      "stale_book": 9,
+      "waiting_snapshot": 10
+    },
+    "comparisons": {
+      "not_candidate": 114,
+      "aligned_equal": 16,
+      "unaligned_or_changed": 30
+    },
+    "localLatencyMs": {
+      "count": 46,
+      "p50": 0.699951171875,
+      "p95": 1.199951171875,
+      "max": 1.39990234375
+    },
+    "httpLatencyMs": {
+      "count": 160,
+      "p50": 249.90000000596046,
+      "p95": 267.40000000596046,
+      "max": 462.5
+    },
+    "mailbox": {
+      "pendingBatches": 0,
+      "queuedEntries": 0,
+      "pendingEntries": 0,
+      "pendingChars": 0,
+      "batchesSent": 48686,
+      "highEntries": 243,
+      "highChars": 153140,
+      "scheduler": "message-task",
+      "maxQueueMs": 6.700000017881393,
+      "maxAckMs": 7,
+      "oldestQueuedMs": 0,
+      "oldestInflightMs": 0,
+      "oldestAckMs": 0
+    }
+  },
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+  "workerUrl": "/client/web/dist/assets/marketData.worker-yEQot-IA.js",
+  "limits": [
+    "synthetic attempts, not user execution or fills",
+    "headless foreground; no new native-background or 24-hour evidence",
+    "HTTP remains authoritative; fallback simulation reuses the same HTTP observation, not a second network request",
+    "local timing includes full read and math, not signing/order/paired-fill latency",
+    "exact same-input 10000-case math regression is synthetic, not 10000 live comparable books"
+  ],
+  "verdict": "SHADOW_SIMULATION_ONLY_NOT_ACTIVE_READY",
+  "deploymentAuthorized": false
+}

@@ -36,6 +36,10 @@ describe("pM functional relocation preserves complete implementations", () => {
         expect(readMutated).toThrow("exact diagnostic-only WS change");
         return;
       }
+      if (target === "packages/venue-adapter/polymarket/realtime/ws.ts") {
+        expect(readMutated).toThrow("complete pre-hook source unchanged");
+        return;
+      }
       const mutated = readMutated();
       expect(mutated).not.toBe(original);
       expect(mutated).toContain("changed implementation");

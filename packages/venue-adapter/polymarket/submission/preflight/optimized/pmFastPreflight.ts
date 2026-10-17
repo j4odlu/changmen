@@ -6,6 +6,7 @@ import { getPolymarketOrderClientRuntime, polymarketSigningGeneration } from "..
 import { pmPrepareSubmit, pmSubmitClockReady } from "../../../pmClientApi";
 import { measurePmExecution, recordPmExecutionMetric } from "../../../pmExecutionMetrics";
 import { resolveOptimizedFokBlockReason } from "./pmBetGuard";
+import { beginWsBookShadow } from "./wsBook/shadowObserver";
 
 function readRuntime(account: PlatformAccount, gateway: string, missing = "PM 钱包或 API 凭据未就绪，请解锁钱包并检查账号") {
   const config = parseTokenConfig(account.token);
@@ -44,7 +45,17 @@ export async function runOptimizedFokPreflight<T>(account: PlatformAccount, opti
     ms: performance.now() - started, success: true });
   if (tasks.role !== "precheckOnly" && !pmSubmitClockReady(account))
     throw new Error("PM 提交准备未完成，请先完成校时再新建投注尝试");
-  const market = await tasks.market();
+  const finishShadow = beginWsBookShadow({ tokenId: option.itemId, gateway: tasks.gateway,
+    simulation: tasks.shadowInput,
+    tick: option.data?.pmBufferMode === "tick" || Boolean(option.data?.pmTickQuote)
+      || (option.data?.pmPriceQuote as { mode?: string } | undefined)?.mode === "tick",
+    proxied: Boolean(account.proxyId), role: tasks.role ?? "execute", linkId: option.diagnosticLinkId,
+    attemptId: option.observation?.attemptId, executionId: option.observation?.executionId,
+    leg: `${option.type}:${option.target}:${option.itemId}` });
+  let market: T;
+  try { market = await tasks.market(); }
+  catch (error) { finishShadow(undefined, true); throw error; }
+  finishShadow(market, false);
   const latest = resolveOptimizedFokBlockReason(option);
   if (latest) throw new Error(latest);
   return { market: { status: "fulfilled" as const, value: market },

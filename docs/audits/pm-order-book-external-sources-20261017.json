@@ -1,0 +1,80 @@
+{
+  "at": "2026-10-17T05:51:16.123Z",
+  "rows": [
+    {
+      "repo": "ccxt/ccxt",
+      "path": "ts/src/prediction/polymarket.ts",
+      "commit": "c89f5497f9c710a0ec66285456152e4d159ac428",
+      "url": "https://github.com/ccxt/ccxt/blob/c89f5497f9c710a0ec66285456152e4d159ac428/ts/src/prediction/polymarket.ts",
+      "sha256": "15379c896b31590f981ea5567aa50e141075beaa8a24f6b7f8c8752ee3ff904b"
+    },
+    {
+      "repo": "ccxt/ccxt",
+      "path": "ts/src/pro/binance.ts",
+      "commit": "d21dce2be87b2ba4923771f5130eda825ed93cb5",
+      "url": "https://github.com/ccxt/ccxt/blob/d21dce2be87b2ba4923771f5130eda825ed93cb5/ts/src/pro/binance.ts",
+      "sha256": "fde27fde2d05e72ef24aaddd8bfa8a0b97a1f6ca2ed3133cdd6378957bd10f77"
+    },
+    {
+      "repo": "Polymarket/ts-sdk",
+      "path": "packages/client/src/websockets/clob/market.ts",
+      "commit": "e77aca62456ed4e25c3d4406c7cbb2f5ea258882",
+      "url": "https://github.com/Polymarket/ts-sdk/blob/e77aca62456ed4e25c3d4406c7cbb2f5ea258882/packages/client/src/websockets/clob/market.ts",
+      "sha256": "fc1516c386ece43acd0b00df381b8ca10d0ae23e54a2196241bbf138d2bd2e1a"
+    },
+    {
+      "repo": "weiminglong/poly-book",
+      "path": "README.md",
+      "commit": "126d30ce9638b9441a3358bbd14ea1b3d420d0cd",
+      "url": "https://github.com/weiminglong/poly-book/blob/126d30ce9638b9441a3358bbd14ea1b3d420d0cd/README.md",
+      "sha256": "f0fbe8fb14205ae896c0cae35fbcfd346c68a6ab7e4f85545756b2bbfefc3c97"
+    },
+    {
+      "repo": "hummingbot/hummingbot",
+      "commit": "9af100d6822da7d2d0291a906c730ef172284ee2",
+      "path": "hummingbot/core/data_type/order_book_tracker.py",
+      "url": "https://github.com/hummingbot/hummingbot/blob/9af100d6822da7d2d0291a906c730ef172284ee2/hummingbot/core/data_type/order_book_tracker.py",
+      "sha256": "4cb093d02aaa61a2e72d9ee526b759a9c3ea80c09cf5a68057f90807653daff0"
+    },
+    {
+      "repo": "Polymarket/ts-sdk",
+      "commit": "e77aca62456ed4e25c3d4406c7cbb2f5ea258882",
+      "path": "packages/bindings/src/subscriptions/clob.ts",
+      "url": "https://github.com/Polymarket/ts-sdk/blob/e77aca62456ed4e25c3d4406c7cbb2f5ea258882/packages/bindings/src/subscriptions/clob.ts",
+      "sha256": "0df98f253e4e5f0879a69f96511e0a8d63497233bc2f2f236bb4435b99cb1a0e"
+    },
+    {
+      "repo": "nautechsystems/nautilus_trader",
+      "commit": "e1c7a7af5ae0b2a254dc303475e11663c3dd5762",
+      "path": "docs/integrations/polymarket.md",
+      "url": "https://github.com/nautechsystems/nautilus_trader/blob/e1c7a7af5ae0b2a254dc303475e11663c3dd5762/docs/integrations/polymarket.md",
+      "sha256": "7b3fb440eb4941d2fe47290d46e1d35d140d5f862dc6db9ed68f3ed5527e7417"
+    },
+    {
+      "repo": "nautechsystems/nautilus_trader",
+      "commit": "e1c7a7af5ae0b2a254dc303475e11663c3dd5762",
+      "path": "crates/adapters/polymarket/src/book/mod.rs",
+      "url": "https://github.com/nautechsystems/nautilus_trader/blob/e1c7a7af5ae0b2a254dc303475e11663c3dd5762/crates/adapters/polymarket/src/book/mod.rs",
+      "sha256": "abe6d6df5295d4b7e3adec4d3acb208bafe3eba687fa93962a7eb8ebabb54bbe"
+    },
+    {
+      "repo": "nautechsystems/nautilus_trader",
+      "commit": "e1c7a7af5ae0b2a254dc303475e11663c3dd5762",
+      "path": "crates/adapters/polymarket/src/book/sync.rs",
+      "url": "https://github.com/nautechsystems/nautilus_trader/blob/e1c7a7af5ae0b2a254dc303475e11663c3dd5762/crates/adapters/polymarket/src/book/sync.rs",
+      "sha256": "950aeb198d41e885a0bd610d10bc710f1690cf3a3a42105e89a731d155947de0"
+    },
+    {
+      "repo": "nautechsystems/nautilus_trader",
+      "commit": "e1c7a7af5ae0b2a254dc303475e11663c3dd5762",
+      "path": "crates/adapters/polymarket/src/book/recovery.rs",
+      "url": "https://github.com/nautechsystems/nautilus_trader/blob/e1c7a7af5ae0b2a254dc303475e11663c3dd5762/crates/adapters/polymarket/src/book/recovery.rs",
+      "sha256": "b34e4146a40f4356f66f38785fd295ddf9b235b90dc7c3ca3a78069d9304e989"
+    }
+  ],
+  "leaderboard": {
+    "url": "https://builders.polymarket.com/",
+    "path": "output/playwright/pm-asset-isolation/builders-leaderboard.json",
+    "sha256": "9cc69d03031783d97a0093b9167faa217a79b654b1374377f3454b75e46d03d5"
+  }
+}

@@ -3,12 +3,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 import { restorePmFokCancellationSource, verifyPmFokCancellationContract } from "./pm-fok-cancellation-boundary.mjs";
+import { restorePmExecutionShadowSource } from "./pm-execution-shadow-boundary.mjs";
 const normalize = value => value.replaceAll("\r\n", "\n");
 const digest = value => createHash("sha256").update(normalize(value)).digest("hex");
 const text = normalize(fs.readFileSync(new URL("./pm-legacy-fok-runtime-increments.json", import.meta.url), "utf8"));
 assert.equal(digest(text), "b9950ebd093af8bb71ccd81e78b7204a91e3526c0e77af5d2a4cc27466f6ad3d", "legacy FOK runtime recovery increments stay fixed");
 const { changes } = JSON.parse(text);
 export function restorePmLegacyFokRuntimeSource(file, source, required = false) {
+  source = restorePmExecutionShadowSource(file, source);
   source = restorePmFokCancellationSource(file, source);
   const row = changes[file];
   if (!row) return source;

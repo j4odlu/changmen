@@ -70,6 +70,12 @@ test("buildPmSportSnapshot sets label from score and period", () => {
   assert.match(snap.label, /进行中 · 2\/3 · 1-0/);
 });
 
+test("buildPmSportSnapshot preserves a numeric zero clock at map start", () => {
+  const snapshot = buildPmSportSnapshot({ live: true, period: "2/3", elapsed: 0 });
+  assert.equal(snapshot.elapsed, "0");
+  assert.match(snapshot.label, /已进行0:00/);
+});
+
 test("buildPmSportSnapshot keeps eventId for archive identity", () => {
   const snap = buildPmSportSnapshot({
     gameId: 1,

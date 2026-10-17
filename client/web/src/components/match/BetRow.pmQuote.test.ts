@@ -37,6 +37,7 @@ const renderer = createRenderer<Host, Host>({
 });
 const apps: ReturnType<typeof renderer.createApp>[] = [];
 type State = {
+  pmLiveTimer: string | null;
   extensionBet: ViewBet;
   itemOdds: (item: ViewBetItem, side: BetSide) => number;
   itemQuotePending: (item: ViewBetItem, side: BetSide) => boolean;
@@ -76,6 +77,32 @@ afterEach(() => {
   for (const app of apps.splice(0)) app.unmount();
   resetPmArbPriceBufferPrefsForTests(); vi.restoreAllMocks();
   resetMapBetMuteForTests();
+});
+
+it("updates the PM clock from VPS snapshots independently of the OB live map", async () => {
+  const { state, match, bet } = mount({ live: true, currentMap: 3, elapsed: "755" });
+  expect(match.liveRound).toBe(0);
+  expect(state.pmLiveTimer).toBe("12:35");
+  match.liveRound = 2;
+  match.pmSport = { status: "running", period: "3/5", elapsed: "12:40" };
+  await nextTick();
+  expect(state.pmLiveTimer).toBe("12:40");
+  match.pmSport = { live: true, currentMap: 4, elapsed: "0" };
+  await nextTick();
+  expect(state.pmLiveTimer).toBeNull();
+  bet.round = 4;
+  await nextTick();
+  expect(state.pmLiveTimer).toBe("0:00");
+  match.pmSport = { ended: true, currentMap: 4, elapsed: "755" };
+  await nextTick();
+  expect(state.pmLiveTimer).toBeNull();
+});
+
+it("does not synthesize a PM clock from the OB timer or a missing PM elapsed field", () => {
+  const { state, match } = mount({ live: true, currentMap: 3 });
+  match.liveRound = 3;
+  match.liveRoundStart = Date.now() - 60_000;
+  expect(state.pmLiveTimer).toBeNull();
 });
 
 it("missing tick is pending for an open match, then locks immediately when the match finishes", async () => {

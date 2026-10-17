@@ -2,12 +2,39 @@ import { describe, expect, it } from "vitest";
 import {
   buildPmSportDisplayParts,
   readPmMapRoundScore,
+  readPmMapElapsed,
   formatPmMatchStatus,
   formatResolutionSourceLabel,
   normalizeResolutionSourceHref,
 } from "./pmSportDisplay";
 
 describe("pmSportDisplay", () => {
+  it.each([
+    ["755", "12:35"], ["0", "0:00"], ["3720", "62:00"],
+    ["00:00", "00:00"], ["12:35", "12:35"], ["1:02:35", "1:02:35"],
+  ])("shows the supplied PM map clock %s", (elapsed, expected) => {
+    expect(readPmMapElapsed({ live: true, currentMap: 2, elapsed }, 2)).toBe(expected);
+    expect(readPmMapElapsed({ status: "running", period: "2/3", elapsed }, 2)).toBe(expected);
+  });
+
+  it.each([undefined, "", " ", "-1", "1.2", "NaN", "12:60", "暂停", "99999999999999999999"])(
+    "hides missing or invalid PM clocks: %s", elapsed => {
+      expect(readPmMapElapsed({ live: true, currentMap: 2, elapsed }, 2)).toBeNull();
+    },
+  );
+
+  it("never borrows a PM clock for another map or an inactive match", () => {
+    const snapshot = { live: true, currentMap: 2, elapsed: "755" };
+    for (const map of [0, 1, 3, -1, 2.5])
+      expect(readPmMapElapsed(snapshot, map)).toBeNull();
+    for (const status of ["finished", "final", "postponed", "canceled", "cancelled", "scheduled", "not_started"])
+      expect(readPmMapElapsed({ ...snapshot, status }, 2)).toBeNull();
+    expect(readPmMapElapsed({ ...snapshot, ended: true }, 2)).toBeNull();
+    expect(readPmMapElapsed({ currentMap: 2, elapsed: "755" }, 2)).toBeNull();
+    expect(readPmMapElapsed({ live: true, elapsed: "755" }, 2)).toBeNull();
+    expect(readPmMapElapsed(undefined, 2)).toBeNull();
+  });
+
   it.each([
     ["not_started", "未开赛", "pending"],
     ["running", "进行中", "live"],

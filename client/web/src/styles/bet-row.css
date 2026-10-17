@@ -12,6 +12,12 @@
   position:absolute;right:-6px;top:-6px;
 }
 
+/* [changmen 扩展] PM 在左，OB 在右；两者各自使用所属平台的地图与时间。 */
+.matchs .bet .pm-live {
+  position:absolute;left:-6px;top:-6px;z-index:2;
+  font-variant-numeric:tabular-nums;
+}
+
 .matchs .bet .bet-title {
   color:#fff;font-size:12px;text-align:center;padding-bottom:6px;
 }
@@ -37,6 +43,13 @@
 }
 .matchs .bet:has(.manual-odds-toggle) .bet-title {
   padding-left:68px;
+}
+/* PM 当前地图仍可保留既有静音状态，手动按钮移至右侧避免遮住时钟。 */
+.matchs .bet:has(.pm-live) .manual-odds-toggle {
+  left:auto;right:32px;
+}
+.matchs .bet:has(.pm-live):has(.manual-odds-toggle) .bet-title {
+  padding-left:0;padding-right:100px;
 }
 .matchs .bet.is-map-muted {
   opacity:.72;

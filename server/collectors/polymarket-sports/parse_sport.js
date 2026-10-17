@@ -177,7 +177,7 @@ export function buildPmSportSnapshot(msg, prev = null) {
     bo: parsed.bo ?? undefined,
     scoreRaw: msg.score ? String(msg.score) : undefined,
     mapScore: parsed.mapScore,
-    elapsed: msg.elapsed ? String(msg.elapsed) : undefined,
+    elapsed: msg.elapsed != null ? String(msg.elapsed) : undefined,
     finishedTimestamp: msg.finished_timestamp ? String(msg.finished_timestamp) : undefined,
     resolutionSource,
     updatedAt: Date.now(),

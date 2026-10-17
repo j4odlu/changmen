@@ -27,24 +27,13 @@ export function formatPmMatchStatus(snapshot: PmSportSnapshot | undefined): PmMa
   return { label: "状态待更新", kind: "unknown" };
 }
 
-/** [changmen 扩展] 只展示 VPS 下发的 PM 当前地图时钟；暂停/断流时不在浏览器自行累加。 */
-export function readPmMapElapsed(snapshot: PmSportSnapshot | undefined, map: number): string | null {
-  if (!snapshot || !Number.isInteger(map) || map <= 0
-    || ["not_started", "scheduled"].includes(String(snapshot.status ?? "").trim().toLowerCase())
-    || formatPmMatchStatus(snapshot).kind !== "live")
-    return null;
+/** [changmen 扩展] 沿用标题的 PM 进行中判断，仅标记 VPS 下发的当前地图；不依赖计时字段。 */
+export function isPmMapLive(snapshot: PmSportSnapshot | undefined, map: number): boolean {
+  if (!snapshot || !Number.isInteger(map) || map <= 0 || formatPmMatchStatus(snapshot).kind !== "live")
+    return false;
   const period = /^(\d+)\/(\d+)$/.exec(String(snapshot.period ?? "").trim());
   const currentMap = snapshot.currentMap ?? (period ? Number(period[1]) : null);
-  if (currentMap !== map)
-    return null;
-  const raw = String(snapshot.elapsed ?? "").trim();
-  if (/^\d+$/.test(raw)) {
-    const seconds = Number(raw);
-    return Number.isSafeInteger(seconds)
-      ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}` : null;
-  }
-  // PM 也可能直接下发分:秒或时:分:秒；保留官方时钟，不把任意文本当时间。
-  return /^\d+:[0-5]\d(?::[0-5]\d)?$/.test(raw) ? raw : null;
+  return currentMap === map;
 }
 
 /** [changmen 扩展] PM 当前地图局内比分；scoreRaw 按比赛 Reverse 对齐，阶段编号不另行推测。 */

@@ -15,7 +15,7 @@ import LimitDiagDialog from "@/components/match/LimitDiagDialog.vue";
 import PmPrematchProbability from "@/components/match/PmPrematchProbability.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { useBetRowExtensionUiEnabled } from "@/composables/useExtensionPrefs";
-import { readPmMapElapsed } from "@/shared/pmSportDisplay";
+import { isPmMapLive } from "@/shared/pmSportDisplay";
 import { ArbLineOverlay, useBetRowArbUi } from "@/extensions/arbBet/ui";
 import {
   canFoldMap,
@@ -82,9 +82,9 @@ const showLiveTimer = computed(() => {
   return lr !== 0 && lr === props.bet.round;
 });
 
-// [changmen 扩展] PM 地图/时间独立于 OB；初始列表和 VPS 实时推送共用 pmSport。
-const pmLiveTimer = computed(() => props.bet.marketCode
-  ? null : readPmMapElapsed(props.match.pmSport, props.bet.round));
+// [changmen 扩展] PM 当前地图独立于 OB；初始列表和 VPS 实时推送共用 pmSport。
+const showPmLive = computed(() => !props.bet.marketCode
+  && isPmMapLive(props.match.pmSport, props.bet.round));
 
 /** [changmen 扩展] 全场与各地图非 live 可折叠；live 与折叠按钮互斥 */
 const canFold = computed(() => canFoldMap(props.bet.round) && !showLiveTimer.value);
@@ -447,16 +447,16 @@ function onBetTitleDblClick() {
 <template>
   <div class="bet" :class="{ 'is-map-muted': mapMuted }">
     <el-tag
-      v-if="pmLiveTimer !== null"
+      v-if="showPmLive"
       class="pm-live"
       type="success"
       size="small"
       effect="dark"
       round
       :disable-transitions="true"
-      title="PM 当前地图时间（随服务端赛况更新）"
+      title="PM 当前地图进行中（随服务端赛况更新）"
     >
-      PM {{ pmLiveTimer }}
+      PM LIVE
     </el-tag>
     <el-tag
       v-if="showLiveTimer"

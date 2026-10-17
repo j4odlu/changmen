@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createRenderer, h, nextTick, reactive, ref, ssrContextKey, type Component } from "vue";
-import { createPinia, setActivePinia } from "pinia";
+import { createRenderer, createSSRApp, h, nextTick, reactive, ref, ssrContextKey, type Component } from "vue";
+import { renderToString } from "vue/server-renderer";
+import { createPinia, getActivePinia, setActivePinia } from "pinia";
 import type { BetSide, ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useMatchStore } from "@/stores/matchStore";
@@ -37,7 +38,7 @@ const renderer = createRenderer<Host, Host>({
 });
 const apps: ReturnType<typeof renderer.createApp>[] = [];
 type State = {
-  pmLiveTimer: string | null;
+  showPmLive: boolean;
   extensionBet: ViewBet;
   itemOdds: (item: ViewBetItem, side: BetSide) => number;
   itemQuotePending: (item: ViewBetItem, side: BetSide) => boolean;
@@ -55,7 +56,7 @@ function item(type: ViewBetItem["type"]): ViewBetItem {
 }
 function mount(pmSport?: ViewMatch["pmSport"], round = 3, allowBetting = true) {
   const pm = item("Polymarket"); const pb = item("PB");
-  const bet = reactive({ id: 1, round, items: [pm, pb] } as ViewBet);
+  const bet = reactive({ id: 1, round, items: [pm, pb], getBetName: () => `地图${round}` } as ViewBet);
   const match = reactive({ id: 1, liveRound: 0, pmSport } as ViewMatch);
   const odds = useOddsStore();
   for (const entry of bet.items) for (const side of ["Home", "Away"] as const)
@@ -79,30 +80,49 @@ afterEach(() => {
   resetMapBetMuteForTests();
 });
 
-it("updates the PM clock from VPS snapshots independently of the OB live map", async () => {
-  const { state, match, bet } = mount({ live: true, currentMap: 3, elapsed: "755" });
+it("updates PM LIVE from VPS snapshots without elapsed independently of the OB live map", async () => {
+  const { state, match, bet } = mount({ status: "running", live: true, currentMap: 3, period: "3/3" });
   expect(match.liveRound).toBe(0);
-  expect(state.pmLiveTimer).toBe("12:35");
+  expect(state.showPmLive).toBe(true);
   match.liveRound = 2;
-  match.pmSport = { status: "running", period: "3/5", elapsed: "12:40" };
+  match.pmSport = { status: "running", period: "3/5" };
   await nextTick();
-  expect(state.pmLiveTimer).toBe("12:40");
-  match.pmSport = { live: true, currentMap: 4, elapsed: "0" };
+  expect(state.showPmLive).toBe(true);
+  match.pmSport = { live: true, currentMap: 4 };
   await nextTick();
-  expect(state.pmLiveTimer).toBeNull();
+  expect(state.showPmLive).toBe(false);
   bet.round = 4;
   await nextTick();
-  expect(state.pmLiveTimer).toBe("0:00");
-  match.pmSport = { ended: true, currentMap: 4, elapsed: "755" };
+  expect(state.showPmLive).toBe(true);
+  match.pmSport = { ended: true, currentMap: 4 };
   await nextTick();
-  expect(state.pmLiveTimer).toBeNull();
+  expect(state.showPmLive).toBe(false);
 });
 
-it("does not synthesize a PM clock from the OB timer or a missing PM elapsed field", () => {
-  const { state, match } = mount({ live: true, currentMap: 3 });
+it("renders PM LIVE in the real map-card template for the VPS running 3/3 snapshot", async () => {
+  const { match, bet } = mount({ status: "running", live: true, currentMap: 3, period: "3/3",
+    scoreRaw: "000-000|1-1|Bo3", mapScore: { home: 1, away: 1 } });
+  const app = createSSRApp(BetRow, { match, bet }).use(getActivePinia()!);
+  const html = await renderToString(app);
+  expect(html).toMatch(/class="[^"]*pm-live[^"]*"/);
+  expect(html).toContain("PM LIVE");
+});
+
+it("does not infer PM LIVE from OB and excludes full-match and other market cards", async () => {
+  const { state, match, bet } = mount();
   match.liveRound = 3;
   match.liveRoundStart = Date.now() - 60_000;
-  expect(state.pmLiveTimer).toBeNull();
+  expect(state.showPmLive).toBe(false);
+  match.pmSport = { live: true, currentMap: 3 };
+  await nextTick();
+  expect(state.showPmLive).toBe(true);
+  bet.marketCode = "total";
+  await nextTick();
+  expect(state.showPmLive).toBe(false);
+  bet.marketCode = undefined;
+  bet.round = 0;
+  await nextTick();
+  expect(state.showPmLive).toBe(false);
 });
 
 it("missing tick is pending for an open match, then locks immediately when the match finishes", async () => {

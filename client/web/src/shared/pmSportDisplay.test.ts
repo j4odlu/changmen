@@ -2,37 +2,36 @@ import { describe, expect, it } from "vitest";
 import {
   buildPmSportDisplayParts,
   readPmMapRoundScore,
-  readPmMapElapsed,
+  isPmMapLive,
   formatPmMatchStatus,
   formatResolutionSourceLabel,
   normalizeResolutionSourceHref,
 } from "./pmSportDisplay";
 
 describe("pmSportDisplay", () => {
-  it.each([
-    ["755", "12:35"], ["0", "0:00"], ["3720", "62:00"],
-    ["00:00", "00:00"], ["12:35", "12:35"], ["1:02:35", "1:02:35"],
-  ])("shows the supplied PM map clock %s", (elapsed, expected) => {
-    expect(readPmMapElapsed({ live: true, currentMap: 2, elapsed }, 2)).toBe(expected);
-    expect(readPmMapElapsed({ status: "running", period: "2/3", elapsed }, 2)).toBe(expected);
+  it("marks the current PM map live from a real VPS message without elapsed", () => {
+    const snapshot = {
+      status: "running", live: true, ended: false, period: "3/3",
+      scoreRaw: "000-000|1-1|Bo3", mapScore: { home: 1, away: 1 },
+    };
+    expect(formatPmMatchStatus(snapshot).label).toBe("进行中 · 地图3/3 · 大比分1–1");
+    expect(isPmMapLive(snapshot, 3)).toBe(true);
+    expect(isPmMapLive({ live: true, currentMap: 2 }, 2)).toBe(true);
+    expect(isPmMapLive({ status: "InProgress", period: "2/3" }, 2)).toBe(true);
   });
 
-  it.each([undefined, "", " ", "-1", "1.2", "NaN", "12:60", "暂停", "99999999999999999999"])(
-    "hides missing or invalid PM clocks: %s", elapsed => {
-      expect(readPmMapElapsed({ live: true, currentMap: 2, elapsed }, 2)).toBeNull();
-    },
-  );
-
-  it("never borrows a PM clock for another map or an inactive match", () => {
-    const snapshot = { live: true, currentMap: 2, elapsed: "755" };
+  it("never marks full-match, other maps or inactive matches live", () => {
+    const snapshot = { live: true, currentMap: 2 };
     for (const map of [0, 1, 3, -1, 2.5])
-      expect(readPmMapElapsed(snapshot, map)).toBeNull();
-    for (const status of ["finished", "final", "postponed", "canceled", "cancelled", "scheduled", "not_started"])
-      expect(readPmMapElapsed({ ...snapshot, status }, 2)).toBeNull();
-    expect(readPmMapElapsed({ ...snapshot, ended: true }, 2)).toBeNull();
-    expect(readPmMapElapsed({ currentMap: 2, elapsed: "755" }, 2)).toBeNull();
-    expect(readPmMapElapsed({ live: true, elapsed: "755" }, 2)).toBeNull();
-    expect(readPmMapElapsed(undefined, 2)).toBeNull();
+      expect(isPmMapLive(snapshot, map)).toBe(false);
+    for (const status of ["finished", "final", "postponed", "canceled", "cancelled"])
+      expect(isPmMapLive({ ...snapshot, status }, 2)).toBe(false);
+    for (const status of ["scheduled", "not_started", "unknown"])
+      expect(isPmMapLive({ live: false, currentMap: 2, status }, 2)).toBe(false);
+    expect(isPmMapLive({ ...snapshot, ended: true }, 2)).toBe(false);
+    expect(isPmMapLive({ currentMap: 2 }, 2)).toBe(false);
+    expect(isPmMapLive({ live: true }, 2)).toBe(false);
+    expect(isPmMapLive(undefined, 2)).toBe(false);
   });
 
   it.each([

@@ -14,6 +14,7 @@ import { useFootballOrderStore } from "@/stores/footballOrderStore";
 import { useOrderStore } from "@/stores/orderStore";
 import { useUserStore } from "@/stores/userStore";
 import { readObSportDisplayBalance, sportObSessionFromAccount } from "@/runtime/obSportBetAccount";
+import { getExchange } from "@/shared/currency";
 
 const props = withDefaults(
   defineProps<{
@@ -65,10 +66,12 @@ const panelBalance = computed(() => {
   if (!isSports.value)
     return totalBalance.value;
   return accounts.value.reduce((sum, row) => {
-    const n = sportObSessionFromAccount(row)
+    const isObSport = Boolean(sportObSessionFromAccount(row));
+    const n = isObSport
       ? readObSportDisplayBalance(row)
       : row.balance;
-    return sum + (n ?? 0);
+    // [changmen 扩展] 体育钱包使用 CNY，其余场馆原币按同一汇率折算。
+    return sum + (n ?? 0) * (isObSport ? 1 : getExchange(row.currency));
   }, 0);
 });
 
@@ -187,7 +190,7 @@ const shownUserName = computed(() =>
       <el-row>
         <el-col :span="8">
           <el-statistic
-            title="总余额"
+            title="总余额（元）"
             :value="Math.round(animBalance)"
             :precision="0"
             class="report-number"

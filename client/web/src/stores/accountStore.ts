@@ -3,6 +3,7 @@ import type { AccountRecord, CreateTagPlatformIdentity } from "@changmen/client-
 import type { PlatformId } from "@/types/esport";
 import { defineStore } from "pinia";
 import { PlatformAccount } from "@/models/platformAccount";
+import { getExchange } from "@/shared/currency";
 import * as accountCrud from "@/stores/account/accountCrud";
 import { getProviders, pickAccount } from "@/stores/account/accountPicker";
 import * as balanceRefresh from "@/stores/account/balanceRefresh";
@@ -27,8 +28,9 @@ export const useAccountStore = defineStore("account", {
   getters: {
     sortedAccounts: s => [...s.accounts].sort(PlatformAccount.sortByProvider),
 
+    /** [changmen 扩展] 左上角总余额统一折算为 CNY；A8 此处直接累加原币。 */
     totalBalance: s =>
-      s.accounts.reduce((sum, a) => sum + (a.balance ?? 0), 0),
+      s.accounts.reduce((sum, a) => sum + (a.balance ?? 0) * getExchange(a.currency), 0),
 
     totalToday: s => s.accounts.reduce((sum, a) => sum + (a.today ?? 0), 0),
 

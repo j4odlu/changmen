@@ -286,7 +286,7 @@ publish_root="$fixture/publish"
 mkdir -p "$publish_root/scripts/deploy" "$publish_root/deploy/scripts" "$publish_root/output/release-validation" "$fixture/publish-bin"
 cp "$source_root/scripts/deploy/publish.sh" "$publish_root/scripts/deploy/"
 cp "$source_root/scripts/deploy/release-retention.mjs" "$publish_root/scripts/deploy/"
-cp "$source_root/deploy/scripts/"release-{common,frontend}.sh "$publish_root/deploy/scripts/"
+cp "$source_root/deploy/scripts/"release-{common,frontend,transport}.sh "$publish_root/deploy/scripts/"
 cp "$fixture/dist.tgz" "$publish_root/output/release-validation/frontend.tgz"
 printf '{}' > "$publish_root/output/release-validation/evidence.json"
 printf '// verifier fixture' > "$publish_root/output/release-validation/verify-runtime.mjs"
@@ -305,8 +305,10 @@ cat > "$fixture/publish-bin/ssh" <<'SH'
 #!/usr/bin/env bash
 printf 'ssh\n' >> "$TEST_PUBLISH_LOG"
 case "${!#}" in
+  "mktemp -d "*) printf '%s\n' "${!#}" | sed -e "s/^mktemp -d '//" -e "s/XXXXXXXX'$/12345678/" ;;
   "cat > "*"/app.tgz'") cat > "$TEST_PUBLISH_UPLOAD" ;;
   "cat > "*) cat >/dev/null ;;
+  "bash -s -- cleanup "*|*" bash -s -- run "*) cat >/dev/null ;;
 esac
 SH
 chmod +x "$fixture/publish-bin/"*

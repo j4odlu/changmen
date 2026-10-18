@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { runChangeValidation } from "../verification/verify-change.mjs";
 import { assertAccepted, assertCandidate, assertArchiveEvidence, sealEvidence, sha256, verifySupplementalEvidence } from "./release-evidence.mjs";
 import { DATABASE_PHASES } from "./acceptance-contract.mjs";
@@ -18,6 +18,33 @@ function fixture() {
   git(root, "-c", "user.name=Evidence", "-c", "user.email=evidence@example.invalid", "commit", "-qm", "fixture");
   return root;
 }
+test("transport verification starts without installed workspace dependencies and still rejects missing proof", () => {
+  const root = fixture();
+  try {
+    for (const file of [
+      "scripts/deploy/release-evidence.mjs", "scripts/deploy/change-plan.mjs",
+      "scripts/deploy/classify-deploy-scope.mjs", "scripts/deploy/pack-git-repo.mjs",
+      "scripts/deploy/acceptance-contract.mjs", "scripts/verification/verify-change.mjs",
+      "scripts/verification/validation-plan.mjs", "server/storage/runtime_version.js",
+      "devtools/runtime-tooling/runtime_version.js", "devtools/runtime-tooling/package.json",
+    ]) {
+      const target = path.join(root, file);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.copyFileSync(new URL(`../../${file}`, import.meta.url), target);
+    }
+    assert.equal(fs.existsSync(path.join(root, "node_modules")), false);
+    for (const scope of ["backend", "frontend"]) {
+      const result = spawnSync(process.execPath, ["scripts/deploy/release-evidence.mjs", "verify", scope,
+        "missing-proof.json", "missing-archive.tgz", "a".repeat(40)], { cwd: root, encoding: "utf8", windowsHide: true });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /ENOENT.*missing-proof\.json/);
+      assert.doesNotMatch(result.stderr, /ERR_MODULE_NOT_FOUND/);
+    }
+  } finally {
+    assert.equal(path.dirname(root), path.resolve(os.tmpdir()));
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 function proofs(root, acceptance) {
   const common = { passed: true, sourceStable: true, identity: acceptance.identity };
   const full = JSON.parse(fs.readFileSync(path.join(root, "output/fok-release-verdict.json"), "utf8"));

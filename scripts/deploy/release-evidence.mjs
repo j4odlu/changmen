@@ -8,7 +8,8 @@ import { fileURLToPath } from "node:url";
 import { changePlan, deployedSelection, planHash } from "./change-plan.mjs";
 import { assertCommittedSource, validationInputs } from "../verification/verify-change.mjs";
 import { packGitRepoArchive } from "./pack-git-repo.mjs";
-import { readSourceVersion } from "../../server/storage/runtime_version.js";
+// Transport jobs use a source checkout without npm install; this module uses Node builtins only.
+import { readSourceVersion } from "../../devtools/runtime-tooling/runtime_version.js";
 import { supplementalReports, assertSupplemental } from "./acceptance-contract.mjs";
 
 export const sha256 = value => createHash("sha256").update(value).digest("hex");

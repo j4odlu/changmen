@@ -37,6 +37,30 @@ describe("precise whole-module release protection", () => {
   });
 });
 
+describe("A8 makeup tail correction preserves the rest of the original round", () => {
+  const file = "client/web/src/stores/betting/runArbBetRound.ts";
+  for (const base of [core, vps]) {
+    it(`accepts only the exact tail correction against ${base}`, () => {
+      expect(check(file, undefined, undefined, base)).toMatchObject({
+        fixedSourceEqual: false,
+        exactBoundaryVerified: true,
+        kind: "A8 makeup tail gate correction with complete fixed-baseline module",
+      });
+    });
+    for (const [before, after] of [
+      ["if ((user.config.makeUp && loseStore.orders.size) || hasCurrentPendingVenueObservation)", "if (loseStore.orders.size || hasCurrentPendingVenueObservation)"],
+      ["const hasCurrentPendingVenueObservation = [...loseStore.orders.values()]", "const hasCurrentPendingVenueObservation = []"],
+      ["if (needBetting)", "if (true)"],
+      ["await processLoseOrders();", "await processLoseOrders(); await processLoseOrders();"],
+    ]) {
+      it(`rejects an additional round change ${before}/${base}`, () => mutate(file, before, after, base));
+    }
+    it(`rejects unrelated actions in the module/${base}`, () => {
+      expect(() => check(file, `${read(file)}\nvoid unexpectedTradingAction();\n`, read, base)).toThrow();
+    });
+  }
+});
+
 describe("shared account gateway keeps exact mode and auxiliary-failure boundaries", () => {
   const file = "client/web/src/stores/account/betGateway.ts";
   for (const [before, after] of [

@@ -1,0 +1,72 @@
+{
+  "client/web/src/stores/betting/loseOrder.ts": {
+    "marker": "!order.isCreateOrder && waitSec !== 0",
+    "changes": [
+      [
+        "        continue;\n      }\n\n      // [A8 可证实] 手动队列、waitTime=-1：接口成功即完成本次消费，不做拒单复检。\n      if (isPendingConfirmVenueProvider(account.provider) && !order.isCreateOrder && waitSec !== 0) {\n        await processPmMakeUpLeg({\n          betId,\n          order,\n",
+        "        continue;\n      }\n\n      if (isPendingConfirmVenueProvider(account.provider)) {\n        await processPmMakeUpLeg({\n          betId,\n          order,\n"
+      ],
+      [
+        "          removeIds,\n          setMessage,\n        });\n        // [A8 可证实] 确认拒单后继续下一候选；出队或仍待检测由循环顶部停止新提交。\n        continue;\n      }\n\n      await processA8RegularVenueMakeUpLeg({\n",
+        "          removeIds,\n          setMessage,\n        });\n        break;\n      }\n\n      await processA8RegularVenueMakeUpLeg({\n"
+      ],
+      [
+        "\n  for (const betId of removeIds) {\n    if (loseStore.orders.has(betId))\n      loseStore.removeOrder(betId);\n    const abandon = abandonSellByBetId.get(betId);\n    if (abandon)\n      scheduleArbFailAutoSellByLink(abandon.linkId, setMessage, abandon.reason);\n",
+        "\n  for (const betId of removeIds) {\n    if (loseStore.orders.has(betId))\n      loseStore.removeOrder(betId, true);\n    const abandon = abandonSellByBetId.get(betId);\n    if (abandon)\n      scheduleArbFailAutoSellByLink(abandon.linkId, setMessage, abandon.reason);\n"
+      ]
+    ]
+  },
+  "client/web/src/stores/betting/loseOrderPm.ts": {
+    "marker": "outcome === \"dequeued\" || outcome === \"rejected\"",
+    "changes": [
+      [
+        "    removeIds,\n    setMessage,\n  });\n  // [A8 可证实] 接口成功的补单完成检测后记账号/次数，即使本次检测为拒单。\n  if (outcome === \"dequeued\" || outcome === \"rejected\")\n    markSuccessfulBet(account, bet.id, order.target);\n}\n\n",
+        "    removeIds,\n    setMessage,\n  });\n  if (outcome === \"dequeued\")\n    markSuccessfulBet(account, bet.id, order.target);\n}\n\n"
+      ]
+    ]
+  },
+  "client/web/src/stores/betting/loseOrderPmPending.ts": {
+    "marker": "outcome === \"dequeued\" || outcome === \"rejected\"",
+    "changes": [
+      [
+        "    setMessage,\n  });\n\n  if ((outcome === \"dequeued\" || outcome === \"rejected\") && pendingRole === \"target\")\n    markSuccess(account, pendingTarget);\n  else if (outcome === \"ready-makeup\")\n    markSuccess(account, pendingTarget);\n",
+        "    setMessage,\n  });\n\n  if (outcome === \"dequeued\" && pendingRole === \"target\")\n    markSuccess(account, pendingTarget);\n  else if (outcome === \"ready-makeup\")\n    markSuccess(account, pendingTarget);\n"
+      ],
+      [
+        "  })\n    .then(() => {\n      if (workerRemoveIds.has(params.betId) && params.loseStore.orders.has(params.betId))\n        params.loseStore.removeOrder(params.betId);\n    })\n    .catch(() => {\n      params.loseStore.deferPendingVenueOrder(params.betId);\n",
+        "  })\n    .then(() => {\n      if (workerRemoveIds.has(params.betId) && params.loseStore.orders.has(params.betId))\n        params.loseStore.removeOrder(params.betId, true);\n    })\n    .catch(() => {\n      params.loseStore.deferPendingVenueOrder(params.betId);\n"
+      ]
+    ]
+  },
+  "client/web/src/stores/loseOrderStore.ts": {
+    "marker": "this.removeOrder(betId);",
+    "changes": [
+      [
+        "          continue;\n        if (!active.has(betId) && !existing.pendingVenueOrderId) {\n          const linkId = Number(existing.linkId) || 0;\n          this.removeOrder(betId);\n          if (linkId) {\n            void import(\"@/stores/userStore\")\n              .then(({ useUserStore }) => {\n",
+        "          continue;\n        if (!active.has(betId) && !existing.pendingVenueOrderId) {\n          const linkId = Number(existing.linkId) || 0;\n          this.removeOrder(betId, true);\n          if (linkId) {\n            void import(\"@/stores/userStore\")\n              .then(({ useUserStore }) => {\n"
+      ]
+    ]
+  },
+  "client/web/src/stores/betting/makeUpReference.ts": {
+    "marker": "_venueOrders",
+    "changes": [
+      [
+        "import type { BetOption } from \"@changmen/client-core/models/betOption\";\nimport type { PlatformAccount } from \"@/models/platformAccount\";\nimport type { VenueOrder } from \"@changmen/venue-adapter/contract\";\nimport { resolvePlanCnyFromVenueStake } from \"@changmen/venue-adapter/adaptation\";\nimport { PLATFORMS } from \"@changmen/venue-adapter/shared\";\n\n/** [A8 可证实] Ly 使用成功腿 option 的金额/odds，不改用实单或 newOdds。\n * [changmen 扩展] PM/PF 仅把场馆金额换回队列使用的 CNY。\n */\nexport function resolveMakeUpSuccessReference(\n  leg: BetOption,\n  _venueOrders: VenueOrder[],\n  _rejected: boolean,\n  account?: PlatformAccount,\n  _successOrderId?: string | null,\n): { betMoney: number; betOdds: number } {\n  const raw = Math.round(Number(leg.betMoney) || 0);\n  const betMoney = account && (\n    leg.type === PLATFORMS.Polymarket || leg.type === PLATFORMS.PredictFun\n  )\n    ? resolvePlanCnyFromVenueStake(account, Number(leg.betMoney) || 0)\n    : raw;\n  const betOdds = Number(leg.odds) || 0;\n  return { betMoney, betOdds };\n}\n",
+        "import type { BetOption } from \"@changmen/client-core/models/betOption\";\nimport type { PlatformAccount } from \"@/models/platformAccount\";\nimport type { VenueOrder } from \"@changmen/venue-adapter/contract\";\nimport {\n  resolvePlanCnyFromVenueOrder,\n  resolvePlanCnyFromVenueStake,\n} from \"@changmen/venue-adapter/adaptation\";\nimport { PLATFORMS } from \"@changmen/venue-adapter/shared\";\n\nfunction pickVenueOrderForMakeUpReference(\n  venueOrders: VenueOrder[],\n  successOrderId?: string | null,\n): VenueOrder | undefined {\n  const id = String(successOrderId ?? \"\").trim();\n  if (id) {\n    const ours = venueOrders.find(o => o.orderId === id && o.status !== \"reject\");\n    if (ours)\n      return ours;\n    return undefined;\n  }\n  return venueOrders.find(o => o.status !== \"reject\");\n}\n\n/** 补单入队：优先锚定成功腿场馆实单，避免 leg 对象被重试污染 */\nexport function resolveMakeUpSuccessReference(\n  leg: BetOption,\n  venueOrders: VenueOrder[],\n  rejected: boolean,\n  account?: PlatformAccount,\n  successOrderId?: string | null,\n): { betMoney: number; betOdds: number } {\n  if (!rejected && venueOrders.length > 0) {\n    const placed = pickVenueOrderForMakeUpReference(venueOrders, successOrderId);\n    if (placed) {\n      const betMoney = account\n        ? resolvePlanCnyFromVenueOrder(account, placed)\n        : Math.round(Number(placed.betMoney) || 0);\n      const betOdds = Number(placed.odds) || 0;\n      if (betMoney > 0 && betOdds > 0)\n        return { betMoney, betOdds };\n    }\n  }\n  const raw = Math.round(Number(leg.betMoney) || 0);\n  const betMoney = account && (\n    leg.type === PLATFORMS.Polymarket || leg.type === PLATFORMS.PredictFun\n  )\n    ? resolvePlanCnyFromVenueStake(account, Number(leg.betMoney) || 0)\n    : raw;\n  const betOdds = Number(leg.newOdds ?? leg.odds) || 0;\n  return { betMoney, betOdds };\n}\n"
+      ]
+    ]
+  },
+  "client/web/src/stores/betting/autoBet/retryFailedLeg.ts": {
+    "marker": "legStakeCny(retryLeg.betMoney, retryLeg.type, pickedAccount)",
+    "changes": [
+      [
+        "    if (!retryLeg.data)\n      continue;\n\n    // [A8 可证实] 默认重试在候选阶段检查赔率门槛；预检有 data 后直接提交，不追加收益门控。\n    if (useBand && bandPrefs && isMakeupProfitRateMode(bandPrefs)) {\n      const guardedOdds = Number(retryLeg.odds) || pickedItem.getOdds(failedLeg.target);\n      const retryStakeCny = legStakeCny(retryLeg.betMoney, retryLeg.type, pickedAccount);\n      const rateCheck = checkMakeupProfitRateCandidate(\n        successStakeCny,\n        successLeg.odds,\n",
+        "    if (!retryLeg.data)\n      continue;\n\n    const guardedOdds = Number(retryLeg.odds) || pickedItem.getOdds(failedLeg.target);\n    const retryStakeCny = legStakeCny(\n      retryLeg.betMoney,\n      retryLeg.type,\n      pickedAccount,\n    );\n    const totalStakeCny = successStakeCny + retryStakeCny;\n    const minPayoutCny = Math.min(\n      successStakeCny * successLeg.odds,\n      retryStakeCny * guardedOdds,\n    );\n    const guardedProfit = totalStakeCny > 0 ? minPayoutCny / totalStakeCny : 0;\n    const minGuardProfit = Number(profitThreshold) || 0;\n    if (useBand && bandPrefs && isMakeupProfitRateMode(bandPrefs)) {\n      const rateCheck = checkMakeupProfitRateCandidate(\n        successStakeCny,\n        successLeg.odds,\n"
+      ],
+      [
+        "        continue;\n      }\n    }\n\n    const result = await accountStore.betting(\n      pickedAccount,\n",
+        "        continue;\n      }\n    }\n    else if (!Number.isFinite(guardedProfit) || guardedProfit < minGuardProfit) {\n      observeOption(retryLeg, pickedAccount, \"decision\", { outcome: \"blocked\", reasonCode: \"minimum_profit\" });\n      trace?.event(\n        \"重试\",\n        `拦截 ${pickedAccount.provider}@${guardedOdds}，组合收益 ${guardedProfit.toFixed(4)} < ${minGuardProfit}`,\n      );\n      continue;\n    }\n\n    const result = await accountStore.betting(\n      pickedAccount,\n"
+      ]
+    ]
+  }
+}

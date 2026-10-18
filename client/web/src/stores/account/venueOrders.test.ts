@@ -1,7 +1,7 @@
 import type { VenueOrder } from "@changmen/venue-adapter/contract";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
-import { applyUnsettledStats, syncVenueOrders } from "@/stores/account/venueOrders";
+import { applyUnsettledStats, syncVenueOrders, updateVenueOrders } from "@/stores/account/venueOrders";
 
 const saveOrders = vi.hoisted(() => vi.fn(async () => undefined));
 const getOrders = vi.hoisted(() => vi.fn(async () => [] as VenueOrder[]));
@@ -303,5 +303,57 @@ describe("syncVenueOrders waitForOrderId", () => {
     expect(getOrders).toHaveBeenCalledTimes(2);
     expect(orders?.[0]?.orderId).toBe("ray-new");
     expect(saveOrders).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("A8 order evidence survives a failed backend save", () => {
+  beforeEach(() => {
+    saveOrders.mockReset();
+    getOrders.mockReset();
+  });
+  afterEach(() => {
+    saveOrders.mockReset();
+    vi.restoreAllMocks();
+  });
+
+  it.each((["OB", "RAY", "Polymarket"] as const).flatMap(provider =>
+    (["reject", "none"] as const).map(status => ({ provider, status }))))(
+    "$provider/$status returns the venue result after save failure without another query",
+    async ({ provider, status }) => {
+      const error = new Error("Client_SaveOrder unavailable");
+      const report = vi.spyOn(console, "error").mockImplementation(() => {});
+      const account = new PlatformAccount({ accountId: 42, provider, playerName: "test", token: "esport-token" });
+      const row = { ...makeVenueOrder({ orderId: "original", status, odds: 2, betMoney: 100 }), provider,
+        ...(provider === "Polymarket" ? { pmSide: "buy" as const, pmShares: 2 } : {}) };
+      getOrders.mockResolvedValue([row]);
+      saveOrders.mockRejectedValue(error);
+
+      const result = await updateVenueOrders(account, { pendingBindLinkId: 123, pendingBindOrderId: row.orderId });
+
+      expect(result).toEqual([{ ...row, link: 123 }]);
+      expect(result?.[0]).toBe(row);
+      expect(getOrders).toHaveBeenCalledExactlyOnceWith(account);
+      expect(saveOrders).toHaveBeenCalledExactlyOnceWith(account, result);
+      expect(account.loadingBalance).toBe(false);
+      expect(account.unsettle).toBe(status === "none" ? 1 : 0);
+      expect(report).toHaveBeenCalledWith(expect.any(String), error);
+    },
+  );
+
+  it("preserves A8's successful empty list when its save fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    getOrders.mockResolvedValue([]);
+    saveOrders.mockRejectedValue(new Error("save unavailable"));
+    expect(await updateVenueOrders(makeAccount())).toEqual([]);
+    expect(getOrders).toHaveBeenCalledOnce();
+  });
+
+  it("keeps query failure distinct from a fetched rejection", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    getOrders.mockRejectedValue(new Error("venue unavailable"));
+    const account = makeAccount();
+    expect(await updateVenueOrders(account)).toBeUndefined();
+    expect(saveOrders).not.toHaveBeenCalled();
+    expect(account.loadingBalance).toBe(false);
   });
 });

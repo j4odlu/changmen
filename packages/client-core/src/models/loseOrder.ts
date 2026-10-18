@@ -52,6 +52,8 @@ export class LoseOrder implements LoseOrderRecord {
   pendingVenueNextPollAt?: number;
   pendingVenueAttempts?: number;
   pendingVenueMakeUpEligible?: boolean;
+  pendingRegularReceipt?: LoseOrderRecord["pendingRegularReceipt"];
+  pendingVenueReceipt?: LoseOrderRecord["pendingVenueReceipt"];
   runtimePhase?: MakeupRuntimePhase;
 
   constructor(raw: Partial<LoseOrderRecord> & {
@@ -75,35 +77,49 @@ export class LoseOrder implements LoseOrderRecord {
     const pendingId = String(
       raw.pendingVenueOrderId ?? raw.pendingPmOrderId ?? "",
     ).trim();
+    const regular = raw.pendingRegularReceipt;
+    this.pendingRegularReceipt = regular && Number.isFinite(regular.checkAt) && regular.checkAt > 0
+      ? { checkAt: regular.checkAt,
+          ...(typeof regular.rejected === "boolean" ? { rejected: regular.rejected } : {}),
+          ...(regular.bindOrderId ? { bindOrderId: String(regular.bindOrderId) } : {}) }
+      : undefined;
+    const hasPending = Boolean(pendingId || this.pendingRegularReceipt);
     this.pendingVenueOrderId = pendingId || undefined;
-    this.pendingVenueSubmittedAt = pendingId ? Number(raw.pendingVenueSubmittedAt) || this.createAt : undefined;
-    this.pendingVenueOdds = pendingId ? Number(raw.pendingVenueOdds) || undefined : undefined;
-    this.pendingVenueBetMoney = pendingId ? Number(raw.pendingVenueBetMoney) || undefined : undefined;
-    this.pendingVenueError = pendingId ? raw.pendingVenueError : undefined;
+    this.pendingVenueSubmittedAt = hasPending ? Number(raw.pendingVenueSubmittedAt) || this.createAt : undefined;
+    this.pendingVenueOdds = hasPending ? Number(raw.pendingVenueOdds) || undefined : undefined;
+    this.pendingVenueBetMoney = hasPending ? Number(raw.pendingVenueBetMoney) || undefined : undefined;
+    this.pendingVenueError = hasPending ? raw.pendingVenueError : undefined;
     const pendingAcc = Number(
       raw.pendingVenueAccountId ?? raw.pendingPmAccountId,
     );
-    this.pendingVenueAccountId = pendingId && Number.isFinite(pendingAcc) && pendingAcc > 0
+    this.pendingVenueAccountId = hasPending && Number.isFinite(pendingAcc) && pendingAcc > 0
       ? pendingAcc
       : undefined;
-    this.pendingVenueRole = pendingId
+    const receipt = raw.pendingVenueReceipt;
+    this.pendingVenueReceipt = pendingId && receipt?.orderId === pendingId && receipt.accountId === pendingAcc
+      && Number.isFinite(pendingAcc) && pendingAcc > 0 && typeof receipt.rejected === "boolean"
+      ? { orderId: pendingId, accountId: pendingAcc, rejected: receipt.rejected,
+          ...(receipt.bindOrderId ? { bindOrderId: String(receipt.bindOrderId) } : {}),
+          ...(typeof receipt.message === "string" ? { message: receipt.message } : {}) }
+      : undefined;
+    this.pendingVenueRole = hasPending
       ? (raw.pendingVenueRole === "anchor" ? "anchor" : "target")
       : undefined;
     this.pendingPmSubmission = validatePmSubmission(raw.pendingPmSubmission, pendingId, pendingAcc) ?? undefined;
-    this.pendingVenueTarget = pendingId && raw.pendingVenueTarget
+    this.pendingVenueTarget = hasPending && raw.pendingVenueTarget
       ? raw.pendingVenueTarget as BetSide
       : undefined;
     const conditionId = String(raw.pendingVenueConditionId ?? "").trim();
-    this.pendingVenueConditionId = pendingId && conditionId ? conditionId : undefined;
+    this.pendingVenueConditionId = hasPending && conditionId ? conditionId : undefined;
     const nextPollAt = Number(raw.pendingVenueNextPollAt);
-    this.pendingVenueNextPollAt = pendingId && Number.isFinite(nextPollAt) && nextPollAt > 0
+    this.pendingVenueNextPollAt = hasPending && Number.isFinite(nextPollAt) && nextPollAt > 0
       ? nextPollAt
       : undefined;
     const attempts = Number(raw.pendingVenueAttempts);
-    this.pendingVenueAttempts = pendingId
+    this.pendingVenueAttempts = hasPending
       ? (Number.isFinite(attempts) && attempts > 0 ? Math.floor(attempts) : 0)
       : undefined;
-    this.pendingVenueMakeUpEligible = pendingId
+    this.pendingVenueMakeUpEligible = hasPending
       ? raw.pendingVenueMakeUpEligible !== false
       : undefined;
     this.runtimePhase = normalizeMakeupRuntimePhase(raw.runtimePhase);
@@ -144,8 +160,10 @@ export class LoseOrder implements LoseOrderRecord {
       createAt: this.createAt,
       isCreateOrder: this.isCreateOrder,
       betCount: this.betCount,
-      ...(this.pendingVenueOrderId
+      ...(this.pendingVenueOrderId || this.pendingRegularReceipt
         ? {
+            pendingRegularReceipt: this.pendingRegularReceipt ? { ...this.pendingRegularReceipt } : undefined,
+            pendingVenueReceipt: this.pendingVenueReceipt ? { ...this.pendingVenueReceipt } : undefined,
             pendingVenueOrderId: this.pendingVenueOrderId,
             pendingPmSubmission: this.pendingPmSubmission,
             pendingVenueSubmittedAt: this.pendingVenueSubmittedAt,

@@ -144,6 +144,7 @@ async function syncSportsWorkspaceOrders(account: PlatformAccount): Promise<Venu
 export async function syncVenueOrders(
   account: PlatformAccount,
   opts?: SyncVenueOrdersOpts,
+  onFetchedOrders?: (orders: VenueOrder[]) => void,
 ): Promise<VenueOrder[] | undefined> {
   if (isSportsWorkspacePath()) {
     const handled = await syncSportsWorkspaceOrders(account);
@@ -190,6 +191,8 @@ export async function syncVenueOrders(
   if (!orders)
     return undefined;
 
+  // [A8 可证实] uv.updateOrders 在保存之前持有 e；底层同步仍保留失败抛错的约定。
+  onFetchedOrders?.(orders);
   stampPendingBindLink(orders, opts);
   applyUnsettledStats(account, orders);
   if (String(account.provider ?? "").trim() !== "PredictFun")
@@ -208,13 +211,15 @@ export async function updateVenueOrders(
   account: PlatformAccount,
   opts?: SyncVenueOrdersOpts,
 ): Promise<VenueOrder[] | undefined> {
+  let fetchedOrders: VenueOrder[] | undefined;
   account.loadingBalance = true;
   try {
-    return await syncVenueOrders(account, opts);
+    return await syncVenueOrders(account, opts, (orders) => { fetchedOrders = orders; });
   }
   catch (err) {
     console.error(`[${account.provider}]${account.playerName} 加载订单出错`, err);
-    return undefined;
+    // [A8 可证实] return e 在 catch 之后；上报失败不能抹去已查到的拒单结果。
+    return fetchedOrders;
   }
   finally {
     account.loadingBalance = false;

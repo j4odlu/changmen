@@ -14,6 +14,7 @@ import { restoreOrdersConsumerCompatibility } from "./orders-consumer-boundary.m
 import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
 import { restoreGtcSnapshotMetadata } from "./pm-manual-sell-split-boundary.mjs";
 import { restoreAccountPersistenceSource } from "./account-persistence-boundary.mjs";
+import { restoreA8MakeupSource } from "./a8-makeup-boundary.mjs";
 
 export const notificationCommit = "23f2846bee1ff0a91811f49f9a5d5ac2d78fccdf";
 const root = "client/web/src/stores/betting/autoBet/";
@@ -113,6 +114,9 @@ function restoreGateway(source) {
 }
 
 export function verifyProtectedSource(file, current, original, readSource = target => fs.readFileSync(target, "utf8"), baselineRead) {
+  const makeupSource = restoreA8MakeupSource(file, current, replaceExact);
+  const makeupRestored = makeupSource !== current;
+  current = makeupSource;
   current = restoreAccountPersistenceSource(file, current, readSource, replaceExact);
   const clientStateSource = restoreGtcClientStateSource(file, current, readSource, replaceExact);
   const clientStateRestored = clientStateSource !== current;
@@ -120,7 +124,7 @@ export function verifyProtectedSource(file, current, original, readSource = targ
   const specialized = specializeFokSource(file, restoreMinimalOrdersSource(file, current, readSource), readSource);
   const unified = restoreRayOrderSyncSource(file, restoreUnifiedArbitrageSource(file, specialized, replaceExact), readSource, replaceExact);
   const source = restoreRayBackendDispatch(file, restoreRayProviderSource(file, restoreRayFinalizeSource(file, unified, replaceExact), readSource), replaceExact);
-  const unifiedRestored = clientStateRestored || source !== specialized;
+  const unifiedRestored = makeupRestored || clientStateRestored || source !== specialized;
   if (file === "server/db/rds/orders_store.js") {
     sameModule(restoreOrdersConsumerCompatibility(source, readSource), original, file);
     return { file, fixedSourceEqual: false, exactBoundaryVerified: true, kind: "explicit orders financial compatibility with complete fixed-baseline module" };
@@ -128,7 +132,18 @@ export function verifyProtectedSource(file, current, original, readSource = targ
   if (source === normalize(original))
     return { file, fixedSourceEqual: !unifiedRestored, exactBoundaryVerified: unifiedRestored, ...(unifiedRestored ? { kind: "precise unified increments with complete fixed-baseline module" } : {}) };
   let restored = source;
-  if (file === "server/backend/core/account/order_store.js") {
+  if (file === "client/web/src/stores/betting/runArbBetRound.ts") {
+    // [A8 可证实] index0706 O() 在套利后检查最新队列；仅登记这处轮首快照 bug 的修正。
+    // [changmen 扩展] 原始固定基线不变，反向还原精确片段后继续核对完整模块。
+    restored = replaceExact(restored, `const hasCurrentPendingVenueObservation = [...loseStore.orders.values()]
+      .some(order => Boolean(order.pendingVenueOrderId));
+    if ((user.config.makeUp && loseStore.orders.size) || hasCurrentPendingVenueObservation)
+      await processLoseOrders();`, `if (needLoseOrderWork)
+      await processLoseOrders();`);
+    sameModule(restored, original, file);
+    return { file, fixedSourceEqual: false, exactBoundaryVerified: true, kind: "A8 makeup tail gate correction with complete fixed-baseline module" };
+  }
+  else if (file === "server/backend/core/account/order_store.js") {
     for (const [name, module] of [["preserveOrderMode", "orderMetadata"], ["saveRowsByExecution", "saveRows"]]) {
       restored = replaceExact(restored, `import { ${name} } from "../orderModes/${module}.js";`);
       const helper = `server/backend/core/orderModes/${module}.js`;

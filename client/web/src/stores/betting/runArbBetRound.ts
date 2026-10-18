@@ -19,7 +19,7 @@ export async function runArbBetRound(ctx: ArbBetRoundContext): Promise<void> {
   const config = user.config;
   const hasPending = peekPendingOrderBinds().length > 0;
   const hasPendingVenueObservation = [...loseStore.orders.values()]
-    .some(order => Boolean(order.pendingVenueOrderId));
+    .some(order => Boolean(order.pendingVenueOrderId || order.pendingRegularReceipt));
   const needMakeUp = Boolean(config.makeUp && loseStore.orders.size);
   const needLoseOrderWork = needMakeUp || hasPendingVenueObservation;
   const needBetting = Boolean(config.betting && accountsFundingReady(useAccountStore()));
@@ -35,7 +35,10 @@ export async function runArbBetRound(ctx: ArbBetRoundContext): Promise<void> {
   if (needBetting)
     await runA8ArbRound({ setMessage });
 
+  // [A8 可证实] O() 在整轮套利结束后读取最新队列与 makeUp，包含本轮新入队的补单。
   // [changmen 扩展] delayed 原单观察不受补单开关控制；processLoseOrders 内仍禁止关闭时 POST 新单。
-  if (needLoseOrderWork)
+  const hasCurrentPendingVenueObservation = [...loseStore.orders.values()]
+    .some(order => Boolean(order.pendingVenueOrderId || order.pendingRegularReceipt));
+  if ((user.config.makeUp && loseStore.orders.size) || hasCurrentPendingVenueObservation)
     await processLoseOrders();
 }

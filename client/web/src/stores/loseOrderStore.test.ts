@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoseOrder } from "@/models/loseOrder";
 import { pmSubmissionFromResult } from "@changmen/shared/pm_submission";
 
-import { useLoseOrderStore } from "@/stores/loseOrderStore";
+import { consumeMakeUpQueue, useLoseOrderStore } from "@/stores/loseOrderStore";
 
 const publishLoseOrderMessage = vi.fn();
 
@@ -56,6 +56,107 @@ describe("useLoseOrderStore A8 publish parity", () => {
     store.clearPendingVenueOrder(55);
     expect(store.orders.get(55)!.pendingVenueError).toBeUndefined();
     expect(store.orders.get(55)!.toJSON()).not.toHaveProperty("pendingVenueSubmittedAt");
+  });
+
+  it.each([false, true])("确认型原单终态 rejected=%s 保存恢复、同单保留、换单及消费清除", (rejected) => {
+    const store = useLoseOrderStore();
+    store.createOrder(new LoseOrder({ betId: 55, betCount: 3 }));
+    store.setPendingVenueOrder(55, "original", 7, { odds: 2, betMoney: 50 });
+    const order = store.orders.get(55)!;
+    order.pendingVenueReceipt = { orderId: "original", accountId: 7, rejected, bindOrderId: "actual-id", message: "原结果" };
+    store.persist();
+    const writes = vi.mocked(sessionStorage.setItem).mock.calls.filter(call => call[0] === "LOSEORDER");
+    const restored = new LoseOrder(JSON.parse(writes.at(-1)![1])[0]);
+    expect(restored.pendingVenueReceipt).toEqual(order.pendingVenueReceipt);
+    expect(new LoseOrder({ ...restored.toJSON(), pendingVenueAccountId: 8 }).pendingVenueReceipt).toBeUndefined();
+    expect(new LoseOrder({ ...restored.toJSON(), pendingVenueOrderId: "another" }).pendingVenueReceipt).toBeUndefined();
+    store.setPendingVenueOrder(55, "original", 7);
+    expect(order.pendingVenueReceipt).toEqual(restored.pendingVenueReceipt);
+    store.setPendingVenueOrder(55, "original", 8);
+    expect(order.pendingVenueReceipt).toBeUndefined();
+    order.pendingVenueReceipt = { ...restored.pendingVenueReceipt!, accountId: 8 };
+    store.setPendingVenueOrder(55, "another", 8);
+    expect(order.pendingVenueReceipt).toBeUndefined();
+    order.pendingVenueReceipt = { orderId: "another", accountId: 8, rejected };
+    consumeMakeUpQueue(store, order, new Set());
+    expect(store.orders.get(55)?.betCount).toBe(2);
+    expect(order.pendingVenueReceipt).toBeUndefined();
+    expect(new LoseOrder(order.toJSON()).pendingVenueReceipt).toBeUndefined();
+  });
+
+  it.each(["accepted-id", ""])("普通馆受理回执 %s 刷新保存检测时间与终态，清除后不残留", (id) => {
+    const store = useLoseOrderStore();
+    store.createOrder(new LoseOrder({ betId: 55, betCount: 3 }));
+    store.setPendingVenueOrder(55, id, 7, { regularReceipt: { checkAt: 20000 }, odds: 2, betMoney: 50 });
+    const order = store.orders.get(55)!;
+    order.pendingRegularReceipt!.rejected = false;
+    order.pendingRegularReceipt!.bindOrderId = "detected-id";
+    const restored = new LoseOrder(order.toJSON());
+    expect(restored.pendingVenueAccountId).toBe(7);
+    expect(restored.pendingRegularReceipt).toEqual({ checkAt: 20000, rejected: false, bindOrderId: "detected-id" });
+    store.removeOrders([]);
+    expect(store.orders.get(55)?.betCount).toBe(3);
+    consumeMakeUpQueue(store, order, new Set());
+    expect(store.orders.get(55)?.betCount).toBe(2);
+    expect(store.orders.get(55)?.pendingRegularReceipt).toBeUndefined();
+    expect(store.orders.get(55)?.pendingVenueAccountId).toBeUndefined();
+  });
+
+  it("consumes one configured count and persists the remainder (A8)", () => {
+    const store = useLoseOrderStore();
+    store.createOrder(new LoseOrder({ betId: 2, matchId: 1, isCreateOrder: true, betCount: 3 }));
+    store.removeOrder(2);
+    expect(store.orders.get(2)?.betCount).toBe(2);
+    const writes = vi.mocked(sessionStorage.setItem).mock.calls.filter(call => call[0] === "LOSEORDER");
+    const saved = JSON.parse(writes[writes.length - 1]![1]);
+    expect(new LoseOrder(saved[0]).betCount).toBe(2);
+    store.removeOrder(2);
+    expect(store.orders.get(2)?.betCount).toBe(1);
+    store.removeOrder(2);
+    expect(store.orders.has(2)).toBe(false);
+  });
+
+  it.each([1, 3])("completion count=%s clears the old order and persists consumption in one write", (count) => {
+    const store = useLoseOrderStore();
+    store.createOrder(new LoseOrder({ betId: 55, betCount: count }));
+    store.setPendingVenueOrder(55, "original", 7, { submittedAt: 1000, odds: 2, betMoney: 14.93 });
+    const order = store.orders.get(55)!;
+    const consumed = new Set<number>();
+    vi.mocked(sessionStorage.setItem).mockClear();
+
+    expect(consumeMakeUpQueue(store, order, consumed)).toBe(true);
+    expect(consumeMakeUpQueue(store, order, consumed)).toBe(false);
+
+    const writes = vi.mocked(sessionStorage.setItem).mock.calls.filter(call => call[0] === "LOSEORDER");
+    expect(writes).toHaveLength(1);
+    const restored = JSON.parse(writes[0]![1]).map((row: never) => new LoseOrder(row));
+    expect(restored).toHaveLength(count === 1 ? 0 : 1);
+    if (count > 1) {
+      expect(restored[0].betCount).toBe(count - 1);
+      expect(restored[0].pendingVenueOrderId).toBeUndefined();
+    }
+  });
+
+  it("completion of an old queue cannot consume its replacement", () => {
+    const store = useLoseOrderStore();
+    store.createOrder(new LoseOrder({ betId: 55 }));
+    const old = store.orders.get(55)!;
+    store.createOrder(new LoseOrder({ betId: 55, betCount: 3 }));
+    vi.mocked(sessionStorage.setItem).mockClear();
+
+    expect(consumeMakeUpQueue(store, old, new Set())).toBe(false);
+
+    expect(store.orders.get(55)?.betCount).toBe(3);
+    expect(sessionStorage.setItem).not.toHaveBeenCalled();
+  });
+
+  it("pruning absent markets also decrements configured counts (A8)", () => {
+    const store = useLoseOrderStore();
+    store.createOrder(new LoseOrder({ betId: 2, matchId: 1, isCreateOrder: true, betCount: 2 }));
+    store.removeOrders([]);
+    expect(store.orders.get(2)?.betCount).toBe(1);
+    store.removeOrders([]);
+    expect(store.orders.has(2)).toBe(false);
   });
 
   it("allows PM confirmation retries without the 30 second backoff", () => {

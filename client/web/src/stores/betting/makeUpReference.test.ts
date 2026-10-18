@@ -11,16 +11,16 @@ function leg(betMoney: number, odds: number, newOdds?: number): BetOption {
 }
 
 describe("resolveMakeUpSuccessReference", () => {
-  it("prefers venue order stake and odds when not rejected", () => {
+  it("uses the successful option instead of a different venue fill (A8)", () => {
     const ref = resolveMakeUpSuccessReference(
       leg(30, 1.35),
       [{ betMoney: 70, odds: 4.095, status: "none" } as never],
       false,
     );
-    expect(ref).toEqual({ betMoney: 70, betOdds: 4.095 });
+    expect(ref).toEqual({ betMoney: 30, betOdds: 1.35 });
   });
 
-  it("anchors venue reference to successOrderId when list has stale rows", () => {
+  it("does not replace option values with a venue row selected by orderId (A8)", () => {
     const ref = resolveMakeUpSuccessReference(
       leg(30, 1.35),
       [
@@ -31,7 +31,7 @@ describe("resolveMakeUpSuccessReference", () => {
       undefined,
       "0xnew",
     );
-    expect(ref).toEqual({ betMoney: 70, betOdds: 4.095 });
+    expect(ref).toEqual({ betMoney: 30, betOdds: 1.35 });
   });
 
   it("falls back to leg when successOrderId is absent from venue list", () => {
@@ -42,16 +42,16 @@ describe("resolveMakeUpSuccessReference", () => {
       undefined,
       "0xnew",
     );
-    expect(ref).toEqual({ betMoney: 70, betOdds: 4.095 });
+    expect(ref).toEqual({ betMoney: 70, betOdds: 4 });
   });
 
-  it("falls back to leg newOdds when venue sync is empty", () => {
+  it("keeps option odds instead of newOdds when venue sync is empty (A8)", () => {
     const ref = resolveMakeUpSuccessReference(
       leg(70, 4, 4.095),
       [],
       false,
     );
-    expect(ref).toEqual({ betMoney: 70, betOdds: 4.095 });
+    expect(ref).toEqual({ betMoney: 70, betOdds: 4 });
   });
 
   it("falls back to leg when success leg was rejected", () => {
@@ -75,6 +75,17 @@ describe("resolveMakeUpSuccessReference", () => {
       pmAccount,
     );
     expect(ref).toEqual({ betMoney: 93.8, betOdds: 1.695 });
+  });
+
+  it("PM price improvement does not change the A8 option anchor after currency conversion", () => {
+    const ref = resolveMakeUpSuccessReference(
+      { betMoney: 14, odds: 2, newOdds: 2.2, type: "Polymarket" } as BetOption,
+      [{ orderId: "filled", betMoney: 100, odds: 2.5, status: "none" } as never],
+      false,
+      { provider: "Polymarket", currency: "USDT" } as never,
+      "filled",
+    );
+    expect(ref).toEqual({ betMoney: 93.8, betOdds: 2 });
   });
 
   it("converts PF leg betMoney from USDT to CNY on fallback (same as PM)", () => {
@@ -105,7 +116,7 @@ describe("resolveMakeUpSuccessReference", () => {
     expect(ref).toEqual({ betMoney: 93.8, betOdds: 1.695 });
   });
 
-  it("keeps scaled PM venue order CNY betMoney", () => {
+  it("converts the PM option once without adopting scaled venue amounts (A8)", () => {
     const pmAccount = {
       provider: "Polymarket",
       currency: "USDT",
@@ -116,7 +127,7 @@ describe("resolveMakeUpSuccessReference", () => {
       false,
       pmAccount,
     );
-    expect(ref).toEqual({ betMoney: 98, betOdds: 1.695 });
+    expect(ref).toEqual({ betMoney: 93.8, betOdds: 1.695 });
   });
 });
 

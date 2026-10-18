@@ -1,0 +1,76 @@
+{
+  "client/web/src/stores/betting/loseOrder.ts": {
+    "marker": "const orders = new Map(loseStore.orders);",
+    "changes": [
+      [
+        "  const abandonSellByBetId = new Map<number, { linkId: number; reason: string }>();\n  const betLookup = buildLoseOrderBetLookup(matchStore.matchs);\n  const failSellOn = user.extensionPrefs?.arbFailAutoSell?.enabled === true;\n  const orders = new Map(loseStore.orders);\n\n  for (const [betId, order] of orders) {\n    const ref = resolveLoseOrderBetRef(order, matchStore.matchs, betLookup);\n    const resumed = schedulePendingVenueMakeUpResume({\n      betId,\n",
+        "  const abandonSellByBetId = new Map<number, { linkId: number; reason: string }>();\n  const betLookup = buildLoseOrderBetLookup(matchStore.matchs);\n  const failSellOn = user.extensionPrefs?.arbFailAutoSell?.enabled === true;\n\n  for (const [betId, order] of loseStore.orders) {\n    const ref = resolveLoseOrderBetRef(order, matchStore.matchs, betLookup);\n    const resumed = schedulePendingVenueMakeUpResume({\n      betId,\n"
+      ],
+      [
+        "      .sort((a, b) => b.getOdds(order.target) - a.getOdds(order.target));\n\n    for (const item of candidates) {\n      if (removeIds.has(betId) || loseStore.orders.get(betId) !== order)\n        break;\n\n      // 已有 pending 续查单时，禁止再 POST 新补单（等 tryResume / 下轮 settle）\n",
+        "      .sort((a, b) => b.getOdds(order.target) - a.getOdds(order.target));\n\n    for (const item of candidates) {\n      if (removeIds.has(betId))\n        break;\n\n      // 已有 pending 续查单时，禁止再 POST 新补单（等 tryResume / 下轮 settle）\n"
+      ],
+      [
+        "      option.observation = createObservationContext(order.observation);\n\n      const checked = await accountStore.checkBetting(account, option);\n      if (loseStore.orders.get(betId) !== order)\n        break;\n      if (!checked.data)\n        continue;\n\n",
+        "      option.observation = createObservationContext(order.observation);\n\n      const checked = await accountStore.checkBetting(account, option);\n      if (!checked.data)\n        continue;\n\n"
+      ],
+      [
+        "        waitSec,\n        order.linkId ? { linkId: order.linkId } : undefined,\n      );\n      if (loseStore.orders.get(betId) !== order)\n        break;\n\n      if (!result?.success) {\n        // [A8 可证实] `else le||Z.push(z)`：null/undefined 出队；`{success:false}` 保留\n",
+        "        waitSec,\n        order.linkId ? { linkId: order.linkId } : undefined,\n      );\n\n      if (!result?.success) {\n        // [A8 可证实] `else le||Z.push(z)`：null/undefined 出队；`{success:false}` 保留\n"
+      ],
+      [
+        "  }\n\n  for (const betId of removeIds) {\n    // [changmen 扩展] 等待其它盘口收尾时，用户可能已取消并重建此盘口队列。\n    if (loseStore.orders.get(betId) !== orders.get(betId))\n      continue;\n    if (loseStore.orders.has(betId))\n      loseStore.removeOrder(betId);\n    const abandon = abandonSellByBetId.get(betId);\n",
+        "  }\n\n  for (const betId of removeIds) {\n    if (loseStore.orders.has(betId))\n      loseStore.removeOrder(betId);\n    const abandon = abandonSellByBetId.get(betId);\n"
+      ]
+    ]
+  },
+  "client/web/src/stores/betting/loseOrderPmPending.ts": {
+    "marker": "new WeakSet<LoseOrder>()",
+    "changes": [
+      [
+        "  const makeUpEligible = order.pendingVenueMakeUpEligible !== false;\n  const makeUpEnabled = useUserStore().config.makeUp === true;\n  const canMakeUp = makeUpEligible && makeUpEnabled;\n  const pendingId = order.pendingVenueOrderId;\n  // [changmen 扩展] 异步结果只归属于发起检测的队列和原单。\n  const isCurrentOrder = () => loseStore.orders.get(betId) === order\n    && order.pendingVenueOrderId === pendingId;\n\n  const legOutcome = await resolveVenueLegOutcome(\n    account,\n",
+        "  const makeUpEligible = order.pendingVenueMakeUpEligible !== false;\n  const makeUpEnabled = useUserStore().config.makeUp === true;\n  const canMakeUp = makeUpEligible && makeUpEnabled;\n\n  const legOutcome = await resolveVenueLegOutcome(\n    account,\n"
+      ],
+      [
+        "    settlement: legOutcome.settlement,\n    linkId: order.linkId,\n  });\n  if (!isCurrentOrder())\n    return \"stopped\";\n\n  if (!isVenueLegRejected(legOutcome)) {\n    const orderId = resolveArbBindOrderId(venueOrders, result, false);\n    const bound = await bindArbLegOrder(order.linkId, account, result, venueOrders, false);\n    if (!isCurrentOrder())\n      return \"stopped\";\n    if (!bound && orderId) {\n      enqueuePendingOrderBind({\n        observation: result.observation,\n        target: checked.target,\n",
+        "    settlement: legOutcome.settlement,\n    linkId: order.linkId,\n  });\n\n  if (!isVenueLegRejected(legOutcome)) {\n    loseStore.clearPendingVenueOrder(betId);\n    const orderId = resolveArbBindOrderId(venueOrders, result, false);\n    if (!(await bindArbLegOrder(order.linkId, account, result, venueOrders, false)) && orderId) {\n      enqueuePendingOrderBind({\n        observation: result.observation,\n        target: checked.target,\n"
+      ],
+      [
+        "        betId,\n      });\n    }\n    // [changmen 扩展] 已成交事实保持不变；绑定收尾结束后才解除原单锁。\n    loseStore.clearPendingVenueOrder(betId);\n    refreshOrderListAfterBind();\n    if (pendingRole === \"anchor\") {\n      if (!canMakeUp) {\n",
+        "        betId,\n      });\n    }\n    refreshOrderListAfterBind();\n    if (pendingRole === \"anchor\") {\n      if (!canMakeUp) {\n"
+      ],
+      [
+        "    return \"pending\";\n  }\n\n  if (\n    isVenueLegConfirmedUnfilled(legOutcome)\n    && isPolymarketProvider(account.provider)\n",
+        "    return \"pending\";\n  }\n\n  loseStore.clearPendingVenueOrder(betId);\n  if (\n    isVenueLegConfirmedUnfilled(legOutcome)\n    && isPolymarketProvider(account.provider)\n"
+      ],
+      [
+        "      /* 拒单落库失败不阻断补单收尾 */\n    }\n  }\n  if (!isCurrentOrder())\n    return \"stopped\";\n  const orderId = resolveArbBindOrderId(venueOrders, result, true);\n  const bound = await bindArbLegOrder(order.linkId, account, result, venueOrders, true);\n  if (!isCurrentOrder())\n    return \"stopped\";\n  if (!bound && orderId) {\n    enqueuePendingOrderBind({\n      observation: result.observation,\n      target: checked.target,\n",
+        "      /* 拒单落库失败不阻断补单收尾 */\n    }\n  }\n  const orderId = resolveArbBindOrderId(venueOrders, result, true);\n  if (!(await bindArbLegOrder(order.linkId, account, result, venueOrders, true)) && orderId) {\n    enqueuePendingOrderBind({\n      observation: result.observation,\n      target: checked.target,\n"
+      ],
+      [
+        "      betId,\n    });\n  }\n  loseStore.clearPendingVenueOrder(betId);\n  refreshOrderListAfterBind();\n  if (pendingRole === \"anchor\") {\n    removeIds.add(betId);\n",
+        "      betId,\n    });\n  }\n  refreshOrderListAfterBind();\n  if (pendingRole === \"anchor\") {\n    removeIds.add(betId);\n"
+      ],
+      [
+        "/** @deprecated 用 VenueJbResumeResult */\nexport type PmJbResumeResult = VenueJbResumeResult;\n\nconst pendingResumeFlights = new WeakSet<LoseOrder>();\n\nexport interface PendingVenueResumeParams {\n  betId: number;\n",
+        "/** @deprecated 用 VenueJbResumeResult */\nexport type PmJbResumeResult = VenueJbResumeResult;\n\nconst pendingResumeFlights = new Map<string, Promise<void>>();\n\nexport interface PendingVenueResumeParams {\n  betId: number;\n"
+      ],
+      [
+        "  const pendingId = String(order.pendingVenueOrderId ?? \"\").trim();\n  if (!pendingId)\n    return \"not-applicable\";\n  const isCurrentOrder = () => loseStore.orders.get(betId) === order\n    && order.pendingVenueOrderId === pendingId;\n  if (!isCurrentOrder())\n    return \"handled\";\n\n  const account = accountStore.findAccount(order.pendingVenueAccountId);\n  if (!account || !isPendingConfirmVenueProvider(account.provider)) {\n",
+        "  const pendingId = String(order.pendingVenueOrderId ?? \"\").trim();\n  if (!pendingId)\n    return \"not-applicable\";\n\n  const account = accountStore.findAccount(order.pendingVenueAccountId);\n  if (!account || !isPendingConfirmVenueProvider(account.provider)) {\n"
+      ],
+      [
+        "      submission = validatePmSubmission(await getPmSubmission(account.accountId, pendingId), pendingId, account.accountId);\n    }\n    catch { /* 金额恢复失败不阻断原单状态核验，也不得触发新 POST。 */ }\n    if (!isCurrentOrder())\n      return \"handled\";\n    if (submission) {\n      order.pendingPmSubmission = submission;\n      order.pendingVenueBetMoney = submission.stakeUsdc;\n",
+        "      submission = validatePmSubmission(await getPmSubmission(account.accountId, pendingId), pendingId, account.accountId);\n    }\n    catch { /* 金额恢复失败不阻断原单状态核验，也不得触发新 POST。 */ }\n    if (submission) {\n      order.pendingPmSubmission = submission;\n      order.pendingVenueBetMoney = submission.stakeUsdc;\n"
+      ],
+      [
+        "    setMessage,\n  });\n\n  if (loseStore.orders.get(betId) !== order)\n    return \"handled\";\n  if ((outcome === \"dequeued\" || outcome === \"rejected\") && pendingRole === \"target\")\n    markSuccess(account, pendingTarget);\n  else if (outcome === \"ready-makeup\")\n",
+        "    setMessage,\n  });\n\n  if ((outcome === \"dequeued\" || outcome === \"rejected\") && pendingRole === \"target\")\n    markSuccess(account, pendingTarget);\n  else if (outcome === \"ready-makeup\")\n"
+      ],
+      [
+        "export function schedulePendingVenueMakeUpResume(\n  params: PendingVenueResumeParams,\n): VenueJbResumeResult {\n  // [changmen 扩展] 覆盖解除 pending 到队列出队之间的微任务间隙；新队列不继承旧任务。\n  if (pendingResumeFlights.has(params.order))\n    return \"handled\";\n  const orderId = String(params.order.pendingVenueOrderId ?? \"\").trim();\n  if (!orderId)\n    return \"not-applicable\";\n  if ((Number(params.order.pendingVenueNextPollAt) || 0) > Date.now())\n    return \"handled\";\n\n  const isCurrentOrder = () => params.loseStore.orders.get(params.betId) === params.order;\n  const workerRemoveIds = new Set<number>();\n  pendingResumeFlights.add(params.order);\n  void tryResumePendingVenueMakeUp({\n    ...params,\n    removeIds: workerRemoveIds,\n  })\n    .then(() => {\n      if (workerRemoveIds.has(params.betId) && isCurrentOrder() && !params.order.pendingVenueOrderId)\n        params.loseStore.removeOrder(params.betId);\n    })\n    .catch(() => {\n      if (isCurrentOrder() && params.order.pendingVenueOrderId === orderId)\n        params.loseStore.deferPendingVenueOrder(params.betId);\n    })\n    .finally(() => {\n      pendingResumeFlights.delete(params.order);\n    });\n  return \"handled\";\n}\n\n",
+        "export function schedulePendingVenueMakeUpResume(\n  params: PendingVenueResumeParams,\n): VenueJbResumeResult {\n  const orderId = String(params.order.pendingVenueOrderId ?? \"\").trim();\n  if (!orderId)\n    return \"not-applicable\";\n  if ((Number(params.order.pendingVenueNextPollAt) || 0) > Date.now())\n    return \"handled\";\n\n  const key = `${params.betId}:${orderId}`;\n  if (pendingResumeFlights.has(key))\n    return \"handled\";\n\n  const workerRemoveIds = new Set<number>();\n  const flight = tryResumePendingVenueMakeUp({\n    ...params,\n    removeIds: workerRemoveIds,\n  })\n    .then(() => {\n      if (workerRemoveIds.has(params.betId) && params.loseStore.orders.has(params.betId))\n        params.loseStore.removeOrder(params.betId);\n    })\n    .catch(() => {\n      params.loseStore.deferPendingVenueOrder(params.betId);\n    })\n    .finally(() => {\n      if (pendingResumeFlights.get(key) === flight)\n        pendingResumeFlights.delete(key);\n    });\n  pendingResumeFlights.set(key, flight);\n  return \"handled\";\n}\n\n"
+      ]
+    ]
+  }
+}

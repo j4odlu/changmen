@@ -8,7 +8,7 @@ const processLoseOrders = vi.fn(async () => {});
 const matchStoreState = {
   matchs: [] as { id: number; bets: { id: number }[] }[],
 };
-const loseOrders = new Map<number, { pendingVenueOrderId?: string }>();
+const loseOrders = new Map<number, { pendingVenueOrderId?: string; pendingRegularReceipt?: { checkAt: number } }>();
 
 const runA8ArbRound = vi.fn(async () => {});
 
@@ -58,8 +58,8 @@ describe("runArbBetRound lose-order gate", () => {
     loseOrders.set(2, {});
     matchStoreState.matchs = [];
     accountsFundingReady.mockReturnValue(true);
-    processLoseOrders.mockClear();
-    runA8ArbRound.mockClear();
+    processLoseOrders.mockReset();
+    runA8ArbRound.mockReset();
     processPendingOrderBinds.mockClear();
     peekPendingOrderBinds.mockReturnValue([]);
   });
@@ -70,6 +70,16 @@ describe("runArbBetRound lose-order gate", () => {
     peekPendingOrderBinds.mockReturnValue([{ linkId: 1 }]);
     await runArbBetRound({ setMessage: () => {}, processLoseOrders });
     expect(processPendingOrderBinds).toHaveBeenCalledOnce();
+  });
+
+  it("补单关闭时仍收尾没有场馆 ID 的普通馆已受理回执", async () => {
+    config.betting = false;
+    config.makeUp = false;
+    loseOrders.clear();
+    loseOrders.set(1, { pendingRegularReceipt: { checkAt: 1000 } });
+    await runArbBetRound({ setMessage: vi.fn(), processLoseOrders });
+    expect(processLoseOrders).toHaveBeenCalledOnce();
+    expect(runA8ArbRound).not.toHaveBeenCalled();
   });
 
   it("processes lose orders when makeUp on even if betting off (A8 jb)", async () => {
@@ -108,6 +118,94 @@ describe("runArbBetRound lose-order gate", () => {
     await runArbBetRound({ setMessage: () => {}, processLoseOrders });
 
     expect(runA8ArbRound).toHaveBeenCalledOnce();
+  });
+
+  it("consumes a queue created during arb only after the whole arb round finishes (A8)", async () => {
+    config.betting = true;
+    config.makeUp = true;
+    loseOrders.clear();
+    const events: string[] = [];
+    let finishArb!: () => void;
+    const arbFinished = new Promise<void>((resolve) => { finishArb = resolve; });
+    runA8ArbRound.mockImplementationOnce(async () => {
+      loseOrders.set(3, {});
+      events.push("queue_created");
+      await arbFinished;
+      events.push("arb_finished");
+    });
+    processLoseOrders.mockImplementationOnce(async () => { events.push("makeup"); });
+
+    const round = runArbBetRound({ setMessage: () => {}, processLoseOrders });
+    expect(loseOrders.has(3)).toBe(true);
+    expect(processLoseOrders).not.toHaveBeenCalled();
+    finishArb();
+    await round;
+
+    expect(events).toEqual(["queue_created", "arb_finished", "makeup"]);
+    expect(processLoseOrders).toHaveBeenCalledOnce();
+  });
+
+  it("reads makeUp enabled during arb at the tail of the same round (A8)", async () => {
+    config.betting = true;
+    config.makeUp = false;
+    loseOrders.clear();
+    runA8ArbRound.mockImplementationOnce(async () => {
+      loseOrders.set(3, {});
+      config.makeUp = true;
+    });
+
+    await runArbBetRound({ setMessage: () => {}, processLoseOrders });
+
+    expect(processLoseOrders).toHaveBeenCalledOnce();
+  });
+
+  it("does not consume ordinary makeup when makeUp is disabled during arb (A8)", async () => {
+    config.betting = true;
+    config.makeUp = true;
+    runA8ArbRound.mockImplementationOnce(async () => { config.makeUp = false; });
+
+    await runArbBetRound({ setMessage: () => {}, processLoseOrders });
+
+    expect(processLoseOrders).not.toHaveBeenCalled();
+  });
+
+  it("does not consume a queue removed during arb (A8)", async () => {
+    config.betting = true;
+    config.makeUp = true;
+    runA8ArbRound.mockImplementationOnce(async () => { loseOrders.clear(); });
+
+    await runArbBetRound({ setMessage: () => {}, processLoseOrders });
+
+    expect(processLoseOrders).not.toHaveBeenCalled();
+  });
+
+  it("observes a pending venue order created during arb even when makeUp is off", async () => {
+    config.betting = true;
+    config.makeUp = false;
+    loseOrders.clear();
+    runA8ArbRound.mockImplementationOnce(async () => {
+      loseOrders.set(3, { pendingVenueOrderId: "0xdelayed" });
+    });
+
+    await runArbBetRound({ setMessage: () => {}, processLoseOrders });
+
+    expect(processLoseOrders).toHaveBeenCalledOnce();
+  });
+
+  it("consumes a queue created by deferred binding before the arb round", async () => {
+    config.betting = false;
+    config.makeUp = true;
+    loseOrders.clear();
+    peekPendingOrderBinds.mockReturnValue([{ linkId: 1 }]);
+    processPendingOrderBinds.mockImplementationOnce(async () => {
+      loseOrders.set(3, {});
+      return { ok: 1, fail: 0, left: 0 };
+    });
+
+    await runArbBetRound({ setMessage: () => {}, processLoseOrders });
+
+    expect(runA8ArbRound).not.toHaveBeenCalled();
+    expect(processLoseOrders).toHaveBeenCalledOnce();
   });
 
   it("skips arb but still processes lose orders when funding not ready (A8)", async () => {

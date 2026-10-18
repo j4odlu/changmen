@@ -7,6 +7,7 @@ import { restorePmOptimizedFokSource } from "./pm-optimized-fok-boundary.mjs";
 import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mjs";
 import { restoreGtcSelectionHistorySource } from "./gtc-selection-history-boundary.mjs";
 import { restorePmUnifiedPreflightSource, verifyPmUnifiedPreflightContract } from "./pm-unified-preflight-boundary.mjs";
+import { restoreA8MakeupSource } from "./a8-makeup-boundary.mjs";
 
 const registered = fs.readFileSync(new URL("./pm-preflight-increments.json", import.meta.url), "utf8").replaceAll("\r\n", "\n");
 assert.equal(createHash("sha256").update(registered).digest("hex"), "4f0c597bacc484e229baf8ee6f9ba5b558bccc59087b200060581a9921d50976", "PM preflight reviewed increments must remain fixed");
@@ -40,6 +41,7 @@ const walletCompletionGuards = {
 };
 
 export function restorePmPreflightSource(file, source, required = false) {
+  source = restoreA8MakeupSource(file, source, replaceExact);
   source = restorePmUnifiedPreflightSource(file, source);
   const guard = walletCompletionGuards[file];
   if (guard) {

@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoseOrder } from "@/models/loseOrder";
+import { BetOption } from "@changmen/client-core/models/betOption";
+import { BetResult } from "@changmen/client-core/models/betResult";
 import { pmSubmissionFromResult } from "@changmen/shared/pm_submission";
-import { tryResumePendingVenueMakeUp } from "./loseOrderPmPending";
+import { applyVenueJbSettlementOutcome, tryResumePendingVenueMakeUp } from "./loseOrderPmPending";
+import { bindArbLegOrder } from "./arbOrderBind";
 
 const mocks = vi.hoisted(() => ({
   recover: vi.fn(), save: vi.fn(), settle: vi.fn(), log: vi.fn(), refresh: vi.fn(),
@@ -37,7 +40,7 @@ async function resume(order: LoseOrder) {
   await tryResumePendingVenueMakeUp({
     betId: 1, order,
     accountStore: { findAccount: () => ({ accountId: 317, provider: "Polymarket" }) } as never,
-    loseStore: { persist, clearPendingVenueOrder: vi.fn(), setPendingVenueOrder: vi.fn(), deferPendingVenueOrder: vi.fn() } as never,
+    loseStore: { orders: new Map([[1, order]]), persist, clearPendingVenueOrder: vi.fn(), setPendingVenueOrder: vi.fn(), deferPendingVenueOrder: vi.fn() } as never,
     removeIds: new Set(), setMessage: vi.fn(), markSuccess: vi.fn(),
   });
   return persist;
@@ -91,5 +94,59 @@ describe("PM original submission recovery", () => {
     mocks.recover.mockResolvedValue(snapshot);
     await resume(order);
     expect(mocks.save.mock.calls[0][1][0].betMoney).toBeCloseTo(100.031);
+  });
+
+  it("queue replacement during original amount recovery does not discard its settlement or binding", async () => {
+    const order = legacy();
+    const orders = new Map([[1, order]]);
+    const replacement = new LoseOrder({ betId: 1, linkId: 2, betMoney: 80, betOdds: 3, betCount: 3 });
+    let recover!: (value: typeof snapshot) => void;
+    mocks.recover.mockImplementationOnce(() => new Promise(resolve => { recover = resolve; }));
+    const clear = vi.fn();
+    const mark = vi.fn();
+    const task = tryResumePendingVenueMakeUp({
+      betId: 1, order,
+      accountStore: { findAccount: () => ({ accountId: 317, provider: "Polymarket" }) } as never,
+      loseStore: { orders, persist: vi.fn(), clearPendingVenueOrder: clear } as never,
+      removeIds: new Set(), setMessage: vi.fn(), markSuccess: mark,
+    });
+    orders.set(1, replacement);
+    recover(snapshot);
+    await task;
+
+    expect(mocks.settle).toHaveBeenCalledOnce();
+    expect(mocks.save.mock.calls[0][1][0].betMoney).toBeCloseTo(100.031);
+    expect(bindArbLegOrder).toHaveBeenCalledOnce();
+    expect(orders.get(1)).toBe(replacement);
+    expect(replacement.betCount).toBe(3);
+    expect(clear).not.toHaveBeenCalled();
+    expect(mark).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ accountId: 317 }), "Home");
+  });
+
+  it.each([
+    { role: "target", settlement: "filled", count: 1 },
+    { role: "target", settlement: "unfilled", count: 1 },
+    { role: "anchor", settlement: "filled", count: 1 },
+    { role: "anchor", settlement: "unfilled", count: 0 },
+  ] as const)("$role/$settlement 原单重复收尾按 A8 角色只计数 $count 次", async ({ role, settlement, count }) => {
+    const order = legacy();
+    order.pendingVenueRole = role;
+    order.pendingVenueTarget = "Away";
+    const result = Object.assign(new BetResult("Polymarket", true), { orderId: id, beginTime: snapshot.submittedAt });
+    const mark = vi.fn();
+    // 原队列已被取消；收尾只能记原账号和原方向，不能依赖当前队列。
+    const ctx = {
+      betId: 1, order, result,
+      account: { accountId: 317, provider: "Polymarket" } as never,
+      checked: new BetOption("Polymarket", "1", "1", "", 14.93, "Away", 2),
+      platformLabel: "Polymarket", loseStore: { orders: new Map() } as never,
+      removeIds: new Set<number>(), setMessage: vi.fn(), markSuccess: mark,
+    };
+    mocks.settle.mockResolvedValue({ settlement, orders: [] });
+    await applyVenueJbSettlementOutcome(ctx);
+    await applyVenueJbSettlementOutcome(ctx);
+    expect(mark).toHaveBeenCalledTimes(count);
+    if (count)
+      expect(mark).toHaveBeenCalledWith(ctx.account, "Away");
   });
 });

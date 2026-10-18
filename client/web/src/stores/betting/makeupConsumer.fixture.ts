@@ -1,0 +1,10 @@
+/**
+ * [A8 可证实] index0706.js:95 的完整队列消费段，保留交易分支用于回归对照。
+ * 本地 bundle 提示标题存在损坏编码；仅将该标题替换为 reject，使片段可执行。
+ * 原始片段 SHA-256: 7d98cd603ead0836426cba5b0da3570092ebbc37601f9fd6330844cff00829b4
+ */
+const source = "if([...y.orders.keys()].length!==0&&g.config.makeUp){const Z=[];for(const[z,Q]of y.orders){const ce=t.value.find(ne=>ne.id===Q.matchId);if(!ce){Z.push(z);continue}const ge=ce.bets.find(ne=>ne.id===Q.betId);if(!ge){Z.push(z);continue}let ve=Q.getOdds(g.config.makeProfit);const J=ge.items.filter(ne=>ne.getOdds(Q.target)>=ve).sort((ne,me)=>ne.getOdds(Q.target)>me.getOdds(Q.target)?-1:1);if(J.length!==0)for(const ne of J){if(Z.includes(Q.betId))continue;const me=Q.getBetMoney(ne.getOdds(Q.target)),Oe=h.getAccount(ne.type,me,g.config.noSameProvider&&S(ge.id,_r.getOpponent(Q.target))||[],ue=>{if(ue.isPause()||ue.noMarkup||ue.minOdds!==0&&ne.getOdds(Q.target)<ue.minOdds||ue.maxOdds!==0&&ne.getOdds(Q.target)>ue.maxOdds)return!1;const ee=`${Q.betId}:${Q.target}`,N=e.value.get(ee);return!(N&&(ue.minDefault!==0&&N<ue.minDefault||ue.maxDefault!==0&&N>ue.maxDefault))});if(!Oe)continue;const Ie=await h.checkBetting(Oe,new If(ce,ge,ne,Q.target,me));if(!Ie.data)continue;const be=g.config.waitTime[Oe.provider]===-1?0:Math.max(g.config.waitTime[Oe.provider]??0,10),le=await h.betting(Oe,Ie,be);let he=!1;if(le&&le.success){if(Q.isCreateOrder||(be>0&&_r.tip(\"reject\",`等待<countdown>${be}</countdown>秒`,be*1e3),await dt.wait(be*1e3)),!Q.isCreateOrder&&be!==0){const ue=await Oe.updateOrders();ue&&ue.length!==0?(ue[0].status===Yt.reject?(he=!0,_r.tip(\"拒单提醒\",`${Q.target}再次被拒单`,3e3)):Z.push(z),await Ut.saveOrderBind([new vx(Q.linkId,Oe.provider,ue[0].orderId)])):(!ue||ue.length===0)&&Z.push(z),v.send.LoseOrderMessage(Oe,Q,Ie,he)}else Z.push(z);A(Oe,ge.id,Ie.target)}else le||Z.push(z)}}Z.length!==0&&Z.forEach(z=>{y.removeOrder(z)})}";
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+export const runA8MakeupConsumer = new AsyncFunction(
+  "y", "g", "t", "h", "e", "S", "_r", "If", "dt", "Ut", "vx", "v", "Yt", "A", source,
+) as (...args: unknown[]) => Promise<void>;

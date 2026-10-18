@@ -1,5 +1,6 @@
 import { BetOption, opponentSide } from "@changmen/client-core/models/betOption";
-import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
+import { isPendingConfirmVenueProvider, isPolymarketProvider } from "@changmen/shared/account_multiply";
+import { pmSubmissionFromResult } from "@changmen/shared/pm_submission";
 import { legStakeCny } from "@/domain/polymarket/pmArbStake";
 import {
   checkMakeupProfitRateCandidate,
@@ -23,7 +24,7 @@ import {
 } from "@/stores/betting/loseOrderPm";
 import { processA8RegularVenueMakeUpLeg } from "@/stores/betting/loseOrderRegular";
 import { markSuccessfulBet, readUsedAccounts } from "@/stores/betting/successMarkers";
-import { useLoseOrderStore } from "@/stores/loseOrderStore";
+import { consumeMakeUpQueue, useLoseOrderStore } from "@/stores/loseOrderStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { useUserStore } from "@/stores/userStore";
 
@@ -66,8 +67,9 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
   const abandonSellByBetId = new Map<number, { linkId: number; reason: string }>();
   const betLookup = buildLoseOrderBetLookup(matchStore.matchs);
   const failSellOn = user.extensionPrefs?.arbFailAutoSell?.enabled === true;
+  const orders = new Map(loseStore.orders);
 
-  for (const [betId, order] of loseStore.orders) {
+  for (const [betId, order] of orders) {
     const ref = resolveLoseOrderBetRef(order, matchStore.matchs, betLookup);
     const resumed = schedulePendingVenueMakeUpResume({
       betId,
@@ -87,8 +89,8 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
       continue;
     if (!ref) {
       // [A8 可证实] `!ce||!ge` → Z.push(z) 出队（含 link 绑定）
-      removeIds.add(betId);
-      if (failSellOn && order.linkId) {
+      const consumed = consumeMakeUpQueue(loseStore, order, removeIds);
+      if (consumed && failSellOn && order.linkId) {
         abandonSellByBetId.set(betId, {
           linkId: order.linkId,
           reason: "补单目标已离盘",
@@ -120,11 +122,11 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
       .sort((a, b) => b.getOdds(order.target) - a.getOdds(order.target));
 
     for (const item of candidates) {
-      if (removeIds.has(betId))
+      if (removeIds.has(betId) || loseStore.orders.get(betId) !== order)
         break;
 
       // 已有 pending 续查单时，禁止再 POST 新补单（等 tryResume / 下轮 settle）
-      if (order.pendingVenueOrderId)
+      if (order.pendingVenueOrderId || order.pendingRegularReceipt)
         break;
 
       const sideOdds = item.getOdds(order.target);
@@ -147,6 +149,8 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
       option.observation = createObservationContext(order.observation);
 
       const checked = await accountStore.checkBetting(account, option);
+      if (loseStore.orders.get(betId) !== order)
+        break;
       if (!checked.data)
         continue;
 
@@ -177,12 +181,16 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
         waitSec,
         order.linkId ? { linkId: order.linkId } : undefined,
       );
+      const isCurrentOrder = loseStore.orders.get(betId) === order;
+      // [changmen 扩展] 取消只停止后续下注；任何场馆已受理的原单都必须完成检测、绑定和计数。
+      if (!isCurrentOrder && !result?.success)
+        break;
 
       if (!result?.success) {
         // [A8 可证实] `else le||Z.push(z)`：null/undefined 出队；`{success:false}` 保留
         if (!result) {
-          removeIds.add(betId);
-          if (failSellOn && order.linkId) {
+          const consumed = consumeMakeUpQueue(loseStore, order, removeIds);
+          if (consumed && failSellOn && order.linkId) {
             abandonSellByBetId.set(betId, {
               linkId: order.linkId,
               reason: "补单请求失败",
@@ -192,7 +200,32 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
         continue;
       }
 
-      if (isPendingConfirmVenueProvider(account.provider)) {
+      if (isCurrentOrder && !isPendingConfirmVenueProvider(account.provider) && !order.isCreateOrder && waitSec !== 0) {
+        try {
+          loseStore.setPendingVenueOrder(betId, String(result.orderId ?? ""), account.accountId, {
+            role: "target", pendingTarget: order.target, observation: checked.observation,
+            conditionId: String(checked.betId ?? ""), submittedAt: result.beginTime,
+            odds: checked.odds, betMoney: checked.betMoney,
+            regularReceipt: { checkAt: Date.now() + waitSec * 1000 },
+          });
+        }
+        catch { /* 已受理回执仍在本页继续收尾，存储失败不得重发。 */ }
+      }
+
+      // [A8 可证实] 手动队列、waitTime=-1：接口成功即完成本次消费，不做拒单复检。
+      if (isPendingConfirmVenueProvider(account.provider) && (!isCurrentOrder || (!order.isCreateOrder && waitSec !== 0))) {
+        // [changmen 扩展] 受理回执先保存原单 ID；刷新后只核验原单，不能再次发送补单。
+        if (isCurrentOrder) {
+          try {
+            loseStore.setPendingVenueOrder(betId, String(result.orderId ?? ""), account.accountId, {
+              role: "target", pendingTarget: order.target, observation: checked.observation,
+              conditionId: String(checked.betId ?? ""), submittedAt: result.beginTime,
+              pmSubmission: isPolymarketProvider(account.provider) ? pmSubmissionFromResult(result, account.accountId) : null,
+              odds: checked.newOdds || checked.odds, betMoney: checked.betMoney,
+            });
+          }
+          catch { /* 存储失败不能丢弃已经受理的订单回执。 */ }
+        }
         await processPmMakeUpLeg({
           betId,
           order,
@@ -206,7 +239,8 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
           removeIds,
           setMessage,
         });
-        break;
+        // [A8 可证实] 确认拒单后继续下一候选；出队或仍待检测由循环顶部停止新提交。
+        continue;
       }
 
       await processA8RegularVenueMakeUpLeg({
@@ -225,11 +259,7 @@ export async function processLoseOrders(ctx: LoseOrderTickContext): Promise<void
     }
   }
 
-  for (const betId of removeIds) {
-    if (loseStore.orders.has(betId))
-      loseStore.removeOrder(betId, true);
-    const abandon = abandonSellByBetId.get(betId);
-    if (abandon)
-      scheduleArbFailAutoSellByLink(abandon.linkId, setMessage, abandon.reason);
-  }
+  // [changmen 扩展] 单笔已即时消费；这里只调度明确放弃补单的原 Link 减仓。
+  for (const abandon of abandonSellByBetId.values())
+    scheduleArbFailAutoSellByLink(abandon.linkId, setMessage, abandon.reason);
 }

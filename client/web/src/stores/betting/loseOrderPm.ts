@@ -6,7 +6,6 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import { isPolymarketProvider } from "@changmen/shared/account_multiply";
 import { syncActiveBetMakeupPendingConfirm } from "@/stores/betting/activeBetRunSync";
 import { applyVenueJbSettlementOutcome } from "@/stores/betting/loseOrderPmPending";
-import { markSuccessfulBet } from "@/stores/betting/successMarkers";
 import type { useLoseOrderStore } from "@/stores/loseOrderStore";
 
 export interface PmMakeUpLegContext {
@@ -28,7 +27,6 @@ export async function processPmMakeUpLeg(ctx: PmMakeUpLegContext): Promise<void>
   const {
     betId,
     order,
-    bet,
     account,
     checked,
     result,
@@ -41,7 +39,8 @@ export async function processPmMakeUpLeg(ctx: PmMakeUpLegContext): Promise<void>
   if (result.pending && !isPolymarketProvider(account.provider))
     syncActiveBetMakeupPendingConfirm(betId, result.orderId);
 
-  const outcome = await applyVenueJbSettlementOutcome({
+  // [changmen 扩展] 原单计数在确认收尾处统一记录，队列取消不丢失计数。
+  await applyVenueJbSettlementOutcome({
     betId,
     order,
     account,
@@ -52,8 +51,6 @@ export async function processPmMakeUpLeg(ctx: PmMakeUpLegContext): Promise<void>
     removeIds,
     setMessage,
   });
-  if (outcome === "dequeued")
-    markSuccessfulBet(account, bet.id, order.target);
 }
 
 export type {

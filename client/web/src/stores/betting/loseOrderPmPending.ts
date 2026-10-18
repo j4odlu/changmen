@@ -23,12 +23,21 @@ import {
 } from "@/stores/betting/activeBetRunSync";
 import {
   bindArbLegOrder,
+  bindArbOrderId,
   refreshOrderListAfterBind,
   resolveArbBindOrderId,
 } from "@/stores/betting/arbOrderBind";
 import { enqueuePendingOrderBind } from "@/stores/betting/pendingOrderBind";
 import { useMessageStore } from "@/stores/messageStore";
 import { useUserStore } from "@/stores/userStore";
+import { consumeMakeUpQueue } from "@/stores/loseOrderStore";
+import { markSuccessfulBet } from "@/stores/betting/successMarkers";
+import {
+  continueMakeUpObservation,
+  isMakeUpObservationRetrying,
+  makeUpObservationScope,
+  processA8RegularVenueMakeUpLeg,
+} from "@/stores/betting/loseOrderRegular";
 
 export type VenueJbSettlementOutcome
   = | "dequeued"
@@ -49,10 +58,19 @@ export interface VenueJbSettlementContext {
   loseStore: ReturnType<typeof useLoseOrderStore>;
   removeIds: Set<number>;
   setMessage: (msg: string) => void;
+  markSuccess?: (account: PlatformAccount, target: LoseOrder["target"]) => void;
 }
 
 function isVenueTimeoutReject(result: BetResult): boolean {
   return result.reject === "timeout";
+}
+
+const countedResults = new WeakSet<BetResult>();
+
+/** [changmen 扩展] 取消队列只停止新下注；已发送的原单仍核验并绑定，不写回新队列。 */
+function continueDetachedObservation(ctx: VenueJbSettlementContext, scopeCurrent: () => boolean): void {
+  continueMakeUpObservation(ctx.order, scopeCurrent,
+    async () => (await applyVenueJbSettlementOutcome(ctx)) === "pending");
 }
 
 /** 受理后确认场馆 jb：订单状态层确认后按 filled / timeout / unfilled 收尾 */
@@ -71,34 +89,94 @@ export async function applyVenueJbSettlementOutcome(
     setMessage,
   } = ctx;
   const pendingRole = order.pendingVenueRole ?? "target";
+  const pendingTarget = order.pendingVenueTarget ?? order.target;
   const makeUpEligible = order.pendingVenueMakeUpEligible !== false;
   const makeUpEnabled = useUserStore().config.makeUp === true;
   const canMakeUp = makeUpEligible && makeUpEnabled;
+  const pendingId = order.pendingVenueOrderId;
+  // [changmen 扩展] 异步结果只归属于发起检测的队列和原单。
+  const isCurrentOrder = () => loseStore.orders.get(betId) === order
+    && order.pendingVenueOrderId === pendingId;
+  // [A8 可证实] 受理的补单检测结束后计数；[changmen 扩展] 计数属于原单，不依赖队列存续。
+  const recordTerminal = (filled: boolean) => {
+    if (countedResults.has(result) || (!filled && pendingRole !== "target"))
+      return;
+    countedResults.add(result);
+    try {
+      if (ctx.markSuccess)
+        ctx.markSuccess(account, pendingTarget);
+      else
+        markSuccessfulBet(account, betId, pendingTarget);
+    }
+    catch { /* 计数存储失败不改变成交事实或重新开放原补单。 */ }
+  };
 
-  const legOutcome = await resolveVenueLegOutcome(
-    account,
-    result,
-    () => useAccountStore().updateVenueOrders(account, {
-      pendingBindLinkId: order.linkId || undefined,
-      pendingBindOrderId: String(result.orderId ?? "").trim() || undefined,
-      waitForOrderId: String(result.orderId ?? "").trim() || undefined,
-    }),
-    { confirmPostAccepted: true, pmConditionId: String(checked.betId ?? "").trim() || undefined },
-  );
+  const scopeCurrent = makeUpObservationScope(account);
+  const savedReceipt = order.pendingVenueReceipt;
+  const receipt = savedReceipt?.orderId === String(result.orderId ?? "").trim()
+    && savedReceipt.accountId === account.accountId ? savedReceipt : undefined;
+  let legOutcome: Awaited<ReturnType<typeof resolveVenueLegOutcome>>;
+  try {
+    if (receipt) {
+      // [changmen 扩展] 已确定结果先于绑定保存；恢复后只收尾，不能被后续超时或新查询改判。
+      result.success = true;
+      result.pending = false;
+      result.pmSubmitUnknown = false;
+      result.reject = receipt.rejected ? "unfilled" : null;
+      result.message = receipt.message ?? result.message;
+      legOutcome = { orders: [], settlement: receipt.rejected ? "unfilled" : "filled" };
+    }
+    else {
+      legOutcome = await resolveVenueLegOutcome(
+        account,
+        result,
+        () => useAccountStore().updateVenueOrders(account, {
+          pendingBindLinkId: order.linkId || undefined,
+          pendingBindOrderId: String(result.orderId ?? "").trim() || undefined,
+          waitForOrderId: String(result.orderId ?? "").trim() || undefined,
+        }),
+        { confirmPostAccepted: true, pmConditionId: String(checked.betId ?? "").trim() || undefined },
+      );
+    }
+  }
+  catch {
+    continueDetachedObservation(ctx, scopeCurrent);
+    return "pending";
+  }
+  if (isMakeUpObservationRetrying(order) && !scopeCurrent())
+    return "stopped";
   const venueOrders = legOutcome.orders;
-  saveVenueSettlementLog({
-    account,
-    option: checked,
-    result,
-    orders: venueOrders,
-    settlement: legOutcome.settlement,
-    linkId: order.linkId,
-  });
+  if (!receipt && order.pendingVenueOrderId === pendingId
+    && !isVenueLegPendingConfirm(legOutcome) && !isVenueTimeoutReject(result)) {
+    order.pendingVenueReceipt = {
+      orderId: String(result.orderId ?? "").trim(), accountId: account.accountId,
+      rejected: isVenueLegRejected(legOutcome),
+      bindOrderId: resolveArbBindOrderId(venueOrders, result, isVenueLegRejected(legOutcome)),
+      message: result.message ?? undefined,
+    };
+    if (isCurrentOrder()) {
+      try { loseStore.persist(); }
+      catch { /* 本页保留终态；存储失败不能改判或重发已确认原单。 */ }
+    }
+  }
+  try {
+    saveVenueSettlementLog({
+      account,
+      option: checked,
+      result,
+      orders: venueOrders,
+      settlement: legOutcome.settlement,
+      linkId: order.linkId,
+    });
+  }
+  catch { /* 诊断异常不能改变已经确定的场馆结果。 */ }
 
   if (!isVenueLegRejected(legOutcome)) {
-    loseStore.clearPendingVenueOrder(betId);
-    const orderId = resolveArbBindOrderId(venueOrders, result, false);
-    if (!(await bindArbLegOrder(order.linkId, account, result, venueOrders, false)) && orderId) {
+    const orderId = receipt ? receipt.bindOrderId : resolveArbBindOrderId(venueOrders, result, false);
+    const bound = receipt
+      ? orderId ? await bindArbOrderId(order.linkId, result.provider, account.accountId, orderId) : false
+      : await bindArbLegOrder(order.linkId, account, result, venueOrders, false);
+    if (!bound && orderId) {
       enqueuePendingOrderBind({
         observation: result.observation,
         target: checked.target,
@@ -109,10 +187,24 @@ export async function applyVenueJbSettlementOutcome(
         betId,
       });
     }
+    const currentAtCommit = isCurrentOrder();
+    try {
+      if (currentAtCommit) {
+        if (pendingRole !== "anchor" || !canMakeUp)
+          consumeMakeUpQueue(loseStore, order, removeIds);
+        else
+          loseStore.clearPendingVenueOrder(betId);
+      }
+    }
+    finally {
+      recordTerminal(true);
+    }
+    const current = loseStore.orders.get(betId);
+    if (!currentAtCommit || (current && current !== order))
+      return "stopped";
     refreshOrderListAfterBind();
     if (pendingRole === "anchor") {
       if (!canMakeUp) {
-        removeIds.add(betId);
         const reason = makeUpEnabled ? "补单条件未通过" : "自动补单已关闭";
         setMessage(`锚腿已成交，${reason}`);
         syncActiveBetFail(betId, `单腿已成交，${reason}`);
@@ -123,7 +215,6 @@ export async function applyVenueJbSettlementOutcome(
       void useAccountStore().refreshBalance(account);
       return "ready-makeup";
     }
-    removeIds.add(betId);
     setMessage(`补单成功 ${platformLabel}@${checked.odds}`);
     syncActiveBetMakeupDone(betId, platformLabel, checked.odds);
     useMessageStore().loseOrderMessage(account, order, checked, false);
@@ -140,6 +231,10 @@ export async function applyVenueJbSettlementOutcome(
   if (
     isVenueLegPendingConfirm(legOutcome) || isVenueTimeoutReject(result)
   ) {
+    if (!isCurrentOrder()) {
+      continueDetachedObservation(ctx, scopeCurrent);
+      return "pending";
+    }
     loseStore.setPendingVenueOrder(betId, String(result.orderId ?? ""), account.accountId, {
       role: pendingRole,
       observation: checked.observation,
@@ -166,7 +261,6 @@ export async function applyVenueJbSettlementOutcome(
     return "pending";
   }
 
-  loseStore.clearPendingVenueOrder(betId);
   if (
     isVenueLegConfirmedUnfilled(legOutcome)
     && isPolymarketProvider(account.provider)
@@ -181,8 +275,11 @@ export async function applyVenueJbSettlementOutcome(
       /* 拒单落库失败不阻断补单收尾 */
     }
   }
-  const orderId = resolveArbBindOrderId(venueOrders, result, true);
-  if (!(await bindArbLegOrder(order.linkId, account, result, venueOrders, true)) && orderId) {
+  const orderId = receipt ? receipt.bindOrderId : resolveArbBindOrderId(venueOrders, result, true);
+  const bound = receipt
+    ? orderId ? await bindArbOrderId(order.linkId, result.provider, account.accountId, orderId) : false
+    : await bindArbLegOrder(order.linkId, account, result, venueOrders, true);
+  if (!bound && orderId) {
     enqueuePendingOrderBind({
       observation: result.observation,
       target: checked.target,
@@ -193,16 +290,29 @@ export async function applyVenueJbSettlementOutcome(
       betId,
     });
   }
+  const currentAtCommit = isCurrentOrder();
+  try {
+    if (currentAtCommit) {
+      if (pendingRole === "anchor" || !canMakeUp)
+        consumeMakeUpQueue(loseStore, order, removeIds);
+      else
+        loseStore.clearPendingVenueOrder(betId);
+    }
+  }
+  finally {
+    recordTerminal(false);
+  }
+  const current = loseStore.orders.get(betId);
+  if (!currentAtCommit || (current && current !== order))
+    return "stopped";
   refreshOrderListAfterBind();
   if (pendingRole === "anchor") {
-    removeIds.add(betId);
     setMessage("待确认锚腿未成交，双方均未形成敞口");
     syncActiveBetFail(betId, "待确认订单未成交，补单结束");
     void useAccountStore().refreshBalance(account);
     return "stopped";
   }
   if (!canMakeUp) {
-    removeIds.add(betId);
     const reason = makeUpEnabled ? "补单条件未通过" : "自动补单已关闭";
     setMessage(`待确认订单未成交，${reason}`);
     syncActiveBetFail(betId, `另一腿已成交，${reason}`);
@@ -230,7 +340,7 @@ export type VenueJbResumeResult = "not-applicable" | "handled";
 /** @deprecated 用 VenueJbResumeResult */
 export type PmJbResumeResult = VenueJbResumeResult;
 
-const pendingResumeFlights = new Map<string, Promise<void>>();
+const pendingResumeFlights = new WeakSet<LoseOrder>();
 
 export interface PendingVenueResumeParams {
   betId: number;
@@ -261,11 +371,15 @@ export async function tryResumePendingVenueMakeUp(
   } = params;
 
   const pendingId = String(order.pendingVenueOrderId ?? "").trim();
-  if (!pendingId)
+  if (!pendingId && !order.pendingRegularReceipt)
     return "not-applicable";
+  const isCurrentOrder = () => loseStore.orders.get(betId) === order
+    && String(order.pendingVenueOrderId ?? "").trim() === pendingId;
 
   const account = accountStore.findAccount(order.pendingVenueAccountId);
-  if (!account || !isPendingConfirmVenueProvider(account.provider)) {
+  if (!account || (!order.pendingRegularReceipt && !isPendingConfirmVenueProvider(account.provider))) {
+    if (!isCurrentOrder())
+      return "handled";
     // [changmen 扩展] 账号消失不是原单未成交证据，保留锁并报告异常。
     order.pendingVenueError = "原单账号不可用，无法核验成交";
     loseStore.deferPendingVenueOrder(betId);
@@ -274,7 +388,6 @@ export async function tryResumePendingVenueMakeUp(
     return "handled";
   }
 
-  const pendingRole = order.pendingVenueRole ?? "target";
   const ref = bet?.items.find(item => item.type === account.provider);
   const pendingTarget = order.pendingVenueTarget ?? order.target;
   const isPm = isPolymarketProvider(account.provider);
@@ -288,9 +401,12 @@ export async function tryResumePendingVenueMakeUp(
       order.pendingPmSubmission = submission;
       order.pendingVenueBetMoney = submission.stakeUsdc;
       order.pendingVenueSubmittedAt = submission.submittedAt;
-      loseStore.persist?.();
+      if (isCurrentOrder())
+        loseStore.persist?.();
     }
     else {
+      if (!isCurrentOrder())
+        return "handled";
       // 保留原单锁和队列以便恢复读取；不制造订单、不触发另一笔 POST。
       order.pendingVenueError = "原单记录读取失败，正在重试";
       loseStore.deferPendingVenueOrder(betId);
@@ -325,13 +441,22 @@ export async function tryResumePendingVenueMakeUp(
     pmSubmitUnknown: submission?.submitUnknown,
     pmSubmittedAt: submission?.submittedAt,
     orderId: pendingId,
-    pending: true,
+    pending: isPendingConfirmVenueProvider(account.provider),
     observation: order.pendingObservation,
     beginTime: submission?.submittedAt || order.pendingVenueSubmittedAt || order.createAt,
     ...(submission ? { request: { order: { side: "BUY", makerAmount: submission.makerAmount } } } : {}),
   });
 
-  const outcome = await applyVenueJbSettlementOutcome({
+  if (order.pendingRegularReceipt) {
+    await processA8RegularVenueMakeUpLeg({
+      betId, order, bet: { id: betId }, account, checked, result, accountStore,
+      waitSec: Math.max(0, (order.pendingRegularReceipt.checkAt - Date.now()) / 1000),
+      removeIds, setMessage, resumeAccepted: true,
+    });
+    return "handled";
+  }
+
+  await applyVenueJbSettlementOutcome({
     betId,
     order,
     account,
@@ -341,12 +466,8 @@ export async function tryResumePendingVenueMakeUp(
     loseStore,
     removeIds,
     setMessage,
+    markSuccess,
   });
-
-  if (outcome === "dequeued" && pendingRole === "target")
-    markSuccess(account, pendingTarget);
-  else if (outcome === "ready-makeup")
-    markSuccess(account, pendingTarget);
 
   return "handled";
 }
@@ -355,33 +476,30 @@ export async function tryResumePendingVenueMakeUp(
 export function schedulePendingVenueMakeUpResume(
   params: PendingVenueResumeParams,
 ): VenueJbResumeResult {
+  // [changmen 扩展] 覆盖解除 pending 到队列出队之间的微任务间隙；新队列不继承旧任务。
+  if (pendingResumeFlights.has(params.order) || isMakeUpObservationRetrying(params.order))
+    return "handled";
   const orderId = String(params.order.pendingVenueOrderId ?? "").trim();
-  if (!orderId)
+  if (!orderId && !params.order.pendingRegularReceipt)
     return "not-applicable";
   if ((Number(params.order.pendingVenueNextPollAt) || 0) > Date.now())
     return "handled";
 
-  const key = `${params.betId}:${orderId}`;
-  if (pendingResumeFlights.has(key))
-    return "handled";
-
+  const isCurrentOrder = () => params.loseStore.orders.get(params.betId) === params.order;
   const workerRemoveIds = new Set<number>();
-  const flight = tryResumePendingVenueMakeUp({
+  pendingResumeFlights.add(params.order);
+  void tryResumePendingVenueMakeUp({
     ...params,
     removeIds: workerRemoveIds,
   })
-    .then(() => {
-      if (workerRemoveIds.has(params.betId) && params.loseStore.orders.has(params.betId))
-        params.loseStore.removeOrder(params.betId, true);
-    })
     .catch(() => {
-      params.loseStore.deferPendingVenueOrder(params.betId);
+      if (isCurrentOrder() && String(params.order.pendingVenueOrderId ?? "").trim() === orderId)
+        params.loseStore.deferPendingVenueOrder(params.betId);
     })
     .finally(() => {
-      if (pendingResumeFlights.get(key) === flight)
-        pendingResumeFlights.delete(key);
-    });
-  pendingResumeFlights.set(key, flight);
+      pendingResumeFlights.delete(params.order);
+    })
+    .catch(() => { /* 持久化失败时内存中的出队仍有效，不能重开已成交的队列。 */ });
   return "handled";
 }
 

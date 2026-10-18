@@ -150,20 +150,10 @@ export async function retryFailedLeg(
     if (!retryLeg.data)
       continue;
 
-    const guardedOdds = Number(retryLeg.odds) || pickedItem.getOdds(failedLeg.target);
-    const retryStakeCny = legStakeCny(
-      retryLeg.betMoney,
-      retryLeg.type,
-      pickedAccount,
-    );
-    const totalStakeCny = successStakeCny + retryStakeCny;
-    const minPayoutCny = Math.min(
-      successStakeCny * successLeg.odds,
-      retryStakeCny * guardedOdds,
-    );
-    const guardedProfit = totalStakeCny > 0 ? minPayoutCny / totalStakeCny : 0;
-    const minGuardProfit = Number(profitThreshold) || 0;
+    // [A8 可证实] 默认重试在候选阶段检查赔率门槛；预检有 data 后直接提交，不追加收益门控。
     if (useBand && bandPrefs && isMakeupProfitRateMode(bandPrefs)) {
+      const guardedOdds = Number(retryLeg.odds) || pickedItem.getOdds(failedLeg.target);
+      const retryStakeCny = legStakeCny(retryLeg.betMoney, retryLeg.type, pickedAccount);
       const rateCheck = checkMakeupProfitRateCandidate(
         successStakeCny,
         successLeg.odds,
@@ -179,14 +169,6 @@ export async function retryFailedLeg(
         );
         continue;
       }
-    }
-    else if (!Number.isFinite(guardedProfit) || guardedProfit < minGuardProfit) {
-      observeOption(retryLeg, pickedAccount, "decision", { outcome: "blocked", reasonCode: "minimum_profit" });
-      trace?.event(
-        "重试",
-        `拦截 ${pickedAccount.provider}@${guardedOdds}，组合收益 ${guardedProfit.toFixed(4)} < ${minGuardProfit}`,
-      );
-      continue;
     }
 
     const result = await accountStore.betting(

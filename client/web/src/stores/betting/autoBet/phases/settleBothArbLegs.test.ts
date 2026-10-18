@@ -38,6 +38,7 @@ vi.mock("@/stores/accountStore", () => ({
 }));
 
 import { settleBothArbLegs } from "./settleBothArbLegs";
+import { arbMakeUpSides } from "../arbMakeUpPair";
 
 function params(): ArbBetAttemptParams {
   return {
@@ -81,6 +82,33 @@ describe("settleBothArbLegs A8 wait", () => {
     });
     bindArbLegOrder.mockResolvedValue(true);
     maxLegRejectWaitSec.mockReturnValue(30);
+  });
+
+  it.each([
+    { pmReject: false, otherReject: false, expected: null },
+    { pmReject: false, otherReject: true, expected: "enqueueB" },
+    { pmReject: true, otherReject: false, expected: "enqueueA" },
+    { pmReject: true, otherReject: true, expected: null },
+  ] as const)("PM=$pmReject 另一腿=$otherReject：先保存 PM 结果、等另一腿后才决定 $expected", async ({ pmReject, otherReject, expected }) => {
+    const input = placed("Polymarket", "OB");
+    input.resultA!.pending = true;
+    let release!: () => void;
+    const traditionalWait = new Promise<void>(resolve => { release = resolve; });
+    wait.mockImplementationOnce(() => traditionalWait);
+    settleArbLegUntilTerminal.mockImplementation(async (account: { provider: string }) => ({
+      orders: [], rejected: account.provider === "Polymarket" ? pmReject : otherReject, pendingConfirm: false,
+    }));
+    let complete = false;
+    const task = settleBothArbLegs(params(), input).then(value => { complete = true; return value; });
+    await vi.waitFor(() => expect(bindArbLegOrder).toHaveBeenCalled());
+    expect(complete).toBe(false);
+    expect(settleArbLegUntilTerminal).toHaveBeenCalledOnce();
+    expect(settleArbLegUntilTerminal.mock.calls[0][0].provider).toBe("Polymarket");
+    release();
+    const settled = await task;
+    expect(settleArbLegUntilTerminal).toHaveBeenCalledTimes(2);
+    expect(arbMakeUpSides(input.resultA, settled.rejectA, input.resultB, settled.rejectB,
+      settled.pendingConfirmA, settled.pendingConfirmB)).toBe(expected);
   });
 
   it("普通场馆检测等待为 0 时仍弹原有倒计时，并立即拉单", async () => {

@@ -41,6 +41,10 @@ export interface LoseOrderRecord {
   pendingVenueAttempts?: number;
   /** delayed 原单确认后，是否允许转入补单；状态观察本身不受此值影响 */
   pendingVenueMakeUpEligible?: boolean;
+  /** [changmen 扩展] 普通馆已受理补单：固定检测时间和已确定结果，刷新只收尾原单。 */
+  pendingRegularReceipt?: { checkAt: number; rejected?: boolean; bindOrderId?: string };
+  /** [changmen 扩展] 确认型场馆原单已确定的结果；刷新只完成收尾，不重新判定。 */
+  pendingVenueReceipt?: { orderId: string; accountId: number; rejected: boolean; bindOrderId?: string; message?: string };
   /** [changmen 扩展] 侧栏补单行运行时阶段（刷新后 placing/settling 会清空） */
   runtimePhase?: MakeupRuntimePhase;
 }

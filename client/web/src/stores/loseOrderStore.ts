@@ -134,24 +134,31 @@ export const useLoseOrderStore = defineStore("loseorder", {
         error?: string;
         pmSubmission?: PmSubmission | null;
         observation?: ObservationContext;
+        regularReceipt?: LoseOrder["pendingRegularReceipt"];
       } = {},
     ) {
       const existing = this.orders.get(betId);
       if (!existing)
         return;
       const id = String(orderId ?? "").trim();
-      if (!id)
+      if (!id && !opts.regularReceipt)
         return;
-      const changed = existing.pendingVenueOrderId !== id || existing.pendingVenueAccountId !== Number(accountId);
-      if (changed)
+      const changed = String(existing.pendingVenueOrderId ?? "") !== id || existing.pendingVenueAccountId !== Number(accountId);
+      if (changed) {
         existing.pendingPmSubmission = undefined;
+        existing.pendingVenueReceipt = undefined;
+      }
       if (opts.observation)
         existing.pendingObservation = opts.observation;
       else if (changed)
         existing.pendingObservation = undefined;
       if (!existing.pendingPmSubmission)
         existing.pendingPmSubmission = validatePmSubmission(opts.pmSubmission, id, Number(accountId)) ?? undefined;
-      existing.pendingVenueOrderId = id;
+      existing.pendingVenueOrderId = id || undefined;
+      if (opts.regularReceipt)
+        existing.pendingRegularReceipt = { ...opts.regularReceipt };
+      else if (changed)
+        existing.pendingRegularReceipt = undefined;
       existing.pendingVenueAccountId = Number(accountId) || undefined;
       existing.pendingVenueRole = opts.role ?? existing.pendingVenueRole ?? "target";
       existing.pendingVenueTarget = opts.pendingTarget ?? existing.pendingVenueTarget;
@@ -175,15 +182,18 @@ export const useLoseOrderStore = defineStore("loseorder", {
       this.persist();
     },
 
-    clearPendingVenueOrder(betId: number) {
+    clearPendingVenueOrder(betId: number, persist = true) {
       const existing = this.orders.get(betId);
       if (!existing)
         return;
       const hadPending = Boolean(existing.pendingVenueOrderId)
+        || Boolean(existing.pendingRegularReceipt)
         || Boolean((existing as { pendingPmOrderId?: string }).pendingPmOrderId);
       if (!hadPending)
         return;
       existing.pendingVenueOrderId = undefined;
+      existing.pendingRegularReceipt = undefined;
+      existing.pendingVenueReceipt = undefined;
       existing.pendingObservation = undefined;
       existing.pendingPmSubmission = undefined;
       existing.pendingVenueSubmittedAt = undefined;
@@ -202,12 +212,13 @@ export const useLoseOrderStore = defineStore("loseorder", {
       if (existing.runtimePhase === "venue_pending" || existing.runtimePhase === "pm_pending")
         existing.runtimePhase = undefined;
       this.touchOrdersMap();
-      this.persist();
+      if (persist)
+        this.persist();
     },
 
     deferPendingVenueOrder(betId: number, retryMs?: number) {
       const existing = this.orders.get(betId);
-      if (!existing?.pendingVenueOrderId)
+      if (!existing?.pendingVenueOrderId && !existing?.pendingRegularReceipt)
         return;
       const attempts = Math.max(0, Number(existing.pendingVenueAttempts) || 0) + 1;
       existing.pendingVenueAttempts = attempts;
@@ -257,6 +268,14 @@ export const useLoseOrderStore = defineStore("loseorder", {
         betCount: 1,
       });
       this.createOrder(order);
+    },
+
+    /** [changmen 扩展] 清除原单锁与消费一次队列合并为一次存储写入。 */
+    consumeOrder(order: LoseOrder) {
+      if (this.orders.get(order.betId) !== order)
+        return;
+      this.clearPendingVenueOrder(order.betId, false);
+      this.removeOrder(order.betId);
     },
 
     removeOrder(betId: number, force = false) {
@@ -310,9 +329,9 @@ export const useLoseOrderStore = defineStore("loseorder", {
         const existing = this.orders.get(betId);
         if (!existing)
           continue;
-        if (!active.has(betId) && !existing.pendingVenueOrderId) {
+        if (!active.has(betId) && !existing.pendingVenueOrderId && !existing.pendingRegularReceipt) {
           const linkId = Number(existing.linkId) || 0;
-          this.removeOrder(betId, true);
+          this.removeOrder(betId);
           if (linkId) {
             void import("@/stores/userStore")
               .then(({ useUserStore }) => {
@@ -337,3 +356,21 @@ export const useLoseOrderStore = defineStore("loseorder", {
     },
   },
 });
+
+/** [changmen 扩展] 单笔完成即保存；consumedIds 仅防止本轮再次消费和扣减。 */
+export function consumeMakeUpQueue(
+  store: ReturnType<typeof useLoseOrderStore>,
+  order: LoseOrder,
+  consumedIds: Set<number>,
+): boolean {
+  if (consumedIds.has(order.betId))
+    return false;
+  consumedIds.add(order.betId);
+  if (store.orders.get(order.betId) !== order)
+    return false;
+  try {
+    store.consumeOrder(order);
+  }
+  catch { /* 存储异常不回滚已完成的内存消费，也不允许重发这一笔。 */ }
+  return true;
+}

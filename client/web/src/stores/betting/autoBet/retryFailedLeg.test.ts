@@ -140,7 +140,7 @@ describe("retryFailedLeg PM settlement defer", () => {
     );
   });
 
-  it("blocks a retry leg that would make the posted pair lose money", async () => {
+  it("submits prepared retry data without an extra post-precheck profit gate (A8)", async () => {
     const rayAccount = new PlatformAccount({
       accountId: 3,
       provider: "RAY",
@@ -182,10 +182,10 @@ describe("retryFailedLeg PM settlement defer", () => {
       trace as never,
     );
 
-    expect(out).toBeNull();
+    expect(out?.result.success).toBe(true);
     expect(checkBetting).toHaveBeenCalledOnce();
-    expect(betting).not.toHaveBeenCalled();
-    expect(trace.event).toHaveBeenCalledWith(
+    expect(betting).toHaveBeenCalledOnce();
+    expect(trace.event).not.toHaveBeenCalledWith(
       "重试",
       expect.stringContaining("组合收益"),
     );
@@ -233,6 +233,28 @@ describe("retryFailedLeg PM settlement defer", () => {
     expect(out?.result.success).toBe(true);
     expect(betting).toHaveBeenCalledOnce();
   });
+
+  it("does not reject the A8 integer stake near the candidate odds threshold", async () => {
+    const account = new PlatformAccount({ accountId: 1, provider: "OB", playerName: "ob" });
+    getAccount.mockReturnValue(account);
+    checkBetting.mockImplementation(async (_account, option: BetOption) => {
+      option.data = { ok: true };
+      return option;
+    });
+    betting.mockResolvedValue(new BetResult("OB", true));
+    const result = await retryFailedLeg(
+      { id: 1, title: "A vs B" } as never,
+      { id: 100, items: [makeItem("OB", 3.81)] } as never,
+      new BetOption("RAY", "m", "b", "h", 80, "Home", 1.45),
+      new BetOption("OB", "m", "b", "a", 30, "Away", 3.81),
+      new PlatformAccount({ accountId: 2, provider: "RAY", playerName: "ray" }),
+      { anyOdds: false, makeProfit: 1.05, noSameBet: false, makeUp: true } as never,
+      10,
+    );
+
+    expect(result?.result.success).toBe(true);
+    expect(betting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 30, odds: 3.81 }), 10, undefined);
+  });
 });
 
 describe("retryFailedLeg makeupOddsBand", () => {
@@ -270,7 +292,7 @@ describe("retryFailedLeg makeupOddsBand", () => {
     expect(betting).not.toHaveBeenCalled();
   });
 
-  it("blocks retry when the hedge formula cannot meet makeProfit", async () => {
+  it("falls back to the A8 candidate gate when the odds band has no solution", async () => {
     const acc = new PlatformAccount({ accountId: 1, provider: "OB", playerName: "ob1" });
     getAccount.mockReturnValue(acc);
     checkBetting.mockImplementation(async (_acc, opt: BetOption) => {
@@ -294,8 +316,8 @@ describe("retryFailedLeg makeupOddsBand", () => {
       10,
     );
 
-    expect(out).toBeNull();
-    expect(betting).not.toHaveBeenCalled();
+    expect(out?.result.success).toBe(true);
+    expect(betting).toHaveBeenCalledOnce();
   });
 
   it("does not use the band on immediate retry when makeUp is off", async () => {

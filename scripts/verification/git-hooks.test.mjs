@@ -22,7 +22,7 @@ it("a real Git commit is blocked by failed typecheck, accepts docs, and works fr
     const hookDir = path.join(temporary, "scripts/git-hooks"); fs.mkdirSync(hookDir, { recursive: true });
     for (const file of ["pre-commit", "pre-commit.mjs"])
       fs.copyFileSync(new URL(`../git-hooks/${file}`, import.meta.url), path.join(hookDir, file));
-    fs.writeFileSync(path.join(temporary, "package.json"), JSON.stringify({ name: "changmen", scripts: { "typecheck:frontend": "node -e process.exit(7)" } }));
+    fs.writeFileSync(path.join(temporary, "package.json"), JSON.stringify({ name: "changmen", scripts: { "typecheck:frontend": 'node -e "process.exit(7)"' } }));
     git(["add", "."]); git(["-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture"]);
     expect(installHooks(hookDir)).toMatchObject({ hooksPath: "scripts/git-hooks", globalSettingsChanged: false });
     fs.mkdirSync(path.join(temporary, "client/web/src"), { recursive: true });
@@ -33,7 +33,7 @@ it("a real Git commit is blocked by failed typecheck, accepts docs, and works fr
     git(["reset", "--quiet"]);
     fs.writeFileSync(path.join(temporary, "README.md"), "docs\n"); git(["add", "README.md"]);
     git(["commit", "-qm", "documentation bypasses unrelated typecheck"]);
-    fs.writeFileSync(path.join(temporary, "package.json"), JSON.stringify({ name: "changmen", scripts: { "typecheck:frontend": "node -e process.exit(0)" } }));
+    fs.writeFileSync(path.join(temporary, "package.json"), JSON.stringify({ name: "changmen", scripts: { "typecheck:frontend": 'node -e "process.exit(0)"' } }));
     git(["add", "package.json", "client"]); git(["commit", "-qm", "frontend passes"]);
   } finally {
     expect(path.dirname(path.resolve(temporary))).toBe(fs.realpathSync(os.tmpdir()));

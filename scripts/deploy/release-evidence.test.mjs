@@ -128,7 +128,10 @@ test("real Git archives and frontend build metadata seal successfully; an old bu
 });
 test("maintenance-only pushes require one source-bound five-phase proof even with no application archives", () => {
   const root = fixture(), originalSha = process.env.GITHUB_SHA;
+  const originalDeployedVersions = process.env.CI_DEPLOYED_VERSIONS_FILE;
   try {
+    // This synthetic repository has its own history, independent of the CI checkout.
+    delete process.env.CI_DEPLOYED_VERSIONS_FILE;
     fs.writeFileSync(path.join(root, ".gitignore"), "output/\n");
     fs.mkdirSync(path.join(root, "scripts/deploy"), { recursive: true });
     fs.copyFileSync(new URL("./verify-runtime.mjs", import.meta.url), path.join(root, "scripts/deploy/verify-runtime.mjs"));
@@ -184,6 +187,8 @@ test("maintenance-only pushes require one source-bound five-phase proof even wit
     assert.throws(() => assertAccepted(downgraded), /plan mismatch/i);
   } finally {
     if (originalSha === undefined) delete process.env.GITHUB_SHA; else process.env.GITHUB_SHA = originalSha;
+    if (originalDeployedVersions === undefined) delete process.env.CI_DEPLOYED_VERSIONS_FILE;
+    else process.env.CI_DEPLOYED_VERSIONS_FILE = originalDeployedVersions;
     assert.equal(path.dirname(root), path.resolve(os.tmpdir()));
     fs.rmSync(root, { recursive: true, force: true });
   }

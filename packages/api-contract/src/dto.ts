@@ -120,10 +120,18 @@ export interface PolymarketMarketIndexEntry {
 }
 
 /** [changmen 扩展] polymarket_market_index.json */
+export interface PolymarketOutcomeEntry extends PolymarketMarketIndexEntry {
+  firstSeenAt: number;
+  lastCheckedAt?: number;
+  nextCheckAt?: number;
+}
+
 export interface PolymarketMarketIndex {
   updatedAt: number;
   assetIds: string[];
   entries: PolymarketMarketIndexEntry[];
+  /** [changmen 扩展] 独立赛果补采队列/存档；不加入行情 assets 或下注盘口。 */
+  outcomeEntries?: PolymarketOutcomeEntry[];
 }
 
 /** [changmen 扩展] VPS sxbet-collector 写入，浏览器 Centrifugo → fo */

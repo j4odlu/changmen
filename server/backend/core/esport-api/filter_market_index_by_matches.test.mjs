@@ -7,6 +7,20 @@ import {
 } from "./filter_market_index_by_matches.js";
 
 describe("filter_market_index_by_matches", () => {
+  it("passes archived outcomes for matched IDs/slugs without subscribing them as quotes", () => {
+    const index = { updatedAt: 1, entries: [], assetIds: [], outcomeEntries: [
+      { sourceMatchId: "e1", marketId: "m1", homeTokenId: "h", awayTokenId: "a" },
+      { sourceMatchId: "e2", eventSlug: "slug2", marketId: "m2" },
+      { sourceMatchId: "other", marketId: "m3" },
+    ] };
+    const out = filterMarketIndexByClientMatches("Polymarket", index, [
+      { Matchs: { Polymarket: "e1" } }, { Matchs: { Polymarket: "slug2" } },
+    ]);
+    expect(out.outcomeEntries.map(e => e.marketId)).toEqual(["m1", "m2"]);
+    expect(out.entries).toEqual([]);
+    expect(out.assetIds).toEqual([]);
+    expect(filterMarketIndexByClientMatches("Polymarket", index, []).outcomeEntries).toEqual([]);
+  });
   const pmIndex = {
     updatedAt: 1_700_000_000_000,
     assetIds: ["h1", "a1", "h2", "a2", "h3", "a3"],

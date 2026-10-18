@@ -1,6 +1,7 @@
 /// <reference path="./legacy-modules.d.ts" />
 import type { PolymarketMarketIndex, PolymarketMarketIndexEntry } from "@changmen/api-contract";
 import type { IndexCandidate, IndexOptions, PlatformMatch, PlatformBet } from "./types.ts";
+import { mergePolymarketOutcomeEntries } from "./outcomes.ts";
 import {
   readPolymarketMarketIndex,
   writePolymarketMarketIndex,
@@ -19,6 +20,7 @@ export function buildPolymarketMarketIndexFromEntries(entries: PolymarketMarketI
     updatedAt: Date.now(),
     assetIds: [...assetIdSet],
     entries,
+    outcomeEntries: mergePolymarketOutcomeEntries(readPolymarketMarketIndex()?.outcomeEntries ?? [], entries),
   };
 }
 

@@ -49,5 +49,26 @@ export function readRelocatedPmFunctionalSource(file, source, readSource = targe
   if (!target)
     return source.replace(/\r\n/g, "\n");
   assert.equal(source.replace(/\r\n/g, "\n"), pmFunctionalCompatibilitySource(file), `${file}: compatibility entry must only re-export its registered implementation`);
-  return rebasePmFokImports(restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, restorePmWsQuantityEvidenceSource(target, readSource(target), readSource)), readSource)), target, file).replace(/\r\n/g, "\n");
+  const implementation = restorePmOutcomeArchiveSource(target, readSource(target));
+  return rebasePmFokImports(restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, restorePmWsQuantityEvidenceSource(target, implementation, readSource)), readSource)), target, file).replace(/\r\n/g, "\n");
+}
+
+/** [changmen 扩展] 只逆转赛果存档的展示循环及空行情分支，再由调用方全文对照原固定基线。 */
+export function restorePmOutcomeArchiveSource(file, source) {
+  if (file === "packages/venue-adapter/polymarket/markets/collect.ts") {
+    for (const [after, before] of [
+      ["if (lastIndexUpdatedAt !== 0 || index?.outcomeEntries?.length) {", "if (lastIndexUpdatedAt !== 0) {"],
+      ["replacePmMapOutcomesFromIndex(index?.outcomeEntries?.length ? index : null);", "replacePmMapOutcomesFromIndex(null);"],
+      ["lastIndexUpdatedAt = index?.outcomeEntries?.length ? index.updatedAt : 0;", "lastIndexUpdatedAt = 0;"],
+    ]) {
+      assert.equal(source.split(after).length, 2, "exact outcome-only index branch");
+      source = source.replace(after, before);
+    }
+    return source;
+  }
+  if (file !== "packages/venue-adapter/polymarket/markets/pmMapOutcomeStore.ts")
+    return source;
+  const after = "for (const entry of [...(index.entries ?? []), ...(index.outcomeEntries ?? [])]) {";
+  assert.equal(source.split(after).length, 2, "exact outcome archive display iteration");
+  return source.replace(after, "for (const entry of index.entries ?? []) {");
 }

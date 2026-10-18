@@ -36,6 +36,26 @@ export function isPmMapLive(snapshot: PmSportSnapshot | undefined, map: number):
   return currentMap === map;
 }
 
+/** [changmen 扩展] 仅用明确的赛程进度判断已打完；封盘、价格和计时不参与。 */
+export function isPmMapFinished(snapshot: PmSportSnapshot | undefined, map: number): boolean {
+  if (!snapshot || !Number.isInteger(map) || map < 0)
+    return false;
+  const kind = formatPmMatchStatus(snapshot).kind;
+  const period = /^(\d+)\/(\d+)$/.exec(String(snapshot.period ?? "").trim());
+  const currentMap = snapshot.currentMap ?? (period ? Number(period[1]) : null);
+  if (kind === "live")
+    return map > 0 && typeof currentMap === "number" && Number.isInteger(currentMap) && currentMap > map;
+  if (kind !== "finished")
+    return false;
+  if (map === 0)
+    return true;
+  const score = snapshot.mapScore;
+  const played = score && Number.isInteger(score.home) && Number.isInteger(score.away)
+    && score.home >= 0 && score.away >= 0 ? score.home + score.away : currentMap;
+  // BO3 以 2–0 结束时，未打的地图3不能显示待结算。
+  return typeof played === "number" && Number.isInteger(played) && played > 0 && map <= played;
+}
+
 /** [changmen 扩展] PM 当前地图局内比分；scoreRaw 按比赛 Reverse 对齐，阶段编号不另行推测。 */
 export function readPmMapRoundScore(snapshot: PmSportSnapshot | undefined, map: number, reversed = false): { home: number; away: number } | null {
   if (!snapshot || formatPmMatchStatus(snapshot).kind !== "live" || !Number.isInteger(map) || map <= 0)

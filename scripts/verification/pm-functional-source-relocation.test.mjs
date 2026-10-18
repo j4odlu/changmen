@@ -5,7 +5,7 @@ import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { rebasePmFokImports } from "./pm-fok-source-relocation.mjs";
-import { PM_FUNCTIONAL_RELOCATIONS, pmFunctionalCompatibilitySource, readRelocatedPmFunctionalSource } from "./pm-functional-source-relocation.mjs";
+import { PM_FUNCTIONAL_RELOCATIONS, pmFunctionalCompatibilitySource, readRelocatedPmFunctionalSource, restorePmOutcomeArchiveSource } from "./pm-functional-source-relocation.mjs";
 import { verifyPmOfficialSettlementSource } from "./pm-settlement-policy-boundary.mjs";
 import { restorePmTickRefreshSource } from "./pm-tick-refresh-boundary.mjs";
 import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
@@ -14,6 +14,16 @@ import { restorePmWsQuantityEvidenceSource } from "./pm-ws-quantity-evidence-bou
 
 const base = "e901bb596952256284cd8a9eb8b73b572c963915";
 describe("pM functional relocation preserves complete implementations", () => {
+  it("restores only the registered result archive loop, retaining winner policy and all other code for full verification", () => {
+    const file = "packages/venue-adapter/polymarket/markets/pmMapOutcomeStore.ts";
+    const source = fs.readFileSync(file, "utf8");
+    const restored = restorePmOutcomeArchiveSource(file, source);
+    expect(restored).toContain('entry.outcomeKind !== "official"');
+    expect(restored).not.toContain("index.outcomeEntries");
+    expect(restorePmOutcomeArchiveSource(file, source + "\nthrow Error('extra');")).toContain("throw Error('extra')");
+    expect(() => restorePmOutcomeArchiveSource(file, source.replace("index.outcomeEntries", "index.entries"))).toThrow();
+    expect(restorePmOutcomeArchiveSource("unregistered.ts", source)).toBe(source);
+  });
   for (const [file, target] of Object.entries(PM_FUNCTIONAL_RELOCATIONS)) {
     it(`${file}: matches the fixed original implementation and dependency targets`, () => {
       const original = execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" }).replace(/\r\n/g, "\n");

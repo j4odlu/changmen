@@ -54,7 +54,7 @@ export function replacePmMapOutcomesFromIndex(index: PolymarketMarketIndex | nul
   const prevRs = new Map(resolutionBySourceMatchId);
   byTokenId.clear();
   resolutionBySourceMatchId.clear();
-  for (const entry of index.entries ?? []) {
+  for (const entry of [...(index.entries ?? []), ...(index.outcomeEntries ?? [])]) {
     const sourceMatchId = String(entry.sourceMatchId ?? "").trim();
     const eventSlug = String(entry.eventSlug ?? "").trim();
     const rs = String(entry.resolutionSource ?? "").trim();

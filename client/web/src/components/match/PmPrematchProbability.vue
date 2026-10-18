@@ -4,7 +4,7 @@ import { formatOrderTime } from "@changmen/client-core/shared/format";
 import { lookupPmMapOutcomeByToken, pmMapOutcomeTick } from "@changmen/venue-adapter/polymarket";
 import { computed } from "vue";
 import { readPrematchProbability } from "@/shared/pmPrematchProbability";
-import { readPmMapRoundScore } from "@/shared/pmSportDisplay";
+import { isPmMapFinished, readPmMapRoundScore } from "@/shared/pmSportDisplay";
 
 const props = defineProps<{ bet: ViewBet; match: ViewMatch }>();
 const pm = computed(() => props.bet.items.find(item => item.type === "Polymarket"));
@@ -27,6 +27,7 @@ const outcome = computed(() => {
 });
 const homeWon = computed(() => !!outcome.value?.winningTokenId && outcome.value.winningTokenId === pm.value?.homeId);
 const awayWon = computed(() => !!outcome.value?.winningTokenId && outcome.value.winningTokenId === pm.value?.awayId);
+const awaitingSettlement = computed(() => !homeWon.value && !awayWon.value && isPmMapFinished(props.match.pmSport, props.bet.round));
 const outcomeDetail = computed(() => outcome.value
   ? `${homeWon.value ? props.bet.homeName : props.bet.awayName} · PM 官方胜负`
   : undefined);
@@ -50,6 +51,7 @@ const detail = computed(() => value.value
   <div v-if="pm" class="item flex pm-prematch" :title="detail" @dblclick.stop>
     <div class="item-type pm-prematch-badge" :aria-label="roundScore ? 'C：PM 局内比分及登记开赛时间前胜率' : 'C：PM 登记开赛时间前胜率'">
       C
+      <span v-if="awaitingSettlement" class="pm-settlement-pending" title="该地图或全场已打完，等待 PM 官方胜方确认">待结算</span>
     </div>
     <div class="item-odds home" :class="{ 'pm-map-won': homeWon, 'pm-map-lost': awayWon, 'pm-prematch-live-score': roundScore }" :title="roundScore ? 'PM 实时主队局内比分' : homeWon ? outcomeDetail : undefined" :aria-label="cellLabel('home')">
       <span v-if="homeWon" class="pm-map-win-badge">WIN</span>
@@ -65,6 +67,22 @@ const detail = computed(() => value.value
 </template>
 
 <style scoped>
+.pm-prematch-badge {
+  position: relative;
+}
+.pm-settlement-pending {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  transform: translate(-50%, -100%);
+  padding: 0 3px;
+  border-radius: 3px;
+  font-size: 9px;
+  line-height: 13px;
+  white-space: nowrap;
+  color: var(--cm-color-warning, #e6a23c);
+  background: var(--cm-bg, #202329);
+}
 .matchs .bet .bet-items .pm-prematch.item .item-odds {
   /* 沿用赔率格和当前主题背景，仅用主题强调色区分赛前参考值。 */
   color: var(--cm-color-warning, #e6a23c);

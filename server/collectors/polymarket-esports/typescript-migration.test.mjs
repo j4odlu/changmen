@@ -35,7 +35,19 @@ it("public exports typecheck in a separate strict consumer without collector tsc
 for (const [name, hash] of Object.entries(baseline.hashes)) {
   it(`${name}.ts erases to the pre-migration implementation`, () => {
     assert.equal(ts.version, baseline.compiler);
-    const source = fs.readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8");
+    let source = fs.readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8").replaceAll("\r\n", "\n");
+    // [changmen 扩展] 精确逆转赛果补采的三个接入点；保留原始迁移摘要，不放行其它改动。
+    const outcomeHooks = name === "index" ? [
+      'import { refreshPolymarketOutcomes } from "./outcomes.ts";\n',
+      '    // [changmen 扩展] 先补采赛果，避免 discovery 剔除 ended/closed 后丢失待查市场。\n    await refreshPolymarketOutcomes().catch(err => console.warn("[polymarket-esports] outcome refresh failed:", (err as Error).message));\n',
+    ] : name === "market_index" ? [
+      'import { mergePolymarketOutcomeEntries } from "./outcomes.ts";\n',
+      '    outcomeEntries: mergePolymarketOutcomeEntries(readPolymarketMarketIndex()?.outcomeEntries ?? [], entries),\n',
+    ] : [];
+    for (const hook of outcomeHooks) {
+      assert.equal(source.split(hook).length, 2, `missing/duplicate outcome hook: ${name}`);
+      source = source.replace(hook, "");
+    }
     const runtime = ts.transpileModule(source, {
       compilerOptions: { target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.ESNext, removeComments: true },
     }).outputText.replace(/(from\s+|import\s+)(["'])\.\/(api|parse|loop|market_index)\.ts\2/g, "$1$2./$3.js$2");
@@ -58,7 +70,8 @@ it("the unchanged PM2 JS entry boots and shuts down through native Node TS", () 
     const modules = {
       "@changmen/db": 'export const hasDatabaseUrlConfig=()=>true; export const initDatabaseUrl=async()=>null; export const getResolvedDatabaseLabel=()=>"test";',
       "@changmen/storage/load_env.js": 'export const loadChangmenEnv=()=>{};',
-      "./loop.ts": 'export const runPolymarketEsportsDiscoveryCycle=async()=>({skipped:false,matches:1,bets:2,writePlatform:true,collectTypes:["moneyline"]});',
+      "./loop.ts": 'export const runPolymarketEsportsDiscoveryCycle=async()=>{if(!globalThis.outcomesRan)throw Error("outcome refresh must precede discovery");return {skipped:false,matches:1,bets:2,writePlatform:true,collectTypes:["moneyline"]};};',
+      "./outcomes.ts": 'export const refreshPolymarketOutcomes=async()=>{globalThis.outcomesRan=true;throw Error("test outcome outage");};',
     };
     registerHooks({resolve(spec,context,next){
       if(Object.hasOwn(modules,spec))return {url:"data:text/javascript,"+encodeURIComponent(modules[spec]),shortCircuit:true};
@@ -77,4 +90,5 @@ it("the unchanged PM2 JS entry boots and shuts down through native Node TS", () 
   assert.equal(result.error, undefined);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /cycle ok mode=live matches=1 bets=2/);
+  assert.match(result.stderr, /outcome refresh failed: test outcome outage/);
 });

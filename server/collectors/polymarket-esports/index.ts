@@ -12,6 +12,7 @@ import {
 } from "@changmen/db";
 
 import { runPolymarketEsportsDiscoveryCycle } from "./loop.ts";
+import { refreshPolymarketOutcomes } from "./outcomes.ts";
 
 loadChangmenEnv();
 
@@ -27,6 +28,8 @@ async function tick() {
   }
   tickRunning = true;
   try {
+    // [changmen 扩展] 先补采赛果，避免 discovery 剔除 ended/closed 后丢失待查市场。
+    await refreshPolymarketOutcomes().catch(err => console.warn("[polymarket-esports] outcome refresh failed:", (err as Error).message));
     const stats = await runPolymarketEsportsDiscoveryCycle();
     if (stats.skipped) {
       console.warn(

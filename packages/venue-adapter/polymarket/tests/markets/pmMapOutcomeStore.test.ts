@@ -8,6 +8,21 @@ import {
 } from "../../pmMapOutcomeStore";
 
 describe("pmMapOutcomeStore", () => {
+  it("shows archived official winners after a market leaves discovery, overriding missing live results", () => {
+    const entry = { sourceMatchId: "e", marketId: "m", sourceBetId: "m", map: 2,
+      homeTokenId: "h", awayTokenId: "a", homeName: "A", awayName: "B",
+      homeOdds: 0, awayOdds: 0, status: "Locked" };
+    replacePmMapOutcomesFromIndex({ updatedAt: 2, assetIds: [], entries: [entry], outcomeEntries: [{
+      ...entry, firstSeenAt: 1, mapOutcome: "away", outcomeKind: "official",
+    }] });
+    expect(lookupPmMapOutcomeByToken("a")?.winningTokenId).toBe("a");
+    replacePmMapOutcomesFromIndex({ updatedAt: 3, assetIds: [], entries: [], outcomeEntries: [{
+      ...entry, firstSeenAt: 1, mapOutcome: "away", outcomeKind: "official",
+    }] });
+    expect(lookupPmMapOutcomeByToken("h")?.winningTokenId).toBe("a");
+    replacePmMapOutcomesFromIndex(null);
+    expect(lookupPmMapOutcomeByToken("h")).toBeNull();
+  });
   it("indexes outcomes by home/away token and clears on null", () => {
     replacePmMapOutcomesFromIndex({
       updatedAt: 1,

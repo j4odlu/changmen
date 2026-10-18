@@ -104,6 +104,12 @@ export function filterMarketIndexByClientMatches(provider, index, matches = []) 
       updatedAt,
       assetIds: [...assetIdSet],
       entries,
+      // [changmen 扩展] 赛果按相同合场范围下发，但不加入行情 assetIds。
+      ...(Array.isArray(index.outcomeEntries) ? {
+        outcomeEntries: index.outcomeEntries.filter(entry =>
+          matchedIds.has(String(entry?.sourceMatchId || "").trim())
+          || matchedIds.has(String(entry?.eventSlug || "").trim())),
+      } : {}),
     };
   }
 

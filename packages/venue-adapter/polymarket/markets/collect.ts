@@ -221,11 +221,11 @@ export function startPolymarketCollector(): () => void {
     const index = isPolymarketMarketIndex(platform?.MarketIndex) ? platform.MarketIndex : null;
     if (!index?.entries?.length) {
       // 空 Index：卸掉电竞 maps，避免幽灵 asset；勿在从未成功过时反复 clear
-      if (lastIndexUpdatedAt !== 0) {
+      if (lastIndexUpdatedAt !== 0 || index?.outcomeEntries?.length) {
         marketsById.clear();
         assetToMarket.clear();
-        replacePmMapOutcomesFromIndex(null);
-        lastIndexUpdatedAt = 0;
+        replacePmMapOutcomesFromIndex(index?.outcomeEntries?.length ? index : null);
+        lastIndexUpdatedAt = index?.outcomeEntries?.length ? index.updatedAt : 0;
       }
       syncEsportAssets();
       return;

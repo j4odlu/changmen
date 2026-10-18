@@ -12,7 +12,7 @@
   "scripts": {
     "start": "node index.js",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "npm run typecheck && node --test parse.test.mjs api.test.mjs loop.safety.test.mjs market_index.test.mjs typescript-migration.test.mjs"
+    "test": "npm run typecheck && node --test parse.test.mjs api.test.mjs loop.safety.test.mjs market_index.test.mjs outcomes.test.mjs typescript-migration.test.mjs"
   },
   "dependencies": {
     "@changmen/api-contract": "file:../../../packages/api-contract",

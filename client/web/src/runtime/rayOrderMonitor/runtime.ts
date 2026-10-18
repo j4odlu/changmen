@@ -137,10 +137,11 @@ function pollAccount(account: PlatformAccount): void {
   const current = capture(account);
   const task = (async () => {
     const startedAt = Date.now();
-    const orders = account.active ? await readRaySubmissionPreviewOrders(account) : await readRayAccountOrders(account);
+    const previewOnly = account.active;
+    const orders = previewOnly ? await readRaySubmissionPreviewOrders(account) : await readRayAccountOrders(account);
     if (current())
       observeRaySubmissionPreviews(account, orders, startedAt);
-    if (!current() || account.active)
+    if (previewOnly || !current() || account.active)
       return;
     recoverRaySettlement();
     bindRayOrderContexts(account, orders, () => current() && !account.active);

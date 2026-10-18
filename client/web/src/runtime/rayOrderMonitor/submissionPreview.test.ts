@@ -7,11 +7,12 @@ import { createPinia, setActivePinia } from "pinia";
 import { getProvider } from "@/runtime/providers";
 import { observedRayOrders, resetRayOrderResults } from "@/runtime/orderMonitoring/rayOrders";
 import { startRayOrderMonitoring, stopRayOrderMonitoring } from "./runtime";
-import { beginRaySubmissionPreview, finishRaySubmissionPreviewChecks, observeRaySubmissionPreviews, projectRaySubmissionPreviews, retireRaySubmissionPreviews } from "./submissionPreview";
+import { beginRaySubmissionPreview, observeRaySubmissionPreviews, projectRaySubmissionPreviews, retireRaySubmissionPreviews } from "./submissionPreview";
 import { useRayOrderContextStore } from "./contextStore";
+import { registerRayOrderContext } from "./contexts";
 
 const mock = vi.hoisted(() => ({ submit: vi.fn(), rawRead: vi.fn(), regularRead: vi.fn(), makeup: vi.fn(),
-  owner: "u1", preview: false, accounts: [] as PlatformAccount[], rows: new Map(),
+  owner: "u1", preview: false, lateMakeup: false, expectedMakeup: 0, accounts: [] as PlatformAccount[], rows: new Map(),
   save: vi.fn(), bind: vi.fn(), refresh: vi.fn(), profit: vi.fn() }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => mock.owner, isAuthSessionCurrent: (owner: string) => owner === mock.owner }));
 vi.mock("@/runtime/venueAdapters", () => ({ getProvider: () => ({ betting: mock.submit, getOrders: mock.rawRead }) }));
@@ -21,7 +22,7 @@ vi.mock("@/api/order", () => ({ saveOrders: mock.save }));
 vi.mock("@/api/chat", () => ({ saveUserLog: vi.fn().mockResolvedValue(true) }));
 vi.mock("@/services/orderObservation", () => ({ observeOrder: vi.fn() }));
 vi.mock("@/stores/betting/arbOrderBind", () => ({ bindArbOrderId: mock.bind, refreshOrderListAfterBind: mock.refresh }));
-vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ get userId() { return mock.owner; }, get isLoggedIn() { return !!mock.owner; } }) }));
+vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ get userId() { return mock.owner; }, get isLoggedIn() { return !!mock.owner; }, get extensionPrefs() { return { rayLateRejectAutoMakeup: { enabled: mock.lateMakeup } }; } }) }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ accounts: mock.accounts, get adminWorkspacePreview() { return mock.preview; },
   findAccount: (id: number) => mock.accounts.find(a => a.accountId === id) }) }));
 vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: mock.rows, updateTodayProfit: mock.profit }) }));
@@ -41,22 +42,17 @@ function venue(id = "one", status: VenueOrder["status"] = "none"): VenueOrder {
     venueMatchId: "123", venueItemId: "456" };
 }
 const display = () => projectRaySubmissionPreviews([], "2026-10-19", 0);
-function finishChecks(rejected = false, orders: VenueOrder[] = [venue()], pending = false) {
-  finishRaySubmissionPreviewChecks({ linkId: link, accountA: account(), accountB: undefined, legA: option(), legB: option() }, {
-    rejectA: rejected, rejectB: false, pendingConfirmA: pending, pendingConfirmB: false, ordersA: orders, ordersB: [],
-  });
-}
 async function flush() { await vi.advanceTimersByTimeAsync(0); }
 beforeEach(() => {
   setActivePinia(createPinia()); stopRayOrderMonitoring(); resetRayOrderResults(); sessionStorage.clear();
   vi.clearAllMocks(); vi.useFakeTimers(); vi.setSystemTime(now);
-  mock.owner = "u1"; mock.preview = false; mock.rows.clear();
+  mock.owner = "u1"; mock.preview = false; mock.lateMakeup = false; mock.expectedMakeup = 0; mock.rows.clear();
   mock.accounts = [{ accountId: 2, provider: "RAY", playerName: "RAY", token: "token", gateway: "https://ray.example", active: true } as PlatformAccount];
   mock.submit.mockResolvedValue(new BetResult("RAY", true)); mock.rawRead.mockResolvedValue([venue()]); mock.regularRead.mockResolvedValue([]);
 });
 afterEach(() => {
   expect(mock.save).not.toHaveBeenCalled(); expect(mock.bind).not.toHaveBeenCalled(); expect(mock.refresh).not.toHaveBeenCalled();
-  expect(mock.makeup).not.toHaveBeenCalled(); expect(mock.profit).not.toHaveBeenCalled();
+  expect(mock.makeup).toHaveBeenCalledTimes(mock.expectedMakeup); expect(mock.profit).not.toHaveBeenCalled();
   stopRayOrderMonitoring(); vi.useRealTimers();
 });
 
@@ -86,95 +82,56 @@ it("retries missing venue orders every five seconds and keeps early rejects conf
   expect(useRayOrderContextStore().tasks.size).toBe(0); expect(mock.regularRead).not.toHaveBeenCalled();
 });
 
-it("formal synchronization replaces the preview without duplicates or changes to the stored Link", async () => {
+it.each(["None", "Reject", "Win"])("formal %s orders immediately replace previews, before any rejection result handoff", async (status) => {
   startRayOrderMonitoring(); await getProvider(account())!.betting(account(), option()); await flush();
-  const formal = { Type: "RAY", PlayerID: 2, OrderID: "one", Link: link + 1, Status: "None" };
-  expect(projectRaySubmissionPreviews([[link + 1, [formal]]], "2026-10-19", 0)[0]![1][0]).toMatchObject({ Status: "RayConfirming" });
-  expect(formal.Status).toBe("None");
-  finishChecks();
-  expect(projectRaySubmissionPreviews([[link + 1, [formal]]], "2026-10-19", 0)).toEqual([[link + 1, [formal]]]);
-  mock.rows.set(link + 1, [formal]); account().active = false;
-  await vi.advanceTimersByTimeAsync(5000);
-  expect(display()).toEqual([]); expect(formal.Link).toBe(link + 1);
-});
-
-it.each([false, true])("uses the original rejection result (%s), even when early venue status disagrees", (rejected) => {
-  beginRaySubmissionPreview(account(), option())!(new BetResult("RAY", true));
-  observeRaySubmissionPreviews(account(), [venue("one", rejected ? "none" : "reject")], now);
-  expect(display()[0]![1][0]!.Status).toBe("RayConfirming");
-  finishChecks(rejected, [venue("one", rejected ? "reject" : "none")]);
-  expect(display()[0]![1][0]!.Status).toBe(rejected ? "Reject" : "None");
-  // 检测前发起的慢请求不能覆盖刚完成的检测结果。
-  observeRaySubmissionPreviews(account(), [venue("one", rejected ? "none" : "reject")], now);
-  expect(display()[0]![1][0]!.Status).toBe(rejected ? "Reject" : "None");
-});
-
-it("retains the confirming overlay when synchronization arrives before the check and waits for a matching formal rejection", () => {
-  beginRaySubmissionPreview(account(), option())!(new BetResult("RAY", true));
-  observeRaySubmissionPreviews(account(), [venue()], now);
-  const formal = { Type: "RAY", PlayerID: 2, OrderID: "one", Link: link, Status: "None" };
-  retireRaySubmissionPreviews([formal]);
-  expect(display()[0]![1][0]!.Status).toBe("RayConfirming");
-  finishChecks(true, [venue("one", "reject")]); retireRaySubmissionPreviews([formal]);
-  expect(projectRaySubmissionPreviews([[link, [formal]]], "2026-10-19", 0)[0]![1][0]!.Status).toBe("Reject");
-  expect(formal.Status).toBe("None");
-  retireRaySubmissionPreviews([{ ...formal, Status: "Reject" }]); expect(display()).toEqual([]);
-});
-
-it("missing orders and unfinished checks remain confirming, while later monitoring can observe a late reject", () => {
-  beginRaySubmissionPreview(account(), option())!(new BetResult("RAY", true));
-  finishChecks(false, [], true);
+  const formal = { Type: "RAY", PlayerID: 2, OrderID: "one", Link: link + 1, Status: status };
+  const entries: [number, import("@/types/order").OrderRow[]][] = [[link + 1, [formal]]];
+  expect(projectRaySubmissionPreviews(entries, "2026-10-19", 0)).toBe(entries);
+  expect(formal.Status).toBe(status); expect(formal.Link).toBe(link + 1);
+  retireRaySubmissionPreviews([formal]); expect(display()).toEqual([]);
   observeRaySubmissionPreviews(account(), [venue()], now + 1);
-  expect(display()[0]![1][0]!.Status).toBe("RayConfirming");
-  finishChecks(false, []);
-  expect(display()[0]![1][0]!.Status).toBe("None");
-  observeRaySubmissionPreviews(account(), [venue("one", "reject")], now + 1);
-  expect(display()[0]![1][0]!.Status).toBe("Reject");
-});
-
-it("uses only the matching link, account and leg when consuming rejection results", () => {
-  const input = option(); input.orderIndex = 2;
-  beginRaySubmissionPreview(account(), input)!(new BetResult("RAY", true));
-  observeRaySubmissionPreviews(account(), [venue()], now);
-  const placed = { linkId: link, accountA: undefined, accountB: account(), legA: option(), legB: option() };
-  placed.legB.target = "Home";
-  const facts = { rejectA: true, rejectB: false, pendingConfirmA: false, pendingConfirmB: false, ordersA: [], ordersB: [venue()] };
-  finishRaySubmissionPreviewChecks(placed, facts);
-  expect(display()[0]![1][0]!.Status).toBe("RayConfirming");
-  placed.legB.target = "Away";
-  finishRaySubmissionPreviewChecks({ ...placed, linkId: link + 1 }, facts);
-  expect(display()[0]![1][0]!.Status).toBe("RayConfirming");
-  finishRaySubmissionPreviewChecks(placed, facts);
-  expect(display()[0]![1][0]!.Status).toBe("None");
-  expect(facts).toEqual({ rejectA: true, rejectB: false, pendingConfirmA: false, pendingConfirmB: false, ordersA: [], ordersB: [venue()] });
-});
-
-it.each([0, 1])("a retry or single B leg with submission index %s still consumes the B rejection result", (orderIndex) => {
-  const input = option(); input.orderIndex = orderIndex; input.diagnosticAttempt = "retry";
-  beginRaySubmissionPreview(account(), input)!(new BetResult("RAY", true));
-  observeRaySubmissionPreviews(account(), [venue()], now);
-  finishRaySubmissionPreviewChecks({ linkId: link, accountA: undefined, accountB: account(), legA: option(), legB: input }, {
-    rejectA: false, rejectB: true, pendingConfirmA: false, pendingConfirmB: false, ordersA: [], ordersB: [venue("one", "reject")],
-  });
-  expect(display()[0]![1][0]!.Status).toBe("Reject");
-});
-
-it("manual submissions retain normal synchronization without waiting for an arbitrage check they never run", () => {
-  const input = option(); input.diagnosticAttempt = undefined;
-  beginRaySubmissionPreview(account(), input)!(new BetResult("RAY", true));
-  observeRaySubmissionPreviews(account(), [venue()], now);
-  expect(display()[0]![1][0]!.Status).toBe("None");
-  retireRaySubmissionPreviews([{ Type: "RAY", PlayerID: 2, OrderID: "one", Status: "None" }]);
   expect(display()).toEqual([]);
 });
 
-it("does not regress a formally settled order after rejection detection passes", () => {
+it("retirement matches the account and order ID and excludes other display-only rows", () => {
   beginRaySubmissionPreview(account(), option())!(new BetResult("RAY", true));
-  observeRaySubmissionPreviews(account(), [venue()], now); finishChecks();
-  const formal = { Type: "RAY", PlayerID: 2, OrderID: "one", Link: link, Status: "Win", Money: 70 };
-  const entries: [number, import("@/types/order").OrderRow[]][] = [[link, [formal]]];
-  expect(projectRaySubmissionPreviews(entries, "2026-10-19", 0)).toBe(entries);
-  retireRaySubmissionPreviews([formal]); expect(display()).toEqual([]);
+  observeRaySubmissionPreviews(account(), [venue()], now);
+  retireRaySubmissionPreviews([{ Type: "RAY", PlayerID: 99, OrderID: "one", Status: "Reject" },
+    { Type: "RAY", PlayerID: 2, OrderID: "other", Status: "Reject" },
+    { DisplayOnly: true, Type: "RAY", PlayerID: 2, OrderID: "one", Status: "None" }]);
+  expect(display()).toHaveLength(1);
+  retireRaySubmissionPreviews([{ Type: "RAY", PlayerID: 2, OrderID: "one", Status: "Reject" }]);
+  expect(display()).toEqual([]);
+});
+
+it.each([undefined, "initial", "retry"] as const)("previews stay read-only and confirming regardless of submission mode %s", (attempt) => {
+  const input = option(); input.diagnosticAttempt = attempt; input.orderIndex = 1;
+  beginRaySubmissionPreview(account(), input)!(new BetResult("RAY", true));
+  observeRaySubmissionPreviews(account(), [venue("one", "reject")], now);
+  expect(display()[0]![1][0]!.Status).toBe("RayConfirming");
+  expect(useRayOrderContextStore().tasks.size).toBe(0);
+});
+
+it("an early slow response stays read-only after confirmation; only a new monitor query may process a late rejection", async () => {
+  let release!: (orders: VenueOrder[]) => void;
+  mock.lateMakeup = true;
+  mock.rawRead.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+  startRayOrderMonitoring(); await getProvider(account())!.betting(account(), option()); await flush();
+  mock.rawRead.mockResolvedValueOnce([venue()]);
+  const checked = await getProvider(account())!.getOrders!(account());
+  registerRayOrderContext({ linkId: link, matchId: 123, betId: 10, side: "A", accountId: 2, submittedAt: now,
+    match: "Alpha vs Beta", bet: "map1", item: "Beta", target: "Away", odds: 2, betMoney: 70,
+    anchorConfirmed: true, anchorProvider: "OB", anchorAccountId: 3, anchorBetMoney: 70, anchorOdds: 2,
+    initialOrders: checked, initialRejected: false });
+  account().active = false;
+  release([venue("one", "reject")]); await flush();
+  expect(useRayOrderContextStore().taskForLink(link)?.status).toBe("watching");
+  expect(mock.makeup).not.toHaveBeenCalled(); expect(mock.regularRead).not.toHaveBeenCalled();
+  expect(observedRayOrders(account())!.orders[0]!.status).toBe("none");
+  mock.regularRead.mockResolvedValue([venue("one", "reject")]); mock.expectedMakeup = 1;
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(useRayOrderContextStore().taskForLink(link)?.status).toBe("rejected");
+  expect(mock.makeup).toHaveBeenCalledOnce();
 });
 
 it("requires this submission's venue identity, time and a unique candidate", () => {

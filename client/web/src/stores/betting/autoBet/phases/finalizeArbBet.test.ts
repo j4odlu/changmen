@@ -15,7 +15,6 @@ import { placeArbLegs } from "./placeArbLegs";
 
 const shouldSendArbProgress = vi.hoisted(() => vi.fn(() => false));
 const registerRayOrderContext = vi.hoisted(() => vi.fn());
-const finishRaySubmissionPreviewChecks = vi.hoisted(() => vi.fn());
 const autoSellEnabled = vi.hoisted(() => ({ value: false }));
 const autoSell = vi.hoisted(() => vi.fn(async () => false));
 const rejectWait = vi.hoisted(() => vi.fn(async () => {}));
@@ -23,7 +22,6 @@ const betting = vi.hoisted(() => vi.fn());
 const retryFailedLeg = vi.hoisted(() => vi.fn());
 const enqueueMakeUpOrder = vi.hoisted(() => vi.fn());
 vi.mock("@/runtime/rayOrderMonitor/contexts", () => ({ registerRayOrderContext }));
-vi.mock("@/runtime/rayOrderMonitor/submissionPreview", () => ({ finishRaySubmissionPreviewChecks }));
 vi.mock("@/stores/betting/autoBet/retryFailedLeg", () => ({ retryFailedLeg }));
 vi.mock("@/stores/betting/autoBet/makeUp", () => ({ enqueueMakeUpOrder }));
 
@@ -294,7 +292,6 @@ describe("finalizeArbBet makeup enqueue", () => {
     loseOrderStore.removeOrder.mockClear();
     betting.mockReset(); retryFailedLeg.mockReset().mockResolvedValue(null);
     enqueueMakeUpOrder.mockReset().mockResolvedValue(true);
-    finishRaySubmissionPreviewChecks.mockReset();
   });
 
   it.each(["Custom", "Parallel"] as const)("%s 失败腿重试未成：等待首次检测结束，才按真实配对结果决定入队", async (betSorting) => {
@@ -314,10 +311,8 @@ describe("finalizeArbBet makeup enqueue", () => {
     const pending = finalizeArbBet(attempt, placed);
     await Promise.resolve();
     expect(rejectWait).toHaveBeenCalledWith(3000); expect(settleArbLeg).not.toHaveBeenCalled();
-    expect(finishRaySubmissionPreviewChecks).not.toHaveBeenCalled();
     expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
     release(); await pending;
-    expect(finishRaySubmissionPreviewChecks).toHaveBeenCalledExactlyOnceWith(placed, expect.objectContaining({ rejectA: false, pendingConfirmA: false }));
     expect(enqueueMakeUpOrder).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
       linkId: placed.linkId, accountId: placed.accountA!.accountId, target: placed.legB.target,
       betMoney: placed.legA.betMoney, betOdds: placed.legA.odds,

@@ -2,8 +2,7 @@ import fs from "node:fs";
 import { expect, it } from "vitest";
 import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mjs";
 import { makeupTimingPreviousCommit, restoreA8MakeupTiming } from "./a8-makeup-timing-boundary.mjs";
-import { restoreRaySubmissionPreviewSource } from "./ray-submission-preview-boundary.mjs";
-const read = file => restoreRaySubmissionPreviewSource(file, fs.readFileSync(file, "utf8"));
+const read = file => fs.readFileSync(file, "utf8");
 const phases = "client/web/src/stores/betting/autoBet/phases/";
 
 it.each(["placeArbLegs.ts", "finalizeArbBet.ts"])("restores only the exact removed premature-queue behavior before checking the entire prior module: %s", (name) => {

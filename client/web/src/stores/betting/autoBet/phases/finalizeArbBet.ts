@@ -1,6 +1,5 @@
 import type { ArbBetAttemptParams, ArbBetPlaced } from "@/stores/betting/autoBet/phases/types";
 import { registerRayOrderContext } from "@/runtime/rayOrderMonitor/contexts";
-import { finishRaySubmissionPreviewChecks } from "@/runtime/rayOrderMonitor/submissionPreview";
 import {
   recordSingleLeg9999MapFill,
   recordSingleLeg9999MapFillKeys,
@@ -31,7 +30,6 @@ export async function finalizeArbBet(
   const { linkId } = placed;
 
   const settle = await settleBothArbLegs(params, placed);
-  finishRaySubmissionPreviewChecks(placed, settle);
   const actions = placed.originalExecution?.actions;
   await placed.originalExecution?.close();
 

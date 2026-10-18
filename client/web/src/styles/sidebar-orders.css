@@ -493,6 +493,7 @@
 }
 
 .orders .status.None,
+.orders .status.RayConfirming,
 .orders .status.Pending {
   color: #aeaeae;
   background: rgba(174, 174, 174, 0.1);
@@ -502,6 +503,10 @@
 .orders .status.None::after,
 .orders .status.Pending::after {
   content: "待结算";
+}
+
+.orders .status.RayConfirming::after {
+  content: "确认中";
 }
 
 .orders .status.Win {

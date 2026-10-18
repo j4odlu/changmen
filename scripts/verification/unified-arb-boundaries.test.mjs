@@ -6,6 +6,7 @@ import { gitSource, moduleTokens, replaceExact, verifyProtectedSource } from "./
 import { restoreRayFinalizeSource } from "./ray-frontend-boundary.mjs";
 import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
 import { restoreA8MakeupTiming } from "./a8-makeup-timing-boundary.mjs";
+import { restoreRaySubmissionPreviewSource } from "./ray-submission-preview-boundary.mjs";
 import { readReviewedCapabilityContracts, restoreUnifiedArbitrageSource, UNIFIED_ARBITRAGE_BOUNDARIES, verifyUnifiedArbitrageContract } from "./unified-arb-boundaries.mjs";
 
 const read = file => fs.readFileSync(file, "utf8");
@@ -27,7 +28,7 @@ describe("unified public phases preserve complete immutable baselines", () => {
     }
     boundaries.forEach(([before, after], index) => {
       it(`${file} boundary ${index}: rejects a missing or duplicated reviewed fragment`, () => {
-        const previous = restoreA8MakeupTiming(file, restorePmPreflightSource(file, read(file)), replaceExact, gitSource);
+        const previous = restoreA8MakeupTiming(file, restoreRaySubmissionPreviewSource(file, restorePmPreflightSource(file, read(file))), replaceExact, gitSource);
         const absent = replaceExact(previous, before, after);
         expect(() => restoreUnifiedArbitrageSource(file, absent, replaceExact, true)).toThrow();
         const duplicate = replaceExact(previous, before, `${before}\n${before}`);

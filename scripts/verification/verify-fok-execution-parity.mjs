@@ -239,6 +239,8 @@ async function finalize(old, providers) {
     settleBothArbLegs: async () => { push("settle"); return settled; },
     registerRayRejectMonitor: x => push("register_ray", { side: x.side, initialDetectionPending: x.initialDetectionPending ?? false, anchorConfirmed: x.anchorConfirmed }),
     registerRayOrderContext: x => push("register_ray", { side: x.side, initialDetectionPending: x.initialDetectionPending ?? false, anchorConfirmed: x.anchorConfirmed }),
+    // [changmen 扩展] 只读状态投影另有行为回归；此差分继续完整比较原下注业务轨迹。
+    finishRaySubmissionPreviewChecks: () => {},
     resolveArbMakeUpSuccessRef: () => ({ betMoney: 100, betOdds: 2 }),
     applyArbMakeUpFromRejects: async () => { push("makeup"); return {}; },
     logArbFinalizeTraceEvents: () => push("trace"),

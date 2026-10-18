@@ -22,3 +22,11 @@ it("rejects edits to read-only behavior and exact preview entry points without c
   const file = "client/web/src/runtime/rayOrderMonitor/runtime.ts";
   expect(() => restoreRaySubmissionPreviewSource(file, read(file).replace("observeRaySubmissionPreviews(account, orders, startedAt)", "observeRaySubmissionPreviews(account, [], startedAt)"))).toThrow();
 });
+
+it("requires the display-only handoff after the original rejection check and rejects changed results", () => {
+  const file = "client/web/src/stores/betting/autoBet/phases/finalizeArbBet.ts";
+  expect(() => verifyRaySubmissionPreviewSources(path => path === file
+    ? read(path).replace("finishRaySubmissionPreviewChecks(placed, settle);", "finishRaySubmissionPreviewChecks(placed, {});") : read(path))).toThrow();
+  expect(() => verifyRaySubmissionPreviewSources(path => path === file
+    ? read(path).replaceAll("finishRaySubmissionPreviewChecks", "removedDisplayHandoff") : read(path))).toThrow();
+});

@@ -682,6 +682,7 @@ html[data-ui-theme="paper"] .orders .status {
 }
 
 html[data-ui-theme="paper"] .orders .status.None,
+html[data-ui-theme="paper"] .orders .status.RayConfirming,
 html[data-ui-theme="paper"] .orders .status.Pending,
 html[data-ui-theme="paper"] .orders .status.PmSell,
 html[data-ui-theme="paper"] .orders .status.PmSettled,

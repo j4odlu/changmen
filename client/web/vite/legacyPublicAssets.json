@@ -13,22 +13,22 @@
       "sha256": "2adefcbc041e7d18fcf2d417879dc5a09997aa64d675b7a3c4b6ce33da13f3fe"
     },
     "/esport2/assets/rank-chip-badge-boss.svg": {
-      "sha256": "237949de58028768bdaed66f192a8de18edfee22a46e23690d30e625c12500cb"
+      "sha256": "5ff3e036391896dea73538b1f05342f46db2f6f8eff05ae9735f52ccecdd9763"
     },
     "/esport2/assets/rank-chip-boss-hover.svg": {
-      "sha256": "abb66a9abbb5fa9a2063d06f5766657c7fe10791c0f5715a4f18da6bea13192f"
+      "sha256": "9b362ca4fe746e57983668a18a6a9ffa0f3a5dcdd1115117568c08acbd831eb4"
     },
     "/esport2/assets/rank-chip-boss.svg": {
-      "sha256": "5bd2eac3be19abeb564ab82374bbe6d2b5a4fa49a3908d244c7abdfc0245d9e6"
+      "sha256": "3a93ab92ce08acf67fb556e4cf938a4ad16f639a421da61ccdb98e1bb0d9cb54"
     },
     "/esport2/assets/rank-chip-default.svg": {
-      "sha256": "d34f9935d2deecef39c571b20c7cd30ef2531ece54520dade1e2729ab3dc6672"
+      "sha256": "b057e226537b1496448681ee5712560fa5fb958dad4c0af1112ab644c06f2f12"
     },
     "/esport2/assets/rank-chip-loser-hover.svg": {
-      "sha256": "1ef0d8d90946e5cc4f0d0d726624a97d59770427003d9b12ec3ae5eeafc2920b"
+      "sha256": "23ad15127aebbcf97f70f7479fdc2e459dfc068b28815cc05dc6df828fe81537"
     },
     "/esport2/assets/rank-chip-loser.svg": {
-      "sha256": "089ce9e433d676dc8704e3dca6a8ba43ab1a7412b0c6a626b713f6166f2fda6a"
+      "sha256": "7bdffe2560c1f3b1ace985816ab7ca210a50a329e8c0b335fe0885cf4954cc97"
     }
   }
 }

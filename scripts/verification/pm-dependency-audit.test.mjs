@@ -121,7 +121,7 @@ it("PM imports have declarations and a Vue host peer while inherited uncertainty
     .toMatchObject({ declaration: "peerDependencies", peerOptional: true, declarationRange: "^3.5.13" });
   expect(report.sharedExternalPackages).toEqual(expect.arrayContaining(["@polymarket/client", "@polymarket/clob-client-v2", "viem"]));
   expect(report.safeToNarrowPublishScope).toBe(false);
-}, 20_000);
+}, 60_000); // Full graph scans take up to 32 seconds on the shared CI runner.
 it("does not classify a later runtime use as type-only or merge different SDK subpaths", () => {
   const read = fs.readFileSync;
   let report;
@@ -138,7 +138,7 @@ it("does not classify a later runtime use as type-only or merge different SDK su
   expect(facts.find(fact => fact.spec === "@polymarket/client").typeOnly).toBe(false);
   expect(report.undeclaredRuntimeDependencies.some(fact => fact.spec === "@polymarket/client")).toBe(true);
   expect(report.violations.some(row => row.pattern.includes("isolated browser core"))).toBe(true);
-}, 20_000);
+}, 60_000);
 it("requires the browser package to declare its SDK type dependency instead of borrowing the adapter host", () => {
   const read = fs.readFileSync;
   let report;
@@ -151,7 +151,7 @@ it("requires the browser package to declare its SDK type dependency instead of b
     report = inspectPmDependencies(fileURLToPath(new URL("../../", import.meta.url)));
   } finally { fs.readFileSync = read; }
   expect(report.violations.some(row => row.rule === "pm-direct-dependency" && row.file === "client/packages/pm-market-data-browser/package.json")).toBe(true);
-}, 20_000);
+}, 60_000);
 it("rejects private Vue runtimes, missing/required peers and a host range mismatch", () => {
   const peer = { peerDependencies: { vue: "^3.5.13" }, peerDependenciesMeta: { vue: { optional: true } } };
   const host = { dependencies: { vue: "^3.5.13" } };

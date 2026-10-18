@@ -12,7 +12,7 @@ describe('all original 551 VPS manifest entries remain protected',()=>{
     expect(results.map(row=>row.file)).toEqual(Object.keys(manifest.protectedFiles));
     expect(results).toHaveLength(551);
     expect(results.some(row=>row.file==='server/backend/core/account/order_store.js')).toBe(true);
-  });
+  }, 30_000); // Complete 551-entry restoration exceeded the default 5 seconds in CI.
   it('cannot remove an original entry',()=>{const copy=structuredClone(manifest);delete copy.protectedFiles[Object.keys(copy.protectedFiles).at(-1)];expect(()=>verifyManifestSources(copy,read,sources)).toThrow();});
   it('cannot relabel the baseline',()=>expect(()=>verifyManifestSources({...manifest,version:'5eb63ba7f49156a4a98a1357a0888e1dcc0e9924'},read,sources)).toThrow());
   it('cannot accept substituted original source bytes',()=>{const copy={...sources};copy[Object.keys(copy)[0]]+='\nvoid hiddenTrade();';expect(()=>verifyManifestSources(manifest,read,copy)).toThrow('provenance');});

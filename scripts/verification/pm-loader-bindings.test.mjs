@@ -167,7 +167,7 @@ it("covers the real PM graph, runtime preload dependencies and nine reviewed sou
   expect(report.loaderBindings.rawUnknowns).toBe(31);
   expect(report.loaderBindings.runtimeRootsCertified).toBe(false);
   expect(report.loaderBindings.safeToNarrowPublishScope).toBe(false);
-}, 25_000);
+}, 60_000); // Full graph scans share CPU with the other verification workers in CI.
 it("fails closed for configured external roots without executing or reading those roots", () => {
   const name = "CHANGMEN_ADAPTER_ROOT", previous = process.env[name];
   try {
@@ -179,4 +179,4 @@ it("fails closed for configured external roots without executing or reading thos
   } finally {
     if (previous === undefined) delete process.env[name]; else process.env[name] = previous;
   }
-}, 25_000);
+}, 60_000);

@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { expect, it } from "vitest";
@@ -11,6 +12,15 @@ import { inspectComponentEntries } from "./component-entry-boundary.mjs";
 import { restoreRuntimeCoverageSource } from "./runtime-source-coverage.mjs";
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const read = file => fs.readFileSync(path.join(root, file));
+it("binds serving asset hashes to exact Git archive and checkout bytes", () => {
+  const contract = JSON.parse(read("client/web/vite/legacyPublicAssets.json"));
+  for (const [id, asset] of Object.entries(contract.assets)) {
+    const file = `server/backend/public/assets/${id.slice(contract.prefix.length)}`;
+    const committed = execFileSync("git", ["show", `HEAD:${file}`], { cwd: root });
+    expect(read(file)).toEqual(committed);
+    expect(createHash("sha256").update(committed).digest("hex")).toBe(asset.sha256);
+  }
+});
 it("keeps the complete original identity algorithm, including every original source filter", () => {
   expect(restoreRuntimeCoverageSource(read("devtools/runtime-tooling/runtime_version.js").toString()))
     .toBe(gitSource("abdfce46d46f562c208ea0d832b6cafc02fd2360", "server/storage/runtime_version.js"));

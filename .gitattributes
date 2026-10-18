@@ -1,4 +1,6 @@
 *.sh text eol=lf
 scripts/git-hooks/pre-commit text eol=lf
+# Public asset hashes must match Git archives on Windows and Linux.
+server/backend/public/assets/rank-chip*.svg text eol=lf
 # Vitest imports this CLI module; preserve its hashbang line on Windows checkout.
 server/backend/scripts/apply-rds-schema.mjs text eol=lf

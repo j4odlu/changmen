@@ -13,7 +13,7 @@ beforeAll(() => {
   const report = inspectPmDependencies(root);
   sites = report.inheritedUnknowns;
   evidence = report.sharedLoaderEvidence;
-}, 20_000);
+}, 60_000); // This hook scans the complete graph, including all retained unknowns.
 const inspect = (actual = sites, options = {}) => inspectPmSharedLoaders(root, actual, { env: {}, ...options });
 
 it("classifies the actual PM closure while retaining every original unknown", () => {

@@ -74,21 +74,24 @@ export function evaluateStatusPage(summary, components) {
  * @param {{ timeoutMs?: number; fetchImpl?: typeof fetch }} [options]
  */
 export async function fetchPolymarketStatus({ timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = fetch } = {}) {
-  const get = (url) => {
+  const get = async (url) => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-    return fetchImpl(url, { signal: ctrl.signal, headers: { accept: "application/json" } })
-      .finally(() => clearTimeout(timer));
+    try {
+      const res = await fetchImpl(url, { signal: ctrl.signal, headers: { accept: "application/json" } });
+      if (!res.ok)
+        throw new Error(`HTTP ${res.status}`);
+      // [changmen 扩展] 响应头到达后仍可能卡在 JSON body；完整读取前必须保留超时。
+      return await res.json();
+    }
+    finally {
+      clearTimeout(timer);
+    }
   };
-  const [summaryRes, componentsRes] = await Promise.all([
+  const [summary, componentsBody] = await Promise.all([
     get(`${PM_STATUS_PAGE_URL}/v3/summary.json`),
     get(`${PM_STATUS_PAGE_URL}/v3/components.json`),
   ]);
-  for (const res of [summaryRes, componentsRes]) {
-    if (!res.ok)
-      throw new Error(`HTTP ${res.status}`);
-  }
-  const [summary, componentsBody] = await Promise.all([summaryRes.json(), componentsRes.json()]);
   // V3 文档示例为数组；PM 实际响应也可能使用 { components: [...] }。
   const components = Array.isArray(componentsBody) ? componentsBody : componentsBody?.components;
   return {

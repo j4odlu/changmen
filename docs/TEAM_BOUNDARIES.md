@@ -200,7 +200,7 @@ adapter 的 PM 直接运行依赖已补齐，Vue 以与web相同范围的 option
 
 `retained-source-boundaries` 将上述保留项固定为 6 组、明确退出条件，并拒绝兼容入口静默退役、有效 SQL 资产遗漏、冻结路径退登和 DB 例外扩大。`component-install-inputs` 同时核对前端/后端/RDS 的声明闭包，当前为 7/14/3 个 workspace，后端含开发工具为 15 个；前端 9 包且带入 DB/storage 的结果属于早期批次，后续已解除。临时安装实验已验证后端生产 workspace 集合可排除浏览器依赖，RDS 定向安装也无浏览器依赖；生产配置未采纳精简安装，源码/资产布局仍有保留约束，详见[真实安装证据](SOURCE_FILE_ISOLATION_20261017.md)。
 
-RDS 维护资产后续已归入 `server/db/assets/`，维护实现统一按自身包位置读取；backend 原 SQL/基线是 44 份生成的兼容副本，内容/checksum 不变。资产一致性检查接入保留边界，不允许主资产缺失时回退 backend。只有 DB/shared/storage、完全没有 backend 目录的干净安装已通过临时 PostgreSQL 维护验收；旧消费者、历史脚本和生产发布流程仍保留，见[资产独立记录](SOURCE_FILE_ISOLATION_20261017.md)。
+RDS 维护资产后续已归入 `server/db/assets/`，维护实现统一按自身包位置读取；backend 原 SQL/基线是 44 份生成的兼容副本，内容/checksum 不变。资产一致性检查接入保留边界，不允许主资产缺失时回退 backend。独立维护验收必须复制完整 RDS 运行时闭包：DB/shared/storage，加上 storage 依赖的 `devtools/runtime-tooling`，完全没有 backend 目录；测试同时核对包链接和实际源码存在，不能把 npm 创建的悬空链接视为安装成功。旧消费者、历史脚本和生产发布流程仍保留，见[资产独立记录](SOURCE_FILE_ISOLATION_20261017.md)。
 
 ## CODEOWNERS
 

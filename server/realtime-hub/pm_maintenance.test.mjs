@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createServer } from "node:http";
+import { once } from "node:events";
 import {
   evaluateStatusPage,
   fetchPolymarketStatus,
@@ -152,6 +154,40 @@ for (const [shape, wrap] of [
 }
 
 for (const endpoint of ["summary", "components"]) {
+  test(`V3 ${endpoint} body stall aborts and a later poll can recover`, { timeout: 5000 }, async (t) => {
+    let stall = true;
+    let headersSent = false;
+    const server = createServer((req, res) => {
+      res.setHeader("content-type", "application/json");
+      if (stall && req.url === `/v3/${endpoint}.json`) {
+        res.writeHead(200);
+        res.flushHeaders();
+        res.write("{");
+        headersSent = true;
+        return;
+      }
+      res.end(JSON.stringify(req.url === "/v3/summary.json" ? SUMMARY_UP : COMPONENTS_OK));
+    });
+    t.after(() => new Promise(resolve => {
+      server.close(resolve);
+      server.closeAllConnections();
+    }));
+    // Node fetch rejects a few low-numbered ports even on loopback.
+    do {
+      server.listen(0, "127.0.0.1");
+      await once(server, "listening");
+      if (server.address().port > 10080)
+        break;
+      await new Promise(resolve => server.close(resolve));
+    } while (true);
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const fetchImpl = (url, options) => fetch(base + new URL(url).pathname, options);
+    await assert.rejects(fetchPolymarketStatus({ timeoutMs: 500, fetchImpl }), { name: "AbortError" });
+    assert.equal(headersSent, true, "The deadline must cover the body after HTTP headers arrive");
+    stall = false;
+    assert.equal((await fetchPolymarketStatus({ timeoutMs: 1000, fetchImpl })).state, "operational");
+  });
+
   test(`V3 ${endpoint} HTTP errors reject the poll`, async () => {
     await assert.rejects(fetchPolymarketStatus({
       fetchImpl: async (url) => ({

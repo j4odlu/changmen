@@ -67,10 +67,10 @@ const detail = computed(() => value.value
 </template>
 
 <style scoped>
-.pm-prematch-badge {
+.matchs .bet .bet-items .pm-prematch.item .pm-prematch-badge {
   position: relative;
 }
-.pm-settlement-pending {
+.matchs .bet .bet-items .pm-prematch.item .pm-settlement-pending {
   position: absolute;
   left: 50%;
   top: -3px;

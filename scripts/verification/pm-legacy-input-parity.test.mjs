@@ -30,6 +30,27 @@ function restoreReviewedParserClock(source) {
   return source.replace(reviewedClock, originalClock);
 }
 
+// [changmen 扩展] 仅移除赛果存档的两个新增类型片段；所有原字段仍逐字对照同一历史基线。
+function restoreReviewedOutcomeArchiveContract(file, source) {
+  if (file !== "packages/api-contract/src/dto.ts" || source === online(file)) return source;
+  for (const fragment of [
+    `export interface PolymarketOutcomeEntry extends PolymarketMarketIndexEntry {
+  firstSeenAt: number;
+  lastCheckedAt?: number;
+  nextCheckAt?: number;
+}
+
+`,
+    `  /** [changmen 扩展] 独立赛果补采队列/存档；不加入行情 assets 或下注盘口。 */
+  outcomeEntries?: PolymarketOutcomeEntry[];
+`,
+  ]) {
+    assert.equal(source.split(fragment).length, 2, "exact optional outcome archive contract addition");
+    source = source.replace(fragment, "");
+  }
+  return source;
+}
+
 describe("legacy FOK retains the deployed sports input pipeline", () => {
   it.each([
     "server/collectors/polymarket-sports/index.js",
@@ -45,8 +66,25 @@ describe("legacy FOK retains the deployed sports input pipeline", () => {
     "package-lock.json",
   ])("%s restores the complete fixed historical source after exact reviewed changes", file => {
     // [changmen 扩展] 仅逆向登记的包迁移，仍逐字比较原固定历史源码；其余文件不做变换。
-    const source = file === parserFile ? restoreReviewedParserClock(read(file)) : read(file);
+    const source = file === parserFile ? restoreReviewedParserClock(read(file)) : restoreReviewedOutcomeArchiveContract(file, read(file));
     expect(restorePmSourceIsolationMetadata(file, source, online(file))).toBe(online(file));
+  });
+
+  it("accepts only the exact optional archive DTO addition and retains the complete historical contract", () => {
+    const file = "packages/api-contract/src/dto.ts";
+    const original = online(file), current = read(file);
+    expect(restoreReviewedOutcomeArchiveContract(file, original)).toBe(original);
+    expect(restoreReviewedOutcomeArchiveContract(file, current)).toBe(original);
+    for (const changed of [
+      current.replace("outcomeEntries?:", "outcomeEntries:"),
+      current.replace("nextCheckAt?: number;", "nextCheckAt?: string;"),
+      current.replace("outcomeEntries?: PolymarketOutcomeEntry[];", "outcomeEntries?: PolymarketOutcomeEntry[];\n  outcomeEntries?: PolymarketOutcomeEntry[];"),
+      current.replace("assetIds: string[];", "assetIds: number[];"),
+      current + "\nexport const unreviewedGate = true;\n",
+    ]) expect(() => assert.equal(restoreReviewedOutcomeArchiveContract(file, changed), original)).toThrow();
+    const options = { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 };
+    expect(ts.transpileModule(current, { compilerOptions: options }).outputText)
+      .toBe(ts.transpileModule(original, { compilerOptions: options }).outputText);
   });
 
   it("accepts both exact parser forms while retaining the original historical baseline", () => {

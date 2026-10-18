@@ -5,6 +5,7 @@ import { lookupPmMapOutcomeByToken, pmMapOutcomeTick } from "@changmen/venue-ada
 import { computed } from "vue";
 import { readPrematchProbability } from "@/shared/pmPrematchProbability";
 import { isPmMapFinished, readPmMapRoundScore } from "@/shared/pmSportDisplay";
+import { readPmScoreMapOutcome, type PmScoreMapOutcome } from "@/shared/pmScoreMapOutcome";
 
 const props = defineProps<{ bet: ViewBet; match: ViewMatch }>();
 const pm = computed(() => props.bet.items.find(item => item.type === "Polymarket"));
@@ -18,18 +19,29 @@ function cellLabel(side: "home" | "away"): string {
   const probability = value.value ? `${value.value[side].toFixed(1)}%` : status.value;
   const score = roundScore.value ? `局内比分${roundScore.value[side]}，赛前` : "";
   const won = side === "home" ? homeWon.value : awayWon.value;
-  return `${name}：${score}${probability}${won ? '，WIN' : ''}`;
+  return `${name}：${score}${probability}${won ? `，${officialWinner.value ? 'WIN' : '比分确认胜出，PM 待结算'}` : ''}`;
 }
 /** [changmen 扩展] 胜者按 token 对齐比赛卡，避免 PM 原始主客方向与合场方向相反。 */
 const outcome = computed(() => {
   void pmMapOutcomeTick.value;
   return lookupPmMapOutcomeByToken(pm.value?.homeId) ?? lookupPmMapOutcomeByToken(pm.value?.awayId);
 });
-const homeWon = computed(() => !!outcome.value?.winningTokenId && outcome.value.winningTokenId === pm.value?.homeId);
-const awayWon = computed(() => !!outcome.value?.winningTokenId && outcome.value.winningTokenId === pm.value?.awayId);
-const awaitingSettlement = computed(() => !homeWon.value && !awayWon.value && isPmMapFinished(props.match.pmSport, props.bet.round));
-const outcomeDetail = computed(() => outcome.value
-  ? `${homeWon.value ? props.bet.homeName : props.bet.awayName} · PM 官方胜负`
+const officialWinner = computed(() => !outcome.value?.winningTokenId ? null
+  : outcome.value.winningTokenId === pm.value?.homeId ? "home"
+  : outcome.value.winningTokenId === pm.value?.awayId ? "away" : null);
+const scoreOutcome = computed<PmScoreMapOutcome | null>(previous => readPmScoreMapOutcome({
+  snapshot: props.match.pmSport,
+  eventKey: String(props.match.providers?.Polymarket ?? props.match.id ?? ""),
+  map: props.bet.round, homeName: props.bet.homeName, awayName: props.bet.awayName,
+  homeTokenId: pm.value?.homeId ?? "", awayTokenId: pm.value?.awayId ?? "",
+}, previous));
+const winner = computed(() => officialWinner.value ?? scoreOutcome.value?.side);
+const homeWon = computed(() => winner.value === "home");
+const awayWon = computed(() => winner.value === "away");
+const winLabel = computed(() => officialWinner.value ? "WIN" : "胜 · 待结算");
+const awaitingSettlement = computed(() => !winner.value && isPmMapFinished(props.match.pmSport, props.bet.round));
+const outcomeDetail = computed(() => winner.value
+  ? `${homeWon.value ? props.bet.homeName : props.bet.awayName} · ${officialWinner.value ? 'PM 官方胜负' : '比分确认胜出，等待 PM 官方结算'}`
   : undefined);
 const status = computed(() => {
   switch (result.value.status) {
@@ -54,12 +66,12 @@ const detail = computed(() => value.value
       <span v-if="awaitingSettlement" class="pm-settlement-pending" title="该地图或全场已打完，等待 PM 官方胜方确认">待结算</span>
     </div>
     <div class="item-odds home" :class="{ 'pm-map-won': homeWon, 'pm-map-lost': awayWon, 'pm-prematch-live-score': roundScore }" :title="roundScore ? 'PM 实时主队局内比分' : homeWon ? outcomeDetail : undefined" :aria-label="cellLabel('home')">
-      <span v-if="homeWon" class="pm-map-win-badge">WIN</span>
+      <span v-if="homeWon" class="pm-map-win-badge">{{ winLabel }}</span>
       <span v-if="roundScore" class="pm-round-score">{{ roundScore.home }}</span>
       <span :class="{ 'pm-round-probability': roundScore }">{{ value ? `${value.home.toFixed(1)}%` : "—" }}</span>
     </div>
     <div class="item-odds away" :class="{ 'pm-map-won': awayWon, 'pm-map-lost': homeWon, 'pm-prematch-live-score': roundScore }" :title="roundScore ? 'PM 实时客队局内比分' : awayWon ? outcomeDetail : undefined" :aria-label="cellLabel('away')">
-      <span v-if="awayWon" class="pm-map-win-badge">WIN</span>
+      <span v-if="awayWon" class="pm-map-win-badge">{{ winLabel }}</span>
       <span v-if="roundScore" class="pm-round-score">{{ roundScore.away }}</span>
       <span :class="{ 'pm-round-probability': roundScore }">{{ value ? `${value.away.toFixed(1)}%` : "—" }}</span>
     </div>

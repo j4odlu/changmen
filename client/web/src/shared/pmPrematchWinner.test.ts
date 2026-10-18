@@ -7,6 +7,28 @@ import PmPrematchProbability from "@/components/match/PmPrematchProbability.vue"
 
 afterEach(() => replacePmMapOutcomesFromIndex(null));
 
+it.each([false, true])("shows a score-confirmed winner before settlement, and gives the official result priority (reversed snapshot=%s)", async (reversed) => {
+  const bet = { round: 1, homeName: "Home", awayName: "Away", getBetName: () => "地图1",
+    items: [{ type: "Polymarket", homeId: "a", awayId: "b" }] } as unknown as ViewBet;
+  const match = { id: 1, reverse: reversed ? ["Polymarket"] : [],
+    pmSport: { live: true, currentMap: 2, homeTeam: reversed ? "Away" : "Home", awayTeam: reversed ? "Home" : "Away",
+      scoreRaw: "000-000|1-0|Bo3", mapScore: { home: 1, away: 0 } } } as unknown as ViewMatch;
+  const render = () => renderToString(createSSRApp(PmPrematchProbability, { bet, match }));
+  const html = await render();
+  expect(html).toContain("胜 · 待结算");
+  expect(html).not.toContain(">WIN<");
+  expect(html).toContain(`${reversed ? 'Away' : 'Home'}：等待 VPS 历史价，比分确认胜出，PM 待结算`);
+  expect(html).toContain("比分确认胜出，等待 PM 官方结算");
+  replacePmMapOutcomesFromIndex({ updatedAt: 1, assetIds: ["a", "b"], entries: [{
+    sourceMatchId: "e", marketId: "m", sourceBetId: "m", map: 1, homeTokenId: "a", awayTokenId: "b",
+    homeName: "Home", awayName: "Away", homeOdds: 0, awayOdds: 0, status: "Locked", mapOutcome: reversed ? "home" : "away", outcomeKind: "official",
+  }] });
+  const official = await render();
+  expect(official).toContain(">WIN<");
+  expect(official).not.toContain("胜 · 待结算");
+  expect(official).toContain("PM 官方胜负");
+});
+
 it("only marks played, finished maps as pending, and replaces pending with an official WIN", async () => {
   const bet = { round: 2, homeName: "A", awayName: "B", getBetName: () => "地图2",
     items: [{ type: "Polymarket", homeId: "a", awayId: "b" }] } as unknown as ViewBet;

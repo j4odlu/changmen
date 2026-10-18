@@ -142,7 +142,16 @@ export function verifyProtectedSource(file, current, original, readSource = targ
   if (source === normalize(original))
     return { file, fixedSourceEqual: !unifiedRestored, exactBoundaryVerified: unifiedRestored, ...(unifiedRestored ? { kind: "precise unified increments with complete fixed-baseline module" } : {}) };
   let restored = source;
-  if (file === "client/web/src/stores/betting/runArbBetRound.ts") {
+  if (file === "client/web/src/stores/accountStore.ts") {
+    // [changmen 扩展] 仅还原已发布的总余额 CNY 展示换算，再全文核对原始固定基线。
+    restored = replaceExact(restored, 'import { getExchange } from "@/shared/currency";');
+    restored = replaceExact(restored,
+      's.accounts.reduce((sum, a) => sum + (a.balance ?? 0) * getExchange(a.currency), 0)',
+      's.accounts.reduce((sum, a) => sum + (a.balance ?? 0), 0)');
+    sameModule(restored, original, file);
+    return { file, fixedSourceEqual: false, exactBoundaryVerified: true, kind: "CNY total balance display with complete fixed-baseline account store" };
+  }
+  else if (file === "client/web/src/stores/betting/runArbBetRound.ts") {
     // [A8 可证实] index0706 O() 在套利后检查最新队列；仅登记这处轮首快照 bug 的修正。
     // [changmen 扩展] 原始固定基线不变，反向还原精确片段后继续核对完整模块。
     restored = replaceExact(restored, `const hasCurrentPendingVenueObservation = [...loseStore.orders.values()]

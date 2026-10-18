@@ -3,9 +3,17 @@ import fs from 'node:fs';
 import { execFileSync,spawnSync } from 'node:child_process';
 import { describe,it,expect } from 'vitest';
 import { fixedManifestSources,verifyManifestSources } from './vps-source-manifest-boundary.mjs';
+import { verifyProtectedSource } from './fok-exact-boundaries.mjs';
 const manifest=JSON.parse(fs.readFileSync('scripts/verification/vps-fok-baseline.json'));
 const sources=fixedManifestSources(manifest);
 const read=file=>fs.readFileSync(file,'utf8');
+it.each([
+  ['exchange rate', source=>source.replace('getExchange(a.currency)', 'getExchange(a.currency) * 2')],
+  ['other account behavior', source=>source+'\nvoid unexpectedAccountAction();'],
+])('the CNY display correction cannot conceal a changed %s', (_name, change)=>{
+  const file='client/web/src/stores/accountStore.ts';
+  expect(()=>verifyProtectedSource(file,change(read(file)),sources[file],read,requested=>sources[requested])).toThrow();
+});
 describe('all original 551 VPS manifest entries remain protected',()=>{
   it('verifies every original entry, including the complete shared writer',()=>{
     const results=verifyManifestSources(manifest,read,sources);

@@ -157,7 +157,12 @@ it("covers the real PM graph, runtime preload dependencies and nine reviewed sou
   expect(report.unknownSummary.inherited).toBe(20);
   expect(report.loaderBindings.origins).toHaveLength(8);
   expect(report.loaderBindings.calls).toHaveLength(9);
-  expect(report.loaderBindings.scannedSourceFiles).toBe(938);
+  // [changmen 扩展] 图会随真实导入增长；逐个文件的证据和 loader 来源仍完整检查。
+  const evidenceFiles = report.loaderBindings.inputEvidence.map(row => row.file);
+  expect(report.loaderBindings.scannedSourceFiles).toBe(evidenceFiles.length);
+  expect(new Set(evidenceFiles).size).toBe(evidenceFiles.length);
+  expect(evidenceFiles.length).toBeGreaterThanOrEqual(938);
+  expect(evidenceFiles).toContain("client/web/src/runtime/rayOrderMonitor/submissionPreview.ts");
   expect(report.loaderBindings.inputEvidence.some(row => row.file === "packages/shared/catalog/game_catalog_rules.ts")).toBe(true);
   expect(report.loaderBindings.inputEvidence.some(row => row.file === "packages/shared/catalog/game_catalog_rules.js")).toBe(true);
   // [changmen 扩展] PM2 retains index.js while discovery runs the typed implementations.

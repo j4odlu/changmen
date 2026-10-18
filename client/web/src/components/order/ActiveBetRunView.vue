@@ -121,7 +121,7 @@ const panelStyle = computed(() => {
     style.right = "auto";
   }
   else {
-    style.top = "72px";
+    style.top = collapsed.value ? "144px" : "72px";
     style.right = "16px";
     style.left = "auto";
   }

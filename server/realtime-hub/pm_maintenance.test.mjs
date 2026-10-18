@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   evaluateStatusPage,
+  fetchPolymarketStatus,
   flattenStatusComponents,
   normalizePmMaintenanceState,
   PM_STATUS_PAGE_URL,
@@ -104,11 +105,69 @@ const SUMMARY_UP = { page: { name: "Polymarket", status: "UP" } };
 const COMPONENTS_OK = [OPERATIONAL];
 const COMPONENTS_MAINT = [{ name: "Polymarket Web App", status: "UNDERMAINTENANCE" }];
 
+for (const [shape, wrap] of [
+  ["array", components => components],
+  ["components object", components => ({ components })],
+]) {
+  for (const scenario of [
+    { name: "operational", summary: SUMMARY_UP, components: COMPONENTS_OK, state: "operational", affected: [] },
+    { name: "page maintenance", summary: { page: { status: "UNDERMAINTENANCE" } }, components: COMPONENTS_OK, state: "maintenance", affected: [] },
+    { name: "page incident", summary: { page: { status: "HASISSUES" } }, components: COMPONENTS_OK, state: "incident", affected: [] },
+    {
+      name: "flat grouped maintenance",
+      summary: SUMMARY_UP,
+      components: [OPERATIONAL, { name: " CLOB ", status: "UNDERMAINTENANCE", group: { id: "predictions", name: "Predictions" } }],
+      state: "maintenance",
+      affected: ["CLOB=UNDERMAINTENANCE"],
+    },
+    {
+      name: "nested incident",
+      summary: SUMMARY_UP,
+      components: [{ name: "Predictions", status: "OPERATIONAL", children: [{ name: "CLOB", status: "MAJOROUTAGE" }] }],
+      state: "incident",
+      affected: ["CLOB=MAJOROUTAGE"],
+    },
+  ]) {
+    test(`V3 ${shape}: ${scenario.name}`, async () => {
+      const urls = [];
+      const checkedBefore = Date.now();
+      const result = await fetchPolymarketStatus({
+        fetchImpl: async (url) => {
+          urls.push(url);
+          const body = url === `${PM_STATUS_PAGE_URL}/v3/summary.json` ? scenario.summary : wrap(scenario.components);
+          return { ok: true, status: 200, json: async () => body };
+        },
+      });
+      assert.deepEqual(urls, [
+        `${PM_STATUS_PAGE_URL}/v3/summary.json`,
+        `${PM_STATUS_PAGE_URL}/v3/components.json`,
+      ]);
+      assert.equal(result.state, scenario.state);
+      assert.equal(result.pageStatus, scenario.summary.page.status);
+      assert.deepEqual(result.affected, scenario.affected);
+      assert.equal(result.source, PM_STATUS_PAGE_URL);
+      assert.ok(result.checkedAt >= checkedBefore && result.checkedAt <= Date.now());
+    });
+  }
+}
+
+for (const endpoint of ["summary", "components"]) {
+  test(`V3 ${endpoint} HTTP errors reject the poll`, async () => {
+    await assert.rejects(fetchPolymarketStatus({
+      fetchImpl: async (url) => ({
+        ok: !String(url).endsWith(`/${endpoint}.json`),
+        status: String(url).endsWith(`/${endpoint}.json`) ? 503 : 200,
+        json: async () => String(url).endsWith("/summary.json") ? SUMMARY_UP : COMPONENTS_OK,
+      }),
+    }), /HTTP 503/);
+  });
+}
+
 function statusFetch(components) {
   return (url) => {
     if (String(url).includes("summary.json"))
       return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(SUMMARY_UP) });
-    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ components }) });
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(components) });
   };
 }
 
@@ -141,7 +200,7 @@ test("watcher flips to maintenance only after consecutive readings", async () =>
   const dynamic = startHarness((url) => {
     if (String(url).includes("summary.json"))
       return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(SUMMARY_UP) });
-    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ components }) });
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(components) });
   });
   await flush();
   await flush();
@@ -151,6 +210,12 @@ test("watcher flips to maintenance only after consecutive readings", async () =>
   assert.equal(dynamic.messages.at(-1).message.state, "operational");
   await dynamic.tick();
   assert.equal(dynamic.messages.at(-1).message.state, "maintenance");
+  assert.deepEqual(dynamic.messages.at(-1).message.affected, ["Polymarket Web App=UNDERMAINTENANCE"]);
+  components = COMPONENTS_OK;
+  await dynamic.tick();
+  assert.equal(dynamic.messages.at(-1).message.state, "maintenance");
+  await dynamic.tick();
+  assert.equal(dynamic.messages.at(-1).message.state, "operational");
   dynamic.stop();
 });
 

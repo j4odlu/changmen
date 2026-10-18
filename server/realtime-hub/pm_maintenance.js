@@ -49,7 +49,7 @@ export function flattenStatusComponents(components) {
 
 /**
  * 由状态页响应推导维护状态（纯函数）
- * @param {{ status?: unknown } | null | undefined} summary
+ * @param {{ status?: unknown; page?: { status?: unknown } } | null | undefined} summary
  * @param {unknown} components
  * @returns {{ state: PmMaintenanceState; pageStatus: string; affected: string[] }}
  */
@@ -81,16 +81,18 @@ export async function fetchPolymarketStatus({ timeoutMs = DEFAULT_TIMEOUT_MS, fe
       .finally(() => clearTimeout(timer));
   };
   const [summaryRes, componentsRes] = await Promise.all([
-    get(`${PM_STATUS_PAGE_URL}/api/v2/summary.json`),
-    get(`${PM_STATUS_PAGE_URL}/api/v2/components.json`),
+    get(`${PM_STATUS_PAGE_URL}/v3/summary.json`),
+    get(`${PM_STATUS_PAGE_URL}/v3/components.json`),
   ]);
   for (const res of [summaryRes, componentsRes]) {
     if (!res.ok)
       throw new Error(`HTTP ${res.status}`);
   }
   const [summary, componentsBody] = await Promise.all([summaryRes.json(), componentsRes.json()]);
+  // V3 文档示例为数组；PM 实际响应也可能使用 { components: [...] }。
+  const components = Array.isArray(componentsBody) ? componentsBody : componentsBody?.components;
   return {
-    ...evaluateStatusPage(summary, componentsBody?.components),
+    ...evaluateStatusPage(summary, components),
     checkedAt: Date.now(),
     source: PM_STATUS_PAGE_URL,
   };

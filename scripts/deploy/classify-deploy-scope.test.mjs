@@ -25,6 +25,12 @@ describe("classifyDeployScope", () => {
       "full",
     );
   });
+  it("keeps relocated Node identity tools shared by Vite and backend in full publication", () => {
+    for (const file of ["devtools/runtime-tooling/runtime_version.js", "devtools/runtime-tooling/dev_web_port.js",
+      "devtools/runtime-tooling/runtime_version.d.ts", "devtools/runtime-tooling/package.json", "packages/shared/tooling/package.json"])
+      assert.equal(classifyDeployScope([file]), "full");
+    assert.equal(classifyDeployScope(["devtools/platform-probes/ob/core.js"]), "backend");
+  });
 
   it("noop for docs / workflow-only", () => {
     assert.equal(classifyDeployScope(["PRODUCTION_DEPLOYMENT.md", "docs/ARCHITECTURE.md"]), "noop");

@@ -26,6 +26,7 @@
 /packages/venue-adapter/registry/       @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
 /packages/venue-adapter/scripts/        @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
 /devtools/venue-adapter/verification/   @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/devtools/runtime-tooling/             @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
 /docs/TEAM_BOUNDARIES.md                @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
 /docs/CODEOWNERS.example                @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
 /.github/CODEOWNERS                     @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM

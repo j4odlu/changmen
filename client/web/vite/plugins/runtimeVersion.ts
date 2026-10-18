@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { Plugin } from "vite";
-import { captureRuntimeVersion, readSourceVersion } from "@changmen/shared/tooling/runtime_version.js";
+import { captureRuntimeVersion, readSourceVersion } from "@changmen/runtime-tooling/runtime_version.js";
 
 /** [changmen 扩展] 独立只读诊断页；不改变应用启动、登录、交易或轮询。 */
 export function versionPage(): string {

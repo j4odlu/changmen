@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import { restoreRuntimeToolingMetadata } from "./runtime-tooling-migration.mjs";
 
 export const PM_METADATA_BASELINE = "a233e20534395b31401828e754432407b109053d";
 const record = JSON.parse(fs.readFileSync(new URL("./pm-source-isolation-metadata.json", import.meta.url), "utf8"));
@@ -59,7 +60,7 @@ function reverseChange(file, source, change) {
 
 // Test/source view only: all unknown text still reaches the original strict full-file assertions below.
 export function restorePmClientFolderMetadata(file, source) {
-  source = normalize(source);
+  source = restoreRuntimeToolingMetadata(file, source);
   const change = clientFolder.changes.find(row => row.file === file);
   return change && sha(source) === change.migratedSha256 ? reverseChange(file, source, change) : source;
 }

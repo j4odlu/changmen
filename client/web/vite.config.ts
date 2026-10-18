@@ -15,7 +15,7 @@ import { browserNodeBuiltins } from "./vite/plugins/browserNodeBuiltins";
 import { backendPublicAssets } from "./vite/plugins/backendPublicAssets";
 import { matcherDevRedirect } from "./vite/plugins/matcherDevRedirect";
 import { runtimeVersionPlugin } from "./vite/plugins/runtimeVersion";
-import { resolveDevWebPort } from "@changmen/shared/tooling/dev_web_port.js";
+import { resolveDevWebPort } from "@changmen/runtime-tooling/dev_web_port.js";
 
 const elementPlusResolver = ElementPlusResolver({ importStyle: "css" });
 

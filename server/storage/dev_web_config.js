@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
-import { resolveDevWebPort } from "@changmen/shared/tooling/dev_web_port.js";
+import { resolveDevWebPort } from "@changmen/runtime-tooling/dev_web_port.js";
 import { CHANGMEN_ROOT_FROM_PKG } from "./changmen_root.js";
 
 /** Shared by Vite and local authentication; production never reads frontend env files. */
-export { resolveDevWebPort } from "@changmen/shared/tooling/dev_web_port.js";
+export { resolveDevWebPort } from "@changmen/runtime-tooling/dev_web_port.js";
 
 export function readDevWebPort(webRoot = path.join(CHANGMEN_ROOT_FROM_PKG, "client/web"), env = process.env, platform = process.platform) {
   const values = {};

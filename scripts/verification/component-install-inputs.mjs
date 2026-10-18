@@ -44,15 +44,44 @@ export function declaredInstallClosure(root, packages, name, { build = false } =
       else external.add(dependency);
     }
   }
-  return { root: name, workspaces: [...seen].sort(), workspaceDirectories: [...seen].map(value => packages.get(value).dir).sort(),
+  return { root: name, build, workspaces: [...seen].sort(), workspaceDirectories: [...seen].map(value => packages.get(value).dir).sort(),
     directExternalPackages: [...external].sort(), edges, violations };
 }
 // Browser installation must not pull Node workspaces through a shared/adapter declaration.
 export function frontendInstallBoundary(profile) {
-  return profile.edges.filter(edge => edge.target && (/^(?:server|devtools)\//.test(edge.target)
+  const toolingEdge = edge => edge.name === "@changmen/runtime-tooling" && edge.target === "devtools/runtime-tooling"
+    && profile.build === true && profile.root === "@changmen/web" && edge.from === "client/web" && edge.group === "devDependencies";
+  return profile.edges.filter(edge => edge.target && !toolingEdge(edge) && (/^(?:server|devtools)\//.test(edge.target)
+    || edge.target === "packages/shared/tooling"
     || /^packages\/venue-adapter\/(?:loader|registry|scripts)(?:\/|$)/.test(edge.target)))
     .map(edge => ({ file: `${edge.from}/package.json`, spec: edge.name,
       pattern: `Frontend install reaches a Node/data workspace: ${edge.via.join(" -> ")}` }));
+}
+// The one frontend build tool is builtin-only and explicitly owned by its Node/build hosts.
+export function runtimeToolingDeclarationBoundary(packages) {
+  const violations = [], name = "@changmen/runtime-tooling", tool = packages.get(name);
+  const fail = (file, pattern) => violations.push({ file, spec: name, pattern });
+  const expected = { "./runtime_version.js": "./runtime_version.js", "./dev_web_port.js": "./dev_web_port.js" };
+  if (!tool || tool.dir !== "devtools/runtime-tooling" || tool.pkg.type !== "module" || tool.pkg.version !== "1.0.0"
+    || JSON.stringify(tool.pkg.exports) !== JSON.stringify(expected)
+    || JSON.stringify(tool.pkg.files) !== JSON.stringify(["runtime_version.js", "runtime_version.d.ts", "dev_web_port.js", "dev_web_port.d.ts"])
+    || ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies", "scripts"].some(group => Object.keys(tool.pkg[group] || {}).length))
+    fail("devtools/runtime-tooling/package.json", "Node identity tool must retain exact exports and no package dependencies or lifecycle scripts");
+  const shared = packages.get("@changmen/shared")?.pkg;
+  if (["dependencies", "optionalDependencies", "devDependencies", "peerDependencies"].some(group => shared?.[group]?.[name] || shared?.[group]?.["@changmen/runtime-tooling-compat"]))
+    fail("packages/shared/package.json", "Shared runtime declarations must not install Node tooling or its legacy compatibility workspace");
+  const compat = packages.get("@changmen/runtime-tooling-compat");
+  if (!compat || compat.dir !== "packages/shared/tooling" || compat.pkg.type !== "module"
+    || JSON.stringify(compat.pkg.exports) !== JSON.stringify(expected)
+    || JSON.stringify(compat.pkg.files) !== JSON.stringify(["runtime_version.js", "runtime_version.d.ts", "dev_web_port.js", "dev_web_port.d.ts"])
+    || JSON.stringify(compat.pkg.dependencies) !== JSON.stringify({ [name]: "file:../../../devtools/runtime-tooling" })
+    || ["devDependencies", "optionalDependencies", "peerDependencies", "scripts"].some(group => Object.keys(compat.pkg[group] || {}).length))
+    fail("packages/shared/tooling/package.json", "Legacy Node entries must own only the single canonical Node tool dependency");
+  if (packages.get("@changmen/web")?.pkg.devDependencies?.[name] !== "file:../../devtools/runtime-tooling")
+    fail("client/web/package.json", "Vite must explicitly own its Node tool as a development dependency");
+  if (packages.get("@changmen/storage")?.pkg.dependencies?.[name] !== "file:../../devtools/runtime-tooling")
+    fail("server/storage/package.json", "Server runtime must explicitly own its Node tool as a production dependency");
+  return violations;
 }
 export function venueBrowserDeclarationBoundary(packages) {
   const violations = [], adapter = packages.get("@changmen/venue-adapter"), tools = packages.get("@changmen/venue-adapter-tools");
@@ -79,7 +108,8 @@ export function inspectComponentInstallInputs(root) {
     if (id === "frontend") profiles[id].build = declaredInstallClosure(root, packages, name, { build: true });
   }
   const frontendBackendEdges = profiles.frontend.edges.filter(edge => edge.target?.startsWith("server/"));
-  const frontendIsolationViolations = [...frontendInstallBoundary(profiles.frontend.build), ...venueBrowserDeclarationBoundary(packages)];
+  const frontendIsolationViolations = [...frontendInstallBoundary(profiles.frontend), ...frontendInstallBoundary(profiles.frontend.build),
+    ...venueBrowserDeclarationBoundary(packages), ...runtimeToolingDeclarationBoundary(packages)];
   const inputs = ["package.json", "package-lock.json", ...[...packages.values()].map(item => `${item.dir}/package.json`)];
   return { schemaVersion: 1, purpose: "component-install-inputs-only", publishScopeOptimizationEnabled: false,
     installationCertified: false, profiles, frontendBackendEdges, frontendDeclarationsIsolated: frontendIsolationViolations.length === 0,

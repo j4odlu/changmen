@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import { restoreRuntimeToolingCoverage } from "./runtime-tooling-migration.mjs";
 
 const record = JSON.parse(fs.readFileSync(new URL("./runtime-source-coverage.json", import.meta.url), "utf8"));
 const sha = text => createHash("sha256").update(text).digest("hex");
@@ -13,7 +14,7 @@ assert.equal(record.baselineSha256, "23a65e104e76e24aedecca73845238b5a4ca70e2e55
 assert.equal(record.changes.length, 2);
 
 export function restoreRuntimeCoverageSource(source) {
-  source = source.replaceAll("\r\n", "\n");
+  source = restoreRuntimeToolingCoverage(source);
   assert.equal(sha(source), record.migratedSha256, "Only the exact registered runtime coverage change is accepted");
   for (const change of [...record.changes].reverse()) {
     assert.equal(source.split(change.after).length, 2, "Exactly one registered runtime coverage location");

@@ -158,8 +158,8 @@ it("covers the real PM graph, runtime preload dependencies and nine reviewed sou
   expect(report.loaderBindings.origins).toHaveLength(8);
   expect(report.loaderBindings.calls).toHaveLength(9);
   expect(report.loaderBindings.scannedSourceFiles).toBe(932);
-  // [changmen 扩展] 保留旧端口配置覆盖，并明确覆盖迁出的完整共享端口解析实现。
-  for (const file of ["server/storage/dev_web_config.js", "packages/shared/tooling/dev_web_port.js"])
+  // [changmen 扩展] 保留旧端口配置覆盖，并明确覆盖迁出的完整 Node 端口解析实现。
+  for (const file of ["server/storage/dev_web_config.js", "devtools/runtime-tooling/dev_web_port.js"])
     expect(report.loaderBindings.inputEvidence.some(row => row.file === file)).toBe(true);
   expect(report.loaderBindings.inputEvidence.some(row => row.file.includes("/scripts/"))).toBe(false);
   expect(report.loaderBindings.runtimeRoots).toHaveLength(21);

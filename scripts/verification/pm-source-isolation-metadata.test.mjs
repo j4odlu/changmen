@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 import { PM_METADATA_BASELINE, restorePmSourceIsolationMetadata } from "./pm-source-isolation-metadata.mjs";
+import { restoreRuntimeToolingMetadata } from "./runtime-tooling-migration.mjs";
 
 const record = JSON.parse(fs.readFileSync(new URL("./pm-source-isolation-metadata.json", import.meta.url), "utf8"));
 const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
@@ -70,6 +71,7 @@ for (const file of ["server/db/package.json", "packages/shared/package.json"]) {
 }
 
 it("changes exactly 15 workspace/link records and removes only the unused nested socket client", () => {
+  const lock = JSON.parse(restoreRuntimeToolingMetadata(lockFile, read(lockFile)));
   expect(Object.keys(lock).filter(key => key !== "packages").map(key => [key, lock[key]]))
     .toEqual(Object.keys(oldLock).filter(key => key !== "packages").map(key => [key, oldLock[key]]));
   const changed = [...new Set([...Object.keys(oldLock.packages), ...Object.keys(lock.packages)])]

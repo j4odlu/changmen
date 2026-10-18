@@ -8,9 +8,9 @@ const root = process.cwd();
 test("candidate profile covers eight actual processes, six install roots and their Node build resources", () => {
   const p = backendInstallProfile(root);
   assert.equal(p.productionEnabled, false); assert.equal(p.archiveSlimmingEnabled, false);
-  assert.equal(p.entries.length, 8); assert.equal(p.roots.length, 6); assert.equal(p.workspaces.length, 18);
+  assert.equal(p.entries.length, 8); assert.equal(p.roots.length, 6); assert.equal(p.workspaces.length, 19);
   for (const name of ["@changmen/polymarket-esports-collector", "@changmen/polymarket-football-collector", "@changmen/predictfun-collector",
-    "@changmen/venue-adapter-tools", "@changmen/venue-node-loader", "@changmen/venue-node-registry"]) assert(p.workspaces.includes(name));
+    "@changmen/venue-adapter-tools", "@changmen/venue-node-loader", "@changmen/venue-node-registry", "@changmen/runtime-tooling"]) assert(p.workspaces.includes(name));
   assert(!p.roots.includes("@changmen/sxbet-collector"));
   assert(p.installArgs.includes("--include=dev")); assert(p.installArgs.includes("--include-workspace-root=false"));
   const links = p.workspaces.map(name => name.slice("@changmen/".length));

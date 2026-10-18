@@ -112,7 +112,8 @@ it("PM imports have declarations and a Vue host peer while inherited uncertainty
   expect(report.sharedLoaderEvidence.byClass).toEqual({ "fixed-target": 12, "environment-dependent": 3, "parameter-unknown": 5 });
   expect(report.loaderBindings.calls).toHaveLength(9);
   expect(report.loaderBindings.safeToNarrowPublishScope).toBe(false);
-  expect(report.sourceFiles.some(file => file.startsWith("server/backend/scripts/") || file.startsWith("devtools/"))).toBe(false);
+  expect(report.sourceFiles.some(file => file.startsWith("server/backend/scripts/"))).toBe(false);
+  expect(report.sourceFiles.filter(file => file.startsWith("devtools/"))).toEqual(["devtools/runtime-tooling/dev_web_port.js"]);
   expect(report.undeclaredRuntimeDependencies).toEqual([]);
   expect(report.externalDependencies.find(fact => fact.owner === "client/packages/pm-market-data-browser/package.json"))
     .toMatchObject({ spec: "@polymarket/client/actions", typeOnly: true, declaredDevelopment: true });

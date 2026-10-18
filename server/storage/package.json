@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "dotenv": "^17.4.2",
-    "@changmen/shared": "file:../../packages/shared"
+    "@changmen/shared": "file:../../packages/shared",
+    "@changmen/runtime-tooling": "file:../../devtools/runtime-tooling"
   }
 }

@@ -10,7 +10,8 @@
     "client/web/scripts/gen-platform-icons-css.mjs",
     "client/web/scripts/clean-dist-assets.mjs",
     "client/web/scripts/run-production-build.mjs",
-    "client/devtools/venue-adapter"
+    "client/devtools/venue-adapter",
+    "devtools/runtime-tooling"
   ],
   "roots": [
     "client/web/src",
@@ -26,7 +27,8 @@
     "client/web/scripts/clean-dist-assets.mjs",
     "client/web/scripts/run-production-build.mjs",
     "client/devtools/venue-adapter",
-    "client/packages"
+    "client/packages",
+    "devtools/runtime-tooling"
   ],
   "compatibilityAssets": [
     {
@@ -211,6 +213,11 @@
     }
   ],
   "rules": [
+    {
+      "prefix": "devtools/runtime-tooling",
+      "layer": "shared",
+      "role": "tooling"
+    },
     {
       "files": [
         "client/web/vite.config.ts",
@@ -473,6 +480,26 @@
       "file": "server/backend/scripts/apply-order-observation-schema.mjs",
       "canonical": "server/db/maintenance/apply-order-observation-schema.mjs",
       "spec": "@changmen/db/maintenance/apply-order-observation-schema.mjs"
+    },
+    {
+      "file": "packages/shared/tooling/runtime_version.js",
+      "canonical": "devtools/runtime-tooling/runtime_version.js",
+      "spec": "@changmen/runtime-tooling/runtime_version.js"
+    },
+    {
+      "file": "packages/shared/tooling/runtime_version.d.ts",
+      "canonical": "devtools/runtime-tooling/runtime_version.d.ts",
+      "spec": "@changmen/runtime-tooling/runtime_version.js"
+    },
+    {
+      "file": "packages/shared/tooling/dev_web_port.js",
+      "canonical": "devtools/runtime-tooling/dev_web_port.js",
+      "spec": "@changmen/runtime-tooling/dev_web_port.js"
+    },
+    {
+      "file": "packages/shared/tooling/dev_web_port.d.ts",
+      "canonical": "devtools/runtime-tooling/dev_web_port.d.ts",
+      "spec": "@changmen/runtime-tooling/dev_web_port.js"
     }
   ],
   "compatibilityCliEntries": [

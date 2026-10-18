@@ -16,7 +16,7 @@ function changed(target, transform, run) {
 it("keeps six finite retained groups with named exit conditions and no release authority", () => {
   const report = inspectRetainedSourceBoundaries(root);
   expect(report.violations).toEqual([]); expect(report.groups).toHaveLength(6);
-  expect(report.compatibilityEntries).toBe(23); expect(report.compatibilityCliEntries).toBe(6);
+  expect(report.compatibilityEntries).toBe(27); expect(report.compatibilityCliEntries).toBe(6);
   expect(report.installationCertified).toBe(false); expect(report.publishScopeOptimizationEnabled).toBe(false);
 });
 for (const file of ["packages/venue-adapter/loader/adapter_paths.mjs", "packages/venue-adapter/registry/adapters.ts",

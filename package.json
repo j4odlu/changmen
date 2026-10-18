@@ -30,7 +30,9 @@
     "server/collectors/polymarket-esports",
     "server/collectors/polymarket-football",
     "server/collectors/predictfun-collector",
-    "server/collectors/sxbet-collector"
+    "server/collectors/sxbet-collector",
+    "devtools/runtime-tooling",
+    "packages/shared/tooling"
   ],
   "scripts": {
     "install:all": "npm install",

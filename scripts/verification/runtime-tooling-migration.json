@@ -1,0 +1,334 @@
+{
+  "schemaVersion": 1,
+  "purpose": "node-tooling-folder-isolation-only",
+  "baselineCommit": "02b5092c7b8b51d0cc6022af50fd8e73226116d6",
+  "historicalBaseline": "a233e20534395b31401828e754432407b109053d",
+  "publishScopeOptimizationEnabled": false,
+  "changes": [
+    {
+      "file": "package.json",
+      "baselineSha256": "52f2568c701209025dba589ea9d3f1b07ab165b9bfc2a721c9367b2a116d106a",
+      "migratedSha256": "bb301458a020cbfc65c265d3eaf9f0477608602a5d35f678a6ca162de08100a3",
+      "patches": [
+        {
+          "oldStart": 33,
+          "oldCount": 1,
+          "newStart": 33,
+          "newCount": 3,
+          "before": [
+            "    \"server/collectors/sxbet-collector\""
+          ],
+          "after": [
+            "    \"server/collectors/sxbet-collector\",",
+            "    \"devtools/runtime-tooling\",",
+            "    \"packages/shared/tooling\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "package-lock.json",
+      "baselineSha256": "4dbdd6289a10d80ed5208d27336d2ff74d72970fedfbc22765d5c323ea70bebd",
+      "migratedSha256": "411f43dca5351340b7dd8aa88637efe5e779f9b460704250a553a057d21d0035",
+      "patches": [
+        {
+          "oldStart": 32,
+          "oldCount": 1,
+          "newStart": 32,
+          "newCount": 3,
+          "before": [
+            "        \"server/collectors/sxbet-collector\""
+          ],
+          "after": [
+            "        \"server/collectors/sxbet-collector\",",
+            "        \"devtools/runtime-tooling\",",
+            "        \"packages/shared/tooling\""
+          ]
+        },
+        {
+          "oldStart": 578,
+          "oldCount": 0,
+          "newStart": 581,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "        \"@changmen/runtime-tooling\": \"file:../../devtools/runtime-tooling\","
+          ]
+        },
+        {
+          "oldStart": 695,
+          "oldCount": 0,
+          "newStart": 699,
+          "newCount": 4,
+          "before": [],
+          "after": [
+            "    \"devtools/runtime-tooling\": {",
+            "      \"name\": \"@changmen/runtime-tooling\",",
+            "      \"version\": \"1.0.0\"",
+            "    },"
+          ]
+        },
+        {
+          "oldStart": 958,
+          "oldCount": 0,
+          "newStart": 966,
+          "newCount": 8,
+          "before": [],
+          "after": [
+            "    \"node_modules/@changmen/runtime-tooling\": {",
+            "      \"resolved\": \"devtools/runtime-tooling\",",
+            "      \"link\": true",
+            "    },",
+            "    \"node_modules/@changmen/runtime-tooling-compat\": {",
+            "      \"resolved\": \"packages/shared/tooling\",",
+            "      \"link\": true",
+            "    },"
+          ]
+        },
+        {
+          "oldStart": 12952,
+          "oldCount": 0,
+          "newStart": 12968,
+          "newCount": 7,
+          "before": [],
+          "after": [
+            "    \"packages/shared/tooling\": {",
+            "      \"name\": \"@changmen/runtime-tooling-compat\",",
+            "      \"version\": \"1.0.0\",",
+            "      \"dependencies\": {",
+            "        \"@changmen/runtime-tooling\": \"file:../../../devtools/runtime-tooling\"",
+            "      }",
+            "    },"
+          ]
+        },
+        {
+          "oldStart": 13346,
+          "oldCount": 0,
+          "newStart": 13369,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "        \"@changmen/runtime-tooling\": \"file:../../devtools/runtime-tooling\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/web/package.json",
+      "baselineSha256": "0b3bc716b2554261cc27ef14f13041222363e7e67d888bd87828c317c9b6cc82",
+      "migratedSha256": "fecfdab3e4cf262e2a6007785a6a7d2b5f2ad89d33002a66cdf1901ce73b81bc",
+      "patches": [
+        {
+          "oldStart": 66,
+          "oldCount": 1,
+          "newStart": 66,
+          "newCount": 2,
+          "before": [
+            "    \"vue-tsc\": \"^2.2.8\""
+          ],
+          "after": [
+            "    \"vue-tsc\": \"^2.2.8\",",
+            "    \"@changmen/runtime-tooling\": \"file:../../devtools/runtime-tooling\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "server/storage/package.json",
+      "baselineSha256": "47730097beb0ee119d5586a293cc09e332ca6e6cc3ff3334badea1917304dad6",
+      "migratedSha256": "a41cb3061b2bea9b2d29a8fb3c7bbad7ec59328f13d052ef7b850e8200f3e727",
+      "patches": [
+        {
+          "oldStart": 24,
+          "oldCount": 1,
+          "newStart": 24,
+          "newCount": 2,
+          "before": [
+            "    \"@changmen/shared\": \"file:../../packages/shared\""
+          ],
+          "after": [
+            "    \"@changmen/shared\": \"file:../../packages/shared\",",
+            "    \"@changmen/runtime-tooling\": \"file:../../devtools/runtime-tooling\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/source-ownership-inputs.json",
+      "baselineSha256": "0542ecea8b85eacc840efc574ffa023a37cb610b46e5f64928265e61038d5015",
+      "migratedSha256": "e1fcaca7821de20fa95d7a03dc480c3729bdbc084727d98c89c47656c0b973c9",
+      "patches": [
+        {
+          "oldStart": 13,
+          "oldCount": 1,
+          "newStart": 13,
+          "newCount": 2,
+          "before": [
+            "    \"client/devtools/venue-adapter\""
+          ],
+          "after": [
+            "    \"client/devtools/venue-adapter\",",
+            "    \"devtools/runtime-tooling\""
+          ]
+        },
+        {
+          "oldStart": 29,
+          "oldCount": 1,
+          "newStart": 30,
+          "newCount": 2,
+          "before": [
+            "    \"client/packages\""
+          ],
+          "after": [
+            "    \"client/packages\",",
+            "    \"devtools/runtime-tooling\""
+          ]
+        },
+        {
+          "oldStart": 213,
+          "oldCount": 0,
+          "newStart": 216,
+          "newCount": 5,
+          "before": [],
+          "after": [
+            "    {",
+            "      \"prefix\": \"devtools/runtime-tooling\",",
+            "      \"layer\": \"shared\",",
+            "      \"role\": \"tooling\"",
+            "    },"
+          ]
+        },
+        {
+          "oldStart": 475,
+          "oldCount": 0,
+          "newStart": 483,
+          "newCount": 20,
+          "before": [],
+          "after": [
+            "    },",
+            "    {",
+            "      \"file\": \"packages/shared/tooling/runtime_version.js\",",
+            "      \"canonical\": \"devtools/runtime-tooling/runtime_version.js\",",
+            "      \"spec\": \"@changmen/runtime-tooling/runtime_version.js\"",
+            "    },",
+            "    {",
+            "      \"file\": \"packages/shared/tooling/runtime_version.d.ts\",",
+            "      \"canonical\": \"devtools/runtime-tooling/runtime_version.d.ts\",",
+            "      \"spec\": \"@changmen/runtime-tooling/runtime_version.js\"",
+            "    },",
+            "    {",
+            "      \"file\": \"packages/shared/tooling/dev_web_port.js\",",
+            "      \"canonical\": \"devtools/runtime-tooling/dev_web_port.js\",",
+            "      \"spec\": \"@changmen/runtime-tooling/dev_web_port.js\"",
+            "    },",
+            "    {",
+            "      \"file\": \"packages/shared/tooling/dev_web_port.d.ts\",",
+            "      \"canonical\": \"devtools/runtime-tooling/dev_web_port.d.ts\",",
+            "      \"spec\": \"@changmen/runtime-tooling/dev_web_port.js\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/deploy/component-inputs.json",
+      "baselineSha256": "e3eac429d340ba24302855fe34e64225778eb70891ce7731601cc03c5e9cdebe",
+      "migratedSha256": "555c31408d504036bb8e93785d28e7aefd017bb4bc9ebd682761560f79732446",
+      "patches": [
+        {
+          "oldStart": 22,
+          "oldCount": 1,
+          "newStart": 22,
+          "newCount": 2,
+          "before": [
+            "    \"packages/venue-adapter/scripts/package.json\""
+          ],
+          "after": [
+            "    \"packages/venue-adapter/scripts/package.json\",",
+            "    \"devtools/runtime-tooling/package.json\""
+          ]
+        },
+        {
+          "oldStart": 26,
+          "oldCount": 1,
+          "newStart": 27,
+          "newCount": 2,
+          "before": [
+            "    \"devtools/platform-probes\""
+          ],
+          "after": [
+            "    \"devtools/platform-probes\",",
+            "    \"devtools/runtime-tooling\""
+          ]
+        },
+        {
+          "oldStart": 31,
+          "oldCount": 1,
+          "newStart": 33,
+          "newCount": 2,
+          "before": [
+            "    \"packages/shared/tooling\""
+          ],
+          "after": [
+            "    \"packages/shared/tooling\",",
+            "    \"devtools/runtime-tooling\""
+          ]
+        }
+      ]
+    }
+  ],
+  "runtime": {
+    "file": "devtools/runtime-tooling/runtime_version.js",
+    "baselineSha256": "8a2d9633f34099e4d2f7f5bdf518566291f05989fd70e686f3e0f2c41c1df1ae",
+    "migratedSha256": "542882e4a7d9c8342798d672a24988b271fba0332742d5be95d57b692d12ad50",
+    "patches": [
+      {
+        "oldStart": 23,
+        "oldCount": 0,
+        "newStart": 24,
+        "newCount": 1,
+        "before": [],
+        "after": [
+          "  if (file.startsWith(\"devtools/runtime-tooling/\")) return true;"
+        ]
+      },
+      {
+        "oldStart": 43,
+        "oldCount": 1,
+        "newStart": 44,
+        "newCount": 1,
+        "before": [
+          "  for (const dir of [\"client/web/src\", \"client/web/public\", \"client/web/vite\", \"client/web/scripts\", \"client/packages\", \"packages\", \"server\", \"devtools/platform-probes\"])"
+        ],
+        "after": [
+          "  for (const dir of [\"client/web/src\", \"client/web/public\", \"client/web/vite\", \"client/web/scripts\", \"client/packages\", \"devtools/runtime-tooling\", \"packages\", \"server\", \"devtools/platform-probes\"])"
+        ]
+      }
+    ]
+  },
+  "moves": [
+    {
+      "from": "packages/shared/tooling/runtime_version.js",
+      "to": "devtools/runtime-tooling/runtime_version.js",
+      "originalSha256": "8a2d9633f34099e4d2f7f5bdf518566291f05989fd70e686f3e0f2c41c1df1ae",
+      "migratedSha256": "542882e4a7d9c8342798d672a24988b271fba0332742d5be95d57b692d12ad50"
+    },
+    {
+      "from": "packages/shared/tooling/runtime_version.d.ts",
+      "to": "devtools/runtime-tooling/runtime_version.d.ts",
+      "originalSha256": "fcc671f8981701c5be3c8411ee69cd7f0f49239f30c58581738e9de7b04a61fc",
+      "migratedSha256": "fcc671f8981701c5be3c8411ee69cd7f0f49239f30c58581738e9de7b04a61fc"
+    },
+    {
+      "from": "packages/shared/tooling/dev_web_port.js",
+      "to": "devtools/runtime-tooling/dev_web_port.js",
+      "originalSha256": "3563e18df17741a15c0e7a6271ed2da973f34c83c8c04a25d0cb87e9b3c39134",
+      "migratedSha256": "3563e18df17741a15c0e7a6271ed2da973f34c83c8c04a25d0cb87e9b3c39134"
+    },
+    {
+      "from": "packages/shared/tooling/dev_web_port.d.ts",
+      "to": "devtools/runtime-tooling/dev_web_port.d.ts",
+      "originalSha256": "ae1099e422862d111e566f28a6154973ea64ba44494720ed41a10d173a3ad7ed",
+      "migratedSha256": "ae1099e422862d111e566f28a6154973ea64ba44494720ed41a10d173a3ad7ed"
+    }
+  ]
+}

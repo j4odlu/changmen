@@ -8,6 +8,7 @@ import { gitSource } from "./fok-exact-boundaries.mjs";
 import { restorePmClientFolderMetadata, restorePmSourceIsolationMetadata, PM_METADATA_BASELINE } from "./pm-source-isolation-metadata.mjs";
 import { pmNodeBrowserLoaderTarget } from "./pm-dependency-audit.mjs";
 import { classifyDeployScope } from "../deploy/classify-deploy-scope.mjs";
+import { restoreRuntimeToolingMetadata } from "./runtime-tooling-migration.mjs";
 
 const record = JSON.parse(fs.readFileSync(new URL("./pm-client-folder-metadata.json", import.meta.url), "utf8"));
 const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
@@ -30,7 +31,7 @@ it("resolves the unchanged package name to the actual client directory", () => {
 });
 for (const change of record.changes) {
   it(`${change.file}: restores the entire prior metadata file and rejects normalization of extra content`, () => {
-    const current = read(change.file), previous = restorePmClientFolderMetadata(change.file, current);
+    const current = restoreRuntimeToolingMetadata(change.file, read(change.file)), previous = restorePmClientFolderMetadata(change.file, current);
     expect(sha(current)).toBe(change.migratedSha256);
     expect(sha(previous)).toBe(change.baselineSha256);
     expect(restorePmClientFolderMetadata(change.file, previous)).toBe(previous);
@@ -39,7 +40,7 @@ for (const change of record.changes) {
 }
 it("retains all original full-text historical lock proofs and exactly six workspace record changes", () => {
   expect(PM_METADATA_BASELINE).toBe("a233e20534395b31401828e754432407b109053d");
-  const current = read("package-lock.json"), previous = restorePmClientFolderMetadata("package-lock.json", current);
+  const current = restoreRuntimeToolingMetadata("package-lock.json", read("package-lock.json")), previous = restorePmClientFolderMetadata("package-lock.json", current);
   expect(restorePmSourceIsolationMetadata("package-lock.json", current, gitSource(PM_METADATA_BASELINE, "package-lock.json")))
     .toBe(gitSource(PM_METADATA_BASELINE, "package-lock.json"));
   const old = JSON.parse(previous).packages, next = JSON.parse(current).packages;
@@ -69,7 +70,7 @@ it("does not narrow publication because browser files moved into client", () => 
   expect(classifyDeployScope(["package.json", "package-lock.json", "client/packages/pm-market-data-browser/src/index.ts"])).toBe("full");
 });
 it("retains every old compatibility contract except the three exact tool locations", () => {
-  const current = JSON.parse(read("scripts/verification/source-ownership-inputs.json"));
+  const current = JSON.parse(restoreRuntimeToolingMetadata("scripts/verification/source-ownership-inputs.json", read("scripts/verification/source-ownership-inputs.json")));
   const previous = JSON.parse(restorePmClientFolderMetadata("scripts/verification/source-ownership-inputs.json", read("scripts/verification/source-ownership-inputs.json")));
   expect(current.compatibilityEntries).toEqual(previous.compatibilityEntries);
   expect(current.compatibilityAssets).toEqual(previous.compatibilityAssets);

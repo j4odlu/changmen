@@ -9,7 +9,7 @@
 | 前端 | `client/web`、`client/packages/`、`client/devtools/` | 本批公共簿包及前端维护工具迁入；历史客户端包和 Chrome 扩展仍有保留项 |
 | 后端 | `server/backend`、`server/match`、`server/collectors` 等 | 原业务目录保持；Node loader/registry 受保护的实现仍在旧 adapter 目录 |
 | 数据层 | `server/db`，含 `assets/` 与 `maintenance/` | 主实现及资产已归数据层；backend 旧 CLI/SQL 留作兼容 |
-| 真正共享 | `packages/api-contract`、`packages/shared` 中的协议及纯逻辑 | 单一实现继续共享；`shared/tooling` 的两项 Node 构建实现仍需后续迁移，不能视作浏览器公共能力 |
+| 真正共享 | `packages/api-contract`、`packages/shared` 中的协议及纯逻辑 | 单一实现继续共享；两项 Node 工具后续已迁至 `devtools/runtime-tooling`，旧 shared 路径仅兼容 |
 
 本批把 `packages/pm-market-data-browser` 完整迁到 `client/packages/pm-market-data-browser`，把 `devtools/venue-adapter/frontend` 迁到 `client/devtools/venue-adapter`，共 19 个文件。两个旧实现目录移除，没有用复制、junction 或空壳目录模拟隔离。三个旧 `packages/venue-adapter/scripts` CLI 只分派到新的真实工具文件，保留原 npm 命令。
 
@@ -28,10 +28,12 @@ lock 相对批前只改变六个 workspace/link 记录：根 workspaces、web �
 1. `packages/venue-adapter` 仍有浏览器和 Node 实现混放；loader/registry 的七个文件受原 551 项保护，其他平台及经典 FOK 源码也有大量受保护路径。不能把这一批 19 个文件的迁移表述为整个 adapter 已迁走。
 2. `packages/client-core`、`packages/arb-core` 仍是前端实现的历史目录，分别有 25、11 个被源码归属库存识别的固定保护文件。后续搬迁必须同时设计旧路径兼容与真实运行实现的完整保护。
 3. 根 `chrome-extension` 尚未迁移。迁移前须核对已加载扩展目录、构建根及打包输出，保持现有浏览器联调入口可用。
-4. `packages/shared/tooling` 仍含两个 Node 构建实现，`devtools/platform-probes` 仍含服务端探针。后续按实际资源根和消费者拆分，不复制第二套 loader 或工具算法。
+4. `packages/shared/tooling` 的两个 Node 实现及类型后续已迁至 `devtools/runtime-tooling`，原目录只保留 Node 兼容入口 workspace。`devtools/platform-probes` 仍含服务端探针，资源根与消费者待核对；不复制第二套 loader 或工具算法。
 5. 数据层旧 SQL/CLI 兼容副本继续保留；只有全部旧消费者退役后才移除。
 
 上述保留项使四类代码的物理隔离仍未全部完成。本批不启用精简安装、瘦包或独立发布 C–E，不拆仓，也不改变本机或生产服务的工作目录。
+
+[第二批 Node 工具与冻结迁移方案](NODE_TOOLING_AND_FROZEN_MIGRATION_20261018.md)已补充 888 路径清单、工具新旧入口及安装验证；冻结包本轮只完成方案，未实际迁移。
 
 ## 验证
 

@@ -29,14 +29,15 @@ function proofs(root, acceptance) {
   return { full, database };
 }
 
-test("a stale relocated-package build fingerprint cannot seal even with the current commit identity", () => {
+for (const [directory, label] of [["client/packages/book", "relocated-package"], ["devtools/runtime-tooling", "relocated-Node-tool"]])
+test(`a stale ${label} build fingerprint cannot seal even with the current commit identity`, () => {
   const root = fixture();
   const write = (file, source) => { fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true }); fs.writeFileSync(path.join(root, file), source); };
   try {
     write(".gitignore", "output/\nclient/web/dist/\n");
     write("server/backend/server.js", "export const backend = true;");
     write("client/web/src/App.vue", "<template>app</template>");
-    write("client/packages/book/src/book.ts", "export const book = 1;");
+    write(`${directory}/src/book.ts`, "export const book = 1;");
     write("packages/api-contract/package.json", '{"version":"1"}');
     write("scripts/deploy/verify-runtime.mjs", fs.readFileSync(new URL("./verify-runtime.mjs", import.meta.url)));
     git(root, "add", "."); git(root, "-c", "user.name=Evidence", "-c", "user.email=evidence@example.invalid", "commit", "-qm", "sources");
@@ -47,7 +48,7 @@ test("a stale relocated-package build fingerprint cannot seal even with the curr
       backendUrl: "https://api.changmen.fun/api/runtime-version" };
     write("client/web/dist/runtime-version.json", JSON.stringify(metadata));
     assert.equal(sealEvidence(root).expectedRuntime.frontend.sourceFingerprint, previous.sourceFingerprint);
-    write("client/packages/book/src/book.ts", "export const book = 2;");
+    write(`${directory}/src/book.ts`, "export const book = 2;");
     git(root, "add", "."); git(root, "-c", "user.name=Evidence", "-c", "user.email=evidence@example.invalid", "commit", "-qm", "relocated source changed");
     const current = readSourceVersion(root, "frontend");
     assert.notEqual(current.sourceFingerprint, previous.sourceFingerprint);

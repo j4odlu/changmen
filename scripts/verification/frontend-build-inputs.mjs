@@ -12,19 +12,25 @@ export function inspectFrontendBuildInputs(root, { readFile = file => fs.readFil
   if (policy.schemaVersion !== 1 || policy.purpose !== "frontend-build-source-isolation-only" || policy.publishScopeOptimizationEnabled !== false)
     throw Error("Invalid frontend build source policy");
   const fail = (file, pattern) => violations.push({ rule: "frontend-build-input", file, line: 0, spec: "build contract", pattern });
-  for (const [file, expected] of [["packages/shared/tooling/runtime_version.js", policy.canonicalRuntimeSha256],
-    ["packages/shared/tooling/dev_web_port.js", policy.canonicalPortSha256]]) {
+  for (const [file, expected] of [["devtools/runtime-tooling/runtime_version.js", policy.canonicalRuntimeSha256],
+    ["devtools/runtime-tooling/dev_web_port.js", policy.canonicalPortSha256]]) {
     try {
       const source = file.endsWith("runtime_version.js") ? restoreRuntimeCoverageSource(text(file)) : text(file);
       if (hash(source) !== expected) fail(file, "Complete original shared implementation must remain unchanged");
     } catch { fail(file, "Only the registered coverage addition may precede complete original source verification"); }
   }
-  const wrapper = '// [changmen 扩展] 保留旧 Node 入口；完整来源识别实现位于共享工具子目录。\nexport * from "@changmen/shared/tooling/runtime_version.js";\n';
+  for (const name of ["runtime_version.js", "runtime_version.d.ts", "dev_web_port.js", "dev_web_port.d.ts"]) {
+    const file = `packages/shared/tooling/${name}`;
+    const entry = '// [changmen 扩展] 旧 Node 工具导出兼容；宿主显式提供 runtime-tooling。\n'
+      + `export * from "@changmen/runtime-tooling/${name.replace(".d.ts", ".js")}";\n`;
+    if (text(file) !== entry) fail(file, "Legacy tooling exports must only forward to the single Node workspace");
+  }
+  const wrapper = '// [changmen 扩展] 保留旧 Node 入口；完整来源识别实现位于独立 Node 工具包。\nexport * from "@changmen/runtime-tooling/runtime_version.js";\n';
   if (text("server/storage/runtime_version.js") !== wrapper) fail("server/storage/runtime_version.js", "Old source identity entry must only re-export the same canonical module");
-  const portSource = text("packages/shared/tooling/dev_web_port.js");
+  const portSource = text("devtools/runtime-tooling/dev_web_port.js");
   const devConfig = text("server/storage/dev_web_config.js")
-    .replace('import { resolveDevWebPort } from "@changmen/shared/tooling/dev_web_port.js";\n', "")
-    .replace('export { resolveDevWebPort } from "@changmen/shared/tooling/dev_web_port.js";\n', portSource.trimEnd() + "\n");
+    .replace('import { resolveDevWebPort } from "@changmen/runtime-tooling/dev_web_port.js";\n', "")
+    .replace('export { resolveDevWebPort } from "@changmen/runtime-tooling/dev_web_port.js";\n', portSource.trimEnd() + "\n");
   if (hash(devConfig) !== policy.originalDevConfigSha256) fail("server/storage/dev_web_config.js", "Complete original environment loading and port semantics must restore exactly");
   const shared = JSON.parse(text("packages/shared/package.json"));
   for (const name of ["runtime_version", "dev_web_port"])
@@ -34,6 +40,7 @@ export function inspectFrontendBuildInputs(root, { readFile = file => fs.readFil
     fail("scripts/verification/source-ownership-inputs.json", "Every active frontend build input must remain a scoped ownership seed");
   const components = JSON.parse(text("scripts/deploy/component-inputs.json"));
   if (!components.nodeOnlyPaths.includes("packages/shared/tooling")) fail("scripts/deploy/component-inputs.json", "Shared Node tooling must remain forbidden to browser runtime consumers");
+  if (!components.nodeOnlyPaths.includes("devtools/runtime-tooling")) fail("scripts/deploy/component-inputs.json", "Canonical Node tooling must remain forbidden to browser runtime consumers");
   const contract = JSON.parse(text(policy.assetContract)), prefix = "/esport2/assets/";
   if (contract.schemaVersion !== 1 || contract.prefix !== prefix || contract.owner !== "backend-public-contract" || !contract.assets || !Object.keys(contract.assets).length)
     throw Error("Invalid legacy public asset contract");

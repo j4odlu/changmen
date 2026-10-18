@@ -1,0 +1,17 @@
+{
+  "name": "@changmen/runtime-tooling",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Node-only runtime source identity and development port helpers; browser builds consume these as tools.",
+  "exports": {
+    "./runtime_version.js": "./runtime_version.js",
+    "./dev_web_port.js": "./dev_web_port.js"
+  },
+  "files": [
+    "runtime_version.js",
+    "runtime_version.d.ts",
+    "dev_web_port.js",
+    "dev_web_port.d.ts"
+  ]
+}

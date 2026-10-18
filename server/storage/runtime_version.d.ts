@@ -1,1 +1,1 @@
-export * from "@changmen/shared/tooling/runtime_version.js";
+export * from "@changmen/runtime-tooling/runtime_version.js";

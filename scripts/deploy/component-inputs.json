@@ -19,16 +19,19 @@
     "client/packages/pm-market-data-browser/package.json",
     "packages/venue-adapter/loader/package.json",
     "packages/venue-adapter/registry/package.json",
-    "packages/venue-adapter/scripts/package.json"
+    "packages/venue-adapter/scripts/package.json",
+    "devtools/runtime-tooling/package.json"
   ],
   "nodeRoots": [
     "server",
-    "devtools/platform-probes"
+    "devtools/platform-probes",
+    "devtools/runtime-tooling"
   ],
   "nodeOnlyPaths": [
     "packages/venue-adapter/registry/paths.js",
     "packages/venue-adapter/registry/feeds.js",
-    "packages/shared/tooling"
+    "packages/shared/tooling",
+    "devtools/runtime-tooling"
   ],
   "browserRoots": [
     "client/web/src",

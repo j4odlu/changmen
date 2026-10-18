@@ -24,11 +24,15 @@ describe("actual runtime source identity", () => {
       "tests/book.test.ts", "src/book.test.ts", "node_modules/runtime.js", ".env", "src/.env.local"])
       expect(isVersionSource(`client/packages/book/${suffix}`, role)).toBe(isVersionSource(`packages/book/${suffix}`, role));
     expect(isVersionSource("client/packages/book/src/book.ts", role)).toBe(true);
+    for (const suffix of ["package.json", "runtime_version.js", "tests/helper.test.js", "node_modules/library.js", ".env"])
+      expect(isVersionSource(`devtools/runtime-tooling/${suffix}`, role)).toBe(isVersionSource(`packages/tool/${suffix}`, role));
+    expect(isVersionSource("devtools/runtime-tooling-other/helper.js", role)).toBe(false);
     expect(isVersionSource("client/devtools/venue-adapter/sync-package-exports.mjs", role)).toBe(false);
     expect(isVersionSource("client/packages-other/runtime.ts", role)).toBe(false);
   });
-  it.each(["frontend", "backend"])("detects edited, deleted, renamed and untracked relocated code for %s", role => {
-    const root = fixture(), file = "client/packages/book/src/book.ts", original = "export const value = 1;\n";
+  it.each(["frontend", "backend"].flatMap(role => ["client/packages/book", "devtools/runtime-tooling"].map(directory => [role, directory])))
+  ("detects edited, deleted, renamed and untracked relocated code for %s in %s", (role, directory) => {
+    const root = fixture(), file = `${directory}/src/book.ts`, original = "export const value = 1;\n";
     try {
       write(root, file, original); git(root, "add", "."); commit(root);
       const before = readSourceVersion(root, role); expect(before.dirty).toBe(false);
@@ -40,12 +44,12 @@ describe("actual runtime source identity", () => {
       expect(readSourceVersion(root, role).sourceFingerprint).not.toBe(before.sourceFingerprint);
       expect(readSourceVersion(root, role).dirty).toBe(true);
       write(root, file, original);
-      const renamed = "client/packages/book/src/renamed.ts";
+      const renamed = `${directory}/src/renamed.ts`;
       fs.renameSync(path.join(root, file), path.join(root, renamed));
       expect(readSourceVersion(root, role).sourceFingerprint).not.toBe(before.sourceFingerprint);
       expect(readSourceVersion(root, role).dirty).toBe(true);
       fs.renameSync(path.join(root, renamed), path.join(root, file));
-      write(root, "client/packages/book/src/new.ts", "export const added = true;");
+      write(root, `${directory}/src/new.ts`, "export const added = true;");
       expect(readSourceVersion(root, role).sourceFingerprint).not.toBe(before.sourceFingerprint);
       expect(readSourceVersion(root, role).dirty).toBe(true);
     } finally {
@@ -53,13 +57,13 @@ describe("actual runtime source identity", () => {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
-  it("keeps Git and no-Git package inventories equal and detects archived changes", () => {
+  it.each(["client/packages/book", "devtools/runtime-tooling"])("keeps Git and no-Git inventories equal and detects archived changes in %s", directory => {
     const root = fixture();
     try {
-      const file = "client/packages/book/src/book.ts";
+      const file = `${directory}/src/book.ts`;
       write(root, file, "export const value = 1;\n");
-      write(root, "client/packages/book/package.json", '{"type":"module"}');
-      write(root, "client/packages/book/src/icon.png", Buffer.from([0xff, 0x02]));
+      write(root, `${directory}/package.json`, '{"type":"module"}');
+      write(root, `${directory}/src/icon.png`, Buffer.from([0xff, 0x02]));
       git(root, "add", "."); commit(root);
       const head = git(root, "rev-parse", "HEAD"), release = path.join(root, `backend-${head}-1-1`);
       for (const name of git(root, "ls-files", "-z").split("\0").filter(Boolean)) write(release, name, fs.readFileSync(path.join(root, name)));
@@ -74,8 +78,8 @@ describe("actual runtime source identity", () => {
         expect(readSourceVersion(release, role).sourceFingerprint).not.toBe(original[role].sourceFingerprint);
         expect(readSourceVersion(release, role).sourceFingerprint).toBe(readSourceVersion(root, role).sourceFingerprint);
       }
-      for (const [name, body] of [["client/packages/book/.env", "TOKEN=secret"],
-        ["client/packages/book/tests/book.test.ts", "fixture"], ["client/packages/book/node_modules/library.js", "vendor"]]) {
+      for (const [name, body] of [[`${directory}/.env`, "TOKEN=secret"],
+        [`${directory}/tests/book.test.ts`, "fixture"], [`${directory}/node_modules/library.js`, "vendor"]]) {
         const before = readSourceVersion(release, "frontend"); write(release, name, body);
         expect(readSourceVersion(release, "frontend")).toEqual(before);
       }

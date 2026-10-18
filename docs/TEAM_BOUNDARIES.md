@@ -22,6 +22,8 @@ changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check
 
 [changmen 扩展] 后续已按用户选择推进[真实文件夹隔离](FOLDER_ISOLATION.md)：公共簿包移入 `client/packages/pm-market-data-browser`，前端维护工具移入 `client/devtools/venue-adapter`，共 19 个文件。旧实现目录移除，包名和旧 CLI 调用保持；整个 adapter、client-core、Chrome 扩展及 Node 构建工具仍有未迁项，不能视为四类物理隔离全部完成。
 
+[changmen 扩展] [第二批](NODE_TOOLING_AND_FROZEN_MIGRATION_20261018.md)将两个 Node 工具及两份声明迁入独立 `devtools/runtime-tooling` workspace；旧 shared 导出归兼容 workspace，shared 声明保持无 Node 依赖。前端运行图 7 包、构建图 8 包、backend 15 包、RDS 4 包；实际 npm 仍可能链接构建包，不据此启用精简安装。剩余 888 路径已有规划清单；client-core/arb-core 和七个 adapter 入口仅完成迁移保护方案，冻结文件未搬动。
+
 ## 团队与目录
 
 | 团队 | 拥有目录 | 职责 |

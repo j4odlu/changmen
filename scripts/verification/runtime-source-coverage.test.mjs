@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 import { restoreRuntimeCoverageSource } from "./runtime-source-coverage.mjs";
 
-const file = "packages/shared/tooling/runtime_version.js";
+const file = "devtools/runtime-tooling/runtime_version.js";
 const current = fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
 it("restores the complete original identity source without replacing its historical reference", () => {
   expect(restoreRuntimeCoverageSource(current)).toBe(gitSource("abdfce46d46f562c208ea0d832b6cafc02fd2360", "server/storage/runtime_version.js"));

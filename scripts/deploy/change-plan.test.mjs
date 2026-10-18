@@ -76,8 +76,10 @@ test("manual publication preserves requested components and database checks with
   assert.equal(changePlan([], { unknownBase: true }).deployment.scope, "full");
   assert.throws(() => changePlan([], { requestedScope: "noop" }));
   const verification = changePlan(["scripts/verification/validation-plan.mjs"], { requestedScope: "full" });
-  for (const check of ["verification-control", "verification-node", "backend", "frontend", "build"])
+  for (const check of ["deployment-control", "validation-control", "backend", "frontend", "build"])
     assert(verification.checks.includes(check));
+  assert(!verification.checks.includes("verification-control"));
+  assert(changePlan(["scripts/verification/pm-dependency-audit.mjs"], { purpose: "release" }).checks.includes("verification-control"));
 });
 test("release intent is separate from risk; no deployment needs no live acceptance", () => {
   const release = changePlan(["client/web/src/components/admin/Report.vue"], { purpose: "release" });

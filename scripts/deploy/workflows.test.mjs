@@ -34,9 +34,9 @@ test("one push entry covers every path and validates before either component", (
   assert.equal(release.concurrency["cancel-in-progress"], false);
   assert.equal(release.concurrency.queue, "max");
   assert.equal(release.jobs.validate.env.TZ, "Asia/Shanghai", "Date attribution must match production");
-  const baseline = release.jobs.validate.steps.find(s => s.run?.includes("node scripts/deploy/read-deployed-versions.mjs"));
+  const baseline = release.jobs.plan.steps.find(s => s.run?.includes("node scripts/deploy/read-deployed-versions.mjs"));
   assert.equal(baseline.if, "github.event_name == 'push'");
-  assert.equal(release.jobs.validate.env.CI_DEPLOYED_VERSIONS_FILE, undefined);
+  assert.equal(release.jobs.plan.env.CI_DEPLOYED_VERSIONS_FILE, undefined);
   assert.match(baseline.run, /CI_DEPLOYED_VERSIONS_FILE=.*GITHUB_ENV/);
   assert.deepEqual(release.jobs.backend.needs, "validate");
   assert.equal(release.jobs.frontend.needs, "validate");
@@ -49,7 +49,7 @@ test("one push entry covers every path and validates before either component", (
 });
 test("component checks run once, and artifacts are sealed only after success", () => {
   const steps = release.jobs.validate.steps;
-  const checks = steps.findIndex(s => s.run?.startsWith("npm run check:change "));
+  const checks = steps.findIndex(s => s.run === "node scripts/deploy/release-checks.mjs collect");
   const seal = steps.findIndex(s => s.run === "node scripts/deploy/release-evidence.mjs seal");
   const upload = steps.findIndex(s => s.uses?.startsWith("actions/upload-artifact@") && s.with.name === "verified-release");
   assert.ok(checks >= 0 && checks < seal && seal < upload);
@@ -58,7 +58,7 @@ test("component checks run once, and artifacts are sealed only after success", (
   assert.equal(steps[upload].with["if-no-files-found"], "error");
   assert.ok(steps.find(s => s.with?.name === "failed-acceptance").with.path.includes("output/orders-phase2-protection/*.log"));
   assert.ok(!JSON.stringify(steps[checks]).includes("secrets."));
-  assert.equal(steps.filter(s => s.run?.includes("check:change --")).length, 1);
+  assert.equal(steps.filter(s => s.run?.endsWith("release-checks.mjs collect")).length, 1);
   assert.equal(steps.find(s => s.uses?.startsWith("actions/checkout@")).with["fetch-depth"], 0);
   assert.deepEqual(release.on.workflow_dispatch.inputs.component.options, ["full", "backend", "frontend"]);
 });
@@ -73,18 +73,28 @@ test("the standalone full audit remains manual and cannot publish components", (
   assert(!JSON.stringify(audit).includes("publish.sh"));
 });
 
-test("required commit-bound checks finish before sealing, with PostgreSQL and capture credentials available for manual release too", () => {
+test("independent runners require all planned checks before sealing and keep credentials in the planning job", () => {
   const steps = release.jobs.validate.steps;
-  assert.equal(steps.find(s => s.name === "Prepare read-only version check").if, undefined);
-  const postgres = steps.findIndex(s => s.name === "Install PostgreSQL for required compatibility checks");
-  const check = steps.findIndex(s => s.run?.startsWith("npm run check:change "));
+  assert.equal(release.jobs.plan.steps.find(s => s.name === "Prepare read-only version check").if, undefined);
+  assert.deepEqual(release.jobs.checks.needs, "plan");
+  assert.deepEqual(release.jobs.validate.needs, ["plan", "checks"]);
+  assert.equal(release.jobs.checks.strategy["fail-fast"], false);
+  assert.equal(release.jobs.checks.strategy.matrix, "${{ fromJSON(needs.plan.outputs.matrix) }}");
+  for (const job of [release.jobs.checks, release.jobs.validate])
+    assert.equal(job.steps.find(step => step.uses?.startsWith("actions/setup-node@")).with["node-version"], "${{ needs.plan.outputs.node-version }}");
+  assert(!JSON.stringify(release.jobs.checks).includes("secrets."));
+  assert(!JSON.stringify(release.jobs.validate).includes("secrets."));
+  assert(!steps.some(s => s.run === "npm ci" || s.run?.includes("app:build")), "Collector never rebuilds");
+  const laneSteps = release.jobs.checks.steps;
+  const postgres = laneSteps.findIndex(s => s.name === "Install PostgreSQL for required compatibility checks");
+  const check = laneSteps.findIndex(s => s.run?.startsWith("node scripts/deploy/release-checks.mjs run "));
   assert(postgres >= 0 && postgres < check);
-  assert.equal(steps[postgres].if, "steps.plan.outputs.database-compatibility == 'true'");
-  assert.match(steps[postgres].run, /CHANGMEN_TEST_PG_BIN/);
+  assert.equal(laneSteps[postgres].if, "matrix.lane == 'backend' && needs.plan.outputs.database-compatibility == 'true'");
+  assert.match(laneSteps[postgres].run, /CHANGMEN_TEST_PG_BIN/);
   const commands = validationCommands({}, "npm-cli.js", "backend-first");
   assert.equal(commands["complete-release"], undefined, "Specialized audits have no automatic publication command");
   assert.equal(commands["database-compatibility"].command[1], "scripts/deploy/check-database-compatibility.mjs");
-  assert(release.jobs.validate["timeout-minutes"] >= 45);
+  assert(release.jobs.checks["timeout-minutes"] >= 15);
   const summary = steps.find(s => s.run === "node scripts/deploy/release-summary.mjs");
   assert.equal(summary.if, "always()"); assert.equal(summary.env.ACCEPTANCE_JOB_STATUS, "${{ job.status }}");
   assert.match(steps.find(s => s.with?.name === "failed-acceptance").with.path, /output\/database-compatibility\//);
@@ -128,7 +138,7 @@ test("master database checks have one owner while PR/manual coverage and all fiv
   assert(!JSON.stringify(database).includes("publish.sh"));
   const command = "node scripts/deploy/check-database-compatibility.mjs";
   assert.equal(database.jobs.compatibility.steps.filter(step => step.run === command).length, 1);
-  assert.equal(release.jobs.validate.steps.filter(step => step.run?.startsWith("npm run check:change ")).length, 1);
+  assert.equal(release.jobs.checks.steps.filter(step => step.run?.startsWith("node scripts/deploy/release-checks.mjs run ")).length, 1);
   assert.deepEqual(DATABASE_PHASES, ["schema-compatibility", "history-schema", "rds-cli-isolation",
     "rds-assets-standalone", "deploy-account-preservation"]);
 });

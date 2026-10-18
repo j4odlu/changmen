@@ -39,11 +39,21 @@ it("deploy-only changes require build and control tests without repeating unchan
   for (const check of ["backend", "frontend", "complete-release", "verification-control"]) expect(plan.checks).not.toContain(check);
 });
 it("publication has no FOK/live audit gate, while changed verification code retains its own tests", () => {
-  for (const paths of [[], ["packages/shared/catalog/game_catalog.json"], ["server/backend/core/account/order_store.js"], ["scripts/verification/validation-plan.mjs"]]) {
+  for (const paths of [[], ["packages/shared/catalog/game_catalog.json"], ["server/backend/core/account/order_store.js"], ["scripts/verification/pm-dependency-audit.mjs"]]) {
     const plan = validationPlan(paths, { publication: true });
     expect(plan.immutableFokEntries).toBe(0);
     expect(plan.checks).not.toContain("fok-551"); expect(plan.checks).not.toContain("complete-release");
     expect(plan.checks.includes("verification-control")).toBe(paths.some(file => file.startsWith("scripts/verification/")));
+  }
+});
+it("validation entry changes run their dedicated regression without unrelated PM graph mutation tests", () => {
+  for (const file of ["validation-plan.mjs", "verify-change.mjs", "validation-plan.test.mjs", "verify-change.test.mjs"]) {
+    const plan = validationPlan([`scripts/verification/${file}`], { publication: true });
+    expect(plan.checks).toContain("validation-control");
+    expect(plan.checks).not.toContain("verification-control");
+    expect(plan.checks).not.toContain("verification-node");
+    expect(validationPlan([`scripts/verification/${file}`, "scripts/verification/unknown-new-helper.mjs"], { publication: true }).checks)
+      .toContain("verification-control");
   }
 });
 it("a critical deleted or renamed path cannot be hidden by unrelated documents", () => {

@@ -41,7 +41,12 @@ export function validationPlan(changedPaths, { publication = false, components =
     : full ? "full" : frontend && backend ? "integration" : frontend ? "frontend" : backend ? "backend" : controls ? "controls" : "docs";
   // 后端入口本身含 test:checks，避免再串联一次相同边界检查。
   const checkBackend = backend || full, checkFrontend = frontend || full;
-  const verificationChanged = relevant.some(file => /^scripts\/verification\//.test(file));
+  // These entry points and their tests are already covered by validation-control
+  // (and their deploy consumers by deployment-control). Unknown/shared audit
+  // implementations still require the entire verification suite.
+  const validationControls = new Set(["validation-plan.mjs", "validation-plan.test.mjs", "verify-change.mjs", "verify-change.test.mjs"]);
+  const verificationChanged = relevant.some(file => /^scripts\/verification\//.test(file)
+    && !validationControls.has(file.slice("scripts/verification/".length)));
   const releaseChecks = ["validation-control", ...(verificationChanged ? ["verification-control", "verification-node"] : [])];
   if (publication) {
     if (!components.includes("backend") || !testsNeeded) releaseChecks.push("boundaries");

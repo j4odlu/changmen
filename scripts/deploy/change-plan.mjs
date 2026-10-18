@@ -35,9 +35,10 @@ export function changePlan(paths, { unknownBase = false, requestedScope = null, 
   const publication = purpose === "release" && components.length > 0;
   const validation = validationPlan(paths, { publication, components, release: purpose === "release",
     forceTests: unknownBase || requestedScope !== null });
-  if (paths.some(file => /^(?:scripts\/deploy\/|\.github\/|deploy\/|sh\/(?:deploy-|_common\.sh))/.test(file)))
+  if (paths.some(file => /^(?:scripts\/deploy\/|\.github\/|deploy\/|sh\/(?:deploy-|_common\.sh))/.test(file)
+    || /^scripts\/verification\/(?:validation-plan|verify-change)(?:\.test)?\.mjs$/.test(file)))
     validation.checks = ["deployment-control", ...validation.checks];
-  // [changmen 扩展] Required checks execute in the same committed checkout before sealing.
+  // [changmen 扩展] Required checks verify the same committed candidate before sealing.
   // FOK/live historical auditing has its own explicit entry; ordinary releases run component checks.
   const uncertain = unknownBase || requestedScope !== null;
   const requiredChecks = {

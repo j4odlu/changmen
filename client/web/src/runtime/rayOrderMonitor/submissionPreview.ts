@@ -10,7 +10,6 @@ import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { useUserStore } from "@/stores/userStore";
 import { useAccountStore } from "@/stores/accountStore";
 import { useOrderStore } from "@/stores/orderStore";
-import { getProvider } from "@/runtime/venueAdapters";
 import { observedRayOrders } from "@/runtime/orderMonitoring/rayOrders";
 import { toOrderDateKeyLocal } from "@/shared/orderLink";
 import { matchRayVenueOrder } from "./match";
@@ -77,8 +76,8 @@ export function beginRaySubmissionPreview(account: PlatformAccount, option: BetO
   };
 }
 
-export function hasRaySubmissionPreviews(account: PlatformAccount): boolean {
-  return [...previews.values()].some(preview => preview.account === account && preview.current());
+export function pendingRaySubmissionPreviewAccounts(): PlatformAccount[] {
+  return [...new Set([...previews.values()].filter(preview => !preview.order && preview.current()).map(preview => preview.account))];
 }
 
 export function retireRaySubmissionPreviews(rows: readonly OrderRow[]): void {
@@ -89,11 +88,6 @@ export function retireRaySubmissionPreviews(rows: readonly OrderRow[]): void {
   }
 }
 
-/** 预览查询直接读 adapter，不向 GTC/拒单检测共享的事实快照发布提前结果。 */
-export async function readRaySubmissionPreviewOrders(account: PlatformAccount): Promise<VenueOrder[]> {
-  return await getProvider(account)?.getOrders?.(account) ?? [];
-}
-
 function sameText(left: string, right: string): boolean {
   const normalize = (value: string) => value.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
   const a = normalize(left), b = normalize(right);
@@ -102,21 +96,18 @@ function sameText(left: string, right: string): boolean {
 
 export function observeRaySubmissionPreviews(account: PlatformAccount, orders: readonly VenueOrder[], startedAt: number): void {
   const owned = [...previews.values()].filter(preview => preview.account === account && preview.current());
+  const claimed = new Set(owned.map(preview => preview.order?.orderId).filter(Boolean));
   for (const preview of owned) {
-    if (startedAt < preview.acceptedAt)
+    if (preview.order || startedAt < preview.acceptedAt)
       continue;
-    const claimed = new Set(owned.filter(other => other !== preview).map(other => other.order?.orderId).filter(Boolean));
     const candidates = orders.filter(order => !claimed.has(order.orderId) && !preview.previousIds.has(order.orderId)
       && order.createAt >= preview.task.submittedAt - 1000
       && (order.venueItemId ? order.venueItemId === preview.itemId : sameText(preview.task.item, order.item))
       && (order.venueMatchId ? order.venueMatchId === preview.matchId : sameText(preview.task.match, order.match)));
     const matched = matchRayVenueOrder(preview.task, candidates);
-    const order = preview.order ? candidates.find(order => order.orderId === preview.order!.orderId)
-      : matched.kind === "matched" ? matched.candidate.order : undefined;
-    if (order) {
-      // 慢响应不能把已观察到的终态回退为未结算。
-      const terminal = preview.order && ["win", "lose", "return", "reject"].includes(preview.order.status);
-      previews.set(preview.task.key, { ...preview, order: terminal ? preview.order : { ...order } });
+    if (matched.kind === "matched") {
+      claimed.add(matched.candidate.order.orderId);
+      previews.set(preview.task.key, { ...preview, order: { ...matched.candidate.order } });
     }
   }
 }

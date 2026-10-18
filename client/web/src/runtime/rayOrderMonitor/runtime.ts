@@ -12,7 +12,8 @@ import { loadRayMonitorOrders } from "./api";
 import { rayClientStatus, updateRayOrdersLocally } from "./localOrders";
 import { bindRayOrderContexts, observeRayOrderContexts, resumeRayContextMakeup } from "./contexts";
 import { useRayOrderContextStore } from "./contextStore";
-import { hasRaySubmissionPreviews, observeRaySubmissionPreviews, readRaySubmissionPreviewOrders, retireRaySubmissionPreviews, resetRaySubmissionPreviews, setRaySubmissionPreviewWake } from "./submissionPreview";
+
+import { startRaySubmissionPreviewPolling, stopRaySubmissionPreviewPolling } from "./submissionPreviewPolling";
 
 export const RAY_ORDER_POLL_MS = 5000;
 export const RAY_ORDER_RECOVERY_MS = 60_000;
@@ -68,7 +69,6 @@ export function recoverRaySettlement(): void {
     catch { /* 损坏的会话缓存不阻止数据库恢复。 */ }
   }
   const contexts = useRayOrderContextStore(); contexts.restore(current);
-  retireRaySubmissionPreviews([...useOrderStore().orders.values()].flat());
   for (const row of [...useOrderStore().orders.values()].flat())
     register(row);
   for (const task of contexts.activeTasks) {
@@ -127,21 +127,16 @@ function reportError(player: number, error: unknown): void {
 function pollAccount(account: PlatformAccount): void {
   const player = account.accountId;
   // 原下注确认窗口仍使用自己的查单；后台查询不能覆盖在途确认结果。
-  const previewing = hasRaySubmissionPreviews(account);
-  if (polling.has(player) || (account.active && !previewing) || (polledAt.has(player) && Date.now() - polledAt.get(player)! < RAY_ORDER_POLL_MS))
+  if (polling.has(player) || account.active || (polledAt.has(player) && Date.now() - polledAt.get(player)! < RAY_ORDER_POLL_MS))
     return;
   const originals = new Set([...tasks.values()].filter(row => row.PlayerID === player).map(key));
-  if (!previewing && !originals.size && !useRayOrderContextStore().activeTasks.some(task => task.accountId === player))
+  if (!originals.size && !useRayOrderContextStore().activeTasks.some(task => task.accountId === player))
     return;
   polledAt.set(player, Date.now());
   const current = capture(account);
   const task = (async () => {
-    const startedAt = Date.now();
-    const previewOnly = account.active;
-    const orders = previewOnly ? await readRaySubmissionPreviewOrders(account) : await readRayAccountOrders(account);
-    if (current())
-      observeRaySubmissionPreviews(account, orders, startedAt);
-    if (previewOnly || !current() || account.active)
+    const orders = await readRayAccountOrders(account);
+    if (!current() || account.active)
       return;
     recoverRaySettlement();
     bindRayOrderContexts(account, orders, () => current() && !account.active);
@@ -213,10 +208,7 @@ export function startRayOrderMonitoring(): void {
   if (timer)
     return;
   recoverRaySettlement();
-  setRaySubmissionPreviewWake((account) => {
-    const current = useAccountStore().findAccount(account.accountId);
-    if (timer && current === account) { polledAt.delete(account.accountId); pollAccount(current); }
-  });
+  startRaySubmissionPreviewPolling();
   const stamp = generation;
   const tick = () => {
     if (stamp !== generation)
@@ -228,6 +220,6 @@ export function startRayOrderMonitoring(): void {
 }
 export function stopRayOrderMonitoring(): void {
   clearTimeout(timer); timer = undefined;
-  resetRaySubmissionPreviews();
+  stopRaySubmissionPreviewPolling();
   stopRaySettlement(); resetRayOrderPolling(); resetRayMonitoring();
 }

@@ -18,25 +18,9 @@ const changes = {
     }, getOrders(account) {`, 'wrapper = { ...provider, getOrders(account) {'],
   ],
   [root + "runtime/rayOrderMonitor/runtime.ts"]: [
-    ['import { hasRaySubmissionPreviews, observeRaySubmissionPreviews, readRaySubmissionPreviewOrders, retireRaySubmissionPreviews, resetRaySubmissionPreviews, setRaySubmissionPreviewWake } from "./submissionPreview";\n', ""],
-    ['  retireRaySubmissionPreviews([...useOrderStore().orders.values()].flat());\n', ""],
-    [`  const previewing = hasRaySubmissionPreviews(account);
-  if (polling.has(player) || (account.active && !previewing) || (polledAt.has(player) && Date.now() - polledAt.get(player)! < RAY_ORDER_POLL_MS))`,
-    '  if (polling.has(player) || account.active || (polledAt.has(player) && Date.now() - polledAt.get(player)! < RAY_ORDER_POLL_MS))'],
-    ['  if (!previewing && !originals.size && !useRayOrderContextStore().activeTasks.some(task => task.accountId === player))',
-    '  if (!originals.size && !useRayOrderContextStore().activeTasks.some(task => task.accountId === player))'],
-    [`    const startedAt = Date.now();
-    const previewOnly = account.active;
-    const orders = previewOnly ? await readRaySubmissionPreviewOrders(account) : await readRayAccountOrders(account);
-    if (current())
-      observeRaySubmissionPreviews(account, orders, startedAt);
-    if (previewOnly || !current() || account.active)
-      return;`, '    const orders = await readRayAccountOrders(account);\n    if (!current() || account.active)\n      return;'],
-    [`  setRaySubmissionPreviewWake((account) => {
-    const current = useAccountStore().findAccount(account.accountId);
-    if (timer && current === account) { polledAt.delete(account.accountId); pollAccount(current); }
-  });\n`, ""],
-    ['  resetRaySubmissionPreviews();\n', ""],
+    ['import { startRaySubmissionPreviewPolling, stopRaySubmissionPreviewPolling } from "./submissionPreviewPolling";\n\n', ""],
+    ['  startRaySubmissionPreviewPolling();\n', ""],
+    ['  stopRaySubmissionPreviewPolling();\n', ""],
   ],
   [root + "components/order/OrderView.vue"]: [
     ['import { projectRaySubmissionPreviews } from "@/runtime/rayOrderMonitor/submissionPreview";\n', ""],
@@ -47,8 +31,44 @@ const displayOrderEntries = computed(() => props.projectOrderEntries?.(previewOr
   ],
 };
 
-// [changmen 扩展] 仅反向还原预览角标，原预览源码哈希保持不变。
+// [changmen 扩展] 精确还原展示调度拆分及角标；原预览和业务监控的固定哈希保持不变。
 export function restoreRaySubmissionPreviewSource(file, source) {
+  if (file === root + "runtime/rayOrderMonitor/submissionPreview.ts") {
+    source = source.replaceAll("\r\n", "\n");
+    for (const [added, original] of [
+      [
+        "import { observedRayOrders }",
+        "import { getProvider } from \"@/runtime/venueAdapters\";\nimport { observedRayOrders }"
+      ],
+      [
+        "export function pendingRaySubmissionPreviewAccounts(): PlatformAccount[] {\n  return [...new Set([...previews.values()].filter(preview => !preview.order && preview.current()).map(preview => preview.account))];\n}\n\n",
+        "export function hasRaySubmissionPreviews(account: PlatformAccount): boolean {\n  return [...previews.values()].some(preview => preview.account === account && preview.current());\n}\n\n"
+      ],
+      [
+        "function sameText",
+        "/** 预览查询直接读 adapter，不向 GTC/拒单检测共享的事实快照发布提前结果。 */\nexport async function readRaySubmissionPreviewOrders(account: PlatformAccount): Promise<VenueOrder[]> {\n  return await getProvider(account)?.getOrders?.(account) ?? [];\n}\n\nfunction sameText"
+      ],
+      [
+        "  const claimed = new Set(owned.map(preview => preview.order?.orderId).filter(Boolean));\n",
+        ""
+      ],
+      [
+        "    const candidates = orders.filter(order =>",
+        "    const claimed = new Set(owned.filter(other => other !== preview).map(other => other.order?.orderId).filter(Boolean));\n    const candidates = orders.filter(order =>"
+      ],
+      [
+        "    if (preview.order || startedAt < preview.acceptedAt)",
+        "    if (startedAt < preview.acceptedAt)"
+      ],
+      [
+        "    if (matched.kind === \"matched\") {\n      claimed.add(matched.candidate.order.orderId);\n      previews.set(preview.task.key, { ...preview, order: { ...matched.candidate.order } });\n    }",
+        "    const order = preview.order ? candidates.find(order => order.orderId === preview.order!.orderId)\n      : matched.kind === \"matched\" ? matched.candidate.order : undefined;\n    if (order) {\n      // 慢响应不能把已观察到的终态回退为未结算。\n      const terminal = preview.order && [\"win\", \"lose\", \"return\", \"reject\"].includes(preview.order.status);\n      previews.set(preview.task.key, { ...preview, order: terminal ? preview.order : { ...order } });\n    }"
+      ]
+    ]) {
+      assert.equal(source.split(added).length, 2, "one exact independent preview change");
+      source = source.replace(added, original);
+    }
+  }
   if (file === root + "runtime/rayOrderMonitor/submissionPreview.ts" && source.includes('Status: "RayConfirming"')) {
     const added = '      Money: order.money, CreateAt: order.createAt, Status: "RayConfirming",';
     assert.equal(source.split(added).length, 2, "one exact RAY confirming preview label");
@@ -64,12 +84,15 @@ export function restoreRaySubmissionPreviewSource(file, source) {
 }
 
 export function verifyRaySubmissionPreviewSources(readSource) {
+  const poller = root + "runtime/rayOrderMonitor/submissionPreviewPolling.ts";
+  assert.equal(createHash("sha256").update(readSource(poller).replaceAll("\r\n", "\n")).digest("hex"), "eb5527a9639e66d58ee46b46bd7ddc08ef6ab0429754b2691e5666b23375a4af",
+    "complete independent display poller; raw reads only, no business monitoring effects");
   const file = root + "runtime/rayOrderMonitor/submissionPreview.ts";
   const source = restoreRaySubmissionPreviewSource(file, readSource(file)).replaceAll("\r\n", "\n");
   assert.equal(createHash("sha256").update(source).digest("hex"), "ddd0174700c9ab577c0bd4e5bada42e2a16e554648b108b57dde77161c889b3b",
     "complete RAY read-only preview implementation; no changes to rejection, persistence or shared snapshots");
   for (const entry of Object.keys(changes)) {
-    assert(readSource(entry).includes("submissionPreview"), `${entry}: RAY preview entry is installed`);
+    assert(readSource(entry).toLowerCase().includes("submissionpreview"), `${entry}: RAY preview entry is installed`);
     restoreRaySubmissionPreviewSource(entry, readSource(entry));
   }
   assert(readSource(file).includes('Status: "RayConfirming"'), "RAY preview only shows confirming before formal synchronization");

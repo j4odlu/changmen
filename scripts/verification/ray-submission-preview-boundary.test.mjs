@@ -10,7 +10,7 @@ it("preserves the original complete monitor hash and provider after restoring on
   const monitor = "client/web/src/runtime/rayOrderMonitor/runtime.ts";
   expect(verifyRayClientMonitorSource(monitor, read(monitor))).toBe(true);
   const source = read(monitor);
-  expect(() => verifyRayClientMonitorSource(monitor, source.replace("if (previewOnly || !current() || account.active)", "if (!current() || account.active)"))).toThrow();
+  expect(() => verifyRayClientMonitorSource(monitor, source.replace("polling.has(player) || account.active", "polling.has(player)"))).toThrow();
   expect(() => verifyRayClientMonitorSource(monitor, source.replace("observeRayOrderContexts(player, contextOrders, current)", "observeRayOrderContexts(player, orders, current)"))).toThrow();
   const provider = "client/web/src/runtime/providers.ts";
   expect(() => restoreRayProviderSource(provider, read(provider), read)).not.toThrow();
@@ -20,7 +20,9 @@ it("preserves the original complete monitor hash and provider after restoring on
 it("rejects edits to read-only behavior and exact preview entry points without changing immutable baselines", () => {
   expect(() => verifyRaySubmissionPreviewSources(file => read(file) + (file.endsWith("submissionPreview.ts") ? "\nvoid writeOrders();" : ""))).toThrow();
   const file = "client/web/src/runtime/rayOrderMonitor/runtime.ts";
-  expect(() => restoreRaySubmissionPreviewSource(file, read(file).replace("observeRaySubmissionPreviews(account, orders, startedAt)", "observeRaySubmissionPreviews(account, [], startedAt)"))).toThrow();
+  expect(() => restoreRaySubmissionPreviewSource(file, read(file).replace("startRaySubmissionPreviewPolling();", ""))).toThrow();
+  expect(() => verifyRaySubmissionPreviewSources(file => file.endsWith("submissionPreviewPolling.ts")
+    ? read(file).replace('from "@/runtime/venueAdapters"', 'from "@/runtime/providers"') : read(file))).toThrow();
 });
 
 it("keeps the preview independent of A/B rejection results and protects the confirming label", () => {

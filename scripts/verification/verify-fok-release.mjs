@@ -7,7 +7,7 @@ import {assertCaptureEvidence} from './release-provenance.mjs';
 import {releasePlan, selectGtcRelease} from './gtc-independent-release.mjs';
 import {validationIdentity} from './verify-change.mjs';
 import {FULL_AUDIT_PHASES, executionContext} from '../deploy/acceptance-contract.mjs';
-assert(process.env.npm_execpath,'Run with npm run check:fok-release');
+assert(process.env.npm_execpath,'Run through npm run check:change or npm run check:fok-release');
 const plan=releasePlan(process.argv.slice(2));
 const identity=validationIdentity(process.cwd());
 const invocationId=process.env.CHANGMEN_ACCEPTANCE_INVOCATION??null;
@@ -30,7 +30,8 @@ const phases=[
   ['gtc-backend-compatibility',['scripts/verification/verify-gtc-backend-compatibility.mjs',`--release-plan=${plan}`]],
   ['checks',npm('run','test:checks')],
   ['router-compile',npm('run','compile:router','--workspace=@changmen/backend')],
-  ['backend',npm('run','test:backend','--','--force')],
+  // test:checks already ran above; this is the unchanged server workspace test selection.
+  ['backend',npm('exec','--','turbo','run','test','--filter=./server/**...','--force')],
   ['order-business',vitest('run','server/db/rds','server/backend/core/account','server/backend/core/orderModes','--exclude','server/backend/core/account/user_login_meta.test.mjs','--exclude','server/backend/core/account/user_presence.test.mjs','--reporter=json','--outputFile=output/orders-phase2-protection/order-business.json')],
   ['compatibility',vitest('run','server/db/rds/orders_execution_compat.test.mjs','server/backend/core/account/admin_maintenance.ordersCompat.test.mjs','scripts/verification/orders-consumer-boundary.test.mjs','scripts/migrations/pm-gtc-orders/plan.test.mjs','scripts/migrations/pm-gtc-orders/phase2-schema.test.mjs','scripts/migrations/pm-gtc-orders/backfill.test.mjs','scripts/migrations/pm-gtc-orders/integration/preparation.test.mjs','--reporter=json','--outputFile=output/orders-phase2-protection/compatibility.json')],
   ['frontend-typecheck',npm('run','typecheck:frontend')],
@@ -44,12 +45,13 @@ const phases=[
 const results=[];
 assert.deepEqual(phases.map(row=>row[0]),FULL_AUDIT_PHASES,'All original complete audit phases must remain present');
 for(const [phase,args,cwd] of phases) {
+  console.log(`[audit] ${phase}: START`);
   const started=Date.now();const result=spawnSync(process.execPath,args,{cwd:cwd?path.resolve(cwd):process.cwd(),encoding:'utf8',timeout:300000,maxBuffer:30*1024*1024,windowsHide:true});
   const log=`output/orders-phase2-protection/${phase}.log`;
   fs.writeFileSync(log,(result.stdout??'')+(result.stderr??'')+(result.error?'\n'+result.error.message:''));
   results.push({phase,passed:result.status===0&&!result.error,exitCode:result.status,errorCode:result.error?.code??null,signal:result.signal??null,
     execution:{command:[process.execPath,...args],cwd:cwd??'.'},elapsedMs:Date.now()-started,log});
-  console.log(`${phase}: ${result.status===0&&!result.error?'PASS':'FAIL'} (${log})`);
+  console.log(`[audit] ${phase}: ${result.status===0&&!result.error?'PASS':'FAIL'} (${((Date.now()-started)/1000).toFixed(1)}s; ${log})`);
   if(result.status!==0||result.error)break;
 }
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));

@@ -307,7 +307,7 @@ export function analyzePmLoaderBindings({ files, dependencies, origins, expected
 }
 
 /** Include only the already-evidenced default preload inventory and its true source dependencies. */
-export function inspectPmLoaderBindings(root, manifest, graph, sharedEvidence) {
+export function inspectPmLoaderBindings(root, manifest, graph, sharedEvidence, inspection) {
   const policy = JSON.parse(fs.readFileSync(path.join(root, "scripts/verification/pm-loader-binding-inputs.json"), "utf8"));
   if (policy.schemaVersion !== 1 || policy.purpose !== "pm-loader-binding-gate-only" || policy.publishScopeOptimizationEnabled !== false) throw Error("Loader binding gate cannot choose publication scope");
   const central = "packages/venue-adapter/loader/adapter_paths.mjs";
@@ -323,7 +323,9 @@ export function inspectPmLoaderBindings(root, manifest, graph, sharedEvidence) {
   const contracts = policy.sourceContracts.map(row => ({ ...row, matched: sharedLoaderSourceSignature(row.file, fs.readFileSync(path.join(root, row.file), "utf8"), row.selector) === row.signature }));
   const preload = sharedEvidence.defaultScenario;
   const runtimeRoots = preload ? [...new Set([...preload.preloadFiles.map(row => row.file), ...preload.targetEvidence.filter(row => row.file.startsWith("devtools/platform-probes/")).map(row => row.file)])] : [];
-  const expanded = preload ? inspectComponentEntries(root, { ...manifest, scopes: { ...manifest.scopes, pm: { ...manifest.scopes.pm, nodeRoots: [...manifest.scopes.pm.nodeRoots, ...runtimeRoots] } } }, { scope: "pm" }) : graph;
+  const expandedManifest = { ...manifest, scopes: { ...manifest.scopes, pm: { ...manifest.scopes.pm, nodeRoots: [...manifest.scopes.pm.nodeRoots, ...runtimeRoots] } } };
+  const expanded = preload ? (inspection ? inspection.inspect(expandedManifest, { scope: "pm" })
+    : inspectComponentEntries(root, expandedManifest, { scope: "pm" })) : graph;
   const checked = new Map([...sharedEvidence.sourceContracts, ...contracts].filter(row => row.matched).map(row => [row.file, row.selector]));
   function reviewedAcquisition(file, node) {
     const selector = checked.get(file);
@@ -331,7 +333,7 @@ export function inspectPmLoaderBindings(root, manifest, graph, sharedEvidence) {
     if (selector === "pg-loader") for (let p = node; p; p = p.parent) if (ts.isFunctionDeclaration(p) && p.name?.text === "requirePg" && ts.isSourceFile(p.parent)) return true;
     return false;
   }
-  const files = Object.fromEntries(expanded.sourceFiles.map(file => [file, fs.readFileSync(path.join(root, file), "utf8")]));
+  const files = Object.fromEntries(expanded.sourceFiles.map(file => [file, inspection ? inspection.readSource(file) : fs.readFileSync(path.join(root, file), "utf8")]));
   const result = analyzePmLoaderBindings({ files, dependencies: expanded.dependencies, origins: policy.origins, expectedCalls: policy.calls, facade: policy.facade, reviewedAcquisition });
   const unknownKey = row => JSON.stringify([row.file, row.kind, row.expression, row.loaderSymbol, row.arguments]);
   const originalUnknowns = new Set(graph.unknown.map(unknownKey));

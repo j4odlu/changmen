@@ -27,7 +27,7 @@ function change(setting: PmBookSetting, value: unknown) {
 
 <template>
   <div class="pm-book-settings">
-    <p>本地订单簿旁路验证（实验功能）</p>
+    <h4 class="pm-book-settings__heading">动态复核预检设置</h4>
     <p class="pm-book-settings__note">
       默认关闭，仅当前浏览器、当前站点生效，切换后立即保存，无需点击下方保存按钮；换账号会保留此浏览器设置。
       仅直连官方 PM-M 且已保存动态复核预检时启用，经典预检和中转连接不运行旁路。
@@ -55,5 +55,6 @@ function change(setting: PmBookSetting, value: unknown) {
 
 <style scoped>
 .pm-book-settings { border-top: 1px solid var(--el-border-color-lighter); margin-top: 12px; padding-top: 4px; font-size: 13px; }
+.pm-book-settings__heading { margin: 12px 0 8px; font-size: 13px; font-weight: 600; }
 .pm-book-settings__note { color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.6; }
 </style>

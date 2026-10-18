@@ -1,4 +1,3 @@
-import { fullAcceptanceFixture } from "../testing/full-acceptance-fixture.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -47,13 +46,11 @@ test("transport verification starts without installed workspace dependencies and
 });
 function proofs(root, acceptance) {
   const common = { passed: true, sourceStable: true, identity: acceptance.identity };
-  const full = JSON.parse(fs.readFileSync(path.join(root, "output/fok-release-verdict.json"), "utf8"));
   const database = { ...common, localOnly: true, productionWrites: false,
     results: DATABASE_PHASES.map(phase => ({ phase, passed: true })) };
-  fs.writeFileSync(path.join(root, "output/fok-release-verdict.json"), JSON.stringify(full));
   fs.mkdirSync(path.join(root, "output/database-compatibility"), { recursive: true });
   fs.writeFileSync(path.join(root, "output/database-compatibility/verdict.json"), JSON.stringify(database));
-  return { full, database };
+  return { database };
 }
 
 for (const [directory, label] of [["client/packages/book", "relocated-package"], ["devtools/runtime-tooling", "relocated-Node-tool"]])
@@ -69,7 +66,7 @@ test(`a stale ${label} build fingerprint cannot seal even with the current commi
     write("scripts/deploy/verify-runtime.mjs", fs.readFileSync(new URL("./verify-runtime.mjs", import.meta.url)));
     git(root, "add", "."); git(root, "-c", "user.name=Evidence", "-c", "user.email=evidence@example.invalid", "commit", "-qm", "sources");
     const previous = readSourceVersion(root, "frontend");
-    let acceptance = runChangeValidation(["--publish=frontend"], { cwd: root, npm: "npm-cli.js", run: fullAcceptanceFixture(root) });
+    let acceptance = runChangeValidation(["--publish=frontend"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
     proofs(root, acceptance);
     const metadata = { frontend: { ...previous, role: "frontend", startedAt: "2026-10-14T00:00:00Z" },
       backendUrl: "https://api.changmen.fun/api/runtime-version" };
@@ -79,7 +76,7 @@ test(`a stale ${label} build fingerprint cannot seal even with the current commi
     git(root, "add", "."); git(root, "-c", "user.name=Evidence", "-c", "user.email=evidence@example.invalid", "commit", "-qm", "relocated source changed");
     const current = readSourceVersion(root, "frontend");
     assert.notEqual(current.sourceFingerprint, previous.sourceFingerprint);
-    acceptance = runChangeValidation(["--publish=frontend"], { cwd: root, npm: "npm-cli.js", run: fullAcceptanceFixture(root) });
+    acceptance = runChangeValidation(["--publish=frontend"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
     proofs(root, acceptance);
     // Deliberately pair current commit/clean flags with an old source fingerprint.
     metadata.frontend.commit = current.commit;
@@ -94,11 +91,12 @@ test(`a stale ${label} build fingerprint cannot seal even with the current commi
 test("failed, missing or downgraded checks cannot produce publication proof", () => {
   const root = fixture();
   try {
-    const report = runChangeValidation(["--publish=backend"], { cwd: root, npm: "npm-cli.js", run: fullAcceptanceFixture(root) });
+    const report = runChangeValidation(["--publish=backend"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
     assertAccepted(report);
     for (const mutate of [
       p => { p.passed = false; }, p => { p.sourceStable = false; }, p => { p.immutableFokEntries = 550; },
       p => { p.results.pop(); }, p => { p.results[0].passed = false; },
+      p => { p.results[0].exitCode = 1; }, p => { p.results[0].errorCode = "ETIMEDOUT"; }, p => { p.results[0].signal = "SIGTERM"; },
       p => { p.plan.checks = ["fok-551"]; }, p => { p.plan.deployment.components = ["frontend"]; },
     ]) {
       const broken = structuredClone(report); mutate(broken); assert.throws(() => assertAccepted(broken));
@@ -119,12 +117,12 @@ test("real Git archives and frontend build metadata seal successfully; an old bu
     fs.writeFileSync(path.join(root, "packages/api-contract/package.json"), '{"version":"1"}');
     fs.copyFileSync(new URL("./verify-runtime.mjs", import.meta.url), path.join(root, "scripts/deploy/verify-runtime.mjs"));
     git(root, "add", "."); git(root, "-c", "user.name=Evidence", "-c", "user.email=evidence@example.invalid", "commit", "-qm", "sources");
-    let acceptance = runChangeValidation(["--publish=full"], { cwd: root, npm: "npm-cli.js", run: fullAcceptanceFixture(root) });
-    fs.rmSync(path.join(root, "output/fok-release-verdict.json"));
+    let acceptance = runChangeValidation(["--publish=full"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
+    assert.equal(fs.existsSync(path.join(root, "output/fok-release-verdict.json")), false);
     assert.throws(() => sealEvidence(root), /ENOENT/);
-    acceptance = runChangeValidation(["--publish=full"], { cwd: root, npm: "npm-cli.js", run: fullAcceptanceFixture(root) });
+    acceptance = runChangeValidation(["--publish=full"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
     const proof = proofs(root, acceptance);
-    for (const [file, valid] of [["output/fok-release-verdict.json", proof.full], ["output/database-compatibility/verdict.json", proof.database]]) {
+    for (const [file, valid] of [["output/database-compatibility/verdict.json", proof.database]]) {
       for (const mutate of [p => { p.identity.commit = "b".repeat(40); }, p => { p.identity.inputFingerprint = "c".repeat(64); },
         p => { p.results.pop(); }, p => { p.results[0].passed = false; }, p => { p.results[1] = p.results[0]; }, p => { p.sourceStable = false; }]) {
         const broken = structuredClone(valid); mutate(broken); fs.writeFileSync(path.join(root, file), JSON.stringify(broken));
@@ -137,13 +135,14 @@ test("real Git archives and frontend build metadata seal successfully; an old bu
       backendUrl: "https://api.changmen.fun/api/runtime-version" };
     fs.writeFileSync(path.join(dist, "runtime-version.json"), JSON.stringify(metadata));
     const evidence = sealEvidence(root);
-    assert.match(evidence.fullAcceptanceSha256, /^[a-f0-9]{64}$/);
+    assert.equal(evidence.fullAcceptanceSha256, null);
     assert.match(evidence.databaseAcceptanceSha256, /^[a-f0-9]{64}$/);
-    assert.equal(evidence.report.completeRelease, true);
+    assert.equal(evidence.report.completeRelease, false);
+    assert.equal(evidence.report.immutableFokEntries, 0);
     verifySupplementalEvidence(evidence, path.join(root, "output/release-validation"));
     const changedReference = structuredClone(evidence);
-    changedReference.report.results.find(row => row.reusedFrom).reusedFrom.reportHash = "f".repeat(64);
-    assert.throws(() => verifySupplementalEvidence(changedReference, path.join(root, "output/release-validation")));
+    changedReference.report.results[0].reusedFrom = { kind: "full", phase: "vps-core" };
+    assert.throws(() => assertAccepted(changedReference.report), /Unapproved reuse/);
     fs.appendFileSync(path.join(root, "output/release-validation/database-acceptance.json"), " ");
     assert.throws(() => verifySupplementalEvidence(evidence, path.join(root, "output/release-validation")), /changed/);
     for (const scope of ["frontend", "backend"])
@@ -224,7 +223,7 @@ test("maintenance-only pushes require one source-bound five-phase proof even wit
 test("post-check edits and other commits cannot reuse acceptance", () => {
   const root = fixture();
   try {
-    const report = runChangeValidation(["--publish=backend"], { cwd: root, npm: "npm-cli.js", run: fullAcceptanceFixture(root) });
+    const report = runChangeValidation(["--publish=backend"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
     assertCandidate(report, root);
     fs.writeFileSync(path.join(root, "runtime.js"), "changed");
     assert.throws(() => assertCandidate(report, root), /Uncommitted|inputs/);
@@ -235,7 +234,7 @@ test("post-check edits and other commits cannot reuse acceptance", () => {
 test("the exact archive, component and source identity are bound to acceptance", () => {
   const root = fixture();
   try {
-    const report = runChangeValidation(["--publish=backend"], { cwd: root, npm: "npm-cli.js", run: fullAcceptanceFixture(root) });
+    const report = runChangeValidation(["--publish=backend"], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
     const archive = path.join(root, "artifact.tgz"); fs.writeFileSync(archive, "artifact");
     const commit = report.identity.commit;
     const evidence = { format: 1, commit, candidateTree: report.identity.candidateTree, inputFingerprint: report.identity.inputFingerprint,
@@ -251,7 +250,7 @@ test("the exact archive, component and source identity are bound to acceptance",
 test("passing daily checks cannot seal or authorize a release", () => {
   const root = fixture();
   try {
-    const report = runChangeValidation([], { cwd: root, npm: "npm-cli.js", run: fullAcceptanceFixture(root) });
+    const report = runChangeValidation([], { cwd: root, npm: "npm-cli.js", run: () => ({ status: 0 }) });
     assert.equal(report.passed, true); assert.equal(report.completeRelease, false);
     assert.throws(() => assertAccepted(report), /Daily validation/);
     assert.throws(() => sealEvidence(root), /Daily validation/);

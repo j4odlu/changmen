@@ -72,7 +72,7 @@ it.each(["capture-vps-fok-baseline", "audit-fok-release-files"])("stops at faile
   expect(result.report.passed).toBe(false);
   expect(result.calls.some(command => command.includes("--release-plan=backend-first"))).toBe(false);
 });
-it.each(["verify-gtc-backend-compatibility", "test:backend", "app:build"])("stops immediately at a failed required stage %s", failPhase => {
+it.each(["verify-gtc-backend-compatibility", "turbo", "app:build"])("stops immediately at a failed required stage %s", failPhase => {
   const result = run({ failPhase });
   expect(result.report.passed).toBe(false);
   expect(result.report.results.at(-1).passed).toBe(false);
@@ -81,11 +81,16 @@ it.each(["verify-gtc-backend-compatibility", "test:backend", "app:build"])("stop
 });
 it("full audit records actual commands and treats a zero-status timeout as a failed execution", () => {
   const success = run();
+  expect(success.calls.filter(args => args.includes("test:checks"))).toHaveLength(1);
+  expect(success.calls.filter(args => args.includes("check:fok-vps"))).toHaveLength(1);
+  expect(success.report.results.find(row => row.phase === "backend").execution.command).toEqual([
+    "node", "npm", "exec", "--", "turbo", "run", "test", "--filter=./server/**...", "--force",
+  ]);
   expect(success.report.results.find(row => row.phase === "frontend")).toMatchObject({
     exitCode: 0, errorCode: null, signal: null,
     execution: { command: ["node", "npm", "exec", "--", "vitest", "run", "--maxWorkers=2", "--reporter=json", "--outputFile=../../output/orders-phase2-protection/frontend.json"], cwd: "client/web" },
   });
-  const failed = run({ errorPhase: "test:backend" });
+  const failed = run({ errorPhase: "turbo" });
   expect(failed.exitCode).toBe(1);
   expect(failed.report.results.at(-1)).toMatchObject({ phase: "backend", passed: false, exitCode: 0, errorCode: "ETIMEDOUT" });
 });

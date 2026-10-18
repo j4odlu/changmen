@@ -4,8 +4,6 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { expect, it, vi } from "vitest";
 import { assertCommittedSource, assertStagedSource, changedValidationPaths, runChangeValidation } from "./verify-change.mjs";
-import { fullAcceptanceFixture } from "../testing/full-acceptance-fixture.mjs";
-import { FULL_CHECK_COVERAGE } from "../deploy/acceptance-contract.mjs";
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-validation-"));
@@ -53,64 +51,52 @@ it("daily core checks stay offline and cannot claim complete release approval", 
   expect(report.plan.purpose).toBe("change");
   expect(run.mock.calls.every(call => !call[1].includes("check:fok-release") && !call[1].includes("scripts/verification/verify-fok-release.mjs"))).toBe(true);
 });
-it("a full publication gate failure stops before duplicate component work or database checks", () => {
-  const cwd = fixture(); const run = vi.fn((_command, args) => ({ status: args.includes("scripts/verification/verify-fok-release.mjs") ? 1 : 0 }));
-  const report = runChangeValidation(["--publish=backend"], { cwd, npm: "npm-cli.js", run });
-  expect(report.passed).toBe(false); expect(report.completeRelease).toBe(false);
-  expect(report.plan.purpose).toBe("release");
-  expect(run.mock.calls.filter(call => call[1].includes("scripts/verification/verify-fok-release.mjs"))).toHaveLength(1);
-  expect(run.mock.calls.some(call => call[1].includes("test:backend") || call[1].includes("scripts/deploy/check-database-compatibility.mjs"))).toBe(false);
+it.each(["frontend", "backend", "full"])("%s publication executes its component checks without a FOK or live audit", scope => {
+  const cwd = fixture(), run = vi.fn(() => ({ status: 0 }));
+  const report = runChangeValidation(["--publish=" + scope], { cwd, npm: "npm-cli.js", run });
+  expect(report.passed).toBe(true); expect(report.completeRelease).toBe(false);
+  expect(report.immutableFokEntries).toBe(0);
+  expect(report.executionOrder).toEqual(report.plan.checks);
+  expect(report.results.every(row => !row.reusedFrom)).toBe(true);
+  expect(run.mock.calls.some(call => call[1].includes("check:fok-vps") || call[1].some(arg => /verify-(?:fok-)?release\.mjs$/.test(arg)))).toBe(false);
+  expect(report.plan.checks.includes("backend")).toBe(scope !== "frontend");
+  expect(report.plan.checks.includes("frontend")).toBe(scope !== "backend");
+  expect(report.plan.checks.includes("build")).toBe(scope !== "backend");
 });
 
-it("high-risk publication executes full audit once and explicitly references every equivalent phase", () => {
-  const cwd = fixture(), run = vi.fn(fullAcceptanceFixture(cwd));
+it.each(["validation-control", "backend", "build", "database-compatibility"])("a failed %s still stops publication before subsequent checks", failure => {
+  const cwd = fixture(); let failed = false;
+  const run = vi.fn((_node, args) => {
+    const hit = failure === "validation-control" ? args.includes("scripts/verification/validation-plan.test.mjs")
+      : failure === "backend" ? args.includes("test:backend") : failure === "build" ? args.includes("app:build")
+      : args.includes("scripts/deploy/check-database-compatibility.mjs");
+    expect(failed).toBe(false); failed = hit; return { status: hit ? 23 : 0 };
+  });
   const report = runChangeValidation(["--publish=full"], { cwd, npm: "npm-cli.js", run });
-  expect(report.passed).toBe(true);
-  expect(report.results.map(row => row.check)).toEqual(report.plan.checks);
-  expect(report.results.filter(row => row.reusedFrom).map(row => row.check)).toEqual(report.plan.checks.filter(check => FULL_CHECK_COVERAGE[check]));
-  expect(report.executionOrder).toContain("fok-551");
-  expect(report.executionOrder.indexOf("fok-551")).toBeLessThan(report.executionOrder.indexOf("complete-release"));
-  expect(report.executionOrder).not.toContain("build"); expect(report.executionOrder).not.toContain("backend");
-  expect(run.mock.calls.filter(call => call[1].includes("scripts/verification/verify-fok-release.mjs"))).toHaveLength(1);
+  expect(report.passed).toBe(false); expect(report.results.at(-1)).toMatchObject({ check: failure, passed: false, exitCode: 23 });
 });
 
-it.each([
-  p => { p.invocationId = "stale"; }, p => { p.identity.inputFingerprint = "f".repeat(64); },
-  p => { p.context.environmentHash = "f".repeat(64); }, p => { p.results.pop(); },
-  p => { p.results.find(r => r.phase === "backend").execution.command.push("--passWithNoTests"); },
-  p => { p.results.find(r => r.phase === "backend").execution.cwd = "other"; },
-  p => { p.results.find(r => r.phase === "backend").errorCode = "ETIMEDOUT"; },
-  p => { p.results.find(r => r.phase === "backend").exitCode = 1; },
-  p => { p.results.find(r => r.phase === "backend").signal = "SIGTERM"; },
-])("rejects missing execution or stale/changed evidence without falling back to a second acceptance %o", mutate => {
-  const cwd = fixture(), run = vi.fn(fullAcceptanceFixture(cwd, mutate));
+it("a stale successful FOK audit cannot replace or bypass a current component failure", () => {
+  const cwd = fixture(); fs.mkdirSync(path.join(cwd, "output"), { recursive: true });
+  fs.writeFileSync(path.join(cwd, "output/fok-release-verdict.json"), JSON.stringify({ passed: true }));
+  const run = vi.fn((_node, args) => ({ status: args.includes("test:backend") ? 1 : 0 }));
   const report = runChangeValidation(["--publish=full"], { cwd, npm: "npm-cli.js", run });
-  expect(report.passed).toBe(false);
-  expect(report.results.some(row => row.errorCode === "ACCEPTANCE_EVIDENCE_INVALID")).toBe(true);
+  expect(report.passed).toBe(false); expect(report.results.at(-1).check).toBe("backend");
+  expect(report.results.every(row => !row.reusedFrom)).toBe(true);
   expect(run.mock.calls.some(call => call[1].includes("app:build"))).toBe(false);
 });
 
-it("a successful exit with no fresh full report cannot reuse the previous run", () => {
-  const cwd = fixture();
-  const first = runChangeValidation(["--publish=full"], { cwd, npm: "npm-cli.js", run: fullAcceptanceFixture(cwd) });
-  expect(first.passed).toBe(true);
-  const run = vi.fn(() => ({ status: 0 }));
-  const second = runChangeValidation(["--publish=full"], { cwd, npm: "npm-cli.js", run });
-  expect(second.passed).toBe(false);
-  expect(second.results.find(row => row.check === "complete-release").errorCode).toBe("ACCEPTANCE_EVIDENCE_INVALID");
-  expect(run.mock.calls.some(call => call[1].includes("app:build"))).toBe(false);
-});
-
-it("source changes after full execution block all result reuse", () => {
-  const cwd = fixture(), fake = fullAcceptanceFixture(cwd);
-  const run = (node, args, options) => {
-    const result = fake(node, args, options);
-    if (args.includes("scripts/verification/verify-fok-release.mjs")) fs.writeFileSync(path.join(cwd, "drift.js"), "changed");
-    return result;
-  };
+it("source changes during component execution still invalidate publication", () => {
+  const cwd = fixture(), run = () => { fs.writeFileSync(path.join(cwd, "drift.js"), "changed"); return { status: 0 }; };
   const report = runChangeValidation(["--publish=full"], { cwd, npm: "npm-cli.js", run });
   expect(report.passed).toBe(false); expect(report.sourceStable).toBe(false);
-  expect(report.results.some(row => row.diagnostic?.includes("Inputs changed before reuse"))).toBe(true);
+});
+
+it("a check that fails to launch cannot leave an earlier acceptance usable", () => {
+  const cwd = fixture();
+  expect(runChangeValidation(["--publish=backend"], { cwd, npm: "npm-cli.js", run: () => ({ status: 0 }) }).passed).toBe(true);
+  expect(() => runChangeValidation(["--publish=backend"], { cwd, npm: "npm-cli.js", run: () => { throw Error("launch failed"); } })).toThrow("launch failed");
+  expect(fs.existsSync(path.join(cwd, "output/change-validation/verdict.json"))).toBe(false);
 });
 
 it("a zero-status timeout is still a failure and stops the next check", () => {

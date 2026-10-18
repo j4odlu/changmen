@@ -26,17 +26,25 @@ it("core changes retain both local suites without contacting a live release", ()
 });
 it("publication runs component tests and builds; full audit is not implicit", () => {
   expect(validationPlan(["client/web/src/components/admin/Report.vue"], { publication: true, components: ["frontend"] }).checks)
-    .toEqual(["fok-551", "boundaries", "frontend", "build"]);
+    .toEqual(["validation-control", "boundaries", "frontend", "build"]);
   expect(validationPlan([], { publication: true, components: ["backend"] }).checks)
-    .toEqual(["fok-551", "router-compile", "backend"]);
+    .toEqual(["validation-control", "router-compile", "backend"]);
   const tools = validationPlan(["scripts/deploy/publish.sh"]);
   expect(tools.checks).toContain("verification-control");
   for (const check of ["frontend", "backend", "build", "complete-release"]) expect(tools.checks).not.toContain(check);
 });
 it("deploy-only changes require build and control tests without repeating unchanged application suites", () => {
   const plan = validationPlan(["scripts/deploy/publish.sh", "deploy/scripts/release-backend.sh"], { publication: true });
-  expect(plan.checks).toEqual(["fok-551", "validation-control", "router-compile", "build"]);
+  expect(plan.checks).toEqual(["validation-control", "boundaries", "router-compile", "build"]);
   for (const check of ["backend", "frontend", "complete-release", "verification-control"]) expect(plan.checks).not.toContain(check);
+});
+it("publication has no FOK/live audit gate, while changed verification code retains its own tests", () => {
+  for (const paths of [[], ["packages/shared/catalog/game_catalog.json"], ["server/backend/core/account/order_store.js"], ["scripts/verification/validation-plan.mjs"]]) {
+    const plan = validationPlan(paths, { publication: true });
+    expect(plan.immutableFokEntries).toBe(0);
+    expect(plan.checks).not.toContain("fok-551"); expect(plan.checks).not.toContain("complete-release");
+    expect(plan.checks.includes("verification-control")).toBe(paths.some(file => file.startsWith("scripts/verification/")));
+  }
 });
 it("a critical deleted or renamed path cannot be hidden by unrelated documents", () => {
   expect(validationPlan(["docs/plan.md", "server/db/old.js", "client/web/src/components/admin/new.vue"]).tier).toBe("full");

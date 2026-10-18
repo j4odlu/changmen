@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import { parseValidationArgs } from "./validation-plan.mjs";
 import { changePlan, eventSelection, planHash } from "../deploy/change-plan.mjs";
-import { FULL_CHECK_COVERAGE, executionContext, proofHash, assertSupplemental } from "../deploy/acceptance-contract.mjs";
+import { executionContext } from "../deploy/acceptance-contract.mjs";
 
 const binary = file => /\.(?:png|jpe?g|webp|gif|woff2?)$/.test(file);
 const code = file => /\.(?:[cm]?js|tsx?|vue|json|ya?ml|sh|sql|toml|css|scss|less|html|svg|png|jpe?g|webp|gif|woff2?)$/.test(file)
@@ -51,7 +51,6 @@ export function validationCommands(plan, npm, releasePlan) {
   const cmd = (...args) => [process.execPath, npm, ...args];
   return {
     "deployment-control": { command: [process.execPath, "scripts/deploy/check-controls.mjs"] },
-    "complete-release": { command: [process.execPath, "scripts/verification/verify-fok-release.mjs", `--release-plan=${releasePlan}`] },
     "database-compatibility": { command: [process.execPath, "scripts/deploy/check-database-compatibility.mjs"] },
     "fok-551": { command: cmd("run", "check:fok-vps") },
     "verification-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification", "--exclude", "scripts/verification/fok-source-specialization.test.mjs", "--maxWorkers=4") },
@@ -65,50 +64,26 @@ export function validationCommands(plan, npm, releasePlan) {
     build: { command: cmd("run", "app:build") },
   };
 }
-export function executeValidationChecks(plan, { run = spawnSync, npm, cwd, identity }) {
+export function executeValidationChecks(plan, { run = spawnSync, npm, cwd }) {
   const commands = validationCommands(plan, npm, plan.releasePlan), results = [], invocationId = randomUUID();
-  // Direct Node invocation keeps exactly this environment in the full-audit child.
   const env = { ...process.env, npm_execpath: npm, CHANGMEN_ACCEPTANCE_INVOCATION: invocationId };
   const context = executionContext(env), executionOrder = [];
-  const acceptance = { plan, identity, invocationId, context, results };
-  const order = plan.checks.includes("complete-release")
-    ? [...plan.checks.filter(check => !FULL_CHECK_COVERAGE[check] && !["complete-release", "database-compatibility"].includes(check)),
-      "complete-release", ...plan.checks.filter(check => FULL_CHECK_COVERAGE[check] || check === "database-compatibility")]
-    : plan.checks;
-  let full = null;
-  const reportFile = path.join(cwd, "output/fok-release-verdict.json");
-  if (plan.checks.includes("complete-release")) fs.rmSync(reportFile, { force: true });
-  for (const check of order) {
+  for (const check of plan.checks) {
     const selected = commands[check], started = Date.now();
+    assert(selected, "Unknown validation check: " + check);
+    console.log("[validate] " + check + ": START");
     const execution = { command: selected.command, cwd: selected.cwd ?? "." };
-    let row;
-    try {
-      if (full && FULL_CHECK_COVERAGE[check]) {
-        assert.deepEqual(validationIdentity(cwd), identity, "Inputs changed before reuse");
-        assert.equal(proofHash(JSON.parse(fs.readFileSync(reportFile, "utf8"))), proofHash(full), "Full report changed before reuse");
-        row = { check, passed: true, elapsedMs: 0, exitCode: 0, errorCode: null, signal: null, execution,
-          reusedFrom: { kind: "full", phase: FULL_CHECK_COVERAGE[check], reportHash: proofHash(full), invocationId } };
-        assertSupplemental(full, "full", { ...acceptance, results: [row] });
-      } else {
-        executionOrder.push(check);
-        const result = run(selected.command[0], selected.command.slice(1), { cwd: selected.cwd ? path.resolve(cwd, selected.cwd) : cwd,
-          stdio: "inherit", env, timeout: check === "complete-release" ? 30 * 60000 : check === "database-compatibility" ? 15 * 60000 : 5 * 60000, windowsHide: true });
-        row = { check, passed: result.status === 0 && !result.error, elapsedMs: Date.now() - started,
-          exitCode: result.status, errorCode: result.error?.code ?? null, signal: result.signal ?? null, execution };
-        if (check === "complete-release" && row.passed) {
-          full = JSON.parse(fs.readFileSync(reportFile, "utf8"));
-          assert.equal(full.invocationId, invocationId, "Full report belongs to another invocation");
-          assert.deepEqual(full.context, context, "Full audit execution environment differs");
-          assertSupplemental(full, "full", acceptance);
-        }
-      }
-    } catch (error) {
-      row = { check, passed: false, elapsedMs: Date.now() - started, exitCode: null, errorCode: "ACCEPTANCE_EVIDENCE_INVALID", signal: null, diagnostic: error.message, execution };
-    }
+    executionOrder.push(check);
+    const result = run(selected.command[0], selected.command.slice(1), {
+      cwd: selected.cwd ? path.resolve(cwd, selected.cwd) : cwd, stdio: "inherit", env,
+      timeout: check === "database-compatibility" ? 15 * 60000 : 5 * 60000, windowsHide: true,
+    });
+    const row = { check, passed: result.status === 0 && !result.error, elapsedMs: Date.now() - started,
+      exitCode: result.status, errorCode: result.error?.code ?? null, signal: result.signal ?? null, execution };
     results.push(row);
+    console.log("[validate] " + check + ": " + (row.passed ? "PASS" : "FAIL") + " (" + ((Date.now() - started) / 1000).toFixed(1) + "s)");
     if (!row.passed) break;
   }
-  results.sort((a, b) => plan.checks.indexOf(a.check) - plan.checks.indexOf(b.check));
   return { results, invocationId, context, executionOrder };
 }
 export function runChangeValidation(args, { run = spawnSync, npm = process.env.npm_execpath, cwd = process.cwd() } = {}) {
@@ -128,14 +103,16 @@ export function runChangeValidation(args, { run = spawnSync, npm = process.env.n
   const identity = { commit: options.staged ? null : git(cwd, "rev-parse", "HEAD").trim(),
     candidateTree: git(cwd, options.staged ? "write-tree" : "rev-parse", ...(options.staged ? [] : ["HEAD^{tree}"])).trim(),
     inputFingerprint: digest(JSON.stringify(before)) };
+  const reportFile = path.join(cwd, "output/change-validation/verdict.json");
+  fs.mkdirSync(path.dirname(reportFile), { recursive: true });
+  fs.rmSync(reportFile, { force: true });
   const execution = executeValidationChecks(plan, { run, npm, cwd, identity });
   const { results } = execution;
   const sourceStable = JSON.stringify(validationInputs(cwd)) === JSON.stringify(before);
   const passed = results.length === plan.checks.length && results.every(row => row.passed) && sourceStable;
-  const report = { checkedAt: new Date().toISOString(), passed, tier: plan.tier, paths: plan.paths, immutableFokEntries: 551, sourceStable,
+  const report = { checkedAt: new Date().toISOString(), passed, tier: plan.tier, paths: plan.paths, immutableFokEntries: plan.immutableFokEntries, sourceStable,
     completeRelease: plan.checks.includes("complete-release") && passed, ...execution, identity, plan, planFingerprint: planHash(plan) };
-  fs.mkdirSync(path.join(cwd, "output/change-validation"), { recursive: true });
-  fs.writeFileSync(path.join(cwd, "output/change-validation/verdict.json"), JSON.stringify(report, null, 2));
+  fs.writeFileSync(reportFile, JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report)); return report;
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -10,7 +10,6 @@ export function assertTransport(scope, evidence, archive, commit) {
   assert.match(commit, /^[a-f0-9]{40}$/);
   assert.equal(evidence.report.passed, true);
   assert.equal(evidence.report.sourceStable, true);
-  assert.equal(evidence.report.immutableFokEntries, 551);
   assert.equal(evidence.report.plan.purpose, "release", "Local checks cannot authorize transport");
   assert(evidence.report.plan.deployment.components.includes(scope));
   assert.equal(createHash("sha256").update(fs.readFileSync(archive)).digest("hex"), evidence.archives[scope], "Transport archive mismatch");

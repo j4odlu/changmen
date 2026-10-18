@@ -82,7 +82,7 @@ test("required commit-bound checks finish before sealing, with PostgreSQL and ca
   assert.equal(steps[postgres].if, "steps.plan.outputs.database-compatibility == 'true'");
   assert.match(steps[postgres].run, /CHANGMEN_TEST_PG_BIN/);
   const commands = validationCommands({}, "npm-cli.js", "backend-first");
-  assert.deepEqual(commands["complete-release"].command, [process.execPath, "scripts/verification/verify-fok-release.mjs", "--release-plan=backend-first"]);
+  assert.equal(commands["complete-release"], undefined, "Specialized audits have no automatic publication command");
   assert.equal(commands["database-compatibility"].command[1], "scripts/deploy/check-database-compatibility.mjs");
   assert(release.jobs.validate["timeout-minutes"] >= 45);
   const summary = steps.find(s => s.run === "node scripts/deploy/release-summary.mjs");
@@ -148,6 +148,7 @@ test("backend check still covers every server workspace and its dependencies", (
   assert.deepEqual(command.slice(2), ["run", "test:backend", "--", "--force"]);
   const root = JSON.parse(read("package.json"));
   const filter = root.scripts["test:backend"].match(/--filter=(\S+)/)[1];
+  assert.match(root.scripts["test:backend"], /^npm run test:checks && turbo run test --filter=\S+$/);
   const graph = JSON.parse(execFileSync(process.execPath, [
     fileURLToPath(new URL("../../node_modules/turbo/bin/turbo", import.meta.url)),
     "run", "test", `--filter=${filter}`, "--dry=json",

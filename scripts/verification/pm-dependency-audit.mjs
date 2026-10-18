@@ -4,7 +4,7 @@ import path from "node:path";
 import { builtinModules, createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { inspectComponentEntries } from "./component-entry-boundary.mjs";
+import { createComponentInspection } from "./component-entry-boundary.mjs";
 import { inspectPmSharedLoaders } from "./pm-shared-loader-evidence.mjs";
 import { inspectPmLoaderBindings } from "./pm-loader-bindings.mjs";
 
@@ -112,7 +112,8 @@ export function inspectPmDependencies(root) {
   const manifest = readJson(path.join(root, "scripts/deploy/component-inputs.json"));
   const contract = readJson(path.join(root, "scripts/verification/pm-dependency-inputs.json"));
   if (contract.schemaVersion !== 1 || contract.purpose !== "pm-dynamic-input-review-only" || contract.publishScopeOptimizationEnabled !== false) throw Error("PM evidence cannot enable publish scope optimization");
-  const graph = inspectComponentEntries(root, manifest, { scope: "pm" });
+  const inspection = createComponentInspection(root);
+  const graph = inspection.inspect(manifest, { scope: "pm" });
   const roots = [...manifest.scopes.pm.nodeRoots, ...manifest.scopes.pm.browserRoots];
   const primary = file => roots.some(dir => inside(file, dir));
   const dynamicSites = graph.dependencies.filter(site => primary(site.file) && dynamicKinds.has(site.kind));
@@ -149,7 +150,7 @@ export function inspectPmDependencies(root) {
   }));
   const sharedLoaderEvidence = inspectPmSharedLoaders(root, inheritedUnknowns);
   violations.push(...sharedLoaderEvidence.violations);
-  const loaderBindings = inspectPmLoaderBindings(root, manifest, graph, sharedLoaderEvidence);
+  const loaderBindings = inspectPmLoaderBindings(root, manifest, graph, sharedLoaderEvidence, inspection);
   violations.push(...loaderBindings.violations);
   for (const call of loaderBindings.calls) {
     const site = { ...call, environment: "node", kind: "custom-loader", loaderSymbol: call.origin.symbol };

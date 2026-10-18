@@ -25,6 +25,13 @@ it("restores the complete fixed original module and accepts its historical form"
   expect(verifyProtectedSource(file, source, original)).toMatchObject({ fixedSourceEqual: false, exactBoundaryVerified: true });
 });
 
+it("direct whole-module verification treats CRLF and LF equally and still rejects changed CRLF source", () => {
+  expect(verifyProtectedSource(file, source.replaceAll("\n", "\r\n"), original))
+    .toEqual(verifyProtectedSource(file, source, original));
+  const changed = source.replace("3700", "3701").replaceAll("\n", "\r\n");
+  expect(() => verifyProtectedSource(file, changed, original)).toThrow();
+});
+
 for (const [label, mutate] of [
   ["changed backend port", value => value.replace("3700", "3701")],
   ["changed production hub", value => value.replace("https://ws.changmen.fun", "https://unreviewed.invalid")],

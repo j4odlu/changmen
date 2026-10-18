@@ -33,21 +33,20 @@ export function changePlan(paths, { unknownBase = false, requestedScope = null, 
     !isDatabaseMaintenancePath(file) && (classifyDeployScope([file]) === "full"
       || /^(?:client\/web\/src\/api\/|server\/backend\/core\/esport-api\/|server\/backend\/http_routes\.js$)/.test(file))));
   const publication = purpose === "release" && components.length > 0;
-  const validation = validationPlan(unknownBase || requestedScope ? [] : paths, { publication, components });
+  const validation = validationPlan(paths, { publication, components, release: purpose === "release",
+    forceTests: unknownBase || requestedScope !== null });
   if (paths.some(file => /^(?:scripts\/deploy\/|\.github\/|deploy\/|sh\/(?:deploy-|_common\.sh))/.test(file)))
     validation.checks = ["deployment-control", ...validation.checks];
   // [changmen 扩展] Required checks execute in the same committed checkout before sealing.
-  // A manual/unknown selection has no demonstrated low-risk baseline and cannot skip them.
+  // FOK/live historical auditing has its own explicit entry; ordinary releases run component checks.
   const uncertain = unknownBase || requestedScope !== null;
   const requiredChecks = {
-    completeRelease: publication && (uncertain || validation.fullReasons.length > 0
-      || validation.checks.includes("validation-control")),
+    completeRelease: false,
     databaseCompatibility: (purpose === "release" && paths.some(databaseWorkflowPath))
       || (publication && (uncertain || components.includes("backend")
         || paths.some(file => isDatabaseMaintenancePath(file)
           || /^(?:server\/db\/|server\/backend\/db\/|scripts\/testing\/|packages\/shared\/|package(?:-lock)?\.json$)/.test(file)))),
   };
-  if (requiredChecks.completeRelease) validation.checks.push("complete-release");
   if (requiredChecks.databaseCompatibility) validation.checks.push("database-compatibility");
   return { ...validation, changedPaths: [...new Set(paths)].sort(), unknownBase, requestedScope, deployedVersions, liveComponents, eventPaths,
     purpose, requiredChecks, deployment: { scope, components, backendFirst }, releasePlan: components.length === 1 && components[0] === "frontend" ? "frontend-only" : "backend-first" };

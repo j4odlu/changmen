@@ -15,7 +15,9 @@ test("missing, duplicate or altered attachment cannot be exempted", () => {
     assert.throws(() => restorePmBookSettingsSource(PM_BOOK_SETTINGS_TAB, changed, true));
   }
 });
-test("changes outside the two lines still fail the original source hash", () => {
+test("changes to defaults or unreviewed display text still fail the original source hash", () => {
   assert.throws(() => verifyPmUnifiedPreflightContract(file => file === PM_BOOK_SETTINGS_TAB
     ? read(file).replace('pmFokPreflightMode ??= "legacy"', 'pmFokPreflightMode ??= "optimized"') : read(file)));
+  assert.throws(() => verifyPmUnifiedPreflightContract(file => file === PM_BOOK_SETTINGS_TAB
+    ? read(file).replace('aria-label="预检方式"', 'aria-label="跳过预检"') : read(file)));
 });

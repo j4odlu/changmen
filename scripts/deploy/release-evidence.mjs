@@ -17,9 +17,9 @@ const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: 
 export function assertAccepted(report) {
   assert.equal(report.passed, true, "Acceptance did not pass");
   assert.equal(report.sourceStable, true, "Acceptance source changed");
-  assert.equal(report.immutableFokEntries, 551, "Original FOK protection is required");
   assert.equal(planHash(report.plan), report.planFingerprint, "Recorded acceptance plan changed");
   const plan = changePlan(report.plan.changedPaths, report.plan);
+  assert.equal(report.immutableFokEntries, plan.immutableFokEntries, "Acceptance coverage differs from its plan");
   assert.equal(plan.purpose, "release", "Daily validation is not publication approval");
   assert.equal(report.plan.releasePlan, plan.releasePlan, "Release plan conflicts with component dependencies");
   assert.equal(planHash(plan), report.planFingerprint, "Acceptance plan mismatch");
@@ -27,6 +27,11 @@ export function assertAccepted(report) {
   assert.equal(report.completeRelease, plan.checks.includes("complete-release"));
   assert.deepEqual(report.results.map(row => ({ check: row.check, passed: row.passed })),
     plan.checks.map(check => ({ check, passed: true })), "Incomplete acceptance");
+  for (const row of report.results) {
+    assert.equal(row.exitCode, 0, "Acceptance check did not execute successfully");
+    assert.equal(row.errorCode, null, "Acceptance check failed to start or timed out");
+    assert.equal(row.signal, null, "Acceptance check was terminated");
+  }
   for (const row of report.results) if (row.reusedFrom)
     assert.equal(plan.requiredChecks.completeRelease, true, "Unapproved reuse without complete audit");
   assert.match(report.identity.candidateTree, /^[a-f0-9]{40}$/);

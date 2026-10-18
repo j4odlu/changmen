@@ -78,56 +78,87 @@ export function componentImportSites(file, source, customLoaders = []) {
   return sites;
 }
 
-export function inspectComponentEntries(root, manifest = JSON.parse(fs.readFileSync(path.join(root, "scripts/deploy/component-inputs.json"), "utf8")), { scope } = {}) {
+/** A fresh read-only snapshot for one audit invocation, never a process/global cache. */
+export function createComponentInspection(root) {
   root = fs.realpathSync(root);
-  const violations = [], unknown = [], sourceCache = new Map(), resolutionCache = new Map();
+  const memo = operation => {
+    const values = new Map();
+    return key => {
+      if (!values.has(key)) values.set(key, operation(key));
+      return values.get(key);
+    };
+  };
+  const snapshot = {
+    exists: memo(file => fs.existsSync(file)),
+    realpath: memo(file => fs.realpathSync(file)),
+    stat: memo(file => fs.statSync(file)),
+    read: memo(file => fs.readFileSync(file, "utf8")),
+    directory: memo(file => fs.readdirSync(file, { withFileTypes: true })),
+    safe: new Map(), walks: new Map(), files: new Map(), imports: new Map(), resolutions: new Map(),
+  };
+  return {
+    inspect: (manifest, options = {}) => inspectComponentSnapshot(root,
+      manifest === undefined ? JSON.parse(snapshot.read(path.join(root, "scripts/deploy/component-inputs.json"))) : manifest, options, snapshot),
+    readSource: file => snapshot.read(path.join(root, file)),
+  };
+}
+
+export function inspectComponentEntries(root, manifest, options = {}) {
+  return createComponentInspection(root).inspect(manifest, options);
+}
+
+function inspectComponentSnapshot(root, manifest, { scope }, snapshot) {
+  const violations = [], unknown = [], sourceCache = new Map(), resolutionCache = snapshot.resolutions;
   const violation = (file, spec, pattern, line = 0) => violations.push({ rule: "component-entry", file, line, spec, pattern });
   const clean = file => typeof file === "string" && file.length > 0 && !file.includes("\\") && !path.posix.isAbsolute(file)
     && !/^[a-z]:/i.test(file) && !file.split("/").some(part => part === ".." || part === ".");
   function safe(file) {
     if (!clean(file)) throw Error(`Invalid component path: ${file}`);
+    if (snapshot.safe.has(file)) return snapshot.safe.get(file);
     const abs = path.join(root, file);
-    if (fs.existsSync(abs)) {
-      const relative = path.relative(root, fs.realpathSync(abs));
+    if (snapshot.exists(abs)) {
+      const relative = path.relative(root, snapshot.realpath(abs));
       if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw Error(`Component path escapes workspace: ${file}`);
     }
-    return abs;
+    snapshot.safe.set(file, abs); return abs;
   }
   function walk(rel) {
+    if (snapshot.walks.has(rel)) return snapshot.walks.get(rel);
     const abs = safe(rel);
-    if (!fs.existsSync(abs)) throw Error(`Missing component input: ${rel}`);
-    if (fs.statSync(abs).isFile()) return SOURCE.test(rel) ? [rel] : [];
-    return fs.readdirSync(abs, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)).flatMap(item =>
+    if (!snapshot.exists(abs)) throw Error(`Missing component input: ${rel}`);
+    if (snapshot.stat(abs).isFile()) return SOURCE.test(rel) ? [rel] : [];
+    const files = snapshot.directory(abs).slice().sort((a, b) => a.name.localeCompare(b.name)).flatMap(item =>
       item.name.startsWith(".") || SKIP.has(item.name) || item.isSymbolicLink() ? [] : walk(`${rel.replace(/\/$/, "")}/${item.name}`));
+    snapshot.walks.set(rel, files); return files;
   }
   if (manifest.schemaVersion !== 1 || manifest.purpose !== "inventory-and-boundary-only" || manifest.publishScopeOptimizationEnabled !== false) throw Error("Component inventory cannot enable publish scope optimization");
   const selectedScope = scope ? manifest.scopes?.[scope] : undefined;
   const ownership = manifest.sourceOwnership
-    ? validateSourceOwnership(JSON.parse(fs.readFileSync(safe(manifest.sourceOwnership), "utf8"))) : null;
+    ? validateSourceOwnership(JSON.parse(snapshot.read(safe(manifest.sourceOwnership), "utf8"))) : null;
   if (scope && !selectedScope) throw Error(`Unknown component scope: ${scope}`);
   const ids = new Set(), entryFiles = new Set();
   for (const entry of manifest.entries) {
     if (!entry.id || ids.has(entry.id) || entryFiles.has(entry.file) || !["browser", "node", "universal"].includes(entry.environment)) throw Error(`Invalid/duplicate component entry: ${entry.id}`);
     ids.add(entry.id); entryFiles.add(entry.file);
-    if (!fs.existsSync(safe(entry.file))) throw Error(`Missing component entry: ${entry.file}`);
+    if (!snapshot.exists(safe(entry.file))) throw Error(`Missing component entry: ${entry.file}`);
   }
   for (const prefix of [...manifest.nodeRoots, ...manifest.nodeOnlyPaths, ...manifest.browserRoots, ...manifest.browserOnlyPaths]) {
-    if (!fs.existsSync(safe(prefix))) throw Error(`Missing component root: ${prefix}`);
+    if (!snapshot.exists(safe(prefix))) throw Error(`Missing component root: ${prefix}`);
   }
-  for (const file of manifest.testEntries) if (!fs.existsSync(safe(file))) throw Error(`Missing test entry: ${file}`);
-  for (const file of manifest.conservativeInputs) if (!fs.existsSync(safe(file))) throw Error(`Missing conservative input: ${file}`);
-  for (const item of manifest.isolatedBrowserRoots || []) if (!fs.existsSync(safe(item.path)) || !Array.isArray(item.typeImports)) throw Error(`Invalid isolated browser root: ${item.path}`);
+  for (const file of manifest.testEntries) if (!snapshot.exists(safe(file))) throw Error(`Missing test entry: ${file}`);
+  for (const file of manifest.conservativeInputs) if (!snapshot.exists(safe(file))) throw Error(`Missing conservative input: ${file}`);
+  for (const item of manifest.isolatedBrowserRoots || []) if (!snapshot.exists(safe(item.path)) || !Array.isArray(item.typeImports)) throw Error(`Invalid isolated browser root: ${item.path}`);
 
-  const packages = new Map(), rootPackage = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+  const packages = new Map(), rootPackage = JSON.parse(snapshot.read(path.join(root, "package.json"), "utf8"));
   for (const pattern of rootPackage.workspaces) {
     const star = pattern.indexOf("*");
     if (star >= 0 && !pattern.endsWith("/*")) throw Error(`Unsupported workspace pattern: ${pattern}`);
-    const dirs = star < 0 ? [pattern] : fs.readdirSync(safe(pattern.slice(0, -2)), { withFileTypes: true })
+    const dirs = star < 0 ? [pattern] : snapshot.directory(safe(pattern.slice(0, -2)))
       .filter(item => item.isDirectory()).map(item => `${pattern.slice(0, -1)}${item.name}`);
     for (const dir of dirs) {
       const file = `${dir}/package.json`;
-      if (!fs.existsSync(safe(file))) continue;
-      const pkg = JSON.parse(fs.readFileSync(safe(file), "utf8"));
+      if (!snapshot.exists(safe(file))) continue;
+      const pkg = JSON.parse(snapshot.read(safe(file), "utf8"));
       if (packages.has(pkg.name)) throw Error(`Duplicate workspace name: ${pkg.name}`);
       packages.set(pkg.name, { dir, ...pkg });
     }
@@ -135,13 +166,15 @@ export function inspectComponentEntries(root, manifest = JSON.parse(fs.readFileS
   const externalNames = new Set([...builtinModules, ...[rootPackage, ...packages.values()].flatMap(pkg =>
     ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].flatMap(field => Object.keys(pkg[field] || {})))]);
   function resolveFile(file) {
+    if (snapshot.files.has(file)) return snapshot.files.get(file);
     if (file === "." || file === "./") return [];
     const candidates = [file];
     // TS source can stand behind a .js import in Vite/tsc; inspect both conservatively.
     if (/\.[cm]?js$/.test(file)) candidates.push(file.replace(/\.[cm]?js$/, ".ts"), file.replace(/\.[cm]?js$/, ".mts"));
     // A dotted basename (marketData.worker, foo.impl) can still omit its source extension.
     if (!SOURCE.test(file) && !file.endsWith(".json")) for (const ext of [".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".tsx", ".vue", ".json", "/index.js", "/index.ts", "/index.mjs"]) candidates.push(file + ext);
-    return candidates.filter(candidate => fs.existsSync(safe(candidate)) && fs.statSync(safe(candidate)).isFile());
+    const files = candidates.filter(candidate => snapshot.exists(safe(candidate)) && snapshot.stat(safe(candidate)).isFile());
+    snapshot.files.set(file, files); return files;
   }
   const flattenTargets = target => typeof target === "string" ? [target] : target && typeof target === "object" ? Object.values(target).flatMap(flattenTargets) : [];
   function resolve(file, raw) {
@@ -184,14 +217,18 @@ export function inspectComponentEntries(root, manifest = JSON.parse(fs.readFileS
   const customLoaders = manifest.dynamicLoaders.flatMap(item => item.symbols);
   for (const loader of manifest.dynamicLoaders) {
     if (loader.status !== "opaque" || !loader.reason) throw Error(`Dynamic loader requires opaque status and reason: ${loader.file}`);
-    for (const file of [loader.file, ...loader.inputs]) if (!fs.existsSync(safe(file))) throw Error(`Missing loader input: ${file}`);
+    for (const file of [loader.file, ...loader.inputs]) if (!snapshot.exists(safe(file))) throw Error(`Missing loader input: ${file}`);
     unknown.push({ file: loader.file, line: 0, kind: "loader-contract", reason: loader.reason, inputs: loader.inputs });
   }
   const browserPaths = [...manifest.browserRoots, ...manifest.browserOnlyPaths, ...manifest.entries.filter(item => item.environment === "browser").map(item => item.file)];
   const browserOnly = file => browserPaths.some(prefix => under(file, prefix));
   for (const entry of manifest.entries) if (entry.environment !== "browser" && browserOnly(entry.file)) violation(entry.file, entry.id, "conflicting browser/Node or universal environment");
   function sites(file) {
-    if (!sourceCache.has(file)) sourceCache.set(file, componentImportSites(file, fs.readFileSync(safe(file), "utf8"), customLoaders));
+    if (!sourceCache.has(file)) {
+      const key = JSON.stringify([file, customLoaders]);
+      if (!snapshot.imports.has(key)) snapshot.imports.set(key, componentImportSites(file, snapshot.read(safe(file)), customLoaders));
+      sourceCache.set(file, snapshot.imports.get(key));
+    }
     return sourceCache.get(file);
   }
   // All Node source files are seeds (including operational scripts), except tests as seeds.

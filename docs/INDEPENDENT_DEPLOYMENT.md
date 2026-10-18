@@ -1,5 +1,7 @@
 # 前端、后端与 RDS 独立发布
 
+[changmen 扩展] 2026-10-19：通用发布已移除默认 FOK 551 项检查及 22 阶段专项依赖。组件测试/构建、数据库兼容、候选与产物身份校验继续执行；FOK 专项保留独立入口。此前专项接入/复用的记录以 [当前验收归属](./ACTIONS_VALIDATION_PERFORMANCE_20261019.md) 为准。
+
 [changmen 扩展] 生产统一从 GitHub Actions **Validate and release** 发布。本机只开发、验证、commit/push 和只读核验。部署层保持三项职责：
 
 | 组件 | 发布动作 | 失败处理 |

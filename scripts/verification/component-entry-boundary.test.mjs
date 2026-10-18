@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
-import { componentImportSites, inspectComponentEntries } from "./component-entry-boundary.mjs";
+import { componentImportSites, createComponentInspection, inspectComponentEntries } from "./component-entry-boundary.mjs";
 
 const scratch = [];
 afterEach(() => {
@@ -51,6 +51,33 @@ function fixture() {
 const book = "packages/mixed/browser/book.ts";
 
 describe("component entry boundaries", () => {
+  it("shares reads across expanded graphs without sharing scope-specific inventories", () => {
+    const f = fixture();
+    f.write("packages/mixed/registry/preload.ts", "export const preload = true;");
+    f.manifest.scopes = { pm: { nodeRoots: ["server"], browserRoots: [] } };
+    const expanded = { ...f.manifest, scopes: { pm: { nodeRoots: ["server", "packages/mixed/registry"], browserRoots: [] } } };
+    const expected = [inspectComponentEntries(f.root, f.manifest, { scope: "pm" }), inspectComponentEntries(f.root, expanded, { scope: "pm" })];
+    const inspection = createComponentInspection(f.root);
+    expect([inspection.inspect(f.manifest, { scope: "pm" }), inspection.inspect(expanded, { scope: "pm" })]).toEqual(expected);
+    expect(expected[0].sourceFiles).not.toContain("packages/mixed/registry/preload.ts");
+    expect(expected[1].sourceFiles).toContain("packages/mixed/registry/preload.ts");
+    expect(inspection.readSource(book)).toBe("export const book = 1;");
+  });
+  it("starts a fresh snapshot after source, directory and export changes in the same process", () => {
+    const f = fixture();
+    expect(f.inspect().violations).toEqual([]);
+    f.write("server/injected.mjs", 'import "@changmen/mixed/book";');
+    expect(f.inspect().violations.some(v => v.file === "server/injected.mjs")).toBe(true);
+    f.write("server/injected.mjs", "");
+    f.write("server/main.mjs", 'import "@changmen/mixed/book";');
+    expect(f.inspect().violations.some(v => v.file === "server/main.mjs")).toBe(true);
+    f.write("server/main.mjs", "");
+    f.pkg.exports["."] = "./browser/book.ts";
+    f.write("packages/mixed/package.json", f.pkg);
+    expect(f.inspect().violations.some(v => v.file === "packages/mixed/registry/index.ts")).toBe(true);
+    fs.rmSync(path.join(f.root, book));
+    expect(() => f.inspect()).toThrow("Missing component entry");
+  });
   it("allows shared registry, browser book and Node loader without relabeling the mixed package", () => {
     const f = fixture(), report = f.inspect();
     expect(report.violations).toEqual([]);

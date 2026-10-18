@@ -116,6 +116,8 @@ function restoreGateway(source) {
 }
 
 export function verifyProtectedSource(file, current, original, readSource = target => fs.readFileSync(target, "utf8"), baselineRead) {
+  // [changmen 扩展] Match the existing manifest/hash line-ending normalization on direct callers too.
+  current = normalize(current);
   const nodeEnvSource = restoreClientCoreNodeEnv(file, current, replaceExact);
   const nodeEnvRestored = nodeEnvSource !== current;
   current = nodeEnvSource;

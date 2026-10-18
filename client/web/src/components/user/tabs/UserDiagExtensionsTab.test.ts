@@ -140,10 +140,13 @@ describe("pm GTC V1 explicit activation in Extensions", () => {
     expect(readPmBookSettings().shadow).toBe(false);
     expect(useUserStore().extensionPrefs.pmFokPreflightMode).toBe("legacy");
   });
-  it("renders legacy as the FOK default and edits the independent preference without activating GTC", async () => {
+  it("renders independent preflight settings and edits the preference without activating GTC", async () => {
     const html = await renderToString(createSSRApp(Tab));
     expect(html).toContain("经典预检（默认）");
     expect(html).toContain("动态复核预检");
+    expect(html).toContain('aria-label="预检方式"');
+    expect(html).toContain("动态复核预检设置");
+    expect(html).not.toContain("PM FOK 预检方式");
     const user = useUserStore();
     expect(user.extensionPrefs.pmFokPreflightMode).toBe("legacy");
     mocks.selectPreflight!("optimized");

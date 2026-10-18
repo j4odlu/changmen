@@ -10,7 +10,7 @@ export function releaseSummary({ root = process.cwd(), commit = process.env.GITH
   const seal = read("output/release-validation/evidence.json");
   const sealed = seal && seal.commit === report?.identity?.commit && seal.inputFingerprint === report?.identity?.inputFingerprint
     && seal.planFingerprint === report?.planFingerprint;
-  let accepted = report?.passed === true && report?.sourceStable === true && report.immutableFokEntries === 551
+  let accepted = report?.passed === true && report?.sourceStable === true
     && report.results?.every(row => row.passed === true) && sealed && (!commit || report.identity?.commit === commit);
   const rows = (report?.results ?? []).map(row => `| ${cell(row.check)} | ${row.passed ? "PASS" : "FAIL"} | ${cell(row.elapsedMs)} | ${row.reusedFrom ? `完整审计 / ${cell(row.reusedFrom.phase)}` : "直接执行"} |`), failures = [];
   for (const row of report?.results ?? []) if (!row.passed)
@@ -27,7 +27,7 @@ export function releaseSummary({ root = process.cwd(), commit = process.env.GITH
   if (report && commit && report.identity?.commit !== commit) failures.push("验收报告提交与本次工作流不一致。");
   if (report?.sourceStable === false) failures.push("检查期间源码发生变化。");
   if (status && status !== "success") { accepted = false; failures.push(`工作流状态 ${cell(status)}；检查封包、上传或之前失败的步骤。`); }
-  return `## 发布验收\n\n- 提交：${cell(commit ?? report?.identity?.commit)}\n- 范围：${cell(plan?.deployment?.scope)}\n- 顺序：${plan?.deployment?.backendFirst ? "backend → frontend" : "按组件计划"}\n- 本任务验收及封包：${accepted ? "通过，发布仍受后续任务控制" : "未通过，不能据此放行"}\n- 完整审计必需：${cell(plan?.requiredChecks?.completeRelease)}；数据库兼容必需：${cell(plan?.requiredChecks?.databaseCompatibility)}\n\n| 检查 | 结果 | 毫秒 | 证据来源 |\n| --- | --- | --- | --- |\n${rows.join("\n")}\n\n${failures.map(row => `- ${row}`).join("\n")}\n\n报告和各阶段日志见本次工作流验收附件；缺失检查不视为通过。\n`;
+  return `## 发布验收\n\n- 提交：${cell(commit ?? report?.identity?.commit)}\n- 范围：${cell(plan?.deployment?.scope)}\n- 顺序：${plan?.deployment?.backendFirst ? "backend → frontend" : "按组件计划"}\n- 本任务验收及封包：${accepted ? "通过，发布仍受后续任务控制" : "未通过，不能据此放行"}\n- FOK 专项：独立按需执行；数据库兼容必需：${cell(plan?.requiredChecks?.databaseCompatibility)}\n\n| 检查 | 结果 | 毫秒 | 证据来源 |\n| --- | --- | --- | --- |\n${rows.join("\n")}\n\n${failures.map(row => `- ${row}`).join("\n")}\n\n报告和各阶段日志见本次工作流验收附件；缺失检查不视为通过。\n`;
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const summary = releaseSummary();

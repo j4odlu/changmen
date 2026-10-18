@@ -28,7 +28,7 @@ test("transport accepts explicit scoped publication but refuses local checks", (
     const archive = path.join(root, "artifact.tgz"); fs.writeFileSync(archive, "exact artifact");
     const proof = { format: 1, commit: runtime.commit,
       archives: { backend: createHash("sha256").update(fs.readFileSync(archive)).digest("hex") },
-      report: { passed: true, sourceStable: true, immutableFokEntries: 551, completeRelease: false,
+      report: { passed: true, sourceStable: true, immutableFokEntries: 0, completeRelease: false,
         plan: { purpose: "release", deployment: { components: ["backend"] } } } };
     assertTransport("backend", proof, archive, runtime.commit);
     proof.report.plan.purpose = "change";

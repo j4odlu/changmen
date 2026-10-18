@@ -10,7 +10,7 @@ test("missing reports, changed commits and failed jobs never read as a publicati
   try {
     assert.match(releaseSummary({ root }), /未产生验收报告/);
     const identity = { commit: "a".repeat(40), inputFingerprint: "b".repeat(64) };
-    const report = { identity, passed: true, sourceStable: true, immutableFokEntries: 551, planFingerprint: "c".repeat(64), results: [],
+    const report = { identity, passed: true, sourceStable: true, immutableFokEntries: 0, planFingerprint: "c".repeat(64), results: [],
       plan: { requiredChecks: { completeRelease: false, databaseCompatibility: false }, deployment: { scope: "frontend" } } };
     save("output/change-validation/verdict.json", report);
     assert.match(releaseSummary({ root }), /未取得.*封包证据/);

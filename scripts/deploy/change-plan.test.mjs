@@ -63,11 +63,11 @@ test("unpublished changes survive failed/partial earlier pushes and documentatio
     assert.equal(changePlan(partial.paths, partial).releasePlan, "frontend-only");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
-test("manual publication preserves requested components and cannot skip required audit/database checks", () => {
+test("manual publication preserves requested components and database checks without specialized audits", () => {
   for (const scope of ["frontend", "backend", "full"]) {
     const plan = changePlan(["docs/note.md"], { requestedScope: scope });
     assert.equal(plan.tier, scope === "full" ? "integration" : scope); assert.equal(plan.deployment.scope, scope);
-    assert.equal(plan.purpose, "release"); assert(plan.checks.includes("complete-release"));
+    assert.equal(plan.purpose, "release"); assert(!plan.checks.includes("complete-release")); assert(!plan.checks.includes("fok-551"));
     assert(plan.checks.includes("database-compatibility"));
     assert.equal(plan.checks.includes("backend"), scope !== "frontend");
     assert.equal(plan.checks.includes("build"), scope !== "backend");
@@ -75,6 +75,9 @@ test("manual publication preserves requested components and cannot skip required
   }
   assert.equal(changePlan([], { unknownBase: true }).deployment.scope, "full");
   assert.throws(() => changePlan([], { requestedScope: "noop" }));
+  const verification = changePlan(["scripts/verification/validation-plan.mjs"], { requestedScope: "full" });
+  for (const check of ["verification-control", "verification-node", "backend", "frontend", "build"])
+    assert(verification.checks.includes(check));
 });
 test("release intent is separate from risk; no deployment needs no live acceptance", () => {
   const release = changePlan(["client/web/src/components/admin/Report.vue"], { purpose: "release" });
@@ -89,25 +92,25 @@ test("release intent is separate from risk; no deployment needs no live acceptan
 
 test("required publication checks follow risk without expanding component selection or weakening daily offline checks", () => {
   const cases = [
-    [["client/web/src/components/admin/Report.vue"], false, false],
-    [["client/web/src/orderModes/gtc/api.ts"], true, false],
-    [["server/backend/core/observability/memory.js"], false, true],
-    [["server/backend/core/account/order_store.js"], true, true],
-    [["packages/shared/contract.js"], true, true],
-    [["client/web/src/components/admin/Report.vue", "server/backend/scripts/apply-rds-schema.mjs"], true, true],
-    [["scripts/deploy/publish.sh"], true, true],
-    [["unknown/file.js"], true, true],
-    [["docs/note.md"], false, false],
-    [[".github/workflows/release.yml"], false, false],
+    [["client/web/src/components/admin/Report.vue"], false],
+    [["client/web/src/orderModes/gtc/api.ts"], false],
+    [["server/backend/core/observability/memory.js"], true],
+    [["server/backend/core/account/order_store.js"], true],
+    [["packages/shared/contract.js"], true],
+    [["client/web/src/components/admin/Report.vue", "server/backend/scripts/apply-rds-schema.mjs"], true],
+    [["scripts/deploy/publish.sh"], true],
+    [["unknown/file.js"], true],
+    [["docs/note.md"], false],
+    [[".github/workflows/release.yml"], false],
   ];
-  for (const [paths, completeRelease, databaseCompatibility] of cases) {
+  for (const [paths, databaseCompatibility] of cases) {
     const daily = changePlan(paths), release = changePlan(paths, { purpose: "release" });
     assert.deepEqual(release.deployment, daily.deployment);
-    assert.deepEqual(release.requiredChecks, { completeRelease, databaseCompatibility }, paths.join(","));
-    assert.equal(release.checks.includes("complete-release"), completeRelease);
+    assert.deepEqual(release.requiredChecks, { completeRelease: false, databaseCompatibility }, paths.join(","));
+    assert.equal(release.checks.includes("complete-release"), false);
     assert.equal(release.checks.includes("database-compatibility"), databaseCompatibility);
     assert(!daily.checks.includes("complete-release")); assert(!daily.checks.includes("database-compatibility"));
-    assert(release.checks.includes("fok-551"));
+    assert(!release.checks.includes("fok-551")); assert.equal(release.immutableFokEntries, 0);
   }
 });
 test("real CI diffs include both sides of renames/deletions, wrong commits fail, unknown base escalates", () => {
@@ -136,7 +139,7 @@ test("maintenance-only push coverage moves into release validation without selec
     assert.equal(release.requiredChecks.completeRelease, false);
     assert.equal(release.requiredChecks.databaseCompatibility, true, file);
     assert.equal(release.checks.filter(check => check === "database-compatibility").length, 1);
-    assert(release.checks.includes("fok-551"));
+    assert(!release.checks.includes("fok-551")); assert.equal(release.immutableFokEntries, 0);
     assert(!daily.checks.includes("database-compatibility"), "Daily/PR validation stays offline");
   }
 });

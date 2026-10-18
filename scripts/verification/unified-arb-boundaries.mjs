@@ -7,6 +7,7 @@ import { restoreRayFinalizeSource, verifyRayFrontendSources } from "./ray-fronte
 import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
 import { restoreGtcSelectionHistorySource } from "./gtc-selection-history-boundary.mjs";
 import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
+import { restoreA8MakeupTiming } from "./a8-makeup-timing-boundary.mjs";
 
 const root = "client/web/src/stores/betting/autoBet/";
 const phases = `${root}phases/`;
@@ -156,6 +157,7 @@ for (const replacements of Object.values(UNIFIED_ARBITRAGE_BOUNDARIES)) {
 }
 
 export function restoreUnifiedArbitrageSource(file, source, replaceExact, required = false) {
+  source = restoreA8MakeupTiming(file, source, replaceExact, gitSource);
   source = restorePmPreflightSource(file, source);
   source = restoreGtcSelectionHistorySource(file, source, replaceExact, required);
   const replacements = UNIFIED_ARBITRAGE_BOUNDARIES[file];

@@ -13,5 +13,5 @@ it("review rejects ordinary order behavior changed alongside the optional projec
   assert.throws(() => checkOrdinaryOrderView(fs.readFileSync(file, "utf8").replace("filterAccountId.value !== 0", "filterAccountId.value !== 1"), original), /complete ordinary OrderView module/);
 });
 it("review rejects a changed projection fallback", () => {
-  assert.throws(() => checkOrdinaryOrderView(fs.readFileSync(file, "utf8").replace("?? mergedOrderEntries.value", "?? []"), original), /exact OrderView extension/);
+  assert.throws(() => checkOrdinaryOrderView(fs.readFileSync(file, "utf8").replace("?? previewOrderEntries.value", "?? []"), original), /exact RAY read-only preview extension/);
 });

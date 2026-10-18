@@ -10,7 +10,6 @@ import type {
   ArbLegPlaceOutcome,
 } from "@/stores/betting/autoBet/phases/types";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
-import { legStakeCny } from "@/domain/polymarket/pmArbStake";
 import { observeArbSubmissionBlocked } from "@/services/orderExecutionObservation";
 import { formatBetResult } from "@/shared/arbBetTraceFormat";
 import { useAccountStore } from "@/stores/accountStore";
@@ -19,10 +18,8 @@ import {
   syncActiveBetPhase,
   syncActiveBetPlaceResults,
 } from "@/stores/betting/activeBetRunSync";
-import { enqueueMakeUpOrder } from "@/stores/betting/autoBet/makeUp";
 import { resolveArbLegPlaceOutcome } from "@/stores/betting/autoBet/phases/types";
 import { retryFailedLeg } from "@/stores/betting/autoBet/retryFailedLeg";
-import { useLoseOrderStore } from "@/stores/loseOrderStore";
 
 /** [A8 可证实] 仅用户选 Parallel 时走并发 POST；不按场馆类型另开编排分支。 */
 export function shouldPlaceLegsInParallel(
@@ -68,7 +65,7 @@ export async function placeArbLegs(
   params: ArbBetAttemptParams,
   checked: ArbBetChecked,
 ): Promise<ArbBetPlaced> {
-  const { match, bet, config, trace, setMessage } = params;
+  const { match, bet, config, trace } = params;
   const accountStore = useAccountStore();
   let { legA, legB, accountA, accountB, betBothLegs, waitSec, linkId } = checked;
   const placeOpts = { linkId, requirePreparedQuote: true };
@@ -218,31 +215,7 @@ export async function placeArbLegs(
     }
     else {
       trace?.event("重试", "换腿未成功");
-      const anchorPlaceOutcome = resolveArbLegPlaceOutcome(attemptedA, resultA);
-      if (anchorPlaceOutcome === "accepted_pending_confirm") {
-        // PM delayed / PF OPEN 与传统场馆拒单检测中的语义一致：尚未确认成交，
-        // 可以保留 A8 即时换腿重试，但不能作为普通补单的成功锚腿。
-        trace?.event("补单", `${legA.type} 结果确认中，暂不进入补单队列`);
-      }
-      else if (accountA) {
-        const enqueued = await enqueueMakeUpOrder({
-          loseStore: useLoseOrderStore(),
-          match,
-          bet,
-          config,
-          setMessage,
-          linkId,
-          accountId: accountA.accountId,
-          target: legB.target,
-          betMoney: legStakeCny(legA.betMoney, legA.type, accountA),
-          betOdds: legA.odds,
-          failedLegOdds: legB.odds,
-          failedPlatformLabel: legB.type,
-          observation: { executionId: legA.observation?.executionId, parentAttemptId: legA.observation?.attemptId, ownerUserId: legA.observation?.ownerUserId, anchorAttemptId: legA.observation?.attemptId, anchorOrderId: resultA?.orderId || undefined },
-        });
-        if (enqueued)
-          trace?.event("补单", `${legB.type} 已加入补单队列`);
-      }
+      // [A8 可证实] 拒单检测结束后才由 finalize 决定入队；此处只保留即时换馆重试。
     }
   }
 

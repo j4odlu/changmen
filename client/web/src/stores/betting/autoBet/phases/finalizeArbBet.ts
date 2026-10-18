@@ -6,8 +6,6 @@ import {
   releaseSingleLeg9999MapFill,
   releaseSingleLeg9999MapFillKeys,
 } from "@/extensions/arbBet/singleLeg9999MapCount";
-import { saveMakeUpCancelLog } from "@/services/bettingLog";
-import { observeOrder } from "@/services/orderObservation";
 import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
 import {
   applyArbMakeUpFromRejects,
@@ -21,70 +19,9 @@ import {
 } from "@/stores/betting/autoBet/phases/finalizeArbMessaging";
 import { settleBothArbLegs } from "@/stores/betting/autoBet/phases/settleBothArbLegs";
 import { syncArbFinalizeActiveBet } from "@/stores/betting/autoBet/phases/syncArbFinalizeUi";
-import { useLoseOrderStore } from "@/stores/loseOrderStore";
 import { useUserStore } from "@/stores/userStore";
 
-/**
- * [changmen 扩展] place 阶段允许先为 API 失败腿创建补单队列；若随后确认
- * 唯一的 API 成功腿实际拒单，则已无成交敞口，必须在队列消费前精确撤销。
- *
- * 仅撤销当前 bet/link、且锚账号与目标腿都吻合的自动补单，避免影响手动补单、
- * 旧 Link 或同盘口后续新一轮套利。
- */
-function cancelQueuedMakeUpForRejectedAnchor(
-  params: ArbBetAttemptParams,
-  placed: ArbBetPlaced,
-  settle: Awaited<ReturnType<typeof settleBothArbLegs>>,
-): boolean {
-  const { bet, trace } = params;
-  const {
-    accountA,
-    betBothLegs,
-    legA,
-    legB,
-    linkId,
-    resultA,
-    resultB,
-  } = placed;
-
-  // placeArbLegs 的提前入队只会发生在 A 接口成功、B 接口失败且已尝试的路径。
-  if (!betBothLegs || !resultA?.success || resultB?.success || !settle.rejectA || !accountA)
-    return false;
-
-  const loseStore = useLoseOrderStore();
-  const queued = loseStore.orders.get(bet.id);
-  if (
-    !queued
-    || queued.isCreateOrder
-    || Number(queued.linkId) !== Number(linkId)
-    || Number(queued.accountId) !== Number(accountA.accountId)
-    || queued.target !== legB.target
-  ) {
-    return false;
-  }
-
-  loseStore.removeOrder(bet.id, true);
-  observeOrder(queued.observation, linkId, "queue_canceled", { target: legB.target, reasonCode: "anchor_rejected", source: "business_queue" });
-  saveMakeUpCancelLog({
-    linkId,
-    betId: bet.id,
-    target: legB.target,
-    match: String(legB.match?.title || params.match.title || ""),
-    bet: String(legB.bet?.getBetName() || bet.getBetName() || ""),
-    failedPlatformLabel: legB.type,
-    anchorProvider: legA.type,
-    anchorAccountId: Number(accountA.accountId),
-    anchorTarget: legA.target,
-    reason: `${legA.type} ${legA.target} 确认拒单，已无有效成交锚点`,
-  });
-  trace?.event(
-    "补单",
-    `${legA.type} ${legA.target} 确认拒单，已取消 ${legB.type} ${legB.target} 补单队列`,
-  );
-  return true;
-}
-
-/** 套利收尾编排：settle → makeup → mark → notify（顺序对齐 A8 bundle） */
+/** [A8 可证实] 首次拒单检测结束后统一决定补单入队，不再撤销提交阶段的提前队列。 */
 export async function finalizeArbBet(
   params: ArbBetAttemptParams,
   placed: ArbBetPlaced,
@@ -95,7 +32,6 @@ export async function finalizeArbBet(
   const settle = await settleBothArbLegs(params, placed);
   const actions = placed.originalExecution?.actions;
   await placed.originalExecution?.close();
-  cancelQueuedMakeUpForRejectedAnchor(params, placed, settle);
 
   const registerRayLeg = (side: "A" | "B") => {
     const leg = side === "A" ? placed.legA : placed.legB;

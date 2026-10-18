@@ -11,13 +11,19 @@ import { PlatformAccount } from "@/models/platformAccount";
 import { createArbExecutionTrace } from "@/stores/betting/autoBet/arbExecutionTrace";
 import { createDefaultUserConfig } from "@/types/userConfig";
 import { finalizeArbBet } from "./finalizeArbBet";
+import { placeArbLegs } from "./placeArbLegs";
 
 const shouldSendArbProgress = vi.hoisted(() => vi.fn(() => false));
 const registerRayOrderContext = vi.hoisted(() => vi.fn());
 const autoSellEnabled = vi.hoisted(() => ({ value: false }));
 const autoSell = vi.hoisted(() => vi.fn(async () => false));
 const rejectWait = vi.hoisted(() => vi.fn(async () => {}));
+const betting = vi.hoisted(() => vi.fn());
+const retryFailedLeg = vi.hoisted(() => vi.fn());
+const enqueueMakeUpOrder = vi.hoisted(() => vi.fn());
 vi.mock("@/runtime/rayOrderMonitor/contexts", () => ({ registerRayOrderContext }));
+vi.mock("@/stores/betting/autoBet/retryFailedLeg", () => ({ retryFailedLeg }));
+vi.mock("@/stores/betting/autoBet/makeUp", () => ({ enqueueMakeUpOrder }));
 
 const loseOrderStore = vi.hoisted(() => ({
   orders: new Map<number, {
@@ -126,7 +132,7 @@ vi.mock("@/api/esport", () => ({
 }));
 
 vi.mock("@/stores/accountStore", () => ({
-  useAccountStore: () => ({ refreshBalance }),
+  useAccountStore: () => ({ refreshBalance, betting }),
 }));
 
 vi.mock("@/stores/loseOrderStore", () => ({
@@ -284,6 +290,46 @@ describe("finalizeArbBet makeup enqueue", () => {
     saveMakeUpCancelLog.mockReset();
     loseOrderStore.orders.clear();
     loseOrderStore.removeOrder.mockClear();
+    betting.mockReset(); retryFailedLeg.mockReset().mockResolvedValue(null);
+    enqueueMakeUpOrder.mockReset().mockResolvedValue(true);
+  });
+
+  it.each(["Custom", "Parallel"] as const)("%s 失败腿重试未成：等待首次检测结束，才按真实配对结果决定入队", async (betSorting) => {
+    const actual = await vi.importActual<typeof import("@/stores/betting/autoBet/arbMakeUpFromRejects")>("@/stores/betting/autoBet/arbMakeUpFromRejects");
+    applyArbMakeUpFromRejects.mockImplementationOnce(actual.applyArbMakeUpFromRejects);
+    const input = makePlaced(); input.legA.data = { prepared: true }; input.legB.data = { prepared: true };
+    betting.mockResolvedValueOnce(new BetResult("OB", true)).mockResolvedValueOnce(new BetResult("RAY", false));
+    const attempt = { ...params, config: { ...params.config, betSorting } };
+    const placed = await placeArbLegs(attempt, input);
+    expect(retryFailedLeg).toHaveBeenCalledOnce(); expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
+    let release!: () => void;
+    rejectWait.mockImplementationOnce(() => new Promise<void>(resolve => { release = resolve; }));
+    settleArbLeg.mockImplementationOnce(async () => {
+      expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
+      return packLegSync({ orders: [venueOrder("ob-confirmed", "none", 2)], rejected: false });
+    });
+    const pending = finalizeArbBet(attempt, placed);
+    await Promise.resolve();
+    expect(rejectWait).toHaveBeenCalledWith(3000); expect(settleArbLeg).not.toHaveBeenCalled();
+    expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
+    release(); await pending;
+    expect(enqueueMakeUpOrder).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      linkId: placed.linkId, accountId: placed.accountA!.accountId, target: placed.legB.target,
+      betMoney: placed.legA.betMoney, betOdds: placed.legA.odds,
+    }));
+    expect(enqueueMakeUpOrder.mock.invocationCallOrder[0]).toBeGreaterThan(settleArbLeg.mock.invocationCallOrder[0]!);
+    expect(loseOrderStore.removeOrder).not.toHaveBeenCalled();
+  });
+
+  it.each(["reject", "pending"])("首腿首次检测为 %s 时不为接口失败腿创建普通补单", async (state) => {
+    const actual = await vi.importActual<typeof import("@/stores/betting/autoBet/arbMakeUpFromRejects")>("@/stores/betting/autoBet/arbMakeUpFromRejects");
+    applyArbMakeUpFromRejects.mockImplementationOnce(actual.applyArbMakeUpFromRejects);
+    const input = makePlaced(); input.legA.data = { prepared: true }; input.legB.data = { prepared: true };
+    betting.mockResolvedValueOnce(new BetResult("OB", true)).mockResolvedValueOnce(new BetResult("RAY", false));
+    const placed = await placeArbLegs(params, input);
+    settleArbLeg.mockResolvedValueOnce(packLegSync({ orders: [], rejected: state === "reject", pendingConfirm: state === "pending" }));
+    await finalizeArbBet(params, placed);
+    expect(enqueueMakeUpOrder).not.toHaveBeenCalled(); expect(loseOrderStore.removeOrder).not.toHaveBeenCalled();
   });
 
   it("public finalize keeps original partial facts and permissions even when automatic remedies are enabled", async () => {
@@ -365,7 +411,7 @@ describe("finalizeArbBet makeup enqueue", () => {
     expect(applyArbMakeUpFromRejects).toHaveBeenCalledOnce();
   });
 
-  it("aPI 成功锚腿确认拒单后撤销同 Link 的提前补单队列", async () => {
+  it("首次检测确认锚腿拒单时只交给原配对判断，不撤销已有队列", async () => {
     const linkId = 1_790_352_533_196;
     const accountA = makeAccount("RAY");
     const accountB = makeAccount("Polymarket");
@@ -394,17 +440,9 @@ describe("finalizeArbBet makeup enqueue", () => {
       placeOutcomeB: "api_failed",
     }));
 
-    expect(loseOrderStore.removeOrder).toHaveBeenCalledWith(params.bet.id, true);
-    expect(loseOrderStore.orders.has(params.bet.id)).toBe(false);
-    expect(saveMakeUpCancelLog).toHaveBeenCalledWith(expect.objectContaining({
-      linkId,
-      betId: params.bet.id,
-      target: legB.target,
-      failedPlatformLabel: "Polymarket",
-      anchorProvider: "RAY",
-      anchorAccountId: accountA.accountId,
-      anchorTarget: legA.target,
-    }));
+    expect(loseOrderStore.removeOrder).not.toHaveBeenCalled();
+    expect(loseOrderStore.orders.has(params.bet.id)).toBe(true);
+    expect(saveMakeUpCancelLog).not.toHaveBeenCalled();
     expect(applyArbMakeUpFromRejects).toHaveBeenCalledWith(
       params,
       expect.anything(),

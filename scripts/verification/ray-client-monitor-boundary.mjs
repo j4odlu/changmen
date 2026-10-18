@@ -1,6 +1,7 @@
 // [changmen 扩展] 固定本次客户端监控职责拆分；仅还原正常同步中唯一的关联收尾增量。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { restoreRaySubmissionPreviewSource } from "./ray-submission-preview-boundary.mjs";
 
 export const rayClientMonitorHashes = Object.freeze({
   "client/web/src/runtime/rayOrderMonitor/api.ts": "34dd070e398f583b9ea2e01200fd52438fc6d70b57256cd0714d0d1ab8a745d1",
@@ -13,6 +14,7 @@ export const rayClientMonitorHashes = Object.freeze({
   "client/web/src/orderModes/gtc/otherOrders.ts": "df493d7586cbf258de43aaf0356bf9ae724134b10fc8049e57ed64d6271a4a6f",
 });
 export function verifyRayClientMonitorSource(file, source) {
+  source = restoreRaySubmissionPreviewSource(file, source);
   const expected = rayClientMonitorHashes[file];
   if (!expected)
     return false;

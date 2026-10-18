@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { verifyRayClientMonitorSource } from "./ray-client-monitor-boundary.mjs";
+import { restoreRaySubmissionPreviewSource, verifyRaySubmissionPreviewSources } from "./ray-submission-preview-boundary.mjs";
 
 export const rayFrontendCommit = "2391dc9df446dcb7ed85030a3faca3696b0d0da7";
 export const rayFrontendSources = Object.freeze([
@@ -13,6 +14,7 @@ export const rayFrontendSources = Object.freeze([
   "client/web/src/orderModes/gtc/otherOrders.ts",
 ]);
 export function verifyRayFrontendSources(readSource) {
+  verifyRaySubmissionPreviewSources(readSource);
   for (const file of rayFrontendSources) {
     if (verifyRayClientMonitorSource(file, readSource(file)))
       continue;
@@ -28,6 +30,7 @@ export function restoreRayFinalizeSource(file, source, replaceExact) {
   return replaceExact(source, "registerRayOrderContext({", "registerRayRejectMonitor({");
 }
 export function restoreRayOrderViewSource(source) {
+  source = restoreRaySubmissionPreviewSource("client/web/src/components/order/OrderView.vue", source);
   for (const [before, after] of [
     ["import { useRayOrderContextStore } from \"@/runtime/rayOrderMonitor/contextStore\";", "import { useRayRejectMonitorStore } from \"@/extensions/arbBet/rayRejectMonitor/store\";"],
     ["const rayOrderContextStore = useRayOrderContextStore();", "const rayRejectMonitorStore = useRayRejectMonitorStore();"],
@@ -45,7 +48,7 @@ export function restoreRayProviderSource(file, source, readSource) {
   const commit = "adb333bf24b6ba6aa3e441009b56f874a23f6ed9";
   for (const [path, current] of [[file, source], ["client/web/src/runtime/orderMonitoring/rayOrders.ts", readSource("client/web/src/runtime/orderMonitoring/rayOrders.ts")]]) {
     const fixed = execFileSync("git", ["show", `${commit}:${path}`], { encoding: "utf8" });
-    assert.equal(current.replaceAll("\r\n", "\n"), fixed.replaceAll("\r\n", "\n"), `${path}: complete committed passive RAY observation`);
+    assert.equal(restoreRaySubmissionPreviewSource(path, current).replaceAll("\r\n", "\n"), fixed.replaceAll("\r\n", "\n"), `${path}: complete committed passive RAY observation`);
   }
   return "export { getProvider, supportedBetProviders } from \"@/runtime/venueAdapters\";\n";
 }

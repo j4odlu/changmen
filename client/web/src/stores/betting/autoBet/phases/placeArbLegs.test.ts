@@ -180,7 +180,7 @@ describe("placeArbLegs two-leg report contract", () => {
     expect(out.resultA?.pending).toBe(false);
   });
 
-  it.each(["Serial", "Parallel"])("%s PM submission failure after the other leg succeeds enters existing retry and makeup", async betSorting => {
+  it.each(["Serial", "Parallel"])("%s PM submission failure retries immediately but leaves makeup enqueue until rejection detection completes", async betSorting => {
     betting.mockResolvedValueOnce(new BetResult("OB", true))
       .mockResolvedValueOnce(new BetResult("Polymarket", false, "Network Error"));
     const input = checked({ accountB: account("Polymarket"), legB: leg("Polymarket", "Away") });
@@ -188,7 +188,7 @@ describe("placeArbLegs two-leg report contract", () => {
     expect(out.placeOutcomeA).toBe("filled_pending_settle");
     expect(out.placeOutcomeB).toBe("api_failed");
     expect(retryFailedLeg).toHaveBeenCalledOnce();
-    expect(enqueueMakeUpOrder).toHaveBeenCalledOnce();
+    expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
   });
 
   it("an unknown PM second leg cannot trigger anyOdds replacement or makeup before settlement", async () => {

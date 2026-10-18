@@ -758,7 +758,7 @@ const conflicts = {
   ], "code", "建议人工修订 CLAUDE.md 两行"),
   "F-02": C("F-02", "client_matches 写者范围（单写者宣称 vs operation/field 级多写者）", [
     { layer: "code", says: "7 类 operation 写者（Phase 4 重扫）：compose 主写/compose stub insert/prune ended/pm_sport 列/UI 人工/死代码/离线 ops；详见 index.json resources.client_matches.operations", evidence: ["server/db/rds/client_matches_store.js:270,280", "server/db/rds/matcher_store.js:48,116,192,317,462,483,557", "server/db/rds/platform_collector_store.js:908,935", "server/db/rds/pm_sport_store.js:74", "server/backend/core/db/store.js:358", "server/backend/scripts/ops/incidents/wipe-pf-esport-matches.mjs:163-171", "server/db/archive_stale.js:41-51"] },
-    { layer: "docs", says: "生产唯一 writer = matchMergeOnce → composeOnce", evidence: ["server/match/matcher/docs/REPLACE.md:14", "server/match/matcher/README.md:47"] },
+    { layer: "docs", says: "生产唯一 writer = matchMergeOnce → composeOnce", evidence: ["server/match/matcher/README.md:47"] },
   ], "code", "Phase 4 已把 code 侧 writers 全量结构化（TE-2 FIXED）；文档侧措辞仍待人工裁决"),
   "F-03": C("F-03", "sport_client_matches 读路径（文档内部矛盾）", [
     { layer: "code", says: "backend router 未接入 sport_client_matches 读路径；GetBaseball 等 = M+J 不读写 RDS 赛表", evidence: ["server/db/rds/sport_client_matches_store.js", "grep: router 无接入"] },

@@ -1,5 +1,5 @@
 /**
- * 从 platform_bets 取原生盘口 Source（不经 match-engine bet_builder / accumulate）。
+ * 从 platform_bets 取原生盘口 Source。
  */
 import { formatOdds, truncateOddsTo3 } from "@changmen/shared/odds_format";
 import {

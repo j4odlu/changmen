@@ -57,7 +57,7 @@ export function assertComposerMayWrite(opts = {}) {
     if (isMatcherRunning(hb)) {
       const hbPid = Number(hb.pid) || 0;
       // viaMatcherWriter：本进程合场循环会写 matcher HB，只放行同 pid；
-      // 仍须挡住「另一台 legacy/独立 matcher」与 composer 双写。
+      // 仍须挡住其它 matcher 与 composer 双写。
       if (opts.skipMatcherHeartbeat) {
         if (hbPid && hbPid !== process.pid) {
           return {

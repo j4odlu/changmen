@@ -95,7 +95,7 @@ describe("pipeline integration", () => {
     assert.ok(ended.endedCount >= 1);
   });
 
-  it("uses legacy match:id merge key prefix", () => {
+  it("uses match:id merge key prefix", () => {
     installPlugin();
     const list = clusterByGbThenName({
       OB: { ob1: pmOb },

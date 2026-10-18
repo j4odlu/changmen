@@ -144,7 +144,6 @@ resolver 与 matcher 通过 workspace 依赖复用；测试：`npm run test --pr
 ### `server/match/matcher` (`@changmen/matcher`)
 
 合场算法（`compose/`）、调度循环、运维动作（`ops/`）、人工关联（`link/` + `ui/`）、只读对照页（`ui/compare/`）。
-原 `match-composer` 已并入本包：两者互相用相对路径 import 构成环，且从未被以包名消费，拆包不产生隔离。
 
 ## client / server 说明
 
@@ -173,7 +172,7 @@ Client_GetMatchs 只读 client_matches → web（不做 Round/promote overlay）
 embedded：SaveLiveTimer debounce ~3s 触发 matchMerge（`MATCHER_TIMER_DEBOUNCE_MS`）
 ```
 
-> 写路径：`@changmen/matcher` 的 `compose/` 从零合场，内嵌 esport，不占独立 PM2 槽；旧 legacy merge/projector 路径已下线。详见 [PRODUCTION_DEPLOYMENT.md](../PRODUCTION_DEPLOYMENT.md) §3.4 与 `server/match/matcher/docs/REPLACE.md`。
+> 自动合场写路径：`@changmen/matcher` 的 `compose/` 内嵌 esport，不占独立 PM2 槽。详见 [PRODUCTION_DEPLOYMENT.md](../PRODUCTION_DEPLOYMENT.md) §3.4 与 [matcher README](../server/match/matcher/README.md)。
 
 巡检：`node server/match/matcher/scripts/audit-client-sources.mjs`（静态 + rebuild diff；`--strict` 有问题 exit 1）。
 

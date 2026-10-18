@@ -27,14 +27,14 @@ matchMerge 循环**内嵌在 `changmen-esport`**（`npm run web` / PM2 `changmen
 
 间隔、端口等环境变量由 `lib/config.js` 统一读取（勿在多处写 `process.env.MATCHER_*`）。
 
-`lib/env.js` 与 `lib/env_composer.js` 的候选顺序不同，是从原两个包**逐条保留**下来的：前者优先包内 `.env`，后者优先 `server/backend/.env`。合并两者属行为变更，需单独评估。
+`lib/env.js` 优先包内 `.env`，`lib/env_composer.js` 优先 `server/backend/.env`。合并两者属行为变更，需单独评估。
 
 ## 合场管线
 
 ```
 platform_matches / bets / timers / client_matches / overrides
   → clusterByGbThenName（自研）
-    → resolveIds（match-identity/ids，非 merge）
+    → resolveIds（match-identity/ids）
     → resolveMatchStructure（Round / gate / BO / periods / decider）
       → orientationLock（PM→OB→RAY）
         → projectSources（I1 / force_aligned / 决胜局用 Map0 作输入）
@@ -44,7 +44,7 @@ platform_matches / bets / timers / client_matches / overrides
 
 赛制层（`compose/structure/`）必须跑在投影之前：`Round`、`BO`、该场的局段集合 `periods` 在此定型，投影与 shape 只读。决胜局（`Round === OB.BO`）缺原生局盘时，用 Map0 的 native 作为投影**输入**，因此只 swap 一次；shape 层不得回头改已投影的 `Sources`。不变式 `checkBetsWithinPeriods` 守这条。
 
-生产唯一写路径是内嵌 `matchMergeOnce` → `composeOnce`；PM2 不注册独立 composer 写进程。详见 [docs/REPLACE.md](./docs/REPLACE.md)。
+生产自动合场写路径是内嵌 `matchMergeOnce` → `composeOnce`；PM2 不注册独立 composer 写进程。人工运维及 PM 附加字段写入另有各自入口。
 
 ## 依赖
 
@@ -85,7 +85,7 @@ npm run composer:test   # 单测 + 禁止 merge import
 | **matchMerge**（本目录调度 + `compose/`） | 读 `platform_matches` / `platform_bets` / `live_timers` → 写 `client_matches` | 聚类、Reverse/主客投影、决胜局 promote、Map=0 trim、Round、gb 锁 |
 | **Client_GetMatchs**（`server/backend`） | 读 `client_matches` 返回前端 | **只消费**，不做 Bets/Sources/Reverse/Round 二次变换 |
 
-写库统一走 `matchMergeOnce` → `composeOnce`。
+自动合场写库统一走 `matchMergeOnce` → `composeOnce`。
 
 ### 主客朝向（gb 锁）
 

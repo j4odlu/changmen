@@ -31,7 +31,7 @@
        �?       ├─�?game/getTimer �?saveLiveTimer
        �?       └─�?wait(30s) 循环
 
-  Client_GetMatchs �?A8 服务端（changmen �?client_matchs 模拟�?  UI 读赔 �?fo（OB 不用 GetMatchs 快照当初值）
+  Client_GetMatchs → 服务端（changmen 读取 client_matches）  UI 读赔 �?fo（OB 不用 GetMatchs 快照当初值）
   下注 �?剪贴�?ACCOUNT + yYe（changmen：obProvider�?```
 
 ### 1.1 saveMatch / saveBets �?A8 中的含义
@@ -66,8 +66,6 @@
 | Token 试玩 `$Me` | �?| `refreshObCollectToken` | 已对�?[A8 可证实] |
 | 下注 yYe | �?| `obProvider.ts` | 已对�?[A8 可证实] |
 | 比赛列表数据�?| 浏览�?saveMatch �?matcher | 客户�?+ RDS | 已对�?[A8 可证实] |
-| `matches.json` / `bets.json` | 不可见（黑盒�?| legacy JSON + RDS | [changmen 推测] |
-| `client_matchs` + `stableId` | 仅见 GetMatchs 响应形状 | `match_merge.js` | [changmen 推测] |
 | 前端 4 场并行灌�?| 顺序 | 顺序 `for...of` | 已对�?[A8 可证实] |
 | `syncObLogin` 启动�?gateway | �?| `platform_sync.js` | [changmen 扩展] |
 | CollectConfig 空库 seed / �?collect 字段 | A8：全�?| 已对齐：`collect: []`，无前端 fallback | [A8 可证实] |
@@ -96,13 +94,13 @@
 **文件**：`packages/venue-adapter/ob/collect.ts`、`markets.ts`（比赛列�?HTTP 在同模块�?`markets.ts`�?
 - [x] 1.1 过滤�?`buildMatchesFromList` �?`collect.saveMatch`（UMe 92328�?- [x] 1.2 开关关时不 saveMatch/saveBets�?*�?* fo + MQTT（Af 74621/74651�?- [x] 1.3 `game/view` �?stage 错误 �?整场�?saveBets（UMe 92388�?2393�?- [x] 1.4 stage 间隔 1500ms（`STAGE_VIEW_INTERVAL_MS`�?- [x] 1.5 灌盘顺序 `for...of`（UMe 顺序�?- [x] 1.6 index �?`flag=1&day=1`（UMe 92296�?
 **验收 [A8 可证实]**：Network 30s 周期内，CollectConfig 开 OB 时见 `API_SaveMatch?OB` + `API_SaveBet?OB`；关开关时无上述请求但 fo 仍变�?
-### 阶段 2 �?GetMatchs �?fo [A8 可证�?+ changmen 推测]（已完成离线校验�?
-**文件**：`core/esport-api/store.js`、`match_merge.js`、`matchStore.ts`、`models/match.ts`
+### 阶段 2 — GetMatchs 与 fo
+**文件**：`server/backend/core/esport-api/store.js`、`server/match/matcher/compose/`、`matchStore.ts`、`models/match.ts`
 
-- [x] 2.1 saveMatch/saveBets �?`buildClientMatchList` 重建（`store.rebuildClientMatchListNow`�?- [x] 2.2 `Sources.OB.*` �?saveBets 字段一致（`sourceFromBet` + 脚本 `npm run test:ob-getmatchs`�?- [x] 2.3 `fetchMatches` �?`syncObMqttSubscriptionsForGetMatchs`（`matchStore.ts` 已接线）
-- [x] 2.4 OB `ViewBetItem` + `getOddsForBetSide` + `syncObItemIdsFromFo`（`models/match.ts`�?
-**验收**：`npm run test:ob-getmatchs`（离线合�?+ TJ01 样例）；live 可�?`ESPORT_TEST_BASE=http://127.0.0.1:3456 npm run test:ob-getmatchs`（需 CollectConfig 开 OB 且已采集）�?
-**说明**：默�?`ESPORT_MATCH_MERGE_MODE=accumulate` 下每平台一行；TJ01 多平�?`Matchs` 并一行属�?merge 目标形�?[changmen 推测]，不�?OB 单平�?parity 范围�?
+- [changmen 扩展] 客户端通过 `API_SaveMatch` / `API_SaveBet` 上报，matcher 的 `compose/` 合场写入 `client_matches`，`Client_GetMatchs` 读取结果。
+- [A8 可证实] OB 实时赔率由 fo 消费；`syncObMqttSubscriptionsForGetMatchs`、`getOddsForBetSide` 与 `syncObItemIdsFromFo` 负责订阅和盘口 ID 对齐。
+
+**离线验证**：在 `client/web/` 执行 `npm run test:ob`。live smoke 使用 `npm run test:ob-live`，需已启动 backend 并采集 OB 数据。
 ### 阶段 3 �?MQTT / fo 细项 [A8 可证实]（已完成�?
 **文件**：`packages/venue-adapter/ob/mqtt.ts`、`oddsStore.ts`、`docs/platforms/OB.md`
 

@@ -1,6 +1,6 @@
 /**
  * 自研合场聚类：gb 对 → 队名+严格时间；最少 2 馆。
- * MergeKey 使用 legacy match:id: / match:name: 格式。
+ * MergeKey 使用 match:id: / match:name: 格式。
  */
 import { isComposerPbRotnumCollapse } from "../../lib/config.js";
 import {

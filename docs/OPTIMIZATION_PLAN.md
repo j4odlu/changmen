@@ -5,7 +5,6 @@ AI 助手每次执行优化任务都**按本文档进行**，用户可据此查�
 
 - 最近更新：2026-08-13
 - 关联：[ARCHITECTURE.md](./ARCHITECTURE.md)、[DATA_STORAGE.md](./DATA_STORAGE.md)、[ACCOUNT_BACKEND.md](./ACCOUNT_BACKEND.md)、**[MATCH_LIFECYCLE_ROADMAP.md](./MATCH_LIFECYCLE_ROADMAP.md)**（合场 → 场次状态机演进）
-- **目录注记（2026-08-07）**：match 模块已整合——`match-engine/` → `server/match/identity`、`team-resolver/` → `server/match/resolver`、`matcher/`+`match-composer/` → `server/match/matcher`。下文旧目录名为当时命名；现路径以 [ARCHITECTURE.md](./ARCHITECTURE.md) 为准。
 
 ---
 
@@ -16,7 +15,7 @@ AI 助手每次执行优化任务都**按本文档进行**，用户可据此查�
 | 已覆盖 | 未覆盖（后续可补） |
 |--------|--------------------|
 | 全仓规模统计（大文件 / `@deprecated` / `any` / `console` / 依赖过期） | `chrome-extension/`（`content.js` 4315 行、`background.js` 3398 行）未深入 |
-| `server/`（backend、db、match/identity、match/matcher link）中等深度 | `match-projector`（已删）/ `match-composer`（已并入 matcher）/ `ws_forward` / `collectors/*` 仅扫过 |
+| `server/`（backend、db、match/identity、match/matcher link）中等深度 | `server/match/matcher/compose` / `ws_forward` / `collectors/*` 仅扫过 |
 | `client/web/src` 前端（stores、大组件、打包）中等深度 | 测试有效性 / 覆盖率未评估 |
 | eslint / turbo / test 脚本链路 | 未跑 profiler 做真实性能量化；未做安全审计 |
 
@@ -193,55 +192,6 @@ AI 助手每次执行优化任务都**按本文档进行**，用户可据此查�
 | A-2 | server/match/matcher（compose）/ ws_forward / collectors | 未审计 |
 | A-3 | 测试覆盖率与有效性评估 | 未审计 |
 | A-4 | 真实性能 profiling 量化 | 未做 |
-
----
-
-## 五、Legacy 合场路径下线（P3，✅ 2026-08-04 完成）
-
-**目标**：下线旧写路径 `MATCHER_WRITER=legacy`（`match-engine/merge/` 旧管线 + `match-projector` 覆写），生产已由 `match-composer` 独占。
-
-**取舍（阶段 0 决策，动代码前须确认）**：
-- [x] 确认放弃 `MATCHER_WRITER=legacy` 应急回滚窗口（下线后回滚靠 git revert / 版本回退）。
-- [x] `audit:client-sources` 已迁移到 composer dry-run；`composer:diff` 保留。
-
-**关键事实（来自耦合面盘点）**：composer **不** import `match-engine/merge`（有 CI 闸 `check-no-merge-import`），只共享 `match-engine` 的 `teams/` + `ids/` 与 matcher 的 `align_unmatched_to_client.js`。删 merge/projector **不波及 composer 编译与测试**。但有几处**共享边缘引用**必须先迁移，否则删 merge 会连带炸：
-- `matcher/ui/matcher_data.js` 的 `normalizeMatchesShape`（composer 有自有副本 `src/io/snapshot.js`）
-- `scripts/audit-client-sources.mjs` 的 `previewMatchMergeOnce` / `swapBetSource`
-- `client/web/scripts/test-ob-getmatchs-shape.mjs` 的 `buildMatchListAccumulate`
-- `devtools/platform-probes/ray/scripts/verify_save_bets.js` 直引 `merge/bet_builder.js`
-- `match-engine/index.js` 对 merge 的 re-export（需修剪，保留 teams/ids 导出）
-- `merge/match_lifecycle.js` 依赖 `match_merge.js` 的 `liveRound`（不能单留 lifecycle）
-
-### 分阶段（每阶段独立可部署、可回退）
-
-**阶段 1 [改] 断 legacy 写分支（不删包，先固定走 composer）**
-- [x] `matcher/ops/match_merge_once.js`：删除 legacy 分支与 projector side engine，`matchMergeOnce` 恒走 composer。
-- [x] `audit-client-sources.mjs` 迁移到 `composeOnce({ write:false, registerTeams:false })`。
-- [x] matcher UI 写路径固定显示 composer，删 legacy/projector 文案。
-- [x] `.env.example` 删 legacy/SIDE 开关。
-- 验证：`composer:test`、`test --prefix server/match/matcher`、`app:build`、`check:boundaries` 全绿；matcher UI 手测合并/连线正常。
-
-**阶段 2 [删] 整包 `match-projector`**（前置：阶段 1）
-- [x] 删除 `server/match-projector/**`（含 tests/docs）。
-- [x] 删除 workspace 与 `projector:*` scripts，更新 lockfile。
-- [x] 删除 projector 边界规则。
-- [x] composer write guard 删除 projector HB 检查，保留 matcher/composer 双写防护。
-- 验证：`composer:test`、`check:boundaries`、`app:build` 全绿。
-
-**阶段 3 [删] `match-engine/merge/`**（前置：阶段 1、2 + 边缘引用已迁移）
-- [x] UI/audit/OB 离线测试/RAY 探针迁移到 composer 对应工具。
-- [x] 删除 `merge/**` + 19 个 merge 专属测试；修剪根导出，保留 teams/ids/time windows。
-- [x] 删除 `computeMatchMergeList` / `previewMatchMergeOnce`。
-- 验证：match-engine 保留 **6 个** teams/ids/align 测试（31/31）；composer 78/78；matcher 27/27。`align_unmatched` 是 composer 共享行为，纠正原计划后保留其测试。`sync_platform_links` 既有失败随旧 merge 删除。
-
-**阶段 4 [删] 开关层简化**（前置：阶段 1–3）
-- [x] 删除 `matcher/lib/side_engine.js`。
-- [x] 删除 `matcher_writer.js`；write guard 固定拒绝独立 WRITE，保留 FORCE 应急旁路。
-- [x] 删除 `matcher_writer.test.mjs`，同步更新 write guard 测试。
-- [x] 文档统一为“单写路径 composer”。
-
-### [保留] 不可动（composer/matcher 仍依赖）
-`match-engine/teams/**`、`ids/client_match_ids.js`、`time_windows.js`、`matcher/ops/align_unmatched_to_client.js`、`match-composer/**`、`matcher/loop.js`+link+UI 主体、composer write_guard 的 matcher/composer HB 防护、teams/ids/align 的 6 个测试。
 
 ---
 

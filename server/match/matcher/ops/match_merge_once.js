@@ -6,7 +6,7 @@ import {
 import "../lib/env.js";
 
 /**
- * 单次 matchMerge：由 match-composer 读 platform 快照、合场并写 client_matches。
+ * 单次 matchMerge：由包内 compose/ 读 platform 快照、合场并写 client_matches。
  *
  * 数据边界：本函数产出是 Client_GetMatchs 的唯一权威来源；读路径不应再 reconcile/promote/trim。
  */
@@ -67,7 +67,7 @@ async function ensureTeamPlugin() {
 }
 
 /**
- * 唯一写路径：整段交给 match-composer。
+ * 自动合场写路径：整段交给包内 compose/。
  * viaMatcherWriter 仅跳过本进程 matcher HB，仍挡其它 matcher/composer 写进程。
  */
 async function matchMergeOnceImpl() {

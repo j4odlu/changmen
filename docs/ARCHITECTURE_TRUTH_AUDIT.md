@@ -87,7 +87,7 @@
 | `platform_matches` | ①浏览器路径：`router.ts:557` → `store.js:204`→`:264` `sb.writePlatformMatches`；②`polymarket-esports/loop.js:66-69`；③`predictfun-collector/loop.js:118,127,129`；④`sxbet-collector/loop.js:74,84,85`；⑤prune `platform_collector_store.js:740` | **否（刻意多写者，按 platform 前缀分行）**；浏览器路径对 VPS 馆被 `isVpsOwnedPlatformCollect` 软守卫拦截（`store.js:208/317/345`，仅 warn+return） | `changmen-esport` + 3 collector 进程（2  paused） | RDS `platform_matches`（孤儿行搬 `platform_matches_history`，`:115-120`） | 浏览器路径**是**（内存先写 + `_writeRds` fire-and-forget，队列满 drop `common.js:71-103`）；collector 路径否（await） | DATA_STORAGE:9 |
 | `platform_bets` | ①`router.ts:567` → `store.js:313`→`:337`；②③④ 同上 collectors | 否（同上） | 同上 | RDS `platform_bets`（每 match full replace；sticky 平台空快照不清 `:15,38`） | 同 platform_matches | DATA_STORAGE:10 |
 | `live_timers` | `router.ts:577` → `store.js:340` → `platform_collector_store.js:1119 writeLiveTimersAsync`（**await**） | **是**（每平台全量替换语义；OB 空响应防 wipe 特例 `store.js:351-372`） | `changmen-esport` | RDS `live_timers` | 否（该路径 await；内存 `_timers` 先更新 `:373`） | DATA_STORAGE:11 |
-| `client_matches` | **自动循环唯一活路径**：`match_merge_once.js:116` → `compose_once.js:144` → `compose/io/write.js:16` → `client_matches_store.js:280`（await 直写）。例外：①`pm_sport` 列 ← `changmen-pm-sports`（`pm_sport_store.js:74`）；②matcher UI/ops 人工写（`matcher_store.js:192,225,462,497,557`）；③死代码 `core/db/store.js:358 saveClientMatches`（无调用方） | **partial**：自动循环写唯一（互斥 = 本地 pid 心跳 `write_guard.js:41-50`，非 DB 锁）；表级非单写者 | `changmen-esport`（compose）；`changmen-pm-sports`（列） | RDS `client_matches`；history 表存在（`014_history_tables.sql:5`）；`archive_stale.js` 默认 client scope = **no-op**（`:117`），ALL scope 才搬 history | 否（Async 直写；无 pool 降级 fire-and-forget `:286`） | DATA_STORAGE:12 声称单写路径；⚠️ matcher `docs/REPLACE.md:14`、`README.md:47`「生产唯一 writer」为 overclaim（§10 F-02） |
+| `client_matches` | **自动循环唯一活路径**：`match_merge_once.js:116` → `compose_once.js:144` → `compose/io/write.js:16` → `client_matches_store.js:280`（await 直写）。例外：①`pm_sport` 列 ← `changmen-pm-sports`（`pm_sport_store.js:74`）；②matcher UI/ops 人工写（`matcher_store.js:192,225,462,497,557`）；③死代码 `core/db/store.js:358 saveClientMatches`（无调用方） | **partial**：自动循环写唯一（互斥 = 本地 pid 心跳 `write_guard.js:41-50`，非 DB 锁）；表级非单写者 | `changmen-esport`（compose）；`changmen-pm-sports`（列） | RDS `client_matches`；history 表存在（`014_history_tables.sql:5`）；`archive_stale.js` 默认 client scope = **no-op**（`:117`），ALL scope 才搬 history | 否（Async 直写；无 pool 降级 fire-and-forget `:286`） | DATA_STORAGE:12 声称单写路径；⚠️ matcher `README.md:47`「生产唯一 writer」为 overclaim（§10 F-02） |
 | `orders` | `order_store.js:161 saveOrder` → `orders_store.js:224 upsertOrders`；`updateOrderBind:1178`/`rebindOrderLink:1229`；PF 集成 `pf_server_order.js:17`；admin 删除 `orders_store.js:1020,1045`；ops 迁移脚本 | 否（多入口，行级 upsert 以 (player, orderId) 为键；`saveOrder` 前置 strict 读防覆盖 `:191-194`） | `changmen-esport` + ops 脚本（离线） | RDS `orders`（migration 001:38） | 否（全 await） | DATA_STORAGE:18（仅电竞） |
 | `football_orders` | `football_order_service.js:41` → `football_orders_store.js:81 upsertFootballOrder`（ON CONFLICT (user_id, client_id)）；结算回写 `:166`（入口 `football_order_routes.js:30`） | 否（用户 API + 结算回写） | `changmen-esport` | RDS `football_orders`（migration 040/041；DDL 亦内联 `:7-46`） | 否 | DATA_STORAGE:19 |
 | `platforms.json` | `platform_storage.js:13 setPlatform`（**同步**落盘）；写者：`server.js:92-120` platform_sync 启动种子、`router.ts:548-554 API_UpdatePlatform`、`router.ts:498` TF 探针 | 是（名义单写者**进程**；文件级无锁） | `changmen-esport` | 本地文件 `ESPORT_DATA_DIR/platforms.json`；默认 `ESPORT_DATA_DIR = STORAGE_DIR = env(CHANGMEN_STORAGE_DIR‖GAMEBET_STORAGE_DIR) ‖ server/backend/storage`（`paths.js:44-49`） | 否（同步） | DATA_STORAGE:30,79；⚠️ 与 CLAUDE.md `storage/legacy/esport` 表述漂移（§10 F-15） |
@@ -235,7 +235,7 @@ capability 是从 runtime/代码取证**派生**出的归组（非仓库现有�
 | ID | 主题 | 代码说（canonical 候选） | 文档说 | likely canonical | requires_human_decision |
 |---|---|---|---|---|---|
 | F-01 | 账号存储模型 | `players` 表为唯一真相，`profiles.accounts jsonb` 已弃写（`server/db/player_account_record.js`、`venue_account_key.js`；部署链 028 backfill） | CLAUDE.md:163「账号 → RDS `profiles.accounts` jsonb」、:268 重述 | 代码 + ACCOUNT_BACKEND.md:15-26 | true（改 CLAUDE.md 两行） |
-| F-02 | `client_matches` 写者 | 自动循环唯一，但表级有 3 类例外：`pm_sport` 列（`pm_sport_store.js:74`）、UI/ops 人工写（`matcher_store.js:192,225,462,497,557`）、死路径 `store.js:358` | matcher `docs/REPLACE.md:14`、README.md:47「生产唯一 writer = matchMergeOnce → composeOnce」 | 代码 | true（文档补例外说明或删死路径） |
+| F-02 | `client_matches` 写者 | 自动循环唯一，但表级有 3 类例外：`pm_sport` 列（`pm_sport_store.js:74`）、UI/ops 人工写（`matcher_store.js:192,225,462,497,557`）、死路径 `store.js:358` | matcher README.md:47「生产唯一 writer = matchMergeOnce → composeOnce」 | 代码 | true（文档补例外说明或删死路径） |
 | F-03 | `sport_client_matches` 读路径 | backend router 未接入该读路径（grep 仅命中 store/迁移/smoke/wipe）；GetBaseball 等 = M+J「不读写 RDS 赛表」 | DATA_STORAGE:14（读方=GetBaseball/FootballMatchs）vs :81（M+J）——文档**内部**矛盾 | 代码支持 :81；:14 是未标注的目标态 | true（:14 标「目标态」或修正） |
 | F-04 | layout 键 `baseball` | `paths.js:24` 键指向仓库根**不存在**的 `baseball/`；全仓零消费者 | PATH_REGISTRY.md:45 登记「棒球代码目录」 | 代码（键为遗留） | true（删键或重指） |
 | F-05 | baseball `sharedPackages` 数量 | `lines/baseball/line.json` = 4 个（client-core, arb-core, api-contract, venue-adapter） | PATH_REGISTRY.md:102-104 = 2 个 | line.json | true |
@@ -277,12 +277,11 @@ capability 是从 runtime/代码取证**派生**出的归组（非仓库现有�
 2. **无证据优先级标记**：DATA_STORAGE:14 vs :81 这类同文档矛盾（F-03），AI 无法判断哪句是当前态，只能猜或两信其一。
 3. **「单写者」过度宣称的反向危害**：matcher 文档宣称「生产唯一 writer」（F-02），一个尽职的 AI 可能把 `pm_sport` 写者或 UI ops 路径当「违规」去「修复」，造成真实破坏。这是**文档过度宣称比缺失更危险**的典型案例。
 4. **镜像当源**：平台清单 9 处副本（R-1），AI 读到 `check-collect-platforms.js` 的 11 馆硬编码或 client-core 的 14 馆列表时，极易以偏概全（例：以为 SXBet 不在系统内——M-07）。
-5. **僵尸物理目录误导**：`server/{matcher,match-composer,match-engine,match-projector}` 四个仅含 node_modules 的空壳（F-11 关联）+ 根目录 `tmp-ob-pc-js/`、`yabao/`、`devtools/tmp-*`——AI 的目录扫描会把它们当活跃模块，浪费上下文并可能基于其引用旧路径。
-6. **未文档化的闸门**：esport-freeze（F-15）会让 AI 的合法修改在 `npm test` 第 4 环神秘失败，且错误信息不指向任何文档。
-7. **workspaces glob 缺口（F-09）的误修风险**：AI 发现 `packages/shared` 不在 workspaces 后，最直觉的「修复」可能是动 workspaces 数组或重装依赖——而这可能破坏 lockfile 遗留 link 的微妙平衡。属「必须人工裁决」的典型。
-8. **28 万行散文无索引**：每个 AI 会话都重新从 20+ 份文档推导架构，结论质量依赖会话长度；这正是 Architecture Index 要解决的问题（§13）。
-9. **CODEOWNERS.example 的错误路径**（F-13）：AI 若按模板生成 CODEOWNERS，会产生无效所有权规则。
-10. **本地 gate ≠ 合并 gate（M-09）**：AI 本地跑通 `npm test` 不代表 CI 拦截；合并评审是最后一道也是唯一一道远程防线。
+5. **未文档化的闸门**：esport-freeze（F-15）会让 AI 的合法修改在 `npm test` 第 4 环神秘失败，且错误信息不指向任何文档。
+6. **workspaces glob 缺口（F-09）的误修风险**：AI 发现 `packages/shared` 不在 workspaces 后，最直觉的「修复」可能是动 workspaces 数组或重装依赖——而这可能破坏 lockfile 遗留 link 的微妙平衡。属「必须人工裁决」的典型。
+7. **28 万行散文无索引**：每个 AI 会话都重新从 20+ 份文档推导架构，结论质量依赖会话长度；这正是 Architecture Index 要解决的问题（§13）。
+8. **CODEOWNERS.example 的错误路径**（F-13）：AI 若按模板生成 CODEOWNERS，会产生无效所有权规则。
+9. **本地 gate ≠ 合并 gate（M-09）**：AI 本地跑通 `npm test` 不代表 CI 拦截；合并评审是最后一道也是唯一一道远程防线。
 
 ---
 

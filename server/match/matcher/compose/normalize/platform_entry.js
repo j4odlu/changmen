@@ -89,7 +89,7 @@ export function canUseNameKey(entry) {
   return true;
 }
 
-/** 与 legacy match_merge 一致：match:id:GameID:gb:gb */
+/** MergeKey 格式：match:id:GameID:gb:gb */
 export function pairKeyId(entry) {
   const ck = canonicalMatchKeyByIdOnly(
     entry.GameID,

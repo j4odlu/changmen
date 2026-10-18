@@ -2170,7 +2170,6 @@
           "layer": "docs",
           "says": "生产唯一 writer = matchMergeOnce → composeOnce",
           "evidence": [
-            "server/match/matcher/docs/REPLACE.md:14",
             "server/match/matcher/README.md:47"
           ]
         }

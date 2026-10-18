@@ -28,9 +28,9 @@ syncObLiveTimer → API_SaveLiveTimer
 
 CollectConfig 关：仍 game/view + fo + MQTT；**不** saveMatch/saveBets。
 
-**MQTT**：浏览器 **直连** OB 源站 wss（`mqttSession.ts`：试玩 login 解析 `addr.mqtt`，username = `Client_GetCollectPlatform` token）。不经 `/esport/ws/OB` relay。
+**MQTT**：[changmen 扩展] `packages/venue-adapter/ob/realtime.ts` 支持官方试玩源直连和 CHANGMEN 转发。`mqttSession.ts` 从试玩登录结果解析官方 MQTT 地址并查询 memberId，clientId 为 `mqttjs_dj{memberId}`；CHANGMEN 模式通过 `/esport/ws-forward/OB?u=...` 转发到同一官方源。连接配置不使用固定 clientId，也不把采集 HTTP token 当作 MQTT username；账密定义见 `mqttConfig.ts`。
 
-详见 [changmen/readme.md](../../../../../readme.md#项目共识)。
+项目数据流见 [ARCHITECTURE.md](../../../../docs/ARCHITECTURE.md)。
 
 ## 开赛时间过滤（对齐 A8）
 
@@ -57,7 +57,11 @@ list.filter(row => games.includes(gid) && num(row.start_time) < horizon);
 | 常态 | `getCollectPlatform("OB")` → `Client_GetCollectPlatform`（`Gateway` + `Token`） |
 | 失效 | `game/index` 且 `data === "token"` → `refreshObCollectToken()`（直连 A8 同款试玩 URL，只写 `token`） |
 | HTTP | `ob/http.ts` → `directGet`（**Axios/XHR**，对齐 A8 `Rr.get`）直连 OB `gateway` |
-| MQTT | 浏览器直连源站 wss；`username` = platform `Token`（见 `mqttSession.ts`） |
+| MQTT | [changmen 扩展] 官方试玩源直连或 CHANGMEN 转发，配置由 `mqttSession.ts` 生成 |
+
+[changmen 扩展] backend 启动时由 `core/esport-api/platform_sync.js` 的 `resolveObSession()` 准备采集配置。试玩地址定义见 `packages/venue-adapter/ob/constants.ts`。
+
+[A8 可证实] token 失效后的刷新只通过 `API_UpdatePlatform({ provider: "OB", token })` 更新 token，不更新 gateway。当前 `refreshObCollectToken()` 从试玩响应的 `data.token` 或 `data.pc` URL 提取 token，见 `packages/venue-adapter/ob/collect.ts`。
 
 试玩 UI：`api/v4.ts` → `enterCreditPlate("OB")`（仅 `window.open(pc)`，不写采集配置）。
 
@@ -84,7 +88,13 @@ list.filter(row => games.includes(gid) && num(row.start_time) < horizon);
 | 下单 | `POST /game/bet` | 同上 |
 | 注单 | `GET /game/orderList` | status 1/2 |
 
-离线契约校验：`npm run test:ob-provider`
+以下命令在 `client/web/` 执行：
 
-Live 冒烟（后端 3456，默认账号 TJ01）：`ESPORT_TEST_BASE=http://127.0.0.1:3456 npm run test:ob-live`  
-SaveMatch 写入 round-trip（自动备份/恢复 OB 数据）：`OB_SMOKE_WRITE=1` 同上。
+```text
+npm run test:ob              # GetMatchs 形状 + provider 离线契约
+npm run test:ob-provider     # 仅 provider 契约
+```
+
+离线验证时不设置 `ESPORT_TEST_BASE`，避免触发脚本的在线登录分支。在线验收使用当前 Cookie 登录的客户端及 Network 抓包，核对采集上报、`Client_GetMatchs` 和 MQTT 更新。
+
+`test:ob-live` / `test:ob:all` 尚未适配当前 Cookie 登录和目录布局，不作为当前在线验收入口。

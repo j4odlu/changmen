@@ -10,6 +10,13 @@ A8 仅有 `index.js` 可见，**A8 服务端为黑盒**。changmen 后端为自�
 | **A8 服务端** | 不可见 |
 | **changmen 服务端** `[changmen 实现]` | 见下「存储」 |
 
+## ACCOUNT 兼容约束与维护
+
+- [A8 可证实] 前端 `stores/account` 的加载、`persistAccounts` 及余额刷新后保存的时序与 API 调用须与 bundle 一致，不增加空列表 skip 或 admin 预览 skip save。
+- [changmen 扩展] 管理端用户工作区预览使用 `adminWorkspacePreview`。后端须拒绝空列表覆盖已有账号及非本人 `playerId` 保存，不能依赖前端跳过保存来保证安全。
+- 后端模型调整按「兼容 → 迁移 → 内部重构」推进，保持 `Client_*` 线协议、对外 bigint `accountId` 及订单 `player_id` 关联。
+- 手动改库后按本文运维说明刷新缓存；不得跨 profile 复制凭证。账号巡检使用 `server/backend/scripts/audit-accounts-full.mjs`。
+
 ## 存储（players 唯一真相）
 
 ```text

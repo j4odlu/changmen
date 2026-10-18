@@ -72,12 +72,13 @@
          ──► 解析为 CollectBetDto（+ 本地 oddsStore）
          ──► collectStore.saveBets（开关控制）
          ──► api/esport API_SaveBet
-         ──► backend bets.json
-         ──► Client_GetMatchs 合并 → UI
+         ──► backend → platform_bets
+         ──► matcher compose/ 合场 → client_matches
+         ──► Client_GetMatchs 读取 → matchStore → UI
 ```
 
 上报开关：`collectStore`（由 `runtime/collectors.ts` 启动）。语义是”是否调用 `saveBets` 写入后端”，不是”是否连接平台拉赔率”。  
-历史代码里仍有 `saveMatch` 调用；**比赛列表以服务端 `matches.json` 为准**。
+比赛列表以服务端 `client_matches` 为准。
 
 ### 下注（出单）
 

@@ -36,6 +36,7 @@
   ],
   "scripts": {
     "install:all": "npm install",
+    "hooks:install": "node scripts/git-hooks/install.mjs",
     "dev": "turbo run dev",
     "dev:remote": "bash sh/dev-esport.sh remote",
     "dev:backend": "turbo run dev --filter=@changmen/backend",
@@ -98,6 +99,15 @@
     "test:query-boundaries:postgres": "node scripts/testing/query-boundaries-postgres.mjs",
     "test:schema-compat:postgres": "node scripts/testing/schema-compatibility-postgres.mjs",
     "test:history-schema:postgres": "node scripts/testing/history-schema-postgres.mjs"
+  },
+  "overrides": {
+    "@polymarket/builder-relayer-client": {
+      "axios": "0.34.0"
+    },
+    "axios@>=1 <1.20.0": "1.20.0",
+    "qs": "6.16.1",
+    "ws": "8.21.0",
+    "uuid@<11.1.1": "11.1.1"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.0.0",

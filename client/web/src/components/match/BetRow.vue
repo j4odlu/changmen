@@ -9,6 +9,7 @@ import {
   subscribePbWsShadow,
 } from "@changmen/venue-adapter/pb";
 import { getPolymarketPmSportBlockReason } from "@changmen/venue-adapter/polymarket";
+import { lookupRayMapOutcome } from "@changmen/venue-adapter/ray";
 import { storeToRefs } from "pinia";
 import { computed, onUnmounted, ref, watch } from "vue";
 import LimitDiagDialog from "@/components/match/LimitDiagDialog.vue";
@@ -85,6 +86,15 @@ const showLiveTimer = computed(() => {
 // [changmen 扩展] PM 当前地图独立于 OB；初始列表和 VPS 实时推送共用 pmSport。
 const showPmLive = computed(() => !props.bet.marketCode
   && isPmMapLive(props.match.pmSport, props.bet.round));
+
+/** [changmen 扩展] RAY 原生赛果只覆盖本馆胜方盘口，不依赖 PM 大比分或赔率。 */
+const rayWinner = computed(() => {
+  const item = props.bet.items.find(item => item.type === "RAY");
+  return !props.bet.marketCode && item ? lookupRayMapOutcome({
+    matchId: item.matchId, betId: item.betId, map: props.bet.round,
+    homeId: item.homeId, awayId: item.awayId,
+  }) : null;
+});
 
 /** [changmen 扩展] 全场与各地图非 live 可折叠；live 与折叠按钮互斥 */
 const canFold = computed(() => canFoldMap(props.bet.round) && !showLiveTimer.value);
@@ -527,10 +537,13 @@ function onBetTitleDblClick() {
             ...oddsCellClasses(item, 'Home'),
             'ev-positive': evMarker.isPositiveEv(item, 'Home'),
             'ev-near': evMarker.isNearEv(item, 'Home'),
+            'ray-map-won': item.type === 'RAY' && rayWinner === 'Home',
+            'ray-map-lost': item.type === 'RAY' && rayWinner === 'Away',
           }"
           @click="onTarget(item.type, 'Home')"
           @dblclick.stop="onOddsDblClick(item, 'Home')"
         >
+          <span v-if="item.type === 'RAY' && rayWinner === 'Home'" class="ray-map-win-badge" title="RAY 已确认本方赢得该地图">WIN</span>
           {{ itemOdds(item, "Home") || (itemQuotePending(item, 'Home') ? '等待报价' : '')
           }}<span
             v-if="pbShadowLabel(item, 'Home')"
@@ -565,10 +578,13 @@ function onBetTitleDblClick() {
             ...oddsCellClasses(item, 'Away'),
             'ev-positive': evMarker.isPositiveEv(item, 'Away'),
             'ev-near': evMarker.isNearEv(item, 'Away'),
+            'ray-map-won': item.type === 'RAY' && rayWinner === 'Away',
+            'ray-map-lost': item.type === 'RAY' && rayWinner === 'Home',
           }"
           @click="onTarget(item.type, 'Away')"
           @dblclick.stop="onOddsDblClick(item, 'Away')"
         >
+          <span v-if="item.type === 'RAY' && rayWinner === 'Away'" class="ray-map-win-badge" title="RAY 已确认本方赢得该地图">WIN</span>
           {{ itemOdds(item, "Away") || (itemQuotePending(item, 'Away') ? '等待报价' : '')
           }}<span
             v-if="pbShadowLabel(item, 'Away')"

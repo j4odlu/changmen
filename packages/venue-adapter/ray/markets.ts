@@ -3,6 +3,7 @@ import { directGet } from "@changmen/client-core/shared/http";
 import type { CollectBetDto } from "@changmen/client-core/types/collect";
 import type { CollectPlatformInfo } from "@changmen/api-contract";
 import { PLATFORMS } from "../shared/platforms";
+import { updateRayMapOutcomes } from "./rayMapOutcome";
 
 import {
   groupRayOddsToSaveBets,
@@ -84,6 +85,7 @@ export async function loadRayBets(
   if (res.code !== 200 || !res.result) return [];
 
   const payload = res.result as unknown as RayOddsPayload;
+  updateRayMapOutcomes(matchId, payload, betRe, gameCode);
   ingestRayOddsPayloadToFo(payload, betRe, gameCode);
   return reportRayOddsPayloadToSaveBetRows(payload, betRe, gameCode);
 }

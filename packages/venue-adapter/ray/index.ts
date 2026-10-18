@@ -3,6 +3,7 @@ import { rayProvider } from "./bet";
 import { startRayCollector } from "./collect";
 
 export { rayProvider, startRayCollector };
+export { lookupRayMapOutcome } from "./rayMapOutcome";
 export * from "./bet";
 export * from "./collect";
 export {

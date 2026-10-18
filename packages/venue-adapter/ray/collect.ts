@@ -18,6 +18,7 @@ import { notifyCollectError } from "../shared/collectNotify";
 import { useCollectStore } from "../shared/webBridge";
 import { rayMatchStage } from "./shared/match_stage";
 import { collectRayGet, loadRayBets } from "./markets";
+import { clearRayMapOutcomes, retainRayMapOutcomes } from "./rayMapOutcome";
 
 export { rayApiPath } from "./markets";
 
@@ -142,6 +143,7 @@ export function startRayCollector(): () => void {
         });
 
         const matchPayload: CollectMatchDto[] = [];
+        retainRayMapOutcomes(list.map(row => String(row.id)));
         for (const row of list) {
           const teams = (row.team ?? []) as Array<Record<string, unknown>>;
           const home = teams.find((t) => t.pos === 1);
@@ -209,6 +211,7 @@ export function startRayCollector(): () => void {
 
   const stop = () => {
     stopped = true;
+    clearRayMapOutcomes();
     rayOnMessage = null;
     void rayRealtime?.stop();
     rayRealtime = null;

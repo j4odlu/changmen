@@ -379,7 +379,8 @@ html[data-ui-theme="brutal"] .matchs .bet .item.defaultOdds .item-type {
   margin-right: 6px;
 }
 
-html[data-ui-theme="brutal"] .matchs .bet .item .item-odds .pm-map-win-badge {
+html[data-ui-theme="brutal"] .matchs .bet .item .item-odds .pm-map-win-badge,
+html[data-ui-theme="brutal"] .matchs .bet .item .item-odds .ray-map-win-badge {
   border-radius: 0;
   border: 1px solid var(--brutal-ink);
   background: var(--brutal-green);
@@ -387,7 +388,8 @@ html[data-ui-theme="brutal"] .matchs .bet .item .item-odds .pm-map-win-badge {
   box-shadow: 1px 1px 0 var(--brutal-ink);
 }
 
-html[data-ui-theme="brutal"] .matchs .bet .item .item-odds.pm-map-won {
+html[data-ui-theme="brutal"] .matchs .bet .item .item-odds.pm-map-won,
+html[data-ui-theme="brutal"] .matchs .bet .item .item-odds.ray-map-won {
   border-color: var(--brutal-ink);
   box-shadow: inset 0 0 0 2px var(--cm-color-success);
 }

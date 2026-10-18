@@ -43,6 +43,7 @@ export function restoreRayOrderViewSource(source) {
   return source;
 }
 export function restoreRayProviderSource(file, source, readSource) {
+  source = restoreRayMapOutcomeSource(file, source);
   if (file !== "client/web/src/runtime/providers.ts")
     return source;
   const commit = "adb333bf24b6ba6aa3e441009b56f874a23f6ed9";
@@ -51,4 +52,30 @@ export function restoreRayProviderSource(file, source, readSource) {
     assert.equal(restoreRaySubmissionPreviewSource(path, current).replaceAll("\r\n", "\n"), fixed.replaceAll("\r\n", "\n"), `${path}: complete committed passive RAY observation`);
   }
   return "export { getProvider, supportedBetProviders } from \"@/runtime/venueAdapters\";\n";
+}
+
+/** [changmen 扩展] 精确还原赛果展示入口；其余完整采集、赔率、下注实现仍核对原固定基线。 */
+export function restoreRayMapOutcomeSource(file, source) {
+  const hooks = {
+    "packages/venue-adapter/ray/markets.ts": [
+      'import { updateRayMapOutcomes } from "./rayMapOutcome";\n',
+      '  updateRayMapOutcomes(matchId, payload, betRe, gameCode);\n',
+    ],
+    "packages/venue-adapter/ray/collect.ts": [
+      'import { clearRayMapOutcomes, retainRayMapOutcomes } from "./rayMapOutcome";\n',
+      '        retainRayMapOutcomes(list.map(row => String(row.id)));\n',
+      '    clearRayMapOutcomes();\n',
+    ],
+    "packages/venue-adapter/ray/index.ts": [
+      'export { lookupRayMapOutcome } from "./rayMapOutcome";\n',
+    ],
+  }[file];
+  if (!hooks)
+    return source;
+  source = source.replaceAll("\r\n", "\n");
+  for (const hook of hooks) {
+    assert.equal(source.split(hook).length, 2, `${file}: exact display-only RAY outcome hook`);
+    source = source.replace(hook, "");
+  }
+  return source;
 }

@@ -55,17 +55,20 @@
   opacity:.72;
 }
 
-/* [changmen 扩展] WIN 浮在 C 行胜方赛前价格上方，不增加行高。 */
-.matchs .bet .item .item-odds.pm-map-won {
+/* [changmen 扩展] PM 的 C 行与 RAY 原生赛果共用 WIN 样式，不增加行高。 */
+.matchs .bet .item .item-odds.pm-map-won,
+.matchs .bet .item .item-odds.ray-map-won {
   border-color:var(--cm-color-success);
   box-shadow:0 0 4px color-mix(in srgb, var(--cm-color-success) 40%, transparent) inset;
 }
 
-.matchs .bet .item .item-odds.pm-map-lost {
+.matchs .bet .item .item-odds.pm-map-lost,
+.matchs .bet .item .item-odds.ray-map-lost {
   opacity:0.55;
 }
 
-.matchs .bet .item .item-odds .pm-map-win-badge {
+.matchs .bet .item .item-odds .pm-map-win-badge,
+.matchs .bet .item .item-odds .ray-map-win-badge {
   position:absolute;
   left:50%;
   top:0;

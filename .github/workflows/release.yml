@@ -66,6 +66,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: release-plan
+          overwrite: true
           path: |
             output/change-validation/plan.json
             output/change-validation/bundle.json
@@ -115,6 +116,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-lane-${{ matrix.lane }}
+          overwrite: true
           path: output/release-lanes/
           if-no-files-found: error
           retention-days: 14
@@ -123,6 +125,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: failed-acceptance-${{ matrix.lane }}
+          overwrite: true
           path: |
             output/orders-phase2-protection/*.log
             output/orders-phase2-protection/*.json
@@ -164,6 +167,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: verified-release
+          overwrite: true
           path: output/release-validation/
           if-no-files-found: error
           retention-days: 14
@@ -172,6 +176,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: failed-acceptance
+          overwrite: true
           path: |
             output/change-validation/
             output/orders-phase2-protection/*.log

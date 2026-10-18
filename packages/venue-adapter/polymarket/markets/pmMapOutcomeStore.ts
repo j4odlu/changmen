@@ -7,6 +7,8 @@ import type {
   PolymarketMarketIndexEntry,
 } from "@changmen/api-contract";
 import { shallowRef } from "vue";
+import { replacePmMapIdentitiesFromIndex } from "./pmMapIdentityStore";
+export { lookupPmMapIdentityByToken, type PmMapIdentity } from "./pmMapIdentityStore";
 
 export interface PmMapOutcomeHit {
   winningTokenId: string;
@@ -45,6 +47,7 @@ function hitFromEntry(entry: PolymarketMarketIndexEntry): PmMapOutcomeHit | null
 
 /** Index 同步后替换本地胜负表；直播来源对已见过的 sourceMatchId 做 sticky（closed 出 Index 后仍可展示） */
 export function replacePmMapOutcomesFromIndex(index: PolymarketMarketIndex | null | undefined): void {
+  replacePmMapIdentitiesFromIndex(index);
   if (index == null) {
     byTokenId.clear();
     resolutionBySourceMatchId.clear();

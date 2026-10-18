@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computed, reactive } from "vue";
 import type { PmSportSnapshot } from "@/types/esport";
 import { readPmScoreMapOutcome, type PmScoreMapOutcome } from "./pmScoreMapOutcome";
+import fixture from "./fixtures/pm-procyon-map-one.json";
 
 const input = (snapshot: PmSportSnapshot, extra = {}) => ({ snapshot, eventKey: "event", map: 1,
   homeName: "Home", awayName: "Away", homeTokenId: "h", awayTokenId: "a", ...extra });
@@ -11,6 +12,21 @@ const snapshot = (extra: Partial<PmSportSnapshot> = {}): PmSportSnapshot => ({
 });
 
 describe("display-only PM map outcomes from score evidence", () => {
+  it("uses exact native names and both tokens, rejecting mismatched event, map, teams or token evidence", () => {
+    const source = fixture.match.Bets[0]!.Sources.Polymarket;
+    const context = input(fixture.match.PmSport, { eventKey: '1205551', homeName: 'Procyon Team', awayName: 'your end',
+      homeTokenId: source.HomeID, awayTokenId: source.AwayID, market: fixture.entry });
+    expect(readPmScoreMapOutcome(context)?.side).toBe('home');
+    for (const market of [
+      { ...fixture.entry, sourceMatchId: 'other' }, { ...fixture.entry, map: 2 },
+      { ...fixture.entry, homeTokenId: 'other' }, { ...fixture.entry, awayTokenId: 'other' },
+      { ...fixture.entry, homeName: 'Procyon Academy' }, { ...fixture.entry, homeName: '' },
+    ]) expect(readPmScoreMapOutcome({ ...context, market })).toBeNull();
+    expect(readPmScoreMapOutcome({ ...context, eventKey: 'other' })).toBeNull();
+    expect(readPmScoreMapOutcome({ ...context, snapshot: { ...context.snapshot, slug: 'other' } })).toBeNull();
+    expect(readPmScoreMapOutcome({ ...context, eventKey: fixture.entry.eventSlug })?.side).toBe('home');
+    expect(readPmScoreMapOutcome({ ...context, market: { ...fixture.entry, eventSlug: undefined } })?.side).toBe('home');
+  });
   it("retains the observed result across reactive score updates, but clears it on a match switch", () => {
     const context = reactive(input(snapshot()));
     const result = computed<PmScoreMapOutcome | null>(previous => readPmScoreMapOutcome(context, previous));

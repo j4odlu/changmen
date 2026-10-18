@@ -68,6 +68,15 @@ export function restorePmOutcomeArchiveSource(file, source) {
   }
   if (file !== "packages/venue-adapter/polymarket/markets/pmMapOutcomeStore.ts")
     return source;
+  // 只逆转只读身份缓存的精确入口；官方胜负及所有既有实现仍全文对照固定基线。
+  for (const hook of [
+    'import { replacePmMapIdentitiesFromIndex } from "./pmMapIdentityStore";\n',
+    'export { lookupPmMapIdentityByToken, type PmMapIdentity } from "./pmMapIdentityStore";\n',
+    '  replacePmMapIdentitiesFromIndex(index);\n',
+  ]) {
+    assert.equal(source.replace(/\r\n/g, "\n").split(hook).length, 2, "exact display-only map identity hook");
+    source = source.replace(/\r\n/g, "\n").replace(hook, "");
+  }
   const after = "for (const entry of [...(index.entries ?? []), ...(index.outcomeEntries ?? [])]) {";
   assert.equal(source.split(after).length, 2, "exact outcome archive display iteration");
   return source.replace(after, "for (const entry of index.entries ?? []) {");

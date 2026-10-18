@@ -4,8 +4,43 @@ import { renderToString } from "@vue/server-renderer";
 import { afterEach, expect, it } from "vitest";
 import { createSSRApp } from "vue";
 import PmPrematchProbability from "@/components/match/PmPrematchProbability.vue";
+import { ViewMatch as MatchModel } from "@changmen/client-core/models/match";
+import productionFixture from "./fixtures/pm-procyon-map-one.json";
 
 afterEach(() => replacePmMapOutcomesFromIndex(null));
+
+// 2026-10-19 线上赛事 8209：保留真实别名、事件 ID、盘口和 token，覆盖 DTO → 组件链路。
+it.each([false, true])("shows Procyon Team's map-one win using its native PM name Procyon Gaming (reversed=%s)", async reversed => {
+  const dto = structuredClone(productionFixture.match);
+  const source = dto.Bets[0]!.Sources.Polymarket;
+  if (reversed) {
+    [dto.Bets[0]!.HomeName, dto.Bets[0]!.AwayName] = [dto.Bets[0]!.AwayName, dto.Bets[0]!.HomeName];
+    [source.HomeID, source.AwayID] = [source.AwayID, source.HomeID];
+  }
+  const match = new MatchModel({ ...dto, Bets: dto.Bets.map(row => ({ ...row, HomeID: 0, AwayID: 0,
+    Sources: { Polymarket: { ...row.Sources.Polymarket, Type: "Polymarket" } },
+  })) });
+  const bet = match.bets[0]!;
+  const index = { updatedAt: 1, assetIds: [], entries: [productionFixture.entry] };
+  replacePmMapOutcomesFromIndex(index);
+  const render = () => renderToString(createSSRApp(PmPrematchProbability, { bet, match }));
+  const assertWinner = async () => {
+    const html = await render();
+    expect(html).toContain('胜 · 待结算');
+    expect(html).toContain('Procyon Team：等待 VPS 历史价，比分确认胜出，PM 待结算');
+    expect(html.match(/class="([^"]*pm-map-won[^"]*)"/)?.[1]).toContain(reversed ? 'away' : 'home');
+    expect(html).not.toContain('>WIN<');
+  };
+  await assertWinner();
+  // 已对齐的 WS 推送会交换队名及比分，原始比分不动；不应再次翻转。
+  [match.pmSport!.homeTeam, match.pmSport!.awayTeam] = [match.pmSport!.awayTeam, match.pmSport!.homeTeam];
+  match.pmSport!.mapScore = { home: 0, away: 1 };
+  await assertWinner();
+  replacePmMapOutcomesFromIndex({ ...index, entries: [], outcomeEntries: [{ ...productionFixture.entry, firstSeenAt: 1 }] });
+  await assertWinner();
+  replacePmMapOutcomesFromIndex(null);
+  expect(await render()).not.toContain('胜 · 待结算');
+});
 
 it.each([false, true])("shows a score-confirmed winner before settlement, and gives the official result priority (reversed snapshot=%s)", async (reversed) => {
   const bet = { round: 1, homeName: "Home", awayName: "Away", getBetName: () => "地图1",

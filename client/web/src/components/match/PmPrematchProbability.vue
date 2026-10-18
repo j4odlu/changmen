@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ViewBet, ViewMatch } from "@/models/match";
 import { formatOrderTime } from "@changmen/client-core/shared/format";
-import { lookupPmMapOutcomeByToken, pmMapOutcomeTick } from "@changmen/venue-adapter/polymarket";
+import { lookupPmMapIdentityByToken, lookupPmMapOutcomeByToken, pmMapOutcomeTick } from "@changmen/venue-adapter/polymarket";
 import { computed } from "vue";
 import { readPrematchProbability } from "@/shared/pmPrematchProbability";
 import { isPmMapFinished, readPmMapRoundScore } from "@/shared/pmSportDisplay";
@@ -29,12 +29,16 @@ const outcome = computed(() => {
 const officialWinner = computed(() => !outcome.value?.winningTokenId ? null
   : outcome.value.winningTokenId === pm.value?.homeId ? "home"
   : outcome.value.winningTokenId === pm.value?.awayId ? "away" : null);
-const scoreOutcome = computed<PmScoreMapOutcome | null>(previous => readPmScoreMapOutcome({
-  snapshot: props.match.pmSport,
-  eventKey: String(props.match.providers?.Polymarket ?? props.match.id ?? ""),
-  map: props.bet.round, homeName: props.bet.homeName, awayName: props.bet.awayName,
-  homeTokenId: pm.value?.homeId ?? "", awayTokenId: pm.value?.awayId ?? "",
-}, previous));
+const scoreOutcome = computed<PmScoreMapOutcome | null>(previous => {
+  void pmMapOutcomeTick.value;
+  return readPmScoreMapOutcome({
+    snapshot: props.match.pmSport,
+    eventKey: String(props.match.providers?.Polymarket ?? props.match.id ?? ""),
+    map: props.bet.round, homeName: props.bet.homeName, awayName: props.bet.awayName,
+    homeTokenId: pm.value?.homeId ?? "", awayTokenId: pm.value?.awayId ?? "",
+    market: lookupPmMapIdentityByToken(pm.value?.homeId),
+  }, previous);
+});
 const winner = computed(() => officialWinner.value ?? scoreOutcome.value?.side);
 const homeWon = computed(() => winner.value === "home");
 const awayWon = computed(() => winner.value === "away");

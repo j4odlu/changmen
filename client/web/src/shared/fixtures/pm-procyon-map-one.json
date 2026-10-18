@@ -1,0 +1,59 @@
+{
+  "match": {
+    "ID": 8209,
+    "Title": "Procyon Team vs your end",
+    "Game": "CS2",
+    "GameID": 1,
+    "BO": 3,
+    "StartTime": 1792361400000,
+    "Reverse": [],
+    "Matchs": { "Polymarket": "1205551" },
+    "PmSport": {
+      "bo": 3,
+      "live": true,
+      "slug": "cs2-pcy-youren-2026-10-18",
+      "ended": false,
+      "gameId": 1754459,
+      "period": "2/3",
+      "status": "running",
+      "eventId": "1205551",
+      "awayTeam": "your end",
+      "homeTeam": "Procyon Gaming",
+      "mapScore": { "away": 0, "home": 1 },
+      "scoreRaw": "000-000|1-0|Bo3",
+      "updatedAt": 1792364362735,
+      "currentMap": 2
+    },
+    "Bets": [{
+      "ID": 33624065,
+      "Map": 1,
+      "Name": "[地图1]-单局-获胜",
+      "MatchID": 8209,
+      "Sources": { "Polymarket": {
+        "Type": "Polymarket",
+        "BetID": "0x5c4d3a1492e852ffb7adb70b044a64398f03a20ed4e5c82b8183f46c70e80f66",
+        "AwayID": "43467094423416655420243863009146625185148875615533992955459990771297732822105",
+        "HomeID": "97814096525719869785699016949885395120977300443105189741099394514130167824833",
+        "Status": "Locked",
+        "AwayOdds": 1000,
+        "HomeOdds": 0
+      } },
+      "AwayName": "your end",
+      "HomeName": "Procyon Team"
+    }]
+  },
+  "entry": {
+    "sourceMatchId": "1205551",
+    "marketId": "0x5c4d3a1492e852ffb7adb70b044a64398f03a20ed4e5c82b8183f46c70e80f66",
+    "homeTokenId": "97814096525719869785699016949885395120977300443105189741099394514130167824833",
+    "awayTokenId": "43467094423416655420243863009146625185148875615533992955459990771297732822105",
+    "sourceBetId": "0x5c4d3a1492e852ffb7adb70b044a64398f03a20ed4e5c82b8183f46c70e80f66",
+    "map": 1,
+    "homeName": "Procyon Gaming",
+    "awayName": "your end",
+    "homeOdds": 0,
+    "awayOdds": 1000,
+    "status": "Locked",
+    "eventSlug": "cs2-pcy-youren-2026-10-18"
+  }
+}

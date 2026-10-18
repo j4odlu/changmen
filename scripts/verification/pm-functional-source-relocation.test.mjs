@@ -22,6 +22,7 @@ describe("pM functional relocation preserves complete implementations", () => {
     expect(restored).not.toContain("index.outcomeEntries");
     expect(restorePmOutcomeArchiveSource(file, source + "\nthrow Error('extra');")).toContain("throw Error('extra')");
     expect(() => restorePmOutcomeArchiveSource(file, source.replace("index.outcomeEntries", "index.entries"))).toThrow();
+    expect(() => restorePmOutcomeArchiveSource(file, source.replace('replacePmMapIdentitiesFromIndex(index);', 'replacePmMapIdentitiesFromIndex(null);'))).toThrow('exact display-only map identity hook');
     expect(restorePmOutcomeArchiveSource("unregistered.ts", source)).toBe(source);
   });
   for (const [file, target] of Object.entries(PM_FUNCTIONAL_RELOCATIONS)) {
@@ -56,7 +57,7 @@ describe("pM functional relocation preserves complete implementations", () => {
     });
     it(`${file}: resolves every relative dependency to its original module`, () => {
       const original = execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" });
-      const moved = restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, restorePmWsQuantityEvidenceSource(target, fs.readFileSync(target, "utf8"))), file => fs.readFileSync(file, "utf8")));
+      const moved = restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, restorePmWsQuantityEvidenceSource(target, restorePmOutcomeArchiveSource(target, fs.readFileSync(target, "utf8")))), file => fs.readFileSync(file, "utf8")));
       const imports = (source, filename) => {
         const sf = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true);
         const result = [];

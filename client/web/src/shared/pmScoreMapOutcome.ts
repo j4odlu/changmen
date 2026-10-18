@@ -1,4 +1,5 @@
 import type { PmSportSnapshot } from "@/types/esport";
+import type { PmMapIdentity } from "@changmen/venue-adapter/polymarket";
 import { formatPmMatchStatus, isPmMapFinished } from "./pmSportDisplay";
 
 export interface PmScoreMapOutcome {
@@ -17,6 +18,7 @@ export function readPmScoreMapOutcome(input: {
   awayName: string;
   homeTokenId: string;
   awayTokenId: string;
+  market?: PmMapIdentity | null;
 }, previous?: PmScoreMapOutcome | null): PmScoreMapOutcome | null {
   const { snapshot, map, eventKey, homeTokenId, awayTokenId } = input;
   if (!snapshot || !eventKey || !homeTokenId || !awayTokenId || homeTokenId === awayTokenId
@@ -27,9 +29,27 @@ export function readPmScoreMapOutcome(input: {
   const scoreHome = name(snapshot.homeTeam), scoreAway = name(snapshot.awayTeam);
   if (!home || !away || home === away || !scoreHome || !scoreAway || scoreHome === scoreAway)
     return null;
-  const aligned = scoreHome === home && scoreAway === away;
-  const reversed = scoreHome === away && scoreAway === home;
-  if (!aligned && !reversed)
+  const market = input.market;
+  // 合场队名可能是别名（如 Procyon Team / Procyon Gaming），以 PM 原生队名和 token 双向对齐。
+  let nativeHome = home, nativeAway = away, tokensReversed = false;
+  if (market) {
+    const eventIds = [String(market.sourceMatchId), market.eventSlug].filter(Boolean);
+    if (market.map !== map || !eventIds.includes(eventKey)
+      || (snapshot.slug && market.eventSlug && snapshot.slug !== market.eventSlug))
+      return null;
+    const tokensAligned = homeTokenId === market.homeTokenId && awayTokenId === market.awayTokenId;
+    tokensReversed = homeTokenId === market.awayTokenId && awayTokenId === market.homeTokenId;
+    if (!tokensAligned && !tokensReversed)
+      return null;
+    nativeHome = name(market.homeName);
+    nativeAway = name(market.awayName);
+    if (!nativeHome || !nativeAway || nativeHome === nativeAway)
+      return null;
+  }
+  const aligned = scoreHome === nativeHome && scoreAway === nativeAway;
+  const swapped = scoreHome === nativeAway && scoreAway === nativeHome;
+  const reversed = swapped !== tokensReversed;
+  if (!aligned && !swapped)
     return null;
   const score = snapshot.mapScore;
   if (!score || !Number.isSafeInteger(score.home) || !Number.isSafeInteger(score.away) || score.home < 0 || score.away < 0)
@@ -50,7 +70,8 @@ export function readPmScoreMapOutcome(input: {
     return null;
   const homeWins = reversed ? score.away : score.home;
   const awayWins = reversed ? score.home : score.away;
-  const identity = JSON.stringify([eventKey, snapshot.gameId, snapshot.slug, map, homeTokenId, awayTokenId, home, away]);
+  const identity = JSON.stringify([eventKey, snapshot.gameId, snapshot.slug, map, homeTokenId, awayTokenId, home, away,
+    market?.marketId, nativeHome, nativeAway]);
   const retained = previous?.identity === identity && homeWins >= previous.homeWins && awayWins >= previous.awayWins
     ? previous : null;
   // 比分可能先于 period 更新；该帧不产生新结论，也不抹掉仍与比分相容的旧证据。

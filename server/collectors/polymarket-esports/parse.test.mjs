@@ -10,6 +10,16 @@ import {
 } from "./parse.js";
 
 describe("polymarket-esports parse", () => {
+  it("uses configured game recognition across event metadata and keeps unknown sports out", () => {
+    for (const [slug, code] of [["counter-strike-2", "cs2"], ["league-of-legends", "lol"],
+      ["dota-2", "dota2"], ["honor-of-kings", "kog"], ["valorant", "valorant"]]) {
+      assert.equal(mapPolymarketGameId({ events: [{ series: [{ slug }] }] }), code);
+      assert.equal(mapPolymarketGameId({ tags: [{ slug }] }), code);
+    }
+    assert.equal(mapPolymarketGameId({ question: "CS2 vs LoL exhibition" }), "lol", "original match priority");
+    assert.equal(mapPolymarketGameId({ events: [{ slug: "nba-a-b" }] }), null);
+    assert.equal(mapPolymarketGameId({}), null);
+  });
   it("parseJsonArray accepts stringified arrays", () => {
     assert.deepEqual(parseJsonArray("[\"a\",\"b\"]"), ["a", "b"]);
   });

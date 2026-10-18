@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import { restorePmCollectorTypeScriptMetadata } from "./pm-collector-typescript-metadata.mjs";
 const record = JSON.parse(fs.readFileSync(new URL("./dependency-security-metadata.json", import.meta.url), "utf8"));
 const previous = JSON.parse(fs.readFileSync(new URL("./runtime-tooling-migration.json", import.meta.url), "utf8"));
 const sha = source => createHash("sha256").update(source).digest("hex");
@@ -15,6 +16,7 @@ for (const row of record.changes)
   assert.equal(row.baselineSha256, previous.changes.find(old => old.file === row.file).migratedSha256);
 
 export function restoreDependencySecurityMetadata(file, source) {
+  source = restorePmCollectorTypeScriptMetadata(file, source);
   source = source.replaceAll("\r\n", "\n");
   const row = record.changes.find(change => change.file === file);
   if (!row || sha(source) !== row.migratedSha256) return source;

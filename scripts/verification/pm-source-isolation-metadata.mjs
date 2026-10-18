@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 import { restoreRuntimeToolingMetadata } from "./runtime-tooling-migration.mjs";
+import { restorePmCollectorTypeScriptMetadata } from "./pm-collector-typescript-metadata.mjs";
 
 export const PM_METADATA_BASELINE = "a233e20534395b31401828e754432407b109053d";
 const record = JSON.parse(fs.readFileSync(new URL("./pm-source-isolation-metadata.json", import.meta.url), "utf8"));
@@ -82,7 +83,7 @@ export function restorePmFrontendBuildMetadata(file, source) {
 }
 
 export function restorePmSourceIsolationMetadata(file, source, original) {
-  source = normalize(source);
+  source = restorePmCollectorTypeScriptMetadata(file, normalize(source));
   const change = changes.get(file);
   // Unregistered files retain the caller's existing complete-source equality check.
   if (!change) return source;

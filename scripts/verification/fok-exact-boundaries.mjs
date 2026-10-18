@@ -15,6 +15,8 @@ import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
 import { restoreGtcSnapshotMetadata } from "./pm-manual-sell-split-boundary.mjs";
 import { restoreAccountPersistenceSource } from "./account-persistence-boundary.mjs";
 import { restoreA8MakeupSource } from "./a8-makeup-boundary.mjs";
+import { restoreGameCatalogCentralization } from "./game-catalog-centralization-boundary.mjs";
+import { restoreClientCoreNodeEnv } from "./client-core-node-env-boundary.mjs";
 
 export const notificationCommit = "23f2846bee1ff0a91811f49f9a5d5ac2d78fccdf";
 const root = "client/web/src/stores/betting/autoBet/";
@@ -114,6 +116,12 @@ function restoreGateway(source) {
 }
 
 export function verifyProtectedSource(file, current, original, readSource = target => fs.readFileSync(target, "utf8"), baselineRead) {
+  const nodeEnvSource = restoreClientCoreNodeEnv(file, current, replaceExact);
+  const nodeEnvRestored = nodeEnvSource !== current;
+  current = nodeEnvSource;
+  const catalogSource = restoreGameCatalogCentralization(file, current, readSource, replaceExact);
+  const catalogRestored = catalogSource !== current;
+  current = catalogSource;
   const makeupSource = restoreA8MakeupSource(file, current, replaceExact);
   const makeupRestored = makeupSource !== current;
   current = makeupSource;
@@ -124,7 +132,7 @@ export function verifyProtectedSource(file, current, original, readSource = targ
   const specialized = specializeFokSource(file, restoreMinimalOrdersSource(file, current, readSource), readSource);
   const unified = restoreRayOrderSyncSource(file, restoreUnifiedArbitrageSource(file, specialized, replaceExact), readSource, replaceExact);
   const source = restoreRayBackendDispatch(file, restoreRayProviderSource(file, restoreRayFinalizeSource(file, unified, replaceExact), readSource), replaceExact);
-  const unifiedRestored = makeupRestored || clientStateRestored || source !== specialized;
+  const unifiedRestored = nodeEnvRestored || catalogRestored || makeupRestored || clientStateRestored || source !== specialized;
   if (file === "server/db/rds/orders_store.js") {
     sameModule(restoreOrdersConsumerCompatibility(source, readSource), original, file);
     return { file, fixedSourceEqual: false, exactBoundaryVerified: true, kind: "explicit orders financial compatibility with complete fixed-baseline module" };

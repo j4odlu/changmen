@@ -1,0 +1,34 @@
+{
+  "previousCommit": "84364793171244eca85378ef7bce3388f147b237",
+  "hashes": {
+    "packages/shared/catalog/game_catalog_rules.ts": "a060d32f4ac6290a0f11f97a7b877688ebce1b8688891b4a0c82ccc7b842c6a7",
+    "packages/shared/catalog/game_catalog.json": "51576f8c357d6c3aefc68d4626efd0318a4b984b92d5365c15518073aacdd8b3",
+    "packages/shared/catalog/game_catalog_rules.js": "4abdfb07e7be8fb1a4fa0587526c965bc8bbf461fcc926be25837ff505e0c6f8"
+  },
+  "files": {
+    "packages/shared/catalog/game_catalog.ts": [
+      {
+        "before": "import sportsCatalog from \"./game_catalog_sports.json\" with { type: \"json\" };",
+        "after": "import sportsCatalog from \"./game_catalog_sports.json\" with { type: \"json\" };\nimport { getConfiguredGameAlias } from \"./game_catalog_rules.js\";\n\nexport {\n  getConfiguredPlatformDiscovery,\n  getConfiguredPlatformGameIds,\n  matchConfiguredPlatformGameText,\n} from \"./game_catalog_rules.js\";"
+      },
+      {
+        "before": "/** 平博 league.gameCode 经 slugify 后的别名 → catalog code */\nconst PB_SLUG_ALIASES: Record<string, string> = {\n  \"cs\": \"cs2\",\n  \"cs2\": \"cs2\",\n  \"cs-go\": \"cs2\",\n  \"csgo\": \"cs2\",\n  \"counter-strike\": \"cs2\",\n  \"counter-strike-2\": \"cs2\",\n  \"valorant\": \"valorant\",\n  \"lol\": \"lol\",\n  \"league-of-legends\": \"lol\",\n  \"dota2\": \"dota2\",\n  \"dota-2\": \"dota2\",\n  \"kog\": \"kog\",\n  \"king-of-glory\": \"kog\",\n  \"kings-of-glory\": \"kog\",\n  \"honor-of-kings\": \"kog\",\n};\n\n/** A8 Stake `_Q` SourceGameID aliases. */\nconst STAKE_A8_ALIASES: Record<string, string> = {\n  CS2: \"cs2\",\n  LOL: \"lol\",\n  GOK: \"kog\",\n  Dota2: \"dota2\",\n  Valorant: \"valorant\",\n};\n\n/** Polymarket Gamma events series_slug / tag slug aliases. */\nconst POLYMARKET_ALIASES: Record<string, string> = {\n  \"counter-strike\": \"cs2\",\n  \"counter-strike-2\": \"cs2\",\n  \"cs2\": \"cs2\",\n  \"league-of-legends\": \"lol\",\n  \"lol\": \"lol\",\n  \"dota-2\": \"dota2\",\n  \"dota2\": \"dota2\",\n  \"honor-of-kings\": \"kog\",\n  \"king-of-glory\": \"kog\",\n  \"kings-of-glory\": \"kog\",\n  \"hok\": \"kog\",\n  \"kog\": \"kog\",\n  \"valorant\": \"valorant\",\n};\n\n/** Limitless metadata.esportTitle → catalog code */\nconst LIMITLESS_ALIASES: Record<string, string> = {\n  \"cs2\": \"cs2\",\n  \"cs-go\": \"cs2\",\n  \"csgo\": \"cs2\",\n  \"counter-strike\": \"cs2\",\n  \"counter-strike-2\": \"cs2\",\n  \"lol\": \"lol\",\n  \"league-of-legends\": \"lol\",\n  \"dota-2\": \"dota2\",\n  \"dota2\": \"dota2\",\n  \"valorant\": \"valorant\",\n};\n\n/** SXBet SourceGameID / league alias → catalog code */\nconst SXBET_ALIASES: Record<string, string> = {\n  \"cs2\": \"cs2\",\n  \"lol\": \"lol\",\n  \"dota2\": \"dota2\",\n  \"dota-2\": \"dota2\",\n  \"valorant\": \"valorant\",\n  \"kog\": \"kog\",\n};\n\n/** Azuro sportId / slug → catalog code */\nconst AZURO_ALIASES: Record<string, string> = {\n  \"1061\": \"cs2\",\n  \"1002\": \"lol\",\n  \"1000\": \"dota2\",\n  \"cs2\": \"cs2\",\n  \"lol\": \"lol\",\n  \"dota-2\": \"dota2\",\n  \"dota2\": \"dota2\",\n};\n\n/** TF 王者荣耀：A8 采集用 14；旧 probe 曾记 43 */\nconst TF_GAME_ALIASES: Record<number, string> = {\n  43: \"kog\",\n};\n\nfunction listGames(): GameEntry[] {",
+        "after": "function listGames(): GameEntry[] {"
+      },
+      {
+        "before": "  if (platform === \"PB\") {\n    const alias = PB_SLUG_ALIASES[id];\n    if (alias)\n      return alias;\n  }\n  if (platform === \"Stake\") {\n    const alias = STAKE_A8_ALIASES[id];\n    if (alias)\n      return alias;\n  }\n  if (platform === \"Polymarket\") {\n    const alias = POLYMARKET_ALIASES[id.toLowerCase()];\n    if (alias)\n      return alias;\n  }\n  if (platform === \"Limitless\") {\n    const alias = LIMITLESS_ALIASES[id.toLowerCase()];\n    if (alias)\n      return alias;\n  }\n  if (platform === \"SXBet\") {\n    const alias = SXBET_ALIASES[id.toLowerCase()];\n    if (alias)\n      return alias;\n  }\n  if (platform === \"Azuro\") {\n    const alias = AZURO_ALIASES[id.toLowerCase()];\n    if (alias)\n      return alias;\n  }\n  if (platform === \"TF\") {\n    const alias = TF_GAME_ALIASES[id as unknown as number];\n    if (alias)\n      return alias;\n  }\n",
+        "after": "  const alias = getConfiguredGameAlias(platform, id);\n  if (alias)\n    return alias;\n"
+      }
+    ],
+    "packages/venue-adapter/ray/a8Collect.ts": [
+      {
+        "before": "export const RAY_A8_COLLECT = {",
+        "after": "import { getConfiguredPlatformGameIds } from \"@changmen/shared/catalog/game_catalog\";\n\nexport const RAY_A8_COLLECT = {"
+      },
+      {
+        "before": "games: [\"70\", \"151\", \"140\", \"74\", \"37197927\"],",
+        "after": "games: getConfiguredPlatformGameIds(\"RAY\"),"
+      }
+    ]
+  }
+}

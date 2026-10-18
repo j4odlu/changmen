@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { handleRayRealtimeMessage } from "./collect";
+import { RAY_A8_COLLECT } from "./a8Collect";
 
 const isVenueOdds = vi.hoisted(() => vi.fn());
 const saveVenueOdds = vi.hoisted(() => vi.fn());
@@ -10,6 +11,9 @@ vi.mock("@changmen/client-core/bridge/oddsAccess", () => ({
 }));
 
 describe("handleRayRealtimeMessage", () => {
+  test("catalog-derived collector scope retains the original five games and order", () => {
+    expect(RAY_A8_COLLECT.games).toEqual(["70", "151", "140", "74", "37197927"]);
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });

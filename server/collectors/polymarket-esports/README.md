@@ -1,6 +1,18 @@
 # polymarket-esports (`@changmen/polymarket-esports-collector`)
 
-VPS 守护进程：Polymarket **Gamma + CLOB /prices discovery（唯一权威）** → `platform_*` + 本机 `polymarket_market_index.json`。解析见本包 `parse.js` / `api.js`。
+VPS 守护进程：Polymarket **Gamma + CLOB /prices discovery（唯一权威）** → `platform_*` + 本机 `polymarket_market_index.json`。解析见本包 `parse.ts` / `api.ts`。
+
+## TypeScript 实现与兼容入口
+
+`index.ts`、`api.ts`、`parse.ts`、`loop.ts`、`market_index.ts` 是实现源码，`types.ts` 定义采集、写库和索引契约。Node 24 原生擦除类型运行，无需生成 dist；`tsconfig.json` 启用 strict、noEmit、erasableSyntaxOnly。
+
+同名 `.js` 仅转发到 `.ts`，保留 PM2 的 `index.js`、包 exports 和旧导入路径，因此部署与回滚仍使用原启动配置。上线须连同 TS 源码发布。
+
+根目录执行 `npm run typecheck --workspace=@changmen/polymarket-esports-collector` 可单独检查类型；`npm test --workspace=@changmen/polymarket-esports-collector` 先检查类型，再跑解析、API、写库安全、索引与迁移测试，也被根目录后端测试链调用。数据库采集接口统一由 `server/db/collector_contracts.d.ts` 维护，`legacy-modules.d.ts` 仅引用它；storage 在自身 JS 文件旁维护声明，两套 PM 采集器共用。使用方无需额外把声明加入自己的 tsconfig；迁移测试会单独编译包的公开导出验证这一点。
+
+`typescript-runtime-baseline.json` 记录本次迁移前（已集中游戏配置）的运行代码摘要。迁移测试核对类型擦除后的实现与旧实现一致，并验证 JS 转发和原生 TS 启动。它不替代独立的经典 FOK 固定基线。
+
+TS 开发依赖与 API 类型依赖在 workspace 记录中声明。`scripts/verification/pm-collector-typescript-metadata.mjs` 与 `pm-sports-typescript-metadata.mjs` 按阶段精确逆转已登记的增量，继续核对完整历史锁文件。额外改动、SDK 漂移和历史基线替换仍会失败。
 
 **职责一句话**：只有 VPS 写 Polymarket 电竞库；浏览器只吃 Index → Market WS → fo（可经 VPS 或直连官网；**不**镜像列表 discovery）。
 

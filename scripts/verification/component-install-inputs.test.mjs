@@ -7,7 +7,10 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 it("reports real frontend/backend/RDS declarations without claiming installation isolation", () => {
   const report = inspectComponentInstallInputs(root);
   expect(report.violations).toEqual([]); expect(report.profiles.frontend.workspaces).toHaveLength(7);
-  expect(report.profiles.backend.workspaces).toHaveLength(15); expect(report.profiles.rds.workspaces).toHaveLength(4);
+  expect(report.profiles.backend.workspaces).toHaveLength(15);
+  expect(report.profiles.rds.workspaces).toEqual([
+    "@changmen/api-contract", "@changmen/db", "@changmen/runtime-tooling", "@changmen/shared", "@changmen/storage",
+  ]);
   expect(report.profiles.backend.workspaces).not.toContain("@changmen/venue-adapter");
   expect(report.frontendBackendEdges).toEqual([]); expect(report.frontendDeclarationsIsolated).toBe(true);
   expect(report.profiles.frontend.build.directExternalPackages).toContain("vite");
@@ -90,7 +93,9 @@ it("terminates local dependency cycles and retains a reviewable dependency chain
   const packages = readInstallWorkspaces(root);
   packages.get("@changmen/shared").pkg.dependencies = { "@changmen/db": "file:../../server/db" };
   const report = declaredInstallClosure(root, packages, "@changmen/db");
-  expect(report.workspaces).toHaveLength(4);
+  expect(report.workspaces).toEqual([
+    "@changmen/api-contract", "@changmen/db", "@changmen/runtime-tooling", "@changmen/shared", "@changmen/storage",
+  ]);
   expect(report.edges.some(edge => edge.via.join(" -> ") === "@changmen/db -> @changmen/shared -> @changmen/db")).toBe(true);
 });
 for (const [name, edit] of [

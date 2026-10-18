@@ -1,0 +1,11 @@
+{
+  "description": "Runtime SHA256 of pre-TypeScript collector implementations, after game catalog centralization. Type erasure must preserve these hashes; this does not replace the FOK baseline.",
+  "compiler": "6.0.3",
+  "hashes": {
+    "api": "aa1743e31c735e47abee5355deefb1080c5cca9ee703a9e013c68d2da1753a3d",
+    "parse": "dd215cddd6b31a8967a0a94c6313467d907765870e26adf175fd0c4e1b36e9f0",
+    "loop": "07d3ac9070b8830fbbdc8964ab0cf33e9d95856c847d9368a211e25f4f292659",
+    "market_index": "51822b3fcc1bcefa4293ddf037cf4a6e823d46aed310a00a28621d15e5f46291",
+    "index": "18aa4889219cdc4347e9cb543cdfc9cf4b2298092efc4faed16ebf18cfedcffc"
+  }
+}

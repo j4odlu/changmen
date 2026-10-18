@@ -14,7 +14,7 @@ function devBrowserSameOrigin(): string {
 function hkRelayOriginFromEnv(): string {
   if (typeof import.meta === "undefined")
     return "";
-  const env = import.meta.env as Record<string, string | undefined>;
+  const env = (import.meta.env ?? {}) as Record<string, string | undefined>;
   return String(env.VITE_HK_RELAY_ORIGIN || env.VITE_PM_HK_RELAY_ORIGIN || "").trim().replace(/\/+$/, "");
 }
 

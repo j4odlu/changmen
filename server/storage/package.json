@@ -20,6 +20,7 @@
     "./sxbet_market_index.js": "./sxbet_market_index.js"
   },
   "dependencies": {
+    "@changmen/api-contract": "file:../../packages/api-contract",
     "dotenv": "^17.4.2",
     "@changmen/shared": "file:../../packages/shared",
     "@changmen/runtime-tooling": "file:../../devtools/runtime-tooling"

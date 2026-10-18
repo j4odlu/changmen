@@ -1,11 +1,67 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import fs from "node:fs";
+import vm from "node:vm";
+import ts from "typescript";
+import { getConfiguredPlatformDiscovery } from "@changmen/shared/catalog/game_catalog";
 import {
   gammaEventToSportMessage,
   parseTeamsFromGammaTitle,
+  refreshGammaEventIndex,
   withGammaSportIdentity,
 } from "./gamma_map.js";
 import { buildPmSportSnapshot } from "./parse_sport.js";
+
+test("Gamma score index uses the same configured sport keys and series fallback as discovery", async () => {
+  const originalFetch = globalThis.fetch;
+  const config = getConfiguredPlatformDiscovery("Polymarket");
+  const requested = [];
+  try {
+    globalThis.fetch = async (url) => {
+      const parsed = new URL(url);
+      if (parsed.pathname === "/sports") return Response.json([
+        ...config.sportKeys.map((sport, index) => ({ sport, series: `configured-${index}` })),
+        { sport: "unconfigured-fixture", series: "must-not-collect" },
+      ]);
+      requested.push(parsed.searchParams.getAll("series_id"));
+      return Response.json({ events: [{ id: "event", slug: "lol-fixture", gameId: 123 }] });
+    };
+    const index = await refreshGammaEventIndex();
+    assert.deepEqual(requested, [config.sportKeys.map((_, index) => `configured-${index}`)]);
+    assert.equal(index.byGameId.get(123).id, "event");
+    requested.length = 0;
+    globalThis.fetch = async (url) => {
+      const parsed = new URL(url);
+      if (parsed.pathname === "/sports") return Response.json([]);
+      requested.push(parsed.searchParams.getAll("series_id"));
+      return Response.json({ events: [] });
+    };
+    await refreshGammaEventIndex();
+    assert.deepEqual(requested, [config.fallbackSeriesIds]);
+  }
+  finally { globalThis.fetch = originalFetch; }
+});
+
+test("Gamma score index consumes future configured scope without another game allowlist", async () => {
+  // Evaluate only this isolated JS module with the shared discovery boundary
+  // replaced; no service or credential module is executed.
+  const source = ts.transpileModule(fs.readFileSync(new URL("./gamma_map.ts", import.meta.url), "utf8"), {
+    compilerOptions: { target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.ESNext },
+  }).outputText
+    .replace(/^import \{ getConfiguredPlatformDiscovery \} from "@changmen\/shared\/catalog\/game_catalog";$/m, "")
+    .replace(/^export /gm, "");
+  const query = vm.runInNewContext(`(() => { ${source}; return refreshGammaEventIndex; })()`, {
+    getConfiguredPlatformDiscovery: () => ({ sportKeys: ["fixture-game"], fallbackSeriesIds: ["fixture-fallback"] }),
+    URLSearchParams, AbortSignal, console,
+    fetch: async (url) => {
+      const parsed = new URL(url);
+      if (parsed.pathname === "/sports") return Response.json([{ sport: "fixture-game", series: "fixture-series" }]);
+      assert.deepEqual(parsed.searchParams.getAll("series_id"), ["fixture-series"]);
+      return Response.json({ events: [{ id: "fixture-event", gameId: 456 }] });
+    },
+  });
+  assert.equal((await query()).byGameId.get(456).id, "fixture-event");
+});
 
 test("WS keeps its score and status while Gamma only supplies archive identity", () => {
   const msg = { gameId: 1711469, score: "000-000|1-1|Bo3", period: "3/3", live: true, status: "running" };

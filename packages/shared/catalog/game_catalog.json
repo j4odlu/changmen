@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "updatedAt": "2026-08-12",
+  "version": 4,
+  "updatedAt": "2026-10-18",
   "description": "电竞游戏类型。各平台 native id 经 code 对齐；sport=esport。体育联赛见 game_catalog_sports.json。",
   "games": [
     {
@@ -27,6 +27,70 @@
         "Azuro": "1061",
         "IM": "47",
         "XBet": "43"
+      },
+      "platformSettings": {
+        "PB": {
+          "aliases": [
+            "cs",
+            "cs2",
+            "cs-go",
+            "csgo",
+            "counter-strike",
+            "counter-strike-2"
+          ]
+        },
+        "Stake": {
+          "aliases": [
+            "CS2"
+          ]
+        },
+        "Polymarket": {
+          "aliases": [
+            "counter-strike",
+            "counter-strike-2",
+            "cs2"
+          ],
+          "caseInsensitiveAliases": true,
+          "collection": {
+            "order": 0,
+            "sportKeys": [
+              "cs2"
+            ],
+            "fallbackSeriesIds": [
+              "10310"
+            ],
+            "textPattern": "\\bcs2\\b|\\bcsgo\\b|counter[-\\s]?strike",
+            "textMatchOrder": 2
+          }
+        },
+        "Limitless": {
+          "aliases": [
+            "cs2",
+            "cs-go",
+            "csgo",
+            "counter-strike",
+            "counter-strike-2"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "SXBet": {
+          "aliases": [
+            "cs2"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "Azuro": {
+          "aliases": [
+            "1061",
+            "cs2"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "RAY": {
+          "collection": {
+            "order": 2
+          }
+        }
       }
     },
     {
@@ -49,6 +113,58 @@
         "PredictFun": "kog",
         "IM": "48",
         "XBet": "43"
+      },
+      "platformSettings": {
+        "PB": {
+          "aliases": [
+            "kog",
+            "king-of-glory",
+            "kings-of-glory",
+            "honor-of-kings"
+          ]
+        },
+        "Stake": {
+          "aliases": [
+            "GOK"
+          ]
+        },
+        "Polymarket": {
+          "aliases": [
+            "honor-of-kings",
+            "king-of-glory",
+            "kings-of-glory",
+            "hok",
+            "kog"
+          ],
+          "caseInsensitiveAliases": true,
+          "collection": {
+            "order": 3,
+            "sportKeys": [
+              "hok"
+            ],
+            "fallbackSeriesIds": [
+              "10434"
+            ],
+            "textPattern": "\\bhonor[-\\s]+of[-\\s]+kings\\b|\\bking[-\\s]+of[-\\s]+glory\\b|\\bkings[-\\s]+of[-\\s]+glory\\b|\\bhok\\b|\\bkog\\b|王者荣耀",
+            "textMatchOrder": 3
+          }
+        },
+        "SXBet": {
+          "aliases": [
+            "kog"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "TF": {
+          "aliases": [
+            "43"
+          ]
+        },
+        "RAY": {
+          "collection": {
+            "order": 3
+          }
+        }
       }
     },
     {
@@ -73,6 +189,52 @@
         "SXBet": "valorant",
         "IM": "65",
         "XBet": "43"
+      },
+      "platformSettings": {
+        "PB": {
+          "aliases": [
+            "valorant"
+          ]
+        },
+        "Stake": {
+          "aliases": [
+            "Valorant"
+          ]
+        },
+        "Polymarket": {
+          "aliases": [
+            "valorant"
+          ],
+          "caseInsensitiveAliases": true,
+          "collection": {
+            "order": 4,
+            "sportKeys": [
+              "val"
+            ],
+            "fallbackSeriesIds": [
+              "10369"
+            ],
+            "textPattern": "\\bvalorant\\b",
+            "textMatchOrder": 4
+          }
+        },
+        "Limitless": {
+          "aliases": [
+            "valorant"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "SXBet": {
+          "aliases": [
+            "valorant"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "RAY": {
+          "collection": {
+            "order": 4
+          }
+        }
       }
     },
     {
@@ -98,6 +260,62 @@
         "Azuro": "1002",
         "IM": "45",
         "XBet": "43"
+      },
+      "platformSettings": {
+        "PB": {
+          "aliases": [
+            "lol",
+            "league-of-legends"
+          ]
+        },
+        "Stake": {
+          "aliases": [
+            "LOL"
+          ]
+        },
+        "Polymarket": {
+          "aliases": [
+            "league-of-legends",
+            "lol"
+          ],
+          "caseInsensitiveAliases": true,
+          "collection": {
+            "order": 1,
+            "sportKeys": [
+              "lol"
+            ],
+            "fallbackSeriesIds": [
+              "10311"
+            ],
+            "textPattern": "\\bleague[-\\s]+of[-\\s]+legends\\b|\\blol\\b",
+            "textMatchOrder": 0
+          }
+        },
+        "Limitless": {
+          "aliases": [
+            "lol",
+            "league-of-legends"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "SXBet": {
+          "aliases": [
+            "lol"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "Azuro": {
+          "aliases": [
+            "1002",
+            "lol"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "RAY": {
+          "collection": {
+            "order": 0
+          }
+        }
       }
     },
     {
@@ -123,6 +341,64 @@
         "Azuro": "1000",
         "IM": "46",
         "XBet": "43"
+      },
+      "platformSettings": {
+        "PB": {
+          "aliases": [
+            "dota2",
+            "dota-2"
+          ]
+        },
+        "Stake": {
+          "aliases": [
+            "Dota2"
+          ]
+        },
+        "Polymarket": {
+          "aliases": [
+            "dota-2",
+            "dota2"
+          ],
+          "caseInsensitiveAliases": true,
+          "collection": {
+            "order": 2,
+            "sportKeys": [
+              "dota2"
+            ],
+            "fallbackSeriesIds": [
+              "10309"
+            ],
+            "textPattern": "\\bdota[-\\s]*2?\\b",
+            "textMatchOrder": 1
+          }
+        },
+        "Limitless": {
+          "aliases": [
+            "dota-2",
+            "dota2"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "SXBet": {
+          "aliases": [
+            "dota2",
+            "dota-2"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "Azuro": {
+          "aliases": [
+            "1000",
+            "dota-2",
+            "dota2"
+          ],
+          "caseInsensitiveAliases": true
+        },
+        "RAY": {
+          "collection": {
+            "order": 1
+          }
+        }
       }
     }
   ]

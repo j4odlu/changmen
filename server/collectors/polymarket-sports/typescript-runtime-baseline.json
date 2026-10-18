@@ -1,0 +1,15 @@
+{
+  "description": "Type-erased SHA256 of the accepted pre-migration score collector, including shared catalog wiring; the independent FOK baseline is unchanged.",
+  "compiler": "6.0.3",
+  "previousCommit": "84364793171244eca85378ef7bce3388f147b237",
+  "hashes": {
+    "index": "73193ecf7d8904dddcc9e39db206042652bbae80a1bf8d2e83d8b960fd19c05b",
+    "gamma_map": "49227577c9aa83532d15f53c0dd5992bf3b40b78e8fa00cc0b9321d9f33a4496",
+    "gamma_poll": "607b59a94eef36d560caa3f6c45a1e90c285b4e69264d9b59467e3a2ee03f17f",
+    "sport_state": "ebf35a2bf0a2bedd9b94ce41a9dd8457b8d5cc8e7ab21751a8c9f64f635cbd5f",
+    "resolve_match": "62f656c26d875a1d81f7aff4704c4301db25e2ff2f82a39fd555158aeb28fa1e",
+    "parse_sport": "c64a3ceac5b46e955c86a368b9638bceaf559fdbfcd1a0e9cd55c415ea664252",
+    "prematch_prices": "69495023edb5628b0596d23cd70c5ba76a642cdc381ad9d6bcaeb17af60528ea",
+    "broadcast_notify": "cef0931341bb256e0f3715feeb889fa380a9cfba0fc78d6b1b2f20ca93d16978"
+  }
+}

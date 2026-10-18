@@ -32,6 +32,7 @@ function vitest(label, args) {
 const STEPS = [
   ts("shared/catalog: market", "packages/shared/catalog/market_catalog_smoke.test.ts"),
   ts("shared/catalog: game", "packages/shared/catalog/game_catalog_smoke.test.ts"),
+  ts("shared/catalog: centralized game rules", "packages/shared/catalog/game_catalog_rules.smoke.test.ts"),
   ts("shared/catalog: sport", "packages/shared/catalog/sport_catalog_smoke.test.ts"),
   ts("shared/catalog: football_team_key", "packages/shared/catalog/football_team_key_smoke.test.ts"),
   ts("shared: im_parse", "packages/shared/im_parse_smoke.test.ts"),

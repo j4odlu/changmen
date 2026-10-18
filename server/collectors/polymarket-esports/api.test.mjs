@@ -12,6 +12,42 @@ import {
 } from "./api.js";
 
 describe("polymarket-esports api helpers", () => {
+  it("uses configured sport keys and retains the original series fallback", async () => {
+    const realFetch = globalThis.fetch;
+    try {
+      for (const unavailable of [false, true]) {
+        resetPolymarketEsportsApiCachesForTests();
+        const eventUrls = [];
+        globalThis.fetch = async (url) => {
+          const path = String(url);
+          if (path.endsWith("/sports")) {
+            if (unavailable)
+              throw new Error("metadata unavailable");
+            return { ok: true, json: async () => [
+              ...["cs2", "lol", "dota2", "hok", "val"].map(sport => ({ sport, series: `live-${sport}` })),
+              { sport: "nba", series: "must-not-collect" },
+            ] };
+          }
+          if (path.endsWith("/sports/market-types"))
+            return { ok: true, json: async () => ["moneyline", "child_moneyline"] };
+          assert.ok(path.includes("/events/keyset"));
+          eventUrls.push(new URL(path));
+          return { ok: true, json: async () => ({ events: [] }) };
+        };
+        await fetchPolymarketEsportsMarkets();
+        assert.ok(eventUrls.length > 0);
+        for (const url of eventUrls) {
+          assert.deepEqual(url.searchParams.getAll("series_id"), unavailable
+            ? ["10310", "10311", "10309", "10434", "10369"]
+            : ["live-cs2", "live-lol", "live-dota2", "live-hok", "live-val"]);
+        }
+      }
+    }
+    finally {
+      globalThis.fetch = realFetch;
+      resetPolymarketEsportsApiCachesForTests();
+    }
+  });
   it("loads official token winners without using Gamma prices or token order", async () => {
     const realFetch = globalThis.fetch;
     const requests = [];

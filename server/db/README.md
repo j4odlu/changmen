@@ -14,6 +14,8 @@ PostgreSQL / RDS **数据层唯一入口**。业务代码只 `import` 本包，�
 
 ## 目录
 
+[changmen 扩展] `collector_contracts.d.ts` 维护现有 JS facade 中采集器使用的接口子集，由采集器显式引用。比分及历史价结构复用 `@changmen/api-contract`；这份声明不代表整个 DB 包已迁移为 TypeScript。
+
 | 路径 | 内容 |
 |------|------|
 | `index.js` | 对外 API（re-export impl + 工具） |

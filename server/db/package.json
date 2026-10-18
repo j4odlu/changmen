@@ -29,6 +29,7 @@
     "test": "vitest run && node --import ../../scripts/testing/offline-env.mjs --test football_orders.smoke.test.mjs pod_bet_execution.smoke.test.mjs sport_matcher_tables.smoke.test.mjs"
   },
   "dependencies": {
+    "@changmen/api-contract": "file:../../packages/api-contract",
     "@changmen/storage": "file:../storage",
     "pg": "^8.21.0",
     "@changmen/shared": "file:../../packages/shared"

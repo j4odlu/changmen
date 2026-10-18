@@ -86,6 +86,28 @@ sport_catalog（运动）
 |------|------|------|------|
 | `sport` | string | `"esport"` | 指向 `sport_catalog.code`；旧条目缺省时视为电竞 |
 
+### 3.2a 场馆游戏配置集中（2026-10-18）
+
+[changmen 扩展] `game_catalog.json` 的 `platforms` 继续保存各场馆原生游戏 ID；新增 `platformSettings` 保存同一游戏的场馆别名及采集发现参数。浏览器与 Node 共用 `game_catalog_rules.ts`，保留 `.js` 转发入口以兼容后端路由编译，并通过已有 `@changmen/shared/catalog/game_catalog` 入口导出；原查询接口保持兼容，不新增 package exports。
+
+| 字段（`platformSettings.<场馆>` 下） | 用途 |
+| --- | --- |
+| `aliases` | 该游戏的场馆原始 ID/slug 别名 |
+| `caseInsensitiveAliases` | 别名是否忽略大小写；默认否，保留原场馆识别行为 |
+| `collection.order` | 采集列表顺序；未配置的游戏排在已有项之后 |
+| `collection.sportKeys` | PM `/sports` 发现键；缺省使用 `platforms` 中的 ID |
+| `collection.fallbackSeriesIds` | PM `/sports` 不可用时的 series 兜底 |
+| `collection.textPattern` | 场馆市场元数据的游戏识别正则（忽略大小写） |
+| `collection.textMatchOrder` | 文本同时命中多个游戏时的识别优先级 |
+
+RAY 浏览器及探针凭证对象的 `games` 均从公共配置生成；PM 赛事 collector 的 sport keys、series 兜底和游戏识别，以及 `polymarket-sports/gamma_map.js` 比分身份索引的 sport keys、series 兜底，也从公共配置生成。公共查询原有 PB、Stake、PM、Limitless、SXBet、Azuro、TF 别名已迁入同一 JSON。
+
+本次迁移保持原五个游戏及各场馆识别结果，未接入篮球。`AGGREGATE_GAME_CODES` 对原服务端 active-game 查询的作用保持；RAY/PM 静态采集范围不新增环境变量门控。游戏采集只读取本文件的电竞条目，`game_catalog_sports.json` 的独立体育类目不进入该范围。盘口选盘规则仍由 `market_catalog.json` 管理。
+
+改配置后需重新构建前端、重启对应 Node collector。新增类目应先补原生 ID、发现参数与文本识别规则，再按 `market_catalog` 核对盘口；无需在 RAY/PM 适配器另写游戏白名单。
+
+FOK 固定基线未替换。`scripts/verification/game-catalog-centralization-increments.json` 精确登记配置迁移，继续全文核对原受保护模块，并校验新配置及公共规则实现。后续改变游戏范围时须同步审查该精确迁移契约，不能直接更新原 VPS baseline 或豁免目录。
+
 ### 3.3 棒球预留条目（阶段 B2 写入）
 
 ```json

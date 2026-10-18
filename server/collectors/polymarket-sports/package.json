@@ -11,11 +11,19 @@
   },
   "scripts": {
     "start": "node index.js",
-    "test": "node --test parse_sport.test.mjs gamma_map.test.mjs sport_state.test.mjs gamma_poll.test.mjs prematch_prices.test.mjs"
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "npm run typecheck && node --test parse_sport.test.mjs gamma_map.test.mjs sport_state.test.mjs gamma_poll.test.mjs prematch_prices.test.mjs typescript-migration.test.mjs"
   },
   "dependencies": {
+    "@changmen/api-contract": "file:../../../packages/api-contract",
     "@changmen/db": "file:../../db",
+    "@changmen/shared": "file:../../../packages/shared",
     "@changmen/storage": "file:../../storage",
     "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/ws": "^8.18.1",
+    "typescript": "6.0.3"
   }
 }

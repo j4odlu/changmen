@@ -8,10 +8,11 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { gitSource, moduleTokens } from "./fok-exact-boundaries.mjs";
 import { restorePmSourceIsolationMetadata } from "./pm-source-isolation-metadata.mjs";
+import { restorePmSportsTypeScriptSource } from "./pm-sports-typescript-boundary.mjs";
 
 const baseline = "a233e20534395b31401828e754432407b109053d";
 const pm = "packages/venue-adapter/polymarket/";
-const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const read = file => restorePmSportsTypeScriptSource(file, fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n"));
 const online = file => gitSource(baseline, file).replaceAll("\r\n", "\n");
 
 const parserFile = "server/collectors/polymarket-sports/parse_sport.js";

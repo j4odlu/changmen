@@ -32,12 +32,18 @@ wss://sports-api.polymarket.com/ws
 
 | 文件 | 职责 |
 |------|------|
-| `index.js` | WS 连接、重连、主循环 |
-| `gamma_map.js` | Gamma event 索引 |
-| `gamma_poll.js` | WS 状态写入、Gamma 状态补充、独立历史价轮询 |
-| `sport_state.js` | 来源优先级恢复、按比赛串行写入和去重 |
-| `resolve_match.js` | `gameId` / slug → `client_match_id` |
-| `parse_sport.js` | Sports WS 消息解析 |
+| `index.ts` | WS 连接、重连、主循环 |
+| `gamma_map.ts` | Gamma event 索引，游戏范围读取共享 catalog |
+| `gamma_poll.ts` | WS 状态写入、Gamma 状态补充、独立历史价轮询 |
+| `sport_state.ts` | 来源优先级恢复、按比赛串行写入和去重 |
+| `resolve_match.ts` | `gameId` / slug → `client_match_id` |
+| `parse_sport.ts` | Sports WS 消息解析 |
+| `prematch_prices.ts` | 赛前历史价查询与缓存 |
+| `broadcast_notify.ts` | 写库后广播通知 |
+
+[changmen 扩展] 8 个实现使用 strict TypeScript；Node 24 原生擦除类型，不生成另一套构建产物。对应 `.js` 保留为兼容入口，PM2 仍启动 `index.js`。`types.ts` 描述外部消息与本地状态；数据库采集接口统一引用 `server/db/collector_contracts.d.ts`，存储接口声明由 `server/storage` 维护，两套 PM 采集器共用。
+
+验证：仓库根 `npm run typecheck --workspace=@changmen/polymarket-sports`；`npm test --workspace=@changmen/polymarket-sports` 包含原有行为回归、全部实现的类型擦除比对、独立 strict 使用方及隔离的原生启动/WS/写库/广播测试。经典 FOK 校验仍比较固定历史完整源码；仅在完整运行代码一致后还原迁移前源码，不替换历史基线。
 
 探针：`scripts/probe-sports-ws.mjs`、`scripts/compare-ws-gamma.mjs`。
 

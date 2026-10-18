@@ -9,7 +9,7 @@ it.each(["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"])("real automati
   assert.equal(result.finalRows.length, 4);
   assert.equal(result.manualRows.length, 19);
   assert.deepEqual(result.historicalManualRows.map(row => row.name), ["low balance", "account filter", "muted map", "prematch blocked"]);
-});
+}, 30_000); // Historical transpilation exceeded the default 5 seconds on the shared CI runner.
 
 it("real GTC state preserves seeded FOK gates, ignores invalid fills and counts late fills once", () => {
   assert.equal(runGtcStateFixture().gtcCount, 1);

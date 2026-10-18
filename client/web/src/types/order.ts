@@ -48,6 +48,8 @@ export interface OrderRow {
   PmShares?: number;
   /** CLOB trade.price / 成交概率价（0–1）；不含手续费 */
   PmFillPrice?: number;
+  /** [changmen 扩展] 拒单原始签单限价；与成交价分开。 */
+  PmSubmittedPrice?: number;
   /** 含手续费全成本 USDC（名义 + fee）；剩余敞口随卖出扣减 */
   PmStakeUsdc?: number;
   /** [changmen 扩展] 买单撮合手续费 USDC */

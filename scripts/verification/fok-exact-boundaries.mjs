@@ -17,6 +17,7 @@ import { restoreAccountPersistenceSource } from "./account-persistence-boundary.
 import { restoreA8MakeupSource } from "./a8-makeup-boundary.mjs";
 import { restoreGameCatalogCentralization } from "./game-catalog-centralization-boundary.mjs";
 import { restoreClientCoreNodeEnv } from "./client-core-node-env-boundary.mjs";
+import { restorePmRejectDisplaySource } from "./pm-reject-display-boundary.mjs";
 
 export const notificationCommit = "23f2846bee1ff0a91811f49f9a5d5ac2d78fccdf";
 const root = "client/web/src/stores/betting/autoBet/";
@@ -118,6 +119,7 @@ function restoreGateway(source) {
 export function verifyProtectedSource(file, current, original, readSource = target => fs.readFileSync(target, "utf8"), baselineRead) {
   // [changmen 扩展] Match the existing manifest/hash line-ending normalization on direct callers too.
   current = normalize(current);
+  current = restorePmRejectDisplaySource(file, current);
   const nodeEnvSource = restoreClientCoreNodeEnv(file, current, replaceExact);
   const nodeEnvRestored = nodeEnvSource !== current;
   current = nodeEnvSource;

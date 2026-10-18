@@ -1,5 +1,7 @@
 import { expect, it } from "vitest";
 import { mergePolymarketProviderSave } from "./save_pm.js";
+import { rowToOrder } from "./dto.js";
+import { pmSubmissionFromResult, validatePmSubmission } from "@changmen/shared/pm_submission";
 const snapshot = { orderId: "original", accountId: 317, makerAmount: "14930000", stakeUsdc: 14.93, submittedAt: 1790697330729 };
 it("restores reject principal and repeated stale sync cannot inflate it or add fees", () => {
   const old = { betMoney: 790.6, pmStakeUsdc: 118, pmOrigin: "changmen" };
@@ -19,4 +21,34 @@ it("real fill keeps the actual all-in cost", () => {
   const actual = mergePolymarketProviderSave({}, prev, incoming, "changmen", { ...prev, ...incoming }, 0, 101);
   expect(actual.bet_money).toBe(101);
   expect(actual.raw.pmFeeUsdc).toBe(0.1);
+});
+
+it("keeps signed quantities as optional display evidence through reject saves and stale sync", () => {
+  const original = pmSubmissionFromResult({ orderId: "original", beginTime: snapshot.submittedAt,
+    request: { order: { side: "BUY", makerAmount: "14930000", takerAmount: "29860000", signature: "do-not-store" } } }, 317);
+  expect(original).toEqual({ ...snapshot, takerAmount: "29860000" });
+  expect(validatePmSubmission(original, "original", 317)).toEqual(original);
+  const incoming = { orderId: "original", status: "reject", pmSubmission: original };
+  const saved = mergePolymarketProviderSave({}, {}, incoming, "changmen", incoming, 0, 0);
+  const synced = mergePolymarketProviderSave({ order_id: "original" }, saved.raw,
+    { orderId: "original", status: "reject" }, "changmen", saved.raw, 0, saved.bet_money);
+  const dto = rowToOrder({ order_id: "original", player_id: 317, provider: "Polymarket", status: "Reject", raw: synced.raw });
+  expect(dto.PmSubmittedPrice).toBe(0.5);
+  expect(dto.PmFillPrice).toBeUndefined();
+  expect(dto.PmShares).toBeUndefined();
+  expect(dto.pmSubmission).toBeUndefined();
+  expect(synced.bet_money).toBeCloseTo(14.93 * 6.7);
+});
+
+it("accepts old submission snapshots and never derives a price from mismatched or malformed evidence", () => {
+  expect(validatePmSubmission(snapshot, "original", 317)).toEqual(snapshot);
+  const row = { order_id: "original", player_id: 317, provider: "Polymarket", status: "Reject" };
+  for (const value of [snapshot, { ...snapshot, takerAmount: "0" }, { ...snapshot, takerAmount: "NaN" },
+    { ...snapshot, takerAmount: "1000000" }, { ...snapshot, orderId: "another", takerAmount: "29860000" },
+    { ...snapshot, accountId: 318, takerAmount: "29860000" }])
+    expect(rowToOrder({ ...row, raw: { pmSubmission: value } }).PmSubmittedPrice).toBeUndefined();
+  const raw = { pmSubmission: { ...snapshot, takerAmount: "29860000" } };
+  expect(rowToOrder({ ...row, status: "Win", raw }).PmSubmittedPrice).toBeUndefined();
+  expect(rowToOrder({ ...row, raw: { ...raw, pmSide: "sell" } }).PmSubmittedPrice).toBeUndefined();
+  expect(rowToOrder({ ...row, raw: { ...raw, pmGtcExecutionId: "gtc" } }).PmSubmittedPrice).toBeUndefined();
 });

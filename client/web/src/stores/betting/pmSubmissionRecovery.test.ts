@@ -76,6 +76,14 @@ describe("PM original submission recovery", () => {
       expect(call[1][0].betMoney).toBeCloseTo(100.031);
   });
 
+  it("retains submitted price evidence when a pending reject completes after reload", async () => {
+    const original = { ...snapshot, takerAmount: "29860000" };
+    const order = new LoseOrder({ ...legacy().toJSON(), pendingPmSubmission: original });
+    await resume(new LoseOrder(order.toJSON()));
+    expect(mocks.save.mock.calls[0][1][0].pmSubmission).toMatchObject(original);
+    expect(mocks.save.mock.calls[0][1][0].betMoney).toBeCloseTo(100.031);
+  });
+
   it.each(["missing", "network", "wrong-account", "wrong-order"])("%s evidence never writes inferred 118/791", async (kind) => {
     if (kind === "network") mocks.recover.mockRejectedValue(new Error("offline"));
     if (kind === "wrong-account") mocks.recover.mockResolvedValue({ ...snapshot, accountId: 1 });

@@ -8,6 +8,7 @@ import {
   pmOddsTextFromClobPrice,
   pmOrderDisplayPriceText,
   pmOrderFillPriceText,
+  pmOrderSubmissionQuote,
   pmOrderOddsText,
   pmOrderPriceLabel,
   pmOrderProfitDisplayCny,
@@ -36,6 +37,33 @@ const pmBuy: OrderRow = {
 };
 
 describe("pmOrderDisplay", () => {
+  it("shows historical reject odds without inventing a fill price", () => {
+    const row: OrderRow = { Type: "Polymarket", Status: "Reject", Odds: 2.38, PmStakeUsdc: 9.33 };
+    expect(pmOrderSubmissionQuote(row)).toEqual({ priceText: "≈0.4202", oddsText: "2.380" });
+    expect(resolvePmFillPrice(row)).toBeNull();
+    expect(pmOrderFillPriceText(row)).toBeNull();
+    expect(pmOrderSharesText(row)).toBeNull();
+  });
+
+  it("uses original submission price instead of any fill field for rejects", () => {
+    expect(pmOrderSubmissionQuote({ Type: "Polymarket", Status: "reject", Odds: 2.38,
+      PmSubmittedPrice: 9330000 / 22214200, PmFillPrice: 0.41 }))
+      .toEqual({ priceText: "0.42", oddsText: "2.380" });
+    expect(pmOrderSubmissionQuote({ Type: "Polymarket", Status: "Reject", PmSubmittedPrice: 0.5 }))
+      .toEqual({ priceText: "0.5", oddsText: "2.000" });
+  });
+
+  it("does not fabricate missing or invalid reject quotes", () => {
+    expect(pmOrderSubmissionQuote({ Type: "Polymarket", Status: "Reject", Odds: 0,
+      PmSubmittedPrice: 1 })).toEqual({ priceText: "—", oddsText: "—" });
+  });
+
+  it("leaves filled, sell, GTC and other venue layouts unchanged", () => {
+    for (const row of [pmBuy, { ...pmBuy, Status: "Reject", PmSide: "sell" as const },
+      { ...pmBuy, Status: "Reject", PmGtcExecutionId: "gtc" }, { ...pmBuy, Type: "RAY", Status: "Reject" }])
+      expect(pmOrderSubmissionQuote(row)).toBeNull();
+  });
+
   it("detects PM rows for list layout (buy and sell)", () => {
     expect(isPmOrderListRow(pmBuy)).toBe(true);
     expect(isPmOrderListRow({ ...pmBuy, PmSide: "sell" })).toBe(true);

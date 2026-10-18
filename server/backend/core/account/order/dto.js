@@ -3,6 +3,7 @@
  * 不写库。由 order_store.js re-export，对外路径不变。
  */
 import { placeholderLinkFromCreateAt } from "@changmen/db";
+import { validatePmSubmission, pmMakerAmountUsdc } from "@changmen/shared/pm_submission";
 import { computePfHoldShares } from "../../integrations/predictfun/pf_fee.js";
 import { isPredictionSellForCount } from "./kinds.js";
 import { readPositionSellEvents } from "./position_events.js";
@@ -59,6 +60,12 @@ export function rowToOrder(r) {
   let betMoney = r.bet_money || 0;
   let money = r.money || 0;
   const pfHoldShares = resolvePfHoldSharesFromRaw(raw);
+  // [changmen 扩展] 拒单展示原始签单限价，不写入成交价，也不查历史日志。
+  const submission = r.provider === "Polymarket" && raw.pmSide !== "sell" && !raw.pmGtcExecutionId
+    && String(r.status).toLowerCase() === "reject"
+    ? validatePmSubmission(raw.pmSubmission, String(r.order_id), Number(r.player_id)) : null;
+  const submittedShares = submission?.takerAmount ? pmMakerAmountUsdc(submission.takerAmount) : null;
+  const submittedPrice = submission && submittedShares ? submission.stakeUsdc / submittedShares : undefined;
   // 按 provider 判卖单（对齐 kinds / order_store），避免 PF 买单误带 pmSide=sell 时清零盈亏
   if (isPredictionSellForCount({ provider: r.provider, raw }))
     money = 0;
@@ -91,6 +98,7 @@ export function rowToOrder(r) {
     Game: raw.game ? String(raw.game) : undefined,
     PmTokenId: raw.pmTokenId ? String(raw.pmTokenId) : undefined,
     PmShares: parseNum(raw.pmShares, 0) || undefined,
+    ...(submittedPrice != null ? { PmSubmittedPrice: submittedPrice } : {}),
     ...(raw.pmGtcExecutionId ? {
       PmGtcExecutionId: String(raw.pmGtcExecutionId),
       PmGtcBuyShares: raw.pmGtcBuyShares != null ? parseNum(raw.pmGtcBuyShares, 0) : undefined,

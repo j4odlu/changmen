@@ -345,6 +345,23 @@ export function pmOrderFillPriceText(row: OrderRow): string | null {
   return formatPolymarketApiDecimal(price);
 }
 
+/** [changmen 扩展] FOK 拒单只展示提交报价；旧订单价格由已保存赔率反算，明确标为约值。 */
+export function pmOrderSubmissionQuote(row: OrderRow): { priceText: string; oddsText: string } | null {
+  if (!isPmBuyOrderListRow(row) || row.PmGtcExecutionId
+    || String(normalizeOrderStatus(String(row.Status ?? ""))) !== "Reject")
+    return null;
+  const submittedPrice = Number(row.PmSubmittedPrice);
+  const hasPrice = Number.isFinite(submittedPrice) && submittedPrice > 0 && submittedPrice < 1;
+  const storedOdds = Number(row.Odds);
+  const hasOdds = Number.isFinite(storedOdds) && storedOdds > 1;
+  const odds = hasOdds ? storedOdds : hasPrice ? 1 / submittedPrice : null;
+  return {
+    priceText: hasPrice ? formatPolymarketApiDecimal(submittedPrice, 4)
+      : hasOdds ? `≈${formatPolymarketApiDecimal(1 / storedOdds, 4)}` : "—",
+    oddsText: odds == null ? "—" : toFixed(truncateOddsTo3(odds), 3),
+  };
+}
+
 /** 从未结算买单视角：把 fo 条目转成 0~1 盘口价（与盘口 getOdds 同源，优先 clobPrice） */
 export function clobPriceFromFoOddsEntry(entry: {
   clobPrice?: number;

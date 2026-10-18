@@ -1,0 +1,101 @@
+{
+  "description": "[changmen 扩展] 用户请求的 PM FOK 拒单提交报价展示；仅登记精确增量，原固定基线不变。",
+  "changes": {
+    "packages/shared/pm_submission.ts": {
+      "beforeSha": "f09ed81ee379bce368d1672545ed08339a0978e3c900ad8e86298e424b570a7d",
+      "increments": [
+        [
+          "  accountId: number;\n  makerAmount: string;\n  stakeUsdc: number;\n  submittedAt: number;\n",
+          "  accountId: number;\n  makerAmount: string;\n  /** [changmen 扩展] 原始 BUY 申请份额；可选，旧快照只有金额。仅供提交价展示。 */\n  takerAmount?: string;\n  stakeUsdc: number;\n  submittedAt: number;\n"
+        ],
+        [
+          "  const submittedAt = Number(result.pmSubmittedAt ?? result.beginTime);\n  const makerAddress = String(order.maker ?? \"\").trim().toLowerCase();\n  if (!orderId || (response.orderID && response.orderID !== orderId)\n    || String(order.side).toUpperCase() !== \"BUY\" || stakeUsdc == null\n",
+          "  const submittedAt = Number(result.pmSubmittedAt ?? result.beginTime);\n  const makerAddress = String(order.maker ?? \"\").trim().toLowerCase();\n  const takerAmount = pmMakerAmountUsdc(order.takerAmount);\n  if (!orderId || (response.orderID && response.orderID !== orderId)\n    || String(order.side).toUpperCase() !== \"BUY\" || stakeUsdc == null\n"
+        ],
+        [
+          "    return null;\n  return { orderId, accountId, makerAmount: String(order.makerAmount), stakeUsdc, submittedAt,\n    ...(result.pmSubmitUnknown === true ? { submitUnknown: true } : {}),\n    ...(/^0x[0-9a-f]{40}$/.test(makerAddress) ? { makerAddress } : {}) };\n",
+          "    return null;\n  return { orderId, accountId, makerAmount: String(order.makerAmount), stakeUsdc, submittedAt,\n    ...(takerAmount != null && takerAmount > stakeUsdc ? { takerAmount: String(order.takerAmount) } : {}),\n    ...(result.pmSubmitUnknown === true ? { submitUnknown: true } : {}),\n    ...(/^0x[0-9a-f]{40}$/.test(makerAddress) ? { makerAddress } : {}) };\n"
+        ],
+        [
+          "    orderId, beginTime: row.submittedAt,\n    pmSubmitUnknown: row.submitUnknown,\n    request: { order: { side: \"BUY\", makerAmount: row.makerAmount, maker: row.makerAddress } },\n  }, accountId);\n  return parsed && parsed.stakeUsdc === row.stakeUsdc ? parsed : null;\n",
+          "    orderId, beginTime: row.submittedAt,\n    pmSubmitUnknown: row.submitUnknown,\n    request: { order: { side: \"BUY\", makerAmount: row.makerAmount, takerAmount: row.takerAmount, maker: row.makerAddress } },\n  }, accountId);\n  return parsed && parsed.stakeUsdc === row.stakeUsdc ? parsed : null;\n"
+        ]
+      ]
+    },
+    "server/backend/core/account/order/dto.js": {
+      "beforeSha": "57115acaaad8ce6fc60069170122f285f85e7daa3de862e6e167a953e8a1ceb2",
+      "increments": [
+        [
+          " */\nimport { placeholderLinkFromCreateAt } from \"@changmen/db\";\nimport { computePfHoldShares } from \"../../integrations/predictfun/pf_fee.js\";\nimport { isPredictionSellForCount } from \"./kinds.js\";\n",
+          " */\nimport { placeholderLinkFromCreateAt } from \"@changmen/db\";\nimport { validatePmSubmission, pmMakerAmountUsdc } from \"@changmen/shared/pm_submission\";\nimport { computePfHoldShares } from \"../../integrations/predictfun/pf_fee.js\";\nimport { isPredictionSellForCount } from \"./kinds.js\";\n"
+        ],
+        [
+          "  let money = r.money || 0;\n  const pfHoldShares = resolvePfHoldSharesFromRaw(raw);\n  // 按 provider 判卖单（对齐 kinds / order_store），避免 PF 买单误带 pmSide=sell 时清零盈亏\n  if (isPredictionSellForCount({ provider: r.provider, raw }))\n",
+          "  let money = r.money || 0;\n  const pfHoldShares = resolvePfHoldSharesFromRaw(raw);\n  // [changmen 扩展] 拒单展示原始签单限价，不写入成交价，也不查历史日志。\n  const submission = r.provider === \"Polymarket\" && raw.pmSide !== \"sell\" && !raw.pmGtcExecutionId\n    && String(r.status).toLowerCase() === \"reject\"\n    ? validatePmSubmission(raw.pmSubmission, String(r.order_id), Number(r.player_id)) : null;\n  const submittedShares = submission?.takerAmount ? pmMakerAmountUsdc(submission.takerAmount) : null;\n  const submittedPrice = submission && submittedShares ? submission.stakeUsdc / submittedShares : undefined;\n  // 按 provider 判卖单（对齐 kinds / order_store），避免 PF 买单误带 pmSide=sell 时清零盈亏\n  if (isPredictionSellForCount({ provider: r.provider, raw }))\n"
+        ],
+        [
+          "    PmTokenId: raw.pmTokenId ? String(raw.pmTokenId) : undefined,\n    PmShares: parseNum(raw.pmShares, 0) || undefined,\n    ...(raw.pmGtcExecutionId ? {\n      PmGtcExecutionId: String(raw.pmGtcExecutionId),\n",
+          "    PmTokenId: raw.pmTokenId ? String(raw.pmTokenId) : undefined,\n    PmShares: parseNum(raw.pmShares, 0) || undefined,\n    ...(submittedPrice != null ? { PmSubmittedPrice: submittedPrice } : {}),\n    ...(raw.pmGtcExecutionId ? {\n      PmGtcExecutionId: String(raw.pmGtcExecutionId),\n"
+        ]
+      ]
+    },
+    "client/web/src/stores/account/betGateway.ts": {
+      "beforeSha": "ae5e13f8231c7953e9e6d395d4dac6317975372f06b083b3b6fc03e6f726de98",
+      "increments": [
+        [
+          "      pmSubmittedAt: task.pmSubmission?.submittedAt,\n      ...(task.pmSubmission ? { beginTime: task.pmSubmission.submittedAt,\n        request: { order: { side: \"BUY\", makerAmount: task.pmSubmission.makerAmount, maker: task.pmSubmission.makerAddress } } } : {}),\n      orderId: task.orderId,\n      pending: true,\n",
+          "      pmSubmittedAt: task.pmSubmission?.submittedAt,\n      ...(task.pmSubmission ? { beginTime: task.pmSubmission.submittedAt,\n        request: { order: { side: \"BUY\", makerAmount: task.pmSubmission.makerAmount, maker: task.pmSubmission.makerAddress,\n          ...(task.pmSubmission.takerAmount ? { takerAmount: task.pmSubmission.takerAmount } : {}) } } } : {}),\n      orderId: task.orderId,\n      pending: true,\n"
+        ]
+      ]
+    },
+    "client/web/src/stores/betting/loseOrderPmPending.ts": {
+      "beforeSha": "168fa82e816b2bf398287ffc649afab4e1e9f4f3690723513321207de7d75493",
+      "increments": [
+        [
+          "    observation: order.pendingObservation,\n    beginTime: submission?.submittedAt || order.pendingVenueSubmittedAt || order.createAt,\n    ...(submission ? { request: { order: { side: \"BUY\", makerAmount: submission.makerAmount } } } : {}),\n  });\n\n",
+          "    observation: order.pendingObservation,\n    beginTime: submission?.submittedAt || order.pendingVenueSubmittedAt || order.createAt,\n    ...(submission ? { request: { order: { side: \"BUY\", makerAmount: submission.makerAmount,\n      ...(submission.takerAmount ? { takerAmount: submission.takerAmount } : {}) } } } : {}),\n  });\n\n"
+        ]
+      ]
+    },
+    "client/web/src/shared/pmOrderDisplay.ts": {
+      "beforeSha": "d17b679954adae08cf94673c33c3a6d1df988773500ffb054f2db1e4325f8299",
+      "increments": [
+        [
+          "}\n\n/** 从未结算买单视角：把 fo 条目转成 0~1 盘口价（与盘口 getOdds 同源，优先 clobPrice） */\nexport function clobPriceFromFoOddsEntry(entry: {\n",
+          "}\n\n/** [changmen 扩展] FOK 拒单只展示提交报价；旧订单价格由已保存赔率反算，明确标为约值。 */\nexport function pmOrderSubmissionQuote(row: OrderRow): { priceText: string; oddsText: string } | null {\n  if (!isPmBuyOrderListRow(row) || row.PmGtcExecutionId\n    || String(normalizeOrderStatus(String(row.Status ?? \"\"))) !== \"Reject\")\n    return null;\n  const submittedPrice = Number(row.PmSubmittedPrice);\n  const hasPrice = Number.isFinite(submittedPrice) && submittedPrice > 0 && submittedPrice < 1;\n  const storedOdds = Number(row.Odds);\n  const hasOdds = Number.isFinite(storedOdds) && storedOdds > 1;\n  const odds = hasOdds ? storedOdds : hasPrice ? 1 / submittedPrice : null;\n  return {\n    priceText: hasPrice ? formatPolymarketApiDecimal(submittedPrice, 4)\n      : hasOdds ? `≈${formatPolymarketApiDecimal(1 / storedOdds, 4)}` : \"—\",\n    oddsText: odds == null ? \"—\" : toFixed(truncateOddsTo3(odds), 3),\n  };\n}\n\n/** 从未结算买单视角：把 fo 条目转成 0~1 盘口价（与盘口 getOdds 同源，优先 clobPrice） */\nexport function clobPriceFromFoOddsEntry(entry: {\n"
+        ]
+      ]
+    },
+    "client/web/src/components/order/OrderList.vue": {
+      "beforeSha": "5b0b24ada119a579a9b58aadd4a8e0772039a0ce784227865e2524414c163be5",
+      "increments": [
+        [
+          "  pmOddsTextFromClobPrice,\n  pmOrderFillPriceText,\n  pmOrderOddsText,\n  pmOrderPriceLabel,\n",
+          "  pmOddsTextFromClobPrice,\n  pmOrderFillPriceText,\n  pmOrderSubmissionQuote,\n  pmOrderOddsText,\n  pmOrderPriceLabel,\n"
+        ],
+        [
+          "              </template>\n              <template v-else>\n                <div class=\"order__profit-line\">\n                  <span v-if=\"pmOrderSharesText(block.row)\">份额：{{ pmOrderSharesText(block.row) }} </span>\n                  <span v-if=\"pmOrderFillPriceText(block.row)\">{{ pmOrderPriceLabel(block.row) }}：{{ pmOrderFillPriceText(block.row) }} </span>\n",
+          "              </template>\n              <template v-else>\n                <div v-if=\"pmOrderSubmissionQuote(block.row)\" class=\"order__profit-line\">\n                  <span>提交限价：{{ pmOrderSubmissionQuote(block.row)?.priceText }} </span>\n                  <span>提交赔率：<span class=\"order__odds\">{{ pmOrderSubmissionQuote(block.row)?.oddsText }}</span></span>\n                </div>\n                <div v-else class=\"order__profit-line\">\n                  <span v-if=\"pmOrderSharesText(block.row)\">份额：{{ pmOrderSharesText(block.row) }} </span>\n                  <span v-if=\"pmOrderFillPriceText(block.row)\">{{ pmOrderPriceLabel(block.row) }}：{{ pmOrderFillPriceText(block.row) }} </span>\n"
+        ]
+      ]
+    },
+    "server/backend/core/account/admin_orders.js": {
+      "beforeSha": "0214b9780e9eb36bcfcbd901d90529372994f69411cc19de16d3735540ad6f9d",
+      "increments": [
+        [
+          "    pmShares: o.PmShares,\n    pmFillPrice: o.PmFillPrice,\n    pmStakeUsdc: o.PmStakeUsdc,\n    pmFeeUsdc: o.PmFeeUsdc,\n",
+          "    pmShares: o.PmShares,\n    pmFillPrice: o.PmFillPrice,\n    ...(o.PmSubmittedPrice != null ? { pmSubmittedPrice: o.PmSubmittedPrice } : {}),\n    pmStakeUsdc: o.PmStakeUsdc,\n    pmFeeUsdc: o.PmFeeUsdc,\n"
+        ]
+      ]
+    },
+    "client/web/src/shared/adminOrderDisplay.ts": {
+      "beforeSha": "80947f25ec16c7f84a6b0073a26654de488e68455b4271e474055958cd00b3b2",
+      "increments": [
+        [
+          "    PmShares: row.pmShares,\n    PmFillPrice: row.pmFillPrice,\n    PmStakeUsdc: row.pmStakeUsdc,\n    PmFeeUsdc: row.pmFeeUsdc,\n",
+          "    PmShares: row.pmShares,\n    PmFillPrice: row.pmFillPrice,\n    ...(row.pmSubmittedPrice != null ? { PmSubmittedPrice: row.pmSubmittedPrice } : {}),\n    PmStakeUsdc: row.pmStakeUsdc,\n    PmFeeUsdc: row.pmFeeUsdc,\n"
+        ]
+      ]
+    }
+  }
+}

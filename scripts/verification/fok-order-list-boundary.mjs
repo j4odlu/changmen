@@ -1,8 +1,9 @@
 // [changmen 扩展] 完整保护已有 DisplayOnly 展示、操作边界及可选执行详情。
 import assert from "node:assert/strict";
+import { restorePmRejectDisplaySource } from "./pm-reject-display-boundary.mjs";
 
 export function checkOrdinaryOrderList(current, baseline) {
-  let source = current.replace(/\r\n/g, "\n");
+  let source = restorePmRejectDisplaySource("client/web/src/components/order/OrderList.vue", current.replace(/\r\n/g, "\n"));
   function replace(before, after = "") {
     assert.equal(source.split(before).length, 2, `exact OrderList boundary: ${before}`);
     source = source.replace(before, after);

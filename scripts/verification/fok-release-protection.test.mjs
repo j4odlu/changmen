@@ -24,7 +24,7 @@ function reject(script, file, change, expected) {
   expect(result.stderr).toContain(expected);
 }
 it("real core entry rejects a changed POST payload inside notification wrappers", () => {
-  reject("verify-fok-execution-parity.mjs", "client/web/src/stores/account/betGateway.ts", "source => source.replace(\"provider.betting(account, option)\", \"provider.betting(account, { ...option, betMoney: 0 })\")", "original source preserved");
+  reject("verify-fok-execution-parity.mjs", "client/web/src/stores/account/betGateway.ts", "source => source.replace(\"provider.betting(account, option)\", \"provider.betting(account, { ...option, betMoney: 0 })\")", "complete source outside reject display change");
 }, 30_000);
 it("real VPS entry rejects added makeup work instead of exempting a protected module", () => {
   reject("verify-vps-fok-baseline.mjs", "client/web/src/stores/betting/autoBet/arbMakeUpFromRejects.ts", "source => source + \"\\nvoid unexpectedMakeup();\\n\"", "unregistered protected source difference");
@@ -39,7 +39,7 @@ it("real core entry also checks the private GTC sell helper rather than deleting
   reject("verify-fok-execution-parity.mjs", "client/web/src/stores/account/pmManualSell.ts", "source => source.replace(\"ordersToSave.map(row =>\", \"ordersToSave.slice(1).map(row =>\")", "complete committed GTC persistence body");
 }, 30_000);
 it("real core entry rejects rolling the gateway back to the old unisolated notification behavior", () => {
-  reject("verify-fok-execution-parity.mjs", "client/web/src/stores/account/betGateway.ts", "source => execFileSync(\"git\", [\"show\", \"219535c8:client/web/src/stores/account/betGateway.ts\"], { encoding: \"utf8\" })", "exact fast FOK increment");
+  reject("verify-fok-execution-parity.mjs", "client/web/src/stores/account/betGateway.ts", "source => execFileSync(\"git\", [\"show\", \"219535c8:client/web/src/stores/account/betGateway.ts\"], { encoding: \"utf8\" })", "exact reject display increment");
 }, 30_000);
 it("real core entry rejects a native helper that switches the order table", () => {
   reject("verify-fok-execution-parity.mjs", "server/db/rds/native_orders.js", "source => source.replace('const table = \"orders\"', 'const table = \"orders_financial\"')", "complete native orders helper");

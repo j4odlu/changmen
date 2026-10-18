@@ -81,6 +81,7 @@ export function adminOrderToOrderRow(
     PmTokenId: row.pmTokenId,
     PmShares: row.pmShares,
     PmFillPrice: row.pmFillPrice,
+    ...(row.pmSubmittedPrice != null ? { PmSubmittedPrice: row.pmSubmittedPrice } : {}),
     PmStakeUsdc: row.pmStakeUsdc,
     PmFeeUsdc: row.pmFeeUsdc,
     PmConditionId: row.pmConditionId,

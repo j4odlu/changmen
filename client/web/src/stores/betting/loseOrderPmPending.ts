@@ -444,7 +444,8 @@ export async function tryResumePendingVenueMakeUp(
     pending: isPendingConfirmVenueProvider(account.provider),
     observation: order.pendingObservation,
     beginTime: submission?.submittedAt || order.pendingVenueSubmittedAt || order.createAt,
-    ...(submission ? { request: { order: { side: "BUY", makerAmount: submission.makerAmount } } } : {}),
+    ...(submission ? { request: { order: { side: "BUY", makerAmount: submission.makerAmount,
+      ...(submission.takerAmount ? { takerAmount: submission.takerAmount } : {}) } } } : {}),
   });
 
   if (order.pendingRegularReceipt) {

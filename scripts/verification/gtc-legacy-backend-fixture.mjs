@@ -6,6 +6,7 @@ import ts from "typescript";
 import { historicalMinimal } from "./historical-order-storage.mjs";
 const { minimalClientOrder } = historicalMinimal;
 import { gitSource } from "./fok-exact-boundaries.mjs";
+import { pmMakerAmountUsdc, validatePmSubmission } from "../../packages/shared/pm_submission.ts";
 export const legacyBusinessFiles = ["server/backend/core/orderModes/readOrders.js", "server/backend/core/orderModes/identity.js",
   ...["link", "group_home", "kinds", "date_key", "dto"].map(name => `server/backend/core/account/order/${name}.js`)];
 export function loadOfflineModule(file, source, require, globals = {}) {
@@ -42,6 +43,7 @@ export async function legacyBackendScenario(source, { repeatedGroup = false, reb
     const file = name === "readOrders" || name === "identity" ? `server/backend/core/orderModes/${name}.js` : `server/backend/core/account/order/${name}.js`;
     if (!cache.has(file)) cache.set(file, loadOfflineModule(file, source(file), target => {
       if (target === "@changmen/db") return db;
+      if (target === "@changmen/shared/pm_submission") return { pmMakerAmountUsdc, validatePmSubmission };
       if (target.endsWith("/order_store.js")) return { attachPlayerDisplayToClientOrders: async rows => rows };
       if (target.endsWith("/pf_fee.js")) return { computePfHoldShares: () => undefined };
       if (target.endsWith("/position_events.js")) return { readPositionSellEvents: () => [] };
@@ -113,6 +115,7 @@ export async function exactMonitorApiScenario(record, rawOrders, { failRead = fa
       if (target.endsWith("/player_ownership.js")) return { assertPlayerOwnedByUser: async (player, owner) => ({ ok: player === record.plan.playerId && owner === record.owner, player: { provider: "Polymarket" } }) };
       if (file.endsWith("/gtc/handler.js") && target === "./orders.js") return get("server/backend/core/orderModes/gtc/orders.js");
       if (target.endsWith("/order/dto.js")) return get("server/backend/core/account/order/dto.js");
+      if (target === "@changmen/shared/pm_submission") return { pmMakerAmountUsdc, validatePmSubmission };
       if (file.endsWith("/order/dto.js") && target === "./kinds.js") return get("server/backend/core/account/order/kinds.js");
       if (target.endsWith("/pf_fee.js")) return { computePfHoldShares: () => undefined };
       if (target.endsWith("/position_events.js")) return { readPositionSellEvents: () => [] };

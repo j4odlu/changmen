@@ -10,10 +10,12 @@ import { gitSource, manualBaselineAfterKnownCorrection, replaceExact, verifyProt
 import { checkOrdinaryOrderList } from "./fok-order-list-boundary.mjs";
 import { specializeFokSource } from "./fok-source-specialization.mjs";
 import { verifyPmPreflightContract } from "./pm-preflight-boundary.mjs";
+import { verifyPmRejectDisplayContract } from "./pm-reject-display-boundary.mjs";
 // [changmen 扩展] 永久固定到加入 GTC 配置前；需要本地 Git 保留此基线提交。
 const base = process.env.FOK_PARITY_BASELINE ?? "219535c8";
 assert(["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"].includes(base), "FOK protection accepts only the two original immutable baselines");
 fs.mkdirSync("output", { recursive: true });
+verifyPmRejectDisplayContract(file => fs.readFileSync(file, "utf8"));
 verifyGtcCompatibilityRetirement();
 const executePath = "client/web/src/stores/betting/autoBet/executeArbBet.ts";
 const normalizeSource = text => text.replace(/\r\n/g, "\n");

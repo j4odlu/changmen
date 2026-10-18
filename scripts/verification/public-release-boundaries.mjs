@@ -2,9 +2,11 @@
 import assert from 'node:assert/strict';
 import { gitSource, moduleTokens, replaceExact } from './fok-exact-boundaries.mjs';
 import { restorePmUnifiedPreflightSource } from './pm-unified-preflight-boundary.mjs';
+import { restorePmRejectDisplaySource } from './pm-reject-display-boundary.mjs';
 export const publicFiles = ['server/backend/core/esport-api/account_client_routes.ts','server/backend/core/esport-api/pm_pf_routes.ts','server/backend/core/account/admin_orders.js','client/web/src/shared/adminOrderDisplay.ts','client/web/src/types/extensionPrefs.ts'];
 // [changmen 扩展] 只恢复已经提交的 action 名单和 RAY 配置迁移，其余公共模块继续全文比较。
 export function restoreCommittedPublicAdditions(file, source) {
+  source = restorePmRejectDisplaySource(file, source);
   source = restorePmUnifiedPreflightSource(file, source);
   if (file.endsWith('pm_pf_routes.ts')) {
     if (source.includes('"Pm_GtcSyncResult"') || source.includes('"Pm_GtcReadResults"'))

@@ -3,6 +3,8 @@ export interface PmSubmission {
   orderId: string;
   accountId: number;
   makerAmount: string;
+  /** [changmen 扩展] 原始 BUY 申请份额；可选，旧快照只有金额。仅供提交价展示。 */
+  takerAmount?: string;
   stakeUsdc: number;
   submittedAt: number;
   /** 本地查询哈希未获受理证据时，不能应用已受理买单超时策略。 */
@@ -32,12 +34,14 @@ export function pmSubmissionFromResult(value: unknown, accountId: number): PmSub
   const stakeUsdc = pmMakerAmountUsdc(order.makerAmount);
   const submittedAt = Number(result.pmSubmittedAt ?? result.beginTime);
   const makerAddress = String(order.maker ?? "").trim().toLowerCase();
+  const takerAmount = pmMakerAmountUsdc(order.takerAmount);
   if (!orderId || (response.orderID && response.orderID !== orderId)
     || String(order.side).toUpperCase() !== "BUY" || stakeUsdc == null
     || !Number.isSafeInteger(accountId) || accountId <= 0
     || !Number.isSafeInteger(submittedAt) || submittedAt <= 0)
     return null;
   return { orderId, accountId, makerAmount: String(order.makerAmount), stakeUsdc, submittedAt,
+    ...(takerAmount != null && takerAmount > stakeUsdc ? { takerAmount: String(order.takerAmount) } : {}),
     ...(result.pmSubmitUnknown === true ? { submitUnknown: true } : {}),
     ...(/^0x[0-9a-f]{40}$/.test(makerAddress) ? { makerAddress } : {}) };
 }
@@ -51,7 +55,7 @@ export function validatePmSubmission(value: unknown, orderId: string, accountId:
   const parsed = pmSubmissionFromResult({
     orderId, beginTime: row.submittedAt,
     pmSubmitUnknown: row.submitUnknown,
-    request: { order: { side: "BUY", makerAmount: row.makerAmount, maker: row.makerAddress } },
+    request: { order: { side: "BUY", makerAmount: row.makerAmount, takerAmount: row.takerAmount, maker: row.makerAddress } },
   }, accountId);
   return parsed && parsed.stakeUsdc === row.stakeUsdc ? parsed : null;
 }

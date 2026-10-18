@@ -191,6 +191,7 @@ export interface AdminOrderRow {
   pmTokenId?: string;
   pmShares?: number;
   pmFillPrice?: number;
+  pmSubmittedPrice?: number;
   pmStakeUsdc?: number;
   pmFeeUsdc?: number;
   pmConditionId?: string;

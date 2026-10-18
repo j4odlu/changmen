@@ -5,12 +5,14 @@ import { createHash } from "node:crypto";
 import { restorePmLegacyFokRuntimeSource, verifyPmLegacyFokRuntimeContract } from "./pm-legacy-fok-runtime-boundary.mjs";
 import { restorePmWsShadowSource, verifyPmWsShadowContract } from "./pm-ws-shadow-boundary.mjs";
 import { restorePmBookSettingsSource, PM_BOOK_SETTINGS_TAB } from "./pm-book-settings-boundary.mjs";
+import { restorePmRejectDisplaySource } from "./pm-reject-display-boundary.mjs";
 const normalize = value => value.replaceAll("\r\n", "\n");
 const digest = value => createHash("sha256").update(normalize(value)).digest("hex");
 const text = normalize(fs.readFileSync(new URL("./pm-fast-fok-increments.json", import.meta.url), "utf8"));
 assert.equal(digest(text), "bc152fb0325876398eb67c187b21291b066e478bf2ed924b1b68dd68e9efbaab", "fast FOK reviewed increments stay fixed");
 const registered = JSON.parse(text);
 export function restorePmFastFokSource(file, source, required = false) {
+  source = restorePmRejectDisplaySource(file, source);
   source = restorePmBookSettingsSource(file, source, required && file === PM_BOOK_SETTINGS_TAB);
   source = restorePmWsShadowSource(file, source);
   source = restorePmLegacyFokRuntimeSource(file, source);

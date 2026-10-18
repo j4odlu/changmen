@@ -89,7 +89,7 @@ describe("supplementary FOK audit reads full relocated source without exemptions
   it("accepts only the precise notification wrapper and rejects changed POST arguments", () => {
     const file = "client/web/src/stores/account/betGateway.ts";
     expect(check([file]).differences).toEqual([file]);
-    expect(() => check([file], change(file, (source, matched) => matched ? source.replace("provider.betting(account, option)", "provider.betting(account, {})") : source))).toThrow("complete fixed-baseline module");
+    expect(() => check([file], change(file, (source, matched) => matched ? source.replace("provider.betting(account, option)", "provider.betting(account, {})") : source))).toThrow("complete source outside reject display change");
   });
   it("checks the exact DisplayOnly guard without allowing a wider exemption", () => {
     const file = "client/web/src/shared/orderLink.ts";

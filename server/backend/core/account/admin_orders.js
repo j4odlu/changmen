@@ -109,6 +109,7 @@ export function mapAdminOrderRow(r, startIndex = null) {
     pmTokenId: o.PmTokenId,
     pmShares: o.PmShares,
     pmFillPrice: o.PmFillPrice,
+    ...(o.PmSubmittedPrice != null ? { pmSubmittedPrice: o.PmSubmittedPrice } : {}),
     pmStakeUsdc: o.PmStakeUsdc,
     pmFeeUsdc: o.PmFeeUsdc,
     pmConditionId: o.PmConditionId,

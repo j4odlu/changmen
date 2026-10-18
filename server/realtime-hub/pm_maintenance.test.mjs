@@ -154,11 +154,13 @@ for (const [shape, wrap] of [
 }
 
 for (const endpoint of ["summary", "components"]) {
-  test(`V3 ${endpoint} body stall aborts and a later poll can recover`, { timeout: 5000 }, async (t) => {
+  test(`V3 ${endpoint} body stall aborts and a later poll can recover`, { timeout: 15000 }, async (t) => {
     let stall = true;
     let headersSent = false;
     const server = createServer((req, res) => {
       res.setHeader("content-type", "application/json");
+      // Each fixture owns its sockets; pooled idle connections must not delay teardown.
+      res.setHeader("connection", "close");
       if (stall && req.url === `/v3/${endpoint}.json`) {
         res.writeHead(200);
         res.flushHeaders();

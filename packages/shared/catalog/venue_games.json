@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-20",
-  "description": "Client_GetGames 默认返回值。按 venue/provider 保存各场馆 native game_id；动态平台配置仍可通过数据库 override 追加。",
+  "updatedAt": "2026-10-19",
+  "description": "历史场馆游戏列表，仅保留旧 JSON 导入兼容。Client_GetGames 已直接读取 game_catalog.json；新增游戏无需更新本快照，动态平台配置仍可追加。",
   "providers": {
     "OB": [
       "257578064923863",

@@ -13,7 +13,7 @@ const npm = [process.env.CHANGMEN_TEST_NPM_CLI, process.env.npm_execpath,
 if (!npm) throw Error("Set CHANGMEN_TEST_NPM_CLI to an npm CLI JavaScript entry (offline cache required)");
 const out = process.env.CHANGMEN_TEST_EVIDENCE_DIR;
 await withTemporaryPostgres(async ({ temporary }) => {
-  const root = path.join(temporary, "standalone"), workspaces = ["server/db", "server/storage", "packages/shared", "devtools/runtime-tooling"];
+  const root = path.join(temporary, "standalone"), workspaces = ["server/db", "server/storage", "packages/shared", "packages/api-contract", "devtools/runtime-tooling"];
   fs.mkdirSync(root);
   const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
     { cwd: repo, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, windowsHide: true }).split("\0").filter(Boolean);
@@ -30,12 +30,16 @@ await withTemporaryPostgres(async ({ temporary }) => {
   const installed = await exec(process.execPath, args, { cwd: root, timeout: 180000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 });
   if (out) { fs.mkdirSync(out, { recursive: true }); fs.writeFileSync(path.join(out, "standalone-install.log"), installed.stdout + installed.stderr); }
   assert(fs.readFileSync(path.join(root, "package-lock.json")).equals(fs.readFileSync(path.join(repo, "package-lock.json"))));
-  assert.deepEqual(fs.readdirSync(path.join(root, "node_modules/@changmen")).sort(), ["db", "runtime-tooling", "shared", "storage"]);
+  assert.deepEqual(fs.readdirSync(path.join(root, "node_modules/@changmen")).sort(), ["api-contract", "db", "runtime-tooling", "shared", "storage"]);
   // npm can create a dangling file: workspace link when its source was not copied.
-  for (const workspace of workspaces)
+  for (const workspace of workspaces) {
     assert(fs.existsSync(path.join(root, workspace, "package.json")), `Missing standalone workspace source: ${workspace}`);
+    const name = JSON.parse(fs.readFileSync(path.join(root, workspace, "package.json"), "utf8")).name;
+    assert.equal(fs.realpathSync(path.join(root, "node_modules", name)), fs.realpathSync(path.join(root, workspace)),
+      `Standalone dependency must resolve to its copied source: ${name}`);
+  }
   const noBackend = () => assert(!fs.existsSync(path.join(root, "server/backend")), "Standalone maintenance must never require/create a backend directory");
-  noBackend(); checks.push("clean offline production install has only DB/shared/storage/runtime-tooling, unchanged lock and no backend directory");
+  noBackend(); checks.push("clean offline production install has only DB/shared/storage/api-contract/runtime-tooling, complete local workspace links, unchanged lock and no backend directory");
   const env = { ...process.env, NODE_PATH: "", NODE_OPTIONS: "", CHANGMEN_STORAGE_DIR: path.join(root, "local-storage"), ESPORT_DATA_DIR: path.join(root, "local-storage/esport") };
   const command = async (name, args = []) => {
     try { return await exec(process.execPath, [path.join(root, `server/db/maintenance/${name}.mjs`), ...args],

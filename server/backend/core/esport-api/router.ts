@@ -13,7 +13,6 @@ import {
 import type { IncomingMessage, ServerResponse } from "node:http";
 import * as sb from "@changmen/db";
 import catalog from "@changmen/shared/catalog/game_catalog.json" with { type: "json" };
-import venueGames from "@changmen/shared/catalog/venue_games.json" with { type: "json" };
 import { getDefaultMarketCode, getPlatformRules } from "@changmen/shared/catalog/market_catalog";
 import { isWsForwardHttpPath } from "@changmen/ws-forward";
 import * as accountStore from "../account/account_store.js";
@@ -197,13 +196,9 @@ function actionFromUrl(urlPath: string): string {
 }
 
 function gamesForProvider(provider: string): string[] {
-  const fromVenueGames = (venueGames as { providers?: Record<string, unknown> }).providers?.[provider];
-  if (Array.isArray(fromVenueGames))
-    return [...new Set(fromVenueGames.filter(Boolean).map(String))];
-
   const ids = new Set<string>();
   for (const game of catalog.games || []) {
-    // 棒球/足球联赛不进 Client_GetGames（与 venue_games 仅电竞一致）
+    // [changmen 扩展] Client_GetGames 直接派生集中配置，仅返回电竞类目。
     if (((game as { sport?: string }).sport ?? "esport") !== "esport")
       continue;
     const id = game.platforms?.[provider];

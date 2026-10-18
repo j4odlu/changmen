@@ -1,5 +1,6 @@
 import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import legacyVenueGames from "@changmen/shared/catalog/venue_games.json" with { type: "json" };
 
 // [changmen 扩展] Fixed consumer examples. Exercise the real HTTP parser, router,
 // account dispatcher and login use case; stub persistence and external services.
@@ -13,9 +14,16 @@ const h = vi.hoisted(() => {
     cache: { getProfileById: vi.fn(), loadProfileById: vi.fn(), loadAccountsForUser: vi.fn(), refreshAccountsFromRdsIfEmpty: vi.fn() },
     service: { handleGetData: vi.fn(), handleSaveData: vi.fn(), handleSaveAccounts: vi.fn(), handleSaveOrderBind: vi.fn() },
     orders: { getOrders: vi.fn(), saveOrders: vi.fn() },
-    store: { ensureSeed: vi.fn(), buildMatchList: vi.fn(), saveMatches: vi.fn(), saveBets: vi.fn(), saveLiveTimer: vi.fn() },
+    store: { ensureSeed: vi.fn(), buildMatchList: vi.fn(), saveMatches: vi.fn(), saveBets: vi.fn(), saveLiveTimer: vi.fn(), getPlatform: vi.fn() },
+    catalog: { games: [] }, originalGames: [],
     touch: vi.fn(), recordLogin: vi.fn(), cookie: false,
   };
+});
+vi.mock("@changmen/shared/catalog/game_catalog.json", async importOriginal => {
+  const original = await importOriginal();
+  h.originalGames = structuredClone(original.default.games);
+  Object.assign(h.catalog, original.default, { games: structuredClone(h.originalGames) });
+  return { default: h.catalog };
 });
 vi.mock("@changmen/db", () => h.db);
 vi.mock("@changmen/ws-forward", () => ({ isWsForwardHttpPath: () => false }));
@@ -72,6 +80,7 @@ async function request(action, body = {}, { json = false, raw } = {}) {
 beforeEach(() => {
   vi.resetAllMocks(); vi.stubEnv("AUTH_MODE", "dual");
   h.authenticated = true; h.cookie = false;
+  h.catalog.games.splice(0, h.catalog.games.length, ...structuredClone(h.originalGames));
   h.cache.loadProfileById.mockResolvedValue(h.user);
   h.cache.refreshAccountsFromRdsIfEmpty.mockResolvedValue([h.account]);
   h.service.handleGetData.mockReturnValue({ direct: [h.account] });
@@ -85,6 +94,44 @@ afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 describe.each(["legacy", "registry"])("core HTTP consumer contracts (%s dispatch)", mode => {
   beforeEach(() => vi.stubEnv("ESPORT_ACTION_DISPATCH", mode));
+  it("preserves every venue's existing game IDs and order from the central catalog", async () => {
+    for (const [provider, ids] of Object.entries(legacyVenueGames.providers)) {
+      const response = (await request("Client_GetGames", { provider })).body;
+      expect(response.success).toBe(1);
+      // The snapshot proves compatibility of the original IDs; additional games
+      // in the current catalog must never require updating this old snapshot.
+      expect(response.info.filter(id => ids.includes(id))).toEqual(ids);
+    }
+    expect((await request("Client_GetGames", { provider: "unknown-fixture" })).body).toEqual(ok([]));
+  });
+  it("reflects added, edited and removed catalog games without a venue snapshot update", async () => {
+    const before = {};
+    for (const provider of ["RAY", "Polymarket"])
+      before[provider] = (await request("Client_GetGames", { provider })).body.info;
+    const configured = { code: "fixture-game", sport: "esport", name: "测试类目", nameEn: "Fixture",
+      platforms: { RAY: "fixture-ray", Polymarket: "fixture-pm" } };
+    h.catalog.games.push(configured);
+    for (const provider of ["RAY", "Polymarket"]) {
+      expect((await request("Client_GetGames", { provider })).body)
+        .toEqual(ok([...before[provider], configured.platforms[provider]]));
+    }
+    configured.platforms.RAY = "fixture-ray-edited";
+    expect((await request("Client_GetGames", { provider: "RAY" })).body.info)
+      .toEqual([...before.RAY, "fixture-ray-edited"]);
+    h.catalog.games.pop();
+    expect((await request("Client_GetGames", { provider: "RAY" })).body).toEqual(ok(before.RAY));
+  });
+  it("keeps sport filtering, duplicate IDs and platform additions compatible", async () => {
+    const before = (await request("Client_GetGames", { provider: "RAY" })).body.info;
+    h.catalog.games.push(
+      { code: "fixture-sport", sport: "basketball", platforms: { RAY: "fixture-sport" } },
+      { code: "fixture-default", platforms: { RAY: "fixture-default" } },
+      { code: "fixture-duplicate", sport: "esport", platforms: { RAY: legacyVenueGames.providers.RAY[0] } },
+    );
+    h.store.getPlatform.mockReturnValue({ games: [legacyVenueGames.providers.RAY[0], "fixture-extra", "fixture-extra"] });
+    expect((await request("Client_GetGames", { provider: "RAY" })).body)
+      .toEqual(ok([...before, "fixture-default", "fixture-extra"]));
+  });
   it("keeps ACCOUNT raw JSON arrays distinct from GetAccounts envelopes", async () => {
     expect((await request("Client_GetData", { key: "ACCOUNT" }, { json: true })).body).toEqual([h.account]);
     expect(h.cache.loadAccountsForUser).toHaveBeenCalledWith("contract-user");

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 
 const g = await import("./game_catalog.ts");
 const gameCatalog = await import("./game_catalog.json", { with: { type: "json" } });
-const venueGames = await import("./venue_games.json", { with: { type: "json" } });
 
 assert.equal(g.getGameSport("cs2"), "esport");
 assert.equal(g.getGameCodeForPlatformId("IA", "3"), "cs2");
@@ -38,18 +37,6 @@ assert.equal(g.getGameCodeForPlatformId("Azuro", "1061"), "cs2");
 assert.equal(g.getGameCodeForPlatformId("Azuro", "lol"), "lol");
 assert.equal(g.getGameCodeForPlatformId("Azuro", "1000"), "dota2");
 assert.ok(g.getActivePlatformGameIds("OB").length > 0);
-
-const derivedVenueGames: Record<string, string[]> = {};
-for (const game of gameCatalog.default.games) {
-  if ((game.sport ?? "esport") !== "esport")
-    continue;
-  for (const [provider, gameId] of Object.entries(game.platforms || {})) {
-    derivedVenueGames[provider] ||= [];
-    if (!derivedVenueGames[provider].includes(String(gameId)))
-      derivedVenueGames[provider].push(String(gameId));
-  }
-}
-assert.deepEqual(venueGames.default.providers, derivedVenueGames);
 
 assert.equal(g.getGameDisplayName("chi"), "中超");
 assert.equal(g.getGameDisplayName("mlb"), "美职棒");

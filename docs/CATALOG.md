@@ -90,6 +90,8 @@ sport_catalog（运动）
 
 [changmen 扩展] `game_catalog.json` 的 `platforms` 继续保存各场馆原生游戏 ID；新增 `platformSettings` 保存同一游戏的场馆别名及采集发现参数。浏览器与 Node 共用 `game_catalog_rules.ts`，保留 `.js` 转发入口以兼容后端路由编译，并通过已有 `@changmen/shared/catalog/game_catalog` 入口导出；原查询接口保持兼容，不新增 package exports。
 
+[changmen 扩展] `Client_GetGames` 对所有场馆直接读取 `game_catalog.json` 的电竞条目，按目录顺序去重，并继续追加平台运行配置中的 `games`。`venue_games.json` 仅保留公开 JSON 导入兼容的历史快照，不再作为运行时配置或要求与当前目录同步；新增游戏只维护集中目录。API 回归覆盖目录新增、修改、删除、非电竞排除及动态追加。
+
 | 字段（`platformSettings.<场馆>` 下） | 用途 |
 | --- | --- |
 | `aliases` | 该游戏的场馆原始 ID/slug 别名 |

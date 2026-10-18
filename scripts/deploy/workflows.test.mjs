@@ -5,6 +5,8 @@ import YAML from "yaml";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { validationCommands } from "../verification/verify-change.mjs";
+import { changePlan } from "./change-plan.mjs";
+import { DATABASE_PHASES } from "./acceptance-contract.mjs";
 const read = p => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
 const workflow = name => YAML.parse(read(`.github/workflows/${name}.yml`));
 const release = workflow("release");
@@ -60,7 +62,7 @@ test("component checks run once, and artifacts are sealed only after success", (
   assert.equal(steps.find(s => s.uses?.startsWith("actions/checkout@")).with["fetch-depth"], 0);
   assert.deepEqual(release.on.workflow_dispatch.inputs.component.options, ["full", "backend", "frontend"]);
 });
-test("the full 22-stage live audit is manual and cannot publish components", () => {
+test("the standalone full audit remains manual and cannot publish components", () => {
   const audit = workflow("special-audit");
   assert.equal(audit.on.push, undefined);
   assert(Object.hasOwn(audit.on, "workflow_dispatch"));
@@ -69,6 +71,26 @@ test("the full 22-stage live audit is manual and cannot publish components", () 
   assert(audit.jobs.audit.steps.some(s => s.run === "npm run check:fok-release -- --release-plan=backend-first"));
   assert(!JSON.stringify(release).includes("check:fok-release"));
   assert(!JSON.stringify(audit).includes("publish.sh"));
+});
+
+test("required commit-bound checks finish before sealing, with PostgreSQL and capture credentials available for manual release too", () => {
+  const steps = release.jobs.validate.steps;
+  assert.equal(steps.find(s => s.name === "Prepare read-only version check").if, undefined);
+  const postgres = steps.findIndex(s => s.name === "Install PostgreSQL for required compatibility checks");
+  const check = steps.findIndex(s => s.run?.startsWith("npm run check:change "));
+  assert(postgres >= 0 && postgres < check);
+  assert.equal(steps[postgres].if, "steps.plan.outputs.database-compatibility == 'true'");
+  assert.match(steps[postgres].run, /CHANGMEN_TEST_PG_BIN/);
+  const commands = validationCommands({}, "npm-cli.js", "backend-first");
+  assert.deepEqual(commands["complete-release"].command, [process.execPath, "scripts/verification/verify-fok-release.mjs", "--release-plan=backend-first"]);
+  assert.equal(commands["database-compatibility"].command[1], "scripts/deploy/check-database-compatibility.mjs");
+  assert(release.jobs.validate["timeout-minutes"] >= 45);
+  const summary = steps.find(s => s.run === "node scripts/deploy/release-summary.mjs");
+  assert.equal(summary.if, "always()"); assert.equal(summary.env.ACCEPTANCE_JOB_STATUS, "${{ job.status }}");
+  assert.match(steps.find(s => s.with?.name === "failed-acceptance").with.path, /output\/database-compatibility\//);
+  const database = workflow("database-compatibility");
+  assert.equal(database.jobs.compatibility.steps.find(s => s.uses?.startsWith("actions/checkout@")).with.ref, "${{ github.sha }}");
+  assert(database.jobs.compatibility.steps.some(s => s.run === "node scripts/deploy/check-database-compatibility.mjs"));
 });
 test("component transports consume the same checked artifact and never rebuild", () => {
   for (const scope of ["frontend", "backend"]) {
@@ -83,6 +105,32 @@ test("component transports consume the same checked artifact and never rebuild",
     assert.equal(component.concurrency["cancel-in-progress"], false);
   }
   assert.notEqual(workflow("deploy-frontend").concurrency.group, workflow("deploy-backend").concurrency.group);
+});
+
+test("master database checks have one owner while PR/manual coverage and all five phases remain", () => {
+  const database = workflow("database-compatibility");
+  assert.equal(database.on.push, undefined, "Master validation owns the DB check; a second push workflow duplicates it");
+  assert.deepEqual(Object.keys(database.on).sort(), ["pull_request", "workflow_dispatch"]);
+  assert.deepEqual(database.on.pull_request.paths, [".github/workflows/database-compatibility.yml", "scripts/testing/**",
+    "deploy/scripts/release-*.sh", "scripts/deploy/**", "server/db/**", "server/backend/db/**",
+    "server/backend/scripts/*rds*", "server/backend/scripts/*order-observation-schema*", "package.json", "package-lock.json"]);
+  const samples = [".github/workflows/database-compatibility.yml", "scripts/testing/nested/schema-postgres.mjs",
+    "deploy/scripts/release-frontend.sh", "scripts/deploy/nested/control.mjs", "server/db/assets/schema-baseline.json",
+    "server/backend/db/migrations/043_auth_session_audit.sql", "server/backend/scripts/check-rds-schema.mjs",
+    "server/backend/scripts/apply-order-observation-schema.mjs", "package.json", "package-lock.json"];
+  for (const file of samples) {
+    const plan = changePlan([file], { purpose: "release" });
+    assert.equal(plan.requiredChecks.databaseCompatibility, true, file);
+    assert.equal(plan.checks.filter(check => check === "database-compatibility").length, 1, file);
+  }
+  assert.deepEqual(database.permissions, { contents: "read" });
+  assert(!JSON.stringify(database).includes("secrets."));
+  assert(!JSON.stringify(database).includes("publish.sh"));
+  const command = "node scripts/deploy/check-database-compatibility.mjs";
+  assert.equal(database.jobs.compatibility.steps.filter(step => step.run === command).length, 1);
+  assert.equal(release.jobs.validate.steps.filter(step => step.run?.startsWith("npm run check:change ")).length, 1);
+  assert.deepEqual(DATABASE_PHASES, ["schema-compatibility", "history-schema", "rds-cli-isolation",
+    "rds-assets-standalone", "deploy-account-preservation"]);
 });
 test("local entry points share acceptance and seal before transport; transport rejects stale proof before SSH", () => {
   for (const scope of ["frontend", "backend"]) {

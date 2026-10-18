@@ -1,12 +1,13 @@
 import path from "node:path";
 import os from "node:os";
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, writeSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { expandedRequirements, readReference, reference } from "../testing/schema-compatibility/reference.mjs";
 import { readSchemaBaseline, schemaDifferences } from "../../server/backend/scripts/rds-schema-check.mjs";
 import { RDS_MIGRATIONS } from "../../server/backend/scripts/apply-rds-schema.mjs";
+import { checkDatabaseCompatibility } from "../deploy/check-database-compatibility.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 describe("fixed database compatibility reference", () => {
@@ -41,25 +42,25 @@ describe("fixed database compatibility reference", () => {
     expect(Object.keys(baseline.schema.tables).some(name => name.startsWith("round4_"))).toBe(false);
   });
   it.each([
-    ["Exercise isolated upgrade and code rollback", "postgres.log", 0],
-    ["Exercise isolated upgrade and code rollback", "postgres.log", 23],
-    ["Exercise canonical reconciliation and publication preflight", "history.log", 0],
-    ["Exercise canonical reconciliation and publication preflight", "history.log", 23],
-  ])("CI %s retains %s and propagates exit %s", (step, logFile, exitCode) => {
+    ["schema-compatibility", 0], ["schema-compatibility", 23],
+    ["history-schema", 0], ["history-schema", 23],
+  ])("CI runner retains %s output and propagates failure %s", (phase, exitCode) => {
     const workflow = readFileSync(path.join(root, ".github/workflows/database-compatibility.yml"), "utf8");
-    const block = workflow.match(new RegExp(`      - name: ${step}\\r?\\n([\\s\\S]*?)(?=      - |$)`))?.[1];
-    expect(block).toBeDefined();
-    const script = block.split(/        run: \|\r?\n/)[1].split(/\r?\n/).map(line => line.replace(/^          /, "")).join("\n");
+    expect(workflow).toContain("run: node scripts/deploy/check-database-compatibility.mjs");
+    expect(workflow).toContain("path: output/database-compatibility/");
     const tempRoot = path.resolve(os.tmpdir());
     const directory = mkdtempSync(path.join(tempRoot, "changmen-schema-ci-"));
     try {
-      const bash = process.platform === "win32" ? "C:/msys64/usr/bin/bash.exe" : "bash";
-      const result = spawnSync(bash, ["--noprofile", "--norc", "-e", "-c",
-        `mkdir -p output/schema-compatibility; npm() { printf 'synthetic test output\\n'; return ${exitCode}; };\n${script}`],
-      { cwd: directory, encoding: "utf8", windowsHide: true, timeout: 10_000 });
-      expect(result.error).toBeUndefined();
-      expect(result.status, result.stderr).toBe(exitCode);
-      expect(readFileSync(path.join(directory, "output/schema-compatibility", logFile), "utf8")).toContain("synthetic test output");
+      const git = (...args) => execFileSync("git", args, { cwd: directory, stdio: "pipe" });
+      git("init", "-q"); writeFileSync(path.join(directory, "input.js"), "fixture"); git("add", ".");
+      git("-c", "user.name=CI Test", "-c", "user.email=test@example.invalid", "commit", "-qm", "fixture");
+      const result = checkDatabaseCompatibility({ cwd: directory, env: {}, run: (_node, args, options) => {
+        writeSync(options.stdio[1], "synthetic test output\n");
+        return { status: args[0].endsWith(`/${phase}-postgres.mjs`) ? exitCode : 0 };
+      } });
+      expect(result.passed).toBe(exitCode === 0);
+      expect(result.results.find(row => row.phase === phase)?.exitCode).toBe(exitCode);
+      expect(readFileSync(path.join(directory, "output/database-compatibility", phase + ".log"), "utf8")).toContain("synthetic test output");
     } finally {
       if (path.dirname(directory) !== tempRoot || !path.basename(directory).startsWith("changmen-schema-ci-")) throw Error("Unexpected test directory");
       rmSync(directory, { recursive: true, force: true });

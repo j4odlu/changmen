@@ -299,6 +299,8 @@ npm run build
 
 Actions → **Validate and release** → Run workflow → 选择 `frontend` / `backend` / `full`（仅 master）。推送 master 则对比各端已发布版本自动选择组件；失败留下的未发布变化会继续纳入计划。
 
+[changmen 扩展] 2026-10-18：同一 checkout 按风险执行完整 22 阶段审计与所需临时 PostgreSQL 五组检查，全部通过并核对相同提交/输入后才封包。第二批让等价组件检查引用本次完整审计的实际成功阶段，增加运行标识、环境和命令/目录核验，保留 551 入口保护及全部 22 阶段。低风险自动前端仍独立检查；手动或未知基线保守补齐审计，可能只读访问生产双端来源。Actions Summary 及失败附件统一记录阶段、引用来源和退出原因；见 [第一批结果绑定](docs/ACTIONS_ACCEPTANCE_GATES_20261018.md) 与 [第二批验证复用](docs/ACTIONS_VALIDATION_REUSE_20261018.md)。实际发布范围或重启规则不改。
+
 | 变更范围 | 发布动作 | 是否重启后端 |
 |---|---|---|
 | 仅前端 | 验收后切换静态制品 | 否 |

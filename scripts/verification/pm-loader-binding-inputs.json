@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "purpose": "pm-loader-binding-gate-only",
+  "publishScopeOptimizationEnabled": false,
+  "origins": [
+    {
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "symbol": "reqS"
+    },
+    {
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "symbol": "backendRequire"
+    },
+    {
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "symbol": "adapterRequire"
+    },
+    {
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "symbol": "requirePlatform"
+    },
+    {
+      "file": "devtools/platform-probes/backend/_paths.js",
+      "symbol": "reqS"
+    },
+    {
+      "file": "devtools/platform-probes/backend/_paths.js",
+      "symbol": "backendRequire"
+    },
+    {
+      "file": "devtools/platform-probes/backend/_paths.cjs",
+      "symbol": "reqS"
+    },
+    {
+      "file": "devtools/platform-probes/backend/_paths.cjs",
+      "symbol": "backendRequire"
+    }
+  ],
+  "facade": {
+    "file": "server/backend/core/shared/adapter_paths.js",
+    "exports": {
+      "reqS": "packages/venue-adapter/loader/adapter_paths.mjs#reqS",
+      "backendRequire": "packages/venue-adapter/loader/adapter_paths.mjs#backendRequire",
+      "adapterRequire": "packages/venue-adapter/loader/adapter_paths.mjs#adapterRequire",
+      "requirePlatform": "packages/venue-adapter/loader/adapter_paths.mjs#requirePlatform"
+    }
+  },
+  "sourceContracts": [
+    {
+      "file": "devtools/platform-probes/backend/_paths.js",
+      "selector": "module",
+      "signature": "0f85746eaafb7792a6b224a4b3b214078f8368bab409c176c99c20cf5c93c24a"
+    },
+    {
+      "file": "devtools/platform-probes/backend/_paths.cjs",
+      "selector": "module",
+      "signature": "f62c1ea53fd921ce4e6764c115a0ff56a629142762b0b509a1fadfdf81622209"
+    }
+  ],
+  "calls": [
+    {
+      "file": "devtools/platform-probes/ia/ws.js",
+      "origin": {
+        "file": "devtools/platform-probes/backend/_paths.js",
+        "symbol": "backendRequire"
+      },
+      "arguments": [
+        "socket.io-client"
+      ],
+      "count": 1
+    },
+    {
+      "file": "devtools/platform-probes/ray/ws.js",
+      "origin": {
+        "file": "devtools/platform-probes/backend/_paths.js",
+        "symbol": "backendRequire"
+      },
+      "arguments": [
+        "socketcluster-client"
+      ],
+      "count": 1
+    },
+    {
+      "file": "devtools/platform-probes/tf/ws.js",
+      "origin": {
+        "file": "devtools/platform-probes/backend/_paths.js",
+        "symbol": "backendRequire"
+      },
+      "arguments": [
+        "ws"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/esport-api/store.js",
+      "origin": {
+        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "symbol": "adapterRequire"
+      },
+      "arguments": [
+        "registry",
+        "feeds.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/account/balance_provider.js",
+      "origin": {
+        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "PB",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/account/balance_provider.js",
+      "origin": {
+        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "HG",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/account/balance_provider.js",
+      "origin": {
+        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "OB",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/account/balance_provider.js",
+      "origin": {
+        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "RAY",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/account/balance_provider.js",
+      "origin": {
+        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "RAY",
+        "node",
+        "core.js"
+      ],
+      "count": 1
+    }
+  ]
+}

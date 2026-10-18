@@ -1,0 +1,387 @@
+{
+  "schemaVersion": 1,
+  "purpose": "client-folder-isolation-only",
+  "historicalBaseline": "a233e20534395b31401828e754432407b109053d",
+  "reason": "Move only unfrozen browser workspace and frontend tools into client; package names/runtime source stay the same. Reverse exact metadata before all existing full historical comparisons. No protected path or release scope changes.",
+  "changes": [
+    {
+      "file": "package.json",
+      "baselineSha256": "76ce24cb5bcf60fd5e45e0c44545d0e1f72a35c3fe8755e8a194086558213ddd",
+      "migratedSha256": "52f2568c701209025dba589ea9d3f1b07ab165b9bfc2a721c9367b2a116d106a",
+      "patches": [
+        {
+          "oldStart": 20,
+          "oldCount": 1,
+          "newStart": 20,
+          "newCount": 1,
+          "before": [
+            "    \"packages/pm-market-data-browser\","
+          ],
+          "after": [
+            "    \"client/packages/pm-market-data-browser\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "package-lock.json",
+      "baselineSha256": "0dc1956e6dd114195ed7c8af26a577cab4bc8d03528d54f477144c499671b839",
+      "migratedSha256": "4dbdd6289a10d80ed5208d27336d2ff74d72970fedfbc22765d5c323ea70bebd",
+      "patches": [
+        {
+          "oldStart": 19,
+          "oldCount": 1,
+          "newStart": 19,
+          "newCount": 1,
+          "before": [
+            "        \"packages/pm-market-data-browser\","
+          ],
+          "after": [
+            "        \"client/packages/pm-market-data-browser\","
+          ]
+        },
+        {
+          "oldStart": 539,
+          "oldCount": 0,
+          "newStart": 540,
+          "newCount": 7,
+          "before": [],
+          "after": [
+            "    \"client/packages/pm-market-data-browser\": {",
+            "      \"name\": \"@changmen/pm-market-data-browser\",",
+            "      \"version\": \"0.1.0\",",
+            "      \"devDependencies\": {",
+            "        \"@polymarket/client\": \"0.12.0\"",
+            "      }",
+            "    },"
+          ]
+        },
+        {
+          "oldStart": 547,
+          "oldCount": 1,
+          "newStart": 554,
+          "newCount": 1,
+          "before": [
+            "        \"@changmen/pm-market-data-browser\": \"file:../../packages/pm-market-data-browser\","
+          ],
+          "after": [
+            "        \"@changmen/pm-market-data-browser\": \"file:../packages/pm-market-data-browser\","
+          ]
+        },
+        {
+          "oldStart": 929,
+          "oldCount": 1,
+          "newStart": 936,
+          "newCount": 1,
+          "before": [
+            "      \"resolved\": \"packages/pm-market-data-browser\","
+          ],
+          "after": [
+            "      \"resolved\": \"client/packages/pm-market-data-browser\","
+          ]
+        },
+        {
+          "oldStart": 12942,
+          "oldCount": 7,
+          "newStart": 12948,
+          "newCount": 0,
+          "before": [
+            "    \"packages/pm-market-data-browser\": {",
+            "      \"name\": \"@changmen/pm-market-data-browser\",",
+            "      \"version\": \"0.1.0\",",
+            "      \"devDependencies\": {",
+            "        \"@polymarket/client\": \"0.12.0\"",
+            "      }",
+            "    },"
+          ],
+          "after": []
+        },
+        {
+          "oldStart": 12958,
+          "oldCount": 1,
+          "newStart": 12958,
+          "newCount": 1,
+          "before": [
+            "        \"@changmen/pm-market-data-browser\": \"file:../pm-market-data-browser\","
+          ],
+          "after": [
+            "        \"@changmen/pm-market-data-browser\": \"file:../../client/packages/pm-market-data-browser\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/web/package.json",
+      "baselineSha256": "e682a86031d92dccfa070e02774bd0dbab7cac1386ab9792c744aeb22a2429cf",
+      "migratedSha256": "0b3bc716b2554261cc27ef14f13041222363e7e67d888bd87828c317c9b6cc82",
+      "patches": [
+        {
+          "oldStart": 52,
+          "oldCount": 1,
+          "newStart": 52,
+          "newCount": 1,
+          "before": [
+            "    \"@changmen/pm-market-data-browser\": \"file:../../packages/pm-market-data-browser\""
+          ],
+          "after": [
+            "    \"@changmen/pm-market-data-browser\": \"file:../packages/pm-market-data-browser\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/package.json",
+      "baselineSha256": "a3d279e9d78ebf920a311cc6ffdfad92f82793d3ca3e1a2b1b2a02b02dec9e19",
+      "migratedSha256": "c429df7bc53a654c589acdb91c41b5f77a3fd822d2b0ac42028aaece28a3d211",
+      "patches": [
+        {
+          "oldStart": 60,
+          "oldCount": 1,
+          "newStart": 60,
+          "newCount": 1,
+          "before": [
+            "    \"@changmen/pm-market-data-browser\": \"file:../pm-market-data-browser\""
+          ],
+          "after": [
+            "    \"@changmen/pm-market-data-browser\": \"file:../../client/packages/pm-market-data-browser\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/source-ownership-inputs.json",
+      "baselineSha256": "9c84b46330b384d6493942d72915b3d6dc9c738f908f082a6e5a0f5d18d5f717",
+      "migratedSha256": "0542ecea8b85eacc840efc574ffa023a37cb610b46e5f64928265e61038d5015",
+      "patches": [
+        {
+          "oldStart": 12,
+          "oldCount": 1,
+          "newStart": 12,
+          "newCount": 2,
+          "before": [
+            "    \"client/web/scripts/run-production-build.mjs\""
+          ],
+          "after": [
+            "    \"client/web/scripts/run-production-build.mjs\",",
+            "    \"client/devtools/venue-adapter\""
+          ]
+        },
+        {
+          "oldStart": 26,
+          "oldCount": 1,
+          "newStart": 27,
+          "newCount": 3,
+          "before": [
+            "    \"client/web/scripts/run-production-build.mjs\""
+          ],
+          "after": [
+            "    \"client/web/scripts/run-production-build.mjs\",",
+            "    \"client/devtools/venue-adapter\",",
+            "    \"client/packages\""
+          ]
+        },
+        {
+          "oldStart": 235,
+          "oldCount": 1,
+          "newStart": 238,
+          "newCount": 1,
+          "before": [
+            "      \"prefix\": \"devtools/venue-adapter/frontend\","
+          ],
+          "after": [
+            "      \"prefix\": \"client/devtools/venue-adapter\","
+          ]
+        },
+        {
+          "oldStart": 333,
+          "oldCount": 1,
+          "newStart": 336,
+          "newCount": 1,
+          "before": [
+            "      \"prefix\": \"packages/pm-market-data-browser\","
+          ],
+          "after": [
+            "      \"prefix\": \"client/packages/pm-market-data-browser\","
+          ]
+        },
+        {
+          "oldStart": 478,
+          "oldCount": 2,
+          "newStart": 481,
+          "newCount": 2,
+          "before": [
+            "      \"canonical\": \"devtools/venue-adapter/frontend/list-web-venue-imports.mjs\",",
+            "      \"spec\": \"../../../devtools/venue-adapter/frontend/list-web-venue-imports.mjs\""
+          ],
+          "after": [
+            "      \"canonical\": \"client/devtools/venue-adapter/list-web-venue-imports.mjs\",",
+            "      \"spec\": \"../../../client/devtools/venue-adapter/list-web-venue-imports.mjs\""
+          ]
+        },
+        {
+          "oldStart": 483,
+          "oldCount": 2,
+          "newStart": 486,
+          "newCount": 2,
+          "before": [
+            "      \"canonical\": \"devtools/venue-adapter/frontend/relativize-internal-imports.mjs\",",
+            "      \"spec\": \"../../../devtools/venue-adapter/frontend/relativize-internal-imports.mjs\""
+          ],
+          "after": [
+            "      \"canonical\": \"client/devtools/venue-adapter/relativize-internal-imports.mjs\",",
+            "      \"spec\": \"../../../client/devtools/venue-adapter/relativize-internal-imports.mjs\""
+          ]
+        },
+        {
+          "oldStart": 488,
+          "oldCount": 2,
+          "newStart": 491,
+          "newCount": 2,
+          "before": [
+            "      \"canonical\": \"devtools/venue-adapter/frontend/sync-package-exports.mjs\",",
+            "      \"spec\": \"../../../devtools/venue-adapter/frontend/sync-package-exports.mjs\""
+          ],
+          "after": [
+            "      \"canonical\": \"client/devtools/venue-adapter/sync-package-exports.mjs\",",
+            "      \"spec\": \"../../../client/devtools/venue-adapter/sync-package-exports.mjs\""
+          ]
+        }
+      ]
+    }
+  ],
+  "moves": [
+    {
+      "from": "packages/pm-market-data-browser/package.json",
+      "to": "client/packages/pm-market-data-browser/package.json",
+      "sha256": "f579476ccbee8daec763557cd38a4953fbcfa69bac39f8107a07d278f49749b4",
+      "bytes": 864,
+      "migratedSha256": "f579476ccbee8daec763557cd38a4953fbcfa69bac39f8107a07d278f49749b4"
+    },
+    {
+      "from": "packages/pm-market-data-browser/README.md",
+      "to": "client/packages/pm-market-data-browser/README.md",
+      "sha256": "1b0bbac1e526bb7374a34538a2d86032ff737a18695851eb805e97841af2f6b8",
+      "bytes": 2676,
+      "migratedSha256": "b843fa430c64efdc1ab8e478b13d90fb24b48b7c5a52a234950d46e779490c5b"
+    },
+    {
+      "from": "packages/pm-market-data-browser/src/bookReducer.ts",
+      "to": "client/packages/pm-market-data-browser/src/bookReducer.ts",
+      "sha256": "2cd03ada47f0362021ec347dcf6120c9795e97fb8ce20dbcac226cce896b14bb",
+      "bytes": 7588,
+      "migratedSha256": "2cd03ada47f0362021ec347dcf6120c9795e97fb8ce20dbcac226cce896b14bb"
+    },
+    {
+      "from": "packages/pm-market-data-browser/src/bookStore.ts",
+      "to": "client/packages/pm-market-data-browser/src/bookStore.ts",
+      "sha256": "c61e8c9ab40f375cce4fb21df3694faf429525d3e40e934ba521f57296697e8a",
+      "bytes": 7702,
+      "migratedSha256": "c61e8c9ab40f375cce4fb21df3694faf429525d3e40e934ba521f57296697e8a"
+    },
+    {
+      "from": "packages/pm-market-data-browser/src/feedTypes.ts",
+      "to": "client/packages/pm-market-data-browser/src/feedTypes.ts",
+      "sha256": "e2dd4b7b246ea88d5ca6c28b3663a188ac2a1ed3554b4b466a64a1e92dc46227",
+      "bytes": 569,
+      "migratedSha256": "e2dd4b7b246ea88d5ca6c28b3663a188ac2a1ed3554b4b466a64a1e92dc46227"
+    },
+    {
+      "from": "packages/pm-market-data-browser/src/index.ts",
+      "to": "client/packages/pm-market-data-browser/src/index.ts",
+      "sha256": "10cdfd1bccb1185afd7042deea80c783c5440f5c7290cc944f07d09b7a0b040f",
+      "bytes": 815,
+      "migratedSha256": "10cdfd1bccb1185afd7042deea80c783c5440f5c7290cc944f07d09b7a0b040f"
+    },
+    {
+      "from": "packages/pm-market-data-browser/src/marketData.worker.ts",
+      "to": "client/packages/pm-market-data-browser/src/marketData.worker.ts",
+      "sha256": "6901ec52df90306fbb4150caa6c27a48a747f92c5764c17650dbd5d4c4a01412",
+      "bytes": 225,
+      "migratedSha256": "6901ec52df90306fbb4150caa6c27a48a747f92c5764c17650dbd5d4c4a01412"
+    },
+    {
+      "from": "packages/pm-market-data-browser/src/marketStreamProtocol.ts",
+      "to": "client/packages/pm-market-data-browser/src/marketStreamProtocol.ts",
+      "sha256": "cc3e422a8023d1fdb1269e444df56c80124a81a31fbec621fe4b813deda2a7ca",
+      "bytes": 384,
+      "migratedSha256": "cc3e422a8023d1fdb1269e444df56c80124a81a31fbec621fe4b813deda2a7ca"
+    },
+    {
+      "from": "packages/pm-market-data-browser/src/orderedWorkerMailbox.ts",
+      "to": "client/packages/pm-market-data-browser/src/orderedWorkerMailbox.ts",
+      "sha256": "06fd9687db0ef6c532ff97d17393e986bb55bd93a11934636437000ce07ba052",
+      "bytes": 4911,
+      "migratedSha256": "06fd9687db0ef6c532ff97d17393e986bb55bd93a11934636437000ce07ba052"
+    },
+    {
+      "from": "packages/pm-market-data-browser/src/passiveBookFeed.ts",
+      "to": "client/packages/pm-market-data-browser/src/passiveBookFeed.ts",
+      "sha256": "5ae4027a4be42389bcd711a59429992869dce243026f880d99897ef13c9ed630",
+      "bytes": 5892,
+      "migratedSha256": "5ae4027a4be42389bcd711a59429992869dce243026f880d99897ef13c9ed630"
+    },
+    {
+      "from": "packages/pm-market-data-browser/src/service.ts",
+      "to": "client/packages/pm-market-data-browser/src/service.ts",
+      "sha256": "30fa90b4d1ae65011d058b161bdd4820dc174e1665975ef54d208a797886fddb",
+      "bytes": 17120,
+      "migratedSha256": "30fa90b4d1ae65011d058b161bdd4820dc174e1665975ef54d208a797886fddb"
+    },
+    {
+      "from": "packages/pm-market-data-browser/src/serviceProtocol.ts",
+      "to": "client/packages/pm-market-data-browser/src/serviceProtocol.ts",
+      "sha256": "cee7bc5efaf01d0f15ebe14a47f3c7469249dc7d4a0caf3300168baca1358aea",
+      "bytes": 1194,
+      "migratedSha256": "cee7bc5efaf01d0f15ebe14a47f3c7469249dc7d4a0caf3300168baca1358aea"
+    },
+    {
+      "from": "packages/pm-market-data-browser/src/workerRuntime.ts",
+      "to": "client/packages/pm-market-data-browser/src/workerRuntime.ts",
+      "sha256": "32986718dabaa64967885767443e5bf02a877d0dbb0634d63d8a1c20ddce8287",
+      "bytes": 3853,
+      "migratedSha256": "32986718dabaa64967885767443e5bf02a877d0dbb0634d63d8a1c20ddce8287"
+    },
+    {
+      "from": "packages/pm-market-data-browser/tests/hostPorts.test.ts",
+      "to": "client/packages/pm-market-data-browser/tests/hostPorts.test.ts",
+      "sha256": "34b1a173a4d8b1bc1fe277a39efe21e49d82bc08816ccb32064e466e6c80b39a",
+      "bytes": 3269,
+      "migratedSha256": "2c45caf79dcc3e57a6858624d2f7f88ab3743977020273172b114d57ec11720a"
+    },
+    {
+      "from": "packages/pm-market-data-browser/tests/workerRuntime.test.ts",
+      "to": "client/packages/pm-market-data-browser/tests/workerRuntime.test.ts",
+      "sha256": "cb6d6c1422da9da2056ec71331d9ff1089839828ce0aadab502ee74361e83de7",
+      "bytes": 4046,
+      "migratedSha256": "8308bf41fd2e8c8942791305feb1bdbc84cdc1bd17e06f26de684d3c1ed832de"
+    },
+    {
+      "from": "devtools/venue-adapter/frontend/commands.test.mjs",
+      "to": "client/devtools/venue-adapter/commands.test.mjs",
+      "sha256": "a58a5308f0ab5bbc07a8e9396d5a3b50ed0fd50c09ed7d81b7b5f28064f6aeae",
+      "bytes": 3660,
+      "migratedSha256": "597360522af6f55dd65bbfbab10b87f7e4503f7699885eab377095fb29adb4bb"
+    },
+    {
+      "from": "devtools/venue-adapter/frontend/list-web-venue-imports.mjs",
+      "to": "client/devtools/venue-adapter/list-web-venue-imports.mjs",
+      "sha256": "d53235f2b75779b1890a9f2b3ea123a6afa72b7dd1962538e6d8c7ed79f27f66",
+      "bytes": 5670,
+      "migratedSha256": "d53235f2b75779b1890a9f2b3ea123a6afa72b7dd1962538e6d8c7ed79f27f66"
+    },
+    {
+      "from": "devtools/venue-adapter/frontend/relativize-internal-imports.mjs",
+      "to": "client/devtools/venue-adapter/relativize-internal-imports.mjs",
+      "sha256": "48dcc71b2a7dcb4fd8ee17f5647f8a89429cc52469310f2f68ff5e0f282f004e",
+      "bytes": 3766,
+      "migratedSha256": "48dcc71b2a7dcb4fd8ee17f5647f8a89429cc52469310f2f68ff5e0f282f004e"
+    },
+    {
+      "from": "devtools/venue-adapter/frontend/sync-package-exports.mjs",
+      "to": "client/devtools/venue-adapter/sync-package-exports.mjs",
+      "sha256": "2c5059e093252dc2099534101d42d36dc79a29d3c7faf679d31ae0be3563df37",
+      "bytes": 4289,
+      "migratedSha256": "2c5059e093252dc2099534101d42d36dc79a29d3c7faf679d31ae0be3563df37"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "purpose": "frontend-build-source-isolation-only",
+  "publishScopeOptimizationEnabled": false,
+  "canonicalRuntimeSha256": "23a65e104e76e24aedecca73845238b5a4ca70e2e5584f454a2423d65231f821",
+  "canonicalPortSha256": "3563e18df17741a15c0e7a6271ed2da973f34c83c8c04a25d0cb87e9b3c39134",
+  "originalDevConfigSha256": "da4829315aefdea33c4ce975f2c0ed3911b7b777a336be7e7eeafd080073445e",
+  "activeBuildRoots": [
+    "client/web/vite.config.ts",
+    "client/web/vite",
+    "client/web/scripts/bootstrap-dialogs.mjs",
+    "client/web/scripts/gen-platform-icons-css.mjs",
+    "client/web/scripts/clean-dist-assets.mjs",
+    "client/web/scripts/run-production-build.mjs"
+  ],
+  "assetContract": "client/web/vite/legacyPublicAssets.json"
+}

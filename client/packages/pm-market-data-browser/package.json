@@ -1,0 +1,26 @@
+{
+  "name": "@changmen/pm-market-data-browser",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-only passive PM order book; host-injected source and Worker ports",
+  "changmen": {
+    "runtime": "browser"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./bookReducer": "./src/bookReducer.ts",
+    "./bookStore": "./src/bookStore.ts",
+    "./feedTypes": "./src/feedTypes.ts",
+    "./passiveBookFeed": "./src/passiveBookFeed.ts",
+    "./serviceProtocol": "./src/serviceProtocol.ts",
+    "./service": "./src/service.ts",
+    "./orderedWorkerMailbox": "./src/orderedWorkerMailbox.ts",
+    "./marketStreamProtocol": "./src/marketStreamProtocol.ts",
+    "./workerRuntime": "./src/workerRuntime.ts",
+    "./marketData.worker.ts": "./src/marketData.worker.ts"
+  },
+  "devDependencies": {
+    "@polymarket/client": "0.12.0"
+  }
+}

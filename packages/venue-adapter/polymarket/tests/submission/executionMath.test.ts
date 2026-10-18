@@ -10,7 +10,7 @@ import { pmFokDepthBufferNeedUsdc, pmFokFillPriceDepthUsdc } from "../../pmFokDe
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 
 const original = readFileSync(new URL("../../fok/preflight.ts", import.meta.url), "utf8").replaceAll("\r\n", "\n");
-const mirror = readFileSync(new URL("../../submission/preflight/optimized/wsBook/executionMath.ts", import.meta.url), "utf8").replaceAll("\r\n", "\n");
+const mirror = readFileSync(new URL("../../../browser/pm-book-diagnostics/executionMath.ts", import.meta.url), "utf8").replaceAll("\r\n", "\n");
 const ranges = [
   ["function polymarketFokLimitFromDetection(", "\ninterface PolymarketOrderDiagnostic"],
   ["function fmt(", "\nasync function resolvePolymarketExecutableBuy("],

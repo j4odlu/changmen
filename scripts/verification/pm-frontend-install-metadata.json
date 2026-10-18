@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "file": "package-lock.json",
+  "reason": "Browser adapter drops unused DB and Node storage; existing backend tool owns storage. Web declares existing build-time dotenv and aligns socketcluster-client to unchanged Vite root alias version 20.0.1; only unused nested 19.2.7 lock record is removed. All remaining external lock records unchanged.",
+  "baselineSha256": "4d443752ad3436a2192aa28bc2251b089f2b57c0a4f02f5c63a7b0be7d06f557",
+  "migratedSha256": "f8b46d8629e989e743f6da694035064d4f5474688d0bb59cde0b1a1f2d285d45",
+  "patches": [
+    {
+      "oldStart": 17,
+      "oldCount": 0,
+      "newStart": 18,
+      "newCount": 1,
+      "before": [],
+      "after": [
+        "        \"packages/venue-adapter/scripts\","
+      ]
+    },
+    {
+      "oldStart": 563,
+      "oldCount": 1,
+      "newStart": 564,
+      "newCount": 1,
+      "before": [
+        "        \"socketcluster-client\": \"^19.2.0\","
+      ],
+      "after": [
+        "        \"socketcluster-client\": \"20.0.1\","
+      ]
+    },
+    {
+      "oldStart": 573,
+      "oldCount": 0,
+      "newStart": 575,
+      "newCount": 1,
+      "before": [],
+      "after": [
+        "        \"dotenv\": \"17.4.2\","
+      ]
+    },
+    {
+      "oldStart": 667,
+      "oldCount": 21,
+      "newStart": 668,
+      "newCount": 0,
+      "before": [
+        "    \"client/web/node_modules/socketcluster-client\": {",
+        "      \"version\": \"19.2.7\",",
+        "      \"resolved\": \"https://registry.npmjs.org/socketcluster-client/-/socketcluster-client-19.2.7.tgz\",",
+        "      \"integrity\": \"sha512-c6caNOr/49FUjlVnQfXb0TasMnrqY1uN/uevT99xicF+7NkvGSNwjP6rlMP0v1ZZjz+MosT2/qJNDDc2b3v/Jw==\",",
+        "      \"license\": \"MIT\",",
+        "      \"dependencies\": {",
+        "        \"ag-auth\": \"^2.1.0\",",
+        "        \"ag-channel\": \"^5.0.0\",",
+        "        \"ag-request\": \"^1.1.0\",",
+        "        \"async-stream-emitter\": \"^7.0.1\",",
+        "        \"buffer\": \"^5.2.1\",",
+        "        \"clone-deep\": \"^4.0.1\",",
+        "        \"linked-list\": \"^2.1.0\",",
+        "        \"sc-errors\": \"^3.0.0\",",
+        "        \"sc-formatter\": \"^4.0.0\",",
+        "        \"stream-demux\": \"^10.0.1\",",
+        "        \"uuid\": \"^8.3.2\",",
+        "        \"vinyl-buffer\": \"^1.0.1\",",
+        "        \"ws\": \"^8.18.0\"",
+        "      }",
+        "    },"
+      ],
+      "after": []
+    },
+    {
+      "oldStart": 994,
+      "oldCount": 0,
+      "newStart": 976,
+      "newCount": 4,
+      "before": [],
+      "after": [
+        "    \"node_modules/@changmen/venue-adapter-tools\": {",
+        "      \"resolved\": \"packages/venue-adapter/scripts\",",
+        "      \"link\": true",
+        "    },"
+      ]
+    },
+    {
+      "oldStart": 12973,
+      "oldCount": 1,
+      "newStart": 12957,
+      "newCount": 0,
+      "before": [
+        "        \"@changmen/db\": \"file:../../server/db\","
+      ],
+      "after": []
+    },
+    {
+      "oldStart": 12976,
+      "oldCount": 1,
+      "newStart": 12959,
+      "newCount": 0,
+      "before": [
+        "        \"@changmen/storage\": \"file:../../server/storage\","
+      ],
+      "after": []
+    },
+    {
+      "oldStart": 13111,
+      "oldCount": 0,
+      "newStart": 13095,
+      "newCount": 7,
+      "before": [],
+      "after": [
+        "    \"packages/venue-adapter/scripts\": {",
+        "      \"name\": \"@changmen/venue-adapter-tools\",",
+        "      \"version\": \"1.0.0\",",
+        "      \"dependencies\": {",
+        "        \"@changmen/storage\": \"file:../../../server/storage\"",
+        "      }",
+        "    },"
+      ]
+    }
+  ]
+}

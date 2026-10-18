@@ -2,6 +2,8 @@
 
 赛事匹配模块的**纯函数层**：`client_match` ID 分配、队名键、平台优先级与开赛时间容差。旧 `merge/` 合并管线已下线。
 
+[changmen 扩展] 2026-10-17：本目录现为兼容入口，8 个 JS 实现逐字迁至 `packages/shared/match-identity`；RDS 直接使用该 shared 入口，matcher / resolver 的原 import 保持可用。所有入口共享同一函数与插件状态。本目录的别名 JSON 保留旧公开路径，门禁要求其与 shared canonical 资产逐字一致，详见[源码隔离记录](../../../docs/SOURCE_FILE_ISOLATION_20261017.md)。
+
 唯一依赖是 `@changmen/shared`。这份纯度是刻意维持的——`server/db`、`server/backend` 与诊断脚本都直接引用本包，一旦掺入 express / axios / 平台适配层，这些消费方就会被迫拖上整条运行时依赖链。
 
 ## 使用方

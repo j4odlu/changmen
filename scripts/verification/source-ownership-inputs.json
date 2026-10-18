@@ -1,0 +1,512 @@
+{
+  "schemaVersion": 1,
+  "purpose": "source-ownership-only",
+  "publishScopeOptimizationEnabled": false,
+  "toolingRoots": [
+    "devtools/venue-adapter",
+    "client/web/vite.config.ts",
+    "client/web/vite",
+    "client/web/scripts/bootstrap-dialogs.mjs",
+    "client/web/scripts/gen-platform-icons-css.mjs",
+    "client/web/scripts/clean-dist-assets.mjs",
+    "client/web/scripts/run-production-build.mjs",
+    "client/devtools/venue-adapter"
+  ],
+  "roots": [
+    "client/web/src",
+    "chrome-extension/src",
+    "packages",
+    "server",
+    "devtools/platform-probes",
+    "devtools/venue-adapter",
+    "client/web/vite.config.ts",
+    "client/web/vite",
+    "client/web/scripts/bootstrap-dialogs.mjs",
+    "client/web/scripts/gen-platform-icons-css.mjs",
+    "client/web/scripts/clean-dist-assets.mjs",
+    "client/web/scripts/run-production-build.mjs",
+    "client/devtools/venue-adapter",
+    "client/packages"
+  ],
+  "compatibilityAssets": [
+    {
+      "file": "server/match/identity/teams/team_aliases.json",
+      "canonical": "packages/shared/match-identity/teams/team_aliases.json"
+    },
+    {
+      "file": "server/backend/scripts/rds-schema-baseline.json",
+      "canonical": "server/db/assets/schema-baseline.json"
+    },
+    {
+      "file": "server/backend/db/migrations/001_baseline.sql",
+      "canonical": "server/db/assets/migrations/001_baseline.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/003_money_logs.sql",
+      "canonical": "server/db/assets/migrations/003_money_logs.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/004_users_is_admin.sql",
+      "canonical": "server/db/assets/migrations/004_users_is_admin.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/005_client_matches_list_status.sql",
+      "canonical": "server/db/assets/migrations/005_client_matches_list_status.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/006_tag_platforms_players.sql",
+      "canonical": "server/db/assets/migrations/006_tag_platforms_players.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/007_platform_matches_is_live.sql",
+      "canonical": "server/db/assets/migrations/007_platform_matches_is_live.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/008_user_logs.sql",
+      "canonical": "server/db/assets/migrations/008_user_logs.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/009_orders_changmen_bet.sql",
+      "canonical": "server/db/assets/migrations/009_orders_changmen_bet.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/010_value_signals.sql",
+      "canonical": "server/db/assets/migrations/010_value_signals.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/011_odds_history.sql",
+      "canonical": "server/db/assets/migrations/011_odds_history.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/012_user_roles_teams.sql",
+      "canonical": "server/db/assets/migrations/012_user_roles_teams.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/013_widen_odds_numeric.sql",
+      "canonical": "server/db/assets/migrations/013_widen_odds_numeric.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/014_history_tables.sql",
+      "canonical": "server/db/assets/migrations/014_history_tables.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/015_prune_indexes_and_drop_list_status.sql",
+      "canonical": "server/db/assets/migrations/015_prune_indexes_and_drop_list_status.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/016_client_matches_pm_sport.sql",
+      "canonical": "server/db/assets/migrations/016_client_matches_pm_sport.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/017_client_matches_canonical_teams.sql",
+      "canonical": "server/db/assets/migrations/017_client_matches_canonical_teams.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/018_client_match_platform_overrides.sql",
+      "canonical": "server/db/assets/migrations/018_client_match_platform_overrides.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/023_team_platform_maps_gb_team_id.sql",
+      "canonical": "server/db/assets/migrations/023_team_platform_maps_gb_team_id.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/024_team_platform_maps_venue_columns.sql",
+      "canonical": "server/db/assets/migrations/024_team_platform_maps_venue_columns.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/025_team_venue_maps.sql",
+      "canonical": "server/db/assets/migrations/025_team_venue_maps.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/026_players_owner_user_id.sql",
+      "canonical": "server/db/assets/migrations/026_players_owner_user_id.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/027_players_active_owner_required.sql",
+      "canonical": "server/db/assets/migrations/027_players_active_owner_required.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/028_players_account_data.sql",
+      "canonical": "server/db/assets/migrations/028_players_account_data.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/029_orders_user_player_index.sql",
+      "canonical": "server/db/assets/migrations/029_orders_user_player_index.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/030_players_venue_member_id.sql",
+      "canonical": "server/db/assets/migrations/030_players_venue_member_id.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/031_team_venue_maps_venue_team_id.sql",
+      "canonical": "server/db/assets/migrations/031_team_venue_maps_venue_team_id.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/032_players_venue_account_key.sql",
+      "canonical": "server/db/assets/migrations/032_players_venue_account_key.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/033_sport_matcher_tables.sql",
+      "canonical": "server/db/assets/migrations/033_sport_matcher_tables.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/034_platform_bets_market_id.sql",
+      "canonical": "server/db/assets/migrations/034_platform_bets_market_id.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/035_players_venue_account_key_including_deleted.sql",
+      "canonical": "server/db/assets/migrations/035_players_venue_account_key_including_deleted.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/036_team_provider_ids.sql",
+      "canonical": "server/db/assets/migrations/036_team_provider_ids.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/037_client_matches_ended_at.sql",
+      "canonical": "server/db/assets/migrations/037_client_matches_ended_at.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/038_platform_matches_rot_num.sql",
+      "canonical": "server/db/assets/migrations/038_platform_matches_rot_num.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/039_platform_bets_line_id.sql",
+      "canonical": "server/db/assets/migrations/039_platform_bets_line_id.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/040_football_orders.sql",
+      "canonical": "server/db/assets/migrations/040_football_orders.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/041_football_orders_status.sql",
+      "canonical": "server/db/assets/migrations/041_football_orders_status.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/042_pod_bet_executions.sql",
+      "canonical": "server/db/assets/migrations/042_pod_bet_executions.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/043_auth_session_audit.sql",
+      "canonical": "server/db/assets/migrations/043_auth_session_audit.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/044_auth_sessions.sql",
+      "canonical": "server/db/assets/migrations/044_auth_sessions.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/045_pod_ray_execution.sql",
+      "canonical": "server/db/assets/migrations/045_pod_ray_execution.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/20261002_order_observations.sql",
+      "canonical": "server/db/assets/migrations/20261002_order_observations.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/20261003_order_observation_execution_index.sql",
+      "canonical": "server/db/assets/migrations/20261003_order_observation_execution_index.sql"
+    },
+    {
+      "file": "server/backend/db/migrations/20261015_reconcile_archive_schema.sql",
+      "canonical": "server/db/assets/migrations/20261015_reconcile_archive_schema.sql"
+    }
+  ],
+  "rules": [
+    {
+      "files": [
+        "client/web/vite.config.ts",
+        "client/web/scripts/bootstrap-dialogs.mjs",
+        "client/web/scripts/gen-platform-icons-css.mjs",
+        "client/web/scripts/clean-dist-assets.mjs",
+        "client/web/scripts/run-production-build.mjs"
+      ],
+      "layer": "frontend",
+      "role": "tooling"
+    },
+    {
+      "prefix": "client/web/vite",
+      "layer": "frontend",
+      "role": "tooling"
+    },
+    {
+      "files": [
+        "server/db/assets/schema-baseline.json"
+      ],
+      "layer": "rds",
+      "role": "asset"
+    },
+    {
+      "prefix": "client/devtools/venue-adapter",
+      "layer": "frontend",
+      "role": "tooling"
+    },
+    {
+      "prefix": "devtools/venue-adapter/verification",
+      "layer": "shared",
+      "role": "tooling"
+    },
+    {
+      "files": [
+        "packages/venue-adapter/scripts/list-web-venue-imports.mjs",
+        "packages/venue-adapter/scripts/relativize-internal-imports.mjs",
+        "packages/venue-adapter/scripts/sync-package-exports.mjs"
+      ],
+      "layer": "frontend",
+      "role": "tooling"
+    },
+    {
+      "files": [
+        "packages/venue-adapter/scripts/check-esport-freeze.mjs"
+      ],
+      "layer": "shared",
+      "role": "tooling"
+    },
+    {
+      "files": [
+        "server/match/identity/teams/team_aliases.json"
+      ],
+      "layer": "shared",
+      "role": "asset"
+    },
+    {
+      "files": [
+        "packages/venue-adapter/registry/paths.js",
+        "packages/venue-adapter/registry/feeds.js"
+      ],
+      "layer": "backend"
+    },
+    {
+      "files": [
+        "packages/venue-adapter/registry/manifest.json"
+      ],
+      "layer": "shared",
+      "role": "asset"
+    },
+    {
+      "files": [
+        "server/backend/scripts/rds-schema-baseline.json",
+        "server/backend/scripts/rds-schema-check.mjs",
+        "server/backend/scripts/rds-migrations.mjs",
+        "server/backend/scripts/reconcile-rds-schema.mjs",
+        "server/backend/scripts/rds-reconciliation-backup.mjs",
+        "server/backend/scripts/check-rds-schema.mjs",
+        "server/backend/scripts/apply-rds-schema.mjs",
+        "server/backend/scripts/apply-order-observation-schema.mjs"
+      ],
+      "layer": "rds"
+    },
+    {
+      "prefix": "packages/venue-adapter/loader",
+      "layer": "backend"
+    },
+    {
+      "prefix": "packages/venue-adapter/scripts",
+      "layer": "backend",
+      "role": "tooling"
+    },
+    {
+      "prefix": "server/db",
+      "layer": "rds"
+    },
+    {
+      "prefix": "server/backend/db",
+      "layer": "rds"
+    },
+    {
+      "prefix": "server/storage",
+      "layer": "backend",
+      "role": "infrastructure"
+    },
+    {
+      "prefix": "packages/api-contract",
+      "layer": "shared"
+    },
+    {
+      "prefix": "packages/shared",
+      "layer": "shared"
+    },
+    {
+      "prefix": "packages/client-core",
+      "layer": "frontend"
+    },
+    {
+      "prefix": "packages/arb-core",
+      "layer": "frontend"
+    },
+    {
+      "prefix": "client/packages/pm-market-data-browser",
+      "layer": "frontend"
+    },
+    {
+      "prefix": "packages/venue-adapter",
+      "layer": "frontend"
+    },
+    {
+      "prefix": "client/web/src",
+      "layer": "frontend"
+    },
+    {
+      "prefix": "chrome-extension/src",
+      "layer": "frontend"
+    },
+    {
+      "prefix": "devtools/platform-probes",
+      "layer": "backend",
+      "role": "probe"
+    },
+    {
+      "prefix": "server",
+      "layer": "backend"
+    }
+  ],
+  "compatibilityEntries": [
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/bookMetadata.ts",
+      "canonical": "packages/venue-adapter/browser/pm-book-diagnostics/bookMetadata.ts",
+      "spec": "../../../../../browser/pm-book-diagnostics/bookMetadata"
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/bookRuntime.ts",
+      "canonical": "packages/venue-adapter/browser/pm-book-diagnostics/bookRuntime.ts",
+      "spec": "../../../../../browser/pm-book-diagnostics/bookRuntime"
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/executionMath.ts",
+      "canonical": "packages/venue-adapter/browser/pm-book-diagnostics/executionMath.ts",
+      "spec": "../../../../../browser/pm-book-diagnostics/executionMath"
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/executionSimulation.ts",
+      "canonical": "packages/venue-adapter/browser/pm-book-diagnostics/executionSimulation.ts",
+      "spec": "../../../../../browser/pm-book-diagnostics/executionSimulation"
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/freshnessPolicy.ts",
+      "canonical": "packages/venue-adapter/browser/pm-book-diagnostics/freshnessPolicy.ts",
+      "spec": "../../../../../browser/pm-book-diagnostics/freshnessPolicy"
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/shadowObserver.ts",
+      "canonical": "packages/venue-adapter/browser/pm-book-diagnostics/shadowObserver.ts",
+      "spec": "../../../../../browser/pm-book-diagnostics/shadowObserver"
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/shadowWorkerClient.ts",
+      "canonical": "packages/venue-adapter/browser/pm-book-diagnostics/shadowWorkerClient.ts",
+      "spec": "../../../../../browser/pm-book-diagnostics/shadowWorkerClient"
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/shadowWorkerProtocol.ts",
+      "canonical": "packages/venue-adapter/browser/pm-book-diagnostics/shadowWorkerProtocol.ts",
+      "spec": "../../../../../browser/pm-book-diagnostics/shadowWorkerProtocol"
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/workerDiagnostics.ts",
+      "canonical": "packages/venue-adapter/browser/pm-book-diagnostics/workerDiagnostics.ts",
+      "spec": "../../../../../browser/pm-book-diagnostics/workerDiagnostics"
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/orderBookSource.ts",
+      "canonical": "packages/venue-adapter/browser/pm-book-source.ts",
+      "spec": "../browser/pm-book-source"
+    },
+    {
+      "file": "server/backend/scripts/rds-migrations.mjs",
+      "canonical": "server/db/maintenance/rds-migrations.mjs",
+      "spec": "@changmen/db/maintenance/rds-migrations.mjs"
+    },
+    {
+      "file": "server/backend/scripts/rds-schema-check.mjs",
+      "canonical": "server/db/maintenance/rds-schema-check.mjs",
+      "spec": "@changmen/db/maintenance/rds-schema-check.mjs"
+    },
+    {
+      "file": "server/backend/scripts/reconcile-rds-schema.mjs",
+      "canonical": "server/db/maintenance/reconcile-rds-schema.mjs",
+      "spec": "@changmen/db/maintenance/reconcile-rds-schema.mjs"
+    },
+    {
+      "file": "server/backend/scripts/rds-reconciliation-backup.mjs",
+      "canonical": "server/db/maintenance/rds-reconciliation-backup.mjs",
+      "spec": "@changmen/db/maintenance/rds-reconciliation-backup.mjs"
+    },
+    {
+      "file": "server/match/identity/index.js",
+      "canonical": "packages/shared/match-identity/index.js",
+      "spec": "@changmen/shared/match-identity"
+    },
+    {
+      "file": "server/match/identity/time_windows.js",
+      "canonical": "packages/shared/match-identity/time_windows.js",
+      "spec": "@changmen/shared/match-identity/time_windows.js"
+    },
+    {
+      "file": "server/match/identity/ids/client_match_ids.js",
+      "canonical": "packages/shared/match-identity/ids/client_match_ids.js",
+      "spec": "@changmen/shared/match-identity/ids/client_match_ids.js"
+    },
+    {
+      "file": "server/match/identity/teams/canonical_ob_name.js",
+      "canonical": "packages/shared/match-identity/teams/canonical_ob_name.js",
+      "spec": "@changmen/shared/match-identity/teams/canonical_ob_name.js"
+    },
+    {
+      "file": "server/match/identity/teams/match_utils.js",
+      "canonical": "packages/shared/match-identity/teams/match_utils.js",
+      "spec": "@changmen/shared/match-identity/teams/match_utils.js"
+    },
+    {
+      "file": "server/match/identity/teams/provider_priority.js",
+      "canonical": "packages/shared/match-identity/teams/provider_priority.js",
+      "spec": "@changmen/shared/match-identity/teams/provider_priority.js"
+    },
+    {
+      "file": "server/match/identity/teams/team_key.js",
+      "canonical": "packages/shared/match-identity/teams/team_key.js",
+      "spec": "@changmen/shared/match-identity/teams/team_key.js"
+    },
+    {
+      "file": "server/match/identity/profiles/esport.js",
+      "canonical": "packages/shared/match-identity/profiles/esport.js",
+      "spec": "@changmen/shared/match-identity/profiles/esport.js"
+    },
+    {
+      "file": "server/backend/scripts/apply-order-observation-schema.mjs",
+      "canonical": "server/db/maintenance/apply-order-observation-schema.mjs",
+      "spec": "@changmen/db/maintenance/apply-order-observation-schema.mjs"
+    }
+  ],
+  "compatibilityCliEntries": [
+    {
+      "file": "packages/venue-adapter/scripts/list-web-venue-imports.mjs",
+      "canonical": "client/devtools/venue-adapter/list-web-venue-imports.mjs",
+      "spec": "../../../client/devtools/venue-adapter/list-web-venue-imports.mjs"
+    },
+    {
+      "file": "packages/venue-adapter/scripts/relativize-internal-imports.mjs",
+      "canonical": "client/devtools/venue-adapter/relativize-internal-imports.mjs",
+      "spec": "../../../client/devtools/venue-adapter/relativize-internal-imports.mjs"
+    },
+    {
+      "file": "packages/venue-adapter/scripts/sync-package-exports.mjs",
+      "canonical": "client/devtools/venue-adapter/sync-package-exports.mjs",
+      "spec": "../../../client/devtools/venue-adapter/sync-package-exports.mjs"
+    },
+    {
+      "file": "packages/venue-adapter/scripts/check-esport-freeze.mjs",
+      "canonical": "devtools/venue-adapter/verification/check-esport-freeze.mjs",
+      "spec": "../../../devtools/venue-adapter/verification/check-esport-freeze.mjs"
+    },
+    {
+      "file": "server/backend/scripts/check-rds-schema.mjs",
+      "canonical": "server/db/maintenance/check-rds-schema.mjs",
+      "spec": "@changmen/db/maintenance/check-rds-schema.mjs",
+      "command": "checkConfiguredRdsSchema"
+    },
+    {
+      "file": "server/backend/scripts/apply-rds-schema.mjs",
+      "canonical": "server/db/maintenance/apply-rds-schema.mjs",
+      "spec": "@changmen/db/maintenance/apply-rds-schema.mjs",
+      "command": "runConfiguredRdsSchema"
+    }
+  ]
+}

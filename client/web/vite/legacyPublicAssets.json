@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "prefix": "/esport2/assets/",
+  "owner": "backend-public-contract",
+  "assets": {
+    "/esport2/assets/BV3jdLt7.png": {
+      "sha256": "96fa246a72608b19a07afc67d1834a6fcf9f83718fef09b9daf4e175316c8dec"
+    },
+    "/esport2/assets/CQ1lLIdm.woff2": {
+      "sha256": "4a259dde317e08aa5d37e6eb684e222ae833516b2a0fccba36ee5e36224f16be"
+    },
+    "/esport2/assets/fontawesome-webfont.woff2": {
+      "sha256": "2adefcbc041e7d18fcf2d417879dc5a09997aa64d675b7a3c4b6ce33da13f3fe"
+    },
+    "/esport2/assets/rank-chip-badge-boss.svg": {
+      "sha256": "237949de58028768bdaed66f192a8de18edfee22a46e23690d30e625c12500cb"
+    },
+    "/esport2/assets/rank-chip-boss-hover.svg": {
+      "sha256": "abb66a9abbb5fa9a2063d06f5766657c7fe10791c0f5715a4f18da6bea13192f"
+    },
+    "/esport2/assets/rank-chip-boss.svg": {
+      "sha256": "5bd2eac3be19abeb564ab82374bbe6d2b5a4fa49a3908d244c7abdfc0245d9e6"
+    },
+    "/esport2/assets/rank-chip-default.svg": {
+      "sha256": "d34f9935d2deecef39c571b20c7cd30ef2531ece54520dade1e2729ab3dc6672"
+    },
+    "/esport2/assets/rank-chip-loser-hover.svg": {
+      "sha256": "1ef0d8d90946e5cc4f0d0d726624a97d59770427003d9b12ec3ae5eeafc2920b"
+    },
+    "/esport2/assets/rank-chip-loser.svg": {
+      "sha256": "089ce9e433d676dc8704e3dca6a8ba43ab1a7412b0c6a626b713f6166f2fda6a"
+    }
+  }
+}

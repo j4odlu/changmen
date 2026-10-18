@@ -11,7 +11,7 @@ on:
         options: [full, backend, frontend]
 permissions:
   contents: read
-# Keep production publications ordered; full audits have a separate manual entry.
+# Required audits and database checks finish in this checkout before sealing.
 concurrency:
   group: changmen-release-production
   cancel-in-progress: false
@@ -20,7 +20,7 @@ jobs:
   validate:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
     env:
       TZ: Asia/Shanghai
     outputs:
@@ -37,7 +37,6 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Prepare read-only version check
-        if: github.event_name == 'push'
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
@@ -60,6 +59,14 @@ jobs:
         run: node scripts/deploy/change-plan.mjs
       - name: Install dependencies
         run: npm ci
+      - name: Install PostgreSQL for required compatibility checks
+        if: steps.plan.outputs.database-compatibility == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql
+          SCHEMA_TEST_PG_BIN="$(dirname "$(find /usr/lib/postgresql -type f -name initdb | sort -V | tail -n 1)")"
+          test -x "$SCHEMA_TEST_PG_BIN/pg_ctl"
+          echo "CHANGMEN_TEST_PG_BIN=$SCHEMA_TEST_PG_BIN" >> "$GITHUB_ENV"
       - name: Check selected components and build
         env:
           VITE_PREDICT_FUN_API_BASE: https://api.predict.fun
@@ -83,10 +90,16 @@ jobs:
             output/orders-phase2-protection/*.log
             output/orders-phase2-protection/*.json
             output/fok-release-verdict.json
+            output/database-compatibility/
           retention-days: 7
       - name: Remove capture key
         if: always()
         run: rm -f "$RUNNER_TEMP/release-capture-key"
+      - name: Summarize acceptance and failures
+        if: always()
+        env:
+          ACCEPTANCE_JOB_STATUS: ${{ job.status }}
+        run: node scripts/deploy/release-summary.mjs
   backend:
     needs: validate
     if: needs.validate.outputs.backend == 'true'

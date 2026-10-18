@@ -28,3 +28,7 @@ it.each(["missing", "pool throws", "query throws"])("unavailable schema is unkno
   const report = await reader(); expect(report.restartRequired).toBeNull(); expect(report.database.status).toBe("unavailable");
   expect(JSON.stringify(report)).not.toMatch(/secret|DSN/); expect(report.backend.commit).toBe("loaded");
 });
+it("an omitted test pool remains unavailable instead of selecting the configured database", async () => {
+  const reader = createRuntimeVersionReader({ running: { commit: "loaded" }, source: () => null });
+  expect((await reader()).database).toMatchObject({ status: "unavailable", schemaFingerprint: null });
+});

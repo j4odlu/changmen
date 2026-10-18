@@ -31,6 +31,9 @@ await withTemporaryPostgres(async ({ temporary }) => {
     const before = (await pool.query("SELECT * FROM players WHERE id=$1", [id])).rows[0];
     const beforeUser = (await pool.query("SELECT * FROM users WHERE id=$1", [owner])).rows[0];
     const beforeProfile = (await pool.query("SELECT * FROM profiles WHERE id=$1", [owner])).rows[0];
+    const initialLedger = (await pool.query("SELECT name,checksum,applied_at FROM changmen_schema_migrations ORDER BY name")).rows;
+    assert.deepEqual(Object.fromEntries(initialLedger.map(row => [row.name, row.checksum])), readSchemaBaseline().migrations,
+      "initialized ledger must exactly match the canonical migration checksums");
     await pool.query("SELECT setval('client_matches_id_seq',12345)");
     // Release activation must not execute database maintenance. The standalone
     // checker is exercised separately against the same disposable database.
@@ -50,7 +53,7 @@ await withTemporaryPostgres(async ({ temporary }) => {
     for (const name of ["curl", "ssh", "scp"]) command(name, 'echo "Unexpected network access" >&2; exit 98');
     const manifest = path.join(fixture, "changes.txt"), nodeLog = path.join(fixture, "node.log"), pm2Log = path.join(fixture, "pm2.log");
     const scenarios = [
-      { name: "ordinary runtime activation does not access schema or change players, roles, profiles or sequences", files: ["server/backend/core/db/store.js", "server/db/rds/player_store.js"], full: "0", ledger: 42 },
+      { name: "ordinary runtime activation does not access schema or change players, roles, profiles or sequences", files: ["server/backend/core/db/store.js", "server/db/rds/player_store.js"], full: "0", ledger: "unchanged" },
       { name: "activation without a migration ledger does not replay or adopt migrations", files: ["server/backend/scripts/apply-rds-schema.mjs"], full: "0", dropLedger: true, ledger: null },
       { name: "activation with an empty ledger does not write migration records", files: ["server/backend/scripts/check-rds-schema.mjs"], full: "0", emptyLedger: true, ledger: 0 },
       { name: "explicit full activation also does not invoke database maintenance", files: ["server/db/rds/player_store.js"], full: "1", ledger: 0 },
@@ -85,6 +88,9 @@ await withTemporaryPostgres(async ({ temporary }) => {
       assert.deepEqual(commands, [], "application activation must not run database maintenance");
       const ledger = (await pool.query("SELECT to_regclass('public.changmen_schema_migrations') AS name")).rows[0].name;
       if (scenario.ledger === null) assert.equal(ledger, null);
+      else if (scenario.ledger === "unchanged")
+        assert.deepEqual((await pool.query("SELECT name,checksum,applied_at FROM changmen_schema_migrations ORDER BY name")).rows,
+          initialLedger, "activation and read-only verification must preserve the complete migration ledger");
       else assert.equal(Number((await pool.query("SELECT count(*) FROM changmen_schema_migrations")).rows[0].count), scenario.ledger);
       cases.push(scenario.name); console.log(`PASS ${scenario.name}`);
     }

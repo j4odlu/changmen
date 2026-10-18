@@ -5,9 +5,16 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {assertCaptureEvidence} from './release-provenance.mjs';
 import {releasePlan, selectGtcRelease} from './gtc-independent-release.mjs';
+import {validationIdentity} from './verify-change.mjs';
+import {FULL_AUDIT_PHASES, executionContext} from '../deploy/acceptance-contract.mjs';
 assert(process.env.npm_execpath,'Run with npm run check:fok-release');
 const plan=releasePlan(process.argv.slice(2));
+const identity=validationIdentity(process.cwd());
+const invocationId=process.env.CHANGMEN_ACCEPTANCE_INVOCATION??null;
+const context=executionContext();
+if(process.env.GITHUB_SHA)assert.equal(identity.commit,process.env.GITHUB_SHA,'Audit commit differs from CI checkout');
 fs.mkdirSync('output/orders-phase2-protection',{recursive:true});
+for(const file of ['output/fok-release-verdict.json','output/orders-phase2-protection/release-verdict.json'])fs.rmSync(file,{force:true});
 const npm=(...args)=>[process.env.npm_execpath,...args];
 const vitest=(...args)=>npm('exec','--','vitest',...args);
 const phases=[
@@ -35,13 +42,15 @@ const phases=[
   ['release-stability',['scripts/verification/verify-fok-release-stability.mjs']],
 ];
 const results=[];
+assert.deepEqual(phases.map(row=>row[0]),FULL_AUDIT_PHASES,'All original complete audit phases must remain present');
 for(const [phase,args,cwd] of phases) {
   const started=Date.now();const result=spawnSync(process.execPath,args,{cwd:cwd?path.resolve(cwd):process.cwd(),encoding:'utf8',timeout:300000,maxBuffer:30*1024*1024,windowsHide:true});
   const log=`output/orders-phase2-protection/${phase}.log`;
   fs.writeFileSync(log,(result.stdout??'')+(result.stderr??'')+(result.error?'\n'+result.error.message:''));
-  results.push({phase,passed:result.status===0,exitCode:result.status,elapsedMs:Date.now()-started,log});
-  console.log(`${phase}: ${result.status===0?'PASS':'FAIL'} (${log})`);
-  if(result.status!==0)break;
+  results.push({phase,passed:result.status===0&&!result.error,exitCode:result.status,errorCode:result.error?.code??null,signal:result.signal??null,
+    execution:{command:[process.execPath,...args],cwd:cwd??'.'},elapsedMs:Date.now()-started,log});
+  console.log(`${phase}: ${result.status===0&&!result.error?'PASS':'FAIL'} (${log})`);
+  if(result.status!==0||result.error)break;
 }
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
 const capture=results.find(row=>row.phase==='capture')?.passed?read('output/vps-fok-baseline.json'):null;
@@ -67,8 +76,10 @@ if(compatibility&&capture&&compatibility.release?.plan===plan) {
     selectedRelease=selected;
   } catch { /* 旧结果、缺失组合或矛盾证据均阻断当前发布。 */ }
 }
-const passed=results.length===phases.length&&results.every(row=>row.passed)&&evidenceConsistent&&selectedRelease?.passed===true;
+const sourceStable=JSON.stringify(validationIdentity(process.cwd()))===JSON.stringify(identity);
+const passed=results.length===phases.length&&results.every(row=>row.passed)&&evidenceConsistent&&selectedRelease?.passed===true&&sourceStable;
 const report={checkedAt:new Date().toISOString(),passed,fullReleaseAccepted:passed,releaseScope:'current-source-with-independent-frontend-backend-compatibility',releasePlan:plan,deploymentOrder:selectedRelease?.deploymentOrder??null,frontendOnlyGtcCompatible:selectedRelease?.frontendOnlyGtcCompatible??null,releaseCombinations:selectedRelease?compatibility.combinations:null,immutableBaselines:['219535c8','75b1efac66625e5f2bc9884a965b244bfaf337ed'],captureId:capture?.captureId,frontendVersion:capture?.frontendVersion,backendVersion:capture?.backendVersion,results,evidenceConsistent,executionControlSource:'client-indexeddb',orderResultStore:'rds-orders',legacyControlSource:'pm_gtc_executions',compatDefault:'off',productionDatabaseConnected:false,productionWrites:false,realTrading:false,committed:false,pushed:false,deployed:false,failedBoundaries:[...results.filter(row=>!row.passed).map(row=>row.phase),...(selectedRelease?.failedBoundaries??['gtc:missing-current-release-evidence'])]};
+Object.assign(report,{identity,sourceStable,invocationId,context});
 fs.writeFileSync('output/fok-release-verdict.json',JSON.stringify(report,null,2));
 fs.writeFileSync('output/orders-phase2-protection/release-verdict.json',JSON.stringify(report,null,2));
 console.log(`FOK/VPS complete release protection: ${passed?'PASS':'FAIL'}`);

@@ -1,0 +1,279 @@
+{
+  "schemaVersion": 1,
+  "purpose": "inventory-and-boundary-only",
+  "publishScopeOptimizationEnabled": false,
+  "sourceOwnership": "scripts/verification/source-ownership-inputs.json",
+  "conservativeInputs": [
+    "scripts/verification/source-ownership-inputs.json",
+    "package.json",
+    "package-lock.json",
+    "packages/venue-adapter/package.json",
+    "client/web/vite.config.ts",
+    "client/web/tsconfig.app.json",
+    "packages/venue-adapter/scripts/sync-backend-bundle.mjs",
+    "scripts/deploy/classify-deploy-scope.mjs",
+    "scripts/deploy/change-plan.mjs",
+    "scripts/deploy/release-evidence.mjs",
+    "server/storage/runtime_version.js",
+    ".github/workflows/release.yml",
+    "client/packages/pm-market-data-browser/package.json",
+    "packages/venue-adapter/loader/package.json",
+    "packages/venue-adapter/registry/package.json",
+    "packages/venue-adapter/scripts/package.json"
+  ],
+  "nodeRoots": [
+    "server",
+    "devtools/platform-probes"
+  ],
+  "nodeOnlyPaths": [
+    "packages/venue-adapter/registry/paths.js",
+    "packages/venue-adapter/registry/feeds.js",
+    "packages/shared/tooling"
+  ],
+  "browserRoots": [
+    "client/web/src",
+    "chrome-extension/src"
+  ],
+  "testEntries": [
+    "server/backend/scripts/test-packaged-adapter-layout.js"
+  ],
+  "browserOnlyPaths": [
+    "packages/venue-adapter/browser/",
+    "packages/venue-adapter/polymarket/realtime/orderBook/",
+    "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/",
+    "client/packages/pm-market-data-browser/src/"
+  ],
+  "scopes": {
+    "pm": {
+      "nodeRoots": [
+        "server/backend/core/integrations/polymarket",
+        "server/ws_forward/pm_market_hub_server.js",
+        "server/ws_forward/pm_sport_market_hub_server.js",
+        "server/ws_forward/platforms/pm.js",
+        "server/collectors/polymarket-esports/index.js",
+        "server/collectors/polymarket-football/index.js",
+        "server/collectors/polymarket-sports/index.js"
+      ],
+      "browserRoots": [
+        "packages/venue-adapter/browser",
+        "packages/venue-adapter/polymarket",
+        "client/web/src/runtime/pmMarketData.ts",
+        "client/web/src/runtime/pmBookSettings.ts",
+        "client/web/src/runtime/pmDynamicWsPreflight.ts",
+        "client/web/src/runtime/pmDynamicWsShadowWorker.ts",
+        "client/web/src/runtime/appSession.ts",
+        "client/web/src/runtime/sportsSession.ts",
+        "client/web/src/runtime/venueTransportSession.ts",
+        "client/web/src/runtime/gtcOrderMonitor/pm.ts",
+        "client/web/src/runtime/gtcOrderMonitor/pmPolling.ts",
+        "client/web/src/security/pmVault",
+        "client/packages/pm-market-data-browser/src"
+      ]
+    }
+  },
+  "entries": [
+    {
+      "id": "pm-adapter",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/index.ts",
+      "specifiers": [
+        "@changmen/venue-adapter/polymarket"
+      ]
+    },
+    {
+      "id": "browser-adapter-registry",
+      "environment": "browser",
+      "file": "packages/venue-adapter/registry/adapters.ts",
+      "specifiers": [
+        "@changmen/venue-adapter/registry/adapters"
+      ]
+    },
+    {
+      "id": "pm-original-market-ws",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/realtime/ws.ts"
+    },
+    {
+      "id": "pm-original-quote-hub",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/quotes/marketQuoteHub.ts"
+    },
+    {
+      "id": "pm-classic-fok",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/fok/bet.ts"
+    },
+    {
+      "id": "pm-classic-preflight",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/fok/preflight.ts"
+    },
+    {
+      "id": "pm-preflight-mode",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/pmFokPreflightMode.ts",
+      "specifiers": [
+        "@changmen/venue-adapter/polymarket/pmFokPreflightMode"
+      ]
+    },
+    {
+      "id": "pm-market-source",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/realtime/marketStream.ts"
+    },
+    {
+      "id": "pm-market-source-protocol",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/realtime/marketStreamProtocol.ts"
+    },
+    {
+      "id": "pm-worker-mailbox",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/realtime/orderedWorkerMailbox.ts"
+    },
+    {
+      "id": "pm-book",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/orderBook.ts",
+      "specifiers": [
+        "@changmen/venue-adapter/polymarket/orderBook"
+      ]
+    },
+    {
+      "id": "pm-book-core",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/realtime/orderBook/index.ts"
+    },
+    {
+      "id": "pm-book-worker",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/marketData.worker.ts"
+    },
+    {
+      "id": "pm-book-shadow",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/wsBookShadow.ts",
+      "specifiers": [
+        "@changmen/venue-adapter/polymarket/wsBookShadow"
+      ]
+    },
+    {
+      "id": "pm-book-host",
+      "environment": "browser",
+      "file": "client/web/src/runtime/pmMarketData.ts"
+    },
+    {
+      "id": "pm-book-settings",
+      "environment": "browser",
+      "file": "client/web/src/runtime/pmBookSettings.ts"
+    },
+    {
+      "id": "pm-dynamic-preflight-host",
+      "environment": "browser",
+      "file": "client/web/src/runtime/pmDynamicWsPreflight.ts"
+    },
+    {
+      "id": "pm-dynamic-shadow-host",
+      "environment": "browser",
+      "file": "client/web/src/runtime/pmDynamicWsShadowWorker.ts"
+    },
+    {
+      "id": "venue-registry",
+      "environment": "universal",
+      "file": "packages/venue-adapter/registry/index.ts",
+      "specifiers": [
+        "@changmen/venue-adapter",
+        "@changmen/venue-adapter/registry"
+      ]
+    },
+    {
+      "id": "venue-contract",
+      "environment": "universal",
+      "file": "packages/venue-adapter/contract/index.ts",
+      "specifiers": [
+        "@changmen/venue-adapter/contract"
+      ]
+    },
+    {
+      "id": "venue-node-loader",
+      "environment": "node",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "specifiers": [
+        "@changmen/venue-adapter/loader/adapter_paths.js",
+        "@changmen/venue-adapter/loader/adapter_paths.mjs",
+        "@changmen/venue-node-loader",
+        "@changmen/venue-node-loader/adapter_paths.js",
+        "@changmen/venue-node-loader/adapter_paths.mjs"
+      ]
+    },
+    {
+      "id": "backend-loader-facade",
+      "environment": "node",
+      "file": "server/backend/core/shared/adapter_paths.js"
+    },
+    {
+      "id": "pm-browser-package",
+      "environment": "browser",
+      "file": "client/packages/pm-market-data-browser/src/index.ts",
+      "specifiers": [
+        "@changmen/pm-market-data-browser"
+      ]
+    },
+    {
+      "id": "pm-browser-worker-runtime",
+      "environment": "browser",
+      "file": "client/packages/pm-market-data-browser/src/workerRuntime.ts",
+      "specifiers": [
+        "@changmen/pm-market-data-browser/workerRuntime"
+      ]
+    },
+    {
+      "id": "pm-browser-worker",
+      "environment": "browser",
+      "file": "client/packages/pm-market-data-browser/src/marketData.worker.ts",
+      "specifiers": [
+        "@changmen/pm-market-data-browser/marketData.worker.ts"
+      ]
+    },
+    {
+      "id": "pm-book-web-worker",
+      "environment": "browser",
+      "file": "client/web/src/runtime/pmMarketData.worker.ts"
+    },
+    {
+      "id": "pm-readonly-book-source",
+      "environment": "browser",
+      "file": "packages/venue-adapter/polymarket/orderBookSource.ts",
+      "specifiers": [
+        "@changmen/venue-adapter/polymarket/orderBookSource"
+      ]
+    }
+  ],
+  "dynamicLoaders": [
+    {
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "symbols": [
+        "reqS",
+        "backendRequire",
+        "adapterRequire",
+        "requirePlatform",
+        "requireShared"
+      ],
+      "status": "opaque",
+      "inputs": [
+        "packages/venue-adapter/registry/paths.js",
+        "packages/venue-adapter/registry/feeds.js",
+        "packages/venue-adapter/registry/manifest.json"
+      ],
+      "reason": "Computed module paths and CHANGMEN_ADAPTER_ROOT/GAMEBET_ADAPTER_ROOT overrides are not a closed static dependency proof."
+    }
+  ],
+  "isolatedBrowserRoots": [
+    {
+      "path": "client/packages/pm-market-data-browser/src",
+      "typeImports": [
+        "@polymarket/client/actions"
+      ]
+    }
+  ]
+}

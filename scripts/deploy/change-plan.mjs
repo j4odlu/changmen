@@ -8,6 +8,13 @@ import { validationPlan } from "../verification/validation-plan.mjs";
 import { classifyDeployScope, isDatabaseMaintenancePath } from "./classify-deploy-scope.mjs";
 
 export const planHash = plan => createHash("sha256").update(JSON.stringify(plan)).digest("hex");
+// Preserve the standalone DB workflow's original push coverage in this one chain.
+// Maintenance-only changes still need DB validation even when no app is published.
+const databaseWorkflowPath = file => file === ".github/workflows/database-compatibility.yml"
+  || /^(?:scripts\/(?:testing|deploy)\/|server\/db\/|server\/backend\/db\/)/.test(file)
+  || /^deploy\/scripts\/release-[^/]*\.sh$/.test(file)
+  || /^server\/backend\/scripts\/[^/]*(?:rds|order-observation-schema)[^/]*$/.test(file)
+  || /^package(?:-lock)?\.json$/.test(file);
 export function changePlan(paths, { unknownBase = false, requestedScope = null, deployedVersions = null, liveComponents = null, eventPaths = null, purpose = requestedScope ? "release" : "change" } = {}) {
   if (requestedScope !== null && !["frontend", "backend", "full"].includes(requestedScope))
     throw Error("Invalid requested publication scope");
@@ -29,8 +36,21 @@ export function changePlan(paths, { unknownBase = false, requestedScope = null, 
   const validation = validationPlan(unknownBase || requestedScope ? [] : paths, { publication, components });
   if (paths.some(file => /^(?:scripts\/deploy\/|\.github\/|deploy\/|sh\/(?:deploy-|_common\.sh))/.test(file)))
     validation.checks = ["deployment-control", ...validation.checks];
+  // [changmen 扩展] Required checks execute in the same committed checkout before sealing.
+  // A manual/unknown selection has no demonstrated low-risk baseline and cannot skip them.
+  const uncertain = unknownBase || requestedScope !== null;
+  const requiredChecks = {
+    completeRelease: publication && (uncertain || validation.fullReasons.length > 0
+      || validation.checks.includes("validation-control")),
+    databaseCompatibility: (purpose === "release" && paths.some(databaseWorkflowPath))
+      || (publication && (uncertain || components.includes("backend")
+        || paths.some(file => isDatabaseMaintenancePath(file)
+          || /^(?:server\/db\/|server\/backend\/db\/|scripts\/testing\/|packages\/shared\/|package(?:-lock)?\.json$)/.test(file)))),
+  };
+  if (requiredChecks.completeRelease) validation.checks.push("complete-release");
+  if (requiredChecks.databaseCompatibility) validation.checks.push("database-compatibility");
   return { ...validation, changedPaths: [...new Set(paths)].sort(), unknownBase, requestedScope, deployedVersions, liveComponents, eventPaths,
-    purpose, deployment: { scope, components, backendFirst }, releasePlan: components.length === 1 && components[0] === "frontend" ? "frontend-only" : "backend-first" };
+    purpose, requiredChecks, deployment: { scope, components, backendFirst }, releasePlan: components.length === 1 && components[0] === "frontend" ? "frontend-only" : "backend-first" };
 }
 export function deployedSelection(versions, root, head, eventPaths = []) {
   const paths = [...eventPaths], liveComponents = [];
@@ -68,6 +88,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   fs.mkdirSync("output/change-validation", { recursive: true });
   fs.writeFileSync("output/change-validation/plan.json", JSON.stringify(plan, null, 2));
   if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT,
-    `tier=${plan.tier}\nbackend=${plan.deployment.components.includes("backend")}\nfrontend=${plan.deployment.components.includes("frontend")}\nbackend-first=${plan.deployment.backendFirst}\n`);
+    `tier=${plan.tier}\nbackend=${plan.deployment.components.includes("backend")}\nfrontend=${plan.deployment.components.includes("frontend")}\nbackend-first=${plan.deployment.backendFirst}\ncomplete-release=${plan.requiredChecks.completeRelease}\ndatabase-compatibility=${plan.requiredChecks.databaseCompatibility}\n`);
   console.log(JSON.stringify(plan));
 }

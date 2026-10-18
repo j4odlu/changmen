@@ -5,6 +5,13 @@
  */
 import fs from "node:fs";
 import { checkDatabaseAccessBoundaries } from "./verification/backend-db-boundary.mjs";
+import { inspectComponentEntries } from "./verification/component-entry-boundary.mjs";
+import { inspectPmDependencies } from "./verification/pm-dependency-audit.mjs";
+import { inspectVenueNodeDependencies } from "./verification/venue-node-dependencies.mjs";
+import { sourceOwnershipInventory } from "./verification/source-ownership.mjs";
+import { inspectRetainedSourceBoundaries } from "./verification/retained-source-boundaries.mjs";
+import { inspectComponentInstallInputs } from "./verification/component-install-inputs.mjs";
+import { inspectFrontendBuildInputs } from "./verification/frontend-build-inputs.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CHANGMEN_LAYOUT, VENUE_ADAPTER_REL } from "../server/storage/paths.js";
@@ -33,7 +40,7 @@ const RULES = [
   },
   {
     id: "client-app",
-    roots: ["client/web/src", "chrome-extension/src"],
+    roots: ["client/web/src", "client/packages", "chrome-extension/src"],
     forbid: [
       /@changmen\/db\b/,
       /@changmen\/match-identity\b/,
@@ -231,6 +238,31 @@ function checkLegacyDirs(violations) {
 
 function main() {
   const violations = checkDatabaseAccessBoundaries(CHANGMEN_ROOT);
+  const buildInputs = inspectFrontendBuildInputs(CHANGMEN_ROOT);
+  violations.push(...buildInputs.violations);
+  console.log(`frontend-build-inputs: shared Node implementations and ${buildInputs.assets} public asset contracts checked`);
+  const ownership = sourceOwnershipInventory(CHANGMEN_ROOT);
+  for (const file of ownership.unclassified) violations.push({ rule: "source-ownership", file, line: 0, spec: "unclassified source", pattern: "New source roots require explicit frontend/backend/RDS/shared ownership" });
+  for (const { file, canonical } of ownership.incompatibleAssets) violations.push({ rule: "source-ownership", file, line: 0, spec: canonical, pattern: "Compatibility asset differs from its canonical copy" });
+  for (const { file, canonical } of ownership.incompatibleEntries) violations.push({ rule: "source-ownership", file, line: 0, spec: canonical, pattern: "Compatibility entry must remain a pure re-export of its single canonical implementation" });
+  console.log(`source-ownership: ${JSON.stringify(ownership.counts)}; ${ownership.unclassified.length} unclassified files`);
+  const retained = inspectRetainedSourceBoundaries(CHANGMEN_ROOT);
+  violations.push(...retained.violations);
+  console.log(`retained-source: ${retained.groups.length} explicit boundaries; no source or installation exemptions`);
+  const installInputs = inspectComponentInstallInputs(CHANGMEN_ROOT);
+  violations.push(...installInputs.violations.map(row => ({ ...row, rule: "component-install-input", line: 0 })));
+  console.log(`component-install-inputs: frontend/backend/RDS declarations inspected; actual installation remains uncertified`);
+  const nodeDependencies = inspectVenueNodeDependencies(CHANGMEN_ROOT);
+  violations.push(...nodeDependencies.violations);
+  console.log(`venue-node-install: ${Object.keys(nodeDependencies.closures).length} production closures; resolver tooling ${nodeDependencies.resolverTooling.workspaces.length} workspaces and ${nodeDependencies.consumers.length} explicit Node consumers; backend tooling ${nodeDependencies.backendTooling.workspaces.length} workspaces and ${nodeDependencies.bundleConsumers.length} explicit tool consumer; browser/mixed dependencies forbidden; publish scope unchanged`);
+  const components = inspectComponentEntries(CHANGMEN_ROOT);
+  violations.push(...components.violations);
+  console.log(`component-entry: ${components.entries.length} entries; ${components.unknown.length} unknown inputs; publish scope unchanged (details: node scripts/verification/component-entry-boundary.mjs --json)`);
+  const pm = inspectPmDependencies(CHANGMEN_ROOT);
+  violations.push(...pm.violations);
+  console.log(`pm-dependency: ${pm.dynamicSites.length} reviewed dynamic sites; ${pm.unknownSummary.unexplainedPrimary} unexplained PM inputs; ${pm.unknownSummary.inherited} shared uncertainties (details: node scripts/verification/pm-dependency-audit.mjs --json)`);
+  console.log(`pm-shared-loader: ${JSON.stringify(pm.sharedLoaderEvidence.byClass)}; production roots remain uncertified`);
+  console.log(`pm-loader-binding: ${pm.loaderBindings.calls.length} source-bound calls; ${pm.loaderBindings.scannedSourceFiles} bounded files; unknown calls fail; publish scope unchanged`);
 
   checkLegacyDirs(violations);
 
@@ -261,6 +293,7 @@ function main() {
     console.error(`  [${v.rule}] ${v.file}:${v.line}`);
     console.error(`    import "${v.spec}"`);
     console.error(`    matched /${v.pattern}/\n`);
+    if (v.trace) for (const edge of v.trace) console.error(`    via ${edge.file}:${edge.line} -> ${edge.target}`);
   }
   console.error("See changmen/docs/TEAM_BOUNDARIES.md");
   process.exit(1);

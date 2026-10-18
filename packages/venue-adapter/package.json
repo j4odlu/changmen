@@ -28,6 +28,7 @@
     "./polymarket/gtc": "./polymarket/gtc/index.ts",
     "./polymarket/marketDelay": "./polymarket/marketDelay.ts",
     "./polymarket/orderBook": "./polymarket/orderBook.ts",
+    "./polymarket/orderBookSource": "./polymarket/orderBookSource.ts",
     "./polymarket/orderSettlement": "./polymarket/orderSettlement.ts",
     "./polymarket/orders": "./polymarket/orders.ts",
     "./polymarket/pmArbPriceBufferMode": "./polymarket/pmArbPriceBufferMode.ts",
@@ -46,14 +47,24 @@
   "dependencies": {
     "@changmen/api-contract": "file:../api-contract",
     "@changmen/client-core": "file:../client-core",
-    "@changmen/db": "file:../../server/db",
     "@changmen/shared": "file:../shared",
-    "@changmen/storage": "file:../../server/storage",
+    "@noble/hashes": "1.3.2",
+    "@polymarket/builder-relayer-client": "0.0.10",
+    "@polymarket/builder-signing-sdk": "0.0.8",
     "@polymarket/client": "0.12.0",
     "@polymarket/clob-client-v2": "1.2.0",
     "@predictdotfun/sdk": "^1.3.8",
     "centrifuge": "^5.7.0",
     "ethers": "^6.15.0",
-    "viem": "^2.47.4"
+    "viem": "^2.47.4",
+    "@changmen/pm-market-data-browser": "file:../../client/packages/pm-market-data-browser"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.13"
+  },
+  "peerDependenciesMeta": {
+    "vue": {
+      "optional": true
+    }
   }
 }

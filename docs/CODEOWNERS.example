@@ -4,21 +4,32 @@
 #   1. 复制到仓库根：  .github/CODEOWNERS
 #   2. 将 @CHANGMEN_CLIENT_TEAM / @CHANGMEN_SERVER_TEAM 换成 GitHub 用户名或 org/team
 #
-# 路径相对于仓库根（gamebet/）
+# 路径相对于 changmen 仓库根；本文件只是模板，真实负责人未确认前不启用。
 
 # --- 客户端团队 ---
-/changmen/client/web/                    @CHANGMEN_CLIENT_TEAM
-/changmen/client/chrome-extension/       @CHANGMEN_CLIENT_TEAM
-/changmen/client/platform-adapter/       @CHANGMEN_CLIENT_TEAM
+/client/web/                            @CHANGMEN_CLIENT_TEAM
+/chrome-extension/                      @CHANGMEN_CLIENT_TEAM
+/packages/venue-adapter/                 @CHANGMEN_CLIENT_TEAM
+/client/packages/pm-market-data-browser/        @CHANGMEN_CLIENT_TEAM
+/client/devtools/venue-adapter/        @CHANGMEN_CLIENT_TEAM
 
 # --- 服务端团队 ---
-/changmen/server/backend/                @CHANGMEN_SERVER_TEAM
-/changmen/server/match/                  @CHANGMEN_SERVER_TEAM
-/changmen/server/db/                     @CHANGMEN_SERVER_TEAM
-/changmen/devtools/platform-probes/     @CHANGMEN_SERVER_TEAM
+/server/                                @CHANGMEN_SERVER_TEAM
+/devtools/platform-probes/              @CHANGMEN_SERVER_TEAM
 
-# --- 共同维护（双方都需 review）---
-/changmen/packages/shared/               @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
-/changmen/packages/api-contract/         @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
-/changmen/docs/TEAM_BOUNDARIES.md       @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
-/changmen/scripts/check-team-boundaries.mjs @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+# --- 共同维护（并列登记；实际审查要求由仓库规则配置）---
+/packages/shared/                       @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/packages/api-contract/                 @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/packages/client-core/                  @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/packages/arb-core/                     @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/packages/venue-adapter/loader/         @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/packages/venue-adapter/registry/       @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/packages/venue-adapter/scripts/        @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/devtools/venue-adapter/verification/   @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/docs/TEAM_BOUNDARIES.md                @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/docs/CODEOWNERS.example                @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/.github/CODEOWNERS                     @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/scripts/check-team-boundaries.mjs      @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/scripts/verification/                  @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/scripts/deploy/                        @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM
+/.github/workflows/                     @CHANGMEN_CLIENT_TEAM @CHANGMEN_SERVER_TEAM

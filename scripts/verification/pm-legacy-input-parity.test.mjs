@@ -1,16 +1,33 @@
 // [changmen 扩展] 原有预检兼容性同时覆盖上游输入和提取后的公共任务，不能只比判断函数。
 import fs from "node:fs";
+import assert from "node:assert/strict";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { gitSource, moduleTokens } from "./fok-exact-boundaries.mjs";
+import { restorePmSourceIsolationMetadata } from "./pm-source-isolation-metadata.mjs";
 
 const baseline = "a233e20534395b31401828e754432407b109053d";
 const pm = "packages/venue-adapter/polymarket/";
 const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
 const online = file => gitSource(baseline, file).replaceAll("\r\n", "\n");
+
+const parserFile = "server/collectors/polymarket-sports/parse_sport.js";
+const clockCommit = "1a0f4c0204496a3d1b9bb0e0b96c10a7f1d3a7e0";
+const originalClock = "    elapsed: msg.elapsed ? String(msg.elapsed) : undefined,";
+const reviewedClock = "    elapsed: msg.elapsed != null ? String(msg.elapsed) : undefined,";
+// [changmen 扩展] 只还原已提交的零计时修正；完整原文件及固定历史提交仍逐字核对。
+function restoreReviewedParserClock(source) {
+  const original = online(parserFile);
+  const committed = gitSource(clockCommit, parserFile);
+  assert.equal(committed.split(reviewedClock).length, 2, "exactly one reviewed clock field");
+  assert.equal(committed.replace(reviewedClock, originalClock), original, "reviewed commit changes only the zero clock field");
+  if (source === original) return source;
+  assert.equal(source, committed, "only the exact committed parser correction is accepted");
+  return source.replace(reviewedClock, originalClock);
+}
 
 describe("legacy FOK retains the deployed sports input pipeline", () => {
   it.each([
@@ -25,8 +42,25 @@ describe("legacy FOK retains the deployed sports input pipeline", () => {
     "packages/client-core/src/models/match.ts",
     "packages/shared/package.json",
     "package-lock.json",
-  ])("%s is unchanged from the verified online version", file => {
-    expect(read(file)).toBe(online(file));
+  ])("%s restores the complete fixed historical source after exact reviewed changes", file => {
+    // [changmen 扩展] 仅逆向登记的包迁移，仍逐字比较原固定历史源码；其余文件不做变换。
+    const source = file === parserFile ? restoreReviewedParserClock(read(file)) : read(file);
+    expect(restorePmSourceIsolationMetadata(file, source, online(file))).toBe(online(file));
+  });
+
+  it("accepts both exact parser forms while retaining the original historical baseline", () => {
+    expect(baseline).toBe("a233e20534395b31401828e754432407b109053d");
+    expect(restoreReviewedParserClock(online(parserFile))).toBe(online(parserFile));
+    expect(restoreReviewedParserClock(gitSource(clockCommit, parserFile))).toBe(online(parserFile));
+  });
+
+  it.each([
+    ["extra source", source => `${source}\n`],
+    ["clock semantics", source => source.replace(reviewedClock, "    elapsed: String(msg.elapsed),")],
+    ["timestamp semantics", source => source.replace("updatedAt: Date.now(),", "updatedAt: 0,")],
+    ["duplicate clock field", source => source.replace(reviewedClock, `${reviewedClock}\n${reviewedClock}`)],
+  ])("rejects unreviewed parser %s", (_label, mutate) => {
+    expect(() => restoreReviewedParserClock(mutate(gitSource(clockCommit, parserFile)))).toThrow("exact committed parser correction");
   });
 
   it.each(["markets/pmSportGamma.ts", "submission/preflight/pmBetGuard.ts"])("legacy %s still matches the current online module", file => {

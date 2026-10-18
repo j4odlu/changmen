@@ -4,7 +4,7 @@
 
 import { getGameCodeForPlatformId } from "@changmen/shared/catalog/game_catalog";
 import { formatPbTeamPlatformId } from "@changmen/shared/catalog/pb_team_platform_id";
-import { normalizeTeam, resolveCanonicalTeamName } from "../../match/identity/index.js";
+import { normalizeTeam, resolveCanonicalTeamName } from "@changmen/shared/match-identity";
 import { getPgPool } from "./common.js";
 import { readVenueTeamId, resolveVenueTeamIdColumn } from "./team_venue_maps_cols.js";
 

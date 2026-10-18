@@ -20,6 +20,7 @@
     "./sxbet_market_index.js": "./sxbet_market_index.js"
   },
   "dependencies": {
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "@changmen/shared": "file:../../packages/shared"
   }
 }

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { captureRuntimeVersion, readSourceVersion } from "./runtime_version.js";
+import { captureRuntimeVersion, readSourceVersion, isVersionSource } from "./runtime_version.js";
 
 const write = (root, file, body) => { fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true }); fs.writeFileSync(path.join(root, file), body); };
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }).trim();
@@ -19,6 +19,73 @@ function fixture(release = false) {
 }
 function commit(root) { git(root, "-c", "user.name=Version Test", "-c", "user.email=version-test@example.invalid", "commit", "-qm", "fixture"); }
 describe("actual runtime source identity", () => {
+  it.each(["frontend", "backend"])("preserves prior package coverage and exclusions after relocation for %s", role => {
+    for (const suffix of ["package.json", "src/book.ts", "src/worker.js", "src/style.css", "src/icon.png",
+      "tests/book.test.ts", "src/book.test.ts", "node_modules/runtime.js", ".env", "src/.env.local"])
+      expect(isVersionSource(`client/packages/book/${suffix}`, role)).toBe(isVersionSource(`packages/book/${suffix}`, role));
+    expect(isVersionSource("client/packages/book/src/book.ts", role)).toBe(true);
+    expect(isVersionSource("client/devtools/venue-adapter/sync-package-exports.mjs", role)).toBe(false);
+    expect(isVersionSource("client/packages-other/runtime.ts", role)).toBe(false);
+  });
+  it.each(["frontend", "backend"])("detects edited, deleted, renamed and untracked relocated code for %s", role => {
+    const root = fixture(), file = "client/packages/book/src/book.ts", original = "export const value = 1;\n";
+    try {
+      write(root, file, original); git(root, "add", "."); commit(root);
+      const before = readSourceVersion(root, role); expect(before.dirty).toBe(false);
+      write(root, file, "export const value = 2;\n");
+      expect(readSourceVersion(root, role).sourceFingerprint).not.toBe(before.sourceFingerprint);
+      expect(readSourceVersion(root, role).dirty).toBe(true);
+      write(root, file, original); expect(readSourceVersion(root, role)).toEqual(before);
+      fs.unlinkSync(path.join(root, file));
+      expect(readSourceVersion(root, role).sourceFingerprint).not.toBe(before.sourceFingerprint);
+      expect(readSourceVersion(root, role).dirty).toBe(true);
+      write(root, file, original);
+      const renamed = "client/packages/book/src/renamed.ts";
+      fs.renameSync(path.join(root, file), path.join(root, renamed));
+      expect(readSourceVersion(root, role).sourceFingerprint).not.toBe(before.sourceFingerprint);
+      expect(readSourceVersion(root, role).dirty).toBe(true);
+      fs.renameSync(path.join(root, renamed), path.join(root, file));
+      write(root, "client/packages/book/src/new.ts", "export const added = true;");
+      expect(readSourceVersion(root, role).sourceFingerprint).not.toBe(before.sourceFingerprint);
+      expect(readSourceVersion(root, role).dirty).toBe(true);
+    } finally {
+      if (path.dirname(root) !== path.resolve(os.tmpdir()) || !path.basename(root).startsWith("changmen-runtime-version-")) throw Error("Unexpected runtime fixture cleanup target");
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+  it("keeps Git and no-Git package inventories equal and detects archived changes", () => {
+    const root = fixture();
+    try {
+      const file = "client/packages/book/src/book.ts";
+      write(root, file, "export const value = 1;\n");
+      write(root, "client/packages/book/package.json", '{"type":"module"}');
+      write(root, "client/packages/book/src/icon.png", Buffer.from([0xff, 0x02]));
+      git(root, "add", "."); commit(root);
+      const head = git(root, "rev-parse", "HEAD"), release = path.join(root, `backend-${head}-1-1`);
+      for (const name of git(root, "ls-files", "-z").split("\0").filter(Boolean)) write(release, name, fs.readFileSync(path.join(root, name)));
+      const original = Object.fromEntries(["frontend", "backend"].map(role => [role, readSourceVersion(root, role)]));
+      for (const role of ["frontend", "backend"]) {
+        const archived = readSourceVersion(release, role);
+        expect(archived.provenance).toBe("release-directory");
+        expect(archived.sourceFingerprint).toBe(original[role].sourceFingerprint);
+      }
+      write(root, file, "export const value = 2;\n"); write(release, file, "export const value = 2;\n");
+      for (const role of ["frontend", "backend"]) {
+        expect(readSourceVersion(release, role).sourceFingerprint).not.toBe(original[role].sourceFingerprint);
+        expect(readSourceVersion(release, role).sourceFingerprint).toBe(readSourceVersion(root, role).sourceFingerprint);
+      }
+      for (const [name, body] of [["client/packages/book/.env", "TOKEN=secret"],
+        ["client/packages/book/tests/book.test.ts", "fixture"], ["client/packages/book/node_modules/library.js", "vendor"]]) {
+        const before = readSourceVersion(release, "frontend"); write(release, name, body);
+        expect(readSourceVersion(release, "frontend")).toEqual(before);
+      }
+      const beforeDelete = readSourceVersion(release, "frontend"); fs.unlinkSync(path.join(release, file));
+      expect(readSourceVersion(release, "frontend").sourceFingerprint).not.toBe(beforeDelete.sourceFingerprint);
+    } finally {
+      if (path.dirname(root) !== path.resolve(os.tmpdir()) || !path.basename(root).startsWith("changmen-runtime-version-")) throw Error("Unexpected runtime fixture cleanup target");
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
   it("retains loaded identity after edits and Git commits; disk identity moves independently", () => {
     const root = fixture(), running = captureRuntimeVersion(root, "backend", { startedAt: "2026-10-14T00:00:00Z" });
     expect(running.dirty).toBe(false);

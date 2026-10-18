@@ -63,11 +63,12 @@ test("unpublished changes survive failed/partial earlier pushes and documentatio
     assert.equal(changePlan(partial.paths, partial).releasePlan, "frontend-only");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
-test("manual publication checks exactly the requested components without a live audit", () => {
+test("manual publication preserves requested components and cannot skip required audit/database checks", () => {
   for (const scope of ["frontend", "backend", "full"]) {
     const plan = changePlan(["docs/note.md"], { requestedScope: scope });
     assert.equal(plan.tier, scope === "full" ? "integration" : scope); assert.equal(plan.deployment.scope, scope);
-    assert.equal(plan.purpose, "release"); assert(!plan.checks.includes("complete-release"));
+    assert.equal(plan.purpose, "release"); assert(plan.checks.includes("complete-release"));
+    assert(plan.checks.includes("database-compatibility"));
     assert.equal(plan.checks.includes("backend"), scope !== "frontend");
     assert.equal(plan.checks.includes("build"), scope !== "backend");
     assert.equal(plan.releasePlan, scope === "frontend" ? "frontend-only" : "backend-first");
@@ -85,6 +86,30 @@ test("release intent is separate from risk; no deployment needs no live acceptan
   assert(!changePlan(["client/web/src/components/admin/Report.vue"]).checks.includes("deployment-control"));
   assert.throws(() => changePlan([], { purpose: "fast" }));
 });
+
+test("required publication checks follow risk without expanding component selection or weakening daily offline checks", () => {
+  const cases = [
+    [["client/web/src/components/admin/Report.vue"], false, false],
+    [["client/web/src/orderModes/gtc/api.ts"], true, false],
+    [["server/backend/core/observability/memory.js"], false, true],
+    [["server/backend/core/account/order_store.js"], true, true],
+    [["packages/shared/contract.js"], true, true],
+    [["client/web/src/components/admin/Report.vue", "server/backend/scripts/apply-rds-schema.mjs"], true, true],
+    [["scripts/deploy/publish.sh"], true, true],
+    [["unknown/file.js"], true, true],
+    [["docs/note.md"], false, false],
+    [[".github/workflows/release.yml"], false, false],
+  ];
+  for (const [paths, completeRelease, databaseCompatibility] of cases) {
+    const daily = changePlan(paths), release = changePlan(paths, { purpose: "release" });
+    assert.deepEqual(release.deployment, daily.deployment);
+    assert.deepEqual(release.requiredChecks, { completeRelease, databaseCompatibility }, paths.join(","));
+    assert.equal(release.checks.includes("complete-release"), completeRelease);
+    assert.equal(release.checks.includes("database-compatibility"), databaseCompatibility);
+    assert(!daily.checks.includes("complete-release")); assert(!daily.checks.includes("database-compatibility"));
+    assert(release.checks.includes("fok-551"));
+  }
+});
 test("real CI diffs include both sides of renames/deletions, wrong commits fail, unknown base escalates", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-event-plan-"));
   const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: "pipe" }).trim();
@@ -99,4 +124,30 @@ test("real CI diffs include both sides of renames/deletions, wrong commits fail,
     assert.equal(eventSelection({ before: "b".repeat(40) }, root, head).unknownBase, true);
     assert.equal(eventSelection({ inputs: { component: "frontend" } }, root, head).requestedScope, "frontend");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("maintenance-only push coverage moves into release validation without selecting an application", () => {
+  for (const file of ["server/backend/db/migrations/044_auth_browser_sessions.sql",
+    "server/backend/scripts/apply-rds-schema.mjs", "server/backend/scripts/rds-schema-check.mjs",
+    "server/backend/scripts/apply-order-observation-schema.mjs", ".github/workflows/database-compatibility.yml"]) {
+    const daily = changePlan([file]), release = changePlan([file], { purpose: "release" });
+    assert.deepEqual(release.deployment, daily.deployment);
+    assert.equal(release.deployment.scope, "noop", file);
+    assert.equal(release.requiredChecks.completeRelease, false);
+    assert.equal(release.requiredChecks.databaseCompatibility, true, file);
+    assert.equal(release.checks.filter(check => check === "database-compatibility").length, 1);
+    assert(release.checks.includes("fok-551"));
+    assert(!daily.checks.includes("database-compatibility"), "Daily/PR validation stays offline");
+  }
+});
+
+test("already-deployed inputs and repeated paths do not skip or duplicate database validation", () => {
+  const file = "server/backend/db/migrations/044_auth_browser_sessions.sql";
+  const plan = changePlan([file, file], { purpose: "release", liveComponents: [],
+    deployedVersions: { frontend: "a".repeat(40), backend: "b".repeat(40) }, eventPaths: [file] });
+  assert.deepEqual(plan.deployment.components, []);
+  assert.equal(plan.requiredChecks.databaseCompatibility, true);
+  assert.equal(plan.checks.filter(check => check === "database-compatibility").length, 1);
+  assert.equal(changePlan(["docs/notes.md"], { purpose: "release" }).requiredChecks.databaseCompatibility, false);
+  assert.equal(changePlan(["client/web/src/style.css"], { purpose: "release" }).requiredChecks.databaseCompatibility, false);
 });

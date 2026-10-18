@@ -35,7 +35,7 @@
     "stake:sports": "npm run stake:sports --workspace=@changmen/platform-probes",
     "saba:parse": "npm run saba:parse --workspace=@changmen/platform-probes",
     "hg:balance": "npm run hg:balance --workspace=@changmen/platform-probes",
-    "sync:platform-adapter": "npm run sync:backend-bundle --workspace=@changmen/venue-adapter && npm run sync:backend-bundle --workspace=@changmen/platform-probes",
+    "sync:platform-adapter": "npm run sync:backend-bundle --workspace=@changmen/venue-adapter-tools && npm run sync:backend-bundle --workspace=@changmen/platform-probes",
     "account:cli": "node scripts/account_cli.js",
     "account:tags": "node scripts/account_cli.js tags",
     "purge:ob-timers": "node scripts/ops/incidents/purge-platform-live-timers.mjs OB",
@@ -81,7 +81,7 @@
     "@changmen/shared": "file:../../packages/shared",
     "@changmen/storage": "file:../storage",
     "@changmen/team-resolver": "file:../match/resolver",
-    "@changmen/venue-adapter": "file:../../packages/venue-adapter",
+    "@changmen/venue-node-loader": "file:../../packages/venue-adapter/loader",
     "@changmen/ws-forward": "file:../ws_forward",
     "@polymarket/builder-relayer-client": "^0.0.10",
     "@polymarket/builder-signing-sdk": "^0.0.8",
@@ -97,6 +97,7 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
+    "@changmen/venue-adapter-tools": "file:../../packages/venue-adapter/scripts",
     "@types/node": "^25.9.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",

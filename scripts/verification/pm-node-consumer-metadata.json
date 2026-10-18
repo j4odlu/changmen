@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "reason": "Replace only the resolver scraper development dependency with its original Node loader workspace; restore the complete previous lock before all existing historical proofs.",
+  "file": "package-lock.json",
+  "baselineSha256": "d884d5c51b4ce29a46362a4ac3cc042220ece98c348bc981031d6d46b1fac74e",
+  "migratedSha256": "5a23632557f2b1387fbf94b3ff237fea8d4d7a6747a2c2f46d61a06727d6d2e5",
+  "patches": [
+    {
+      "oldStart": 13332,
+      "oldCount": 1,
+      "newStart": 13332,
+      "newCount": 1,
+      "before": [
+        "        \"@changmen/venue-adapter\": \"file:../../../packages/venue-adapter\""
+      ],
+      "after": [
+        "        \"@changmen/venue-node-loader\": \"file:../../../packages/venue-adapter/loader\""
+      ]
+    }
+  ]
+}

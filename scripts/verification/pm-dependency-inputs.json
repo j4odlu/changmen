@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "purpose": "pm-dynamic-input-review-only",
+  "publishScopeOptimizationEnabled": false,
+  "dynamicSites": [
+    {
+      "file": "client/web/src/runtime/appSession.ts",
+      "kind": "dynamic-import",
+      "spec": "@/security/pmVault",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/runtime/appSession.ts",
+      "kind": "dynamic-import",
+      "spec": "@/stores/account/balanceRefresh",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/runtime/appSession.ts",
+      "kind": "dynamic-import",
+      "spec": "@/stores/orderStore",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/runtime/appSession.ts",
+      "kind": "dynamic-import",
+      "spec": "@changmen/venue-adapter/polymarket",
+      "count": 2
+    },
+    {
+      "file": "client/web/src/runtime/appSession.ts",
+      "kind": "dynamic-import",
+      "spec": "@changmen/venue-adapter/predictfun",
+      "count": 2
+    },
+    {
+      "file": "client/web/src/runtime/gtcOrderMonitor/pm.ts",
+      "kind": "dynamic-import",
+      "spec": "@changmen/venue-adapter/polymarket/gtc",
+      "count": 2
+    },
+    {
+      "file": "client/web/src/runtime/gtcOrderMonitor/pmPolling.ts",
+      "kind": "dynamic-import",
+      "spec": "@changmen/venue-adapter/polymarket",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/runtime/gtcOrderMonitor/pmPolling.ts",
+      "kind": "dynamic-import",
+      "spec": "@changmen/venue-adapter/polymarket/gtc",
+      "count": 2
+    },
+    {
+      "file": "client/web/src/runtime/pmDynamicWsPreflight.ts",
+      "kind": "dynamic-import",
+      "spec": "./pmMarketData",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/runtime/sportsSession.ts",
+      "kind": "dynamic-import",
+      "spec": "@/security/pmVault",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/runtime/sportsSession.ts",
+      "kind": "dynamic-import",
+      "spec": "@/stores/account/balanceRefresh",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/runtime/venueTransportSession.ts",
+      "kind": "dynamic-import",
+      "spec": "@changmen/venue-adapter/polymarket",
+      "count": 2
+    },
+    {
+      "file": "client/web/src/runtime/venueTransportSession.ts",
+      "kind": "dynamic-import",
+      "spec": "@changmen/venue-adapter/predictfun",
+      "count": 2
+    },
+    {
+      "file": "client/web/src/security/pmVault/accountUiStatus.ts",
+      "kind": "dynamic-import",
+      "spec": "@/stores/account/balanceRefresh",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/security/pmVault/accountUiStatus.ts",
+      "kind": "dynamic-import",
+      "spec": "@/stores/accountStore",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/security/pmVault/accountUiStatus.ts",
+      "kind": "dynamic-import",
+      "spec": "@/stores/userStore",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/security/pmVault/session.ts",
+      "kind": "dynamic-import",
+      "spec": "./accounts",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/security/pmVault/session.ts",
+      "kind": "dynamic-import",
+      "spec": "./accountUiStatus",
+      "count": 3
+    },
+    {
+      "file": "client/web/src/security/pmVault/session.ts",
+      "kind": "dynamic-import",
+      "spec": "@/stores/accountStore",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/auth/credentials.ts",
+      "kind": "dynamic-import",
+      "spec": "../polygonRpc",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/auth/credentials.ts",
+      "kind": "dynamic-import",
+      "spec": "@polymarket/clob-client-v2",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/auth/credentials.ts",
+      "kind": "dynamic-import",
+      "spec": "viem",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/auth/credentials.ts",
+      "kind": "dynamic-import",
+      "spec": "viem/accounts",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/orderBook.ts",
+      "kind": "module-url",
+      "spec": "./marketData.worker.ts",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/orders/history/orders.ts",
+      "kind": "dynamic-import",
+      "spec": "../../l2Auth",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/orders/history/orders.ts",
+      "kind": "dynamic-import",
+      "spec": "../../pmStoredOrders",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/orders/pmFee.ts",
+      "kind": "dynamic-import",
+      "spec": "../pmActivity",
+      "count": 2
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/pmTickMetadata.ts",
+      "kind": "dynamic-import",
+      "spec": "../api",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/pmTickMetadata.ts",
+      "kind": "dynamic-import",
+      "spec": "../pmTransport",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/realtime/userWs.ts",
+      "kind": "dynamic-import",
+      "spec": "../pmHeartbeat.js",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/realtime/userWs.ts",
+      "kind": "dynamic-import",
+      "spec": "../settlementJob.js",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/client/pmOrderClientCache.ts",
+      "kind": "dynamic-import",
+      "spec": "../../polygonRpc",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/client/pmOrderClientCache.ts",
+      "kind": "dynamic-import",
+      "spec": "@polymarket/clob-client-v2",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/client/pmOrderClientCache.ts",
+      "kind": "dynamic-import",
+      "spec": "viem",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/client/pmOrderClientCache.ts",
+      "kind": "dynamic-import",
+      "spec": "viem/accounts",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/wallet/depositWallet.ts",
+      "kind": "dynamic-import",
+      "spec": "viem",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/wallet/depositWallet.ts",
+      "kind": "dynamic-import",
+      "spec": "viem/accounts",
+      "count": 2
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/wallet/walletPrepUnified.ts",
+      "kind": "dynamic-import",
+      "spec": "@polymarket/client",
+      "count": 1
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/wallet/walletPrepUnified.ts",
+      "kind": "dynamic-import",
+      "spec": "@polymarket/client/viem",
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/integrations/polymarket/clob_l1.js",
+      "kind": "dynamic-import",
+      "spec": "@polymarket/clob-client-v2",
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/integrations/polymarket/clob_l1.js",
+      "kind": "dynamic-import",
+      "spec": "viem",
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/integrations/polymarket/clob_l1.js",
+      "kind": "dynamic-import",
+      "spec": "viem/accounts",
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/integrations/polymarket/clob_l1.js",
+      "kind": "dynamic-import",
+      "spec": "viem/chains",
+      "count": 1
+    },
+    {
+      "file": "client/web/src/runtime/pmMarketData.ts",
+      "kind": "module-url",
+      "spec": "./pmMarketData.worker.ts",
+      "count": 1
+    }
+  ],
+  "supportInputs": [
+    "scripts/verification/pm-loader-binding-inputs.json",
+    "scripts/verification/pm-shared-loader-inputs.json",
+    "packages/venue-adapter/loader/adapter_paths.mjs",
+    "packages/venue-adapter/registry/paths.js",
+    "packages/venue-adapter/registry/feeds.js",
+    "packages/venue-adapter/registry/manifest.json",
+    "client/web/vite.config.ts",
+    "client/web/tsconfig.app.json",
+    "client/web/vite/plugins/browserNodeBuiltins.ts",
+    "client/web/src/polyfills/builderSigningHmac.ts",
+    "packages/venue-adapter/scripts/sync-backend-bundle.mjs",
+    "package.json",
+    "package-lock.json",
+    "packages/venue-adapter/package.json",
+    "client/web/package.json",
+    "server/backend/package.json",
+    "server/storage/runtime_version.js",
+    "client/packages/pm-market-data-browser/package.json"
+  ]
+}

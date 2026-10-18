@@ -43,14 +43,16 @@
     "mqtt": "^5.14.1",
     "pinia": "^3.0.2",
     "socket.io-client": "^4.8.1",
-    "socketcluster-client": "^19.2.0",
+    "socketcluster-client": "20.0.1",
     "three": "^0.185.1",
     "tronweb": "^6.3.0",
     "viem": "^2.53.1",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "@changmen/pm-market-data-browser": "file:../packages/pm-market-data-browser"
   },
   "devDependencies": {
+    "dotenv": "17.4.2",
     "@types/node": "^25.9.1",
     "@types/three": "^0.185.1",
     "@vitejs/plugin-vue": "^5.2.3",

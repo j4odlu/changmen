@@ -23,10 +23,10 @@ const accountRoutes = readFileSync(
   "utf8",
 );
 const migration = readFileSync(
-  join(__dirname, "../backend/db/migrations/040_football_orders.sql"),
+  join(__dirname, "assets/migrations/040_football_orders.sql"),
   "utf8",
 );
-const apply = readFileSync(join(__dirname, "../backend/scripts/apply-rds-schema.mjs"), "utf8");
+const apply = readFileSync(join(__dirname, "maintenance/apply-rds-schema.mjs"), "utf8");
 const monthReport = readFileSync(
   join(__dirname, "../backend/core/football/football_month_report.js"),
   "utf8",
@@ -66,7 +66,7 @@ assert.doesNotMatch(migration, /REFERENCES orders\b/);
 assert.match(apply, /040_football_orders\.sql/);
 assert.match(apply, /041_football_orders_status\.sql/);
 const migration041 = readFileSync(
-  join(__dirname, "../backend/db/migrations/041_football_orders_status.sql"),
+  join(__dirname, "assets/migrations/041_football_orders_status.sql"),
   "utf8",
 );
 assert.match(migration041, /ADD COLUMN IF NOT EXISTS status/);

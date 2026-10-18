@@ -4,6 +4,8 @@
 
 ## 职责与依赖
 
+[changmen 扩展] B 批已将核心、服务、FIFO 和协议迁至 [`packages/pm-market-data-browser`](../../../../../client/packages/pm-market-data-browser/README.md)。本目录保留兼容转导出与薄 service 构造适配器；下表的旧文件名继续有效，但运行实现只有新包一份。web 现在显式注入 `orderBookSource`、Worker 工厂、授权和时钟。通用 Worker 循环在新包，动态 HTTP 对照通过 `wsBook/workerDiagnostics.ts` 注入。完整验证见 [B 批记录](../../../../../docs/audits/PM_BROWSER_MODULE_EXTRACTION_AUDIT_20261017.md)。
+
 | 层 | 文件 | 职责 |
 | --- | --- | --- |
 | 原连接 | `../ws.ts`、`../marketStream.ts` | PM-M 独占订阅、心跳、重连；已有观察钩子广播原始帧，本轮未改 |

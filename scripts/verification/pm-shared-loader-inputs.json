@@ -1,0 +1,451 @@
+{
+  "schemaVersion": 1,
+  "purpose": "pm-shared-loader-review-only",
+  "publishScopeOptimizationEnabled": false,
+  "sourceContracts": [
+    {
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "selector": "module",
+      "signature": "0e9166ae1c24727470027191ab18601c6ae2ab6720a6dddde8790f6867111096"
+    },
+    {
+      "file": "packages/venue-adapter/registry/paths.js",
+      "selector": "module",
+      "signature": "7e06d9c2c923f2bb0aff8b6ed94c4e0418b3c6db2287b9d44e40b3ec40f2c8eb"
+    },
+    {
+      "file": "packages/venue-adapter/registry/feeds.js",
+      "selector": "module",
+      "signature": "1cccc39550dcb283ab1d286ad49b99e67d47a0f284a9af201962c3ee5441e19c"
+    },
+    {
+      "file": "server/storage/paths.js",
+      "selector": "module",
+      "signature": "83d1f5055d04db07172d067f71119faffb44687bc1154e20db5c0e5ca7ffeb24"
+    },
+    {
+      "file": "server/storage/changmen_root.js",
+      "selector": "module",
+      "signature": "660c34b6b3bf37eee9dfcc1a17102ce80b01696ecc5ae904c30a2e54bf5c1077"
+    },
+    {
+      "file": "server/db/pg_pool.js",
+      "selector": "pg-loader",
+      "signature": "04c2dee833fe235d1b97c217a1425c339b532d5ea48d3e9fe98dd0735a0aa299"
+    },
+    {
+      "file": "server/db/resolve_database_url.js",
+      "selector": "pg-loader",
+      "signature": "f82263431f03a11d45eb8869533b3db7b2558d92adb636c2fb5802a42be732b8"
+    }
+  ],
+  "environmentPolicies": [
+    {
+      "id": "adapter-root",
+      "keys": [
+        "CHANGMEN_ADAPTER_ROOT",
+        "GAMEBET_ADAPTER_ROOT",
+        "CHANGMEN_BACKEND_ROOT",
+        "GAMEBET_BACKEND_ROOT"
+      ],
+      "defaults": [
+        "packages/venue-adapter",
+        "server/backend/platform_adapter",
+        "platform_adapter"
+      ],
+      "note": "Loader root and registry ADAPTER_ROOT are distinct selectors; an external registry may still prefer the workspace adapter root."
+    },
+    {
+      "id": "probes-root",
+      "keys": [
+        "CHANGMEN_PLATFORM_PROBES_ROOT",
+        "GAMEBET_PLATFORM_PROBES_ROOT",
+        "CHANGMEN_NODE_ROOT",
+        "GAMEBET_NODE_ROOT",
+        "CHANGMEN_BACKEND_ROOT",
+        "GAMEBET_BACKEND_ROOT"
+      ],
+      "defaults": [
+        "devtools/platform-probes",
+        "server/backend/platform_node"
+      ],
+      "note": "Programmatic setPlatformNodeRootForTests overrides environment selection; this audit never executes the setter."
+    },
+    {
+      "id": "shared-module-search",
+      "keys": [
+        "CHANGMEN_BACKEND_ROOT",
+        "GAMEBET_BACKEND_ROOT",
+        "NODE_PATH",
+        "NODE_OPTIONS"
+      ],
+      "defaults": [
+        "server/backend/node_modules",
+        "node_modules"
+      ],
+      "note": "Ordered require.resolve start paths, followed by Node module lookup; caller supplies the module suffix/specifier."
+    },
+    {
+      "id": "pg-search",
+      "keys": [
+        "NODE_PATH",
+        "NODE_OPTIONS"
+      ],
+      "defaults": [
+        "apps/backend/node_modules",
+        "node_modules",
+        "server/node_modules"
+      ],
+      "note": "Fixed pg name and ordered start paths; Node also searches ancestors. No database URL is read or DB opened."
+    }
+  ],
+  "records": [
+    {
+      "id": "shared-01",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "kind": "loader-contract",
+      "expression": null,
+      "loaderSymbol": null,
+      "arguments": null,
+      "classification": "environment-dependent",
+      "rootPolicy": "all-loader-roots",
+      "scopeInterpretation": "Summary of overridable adapter/probes/search roots, not a distinct loading operation."
+    },
+    {
+      "id": "shared-02",
+      "file": "server/backend/core/account/balance_provider.js",
+      "kind": "custom-loader",
+      "expression": "\"PB\"",
+      "loaderSymbol": "requirePlatform",
+      "arguments": [
+        "PB",
+        "node",
+        "session.js"
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "probes-root",
+      "target": {
+        "request": [
+          "PB",
+          "node",
+          "session.js"
+        ]
+      },
+      "scopeInterpretation": "Literal target; absolute location still depends on the selected root."
+    },
+    {
+      "id": "shared-03",
+      "file": "server/backend/core/account/balance_provider.js",
+      "kind": "custom-loader",
+      "expression": "\"HG\"",
+      "loaderSymbol": "requirePlatform",
+      "arguments": [
+        "HG",
+        "node",
+        "session.js"
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "probes-root",
+      "target": {
+        "request": [
+          "HG",
+          "node",
+          "session.js"
+        ]
+      },
+      "scopeInterpretation": "Literal target; absolute location still depends on the selected root."
+    },
+    {
+      "id": "shared-04",
+      "file": "server/backend/core/account/balance_provider.js",
+      "kind": "custom-loader",
+      "expression": "\"OB\"",
+      "loaderSymbol": "requirePlatform",
+      "arguments": [
+        "OB",
+        "node",
+        "session.js"
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "probes-root",
+      "target": {
+        "request": [
+          "OB",
+          "node",
+          "session.js"
+        ]
+      },
+      "scopeInterpretation": "Literal target; absolute location still depends on the selected root."
+    },
+    {
+      "id": "shared-05",
+      "file": "server/backend/core/account/balance_provider.js",
+      "kind": "custom-loader",
+      "expression": "\"RAY\"",
+      "loaderSymbol": "requirePlatform",
+      "arguments": [
+        "RAY",
+        "node",
+        "session.js"
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "probes-root",
+      "target": {
+        "request": [
+          "RAY",
+          "node",
+          "session.js"
+        ]
+      },
+      "scopeInterpretation": "Literal target; absolute location still depends on the selected root."
+    },
+    {
+      "id": "shared-06",
+      "file": "server/backend/core/account/balance_provider.js",
+      "kind": "custom-loader",
+      "expression": "\"RAY\"",
+      "loaderSymbol": "requirePlatform",
+      "arguments": [
+        "RAY",
+        "node",
+        "core.js"
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "probes-root",
+      "target": {
+        "request": [
+          "RAY",
+          "node",
+          "core.js"
+        ]
+      },
+      "scopeInterpretation": "Literal target; absolute location still depends on the selected root."
+    },
+    {
+      "id": "shared-07",
+      "file": "server/backend/core/esport-api/store.js",
+      "kind": "custom-loader",
+      "expression": "\"registry\"",
+      "loaderSymbol": "adapterRequire",
+      "arguments": [
+        "registry",
+        "feeds.js"
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "adapter-root",
+      "target": {
+        "request": [
+          "registry",
+          "feeds.js"
+        ]
+      },
+      "scopeInterpretation": "Literal target; absolute location still depends on the selected root."
+    },
+    {
+      "id": "shared-08",
+      "file": "server/db/pg_pool.js",
+      "kind": "require",
+      "expression": "require.resolve(\"pg\", { paths: searchPaths })",
+      "loaderSymbol": null,
+      "arguments": [
+        null
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "pg-search",
+      "target": {
+        "specifier": "pg"
+      },
+      "scopeInterpretation": "One of two records for one nested pg require/resolve operation."
+    },
+    {
+      "id": "shared-09",
+      "file": "server/db/pg_pool.js",
+      "kind": "computed-loader",
+      "expression": "\"pg\"",
+      "loaderSymbol": null,
+      "arguments": [
+        "pg",
+        null
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "pg-search",
+      "target": {
+        "specifier": "pg"
+      },
+      "scopeInterpretation": "One of two records for one nested pg require/resolve operation."
+    },
+    {
+      "id": "shared-10",
+      "file": "server/db/resolve_database_url.js",
+      "kind": "require",
+      "expression": "require.resolve(\"pg\", { paths: searchPaths })",
+      "loaderSymbol": null,
+      "arguments": [
+        null
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "pg-search",
+      "target": {
+        "specifier": "pg"
+      },
+      "scopeInterpretation": "One of two records for one nested pg require/resolve operation."
+    },
+    {
+      "id": "shared-11",
+      "file": "server/db/resolve_database_url.js",
+      "kind": "computed-loader",
+      "expression": "\"pg\"",
+      "loaderSymbol": null,
+      "arguments": [
+        "pg",
+        null
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "pg-search",
+      "target": {
+        "specifier": "pg"
+      },
+      "scopeInterpretation": "One of two records for one nested pg require/resolve operation."
+    },
+    {
+      "id": "shared-12",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "kind": "require",
+      "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
+      "loaderSymbol": null,
+      "arguments": [
+        null
+      ],
+      "classification": "parameter-unknown",
+      "rootPolicy": "shared-module-search",
+      "target": {
+        "port": "reqS"
+      },
+      "scopeInterpretation": "Open parameter API; no generic invocation in the current recognized PM call set."
+    },
+    {
+      "id": "shared-13",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "kind": "computed-loader",
+      "expression": "entry",
+      "loaderSymbol": null,
+      "arguments": [
+        null,
+        null
+      ],
+      "classification": "parameter-unknown",
+      "rootPolicy": "shared-module-search",
+      "target": {
+        "port": "reqS"
+      },
+      "scopeInterpretation": "Open parameter API; no generic invocation in the current recognized PM call set."
+    },
+    {
+      "id": "shared-14",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "kind": "require",
+      "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
+      "loaderSymbol": null,
+      "arguments": [
+        null
+      ],
+      "classification": "parameter-unknown",
+      "rootPolicy": "shared-module-search",
+      "target": {
+        "port": "backendRequire"
+      },
+      "scopeInterpretation": "Open parameter API; no generic invocation in the current recognized PM call set."
+    },
+    {
+      "id": "shared-15",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "kind": "computed-loader",
+      "expression": "specifier",
+      "loaderSymbol": null,
+      "arguments": [
+        null,
+        null
+      ],
+      "classification": "parameter-unknown",
+      "rootPolicy": "shared-module-search",
+      "target": {
+        "port": "backendRequire"
+      },
+      "scopeInterpretation": "Open parameter API; no generic invocation in the current recognized PM call set."
+    },
+    {
+      "id": "shared-16",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "kind": "dynamic-import",
+      "expression": "pathsUrl",
+      "loaderSymbol": null,
+      "arguments": [
+        null
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "adapter-root",
+      "target": {
+        "suffix": "registry/paths.js"
+      },
+      "scopeInterpretation": "Fixed registry filename under the selected adapter root."
+    },
+    {
+      "id": "shared-17",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "kind": "dynamic-import",
+      "expression": "feedsUrl",
+      "loaderSymbol": null,
+      "arguments": [
+        null
+      ],
+      "classification": "fixed-target",
+      "rootPolicy": "adapter-root",
+      "target": {
+        "suffix": "registry/feeds.js"
+      },
+      "scopeInterpretation": "Fixed registry filename under the selected adapter root."
+    },
+    {
+      "id": "shared-18",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "kind": "require",
+      "expression": "path.join(getAdapterRoot(), ...segments)",
+      "loaderSymbol": null,
+      "arguments": [
+        null
+      ],
+      "classification": "parameter-unknown",
+      "rootPolicy": "adapter-root",
+      "target": {
+        "port": "adapterRequire.generic"
+      },
+      "scopeInterpretation": "Open parameter API; no generic invocation in the current recognized PM call set."
+    },
+    {
+      "id": "shared-19",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "kind": "dynamic-import",
+      "expression": "pathToFileURL(abs).href",
+      "loaderSymbol": null,
+      "arguments": [
+        null
+      ],
+      "classification": "environment-dependent",
+      "rootPolicy": "manifest-preload",
+      "scopeInterpretation": "Manifest and module package type select top-level JS files under the probes root."
+    },
+    {
+      "id": "shared-20",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "kind": "require",
+      "expression": "abs",
+      "loaderSymbol": null,
+      "arguments": [
+        null
+      ],
+      "classification": "environment-dependent",
+      "rootPolicy": "probes-root",
+      "scopeInterpretation": "Forwards the five recognized requirePlatform requests; roots remain overridable."
+    }
+  ]
+}

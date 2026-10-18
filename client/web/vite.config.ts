@@ -15,15 +15,14 @@ import { browserNodeBuiltins } from "./vite/plugins/browserNodeBuiltins";
 import { backendPublicAssets } from "./vite/plugins/backendPublicAssets";
 import { matcherDevRedirect } from "./vite/plugins/matcherDevRedirect";
 import { runtimeVersionPlugin } from "./vite/plugins/runtimeVersion";
-import { resolveDevWebPort } from "../../server/storage/dev_web_config.js";
-import {
-  VENUE_ADAPTER_REL,
-  VENUE_ADAPTER_ROOT,
-} from "../../server/storage/paths.js";
+import { resolveDevWebPort } from "@changmen/shared/tooling/dev_web_port.js";
 
 const elementPlusResolver = ElementPlusResolver({ importStyle: "css" });
 
 const WEB_ROOT = fileURLToPath(new URL(".", import.meta.url));
+const WORKSPACE_ROOT = path.resolve(WEB_ROOT, "../..");
+const VENUE_ADAPTER_REL = "packages/venue-adapter";
+const VENUE_ADAPTER_ROOT = path.resolve(WORKSPACE_ROOT, VENUE_ADAPTER_REL);
 const CLIENT_CORE_SRC = path.resolve(WEB_ROOT, "../../packages/client-core/src");
 const venueAdapterVitestGlob = path
   .relative(WEB_ROOT, VENUE_ADAPTER_ROOT)
@@ -195,7 +194,7 @@ export default defineConfig(({ command, mode }) => {
     // 须靠前：alias/optimizeDeps 影响 builder-relayer-client 预构建
     browserNodeBuiltins(),
     backendPublicAssets(),
-    runtimeVersionPlugin(path.resolve(WEB_ROOT, "../.."), env.VITE_API_BASE || process.env.VITE_API_BASE || ""),
+    runtimeVersionPlugin(WORKSPACE_ROOT, env.VITE_API_BASE || process.env.VITE_API_BASE || ""),
     vue(),
     AutoImport({
       resolvers: [elementPlusResolver],
@@ -279,11 +278,13 @@ export default defineConfig(({ command, mode }) => {
   test: {
     setupFiles: ["src/test/vitestPolyfillLocalStorage.ts", "src/test/vitestSetupCore.ts"],
     include: [
+      "vite/**/*.test.ts",
       "src/**/*.{test,spec}.{js,mjs,ts}",
       "tests/integration/**/*.{test,spec}.{js,mjs,ts}",
       `${venueAdapterVitestGlob}/**/*.{test,spec}.{js,mjs,ts}`,
       `${venueAdapterVitestGlob}/**/shared/**/*.{test,spec}.{js,mjs,ts}`,
       `${clientCoreVitestGlob}/src/**/*.{test,spec}.{js,mjs,ts}`,
+      "../packages/pm-market-data-browser/tests/**/*.{test,spec}.{js,mjs,ts}",
     ],
   },
   };

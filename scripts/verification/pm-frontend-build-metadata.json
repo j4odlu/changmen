@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "reason": "Add explicit shared Node tooling exports and the storage host dependency for the original compatibility entries; preserve previous exact metadata migrations and every external lock record.",
+  "changes": [
+    {
+      "file": "packages/shared/package.json",
+      "baselineSha256": "aeeeace3f250ea75115e4ef0981cf83390aee35c6f5935e60441c958c6b249d8",
+      "migratedSha256": "0d1e2907b08fb109e60d94b906668094b1d296701a7aeb1d1c0191ab12fa49ea",
+      "patches": [
+        {
+          "oldStart": 37,
+          "oldCount": 1,
+          "newStart": 37,
+          "newCount": 3,
+          "before": [
+            "    \"./match-identity/*\": \"./match-identity/*\""
+          ],
+          "after": [
+            "    \"./match-identity/*\": \"./match-identity/*\",",
+            "    \"./tooling/runtime_version.js\": \"./tooling/runtime_version.js\",",
+            "    \"./tooling/dev_web_port.js\": \"./tooling/dev_web_port.js\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "package-lock.json",
+      "baselineSha256": "f8b46d8629e989e743f6da694035064d4f5474688d0bb59cde0b1a1f2d285d45",
+      "migratedSha256": "d884d5c51b4ce29a46362a4ac3cc042220ece98c348bc981031d6d46b1fac74e",
+      "patches": [
+        {
+          "oldStart": 13350,
+          "oldCount": 0,
+          "newStart": 13351,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "        \"@changmen/shared\": \"file:../../packages/shared\","
+          ]
+        }
+      ]
+    }
+  ]
+}

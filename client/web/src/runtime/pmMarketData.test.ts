@@ -5,7 +5,10 @@ const io = vi.hoisted(() => ({ accounts: {} as { accounts: Array<Record<string, 
   create: vi.fn(), start: vi.fn(), stop: vi.fn(), stopConsumer: vi.fn(), acquire: vi.fn() }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => io.accounts }));
 vi.mock("@changmen/venue-adapter/polymarket", () => ({ getPmMarketWsSourceMode: () => "official", resolvePmHttpMode: () => io.route, resolvePmOrderSubmitHttpMode: () => io.route }));
-vi.mock("@changmen/venue-adapter/polymarket/orderBook", () => ({ createPmOrderBookService: io.create }));
+vi.mock("@changmen/pm-market-data-browser", () => ({ PmOrderBookService: class {
+  constructor(ports: unknown) { return io.create(ports); }
+} }));
+vi.mock("@changmen/venue-adapter/polymarket/orderBookSource", () => ({ pmOrderBookSource: { observe: vi.fn(), subscribedAssets: () => [] } }));
 vi.mock("./pmDynamicWsShadowWorker", () => ({ startPmDynamicWsShadowWorker: io.start }));
 let owner: ReturnType<typeof startPmMarketData> | undefined;
 beforeEach(() => {
@@ -18,6 +21,8 @@ beforeEach(() => {
 afterEach(() => { owner?.stop(); owner = undefined; localStorage.removeItem("changmen:pm:ws-book-shadow"); vi.useRealTimers(); vi.unstubAllGlobals(); });
 test("independent owner starts without dynamic consumer and preserves cache on consumer toggle/token rotation", () => {
   owner = startPmMarketData(() => true); expect(io.create).toHaveBeenCalledOnce(); expect(io.start).not.toHaveBeenCalled();
+  expect(io.create.mock.calls[0]![0]).toMatchObject({ allowed: expect.any(Function), createWorker: expect.any(Function),
+    monotonicNow: expect.any(Function), source: { observe: expect.any(Function), subscribedAssets: expect.any(Function) } });
   acquirePmDepthView(); expect(io.acquire).toHaveBeenCalledOnce();
   localStorage.setItem("changmen:pm:ws-book-shadow", "1"); owner.reconcile(); expect(io.start).toHaveBeenCalledOnce();
   io.accounts.accounts[0]!.token = "new"; expect(io.create).toHaveBeenCalledOnce(); expect(io.stop).not.toHaveBeenCalled();

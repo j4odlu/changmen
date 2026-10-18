@@ -1,5 +1,5 @@
 /**
- * 平台 adapter 加载 — 实现位于 @changmen/venue-adapter/loader。
+ * 平台 adapter 加载 — Node 包入口指向原 loader 源码，旧入口继续兼容。
  */
 export {
   adapterRequire,
@@ -13,4 +13,4 @@ export {
   requirePlatform,
   resetAdapterRootForTests,
   resolvePlatformFile,
-} from "@changmen/venue-adapter/loader/adapter_paths.js";
+} from "@changmen/venue-node-loader";

@@ -12,9 +12,9 @@ const rdsDir = join(__dirname, "rds");
 const teamDbPath = join(__dirname, "../match/resolver/team_db.js");
 const migrationPath = join(
   __dirname,
-  "../backend/db/migrations/033_sport_matcher_tables.sql",
+  "assets/migrations/033_sport_matcher_tables.sql",
 );
-const applySchemaPath = join(__dirname, "../backend/scripts/apply-rds-schema.mjs");
+const applySchemaPath = join(__dirname, "maintenance/apply-rds-schema.mjs");
 
 const { SPORT_MATCHER_TABLES } = await import("./rds/sport_client_matches_store.js");
 

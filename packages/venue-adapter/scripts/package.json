@@ -1,0 +1,19 @@
+{
+  "name": "@changmen/venue-adapter-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Node ownership for the existing backend bundle tool; original script and frontend compatibility commands stay in place",
+  "scripts": {
+    "sync:backend-bundle": "node sync-backend-bundle.mjs"
+  },
+  "exports": {
+    "./sync-backend-bundle.mjs": "./sync-backend-bundle.mjs"
+  },
+  "files": [
+    "sync-backend-bundle.mjs"
+  ],
+  "dependencies": {
+    "@changmen/storage": "file:../../../server/storage"
+  }
+}

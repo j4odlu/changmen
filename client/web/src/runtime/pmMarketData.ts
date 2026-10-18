@@ -1,7 +1,8 @@
 import { watch } from "vue";
 import { useAccountStore } from "@/stores/accountStore";
 import { getPmMarketWsSourceMode, resolvePmHttpMode, resolvePmOrderSubmitHttpMode } from "@changmen/venue-adapter/polymarket";
-import { createPmOrderBookService, type PmOrderBookService, type BookLease } from "@changmen/venue-adapter/polymarket/orderBook";
+import { PmOrderBookService, type BookLease } from "@changmen/pm-market-data-browser";
+import { pmOrderBookSource } from "@changmen/venue-adapter/polymarket/orderBookSource";
 import { startPmDynamicWsShadowWorker } from "./pmDynamicWsShadowWorker";
 
 let active: PmOrderBookService | undefined;
@@ -24,7 +25,12 @@ export function startPmMarketData(enabled: () => boolean): { stop(): void; recon
   };
   const reconcile = () => {
     if (!allowed()) { release(); return; }
-    if (!service) { service = createPmOrderBookService(allowed); active = service; }
+    if (!service) {
+      service = new PmOrderBookService({ allowed, source: pmOrderBookSource,
+        createWorker: () => new Worker(new URL("./pmMarketData.worker.ts", import.meta.url), { type: "module", name: "pm-market-book" }),
+        monotonicNow: () => performance.now() });
+      active = service;
+    }
     // A failed service remains failed until a new authorized session; no retry loop.
     if (shadow() && !stopConsumer && service.report().worker) stopConsumer = startPmDynamicWsShadowWorker(shadow, service);
     if (shadow()) stopConsumer?.reconcile?.();

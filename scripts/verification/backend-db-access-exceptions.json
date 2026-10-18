@@ -57,20 +57,6 @@
       "context": "listDuplicateOrderIds/crossUser",
       "signature": "46afbc7828d4d0e55d0939100995a7294ecfd42120fb7b50ce10167be0a95b59",
       "line": 164
-    },
-    {
-      "file": "server/backend/core/shared/runtime_version.js",
-      "kind": "database-pool-import",
-      "context": "module",
-      "signature": "ea06ead14c90f72d23e5273ef51b6bf2fd6e9e4d56d3e3a907073dffb202c5fb",
-      "line": 5
-    },
-    {
-      "file": "server/backend/core/shared/runtime_version.js",
-      "kind": "database-execution",
-      "context": "createRuntimeVersionReader/database/task/result",
-      "signature": "a396732bdceba579a2f719aec5950f619c99ce6d87cb4507f6243e73ee23a7ff",
-      "line": 27
     }
   ]
 }

@@ -1,20 +1,9 @@
 name: Database compatibility
+# Master pushes run these phases inside release validation, including maintenance-only changes.
+# Keep standalone PR feedback and explicit manual diagnostics; never duplicate a push run.
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - '.github/workflows/database-compatibility.yml'
-      - 'scripts/testing/**'
-      - 'deploy/scripts/release-*.sh'
-      - 'scripts/deploy/**'
-      - 'server/db/**'
-      - 'server/backend/db/**'
-      - 'server/backend/scripts/*rds*'
-      - 'server/backend/scripts/*order-observation-schema*'
-      - 'package.json'
-      - 'package-lock.json'
-  push:
-    branches: [master]
     paths:
       - '.github/workflows/database-compatibility.yml'
       - 'scripts/testing/**'
@@ -35,6 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
@@ -48,19 +38,12 @@ jobs:
           SCHEMA_TEST_PG_BIN="$(dirname "$(find /usr/lib/postgresql -type f -name initdb | sort -V | tail -n 1)")"
           test -x "$SCHEMA_TEST_PG_BIN/pg_ctl"
           echo "CHANGMEN_TEST_PG_BIN=$SCHEMA_TEST_PG_BIN" >> "$GITHUB_ENV"
-      - name: Exercise isolated upgrade and code rollback
-        run: |
-          set -o pipefail
-          mkdir -p output/schema-compatibility
-          npm run test:schema-compat:postgres 2>&1 | tee output/schema-compatibility/postgres.log
-      - name: Exercise canonical reconciliation and publication preflight
-        run: |
-          set -o pipefail
-          npm run test:history-schema:postgres 2>&1 | tee output/schema-compatibility/history.log
+      - name: Exercise all required database compatibility phases
+        run: node scripts/deploy/check-database-compatibility.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: database-compatibility-report
-          path: output/schema-compatibility/
+          path: output/database-compatibility/
           if-no-files-found: ignore
           retention-days: 14

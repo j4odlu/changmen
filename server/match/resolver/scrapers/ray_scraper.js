@@ -116,7 +116,7 @@ async function batchUpsert(rows) {
 // ── 主流�?────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const { requirePlatform } = await import("@changmen/venue-adapter/loader/adapter_paths.js");
+  const { requirePlatform } = await import("@changmen/venue-node-loader");
   ({ login, rayGet } = requirePlatform("RAY", "node", "session.js"));
 
   console.log(DRY_RUN ? "[ray_scraper] 模式：dry-run（只打印�? : "[ray_scraper] 模式：写�?RDS");

@@ -1,6 +1,14 @@
 # changmen 架构
 
-单一架构文档入口。命令与日常开发见 [../CLAUDE.md](../CLAUDE.md)。
+单一架构文档入口。命令与日常开发见 [../AGENTS.md](../AGENTS.md)。
+
+[changmen 扩展] 2026-10-18 [文件夹隔离](FOLDER_ISOLATION.md)：浏览器公共簿包和前端维护工具已实际迁入 `client/packages` 与 `client/devtools`。下方目录树区分当前落点与冻结兼容区域；前端专属旧包、扩展及 Node 工具仍有剩余迁移项，不宣称全树已隔离。
+
+[changmen 扩展] 2026-10-17 源码归属补充：浏览器诊断实现位于 `packages/venue-adapter/browser`；RDS 维护与结构观察位于 `server/db`；公共身份规则位于 `packages/shared/match-identity`，原 identity 目录保留兼容。resolver / matcher 仍为后端。当前冻结路径和未完成项见 [四类源码隔离记录](SOURCE_FILE_ISOLATION_20261017.md)。
+
+[changmen 扩展] 2026-10-18 [matcher 只读检查](audits/MATCHER_READONLY_AUDIT_20261018.md)：生产内嵌合场持续运行；三个 scraper 不在日常启动链，但保有历史补数标签，不能直接认定无用。发现映射 DAL 丢失 game 字段和三个辅助命令的既有语法错误；本轮未改匹配算法或生产数据。
+
+[changmen 扩展] RDS 的 43 个有效迁移 SQL 与结构基线主文件位于 `server/db/assets/`，维护代码经本包 `maintenance/assets.mjs` 读取；backend 原路径保留逐字生成的兼容副本。无 backend 目录的三包干净安装已通过维护验收，详情见同一源码隔离记录；旧部署规则不变。
 
 ## 目标目录（monorepo，档 B）
 
@@ -8,7 +16,8 @@
 changmen/
 ├── client/
 │   ├── web/                     # Vue 控制台
-│   └── venue-adapter/             # @changmen/venue-adapter
+│   ├── packages/pm-market-data-browser/ # 浏览器公共簿 workspace
+│   └── devtools/venue-adapter/   # 前端维护工具
 ├── chrome-extension/            # MV3 扩展
 ├── server/
 │   ├── backend/                 # HTTP API、代理、静态托管
@@ -34,7 +43,8 @@ changmen/
 ├── packages/
 │   ├── shared/                  # @changmen/shared
 │   ├── api-contract/            # HTTP 契约
-│   └── client-core/             # @changmen/client-core（web/插件共用 TS）
+│   ├── client-core/             # 前端共享模型；冻结旧目录，尚未迁入 client
+│   └── venue-adapter/           # 当前双端目录，含冻结 loader/registry 与浏览器平台源码
 └── docs/
 ```
 
@@ -88,9 +98,10 @@ server/backend ──读写────► server/db (@changmen/db)
 server/match/matcher ──matchMerge──► 包内 compose/（合场算法）
 server/match/matcher ──共享工具──► @changmen/match-identity (teams / ids / time windows)
 server/match/matcher ──队名────► @changmen/team-resolver（workspace 依赖，可选）
-server/match/resolver ──requirePlatform──► @changmen/venue-adapter/loader
+resolver 辅助 scraper（开发工具） ──requirePlatform──► @changmen/venue-node-loader（原实现）
 
-server/backend ──requirePlatform──► packages/venue-adapter（monorepo 默认）
+server/backend ──requirePlatform──► @changmen/venue-node-loader（原冻结实现）
+server/db ──公共队名规则──► @changmen/shared/match-identity
 server/backend ──可选拷贝──► server/backend/platform_adapter（瘦包 / GAMEBET_ADAPTER_ROOT）
 ```
 
@@ -128,7 +139,7 @@ resolver 与 matcher 通过 workspace 依赖复用；测试：`npm run test --pr
 ### `server/match/resolver` (`@changmen/team-resolver`)
 
 队名规范化插件；matcher `matchMerge` 与 UI `merge_mode` 动态加载 `team_db.js`。  
-爬虫脚本在 `scrapers/`，环境变量通过 `@changmen/db` 的 `loadChangmenEnv()` 加载。
+爬虫脚本在 `scrapers/`，为手动队伍映射补数工具，当前不进入日常启动链；环境变量通过 `@changmen/storage` 的 `loadChangmenEnv()` 加载。当前可用性见上述只读检查，不以包声明或静态解析通过代替命令验收。
 
 ### `server/match/matcher` (`@changmen/matcher`)
 
@@ -177,6 +188,6 @@ embedded：SaveLiveTimer debounce ~3s 触发 matchMerge（`MATCHER_TIMER_DEBOUNC
 - [../lines/README.md](../lines/README.md) — 产品线锚点 `lines/{code}/`
 - [CATALOG.md](./CATALOG.md) — sport / game / market catalog（配置单一入口）
 - [../server/README.md](../server/README.md) — 服务端各 workspace 包与进程
-- [../CLAUDE.md](../CLAUDE.md) — 命令、表结构、采集间隔
+- [../AGENTS.md](../AGENTS.md) — 命令、表结构、采集间隔
 - [DATA_STORAGE.md](./DATA_STORAGE.md) — RDS / JSON 边界与 **API 数据策略**（memory-first）
 - [../PRODUCTION_DEPLOYMENT.md](../PRODUCTION_DEPLOYMENT.md) — 生产部署

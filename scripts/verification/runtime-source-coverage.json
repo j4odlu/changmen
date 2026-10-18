@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "purpose": "runtime-source-coverage-only",
+  "file": "packages/shared/tooling/runtime_version.js",
+  "baselineCommit": "abdfce46d46f562c208ea0d832b6cafc02fd2360",
+  "baselineSha256": "23a65e104e76e24aedecca73845238b5a4ca70e2e5584f454a2423d65231f821",
+  "migratedSha256": "8a2d9633f34099e4d2f7f5bdf518566291f05989fd70e686f3e0f2c41c1df1ae",
+  "reason": "Preserve the previous packages source coverage for client/packages in both roles and no-Git archive discovery; retain every existing filter and the complete historical algorithm.",
+  "changes": [
+    {
+      "before": "  return role === \"frontend\"\n",
+      "after": "  // [changmen 扩展] 迁入 client 的包保留原 packages 的双端保守覆盖，既有排除规则仍先执行。\n  if (file.startsWith(\"client/packages/\")) return true;\n  return role === \"frontend\"\n"
+    },
+    {
+      "before": "  for (const dir of [\"client/web/src\", \"client/web/public\", \"client/web/vite\", \"client/web/scripts\", \"packages\", \"server\", \"devtools/platform-probes\"])",
+      "after": "  for (const dir of [\"client/web/src\", \"client/web/public\", \"client/web/vite\", \"client/web/scripts\", \"client/packages\", \"packages\", \"server\", \"devtools/platform-probes\"])"
+    }
+  ]
+}

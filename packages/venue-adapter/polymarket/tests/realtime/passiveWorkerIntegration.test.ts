@@ -6,9 +6,10 @@ import type { ShadowWorkerRequest, ShadowWorkerResponse } from "../../submission
 
 test("real isolated production Worker consumes shared frames, compares HTTP and resets on disconnect with no WS constructor", async () => {
   const entry = fileURLToPath(new URL("../../marketData.worker.ts", import.meta.url));
-  const core = await build({ entryPoints: [fileURLToPath(new URL("../../realtime/orderBook/bookStore.ts", import.meta.url))],
+  const core = await build({ absWorkingDir: fileURLToPath(new URL("../../../../../", import.meta.url)),
+    entryPoints: [fileURLToPath(new URL("../../../../../client/packages/pm-market-data-browser/src/bookStore.ts", import.meta.url))],
     bundle: true, write: false, platform: "browser", metafile: true });
-  expect(Object.keys(core.metafile!.inputs).every(path => path.includes("realtime/orderBook/") || path.endsWith("realtime/marketStreamProtocol.ts"))).toBe(true);
+  expect(Object.keys(core.metafile!.inputs).every(path => path.includes("client/packages/pm-market-data-browser/src/"))).toBe(true);
   const result = await build({ entryPoints: [entry], bundle: true, write: false, platform: "browser", format: "cjs", metafile: true });
   const dependencies = Object.keys(result.metafile!.inputs);
   expect(dependencies.some(path => path.includes("directBookFeed"))).toBe(false);

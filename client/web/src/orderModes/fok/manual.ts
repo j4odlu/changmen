@@ -9,6 +9,7 @@ import { manualBetToastSeconds } from "@/shared/betTiming";
 import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
 import { buildManualBetCheckFailureHtml } from "@/stores/betting/manualBetAlert";
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
+import { isRayMatchRiskClosed, RAY_MATCH_RISK_MESSAGE } from "@changmen/venue-adapter/ray";
 
 export interface ManualExecutionContext {
   match: ViewMatch;
@@ -39,6 +40,7 @@ export async function executeManualFok(account: PlatformAccount, option: BetOpti
     );
     return;
   }
+  if (isRayMatchRiskClosed(match)) { setMessage(RAY_MATCH_RISK_MESSAGE); return; }
   const result = await accountStore.betting(account, option, toastSec);
   if (result?.success) {
     // PM/PF pending：受理≠成交，等 settle 确认后再 mark

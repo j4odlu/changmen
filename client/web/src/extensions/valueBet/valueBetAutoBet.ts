@@ -23,6 +23,7 @@ import { useAccountStore } from "@/stores/accountStore";
 import { isValueBetPlaceInFlight, placeValueBetOrder } from "@/stores/betting/placeValueBet";
 import { useMatchStore } from "@/stores/matchStore";
 import { useUserStore } from "@/stores/userStore";
+import { isRayMatchRiskClosed } from "@changmen/venue-adapter/ray";
 
 export const VALUE_BET_AUTO_FAIL_COOLDOWN_MS = 5_000;
 
@@ -85,6 +86,7 @@ export function collectValueBetAutoCandidates(
     return out;
 
   for (const match of matches) {
+    if (isRayMatchRiskClosed(match)) continue;
     for (const bet of match.bets) {
       if (!isPrematchFullMarketAllowed(match, bet))
         continue;

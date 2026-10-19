@@ -1,4 +1,5 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
+import { isRayMatchRiskClosed, RAY_MATCH_RISK_MESSAGE } from "@changmen/venue-adapter/ray";
 import type { GtcPlan } from "@changmen/shared/pm_gtc";
 import type { ViewBet, ViewMatch } from "@/models/match";
 import type { PlatformAccount } from "@/models/platformAccount";
@@ -25,6 +26,7 @@ export async function executeManualGtc(account: PlatformAccount, input: BetOptio
   if (!user.isLoggedIn || !user.userId || account.provider !== "Polymarket" || input.type !== "Polymarket")
     throw new Error("请登录后使用 PM 手动 GTC");
   const checkSession = () => {
+    if (isRayMatchRiskClosed(context.match)) throw new Error(RAY_MATCH_RISK_MESSAGE);
     if (!isAuthSessionCurrent(session) || String(user.userId) !== owner)
       throw new Error("用户会话已变更，禁止继续发送手动 GTC");
   };

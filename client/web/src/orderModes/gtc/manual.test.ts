@@ -5,6 +5,7 @@ import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { executeManualGtc } from "./manual";
 import * as pmOrders from "@changmen/venue-adapter/polymarket/orders";
+import * as ray from "@changmen/venue-adapter/ray";
 
 const notices = vi.hoisted(() => ({ notify: vi.fn(), close: vi.fn() }));
 
@@ -31,6 +32,7 @@ it("shared submit preparation failure is explicitly unsent for manual GTC too", 
   expect(mocks.row).toMatchObject({ pmAuthorized: true, submitNotSent: true, decision: "closed", released: true });
 });
 beforeEach(() => {
+  vi.spyOn(ray, "isRayMatchRiskClosed").mockReturnValue(false);
   vi.clearAllMocks(); mocks.valid = true; mocks.row = undefined; mocks.progress.ready = true; mocks.progress.records = [];
   notices.notify.mockReturnValue({ close: notices.close });
   mocks.user.extensionPrefs = { pmGtcV1Participant: false, pmArbOrderMode: "FOK" };
@@ -43,6 +45,26 @@ beforeEach(() => {
 });
 
 describe("isolated manual GTC execution", () => {
+  it.each(["entry", "precheck", "prepareSubmit"])("blocks a closed match at %s without submitting or touching older orders", async phase => {
+    const old = { id: "old", submit: "accepted", orderId: "existing", released: false } as GtcExecution;
+    mocks.progress.records = [old];
+    if (phase === "entry") vi.mocked(ray.isRayMatchRiskClosed).mockReturnValue(true);
+    if (phase === "precheck") mocks.check.mockImplementationOnce(async (_account, option) => {
+      option.data = {}; vi.mocked(ray.isRayMatchRiskClosed).mockReturnValue(true); return option;
+    });
+    if (phase === "prepareSubmit") {
+      const prepared = await mocks.prepare();
+      mocks.prepare.mockResolvedValueOnce({ ...prepared, prepareSubmit: async () => {
+        vi.mocked(ray.isRayMatchRiskClosed).mockReturnValue(true);
+      } });
+    }
+    await expect(executeManualGtc(account, input(), context())).rejects.toThrow(ray.RAY_MATCH_RISK_MESSAGE);
+    expect(mocks.submit).not.toHaveBeenCalled();
+    expect(mocks.progress.records).toEqual([old]);
+    expect(old).toMatchObject({ submit: "accepted", released: false });
+    if (phase === "prepareSubmit") expect(mocks.row).toMatchObject({ decision: "closed", released: true });
+    else expect(mocks.create).not.toHaveBeenCalled();
+  });
   it("saves the native PM label for a manual bet launched from a decider row", async () => {
     const label = vi.spyOn(pmOrders, "lookupPolymarketOrderBetLabel").mockReturnValueOnce("全场");
     const ctx = context();

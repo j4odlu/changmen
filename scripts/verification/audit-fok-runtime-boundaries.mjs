@@ -57,6 +57,7 @@ async function manualSequence(deployed, cancelFirst) {
     refreshBalance: async () => {},
   };
   const dependencies = {
+    isRayMatchRiskClosed: () => false,
     BetOption: class { constructor(_m, _b, item, target, betMoney) { Object.assign(this, { type: item.type, target, betMoney, itemId: "token", betId: "condition" }); } },
     h: (_component, props) => props,
     ref: value => ({ value }),

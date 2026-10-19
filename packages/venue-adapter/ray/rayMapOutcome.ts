@@ -1,6 +1,7 @@
 import { shallowReactive } from "vue";
 import { rayMatchStage } from "./shared/match_stage";
 import { isRayOddCollectable, type RayOddsPayload } from "./shared/save_bets";
+import { updateRayMatchRisk } from "./rayMatchRisk";
 
 interface RayMapOutcome {
   winnerId: string;
@@ -11,6 +12,7 @@ interface RayMapOutcome {
 const byMatch = shallowReactive(new Map<string, ReadonlyMap<string, RayMapOutcome>>());
 
 export function updateRayMapOutcomes(matchId: string, payload: RayOddsPayload, betRe: RegExp, gameCode?: string | null): void {
+  updateRayMatchRisk(matchId, payload, betRe, gameCode);
   const next = new Map<string, RayMapOutcome>();
   const home = payload.team?.find(team => team.pos === 1);
   const away = payload.team?.find(team => team.pos === 2);

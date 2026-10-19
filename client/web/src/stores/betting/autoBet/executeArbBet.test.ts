@@ -11,6 +11,7 @@ import {
 import { executeArbBet } from "@/stores/betting/autoBet/executeArbBet";
 import { createDefaultUserConfig } from "@/types/userConfig";
 import { syncActiveBetFail } from "@/stores/betting/activeBetRunSync";
+import * as ray from "@changmen/venue-adapter/ray";
 
 const prepareArbAttempt = vi.hoisted(() => vi.fn());
 const checkArbLegs = vi.hoisted(() => vi.fn());
@@ -59,10 +60,55 @@ function mockSessionStorage() {
 
 describe("executeArbBet orchestration", () => {
   beforeEach(() => {
+    vi.spyOn(ray, "isRayMatchRiskClosed").mockReturnValue(false);
     vi.clearAllMocks();
     mockSessionStorage();
     resetMapBetMuteForTests();
     resetPrematchFullOnlyForTests();
+  });
+
+  it("skips a closed match before preparation", async () => {
+    vi.mocked(ray.isRayMatchRiskClosed).mockReturnValue(true);
+    const setMessage = vi.fn();
+    await executeArbBet({ match: { id: 1 } as never, bet: { id: 10 } as never,
+      config: createDefaultUserConfig(), setMessage });
+    expect(prepareArbAttempt).not.toHaveBeenCalled();
+    expect(placeArbLegs).not.toHaveBeenCalled();
+    expect(setMessage).toHaveBeenCalledWith(ray.RAY_MATCH_RISK_MESSAGE);
+  });
+
+  it("closes a race during precheck without sending and releases its reservation and send window", async () => {
+    const close = vi.fn();
+    const ready = { linkId: 1, singleLeg9999MapReserved: true, singleLeg9999MapKeys: ["reserved"] };
+    prepareArbAttempt.mockImplementationOnce(async params => {
+      params.originalExecution = { close }; return ready;
+    });
+    checkArbLegs.mockImplementationOnce(async () => {
+      vi.mocked(ray.isRayMatchRiskClosed).mockReturnValue(true); return ready;
+    });
+    const setMessage = vi.fn();
+    await executeArbBet({ match: { id: 1 } as never, bet: { id: 10, round: 1 } as never,
+      config: createDefaultUserConfig(), setMessage });
+    expect(placeArbLegs).not.toHaveBeenCalled();
+    expect(finalizeArbBet).not.toHaveBeenCalled();
+    expect(releaseSingleLeg9999MapFillKeys).toHaveBeenCalledExactlyOnceWith(["reserved"]);
+    expect(close).toHaveBeenCalledOnce();
+    expect(setMessage).toHaveBeenCalledWith(ray.RAY_MATCH_RISK_MESSAGE);
+    expect(syncActiveBetFail).toHaveBeenCalledWith(10, ray.RAY_MATCH_RISK_MESSAGE, "预检");
+    expect(recordArbAttemptMetric).toHaveBeenCalledWith(expect.objectContaining({ stop: "skip_check" }));
+  });
+
+  it("does not interrupt placement or finalization after the first send has started", async () => {
+    const ready = { linkId: 1 };
+    prepareArbAttempt.mockResolvedValueOnce(ready);
+    checkArbLegs.mockResolvedValueOnce(ready);
+    placeArbLegs.mockImplementationOnce(async () => {
+      vi.mocked(ray.isRayMatchRiskClosed).mockReturnValue(true); return ready;
+    });
+    await executeArbBet({ match: { id: 1 } as never, bet: { id: 10 } as never,
+      config: createDefaultUserConfig(), setMessage: vi.fn() });
+    expect(placeArbLegs).toHaveBeenCalledOnce();
+    expect(finalizeArbBet).toHaveBeenCalledWith(expect.anything(), ready);
   });
 
   it("[changmen 扩展] 折叠全场时不进 prepare", async () => {

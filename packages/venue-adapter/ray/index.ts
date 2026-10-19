@@ -4,6 +4,7 @@ import { startRayCollector } from "./collect";
 
 export { rayProvider, startRayCollector };
 export { lookupRayMapOutcome } from "./rayMapOutcome";
+export { isRayMatchRiskClosed, RAY_MATCH_RISK_MESSAGE } from "./rayMatchRisk";
 export * from "./bet";
 export * from "./collect";
 export {

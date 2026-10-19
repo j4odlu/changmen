@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { verifyRayClientMonitorSource } from "./ray-client-monitor-boundary.mjs";
 import { restoreRaySubmissionPreviewSource, verifyRaySubmissionPreviewSources } from "./ray-submission-preview-boundary.mjs";
+import { restoreRayMatchRiskSource } from "./ray-match-risk-boundary.mjs";
 
 export const rayFrontendCommit = "2391dc9df446dcb7ed85030a3faca3696b0d0da7";
 export const rayFrontendSources = Object.freeze([
@@ -43,6 +44,7 @@ export function restoreRayOrderViewSource(source) {
   return source;
 }
 export function restoreRayProviderSource(file, source, readSource) {
+  source = restoreRayMatchRiskSource(file, source);
   source = restoreRayMapOutcomeSource(file, source);
   if (file !== "client/web/src/runtime/providers.ts")
     return source;

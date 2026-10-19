@@ -1,0 +1,36 @@
+{
+  "description": "[changmen 扩展] 精确登记已提交的补单赔率上下沿展示；不改变运行源码及原校验基线。",
+  "commit": "4a553bbb1ed34cb59486ae5030f81cdab5656cf7",
+  "changes": {
+    "client/web/src/shared/orderLink.ts": {
+      "beforeSha": "88d1276bbc09a42e560783b7c593cd25f376f70f0d049358b6cd41812f018be6",
+      "increments": [
+        [
+          "import { formatLinkId, isSingleLegLink, orderLinkSortKey, toFixed } from \"@changmen/client-core/shared/format\";\nimport { Currency, getExchange } from \"@changmen/shared/currency\";\nimport { truncateShareUsdtAmount } from \"@/shared/pfOrderDisplay\";\nimport { makeupDisplayOdds } from \"@/extensions/arbBet/makeupOddsBand\";\n\n/** 与 @changmen/db ARB_LINK_MIN 对齐：SaveOrderBind 的 Date.now() 毫秒时间戳 */\nconst ARB_LINK_MIN = 1_000_000_000_000;\n",
+          "import { formatLinkId, isSingleLegLink, orderLinkSortKey, toFixed } from \"@changmen/client-core/shared/format\";\nimport { Currency, getExchange } from \"@changmen/shared/currency\";\nimport { truncateShareUsdtAmount } from \"@/shared/pfOrderDisplay\";\nimport { makeupDisplayBand, makeupDisplayOdds } from \"@/extensions/arbBet/makeupOddsBand\";\n\n/** 与 @changmen/db ARB_LINK_MIN 对齐：SaveOrderBind 的 Date.now() 毫秒时间戳 */\nconst ARB_LINK_MIN = 1_000_000_000_000;\n"
+        ],
+        [
+          "    Bet: order.bet,\n    Item: order.target,\n    Odds: odds,\n    BetMoney: betMoney,\n    Money: 0,\n    Status: presentation.status,\n",
+          "    Bet: order.bet,\n    Item: order.target,\n    Odds: odds,\n    MakeupOddsBand: makeupDisplayBand(order, bandPrefs) ?? undefined,\n    BetMoney: betMoney,\n    Money: 0,\n    Status: presentation.status,\n"
+        ]
+      ]
+    },
+    "client/web/src/components/order/OrderList.vue": {
+      "beforeSha": "f61fc61601859122f03a38fdfe07dd73b0b2cc40e2acaf69e9ebe1bc49edd034",
+      "increments": [
+        [
+          "              </template>\n            </template>\n            <template v-else>\n              买入金额：{{ toFixed(Number(block.row.BetMoney) || 0, 0) }} 赔率：<span class=\"order__odds\">{{\n                formatDisplayOdds(Number(block.row.Odds) || 0)\n              }}</span>\n              <template v-if=\"isMakeupPendingOrderRow(block.row)\">\n",
+          "              </template>\n            </template>\n            <template v-else>\n              买入金额：{{ toFixed(Number(block.row.BetMoney) || 0, 0) }} {{ block.row.MakeupOddsBand ? \"打平赔率\" : \"赔率\" }}：<span class=\"order__odds\">{{\n                formatDisplayOdds(Number(block.row.Odds) || 0)\n              }}</span>\n              <template v-if=\"isMakeupPendingOrderRow(block.row)\">\n"
+        ],
+        [
+          "              </template>\n            </template>\n          </div>\n          <div class=\"time\">\n            买入时间：{{ formatOrderTime(block.row.CreateAt || 0) }}\n          </div>\n",
+          "              </template>\n            </template>\n          </div>\n          <div\n            v-if=\"isMakeupPendingOrderRow(block.row) && block.row.MakeupOddsBand\"\n            class=\"order__makeup-band\"\n            :title=\"block.row.MakeupOddsBand.approximate\n              ? '上下沿赔率按等返还金额折算，仅供参考；实际按取整后的补单金额计算总体保底利润率。'\n              : '最高候选赔率严格低于下沿或高于上沿才补单；等于边界或处于区间内不补单。'\"\n          >\n            <span>\n              下沿赔率：<span v-if=\"block.row.MakeupOddsBand.lowerOdds != null\" class=\"order__odds\">{{ block.row.MakeupOddsBand.approximate ? \"约 \" : \"\" }}{{ formatDisplayOdds(block.row.MakeupOddsBand.lowerOdds) }}</span><span v-else>{{ block.row.MakeupOddsBand.approximate ? \"不可达\" : \"已关闭\" }}</span>\n            </span>\n            <span>\n              上沿赔率：<span v-if=\"block.row.MakeupOddsBand.upperOdds != null\" class=\"order__odds\">{{ block.row.MakeupOddsBand.approximate ? \"约 \" : \"\" }}{{ formatDisplayOdds(block.row.MakeupOddsBand.upperOdds) }}</span><span v-else>不可达</span>\n            </span>\n          </div>\n          <div class=\"time\">\n            买入时间：{{ formatOrderTime(block.row.CreateAt || 0) }}\n          </div>\n"
+        ],
+        [
+          "    </template>\n  </div>\n</template>\n",
+          "    </template>\n  </div>\n</template>\n\n<style scoped>\n.order__makeup-band {\n  display: flex;\n  flex-wrap: wrap;\n  column-gap: 12px;\n}\n\n.order__makeup-band > span {\n  white-space: nowrap;\n}\n\n.order__makeup-band .order__odds {\n  color: var(--cm-color-odds);\n}\n</style>\n"
+        ]
+      ]
+    }
+  }
+}

@@ -19,9 +19,10 @@ test("a guard with a wider condition is rejected rather than stripped", () => {
   const file = paths[0]; const source = fs.readFileSync(file, "utf8");
   assert.throws(() => specializeFokSource(file, source.replace("if (row.DisplayOnly)", "if (row.DisplayOnly || row.Type === 'RAY')")));
 });
-test("changing the ordinary rebind rule remains visible to comparison", () => {
+test("changing the ordinary rebind rule is rejected by the complete display-source check", () => {
   const file = paths[0]; const source = fs.readFileSync(file, "utf8");
-  assert.notEqual(specializeFokSource(file, source.replace("link !== 0", "link !== 10")), specializeFokSource(file, source));
+  assert.ok(source.includes("link !== 0"));
+  assert.throws(() => specializeFokSource(file, source.replace("link !== 0", "link !== 10")), /complete source outside makeup odds display change/);
 });
 test("changing the FOK retry payload remains visible to comparison", () => {
   const file = paths[1]; const source = fs.readFileSync(file, "utf8");

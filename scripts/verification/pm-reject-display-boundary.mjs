@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import { restoreMakeupOddsDisplaySource } from "./makeup-odds-display-boundary.mjs";
 const normalize = source => source.replaceAll("\r\n", "\n");
 const digest = source => createHash("sha256").update(normalize(source)).digest("hex");
 const text = normalize(fs.readFileSync(new URL("./pm-reject-display-increments.json", import.meta.url), "utf8"));
@@ -9,6 +10,7 @@ assert.equal(digest(text), "5e17aeedd0b81f6b9a062778594b234a2431a1144b39e602c660
 const registered = JSON.parse(text);
 
 export function restorePmRejectDisplaySource(file, source, required = false) {
+  source = restoreMakeupOddsDisplaySource(file, source);
   const row = registered.changes[file];
   if (!row) return source;
   let restored = normalize(source);

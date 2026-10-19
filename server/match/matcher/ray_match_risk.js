@@ -3,6 +3,14 @@ import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store.j
 const FILE = "ray_match_risks";
 let closed;
 
+/** 运维页每次读持久记录，兼容独立 matcher UI 与采集宿主处于不同进程。只读，不改变关闭状态。 */
+export function readRayRiskIds() {
+  const saved = readJsonFile(FILE, []);
+  return Array.isArray(saved)
+    ? [...new Set(saved.filter(key => typeof key === "string" && /^RAY:\d+$/.test(key)).map(key => key.slice(4)))]
+    : [];
+}
+
 function closedKeys() {
   if (!closed) {
     const saved = readJsonFile(FILE, []);

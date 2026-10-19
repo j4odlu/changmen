@@ -1,11 +1,35 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildRayRiskMatches,
   computeRecommendations,
   dashboardRowsFromSnapshot,
   isPlatformMatchLinkedForRec,
 } from "./matcher_data.js";
 
 const T0 = Date.parse("2026-08-08T01:45:00+08:00");
+
+describe("abnormal match dashboard details", () => {
+  it("lists only recorded anomalies, preferring the merged title and normalized time", () => {
+    const matches = [{ id: 42, title: "Alpha vs Beta", start_time: T0 / 1000, matchs: { RAY: "910001" } }];
+    const original = structuredClone(matches);
+    expect(buildRayRiskMatches(["910001"], matches, [{ source_match_id: "910002", home: "Normal", away: "Match" }]))
+      .toEqual([{ rayMatchId: "910001", clientMatchId: 42, title: "Alpha vs Beta", startTime: T0, detailsAvailable: true }]);
+    expect(matches).toEqual(original);
+  });
+  it("shows unmatched anomalies using the collected RAY teams and time", () => {
+    expect(buildRayRiskMatches(["910001"], [], [{ source_match_id: "910001", home: "A", away: "B", start_time: T0 }]))
+      .toEqual([{ rayMatchId: "910001", clientMatchId: null, title: "A vs B", startTime: T0, detailsAvailable: true }]);
+  });
+  it("keeps the anomaly visible by native ID even after match data disappears", () => {
+    expect(buildRayRiskMatches(["910001"], [], []))
+      .toEqual([{ rayMatchId: "910001", clientMatchId: null, title: "RAY 比赛 #910001", startTime: 0, detailsAvailable: false }]);
+  });
+  it("can use an existing source binding without mixing another abnormal match's title", () => {
+    expect(buildRayRiskMatches(["910001"], [{ id: 42, title: "Bound match", matchs: { OB: "ob1" } }],
+      [{ source_match_id: "910001", match_id: 42 }])[0].title).toBe("Bound match");
+    expect(buildRayRiskMatches(["910001"], [{ id: 42, title: "Other match", matchs: { RAY: "910002" } }], [])[0].detailsAvailable).toBe(false);
+  });
+});
 
 function row(overrides = {}) {
   return {

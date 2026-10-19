@@ -17,6 +17,16 @@ beforeEach(() => {
   storage.write.mockReset().mockImplementation((name, data) => { storage.data = structuredClone(data); });
 });
 
+it("reads newly persisted RAY IDs across processes without changing the close registry", async () => {
+  const risk = await import("../ray_match_risk.js");
+  expect(risk.readRayRiskIds()).toEqual([]);
+  storage.data = ["RAY:910001", "match:1", "OB:ob1", "RAY:910001", null, "RAY:invalid"];
+  expect(risk.readRayRiskIds()).toEqual(["910001"]);
+  storage.data.push("RAY:910002");
+  expect(risk.readRayRiskIds()).toEqual(["910001", "910002"]);
+  expect(storage.write).not.toHaveBeenCalled();
+});
+
 it.each([3, 5, 7])("detects final-map-first prematch BO%s from native results", async bo => {
   const risk = await import("../ray_match_risk.js");
   expect(risk.hasRayPrematchAnomaly("910001", payload(bo), now)).toBe(true);

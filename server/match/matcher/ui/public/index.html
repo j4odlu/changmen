@@ -574,6 +574,12 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    .ray-risk-panel { margin: 0 18px 12px; border: 1px solid #b7791f; border-radius: 10px; background: var(--panel); }
+    .ray-risk-panel summary { padding: 12px 14px; cursor: pointer; color: #fbbf24; font-weight: 650; }
+    .ray-risk-hint { margin: 0; padding: 0 14px 12px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .ray-risk-body { max-height: 280px; overflow: auto; padding: 0 14px 12px; }
+    .ray-risk-body table { min-width: 620px; }
+    .ray-risk-body .risk-status { color: #fbbf24; white-space: nowrap; }
     .hidden-panel-wrap { margin: 0 18px 12px; }
     .hidden-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
     .hidden-panel-header {
@@ -643,6 +649,12 @@
 </div>
 
 <div class="stats" id="stats-bar"></div>
+
+<details class="ray-risk-panel" id="ray-risk-panel" open>
+  <summary>异常比赛 · 已停止下发 <span class="badge" id="ray-risk-count">—</span></summary>
+  <p class="ray-risk-hint">赛前前面所有地图均无赛果，最后一张地图却已出赛果：可能存在让局，此局关闭。以下比赛整场不向客户端下发，异常记录不会自动解除。</p>
+  <div class="ray-risk-body" id="ray-risk-body"><div class="empty" style="padding:16px">加载中…</div></div>
+</details>
 
 <div class="hidden-panel-wrap" id="hidden-panel-wrap" style="display:none">
   <div class="hidden-panel">
@@ -1432,6 +1444,23 @@ function platformRank(p) {
 }
 function pickReferenceMatch(matches) {
   return [...matches].sort((a, b) => platformRank(a.platform) - platformRank(b.platform))[0];
+}
+
+function renderRayRiskMatches(rows) {
+  document.getElementById('ray-risk-count').textContent = rows.length;
+  const body = document.getElementById('ray-risk-body');
+  if (!rows.length) {
+    body.innerHTML = '<div class="empty" style="padding:16px">暂无异常比赛记录</div>';
+    return;
+  }
+  body.innerHTML = `<table class="team-table">
+    <thead><tr><th>比赛</th><th>开赛时间</th><th>来源 / 比赛 ID</th><th>提示</th></tr></thead>
+    <tbody>${rows.map(row => `<tr>
+      <td>${esc(row.title)}${row.detailsAvailable ? '' : '<div class="queue-search-hint">当前采集资料已不可用，保留异常记录</div>'}</td>
+      <td>${esc(row.startTime ? fmtTime(row.startTime) : '未知')}</td>
+      <td>RAY #${esc(row.rayMatchId)}${row.clientMatchId != null ? ` · 本站 #${esc(row.clientMatchId)}` : ''}</td>
+      <td class="risk-status">可能存在让局，此局关闭。</td>
+    </tr>`).join('')}</tbody></table>`;
 }
 
 function renderStats(d, displayCms) {
@@ -3645,6 +3674,7 @@ async function load(opts = {}) {
     const displayCms = filterDisplayClientMatches(d.clientMatches, d.platforms);
     const teamMaps = d.teamMaps || {};
     renderStats(d, displayCms);
+    renderRayRiskMatches(d.rayRiskMatches || []);
     setHiddenMatchCount(d.hiddenClientMatchCount ?? 0);
     if (!_hiddenPanelOpen) {
       _hiddenClientMatchesLoaded = false;
@@ -3691,6 +3721,8 @@ async function load(opts = {}) {
     if (seq !== _loadSeq) return;
     _lastDataFingerprint = null;
     const errHtml = `<div class="empty" style="color:#f87171">加载失败: ${esc(err.message)}</div>`;
+    document.getElementById('ray-risk-count').textContent = '—';
+    document.getElementById('ray-risk-body').innerHTML = errHtml;
     document.getElementById('matched-id-panels') && (document.getElementById('matched-id-panels').innerHTML = errHtml);
     document.getElementById('matched-name-panels') && (document.getElementById('matched-name-panels').innerHTML = errHtml);
     document.getElementById('queue-panels') && (document.getElementById('queue-panels').innerHTML = errHtml);

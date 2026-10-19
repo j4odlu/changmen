@@ -18,6 +18,7 @@ import {
   STALE_FACTOR,
 } from "../lib/heartbeat.js";
 import { fetchMatcherRdsSnapshot } from "../ops/rds_snapshot_cache.js";
+import { readRayRiskIds } from "../ray_match_risk.js";
 import {
   getEmbeddedMatcherState,
   isManagedByServer,
@@ -354,6 +355,23 @@ function summarizeMatcherDashboard(data) {
   };
 }
 
+/** 仅补充运维展示资料；不调用过滤函数，也不改写赛事、盘口或异常记录。 */
+export function buildRayRiskMatches(ids, clientMatches, rayMatches) {
+  return ids.map((id) => {
+    const native = rayMatches.find(row => String(row.source_match_id) === id);
+    const cm = clientMatches.find(row => String(row.matchs?.RAY ?? "") === id)
+      || clientMatches.find(row => native?.match_id != null && Number(row.id) === Number(native.match_id));
+    const title = cm?.title || (native?.home && native?.away ? `${native.home} vs ${native.away}` : "");
+    return {
+      rayMatchId: id,
+      clientMatchId: cm?.id ?? null,
+      title: title || `RAY 比赛 #${id}`,
+      startTime: normalizeEpochMs(cm?.start_time || native?.start_time),
+      detailsAvailable: Boolean(title),
+    };
+  });
+}
+
 async function fetchMatcherDashboard() {
   const [snapshot, hiddenClientMatchCount] = await Promise.all([
     fetchMatcherRdsSnapshot(),
@@ -412,6 +430,7 @@ async function fetchMatcherDashboard() {
   const dashboard = {
     platforms: byPlatform,
     clientMatches,
+    rayRiskMatches: buildRayRiskMatches(readRayRiskIds(), clientMatches, byPlatform.RAY || []),
     hiddenClientMatches: [],
     hiddenClientMatchCount,
     recommendations,

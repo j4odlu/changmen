@@ -76,16 +76,26 @@ export async function loadRayBets(
   matchId: string,
   betRe: RegExp,
   gameCode?: string | null,
-): Promise<CollectBetDto[]> {
+): Promise<{ bets: CollectBetDto[]; matchResult?: Record<string, unknown> }> {
   const res = await collectRayGet<{ code: number; result?: Record<string, unknown> }>(
     platform,
     "odds",
     `match_id=${matchId}`,
   );
-  if (res.code !== 200 || !res.result) return [];
+  if (res.code !== 200 || !res.result) return { bets: [] };
 
   const payload = res.result as unknown as RayOddsPayload;
   updateRayMapOutcomes(matchId, payload, betRe, gameCode);
   ingestRayOddsPayloadToFo(payload, betRe, gameCode);
-  return reportRayOddsPayloadToSaveBetRows(payload, betRe, gameCode);
+  const { id, status, round, start_time } = res.result;
+  // 仅透传原始字段；异常判断由 matcher 执行，不新增请求。
+  const matchResult = {
+    id, status, round, start_time,
+    team: payload.team?.map(({ pos, team_id }) => ({ pos, team_id })),
+    odds: payload.odds?.filter(row => row.group_name === "获胜者").map(row => ({
+      match_stage: row.match_stage, odds_group_id: row.odds_group_id, odds_id: row.odds_id,
+      team_id: row.team_id, status: row.status, win: row.win, group_name: row.group_name,
+    })),
+  };
+  return { bets: reportRayOddsPayloadToSaveBetRows(payload, betRe, gameCode), matchResult };
 }

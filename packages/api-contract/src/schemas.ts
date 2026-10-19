@@ -25,6 +25,7 @@ export const SaveBetRequest = z.object({
   provider: z.string().min(1),
   matchId: z.union([z.string(), z.number()]),
   bets: z.string().min(1),
+  matchResult: z.string().optional(),
 });
 
 export const SaveLiveTimerRequest = z.object({

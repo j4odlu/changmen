@@ -9,6 +9,16 @@ const read = file => fs.readFileSync(file, "utf8");
 const writer = "server/backend/core/account/order_store.js";
 const service = "server/backend/core/account/account_service.js";
 describe("complete committed RAY migration preserves fixed public FOK modules", () => {
+  it.each([
+    "packages/venue-adapter/ray/collect.ts",
+    "packages/venue-adapter/ray/markets.ts",
+    "packages/venue-adapter/shared/webBridgeTypes.ts",
+  ])("allows only raw result forwarding and keeps unrelated source changes visible: %s", (file) => {
+    const base = "75b1efac66625e5f2bc9884a965b244bfaf337ed";
+    const old = target => gitSource(base, target);
+    expect(() => verifyProtectedSource(file, read(file), old(file), read, old)).not.toThrow();
+    expect(() => verifyProtectedSource(file, `${read(file)}\nvoid unexpectedTradingAction();`, old(file), read, old)).toThrow();
+  });
   it("requires all committed monitoring implementations", () => {
     expect(verifyRayFrontendSources(read).completeModules).toBe(14);
   });

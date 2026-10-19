@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { isVpsOwnedPlatformCollect } from "@changmen/venue-adapter/registry";
 import { saveBetSource, saveLiveTimer, saveMatchSource } from "./match";
+import { postForm } from "@/api/client";
 
 vi.mock("@/api/client", () => ({
   post: vi.fn(),
@@ -9,6 +10,17 @@ vi.mock("@/api/client", () => ({
 }));
 
 describe("api/match VPS Save* gate", () => {
+  it("adds raw result facts only to the existing RAY SaveBet request", async () => {
+    const matchResult = { id: "1", status: 1, odds: [{ win: 1 }] };
+    await saveBetSource("RAY", "1", [], matchResult);
+    expect(postForm).toHaveBeenLastCalledWith("API_SaveBet?RAY", {
+      provider: "RAY", matchId: "1", bets: "[]", matchResult: JSON.stringify(matchResult),
+    });
+    await saveBetSource("OB", "1", [], matchResult);
+    expect(postForm).toHaveBeenLastCalledWith("API_SaveBet?OB", { provider: "OB", matchId: "1", bets: "[]" });
+    await saveBetSource("RAY", "1", []);
+    expect(postForm).toHaveBeenLastCalledWith("API_SaveBet?RAY", { provider: "RAY", matchId: "1", bets: "[]" });
+  });
   it("blocks Save* for every vps_http_ws platform from manifest", async () => {
     expect(isVpsOwnedPlatformCollect("PredictFun")).toBe(true);
     expect(isVpsOwnedPlatformCollect("Polymarket")).toBe(true);

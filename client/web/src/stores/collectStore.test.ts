@@ -27,6 +27,20 @@ describe("collectStore.saveMatch A8 parity", () => {
     expect(saveMatchSource).toHaveBeenCalledWith("OB", []);
   });
 
+  it("forwards RAY raw facts through SaveBet only when reporting is enabled", async () => {
+    const store = useCollectStore();
+    const result = { id: "1", round: "bo3", odds: [] };
+    store.collect.set("RAY", true);
+    expect(await store.saveBets("RAY", "1", [], result)).toBe(true);
+    expect(saveBetSource).toHaveBeenLastCalledWith("RAY", "1", [], result);
+    vi.mocked(saveBetSource).mockClear();
+    store.collect.set("RAY", false);
+    expect(await store.saveBets("RAY", "1", [], result)).toBe(false);
+    expect(saveBetSource).not.toHaveBeenCalled();
+    expect(await store.saveBets("OB", "1", [])).toBe(true);
+    expect(saveBetSource).toHaveBeenLastCalledWith("OB", "1", []);
+  });
+
   it("skips API when collect switch is off", async () => {
     const store = useCollectStore();
     store.collect.set("OB", false);

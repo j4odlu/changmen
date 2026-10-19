@@ -16,6 +16,7 @@ export interface CollectStoreBridge {
     platform: PlatformId,
     matchId: string | number,
     bets: CollectBetDto[],
+    matchResult?: Record<string, unknown>,
   ): Promise<boolean>;
   logCollect(title: string, rows: unknown[]): Promise<void>;
 }

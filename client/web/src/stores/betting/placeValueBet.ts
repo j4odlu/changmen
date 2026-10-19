@@ -1,5 +1,4 @@
 import type { BetSide, ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
-import { isRayMatchRiskClosed } from "@changmen/venue-adapter/ray";
 import { accountPassesMainBetFilter } from "@/domain/betting/betFilters";
 import { isSingleLegRateAtOdds } from "@/domain/betting/singleLegRate";
 import { isMapMuteActive } from "@/extensions/mapBetMute";
@@ -141,7 +140,7 @@ function evaluateLivePlaceSafety(
     edge: snap.edge,
     minEdge: autoGate?.minEdge ?? minEdge,
     maxEdge: autoGate?.maxEdge,
-    muted: isRayMatchRiskClosed(match) || isMapMuteActive(match.id, bet.round, match.liveRound)
+    muted: isMapMuteActive(match.id, bet.round, match.liveRound)
       || !isPrematchFullMarketAllowed(match, bet),
     checkMute: true,
     mapCount: getValueBetMapCount(match.id, bet.round),

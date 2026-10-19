@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { restoreRayMatchRiskSource } from "./ray-match-risk-boundary.mjs";
 import { verifyGtcCompatibilityRetirement } from "./gtc-compat-retirement.mjs";
 import { restoreUnifiedArbitrageSource, verifyUnifiedArbitrageContract } from "./unified-arb-boundaries.mjs";
 import { verifyRayFrontendSources } from "./ray-frontend-boundary.mjs";
@@ -89,7 +88,7 @@ const beforePm = methodBodies(pmFile, execFileSync("git", ["show", `${base}:${pm
 const currentPm = methodBodies(pmFile, specializeFokSource(pmFile, fs.readFileSync(pmFile, "utf8")));
 for (const [name, body] of beforePm) assert.equal(currentPm.get(name), body, `PM FOK: ${name}`);
 const oldManual = execFileSync("git", ["show", `${base}:client/web/src/stores/betting/manualBet.ts`], { encoding: "utf8" });
-const currentManual = restoreRayMatchRiskSource("client/web/src/orderModes/fok/manual.ts", fs.readFileSync("client/web/src/orderModes/fok/manual.ts", "utf8"));
+const currentManual = fs.readFileSync("client/web/src/orderModes/fok/manual.ts", "utf8");
 function manualTail(text) {
   const suffix = text.slice(text.indexOf("  const toastSec = manualBetToastSeconds();"));
   return methodBodies("manual.ts", `async function fok(){\n${suffix}`).get("fok");
@@ -161,7 +160,6 @@ async function execute(old, scenario) {
     ready.legA.type = "PB";
   const params = { match: { id: 1, title: "M", round: 0 }, bet: { id: 2, round: 1 }, config: {}, setMessage: m => push("message", m) };
   const functions = {
-    isRayMatchRiskClosed: () => false,
     isPrematchFullMarketAllowed: () => !scenario.blockPrematch,
     isMapMuteActive: () => Boolean(scenario.mute),
     prepareArbAttempt: async (p) => {
@@ -356,7 +354,6 @@ async function manual(old, scenario) {
     refreshBalance: async (...args) => push("balance", args),
   };
   const functions = {
-    isRayMatchRiskClosed: () => false,
     BetOption: class { constructor(m, b, i, side, amount) { Object.assign(this, { type: i.type, betMoney: amount, target: side, betId: i.betId, itemId: "token" }); } },
     h: (_type, props) => ({ context: props.context }),
     ref: value => ({ value }),

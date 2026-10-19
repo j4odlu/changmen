@@ -7,6 +7,7 @@
     ".": "./index.js",
     "./loop.js": "./loop.js",
     "./runtime_ports.js": "./runtime_ports.js",
+    "./ray_match_risk.js": "./ray_match_risk.js",
     "./ui/matcher_auth.js": "./ui/matcher_auth.js",
     "./ui/server.js": "./ui/server.js",
     "./lib/config.js": "./lib/config.js",

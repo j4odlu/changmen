@@ -541,7 +541,13 @@ async function handleCoreAction(
       let bets: unknown[] = [];
       try { bets = JSON.parse(sbParsed.data.bets as string); }
       catch { return fail("invalid bets json"); }
-      store.saveBets(sbParsed.data.provider, sbParsed.data.matchId, bets);
+      if (sbParsed.data.provider === "RAY" && sbParsed.data.matchResult !== undefined) {
+        let matchResult: unknown;
+        try { matchResult = JSON.parse(sbParsed.data.matchResult); }
+        catch { return fail("invalid matchResult json"); }
+        store.saveBets(sbParsed.data.provider, sbParsed.data.matchId, bets, matchResult);
+      }
+      else store.saveBets(sbParsed.data.provider, sbParsed.data.matchId, bets);
       return ok(true);
     }
     case "API_SaveLiveTimer": {

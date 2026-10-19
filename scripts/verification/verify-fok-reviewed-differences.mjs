@@ -1,6 +1,5 @@
 // [changmen 扩展] 补充业务验证；不改 VPS 哈希清单，不替代严格源码快照。
 import assert from "node:assert/strict";
-import { restoreRayMatchRiskSource } from "./ray-match-risk-boundary.mjs";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -178,7 +177,7 @@ await import("./verify-fok-shared-boundaries.mjs");
 // Extra progress events are outside the submission/financial trace. Make the new observer throw
 // to prove its isolation while the complete baseline business trace still matches.
 const fokTail = source => canonical(`async function fok(){\n${source.slice(source.indexOf("  const toastSec = manualBetToastSeconds();"))}`);
-assert.equal(fokTail(restoreRayMatchRiskSource("client/web/src/orderModes/fok/manual.ts", fs.readFileSync("client/web/src/orderModes/fok/manual.ts", "utf8"))), fokTail(oldSource("client/web/src/stores/betting/manualBet.ts")), "complete normal-match manual FOK execution body unchanged from VPS");
+assert.equal(fokTail(fs.readFileSync("client/web/src/orderModes/fok/manual.ts", "utf8")), fokTail(oldSource("client/web/src/stores/betting/manualBet.ts")), "complete manual FOK execution body unchanged from VPS");
 // [changmen 扩展] 实际源码差分沿用固定 VPS 与独立手动提交，历史四项差异显式记录。
 const manualIndependentBaseline = "89b87779";
 const behavioral = await runFokDifferentials(base);

@@ -62,7 +62,8 @@ it("updates mounted readers and clears removed matches and collector sessions", 
 
 it("uses exactly the existing odds request and retains the original SaveBet output", async () => {
   vi.mocked(directGet).mockResolvedValue({ code: 200, result: payload() });
-  const rows = await loadRayBets({ Gateway: "https://ray.example/v2", Token: "test" }, query.matchId, /^获胜者$/, "cs2");
+  const { bets: rows, matchResult } = await loadRayBets({ Gateway: "https://ray.example/v2", Token: "test" }, query.matchId, /^获胜者$/, "cs2");
+  expect(matchResult).toMatchObject({ id: 38457365, team: payload().team, odds: payload().odds!.map(({ odds, ...row }) => row) });
   expect(directGet).toHaveBeenCalledOnce();
   expect(vi.mocked(directGet).mock.calls[0]![0]).toBe("https://ray.example/v2/odds?match_id=38457365");
   expect(rows.map(row => [row.Map, row.SourceHomeID, row.SourceAwayID, row.Status])).toEqual([

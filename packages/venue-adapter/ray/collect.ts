@@ -189,13 +189,13 @@ export function startRayCollector(): () => void {
         for (const row of list) {
           const matchId = row.id as string | number;
           const gameCode = getGameCodeForPlatformId("RAY", String(row.game_id ?? "")) || null;
-          const bets = await loadRayBets(platform, String(matchId), betRe, gameCode);
+          const { bets, matchResult } = await loadRayBets(platform, String(matchId), betRe, gameCode);
           if (bets.length) {
             console.debug(
               `[RAY] saveBets ${matchId} maps=${bets.map((b) => b.Map).join(",")}`,
             );
           }
-          await collect.saveBets(PLATFORM, matchId, bets);
+          await collect.saveBets(PLATFORM, matchId, bets, matchResult);
         }
       } catch (err) {
         console.warn("[RAY] collect error", err);

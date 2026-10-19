@@ -30,7 +30,7 @@ export async function saveMatchSource(provider: string, matchs: unknown[]) {
   });
 }
 
-export async function saveBetSource(provider: string, matchId: string | number, bets: unknown[]) {
+export async function saveBetSource(provider: string, matchId: string | number, bets: unknown[], matchResult?: Record<string, unknown>) {
   // [changmen 扩展] vps_http_ws 馆由 VPS collector 独占写；浏览器不得 SaveBet（会抹局盘）
   if (isVpsOwnedPlatformCollect(provider))
     return false;
@@ -39,6 +39,7 @@ export async function saveBetSource(provider: string, matchId: string | number, 
     provider,
     matchId: String(matchId),
     bets: JSON.stringify(wire),
+    ...(provider === "RAY" && matchResult !== undefined ? { matchResult: JSON.stringify(matchResult) } : {}),
   });
 }
 

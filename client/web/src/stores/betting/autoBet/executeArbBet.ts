@@ -1,5 +1,4 @@
 import type { ObservationContext } from "@changmen/shared/order_observation";
-import { isRayMatchRiskClosed, RAY_MATCH_RISK_MESSAGE } from "@changmen/venue-adapter/ray";
 import type { ViewBet, ViewMatch } from "@/models/match";
 import type { ArbAttemptPhase } from "@/stores/betting/autoBet/arbAttemptMetrics";
 import type { ArbBetAttemptParams, ArbBetReady } from "@/stores/betting/autoBet/phases/types";
@@ -46,7 +45,6 @@ export async function executeArbBet(params: {
   config: UserConfig;
   setMessage: (msg: string) => void;
 }): Promise<void> {
-  if (isRayMatchRiskClosed(params.match)) { params.setMessage(RAY_MATCH_RISK_MESSAGE); return; }
   // [changmen 扩展] 赛前全场过滤：关则恒放行；开则只留下未开赛全场
   if (!isPrematchFullMarketAllowed(params.match, params.bet))
     return;
@@ -86,17 +84,6 @@ export async function executeArbBet(params: {
       observationOutcome = "blocked";
       releaseSingleLeg9999Reservation(params.match.id, params.bet.round, readyValue);
       reservationReleased = true;
-      recordArbAttemptMetric({ ...base, phaseMs: phaseMsMap, stop: "skip_check" });
-      return;
-    }
-
-    if (isRayMatchRiskClosed(params.match)) {
-      observationOutcome = "blocked";
-      params.setMessage(RAY_MATCH_RISK_MESSAGE);
-      releaseSingleLeg9999Reservation(params.match.id, params.bet.round, readyValue);
-      reservationReleased = true;
-      syncActiveBetFail(params.bet.id, RAY_MATCH_RISK_MESSAGE, "预检");
-      attempt.trace?.finish("fail", RAY_MATCH_RISK_MESSAGE);
       recordArbAttemptMetric({ ...base, phaseMs: phaseMsMap, stop: "skip_check" });
       return;
     }

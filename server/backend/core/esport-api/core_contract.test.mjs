@@ -94,6 +94,19 @@ afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 describe.each(["legacy", "registry"])("core HTTP consumer contracts (%s dispatch)", mode => {
   beforeEach(() => vi.stubEnv("ESPORT_ACTION_DISPATCH", mode));
+  it("forwards optional raw RAY results without changing legacy or other venue SaveBet calls", async () => {
+    const fields = { provider: "RAY", matchId: "1", bets: "[]" };
+    const result = { id: "1", status: 1, round: "bo3", odds: [] };
+    expect((await request("API_SaveBet", { ...fields, matchResult: JSON.stringify(result) })).body).toEqual(ok(true));
+    expect(h.store.saveBets).toHaveBeenLastCalledWith("RAY", "1", [], result);
+    expect((await request("API_SaveBet", fields)).body).toEqual(ok(true));
+    expect(h.store.saveBets).toHaveBeenLastCalledWith("RAY", "1", []);
+    expect((await request("API_SaveBet", { ...fields, provider: "OB", matchResult: "invalid" })).body).toEqual(ok(true));
+    expect(h.store.saveBets).toHaveBeenLastCalledWith("OB", "1", []);
+    h.store.saveBets.mockClear();
+    expect((await request("API_SaveBet", { ...fields, matchResult: "invalid" })).body).toEqual(failure("invalid matchResult json"));
+    expect(h.store.saveBets).not.toHaveBeenCalled();
+  });
   it("preserves every venue's existing game IDs and order from the central catalog", async () => {
     for (const [provider, ids] of Object.entries(legacyVenueGames.providers)) {
       const response = (await request("Client_GetGames", { provider })).body;

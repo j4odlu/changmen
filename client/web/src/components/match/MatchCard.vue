@@ -17,7 +17,6 @@ import {
   pmMapOutcomeTick,
 } from "@changmen/venue-adapter/polymarket";
 import { computed } from "vue";
-import { isRayMatchRiskClosed, RAY_MATCH_RISK_MESSAGE } from "@changmen/venue-adapter/ray";
 
 /** Polymarket 电竞侧栏 SVG（从 polymarket.com/esports 抠出）；未知/联赛仍走文字标签 */
 const ESPORT_GAME_ICONS: Record<string, string> = {
@@ -70,34 +69,30 @@ const resolutionHref = computed(() => normalizeResolutionSourceHref(resolutionSo
 const pmMatchStatus = computed(() => props.match.pmSport || props.match.providers?.Polymarket
   ? formatPmMatchStatus(props.match.pmSport)
   : null);
-const riskClosed = computed(() => isRayMatchRiskClosed(props.match));
 </script>
 
 <template>
   <div class="match">
     <div class="match-title">
-      <template v-if="!riskClosed">
-        <img
-          v-if="gameIconSrc"
-          class="game-icon"
-          :src="gameIconSrc"
-          :alt="gameTag"
-          :title="gameTag"
-          width="18"
-          height="18"
-        >
-        <label v-else-if="gameTag" class="game-tag">[{{ gameTag }}]</label>
-      </template>
+      <img
+        v-if="gameIconSrc"
+        class="game-icon"
+        :src="gameIconSrc"
+        :alt="gameTag"
+        :title="gameTag"
+        width="18"
+        height="18"
+      >
+      <label v-else-if="gameTag" class="game-tag">[{{ gameTag }}]</label>
       <label v-html="match.title" />
       <label class="startTime">{{ formatDate(match.startAt) }}</label>
-      <span v-if="riskClosed" class="match-risk-closed" role="status">{{ RAY_MATCH_RISK_MESSAGE }}</span>
       <span
-        v-else-if="pmMatchStatus"
+        v-if="pmMatchStatus"
         class="pm-match-status"
         :class="`pm-match-status--${pmMatchStatus.kind}`"
         title="PM 实时赛况；比分按标题左右队伍排列，地图阶段沿用 PM 编号"
       >PM · {{ pmMatchStatus.label }}</span>
-      <span v-if="!riskClosed && resolutionLabel && resolutionHref" class="pm-sport">
+      <span v-if="resolutionLabel && resolutionHref" class="pm-sport">
         <a
           class="pm-sport-link"
           :href="resolutionHref"
@@ -106,7 +101,7 @@ const riskClosed = computed(() => isRayMatchRiskClosed(props.match));
         >{{ resolutionLabel }}</a>
       </span>
     </div>
-    <div v-if="!riskClosed" class="bets flex flex-wrap">
+    <div class="bets flex flex-wrap">
       <BetRow
         v-for="bet in match.bets"
         :key="bet.id"
@@ -120,11 +115,6 @@ const riskClosed = computed(() => isRayMatchRiskClosed(props.match));
 </template>
 
 <style scoped>
-.match-risk-closed {
-  margin-left: 10px;
-  color: var(--cm-color-danger, #f56c6c);
-  font-weight: 600;
-}
 .pm-match-status {
   margin-left: 10px;
   padding: 1px 6px;

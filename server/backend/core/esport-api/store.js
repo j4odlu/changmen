@@ -1,4 +1,5 @@
 import * as sb from "@changmen/db";
+import { filterRayRiskMatches, observeRayMatchResult } from "@changmen/matcher/ray_match_risk.js";
 import { formatBetOdds } from "@changmen/shared/odds_format";
 import { a8StartTimeListAllowed, normalizeEpochMs } from "@changmen/shared/time/match_time";
 import { readJsonFile, writeJsonFile, writeJsonFileDebounced } from "@changmen/storage/json_file_store.js";
@@ -312,7 +313,7 @@ function normalizeSaveBetRows(bets) {
     .sort((a, b) => (a.Map ?? 0) - (b.Map ?? 0));
 }
 
-export function saveBets(provider, matchId, bets) {
+export function saveBets(provider, matchId, bets, matchResult) {
   // vps_http_ws 馆由 VPS collector 独占写；
   // 浏览器 SaveBet 会与 collector 抢写 / 抹掉地图盘。
   const plat = String(provider || "").trim();
@@ -322,6 +323,7 @@ export function saveBets(provider, matchId, bets) {
     );
     return;
   }
+  if (plat === "RAY" && matchResult !== undefined) observeRayMatchResult(matchId, matchResult);
   const key = `${provider}:${matchId}`;
   const existing = _bets[key]?.bets || [];
   const raw = Array.isArray(bets) ? bets : [];
@@ -534,7 +536,7 @@ export function hydrateCollectorHotSnapshot({ matchesRaw = {}, bets = {}, timers
 
 export async function buildMatchList() {
   // 只读 client_matches（matchMerge 写入）；Round/Bets/Reverse 均由 matcher finalize，读路径不改写
-  const fromDb = await dbStore.loadClientMatchesFromDb();
+  const fromDb = filterRayRiskMatches(await dbStore.loadClientMatchesFromDb() || []);
   if (!fromDb?.length)
     return [];
   defaultOddsApi.recordFromMatchList(fromDb);

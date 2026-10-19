@@ -1,6 +1,5 @@
 // [changmen 扩展] 仅还原逐项审查的统一流程增量；还原后仍由原保护比较整个固定基线模块。
 import assert from "node:assert/strict";
-import { restoreRayMatchRiskSource } from "./ray-match-risk-boundary.mjs";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { gitSource, moduleTokens } from "./fok-exact-boundaries.mjs";
@@ -158,7 +157,6 @@ for (const replacements of Object.values(UNIFIED_ARBITRAGE_BOUNDARIES)) {
 }
 
 export function restoreUnifiedArbitrageSource(file, source, replaceExact, required = false) {
-  source = restoreRayMatchRiskSource(file, source);
   source = restoreA8MakeupTiming(file, source, replaceExact, gitSource);
   source = restorePmPreflightSource(file, source);
   source = restoreGtcSelectionHistorySource(file, source, replaceExact, required);

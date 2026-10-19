@@ -70,12 +70,15 @@ export const useCollectStore = defineStore("collect", {
       platform: PlatformId,
       matchId: string | number,
       bets: CollectBetDto[],
+      matchResult?: Record<string, unknown>,
     ): Promise<boolean> {
       if (isVpsOwnedPlatformCollect(platform))
         return false;
       if (!this.collect.get(platform))
         return false;
-      const ok = await saveBetSource(platform, matchId, bets);
+      const ok = matchResult === undefined
+        ? await saveBetSource(platform, matchId, bets)
+        : await saveBetSource(platform, matchId, bets, matchResult);
       void this.logCollect(
         `${platform}盘口采集${matchId}/${bets.length} => ${ok}`,
         bets.map(b => ({ matchId: b.SourceMatchID, betId: b.SourceBetID, betName: b.BetName, team: `${b.HomeName} vs ${b.AwayName}` })),

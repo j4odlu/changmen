@@ -13,7 +13,6 @@ import { PlatformAccount } from "@/models/platformAccount";
 import { incrementBetCount, setLastBetOdds } from "@/shared/betTiming";
 import { runManualBet } from "@/stores/betting/manualBet";
 import { useOddsStore } from "@/stores/oddsStore";
-import * as ray from "@changmen/venue-adapter/ray";
 
 const updateVenueOrders = vi.hoisted(() => vi.fn(async () => []));
 const refreshBalance = vi.hoisted(() => vi.fn(async () => undefined));
@@ -78,7 +77,6 @@ function manualTestAccount(provider: "Polymarket" | "RAY" = "Polymarket", balanc
 
 describe("runManualBet post-success sync", () => {
   beforeEach(() => {
-    vi.spyOn(ray, "isRayMatchRiskClosed").mockReturnValue(false);
     executeManualGtc.mockReset();
     executeManualGtc.mockResolvedValue({ message: "GTC 下单成功", pm: { submission: "accepted" } } as never);
     setActivePinia(createPinia());
@@ -101,27 +99,6 @@ describe("runManualBet post-success sync", () => {
     resetMapBetMuteForTests();
     vi.mocked(ElMessageBox.prompt).mockClear();
     vi.mocked(ElMessageBox.alert).mockClear();
-  });
-
-  it.each(["prompt", "precheck"])("blocks a stale manual FOK request when closed during %s", async phase => {
-    const match = { id: 1, title: "A vs B", bets: [], game: "Valorant" } as unknown as ViewMatch;
-    const bet = { id: 1, homeName: "A", awayName: "B", getBetName: () => "Map 1", items: [] } as unknown as ViewBet;
-    const item = { type: "Polymarket", matchId: "m1", betId: "b1", getOdds: () => 1.8, getItemId: () => "i1" } as unknown as ViewBetItem;
-    if (phase === "prompt") prompt.mockImplementationOnce(async () => {
-      vi.mocked(ray.isRayMatchRiskClosed).mockReturnValue(true); return { value: "25" };
-    });
-    else checkBetting.mockImplementationOnce(async (_account, option) => {
-      vi.mocked(ray.isRayMatchRiskClosed).mockReturnValue(true);
-      (option as { data: unknown }).data = {}; return option as never;
-    });
-    const setMessage = vi.fn();
-    await runManualBet(match, bet, item, "Home", { setMessage });
-    expect(betting).not.toHaveBeenCalled();
-    expect(executeManualGtc).not.toHaveBeenCalled();
-    expect(markSuccessfulBet).not.toHaveBeenCalled();
-    expect(updateVenueOrders).not.toHaveBeenCalled();
-    expect(setMessage).toHaveBeenCalledWith(ray.RAY_MATCH_RISK_MESSAGE);
-    expect(checkBetting).toHaveBeenCalledTimes(phase === "prompt" ? 0 : 1);
   });
 
   it("pM matched + optimistic saved: refresh without waitForOrderId", async () => {

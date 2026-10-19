@@ -14,6 +14,7 @@ import { restorePublishedPmSettlement } from "./pm-published-settlement-boundary
 import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
 import { restoreRayProviderSource, restoreRayFinalizeSource } from "./ray-frontend-boundary.mjs";
 import { restorePmManualSellSplit } from "./pm-manual-sell-split-boundary.mjs";
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 
 // [changmen 扩展] 执行辅助检查器的真实读取函数和完整保护循环；不运行交易或改写被保护文件。
 const file = "scripts/verification/verify-fok-reviewed-differences.mjs";
@@ -71,7 +72,7 @@ describe("supplementary FOK audit reads full relocated source without exemptions
   for (const file of ["packages/venue-adapter/polymarket/bet.ts", "packages/venue-adapter/polymarket/pmSubmitJournal.ts"]) {
     it(`${file}: rejects implementation changes hidden behind the old entry`, () => {
       expect(() => check([file], change(relocations[file], (source, matched) => matched ? `${source}\nthrow new Error('changed business');\n` : source)))
-        .toThrow(`unregistered protected source difference`);
+        .toThrow('unregistered protected source difference');
     });
     it(`${file}: rejects added actions and wrong targets in the old entry`, () => {
       expect(() => check([file], change(file, (source, matched) => matched ? `${source}\nsetTimeout(() => {}, 1);\n` : source)))
@@ -82,8 +83,9 @@ describe("supplementary FOK audit reads full relocated source without exemptions
   }
   it("rejects changed dependencies rather than removing imports", () => {
     const file = "packages/venue-adapter/polymarket/bet.ts";
-    expect(fs.readFileSync(relocations[file], "utf8")).toContain("from \"../pmClientApi\"");
-    expect(() => check([file], change(relocations[file], (source, matched) => matched ? source.replace("from \"../pmClientApi\"", "from \"../otherApi\"") : source)))
+    const previous = restoreVenueBrowserExecution(relocations[file], fs.readFileSync(relocations[file], "utf8"));
+    expect(previous).toContain("from \"../pmClientApi\"");
+    expect(() => check([file], change(relocations[file], (source, matched) => matched ? previous.replace("from \"../pmClientApi\"", "from \"../otherApi\"") : source)))
       .toThrow(`exact unified PM preflight increment`);
   });
   it("accepts only the precise notification wrapper and rejects changed POST arguments", () => {

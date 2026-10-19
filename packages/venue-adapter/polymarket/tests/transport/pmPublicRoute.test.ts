@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, expect, test, vi } from "vitest";
-import { clearPmPublicRoutesForTests, sharePublicGet, withPublicRoute } from "../../pmPublicRoute";
+import { clearPmPublicRoutesForTests, sharePublicGet, withPublicRoute } from "@changmen/venue-browser/polymarket/transport/pmPublicRoute";
 
 beforeEach(() => { clearPmPublicRoutesForTests(); vi.useFakeTimers({ toFake: ["performance"] }); });
 afterEach(() => vi.useRealTimers());

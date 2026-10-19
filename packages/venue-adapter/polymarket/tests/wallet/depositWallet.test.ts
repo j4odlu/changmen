@@ -1,16 +1,16 @@
 import { decodeFunctionData, zeroAddress, type Hex } from "viem";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { POLYGON_POLYMARKET, polymarketTradeSpenders } from "../../contracts";
+import { POLYGON_POLYMARKET, polymarketTradeSpenders } from "@changmen/venue-browser/polymarket/wallet/contracts";
 import {
   buildDepositWalletApprovalCalls,
   createPolymarketRelayClient,
   derivePolymarketDepositWalletAddress,
-} from "../../depositWallet";
-import { buildStandardApprovalTransactions } from "../../relayer";
+} from "@changmen/venue-browser/polymarket/wallet/depositWallet";
+import { buildStandardApprovalTransactions } from "@changmen/venue-browser/polymarket/wallet/relayer";
 import {
   POLYGON_RPC_URLS,
   resolvePolygonRpcUrls,
-} from "../../polygonRpc";
+} from "@changmen/venue-browser/polymarket/wallet/polygonRpc";
 
 const DEPOSIT_FACTORY = "0x00000000000fb5c9adea0298d729a0cb3823cc07";
 const FACTORY_BEACON_SELECTOR = "0x49493a4d";

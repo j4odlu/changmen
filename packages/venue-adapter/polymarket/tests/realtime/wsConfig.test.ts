@@ -4,10 +4,10 @@ import {
   PM_USER_WS_FORWARD_PATH,
   resolvePolymarketMarketWsUrl,
   resolvePolymarketUserWsUrl,
-} from "../../wsConfig";
-import { POLYMARKET_MARKET_WS, POLYMARKET_USER_WS } from "../../api";
-import { resetPmMarketWsSourceModeForTests, setPmMarketWsSourceMode } from "../../pmMarketWsMode";
-import { resetPmUserWsSourceModeForTests, setPmUserWsSourceMode } from "../../pmUserWsMode";
+} from "@changmen/venue-browser/polymarket/wsConfig";
+import { POLYMARKET_MARKET_WS, POLYMARKET_USER_WS } from "@changmen/venue-browser/polymarket/api";
+import { resetPmMarketWsSourceModeForTests, setPmMarketWsSourceMode } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
+import { resetPmUserWsSourceModeForTests, setPmUserWsSourceMode } from "@changmen/venue-browser/polymarket/pmUserWsMode";
 import { setChangmenAuthTokenGetter } from "../../../shared/changmenAuthToken";
 
 vi.mock("@changmen/client-core/shared/hkRelayOrigin", () => ({

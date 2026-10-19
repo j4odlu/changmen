@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { exactGtcSellCash } from "./sellCash";
+import { exactGtcSellCash } from "@changmen/venue-browser/polymarket/gtc/sellCash";
 const trade = { id: "t", taker_order_id: "sell", asset_id: "token", side: "SELL", size: "4", status: "CONFIRMED", transaction_hash: "tx" };
 const activity = { type: "TRADE", side: "SELL", asset: "token", size: 4, usdcSize: 2.352, transactionHash: "tx" };
 describe("GTC sell cash proof", () => {

@@ -3,7 +3,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { VENUE_BROWSER_SOURCE_ROOT } from "./venue-browser-layout.mjs";
 
 const json = file => JSON.parse(fs.readFileSync(file, "utf8"));
 const hash = file => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -46,8 +45,7 @@ export function declaredInstallClosure(root, packages, name, { build = false } =
     }
   }
   const workspaceDirectories = [...seen].map(value => packages.get(value).dir).sort();
-  // This transitional source tree is owned by adapter; it is not another npm package.
-  const sourceDirectories = [...workspaceDirectories, ...(seen.has("@changmen/venue-adapter") ? [VENUE_BROWSER_SOURCE_ROOT] : [])].sort();
+  const sourceDirectories = [...workspaceDirectories];
   return { root: name, build, workspaces: [...seen].sort(), workspaceDirectories, sourceDirectories,
     directExternalPackages: [...external].sort(), edges, violations };
 }

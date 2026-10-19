@@ -1,4 +1,4 @@
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import type { OrderRow } from "@/types/order";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, expect, it, vi } from "vitest";

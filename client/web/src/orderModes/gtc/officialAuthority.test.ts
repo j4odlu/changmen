@@ -24,7 +24,7 @@ vi.mock("./recoveryApi", () => ({ resetGtcRecoveryApi: () => {}, recoverGtc: asy
 } }));
 vi.mock("./successMarkers", () => ({ markGtcSuccess: vi.fn() }));
 vi.mock("@/shared/pmOrderDisplay", () => ({ formatPolymarketApiDecimal: (value: number) => String(value) }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ readGtcFacts: mocks.read, pmCancelOrder: mocks.cancel }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ readGtcFacts: mocks.read, pmCancelOrder: mocks.cancel }));
 const hash = `0x${"a".repeat(64)}`;
 const plan = { source: "manual", playerId: 1, otherPlayerId: 0, otherProvider: "", shares: "10", tokenId: "token", orderHash: hash, betRowId: 2, target: "Home", otherTarget: "Away" } as GtcPlan;
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;

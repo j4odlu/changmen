@@ -1,7 +1,7 @@
 import { decodeFunctionData } from "viem";
 import { describe, expect, test } from "vitest";
-import { POLYGON_POLYMARKET, polymarketTradeSpenders } from "../../contracts";
-import { buildStandardApprovalTransactions } from "../../relayer";
+import { POLYGON_POLYMARKET, polymarketTradeSpenders } from "@changmen/venue-browser/polymarket/wallet/contracts";
+import { buildStandardApprovalTransactions } from "@changmen/venue-browser/polymarket/wallet/relayer";
 
 const ERC20_APPROVE_ABI = [
   {

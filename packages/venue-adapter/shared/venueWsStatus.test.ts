@@ -4,7 +4,7 @@ import {
   reportVenueWsStatus,
   resetVenueWsStatusesForTests,
   subscribeVenueWsStatus,
-} from "./venueWsStatus";
+} from "@changmen/venue-browser/shared/venueWsStatus";
 
 describe("venueWsStatus", () => {
   it("lists registered connections with default disconnected", () => {

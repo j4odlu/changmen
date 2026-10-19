@@ -1,5 +1,5 @@
 import { BOOK_LIMITS, reduceBookFrame, type LocalOrderBook } from "@changmen/pm-market-data-browser/bookReducer";
-import { polymarketMarketOrderOptions } from "../../../../packages/venue-adapter/polymarket/submission/preflight/pmMarketOrderOptions";
+import { polymarketMarketOrderOptions } from "../polymarket/pmMarketOrderOptions";
 
 export interface BookMetadata { version: 2 | 3; tick: string; minSize: number; negRisk: boolean; market: string; at: number }
 /** Previously completed, asset-bound HTTP preflight options only; never WS defaults. */

@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { createStoredMarketRefresh } from "../../orders/history/storedMarketRefresh";
+import { createStoredMarketRefresh } from "@changmen/venue-browser/polymarket/orders/history/storedMarketRefresh";
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 const refs = [{ conditionId: "condition", tokenId: "token" }];

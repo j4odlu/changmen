@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { clearPmFootballDirectCache, fetchPmFootballDirect } from "../../pmFootballDiscovery";
+import { clearPmFootballDirectCache, fetchPmFootballDirect } from "@changmen/venue-browser/polymarket/markets/pmFootballDiscovery";
 
 afterEach(clearPmFootballDirectCache);
 

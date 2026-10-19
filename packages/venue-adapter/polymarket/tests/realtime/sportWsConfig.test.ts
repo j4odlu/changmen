@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { POLYMARKET_MARKET_WS } from "../../api";
-import { resetPmMarketWsSourceModeForTests, setPmMarketWsSourceMode } from "../../pmMarketWsMode";
+import { POLYMARKET_MARKET_WS } from "@changmen/venue-browser/polymarket/api";
+import { resetPmMarketWsSourceModeForTests, setPmMarketWsSourceMode } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
 import { PM_SPORT_MARKET_WS_FORWARD_PATH, resolvePolymarketSportMarketWsUrl } from "../../sportWsConfig";
 
 afterEach(resetPmMarketWsSourceModeForTests);

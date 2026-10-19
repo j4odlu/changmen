@@ -1,3 +1,4 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 精确登记钱包初始化前移、Gamma 预热与交易赛况闸；原 FOK 固定基线不变。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
@@ -65,6 +66,8 @@ export function restorePmPreflightSource(file, source, required = false) {
 }
 
 export function verifyPmPreflightContract(readSource) {
+  const actualRead = readSource;
+  readSource = file => restoreVenueBrowserExecution(file, actualRead(file));
   verifyPmUnifiedPreflightContract(readSource);
   verifyPmAccountSigningContract(readSource);
   for (const [file, expected] of Object.entries(helpers)) {

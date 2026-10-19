@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { directGet } from "@changmen/client-core/shared/http";
-import { browserSubmitClockReady, browserSubmitTimestamp, clearBrowserSubmitClockForTests, prepareBrowserSubmitClock } from "../../pmBrowserSubmitClock";
+import { browserSubmitClockReady, browserSubmitTimestamp, clearBrowserSubmitClockForTests, prepareBrowserSubmitClock } from "@changmen/venue-browser/polymarket/submission/client/pmBrowserSubmitClock";
 vi.mock("@changmen/client-core/shared/http", () => ({ directGet: vi.fn() }));
 const gateway = "https://clob.polymarket.com";
 beforeEach(() => {

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPmTickBufferQuote, validatePmTickBufferQuote, clearPmTickBufferMetadata,
   notePmTickBufferBook, pmTickBufferTick, requestPmTickBufferTick, setPmTickBufferLoader,
-  pmTickBufferOrderShares } from "../../pmTickBuffer";
-import { retainPmTickBufferRequests } from "../../pmTickBuffer";
-import { clearPmTickStateForTests, currentPmTick, notePmTickFrame, notePmTickReconnect } from "../../pmTickState";
+  pmTickBufferOrderShares } from "@changmen/venue-browser/polymarket/quotes/pmTickBuffer";
+import { retainPmTickBufferRequests } from "@changmen/venue-browser/polymarket/quotes/pmTickBuffer";
+import { clearPmTickStateForTests, currentPmTick, notePmTickFrame, notePmTickReconnect } from "@changmen/venue-browser/polymarket/pmTickState";
 
 beforeEach(() => { clearPmTickBufferMetadata(); clearPmTickStateForTests(); });
 afterEach(() => { setPmTickBufferLoader(undefined); clearPmTickBufferMetadata(); vi.useRealTimers(); });

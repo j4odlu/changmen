@@ -1,3 +1,4 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 按账号隔离钱包签名会话；精确还原后继续核验既有 FOK/GTC 基线。
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -25,6 +26,8 @@ export function restorePmAccountSigningSource(file, source, required = false) {
 }
 
 export function verifyPmAccountSigningContract(read) {
+  const actualRead = read;
+  read = file => restoreVenueBrowserExecution(file, actualRead(file));
   verifyPmFastFokContract(read);
   for (const [file, row] of Object.entries(changes))
     assert.equal(digest(restorePmAccountSigningSource(file, read(file), true)), row.beforeSha,

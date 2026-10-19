@@ -1,12 +1,12 @@
 import { beforeEach, afterEach, expect, test, vi } from "vitest";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import { pmPrepareSubmit, pmSubmitOrder } from "../../pmClientApi";
-import { setPmHttpModeForTests } from "../../pmTransportMode";
-import { setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "../../pmOrderSubmitMode";
-import { browserSubmitClockReady, prepareBrowserSubmitClock } from "../../pmBrowserSubmitClock";
+import { pmPrepareSubmit, pmSubmitOrder } from "@changmen/venue-browser/polymarket/orders/pmClientApi";
+import { setPmHttpModeForTests } from "@changmen/venue-browser/polymarket/pmTransportMode";
+import { setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "@changmen/venue-browser/polymarket/pmOrderSubmitMode";
+import { browserSubmitClockReady, prepareBrowserSubmitClock } from "@changmen/venue-browser/polymarket/submission/client/pmBrowserSubmitClock";
 const call = vi.hoisted(() => vi.fn());
-vi.mock("../../pmTransport", () => ({ pmEsportCall: call }));
-vi.mock("../../pmBrowserSubmitClock", () => ({ browserSubmitClockReady: vi.fn(() => false), prepareBrowserSubmitClock: vi.fn(async () => {}) }));
+vi.mock("@changmen/venue-browser/polymarket/transport/pmTransport", () => ({ pmEsportCall: call }));
+vi.mock("@changmen/venue-browser/polymarket/submission/client/pmBrowserSubmitClock", () => ({ browserSubmitClockReady: vi.fn(() => false), prepareBrowserSubmitClock: vi.fn(async () => {}) }));
 beforeEach(() => {
   globalThis.localStorage.removeItem(PM_ORDER_SUBMIT_MODE_KEY);
   vi.useFakeTimers({ toFake: ["performance"] }); call.mockReset(); setPmHttpModeForTests("vps");

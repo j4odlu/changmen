@@ -1,3 +1,4 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 动态 FOK 单次拉簿增量；还原后核验之前的固定基线。
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -27,6 +28,8 @@ export function restorePmFastFokSource(file, source, required = false) {
   return result;
 }
 export function verifyPmFastFokContract(read) {
+  const actualRead = read;
+  read = file => restoreVenueBrowserExecution(file, actualRead(file));
   verifyPmWsShadowContract(read);
   verifyPmLegacyFokRuntimeContract(read);
   for (const [file, row] of Object.entries(registered.changes))

@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchPolymarketUserActivityTrades, matchPolymarketActivityBuyCost, parsePolymarketActivityBuyCost, resolvePolymarketBuyCostFromActivity } from "../../pmActivity";
-import { fetchPolymarketActivityV2, normalizePolymarketActivityV2Row } from "../../pmActivityV2";
-import { enrichPolymarketBuyOrdersWithFees } from "../../pmFee";
+import { fetchPolymarketUserActivityTrades, matchPolymarketActivityBuyCost, parsePolymarketActivityBuyCost, resolvePolymarketBuyCostFromActivity } from "@changmen/venue-browser/polymarket/orders/history/pmActivity";
+import { fetchPolymarketActivityV2, normalizePolymarketActivityV2Row } from "@changmen/venue-browser/polymarket/orders/history/pmActivityV2";
+import { enrichPolymarketBuyOrdersWithFees } from "@changmen/venue-browser/polymarket/orders/pmFee";
 
 const { get } = vi.hoisted(() => ({ get: vi.fn() }));
-vi.mock("../../transport", () => ({ polymarketPluginGet: get }));
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({ polymarketPluginGet: get }));
 
 const user = "0x983eedfbd75803602e4a6e6ea9aab6dc6b9c6748";
 const tx = `0x${"a".repeat(64)}`;

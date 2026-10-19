@@ -11,7 +11,7 @@ vi.mock("@changmen/venue-adapter/polymarket", async original => ({
   ...await original<typeof import("@changmen/venue-adapter/polymarket")>(),
   prepareOptimizedFokExecution: io.prepare,
 }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ checkGtcBuy: io.gtc }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ checkGtcBuy: io.gtc }));
 vi.mock("@/runtime/providers", () => ({ getProvider: () => ({ checkBet: io.check }) }));
 const account = { accountId: 1, provider: "Polymarket", currency: "CNY" } as PlatformAccount;
 const store = {} as AccountStoreContext;

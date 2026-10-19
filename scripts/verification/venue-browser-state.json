@@ -1,0 +1,63 @@
+{
+  "baseline": "3126c8de0462aaca96b96be432618fd852285755",
+  "rows": [
+    {
+      "file": "packages/venue-adapter/polymarket/fok/pmFokDepthBufferMode.ts",
+      "canonical": "client/packages/venue-browser/polymarket/pmFokDepthBufferMode.ts",
+      "spec": "../../../../client/packages/venue-browser/polymarket/pmFokDepthBufferMode",
+      "wrapper": "export * from \"../../../../client/packages/venue-browser/polymarket/pmFokDepthBufferMode\";\n",
+      "beforeSha": "9f79419885d3b9433da32f3728e1bceb7f8a6ba77e02802a7ef98e20757f4be1",
+      "afterSha": "9f79419885d3b9433da32f3728e1bceb7f8a6ba77e02802a7ef98e20757f4be1",
+      "replacements": []
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/pmTickState.ts",
+      "canonical": "client/packages/venue-browser/polymarket/pmTickState.ts",
+      "spec": "../../../../client/packages/venue-browser/polymarket/pmTickState",
+      "wrapper": "export * from \"../../../../client/packages/venue-browser/polymarket/pmTickState\";\n",
+      "beforeSha": "00a695ac85d854fd7241b6f08872dceec0d5ced31e3bd770677aebb977f616d3",
+      "afterSha": "c2cf828676fcb3ede6276c2d7ce0e50e69b42ce0d953489642e0bd8ba0ef6563",
+      "replacements": [
+        {
+          "from": "\"../pmTickPrice\"",
+          "to": "\"./pmTickPrice\""
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "file": "client/packages/venue-browser/pm-book-diagnostics/executionMath.ts",
+      "beforeSha": "c7c66ac68a06042b076cade7de2fd9099712ca9226211269ae81cf019e21fcd0",
+      "afterSha": "5ee303f95d69f38119bed1fbb326eaf67aaf87e0514d1aaf3dbb521916fa20d7",
+      "replacements": [
+        {
+          "from": "\"../../../../packages/venue-adapter/polymarket/pmFokDepthBufferMode\"",
+          "to": "\"../polymarket/pmFokDepthBufferMode\""
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/pm-book-diagnostics/executionSimulation.ts",
+      "beforeSha": "60b8d5e22e27d0f03bf7f6b9f4fbf3a40c86c2d544c9e090cc3f90664ad6d796",
+      "afterSha": "55d8ecdb1498be070ec2eccf3a72e993b5418e1663d97284a7986065d162801d",
+      "replacements": [
+        {
+          "from": "\"../../../../packages/venue-adapter/polymarket/pmTickState\"",
+          "to": "\"../polymarket/pmTickState\""
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/source-ownership-inputs.json",
+      "beforeSha": "b0ccd2c6c533703a9f123825ffe3439ff13581c716637695b860806d5044b4d3",
+      "afterSha": "14925682ff085776c7c0749527a6e4b4c72ca476e0d1d5c2d8451b7160551a8f",
+      "replacements": [
+        {
+          "from": "",
+          "to": ",\n    {\n      \"file\": \"packages/venue-adapter/polymarket/fok/pmFokDepthBufferMode.ts\",\n      \"canonical\": \"client/packages/venue-browser/polymarket/pmFokDepthBufferMode.ts\",\n      \"spec\": \"../../../../client/packages/venue-browser/polymarket/pmFokDepthBufferMode\"\n    },\n    {\n      \"file\": \"packages/venue-adapter/polymarket/quotes/pmTickState.ts\",\n      \"canonical\": \"client/packages/venue-browser/polymarket/pmTickState.ts\",\n      \"spec\": \"../../../../client/packages/venue-browser/polymarket/pmTickState\"\n    }"
+        }
+      ]
+    }
+  ]
+}

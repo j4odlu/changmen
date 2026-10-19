@@ -1,6 +1,6 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { getVenueOddsEntry } from "@changmen/client-core/bridge/oddsAccess";
-import { optimizedFokQuoteBlock } from "../../submission/preflight/optimized/pmExecutableQuote";
+import { optimizedFokQuoteBlock } from "@changmen/venue-browser/polymarket/submission/preflight/optimized/pmExecutableQuote";
 vi.mock("@changmen/client-core/bridge/oddsAccess", () => ({ getVenueOddsEntry: vi.fn() }));
 beforeEach(() => vi.mocked(getVenueOddsEntry).mockReset());
 test.each([

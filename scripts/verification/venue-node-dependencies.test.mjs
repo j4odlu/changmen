@@ -101,6 +101,26 @@ it("includes transitive resolver tooling production peers without including unre
   expect(report.resolverTooling.directExternalPackages).toContain("vue");
   expect(report.violations.some(row => row.pattern.includes("resolver tooling closure"))).toBe(true);
 });
+
+for (const [file, target] of [
+  ["server/backend/package.json", "file:../../client/packages/venue-browser"],
+  ["server/match/resolver/package.json", "file:../../../client/packages/venue-browser"],
+]) for (const group of ["dependencies", "optionalDependencies", "peerDependencies", "devDependencies"])
+  it(`rejects the browser workspace itself through ${file} ${group}`, () => {
+    const f = fixture();
+    f.edit(file, p => { p[group] = { ...p[group], "@changmen/venue-browser": target }; });
+    expect(inspectVenueNodeDependencies(f.root).violations.some(row => row.file === file
+      && row.spec === "@changmen/venue-browser" && row.pattern.includes(`through ${group}`))).toBe(true);
+  });
+
+it("rejects the browser workspace in transitive Node production dependencies", () => {
+  const f = fixture();
+  f.edit("server/storage/package.json", p => {
+    p.optionalDependencies = { "@changmen/venue-browser": "file:../../client/packages/venue-browser" };
+  });
+  expect(inspectVenueNodeDependencies(f.root).violations.some(row => row.file === "server/storage/package.json"
+    && row.spec === "@changmen/venue-browser" && row.pattern.includes("Node production closure"))).toBe(true);
+});
 for (const [name, source] of [
   ["relative tool source", 'import {syncPlatformAdapterBackendBundle} from "../../../packages/venue-adapter/scripts/sync-backend-bundle.mjs";'],
   ["mixed package", 'import "@changmen/venue-adapter";'],

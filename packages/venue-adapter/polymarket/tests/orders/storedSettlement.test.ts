@@ -1,15 +1,15 @@
-import type { VenueOrder } from "../../../contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchPolymarketVenueOrdersMerged } from "../../orders";
-import { rememberPolymarketMarketBetLabel } from "../../markets/orderBetLabel";
-import { storedMarketRefresh } from "../../orders/history/storedMarketRefresh";
+import { fetchPolymarketVenueOrdersMerged } from "@changmen/venue-browser/polymarket/orders/history/orders";
+import { rememberPolymarketMarketBetLabel } from "@changmen/venue-browser/polymarket/markets/orderBetLabel";
+import { storedMarketRefresh } from "@changmen/venue-browser/polymarket/orders/history/storedMarketRefresh";
 
 const mocks = vi.hoisted(() => ({ trades: vi.fn(), get: vi.fn(), stored: vi.fn() }));
-vi.mock("../../pmClientApi", () => ({ pmGetTrades: mocks.trades }));
-vi.mock("../../transport", () => ({ polymarketPluginGet: mocks.get }));
-vi.mock("../../pmStoredOrders", () => ({ loadPolymarketStoredVenueOrders: mocks.stored }));
-vi.mock("../../pmFee", () => ({ enrichPolymarketBuyOrdersWithFees: async (rows: VenueOrder[]) => rows }));
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({ pmGetTrades: mocks.trades }));
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({ polymarketPluginGet: mocks.get }));
+vi.mock("@changmen/venue-browser/polymarket/orders/history/pmStoredOrders", () => ({ loadPolymarketStoredVenueOrders: mocks.stored }));
+vi.mock("@changmen/venue-browser/polymarket/orders/pmFee", () => ({ enrichPolymarketBuyOrdersWithFees: async (rows: VenueOrder[]) => rows }));
 
 const condition = "0xf2100079b1360cfb3ffe88642455ff3ad6596c029f8c54962985aca7283280dc";
 const token = "57232858937149583352927277805092640185006103000471324975696067551168118876742";

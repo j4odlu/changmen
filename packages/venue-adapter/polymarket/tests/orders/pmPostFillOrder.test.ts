@@ -2,14 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import { getExchange, Currency } from "@changmen/shared/currency";
-import { rememberPolymarketMarketBetLabel } from "../../markets/orderBetLabel";
+import { rememberPolymarketMarketBetLabel } from "@changmen/venue-browser/polymarket/markets/orderBetLabel";
 import {
   buildPolymarketMatchedBuyVenueOrderFromBet,
   buildPolymarketMatchedBuyVenueOrderUsdc,
-} from "../../pmPostFillOrder";
+} from "@changmen/venue-browser/polymarket/orders/facts/pmPostFillOrder";
 
-vi.mock("../../pmFee", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../pmFee")>();
+vi.mock("@changmen/venue-browser/polymarket/orders/pmFee", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@changmen/venue-browser/polymarket/orders/pmFee")>();
   return {
     ...actual,
     fetchPolymarketMarketFeeDetails: vi.fn(async () => ({

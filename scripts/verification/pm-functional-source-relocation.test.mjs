@@ -11,12 +11,16 @@ import { restorePmTickRefreshSource } from "./pm-tick-refresh-boundary.mjs";
 import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
 import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
 import { restorePmWsQuantityEvidenceSource } from "./pm-ws-quantity-evidence-boundary.mjs";
+import { VENUE_BROWSER_LEAVES, readVenueBrowserLeafSource } from "./venue-browser-leaves.mjs";
+import { VENUE_BROWSER_STATE } from "./venue-browser-state.mjs";
+import { restoreVenueBrowserExecution } from './venue-browser-execution.mjs';
+import { restoreVenueBrowserMarketHosts, VENUE_BROWSER_MARKET_HOSTS } from './venue-browser-market-hosts.mjs';
 
 const base = "e901bb596952256284cd8a9eb8b73b572c963915";
 describe("pM functional relocation preserves complete implementations", () => {
   it("restores only the registered result archive loop, retaining winner policy and all other code for full verification", () => {
     const file = "packages/venue-adapter/polymarket/markets/pmMapOutcomeStore.ts";
-    const source = fs.readFileSync(file, "utf8");
+    const source = restoreVenueBrowserMarketHosts(file, fs.readFileSync(file, "utf8"));
     const restored = restorePmOutcomeArchiveSource(file, source);
     expect(restored).toContain('entry.outcomeKind !== "official"');
     expect(restored).not.toContain("index.outcomeEntries");
@@ -41,14 +45,32 @@ describe("pM functional relocation preserves complete implementations", () => {
       const facade = pmFunctionalCompatibilitySource(file);
       const original = readRelocatedPmFunctionalSource(file, facade);
       const readMutated = () => readRelocatedPmFunctionalSource(file, facade, (requested) => {
-        return fs.readFileSync(requested, "utf8") + (requested === target ? "\nthrow new Error('changed implementation');\n" : "");
+        const source = fs.readFileSync(requested, "utf8");
+        if (requested === target && VENUE_BROWSER_MARKET_HOSTS.changes.some(row => row.file === target))
+          return restoreVenueBrowserMarketHosts(target, source) + "\nthrow new Error('changed implementation');\n";
+        return requested === target && target.endsWith('/diagnostics/orderTrace.ts')
+          ? restoreVenueBrowserExecution(target, source) + "\nthrow new Error('changed implementation');\n"
+          : source + (requested === target ? "\nthrow new Error('changed implementation');\n" : "");
       });
       if (target === "packages/venue-adapter/polymarket/diagnostics/orderTrace.ts") {
         expect(readMutated).toThrow("exact diagnostic-only WS change");
         return;
       }
-      if (target === "packages/venue-adapter/polymarket/realtime/ws.ts") {
-        expect(readMutated).toThrow("complete pre-hook source unchanged");
+      if (["packages/venue-adapter/polymarket/realtime/ws.ts", "packages/venue-adapter/polymarket/realtime/sportMarketWs.ts"].includes(target)) {
+        // A modified forwarding entry cannot restore the complete registered lifecycle source.
+        expect(readMutated).toThrow("exact tick-size refresh change");
+        return;
+      }
+      if (target === "packages/venue-adapter/polymarket/quotes/pmTickMetadata.ts") {
+        expect(readMutated).toThrow("exact tick-size refresh change");
+        return;
+      }
+      if (VENUE_BROWSER_LEAVES.rows.some(row => row.file === target)) {
+        expect(readMutated).toThrow("exact leaf facade");
+        return;
+      }
+      if (VENUE_BROWSER_STATE.rows.some(row => row.file === target)) {
+        expect(readMutated).toThrow("exact state facade");
         return;
       }
       const mutated = readMutated();
@@ -57,7 +79,7 @@ describe("pM functional relocation preserves complete implementations", () => {
     });
     it(`${file}: resolves every relative dependency to its original module`, () => {
       const original = execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" });
-      const moved = restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, restorePmWsQuantityEvidenceSource(target, restorePmOutcomeArchiveSource(target, fs.readFileSync(target, "utf8")))), file => fs.readFileSync(file, "utf8")));
+      const moved = restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, restorePmWsQuantityEvidenceSource(target, restorePmOutcomeArchiveSource(target, readVenueBrowserLeafSource(target, fs.readFileSync(target, "utf8"))))), file => fs.readFileSync(file, "utf8")));
       const imports = (source, filename) => {
         const sf = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true);
         const result = [];

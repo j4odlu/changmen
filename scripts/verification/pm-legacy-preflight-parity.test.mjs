@@ -3,6 +3,7 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { gitSource, moduleTokens } from "./fok-exact-boundaries.mjs";
 import { restorePmOptimizedFokSource } from "./pm-optimized-fok-boundary.mjs";
+import { readVenueBrowserLeafSource } from "./venue-browser-leaves.mjs";
 
 const root = "packages/venue-adapter/polymarket/";
 const baseline = "1632d6905061f56fcc7af7039914ca26d743ed48";
@@ -77,6 +78,6 @@ describe("legacy FOK compared directly to the deployed version", () => {
     "markets/pmSportGuard.ts", "markets/pmMarketGuard.ts", "submission/preflight/pmDetection.ts",
     "submission/preflight/pmMarketOrderOptions.ts", "quotes/pmTickPrice.ts",
   ])("%s keeps its online predicates", file => {
-    expect(moduleTokens(fs.readFileSync(root + file, "utf8"))).toEqual(moduleTokens(gitSource(baseline, root + file)));
+    expect(moduleTokens(readVenueBrowserLeafSource(root + file, fs.readFileSync(root + file, "utf8")))).toEqual(moduleTokens(gitSource(baseline, root + file)));
   });
 });

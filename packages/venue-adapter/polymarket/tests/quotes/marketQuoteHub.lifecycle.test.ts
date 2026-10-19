@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 async function mockPmWs() {
-  const ws = await import("../../ws");
+  const ws = await import("@changmen/venue-browser/polymarket/ws");
   const send = vi.fn();
   const stop = vi.fn();
   const startSpy = vi.spyOn(ws, "startPolymarketMarketWs").mockReturnValue({ send, stop } as any);
@@ -143,7 +143,7 @@ describe("PM marketQuoteHub lifecycle contracts", () => {
 
 describe("PM collect / hub source contracts", () => {
   test("collect stop only unregister esport; hub-ready force only; no unchanged-index resub; no sport re-export", () => {
-    const src = readFileSync(join(root, "markets/collect.ts"), "utf8");
+    const src = readFileSync(join(root, "../../../client/packages/venue-browser/polymarket/markets/collect.ts"), "utf8");
     expect(src).toMatch(/unregisterPolymarketQuoteConsumer\(QUOTE_CONSUMER\)/);
     expect(src).not.toMatch(/clearPolymarketSportHub/);
     expect(src).toMatch(/onPolymarketMarketHubReady\(\(\) => \{\s*syncEsportAssets\(true\);/);
@@ -158,7 +158,7 @@ describe("PM collect / hub source contracts", () => {
   });
 
   test("WS quote path writes fo only; Index sync may refreshOddsOnBets", () => {
-    const src = readFileSync(join(root, "markets/collect.ts"), "utf8");
+    const src = readFileSync(join(root, "../../../client/packages/venue-browser/polymarket/markets/collect.ts"), "utf8");
     const quoteStart = src.indexOf("function updateBetFromAsset");
     const quoteEnd = src.indexOf("const unQuote", quoteStart);
     expect(quoteStart).toBeGreaterThanOrEqual(0);
@@ -171,12 +171,13 @@ describe("PM collect / hub source contracts", () => {
     expect(indexStart).toBeGreaterThanOrEqual(0);
     expect(src.slice(indexStart)).toMatch(/refreshOddsOnBets\(/);
 
-    const quoteMod = readFileSync(join(root, "quotes/pmTokenQuote.ts"), "utf8");
+    const quoteMod = readFileSync(join(root, "../../../client/packages/venue-browser/polymarket/quotes/pmTokenQuote.ts"), "utf8");
     expect(quoteMod).toMatch(/export function saveTokenQuote\(/);
   });
 
   test("hub layer never imports oddsAccess", () => {
-    const hub = readFileSync(join(root, "quotes/marketQuoteHub.ts"), "utf8");
+    const hub = readFileSync(join(root, "../../../client/packages/venue-browser/polymarket/marketQuoteHub.ts"), "utf8");
+    expect(hub).toMatch(/export function registerPolymarketQuoteAssets\(/);
     expect(hub).not.toMatch(/oddsAccess/);
     expect(hub).not.toMatch(/saveVenueOdds/);
   });

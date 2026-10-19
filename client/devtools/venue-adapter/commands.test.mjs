@@ -19,6 +19,7 @@ function fixture(run) {
   write("packages/venue-adapter/package.json", JSON.stringify({ exports: {
     ".": "./registry/index.ts", "./loader/adapter_paths.js": "./loader/adapter_paths.mjs",
     "./loader/adapter_paths.mjs": "./loader/adapter_paths.mjs", "./polymarket": "./polymarket/index.ts",
+    "./polymarket/orderBook": "./polymarket/orderBook.ts", "./polymarket/wsBookShadow": "./polymarket/wsBookShadow.ts",
   } }));
   const command = (name, args = ["--check"], canonical = false) => spawnSync(process.execPath,
     [path.join(root, canonical ? "client/devtools/venue-adapter" : "packages/venue-adapter/scripts", `${name}.mjs`), ...args],
@@ -49,4 +50,11 @@ it("rewrites only adapter source using the original adapter root", () => fixture
   expect(fs.readFileSync(path.join(root, "packages/venue-adapter/polymarket/source.ts"), "utf8")).toContain('from "./index"');
   expect(fs.readFileSync(path.join(root, "client/web/src/main.ts"), "utf8")).toContain("@changmen/venue-adapter/polymarket");
   expect(command("relativize-internal-imports").status).toBe(0);
+}));
+it("retains both browser compatibility exports after the last application import is removed", () => fixture(({ root, write, command }) => {
+  write("client/web/src/main.ts", "export {};\n");
+  expect(command("sync-package-exports", []).status).toBe(0);
+  const exports = JSON.parse(fs.readFileSync(path.join(root, "packages/venue-adapter/package.json"), "utf8")).exports;
+  expect(exports["./polymarket/orderBook"]).toBe("./polymarket/orderBook.ts");
+  expect(exports["./polymarket/wsBookShadow"]).toBe("./polymarket/wsBookShadow.ts");
 }));

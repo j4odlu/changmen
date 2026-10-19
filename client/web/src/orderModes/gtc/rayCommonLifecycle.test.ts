@@ -1,5 +1,5 @@
 import type { GtcExecution, GtcPlan } from "@changmen/shared/pm_gtc";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import { createGtcExecution } from "@changmen/shared/pm_gtc";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import { createPinia, setActivePinia } from "pinia";

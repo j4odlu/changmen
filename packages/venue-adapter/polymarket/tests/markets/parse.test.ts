@@ -9,7 +9,7 @@ import {
   parseJsonArray,
   polymarketOrderContextFromMarket,
   type PolymarketRawMarket,
-} from "../../parse";
+} from "@changmen/venue-browser/polymarket/markets/parse";
 
 const baseMarket: PolymarketRawMarket = {
   id: "m1",
@@ -30,7 +30,7 @@ const baseMarket: PolymarketRawMarket = {
 
 describe("Polymarket parse (quote / order tools)", () => {
   test("does not export discovery mapper (VPS collector owns discovery)", async () => {
-    const mod = await import("../../parse");
+    const mod = await import("@changmen/venue-browser/polymarket/markets/parse");
     expect("buildPolymarketMappedMarket" in mod).toBe(false);
     expect("normalizePolymarketTeamName" in mod).toBe(false);
     expect("sourceTeamId" in mod).toBe(false);

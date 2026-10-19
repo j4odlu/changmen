@@ -3,7 +3,7 @@ useFakeMailboxTasks();
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { OwnedWorkerFixture as WsBookShadowWorkerClient } from "../helpers/ownedBookFixtures";
 import type { ServiceMessage } from "../../realtime/orderBook/serviceProtocol";
-import { beginWsBookShadow, type ShadowAttempt } from "../../submission/preflight/optimized/wsBook/shadowObserver";
+import { beginWsBookShadow, type ShadowAttempt } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 import type { ShadowWorkerRequest, ShadowWorkerResponse } from "../../submission/preflight/optimized/wsBook/shadowWorkerProtocol";
 
 class FakeWorker {

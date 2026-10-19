@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   matchPolymarketActivityBuyCost,
   parsePolymarketActivityBuyCost,
-} from "../../pmActivity";
+} from "@changmen/venue-browser/polymarket/orders/history/pmActivity";
 
 describe("parsePolymarketActivityBuyCost", () => {
   it("parses sports buy: usdcSize = notional + fee", () => {
@@ -201,10 +201,10 @@ describe("matchPolymarketActivityBuyCost", () => {
 describe("resolvePolymarketBuyCostFromActivity (http)", () => {
   it("returns null when fetch empty", async () => {
     vi.resetModules();
-    vi.doMock("../../transport", () => ({
+    vi.doMock("@changmen/venue-browser/polymarket/transport/transport", () => ({
       polymarketPluginGet: vi.fn(async () => ({ data: [], pagination: { has_more: false, next_cursor: null } })),
     }));
-    const { resolvePolymarketBuyCostFromActivity } = await import("../../pmActivity");
+    const { resolvePolymarketBuyCostFromActivity } = await import("@changmen/venue-browser/polymarket/orders/history/pmActivity");
     const cost = await resolvePolymarketBuyCostFromActivity(
       "0x47c9014f76660cd2efe17c1f5ea342fd12cd2038",
       { conditionId: "0xmissing", shares: 1 },

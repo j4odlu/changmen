@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import { restoreVenueBrowserExecution } from './venue-browser-execution.mjs';
 const normalize = source => source.replaceAll("\r\n", "\n");
 const digest = source => createHash("sha256").update(normalize(source)).digest("hex");
 const text = normalize(fs.readFileSync(new URL("./pm-ws-quantity-evidence-increments.json", import.meta.url), "utf8"));
@@ -12,7 +13,7 @@ export function restorePmWsQuantityEvidenceSource(file, source, read = file => f
   let restored = normalize(source);
   if (!required && !restored.includes('import { polymarketWsQuantityEvidence }')) return restored;
   assert.equal(digest(restored), row.afterSha, "exact diagnostic-only WS change");
-  assert.equal(digest(read(row.helper)), row.helperSha, "exact bounded WS field evidence helper");
+  assert.equal(digest(restoreVenueBrowserExecution(row.helper, read(row.helper))), row.helperSha, "exact bounded WS field evidence helper");
   for (const addition of row.additions) {
     assert.equal(restored.split(addition).length, 2, "unique WS evidence increment");
     restored = restored.replace(addition, "");

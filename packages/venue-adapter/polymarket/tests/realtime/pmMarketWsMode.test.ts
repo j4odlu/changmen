@@ -5,7 +5,7 @@ import {
   pmMarketWsSourceModeLabel,
   resetPmMarketWsSourceModeForTests,
   setPmMarketWsSourceMode,
-} from "../../pmMarketWsMode";
+} from "@changmen/venue-browser/polymarket/pmMarketWsMode";
 
 describe("pmMarketWsMode", () => {
   beforeEach(() => {

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import { pmGetBook, pmPrepareSubmit, pmSubmitClockReady, pmSubmitOrder } from "../../pmClientApi";
-import { estimatePolymarketManualSellProceedsUsdc, sellPolymarketBuyPosition } from "../../pmManualSell";
-import { resolvePolymarketBuilderCode } from "../../builder";
-import { PM_ORDER_SUBMIT_MODE_KEY, setPmOrderSubmitMode } from "../../pmOrderSubmitMode";
-import { preparePolymarketAccountRuntimes, clearPolymarketOrderClientCache } from "../../pmOrderClientCache";
-import { clearPmSubmitJournalForTests } from "../../pmSubmitJournal";
-vi.mock("../../pmClientApi", () => ({
+import { pmGetBook, pmPrepareSubmit, pmSubmitClockReady, pmSubmitOrder } from "@changmen/venue-browser/polymarket/orders/pmClientApi";
+import { estimatePolymarketManualSellProceedsUsdc, sellPolymarketBuyPosition } from "@changmen/venue-browser/polymarket/submission/pmManualSell";
+import { resolvePolymarketBuilderCode } from "@changmen/venue-browser/polymarket/submission/client/builder";
+import { PM_ORDER_SUBMIT_MODE_KEY, setPmOrderSubmitMode } from "@changmen/venue-browser/polymarket/pmOrderSubmitMode";
+import { preparePolymarketAccountRuntimes, clearPolymarketOrderClientCache } from "@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache";
+import { clearPmSubmitJournalForTests } from "@changmen/venue-browser/polymarket/submission/recovery/pmSubmitJournal";
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({
   pmGetBook: vi.fn(), pmPrepareSubmit: vi.fn(), pmSubmitClockReady: vi.fn(), pmSubmitOrder: vi.fn(),
 }));
 const privateKey = `0x${"0".repeat(63)}1`;

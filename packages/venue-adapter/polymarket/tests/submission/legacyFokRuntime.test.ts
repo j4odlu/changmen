@@ -1,14 +1,14 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import type { BetOption } from "@changmen/client-core/models/betOption";
-import { runPmBuyPreflight, matchesPmPreflightBinding } from "../../submission/preflight/pmBuyPreflight";
+import { runPmBuyPreflight, matchesPmPreflightBinding } from "@changmen/venue-browser/polymarket/submission/preflight/pmBuyPreflight";
 import { clearPolymarketOrderClientCacheForTests, preparePolymarketAccountRuntimes,
-  retainPolymarketAccountRuntimes } from "../../pmOrderClientCache";
+  retainPolymarketAccountRuntimes } from "@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache";
 
 const clock = vi.hoisted(() => vi.fn(async () => {}));
-vi.mock("../../pmClientApi", () => ({ pmPrepareSubmit: clock }));
-vi.mock("../../submission/preflight/legacy/pmBetGuard", () => ({ resolvePolymarketBetBlockReason: async () => null }));
-vi.mock("../../pmBetGuard", () => ({ resolvePolymarketBetBlockReason: async () => null }));
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({ pmPrepareSubmit: clock }));
+vi.mock("@changmen/venue-browser/polymarket/submission/preflight/legacy/pmBetGuard", () => ({ resolvePolymarketBetBlockReason: async () => null }));
+vi.mock("@changmen/venue-browser/polymarket/submission/preflight/pmBetGuard", () => ({ resolvePolymarketBetBlockReason: async () => null }));
 
 // 公共测试钱包；真实 SDK 本地初始化，HTTP 与下单均不调用。
 const config = { walletAddress: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",

@@ -8,7 +8,7 @@ import {
   resetPmArbPriceBufferPrefsForTests,
   resolvePolymarketExecMaxPrice,
   setPmArbPriceBufferPrefs,
-} from "../../pmArbPriceBufferMode";
+} from "@changmen/venue-browser/polymarket/quotes/pmArbPriceBufferMode";
 
 describe("pmArbPriceBufferMode", () => {
   afterEach(() => {

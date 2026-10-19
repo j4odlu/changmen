@@ -1,8 +1,8 @@
 import type { PolymarketMarketIndexEntry } from "@changmen/api-contract";
-import type { VenueOrder } from "../../../contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import { describe, expect, it } from "vitest";
-import { lookupPolymarketOrderBetLabel, rememberPolymarketIndexBetLabel, rememberPolymarketMarketBetLabel } from "../../markets/orderBetLabel";
-import { finalizePolymarketVenueOrders } from "../../orders";
+import { lookupPolymarketOrderBetLabel, rememberPolymarketIndexBetLabel, rememberPolymarketMarketBetLabel } from "@changmen/venue-browser/polymarket/markets/orderBetLabel";
+import { finalizePolymarketVenueOrders } from "@changmen/venue-browser/polymarket/orders/history/orders";
 
 describe("PM orders use native market labels instead of composer periods", () => {
   it("keeps a full-match token labelled full match after decider projection", () => {

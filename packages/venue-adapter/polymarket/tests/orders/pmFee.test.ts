@@ -4,9 +4,9 @@ import {
   computePolymarketPlatformFeeUsdc,
   enrichPolymarketBuyVenueOrderWithFee,
   parsePolymarketMarketFeeDetails,
-} from "../../pmFee";
+} from "@changmen/venue-browser/polymarket/orders/pmFee";
 
-vi.mock("../../transport", () => ({
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({
   polymarketPluginGet: vi.fn(async () => ({
     fd: { r: 0.05, e: 1, to: true },
   })),

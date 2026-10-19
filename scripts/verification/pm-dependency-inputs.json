@@ -118,121 +118,121 @@
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/auth/credentials.ts",
+      "file": "client/packages/venue-browser/polymarket/auth/credentials.ts",
       "kind": "dynamic-import",
-      "spec": "../polygonRpc",
+      "spec": "../wallet/polygonRpc",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/auth/credentials.ts",
+      "file": "client/packages/venue-browser/polymarket/auth/credentials.ts",
       "kind": "dynamic-import",
       "spec": "@polymarket/clob-client-v2",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/auth/credentials.ts",
+      "file": "client/packages/venue-browser/polymarket/auth/credentials.ts",
       "kind": "dynamic-import",
       "spec": "viem",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/auth/credentials.ts",
+      "file": "client/packages/venue-browser/polymarket/auth/credentials.ts",
       "kind": "dynamic-import",
       "spec": "viem/accounts",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/orderBook.ts",
+      "file": "client/packages/venue-browser/polymarket/orderBook.ts",
       "kind": "module-url",
-      "spec": "./marketData.worker.ts",
+      "spec": "../pm-book-diagnostics/marketData.worker.ts",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/orders/history/orders.ts",
+      "file": "client/packages/venue-browser/polymarket/orders/history/orders.ts",
       "kind": "dynamic-import",
-      "spec": "../../l2Auth",
+      "spec": "../../auth/l2Auth",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/orders/history/orders.ts",
+      "file": "client/packages/venue-browser/polymarket/orders/history/orders.ts",
       "kind": "dynamic-import",
-      "spec": "../../pmStoredOrders",
+      "spec": "./pmStoredOrders",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/orders/pmFee.ts",
+      "file": "client/packages/venue-browser/polymarket/orders/pmFee.ts",
       "kind": "dynamic-import",
-      "spec": "../pmActivity",
+      "spec": "./history/pmActivity",
       "count": 2
     },
     {
-      "file": "packages/venue-adapter/polymarket/quotes/pmTickMetadata.ts",
+      "file": "client/packages/venue-browser/polymarket/quotes/pmTickMetadata.ts",
       "kind": "dynamic-import",
       "spec": "../api",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/quotes/pmTickMetadata.ts",
+      "file": "client/packages/venue-browser/polymarket/quotes/pmTickMetadata.ts",
       "kind": "dynamic-import",
-      "spec": "../pmTransport",
+      "spec": "../transport/pmTransport",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/realtime/userWs.ts",
+      "file": "client/packages/venue-browser/polymarket/realtime/userWs.ts",
       "kind": "dynamic-import",
-      "spec": "../pmHeartbeat.js",
+      "spec": "../orders/confirmation/pmHeartbeat",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/realtime/userWs.ts",
+      "file": "client/packages/venue-browser/polymarket/realtime/userWs.ts",
       "kind": "dynamic-import",
-      "spec": "../settlementJob.js",
+      "spec": "../fok/settlementJob",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/submission/client/pmOrderClientCache.ts",
+      "file": "client/packages/venue-browser/polymarket/submission/client/pmOrderClientCache.ts",
       "kind": "dynamic-import",
-      "spec": "../../polygonRpc",
+      "spec": "../../wallet/polygonRpc",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/submission/client/pmOrderClientCache.ts",
+      "file": "client/packages/venue-browser/polymarket/submission/client/pmOrderClientCache.ts",
       "kind": "dynamic-import",
       "spec": "@polymarket/clob-client-v2",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/submission/client/pmOrderClientCache.ts",
+      "file": "client/packages/venue-browser/polymarket/submission/client/pmOrderClientCache.ts",
       "kind": "dynamic-import",
       "spec": "viem",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/submission/client/pmOrderClientCache.ts",
+      "file": "client/packages/venue-browser/polymarket/submission/client/pmOrderClientCache.ts",
       "kind": "dynamic-import",
       "spec": "viem/accounts",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/wallet/depositWallet.ts",
+      "file": "client/packages/venue-browser/polymarket/wallet/depositWallet.ts",
       "kind": "dynamic-import",
       "spec": "viem",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/wallet/depositWallet.ts",
+      "file": "client/packages/venue-browser/polymarket/wallet/depositWallet.ts",
       "kind": "dynamic-import",
       "spec": "viem/accounts",
       "count": 2
     },
     {
-      "file": "packages/venue-adapter/polymarket/wallet/walletPrepUnified.ts",
+      "file": "client/packages/venue-browser/polymarket/wallet/walletPrepUnified.ts",
       "kind": "dynamic-import",
       "spec": "@polymarket/client",
       "count": 1
     },
     {
-      "file": "packages/venue-adapter/polymarket/wallet/walletPrepUnified.ts",
+      "file": "client/packages/venue-browser/polymarket/wallet/walletPrepUnified.ts",
       "kind": "dynamic-import",
       "spec": "@polymarket/client/viem",
       "count": 1

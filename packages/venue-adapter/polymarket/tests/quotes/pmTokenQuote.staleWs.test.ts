@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { registerOddsAccess, clearOddsAccess, type VenueOddsEntry } from "@changmen/client-core/bridge/oddsAccess";
-import { PLATFORMS } from "../../../shared/platforms";
+import { PLATFORMS } from "@changmen/client-core/shared/platforms";
 import type { BetOption } from "@changmen/client-core/models/betOption";
-import { clearPmExecutionMetrics, getPmExecutionMetrics } from "../../pmExecutionMetrics";
+import { clearPmExecutionMetrics, getPmExecutionMetrics } from "@changmen/venue-browser/polymarket/pmExecutionMetrics";
 import {
   notePolymarketLiveBookQuote,
   resetPolymarketLiveQuoteTsForTests,
@@ -10,7 +10,7 @@ import {
   shouldApplyPolymarketWsQuote,
   syncPolymarketFoOnPriceAboveDetection,
   PolymarketPriceAboveDetectionError,
-} from "../../pmTokenQuote";
+} from "@changmen/venue-browser/polymarket/quotes/pmTokenQuote";
 
 describe("shouldApplyPolymarketWsQuote", () => {
   afterEach(() => {

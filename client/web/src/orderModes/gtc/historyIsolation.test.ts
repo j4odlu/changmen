@@ -12,7 +12,7 @@ vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCu
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: mocks.owner, extensionPrefs: { pmArbOrderMode: mocks.mode, pmGtcV1Participant: true } }) }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ findAccount: (id: number) => mocks.accounts.find(account => account.accountId === id) }) }));
 vi.mock("./api", () => ({ listGtc: mocks.list, commandGtc: mocks.command }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ readGtcTradeHistory: vi.fn().mockResolvedValue({ trades: [], complete: true }), readGtcFacts: mocks.read }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ readGtcTradeHistory: vi.fn().mockResolvedValue({ trades: [], complete: true }), readGtcFacts: mocks.read }));
 
 const betId = 99001;
 const hash = `0x${"a".repeat(64)}`;

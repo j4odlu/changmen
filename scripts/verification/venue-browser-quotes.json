@@ -1,0 +1,257 @@
+{
+  "baseline": "3126c8de0462aaca96b96be432618fd852285755",
+  "changes": [
+    {
+      "file": "packages/venue-adapter/polymarket/realtime/wsQuotes.ts",
+      "beforeSha": "110eee8a486be3ce6e3a6a8e8aedbfde32bf6e5164ecc2712603d68f4656bda1",
+      "afterSha": "c7e0a8e19c5ef44461de8740d74db5b3ec6f0bbcd87ca871307e163000e759fb",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 42,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "/**",
+            " * Polymarket CLOB market 行情解析（数据源层，无业务副作用）。",
+            " */",
+            "import type { PolymarketWsMessage } from \"../api\";",
+            "import { bestAskFromBook } from \"../parse\";",
+            "",
+            "export function extractPolymarketWsBestAsks(raw: string): Array<{",
+            "  assetId: string;",
+            "  bestAsk: string | number;",
+            "  timestamp?: number;",
+            "}> {",
+            "  if (raw === \"PONG\") return [];",
+            "  const parsed = JSON.parse(raw) as PolymarketWsMessage | PolymarketWsMessage[];",
+            "  const messages = Array.isArray(parsed) ? parsed : [parsed];",
+            "  const updates: Array<{ assetId: string; bestAsk: string | number; timestamp?: number }> = [];",
+            "  for (const msg of messages) {",
+            "    const ts = Number((msg as { timestamp?: string | number }).timestamp);",
+            "    const timestamp = Number.isFinite(ts) && ts > 0 ? ts : undefined;",
+            "    if (msg.event_type === \"best_bid_ask\" && msg.asset_id && msg.best_ask !== undefined) {",
+            "      updates.push({ assetId: String(msg.asset_id), bestAsk: msg.best_ask, ...(timestamp ? { timestamp } : {}) });",
+            "    }",
+            "    else if (msg.event_type === \"price_change\" && Array.isArray(msg.price_changes)) {",
+            "      for (const change of msg.price_changes) {",
+            "        if (change.asset_id && change.best_ask !== undefined) {",
+            "          const changeTs = Number((change as { timestamp?: string | number }).timestamp);",
+            "          const rowTs = Number.isFinite(changeTs) && changeTs > 0 ? changeTs : timestamp;",
+            "          updates.push({",
+            "            assetId: String(change.asset_id),",
+            "            bestAsk: change.best_ask,",
+            "            ...(rowTs ? { timestamp: rowTs } : {}),",
+            "          });",
+            "        }",
+            "      }",
+            "    }",
+            "    else if (msg.event_type === \"book\" && msg.asset_id) {",
+            "      const bestAsk = bestAskFromBook({ asks: msg.asks });",
+            "      if (bestAsk > 0)",
+            "        updates.push({ assetId: String(msg.asset_id), bestAsk, ...(timestamp ? { timestamp } : {}) });",
+            "    }",
+            "  }",
+            "  return updates;",
+            "}"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/polymarket/wsQuotes\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/transport/api.ts",
+      "beforeSha": "16d983a9407bb5e4e4349facacd8f5a11fff452996ff090a36240cfd1bb855ec",
+      "afterSha": "f80cd425a1ff1fe5be93cef74a64910df97b4ce6bb8ec59ef49f544479f48224",
+      "patches": [
+        {
+          "oldStart": 32,
+          "oldCount": 26,
+          "newStart": 32,
+          "newCount": 1,
+          "before": [
+            "export interface PolymarketWsPriceChange {",
+            "  asset_id?: string;",
+            "  price?: string;",
+            "  size?: string;",
+            "  side?: string;",
+            "  best_bid?: string;",
+            "  best_ask?: string;",
+            "  hash?: string;",
+            "}",
+            "",
+            "export interface PolymarketWsMessage {",
+            "  event_type?: string;",
+            "  asset_id?: string;",
+            "  market?: string;",
+            "  timestamp?: string | number;",
+            "  hash?: string;",
+            "  // best_bid_ask event",
+            "  best_ask?: string;",
+            "  best_bid?: string;",
+            "  spread?: string;",
+            "  // book event (initial_dump snapshot)",
+            "  bids?: Array<{ price?: string | number; size?: string | number }>;",
+            "  asks?: Array<{ price?: string | number; size?: string | number }>;",
+            "  // price_change event",
+            "  price_changes?: PolymarketWsPriceChange[];",
+            "}"
+          ],
+          "after": [
+            "export type { PolymarketWsPriceChange, PolymarketWsMessage } from \"@changmen/venue-browser/polymarket/marketMessage\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/markets/parse.ts",
+      "beforeSha": "ed4925e5fd6db0dccf8a1270d8e1ffa971dc8a38a063d6bc347f424dbe60e038",
+      "afterSha": "b8659fb15ccd1c7c1dd89b00fb784ea3ab975613ba95e51e055c883f8ae9a545",
+      "patches": [
+        {
+          "oldStart": 64,
+          "oldCount": 11,
+          "newStart": 64,
+          "newCount": 2,
+          "before": [
+            "export interface PolymarketBook {",
+            "  asset_id?: string;",
+            "  bids?: PolymarketPriceLevel[];",
+            "  asks?: PolymarketPriceLevel[];",
+            "  timestamp?: string | number;",
+            "}",
+            "",
+            "export interface PolymarketPriceLevel {",
+            "  price?: string | number;",
+            "  size?: string | number;",
+            "}"
+          ],
+          "after": [
+            "import type { PolymarketBook } from \"@changmen/venue-browser/polymarket/bookQuote\";",
+            "export type { PolymarketBook, PolymarketPriceLevel } from \"@changmen/venue-browser/polymarket/bookQuote\";"
+          ]
+        },
+        {
+          "oldStart": 215,
+          "oldCount": 12,
+          "newStart": 206,
+          "newCount": 1,
+          "before": [
+            "export function bestAskFromBook(book: PolymarketBook | undefined): number {",
+            "  const asks = book?.asks ?? [];",
+            "  let best = Number.POSITIVE_INFINITY;",
+            "  for (const level of asks) {",
+            "    const price = Number(level.price);",
+            "    const size = Number(level.size);",
+            "    if (Number.isFinite(price) && price > 0 && price < best && (!Number.isFinite(size) || size > 0)) {",
+            "      best = price;",
+            "    }",
+            "  }",
+            "  return Number.isFinite(best) ? best : 0;",
+            "}"
+          ],
+          "after": [
+            "export { bestAskFromBook } from \"@changmen/venue-browser/polymarket/bookQuote\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/marketQuoteHub.ts",
+      "beforeSha": "1bd21150f228fa9bd79d8bbffca9e47947d83bff63160ead735141bb124810ec",
+      "afterSha": "21a6f14d722df814b2fe468694c5f175a102503279c44bb58ea340adc51bbd76",
+      "patches": [
+        {
+          "oldStart": 16,
+          "oldCount": 1,
+          "newStart": 16,
+          "newCount": 1,
+          "before": [
+            "import { extractPolymarketWsBestAsks } from \"../wsQuotes\";"
+          ],
+          "after": [
+            "import { extractPolymarketWsBestAsks } from \"@changmen/venue-browser/polymarket/wsQuotes\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/sportQuoteHub.ts",
+      "beforeSha": "0c07367bc5f156c8eef207800b6d8395cc9d8222a1327b052ff5511742e43b0b",
+      "afterSha": "aa829aef97a206b40fa3b29f123ba01b86b2c469bafe7ec654215b37555cfbac",
+      "patches": [
+        {
+          "oldStart": 9,
+          "oldCount": 1,
+          "newStart": 9,
+          "newCount": 1,
+          "before": [
+            "import { extractPolymarketWsBestAsks } from \"../wsQuotes\";"
+          ],
+          "after": [
+            "import { extractPolymarketWsBestAsks } from \"@changmen/venue-browser/polymarket/wsQuotes\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/package.json",
+      "beforeSha": "9339a3764cdfbe49e9d1fcf769b5f819ac04b6668677c305c903243a5b072769",
+      "afterSha": "58af0ee2f784eaa2f95bedcfae1458957cceed367beb35f83e909d379f2f28ab",
+      "patches": [
+        {
+          "oldStart": 29,
+          "oldCount": 1,
+          "newStart": 29,
+          "newCount": 4,
+          "before": [
+            "    \"./polymarket/marketStream\": \"./polymarket/marketStream.ts\""
+          ],
+          "after": [
+            "    \"./polymarket/marketStream\": \"./polymarket/marketStream.ts\",",
+            "    \"./polymarket/marketMessage\": \"./polymarket/marketMessage.ts\",",
+            "    \"./polymarket/bookQuote\": \"./polymarket/bookQuote.ts\",",
+            "    \"./polymarket/wsQuotes\": \"./polymarket/wsQuotes.ts\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/source-ownership-inputs.json",
+      "beforeSha": "c2c9946672512772b3821c39ab35482c9b8fbf43fa9e8e5c087106b0ff301be7",
+      "afterSha": "a66e02da920c975b5a590706d5fc537c830fc62a4414680c3d53ed7094f98704",
+      "patches": [
+        {
+          "oldStart": 594,
+          "oldCount": 0,
+          "newStart": 595,
+          "newCount": 5,
+          "before": [],
+          "after": [
+            "    },",
+            "    {",
+            "      \"file\": \"packages/venue-adapter/polymarket/realtime/wsQuotes.ts\",",
+            "      \"canonical\": \"client/packages/venue-browser/polymarket/wsQuotes.ts\",",
+            "      \"spec\": \"@changmen/venue-browser/polymarket/wsQuotes\""
+          ]
+        }
+      ]
+    }
+  ],
+  "added": [
+    {
+      "file": "client/packages/venue-browser/polymarket/marketMessage.ts",
+      "sha": "f3ecc4b4f217524699fbc29992a3faef92b0896c961cd028265a532fbd35229c"
+    },
+    {
+      "file": "client/packages/venue-browser/polymarket/bookQuote.ts",
+      "sha": "847b51fb6d9dd97a155fccb0e8b93036a4965d1e49ffc2a14b5aabe557e31b75"
+    },
+    {
+      "file": "client/packages/venue-browser/polymarket/wsQuotes.ts",
+      "sha": "dcbb638ace1c8037234a25fbd30379fa4a0da55bf54792346a94b8816ea54326"
+    }
+  ]
+}

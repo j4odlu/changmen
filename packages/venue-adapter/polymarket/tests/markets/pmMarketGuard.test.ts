@@ -3,8 +3,8 @@ import {
   getPolymarketMarketBlockReason,
   isPolymarketSubmitTimeoutError,
   isPolymarketTradingDisabledError,
-} from "../../pmMarketGuard";
-import type { PolymarketRawMarket } from "../../parse";
+} from "@changmen/venue-browser/polymarket/markets/pmMarketGuard";
+import type { PolymarketRawMarket } from "@changmen/venue-browser/polymarket/markets/parse";
 
 describe("getPolymarketMarketBlockReason", () => {
   test("endpoint prices only apply the underdog guard and do not declare an official result", () => {

@@ -28,7 +28,7 @@ export function checkPmVuePeer(adapter, host) {
 export function pmNodeBrowserLoaderTarget(site) {
   if (site.environment !== "node" || site.kind !== "custom-loader" || !site.arguments?.length || site.arguments.some(value => typeof value !== "string")) return null;
   const symbol = site.loaderSymbol || site.loader, args = site.arguments;
-  if (symbol === "backendRequire" && (/^@changmen\/(?:venue-adapter\/(?:polymarket|browser)|pm-market-data-browser)(?:\/|$)/.test(args[0])
+  if (symbol === "backendRequire" && (/^@changmen\/(?:venue-adapter\/(?:polymarket|browser)|pm-market-data-browser|venue-browser)(?:\/|$)/.test(args[0])
     || args[0] === "@changmen/venue-adapter/registry/adapters")) return args[0];
   let target;
   if (symbol === "adapterRequire") target = path.posix.normalize(`packages/venue-adapter/${args.join("/")}`);

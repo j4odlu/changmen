@@ -1,13 +1,14 @@
 import { expect, test, vi } from "vitest";
-import * as legacy from "../../submission/preflight/optimized/wsBook/shadowObserver";
-import * as browser from "../../../browser/pm-book-diagnostics/shadowObserver";
+import * as legacy from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
+import * as browser from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 import { WsBookShadowRuntime as LegacyRuntime } from "../../submission/preflight/optimized/wsBook/bookRuntime";
 import { WsBookShadowRuntime as BrowserRuntime } from "../../../browser/pm-book-diagnostics/bookRuntime";
 import { pmOrderBookSource as legacySource } from "../../orderBookSource";
 import { pmOrderBookSource as browserSource } from "../../../browser/pm-book-source";
 import * as canonical from "../../../../../client/packages/venue-browser/pm-book-diagnostics/shadowObserver";
 import { WsBookShadowRuntime as CanonicalRuntime } from "../../../../../client/packages/venue-browser/pm-book-diagnostics/bookRuntime";
-import { pmOrderBookSource as canonicalSource } from "../../../../../client/packages/venue-browser/pm-book-source";
+import { pmOrderBookSource as hostSource } from "../../../browser/pm-book-source-host";
+import { observePmMarketStream } from "../../realtime/marketStream";
 
 test("legacy and browser paths share the same observer slot and HTTP completion", () => {
   expect(legacy.beginWsBookShadow).toBe(browser.beginWsBookShadow);
@@ -30,6 +31,7 @@ test("compatibility entries keep one diagnostics runtime and readonly market sou
   expect(LegacyRuntime).toBe(BrowserRuntime);
   expect(BrowserRuntime).toBe(CanonicalRuntime);
   expect(legacySource).toBe(browserSource);
-  expect(browserSource).toBe(canonicalSource);
+  expect(browserSource).toBe(hostSource);
+  expect(browserSource.observe).toBe(observePmMarketStream);
   expect(Object.isFrozen(browserSource)).toBe(true);
 });

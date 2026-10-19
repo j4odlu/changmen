@@ -47,11 +47,11 @@ vi.mock("@changmen/client-core/shared/wait", () => ({
   wait: vi.fn(() => new Promise(() => {})),
 }));
 
-vi.mock("../shared/collectNotify", () => ({
+vi.mock("@changmen/venue-browser/shared/collectNotify", () => ({
   notifyCollectError: vi.fn(),
 }));
 
-vi.mock("../shared/webBridge", () => ({
+vi.mock("@changmen/venue-browser/shared/webBridge", () => ({
   useCollectStore: () => ({ saveMatch, saveBets }),
   useMatchStore: () => ({ refreshOddsOnBets }),
 }));

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { PM_FOLDER_RELOCATIONS, certifyPmFolderRelease, checkPmFolderFreeze } from "./pm-folder-release-boundary.mjs";
 import { PM_UNIFIED_PREFLIGHT_HELPERS } from "./pm-unified-preflight-boundary.mjs";
+import { restoreVenueBrowserExecution } from './venue-browser-execution.mjs';
 const manifestFile = "packages/venue-adapter/esport-freeze.json";
 const read = file => fs.readFileSync(file, "utf8");
 const manifest = read(manifestFile);
@@ -28,7 +29,9 @@ describe("independent PM folder release protection", () => {
   }
   it("rejects a changed dependency path even if the function bodies stay the same", () => {
     const file = "packages/venue-adapter/polymarket/fok/bet.ts";
-    expect(() => certifyPmFolderRelease(manifest, f => f === file ? read(f).replace('"../orderTrace"', '"../otherTrace"') : read(f), gitRead)).toThrow();
+    const previous = restoreVenueBrowserExecution(file, read(file));
+    expect(previous).toContain('"../orderTrace"');
+    expect(() => certifyPmFolderRelease(manifest, f => f === file ? previous.replace('"../orderTrace"', '"../otherTrace"') : read(f), gitRead)).toThrow();
   });
   it("rejects any edit of the original freeze manifest", () => {
     expect(() => certifyPmFolderRelease(manifest + "\n", read, gitRead)).toThrow("original freeze manifest unchanged");

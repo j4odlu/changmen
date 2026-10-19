@@ -6,7 +6,7 @@ import { registerWsBookShadowObserver, type ShadowAttempt } from "./shadowObserv
 import { observerClock, type ShadowHttpSummary, type ShadowWorkerRequest, type ShadowWorkerResponse } from "./shadowWorkerProtocol";
 import { copySimulationInput, simulateLocalSource, type SimulationObservation } from "./executionSimulation";
 import { simulateExecutableBuy } from "./executionMath";
-import type { PolymarketOrderOptions } from "../../../../packages/venue-adapter/polymarket/fok/preflight";
+import type { PolymarketOrderOptions } from "../polymarket/pmOrderOptions";
 
 /** Main-thread dynamic consumer. The injected service owns all shared market resources. */
 export class WsBookShadowWorkerClient {

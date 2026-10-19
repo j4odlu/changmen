@@ -4,7 +4,7 @@ import { BetResult } from "@changmen/client-core/models/betResult";
 import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { executeManualGtc } from "./manual";
-import * as pmOrders from "@changmen/venue-adapter/polymarket/orders";
+import * as pmOrders from "@changmen/venue-browser/polymarket/orders/history/orders";
 
 const notices = vi.hoisted(() => ({ notify: vi.fn(), close: vi.fn() }));
 
@@ -14,7 +14,7 @@ vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ ...mocks.user, sav
 vi.mock("./gateway", () => ({ checkBetting: mocks.check }));
 vi.mock("@/stores/betting/arbOrderBind", () => ({ refreshOrderListAfterBind: vi.fn() }));
 vi.mock("element-plus", () => ({ ElNotification: notices.notify }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ prepareManualGtcBuy: mocks.prepare, pmSubmitMaker: () => "maker" }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ prepareManualGtcBuy: mocks.prepare, pmSubmitMaker: () => "maker" }));
 vi.mock("./api", () => ({ createGtc: mocks.create }));
 vi.mock("./runtime", () => ({ gtcProgress: mocks.progress, startGtcRuntime: vi.fn(), refreshGtcRecords: mocks.refresh, acceptGtc: (row: GtcExecution) => { mocks.row = row; return row; }, currentGtc: () => mocks.row, mutateGtc: async (_id: string, command: GtcCommand) => { mocks.row = applyGtcCommand(mocks.row!, command, Date.now()); return mocks.row; }, pollGtc: async () => {
   const row = mocks.row!; if (row.submit === "accepted")

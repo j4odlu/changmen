@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { fetchPolymarketRelayerStatus } from "../../relayer";
+import { fetchPolymarketRelayerStatus } from "@changmen/venue-browser/polymarket/wallet/relayer";
 
 afterEach(() => vi.unstubAllGlobals());
 it("sends the API Cookie and CSRF headers on cross-origin relayer status without a JWT", async () => {

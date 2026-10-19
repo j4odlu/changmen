@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { BookLease } from "../../realtime/orderBook/service";
+import type { BookLease } from "@changmen/venue-browser/polymarket/realtime/orderBook/service";
 import type { FullBookView } from "../../realtime/orderBook/bookStore";
 import { simulateLocalSource, copySimulationInput, type ExecutionMetadata } from "../../submission/preflight/optimized/wsBook/executionSimulation";
 import { observerClock } from "../../submission/preflight/optimized/wsBook/shadowWorkerProtocol";

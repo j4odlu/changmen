@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { WsBookShadowWorkerClient } from "../../submission/preflight/optimized/wsBook/shadowWorkerClient";
-import { beginWsBookShadow } from "../../submission/preflight/optimized/wsBook/shadowObserver";
-import { simulateExecutableBuy } from "../../submission/preflight/optimized/wsBook/executionMath";
-import type { BookConsumerPort, BookLease } from "../../realtime/orderBook/service";
+import { beginWsBookShadow } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
+import { simulateExecutableBuy } from "@changmen/venue-browser/pm-book-diagnostics/executionMath";
+import type { BookConsumerPort, BookLease } from "@changmen/venue-browser/polymarket/realtime/orderBook/service";
 import type { FullBookView } from "../../realtime/orderBook/bookStore";
 import { observerClock } from "../../submission/preflight/optimized/wsBook/shadowWorkerProtocol";
-import { runPmBuyPreflight } from "../../submission/preflight/pmBuyPreflight";
+import { runPmBuyPreflight } from "@changmen/venue-browser/polymarket/submission/preflight/pmBuyPreflight";
 
 let client: WsBookShadowWorkerClient, receive: (value: unknown) => void, lease: BookLease, view: FullBookView, allowed: boolean;
 const input = { tokenId: "1", detectionOdds: 2, maxPrice: .5, apiBetMoney: 5, depth: { enabled: false, multiplier: 1.5 } };

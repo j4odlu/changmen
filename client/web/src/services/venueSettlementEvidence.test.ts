@@ -1,4 +1,4 @@
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import { describe, expect, it } from "vitest";

@@ -1,22 +1,27 @@
 import { readFileSync } from "node:fs";
 import { transformSync } from "esbuild";
 import { expect, test } from "vitest";
-import { simulateExecutableBuy } from "../../submission/preflight/optimized/wsBook/executionMath";
-import { isValidClobPrice } from "../../pmDetection";
-import { PolymarketPriceAboveDetectionError } from "../../pmTokenQuote";
-import { alignPolymarketPriceToTick, isPolymarketPriceOnTick } from "../../pmTickPrice";
-import { pmBuyOrderShares } from "../../pmBuyOrderShares";
-import { pmFokDepthBufferNeedUsdc, pmFokFillPriceDepthUsdc } from "../../pmFokDepthBufferMode";
+import { simulateExecutableBuy } from "@changmen/venue-browser/pm-book-diagnostics/executionMath";
+import { isValidClobPrice } from "@changmen/venue-browser/polymarket/submission/preflight/pmDetection";
+import { PolymarketPriceAboveDetectionError } from "@changmen/venue-browser/polymarket/quotes/pmTokenQuote";
+import { alignPolymarketPriceToTick, isPolymarketPriceOnTick } from "@changmen/venue-browser/polymarket/pmTickPrice";
+import { pmBuyOrderShares } from "@changmen/venue-browser/polymarket/pmBuyOrderShares";
+import { pmFokDepthBufferNeedUsdc, pmFokFillPriceDepthUsdc } from "@changmen/venue-browser/polymarket/pmFokDepthBufferMode";
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 
-const original = readFileSync(new URL("../../fok/preflight.ts", import.meta.url), "utf8").replaceAll("\r\n", "\n");
+const original = readFileSync(new URL("../../../../../client/packages/venue-browser/polymarket/fok/preflight.ts", import.meta.url), "utf8").replaceAll("\r\n", "\n");
 const mirror = readFileSync(new URL("../../../../../client/packages/venue-browser/pm-book-diagnostics/executionMath.ts", import.meta.url), "utf8").replaceAll("\r\n", "\n");
 const ranges = [
   ["function polymarketFokLimitFromDetection(", "\ninterface PolymarketOrderDiagnostic"],
   ["function fmt(", "\nasync function resolvePolymarketExecutableBuy("],
   ["function calculateBuyMarketLimitPrice(", "\n/** 下单 USDC"],
 ];
-const bodies = ranges.map(([a, b]) => original.slice(original.indexOf(a!), original.indexOf(b!, original.indexOf(a!))).trim().replaceAll("export function ", "function "));
+const bodies = ranges.map(([a, b]) => {
+  const start = original.indexOf(a!), end = original.indexOf(b!, start);
+  expect(start).toBeGreaterThanOrEqual(0);
+  expect(end).toBeGreaterThan(start);
+  return original.slice(start, end).trim().replaceAll("export function ", "function ");
+});
 test("diagnostic math retains exact original algorithm bodies, including error messages and depth buffer", () => {
   for (const body of bodies) expect(mirror).toContain(body);
 });

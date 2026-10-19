@@ -1,10 +1,10 @@
 export * from "./checkBetProbe";
 export * from "./directRealtimeStatus";
-export * from "./venueWsStatus";
+export * from "@changmen/venue-browser/shared/venueWsStatus";
 export * from "./rejectWait";
-export * from "./webBridge";
-export * from "./webBridgeTypes";
-export * from "./changmenAuthToken";
-export * from "./changmenWsBase";
+export * from "@changmen/venue-browser/shared/webBridge";
+export * from "@changmen/venue-browser/shared/webBridgeTypes";
+export * from "@changmen/venue-browser/shared/changmenAuthToken";
+export * from "@changmen/venue-browser/shared/changmenWsBase";
 export * from "./socket/changmenHub";
-export { PLATFORMS } from "./platforms";
+export { PLATFORMS } from "@changmen/client-core/shared/platforms";

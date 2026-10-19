@@ -1,9 +1,11 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { restorePmStoredSettlementSource } from "./pm-stored-settlement-boundary.mjs";
 import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
 const file = "packages/venue-adapter/polymarket/orders/history/orders.ts";
-const read = f => fs.readFileSync(f, "utf8");
+const readBeforeExecution = f => fs.readFileSync(f, "utf8");
+const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 describe("stored PM settlement exact change boundary", () => {
   it("restores this correction before the original label and financial baseline checks", () => {
     expect(restorePmStoredSettlementSource(file, read(file))).not.toContain("needsStoredMarketSettlement");

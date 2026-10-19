@@ -1,0 +1,628 @@
+{
+  "baseline": "3126c8de0462aaca96b96be432618fd852285755",
+  "changes": [
+    {
+      "file": "package.json",
+      "beforeSha": "1fe027f4f03f05723a217a5cec227163e63270733da33840cd57b2abf76e5090",
+      "afterSha": "2fb496285502275499100cd8f6dbce30ad52354ec7e04a5510b04792cbf5517d",
+      "patches": [
+        {
+          "oldStart": 20,
+          "oldCount": 0,
+          "newStart": 21,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "    \"client/packages/venue-browser\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/package.json",
+      "beforeSha": "a53e5b60b7473f236d5f77a5de9ba21638f3f857aeceef25166bbf0e6f41a08c",
+      "afterSha": "c30e9d8c0692f8f152794111c942da93ccd6bca8fda9d54ad2bacddc43e61e5f",
+      "patches": [
+        {
+          "oldStart": 60,
+          "oldCount": 1,
+          "newStart": 60,
+          "newCount": 2,
+          "before": [
+            "    \"@changmen/pm-market-data-browser\": \"file:../../client/packages/pm-market-data-browser\""
+          ],
+          "after": [
+            "    \"@changmen/pm-market-data-browser\": \"file:../../client/packages/pm-market-data-browser\",",
+            "    \"@changmen/venue-browser\": \"file:../../client/packages/venue-browser\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-source-host.ts",
+      "beforeSha": "8ef4d770b63927ebe8a7338c3d0cae20f0c6466a16bdfda1aefd5fc1515f980e",
+      "afterSha": "d642ea89052ebed8bb0bb6ed6b4584cc6db2b7fd1672cd3c53d07d8c259ccb4b",
+      "patches": [
+        {
+          "oldStart": 3,
+          "oldCount": 1,
+          "newStart": 3,
+          "newCount": 1,
+          "before": [
+            "import { createReadonlyMarketSource } from \"../../../client/packages/venue-browser/pm-book-source\";"
+          ],
+          "after": [
+            "import { createReadonlyMarketSource } from \"@changmen/venue-browser/pm-book-source\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/bookRuntime.ts",
+      "beforeSha": "c35845d6b24e153222764d01cc794cd61e36b9193ab80b926ccc26bbce84a9cd",
+      "afterSha": "e175b2d51e359bc0e2ee81271b7bb2c36c66220db18122fc97051483a3a9da16",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/pm-book-diagnostics/bookRuntime\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/pm-book-diagnostics/bookRuntime\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/bookMetadata.ts",
+      "beforeSha": "8bce84981905c2e03813c4057d15e0f7e68daad238c7102ae90e14738243c5e2",
+      "afterSha": "cbf267554b0043b7bdd4c77c4a56cdebb66c8be890fb5c8f7d2e9577fee01c0c",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/pm-book-diagnostics/bookMetadata\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/pm-book-diagnostics/bookMetadata\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/executionSimulation.ts",
+      "beforeSha": "f1faa1e054fdb26a225b536641769e074d74a223c6246dabd15359a879ac1d16",
+      "afterSha": "882216c17481e7ecd75c040fe16a4524cb6201ff6ea66c7565e3c39b2c9f0e86",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/pm-book-diagnostics/executionSimulation\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/pm-book-diagnostics/executionSimulation\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/freshnessPolicy.ts",
+      "beforeSha": "8cc57015234f5a038763204ebe695dc1e408292fb2df8e079a072560d0574bd6",
+      "afterSha": "e8e42e2e0794610025018d6b2333a774705e9392c1ec181e303f2a16be1d58ee",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/pm-book-diagnostics/freshnessPolicy\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/pm-book-diagnostics/freshnessPolicy\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/workerDiagnostics.ts",
+      "beforeSha": "8f914a16b7e9131c78405462ee95b8e5ce1986a8c6f62c4950cd0ae0aeec445b",
+      "afterSha": "b265d65f4d38db86fbcc6b1443fb03305b4ae660d05e2f0fd657cc3ba8befac5",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/pm-book-diagnostics/workerDiagnostics\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/pm-book-diagnostics/workerDiagnostics\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/executionMath.ts",
+      "beforeSha": "dc63f989f25a978b699f45516df65aa4e04239d3d1a405ac716d029f26c0c2b8",
+      "afterSha": "204cef1c5e93eac859f6b2f0ac610963a880ed61b5deb612cf22e70a51d663c5",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/pm-book-diagnostics/executionMath\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/pm-book-diagnostics/executionMath\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/shadowObserver.ts",
+      "beforeSha": "8c5146d1cd76191230685c322f87eac01d3bd46990c7db3c2d9c5d015e9a249c",
+      "afterSha": "85fba6547a23b37c7adcc41a4032b1d533364b36999cf0f42444492edfe7eb55",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/pm-book-diagnostics/shadowObserver\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/pm-book-diagnostics/shadowObserver\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/shadowWorkerProtocol.ts",
+      "beforeSha": "dd9c918d76940e273201e51d5a0e5cd47fdc73dd261b6124ce3109f58bc46e6c",
+      "afterSha": "9dbd995cfce269f9cdd507dc4773ae078ce100505bd36ba894afe4efb6da91dd",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/pm-book-diagnostics/shadowWorkerProtocol\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/pm-book-diagnostics/shadowWorkerProtocol\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/shadowWorkerClient.ts",
+      "beforeSha": "bcc06213d2f3d9f95e43a83e6dd88b20d098e4227f6f88eee349d186e2f24b91",
+      "afterSha": "e975150021d3d22f92dd6e300c2b601359f43f7d9f2135599addfee67ce0b714",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/pm-book-diagnostics/shadowWorkerClient\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/pm-book-diagnostics/shadowWorkerClient\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/fok/pmFokDepthBufferMode.ts",
+      "beforeSha": "b2126f1a1f754442792f893b37f7f5d6bd106631314bef5127220aa423529cd5",
+      "afterSha": "418a31965fd2c82e9ac7a64ff15c8cd0cfbd2d5abe3f9a0a5d88764696153107",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/polymarket/pmFokDepthBufferMode\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/polymarket/pmFokDepthBufferMode\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/fok/preflight.ts",
+      "beforeSha": "9c3194e6fcacaecc86e11bc3f8aeb9af5688487d4827cd4f857e12097253e5e7",
+      "afterSha": "571af8109e380787151f80b25862bdd2989aa2956b0356f0725c8eb6d764335a",
+      "patches": [
+        {
+          "oldStart": 44,
+          "oldCount": 2,
+          "newStart": 44,
+          "newCount": 2,
+          "before": [
+            "import type { PolymarketOrderOptions } from \"../../../../client/packages/venue-browser/polymarket/pmOrderOptions\";",
+            "export type { PolymarketOrderOptions } from \"../../../../client/packages/venue-browser/polymarket/pmOrderOptions\";"
+          ],
+          "after": [
+            "import type { PolymarketOrderOptions } from \"@changmen/venue-browser/polymarket/pmOrderOptions\";",
+            "export type { PolymarketOrderOptions } from \"@changmen/venue-browser/polymarket/pmOrderOptions\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/pmTokenQuote.ts",
+      "beforeSha": "d303a3c602b26cac7cacc44754900cd2f6c49af14be781000ab35ba710687a36",
+      "afterSha": "988c88418917c94d9c0b779b71af723e2b30f7a4e5d5ac2ddd42a0c274c2b72b",
+      "patches": [
+        {
+          "oldStart": 44,
+          "oldCount": 2,
+          "newStart": 44,
+          "newCount": 2,
+          "before": [
+            "import { PolymarketPriceAboveDetectionError } from \"../../../../client/packages/venue-browser/polymarket/pmPriceError\";",
+            "export { PolymarketPriceAboveDetectionError, isPolymarketPriceAboveDetectionError } from \"../../../../client/packages/venue-browser/polymarket/pmPriceError\";"
+          ],
+          "after": [
+            "import { PolymarketPriceAboveDetectionError } from \"@changmen/venue-browser/polymarket/pmPriceError\";",
+            "export { PolymarketPriceAboveDetectionError, isPolymarketPriceAboveDetectionError } from \"@changmen/venue-browser/polymarket/pmPriceError\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/pmTickState.ts",
+      "beforeSha": "5e91b398532ac4d30e8cffe72fd16c6e5bb2d970e83c8fdc51f36cf6444a197d",
+      "afterSha": "13b2742f986892fee121727286b88e333207eba1a849b43843c58b75c8740cfb",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/polymarket/pmTickState\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/polymarket/pmTickState\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/pmTickPrice.ts",
+      "beforeSha": "e977a0885dce467ff92ff16ed6658a6dda7a9d05bbd87a85009c0482e7026c03",
+      "afterSha": "4a6640da224d96f7339df351ae7656f6ae0dc63ad7bb8fc829222f836d2dd245",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../client/packages/venue-browser/polymarket/pmTickPrice\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/polymarket/pmTickPrice\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/pmBuyOrderShares.ts",
+      "beforeSha": "8d354aad739de78d82aa883a20fcc8b65bc25f8af7c51ae22bee28360f25ff3a",
+      "afterSha": "1afc8d281dca5a3302ca6b4fa68d1d2f406318e1c42a9ac84b600e9cf2c27079",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../../client/packages/venue-browser/polymarket/pmBuyOrderShares\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/polymarket/pmBuyOrderShares\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/pmDetection.ts",
+      "beforeSha": "8cce54273654647cc0b677fcf68c5e5f50bdb17ad9e2069af5cb4903bb0e7469",
+      "afterSha": "c8f8f89957776060e4e4245ff352eeaae4e6e9ab31eed31b532dc2b51a5f0d4b",
+      "patches": [
+        {
+          "oldStart": 19,
+          "oldCount": 2,
+          "newStart": 19,
+          "newCount": 2,
+          "before": [
+            "import { isValidClobPrice } from \"../../../../../client/packages/venue-browser/polymarket/pmPriceValidity\";",
+            "export { isValidClobPrice } from \"../../../../../client/packages/venue-browser/polymarket/pmPriceValidity\";"
+          ],
+          "after": [
+            "import { isValidClobPrice } from \"@changmen/venue-browser/polymarket/pmPriceValidity\";",
+            "export { isValidClobPrice } from \"@changmen/venue-browser/polymarket/pmPriceValidity\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/pmMarketOrderOptions.ts",
+      "beforeSha": "bb1afab4b0898db832fb3b0df909803f6e30141c3ec2b7570461fdeaa7273fbf",
+      "afterSha": "16f0c973d7bfc47ef1e81ca2e7859d7f46dfd3e358de8e0dd50286cfbf905269",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "export * from \"../../../../../client/packages/venue-browser/polymarket/pmMarketOrderOptions\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/polymarket/pmMarketOrderOptions\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/source-ownership-inputs.json",
+      "beforeSha": "8ac5e1e2f99bad63e9a8ec02725c5de7797ff1866bf362b791fbe3244d236337",
+      "afterSha": "1e8a26a4b518ee1ae85b6c81b394a5fea71fea2bca8d5e666afa5f91d374c4e5",
+      "patches": [
+        {
+          "oldStart": 519,
+          "oldCount": 1,
+          "newStart": 519,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/pm-book-diagnostics/bookMetadata\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/pm-book-diagnostics/bookMetadata\""
+          ]
+        },
+        {
+          "oldStart": 524,
+          "oldCount": 1,
+          "newStart": 524,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/pm-book-diagnostics/bookRuntime\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/pm-book-diagnostics/bookRuntime\""
+          ]
+        },
+        {
+          "oldStart": 529,
+          "oldCount": 1,
+          "newStart": 529,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/pm-book-diagnostics/executionMath\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/pm-book-diagnostics/executionMath\""
+          ]
+        },
+        {
+          "oldStart": 534,
+          "oldCount": 1,
+          "newStart": 534,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/pm-book-diagnostics/executionSimulation\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/pm-book-diagnostics/executionSimulation\""
+          ]
+        },
+        {
+          "oldStart": 539,
+          "oldCount": 1,
+          "newStart": 539,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/pm-book-diagnostics/freshnessPolicy\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/pm-book-diagnostics/freshnessPolicy\""
+          ]
+        },
+        {
+          "oldStart": 544,
+          "oldCount": 1,
+          "newStart": 544,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/pm-book-diagnostics/shadowObserver\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/pm-book-diagnostics/shadowObserver\""
+          ]
+        },
+        {
+          "oldStart": 549,
+          "oldCount": 1,
+          "newStart": 549,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/pm-book-diagnostics/shadowWorkerClient\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/pm-book-diagnostics/shadowWorkerClient\""
+          ]
+        },
+        {
+          "oldStart": 554,
+          "oldCount": 1,
+          "newStart": 554,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/pm-book-diagnostics/shadowWorkerProtocol\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/pm-book-diagnostics/shadowWorkerProtocol\""
+          ]
+        },
+        {
+          "oldStart": 559,
+          "oldCount": 1,
+          "newStart": 559,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/pm-book-diagnostics/workerDiagnostics\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/pm-book-diagnostics/workerDiagnostics\""
+          ]
+        },
+        {
+          "oldStart": 569,
+          "oldCount": 1,
+          "newStart": 569,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/polymarket/pmTickPrice\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/polymarket/pmTickPrice\""
+          ]
+        },
+        {
+          "oldStart": 574,
+          "oldCount": 1,
+          "newStart": 574,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../../client/packages/venue-browser/polymarket/pmBuyOrderShares\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/polymarket/pmBuyOrderShares\""
+          ]
+        },
+        {
+          "oldStart": 579,
+          "oldCount": 1,
+          "newStart": 579,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../../client/packages/venue-browser/polymarket/pmMarketOrderOptions\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/polymarket/pmMarketOrderOptions\""
+          ]
+        },
+        {
+          "oldStart": 584,
+          "oldCount": 1,
+          "newStart": 584,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/polymarket/pmFokDepthBufferMode\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/polymarket/pmFokDepthBufferMode\""
+          ]
+        },
+        {
+          "oldStart": 589,
+          "oldCount": 1,
+          "newStart": 589,
+          "newCount": 1,
+          "before": [
+            "      \"spec\": \"../../../../client/packages/venue-browser/polymarket/pmTickState\""
+          ],
+          "after": [
+            "      \"spec\": \"@changmen/venue-browser/polymarket/pmTickState\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "package-lock.json",
+      "beforeSha": "bded66403c35906026611e9fc56e5d1e2af35399fad2bbeafbe8434110dbbe6d",
+      "afterSha": "0dc787cfb14d8c08f0ad95f535a66eb5b50c3796b8bca9c8a2a47846150dbc28",
+      "patches": [
+        {
+          "oldStart": 19,
+          "oldCount": 0,
+          "newStart": 20,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "        \"client/packages/venue-browser\","
+          ]
+        },
+        {
+          "oldStart": 565,
+          "oldCount": 0,
+          "newStart": 567,
+          "newCount": 8,
+          "before": [],
+          "after": [
+            "    \"client/packages/venue-browser\": {",
+            "      \"name\": \"@changmen/venue-browser\",",
+            "      \"version\": \"0.1.0\",",
+            "      \"dependencies\": {",
+            "        \"@changmen/pm-market-data-browser\": \"file:../pm-market-data-browser\",",
+            "        \"@changmen/shared\": \"file:../../../packages/shared\"",
+            "      }",
+            "    },"
+          ]
+        },
+        {
+          "oldStart": 1018,
+          "oldCount": 0,
+          "newStart": 1028,
+          "newCount": 4,
+          "before": [],
+          "after": [
+            "    \"node_modules/@changmen/venue-browser\": {",
+            "      \"resolved\": \"client/packages/venue-browser\",",
+            "      \"link\": true",
+            "    },"
+          ]
+        },
+        {
+          "oldStart": 12915,
+          "oldCount": 0,
+          "newStart": 12929,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "        \"@changmen/venue-browser\": \"file:../../client/packages/venue-browser\","
+          ]
+        }
+      ]
+    }
+  ],
+  "added": [
+    {
+      "file": "client/packages/venue-browser/package.json",
+      "sha": "6416cc768c048346f349f0e6528f5e680a416a7a75fbe64012c46f28122c2b55"
+    }
+  ]
+}

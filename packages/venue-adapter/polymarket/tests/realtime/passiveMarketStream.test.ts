@@ -4,13 +4,13 @@ import { beforeEach, afterEach, expect, test, vi } from "vitest";
 import { observePmMarketStream } from "../../realtime/marketStream";
 import type { MarketStreamEvent } from "../../realtime/marketStreamProtocol";
 import { registerPolymarketQuoteAssets, onPolymarketMarketQuote, __testResetPolymarketMarketQuoteHub } from "../../quotes/marketQuoteHub";
-import { resetPmMarketWsSourceModeForTests } from "../../pmMarketWsMode";
+import { resetPmMarketWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
 import { resetPmRoutingPreferenceForTests, setPmRoutingPreference } from "../../pmRoutingPreference";
 import { resetOfficialFailStreakForTests } from "../../ws";
-import { resetPolymarketLiveQuoteTsForTests } from "../../pmTokenQuote";
+import { resetPolymarketLiveQuoteTsForTests } from "@changmen/venue-browser/polymarket/quotes/pmTokenQuote";
 import { OwnedWorkerFixture as WsBookShadowWorkerClient } from "../helpers/ownedBookFixtures";
 import type { ServiceMessage } from "../../realtime/orderBook/serviceProtocol";
-import { beginWsBookShadow } from "../../submission/preflight/optimized/wsBook/shadowObserver";
+import { beginWsBookShadow } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 import type { ShadowWorkerRequest, ShadowWorkerResponse } from "../../submission/preflight/optimized/wsBook/shadowWorkerProtocol";
 
 class Socket {

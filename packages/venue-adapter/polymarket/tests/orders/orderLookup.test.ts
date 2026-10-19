@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const api = vi.hoisted(() => ({ pmGetOrder: vi.fn(), pmGetOpenOrders: vi.fn() }));
-vi.mock("../../pmClientApi", () => api);
-import { fetchPolymarketOrderRow } from "../../orderStatus";
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => api);
+import { fetchPolymarketOrderRow } from "@changmen/venue-browser/polymarket/orders/facts/orderStatus";
 const trace = vi.hoisted(() => vi.fn());
-vi.mock("../../orderTrace", async original => ({ ...await original<typeof import("../../orderTrace")>(), tracePolymarketOrder: trace }));
+vi.mock("@changmen/venue-browser/polymarket/diagnostics/orderTrace", async original => ({ ...await original<typeof import("@changmen/venue-browser/polymarket/diagnostics/orderTrace")>(), tracePolymarketOrder: trace }));
 const account = { token: JSON.stringify({ address: "0x1", apiKey: "k", secret: "s", passphrase: "p" }) } as never;
 
 describe("PM exact order reconciliation", () => {

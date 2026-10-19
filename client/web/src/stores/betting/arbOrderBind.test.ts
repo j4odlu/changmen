@@ -1,4 +1,4 @@
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { bindArbLegOrder, bindArbOrderId, resolveArbBindOrderId } from "./arbOrderBind";

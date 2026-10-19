@@ -47,13 +47,13 @@ const MOCK_ONLY_DEEP = new Set([
 
 /** 运行时单点深 import（避免 registry barrel 拉起全平台 adapters） */
 const RUNTIME_DEEP = new Map([
+  // [changmen 扩展] 仅此迁移测试验证旧公共报价入口与新包共享状态。
+  ["runtime/venueBrowserAccountRuntimeCompatibility.test.ts", new Set(["polymarket/pmArbPriceBufferMode"])],
   // [changmen 扩展] 轻量已保存偏好入口与仅动态加载的影子消费者；不开放整个深路径目录。
   ["runtime/pmDynamicWsPreflight.ts", new Set(["polymarket/pmFokPreflightMode"])],
   ["runtime/pmDynamicWsPreflight.test.ts", new Set(["polymarket/pmFokPreflightMode"])],
   ["components/user/tabs/PmBookSettings.vue", new Set(["polymarket/pmFokPreflightMode"])],
   ["components/user/tabs/UserDiagExtensionsTab.test.ts", new Set(["polymarket/pmFokPreflightMode"])],
-  ["runtime/pmDynamicWsShadowWorker.ts", new Set(["polymarket/wsBookShadow", "polymarket/orderBook"])],
-  ["runtime/pmDynamicWsShadowWorker.test.ts", new Set(["polymarket/wsBookShadow", "polymarket/orderBook"])],
   ["runtime/pmMarketData.ts", new Set(["polymarket/orderBookSource"])],
   ["runtime/pmMarketData.test.ts", new Set(["polymarket/orderBookSource"])],
   // [changmen 扩展] 公共套利按 PM 单腿模式懒加载 GTC；兼容桥只封装原单身份。

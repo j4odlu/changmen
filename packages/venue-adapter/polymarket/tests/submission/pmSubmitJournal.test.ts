@@ -1,11 +1,11 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { clearPmSubmitJournalForTests, finishPmSubmitAttempt, guardedPmSubmit,
-  pmAccountSubmitAttempts, pmSubmitScope, PmSubmitUnknownError } from "../../pmSubmitJournal";
-import { preparePolymarketOrderClientRuntime } from "../../pmOrderClientCache";
-import { resolveApiCreds } from "../../l2Auth";
+  pmAccountSubmitAttempts, pmSubmitScope, PmSubmitUnknownError } from "@changmen/venue-browser/polymarket/submission/recovery/pmSubmitJournal";
+import { preparePolymarketOrderClientRuntime } from "@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache";
+import { resolveApiCreds } from "@changmen/venue-browser/polymarket/auth/l2Auth";
 const owner = vi.hoisted(() => ({ userId: 1 as unknown }));
-vi.mock("../../../shared/webBridge", () => ({ useUserStore: () => owner }));
+vi.mock("@changmen/venue-browser/shared/webBridge", () => ({ useUserStore: () => owner }));
 
 const config = { walletAddress: "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf",
   privateKey: `0x${"0".repeat(63)}1`, signatureType: 3,

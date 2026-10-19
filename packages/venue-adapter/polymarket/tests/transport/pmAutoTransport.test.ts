@@ -4,13 +4,13 @@ import {
   markPmTransportManualOverride,
   resetPmTransportManualOverrideForTests,
   syncPmHttpModeWithMarketWs,
-} from "../../pmAutoTransport";
+} from "@changmen/venue-browser/polymarket/transport/pmAutoTransport";
 import { resetPmRoutingPreferenceForTests, setPmRoutingPreference } from "../../pmRoutingPreference";
-import { resetPmMarketWsSourceModeForTests, getPmMarketWsSourceMode, setPmMarketWsSourceMode } from "../../pmMarketWsMode";
-import { resetPmUserWsSourceModeForTests, getPmUserWsSourceMode } from "../../pmUserWsMode";
-import { setPmHttpModeForTests, resolvePmHttpMode, setPmHttpMode } from "../../pmTransportMode";
-import * as reachability from "../../pmOfficialReachability";
-import { getPmOrderSubmitMode, resolvePmOrderSubmitHttpMode, setPmOrderSubmitMode } from "../../pmOrderSubmitMode";
+import { resetPmMarketWsSourceModeForTests, getPmMarketWsSourceMode, setPmMarketWsSourceMode } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
+import { resetPmUserWsSourceModeForTests, getPmUserWsSourceMode } from "@changmen/venue-browser/polymarket/pmUserWsMode";
+import { setPmHttpModeForTests, resolvePmHttpMode, setPmHttpMode } from "@changmen/venue-browser/polymarket/pmTransportMode";
+import * as reachability from "@changmen/venue-browser/polymarket/transport/pmOfficialReachability";
+import { getPmOrderSubmitMode, resolvePmOrderSubmitHttpMode, setPmOrderSubmitMode } from "@changmen/venue-browser/polymarket/pmOrderSubmitMode";
 
 vi.mock("@changmen/client-core/chrome-plugin/bridge", () => ({
   probeGamebetExtension: vi.fn(async () => null),

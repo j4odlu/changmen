@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const getTrades = vi.hoisted(() => vi.fn());
-vi.mock("../../pmClientApi", () => ({ pmGetTrades: getTrades }));
-import { fetchPolymarketConfirmedTradeForOrder } from "../../orders";
-import { interpretPolymarketOrderRow, applyPolymarketBuyTimeoutPolicy, applyPolymarketSettlementToResult } from "../../orderStatus";
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({ pmGetTrades: getTrades }));
+import { fetchPolymarketConfirmedTradeForOrder } from "@changmen/venue-browser/polymarket/orders/history/orders";
+import { interpretPolymarketOrderRow, applyPolymarketBuyTimeoutPolicy, applyPolymarketSettlementToResult } from "@changmen/venue-browser/polymarket/orders/facts/orderStatus";
 import { BetResult } from "@changmen/client-core/models/betResult";
-import { polymarketFailedBuyTradeRow } from "../../tradeFailure";
+import { polymarketFailedBuyTradeRow } from "@changmen/venue-browser/polymarket/orders/facts/tradeFailure";
 
 const account = { provider: "Polymarket", accountId: 1, token: "{}" } as never;
 const failed = { id: "trade-1", taker_order_id: "order-1", side: "BUY", status: "FAILED", size: "10" };

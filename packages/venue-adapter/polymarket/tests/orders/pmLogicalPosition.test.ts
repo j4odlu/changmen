@@ -5,7 +5,7 @@ import {
   resolveBuyStakeUsdc,
   resolvePmRemainingShares,
   venueOrderFromOrderRow,
-} from "../../pmLogicalPosition";
+} from "@changmen/venue-browser/polymarket/orders/positions/pmLogicalPosition";
 
 describe("pmLogicalPosition", () => {
   const baseRow = {

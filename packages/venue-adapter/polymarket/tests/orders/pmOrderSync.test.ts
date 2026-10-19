@@ -8,7 +8,7 @@ import {
   PM_ORDER_FULL_LOOKBACK_MS,
   resetPolymarketOrderSyncForTest,
   resolvePolymarketTradeLookbackMs,
-} from "../../pmOrderSync";
+} from "@changmen/venue-browser/polymarket/orders/history/pmOrderSync";
 
 describe("pmOrderSync", () => {
   beforeEach(() => {

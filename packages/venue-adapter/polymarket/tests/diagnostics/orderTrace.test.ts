@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 const saveUserLog = vi.hoisted(() => vi.fn(async (_message: string, _data?: unknown) => {}));
 vi.mock("@changmen/client-core/bridge/clientApi", () => ({ saveUserLog }));
-import { tracePolymarketOrder, tracePolymarketWsMessage, polymarketReadErrorDetails } from "../../orderTrace";
+import { tracePolymarketOrder, tracePolymarketWsMessage, polymarketReadErrorDetails } from "@changmen/venue-browser/polymarket/diagnostics/orderTrace";
 
 afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
 describe("PM order timeline", () => {

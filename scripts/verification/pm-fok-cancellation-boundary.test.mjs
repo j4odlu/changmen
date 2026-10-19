@@ -1,7 +1,9 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import fs from "node:fs";
 import { expect, it } from "vitest";
 import { restorePmFokCancellationSource, verifyPmFokCancellationContract } from "./pm-fok-cancellation-boundary.mjs";
-const read = file => fs.readFileSync(file, "utf8");
+const readBeforeExecution = file => fs.readFileSync(file, "utf8");
+const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 it("accepts only the precise authorized cancellation changes", () => {
   expect(() => verifyPmFokCancellationContract(read)).not.toThrow();
 });

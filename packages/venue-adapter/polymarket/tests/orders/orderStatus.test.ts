@@ -14,8 +14,8 @@ import {
   isPolymarketPostFillConfirmed,
   isPolymarketDelayLookupPending,
   isPolymarketRestingNoFill,
-} from "../../orderStatus";
-import { settlePolymarketDelayedOrder } from "../../orderSettlement";
+} from "@changmen/venue-browser/polymarket/orders/facts/orderStatus";
+import { settlePolymarketDelayedOrder } from "@changmen/venue-browser/polymarket/fok/orderSettlement";
 import { BetResult } from "@changmen/client-core/models/betResult";
 
 const fetchPolymarketConfirmedTradeForOrder = vi.fn();
@@ -46,12 +46,12 @@ describe("BUY timeout policy rollback", () => {
   });
 });
 
-vi.mock("../../orders", () => ({
+vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", () => ({
   fetchPolymarketConfirmedTradeForOrder: (...args: unknown[]) =>
     fetchPolymarketConfirmedTradeForOrder(...args),
 }));
 
-vi.mock("../../userWs", () => ({
+vi.mock("@changmen/venue-browser/polymarket/realtime/userWs", () => ({
   readPolymarketOrderTradeIds: vi.fn(() => []),
   observePolymarketOrderWatch: vi.fn(() => () => {}),
   awaitPolymarketOrderWatch: (...args: unknown[]) => awaitPolymarketOrderWatch(...args),

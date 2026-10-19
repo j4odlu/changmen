@@ -44,10 +44,10 @@ try{
  assert(!fs.existsSync(path.join(fixture,'server')));
  assert(!fs.existsSync(path.join(fixture,'packages/client-core')));
  assert(!fs.existsSync(path.join(fixture,'packages/arb-core')));
- for(const name of ['client-core','arb-core','pm-market-data-browser'])
+ for(const name of ['client-core','arb-core','pm-market-data-browser','venue-browser'])
   assert.equal(fs.realpathSync(path.join(fixture,'node_modules/@changmen',name)),fs.realpathSync(path.join(fixture,'client/packages',name)));
  assert(fs.existsSync(path.join(fixture,'client/packages/venue-browser/pm-book-source.ts')));
- assert(!fs.existsSync(path.join(fixture,'client/packages/venue-browser/package.json')));
+ assert(fs.existsSync(path.join(fixture,'client/packages/venue-browser/package.json')));
  Object.assign(report,{passed:true,serverAbsent:true,legacyClientPackageDirectoriesAbsent:true,packageLockUnchanged:true});
  save();console.log(JSON.stringify({passed:true,workspaces:closure.workspaceDirectories.length,sourceDirectories:closure.sourceDirectories.length,serverAbsent:true}));
 }finally{

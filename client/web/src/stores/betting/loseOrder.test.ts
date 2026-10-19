@@ -1,7 +1,7 @@
 import type { ViewMatch } from "@/models/match";
 import type { PlatformId } from "@/types/esport";
 import type { MakeupOddsBandPrefs } from "@/types/extensionPrefs";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { LoseOrder } from "@/models/loseOrder";
@@ -128,11 +128,11 @@ vi.mock("@changmen/venue-adapter/shared/rejectWait", () => ({
   venueRejectWaitBeforePoll: vi.fn(async () => {}),
 }));
 
-vi.mock("@changmen/venue-adapter/polymarket/orderSettlement", () => ({
+vi.mock("@changmen/venue-browser/polymarket/fok/orderSettlement", () => ({
   settlePolymarketDelayedOrder: (...args: unknown[]) => settlePolymarketDelayedOrder(...args),
 }));
 
-vi.mock("@changmen/venue-adapter/polymarket/settlementJob", () => ({
+vi.mock("@changmen/venue-browser/polymarket/fok/settlementJob", () => ({
   awaitPolymarketSettlementJob: vi.fn(async () => null),
   getPolymarketSettlementDelayCtx: vi.fn(() => null),
   clearPolymarketSettlementJob: vi.fn(),
@@ -140,7 +140,7 @@ vi.mock("@changmen/venue-adapter/polymarket/settlementJob", () => ({
   clearPolymarketSettlementJobs: vi.fn(),
 }));
 
-vi.mock("@changmen/venue-adapter/polymarket/marketDelay", () => ({
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/marketDelay", () => ({
   resolvePolymarketDelayedPollOpts: vi.fn(async () => ({
     initialDelayMs: 1,
     intervalMs: 1,

@@ -1,8 +1,10 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { describe, it } from "vitest";
 import { specializeFokSource } from "./fok-source-specialization.mjs";
+import { VENUE_BROWSER_STATE } from "./venue-browser-state.mjs";
 import { PM_FOK_RELOCATIONS, pmFokCompatibilitySource, readRelocatedPmFokSource, rebasePmFokImports } from "./pm-fok-source-relocation.mjs";
 
 describe("pM FOK relocation preserves the complete immutable source", () => {
@@ -18,7 +20,15 @@ describe("pM FOK relocation preserves the complete immutable source", () => {
     });
     it(`${file}: leaves an implementation change visible`, () => {
       const wrapper = pmFokCompatibilitySource(file);
-      const moved = fs.readFileSync(target, "utf8");
+      const moved = restoreVenueBrowserExecution(target, fs.readFileSync(target, "utf8"));
+      if (VENUE_BROWSER_STATE.rows.some(row => row.file === target)) {
+        assert.throws(() => readRelocatedPmFokSource(file, wrapper, () => `${moved}\nthrow new Error("changed execution");\n`), /exact state facade/);
+        return;
+      }
+      if (file === "packages/venue-adapter/polymarket/bet.ts") {
+        assert.throws(() => readRelocatedPmFokSource(file, wrapper, () => `${moved}\nthrow new Error("changed execution");\n`), /exact unified PM preflight increment/);
+        return;
+      }
       assert.notEqual(readRelocatedPmFokSource(file, wrapper, () => `${moved}\nthrow new Error("changed execution");\n`), readRelocatedPmFokSource(file, wrapper));
     });
     it(`${file}: rejects an alternative target`, () => {
@@ -27,7 +37,7 @@ describe("pM FOK relocation preserves the complete immutable source", () => {
   }
   it("keeps dependency changes visible instead of dropping all imports", () => {
     const file = "packages/venue-adapter/polymarket/bet.ts";
-    const moved = fs.readFileSync(PM_FOK_RELOCATIONS[file], "utf8");
+    const moved = restoreVenueBrowserExecution(PM_FOK_RELOCATIONS[file], fs.readFileSync(PM_FOK_RELOCATIONS[file], "utf8"));
     assert(moved.includes("from \"../pmClientApi\""));
     const wrapper = pmFokCompatibilitySource(file);
     assert.throws(() => readRelocatedPmFokSource(file, wrapper, () => moved.replace("from \"../pmClientApi\"", "from \"../otherApi\"")), /exact unified PM preflight increment/);

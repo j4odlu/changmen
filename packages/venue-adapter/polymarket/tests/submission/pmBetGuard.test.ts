@@ -1,10 +1,10 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { BetOption as BetOptionClass } from "@changmen/client-core/models/betOption";
-import { resolvePolymarketBetBlockReason } from "../../pmBetGuard";
-import { polymarketPluginGet } from "../../transport";
-import { clearPmGammaCacheForTests } from "../../pmSportGamma";
+import { resolvePolymarketBetBlockReason } from "@changmen/venue-browser/polymarket/submission/preflight/pmBetGuard";
+import { polymarketPluginGet } from "@changmen/venue-browser/polymarket/transport/transport";
+import { clearPmGammaCacheForTests } from "@changmen/venue-browser/polymarket/markets/pmSportGamma";
 
-vi.mock("../../transport", () => ({
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({
   polymarketPluginGet: vi.fn(),
 }));
 

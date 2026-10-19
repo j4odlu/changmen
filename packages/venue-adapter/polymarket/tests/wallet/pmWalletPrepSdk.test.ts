@@ -22,9 +22,9 @@ vi.mock("@polymarket/client/viem", () => ({
 import {
   resolvePmWalletPrepSdk,
   setPmWalletPrepSdkForTests,
-} from "../../pmWalletPrepSdk";
-import { preparePolymarketWalletUnified } from "../../walletPrepUnified";
-import { preparePolymarketWallet } from "../../relayer";
+} from "@changmen/venue-browser/polymarket/wallet/pmWalletPrepSdk";
+import { preparePolymarketWalletUnified } from "@changmen/venue-browser/polymarket/wallet/walletPrepUnified";
+import { preparePolymarketWallet } from "@changmen/venue-browser/polymarket/wallet/relayer";
 
 afterEach(() => {
   setPmWalletPrepSdkForTests(null);

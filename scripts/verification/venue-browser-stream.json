@@ -1,0 +1,163 @@
+{
+  "baseline": "3126c8de0462aaca96b96be432618fd852285755",
+  "changes": [
+    {
+      "file": "packages/venue-adapter/polymarket/realtime/marketStream.ts",
+      "beforeSha": "a9dc88cbd1e374e265bb857724a6ca1a5eb30ce26d12a681391a598fe990b7fb",
+      "afterSha": "6ca164e3bc398c23ee72476da5c5336da64394ed0383cf2aebd1a82816ce8709",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 36,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "import type { MarketStreamEvent, MarketStreamState } from \"./marketStreamProtocol\";",
+            "",
+            "// [changmen 扩展] No retained frames, timers, subscriptions or network handles.",
+            "let state: MarketStreamState = Object.freeze({ epoch: 0, source: \"official\", open: false });",
+            "let sequence = 0;",
+            "const observers = new Set<(event: MarketStreamEvent) => void>();",
+            "function emit(event: MarketStreamEvent): void {",
+            "  for (const observer of observers) {",
+            "    try { observer(event); } catch { observers.delete(observer); }",
+            "  }",
+            "}",
+            "export function observePmMarketStream(observer: (event: MarketStreamEvent) => void): () => void {",
+            "  if (observers.size >= 4) throw new Error(\"market observer capacity\");",
+            "  observers.add(observer);",
+            "  try { observer(Object.freeze({ type: \"state\", state })); } catch { observers.delete(observer); }",
+            "  return () => { observers.delete(observer); };",
+            "}",
+            "/** Producer hooks are observational: never call transport/quote code. */",
+            "export function notePmStreamConnecting(source: MarketStreamState[\"source\"]): number {",
+            "  state = Object.freeze({ epoch: state.epoch + 1, source, open: false }); sequence = 0;",
+            "  if (observers.size) emit(Object.freeze({ type: \"state\", state }));",
+            "  return state.epoch;",
+            "}",
+            "export function notePmStreamOpen(epoch: number, open: boolean): void {",
+            "  if (epoch !== state.epoch) return;",
+            "  state = Object.freeze({ ...state, open });",
+            "  if (observers.size) emit(Object.freeze({ type: \"state\", state }));",
+            "}",
+            "export function capturePmStreamTime(): number {",
+            "  return observers.size ? performance.timeOrigin + performance.now() : 0;",
+            "}",
+            "export function notePmStreamFrame(epoch: number, raw: string, wallAt: number, receivedAt: number): void {",
+            "  if (!observers.size || epoch !== state.epoch || !state.open || raw === \"PONG\") return;",
+            "  emit(Object.freeze({ type: \"frame\", epoch, sequence: ++sequence,",
+            "    receivedAt, wallAt, raw }));",
+            "}"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/polymarket/marketStream\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/realtime/ws.ts",
+      "beforeSha": "a22eceac2c230d33d515464f4aebf9bb0c6d7c0575a5bf48d71038948ca2a9f3",
+      "afterSha": "98025b9bf1e4f6ef2f4064eb01609f2e7ae0b01bdc4a7ca56fb9412dc3f1e8ee",
+      "patches": [
+        {
+          "oldStart": 2,
+          "oldCount": 1,
+          "newStart": 2,
+          "newCount": 1,
+          "before": [
+            "import { notePmStreamConnecting, notePmStreamOpen, notePmStreamFrame, capturePmStreamTime } from \"./marketStream\";"
+          ],
+          "after": [
+            "import { notePmStreamConnecting, notePmStreamOpen, notePmStreamFrame, capturePmStreamTime } from \"@changmen/venue-browser/polymarket/marketStream\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/realtime/orderBook/service.ts",
+      "beforeSha": "043152b6a5e1dfdc28f9cb5922b7f426b2f2dc115647011e9d733499349b99fc",
+      "afterSha": "535917b24d3c528a726d7a4d6bdbb9fb77bfb2f1f6a92faf35e862044e3ff84c",
+      "patches": [
+        {
+          "oldStart": 3,
+          "oldCount": 1,
+          "newStart": 3,
+          "newCount": 1,
+          "before": [
+            "import { observePmMarketStream } from \"../marketStream\";"
+          ],
+          "after": [
+            "import { observePmMarketStream } from \"@changmen/venue-browser/polymarket/marketStream\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-source-host.ts",
+      "beforeSha": "d642ea89052ebed8bb0bb6ed6b4584cc6db2b7fd1672cd3c53d07d8c259ccb4b",
+      "afterSha": "3efb21ee4082d02776f09ddc0a83219b5c0ec1003a70270aa5ad53a378d54579",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 1,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "import { observePmMarketStream } from \"../polymarket/realtime/marketStream\";"
+          ],
+          "after": [
+            "import { observePmMarketStream } from \"@changmen/venue-browser/polymarket/marketStream\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/package.json",
+      "beforeSha": "eb47aeaf7bd2f9c43c281bfc4056c23f8f30ac7af250d1373618ba2c52d9db6c",
+      "afterSha": "9339a3764cdfbe49e9d1fcf769b5f819ac04b6668677c305c903243a5b072769",
+      "patches": [
+        {
+          "oldStart": 28,
+          "oldCount": 1,
+          "newStart": 28,
+          "newCount": 2,
+          "before": [
+            "    \"./pm-book-diagnostics/marketData.worker\": \"./pm-book-diagnostics/marketData.worker.ts\""
+          ],
+          "after": [
+            "    \"./pm-book-diagnostics/marketData.worker\": \"./pm-book-diagnostics/marketData.worker.ts\",",
+            "    \"./polymarket/marketStream\": \"./polymarket/marketStream.ts\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/source-ownership-inputs.json",
+      "beforeSha": "1e8a26a4b518ee1ae85b6c81b394a5fea71fea2bca8d5e666afa5f91d374c4e5",
+      "afterSha": "c2c9946672512772b3821c39ab35482c9b8fbf43fa9e8e5c087106b0ff301be7",
+      "patches": [
+        {
+          "oldStart": 589,
+          "oldCount": 0,
+          "newStart": 590,
+          "newCount": 5,
+          "before": [],
+          "after": [
+            "    },",
+            "    {",
+            "      \"file\": \"packages/venue-adapter/polymarket/realtime/marketStream.ts\",",
+            "      \"canonical\": \"client/packages/venue-browser/polymarket/marketStream.ts\",",
+            "      \"spec\": \"@changmen/venue-browser/polymarket/marketStream\""
+          ]
+        }
+      ]
+    }
+  ],
+  "added": [
+    {
+      "file": "client/packages/venue-browser/polymarket/marketStream.ts",
+      "sha": "b95079a398f0830e5d5a0e1ee59630bb39ed18af5acf39e0cf9945beb2441568"
+    }
+  ]
+}

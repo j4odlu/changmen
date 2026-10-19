@@ -1,8 +1,8 @@
 import { beforeEach, afterEach, expect, test, vi } from "vitest";
-import { retainPolymarketAccountRuntimes, getPolymarketOrderClientRuntime, preparePolymarketAccountRuntimes, polymarketSigningGeneration, preparePolymarketOrderClientRuntime, clearPolymarketOrderClientCacheForTests, hasPolymarketOrderClientRuntime } from "../../pmOrderClientCache";
-import { resolveApiCreds } from "../../l2Auth";
-import { pmSignedOrderHash } from "../../pmSubmitJournal";
-import * as builderConfig from "../../builder";
+import { retainPolymarketAccountRuntimes, getPolymarketOrderClientRuntime, preparePolymarketAccountRuntimes, polymarketSigningGeneration, preparePolymarketOrderClientRuntime, clearPolymarketOrderClientCacheForTests, hasPolymarketOrderClientRuntime } from "@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache";
+import { resolveApiCreds } from "@changmen/venue-browser/polymarket/auth/l2Auth";
+import { pmSignedOrderHash } from "@changmen/venue-browser/polymarket/submission/recovery/pmSubmitJournal";
+import * as builderConfig from "@changmen/venue-browser/polymarket/submission/client/builder";
 
 const config = { walletAddress: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", privateKey: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
   apiCreds: { apiKey: "key", secret: "c2VjcmV0", passphrase: "pass" } };

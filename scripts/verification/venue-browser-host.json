@@ -1,0 +1,44 @@
+{
+  "baseline": "3126c8de0462aaca96b96be432618fd852285755",
+  "changes": [
+    {
+      "file": "client/packages/venue-browser/pm-book-source.ts",
+      "beforeSha": "bde479abc4db2a98c656f1cdd9a6b851f13660f5c87143f8c232b0e0d1b45314",
+      "afterSha": "79e04e8dfea2be7f5474a52337bf7d5597aac50f43efda7104387a665f3638a2",
+      "replacements": [
+        {
+          "from": "import { observePmMarketStream } from \"../../../packages/venue-adapter/polymarket/realtime/marketStream\";\nimport { getPolymarketQuoteConsumerAssetIds } from \"../../../packages/venue-adapter/polymarket/quotes/marketQuoteHub\";\nimport type { ReadonlyMarketSourcePort } from \"@changmen/pm-market-data-browser\";\n\n/** [changmen 扩展] Existing observations only; no Worker factory or subscription authority. */\nexport const pmOrderBookSource: ReadonlyMarketSourcePort = Object.freeze({\n  observe: observePmMarketStream,\n  subscribedAssets: () => getPolymarketQuoteConsumerAssetIds(\"esport\"),\n});\n",
+          "to": "import type { ReadonlyMarketSourcePort } from \"@changmen/pm-market-data-browser\";\n\n/** [changmen 扩展] Bind read-only host callbacks without observing or reading during creation. */\nexport function createReadonlyMarketSource(\n  observe: ReadonlyMarketSourcePort[\"observe\"],\n  subscribedAssets: ReadonlyMarketSourcePort[\"subscribedAssets\"],\n): ReadonlyMarketSourcePort {\n  return Object.freeze({ observe, subscribedAssets });\n}\n"
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-source.ts",
+      "beforeSha": "c02dddea119ff7da2b6f15863799c5a2cb52ce5a8e064ae4223f9418405483eb",
+      "afterSha": "16e11cb4fda505c3536ae4dbf13f17590ad5c52a54cfc4f745259f8ca2d5a294",
+      "replacements": [
+        {
+          "from": "export * from \"../../../client/packages/venue-browser/pm-book-source\";\n",
+          "to": "export * from \"./pm-book-source-host\";\n"
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/source-ownership-inputs.json",
+      "beforeSha": "14925682ff085776c7c0749527a6e4b4c72ca476e0d1d5c2d8451b7160551a8f",
+      "afterSha": "8ac5e1e2f99bad63e9a8ec02725c5de7797ff1866bf362b791fbe3244d236337",
+      "replacements": [
+        {
+          "from": "\"canonical\": \"client/packages/venue-browser/pm-book-source.ts\",\n      \"spec\": \"../../../client/packages/venue-browser/pm-book-source\"",
+          "to": "\"canonical\": \"packages/venue-adapter/browser/pm-book-source-host.ts\",\n      \"spec\": \"./pm-book-source-host\""
+        }
+      ]
+    }
+  ],
+  "added": [
+    {
+      "file": "packages/venue-adapter/browser/pm-book-source-host.ts",
+      "sha": "8ef4d770b63927ebe8a7338c3d0cae20f0c6466a16bdfda1aefd5fc1515f980e"
+    }
+  ]
+}

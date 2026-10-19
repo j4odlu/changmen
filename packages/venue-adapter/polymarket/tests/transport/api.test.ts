@@ -6,11 +6,11 @@ import {
   polymarketMarketSubscribeMessage,
   polymarketUserSubscribeMessage,
   polymarketUserSubscribeMoreMessage,
-} from "../../api";
+} from "@changmen/venue-browser/polymarket/api";
 
 describe("Polymarket API (quote endpoints / WS messages)", () => {
   test("does not export list discovery helpers (VPS collector owns discovery)", async () => {
-    const mod = await import("../../api");
+    const mod = await import("@changmen/venue-browser/polymarket/api");
     expect("fetchPolymarketEsportsMarkets" in mod).toBe(false);
     expect("fetchPolymarketMarkets" in mod).toBe(false);
     expect("fetchBatchBuyPrices" in mod).toBe(false);

@@ -1,3 +1,4 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 使用当前完整迁移源码与不可变 Git 来源；不写回生产文件。
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -24,8 +25,9 @@ describe("default freeze verifies exact full relocation instead of an exemption"
   }
   it("rejects a redirected relative dependency", () => {
     const file = FROZEN_PM_RELOCATIONS["packages/venue-adapter/polymarket/bet.ts"];
-    expect(read(file)).toContain('from "../pmClientApi"');
-    expect(() => certifyEsportRelocations({ ...options, readSource: path => path === file ? read(path).replace('from "../pmClientApi"', 'from "../gtc/client"') : read(path) })).toThrow(/exact unified PM preflight increment|original implementation unchanged outside optimized increments/);
+    const previous=restoreVenueBrowserExecution(file,read(file));
+    expect(previous).toContain('from "../pmClientApi"');
+    expect(() => certifyEsportRelocations({ ...options, readSource: path => path === file ? previous.replace('from "../pmClientApi"', 'from "../gtc/client"') : read(path) })).toThrow(/exact unified PM preflight increment|original implementation unchanged outside optimized increments/);
   });
   it("rejects a changed manifest and changed immutable source", () => {
     expect(() => certifyEsportRelocations({ ...options, manifestText: JSON.stringify({ paths: [] }) })).toThrow("original freeze manifest unchanged");
@@ -60,7 +62,7 @@ it("real default freeze CLI passes certified relocation without a flag", () => {
 for (const file of ["packages/venue-adapter/polymarket/bet.ts", "packages/venue-adapter/polymarket/fok/bet.ts", "packages/venue-adapter/polymarket/orders/history/orders.ts"]) {
   it(`real default CLI rejects added actions in ${file}`, () => {
     const result = cli({ file, change: 'source => source + "\\nvoid unexpectedTradingAction();\\n"' });
-    expect(result.status).toBe(1); expect(result.stderr).toMatch(/compatibility entry|complete implementation and dependencies unchanged|exact reviewed settlement implementation|original implementation unchanged outside optimized increments/);
+    expect(result.status).toBe(1); expect(result.stderr).toMatch(/compatibility entry|complete implementation and dependencies unchanged|exact reviewed settlement implementation|original implementation unchanged outside optimized increments|exact captured FOK mode isolation/);
   }, 30_000);
 }
 it("real default CLI detects a new untracked frozen implementation", () => {

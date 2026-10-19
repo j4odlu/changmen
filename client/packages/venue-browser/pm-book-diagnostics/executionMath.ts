@@ -1,12 +1,12 @@
 // [changmen 扩展] Diagnostic-only mirror. Exact original function bodies are regression-checked;
 // original FOK code is untouched. No HTTP, orders, options mutation or global preference writes.
-import type { PolymarketOrderOptions } from "../../../../packages/venue-adapter/polymarket/fok/preflight";
+import type { PolymarketOrderOptions } from "../polymarket/pmOrderOptions";
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
-import { pmBuyOrderShares } from "../../../../packages/venue-adapter/polymarket/submission/preflight/pmBuyOrderShares";
-import { isValidClobPrice } from "../../../../packages/venue-adapter/polymarket/pmDetection";
-import { PolymarketPriceAboveDetectionError } from "../../../../packages/venue-adapter/polymarket/pmTokenQuote";
-import { isPolymarketPriceOnTick, alignPolymarketPriceToTick, type PolymarketTickSize as TickSize } from "../../../../packages/venue-adapter/polymarket/pmTickPrice";
-import { pmFokDepthBufferNeedUsdc as depthNeed, pmFokFillPriceDepthUsdc } from "../../../../packages/venue-adapter/polymarket/pmFokDepthBufferMode";
+import { pmBuyOrderShares } from "../polymarket/pmBuyOrderShares";
+import { isValidClobPrice } from "../polymarket/pmPriceValidity";
+import { PolymarketPriceAboveDetectionError } from "../polymarket/pmPriceError";
+import { isPolymarketPriceOnTick, alignPolymarketPriceToTick, type PolymarketTickSize as TickSize } from "../polymarket/pmTickPrice";
+import { pmFokDepthBufferNeedUsdc as depthNeed, pmFokFillPriceDepthUsdc } from "../polymarket/pmFokDepthBufferMode";
 export interface SimulationInput {
   tokenId: string; detectionOdds: number; apiBetMoney: number; maxPrice: number;
   depth: { enabled: boolean; multiplier: number };

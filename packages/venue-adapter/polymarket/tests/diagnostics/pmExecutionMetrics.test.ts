@@ -6,10 +6,10 @@ import {
   recordPmExecutionMetric,
   recordPmQuoteToFoMetric,
   measurePmExecution,
-} from "../../pmExecutionMetrics";
-import { resetPmMarketWsSourceModeForTests } from "../../pmMarketWsMode";
-import { setPmHttpModeForTests } from "../../pmTransportMode";
-import { setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "../../pmOrderSubmitMode";
+} from "@changmen/venue-browser/polymarket/pmExecutionMetrics";
+import { resetPmMarketWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
+import { setPmHttpModeForTests } from "@changmen/venue-browser/polymarket/pmTransportMode";
+import { setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "@changmen/venue-browser/polymarket/pmOrderSubmitMode";
 
 describe("pmExecutionMetrics", () => {
   test("summarizes frozen FOK modes separately without assigning untagged samples", () => {

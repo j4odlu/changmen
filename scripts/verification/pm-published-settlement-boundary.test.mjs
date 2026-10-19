@@ -1,3 +1,4 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 已发布 PM 改动保留、精确还原及越界负向；不执行数据库/交易/Git 写入。
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -9,7 +10,8 @@ import { deployedSource, immutableBaselines, verifyPhase2Module } from './orders
 import { restorePmOrderBetLabelSource } from './pm-order-bet-label-boundary.mjs';
 const previous = '5eb63ba7f49156a4a98a1357a0888e1dcc0e9924';
 const normal = text => text.replaceAll('\r\n', '\n');
-const read = file => normal(fs.readFileSync(file, 'utf8'));
+const readBeforeExecution = file => normal(fs.readFileSync(file, 'utf8'));
+const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 const cache = new Map();
 const source = (base, file) => {
   const key = `${base}:${file}`;

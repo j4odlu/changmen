@@ -13,7 +13,7 @@ import * as observation from "@/services/orderObservation";
 
 const mocks = vi.hoisted(() => ({ vaultProvider: vi.fn(), sharedCheck: vi.fn(), sharedPlace: vi.fn(), delay: vi.fn(), sound: vi.fn(), publish: vi.fn(), gtcCheck: vi.fn(), stake: vi.fn((_account: unknown, amount: number) => amount), betting: vi.fn(), check: vi.fn(), post: vi.fn(), user: { isLoggedIn: true, userId: "u1" }, notify: vi.fn(() => ({ close: vi.fn() })) }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ checkBetting: mocks.sharedCheck, betting: mocks.sharedPlace }) }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ checkGtcBuy: mocks.gtcCheck }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ checkGtcBuy: mocks.gtcCheck }));
 vi.mock("@/services/orderObservationTransport", () => ({ uploadObservationBatch: mocks.post }));
 vi.mock("@/runtime/providers", () => ({ getProvider: () => ({ checkBet: mocks.check, betting: mocks.betting }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => mocks.user }));

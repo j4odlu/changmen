@@ -8,7 +8,7 @@ import { backendProcesses } from "./verify-backend-processes.mjs";
 import { readInstallWorkspaces, declaredInstallClosure } from "../verification/component-install-inputs.mjs";
 
 export const forbiddenBackendPackages = ["@changmen/web", "@changmen/chrome-extension", "@changmen/venue-adapter",
-  "@changmen/client-core", "@changmen/pm-market-data-browser", "vue", "pinia"];
+  "@changmen/client-core", "@changmen/pm-market-data-browser", "@changmen/venue-browser", "vue", "pinia"];
 const safeRelative = value => typeof value === "string" && value.length > 0 && !path.isAbsolute(value)
   && !value.includes("\\") && !value.includes(":") && !value.split("/").some(part => !part || part === "." || part === "..");
 
@@ -50,6 +50,20 @@ export function backendInstallProfile(root, { processes = backendProcesses, pack
 export function assertBackendInstalledLinks(profile, links) {
   assert.deepEqual([...links].sort(), profile.workspaces.map(name => name.slice("@changmen/".length)).sort(),
     "Installed workspace links must exactly cover the eight-process closure");
+}
+
+// Package-root resolution can fail for an installed package with only subpath exports.
+// Check its directory in every selected workspace's Node lookup paths instead; never import it.
+export function assertBackendBrowserPackagesAbsent(root, profile) {
+  for (const directory of profile.workspaceDirectories) {
+    const require = createRequire(path.resolve(root, directory, "package.json"));
+    for (const name of forbiddenBackendPackages) {
+      for (const lookup of require.resolve.paths(name) || []) {
+        const target = path.join(lookup, name);
+        assert(!fs.existsSync(target), `Browser package ${name} is installed for ${directory}: ${target}`);
+      }
+    }
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

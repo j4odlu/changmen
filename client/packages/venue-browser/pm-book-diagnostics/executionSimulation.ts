@@ -2,11 +2,11 @@ import { bookAgeFailure, withinAge, DYNAMIC_BOOK_AGES } from "./freshnessPolicy"
 import type { FullBookView } from "@changmen/pm-market-data-browser/bookStore";
 import type { BookLease } from "@changmen/pm-market-data-browser/service";
 import type { BookMetadata } from "./bookMetadata";
-import type { PolymarketOrderOptions } from "../../../../packages/venue-adapter/polymarket/fok/preflight";
+import type { PolymarketOrderOptions } from "../polymarket/pmOrderOptions";
 import { simulateExecutableBuy, type SimulationInput } from "./executionMath";
 import { observerClock } from "./shadowWorkerProtocol";
-import { currentPmTick } from "../../../../packages/venue-adapter/polymarket/pmTickState";
-import { normalizePolymarketTickSize } from "../../../../packages/venue-adapter/polymarket/pmTickPrice";
+import { currentPmTick } from "../polymarket/pmTickState";
+import { normalizePolymarketTickSize } from "../polymarket/pmTickPrice";
 
 export interface ExecutionMetadata extends BookMetadata { asset: string; bookGeneration: number; assetGeneration: number; clockAt: number }
 export interface ExecutionSimulation {

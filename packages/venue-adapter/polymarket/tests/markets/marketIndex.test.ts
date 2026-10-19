@@ -3,8 +3,8 @@ import { describe, expect, test } from "vitest";
 import {
   applyPolymarketMarketIndex,
   isPolymarketMarketIndex,
-} from "../../marketIndex";
-import { lookupPolymarketOrderBetLabel } from "../../orders";
+} from "@changmen/venue-browser/polymarket/markets/marketIndex";
+import { lookupPolymarketOrderBetLabel } from "@changmen/venue-browser/polymarket/orders/history/orders";
 
 describe("polymarket marketIndex", () => {
   test("isPolymarketMarketIndex", () => {

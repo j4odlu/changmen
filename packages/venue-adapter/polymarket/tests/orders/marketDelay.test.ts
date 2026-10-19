@@ -5,7 +5,7 @@ import {
   buildPolymarketDelayedPollOpts,
   buildPolymarketWatchTimeoutMs,
   parsePolymarketClobMarketDelay,
-} from "../../marketDelay";
+} from "@changmen/venue-browser/polymarket/orders/confirmation/marketDelay";
 
 describe("parsePolymarketClobMarketDelay", () => {
   it("reads official sd / itode from CLOB market row", () => {

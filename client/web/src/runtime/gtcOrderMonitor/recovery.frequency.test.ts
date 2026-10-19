@@ -22,7 +22,7 @@ vi.mock("@/api/client", () => ({ post: mock.post, getAuthSessionVersion: () => "
 } }));
 vi.mock("@/orderModes/gtc/executionState", () => ({ captureGtcSession: () => () => mock.session, knownGtcRevisions: () => Object.fromEntries(mock.records.map(row => [row.id, row.revision])), applyRecoveredGtcRecords: () => 0, financialOrders: () => mock.evidence!.rows(mock.orders), gtcProgress: mock, settlement: { rows: (rows: OrderRow[]) => mock.evidence!.rows(rows) } }));
 vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ fetchOrders: mock.refresh, orderDate: "2026-10-14" }) }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ resolveGtcFillFee: () => 0 }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ resolveGtcFillFee: () => 0 }));
 const id = (n: number) => `${n.toString(16).padStart(8, "0")}-1111-1111-1111-111111111111`;
 function record(n: number): GtcExecution {
   const row = createGtcExecution(id(n), "owner", "wallet", "maker", { playerId: 1, otherPlayerId: 2, otherProvider: "RAY", orderHash: `buy${n}`, shares: "10" } as GtcPlan, 0);

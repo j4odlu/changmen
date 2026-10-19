@@ -1,5 +1,6 @@
+import { validatePmPriceQuote } from "@changmen/venue-browser/polymarket/priceQuote";
 import type { BetOption } from "@changmen/client-core/models/betOption";
-import { getPmArbPriceBufferPrefs, resolvePmDisplayQuote, validatePmPriceQuote,
+import { getPmArbPriceBufferPrefs, resolvePmDisplayQuote,
   type PmArbPriceBufferPrefs } from "@changmen/venue-adapter/polymarket";
 import { useOddsStore } from "@/stores/oddsStore";
 

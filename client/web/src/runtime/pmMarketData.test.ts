@@ -8,7 +8,7 @@ vi.mock("@changmen/venue-adapter/polymarket", () => ({ getPmMarketWsSourceMode: 
 vi.mock("@changmen/pm-market-data-browser", () => ({ PmOrderBookService: class {
   constructor(ports: unknown) { return io.create(ports); }
 } }));
-vi.mock("@changmen/venue-adapter/polymarket/orderBookSource", () => ({ pmOrderBookSource: { observe: vi.fn(), subscribedAssets: () => [] } }));
+vi.mock("@changmen/venue-browser/pm-book-source-host", () => ({ pmOrderBookSource: { observe: vi.fn(), subscribedAssets: () => [] } }));
 vi.mock("./pmDynamicWsShadowWorker", () => ({ startPmDynamicWsShadowWorker: io.start }));
 let owner: ReturnType<typeof startPmMarketData> | undefined;
 beforeEach(() => {

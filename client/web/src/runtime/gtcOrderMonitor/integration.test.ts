@@ -1,6 +1,6 @@
 /** [changmen 扩展] 原有账号查询结果供各原单消费；PM 模式恢复不增加 RAY 请求。 */
 import type { GtcCommand, GtcExecution, GtcPlan } from "@changmen/shared/pm_gtc";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import type { OrderRow } from "@/types/order";
 import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { createPinia, setActivePinia } from "pinia";
@@ -35,7 +35,7 @@ vi.mock("@/orderModes/gtc/ordersApi", () => ({ loadGtcMonitorOrders: vi.fn().moc
 vi.mock("@/orderModes/gtc/api", () => ({ listGtc: async () => [...mocks.records.values()], commandGtc: async (row: GtcExecution, command: GtcCommand) => {
   const next = applyGtcCommand(JSON.parse(JSON.stringify(row)), command, Date.now()); mocks.records.set(next.id, next); return next;
 } }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ readGtcTradeHistory: vi.fn().mockResolvedValue({ trades: [], complete: true }), readGtcFacts: mocks.pmRead }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ readGtcTradeHistory: vi.fn().mockResolvedValue({ trades: [], complete: true }), readGtcFacts: mocks.pmRead }));
 vi.mock("@changmen/venue-adapter/polymarket", () => ({ observePolymarketOrderWatch: () => () => {} }));
 
 function execution(id: string, accountId = 2) {

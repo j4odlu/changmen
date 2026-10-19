@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   clearPmGammaCacheForTests, fetchGammaEventById, fetchGammaMarketByTokenId,
   fetchClobMarketByConditionId,
-} from "../../pmSportGamma";
-import { PM_GAMMA_CACHE_MS } from "../../markets/pmGammaCache";
-import { polymarketPluginGet } from "../../transport";
+} from "@changmen/venue-browser/polymarket/markets/pmSportGamma";
+import { PM_GAMMA_CACHE_MS } from "@changmen/venue-browser/polymarket/markets/pmGammaCache";
+import { polymarketPluginGet } from "@changmen/venue-browser/polymarket/transport/transport";
 
-vi.mock("../../transport", () => ({ polymarketPluginGet: vi.fn() }));
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({ polymarketPluginGet: vi.fn() }));
 const now = 1_800_000_000_000;
 beforeEach(() => {
   clearPmGammaCacheForTests();

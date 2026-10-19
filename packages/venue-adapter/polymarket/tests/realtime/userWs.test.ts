@@ -9,9 +9,9 @@ import {
   warmPolymarketUserWs,
   readPolymarketOrderWatch,
   observePolymarketOrderWatch,
-} from "../../userWs";
-import { POLYMARKET_USER_WS } from "../../api";
-import { resetPmUserWsSourceModeForTests } from "../../pmUserWsMode";
+} from "@changmen/venue-browser/polymarket/realtime/userWs";
+import { POLYMARKET_USER_WS } from "@changmen/venue-browser/polymarket/api";
+import { resetPmUserWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmUserWsMode";
 const diagnosticLog = vi.hoisted(() => vi.fn(async (_title: string, _data?: unknown) => {}));
 vi.mock("@changmen/client-core/bridge/clientApi", () => ({ saveUserLog: diagnosticLog }));
 

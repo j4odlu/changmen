@@ -1,4 +1,4 @@
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetResult } from "@changmen/client-core/models/betResult";
@@ -25,22 +25,22 @@ vi.mock("@/stores/account/pmRejectOrder", () => ({
   persistPolymarketExecutionReject: (...args: unknown[]) => persistPolymarketExecutionReject(...args),
 }));
 
-vi.mock("@changmen/venue-adapter/polymarket/orderSettlement", () => ({
+vi.mock("@changmen/venue-browser/polymarket/fok/orderSettlement", () => ({
   settlePolymarketDelayedOrder: (...args: unknown[]) => settlePolymarketDelayedOrder(...args),
 }));
 
-vi.mock("@changmen/venue-adapter/polymarket/settlementJob", () => ({
+vi.mock("@changmen/venue-browser/polymarket/fok/settlementJob", () => ({
   awaitPolymarketSettlementJob: (...args: unknown[]) => awaitPolymarketSettlementJob(...args),
   getPolymarketSettlementDelayCtx: (...args: unknown[]) => getPolymarketSettlementDelayCtx(...args),
   clearPolymarketSettlementJob: vi.fn(),
 }));
 
-vi.mock("@changmen/venue-adapter/polymarket/marketDelay", () => ({
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/marketDelay", () => ({
   resolvePolymarketDelayedPollOpts: (...args: unknown[]) => resolvePolymarketDelayedPollOpts(...args),
 }));
 
-vi.mock("@changmen/venue-adapter/polymarket/orders", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@changmen/venue-adapter/polymarket/orders")>();
+vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@changmen/venue-browser/polymarket/orders/history/orders")>();
   return {
     ...actual,
     fetchPolymarketConfirmedTradeForOrder: (...args: unknown[]) =>

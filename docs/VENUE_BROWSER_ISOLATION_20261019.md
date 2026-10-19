@@ -23,7 +23,7 @@
 
 本机日志位于 output/venue-browser-isolation-20261019/，独立安装详细报告分别位于 output/frontend-install-isolation/、output/backend-install-isolation/。最初独立包方案的构建循环和兼容入口数量断言失败保留在 *-initial.log，最终结果以复验记录为准。
 
-本轮未提交、推送或部署，未连接或迁移生产数据库。原有架构文档、matcher README 及其他用户计划/审计文档不纳入本轮改动。
+首批已提交并推送至 master：3126c8de0462aaca96b96be432618fd852285755。Actions 39252959950 完成前后端部署。没有执行数据库迁移；原有架构文档、matcher README 及其他用户计划/审计文档未纳入提交。
 
 ## 最终验证结果
 
@@ -38,3 +38,11 @@
 | 后端独立安装 | 完整和定向安装、路由编译、原生 loader、registry 与瘦包验证通过；没有复制新浏览器目录 |
 
 不同测试组有交叉，不累加为单一总数。前端构建仍有既有大 chunk 及静态/动态导入重叠提示；安装实验关闭生命周期脚本，不代替 Linux 生产环境验收。
+
+## 上线验收
+
+2026-10-19 20:43（Asia/Taipei）完成首批上线只读验收。前后端版本均为 3126c8de，8 个预期 PM2 服务在线且指向当前发布目录，RDS 连接及内嵌 matcher 正常，restartRequired=false。124 秒观察窗口内 PID 和重启计数保持不变，无新增模块加载、语法或引用错误；主 backend 错误日志无新增字节。采集日志仍有 cycle-ok 输出和赛事未匹配提示。
+
+公开首页、入口 JS、CSS 与服务器发布文件的 SHA-256 一致。第一次本机直连下载 JS 超时，改用本机 HTTP 代理后完成全部内容校验。数据库结构指纹保持 2ccbe256dd7501978d2207668ff94fc46d98787074978f4460f9efbc8b8e6158。证据位于 output/venue-browser-isolation-20261019/release-verdict.json 及相关 release-*.json。本次未执行登录后的 UI 操作或真实下单验收。
+
+后续纯工具拆分是本地独立批次，见 [VENUE_BROWSER_LEAVES_20261019.md](./VENUE_BROWSER_LEAVES_20261019.md)，不包含在上述线上版本中。

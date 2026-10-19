@@ -5,7 +5,7 @@ import {
   isPolymarketTradeHashResolved,
   needsPolymarketTradeHashEnrichment,
   withPolymarketTransactionHashes,
-} from "../../pmTradeHashes";
+} from "@changmen/venue-browser/polymarket/orders/facts/pmTradeHashes";
 
 describe("needsPolymarketTradeHashEnrichment", () => {
   it("true when tradeIDs present and hashes empty", () => {

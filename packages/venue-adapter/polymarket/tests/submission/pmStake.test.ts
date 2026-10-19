@@ -6,7 +6,7 @@ import {
   polymarketUsdtFromCny,
   resolvePolymarketVenueStakeUsdc,
   round2Usdc,
-} from "../../pmStake";
+} from "@changmen/venue-browser/polymarket/submission/preflight/pmStake";
 
 describe("pmStake", () => {
   const pmAccount = new PlatformAccount({

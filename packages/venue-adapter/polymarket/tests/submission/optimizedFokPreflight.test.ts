@@ -2,14 +2,14 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 // Frozen previous guard retained for the before/after replay and Gamma cache regressions.
 import { resolveOptimizedFokBlockReason as check } from "./fixtures/pmBeforeFastGuard";
-import { resolvePolymarketBetBlockReason as legacy } from "../../submission/preflight/legacy/pmBetGuard";
-import { resolvePolymarketBetBlockReason as gtc } from "../../pmBetGuard";
-import { clearPmGammaCacheForTests, fetchGammaEventById } from "../../pmSportGamma";
-import { getPmGammaEvidence } from "../../markets/pmGammaCache";
-import { polymarketPluginGet } from "../../transport";
-import { prewarmPmSportForCandidate } from "../../markets/pmSportPrewarm";
-import { clearPmExecutionMetrics, getPmExecutionMetrics } from "../../pmExecutionMetrics";
-vi.mock("../../transport", () => ({ polymarketPluginGet: vi.fn() }));
+import { resolvePolymarketBetBlockReason as legacy } from "@changmen/venue-browser/polymarket/submission/preflight/legacy/pmBetGuard";
+import { resolvePolymarketBetBlockReason as gtc } from "@changmen/venue-browser/polymarket/submission/preflight/pmBetGuard";
+import { clearPmGammaCacheForTests, fetchGammaEventById } from "@changmen/venue-browser/polymarket/markets/pmSportGamma";
+import { getPmGammaEvidence } from "@changmen/venue-browser/polymarket/markets/pmGammaCache";
+import { polymarketPluginGet } from "@changmen/venue-browser/polymarket/transport/transport";
+import { prewarmPmSportForCandidate } from "@changmen/venue-browser/polymarket/markets/pmSportPrewarm";
+import { clearPmExecutionMetrics, getPmExecutionMetrics } from "@changmen/venue-browser/polymarket/pmExecutionMetrics";
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({ polymarketPluginGet: vi.fn() }));
 const get = vi.mocked(polymarketPluginGet);
 const option = () => ({ type: "Polymarket", itemId: "token", betId: "condition", bet: { round: 0 },
   match: { providers: { Polymarket: "event" }, startAt: Date.now() - 60_000,

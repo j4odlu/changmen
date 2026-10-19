@@ -1,8 +1,9 @@
 import { computed, watch } from "vue";
-import { isPmTickBufferActive, onPmTickBufferModeChange, onPmPricePolicyChange, onPmTickBufferChange,
-  requestPmTickBufferTick, setPmTickBufferLoader, clearPmTickBufferMetadata,
-  retainPmTickBufferRequests, fetchPmTickBufferTickSize, isValidClobPrice,
+import { isPmTickBufferActive, onPmTickBufferModeChange, onPmPricePolicyChange,
+  fetchPmTickBufferTickSize, isValidClobPrice,
   getPolymarketPmSportBlockReason } from "@changmen/venue-adapter/polymarket";
+import { onPmTickBufferChange, requestPmTickBufferTick, setPmTickBufferLoader,
+  clearPmTickBufferMetadata, retainPmTickBufferRequests } from "@changmen/venue-browser/polymarket/pmTickMetadata";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useMatchStore } from "@/stores/matchStore";
 

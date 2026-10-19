@@ -1,14 +1,14 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { settlePolymarketDelayedOrder } from "../../orderSettlement";
+import { settlePolymarketDelayedOrder } from "@changmen/venue-browser/polymarket/fok/orderSettlement";
 import {
   awaitPolymarketSettlementJob,
   clearPolymarketSettlementJobs,
   getPolymarketSettlementDelayCtx,
   startPolymarketSettlementJob,
-} from "../../settlementJob";
+} from "@changmen/venue-browser/polymarket/fok/settlementJob";
 
-vi.mock("../../orderSettlement", () => ({
+vi.mock("@changmen/venue-browser/polymarket/fok/orderSettlement", () => ({
   settlePolymarketDelayedOrder: vi.fn(),
 }));
 

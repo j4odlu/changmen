@@ -8,7 +8,7 @@ import {
   pmFokFillPriceDepthUsdc,
   resetPmFokDepthBufferPrefsForTests,
   setPmFokDepthBufferPrefs,
-} from "../../pmFokDepthBufferMode";
+} from "@changmen/venue-browser/polymarket/pmFokDepthBufferMode";
 
 describe("pmFokDepthBufferMode", () => {
   afterEach(() => {

@@ -2,7 +2,7 @@ import { beforeEach, afterEach, test, expect, vi } from "vitest";
 import { PassiveBookFeed } from "../../realtime/orderBook/passiveBookFeed";
 import type { MarketStreamEvent } from "../../realtime/marketStreamProtocol";
 import { OwnedRuntimeFixture as WsBookShadowRuntime } from "../helpers/ownedBookFixtures";
-import { beginWsBookShadow } from "../../submission/preflight/optimized/wsBook/shadowObserver";
+import { beginWsBookShadow } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 
 const book = (id = "1", size = "20") => ({ event_type: "book", asset_id: id, market: "m", timestamp: String(Date.now()),
   hash: "hash", bids: [{ price: "0.4", size: "3" }], asks: [{ price: "0.5", size }] });

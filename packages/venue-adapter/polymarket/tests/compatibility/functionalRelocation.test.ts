@@ -150,7 +150,7 @@ describe("pM functional relocation", () => {
     vi.useFakeTimers();
     const legacy = await import("../../pmHeartbeat");
     const moved = await import("../../orders/confirmation/pmHeartbeat");
-    const api = await import("../../pmClientApi");
+    const api = await import("@changmen/venue-browser/polymarket/orders/pmClientApi");
     const post = vi.spyOn(api, "pmPostHeartbeat").mockResolvedValue({ heartbeat_id: "mock-only" });
     const account = { accountId: 7002, provider: "Polymarket" } as PlatformAccount;
     const before = vi.getTimerCount();

@@ -8,15 +8,15 @@ import {
   resetOfficialFailStreakForTests,
   startPolymarketMarketWs,
 } from "../../ws";
-import { POLYMARKET_MARKET_WS } from "../../api";
-import { getPmMarketWsSourceMode, resetPmMarketWsSourceModeForTests } from "../../pmMarketWsMode";
-import { resetPmUserWsSourceModeForTests } from "../../pmUserWsMode";
-import { markPmTransportManualOverride, resetPmTransportManualOverrideForTests } from "../../pmAutoTransport";
+import { POLYMARKET_MARKET_WS } from "@changmen/venue-browser/polymarket/api";
+import { getPmMarketWsSourceMode, resetPmMarketWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
+import { resetPmUserWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmUserWsMode";
+import { markPmTransportManualOverride, resetPmTransportManualOverrideForTests } from "@changmen/venue-browser/polymarket/transport/pmAutoTransport";
 import { resetPmRoutingPreferenceForTests, setPmRoutingPreference } from "../../pmRoutingPreference";
 import { setChangmenAuthTokenGetter } from "../../../shared/changmenAuthToken";
-import { PM_MARKET_WS_FORWARD_PATH } from "../../wsConfig";
-import { listVenueWsStatuses } from "../../../shared/venueWsStatus";
-import { onPmTickReconnect } from "../../pmTickState";
+import { PM_MARKET_WS_FORWARD_PATH } from "@changmen/venue-browser/polymarket/wsConfig";
+import { listVenueWsStatuses } from "@changmen/venue-browser/shared/venueWsStatus";
+import { onPmTickReconnect } from "@changmen/venue-browser/polymarket/pmTickState";
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];

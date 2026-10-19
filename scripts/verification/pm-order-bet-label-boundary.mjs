@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { restorePmStoredSettlementSource } from "./pm-stored-settlement-boundary.mjs";
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 
 // [changmen 扩展] 用户要求订单盘口名来自 PM；只登记名称来源及补元数据查询，原执行/财务基线保留。
 export const PM_ORDER_LABEL_HELPER = "packages/venue-adapter/polymarket/markets/orderBetLabel.ts";
@@ -16,7 +17,7 @@ function replace(source, before, after = "", count = 1) {
 export function restorePmOrderBetLabelSource(file, input, read) {
   let source = restorePmStoredSettlementSource(file, normalize(input));
   if (file === "client/web/src/orderModes/gtc/arbLeg.ts" && source.includes("lookupPolymarketOrderBetLabel")) {
-    assert.equal(createHash("sha256").update(normalize(read(PM_ORDER_LABEL_HELPER))).digest("hex"), helperSha, "exact PM order label helper");
+    assert.equal(createHash("sha256").update(restoreVenueBrowserExecution(PM_ORDER_LABEL_HELPER, normalize(read(PM_ORDER_LABEL_HELPER)))).digest("hex"), helperSha, "exact PM order label helper");
     source = replace(source, 'import { lookupPolymarketOrderBetLabel } from "@changmen/venue-adapter/polymarket/orders";\n');
     return replace(source, 'bet: lookupPolymarketOrderBetLabel(pm.betId, pm.itemId) || "盘口待核实", item: pm.target', "bet: params.bet.getBetName(), item: pm.target");
   }
@@ -25,7 +26,7 @@ export function restorePmOrderBetLabelSource(file, input, read) {
   const changed = source.includes("orderBetLabel") || source.includes('if (type === "child_moneyline" || !type)');
   if (!changed)
     return source;
-  assert.equal(createHash("sha256").update(normalize(read(PM_ORDER_LABEL_HELPER))).digest("hex"), helperSha, "exact PM order label helper");
+  assert.equal(createHash("sha256").update(restoreVenueBrowserExecution(PM_ORDER_LABEL_HELPER, normalize(read(PM_ORDER_LABEL_HELPER)))).digest("hex"), helperSha, "exact PM order label helper");
   if (file.endsWith("/marketIndex.ts")) {
     source = replace(source, 'import { rememberPolymarketIndexBetLabel } from "./orderBetLabel";\n');
     return replace(source, "    rememberPolymarketIndexBetLabel(entry);\n");

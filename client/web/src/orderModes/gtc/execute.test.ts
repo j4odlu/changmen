@@ -9,7 +9,7 @@ import { showRejectDetectionTip } from "@/stores/betting/autoBet/rejectWait";
 import { executeGtc } from "@/test/executeOriginalPair";
 import { prepareGtcLegExecution } from "./arbLeg";
 import { markGtcSuccess } from "./successMarkers";
-import * as pmOrders from "@changmen/venue-adapter/polymarket/orders";
+import * as pmOrders from "@changmen/venue-browser/polymarket/orders/history/orders";
 
 const notices = vi.hoisted(() => ({ notify: vi.fn(), close: vi.fn() }));
 vi.mock("element-plus", () => ({ ElNotification: notices.notify }));
@@ -37,7 +37,7 @@ vi.mock("@/stores/betting/autoBet/rejectWait", () => ({ maxLegRejectWaitSec: vi.
 vi.mock("@/stores/betting/activeBetRunSync", () => ({ syncActiveBetPhase: vi.fn(), syncActiveBetFail: vi.fn(), syncActiveBetLeg: vi.fn(), syncActiveBetPlaceResults: vi.fn(), syncActiveBetLegSettleResult: vi.fn(), scheduleActiveBetRunRemoval: vi.fn() }));
 vi.mock("./otherOrders", () => ({ settleGtcOtherLeg: mocks.settle }));
 vi.mock("@/stores/betting/successMarkers", () => ({ markSuccessfulBet: mocks.count }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ prepareGtcBuy: mocks.prepare, pmSubmitMaker: () => "maker" }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ prepareGtcBuy: mocks.prepare, pmSubmitMaker: () => "maker" }));
 vi.mock("./api", () => ({ createGtc: mocks.create }));
 vi.mock("./runtime", () => ({
   startGtcRuntime: vi.fn(), beginGtcInitialDispatch: () => vi.fn(),

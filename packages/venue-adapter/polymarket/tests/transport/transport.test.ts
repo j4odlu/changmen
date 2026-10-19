@@ -6,12 +6,12 @@ vi.mock("@changmen/client-core/shared/platformHttp", () => ({
   parseJsonLoose: (text: string) => JSON.parse(text),
 }));
 
-vi.mock("../../pmTransportMode", () => ({
+vi.mock("@changmen/venue-browser/polymarket/pmTransportMode", () => ({
   resolvePmHttpMode: vi.fn(() => "vps"),
 }));
 
 import { changmenPmHttpRequest } from "@changmen/client-core/shared/platformHttp";
-import { polymarketL2Get, polymarketPluginGet, polymarketPluginPost } from "../../transport";
+import { polymarketL2Get, polymarketPluginGet, polymarketPluginPost } from "@changmen/venue-browser/polymarket/transport/transport";
 
 describe("polymarket transport", () => {
   beforeEach(() => {

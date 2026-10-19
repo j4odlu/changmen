@@ -29,11 +29,13 @@ const IMPORT_RES = [
   new RegExp(`vi\\.mock\\s*\\(\\s*["']${PKG}/([^"']+)["']`, "g"),
 ];
 
-/** 始终导出的 Node loader 路径（非 TS import 扫描） */
+/** 固定公共入口；旧浏览器入口不能因应用改用新包而被扫描器删除。 */
 const FIXED_EXPORTS = {
   ".": "./registry/index.ts",
   "./loader/adapter_paths.js": "./loader/adapter_paths.mjs",
   "./loader/adapter_paths.mjs": "./loader/adapter_paths.mjs",
+  "./polymarket/orderBook": "./polymarket/orderBook.ts",
+  "./polymarket/wsBookShadow": "./polymarket/wsBookShadow.ts",
 };
 
 function walk(dir, out = []) {

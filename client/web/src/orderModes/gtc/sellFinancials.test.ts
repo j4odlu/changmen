@@ -1,9 +1,9 @@
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { reconcileGtcSellFinancials } from "./sellFinancials";
 const mocks = vi.hoisted(() => ({ cash: vi.fn() }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ readGtcSellCash: mocks.cash }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ readGtcSellCash: mocks.cash }));
 const account = { provider: "Polymarket", accountId: 292 } as PlatformAccount;
 const rows = () => [{ orderId: "buy", provider: "Polymarket", pmSide: "buy", pmSellProceeds: 2.4, pmRealizedPnlUsdc: 0.36, money: 2,
   positionEvents: { sells: [{ id: "sell", at: 1, shares: 4, proceeds: 2.4 }] } },

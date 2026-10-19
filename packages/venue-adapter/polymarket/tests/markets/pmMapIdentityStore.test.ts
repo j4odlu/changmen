@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from "vitest";
-import { lookupPmMapIdentityByToken, replacePmMapOutcomesFromIndex, lookupPmMapOutcomeByToken } from "../../pmMapOutcomeStore";
+import { lookupPmMapIdentityByToken, replacePmMapOutcomesFromIndex, lookupPmMapOutcomeByToken } from "@changmen/venue-browser/polymarket/markets/pmMapOutcomeStore";
 
 afterEach(() => replacePmMapOutcomesFromIndex(null));
 

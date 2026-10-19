@@ -45,6 +45,9 @@ for (const [loaderSymbol, args] of [
   ["backendRequire", ["@changmen/venue-adapter/registry/adapters"]],
   ["backendRequire", ["@changmen/pm-market-data-browser"]],
   ["backendRequire", ["@changmen/pm-market-data-browser/service"]],
+  ["backendRequire", ["@changmen/venue-browser"]],
+  ["backendRequire", ["@changmen/venue-browser/pm-book-source"]],
+  ["backendRequire", ["@changmen/venue-browser/polymarket/pmTickState"]],
   ["adapterRequire", ["..", "pm-market-data-browser", "src/index.ts"]],
   ["adapterRequire", ["..", "..", "client", "packages", "pm-market-data-browser", "src/index.ts"]],
   ["requirePlatform", ["Polymarket", "../../pm-market-data-browser/src/index.ts"]],
@@ -117,7 +120,7 @@ it("PM imports have declarations and a Vue host peer while inherited uncertainty
   expect(report.undeclaredRuntimeDependencies).toEqual([]);
   expect(report.externalDependencies.find(fact => fact.owner === "client/packages/pm-market-data-browser/package.json"))
     .toMatchObject({ spec: "@polymarket/client/actions", typeOnly: true, declaredDevelopment: true });
-  expect(report.externalDependencies.find(fact => fact.name === "vue" && fact.owner === "packages/venue-adapter/package.json"))
+  expect(report.externalDependencies.find(fact => fact.name === "vue" && fact.owner === "client/packages/venue-browser/package.json"))
     .toMatchObject({ declaration: "peerDependencies", peerOptional: true, declarationRange: "^3.5.13" });
   expect(report.sharedExternalPackages).toEqual(expect.arrayContaining(["@polymarket/client", "@polymarket/clob-client-v2", "viem"]));
   expect(report.safeToNarrowPublishScope).toBe(false);
@@ -162,6 +165,7 @@ it("rejects private Vue runtimes, missing/required peers and a host range mismat
 for (const [name, file, addition, marker] of [
   ["computed PM input", "packages/venue-adapter/polymarket/orderBook.ts", "void import(globalThis.unreviewedInput);", "[pm-dynamic-input]"],
   ["shared Node loader reaching PM browser", "server/backend/core/account/balance_provider.js", 'requirePlatform("Polymarket", "orderBook.ts");', "[pm-node-browser-loader]"],
+  ["shared Node loader reaching the browser workspace", "server/backend/core/account/balance_provider.js", 'import { backendRequire } from "../shared/adapter_paths.js";backendRequire("@changmen/venue-browser/pm-book-source");', "[pm-node-browser-loader]"],
   ["shared loader facade changing without review", "packages/venue-adapter/loader/adapter_paths.mjs", "void 0;", "AssertionError [ERR_ASSERTION]:"],
   ["namespace loader with unknown argument", "server/backend/core/esport-api/store.js", 'import * as boundLoader from "../shared/adapter_paths.js";boundLoader.backendRequire(globalThis.unknownModule);', "[pm-loader-unknown]"],
   ["namespace loader reaching PM browser", "server/backend/core/esport-api/store.js", 'import * as boundLoader from "../shared/adapter_paths.js";boundLoader.requirePlatform("Polymarket","orderBook.ts");', "[pm-node-browser-loader]"],
@@ -172,10 +176,19 @@ for (const [name, file, addition, marker] of [
     fs.readFileSync=function(file,...args){const value=read.call(this,file,...args);
       return typeof value === "string" && String(file).replaceAll("\\\\","/").endsWith(${JSON.stringify(`/${file}`)})
         ? value+${JSON.stringify(`\n${addition}\n`)} : value;};
+    if (${JSON.stringify(marker)} === "[pm-dynamic-input]") {
+      const {inspectPmDependencies}=await import("./scripts/verification/pm-dependency-audit.mjs");
+      const report=inspectPmDependencies(process.cwd());
+      if(!report.violations.some(row=>row.rule==="pm-dynamic-input" && row.file===${JSON.stringify(file)}))throw Error("Missing computed-input rejection");
+      console.log(${JSON.stringify(`${marker} ${file}:`)});
+    }
     await import("./scripts/check-team-boundaries.mjs");`;
   const result = spawnSync(process.execPath, ["--input-type=module", "--eval", code], { cwd: root, encoding: "utf8", timeout: 35_000, maxBuffer: 2 * 1024 * 1024 });
   expect(result.status).toBe(1);
-  expect(result.stderr).toContain(`${marker} ${file}:`);
+  if (marker === "[pm-dynamic-input]") {
+    expect(result.stdout).toContain(`${marker} ${file}:`);
+    expect(result.stderr).toContain(`${file}: exact market hosts relocation`);
+  } else expect(result.stderr).toContain(`${marker} ${file}:`);
   if (marker.startsWith("AssertionError")) expect(result.stderr).toContain("exact Node facade");
 }, 40_000);
 it("actual boundary command accepts a reviewed preload request through a namespace with unchanged provenance", () => {
@@ -193,12 +206,17 @@ it("actual boundary command rejects removing a PM direct dependency even when it
   const root = fileURLToPath(new URL("../../", import.meta.url));
   const code = `import fs from "node:fs";const read=fs.readFileSync;
     fs.readFileSync=function(file,...args){const value=read.call(this,file,...args);
-      if(typeof value !== "string" || !String(file).replaceAll("\\\\","/").endsWith("/packages/venue-adapter/package.json")) return value;
+      if(typeof value !== "string" || !String(file).replaceAll("\\\\","/").endsWith("/client/packages/venue-browser/package.json")) return value;
       const pkg=JSON.parse(value);delete pkg.dependencies["@noble/hashes"];return JSON.stringify(pkg);};
+    const {installedPmDependency}=await import("./scripts/verification/pm-dependency-audit.mjs");
+    const dependency=installedPmDependency(process.cwd(),"client/packages/venue-browser/polymarket/auth/l2Auth.ts","@noble/hashes/hmac");
+    if(dependency.declaredRuntime || dependency.owner!=="client/packages/venue-browser/package.json" || !dependency.installedVersion)throw Error("Missing direct-dependency rejection");
+    console.log("[pm-direct-dependency] client/packages/venue-browser/package.json:");
     await import("./scripts/check-team-boundaries.mjs");`;
   const result = spawnSync(process.execPath, ["--input-type=module", "--eval", code], { cwd: root, encoding: "utf8", timeout: 35_000, maxBuffer: 2 * 1024 * 1024 });
   expect(result.status).toBe(1);
-  expect(result.stderr).toContain("[pm-direct-dependency] packages/venue-adapter/package.json:");
+  expect(result.stdout).toContain("[pm-direct-dependency] client/packages/venue-browser/package.json:");
+  expect(result.stderr).toContain("client/packages/venue-browser/package.json: exact market hosts relocation");
 }, 40_000);
 it("actual boundary command rejects removing a required real loader definition from the gate policy", () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));

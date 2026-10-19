@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ order: vi.fn(), trade: vi.fn(), cancel: vi.fn(), trace: vi.fn() }));
-vi.mock("../../orders", () => ({ fetchPolymarketConfirmedTradeForOrder: mocks.trade }));
-vi.mock("../../pmClientApi", () => ({ pmCancelOrder: mocks.cancel }));
-vi.mock("../../orderTrace", async original => ({ ...await original<typeof import("../../orderTrace")>(), tracePolymarketOrder: mocks.trace }));
-vi.mock("../../orderStatus", async (original) => ({
-  ...await original<typeof import("../../orderStatus")>(), fetchPolymarketOrderRow: mocks.order,
+vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", () => ({ fetchPolymarketConfirmedTradeForOrder: mocks.trade }));
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({ pmCancelOrder: mocks.cancel }));
+vi.mock("@changmen/venue-browser/polymarket/diagnostics/orderTrace", async original => ({ ...await original<typeof import("@changmen/venue-browser/polymarket/diagnostics/orderTrace")>(), tracePolymarketOrder: mocks.trace }));
+vi.mock("@changmen/venue-browser/polymarket/orders/facts/orderStatus", async (original) => ({
+  ...await original<typeof import("@changmen/venue-browser/polymarket/orders/facts/orderStatus")>(), fetchPolymarketOrderRow: mocks.order,
 }));
-import { settlePolymarketDelayedOrder } from "../../orderSettlement";
-import { registerPolymarketOrderWatch, stopAllPolymarketUserWs, readPolymarketOrderWatch } from "../../userWs";
-import { resetPmUserWsSourceModeForTests } from "../../pmUserWsMode";
+import { settlePolymarketDelayedOrder } from "@changmen/venue-browser/polymarket/fok/orderSettlement";
+import { registerPolymarketOrderWatch, stopAllPolymarketUserWs, readPolymarketOrderWatch } from "@changmen/venue-browser/polymarket/realtime/userWs";
+import { resetPmUserWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmUserWsMode";
 
 class Socket {
   static OPEN = 1;

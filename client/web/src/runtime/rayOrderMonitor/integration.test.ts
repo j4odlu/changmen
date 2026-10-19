@@ -1,5 +1,5 @@
 /** [changmen 扩展] 监控只更新客户端状态和补单交接，不保存订单或刷新列表。 */
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import type { OrderRow } from "@/types/order";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";

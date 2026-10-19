@@ -1,4 +1,4 @@
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import type { RayOrderContext } from "./types";
 import { describe, expect, it } from "vitest";
 import { matchRayVenueOrder } from "./match";

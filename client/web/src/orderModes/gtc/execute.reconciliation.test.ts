@@ -80,8 +80,8 @@ vi.mock("@changmen/client-core/shared/http", () => ({
   directPostJson: () => { throw new Error("Unexpected PM direct POST"); },
   directDeleteJson: () => { throw new Error("Unexpected PM direct DELETE"); },
 }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", async importOriginal => ({
-  ...await importOriginal<typeof import("@changmen/venue-adapter/polymarket/gtc")>(),
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", async importOriginal => ({
+  ...await importOriginal<typeof import("@changmen/venue-browser/polymarket/gtc/index")>(),
   pmSubmitMaker: () => "maker",
   prepareGtcBuy: async () => ({ shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", protocol: 2, negRisk: false, orderHash: "pm-original", route: "direct", prepareSubmit: async () => {}, validate() {}, submit: mocks.submit }),
 }));
@@ -103,7 +103,7 @@ async function finishAttempt(task: ReturnType<typeof executeGtc>) {
   return task;
 }
 beforeEach(async () => {
-  await import("@changmen/venue-adapter/polymarket/gtc");
+  await import("@changmen/venue-browser/polymarket/gtc/index");
   stopPmGtcMonitoring(); resetGtcState(); initializeGtcState("owner"); vi.useFakeTimers(); vi.setSystemTime(0); vi.clearAllMocks(); sessionStorage.clear();
   mocks.trace = []; mocks.orderMs = 100; mocks.historyMs = 200; mocks.remaining = 250; mocks.quantity = "10"; mocks.failHistory = false;
   mocks.accounts = [new PlatformAccount({ accountId: 1, provider: "Polymarket", playerName: "PM" }), new PlatformAccount({ accountId: 2, provider: "RAY", playerName: "RAY" })];

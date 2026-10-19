@@ -43,7 +43,8 @@ describe("fok relocation compatibility", () => {
     vi.useFakeTimers();
     const account = { accountId: 17, provider: "Polymarket" } as PlatformAccount;
     const payload = { outcome: "matched" as const, row: { id: "same-original", status: "matched" } };
-    const settle = vi.spyOn(legacySettlement, "settlePolymarketDelayedOrder").mockResolvedValue(payload);
+    const implementation = await import("@changmen/venue-browser/polymarket/fok/orderSettlement");
+    const settle = vi.spyOn(implementation, "settlePolymarketDelayedOrder").mockResolvedValue(payload);
     legacyJobs.startPolymarketSettlementJob(account, "same-original", { submittedAt: 1000 });
     movedJobs.startPolymarketSettlementJob(account, "same-original", { submittedAt: 2000 });
     expect(settle).toHaveBeenCalledTimes(1);

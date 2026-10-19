@@ -1,3 +1,4 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 用户授权的 FOK CANCELLATION 快速收尾；仅还原精确增量，固定基线不变。
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -19,6 +20,8 @@ export function restorePmFokCancellationSource(file, source, required = false) {
   return restored;
 }
 export function verifyPmFokCancellationContract(read) {
+  const actualRead = read;
+  read = file => restoreVenueBrowserExecution(file, actualRead(file));
   for (const [file, row] of Object.entries(registered.changes)) {
     const restored = restorePmFokCancellationSource(file, read(file), true);
     // bet.ts 的完整源码继续由既有预检/提交固定基线验证，不能固定到其它未提交改动。

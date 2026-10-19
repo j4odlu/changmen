@@ -1,4 +1,4 @@
-import { clearPmPublicRoutesForTests } from "../../pmPublicRoute";
+import { clearPmPublicRoutesForTests } from "@changmen/venue-browser/polymarket/transport/pmPublicRoute";
 import { a8PluginGet, a8PluginPost } from "@changmen/client-core/chrome-plugin/bridge";
 
 import { directGet, directPostJson } from "@changmen/client-core/shared/http";
@@ -7,10 +7,10 @@ import { changmenPmEsportCall, changmenPmHttpRequest } from "@changmen/client-co
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fetchPolymarketActivityV2 } from "../../pmActivityV2";
-import { fetchPmTickBufferTickSize } from "../../pmTickMetadata";
+import { fetchPolymarketActivityV2 } from "@changmen/venue-browser/polymarket/orders/history/pmActivityV2";
+import { fetchPmTickBufferTickSize } from "@changmen/venue-browser/polymarket/quotes/pmTickMetadata";
 
-import { resetPmMarketWsSourceModeForTests } from "../../pmMarketWsMode";
+import { resetPmMarketWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
 import {
   PM_GET_BOOK_DIRECT_TIMEOUT_MS,
   PM_PRIVATE_READ_DIRECT_TIMEOUT_MS,
@@ -18,11 +18,11 @@ import {
   pmEsportCall,
   pmTransportHttpGet,
   setPmGetBookDirectTimeoutMsForTests,
-} from "../../pmTransport";
-import { resolvePmHttpMode, setPmHttpModeForTests } from "../../pmTransportMode";
-import { getPmOrderSubmitMode, setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "../../pmOrderSubmitMode";
-import { browserSubmitTimestamp } from "../../pmBrowserSubmitClock";
-vi.mock("../../pmBrowserSubmitClock", () => ({ browserSubmitTimestamp: vi.fn(() => 123) }));
+} from "@changmen/venue-browser/polymarket/transport/pmTransport";
+import { resolvePmHttpMode, setPmHttpModeForTests } from "@changmen/venue-browser/polymarket/pmTransportMode";
+import { getPmOrderSubmitMode, setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "@changmen/venue-browser/polymarket/pmOrderSubmitMode";
+import { browserSubmitTimestamp } from "@changmen/venue-browser/polymarket/submission/client/pmBrowserSubmitClock";
+vi.mock("@changmen/venue-browser/polymarket/submission/client/pmBrowserSubmitClock", () => ({ browserSubmitTimestamp: vi.fn(() => 123) }));
 
 vi.mock("@changmen/client-core/shared/http", () => ({
 
@@ -54,7 +54,7 @@ vi.mock("@changmen/client-core/chrome-plugin/bridge", () => ({
 
 }));
 
-vi.mock("../../l2Auth", () => ({
+vi.mock("@changmen/venue-browser/polymarket/auth/l2Auth", () => ({
 
   buildL2HeadersFromAccount: vi.fn(async () => ({
 

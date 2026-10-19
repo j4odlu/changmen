@@ -1,5 +1,5 @@
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import type { OrderRow } from "@/types/order";
 import { resolvePmRemainingShares } from "@changmen/venue-adapter/polymarket";
 import { beforeEach, describe, expect, it } from "vitest";

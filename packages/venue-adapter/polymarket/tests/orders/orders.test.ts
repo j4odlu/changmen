@@ -18,9 +18,9 @@ import {
   resolvePolymarketSettlement,
   scalePolymarketVenueOrdersForDisplay,
   type PolymarketTradeRow,
-} from "../../orders";
-import { collectPolymarketUserAddresses } from "../../l2Auth";
-import { polymarketOrderContextFromMarket, type PolymarketRawMarket } from "../../parse";
+} from "@changmen/venue-browser/polymarket/orders/history/orders";
+import { collectPolymarketUserAddresses } from "@changmen/venue-browser/polymarket/auth/l2Auth";
+import { polymarketOrderContextFromMarket, type PolymarketRawMarket } from "@changmen/venue-browser/polymarket/markets/parse";
 
 describe("parsePolymarketMicroUsdc", () => {
   test("parses micro collateral strings", () => {

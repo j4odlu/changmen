@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../pmClientApi", () => ({
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({
   pmPostHeartbeat: vi.fn(),
 }));
 
-import { pmPostHeartbeat } from "../../pmClientApi";
+import { pmPostHeartbeat } from "@changmen/venue-browser/polymarket/orders/pmClientApi";
 import {
   ensurePolymarketHeartbeat,
   getPolymarketHeartbeatAccountIdsForTests,
   POLYMARKET_HEARTBEAT_INTERVAL_MS,
   stopAllPolymarketHeartbeats,
   stopPolymarketHeartbeat,
-} from "../../pmHeartbeat";
+} from "@changmen/venue-browser/polymarket/orders/confirmation/pmHeartbeat";
 
 describe("pmHeartbeat", () => {
   beforeEach(() => {

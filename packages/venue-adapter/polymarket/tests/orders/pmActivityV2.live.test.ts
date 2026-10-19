@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchPolymarketActivityV2 } from "../../pmActivityV2";
+import { fetchPolymarketActivityV2 } from "@changmen/venue-browser/polymarket/orders/history/pmActivityV2";
 
 // Opt-in read-only smoke against the public wallet in Polymarket's own docs.
 // No account credentials, orders, or database writes.
-vi.mock("../../transport", () => ({
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({
   polymarketPluginGet: async (url: string) => {
     const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!res.ok)

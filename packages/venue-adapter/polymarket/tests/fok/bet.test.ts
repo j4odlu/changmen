@@ -1,26 +1,26 @@
-import { setPmFokPreflightMode } from "../../submission/preflight/pmFokPreflightMode";
-import { notePmTickFrame, clearPmTickStateForTests } from "../../pmTickState";
-import { createPmTickBufferQuote, clearPmTickBufferMetadata, notePmTickBufferBook } from "../../pmTickBuffer";
+import { setPmFokPreflightMode } from "@changmen/venue-browser/polymarket/submission/preflight/pmFokPreflightMode";
+import { notePmTickFrame, clearPmTickStateForTests } from "@changmen/venue-browser/polymarket/pmTickState";
+import { createPmTickBufferQuote, clearPmTickBufferMetadata, notePmTickBufferBook } from "@changmen/venue-browser/polymarket/quotes/pmTickBuffer";
 import { transformPmPrice } from "../../priceQuote";
-import { pmBuyOrderShares } from "../../pmBuyOrderShares";
+import { pmBuyOrderShares } from "@changmen/venue-browser/polymarket/pmBuyOrderShares";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { isPolymarketFokBuyFilled, isPolymarketOrderAccepted, polymarketProvider } from "../../bet";
+import { isPolymarketFokBuyFilled, isPolymarketOrderAccepted, polymarketProvider } from "@changmen/venue-browser/polymarket/fok/bet";
 import {
   resetPmFokDepthBufferPrefsForTests,
   setPmFokDepthBufferPrefs,
-} from "../../pmFokDepthBufferMode";
-import { POLYMARKET_BUILDER_CODE_DEFAULT } from "../../builder";
-import { setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "../../pmOrderSubmitMode";
-import { POLYMARKET_CLOB_API } from "../../api";
-import { resetPolymarketOrderSyncForTest } from "../../pmOrderSync";
-import { clearPmExecutionMetrics, getPmExecutionMetrics } from "../../pmExecutionMetrics";
-import { preparePolymarketAccountRuntimes, clearPolymarketOrderClientCacheForTests } from "../../pmOrderClientCache";
-import { clearPmSubmitJournalForTests, guardedPmSubmit, pmAccountSubmitAttempts } from "../../pmSubmitJournal";
-import * as pmOrigin from "../../pmOrigin";
-import * as userWs from "../../userWs";
-import { clearPmGammaCacheForTests } from "../../pmSportGamma";
-import { checkGtcBuy, prepareManualGtcBuy } from "../../gtc/preparation";
+} from "@changmen/venue-browser/polymarket/pmFokDepthBufferMode";
+import { POLYMARKET_BUILDER_CODE_DEFAULT } from "@changmen/venue-browser/polymarket/submission/client/builder";
+import { setPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "@changmen/venue-browser/polymarket/pmOrderSubmitMode";
+import { POLYMARKET_CLOB_API } from "@changmen/venue-browser/polymarket/api";
+import { resetPolymarketOrderSyncForTest } from "@changmen/venue-browser/polymarket/orders/history/pmOrderSync";
+import { clearPmExecutionMetrics, getPmExecutionMetrics } from "@changmen/venue-browser/polymarket/pmExecutionMetrics";
+import { preparePolymarketAccountRuntimes, clearPolymarketOrderClientCacheForTests } from "@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache";
+import { clearPmSubmitJournalForTests, guardedPmSubmit, pmAccountSubmitAttempts } from "@changmen/venue-browser/polymarket/submission/recovery/pmSubmitJournal";
+import * as pmOrigin from "@changmen/venue-browser/polymarket/orders/positions/pmOrigin";
+import * as userWs from "@changmen/venue-browser/polymarket/realtime/userWs";
+import { clearPmGammaCacheForTests } from "@changmen/venue-browser/polymarket/markets/pmSportGamma";
+import { checkGtcBuy, prepareManualGtcBuy } from "@changmen/venue-browser/polymarket/gtc/preparation";
 
 const polymarketPluginGet = vi.hoisted(() => vi.fn());
 const polymarketPluginPost = vi.hoisted(() => vi.fn());
@@ -30,14 +30,14 @@ const pmSubmitOrder = vi.hoisted(() => vi.fn());
 const saveVenueOdds = vi.hoisted(() => vi.fn());
 const getVenueOddsEntry = vi.hoisted(() => vi.fn());
 
-vi.mock("../../transport", () => ({
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({
   polymarketPluginGet,
   polymarketPluginPost,
   polymarketL2Get: (account: PlatformAccount, url: string, l2Path: string) =>
     polymarketPluginGet(url, { account, l2Path }),
 }));
 
-vi.mock("../../pmClientApi", () => ({
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({
   pmGetBook,
   pmPrepareSubmit: vi.fn().mockResolvedValue(undefined),
   pmSubmitClockReady: () => true,

@@ -22,7 +22,7 @@ vi.mock("./api", () => ({ listGtc: mocks.list, commandGtc: mocks.command }));
 vi.mock("./ordersApi", () => ({ loadGtcMonitorOrders: vi.fn().mockResolvedValue([]), refreshGtcOrders: vi.fn().mockResolvedValue(undefined), saveOrders: vi.fn() }));
 vi.mock("./otherOrders", () => ({ readGtcOtherOrders: mocks.otherRead }));
 vi.mock("@/runtime/orderPolling/ray", () => ({ resetRayOrderPolling: vi.fn() }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ readGtcTradeHistory: vi.fn().mockResolvedValue({ trades: [], complete: true }), readGtcFacts: mocks.read, pmCancelOrder: mocks.cancel }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ readGtcTradeHistory: vi.fn().mockResolvedValue({ trades: [], complete: true }), readGtcFacts: mocks.read, pmCancelOrder: mocks.cancel }));
 vi.mock("@changmen/venue-adapter/polymarket", () => ({ observePolymarketOrderWatch: () => () => {} }));
 const hash = `0x${"a".repeat(64)}`;
 const plan = { playerId: 1, otherPlayerId: 2, shares: "10", tokenId: "token", orderHash: hash, betRowId: 2, target: "Home", otherTarget: "Away", otherOdds: 2, originalPmLeg: "A" } as GtcPlan;
@@ -63,7 +63,7 @@ describe("gTC independent progress and cancellation", () => {
     original.other = { state: "accepted", orderId: null, submittedAt: Date.now() - 1000, message: "当前余额:1499.63" };
     return original;
   }
-  function counterpartOrder(): import("@changmen/venue-adapter/contract").VenueOrder {
+  function counterpartOrder(): import("@changmen/client-core/contract").VenueOrder {
     return { provider: "RAY", orderId: "40764f62796e6acdb186", createAt: Date.now(), odds: 1.66, betMoney: 100, money: 0, reward: 0, status: "none" as const, game: "CS2", match: "FaZe - VS - NAVI Junior", bet: "map1 获胜者", item: "FaZe", venueMatchId: "38452903", venueItemId: "76482018", link: 1791627619164 };
   }
   it("an empty venue snapshot preserves acceptance and the next read can still identify the original", async () => {
@@ -123,7 +123,7 @@ describe("gTC independent progress and cancellation", () => {
     expect(mocks.mark).not.toHaveBeenCalled();
   });
   it("a slow PM query cannot block consuming original RAY results and never schedules RAY queries", async () => {
-    await import("@changmen/venue-adapter/polymarket/gtc");
+    await import("@changmen/venue-browser/polymarket/gtc/index");
     vi.useFakeTimers(); stopGtcRuntime();
     const slow = row(); slow.id = "slow-pm";
     const ray = mergeGtcFacts(counterpartRow(), { ...facts(), order: { ...facts().order, status: "CANCELED" } });

@@ -10,7 +10,7 @@ vi.mock("@changmen/client-core/bridge/clientApi", () => ({
   getCollectPlatform,
 }));
 
-vi.mock("./webBridge", () => ({
+vi.mock("@changmen/venue-browser/shared/webBridge", () => ({
   useAccountStore: () => accountState,
 }));
 

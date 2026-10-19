@@ -1,0 +1,78 @@
+{
+  "baseline": "3126c8de0462aaca96b96be432618fd852285755",
+  "rows": [
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/pmDetection.ts",
+      "canonical": "client/packages/venue-browser/polymarket/pmPriceValidity.ts",
+      "beforeSha": "0ea6a9f11bc66b110b8e470d61a97b166832ee6e2c966d3df436ca88471383b7",
+      "afterSha": "8cce54273654647cc0b677fcf68c5e5f50bdb17ad9e2069af5cb4903bb0e7469",
+      "canonicalSha": "60799fa1590e5ac78b01c5b1dd108ee7876c00b32ee0e49d4f84d1d298f1e1b5",
+      "prefix": "",
+      "fragment": "export function isValidClobPrice(value: number): boolean {\n  return Number.isFinite(value) && value > 0 && value < 1;\n}\n",
+      "replacement": "import { isValidClobPrice } from \"../../../../../client/packages/venue-browser/polymarket/pmPriceValidity\";\nexport { isValidClobPrice } from \"../../../../../client/packages/venue-browser/polymarket/pmPriceValidity\";\n"
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/pmTokenQuote.ts",
+      "canonical": "client/packages/venue-browser/polymarket/pmPriceError.ts",
+      "beforeSha": "8ff52db7da05a226343fece278e6f70f1c0858a5438969c694bd007dc646b312",
+      "afterSha": "d303a3c602b26cac7cacc44754900cd2f6c49af14be781000ab35ba710687a36",
+      "canonicalSha": "2a057e88e22e80384de16cf9c25dacc193379c538029ca15fa933e1680bc96de",
+      "prefix": "",
+      "fragment": "/** 预检/下单：book best ask 高于检测限价时抛出，便于 catch 回写 fo */\nexport class PolymarketPriceAboveDetectionError extends Error {\n  readonly bestAskPrice: number;\n  readonly detectionMaxPrice: number;\n\n  constructor(message: string, bestAskPrice: number, detectionMaxPrice: number) {\n    super(message);\n    this.name = \"PolymarketPriceAboveDetectionError\";\n    this.bestAskPrice = bestAskPrice;\n    this.detectionMaxPrice = detectionMaxPrice;\n  }\n}\n\nexport function isPolymarketPriceAboveDetectionError(\n  err: unknown,\n): err is PolymarketPriceAboveDetectionError {\n  return err instanceof PolymarketPriceAboveDetectionError;\n}\n",
+      "replacement": "import { PolymarketPriceAboveDetectionError } from \"../../../../client/packages/venue-browser/polymarket/pmPriceError\";\nexport { PolymarketPriceAboveDetectionError, isPolymarketPriceAboveDetectionError } from \"../../../../client/packages/venue-browser/polymarket/pmPriceError\";\n"
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/fok/preflight.ts",
+      "canonical": "client/packages/venue-browser/polymarket/pmOrderOptions.ts",
+      "beforeSha": "62789d0499c4d5b8128eeae2e271dc3a961730ba75ed287f68d5a494127797a9",
+      "afterSha": "9c3194e6fcacaecc86e11bc3f8aeb9af5688487d4827cd4f857e12097253e5e7",
+      "canonicalSha": "41f4d6744fb4bab588a3c26c1b6a2c9e79efc1b05c1b5948ab2f3a56298349dc",
+      "prefix": "import type { PolymarketTickSize as TickSize } from \"./pmTickPrice\";\n\n",
+      "fragment": "export interface PolymarketOrderOptions {\n  version: 2 | 3;\n  bookTimestamp: number;\n  tickSize: TickSize;\n  minOrderSize: number;\n  negRisk: boolean;\n  asks: Array<{ price: number; size: number }>;\n}\n",
+      "replacement": "import type { PolymarketOrderOptions } from \"../../../../client/packages/venue-browser/polymarket/pmOrderOptions\";\nexport type { PolymarketOrderOptions } from \"../../../../client/packages/venue-browser/polymarket/pmOrderOptions\";\n"
+    }
+  ],
+  "changes": [
+    {
+      "file": "client/packages/venue-browser/pm-book-diagnostics/executionMath.ts",
+      "beforeSha": "60060e4e4ebc4cc0a51d9e30114d78b8422fd7d442b87b099c037f34ac7df7b7",
+      "afterSha": "c7c66ac68a06042b076cade7de2fd9099712ca9226211269ae81cf019e21fcd0",
+      "replacements": [
+        {
+          "from": "\"../../../../packages/venue-adapter/polymarket/fok/preflight\"",
+          "to": "\"../polymarket/pmOrderOptions\""
+        },
+        {
+          "from": "\"../../../../packages/venue-adapter/polymarket/pmDetection\"",
+          "to": "\"../polymarket/pmPriceValidity\""
+        },
+        {
+          "from": "\"../../../../packages/venue-adapter/polymarket/pmTokenQuote\"",
+          "to": "\"../polymarket/pmPriceError\""
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/pm-book-diagnostics/executionSimulation.ts",
+      "beforeSha": "6f26f1eb6bb752948cdaf931951dee68ad7f47e391dbdfdb05eac6973239810f",
+      "afterSha": "60b8d5e22e27d0f03bf7f6b9f4fbf3a40c86c2d544c9e090cc3f90664ad6d796",
+      "replacements": [
+        {
+          "from": "\"../../../../packages/venue-adapter/polymarket/fok/preflight\"",
+          "to": "\"../polymarket/pmOrderOptions\""
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/pm-book-diagnostics/shadowWorkerClient.ts",
+      "beforeSha": "0c6a46a0aeceafeb7c024997d84dcd55fdd24b0ec5fba28d427716377c97444e",
+      "afterSha": "36cb01e94ef3d8c273d3bc67f8e64024daa10f6863684fe44c392c3140d08ff1",
+      "replacements": [
+        {
+          "from": "\"../../../../packages/venue-adapter/polymarket/fok/preflight\"",
+          "to": "\"../polymarket/pmOrderOptions\""
+        }
+      ]
+    }
+  ]
+}

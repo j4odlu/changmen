@@ -6,17 +6,17 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("@changmen/client-core/bridge/clientApi", () => ({ getCollectPlatform: state.getPlatform }));
 vi.mock("@changmen/client-core/bridge/oddsAccess", () => ({ saveVenueOdds: state.saveOdds, getVenueOddsEntry: () => null }));
-vi.mock("../../../shared/webBridge", () => ({
+vi.mock("@changmen/venue-browser/shared/webBridge", () => ({
   useCollectStore: () => ({ ready: true }), useMatchStore: () => ({ refreshOddsOnBets: state.refreshOdds }),
 }));
-vi.mock("../../marketQuoteHub", () => ({
+vi.mock("@changmen/venue-browser/polymarket/marketQuoteHub", () => ({
   onPolymarketMarketHubReady: () => () => {}, onPolymarketMarketQuote: () => () => {},
   registerPolymarketQuoteAssets: state.registerAssets, unregisterPolymarketQuoteConsumer: vi.fn(),
 }));
-vi.mock("../../pmTokenQuote", () => ({ saveTokenQuote: vi.fn() }));
+vi.mock("@changmen/venue-browser/polymarket/quotes/pmTokenQuote", () => ({ saveTokenQuote: vi.fn() }));
 
-import { startPolymarketCollector } from "../../collect";
-import { lookupPmMapOutcomeByToken, replacePmMapOutcomesFromIndex } from "../../pmMapOutcomeStore";
+import { startPolymarketCollector } from "@changmen/venue-browser/polymarket/markets/collect";
+import { lookupPmMapOutcomeByToken, replacePmMapOutcomesFromIndex } from "@changmen/venue-browser/polymarket/markets/pmMapOutcomeStore";
 
 const entry = { sourceMatchId: "e", marketId: "m", sourceBetId: "m", map: 2, homeTokenId: "h",
   awayTokenId: "a", homeName: "Home", awayName: "Away", homeOdds: 0, awayOdds: 0, status: "Locked" };

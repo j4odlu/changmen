@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { restoreNodePackageMetadata } from './node-package-relocation.mjs';
+import { restoreVenueBrowserExecution } from './venue-browser-execution.mjs';
 
 const normalize = text => text.replaceAll('\r\n', '\n');
 const sha = text => createHash('sha256').update(normalize(text)).digest('hex');
@@ -59,7 +60,7 @@ export function verifyClientPackageRelocation(read) {
   for (const name of ['client-core', 'arb-core']) {
     assert.equal(sha(read(`packages/${name}/package.json`)), packageHashes[name], 'Original package contract must stay intact');
     const before = JSON.parse(read(`packages/${name}/package.json`));
-    const current = JSON.parse(read(`client/packages/${name}/package.json`));
+    const current = JSON.parse(restoreVenueBrowserExecution(`client/packages/${name}/package.json`, read(`client/packages/${name}/package.json`)));
     current.dependencies['@changmen/api-contract'] = 'file:../api-contract';
     if (name === 'client-core') current.dependencies['@changmen/shared'] = 'file:../shared';
     assert.deepEqual(current, before, `${name}: public package contract changed`);

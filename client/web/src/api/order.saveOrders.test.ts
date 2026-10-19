@@ -1,4 +1,4 @@
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 

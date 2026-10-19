@@ -1,0 +1,114 @@
+{
+  "baseline": "3126c8de0462aaca96b96be432618fd852285755",
+  "rows": [
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/pmTickPrice.ts",
+      "canonical": "client/packages/venue-browser/polymarket/pmTickPrice.ts",
+      "wrapper": "export * from \"../../../../client/packages/venue-browser/polymarket/pmTickPrice\";\n",
+      "spec": "../../../../client/packages/venue-browser/polymarket/pmTickPrice",
+      "beforeSha": "b4b8b2343e125ef760af3072d67a16ac785e63c4416c5f135e7d04dea00ed220",
+      "afterSha": "b4b8b2343e125ef760af3072d67a16ac785e63c4416c5f135e7d04dea00ed220",
+      "replacements": []
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/pmBuyOrderShares.ts",
+      "canonical": "client/packages/venue-browser/polymarket/pmBuyOrderShares.ts",
+      "wrapper": "export * from \"../../../../../client/packages/venue-browser/polymarket/pmBuyOrderShares\";\n",
+      "spec": "../../../../../client/packages/venue-browser/polymarket/pmBuyOrderShares",
+      "beforeSha": "bfd910f79a43091f8e063fffbf6e9a2fc7a358fabeb99608e788522b13a1b811",
+      "afterSha": "08b7a06842860355d58493a9382c6bd71d160fdc3d337ee74420ddd0f7878996",
+      "replacements": [
+        {
+          "from": "\"../../pmTickPrice\"",
+          "to": "\"./pmTickPrice\""
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/submission/preflight/pmMarketOrderOptions.ts",
+      "canonical": "client/packages/venue-browser/polymarket/pmMarketOrderOptions.ts",
+      "wrapper": "export * from \"../../../../../client/packages/venue-browser/polymarket/pmMarketOrderOptions\";\n",
+      "spec": "../../../../../client/packages/venue-browser/polymarket/pmMarketOrderOptions",
+      "beforeSha": "ce5870e5389aef3f0892a082226ca411f247f7b401041c3b8150844a944660d0",
+      "afterSha": "cbe173ed6349123dbf0dda655ab31950f82f0bd9540e63133d535744b7165b21",
+      "replacements": [
+        {
+          "from": "\"../../pmTickPrice\"",
+          "to": "\"./pmTickPrice\""
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "file": "client/packages/venue-browser/pm-book-diagnostics/bookMetadata.ts",
+      "beforeSha": "2ff3a2c0a5bdc1e7c03a76983940d2bba94734b3dc60b7033d2b1ad477e0427c",
+      "afterSha": "9ce396391d40907e737d69050cacca2ed2d4276d2186777412ac239a285e2338",
+      "replacements": [
+        {
+          "from": "\"../../../../packages/venue-adapter/polymarket/submission/preflight/pmMarketOrderOptions\"",
+          "to": "\"../polymarket/pmMarketOrderOptions\""
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/pm-book-diagnostics/executionMath.ts",
+      "beforeSha": "668a2b7d6e17307de73b7b473efd02460e8134221182439d501f0f2010f22847",
+      "afterSha": "60060e4e4ebc4cc0a51d9e30114d78b8422fd7d442b87b099c037f34ac7df7b7",
+      "replacements": [
+        {
+          "from": "\"../../../../packages/venue-adapter/polymarket/submission/preflight/pmBuyOrderShares\"",
+          "to": "\"../polymarket/pmBuyOrderShares\""
+        },
+        {
+          "from": "\"../../../../packages/venue-adapter/polymarket/pmTickPrice\"",
+          "to": "\"../polymarket/pmTickPrice\""
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/pm-book-diagnostics/executionSimulation.ts",
+      "beforeSha": "25228fb56baf6b646a4dd4f771bab475c0def8ffd0a7df46c5d386135cd47cd5",
+      "afterSha": "6f26f1eb6bb752948cdaf931951dee68ad7f47e391dbdfdb05eac6973239810f",
+      "replacements": [
+        {
+          "from": "\"../../../../packages/venue-adapter/polymarket/pmTickPrice\"",
+          "to": "\"../polymarket/pmTickPrice\""
+        }
+      ]
+    }
+  ],
+  "metadata": [
+    {
+      "file": "scripts/verification/source-ownership-inputs.json",
+      "beforeSha": "495e594b19ea4ebb28600806180b3d6934af49d24ad5078819e7c65781c16200",
+      "afterSha": "b0ccd2c6c533703a9f123825ffe3439ff13581c716637695b860806d5044b4d3",
+      "patches": [
+        {
+          "oldStart": 564,
+          "oldCount": 0,
+          "newStart": 565,
+          "newCount": 15,
+          "before": [],
+          "after": [
+            "    },",
+            "    {",
+            "      \"file\": \"packages/venue-adapter/polymarket/quotes/pmTickPrice.ts\",",
+            "      \"canonical\": \"client/packages/venue-browser/polymarket/pmTickPrice.ts\",",
+            "      \"spec\": \"../../../../client/packages/venue-browser/polymarket/pmTickPrice\"",
+            "    },",
+            "    {",
+            "      \"file\": \"packages/venue-adapter/polymarket/submission/preflight/pmBuyOrderShares.ts\",",
+            "      \"canonical\": \"client/packages/venue-browser/polymarket/pmBuyOrderShares.ts\",",
+            "      \"spec\": \"../../../../../client/packages/venue-browser/polymarket/pmBuyOrderShares\"",
+            "    },",
+            "    {",
+            "      \"file\": \"packages/venue-adapter/polymarket/submission/preflight/pmMarketOrderOptions.ts\",",
+            "      \"canonical\": \"client/packages/venue-browser/polymarket/pmMarketOrderOptions.ts\",",
+            "      \"spec\": \"../../../../../client/packages/venue-browser/polymarket/pmMarketOrderOptions\""
+          ]
+        }
+      ]
+    }
+  ]
+}

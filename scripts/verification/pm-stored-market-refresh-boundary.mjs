@@ -2,11 +2,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import { restoreVenueBrowserExecution } from './venue-browser-execution.mjs';
 const changes = JSON.parse(fs.readFileSync(new URL("./pm-stored-market-refresh-increments.json", import.meta.url), "utf8"));
 export function restorePmStoredMarketRefreshSource(file, input) {
   let source = input.replace(/\r\n/g, "\n");
   if (file !== changes.file || !source.includes('import { storedMarketRefresh }')) return source;
-  const helper = fs.readFileSync(new URL(`../../${changes.helper}`, import.meta.url), "utf8").replace(/\r\n/g, "\n");
+  const helper = restoreVenueBrowserExecution(changes.helper, fs.readFileSync(new URL(`../../${changes.helper}`, import.meta.url), "utf8"));
   assert.equal(createHash("sha256").update(helper).digest("hex"), changes.helperSha, "exact bounded historical market refresh");
   for (const change of changes.changes) {
     assert.equal(source.split(change.after).length - 1, 1, "exact nonblocking historical market lookup");

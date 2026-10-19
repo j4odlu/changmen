@@ -4,8 +4,9 @@ import { useMatchStore } from "@/stores/matchStore";
 import { useOddsStore } from "@/stores/oddsStore";
 import { getPmMarketWsSourceMode, resolvePmHttpMode, resolvePmOrderSubmitHttpMode,
   getPolymarketPmSportBlockReason } from "@changmen/venue-adapter/polymarket";
-import { WsBookShadowWorkerClient, officialGateway } from "@changmen/venue-adapter/polymarket/wsBookShadow";
-import type { BookConsumerPort } from "@changmen/venue-adapter/polymarket/orderBook";
+import { officialGateway } from "@changmen/venue-browser/pm-book-diagnostics/bookRuntime";
+import { WsBookShadowWorkerClient } from "@changmen/venue-browser/pm-book-diagnostics/shadowWorkerClient";
+import type { BookConsumerPort } from "@changmen/pm-market-data-browser/service";
 
 declare global { interface Window { pmWsBookShadowReport?: () => unknown } }
 /** 只有实际生效 optimized + 本机显式 shadow 才加载本模块。 */

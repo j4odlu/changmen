@@ -4,7 +4,7 @@ import {
   detectionMaxPriceFromOdds,
   polymarketClobMatchesOdds,
   resolvePolymarketDetectionMaxPrice,
-} from "../../pmDetection";
+} from "@changmen/venue-browser/polymarket/submission/preflight/pmDetection";
 
 function optionWithData(data: Record<string, unknown> | null, odds = 1.47): BetOption {
   return {

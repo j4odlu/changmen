@@ -3,7 +3,7 @@ import {
   getPolymarketPmSportBlockReason,
   isPmSeriesDecided,
   isPmSportEnded,
-} from "../../pmSportGuard";
+} from "@changmen/venue-browser/polymarket/markets/pmSportGuard";
 
 describe("isPmSportEnded", () => {
   test("ended flag", () => {

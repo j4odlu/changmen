@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { transformPmPrice, validatePmPriceQuote } from "../../priceQuote";
-import type { PolymarketTickSize } from "../../pmTickPrice";
+import type { PolymarketTickSize } from "@changmen/venue-browser/polymarket/pmTickPrice";
 
 it("percentage and tick rules convert one raw price without stacking or mutating inputs", () => {
   const policy = { enabled: true, mode: "percent" as const, multiplier: 1.01 };

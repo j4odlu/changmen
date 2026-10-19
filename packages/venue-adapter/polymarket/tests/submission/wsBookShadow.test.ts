@@ -4,7 +4,7 @@ import { DirectBookFeed } from "../helpers/directBookFeed";
 import { parseHttpBook } from "../../submission/preflight/optimized/wsBook/bookMetadata";
 import { compareAsks } from "../../submission/preflight/optimized/wsBook/bookRuntime";
 import { OwnedRuntimeFixture as WsBookShadowRuntime } from "../helpers/ownedBookFixtures";
-import { beginWsBookShadow, registerWsBookShadowObserver, type ShadowAttempt } from "../../submission/preflight/optimized/wsBook/shadowObserver";
+import { beginWsBookShadow, registerWsBookShadowObserver, type ShadowAttempt } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 
 const snapshot = (asset = "1", timestamp = "1000") => ({ event_type: "book", asset_id: asset, market: "m", timestamp,
   hash: "snapshot-hash", bids: [{ price: "0.4", size: "10" }], asks: [{ price: "0.50", size: "20" }] });

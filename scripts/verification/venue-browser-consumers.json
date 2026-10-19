@@ -1,0 +1,255 @@
+{
+  "baseline": "3126c8de0462aaca96b96be432618fd852285755",
+  "changes": [
+    {
+      "file": "packages/venue-adapter/polymarket/marketData.worker.ts",
+      "beforeSha": "e712ebfb2cda7c91366768a72f962545ea315f58b3a7b3c9223336ce401165d1",
+      "afterSha": "bb12af86ff3ed7379fe8a9edfe025d201a23245eb5630326eb142fc10bf46741",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 5,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "import { startPmBookWorker, type BookWorkerScope } from \"@changmen/pm-market-data-browser/workerRuntime\";",
+            "import { createPmBookDiagnostics } from \"../browser/pm-book-diagnostics/workerDiagnostics\";",
+            "",
+            "/** [changmen 扩展] Compatibility composition entry; one book and one optional consumer. */",
+            "startPmBookWorker(globalThis as unknown as BookWorkerScope, createPmBookDiagnostics);"
+          ],
+          "after": [
+            "import \"@changmen/venue-browser/pm-book-diagnostics/marketData.worker\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/runtime/pmMarketData.worker.ts",
+      "beforeSha": "8e83fb5118ef9f9ceee4e6fa51e01427c707aaaa6a7ff9dad2f811ac720064bc",
+      "afterSha": "43604ae03a6681f58721472518aa334e93a054c4ef9436ee3f37a6e15bc53ac4",
+      "patches": [
+        {
+          "oldStart": 2,
+          "oldCount": 1,
+          "newStart": 2,
+          "newCount": 1,
+          "before": [
+            "import \"../../../../packages/venue-adapter/polymarket/marketData.worker\";"
+          ],
+          "after": [
+            "import \"@changmen/venue-browser/pm-book-diagnostics/marketData.worker\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/runtime/pmDynamicWsShadowWorker.ts",
+      "beforeSha": "678f40da4bf0834e475796fa94f240ff1a7019d96d8840165be79a4430054115",
+      "afterSha": "06f0b77b80b4a7c6a7a5a1abbedc0dbd7b1d4ddccfe57680828cfdc80bbca270",
+      "patches": [
+        {
+          "oldStart": 7,
+          "oldCount": 2,
+          "newStart": 7,
+          "newCount": 3,
+          "before": [
+            "import { WsBookShadowWorkerClient, officialGateway } from \"@changmen/venue-adapter/polymarket/wsBookShadow\";",
+            "import type { BookConsumerPort } from \"@changmen/venue-adapter/polymarket/orderBook\";"
+          ],
+          "after": [
+            "import { officialGateway } from \"@changmen/venue-browser/pm-book-diagnostics/bookRuntime\";",
+            "import { WsBookShadowWorkerClient } from \"@changmen/venue-browser/pm-book-diagnostics/shadowWorkerClient\";",
+            "import type { BookConsumerPort } from \"@changmen/pm-market-data-browser/service\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/runtime/pmDynamicWsShadowWorker.test.ts",
+      "beforeSha": "ed87d81d29d6e36450eb47c5fe2cbbad610d51dd2b74f0df74e9f74204e56e15",
+      "afterSha": "dc3c0435536386f1fc378f44d9afafad1f086403146d00fe3253b3e59d614aa1",
+      "patches": [
+        {
+          "oldStart": 3,
+          "oldCount": 1,
+          "newStart": 3,
+          "newCount": 1,
+          "before": [
+            "import type { PmOrderBookService } from \"@changmen/venue-adapter/polymarket/orderBook\";"
+          ],
+          "after": [
+            "import type { PmOrderBookService } from \"@changmen/pm-market-data-browser/service\";"
+          ]
+        },
+        {
+          "oldStart": 13,
+          "oldCount": 1,
+          "newStart": 13,
+          "newCount": 1,
+          "before": [
+            "vi.mock(\"@changmen/venue-adapter/polymarket/wsBookShadow\", () => ({"
+          ],
+          "after": [
+            "vi.mock(\"@changmen/venue-browser/pm-book-diagnostics/bookRuntime\", () => ({"
+          ]
+        },
+        {
+          "oldStart": 14,
+          "oldCount": 0,
+          "newStart": 15,
+          "newCount": 2,
+          "before": [],
+          "after": [
+            "}));",
+            "vi.mock(\"@changmen/venue-browser/pm-book-diagnostics/shadowWorkerClient\", () => ({"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/package.json",
+      "beforeSha": "6416cc768c048346f349f0e6528f5e680a416a7a75fbe64012c46f28122c2b55",
+      "afterSha": "eb47aeaf7bd2f9c43c281bfc4056c23f8f30ac7af250d1373618ba2c52d9db6c",
+      "patches": [
+        {
+          "oldStart": 27,
+          "oldCount": 1,
+          "newStart": 27,
+          "newCount": 2,
+          "before": [
+            "    \"./polymarket/pmTickState\": \"./polymarket/pmTickState.ts\""
+          ],
+          "after": [
+            "    \"./polymarket/pmTickState\": \"./polymarket/pmTickState.ts\",",
+            "    \"./pm-book-diagnostics/marketData.worker\": \"./pm-book-diagnostics/marketData.worker.ts\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/web/package.json",
+      "beforeSha": "a693c6dfd138321f1f50188b24749efebae55db2eaf8d3adcbcbe58d70580cd5",
+      "afterSha": "e4a29e81cc93b9adbad2fd3bf5a41e8715d7e84d3feaa65fef4ab4bbbb17b3e9",
+      "patches": [
+        {
+          "oldStart": 52,
+          "oldCount": 1,
+          "newStart": 52,
+          "newCount": 2,
+          "before": [
+            "    \"@changmen/pm-market-data-browser\": \"file:../packages/pm-market-data-browser\""
+          ],
+          "after": [
+            "    \"@changmen/pm-market-data-browser\": \"file:../packages/pm-market-data-browser\",",
+            "    \"@changmen/venue-browser\": \"file:../packages/venue-browser\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/devtools/venue-adapter/list-web-venue-imports.mjs",
+      "beforeSha": "d53235f2b75779b1890a9f2b3ea123a6afa72b7dd1962538e6d8c7ed79f27f66",
+      "afterSha": "5a08de2809e71ad9601e8012b2e5d7317c7736ffafd927e82af4dfbbc23bff88",
+      "patches": [
+        {
+          "oldStart": 55,
+          "oldCount": 2,
+          "newStart": 54,
+          "newCount": 0,
+          "before": [
+            "  [\"runtime/pmDynamicWsShadowWorker.ts\", new Set([\"polymarket/wsBookShadow\", \"polymarket/orderBook\"])],",
+            "  [\"runtime/pmDynamicWsShadowWorker.test.ts\", new Set([\"polymarket/wsBookShadow\", \"polymarket/orderBook\"])],"
+          ],
+          "after": []
+        }
+      ]
+    },
+    {
+      "file": "package-lock.json",
+      "beforeSha": "0dc787cfb14d8c08f0ad95f535a66eb5b50c3796b8bca9c8a2a47846150dbc28",
+      "afterSha": "d96bea3bb3f60f84e84e3956b71201f725f114430542b136bac782501224d396",
+      "patches": [
+        {
+          "oldStart": 584,
+          "oldCount": 0,
+          "newStart": 585,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "        \"@changmen/venue-browser\": \"file:../packages/venue-browser\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/devtools/venue-adapter/sync-package-exports.mjs",
+      "beforeSha": "2c5059e093252dc2099534101d42d36dc79a29d3c7faf679d31ae0be3563df37",
+      "afterSha": "99d60b4bef01b3b8d69a0a3b4a1388da8db25887ee33e5d501c891c50d0e1e37",
+      "patches": [
+        {
+          "oldStart": 32,
+          "oldCount": 1,
+          "newStart": 32,
+          "newCount": 1,
+          "before": [
+            "/** 始终导出的 Node loader 路径（非 TS import 扫描） */"
+          ],
+          "after": [
+            "/** 固定公共入口；旧浏览器入口不能因应用改用新包而被扫描器删除。 */"
+          ]
+        },
+        {
+          "oldStart": 36,
+          "oldCount": 0,
+          "newStart": 37,
+          "newCount": 2,
+          "before": [],
+          "after": [
+            "  \"./polymarket/orderBook\": \"./polymarket/orderBook.ts\",",
+            "  \"./polymarket/wsBookShadow\": \"./polymarket/wsBookShadow.ts\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/devtools/venue-adapter/commands.test.mjs",
+      "beforeSha": "597360522af6f55dd65bbfbab10b87f7e4503f7699885eab377095fb29adb4bb",
+      "afterSha": "90f66432083bca1ad81063d1183f3ce99e62162fdb6ea798fb95ab0bb49ef977",
+      "patches": [
+        {
+          "oldStart": 21,
+          "oldCount": 0,
+          "newStart": 22,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "    \"./polymarket/orderBook\": \"./polymarket/orderBook.ts\", \"./polymarket/wsBookShadow\": \"./polymarket/wsBookShadow.ts\","
+          ]
+        },
+        {
+          "oldStart": 52,
+          "oldCount": 0,
+          "newStart": 54,
+          "newCount": 7,
+          "before": [],
+          "after": [
+            "it(\"retains both browser compatibility exports after the last application import is removed\", () => fixture(({ root, write, command }) => {",
+            "  write(\"client/web/src/main.ts\", \"export {};\\n\");",
+            "  expect(command(\"sync-package-exports\", []).status).toBe(0);",
+            "  const exports = JSON.parse(fs.readFileSync(path.join(root, \"packages/venue-adapter/package.json\"), \"utf8\")).exports;",
+            "  expect(exports[\"./polymarket/orderBook\"]).toBe(\"./polymarket/orderBook.ts\");",
+            "  expect(exports[\"./polymarket/wsBookShadow\"]).toBe(\"./polymarket/wsBookShadow.ts\");",
+            "}));"
+          ]
+        }
+      ]
+    }
+  ],
+  "added": [
+    {
+      "file": "client/packages/venue-browser/pm-book-diagnostics/marketData.worker.ts",
+      "sha": "7009091d23a0b421941e5e4464afb0fa6875cd0fe791aad48f8278d195cc60aa"
+    }
+  ]
+}

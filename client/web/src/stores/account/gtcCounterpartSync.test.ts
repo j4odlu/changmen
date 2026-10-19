@@ -1,5 +1,5 @@
 import type { GtcPlan } from "@changmen/shared/pm_gtc";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";

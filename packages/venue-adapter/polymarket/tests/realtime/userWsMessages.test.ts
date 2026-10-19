@@ -3,7 +3,7 @@ import {
   interpretPolymarketUserWsMessage,
   polymarketOrderRowFromUserWsMessage,
   polymarketUserOrderIdsFromMessage,
-} from "../../userWsMessages";
+} from "@changmen/venue-browser/polymarket/realtime/userWsMessages";
 
 const ORDER_ID = "0xabc123";
 

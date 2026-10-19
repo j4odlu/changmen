@@ -6,7 +6,7 @@ import { componentImportSites } from "./component-entry-boundary.mjs";
 import { declaredInstallClosure } from "./component-install-inputs.mjs";
 
 const read = file => JSON.parse(fs.readFileSync(file, "utf8"));
-const forbidden = new Set(["@changmen/venue-adapter", "@changmen/pm-market-data-browser", "@changmen/client-core", "vue", "pinia"]);
+const forbidden = new Set(["@changmen/venue-adapter", "@changmen/pm-market-data-browser", "@changmen/venue-browser", "@changmen/client-core", "vue", "pinia"]);
 const resolverConsumers = {
   "server/match/resolver/scrapers/ob_scraper.js": "dynamic-import",
   "server/match/resolver/scrapers/pb_scraper.mjs": "static",

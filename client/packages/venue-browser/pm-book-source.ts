@@ -1,9 +1,9 @@
-import { observePmMarketStream } from "../../../packages/venue-adapter/polymarket/realtime/marketStream";
-import { getPolymarketQuoteConsumerAssetIds } from "../../../packages/venue-adapter/polymarket/quotes/marketQuoteHub";
 import type { ReadonlyMarketSourcePort } from "@changmen/pm-market-data-browser";
 
-/** [changmen 扩展] Existing observations only; no Worker factory or subscription authority. */
-export const pmOrderBookSource: ReadonlyMarketSourcePort = Object.freeze({
-  observe: observePmMarketStream,
-  subscribedAssets: () => getPolymarketQuoteConsumerAssetIds("esport"),
-});
+/** [changmen 扩展] Bind read-only host callbacks without observing or reading during creation. */
+export function createReadonlyMarketSource(
+  observe: ReadonlyMarketSourcePort["observe"],
+  subscribedAssets: ReadonlyMarketSourcePort["subscribedAssets"],
+): ReadonlyMarketSourcePort {
+  return Object.freeze({ observe, subscribedAssets });
+}

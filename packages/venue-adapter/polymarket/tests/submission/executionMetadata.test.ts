@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { BookStore } from "../../realtime/orderBook/bookStore";
 import { WsBookShadowRuntime } from "../../submission/preflight/optimized/wsBook/bookRuntime";
 import { metadataFromHttpOptions } from "../../submission/preflight/optimized/wsBook/bookMetadata";
-import { beginWsBookShadow } from "../../submission/preflight/optimized/wsBook/shadowObserver";
+import { beginWsBookShadow } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 import { observerClock } from "../../submission/preflight/optimized/wsBook/shadowWorkerProtocol";
 
 let store: BookStore, consumer: WsBookShadowRuntime, sequence: number;

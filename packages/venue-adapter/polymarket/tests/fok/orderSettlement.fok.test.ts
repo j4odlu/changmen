@@ -10,16 +10,16 @@ const pollPolymarketDelayedOrder = vi.fn(async () => ({
   row: { status: "live", size_matched: "0" },
 }));
 
-vi.mock("../../orders", () => ({
+vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", () => ({
   fetchPolymarketConfirmedTradeForOrder: (...args: unknown[]) =>
     fetchPolymarketConfirmedTradeForOrder(...args),
 }));
 
-vi.mock("../../pmClientApi", () => ({
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({
   pmCancelOrder: (...args: unknown[]) => pmCancelOrder(...args),
 }));
 
-vi.mock("../../userWs", () => ({
+vi.mock("@changmen/venue-browser/polymarket/realtime/userWs", () => ({
   readPolymarketOrderTradeIds: vi.fn(() => []),
   observePolymarketOrderWatch: vi.fn(() => () => {}),
   awaitPolymarketOrderWatch: (...args: unknown[]) => awaitPolymarketOrderWatch(...args),
@@ -27,8 +27,8 @@ vi.mock("../../userWs", () => ({
   readPolymarketOrderWatch: (...args: unknown[]) => readPolymarketOrderWatch(...args),
 }));
 
-vi.mock("../../orderStatus", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../orderStatus")>();
+vi.mock("@changmen/venue-browser/polymarket/orders/facts/orderStatus", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@changmen/venue-browser/polymarket/orders/facts/orderStatus")>();
   return {
     ...actual,
     fetchPolymarketOrderRow: (...args: unknown[]) => fetchPolymarketOrderRow(...args),
@@ -39,7 +39,7 @@ vi.mock("../../orderStatus", async (importOriginal) => {
 import {
   finalizePolymarketFokRestingOrder,
   settlePolymarketDelayedOrder,
-} from "../../orderSettlement";
+} from "@changmen/venue-browser/polymarket/fok/orderSettlement";
 
 describe("finalizePolymarketFokRestingOrder", () => {
   const acc = { provider: "Polymarket", accountId: 1, token: "{}" } as never;

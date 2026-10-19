@@ -13,7 +13,7 @@ vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: "owner" })
 vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ orders: new Map() }) }));
 vi.mock("@/orderModes/gtc/successMarkers", () => ({ markGtcSuccess: vi.fn() }));
 vi.mock("@/orderModes/gtc/api", () => ({ commandGtc: async (row: GtcExecution, command: GtcCommand) => applyGtcCommand(structuredClone(JSON.parse(JSON.stringify(row))), command, Date.now()) }));
-vi.mock("@changmen/venue-adapter/polymarket/gtc", () => ({ readGtcTradeHistory: mocks.history, readGtcFacts: mocks.facts }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ readGtcTradeHistory: mocks.history, readGtcFacts: mocks.facts }));
 vi.mock("@changmen/venue-adapter/polymarket", () => ({ observePolymarketOrderWatch: mocks.watch }));
 vi.mock("./recovery", () => ({ recoverMonitorRecords: async () => {} }));
 function record(id: string, accountId = 1) {
@@ -23,7 +23,7 @@ function record(id: string, accountId = 1) {
   acceptGtc(row);
 }
 beforeEach(async () => {
-  await import("@changmen/venue-adapter/polymarket/gtc");
+  await import("@changmen/venue-browser/polymarket/gtc/index");
   await import("@changmen/venue-adapter/polymarket");
   stopPmGtcMonitoring(); resetGtcState(); initializeGtcState("owner"); vi.useFakeTimers(); vi.clearAllMocks();
   mocks.accounts = [1, 2].map(accountId => new PlatformAccount({ accountId, provider: "Polymarket", token: "test", playerName: "PM" }));

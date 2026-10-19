@@ -3,8 +3,8 @@
  */
 import { afterEach, describe, expect, test, vi } from "vitest";
 import * as sportHub from "../../sportQuoteHub";
-import * as sportWs from "../../sportMarketWs";
-import * as esportWs from "../../ws";
+import * as sportWs from "@changmen/venue-browser/polymarket/sportMarketWs";
+import * as esportWs from "@changmen/venue-browser/polymarket/ws";
 
 afterEach(() => {
   sportHub.__testResetPolymarketSportQuoteHub();

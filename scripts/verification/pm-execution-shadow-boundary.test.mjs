@@ -1,8 +1,10 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { verifyPmExecutionShadowContract } from './pm-execution-shadow-boundary.mjs';
-const read = file => readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8').replaceAll('\r\n', '\n');
+const readBeforeExecution = file => readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8').replaceAll('\r\n', '\n');
+const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 const { changes } = JSON.parse(read('scripts/verification/pm-execution-shadow-increments.json'));
 test('all three observation inputs restore to the previous complete sources', () => verifyPmExecutionShadowContract(read));
 for (const [file, row] of Object.entries(changes)) {

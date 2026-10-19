@@ -29,7 +29,7 @@ describe("pmOrigin", () => {
     const {
       isPolymarketChangmenOrder,
       markPolymarketChangmenOrder,
-    } = await import("../../pmOrigin");
+    } = await import("@changmen/venue-browser/polymarket/orders/positions/pmOrigin");
     markPolymarketChangmenOrder(42, "0xabc");
     expect(isPolymarketChangmenOrder(42, "0xabc")).toBe(true);
     expect(isPolymarketChangmenOrder(42, "0xother")).toBe(false);
@@ -40,7 +40,7 @@ describe("pmOrigin", () => {
     const {
       markPolymarketChangmenOrder,
       resolvePolymarketOrderOrigin,
-    } = await import("../../pmOrigin");
+    } = await import("@changmen/venue-browser/polymarket/orders/positions/pmOrigin");
     expect(resolvePolymarketOrderOrigin(1, "0x1", "changmen")).toBe("changmen");
     expect(resolvePolymarketOrderOrigin(1, "0x1", "external")).toBe("external");
     markPolymarketChangmenOrder(1, "0x2");
@@ -51,7 +51,7 @@ describe("pmOrigin", () => {
     const {
       applyPolymarketOrderOrigins,
       markPolymarketChangmenOrder,
-    } = await import("../../pmOrigin");
+    } = await import("@changmen/venue-browser/polymarket/orders/positions/pmOrigin");
     markPolymarketChangmenOrder(7, "0xcm");
     const out = applyPolymarketOrderOrigins(pmAccount(7), [
       {

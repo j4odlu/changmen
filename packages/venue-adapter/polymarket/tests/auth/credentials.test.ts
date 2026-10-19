@@ -17,17 +17,17 @@ vi.mock("viem/accounts", () => ({
   privateKeyToAccount: vi.fn(() => ({ address: "0x1111111111111111111111111111111111111111" })),
 }));
 
-vi.mock("../../polygonRpc", () => ({
+vi.mock("@changmen/venue-browser/polymarket/wallet/polygonRpc", () => ({
   createPolygonHttpTransport: vi.fn(() => ({ transport: true })),
   polygonChainForRpc: vi.fn(() => ({ id: 137 })),
 }));
 
-vi.mock("../../transport", () => ({
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({
   polymarketPluginGet,
   polymarketPluginPost,
 }));
 
-import { createOrDerivePolymarketApiCreds } from "../../credentials";
+import { createOrDerivePolymarketApiCreds } from "@changmen/venue-browser/polymarket/auth/credentials";
 
 describe("Polymarket L1 credentials", () => {
   beforeEach(() => {

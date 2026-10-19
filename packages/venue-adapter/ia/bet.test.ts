@@ -23,7 +23,7 @@ vi.mock("@changmen/client-core/bridge/oddsAccess", () => ({
   writeVenueOdds: vi.fn(),
 }));
 
-vi.mock("../shared/webBridge", () => ({
+vi.mock("@changmen/venue-browser/shared/webBridge", () => ({
   useMessageStore: () => ({
     limitMessage: () => "超出限红",
   }),

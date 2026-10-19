@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import { runPmBuyPreflight } from "../../submission/preflight/pmBuyPreflight";
+import { runPmBuyPreflight } from "@changmen/venue-browser/polymarket/submission/preflight/pmBuyPreflight";
 import { runPmBuyPreflight as before } from "./fixtures/pmBeforeFastPreflight";
-import { prepareOptimizedFokExecution } from "../../submission/preflight/optimized/pmFastPreflight";
-import { clearPmGammaCacheForTests } from "../../pmSportGamma";
-import { registerWsBookShadowObserver } from "../../submission/preflight/optimized/wsBook/shadowObserver";
+import { prepareOptimizedFokExecution } from "@changmen/venue-browser/polymarket/submission/preflight/optimized/pmFastPreflight";
+import { clearPmGammaCacheForTests } from "@changmen/venue-browser/polymarket/markets/pmSportGamma";
+import { registerWsBookShadowObserver } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 
 const io = vi.hoisted(() => ({ ready: true, generation: 1, quote: undefined as unknown, get: vi.fn(), prepare: vi.fn(), runtime: vi.fn() }));
-vi.mock("../../transport", () => ({ polymarketPluginGet: io.get }));
-vi.mock("../../pmClientApi", () => ({ pmPrepareSubmit: io.prepare, pmSubmitClockReady: () => io.ready }));
-vi.mock("../../l2Auth", () => ({ parseTokenConfig: () => ({}), resolvePrivateKey: () => "private",
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({ polymarketPluginGet: io.get }));
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({ pmPrepareSubmit: io.prepare, pmSubmitClockReady: () => io.ready }));
+vi.mock("@changmen/venue-browser/polymarket/auth/l2Auth", () => ({ parseTokenConfig: () => ({}), resolvePrivateKey: () => "private",
   resolveApiCreds: () => ({ address: "address", apiKey: "key", secret: "secret", passphrase: "phrase" }) }));
-vi.mock("../../pmOrderClientCache", () => ({ getPolymarketOrderClientRuntime: io.runtime,
+vi.mock("@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache", () => ({ getPolymarketOrderClientRuntime: io.runtime,
   polymarketSigningGeneration: () => io.generation }));
 vi.mock("@changmen/client-core/bridge/oddsAccess", () => ({ getVenueOddsEntry: () => io.quote }));
 const account = { provider: "Polymarket", accountId: 1, token: "opaque", gateway: "https://clob.polymarket.com" } as PlatformAccount;

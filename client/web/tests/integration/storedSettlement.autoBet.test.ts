@@ -1,21 +1,21 @@
 // 跨层集成测试：连接真实订单适配器与客户端自动下注门控；场馆 HTTP 和实际下单均 mock。
 import { beforeEach, expect, it, vi } from "vitest";
-import { fetchPolymarketVenueOrdersMerged } from "../../../../packages/venue-adapter/polymarket/orders";
-import { storedMarketRefresh } from "../../../../packages/venue-adapter/polymarket/orders/history/storedMarketRefresh";
+import { fetchPolymarketVenueOrdersMerged } from "@changmen/venue-browser/polymarket/orders/history/orders";
+import { storedMarketRefresh } from "@changmen/venue-browser/polymarket/orders/history/storedMarketRefresh";
 import { updateVenueOrders } from "@/stores/account/venueOrders";
 import { accountsFundingReady } from "@/stores/account/accountPicker";
 import { runArbBetRound } from "@/stores/betting/runArbBetRound";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { AccountStoreContext } from "@/stores/account/context";
-import type { VenueOrder } from "../../../../packages/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 
 const state = vi.hoisted(() => ({ get: vi.fn(), save: vi.fn(), round: vi.fn(),
   account: {} as PlatformAccount, stored: [] as VenueOrder[],
   mode: "FOK", preflight: "legacy" }));
-vi.mock("../../../../packages/venue-adapter/polymarket/pmClientApi", () => ({ pmGetTrades: async () => [] }));
-vi.mock("../../../../packages/venue-adapter/polymarket/transport", () => ({ polymarketPluginGet: state.get }));
-vi.mock("../../../../packages/venue-adapter/polymarket/pmStoredOrders", () => ({ loadPolymarketStoredVenueOrders: async () => state.stored }));
-vi.mock("../../../../packages/venue-adapter/polymarket/pmFee", () => ({ enrichPolymarketBuyOrdersWithFees: async (rows: VenueOrder[]) => rows }));
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({ pmGetTrades: async () => [] }));
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({ polymarketPluginGet: state.get }));
+vi.mock("@changmen/venue-browser/polymarket/orders/history/pmStoredOrders", () => ({ loadPolymarketStoredVenueOrders: async () => state.stored }));
+vi.mock("@changmen/venue-browser/polymarket/orders/pmFee", () => ({ enrichPolymarketBuyOrdersWithFees: async (rows: VenueOrder[]) => rows }));
 vi.mock("@/runtime/providers", () => ({ getProvider: () => ({ getOrders: fetchPolymarketVenueOrdersMerged }) }));
 vi.mock("@/api/order", () => ({ saveOrders: state.save }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({

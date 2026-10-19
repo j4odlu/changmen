@@ -9,6 +9,7 @@ import { restorePmClientFolderMetadata, restorePmSourceIsolationMetadata, PM_MET
 import { pmNodeBrowserLoaderTarget } from "./pm-dependency-audit.mjs";
 import { classifyDeployScope } from "../deploy/classify-deploy-scope.mjs";
 import { restoreRuntimeToolingMetadata } from "./runtime-tooling-migration.mjs";
+import { restoreVenueBrowserConsumers } from "./venue-browser-consumers.mjs";
 
 const record = JSON.parse(fs.readFileSync(new URL("./pm-client-folder-metadata.json", import.meta.url), "utf8"));
 const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
@@ -20,7 +21,7 @@ it("moves exactly two unfrozen frontend directories without leaving duplicate im
   const protectedFiles = JSON.parse(read("scripts/verification/vps-fok-baseline.json")).protectedFiles;
   for (const row of record.moves) {
     expect(protectedFiles[row.from]).toBeUndefined();
-    expect(sha(fs.readFileSync(row.to))).toBe(row.migratedSha256);
+    expect(sha(restoreVenueBrowserConsumers(row.to,read(row.to)))).toBe(row.migratedSha256);
     if (/\/src\/.*\.ts$/.test(row.to) || /(?:list-web-venue-imports|relativize-internal-imports|sync-package-exports)\.mjs$/.test(row.to))
       expect(row.migratedSha256).toBe(row.sha256);
   }

@@ -1,7 +1,9 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import fs from "node:fs";
 import { expect, test } from "vitest";
 import { restorePmAccountSigningSource, verifyPmAccountSigningContract } from "./pm-account-signing-boundary.mjs";
-const read = file => fs.readFileSync(file, "utf8");
+const readBeforeExecution = file => fs.readFileSync(file, "utf8");
+const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 const { changes } = JSON.parse(read("scripts/verification/pm-account-signing-increments.json"));
 
 test("account isolation preserves all behavior outside its explicit increments", () => {

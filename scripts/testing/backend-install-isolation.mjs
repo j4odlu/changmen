@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { backendInstallProfile, assertBackendInstalledLinks, forbiddenBackendPackages } from "../deploy/backend-install-profile.mjs";
+import { backendInstallProfile, assertBackendInstalledLinks, assertBackendBrowserPackagesAbsent } from "../deploy/backend-install-profile.mjs";
 import { readInstallWorkspaces } from "../verification/component-install-inputs.mjs";
 import { validationIdentity } from "../verification/verify-change.mjs";
 import { captureBackendResolution, assertBackendResolutionParity } from "../verification/backend-install-resolution.mjs";
@@ -54,6 +54,8 @@ try {
   for (const root of [baseline, candidate]) for (const file of ["package.json", "package-lock.json"])
     assert(fs.readFileSync(path.join(root, file)).equals(fs.readFileSync(path.join(repo, file))), `${file} changed`);
   const links = fs.readdirSync(path.join(candidate, "node_modules/@changmen")); assertBackendInstalledLinks(profile, links);
+  assertBackendBrowserPackagesAbsent(candidate, profile);
+  report.browserPackagesAbsent = true;
   report.installedWorkspaces = links.sort();
   for (const root of [baseline, candidate]) command(root === baseline ? "full-router" : "selected-router", root,
     [npm, "run", "compile:router", "--workspace=@changmen/backend"]);
@@ -63,10 +65,9 @@ try {
   assertBackendResolutionParity(full, selected);
   report.resolution = { parityPassed: true, files: full.files.length, literalSites: full.resolutions.length,
     unresolved: full.unresolved.length, unknown: full.unknown.length, completeRuntimeClosureCertified: false };
-  const probe = `import assert from'node:assert/strict';import{createRequire}from'node:module';import net from'node:net';import{pathToFileURL}from'node:url';
+  const probe = `import assert from'node:assert/strict';import net from'node:net';import{pathToFileURL}from'node:url';
 let attempts=0;const blocked=()=>{attempts++;throw Error('Network forbidden in installation verification');};globalThis.fetch=blocked;net.Socket.prototype.connect=blocked;
-const root=process.cwd(),req=createRequire(root+'/server/backend/package.json');
-for(const name of ${JSON.stringify(forbiddenBackendPackages)})assert.throws(()=>req.resolve(name));
+const root=process.cwd();
 const loader=await import('@changmen/venue-node-loader');const legacy=await import(pathToFileURL(root+'/packages/venue-adapter/loader/adapter_paths.mjs').href);
 assert.deepEqual(Object.keys(loader),Object.keys(legacy));for(const key of Object.keys(loader))assert.equal(loader[key],legacy[key]);
 await loader.initAdapterRegistry();await loader.initEsmPlatformBackends();

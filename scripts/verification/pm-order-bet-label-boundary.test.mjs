@@ -1,7 +1,9 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { PM_ORDER_LABEL_HELPER, restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
-const read = file => fs.readFileSync(file, "utf8");
+const readBeforeExecution = file => fs.readFileSync(file, "utf8");
+const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 const orders = "packages/venue-adapter/polymarket/orders/history/orders.ts";
 describe("PM order label scoped correction", () => {
   it("restores only the registered labels and lookup inputs", () => {

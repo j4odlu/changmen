@@ -1,1 +1,1 @@
-export * from "../../../../client/packages/venue-browser/pm-book-diagnostics/executionSimulation";
+export * from "@changmen/venue-browser/pm-book-diagnostics/executionSimulation";

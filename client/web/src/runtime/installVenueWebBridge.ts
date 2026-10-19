@@ -1,5 +1,5 @@
-import { setChangmenAuthTokenGetter, setChangmenHandshakeTokenGetter, setChangmenCookieSessionGetter, setVenueWebBridge } from "@changmen/venue-adapter/shared";
-import type { VenueWebBridge } from "@changmen/venue-adapter/shared";
+import { setChangmenAuthTokenGetter, setChangmenHandshakeTokenGetter, setChangmenCookieSessionGetter } from "@changmen/venue-browser/shared/changmenAuthToken";
+import { setVenueWebBridge, type VenueWebBridge } from "@changmen/venue-browser/shared/webBridge";
 import { getToken, usesWebCookieSession } from "@/api/client";
 import { getCompatibilityToken } from "@/lib/authCredentials";
 import { useAccountStore } from "@/stores/accountStore";

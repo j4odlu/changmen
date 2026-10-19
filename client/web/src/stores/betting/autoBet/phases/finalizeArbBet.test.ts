@@ -1,5 +1,5 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import type { ArbBetAttemptParams, ArbBetPlaced } from "./types";
 import type { OriginalExecutionLifecycle } from "@/domain/betting/originalLegExecution";
 import type { ViewBet, ViewMatch } from "@/models/match";

@@ -7,6 +7,7 @@ import {installedPmDependency,pmNodeBrowserLoaderTarget} from './pm-dependency-a
 import {classifySourceFile,sourceLayerViolation} from './source-ownership.mjs';
 import {isVersionSource} from '../../devtools/runtime-tooling/runtime_version.js';
 import {classifyDeployScope} from '../deploy/classify-deploy-scope.mjs';
+import {restoreVenueBrowserWorkspace} from './venue-browser-workspace.mjs';
 const read=file=>fs.readFileSync(file,'utf8').replaceAll('\r\n','\n');
 const original=file=>execFileSync('git',['show',record.baseline+':'+file],{encoding:'utf8',windowsHide:true}).replaceAll('\r\n','\n');
 it('retains the full original implementation after reversing only relative imports',()=>{
@@ -22,7 +23,7 @@ it('rejects missing, changed or redirected sources and extra facade implementati
  for(const row of record.rows){
   expect(()=>verifyVenueBrowserRelocation(file=>file===row.canonical?read(file)+'\nvoid unexpected();\n':read(file))).toThrow();
   expect(()=>verifyVenueBrowserRelocation(file=>{if(file===row.canonical)throw Error('missing');return read(file);})).toThrow();
-  expect(()=>verifyVenueBrowserRelocation(file=>file===row.file?read(file).replace('client/','other/'):read(file))).toThrow();
+  expect(()=>verifyVenueBrowserRelocation(file=>file===row.file?read(file).replace('from "','from "missing/'):read(file))).toThrow();
   expect(()=>verifyVenueBrowserRelocation(file=>file===row.file?read(file)+'export const duplicate = true;\n':read(file))).toThrow();
  }
 });
@@ -33,19 +34,20 @@ it('restores only the two exact metadata edits for existing complete-source proo
   expect(restoreVenueBrowserMetadata(row.file,read(row.file)+'\n')).not.toBe(original(row.file));
  }
 });
-it('keeps one existing adapter workspace and makes its additional source directory explicit',()=>{
- expect(fs.existsSync('client/packages/venue-browser/package.json')).toBe(false);
+it('owns browser sources in their independent workspace while retaining earlier metadata proofs',()=>{
+ expect(fs.existsSync('client/packages/venue-browser/package.json')).toBe(true);
  const root=process.cwd(),packages=readInstallWorkspaces(root);
- expect([...packages.keys()]).not.toContain('@changmen/venue-browser');
+ expect([...packages.keys()]).toContain('@changmen/venue-browser');
  const frontend=declaredInstallClosure(root,packages,'@changmen/web',{build:true});
- expect(frontend.sourceDirectories).toEqual([...frontend.workspaceDirectories,'client/packages/venue-browser'].sort());
+ expect(frontend.sourceDirectories).toEqual(frontend.workspaceDirectories);
+ expect(frontend.workspaceDirectories).toContain('client/packages/venue-browser');
  for(const name of ['@changmen/backend','@changmen/db']){
   const closure=declaredInstallClosure(root,packages,name);
   expect(closure.sourceDirectories).not.toContain('client/packages/venue-browser');
  }
  const fact=installedPmDependency(root,'client/packages/venue-browser/pm-book-diagnostics/bookRuntime.ts','@changmen/pm-market-data-browser/bookReducer');
- expect(fact.owner).toBe('packages/venue-adapter/package.json');expect(fact.declaredRuntime).toBe(true);
- for(const file of ['package.json','package-lock.json','packages/venue-adapter/package.json'])expect(read(file)).toBe(original(file));
+ expect(fact.owner).toBe('client/packages/venue-browser/package.json');expect(fact.declaredRuntime).toBe(true);
+ for(const file of ['package.json','package-lock.json','packages/venue-adapter/package.json'])expect(restoreVenueBrowserWorkspace(file,read(file))).toBe(original(file));
 });
 it('classifies the new sources as browser-only and preserves conservative publication',()=>{
  const policy=JSON.parse(read('scripts/verification/source-ownership-inputs.json'));

@@ -1,0 +1,326 @@
+{
+  "baseline": "3126c8de0462aaca96b96be432618fd852285755",
+  "changes": [
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/priceQuote.ts",
+      "beforeSha": "ef7f63b371fc09f80c607b3ea4882e4fc329fe99a2d5d69e37c0311c6497c8fd",
+      "afterSha": "8c5b2037577c1d21e4ee4b3307692ead67ba4253cb27d06713837bd23bf997b7",
+      "patches": [
+        {
+          "oldStart": 1,
+          "oldCount": 74,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [
+            "import { truncateOddsTo3 } from \"@changmen/shared/odds_format\";",
+            "import { isPolymarketPriceOnTick, normalizePolymarketTickSize, type PolymarketTickSize } from \"../pmTickPrice\";",
+            "",
+            "/** [changmen 扩展] 纯报价转换：不读行情缓存、配置或时钟，不请求网络。 */",
+            "export interface PmPricePolicy {",
+            "  enabled: boolean;",
+            "  mode?: \"percent\" | \"tick\";",
+            "  multiplier: number;",
+            "}",
+            "interface QuoteBase {",
+            "  tokenId: string;",
+            "  rawAsk: number;",
+            "  cap: number;",
+            "  displayOdds: number;",
+            "}",
+            "export type PmPriceQuote = Readonly<QuoteBase & (",
+            "  | { mode: \"none\" }",
+            "  | { mode: \"percent\"; multiplier: number }",
+            "  | { mode: \"tick\"; tick: PolymarketTickSize }",
+            ")>;",
+            "export type PmPriceQuoteResult =",
+            "  | { status: \"ready\"; quote: PmPriceQuote }",
+            "  | { status: \"locked\" | \"waiting-tick\" | \"invalid-price\" };",
+            "",
+            "export function transformPmPrice(",
+            "  tokenId: string,",
+            "  rawAsk: number,",
+            "  policy: PmPricePolicy,",
+            "  tick?: PolymarketTickSize,",
+            "): PmPriceQuoteResult {",
+            "  if (!Number.isFinite(rawAsk) || rawAsk <= 0 || rawAsk >= 1)",
+            "    return { status: \"invalid-price\" };",
+            "  let cap = rawAsk;",
+            "  let mode: PmPriceQuote[\"mode\"] = \"none\";",
+            "  if (policy.enabled && policy.mode === \"tick\") {",
+            "    if (!tick) return { status: \"waiting-tick\" };",
+            "    try { tick = normalizePolymarketTickSize(tick); }",
+            "    catch { return { status: \"invalid-price\" }; }",
+            "    if (!isPolymarketPriceOnTick(rawAsk, tick)) return { status: \"invalid-price\" };",
+            "    mode = \"tick\";",
+            "    cap = (Math.round(rawAsk * 10_000) + Math.round(Number(tick) * 10_000)) / 10_000;",
+            "    if (!isPolymarketPriceOnTick(cap, tick)) return { status: \"invalid-price\" };",
+            "  }",
+            "  else if (policy.enabled && policy.multiplier > 1) {",
+            "    if (!Number.isFinite(policy.multiplier)) return { status: \"invalid-price\" };",
+            "    mode = \"percent\";",
+            "    cap = Math.min(0.9999, Math.round(rawAsk * policy.multiplier * 10_000) / 10_000);",
+            "  }",
+            "  const displayOdds = truncateOddsTo3(1 / cap);",
+            "  if (mode === \"tick\" && !(displayOdds > 1)) return { status: \"invalid-price\" };",
+            "  const base = { tokenId, rawAsk, cap, displayOdds };",
+            "  const quote: PmPriceQuote = mode === \"tick\"",
+            "    ? Object.freeze({ ...base, mode, tick: tick! })",
+            "    : mode === \"percent\"",
+            "      ? Object.freeze({ ...base, mode, multiplier: policy.multiplier })",
+            "      : Object.freeze({ ...base, mode });",
+            "  return { status: \"ready\", quote };",
+            "}",
+            "",
+            "export function validatePmPriceQuote(value: unknown, tokenId: string, odds: number): PmPriceQuote {",
+            "  const quote = value as PmPriceQuote | undefined;",
+            "  if (!quote || ![\"none\", \"percent\", \"tick\"].includes(quote.mode))",
+            "    throw new Error(\"PM 调整报价缺失或不匹配，请新建投注尝试\");",
+            "  const result = transformPmPrice(tokenId, quote.rawAsk, {",
+            "    enabled: quote.mode !== \"none\",",
+            "    mode: quote.mode === \"tick\" ? \"tick\" : \"percent\",",
+            "    multiplier: quote.mode === \"percent\" ? quote.multiplier : 1,",
+            "  }, quote.mode === \"tick\" ? quote.tick : undefined);",
+            "  if (quote.tokenId !== tokenId || result.status !== \"ready\"",
+            "    || result.quote.mode !== quote.mode || result.quote.cap !== quote.cap",
+            "    || result.quote.displayOdds !== quote.displayOdds || odds !== quote.displayOdds)",
+            "    throw new Error(\"PM 调整报价缺失或不匹配，请新建投注尝试\");",
+            "  return quote;",
+            "}"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/polymarket/priceQuote\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/pmTickBuffer.ts",
+      "beforeSha": "59c151ea1916e6b914abeaf2aec20a6aa3783f75bbd9924ce2574269594f53df",
+      "afterSha": "ae661503d5d89012931324b880babaf41e76d349590e425e4b269d11cc40ff68",
+      "patches": [
+        {
+          "oldStart": 3,
+          "oldCount": 1,
+          "newStart": 3,
+          "newCount": 1,
+          "before": [
+            "import { transformPmPrice, type PmPriceQuote } from \"../priceQuote\";"
+          ],
+          "after": [
+            "import { transformPmPrice, type PmPriceQuote } from \"@changmen/venue-browser/polymarket/priceQuote\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/quotes/pmArbPriceBufferMode.ts",
+      "beforeSha": "a97e53c82ff9f4f23d949194ece3b25eb3f2c01d5527c5649e243a05e1f84b36",
+      "afterSha": "eb26331f07c175b34e3d4984c10cf5865567571e40f1495b88966742c9916871",
+      "patches": [
+        {
+          "oldStart": 3,
+          "oldCount": 1,
+          "newStart": 3,
+          "newCount": 1,
+          "before": [
+            "import { transformPmPrice, type PmPriceQuoteResult } from \"../priceQuote\";"
+          ],
+          "after": [
+            "import { transformPmPrice, type PmPriceQuoteResult } from \"@changmen/venue-browser/polymarket/priceQuote\";"
+          ]
+        },
+        {
+          "oldStart": 5,
+          "oldCount": 1,
+          "newStart": 5,
+          "newCount": 1,
+          "before": [
+            "export * from \"../priceQuote\";"
+          ],
+          "after": [
+            "export * from \"@changmen/venue-browser/polymarket/priceQuote\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/fok/preflight.ts",
+      "beforeSha": "571af8109e380787151f80b25862bdd2989aa2956b0356f0725c8eb6d764335a",
+      "afterSha": "ea4010269abf94fe2bf9b25fd4ab5806de04e4aedab24fcf1e4963dc648572a6",
+      "patches": [
+        {
+          "oldStart": 11,
+          "oldCount": 1,
+          "newStart": 11,
+          "newCount": 1,
+          "before": [
+            "import { validatePmPriceQuote, type PmPriceQuote } from \"../priceQuote\";"
+          ],
+          "after": [
+            "import { validatePmPriceQuote, type PmPriceQuote } from \"@changmen/venue-browser/polymarket/priceQuote\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/fok/bet.ts",
+      "beforeSha": "881a573d03be4de37340b9400840cb039a7c198a0b355125c3db4cb5df9a34b7",
+      "afterSha": "946a4aa789989261ecba37997495ee13f514fd835b1e033df4775248035b3545",
+      "patches": [
+        {
+          "oldStart": 8,
+          "oldCount": 1,
+          "newStart": 8,
+          "newCount": 1,
+          "before": [
+            "import { validatePmPriceQuote } from \"../priceQuote\";"
+          ],
+          "after": [
+            "import { validatePmPriceQuote } from \"@changmen/venue-browser/polymarket/priceQuote\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/gtc/preparation.ts",
+      "beforeSha": "dbdb07cab60f04e56eb97d3ab6ffdb4e9a83fcb0cff1328ddc75b7bca724c267",
+      "afterSha": "edf65b3b41e6603d400199ac192a779967f0b4d21bbbc54f71c99b9dae965e9d",
+      "patches": [
+        {
+          "oldStart": 17,
+          "oldCount": 1,
+          "newStart": 17,
+          "newCount": 1,
+          "before": [
+            "import { validatePmPriceQuote } from \"../priceQuote\";"
+          ],
+          "after": [
+            "import { validatePmPriceQuote } from \"@changmen/venue-browser/polymarket/priceQuote\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/polymarket/gtc/contract.ts",
+      "beforeSha": "b47708b3de0900c5861451796a3c6828a6a14b4cb4ca2ca82bcebd2f5f2efc8d",
+      "afterSha": "80850ece1e2c99dd01c1d5a2351644e6700de57f68bd65213a7d7742c960d457",
+      "patches": [
+        {
+          "oldStart": 2,
+          "oldCount": 1,
+          "newStart": 2,
+          "newCount": 1,
+          "before": [
+            "import type { PmPriceQuote } from \"../priceQuote\";"
+          ],
+          "after": [
+            "import type { PmPriceQuote } from \"@changmen/venue-browser/polymarket/priceQuote\";"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/polymarket/tickBufferQuote.ts",
+      "beforeSha": "79c41a5112faeff2c836a567e16681384395b3d8fea3bfca8f50e712bf7429a0",
+      "afterSha": "c9bccf37b522119d39c7a278311e7337a67f12c4feb9e2ca4fa66d7d8d338e20",
+      "patches": [
+        {
+          "oldStart": 0,
+          "oldCount": 0,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "import { validatePmPriceQuote } from \"@changmen/venue-browser/polymarket/priceQuote\";"
+          ]
+        },
+        {
+          "oldStart": 2,
+          "oldCount": 1,
+          "newStart": 3,
+          "newCount": 1,
+          "before": [
+            "import { getPmArbPriceBufferPrefs, resolvePmDisplayQuote, validatePmPriceQuote,"
+          ],
+          "after": [
+            "import { getPmArbPriceBufferPrefs, resolvePmDisplayQuote,"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/polymarket/attachDetectionQuote.ts",
+      "beforeSha": "081c3e8906199f11b1d41d2f9b7d19abac3ebba38342e149eb6f537d058f43bf",
+      "afterSha": "083122bf245c2b9c6b796afca2224b503f4936f1cedd487732ceb2b89533103d",
+      "patches": [
+        {
+          "oldStart": 0,
+          "oldCount": 0,
+          "newStart": 1,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "import { validatePmPriceQuote } from \"@changmen/venue-browser/polymarket/priceQuote\";"
+          ]
+        },
+        {
+          "oldStart": 13,
+          "oldCount": 1,
+          "newStart": 13,
+          "newCount": 0,
+          "before": [
+            "  validatePmPriceQuote,"
+          ],
+          "after": []
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/package.json",
+      "beforeSha": "58af0ee2f784eaa2f95bedcfae1458957cceed367beb35f83e909d379f2f28ab",
+      "afterSha": "ecaff283df986dded98ee097bd301242c9e1730ab1baeffe7cbf3b5253e3e61b",
+      "patches": [
+        {
+          "oldStart": 32,
+          "oldCount": 1,
+          "newStart": 32,
+          "newCount": 2,
+          "before": [
+            "    \"./polymarket/wsQuotes\": \"./polymarket/wsQuotes.ts\""
+          ],
+          "after": [
+            "    \"./polymarket/wsQuotes\": \"./polymarket/wsQuotes.ts\",",
+            "    \"./polymarket/priceQuote\": \"./polymarket/priceQuote.ts\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/source-ownership-inputs.json",
+      "beforeSha": "a66e02da920c975b5a590706d5fc537c830fc62a4414680c3d53ed7094f98704",
+      "afterSha": "f88451d5642ac4f6f54e4384ff71043acbe7d87696abf319b44b1c173c23f289",
+      "patches": [
+        {
+          "oldStart": 599,
+          "oldCount": 0,
+          "newStart": 600,
+          "newCount": 5,
+          "before": [],
+          "after": [
+            "    },",
+            "    {",
+            "      \"file\": \"packages/venue-adapter/polymarket/quotes/priceQuote.ts\",",
+            "      \"canonical\": \"client/packages/venue-browser/polymarket/priceQuote.ts\",",
+            "      \"spec\": \"@changmen/venue-browser/polymarket/priceQuote\""
+          ]
+        }
+      ]
+    }
+  ],
+  "added": [
+    {
+      "file": "client/packages/venue-browser/polymarket/priceQuote.ts",
+      "sha": "435d91d6bf494296c5f018cb3515fd62107bad4c8596d85856d5cb8b93a23002"
+    }
+  ]
+}

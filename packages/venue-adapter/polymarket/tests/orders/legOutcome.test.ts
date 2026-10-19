@@ -1,8 +1,8 @@
-import type { VenueOrder } from "../../../contract";
+import type { VenueOrder } from "@changmen/client-core/contract";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetResult } from "@changmen/client-core/models/betResult";
-import { resolvePolymarketLegOutcome } from "../../legOutcome";
+import { resolvePolymarketLegOutcome } from "@changmen/venue-browser/polymarket/orders/confirmation/legOutcome";
 
 const settlePolymarketDelayedOrder = vi.fn();
 const awaitPolymarketSettlementJob = vi.fn();
@@ -11,26 +11,26 @@ const fetchPolymarketConfirmedTradeForOrder = vi.fn();
 const resolvePolymarketDelayedPollOpts = vi.fn();
 const readPolymarketOrderWatch = vi.fn();
 
-vi.mock("../../userWs", () => ({
+vi.mock("@changmen/venue-browser/polymarket/realtime/userWs", () => ({
   readPolymarketOrderWatch: (...args: unknown[]) => readPolymarketOrderWatch(...args),
 }));
 
-vi.mock("../../orderSettlement", () => ({
+vi.mock("@changmen/venue-browser/polymarket/fok/orderSettlement", () => ({
   settlePolymarketDelayedOrder: (...args: unknown[]) => settlePolymarketDelayedOrder(...args),
 }));
 
-vi.mock("../../settlementJob", () => ({
+vi.mock("@changmen/venue-browser/polymarket/fok/settlementJob", () => ({
   awaitPolymarketSettlementJob: (...args: unknown[]) => awaitPolymarketSettlementJob(...args),
   getPolymarketSettlementDelayCtx: (...args: unknown[]) => getPolymarketSettlementDelayCtx(...args),
   clearPolymarketSettlementJob: vi.fn(),
 }));
 
-vi.mock("../../marketDelay", () => ({
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/marketDelay", () => ({
   resolvePolymarketDelayedPollOpts: (...args: unknown[]) => resolvePolymarketDelayedPollOpts(...args),
 }));
 
-vi.mock("../../orders", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../orders")>();
+vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@changmen/venue-browser/polymarket/orders/history/orders")>();
   return {
     ...actual,
     fetchPolymarketConfirmedTradeForOrder: (...args: unknown[]) =>

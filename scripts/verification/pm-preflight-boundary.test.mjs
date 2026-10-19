@@ -1,10 +1,12 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { gitSource, moduleTokens, replaceExact, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { restorePmPreflightSource, verifyPmPreflightContract } from "./pm-preflight-boundary.mjs";
 import { restoreUnifiedArbitrageSource } from "./unified-arb-boundaries.mjs";
 
-const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const readBeforeExecution = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 const gateway = "client/web/src/stores/account/betGateway.ts";
 const fok = "packages/venue-adapter/polymarket/fok/bet.ts";
 const common = "packages/venue-adapter/polymarket/submission/preflight/pmBuyPreflight.ts";

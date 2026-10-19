@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { SessionBuilderConfig } from "../../sessionBuilderConfig";
+import { SessionBuilderConfig } from "@changmen/venue-browser/polymarket/wallet/sessionBuilderConfig";
 
 afterEach(() => vi.unstubAllGlobals());
 it("signs through Cookie/CSRF without requesting or sending a legacy JWT", async () => {

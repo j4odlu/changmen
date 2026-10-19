@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Currency, getExchange } from "@changmen/shared/currency";
-import { calculateSellMarketLimitPrice, buildSellAndBuyPatchOrders } from "../../pmManualSell";
-import { stripPolymarketSellOrders } from "../../pmLogicalPosition";
+import { calculateSellMarketLimitPrice, buildSellAndBuyPatchOrders } from "@changmen/venue-browser/polymarket/submission/pmManualSell";
+import { stripPolymarketSellOrders } from "@changmen/venue-browser/polymarket/orders/positions/pmLogicalPosition";
 
 describe("calculateSellMarketLimitPrice", () => {
   const bids = [

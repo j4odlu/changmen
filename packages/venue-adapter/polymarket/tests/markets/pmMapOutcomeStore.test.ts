@@ -5,7 +5,7 @@ import {
   lookupResolutionSourceBySourceMatchId,
   pmMapOutcomeWinnerLabel,
   replacePmMapOutcomesFromIndex,
-} from "../../pmMapOutcomeStore";
+} from "@changmen/venue-browser/polymarket/markets/pmMapOutcomeStore";
 
 describe("pmMapOutcomeStore", () => {
   it("shows archived official winners after a market leaves discovery, overriding missing live results", () => {

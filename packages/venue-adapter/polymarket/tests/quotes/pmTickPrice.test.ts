@@ -3,7 +3,7 @@ import {
   alignPolymarketPriceToTick,
   isPolymarketPriceOnTick,
   normalizePolymarketTickSize,
-} from "../../pmTickPrice";
+} from "@changmen/venue-browser/polymarket/pmTickPrice";
 
 describe("normalizePolymarketTickSize", () => {
   it("accepts official ticks including 0.0025", () => {

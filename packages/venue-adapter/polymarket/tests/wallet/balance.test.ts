@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../transport", () => ({
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({
   polymarketPluginGet: vi.fn(),
 }));
 
-import { polymarketPluginGet } from "../../transport";
-import { fetchPolymarketBalanceViaTransport } from "../../balance";
+import { polymarketPluginGet } from "@changmen/venue-browser/polymarket/transport/transport";
+import { fetchPolymarketBalanceViaTransport } from "@changmen/venue-browser/polymarket/wallet/balance";
 
 describe("fetchPolymarketBalanceViaTransport", () => {
   beforeEach(() => {

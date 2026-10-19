@@ -1,3 +1,4 @@
+import { validatePmPriceQuote } from "@changmen/venue-browser/polymarket/priceQuote";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { capturePmPriceQuote, pmAttemptUsesTickBuffer, pmAttemptPricePolicy } from "./tickBufferQuote";
 import { PLATFORMS } from "@changmen/venue-adapter/shared";
@@ -10,7 +11,6 @@ import {
   getPmArbPriceBufferPrefs,
   isPmTickBufferActive,
   validatePmTickBufferQuote,
-  validatePmPriceQuote,
   polymarketClobMatchesOdds,
   type PolymarketOptionQuoteData,
 } from "@changmen/venue-adapter/polymarket";

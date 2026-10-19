@@ -1,13 +1,13 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { awaitPolymarketOrderWatch, readPolymarketOrderWatch, registerPolymarketOrderWatch, stopAllPolymarketUserWs, warmPolymarketUserWs } from "../../userWs";
-import { settlePolymarketDelayedOrder } from "../../orderSettlement";
+import { awaitPolymarketOrderWatch, readPolymarketOrderWatch, registerPolymarketOrderWatch, stopAllPolymarketUserWs, warmPolymarketUserWs } from "@changmen/venue-browser/polymarket/realtime/userWs";
+import { settlePolymarketDelayedOrder } from "@changmen/venue-browser/polymarket/fok/orderSettlement";
 
 const reads = vi.hoisted(() => ({ order: vi.fn(), trade: vi.fn() }));
 vi.mock("@changmen/client-core/bridge/clientApi", () => ({ saveUserLog: vi.fn(async () => {}) }));
-vi.mock("../../orders", () => ({ fetchPolymarketConfirmedTradeForOrder: reads.trade }));
-vi.mock("../../orderStatus", async (original) => ({
-  ...await original<typeof import("../../orderStatus")>(), fetchPolymarketOrderRow: reads.order,
+vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", () => ({ fetchPolymarketConfirmedTradeForOrder: reads.trade }));
+vi.mock("@changmen/venue-browser/polymarket/orders/facts/orderStatus", async (original) => ({
+  ...await original<typeof import("@changmen/venue-browser/polymarket/orders/facts/orderStatus")>(), fetchPolymarketOrderRow: reads.order,
 }));
 
 class Socket {

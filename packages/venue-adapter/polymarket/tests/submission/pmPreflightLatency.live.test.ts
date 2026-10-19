@@ -4,24 +4,24 @@ import path from "node:path";
 import { expect, test, vi } from "vitest";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import { checkFokBuy } from "../../fok/preflight";
-import { setPmFokPreflightMode } from "../../submission/preflight/pmFokPreflightMode";
-import { clearPmGammaCacheForTests, fetchGammaEventById, fetchGammaMarketByTokenId } from "../../pmSportGamma";
-import { clearPmExecutionMetrics, getPmExecutionMetrics } from "../../pmExecutionMetrics";
+import { checkFokBuy } from "@changmen/venue-browser/polymarket/fok/preflight";
+import { setPmFokPreflightMode } from "@changmen/venue-browser/polymarket/submission/preflight/pmFokPreflightMode";
+import { clearPmGammaCacheForTests, fetchGammaEventById, fetchGammaMarketByTokenId } from "@changmen/venue-browser/polymarket/markets/pmSportGamma";
+import { clearPmExecutionMetrics, getPmExecutionMetrics } from "@changmen/venue-browser/polymarket/pmExecutionMetrics";
 import { runPmBuyPreflight as beforePreflight } from "./fixtures/pmBeforeFastPreflight";
 
 const io = vi.hoisted(() => ({ before: false, get: vi.fn(), forbidden: vi.fn(() => { throw new Error("Live probe must never sign or submit"); }) }));
-vi.mock("../../submission/preflight/pmBuyPreflight", async importOriginal => {
-  const original = await importOriginal<typeof import("../../submission/preflight/pmBuyPreflight")>();
+vi.mock("@changmen/venue-browser/polymarket/submission/preflight/pmBuyPreflight", async importOriginal => {
+  const original = await importOriginal<typeof import("@changmen/venue-browser/polymarket/submission/preflight/pmBuyPreflight")>();
   return { ...original, runPmBuyPreflight: (...args: Parameters<typeof original.runPmBuyPreflight>) =>
     io.before ? beforePreflight(...args) : original.runPmBuyPreflight(...args) };
 });
-vi.mock("../../transport", () => ({ polymarketPluginGet: io.get, polymarketPluginPost: io.forbidden }));
-vi.mock("../../pmClientApi", () => ({
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({ polymarketPluginGet: io.get, polymarketPluginPost: io.forbidden }));
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({
   pmGetBook: (token: string) => io.get(`https://clob.polymarket.com/book?token_id=${encodeURIComponent(token)}`),
   pmPrepareSubmit: io.forbidden, pmSubmitClockReady: () => false, pmSubmitOrder: io.forbidden,
 }));
-vi.mock("../../pmOrderClientCache", () => ({
+vi.mock("@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache", () => ({
   getPolymarketOrderClientRuntime: io.forbidden, polymarketSigningGeneration: () => 0,
 }));
 vi.mock("@changmen/client-core/bridge/oddsAccess", () => ({

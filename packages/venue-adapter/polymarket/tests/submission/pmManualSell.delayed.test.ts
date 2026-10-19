@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 
-vi.mock("../../marketDelay", () => ({
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/marketDelay", () => ({
   fetchPolymarketMarketSecondsDelay: vi.fn(),
   UNKNOWN_SPORTS_SECONDS_DELAY: 30,
   buildPolymarketDelayedPollOpts: vi.fn((sd: number) => ({
@@ -12,36 +12,36 @@ vi.mock("../../marketDelay", () => ({
   buildPolymarketWatchTimeoutMs: vi.fn((sd: number) => Math.min(90_000, sd * 1000 + 20_000)),
 }));
 
-vi.mock("../../userWs", () => ({
+vi.mock("@changmen/venue-browser/polymarket/realtime/userWs", () => ({
   registerPolymarketOrderWatch: vi.fn(),
 }));
 
-vi.mock("../../settlementJob", () => ({
+vi.mock("@changmen/venue-browser/polymarket/fok/settlementJob", () => ({
   startPolymarketSettlementJob: vi.fn(),
   awaitPolymarketSettlementJob: vi.fn(),
 }));
 
-vi.mock("../../orderSettlement", () => ({
+vi.mock("@changmen/venue-browser/polymarket/fok/orderSettlement", () => ({
   settlePolymarketDelayedOrder: vi.fn(),
 }));
 
-vi.mock("../../orders", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../orders")>();
+vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@changmen/venue-browser/polymarket/orders/history/orders")>();
   return {
     ...actual,
     resolvePolymarketSellFillWithRetry: vi.fn(),
   };
 });
 
-import { fetchPolymarketMarketSecondsDelay } from "../../marketDelay";
-import { settlePolymarketDelayedOrder } from "../../orderSettlement";
-import { resolvePolymarketSellFillWithRetry } from "../../orders";
-import { confirmPolymarketManualSellDelayedFill } from "../../pmManualSell";
+import { fetchPolymarketMarketSecondsDelay } from "@changmen/venue-browser/polymarket/orders/confirmation/marketDelay";
+import { settlePolymarketDelayedOrder } from "@changmen/venue-browser/polymarket/fok/orderSettlement";
+import { resolvePolymarketSellFillWithRetry } from "@changmen/venue-browser/polymarket/orders/history/orders";
+import { confirmPolymarketManualSellDelayedFill } from "@changmen/venue-browser/polymarket/submission/pmManualSell";
 import {
   awaitPolymarketSettlementJob,
   startPolymarketSettlementJob,
-} from "../../settlementJob";
-import { registerPolymarketOrderWatch } from "../../userWs";
+} from "@changmen/venue-browser/polymarket/fok/settlementJob";
+import { registerPolymarketOrderWatch } from "@changmen/venue-browser/polymarket/realtime/userWs";
 
 function account(): PlatformAccount {
   return { accountId: 1, provider: "Polymarket", gateway: "", token: "" } as PlatformAccount;

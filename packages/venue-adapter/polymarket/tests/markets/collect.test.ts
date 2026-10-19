@@ -8,7 +8,7 @@ const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
 describe("Polymarket collect fo lock contracts", () => {
   test("WS quote path writes locked:false (do not zero getOdds when other side missing)", () => {
-    const src = readFileSync(join(root, "markets/collect.ts"), "utf8");
+    const src = readFileSync(join(root, "../../../client/packages/venue-browser/polymarket/markets/collect.ts"), "utf8");
     const start = src.indexOf("function updateBetFromAsset");
     const end = src.indexOf("const unQuote", start);
     expect(start).toBeGreaterThanOrEqual(0);
@@ -20,7 +20,7 @@ describe("Polymarket collect fo lock contracts", () => {
   });
 
   test("Index http seed skips overwrite when fo already has mqtt clob", () => {
-    const src = readFileSync(join(root, "markets/collect.ts"), "utf8");
+    const src = readFileSync(join(root, "../../../client/packages/venue-browser/polymarket/markets/collect.ts"), "utf8");
     const start = src.indexOf("function saveBetOddsToFo");
     const end = src.indexOf("export function startPolymarketCollector");
     expect(start).toBeGreaterThanOrEqual(0);

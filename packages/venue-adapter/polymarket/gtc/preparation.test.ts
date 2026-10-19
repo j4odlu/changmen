@@ -1,17 +1,17 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { checkGtcBuy, checkManualGtcBuy, prepareManualGtcBuy } from "./preparation";
+import { checkGtcBuy, checkManualGtcBuy, prepareManualGtcBuy } from "@changmen/venue-browser/polymarket/gtc/preparation";
 
 const mocks = vi.hoisted(() => ({ book: vi.fn(), guard: vi.fn(), prepareClock: vi.fn(), clock: true, tick: undefined as string | undefined, generation: 1, build: vi.fn(), runtime: {}, ready: true }));
-vi.mock("./index", () => ({ buildPreparedGtcBuy: mocks.build }));
-vi.mock("../builder", () => ({ resolvePolymarketBuilderCode: () => "builder" }));
-vi.mock("../pmClientApi", () => ({ pmGetBook: mocks.book, pmPrepareSubmit: mocks.prepareClock, pmSubmitClockReady: () => mocks.clock }));
-vi.mock("../pmBetGuard", () => ({ resolvePolymarketBetBlockReason: mocks.guard }));
-vi.mock("../pmTickState", () => ({ currentPmTick: () => mocks.tick }));
-vi.mock("../pmOrderClientCache", () => ({ getPolymarketOrderClientRuntime: () => { if (!mocks.ready) throw new Error("PM 钱包签名器未就绪"); return { runtime: mocks.runtime }; }, polymarketSigningGeneration: () => mocks.generation }));
-vi.mock("../pmOrderSubmitMode", () => ({ resolvePmOrderSubmitHttpMode: () => "direct" }));
-vi.mock("../l2Auth", () => ({ parseTokenConfig: () => ({}), resolvePrivateKey: () => "key", resolveApiCreds: () => ({ address: "address", apiKey: "key", secret: "secret", passphrase: "passphrase" }) }));
+vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ buildPreparedGtcBuy: mocks.build }));
+vi.mock("@changmen/venue-browser/polymarket/submission/client/builder", () => ({ resolvePolymarketBuilderCode: () => "builder" }));
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({ pmGetBook: mocks.book, pmPrepareSubmit: mocks.prepareClock, pmSubmitClockReady: () => mocks.clock }));
+vi.mock("@changmen/venue-browser/polymarket/submission/preflight/pmBetGuard", () => ({ resolvePolymarketBetBlockReason: mocks.guard }));
+vi.mock("@changmen/venue-browser/polymarket/pmTickState", () => ({ currentPmTick: () => mocks.tick }));
+vi.mock("@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache", () => ({ getPolymarketOrderClientRuntime: () => { if (!mocks.ready) throw new Error("PM 钱包签名器未就绪"); return { runtime: mocks.runtime }; }, polymarketSigningGeneration: () => mocks.generation }));
+vi.mock("@changmen/venue-browser/polymarket/pmOrderSubmitMode", () => ({ resolvePmOrderSubmitHttpMode: () => "direct" }));
+vi.mock("@changmen/venue-browser/polymarket/auth/l2Auth", () => ({ parseTokenConfig: () => ({}), resolvePrivateKey: () => "key", resolveApiCreds: () => ({ address: "address", apiKey: "key", secret: "secret", passphrase: "passphrase" }) }));
 const account = { accountId: 1, provider: "Polymarket", token: "vault", currency: "USDT" } as PlatformAccount;
 const option = () => ({ type: "Polymarket", itemId: "token", betId: "condition", matchId: "match", target: "Home", betMoney: 5, odds: 2, data: null } as BetOption);
 beforeEach(() => {

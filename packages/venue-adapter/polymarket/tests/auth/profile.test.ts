@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const polymarketPluginGet = vi.fn();
-vi.mock("../../transport", () => ({
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({
   polymarketPluginGet: (...args: unknown[]) => polymarketPluginGet(...args),
 }));
 
@@ -9,7 +9,7 @@ import {
   mapPolymarketPublicProfile,
   resolvePolymarketProfileAddress,
   resolvePolymarketVenueIdentityFromToken,
-} from "../../profile";
+} from "@changmen/venue-browser/polymarket/auth/profile";
 
 describe("polymarket profile", () => {
   beforeEach(() => {

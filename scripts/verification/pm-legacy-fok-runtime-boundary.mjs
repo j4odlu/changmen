@@ -1,3 +1,4 @@
+import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 经典 FOK 恢复自动准备 signer；其余模式及原冻结基线逐字保留。
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -23,6 +24,8 @@ export function restorePmLegacyFokRuntimeSource(file, source, required = false) 
   return result;
 }
 export function verifyPmLegacyFokRuntimeContract(read) {
+  const actualRead = read;
+  read = file => restoreVenueBrowserExecution(file, actualRead(file));
   verifyPmFokCancellationContract(read);
   for (const [file, row] of Object.entries(changes))
     assert(row.beforeShas.includes(digest(restorePmLegacyFokRuntimeSource(file, read(file), true))),

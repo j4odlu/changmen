@@ -6,7 +6,7 @@ import { declaredInstallClosure, frontendInstallBoundary, inspectComponentInstal
 const root = fileURLToPath(new URL("../../", import.meta.url));
 it("reports real frontend/backend/RDS declarations without claiming installation isolation", () => {
   const report = inspectComponentInstallInputs(root);
-  expect(report.violations).toEqual([]); expect(report.profiles.frontend.workspaces).toHaveLength(7);
+  expect(report.violations).toEqual([]); expect(report.profiles.frontend.workspaces).toHaveLength(8);
   expect(report.profiles.backend.workspaces).toHaveLength(15);
   expect(report.profiles.rds.workspaces).toEqual([
     "@changmen/api-contract", "@changmen/db", "@changmen/runtime-tooling", "@changmen/shared", "@changmen/storage",

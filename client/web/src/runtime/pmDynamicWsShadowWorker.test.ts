@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, expect, test, vi } from "vitest";
 import { reactive, nextTick } from "vue";
-import type { PmOrderBookService } from "@changmen/venue-adapter/polymarket/orderBook";
+import type { PmOrderBookService } from "@changmen/pm-market-data-browser/service";
 import { startPmDynamicWsShadowWorker } from "./pmDynamicWsShadowWorker";
 const io = vi.hoisted(() => ({ ws: "official", http: "direct", submit: "direct", accounts: {} as { accounts: Array<Record<string, unknown>> },
   matches: {} as { matchs: unknown[] }, odds: vi.fn(), construct: vi.fn(), setAssets: vi.fn(), stop: vi.fn(), reconcile: vi.fn() }));
@@ -10,8 +10,10 @@ vi.mock("@/stores/oddsStore", () => ({ useOddsStore: () => ({ getPmQuoteEntry: i
 vi.mock("@changmen/venue-adapter/polymarket", () => ({ getPmMarketWsSourceMode: () => io.ws,
   resolvePmHttpMode: () => io.http, resolvePmOrderSubmitHttpMode: () => io.submit,
   getPolymarketPmSportBlockReason: () => null }));
-vi.mock("@changmen/venue-adapter/polymarket/wsBookShadow", () => ({
+vi.mock("@changmen/venue-browser/pm-book-diagnostics/bookRuntime", () => ({
   officialGateway: (gateway: string) => gateway === "https://clob.polymarket.com",
+}));
+vi.mock("@changmen/venue-browser/pm-book-diagnostics/shadowWorkerClient", () => ({
   WsBookShadowWorkerClient: class {
     constructor(allowed: () => boolean) { io.construct(allowed); }
     setAssets = io.setAssets; stop = io.stop; reconcile = io.reconcile; report = () => ({ activeSupported: false });

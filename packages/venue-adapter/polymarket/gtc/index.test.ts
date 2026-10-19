@@ -1,17 +1,17 @@
 import type { GtcPlan } from "@changmen/shared/pm_gtc";
 import { createGtcExecution, gtcCanCancel, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buildPreparedGtcBuy, gtcTradeFills, readGtcFacts, readGtcTradeHistory } from "./index";
+import { buildPreparedGtcBuy, gtcTradeFills, readGtcFacts, readGtcTradeHistory } from "@changmen/venue-browser/polymarket/gtc/index";
 
 const mocks = vi.hoisted(() => ({ market: vi.fn(), getOrder: vi.fn(), trades: vi.fn(), submit: vi.fn(), build: vi.fn(), consume: vi.fn(), json: vi.fn() }));
-vi.mock("../userWs", () => ({ warmPolymarketUserWs: vi.fn() }));
+vi.mock("@changmen/venue-browser/polymarket/realtime/userWs", () => ({ warmPolymarketUserWs: vi.fn() }));
 const preparation = () => ({ data: { apiBetMoney: 5, limitPrice: 0.5, tokenId: "token", orderOptions: { tickSize: "0.01", minOrderSize: 5, version: 2, negRisk: false } }, runtime: { builder: { buildOrder: mocks.build }, clob: { isV2Order: () => true, Side: { BUY: "BUY" }, OrderType: { GTC: "GTC" }, orderToJsonV2: mocks.json }, builderCode: "builder" }, consume: mocks.consume, prepareSubmit: async () => {}, validate: () => {} });
 const prepareGtcBuy = (account: Parameters<typeof buildPreparedGtcBuy>[0], option: Parameters<typeof buildPreparedGtcBuy>[1]) => buildPreparedGtcBuy(account, option, preparation() as never);
-vi.mock("../transport", () => ({ polymarketPluginGet: mocks.market, polymarketL2Get: mocks.trades }));
-vi.mock("../pmClientApi", () => ({ pmSubmitOrder: mocks.submit, pmGetOrder: mocks.getOrder, pmCancelOrder: vi.fn() }));
-vi.mock("../pmSubmitJournal", () => ({ pmSignedOrderHash: () => "order", pmSubmitMaker: () => "maker" }));
-vi.mock("../pmOrderSubmitMode", () => ({ resolvePmOrderSubmitHttpMode: () => "direct" }));
-vi.mock("../l2Auth", () => ({ parseTokenConfig: () => ({}), resolveApiCreds: () => ({ apiKey: "api" }) }));
+vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({ polymarketPluginGet: mocks.market, polymarketL2Get: mocks.trades }));
+vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({ pmSubmitOrder: mocks.submit, pmGetOrder: mocks.getOrder, pmCancelOrder: vi.fn() }));
+vi.mock("@changmen/venue-browser/polymarket/submission/recovery/pmSubmitJournal", () => ({ pmSignedOrderHash: () => "order", pmSubmitMaker: () => "maker" }));
+vi.mock("@changmen/venue-browser/polymarket/pmOrderSubmitMode", () => ({ resolvePmOrderSubmitHttpMode: () => "direct" }));
+vi.mock("@changmen/venue-browser/polymarket/auth/l2Auth", () => ({ parseTokenConfig: () => ({}), resolveApiCreds: () => ({ apiKey: "api" }) }));
 const plan = { tokenId: "token", conditionId: "condition", shares: "10", feeProof: { rate: "0.1", exponent: 1, takerOnly: true, observedAt: 1 } } as GtcPlan;
 const trade = { id: "t", taker_order_id: "other", asset_id: "token", side: "SELL", size: "100", price: "0.6", status: "CONFIRMED", last_update: "1000", maker_orders: [{ order_id: "order", asset_id: "token", side: "BUY", matched_amount: "3", price: "0.5" }, { order_id: "unrelated", asset_id: "token", side: "BUY", matched_amount: "97", price: "0.5" }] };
 it("shares one complete account history across originals while retaining exact fill identities", async () => {

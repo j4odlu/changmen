@@ -6,6 +6,7 @@ import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs"
 import { restorePmTickRefreshSource } from "./pm-tick-refresh-boundary.mjs";
 import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
 import { restorePmWsQuantityEvidenceSource } from "./pm-ws-quantity-evidence-boundary.mjs";
+import { readVenueBrowserLeafSource } from "./venue-browser-leaves.mjs";
 
 // [changmen 扩展] 精确登记本次纯位置迁移；旧入口只能再导出，核验仍读取完整实现。
 export const PM_FUNCTIONAL_GROUPS = Object.freeze({
@@ -49,7 +50,7 @@ export function readRelocatedPmFunctionalSource(file, source, readSource = targe
   if (!target)
     return source.replace(/\r\n/g, "\n");
   assert.equal(source.replace(/\r\n/g, "\n"), pmFunctionalCompatibilitySource(file), `${file}: compatibility entry must only re-export its registered implementation`);
-  const implementation = restorePmOutcomeArchiveSource(target, readSource(target));
+  const implementation = restorePmOutcomeArchiveSource(target, readVenueBrowserLeafSource(target, readSource(target), readSource));
   return rebasePmFokImports(restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, restorePmWsQuantityEvidenceSource(target, implementation, readSource)), readSource)), target, file).replace(/\r\n/g, "\n");
 }
 

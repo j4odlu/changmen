@@ -80,9 +80,8 @@ it('preserves the actual target of every static, dynamic and type dependency aft
  const browser=JSON.parse(read('client/packages/venue-browser/package.json')),adapter=JSON.parse(read('packages/venue-adapter/package.json'));
  for(const [name,version] of Object.entries(browser.dependencies))if(!name.startsWith('@changmen/'))expect(version,name).toBe(adapter.dependencies[name]);
 });
-it('rejects modified or missing original entries, canonical code, consumers and metadata through the existing complete gate',()=>{
- for(const row of [...record.changes,...record.added]){
+// Each file gets its own timeout budget; the complete gate and both rejection checks stay unchanged.
+it.each([...record.changes,...record.added])('$file: rejects modified or missing source through the existing complete gate',(row)=>{
   expect(()=>verifyVenueBrowserRelocation(f=>read(f)+(f===row.file?'\nvoid changed();\n':''))).toThrow();
   expect(()=>verifyVenueBrowserRelocation(f=>{if(f===row.file)throw Error('missing');return read(f);})).toThrow();
- }
 });

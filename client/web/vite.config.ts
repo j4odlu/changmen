@@ -23,13 +23,13 @@ const WEB_ROOT = fileURLToPath(new URL(".", import.meta.url));
 const WORKSPACE_ROOT = path.resolve(WEB_ROOT, "../..");
 const VENUE_ADAPTER_REL = "packages/venue-adapter";
 const VENUE_ADAPTER_ROOT = path.resolve(WORKSPACE_ROOT, VENUE_ADAPTER_REL);
-const CLIENT_CORE_SRC = path.resolve(WEB_ROOT, "../../packages/client-core/src");
+const CLIENT_CORE_SRC = path.resolve(WEB_ROOT, "../packages/client-core/src");
 const venueAdapterVitestGlob = path
   .relative(WEB_ROOT, VENUE_ADAPTER_ROOT)
   .split(path.sep)
   .join("/");
 const clientCoreVitestGlob = path
-  .relative(WEB_ROOT, path.resolve(WEB_ROOT, "../../packages/client-core"))
+  .relative(WEB_ROOT, path.resolve(WEB_ROOT, "../packages/client-core"))
   .split(path.sep)
   .join("/");
 

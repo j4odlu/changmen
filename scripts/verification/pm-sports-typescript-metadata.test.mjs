@@ -1,9 +1,10 @@
+import { restoreClientPackageMetadata } from "./client-package-relocation.mjs";
 import fs from "node:fs";
 import { expect, it } from "vitest";
 import { restorePmSportsTypeScriptMetadata as restore } from "./pm-sports-typescript-metadata.mjs";
 import { restorePmSourceIsolationMetadata, PM_METADATA_BASELINE } from "./pm-source-isolation-metadata.mjs";
 import { gitSource } from "./fok-exact-boundaries.mjs";
-const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const read = file => restoreClientPackageMetadata(file, fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n"));
 const file = "package-lock.json", current = read(file), before = restore(file, current);
 const keys = ["server/collectors/polymarket-sports", "server/db", "server/storage"];
 it("changes only the three workspace type dependency records and preserves every SDK record", () => {

@@ -1,26 +1,5 @@
-# @changmen/arb-core
+# arb-core 兼容入口
 
-电竞/体育套利 **纯逻辑** 包：选腿、隐含利润、机会扫描、状态 diff。无 Pinia、Vue、HTTP。
+[changmen 扩展] 实现已迁至 `client/packages/arb-core`，workspace 包名 `@changmen/arb-core` 保持不变。本目录不再注册为 workspace；`src/` 仅转导出唯一实现，旧 package.json、tsconfig 和命令入口暂留兼容。不要在本目录增加业务实现。
 
-## 使用方
-
-| 包 | 典型 import |
-|----|-------------|
-| `client/web` | `@changmen/arb-core`、`@changmen/arb-core/opportunity/detect` |
-| 主控台棒球/足球 Tab（后期套利） | 同上（moneyline 套利 MVP） |
-
-## 目录
-
-| 路径 | 内容 |
-|------|------|
-| `src/arbitrage/` | `pickArbLegs`、`arbStakeMath`、`polymarketArbPrecheck` |
-| `src/opportunity/` | `detectOpportunities`、`diffOpportunities`、类型 |
-| `src/providerKeys.ts` | 套利检测平台列表收口 |
-
-## 边界
-
-- **依赖** `@changmen/client-core`（`ViewMatch`、`UserConfig`、`BetOption` 等）
-- **不** import `client/web`、`stores`、`venue-adapter`
-- **不**含 `syncArbRuntime`（Vue watch + marketWatch 留在 web `extensions/arbOpportunity`）
-
-相关：[docs/TEAM_BOUNDARIES.md](../../docs/TEAM_BOUNDARIES.md)
+迁移与验证见 `docs/CLIENT_PACKAGE_ISOLATION_20261019.md`。

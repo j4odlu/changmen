@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@changmen/api-contract": "file:../api-contract",
-    "@changmen/client-core": "file:../client-core",
+    "@changmen/client-core": "file:../../client/packages/client-core",
     "@changmen/shared": "file:../shared",
     "@noble/hashes": "1.3.2",
     "@polymarket/builder-relayer-client": "0.0.10",

@@ -1,0 +1,23 @@
+{
+  "name": "@changmen/arb-core",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "changmen 套利纯逻辑：选腿、机会检测、状态 diff（无 Pinia/Vue）",
+  "exports": {
+    ".": "./src/index.ts",
+    "./arbitrage": "./src/arbitrage/index.ts",
+    "./arbitrage/pickArbLegs": "./src/arbitrage/pickArbLegs.ts",
+    "./arbitrage/arbStakeMath": "./src/arbitrage/arbStakeMath.ts",
+    "./arbitrage/polymarketArbPrecheck": "./src/arbitrage/polymarketArbPrecheck.ts",
+    "./opportunity": "./src/opportunity/index.ts",
+    "./opportunity/detect": "./src/opportunity/detect.ts",
+    "./opportunity/state": "./src/opportunity/state.ts",
+    "./opportunity/types": "./src/opportunity/types.ts",
+    "./providerKeys": "./src/providerKeys.ts"
+  },
+  "dependencies": {
+    "@changmen/api-contract": "file:../../../packages/api-contract",
+    "@changmen/client-core": "file:../client-core"
+  }
+}

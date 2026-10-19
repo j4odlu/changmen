@@ -214,6 +214,14 @@
   ],
   "rules": [
     {
+      "prefix": "client/packages/arb-core",
+      "layer": "frontend"
+    },
+    {
+      "prefix": "client/packages/client-core",
+      "layer": "frontend"
+    },
+    {
       "prefix": "devtools/runtime-tooling",
       "layer": "shared",
       "role": "tooling"

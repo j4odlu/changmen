@@ -85,7 +85,7 @@ export function runtimeToolingDeclarationBoundary(packages) {
 }
 export function venueBrowserDeclarationBoundary(packages) {
   const violations = [], adapter = packages.get("@changmen/venue-adapter"), tools = packages.get("@changmen/venue-adapter-tools");
-  for (const [name, target] of Object.entries({ "@changmen/api-contract": "file:../api-contract", "@changmen/client-core": "file:../client-core" }))
+  for (const [name, target] of Object.entries({ "@changmen/api-contract": "file:../api-contract", "@changmen/client-core": "file:../../client/packages/client-core" }))
     if (adapter?.pkg.dependencies?.[name] !== target) violations.push({ file: "packages/venue-adapter/package.json", spec: name,
       pattern: "The browser adapter must retain its direct hosts for adjacent registry TypeScript consumers" });
   for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"])

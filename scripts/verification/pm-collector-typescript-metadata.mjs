@@ -1,5 +1,6 @@
 // [changmen 扩展] Reverse exact collector dependency increments before all
 // historical full-lock proofs. No SDK record or fixed FOK baseline is replaced.
+import { restoreClientPackageMetadata } from "./client-package-relocation.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { restorePmSportsTypeScriptMetadata } from "./pm-sports-typescript-metadata.mjs";
@@ -47,7 +48,7 @@ const after = `    "server/collectors/polymarket-esports": {
 `;
 
 export function restorePmCollectorTypeScriptMetadata(file, source) {
-  source = restorePmSportsTypeScriptMetadata(file, source);
+  source = restorePmSportsTypeScriptMetadata(file, restoreClientPackageMetadata(file, source));
   if (file === "server/collectors/polymarket-sports/package.json") {
     source = source.replaceAll("\r\n", "\n");
     if (sha(source) !== "000d09d5bde7fc5660a4cc8473d709cd66a151fbc0c82017182b951d31f43d8e") return source;

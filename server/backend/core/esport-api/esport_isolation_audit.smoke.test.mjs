@@ -16,7 +16,7 @@ const buildMatchList = store.slice(buildStart, buildEnd);
 assert.equal(/sport_merge|sport_gamma|football_gamma|sport_predictfun|sport_football|sport_ob|MarketCode|lineMarkets/.test(buildMatchList), false);
 assert.match(buildMatchList, /loadClientMatchesFromDb/);
 
-const matchTs = fs.readFileSync(path.join(root, "packages/client-core/src/models/match.ts"), "utf8");
+const matchTs = fs.readFileSync(path.join(root, "client/packages/client-core/src/models/match.ts"), "utf8");
 const gnStart = matchTs.indexOf("getBetName()");
 const gnEnd = matchTs.indexOf("maxOdds(");
 const gn = matchTs.slice(gnStart, gnEnd);

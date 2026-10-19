@@ -7,9 +7,9 @@
     "node": ">=24"
   },
   "workspaces": [
-    "packages/arb-core",
+    "client/packages/arb-core",
     "packages/shared",
-    "packages/client-core",
+    "client/packages/client-core",
     "packages/api-contract",
     "client/web",
     "chrome-extension",

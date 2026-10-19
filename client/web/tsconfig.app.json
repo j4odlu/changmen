@@ -19,9 +19,9 @@
     "resolveJsonModule": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@changmen/arb-core": ["../../packages/arb-core/src/index.ts"],
-      "@changmen/arb-core/*": ["../../packages/arb-core/src/*"],
-      "@changmen/client-core/*": ["../../packages/client-core/src/*"],
+      "@changmen/arb-core": ["../packages/arb-core/src/index.ts"],
+      "@changmen/arb-core/*": ["../packages/arb-core/src/*"],
+      "@changmen/client-core/*": ["../packages/client-core/src/*"],
       "@changmen/shared/*": ["../../packages/shared/*"],
       "@changmen/venue-adapter": ["../../packages/venue-adapter/registry/index.ts"],
       "@changmen/venue-adapter/*": ["../../packages/venue-adapter/*"],

@@ -1,0 +1,512 @@
+{
+  "schemaVersion": 1,
+  "purpose": "client-core-arb-core-folder-isolation-only",
+  "baselineCommit": "ce39897bd33ec11a438332323e9419a379517a93",
+  "immutableFokBaseline": "75b1efac66625e5f2bc9884a965b244bfaf337ed",
+  "publishScopeOptimizationEnabled": false,
+  "relocations": [
+    {
+      "file": "packages/arb-core/src/arbitrage/arbStakeMath.ts",
+      "canonical": "client/packages/arb-core/src/arbitrage/arbStakeMath.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/arb-core/src/arbitrage/arbStakeMath.ts\";\n",
+      "sourceSha256": "0b364416246a387d43636f1e4402cb56d3736555b4bd5c262b702979cdaa95ba"
+    },
+    {
+      "file": "packages/arb-core/src/arbitrage/index.ts",
+      "canonical": "client/packages/arb-core/src/arbitrage/index.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/arb-core/src/arbitrage/index.ts\";\n",
+      "sourceSha256": "ee9803d4b5b9b08dc2749b1dfc77a13ede348b91a11854f06c7a3a8be69a9d62"
+    },
+    {
+      "file": "packages/arb-core/src/arbitrage/pickArbLegs.ts",
+      "canonical": "client/packages/arb-core/src/arbitrage/pickArbLegs.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/arb-core/src/arbitrage/pickArbLegs.ts\";\n",
+      "sourceSha256": "1dc044edb24081ed93a667a99a5414ffa4b00a024a97fe9b3b88052174090a4e"
+    },
+    {
+      "file": "packages/arb-core/src/arbitrage/polymarketArbPrecheck.ts",
+      "canonical": "client/packages/arb-core/src/arbitrage/polymarketArbPrecheck.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/arb-core/src/arbitrage/polymarketArbPrecheck.ts\";\n",
+      "sourceSha256": "97af510156514f58b92c24aa6a18962f8648579644c927b30a51dea471452a5c"
+    },
+    {
+      "file": "packages/arb-core/src/index.ts",
+      "canonical": "client/packages/arb-core/src/index.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../client/packages/arb-core/src/index.ts\";\n",
+      "sourceSha256": "58673a23670d7c353049470c860fce04be0a5ca2272e89c0048cab30f35e2bc2"
+    },
+    {
+      "file": "packages/arb-core/src/opportunity/detect.ts",
+      "canonical": "client/packages/arb-core/src/opportunity/detect.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/arb-core/src/opportunity/detect.ts\";\n",
+      "sourceSha256": "e4b0a897e7503c43c1891de5b0987fd6bf3882f62fb974271e2e50d83aa250d9"
+    },
+    {
+      "file": "packages/arb-core/src/opportunity/index.ts",
+      "canonical": "client/packages/arb-core/src/opportunity/index.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/arb-core/src/opportunity/index.ts\";\n",
+      "sourceSha256": "78e8f55c547fad237bb2dd3591d115bba7ad986bc41c856c989afa549670d02c"
+    },
+    {
+      "file": "packages/arb-core/src/opportunity/state.ts",
+      "canonical": "client/packages/arb-core/src/opportunity/state.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/arb-core/src/opportunity/state.ts\";\n",
+      "sourceSha256": "c097c8ea554c49712e7eedbe4fb77dadc5841ec2721e41d8732195a6ba40fe32"
+    },
+    {
+      "file": "packages/arb-core/src/opportunity/types.ts",
+      "canonical": "client/packages/arb-core/src/opportunity/types.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/arb-core/src/opportunity/types.ts\";\n",
+      "sourceSha256": "516a75b51065a5b0be731fbe34e2323dbc329c58356d5a731a3024e20d9950b0"
+    },
+    {
+      "file": "packages/arb-core/src/providerKeys.ts",
+      "canonical": "client/packages/arb-core/src/providerKeys.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../client/packages/arb-core/src/providerKeys.ts\";\n",
+      "sourceSha256": "8b6d14ef8c9dfd58f76709bf03752987c3779d0661660c31c3c117566174b967"
+    },
+    {
+      "file": "packages/arb-core/src/types.ts",
+      "canonical": "client/packages/arb-core/src/types.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../client/packages/arb-core/src/types.ts\";\n",
+      "sourceSha256": "d007ad2191ec9d887b3e556b037f66fd1bb013a7cc3c3a03a2197af03e991929"
+    },
+    {
+      "file": "packages/client-core/scripts/list-consumer-imports.mjs",
+      "canonical": "client/packages/client-core/scripts/list-consumer-imports.mjs",
+      "kind": "cli",
+      "wrapper": "#!/usr/bin/env node\nimport \"../../../client/packages/client-core/scripts/list-consumer-imports.mjs\";\n",
+      "sourceSha256": "e6d2ce4e526e0e6772cc53b37965aad1c7e43537cb4a1e47afb69d7fee8abc01"
+    },
+    {
+      "file": "packages/client-core/scripts/relativize-internal-imports.mjs",
+      "canonical": "client/packages/client-core/scripts/relativize-internal-imports.mjs",
+      "kind": "cli",
+      "wrapper": "#!/usr/bin/env node\nimport \"../../../client/packages/client-core/scripts/relativize-internal-imports.mjs\";\n",
+      "sourceSha256": "b2cbc529e5c2ef08bb1b69df13fa1a2216cee1290370b546216bed8b92e7398f"
+    },
+    {
+      "file": "packages/client-core/scripts/sync-package-exports.mjs",
+      "canonical": "client/packages/client-core/scripts/sync-package-exports.mjs",
+      "kind": "cli",
+      "wrapper": "#!/usr/bin/env node\nimport \"../../../client/packages/client-core/scripts/sync-package-exports.mjs\";\n",
+      "sourceSha256": "c1e54ebcd0c3146087824c4533d5fca0d7a3a5332c752010c3d495bb83e98cee"
+    },
+    {
+      "file": "packages/client-core/src/bridge/bettingLog.ts",
+      "canonical": "client/packages/client-core/src/bridge/bettingLog.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/bridge/bettingLog.ts\";\n",
+      "sourceSha256": "9ad9e82a2821e4b03233923f36ff0a45c1078224436c835cc39d7078a33d4490"
+    },
+    {
+      "file": "packages/client-core/src/bridge/clientApi.ts",
+      "canonical": "client/packages/client-core/src/bridge/clientApi.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/bridge/clientApi.ts\";\n",
+      "sourceSha256": "30bf6dc2811baad886289dce84a57f76667bea4f7c9f7ff9a431b52848c36600"
+    },
+    {
+      "file": "packages/client-core/src/bridge/oddsAccess.ts",
+      "canonical": "client/packages/client-core/src/bridge/oddsAccess.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/bridge/oddsAccess.ts\";\n",
+      "sourceSha256": "e153f4b131065d2b879dc58eaeddb4c17e4f9d55fb46ad16be3e4fad360fff0c"
+    },
+    {
+      "file": "packages/client-core/src/chrome-plugin/bridge.ts",
+      "canonical": "client/packages/client-core/src/chrome-plugin/bridge.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/chrome-plugin/bridge.ts\";\n",
+      "sourceSha256": "40b6d5b975d0271a62ed07a7539ea294efe47dd7b24c7282334f739ec5a5ffa1"
+    },
+    {
+      "file": "packages/client-core/src/models/betOption.ts",
+      "canonical": "client/packages/client-core/src/models/betOption.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/models/betOption.ts\";\n",
+      "sourceSha256": "dd0f9677b0c46d0e528b5b1fe9d39be22f57ed34bce925accda30866f2f9b821"
+    },
+    {
+      "file": "packages/client-core/src/models/betResult.ts",
+      "canonical": "client/packages/client-core/src/models/betResult.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/models/betResult.ts\";\n",
+      "sourceSha256": "9db7c825349d655f8963ca456983352f5a0c97206e02374ee46569211a2e0cf1"
+    },
+    {
+      "file": "packages/client-core/src/models/loseOrder.ts",
+      "canonical": "client/packages/client-core/src/models/loseOrder.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/models/loseOrder.ts\";\n",
+      "sourceSha256": "aee89a449dd2c171484c27e0d30f1de9d5adb4df9a302002c096981d4341a3d9"
+    },
+    {
+      "file": "packages/client-core/src/models/match.ts",
+      "canonical": "client/packages/client-core/src/models/match.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/models/match.ts\";\n",
+      "sourceSha256": "ea96c7fcc51a3640e23e47c4f1ca7974faf7238ecf7d9d625303a819f14ee73a"
+    },
+    {
+      "file": "packages/client-core/src/models/platformAccount.ts",
+      "canonical": "client/packages/client-core/src/models/platformAccount.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/models/platformAccount.ts\";\n",
+      "sourceSha256": "a2351e823a7c22223ca6252461ea4c4b67e82bfc6fa648295fcc95c20510c7ef"
+    },
+    {
+      "file": "packages/client-core/src/shared/a8Axios.ts",
+      "canonical": "client/packages/client-core/src/shared/a8Axios.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/shared/a8Axios.ts\";\n",
+      "sourceSha256": "bd6873289198cd7f3b4045a64c3752e5b0da58b01048501b132b2ae0656d83d7"
+    },
+    {
+      "file": "packages/client-core/src/shared/bracketForm.ts",
+      "canonical": "client/packages/client-core/src/shared/bracketForm.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/shared/bracketForm.ts\";\n",
+      "sourceSha256": "f7a34c7afa0abcb3fc647b8e5b46ac70fc53d623ed67be57434f1d8f3887bb24"
+    },
+    {
+      "file": "packages/client-core/src/shared/format.ts",
+      "canonical": "client/packages/client-core/src/shared/format.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/shared/format.ts\";\n",
+      "sourceSha256": "b39e98920708891f55de790fc1f8366cf78570b2c1b4fa6a2439c73e8dd93843"
+    },
+    {
+      "file": "packages/client-core/src/shared/hkRelayOrigin.ts",
+      "canonical": "client/packages/client-core/src/shared/hkRelayOrigin.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/shared/hkRelayOrigin.ts\";\n",
+      "sourceSha256": "f834712eded0a45a3d8f34317875c447d5126ba5791442e05f03281c31cd203a"
+    },
+    {
+      "file": "packages/client-core/src/shared/http.ts",
+      "canonical": "client/packages/client-core/src/shared/http.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/shared/http.ts\";\n",
+      "sourceSha256": "fa9f2be1d9ec858ebaacad2afb2fefbb07835bfa93298e0f88744cce3c533ae3"
+    },
+    {
+      "file": "packages/client-core/src/shared/md5.ts",
+      "canonical": "client/packages/client-core/src/shared/md5.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/shared/md5.ts\";\n",
+      "sourceSha256": "083915a8951c961d8c7c4d78f31dc75811d19a53689acdd0c49b94c1c8c2af0c"
+    },
+    {
+      "file": "packages/client-core/src/shared/platformHttp.ts",
+      "canonical": "client/packages/client-core/src/shared/platformHttp.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/shared/platformHttp.ts\";\n",
+      "sourceSha256": "237af6635f3a148f348130df87bfedf82458d80240c959d63a047753fd499a49"
+    },
+    {
+      "file": "packages/client-core/src/shared/venueGames.ts",
+      "canonical": "client/packages/client-core/src/shared/venueGames.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/shared/venueGames.ts\";\n",
+      "sourceSha256": "8801a46fc6cc4b3e5d12bf58f4b7b88b68758fdaf8bf7b1c9a4eab0ac6504b38"
+    },
+    {
+      "file": "packages/client-core/src/shared/wait.ts",
+      "canonical": "client/packages/client-core/src/shared/wait.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/shared/wait.ts\";\n",
+      "sourceSha256": "d1648c843554df97732a4fc50934d601426853c95068575fd27587f3bb4cecb5"
+    },
+    {
+      "file": "packages/client-core/src/types/account.ts",
+      "canonical": "client/packages/client-core/src/types/account.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/types/account.ts\";\n",
+      "sourceSha256": "5039c4b05b2953df31f557bd9dd835605a36f881a79ea0c3f209271472f9a84e"
+    },
+    {
+      "file": "packages/client-core/src/types/collect.ts",
+      "canonical": "client/packages/client-core/src/types/collect.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/types/collect.ts\";\n",
+      "sourceSha256": "f7f211d6635b60eb15510aa281389bc4a75520de64ad43c841db29f1f0d071e3"
+    },
+    {
+      "file": "packages/client-core/src/types/esport.ts",
+      "canonical": "client/packages/client-core/src/types/esport.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/types/esport.ts\";\n",
+      "sourceSha256": "9cc1250fe3751589437a26658406d5ddd70280d0e6b533ff8487ac6fb2593407"
+    },
+    {
+      "file": "packages/client-core/src/types/limit.ts",
+      "canonical": "client/packages/client-core/src/types/limit.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/types/limit.ts\";\n",
+      "sourceSha256": "74c29ead2899a04f764c2895484487498918074911f77ef38b16f2b0525d61cf"
+    },
+    {
+      "file": "packages/client-core/src/types/order.ts",
+      "canonical": "client/packages/client-core/src/types/order.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/types/order.ts\";\n",
+      "sourceSha256": "fcb30aa566fbafb1ab325ad13624bb9b8a422fe6c9d57b2188b22e0091d1fa50"
+    },
+    {
+      "file": "packages/client-core/src/types/platforms.ts",
+      "canonical": "client/packages/client-core/src/types/platforms.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/types/platforms.ts\";\n",
+      "sourceSha256": "a1e905248e67fb6ecd3297dc34df0e06b6cdeb87f3b3df4f961f37dee3f92511"
+    },
+    {
+      "file": "packages/client-core/src/types/userConfig.ts",
+      "canonical": "client/packages/client-core/src/types/userConfig.ts",
+      "kind": "runtime",
+      "wrapper": "export * from \"../../../../client/packages/client-core/src/types/userConfig.ts\";\n",
+      "sourceSha256": "d47f9b381c3379f81b87da65ecfe9fa44733102a9d34a019ca66e359d3871f7a"
+    }
+  ],
+  "changes": [
+    {
+      "file": "package.json",
+      "baselineSha256": "e276fc308f6fb3be1a1305897fee46a308e7f6d8f92e0c18b32e0f69919e421c",
+      "migratedSha256": "c0658c2ddb8ac53e0f89da48dbf2227017dd548bbfe20a1127c8ce7688fb1d73",
+      "patches": [
+        {
+          "oldStart": 10,
+          "oldCount": 1,
+          "newStart": 10,
+          "newCount": 1,
+          "before": [
+            "    \"packages/arb-core\","
+          ],
+          "after": [
+            "    \"client/packages/arb-core\","
+          ]
+        },
+        {
+          "oldStart": 12,
+          "oldCount": 1,
+          "newStart": 12,
+          "newCount": 1,
+          "before": [
+            "    \"packages/client-core\","
+          ],
+          "after": [
+            "    \"client/packages/client-core\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "package-lock.json",
+      "baselineSha256": "270efd0304a288442b3ca93189ad107bc00666531d85c7bb3119f122476b9bf2",
+      "migratedSha256": "741c9b289b7292f28ec13ba937e8e485e1ea134ac3d8fc49fe4ec616b838743f",
+      "patches": [
+        {
+          "oldStart": 9,
+          "oldCount": 1,
+          "newStart": 9,
+          "newCount": 1,
+          "before": [
+            "        \"packages/arb-core\","
+          ],
+          "after": [
+            "        \"client/packages/arb-core\","
+          ]
+        },
+        {
+          "oldStart": 11,
+          "oldCount": 1,
+          "newStart": 11,
+          "newCount": 1,
+          "before": [
+            "        \"packages/client-core\","
+          ],
+          "after": [
+            "        \"client/packages/client-core\","
+          ]
+        },
+        {
+          "oldStart": 541,
+          "oldCount": 0,
+          "newStart": 542,
+          "newCount": 17,
+          "before": [],
+          "after": [
+            "    \"client/packages/arb-core\": {",
+            "      \"name\": \"@changmen/arb-core\",",
+            "      \"version\": \"0.1.0\",",
+            "      \"dependencies\": {",
+            "        \"@changmen/api-contract\": \"file:../../../packages/api-contract\",",
+            "        \"@changmen/client-core\": \"file:../client-core\"",
+            "      }",
+            "    },",
+            "    \"client/packages/client-core\": {",
+            "      \"name\": \"@changmen/client-core\",",
+            "      \"version\": \"0.1.0\",",
+            "      \"dependencies\": {",
+            "        \"@changmen/api-contract\": \"file:../../../packages/api-contract\",",
+            "        \"@changmen/shared\": \"file:../../../packages/shared\",",
+            "        \"axios\": \"^1.13.6\"",
+            "      }",
+            "    },"
+          ]
+        },
+        {
+          "oldStart": 554,
+          "oldCount": 2,
+          "newStart": 571,
+          "newCount": 2,
+          "before": [
+            "        \"@changmen/arb-core\": \"file:../../packages/arb-core\",",
+            "        \"@changmen/client-core\": \"file:../../packages/client-core\","
+          ],
+          "after": [
+            "        \"@changmen/arb-core\": \"file:../packages/arb-core\",",
+            "        \"@changmen/client-core\": \"file:../packages/client-core\","
+          ]
+        },
+        {
+          "oldStart": 911,
+          "oldCount": 1,
+          "newStart": 928,
+          "newCount": 1,
+          "before": [
+            "      \"resolved\": \"packages/arb-core\","
+          ],
+          "after": [
+            "      \"resolved\": \"client/packages/arb-core\","
+          ]
+        },
+        {
+          "oldStart": 923,
+          "oldCount": 1,
+          "newStart": 940,
+          "newCount": 1,
+          "before": [
+            "      \"resolved\": \"packages/client-core\","
+          ],
+          "after": [
+            "      \"resolved\": \"client/packages/client-core\","
+          ]
+        },
+        {
+          "oldStart": 12881,
+          "oldCount": 17,
+          "newStart": 12897,
+          "newCount": 0,
+          "before": [
+            "    \"packages/arb-core\": {",
+            "      \"name\": \"@changmen/arb-core\",",
+            "      \"version\": \"0.1.0\",",
+            "      \"dependencies\": {",
+            "        \"@changmen/api-contract\": \"file:../api-contract\",",
+            "        \"@changmen/client-core\": \"file:../client-core\"",
+            "      }",
+            "    },",
+            "    \"packages/client-core\": {",
+            "      \"name\": \"@changmen/client-core\",",
+            "      \"version\": \"0.1.0\",",
+            "      \"dependencies\": {",
+            "        \"@changmen/api-contract\": \"file:../api-contract\",",
+            "        \"@changmen/shared\": \"file:../shared\",",
+            "        \"axios\": \"^1.13.6\"",
+            "      }",
+            "    },"
+          ],
+          "after": []
+        },
+        {
+          "oldStart": 12913,
+          "oldCount": 1,
+          "newStart": 12913,
+          "newCount": 1,
+          "before": [
+            "        \"@changmen/client-core\": \"file:../client-core\","
+          ],
+          "after": [
+            "        \"@changmen/client-core\": \"file:../../client/packages/client-core\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "client/web/package.json",
+      "baselineSha256": "fecfdab3e4cf262e2a6007785a6a7d2b5f2ad89d33002a66cdf1901ce73b81bc",
+      "migratedSha256": "a693c6dfd138321f1f50188b24749efebae55db2eaf8d3adcbcbe58d70580cd5",
+      "patches": [
+        {
+          "oldStart": 28,
+          "oldCount": 2,
+          "newStart": 28,
+          "newCount": 2,
+          "before": [
+            "    \"@changmen/arb-core\": \"file:../../packages/arb-core\",",
+            "    \"@changmen/client-core\": \"file:../../packages/client-core\","
+          ],
+          "after": [
+            "    \"@changmen/arb-core\": \"file:../packages/arb-core\",",
+            "    \"@changmen/client-core\": \"file:../packages/client-core\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/package.json",
+      "baselineSha256": "c429df7bc53a654c589acdb91c41b5f77a3fd822d2b0ac42028aaece28a3d211",
+      "migratedSha256": "a53e5b60b7473f236d5f77a5de9ba21638f3f857aeceef25166bbf0e6f41a08c",
+      "patches": [
+        {
+          "oldStart": 49,
+          "oldCount": 1,
+          "newStart": 49,
+          "newCount": 1,
+          "before": [
+            "    \"@changmen/client-core\": \"file:../client-core\","
+          ],
+          "after": [
+            "    \"@changmen/client-core\": \"file:../../client/packages/client-core\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/source-ownership-inputs.json",
+      "baselineSha256": "e1fcaca7821de20fa95d7a03dc480c3729bdbc084727d98c89c47656c0b973c9",
+      "migratedSha256": "3e8eace67c710e2c34ce2ecfdf3c657bfdfa273be3ead9416a891285cb974c63",
+      "patches": [
+        {
+          "oldStart": 215,
+          "oldCount": 0,
+          "newStart": 216,
+          "newCount": 8,
+          "before": [],
+          "after": [
+            "    {",
+            "      \"prefix\": \"client/packages/arb-core\",",
+            "      \"layer\": \"frontend\"",
+            "    },",
+            "    {",
+            "      \"prefix\": \"client/packages/client-core\",",
+            "      \"layer\": \"frontend\"",
+            "    },"
+          ]
+        }
+      ]
+    }
+  ]
+}

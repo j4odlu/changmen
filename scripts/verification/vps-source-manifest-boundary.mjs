@@ -1,4 +1,5 @@
 // [changmen 扩展] 每个既有 manifest 条目都核对原始哈希并执行完整模块保护，没有文件跳过。
+import { verifyClientPackageRelocation } from "./client-package-relocation.mjs";
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -22,6 +23,7 @@ export function verifyManifestSources(manifest,readSource=file=>fs.readFileSync(
   assert.equal(manifest.version,'75b1efac66625e5f2bc9884a965b244bfaf337ed');
   const files=Object.keys(manifest.protectedFiles);assert.equal(files.length,551);
   const baselineRead=file=>sources[file]??execFileSync('git',['show',`${manifest.version}:${file}`],{encoding:'utf8'});
+  verifyClientPackageRelocation(readSource);
   const results=[];
   for(const file of files) {
     assert.equal(sha(baselineRead(file)),manifest.protectedFiles[file],`${file}: immutable manifest provenance`);

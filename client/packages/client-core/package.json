@@ -1,0 +1,45 @@
+{
+  "name": "@changmen/client-core",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "changmen 客户端共享层：领域模型、DTO、HTTP 工具（web 与 venue-adapter 共用）",
+  "scripts": {
+    "sync:exports": "node scripts/sync-package-exports.mjs",
+    "check:exports": "node scripts/sync-package-exports.mjs --check",
+    "check:internal-imports": "node scripts/relativize-internal-imports.mjs --check",
+    "list:imports": "node scripts/list-consumer-imports.mjs",
+    "check:consumer-imports": "node scripts/list-consumer-imports.mjs --check"
+  },
+  "exports": {
+    "./bridge/bettingLog": "./src/bridge/bettingLog.ts",
+    "./bridge/clientApi": "./src/bridge/clientApi.ts",
+    "./bridge/oddsAccess": "./src/bridge/oddsAccess.ts",
+    "./chrome-plugin/bridge": "./src/chrome-plugin/bridge.ts",
+    "./models/betOption": "./src/models/betOption.ts",
+    "./models/betResult": "./src/models/betResult.ts",
+    "./models/loseOrder": "./src/models/loseOrder.ts",
+    "./models/match": "./src/models/match.ts",
+    "./models/platformAccount": "./src/models/platformAccount.ts",
+    "./shared/a8Axios": "./src/shared/a8Axios.ts",
+    "./shared/bracketForm": "./src/shared/bracketForm.ts",
+    "./shared/format": "./src/shared/format.ts",
+    "./shared/hkRelayOrigin": "./src/shared/hkRelayOrigin.ts",
+    "./shared/http": "./src/shared/http.ts",
+    "./shared/md5": "./src/shared/md5.ts",
+    "./shared/platformHttp": "./src/shared/platformHttp.ts",
+    "./shared/venueGames": "./src/shared/venueGames.ts",
+    "./shared/wait": "./src/shared/wait.ts",
+    "./types/account": "./src/types/account.ts",
+    "./types/collect": "./src/types/collect.ts",
+    "./types/esport": "./src/types/esport.ts",
+    "./types/limit": "./src/types/limit.ts",
+    "./types/order": "./src/types/order.ts",
+    "./types/userConfig": "./src/types/userConfig.ts"
+  },
+  "dependencies": {
+    "@changmen/api-contract": "file:../../../packages/api-contract",
+    "@changmen/shared": "file:../../../packages/shared",
+    "axios": "^1.13.6"
+  }
+}

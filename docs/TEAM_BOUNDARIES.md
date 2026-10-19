@@ -230,3 +230,7 @@ copy docs\CODEOWNERS.example .github\CODEOWNERS
 ### 第四轮兼容演练与包边界
 
 数据库升级流程与隔离 PostgreSQL 演练见 [DATABASE_UPGRADE_COMPATIBILITY.md](DATABASE_UPGRADE_COMPATIBILITY.md)。共享包保留统一协议和纯逻辑，环境专属能力按入口隔离；当前消费者证据与后续拆分顺序见 [SHARED_PACKAGE_BOUNDARIES.md](SHARED_PACKAGE_BOUNDARIES.md)。本轮未修改生产结构或业务协议，也未改变发布分类。
+
+## 客户端基础包真实目录隔离（2026-10-19）
+
+[changmen 扩展] `@changmen/client-core` 和 `@changmen/arb-core` 的唯一实现已归 `client/packages/`，原包名/导出保持。旧 `packages/` 路径仅保留 36 个源码转发及 3 个 CLI 分派，不再是 workspace。边界命令核对全部旧入口与 canonical 完整内容，原 551 基线与电竞冻结清单不改。包名、Vite alias、类型路径、锁链接和测试发现均使用新实现；实际发布范围仍保守处理，不启用精简安装。详见 [本轮迁移与验证](CLIENT_PACKAGE_ISOLATION_20261019.md)。

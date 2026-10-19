@@ -1,4 +1,5 @@
 // [changmen 扩展] 原有预检兼容性同时覆盖上游输入和提取后的公共任务，不能只比判断函数。
+import { readClientPackageSource } from "./client-package-relocation.mjs";
 import fs from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
@@ -12,7 +13,7 @@ import { restorePmSportsTypeScriptSource } from "./pm-sports-typescript-boundary
 
 const baseline = "a233e20534395b31401828e754432407b109053d";
 const pm = "packages/venue-adapter/polymarket/";
-const read = file => restorePmSportsTypeScriptSource(file, fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n"));
+const read = file => restorePmSportsTypeScriptSource(file, readClientPackageSource(file, fs.readFileSync(file, "utf8"), f => fs.readFileSync(f, "utf8")).replaceAll("\r\n", "\n"));
 const online = file => gitSource(baseline, file).replaceAll("\r\n", "\n");
 
 const parserFile = "server/collectors/polymarket-sports/parse_sport.js";

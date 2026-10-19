@@ -1,5 +1,6 @@
 // [changmen 扩展] Exact development/type dependency increment, with complete
 // original lock verification and negative cases for unrelated edits.
+import { restoreClientPackageMetadata } from "./client-package-relocation.mjs";
 import fs from "node:fs";
 import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
@@ -8,7 +9,7 @@ import { restorePmSportsTypeScriptMetadata } from "./pm-sports-typescript-metada
 import { restorePmSourceIsolationMetadata, PM_METADATA_BASELINE } from "./pm-source-isolation-metadata.mjs";
 
 const file = "package-lock.json";
-const source = restorePmSportsTypeScriptMetadata(file, fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n"));
+const source = restorePmSportsTypeScriptMetadata(file, restoreClientPackageMetadata(file, fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n")));
 const previous = gitSource("84364793171244eca85378ef7bce3388f147b237", file);
 const key = "server/collectors/polymarket-esports";
 const sportsKey = "server/collectors/polymarket-sports";

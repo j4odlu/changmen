@@ -1,4 +1,5 @@
 // [changmen 扩展] 独立 PM 目录迁移：完整实现证明，原冻结清单与业务基线不变。
+import { verifyClientPackageRelocation } from "./client-package-relocation.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { PM_FOK_RELOCATIONS, readRelocatedPmFokSource } from "./pm-fok-source-relocation.mjs";
@@ -36,6 +37,7 @@ export function certifyPmFolderRelease(manifestText, read, baselineRead) {
 
 export function checkPmFolderFreeze(changed, manifestText, read, baselineRead) {
   const certified = certifyPmFolderRelease(manifestText, read, baselineRead);
+  for (const file of verifyClientPackageRelocation(read)) certified.add(file);
   // 新实现继承原模块的冻结保护；不豁免整个目录或其它新增文件。
   const originalPaths = JSON.parse(manifestText).paths;
   const paths = [...originalPaths, "packages/venue-adapter/polymarket/fok", ...Object.entries(PM_FOLDER_RELOCATIONS)

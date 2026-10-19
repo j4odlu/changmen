@@ -1,5 +1,6 @@
 // [changmen 扩展] Native Node regression plus exact restoration of the original
 // protected module; no business-source or directory exclusion is introduced.
+import { readClientPackageSource } from "./client-package-relocation.mjs";
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import { expect, it } from "vitest";
@@ -7,7 +8,7 @@ import { gitSource, replaceExact, verifyProtectedSource } from "./fok-exact-boun
 import { restoreClientCoreNodeEnv } from "./client-core-node-env-boundary.mjs";
 
 const file = "packages/client-core/src/shared/hkRelayOrigin.ts";
-const source = fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const source = readClientPackageSource(file, fs.readFileSync(file, "utf8"), f => fs.readFileSync(f, "utf8")).replaceAll("\r\n", "\n");
 const original = gitSource("75b1efac66625e5f2bc9884a965b244bfaf337ed", file);
 
 it("native Node resolves both relay origins without import.meta.env", () => {

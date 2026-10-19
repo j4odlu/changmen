@@ -3,12 +3,20 @@ import fs from "node:fs";
 import { backendInstallProfile } from "../deploy/backend-install-profile.mjs";
 import { certifyBackendDynamicPaths, assertDynamicPathParity, dynamicPathEnvironmentKeys } from "./backend-dynamic-paths.mjs";
 import { analyzePmLoaderBindings } from "./pm-loader-bindings.mjs";
+import { spawnSync } from "node:child_process";
 
 const root = process.cwd(), entries = backendInstallProfile(root).entries;
 const policy = JSON.parse(fs.readFileSync(new URL("./backend-dynamic-path-inputs.json", import.meta.url)));
 const env = { ...process.env, NODE_OPTIONS: "", NODE_PATH: "" };
 let certificate;
-beforeAll(() => { certificate = certifyBackendDynamicPaths(root, entries, env); }, 120000);
+beforeAll(() => {
+  // This lane has its own clean checkout, independent of the backend build lane.
+  const compiled = spawnSync(process.execPath, ["server/backend/scripts/ensure-router-compiled.mjs"],
+    { cwd: root, encoding: "utf8", timeout: 90000, windowsHide: true });
+  expect(compiled.error, compiled.stderr).toBeUndefined();
+  expect(compiled.status, compiled.stdout + compiled.stderr).toBe(0);
+  certificate = certifyBackendDynamicPaths(root, entries, env);
+}, 120000);
 
 it("certifies all original dynamic sites and the recursively expanded default project inputs", () => {
   expect(certificate.records).toHaveLength(11);

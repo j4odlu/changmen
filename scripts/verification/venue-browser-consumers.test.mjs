@@ -13,10 +13,10 @@ const original=f=>execFileSync('git',['show',record.baseline+':'+f],{encoding:'u
 it('retains every previous consumer and rejects changes through the complete boundary gate',()=>{
  expect(verifyVenueBrowserConsumers(read)).toEqual({changedFiles:10,workers:1});
  for(const row of record.changes)expect(sha(restoreVenueBrowserConsumers(row.file,read(row.file)))).toBe(row.beforeSha);
- for(const row of [...record.changes,...record.added]){
+});
+it.each([...record.changes,...record.added])('$file: rejects changed or missing consumer through the complete boundary gate',(row)=>{
   expect(()=>verifyVenueBrowserRelocation(f=>read(f)+(f===row.file?'\nvoid changed();\n':''))).toThrow();
   expect(()=>verifyVenueBrowserRelocation(f=>{if(f===row.file)throw Error('missing');return read(f);})).toThrow();
- }
 });
 it('preserves Worker startup exactly and consumer statements after imports are removed',()=>{
  const worker=record.added[0].file;

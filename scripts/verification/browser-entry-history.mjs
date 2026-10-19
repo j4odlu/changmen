@@ -49,16 +49,19 @@ export function withAdapterHistoryReader(read){
  };
 }
 export function readAdapterHistory(file,options){
- const source=withAdapterHistoryReader(target=>fs.readFileSync(typeof target==='string'&&known.has(target)?path.join(root,target):target,options??'utf8'))(file);
+ const source=withAdapterHistoryReader(target=>fs.readFileSync(adapterHistoryDependencyFile(typeof target==='string'&&known.has(target)?path.join(root,target):target),options??'utf8'))(file);
  return options===undefined?Buffer.from(source):source;
+}
+// A historical resolver can return a virtual old dependency path. Direct reads must
+// use the same workspace owner as resolver probes; root-hoisted paths stay intact.
+export function adapterHistoryDependencyFile(file){
+ const key=relative(file),prefix='packages/venue-adapter/node_modules/';
+ return key===prefix.slice(0,-1)?path.join(root,'client/packages/venue-browser/node_modules')
+  :key.startsWith(prefix)?path.join(root,'client/packages/venue-browser/node_modules',key.slice(prefix.length)):file;
 }
 export function adapterHistorySystem(system){
  const directories=new Set();for(const file of entries.keys())for(let dir=path.posix.dirname(file);dir!=='.';dir=path.posix.dirname(dir))directories.add(dir);
- const dependency=file=>{
-  const key=relative(file),prefix='packages/venue-adapter/node_modules/';
-  return key===prefix.slice(0,-1)?path.join(root,'client/packages/venue-browser/node_modules')
-   :key.startsWith(prefix)?path.join(root,'client/packages/venue-browser/node_modules',key.slice(prefix.length)):file;
- };
+ const dependency=adapterHistoryDependencyFile;
  return {...system,fileExists:file=>system.fileExists(dependency(file))||entries.has(relative(file)),
  directoryExists:dir=>Boolean(system.directoryExists?.(dependency(dir)))||directories.has(relative(dir)),readFile:file=>{
   try{return readAdapterHistory(dependency(file),'utf8');}catch(error){if(error.code==='ENOENT')return undefined;throw error;}

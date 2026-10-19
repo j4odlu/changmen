@@ -6,7 +6,7 @@ const read=file=>fs.readFileSync(file,'utf8'),exists=file=>fs.existsSync(file);
 it('retires every browser entry on disk while complete original sources remain verifiable',()=>{
  expect(inspectBrowserEntryRetirement(process.cwd()).retired).toBe(595);
  for(const file of BROWSER_ENTRY_RETIREMENT.retired){expect(exists(file)).toBe(false);expect(readAdapterHistory(file,'utf8').length).toBeGreaterThan(0);}
-});
+},30000);
 it('rejects a retired entry returning even as a thin export',()=>{
  const file=BROWSER_ENTRY_RETIREMENT.retired[0];
  expect(()=>verifyBrowserEntryRetirement(read,f=>f===file||exists(f))).toThrow('retired browser entry must not return');

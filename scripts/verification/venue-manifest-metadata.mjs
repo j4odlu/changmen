@@ -2,12 +2,14 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import { restoreVenueBrowserMetadata } from "./venue-browser-relocation.mjs";
 const normalize = source => source.replaceAll("\r\n", "\n");
 const sha = source => createHash("sha256").update(normalize(source)).digest("hex");
 const text = fs.readFileSync(new URL("./venue-manifest-metadata.json", import.meta.url), "utf8");
 assert.equal(sha(text), "f907e411e76437bd8b30e678f08f83e916d78e32e20aa34c78a434960bfdeb04");
 export const VENUE_MANIFEST_METADATA = JSON.parse(text);
 export function restoreVenueManifestMetadata(file, source) {
+  source = restoreVenueBrowserMetadata(file, source);
   source = normalize(source);
   const row = VENUE_MANIFEST_METADATA.changes.find(row => row.file === file);
   if (!row || sha(source) !== row.afterSha) return source;

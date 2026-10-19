@@ -214,6 +214,10 @@
   ],
   "rules": [
     {
+      "prefix": "client/packages/venue-browser",
+      "layer": "frontend"
+    },
+    {
       "prefix": "client/packages/arb-core",
       "layer": "frontend"
     },
@@ -508,6 +512,56 @@
       "file": "packages/shared/tooling/dev_web_port.d.ts",
       "canonical": "devtools/runtime-tooling/dev_web_port.d.ts",
       "spec": "@changmen/runtime-tooling/dev_web_port.js"
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/bookMetadata.ts",
+      "canonical": "client/packages/venue-browser/pm-book-diagnostics/bookMetadata.ts",
+      "spec": "../../../../client/packages/venue-browser/pm-book-diagnostics/bookMetadata"
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/bookRuntime.ts",
+      "canonical": "client/packages/venue-browser/pm-book-diagnostics/bookRuntime.ts",
+      "spec": "../../../../client/packages/venue-browser/pm-book-diagnostics/bookRuntime"
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/executionMath.ts",
+      "canonical": "client/packages/venue-browser/pm-book-diagnostics/executionMath.ts",
+      "spec": "../../../../client/packages/venue-browser/pm-book-diagnostics/executionMath"
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/executionSimulation.ts",
+      "canonical": "client/packages/venue-browser/pm-book-diagnostics/executionSimulation.ts",
+      "spec": "../../../../client/packages/venue-browser/pm-book-diagnostics/executionSimulation"
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/freshnessPolicy.ts",
+      "canonical": "client/packages/venue-browser/pm-book-diagnostics/freshnessPolicy.ts",
+      "spec": "../../../../client/packages/venue-browser/pm-book-diagnostics/freshnessPolicy"
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/shadowObserver.ts",
+      "canonical": "client/packages/venue-browser/pm-book-diagnostics/shadowObserver.ts",
+      "spec": "../../../../client/packages/venue-browser/pm-book-diagnostics/shadowObserver"
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/shadowWorkerClient.ts",
+      "canonical": "client/packages/venue-browser/pm-book-diagnostics/shadowWorkerClient.ts",
+      "spec": "../../../../client/packages/venue-browser/pm-book-diagnostics/shadowWorkerClient"
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/shadowWorkerProtocol.ts",
+      "canonical": "client/packages/venue-browser/pm-book-diagnostics/shadowWorkerProtocol.ts",
+      "spec": "../../../../client/packages/venue-browser/pm-book-diagnostics/shadowWorkerProtocol"
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-diagnostics/workerDiagnostics.ts",
+      "canonical": "client/packages/venue-browser/pm-book-diagnostics/workerDiagnostics.ts",
+      "spec": "../../../../client/packages/venue-browser/pm-book-diagnostics/workerDiagnostics"
+    },
+    {
+      "file": "packages/venue-adapter/browser/pm-book-source.ts",
+      "canonical": "client/packages/venue-browser/pm-book-source.ts",
+      "spec": "../../../client/packages/venue-browser/pm-book-source"
     }
   ],
   "compatibilityCliEntries": [

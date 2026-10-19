@@ -44,7 +44,8 @@
     "packages/venue-adapter/browser/",
     "packages/venue-adapter/polymarket/realtime/orderBook/",
     "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/",
-    "client/packages/pm-market-data-browser/src/"
+    "client/packages/pm-market-data-browser/src/",
+    "client/packages/venue-browser/"
   ],
   "scopes": {
     "pm": {
@@ -70,7 +71,8 @@
         "client/web/src/runtime/gtcOrderMonitor/pm.ts",
         "client/web/src/runtime/gtcOrderMonitor/pmPolling.ts",
         "client/web/src/security/pmVault",
-        "client/packages/pm-market-data-browser/src"
+        "client/packages/pm-market-data-browser/src",
+        "client/packages/venue-browser"
       ]
     }
   },

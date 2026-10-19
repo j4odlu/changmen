@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { createComponentInspection } from "./component-entry-boundary.mjs";
 import { inspectPmSharedLoaders } from "./pm-shared-loader-evidence.mjs";
 import { inspectPmLoaderBindings } from "./pm-loader-bindings.mjs";
+import { ownsRelocatedVenueBrowser, VENUE_BROWSER_OWNER } from "./venue-browser-layout.mjs";
 
 const dynamicKinds = new Set(["dynamic-import", "module-url", "require", "custom-loader", "computed-loader"]);
 const packageName = spec => spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
@@ -37,7 +38,7 @@ export function pmNodeBrowserLoaderTarget(site) {
       : path.posix.normalize(`packages/venue-adapter/polymarket/${args.slice(1).join("/")}`);
   }
   return target && (inside(target, "packages/venue-adapter/polymarket") && !inside(target, "packages/venue-adapter/polymarket/shared")
-    || inside(target, "packages/venue-adapter/browser") || (inside(target, "packages/pm-market-data-browser") || inside(target, "client/packages/pm-market-data-browser")) || target === "packages/venue-adapter/registry/adapters.ts") ? target : null;
+    || inside(target, "packages/venue-adapter/browser") || inside(target, "client/packages/venue-browser") || (inside(target, "packages/pm-market-data-browser") || inside(target, "client/packages/pm-market-data-browser")) || target === "packages/venue-adapter/registry/adapters.ts") ? target : null;
 }
 
 export function comparePmDynamicSites(actual, expected) {
@@ -71,7 +72,7 @@ export function installedPmDependency(root, importer, spec, lock = readJson(path
     return undefined;
   }
   const importerDir = path.dirname(path.join(root, importer));
-  const owner = nearest(importerDir, "package.json");
+  const owner = nearest(ownsRelocatedVenueBrowser(importer) ? path.join(root, VENUE_BROWSER_OWNER) : importerDir, "package.json");
   const installed = nearest(importerDir, `node_modules/${name}/package.json`, json => json.name === name);
   const runtimeFields = ["dependencies", "peerDependencies", "optionalDependencies"];
   const declaration = owner && runtimeFields.find(field => Object.hasOwn(owner.json[field] || {}, name));

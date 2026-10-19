@@ -244,3 +244,9 @@ copy docs\CODEOWNERS.example .github\CODEOWNERS
 [changmen 扩展] 平台目录的唯一维护源现为 `packages/shared/catalog/venue_manifest.json`，公共导出为 `@changmen/shared/catalog/venue_manifest.json`。`npm run sync:venue-manifest` 生成 `packages/venue-adapter/registry/manifest.json` 和 `server/packages/venue-node-registry/manifest.json`，后两者只作运行兼容资产。`npm run check:venue-manifest` 及既有 `check:boundaries` 只读检查三者逐字一致，不自动修复。
 
 浏览器元数据、图标生成、Node registry 及资源根探测仍使用原路径，loader 的环境覆盖、缓存和初始化规则不变。默认瘦包从共享主资产取 catalog；显式外部源保留自己的 catalog。发布范围与生产安装规则不变，旧资源目录尚未退役。详见 [第三轮实施与验证](VENUE_MANIFEST_ISOLATION_20261019.md)。
+
+## 浏览器实现真实目录隔离（2026-10-19，第四轮首批）
+
+[changmen 扩展] 10 个行情簿诊断和只读 source 实现归入 `client/packages/venue-browser/`，原 `packages/venue-adapter/browser/` 只转导出。Node 静态入口和受管动态 loader 不得导入新目录，旧入口及源码完整内容受边界检查约束。
+
+新目录仍归原私有 adapter workspace 管理；共享行情工具的反向依赖尚未解除，不新增独立 npm 包或改变发布范围。安装输入分为 `workspaceDirectories`（npm workspace 清单）和 `sourceDirectories`（完整源码目录，含此次迁入目录）。独立前端安装及构建用 `node scripts/testing/frontend-install-isolation.mjs` 验证。详见 [实施与验证记录](VENUE_BROWSER_ISOLATION_20261019.md)。

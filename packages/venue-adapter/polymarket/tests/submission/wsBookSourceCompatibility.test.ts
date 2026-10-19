@@ -5,9 +5,14 @@ import { WsBookShadowRuntime as LegacyRuntime } from "../../submission/preflight
 import { WsBookShadowRuntime as BrowserRuntime } from "../../../browser/pm-book-diagnostics/bookRuntime";
 import { pmOrderBookSource as legacySource } from "../../orderBookSource";
 import { pmOrderBookSource as browserSource } from "../../../browser/pm-book-source";
+import * as canonical from "../../../../../client/packages/venue-browser/pm-book-diagnostics/shadowObserver";
+import { WsBookShadowRuntime as CanonicalRuntime } from "../../../../../client/packages/venue-browser/pm-book-diagnostics/bookRuntime";
+import { pmOrderBookSource as canonicalSource } from "../../../../../client/packages/venue-browser/pm-book-source";
 
 test("legacy and browser paths share the same observer slot and HTTP completion", () => {
   expect(legacy.beginWsBookShadow).toBe(browser.beginWsBookShadow);
+  expect(browser.beginWsBookShadow).toBe(canonical.beginWsBookShadow);
+  expect(browser.registerWsBookShadowObserver).toBe(canonical.registerWsBookShadowObserver);
   const finish = vi.fn(), start = vi.fn(() => finish);
   const remove = browser.registerWsBookShadowObserver(start);
   try {
@@ -23,6 +28,8 @@ test("legacy and browser paths share the same observer slot and HTTP completion"
 });
 test("compatibility entries keep one diagnostics runtime and readonly market source", () => {
   expect(LegacyRuntime).toBe(BrowserRuntime);
+  expect(BrowserRuntime).toBe(CanonicalRuntime);
   expect(legacySource).toBe(browserSource);
+  expect(browserSource).toBe(canonicalSource);
   expect(Object.isFrozen(browserSource)).toBe(true);
 });

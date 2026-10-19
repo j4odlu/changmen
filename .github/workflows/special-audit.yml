@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       TZ: Asia/Shanghai
@@ -39,7 +39,7 @@ jobs:
       - run: npm ci
       - name: Run all 22 audit stages
         run: npm run check:fok-release -- --release-plan=backend-first
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: special-audit-report

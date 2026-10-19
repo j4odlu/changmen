@@ -19,7 +19,7 @@ permissions:
   contents: read
 jobs:
   compatibility:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
@@ -40,7 +40,7 @@ jobs:
           echo "CHANGMEN_TEST_PG_BIN=$SCHEMA_TEST_PG_BIN" >> "$GITHUB_ENV"
       - name: Exercise all required database compatibility phases
         run: node scripts/deploy/check-database-compatibility.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: database-compatibility-report

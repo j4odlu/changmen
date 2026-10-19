@@ -5,6 +5,7 @@ import {
   checkMakeupProfitRateCandidate,
   filterMakeupOddsBandCandidates,
   isMakeupOddsBandEnabled,
+  makeupDisplayBand,
   makeupDisplayOdds,
   previewMakeupOddsBand,
   resolveMakeupOddsBandBounds,
@@ -126,6 +127,45 @@ describe("makeupOddsBand", () => {
   it("display odds stay on typed odds for manual isCreateOrder", () => {
     const order = new LoseOrder({ betOdds: 1.88, isCreateOrder: true });
     expect(makeupDisplayOdds(order, 1.01, on)).toBe(1.88);
+  });
+
+  describe("display band", () => {
+    const order = { betOdds: 2, isCreateOrder: false };
+
+    it("shows the same strict boundaries used by odds-factor filtering", () => {
+      expect(makeupDisplayBand(order, on)).toEqual({
+        breakEvenOdds: 2, lowerOdds: 1.92, upperOdds: 2.04, approximate: false,
+      });
+      expect(filterMakeupOddsBandCandidates([item(1.92)], i => i.odds, 2, on)).toEqual([]);
+      expect(filterMakeupOddsBandCandidates([item(2.04)], i => i.odds, 2, on)).toEqual([]);
+    });
+
+    it("omits the band for disabled, manual and invalid orders", () => {
+      expect(makeupDisplayBand(order, off)).toBeNull();
+      expect(makeupDisplayBand(order)).toBeNull();
+      expect(makeupDisplayBand({ ...order, isCreateOrder: true }, on)).toBeNull();
+      expect(makeupDisplayBand({ ...order, betOdds: 1 }, on)).toBeNull();
+      expect(makeupDisplayBand(order, { ...on, lower: 0 })?.lowerOdds).toBeNull();
+    });
+
+    it("converts profit percentages to approximate odds instead of reusing factors", () => {
+      const band = makeupDisplayBand(order, {
+        ...on, mode: "profitRate", upperProfitPct: 4, lowerLossPct: 3,
+      });
+      expect(band).toEqual({
+        breakEvenOdds: 2, upperOdds: 2.167, lowerOdds: 1.883, approximate: true,
+      });
+      const upperOdds = band!.upperOdds!;
+      const lowerOdds = band!.lowerOdds!;
+      expect(calcMakeupPlanProfitRate(100, 2, 200 / upperOdds, upperOdds)).toBeCloseTo(0.04, 3);
+      expect(calcMakeupPlanProfitRate(100, 2, 200 / lowerOdds, lowerOdds)).toBeCloseTo(-0.03, 3);
+    });
+
+    it("represents unreachable profit-rate boundaries without Infinity or NaN", () => {
+      expect(makeupDisplayBand(order, {
+        ...on, mode: "profitRate", upperProfitPct: 100, lowerLossPct: 100,
+      })).toEqual({ breakEvenOdds: 2, upperOdds: null, lowerOdds: null, approximate: true });
+    });
   });
 
   describe("profit-rate mode", () => {

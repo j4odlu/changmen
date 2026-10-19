@@ -878,7 +878,7 @@ function badgeTitle(row: OrderRow): string {
               </template>
             </template>
             <template v-else>
-              买入金额：{{ toFixed(Number(block.row.BetMoney) || 0, 0) }} 赔率：<span class="order__odds">{{
+              买入金额：{{ toFixed(Number(block.row.BetMoney) || 0, 0) }} {{ block.row.MakeupOddsBand ? "打平赔率" : "赔率" }}：<span class="order__odds">{{
                 formatDisplayOdds(Number(block.row.Odds) || 0)
               }}</span>
               <template v-if="isMakeupPendingOrderRow(block.row)">
@@ -894,6 +894,20 @@ function badgeTitle(row: OrderRow): string {
                 盈亏：{{ toFixed(Number(block.row.Money) || 0, 0) }}
               </template>
             </template>
+          </div>
+          <div
+            v-if="isMakeupPendingOrderRow(block.row) && block.row.MakeupOddsBand"
+            class="order__makeup-band"
+            :title="block.row.MakeupOddsBand.approximate
+              ? '上下沿赔率按等返还金额折算，仅供参考；实际按取整后的补单金额计算总体保底利润率。'
+              : '最高候选赔率严格低于下沿或高于上沿才补单；等于边界或处于区间内不补单。'"
+          >
+            <span>
+              下沿赔率：<span v-if="block.row.MakeupOddsBand.lowerOdds != null" class="order__odds">{{ block.row.MakeupOddsBand.approximate ? "约 " : "" }}{{ formatDisplayOdds(block.row.MakeupOddsBand.lowerOdds) }}</span><span v-else>{{ block.row.MakeupOddsBand.approximate ? "不可达" : "已关闭" }}</span>
+            </span>
+            <span>
+              上沿赔率：<span v-if="block.row.MakeupOddsBand.upperOdds != null" class="order__odds">{{ block.row.MakeupOddsBand.approximate ? "约 " : "" }}{{ formatDisplayOdds(block.row.MakeupOddsBand.upperOdds) }}</span><span v-else>不可达</span>
+            </span>
           </div>
           <div class="time">
             买入时间：{{ formatOrderTime(block.row.CreateAt || 0) }}
@@ -913,3 +927,19 @@ function badgeTitle(row: OrderRow): string {
     </template>
   </div>
 </template>
+
+<style scoped>
+.order__makeup-band {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 12px;
+}
+
+.order__makeup-band > span {
+  white-space: nowrap;
+}
+
+.order__makeup-band .order__odds {
+  color: var(--cm-color-odds);
+}
+</style>

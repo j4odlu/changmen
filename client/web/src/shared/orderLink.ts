@@ -5,7 +5,7 @@ import { hasOpenPolymarketPosition, resolvePmRemainingShares } from "@changmen/v
 import { formatLinkId, isSingleLegLink, orderLinkSortKey, toFixed } from "@changmen/client-core/shared/format";
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { truncateShareUsdtAmount } from "@/shared/pfOrderDisplay";
-import { makeupDisplayOdds } from "@/extensions/arbBet/makeupOddsBand";
+import { makeupDisplayBand, makeupDisplayOdds } from "@/extensions/arbBet/makeupOddsBand";
 
 /** 与 @changmen/db ARB_LINK_MIN 对齐：SaveOrderBind 的 Date.now() 毫秒时间戳 */
 const ARB_LINK_MIN = 1_000_000_000_000;
@@ -675,6 +675,7 @@ export function loseOrderToPendingRow(
     Bet: order.bet,
     Item: order.target,
     Odds: odds,
+    MakeupOddsBand: makeupDisplayBand(order, bandPrefs) ?? undefined,
     BetMoney: betMoney,
     Money: 0,
     Status: presentation.status,

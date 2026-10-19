@@ -846,6 +846,20 @@ describe("orderLink A8 parity", () => {
     expect(orderLinkLegend(merged.get(link)!)).toContain("补单中");
   });
 
+  it("pending rows carry break-even and live band preferences without changing stored orders", () => {
+    const order = new LoseOrder({ betId: 42, linkId: 1, betMoney: 100, betOdds: 2 });
+    const prefs = { enabled: true, upper: 1.02, lower: 0.96 };
+    const row = loseOrderToPendingRow(order, 1.01, prefs);
+    expect(row.Odds).toBe(2);
+    expect(row.MakeupOddsBand).toEqual({
+      breakEvenOdds: 2, lowerOdds: 1.92, upperOdds: 2.04, approximate: false,
+    });
+    expect(loseOrderToPendingRow(order, 1.01, { ...prefs, upper: 1.05 }).MakeupOddsBand?.upperOdds).toBe(2.1);
+    expect(loseOrderToPendingRow(order, 1.01).MakeupOddsBand).toBeUndefined();
+    expect(loseOrderToPendingRow(order, 1.01).Odds).toBe(order.getOdds(1.01));
+    expect(order.betOdds).toBe(2);
+  });
+
   it("loseOrderToPendingRow reflects runtime placing phase", () => {
     const row = loseOrderToPendingRow(
       new LoseOrder({

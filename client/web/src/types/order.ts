@@ -18,6 +18,8 @@ export interface OrderRow {
   Bet?: string;
   Item?: string;
   Odds?: number;
+  /** [changmen 扩展] 自动补单占位行的上下沿展示，不写入订单。 */
+  MakeupOddsBand?: import("@/extensions/arbBet/makeupOddsBand").MakeupOddsBandDisplay;
   BetMoney?: number;
   Money?: number;
   Status?: import("@changmen/client-core/types/order").OrderStatus;

@@ -173,6 +173,47 @@ export function previewMakeupOddsBand(
   return resolveMakeupOddsBandBounds(filledOdds, prefs);
 }
 
+export interface MakeupOddsBandDisplay {
+  breakEvenOdds: number;
+  upperOdds: number | null;
+  lowerOdds: number | null;
+  /** 利润率模式按未取整的等返还金额折算，实际门槛仍由整数计划金额判断。 */
+  approximate: boolean;
+}
+
+/** [changmen 扩展] 自动补单行的上下沿展示；只提供参考，不参与候选过滤。 */
+export function makeupDisplayBand(
+  order: { betOdds: number; isCreateOrder: boolean },
+  rawPrefs?: MakeupOddsBandPrefs | null,
+): MakeupOddsBandDisplay | null {
+  if (order.isCreateOrder || !isMakeupOddsBandEnabled(rawPrefs) || !rawPrefs)
+    return null;
+  const prefs = normalizeMakeupOddsBand(rawPrefs);
+  if (prefs.mode !== "profitRate") {
+    const bounds = resolveMakeupOddsBandBounds(order.betOdds, prefs);
+    return bounds ? { ...bounds, approximate: false } : null;
+  }
+  const breakEvenOdds = calcBreakEvenOdds(order.betOdds);
+  if (breakEvenOdds == null)
+    return null;
+  // 等返还时 1 / 已成赔率 + 1 / 补单赔率 = 1 / (1 + 总体利润率)。
+  const oddsAtRate = (rate: number): number | null => {
+    if (!(1 + rate > 0))
+      return null;
+    const implied = 1 / (1 + rate) - 1 / order.betOdds;
+    if (!(implied > 0))
+      return null;
+    const odds = 1 / implied;
+    return Number.isFinite(odds) && odds > 1 ? Number(toFixed(odds)) : null;
+  };
+  return {
+    breakEvenOdds,
+    upperOdds: oddsAtRate(Number(prefs.upperProfitPct) / 100),
+    lowerOdds: oddsAtRate(-Number(prefs.lowerLossPct) / 100),
+    approximate: true,
+  };
+}
+
 /**
  * 侧栏 / 提示用的展示赔率。关上下沿或手动补单：与 A8 相同 `getOdds(makeProfit)`。
  * 开着时展示打平价（带子中轴），公式失败则回退 makeProfit。

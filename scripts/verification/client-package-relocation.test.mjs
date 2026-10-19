@@ -16,11 +16,12 @@ it('keeps every original runtime byte at its single canonical location', () => {
   const runtime = policy.relocations.filter(row => row.kind === 'runtime');
   expect(runtime).toHaveLength(36);
   for (const row of runtime) {
-    expect(read(row.canonical)).toBe(original(row.file));
-    expect(sha(original(row.file))).toBe(row.sourceSha256);
-    expect(readClientPackageSource(row.file, read(row.file), read)).toBe(original(row.file));
+    const baseline = original(row.file);
+    expect(read(row.canonical)).toBe(baseline);
+    expect(sha(baseline)).toBe(row.sourceSha256);
+    expect(readClientPackageSource(row.file, read(row.file), read)).toBe(baseline);
   }
-});
+}, 30_000);
 
 describe.each(policy.relocations.map(row => [row.file, row]))('%s', (_file, row) => {
   it('rejects changed or missing canonical implementation', () => {

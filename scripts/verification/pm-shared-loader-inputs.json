@@ -4,17 +4,17 @@
   "publishScopeOptimizationEnabled": false,
   "sourceContracts": [
     {
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "selector": "module",
-      "signature": "0e9166ae1c24727470027191ab18601c6ae2ab6720a6dddde8790f6867111096"
+      "signature": "528d8f84d6d6e03f1ef89170c9701df370c01d333a5ac4d24cea97be8fcf438c"
     },
     {
-      "file": "packages/venue-adapter/registry/paths.js",
+      "file": "server/packages/venue-node-registry/paths.js",
       "selector": "module",
-      "signature": "7e06d9c2c923f2bb0aff8b6ed94c4e0418b3c6db2287b9d44e40b3ec40f2c8eb"
+      "signature": "a97fd335fdab8423a74b3878cd9711427ab499cc28f761a83f84525649c4ab89"
     },
     {
-      "file": "packages/venue-adapter/registry/feeds.js",
+      "file": "server/packages/venue-node-registry/feeds.js",
       "selector": "module",
       "signature": "1cccc39550dcb283ab1d286ad49b99e67d47a0f284a9af201962c3ee5441e19c"
     },
@@ -102,7 +102,7 @@
   "records": [
     {
       "id": "shared-01",
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "kind": "loader-contract",
       "expression": null,
       "loaderSymbol": null,
@@ -309,7 +309,7 @@
     },
     {
       "id": "shared-12",
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "kind": "require",
       "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
       "loaderSymbol": null,
@@ -325,7 +325,7 @@
     },
     {
       "id": "shared-13",
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "kind": "computed-loader",
       "expression": "entry",
       "loaderSymbol": null,
@@ -342,7 +342,7 @@
     },
     {
       "id": "shared-14",
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "kind": "require",
       "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
       "loaderSymbol": null,
@@ -358,7 +358,7 @@
     },
     {
       "id": "shared-15",
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "kind": "computed-loader",
       "expression": "specifier",
       "loaderSymbol": null,
@@ -375,7 +375,7 @@
     },
     {
       "id": "shared-16",
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "kind": "dynamic-import",
       "expression": "pathsUrl",
       "loaderSymbol": null,
@@ -391,7 +391,7 @@
     },
     {
       "id": "shared-17",
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "kind": "dynamic-import",
       "expression": "feedsUrl",
       "loaderSymbol": null,
@@ -407,7 +407,7 @@
     },
     {
       "id": "shared-18",
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "kind": "require",
       "expression": "path.join(getAdapterRoot(), ...segments)",
       "loaderSymbol": null,
@@ -423,7 +423,7 @@
     },
     {
       "id": "shared-19",
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "kind": "dynamic-import",
       "expression": "pathToFileURL(abs).href",
       "loaderSymbol": null,
@@ -436,7 +436,7 @@
     },
     {
       "id": "shared-20",
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "kind": "require",
       "expression": "abs",
       "loaderSymbol": null,

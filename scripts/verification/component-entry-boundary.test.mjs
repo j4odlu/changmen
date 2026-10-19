@@ -230,10 +230,10 @@ describe("component entry boundaries", () => {
     try { expect(f.inspect().violations.length).toBeGreaterThan(0); }
     catch (error) { if (error.name === "AssertionError") throw error; expect(error.message).toMatch(/Component inventory|Invalid|Missing|Dynamic loader/); }
   });
-  it("audits the current repository with all 27 reviewed entries and no static environment crossing", () => {
+  it("audits the current repository with all 28 reviewed entries and no static environment crossing", () => {
     const root = fileURLToPath(new URL("../../", import.meta.url));
     const report = inspectComponentEntries(root);
-    expect(report.entries).toHaveLength(27);
+    expect(report.entries).toHaveLength(28);
     expect(report.violations).toEqual([]);
     expect(report.safeToNarrowPublishScope).toBe(false);
     expect(report.entries.find(entry => entry.id === "pm-classic-fok").environment).toBe("browser");

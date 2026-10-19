@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { sharedLoaderSourceSignature } from "./pm-shared-loader-evidence.mjs";
 import { inspectRdsAssetCopies } from "./rds-assets.mjs";
 import { restorePmClientFolderMetadata } from "./pm-source-isolation-metadata.mjs";
+import { readNodePackageSource, nodeCanonicalPath, restoreNodePackageMetadata } from "./node-package-relocation.mjs";
 
 const ids = ["frozen-adapter-island", "compatibility-entries", "rds-assets", "frozen-database-island", "backend-bundle-tool", "layout-roots"];
 const digest = text => createHash("sha256").update(text.replaceAll("\r\n", "\n")).digest("hex");
@@ -31,7 +32,7 @@ export function inspectRetainedSourceBoundaries(root) {
   const frozenPaths = Object.keys(manifest.protectedFiles).filter(file => file.startsWith("packages/venue-adapter/loader/") || file.startsWith("packages/venue-adapter/registry/")).sort();
   if (JSON.stringify([...group("frozen-adapter-island").files].sort()) !== JSON.stringify(frozenPaths)) fail("scripts/verification/retained-source-boundaries.json", "Every original frozen adapter island path must remain inventoried");
   for (const file of group("frozen-adapter-island").files) {
-    if (!manifest.protectedFiles[file] || digest(read(file)) !== manifest.protectedFiles[file]) fail(file, "Original frozen source/path must remain protected and unchanged");
+    if (!manifest.protectedFiles[file] || digest(readNodePackageSource(file, read(file), read)) !== manifest.protectedFiles[file]) fail(file, "Original frozen source/path must remain protected and unchanged");
   }
   const ownership = json("scripts/verification/source-ownership-inputs.json");
   const contracts = { entries: ownership.compatibilityEntries, commands: ownership.compatibilityCliEntries, assets: ownership.compatibilityAssets };
@@ -58,11 +59,12 @@ export function inspectRetainedSourceBoundaries(root) {
     || exceptions.sites.length !== 8 || exceptions.sites.some(site => site.file !== "server/backend/core/account/admin_maintenance.js"))
     fail("scripts/verification/backend-db-access-exceptions.json", "Only the existing eight frozen database access locations may remain");
   const bundler = group("backend-bundle-tool");
-  if (digest(read(bundler.files[0])) !== bundler.sourceSha256) fail(bundler.files[0], "Retained bundle copying and source root contract must remain unchanged");
+  if (digest(restoreNodePackageMetadata(bundler.files[0], read(bundler.files[0]))) !== bundler.sourceSha256) fail(bundler.files[0], "Retained bundle copying and source root contract must remain unchanged");
   const inputs = json("scripts/verification/pm-shared-loader-inputs.json");
   for (const file of group("layout-roots").files) {
-    const source = inputs.sourceContracts.find(contract => contract.file === file && contract.selector === "module");
-    if (!source || sharedLoaderSourceSignature(file, read(file), source.selector) !== source.signature) fail(file, "Existing layout-root source contract must remain intact");
+    const canonical = nodeCanonicalPath(file);
+    const source = inputs.sourceContracts.find(contract => contract.file === canonical && contract.selector === "module");
+    if (!source || sharedLoaderSourceSignature(canonical, read(canonical), source.selector) !== source.signature) fail(file, "Existing layout-root source contract must remain intact");
   }
   return { schemaVersion: 1, purpose: policy.purpose, publishScopeOptimizationEnabled: false, installationCertified: false,
     groups: policy.groups, compatibilityEntries: contracts.entries.length, compatibilityCliEntries: contracts.commands.length,

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 import { restoreDependencySecurityMetadata } from "./dependency-security-metadata.mjs";
+import { restoreNodePackageMetadata } from "./node-package-relocation.mjs";
 const record = JSON.parse(fs.readFileSync(new URL("./runtime-tooling-migration.json", import.meta.url), "utf8"));
 const sha = source => createHash("sha256").update(source).digest("hex");
 assert.equal(record.schemaVersion, 1);
@@ -30,11 +31,13 @@ function restore(source, change) {
   return previous;
 }
 export function restoreRuntimeToolingMetadata(file, source) {
+  source = restoreNodePackageMetadata(file, source);
   source = restoreDependencySecurityMetadata(file, source);
   const change = record.changes.find(row => row.file === file);
   return change && sha(source) === change.migratedSha256 ? restore(source, change) : source;
 }
 export function restoreRuntimeToolingCoverage(source) {
+  source = restoreNodePackageMetadata("devtools/runtime-tooling/runtime_version.js", source);
   source = source.replaceAll("\r\n", "\n");
   return sha(source) === record.runtime.migratedSha256 ? restore(source, record.runtime) : source;
 }

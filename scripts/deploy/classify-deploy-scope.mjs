@@ -76,6 +76,7 @@ export function classifyDeployScope(paths) {
 
     if (
       p.startsWith("packages/venue-adapter/")
+      || /^server\/packages\/venue-node-(?:loader|registry)\//.test(p)
       || p.startsWith("client/platform-adapter/")
       || p.startsWith("packages/")
     ) {

@@ -144,7 +144,7 @@ export function inspectPmDependencies(root) {
   for (const site of unexplainedPrimaryUnknowns) violations.push({ rule: "pm-unresolved-input", ...site, pattern: "unexplained PM source input requires review" });
 
   const inheritedUnknowns = graph.unknown.filter(site => !primary(site.file)).map(site => ({ ...site,
-    category: site.file === "packages/venue-adapter/loader/adapter_paths.mjs" || site.kind === "custom-loader"
+    category: site.file === "server/packages/venue-node-loader/adapter_paths.mjs" || site.kind === "custom-loader"
       ? "shared-platform-loader" : /^server\/db\//.test(site.file) ? "shared-database-module-search" : "unclassified-shared-input",
     closed: false,
   }));

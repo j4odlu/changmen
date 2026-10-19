@@ -13,22 +13,22 @@ const resolverConsumers = {
   "server/match/resolver/scrapers/ray_scraper.js": "dynamic-import",
 };
 const nodeEntries = {
-  "packages/venue-adapter/loader": {
+  "server/packages/venue-node-loader": {
     name: "@changmen/venue-node-loader",
     exports: { ".": "./adapter_paths.mjs", "./adapter_paths.js": "./adapter_paths.mjs", "./adapter_paths.mjs": "./adapter_paths.mjs" },
     files: ["adapter_paths.mjs"],
     dependencies: {
       "@changmen/platform-probes": "file:../../../devtools/platform-probes",
-      "@changmen/shared": "file:../../shared",
-      "@changmen/storage": "file:../../../server/storage",
-      "@changmen/venue-node-registry": "file:../registry",
+      "@changmen/shared": "file:../../../packages/shared",
+      "@changmen/storage": "file:../../storage",
+      "@changmen/venue-node-registry": "file:../venue-node-registry",
     },
   },
-  "packages/venue-adapter/registry": {
+  "server/packages/venue-node-registry": {
     name: "@changmen/venue-node-registry",
     exports: { "./paths.js": "./paths.js", "./feeds.js": "./feeds.js", "./manifest.json": "./manifest.json" },
     files: ["paths.js", "feeds.js", "manifest.json"],
-    dependencies: { "@changmen/storage": "file:../../../server/storage" },
+    dependencies: { "@changmen/storage": "file:../../storage" },
   },
 };
 
@@ -59,7 +59,7 @@ export function inspectVenueNodeDependencies(root) {
       fail(file, expected.name, "Adjacent browser TypeScript hosts belong to the parent browser adapter, not the Node registry development install");
   }
   const backend = packages.get("@changmen/backend");
-  if (backend?.pkg.dependencies?.["@changmen/venue-node-loader"] !== "file:../../packages/venue-adapter/loader")
+  if (backend?.pkg.dependencies?.["@changmen/venue-node-loader"] !== "file:../packages/venue-node-loader")
     fail("server/backend/package.json", "@changmen/venue-node-loader", "The backend facade requires its own production Node loader declaration");
   if (backend?.pkg.devDependencies?.["@changmen/venue-adapter-tools"] !== "file:../../packages/venue-adapter/scripts")
     fail("server/backend/package.json", "@changmen/venue-adapter-tools", "Backend bundle validation must declare its existing Node tool workspace");
@@ -81,7 +81,7 @@ export function inspectVenueNodeDependencies(root) {
       fail(bundleConsumerFile, site.spec, "Backend bundle validation cannot bypass its Node tool owner through the mixed package/source");
   }
   const resolver = packages.get("@changmen/team-resolver");
-  if (resolver?.pkg.devDependencies?.["@changmen/venue-node-loader"] !== "file:../../../packages/venue-adapter/loader")
+  if (resolver?.pkg.devDependencies?.["@changmen/venue-node-loader"] !== "file:../../packages/venue-node-loader")
     fail("server/match/resolver/package.json", "@changmen/venue-node-loader", "Resolver scraper tools must declare the original Node loader as a development dependency");
   for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"])
     for (const name of forbidden) if (resolver?.pkg[group]?.[name])

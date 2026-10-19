@@ -162,7 +162,7 @@ it("rejects private Vue runtimes, missing/required peers and a host range mismat
 for (const [name, file, addition, marker] of [
   ["computed PM input", "packages/venue-adapter/polymarket/orderBook.ts", "void import(globalThis.unreviewedInput);", "[pm-dynamic-input]"],
   ["shared Node loader reaching PM browser", "server/backend/core/account/balance_provider.js", 'requirePlatform("Polymarket", "orderBook.ts");', "[pm-node-browser-loader]"],
-  ["shared loader rules changing without review", "packages/venue-adapter/loader/adapter_paths.mjs", "void 0;", "[pm-shared-loader]"],
+  ["shared loader facade changing without review", "packages/venue-adapter/loader/adapter_paths.mjs", "void 0;", "AssertionError [ERR_ASSERTION]:"],
   ["namespace loader with unknown argument", "server/backend/core/esport-api/store.js", 'import * as boundLoader from "../shared/adapter_paths.js";boundLoader.backendRequire(globalThis.unknownModule);', "[pm-loader-unknown]"],
   ["namespace loader reaching PM browser", "server/backend/core/esport-api/store.js", 'import * as boundLoader from "../shared/adapter_paths.js";boundLoader.requirePlatform("Polymarket","orderBook.ts");', "[pm-node-browser-loader]"],
   ["opaque acquisition in a real preload file", "devtools/platform-probes/ray/ws.js", "void import(globalThis.unknownPreload);", "[pm-loader-unknown]"],
@@ -176,6 +176,7 @@ for (const [name, file, addition, marker] of [
   const result = spawnSync(process.execPath, ["--input-type=module", "--eval", code], { cwd: root, encoding: "utf8", timeout: 35_000, maxBuffer: 2 * 1024 * 1024 });
   expect(result.status).toBe(1);
   expect(result.stderr).toContain(`${marker} ${file}:`);
+  if (marker.startsWith("AssertionError")) expect(result.stderr).toContain("exact Node facade");
 }, 40_000);
 it("actual boundary command accepts a reviewed preload request through a namespace with unchanged provenance", () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));

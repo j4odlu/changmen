@@ -29,6 +29,6 @@
     "axios": "^1.7.2"
   },
   "devDependencies": {
-    "@changmen/venue-node-loader": "file:../../../packages/venue-adapter/loader"
+    "@changmen/venue-node-loader": "file:../../packages/venue-node-loader"
   }
 }

@@ -4,19 +4,19 @@
   "publishScopeOptimizationEnabled": false,
   "origins": [
     {
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "symbol": "reqS"
     },
     {
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "symbol": "backendRequire"
     },
     {
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "symbol": "adapterRequire"
     },
     {
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "symbol": "requirePlatform"
     },
     {
@@ -39,10 +39,10 @@
   "facade": {
     "file": "server/backend/core/shared/adapter_paths.js",
     "exports": {
-      "reqS": "packages/venue-adapter/loader/adapter_paths.mjs#reqS",
-      "backendRequire": "packages/venue-adapter/loader/adapter_paths.mjs#backendRequire",
-      "adapterRequire": "packages/venue-adapter/loader/adapter_paths.mjs#adapterRequire",
-      "requirePlatform": "packages/venue-adapter/loader/adapter_paths.mjs#requirePlatform"
+      "reqS": "server/packages/venue-node-loader/adapter_paths.mjs#reqS",
+      "backendRequire": "server/packages/venue-node-loader/adapter_paths.mjs#backendRequire",
+      "adapterRequire": "server/packages/venue-node-loader/adapter_paths.mjs#adapterRequire",
+      "requirePlatform": "server/packages/venue-node-loader/adapter_paths.mjs#requirePlatform"
     }
   },
   "sourceContracts": [
@@ -94,7 +94,7 @@
     {
       "file": "server/backend/core/esport-api/store.js",
       "origin": {
-        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
         "symbol": "adapterRequire"
       },
       "arguments": [
@@ -106,7 +106,7 @@
     {
       "file": "server/backend/core/account/balance_provider.js",
       "origin": {
-        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -119,7 +119,7 @@
     {
       "file": "server/backend/core/account/balance_provider.js",
       "origin": {
-        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -132,7 +132,7 @@
     {
       "file": "server/backend/core/account/balance_provider.js",
       "origin": {
-        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -145,7 +145,7 @@
     {
       "file": "server/backend/core/account/balance_provider.js",
       "origin": {
-        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -158,7 +158,7 @@
     {
       "file": "server/backend/core/account/balance_provider.js",
       "origin": {
-        "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [

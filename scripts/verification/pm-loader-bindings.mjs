@@ -310,7 +310,7 @@ export function analyzePmLoaderBindings({ files, dependencies, origins, expected
 export function inspectPmLoaderBindings(root, manifest, graph, sharedEvidence, inspection) {
   const policy = JSON.parse(fs.readFileSync(path.join(root, "scripts/verification/pm-loader-binding-inputs.json"), "utf8"));
   if (policy.schemaVersion !== 1 || policy.purpose !== "pm-loader-binding-gate-only" || policy.publishScopeOptimizationEnabled !== false) throw Error("Loader binding gate cannot choose publication scope");
-  const central = "packages/venue-adapter/loader/adapter_paths.mjs";
+  const central = "server/packages/venue-node-loader/adapter_paths.mjs";
   const probeHelpers = ["devtools/platform-probes/backend/_paths.js", "devtools/platform-probes/backend/_paths.cjs"];
   const required = [...["reqS", "backendRequire", "adapterRequire", "requirePlatform"].map(symbol => `${central}#${symbol}`), ...probeHelpers.flatMap(file => ["reqS", "backendRequire"].map(symbol => `${file}#${symbol}`))];
   const clean = file => typeof file === "string" && file.length > 0 && !file.includes("\\") && !path.posix.isAbsolute(file) && !/^[a-z]:/i.test(file) && !file.split("/").some(part => part === ".." || part === ".");

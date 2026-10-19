@@ -234,3 +234,7 @@ copy docs\CODEOWNERS.example .github\CODEOWNERS
 ## 客户端基础包真实目录隔离（2026-10-19）
 
 [changmen 扩展] `@changmen/client-core` 和 `@changmen/arb-core` 的唯一实现已归 `client/packages/`，原包名/导出保持。旧 `packages/` 路径仅保留 36 个源码转发及 3 个 CLI 分派，不再是 workspace。边界命令核对全部旧入口与 canonical 完整内容，原 551 基线与电竞冻结清单不改。包名、Vite alias、类型路径、锁链接和测试发现均使用新实现；实际发布范围仍保守处理，不启用精简安装。详见 [本轮迁移与验证](CLIENT_PACKAGE_ISOLATION_20261019.md)。
+
+## Node 基础包真实目录隔离（2026-10-19）
+
+[changmen 扩展] `@changmen/venue-node-loader` 与 `@changmen/venue-node-registry` 的 workspace 和三个运行实现已归 `server/packages/`。原路径转导出同一实现，包名和 exports 不变；瘦包内展开原实现，保持资源定位。浏览器 adapter、共享 catalog 的主资产和原资源根仍保留；Node catalog 导出副本受逐字一致性检查约束。新目录仍按原保守范围发布，未启用精简生产安装。详见 [第二轮迁移与验证](NODE_PACKAGE_ISOLATION_20261019.md)。

@@ -67,7 +67,8 @@ try {
 let attempts=0;const blocked=()=>{attempts++;throw Error('Network forbidden in installation verification');};globalThis.fetch=blocked;net.Socket.prototype.connect=blocked;
 const root=process.cwd(),req=createRequire(root+'/server/backend/package.json');
 for(const name of ${JSON.stringify(forbiddenBackendPackages)})assert.throws(()=>req.resolve(name));
-const loader=await import('@changmen/venue-node-loader');assert.equal(loader,await import(pathToFileURL(root+'/packages/venue-adapter/loader/adapter_paths.mjs').href));
+const loader=await import('@changmen/venue-node-loader');const legacy=await import(pathToFileURL(root+'/packages/venue-adapter/loader/adapter_paths.mjs').href);
+assert.deepEqual(Object.keys(loader),Object.keys(legacy));for(const key of Object.keys(loader))assert.equal(loader[key],legacy[key]);
 await loader.initAdapterRegistry();await loader.initEsmPlatformBackends();
 for(const id of ['OB','PB','RAY'])assert(loader.requirePlatform(id,'node','session.js'));
 assert.equal(typeof(await import('@changmen/team-resolver')).resolve,'function');assert.equal(attempts,0);

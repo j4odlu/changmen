@@ -17,7 +17,7 @@ describe("independent PM folder release protection", () => {
     expect(Object.keys(PM_FOLDER_RELOCATIONS)).toHaveLength(83);
     expect(Object.keys(PM_UNIFIED_PREFLIGHT_HELPERS)).toHaveLength(5);
     expect(certifyPmFolderRelease(manifest, read, gitRead).size).toBe(167 + 5);
-  });
+  }, 30_000); // Reads 83 historical files through Git; keep assertions intact under CI load.
   for (const [file, target] of Object.entries(PM_FOLDER_RELOCATIONS)) {
     it(`${target}: rejects an execution statement change`, () => {
       expect(() => certifyPmFolderRelease(manifest, f => read(f) + (f === target ? "\nthrow Error('changed');\n" : ""), gitRead)).toThrow();

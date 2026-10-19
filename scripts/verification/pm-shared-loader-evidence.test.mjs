@@ -101,8 +101,8 @@ it("binds pg module/search selection without treating unrelated DB business func
   expect(sharedLoaderSourceSignature(file, text.replace('"apps", "backend"', '"other", "backend"'), "pg-loader")).not.toBe(signature);
 });
 for (const [file, change] of [
-  ["packages/venue-adapter/loader/adapter_paths.mjs", text => `${text}\nvoid 0;`],
-  ["packages/venue-adapter/registry/paths.js", text => `${text}\nvoid 0;`],
+  ["server/packages/venue-node-loader/adapter_paths.mjs", text => `${text}\nvoid 0;`],
+  ["server/packages/venue-node-registry/paths.js", text => `${text}\nvoid 0;`],
   ["server/db/pg_pool.js", text => text.replace('"pg", { paths:', '"other-db", { paths:')],
 ]) it(`invalidates classifications when the reviewed rules change in ${file}`, () => {
   const result = inspect(sites, { readSource: name => name === file ? change(source(name)) : source(name) });

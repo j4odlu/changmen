@@ -28,8 +28,8 @@
     "devtools/runtime-tooling"
   ],
   "nodeOnlyPaths": [
-    "packages/venue-adapter/registry/paths.js",
-    "packages/venue-adapter/registry/feeds.js",
+    "server/packages/venue-node-registry/paths.js",
+    "server/packages/venue-node-registry/feeds.js",
     "packages/shared/tooling",
     "devtools/runtime-tooling"
   ],
@@ -200,10 +200,8 @@
     {
       "id": "venue-node-loader",
       "environment": "node",
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "specifiers": [
-        "@changmen/venue-adapter/loader/adapter_paths.js",
-        "@changmen/venue-adapter/loader/adapter_paths.mjs",
         "@changmen/venue-node-loader",
         "@changmen/venue-node-loader/adapter_paths.js",
         "@changmen/venue-node-loader/adapter_paths.mjs"
@@ -250,11 +248,20 @@
       "specifiers": [
         "@changmen/venue-adapter/polymarket/orderBookSource"
       ]
+    },
+    {
+      "id": "venue-node-loader-compat",
+      "environment": "node",
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "specifiers": [
+        "@changmen/venue-adapter/loader/adapter_paths.js",
+        "@changmen/venue-adapter/loader/adapter_paths.mjs"
+      ]
     }
   ],
   "dynamicLoaders": [
     {
-      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
       "symbols": [
         "reqS",
         "backendRequire",
@@ -264,8 +271,8 @@
       ],
       "status": "opaque",
       "inputs": [
-        "packages/venue-adapter/registry/paths.js",
-        "packages/venue-adapter/registry/feeds.js",
+        "server/packages/venue-node-registry/paths.js",
+        "server/packages/venue-node-registry/feeds.js",
         "packages/venue-adapter/registry/manifest.json"
       ],
       "reason": "Computed module paths and CHANGMEN_ADAPTER_ROOT/GAMEBET_ADAPTER_ROOT overrides are not a closed static dependency proof."

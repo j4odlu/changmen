@@ -1,0 +1,703 @@
+{
+  "baseline": "92c0d7d6a223cfc421c29590f495ec115c9aec49",
+  "sourceRows": [
+    {
+      "file": "packages/venue-adapter/loader/adapter_paths.mjs",
+      "canonical": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "wrapper": "export * from \"../../../server/packages/venue-node-loader/adapter_paths.mjs\";\n",
+      "sourceSha": "f7503e0b2433687d8277510d962869b51452323d688ee20788e9ccfac8d9183c",
+      "canonicalSha": "3badc128eb1800d1a551ee009d6e104bd646cca644e86743c8a73c3fd87950a6"
+    },
+    {
+      "file": "packages/venue-adapter/registry/paths.js",
+      "canonical": "server/packages/venue-node-registry/paths.js",
+      "wrapper": "export * from \"../../../server/packages/venue-node-registry/paths.js\";\n",
+      "sourceSha": "082e0eacc371931f2daa33f2773085052f40d7bde82f3b65ec626616d60427df",
+      "canonicalSha": "1f92d5259ed6f3697dae2fedb8adfb2bc0ddc103e8f248fce9b24696f0c34447"
+    },
+    {
+      "file": "packages/venue-adapter/registry/feeds.js",
+      "canonical": "server/packages/venue-node-registry/feeds.js",
+      "wrapper": "export * from \"../../../server/packages/venue-node-registry/feeds.js\";\n",
+      "sourceSha": "9506335e9341edee88373936189634619e6d74eabc8e613aec021f0174c232d6",
+      "canonicalSha": "9506335e9341edee88373936189634619e6d74eabc8e613aec021f0174c232d6"
+    }
+  ],
+  "changes": [
+    {
+      "file": "scripts/deploy/classify-deploy-scope.mjs",
+      "beforeSha": "47f2c4d57c532cdbd0f7595d6426301f15dfda65610eee7ec93fba69138924e0",
+      "afterSha": "848f193e5eb6927c749be3626cedbbbd5e323d7fcd5342176f1e0ff6841edd05",
+      "patches": [
+        {
+          "oldStart": 78,
+          "oldCount": 0,
+          "newStart": 79,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "      || /^server\\/packages\\/venue-node-(?:loader|registry)\\//.test(p)"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "package.json",
+      "beforeSha": "c0658c2ddb8ac53e0f89da48dbf2227017dd548bbfe20a1127c8ce7688fb1d73",
+      "afterSha": "fe789d446e798cb3364ddb915ee272f2c29d6b2ac2387e5031342428478aca6b",
+      "patches": [
+        {
+          "oldStart": 17,
+          "oldCount": 2,
+          "newStart": 17,
+          "newCount": 2,
+          "before": [
+            "    \"packages/venue-adapter/loader\",",
+            "    \"packages/venue-adapter/registry\","
+          ],
+          "after": [
+            "    \"server/packages/venue-node-loader\",",
+            "    \"server/packages/venue-node-registry\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "package-lock.json",
+      "beforeSha": "741c9b289b7292f28ec13ba937e8e485e1ea134ac3d8fc49fe4ec616b838743f",
+      "afterSha": "1857572e7d587ebcd362a9e46360cd1fb2365b889f45b834cb2d66cecbf3c6af",
+      "patches": [
+        {
+          "oldStart": 16,
+          "oldCount": 2,
+          "newStart": 16,
+          "newCount": 2,
+          "before": [
+            "        \"packages/venue-adapter/loader\",",
+            "        \"packages/venue-adapter/registry\","
+          ],
+          "after": [
+            "        \"server/packages/venue-node-loader\",",
+            "        \"server/packages/venue-node-registry\","
+          ]
+        },
+        {
+          "oldStart": 1020,
+          "oldCount": 1,
+          "newStart": 1020,
+          "newCount": 1,
+          "before": [
+            "      \"resolved\": \"packages/venue-adapter/loader\","
+          ],
+          "after": [
+            "      \"resolved\": \"server/packages/venue-node-loader\","
+          ]
+        },
+        {
+          "oldStart": 1024,
+          "oldCount": 1,
+          "newStart": 1024,
+          "newCount": 1,
+          "before": [
+            "      \"resolved\": \"packages/venue-adapter/registry\","
+          ],
+          "after": [
+            "      \"resolved\": \"server/packages/venue-node-registry\","
+          ]
+        },
+        {
+          "oldStart": 12937,
+          "oldCount": 0,
+          "newStart": 12938,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "      \"extraneous\": true,"
+          ]
+        },
+        {
+          "oldStart": 13042,
+          "oldCount": 0,
+          "newStart": 13044,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "      \"extraneous\": true,"
+          ]
+        },
+        {
+          "oldStart": 13068,
+          "oldCount": 1,
+          "newStart": 13070,
+          "newCount": 1,
+          "before": [
+            "        \"@changmen/venue-node-loader\": \"file:../../packages/venue-adapter/loader\","
+          ],
+          "after": [
+            "        \"@changmen/venue-node-loader\": \"file:../packages/venue-node-loader\","
+          ]
+        },
+        {
+          "oldStart": 13297,
+          "oldCount": 1,
+          "newStart": 13299,
+          "newCount": 18,
+          "before": [
+            "        \"@changmen/venue-node-loader\": \"file:../../../packages/venue-adapter/loader\""
+          ],
+          "after": [
+            "        \"@changmen/venue-node-loader\": \"file:../../packages/venue-node-loader\"",
+            "      }",
+            "    },",
+            "    \"server/packages/venue-node-loader\": {",
+            "      \"name\": \"@changmen/venue-node-loader\",",
+            "      \"version\": \"1.0.0\",",
+            "      \"dependencies\": {",
+            "        \"@changmen/platform-probes\": \"file:../../../devtools/platform-probes\",",
+            "        \"@changmen/shared\": \"file:../../../packages/shared\",",
+            "        \"@changmen/storage\": \"file:../../storage\",",
+            "        \"@changmen/venue-node-registry\": \"file:../venue-node-registry\"",
+            "      }",
+            "    },",
+            "    \"server/packages/venue-node-registry\": {",
+            "      \"name\": \"@changmen/venue-node-registry\",",
+            "      \"version\": \"1.0.0\",",
+            "      \"dependencies\": {",
+            "        \"@changmen/storage\": \"file:../../storage\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "server/backend/package.json",
+      "beforeSha": "15f6c0ff31ca0c10e2d925a0be21181d57c67f1121194a3dc310fee24f8575c9",
+      "afterSha": "50fa64f3d742761572a7cb3e224de1be548db317dfde4798dd789601388614c2",
+      "patches": [
+        {
+          "oldStart": 84,
+          "oldCount": 1,
+          "newStart": 84,
+          "newCount": 1,
+          "before": [
+            "    \"@changmen/venue-node-loader\": \"file:../../packages/venue-adapter/loader\","
+          ],
+          "after": [
+            "    \"@changmen/venue-node-loader\": \"file:../packages/venue-node-loader\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "server/match/resolver/package.json",
+      "beforeSha": "f0007e840798ee37b598f81f3d4ab76df496a1020b5c1b47962389fc799bfa4f",
+      "afterSha": "b24950829d7c4bf3d0e55aa9ec8d490606d7da749a12e84c27bb8970ec7b0264",
+      "patches": [
+        {
+          "oldStart": 32,
+          "oldCount": 1,
+          "newStart": 32,
+          "newCount": 1,
+          "before": [
+            "    \"@changmen/venue-node-loader\": \"file:../../../packages/venue-adapter/loader\""
+          ],
+          "after": [
+            "    \"@changmen/venue-node-loader\": \"file:../../packages/venue-node-loader\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/deploy/component-inputs.json",
+      "beforeSha": "555c31408d504036bb8e93785d28e7aefd017bb4bc9ebd682761560f79732446",
+      "afterSha": "b5a0f8041c6cb2279f724c2efa2a1adaffbf2d1e05e259726f57e63d18899f52",
+      "patches": [
+        {
+          "oldStart": 31,
+          "oldCount": 2,
+          "newStart": 31,
+          "newCount": 2,
+          "before": [
+            "    \"packages/venue-adapter/registry/paths.js\",",
+            "    \"packages/venue-adapter/registry/feeds.js\","
+          ],
+          "after": [
+            "    \"server/packages/venue-node-registry/paths.js\",",
+            "    \"server/packages/venue-node-registry/feeds.js\","
+          ]
+        },
+        {
+          "oldStart": 203,
+          "oldCount": 1,
+          "newStart": 203,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 205,
+          "oldCount": 2,
+          "newStart": 204,
+          "newCount": 0,
+          "before": [
+            "        \"@changmen/venue-adapter/loader/adapter_paths.js\",",
+            "        \"@changmen/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": []
+        },
+        {
+          "oldStart": 252,
+          "oldCount": 0,
+          "newStart": 251,
+          "newCount": 9,
+          "before": [],
+          "after": [
+            "    },",
+            "    {",
+            "      \"id\": \"venue-node-loader-compat\",",
+            "      \"environment\": \"node\",",
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\",",
+            "      \"specifiers\": [",
+            "        \"@changmen/venue-adapter/loader/adapter_paths.js\",",
+            "        \"@changmen/venue-adapter/loader/adapter_paths.mjs\"",
+            "      ]"
+          ]
+        },
+        {
+          "oldStart": 257,
+          "oldCount": 1,
+          "newStart": 264,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 267,
+          "oldCount": 2,
+          "newStart": 274,
+          "newCount": 2,
+          "before": [
+            "        \"packages/venue-adapter/registry/paths.js\",",
+            "        \"packages/venue-adapter/registry/feeds.js\","
+          ],
+          "after": [
+            "        \"server/packages/venue-node-registry/paths.js\",",
+            "        \"server/packages/venue-node-registry/feeds.js\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/pm-shared-loader-inputs.json",
+      "beforeSha": "196f6cf58684a817fdc14baae5673c04236c2cc9a2e771e0bdaa5493c6a17cf9",
+      "afterSha": "95b064fb1506939625395a3b45dedd28a76e7b61244fa7f951e69bc1e8fc491a",
+      "patches": [
+        {
+          "oldStart": 7,
+          "oldCount": 1,
+          "newStart": 7,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 9,
+          "oldCount": 1,
+          "newStart": 9,
+          "newCount": 1,
+          "before": [
+            "      \"signature\": \"0e9166ae1c24727470027191ab18601c6ae2ab6720a6dddde8790f6867111096\""
+          ],
+          "after": [
+            "      \"signature\": \"528d8f84d6d6e03f1ef89170c9701df370c01d333a5ac4d24cea97be8fcf438c\""
+          ]
+        },
+        {
+          "oldStart": 12,
+          "oldCount": 1,
+          "newStart": 12,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/registry/paths.js\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-registry/paths.js\","
+          ]
+        },
+        {
+          "oldStart": 14,
+          "oldCount": 1,
+          "newStart": 14,
+          "newCount": 1,
+          "before": [
+            "      \"signature\": \"7e06d9c2c923f2bb0aff8b6ed94c4e0418b3c6db2287b9d44e40b3ec40f2c8eb\""
+          ],
+          "after": [
+            "      \"signature\": \"a97fd335fdab8423a74b3878cd9711427ab499cc28f761a83f84525649c4ab89\""
+          ]
+        },
+        {
+          "oldStart": 17,
+          "oldCount": 1,
+          "newStart": 17,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/registry/feeds.js\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-registry/feeds.js\","
+          ]
+        },
+        {
+          "oldStart": 105,
+          "oldCount": 1,
+          "newStart": 105,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 312,
+          "oldCount": 1,
+          "newStart": 312,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 328,
+          "oldCount": 1,
+          "newStart": 328,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 345,
+          "oldCount": 1,
+          "newStart": 345,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 361,
+          "oldCount": 1,
+          "newStart": 361,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 378,
+          "oldCount": 1,
+          "newStart": 378,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 394,
+          "oldCount": 1,
+          "newStart": 394,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 410,
+          "oldCount": 1,
+          "newStart": 410,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 426,
+          "oldCount": 1,
+          "newStart": 426,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 439,
+          "oldCount": 1,
+          "newStart": 439,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/pm-loader-binding-inputs.json",
+      "beforeSha": "7aeffe1989bc58b0ed1a0b2176c7f3e1d646796947ae51797c9a091bf7e76ad7",
+      "afterSha": "96d02c3d8574c37964a2bdf857ee3b68f0e7c087ad240aea4418e229663f3223",
+      "patches": [
+        {
+          "oldStart": 7,
+          "oldCount": 1,
+          "newStart": 7,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 11,
+          "oldCount": 1,
+          "newStart": 11,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 15,
+          "oldCount": 1,
+          "newStart": 15,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 19,
+          "oldCount": 1,
+          "newStart": 19,
+          "newCount": 1,
+          "before": [
+            "      \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 42,
+          "oldCount": 4,
+          "newStart": 42,
+          "newCount": 4,
+          "before": [
+            "      \"reqS\": \"packages/venue-adapter/loader/adapter_paths.mjs#reqS\",",
+            "      \"backendRequire\": \"packages/venue-adapter/loader/adapter_paths.mjs#backendRequire\",",
+            "      \"adapterRequire\": \"packages/venue-adapter/loader/adapter_paths.mjs#adapterRequire\",",
+            "      \"requirePlatform\": \"packages/venue-adapter/loader/adapter_paths.mjs#requirePlatform\""
+          ],
+          "after": [
+            "      \"reqS\": \"server/packages/venue-node-loader/adapter_paths.mjs#reqS\",",
+            "      \"backendRequire\": \"server/packages/venue-node-loader/adapter_paths.mjs#backendRequire\",",
+            "      \"adapterRequire\": \"server/packages/venue-node-loader/adapter_paths.mjs#adapterRequire\",",
+            "      \"requirePlatform\": \"server/packages/venue-node-loader/adapter_paths.mjs#requirePlatform\""
+          ]
+        },
+        {
+          "oldStart": 97,
+          "oldCount": 1,
+          "newStart": 97,
+          "newCount": 1,
+          "before": [
+            "        \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "        \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 109,
+          "oldCount": 1,
+          "newStart": 109,
+          "newCount": 1,
+          "before": [
+            "        \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "        \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 122,
+          "oldCount": 1,
+          "newStart": 122,
+          "newCount": 1,
+          "before": [
+            "        \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "        \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 135,
+          "oldCount": 1,
+          "newStart": 135,
+          "newCount": 1,
+          "before": [
+            "        \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "        \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 148,
+          "oldCount": 1,
+          "newStart": 148,
+          "newCount": 1,
+          "before": [
+            "        \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "        \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        },
+        {
+          "oldStart": 161,
+          "oldCount": 1,
+          "newStart": 161,
+          "newCount": 1,
+          "before": [
+            "        \"file\": \"packages/venue-adapter/loader/adapter_paths.mjs\","
+          ],
+          "after": [
+            "        \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/pm-dependency-inputs.json",
+      "beforeSha": "96e19e3569aedf0ee93b48f2ea2bae95a53ebb619b3d0d43e90c88e7ca71102b",
+      "afterSha": "d46a5ac23045566b6834d81cf1afb05656866e0cac71c51a120719c122366289",
+      "patches": [
+        {
+          "oldStart": 274,
+          "oldCount": 3,
+          "newStart": 274,
+          "newCount": 3,
+          "before": [
+            "    \"packages/venue-adapter/loader/adapter_paths.mjs\",",
+            "    \"packages/venue-adapter/registry/paths.js\",",
+            "    \"packages/venue-adapter/registry/feeds.js\","
+          ],
+          "after": [
+            "    \"server/packages/venue-node-loader/adapter_paths.mjs\",",
+            "    \"server/packages/venue-node-registry/paths.js\",",
+            "    \"server/packages/venue-node-registry/feeds.js\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "devtools/runtime-tooling/runtime_version.js",
+      "beforeSha": "542882e4a7d9c8342798d672a24988b271fba0332742d5be95d57b692d12ad50",
+      "afterSha": "e15558d8a6cbd0fcf89711ce17449e6fb7dbeb91abd47de9f276cf7fb406b954",
+      "patches": [
+        {
+          "oldStart": 23,
+          "oldCount": 0,
+          "newStart": 24,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "  if (/^server\\/packages\\/venue-node-(?:loader|registry)\\//.test(file)) return true;"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/scripts/sync-backend-bundle.mjs",
+      "beforeSha": "f31adb20818038fd1a0c1e9e7c08a90a12fbf9b531b22b795f9c58187391fc56",
+      "afterSha": "9c70d4b710f9fd443ce69915cdd97e78ed186daa5d5f8a96bdf673966f658220",
+      "patches": [
+        {
+          "oldStart": 73,
+          "oldCount": 0,
+          "newStart": 74,
+          "newCount": 17,
+          "before": [],
+          "after": [
+            "  // Materialize the three legacy Node entries when packaging workspace facades.",
+            "  for (const [relative, canonical] of Object.entries({",
+            "    \"loader/adapter_paths.mjs\": \"server/packages/venue-node-loader/adapter_paths.mjs\",",
+            "    \"registry/paths.js\": \"server/packages/venue-node-registry/paths.js\",",
+            "    \"registry/feeds.js\": \"server/packages/venue-node-registry/feeds.js\",",
+            "  })) {",
+            "    const originalPath = path.join(src, relative);",
+            "    if (!fs.existsSync(originalPath)) continue;",
+            "    const facade = fs.readFileSync(originalPath, \"utf8\").replaceAll(\"\\r\\n\", \"\\n\");",
+            "    const expected = `export * from \"../../../${canonical}\";\\n`;",
+            "    if (facade !== expected) continue;",
+            "    const implementation = path.resolve(path.dirname(originalPath), \"../../../\", canonical);",
+            "    const anchor = `new URL(\"../../../packages/venue-adapter/${relative}\", import.meta.url)`;",
+            "    const source = fs.readFileSync(implementation, \"utf8\").replaceAll(anchor, \"import.meta.url\");",
+            "    fs.writeFileSync(path.join(dst, relative), source);",
+            "  }",
+            ""
+          ]
+        }
+      ]
+    }
+  ]
+}

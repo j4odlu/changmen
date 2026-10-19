@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { restoreNodePackageMetadata } from './node-package-relocation.mjs';
 
 const normalize = text => text.replaceAll('\r\n', '\n');
 const sha = text => createHash('sha256').update(normalize(text)).digest('hex');
@@ -27,6 +28,7 @@ export function readClientPackageSource(file, source, read) {
 }
 
 export function restoreClientPackageMetadata(file, source) {
+  source = restoreNodePackageMetadata(file, source);
   source = normalize(source);
   const row = CLIENT_PACKAGE_RELOCATION.changes.find(change => change.file === file);
   if (!row || sha(source) !== row.migratedSha256) return source;

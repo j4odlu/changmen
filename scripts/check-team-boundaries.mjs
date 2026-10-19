@@ -4,6 +4,7 @@
  * 规则见 docs/TEAM_BOUNDARIES.md
  */
 import { inspectClientPackageRelocation } from "./verification/client-package-relocation.mjs";
+import { inspectNodePackageRelocation } from "./verification/node-package-relocation.mjs";
 import fs from "node:fs";
 import { checkDatabaseAccessBoundaries } from "./verification/backend-db-boundary.mjs";
 import { inspectComponentEntries } from "./verification/component-entry-boundary.mjs";
@@ -19,6 +20,7 @@ import { CHANGMEN_LAYOUT, VENUE_ADAPTER_REL } from "../server/storage/paths.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CHANGMEN_ROOT = path.resolve(__dirname, "..");
+console.log(`node-package-relocation: ${inspectNodePackageRelocation(CHANGMEN_ROOT).entries} canonical Node implementations checked`);
 const clientRelocation = inspectClientPackageRelocation(CHANGMEN_ROOT);
 console.log(`client-package-relocation: ${clientRelocation.entries} exact facades and canonical implementations checked`);
 

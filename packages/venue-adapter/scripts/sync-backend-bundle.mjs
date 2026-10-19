@@ -71,6 +71,23 @@ export function syncPlatformAdapterBackendBundle(options = {}) {
     cpDir(from, to);
   }
 
+  // Materialize the three legacy Node entries when packaging workspace facades.
+  for (const [relative, canonical] of Object.entries({
+    "loader/adapter_paths.mjs": "server/packages/venue-node-loader/adapter_paths.mjs",
+    "registry/paths.js": "server/packages/venue-node-registry/paths.js",
+    "registry/feeds.js": "server/packages/venue-node-registry/feeds.js",
+  })) {
+    const originalPath = path.join(src, relative);
+    if (!fs.existsSync(originalPath)) continue;
+    const facade = fs.readFileSync(originalPath, "utf8").replaceAll("\r\n", "\n");
+    const expected = `export * from "../../../${canonical}";\n`;
+    if (facade !== expected) continue;
+    const implementation = path.resolve(path.dirname(originalPath), "../../../", canonical);
+    const anchor = `new URL("../../../packages/venue-adapter/${relative}", import.meta.url)`;
+    const source = fs.readFileSync(implementation, "utf8").replaceAll(anchor, "import.meta.url");
+    fs.writeFileSync(path.join(dst, relative), source);
+  }
+
   return dst;
 }
 

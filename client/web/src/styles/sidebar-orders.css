@@ -500,6 +500,10 @@
   border: 1px solid #aeaeae;
 }
 
+.orders .status.RayConfirming {
+  color: #e6a23c;
+}
+
 .orders .status.None::after,
 .orders .status.Pending::after {
   content: "待结算";

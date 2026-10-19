@@ -692,6 +692,10 @@ html[data-ui-theme="paper"] .orders .status.PfSell {
   border-color: var(--paper-line);
 }
 
+html[data-ui-theme="paper"] .orders .status.RayConfirming {
+  color: #e6a23c;
+}
+
 html[data-ui-theme="paper"] .orders .status.Win {
   color: var(--paper-accent);
   background: var(--paper-accent-soft);

@@ -1,7 +1,7 @@
 import { renderToString } from "@vue/server-renderer";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setPmFokPreflightMode } from "@changmen/venue-adapter/polymarket/pmFokPreflightMode";
+import { setPmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket/pmFokPreflightMode";
 import { PM_BOOK_KEYS, readPmBookSettings } from "@/runtime/pmBookSettings";
 import { createSSRApp } from "vue";
 import { useUserStore } from "@/stores/userStore";

@@ -1,5 +1,5 @@
 import type { VenueOrder } from "@changmen/client-core/contract";
-import { resolveA8VenueLegOutcome } from "@changmen/venue-adapter/adaptation";
+import { resolveA8VenueLegOutcome } from "@changmen/venue-browser/adapter/adaptation";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({ read: vi.fn(), check: vi.fn(), bet: vi.fn(), s
 vi.mock("@/runtime/rayOrderMonitor/submissionPreview", () => ({ beginRaySubmissionPreview: mocks.preview }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "owner", isAuthSessionCurrent: () => true }));
 vi.mock("@/runtime/venueAdapters", () => ({ getProvider: () => ({ getOrders: mocks.read, checkBet: mocks.check, betting: mocks.bet, resolveLegOutcome: mocks.settle }) }));
-vi.mock("@changmen/venue-adapter/shared/rejectWait", () => ({ venueRejectWaitBeforePoll: mocks.wait }));
+vi.mock("@changmen/venue-browser/adapter/shared/rejectWait", () => ({ venueRejectWaitBeforePoll: mocks.wait }));
 const account = () => new PlatformAccount({ accountId: 1, provider: "RAY", token: "test", playerName: "RAY" });
 function order(orderId: string, status: VenueOrder["status"]): VenueOrder {
   return {

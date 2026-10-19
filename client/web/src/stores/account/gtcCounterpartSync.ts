@@ -1,5 +1,5 @@
 /** [changmen 扩展] 正常拉单同步消费客户端已确认的对侧身份，保存本轮最新订单及精确关联。 */
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { post, unwrap } from "@/api/client";
 import { filterKnownGtcBuyOrders, tagKnownGtcVenueOrders } from "@/orderModes/gtc/executionProjection";

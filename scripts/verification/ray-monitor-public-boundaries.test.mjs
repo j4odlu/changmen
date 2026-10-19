@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 固定已提交迁移，负向验证公共入口和完整新模块，不能借迁移绕过原 FOK 模块检查。
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -5,7 +6,7 @@ import { gitSource, moduleTokens, replaceExact, verifyProtectedSource } from "./
 import { restoreRayBackendDispatch } from "./ray-backend-dispatch-boundary.mjs";
 import { rayFrontendCommit, rayFrontendSources, restoreRayFinalizeSource, restoreRayProviderSource, verifyRayFrontendSources } from "./ray-frontend-boundary.mjs";
 
-const read = file => fs.readFileSync(file, "utf8");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 const writer = "server/backend/core/account/order_store.js";
 const service = "server/backend/core/account/account_service.js";
 describe("complete committed RAY migration preserves fixed public FOK modules", () => {

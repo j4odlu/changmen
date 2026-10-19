@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory,adapterHistorySystem} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -20,7 +21,7 @@ const base = "e901bb596952256284cd8a9eb8b73b572c963915";
 describe("pM functional relocation preserves complete implementations", () => {
   it("restores only the registered result archive loop, retaining winner policy and all other code for full verification", () => {
     const file = "packages/venue-adapter/polymarket/markets/pmMapOutcomeStore.ts";
-    const source = restoreVenueBrowserMarketHosts(file, fs.readFileSync(file, "utf8"));
+    const source = restoreVenueBrowserMarketHosts(file, readAdapterHistory(file, "utf8"));
     const restored = restorePmOutcomeArchiveSource(file, source);
     expect(restored).toContain('entry.outcomeKind !== "official"');
     expect(restored).not.toContain("index.outcomeEntries");
@@ -32,7 +33,7 @@ describe("pM functional relocation preserves complete implementations", () => {
   for (const [file, target] of Object.entries(PM_FUNCTIONAL_RELOCATIONS)) {
     it(`${file}: matches the fixed original implementation and dependency targets`, () => {
       const original = execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" }).replace(/\r\n/g, "\n");
-      const current = readRelocatedPmFunctionalSource(file, fs.readFileSync(file, "utf8"));
+      const current = readRelocatedPmFunctionalSource(file, readAdapterHistory(file, "utf8"));
       if (!verifyPmOfficialSettlementSource(file, current))
         expect(current).toBe(original);
     });
@@ -45,7 +46,7 @@ describe("pM functional relocation preserves complete implementations", () => {
       const facade = pmFunctionalCompatibilitySource(file);
       const original = readRelocatedPmFunctionalSource(file, facade);
       const readMutated = () => readRelocatedPmFunctionalSource(file, facade, (requested) => {
-        const source = fs.readFileSync(requested, "utf8");
+        const source = readAdapterHistory(requested, "utf8");
         if (requested === target && VENUE_BROWSER_MARKET_HOSTS.changes.some(row => row.file === target))
           return restoreVenueBrowserMarketHosts(target, source) + "\nthrow new Error('changed implementation');\n";
         return requested === target && target.endsWith('/diagnostics/orderTrace.ts')
@@ -79,7 +80,7 @@ describe("pM functional relocation preserves complete implementations", () => {
     });
     it(`${file}: resolves every relative dependency to its original module`, () => {
       const original = execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" });
-      const moved = restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, restorePmWsQuantityEvidenceSource(target, restorePmOutcomeArchiveSource(target, readVenueBrowserLeafSource(target, fs.readFileSync(target, "utf8"))))), file => fs.readFileSync(file, "utf8")));
+      const moved = restorePmTickRefreshSource(target, restorePmOrderBetLabelSource(target, restorePmPreflightSource(target, restorePmWsQuantityEvidenceSource(target, restorePmOutcomeArchiveSource(target, readVenueBrowserLeafSource(target, readAdapterHistory(target, "utf8"))))), file => readAdapterHistory(file, "utf8")));
       const imports = (source, filename) => {
         const sf = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true);
         const result = [];
@@ -89,7 +90,7 @@ describe("pM functional relocation preserves complete implementations", () => {
             if (((ts.isImportDeclaration(parent) || ts.isExportDeclaration(parent)) && parent.moduleSpecifier === node)
               || (ts.isCallExpression(parent) && parent.expression.kind === ts.SyntaxKind.ImportKeyword)
               || (ts.isLiteralTypeNode(parent) && ts.isImportTypeNode(parent.parent))) {
-              const resolved = ts.resolveModuleName(node.text, path.resolve(filename), { moduleResolution: ts.ModuleResolutionKind.Bundler }, ts.sys).resolvedModule;
+              const resolved = ts.resolveModuleName(node.text, path.resolve(filename), { moduleResolution: ts.ModuleResolutionKind.Bundler }, adapterHistorySystem(ts.sys)).resolvedModule;
               assert(resolved, `${filename}: cannot resolve ${node.text}`);
               result.push(path.resolve(resolved.resolvedFileName));
             }

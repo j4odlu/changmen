@@ -3,7 +3,11 @@
     "target": "ES2022",
     "useDefineForClassFields": true,
     "module": "ESNext",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -18,16 +22,30 @@
     "noUncheckedSideEffectImports": true,
     "resolveJsonModule": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@changmen/arb-core": ["../packages/arb-core/src/index.ts"],
-      "@changmen/arb-core/*": ["../packages/arb-core/src/*"],
-      "@changmen/client-core/*": ["../packages/client-core/src/*"],
-      "@changmen/shared/*": ["../../packages/shared/*"],
-      "@changmen/venue-adapter": ["../../packages/venue-adapter/registry/index.ts"],
-      "@changmen/venue-adapter/*": ["../../packages/venue-adapter/*"],
-      "mqtt": ["../../node_modules/mqtt"],
-      "socket.io-client": ["../../node_modules/socket.io-client"],
-      "socketcluster-client": ["../../node_modules/socketcluster-client"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@changmen/arb-core": [
+        "../packages/arb-core/src/index.ts"
+      ],
+      "@changmen/arb-core/*": [
+        "../packages/arb-core/src/*"
+      ],
+      "@changmen/client-core/*": [
+        "../packages/client-core/src/*"
+      ],
+      "@changmen/shared/*": [
+        "../../packages/shared/*"
+      ],
+      "mqtt": [
+        "../../node_modules/mqtt"
+      ],
+      "socket.io-client": [
+        "../../node_modules/socket.io-client"
+      ],
+      "socketcluster-client": [
+        "../../node_modules/socketcluster-client"
+      ]
     }
   },
   "include": [
@@ -39,7 +57,7 @@
     "../../packages/shared/catalog/game_catalog.browser.ts"
   ],
   "exclude": [
-    "../../packages/venue-adapter/**/*.test.ts",
-    "../../packages/venue-adapter/**/scripts/**"
+    "../packages/venue-browser/adapter/**/*.test.ts",
+    "../packages/venue-browser/adapter/**/scripts/**"
   ]
 }

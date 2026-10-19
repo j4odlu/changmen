@@ -170,7 +170,7 @@ main() {
   npm install
 
   log "RDS schema"
-  (cd server/backend && node scripts/apply-rds-schema.mjs)
+  node server/db/maintenance/apply-rds-schema.mjs
 
   log "compile:router"
   npm run compile:router --workspace=@changmen/backend

@@ -1,4 +1,4 @@
-import type { PmMarketWsSourceMode } from "@changmen/venue-adapter/polymarket";
+import type { PmMarketWsSourceMode } from "@changmen/venue-browser/adapter/polymarket";
 import type { PmOddsDropDetectorConfig, PmOddsDropQuote, PmOddsDropSignal } from "./detector";
 import type { PmOddsDropVenueSnapshot } from "./venueSnapshot";
 import type { BetSide } from "@/models/match";
@@ -6,7 +6,7 @@ import {
   getPmMarketWsSourceMode,
   onPolymarketMarketQuote,
 
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 import { shallowRef } from "vue";
 import {
   DEFAULT_PM_ODDS_DROP_CONFIG,

@@ -36,7 +36,7 @@ vi.mock("@/orderModes/gtc/api", () => ({ listGtc: async () => [...mocks.records.
   const next = applyGtcCommand(JSON.parse(JSON.stringify(row)), command, Date.now()); mocks.records.set(next.id, next); return next;
 } }));
 vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ readGtcTradeHistory: vi.fn().mockResolvedValue({ trades: [], complete: true }), readGtcFacts: mocks.pmRead }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ observePolymarketOrderWatch: () => () => {} }));
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ observePolymarketOrderWatch: () => () => {} }));
 
 function execution(id: string, accountId = 2) {
   const hash = `pm-${id}`;

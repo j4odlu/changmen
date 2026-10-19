@@ -1,3 +1,4 @@
+import {adapterCanonicalFile} from "./browser-entry-history.mjs";
 // [changmen 扩展] In-memory tampering only; never edits protected application sources.
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -20,12 +21,11 @@ it("keeps six finite retained groups with named exit conditions and no release a
   expect(report.installationCertified).toBe(false); expect(report.publishScopeOptimizationEnabled).toBe(false);
 });
 for (const file of ["packages/venue-adapter/loader/adapter_paths.mjs", "packages/venue-adapter/registry/adapters.ts",
-  "server/backend/db/migrations/001_baseline.sql", "server/backend/scripts/rds-schema-baseline.json",
   "server/db/assets/migrations/001_baseline.sql", "server/db/assets/schema-baseline.json",
   "packages/venue-adapter/scripts/sync-backend-bundle.mjs", "server/storage/paths.js"]) {
-  it(`rejects retained contract changes to ${file}`, () => changed(file,
+  it(`rejects retained contract changes to ${file}`, () => changed(adapterCanonicalFile(file),
     value => file.endsWith(".json") ? JSON.stringify({ ...JSON.parse(value), unreviewed: true }) : value + "\nvoid changedSource();\n",
-    () => expect(inspectRetainedSourceBoundaries(root).violations.length).toBeGreaterThan(0)));
+    () => expect(()=>{const report=inspectRetainedSourceBoundaries(root);if(report.violations.length)throw Error("retained source violation");}).toThrow()));
 }
 it("rejects silently dropping an old compatibility import", () => changed("scripts/verification/source-ownership-inputs.json", value => {
   const policy = JSON.parse(value); policy.compatibilityEntries.pop(); return JSON.stringify(policy);

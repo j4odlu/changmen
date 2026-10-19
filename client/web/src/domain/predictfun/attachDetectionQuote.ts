@@ -1,5 +1,5 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
-import { PLATFORMS } from "@changmen/venue-adapter/shared";
+import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
 import { useOddsStore } from "@/stores/oddsStore";
 import {
   isPfArbPriceBufferActive,
@@ -8,7 +8,7 @@ import {
   pfExecCapFromRawAsk,
   predictFunClobMatchesOdds,
   type PredictFunOptionQuoteData,
-} from "@changmen/venue-adapter/predictfun";
+} from "@changmen/venue-browser/adapter/predictfun";
 
 function hasLockedPredictFunDetectionQuote(data: PredictFunOptionQuoteData): boolean {
   // 只认 detectionClobPrice；detectionMaxPrice 可能是执行限价副本，不能当锁定依据

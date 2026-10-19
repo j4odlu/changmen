@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {NODE_ENTRY_RETIREMENT} from './node-entry-retirement.mjs';
 
 const within = (file, prefix) => file === prefix || file.startsWith(`${prefix}/`);
 const test = file => /(?:^|\/)(?:tests?|__tests__|fixtures)(?:\/|$)|\.(?:test|spec)\.[^/]+$/.test(file);
@@ -42,6 +43,9 @@ export function sourceLayerViolation(file, target, policy) {
 export function sourceOwnershipInventory(root) {
   const policy = validateSourceOwnership(JSON.parse(fs.readFileSync(path.join(root, "scripts/verification/source-ownership-inputs.json"), "utf8")));
   const protectedPaths = JSON.parse(fs.readFileSync(path.join(root, "scripts/verification/vps-fok-baseline.json"), "utf8")).protectedFiles;
+  const relocation = JSON.parse(fs.readFileSync(path.join(root, "scripts/verification/adapter-browser-relocation.json"), "utf8"));
+  const protectedOrigins = new Map(relocation.records.filter(row => Object.hasOwn(protectedPaths, row.file)).map(row => [row.canonical, row.file]));
+  for(const row of NODE_ENTRY_RETIREMENT.removed)if(Object.hasOwn(protectedPaths,row.file))protectedOrigins.set(row.canonical,row.file);
   const files = [], unclassified = [], incompatibleAssets = [], incompatibleEntries = [];
   for (const entry of policy.compatibilityCliEntries || []) {
     for (const name of [entry.file, entry.canonical]) if (!name || path.isAbsolute(name) || name.split(/[\\/]/).includes("..")) throw Error("Invalid compatibility CLI path");
@@ -61,7 +65,8 @@ export function sourceOwnershipInventory(root) {
   function recordFile(file) {
     const owner = classifySourceFile(file, policy);
     if (!owner) unclassified.push(file);
-    else files.push({ file, ...owner, protected551: Object.hasOwn(protectedPaths, file) });
+    else files.push({ file, ...owner, protected551: Object.hasOwn(protectedPaths, file) || protectedOrigins.has(file),
+      ...(protectedOrigins.has(file) ? { protectedOrigin: protectedOrigins.get(file) } : {}) });
   }
   function walk(directory) {
     if (directory === "server/backend/storage") return;

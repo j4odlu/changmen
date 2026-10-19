@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 固定原 VPS manifest，逐项完整保护源码；实际运行版本由独立来源核验验证。
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,13 +8,13 @@ import { replaceExact } from './fok-exact-boundaries.mjs';
 import { verifyUnifiedArbitrageContract } from './unified-arb-boundaries.mjs';
 import { verifyGtcCompatibilityRetirement } from './gtc-compat-retirement.mjs';
 assert.equal(process.argv.length,2,'Baseline recording or overrides are not supported');
-const manifest=JSON.parse(fs.readFileSync('scripts/verification/vps-fok-baseline.json','utf8'));
-verifyUnifiedArbitrageContract(file=>fs.readFileSync(file,'utf8'),replaceExact);
+const manifest=JSON.parse(readAdapterHistory('scripts/verification/vps-fok-baseline.json','utf8'));
+verifyUnifiedArbitrageContract(file=>readAdapterHistory(file,'utf8'),replaceExact);
 verifyGtcCompatibilityRetirement();
 const sourceProtection=verifyManifestSources(manifest);
 const round='client/web/src/stores/betting/a8/runA8ArbRound.ts';
 const normal=text=>text.replaceAll('\r\n','\n');
-assert.equal(normal(fs.readFileSync(round,'utf8')).replace('from "@/orderModes/router"','from "@/stores/betting/autoBet/executeArbBet"'),normal(execFileSync('git',['show',`${manifest.version}:${round}`],{encoding:'utf8'})));
+assert.equal(normal(readAdapterHistory(round,'utf8')).replace('from "@/orderModes/router"','from "@/stores/betting/autoBet/executeArbBet"'),normal(execFileSync('git',['show',`${manifest.version}:${round}`],{encoding:'utf8'})));
 const checks=[];
 fs.mkdirSync('output',{recursive:true});
 for(const script of ['verify-fok-execution-parity.mjs','verify-fok-shared-boundaries.mjs','verify-gtc-module-isolation.mjs']) {

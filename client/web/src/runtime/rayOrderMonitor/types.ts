@@ -1,5 +1,5 @@
 import type { ObservationContext } from "@changmen/shared/order_observation";
-import type { VenueOrder, VenueOrderStatus } from "@changmen/venue-adapter/contract";
+import type { VenueOrder, VenueOrderStatus } from "@changmen/venue-browser/adapter/contract";
 
 export type RayOrderSide = "A" | "B";
 

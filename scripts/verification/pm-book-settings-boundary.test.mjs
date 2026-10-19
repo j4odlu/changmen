@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import {readAdapterHistory as readFileSync} from "./browser-entry-history.mjs";
 import { test } from "vitest";
 import { PM_BOOK_SETTINGS_TAB, restorePmBookSettingsSource } from "./pm-book-settings-boundary.mjs";
 import { verifyPmUnifiedPreflightContract } from "./pm-unified-preflight-boundary.mjs";

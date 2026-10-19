@@ -1,13 +1,16 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact closed market market hosts dependency group relocation.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {restoreAdapterBrowserMetadata,readAdapterBrowserSource} from './adapter-browser-relocation.mjs';
 import {createHash} from 'node:crypto';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-market-hosts.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-market-hosts.json',import.meta.url),'utf8');
 assert.equal(sha(text),'b4ef93a219a1660e287e1eccbaed617d4b1e9e648a85d7e1347ad0cbb6db75bb');
 export const VENUE_BROWSER_MARKET_HOSTS=JSON.parse(text);
 export function restoreVenueBrowserMarketHosts(file,source){
+ source=readAdapterBrowserSource(file,restoreAdapterBrowserMetadata(file,source));
  source=normalize(source);const row=VENUE_BROWSER_MARKET_HOSTS.changes.find(row=>row.file===file);
  if(!row||sha(source)!==row.afterSha)return source;
  const lines=source.split('\n');

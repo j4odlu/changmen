@@ -17,7 +17,7 @@ vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => mocks.session, isA
 vi.mock("element-plus", () => ({ ElMessage: { error: vi.fn(), warning: vi.fn(), success: vi.fn() }, ElMessageBox: { confirm: async () => {} } }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ accounts: [mocks.account], findAccount: () => mocks.account }) }));
 vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ get orders() { return mocks.orders; }, set orders(v) { mocks.orders = v; }, fetchOrders: mocks.fetch }) }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
   awaitPolymarketManualSellFinalOutcome: mocks.final, sellPolymarketBuyPosition: mocks.sell,
   finishPmSubmitAttempt: mocks.finish, pmAccountSubmitAttempts: () => [], pmSubmitScope: () => mocks.scope,
   resolvePmRemainingShares: (row: OrderRow) => Number(row.PmShares) - Number(row.PmAttributedSellShares || 0),

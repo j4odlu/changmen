@@ -1,6 +1,6 @@
 import type { GtcExecution, GtcFinancialOrder } from "@changmen/shared/pm_gtc";
-import { buildPolymarketMatchedBuyVenueOrderUsdc } from "@changmen/venue-adapter/polymarket";
-import { scalePolymarketVenueOrdersForDisplay } from "@changmen/venue-adapter/polymarket/orders";
+import { buildPolymarketMatchedBuyVenueOrderUsdc } from "@changmen/venue-browser/adapter/polymarket";
+import { scalePolymarketVenueOrdersForDisplay } from "@changmen/venue-browser/adapter/polymarket/orders";
 
 /** [changmen 扩展] 原单事实适配；金额、费用舍入、赔率和汇率均由普通 PM 助手处理。 */
 export function gtcMatchedOrder(row: GtcExecution, fee: number) {

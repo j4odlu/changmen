@@ -1,5 +1,5 @@
 /** [changmen 扩展] GTC 对侧事实消费：RAY 只消费已有查单结果，其它场馆保持原同步调度。 */
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { OrderRow } from "@/types/order";
 import { watch } from "vue";
 import { captureGtcSession, currentGtc, financialOrders, gtcInitialDispatches, gtcProgress, markGtcLegOnce, mutateGtc, settlement } from "@/orderModes/gtc/executionState";

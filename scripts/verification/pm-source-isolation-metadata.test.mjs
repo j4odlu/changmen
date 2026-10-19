@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 完整历史源码恢复及依赖/导出篡改拒绝；不导入业务模块或执行网络请求。
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -5,8 +6,8 @@ import { gitSource } from "./fok-exact-boundaries.mjs";
 import { PM_METADATA_BASELINE, restorePmSourceIsolationMetadata } from "./pm-source-isolation-metadata.mjs";
 import { restoreRuntimeToolingMetadata } from "./runtime-tooling-migration.mjs";
 
-const record = JSON.parse(fs.readFileSync(new URL("./pm-source-isolation-metadata.json", import.meta.url), "utf8"));
-const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const record = JSON.parse(readAdapterHistory(new URL("./pm-source-isolation-metadata.json", import.meta.url), "utf8"));
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8").replaceAll("\r\n", "\n"));
 const old = file => gitSource(PM_METADATA_BASELINE, file);
 const restore = (file, source = read(file)) => restorePmSourceIsolationMetadata(file, source, old(file));
 const lockFile = "package-lock.json";

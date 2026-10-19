@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 公共预检提取和双 FOK 模式的精确增量；不修改任何原 FOK/VPS 基线。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
@@ -6,7 +7,7 @@ import { restorePmOptimizedFokSource, verifyPmOptimizedFokContract } from "./pm-
 import { restorePmPreflightModeIsolation, verifyPmPreflightModeIsolation } from "./pm-preflight-mode-isolation-boundary.mjs";
 const normalize = value => value.replaceAll("\r\n", "\n");
 const digest = value => createHash("sha256").update(normalize(value)).digest("hex");
-const registered = normalize(fs.readFileSync(new URL("./pm-unified-preflight-increments.json", import.meta.url), "utf8"));
+const registered = normalize(readAdapterHistory(new URL("./pm-unified-preflight-increments.json", import.meta.url), "utf8"));
 assert.equal(digest(registered), "13669430f01a712ef3ca243e9deb19ef817ec6076d803c6efc843bef1f4d1cec", "reviewed unified PM preflight increments stay fixed");
 const changes = JSON.parse(registered);
 export const PM_UNIFIED_PREFLIGHT_HELPERS = Object.freeze({

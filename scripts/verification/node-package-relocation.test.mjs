@@ -5,10 +5,10 @@ import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { expect, it } from 'vitest';
 import { NODE_PACKAGE_RELOCATION as record, verifyNodePackageRelocation, readNodePackageSource, restoreNodePackageMetadata } from './node-package-relocation.mjs';
-import { syncPlatformAdapterBackendBundle } from '../../packages/venue-adapter/scripts/sync-backend-bundle.mjs';
+import { syncPlatformAdapterBackendBundle } from '../../server/packages/venue-adapter-tools/sync-backend-bundle.mjs';
 import { isVersionSource } from '../../devtools/runtime-tooling/runtime_version.js';
 import { classifyDeployScope } from '../deploy/classify-deploy-scope.mjs';
-const read=file=>fs.readFileSync(file,'utf8').replaceAll('\r\n','\n');
+const read=withRetiredNodeEntries(file=>fs.readFileSync(file,'utf8').replaceAll('\r\n','\n'));
 const original=file=>execFileSync('git',['show',`${record.baseline}:${file}`],{encoding:'utf8',windowsHide:true}).replaceAll('\r\n','\n');
 
 it('restores every complete original Node implementation and metadata input',()=>{
@@ -31,39 +31,37 @@ it('keeps all canonical runtime files in both conservative version fingerprints'
   expect(classifyDeployScope([row.canonical])).toBe(classifyDeployScope([row.file]));
  }
 });
-it('old, canonical and package entry points share functions, cache reset and registry state',()=>{
+it('canonical and public package entry points share functions, cache reset and registry state',()=>{
  const result=execFileSync(process.execPath,['--import','./scripts/testing/offline-env.mjs','--input-type=module','-e',`
  import assert from 'node:assert/strict';
- import * as old from './packages/venue-adapter/loader/adapter_paths.mjs';
- import * as current from './server/packages/venue-node-loader/adapter_paths.mjs';
+  import * as current from './server/packages/venue-node-loader/adapter_paths.mjs';
  import * as pkg from '@changmen/venue-node-loader';
- import * as oldPaths from './packages/venue-adapter/registry/paths.js';
- import * as paths from '@changmen/venue-node-registry/paths.js';
+  import * as paths from '@changmen/venue-node-registry/paths.js';
  import * as feeds from '@changmen/venue-node-registry/feeds.js';
  import manifest from '@changmen/venue-node-registry/manifest.json' with {type:'json'};
  import legacyManifest from './packages/venue-adapter/registry/manifest.json' with {type:'json'};
- for(const key of Object.keys(old)){assert.equal(old[key],current[key]);assert.equal(pkg[key],current[key]);}
- for(const key of Object.keys(oldPaths))assert.equal(oldPaths[key],paths[key]);
- assert.equal(old.adapterRequire('registry','paths.js').MANIFEST,paths.MANIFEST);
+ for(const key of Object.keys(current)){assert.equal(pkg[key],current[key]);assert.equal(pkg[key],current[key]);}
+ assert.equal(current.getRegistryPaths().getPlatformNodeRoot,paths.getPlatformNodeRoot);
+ assert.equal(current.adapterRequire('registry','paths.js').MANIFEST,paths.MANIFEST);
  assert.equal(feeds.MANIFEST,paths.MANIFEST);
  assert.equal(manifest,paths.MANIFEST);assert.deepEqual(manifest,legacyManifest);
- assert.equal(old.requirePlatform('OB','node','session.js'),pkg.requirePlatform('OB','backend','session.js'));
- const before=old.getAdapterRoot();
+ assert.equal(current.requirePlatform('OB','node','session.js'),pkg.requirePlatform('OB','backend','session.js'));
+ const before=current.getAdapterRoot();
  paths.setPlatformNodeRootForTests('/explicit-probe-override');
- assert.equal(oldPaths.getPlatformNodeRoot(),'/explicit-probe-override');
- old.resetAdapterRootForTests();
+ assert.equal(paths.getPlatformNodeRoot(),'/explicit-probe-override');
+ current.resetAdapterRootForTests();
  assert.notEqual(paths.getPlatformNodeRoot(),'/explicit-probe-override');
- await old.initAdapterRegistry();await old.initEsmPlatformBackends();
+ await current.initAdapterRegistry();await current.initEsmPlatformBackends();
  assert.equal(pkg.getAdapterRoot(),before);
  for(const key of ['CHANGMEN_ADAPTER_ROOT','GAMEBET_ADAPTER_ROOT']){
-  process.env[key]=before;pkg.resetAdapterRootForTests();assert.equal(old.getAdapterRoot(),before);delete process.env[key];
+  process.env[key]=before;pkg.resetAdapterRootForTests();assert.equal(current.getAdapterRoot(),before);delete process.env[key];
  }
  const probes=paths.getPlatformNodeRoot();
  for(const key of ['CHANGMEN_PLATFORM_PROBES_ROOT','GAMEBET_PLATFORM_PROBES_ROOT','CHANGMEN_NODE_ROOT','GAMEBET_NODE_ROOT']){
-  process.env[key]=probes;paths.resetPlatformNodeRootForTests();assert.equal(oldPaths.getPlatformNodeRoot(),probes);delete process.env[key];
+  process.env[key]=probes;paths.resetPlatformNodeRootForTests();assert.equal(paths.getPlatformNodeRoot(),probes);delete process.env[key];
  }
  process.env.CHANGMEN_ADAPTER_ROOT='/missing-relocation-fixture';pkg.resetAdapterRootForTests();
- assert.throws(()=>old.getAdapterRoot(),/CHANGMEN_ADAPTER_ROOT invalid/);
+ assert.throws(()=>current.getAdapterRoot(),/CHANGMEN_ADAPTER_ROOT invalid/);
  console.log('identity-and-cache: OK');
  `],{encoding:'utf8',windowsHide:true,timeout:25000});
  expect(result).toContain('identity-and-cache: OK');
@@ -133,3 +131,5 @@ it('runs the slim artifact with no workspace sources or inherited package links'
   fs.rmSync(temp,{recursive:true,force:true});
  }
 });
+
+import {withRetiredNodeEntries} from './node-entry-retirement.mjs';

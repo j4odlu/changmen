@@ -1,9 +1,10 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { expect, it } from "vitest";
 import { restoreRaySubmissionPreviewSource, verifyRaySubmissionPreviewSources } from "./ray-submission-preview-boundary.mjs";
 import { verifyRayClientMonitorSource } from "./ray-client-monitor-boundary.mjs";
 import { restoreRayProviderSource } from "./ray-frontend-boundary.mjs";
-const read = file => fs.readFileSync(file, "utf8");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 
 it("preserves the original complete monitor hash and provider after restoring only exact preview additions", () => {
   expect(() => verifyRaySubmissionPreviewSources(read)).not.toThrow();

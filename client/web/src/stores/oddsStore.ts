@@ -14,17 +14,17 @@ import type { LimitEntry } from "@changmen/client-core/types/limit";
 import { defineStore } from "pinia";
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 import { formatDisplayOdds } from "@changmen/client-core/shared/format";
-import { PLATFORMS } from "@changmen/venue-adapter/shared";
+import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
 import {
   isPmArbPriceBufferActive,
   pmEffectiveOddsFromFoEntry,
   isPmTickBufferActive,
   resolvePmDisplayQuote,
-} from "@changmen/venue-adapter/polymarket/pmArbPriceBufferMode";
+} from "@changmen/venue-browser/adapter/polymarket/pmArbPriceBufferMode";
 import {
   isPfArbPriceBufferActive,
   pfEffectiveOddsFromFoEntry,
-} from "@changmen/venue-adapter/predictfun/pfArbPriceBufferMode";
+} from "@changmen/venue-browser/adapter/predictfun/pfArbPriceBufferMode";
 
 /** 写入赔率缓存的数据来源，便于排查 HTTP 初值 vs 推送覆盖 */
 export type OddsSaveSource = "mqtt" | "http";

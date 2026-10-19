@@ -1,11 +1,12 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 import { restorePmSportsTypeScriptSource as restore } from "./pm-sports-typescript-boundary.mjs";
 for (const name of ["index", "gamma_poll", "sport_state", "parse_sport"]) {
   const file = `server/collectors/polymarket-sports/${name}.js`;
-  const source = fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
-  const typed = fs.readFileSync(file.replace(/\.js$/, ".ts"), "utf8");
+  const source = readAdapterHistory(file, "utf8").replaceAll("\r\n", "\n");
+  const typed = readAdapterHistory(file.replace(/\.js$/, ".ts"), "utf8");
   const previous = gitSource("84364793171244eca85378ef7bce3388f147b237", file);
   it(`${name} restores the complete unchanged implementation and rejects any added runtime`, () => {
     expect(restore(file, source)).toBe(previous);

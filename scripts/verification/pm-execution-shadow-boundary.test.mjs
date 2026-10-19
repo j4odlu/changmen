@@ -1,5 +1,5 @@
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
-import { readFileSync } from 'node:fs';
+import { readAdapterHistory as readFileSync } from './browser-entry-history.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { verifyPmExecutionShadowContract } from './pm-execution-shadow-boundary.mjs';

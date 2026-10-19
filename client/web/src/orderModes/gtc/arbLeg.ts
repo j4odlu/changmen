@@ -17,7 +17,7 @@ import { gtcPmNotice } from "./notifications";
 import { acceptGtc, beginGtcInitialDispatch, currentGtc, markGtcLegOnce, mutateGtc, pollGtc, startGtcRuntime } from "./runtime";
 import { assertGtcHistoryAllowsLeg } from "./successMarkers";
 import { gtcProgress } from "./gtcProgressState";
-import { lookupPolymarketOrderBetLabel } from "@changmen/venue-adapter/polymarket/orders";
+import { lookupPolymarketOrderBetLabel } from "@changmen/venue-browser/adapter/polymarket/orders";
 
 /** [changmen 扩展] 旧持久化双腿身份的兼容桥；只提供单腿操作，不编排 prepare/place/settle/finalize。 */
 export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checked: ArbBetChecked): Promise<OriginalExecutionLifecycle> {
@@ -52,7 +52,7 @@ export async function prepareGtcLegExecution(params: ArbBetAttemptParams, checke
     assertGtcHistoryAllowsLeg(owner, otherAccount, params.bet.id, other.target, other.odds, params.config.noSameBet);
   };
   validateHistory();
-  const { prepareGtcBuy, pmSubmitMaker } = await import("@changmen/venue-adapter/polymarket/gtc");
+  const { prepareGtcBuy, pmSubmitMaker } = await import("@changmen/venue-browser/adapter/polymarket/gtc");
   const prepared = await prepareGtcBuy(account, pm);
 
   const fx = getExchange(resolveAccountCurrency(account.provider, account.currency));

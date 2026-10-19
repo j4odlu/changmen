@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ViewBet, ViewMatch } from "@/models/match";
 import { formatOrderTime } from "@changmen/client-core/shared/format";
-import { lookupPmMapIdentityByToken, lookupPmMapOutcomeByToken, pmMapOutcomeTick } from "@changmen/venue-adapter/polymarket";
+import { lookupPmMapIdentityByToken, lookupPmMapOutcomeByToken, pmMapOutcomeTick } from "@changmen/venue-browser/adapter/polymarket";
 import { computed } from "vue";
 import { readPrematchProbability } from "@/shared/pmPrematchProbability";
 import { isPmMapFinished, readPmMapRoundScore } from "@/shared/pmSportDisplay";

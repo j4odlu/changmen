@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 
 const SETTINGS_KEY = "changmen:pm-odds-drop:settings:v1";
 
-vi.mock("@changmen/venue-adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
   getPmMarketWsSourceMode: () => "official",
   onPolymarketMarketQuote: () => () => {},
 }));

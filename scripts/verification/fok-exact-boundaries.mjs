@@ -1,6 +1,8 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 逐项完整保护已审查差异；不改变基线，也不提供按名字/前缀剥离的通用豁免。
 import { readClientPackageSource } from "./client-package-relocation.mjs";
 import { readNodePackageSource } from "./node-package-relocation.mjs";
+import { readAdapterBrowserSource, adapterBrowserSourceReader } from "./adapter-browser-relocation.mjs";
 import assert from "node:assert/strict";
 import { restoreUnifiedArbitrageSource } from "./unified-arb-boundaries.mjs";
 import { restoreRayBackendDispatch } from "./ray-backend-dispatch-boundary.mjs";
@@ -118,7 +120,9 @@ function restoreGateway(source) {
     if (!rejected && !task.recoveryOnly)`);
 }
 
-export function verifyProtectedSource(file, current, original, readSource = target => fs.readFileSync(target, "utf8"), baselineRead) {
+export function verifyProtectedSource(file, current, original, readSource = target => readAdapterHistory(target, "utf8"), baselineRead) {
+  current = readAdapterBrowserSource(file, current, readSource);
+  readSource = adapterBrowserSourceReader(readSource);
   current = readNodePackageSource(file, current, readSource);
   // [changmen 扩展] Match the existing manifest/hash line-ending normalization on direct callers too.
   current = normalize(readClientPackageSource(file, current, readSource));

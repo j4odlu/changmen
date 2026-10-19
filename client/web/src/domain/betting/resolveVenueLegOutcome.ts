@@ -1,8 +1,8 @@
 import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@/models/platformAccount";
-import type { ResolveLegOutcomeOpts, VenueLegOutcome, VenueOrder } from "@changmen/venue-adapter/contract";
-import { isA8VenueReject } from "@changmen/venue-adapter/adaptation";
-import { sortVenueOrdersNewestFirst } from "@changmen/venue-adapter/contract";
+import type { ResolveLegOutcomeOpts, VenueLegOutcome, VenueOrder } from "@changmen/venue-browser/adapter/contract";
+import { isA8VenueReject } from "@changmen/venue-browser/adapter/adaptation";
+import { sortVenueOrdersNewestFirst } from "@changmen/venue-browser/adapter/contract";
 import { getProvider } from "@/runtime/providers";
 import { observeOrder } from "@/services/orderObservation";
 import { submissionVenueStatus } from "@/services/venueSettlementEvidence";

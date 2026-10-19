@@ -1,6 +1,6 @@
 import type { ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
-import { resolveVenueStakeFromPlanCny } from "@changmen/venue-adapter/adaptation";
-import { clearPmTickBufferMetadata, clearPmTickStateForTests, notePmTickBufferBook, resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs } from "@changmen/venue-adapter/polymarket";
+import { resolveVenueStakeFromPlanCny } from "@changmen/venue-browser/adapter/adaptation";
+import { clearPmTickBufferMetadata, clearPmTickStateForTests, notePmTickBufferBook, resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs } from "@changmen/venue-browser/adapter/polymarket";
 import { ElMessageBox } from "element-plus";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";

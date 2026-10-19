@@ -1,11 +1,11 @@
 /** [changmen 扩展] PM 配对状态消费场馆订单事实；RAY 沿用公共拉单、保存和绑定流程。 */
 import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { wait } from "@changmen/client-core/shared/wait";
 import { isPendingConfirmVenueProvider, isPredictFunProvider } from "@changmen/shared/account_multiply";
-import { isVenueLegConfirmedUnfilled, isVenueLegPendingConfirm } from "@changmen/venue-adapter/contract";
+import { isVenueLegConfirmedUnfilled, isVenueLegPendingConfirm } from "@changmen/venue-browser/adapter/contract";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { resolveVenueLegOutcome } from "@/domain/betting/resolveVenueLegOutcome";
 import { observedRayOrders } from "@/runtime/orderMonitoring/rayOrders";

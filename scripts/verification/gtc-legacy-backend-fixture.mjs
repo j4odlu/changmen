@@ -109,8 +109,8 @@ export async function exactMonitorApiScenario(record, rawOrders, { failRead = fa
       if (target === "./confirmedResult") return get("client/web/src/orderModes/gtc/confirmedResult.ts");
       if (target === "./financialOrder") return get("client/web/src/orderModes/gtc/financialOrder.ts");
       if (target === "@changmen/shared/pm_gtc") return get("packages/shared/pm_gtc.ts");
-      if (target === "@changmen/venue-adapter/polymarket") return { buildPolymarketMatchedBuyVenueOrderUsdc: (_id, facts, options) => ({ pmShares: Number(facts.takingAmount), pmFillPrice: .5, pmStakeUsdc: options.fallbackStakeUsdc + options.feeUsdc, pmFeeUsdc: options.feeUsdc, odds: 2, betMoney: options.fallbackStakeUsdc + options.feeUsdc }) };
-      if (target === "@changmen/venue-adapter/polymarket/orders") return { scalePolymarketVenueOrdersForDisplay: rows => rows };
+      if (target === "@changmen/venue-browser/adapter/polymarket" || target === "@changmen/venue-adapter/polymarket") return { buildPolymarketMatchedBuyVenueOrderUsdc: (_id, facts, options) => ({ pmShares: Number(facts.takingAmount), pmFillPrice: .5, pmStakeUsdc: options.fallbackStakeUsdc + options.feeUsdc, pmFeeUsdc: options.feeUsdc, odds: 2, betMoney: options.fallbackStakeUsdc + options.feeUsdc }) };
+      if (target === "@changmen/venue-browser/adapter/polymarket/orders" || target === "@changmen/venue-adapter/polymarket/orders") return { scalePolymarketVenueOrdersForDisplay: rows => rows };
       if (file.endsWith("/gtc/handler.js") && target === "./results.js") return get("server/backend/core/orderModes/gtc/results.js");
       if (target.endsWith("/player_ownership.js")) return { assertPlayerOwnedByUser: async (player, owner) => ({ ok: player === record.plan.playerId && owner === record.owner, player: { provider: "Polymarket" } }) };
       if (file.endsWith("/gtc/handler.js") && target === "./orders.js") return get("server/backend/core/orderModes/gtc/orders.js");

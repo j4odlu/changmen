@@ -1,8 +1,8 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@/models/platformAccount";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
-import { buildPolymarketMatchedBuyVenueOrderFromBet } from "@changmen/venue-adapter/polymarket";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
+import { buildPolymarketMatchedBuyVenueOrderFromBet } from "@changmen/venue-browser/adapter/polymarket";
 import { saveOrders } from "@/api/order";
 
 /**

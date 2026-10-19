@@ -1,5 +1,5 @@
 /** [changmen 扩展] 普通订单同步保存成功后，持久化 RAY 用户端已确认的原单关联。 */
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { getActivePinia } from "pinia";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";

@@ -2,70 +2,16 @@
   "name": "@changmen/venue-adapter",
   "private": true,
   "type": "commonjs",
-  "description": "各平台浏览器适配器（collect/bet + registry + loader）",
+  "description": "Retained verification commands; runtime implementations live under client/ and server/",
   "scripts": {
-    "sync:backend-bundle": "node scripts/sync-backend-bundle.mjs",
-    "ob:lock-observe": "npx tsx ob/scripts/ob_lock_observe.ts",
+    "sync:backend-bundle": "npm run sync:backend-bundle --workspace=@changmen/venue-adapter-tools",
     "list:web-imports": "node scripts/list-web-venue-imports.mjs",
     "sync:exports": "node scripts/sync-package-exports.mjs",
     "check:exports": "node scripts/sync-package-exports.mjs --check",
     "check:internal-imports": "node scripts/relativize-internal-imports.mjs --check",
     "check:web-imports": "node scripts/list-web-venue-imports.mjs --check",
     "check:esport-freeze": "node scripts/check-esport-freeze.mjs",
-    "check:esport-freeze:allow": "node scripts/check-esport-freeze.mjs --allow",
-    "test:quote-hub-contracts": "vitest run marketQuoteHub.contracts.test.ts polymarket/tests/quotes/marketQuoteHub.lifecycle.test.ts predictfun/marketQuoteHub.lifecycle.test.ts"
+    "check:esport-freeze:allow": "node scripts/check-esport-freeze.mjs --allow"
   },
-  "exports": {
-    ".": "./registry/index.ts",
-    "./adaptation": "./adaptation/index.ts",
-    "./contract": "./contract/index.ts",
-    "./dex": "./dex/index.ts",
-    "./loader/adapter_paths.js": "./loader/adapter_paths.mjs",
-    "./loader/adapter_paths.mjs": "./loader/adapter_paths.mjs",
-    "./ob": "./ob/index.ts",
-    "./pb": "./pb/index.ts",
-    "./polymarket": "./polymarket/index.ts",
-    "./polymarket/gtc": "./polymarket/gtc/index.ts",
-    "./polymarket/marketDelay": "./polymarket/marketDelay.ts",
-    "./polymarket/orderBook": "./polymarket/orderBook.ts",
-    "./polymarket/orderBookSource": "./polymarket/orderBookSource.ts",
-    "./polymarket/orderSettlement": "./polymarket/orderSettlement.ts",
-    "./polymarket/orders": "./polymarket/orders.ts",
-    "./polymarket/pmArbPriceBufferMode": "./polymarket/pmArbPriceBufferMode.ts",
-    "./polymarket/pmFokPreflightMode": "./polymarket/pmFokPreflightMode.ts",
-    "./polymarket/settlementJob": "./polymarket/settlementJob.ts",
-    "./polymarket/wsBookShadow": "./polymarket/wsBookShadow.ts",
-    "./predictfun": "./predictfun/index.ts",
-    "./predictfun/pfArbPriceBufferMode": "./predictfun/pfArbPriceBufferMode.ts",
-    "./ray": "./ray/index.ts",
-    "./registry": "./registry/index.ts",
-    "./registry/adapters": "./registry/adapters.ts",
-    "./shared": "./shared/index.ts",
-    "./shared/rejectWait": "./shared/rejectWait.ts",
-    "./stake": "./stake/index.ts"
-  },
-  "dependencies": {
-    "@changmen/api-contract": "file:../api-contract",
-    "@changmen/client-core": "file:../../client/packages/client-core",
-    "@changmen/shared": "file:../shared",
-    "@noble/hashes": "1.3.2",
-    "@polymarket/builder-relayer-client": "0.0.10",
-    "@polymarket/builder-signing-sdk": "0.0.8",
-    "@polymarket/client": "0.12.0",
-    "@polymarket/clob-client-v2": "1.2.0",
-    "@predictdotfun/sdk": "^1.3.8",
-    "centrifuge": "^5.7.0",
-    "ethers": "^6.15.0",
-    "viem": "^2.47.4",
-    "@changmen/pm-market-data-browser": "file:../../client/packages/pm-market-data-browser",
-    "@changmen/venue-browser": "file:../../client/packages/venue-browser"
-  },
-  "peerDependencies": {
-    "vue": "^3.5.13"
-  },
-  "peerDependenciesMeta": {
-    "vue": {
-      "optional": true
-    }
-  }
+  "exports": {}
 }

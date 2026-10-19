@@ -86,21 +86,21 @@ export function runtimeToolingDeclarationBoundary(packages) {
   return violations;
 }
 export function venueBrowserDeclarationBoundary(packages) {
-  const violations = [], adapter = packages.get("@changmen/venue-adapter"), tools = packages.get("@changmen/venue-adapter-tools");
-  for (const [name, target] of Object.entries({ "@changmen/api-contract": "file:../api-contract", "@changmen/client-core": "file:../../client/packages/client-core" }))
-    if (adapter?.pkg.dependencies?.[name] !== target) violations.push({ file: "packages/venue-adapter/package.json", spec: name,
-      pattern: "The browser adapter must retain its direct hosts for adjacent registry TypeScript consumers" });
+  const violations = [], adapter = packages.get("@changmen/venue-adapter"), browser = packages.get("@changmen/venue-browser"), tools = packages.get("@changmen/venue-adapter-tools");
+  for (const [name, target] of Object.entries({ "@changmen/api-contract": "file:../../../packages/api-contract", "@changmen/client-core": "file:../client-core" }))
+    if (browser?.pkg.dependencies?.[name] !== target) violations.push({ file: "client/packages/venue-browser/package.json", spec: name,
+      pattern: "The browser package must directly declare its registry TypeScript hosts" });
   for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"])
     for (const name of ["@changmen/db", "@changmen/storage", "@changmen/venue-node-loader", "@changmen/venue-node-registry", "@changmen/venue-adapter-tools"])
       if (adapter?.pkg[group]?.[name]) violations.push({ file: "packages/venue-adapter/package.json", spec: name,
         pattern: `Browser adapter cannot own Node/data installation through ${group}; use the existing Node entry/tool workspace` });
-  if (!tools || tools.dir !== "packages/venue-adapter/scripts" || tools.pkg.type !== "module"
+  if (!tools || tools.dir !== "server/packages/venue-adapter-tools" || tools.pkg.type !== "module"
     || JSON.stringify(tools.pkg.exports) !== JSON.stringify({ "./sync-backend-bundle.mjs": "./sync-backend-bundle.mjs" })
     || JSON.stringify(tools.pkg.files) !== JSON.stringify(["sync-backend-bundle.mjs"])
     || JSON.stringify(tools.pkg.scripts) !== JSON.stringify({ "sync:backend-bundle": "node sync-backend-bundle.mjs" })
-    || JSON.stringify(tools.pkg.dependencies) !== JSON.stringify({ "@changmen/shared": "file:../../shared", "@changmen/storage": "file:../../../server/storage" }))
-    violations.push({ file: "packages/venue-adapter/scripts/package.json", spec: "@changmen/venue-adapter-tools",
-      pattern: "Backend bundle tool must declare its shared catalog and Node storage dependencies with the original source entry" });
+    || JSON.stringify(tools.pkg.dependencies) !== JSON.stringify({ "@changmen/shared": "file:../../../packages/shared", "@changmen/storage": "file:../../storage", "@changmen/venue-node-loader": "file:../venue-node-loader", "@changmen/venue-node-registry": "file:../venue-node-registry" }))
+    violations.push({ file: "server/packages/venue-adapter-tools/package.json", spec: "@changmen/venue-adapter-tools",
+      pattern: "Backend bundle tool must declare its shared catalog and Node storage dependencies from its server workspace" });
   return violations;
 }
 export function inspectComponentInstallInputs(root) {

@@ -50,7 +50,7 @@ describe("backend database boundary", () => {
     expect(unregisteredDatabaseSites(old.map(s => ({ ...s, file: "server/backend/core/other.js" })), old)).toHaveLength(1);
     expect(unregisteredDatabaseSites(databaseAccessSites(file, 'function other(){ return pool.query("SELECT 1"); }'), old)).toHaveLength(1);
   });
-  it.each(["server/backend/core/account/admin_service.js", "server/backend/core/esport-api/value_bet_service.js", "server/backend/core/esport-api/sport_predictfun_fetch.js", "server/backend/core/shared/runtime_version.js"])("never accepts an exception for an already migrated consumer: %s", file => {
+  it.each(["server/backend/core/account/admin_maintenance.js", "server/backend/core/account/admin_service.js", "server/backend/core/esport-api/value_bet_service.js", "server/backend/core/esport-api/sport_predictfun_fetch.js", "server/backend/core/shared/runtime_version.js"])("never accepts an exception for an already migrated consumer: %s", file => {
     const sites = databaseAccessSites(file, 'db.query("SELECT 1");');
     expect(unregisteredDatabaseSites(sites, sites)).toEqual(sites);
   });

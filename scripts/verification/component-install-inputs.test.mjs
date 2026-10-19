@@ -6,7 +6,7 @@ import { declaredInstallClosure, frontendInstallBoundary, inspectComponentInstal
 const root = fileURLToPath(new URL("../../", import.meta.url));
 it("reports real frontend/backend/RDS declarations without claiming installation isolation", () => {
   const report = inspectComponentInstallInputs(root);
-  expect(report.violations).toEqual([]); expect(report.profiles.frontend.workspaces).toHaveLength(8);
+  expect(report.violations).toEqual([]); expect(report.profiles.frontend.workspaces).toHaveLength(7);
   expect(report.profiles.backend.workspaces).toHaveLength(15);
   expect(report.profiles.rds.workspaces).toEqual([
     "@changmen/api-contract", "@changmen/db", "@changmen/runtime-tooling", "@changmen/shared", "@changmen/storage",
@@ -47,7 +47,7 @@ it("keeps shared free of Node declarations while the explicit legacy workspace o
 });
 for (const [name, target] of [["@changmen/db", "server/db"], ["@changmen/storage", "server/storage"],
   ["@changmen/venue-node-loader", "packages/venue-adapter/loader"], ["@changmen/venue-node-registry", "packages/venue-adapter/registry"],
-  ["@changmen/venue-adapter-tools", "packages/venue-adapter/scripts"], ["@changmen/runtime-tooling-compat", "packages/shared/tooling"]]) {
+  ["@changmen/venue-adapter-tools", "server/packages/venue-adapter-tools"], ["@changmen/runtime-tooling-compat", "packages/shared/tooling"]]) {
   it(`rejects an indirect frontend install edge to ${name}`, () => {
     const packages = readInstallWorkspaces(root);
     packages.get("@changmen/shared").pkg.dependencies = { [name]: `file:../../${target}` };
@@ -62,10 +62,9 @@ for (const group of ["dependencies", "devDependencies", "optionalDependencies", 
     expect(venueBrowserDeclarationBoundary(packages).some(row => row.spec === "@changmen/storage")).toBe(true);
   });
 }
-it("rejects a missing or redirected tool owner while keeping old loader exports unchanged", () => {
+it("rejects a missing or redirected tool owner while keeping old runtime exports retired", () => {
   const packages = readInstallWorkspaces(root), adapter = packages.get("@changmen/venue-adapter").pkg;
-  expect(adapter.exports["./loader/adapter_paths.js"]).toBe("./loader/adapter_paths.mjs");
-  expect(adapter.exports["./loader/adapter_paths.mjs"]).toBe("./loader/adapter_paths.mjs");
+  expect(adapter.exports).toEqual({});
   packages.get("@changmen/venue-adapter-tools").pkg.dependencies["@changmen/storage"] = "file:../../../server/db";
   expect(venueBrowserDeclarationBoundary(packages)).toHaveLength(1);
   packages.delete("@changmen/venue-adapter-tools");
@@ -83,7 +82,7 @@ it("rejects a missing direct shared-catalog dependency in the bundle tool", () =
 });
 it("keeps browser registry type hosts declared by their actual browser adapter owner", () => {
   const packages = readInstallWorkspaces(root);
-  delete packages.get("@changmen/venue-adapter").pkg.dependencies["@changmen/client-core"];
+  delete packages.get("@changmen/venue-browser").pkg.dependencies["@changmen/client-core"];
   expect(venueBrowserDeclarationBoundary(packages).some(row => row.spec === "@changmen/client-core")).toBe(true);
 });
 it("includes optional and peer declarations, excludes other workspaces' development tools", () => {

@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import ts from "typescript";
@@ -7,7 +8,7 @@ import { verifyActualPublicModule } from "./public-release-boundaries.mjs";
 // [changmen 扩展] Compare entire existing public modules, not just selected functions.
 // Both the captured actual release and the original immutable FOK baseline are checked;
 // only the already registered explicit mode additions may be removed. All original imports and executable statements must remain.
-const snapshot = JSON.parse(fs.readFileSync("output/vps-fok-baseline.json", "utf8"));
+const snapshot = JSON.parse(readAdapterHistory("output/vps-fok-baseline.json", "utf8"));
 const printer = ts.createPrinter({ removeComments: true });
 const normalize = text => text.replace(/\s+/g, " ").trim();
 const results = [];
@@ -21,7 +22,7 @@ const files = [
 for (const file of files) {
   assert.equal(typeof snapshot.sources[file], "string", `Missing actual VPS source: ${file}`);
   const parse = text => ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  const verified = verifyActualPublicModule(file, fs.readFileSync(file, "utf8"), snapshot.sources[file]);
+  const verified = verifyActualPublicModule(file, readAdapterHistory(file, "utf8"), snapshot.sources[file]);
   const previous = parse(gitSource(snapshot.immutableBaseline, file));
   const current = parse(verified.source);
   let removedImports = 0;

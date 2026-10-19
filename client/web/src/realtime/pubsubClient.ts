@@ -4,7 +4,7 @@ import {
   leaveChangmenChannel,
   publishChangmenChannel,
   subscribeChangmenChannel,
-} from "@changmen/venue-adapter/shared";
+} from "@changmen/venue-browser/adapter/shared";
 
 /**
  * [changmen 实现] 自研 realtime-hub pub/sub 客户端（BetTarget / 操盘 / 跟单）

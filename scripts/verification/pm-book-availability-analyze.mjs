@@ -1,12 +1,13 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // Compare fixed-denominator observation periods. This is NOT a randomized fill-rate experiment.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-const read = p => JSON.parse(fs.readFileSync(p, 'utf8'));
+const read = withAdapterHistoryReader(p => JSON.parse(readAdapterHistory(p, 'utf8')));
 const base = 'output/pm-book-availability';
 const old = read('output/pm-execution-simulation/summary.json');
 const next = read(`${base}/summary.json`), live = read(`${base}/execution-browser-live.json`);
-const hash = p => createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+const hash = withAdapterHistoryReader(p => createHash('sha256').update(readAdapterHistory(p)).digest('hex'));
 assert.equal(hash(`${base}/candidates.json`), hash('output/pm-execution-simulation/candidates.json'));
 assert.equal(next.live.attempts, 160); assert.equal(old.live.attempts, 160);
 assert.equal(next.live.subscriptionSha256, old.live.subscriptionSha256);

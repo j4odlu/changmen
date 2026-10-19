@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Server-owned registry resource root for Node loaders and slim bundles"
+}

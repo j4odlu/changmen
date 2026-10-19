@@ -5,7 +5,7 @@ vi.mock("@/stores/collectStore", () => ({ useCollectStore: () => ({ init: mocks.
 vi.mock("@/stores/loseOrderStore", () => ({ useLoseOrderStore: () => ({ init: vi.fn() }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ loadConfig: mocks.config, syncPbCollectModeFromLocal: mocks.sync }) }));
 vi.mock("@/runtime/collectors", () => ({ startCollectors: mocks.start, stopCollectors: mocks.stop }));
-vi.mock("@changmen/venue-adapter/stake", () => ({ primeStakeTabId: mocks.prime }));
+vi.mock("@changmen/venue-browser/adapter/stake", () => ({ primeStakeTabId: mocks.prime }));
 import { bootSessionRuntime, stopSessionRuntime } from "./sessionBoot";
 beforeEach(() => { stopSessionRuntime(); vi.clearAllMocks(); mocks.init.mockResolvedValue(undefined); mocks.start.mockResolvedValue(undefined); });
 describe("session runtime initialization", () => {

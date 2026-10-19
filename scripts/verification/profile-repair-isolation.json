@@ -1,0 +1,229 @@
+{
+  "purpose": "extract-profile-repair-persistence-only",
+  "entries": [
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-river-dedupe-pm.mjs",
+      "before": "#!/usr/bin/env node\n/** Remove duplicate Polymarket account 45 from River; keep 47 (primary PM). */\nimport { loadChangmenEnv } from \"@changmen/storage/load_env.js\";\nimport { ensurePgPoolReady, getPgPool } from \"@changmen/db\";\nimport { loadProfileById } from \"../../../core/db/store.js\";\n\nconst dryRun = process.argv.includes(\"--dry-run\");\nconst DROP_ID = 45;\nconst KEEP_PM_ID = 47;\n\nloadChangmenEnv();\nawait ensurePgPoolReady();\nconst pool = getPgPool();\n\nconst { rows } = await pool.query(\n  `SELECT p.id, p.accounts FROM profiles p JOIN users u ON u.id = p.id WHERE u.user_name ILIKE 'River'`,\n);\nconst row = rows[0];\nif (!row)\n  throw new Error(\"River not found\");\n\nconst before = row.accounts || [];\nconst after = before.filter(a => Number(a.accountId ?? a.AccountId) !== DROP_ID);\nconst hasKeep = after.some(a => Number(a.accountId ?? a.AccountId) === KEEP_PM_ID);\n\nconsole.log(`River accounts: ${before.length} -> ${after.length} (drop ${DROP_ID}, keep PM ${KEEP_PM_ID})`);\nfor (const a of after) {\n  console.log(`  ${a.accountId}\\t${a.provider}\\t${a.platformName}\\t${a.playerName}`);\n}\nif (!hasKeep)\n  console.warn(`WARN: PM ${KEEP_PM_ID} not in list after dedupe`);\n\nif (!dryRun && after.length !== before.length) {\n  await pool.query(\n    `UPDATE profiles SET accounts = $2::jsonb, updated_at = $3 WHERE id = $1`,\n    [row.id, JSON.stringify(after), Date.now()],\n  );\n  await loadProfileById(row.id);\n  console.log(\"RDS updated + profile cache reloaded\");\n}\nelse if (dryRun) {\n  console.log(\"[dry-run] no write\");\n}\n",
+      "beforeSha": "3e4f8e1e9e5cfa5e7801054c612d700156a2b8a7b129b1272809322d448cc51b",
+      "afterSha": "5fd1831da5334ad29a02f7cbec27c9e07d83d8148250db323923b0a48bc1fa8f",
+      "replacements": [
+        [
+          "import { ensurePgPoolReady, getPgPool } from \"@changmen/db\";",
+          "import { openProfileRepairData } from \"@changmen/db/maintenance/profile_repairs.js\";"
+        ],
+        [
+          "await ensurePgPoolReady();\nconst pool = getPgPool();",
+          "const data = await openProfileRepairData();"
+        ],
+        [
+          "pool.query(\n  `SELECT p.id, p.accounts FROM profiles p JOIN users u ON u.id = p.id WHERE u.user_name ILIKE 'River'`,\n)",
+          "data.readRiverProfile()"
+        ],
+        [
+          "pool.query(\n    `UPDATE profiles SET accounts = $2::jsonb, updated_at = $3 WHERE id = $1`,\n    [row.id, JSON.stringify(after), Date.now()],\n  )",
+          "data.writeProfileAccounts(row.id, JSON.stringify(after), Date.now())"
+        ]
+      ]
+    },
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-river-prune-players.mjs",
+      "before": "#!/usr/bin/env node\n/**\n * River：只保留 PM47 / PB48 / RAY46，软删其余 owner=River 的活跃 player。\n * 根因：owner 迁移 clone + players 唯一真相后 GetData 会列出全部 owner 行。\n *\n *   node scripts/fix-river-prune-players.mjs [--dry-run]\n */\nimport { loadChangmenEnv } from \"@changmen/storage/load_env.js\";\nimport { ensurePgPoolReady, getPgPool } from \"@changmen/db\";\nimport { loadAccountsForUser, loadProfileById } from \"../../../core/db/store.js\";\n\nconst dryRun = process.argv.includes(\"--dry-run\");\nconst KEEP = new Set([46, 47, 48]);\n\nloadChangmenEnv();\nawait ensurePgPoolReady();\nconst pool = getPgPool();\n\nconst { rows } = await pool.query(\n  `SELECT p.id FROM profiles p JOIN users u ON u.id = p.id WHERE u.user_name ILIKE 'River'`,\n);\nconst uid = rows[0]?.id;\nif (!uid)\n  throw new Error(\"River not found\");\n\nconst { rows: active } = await pool.query(\n  `SELECT id, platform_name, player_name, provider\n   FROM players WHERE owner_user_id = $1::uuid AND deleted_at IS NULL ORDER BY id`,\n  [uid],\n);\n\nconst toDrop = active.filter(p => !KEEP.has(Number(p.id)));\nconsole.log(`River active players: ${active.length}, keep ${KEEP.size}, drop ${toDrop.length}`);\nfor (const p of active) {\n  const mark = KEEP.has(Number(p.id)) ? \"KEEP\" : \"DROP\";\n  console.log(`  [${mark}] ${p.id}\\t${p.provider || \"?\"}\\t${p.platform_name}\\t${p.player_name}`);\n}\n\nif (dryRun || toDrop.length === 0) {\n  console.log(dryRun ? \"[dry-run] no write\" : \"nothing to drop\");\n  await pool.end();\n  process.exit(0);\n}\n\nconst now = Date.now();\nconst dropIds = toDrop.map(p => Number(p.id));\nawait pool.query(\n  `UPDATE players\n   SET deleted_at = $1, delete_description = $2, updated_at = $1\n   WHERE owner_user_id = $3::uuid AND deleted_at IS NULL AND id = ANY($4::bigint[])`,\n  [now, \"fix-river-prune: keep only 46/47/48\", uid, dropIds],\n);\n\nawait loadProfileById(uid);\nawait loadAccountsForUser(uid);\nconsole.log(\"done — cache reloaded\");\nawait pool.end();\n",
+      "beforeSha": "3f8934d6f49b9d2c404477530ff84d939b507c515019c1c9d6e0ba580c24d604",
+      "afterSha": "5ae7424b022ace12022fc5385607decf14843be40e9c2f2a984a8f75105596de",
+      "replacements": [
+        [
+          "import { ensurePgPoolReady, getPgPool } from \"@changmen/db\";",
+          "import { openProfileRepairData } from \"@changmen/db/maintenance/profile_repairs.js\";"
+        ],
+        [
+          "await ensurePgPoolReady();\nconst pool = getPgPool();",
+          "const data = await openProfileRepairData();"
+        ],
+        [
+          "pool.query(\n  `SELECT p.id FROM profiles p JOIN users u ON u.id = p.id WHERE u.user_name ILIKE 'River'`,\n)",
+          "data.readRiverOwner()"
+        ],
+        [
+          "pool.query(\n  `SELECT id, platform_name, player_name, provider\n   FROM players WHERE owner_user_id = $1::uuid AND deleted_at IS NULL ORDER BY id`,\n  [uid],\n)",
+          "data.readActivePlayers(uid)"
+        ],
+        [
+          "pool.query(\n  `UPDATE players\n   SET deleted_at = $1, delete_description = $2, updated_at = $1\n   WHERE owner_user_id = $3::uuid AND deleted_at IS NULL AND id = ANY($4::bigint[])`,\n  [now, \"fix-river-prune: keep only 46/47/48\", uid, dropIds],\n)",
+          "data.softDeletePlayers(now, \"fix-river-prune: keep only 46/47/48\", uid, dropIds)"
+        ],
+        [
+          "await pool.end();",
+          "await data.close();"
+        ],
+        [
+          "await pool.end();",
+          "await data.close();"
+        ]
+      ]
+    },
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-sh01-river-accounts.mjs",
+      "before": "#!/usr/bin/env node\n/**\n * One-off: fix SH01 (empty) and River (PM47 + PB48 + RAY46) profiles.accounts\n * Usage: node scripts/fix-sh01-river-accounts.mjs [--dry-run]\n */\nimport { loadChangmenEnv } from \"@changmen/storage/load_env.js\";\nimport { ensurePgPoolReady, getPgPool } from \"@changmen/db\";\nimport { loadProfileById, pullProfilesFromDb } from \"../../../core/db/store.js\";\n\nconst dryRun = process.argv.includes(\"--dry-run\");\nloadChangmenEnv();\nawait ensurePgPoolReady();\nconst pool = getPgPool();\nawait pullProfilesFromDb();\n\nasync function getUserId(userName) {\n  const { rows } = await pool.query(\n    `SELECT id FROM users WHERE user_name ILIKE $1`,\n    [userName],\n  );\n  return rows[0]?.id;\n}\n\nasync function getProfileAccounts(userName) {\n  const { rows } = await pool.query(\n    `SELECT accounts FROM profiles p JOIN users u ON u.id = p.id WHERE u.user_name ILIKE $1`,\n    [userName],\n  );\n  return rows[0]?.accounts ?? [];\n}\n\nfunction pickAccountFields(src) {\n  if (!src)\n    return null;\n  return { ...src };\n}\n\nfunction minimalAccount({ accountId, provider, platformName, playerName, platformId }) {\n  return {\n    accountId,\n    provider,\n    platformName,\n    playerName,\n    platformId,\n    pause: false,\n    balance: undefined,\n    updateTime: Date.now(),\n    rateConfig: provider === \"RAY\" || provider === \"PB\"\n      ? [{ rate: 0.2, maxOdds: 0, minOdds: 0 }]\n      : [],\n  };\n}\n\nasync function fetchPlayer(playerId) {\n  const { rows } = await pool.query(\n    `SELECT id, platform_id, platform_name, player_name FROM players WHERE id = $1 AND deleted_at IS NULL`,\n    [playerId],\n  );\n  return rows[0] ?? null;\n}\n\nfunction providerForPlatform(platformName) {\n  const n = String(platformName || \"\").toLowerCase();\n  if (n === \"pm\" || n.includes(\"polymarket\"))\n    return \"Polymarket\";\n  if (n === \"pb\" || n.includes(\"平博\"))\n    return \"PB\";\n  if (n === \"ray\" || n.includes(\"雷\"))\n    return \"RAY\";\n  return \"OB\";\n}\n\nasync function buildRiverAccounts(current, riverUserId) {\n  const byId = new Map(\n    (current || []).map(a => [Number(a.accountId ?? a.AccountId), a]),\n  );\n  const wantIds = [\n    { id: 47, fallbackProvider: \"Polymarket\" },\n    { id: 48, fallbackProvider: \"PB\" },\n    { id: 46, fallbackProvider: \"RAY\" },\n  ];\n  const out = [];\n  for (const { id, fallbackProvider } of wantIds) {\n    const existing = byId.get(id);\n    if (existing) {\n      out.push(pickAccountFields(existing));\n      continue;\n    }\n    const player = await fetchPlayer(id);\n    if (!player)\n      continue;\n    const { rows: ownerRows } = await pool.query(\n      `SELECT owner_user_id FROM players WHERE id = $1`,\n      [id],\n    );\n    if (ownerRows[0]?.owner_user_id !== riverUserId) {\n      console.warn(`player ${id} not owned by River, skip`);\n      continue;\n    }\n    out.push(minimalAccount({\n      accountId: id,\n      provider: fallbackProvider || providerForPlatform(player.platform_name),\n      platformName: player.platform_name,\n      playerName: player.player_name,\n      platformId: Number(player.platform_id),\n    }));\n  }\n  return out;\n}\n\nasync function apply(userName, accounts) {\n  const uid = await getUserId(userName);\n  if (!uid)\n    throw new Error(`user not found: ${userName}`);\n  console.log(`${dryRun ? \"[dry-run] \" : \"\"}${userName}: set ${accounts.length} accounts`);\n  for (const a of accounts) {\n    console.log(\n      `  ${a.accountId}\\t${a.provider ?? a.Type}\\t${a.platformName ?? a.PlatformName}\\t${a.playerName ?? a.PlayerName}`,\n    );\n  }\n  if (!dryRun) {\n    const now = Date.now();\n    await pool.query(\n      `UPDATE profiles SET accounts = $2::jsonb, updated_at = $3 WHERE id = $1`,\n      [uid, JSON.stringify(accounts), now],\n    );\n    await loadProfileById(uid);\n  }\n}\n\nconst riverUserId = await getUserId(\"River\");\nconst riverCurrent = await getProfileAccounts(\"River\");\nconst riverNext = await buildRiverAccounts(riverCurrent, riverUserId);\nawait apply(\"River\", riverNext);\n\nconsole.log(\"done\");\n",
+      "beforeSha": "a04c5c0fe04a0e9115f7b72032cf30490cd7071809bdc8cfca2ff2681e38c62c",
+      "afterSha": "621a828a2474102224021ca70ec13a452bc4569f3cba2d31de419c03ee963647",
+      "replacements": [
+        [
+          "import { ensurePgPoolReady, getPgPool } from \"@changmen/db\";",
+          "import { openProfileRepairData } from \"@changmen/db/maintenance/profile_repairs.js\";"
+        ],
+        [
+          "await ensurePgPoolReady();\nconst pool = getPgPool();",
+          "const data = await openProfileRepairData();"
+        ],
+        [
+          "pool.query(\n    `SELECT id FROM users WHERE user_name ILIKE $1`,\n    [userName],\n  )",
+          "data.readUserId(userName)"
+        ],
+        [
+          "pool.query(\n    `SELECT accounts FROM profiles p JOIN users u ON u.id = p.id WHERE u.user_name ILIKE $1`,\n    [userName],\n  )",
+          "data.readProfileAccounts(userName)"
+        ],
+        [
+          "pool.query(\n    `SELECT id, platform_id, platform_name, player_name FROM players WHERE id = $1 AND deleted_at IS NULL`,\n    [playerId],\n  )",
+          "data.readActivePlayer(playerId)"
+        ],
+        [
+          "pool.query(\n      `SELECT owner_user_id FROM players WHERE id = $1`,\n      [id],\n    )",
+          "data.readPlayerOwner(id)"
+        ],
+        [
+          "pool.query(\n      `UPDATE profiles SET accounts = $2::jsonb, updated_at = $3 WHERE id = $1`,\n      [uid, JSON.stringify(accounts), now],\n    )",
+          "data.writeProfileAccounts(uid, JSON.stringify(accounts), now)"
+        ]
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-river-dedupe-pm.mjs",
+      "method": "readRiverProfile",
+      "sql": "`SELECT p.id, p.accounts FROM profiles p JOIN users u ON u.id = p.id WHERE u.user_name ILIKE 'River'`",
+      "parameters": [],
+      "args": []
+    },
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-river-dedupe-pm.mjs",
+      "method": "writeProfileAccounts",
+      "sql": "`UPDATE profiles SET accounts = $2::jsonb, updated_at = $3 WHERE id = $1`",
+      "parameters": [
+        "ownerId",
+        "accountsJson",
+        "updatedAt"
+      ],
+      "args": [
+        "row.id",
+        "JSON.stringify(after)",
+        "Date.now()"
+      ]
+    },
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-river-prune-players.mjs",
+      "method": "readRiverOwner",
+      "sql": "`SELECT p.id FROM profiles p JOIN users u ON u.id = p.id WHERE u.user_name ILIKE 'River'`",
+      "parameters": [],
+      "args": []
+    },
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-river-prune-players.mjs",
+      "method": "readActivePlayers",
+      "sql": "`SELECT id, platform_name, player_name, provider\n   FROM players WHERE owner_user_id = $1::uuid AND deleted_at IS NULL ORDER BY id`",
+      "parameters": [
+        "ownerId"
+      ],
+      "args": [
+        "uid"
+      ]
+    },
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-river-prune-players.mjs",
+      "method": "softDeletePlayers",
+      "sql": "`UPDATE players\n   SET deleted_at = $1, delete_description = $2, updated_at = $1\n   WHERE owner_user_id = $3::uuid AND deleted_at IS NULL AND id = ANY($4::bigint[])`",
+      "parameters": [
+        "deletedAt",
+        "description",
+        "ownerId",
+        "playerIds"
+      ],
+      "args": [
+        "now",
+        "\"fix-river-prune: keep only 46/47/48\"",
+        "uid",
+        "dropIds"
+      ]
+    },
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-sh01-river-accounts.mjs",
+      "method": "readUserId",
+      "sql": "`SELECT id FROM users WHERE user_name ILIKE $1`",
+      "parameters": [
+        "userName"
+      ],
+      "args": [
+        "userName"
+      ]
+    },
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-sh01-river-accounts.mjs",
+      "method": "readProfileAccounts",
+      "sql": "`SELECT accounts FROM profiles p JOIN users u ON u.id = p.id WHERE u.user_name ILIKE $1`",
+      "parameters": [
+        "userName"
+      ],
+      "args": [
+        "userName"
+      ]
+    },
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-sh01-river-accounts.mjs",
+      "method": "readActivePlayer",
+      "sql": "`SELECT id, platform_id, platform_name, player_name FROM players WHERE id = $1 AND deleted_at IS NULL`",
+      "parameters": [
+        "playerId"
+      ],
+      "args": [
+        "playerId"
+      ]
+    },
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-sh01-river-accounts.mjs",
+      "method": "readPlayerOwner",
+      "sql": "`SELECT owner_user_id FROM players WHERE id = $1`",
+      "parameters": [
+        "playerId"
+      ],
+      "args": [
+        "id"
+      ]
+    },
+    {
+      "file": "server/backend/scripts/ops/incidents/fix-sh01-river-accounts.mjs",
+      "method": "writeProfileAccounts",
+      "sql": "`UPDATE profiles SET accounts = $2::jsonb, updated_at = $3 WHERE id = $1`",
+      "parameters": [
+        "ownerId",
+        "accountsJson",
+        "updatedAt"
+      ],
+      "args": [
+        "uid",
+        "JSON.stringify(accounts)",
+        "now"
+      ]
+    }
+  ],
+  "metadata": [
+    {
+      "file": "server/db/package.json",
+      "before": "{\n  \"name\": \"@changmen/db\",\n  \"type\": \"module\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"description\": \"changmen PostgreSQL 数据层（RDS）\",\n  \"exports\": {\n    \".\": \"./index.js\",\n    \"./order_link_filter.js\": \"./order_link_filter.js\",\n    \"./venue_account_key.js\": \"./venue_account_key.js\",\n    \"./pg.js\": \"./pg.js\",\n    \"./client_match_snapshot.js\": \"./client_match_snapshot.js\",\n    \"./profile_metadata.js\": \"./profile_metadata.js\",\n    \"./admin_users.js\": \"./admin_users.js\",\n    \"./value_signals.js\": \"./value_signals.js\",\n    \"./relay_identity.js\": \"./relay_identity.js\",\n    \"./jwt.js\": \"./jwt.js\",\n    \"./maintenance/rds-migrations.mjs\": \"./maintenance/rds-migrations.mjs\",\n    \"./maintenance/rds-schema-check.mjs\": \"./maintenance/rds-schema-check.mjs\",\n    \"./maintenance/reconcile-rds-schema.mjs\": \"./maintenance/reconcile-rds-schema.mjs\",\n    \"./maintenance/rds-reconciliation-backup.mjs\": \"./maintenance/rds-reconciliation-backup.mjs\",\n    \"./runtime_schema.js\": \"./runtime_schema.js\",\n    \"./maintenance/check-rds-schema.mjs\": \"./maintenance/check-rds-schema.mjs\",\n    \"./maintenance/apply-rds-schema.mjs\": \"./maintenance/apply-rds-schema.mjs\",\n    \"./maintenance/apply-order-observation-schema.mjs\": \"./maintenance/apply-order-observation-schema.mjs\",\n    \"./admin_maintenance.js\": \"./admin_maintenance.js\"\n  },\n  \"main\": \"./index.js\",\n  \"scripts\": {\n    \"test\": \"vitest run && node --import ../../scripts/testing/offline-env.mjs --test football_orders.smoke.test.mjs pod_bet_execution.smoke.test.mjs sport_matcher_tables.smoke.test.mjs\"\n  },\n  \"dependencies\": {\n    \"@changmen/api-contract\": \"file:../../packages/api-contract\",\n    \"@changmen/storage\": \"file:../storage\",\n    \"pg\": \"^8.21.0\",\n    \"@changmen/shared\": \"file:../../packages/shared\",\n    \"dotenv\": \"^17.4.2\"\n  }\n}\n",
+      "beforeSha": "250382837cc3702b1396b0de04d0b61b678672270c8d0b6c3f0b78e180e779d1",
+      "afterSha": "990c48897ada59770b2a4e41b0842c4d7441dcca1c2d76ae387fefb0468042d2"
+    }
+  ],
+  "dataFile": "server/db/maintenance/profile_repairs.js",
+  "dataSha": "6438c9d860093167b9aa857ceec41a6d86ca208271463a433440994165e445f7"
+}

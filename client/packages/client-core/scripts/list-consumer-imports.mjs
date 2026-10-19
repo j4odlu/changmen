@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 扫描 client/web + venue-adapter 对 @changmen/client-core/* 的引用。
+ * 扫描 client/web + venue-browser 对 @changmen/client-core/* 的引用。
  *
  * 用法：
  *   node client/packages/client-core/scripts/list-consumer-imports.mjs
@@ -17,7 +17,7 @@ const CHECK = process.argv.includes("--check");
 
 const SCAN_ROOTS = [
   { label: "client/web/src", dir: path.resolve(PKG_ROOT, "../../web/src") },
-  { label: "packages/venue-adapter", dir: path.resolve(PKG_ROOT, "../../../packages/venue-adapter") },
+  { label: "client/packages/venue-browser", dir: path.resolve(PKG_ROOT, "../venue-browser") },
 ];
 
 const IMPORT_RES = [

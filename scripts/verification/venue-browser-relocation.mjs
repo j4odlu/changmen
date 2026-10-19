@@ -1,13 +1,15 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact physical relocation, without changing runtime behavior or release scope.
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import {adapterBrowserSourceReader} from './adapter-browser-relocation.mjs';
 import {createHash} from 'node:crypto';
 import {restoreVenueBrowserLeafEdits,verifyVenueBrowserLeaves} from './venue-browser-leaves.mjs';
 import {restoreVenueBrowserHost} from './venue-browser-host.mjs';
 const normalize=source=>source.replaceAll('\r\n','\n');
 const sha=source=>createHash('sha256').update(normalize(source)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-relocation.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-relocation.json',import.meta.url),'utf8');
 assert.equal(sha(text),'3a5842621332faa9a5afcb9522c1b259081109b16876e612bbcdc91d8114033c');
 export const VENUE_BROWSER_RELOCATION=JSON.parse(text);
 export function restoreVenueBrowserMetadata(file,source){
@@ -31,6 +33,7 @@ export function restoreVenueBrowserSource(row,source){
  assert.equal(sha(source),row.beforeSha,row.file+': complete original source');return source;
 }
 export function verifyVenueBrowserRelocation(read){
+ read=adapterBrowserSourceReader(read);
  verifyVenueBrowserLeaves(read);
  assert.equal(VENUE_BROWSER_RELOCATION.rows.length,10);
  for(const row of VENUE_BROWSER_RELOCATION.rows){
@@ -44,6 +47,6 @@ export function inspectVenueBrowserRelocation(root){
  return verifyVenueBrowserRelocation(file=>{
   const target=fs.realpathSync(path.join(base,file)),relative=path.relative(base,target);
   assert(relative!=='..'&&!relative.startsWith('..'+path.sep)&&!path.isAbsolute(relative),'Browser relocation escapes workspace');
-  return fs.readFileSync(target,'utf8');
+  return readAdapterHistory(target,'utf8');
  });
 }

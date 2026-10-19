@@ -1,5 +1,5 @@
 /** [changmen 扩展] 独立订单监控的关联及补单上下文；没有查询或定时器。 */
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { RayOrderContext, RegisterRayOrderContextInput } from "./types";
 import { saveUserLog } from "@/api/chat";

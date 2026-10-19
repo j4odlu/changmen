@@ -1,9 +1,10 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { a8MakeupIncrements } from "./a8-makeup-boundary.mjs";
 import { gitSource, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 
-const read = file => fs.readFileSync(file, "utf8");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 const bases = ["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"];
 function check(file, source, base) {
   return verifyProtectedSource(file, source, gitSource(base, file), read, path => gitSource(base, path));

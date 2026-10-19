@@ -1,6 +1,6 @@
 import type { ArbBetAttemptParams, ArbBetReady } from "@/stores/betting/autoBet/phases/types";
-import { prewarmPmSportForCandidate } from "@changmen/venue-adapter/polymarket";
-import { capturePmFokPreflightMode } from "@changmen/venue-adapter/polymarket";
+import { prewarmPmSportForCandidate } from "@changmen/venue-browser/adapter/polymarket";
+import { capturePmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket";
 import type { PlatformId } from "@/types/esport";
 import {
   allowArbBetExecution,

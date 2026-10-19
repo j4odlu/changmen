@@ -4,28 +4,21 @@
  * Usage: node scripts/fix-sh01-river-accounts.mjs [--dry-run]
  */
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
-import { ensurePgPoolReady, getPgPool } from "@changmen/db";
+import { openProfileRepairData } from "@changmen/db/maintenance/profile_repairs.js";
 import { loadProfileById, pullProfilesFromDb } from "../../../core/db/store.js";
 
 const dryRun = process.argv.includes("--dry-run");
 loadChangmenEnv();
-await ensurePgPoolReady();
-const pool = getPgPool();
+const data = await openProfileRepairData();
 await pullProfilesFromDb();
 
 async function getUserId(userName) {
-  const { rows } = await pool.query(
-    `SELECT id FROM users WHERE user_name ILIKE $1`,
-    [userName],
-  );
+  const { rows } = await data.readUserId(userName);
   return rows[0]?.id;
 }
 
 async function getProfileAccounts(userName) {
-  const { rows } = await pool.query(
-    `SELECT accounts FROM profiles p JOIN users u ON u.id = p.id WHERE u.user_name ILIKE $1`,
-    [userName],
-  );
+  const { rows } = await data.readProfileAccounts(userName);
   return rows[0]?.accounts ?? [];
 }
 
@@ -52,10 +45,7 @@ function minimalAccount({ accountId, provider, platformName, playerName, platfor
 }
 
 async function fetchPlayer(playerId) {
-  const { rows } = await pool.query(
-    `SELECT id, platform_id, platform_name, player_name FROM players WHERE id = $1 AND deleted_at IS NULL`,
-    [playerId],
-  );
+  const { rows } = await data.readActivePlayer(playerId);
   return rows[0] ?? null;
 }
 
@@ -89,10 +79,7 @@ async function buildRiverAccounts(current, riverUserId) {
     const player = await fetchPlayer(id);
     if (!player)
       continue;
-    const { rows: ownerRows } = await pool.query(
-      `SELECT owner_user_id FROM players WHERE id = $1`,
-      [id],
-    );
+    const { rows: ownerRows } = await data.readPlayerOwner(id);
     if (ownerRows[0]?.owner_user_id !== riverUserId) {
       console.warn(`player ${id} not owned by River, skip`);
       continue;
@@ -120,10 +107,7 @@ async function apply(userName, accounts) {
   }
   if (!dryRun) {
     const now = Date.now();
-    await pool.query(
-      `UPDATE profiles SET accounts = $2::jsonb, updated_at = $3 WHERE id = $1`,
-      [uid, JSON.stringify(accounts), now],
-    );
+    await data.writeProfileAccounts(uid, JSON.stringify(accounts), now);
     await loadProfileById(uid);
   }
 }

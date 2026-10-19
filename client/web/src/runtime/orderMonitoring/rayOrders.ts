@@ -1,6 +1,6 @@
 /** [changmen 扩展] 被动接收原有 RAY 查单结果；不发请求、不设置定时器、不干预拒单或补单。 */
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import { shallowReactive } from "vue";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 

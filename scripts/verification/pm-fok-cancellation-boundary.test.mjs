@@ -1,8 +1,9 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import fs from "node:fs";
 import { expect, it } from "vitest";
 import { restorePmFokCancellationSource, verifyPmFokCancellationContract } from "./pm-fok-cancellation-boundary.mjs";
-const readBeforeExecution = file => fs.readFileSync(file, "utf8");
+const readBeforeExecution = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 it("accepts only the precise authorized cancellation changes", () => {
   expect(() => verifyPmFokCancellationContract(read)).not.toThrow();

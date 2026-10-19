@@ -1,7 +1,7 @@
 import {
   PM_MAINTENANCE_CHANNEL,
   subscribeChangmenChannel,
-} from "@changmen/venue-adapter/shared";
+} from "@changmen/venue-browser/adapter/shared";
 import { readonly, ref } from "vue";
 
 /** PM 官网状态（server/realtime-hub/pm_maintenance.js 发布） */

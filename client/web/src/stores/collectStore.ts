@@ -1,6 +1,6 @@
 import type { CollectBetDto, CollectConfigDto, CollectMatchDto } from "@changmen/client-core/types/collect";
 import type { PlatformId } from "@/types/esport";
-import { isVpsOwnedPlatformCollect } from "@changmen/venue-adapter/registry";
+import { isVpsOwnedPlatformCollect } from "@changmen/venue-browser/adapter/registry";
 import { defineStore } from "pinia";
 import { getClientData, saveBetSource, saveClientData, saveMatchSource, saveUserLog } from "@/api/esport";
 import { ALL_PLATFORMS } from "@/types/userConfig";

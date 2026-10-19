@@ -5,13 +5,13 @@
 import { ElMessage } from "element-plus";
 import { shallowRef } from "vue";
 import type { PlatformAccount } from "@/models/platformAccount";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import {
   awaitPolymarketManualSellFinalOutcome,
   hasOpenPolymarketPosition,
   resolvePmRemainingShares,
   sellPolymarketBuyPosition,
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 import { saveOrders, getPmSubmission } from "@/api/order";
 import { validatePmSubmission } from "@changmen/shared/pm_submission";
 import { groupOrdersByEffectiveLink } from "@/shared/orderLink";
@@ -19,7 +19,7 @@ import { formatPolymarketApiDecimal } from "@/shared/pmOrderDisplay";
 import { useAccountStore } from "@/stores/accountStore";
 import { useOrderStore } from "@/stores/orderStore";
 import type { OrderRow } from "@/types/order";
-import { finishPmSubmitAttempt, pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-adapter/polymarket";
+import { finishPmSubmitAttempt, pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-browser/adapter/polymarket";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 
 type ClosingEntry = {

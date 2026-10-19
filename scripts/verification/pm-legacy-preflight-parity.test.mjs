@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -20,7 +21,7 @@ function functions(source) {
 }
 const online = functions(gitSource(baseline, root + "fok/bet.ts"));
 const current = functions(["fok/preflight.ts", "fok/bet.ts"].map(file =>
-  restorePmOptimizedFokSource(root + file, fs.readFileSync(root + file, "utf8"), true)).join("\n"));
+  restorePmOptimizedFokSource(root + file, readAdapterHistory(root + file, "utf8"), true)).join("\n"));
 function replaceOne(text, before, after = "") {
   expect(text.split(before)).toHaveLength(2);
   return text.replace(before, after);
@@ -78,6 +79,6 @@ describe("legacy FOK compared directly to the deployed version", () => {
     "markets/pmSportGuard.ts", "markets/pmMarketGuard.ts", "submission/preflight/pmDetection.ts",
     "submission/preflight/pmMarketOrderOptions.ts", "quotes/pmTickPrice.ts",
   ])("%s keeps its online predicates", file => {
-    expect(moduleTokens(readVenueBrowserLeafSource(root + file, fs.readFileSync(root + file, "utf8")))).toEqual(moduleTokens(gitSource(baseline, root + file)));
+    expect(moduleTokens(readVenueBrowserLeafSource(root + file, readAdapterHistory(root + file, "utf8")))).toEqual(moduleTokens(gitSource(baseline, root + file)));
   });
 });

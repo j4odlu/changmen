@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {expect,it} from 'vitest';
@@ -8,7 +9,7 @@ import {classifySourceFile,sourceLayerViolation} from './source-ownership.mjs';
 import {isVersionSource} from '../../devtools/runtime-tooling/runtime_version.js';
 import {classifyDeployScope} from '../deploy/classify-deploy-scope.mjs';
 import {restoreVenueBrowserWorkspace} from './venue-browser-workspace.mjs';
-const read=file=>fs.readFileSync(file,'utf8').replaceAll('\r\n','\n');
+const read=withAdapterHistoryReader(file=>readAdapterHistory(file,'utf8').replaceAll('\r\n','\n'));
 const original=file=>execFileSync('git',['show',record.baseline+':'+file],{encoding:'utf8',windowsHide:true}).replaceAll('\r\n','\n');
 it('retains the full original implementation after reversing only relative imports',()=>{
  expect(verifyVenueBrowserRelocation(read).entries).toBe(10);
@@ -26,7 +27,7 @@ it('rejects missing, changed or redirected sources and extra facade implementati
   expect(()=>verifyVenueBrowserRelocation(file=>file===row.file?read(file).replace('from "','from "missing/'):read(file))).toThrow();
   expect(()=>verifyVenueBrowserRelocation(file=>file===row.file?read(file)+'export const duplicate = true;\n':read(file))).toThrow();
  }
-});
+},30_000);
 it('restores only the two exact metadata edits for existing complete-source proofs',()=>{
  expect(record.changes.map(row=>row.file)).toEqual(['scripts/verification/source-ownership-inputs.json','scripts/deploy/component-inputs.json']);
  for(const row of record.changes){

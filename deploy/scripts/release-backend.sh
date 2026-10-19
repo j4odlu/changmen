@@ -44,7 +44,7 @@ command -v pm2 >/dev/null
 # Candidate requirements, read-only, before activation or rollback traps: failure
 # must leave the running processes, links and success marker untouched.
 # Migrations/data maintenance remain a separate, explicitly reviewed lifecycle.
-node --input-type=module -e 'import {loadChangmenEnv} from "@changmen/storage/load_env.js"; loadChangmenEnv(); const {checkConfiguredRdsSchema}=await import("./server/backend/scripts/check-rds-schema.mjs"); await checkConfiguredRdsSchema()'
+node --input-type=module -e 'import {loadChangmenEnv} from "@changmen/storage/load_env.js"; loadChangmenEnv(); const {checkConfiguredRdsSchema}=await import("@changmen/db/maintenance/check-rds-schema.mjs"); await checkConfiguredRdsSchema()'
 # Managed releases already retain their sealed identity. Refuse to replace one
 # without the evidence needed to verify recovery, before changing any process.
 rollback_evidence="$repo/.deploy-state/backend-evidence.$(basename "$previous").json"

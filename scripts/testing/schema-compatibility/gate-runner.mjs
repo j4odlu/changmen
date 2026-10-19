@@ -16,7 +16,7 @@ try {
   if (fail) {
     await client.query("ALTER TABLE platform_bets RENAME COLUMN line_id TO hidden_test_line_id"); hidden = true;
   }
-  const cli = fileURLToPath(new URL("../../../server/backend/scripts/check-rds-schema.mjs", import.meta.url));
+  const cli = fileURLToPath(new URL("../../../server/db/maintenance/check-rds-schema.mjs", import.meta.url));
   const result = spawnSync(process.execPath, [cli], { encoding: "utf8", timeout: 30_000, windowsHide: true });
   if (fail) {
     assert.equal(result.status, 1);

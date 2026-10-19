@@ -12,14 +12,14 @@ import { useOrderStore } from "@/stores/orderStore";
 import { useUserStore } from "@/stores/userStore";
 import { lockPmVault, resetPmVaultAccountUi } from "@/security/pmVault";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
-import { preparePolymarketAccountRuntimes } from "@changmen/venue-adapter/polymarket";
+import { preparePolymarketAccountRuntimes } from "@changmen/venue-browser/adapter/polymarket";
 
 async function applyPmTransportRoutingOnLogin(): Promise<void> {
   try {
     const {
       applyPmAutoTransportOnLogin,
       ensurePolymarketMarketQuoteHub,
-    } = await import("@changmen/venue-adapter/polymarket");
+    } = await import("@changmen/venue-browser/adapter/polymarket");
     const result = await applyPmAutoTransportOnLogin();
     if (result.marketWsMode === "official")
       ensurePolymarketMarketQuoteHub();
@@ -32,7 +32,7 @@ async function applyPmTransportRoutingOnLogin(): Promise<void> {
 
 async function applyPfTransportRoutingOnLogin(): Promise<void> {
   try {
-    const { applyPfAutoTransportOnLogin } = await import("@changmen/venue-adapter/predictfun");
+    const { applyPfAutoTransportOnLogin } = await import("@changmen/venue-browser/adapter/predictfun");
     await applyPfAutoTransportOnLogin();
   }
   catch (err) {
@@ -46,7 +46,7 @@ async function resetPmTransportRoutingOnLogout(): Promise<void> {
     const {
       resetPmTransportRoutingOnLogout,
       stopPolymarketMarketQuoteHub,
-    } = await import("@changmen/venue-adapter/polymarket");
+    } = await import("@changmen/venue-browser/adapter/polymarket");
     stopPolymarketMarketQuoteHub();
     resetPmTransportRoutingOnLogout();
   }
@@ -57,7 +57,7 @@ async function resetPmTransportRoutingOnLogout(): Promise<void> {
 
 async function resetPfTransportRoutingOnLogout(): Promise<void> {
   try {
-    const { resetPfTransportRoutingOnLogout } = await import("@changmen/venue-adapter/predictfun");
+    const { resetPfTransportRoutingOnLogout } = await import("@changmen/venue-browser/adapter/predictfun");
     resetPfTransportRoutingOnLogout();
   }
   catch {

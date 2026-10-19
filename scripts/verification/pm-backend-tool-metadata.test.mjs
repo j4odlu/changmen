@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] One exact tooling declaration change; every prior lock proof remains in force.
 import fs from "node:fs";
 import { createHash } from "node:crypto";
@@ -5,8 +6,8 @@ import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 import { PM_METADATA_BASELINE, restorePmClientFolderMetadata, restorePmBackendToolMetadata, restorePmSourceIsolationMetadata } from "./pm-source-isolation-metadata.mjs";
 
-const file = "package-lock.json", current = restorePmClientFolderMetadata(file, fs.readFileSync(file, "utf8"));
-const record = JSON.parse(fs.readFileSync(new URL("./pm-backend-tool-metadata.json", import.meta.url), "utf8"));
+const file = "package-lock.json", current = restorePmClientFolderMetadata(file, readAdapterHistory(file, "utf8"));
+const record = JSON.parse(readAdapterHistory(new URL("./pm-backend-tool-metadata.json", import.meta.url), "utf8"));
 const original = gitSource(PM_METADATA_BASELINE, file), previous = restorePmBackendToolMetadata(file, current);
 it("changes only the backend tooling owner and restores the complete previous and historical lock", () => {
   expect(record.file).toBe(file); expect(record.patches).toHaveLength(2);

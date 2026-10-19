@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PlatformId } from "@/types/esport";
-import { betPlatformIds } from "@changmen/venue-adapter/registry";
+import { betPlatformIds } from "@changmen/venue-browser/adapter/registry";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { storeToRefs } from "pinia";
 import { computed, ref } from "vue";

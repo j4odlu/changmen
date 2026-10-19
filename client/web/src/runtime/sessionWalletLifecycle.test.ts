@@ -8,11 +8,11 @@ const mocks = vi.hoisted(() => ({
   startBalance: vi.fn(),
   startMain: vi.fn(),
 }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
   preparePolymarketAccountRuntimes: mocks.prepare,
   applyPmAutoTransportOnLogin: async () => ({ marketWsMode: "relay" }),
 }));
-vi.mock("@changmen/venue-adapter/predictfun", () => ({ applyPfAutoTransportOnLogin: vi.fn() }));
+vi.mock("@changmen/venue-browser/adapter/predictfun", () => ({ applyPfAutoTransportOnLogin: vi.fn() }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "session-1", isAuthSessionCurrent: () => mocks.current }));
 vi.mock("@/extensions/arbOpportunity/syncArbRuntime", () => ({
   installArbRuntimeSync: vi.fn(), syncArbRuntime: vi.fn(), teardownArbRuntimeSync: vi.fn(),

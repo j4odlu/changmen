@@ -32,11 +32,11 @@ it("records default target hashes, locked pg resolution and the bounded preload 
   const result = inspect().defaultScenario;
   expect(result.applicableToAuditorProcess).toBe(true);
   expect(result.targetEvidence.map(row => row.file).sort()).toEqual([
-    "devtools/platform-probes/hg/session.js", "devtools/platform-probes/ob/session.js",
-    "devtools/platform-probes/pb/session.js", "devtools/platform-probes/ray/core.js",
-    "devtools/platform-probes/ray/session.js", "packages/venue-adapter/registry/feeds.js",
-    "packages/venue-adapter/registry/paths.js",
-  ]);
+    "server/platform-probes/hg/session.js", "server/platform-probes/ob/session.js",
+    "server/platform-probes/pb/session.js", "server/platform-probes/ray/core.js",
+    "server/platform-probes/ray/session.js", "server/packages/venue-node-registry/runtime/registry/feeds.js",
+    "server/packages/venue-node-registry/runtime/registry/paths.js",
+  ].sort());
   for (const row of [...result.targetEvidence, ...result.preloadPackages, ...result.preloadFiles, result.pg, result.manifest]) {
     expect(row.sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(row.realFile).not.toMatch(/^\.\.\//);
@@ -45,7 +45,7 @@ it("records default target hashes, locked pg resolution and the bounded preload 
   expect(result.pg.version).toBe(lock.packages[result.pg.lockKey].version);
   expect(result.pg.searchPaths).toEqual(["apps/backend/node_modules", "node_modules", "server/node_modules"]);
   expect(result.preloadFiles.length).toBeGreaterThan(0);
-  expect(result.preloadFiles.every(row => /^devtools\/platform-probes\/[^/]+\/[^/_][^/]*\.js$/.test(row.file))).toBe(true);
+  expect(result.preloadFiles.every(row => /^server\/platform-probes\/[^/]+\/[^/_][^/]*\.js$/.test(row.file))).toBe(true);
   expect(result.runtimeExecuted).toBe(false);
   expect(result.moduleDependencyClosuresCertified).toBe(false);
 });
@@ -83,7 +83,7 @@ it("does not certify application .env or remote configuration from an empty audi
   expect(result.runtimeRootsCertified).toBe(false);
 });
 it("ignores comment and whitespace edits for this extra interpretation check, leaving the separate exact FOK protection intact", () => {
-  const file = "packages/venue-adapter/loader/adapter_paths.mjs", text = source(file);
+  const file = "server/packages/venue-node-loader/adapter_paths.mjs", text = source(file);
   expect(sharedLoaderSourceSignature(file, `// added comment\n${text}\n  /* comment */`)).toBe(sharedLoaderSourceSignature(file, text));
 });
 it("keeps code after template substitutions and regular expressions in the source contract", () => {

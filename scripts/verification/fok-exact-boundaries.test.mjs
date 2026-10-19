@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -8,7 +9,7 @@ const core = "219535c8";
 const vps = "75b1efac66625e5f2bc9884a965b244bfaf337ed";
 const root = "client/web/src/stores/betting/autoBet/";
 const files = [`${root}phases/checkArbLegs.ts`, `${root}phases/placeArbLegs.ts`, `${root}executeArbBet.ts`, "client/web/src/stores/betting/activeBetRunSync.ts", "server/backend/core/account/order/position_events.js", "client/web/src/stores/account/betGateway.ts", "client/web/src/components/order/OrderView.vue"];
-const read = file => fs.readFileSync(file, "utf8");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 function check(file, source = read(file), readSource = read, base = vps) {
   return verifyProtectedSource(file, source, gitSource(base, file), readSource, target => gitSource(base, target));
 }

@@ -39,16 +39,16 @@ import { isObSportPcShellHost, resolveObSportHttpGateway } from "@/runtime/obSpo
 import {
   createOrDerivePolymarketApiCreds,
   type PolymarketApiCreds,
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 import {
   fetchPolymarketRelayerStatus,
   preparePolymarketWallet,
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 import {
   normalizePolymarketPrivateKey,
   resolvePolymarketDepositWalletFromPrivateKey,
   resolvePolymarketSignerAddress,
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 import {
   buildPredictFunMemoryToken,
   buildPredictFunPersistToken,
@@ -59,7 +59,7 @@ import {
   resolvePredictFunPredictAccount,
   resolvePredictFunPrivyAddressFromPrivateKey,
   resolvePredictFunPrivyPrivateKey,
-} from "@changmen/venue-adapter/predictfun";
+} from "@changmen/venue-browser/adapter/predictfun";
 import {
   ensurePmVaultSetup,
   ensurePmVaultUnlocked,
@@ -71,8 +71,8 @@ import {
   vaultHasKey,
 } from "@/security/pmVault";
 import { getAdapter } from "@/runtime/venueAdapters";
-import type { AccountBalanceResult } from "@changmen/venue-adapter/contract";
-import { parsePbVenueIdentity } from "@changmen/venue-adapter/pb";
+import type { AccountBalanceResult } from "@changmen/venue-browser/adapter/contract";
+import { parsePbVenueIdentity } from "@changmen/venue-browser/adapter/pb";
 
 function readStoredVenueMemberId(row: { venueMemberId?: string; venueId?: string } | null | undefined): string {
   const v = row?.venueMemberId ?? row?.venueId;

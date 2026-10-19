@@ -1,9 +1,10 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // Public/synthetic evidence only. Passing this analysis never authorizes active execution or release.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 const base = process.argv.includes('--availability') ? 'output/pm-book-availability' : 'output/pm-execution-simulation';
-const read = name => JSON.parse(fs.readFileSync(`${base}/${name}.json`, 'utf8'));
+const read = withAdapterHistoryReader(name => JSON.parse(readAdapterHistory(`${base}/${name}.json`, 'utf8')));
 const controlled = read('execution-browser-controlled'), live = read('execution-browser-live'), gates = read('browser-gates');
 const count = (rows, key) => rows.reduce((out, row) => { const value = key(row); out[value] = (out[value] ?? 0) + 1; return out; }, {});
 const latency = (rows, key) => {

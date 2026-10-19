@@ -13,7 +13,7 @@ import { gtcExecutionResult } from "./result";
 import { acceptGtc, currentGtc, mutateGtc, pollGtc, startGtcRuntime } from "./runtime";
 import { notifyBet } from "@/shared/betNotification";
 import { gtcPmNotice } from "./notifications";
-import { lookupPolymarketOrderBetLabel } from "@changmen/venue-adapter/polymarket/orders";
+import { lookupPolymarketOrderBetLabel } from "@changmen/venue-browser/adapter/polymarket/orders";
 
 /** [changmen 扩展] 单次手动 GTC，不依赖自动下注开关、不触发另一腿或旧 FOK 编排。 */
 export async function executeManualGtc(account: PlatformAccount, input: BetOption, context: {
@@ -34,7 +34,7 @@ export async function executeManualGtc(account: PlatformAccount, input: BetOptio
     await user.saveExtensionPrefs();
   }
   checkSession(); startGtcRuntime(owner); checkSession();
-  const { pmSubmitMaker, prepareManualGtcBuy } = await import("@changmen/venue-adapter/polymarket/gtc");
+  const { pmSubmitMaker, prepareManualGtcBuy } = await import("@changmen/venue-browser/adapter/polymarket/gtc");
   const maker = pmSubmitMaker(account);
   // [changmen 扩展] 每次人工下单是独立订单；历史执行或现有挂单不限制新手动单。
   const option = await checkBetting(account, input, { skipAccountRate: true, manual: true });

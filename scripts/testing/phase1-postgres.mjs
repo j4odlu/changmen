@@ -7,8 +7,8 @@ import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import pg from "../../server/db/pg.js";
-import { applyRdsSchema, RDS_MIGRATIONS } from "../../server/backend/scripts/apply-rds-schema.mjs";
-import { runRdsMigrations } from "../../server/backend/scripts/rds-migrations.mjs";
+import { applyRdsSchema, RDS_MIGRATIONS } from "@changmen/db/maintenance/apply-rds-schema.mjs";
+import { runRdsMigrations } from "@changmen/db/maintenance/rds-migrations.mjs";
 
 const suffix = process.platform === "win32" ? ".exe" : "";
 function executable(name) {
@@ -32,7 +32,7 @@ async function connect(database, port) {
   const client = new pg.Client({ host: "127.0.0.1", port, user: "changmen_test", database, ssl: false });
   await client.connect(); clients.push(client); return client;
 }
-const readSql = name => readFileSync(new URL(`../../server/backend/db/migrations/${name}`, import.meta.url), "utf8");
+const readSql = name => readFileSync(new URL(`../../server/db/assets/migrations/${name}`, import.meta.url), "utf8");
 try {
   const port = await new Promise((resolve, reject) => {
     const server = net.createServer(); server.on("error", reject);

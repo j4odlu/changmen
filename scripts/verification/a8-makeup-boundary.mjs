@@ -1,10 +1,11 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [A8 可证实] 精确登记补单消费/次数/option 锚点/即时重试修正；固定 FOK 基线不变。
 import fs from "node:fs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { restorePmMakeupSettlementSource } from "./pm-makeup-settlement-boundary.mjs";
 
-const registered = fs.readFileSync(new URL("./a8-makeup-increments.json", import.meta.url), "utf8").replaceAll("\r\n", "\n");
+const registered = readAdapterHistory(new URL("./a8-makeup-increments.json", import.meta.url), "utf8").replaceAll("\r\n", "\n");
 assert.equal(createHash("sha256").update(registered).digest("hex"), "6f5954a0bbd44b70a75d86f0adf04e05573d081e035b90bff76e49a0405fcf14", "exact A8 makeup corrections must remain fixed");
 export const a8MakeupIncrements = JSON.parse(registered);
 

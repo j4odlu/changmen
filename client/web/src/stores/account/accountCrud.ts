@@ -24,12 +24,12 @@ import {
 } from "@/security/pmVault";
 import { useUserStore } from "@/stores/userStore";
 import { getRetainedPmSessionEpoch, removeRetainedPmAccount, saveRetainedPmSession, trackPmAccounts } from "@/security/pmVault/retainedPmSession";
-import { preparePolymarketAccountRuntimes } from "@changmen/venue-adapter/polymarket";
+import { preparePolymarketAccountRuntimes } from "@changmen/venue-browser/adapter/polymarket";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/lib/authSession";
 
 async function warmPolymarketUserWsFromAccounts(accounts: PlatformAccount[]) {
   try {
-    const { warmAllPolymarketUserWs } = await import("@changmen/venue-adapter/polymarket");
+    const { warmAllPolymarketUserWs } = await import("@changmen/venue-browser/adapter/polymarket");
     warmAllPolymarketUserWs(accounts);
   }
   catch {
@@ -99,7 +99,7 @@ export async function loadAccounts(store: AccountStoreContext, refreshBalances =
     // 本机 VITE_ 主号凭证：补齐 PF 会话 token（不落库；地址须与 env 一致）
     try {
       const { applyPredictFunEnvFallbackToToken, resolvePredictFunPredictAccount, parsePredictFunTokenConfig }
-        = await import("@changmen/venue-adapter/predictfun");
+        = await import("@changmen/venue-browser/adapter/predictfun");
       for (const acc of store.accounts) {
         if (String(acc.provider) !== "PredictFun")
           continue;

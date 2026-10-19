@@ -14,12 +14,12 @@ vi.mock("@/runtime/obSportWs", () => ({
 }));
 vi.mock("@/runtime/obSportSessionLocal", () => ({ readLocalSportObSession: () => null }));
 vi.mock("@/stores/footballOrderStore", () => ({ useFootballOrderStore: () => ({ applyVenueStatus: vi.fn(), syncVenueSettlementSoon: vi.fn() }) }));
-vi.mock("@changmen/venue-adapter/ray", () => ({ createRayRealtimeClient: () => ({ start: async () => {}, stop: async () => {} }) }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/adapter/ray", () => ({ createRayRealtimeClient: () => ({ start: async () => {}, stop: async () => {} }) }));
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
   onPolymarketSportHubBound: () => () => {}, onPolymarketSportQuote: () => () => {},
   setPolymarketSportAssetIds: vi.fn(), ensurePolymarketSportMarketConnection: vi.fn(), clearPolymarketSportHub: vi.fn(),
 }));
-vi.mock("@changmen/venue-adapter/predictfun", () => ({
+vi.mock("@changmen/venue-browser/adapter/predictfun", () => ({
   onPredictFunSportHubBound: () => () => {}, onPredictFunSportQuote: () => () => {}, setPredictFunSportMarketIds: vi.fn(),
 }));
 

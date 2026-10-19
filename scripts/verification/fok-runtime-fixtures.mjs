@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 单独运行实际旧/新代码的离线差分，严格发布检查继续使用原入口。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -15,12 +16,12 @@ function slice(source, start, end) {
   assert(first >= 0 && last > first, `fixture markers missing: ${start} / ${end}`);
   return source.slice(first, last);
 }
-function sandbox(base, readFileSync = fs.readFileSync) {
-  return { assert, execFileSync, fs: { ...fs, readFileSync }, vm, ts, base, executePath, console };
+function sandbox(base, readFileSync = readAdapterHistory) {
+  return { assert, execFileSync, readAdapterHistory:readFileSync, withAdapterHistoryReader, fs: { ...fs, readFileSync }, vm, ts, base, executePath, console };
 }
 
 export function runGtcStateFixture(readFileSync) {
-  const source = fs.readFileSync(checkerPath, "utf8");
+  const source = readAdapterHistory(checkerPath, "utf8");
   const loader = slice(source, "function load(file, old, context)", "async function execute(old, scenario)");
   const fixture = slice(source, "const storage = new Map();", "const before = gates();");
   const checks = `
@@ -50,7 +51,7 @@ export function runGtcStateFixture(readFileSync) {
 }
 
 export async function runFokDifferentials(base) {
-  const source = fs.readFileSync(checkerPath, "utf8");
+  const source = readAdapterHistory(checkerPath, "utf8");
   let loader = slice(source, "function load(file, old, context)", "async function execute(old, scenario)");
   // eslint-disable-next-line no-template-curly-in-string -- Literal source tokens in the reused VM loader.
   loader = loader.replace("`${base}:${file}`", "`${file === manualPath ? manualOldBase : base}:${file}`");
@@ -80,6 +81,6 @@ export async function runFokDifferentials(base) {
     assert.deepEqual(historicalManualRows.map(row => row.name), ["low balance", "account filter", "muted map", "prematch blocked"]);
     return { baseline: base, manualIndependentBaseline, autoRows, finalRows, manualRows, historicalManualRows };
   `;
-  assert.equal(fs.readFileSync(manualPath, "utf8").replace(/\r\n/g, "\n"), execFileSync("git", ["show", `${manualIndependentBaseline}:${manualPath}`], { encoding: "utf8" }).replace(/\r\n/g, "\n"));
+  assert.equal(readAdapterHistory(manualPath, "utf8").replace(/\r\n/g, "\n"), execFileSync("git", ["show", `${manualIndependentBaseline}:${manualPath}`], { encoding: "utf8" }).replace(/\r\n/g, "\n"));
   return json(await vm.runInNewContext(`(async () => { let manualOldBase = manualIndependentBaseline; ${loader} ${execute} ${finalize} ${manual} ${checks} })()`, { ...sandbox(base), manualPath, manualIndependentBaseline }, { timeout: 30000 }));
 }

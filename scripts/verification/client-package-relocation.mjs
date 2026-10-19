@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { restoreNodePackageMetadata } from './node-package-relocation.mjs';
 import { restoreVenueBrowserExecution } from './venue-browser-execution.mjs';
+import { restoreBrowserEntryRetirement, withAdapterHistoryReader } from './browser-entry-history.mjs';
 
 const normalize = text => text.replaceAll('\r\n', '\n');
 const sha = text => createHash('sha256').update(normalize(text)).digest('hex');
@@ -23,7 +24,7 @@ const entries = new Map(CLIENT_PACKAGE_RELOCATION.relocations.map(row => [row.fi
 export function readClientPackageSource(file, source, read) {
   const row = entries.get(file);
   if (!row || normalize(source) !== row.wrapper) return source;
-  const canonical = normalize(read(row.canonical));
+  const canonical = normalize(restoreBrowserEntryRetirement(row.canonical, read(row.canonical)));
   assert.equal(sha(canonical), row.sourceSha256, `${row.canonical}: relocated implementation changed`);
   return canonical;
 }
@@ -47,6 +48,7 @@ export function restoreClientPackageMetadata(file, source) {
 }
 
 export function verifyClientPackageRelocation(read) {
+  read = withAdapterHistoryReader(read);
   const certified = new Set();
   for (const row of entries.values()) {
     assert.match(row.file, /^packages\/(?:client-core|arb-core)\/(?:src|scripts)\//);

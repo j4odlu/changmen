@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useSportOddsStore } from "@/stores/sportOddsStore";
-import { PLATFORMS } from "@changmen/venue-adapter/shared";
+import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
 
 /**
  * 订单栏现价过滤逻辑的单测替身：与 OrderList bumpOrderLiveIfWatched 同语义。

@@ -56,7 +56,7 @@ export async function createGtc(id: string, maker: string, plan: GtcPlan): Promi
   if (!account || account.provider !== "Polymarket" || accounts.adminWorkspacePreview) throw new Error("PM 账号身份无效");
   if (prepared.source !== "manual" && accounts.findAccount(prepared.otherPlayerId)?.provider !== prepared.otherProvider)
     throw new Error("GTC 对侧账号身份不一致");
-  const { pmSubmitMaker } = await import("@changmen/venue-adapter/polymarket");
+  const { pmSubmitMaker } = await import("@changmen/venue-browser/adapter/polymarket");
   const wallet = pmSubmitMaker(account).toLowerCase();
   if (!/^0x[0-9a-f]{40}$/.test(wallet) || maker.toLowerCase() !== wallet) throw new Error("GTC 客户端与钱包不一致");
   if (!isAuthSessionCurrent(session) || owner() !== userId) throw new Error("GTC 会话已变更");

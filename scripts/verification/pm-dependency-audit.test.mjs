@@ -163,23 +163,23 @@ it("rejects private Vue runtimes, missing/required peers and a host range mismat
     { ...peer, peerDependencies: { vue: "^3.6.0" } }]) expect(checkPmVuePeer(bad, host).length).toBeGreaterThan(0);
 });
 for (const [name, file, addition, marker] of [
-  ["computed PM input", "packages/venue-adapter/polymarket/orderBook.ts", "void import(globalThis.unreviewedInput);", "[pm-dynamic-input]"],
+  ["computed PM input", "client/packages/venue-browser/adapter/polymarket/orderBook.ts", "void import(globalThis.unreviewedInput);", "[pm-dynamic-input]"],
   ["shared Node loader reaching PM browser", "server/backend/core/account/balance_provider.js", 'requirePlatform("Polymarket", "orderBook.ts");', "[pm-node-browser-loader]"],
   ["shared Node loader reaching the browser workspace", "server/backend/core/account/balance_provider.js", 'import { backendRequire } from "../shared/adapter_paths.js";backendRequire("@changmen/venue-browser/pm-book-source");', "[pm-node-browser-loader]"],
-  ["shared loader facade changing without review", "packages/venue-adapter/loader/adapter_paths.mjs", "void 0;", "AssertionError [ERR_ASSERTION]:"],
+  ["shared loader implementation changing without review", "server/packages/venue-node-loader/adapter_paths.mjs", "void 0;", "AssertionError [ERR_ASSERTION]:"],
   ["namespace loader with unknown argument", "server/backend/core/esport-api/store.js", 'import * as boundLoader from "../shared/adapter_paths.js";boundLoader.backendRequire(globalThis.unknownModule);', "[pm-loader-unknown]"],
   ["namespace loader reaching PM browser", "server/backend/core/esport-api/store.js", 'import * as boundLoader from "../shared/adapter_paths.js";boundLoader.requirePlatform("Polymarket","orderBook.ts");', "[pm-node-browser-loader]"],
-  ["opaque acquisition in a real preload file", "devtools/platform-probes/ray/ws.js", "void import(globalThis.unknownPreload);", "[pm-loader-unknown]"],
+  ["opaque acquisition in a real preload file", "server/platform-probes/ray/ws.js", "void import(globalThis.unknownPreload);", "[pm-loader-unknown]"],
 ]) it(`actual boundary command rejects ${name} using memory injection only`, () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));
   const code = `import fs from "node:fs";const read=fs.readFileSync;
     fs.readFileSync=function(file,...args){const value=read.call(this,file,...args);
       return typeof value === "string" && String(file).replaceAll("\\\\","/").endsWith(${JSON.stringify(`/${file}`)})
         ? value+${JSON.stringify(`\n${addition}\n`)} : value;};
-    if (${JSON.stringify(marker)} === "[pm-dynamic-input]") {
+    if (${JSON.stringify(marker)} === "[pm-dynamic-input]" || ${JSON.stringify(file)}.startsWith("server/platform-probes/")) {
       const {inspectPmDependencies}=await import("./scripts/verification/pm-dependency-audit.mjs");
       const report=inspectPmDependencies(process.cwd());
-      if(!report.violations.some(row=>row.rule==="pm-dynamic-input" && row.file===${JSON.stringify(file)}))throw Error("Missing computed-input rejection");
+      if(!report.violations.some(row=>row.rule===${JSON.stringify(marker.slice(1,-1))} && row.file===${JSON.stringify(file)}))throw Error("Missing source-bound input rejection");
       console.log(${JSON.stringify(`${marker} ${file}:`)});
     }
     await import("./scripts/check-team-boundaries.mjs");`;
@@ -187,20 +187,27 @@ for (const [name, file, addition, marker] of [
   expect(result.status).toBe(1);
   if (marker === "[pm-dynamic-input]") {
     expect(result.stdout).toContain(`${marker} ${file}:`);
-    expect(result.stderr).toContain(`${file}: exact market hosts relocation`);
+    expect(result.stderr).toContain(`${file}: retired entry still requires the complete real implementation`);
+  } else if (file.startsWith('server/platform-probes/')) {
+    expect(result.stdout).toContain(`${marker} ${file}:`);
+    expect(result.stderr).toContain(`${file}: complete relocated source required`);
   } else expect(result.stderr).toContain(`${marker} ${file}:`);
-  if (marker.startsWith("AssertionError")) expect(result.stderr).toContain("exact Node facade");
+  if (marker.startsWith("AssertionError")) expect(result.stderr).toContain("implementation changed");
 }, 40_000);
-it("actual boundary command accepts a reviewed preload request through a namespace with unchanged provenance", () => {
+it("recognizes a preload namespace's provenance while the complete source gate rejects unreviewed rewrites", () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));
   const code = `import fs from "node:fs";const read=fs.readFileSync;
     fs.readFileSync=function(file,...args){const value=read.call(this,file,...args);
-      if(typeof value !== "string" || !String(file).replaceAll("\\\\","/").endsWith("/devtools/platform-probes/ray/ws.js"))return value;
+      if(typeof value !== "string" || !String(file).replaceAll("\\\\","/").endsWith("/server/platform-probes/ray/ws.js"))return value;
       return value.replace('import { backendRequire }','import * as boundLoader').replace('backendRequire("socketcluster-client")','boundLoader.backendRequire("socketcluster-client")');};
+    const {inspectPmDependencies}=await import("./scripts/verification/pm-dependency-audit.mjs");
+    const report=inspectPmDependencies(process.cwd());if(report.violations.length)throw Error(JSON.stringify(report.violations));
+    console.log("namespace provenance: OK");
     await import("./scripts/check-team-boundaries.mjs");`;
   const result = spawnSync(process.execPath, ["--input-type=module", "--eval", code], { cwd: root, encoding: "utf8", timeout: 35_000, maxBuffer: 2 * 1024 * 1024 });
-  expect(result.status).toBe(0);
-  expect(result.stdout).toContain("pm-loader-binding: 9 source-bound calls");
+  expect(result.status).toBe(1);
+  expect(result.stdout).toContain("namespace provenance: OK");
+  expect(result.stderr).toContain("server/platform-probes/ray/ws.js: complete relocated source required");
 }, 40_000);
 it("actual boundary command rejects removing a PM direct dependency even when its installed copy remains", () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -216,7 +223,7 @@ it("actual boundary command rejects removing a PM direct dependency even when it
   const result = spawnSync(process.execPath, ["--input-type=module", "--eval", code], { cwd: root, encoding: "utf8", timeout: 35_000, maxBuffer: 2 * 1024 * 1024 });
   expect(result.status).toBe(1);
   expect(result.stdout).toContain("[pm-direct-dependency] client/packages/venue-browser/package.json:");
-  expect(result.stderr).toContain("client/packages/venue-browser/package.json: exact market hosts relocation");
+  expect(result.stderr).toContain("client/packages/venue-browser/package.json: complete reviewed consumer change");
 }, 40_000);
 it("actual boundary command rejects removing a required real loader definition from the gate policy", () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -224,8 +231,12 @@ it("actual boundary command rejects removing a required real loader definition f
     fs.readFileSync=function(file,...args){const value=read.call(this,file,...args);
       if(typeof value !== "string" || !String(file).replaceAll("\\\\","/").endsWith("/scripts/verification/pm-loader-binding-inputs.json"))return value;
       const policy=JSON.parse(value);policy.origins=policy.origins.filter(row=>row.symbol!=="reqS");return JSON.stringify(policy);};
+    const {inspectPmDependencies}=await import("./scripts/verification/pm-dependency-audit.mjs");
+    let rejected=false;try{inspectPmDependencies(process.cwd());}catch(error){if(!error.message.includes("Incomplete or redirected PM loader binding policy"))throw error;rejected=true;}
+    if(!rejected)throw Error("Missing loader policy rejection");console.log("loader policy rejection: OK");
     await import("./scripts/check-team-boundaries.mjs");`;
   const result = spawnSync(process.execPath, ["--input-type=module", "--eval", code], { cwd: root, encoding: "utf8", timeout: 35_000, maxBuffer: 2 * 1024 * 1024 });
   expect(result.status).toBe(1);
-  expect(result.stderr).toContain("Incomplete or redirected PM loader binding policy");
+  expect(result.stdout).toContain("loader policy rejection: OK");
+  expect(result.stderr).toContain("scripts/verification/pm-loader-binding-inputs.json: exact reviewed probe consumer");
 }, 40_000);

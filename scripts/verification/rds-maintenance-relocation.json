@@ -1,0 +1,61 @@
+{
+  "purpose": "move-rds-maintenance-tools-only",
+  "moves": [
+    {
+      "file": "server/backend/scripts/apply-sport-matcher-033.mjs",
+      "canonical": "server/db/maintenance/apply-sport-matcher-033.mjs",
+      "replacements": [
+        [
+          "../../db/assets/migrations/033_sport_matcher_tables.sql",
+          "../assets/migrations/033_sport_matcher_tables.sql"
+        ]
+      ],
+      "before": "#!/usr/bin/env node\n/** 仅执行 033_sport_matcher_tables.sql（不跑全量 apply）。 */\nimport { readFileSync } from \"node:fs\";\nimport { dirname, join } from \"node:path\";\nimport { fileURLToPath } from \"node:url\";\nimport { buildPgClientConfig, initDatabaseUrl } from \"@changmen/db\";\nimport pg from \"@changmen/db/pg.js\";\n\nconst __dirname = dirname(fileURLToPath(import.meta.url));\nconst sqlPath = join(__dirname, \"../../db/assets/migrations/033_sport_matcher_tables.sql\");\n\nawait initDatabaseUrl();\nconst url = process.env.DATABASE_URL;\nif (!url) {\n  console.error(\"缺少 DATABASE_URL\");\n  process.exit(1);\n}\n\nconst client = new pg.Client(buildPgClientConfig(url, 30000));\nawait client.connect();\ntry {\n  await client.query(\"SET lock_timeout = '30s'\");\n  await client.query(readFileSync(sqlPath, \"utf8\"));\n  const { rows } = await client.query(\n    `SELECT tablename FROM pg_tables\n     WHERE schemaname = 'public' AND tablename LIKE 'sport_%'\n     ORDER BY tablename`,\n  );\n  console.log(\"[033] ok:\", rows.map(r => r.tablename).join(\", \"));\n}\nfinally {\n  await client.end();\n}\n",
+      "beforeSha": "06f36b42e7f8def6dae8078728a05931c0989948f8dc41031af798e6a5e2636d",
+      "afterSha": "b46ee95aac097f0f491eed247a0ad0021df8304691f663125b64fc02fb3c647b"
+    },
+    {
+      "file": "server/backend/scripts/ops/verify-036-team-provider-ids.mjs",
+      "canonical": "server/db/maintenance/verify-team-provider-ids.mjs",
+      "replacements": [
+        [
+          "node scripts/ops/verify-036-team-provider-ids.mjs",
+          "node server/db/maintenance/verify-team-provider-ids.mjs"
+        ]
+      ],
+      "before": "#!/usr/bin/env node\n/**\n * 阶段一 036 team_provider_ids 只读巡检（不写库）。\n *\n * 注意：036 文件自带 BEGIN/COMMIT，切勿在本脚本里再套外层事务\n *（嵌套 BEGIN 会被忽略，文件内 COMMIT 会提交整个外层事务 → 误落库）。\n *\n * 运行：node scripts/ops/verify-036-team-provider-ids.mjs\n */\nimport { buildPgClientConfig, initDatabaseUrl } from \"@changmen/db\";\nimport pg from \"@changmen/db/pg.js\";\n\nawait initDatabaseUrl();\nconst url = process.env.DATABASE_URL;\nif (!url) {\n  console.error(\"缺少 DATABASE_URL\");\n  process.exit(1);\n}\n\nconst client = new pg.Client(buildPgClientConfig(url, 30000));\nclient.on(\"error\", (err) => console.warn(\"[verify] client error:\", err.message));\nawait client.connect();\n\nlet exitCode = 0;\n\ntry {\n  const { rows: exists } = await client.query(\n    `SELECT EXISTS (SELECT 1 FROM information_schema.tables\n      WHERE table_schema = 'public' AND table_name = 'team_provider_ids') AS ok`,\n  );\n  if (!exists[0].ok) {\n    console.error(\"[verify] ✘ team_provider_ids 表不存在（尚未执行 036）\");\n    process.exit(1);\n  }\n\n  const { rows: stats } = await client.query(\n    `SELECT COUNT(*)::int AS n,\n            COUNT(DISTINCT provider)::int AS providers\n     FROM team_provider_ids`,\n  );\n  console.log(`[verify] team_provider_ids: ${stats[0].n} 行 / ${stats[0].providers} 个 provider`);\n\n  const { rows: mismatch } = await client.query(\n    `SELECT COUNT(*)::int AS n\n     FROM canonical_teams ct\n     LEFT JOIN team_provider_ids tpi\n       ON tpi.team_id = ct.id AND tpi.provider = 'pandascore'\n     WHERE ct.pandascore_id IS NOT NULL AND tpi.provider_id IS NULL`,\n  );\n  console.log(`[verify] pandascore 回填缺失: ${mismatch[0].n} 行`);\n  if (mismatch[0].n > 0) {\n    console.error(\"[verify] ✘ 存在未回填的 pandascore_id\");\n    exitCode = 1;\n  }\n\n  const { rows: extra } = await client.query(\n    `SELECT COUNT(*)::int AS n\n     FROM team_provider_ids tpi\n     LEFT JOIN canonical_teams ct ON ct.id = tpi.team_id\n     WHERE ct.id IS NULL`,\n  );\n  console.log(`[verify] 孤儿 team_id: ${extra[0].n} 行`);\n  if (extra[0].n > 0) {\n    console.error(\"[verify] ✘ 存在指向不存在 canonical_teams 的 team_id\");\n    exitCode = 1;\n  }\n\n  const { rows: cols } = await client.query(\n    `SELECT column_name, data_type\n     FROM information_schema.columns\n     WHERE table_schema = 'public' AND table_name = 'team_provider_ids'\n     ORDER BY ordinal_position`,\n  );\n  console.log(\"[verify] 表结构:\", cols.map(c => `${c.column_name}:${c.data_type}`).join(\", \"));\n}\ncatch (err) {\n  console.error(\"[verify] ✘ 失败:\", err.message);\n  exitCode = 1;\n}\nfinally {\n  await client.end();\n}\n\nif (exitCode === 0)\n  console.log(\"[verify] ✅ 036 巡检通过\");\nelse\n  console.error(\"[verify] ❌ 存在异常\");\nprocess.exit(exitCode);\n",
+      "beforeSha": "705de73edc92ea3b3f90e2592bdefef7694ce4707f5f634330acd8acb60369a7",
+      "afterSha": "cd3a4e3fc51c1f5e49e40d53d316c2cc79acf23ef6d8f0152a5cbd64b44a7195"
+    },
+    {
+      "file": "server/backend/scripts/ops/migrations/apply-client-certificate-schema.mjs",
+      "canonical": "server/db/maintenance/apply-client-certificate-schema.mjs",
+      "replacements": [
+        [
+          "../../../../db/schema/client_certificates.sql",
+          "../schema/client_certificates.sql"
+        ]
+      ],
+      "before": "import { readFileSync } from 'node:fs';\nimport { loadChangmenEnv } from '@changmen/storage/load_env.js';\nimport { ensurePgPoolReady, getPgPool } from '@changmen/db';\nloadChangmenEnv();\nawait ensurePgPoolReady();\nconst pool = getPgPool();\nawait pool.query(readFileSync(new URL('../../../../db/schema/client_certificates.sql', import.meta.url), 'utf8'));\nconsole.log('Client certificate registry schema ready; account/order migrations not executed');\nawait pool.end();\n",
+      "beforeSha": "2910dc561a53d637ceb9d73347e99f37a17947feb9a5e8cc1c511b788a9a7c7d",
+      "afterSha": "51fa8f0edd20b77489883cd0ba5f65d8c1cd8250e55caf8a5b05ea972b6f45a0"
+    },
+    {
+      "file": "server/backend/scripts/ops/diagnostics/check-rds-schema.mjs",
+      "canonical": "server/db/maintenance/check-migration-tables.mjs",
+      "replacements": [
+        [
+          "cd changmen/server/backend && node scripts/ops/diagnostics/check-rds-schema.mjs",
+          "node server/db/maintenance/check-migration-tables.mjs"
+        ],
+        [
+          "const backendRoot = join(__dirname, \"../../..\");\nconst migrationsDir = join(backendRoot, \"..\", \"db\", \"assets\", \"migrations\");\nconst dbPkgRoot = join(backendRoot, \"..\", \"db\");",
+          "const dbPkgRoot = join(__dirname, \"..\");\nconst migrationsDir = join(dbPkgRoot, \"assets\", \"migrations\");"
+        ]
+      ],
+      "before": "#!/usr/bin/env node\n/**\n * 校验 RDS 迁移 SQL 是否覆盖 @changmen/db 代码里引用的表名（无需连库）。\n *\n *   cd changmen/server/backend && node scripts/ops/diagnostics/check-rds-schema.mjs\n */\n\nimport { readdirSync, readFileSync } from \"node:fs\";\nimport { dirname, join } from \"node:path\";\nimport { fileURLToPath } from \"node:url\";\n\nconst __dirname = dirname(fileURLToPath(import.meta.url));\nconst backendRoot = join(__dirname, \"../../..\");\nconst migrationsDir = join(backendRoot, \"..\", \"db\", \"assets\", \"migrations\");\nconst dbPkgRoot = join(backendRoot, \"..\", \"db\");\n\nconst CODE_FILES = [\n  join(dbPkgRoot, \"impl_rds.js\"),\n  join(dbPkgRoot, \"rds\", \"auth_store.js\"),\n  join(dbPkgRoot, \"rds\", \"auth_session_store.js\"),\n  join(dbPkgRoot, \"rds\", \"team_store.js\"),\n  join(dbPkgRoot, \"rds\", \"matcher_store.js\"),\n];\n\n// The checker intentionally scans whole source files because SQL is embedded in\n// template strings. Ignore SQL grammar tokens and known prose/function matches\n// that cannot be physical table names.\nconst IGNORED_IDENTIFIERS = new Set([\n  \"select\",\n  \"where\",\n  \"set\",\n  \"and\",\n  \"or\",\n  \"not\",\n  \"null\",\n  \"true\",\n  \"false\",\n  \"as\",\n  \"on\",\n  \"using\",\n  \"only\",\n  \"any\",\n  \"all\",\n  \"case\",\n  \"when\",\n  \"then\",\n  \"else\",\n  \"end\",\n  \"limit\",\n  \"offset\",\n  \"order\",\n  \"by\",\n  \"group\",\n  \"having\",\n  \"inner\",\n  \"left\",\n  \"right\",\n  \"full\",\n  \"cross\",\n  \"natural\",\n  \"distinct\",\n  \"exists\",\n  \"between\",\n  \"like\",\n  \"ilike\",\n  \"is\",\n  \"in\",\n  \"values\",\n  \"returning\",\n  \"conflict\",\n  \"excluded\",\n  \"public\",\n  \"cron\",\n  \"job\",\n  \"record\",\n  \"moved\",\n  \"failed\",\n  \"unnest\",\n]);\n\nfunction readText(path) {\n  return readFileSync(path, \"utf8\");\n}\n\nfunction tablesFromMigrations() {\n  const tables = new Set();\n  const re = /CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?([a-z]\\w*)/gi;\n  for (const name of readdirSync(migrationsDir).filter(f => f.endsWith(\".sql\")).sort()) {\n    const sql = readText(join(migrationsDir, name));\n    for (const m of sql.matchAll(re)) {\n      tables.add(m[1].toLowerCase());\n    }\n  }\n  return tables;\n}\n\nfunction tablesFromCode() {\n  const tables = new Set();\n  const re = /\\b(?:FROM|INTO|UPDATE|JOIN|DELETE\\s+FROM)\\s+([a-z]\\w*)\\b/gi;\n  for (const file of CODE_FILES) {\n    const src = readText(file);\n    for (const m of src.matchAll(re)) {\n      const name = m[1].toLowerCase();\n      if (!IGNORED_IDENTIFIERS.has(name))\n        tables.add(name);\n    }\n  }\n  return tables;\n}\n\nfunction main() {\n  const migrationTables = tablesFromMigrations();\n  const codeTables = tablesFromCode();\n  const missing = [...codeTables].filter(t => !migrationTables.has(t)).sort();\n\n  if (missing.length) {\n    console.error(\"[check-rds-schema] 代码引用的表缺少迁移定义:\");\n    for (const t of missing) console.error(`  - ${t}`);\n    console.error(`迁移目录: ${migrationsDir}`);\n    process.exit(1);\n  }\n\n  console.log(\n    `[check-rds-schema] OK — ${codeTables.size} 张代码表均已覆盖（迁移共 ${migrationTables.size} 张表）`,\n  );\n}\n\nmain();\n",
+      "beforeSha": "0d433114d10e496e81745c0f28767c041edf956d81f6494b3bc11478ec7204e0",
+      "afterSha": "8b1df32ab18641a8f21101a606f4ef38ff38c7f8f2622ca264af940919c9c96a"
+    }
+  ]
+}

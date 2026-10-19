@@ -55,8 +55,9 @@ await withTemporaryPostgres(async ({ temporary }) => {
       const assets=await import(${JSON.stringify(pathToFileURL(path.join(root, "server/db/maintenance/assets.mjs")).href)});
       assert.equal(assets.listRdsMigrationNames().length,43);assert(assets.readRdsMigrationSql('001_baseline.sql').includes('CREATE'));
       const storage=await import('@changmen/storage/runtime_version.js');assert.equal(typeof storage.readSourceVersion,'function');
+      const repairs=await import('@changmen/db/maintenance/profile_repairs.js');assert.equal(typeof repairs.openProfileRepairData,'function');
       const req=createRequire(import.meta.url);for(const spec of ['vue','pinia','@changmen/venue-adapter','@changmen/client-core','@changmen/pm-market-data-browser'])assert.throws(()=>req.resolve(spec));console.log('local-assets-only');`);
-    assert.match(read.stdout, /local-assets-only/); noBackend(); checks.push("reads canonical assets with no backend tree and no browser dependencies");
+    assert.match(read.stdout, /local-assets-only/); noBackend(); checks.push("reads canonical assets and imports the profile repair public data interface with no backend tree or browser dependencies");
     for (const name of ["check-rds-schema", "apply-rds-schema"])
       await assert.rejects(command(name), error => error.code === 1 && /数据库结构核验失败/.test(error.stderr));
     assert.equal((await client.query("SELECT count(*)::int AS n FROM pg_tables WHERE schemaname='public'")).rows[0].n, 0);

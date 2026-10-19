@@ -3,8 +3,8 @@ import { PmOrderBookService, BookStore, reduceBookFrame } from "../src/index";
 import type { BookHostPorts } from "../src/service";
 import type { WorkerPort, ServiceMessage } from "../src/serviceProtocol";
 import type { MarketStreamEvent } from "../src/marketStreamProtocol";
-import { BookStore as CompatibilityStore } from "../../../../packages/venue-adapter/polymarket/realtime/orderBook/bookStore";
-import { reduceBookFrame as compatibilityReducer } from "../../../../packages/venue-adapter/polymarket/realtime/orderBook/bookReducer";
+import { BookStore as CompatibilityStore } from "@changmen/venue-browser/adapter/polymarket/realtime/orderBook/bookStore";
+import { reduceBookFrame as compatibilityReducer } from "@changmen/venue-browser/adapter/polymarket/realtime/orderBook/bookReducer";
 
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 function fixture(allowed = true) {

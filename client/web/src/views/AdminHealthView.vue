@@ -12,7 +12,7 @@ import {
   type PmExecutionMetricKind,
   type PmExecutionKindSummary,
   type PmMarketClientMetricsSnapshot,
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 
 const router = useRouter();
 const user = useUserStore();

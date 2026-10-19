@@ -7,6 +7,7 @@ import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mj
 import { stripMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";
 import { restoreGtcClientStateSource } from "./gtc-client-state-boundary.mjs";
 import { restorePmRejectDisplaySource } from "./pm-reject-display-boundary.mjs";
+import { withRdsLegacyEntries } from "./rds-legacy-relocation.mjs";
 export const retirementBase = "27d51b200889c962b7bc21f2733ecd895fa3a1e9";
 export const retiredHelpers = ["server/db/rds/orders_execution_compat.js", "server/db/rds/pm_orders_minimal.js"];
 export const nativeOrdersPath = "server/db/rds/native_orders.js";
@@ -85,6 +86,7 @@ export function restoreRetiredOrdersCompatibility(file, source, readSource) {
   return oldRead(file);
 }
 export function verifyGtcCompatibilityRetirement(readSource = file => fs.readFileSync(file, "utf8")) {
+  readSource = withRdsLegacyEntries(readSource);
   for (const file of retiredHelpers) assert(!fs.existsSync(file), `${file}: retired runtime helper must be absent`);
   assert.deepEqual(moduleTokens(sourceText(readSource(nativeOrdersPath))), moduleTokens(nativeOrdersSource()), "complete native orders helper");
   const files = retirementFiles().filter(file => !retiredHelpers.includes(file));

@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { attachPredictFunDetectionQuote } from "@/domain/predictfun/attachDetectionQuote";
 import { useOddsStore } from "@/stores/oddsStore";
-import { resetPfArbPriceBufferPrefsForTests, setPfArbPriceBufferPrefs } from "@changmen/venue-adapter/predictfun";
+import { resetPfArbPriceBufferPrefsForTests, setPfArbPriceBufferPrefs } from "@changmen/venue-browser/adapter/predictfun";
 
 function pfOption(
   data: Record<string, unknown> | null = null,

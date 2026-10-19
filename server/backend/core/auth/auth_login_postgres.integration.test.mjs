@@ -32,7 +32,7 @@ describe.skipIf(!enabled)("real PostgreSQL login isolation", () => {
       CREATE TABLE IF NOT EXISTS profiles (id uuid PRIMARY KEY REFERENCES users(id), user_name text NOT NULL,
         accounts jsonb, betting_config jsonb, collect_config jsonb, preferences jsonb, created_at bigint, updated_at bigint);`);
     for (const file of ["043_auth_session_audit.sql", "044_auth_sessions.sql"])
-      await pool.query(await readFile(new URL(`../../db/migrations/${file}`, import.meta.url), "utf8"));
+      await pool.query(await readFile(new URL(`../../../db/assets/migrations/${file}`, import.meta.url), "utf8"));
     await pool.query("CREATE OR REPLACE FUNCTION auth_test_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected failure'; END $$");
     await pool.query(await readFile(new URL("../../../db/schema/client_certificates.sql", import.meta.url), "utf8"));
     certificates = await import("../../../db/rds/client_certificate_store.js");

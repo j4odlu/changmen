@@ -1,7 +1,7 @@
 /** [changmen 扩展] 足球 RAY 单腿；采集凭证不用于下注，使用显式选择的账号。 */
 import { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@/models/platformAccount";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PodPmFollowPlaceTicket } from "@/runtime/podPmFollowPlace";
 import { evaluatePodOutcomeGate, type PodOutcomeGateEntry } from "@/runtime/podYabo/gate";
 import { podYaboDailyLossBlocked } from "@/runtime/podYabo/loss";

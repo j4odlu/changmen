@@ -2,7 +2,7 @@ import type { OrderRow } from "@/types/order";
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 import { toFixed } from "@changmen/client-core/shared/format";
 import { scaleUsdtToCnyDisplay } from "@changmen/shared/currency";
-import { lookupPredictFunOrderLabels } from "@changmen/venue-adapter/predictfun";
+import { lookupPredictFunOrderLabels } from "@changmen/venue-browser/adapter/predictfun";
 import { formatPolymarketApiDecimal, statusClassFromRealizedMoney } from "@/shared/pmOrderDisplay";
 import { normalizeOrderStatus } from "@/shared/orderDisplay";
 import { useMatchStore } from "@/stores/matchStore";

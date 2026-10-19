@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import ts from 'typescript';
@@ -5,7 +6,7 @@ import {expect,it} from 'vitest';
 import {VENUE_BROWSER_STREAM as record,verifyVenueBrowserStream,restoreVenueBrowserStream} from './venue-browser-stream.mjs';
 import {verifyVenueBrowserRelocation} from './venue-browser-relocation.mjs';
 import {restoreVenueBrowserLifecycle} from './venue-browser-lifecycle.mjs';
-const read=file=>fs.readFileSync(file,'utf8').replaceAll('\r\n','\n');
+const read=withAdapterHistoryReader(file=>readAdapterHistory(file,'utf8').replaceAll('\r\n','\n'));
 const original=file=>execFileSync('git',['show',record.baseline+':'+file],{encoding:'utf8',windowsHide:true}).replaceAll('\r\n','\n');
 it('moves the complete stream implementation with only its type import changed',()=>{
  expect(verifyVenueBrowserStream(read)).toEqual({changedFiles:6,implementations:1});

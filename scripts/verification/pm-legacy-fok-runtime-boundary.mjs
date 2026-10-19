@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 经典 FOK 恢复自动准备 signer；其余模式及原冻结基线逐字保留。
 import assert from "node:assert/strict";
@@ -7,7 +8,7 @@ import { restorePmFokCancellationSource, verifyPmFokCancellationContract } from 
 import { restorePmExecutionShadowSource } from "./pm-execution-shadow-boundary.mjs";
 const normalize = value => value.replaceAll("\r\n", "\n");
 const digest = value => createHash("sha256").update(normalize(value)).digest("hex");
-const text = normalize(fs.readFileSync(new URL("./pm-legacy-fok-runtime-increments.json", import.meta.url), "utf8"));
+const text = normalize(readAdapterHistory(new URL("./pm-legacy-fok-runtime-increments.json", import.meta.url), "utf8"));
 assert.equal(digest(text), "b9950ebd093af8bb71ccd81e78b7204a91e3526c0e77af5d2a4cc27466f6ad3d", "legacy FOK runtime recovery increments stay fixed");
 const { changes } = JSON.parse(text);
 export function restorePmLegacyFokRuntimeSource(file, source, required = false) {

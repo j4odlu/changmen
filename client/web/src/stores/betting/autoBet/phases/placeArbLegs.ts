@@ -1,5 +1,5 @@
-import { recordPmExecutionMetric } from "@changmen/venue-adapter/polymarket";
-import { validatePolymarketPreparedBuy } from "@changmen/venue-adapter/polymarket";
+import { recordPmExecutionMetric } from "@changmen/venue-browser/adapter/polymarket";
+import { validatePolymarketPreparedBuy } from "@changmen/venue-browser/adapter/polymarket";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@/models/platformAccount";

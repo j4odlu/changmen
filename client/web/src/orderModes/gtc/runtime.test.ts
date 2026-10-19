@@ -23,7 +23,7 @@ vi.mock("./ordersApi", () => ({ loadGtcMonitorOrders: vi.fn().mockResolvedValue(
 vi.mock("./otherOrders", () => ({ readGtcOtherOrders: mocks.otherRead }));
 vi.mock("@/runtime/orderPolling/ray", () => ({ resetRayOrderPolling: vi.fn() }));
 vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ readGtcTradeHistory: vi.fn().mockResolvedValue({ trades: [], complete: true }), readGtcFacts: mocks.read, pmCancelOrder: mocks.cancel }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ observePolymarketOrderWatch: () => () => {} }));
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ observePolymarketOrderWatch: () => () => {} }));
 const hash = `0x${"a".repeat(64)}`;
 const plan = { playerId: 1, otherPlayerId: 2, shares: "10", tokenId: "token", orderHash: hash, betRowId: 2, target: "Home", otherTarget: "Away", otherOdds: 2, originalPmLeg: "A" } as GtcPlan;
 function row() {

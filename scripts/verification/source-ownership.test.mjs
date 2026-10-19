@@ -10,8 +10,8 @@ const policy = validateSourceOwnership(JSON.parse(fs.readFileSync(path.join(root
 it("separates frontend, backend, RDS and shared implementations while preserving frozen Node paths", () => {
   for (const [file, layer] of [
     ["packages/venue-adapter/browser/pm-book-diagnostics/bookRuntime.ts", "frontend"],
-    ["packages/venue-adapter/loader/adapter_paths.mjs", "backend"],
-    ["packages/venue-adapter/registry/paths.js", "backend"],
+    ["server/packages/venue-node-loader/adapter_paths.mjs", "backend"],
+    ["server/packages/venue-node-registry/paths.js", "backend"],
     ["packages/venue-adapter/registry/adapters.ts", "frontend"],
     ["server/db/maintenance/rds-schema-check.mjs", "rds"],
     ["server/match/resolver/index.js", "backend"],
@@ -43,7 +43,7 @@ it("classifies every inventoried source and keeps compatibility JSON identical",
   expect(report.publishScopeOptimizationEnabled).toBe(false);
 });
 it("rejects an implementation being added back into a migrated compatibility entry", () => {
-  const target = "packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/shadowObserver.ts";
+  const target = policy.compatibilityEntries[0].file;
   const read = fs.readFileSync;
   const spy = vi.spyOn(fs, "readFileSync").mockImplementation((file, ...args) => {
     const text = read.call(fs, file, ...args);
@@ -57,7 +57,7 @@ it("never permits ownership metadata to grant a release exemption", () => {
   expect(() => validateSourceOwnership({ ...policy, rules: [{ prefix: "../escape", layer: "shared" }] })).toThrow("Invalid");
 });
 it("rejects extra work in a migrated CLI wrapper", () => {
-  const target = "server/backend/scripts/check-rds-schema.mjs", read = fs.readFileSync;
+  const target = policy.compatibilityCliEntries[0].file, read = fs.readFileSync;
   const spy = vi.spyOn(fs, "readFileSync").mockImplementation((file, ...args) => {
     const text = read.call(fs, file, ...args);
     return typeof text === "string" && String(file).replaceAll("\\", "/").endsWith(target) ? text + "\nvoid unexpectedQuery();\n" : text;
@@ -69,8 +69,8 @@ it("classifies frontend maintenance, backend packaging and shared validation sep
   for (const [file, layer] of [
     ["client/devtools/venue-adapter/sync-package-exports.mjs", "frontend"],
     ["packages/venue-adapter/scripts/list-web-venue-imports.mjs", "frontend"],
-    ["packages/venue-adapter/scripts/sync-backend-bundle.mjs", "backend"],
+    ["server/packages/venue-adapter-tools/sync-backend-bundle.mjs", "backend"],
     ["devtools/venue-adapter/verification/check-esport-freeze.mjs", "shared"],
-    ["server/backend/scripts/check-rds-schema.mjs", "rds"],
+    ["server/db/maintenance/check-rds-schema.mjs", "rds"],
   ]) expect(classifySourceFile(file, policy)?.layer).toBe(layer);
 });

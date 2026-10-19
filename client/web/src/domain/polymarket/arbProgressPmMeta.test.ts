@@ -1,7 +1,7 @@
 import { BetOption as BetOptionClass } from "@changmen/client-core/models/betOption";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildPolymarketArbProgressMeta } from "@/domain/polymarket/arbProgressPmMeta";
-import { PLATFORMS } from "@changmen/venue-adapter/shared";
+import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
 
 const getEntry = vi.hoisted(() => vi.fn());
 

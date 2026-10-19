@@ -8,7 +8,7 @@ import { useMatchStore } from "@/stores/matchStore";
 import { isMapMuteActive, resetMapBetMuteForTests, setFullMatchMuteGlobal } from "@/extensions/mapBetMute";
 import {
   clearPmTickStateForTests, resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs,
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 import BetRow from "./BetRow.vue";
 
 vi.mock("element-plus/es/components/base/style/css", () => ({}));

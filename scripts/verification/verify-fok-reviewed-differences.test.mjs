@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -18,12 +19,12 @@ import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 
 // [changmen 扩展] 执行辅助检查器的真实读取函数和完整保护循环；不运行交易或改写被保护文件。
 const file = "scripts/verification/verify-fok-reviewed-differences.mjs";
-const sf = ts.createSourceFile(file, fs.readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true);
+const sf = ts.createSourceFile(file, readAdapterHistory(file, "utf8"), ts.ScriptTarget.Latest, true);
 const reader = sf.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "currentSource");
 const loop = sf.statements.filter(node => ts.isForOfStatement(node) && node.expression.getText(sf) === "Object.entries(manifest.protectedFiles)");
 assert(reader);
 assert.equal(loop.length, 1);
-const manifest = JSON.parse(fs.readFileSync("scripts/verification/vps-fok-baseline.json", "utf8"));
+const manifest = JSON.parse(readAdapterHistory("scripts/verification/vps-fok-baseline.json", "utf8"));
 const relocations = { ...PM_FOK_RELOCATIONS, ...PM_FUNCTIONAL_RELOCATIONS };
 const sha = source => createHash("sha256").update(source.replace(/\r\n/g, "\n")).digest("hex");
 const originals = new Map();
@@ -41,10 +42,11 @@ for (const file of files) {
   originals.set(file, objects.subarray(end + 1, end + 1 + size).toString("utf8"));
   offset = end + 1 + size + 1;
 }
-function check(paths, readSource = target => fs.readFileSync(target, "utf8"), expectedOverrides = {}) {
+function check(paths, readSource = target => readAdapterHistory(target, "utf8"), expectedOverrides = {}) {
   const protectedFiles = Object.fromEntries(paths.map(file => [file, expectedOverrides[file] ?? manifest.protectedFiles[file]]));
   return JSON.parse(vm.runInNewContext(`${reader.getText(sf)}\nlet exactFiles = 0; const differences = [];\n${loop[0].getText(sf)}\nJSON.stringify({ exactFiles, differences });`, {
     assert,
+    withAdapterHistoryReader, readAdapterHistory: readSource,
     sha,
     fs: { readFileSync: readSource },
     readRelocatedPmFokSource,
@@ -61,7 +63,7 @@ function check(paths, readSource = target => fs.readFileSync(target, "utf8"), ex
   }, { timeout: 10000 }));
 }
 function change(target, transform) {
-  return requested => transform(fs.readFileSync(requested, "utf8"), requested === target);
+  return requested => transform(readAdapterHistory(requested, "utf8"), requested === target);
 }
 
 describe("supplementary FOK audit reads full relocated source without exemptions", () => {
@@ -83,7 +85,7 @@ describe("supplementary FOK audit reads full relocated source without exemptions
   }
   it("rejects changed dependencies rather than removing imports", () => {
     const file = "packages/venue-adapter/polymarket/bet.ts";
-    const previous = restoreVenueBrowserExecution(relocations[file], fs.readFileSync(relocations[file], "utf8"));
+    const previous = restoreVenueBrowserExecution(relocations[file], readAdapterHistory(relocations[file], "utf8"));
     expect(previous).toContain("from \"../pmClientApi\"");
     expect(() => check([file], change(relocations[file], (source, matched) => matched ? previous.replace("from \"../pmClientApi\"", "from \"../otherApi\"") : source)))
       .toThrow(`exact unified PM preflight increment`);
@@ -107,13 +109,13 @@ describe("supplementary FOK audit reads full relocated source without exemptions
     expect(() => check([file], (requested) => {
       if (requested === relocations[file])
         throw new Error("missing registered implementation");
-      return fs.readFileSync(requested, "utf8");
+      return readAdapterHistory(requested, "utf8");
     })).toThrow("missing registered implementation");
   });
 });
 
 const manualFile = "client/web/src/stores/account/pmManualSell.ts";
-const manualSource = fs.readFileSync(manualFile, "utf8").replace(/\r\n/g, "\n");
+const manualSource = readAdapterHistory(manualFile, "utf8").replace(/\r\n/g, "\n");
 const manualDeclarations = ["replace", "restoreGtcManualSellBody", "reviewPmManualSell", "review"].map((name) => {
   const fn = sf.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === name);
   assert(fn, name);

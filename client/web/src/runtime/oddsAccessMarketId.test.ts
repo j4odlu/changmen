@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { saveVenueOdds, getVenueOddsEntry } from "@changmen/client-core/bridge/oddsAccess";
-import { PLATFORMS } from "@changmen/venue-adapter/shared";
+import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
 
 describe("oddsAccess bridge preserves PredictFun marketId", () => {
   beforeEach(() => {

@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -52,7 +53,7 @@ export function rebasePmFokImports(source, fromFile, toFile) {
   return source;
 }
 
-export function readRelocatedPmFokSource(file, source, readSource = target => fs.readFileSync(target, "utf8")) {
+export function readRelocatedPmFokSource(file, source, readSource = target => readAdapterHistory(target, "utf8")) {
   const target = PM_FOK_RELOCATIONS[file];
   if (!target)
     return source.replace(/\r\n/g, "\n");

@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Direct browser consumers and one shared Worker composition; preserve historical proofs.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {restoreVenueBrowserStream,verifyVenueBrowserStream} from './venue-browser-stream.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-consumers.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-consumers.json',import.meta.url),'utf8');
 assert.equal(sha(text),'45e4e03632a72d0ed64c7286330b31b0fd243667343a199b0f22cccc74fc7981');
 export const VENUE_BROWSER_CONSUMERS=JSON.parse(text);
 export function restoreVenueBrowserConsumers(file,source){

@@ -27,7 +27,7 @@ import {
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
 import { useMatchStore } from "@/stores/matchStore";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
-import { buildPolymarketMatchedBuyVenueOrderFromBet } from "@changmen/venue-adapter/polymarket";
+import { buildPolymarketMatchedBuyVenueOrderFromBet } from "@changmen/venue-browser/adapter/polymarket";
 
 export type PlaceValueBetFailCode =
   | "gone"

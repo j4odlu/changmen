@@ -1,8 +1,9 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import fs from "node:fs";
 import { expect, test } from "vitest";
 import { restorePmAccountSigningSource, verifyPmAccountSigningContract } from "./pm-account-signing-boundary.mjs";
-const readBeforeExecution = file => fs.readFileSync(file, "utf8");
+const readBeforeExecution = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 const { changes } = JSON.parse(read("scripts/verification/pm-account-signing-increments.json"));
 

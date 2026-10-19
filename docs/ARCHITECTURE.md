@@ -2,13 +2,17 @@
 
 单一架构文档入口。命令与日常开发见 [../AGENTS.md](../AGENTS.md)。
 
+[changmen 扩展] 2026-10-20 当前物理归属：浏览器 adapter 与测试位于 `client/packages/venue-browser`，旧目录 595 个浏览器文件及 4 个 Node 兼容入口已退役；Node loader/registry 实现位于 `server/packages/venue-node-*`，后端瘦包工具实现位于 `server/packages/venue-adapter-tools`。旧 adapter 目录保留验证命令、生成 manifest 与配套文档，下方按日期保留历史记录。后端八进程的 19 个 workspace 已通过离线独立安装、路由编译和模块解析对比；原 11 处动态路径已在默认 workspace 根下完成有界认证，外部 SDK 内部与自定义运行根不在该结论内，详见 [动态路径认证](BACKEND_DYNAMIC_PATH_CERTIFICATION.md)。平台探针的 93 个文件已迁入 `server/platform-probes`；默认 Node 资源根也已收进 `server/packages/venue-node-registry/runtime`，后端独立安装不再复制旧 adapter 目录，生产发布方式未变。
+
 [changmen 扩展] 2026-10-18 [文件夹隔离](FOLDER_ISOLATION.md)：浏览器公共簿包和前端维护工具已实际迁入 `client/packages` 与 `client/devtools`。下方目录树区分当前落点与冻结兼容区域；前端专属旧包、扩展及 Node 工具仍有剩余迁移项，不宣称全树已隔离。
 
 [changmen 扩展] 2026-10-17 源码归属补充：浏览器诊断实现位于 `packages/venue-adapter/browser`；RDS 维护与结构观察位于 `server/db`；公共身份规则位于 `packages/shared/match-identity`，原 identity 目录保留兼容。resolver / matcher 仍为后端。当前冻结路径和未完成项见 [四类源码隔离记录](SOURCE_FILE_ISOLATION_20261017.md)。
 
 [changmen 扩展] 2026-10-18 [matcher 只读检查](audits/MATCHER_READONLY_AUDIT_20261018.md)：生产内嵌合场持续运行；三个 scraper 不在日常启动链，但保有历史补数标签，不能直接认定无用。发现映射 DAL 丢失 game 字段和三个辅助命令的既有语法错误；本轮未改匹配算法或生产数据。
 
-[changmen 扩展] RDS 的 43 个有效迁移 SQL 与结构基线主文件位于 `server/db/assets/`，维护代码经本包 `maintenance/assets.mjs` 读取；backend 原路径保留逐字生成的兼容副本。无 backend 目录的三包干净安装已通过维护验收，详情见同一源码隔离记录；旧部署规则不变。
+[changmen 扩展] 2026-10-19 [比赛显示一致性方案](MATCH_PUBLICATION_CONSISTENCY_PLAN.md)与[链路审计](audits/MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md)：确认 matcher 与用户列表存在筛选差异、active gap 旧盘口保留及失败被当作空结果的风险。当前收敛为三步公共读取与过滤修复，尚未实现；保持现有合场、生命周期与经典 FOK 规则，不新增发布状态机或通知协议，失败处理缺陷单独记录。
+
+[changmen 扩展] RDS 的 43 个有效迁移 SQL 与结构基线主文件位于 `server/db/assets/`，维护代码经本包 `maintenance/assets.mjs` 读取；backend 原路径的 44 份兼容副本和 7 个维护入口已退役，4 个维护测试迁入 `server/db/maintenance/`。无 backend 目录的干净安装与维护验收通过，历史 SQL/checksum 保持；详情见同一源码隔离记录。
 
 ## 目标目录（monorepo，档 B）
 
@@ -39,7 +43,7 @@ changmen/
 │   └── archive/                 # 废弃仓级脚本
 ├── deploy/scripts/              # VPS bash（canonical；见 deploy/scripts/README.md）
 ├── lines/                       # 产品线锚点（line.json；电竞代码仍在根）
-├── devtools/platform-probes/    # 可选探针 CLI
+├── server/platform-probes/    # 可选探针 CLI
 ├── packages/
 │   ├── shared/                  # @changmen/shared
 │   ├── api-contract/            # HTTP 契约

@@ -1,5 +1,5 @@
 import type { UserInfo } from "@/types/esport";
-import { setPmFokPreflightMode } from "@changmen/venue-adapter/polymarket";
+import { setPmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket";
 import type { FollowConfig } from "@/types/order";
 import type { ExtensionPrefs } from "@/types/extensionPrefs";
 import type { MessageConfig, ProxyRow } from "@/types/userExtras";
@@ -228,7 +228,7 @@ export const useUserStore = defineStore("user", {
       setPmFokPreflightMode(this.extensionPrefs.pmFokPreflightMode);
       // 本机影子价偏好保留在 localStorage；登出只关运行时门控，下次登录再按本地值恢复
       try {
-        const { setPbWsShadowUiAllowed, setPbChangmenExtensions } = await import("@changmen/venue-adapter/pb");
+        const { setPbWsShadowUiAllowed, setPbChangmenExtensions } = await import("@changmen/venue-browser/adapter/pb");
         setPbWsShadowUiAllowed(false);
         setPbChangmenExtensions(false);
       }
@@ -306,20 +306,20 @@ export const useUserStore = defineStore("user", {
     async syncPbCollectModeFromLocal() {
       this.pbChangmenExtensions = readPbChangmenExtensionsLocal();
       this.pbWsShadowUi = readPbWsShadowUiLocal();
-      const { setPbChangmenExtensions, setPbWsShadowUiAllowed } = await import("@changmen/venue-adapter/pb");
+      const { setPbChangmenExtensions, setPbWsShadowUiAllowed } = await import("@changmen/venue-browser/adapter/pb");
       setPbChangmenExtensions(this.pbChangmenExtensions === true);
       setPbWsShadowUiAllowed(this.pbChangmenExtensions === true && this.pbWsShadowUi === true);
     },
 
     /** Extensions → venue-adapter PM 套利缓冲配置（供后续 FOK/展示接线） */
     async syncPmArbPriceBufferFromPrefs() {
-      const { setPmArbPriceBufferPrefs } = await import("@changmen/venue-adapter/polymarket");
+      const { setPmArbPriceBufferPrefs } = await import("@changmen/venue-browser/adapter/polymarket");
       setPmArbPriceBufferPrefs(this.extensionPrefs.pmArbPriceBuffer);
     },
 
     /** Extensions → venue-adapter PM FOK 深度倍数（预检 1× 走出 P 后验 P 及更优） */
     async syncPmFokDepthBufferFromPrefs() {
-      const { setPmFokDepthBufferPrefs } = await import("@changmen/venue-adapter/polymarket");
+      const { setPmFokDepthBufferPrefs } = await import("@changmen/venue-browser/adapter/polymarket");
       setPmFokDepthBufferPrefs(this.extensionPrefs.pmFokDepthBuffer ?? {
         enabled: false,
         multiplier: 1.5,
@@ -328,7 +328,7 @@ export const useUserStore = defineStore("user", {
 
     /** Extensions → venue-adapter PF 套利缓冲配置（展示/限价接线） */
     async syncPfArbPriceBufferFromPrefs() {
-      const { setPfArbPriceBufferPrefs } = await import("@changmen/venue-adapter/predictfun");
+      const { setPfArbPriceBufferPrefs } = await import("@changmen/venue-browser/adapter/predictfun");
       setPfArbPriceBufferPrefs(this.extensionPrefs.pfArbPriceBuffer);
     },
 
@@ -337,7 +337,7 @@ export const useUserStore = defineStore("user", {
       const next = on === true;
       this.pbWsShadowUi = next;
       writePbWsShadowUiLocal(next);
-      const { setPbWsShadowUiAllowed } = await import("@changmen/venue-adapter/pb");
+      const { setPbWsShadowUiAllowed } = await import("@changmen/venue-browser/adapter/pb");
       setPbWsShadowUiAllowed(this.pbChangmenExtensions === true && next);
     },
 
@@ -349,7 +349,7 @@ export const useUserStore = defineStore("user", {
       writePbChangmenExtensionsLocal(next);
       // 子开关未显式写过时跟总开关：开扩展即开影子
       this.pbWsShadowUi = readPbWsShadowUiLocal();
-      const { setPbChangmenExtensions, setPbWsShadowUiAllowed } = await import("@changmen/venue-adapter/pb");
+      const { setPbChangmenExtensions, setPbWsShadowUiAllowed } = await import("@changmen/venue-browser/adapter/pb");
       setPbChangmenExtensions(next);
       setPbWsShadowUiAllowed(next && this.pbWsShadowUi === true);
       if (prev !== next) {

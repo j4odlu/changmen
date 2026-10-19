@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import { replaceExact } from "./fok-exact-boundaries.mjs";
 import { restoreRayBackendDispatch } from "./ray-backend-dispatch-boundary.mjs";
@@ -39,7 +40,7 @@ const results = [];
 for (const file of ["client/web/src/api/order.ts", "client/web/src/stores/account/pmManualSell.ts", "server/backend/core/account/order_store.js", "server/backend/core/account/order/dto.js"]) {
   const previous = parse(file, execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" }));
   const current = parse(file, file === "client/web/src/stores/account/pmManualSell.ts"
-    ? specializeFokSource(file, fs.readFileSync(file, "utf8")) : restoreRayBackendDispatch(file, restoreMinimalOrdersSource(file, fs.readFileSync(file, "utf8"), target => fs.readFileSync(target, "utf8")), replaceExact));
+    ? specializeFokSource(file, readAdapterHistory(file, "utf8")) : restoreRayBackendDispatch(file, restoreMinimalOrdersSource(file, readAdapterHistory(file, "utf8"), target => readAdapterHistory(target, "utf8")), replaceExact));
   const transformed = specialize(current);
   if (file === "server/backend/core/account/order_store.js") {
     const print = (nodes, sf) => normalize(nodes.map(node => printer.printNode(ts.EmitHint.Unspecified, node, sf)).join("\n"));
@@ -65,7 +66,7 @@ for (const file of ["client/web/src/api/order.ts", "client/web/src/stores/accoun
 }
 const store = "client/web/src/stores/orderStore.ts";
 const oldStore = parse(store, execFileSync("git", ["show", `${base}:${store}`], { encoding: "utf8" }));
-const newStore = parse(store, fs.readFileSync(store, "utf8"));
+const newStore = parse(store, readAdapterHistory(store, "utf8"));
 const printStore = sf => normalize(sf.statements.filter(node => !ts.isImportDeclaration(node)).map(node => printer.printNode(ts.EmitHint.Unspecified, node, sf)).join("\n"));
 assert.equal(printStore(newStore), printStore(oldStore));
 const result = { baseline: base, orderStoreBodyIdenticalWithInputDispatchAtImport: true, existingFunctionComparisons: results };

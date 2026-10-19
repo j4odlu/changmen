@@ -37,7 +37,7 @@
 
 ## 配置与迁移
 
-运行 `node server/backend/scripts/ops/migrations/apply-client-certificate-schema.mjs`。这是独立、可重复的增量迁移，仅新增证书/审计表和凭证指纹列。部署脚本识别该文件，只执行证书迁移，不触发全库 schema、账号归属回填或订单迁移。
+运行 `node server/db/maintenance/apply-client-certificate-schema.mjs`。这是需要显式执行、可重复的增量维护，仅新增证书/审计表和凭证指纹列；应用发布不自动执行该命令，也不触发全库 schema、账号归属回填或订单迁移。
 
 签发配置：`CERT_ISSUER_CERT`、`CERT_ISSUER_KEY`、`CERT_ISSUER_CHAIN`（中间 CA + 根证书公开链）、`CERT_CA_BUNDLE`（根证书）；可选 `CERT_OPENSSL_BIN`。后台不允许上传根 CA 私钥。未启用登记校验或签发文件未配置时不可签发。
 

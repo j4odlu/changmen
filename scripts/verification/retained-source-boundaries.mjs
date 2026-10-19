@@ -1,22 +1,30 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Named retained boundaries add checks, never exemptions or release authority.
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { sharedLoaderSourceSignature } from "./pm-shared-loader-evidence.mjs";
-import { inspectRdsAssetCopies } from "./rds-assets.mjs";
+import { inspectRdsAssets } from "./rds-assets.mjs";
+import { inspectRdsEntryRetirement } from "./rds-entry-retirement.mjs";
+import { inspectAdminMaintenanceIsolation, ADMIN_MAINTENANCE_ISOLATION } from "./admin-maintenance-isolation.mjs";
+import { inspectRdsMaintenanceRelocation } from "./rds-maintenance-relocation.mjs";
+import { inspectRdsLegacyRelocation } from "./rds-legacy-relocation.mjs";
+import { inspectRdsContextRelocation } from "./rds-context-relocation.mjs";
+import { inspectProfileRepairIsolation } from "./profile-repair-isolation.mjs";
 import { restorePmClientFolderMetadata } from "./pm-source-isolation-metadata.mjs";
 import { readNodePackageSource, nodeCanonicalPath, restoreNodePackageMetadata } from "./node-package-relocation.mjs";
+import { readAdapterBrowserSource } from "./adapter-browser-relocation.mjs";
 
 const ids = ["frozen-adapter-island", "compatibility-entries", "rds-assets", "frozen-database-island", "backend-bundle-tool", "layout-roots"];
 const digest = text => createHash("sha256").update(text.replaceAll("\r\n", "\n")).digest("hex");
 export function inspectRetainedSourceBoundaries(root) {
-  const read = file => {
+  const read = withAdapterHistoryReader(file => {
     if (typeof file !== "string" || !file || path.isAbsolute(file) || file.includes("\\") || file.split("/").includes("..")) throw Error("Invalid retained boundary path");
     const absolute = path.join(root, file), relative = path.relative(fs.realpathSync(root), fs.realpathSync(absolute));
     if (relative.startsWith(`..${path.sep}`) || relative === ".." || path.isAbsolute(relative)) throw Error("Retained boundary escapes workspace");
-    return fs.readFileSync(absolute, "utf8");
-  };
+    return readAdapterHistory(absolute, "utf8");
+  });
   const json = file => JSON.parse(read(file));
   const policy = json("scripts/verification/retained-source-boundaries.json"), violations = [];
   if (policy.schemaVersion !== 1 || policy.purpose !== "retained-source-boundaries-only" || policy.publishScopeOptimizationEnabled !== false
@@ -32,7 +40,7 @@ export function inspectRetainedSourceBoundaries(root) {
   const frozenPaths = Object.keys(manifest.protectedFiles).filter(file => file.startsWith("packages/venue-adapter/loader/") || file.startsWith("packages/venue-adapter/registry/")).sort();
   if (JSON.stringify([...group("frozen-adapter-island").files].sort()) !== JSON.stringify(frozenPaths)) fail("scripts/verification/retained-source-boundaries.json", "Every original frozen adapter island path must remain inventoried");
   for (const file of group("frozen-adapter-island").files) {
-    if (!manifest.protectedFiles[file] || digest(readNodePackageSource(file, read(file), read)) !== manifest.protectedFiles[file]) fail(file, "Original frozen source/path must remain protected and unchanged");
+    if (!manifest.protectedFiles[file] || digest(readAdapterBrowserSource(file, readNodePackageSource(file, read(file), read), read)) !== manifest.protectedFiles[file]) fail(file, "Original frozen source/path must remain protected and unchanged");
   }
   const ownership = json("scripts/verification/source-ownership-inputs.json");
   const contracts = { entries: ownership.compatibilityEntries, commands: ownership.compatibilityCliEntries, assets: ownership.compatibilityAssets };
@@ -43,21 +51,26 @@ export function inspectRetainedSourceBoundaries(root) {
   if (digest(JSON.stringify(previousContracts)) !== group("compatibility-entries").contractSha256)
     fail("scripts/verification/source-ownership-inputs.json", "Retained compatibility entries cannot be deregistered or redirected without a separate contract review");
   const schema = json("server/db/assets/schema-baseline.json");
-  for (const file of ["server/db/assets/schema-baseline.json", "server/backend/scripts/rds-schema-baseline.json"])
+  for (const file of ["server/db/assets/schema-baseline.json"])
     if (digest(read(file)) !== group("rds-assets").baselineSha256) fail(file, "Retained schema baseline must remain unchanged");
-  const expectedAssets = ["server/db/assets/schema-baseline.json", "server/backend/scripts/rds-schema-baseline.json", ...Object.keys(schema.migrations)
-    .flatMap(name => [`server/db/assets/migrations/${name}`, `server/backend/db/migrations/${name}`])].sort();
+  const expectedAssets = ["server/db/assets/schema-baseline.json", ...Object.keys(schema.migrations)
+    .map(name => `server/db/assets/migrations/${name}`)].sort();
   if (JSON.stringify([...group("rds-assets").files].sort()) !== JSON.stringify(expectedAssets)) fail("server/backend/db/migrations", "Every canonical schema SQL asset must remain explicitly inventoried");
   for (const [name, checksum] of Object.entries(schema.migrations)) {
-    for (const file of [`server/db/assets/migrations/${name}`, `server/backend/db/migrations/${name}`])
+    for (const file of [`server/db/assets/migrations/${name}`])
       if (digest(read(file)) !== checksum) fail(file, "Original SQL checksum must remain unchanged");
   }
-  try { violations.push(...inspectRdsAssetCopies(root).violations); }
+  try { violations.push(...inspectRdsAssets(root).violations); inspectRdsEntryRetirement(root); }
   catch (error) { fail("server/db/assets", error.message); }
-  const exceptions = json("scripts/verification/backend-db-access-exceptions.json");
-  if (digest(JSON.stringify(exceptions)) !== group("frozen-database-island").contractSha256
-    || exceptions.sites.length !== 8 || exceptions.sites.some(site => site.file !== "server/backend/core/account/admin_maintenance.js"))
-    fail("scripts/verification/backend-db-access-exceptions.json", "Only the existing eight frozen database access locations may remain");
+  const exceptions = JSON.parse(fs.readFileSync(path.join(root, "scripts/verification/backend-db-access-exceptions.json"), "utf8"));
+  const oldExceptions = JSON.parse(ADMIN_MAINTENANCE_ISOLATION.metadata.find(row => row.file.endsWith("backend-db-access-exceptions.json")).before);
+  if (digest(JSON.stringify(oldExceptions)) !== group("frozen-database-island").contractSha256 || exceptions.sites.length !== 0)
+    fail("scripts/verification/backend-db-access-exceptions.json", "All eight historical database exceptions have been retired; none may return");
+  try { inspectAdminMaintenanceIsolation(root); } catch (error) { fail(ADMIN_MAINTENANCE_ISOLATION.file, error.message); }
+  try { inspectRdsMaintenanceRelocation(root); } catch (error) { fail("server/db/maintenance", error.message); }
+  try { inspectRdsLegacyRelocation(root); } catch (error) { fail("server/db/maintenance/legacy", error.message); }
+  try { inspectRdsContextRelocation(root); } catch (error) { fail("server/db/maintenance/legacy", error.message); }
+  try { inspectProfileRepairIsolation(root); } catch (error) { fail("server/db/maintenance/profile_repairs.js", error.message); }
   const bundler = group("backend-bundle-tool");
   if (digest(restoreNodePackageMetadata(bundler.files[0], read(bundler.files[0]))) !== bundler.sourceSha256) fail(bundler.files[0], "Retained bundle copying and source root contract must remain unchanged");
   const inputs = json("scripts/verification/pm-shared-loader-inputs.json");

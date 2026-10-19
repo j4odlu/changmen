@@ -219,5 +219,5 @@
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — monorepo 结构与数据流
 - [../server/match/matcher/README.md](../server/match/matcher/README.md) — 人工关联工具
-- `server/backend/scripts/ops/diagnostics/audit-team-maps.mjs` — 队伍映射结构巡检(对应 I1/I4/I5)
+- `server/db/maintenance/legacy/diagnostics/audit-team-maps.mjs` — 队伍映射结构巡检(对应 I1/I4/I5)
 - [ARB_MULTI_SPORT.md §3c](./ARB_MULTI_SPORT.md#3c-足球-ob-本机合场冻结) — **足球本机 OB overlay**：匹配在浏览器执行，不进本文的电竞 compose / `client_matches`。不放松上文 I1–I5。

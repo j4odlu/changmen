@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ViewBetItem } from "@/models/match";
 import { useOddsStore } from "@/stores/oddsStore";
-import { resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs } from "@changmen/venue-adapter/polymarket";
+import { resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs } from "@changmen/venue-browser/adapter/polymarket";
 
 /**
  * 保证套利/展示读 fo 即时价，不依赖 refreshOddsOnBets → updateOdds 抄 fallback。

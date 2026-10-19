@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 从 monorepo 消费方 @changmen/client-core/* 引用生成 package.json exports 白名单。
- * 扫描：client/web/src、packages/venue-adapter（含 vi.mock / dynamic import）。
+ * 扫描：client/web/src、client/packages/venue-browser（含 vi.mock / dynamic import）。
  *
  * 用法：
  *   node client/packages/client-core/scripts/sync-package-exports.mjs          # 写回 package.json
@@ -20,7 +20,7 @@ const CHECK = process.argv.includes("--check");
 
 const SCAN_ROOTS = [
   path.resolve(PKG_ROOT, "../../web/src"),
-  path.resolve(PKG_ROOT, "../../../packages/venue-adapter"),
+  path.resolve(PKG_ROOT, "../venue-browser"),
 ];
 
 const IMPORT_RES = [

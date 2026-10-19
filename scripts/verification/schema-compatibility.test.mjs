@@ -5,8 +5,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync, writeSync } from "nod
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { expandedRequirements, readReference, reference } from "../testing/schema-compatibility/reference.mjs";
-import { readSchemaBaseline, schemaDifferences } from "../../server/backend/scripts/rds-schema-check.mjs";
-import { RDS_MIGRATIONS } from "../../server/backend/scripts/apply-rds-schema.mjs";
+import { readSchemaBaseline, schemaDifferences } from "@changmen/db/maintenance/rds-schema-check.mjs";
+import { RDS_MIGRATIONS } from "@changmen/db/maintenance/apply-rds-schema.mjs";
 import { checkDatabaseCompatibility } from "../deploy/check-database-compatibility.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));

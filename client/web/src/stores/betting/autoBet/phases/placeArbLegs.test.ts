@@ -13,7 +13,7 @@ import { observeArbSubmissionBlocked } from "@/services/orderExecutionObservatio
 vi.mock("@/services/orderExecutionObservation", () => ({ observeArbSubmissionBlocked: vi.fn() }));
 
 const validatePrepared = vi.hoisted(() => vi.fn((): string | null => null));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ validatePolymarketPreparedBuy: validatePrepared, recordPmExecutionMetric: vi.fn() }));
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ validatePolymarketPreparedBuy: validatePrepared, recordPmExecutionMetric: vi.fn() }));
 const betting = vi.hoisted(() => vi.fn());
 const checkBetting = vi.hoisted(() => vi.fn());
 const retryFailedLeg = vi.hoisted(() => vi.fn());

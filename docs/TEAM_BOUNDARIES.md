@@ -1,5 +1,15 @@
 # 团队边界（单仓阶段 0）
 
+[changmen 扩展] 2026-10-20 catalog 环境读取归属服务端：共享 `game_catalog.ts` 只接收显式筛选值，服务端的 `@changmen/storage/game_catalog.js` 每次读取 `AGGREGATE_GAME_CODES`。7 处 ESM 和 2 处 CJS 配置消费者已迁至新入口；目录映射与静态采集规则继续共享。`check:boundaries` 核验实际文件与消费者，环境行为用旧实现逐项对照，原冻结清单及 551 项源码基线不变。
+
+[changmen 扩展] 2026-10-20 Node 旧入口退役：删除 `packages/venue-adapter/loader/adapter_paths.mjs`、`registry/paths.js`、`registry/feeds.js`、`scripts/sync-backend-bundle.mjs` 四个文件；旧包的运行时 exports 为空，验证消费者改用 `server/` 下的入口。`check:boundaries` 检查旧文件不存在、真实源码不再导入旧入口，且当前受管源码中 `server/` 外的后端实现/入口为零。原冻结清单及 551 项保护不变，历史视图仅用于验证。
+
+[changmen 扩展] 2026-10-20 默认 Node 资源根已归属 `server/packages/venue-node-registry/runtime`，由 registry workspace 自身交付。生产 Node 模块不再用旧 adapter 文件路径定位自身；瘦包工具通过公开 Node 入口物化实现。独立后端安装验证不复制旧 adapter 源码或资源，同时保留显式外部资源根和旧命令兼容。
+
+[changmen 扩展] 2026-10-20 Node 平台模块归属：`@changmen/platform-probes` 的 93 个文件已迁至 `server/platform-probes`，旧 `devtools/platform-probes` 不再承载源码，也没有新增旧源码转导出。Node loader、辅助 scraper、npm workspace 与瘦包工具使用新位置；包名、命令及显式根目录覆盖保持不变。真实目录门禁与逐字迁移证明共同检查，原 551 保护基线不变。
+
+[changmen 扩展] 2026-10-20 浏览器入口退役：浏览器 adapter 和测试归属 `client/packages/venue-browser/adapter/`，客户端直接依赖 `@changmen/venue-browser`，禁止重新依赖旧 `@changmen/venue-adapter` 包及其物理路径。旧目录 595 个浏览器文件已删除，仅保留 Node 兼容入口、资源和验证工具；旧包公开入口限两个 loader 别名。历史保护按迁移记录核验新位置的完整实现，真实目录检查同时禁止旧文件回流。以下按日期保留历史边界记录。
+
 changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check-team-boundaries` 让**客户端团队**与**服务端团队**可各自维护，减少跨团队改坏对方代码。
 
 **目录层级**（详见 [SPORTS_PRODUCT_LINES.md](./SPORTS_PRODUCT_LINES.md)）：**平台层**（`packages/`、`packages/venue-adapter/`、`server/backend/`…共用）→ **能力层**（`server/match/identity`、`ws_forward`、`value-bet`…可复用引擎）→ **产品线层**（`lines/{code}/` 仅 manifest + `line.json`，电竞代码仍在根目录）。整理目录时改 manifest/文档即可，不必为产品线复制平台包。
@@ -32,13 +42,13 @@ changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check
 | **服务端（核心）** | `server/backend/`、`server/match/`（identity / resolver / matcher）、`server/db/`、`server/storage/` | API、合并、RDS、本机 JSON 路径、代理/余额、运维脚本 |
 | **服务端（库，backend 挂载）** | `server/ws_forward/`、`server/realtime-hub/` | WebSocket 转发、Changmen Socket.IO 推送（由 backend 进程加载，非独立主链路进程） |
 | **服务端（扩展守护进程）** | `server/collectors/`、`server/value-bet/` | VPS 采集 daemon；详见 [collectors/README.md](../server/collectors/README.md) |
-| **开发工具** | `devtools/platform-probes/` | 可选：直连各平台探针 CLI（非主链路） |
+| **开发工具** | `server/platform-probes/` | 可选：直连各平台探针 CLI（非主链路） |
 | **产品线** | `lines/`、[docs/SPORTS_PRODUCT_LINES.md](./SPORTS_PRODUCT_LINES.md) | 对称锚点 `lines/{code}/`；电竞主栈在仓库根；棒球见 `lines/baseball/` |
 | **共同协商** | `packages/shared/`、`packages/api-contract/`、`packages/client-core/`、`docs/TEAM_BOUNDARIES.md`、`.github/CODEOWNERS` | 跨端工具、catalog、HTTP 契约、web/adapter 共用 TS |
 
 服务端包索引：[server/README.md](../server/README.md)。
 
-已移除的遗留目录（勿再创建）：`server/platform-node`、`server/platform-probes`、`packages/venue-adapter/node/`、`packages/venue-adapter/{platform}/backend/`。探针源码仅在 `devtools/platform-probes/`；瘦包同步产物为 `server/backend/platform_node/` 与 `server/backend/platform_adapter/`。
+已移除的遗留目录（勿再创建）：`server/platform-node`、`packages/venue-adapter/node/`、`packages/venue-adapter/{platform}/backend/`。探针源码仅在 `server/platform-probes/`；瘦包同步产物为 `server/backend/platform_node/` 与 `server/backend/platform_adapter/`。
 
 `packages/venue-adapter` 内的 `loader/`、`registry/`、`scripts/` 属**适配器基础设施**（`reqS` / `backendRequire` 在 `loader/adapter_paths.mjs`）；各平台 `{platform}/shared/` 为**浏览器采集**内部模块（collect / markets / parse 共用），**不同步**到瘦包。
 
@@ -50,7 +60,7 @@ changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check
 
 [changmen 扩展] 2026-10-18：backend 的打包/验证开发依赖已改为现有 `venue-adapter-tools`，原同步函数和复制规则不变；Node registry 的浏览器类型宿主声明由父 adapter 现有直接声明承担。完整根 workspace 配置下单选 backend 的干净开发安装为 393 包/15 个 Node workspace，没有 adapter/client-core/浏览器簿链接，Vue/Pinia 及实际子路径不可解析；七包前端类型/19 项浏览器解析及原打包布局通过。冻结物理位置、工具原资源根、瘦包资产和实际发布规则仍保留，见[本批证据与限制](SOURCE_FILE_ISOLATION_20261017.md)。
 
-`devtools/platform-probes/{platform}/shared/` 为**探针/CLI** 内部模块（如 RAY 的 CJS `save_bets.js`），与浏览器 `shared/` 分离，由探针包 `sync:backend-bundle` 打入 `server/backend/platform_node/`。
+`server/platform-probes/{platform}/shared/` 为**探针/CLI** 内部模块（如 RAY 的 CJS `save_bets.js`），与浏览器 `shared/` 分离，由探针包 `sync:backend-bundle` 打入 `server/backend/platform_node/`。
 
 服务端通过 `requirePlatform(..., "node")` 加载探针；**不得**引用各平台根目录下的采集/下注 ts（`packages/venue-adapter/{platform}/shared/` 亦不在瘦包内）。
 
@@ -142,13 +152,15 @@ changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check
 
 已收口的登录元数据、在线信息和管理用户业务通过 `@changmen/db/profile_metadata.js`、`@changmen/db/admin_users.js` 及既有公开业务方法访问数据。验证输入、权限、API 错误文本和缓存刷新属于 backend；连接池、SQL 和既有事务实现属于 `server/db`。
 
-`npm run check:boundaries` 用 TypeScript AST 检查 backend core 的连接池导入、数据库内部路径、SQL 执行、别名、动态导入及 re-export。历史例外精确登记在 `scripts/verification/backend-db-access-exceptions.json`，每处必须可追溯到固定已发布提交 `d3fd4a0a` 的原语法节点；允许减少，不允许新位置或新增次数。五个已迁移模块不能登记例外。
+`npm run check:boundaries` 用 TypeScript AST 检查 backend core 的连接池导入、数据库内部路径、SQL 执行、别名、动态导入及 re-export。历史例外基线仍固定为已发布提交 `d3fd4a0a`，当前 `scripts/verification/backend-db-access-exceptions.json` 的清单已为空；已迁移模块不能重新登记例外。
 
 正 EV 仪表盘通过 `@changmen/db/value_signals.js` 读取信号与聚合，诊断计算仍在业务层。Predict.fun 体育 relay 通过 `@changmen/db/relay_identity.js` 选择原有用户身份，通过公开 `@changmen/db/jwt.js` 使用原签发器；token 优先级、缓存和请求策略不变。
 
-当前仅剩 1 个诊断文件、8 个历史访问位置：`admin_maintenance.js` 受订单冻结保护。运行版本观察的 SQL、指纹与缓存已迁至 `server/db/runtime_schema.js`，backend 仅组合结果；该文件不得重新登记数据库访问例外。边界规则是工程门禁，不替代运行时鉴权。
+backend 业务目录现为零数据库访问例外：`admin_maintenance.js` 的三条只读查询与连接池访问已逐字迁至 `@changmen/db/admin_maintenance.js`，报表分组、排序、金额转换和提示文字仍在 backend。八处原例外的历史契约保留用于完整源码对照，不再作为当前放行项。运行版本观察的 SQL、指纹与缓存也已归入 `server/db/runtime_schema.js`；已迁移文件不得重新登记例外。边界规则是工程门禁，不替代运行时鉴权。
 
-### 探针（`devtools/platform-probes`）
+数据库历史维护、诊断、事故修复及归档脚本归 `server/db/maintenance/legacy/`，累计从 backend 删除 140 个旧文件，不能加回转导出。边界检查比较完整原文、导入变换、迁移前后模块解析及环境/备份资源的原指向；数据层不得反向导入 backend、平台采集或客户端实现。其余混合脚本保留在 backend，后续应把其中的数据访问拆出，再确定剩余业务编排的归属。
+
+### 探针（`server/platform-probes`）
 
 | 允许 | 禁止 |
 |------|------|
@@ -200,7 +212,7 @@ adapter 的 PM 直接运行依赖已补齐，Vue 以与web相同范围的 option
 
 `retained-source-boundaries` 将上述保留项固定为 6 组、明确退出条件，并拒绝兼容入口静默退役、有效 SQL 资产遗漏、冻结路径退登和 DB 例外扩大。`component-install-inputs` 同时核对前端/后端/RDS 的声明闭包，当前为 7/14/3 个 workspace，后端含开发工具为 15 个；前端 9 包且带入 DB/storage 的结果属于早期批次，后续已解除。临时安装实验已验证后端生产 workspace 集合可排除浏览器依赖，RDS 定向安装也无浏览器依赖；生产配置未采纳精简安装，源码/资产布局仍有保留约束，详见[真实安装证据](SOURCE_FILE_ISOLATION_20261017.md)。
 
-RDS 维护资产后续已归入 `server/db/assets/`，维护实现统一按自身包位置读取；backend 原 SQL/基线是 44 份生成的兼容副本，内容/checksum 不变。资产一致性检查接入保留边界，不允许主资产缺失时回退 backend。独立维护验收必须复制完整 RDS 运行时闭包：DB/shared/storage，加上 storage 依赖的 `devtools/runtime-tooling`，完全没有 backend 目录；测试同时核对包链接和实际源码存在，不能把 npm 创建的悬空链接视为安装成功。旧消费者、历史脚本和生产发布流程仍保留，见[资产独立记录](SOURCE_FILE_ISOLATION_20261017.md)。
+RDS 维护资产归入 `server/db/assets/`，维护实现与测试归入 `server/db/maintenance/`，按自身包位置读取资产；backend 原 SQL/基线的 44 份兼容副本及 7 个维护入口已删除，禁止恢复。资产检查继续固定原历史内容/checksum，不允许主资产缺失时回退 backend。独立维护验收必须复制完整 RDS 运行时闭包：DB/shared/storage/api-contract，加上 storage 依赖的 `devtools/runtime-tooling`，完全没有 backend 目录；测试同时核对包链接和实际源码存在，不能把 npm 创建的悬空链接视为安装成功。固定旧消费者由原 Git 快照物化，历史运维脚本另行审查，见[资产独立记录](SOURCE_FILE_ISOLATION_20261017.md)。
 
 ## CODEOWNERS
 
@@ -215,7 +227,7 @@ copy docs\CODEOWNERS.example .github\CODEOWNERS
 ## 开发习惯
 
 1. **客户端**改采集/下注 → 只动 `venue-adapter` + `client/web`；用 Save* API 验证，不直连 RDS。
-2. **服务端**改合并 → `server/match/matcher` / `resolver`；表结构主资产维护在 `server/db/assets/migrations`，backend 旧资产仅作兼容副本。公共身份规则归 `packages/shared/match-identity`，旧 identity 包保留入口；用 `Client_GetMatchs` 契约测试或 web 冒烟验证。
+2. **服务端**改合并 → `server/match/matcher` / `resolver`；表结构主资产只在 `server/db/assets/migrations` 维护，backend 不保留副本。公共身份规则归 `packages/shared/match-identity`，旧 identity 包保留入口；用 `Client_GetMatchs` 契约测试或 web 冒烟验证。
 3. **`packages/shared`** 变更：谁改谁提 PR，另一方扫一眼受影响 API 字段/展示。
 4. 生产发版按现有组件流程选择 frontend / backend / full；共享协议及当前隔离候选仍按保守范围、后端先行验收。构建、封包、切换和回滚规则见 [INDEPENDENT_DEPLOYMENT.md](INDEPENDENT_DEPLOYMENT.md)，`app:build` 或手工重启不能代替发布验收。
 
@@ -250,3 +262,7 @@ copy docs\CODEOWNERS.example .github\CODEOWNERS
 [changmen 扩展] 10 个行情簿诊断和只读 source 实现归入 `client/packages/venue-browser/`，原 `packages/venue-adapter/browser/` 只转导出。Node 静态入口和受管动态 loader 不得导入新目录，旧入口及源码完整内容受边界检查约束。
 
 新目录仍归原私有 adapter workspace 管理；共享行情工具的反向依赖尚未解除，不新增独立 npm 包或改变发布范围。安装输入分为 `workspaceDirectories`（npm workspace 清单）和 `sourceDirectories`（完整源码目录，含此次迁入目录）。独立前端安装及构建用 `node scripts/testing/frontend-install-isolation.mjs` 验证。详见 [实施与验证记录](VENUE_BROWSER_ISOLATION_20261019.md)。
+
+## 后端默认动态路径认证（2026-10-20）
+
+[changmen 扩展] 八进程后端独立安装的 11 条原始动态记录与展开后的探针路径桥记录，由精确源码契约和真实调用来源检查认证。执行 `node scripts/testing/backend-dynamic-path-isolation.mjs` 比较全量安装与 19 个后端 workspace 安装的动态目标，并验证原生加载身份。外部路径覆盖、应用 .env 和生产环境需另行验收；不据此启用精简安装或发布范围优化。范围、证据及反例测试见 [后端动态路径认证](BACKEND_DYNAMIC_PATH_CERTIFICATION.md)。

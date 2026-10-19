@@ -20,19 +20,19 @@
       "symbol": "requirePlatform"
     },
     {
-      "file": "devtools/platform-probes/backend/_paths.js",
+      "file": "server/platform-probes/backend/_paths.js",
       "symbol": "reqS"
     },
     {
-      "file": "devtools/platform-probes/backend/_paths.js",
+      "file": "server/platform-probes/backend/_paths.js",
       "symbol": "backendRequire"
     },
     {
-      "file": "devtools/platform-probes/backend/_paths.cjs",
+      "file": "server/platform-probes/backend/_paths.cjs",
       "symbol": "reqS"
     },
     {
-      "file": "devtools/platform-probes/backend/_paths.cjs",
+      "file": "server/platform-probes/backend/_paths.cjs",
       "symbol": "backendRequire"
     }
   ],
@@ -47,21 +47,21 @@
   },
   "sourceContracts": [
     {
-      "file": "devtools/platform-probes/backend/_paths.js",
+      "file": "server/platform-probes/backend/_paths.js",
       "selector": "module",
       "signature": "0f85746eaafb7792a6b224a4b3b214078f8368bab409c176c99c20cf5c93c24a"
     },
     {
-      "file": "devtools/platform-probes/backend/_paths.cjs",
+      "file": "server/platform-probes/backend/_paths.cjs",
       "selector": "module",
       "signature": "f62c1ea53fd921ce4e6764c115a0ff56a629142762b0b509a1fadfdf81622209"
     }
   ],
   "calls": [
     {
-      "file": "devtools/platform-probes/ia/ws.js",
+      "file": "server/platform-probes/ia/ws.js",
       "origin": {
-        "file": "devtools/platform-probes/backend/_paths.js",
+        "file": "server/platform-probes/backend/_paths.js",
         "symbol": "backendRequire"
       },
       "arguments": [
@@ -70,9 +70,9 @@
       "count": 1
     },
     {
-      "file": "devtools/platform-probes/ray/ws.js",
+      "file": "server/platform-probes/ray/ws.js",
       "origin": {
-        "file": "devtools/platform-probes/backend/_paths.js",
+        "file": "server/platform-probes/backend/_paths.js",
         "symbol": "backendRequire"
       },
       "arguments": [
@@ -81,9 +81,9 @@
       "count": 1
     },
     {
-      "file": "devtools/platform-probes/tf/ws.js",
+      "file": "server/platform-probes/tf/ws.js",
       "origin": {
-        "file": "devtools/platform-probes/backend/_paths.js",
+        "file": "server/platform-probes/backend/_paths.js",
         "symbol": "backendRequire"
       },
       "arguments": [

@@ -4,8 +4,9 @@ import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 import { restoreDependencySecurityMetadata } from "./dependency-security-metadata.mjs";
 import { restorePmCollectorTypeScriptMetadata } from "./pm-collector-typescript-metadata.mjs";
+import { restoreRetirementPolicy } from "./publish-retirement-metadata.mjs";
 const base = "8db3321d04aca0924998b93fc9fd3efd89ebd8d6";
-const read = file => restorePmCollectorTypeScriptMetadata(file, fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n"));
+const read = file => restorePmCollectorTypeScriptMetadata(file, restoreRetirementPolicy(file, fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n")));
 const record = JSON.parse(read("scripts/verification/dependency-security-metadata.json"));
 const sha = source => createHash("sha256").update(source).digest("hex");
 for (const row of record.changes) it(`${row.file}: exactly reverses the reviewed security update and rejects extra edits`, () => {

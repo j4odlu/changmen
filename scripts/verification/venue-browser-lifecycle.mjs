@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact closed market lifecycle dependency group relocation.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {restoreVenueBrowserExecution,verifyVenueBrowserExecution} from './venue-browser-execution.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-lifecycle.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-lifecycle.json',import.meta.url),'utf8');
 assert.equal(sha(text),'60165fc854eee1664505f333d7dfda300ada2f9beec417f2ea17effa4fc346a7');
 export const VENUE_BROWSER_LIFECYCLE=JSON.parse(text);
 export function restoreVenueBrowserLifecycle(file,source){

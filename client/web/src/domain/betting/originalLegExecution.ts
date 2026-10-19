@@ -1,6 +1,6 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { BetResult } from "@changmen/client-core/models/betResult";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 
 /** [changmen 扩展] 原单事实与动作许可供公共套利阶段消费，场馆实现不调度双腿。 */
 export interface OriginalLegFacts {

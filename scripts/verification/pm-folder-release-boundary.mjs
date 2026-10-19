@@ -1,6 +1,9 @@
 // [changmen 扩展] 独立 PM 目录迁移：完整实现证明，原冻结清单与业务基线不变。
 import { verifyClientPackageRelocation } from "./client-package-relocation.mjs";
 import { verifyNodePackageRelocation } from "./node-package-relocation.mjs";
+import { adapterBrowserSourceReader, verifyAdapterBrowserRelocation } from "./adapter-browser-relocation.mjs";
+import { certifiedBrowserConsumerChanges } from './browser-entry-retirement.mjs';
+import {certifiedCatalogRuntimeChanges} from './catalog-environment-isolation.mjs';
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { PM_FOK_RELOCATIONS, readRelocatedPmFokSource } from "./pm-fok-source-relocation.mjs";
@@ -16,6 +19,7 @@ const fokDoc = "packages/venue-adapter/polymarket/fok/README.md";
 const fokDocSha = "6c178d10abbd140e66725c1a51bc569dbdcdd29d38c7e56ebd15615471e787dc";
 
 export function certifyPmFolderRelease(manifestText, read, baselineRead) {
+  read = adapterBrowserSourceReader(read);
   assert.equal(createHash("sha256").update(normalize(manifestText)).digest("hex"), PM_FOLDER_FREEZE_SHA, "original freeze manifest unchanged");
   const certified = new Set();
   verifyPmUnifiedPreflightHelpers(read);
@@ -38,8 +42,11 @@ export function certifyPmFolderRelease(manifestText, read, baselineRead) {
 
 export function checkPmFolderFreeze(changed, manifestText, read, baselineRead) {
   const certified = certifyPmFolderRelease(manifestText, read, baselineRead);
+  for (const file of certifiedBrowserConsumerChanges(read)) certified.add(file);
+  for (const file of verifyAdapterBrowserRelocation(read)) certified.add(file);
   for (const file of verifyClientPackageRelocation(read)) certified.add(file);
   for (const file of verifyNodePackageRelocation(read)) certified.add(file);
+  for (const file of certifiedCatalogRuntimeChanges(read)) certified.add(file);
   // 新实现继承原模块的冻结保护；不豁免整个目录或其它新增文件。
   const originalPaths = JSON.parse(manifestText).paths;
   const paths = [...originalPaths, "packages/venue-adapter/polymarket/fok", ...Object.entries(PM_FOLDER_RELOCATIONS)

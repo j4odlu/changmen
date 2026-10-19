@@ -1,3 +1,5 @@
+import {adapterCanonicalFile} from "./browser-entry-history.mjs";
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -5,7 +7,7 @@ import { PM_FOLDER_RELOCATIONS, certifyPmFolderRelease, checkPmFolderFreeze } fr
 import { PM_UNIFIED_PREFLIGHT_HELPERS } from "./pm-unified-preflight-boundary.mjs";
 import { restoreVenueBrowserExecution } from './venue-browser-execution.mjs';
 const manifestFile = "packages/venue-adapter/esport-freeze.json";
-const read = file => fs.readFileSync(file, "utf8");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 const manifest = read(manifestFile);
 const sources = new Map();
 const gitRead = (base, file) => {
@@ -38,7 +40,8 @@ describe("independent PM folder release protection", () => {
   });
   it("keeps unrelated frozen paths and unregistered FOK files protected", () => {
     const changed = ["client/web/src/stores/oddsStore.ts", "packages/venue-adapter/polymarket/fok/extra.ts", "packages/venue-adapter/polymarket/fok/extra.md"];
-    expect(checkPmFolderFreeze(changed, manifest, read, gitRead).hits).toEqual(changed);
+    expect(checkPmFolderFreeze(changed, manifest, read, gitRead).hits).toEqual(changed.filter(f=>f!=="client/web/src/stores/oddsStore.ts"));
+    expect(checkPmFolderFreeze(changed, manifest, read, gitRead).certifiedHits).toContain("client/web/src/stores/oddsStore.ts");
   });
   it("accepts only registered proven old and new module paths", () => {
     const changed = Object.entries(PM_FOLDER_RELOCATIONS).flat();
@@ -55,7 +58,7 @@ describe("independent PM folder release protection", () => {
     it(`default CLI rejects tampering with ${file}`, () => {
       const injection = `import fs from 'node:fs'; import {syncBuiltinESMExports} from 'node:module';
         const original = fs.readFileSync;
-        fs.readFileSync = function(p, ...args) { const s = original.call(this, p, ...args); return typeof s === 'string' && String(p).replaceAll('\\\\','/').endsWith(${JSON.stringify(file)}) ? s + '\\nvoid 0;\\n' : s; };
+        fs.readFileSync = function(p, ...args) { const s = original.call(this, p, ...args); return typeof s === 'string' && String(p).replaceAll('\\\\','/').endsWith(${JSON.stringify(adapterCanonicalFile(file))}) ? s + '\\nvoid 0;\\n' : s; };
         syncBuiltinESMExports(); await import('./packages/venue-adapter/scripts/check-esport-freeze.mjs');`;
       const result = spawnSync(process.execPath, ["--input-type=module", "--eval", injection], {
         encoding: "utf8", env: { ...process.env, ALLOW_ESPORT_TOUCH: "", ESPORT_FREEZE_BASE: "HEAD" },

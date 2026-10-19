@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 补充业务验证；不改 VPS 哈希清单，不替代严格源码快照。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -17,7 +18,7 @@ import { restorePmManualSellSplit } from "./pm-manual-sell-split-boundary.mjs";
 
 fs.mkdirSync("output", { recursive: true });
 
-const manifest = JSON.parse(fs.readFileSync("scripts/verification/vps-fok-baseline.json", "utf8"));
+const manifest = JSON.parse(readAdapterHistory("scripts/verification/vps-fok-baseline.json", "utf8"));
 const base = manifest.version;
 const normal = text => text.replace(/\r\n/g, "\n");
 const sha = text => createHash("sha256").update(normal(text)).digest("hex");
@@ -38,12 +39,12 @@ for (const file of files) {
 const oldSource = file => baselineSources.get(file) ?? execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" });
 // [changmen 扩展] 只还原已登记迁移的完整源码与引用；不执行任何业务特化或增加差异豁免。
 function currentSource(file) {
-  const readSource = target => restorePublishedPmSettlement(target, fs.readFileSync(target, "utf8"));
+  const readSource = withAdapterHistoryReader(target => restorePublishedPmSettlement(target, readAdapterHistory(target, "utf8")));
   const relocated = readRelocatedPmFokSource(file, readRelocatedPmFunctionalSource(file, readSource(file), readSource), readSource);
   const unified = restoreUnifiedArbitrageSource(file, restoreMinimalOrdersSource(file, relocated, readSource), replaceExact);
   return restoreRayProviderSource(file, restoreRayFinalizeSource(file, unified, replaceExact), readSource);
 }
-const unifiedContract = verifyUnifiedArbitrageContract(target => fs.readFileSync(target, "utf8"), replaceExact);
+const unifiedContract = verifyUnifiedArbitrageContract(target => readAdapterHistory(target, "utf8"), replaceExact);
 const reviewed = new Map();
 function review(file, kind, transform) {
   const source = currentSource(file);
@@ -168,7 +169,7 @@ for (const [file, expected] of Object.entries(manifest.protectedFiles)) {
   assert.equal(sha(oldSource(file)), expected, `immutable VPS provenance: ${file}`);
   if (sha(currentSource(file)) === expected) { exactFiles++; continue; }
   differences.push(file);
-  verifyProtectedSource(file, fs.readFileSync(file, "utf8"), oldSource(file), target => fs.readFileSync(target, "utf8"), target => gitSource(base, target));
+  verifyProtectedSource(file, readAdapterHistory(file, "utf8"), oldSource(file), target => readAdapterHistory(target, "utf8"), target => gitSource(base, target));
 }
 // Run the original shared boundary entry without source slicing or excluded modules.
 await import("./verify-fok-shared-boundaries.mjs");
@@ -177,7 +178,7 @@ await import("./verify-fok-shared-boundaries.mjs");
 // Extra progress events are outside the submission/financial trace. Make the new observer throw
 // to prove its isolation while the complete baseline business trace still matches.
 const fokTail = source => canonical(`async function fok(){\n${source.slice(source.indexOf("  const toastSec = manualBetToastSeconds();"))}`);
-assert.equal(fokTail(fs.readFileSync("client/web/src/orderModes/fok/manual.ts", "utf8")), fokTail(oldSource("client/web/src/stores/betting/manualBet.ts")), "complete manual FOK execution body unchanged from VPS");
+assert.equal(fokTail(readAdapterHistory("client/web/src/orderModes/fok/manual.ts", "utf8")), fokTail(oldSource("client/web/src/stores/betting/manualBet.ts")), "complete manual FOK execution body unchanged from VPS");
 // [changmen 扩展] 实际源码差分沿用固定 VPS 与独立手动提交，历史四项差异显式记录。
 const manualIndependentBaseline = "89b87779";
 const behavioral = await runFokDifferentials(base);
@@ -199,7 +200,7 @@ function loadFinancial(file, source) {
 const saveFile = "server/backend/core/account/order/save_pm.js";
 assert.equal(sha(currentSource(saveFile)), manifest.protectedFiles[saveFile], "FOK financial merge after exact published settlement restoration");
 const oldMerge = loadFinancial(saveFile, oldSource(saveFile));
-const currentMerge = loadFinancial(saveFile, fs.readFileSync(saveFile, "utf8"));
+const currentMerge = loadFinancial(saveFile, readAdapterHistory(saveFile, "utf8"));
 let financialCases = 0;
 for (const status of ["none", "reject", "win", "lose", "lost"]) {
   for (const state of ["open", "partial", "closed", "settled"]) {

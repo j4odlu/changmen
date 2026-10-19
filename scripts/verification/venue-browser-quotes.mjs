@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact market message, book quote and frame parser relocation.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {restoreVenueBrowserPricing,verifyVenueBrowserPricing} from './venue-browser-pricing.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-quotes.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-quotes.json',import.meta.url),'utf8');
 assert.equal(sha(text),'82179fdbd02b091e8e9c78999ec8f3fa5e8bf895dfa94fd0d009a05bf8a0ea53');
 export const VENUE_BROWSER_QUOTES=JSON.parse(text);
 export function restoreVenueBrowserQuotes(file,source){

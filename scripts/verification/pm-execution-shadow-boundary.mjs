@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Only frozen simulation inputs; the HTTP call and FOK algorithm are unchanged.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { restoreVenueBrowserContracts } from './venue-browser-contracts.mjs';
 const normalize = s => s.replaceAll('\r\n', '\n');
 const digest = s => createHash('sha256').update(normalize(s)).digest('hex');
-const text = normalize(fs.readFileSync(new URL('./pm-execution-shadow-increments.json', import.meta.url), 'utf8'));
+const text = normalize(readAdapterHistory(new URL('./pm-execution-shadow-increments.json', import.meta.url), 'utf8'));
 assert.equal(digest(text), '9af82e9ee43c32dbeb9970ac62cd22bb16a26869633eb5c7313b93755d5c4709');
 const { changes } = JSON.parse(text);
 export function restorePmExecutionShadowSource(file, source, required = false, read) {

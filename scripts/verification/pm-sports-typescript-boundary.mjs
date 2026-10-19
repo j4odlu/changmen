@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Verify the entire erased sports implementation before returning
 // its fixed pre-migration source to the unchanged legacy FOK input comparison.
 import assert from "node:assert/strict";
@@ -19,7 +20,7 @@ export function restorePmSportsTypeScriptSource(file, source, typedSource) {
   if (source === original) return source;
   const shim = `// Compatibility entry; implementation is TypeScript.\n${name === "index" ? 'import "./index.ts";' : `export * from "./${name}.ts";`}\n`;
   assert.equal(source.replaceAll("\r\n", "\n"), shim, `${file}: only the exact compatibility entry is accepted`);
-  const typed = typedSource ?? fs.readFileSync(file.replace(/\.js$/, ".ts"), "utf8");
+  const typed = typedSource ?? readAdapterHistory(file.replace(/\.js$/, ".ts"), "utf8");
   assert.equal(erasePmSportsTypes(typed), erasePmSportsTypes(original), `${file}: the complete runtime implementation must remain identical`);
   return original;
 }

@@ -5,8 +5,8 @@ import { promisify } from "node:util";
 import { mkdirSync, writeFileSync, readFileSync, chmodSync } from "node:fs";
 import path from "node:path";
 import { withTemporaryPostgres } from "./temporary-postgres.mjs";
-import { applyRdsSchema, initializeEmptyRdsSchema } from "../../server/backend/scripts/apply-rds-schema.mjs";
-import { verifyRdsSchema, readSchemaBaseline } from "../../server/backend/scripts/rds-schema-check.mjs";
+import { applyRdsSchema, initializeEmptyRdsSchema } from "@changmen/db/maintenance/apply-rds-schema.mjs";
+import { verifyRdsSchema, readSchemaBaseline } from "@changmen/db/maintenance/rds-schema-check.mjs";
 
 const run = promisify(execFile);
 const bash = process.platform === "win32" ? "C:/msys64/usr/bin/bash.exe" : "bash";

@@ -1,12 +1,13 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 清单完整性、来源及非 DisplayOnly 模块负向检查，避免只修首个失败后漏查。
 import fs from 'node:fs';
 import { execFileSync,spawnSync } from 'node:child_process';
 import { describe,it,expect } from 'vitest';
 import { fixedManifestSources,verifyManifestSources } from './vps-source-manifest-boundary.mjs';
 import { verifyProtectedSource } from './fok-exact-boundaries.mjs';
-const manifest=JSON.parse(fs.readFileSync('scripts/verification/vps-fok-baseline.json'));
+const manifest=JSON.parse(readAdapterHistory('scripts/verification/vps-fok-baseline.json'));
 const sources=fixedManifestSources(manifest);
-const read=file=>fs.readFileSync(file,'utf8');
+const read=withAdapterHistoryReader(file=>readAdapterHistory(file,'utf8'));
 it.each([
   ['exchange rate', source=>source.replace('getExchange(a.currency)', 'getExchange(a.currency) * 2')],
   ['other account behavior', source=>source+'\nvoid unexpectedAccountAction();'],
@@ -31,10 +32,10 @@ describe('all original 551 VPS manifest entries remain protected',()=>{
     it(`${file}: full existing helper cannot introduce I/O or actions`,()=>expect(()=>verifyManifestSources(manifest,requested=>read(requested)+(requested===file?'\nvoid fetch("/new-query");':''),sources)).toThrow('committed mode helper'));
   }
   it('rejects baseline recording before any output or source writes',()=>{
-    const before=fs.readFileSync('scripts/verification/vps-fok-baseline.json');
+    const before=readAdapterHistory('scripts/verification/vps-fok-baseline.json');
     const result=spawnSync(process.execPath,['scripts/verification/verify-vps-fok-baseline.mjs','--record-captured-release'],{encoding:'utf8',timeout:10000});
     expect(result.status).not.toBe(0);expect(result.stderr).toContain('recording');
-    expect(fs.readFileSync('scripts/verification/vps-fok-baseline.json')).toEqual(before);
+    expect(readAdapterHistory('scripts/verification/vps-fok-baseline.json')).toEqual(before);
   });
   it('manifest still equals the committed immutable file',()=>expect(read('scripts/verification/vps-fok-baseline.json').replaceAll('\r\n','\n')).toBe(execFileSync('git',['show','5eb63ba7f49156a4a98a1357a0888e1dcc0e9924:scripts/verification/vps-fok-baseline.json'],{encoding:'utf8'}).replaceAll('\r\n','\n')));
 });

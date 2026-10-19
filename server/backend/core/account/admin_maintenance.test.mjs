@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@changmen/db", () => ({
+vi.mock("../../../db/pg_pool.js", () => ({
   getPgPool: vi.fn(() => null),
   ensurePgPoolReady: vi.fn(async () => {}),
 }));

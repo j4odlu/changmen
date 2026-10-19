@@ -1,9 +1,10 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { gitSource, moduleTokens, replaceExact, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { rayClientMonitorHashes, restoreRayOrderSyncSource, verifyRayClientMonitorSource } from "./ray-client-monitor-boundary.mjs";
 import { restoreA8MakeupSource } from "./a8-makeup-boundary.mjs";
-const read = file => fs.readFileSync(file, "utf8");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 describe("RAY client monitoring and normal synchronization remain separate", () => {
   it("normal order synchronization retains its entire original implementation before the exact binding tail", () => {
     const file = "client/web/src/stores/account/venueOrders.ts";

@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Move the passive stream singleton intact; retain exact historical source checks.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {restoreVenueBrowserQuotes,verifyVenueBrowserQuotes} from './venue-browser-quotes.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-stream.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-stream.json',import.meta.url),'utf8');
 assert.equal(sha(text),'c40adab9f01344b6a269014cff04f9d138d19fe00302297777ad9667d58a21b6');
 export const VENUE_BROWSER_STREAM=JSON.parse(text);
 export function restoreVenueBrowserStream(file,source){

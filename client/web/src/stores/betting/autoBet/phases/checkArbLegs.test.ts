@@ -6,10 +6,10 @@ import { BetOption as BetOptionClass } from "@changmen/client-core/models/betOpt
 import { checkArbLegs } from "@/stores/betting/autoBet/phases/checkArbLegs";
 import { createDefaultUserConfig } from "@/types/userConfig";
 import { syncActiveBetPrecheckResults } from "@/stores/betting/activeBetRunSync";
-import { setPmFokPreflightMode } from "@changmen/venue-adapter/polymarket";
+import { setPmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket";
 const prepareFast = vi.hoisted(() => vi.fn());
-vi.mock("@changmen/venue-adapter/polymarket", async importOriginal => ({
-  ...await importOriginal<typeof import("@changmen/venue-adapter/polymarket")>(), prepareOptimizedFokExecution: prepareFast,
+vi.mock("@changmen/venue-browser/adapter/polymarket", async importOriginal => ({
+  ...await importOriginal<typeof import("@changmen/venue-browser/adapter/polymarket")>(), prepareOptimizedFokExecution: prepareFast,
 }));
 
 const prepareGtc = vi.hoisted(() => vi.fn());

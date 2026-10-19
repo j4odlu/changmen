@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
@@ -6,7 +7,7 @@ import { PM_OFFICIAL_SETTLEMENT_SOURCES, verifyPmOfficialSettlementSource } from
 
 describe("authorized official-priority settlement with price fallback boundary", () => {
   for (const file of Object.keys(PM_OFFICIAL_SETTLEMENT_SOURCES)) {
-    const source = () => readRelocatedPmFunctionalSource(file, fs.readFileSync(file, "utf8"));
+    const source = () => readRelocatedPmFunctionalSource(file, readAdapterHistory(file, "utf8"));
     it(`${file}: accepts the complete reviewed implementation`, () => {
       expect(verifyPmOfficialSettlementSource(file, source())).toBe(true);
     });

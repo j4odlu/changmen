@@ -5,9 +5,9 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { withTemporaryPostgres } from "./temporary-postgres.mjs";
-import { initializeEmptyRdsSchema, RDS_MIGRATIONS } from "../../server/backend/scripts/apply-rds-schema.mjs";
-import { runRdsMigrations } from "../../server/backend/scripts/rds-migrations.mjs";
-import { readSchemaBaseline, verifyRdsSchema } from "../../server/backend/scripts/rds-schema-check.mjs";
+import { initializeEmptyRdsSchema, RDS_MIGRATIONS } from "@changmen/db/maintenance/apply-rds-schema.mjs";
+import { runRdsMigrations } from "@changmen/db/maintenance/rds-migrations.mjs";
+import { readSchemaBaseline, verifyRdsSchema } from "@changmen/db/maintenance/rds-schema-check.mjs";
 import { expandedRequirements, materializeReference, reference } from "./schema-compatibility/reference.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -25,7 +25,7 @@ await withTemporaryPostgres(async ({ temporary }) => {
   const oldBaseline = JSON.parse(oldSources["server/backend/scripts/rds-schema-baseline.json"]);
   const baseline = readSchemaBaseline(), expanded = expandedRequirements(baseline);
   const owner = "00000000-0000-0000-0000-000000000041";
-  const env = { ...process.env, NODE_PATH: path.join(root, "node_modules"), NODE_OPTIONS: "" };
+  const env = { ...process.env, NODE_PATH: path.join(root, "node_modules"), NODE_OPTIONS: "", CHANGMEN_REFERENCE_ROOT: oldRoot };
   async function consumer(source, mode = "read") {
     const { stdout } = await exec(process.execPath, [path.join(root, "scripts/testing/schema-compatibility/consumer.mjs"), source, mode, owner],
       { env, cwd: temporary, timeout: 30_000, windowsHide: true });
@@ -193,7 +193,7 @@ await withTemporaryPostgres(async ({ temporary }) => {
       const before = await business(), records = await ledger();
       await pool.query("ALTER TABLE profiles RENAME COLUMN preferences TO round4_hidden_preferences");
       try {
-        await assert.rejects(exec(process.execPath, [path.join(root, "server/backend/scripts/check-rds-schema.mjs")],
+        await assert.rejects(exec(process.execPath, [path.join(root, "server/db/maintenance/check-rds-schema.mjs")],
           { env, cwd: temporary, timeout: 30_000, windowsHide: true }), error => error.code === 1 && /columns.profiles.preferences: missing/.test(error.stderr));
       } finally { await pool.query("ALTER TABLE profiles RENAME COLUMN round4_hidden_preferences TO preferences"); }
       assert.deepEqual(await business(), before); assert.deepEqual(await ledger(), records);

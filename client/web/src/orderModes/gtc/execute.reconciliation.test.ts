@@ -53,7 +53,7 @@ vi.mock("./runtime", async () => ({
   pollGtcOther: vi.fn().mockResolvedValue([]),
 }));
 vi.mock("@/runtime/gtcOrderMonitor/recovery", () => ({ recoverMonitorRecords: async () => {} }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ recordPmExecutionMetric: vi.fn(), observePolymarketOrderWatch: () => () => {} }));
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ recordPmExecutionMetric: vi.fn(), observePolymarketOrderWatch: () => () => {} }));
 // [changmen 扩展] 仅模拟公开 HTTP 边界，保留真实 PM 查询、分页与 transport；未知请求直接失败。
 vi.mock("@changmen/client-core/shared/platformHttp", async importOriginal => ({
   ...await importOriginal<typeof import("@changmen/client-core/shared/platformHttp")>(),

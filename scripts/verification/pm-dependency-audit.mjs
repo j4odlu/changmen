@@ -34,7 +34,7 @@ export function pmNodeBrowserLoaderTarget(site) {
   if (symbol === "adapterRequire") target = path.posix.normalize(`packages/venue-adapter/${args.join("/")}`);
   if (symbol === "requirePlatform" && args[0].toLowerCase() === "polymarket") {
     target = ["node", "backend"].includes(args[1])
-      ? path.posix.normalize(`devtools/platform-probes/polymarket/${args.slice(2).join("/")}`)
+      ? path.posix.normalize(`server/platform-probes/polymarket/${args.slice(2).join("/")}`)
       : path.posix.normalize(`packages/venue-adapter/polymarket/${args.slice(1).join("/")}`);
   }
   return target && (inside(target, "packages/venue-adapter/polymarket") && !inside(target, "packages/venue-adapter/polymarket/shared")
@@ -165,11 +165,11 @@ export function inspectPmDependencies(root) {
   const sharedExternalPackages = [...new Set(externalDependencies.map(fact => fact.name))].filter(name =>
     new Set(externalDependencies.filter(fact => fact.name === name).map(fact => fact.environment)).size > 1);
   const undeclaredRuntimeDependencies = externalDependencies.filter(fact => !fact.declaredRuntime && !(fact.typeOnly && fact.declaredDevelopment));
-  for (const fact of undeclaredRuntimeDependencies.filter(fact => ["packages/venue-adapter/package.json", "client/packages/pm-market-data-browser/package.json",
+  for (const fact of undeclaredRuntimeDependencies.filter(fact => ["packages/venue-adapter/package.json", "client/packages/venue-browser/package.json", "client/packages/pm-market-data-browser/package.json",
     "packages/venue-adapter/loader/package.json", "packages/venue-adapter/registry/package.json"].includes(fact.owner))) violations.push({
     rule: "pm-direct-dependency", file: fact.owner, line: 0, spec: fact.name, pattern: "PM direct import must be declared by its owning package; a host/transitive installation is insufficient",
   });
-  violations.push(...checkPmVuePeer(readJson(path.join(root, "packages/venue-adapter/package.json")), readJson(path.join(root, "client/web/package.json"))));
+  violations.push(...checkPmVuePeer(readJson(path.join(root, "client/packages/venue-browser/package.json")), readJson(path.join(root, "client/web/package.json"))));
   return {
     schemaVersion: 1, scope: "pm", publishScopeOptimizationEnabled: false, safeToNarrowPublishScope: false,
     nodeSourceFiles: graph.nodeSourceFiles, browserSourceFiles: graph.browserSourceFiles, scannedSourceFiles: graph.sourceFiles.length,

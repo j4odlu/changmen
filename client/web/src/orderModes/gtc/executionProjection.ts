@@ -1,6 +1,6 @@
 /** [changmen 扩展] GTC 财务订单独立投影；不以 Link 或当前模式认定订单来源。 */
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { OrderRow } from "@/types/order";
 import { reactive } from "vue";
 

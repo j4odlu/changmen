@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 let emitPmQuote: ((quote: { assetId: string; bestAsk: number }) => void) | null = null;
 let subscribeCalls = 0;
 
-vi.mock("@changmen/venue-adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
   getPmMarketWsSourceMode: () => "official",
   onPolymarketMarketQuote: (listener: typeof emitPmQuote) => {
     subscribeCalls += 1;

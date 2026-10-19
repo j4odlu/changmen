@@ -1,6 +1,6 @@
 import type { GtcPlan } from "@changmen/shared/pm_gtc";
 import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/shared/pm_gtc";
-import { buildPolymarketMatchedBuyVenueOrderForSave } from "@changmen/venue-adapter/polymarket";
+import { buildPolymarketMatchedBuyVenueOrderForSave } from "@changmen/venue-browser/adapter/polymarket";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { reactive } from "vue";
 import { confirmedGtcResult } from "./confirmedResult";

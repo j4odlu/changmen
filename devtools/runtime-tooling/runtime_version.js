@@ -21,7 +21,7 @@ export function isVersionSource(file, role) {
   if (["package.json", "package-lock.json", "server/storage/runtime_version.js"].includes(file)) return true;
   // [changmen 扩展] 迁入 client 的包保留原 packages 的双端保守覆盖，既有排除规则仍先执行。
   if (file.startsWith("client/packages/")) return true;
-  if (/^server\/packages\/venue-node-(?:loader|registry)\//.test(file)) return true;
+  if (/^server\/packages\/(?:venue-node-(?:loader|registry)|venue-adapter-tools)\//.test(file)) return true;
   if (file.startsWith("devtools/runtime-tooling/")) return true;
   return role === "frontend"
     ? /^(?:client\/web\/(?:src\/|public\/|vite\/|vite\.config\.ts|package\.json|scripts\/run-production-build\.mjs)|packages\/)/.test(file)

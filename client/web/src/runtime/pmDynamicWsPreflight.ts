@@ -1,7 +1,7 @@
 import { watch } from "vue";
 import { onPmBookSettingChange } from "./pmBookSettings";
 import { useUserStore } from "@/stores/userStore";
-import { getPmFokPreflightMode, onPmFokPreflightModeChange } from "@changmen/venue-adapter/polymarket/pmFokPreflightMode";
+import { getPmFokPreflightMode, onPmFokPreflightModeChange } from "@changmen/venue-browser/adapter/polymarket/pmFokPreflightMode";
 
 let cleanup: (() => void) | undefined;
 /** [changmen 扩展] 默认关闭的旁路发布门控；经典模式只有轻量配置监听，无候选 watcher/计时器/网络。 */

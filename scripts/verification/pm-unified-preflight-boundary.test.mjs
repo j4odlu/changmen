@@ -1,10 +1,11 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 import { rebasePmFokImports } from "./pm-fok-source-relocation.mjs";
 import { PM_UNIFIED_PREFLIGHT_HELPERS, restorePmUnifiedPreflightSource, verifyPmUnifiedPreflightContract } from "./pm-unified-preflight-boundary.mjs";
-const readBeforeExecution = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const readBeforeExecution = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8").replaceAll("\r\n", "\n"));
 const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 const changes = JSON.parse(read("scripts/verification/pm-unified-preflight-increments.json"));
 describe("independent PM preflight and selectable online FOK policy", () => {

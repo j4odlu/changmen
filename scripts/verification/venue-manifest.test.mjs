@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, expect, it } from "vitest";
 import { inspectVenueManifestCopies, VENUE_MANIFEST_SOURCE as source, VENUE_MANIFEST_COPIES as copies } from "../sync/venue-manifest.mjs";
 import { VENUE_MANIFEST_METADATA as record, restoreVenueManifestMetadata } from "./venue-manifest-metadata.mjs";
-import { syncPlatformAdapterBackendBundle } from "../../packages/venue-adapter/scripts/sync-backend-bundle.mjs";
+import { syncPlatformAdapterBackendBundle } from "../../server/packages/venue-adapter-tools/sync-backend-bundle.mjs";
 
 const scratch = [];
 const sample = [{ id: "OB", dir: "ob", label: "fixture", collect: false, bet: false, collectionMode: "fixture_mode" }];
@@ -46,7 +46,7 @@ it("keeps both compatibility exports byte-identical to the single authored catal
 });
 it("detects stale and missing copies without repairing them during a check", () => {
   const root = fixture();
-  write(root, copies[0], "[]"); fs.unlinkSync(path.join(root, copies[1]));
+  write(root, copies[0], "[]"); for (const file of copies.slice(1)) fs.unlinkSync(path.join(root, file));
   expect(inspectVenueManifestCopies(root).violations.map(row => row.file)).toEqual(copies);
   expect(fs.readFileSync(path.join(root, copies[0]), "utf8")).toBe("[]");
   expect(fs.existsSync(path.join(root, copies[1]))).toBe(false);
@@ -70,8 +70,8 @@ it.each(["missing", "invalid", "object", "wrong-export"])("fails before copying 
 });
 it("validates all destinations before writing and rejects an escaping directory link", () => {
   const root = fixture(), outside = temporary();
-  const directory = path.dirname(path.join(root, copies[1]));
-  fs.unlinkSync(path.join(root, copies[1])); fs.rmdirSync(directory);
+  const directory = path.dirname(path.join(root, copies[2]));
+  fs.unlinkSync(path.join(root, copies[2])); fs.rmdirSync(directory);
   fs.symlinkSync(outside, directory, "junction");
   write(root, source, "[]");
   expect(() => inspectVenueManifestCopies(root, { write: true })).toThrow("escapes workspace");
@@ -80,7 +80,7 @@ it("validates all destinations before writing and rejects an escaping directory 
 });
 it("restores only the exact reviewed metadata changes to the full previous source", () => {
   for (const row of record.changes) {
-    const current = fs.readFileSync(row.file, "utf8");
+    const current = withRetiredNodeEntries(file=>fs.readFileSync(file,"utf8"))(row.file);
     const baseline = execFileSync("git", ["show", `${record.baseline}:${row.file}`], { encoding: "utf8", windowsHide: true }).replaceAll("\r\n", "\n");
     expect(restoreVenueManifestMetadata(row.file, current)).toBe(baseline);
     expect(restoreVenueManifestMetadata(row.file, current + "\n")).not.toBe(baseline);
@@ -88,16 +88,23 @@ it("restores only the exact reviewed metadata changes to the full previous sourc
 });
 it("default packaging reads the authored asset even when the compatibility copy is stale or missing", () => {
   const root = fixture(); copyStorage(root);
-  const module = "packages/venue-adapter/scripts/sync-backend-bundle.mjs";
+  const module = "server/packages/venue-adapter-tools/sync-backend-bundle.mjs";
   write(root, module, fs.readFileSync(module));
+  write(root, "server/packages/venue-adapter-tools/sync-backend-bundle.mjs", fs.readFileSync("server/packages/venue-adapter-tools/sync-backend-bundle.mjs"));
+  write(root, "server/packages/venue-adapter-tools/package.json", '{"type":"module"}');
   write(root, "packages/venue-adapter/scripts/package.json", '{"type":"module"}');
+  write(root, "node_modules/@changmen/venue-node-loader/package.json", '{"type":"module","exports":"./adapter.mjs"}');
+  write(root, "node_modules/@changmen/venue-node-loader/adapter.mjs", 'export const fixture = true;');
+  write(root, "node_modules/@changmen/venue-node-registry/package.json", '{"type":"module","exports":{"./paths.js":"./paths.js","./feeds.js":"./feeds.js"}}');
+  write(root, "node_modules/@changmen/venue-node-registry/paths.js", 'export const pathsFixture = true;');
+  write(root, "node_modules/@changmen/venue-node-registry/feeds.js", 'export const feedsFixture = true;');
   fs.symlinkSync(path.join(root, "packages/shared"), path.join(root, "node_modules/@changmen/shared"), "junction");
-  write(root, copies[0], "[]");
+  write(root, copies[2], "[]");
   const run = () => child(root, `const {syncPlatformAdapterBackendBundle}=await import(${JSON.stringify(pathToFileURL(path.join(root, module)).href)});syncPlatformAdapterBackendBundle();`);
   run();
   const packed = path.join(root, "server/backend/platform_adapter/registry/manifest.json");
   expect(fs.readFileSync(packed).equals(bytes)).toBe(true);
-  fs.unlinkSync(path.join(root, copies[0])); run();
+  fs.unlinkSync(path.join(root, copies[2])); run();
   expect(fs.readFileSync(packed).equals(bytes)).toBe(true);
   // A missing canonical asset must fail before replacing a previously valid artifact.
   fs.unlinkSync(path.join(root, source));
@@ -131,3 +138,5 @@ it.each(["CHANGMEN_ADAPTER_ROOT", "GAMEBET_ADAPTER_ROOT"])("%s uses the external
   `, { [key]: adapter, CHANGMEN_PLATFORM_PROBES_ROOT: path.join(root, "server/backend/platform_node") });
   expect(result).toContain("external catalog retained");
 });
+
+import {withRetiredNodeEntries} from './node-entry-retirement.mjs';

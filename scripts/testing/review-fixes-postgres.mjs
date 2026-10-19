@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withTemporaryPostgres } from "./temporary-postgres.mjs";
-import { applyRdsSchema } from "../../server/backend/scripts/apply-rds-schema.mjs";
+import { applyRdsSchema } from "@changmen/db/maintenance/apply-rds-schema.mjs";
 
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 await withTemporaryPostgres(async () => {

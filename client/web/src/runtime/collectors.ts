@@ -1,4 +1,4 @@
-import type { CollectorFactory } from "@changmen/venue-adapter/contract";
+import type { CollectorFactory } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformId } from "@/types/esport";
 import { buildCollectorFactories } from "@/runtime/venueAdapters";
 import { useCollectStore } from "@/stores/collectStore";

@@ -6,7 +6,7 @@ import { getCollectPlatform } from "@/api/platform";
 import {
   isPredictFunMarketIndex,
   rememberPredictFunTokenMarketIds,
-} from "@changmen/venue-adapter/predictfun";
+} from "@changmen/venue-browser/adapter/predictfun";
 
 let inflight: Promise<boolean> | null = null;
 let lastOkAt = 0;

@@ -1,7 +1,7 @@
 import type { CookieSessionInfo } from "@/lib/authSession";
 import { browserAuthState, clearAuthSession, getAuthSessionVersion, getCookieSessionInfo, invalidateAuthSession, isAuthSessionCurrent, isAuthTransitionPending, isCookieAuthMode, setCookieAuthMode, setCookieSessionInfo } from "@/lib/authSession";
 import { getApiBase } from "@/config/apiBase";
-import { resolveChangmenWsBase } from "@changmen/venue-adapter/shared";
+import { resolveChangmenWsBase } from "@changmen/venue-browser/adapter/shared";
 import { SessionRestoreConfigurationError } from "@/lib/sessionRestoreError";
 import { withAuthLock } from "@/lib/authLock";
 

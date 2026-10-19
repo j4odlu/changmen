@@ -1,0 +1,344 @@
+{
+  "purpose": "retire-backend-rds-compatibility-only",
+  "publishScopeOptimizationEnabled": false,
+  "entries": [
+    {
+      "file": "server/backend/scripts/rds-migrations.mjs",
+      "canonical": "server/db/maintenance/rds-migrations.mjs",
+      "spec": "@changmen/db/maintenance/rds-migrations.mjs",
+      "before": "// [changmen 扩展] Compatibility path; implementation has one owner.\nexport * from \"@changmen/db/maintenance/rds-migrations.mjs\";\n",
+      "beforeSha": "f1d9578c10ec5cf9470bfb2f4a66df718eeee3c4de1edc3abb869a5604904305",
+      "canonicalSha": "e6abb0418cd49780d016c258cdb0a4132f31f79c4b5d5e1865922b80a16a7ca2"
+    },
+    {
+      "file": "server/backend/scripts/rds-schema-check.mjs",
+      "canonical": "server/db/maintenance/rds-schema-check.mjs",
+      "spec": "@changmen/db/maintenance/rds-schema-check.mjs",
+      "before": "// [changmen 扩展] Compatibility path; implementation has one owner.\nexport * from \"@changmen/db/maintenance/rds-schema-check.mjs\";\n",
+      "beforeSha": "acb242087582418f7311ba28fa5a4c67fcfc0f346051c7967d1ca24e7c59a3b9",
+      "canonicalSha": "728be165fe2ae21bc56a08202db631fb5b525dca8a3c339346a2b5dbca69a28e"
+    },
+    {
+      "file": "server/backend/scripts/reconcile-rds-schema.mjs",
+      "canonical": "server/db/maintenance/reconcile-rds-schema.mjs",
+      "spec": "@changmen/db/maintenance/reconcile-rds-schema.mjs",
+      "before": "// [changmen 扩展] Compatibility path; implementation has one owner.\nexport * from \"@changmen/db/maintenance/reconcile-rds-schema.mjs\";\n",
+      "beforeSha": "7ef86d320f1759513fccd5421f26c76df515f801470131aa66a9e3eea52c0efc",
+      "canonicalSha": "e34ac2c8419a27cbf7335999b0086f8c820c64a2193089a3914c5ccf621add20"
+    },
+    {
+      "file": "server/backend/scripts/rds-reconciliation-backup.mjs",
+      "canonical": "server/db/maintenance/rds-reconciliation-backup.mjs",
+      "spec": "@changmen/db/maintenance/rds-reconciliation-backup.mjs",
+      "before": "// [changmen 扩展] Compatibility path; implementation has one owner.\nexport * from \"@changmen/db/maintenance/rds-reconciliation-backup.mjs\";\n",
+      "beforeSha": "5ed2ede9feb0442c2a4f14c9f52735002cb3bd25ed138e7ef03be999bcd0342f",
+      "canonicalSha": "d0c0b3cc67468361b90625f58ec74742d3e9aa27be198923926754b27b906542"
+    },
+    {
+      "file": "server/backend/scripts/apply-order-observation-schema.mjs",
+      "canonical": "server/db/maintenance/apply-order-observation-schema.mjs",
+      "spec": "@changmen/db/maintenance/apply-order-observation-schema.mjs",
+      "before": "// [changmen 扩展] Compatibility entry; implementation belongs to RDS.\nexport * from \"@changmen/db/maintenance/apply-order-observation-schema.mjs\";\n",
+      "beforeSha": "25fbf5620d6e010191edaa2b785cd4ea1918d4a7eae50ac0b3f67c4bd5d2439f",
+      "canonicalSha": "5b83218a534631c8c5b320a9602c433358921e567f2d29f47ef7faf883915979"
+    },
+    {
+      "file": "server/backend/scripts/check-rds-schema.mjs",
+      "canonical": "server/db/maintenance/check-rds-schema.mjs",
+      "spec": "@changmen/db/maintenance/check-rds-schema.mjs",
+      "command": "checkConfiguredRdsSchema",
+      "before": "#!/usr/bin/env node\nimport path from \"node:path\";\nimport { fileURLToPath } from \"node:url\";\nimport { checkConfiguredRdsSchema } from \"@changmen/db/maintenance/check-rds-schema.mjs\";\nexport * from \"@changmen/db/maintenance/check-rds-schema.mjs\";\n\nif (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {\n  checkConfiguredRdsSchema().catch(error => { console.error(\"[rds] 失败:\", error.message); process.exitCode = 1; });\n}\n",
+      "beforeSha": "450ee72272c282a62e62a0b8a9799beb8cecb6fe92096bb4a4d8d2ba57e71632",
+      "canonicalSha": "c87bca55e2cca10a5ce1a322810a1331bec769c69be94e0793a2b1e0d09c4b61"
+    },
+    {
+      "file": "server/backend/scripts/apply-rds-schema.mjs",
+      "canonical": "server/db/maintenance/apply-rds-schema.mjs",
+      "spec": "@changmen/db/maintenance/apply-rds-schema.mjs",
+      "command": "runConfiguredRdsSchema",
+      "before": "#!/usr/bin/env node\nimport path from \"node:path\";\nimport { fileURLToPath } from \"node:url\";\nimport { runConfiguredRdsSchema } from \"@changmen/db/maintenance/apply-rds-schema.mjs\";\nexport * from \"@changmen/db/maintenance/apply-rds-schema.mjs\";\n\nif (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {\n  runConfiguredRdsSchema().catch(error => { console.error(\"[rds] 失败:\", error.message); process.exitCode = 1; });\n}\n",
+      "beforeSha": "12b265d9f388818e5313deab83cfe5e5fae923a41e83c10839b04606618411f2",
+      "canonicalSha": "04c6261c002dd6fe62c0f7c6f2d155210c7fad06a5a14da1d85f62838a095698"
+    }
+  ],
+  "assets": [
+    {
+      "file": "server/backend/scripts/rds-schema-baseline.json",
+      "canonical": "server/db/assets/schema-baseline.json",
+      "sha256": "deec29cf04f672b53b4def73f8422d21bdb5feddd2b7b001f122edcfa318e93d"
+    },
+    {
+      "file": "server/backend/db/migrations/001_baseline.sql",
+      "canonical": "server/db/assets/migrations/001_baseline.sql",
+      "sha256": "380ac96ea8e8b21fa84894037419dd58df84fd9b66bac609de85b3eb2316aab3"
+    },
+    {
+      "file": "server/backend/db/migrations/003_money_logs.sql",
+      "canonical": "server/db/assets/migrations/003_money_logs.sql",
+      "sha256": "d754838c6a601ac6655aa5dd287b1a18421aabaaee28c62cad53266649867a6c"
+    },
+    {
+      "file": "server/backend/db/migrations/004_users_is_admin.sql",
+      "canonical": "server/db/assets/migrations/004_users_is_admin.sql",
+      "sha256": "437018d578a195199edaef32eb258dcdc1ea2e67aa2cff69fa17635f6f4cd4ae"
+    },
+    {
+      "file": "server/backend/db/migrations/005_client_matches_list_status.sql",
+      "canonical": "server/db/assets/migrations/005_client_matches_list_status.sql",
+      "sha256": "439135537afd273492d4429dfa4cbbb42f40154b89460454ea5d6749026f52ba"
+    },
+    {
+      "file": "server/backend/db/migrations/006_tag_platforms_players.sql",
+      "canonical": "server/db/assets/migrations/006_tag_platforms_players.sql",
+      "sha256": "9c7d7cdd4cd36ffdd32a61fa84fb6b182972e7833887c42176c85476b6068f7c"
+    },
+    {
+      "file": "server/backend/db/migrations/007_platform_matches_is_live.sql",
+      "canonical": "server/db/assets/migrations/007_platform_matches_is_live.sql",
+      "sha256": "1bf5a48168a2e2a39813a9982cdb14cad236f285c3c18c1d7850a59437541fc2"
+    },
+    {
+      "file": "server/backend/db/migrations/008_user_logs.sql",
+      "canonical": "server/db/assets/migrations/008_user_logs.sql",
+      "sha256": "be6f91ed03966984a0bf7f2351ffb8da5fa0c67659d5a6187a276254124540bb"
+    },
+    {
+      "file": "server/backend/db/migrations/009_orders_changmen_bet.sql",
+      "canonical": "server/db/assets/migrations/009_orders_changmen_bet.sql",
+      "sha256": "f8c28bdcb41152126305609b307cfe085da6da2e43cf8a9fbc6a210ef28a85aa"
+    },
+    {
+      "file": "server/backend/db/migrations/010_value_signals.sql",
+      "canonical": "server/db/assets/migrations/010_value_signals.sql",
+      "sha256": "75403811afbcc4b623c6c1bee62d0a8737570f430e389706aa153fa8d5dac658"
+    },
+    {
+      "file": "server/backend/db/migrations/011_odds_history.sql",
+      "canonical": "server/db/assets/migrations/011_odds_history.sql",
+      "sha256": "0df02f05dfcea959a9654b503ba748ff6d33a98a63d7705ebc0ece478b65e40c"
+    },
+    {
+      "file": "server/backend/db/migrations/012_user_roles_teams.sql",
+      "canonical": "server/db/assets/migrations/012_user_roles_teams.sql",
+      "sha256": "9b7490b107157aad120eae081c99d006e2fe3c2baa274b47a097f2962f426ebb"
+    },
+    {
+      "file": "server/backend/db/migrations/013_widen_odds_numeric.sql",
+      "canonical": "server/db/assets/migrations/013_widen_odds_numeric.sql",
+      "sha256": "11a4213713f142af8a9b9c647643b1053bb9933c82f75ff40db9e35dcd4ce6a6"
+    },
+    {
+      "file": "server/backend/db/migrations/014_history_tables.sql",
+      "canonical": "server/db/assets/migrations/014_history_tables.sql",
+      "sha256": "b9654e68f09ac294b62f7745ab7e898a300f78bb7a22e483fdd400b8f70e2bd8"
+    },
+    {
+      "file": "server/backend/db/migrations/015_prune_indexes_and_drop_list_status.sql",
+      "canonical": "server/db/assets/migrations/015_prune_indexes_and_drop_list_status.sql",
+      "sha256": "d438651a521a039df6ff30b3151071cdfe7291e4e0614a7eb971982593cdba41"
+    },
+    {
+      "file": "server/backend/db/migrations/016_client_matches_pm_sport.sql",
+      "canonical": "server/db/assets/migrations/016_client_matches_pm_sport.sql",
+      "sha256": "3fe3641330a1f1deebe16b48038131b147e786a58e2248f0be9c0a95c59b17f1"
+    },
+    {
+      "file": "server/backend/db/migrations/017_client_matches_canonical_teams.sql",
+      "canonical": "server/db/assets/migrations/017_client_matches_canonical_teams.sql",
+      "sha256": "054cf4e35928917c4567ea36714dd71c4465b0a62e20d7c3b8a7513a9a7daaf9"
+    },
+    {
+      "file": "server/backend/db/migrations/018_client_match_platform_overrides.sql",
+      "canonical": "server/db/assets/migrations/018_client_match_platform_overrides.sql",
+      "sha256": "5c650f4087c1985dba56d07cdc3d082c997c359df24b1139926b92a460fb40d9"
+    },
+    {
+      "file": "server/backend/db/migrations/023_team_platform_maps_gb_team_id.sql",
+      "canonical": "server/db/assets/migrations/023_team_platform_maps_gb_team_id.sql",
+      "sha256": "59b90679809f7de6b9f818c783250bc2ec4870e9eadacfbba9ea1cba8eb96d4b"
+    },
+    {
+      "file": "server/backend/db/migrations/024_team_platform_maps_venue_columns.sql",
+      "canonical": "server/db/assets/migrations/024_team_platform_maps_venue_columns.sql",
+      "sha256": "0faab4e5c126878d5b16ad18a8ec7a212eb5287a2b8fbce7b3f518f851e1a2e9"
+    },
+    {
+      "file": "server/backend/db/migrations/025_team_venue_maps.sql",
+      "canonical": "server/db/assets/migrations/025_team_venue_maps.sql",
+      "sha256": "3dc0ad15e9c347b63f972427142e0c886cff3ae7a9c676cd303c364b36bb6b65"
+    },
+    {
+      "file": "server/backend/db/migrations/026_players_owner_user_id.sql",
+      "canonical": "server/db/assets/migrations/026_players_owner_user_id.sql",
+      "sha256": "926946b8a34b1e3164a16a131c760fcd371bc73ffe88401d6bcdfc68175def6e"
+    },
+    {
+      "file": "server/backend/db/migrations/027_players_active_owner_required.sql",
+      "canonical": "server/db/assets/migrations/027_players_active_owner_required.sql",
+      "sha256": "9ea47742691a16e5bd55ad66323bb5ce6ddd6104656f3c562a45cffd14284ab1"
+    },
+    {
+      "file": "server/backend/db/migrations/028_players_account_data.sql",
+      "canonical": "server/db/assets/migrations/028_players_account_data.sql",
+      "sha256": "0cb54d521a2b48660b66754a046f7d50d59962d9bb2fcd95401a1f61c449bf9b"
+    },
+    {
+      "file": "server/backend/db/migrations/029_orders_user_player_index.sql",
+      "canonical": "server/db/assets/migrations/029_orders_user_player_index.sql",
+      "sha256": "f2c3d8daebf704a06f40495f177af10abf54a8b66fb93813a77c57a10c603940"
+    },
+    {
+      "file": "server/backend/db/migrations/030_players_venue_member_id.sql",
+      "canonical": "server/db/assets/migrations/030_players_venue_member_id.sql",
+      "sha256": "ee647e912c173517a68c6bb56657161a0b576f02774f69a57188f9cdf703a44c"
+    },
+    {
+      "file": "server/backend/db/migrations/031_team_venue_maps_venue_team_id.sql",
+      "canonical": "server/db/assets/migrations/031_team_venue_maps_venue_team_id.sql",
+      "sha256": "a37905fc388dfeeb5082773a2e34d5507461c6ac5536ae3874d84e1ffe762717"
+    },
+    {
+      "file": "server/backend/db/migrations/032_players_venue_account_key.sql",
+      "canonical": "server/db/assets/migrations/032_players_venue_account_key.sql",
+      "sha256": "95c8a65a4a9371509e9b96857f4e8901051b9b59cdee7e93156879892ebd9700"
+    },
+    {
+      "file": "server/backend/db/migrations/033_sport_matcher_tables.sql",
+      "canonical": "server/db/assets/migrations/033_sport_matcher_tables.sql",
+      "sha256": "a007dfdb46cad3ef7e69e8a1434bdc49431f1591925a741dcfd36cdabdc319dd"
+    },
+    {
+      "file": "server/backend/db/migrations/034_platform_bets_market_id.sql",
+      "canonical": "server/db/assets/migrations/034_platform_bets_market_id.sql",
+      "sha256": "6f9cc42ae91e98d5cc3cf3ce8725a62fa86df468b8fca3174683fd61788776a6"
+    },
+    {
+      "file": "server/backend/db/migrations/035_players_venue_account_key_including_deleted.sql",
+      "canonical": "server/db/assets/migrations/035_players_venue_account_key_including_deleted.sql",
+      "sha256": "59fe72c3d25b72673130d0a60462ab040b4e03c4ea9b893fe2232ede0a37b3b3"
+    },
+    {
+      "file": "server/backend/db/migrations/036_team_provider_ids.sql",
+      "canonical": "server/db/assets/migrations/036_team_provider_ids.sql",
+      "sha256": "b76d0bd645331c9a893b2d753d0cfdb175f65a806eef11d949c246f081096a05"
+    },
+    {
+      "file": "server/backend/db/migrations/037_client_matches_ended_at.sql",
+      "canonical": "server/db/assets/migrations/037_client_matches_ended_at.sql",
+      "sha256": "d2e85b995eaa5e593d79cf07bfeadbc7d0624acccf7843b7e7954033738cbfb9"
+    },
+    {
+      "file": "server/backend/db/migrations/038_platform_matches_rot_num.sql",
+      "canonical": "server/db/assets/migrations/038_platform_matches_rot_num.sql",
+      "sha256": "0aa57aed03bda6c2270db7643a5b6e2b3bb9750dc3e027b22873a6628d5a8eff"
+    },
+    {
+      "file": "server/backend/db/migrations/039_platform_bets_line_id.sql",
+      "canonical": "server/db/assets/migrations/039_platform_bets_line_id.sql",
+      "sha256": "872ece80be1bc6c25f8631c4edbe918150a48c3075d70793d48309ee7651c45b"
+    },
+    {
+      "file": "server/backend/db/migrations/040_football_orders.sql",
+      "canonical": "server/db/assets/migrations/040_football_orders.sql",
+      "sha256": "e6e31c8215218e53a29119bfd08787da42496e54ce8a3b20a601bfc1d117c3dc"
+    },
+    {
+      "file": "server/backend/db/migrations/041_football_orders_status.sql",
+      "canonical": "server/db/assets/migrations/041_football_orders_status.sql",
+      "sha256": "9fee9dd7f0990bee380cfefef0d005ef8c6adb4e81acdf5032f6cf8f5f7cd627"
+    },
+    {
+      "file": "server/backend/db/migrations/042_pod_bet_executions.sql",
+      "canonical": "server/db/assets/migrations/042_pod_bet_executions.sql",
+      "sha256": "fe7efd902d4788eaabb9d766ea6a87705af1bd51e5c5332535570baaf3e19d4e"
+    },
+    {
+      "file": "server/backend/db/migrations/043_auth_session_audit.sql",
+      "canonical": "server/db/assets/migrations/043_auth_session_audit.sql",
+      "sha256": "a92cf988a22af310b95ee293c4eb396d39452796c5f1cff5bc75ce189177bc99"
+    },
+    {
+      "file": "server/backend/db/migrations/044_auth_sessions.sql",
+      "canonical": "server/db/assets/migrations/044_auth_sessions.sql",
+      "sha256": "3c1ec94ddcdd7e3c3af767cc500665792c10ad2629b918fac85cde548799089a"
+    },
+    {
+      "file": "server/backend/db/migrations/045_pod_ray_execution.sql",
+      "canonical": "server/db/assets/migrations/045_pod_ray_execution.sql",
+      "sha256": "54245dc8341d510aa4ad3ea0abd3c2b8b5883f6a16daf29a040888dff3d24253"
+    },
+    {
+      "file": "server/backend/db/migrations/20261002_order_observations.sql",
+      "canonical": "server/db/assets/migrations/20261002_order_observations.sql",
+      "sha256": "b881676624b1beab21562f614b28deb478a0f6d357400dae8cc402f050046b79"
+    },
+    {
+      "file": "server/backend/db/migrations/20261003_order_observation_execution_index.sql",
+      "canonical": "server/db/assets/migrations/20261003_order_observation_execution_index.sql",
+      "sha256": "7882c4c2acf1e9eac2295dbe5ad97c65549c77d7c617e5c9fe5d9c59a49c8554"
+    },
+    {
+      "file": "server/backend/db/migrations/20261015_reconcile_archive_schema.sql",
+      "canonical": "server/db/assets/migrations/20261015_reconcile_archive_schema.sql",
+      "sha256": "0a84b3b1c870a59885a70ac4ab55121542b6757618b7cf07453209acc231dd1f"
+    }
+  ],
+  "moves": [
+    {
+      "file": "server/backend/db/migrations/002_prune_pg_cron.sql",
+      "canonical": "server/db/assets/archive/002_prune_pg_cron.sql",
+      "beforeSha": "4203ae27527a0ebbe62b1afef64d78336c0e91d38742efe3be46677c4ea108c6",
+      "afterSha": "4203ae27527a0ebbe62b1afef64d78336c0e91d38742efe3be46677c4ea108c6"
+    },
+    {
+      "file": "server/backend/scripts/rds-migrations.test.mjs",
+      "canonical": "server/db/maintenance/rds-migrations.test.mjs",
+      "beforeSha": "407a470b52afb0e5c683dae35e6fa45ef8f6e636e8411f8f2259d51912dc4758",
+      "afterSha": "0e3419daae9805d702100f724d904f20a514cb16f99937d590b3f31c629ee2a7"
+    },
+    {
+      "file": "server/backend/scripts/rds-schema-check.test.mjs",
+      "canonical": "server/db/maintenance/rds-schema-check.test.mjs",
+      "beforeSha": "d2d82a2bd8bc92ecc0aad68c8c426deaed697b047ff8093f1c7b36de51d0bc97",
+      "afterSha": "7ec682ae1dd406de608f755eda5632c8f719be12bc4188988b6c19a8444056d4"
+    },
+    {
+      "file": "server/backend/scripts/rds-reconciliation-backup.test.mjs",
+      "canonical": "server/db/maintenance/rds-reconciliation-backup.test.mjs",
+      "beforeSha": "a6419b17a60cd0c16a809b2bfde3f1e1febc349bd51cbcd49d4a3b5fc8d88f78",
+      "afterSha": "a6419b17a60cd0c16a809b2bfde3f1e1febc349bd51cbcd49d4a3b5fc8d88f78"
+    },
+    {
+      "file": "server/backend/scripts/apply-order-observation-schema.test.mjs",
+      "canonical": "server/db/maintenance/apply-order-observation-schema.test.mjs",
+      "beforeSha": "7a9649d054f91b222886981f55fbc060f5cc9378237170f73e60a307c442cebf",
+      "afterSha": "7a9649d054f91b222886981f55fbc060f5cc9378237170f73e60a307c442cebf"
+    }
+  ],
+  "changes": [
+    {
+      "file": "server/backend/package.json",
+      "before": "{\n  \"name\": \"@changmen/backend\",\n  \"type\": \"module\",\n  \"version\": \"1.0.2\",\n  \"private\": true,\n  \"description\": \"Server: esport-api, HTTP proxy, static hosting for clients\",\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"https://github.com/j4odlu/changmen.git\"\n  },\n  \"scripts\": {\n    \"dev\": \"npm run web\",\n    \"preweb\": \"node scripts/preweb.js\",\n    \"web\": \"node scripts/start-db.mjs\",\n    \"web:rds\": \"node scripts/start-rds.mjs\",\n    \"web:restart\": \"node restart.js\",\n    \"web:restart:bg\": \"node restart.js --background\",\n    \"ob:login\": \"npm run ob:login --workspace=@changmen/platform-probes\",\n    \"ob:view\": \"npm run ob:view --workspace=@changmen/platform-probes\",\n    \"ob:live\": \"npm run ob:live --workspace=@changmen/platform-probes\",\n    \"ob:mqtt\": \"npm run ob:mqtt --workspace=@changmen/platform-probes\",\n    \"ob:hybrid\": \"npm run ob:hybrid --workspace=@changmen/platform-probes\",\n    \"ob:probe-index\": \"npm run ob:probe-index --workspace=@changmen/platform-probes\",\n    \"ob:collect-game-ids\": \"npm run ob:collect-game-ids --workspace=@changmen/platform-probes\",\n    \"ob:collect-odd-types\": \"npm run ob:collect-odd-types --workspace=@changmen/platform-probes\",\n    \"ray:match\": \"npm run ray:match --workspace=@changmen/platform-probes\",\n    \"ray:odds\": \"npm run ray:odds --workspace=@changmen/platform-probes\",\n    \"ray:ws\": \"npm run ray:ws --workspace=@changmen/platform-probes\",\n    \"pb:odds\": \"npm run pb:odds --workspace=@changmen/platform-probes\",\n    \"pb:match\": \"npm run pb:match --workspace=@changmen/platform-probes\",\n    \"pb:balance\": \"npm run pb:balance --workspace=@changmen/platform-probes\",\n    \"tf:events\": \"npm run tf:events --workspace=@changmen/platform-probes\",\n    \"ia:events\": \"npm run ia:events --workspace=@changmen/platform-probes\",\n    \"imt:events\": \"npm run imt:events --workspace=@changmen/platform-probes\",\n    \"stake:sports\": \"npm run stake:sports --workspace=@changmen/platform-probes\",\n    \"saba:parse\": \"npm run saba:parse --workspace=@changmen/platform-probes\",\n    \"hg:balance\": \"npm run hg:balance --workspace=@changmen/platform-probes\",\n    \"sync:platform-adapter\": \"npm run sync:backend-bundle --workspace=@changmen/venue-adapter-tools && npm run sync:backend-bundle --workspace=@changmen/platform-probes\",\n    \"account:cli\": \"node scripts/account_cli.js\",\n    \"account:tags\": \"node scripts/account_cli.js tags\",\n    \"purge:ob-timers\": \"node scripts/ops/incidents/purge-platform-live-timers.mjs OB\",\n    \"account:list\": \"node scripts/account_cli.js list\",\n    \"account:refresh\": \"node scripts/account_cli.js refresh-balance\",\n    \"account:create\": \"node scripts/account_cli.js create\",\n    \"account:import-platform\": \"node scripts/account_cli.js import-platform\",\n    \"account:set-a8\": \"node scripts/account_cli.js set-a8\",\n    \"user:create\": \"node scripts/create-user.js\",\n    \"db:apply\": \"node scripts/apply-rds-schema.mjs\",\n    \"db:initialize\": \"node scripts/apply-rds-schema.mjs --initialize\",\n    \"db:migrate-players\": \"node scripts/ops/migrations/migrate-players-to-rds.mjs\",\n    \"db:migrate-players-owner\": \"node scripts/ops/migrations/migrate-players-owner-user-id.mjs\",\n    \"db:migrate-accounts-from-jsonb\": \"node scripts/ops/migrations/migrate-accounts-jsonb-to-players.mjs\",\n    \"db:finalize-players-owner\": \"node scripts/ops/migrations/finalize-players-owner-user-id.mjs\",\n    \"db:backup-accounts\": \"node scripts/ops/migrations/backup-profiles-accounts.mjs\",\n    \"db:check-players\": \"node scripts/ops/migrations/check-players-rds-migrate.mjs\",\n    \"check:rds-schema\": \"node scripts/check-rds-schema.mjs\",\n    \"post-deploy:check\": \"node scripts/ops/diagnostics/post-deploy-check.mjs\",\n    \"probe:hk-relay\": \"node scripts/ops/diagnostics/probe-hk-relay.mjs\",\n    \"probe:pm-hk-relay\": \"node scripts/ops/diagnostics/probe-hk-relay.mjs\",\n    \"poly:builder-trades\": \"node scripts/ops/diagnostics/polymarket-builder-trades.mjs\",\n    \"poly:backfill-settlement\": \"node scripts/ops/migrations/backfill-polymarket-order-settlement.mjs\",\n    \"db:archive-stale\": \"node scripts/ops/migrations/archive-stale-client-matches.mjs\",\n    \"db:prune\": \"node scripts/ops/migrations/prune-stale.mjs\",\n    \"check:collect\": \"node scripts/check-collect-platforms.js\",\n    \"check:collect:probe\": \"node scripts/check-collect-platforms.js --probe\",\n    \"test:api-contract\": \"vitest run core/esport-api/core_contract.test.mjs\",\n    \"test\": \"vitest run core/matcher core/shared core/http core/auth core/certificates core/account core/db core/integrations/polymarket core/orderModes core/admin_tools/user_log_lookup.test.mjs core/admin_tools/user_log_lookup.observation.test.mjs core/admin_tools/order_observation.test.mjs scripts/apply-order-observation-schema.test.mjs scripts/rds-migrations.test.mjs scripts/rds-schema-check.test.mjs scripts/rds-reconciliation-backup.test.mjs core/esport-api/action_registry.test.mjs core/esport-api/core_contract.test.mjs core/esport-api/value_bet_contract.test.mjs core/esport-api/sport_relay_contract.test.mjs core/football/pod_bet_execution.test.js && node --import ../../scripts/testing/offline-env.mjs --test core/account/user_login_meta.test.mjs core/account/user_presence.test.mjs && npm run test:adapter\",\n    \"test:watch\": \"vitest\",\n    \"test:adapter\": \"node scripts/test-packaged-adapter-layout.js\",\n    \"test:packaged-adapter\": \"node scripts/test-packaged-adapter-layout.js\",\n    \"compile:router\": \"tsc -p tsconfig.router.json\"\n  },\n  \"dependencies\": {\n    \"@changmen/api-contract\": \"file:../../packages/api-contract\",\n    \"@changmen/db\": \"file:../db\",\n    \"@changmen/match-identity\": \"file:../match/identity\",\n    \"@changmen/matcher\": \"file:../match/matcher\",\n    \"@changmen/platform-probes\": \"file:../platform-probes\",\n    \"@changmen/polymarket-sports\": \"file:../collectors/polymarket-sports\",\n    \"@changmen/realtime-hub\": \"file:../realtime-hub\",\n    \"@changmen/shared\": \"file:../../packages/shared\",\n    \"@changmen/storage\": \"file:../storage\",\n    \"@changmen/team-resolver\": \"file:../match/resolver\",\n    \"@changmen/venue-node-loader\": \"file:../packages/venue-node-loader\",\n    \"@changmen/ws-forward\": \"file:../ws_forward\",\n    \"@polymarket/builder-relayer-client\": \"^0.0.10\",\n    \"@polymarket/builder-signing-sdk\": \"^0.0.8\",\n    \"@polymarket/client\": \"0.12.0\",\n    \"@polymarket/clob-client-v2\": \"1.2.0\",\n    \"@predictdotfun/sdk\": \"^1.3.8\",\n    \"ethers\": \"^6.17.0\",\n    \"mqtt\": \"^5.14.0\",\n    \"socket.io-client\": \"^4.8.3\",\n    \"socketcluster-client\": \"^20.0.1\",\n    \"socks-proxy-agent\": \"^8.0.5\",\n    \"viem\": \"^2.47.4\",\n    \"ws\": \"^8.21.0\"\n  },\n  \"devDependencies\": {\n    \"@changmen/venue-adapter-tools\": \"file:../packages/venue-adapter-tools\",\n    \"@types/node\": \"^25.9.2\",\n    \"tsx\": \"^4.22.4\",\n    \"typescript\": \"^6.0.3\",\n    \"vitest\": \"^4.1.8\"\n  }\n}\n",
+      "beforeSha": "eafbd203fdb22be7672fb6232ef3267e6927eafef0d42a3299fb7d31416fdf70",
+      "afterSha": "5b8323533a916348a5a6dad3d1056740c8bbd526055edc543e0ff04c3c102bb4"
+    },
+    {
+      "file": "scripts/verification/source-ownership-inputs.json",
+      "before": "{\n  \"schemaVersion\": 1,\n  \"purpose\": \"source-ownership-only\",\n  \"publishScopeOptimizationEnabled\": false,\n  \"toolingRoots\": [\n    \"devtools/venue-adapter\",\n    \"client/web/vite.config.ts\",\n    \"client/web/vite\",\n    \"client/web/scripts/bootstrap-dialogs.mjs\",\n    \"client/web/scripts/gen-platform-icons-css.mjs\",\n    \"client/web/scripts/clean-dist-assets.mjs\",\n    \"client/web/scripts/run-production-build.mjs\",\n    \"client/devtools/venue-adapter\",\n    \"devtools/runtime-tooling\"\n  ],\n  \"roots\": [\n    \"client/web/src\",\n    \"chrome-extension/src\",\n    \"packages\",\n    \"server\",\n    \"devtools/venue-adapter\",\n    \"client/web/vite.config.ts\",\n    \"client/web/vite\",\n    \"client/web/scripts/bootstrap-dialogs.mjs\",\n    \"client/web/scripts/gen-platform-icons-css.mjs\",\n    \"client/web/scripts/clean-dist-assets.mjs\",\n    \"client/web/scripts/run-production-build.mjs\",\n    \"client/devtools/venue-adapter\",\n    \"client/packages\",\n    \"devtools/runtime-tooling\"\n  ],\n  \"compatibilityAssets\": [\n    {\n      \"file\": \"server/match/identity/teams/team_aliases.json\",\n      \"canonical\": \"packages/shared/match-identity/teams/team_aliases.json\"\n    },\n    {\n      \"file\": \"server/backend/scripts/rds-schema-baseline.json\",\n      \"canonical\": \"server/db/assets/schema-baseline.json\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/001_baseline.sql\",\n      \"canonical\": \"server/db/assets/migrations/001_baseline.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/003_money_logs.sql\",\n      \"canonical\": \"server/db/assets/migrations/003_money_logs.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/004_users_is_admin.sql\",\n      \"canonical\": \"server/db/assets/migrations/004_users_is_admin.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/005_client_matches_list_status.sql\",\n      \"canonical\": \"server/db/assets/migrations/005_client_matches_list_status.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/006_tag_platforms_players.sql\",\n      \"canonical\": \"server/db/assets/migrations/006_tag_platforms_players.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/007_platform_matches_is_live.sql\",\n      \"canonical\": \"server/db/assets/migrations/007_platform_matches_is_live.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/008_user_logs.sql\",\n      \"canonical\": \"server/db/assets/migrations/008_user_logs.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/009_orders_changmen_bet.sql\",\n      \"canonical\": \"server/db/assets/migrations/009_orders_changmen_bet.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/010_value_signals.sql\",\n      \"canonical\": \"server/db/assets/migrations/010_value_signals.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/011_odds_history.sql\",\n      \"canonical\": \"server/db/assets/migrations/011_odds_history.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/012_user_roles_teams.sql\",\n      \"canonical\": \"server/db/assets/migrations/012_user_roles_teams.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/013_widen_odds_numeric.sql\",\n      \"canonical\": \"server/db/assets/migrations/013_widen_odds_numeric.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/014_history_tables.sql\",\n      \"canonical\": \"server/db/assets/migrations/014_history_tables.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/015_prune_indexes_and_drop_list_status.sql\",\n      \"canonical\": \"server/db/assets/migrations/015_prune_indexes_and_drop_list_status.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/016_client_matches_pm_sport.sql\",\n      \"canonical\": \"server/db/assets/migrations/016_client_matches_pm_sport.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/017_client_matches_canonical_teams.sql\",\n      \"canonical\": \"server/db/assets/migrations/017_client_matches_canonical_teams.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/018_client_match_platform_overrides.sql\",\n      \"canonical\": \"server/db/assets/migrations/018_client_match_platform_overrides.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/023_team_platform_maps_gb_team_id.sql\",\n      \"canonical\": \"server/db/assets/migrations/023_team_platform_maps_gb_team_id.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/024_team_platform_maps_venue_columns.sql\",\n      \"canonical\": \"server/db/assets/migrations/024_team_platform_maps_venue_columns.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/025_team_venue_maps.sql\",\n      \"canonical\": \"server/db/assets/migrations/025_team_venue_maps.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/026_players_owner_user_id.sql\",\n      \"canonical\": \"server/db/assets/migrations/026_players_owner_user_id.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/027_players_active_owner_required.sql\",\n      \"canonical\": \"server/db/assets/migrations/027_players_active_owner_required.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/028_players_account_data.sql\",\n      \"canonical\": \"server/db/assets/migrations/028_players_account_data.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/029_orders_user_player_index.sql\",\n      \"canonical\": \"server/db/assets/migrations/029_orders_user_player_index.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/030_players_venue_member_id.sql\",\n      \"canonical\": \"server/db/assets/migrations/030_players_venue_member_id.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/031_team_venue_maps_venue_team_id.sql\",\n      \"canonical\": \"server/db/assets/migrations/031_team_venue_maps_venue_team_id.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/032_players_venue_account_key.sql\",\n      \"canonical\": \"server/db/assets/migrations/032_players_venue_account_key.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/033_sport_matcher_tables.sql\",\n      \"canonical\": \"server/db/assets/migrations/033_sport_matcher_tables.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/034_platform_bets_market_id.sql\",\n      \"canonical\": \"server/db/assets/migrations/034_platform_bets_market_id.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/035_players_venue_account_key_including_deleted.sql\",\n      \"canonical\": \"server/db/assets/migrations/035_players_venue_account_key_including_deleted.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/036_team_provider_ids.sql\",\n      \"canonical\": \"server/db/assets/migrations/036_team_provider_ids.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/037_client_matches_ended_at.sql\",\n      \"canonical\": \"server/db/assets/migrations/037_client_matches_ended_at.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/038_platform_matches_rot_num.sql\",\n      \"canonical\": \"server/db/assets/migrations/038_platform_matches_rot_num.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/039_platform_bets_line_id.sql\",\n      \"canonical\": \"server/db/assets/migrations/039_platform_bets_line_id.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/040_football_orders.sql\",\n      \"canonical\": \"server/db/assets/migrations/040_football_orders.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/041_football_orders_status.sql\",\n      \"canonical\": \"server/db/assets/migrations/041_football_orders_status.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/042_pod_bet_executions.sql\",\n      \"canonical\": \"server/db/assets/migrations/042_pod_bet_executions.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/043_auth_session_audit.sql\",\n      \"canonical\": \"server/db/assets/migrations/043_auth_session_audit.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/044_auth_sessions.sql\",\n      \"canonical\": \"server/db/assets/migrations/044_auth_sessions.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/045_pod_ray_execution.sql\",\n      \"canonical\": \"server/db/assets/migrations/045_pod_ray_execution.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/20261002_order_observations.sql\",\n      \"canonical\": \"server/db/assets/migrations/20261002_order_observations.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/20261003_order_observation_execution_index.sql\",\n      \"canonical\": \"server/db/assets/migrations/20261003_order_observation_execution_index.sql\"\n    },\n    {\n      \"file\": \"server/backend/db/migrations/20261015_reconcile_archive_schema.sql\",\n      \"canonical\": \"server/db/assets/migrations/20261015_reconcile_archive_schema.sql\"\n    }\n  ],\n  \"rules\": [\n    {\n      \"prefix\": \"client/packages/venue-browser\",\n      \"layer\": \"frontend\"\n    },\n    {\n      \"prefix\": \"client/packages/arb-core\",\n      \"layer\": \"frontend\"\n    },\n    {\n      \"prefix\": \"client/packages/client-core\",\n      \"layer\": \"frontend\"\n    },\n    {\n      \"prefix\": \"devtools/runtime-tooling\",\n      \"layer\": \"shared\",\n      \"role\": \"tooling\"\n    },\n    {\n      \"files\": [\n        \"client/web/vite.config.ts\",\n        \"client/web/scripts/bootstrap-dialogs.mjs\",\n        \"client/web/scripts/gen-platform-icons-css.mjs\",\n        \"client/web/scripts/clean-dist-assets.mjs\",\n        \"client/web/scripts/run-production-build.mjs\"\n      ],\n      \"layer\": \"frontend\",\n      \"role\": \"tooling\"\n    },\n    {\n      \"prefix\": \"client/web/vite\",\n      \"layer\": \"frontend\",\n      \"role\": \"tooling\"\n    },\n    {\n      \"files\": [\n        \"server/db/assets/schema-baseline.json\"\n      ],\n      \"layer\": \"rds\",\n      \"role\": \"asset\"\n    },\n    {\n      \"prefix\": \"client/devtools/venue-adapter\",\n      \"layer\": \"frontend\",\n      \"role\": \"tooling\"\n    },\n    {\n      \"prefix\": \"devtools/venue-adapter/verification\",\n      \"layer\": \"shared\",\n      \"role\": \"tooling\"\n    },\n    {\n      \"files\": [\n        \"packages/venue-adapter/scripts/list-web-venue-imports.mjs\",\n        \"packages/venue-adapter/scripts/relativize-internal-imports.mjs\",\n        \"packages/venue-adapter/scripts/sync-package-exports.mjs\"\n      ],\n      \"layer\": \"frontend\",\n      \"role\": \"tooling\"\n    },\n    {\n      \"files\": [\n        \"packages/venue-adapter/scripts/check-esport-freeze.mjs\"\n      ],\n      \"layer\": \"shared\",\n      \"role\": \"tooling\"\n    },\n    {\n      \"files\": [\n        \"server/match/identity/teams/team_aliases.json\"\n      ],\n      \"layer\": \"shared\",\n      \"role\": \"asset\"\n    },\n    {\n      \"files\": [\n        \"packages/venue-adapter/registry/manifest.json\"\n      ],\n      \"layer\": \"shared\",\n      \"role\": \"asset\"\n    },\n    {\n      \"files\": [\n        \"server/backend/scripts/rds-schema-baseline.json\",\n        \"server/backend/scripts/rds-schema-check.mjs\",\n        \"server/backend/scripts/rds-migrations.mjs\",\n        \"server/backend/scripts/reconcile-rds-schema.mjs\",\n        \"server/backend/scripts/rds-reconciliation-backup.mjs\",\n        \"server/backend/scripts/check-rds-schema.mjs\",\n        \"server/backend/scripts/apply-rds-schema.mjs\",\n        \"server/backend/scripts/apply-order-observation-schema.mjs\"\n      ],\n      \"layer\": \"rds\"\n    },\n    {\n      \"prefix\": \"server/db\",\n      \"layer\": \"rds\"\n    },\n    {\n      \"prefix\": \"server/backend/db\",\n      \"layer\": \"rds\"\n    },\n    {\n      \"prefix\": \"server/storage\",\n      \"layer\": \"backend\",\n      \"role\": \"infrastructure\"\n    },\n    {\n      \"prefix\": \"packages/api-contract\",\n      \"layer\": \"shared\"\n    },\n    {\n      \"prefix\": \"packages/shared\",\n      \"layer\": \"shared\"\n    },\n    {\n      \"prefix\": \"packages/client-core\",\n      \"layer\": \"frontend\"\n    },\n    {\n      \"prefix\": \"packages/arb-core\",\n      \"layer\": \"frontend\"\n    },\n    {\n      \"prefix\": \"client/packages/pm-market-data-browser\",\n      \"layer\": \"frontend\"\n    },\n    {\n      \"prefix\": \"packages/venue-adapter\",\n      \"layer\": \"frontend\"\n    },\n    {\n      \"prefix\": \"client/web/src\",\n      \"layer\": \"frontend\"\n    },\n    {\n      \"prefix\": \"chrome-extension/src\",\n      \"layer\": \"frontend\"\n    },\n    {\n      \"prefix\": \"server/platform-probes\",\n      \"layer\": \"backend\",\n      \"role\": \"probe\"\n    },\n    {\n      \"prefix\": \"server\",\n      \"layer\": \"backend\"\n    }\n  ],\n  \"compatibilityEntries\": [\n    {\n      \"file\": \"server/backend/scripts/rds-migrations.mjs\",\n      \"canonical\": \"server/db/maintenance/rds-migrations.mjs\",\n      \"spec\": \"@changmen/db/maintenance/rds-migrations.mjs\"\n    },\n    {\n      \"file\": \"server/backend/scripts/rds-schema-check.mjs\",\n      \"canonical\": \"server/db/maintenance/rds-schema-check.mjs\",\n      \"spec\": \"@changmen/db/maintenance/rds-schema-check.mjs\"\n    },\n    {\n      \"file\": \"server/backend/scripts/reconcile-rds-schema.mjs\",\n      \"canonical\": \"server/db/maintenance/reconcile-rds-schema.mjs\",\n      \"spec\": \"@changmen/db/maintenance/reconcile-rds-schema.mjs\"\n    },\n    {\n      \"file\": \"server/backend/scripts/rds-reconciliation-backup.mjs\",\n      \"canonical\": \"server/db/maintenance/rds-reconciliation-backup.mjs\",\n      \"spec\": \"@changmen/db/maintenance/rds-reconciliation-backup.mjs\"\n    },\n    {\n      \"file\": \"server/match/identity/index.js\",\n      \"canonical\": \"packages/shared/match-identity/index.js\",\n      \"spec\": \"@changmen/shared/match-identity\"\n    },\n    {\n      \"file\": \"server/match/identity/time_windows.js\",\n      \"canonical\": \"packages/shared/match-identity/time_windows.js\",\n      \"spec\": \"@changmen/shared/match-identity/time_windows.js\"\n    },\n    {\n      \"file\": \"server/match/identity/ids/client_match_ids.js\",\n      \"canonical\": \"packages/shared/match-identity/ids/client_match_ids.js\",\n      \"spec\": \"@changmen/shared/match-identity/ids/client_match_ids.js\"\n    },\n    {\n      \"file\": \"server/match/identity/teams/canonical_ob_name.js\",\n      \"canonical\": \"packages/shared/match-identity/teams/canonical_ob_name.js\",\n      \"spec\": \"@changmen/shared/match-identity/teams/canonical_ob_name.js\"\n    },\n    {\n      \"file\": \"server/match/identity/teams/match_utils.js\",\n      \"canonical\": \"packages/shared/match-identity/teams/match_utils.js\",\n      \"spec\": \"@changmen/shared/match-identity/teams/match_utils.js\"\n    },\n    {\n      \"file\": \"server/match/identity/teams/provider_priority.js\",\n      \"canonical\": \"packages/shared/match-identity/teams/provider_priority.js\",\n      \"spec\": \"@changmen/shared/match-identity/teams/provider_priority.js\"\n    },\n    {\n      \"file\": \"server/match/identity/teams/team_key.js\",\n      \"canonical\": \"packages/shared/match-identity/teams/team_key.js\",\n      \"spec\": \"@changmen/shared/match-identity/teams/team_key.js\"\n    },\n    {\n      \"file\": \"server/match/identity/profiles/esport.js\",\n      \"canonical\": \"packages/shared/match-identity/profiles/esport.js\",\n      \"spec\": \"@changmen/shared/match-identity/profiles/esport.js\"\n    },\n    {\n      \"file\": \"server/backend/scripts/apply-order-observation-schema.mjs\",\n      \"canonical\": \"server/db/maintenance/apply-order-observation-schema.mjs\",\n      \"spec\": \"@changmen/db/maintenance/apply-order-observation-schema.mjs\"\n    },\n    {\n      \"file\": \"packages/shared/tooling/runtime_version.js\",\n      \"canonical\": \"devtools/runtime-tooling/runtime_version.js\",\n      \"spec\": \"@changmen/runtime-tooling/runtime_version.js\"\n    },\n    {\n      \"file\": \"packages/shared/tooling/runtime_version.d.ts\",\n      \"canonical\": \"devtools/runtime-tooling/runtime_version.d.ts\",\n      \"spec\": \"@changmen/runtime-tooling/runtime_version.js\"\n    },\n    {\n      \"file\": \"packages/shared/tooling/dev_web_port.js\",\n      \"canonical\": \"devtools/runtime-tooling/dev_web_port.js\",\n      \"spec\": \"@changmen/runtime-tooling/dev_web_port.js\"\n    },\n    {\n      \"file\": \"packages/shared/tooling/dev_web_port.d.ts\",\n      \"canonical\": \"devtools/runtime-tooling/dev_web_port.d.ts\",\n      \"spec\": \"@changmen/runtime-tooling/dev_web_port.js\"\n    }\n  ],\n  \"compatibilityCliEntries\": [\n    {\n      \"file\": \"packages/venue-adapter/scripts/list-web-venue-imports.mjs\",\n      \"canonical\": \"client/devtools/venue-adapter/list-web-venue-imports.mjs\",\n      \"spec\": \"../../../client/devtools/venue-adapter/list-web-venue-imports.mjs\"\n    },\n    {\n      \"file\": \"packages/venue-adapter/scripts/relativize-internal-imports.mjs\",\n      \"canonical\": \"client/devtools/venue-adapter/relativize-internal-imports.mjs\",\n      \"spec\": \"../../../client/devtools/venue-adapter/relativize-internal-imports.mjs\"\n    },\n    {\n      \"file\": \"packages/venue-adapter/scripts/sync-package-exports.mjs\",\n      \"canonical\": \"client/devtools/venue-adapter/sync-package-exports.mjs\",\n      \"spec\": \"../../../client/devtools/venue-adapter/sync-package-exports.mjs\"\n    },\n    {\n      \"file\": \"packages/venue-adapter/scripts/check-esport-freeze.mjs\",\n      \"canonical\": \"devtools/venue-adapter/verification/check-esport-freeze.mjs\",\n      \"spec\": \"../../../devtools/venue-adapter/verification/check-esport-freeze.mjs\"\n    },\n    {\n      \"file\": \"server/backend/scripts/check-rds-schema.mjs\",\n      \"canonical\": \"server/db/maintenance/check-rds-schema.mjs\",\n      \"spec\": \"@changmen/db/maintenance/check-rds-schema.mjs\",\n      \"command\": \"checkConfiguredRdsSchema\"\n    },\n    {\n      \"file\": \"server/backend/scripts/apply-rds-schema.mjs\",\n      \"canonical\": \"server/db/maintenance/apply-rds-schema.mjs\",\n      \"spec\": \"@changmen/db/maintenance/apply-rds-schema.mjs\",\n      \"command\": \"runConfiguredRdsSchema\"\n    }\n  ]\n}\n",
+      "beforeSha": "e3e085559433797ee81c1badf1212c134bf216691e269e71dbb391387c499ae8",
+      "afterSha": "ce941bd0a83ae63dcb625189775029ee53d1f92d90f872d9089bdc59a8a8b866"
+    },
+    {
+      "file": "deploy/scripts/deploy-server-remote.sh",
+      "before": "#!/usr/bin/env bash\n# Piped from BAT/deploy-server-core.bat or run on VPS after git pull.\nset -euo pipefail\n\nROOT=\"${DEPLOY_REPO:?DEPLOY_REPO is required}\"\nif [ \"$ROOT\" = /root/changmen ] && [ ! -d \"$ROOT\" ] && [ -d /root/gamebet ]; then\n  echo \"==> migrate DEPLOY_REPO /root/gamebet -> /root/changmen\"\n  mv /root/gamebet /root/changmen\nfi\nPM2_WEB=\"${PM2_WEB:-changmen-esport}\"\nPM2_PM_SPORTS=\"${PM2_PM_SPORTS:-changmen-pm-sports}\"\nPM2_POLYMARKET=\"${PM2_POLYMARKET:-changmen-polymarket-collector}\"\nPM2_PM_FOOTBALL=\"${PM2_PM_FOOTBALL:-changmen-pm-football-collector}\"\nPM2_PM_MARKET_HUB=\"${PM2_PM_MARKET_HUB:-changmen-pm-market-hub}\"\nPM2_PM_SPORT_MARKET_HUB=\"${PM2_PM_SPORT_MARKET_HUB:-changmen-pm-sport-market-hub}\"\nPM2_PREDICTFUN_MARKET_HUB=\"${PM2_PREDICTFUN_MARKET_HUB:-changmen-predictfun-market-hub}\"\nPM2_SXBET_MARKET_HUB=\"${PM2_SXBET_MARKET_HUB:-changmen-sxbet-market-hub}\"\nPM2_PREDICTFUN=\"${PM2_PREDICTFUN:-changmen-predictfun-collector}\"\nPM2_SXBET=\"${PM2_SXBET:-changmen-sxbet-collector}\"\nPM2_MATCHER=\"${PM2_MATCHER:-changmen-matcher}\"\nDEPLOY_FULL=\"${DEPLOY_FULL:-0}\"\nDEPLOY_SKIP_APP_BUILD=\"${DEPLOY_SKIP_APP_BUILD:-0}\"\n\nt0=$SECONDS\nlog() { echo \"==> $*\"; }\nelapsed() { echo \"==> done in $((SECONDS - t0))s total\"; }\n\nif [ -f \"$ROOT/changmen/package.json\" ]; then\n  GIT_ROOT=\"$ROOT\"\n  CHANGMEN=\"$ROOT/changmen\"\nelif [ -f \"$ROOT/package.json\" ] && [ -d \"$ROOT/server/backend\" ]; then\n  GIT_ROOT=\"$ROOT\"\n  CHANGMEN=\"$ROOT\"\nelse\n  echo \"ERROR: changmen not found under DEPLOY_REPO=$ROOT\"\n  exit 1\nfi\n\nlog \"git root: $GIT_ROOT\"\nlog \"changmen: $CHANGMEN\"\n\nresolve_ecosystem_config() {\n  if [ -f \"$CHANGMEN/deploy/ecosystem.config.cjs\" ]; then\n    echo \"$CHANGMEN/deploy/ecosystem.config.cjs\"\n  elif [ -f \"$GIT_ROOT/deploy/ecosystem.config.cjs\" ]; then\n    echo \"$GIT_ROOT/deploy/ecosystem.config.cjs\"\n  else\n    echo \"$CHANGMEN/ecosystem.config.cjs\"\n  fi\n}\nECOSYSTEM_CONFIG=\"$(resolve_ecosystem_config)\"\nlog \"pm2 ecosystem: $ECOSYSTEM_CONFIG\"\n\ndiscard_deploy_drift() {\n  local p\n  for p in changmen/package-lock.json package-lock.json; do\n    if [ -e \"$p\" ] && ! git diff --quiet -- \"$p\" 2>/dev/null; then\n      log \"discard local drift: $p\"\n      git checkout -- \"$p\" 2>/dev/null || git restore -- \"$p\" 2>/dev/null || true\n    fi\n  done\n}\n\npull_repo() {\n  discard_deploy_drift\n  if git pull --ff-only; then\n    return 0\n  fi\n  log \"git pull failed, fetch and reset to origin (VPS should match remote)\"\n  local branch\n  branch=\"$(git rev-parse --abbrev-ref HEAD)\"\n  git fetch origin\n  git reset --hard \"origin/${branch}\"\n}\n\ncd \"$CHANGMEN\"\nif [ \"${DEPLOY_SKIP_GIT_PULL:-0}\" = \"1\" ]; then\n  OLD_HEAD=\"${DEPLOY_OLD_HEAD:-}\"\n  NEW_HEAD=\"${DEPLOY_NEW_HEAD:-}\"\n  if [ -d \"$GIT_ROOT/.git\" ]; then\n    [ -n \"$OLD_HEAD\" ] || OLD_HEAD=\"$(git -C \"$GIT_ROOT\" rev-parse HEAD 2>/dev/null || true)\"\n    [ -n \"$NEW_HEAD\" ] || NEW_HEAD=\"$(git -C \"$GIT_ROOT\" rev-parse HEAD 2>/dev/null || true)\"\n  fi\n  if [ -z \"$OLD_HEAD\" ] && [ -z \"$NEW_HEAD\" ]; then\n    OLD_HEAD=\"archive\"\n    NEW_HEAD=\"archive\"\n  fi\n  log \"skip git pull (archive sync) ${OLD_HEAD:0:8}..${NEW_HEAD:0:8}\"\nelif [ ! -d \"$GIT_ROOT/.git\" ]; then\n  echo \"ERROR: $GIT_ROOT is not a git repo.\"\n  exit 1\nelse\n  OLD_HEAD=\"$(git rev-parse HEAD)\"\n  pull_repo\n  NEW_HEAD=\"$(git rev-parse HEAD)\"\n\n  if [ -z \"${DEPLOY_REEXEC:-}\" ]; then\n    export DEPLOY_REEXEC=1\n    export DEPLOY_OLD_HEAD=\"$OLD_HEAD\"\n    export DEPLOY_NEW_HEAD=\"$NEW_HEAD\"\n    exec env DEPLOY_REEXEC=1 DEPLOY_OLD_HEAD=\"$OLD_HEAD\" DEPLOY_NEW_HEAD=\"$NEW_HEAD\" \\\n      DEPLOY_REPO=\"$ROOT\" DEPLOY_FULL=\"$DEPLOY_FULL\" DEPLOY_SKIP_APP_BUILD=\"$DEPLOY_SKIP_APP_BUILD\" \\\n      PM2_WEB=\"$PM2_WEB\" PM2_PM_SPORTS=\"$PM2_PM_SPORTS\" \\\n      bash \"$GIT_ROOT/deploy/scripts/deploy-server-remote.sh\"\n  fi\n  if [ -n \"${DEPLOY_OLD_HEAD:-}\" ] && [ -n \"${DEPLOY_NEW_HEAD:-}\" ]; then\n    OLD_HEAD=\"$DEPLOY_OLD_HEAD\"\n    NEW_HEAD=\"$DEPLOY_NEW_HEAD\"\n  fi\nfi\n\nDO_INSTALL_ROOT=0\nDO_INSTALL_FRONTEND=0\nDO_APP_BUILD=0\nDO_COMPILE_ROUTER=0\nDO_PM2_WEB=0\nDO_PM2_PM_SPORTS=0\nDO_PM2_PM_FOOTBALL=0\nNEED_DIST_UPLOAD=0\n\nclassify() {\n  local raw=\"$1\"\n  local p=\"${raw#changmen/}\"\n\n  case \"$p\" in\n    server/backend/db/migrations/*|server/db/schema/*|server/backend/scripts/ops/migrations/*|server/backend/scripts/apply-rds-schema.mjs|server/backend/scripts/apply-order-observation-schema.mjs|server/backend/scripts/ops/diagnostics/check-rds-schema.mjs|server/backend/scripts/check-rds-schema.mjs|server/backend/scripts/rds-schema-*|server/backend/scripts/rds-migrations.mjs|server/backend/scripts/rds-migrations.test.mjs)\n      # RDS maintenance is never an application release operation.\n      ;;\n    package.json|package-lock.json)\n      DO_INSTALL_ROOT=1\n      DO_PM2_WEB=1\n      ;;\n    packages/shared/*|packages/api-contract/*|client/platform-adapter/*|packages/venue-adapter/*)\n      DO_INSTALL_ROOT=1\n      DO_INSTALL_FRONTEND=1\n      DO_APP_BUILD=1\n      DO_PM2_WEB=1\n      ;;\n    server/db/*|server/platform-probes/*|devtools/platform-probes/*)\n      DO_INSTALL_ROOT=1\n      DO_PM2_WEB=1\n      ;;\n    # identity / resolver / matcher（含合场 compose/）—— matcher 内嵌于 esport\n    server/match/*)\n      DO_INSTALL_ROOT=1\n      DO_PM2_WEB=1\n      ;;\n    server/collectors/polymarket-sports/*|server/realtime-hub/*)\n      DO_INSTALL_ROOT=1\n      DO_PM2_WEB=1\n      DO_PM2_PM_SPORTS=1\n      ;;\n    server/collectors/polymarket-esports/*)\n      DO_INSTALL_ROOT=1\n      DO_PM2_WEB=1\n      ;;\n    server/collectors/polymarket-football/*)\n      DO_INSTALL_ROOT=1\n      DO_PM2_WEB=1\n      DO_PM2_PM_FOOTBALL=1\n      ;;\n    server/collectors/predictfun-collector/*|server/ws_forward/*|server/storage/*)\n      DO_INSTALL_ROOT=1\n      DO_PM2_WEB=1\n      ;;\n    server/backend/*)\n      DO_INSTALL_ROOT=1\n      DO_PM2_WEB=1\n      DO_COMPILE_ROUTER=1\n      ;;\n    client/web/*)\n      DO_INSTALL_FRONTEND=1\n      DO_APP_BUILD=1\n      ;;\n    .github/workflows/*|client/chrome-extension/*|BAT/*|deploy/scripts/deploy-server-remote.sh|deploy/**|PRODUCTION_DEPLOYMENT.md)\n      ;;\n    deploy/ecosystem.config.cjs|ecosystem.config.cjs)\n      DO_PM2_WEB=1\n      DO_PM2_PM_SPORTS=1\n      ;;\n    lines/*)\n      ;;\n    *.md|.gitignore)\n      ;;\n    *)\n      log \"unknown change: $raw (running full deploy for safety)\"\n      DO_INSTALL_ROOT=1\n      DO_INSTALL_FRONTEND=1\n      DO_APP_BUILD=1\n      DO_PM2_WEB=1\n      ;;\n  esac\n  return 0\n}\n\nif [ \"${DEPLOY_RELEASE_MODE:-0}\" = \"1\" ]; then\n  # release-backend.sh has already installed and compiled in an isolated tree.\n  # Select runtime targets; SQL/data maintenance is not part of activation.\n  DO_PM2_WEB=1\n  DO_PM2_PM_SPORTS=1\n  DO_PM2_PM_FOOTBALL=1\nelif [ \"$DEPLOY_FULL\" = \"1\" ]; then\n  DO_INSTALL_ROOT=1\n  DO_INSTALL_FRONTEND=1\n  DO_APP_BUILD=1\n  DO_COMPILE_ROUTER=1\n  DO_PM2_WEB=1\n  DO_PM2_PM_SPORTS=1\n  DO_PM2_PM_FOOTBALL=1\nelif [ -n \"${DEPLOY_CHANGED_PATHS_FILE:-}\" ]; then\n  test -f \"$DEPLOY_CHANGED_PATHS_FILE\" || { echo \"ERROR: missing deploy change manifest\"; exit 1; }\n  log \"classify archive using verified source change manifest\"\n  while IFS= read -r path; do\n    [ -z \"$path\" ] || classify \"$path\"\n  done < \"$DEPLOY_CHANGED_PATHS_FILE\"\nelif [ \"$OLD_HEAD\" = \"$NEW_HEAD\" ]; then\n  if [ \"${DEPLOY_SKIP_GIT_PULL:-0}\" = \"1\" ]; then\n    log \"archive sync (same HEAD ${NEW_HEAD:0:8}); refresh dist from PC\"\n    NEED_DIST_UPLOAD=1\n    DO_INSTALL_ROOT=1\n    DO_PM2_WEB=1\n    DO_PM2_PM_SPORTS=1\n    DO_PM2_PM_FOOTBALL=1\n    DO_COMPILE_ROUTER=1\n  else\n    log \"already up to date, skip install/build\"\n  fi\nelif git cat-file -e \"${OLD_HEAD}^{commit}\" 2>/dev/null && git cat-file -e \"${NEW_HEAD}^{commit}\" 2>/dev/null; then\n  while IFS= read -r path; do\n    if [ -n \"$path\" ]; then\n      classify \"$path\"\n    fi\n  done < <(git diff --name-only \"$OLD_HEAD\" \"$NEW_HEAD\")\nelse\n  log \"git diff unavailable; safe install + pm2 restart (archive sync fallback)\"\n  DO_INSTALL_ROOT=1\n  DO_PM2_WEB=1\n  DO_PM2_PM_SPORTS=1\n  DO_PM2_PM_FOOTBALL=1\nfi\n\nif [ \"$DEPLOY_SKIP_APP_BUILD\" = \"1\" ] && [ \"$DO_APP_BUILD\" = \"1\" ]; then\n  NEED_DIST_UPLOAD=1\nfi\nif [ \"$DEPLOY_SKIP_APP_BUILD\" = \"1\" ]; then\n  DO_APP_BUILD=0\nfi\n\nif [ \"${DEPLOY_PLAN_ONLY:-0}\" = \"1\" ]; then\n  printf \"DEPLOY_PLAN full=%s install=%s compile=%s web=%s\\n\" \"$DEPLOY_FULL\" \"$DO_INSTALL_ROOT\" \"$DO_COMPILE_ROUTER\" \"$DO_PM2_WEB\"\n  exit 0\nfi\n\ncd \"$CHANGMEN\"\nDIST_UPLOAD_MARKER=\"$CHANGMEN/client/web/.deploy-needs-dist-upload\"\nif [ \"${DEPLOY_RELEASE_MODE:-0}\" != \"1\" ]; then rm -f \"$DIST_UPLOAD_MARKER\"; fi\nif [ \"${DEPLOY_RELEASE_MODE:-0}\" = \"1\" ]; then\n  log \"isolated backend release; frontend publish marker untouched\"\nelif [ \"$NEED_DIST_UPLOAD\" = \"1\" ]; then\n  log \"frontend changed; local dist upload required\"\n  printf '%s\\n' \"$NEW_HEAD\" > \"$DIST_UPLOAD_MARKER\"\nelse\n  log \"frontend dist upload not required\"\nfi\n\nif [ \"$DO_INSTALL_ROOT\" = \"1\" ] || [ \"$DO_INSTALL_FRONTEND\" = \"1\" ]; then\n  log \"npm install (changmen workspaces)\"\n  npm install\nfi\n\nif [ \"$DO_APP_BUILD\" = \"1\" ]; then\n  log \"app:build (slow on VPS; set DEPLOY_LOCAL_BUILD=1 in deploy-server.local.bat to build on PC)\"\n  npm run app:build\nelse\n  log \"skip app:build\"\nfi\n\nif [ \"$DO_COMPILE_ROUTER\" = \"1\" ]; then\n  log \"compile:router (router.js is gitignored; must match router.ts on VPS)\"\n  npm run compile:router --workspace=@changmen/backend\nelse\n  log \"skip compile:router\"\nfi\n\nif [ \"$DO_PM2_WEB\" = \"0\" ] && [ \"$DO_PM2_PM_SPORTS\" = \"0\" ] && [ \"$DO_PM2_PM_FOOTBALL\" = \"0\" ]; then\n  log \"skip pm2 operations (no backend changes)\"\nelif command -v pm2 >/dev/null 2>&1; then\n  LEGACY_PM2_DELETED=0\n  migrate_legacy_pm2_names() {\n    local pair old new\n    for pair in \"gamebet-web:changmen-esport\" \"gamebet-pm-sports:changmen-pm-sports\" \"gamebet-matcher:changmen-matcher\" \"changmen-web:changmen-esport\"; do\n      old=\"${pair%%:*}\"\n      new=\"${pair##*:}\"\n      if pm2 describe \"$old\" >/dev/null 2>&1 && ! pm2 describe \"$new\" >/dev/null 2>&1; then\n        log \"pm2 legacy process $old -> delete (replaced by $new)\"\n        pm2 delete \"$old\" >/dev/null 2>&1 || true\n        LEGACY_PM2_DELETED=1\n      fi\n    done\n  }\n  migrate_legacy_pm2_names\n  if [ \"$LEGACY_PM2_DELETED\" = \"1\" ]; then\n    log \"legacy pm2 removed; ensure changmen processes restart\"\n    DO_PM2_WEB=1\n    DO_PM2_PM_SPORTS=1\n  fi\n  log \"stop legacy standalone ${PM2_MATCHER} if present\"\n  pm2 delete \"$PM2_MATCHER\" >/dev/null 2>&1 || pm2 stop \"$PM2_MATCHER\" >/dev/null 2>&1 || true\n  # SXBet 场馆已暂停：下次部署删掉 collector / market-hub（ecosystem 仍保留条目供手动恢复）\n  log \"stop paused SXBet processes if present (${PM2_SXBET}, ${PM2_SXBET_MARKET_HUB})\"\n  pm2 delete \"$PM2_SXBET\" >/dev/null 2>&1 || pm2 stop \"$PM2_SXBET\" >/dev/null 2>&1 || true\n  pm2 delete \"$PM2_SXBET_MARKET_HUB\" >/dev/null 2>&1 || pm2 stop \"$PM2_SXBET_MARKET_HUB\" >/dev/null 2>&1 || true\n  PM2_TARGETS=()\n  if [ \"$DO_PM2_WEB\" = \"1\" ]; then\n    PM2_TARGETS+=(\"$PM2_PM_FOOTBALL\")\n  elif [ \"$DO_PM2_PM_FOOTBALL\" = \"1\" ]; then\n    PM2_TARGETS+=(\"$PM2_PM_FOOTBALL\")\n  fi\n  if [ \"$DO_PM2_WEB\" = \"1\" ]; then\n    PM2_TARGETS+=(\"$PM2_WEB\")\n  fi\n  if [ \"$DO_PM2_PM_SPORTS\" = \"1\" ]; then\n    PM2_TARGETS+=(\"$PM2_PM_SPORTS\")\n  fi\n  # 电竞 PM/PF discovery：与 esport/pm-sports 同启（SXBet collector 已暂停）\n  if [ \"$DO_PM2_WEB\" = \"1\" ] || [ \"$DO_PM2_PM_SPORTS\" = \"1\" ]; then\n    PM2_TARGETS+=(\"$PM2_POLYMARKET\")\n    PM2_TARGETS+=(\"$PM2_PREDICTFUN\")\n  fi\n  # PM-MARKET / PM-SPORT-MARKET / PREDICTFUN-MARKET hub 独立进程：与 esport 同启（勿挂回 esport）\n  if [ \"$DO_PM2_WEB\" = \"1\" ]; then\n    PM2_TARGETS+=(\"$PM2_PM_MARKET_HUB\")\n    PM2_TARGETS+=(\"$PM2_PM_SPORT_MARKET_HUB\")\n    PM2_TARGETS+=(\"$PM2_PREDICTFUN_MARKET_HUB\")\n    ENV_FILE=\"$CHANGMEN/server/backend/.env\"\n    if [ -f \"$ENV_FILE\" ] && grep -E '^[[:space:]]*WS_FORWARD_PLATFORMS=' \"$ENV_FILE\" | grep -q 'PM-MARKET'; then\n      log \"WARN: WS_FORWARD_PLATFORMS still contains PM-MARKET — remove it so hub stays isolated (esport will re-attach fan-out and may hang HTTP)\"\n    fi\n    if [ -f \"$ENV_FILE\" ] && grep -E '^[[:space:]]*WS_FORWARD_PLATFORMS=' \"$ENV_FILE\" | grep -q 'PM-SPORT-MARKET'; then\n      log \"WARN: WS_FORWARD_PLATFORMS still contains PM-SPORT-MARKET — remove it so sport hub stays isolated\"\n    fi\n    if [ -f \"$ENV_FILE\" ] && grep -E '^[[:space:]]*WS_FORWARD_PLATFORMS=' \"$ENV_FILE\" | grep -q 'PREDICTFUN-MARKET'; then\n      log \"WARN: WS_FORWARD_PLATFORMS still contains PREDICTFUN-MARKET — remove it so changmen-predictfun-market-hub stays isolated\"\n    fi\n    if [ -f \"$ENV_FILE\" ] && ! grep -E '^[[:space:]]*PREDICT_FUN_API_KEY=.+' \"$ENV_FILE\" >/dev/null 2>&1; then\n      log \"WARN: PREDICT_FUN_API_KEY missing in server/backend/.env — changmen-predictfun-market-hub / 体育 PF REST 可能无法连官方\"\n    fi\n  fi\n  if [ \"${#PM2_TARGETS[@]}\" -gt 0 ]; then\n    log \"pm2 restart ${PM2_TARGETS[*]}\"\n    for target in \"${PM2_TARGETS[@]}\"; do\n      recreate=0\n      if [ \"${DEPLOY_SKIP_GIT_PULL:-0}\" = \"1\" ]; then\n        recreate=1\n      elif pm2 describe \"$target\" >/dev/null 2>&1; then\n        case \"$target\" in\n          \"$PM2_WEB\")\n            expected_cwd=\"$CHANGMEN/server/backend\"\n            ;;\n          \"$PM2_PM_SPORTS\")\n            expected_cwd=\"$CHANGMEN/server/collectors/polymarket-sports\"\n            ;;\n          \"$PM2_POLYMARKET\")\n            expected_cwd=\"$CHANGMEN/server/collectors/polymarket-esports\"\n            ;;\n          \"$PM2_PM_FOOTBALL\")\n            expected_cwd=\"$CHANGMEN/server/collectors/polymarket-football\"\n            ;;\n          \"$PM2_PREDICTFUN\")\n            expected_cwd=\"$CHANGMEN/server/collectors/predictfun-collector\"\n            ;;\n          \"$PM2_SXBET\")\n            expected_cwd=\"$CHANGMEN/server/collectors/sxbet-collector\"\n            ;;\n          \"$PM2_PM_MARKET_HUB\")\n            expected_cwd=\"$CHANGMEN/server/ws_forward\"\n            ;;\n          \"$PM2_PM_SPORT_MARKET_HUB\")\n            expected_cwd=\"$CHANGMEN/server/ws_forward\"\n            ;;\n          \"$PM2_PREDICTFUN_MARKET_HUB\")\n            expected_cwd=\"$CHANGMEN/server/ws_forward\"\n            ;;\n          \"$PM2_SXBET_MARKET_HUB\")\n            expected_cwd=\"$CHANGMEN/server/ws_forward\"\n            ;;\n          *)\n            expected_cwd=\"\"\n            ;;\n        esac\n        if [ -n \"$expected_cwd\" ]; then\n          actual_cwd=\"$(pm2 show \"$target\" 2>/dev/null | sed -n 's/.*exec cwd[[:space:]]*│[[:space:]]*//p' | head -1 | xargs || true)\"\n          if [ -n \"$actual_cwd\" ] && [ \"$actual_cwd\" != \"$expected_cwd\" ]; then\n            log \"pm2 $target cwd drift ($actual_cwd != $expected_cwd); recreate from ecosystem\"\n            recreate=1\n          fi\n        fi\n      fi\n      if [ \"$recreate\" = \"1\" ] && pm2 describe \"$target\" >/dev/null 2>&1; then\n        pm2 delete \"$target\" >/dev/null 2>&1 || true\n      fi\n      if pm2 describe \"$target\" >/dev/null 2>&1; then\n        pm2 restart \"$target\" --update-env\n      else\n        pm2 start \"$ECOSYSTEM_CONFIG\" --only \"$target\" --update-env\n      fi\n    done\n    pm2 save >/dev/null 2>&1 || true\n    pm2 status\n  else\n    log \"skip pm2 restart\"\n  fi\n  # changmen-polymarket-collector / changmen-predictfun-collector 已随 esport/pm-sports 一并启动。\nelse\n  echo \"WARN: pm2 not found, skip restart\"\nfi\n\nif [ \"$DO_PM2_WEB\" = \"1\" ] || [ \"$DEPLOY_FULL\" = \"1\" ]; then\n  if [ \"${DEPLOY_SKIP_POSTCHECK:-0}\" = \"1\" ]; then\n    log \"skip post-deploy check (GHA runs after dist upload)\"\n  elif [ ! -f \"$CHANGMEN/server/backend/.env\" ]; then\n    echo \"ERROR: missing $CHANGMEN/server/backend/.env before post-deploy check\"\n    exit 1\n  else\n    log \"post-deploy check (orders upsert + admin telegram)\"\n    (cd server/backend && node scripts/ops/diagnostics/post-deploy-check.mjs)\n    log \"post-deploy check passed\"\n    log \"HK relay egress probe\"\n    if (cd server/backend && node scripts/ops/diagnostics/probe-hk-relay.mjs); then\n      log \"HK relay probe passed\"\n    else\n      echo \"WARN: HK relay probe failed — set PROBE_TOKEN in server/backend/.env if HTTP_RELAY_REQUIRE_TOKEN=1; or run sync-hk-relay-env-remote.sh\"\n    fi\n    log \"wait embedded matcher heartbeat\"\n    for i in $(seq 1 45); do\n      if node --input-type=module -e \"import { isMatcherRunning, readMatcherHeartbeat } from './server/match/matcher/lib/heartbeat.js'; const hb = readMatcherHeartbeat(); if (hb?.mode === 'embedded' && isMatcherRunning(hb)) process.exit(0); process.exit(1);\"; then\n        log \"embedded matcher heartbeat ok\"\n        break\n      fi\n      if [ \"$i\" = \"45\" ]; then\n        echo \"ERROR: embedded matcher heartbeat not ready\"\n        node --input-type=module -e \"import { readMatcherHeartbeat } from './server/match/matcher/lib/heartbeat.js'; console.error('heartbeat:', JSON.stringify(readMatcherHeartbeat()));\" || true\n        pm2 logs \"$PM2_WEB\" --lines 40 --nostream 2>/dev/null || true\n        exit 1\n      fi\n      sleep 3\n    done\n  fi\nfi\n\nlog \"deploy done\"\nelapsed\n",
+      "beforeSha": "30f604127d621a5bed220fd4134e9f0424993a2df6bf11017990aa34416476ca",
+      "afterSha": "f79e8ce7ab0406755686884b377d0b8b185fd7731250e19909feea983491253c"
+    },
+    {
+      "file": "scripts/deploy/classify-deploy-scope.mjs",
+      "before": "/**\n * Classify deploy scope from changed paths (step 5: FE/BE split pipelines).\n *\n * @param {string[]} paths\n * @returns {'frontend' | 'backend' | 'full' | 'noop'}\n */\nexport function isDatabaseMaintenancePath(p) {\n  return /^(?:server\\/backend\\/db\\/migrations\\/|server\\/db\\/schema\\/|server\\/backend\\/scripts\\/ops\\/migrations\\/)/.test(p)\n    || /^server\\/backend\\/scripts\\/(?:apply-rds-schema|apply-order-observation-schema)\\.mjs$/.test(p)\n    || /^server\\/backend\\/scripts\\/(?:check-rds-schema\\.mjs|rds-schema-[^/]+|rds-migrations(?:\\.test)?\\.mjs)$/.test(p)\n    || p === \"server/backend/scripts/ops/diagnostics/check-rds-schema.mjs\";\n}\n\nexport function classifyDeployScope(paths) {\n  let frontend = false;\n  let backend = false;\n  let sawDeployRelevant = false;\n\n  for (const raw of paths || []) {\n    const p = String(raw || \"\").replace(/^changmen\\//, \"\").replace(/^\\.\\//, \"\").trim();\n    if (!p)\n      continue;\n\n    if (isDatabaseMaintenancePath(p)) continue;\n\n    // Docs / local-only — no VPS action\n    if (\n      /\\.md$/i.test(p)\n      || p === \".gitignore\"\n      || p.startsWith(\"docs/\")\n      || p.startsWith(\".tmp/\")\n      || p.startsWith(\"BAT/\")\n      || p.startsWith(\"certificate/\")\n      || p.startsWith(\"orders_purge\")\n    ) {\n      continue;\n    }\n\n    // CI workflow text only — runners pick it up next push; no live VPS mutate\n    if (p.startsWith(\".github/\"))\n      continue;\n\n    // Chrome extension ships separately\n    if (p.startsWith(\"client/chrome-extension/\") || p.startsWith(\"chrome-extension/\"))\n      continue;\n\n    sawDeployRelevant = true;\n\n    // [changmen 扩展] This Node helper is also consumed by the frontend build.\n    // Publication/evidence plumbing is shared by both component transports.\n    if (p.startsWith(\"server/storage/runtime_version.\")\n      || p.startsWith(\"devtools/runtime-tooling/\")\n      || p === \"scripts/deploy/publish.sh\"\n      || /^scripts\\/deploy\\/(?:release-evidence|release-retention|verify-runtime|change-plan|check-controls)\\./.test(p)\n      || p === \"deploy/scripts/release-common.sh\"\n      || p.startsWith(\"sh/deploy-\")) {\n      frontend = true;\n      backend = true;\n      continue;\n    }\n    if (p === \"deploy/scripts/release-frontend.sh\") {\n      frontend = true;\n      continue;\n    }\n\n    if (p === \"package.json\" || p === \"package-lock.json\" || p === \"turbo.json\") {\n      frontend = true;\n      backend = true;\n      continue;\n    }\n\n    if (p.startsWith(\"client/web/\")) {\n      frontend = true;\n      continue;\n    }\n\n    if (\n      p.startsWith(\"packages/venue-adapter/\")\n      || /^server\\/packages\\/(?:venue-node-(?:loader|registry)|venue-adapter-tools)\\//.test(p)\n      || p.startsWith(\"client/platform-adapter/\")\n      || p.startsWith(\"packages/\")\n    ) {\n      frontend = true;\n      backend = true;\n      continue;\n    }\n\n    if (\n      p.startsWith(\"server/\")\n      || p.startsWith(\"deploy/\")\n      || p.startsWith(\"devtools/\")\n      || p.startsWith(\"scripts/deploy/\")\n      || p.startsWith(\"lines/\")\n    ) {\n      backend = true;\n      continue;\n    }\n\n    // Unknown path → full (safe)\n    frontend = true;\n    backend = true;\n  }\n\n  if (!sawDeployRelevant)\n    return \"noop\";\n  if (frontend && backend)\n    return \"full\";\n  if (frontend)\n    return \"frontend\";\n  if (backend)\n    return \"backend\";\n  return \"noop\";\n}\n\n/**\n * @param {string} fromSha\n * @param {string} toSha\n * @param {{ execFileSync?: (file: string, args: string[], opts?: object) => string, execSync?: (cmd: string, opts?: object) => string }} [opts]\n * @returns {string[] | null} null = unknown base / git failed → treat as full\n */\nexport function listChangedPaths(fromSha, toSha, opts = {}) {\n  const from = String(fromSha || \"\").trim();\n  const to = String(toSha || \"\").trim() || \"HEAD\";\n  if (!from || /^0+$/.test(from))\n    return null;\n\n  try {\n    let out;\n    if (opts.execFileSync) {\n      out = opts.execFileSync(\"git\", [\"diff\", \"--name-only\", from, to], {\n        encoding: \"utf8\",\n        stdio: [\"ignore\", \"pipe\", \"pipe\"],\n      });\n    }\n    else if (opts.execSync) {\n      // Tests / legacy: still accept execSync, but quote is caller responsibility\n      out = opts.execSync(`git diff --name-only ${from} ${to}`, {\n        encoding: \"utf8\",\n        stdio: [\"ignore\", \"pipe\", \"pipe\"],\n      });\n    }\n    else {\n      throw new Error(\"listChangedPaths requires opts.execFileSync or opts.execSync\");\n    }\n    return String(out).split(/\\r?\\n/).map((s) => s.trim()).filter(Boolean);\n  }\n  catch {\n    return null;\n  }\n}\n\n/**\n * Resolve scope for a push / manual run.\n * @param {{ from?: string, to?: string, forceFull?: boolean, paths?: string[], execSync?: Function }} input\n */\nexport function resolveDeployScope(input = {}) {\n  if (input.forceFull)\n    return { scope: \"full\", paths: input.paths || [], reason: \"force_full\" };\n\n  if (Array.isArray(input.paths)) {\n    const scope = classifyDeployScope(input.paths);\n    return { scope, paths: input.paths, reason: \"paths\" };\n  }\n\n  const paths = listChangedPaths(input.from || \"\", input.to || \"HEAD\", {\n    execFileSync: input.execFileSync,\n    execSync: input.execSync,\n  });\n  if (!paths)\n    return { scope: \"full\", paths: [], reason: \"unknown_base\" };\n\n  const scope = classifyDeployScope(paths);\n  return { scope, paths, reason: \"git_diff\" };\n}\n",
+      "beforeSha": "8ab00e9b64cab1be7c52de20bacf1d2283850c18308333c4ba75c6d2f80c5b44",
+      "afterSha": "a410f4ea5fb3ccdbd27aec497baa8e356ec1454cc3b9b8d5dbb76835c395b143"
+    }
+  ]
+}

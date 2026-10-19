@@ -1,6 +1,6 @@
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
 import { gtcDecimal, gtcPmNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc";
-import { resolveGtcFillFee } from "@changmen/venue-adapter/polymarket/gtc";
+import { resolveGtcFillFee } from "@changmen/venue-browser/adapter/polymarket/gtc";
 import { gtcOriginalOrderActions } from "@/orderModes/gtc/executionIdentity";
 import { legacyGtcQueryIssue } from "./syncStatus";
 

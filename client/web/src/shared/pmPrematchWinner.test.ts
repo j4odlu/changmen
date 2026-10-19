@@ -1,5 +1,5 @@
 import type { ViewBet, ViewMatch } from "@/models/match";
-import { replacePmMapOutcomesFromIndex } from "@changmen/venue-adapter/polymarket";
+import { replacePmMapOutcomesFromIndex } from "@changmen/venue-browser/adapter/polymarket";
 import { renderToString } from "@vue/server-renderer";
 import { afterEach, expect, it } from "vitest";
 import { createSSRApp } from "vue";

@@ -8,7 +8,7 @@ vi.mock("@/api/client", () => ({ post: mock.post, unwrap: (response: { success: 
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: mock.user, isLoggedIn: true }) }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ adminWorkspacePreview: mock.preview,
   findAccount: (id: number) => id === 1 ? { accountId: 1, provider: "Polymarket" } : { accountId: 2, provider: "RAY" } }) }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ pmSubmitMaker: () => mock.maker }));
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ pmSubmitMaker: () => mock.maker }));
 const id = "11111111-1111-4111-8111-111111111111";
 const plan = { playerId: 1, otherPlayerId: 2, originalPmLeg: "A", otherProvider: "RAY", otherTarget: "Away", otherOdds: 2, otherStake: 10, target: "Home", protocol: 2, orderHash: `0x${"b".repeat(64)}`, price: "0.5", shares: "10", targetShares: "10", maxPrincipal: "5", allInBudget: "5", fx: 6.7, parallel: false, negRisk: false, betRowId: 42 } as GtcPlan;
 let api: typeof import("./api");

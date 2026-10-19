@@ -1,10 +1,11 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from 'node:fs';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import ts from 'typescript';
 import {expect,it} from 'vitest';
 import {VENUE_BROWSER_LEAVES as record,readVenueBrowserLeafSource,restoreVenueBrowserLeafEdits,verifyVenueBrowserLeaves} from './venue-browser-leaves.mjs';
-const read=file=>fs.readFileSync(file,'utf8').replaceAll('\r\n','\n');
+const read=withAdapterHistoryReader(file=>readAdapterHistory(file,'utf8').replaceAll('\r\n','\n'));
 const original=file=>execFileSync('git',['show',record.baseline+':'+file],{encoding:'utf8',windowsHide:true}).replaceAll('\r\n','\n');
 it('retains all three full original modules with only local import rebasing',()=>{
  expect(verifyVenueBrowserLeaves(read).entries).toBe(3);

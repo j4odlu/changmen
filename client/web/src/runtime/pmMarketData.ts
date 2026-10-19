@@ -1,8 +1,8 @@
 import { watch } from "vue";
 import { useAccountStore } from "@/stores/accountStore";
-import { getPmMarketWsSourceMode, resolvePmHttpMode, resolvePmOrderSubmitHttpMode } from "@changmen/venue-adapter/polymarket";
+import { getPmMarketWsSourceMode, resolvePmHttpMode, resolvePmOrderSubmitHttpMode } from "@changmen/venue-browser/adapter/polymarket";
 import { PmOrderBookService, type BookLease } from "@changmen/pm-market-data-browser";
-import { pmOrderBookSource } from "@changmen/venue-adapter/polymarket/orderBookSource";
+import { pmOrderBookSource } from "@changmen/venue-browser/adapter/polymarket/orderBookSource";
 import { startPmDynamicWsShadowWorker } from "./pmDynamicWsShadowWorker";
 
 let active: PmOrderBookService | undefined;

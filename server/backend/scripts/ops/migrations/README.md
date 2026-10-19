@@ -2,6 +2,8 @@
 
 数据回填与一次性迁移脚本。`npm run db:migrate-*` / `db:finalize-*` / `db:check-players` 入口见 `server/backend/package.json`。
 
+累计 17 个数据库脚本已迁至 [`server/db/maintenance/legacy/migrations/`](../../../../db/maintenance/legacy/migrations/)，原路径删除。下表保留命令/用途索引，其中 `migrate-players-owner-user-id`、`finalize-players-owner-user-id`、`migrate-accounts-jsonb-to-players`、`check-players-rds-migrate`、`backup-profiles-accounts`、`migrate-pm-sell-pnl-to-buy`、`restore-pm-sell-money-from-pnl-usdc`、`restore-pm-buy-money-from-sell-pnl`、`migrate-order-hash-link-to-create-at` 位于新目录；对应 npm 入口已同步指向数据层。
+
 ## 脚本
 
 | 脚本 | npm 命令 | 说明 |
@@ -21,6 +23,6 @@
 | `prune-stale.mjs` | `db:prune` | 已废弃别名 → `archive-stale-client-matches` |
 | `migrate-order-hash-link-to-create-at.mjs` | — | 订单 hash 链补 `create_at`（`--execute` 执行） |
 
-部署时自动触发顺序见 [`deploy/scripts/deploy-server-remote.sh`](../../../../../deploy/scripts/deploy-server-remote.sh)。
+这些维护命令不由应用发布自动执行。发布行为见 [`deploy/scripts/deploy-server-remote.sh`](../../../../../deploy/scripts/deploy-server-remote.sh)。
 
 运维手册：[docs/ACCOUNT_BACKEND.md](../../../../../docs/ACCOUNT_BACKEND.md)

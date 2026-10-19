@@ -1,6 +1,6 @@
 import type { PlatformAccount } from "@/models/platformAccount";
 import { a8PluginSetStore, hasA8PluginRuntime } from "@changmen/client-core/chrome-plugin/bridge";
-import { pbHostsFromAccounts, setPbAccountPageHosts } from "@changmen/venue-adapter/pb";
+import { pbHostsFromAccounts, setPbAccountPageHosts } from "@changmen/venue-browser/adapter/pb";
 
 /** 与扩展 chrome.storage 键一致 */
 export const PB_ACCOUNT_HOSTS_KEY = "pbAccountHosts";

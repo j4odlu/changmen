@@ -7,8 +7,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROVIDER_PATH = path.resolve(__dirname, "../../../packages/venue-adapter/ob/bet.ts");
-const MQTT_PATH = path.resolve(__dirname, "../../../packages/venue-adapter/ob/mqtt.ts");
+const PROVIDER_PATH = path.resolve(__dirname, "@changmen/venue-browser/adapter/ob/bet.ts");
+const MQTT_PATH = path.resolve(__dirname, "@changmen/venue-browser/adapter/ob/mqtt.ts");
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);

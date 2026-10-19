@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   attempts: [] as any[],
   recover: vi.fn(),
 }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ pmSubmitScope: () => mocks.scope, pmAccountSubmitAttempts: () => mocks.attempts,
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ pmSubmitScope: () => mocks.scope, pmAccountSubmitAttempts: () => mocks.attempts,
   pmSubmitMaker: () => "0x1111111111111111111111111111111111111111" }));
 vi.mock("@/api/order", () => ({ getPmSubmission: mocks.recover }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => mocks.session, isAuthSessionCurrent: (v: string) => v === mocks.session }));

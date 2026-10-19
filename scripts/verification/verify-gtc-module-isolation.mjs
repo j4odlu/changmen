@@ -1,8 +1,9 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { verifyGtcClientStateSources } from "./gtc-client-state-boundary.mjs";
-verifyGtcClientStateSources(file => fs.readFileSync(file, "utf8"));
+verifyGtcClientStateSources(file => readAdapterHistory(file, "utf8"));
 
 function files(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -16,7 +17,7 @@ let checked = 0;
 for (const file of files("client/web/src/orderModes/gtc")) {
   if (!/\.(?:ts|vue)$/.test(file) || file.endsWith(".test.ts"))
     continue;
-  const source = fs.readFileSync(file, "utf8");
+  const source = readAdapterHistory(file, "utf8");
   let runtimeImports = source.split("\n").filter(line => !/^import type\b/.test(line)).join("\n");
   // [changmen 扩展] RAY 复用两项公共订单操作；完整接线另由固定源码/契约校验，其他私有动作仍禁止。
   if (file.replaceAll("\\", "/") === "client/web/src/orderModes/gtc/arbLeg.ts")
@@ -31,33 +32,33 @@ for (const file of files("client/web/src/orderModes/gtc")) {
 for (const file of files("packages/venue-adapter/polymarket/gtc")) {
   if (!file.endsWith(".ts") || file.endsWith(".test.ts"))
     continue;
-  assert(!/from\s+["']\.\.\/bet["']/.test(fs.readFileSync(file, "utf8")), `${file}: GTC cannot borrow FOK preparation or its contract`);
+  assert(!/from\s+["']\.\.\/bet["']/.test(readAdapterHistory(file, "utf8")), `${file}: GTC cannot borrow FOK preparation or its contract`);
   checked++;
 }
 // [changmen 扩展] 独立监控只恢复、读取、核对和撤原单；不拥有首次发送或 RAY 生命周期。
 for (const file of files("client/web/src/runtime/gtcOrderMonitor")) {
   if (!file.endsWith(".ts") || file.endsWith(".test.ts")) continue;
-  const source = fs.readFileSync(file, "utf8");
+  const source = readAdapterHistory(file, "utf8");
   assert(!forbidden.test(source), `${file}: GTC monitor cannot import FOK private state/actions`);
   assert(!/\b(?:pmPostGtc|prepareGtcBuy|checkGtcBuy|placeOtherLeg|prepareOtherLeg|startRayOrderMonitoring|stopRayOrderMonitoring|resetRayOrderResults)\s*\(/.test(source), `${file}: GTC monitor cannot submit orders or control RAY`);
   assert(!/kind:\s*["'](?:authorize_pm|authorize_other|submit)["']/.test(source), `${file}: GTC monitor cannot authorize or replay original sends`);
   checked++;
 }
-const gateway = fs.readFileSync("client/web/src/orderModes/gtc/gateway.ts", "utf8");
+const gateway = readAdapterHistory("client/web/src/orderModes/gtc/gateway.ts", "utf8");
 // [changmen 扩展] 账号预检与传统对侧发送共用公共入口；GTC 不复制旁路或自行调度确认。
 assert(/useAccountStore\(\)\.checkBetting\(/.test(gateway) && /accounts\.betting\(/.test(gateway), "GTC account operations must reuse the common gateway");
 assert(!/ensureSharedVaultKeyForAccount|resolveVenueStakeFromPlanCny|provider\.betting|publishBettingEvent|notifyPendingVenueConfirm|markSuccessfulBet|updateVenueOrders/.test(gateway), "GTC compatibility gateway cannot duplicate common account actions");
 for (const obsolete of ["autoEntry.ts", "execute.ts", "prepare.ts", "check.ts"])
   assert(!fs.existsSync(`client/web/src/orderModes/gtc/${obsolete}`), `obsolete GTC pair pipeline must be removed: ${obsolete}`);
-const bridge = fs.readFileSync("client/web/src/orderModes/gtc/arbLeg.ts", "utf8");
+const bridge = readAdapterHistory("client/web/src/orderModes/gtc/arbLeg.ts", "utf8");
 assert(!/placeArbLegs|finalizeArbBet|settleBothArbLegs|showRejectDetectionTip|syncActiveBetPhase/.test(bridge), "GTC bridge cannot own public phases");
 for (const removed of ["report.ts", "orderStore.ts", "orderStats.ts", "financialStatistics.ts", "FinancialOrders.vue", "OrderList.vue"])
   assert(!fs.existsSync(`client/web/src/orderModes/gtc/${removed}`), `GTC execution mode must not create a second ordinary order/statistics/report pipeline: ${removed}`);
 // [changmen 扩展] Shared order transport must not require GTC recovery or duplicate its writer.
 assert(!fs.existsSync("server/backend/core/orderModes/gtc/orderStore.js"), "GTC must reuse the ordinary order writer");
-const transport = fs.readFileSync("server/backend/core/orderModes/router.js", "utf8");
+const transport = readAdapterHistory("server/backend/core/orderModes/router.js", "utf8");
 assert.equal(transport.match(/from\s+["']([^"']+)["']/)?.[1], "../account/account_service.js");
 assert(!/\b(?:import|await|db|listPmGtc|fetchOrderExecutionIdentities)\b/.test(transport), "shared order endpoints must directly export their original handlers");
-const metadata = fs.readFileSync("server/backend/core/orderModes/orderMetadata.js", "utf8");
+const metadata = readAdapterHistory("server/backend/core/orderModes/orderMetadata.js", "utf8");
 assert(!/\b(?:import|await|fetch|query)\b/.test(metadata), "mode metadata must reuse the ordinary writer's prefetched rows without I/O");
 process.stdout.write(`${JSON.stringify({ independentGtcModuleFiles: checked, noFokPrivateImports: true, noFokActionHooks: true, sharedAccountGateway: true, modeSpecificPreparation: true })}\n`);

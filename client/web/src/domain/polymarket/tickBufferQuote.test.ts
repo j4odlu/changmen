@@ -11,7 +11,7 @@ import { createDefaultUserConfig } from "@/types/userConfig";
 import { capturePmTickBufferQuote } from "./tickBufferQuote";
 import { attachPolymarketDetectionQuote } from "./attachDetectionQuote";
 import { clearPmTickBufferMetadata, notePmTickBufferBook, setPmArbPriceBufferPrefs,
-  resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-adapter/polymarket";
+  resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-browser/adapter/polymarket";
 
 beforeEach(() => { setActivePinia(createPinia()); clearPmTickBufferMetadata(); resetPmArbPriceBufferPrefsForTests(); });
 afterEach(() => { clearPmTickBufferMetadata(); resetPmArbPriceBufferPrefsForTests(); });

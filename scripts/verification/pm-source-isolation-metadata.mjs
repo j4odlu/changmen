@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 精确还原三份源码隔离元数据；原历史基线和完整源码相等断言不变。
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -6,35 +7,35 @@ import { restoreRuntimeToolingMetadata } from "./runtime-tooling-migration.mjs";
 import { restorePmCollectorTypeScriptMetadata } from "./pm-collector-typescript-metadata.mjs";
 
 export const PM_METADATA_BASELINE = "a233e20534395b31401828e754432407b109053d";
-const record = JSON.parse(fs.readFileSync(new URL("./pm-source-isolation-metadata.json", import.meta.url), "utf8"));
+const record = JSON.parse(readAdapterHistory(new URL("./pm-source-isolation-metadata.json", import.meta.url), "utf8"));
 assert.equal(record.schemaVersion, 1);
 assert.equal(record.baseline, PM_METADATA_BASELINE, "metadata migration cannot replace the historical baseline");
 assert.deepEqual(record.changes.map(row => row.file), ["server/db/package.json", "packages/shared/package.json", "package-lock.json"]);
 const changes = new Map(record.changes.map(row => [row.file, row]));
-const frontendInstall = JSON.parse(fs.readFileSync(new URL("./pm-frontend-install-metadata.json", import.meta.url), "utf8"));
+const frontendInstall = JSON.parse(readAdapterHistory(new URL("./pm-frontend-install-metadata.json", import.meta.url), "utf8"));
 assert.equal(frontendInstall.schemaVersion, 1);
 assert.equal(frontendInstall.file, "package-lock.json");
 assert.equal(frontendInstall.baselineSha256, changes.get("package-lock.json").migratedSha256,
   "frontend install migration must restore the already registered lock, never replace its original proof");
 const normalize = source => source.replaceAll("\r\n", "\n");
 const sha = source => createHash("sha256").update(source).digest("hex");
-const frontendBuild = JSON.parse(fs.readFileSync(new URL("./pm-frontend-build-metadata.json", import.meta.url), "utf8"));
+const frontendBuild = JSON.parse(readAdapterHistory(new URL("./pm-frontend-build-metadata.json", import.meta.url), "utf8"));
 assert.equal(frontendBuild.schemaVersion, 1);
 assert.deepEqual(frontendBuild.changes.map(row => row.file), ["packages/shared/package.json", "package-lock.json"]);
 for (const row of frontendBuild.changes)
   assert.equal(row.baselineSha256, row.file === "package-lock.json" ? frontendInstall.migratedSha256 : changes.get(row.file).migratedSha256,
     "build source migration must restore the previous exact metadata proof");
-const nodeConsumer = JSON.parse(fs.readFileSync(new URL("./pm-node-consumer-metadata.json", import.meta.url), "utf8"));
+const nodeConsumer = JSON.parse(readAdapterHistory(new URL("./pm-node-consumer-metadata.json", import.meta.url), "utf8"));
 assert.equal(nodeConsumer.schemaVersion, 1);
 assert.equal(nodeConsumer.file, "package-lock.json");
 assert.equal(nodeConsumer.baselineSha256, frontendBuild.changes.find(row => row.file === nodeConsumer.file).migratedSha256,
   "Node consumer migration must restore the previous complete lock, never replace its proof");
-const backendTool = JSON.parse(fs.readFileSync(new URL("./pm-backend-tool-metadata.json", import.meta.url), "utf8"));
+const backendTool = JSON.parse(readAdapterHistory(new URL("./pm-backend-tool-metadata.json", import.meta.url), "utf8"));
 assert.equal(backendTool.schemaVersion, 1);
 assert.equal(backendTool.file, "package-lock.json");
 assert.equal(backendTool.baselineSha256, nodeConsumer.migratedSha256,
   "Backend tooling migration must restore the previous complete Node-consumer lock proof");
-const clientFolder = JSON.parse(fs.readFileSync(new URL("./pm-client-folder-metadata.json", import.meta.url), "utf8"));
+const clientFolder = JSON.parse(readAdapterHistory(new URL("./pm-client-folder-metadata.json", import.meta.url), "utf8"));
 assert.equal(clientFolder.schemaVersion, 1);
 assert.equal(clientFolder.purpose, "client-folder-isolation-only");
 assert.equal(clientFolder.historicalBaseline, PM_METADATA_BASELINE);

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useUserStore } from "@/stores/userStore";
 import { SessionRestoreConfigurationError } from "@/lib/sessionRestoreError";
-import { capturePmFokPreflightMode, setPmFokPreflightMode } from "@changmen/venue-adapter/polymarket";
+import { capturePmFokPreflightMode, setPmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket";
 import { getClientData, getClientDataArray, saveClientDataDetailed } from "@/api/esport";
 
 const auth = vi.hoisted(() => ({

@@ -10,7 +10,7 @@
 
 辅助判定：
 
-- `isVpsOwnedPlatformCollect(id)` / `browserSaveMatchPlatformIds()` — [`registry/meta.ts`](../packages/venue-adapter/registry/meta.ts)（前端）与 [`registry/feeds.js`](../packages/venue-adapter/registry/feeds.js)（后端）
+- `isVpsOwnedPlatformCollect(id)` / `browserSaveMatchPlatformIds()` — [`registry/meta.ts`](../client/packages/venue-browser/adapter/registry/meta.ts)（前端）与 [`registry/feeds.js`](../server/packages/venue-node-registry/feeds.js)（后端）
 - `pluginOnly: true` — UI/采集偏扩展；**不等于** VPS 写库（PM/PF 同时 `pluginOnly` + `vps_http_ws`）
 
 合场唯一写路径已冻结为 esport 内嵌 composer；新馆只要进 `platform_*`，不必改 matcher writer。
@@ -21,8 +21,8 @@
 
 1. **`PlatformId`**：[`packages/api-contract`](../packages/api-contract/src/schemas.ts)（zod enum）+ 相关 TS 导出；`client/web` 经 `@changmen/api-contract` 使用。
 2. **共享主资产 `venue_manifest.json`**：`id` / `dir` / `collect` / `bet` / `collectionMode` / `collectionDesc` / `implementation`；VPS 馆必须 `vps_http_ws`。执行 `npm run sync:venue-manifest` 后运行 `npm run check:venue-manifest`；不要手改生成副本。
-3. **`registry/adapters.ts`**：挂上 `PlatformAdapter`（即使 VPS 馆也要有报价/下单 adapter）。
-4. **`npm run sync:exports --workspace=@changmen/venue-adapter`**（若新增可 import 子路径）。
+3. **`client/packages/venue-browser/adapter/registry/adapters.ts`**：挂上 `PlatformAdapter`（即使 VPS 馆也要有报价/下单 adapter）。
+4. **`client/packages/venue-browser/package.json` 的显式 `exports`**：新增可 import 子路径时同步维护，使用 `@changmen/venue-browser/adapter/...`；不要向旧包添加浏览器导出。
 5. **UI**：采集开关 / 账号卡通常随 `ALL_PLATFORMS` 出现；确认 CollectConfig 对 VPS 馆不提供「浏览器 Save*」错觉（已走 `browserSaveMatchPlatformIds`）。
 6. **边界**：遵守 [TEAM_BOUNDARIES.md](./TEAM_BOUNDARIES.md)；浏览器不得 import `@changmen/db`。
 
@@ -31,7 +31,7 @@
 - 手改 `runtime/collectors.ts` / `providers.ts` 逐馆注册（已由 `buildCollectorFactories()` + registry 驱动；只需进 `PLATFORM_ADAPTERS`）。
 - 假设「每个新馆都必须写 `platform_sync.syncXxx`」——仅当需要启动时往 `platforms.json` 灌采集凭证时才加。
 - 在 `api/match.ts` / `collectStore` / `store.js` 再硬编码馆名字符串（用 manifest / `isVpsOwned*`）。
-- 为 PM/PF 在 venue-adapter 再镜像一份 discovery `parse`（discovery 权威在 `server/collectors/*/parse.js`）。
+- 为 PM/PF 在浏览器 adapter 再镜像一份 discovery `parse`（discovery 权威在 `server/collectors/*/parse.js`）。
 
 ---
 
@@ -41,9 +41,9 @@
 
 | # | 触点 | 说明 |
 |---|------|------|
-| A1 | `packages/venue-adapter/{dir}/` | `collect.ts` + `bet.ts` + `index.ts`（`PlatformAdapter`） |
+| A1 | `client/packages/venue-browser/adapter/{dir}/` | `collect.ts` + `bet.ts` + `index.ts`（`PlatformAdapter`） |
 | A2 | `manifest.json` | `collect: true`，`collectionMode` ≠ `vps_http_ws` |
-| A3 | 可选 `devtools/platform-probes/{dir}/` | Node 探针 / 会话；经 `requirePlatform`；**非**主链路必需 |
+| A3 | 可选 `server/platform-probes/{dir}/` | Node 探针 / 会话；经 `requirePlatform`；**非**主链路必需 |
 | A4 | `platform_sync.js` | **仅当**要有 trial/env 默认凭证写入 `platforms.json` 时加 `syncXxx*` 并挂 `ensurePlatformCredentials` |
 | A5 | HTTP 代理白名单 | 若走 backend relay：`HTTP_RELAY_ALLOWED_HOSTS` / 各馆 proxy 模块 |
 | A6 | 合场 | 确认 `server/match/identity` / catalog 有该馆盘口规则；队名映射按需 |
@@ -106,7 +106,7 @@
 
 ## 相关文档
 
-- 适配器包：[packages/venue-adapter/README.md](../packages/venue-adapter/README.md)
+- 浏览器适配器包：[client/packages/venue-browser/README.md](../client/packages/venue-browser/README.md)
 - 采集 daemon：[server/collectors/README.md](../server/collectors/README.md)
 - 团队边界：[docs/TEAM_BOUNDARIES.md](./TEAM_BOUNDARIES.md)
 - 前端结构：[client/web/src/ARCHITECTURE.md](../client/web/src/ARCHITECTURE.md)

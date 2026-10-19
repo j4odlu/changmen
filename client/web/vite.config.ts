@@ -21,11 +21,10 @@ const elementPlusResolver = ElementPlusResolver({ importStyle: "css" });
 
 const WEB_ROOT = fileURLToPath(new URL(".", import.meta.url));
 const WORKSPACE_ROOT = path.resolve(WEB_ROOT, "../..");
-const VENUE_ADAPTER_REL = "packages/venue-adapter";
-const VENUE_ADAPTER_ROOT = path.resolve(WORKSPACE_ROOT, VENUE_ADAPTER_REL);
+const BROWSER_ADAPTER_ROOT = path.resolve(WORKSPACE_ROOT, "client/packages/venue-browser/adapter");
 const CLIENT_CORE_SRC = path.resolve(WEB_ROOT, "../packages/client-core/src");
 const venueAdapterVitestGlob = path
-  .relative(WEB_ROOT, VENUE_ADAPTER_ROOT)
+  .relative(WEB_ROOT, BROWSER_ADAPTER_ROOT)
   .split(path.sep)
   .join("/");
 const clientCoreVitestGlob = path
@@ -121,10 +120,12 @@ function venueChunkName(id: string): string | undefined {
   // Workspace 内嵌依赖也属于 node_modules，交给 Rollup 分包，不能误归为场馆源码。
   if (id.replace(/\\/g, "/").includes("/node_modules/"))
     return undefined;
-  const marker = `${VENUE_ADAPTER_REL.replace(/\\/g, "/")}/`;
-  const idx = id.replace(/\\/g, "/").indexOf(marker);
-  if (idx === -1)
+  const normalized = id.replace(/\\/g, "/");
+  const marker = ["client/packages/venue-browser/adapter/"]
+    .find(value => normalized.includes(value));
+  if (!marker)
     return undefined;
+  const idx = normalized.indexOf(marker);
   const rest = id.slice(idx + marker.length);
   const dir = rest.split(/[/\\]/)[0];
   if (!dir || dir === "registry" || dir === "adaptation") return undefined;
@@ -220,9 +221,7 @@ export default defineConfig(({ command, mode }) => {
     extensions: [".ts", ".tsx", ".mjs", ".js", ".jsx", ".json"],
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
-      "@changmen/client-core": CLIENT_CORE_SRC,
-      "@changmen/venue-adapter": VENUE_ADAPTER_ROOT,
-      mqtt: fileURLToPath(new URL("../../node_modules/mqtt", import.meta.url)),
+      "@changmen/client-core": CLIENT_CORE_SRC,      mqtt: fileURLToPath(new URL("../../node_modules/mqtt", import.meta.url)),
       "socket.io-client": fileURLToPath(
         new URL("../../node_modules/socket.io-client", import.meta.url),
       ),

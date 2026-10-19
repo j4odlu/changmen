@@ -2,7 +2,7 @@ import { expect, it, vi } from "vitest";
 import { watchSyncEffect } from "vue";
 
 it("shares outcome identity, official result and reactive notifications across entries", async () => {
- const old = await import("../../../../packages/venue-adapter/polymarket/pmMapOutcomeStore");
+ const old = await import("@changmen/venue-browser/adapter/polymarket/pmMapOutcomeStore");
  const canonical = await import("@changmen/venue-browser/polymarket/markets/pmMapOutcomeStore");
  const identity = await import("@changmen/venue-browser/polymarket/markets/pmMapIdentityStore");
  canonical.replacePmMapOutcomesFromIndex(null);
@@ -35,7 +35,7 @@ it("keeps Worker creation behind the original permission callback and retains cl
  vi.stubGlobal("Worker", TestWorker);
  let active: import("@changmen/venue-browser/polymarket/orderBook").PmOrderBookService | undefined;
  try {
-  const old = await import("../../../../packages/venue-adapter/polymarket/orderBook");
+  const old = await import("@changmen/venue-browser/adapter/polymarket/orderBook");
   const canonical = await import("@changmen/venue-browser/polymarket/orderBook");
   expect(constructed).not.toHaveBeenCalled();
   const denied = old.createPmOrderBookService(() => false);
@@ -49,47 +49,47 @@ it("keeps Worker creation behind the original permission callback and retains cl
  } finally { active?.stop(); vi.unstubAllGlobals(); }
 });
 it("packages/venue-adapter/polymarket/markets/collect.ts: retains every runtime export identity", async () => {
- const [old, canonical] = await Promise.all([import("../../../../packages/venue-adapter/polymarket/markets/collect"), import("@changmen/venue-browser/polymarket/markets/collect")]);
+ const [old, canonical] = await Promise.all([import("@changmen/venue-browser/adapter/polymarket/markets/collect"), import("@changmen/venue-browser/polymarket/markets/collect")]);
  expect(Object.keys(old).sort()).toEqual(Object.keys(canonical).sort());
  for (const [name, value] of Object.entries(canonical)) expect((old as Record<string, unknown>)[name], name).toBe(value);
 });
 it("packages/venue-adapter/polymarket/markets/marketIndex.ts: retains every runtime export identity", async () => {
- const [old, canonical] = await Promise.all([import("../../../../packages/venue-adapter/polymarket/markets/marketIndex"), import("@changmen/venue-browser/polymarket/markets/marketIndex")]);
+ const [old, canonical] = await Promise.all([import("@changmen/venue-browser/adapter/polymarket/markets/marketIndex"), import("@changmen/venue-browser/polymarket/markets/marketIndex")]);
  expect(Object.keys(old).sort()).toEqual(Object.keys(canonical).sort());
  for (const [name, value] of Object.entries(canonical)) expect((old as Record<string, unknown>)[name], name).toBe(value);
 });
 it("packages/venue-adapter/polymarket/markets/pmFootballDiscovery.ts: retains every runtime export identity", async () => {
- const [old, canonical] = await Promise.all([import("../../../../packages/venue-adapter/polymarket/markets/pmFootballDiscovery"), import("@changmen/venue-browser/polymarket/markets/pmFootballDiscovery")]);
+ const [old, canonical] = await Promise.all([import("@changmen/venue-browser/adapter/polymarket/markets/pmFootballDiscovery"), import("@changmen/venue-browser/polymarket/markets/pmFootballDiscovery")]);
  expect(Object.keys(old).sort()).toEqual(Object.keys(canonical).sort());
  for (const [name, value] of Object.entries(canonical)) expect((old as Record<string, unknown>)[name], name).toBe(value);
 });
 it("packages/venue-adapter/polymarket/markets/pmMapIdentityStore.ts: retains every runtime export identity", async () => {
- const [old, canonical] = await Promise.all([import("../../../../packages/venue-adapter/polymarket/markets/pmMapIdentityStore"), import("@changmen/venue-browser/polymarket/markets/pmMapIdentityStore")]);
+ const [old, canonical] = await Promise.all([import("@changmen/venue-browser/adapter/polymarket/markets/pmMapIdentityStore"), import("@changmen/venue-browser/polymarket/markets/pmMapIdentityStore")]);
  expect(Object.keys(old).sort()).toEqual(Object.keys(canonical).sort());
  for (const [name, value] of Object.entries(canonical)) expect((old as Record<string, unknown>)[name], name).toBe(value);
 });
 it("packages/venue-adapter/polymarket/markets/pmMapOutcomeStore.ts: retains every runtime export identity", async () => {
- const [old, canonical] = await Promise.all([import("../../../../packages/venue-adapter/polymarket/markets/pmMapOutcomeStore"), import("@changmen/venue-browser/polymarket/markets/pmMapOutcomeStore")]);
+ const [old, canonical] = await Promise.all([import("@changmen/venue-browser/adapter/polymarket/markets/pmMapOutcomeStore"), import("@changmen/venue-browser/polymarket/markets/pmMapOutcomeStore")]);
  expect(Object.keys(old).sort()).toEqual(Object.keys(canonical).sort());
  for (const [name, value] of Object.entries(canonical)) expect((old as Record<string, unknown>)[name], name).toBe(value);
 });
 it("packages/venue-adapter/shared/collectNotify.ts: retains every runtime export identity", async () => {
- const [old, canonical] = await Promise.all([import("../../../../packages/venue-adapter/shared/collectNotify"), import("@changmen/venue-browser/shared/collectNotify")]);
+ const [old, canonical] = await Promise.all([import("@changmen/venue-browser/adapter/shared/collectNotify"), import("@changmen/venue-browser/shared/collectNotify")]);
  expect(Object.keys(old).sort()).toEqual(Object.keys(canonical).sort());
  for (const [name, value] of Object.entries(canonical)) expect((old as Record<string, unknown>)[name], name).toBe(value);
 });
 it("packages/venue-adapter/polymarket/realtime/orderBook/service.ts: retains every runtime export identity", async () => {
- const [old, canonical] = await Promise.all([import("../../../../packages/venue-adapter/polymarket/realtime/orderBook/service"), import("@changmen/venue-browser/polymarket/realtime/orderBook/service")]);
+ const [old, canonical] = await Promise.all([import("@changmen/venue-browser/adapter/polymarket/realtime/orderBook/service"), import("@changmen/venue-browser/polymarket/realtime/orderBook/service")]);
  expect(Object.keys(old).sort()).toEqual(Object.keys(canonical).sort());
  for (const [name, value] of Object.entries(canonical)) expect((old as Record<string, unknown>)[name], name).toBe(value);
 });
 it("packages/venue-adapter/polymarket/orderBook.ts: retains every runtime export identity", async () => {
- const [old, canonical] = await Promise.all([import("../../../../packages/venue-adapter/polymarket/orderBook"), import("@changmen/venue-browser/polymarket/orderBook")]);
+ const [old, canonical] = await Promise.all([import("@changmen/venue-browser/adapter/polymarket/orderBook"), import("@changmen/venue-browser/polymarket/orderBook")]);
  expect(Object.keys(old).sort()).toEqual(Object.keys(canonical).sort());
  for (const [name, value] of Object.entries(canonical)) expect((old as Record<string, unknown>)[name], name).toBe(value);
 });
 it("packages/venue-adapter/browser/pm-book-source-host.ts: retains every runtime export identity", async () => {
- const [old, canonical] = await Promise.all([import("../../../../packages/venue-adapter/browser/pm-book-source-host"), import("@changmen/venue-browser/pm-book-source-host")]);
+ const [old, canonical] = await Promise.all([import("@changmen/venue-browser/adapter/browser/pm-book-source-host"), import("@changmen/venue-browser/pm-book-source-host")]);
  expect(Object.keys(old).sort()).toEqual(Object.keys(canonical).sort());
  for (const [name, value] of Object.entries(canonical)) expect((old as Record<string, unknown>)[name], name).toBe(value);
 });

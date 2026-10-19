@@ -1,7 +1,7 @@
 import { validatePmPriceQuote } from "@changmen/venue-browser/polymarket/priceQuote";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { capturePmPriceQuote, pmAttemptUsesTickBuffer, pmAttemptPricePolicy } from "./tickBufferQuote";
-import { PLATFORMS } from "@changmen/venue-adapter/shared";
+import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
 import { useOddsStore } from "@/stores/oddsStore";
 import {
   hasLockedPolymarketDetectionQuote,
@@ -13,7 +13,7 @@ import {
   validatePmTickBufferQuote,
   polymarketClobMatchesOdds,
   type PolymarketOptionQuoteData,
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 
 /**
  * PM 预检前验证建腿时冻结的统一报价；未经过建腿入口的尝试在此首次冻结。

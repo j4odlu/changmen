@@ -1,5 +1,5 @@
 import type { BetResult } from "@changmen/client-core/models/betResult";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { wait } from "@changmen/client-core/shared/wait";
 import { saveOrderBind } from "@/api/esport";

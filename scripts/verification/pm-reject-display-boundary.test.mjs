@@ -1,7 +1,8 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { expect, it } from "vitest";
 import { restorePmRejectDisplaySource, verifyPmRejectDisplayContract } from "./pm-reject-display-boundary.mjs";
-const read = file => fs.readFileSync(file, "utf8");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 it("accepts only the exact reject quote display changes and optional quantity evidence", () => {
   expect(() => verifyPmRejectDisplayContract(read)).not.toThrow();
 });

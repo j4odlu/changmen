@@ -3,7 +3,7 @@ import { useAccountStore } from "@/stores/accountStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { useOddsStore } from "@/stores/oddsStore";
 import { getPmMarketWsSourceMode, resolvePmHttpMode, resolvePmOrderSubmitHttpMode,
-  getPolymarketPmSportBlockReason } from "@changmen/venue-adapter/polymarket";
+  getPolymarketPmSportBlockReason } from "@changmen/venue-browser/adapter/polymarket";
 import { officialGateway } from "@changmen/venue-browser/pm-book-diagnostics/bookRuntime";
 import { WsBookShadowWorkerClient } from "@changmen/venue-browser/pm-book-diagnostics/shadowWorkerClient";
 import type { BookConsumerPort } from "@changmen/pm-market-data-browser/service";

@@ -7,7 +7,7 @@ import { checkBetting } from "./betGateway";
 import { useOddsStore } from "@/stores/oddsStore";
 import { capturePmTickBufferQuote } from "@/domain/polymarket/tickBufferQuote";
 import { notePmTickBufferBook, clearPmTickBufferMetadata, setPmArbPriceBufferPrefs,
-  resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-adapter/polymarket";
+  resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-browser/adapter/polymarket";
 
 const check = vi.hoisted(() => vi.fn());
 vi.mock("@/runtime/providers", () => ({ getProvider: () => ({ checkBet: check }) }));

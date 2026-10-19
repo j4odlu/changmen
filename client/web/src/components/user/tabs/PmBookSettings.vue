@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import { ElMessage } from "element-plus";
-import { getPmFokPreflightMode, onPmFokPreflightModeChange } from "@changmen/venue-adapter/polymarket/pmFokPreflightMode";
+import { getPmFokPreflightMode, onPmFokPreflightModeChange } from "@changmen/venue-browser/adapter/polymarket/pmFokPreflightMode";
 import { onPmBookSettingChange, readPmBookSettings, setPmBookSetting, type PmBookSetting } from "@/runtime/pmBookSettings";
 
 const settings = ref(readPmBookSettings());

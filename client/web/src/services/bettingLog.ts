@@ -1,6 +1,6 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { BetResult } from "@changmen/client-core/models/betResult";
-import type { VenueLegSettlement, VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueLegSettlement, VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { saveUserLog } from "@/api/chat";
 import { useAccountStore } from "@/stores/accountStore";

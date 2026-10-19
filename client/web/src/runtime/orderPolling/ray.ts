@@ -1,5 +1,5 @@
 /** [changmen 扩展] 后台 RAY 轮询可共享在途请求；下单回执确认独立查询，不绑定订单或保存。 */
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { getProvider } from "@/runtime/providers";

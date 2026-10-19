@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Verify physical moves and complete metadata restoration without changing any historical proof.
 import fs from "node:fs";
 import path from "node:path";
@@ -11,8 +12,8 @@ import { classifyDeployScope } from "../deploy/classify-deploy-scope.mjs";
 import { restoreRuntimeToolingMetadata } from "./runtime-tooling-migration.mjs";
 import { restoreVenueBrowserConsumers } from "./venue-browser-consumers.mjs";
 
-const record = JSON.parse(fs.readFileSync(new URL("./pm-client-folder-metadata.json", import.meta.url), "utf8"));
-const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const record = JSON.parse(readAdapterHistory(new URL("./pm-client-folder-metadata.json", import.meta.url), "utf8"));
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8").replaceAll("\r\n", "\n"));
 const sha = source => createHash("sha256").update(source).digest("hex");
 it("moves exactly two unfrozen frontend directories without leaving duplicate implementations", () => {
   expect(record.moves).toHaveLength(19);

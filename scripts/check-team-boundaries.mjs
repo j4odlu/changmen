@@ -3,7 +3,14 @@
  * 单仓团队边界：扫描 import/require，禁止跨团队源码耦合。
  * 规则见 docs/TEAM_BOUNDARIES.md
  */
+import { inspectBackendProbeRelocation } from "./verification/backend-probe-relocation.mjs";
+import { inspectNodeResourceIsolation } from "./verification/node-resource-isolation.mjs";
+import { inspectNodeEntryRetirement } from './verification/node-entry-retirement.mjs';
+import {inspectCatalogEnvironmentIsolation} from './verification/catalog-environment-isolation.mjs';
 import { inspectClientPackageRelocation } from "./verification/client-package-relocation.mjs";
+import { inspectBackendToolRelocation } from "./verification/backend-tool-relocation.mjs";
+import { inspectAdapterBrowserRelocation } from "./verification/adapter-browser-relocation.mjs";
+import { inspectBrowserEntryRetirement } from "./verification/browser-entry-retirement.mjs";
 import { inspectNodePackageRelocation } from "./verification/node-package-relocation.mjs";
 import { inspectVenueManifestCopies } from "./sync/venue-manifest.mjs";
 import { inspectVenueBrowserRelocation } from "./verification/venue-browser-relocation.mjs";
@@ -22,6 +29,13 @@ import { CHANGMEN_LAYOUT, VENUE_ADAPTER_REL } from "../server/storage/paths.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CHANGMEN_ROOT = path.resolve(__dirname, "..");
+console.log('catalog-environment-isolation:',inspectCatalogEnvironmentIsolation(CHANGMEN_ROOT));
+console.log('node-entry-retirement:', inspectNodeEntryRetirement(CHANGMEN_ROOT));
+console.log('node-resource-isolation:', inspectNodeResourceIsolation(CHANGMEN_ROOT));
+console.log('backend-probe-relocation:', inspectBackendProbeRelocation(CHANGMEN_ROOT));
+console.log('backend-tool-relocation:', inspectBackendToolRelocation(CHANGMEN_ROOT));
+console.log('browser-entry-retirement:', inspectBrowserEntryRetirement(CHANGMEN_ROOT));
+console.log('adapter-browser-relocation:', inspectAdapterBrowserRelocation(CHANGMEN_ROOT));
 console.log('venue-browser-relocation:', inspectVenueBrowserRelocation(CHANGMEN_ROOT));
 const venueManifest = inspectVenueManifestCopies(CHANGMEN_ROOT);
 if (venueManifest.violations.length) throw Error(JSON.stringify(venueManifest.violations));
@@ -53,6 +67,8 @@ const RULES = [
     id: "client-app",
     roots: ["client/web/src", "client/packages", "chrome-extension/src"],
     forbid: [
+      /@changmen\/venue-adapter(?:\/|$)/,
+      /packages[/\\]venue-adapter(?:[/\\]|$)/,
       /@changmen\/db\b/,
       /@changmen\/match-identity\b/,
       /@changmen\/platform-probes\b/,
@@ -75,7 +91,7 @@ const RULES = [
   },
   {
     id: "platform-adapter-frontend",
-    roots: [],
+    roots: ["client/packages/venue-browser/adapter"],
     forbid: [
       /@changmen\/db\b/,
       /@changmen\/match-identity\b/,
@@ -106,7 +122,7 @@ const RULES = [
   },
   {
     id: "platform-probes",
-    roots: ["devtools/platform-probes"],
+    roots: ["server/platform-probes"],
     forbid: [
       /@changmen\/venue-adapter\b/,
       /venue-adapter[/\\](?!registry|loader|shared|contract|backend|scripts|_template)[^/\\]+[/\\]/,
@@ -128,7 +144,8 @@ const RULES = [
 
 const FORBIDDEN_LEGACY_DIRS = [
   "server/platform-node",
-  "server/platform-probes",
+  // server/platform-probes is now canonical; the exact relocation gate above
+  // checks its implementations and rejects every retired devtools source.
   "packages/venue-adapter/node",
 ];
 
@@ -241,7 +258,7 @@ function checkLegacyDirs(violations) {
         file: rel,
         line: 0,
         spec: "directory exists",
-        pattern: "removed in P2; use devtools/platform-probes",
+        pattern: "removed in P2; use server/platform-probes",
       });
     }
   }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { withTemporaryPostgres } from "./temporary-postgres.mjs";
-import { applyRdsSchema } from "../../server/backend/scripts/apply-rds-schema.mjs";
+import { applyRdsSchema } from "@changmen/db/maintenance/apply-rds-schema.mjs";
 
 await withTemporaryPostgres(async () => {
   process.env.DATABASE_POOL_MAX = "1";

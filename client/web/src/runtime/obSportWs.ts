@@ -3,7 +3,7 @@
  * HTTP / WS 均由足球页直连（yewu11 + yewuws2）。源站不按 Origin 卡 C105。
  * 禁止复用电竞 MQTT 与电竞 OB 通道。
  */
-import { reportVenueWsStatus, type VenueWsStatus } from "@changmen/venue-adapter/shared";
+import { reportVenueWsStatus, type VenueWsStatus } from "@changmen/venue-browser/adapter/shared";
 import { unzipObSportPushCd } from "@/runtime/obSportCodec";
 import { parseObSportOrderStatusPush, type ObSportOrderStatusPatch } from "@/runtime/obSportOrderStatus";
 import { yieldToPaint } from "@/runtime/rafTick";

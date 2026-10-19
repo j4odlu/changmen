@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 原有预检兼容性同时覆盖上游输入和提取后的公共任务，不能只比判断函数。
 import { readClientPackageSource } from "./client-package-relocation.mjs";
@@ -14,7 +15,7 @@ import { restorePmSportsTypeScriptSource } from "./pm-sports-typescript-boundary
 
 const baseline = "a233e20534395b31401828e754432407b109053d";
 const pm = "packages/venue-adapter/polymarket/";
-const readBeforeExecution = file => restorePmSportsTypeScriptSource(file, readClientPackageSource(file, fs.readFileSync(file, "utf8"), f => fs.readFileSync(f, "utf8")).replaceAll("\r\n", "\n"));
+const readBeforeExecution = withAdapterHistoryReader(file => restorePmSportsTypeScriptSource(file, readClientPackageSource(file, readAdapterHistory(file, "utf8"), f => readAdapterHistory(f, "utf8")).replaceAll("\r\n", "\n")));
 const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 const online = file => gitSource(baseline, file).replaceAll("\r\n", "\n");
 

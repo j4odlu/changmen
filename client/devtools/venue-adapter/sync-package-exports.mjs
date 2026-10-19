@@ -29,14 +29,8 @@ const IMPORT_RES = [
   new RegExp(`vi\\.mock\\s*\\(\\s*["']${PKG}/([^"']+)["']`, "g"),
 ];
 
-/** 固定公共入口；旧浏览器入口不能因应用改用新包而被扫描器删除。 */
-const FIXED_EXPORTS = {
-  ".": "./registry/index.ts",
-  "./loader/adapter_paths.js": "./loader/adapter_paths.mjs",
-  "./loader/adapter_paths.mjs": "./loader/adapter_paths.mjs",
-  "./polymarket/orderBook": "./polymarket/orderBook.ts",
-  "./polymarket/wsBookShadow": "./polymarket/wsBookShadow.ts",
-};
+/** Browser and Node entries are retired; never regenerate runtime aliases here. */
+const FIXED_EXPORTS = {};
 
 function walk(dir, out = []) {
   for (const name of fs.readdirSync(dir)) {
@@ -91,6 +85,10 @@ function buildExports() {
   const exports = { ...FIXED_EXPORTS };
   const missing = [];
   for (const sub of [...collectSubpaths()].sort()) {
+    if (!Object.hasOwn(FIXED_EXPORTS, `./${sub}`)) {
+      console.error(`Browser entry retired: @changmen/venue-adapter/${sub}; use @changmen/venue-browser/adapter.`);
+      process.exit(1);
+    }
     const target = resolveExportTarget(sub);
     if (!target) {
       missing.push(sub);

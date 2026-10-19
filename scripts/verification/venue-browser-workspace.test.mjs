@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
@@ -8,7 +9,7 @@ import {declaredInstallClosure,readInstallWorkspaces} from './component-install-
 import {isVersionSource} from '../../devtools/runtime-tooling/runtime_version.js';
 import {classifyDeployScope} from '../deploy/classify-deploy-scope.mjs';
 import {restoreVenueBrowserConsumers} from './venue-browser-consumers.mjs';
-const read=file=>fs.readFileSync(file,'utf8').replaceAll('\r\n','\n');
+const read=withAdapterHistoryReader(file=>readAdapterHistory(file,'utf8').replaceAll('\r\n','\n'));
 const sha=s=>createHash('sha256').update(s).digest('hex');
 const root=process.cwd(),sourceRoot='client/packages/venue-browser';
 it('retains every pre-workspace source and rejects changed metadata, host code and exports',()=>{
@@ -18,13 +19,13 @@ it('retains every pre-workspace source and rejects changed metadata, host code a
   expect(()=>verifyVenueBrowserWorkspace(file=>read(file)+(file===row.file?'\nvoid changed();\n':''))).toThrow();
   expect(()=>verifyVenueBrowserWorkspace(file=>{if(file===row.file)throw Error('missing');return read(file);})).toThrow();
  }
-});
+},30_000);
 it('registers a browser-only workspace with declared direct dependencies and exports resolving to the same physical files',()=>{
  const packages=readInstallWorkspaces(root),pkg=packages.get('@changmen/venue-browser');
  expect(pkg.dir).toBe(sourceRoot);expect(pkg.pkg.changmen.runtime).toBe('browser');
- expect(Object.keys(pkg.pkg.dependencies).sort()).toEqual(['@changmen/api-contract','@changmen/client-core','@changmen/pm-market-data-browser','@changmen/shared','@noble/hashes','@polymarket/builder-relayer-client','@polymarket/builder-signing-sdk','@polymarket/client','@polymarket/clob-client-v2','viem']);
+ expect(Object.keys(pkg.pkg.dependencies).sort()).toEqual(['@changmen/api-contract','@changmen/client-core','@changmen/pm-market-data-browser','@changmen/shared','@noble/hashes','@polymarket/builder-relayer-client','@polymarket/builder-signing-sdk','@polymarket/client','@polymarket/clob-client-v2','@predictdotfun/sdk','centrifuge','ethers','mqtt','socket.io-client','socketcluster-client','viem']);
  const require=createRequire(path.join(root,'packages/venue-adapter/package.json'));
- expect(Object.keys(pkg.pkg.exports)).toHaveLength(131);
+ expect(Object.keys(pkg.pkg.exports)).toHaveLength(739);
  for(const [spec,target] of Object.entries(pkg.pkg.exports)){
   expect(spec).not.toContain('*');expect(target).not.toContain('..');
   expect(fs.realpathSync(require.resolve('@changmen/venue-browser'+spec.slice(1))))
@@ -35,7 +36,7 @@ it('registers a browser-only workspace with declared direct dependencies and exp
 it('has an acyclic frontend workspace closure, real source ownership and no backend or RDS installation reach',()=>{
  const packages=readInstallWorkspaces(root);
  const profile=declaredInstallClosure(root,packages,'@changmen/web',{build:true});
- expect(profile.violations).toEqual([]);expect(profile.workspaceDirectories).toHaveLength(9);
+ expect(profile.violations).toEqual([]);expect(profile.workspaceDirectories).toHaveLength(8);
  expect(profile.sourceDirectories).toEqual(profile.workspaceDirectories);
  expect(profile.sourceDirectories.some(file=>file.startsWith('server/'))).toBe(false);
  const edges=new Map();

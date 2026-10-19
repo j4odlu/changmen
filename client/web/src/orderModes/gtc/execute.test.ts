@@ -19,7 +19,7 @@ vi.mock("@changmen/client-core/models/betResult", () => ({ BetResult: class { or
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: mocks.owner, config: { betting: true } }) }));
 vi.mock("./gateway", () => ({ prepareOtherLeg: (...args: unknown[]) => () => mocks.betting(...args) }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ recordPmExecutionMetric: vi.fn(), validatePolymarketPreparedBuy: vi.fn() }));
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ recordPmExecutionMetric: vi.fn(), validatePolymarketPreparedBuy: vi.fn() }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ refreshBalance: vi.fn() }) }));
 vi.mock("@/stores/betting/autoBet/retryFailedLeg", () => ({ retryFailedLeg: vi.fn(() => { throw new Error("unexpected retry"); }) }));
 vi.mock("@/stores/betting/autoBet/makeUp", () => ({ enqueueMakeUpOrder: vi.fn(() => { throw new Error("unexpected makeup"); }) }));

@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { BACKEND_ROOT, CHANGMEN_ROOT, VENUE_ADAPTER_ROOT } from "@changmen/storage/paths.js";
 
-const __dirname = path.dirname(fileURLToPath(new URL("../../../packages/venue-adapter/loader/adapter_paths.mjs", import.meta.url)));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
 const LOADER_DIR = __dirname;

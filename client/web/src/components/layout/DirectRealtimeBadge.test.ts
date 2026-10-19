@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createRenderer, createSSRApp, h, ref, ssrContextKey } from "vue";
 import { renderToString } from "@vue/server-renderer";
-import { getPmRoutingPreference, getPmUserWsSourceMode, setPmRoutingPreference, getPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "@changmen/venue-adapter/polymarket";
+import { getPmRoutingPreference, getPmUserWsSourceMode, setPmRoutingPreference, getPmOrderSubmitMode, PM_ORDER_SUBMIT_MODE_KEY } from "@changmen/venue-browser/adapter/polymarket";
 import Badge from "./DirectRealtimeBadge.vue";
 
 vi.mock("@/services/pmMaintenanceRealtime", () => ({
@@ -22,8 +22,8 @@ vi.mock("element-plus", async () => {
 vi.mock("element-plus/es/components/popover/style/css", () => ({}));
 vi.mock("element-plus/es/components/message/style/css", () => ({}));
 vi.mock("element-plus/es/components/base/style/css", () => ({}));
-vi.mock("@changmen/venue-adapter/polymarket", async (original) => {
-  const pm = await original<typeof import("@changmen/venue-adapter/polymarket")>();
+vi.mock("@changmen/venue-browser/adapter/polymarket", async (original) => {
+  const pm = await original<typeof import("@changmen/venue-browser/adapter/polymarket")>();
   return {
     ...pm,
     applyPmAutoTransportOnLogin: vi.fn(async () => {

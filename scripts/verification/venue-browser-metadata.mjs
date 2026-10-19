@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact metadata cache relocation; HTTP remains with the existing host.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {restoreVenueBrowserLifecycle,verifyVenueBrowserLifecycle} from './venue-browser-lifecycle.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-metadata.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-metadata.json',import.meta.url),'utf8');
 assert.equal(sha(text),'f4b8a1959150c8ea2bf6751277a48126a9fe85f8c99e70f4458a3eaa502852cc');
 export const VENUE_BROWSER_METADATA=JSON.parse(text);
 export function restoreVenueBrowserMetadataCache(file,source){

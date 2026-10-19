@@ -8,7 +8,7 @@ import { BetOption as BetOptionCtor } from "@changmen/client-core/models/betOpti
 import { BetResult as BetResultCtor } from "@changmen/client-core/models/betResult";
 import { isPendingConfirmVenueProvider, isPolymarketProvider } from "@changmen/shared/account_multiply";
 import { pmSubmissionFromResult, validatePmSubmission } from "@changmen/shared/pm_submission";
-import { isVenueLegConfirmedUnfilled, isVenueLegPendingConfirm, isVenueLegRejected } from "@changmen/venue-adapter/contract";
+import { isVenueLegConfirmedUnfilled, isVenueLegPendingConfirm, isVenueLegRejected } from "@changmen/venue-browser/adapter/contract";
 import { getPmSubmission } from "@/api/order";
 import { resolveVenueLegOutcome } from "@/domain/betting/resolveVenueLegOutcome";
 import { saveVenueSettlementLog } from "@/services/bettingLog";

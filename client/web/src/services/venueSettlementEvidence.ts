@@ -1,6 +1,6 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { BetResult } from "@changmen/client-core/models/betResult";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 
 /** [changmen 扩展] RAY 无提交订单号时，按场馆身份、时间、金额和赔率唯一关联；不改业务判定或绑定。 */
 export function settlementEvidenceOrder(option: BetOption, result: BetResult, orders: readonly VenueOrder[]): VenueOrder | undefined {

@@ -17,7 +17,7 @@ import {
   polymarketMoneyForAggregate,
 } from "@/shared/orderLink";
 import { truncateShareUsdtAmount } from "@/shared/pfOrderDisplay";
-import { resolvePmRemainingShares } from "@changmen/venue-adapter/polymarket";
+import { resolvePmRemainingShares } from "@changmen/venue-browser/adapter/polymarket";
 import { accountOrderDisplayName } from "@/shared/accountDisplayName";
 import { useAccountStore } from "@/stores/accountStore";
 import { useMessageStore } from "@/stores/messageStore";

@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { expect, it } from "vitest";
@@ -11,7 +12,7 @@ const files = ["packages/venue-adapter/polymarket/quotes/pmTickMetadata.ts", "cl
   "packages/venue-adapter/polymarket/realtime/sportMarketWs.ts"];
 for (const file of files) {
   it(`${file}: restores only the authorized tick refresh delta`, () => {
-    const source = restorePmSharedStreamSource(file, readVenueBrowserStateSource(file, fs.readFileSync(file, "utf8")));
+    const source = restorePmSharedStreamSource(file, readVenueBrowserStateSource(file, readAdapterHistory(file, "utf8")));
     const originalFile = file.replace("/quotes/", "/").replace("/realtime/", "/");
     const original = execFileSync("git", ["show", `e901bb596952256284cd8a9eb8b73b572c963915:${originalFile}`], { encoding: "utf8" }).replace(/\r\n/g, "\n");
     expect(rebasePmFokImports(restorePmTickRefreshSource(file, source), file, originalFile)).toBe(original);

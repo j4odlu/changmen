@@ -1,6 +1,6 @@
 /** [changmen 扩展] 只保留已保存原单的结算证据，查询停止不随侧栏日期/筛选改变。 */
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { OrderRow } from "@/types/order";
 
 function isFinal(row: OrderRow) {

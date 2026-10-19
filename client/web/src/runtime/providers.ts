@@ -1,4 +1,4 @@
-import type { PlatformProvider } from "@changmen/venue-adapter/contract";
+import type { PlatformProvider } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { getProvider as venueProvider } from "@/runtime/venueAdapters";
 import { beginRayOrderObservation } from "./orderMonitoring/rayOrders";

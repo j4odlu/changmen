@@ -33,7 +33,7 @@ vi.mock("@/runtime/venueAdapters", () => ({
   }),
 }));
 
-vi.mock("@changmen/venue-adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
   fetchPolymarketBalanceViaTransport: (...args: unknown[]) => fetchPolymarketBalanceViaTransport(...args),
 }));
 

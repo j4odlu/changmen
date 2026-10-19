@@ -28,4 +28,4 @@ export {
 export {
   resolveVenueLegOutcome,
 } from "@/domain/betting/resolveVenueLegOutcome";
-export type { ResolveLegOutcomeOpts } from "@changmen/venue-adapter/contract";
+export type { ResolveLegOutcomeOpts } from "@changmen/venue-browser/adapter/contract";

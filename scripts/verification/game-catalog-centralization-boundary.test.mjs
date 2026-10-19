@@ -1,10 +1,11 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { gameCatalogContract } from "./game-catalog-centralization-boundary.mjs";
 
-const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8").replaceAll("\r\n", "\n"));
 const previousCommit = "84364793171244eca85378ef7bce3388f147b237";
 const protectedFiles = ["packages/shared/catalog/game_catalog.ts", "packages/venue-adapter/ray/a8Collect.ts"];
 

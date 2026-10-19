@@ -5,10 +5,10 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { withTemporaryPostgres } from './temporary-postgres.mjs';
-import { initializeEmptyRdsSchema } from '../../server/backend/scripts/apply-rds-schema.mjs';
-import { readRdsSchema, readSchemaBaseline, schemaDifferences, verifyRdsSchema } from '../../server/backend/scripts/rds-schema-check.mjs';
-import { RECONCILE_MIGRATION, RECONCILE_TABLES, reconcileRdsSchema, reconciliationSnapshot } from '../../server/backend/scripts/reconcile-rds-schema.mjs';
-import { createReconciliationBackup } from '../../server/backend/scripts/rds-reconciliation-backup.mjs';
+import { initializeEmptyRdsSchema } from '@changmen/db/maintenance/apply-rds-schema.mjs';
+import { readRdsSchema, readSchemaBaseline, schemaDifferences, verifyRdsSchema } from '@changmen/db/maintenance/rds-schema-check.mjs';
+import { RECONCILE_MIGRATION, RECONCILE_TABLES, reconcileRdsSchema, reconciliationSnapshot } from '@changmen/db/maintenance/reconcile-rds-schema.mjs';
+import { createReconciliationBackup } from '@changmen/db/maintenance/rds-reconciliation-backup.mjs';
 const exec = promisify(execFile), root = fileURLToPath(new URL('../../', import.meta.url));
 const cases=[]; const check=async(name,run)=>{await run();cases.push(name);console.log('PASS '+name);};
 await withTemporaryPostgres(async({temporary})=>{
@@ -131,7 +131,7 @@ await withTemporaryPostgres(async({temporary})=>{
     });
     await check('preflight lock timeout fails within a bounded time without schema mutation',async()=>{
       const c=await pool.connect();try{await c.query('BEGIN');await c.query('LOCK TABLE changmen_schema_migrations IN ACCESS EXCLUSIVE MODE');
-        await assert.rejects(exec(process.execPath,[path.join(root,'server/backend/scripts/check-rds-schema.mjs')],{cwd:root,timeout:10000,windowsHide:true}),e=>e.code===1&&/lock timeout/.test(e.stderr));
+        await assert.rejects(exec(process.execPath,[path.join(root,'server/db/maintenance/check-rds-schema.mjs')],{cwd:root,timeout:10000,windowsHide:true}),e=>e.code===1&&/lock timeout/.test(e.stderr));
       }finally{await c.query('ROLLBACK');c.release();}await verify();
     });
     await check('read-only preflight never creates a missing ledger',async()=>{

@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { it } from "vitest";
@@ -16,13 +17,13 @@ it("real GTC state preserves seeded FOK gates, ignores invalid fills and counts 
 });
 it("fixture rejects a newly introduced unmapped state dependency", () => {
   assert.throws(() => runGtcStateFixture((file, options) => {
-    const source = fs.readFileSync(file, options);
+    const source = readAdapterHistory(file, options);
     return file.endsWith("gtc/executionState.ts") ? `import "./unexpected";\n${source}` : source;
   }), /Unexpected state fixture dependency/);
 });
 it("fixture detects a GTC fill contaminating real FOK success state", () => {
   assert.throws(() => runGtcStateFixture((file, options) => {
-    const source = fs.readFileSync(file, options);
+    const source = readAdapterHistory(file, options);
     return file.endsWith("gtc/executionState.ts")
       ? `import { markSuccessfulBet } from "@/stores/betting/successMarkers";\n${source.replace("sessionStorage.setItem(key, \"1\");", "markSuccessfulBet(account, row.plan.betRowId, row.plan.target, 2); sessionStorage.setItem(key, \"1\");")}`
       : source;

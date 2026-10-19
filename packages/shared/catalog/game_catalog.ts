@@ -104,8 +104,8 @@ function normalizePlatformKey(platform: string): string {
   return hit || raw;
 }
 
-function parseActiveGameCodes(): string[] {
-  const raw = process.env.AGGREGATE_GAME_CODES;
+/** Pure selection: the host supplies its configuration; omitted input selects all esport games. */
+function parseActiveGameCodes(raw?: string): string[] {
   const all = (catalog.games as GameEntry[]).filter(isEsportCatalogGame);
   if (!raw || raw === "*") {
     return all.map(g => g.code);
@@ -119,8 +119,8 @@ function parseActiveGameCodes(): string[] {
   return all.filter(g => wanted.has(g.code)).map(g => g.code);
 }
 
-function getActiveGames(): GameEntry[] {
-  const codes = new Set(parseActiveGameCodes());
+function getActiveGames(raw?: string): GameEntry[] {
+  const codes = new Set(parseActiveGameCodes(raw));
   return (catalog.games as GameEntry[]).filter(g => codes.has(g.code));
 }
 
@@ -145,16 +145,16 @@ function getGameCodeForPlatformId(platform: string, gameId: string | number): st
   return null;
 }
 
-function isAllowedPlatformGameId(platform: string, gameId: string | number): boolean {
+function isAllowedPlatformGameId(platform: string, gameId: string | number, raw?: string): boolean {
   const code = getGameCodeForPlatformId(platform, gameId);
   if (!code)
     return false;
-  return parseActiveGameCodes().includes(code);
+  return parseActiveGameCodes(raw).includes(code);
 }
 
-function getActivePlatformGameIds(platform: string): string[] {
+function getActivePlatformGameIds(platform: string, raw?: string): string[] {
   platform = normalizePlatformKey(platform);
-  return getActiveGames()
+  return getActiveGames(raw)
     .map(g => g.platforms?.[platform])
     .filter(Boolean)
     .map(String);
@@ -215,12 +215,12 @@ interface CatalogSummary {
   }[];
 }
 
-function getCatalogSummary(): CatalogSummary {
+function getCatalogSummary(raw?: string): CatalogSummary {
   return {
     version: catalog.version,
     updatedAt: catalog.updatedAt,
-    activeCodes: parseActiveGameCodes(),
-    games: getActiveGames().map(g => ({
+    activeCodes: parseActiveGameCodes(raw),
+    games: getActiveGames(raw).map(g => ({
       code: g.code,
       name: g.name,
       nameEn: g.nameEn,

@@ -1,5 +1,5 @@
 /** [changmen 扩展] 场馆监控仅更新现有客户端订单，不创建账本订单或发起 HTTP 请求。 */
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { OrderRow } from "@/types/order";
 import { useOrderStore } from "@/stores/orderStore";
 

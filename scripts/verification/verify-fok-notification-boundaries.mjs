@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 真实 POST/通知故障保护；保留既有异常隔离，旧基线差异必须显式匹配。
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -10,7 +11,7 @@ function business(row) {
 const file = "client/web/src/stores/account/betGateway.ts";
 const baselines = ["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"];
 for (const base of baselines)
-  verifyProtectedSource(file, fs.readFileSync(file, "utf8"), gitSource(base, file));
+  verifyProtectedSource(file, readAdapterHistory(file, "utf8"), gitSource(base, file));
 const cases = [];
 for (const base of [...baselines, notificationCommit]) {
   for (const provider of ["OB", "RAY", "Polymarket"]) {

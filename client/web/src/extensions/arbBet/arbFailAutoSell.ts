@@ -7,7 +7,7 @@
  *
  * 不做止盈；9999 单边故意敞口不触发。
  */
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { ArbFailAutoSellPrefs } from "@/types/extensionPrefs";
 import type { OrderRow } from "@/types/order";
 import type { PlatformAccount } from "@/models/platformAccount";
@@ -25,8 +25,8 @@ import {
   sellPolymarketBuyPosition,
   pmSubmitScope,
   type OrderRowLike,
-} from "@changmen/venue-adapter/polymarket";
-import { pfSubmitSell } from "@changmen/venue-adapter/predictfun";
+} from "@changmen/venue-browser/adapter/polymarket";
+import { pfSubmitSell } from "@changmen/venue-browser/adapter/predictfun";
 import { saveOrders } from "@/api/order";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { a8Tip } from "@/shared/a8Notify";

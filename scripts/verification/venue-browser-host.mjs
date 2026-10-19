@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact host composition and pure callback binding; historical proofs remain fixed.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,10 +6,10 @@ import {createHash} from 'node:crypto';
 import {restoreVenueBrowserWorkspace,verifyVenueBrowserWorkspace} from './venue-browser-workspace.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-host.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-host.json',import.meta.url),'utf8');
 assert.equal(sha(text),'15bc3d164711fcafc7d1db888833b42a651b1f5d9c0e2416acc10a6032e1bd2e');
 export const VENUE_BROWSER_HOST=JSON.parse(text);
-const readFile=file=>fs.readFileSync(new URL('../../'+file,import.meta.url),'utf8');
+const readFile=withAdapterHistoryReader(file=>readAdapterHistory(new URL('../../'+file,import.meta.url),'utf8'));
 function reverse(row,source){
  source=normalize(source);assert.equal(sha(source),row.afterSha,row.file+': exact host boundary');
  for(const r of row.replacements){assert.equal(source.split(r.to).length,2);source=source.replace(r.to,r.from);}

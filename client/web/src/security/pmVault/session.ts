@@ -4,7 +4,7 @@
 
 import { reactive, ref } from "vue";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/lib/authSession";
-import { preparePolymarketAccountRuntimes } from "@changmen/venue-adapter/polymarket";
+import { preparePolymarketAccountRuntimes } from "@changmen/venue-browser/adapter/polymarket";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { isPolymarketProvider, isVaultKeyProvider, tokenWalletAddress } from "./tokenStrip";
 import { clearRetainedPmMemory, getRetainedPmSessionEpoch, getRetainedPmPrivateKey, prepareRetainedPmSession, registerRetainedPmCleanup, removeRetainedPmAccount, restoreRetainedPmSession, revokeRetainedPmSession, saveRetainedPmSession } from "./retainedPmSession";

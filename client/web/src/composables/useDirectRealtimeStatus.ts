@@ -1,9 +1,9 @@
-import type { DirectRealtimeStatus } from "@changmen/venue-adapter/shared";
+import type { DirectRealtimeStatus } from "@changmen/venue-browser/adapter/shared";
 import {
 
   listDirectRealtimeStatuses,
   subscribeDirectRealtimeStatus,
-} from "@changmen/venue-adapter/shared";
+} from "@changmen/venue-browser/adapter/shared";
 import { onMounted, onUnmounted, ref } from "vue";
 
 export function useDirectRealtimeStatus() {

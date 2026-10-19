@@ -1,12 +1,12 @@
 import type { ObservationContext } from "@changmen/shared/order_observation";
-import type { ResolveVenueStakeOpts } from "@changmen/venue-adapter/adaptation";
+import type { ResolveVenueStakeOpts } from "@changmen/venue-browser/adapter/adaptation";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { AccountStoreContext } from "@/stores/account/context";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
 import { getExchange } from "@changmen/shared/currency";
-import { resolveVenueStakeFromPlanCny } from "@changmen/venue-adapter/adaptation";
+import { resolveVenueStakeFromPlanCny } from "@changmen/venue-browser/adapter/adaptation";
 import { attachPolymarketDetectionQuote } from "@/domain/polymarket/attachDetectionQuote";
 import { attachPredictFunDetectionQuote } from "@/domain/predictfun/attachDetectionQuote";
 import { publishBettingEvent } from "@/realtime/publishBetting";
@@ -27,11 +27,11 @@ import { markSuccessfulBet } from "@/stores/betting/successMarkers";
 import { useMessageStore } from "@/stores/messageStore";
 import { useUserStore } from "@/stores/userStore";
 import { pmSubmissionFromResult, validatePmSubmission, type PmSubmission } from "@changmen/shared/pm_submission";
-import { pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-adapter/polymarket";
+import { pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-browser/adapter/polymarket";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { getPmSubmission } from "@/api/order";
 import { getRetainedPmPrivateKey } from "@/security/pmVault/retainedPmSession";
-import { capturePmFokPreflightMode, prepareOptimizedFokExecution } from "@changmen/venue-adapter/polymarket";
+import { capturePmFokPreflightMode, prepareOptimizedFokExecution } from "@changmen/venue-browser/adapter/polymarket";
 
 export type CheckBettingOpts = ResolveVenueStakeOpts & {
   /** [changmen 扩展] 本次 PM 单腿模式，非 PM provider 忽略。 */
@@ -433,7 +433,7 @@ export async function checkBetting(
       option.betMoney = venueBetMoney;
     }
     const checked = pm && opts?.pmOrderMode === "GTC"
-      ? await (await import("@changmen/venue-adapter/polymarket/gtc")).checkGtcBuy(account, option, undefined, opts?.pmGtcAllowResting !== true)
+      ? await (await import("@changmen/venue-browser/adapter/polymarket/gtc")).checkGtcBuy(account, option, undefined, opts?.pmGtcAllowResting !== true)
       : await provider.checkBet(account, option, { role: opts?.role ?? "execute", ...(opts?.requireClobConfirmation ? { requireClobConfirmation: true } : {}) });
     checkedOption = checked;
     // [changmen 扩展] adapter 返回新对象时只传递观察元数据，原业务返回值不变。

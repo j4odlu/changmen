@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact development/type dependency increment, with complete
 // original lock verification and negative cases for unrelated edits.
 import { restoreClientPackageMetadata } from "./client-package-relocation.mjs";
@@ -9,7 +10,7 @@ import { restorePmSportsTypeScriptMetadata } from "./pm-sports-typescript-metada
 import { restorePmSourceIsolationMetadata, PM_METADATA_BASELINE } from "./pm-source-isolation-metadata.mjs";
 
 const file = "package-lock.json";
-const source = restorePmSportsTypeScriptMetadata(file, restoreClientPackageMetadata(file, fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n")));
+const source = restorePmSportsTypeScriptMetadata(file, restoreClientPackageMetadata(file, readAdapterHistory(file, "utf8").replaceAll("\r\n", "\n")));
 const previous = gitSource("84364793171244eca85378ef7bce3388f147b237", file);
 const key = "server/collectors/polymarket-esports";
 const sportsKey = "server/collectors/polymarket-sports";
@@ -22,10 +23,10 @@ it("changes exactly the two collector records and restores the complete pre-migr
   expect(Object.keys(after.packages)).toEqual(Object.keys(before.packages));
   expect(Object.keys(after.packages).filter(path => JSON.stringify(after.packages[path]) !== JSON.stringify(before.packages[path])))
     .toEqual([key, sportsKey]);
-  const manifest = JSON.parse(fs.readFileSync(`${key}/package.json`, "utf8"));
+  const manifest = JSON.parse(readAdapterHistory(`${key}/package.json`, "utf8"));
   expect(after.packages[key].dependencies).toEqual(manifest.dependencies);
   expect(after.packages[key].devDependencies).toEqual(manifest.devDependencies);
-  const sportsManifest = JSON.parse(restorePmSportsTypeScriptMetadata(`${sportsKey}/package.json`, fs.readFileSync(`${sportsKey}/package.json`, "utf8")));
+  const sportsManifest = JSON.parse(restorePmSportsTypeScriptMetadata(`${sportsKey}/package.json`, readAdapterHistory(`${sportsKey}/package.json`, "utf8")));
   expect(after.packages[sportsKey].dependencies).toEqual(sportsManifest.dependencies);
   const reverted = structuredClone(after);
   delete reverted.packages[key].dependencies["@changmen/api-contract"];
@@ -55,13 +56,13 @@ for (const [label, mutate] of [
 it("does not normalize any other source or replace any historical proof", () => {
   expect(restore("server/db/index.js", source)).toBe(source);
   for (const proof of ["vps-fok-baseline.json", "dependency-security-metadata.json", "pm-source-isolation-metadata.json", "runtime-tooling-migration.json"])
-    expect(fs.readFileSync(`scripts/verification/${proof}`, "utf8").replaceAll("\r\n", "\n"))
+    expect(readAdapterHistory(`scripts/verification/${proof}`, "utf8").replaceAll("\r\n", "\n"))
       .toBe(gitSource("84364793171244eca85378ef7bce3388f147b237", `scripts/verification/${proof}`));
 });
 
 it("restores only the exact shared dependency increment in the complete sports collector manifest", () => {
   const manifestFile = `${sportsKey}/package.json`;
-  const current = restorePmSportsTypeScriptMetadata(manifestFile, fs.readFileSync(manifestFile, "utf8").replaceAll("\r\n", "\n"));
+  const current = restorePmSportsTypeScriptMetadata(manifestFile, readAdapterHistory(manifestFile, "utf8").replaceAll("\r\n", "\n"));
   const historical = gitSource(PM_METADATA_BASELINE, manifestFile);
   expect(restore(manifestFile, current)).toBe(historical);
   expect(restorePmSourceIsolationMetadata(manifestFile, current, historical)).toBe(historical);

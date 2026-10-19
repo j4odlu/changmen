@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 用户授权的 FOK CANCELLATION 快速收尾；仅还原精确增量，固定基线不变。
 import assert from "node:assert/strict";
@@ -5,7 +6,7 @@ import fs from "node:fs";
 import { createHash } from "node:crypto";
 const normalize = source => source.replaceAll("\r\n", "\n");
 const digest = source => createHash("sha256").update(normalize(source)).digest("hex");
-const text = normalize(fs.readFileSync(new URL("./pm-fok-cancellation-increments.json", import.meta.url), "utf8"));
+const text = normalize(readAdapterHistory(new URL("./pm-fok-cancellation-increments.json", import.meta.url), "utf8"));
 assert.equal(digest(text), "28716354fd6009ed82cc23a36da6fa0532034b9e8c31d443e462a90466016a8c", "reviewed FOK cancellation increments stay fixed");
 const registered = JSON.parse(text);
 export function restorePmFokCancellationSource(file, source, required = false) {

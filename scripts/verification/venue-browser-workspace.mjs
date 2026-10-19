@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact package registration and public-entry imports; no business source exemptions.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {restoreVenueBrowserConsumers,verifyVenueBrowserConsumers} from './venue-browser-consumers.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-workspace.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-workspace.json',import.meta.url),'utf8');
 assert.equal(sha(text),'731db4c57d59ece91848c80afa682ec397c5762ba270c7a5079deb9bc7db1546');
 export const VENUE_BROWSER_WORKSPACE=JSON.parse(text);
 export function restoreVenueBrowserWorkspace(file,source){

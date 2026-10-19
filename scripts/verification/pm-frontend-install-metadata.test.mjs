@@ -1,12 +1,13 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 第二阶段精确逆变换继承第一阶段全文证明，拒绝 Node 安装依赖回流。
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 import { PM_METADATA_BASELINE, restorePmFrontendBuildMetadata, restorePmSourceIsolationMetadata } from "./pm-source-isolation-metadata.mjs";
-const file = "package-lock.json", current = restorePmFrontendBuildMetadata(file, fs.readFileSync(file, "utf8"));
-const first = JSON.parse(fs.readFileSync(new URL("./pm-source-isolation-metadata.json", import.meta.url), "utf8"));
-const change = JSON.parse(fs.readFileSync(new URL("./pm-frontend-install-metadata.json", import.meta.url), "utf8"));
+const file = "package-lock.json", current = restorePmFrontendBuildMetadata(file, readAdapterHistory(file, "utf8"));
+const first = JSON.parse(readAdapterHistory(new URL("./pm-source-isolation-metadata.json", import.meta.url), "utf8"));
+const change = JSON.parse(readAdapterHistory(new URL("./pm-frontend-install-metadata.json", import.meta.url), "utf8"));
 const original = gitSource(PM_METADATA_BASELINE, file);
 it("restores the whole previous registered lock and then the immutable historical baseline", () => {
   expect(change.patches).toHaveLength(8);
@@ -23,7 +24,7 @@ it("restores the whole previous registered lock and then the immutable historica
   expect(restorePmSourceIsolationMetadata(file, current, original)).toBe(original);
 });
 it("keeps the Vite alias SDK at the exact original root version and declares the build env parser", () => {
-  const lock = JSON.parse(current), old = JSON.parse(original), manifest = JSON.parse(fs.readFileSync("client/web/package.json", "utf8"));
+  const lock = JSON.parse(current), old = JSON.parse(original), manifest = JSON.parse(readAdapterHistory("client/web/package.json", "utf8"));
   expect(manifest.dependencies["socketcluster-client"]).toBe("20.0.1");
   expect(lock.packages["node_modules/socketcluster-client"]).toEqual(old.packages["node_modules/socketcluster-client"]);
   expect(lock.packages["node_modules/socketcluster-client"].version).toBe("20.0.1");

@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import { verifyGtcCompatibilityRetirement } from "./gtc-compat-retirement.mjs";
 import { restoreUnifiedArbitrageSource, verifyUnifiedArbitrageContract } from "./unified-arb-boundaries.mjs";
@@ -15,7 +16,7 @@ import { verifyPmRejectDisplayContract } from "./pm-reject-display-boundary.mjs"
 const base = process.env.FOK_PARITY_BASELINE ?? "219535c8";
 assert(["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"].includes(base), "FOK protection accepts only the two original immutable baselines");
 fs.mkdirSync("output", { recursive: true });
-verifyPmRejectDisplayContract(file => fs.readFileSync(file, "utf8"));
+verifyPmRejectDisplayContract(file => readAdapterHistory(file, "utf8"));
 verifyGtcCompatibilityRetirement();
 const executePath = "client/web/src/stores/betting/autoBet/executeArbBet.ts";
 const normalizeSource = text => text.replace(/\r\n/g, "\n");
@@ -56,18 +57,18 @@ const exactFiles = [
   "client/web/src/domain/polymarket/tickBufferQuote.ts",
 ];
 
-verifyRayFrontendSources(target => fs.readFileSync(target, "utf8"));
-const pmPreflightContract = verifyPmPreflightContract(target => fs.readFileSync(target, "utf8"));
-const unifiedContract = verifyUnifiedArbitrageContract(target => fs.readFileSync(target, "utf8"), replaceExact);
+verifyRayFrontendSources(target => readAdapterHistory(target, "utf8"));
+const pmPreflightContract = verifyPmPreflightContract(target => readAdapterHistory(target, "utf8"));
+const unifiedContract = verifyUnifiedArbitrageContract(target => readAdapterHistory(target, "utf8"), replaceExact);
 for (const file of exactFiles)
-  verifyProtectedSource(file, normalizeSource(fs.readFileSync(file, "utf8")), gitSource(base, file), undefined, target => gitSource(base, target));
+  verifyProtectedSource(file, normalizeSource(readAdapterHistory(file, "utf8")), gitSource(base, file), undefined, target => gitSource(base, target));
 // OrderList is shared by both modes. Optional details and amount slot preserve the original fallback.
 const sharedOrderList = "client/web/src/components/order/OrderList.vue";
 const originalOrderList = normalizeSource(execFileSync("git", ["show", `${base}:${sharedOrderList}`], { encoding: "utf8" }));
-checkOrdinaryOrderList(fs.readFileSync(sharedOrderList, "utf8"), originalOrderList);
+checkOrdinaryOrderList(readAdapterHistory(sharedOrderList, "utf8"), originalOrderList);
 for (const name of ["arbEarlyLockSell.ts", "arbFailAutoSell.ts"]) {
   const file = `client/web/src/extensions/arbBet/${name}`;
-  const source = normalizeSource(fs.readFileSync(file, "utf8")).replace("from \"@/orderModes/fok/financialOrders\"", "from \"@/stores/orderStore\"");
+  const source = normalizeSource(readAdapterHistory(file, "utf8")).replace("from \"@/orderModes/fok/financialOrders\"", "from \"@/stores/orderStore\"");
   assert.equal(source, normalizeSource(execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" })), `${name}: unchanged FOK automation with source-filtered common orders`);
 }
 const printer = ts.createPrinter({ removeComments: true });
@@ -85,10 +86,10 @@ function methodBodies(file, text) {
 }
 const pmFile = "packages/venue-adapter/polymarket/bet.ts";
 const beforePm = methodBodies(pmFile, execFileSync("git", ["show", `${base}:${pmFile}`], { encoding: "utf8" }));
-const currentPm = methodBodies(pmFile, specializeFokSource(pmFile, fs.readFileSync(pmFile, "utf8")));
+const currentPm = methodBodies(pmFile, specializeFokSource(pmFile, readAdapterHistory(pmFile, "utf8")));
 for (const [name, body] of beforePm) assert.equal(currentPm.get(name), body, `PM FOK: ${name}`);
 const oldManual = execFileSync("git", ["show", `${base}:client/web/src/stores/betting/manualBet.ts`], { encoding: "utf8" });
-const currentManual = fs.readFileSync("client/web/src/orderModes/fok/manual.ts", "utf8");
+const currentManual = readAdapterHistory("client/web/src/orderModes/fok/manual.ts", "utf8");
 function manualTail(text) {
   const suffix = text.slice(text.indexOf("  const toastSec = manualBetToastSeconds();"));
   return methodBodies("manual.ts", `async function fok(){\n${suffix}`).get("fok");
@@ -96,9 +97,9 @@ function manualTail(text) {
 assert.equal(manualTail(currentManual), manualTail(oldManual), "original manual FOK execution body");
 // Verify the complete manual entry, including account pick, quote, amount, filters and balance.
 // Only specialize the explicit FOK selection and replace the neutral dispatch with its actual executor.
-assert.equal(normalizeSource(fs.readFileSync("client/web/src/stores/betting/manualBet.ts", "utf8")), gitSource("89b87779", "client/web/src/stores/betting/manualBet.ts"), "existing independent manual entry unchanged");
+assert.equal(normalizeSource(readAdapterHistory("client/web/src/stores/betting/manualBet.ts", "utf8")), gitSource("89b87779", "client/web/src/stores/betting/manualBet.ts"), "existing independent manual entry unchanged");
 const oldManualSf = ts.createSourceFile("manual.ts", manualBaselineAfterKnownCorrection(oldManual), ts.ScriptTarget.Latest, true);
-const entrySf = ts.createSourceFile("manual.ts", fs.readFileSync("client/web/src/stores/betting/manualBet.ts", "utf8"), ts.ScriptTarget.Latest, true);
+const entrySf = ts.createSourceFile("manual.ts", readAdapterHistory("client/web/src/stores/betting/manualBet.ts", "utf8"), ts.ScriptTarget.Latest, true);
 const executorSf = ts.createSourceFile("fok.ts", currentManual, ts.ScriptTarget.Latest, true);
 const oldEntry = oldManualSf.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "runManualBet");
 const entry = entrySf.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "runManualBet");
@@ -142,13 +143,13 @@ const oldStatements = oldEntry.body.statements.map(node => cleanPrint(node, oldM
 const combinedStatements = specialized.transformed[0].body.statements.map(node => cleanPrint(node, tail.includes(node) ? executorSf : entrySf));
 assert.deepEqual(combinedStatements, oldStatements, "complete manual entry under FOK selection matches VPS, including all preparation and failure gates");
 specialized.dispose();
-const orchestration = fs.readFileSync(executePath, "utf8");
+const orchestration = readAdapterHistory(executePath, "utf8");
 const fixedOrchestration = restoreUnifiedArbitrageSource(executePath, orchestration, replaceExact, true);
 assert(!fixedOrchestration.includes("useUserStore") && !fixedOrchestration.includes("\"GTC\"") && !fixedOrchestration.includes("pmGtc/"), "orchestration cannot choose PM mode or import its execution module");
 process.stdout.write(`${JSON.stringify({ baseline: base, unifiedContract, pmPreflightContract, exactCoreFiles: exactFiles.length, pmFunctionBodies: beforePm.size, manualFokBodyIdentical: true })}\n`);
 
 function load(file, old, context) {
-  const source = old ? execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
+  const source = old ? execFileSync("git", ["show", `${base}:${file}`], { encoding: "utf8" }) : readAdapterHistory(file, "utf8");
   const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
   const exports = {}; const sandbox = vm.createContext({ ...context, exports, module: { exports }, console });
   vm.runInContext(js, sandbox, { filename: file, timeout: 1000 }); return exports;

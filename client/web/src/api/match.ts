@@ -1,6 +1,6 @@
 import type { CollectBetDto, CollectMatchDto } from "@changmen/client-core/types/collect";
 import type { ClientMatchDto } from "@/types/esport";
-import { isVpsOwnedPlatformCollect } from "@changmen/venue-adapter/registry";
+import { isVpsOwnedPlatformCollect } from "@changmen/venue-browser/adapter/registry";
 import { post, postForm, unwrap } from "@/api/client";
 import {
   toA8LiveTimerRow,

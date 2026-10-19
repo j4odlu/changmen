@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { verifyRayClientMonitorSource } from "./ray-client-monitor-boundary.mjs";
+import { readAdapterBrowserSource } from "./adapter-browser-relocation.mjs";
 import { restoreRaySubmissionPreviewSource, verifyRaySubmissionPreviewSources } from "./ray-submission-preview-boundary.mjs";
 
 export const rayFrontendCommit = "2391dc9df446dcb7ed85030a3faca3696b0d0da7";
@@ -56,6 +57,7 @@ export function restoreRayProviderSource(file, source, readSource) {
 
 /** [changmen 扩展] 精确还原赛果展示与原始字段透传；继续核对完整采集、赔率、下注实现。 */
 export function restoreRayMapOutcomeSource(file, source) {
+  source = readAdapterBrowserSource(file, source);
   source = source.replaceAll("\r\n", "\n");
   const resultChanges = {
     "packages/venue-adapter/shared/webBridgeTypes.ts": [

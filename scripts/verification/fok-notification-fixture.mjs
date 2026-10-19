@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 真实 placeBet 的离线通知故障差分；HTTP、存储与场馆边界全部模拟。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -6,7 +7,7 @@ import vm from "node:vm";
 import ts from "typescript";
 
 const json = value => JSON.parse(JSON.stringify(value));
-const source = file => fs.readFileSync(file, "utf8");
+const source = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 function load(file, text, modules, globals = {}) {
   const exports = {};
   const js = ts.transpileModule(text, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;

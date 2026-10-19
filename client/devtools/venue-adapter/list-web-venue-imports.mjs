@@ -142,6 +142,10 @@ for (const sub of sorted) {
 }
 
 if (CHECK) {
+  if (subs.size) {
+    console.error("Browser entries are retired: use @changmen/venue-browser/adapter instead of @changmen/venue-adapter.");
+    process.exit(1);
+  }
   if (deepViolations.length) {
     console.error("\nlist-web-venue-imports --check: 非 barrel / 非法深路径 import：");
     for (const v of deepViolations)

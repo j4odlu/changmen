@@ -12,7 +12,8 @@
   "files": [
     "paths.js",
     "feeds.js",
-    "manifest.json"
+    "manifest.json",
+    "runtime"
   ],
   "dependencies": {
     "@changmen/storage": "file:../../storage"

@@ -10,7 +10,7 @@ import { fetchPandaSportTrialPaste } from "@/runtime/obSportTrial";
 import { clearObFootballClientCache } from "@/runtime/obSportFootballFetch";
 import { notifySportObSessionUpdated, SPORT_OB_SESSION_UPDATED } from "@/runtime/sportObSessionEvents";
 import { OB_SPORT_WS_ID, resolveObSportWsUrl } from "@/runtime/obSportWs";
-import { getVenueWsStatus, subscribeVenueWsStatus } from "@changmen/venue-adapter/shared";
+import { getVenueWsStatus, subscribeVenueWsStatus } from "@changmen/venue-browser/adapter/shared";
 
 const props = withDefaults(
   defineProps<{

@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
@@ -5,7 +6,7 @@ import ts from 'typescript';
 import {expect,it} from 'vitest';
 import {VENUE_BROWSER_PRICING as record,restoreVenueBrowserPricing,verifyVenueBrowserPricing} from './venue-browser-pricing.mjs';
 import {verifyVenueBrowserRelocation} from './venue-browser-relocation.mjs';
-const read=f=>fs.readFileSync(f,'utf8').replaceAll('\r\n','\n');
+const read=withAdapterHistoryReader(f=>readAdapterHistory(f,'utf8').replaceAll('\r\n','\n'));
 const after=f=>restoreVenueBrowserExecution(f,read(f));
 it('moves the complete pricing implementation with only its local tick import changed',()=>{
  expect(verifyVenueBrowserPricing(read)).toEqual({changedFiles:11,modules:1});

@@ -1,8 +1,9 @@
+import {readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { expect, it } from "vitest";
 import { gitSource, moduleTokens, replaceExact, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { gtcClientStateHashes, restoreGtcClientStateSource, verifyGtcClientStateSource } from "./gtc-client-state-boundary.mjs";
-const read = path => fs.readFileSync(path, "utf8");
+const read = path => readAdapterHistory(path, "utf8");
 it.each([
   ["results.js", 'jsonField(body.result, "result")', "body.result"],
   ["results.js", 'jsonField(body.anchors, "anchors")', "body.anchors"],

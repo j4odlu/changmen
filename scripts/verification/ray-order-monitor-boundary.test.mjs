@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -17,7 +18,7 @@ describe("exact RAY monitoring extensions retain whole FOK source protection", (
     expect(reviewed.split(relation).length - 1).toBe(34);
   });
   it("current RAY extensions retain the reviewed complete implementations", () => {
-    expect(() => restoreRayOrderMonitorSource(restoreRetiredOrdersCompatibility(path, fs.readFileSync(path, "utf8")))).not.toThrow();
+    expect(() => restoreRayOrderMonitorSource(restoreRetiredOrdersCompatibility(path, readAdapterHistory(path, "utf8")))).not.toThrow();
   });
   it.each([
     ["reader owner", "WHERE user_id = $1 AND player_id = $2 AND provider = 'RAY'", "WHERE player_id = $2 AND provider = 'RAY'"],

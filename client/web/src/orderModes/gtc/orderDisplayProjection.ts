@@ -7,7 +7,7 @@ import { resolveOrderItemLabel } from "@/shared/orderItemDisplay";
 import { compareOrderLinkDesc, dropOrphanPolymarketSellGroups, filterOrdersBelongingToDate, groupOrdersByEffectiveLink, orderLinkMapEntries } from "@/shared/orderLink";
 import { gtcMatchedOrder } from "./financialOrder";
 import { gtcOrderCardView } from "./orderCardView";
-import { lookupPolymarketOrderBetLabel } from "@changmen/venue-adapter/polymarket/orders";
+import { lookupPolymarketOrderBetLabel } from "@changmen/venue-browser/adapter/polymarket/orders";
 
 function originalItemText(execution: GtcExecution): string {
   const entities: Record<string, string> = { apos: "'", quot: "\"", amp: "&", lt: "<", gt: ">", nbsp: " " };

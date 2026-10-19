@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { reactive } from "vue";
-import { setPmFokPreflightMode, capturePmFokPreflightMode } from "@changmen/venue-adapter/polymarket/pmFokPreflightMode";
+import { setPmFokPreflightMode, capturePmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket/pmFokPreflightMode";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { installPmDynamicWsPreflight, stopPmDynamicWsPreflight } from "./pmDynamicWsPreflight";
 import { setPmBookSetting } from "./pmBookSettings";

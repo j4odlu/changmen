@@ -35,7 +35,7 @@ export function bootSessionRuntime(): Promise<void> {
         stopCollectors();
         return;
       }
-      const { primeStakeTabId } = await import("@changmen/venue-adapter/stake");
+      const { primeStakeTabId } = await import("@changmen/venue-browser/adapter/stake");
       if (generation !== current) {
         stopCollectors();
         return;

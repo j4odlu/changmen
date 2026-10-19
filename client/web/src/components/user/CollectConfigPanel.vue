@@ -6,7 +6,7 @@ import { CREDIT_PLATE_ENTRIES, enterCreditPlate } from "@/api/v4";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { syncCollectorsFromConfig } from "@/runtime/collectors";
 import { useCollectStore } from "@/stores/collectStore";
-import { browserSaveMatchPlatformIds } from "@changmen/venue-adapter/registry";
+import { browserSaveMatchPlatformIds } from "@changmen/venue-browser/adapter/registry";
 
 const collect = useCollectStore();
 const { log } = storeToRefs(collect);

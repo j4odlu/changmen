@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -13,10 +14,10 @@ const snapshot = { captureId: "offline-fixture", frontendVersion: frontend, back
   sources: Object.fromEntries(publicFiles.map(file => [file, gitSource(file.startsWith("server/") ? backend : frontend, file)])) };
 
 function check(change = source => source, baselineRead = gitSource) {
-  const checker = fs.readFileSync("scripts/verification/verify-fok-public-entries.mjs", "utf8").replace(/^import .*;\r?\n/gm, "");
-  vm.runInNewContext(checker, { assert, ts, gitSource: baselineRead, moduleTokens, verifyActualPublicModule, fs: { ...fs, readFileSync(file, options) {
+  const checker = readAdapterHistory("scripts/verification/verify-fok-public-entries.mjs", "utf8").replace(/^import .*;\r?\n/gm, "");
+  vm.runInNewContext(checker, { assert, ts, gitSource: baselineRead, moduleTokens, verifyActualPublicModule, withAdapterHistoryReader, readAdapterHistory:(file,options)=>{if(file==="output/vps-fok-baseline.json")return JSON.stringify(snapshot);const source=readAdapterHistory(file,options);return file==="server/backend/core/esport-api/pm_pf_routes.ts"?change(source):source;}, fs: { ...fs, readFileSync(file, options) {
     if (file === "output/vps-fok-baseline.json") return JSON.stringify(snapshot);
-    const source = fs.readFileSync(file, options);
+    const source = readAdapterHistory(file, options);
     return file === "server/backend/core/esport-api/pm_pf_routes.ts" ? change(source) : source;
   }, writeFileSync() {} }, process: { stdout: { write() {} } } }, { timeout: 30000 });
 }

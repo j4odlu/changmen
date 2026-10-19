@@ -2,7 +2,7 @@ import type { OrderRow } from "@/types/order";
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 import { toFixed } from "@changmen/client-core/shared/format";
 import { Currency, getExchange } from "@changmen/shared/currency";
-import { resolvePmFillShares, resolvePmRemainingShares } from "@changmen/venue-adapter/polymarket";
+import { resolvePmFillShares, resolvePmRemainingShares } from "@changmen/venue-browser/adapter/polymarket";
 import { normalizeOrderStatus } from "@/shared/orderDisplay";
 
 /** Polymarket API 数值：保留有效小数，去掉尾部 0 */

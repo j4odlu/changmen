@@ -68,7 +68,7 @@ import {
   orderListDisplayBlocks,
   orderListDisplayRows,
 } from "@/shared/orderLink";
-import { resolvePmRemainingShares } from "@changmen/venue-adapter/polymarket";
+import { resolvePmRemainingShares } from "@changmen/venue-browser/adapter/polymarket";
 import {
   canManualSellPmBuy,
   confirmAndSellPmBuyOrder,
@@ -82,7 +82,7 @@ import {
 } from "@/stores/account/pfManualSell";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useSportOddsStore } from "@/stores/sportOddsStore";
-import { PLATFORMS } from "@changmen/venue-adapter/shared";
+import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
 import { isUnifiedFootballOrderRow } from "@/shared/orderDomain";
 
 export type OrderListEntry = readonly [number, OrderRow[]];

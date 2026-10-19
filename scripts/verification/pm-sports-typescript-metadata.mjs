@@ -1,10 +1,11 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Reverse only exact workspace type declarations and development
 // dependencies. All earlier full-file proofs and SDK records remain mandatory.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 const sha = source => createHash("sha256").update(source).digest("hex");
-const text = fs.readFileSync(new URL("./pm-sports-typescript-metadata.json", import.meta.url), "utf8").replaceAll("\r\n", "\n");
+const text = readAdapterHistory(new URL("./pm-sports-typescript-metadata.json", import.meta.url), "utf8").replaceAll("\r\n", "\n");
 assert.equal(sha(text), "d491b193f794db1c28b43a791fe4c6320ac35f025ca0bdfeafc4d1ea08c5a925");
 const record = JSON.parse(text);
 assert.equal(record.schemaVersion, 1);

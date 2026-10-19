@@ -1,9 +1,10 @@
+import {readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { expect, it } from 'vitest';
 import { restoreMakeupOddsDisplaySource } from './makeup-odds-display-boundary.mjs';
 const commit = '4a553bbb1ed34cb59486ae5030f81cdab5656cf7';
-const read = file => fs.readFileSync(file, 'utf8').replaceAll('\r\n', '\n');
+const read = file => readAdapterHistory(file, 'utf8').replaceAll('\r\n', '\n');
 const files = ['client/web/src/shared/orderLink.ts', 'client/web/src/components/order/OrderList.vue'];
 
 it.each(files)('restores the complete pre-display source without changing its historical baseline: %s', file => {

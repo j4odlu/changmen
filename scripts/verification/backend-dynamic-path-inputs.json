@@ -1,0 +1,608 @@
+{
+  "schemaVersion": 1,
+  "purpose": "backend-default-dynamic-path-certification",
+  "productionEnabled": false,
+  "publishScopeOptimizationEnabled": false,
+  "sourceContracts": [
+    {
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "selector": "module",
+      "signature": "0e9166ae1c24727470027191ab18601c6ae2ab6720a6dddde8790f6867111096"
+    },
+    {
+      "file": "server/db/pg_pool.js",
+      "selector": "pg-loader",
+      "signature": "04c2dee833fe235d1b97c217a1425c339b532d5ea48d3e9fe98dd0735a0aa299"
+    },
+    {
+      "file": "server/db/resolve_database_url.js",
+      "selector": "pg-loader",
+      "signature": "f82263431f03a11d45eb8869533b3db7b2558d92adb636c2fb5802a42be732b8"
+    },
+    {
+      "file": "server/packages/venue-node-registry/paths.js",
+      "selector": "module",
+      "signature": "7e06d9c2c923f2bb0aff8b6ed94c4e0418b3c6db2287b9d44e40b3ec40f2c8eb"
+    },
+    {
+      "file": "server/packages/venue-node-registry/runtime/registry/paths.js",
+      "selector": "module",
+      "signature": "000a51c9d1623aaf72853d0e060d2805bead2dad3929c6946cb8af6fea15d3ed"
+    },
+    {
+      "file": "server/packages/venue-node-registry/runtime/registry/feeds.js",
+      "selector": "module",
+      "signature": "a4672509cd1c8b1001b7eac4bfa7531972c10a1ab8f2523bfb7d6c7623d17f52"
+    },
+    {
+      "file": "server/storage/paths.js",
+      "selector": "module",
+      "signature": "5d89d696f2ff79b2386019f45cadb55bf518c49214f3ba6919a5e7bfd9ccc6a8"
+    },
+    {
+      "file": "server/storage/changmen_root.js",
+      "selector": "module",
+      "signature": "660c34b6b3bf37eee9dfcc1a17102ce80b01696ecc5ae904c30a2e54bf5c1077"
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.js",
+      "selector": "module",
+      "signature": "0f85746eaafb7792a6b224a4b3b214078f8368bab409c176c99c20cf5c93c24a"
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.cjs",
+      "selector": "module",
+      "signature": "f62c1ea53fd921ce4e6764c115a0ff56a629142762b0b509a1fadfdf81622209"
+    }
+  ],
+  "calls": [
+    {
+      "file": "server/backend/core/account/balance_provider.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "HG",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/account/balance_provider.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "OB",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/account/balance_provider.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "PB",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/account/balance_provider.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "RAY",
+        "node",
+        "core.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/account/balance_provider.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "RAY",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/esport-api/platform_sync.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "IA",
+        "node",
+        "collect_credentials.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/esport-api/platform_sync.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "OB",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/esport-api/platform_sync.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "PB",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/esport-api/platform_sync.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "RAY",
+        "node",
+        "collect_credentials.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/esport-api/platform_sync.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "TF",
+        "node",
+        "collect_credentials.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/esport-api/router.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "IA",
+        "node",
+        "collect_credentials.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/esport-api/router.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "TF",
+        "node",
+        "collect_credentials.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/core/esport-api/store.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "adapterRequire"
+      },
+      "arguments": [
+        "registry",
+        "feeds.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/http_routes.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "adapterRequire"
+      },
+      "arguments": [
+        "registry",
+        "feeds.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/http_routes.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "OB",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/proxy/ob_http_proxy.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "OB",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/proxy/pb_http_proxy.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "PB",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/proxy/ray_http_proxy.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "RAY",
+        "node",
+        "collect_credentials.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/backend/proxy/ray_http_proxy.js",
+      "origin": {
+        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "symbol": "requirePlatform"
+      },
+      "arguments": [
+        "RAY",
+        "node",
+        "session.js"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/platform-probes/ia/ws.js",
+      "origin": {
+        "file": "server/platform-probes/backend/_paths.js",
+        "symbol": "backendRequire"
+      },
+      "arguments": [
+        "socket.io-client"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/platform-probes/ray/ws.js",
+      "origin": {
+        "file": "server/platform-probes/backend/_paths.js",
+        "symbol": "backendRequire"
+      },
+      "arguments": [
+        "socketcluster-client"
+      ],
+      "count": 1
+    },
+    {
+      "file": "server/platform-probes/tf/ws.js",
+      "origin": {
+        "file": "server/platform-probes/backend/_paths.js",
+        "symbol": "backendRequire"
+      },
+      "arguments": [
+        "ws"
+      ],
+      "count": 1
+    }
+  ],
+  "dynamicSites": [
+    {
+      "file": "server/db/pg_pool.js",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(\"pg\", { paths: searchPaths })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/db/resolve_database_url.js",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(\"pg\", { paths: searchPaths })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "kind": "computed-loader",
+      "spec": null,
+      "expression": "entry",
+      "loader": "require.resolve",
+      "arguments": [
+        null,
+        null
+      ]
+    },
+    {
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "kind": "computed-loader",
+      "spec": null,
+      "expression": "specifier",
+      "loader": "require.resolve",
+      "arguments": [
+        null,
+        null
+      ]
+    },
+    {
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "kind": "dynamic-import",
+      "spec": null,
+      "expression": "feedsUrl",
+      "loader": "import",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "kind": "dynamic-import",
+      "spec": null,
+      "expression": "pathsUrl",
+      "loader": "import",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "kind": "dynamic-import",
+      "spec": null,
+      "expression": "pathToFileURL(abs).href",
+      "loader": "import",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "kind": "require",
+      "spec": null,
+      "expression": "abs",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "kind": "require",
+      "spec": null,
+      "expression": "path.join(getAdapterRoot(), ...segments)",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.cjs",
+      "kind": "computed-loader",
+      "spec": null,
+      "expression": "entry",
+      "loader": "require.resolve",
+      "arguments": [
+        null,
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.cjs",
+      "kind": "computed-loader",
+      "spec": null,
+      "expression": "specifier",
+      "loader": "require.resolve",
+      "arguments": [
+        null,
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.cjs",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.cjs",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.js",
+      "kind": "computed-loader",
+      "spec": null,
+      "expression": "entry",
+      "loader": "require.resolve",
+      "arguments": [
+        null,
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.js",
+      "kind": "computed-loader",
+      "spec": null,
+      "expression": "specifier",
+      "loader": "require.resolve",
+      "arguments": [
+        null,
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.js",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.js",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    }
+  ],
+  "preloadFiles": [
+    "server/platform-probes/ob/core.js",
+    "server/platform-probes/ob/session.js",
+    "server/platform-probes/ray/collect_credentials.js",
+    "server/platform-probes/ray/core.js",
+    "server/platform-probes/ray/ray_game_ids.js",
+    "server/platform-probes/ray/session.js",
+    "server/platform-probes/ray/ws.js",
+    "server/platform-probes/tf/auth.js",
+    "server/platform-probes/tf/collect_credentials.js",
+    "server/platform-probes/tf/core.js",
+    "server/platform-probes/tf/game_ids.js",
+    "server/platform-probes/tf/session.js",
+    "server/platform-probes/tf/ws.js",
+    "server/platform-probes/ia/collect_credentials.js",
+    "server/platform-probes/ia/core.js",
+    "server/platform-probes/ia/game_ids.js",
+    "server/platform-probes/ia/session.js",
+    "server/platform-probes/ia/ws.js",
+    "server/platform-probes/pb/core.js",
+    "server/platform-probes/pb/session.js"
+  ],
+  "entries": [
+    {
+      "name": "changmen-esport",
+      "directory": "server/backend",
+      "script": "scripts/start-db.mjs",
+      "workspace": "@changmen/backend"
+    },
+    {
+      "name": "changmen-pm-sports",
+      "directory": "server/collectors/polymarket-sports",
+      "script": "index.js",
+      "workspace": "@changmen/polymarket-sports"
+    },
+    {
+      "name": "changmen-polymarket-collector",
+      "directory": "server/collectors/polymarket-esports",
+      "script": "index.js",
+      "workspace": "@changmen/polymarket-esports-collector"
+    },
+    {
+      "name": "changmen-pm-football-collector",
+      "directory": "server/collectors/polymarket-football",
+      "script": "index.js",
+      "workspace": "@changmen/polymarket-football-collector"
+    },
+    {
+      "name": "changmen-predictfun-collector",
+      "directory": "server/collectors/predictfun-collector",
+      "script": "index.js",
+      "workspace": "@changmen/predictfun-collector"
+    },
+    {
+      "name": "changmen-pm-market-hub",
+      "directory": "server/ws_forward",
+      "script": "pm_market_hub_server.js",
+      "workspace": "@changmen/ws-forward"
+    },
+    {
+      "name": "changmen-pm-sport-market-hub",
+      "directory": "server/ws_forward",
+      "script": "pm_sport_market_hub_server.js",
+      "workspace": "@changmen/ws-forward"
+    },
+    {
+      "name": "changmen-predictfun-market-hub",
+      "directory": "server/ws_forward",
+      "script": "predictfun_market_hub_server.js",
+      "workspace": "@changmen/ws-forward"
+    }
+  ]
+}

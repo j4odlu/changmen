@@ -20,10 +20,10 @@ vi.mock("@/api/order", () => ({ saveOrders: mocks.save }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ updateVenueOrders }) }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => 1, isAuthSessionCurrent: () => true }));
 vi.mock("@/runtime/venueAdapters", async () => {
-  const { withA8ResolveLegOutcome } = await import("@changmen/venue-adapter/adaptation");
+  const { withA8ResolveLegOutcome } = await import("@changmen/venue-browser/adapter/adaptation");
   return { getProvider: () => withA8ResolveLegOutcome({ getOrders: mocks.read, checkBet: vi.fn(), betting: vi.fn() }) };
 });
-vi.mock("@changmen/venue-adapter/shared/rejectWait", () => ({ venueRejectWaitBeforePoll: mocks.wait }));
+vi.mock("@changmen/venue-browser/adapter/shared/rejectWait", () => ({ venueRejectWaitBeforePoll: mocks.wait }));
 vi.mock("@/services/orderObservation", () => ({ observeOrder: vi.fn() }));
 vi.mock("@/services/bettingLog", () => ({ saveVenueSettlementLog: vi.fn() }));
 vi.mock("@/shared/a8Notify", () => ({ a8Tip: vi.fn() }));

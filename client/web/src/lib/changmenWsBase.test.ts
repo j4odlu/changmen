@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resolveChangmenWsBase } from "@changmen/venue-adapter/shared";
+import { resolveChangmenWsBase } from "@changmen/venue-browser/adapter/shared";
 
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 describe("development authenticated realtime routing", () => {

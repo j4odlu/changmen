@@ -8,16 +8,16 @@
 <button id="run" disabled>运行 12 次前后对比</button><button id="download" disabled>下载结果</button>
 <pre id="result">加载中</pre>
 <script type="module">
-import { checkFokBuy } from '../../../packages/venue-adapter/polymarket/fok/preflight.ts';
-import { checkFokBuy as beforeFastCheck } from '../../../packages/venue-adapter/polymarket/tests/submission/fixtures/pmBeforeFastFok.ts';
-import { setPmFokPreflightMode } from '../../../packages/venue-adapter/polymarket/submission/preflight/pmFokPreflightMode.ts';
-import { clearPmGammaCacheForTests, fetchGammaEventById, fetchGammaMarketByTokenId } from '../../../packages/venue-adapter/polymarket/pmSportGamma.ts';
-import { clearPmExecutionMetrics, getPmExecutionMetrics } from '../../../packages/venue-adapter/polymarket/pmExecutionMetrics.ts';
-import { polymarketPluginGet } from '../../../packages/venue-adapter/polymarket/transport.ts';
-import { pmGetBook } from '../../../packages/venue-adapter/polymarket/pmClientApi.ts';
-import { resolvePmHttpMode } from '../../../packages/venue-adapter/polymarket/pmTransportMode.ts';
-import { getPmMarketWsSourceMode } from '../../../packages/venue-adapter/polymarket/pmMarketWsMode.ts';
-import { prepareBrowserSubmitClock, clearBrowserSubmitClockForTests } from '../../../packages/venue-adapter/polymarket/pmBrowserSubmitClock.ts';
+import { checkFokBuy } from '@changmen/venue-browser/adapter/polymarket/fok/preflight';
+import { checkFokBuy as beforeFastCheck } from '@changmen/venue-browser/adapter/polymarket/tests/submission/fixtures/pmBeforeFastFok';
+import { setPmFokPreflightMode } from '@changmen/venue-browser/adapter/polymarket/submission/preflight/pmFokPreflightMode';
+import { clearPmGammaCacheForTests, fetchGammaEventById, fetchGammaMarketByTokenId } from '@changmen/venue-browser/adapter/polymarket/pmSportGamma';
+import { clearPmExecutionMetrics, getPmExecutionMetrics } from '@changmen/venue-browser/adapter/polymarket/pmExecutionMetrics';
+import { polymarketPluginGet } from '@changmen/venue-browser/adapter/polymarket/transport';
+import { pmGetBook } from '@changmen/venue-browser/adapter/polymarket/pmClientApi';
+import { resolvePmHttpMode } from '@changmen/venue-browser/adapter/polymarket/pmTransportMode';
+import { getPmMarketWsSourceMode } from '@changmen/venue-browser/adapter/polymarket/pmMarketWsMode';
+import { prepareBrowserSubmitClock, clearBrowserSubmitClockForTests } from '@changmen/venue-browser/adapter/polymarket/pmBrowserSubmitClock';
 import { registerPlatformHttpContext, changmenPmHttpRequest } from '@changmen/client-core/shared/platformHttp';
 import { a8Axios } from '@changmen/client-core/shared/a8Axios';
 import { getToken, setCookieSessionInfo } from '../src/lib/authSession.ts';

@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact closed market execution dependency group relocation.
 import {restoreVenueBrowserAccountRuntime,verifyVenueBrowserAccountRuntime} from './venue-browser-account-runtime.mjs';
 import assert from 'node:assert/strict';
@@ -5,7 +6,7 @@ import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-execution.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-execution.json',import.meta.url),'utf8');
 assert.equal(sha(text),'9ff84b25713efb8108c2088b2b49a2deeb97ca128e62891e2fde49464ed7d7c3');
 export const VENUE_BROWSER_EXECUTION=JSON.parse(text);
 export function restoreVenueBrowserExecution(file,source){

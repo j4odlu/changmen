@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Move exact type/predicate/error declarations; retain every original statement.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,10 +7,10 @@ import {restoreVenueBrowserStateEdits,verifyVenueBrowserState} from './venue-bro
 import {restoreVenueBrowserWorkspace} from './venue-browser-workspace.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-contracts.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-contracts.json',import.meta.url),'utf8');
 assert.equal(sha(text),'90c57cbd272a83e264913e3332786d6e3f5d8b4aefc7715a8af6e342a9469c35');
 export const VENUE_BROWSER_CONTRACTS=JSON.parse(text);
-const readFile=file=>fs.readFileSync(new URL('../../'+file,import.meta.url),'utf8');
+const readFile=withAdapterHistoryReader(file=>readAdapterHistory(new URL('../../'+file,import.meta.url),'utf8'));
 export function restoreVenueBrowserContracts(file,source,read=readFile){
  source=restoreVenueBrowserWorkspace(file,source);
  source=normalize(source);

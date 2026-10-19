@@ -1,6 +1,6 @@
 /** [changmen 扩展] PM work-session recovery. No password/KEK, no PredictFun keys. */
 import { reactive } from "vue";
-import { clearPolymarketOrderClientCache as clearSignerCache, retainPolymarketAccountRuntimes } from "@changmen/venue-adapter/polymarket";
+import { clearPolymarketOrderClientCache as clearSignerCache, retainPolymarketAccountRuntimes } from "@changmen/venue-browser/adapter/polymarket";
 import { a8PluginSend } from "@changmen/client-core/chrome-plugin/bridge";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { getAuthSessionVersion, getToken, isAuthSessionCurrent } from "@/lib/authSession";

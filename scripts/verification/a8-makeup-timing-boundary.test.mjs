@@ -1,8 +1,10 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
+import { readAdapterBrowserSource } from "./adapter-browser-relocation.mjs";
 import { expect, it } from "vitest";
 import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mjs";
 import { makeupTimingPreviousCommit, restoreA8MakeupTiming } from "./a8-makeup-timing-boundary.mjs";
-const read = file => fs.readFileSync(file, "utf8");
+const read = withAdapterHistoryReader(file => readAdapterBrowserSource(file, readAdapterHistory(file, "utf8")));
 const phases = "client/web/src/stores/betting/autoBet/phases/";
 
 it.each(["placeArbLegs.ts", "finalizeArbBet.ts"])("restores only the exact removed premature-queue behavior before checking the entire prior module: %s", (name) => {

@@ -124,7 +124,7 @@ vi.mock("@/shared/betTiming", () => ({
   makeUpBetToastSeconds: vi.fn(() => 10),
 }));
 
-vi.mock("@changmen/venue-adapter/shared/rejectWait", () => ({
+vi.mock("@changmen/venue-browser/adapter/shared/rejectWait", () => ({
   venueRejectWaitBeforePoll: vi.fn(async () => {}),
 }));
 
@@ -683,7 +683,7 @@ describe("processLoseOrders (A8 jb parity)", () => {
       updateVenueOrders.mockResolvedValue([]);
       await processLoseOrders({ setMessage: vi.fn() });
       await vi.waitFor(() => expect(markSuccessfulBet).toHaveBeenCalledOnce());
-      const { venueRejectWaitBeforePoll } = await import("@changmen/venue-adapter/shared/rejectWait");
+      const { venueRejectWaitBeforePoll } = await import("@changmen/venue-browser/adapter/shared/rejectWait");
       expect(venueRejectWaitBeforePoll).toHaveBeenCalledWith(remainingSeconds);
       expect(updateVenueOrders).toHaveBeenCalledOnce();
       expect(updateVenueOrders.mock.calls[0][1]).toMatchObject({ pendingBindOrderId: "accepted-before-refresh" });

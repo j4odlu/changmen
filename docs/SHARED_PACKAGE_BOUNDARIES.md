@@ -1,5 +1,11 @@
 # 共享包如何划分前端与后端
 
+[changmen 扩展] 2026-10-20 catalog 配置分离：`packages/shared/catalog/game_catalog.ts` 不再读取 `process.env`，筛选函数显式接收可选配置字符串，省略时选择全部电竞条目。服务端环境读取位于 `server/storage/game_catalog.js`，由 `@changmen/storage/game_catalog.js` 公开；7 处 ESM 与 2 处 CJS 消费点已迁移，每次调用仍读取最新的 `AGGREGATE_GAME_CODES`。静态映射、浏览器入口和 catalog JSON 不变。原生对照测试覆盖未设置、空值、通配符、大小写、分隔符、未知值及导入后修改配置；源码基线保持原值。
+
+[changmen 扩展] 2026-10-20 入口退役：595 个旧浏览器源码及测试入口已删除，Web 直接依赖 `@changmen/venue-browser`；旧 Vite/TS 别名和浏览器 exports 已移除。历史完整源码验证继续核对同一批客户端实现，真实目录与依赖检查禁止旧入口回流。以下迁移记录按历史保留。
+
+[changmen 扩展] 2026-10-20 当前源码位置：`packages/venue-adapter` 剩余的 180 个浏览器实现/注册模块已归入 `client/packages/venue-browser/adapter/`，183 个测试正文随实现迁入。此前迁出的 PM 实现继续使用原客户端路径；旧包中的浏览器源码只保留转导出及测试入口。Node loader/registry 主实现仍在 `server/packages/`，旧包的 Node 资源根与打包工具继续保留。此处只收尾物理归属，不调整生产发布选择或数据库维护流程。逐文件位置、完整正文和 import 调整证明接入 `check:boundaries`，原冻结与 551 项源码基线不变；以下按日期保留历史调查。
+
 [changmen 扩展] 2026-10-17 后续方案见 [PM 模块解耦与验证、发布流程精简](./PM_MODULE_DECOUPLING_AND_RELEASE_PLAN_20261017.md)：区分浏览器/Node/双端入口，以实际消费者证据分别选择验证、构建、发布。仅设计，尚未修改目录、分类器、运行版本指纹或发布流程；下文历史调查继续保留。
 
 第四轮依赖核对，2026-10-15，代码基线 `9aa9159c`。本轮不拆包、不移动代码、不调整发布分类。
@@ -14,7 +20,7 @@
 | --- | --- | --- |
 | `api-contract` | `client/web/src/api/client.ts` 使用 envelope 和 URL；backend workspace 声明依赖并消费 action/DTO | HTTP 协议继续共享，不能复制成可能漂移的两套定义 |
 | `shared` | package exports 提供 catalog、时间、赔率、账号与订单公共规则；Node loader 的 `requireShared()` 动态解析这些入口；Vite 将其打入共用 chunk | 按入口核对，不能将整个包归为浏览器专用，也不能仅凭存在 `.browser.ts` 宣称无 Node 关联 |
-| `shared/catalog/game_catalog.browser.ts` | 只是转导出 `game_catalog.js` 的子集；原实现还包含 `process.env.AGGREGATE_GAME_CODES` 的 Node 配置读取 | 已有面向浏览器的入口；未来可进一步分离纯目录计算与 Node 配置，但需要保持默认值和筛选语义 |
+| `shared/catalog/game_catalog.browser.ts` | 转导出纯 `game_catalog.js` 的子集；环境读取已迁至 `@changmen/storage/game_catalog.js` | 浏览器和共享计算无宿主环境读取；服务端通过公开配置入口保留原筛选语义 |
 | `client-core` | `client/web/src/api/client.ts` 使用 `shared/a8Axios`，adapter 声明依赖 | 面向客户端的能力有独立归属；不能据此假定其每个文件都已经证明只被浏览器消费 |
 | `venue-adapter/loader` | backend 的 `core/shared/adapter_paths.js` 经新 `venue-node-loader` workspace 转导出原 loader 定义；loader 动态提供 `requirePlatform` 和 `reqS` | Node 加载入口，源码与旧入口保留，不能搬成前端独占包 |
 | `venue-adapter/contract`、`registry`、共享 manifest | 浏览器 runtime 使用 contract，客户端注册 adapter；Node loader 使用 registry/manifest；resolver 的 adapter 声明仅供辅助 scraper 开发工具使用 | Node registry 公开入口已单独登记；相邻浏览器 TS 和 manifest 共用关系仍在，实际发布分类仍保守处理 |

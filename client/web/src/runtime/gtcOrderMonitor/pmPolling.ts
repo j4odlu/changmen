@@ -1,6 +1,6 @@
 /** [changmen 扩展] GTC 订单监控独占 PM 原挂单核对、撤单和 WS 监听；不查询对侧场馆。 */
 import type { GtcCommand, GtcExecution, GtcFacts } from "@changmen/shared/pm_gtc";
-import type { GtcTradeHistory } from "@changmen/venue-adapter/polymarket/gtc";
+import type { GtcTradeHistory } from "@changmen/venue-browser/adapter/polymarket/gtc";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { gtcCanCancel, gtcPmNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc";
 import { gtcProgress } from "@/orderModes/gtc/gtcProgressState";
@@ -41,7 +41,7 @@ export function createGtcPmOrderPolling(context: Context) {
       const binding = accountBinding(account);
       const validBinding = () => isCurrent() && binding === accountBinding(account)
         && binding === accountBinding(useAccountStore().findAccount(row.plan.playerId));
-      const { readGtcFacts } = await import("@changmen/venue-adapter/polymarket/gtc");
+      const { readGtcFacts } = await import("@changmen/venue-browser/adapter/polymarket/gtc");
       let result: GtcExecution;
       try {
         if (!validBinding())
@@ -107,7 +107,7 @@ export function createGtcPmOrderPolling(context: Context) {
     gtcProgress.cancelInFlight[id] = true;
     // 本地接管立即生效；副本保存不在 PM 撤单的等待链路上。
     const authorized = await mutate(id, { kind: "cancel", commandId });
-    const { pmCancelOrder } = await import("@changmen/venue-adapter/polymarket/gtc");
+    const { pmCancelOrder } = await import("@changmen/venue-browser/adapter/polymarket/gtc");
     if (!validBinding())
       throw new Error("用户会话已变更，取消结果需要核实");
     try {
@@ -146,7 +146,7 @@ export function createGtcPmOrderPolling(context: Context) {
       const account = useAccountStore().findAccount(row.plan.playerId);
       if (!account)
         return;
-      const ws = await import("@changmen/venue-adapter/polymarket");
+      const ws = await import("@changmen/venue-browser/adapter/polymarket");
       if (!isCurrent() || gtcPmReconciled(current(id)))
         return;
       listeners.set(id, ws.observePolymarketOrderWatch(account, row.orderId || row.plan.orderHash, () => {

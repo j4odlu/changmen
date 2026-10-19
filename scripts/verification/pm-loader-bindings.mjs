@@ -311,7 +311,7 @@ export function inspectPmLoaderBindings(root, manifest, graph, sharedEvidence, i
   const policy = JSON.parse(fs.readFileSync(path.join(root, "scripts/verification/pm-loader-binding-inputs.json"), "utf8"));
   if (policy.schemaVersion !== 1 || policy.purpose !== "pm-loader-binding-gate-only" || policy.publishScopeOptimizationEnabled !== false) throw Error("Loader binding gate cannot choose publication scope");
   const central = "server/packages/venue-node-loader/adapter_paths.mjs";
-  const probeHelpers = ["devtools/platform-probes/backend/_paths.js", "devtools/platform-probes/backend/_paths.cjs"];
+  const probeHelpers = ["server/platform-probes/backend/_paths.js", "server/platform-probes/backend/_paths.cjs"];
   const required = [...["reqS", "backendRequire", "adapterRequire", "requirePlatform"].map(symbol => `${central}#${symbol}`), ...probeHelpers.flatMap(file => ["reqS", "backendRequire"].map(symbol => `${file}#${symbol}`))];
   const clean = file => typeof file === "string" && file.length > 0 && !file.includes("\\") && !path.posix.isAbsolute(file) && !/^[a-z]:/i.test(file) && !file.split("/").some(part => part === ".." || part === ".");
   if (!Array.isArray(policy.origins) || policy.origins.length !== required.length || required.some(key => !policy.origins.some(row => originKey(row) === key))
@@ -322,7 +322,7 @@ export function inspectPmLoaderBindings(root, manifest, graph, sharedEvidence, i
     || !Array.isArray(policy.calls) || !policy.calls.length || policy.calls.some(row => !clean(row.file))) throw Error("Incomplete or redirected PM loader binding policy");
   const contracts = policy.sourceContracts.map(row => ({ ...row, matched: sharedLoaderSourceSignature(row.file, fs.readFileSync(path.join(root, row.file), "utf8"), row.selector) === row.signature }));
   const preload = sharedEvidence.defaultScenario;
-  const runtimeRoots = preload ? [...new Set([...preload.preloadFiles.map(row => row.file), ...preload.targetEvidence.filter(row => row.file.startsWith("devtools/platform-probes/")).map(row => row.file)])] : [];
+  const runtimeRoots = preload ? [...new Set([...preload.preloadFiles.map(row => row.file), ...preload.targetEvidence.filter(row => row.file.startsWith("server/platform-probes/")).map(row => row.file)])] : [];
   const expandedManifest = { ...manifest, scopes: { ...manifest.scopes, pm: { ...manifest.scopes.pm, nodeRoots: [...manifest.scopes.pm.nodeRoots, ...runtimeRoots] } } };
   const expanded = preload ? (inspection ? inspection.inspect(expandedManifest, { scope: "pm" })
     : inspectComponentEntries(root, expandedManifest, { scope: "pm" })) : graph;

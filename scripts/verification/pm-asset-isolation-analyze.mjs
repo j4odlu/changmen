@@ -1,9 +1,10 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Reproducible bounded browser evidence; never authorizes deployment.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 const base = 'output/playwright/pm-asset-isolation';
-const read = name => JSON.parse(fs.readFileSync(`${base}/${name}.json`, 'utf8'));
+const read = withAdapterHistoryReader(name => JSON.parse(readAdapterHistory(`${base}/${name}.json`, 'utf8')));
 const hash = value => createHash('sha256').update(value).digest('hex');
 const count = (rows, key) => rows.reduce((out,row) => { const k=key(row); out[k]=(out[k]??0)+1; return out; },{});
 const live = ['live-cold','live-off','live-late'].map(read), replay = read('replay-summary');
@@ -58,11 +59,11 @@ const summarize=x=>({name:x.name,startedAt:x.startedAt,durationMs:x.durationMs,f
 const normalReplay=replay.filter(x=>x.name!=='replay-overflow');
 const sourceFiles=['packages/venue-adapter/polymarket/realtime/ws.ts','packages/venue-adapter/polymarket/realtime/orderBook/service.ts',
   'packages/venue-adapter/polymarket/realtime/orderedWorkerMailbox.ts','packages/venue-adapter/polymarket/submission/preflight/optimized/wsBook/shadowWorkerClient.ts'];
-const workerHash=hash(fs.readFileSync(live[0].workerUrl.slice(1)));
+const workerHash=hash(readAdapterHistory(live[0].workerUrl.slice(1)));
 const prolongedWindows=[live[0],live[2]].flatMap(windows).filter(w=>w.durationMs>=300000);
 const checks={
   sameCurrentWorker:[...live.filter(x=>x.report),...replay,controlled,lifecycle].every(x=>x.workerUrl===live[0].workerUrl),
-  fixedCandidates:hash(fs.readFileSync(`${base}/candidates.json`))===hash(fs.readFileSync(`${base}/candidates-start.json`)),
+  fixedCandidates:hash(readAdapterHistory(`${base}/candidates.json`))===hash(readAdapterHistory(`${base}/candidates-start.json`)),
   coldAndLateFifteenMinutes:live[0].durationMs>=900000&&live[2].durationMs>=900000,
   workersSurvived:[live[0],live[2]].every(x=>x.report?.worker&&!x.report.failure&&x.workerTerminated===0&&x.timeline.every(t=>!t.failure&&t.worker!==false)),
   // Cold observations include automation-interrupted native hidden windows. Keep
@@ -92,8 +93,8 @@ const checks={
 };
 const result={at:new Date().toISOString(),verdict:'REQUIRES_REVIEW_OF_COST_AND_COVERAGE',deploymentAuthorized:false,
   checks,blockers:Object.entries(checks).filter(([,pass])=>!pass).map(([name])=>name),browser:live[0].browser,
-  workerUrl:live[0].workerUrl,workerSha256:workerHash,sourceHashes:Object.fromEntries(sourceFiles.map(f=>[f,hash(fs.readFileSync(f))])),
-  candidatesSha256:hash(fs.readFileSync(`${base}/candidates.json`)),sourceAssets:recording.assets.length,watchedAssets:recording.watched.length,
+  workerUrl:live[0].workerUrl,workerSha256:workerHash,sourceHashes:Object.fromEntries(sourceFiles.map(f=>[f,hash(readAdapterHistory(f))])),
+  candidatesSha256:hash(readAdapterHistory(`${base}/candidates.json`)),sourceAssets:recording.assets.length,watchedAssets:recording.watched.length,
   previousRetired:{durationMs:read('previous-retired/live-cold').durationMs,quotes:read('previous-retired/live-cold').quotes,
     health:count(read('previous-candidate-health').rows,r=>String(r.status??'error'))},
   live:live.map(summarize),replay:replay.map(summarize),assetIsolation:controlled,lifecycle:summarize(lifecycle),gates,

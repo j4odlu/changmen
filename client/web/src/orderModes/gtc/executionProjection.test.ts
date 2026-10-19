@@ -1,7 +1,7 @@
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
 import type { VenueOrder } from "@changmen/client-core/contract";
 import type { OrderRow } from "@/types/order";
-import { resolvePmRemainingShares } from "@changmen/venue-adapter/polymarket";
+import { resolvePmRemainingShares } from "@changmen/venue-browser/adapter/polymarket";
 import { beforeEach, describe, expect, it } from "vitest";
 import { isDualPredictionArbGroup } from "@/extensions/arbBet/arbEarlyLockSell";
 import { groupOrdersByEffectiveLink } from "@/shared/orderLink";

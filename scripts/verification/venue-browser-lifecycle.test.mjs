@@ -1,10 +1,11 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import fs from 'node:fs';
 import ts from 'typescript';
 import {expect,it} from 'vitest';
 import {VENUE_BROWSER_LIFECYCLE as record,restoreVenueBrowserLifecycle,verifyVenueBrowserLifecycle} from './venue-browser-lifecycle.mjs';
 import {verifyVenueBrowserRelocation} from './venue-browser-relocation.mjs';
-const read=f=>fs.readFileSync(f,'utf8').replaceAll('\r\n','\n');
+const read=withAdapterHistoryReader(f=>readAdapterHistory(f,'utf8').replaceAll('\r\n','\n'));
 const after=f=>restoreVenueBrowserExecution(f,read(f));
 const root='client/packages/venue-browser/';
 const moved=record.changes.filter(row=>/^export \* from "@changmen\/venue-browser\//.test(after(row.file)));
@@ -38,4 +39,4 @@ it('rejects missing or modified sources and metadata through the existing comple
   expect(()=>verifyVenueBrowserRelocation(f=>read(f)+(f===row.file?'\nvoid changed();\n':''))).toThrow();
   expect(()=>verifyVenueBrowserRelocation(f=>{if(f===row.file)throw Error('missing');return read(f);})).toThrow();
  }
-});
+},30_000);

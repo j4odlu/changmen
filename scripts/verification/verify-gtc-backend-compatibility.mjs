@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 执行状态只在客户端；真实结果同步、历史读取及独立发布组合均须有执行证据。
 import fs from "node:fs";
 import assert from "node:assert/strict";
@@ -6,8 +7,8 @@ import { releasePlan, selectGtcRelease, verifyLegacyGtcBackendModules } from "./
 import { publicFiles, verifyActualPublicModule } from "./public-release-boundaries.mjs";
 import { verifyGtcClientStateSources } from "./gtc-client-state-boundary.mjs";
 const plan = releasePlan(process.argv.slice(2));
-const snapshot = JSON.parse(fs.readFileSync("output/vps-fok-baseline.json", "utf8"));
-const source = file => fs.readFileSync(file, "utf8"), captured = file => snapshot.sources[file];
+const snapshot = JSON.parse(readAdapterHistory("output/vps-fok-baseline.json", "utf8"));
+const source = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8")), captured = file => snapshot.sources[file];
 const onlineSource = file => file.startsWith("server/") ? captured(file) : source(file);
 const route = "server/backend/core/esport-api/pm_pf_routes.ts";
 verifyGtcClientStateSources(source);

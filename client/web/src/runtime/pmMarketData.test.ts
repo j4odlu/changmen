@@ -4,7 +4,7 @@ import { startPmMarketData, acquirePmDepthView } from "./pmMarketData";
 const io = vi.hoisted(() => ({ accounts: {} as { accounts: Array<Record<string, unknown>> }, route: "direct",
   create: vi.fn(), start: vi.fn(), stop: vi.fn(), stopConsumer: vi.fn(), acquire: vi.fn() }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => io.accounts }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ getPmMarketWsSourceMode: () => "official", resolvePmHttpMode: () => io.route, resolvePmOrderSubmitHttpMode: () => io.route }));
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ getPmMarketWsSourceMode: () => "official", resolvePmHttpMode: () => io.route, resolvePmOrderSubmitHttpMode: () => io.route }));
 vi.mock("@changmen/pm-market-data-browser", () => ({ PmOrderBookService: class {
   constructor(ports: unknown) { return io.create(ports); }
 } }));

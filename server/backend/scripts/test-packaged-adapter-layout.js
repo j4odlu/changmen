@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { syncPlatformAdapterBackendBundle } from "@changmen/venue-adapter-tools/sync-backend-bundle.mjs";
-import { syncPlatformNodeBundle } from "../../../devtools/platform-probes/scripts/sync-backend-bundle.mjs";
+import { syncPlatformNodeBundle } from "../../platform-probes/scripts/sync-backend-bundle.mjs";
 
 const adapterDst = syncPlatformAdapterBackendBundle();
 const nodeDst = syncPlatformNodeBundle();

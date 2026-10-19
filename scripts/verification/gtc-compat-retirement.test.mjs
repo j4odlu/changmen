@@ -1,7 +1,8 @@
 import fs from "node:fs";
+import { withRdsLegacyEntries } from "./rds-legacy-relocation.mjs";
 import { expect, it } from "vitest";
 import { verifyGtcCompatibilityRetirement, retirementFiles, retiredHelpers, nativeOrdersPath, restoreRetiredOrdersCompatibility } from "./gtc-compat-retirement.mjs";
-const read = file => fs.readFileSync(file, "utf8");
+const read = withRdsLegacyEntries(file => fs.readFileSync(file, "utf8"));
 it("removes all three runtime switches and validates every complete module against the fixed before source", () => expect(verifyGtcCompatibilityRetirement().switchesRemoved).toBe(3));
 it("a fresh Windows CRLF checkout retains the complete fixed-source proof", () => {
   const windows = file => read(file).replaceAll("\r\n", "\n").replaceAll("\n", "\r\n");

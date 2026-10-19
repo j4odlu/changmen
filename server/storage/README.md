@@ -16,6 +16,7 @@
 |------|------|
 | `@changmen/storage/paths.js` | `CHANGMEN_ROOT`、`CHANGMEN_LAYOUT`、`VENUE_ADAPTER_ROOT`、`ESPORT_DATA_DIR` |
 | `@changmen/storage/load_env.js` | 加载 `server/backend/.env` |
+| `@changmen/storage/game_catalog.js` | 每次调用读取 `AGGREGATE_GAME_CODES`，提供配置后的电竞范围与平台游戏 ID；共享 catalog 保持纯计算 |
 | `@changmen/storage/platform_storage.js` | 平台凭证 JSON 读写 |
 | `@changmen/storage/predictfun_market_index.js` | PF 市场索引 |
 | `@changmen/storage/polymarket_market_index.js` | PM 电竞市场索引 |

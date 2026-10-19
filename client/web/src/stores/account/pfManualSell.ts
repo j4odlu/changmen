@@ -7,7 +7,7 @@ import type { OrderRow } from "@/types/order";
 import {
   pfSubmitSignedSell,
   signPredictFunUserMarketSell,
-} from "@changmen/venue-adapter/predictfun";
+} from "@changmen/venue-browser/adapter/predictfun";
 import { useAccountStore } from "@/stores/accountStore";
 import { useOrderStore } from "@/stores/orderStore";
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createServer } from "node:http";
-import { applyRdsSchema } from "../../server/backend/scripts/apply-rds-schema.mjs";
+import { applyRdsSchema } from "@changmen/db/maintenance/apply-rds-schema.mjs";
 import { withTemporaryPostgres } from "./temporary-postgres.mjs";
 
 await withTemporaryPostgres(async () => {

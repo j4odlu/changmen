@@ -1,6 +1,6 @@
 import type { PlatformId } from "@changmen/api-contract";
 import type { UserConfig } from "@changmen/client-core/types/userConfig";
-import { ALL_PLATFORMS } from "@changmen/venue-adapter/registry";
+import { ALL_PLATFORMS } from "@changmen/venue-browser/adapter/registry";
 import { normalizeWaitTime } from "@/shared/betTiming";
 
 export type { UserConfig, BetSorting } from "@changmen/client-core/types/userConfig";

@@ -59,6 +59,8 @@ backend 列表与 matcher 面板共用 DB 包的活跃列表快照缓存。行�
 合场的身份和 align 则复用一次含 ended 行的完整生命周期快照，保留 gb 锁与 PM 状态。
 这些内部快照字段不进入 `Client_*` 线协议。
 
+[changmen 扩展] 共用活跃行缓存不代表展示集合已一致：matcher 还按当前平台来源过滤，用户接口仍可能收到 active gap 保留的旧挂载与盘口。2026-10-19 的[显示一致性方案](../../../docs/MATCH_PUBLICATION_CONSISTENCY_PLAN.md)及[审计报告](../../../docs/audits/MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md)记录现有缺口与验收要求。当前方案缩为三步公共读取与过滤修复，保持现有写入与结束规则，不新建发布状态机；仅更新文档，尚未实施。
+
 环境变量：与 backend 共用 `server/backend/.env`（或本目录 `.env`）。`CHANGMEN_DB_SCRIPT` 与 backend 保持一致（兼容 `GAMEBET_DB_SCRIPT`）。
 
 ## 常用命令

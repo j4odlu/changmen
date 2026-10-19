@@ -15,7 +15,7 @@
 | `CHANGMEN_LAYOUT` | 同上 | 各目录相对根的 **POSIX** 段 |
 | `VENUE_ADAPTER_ROOT` | 同上 | `join(CHANGMEN_ROOT, layout.venueAdapter)` |
 | `CLIENT_WEB_ROOT` | 同上 | `client/web` 绝对路径 |
-| `PLATFORM_PROBES_ROOT` | 同上 | `devtools/platform-probes` |
+| `PLATFORM_PROBES_ROOT` | 同上 | `server/platform-probes` |
 | `BACKEND_ROOT` | 同上 | 可被 `CHANGMEN_BACKEND_ROOT` 覆盖 |
 
 环境变量覆盖（瘦包 / 测试）：
@@ -32,10 +32,10 @@
 
 | 键 | 默认相对路径 | 用途 |
 |----|--------------|------|
-| `venueAdapter` | `packages/venue-adapter` | 浏览器采集/下注 canonical |
+| `venueAdapter` | `server/packages/venue-node-registry/runtime` | 服务端 registry 资源根；旧目录仅保留兼容与验证 |
 | `clientWeb` | `client/web` | 电竞 Vue 控制台 |
 | `clientChromeExtension` | `chrome-extension` | MV3 插件 |
-| `platformProbes` | `devtools/platform-probes` | Node 探针 CLI |
+| `platformProbes` | `server/platform-probes` | Node 探针 CLI |
 | `packages` | `packages` | 跨端 TS 包 |
 | `serverBackend` | `server/backend` | HTTP API |
 | `serverMatcher` | `server/match/matcher` | 合场算法 + matchMerge 循环 + 人工关联 UI |
@@ -52,34 +52,25 @@
 
 | 消费方 | 用法 |
 |--------|------|
-| `packages/venue-adapter/loader/adapter_paths.mjs` | `getAdapterRoot()` 优先 `VENUE_ADAPTER_ROOT` |
-| `packages/venue-adapter/registry/paths.js` | 开发态 `ADAPTER_ROOT`；探针 `PLATFORM_PROBES_ROOT` |
-| `client/web/vite.config.ts` | `@changmen/venue-adapter` alias、`venueChunkName` |
+| `server/packages/venue-node-loader/adapter_paths.mjs` | `getAdapterRoot()` 优先 `VENUE_ADAPTER_ROOT` |
+| `server/packages/venue-node-registry/paths.js` | 开发态 `ADAPTER_ROOT`；探针 `PLATFORM_PROBES_ROOT` |
+| `client/web/vite.config.ts` | `@changmen/venue-browser` 解析与 `venueChunkName` |
 | `scripts/check-team-boundaries.mjs` | 发现各平台浏览器根目录 |
-| `@changmen/venue-adapter/package.json` | `exports["./*"]` 浏览器子路径（I2a） |
-| `client/web/package.json` | workspace 依赖 `@changmen/venue-adapter` |
-| `@changmen/client-core/package.json` | `exports` 白名单（I3g，扫描 web + venue-adapter） |
+| `@changmen/venue-adapter/package.json` | 仅两个 Node loader 子路径 |
+| `client/web/package.json` | workspace 依赖 `@changmen/venue-browser` |
+| `@changmen/client-core/package.json` | `exports` 白名单（I3g，扫描 web + venue-browser） |
 
 ---
 
-## 4. web 消费 venue-adapter（I2b 完成）
+## 4. Web 消费浏览器 workspace
 
-`client/web` 源码统一 `import` **`@changmen/venue-adapter/*`**（不再使用 `@venue` 别名）。
+[changmen 扩展] Web 直接依赖 @changmen/venue-browser，源码使用其 adapter/ 及其他显式子路径。浏览器实现与测试位于 client/packages/venue-browser/，旧 packages/venue-adapter 中的 595 个浏览器文件及旧包别名均已退役。
 
-| 文件 | 写法 |
-|------|------|
-| `client/web/tsconfig.app.json` | `@changmen/venue-adapter/*` → `packages/venue-adapter/*` |
-| `client/web/vite.config.ts` | `@changmen/venue-adapter` → `VENUE_ADAPTER_ROOT` |
-| 根 `package.json` workspaces | `"packages/venue-adapter"` |
-| `lines/esport/line.json` | `components.venueAdapter` |
+浏览器入口以 client/packages/venue-browser/package.json 的显式 exports 为准。CHANGMEN_LAYOUT.venueAdapter 与 lines/esport/line.json 的 components.venueAdapter 表示服务端 registry 资源根，不用于解析浏览器源码。
 
-`client/web` 消费 venue-adapter 时优先 **平台/域 barrel**（`polymarket`、`shared`、`adaptation`、`contract`、`registry`）；深路径清单见 `list:web-imports`；`--check` 校验仅允许 barrel + 文档化 mock 深路径。
+旧 sync-package-exports.mjs 只维护两个 Node loader 导出，发现旧浏览器引用时拒绝生成。npm run check:venue-adapter 同时检查旧包导出、旧引用和冻结范围。
 
-`package.json` `exports` 由 `sync-package-exports.mjs` 扫描 web 消费方生成（19 项）；`npm run check:venue-adapter` 防漂移。
-
-`packages/venue-adapter` **包内**统一相对路径（I3f）；`exports` 仅保留 web 消费子路径。
-
-`@changmen/client-core` **exports** 由 `packages/client-core/scripts/sync-package-exports.mjs` 扫描 `client/web/src` + `packages/venue-adapter` 生成（21 项）；`npm run check:client-core` = exports + 包内相对路径 + 消费方清单校验。
+client-core 的 exports 工具位于 client/packages/client-core/scripts/，扫描 client/web/src 与 client/packages/venue-browser。npm run check:client-core 校验 exports、包内相对引用与消费方清单。
 
 ---
 
@@ -101,6 +92,8 @@
 |----|------------------|
 | esport | `@changmen/shared`、`@changmen/api-contract`、`@changmen/client-core`、`@changmen/arb-core`、`@changmen/venue-adapter` |
 | baseball | `@changmen/client-core`、`@changmen/arb-core` |
+
+上述产品线清单含 Node 兼容包，不等同于 Web 的安装依赖；Web 的实际依赖以 client/web/package.json 为准。
 
 `capabilities` 仍表示**功能**（如 `arbitrage`），与 npm 包名分开。
 

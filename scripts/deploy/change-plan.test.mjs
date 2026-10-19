@@ -19,7 +19,9 @@ test("unrelated component changes publish independently; shared/API changes coor
   assert.equal(changePlan([], { unknownBase: true }).deployment.backendFirst, true);
 });
 test("RDS maintenance does not select either application", () => {
-  for (const maintenance of ["server/backend/db/migrations/044_auth_browser_sessions.sql", "server/db/schema/client_certificates.sql",
+  for (const maintenance of ["server/db/assets/migrations/044_auth_sessions.sql", "server/db/assets/schema-baseline.json",
+    "server/db/maintenance/check-rds-schema.mjs", "server/db/maintenance/apply-rds-schema.mjs",
+    "server/backend/db/migrations/044_auth_browser_sessions.sql", "server/db/schema/client_certificates.sql",
     "server/backend/scripts/apply-rds-schema.mjs", "server/backend/scripts/ops/migrations/backfill.mjs",
     "server/backend/scripts/check-rds-schema.mjs", "server/backend/scripts/rds-schema-check.mjs",
     "server/backend/scripts/rds-schema-check.test.mjs", "server/backend/scripts/rds-schema-baseline.json",

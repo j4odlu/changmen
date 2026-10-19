@@ -1,5 +1,5 @@
 /** [changmen 扩展] RAY 用户端原单监控：恢复、查单、本地更新及拒单事件，不写订单数据库。 */
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { OrderRow } from "@/types/order";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";

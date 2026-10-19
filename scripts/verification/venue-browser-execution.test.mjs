@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory,adapterHistorySystem} from "./browser-entry-history.mjs";
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
@@ -6,7 +7,7 @@ import {VENUE_BROWSER_EXECUTION as record,restoreVenueBrowserExecution,verifyVen
 import {verifyVenueBrowserRelocation} from './venue-browser-relocation.mjs';
 import {restoreVenueBrowserAccountRuntime} from './venue-browser-account-runtime.mjs';
 const after=f=>restoreVenueBrowserAccountRuntime(f,read(f));
-const read=f=>fs.readFileSync(f,'utf8').replaceAll('\r\n','\n');
+const read=withAdapterHistoryReader(f=>readAdapterHistory(f,'utf8').replaceAll('\r\n','\n'));
 const canonical=file=>file==='packages/venue-adapter/contract/index.ts'?'client/packages/client-core/src/contract/index.ts':file==='packages/venue-adapter/shared/platforms.ts'?'client/packages/client-core/src/shared/platforms.ts':'client/packages/venue-browser/'+file.slice('packages/venue-adapter/'.length);
 const moved=record.changes.filter(row=>record.added.some(a=>a.file===canonical(row.file)));
 const normalizeTargets=source=>{
@@ -52,7 +53,7 @@ it('preserves the actual target of every static, dynamic and type dependency aft
   visit(sf);return result;
  };
  const resolve=(file,spec)=>{
-  const resolved=ts.resolveModuleName(spec,path.resolve(file),{moduleResolution:ts.ModuleResolutionKind.Bundler},ts.sys).resolvedModule;
+  const resolved=ts.resolveModuleName(spec,path.resolve(file),{moduleResolution:ts.ModuleResolutionKind.Bundler},adapterHistorySystem(ts.sys)).resolvedModule;
   expect(resolved,file+' -> '+spec).toBeDefined();
   let target=path.relative(process.cwd(),resolved.resolvedFileName).replaceAll('\\','/');
   const seen=new Set();
@@ -60,7 +61,7 @@ it('preserves the actual target of every static, dynamic and type dependency aft
    expect(seen.has(target),target).toBe(false);seen.add(target);
    const facade=/^\s*(?:\/\/[^\n]*\n)*export \* from ["']([^"']+)["'];\s*$/.exec(read(target));
    if(!facade)break;
-   const next=ts.resolveModuleName(facade[1],path.resolve(target),{moduleResolution:ts.ModuleResolutionKind.Bundler},ts.sys).resolvedModule;
+   const next=ts.resolveModuleName(facade[1],path.resolve(target),{moduleResolution:ts.ModuleResolutionKind.Bundler},adapterHistorySystem(ts.sys)).resolvedModule;
    expect(next,target).toBeDefined();target=path.relative(process.cwd(),next.resolvedFileName).replaceAll('\\','/');
   }
   if(target.includes('node_modules/')){
@@ -77,8 +78,8 @@ it('preserves the actual target of every static, dynamic and type dependency aft
   expect(current).toHaveLength(prior.length);
   for(let i=0;i<prior.length;i++)expect(resolve(canonical(row.file),current[i]),row.file+' -> '+prior[i]).toBe(resolve(row.file,prior[i]));
  }
- const browser=JSON.parse(read('client/packages/venue-browser/package.json')),adapter=JSON.parse(read('packages/venue-adapter/package.json'));
- for(const [name,version] of Object.entries(browser.dependencies))if(!name.startsWith('@changmen/'))expect(version,name).toBe(adapter.dependencies[name]);
+ const browser=JSON.parse(read('client/packages/venue-browser/package.json')),adapter=JSON.parse(read('packages/venue-adapter/package.json')),web=JSON.parse(read('client/web/package.json'));
+ for(const [name,version] of Object.entries(browser.dependencies))if(!name.startsWith('@changmen/'))expect(version,name).toBe(adapter.dependencies[name]??web.dependencies[name]);
 });
 // Each file gets its own timeout budget; the complete gate and both rejection checks stay unchanged.
 it.each([...record.changes,...record.added])('$file: rejects modified or missing source through the existing complete gate',(row)=>{

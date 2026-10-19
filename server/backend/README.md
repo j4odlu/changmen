@@ -36,10 +36,11 @@ core/esport-api/     # 路由、store、platform_sync
 core/account/        # 场馆账号
 proxy/               # 各平台 HTTP 代理
 scripts/             # 运维 CLI（见 scripts/README.md）
-db/migrations/       # RDS 迁移
 storage/             # 运行时 JSON（gitignore，见 STORAGE.md）
 storage.example/     # 空模板
 public/              # 静态资源（URL 仍为 /esport2/*，见 public/README.md）
 ```
+
+RDS 迁移 SQL、结构基线与维护代码/测试统一位于 `server/db/assets/` 和 `server/db/maintenance/`；backend 的旧资产副本及 7 个维护分派入口已删除。
 
 平台 canonical 实现位于 `packages/venue-adapter/`，由 `core/shared/adapter_paths.js` 加载。

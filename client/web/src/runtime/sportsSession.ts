@@ -7,7 +7,7 @@ import { useAccountStore } from "@/stores/accountStore";
 import { stopFootballOrderRuntime, useFootballOrderStore } from "@/stores/footballOrderStore";
 import { useUserStore } from "@/stores/userStore";
 import { applyVenueTransportRoutingOnLogin } from "@/runtime/venueTransportSession";
-import { preparePolymarketAccountRuntimes } from "@changmen/venue-adapter/polymarket";
+import { preparePolymarketAccountRuntimes } from "@changmen/venue-browser/adapter/polymarket";
 
 const FOOTBALL_ORDER_REFRESH_MS = 45_000;
 let footballOrderTimer: ReturnType<typeof setInterval> | null = null;

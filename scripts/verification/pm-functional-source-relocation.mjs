@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -45,7 +46,7 @@ export function pmFunctionalCompatibilitySource(file) {
   return `// [changmen 扩展] 保留原入口；实现按功能迁移，所有调用共享同一模块与状态。\nexport * from "./${relative}";\n`;
 }
 
-export function readRelocatedPmFunctionalSource(file, source, readSource = target => fs.readFileSync(target, "utf8")) {
+export function readRelocatedPmFunctionalSource(file, source, readSource = target => readAdapterHistory(target, "utf8")) {
   const target = PM_FUNCTIONAL_RELOCATIONS[file];
   if (!target)
     return source.replace(/\r\n/g, "\n");

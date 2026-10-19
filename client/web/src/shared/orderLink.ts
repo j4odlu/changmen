@@ -1,7 +1,7 @@
 import type { LoseOrderCancelledRecord, OrderRow } from "@/types/order";
 import type { LoseOrder } from "@/models/loseOrder";
 import type { MakeupOddsBandPrefs } from "@/types/extensionPrefs";
-import { hasOpenPolymarketPosition, resolvePmRemainingShares } from "@changmen/venue-adapter/polymarket";
+import { hasOpenPolymarketPosition, resolvePmRemainingShares } from "@changmen/venue-browser/adapter/polymarket";
 import { formatLinkId, isSingleLegLink, orderLinkSortKey, toFixed } from "@changmen/client-core/shared/format";
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { truncateShareUsdtAmount } from "@/shared/pfOrderDisplay";

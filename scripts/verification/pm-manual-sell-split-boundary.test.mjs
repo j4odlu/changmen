@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 实际源码的完整比较与负向验证，不重录任何快照。
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -5,7 +6,7 @@ import { gitSource, moduleTokens, verifyProtectedSource } from "./fok-exact-boun
 import { restoreGtcSnapshotMetadata, restorePmManualSellSplit } from "./pm-manual-sell-split-boundary.mjs";
 
 const file = "client/web/src/stores/account/pmManualSell.ts";
-const read = path => fs.readFileSync(path, "utf8");
+const read = withAdapterHistoryReader(path => readAdapterHistory(path, "utf8"));
 describe("private GTC persistence preserves all ordinary FOK work", () => {
   it("restores the complete committed mixed module and both original FOK baselines", () => {
     expect(restorePmManualSellSplit(file, read(file))).toBe(gitSource("3465fe5d", file));

@@ -1,10 +1,12 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { verifyProtectedSource, gitSource } from "./fok-exact-boundaries.mjs";
 import { restoreRayMapOutcomeSource } from "./ray-frontend-boundary.mjs";
+import { readAdapterBrowserSource } from "./adapter-browser-relocation.mjs";
 
 const files = ["markets", "collect", "index"].map(name => `packages/venue-adapter/ray/${name}.ts`);
-const read = file => fs.readFileSync(file, "utf8");
+const read = withAdapterHistoryReader(file => readAdapterBrowserSource(file, readAdapterHistory(file, "utf8")));
 describe("RAY map results are an exact display-only extension", () => {
   for (const file of files) {
     it(`${file}: still verifies the whole original module against the fixed VPS baseline`, () => {

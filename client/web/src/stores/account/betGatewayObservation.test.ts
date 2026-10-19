@@ -29,7 +29,7 @@ vi.mock("@/stores/account/pmRejectOrder", () => ({ persistPolymarketExecutionRej
 vi.mock("@/stores/betting/autoBet/arbLegSettle", () => ({ settleArbLegUntilTerminal: vi.fn() }));
 vi.mock("@/domain/polymarket/attachDetectionQuote", () => ({ attachPolymarketDetectionQuote: () => {} }));
 vi.mock("@/domain/predictfun/attachDetectionQuote", () => ({ attachPredictFunDetectionQuote: () => {} }));
-vi.mock("@changmen/venue-adapter/adaptation", () => ({ resolveVenueStakeFromPlanCny: mocks.stake }));
+vi.mock("@changmen/venue-browser/adapter/adaptation", () => ({ resolveVenueStakeFromPlanCny: mocks.stake }));
 
 describe("下注主链路与旁路故障隔离", () => {
   const account = { accountId: 1, provider: "OB", currency: "CNY", playerName: "p", platformId: 1, platformName: "OB" } as PlatformAccount;

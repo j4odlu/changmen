@@ -13,12 +13,20 @@ const relative = (root, target) => {
   const value = path.relative(root, fs.realpathSync(target)).replaceAll("\\", "/");
   assert(!value.startsWith("../") && !path.isAbsolute(value), "Resolution escaped isolated installation"); return value;
 };
-export function captureBackendResolution(root, entries, env) {
+export function captureBackendResolution(root, entries, env, { additionalFiles = [], cache = new Map() } = {}) {
   root = fs.realpathSync(root);
-  const queue = entries.map(entry => `${entry.directory}/${entry.script}`), seen = new Set(), resolutions = [], unknown = [];
+  const queue = [...entries.map(entry => `${entry.directory}/${entry.script}`), ...additionalFiles], seen = new Set(), resolutions = [], unknown = [];
   while (queue.length) {
     const file = queue.shift(); if (seen.has(file)) continue; seen.add(file);
     const absolute = path.join(root, file);
+    // Invocation-local cache: callers may expand one unchanged installation's dynamic roots.
+    const cacheKey = JSON.stringify([root, file, hash(absolute), env]);
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      resolutions.push(...cached.resolutions); unknown.push(...cached.unknown);
+      queue.push(...cached.children); continue;
+    }
+    const resolutionStart = resolutions.length, unknownStart = unknown.length, children = [];
     const sites = componentImportSites(file, fs.readFileSync(absolute, "utf8"));
     const selected = sites.filter(site => site.kind !== "type" && site.spec && !isBuiltin(site.spec));
     unknown.push(...sites.filter(site => site.kind !== "type" && !site.spec));
@@ -37,7 +45,7 @@ export function captureBackendResolution(root, entries, env) {
         }
         assert(fs.statSync(target).isFile(), "Not a file");
         row.target = relative(root, target); row.sha256 = hash(target);
-        if (!row.target.includes("node_modules/") && /\.[cm]?[jt]s$/.test(row.target)) queue.push(row.target);
+        if (!row.target.includes("node_modules/") && /\.[cm]?[jt]s$/.test(row.target)) { queue.push(row.target); children.push(row.target); }
         else if (row.target.includes("node_modules/")) {
           for (let dir = path.dirname(target); ; dir = path.dirname(dir)) {
             const manifest = path.join(dir, "package.json");
@@ -48,6 +56,7 @@ export function captureBackendResolution(root, entries, env) {
       } catch (error) { row.error = error.code ?? error.message; }
       resolutions.push(row);
     }
+    cache.set(cacheKey, { resolutions: resolutions.slice(resolutionStart), unknown: unknown.slice(unknownStart), children });
   }
   const key = row => JSON.stringify([row.file, row.line, row.kind, row.spec ?? row.expression]);
   resolutions.sort((a, b) => key(a).localeCompare(key(b))); unknown.sort((a, b) => key(a).localeCompare(key(b)));

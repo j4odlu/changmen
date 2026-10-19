@@ -1,10 +1,11 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 对真实已发布 DisplayOnly 保护做负向变异；不模拟放宽后的业务源码。
 import fs from 'node:fs';
 import { describe,it,expect } from 'vitest';
 import { gitSource,verifyProtectedSource } from './fok-exact-boundaries.mjs';
 import { checkOrdinaryOrderList } from './fok-order-list-boundary.mjs';
 import { verifyActualPublicModule,publicFiles } from './public-release-boundaries.mjs';
-const read=file=>fs.readFileSync(file,'utf8').replaceAll('\r\n','\n');
+const read=withAdapterHistoryReader(file=>readAdapterHistory(file,'utf8').replaceAll('\r\n','\n'));
 const bases=['219535c8','75b1efac66625e5f2bc9884a965b244bfaf337ed'];
 describe('exact deployed DisplayOnly guards and original financial consumers',()=>{
   for(const base of bases) {

@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact closed market account runtime dependency group relocation.
 import {restoreVenueBrowserMarketHosts,verifyVenueBrowserMarketHosts} from './venue-browser-market-hosts.mjs';
 import assert from 'node:assert/strict';
@@ -5,7 +6,7 @@ import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-account-runtime.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-account-runtime.json',import.meta.url),'utf8');
 assert.equal(sha(text),'96480ca43714048fb576bbf2ef413481d0fd793b27a81cf8204de3cfd582254d');
 export const VENUE_BROWSER_ACCOUNT_RUNTIME=JSON.parse(text);
 export function restoreVenueBrowserAccountRuntime(file,source){

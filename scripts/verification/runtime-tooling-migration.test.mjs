@@ -8,8 +8,9 @@ import { restoreDependencySecurityMetadata } from "./dependency-security-metadat
 import { restoreRuntimeCoverageSource } from "./runtime-source-coverage.mjs";
 import { restorePmSourceIsolationMetadata, PM_METADATA_BASELINE } from "./pm-source-isolation-metadata.mjs";
 import { classifyDeployScope } from "../deploy/classify-deploy-scope.mjs";
+import { restoreRetirementPolicy } from "./publish-retirement-metadata.mjs";
 const record = JSON.parse(fs.readFileSync(new URL("./runtime-tooling-migration.json", import.meta.url), "utf8"));
-const read = file => restoreDependencySecurityMetadata(file, fs.readFileSync(file, "utf8"));
+const read = file => restoreDependencySecurityMetadata(file, restoreRetirementPolicy(file, fs.readFileSync(file, "utf8")));
 const sha = source => createHash("sha256").update(source).digest("hex");
 for (const row of record.changes) it(`${row.file}: restores the entire previous committed input without accepting extra content`, () => {
   const current = read(row.file), previous = restoreRuntimeToolingMetadata(row.file, current);

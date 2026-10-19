@@ -13,7 +13,7 @@ vi.mock("./store", () => ({ getVaultMeta: async () => mocks.meta, listVaultKeys:
   replaceVaultPasswordAtomic: vi.fn(), vaultKeyId: vi.fn() }));
 vi.mock("./accountUiStatus", () => ({ touchPmVaultAccountUiSession: vi.fn(), refreshPmVaultAccountUiFromStore: vi.fn() }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ accounts: mocks.accounts }) }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ clearPolymarketOrderClientCache: mocks.clear, preparePolymarketAccountRuntimes: mocks.prepare, retainPolymarketAccountRuntimes: mocks.retain }));
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ clearPolymarketOrderClientCache: mocks.clear, preparePolymarketAccountRuntimes: mocks.prepare, retainPolymarketAccountRuntimes: mocks.retain }));
 import { completePmVaultUnlock, ensurePmVaultForAccounts, getCachedPrivateKey, isPmVaultUnlocked, lockPmVault, pmVaultUi, unlockPmVault, putPrivateKeyInVault } from "./session";
 import * as retained from "./retainedPmSession";
 import { retainedPmSessionUi, revokeRetainedPmSession } from "./retainedPmSession";

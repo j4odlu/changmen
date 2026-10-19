@@ -5,13 +5,13 @@ import {
   setPolymarketSportAssetIds,
   ensurePolymarketSportMarketConnection,
   clearPolymarketSportHub,
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 import {
   onPredictFunSportHubBound,
   onPredictFunSportQuote,
   setPredictFunSportMarketIds,
-} from "@changmen/venue-adapter/predictfun";
-import { createRayRealtimeClient } from "@changmen/venue-adapter/ray";
+} from "@changmen/venue-browser/adapter/predictfun";
+import { createRayRealtimeClient } from "@changmen/venue-browser/adapter/ray";
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 import { useSportOddsStore } from "@/stores/sportOddsStore";
 import { useObSportLiveStore } from "@/stores/obSportLiveStore";

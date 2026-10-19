@@ -365,7 +365,7 @@ describe("sport / esport UI isolation", () => {
     expect(betAccount).toMatch(/sportOb/);
     expect(betAccount).toMatch(/readObSportDisplayBalance/);
     expect(betAccount).not.toMatch(/venue-adapter\/ob|\/game\/bet|useOddsStore/);
-    const obBet = readFileSync(join(repoRoot, "packages/venue-adapter/ob/bet.ts"), "utf8");
+    const obBet = readFileSync(join(repoRoot, "client/packages/venue-browser/adapter/ob/bet.ts"), "utf8");
     expect(obBet).toMatch(/\/game\/balance/);
     expect(obBet).not.toMatch(/sportOb|SaveSportAccount|yewu12/);
     const sportOrders = readFileSync(join(root, "runtime/podSportOrders.ts"), "utf8");

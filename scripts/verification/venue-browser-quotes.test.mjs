@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import ts from 'typescript';
@@ -5,7 +6,7 @@ import {expect,it} from 'vitest';
 import {VENUE_BROWSER_QUOTES as record,restoreVenueBrowserQuotes,verifyVenueBrowserQuotes} from './venue-browser-quotes.mjs';
 import {verifyVenueBrowserRelocation} from './venue-browser-relocation.mjs';
 import {restoreVenueBrowserLifecycle} from './venue-browser-lifecycle.mjs';
-const read=f=>fs.readFileSync(f,'utf8').replaceAll('\r\n','\n');
+const read=withAdapterHistoryReader(f=>readAdapterHistory(f,'utf8').replaceAll('\r\n','\n'));
 const original=f=>execFileSync('git',['show',record.baseline+':'+f],{encoding:'utf8',windowsHide:true}).replaceAll('\r\n','\n');
 const declaration=(source,name)=>{const sf=ts.createSourceFile('original.ts',source,ts.ScriptTarget.Latest,true);return sf.statements.find(s=>s.name?.text===name).getText(sf);};
 it('moves complete original declarations and the entire parser without changing any rules',()=>{

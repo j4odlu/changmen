@@ -4,11 +4,11 @@ import { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { AccountStoreContext } from "./context";
 import { checkBetting } from "./betGateway";
-import { setPmFokPreflightMode } from "@changmen/venue-adapter/polymarket";
+import { setPmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket";
 
 const io = vi.hoisted(() => ({ prepare: vi.fn(), check: vi.fn(), gtc: vi.fn() }));
-vi.mock("@changmen/venue-adapter/polymarket", async original => ({
-  ...await original<typeof import("@changmen/venue-adapter/polymarket")>(),
+vi.mock("@changmen/venue-browser/adapter/polymarket", async original => ({
+  ...await original<typeof import("@changmen/venue-browser/adapter/polymarket")>(),
   prepareOptimizedFokExecution: io.prepare,
 }));
 vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ checkGtcBuy: io.gtc }));

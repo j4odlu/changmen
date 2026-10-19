@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 精确核对已发布 113db6ff 的三个结算模块，并逐 hunk 还原至发布前源码。
 // 原 FOK/VPS 基线及清单独立保留；不提供任意提交、文件或模式的豁免。
 import assert from 'node:assert/strict';
@@ -68,7 +69,7 @@ function restoreReviewedModule(file, source, { original, published, hunks }) {
 export function restorePublishedPmSettlement(file, source) {
   source = restoreVenueBrowserQuotes(file, source);
   if (priceFallbackFiles.includes(file)) source = restorePmPreflightSource(file, source);
-  source = restorePmOrderBetLabelSource(file, source, target => fs.readFileSync(target, 'utf8'));
+  source = restorePmOrderBetLabelSource(file, source, target => readAdapterHistory(target, 'utf8'));
   if (priceFallbackFiles.includes(file)) {
     const reviewed = reviewedModule(file, publishedPmCommit, priceFallbackCommit);
     // 历史包仍按原登记核验；当前包先完整证明新修复，再逐 hunk 恢复旧登记。

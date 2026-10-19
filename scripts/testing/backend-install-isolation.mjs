@@ -28,7 +28,7 @@ const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclud
   { cwd: repo, encoding: "utf8", maxBuffer: 30 * 1024 * 1024, windowsHide: true }).split("\0").filter(Boolean);
 const manifests = new Set([...readInstallWorkspaces(repo).values()].map(item => `${item.dir}/package.json`));
 const copied = file => ["package.json", "package-lock.json"].includes(file) || manifests.has(file)
-  || [...profile.workspaceDirectories, "packages/venue-adapter"].some(dir => file.startsWith(`${dir}/`));
+  || profile.workspaceDirectories.some(dir => file.startsWith(`${dir}/`));
 const copy = root => {
   fs.mkdirSync(root);
   for (const file of files) {
@@ -68,7 +68,7 @@ try {
   const probe = `import assert from'node:assert/strict';import net from'node:net';import{pathToFileURL}from'node:url';
 let attempts=0;const blocked=()=>{attempts++;throw Error('Network forbidden in installation verification');};globalThis.fetch=blocked;net.Socket.prototype.connect=blocked;
 const root=process.cwd();
-const loader=await import('@changmen/venue-node-loader');const legacy=await import(pathToFileURL(root+'/packages/venue-adapter/loader/adapter_paths.mjs').href);
+const loader=await import('@changmen/venue-node-loader');const legacy=await import(pathToFileURL(root+'/server/packages/venue-node-loader/adapter_paths.mjs').href);
 assert.deepEqual(Object.keys(loader),Object.keys(legacy));for(const key of Object.keys(loader))assert.equal(loader[key],legacy[key]);
 await loader.initAdapterRegistry();await loader.initEsmPlatformBackends();
 for(const id of ['OB','PB','RAY'])assert(loader.requirePlatform(id,'node','session.js'));
@@ -77,7 +77,8 @@ const fs=await import('node:fs');const bundle=await import('@changmen/venue-adap
 const packed=bundle.syncPlatformAdapterBackendBundle({dst:root+'/output/isolated-adapter'});
 assert(fs.readFileSync(packed+'/registry/manifest.json').equals(fs.readFileSync(root+'/packages/shared/catalog/venue_manifest.json')));
 assert.equal(attempts,0);
-console.log(JSON.stringify({passed:true,networkAttempts:attempts,originalLoaderIdentity:true,registryAndPreloads:true,sharedCatalogBundle:true}));`;
+assert(!fs.existsSync(root+'/packages/venue-adapter/loader/adapter_paths.mjs'));assert(!fs.existsSync(root+'/packages/venue-adapter/registry/manifest.json'));
+console.log(JSON.stringify({oldAdapterSourcesAbsent:true,passed:true,networkAttempts:attempts,originalLoaderIdentity:true,registryAndPreloads:true,sharedCatalogBundle:true}));`;
   report.nativeProbe = JSON.parse(command("selected-loader", candidate, ["--input-type=module", "--eval", probe]));
   report.sourceStable = JSON.stringify(validationIdentity(repo)) === JSON.stringify(identity);
   assert(report.sourceStable, "Source changed during install experiment"); report.passed = true; save();

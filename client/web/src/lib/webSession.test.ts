@@ -4,8 +4,8 @@ import { probeCookieSession, renewPersistentCookieSession, startWebSessionWatch,
 const locks = vi.hoisted(() => ({ run: vi.fn() }));
 vi.mock("@/lib/authLock", () => ({ withAuthLock: locks.run }));
 vi.mock("@/lib/jwtRefresh", () => ({ stopJwtAutoRefresh: vi.fn(), startJwtAutoRefresh: vi.fn(), refreshJwtSession: async () => true }));
-vi.mock("@changmen/venue-adapter/shared", async (importOriginal) => ({
-  ...await importOriginal<typeof import("@changmen/venue-adapter/shared")>(),
+vi.mock("@changmen/venue-browser/adapter/shared", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@changmen/venue-browser/adapter/shared")>(),
   resolveChangmenWsBase: () => "https://changmen.fun",
 }));
 const info = { user: { id: "u", userName: "river", role: "user" }, browserSessionId: "bs", loginEpoch: "epoch", cookieEnabled: true, csrfToken: "csrf" };

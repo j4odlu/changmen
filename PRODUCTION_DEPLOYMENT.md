@@ -160,12 +160,12 @@ RDS 结构/数据维护独立执行。下面命令仅说明新空库初始化入
 
 ```bash
 cd changmen/server/backend
-node scripts/apply-rds-schema.mjs
+npm run db:apply
 ```
 
-上述兼容命令现在默认只读核验；也可用 `npm run check:rds-schema`。核验清单来自空白临时 PostgreSQL 按显式 42 项编号 SQL 创建的结构，不是从线上数据库录制；各 SQL 的校验值同时固定在清单中。新增/更改结构时必须更新核验要求，不能删掉缺失项以通过检查。独立运行时表不要求从编号迁移创建。已验证历史结构使用独立、明确的兼容规则，保留原始核验基线；规则与范围见 docs/DATABASE_UPGRADE_COMPATIBILITY.md。
+上述命令直接执行数据层维护入口，默认只读核验；也可用 `npm run check:rds-schema`。核验清单来自空白临时 PostgreSQL 按显式 43 项有效 SQL 创建的结构，不是从线上数据库录制；各 SQL 的校验值同时固定在清单中。新增/更改结构时必须更新核验要求，不能删掉缺失项以通过检查。独立运行时表不要求从编号迁移创建。已验证历史结构使用独立、明确的兼容规则，保留原始核验基线；规则与范围见 docs/DATABASE_UPGRADE_COMPATIBILITY.md。
 
-**只有全新空库初始化**使用 `npm run db:initialize`（即 `node scripts/apply-rds-schema.mjs --initialize`）；已有业务表时拒绝执行。存量库若缺字段或索引，应单独准备并审核具体修复，不把全部历史 SQL 当成补齐方法。日常发布不会调用初始化命令。
+**只有全新空库初始化**使用 `npm run db:initialize`（直接执行 `server/db/maintenance/apply-rds-schema.mjs --initialize`）；已有业务表时拒绝执行。存量库若缺字段或索引，应单独准备并审核具体修复，不把全部历史 SQL 当成补齐方法。日常发布不会调用初始化命令。
 
 POD 足球自动跟单上线前必须确认 `042_pod_bet_executions.sql` 已执行；前端自动下注依赖该表做跨标签页、跨设备幂等。完整发布顺序见 [docs/POD_AUTO_FOLLOW.md](./docs/POD_AUTO_FOLLOW.md)。
 

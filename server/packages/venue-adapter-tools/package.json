@@ -1,0 +1,22 @@
+{
+  "name": "@changmen/venue-adapter-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Server-owned backend adapter bundle tool",
+  "scripts": {
+    "sync:backend-bundle": "node sync-backend-bundle.mjs"
+  },
+  "exports": {
+    "./sync-backend-bundle.mjs": "./sync-backend-bundle.mjs"
+  },
+  "files": [
+    "sync-backend-bundle.mjs"
+  ],
+  "dependencies": {
+    "@changmen/shared": "file:../../../packages/shared",
+    "@changmen/storage": "file:../../storage",
+    "@changmen/venue-node-loader": "file:../venue-node-loader",
+    "@changmen/venue-node-registry": "file:../venue-node-registry"
+  }
+}

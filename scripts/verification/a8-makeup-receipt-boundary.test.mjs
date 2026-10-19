@@ -1,10 +1,11 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { readClientPackageSource } from "./client-package-relocation.mjs";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { gitSource, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { a8MakeupReceiptIncrements } from "./pm-makeup-settlement-boundary.mjs";
 
-const read = file => readClientPackageSource(file, fs.readFileSync(file, "utf8"), f => fs.readFileSync(f, "utf8"));
+const read = withAdapterHistoryReader(file => readClientPackageSource(file, readAdapterHistory(file, "utf8"), f => readAdapterHistory(f, "utf8")));
 const bases = ["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"];
 function check(file, source, base = bases[1]) {
   return verifyProtectedSource(file, source, gitSource(base, file), read, path => gitSource(base, path));

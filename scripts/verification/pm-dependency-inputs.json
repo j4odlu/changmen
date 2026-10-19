@@ -24,31 +24,31 @@
     {
       "file": "client/web/src/runtime/appSession.ts",
       "kind": "dynamic-import",
-      "spec": "@changmen/venue-adapter/polymarket",
+      "spec": "@changmen/venue-browser/adapter/polymarket",
       "count": 2
     },
     {
       "file": "client/web/src/runtime/appSession.ts",
       "kind": "dynamic-import",
-      "spec": "@changmen/venue-adapter/predictfun",
+      "spec": "@changmen/venue-browser/adapter/predictfun",
       "count": 2
     },
     {
       "file": "client/web/src/runtime/gtcOrderMonitor/pm.ts",
       "kind": "dynamic-import",
-      "spec": "@changmen/venue-adapter/polymarket/gtc",
+      "spec": "@changmen/venue-browser/adapter/polymarket/gtc",
       "count": 2
     },
     {
       "file": "client/web/src/runtime/gtcOrderMonitor/pmPolling.ts",
       "kind": "dynamic-import",
-      "spec": "@changmen/venue-adapter/polymarket",
+      "spec": "@changmen/venue-browser/adapter/polymarket",
       "count": 1
     },
     {
       "file": "client/web/src/runtime/gtcOrderMonitor/pmPolling.ts",
       "kind": "dynamic-import",
-      "spec": "@changmen/venue-adapter/polymarket/gtc",
+      "spec": "@changmen/venue-browser/adapter/polymarket/gtc",
       "count": 2
     },
     {
@@ -72,13 +72,13 @@
     {
       "file": "client/web/src/runtime/venueTransportSession.ts",
       "kind": "dynamic-import",
-      "spec": "@changmen/venue-adapter/polymarket",
+      "spec": "@changmen/venue-browser/adapter/polymarket",
       "count": 2
     },
     {
       "file": "client/web/src/runtime/venueTransportSession.ts",
       "kind": "dynamic-import",
-      "spec": "@changmen/venue-adapter/predictfun",
+      "spec": "@changmen/venue-browser/adapter/predictfun",
       "count": 2
     },
     {
@@ -279,7 +279,7 @@
     "client/web/tsconfig.app.json",
     "client/web/vite/plugins/browserNodeBuiltins.ts",
     "client/web/src/polyfills/builderSigningHmac.ts",
-    "packages/venue-adapter/scripts/sync-backend-bundle.mjs",
+    "server/packages/venue-adapter-tools/sync-backend-bundle.mjs",
     "package.json",
     "package-lock.json",
     "packages/venue-adapter/package.json",

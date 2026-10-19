@@ -22,7 +22,9 @@
     "./runtime_schema.js": "./runtime_schema.js",
     "./maintenance/check-rds-schema.mjs": "./maintenance/check-rds-schema.mjs",
     "./maintenance/apply-rds-schema.mjs": "./maintenance/apply-rds-schema.mjs",
-    "./maintenance/apply-order-observation-schema.mjs": "./maintenance/apply-order-observation-schema.mjs"
+    "./maintenance/apply-order-observation-schema.mjs": "./maintenance/apply-order-observation-schema.mjs",
+    "./admin_maintenance.js": "./admin_maintenance.js",
+    "./maintenance/profile_repairs.js": "./maintenance/profile_repairs.js"
   },
   "main": "./index.js",
   "scripts": {
@@ -32,6 +34,7 @@
     "@changmen/api-contract": "file:../../packages/api-contract",
     "@changmen/storage": "file:../storage",
     "pg": "^8.21.0",
-    "@changmen/shared": "file:../../packages/shared"
+    "@changmen/shared": "file:../../packages/shared",
+    "dotenv": "^17.4.2"
   }
 }

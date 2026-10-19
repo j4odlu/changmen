@@ -12,7 +12,7 @@ vi.mock("vue-router", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 vi.mock("@/api/client", () => ({ authHeaders: () => ({ "X-Changmen-Auth": "cookie" }) }));
 vi.mock("@/config/apiBase", () => ({ getApiBase: () => "https://api.example.com" }));
 vi.mock("@/components/admin/AdminLayout.vue", () => ({ default: {} }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
   getPmExecutionMetricsSummary: () => ({}),
   getPmMarketClientMetricsSnapshot: () => ({}),
 }));

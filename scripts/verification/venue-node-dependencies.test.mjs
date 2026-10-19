@@ -96,7 +96,7 @@ for (const [name, source] of [
   expect(inspectVenueNodeDependencies(f.root).violations.length).toBeGreaterThan(0);
 });
 it("includes transitive resolver tooling production peers without including unrelated development hosts", () => {
-  const f = fixture(); f.edit("devtools/platform-probes/package.json", p => p.peerDependencies = { vue: "^3.5.13" });
+  const f = fixture(); f.edit("server/platform-probes/package.json", p => p.peerDependencies = { vue: "^3.5.13" });
   const report = inspectVenueNodeDependencies(f.root);
   expect(report.resolverTooling.directExternalPackages).toContain("vue");
   expect(report.violations.some(row => row.pattern.includes("resolver tooling closure"))).toBe(true);

@@ -18,7 +18,7 @@ const nodeEntries = {
     exports: { ".": "./adapter_paths.mjs", "./adapter_paths.js": "./adapter_paths.mjs", "./adapter_paths.mjs": "./adapter_paths.mjs" },
     files: ["adapter_paths.mjs"],
     dependencies: {
-      "@changmen/platform-probes": "file:../../../devtools/platform-probes",
+      "@changmen/platform-probes": "file:../../platform-probes",
       "@changmen/shared": "file:../../../packages/shared",
       "@changmen/storage": "file:../../storage",
       "@changmen/venue-node-registry": "file:../venue-node-registry",
@@ -27,7 +27,7 @@ const nodeEntries = {
   "server/packages/venue-node-registry": {
     name: "@changmen/venue-node-registry",
     exports: { "./paths.js": "./paths.js", "./feeds.js": "./feeds.js", "./manifest.json": "./manifest.json" },
-    files: ["paths.js", "feeds.js", "manifest.json"],
+    files: ["paths.js", "feeds.js", "manifest.json", "runtime"],
     dependencies: { "@changmen/storage": "file:../../storage" },
   },
 };
@@ -61,7 +61,7 @@ export function inspectVenueNodeDependencies(root) {
   const backend = packages.get("@changmen/backend");
   if (backend?.pkg.dependencies?.["@changmen/venue-node-loader"] !== "file:../packages/venue-node-loader")
     fail("server/backend/package.json", "@changmen/venue-node-loader", "The backend facade requires its own production Node loader declaration");
-  if (backend?.pkg.devDependencies?.["@changmen/venue-adapter-tools"] !== "file:../../packages/venue-adapter/scripts")
+  if (backend?.pkg.devDependencies?.["@changmen/venue-adapter-tools"] !== "file:../packages/venue-adapter-tools")
     fail("server/backend/package.json", "@changmen/venue-adapter-tools", "Backend bundle validation must declare its existing Node tool workspace");
   if (backend?.pkg.scripts?.["sync:platform-adapter"] !== "npm run sync:backend-bundle --workspace=@changmen/venue-adapter-tools && npm run sync:backend-bundle --workspace=@changmen/platform-probes")
     fail("server/backend/package.json", "sync:platform-adapter", "Backend manual sync must keep the original adapter-then-probes sequence through the Node tool owner");

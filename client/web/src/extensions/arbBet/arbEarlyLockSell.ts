@@ -15,8 +15,8 @@ import {
   sellPolymarketBuyPosition,
   pmSubmitScope,
   type OrderRowLike,
-} from "@changmen/venue-adapter/polymarket";
-import { pfSubmitSell } from "@changmen/venue-adapter/predictfun";
+} from "@changmen/venue-browser/adapter/polymarket";
+import { pfSubmitSell } from "@changmen/venue-browser/adapter/predictfun";
 import { saveOrders } from "@/api/order";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { a8Tip } from "@/shared/a8Notify";

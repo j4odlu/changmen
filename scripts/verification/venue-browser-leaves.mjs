@@ -1,12 +1,14 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Three pure modules move intact; old paths share their exact exports.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {readAdapterBrowserSource} from './adapter-browser-relocation.mjs';
 import {createHash} from 'node:crypto';
 import {restoreVenueBrowserContracts,restoreVenueBrowserContractImports,verifyVenueBrowserContracts} from './venue-browser-contracts.mjs';
 import {readVenueBrowserStateSource} from './venue-browser-state.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-leaves.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-leaves.json',import.meta.url),'utf8');
 assert.equal(sha(text),'8fb159ff153d54a794b0d001ec5ea9191874825acd3429443863c060a5c538be');
 export const VENUE_BROWSER_LEAVES=JSON.parse(text);
 const entries=new Map(VENUE_BROWSER_LEAVES.rows.map(row=>[row.file,row]));
@@ -15,7 +17,8 @@ function reverseImports(row,source){
  for(const r of row.replacements){assert.equal(source.split(r.to).length,2);source=source.replace(r.to,r.from);}
  assert.equal(sha(source),row.beforeSha,row.file+': complete original source');return source;
 }
-export function readVenueBrowserLeafSource(file,source,read=target=>fs.readFileSync(new URL('../../'+target,import.meta.url),'utf8')){
+export function readVenueBrowserLeafSource(file,source,read=target=>readAdapterHistory(new URL('../../'+target,import.meta.url),'utf8')){
+ source=readAdapterBrowserSource(file,source,read);
  source=readVenueBrowserStateSource(file,source,read);
  source=restoreVenueBrowserContracts(file,source,read);
  const row=entries.get(file);if(!row)return source;

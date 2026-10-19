@@ -124,12 +124,12 @@ describe("offline isolated PostgreSQL test preparation (no database connection)"
       expect(read(name)).not.toMatch(/dotenv|readFile[^;]*\.env\b|process\.env\.DATABASE_URL|auth_login|ALLOW_ESPORT_TOUCH/);
   });
   it("minimal orders fixture matches baseline types/defaults/identity/FK plus the original changmen_bet extension", () => {
-    const baseline = fs.readFileSync("server/backend/db/migrations/001_baseline.sql", "utf8");
+    const baseline = fs.readFileSync("server/db/assets/migrations/001_baseline.sql", "utf8");
     const original = baseline.match(/CREATE TABLE IF NOT EXISTS orders\s*\(([\s\S]*?)\n\);/)[1];
     const fixture = read("bootstrap.sql").match(/CREATE TABLE public\.orders\s*\(([\s\S]*?)\n\);/)[1];
     const normalized = sql => sql.replaceAll("public.", "").replace(/\s+/g, "").toLowerCase();
     expect(normalized(fixture).replace(",changmen_betbooleannotnulldefaultfalse", "")).toBe(normalized(original));
-    expect(fs.readFileSync("server/backend/db/migrations/009_orders_changmen_bet.sql", "utf8")).toContain("changmen_bet boolean NOT NULL DEFAULT false");
+    expect(fs.readFileSync("server/db/assets/migrations/009_orders_changmen_bet.sql", "utf8")).toContain("changmen_bet boolean NOT NULL DEFAULT false");
   });
   it("fixture facts qualify under the original financial helper without changing money rules", () => {
     const command = facts();

@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact singleton relocation; no factories, duplicate state or new lifecycle hooks.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,10 +7,10 @@ import {restoreVenueBrowserHost,verifyVenueBrowserHost} from './venue-browser-ho
 import {restoreVenueBrowserWorkspace} from './venue-browser-workspace.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
-const text=fs.readFileSync(new URL('./venue-browser-state.json',import.meta.url),'utf8');
+const text=readAdapterHistory(new URL('./venue-browser-state.json',import.meta.url),'utf8');
 assert.equal(sha(text),'51b22b9581fbc27ac8d34c7d62b3b3a92aadc3931a325db25029242a599f48ba');
 export const VENUE_BROWSER_STATE=JSON.parse(text);
-const readFile=file=>fs.readFileSync(new URL('../../'+file,import.meta.url),'utf8');
+const readFile=withAdapterHistoryReader(file=>readAdapterHistory(new URL('../../'+file,import.meta.url),'utf8'));
 function reverse(row,source){
  source=normalize(source);assert.equal(sha(source),row.afterSha,row.file+': complete relocated state source');
  for(const r of row.replacements){assert.equal(source.split(r.to).length,2);source=source.replace(r.to,r.from);}

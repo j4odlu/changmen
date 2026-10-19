@@ -16,7 +16,7 @@ vi.mock("@changmen/client-core/chrome-plugin/bridge", () => ({ a8PluginSend: moc
 vi.mock("@/lib/authSession", () => ({ getToken: () => "test-token", getAuthSessionVersion: () => mocks.version,
   isAuthSessionCurrent: (version: string) => version === mocks.version }));
 vi.mock("./store", () => ({ getVaultMeta: async () => mocks.meta, listVaultKeys: async () => [mocks.row, ...mocks.extraRows] }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ clearPolymarketOrderClientCache: mocks.clear, retainPolymarketAccountRuntimes: mocks.retain }));
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ clearPolymarketOrderClientCache: mocks.clear, retainPolymarketAccountRuntimes: mocks.retain }));
 import { clearRetainedPmMemory, getRetainedPmPrivateKey, prepareRetainedPmSession, registerRetainedPmCleanup,
   restoreRetainedPmSession, retainedPmSessionUi, revokeRetainedPmSession, saveRetainedPmSession, setRetainedPmHours, removeRetainedPmAccount } from "./retainedPmSession";
 const pk = `0x${"ab".repeat(32)}`;

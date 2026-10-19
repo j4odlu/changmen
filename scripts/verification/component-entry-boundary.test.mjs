@@ -230,10 +230,11 @@ describe("component entry boundaries", () => {
     try { expect(f.inspect().violations.length).toBeGreaterThan(0); }
     catch (error) { if (error.name === "AssertionError") throw error; expect(error.message).toMatch(/Component inventory|Invalid|Missing|Dynamic loader/); }
   });
-  it("audits the current repository with all 28 reviewed entries and no static environment crossing", () => {
+  it("audits the current repository with 27 active reviewed entries and no static environment crossing", () => {
     const root = fileURLToPath(new URL("../../", import.meta.url));
     const report = inspectComponentEntries(root);
-    expect(report.entries).toHaveLength(28);
+    expect(report.entries).toHaveLength(27);
+    expect(report.entries.some(entry=>entry.id==="venue-node-loader-compat")).toBe(false);
     expect(report.violations).toEqual([]);
     expect(report.safeToNarrowPublishScope).toBe(false);
     expect(report.entries.find(entry => entry.id === "pm-classic-fok").environment).toBe("browser");
@@ -248,13 +249,13 @@ describe("component entry boundaries", () => {
       fs.readFileSync=function(file,...args) {
         const value=read.call(this,file,...args);
         return typeof value === "string" && String(file).replaceAll("\\\\", "/").endsWith("/server/backend/server.js")
-          ? value + '\\nimport "@changmen/venue-adapter/registry/adapters";\\n' : value;
+          ? value + '\\nimport "@changmen/venue-browser/adapter/registry/adapters";\\n' : value;
       };
       await import("./scripts/check-team-boundaries.mjs");`;
     const result = spawnSync(process.execPath, ["--input-type=module", "--eval", code], { cwd: root, encoding: "utf8", timeout: 30_000, maxBuffer: 2 * 1024 * 1024 });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("[component-entry] server/backend/server.js:");
-    expect(result.stderr).toContain("browser-only packages/venue-adapter/registry/adapters.ts");
+    expect(result.stderr).toContain("browser-only client/packages/venue-browser/adapter/registry/adapters.ts");
   }, 35_000);
 });
 

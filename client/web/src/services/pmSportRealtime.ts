@@ -2,7 +2,7 @@ import type { PmSportSnapshot } from "@/types/esport";
 import {
   PM_SPORT_CHANNEL,
   subscribeChangmenChannel,
-} from "@changmen/venue-adapter/shared";
+} from "@changmen/venue-browser/adapter/shared";
 
 let unsub: (() => void) | null = null;
 

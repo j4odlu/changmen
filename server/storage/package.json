@@ -17,7 +17,8 @@
     "./auth_mode.js": "./auth_mode.js",
     "./predictfun_market_index.js": "./predictfun_market_index.js",
     "./polymarket_market_index.js": "./polymarket_market_index.js",
-    "./sxbet_market_index.js": "./sxbet_market_index.js"
+    "./sxbet_market_index.js": "./sxbet_market_index.js",
+    "./game_catalog.js": "./game_catalog.js"
   },
   "dependencies": {
     "@changmen/api-contract": "file:../../packages/api-contract",

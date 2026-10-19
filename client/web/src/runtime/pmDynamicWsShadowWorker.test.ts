@@ -7,7 +7,7 @@ const io = vi.hoisted(() => ({ ws: "official", http: "direct", submit: "direct",
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => io.accounts }));
 vi.mock("@/stores/matchStore", () => ({ useMatchStore: () => io.matches }));
 vi.mock("@/stores/oddsStore", () => ({ useOddsStore: () => ({ getPmQuoteEntry: io.odds }) }));
-vi.mock("@changmen/venue-adapter/polymarket", () => ({ getPmMarketWsSourceMode: () => io.ws,
+vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ getPmMarketWsSourceMode: () => io.ws,
   resolvePmHttpMode: () => io.http, resolvePmOrderSubmitHttpMode: () => io.submit,
   getPolymarketPmSportBlockReason: () => null }));
 vi.mock("@changmen/venue-browser/pm-book-diagnostics/bookRuntime", () => ({

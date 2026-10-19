@@ -1,5 +1,5 @@
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 /** 原单 id 优先；缺 id 时只接纳唯一的场馆比赛/选项/金额/时间完全绑定候选。 */
 export function findGtcOtherOrder(row: GtcExecution, orders: readonly VenueOrder[]): VenueOrder | undefined {
   const candidates = orders.filter((order) => {

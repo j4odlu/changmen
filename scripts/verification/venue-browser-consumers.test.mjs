@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
@@ -6,7 +7,7 @@ import {expect,it} from 'vitest';
 import {VENUE_BROWSER_CONSUMERS as record,restoreVenueBrowserConsumers,verifyVenueBrowserConsumers} from './venue-browser-consumers.mjs';
 import {verifyVenueBrowserRelocation} from './venue-browser-relocation.mjs';
 import {restoreVenueBrowserLifecycle} from './venue-browser-lifecycle.mjs';
-const read=f=>fs.readFileSync(f,'utf8').replaceAll('\r\n','\n');
+const read=withAdapterHistoryReader(f=>readAdapterHistory(f,'utf8').replaceAll('\r\n','\n'));
 const sha=s=>createHash('sha256').update(s).digest('hex');
 const original=f=>execFileSync('git',['show',record.baseline+':'+f],{encoding:'utf8',windowsHide:true}).replaceAll('\r\n','\n');
 it('retains every previous consumer and rejects changes through the complete boundary gate',()=>{

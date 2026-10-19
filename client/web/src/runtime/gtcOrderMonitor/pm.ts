@@ -1,5 +1,5 @@
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
-import type { GtcTradeHistory } from "@changmen/venue-adapter/polymarket/gtc";
+import type { GtcTradeHistory } from "@changmen/venue-browser/adapter/polymarket/gtc";
 import type { PlatformAccount } from "@/models/platformAccount";
 /** [changmen 扩展] PM GTC 原单独立恢复、HTTP 核对和 WS 监听，终态完成核对后停止。 */
 import { captureGtcSession, currentGtc, gtcInitialDispatches, gtcProgress, markGtcLegOnce, mutateGtc } from "@/orderModes/gtc/executionState";
@@ -10,7 +10,7 @@ import { createGtcPmOrderPolling } from "./pmPolling";
 import { recoverMonitorRecords } from "./recovery";
 
 async function read(account: PlatformAccount, row: GtcExecution, shared?: () => Promise<GtcTradeHistory>) {
-  const api = await import("@changmen/venue-adapter/polymarket/gtc");
+  const api = await import("@changmen/venue-browser/adapter/polymarket/gtc");
   // [changmen 扩展] 原单→成交历史的核对顺序保持；核对不参与首次第二腿发送裁决。
   if (shared && row.decision === "closed")
     return api.readGtcFacts(account, row.plan, row.orderId || row.plan.orderHash, row.createdAt, shared());
@@ -33,7 +33,7 @@ const loop = createOrderMonitorLoop({
           let batch = batches.get(row.plan.playerId);
           if (!batch) {
             const since = Math.min(...gtcProgress.records.filter(r => r.plan.playerId === row.plan.playerId && (!gtcPmReconciled(r) || gtcProgress.queryIssues[r.id])).map(r => r.createdAt));
-            batch = import("@changmen/venue-adapter/polymarket/gtc").then((api) => {
+            batch = import("@changmen/venue-browser/adapter/polymarket/gtc").then((api) => {
               const account = useAccountStore().findAccount(row.plan.playerId);
               if (!isCurrent() || !account)
                 throw new Error("GTC 会话或原 PM 账号已变更");

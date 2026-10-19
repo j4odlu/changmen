@@ -1,5 +1,5 @@
-import { recordPmExecutionMetric } from "@changmen/venue-adapter/polymarket";
-import { capturePmFokPreflightMode, prepareOptimizedFokExecution } from "@changmen/venue-adapter/polymarket";
+import { recordPmExecutionMetric } from "@changmen/venue-browser/adapter/polymarket";
+import { capturePmFokPreflightMode, prepareOptimizedFokExecution } from "@changmen/venue-browser/adapter/polymarket";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type {
   ArbBetAttemptParams,
@@ -7,8 +7,8 @@ import type {
   ArbBetReady,
 } from "@/stores/betting/autoBet/phases/types";
 import { wait } from "@changmen/client-core/shared/wait";
-import { getPolymarketPmSportBlockReasonFromOption } from "@changmen/venue-adapter/polymarket";
-import { PLATFORMS } from "@changmen/venue-adapter/shared";
+import { getPolymarketPmSportBlockReasonFromOption } from "@changmen/venue-browser/adapter/polymarket";
+import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
 import { isSingleLegPrecheckOnly } from "@/domain/betting/singleLegRate";
 import { shouldSkipAccountRateOnStakeScale } from "@/extensions/arbBet/stakeScaleByProfit";
 import { createObservationContext, observeOption } from "@/services/orderObservation";

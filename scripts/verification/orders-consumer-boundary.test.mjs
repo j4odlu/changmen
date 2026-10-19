@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { gitSource, verifyProtectedSource } from "./orders-phase2-release-boundary.mjs";
@@ -5,7 +6,7 @@ import { ordersCompatPath, verifyOrdersCompatHelper } from "./orders-consumer-bo
 import { retirementBase, retiredHelpers } from "./gtc-compat-retirement.mjs";
 
 const path = "server/db/rds/orders_store.js";
-const read = file => fs.readFileSync(file, "utf8");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 describe("whole FOK order writer and finance protection retain fixed original baselines", () => {
   for (const base of ["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"]) {
     const check = (source = read(path), readSource = read) => verifyProtectedSource(path, source, gitSource(base, path), readSource);

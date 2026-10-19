@@ -5,10 +5,12 @@ import { execFileSync } from 'node:child_process';
 import ts from 'typescript';
 import { restoreOrdersConsumerCompatibility, restoreGtcOrdersCompatibility, verifyOrdersCompatHelper } from './orders-consumer-boundary.mjs';
 import { restoreMinimalOrdersSource } from './pm-orders-minimal-boundary.mjs';
+import { restoreAdminMaintenanceSource } from './admin-maintenance-isolation.mjs';
+import { withRdsLegacyEntries } from './rds-legacy-relocation.mjs';
 
 export const deployedSource = '113db6ff4e59dd615f8dd867e11d859b05766b7d';
 export const immutableBaselines = ['219535c8','75b1efac66625e5f2bc9884a965b244bfaf337ed'];
-export const read = file => fs.readFileSync(file,'utf8').replaceAll('\r\n','\n');
+export const read = file => withRdsLegacyEntries(target=>fs.readFileSync(target,'utf8'))(file).replaceAll('\r\n','\n');
 export const gitSource = (base,file) => execFileSync('git',['show',`${base}:${file}`],{encoding:'utf8',maxBuffer:8*1024*1024});
 export function moduleTokens(source) {
   const tree=ts.createSourceFile('module.ts',source,ts.ScriptTarget.Latest,true);
@@ -29,6 +31,7 @@ export function verifyProtectedSource(file,current,original,readSource=read) {
 }
 function once(source,before,after='') { assert.equal(source.split(before).length,2,`exact phase2 wiring: ${before}`);return source.replace(before,after); }
 export function restorePhase2Module(file,source,readSource=read) {
+  source=restoreAdminMaintenanceSource(file,source,readSource);
   source=restoreMinimalOrdersSource(file,source,readSource);
   verifyOrdersCompatHelper(readSource);
   if(file==='server/db/rds/orders_store.js') return restoreOrdersConsumerCompatibility(source,readSource,source.includes('patchRayMonitorOrders')?undefined:'313c19e8afc30d62b54363830974b6738eab84d8');

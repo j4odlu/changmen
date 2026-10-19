@@ -1,7 +1,7 @@
 import { validatePmPriceQuote } from "@changmen/venue-browser/polymarket/priceQuote";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { getPmArbPriceBufferPrefs, resolvePmDisplayQuote,
-  type PmArbPriceBufferPrefs } from "@changmen/venue-adapter/polymarket";
+  type PmArbPriceBufferPrefs } from "@changmen/venue-browser/adapter/polymarket";
 import { useOddsStore } from "@/stores/oddsStore";
 
 const policies = new WeakMap<BetOption, PmArbPriceBufferPrefs>();

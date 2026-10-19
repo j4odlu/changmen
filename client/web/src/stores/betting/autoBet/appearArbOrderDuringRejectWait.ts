@@ -1,7 +1,7 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@/models/platformAccount";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
-import { sortVenueOrdersNewestFirst } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
+import { sortVenueOrdersNewestFirst } from "@changmen/venue-browser/adapter/contract";
 import { wait } from "@changmen/client-core/shared/wait";
 import { getProvider } from "@/runtime/providers";
 import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";

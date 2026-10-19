@@ -13,7 +13,7 @@
     "adapter_paths.mjs"
   ],
   "dependencies": {
-    "@changmen/platform-probes": "file:../../../devtools/platform-probes",
+    "@changmen/platform-probes": "file:../../platform-probes",
     "@changmen/shared": "file:../../../packages/shared",
     "@changmen/storage": "file:../../storage",
     "@changmen/venue-node-registry": "file:../venue-node-registry"

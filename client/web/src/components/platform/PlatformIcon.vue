@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PlatformId } from "@changmen/api-contract";
-import { getPlatformIconUrl } from "@changmen/venue-adapter/registry";
+import { getPlatformIconUrl } from "@changmen/venue-browser/adapter/registry";
 import { computed } from "vue";
 
 const props = defineProps<{

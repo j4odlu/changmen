@@ -1,0 +1,252 @@
+{
+  "purpose": "retire-unused-package-manifests-and-preserve-exact-policy-history",
+  "retiredManifests": [
+    {
+      "file": "packages/venue-adapter/loader/package.json",
+      "before": "{\n  \"name\": \"@changmen/venue-node-loader\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"description\": \"Node entry for the existing venue loader; source and root selection are unchanged\",\n  \"exports\": {\n    \".\": \"./adapter_paths.mjs\",\n    \"./adapter_paths.js\": \"./adapter_paths.mjs\",\n    \"./adapter_paths.mjs\": \"./adapter_paths.mjs\"\n  },\n  \"files\": [\"adapter_paths.mjs\"],\n  \"dependencies\": {\n    \"@changmen/platform-probes\": \"file:../../../devtools/platform-probes\",\n    \"@changmen/shared\": \"file:../../shared\",\n    \"@changmen/storage\": \"file:../../../server/storage\",\n    \"@changmen/venue-node-registry\": \"file:../registry\"\n  }\n}\n",
+      "beforeSha": "dfef205ce31377927947d504103f3e35be2688d9aaed12087168484d25db1484",
+      "canonicalPackage": "server/packages/venue-node-loader/package.json",
+      "canonicalSha": "a9d485c924f6206f71d81fcd0fe50fdcf23343705f72e22b8147bf12a96dbb99",
+      "targets": [
+        {
+          "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+          "sha": "f7503e0b2433687d8277510d962869b51452323d688ee20788e9ccfac8d9183c"
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/registry/package.json",
+      "before": "{\n  \"name\": \"@changmen/venue-node-registry\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"description\": \"Node manifest readers; adjacent browser TypeScript stays behind venue-adapter compatibility exports\",\n  \"exports\": {\n    \"./paths.js\": \"./paths.js\",\n    \"./feeds.js\": \"./feeds.js\",\n    \"./manifest.json\": \"./manifest.json\"\n  },\n  \"files\": [\"paths.js\", \"feeds.js\", \"manifest.json\"],\n  \"dependencies\": {\n    \"@changmen/storage\": \"file:../../../server/storage\"\n  }\n}\n",
+      "beforeSha": "b107431801bf8235a572e2aab4355df8679517f0c5ca2a981319bf49d815cbfa",
+      "canonicalPackage": "server/packages/venue-node-registry/package.json",
+      "canonicalSha": "c142b3e7bff912ba874c54dbf1e6f9e553e6ba78bf08226857ee7db164560ea4",
+      "targets": [
+        {
+          "file": "server/packages/venue-node-registry/paths.js",
+          "sha": "082e0eacc371931f2daa33f2773085052f40d7bde82f3b65ec626616d60427df"
+        },
+        {
+          "file": "server/packages/venue-node-registry/feeds.js",
+          "sha": "9506335e9341edee88373936189634619e6d74eabc8e613aec021f0174c232d6"
+        },
+        {
+          "file": "server/packages/venue-node-registry/manifest.json",
+          "sha": "4d6b1c5689a3cb3ac1b963cd534386029cdddd726e0eff050c6247fde70bd43a"
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/scripts/package.json",
+      "before": "{\n  \"name\": \"@changmen/venue-adapter-tools\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"description\": \"Node ownership for the existing backend bundle tool; original script and frontend compatibility commands stay in place\",\n  \"scripts\": {\n    \"sync:backend-bundle\": \"node sync-backend-bundle.mjs\"\n  },\n  \"exports\": {\n    \"./sync-backend-bundle.mjs\": \"./sync-backend-bundle.mjs\"\n  },\n  \"files\": [\n    \"sync-backend-bundle.mjs\"\n  ],\n  \"dependencies\": {\n    \"@changmen/shared\": \"file:../../shared\",\n    \"@changmen/storage\": \"file:../../../server/storage\"\n  }\n}\n",
+      "beforeSha": "e4e3e28c33b74d2b0bd0904b57ca36facd9a12f047e83b0024ccdc4c9f02e09f",
+      "canonicalPackage": "server/packages/venue-adapter-tools/package.json",
+      "canonicalSha": "79254a77b9344127ff1763018d9672b53e3894c82aa062295885be21cb2abb68",
+      "targets": [
+        {
+          "file": "server/packages/venue-adapter-tools/sync-backend-bundle.mjs",
+          "sha": "2e27b09876ffe39ff11e0b12baed728778f11f6bf86da4c9b19afe18cc83e99c"
+        }
+      ]
+    }
+  ],
+  "policy": {
+    "file": "scripts/verification/retained-source-boundaries.json",
+    "before": "{\n  \"schemaVersion\": 1,\n  \"purpose\": \"retained-source-boundaries-only\",\n  \"publishScopeOptimizationEnabled\": false,\n  \"groups\": [\n    {\n      \"id\": \"frozen-adapter-island\",\n      \"owner\": \"frontend/backend\",\n      \"files\": [\n        \"packages/venue-adapter/loader/adapter_paths.mjs\",\n        \"packages/venue-adapter/registry/adapters.ts\",\n        \"packages/venue-adapter/registry/feeds.js\",\n        \"packages/venue-adapter/registry/icons.ts\",\n        \"packages/venue-adapter/registry/index.ts\",\n        \"packages/venue-adapter/registry/meta.ts\",\n        \"packages/venue-adapter/registry/paths.js\"\n      ],\n      \"reason\": \"Seven original frozen browser/Node sources share physical directories.\",\n      \"exitCondition\": \"Keep all original paths/content; any future relocation needs separately authorized compatibility design without weakening 551.\"\n    },\n    {\n      \"id\": \"compatibility-entries\",\n      \"owner\": \"frontend/backend/rds/shared\",\n      \"files\": [\n        \"scripts/verification/source-ownership-inputs.json\"\n      ],\n      \"contractSha256\": \"3cfc7268edce906e775c7471c6b660052d718598d1700a4d01c12a8e18a4b811\",\n      \"reason\": \"Old public imports, CLI identities and JSON paths still have consumers.\",\n      \"exitCondition\": \"Prove every old consumer retired before separately removing its entry; canonical implementations remain unique.\"\n    },\n    {\n      \"id\": \"rds-assets\",\n      \"owner\": \"rds\",\n      \"files\": [\n        \"server/db/assets/schema-baseline.json\",\n        \"server/backend/scripts/rds-schema-baseline.json\",\n        \"server/db/assets/migrations/001_baseline.sql\",\n        \"server/backend/db/migrations/001_baseline.sql\",\n        \"server/db/assets/migrations/003_money_logs.sql\",\n        \"server/backend/db/migrations/003_money_logs.sql\",\n        \"server/db/assets/migrations/004_users_is_admin.sql\",\n        \"server/backend/db/migrations/004_users_is_admin.sql\",\n        \"server/db/assets/migrations/005_client_matches_list_status.sql\",\n        \"server/backend/db/migrations/005_client_matches_list_status.sql\",\n        \"server/db/assets/migrations/006_tag_platforms_players.sql\",\n        \"server/backend/db/migrations/006_tag_platforms_players.sql\",\n        \"server/db/assets/migrations/007_platform_matches_is_live.sql\",\n        \"server/backend/db/migrations/007_platform_matches_is_live.sql\",\n        \"server/db/assets/migrations/008_user_logs.sql\",\n        \"server/backend/db/migrations/008_user_logs.sql\",\n        \"server/db/assets/migrations/009_orders_changmen_bet.sql\",\n        \"server/backend/db/migrations/009_orders_changmen_bet.sql\",\n        \"server/db/assets/migrations/010_value_signals.sql\",\n        \"server/backend/db/migrations/010_value_signals.sql\",\n        \"server/db/assets/migrations/011_odds_history.sql\",\n        \"server/backend/db/migrations/011_odds_history.sql\",\n        \"server/db/assets/migrations/012_user_roles_teams.sql\",\n        \"server/backend/db/migrations/012_user_roles_teams.sql\",\n        \"server/db/assets/migrations/013_widen_odds_numeric.sql\",\n        \"server/backend/db/migrations/013_widen_odds_numeric.sql\",\n        \"server/db/assets/migrations/014_history_tables.sql\",\n        \"server/backend/db/migrations/014_history_tables.sql\",\n        \"server/db/assets/migrations/015_prune_indexes_and_drop_list_status.sql\",\n        \"server/backend/db/migrations/015_prune_indexes_and_drop_list_status.sql\",\n        \"server/db/assets/migrations/016_client_matches_pm_sport.sql\",\n        \"server/backend/db/migrations/016_client_matches_pm_sport.sql\",\n        \"server/db/assets/migrations/017_client_matches_canonical_teams.sql\",\n        \"server/backend/db/migrations/017_client_matches_canonical_teams.sql\",\n        \"server/db/assets/migrations/018_client_match_platform_overrides.sql\",\n        \"server/backend/db/migrations/018_client_match_platform_overrides.sql\",\n        \"server/db/assets/migrations/023_team_platform_maps_gb_team_id.sql\",\n        \"server/backend/db/migrations/023_team_platform_maps_gb_team_id.sql\",\n        \"server/db/assets/migrations/024_team_platform_maps_venue_columns.sql\",\n        \"server/backend/db/migrations/024_team_platform_maps_venue_columns.sql\",\n        \"server/db/assets/migrations/025_team_venue_maps.sql\",\n        \"server/backend/db/migrations/025_team_venue_maps.sql\",\n        \"server/db/assets/migrations/026_players_owner_user_id.sql\",\n        \"server/backend/db/migrations/026_players_owner_user_id.sql\",\n        \"server/db/assets/migrations/027_players_active_owner_required.sql\",\n        \"server/backend/db/migrations/027_players_active_owner_required.sql\",\n        \"server/db/assets/migrations/028_players_account_data.sql\",\n        \"server/backend/db/migrations/028_players_account_data.sql\",\n        \"server/db/assets/migrations/029_orders_user_player_index.sql\",\n        \"server/backend/db/migrations/029_orders_user_player_index.sql\",\n        \"server/db/assets/migrations/030_players_venue_member_id.sql\",\n        \"server/backend/db/migrations/030_players_venue_member_id.sql\",\n        \"server/db/assets/migrations/031_team_venue_maps_venue_team_id.sql\",\n        \"server/backend/db/migrations/031_team_venue_maps_venue_team_id.sql\",\n        \"server/db/assets/migrations/032_players_venue_account_key.sql\",\n        \"server/backend/db/migrations/032_players_venue_account_key.sql\",\n        \"server/db/assets/migrations/033_sport_matcher_tables.sql\",\n        \"server/backend/db/migrations/033_sport_matcher_tables.sql\",\n        \"server/db/assets/migrations/034_platform_bets_market_id.sql\",\n        \"server/backend/db/migrations/034_platform_bets_market_id.sql\",\n        \"server/db/assets/migrations/035_players_venue_account_key_including_deleted.sql\",\n        \"server/backend/db/migrations/035_players_venue_account_key_including_deleted.sql\",\n        \"server/db/assets/migrations/036_team_provider_ids.sql\",\n        \"server/backend/db/migrations/036_team_provider_ids.sql\",\n        \"server/db/assets/migrations/037_client_matches_ended_at.sql\",\n        \"server/backend/db/migrations/037_client_matches_ended_at.sql\",\n        \"server/db/assets/migrations/038_platform_matches_rot_num.sql\",\n        \"server/backend/db/migrations/038_platform_matches_rot_num.sql\",\n        \"server/db/assets/migrations/039_platform_bets_line_id.sql\",\n        \"server/backend/db/migrations/039_platform_bets_line_id.sql\",\n        \"server/db/assets/migrations/040_football_orders.sql\",\n        \"server/backend/db/migrations/040_football_orders.sql\",\n        \"server/db/assets/migrations/041_football_orders_status.sql\",\n        \"server/backend/db/migrations/041_football_orders_status.sql\",\n        \"server/db/assets/migrations/042_pod_bet_executions.sql\",\n        \"server/backend/db/migrations/042_pod_bet_executions.sql\",\n        \"server/db/assets/migrations/043_auth_session_audit.sql\",\n        \"server/backend/db/migrations/043_auth_session_audit.sql\",\n        \"server/db/assets/migrations/044_auth_sessions.sql\",\n        \"server/backend/db/migrations/044_auth_sessions.sql\",\n        \"server/db/assets/migrations/045_pod_ray_execution.sql\",\n        \"server/backend/db/migrations/045_pod_ray_execution.sql\",\n        \"server/db/assets/migrations/20261002_order_observations.sql\",\n        \"server/backend/db/migrations/20261002_order_observations.sql\",\n        \"server/db/assets/migrations/20261003_order_observation_execution_index.sql\",\n        \"server/backend/db/migrations/20261003_order_observation_execution_index.sql\",\n        \"server/db/assets/migrations/20261015_reconcile_archive_schema.sql\",\n        \"server/backend/db/migrations/20261015_reconcile_archive_schema.sql\"\n      ],\n      \"baselineSha256\": \"deec29cf04f672b53b4def73f8422d21bdb5feddd2b7b001f122edcfa318e93d\",\n      \"reason\": \"Data-layer assets are canonical; original backend paths remain byte-identical generated compatibility copies for old consumers.\",\n      \"exitCondition\": \"Remove old copies only after every legacy consumer is retired; preserve historical SQL/checksums and fixed reference evidence.\"\n    },\n    {\n      \"id\": \"frozen-database-island\",\n      \"owner\": \"backend/rds\",\n      \"files\": [\n        \"server/backend/core/account/admin_maintenance.js\",\n        \"scripts/verification/backend-db-access-exceptions.json\"\n      ],\n      \"contractSha256\": \"b99da38ed5c3b067529c071c27857a5746e817ffcfef4049af6844bd6d18280d\",\n      \"reason\": \"Eight direct database locations remain under the existing orders-phase2 freeze.\",\n      \"exitCondition\": \"A separately authorized order compatibility change is needed; do not add access exceptions or move frozen implementation now.\"\n    },\n    {\n      \"id\": \"backend-bundle-tool\",\n      \"owner\": \"backend/tooling\",\n      \"files\": [\n        \"packages/venue-adapter/scripts/sync-backend-bundle.mjs\"\n      ],\n      \"sourceSha256\": \"f31adb20818038fd1a0c1e9e7c08a90a12fbf9b531b22b795f9c58187391fc56\",\n      \"reason\": \"The source root and copied scripts belong to the existing thin-bundle content contract.\",\n      \"exitCondition\": \"Explicitly review standalone tool closure and copied content before moving it; current copy/publish rules stay unchanged.\"\n    },\n    {\n      \"id\": \"layout-roots\",\n      \"owner\": \"backend/rds infrastructure\",\n      \"files\": [\n        \"server/storage/paths.js\",\n        \"server/storage/changmen_root.js\"\n      ],\n      \"reason\": \"Frozen Node consumers find repository and resource roots through these existing definitions.\",\n      \"exitCondition\": \"Independent installation must prove existing layout/resources resolve; no new resolver or fabricated standalone certificate.\"\n    }\n  ]\n}\n",
+    "beforeSha": "5d5afd58781e7364d2a8766aaf3d1eeb9cfba28cbae0fa9fc4c4f563511490a8",
+    "afterSha": "488836999a479b47a968cc3c7c6a4e616406ae6e79444ae2a8c12e464067a895",
+    "proofs": [
+      {
+        "file": "server/db/assets/schema-baseline.json",
+        "sha": "deec29cf04f672b53b4def73f8422d21bdb5feddd2b7b001f122edcfa318e93d"
+      },
+      {
+        "file": "server/db/assets/migrations/001_baseline.sql",
+        "sha": "380ac96ea8e8b21fa84894037419dd58df84fd9b66bac609de85b3eb2316aab3"
+      },
+      {
+        "file": "server/db/assets/migrations/003_money_logs.sql",
+        "sha": "d754838c6a601ac6655aa5dd287b1a18421aabaaee28c62cad53266649867a6c"
+      },
+      {
+        "file": "server/db/assets/migrations/004_users_is_admin.sql",
+        "sha": "437018d578a195199edaef32eb258dcdc1ea2e67aa2cff69fa17635f6f4cd4ae"
+      },
+      {
+        "file": "server/db/assets/migrations/005_client_matches_list_status.sql",
+        "sha": "439135537afd273492d4429dfa4cbbb42f40154b89460454ea5d6749026f52ba"
+      },
+      {
+        "file": "server/db/assets/migrations/006_tag_platforms_players.sql",
+        "sha": "9c7d7cdd4cd36ffdd32a61fa84fb6b182972e7833887c42176c85476b6068f7c"
+      },
+      {
+        "file": "server/db/assets/migrations/007_platform_matches_is_live.sql",
+        "sha": "1bf5a48168a2e2a39813a9982cdb14cad236f285c3c18c1d7850a59437541fc2"
+      },
+      {
+        "file": "server/db/assets/migrations/008_user_logs.sql",
+        "sha": "be6f91ed03966984a0bf7f2351ffb8da5fa0c67659d5a6187a276254124540bb"
+      },
+      {
+        "file": "server/db/assets/migrations/009_orders_changmen_bet.sql",
+        "sha": "f8c28bdcb41152126305609b307cfe085da6da2e43cf8a9fbc6a210ef28a85aa"
+      },
+      {
+        "file": "server/db/assets/migrations/010_value_signals.sql",
+        "sha": "75403811afbcc4b623c6c1bee62d0a8737570f430e389706aa153fa8d5dac658"
+      },
+      {
+        "file": "server/db/assets/migrations/011_odds_history.sql",
+        "sha": "0df02f05dfcea959a9654b503ba748ff6d33a98a63d7705ebc0ece478b65e40c"
+      },
+      {
+        "file": "server/db/assets/migrations/012_user_roles_teams.sql",
+        "sha": "9b7490b107157aad120eae081c99d006e2fe3c2baa274b47a097f2962f426ebb"
+      },
+      {
+        "file": "server/db/assets/migrations/013_widen_odds_numeric.sql",
+        "sha": "11a4213713f142af8a9b9c647643b1053bb9933c82f75ff40db9e35dcd4ce6a6"
+      },
+      {
+        "file": "server/db/assets/migrations/014_history_tables.sql",
+        "sha": "b9654e68f09ac294b62f7745ab7e898a300f78bb7a22e483fdd400b8f70e2bd8"
+      },
+      {
+        "file": "server/db/assets/migrations/015_prune_indexes_and_drop_list_status.sql",
+        "sha": "d438651a521a039df6ff30b3151071cdfe7291e4e0614a7eb971982593cdba41"
+      },
+      {
+        "file": "server/db/assets/migrations/016_client_matches_pm_sport.sql",
+        "sha": "3fe3641330a1f1deebe16b48038131b147e786a58e2248f0be9c0a95c59b17f1"
+      },
+      {
+        "file": "server/db/assets/migrations/017_client_matches_canonical_teams.sql",
+        "sha": "054cf4e35928917c4567ea36714dd71c4465b0a62e20d7c3b8a7513a9a7daaf9"
+      },
+      {
+        "file": "server/db/assets/migrations/018_client_match_platform_overrides.sql",
+        "sha": "5c650f4087c1985dba56d07cdc3d082c997c359df24b1139926b92a460fb40d9"
+      },
+      {
+        "file": "server/db/assets/migrations/023_team_platform_maps_gb_team_id.sql",
+        "sha": "59b90679809f7de6b9f818c783250bc2ec4870e9eadacfbba9ea1cba8eb96d4b"
+      },
+      {
+        "file": "server/db/assets/migrations/024_team_platform_maps_venue_columns.sql",
+        "sha": "0faab4e5c126878d5b16ad18a8ec7a212eb5287a2b8fbce7b3f518f851e1a2e9"
+      },
+      {
+        "file": "server/db/assets/migrations/025_team_venue_maps.sql",
+        "sha": "3dc0ad15e9c347b63f972427142e0c886cff3ae7a9c676cd303c364b36bb6b65"
+      },
+      {
+        "file": "server/db/assets/migrations/026_players_owner_user_id.sql",
+        "sha": "926946b8a34b1e3164a16a131c760fcd371bc73ffe88401d6bcdfc68175def6e"
+      },
+      {
+        "file": "server/db/assets/migrations/027_players_active_owner_required.sql",
+        "sha": "9ea47742691a16e5bd55ad66323bb5ce6ddd6104656f3c562a45cffd14284ab1"
+      },
+      {
+        "file": "server/db/assets/migrations/028_players_account_data.sql",
+        "sha": "0cb54d521a2b48660b66754a046f7d50d59962d9bb2fcd95401a1f61c449bf9b"
+      },
+      {
+        "file": "server/db/assets/migrations/029_orders_user_player_index.sql",
+        "sha": "f2c3d8daebf704a06f40495f177af10abf54a8b66fb93813a77c57a10c603940"
+      },
+      {
+        "file": "server/db/assets/migrations/030_players_venue_member_id.sql",
+        "sha": "ee647e912c173517a68c6bb56657161a0b576f02774f69a57188f9cdf703a44c"
+      },
+      {
+        "file": "server/db/assets/migrations/031_team_venue_maps_venue_team_id.sql",
+        "sha": "a37905fc388dfeeb5082773a2e34d5507461c6ac5536ae3874d84e1ffe762717"
+      },
+      {
+        "file": "server/db/assets/migrations/032_players_venue_account_key.sql",
+        "sha": "95c8a65a4a9371509e9b96857f4e8901051b9b59cdee7e93156879892ebd9700"
+      },
+      {
+        "file": "server/db/assets/migrations/033_sport_matcher_tables.sql",
+        "sha": "a007dfdb46cad3ef7e69e8a1434bdc49431f1591925a741dcfd36cdabdc319dd"
+      },
+      {
+        "file": "server/db/assets/migrations/034_platform_bets_market_id.sql",
+        "sha": "6f9cc42ae91e98d5cc3cf3ce8725a62fa86df468b8fca3174683fd61788776a6"
+      },
+      {
+        "file": "server/db/assets/migrations/035_players_venue_account_key_including_deleted.sql",
+        "sha": "59fe72c3d25b72673130d0a60462ab040b4e03c4ea9b893fe2232ede0a37b3b3"
+      },
+      {
+        "file": "server/db/assets/migrations/036_team_provider_ids.sql",
+        "sha": "b76d0bd645331c9a893b2d753d0cfdb175f65a806eef11d949c246f081096a05"
+      },
+      {
+        "file": "server/db/assets/migrations/037_client_matches_ended_at.sql",
+        "sha": "d2e85b995eaa5e593d79cf07bfeadbc7d0624acccf7843b7e7954033738cbfb9"
+      },
+      {
+        "file": "server/db/assets/migrations/038_platform_matches_rot_num.sql",
+        "sha": "0aa57aed03bda6c2270db7643a5b6e2b3bb9750dc3e027b22873a6628d5a8eff"
+      },
+      {
+        "file": "server/db/assets/migrations/039_platform_bets_line_id.sql",
+        "sha": "872ece80be1bc6c25f8631c4edbe918150a48c3075d70793d48309ee7651c45b"
+      },
+      {
+        "file": "server/db/assets/migrations/040_football_orders.sql",
+        "sha": "e6e31c8215218e53a29119bfd08787da42496e54ce8a3b20a601bfc1d117c3dc"
+      },
+      {
+        "file": "server/db/assets/migrations/041_football_orders_status.sql",
+        "sha": "9fee9dd7f0990bee380cfefef0d005ef8c6adb4e81acdf5032f6cf8f5f7cd627"
+      },
+      {
+        "file": "server/db/assets/migrations/042_pod_bet_executions.sql",
+        "sha": "fe7efd902d4788eaabb9d766ea6a87705af1bd51e5c5332535570baaf3e19d4e"
+      },
+      {
+        "file": "server/db/assets/migrations/043_auth_session_audit.sql",
+        "sha": "a92cf988a22af310b95ee293c4eb396d39452796c5f1cff5bc75ce189177bc99"
+      },
+      {
+        "file": "server/db/assets/migrations/044_auth_sessions.sql",
+        "sha": "3c1ec94ddcdd7e3c3af767cc500665792c10ad2629b918fac85cde548799089a"
+      },
+      {
+        "file": "server/db/assets/migrations/045_pod_ray_execution.sql",
+        "sha": "54245dc8341d510aa4ad3ea0abd3c2b8b5883f6a16daf29a040888dff3d24253"
+      },
+      {
+        "file": "server/db/assets/migrations/20261002_order_observations.sql",
+        "sha": "b881676624b1beab21562f614b28deb478a0f6d357400dae8cc402f050046b79"
+      },
+      {
+        "file": "server/db/assets/migrations/20261003_order_observation_execution_index.sql",
+        "sha": "7882c4c2acf1e9eac2295dbe5ad97c65549c77d7c617e5c9fe5d9c59a49c8554"
+      },
+      {
+        "file": "server/db/assets/migrations/20261015_reconcile_archive_schema.sql",
+        "sha": "0a84b3b1c870a59885a70ac4ab55121542b6757618b7cf07453209acc231dd1f"
+      },
+      {
+        "file": "server/db/admin_maintenance.js",
+        "sha": "5be9c4b3c28fb6e057811a1b8abb032f8e40d92d624cb8a5e0d559e377b956ed"
+      },
+      {
+        "file": "scripts/verification/backend-db-access-exceptions.json",
+        "sha": "ee06abd8c0e5a42507d0a50157a540a4b2fddd8e29c6bc57560a657129afe930"
+      }
+    ]
+  },
+  "metadata": [
+    {
+      "file": "scripts/deploy/component-inputs.json",
+      "before": "{\n  \"schemaVersion\": 1,\n  \"purpose\": \"inventory-and-boundary-only\",\n  \"publishScopeOptimizationEnabled\": false,\n  \"sourceOwnership\": \"scripts/verification/source-ownership-inputs.json\",\n  \"conservativeInputs\": [\n    \"scripts/verification/source-ownership-inputs.json\",\n    \"package.json\",\n    \"package-lock.json\",\n    \"packages/venue-adapter/package.json\",\n    \"client/web/vite.config.ts\",\n    \"client/web/tsconfig.app.json\",\n    \"server/packages/venue-adapter-tools/sync-backend-bundle.mjs\",\n    \"scripts/deploy/classify-deploy-scope.mjs\",\n    \"scripts/deploy/change-plan.mjs\",\n    \"scripts/deploy/release-evidence.mjs\",\n    \"server/storage/runtime_version.js\",\n    \".github/workflows/release.yml\",\n    \"client/packages/pm-market-data-browser/package.json\",\n    \"packages/venue-adapter/loader/package.json\",\n    \"packages/venue-adapter/registry/package.json\",\n    \"packages/venue-adapter/scripts/package.json\",\n    \"devtools/runtime-tooling/package.json\"\n  ],\n  \"nodeRoots\": [\n    \"server\",\n    \"devtools/runtime-tooling\"\n  ],\n  \"nodeOnlyPaths\": [\n    \"server/packages/venue-node-registry/paths.js\",\n    \"server/packages/venue-node-registry/feeds.js\",\n    \"packages/shared/tooling\",\n    \"devtools/runtime-tooling\"\n  ],\n  \"browserRoots\": [\n    \"client/web/src\",\n    \"chrome-extension/src\"\n  ],\n  \"testEntries\": [\n    \"server/backend/scripts/test-packaged-adapter-layout.js\"\n  ],\n  \"browserOnlyPaths\": [\n    \"client/packages/venue-browser/adapter/browser/\",\n    \"client/packages/venue-browser/adapter/polymarket/realtime/orderBook/\",\n    \"client/packages/venue-browser/adapter/polymarket/submission/preflight/optimized/wsBook/\",\n    \"client/packages/pm-market-data-browser/src/\",\n    \"client/packages/venue-browser/\"\n  ],\n  \"scopes\": {\n    \"pm\": {\n      \"nodeRoots\": [\n        \"server/backend/core/integrations/polymarket\",\n        \"server/ws_forward/pm_market_hub_server.js\",\n        \"server/ws_forward/pm_sport_market_hub_server.js\",\n        \"server/ws_forward/platforms/pm.js\",\n        \"server/collectors/polymarket-esports/index.js\",\n        \"server/collectors/polymarket-football/index.js\",\n        \"server/collectors/polymarket-sports/index.js\"\n      ],\n      \"browserRoots\": [\n        \"client/packages/venue-browser/adapter/browser\",\n        \"client/packages/venue-browser/adapter/polymarket\",\n        \"client/web/src/runtime/pmMarketData.ts\",\n        \"client/web/src/runtime/pmBookSettings.ts\",\n        \"client/web/src/runtime/pmDynamicWsPreflight.ts\",\n        \"client/web/src/runtime/pmDynamicWsShadowWorker.ts\",\n        \"client/web/src/runtime/appSession.ts\",\n        \"client/web/src/runtime/sportsSession.ts\",\n        \"client/web/src/runtime/venueTransportSession.ts\",\n        \"client/web/src/runtime/gtcOrderMonitor/pm.ts\",\n        \"client/web/src/runtime/gtcOrderMonitor/pmPolling.ts\",\n        \"client/web/src/security/pmVault\",\n        \"client/packages/pm-market-data-browser/src\",\n        \"client/packages/venue-browser/pm-book-source.ts\",\n        \"client/packages/venue-browser/pm-book-source-host.ts\",\n        \"client/packages/venue-browser/pm-book-diagnostics\",\n        \"client/packages/venue-browser/polymarket\",\n        \"client/packages/venue-browser/shared\"\n      ]\n    }\n  },\n  \"entries\": [\n    {\n      \"id\": \"pm-adapter\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/index.ts\",\n      \"specifiers\": [\n        \"@changmen/venue-browser/adapter/polymarket\"\n      ]\n    },\n    {\n      \"id\": \"browser-adapter-registry\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/registry/adapters.ts\",\n      \"specifiers\": [\n        \"@changmen/venue-browser/adapter/registry/adapters\"\n      ]\n    },\n    {\n      \"id\": \"pm-original-market-ws\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/realtime/ws.ts\"\n    },\n    {\n      \"id\": \"pm-original-quote-hub\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/quotes/marketQuoteHub.ts\"\n    },\n    {\n      \"id\": \"pm-classic-fok\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/fok/bet.ts\"\n    },\n    {\n      \"id\": \"pm-classic-preflight\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/fok/preflight.ts\"\n    },\n    {\n      \"id\": \"pm-preflight-mode\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/pmFokPreflightMode.ts\",\n      \"specifiers\": [\n        \"@changmen/venue-browser/adapter/polymarket/pmFokPreflightMode\"\n      ]\n    },\n    {\n      \"id\": \"pm-market-source\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/realtime/marketStream.ts\"\n    },\n    {\n      \"id\": \"pm-market-source-protocol\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/realtime/marketStreamProtocol.ts\"\n    },\n    {\n      \"id\": \"pm-worker-mailbox\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/realtime/orderedWorkerMailbox.ts\"\n    },\n    {\n      \"id\": \"pm-book\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/orderBook.ts\",\n      \"specifiers\": [\n        \"@changmen/venue-browser/adapter/polymarket/orderBook\"\n      ]\n    },\n    {\n      \"id\": \"pm-book-core\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/realtime/orderBook/index.ts\"\n    },\n    {\n      \"id\": \"pm-book-worker\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/marketData.worker.ts\"\n    },\n    {\n      \"id\": \"pm-book-shadow\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/wsBookShadow.ts\",\n      \"specifiers\": [\n        \"@changmen/venue-browser/adapter/polymarket/wsBookShadow\"\n      ]\n    },\n    {\n      \"id\": \"pm-book-host\",\n      \"environment\": \"browser\",\n      \"file\": \"client/web/src/runtime/pmMarketData.ts\"\n    },\n    {\n      \"id\": \"pm-book-settings\",\n      \"environment\": \"browser\",\n      \"file\": \"client/web/src/runtime/pmBookSettings.ts\"\n    },\n    {\n      \"id\": \"pm-dynamic-preflight-host\",\n      \"environment\": \"browser\",\n      \"file\": \"client/web/src/runtime/pmDynamicWsPreflight.ts\"\n    },\n    {\n      \"id\": \"pm-dynamic-shadow-host\",\n      \"environment\": \"browser\",\n      \"file\": \"client/web/src/runtime/pmDynamicWsShadowWorker.ts\"\n    },\n    {\n      \"id\": \"venue-registry\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/registry/index.ts\",\n      \"specifiers\": [\n        \"@changmen/venue-browser/adapter\",\n        \"@changmen/venue-browser/adapter/registry\"\n      ]\n    },\n    {\n      \"id\": \"venue-contract\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/contract/index.ts\",\n      \"specifiers\": [\n        \"@changmen/venue-browser/adapter/contract\"\n      ]\n    },\n    {\n      \"id\": \"venue-node-loader\",\n      \"environment\": \"node\",\n      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\",\n      \"specifiers\": [\n        \"@changmen/venue-node-loader\",\n        \"@changmen/venue-node-loader/adapter_paths.js\",\n        \"@changmen/venue-node-loader/adapter_paths.mjs\"\n      ]\n    },\n    {\n      \"id\": \"backend-loader-facade\",\n      \"environment\": \"node\",\n      \"file\": \"server/backend/core/shared/adapter_paths.js\"\n    },\n    {\n      \"id\": \"pm-browser-package\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/pm-market-data-browser/src/index.ts\",\n      \"specifiers\": [\n        \"@changmen/pm-market-data-browser\"\n      ]\n    },\n    {\n      \"id\": \"pm-browser-worker-runtime\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/pm-market-data-browser/src/workerRuntime.ts\",\n      \"specifiers\": [\n        \"@changmen/pm-market-data-browser/workerRuntime\"\n      ]\n    },\n    {\n      \"id\": \"pm-browser-worker\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/pm-market-data-browser/src/marketData.worker.ts\",\n      \"specifiers\": [\n        \"@changmen/pm-market-data-browser/marketData.worker.ts\"\n      ]\n    },\n    {\n      \"id\": \"pm-book-web-worker\",\n      \"environment\": \"browser\",\n      \"file\": \"client/web/src/runtime/pmMarketData.worker.ts\"\n    },\n    {\n      \"id\": \"pm-readonly-book-source\",\n      \"environment\": \"browser\",\n      \"file\": \"client/packages/venue-browser/adapter/polymarket/orderBookSource.ts\",\n      \"specifiers\": [\n        \"@changmen/venue-browser/adapter/polymarket/orderBookSource\"\n      ]\n    }\n  ],\n  \"dynamicLoaders\": [\n    {\n      \"file\": \"server/packages/venue-node-loader/adapter_paths.mjs\",\n      \"symbols\": [\n        \"reqS\",\n        \"backendRequire\",\n        \"adapterRequire\",\n        \"requirePlatform\",\n        \"requireShared\"\n      ],\n      \"status\": \"opaque\",\n      \"inputs\": [\n        \"server/packages/venue-node-registry/paths.js\",\n        \"server/packages/venue-node-registry/feeds.js\",\n        \"packages/venue-adapter/registry/manifest.json\"\n      ],\n      \"reason\": \"Computed module paths and CHANGMEN_ADAPTER_ROOT/GAMEBET_ADAPTER_ROOT overrides are not a closed static dependency proof.\"\n    }\n  ],\n  \"isolatedBrowserRoots\": [\n    {\n      \"path\": \"client/packages/pm-market-data-browser/src\",\n      \"typeImports\": [\n        \"@polymarket/client/actions\"\n      ]\n    }\n  ]\n}\n",
+      "beforeSha": "e0fab68ad3ec9a1353e7375fdb04a2ea9407b0e889b01b27c410a2ec842a8cd5",
+      "afterSha": "5bd3830bf8dc356232daf3a01ac91af0eb71bbedb9c0bb7121bd0c132b492af9"
+    }
+  ]
+}

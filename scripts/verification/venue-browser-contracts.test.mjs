@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
@@ -7,7 +8,7 @@ import {expect,it} from 'vitest';
 import {VENUE_BROWSER_CONTRACTS as record,restoreVenueBrowserContracts,restoreVenueBrowserContractImports,verifyVenueBrowserContracts} from './venue-browser-contracts.mjs';
 import {verifyPmExecutionShadowContract} from './pm-execution-shadow-boundary.mjs';
 import {restoreVenueBrowserPricing} from './venue-browser-pricing.mjs';
-const read=file=>fs.readFileSync(file,'utf8').replaceAll('\r\n','\n');
+const read=withAdapterHistoryReader(file=>readAdapterHistory(file,'utf8').replaceAll('\r\n','\n'));
 const original=file=>execFileSync('git',['show',record.baseline+':'+file],{encoding:'utf8',windowsHide:true}).replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(s).digest('hex');
 it('preserves each complete host implementation and exact extracted declaration',()=>{
@@ -51,7 +52,7 @@ it('reads extracted declarations independently of the invoking workspace directo
  const module=new URL('./venue-browser-contracts.mjs',import.meta.url).href;
  const file='packages/venue-adapter/polymarket/fok/preflight.ts';
  const source=new URL('../../'+file,import.meta.url).href;
- const code='import fs from "node:fs";import {restoreVenueBrowserContracts} from '+JSON.stringify(module)+';restoreVenueBrowserContracts('+JSON.stringify(file)+',fs.readFileSync(new URL('+JSON.stringify(source)+'),"utf8"));';
+ const code='import {readAdapterHistory} from '+JSON.stringify(new URL("./browser-entry-history.mjs",import.meta.url).href)+';import {restoreVenueBrowserContracts} from '+JSON.stringify(module)+';restoreVenueBrowserContracts('+JSON.stringify(file)+',readAdapterHistory(new URL('+JSON.stringify(source)+'),"utf8"));';
  expect(()=>execFileSync(process.execPath,['--input-type=module','--eval',code],{cwd:fileURLToPath(new URL('../../packages/venue-adapter',import.meta.url)),windowsHide:true})).not.toThrow();
 });
 it('the existing full-source verification entry also rejects a changed extracted type',()=>{

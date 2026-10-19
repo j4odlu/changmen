@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { isVpsOwnedPlatformCollect } from "@changmen/venue-adapter/registry";
+import { isVpsOwnedPlatformCollect } from "@changmen/venue-browser/adapter/registry";
 import { saveBetSource, saveLiveTimer, saveMatchSource } from "./match";
 import { postForm } from "@/api/client";
 

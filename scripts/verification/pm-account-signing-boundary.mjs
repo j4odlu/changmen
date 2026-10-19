@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 按账号隔离钱包签名会话；精确还原后继续核验既有 FOK/GTC 基线。
 import assert from "node:assert/strict";
@@ -7,7 +8,7 @@ import { restorePmPreflightLabels } from "./pm-preflight-labels-boundary.mjs";
 import { restorePmFastFokSource, verifyPmFastFokContract } from "./pm-fast-fok-boundary.mjs";
 const normalize = value => value.replaceAll("\r\n", "\n");
 const digest = value => createHash("sha256").update(normalize(value)).digest("hex");
-const text = normalize(fs.readFileSync(new URL("./pm-account-signing-increments.json", import.meta.url), "utf8"));
+const text = normalize(readAdapterHistory(new URL("./pm-account-signing-increments.json", import.meta.url), "utf8"));
 assert.equal(digest(text), "f3b171df1c0fc0346c51e1835d2e6b18e3e7d43f47bc6f4424a9877a175ebad0", "account signing isolation increments stay fixed");
 const { changes } = JSON.parse(text);
 

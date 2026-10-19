@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { randomUUID } from "node:crypto";
 import { withTemporaryPostgres } from "./temporary-postgres.mjs";
-import { applyRdsSchema } from "../../server/backend/scripts/apply-rds-schema.mjs";
+import { applyRdsSchema } from "@changmen/db/maintenance/apply-rds-schema.mjs";
 
 const gate = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 const bounded = promise => Promise.race([promise, new Promise((_, reject) => {

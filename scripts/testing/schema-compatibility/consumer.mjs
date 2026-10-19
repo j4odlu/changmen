@@ -13,7 +13,7 @@ const { getPgPool } = await load("server/db/pg_pool.js");
 const pool = getPgPool();
 try {
   if (mode === "verify") {
-    const { verifyRdsSchema } = await load("server/backend/scripts/rds-schema-check.mjs");
+    const { verifyRdsSchema } = await load(root === process.env.CHANGMEN_REFERENCE_ROOT ? "server/backend/scripts/rds-schema-check.mjs" : "server/db/maintenance/rds-schema-check.mjs");
     const client = await pool.connect();
     try { console.log(JSON.stringify(await verifyRdsSchema(client, { log: () => {} }))); }
     finally { client.release(); }

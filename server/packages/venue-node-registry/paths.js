@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import manifest from "./manifest.json" with { type: "json" };
 import { BACKEND_ROOT, CHANGMEN_ROOT, PLATFORM_PROBES_ROOT, VENUE_ADAPTER_ROOT } from "@changmen/storage/paths.js";
 
-const __dirname = path.dirname(fileURLToPath(new URL("../../../packages/venue-adapter/registry/paths.js", import.meta.url)));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const REGISTRY_ROOT = __dirname;
 /** 与 loader 所在包根一致；瘦包内仍用相对路径，开发 monorepo 对齐 VENUE_ADAPTER_ROOT */

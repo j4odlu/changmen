@@ -1,8 +1,9 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import fs from "node:fs";
 import { expect, it } from "vitest";
 import { verifyPmLegacyFokRuntimeContract } from "./pm-legacy-fok-runtime-boundary.mjs";
-const readBeforeExecution = file => fs.readFileSync(file, "utf8");
+const readBeforeExecution = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 const read = file => restoreVenueBrowserExecution(file, readBeforeExecution(file));
 it("preserves all code outside the exact legacy FOK signer compatibility repair", () => {
   expect(() => verifyPmLegacyFokRuntimeContract(read)).not.toThrow();

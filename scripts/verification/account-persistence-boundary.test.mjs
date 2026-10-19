@@ -1,10 +1,11 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { accountPersistenceContract, restoreAccountPersistenceSource } from "./account-persistence-boundary.mjs";
 import { gitSource, moduleTokens, replaceExact, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 
-const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8").replaceAll("\r\n", "\n"));
 const contract = JSON.parse(read(accountPersistenceContract));
 const changes = Object.entries(contract.files).flatMap(([file, rows]) => rows.map(row => ({ file, ...row })));
 

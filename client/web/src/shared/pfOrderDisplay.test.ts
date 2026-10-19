@@ -20,7 +20,7 @@ import type { OrderRow } from "@/types/order";
 import {
   __resetPredictFunTokenMarketIdsForTests,
   rememberPredictFunTokenMarketIds,
-} from "@changmen/venue-adapter/predictfun";
+} from "@changmen/venue-browser/adapter/predictfun";
 
 const pfBuy: OrderRow = {
   Type: "PredictFun",

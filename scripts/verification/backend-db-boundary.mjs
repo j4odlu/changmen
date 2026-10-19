@@ -6,6 +6,7 @@ import ts from "typescript";
 
 export const databaseBoundaryBaseline = "d3fd4a0a02794c3826b8f56a131ceed4bc249caf";
 export const migratedDatabaseConsumers = [
+  "server/backend/core/account/admin_maintenance.js",
   "server/backend/core/account/user_login_meta.js",
   "server/backend/core/account/user_presence.js",
   "server/backend/core/account/admin_service.js",

@@ -7,9 +7,9 @@ import {
   isPbWsShadowUiAllowed,
   resolvePbWsShadow,
   subscribePbWsShadow,
-} from "@changmen/venue-adapter/pb";
-import { getPolymarketPmSportBlockReason } from "@changmen/venue-adapter/polymarket";
-import { lookupRayMapOutcome } from "@changmen/venue-adapter/ray";
+} from "@changmen/venue-browser/adapter/pb";
+import { getPolymarketPmSportBlockReason } from "@changmen/venue-browser/adapter/polymarket";
+import { lookupRayMapOutcome } from "@changmen/venue-browser/adapter/ray";
 import { storeToRefs } from "pinia";
 import { computed, onUnmounted, ref, watch } from "vue";
 import LimitDiagDialog from "@/components/match/LimitDiagDialog.vue";

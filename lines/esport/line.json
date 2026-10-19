@@ -6,7 +6,7 @@
   "sportRef": "esport",
   "components": {
     "web": "client/web",
-    "venueAdapter": "packages/venue-adapter",
+    "venueAdapter": "server/packages/venue-node-registry/runtime",
     "api": "server/backend",
     "matcher": "server/match/matcher",
     "matchIdentity": "server/match/identity",

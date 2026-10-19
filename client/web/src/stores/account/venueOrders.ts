@@ -1,7 +1,7 @@
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
-import { sortVenueOrdersNewestFirst } from "@changmen/venue-adapter/contract";
-import { hasOpenPolymarketPosition, resolvePmRemainingShares } from "@changmen/venue-adapter/polymarket";
+import { sortVenueOrdersNewestFirst } from "@changmen/venue-browser/adapter/contract";
+import { hasOpenPolymarketPosition, resolvePmRemainingShares } from "@changmen/venue-browser/adapter/polymarket";
 import { wait } from "@changmen/client-core/shared/wait";
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { truncateShareUsdtAmount } from "@/shared/pfOrderDisplay";

@@ -1,24 +1,24 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import type { DirectRealtimeStatus } from "@changmen/venue-adapter/shared";
+import type { DirectRealtimeStatus } from "@changmen/venue-browser/adapter/shared";
 import { useDirectRealtimeStatus } from "@/composables/useDirectRealtimeStatus";
 import {
   listVenueWsStatuses,
   subscribeVenueWsStatus,
   type VenueWsStatusEntry,
-} from "@changmen/venue-adapter/shared";
+} from "@changmen/venue-browser/adapter/shared";
 import {
   getObMqttSourceMode,
   cycleObMqttSourceModeAndReconnect,
   obMqttSourceModeLabel,
   type ObMqttSourceMode,
-} from "@changmen/venue-adapter/ob";
+} from "@changmen/venue-browser/adapter/ob";
 import {
   cycleRayWsSourceModeAndReconnect,
   getRayWsSourceMode,
   rayWsSourceModeLabel,
   type RayWsSourceMode,
-} from "@changmen/venue-adapter/ray";
+} from "@changmen/venue-browser/adapter/ray";
 import {
   cyclePmUserWsSourceModeAndReconnect,
   applyPmAutoTransportOnLogin,
@@ -42,7 +42,7 @@ import {
   type PmRoutingPreference,
   type PmOrderSubmitMode,
   type PmUserWsSourceMode,
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 import {
   cyclePredictFunMarketWsSourceModeAndReconnect,
   getPfMarketWsSourceMode,
@@ -50,12 +50,12 @@ import {
   onPfAutoTransportApplied,
   pfMarketWsSourceModeLabel,
   type PfMarketWsSourceMode,
-} from "@changmen/venue-adapter/predictfun";
+} from "@changmen/venue-browser/adapter/predictfun";
 import {
   countPbWsShadowBySource,
   getPbWsPageDetect,
   isPbWsShadowUiAllowed,
-} from "@changmen/venue-adapter/pb";
+} from "@changmen/venue-browser/adapter/pb";
 import { ElMessage } from "element-plus";
 import { startPmMaintenanceFeed, usePmMaintenance } from "@/services/pmMaintenanceRealtime";
 

@@ -1,13 +1,13 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@/models/platformAccount";
-import type { VenueOrder } from "@changmen/venue-adapter/contract";
+import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import {
   buildPolymarketExecutionRejectVenueOrder,
   isPolymarketPostedApiFailure,
   type PolymarketExecutionRejectReason,
   type PolymarketRejectOrderContext,
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 import { saveOrders } from "@/api/order";
 import { pmMakerAmountUsdc, pmSubmissionFromResult } from "@changmen/shared/pm_submission";
 import { scaleUsdtToCnyDisplay } from "@changmen/shared/currency";

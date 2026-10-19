@@ -3,4 +3,4 @@ export {
   getAdapter,
   getProvider,
   supportedBetProviders,
-} from "@changmen/venue-adapter/registry/adapters";
+} from "@changmen/venue-browser/adapter/registry/adapters";

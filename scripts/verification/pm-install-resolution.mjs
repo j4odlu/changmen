@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Offline resolution against an explicitly selected installation.
 import fs from "node:fs";
 import path from "node:path";
@@ -7,7 +8,7 @@ import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const relative = (root, file) => path.relative(root, file).replaceAll("\\", "/");
-const hash = file => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+const hash = withAdapterHistoryReader(file => createHash("sha256").update(readAdapterHistory(file)).digest("hex"));
 function resolution(root, input, mode, id) {
   if (!id || id.startsWith("\0")) throw Error(`Unresolved/virtual PM input: ${input.spec}`);
   const file = id.startsWith("file:") ? fileURLToPath(id) : id.split("?")[0];
@@ -16,7 +17,7 @@ function resolution(root, input, mode, id) {
   let owner;
   for (let dir = path.dirname(real); ; dir = path.dirname(dir)) {
     const manifest = path.join(dir, "package.json");
-    if (fs.existsSync(manifest)) { owner = JSON.parse(fs.readFileSync(manifest, "utf8")); break; }
+    if (fs.existsSync(manifest)) { owner = JSON.parse(readAdapterHistory(manifest, "utf8")); break; }
     if (dir === root || dir === path.dirname(dir)) break;
   }
   return { importer: input.importer, spec: input.spec, mode, target: rel, sha256: hash(real), package: owner?.name, version: owner?.version };
@@ -74,7 +75,7 @@ export async function capturePmInstallResolutions(root, inputs) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = Object.fromEntries(process.argv.slice(2).reduce((rows, value, i, all) => value.startsWith("--") ? [...rows, [value.slice(2), all[i + 1]]] : rows, []));
   if (!args.root || !args.inputs || !args.output) throw Error("Usage: --root INSTALL_ROOT --inputs INPUTS_JSON --output REPORT_JSON");
-  const report = await capturePmInstallResolutions(path.resolve(args.root), JSON.parse(fs.readFileSync(args.inputs, "utf8")));
+  const report = await capturePmInstallResolutions(path.resolve(args.root), JSON.parse(readAdapterHistory(args.inputs, "utf8")));
   fs.writeFileSync(args.output, JSON.stringify(report, null, 2) + "\n");
   console.log(JSON.stringify({ resolutions: report.resolutions.length, vueShared: report.vueShared }));
 }

@@ -15,7 +15,7 @@ import {
 import {
   lookupResolutionSourceBySourceMatchId,
   pmMapOutcomeTick,
-} from "@changmen/venue-adapter/polymarket";
+} from "@changmen/venue-browser/adapter/polymarket";
 import { computed } from "vue";
 
 /** Polymarket 电竞侧栏 SVG（从 polymarket.com/esports 抠出）；未知/联赛仍走文字标签 */

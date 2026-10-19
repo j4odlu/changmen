@@ -3,7 +3,7 @@ import { createSSRApp, ref } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { createPinia, setActivePinia } from "pinia";
 import { ViewMatch } from "@changmen/client-core/models/match";
-import { clearRayMapOutcomes, updateRayMapOutcomes } from "../../../../../packages/venue-adapter/ray/rayMapOutcome";
+import { clearRayMapOutcomes, updateRayMapOutcomes } from "@changmen/venue-browser/adapter/ray/rayMapOutcome";
 import BetRow from "./BetRow.vue";
 
 vi.mock("element-plus/es/components/base/style/css", () => ({}));

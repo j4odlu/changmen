@@ -62,7 +62,7 @@ polymarket-sports ──WS──► 写 client_matches.pm_sport
 | `admin_tools/` | Telegram、订单通知、运维辅助 |
 | `shared/` | adapter_paths、storage 再导出、catalog 测试 |
 
-**SQL 迁移**在 `backend/db/migrations/`；应用层在 `@changmen/db`（`server/db/`）。`npm run db:apply` 在 backend 执行。
+**SQL 迁移**在 `db/assets/migrations/`，维护实现与测试在 `db/maintenance/`；应用层通过 `@changmen/db` 使用数据层。backend 的 `npm run db:apply` 直接执行数据层正式入口，旧目录副本已退役。
 
 ## 常用命令（在 `changmen/`）
 
@@ -91,7 +91,7 @@ Windows 一键：`BAT\dev.bat`（backend + Vite，内嵌 matchMerge）。生产 
 |------|------|
 | API 形状 / 鉴权 / 代理 | `server/backend` |
 | 合并规则 / 新平台入 client_matches | `server/match/identity` + `server/match/matcher` |
-| 表结构 / 查询 | `server/db` + `backend/db/migrations/` |
+| 表结构 / 查询 | `server/db`（SQL 位于 `assets/migrations/`） |
 | 本地 platforms.json / 路径 | `@changmen/storage` |
 | 浏览器采集 | **`packages/venue-adapter`**（不在 server 内实现采集） |
 | PM 体育实时比分 | `polymarket-sports` + `realtime-hub` + 前端 `pmSportRealtime` |

@@ -1,9 +1,10 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { test, expect } from "vitest";
 import { restorePmSharedStreamSource, verifyPmSharedStreamContract } from "./pm-shared-stream-boundary.mjs";
 import { restoreVenueBrowserStream } from "./venue-browser-stream.mjs";
 import { restoreVenueBrowserLifecycle } from "./venue-browser-lifecycle.mjs";
-const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8").replaceAll("\r\n", "\n"));
 const { changes } = JSON.parse(read("scripts/verification/pm-shared-stream-increments.json"));
 test("passive stream hooks restore the full original PM-M implementation", () => {
   expect(() => verifyPmSharedStreamContract(read)).not.toThrow();

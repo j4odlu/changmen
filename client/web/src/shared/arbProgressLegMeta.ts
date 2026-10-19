@@ -3,7 +3,7 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { ArbProgressLegMeta } from "@/stores/betting/autoBet/arbExecutionTrace";
 import { buildPolymarketArbProgressMeta } from "@/domain/polymarket/arbProgressPmMeta";
 import { formatLegAccount } from "@/shared/arbBetTraceFormat";
-import { PLATFORMS } from "@changmen/venue-adapter/shared";
+import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
 
 export function buildArbProgressLegMeta(
   side: ArbProgressLegMeta["side"],

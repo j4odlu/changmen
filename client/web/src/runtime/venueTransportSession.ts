@@ -8,7 +8,7 @@ export async function applyVenueTransportRoutingOnLogin(options: VenueTransportR
     const {
       applyPmAutoTransportOnLogin,
       ensurePolymarketMarketQuoteHub,
-    } = await import("@changmen/venue-adapter/polymarket");
+    } = await import("@changmen/venue-browser/adapter/polymarket");
     const result = await applyPmAutoTransportOnLogin();
     if (ensurePmMarketHub && result.marketWsMode === "official")
       ensurePolymarketMarketQuoteHub();
@@ -19,7 +19,7 @@ export async function applyVenueTransportRoutingOnLogin(options: VenueTransportR
   }
 
   try {
-    const { applyPfAutoTransportOnLogin } = await import("@changmen/venue-adapter/predictfun");
+    const { applyPfAutoTransportOnLogin } = await import("@changmen/venue-browser/adapter/predictfun");
     await applyPfAutoTransportOnLogin();
   }
   catch (err) {
@@ -33,7 +33,7 @@ export async function resetVenueTransportRoutingOnLogout(): Promise<void> {
     const {
       resetPmTransportRoutingOnLogout,
       stopPolymarketMarketQuoteHub,
-    } = await import("@changmen/venue-adapter/polymarket");
+    } = await import("@changmen/venue-browser/adapter/polymarket");
     stopPolymarketMarketQuoteHub();
     resetPmTransportRoutingOnLogout();
   }
@@ -42,7 +42,7 @@ export async function resetVenueTransportRoutingOnLogout(): Promise<void> {
   }
 
   try {
-    const { resetPfTransportRoutingOnLogout } = await import("@changmen/venue-adapter/predictfun");
+    const { resetPfTransportRoutingOnLogout } = await import("@changmen/venue-browser/adapter/predictfun");
     resetPfTransportRoutingOnLogout();
   }
   catch {

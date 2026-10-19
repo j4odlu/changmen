@@ -1,7 +1,8 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { expect, test } from "vitest";
 import { restorePmOptimizedFokSource, verifyPmOptimizedFokContract } from "./pm-optimized-fok-boundary.mjs";
-const read = file => fs.readFileSync(file, "utf8");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
 const registry = JSON.parse(read("scripts/verification/pm-optimized-fok-increments.json"));
 test("optimized changes restore the original modules without moving the original baselines", () => {
   expect(() => verifyPmOptimizedFokContract(read)).not.toThrow();

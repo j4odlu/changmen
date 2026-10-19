@@ -1,8 +1,9 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import fs from "node:fs";
 import { test, expect } from "vitest";
 import { restorePmWsShadowSource, verifyPmWsShadowContract } from "./pm-ws-shadow-boundary.mjs";
 import { restorePmExecutionShadowSource } from "./pm-execution-shadow-boundary.mjs";
-const read = file => fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8").replaceAll("\r\n", "\n"));
 const { changes } = JSON.parse(read("scripts/verification/pm-ws-shadow-increments.json"));
 test("shadow hooks restore full pre-implementation modules without changing fixed baselines", () => {
   expect(() => verifyPmWsShadowContract(read)).not.toThrow();

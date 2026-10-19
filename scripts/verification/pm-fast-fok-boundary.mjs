@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 动态 FOK 单次拉簿增量；还原后核验之前的固定基线。
 import assert from "node:assert/strict";
@@ -9,7 +10,7 @@ import { restorePmBookSettingsSource, PM_BOOK_SETTINGS_TAB } from "./pm-book-set
 import { restorePmRejectDisplaySource } from "./pm-reject-display-boundary.mjs";
 const normalize = value => value.replaceAll("\r\n", "\n");
 const digest = value => createHash("sha256").update(normalize(value)).digest("hex");
-const text = normalize(fs.readFileSync(new URL("./pm-fast-fok-increments.json", import.meta.url), "utf8"));
+const text = normalize(readAdapterHistory(new URL("./pm-fast-fok-increments.json", import.meta.url), "utf8"));
 assert.equal(digest(text), "bc152fb0325876398eb67c187b21291b066e478bf2ed924b1b68dd68e9efbaab", "fast FOK reviewed increments stay fixed");
 const registered = JSON.parse(text);
 export function restorePmFastFokSource(file, source, required = false) {

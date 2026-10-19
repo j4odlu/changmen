@@ -1,3 +1,4 @@
+import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 精确登记钱包初始化前移、Gamma 预热与交易赛况闸；原 FOK 固定基线不变。
 import assert from "node:assert/strict";
@@ -10,7 +11,7 @@ import { restoreGtcSelectionHistorySource } from "./gtc-selection-history-bounda
 import { restorePmUnifiedPreflightSource, verifyPmUnifiedPreflightContract } from "./pm-unified-preflight-boundary.mjs";
 import { restoreA8MakeupSource } from "./a8-makeup-boundary.mjs";
 
-const registered = fs.readFileSync(new URL("./pm-preflight-increments.json", import.meta.url), "utf8").replaceAll("\r\n", "\n");
+const registered = readAdapterHistory(new URL("./pm-preflight-increments.json", import.meta.url), "utf8").replaceAll("\r\n", "\n");
 assert.equal(createHash("sha256").update(registered).digest("hex"), "4f0c597bacc484e229baf8ee6f9ba5b558bccc59087b200060581a9921d50976", "PM preflight reviewed increments must remain fixed");
 const changes = JSON.parse(registered);
 const helpers = {

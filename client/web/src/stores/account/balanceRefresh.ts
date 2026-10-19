@@ -1,6 +1,6 @@
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { AccountStoreContext } from "@/stores/account/context";
-import type { AccountBalanceResult } from "@changmen/venue-adapter/contract";
+import type { AccountBalanceResult } from "@changmen/venue-browser/adapter/contract";
 import { updateBalance } from "@/api/vt";
 import { getAdapter } from "@/runtime/venueAdapters";
 import { isObSportBetToken, sportObSessionFromAccount } from "@/runtime/obSportBetAccount";
@@ -70,7 +70,7 @@ async function fetchVenueBalance(account: PlatformAccount): Promise<AccountBalan
     return provider?.getBalance?.(account);
   }
   if (providerId === "polymarket" && account.accountId) {
-    const { fetchPolymarketBalanceViaTransport } = await import("@changmen/venue-adapter/polymarket");
+    const { fetchPolymarketBalanceViaTransport } = await import("@changmen/venue-browser/adapter/polymarket");
     return fetchPolymarketBalanceViaTransport(account);
   }
   const provider = getAdapter(account.provider)?.provider;

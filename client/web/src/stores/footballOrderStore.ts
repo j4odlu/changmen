@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import type { VenueOrder, VenueOrderStatus } from "@changmen/venue-adapter/contract";
+import type { VenueOrder, VenueOrderStatus } from "@changmen/venue-browser/adapter/contract";
 import {
   getFootballOrders,
   getOpenFootballOrders,

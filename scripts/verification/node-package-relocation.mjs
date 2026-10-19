@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { restoreVenueManifestMetadata } from './venue-manifest-metadata.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');
 const sha=s=>createHash('sha256').update(normalize(s)).digest('hex');
 const text=fs.readFileSync(new URL('./node-package-relocation.json',import.meta.url),'utf8');
@@ -11,6 +12,7 @@ export const NODE_PACKAGE_RELOCATION=JSON.parse(text);
 const entries=new Map(NODE_PACKAGE_RELOCATION.sourceRows.map(row=>[row.file,row]));
 export const nodeCanonicalPath=file=>entries.get(file)?.canonical??file;
 export function restoreNodePackageMetadata(file,source){
+ source=restoreVenueManifestMetadata(file,source);
  source=normalize(source);
  const row=NODE_PACKAGE_RELOCATION.changes.find(row=>row.file===file);
  if(!row||sha(source)!==row.afterSha)return source;
@@ -38,7 +40,7 @@ export function verifyNodePackageRelocation(read){
   readNodePackageSource(row.file,read(row.file),read);
   certified.add(row.file);certified.add(row.canonical);
  }
- assert.equal(normalize(read('server/packages/venue-node-registry/manifest.json')),normalize(read('packages/venue-adapter/registry/manifest.json')),'Node export must match the sole shared catalog source');
+ assert.equal(normalize(read('server/packages/venue-node-registry/manifest.json')),normalize(read('packages/venue-adapter/registry/manifest.json')),'Generated Node and legacy catalog exports must match');
  const root=JSON.parse(read('package.json'));
  for(const name of ['loader','registry']){
   assert(root.workspaces.includes(`server/packages/venue-node-${name}`));

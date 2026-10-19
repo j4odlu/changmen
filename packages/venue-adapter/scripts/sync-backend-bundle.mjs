@@ -12,10 +12,12 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { BACKEND_ROOT } from "@changmen/storage/paths.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 const ADAPTER_PKG_ROOT = path.join(__dirname, "..");
 
 const ADAPTER_INFRA = new Set([
@@ -46,10 +48,16 @@ function cpDir(src, dst) {
 export function syncPlatformAdapterBackendBundle(options = {}) {
   const src = options.src ?? ADAPTER_PKG_ROOT;
   const dst = options.dst ?? path.join(BACKEND_ROOT, "platform_adapter");
+  // Only the default workspace tree uses our authored catalog. Explicit external
+  // trees retain their own manifest, including independently configured platforms.
+  const manifestSource = path.resolve(src) === path.resolve(ADAPTER_PKG_ROOT)
+    ? require.resolve("@changmen/shared/catalog/venue_manifest.json")
+    : path.join(src, "registry", "manifest.json");
 
-  if (!fs.existsSync(path.join(src, "registry", "manifest.json"))) {
+  if (!fs.existsSync(manifestSource)) {
     throw new Error(`platform-adapter source missing manifest: ${src}`);
   }
+  const manifestBytes = fs.readFileSync(manifestSource);
 
   if (fs.existsSync(dst)) {
     fs.rmSync(dst, { recursive: true, force: true });
@@ -88,6 +96,8 @@ export function syncPlatformAdapterBackendBundle(options = {}) {
     fs.writeFileSync(path.join(dst, relative), source);
   }
 
+  fs.mkdirSync(path.join(dst, "registry"), { recursive: true });
+  fs.writeFileSync(path.join(dst, "registry", "manifest.json"), manifestBytes);
   return dst;
 }
 

@@ -96,9 +96,9 @@ export function venueBrowserDeclarationBoundary(packages) {
     || JSON.stringify(tools.pkg.exports) !== JSON.stringify({ "./sync-backend-bundle.mjs": "./sync-backend-bundle.mjs" })
     || JSON.stringify(tools.pkg.files) !== JSON.stringify(["sync-backend-bundle.mjs"])
     || JSON.stringify(tools.pkg.scripts) !== JSON.stringify({ "sync:backend-bundle": "node sync-backend-bundle.mjs" })
-    || JSON.stringify(tools.pkg.dependencies) !== JSON.stringify({ "@changmen/storage": "file:../../../server/storage" }))
+    || JSON.stringify(tools.pkg.dependencies) !== JSON.stringify({ "@changmen/shared": "file:../../shared", "@changmen/storage": "file:../../../server/storage" }))
     violations.push({ file: "packages/venue-adapter/scripts/package.json", spec: "@changmen/venue-adapter-tools",
-      pattern: "Existing backend bundle tool must own its exact Node storage declaration and original source entry" });
+      pattern: "Backend bundle tool must declare its shared catalog and Node storage dependencies with the original source entry" });
   return violations;
 }
 export function inspectComponentInstallInputs(root) {

@@ -14,6 +14,7 @@
     "sync-backend-bundle.mjs"
   ],
   "dependencies": {
+    "@changmen/shared": "file:../../shared",
     "@changmen/storage": "file:../../../server/storage"
   }
 }

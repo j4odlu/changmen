@@ -238,3 +238,9 @@ copy docs\CODEOWNERS.example .github\CODEOWNERS
 ## Node 基础包真实目录隔离（2026-10-19）
 
 [changmen 扩展] `@changmen/venue-node-loader` 与 `@changmen/venue-node-registry` 的 workspace 和三个运行实现已归 `server/packages/`。原路径转导出同一实现，包名和 exports 不变；瘦包内展开原实现，保持资源定位。浏览器 adapter、共享 catalog 的主资产和原资源根仍保留；Node catalog 导出副本受逐字一致性检查约束。新目录仍按原保守范围发布，未启用精简生产安装。详见 [第二轮迁移与验证](NODE_PACKAGE_ISOLATION_20261019.md)。
+
+## 平台 catalog 单源维护（2026-10-19，第三轮）
+
+[changmen 扩展] 平台目录的唯一维护源现为 `packages/shared/catalog/venue_manifest.json`，公共导出为 `@changmen/shared/catalog/venue_manifest.json`。`npm run sync:venue-manifest` 生成 `packages/venue-adapter/registry/manifest.json` 和 `server/packages/venue-node-registry/manifest.json`，后两者只作运行兼容资产。`npm run check:venue-manifest` 及既有 `check:boundaries` 只读检查三者逐字一致，不自动修复。
+
+浏览器元数据、图标生成、Node registry 及资源根探测仍使用原路径，loader 的环境覆盖、缓存和初始化规则不变。默认瘦包从共享主资产取 catalog；显式外部源保留自己的 catalog。发布范围与生产安装规则不变，旧资源目录尚未退役。详见 [第三轮实施与验证](VENUE_MANIFEST_ISOLATION_20261019.md)。

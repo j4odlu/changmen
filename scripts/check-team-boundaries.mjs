@@ -5,6 +5,7 @@
  */
 import { inspectClientPackageRelocation } from "./verification/client-package-relocation.mjs";
 import { inspectNodePackageRelocation } from "./verification/node-package-relocation.mjs";
+import { inspectVenueManifestCopies } from "./sync/venue-manifest.mjs";
 import fs from "node:fs";
 import { checkDatabaseAccessBoundaries } from "./verification/backend-db-boundary.mjs";
 import { inspectComponentEntries } from "./verification/component-entry-boundary.mjs";
@@ -20,6 +21,9 @@ import { CHANGMEN_LAYOUT, VENUE_ADAPTER_REL } from "../server/storage/paths.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CHANGMEN_ROOT = path.resolve(__dirname, "..");
+const venueManifest = inspectVenueManifestCopies(CHANGMEN_ROOT);
+if (venueManifest.violations.length) throw Error(JSON.stringify(venueManifest.violations));
+console.log(`venue-manifest: ${venueManifest.copies.length} generated copies checked against the shared source`);
 console.log(`node-package-relocation: ${inspectNodePackageRelocation(CHANGMEN_ROOT).entries} canonical Node implementations checked`);
 const clientRelocation = inspectClientPackageRelocation(CHANGMEN_ROOT);
 console.log(`client-package-relocation: ${clientRelocation.entries} exact facades and canonical implementations checked`);

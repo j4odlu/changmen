@@ -72,7 +72,11 @@ assert.deepEqual(Object.keys(loader),Object.keys(legacy));for(const key of Objec
 await loader.initAdapterRegistry();await loader.initEsmPlatformBackends();
 for(const id of ['OB','PB','RAY'])assert(loader.requirePlatform(id,'node','session.js'));
 assert.equal(typeof(await import('@changmen/team-resolver')).resolve,'function');assert.equal(attempts,0);
-console.log(JSON.stringify({passed:true,networkAttempts:attempts,originalLoaderIdentity:true,registryAndPreloads:true}));`;
+const fs=await import('node:fs');const bundle=await import('@changmen/venue-adapter-tools/sync-backend-bundle.mjs');
+const packed=bundle.syncPlatformAdapterBackendBundle({dst:root+'/output/isolated-adapter'});
+assert(fs.readFileSync(packed+'/registry/manifest.json').equals(fs.readFileSync(root+'/packages/shared/catalog/venue_manifest.json')));
+assert.equal(attempts,0);
+console.log(JSON.stringify({passed:true,networkAttempts:attempts,originalLoaderIdentity:true,registryAndPreloads:true,sharedCatalogBundle:true}));`;
   report.nativeProbe = JSON.parse(command("selected-loader", candidate, ["--input-type=module", "--eval", probe]));
   report.sourceStable = JSON.stringify(validationIdentity(repo)) === JSON.stringify(identity);
   assert(report.sourceStable, "Source changed during install experiment"); report.passed = true; save();

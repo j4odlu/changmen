@@ -1,0 +1,148 @@
+{
+  "baseline": "17afa9c5c39331c9945b5fdf45f7c63738b80b4f",
+  "changes": [
+    {
+      "file": "package.json",
+      "beforeSha": "fe789d446e798cb3364ddb915ee272f2c29d6b2ac2387e5031342428478aca6b",
+      "afterSha": "1fe027f4f03f05723a217a5cec227163e63270733da33840cd57b2abf76e5090",
+      "patches": [
+        {
+          "oldStart": 49,
+          "oldCount": 0,
+          "newStart": 50,
+          "newCount": 2,
+          "before": [],
+          "after": [
+            "    \"sync:venue-manifest\": \"node scripts/sync/venue-manifest.mjs --sync\",",
+            "    \"check:venue-manifest\": \"node scripts/sync/venue-manifest.mjs --check\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "package-lock.json",
+      "beforeSha": "1857572e7d587ebcd362a9e46360cd1fb2365b889f45b834cb2d66cecbf3c6af",
+      "afterSha": "bded66403c35906026611e9fc56e5d1e2af35399fad2bbeafbe8434110dbbe6d",
+      "patches": [
+        {
+          "oldStart": 13052,
+          "oldCount": 0,
+          "newStart": 13053,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "        \"@changmen/shared\": \"file:../../shared\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/shared/package.json",
+      "beforeSha": "0d1e2907b08fb109e60d94b906668094b1d296701a7aeb1d1c0191ab12fa49ea",
+      "afterSha": "0da10537472ba682139e92f6289e1d87b727e206fbad25ffbdd3a27344ab4fbe",
+      "patches": [
+        {
+          "oldStart": 7,
+          "oldCount": 0,
+          "newStart": 8,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "    \"./catalog/venue_manifest.json\": \"./catalog/venue_manifest.json\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/scripts/package.json",
+      "beforeSha": "58c6e4162b6e67002bb1d51fd8658f265228f1f60e6b22eddd8459b6ea6c70f4",
+      "afterSha": "e4e3e28c33b74d2b0bd0904b57ca36facd9a12f047e83b0024ccdc4c9f02e09f",
+      "patches": [
+        {
+          "oldStart": 16,
+          "oldCount": 0,
+          "newStart": 17,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "    \"@changmen/shared\": \"file:../../shared\","
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/venue-adapter/scripts/sync-backend-bundle.mjs",
+      "beforeSha": "9c70d4b710f9fd443ce69915cdd97e78ed186daa5d5f8a96bdf673966f658220",
+      "afterSha": "03fe28e36f84902dd7636846333cb43fdbb008c80638a00bf672cae2df7bc567",
+      "patches": [
+        {
+          "oldStart": 14,
+          "oldCount": 0,
+          "newStart": 15,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "import { createRequire } from \"node:module\";"
+          ]
+        },
+        {
+          "oldStart": 18,
+          "oldCount": 0,
+          "newStart": 20,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "const require = createRequire(import.meta.url);"
+          ]
+        },
+        {
+          "oldStart": 48,
+          "oldCount": 0,
+          "newStart": 51,
+          "newCount": 5,
+          "before": [],
+          "after": [
+            "  // Only the default workspace tree uses our authored catalog. Explicit external",
+            "  // trees retain their own manifest, including independently configured platforms.",
+            "  const manifestSource = path.resolve(src) === path.resolve(ADAPTER_PKG_ROOT)",
+            "    ? require.resolve(\"@changmen/shared/catalog/venue_manifest.json\")",
+            "    : path.join(src, \"registry\", \"manifest.json\");"
+          ]
+        },
+        {
+          "oldStart": 50,
+          "oldCount": 1,
+          "newStart": 57,
+          "newCount": 1,
+          "before": [
+            "  if (!fs.existsSync(path.join(src, \"registry\", \"manifest.json\"))) {"
+          ],
+          "after": [
+            "  if (!fs.existsSync(manifestSource)) {"
+          ]
+        },
+        {
+          "oldStart": 52,
+          "oldCount": 0,
+          "newStart": 60,
+          "newCount": 1,
+          "before": [],
+          "after": [
+            "  const manifestBytes = fs.readFileSync(manifestSource);"
+          ]
+        },
+        {
+          "oldStart": 90,
+          "oldCount": 0,
+          "newStart": 99,
+          "newCount": 2,
+          "before": [],
+          "after": [
+            "  fs.mkdirSync(path.join(dst, \"registry\"), { recursive: true });",
+            "  fs.writeFileSync(path.join(dst, \"registry\", \"manifest.json\"), manifestBytes);"
+          ]
+        }
+      ]
+    }
+  ]
+}

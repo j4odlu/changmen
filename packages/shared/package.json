@@ -5,6 +5,7 @@
   "private": true,
   "description": "changmen 跨进程共享模块（catalog、odds、time 等；数据层见 @changmen/db）",
   "exports": {
+    "./catalog/venue_manifest.json": "./catalog/venue_manifest.json",
     "./pm_gtc": "./pm_gtc.ts",
     "./pm_gtc_recovery": "./pm_gtc_recovery.ts",
     "./pm_gtc_result": "./pm_gtc_result.ts",

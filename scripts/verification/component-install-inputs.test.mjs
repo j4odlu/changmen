@@ -76,6 +76,11 @@ it("rejects a Node tool CLI that redirects the unchanged bundle implementation",
   packages.get("@changmen/venue-adapter-tools").pkg.scripts["sync:backend-bundle"] = "node ../registry/adapters.ts";
   expect(venueBrowserDeclarationBoundary(packages)).toHaveLength(1);
 });
+it("rejects a missing direct shared-catalog dependency in the bundle tool", () => {
+  const packages = readInstallWorkspaces(root);
+  delete packages.get("@changmen/venue-adapter-tools").pkg.dependencies["@changmen/shared"];
+  expect(venueBrowserDeclarationBoundary(packages)).toHaveLength(1);
+});
 it("keeps browser registry type hosts declared by their actual browser adapter owner", () => {
   const packages = readInstallWorkspaces(root);
   delete packages.get("@changmen/venue-adapter").pkg.dependencies["@changmen/client-core"];

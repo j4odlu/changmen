@@ -1,6 +1,6 @@
 # 新增平台 Checklist（三类）
 
-先选类型，再按对应清单做。**权威开关**在 [`packages/venue-adapter/registry/manifest.json`](../packages/venue-adapter/registry/manifest.json) 的 `collectionMode`（勿再硬编码馆名）。
+先选类型，再按对应清单做。**权威开关**在 [`packages/shared/catalog/venue_manifest.json`](../packages/shared/catalog/venue_manifest.json) 的 `collectionMode`（勿再硬编码馆名）。本文下述 `manifest.json` 均指这份唯一维护源；修改后执行 `npm run sync:venue-manifest`，同时提交生成的浏览器和 Node 副本。原运行路径保留，详见 [第三轮隔离记录](VENUE_MANIFEST_ISOLATION_20261019.md)。
 
 | 类型 | `collectionMode`（示例） | 谁写 `platform_*` | 典型馆 |
 |------|--------------------------|-------------------|--------|
@@ -20,7 +20,7 @@
 ## 公共步骤（三类都要）
 
 1. **`PlatformId`**：[`packages/api-contract`](../packages/api-contract/src/schemas.ts)（zod enum）+ 相关 TS 导出；`client/web` 经 `@changmen/api-contract` 使用。
-2. **`manifest.json`**：`id` / `dir` / `collect` / `bet` / `collectionMode` / `collectionDesc` / `implementation`；VPS 馆必须 `vps_http_ws`。
+2. **共享主资产 `venue_manifest.json`**：`id` / `dir` / `collect` / `bet` / `collectionMode` / `collectionDesc` / `implementation`；VPS 馆必须 `vps_http_ws`。执行 `npm run sync:venue-manifest` 后运行 `npm run check:venue-manifest`；不要手改生成副本。
 3. **`registry/adapters.ts`**：挂上 `PlatformAdapter`（即使 VPS 馆也要有报价/下单 adapter）。
 4. **`npm run sync:exports --workspace=@changmen/venue-adapter`**（若新增可 import 子路径）。
 5. **UI**：采集开关 / 账号卡通常随 `ALL_PLATFORMS` 出现；确认 CollectConfig 对 VPS 馆不提供「浏览器 Save*」错觉（已走 `browserSaveMatchPlatformIds`）。

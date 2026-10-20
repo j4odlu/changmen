@@ -110,7 +110,10 @@ test("required publication checks follow risk without expanding component select
   for (const [paths, databaseCompatibility] of cases) {
     const daily = changePlan(paths), release = changePlan(paths, { purpose: "release" });
     assert.deepEqual(release.deployment, daily.deployment);
-    assert.deepEqual(release.requiredChecks, { completeRelease: false, databaseCompatibility }, paths.join(","));
+    const backendInstallation = release.deployment.components.includes("backend");
+    assert.deepEqual(release.requiredChecks, { completeRelease: false, databaseCompatibility, backendInstallation }, paths.join(","));
+    assert.equal(release.checks.includes("backend-installation"), backendInstallation);
+    assert(!daily.checks.includes("backend-installation"));
     assert.equal(release.checks.includes("complete-release"), false);
     assert.equal(release.checks.includes("database-compatibility"), databaseCompatibility);
     assert(!daily.checks.includes("complete-release")); assert(!daily.checks.includes("database-compatibility"));

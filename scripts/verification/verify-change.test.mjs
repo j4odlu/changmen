@@ -64,12 +64,13 @@ it.each(["frontend", "backend", "full"])("%s publication executes its component 
   expect(report.plan.checks.includes("build")).toBe(scope !== "backend");
 });
 
-it.each(["validation-control", "backend", "build", "database-compatibility"])("a failed %s still stops publication before subsequent checks", failure => {
+it.each(["validation-control", "backend", "build", "database-compatibility", "backend-installation"])("a failed %s still stops publication before subsequent checks", failure => {
   const cwd = fixture(); let failed = false;
   const run = vi.fn((_node, args) => {
     const hit = failure === "validation-control" ? args.includes("scripts/verification/validation-plan.test.mjs")
       : failure === "backend" ? args.includes("test:backend") : failure === "build" ? args.includes("app:build")
-      : args.includes("scripts/deploy/check-database-compatibility.mjs");
+      : failure === "database-compatibility" ? args.includes("scripts/deploy/check-database-compatibility.mjs")
+      : args.includes("scripts/testing/backend-linux-runtime.mjs");
     expect(failed).toBe(false); failed = hit; return { status: hit ? 23 : 0 };
   });
   const report = runChangeValidation(["--publish=full"], { cwd, npm: "npm-cli.js", run });

@@ -130,6 +130,7 @@ jobs:
             output/orders-phase2-protection/*.log
             output/orders-phase2-protection/*.json
             output/database-compatibility/
+            output/backend-linux-runtime/
             output/release-lanes/
           retention-days: 7
   validate:

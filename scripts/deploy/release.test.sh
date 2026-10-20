@@ -32,6 +32,11 @@ if [[ "${1:-}" == */compare-deployed-files.mjs ]]; then exec "$TEST_REAL_NODE" "
 if [[ "${1:-}" == */verify-runtime.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 if [[ "${1:-}" == */release-retention.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 if [[ "${1:-}" == */verify-backend-processes.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
+if [[ "${1:-}" == scripts/deploy/install-backend.mjs ]]; then
+  test ! -f "$TEST_FAIL_INSTALL" || exit 46
+  npm ci --workspace=@changmen/backend --include=dev --include-workspace-root=false --ignore-scripts=false
+  exit 0
+fi
 if [[ "$*" == *'checkConfiguredRdsSchema()'* ]]; then
   printf '%s\n' "$PWD" >> "$TEST_PREFLIGHT_LOG"
   test ! -f "${TEST_FAIL_DB:-/nonexistent}" || exit 44
@@ -59,6 +64,7 @@ chmod +x "$fixture/bin/"*
 export PATH="$fixture/bin:$PATH"
 export TEST_FAIL_HEALTH="$fixture/fail-health" TEST_NPM_LOG="$fixture/npm.log" TEST_FAIL_DB="$fixture/fail-db"
 export TEST_FAIL_SCHEMA="$fixture/fail-schema" TEST_PREFLIGHT_LOG="$fixture/preflight.log"
+export TEST_FAIL_INSTALL="$fixture/fail-install"
 export TEST_WRONG_RUNTIME="$fixture/wrong-runtime"
 export TEST_SIGNAL_FRONTEND="$fixture/signal-frontend" TEST_SIGNAL_BACKEND="$fixture/signal-backend"
 export TEST_ACTIVE_ROOT="$fixture/active-root" TEST_BAD_PROCESSES="$fixture/bad-processes"
@@ -131,6 +137,7 @@ mkdir -p "$fixture/backend/server/backend/db/migrations" "$fixture/backend/serve
 mkdir -p "$fixture/backend/scripts/deploy"
 cp "$source_root/scripts/deploy/compare-deployed-files.mjs" "$fixture/backend/scripts/deploy/"
 cp "$TEST_PROCESS_CHECKER" "$fixture/backend/scripts/deploy/"
+cp "$source_root/scripts/deploy/install-backend.mjs" "$fixture/backend/scripts/deploy/"
 echo '{}' > "$fixture/backend/package-lock.json"
 echo '{}' > "$fixture/backend/package.json"
 echo select > "$fixture/backend/server/backend/db/migrations/001.sql"
@@ -168,9 +175,16 @@ grep -q 'backend-current/deploy/ecosystem.config.cjs' "$DEPLOY_REPO/deploy/ecosy
 "$real_node" -e 'const fs=require("node:fs"),path=require("node:path"),assert=require("node:assert/strict"); assert.equal(require(process.argv[1]).marker,path.dirname(fs.realpathSync(process.argv[2])));' "$DEPLOY_REPO/deploy/ecosystem.config.cjs" "$DEPLOY_REPO/backend-current/deploy/ecosystem.config.cjs"
 test "$(readlink -f "$DEPLOY_REPO/client/web/dist")" = "$frontend_before"
 grep -q ':ci' "$TEST_NPM_LOG"
+grep -q ':ci --workspace=@changmen/backend .*--include-workspace-root=false' "$TEST_NPM_LOG"
 grep -q ':run compile:router' "$TEST_NPM_LOG"
 export DEPLOY_SEQUENCE=6 DEPLOY_RELEASE_ID=be-db-fail
 before_activation="$(cat "$TEST_ACTIVATE_LOG")"
+touch "$TEST_FAIL_INSTALL"
+if bash deploy/scripts/release-backend.sh "$fixture/backend.tgz"; then echo 'failed selected install accepted'; exit 1; fi
+test "$(cat "$TEST_ACTIVATE_LOG")" = "$before_activation"
+test "$(readlink -f "$DEPLOY_REPO/backend-current")" = "$backend_first"
+grep -q '^5 ' "$DEPLOY_REPO/.deploy-state/backend"
+rm "$TEST_FAIL_INSTALL"
 touch "$TEST_FAIL_DB"
 if bash deploy/scripts/release-backend.sh "$fixture/backend.tgz"; then echo 'failed preflight accepted'; exit 1; fi
 test "$(cat "$TEST_ACTIVATE_LOG")" = "$before_activation"

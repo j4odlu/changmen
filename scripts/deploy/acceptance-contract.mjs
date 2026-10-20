@@ -1,6 +1,7 @@
 // [changmen 扩展] Supplemental acceptance must describe the exact release inputs.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { backendProcesses } from "./verify-backend-processes.mjs";
 
 // Only equivalent invocations may be covered; overlapping/subset suites stay separate.
 export const FULL_CHECK_COVERAGE = Object.freeze({
@@ -48,6 +49,8 @@ export function supplementalReports(plan) {
       sealed: "full-acceptance.json", digest: "fullAcceptanceSha256" }] : []),
     ...(plan.requiredChecks.databaseCompatibility ? [{ kind: "database", source: "output/database-compatibility/verdict.json",
       sealed: "database-acceptance.json", digest: "databaseAcceptanceSha256" }] : []),
+    ...(plan.requiredChecks.backendInstallation ? [{ kind: "backend-installation", source: "output/backend-linux-runtime/verdict.json",
+      sealed: "backend-installation.json", digest: "backendInstallationSha256" }] : []),
   ];
 }
 
@@ -55,6 +58,25 @@ export function assertSupplemental(report, kind, acceptance) {
   assert.equal(report.passed, true, `${kind}: acceptance failed`);
   assert.equal(report.sourceStable, true, `${kind}: inputs changed`);
   assert.deepEqual(report.identity, acceptance.identity, `${kind}: acceptance belongs to another commit/tree/input fingerprint`);
+  if (kind === "backend-installation") {
+    assert.equal(report.platform, "linux"); assert.match(report.node, /^v24\./);
+    for (const flag of ["lifecycleScriptsEnabled", "nativeEsbuildExecuted", "browserPackagesAbsent"])
+      assert.equal(report[flag], true, `${kind}: ${flag}`);
+    assert.equal(report.productionWrites, false);
+    assert.equal(report.resolution.parityPassed, true);
+    assert.equal(report.dynamicPaths.passed, true); assert.equal(report.dynamicPaths.uncertified, 0);
+    assert.equal(report.databaseStopped, true);
+    const runtime = report.runtime;
+    for (const flag of ["passed", "networkNamespace", "actualEntries", "upstreamsMocked", "allChildrenExited"])
+      assert.equal(runtime[flag], true, `${kind}: runtime ${flag}`);
+    assert.equal(runtime.externalInterfaceCount, 0); assert.equal(runtime.productionWrites, false);
+    assert.deepEqual(runtime.processes.map(row => row.name).sort(), Object.keys(backendProcesses).sort());
+    for (const row of runtime.processes) { assert.equal(row.ready, true); assert.equal(row.shutdown.code, 0); }
+    assert.deepEqual(runtime.failures.map(row => row.case), ["port-conflict", "missing-database-config", "missing-node-loader"]);
+    for (const row of runtime.failures) assert.equal(row.rejected, true);
+    assert(report.steps.length && report.steps.every(row => row.passed && row.exitCode === 0 && row.errorCode === null));
+    return;
+  }
   if (kind === "full") {
     assert.equal(report.fullReleaseAccepted, true);
     assert.equal(report.evidenceConsistent, true);

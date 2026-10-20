@@ -12,7 +12,7 @@ import { assertCommittedSource, executeValidationChecks, validationIdentity, val
 
 const groups = {
   controls: ["deployment-control", "validation-control", "verification-control", "verification-node", "boundaries"],
-  backend: ["router-compile", "backend", "database-compatibility"],
+  backend: ["router-compile", "backend", "database-compatibility", "backend-installation"],
   frontend: ["frontend-typecheck", "frontend", "build"],
 };
 const read = file => JSON.parse(fs.readFileSync(file, "utf8"));
@@ -72,6 +72,12 @@ export function runReleaseLane(lane, { root = process.cwd(), env = process.env, 
       write(path.join(directory, "database.json"), database);
       report.artifacts.database = sha256(fs.readFileSync(path.join(directory, "database.json")));
     }
+    if (report.passed && selected.checks.includes("backend-installation")) {
+      const installation = read(path.join(root, "output/backend-linux-runtime/verdict.json"));
+      assertSupplemental(installation, "backend-installation", { identity: bundle.identity });
+      write(path.join(directory, "backend-installation.json"), installation);
+      report.artifacts.backendInstallation = sha256(fs.readFileSync(path.join(directory, "backend-installation.json")));
+    }
     if (report.passed && selected.checks.includes("build")) {
       const archive = path.join(directory, "frontend.tgz");
       execFileSync("tar", ["-czf", archive, "-C", path.join(root, "client/web/dist"), "."], { windowsHide: true });
@@ -125,6 +131,12 @@ export function collectRelease(root = process.cwd(), env = process.env) {
     assert.equal(sha256(fs.readFileSync(databaseFile)), reports.find(item => item.lane === "backend").artifacts.database, "Database artifact changed");
     assertSupplemental(database, "database", report);
     write(path.join(root, "output/database-compatibility/verdict.json"), database);
+  }
+  if (bundle.plan.requiredChecks.backendInstallation) {
+    const file = path.join(directory, "backend-installation.json"), installation = read(file);
+    assert.equal(sha256(fs.readFileSync(file)), reports.find(item => item.lane === "backend").artifacts.backendInstallation, "Backend installation artifact changed");
+    assertSupplemental(installation, "backend-installation", report);
+    write(path.join(root, "output/backend-linux-runtime/verdict.json"), installation);
   }
   if (bundle.plan.deployment.components.includes("frontend")) {
     const archive = path.join(directory, "frontend.tgz");

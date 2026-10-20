@@ -9,6 +9,7 @@ import { prepareRelease, releaseLanes, runReleaseLane, mergeReleaseReports, coll
 import { DATABASE_PHASES } from "./acceptance-contract.mjs";
 import { sealEvidence, verifySupplementalEvidence } from "./release-evidence.mjs";
 import { readSourceVersion } from "../../devtools/runtime-tooling/runtime_version.js";
+import { installationProof } from "./fixtures/backend-installation.mjs";
 
 const env = { GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "1" };
 const clone = value => structuredClone(value);
@@ -33,6 +34,7 @@ function fixture(t, scope = "full") {
   const bundle = prepareRelease(root, env), calls = [];
   function run(_node, args) {
     calls.push(args);
+    if (args.includes("scripts/testing/backend-linux-runtime.mjs")) write(root, "output/backend-linux-runtime/verdict.json", installationProof(bundle.identity));
     if (args.includes("scripts/deploy/check-database-compatibility.mjs")) write(root, "output/database-compatibility/verdict.json", {
       passed: true, sourceStable: true, localOnly: true, productionWrites: false, identity: bundle.identity,
       results: DATABASE_PHASES.map(phase => ({ phase, passed: true })),
@@ -122,7 +124,7 @@ test("failed and throwing commands replace any prior successful lane result", t 
 test("changed DB or frontend archives cannot leave an accepted verdict", t => {
   const f = fixture(t);
   fs.renameSync(path.join(f.root, "client/web/dist"), path.join(f.root, "client/web/dist.built"));
-  for (const file of ["database.json", "frontend.tgz"]) {
+  for (const file of ["database.json", "backend-installation.json", "frontend.tgz"]) {
     const target = path.join(f.root, "output/release-lanes", file), original = fs.readFileSync(target);
     const tampered = file.endsWith("json") ? JSON.stringify({ ...JSON.parse(original), localOnly: false }) : "changed archive";
     fs.writeFileSync(target, tampered);

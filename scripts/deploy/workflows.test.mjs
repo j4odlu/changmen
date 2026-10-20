@@ -94,6 +94,8 @@ test("independent runners require all planned checks before sealing and keep cre
   const commands = validationCommands({}, "npm-cli.js", "backend-first");
   assert.equal(commands["complete-release"], undefined, "Specialized audits have no automatic publication command");
   assert.equal(commands["database-compatibility"].command[1], "scripts/deploy/check-database-compatibility.mjs");
+  assert.equal(commands["backend-installation"].command[1], "scripts/testing/backend-linux-runtime.mjs");
+  assert(laneSteps.find(s => s.with?.name === "failed-acceptance-${{ matrix.lane }}").with.path.includes("output/backend-linux-runtime/"));
   assert(release.jobs.checks["timeout-minutes"] >= 15);
   const summary = steps.find(s => s.run === "node scripts/deploy/release-summary.mjs");
   assert.equal(summary.if, "always()"); assert.equal(summary.env.ACCEPTANCE_JOB_STATUS, "${{ job.status }}");

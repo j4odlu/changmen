@@ -1,4 +1,4 @@
-// [changmen 扩展] Candidate installation inputs, never an active publication profile.
+// [changmen 扩展] Installation closure for all eight production processes.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -38,13 +38,13 @@ export function backendInstallProfile(root, { processes = backendProcesses, pack
       violations.push({ file: `${edge.from}/package.json`, spec: edge.name, pattern: `Browser installation through ${edge.via.join(" -> ")}` });
   }
   assert.deepEqual(violations, [], "Backend installation cannot contain unknown/local-target or browser dependencies");
-  return { schemaVersion: 1, purpose: "backend-install-verification-only", productionEnabled: false,
+  return { schemaVersion: 1, purpose: "backend-workspace-installation", productionEnabled: true,
     archiveSlimmingEnabled: false, entries, roots: [...roots].sort(), workspaces: [...workspaces].sort(),
     workspaceDirectories: [...directories].sort(), closures,
-    installArgs: ["ci", ...[...roots].sort().map(name => `--workspace=${name}`), "--include=dev", "--include-workspace-root=false"],
-    limitations: ["Original repository layout and frozen loader resources remain required.",
-      "This profile does not change production installation, archives or process activation.",
-      "Offline ignore-scripts validation does not certify Linux lifecycle/native optional dependencies."] };
+    installArgs: ["ci", ...[...roots].sort().map(name => `--workspace=${name}`), "--include=dev", "--include-workspace-root=false", "--ignore-scripts=false"],
+    limitations: ["The full repository archive and loader resources remain required.",
+      "Development dependencies remain installed for the existing router compilation.",
+      "Linux lifecycle and eight-process checks are required before backend publication."] };
 }
 
 export function assertBackendInstalledLinks(profile, links) {
@@ -54,11 +54,15 @@ export function assertBackendInstalledLinks(profile, links) {
 
 // Package-root resolution can fail for an installed package with only subpath exports.
 // Check its directory in every selected workspace's Node lookup paths instead; never import it.
-export function assertBackendBrowserPackagesAbsent(root, profile) {
+export function assertBackendBrowserPackagesAbsent(root, profile, { includeAncestors = true } = {}) {
   for (const directory of profile.workspaceDirectories) {
     const require = createRequire(path.resolve(root, directory, "package.json"));
     for (const name of forbiddenBackendPackages) {
       for (const lookup of require.resolve.paths(name) || []) {
+        // A managed release can have a legacy full installation in an ancestor.
+        // Verify the new installation without modifying a retained rollback tree.
+        const relative = path.relative(path.resolve(root), path.resolve(lookup));
+        if (!includeAncestors && (relative === ".." || relative.startsWith(".." + path.sep) || path.isAbsolute(relative))) continue;
         const target = path.join(lookup, name);
         assert(!fs.existsSync(target), `Browser package ${name} is installed for ${directory}: ${target}`);
       }

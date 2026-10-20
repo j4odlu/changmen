@@ -10,6 +10,7 @@ import { DATABASE_PHASES } from "./acceptance-contract.mjs";
 import { readSourceVersion } from "../../server/storage/runtime_version.js";
 import { planHash } from "./change-plan.mjs";
 import { checkDatabaseCompatibility } from "./check-database-compatibility.mjs";
+import { installationProof } from "./fixtures/backend-installation.mjs";
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: "pipe" }).trim();
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-evidence-"));
@@ -24,6 +25,7 @@ test("transport verification starts without installed workspace dependencies and
       "scripts/deploy/release-evidence.mjs", "scripts/deploy/change-plan.mjs",
       "scripts/deploy/classify-deploy-scope.mjs", "scripts/deploy/pack-git-repo.mjs",
       "scripts/deploy/acceptance-contract.mjs", "scripts/verification/verify-change.mjs",
+      "scripts/deploy/verify-backend-processes.mjs",
       "scripts/verification/validation-plan.mjs", "server/storage/runtime_version.js",
       "devtools/runtime-tooling/runtime_version.js", "devtools/runtime-tooling/package.json",
     ]) {
@@ -50,7 +52,10 @@ function proofs(root, acceptance) {
     results: DATABASE_PHASES.map(phase => ({ phase, passed: true })) };
   fs.mkdirSync(path.join(root, "output/database-compatibility"), { recursive: true });
   fs.writeFileSync(path.join(root, "output/database-compatibility/verdict.json"), JSON.stringify(database));
-  return { database };
+  const installation = installationProof(acceptance.identity);
+  fs.mkdirSync(path.join(root, "output/backend-linux-runtime"), { recursive: true });
+  fs.writeFileSync(path.join(root, "output/backend-linux-runtime/verdict.json"), JSON.stringify(installation));
+  return { database, installation };
 }
 
 for (const [directory, label] of [["client/packages/book", "relocated-package"], ["devtools/runtime-tooling", "relocated-Node-tool"]])
@@ -238,7 +243,7 @@ test("the exact archive, component and source identity are bound to acceptance",
     const archive = path.join(root, "artifact.tgz"); fs.writeFileSync(archive, "artifact");
     const commit = report.identity.commit;
     const evidence = { format: 1, commit, candidateTree: report.identity.candidateTree, inputFingerprint: report.identity.inputFingerprint,
-      fullAcceptanceSha256: "d".repeat(64), databaseAcceptanceSha256: "e".repeat(64),
+      fullAcceptanceSha256: "d".repeat(64), databaseAcceptanceSha256: "e".repeat(64), backendInstallationSha256: "f".repeat(64),
       report, planFingerprint: report.planFingerprint, archives: { backend: sha256("artifact") },
       expectedRuntime: { backend: { commit, dirty: false, sourceFingerprint: "a".repeat(64), contractFingerprint: "b".repeat(64) } } };
     assertArchiveEvidence(evidence, "backend", archive, commit);

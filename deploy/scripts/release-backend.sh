@@ -38,7 +38,7 @@ if [[ "$previous" == "$repo" ]]; then
   cp "$repo/deploy/ecosystem.config.cjs" "$bootstrap_config"
 fi
 cd "$release"
-npm ci --include=dev
+node scripts/deploy/install-backend.mjs
 npm run compile:router --workspace=@changmen/backend
 command -v pm2 >/dev/null
 # Candidate requirements, read-only, before activation or rollback traps: failure

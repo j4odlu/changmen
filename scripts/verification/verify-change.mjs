@@ -52,6 +52,7 @@ export function validationCommands(plan, npm, releasePlan) {
   return {
     "deployment-control": { command: [process.execPath, "scripts/deploy/check-controls.mjs"] },
     "database-compatibility": { command: [process.execPath, "scripts/deploy/check-database-compatibility.mjs"] },
+    "backend-installation": { command: [process.execPath, "scripts/testing/backend-linux-runtime.mjs"] },
     "fok-551": { command: cmd("run", "check:fok-vps") },
     // Source proofs are CPU-heavy; avoid oversubscribing the two-core CI runner.
     "verification-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification", "--exclude", "scripts/verification/fok-source-specialization.test.mjs", "--maxWorkers=2", "--testTimeout=15000") },
@@ -77,7 +78,7 @@ export function executeValidationChecks(plan, { run = spawnSync, npm, cwd }) {
     executionOrder.push(check);
     const result = run(selected.command[0], selected.command.slice(1), {
       cwd: selected.cwd ? path.resolve(cwd, selected.cwd) : cwd, stdio: "inherit", env,
-      timeout: check === "database-compatibility" ? 15 * 60000 : check === "verification-control" ? 10 * 60000 : 5 * 60000, windowsHide: true,
+      timeout: ["database-compatibility", "backend-installation"].includes(check) ? 15 * 60000 : check === "verification-control" ? 10 * 60000 : 5 * 60000, windowsHide: true,
     });
     const row = { check, passed: result.status === 0 && !result.error, elapsedMs: Date.now() - started,
       exitCode: result.status, errorCode: result.error?.code ?? null, signal: result.signal ?? null, execution };

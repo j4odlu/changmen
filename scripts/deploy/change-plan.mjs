@@ -43,12 +43,14 @@ export function changePlan(paths, { unknownBase = false, requestedScope = null, 
   const uncertain = unknownBase || requestedScope !== null;
   const requiredChecks = {
     completeRelease: false,
+    backendInstallation: publication && components.includes("backend"),
     databaseCompatibility: (purpose === "release" && paths.some(databaseWorkflowPath))
       || (publication && (uncertain || components.includes("backend")
         || paths.some(file => isDatabaseMaintenancePath(file)
           || /^(?:(?:rds|server\/db)\/|server\/backend\/db\/|scripts\/testing\/|packages\/shared\/|package(?:-lock)?\.json$)/.test(file)))),
   };
   if (requiredChecks.databaseCompatibility) validation.checks.push("database-compatibility");
+  if (requiredChecks.backendInstallation) validation.checks.push("backend-installation");
   return { ...validation, changedPaths: [...new Set(paths)].sort(), unknownBase, requestedScope, deployedVersions, liveComponents, eventPaths,
     purpose, requiredChecks, deployment: { scope, components, backendFirst }, releasePlan: components.length === 1 && components[0] === "frontend" ? "frontend-only" : "backend-first" };
 }

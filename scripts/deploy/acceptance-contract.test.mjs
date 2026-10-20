@@ -1,6 +1,23 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FULL_AUDIT_PHASES, DATABASE_PHASES, assertSupplemental, proofHash } from "./acceptance-contract.mjs";
+import { installationProof } from "./fixtures/backend-installation.mjs";
+
+test("backend installation requires Linux lifecycle, native execution, all eight entries, isolation and cleanup for this candidate", () => {
+  const acceptance = { identity: { commit: "a".repeat(40), candidateTree: "b".repeat(40), inputFingerprint: "c".repeat(64) } };
+  const report = installationProof(acceptance.identity);
+  assertSupplemental(report, "backend-installation", acceptance);
+  for (const mutate of [p => { p.identity.commit = "b".repeat(40); }, p => { p.platform = "win32"; },
+    p => { p.lifecycleScriptsEnabled = false; }, p => { p.nativeEsbuildExecuted = false; }, p => { p.browserPackagesAbsent = false; },
+    p => { p.runtime.processes.pop(); }, p => { p.runtime.processes[1] = p.runtime.processes[0]; },
+    p => { p.runtime.processes[0].ready = false; }, p => { p.runtime.processes[0].shutdown.code = 1; },
+    p => { p.runtime.externalInterfaceCount = 1; }, p => { p.runtime.allChildrenExited = false; },
+    p => { p.dynamicPaths.uncertified = 1; }, p => { p.databaseStopped = false; }, p => { p.steps[0].errorCode = "ETIMEDOUT"; },
+    p => { p.runtime.failures.pop(); }, p => { p.runtime.failures[0].rejected = false; }]) {
+    const broken = structuredClone(report); mutate(broken);
+    assert.throws(() => assertSupplemental(broken, "backend-installation", acceptance));
+  }
+});
 
 function fixture(kind) {
   const identity = { commit: "a".repeat(40), candidateTree: "b".repeat(40), inputFingerprint: "c".repeat(64) };

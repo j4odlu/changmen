@@ -53,7 +53,8 @@ export function validationCommands(plan, npm, releasePlan) {
     "deployment-control": { command: [process.execPath, "scripts/deploy/check-controls.mjs"] },
     "database-compatibility": { command: [process.execPath, "scripts/deploy/check-database-compatibility.mjs"] },
     "fok-551": { command: cmd("run", "check:fok-vps") },
-    "verification-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification", "--exclude", "scripts/verification/fok-source-specialization.test.mjs", "--maxWorkers=4") },
+    // Source proofs are CPU-heavy; avoid oversubscribing the two-core CI runner.
+    "verification-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification", "--exclude", "scripts/verification/fok-source-specialization.test.mjs", "--maxWorkers=2", "--testTimeout=15000") },
     "verification-node": { command: [process.execPath, "--test", "scripts/verification/fok-source-specialization.test.mjs"] },
     "validation-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification/validation-plan.test.mjs", "scripts/verification/verify-change.test.mjs", "server/storage/runtime_version.test.mjs", "server/backend/core/shared/runtime_version.test.mjs", "client/web/vite/plugins/runtimeVersion.test.ts", "--maxWorkers=4") },
     "boundaries": { command: cmd("run", "test:checks") },
@@ -76,7 +77,7 @@ export function executeValidationChecks(plan, { run = spawnSync, npm, cwd }) {
     executionOrder.push(check);
     const result = run(selected.command[0], selected.command.slice(1), {
       cwd: selected.cwd ? path.resolve(cwd, selected.cwd) : cwd, stdio: "inherit", env,
-      timeout: check === "database-compatibility" ? 15 * 60000 : 5 * 60000, windowsHide: true,
+      timeout: check === "database-compatibility" ? 15 * 60000 : check === "verification-control" ? 10 * 60000 : 5 * 60000, windowsHide: true,
     });
     const row = { check, passed: result.status === 0 && !result.error, elapsedMs: Date.now() - started,
       exitCode: result.status, errorCode: result.error?.code ?? null, signal: result.signal ?? null, execution };

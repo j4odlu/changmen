@@ -1,4 +1,5 @@
 import "./vitestPolyfillLocalStorage";
+import "./vitestSetupFokWebSocket";
 import { vi } from "vitest";
 import { toFixed } from "@changmen/client-core/shared/format";
 import { registerOddsAccess } from "@changmen/client-core/bridge/oddsAccess";

@@ -252,11 +252,11 @@ describe("component entry boundaries", () => {
           ? value + '\\nimport "@changmen/venue-browser/adapter/registry/adapters";\\n' : value;
       };
       await import("./scripts/check-team-boundaries.mjs");`;
-    const result = spawnSync(process.execPath, ["--input-type=module", "--eval", code], { cwd: root, encoding: "utf8", timeout: 30_000, maxBuffer: 2 * 1024 * 1024 });
+    const result = spawnSync(process.execPath, ["--input-type=module", "--eval", code], { cwd: root, encoding: "utf8", timeout: 60_000, maxBuffer: 2 * 1024 * 1024 });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("[component-entry] server/backend/server.js:");
     expect(result.stderr).toContain("browser-only client/packages/venue-browser/adapter/registry/adapters.ts");
-  }, 35_000);
+  }, 65_000);
 });
 
 for (const [name, source] of [

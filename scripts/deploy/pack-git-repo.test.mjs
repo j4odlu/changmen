@@ -35,6 +35,7 @@ test("HEAD-only backend artifacts exclude browser code and tests, retain assets 
   for (const [file, value] of Object.entries(kept)) write(file, value);
   for (const file of omitted) write(file, "must not ship");
   git("init", "-q"); git("add", "."); git("-c", "user.name=Artifact", "-c", "user.email=artifact@example.invalid", "commit", "-qm", "fixture");
+  assert.equal(git("ls-files", "node_modules"), "", "Dependency links must not enter the Git archive on Linux or Windows");
   const before = readSourceVersion(root, "backend"), a = path.join(temporary, "a.tgz"), b = path.join(temporary, "b.tgz");
   const packed = packBackendRepoArchive(root, a);
   write("server/backend/start.js", "uncommitted change"); write("server/backend/untracked.js", "untracked");

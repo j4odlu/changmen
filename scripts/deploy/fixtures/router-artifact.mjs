@@ -14,6 +14,7 @@ export function routerArtifactFixture(root) {
   }
   if (!fs.existsSync(path.join(root, "node_modules"))) fs.symlinkSync(
     fileURLToPath(new URL("../../../node_modules", import.meta.url)), path.join(root, "node_modules"), "junction");
-  fs.appendFileSync(path.join(root, ".gitignore"), "\nnode_modules/\n");
+  // A trailing slash ignores directories but leaves Linux symbolic links trackable.
+  fs.appendFileSync(path.join(root, ".gitignore"), "\n/node_modules\n");
   return files;
 }

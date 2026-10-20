@@ -28,7 +28,6 @@ jobs:
       frontend: ${{ steps.plan.outputs.frontend }}
       backend-first: ${{ steps.plan.outputs.backend-first }}
       matrix: ${{ steps.lanes.outputs.matrix }}
-      node-version: ${{ steps.lanes.outputs.node-version }}
       database-compatibility: ${{ steps.plan.outputs.database-compatibility }}
     steps:
       - uses: actions/checkout@v5
@@ -91,7 +90,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: ${{ needs.plan.outputs.node-version }}
+          node-version: '24'
           cache: npm
       - uses: actions/download-artifact@v8
         with:
@@ -150,7 +149,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: ${{ needs.plan.outputs.node-version }}
+          node-version: '24'
       - uses: actions/download-artifact@v8
         with:
           name: release-plan

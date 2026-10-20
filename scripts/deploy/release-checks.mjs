@@ -50,7 +50,7 @@ export function prepareRelease(root = process.cwd(), env = process.env) {
     plan, planFingerprint: planHash(plan), lanes: releaseLanes(plan) };
   assertReleaseBundle(bundle, root, env);
   write(path.join(root, "output/change-validation/bundle.json"), bundle);
-  if (env.GITHUB_OUTPUT) fs.appendFileSync(env.GITHUB_OUTPUT, `matrix=${JSON.stringify({ lane: bundle.lanes.map(item => item.lane) })}\nnode-version=${process.version}\n`);
+  if (env.GITHUB_OUTPUT) fs.appendFileSync(env.GITHUB_OUTPUT, `matrix=${JSON.stringify({ lane: bundle.lanes.map(item => item.lane) })}\n`);
   return bundle;
 }
 export function runReleaseLane(lane, { root = process.cwd(), env = process.env, npm = env.npm_execpath, run = spawnSync } = {}) {

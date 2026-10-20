@@ -17,7 +17,7 @@ const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-evidence-"));
   git(root, "init", "-q");
-  fs.appendFileSync(path.join(root, ".git/info/exclude"), "\nnode_modules/\n"); routerArtifactFixture(root);
+  fs.appendFileSync(path.join(root, ".git/info/exclude"), "\n/node_modules\n"); routerArtifactFixture(root);
   fs.writeFileSync(path.join(root, "runtime.js"), "original"); git(root, "add", ".");
   git(root, "-c", "user.name=Evidence", "-c", "user.email=evidence@example.invalid", "commit", "-qm", "fixture");
   return root;
@@ -53,6 +53,7 @@ test("transport verification starts without installed workspace dependencies and
   }
 });
 function proofs(root, acceptance) {
+  assert.equal(git(root, "ls-files", "node_modules"), "", "Overwriting fixture .gitignore must not commit dependency links");
   const common = { passed: true, sourceStable: true, identity: acceptance.identity };
   const database = { ...common, localOnly: true, productionWrites: false,
     results: DATABASE_PHASES.map(phase => ({ phase, passed: true })) };

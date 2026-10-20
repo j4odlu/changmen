@@ -80,8 +80,11 @@ test("independent runners require all planned checks before sealing and keep cre
   assert.deepEqual(release.jobs.validate.needs, ["plan", "checks"]);
   assert.equal(release.jobs.checks.strategy["fail-fast"], false);
   assert.equal(release.jobs.checks.strategy.matrix, "${{ fromJSON(needs.plan.outputs.matrix) }}");
-  for (const job of [release.jobs.checks, release.jobs.validate])
-    assert.equal(job.steps.find(step => step.uses?.startsWith("actions/setup-node@")).with["node-version"], "${{ needs.plan.outputs.node-version }}");
+  // Runtime outputs can be dropped when a patch number matches a masked secret.
+  // Every runner must select the supported major without depending on that output.
+  for (const job of [release.jobs.plan, release.jobs.checks, release.jobs.validate])
+    assert.equal(job.steps.find(step => step.uses?.startsWith("actions/setup-node@")).with["node-version"], "24");
+  assert.equal(release.jobs.plan.outputs["node-version"], undefined);
   assert(!JSON.stringify(release.jobs.checks).includes("secrets."));
   assert(!JSON.stringify(release.jobs.validate).includes("secrets."));
   assert(!steps.some(s => s.run === "npm ci" || s.run?.includes("app:build")), "Collector never rebuilds");

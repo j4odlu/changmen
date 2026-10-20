@@ -50,14 +50,14 @@ it('owns browser sources in their independent workspace while retaining earlier 
  expect(fact.owner).toBe('client/packages/venue-browser/package.json');expect(fact.declaredRuntime).toBe(true);
  for(const file of ['package.json','package-lock.json','packages/venue-adapter/package.json'])expect(restoreVenueBrowserWorkspace(file,read(file))).toBe(original(file));
 });
-it('classifies the new sources as browser-only and preserves conservative publication',()=>{
+it('classifies the new sources as browser-only for boundaries and publication',()=>{
  const policy=JSON.parse(read('scripts/verification/source-ownership-inputs.json'));
  for(const row of record.rows){
   expect(classifySourceFile(row.canonical,policy)?.layer).toBe('frontend');
   expect(sourceLayerViolation('server/backend/server.js',row.canonical,policy)).toBeTruthy();
   expect(sourceLayerViolation(row.canonical,'server/db/index.js',policy)).toBeTruthy();
   expect(isVersionSource(row.canonical,'frontend')).toBe(true);expect(isVersionSource(row.canonical,'backend')).toBe(true);
-  expect(classifyDeployScope([row.canonical])).toBe('full');
+  expect(classifyDeployScope([row.canonical])).toBe('frontend');
  }
  expect(pmNodeBrowserLoaderTarget({environment:'node',kind:'custom-loader',loaderSymbol:'adapterRequire',arguments:['..','..','client/packages/venue-browser/pm-book-source.ts']})).toBeTruthy();
 });

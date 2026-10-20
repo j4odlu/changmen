@@ -6,6 +6,8 @@ const sha = 'a'.repeat(40);
 const run = (extra = {}) => ({ databaseId: 1, headSha: sha, headBranch: 'master', status: 'completed', conclusion: 'success', ...extra });
 test('frontend-only stays independent; shared/API/deployment changes wait', () => {
   assert.equal(needsBackendRelease(['client/web/src/App.vue', 'docs/README.md']), false);
+  for (const file of ['client/packages/venue-browser/polymarket/fok/bet.ts', 'client/packages/client-core/src/shared/http.ts',
+    'client/packages/pm-market-data-browser/src/index.ts']) assert.equal(needsBackendRelease([file]), false);
   for (const path of ['packages/venue-adapter/polymarket/bet.ts', 'server/backend/server.js',
     'scripts/deploy/wait-for-backend.mjs', 'package-lock.json', 'server/storage/runtime_version.js'])
     assert.equal(needsBackendRelease([path]), true, path);

@@ -41,11 +41,11 @@ it.each(policy.changes.map(row => [row.file, row]))('restores complete prior met
   expect(restoreClientPackageMetadata(file, current + '\n')).not.toBe(previous);
 });
 
-it('retains conservative publication and both Git/archive runtime source coverage', () => {
+it('publishes isolated client packages to the frontend and retains both Git/archive source coverage', () => {
   for (const row of policy.relocations) {
     expect(isVersionSource(row.canonical, 'frontend')).toBe(true);
     expect(isVersionSource(row.canonical, 'backend')).toBe(true);
-    expect(classifyDeployScope([row.canonical])).toBe('full');
+    expect(classifyDeployScope([row.canonical])).toBe('frontend');
   }
 });
 

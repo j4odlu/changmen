@@ -43,7 +43,8 @@ export function changePlan(paths, { unknownBase = false, requestedScope = null, 
   const uncertain = unknownBase || requestedScope !== null;
   const requiredChecks = {
     completeRelease: false,
-    backendInstallation: publication && components.includes("backend"),
+    backendInstallation: (publication && components.includes("backend")) || (purpose === "release"
+      && paths.some(file => /^scripts\/testing\/backend-(?:linux-runtime|process-smoke|runtime-fixture|runtime-namespace)\.(?:mjs|sh)$/.test(file))),
     databaseCompatibility: (purpose === "release" && paths.some(databaseWorkflowPath))
       || (publication && (uncertain || components.includes("backend")
         || paths.some(file => isDatabaseMaintenancePath(file)

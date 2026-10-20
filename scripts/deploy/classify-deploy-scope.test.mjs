@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { classifyDeployScope, resolveDeployScope } from "./classify-deploy-scope.mjs";
+import { classifyDeployScope, resolveDeployScope, listChangedPaths } from "./classify-deploy-scope.mjs";
+import { readInstallWorkspaces } from "../verification/component-install-inputs.mjs";
 
 describe("classifyDeployScope", () => {
   it("frontend-only for client/web", () => {
@@ -12,6 +13,37 @@ describe("classifyDeployScope", () => {
     assert.equal(classifyDeployScope(["server/backend/server.js"]), "backend");
     assert.equal(classifyDeployScope(["server/match/matcher/index.js"]), "backend");
     assert.equal(classifyDeployScope(["deploy/scripts/deploy-server-remote.sh"]), "backend");
+    for (const file of ["server/venues/loader/adapter_paths.mjs", "server/venues/registry/runtime/ob/node/session.js",
+      "server/venues/package.json", "server/venues/sync-backend-bundle.mjs", "rds/pg_pool.js"])
+      assert.equal(classifyDeployScope([file]), "backend", file);
+  });
+
+  it("publishes each relocated browser implementation and its build tools only to the frontend", () => {
+    for (const file of ["client/packages/client-core/src/shared/http.ts", "client/packages/arb-core/src/index.ts",
+      "client/packages/venue-browser/polymarket/fok/bet.ts", "client/packages/venue-browser/package.json",
+      "client/packages/pm-market-data-browser/src/marketData.worker.ts", "client/devtools/venue-adapter/sync-package-exports.mjs"])
+      assert.equal(classifyDeployScope([file]), "frontend", file);
+  });
+
+  it("covers every active workspace while keeping shared contracts and build tooling joint", () => {
+    for (const { dir } of readInstallWorkspaces(process.cwd()).values()) {
+      const expected = dir === "chrome-extension" ? "noop" : dir.startsWith("client/") ? "frontend"
+        : dir.startsWith("server/") || dir === "rds" ? "backend" : "full";
+      assert.equal(classifyDeployScope([dir + "/package.json"]), expected, dir);
+    }
+  });
+
+  it("CI-only changes do not restart applications; production transport changes retain their scope", () => {
+    for (const file of ["scripts/deploy/classify-deploy-scope.mjs", "scripts/deploy/change-plan.mjs",
+      "scripts/deploy/release-checks.mjs", "scripts/deploy/backend-install-profile.test.mjs", "scripts/deploy/release.test.sh",
+      "scripts/deploy/fixtures/backend-installation.mjs", "scripts/verification/source-ownership-inputs.json",
+      "scripts/testing/backend-linux-runtime.mjs"])
+      assert.equal(classifyDeployScope([file]), "noop", file);
+    assert.equal(classifyDeployScope(["scripts/deploy/install-backend.mjs"]), "backend");
+    assert.equal(classifyDeployScope(["scripts/deploy/acceptance-contract.mjs"]), "full");
+    assert.equal(classifyDeployScope(["scripts/deploy/compare-deployed-files.mjs"]), "full");
+    assert.equal(classifyDeployScope(["scripts/deploy/example.test.mjs.runtime.js"]), "full");
+    assert.equal(classifyDeployScope(["scripts/deploy/unreviewed-helper.mjs"]), "full");
   });
 
   it("full when shared adapter / packages change", () => {
@@ -40,6 +72,10 @@ describe("classifyDeployScope", () => {
 
   it("unknown path is full", () => {
     assert.equal(classifyDeployScope(["mystery/tool.js"]), "full");
+    assert.equal(classifyDeployScope(["client/packages/unreviewed/index.ts"]), "full");
+    for (const file of ["client/web/../../server/secret.js", "/client/web/main.ts", "C:\\client\\web\\main.ts"])
+      assert.equal(classifyDeployScope([file]), "full");
+    assert.equal(classifyDeployScope([".\\client\\packages\\venue-browser\\index.ts"]), "frontend");
   });
 
   it("root dependency/build inputs affect both sides", () => {
@@ -51,6 +87,14 @@ describe("classifyDeployScope", () => {
     assert.equal(classifyDeployScope(["deploy/scripts/release-common.sh"]), "full");
     assert.equal(classifyDeployScope(["deploy/scripts/release-frontend.sh"]), "frontend");
   });
+});
+
+it("legacy diff consumers keep both sides of renames and NUL-delimited filenames", () => {
+  const paths = listChangedPaths("before", "after", { execFileSync: (bin, args) => {
+    assert.equal(bin, "git"); assert.deepEqual(args, ["diff", "--no-renames", "--name-only", "-z", "before", "after"]);
+    return "client/packages/client-core/old.ts\0server/venues/new.ts\0";
+  } });
+  assert.equal(classifyDeployScope(paths), "full");
 });
 
 describe("resolveDeployScope", () => {

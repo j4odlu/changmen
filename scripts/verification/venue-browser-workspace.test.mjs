@@ -59,8 +59,8 @@ it('all adapter runtime consumers use declared exports instead of reaching into 
  expect(consumers).toHaveLength(18);
  for(const row of consumers){expect(read(row.file)).not.toContain('client/packages/venue-browser/');expect(read(row.file)).toContain('@changmen/venue-browser/');}
 });
-it('keeps the new package manifest in both fingerprints and conservative publication',()=>{
+it('keeps the browser manifest in both fingerprints while publishing it only to the frontend',()=>{
  const file=sourceRoot+'/package.json';
  expect(isVersionSource(file,'frontend')).toBe(true);expect(isVersionSource(file,'backend')).toBe(true);
- expect(classifyDeployScope([file])).toBe('full');
+ expect(classifyDeployScope([file])).toBe('frontend');
 });

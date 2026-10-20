@@ -66,9 +66,9 @@ it("keeps both new physical and public package paths forbidden to Node custom lo
     ["backendRequire", ["@changmen/pm-market-data-browser/service"]],
   ]) expect(pmNodeBrowserLoaderTarget({ environment: "node", kind: "custom-loader", loaderSymbol, arguments: args })).toBeTruthy();
 });
-it("does not narrow publication because browser files moved into client", () => {
+it("publishes the isolated browser package only to the frontend while root lock changes remain shared", () => {
   expect(classifyDeployScope(["packages/pm-market-data-browser/src/index.ts"])).toBe("full");
-  expect(classifyDeployScope(["client/packages/pm-market-data-browser/src/index.ts"])).toBe("full");
+  expect(classifyDeployScope(["client/packages/pm-market-data-browser/src/index.ts"])).toBe("frontend");
   expect(classifyDeployScope(["package.json", "package-lock.json", "client/packages/pm-market-data-browser/src/index.ts"])).toBe("full");
 });
 it("retains every old compatibility contract except the three exact tool locations", () => {

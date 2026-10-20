@@ -1,9 +1,18 @@
 /**
- * Classify deploy scope from changed paths (step 5: FE/BE split pipelines).
+ * Publish by reviewed physical ownership; shared and unknown inputs stay full.
+ * Dependency-audit inventories do not authorize graph-derived scope narrowing.
  *
  * @param {string[]} paths
  * @returns {'frontend' | 'backend' | 'full' | 'noop'}
  */
+const frontendRoots = ["client/web/", "client/packages/client-core/", "client/packages/arb-core/",
+  "client/packages/venue-browser/", "client/packages/pm-market-data-browser/", "client/devtools/"];
+const ciOnlyFiles = new Set(["classify-deploy-scope.mjs", "classify-deploy-scope-cli.mjs", "change-plan.mjs",
+  "check-controls.mjs", "release-checks.mjs", "release-summary.mjs", "read-deployed-versions.mjs", "check-database-compatibility.mjs", "release.test.sh"]
+  .map(file => "scripts/deploy/" + file));
+const backendDeployFiles = new Set(["install-backend.mjs", "backend-install-profile.mjs", "verify-backend-processes.mjs",
+  "pack-git-repo.mjs", "deploy-hk-fast.mjs", "deploy-hk-remaining.mjs"].map(file => "scripts/deploy/" + file));
+
 export function isDatabaseMaintenancePath(p) {
   return /^(?:server\/backend\/db\/migrations\/|(?:rds|server\/db)\/(?:schema|assets|maintenance)\/|server\/backend\/scripts\/ops\/migrations\/)/.test(p)
     || /^server\/backend\/scripts\/(?:apply-rds-schema|apply-order-observation-schema)\.mjs$/.test(p)
@@ -17,9 +26,11 @@ export function classifyDeployScope(paths) {
   let sawDeployRelevant = false;
 
   for (const raw of paths || []) {
-    const p = String(raw || "").replace(/^changmen\//, "").replace(/^\.\//, "").trim();
+    if (typeof raw !== "string") return "full";
+    const p = raw.replaceAll("\\", "/").replace(/^\.\//, "").replace(/^changmen\//, "").trim();
     if (!p)
       continue;
+    if (p.startsWith("/") || p.includes(":") || p.includes("\0") || p.split("/").some(part => part === ".." || part === "." || !part)) return "full";
 
     if (isDatabaseMaintenancePath(p)) continue;
 
@@ -44,6 +55,11 @@ export function classifyDeployScope(paths) {
     if (p.startsWith("client/chrome-extension/") || p.startsWith("chrome-extension/"))
       continue;
 
+    // These sources run in CI/local verification, never in the eight app entries.
+    // Validation and database compatibility selection still see the full diff.
+    if (ciOnlyFiles.has(p) || /^scripts\/(?:verification|testing)\//.test(p)
+      || /^scripts\/deploy\/(?:[^/]+\.test\.mjs$|fixtures\/)/.test(p)) continue;
+
     sawDeployRelevant = true;
 
     // [changmen 扩展] This Node helper is also consumed by the frontend build.
@@ -51,7 +67,7 @@ export function classifyDeployScope(paths) {
     if (p.startsWith("server/storage/runtime_version.")
       || p.startsWith("devtools/runtime-tooling/")
       || p === "scripts/deploy/publish.sh"
-      || /^scripts\/deploy\/(?:release-evidence|release-retention|verify-runtime|change-plan|check-controls)\./.test(p)
+      || /^scripts\/deploy\/(?:release-evidence|release-retention|verify-runtime|acceptance-contract|compare-deployed-files)\./.test(p)
       || p === "deploy/scripts/release-common.sh"
       || p.startsWith("sh/deploy-")) {
       frontend = true;
@@ -69,14 +85,13 @@ export function classifyDeployScope(paths) {
       continue;
     }
 
-    if (p.startsWith("client/web/")) {
+    if (frontendRoots.some(root => p.startsWith(root))) {
       frontend = true;
       continue;
     }
 
     if (
       p.startsWith("packages/venue-adapter/")
-      || p.startsWith("server/venues/")
       || /^server\/packages\/(?:venue-node-(?:loader|registry)|venue-adapter-tools)\//.test(p)
       || p.startsWith("client/platform-adapter/")
       || p.startsWith("packages/")
@@ -91,7 +106,7 @@ export function classifyDeployScope(paths) {
       || p.startsWith("rds/")
       || p.startsWith("deploy/")
       || p.startsWith("devtools/")
-      || p.startsWith("scripts/deploy/")
+      || backendDeployFiles.has(p)
       || p.startsWith("lines/")
     ) {
       backend = true;
@@ -129,14 +144,14 @@ export function listChangedPaths(fromSha, toSha, opts = {}) {
   try {
     let out;
     if (opts.execFileSync) {
-      out = opts.execFileSync("git", ["diff", "--name-only", from, to], {
+      out = opts.execFileSync("git", ["diff", "--no-renames", "--name-only", "-z", from, to], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });
     }
     else if (opts.execSync) {
       // Tests / legacy: still accept execSync, but quote is caller responsibility
-      out = opts.execSync(`git diff --name-only ${from} ${to}`, {
+      out = opts.execSync(`git diff --no-renames --name-only -z ${from} ${to}`, {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });
@@ -144,7 +159,8 @@ export function listChangedPaths(fromSha, toSha, opts = {}) {
     else {
       throw new Error("listChangedPaths requires opts.execFileSync or opts.execSync");
     }
-    return String(out).split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    const text = String(out);
+    return (text.includes("\0") ? text.split("\0") : text.split(/\r?\n/)).filter(Boolean);
   }
   catch {
     return null;

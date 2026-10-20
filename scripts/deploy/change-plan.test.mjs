@@ -161,3 +161,10 @@ test("already-deployed inputs and repeated paths do not skip or duplicate databa
   assert.equal(changePlan(["docs/notes.md"], { purpose: "release" }).requiredChecks.databaseCompatibility, false);
   assert.equal(changePlan(["client/web/src/style.css"], { purpose: "release" }).requiredChecks.databaseCompatibility, false);
 });
+
+test("changing the isolated startup fixture validates it without publishing either application", () => {
+  const plan = changePlan(["scripts/testing/backend-linux-runtime.mjs"], { purpose: "release" });
+  assert.deepEqual(plan.deployment.components, []);
+  assert(plan.checks.includes("backend-installation")); assert(plan.checks.includes("database-compatibility"));
+  assert(!plan.checks.includes("backend")); assert(!plan.checks.includes("frontend")); assert(!plan.checks.includes("build"));
+});

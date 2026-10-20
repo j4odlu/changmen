@@ -59,14 +59,14 @@ export function assertSupplemental(report, kind, acceptance) {
   assert.equal(report.sourceStable, true, `${kind}: inputs changed`);
   assert.deepEqual(report.identity, acceptance.identity, `${kind}: acceptance belongs to another commit/tree/input fingerprint`);
   if (kind === "backend-installation") {
-    assert.equal(report.archive?.profile, "backend-runtime-v1");
+    assert.equal(report.archive?.profile, "backend-runtime-v2");
     assert.match(report.archive.sha256, /^[a-f0-9]{64}$/);
     assert.match(report.archive.sourceFingerprint, /^[a-f0-9]{64}$/);
     assert.equal(report.archive.fingerprintParity, true);
     assert.equal(report.archive.browserSourcesAbsent, true);
     assert(report.archive.files > 0 && report.archive.bytes > 0);
     assert.equal(report.platform, "linux"); assert.match(report.node, /^v24\./);
-    for (const flag of ["lifecycleScriptsEnabled", "nativeEsbuildExecuted", "browserPackagesAbsent"])
+    for (const flag of ["lifecycleScriptsEnabled", "nativeEsbuildExecuted", "developmentToolsAbsent", "precompiledRouterVerified", "routerBuildParity", "browserPackagesAbsent"])
       assert.equal(report[flag], true, `${kind}: ${flag}`);
     assert.equal(report.productionWrites, false);
     assert.equal(report.resolution.parityPassed, true);

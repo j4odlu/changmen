@@ -34,7 +34,7 @@ if [[ "${1:-}" == */release-retention.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; 
 if [[ "${1:-}" == */verify-backend-processes.mjs ]]; then exec "$TEST_REAL_NODE" "$@"; fi
 if [[ "${1:-}" == scripts/deploy/install-backend.mjs ]]; then
   test ! -f "$TEST_FAIL_INSTALL" || exit 46
-  npm ci --workspace=@changmen/backend --include=dev --include-workspace-root=false --ignore-scripts=false
+  npm ci --workspace=@changmen/backend --omit=dev --include-workspace-root=false --ignore-scripts=false
   exit 0
 fi
 if [[ "$*" == *'checkConfiguredRdsSchema()'* ]]; then
@@ -132,7 +132,7 @@ bash deploy/scripts/release-frontend.sh "$fixture/dist.tgz"
 grep -q '^4 ' "$DEPLOY_REPO/.deploy-state/frontend"
 rm "$TEST_BACKEND_DOWN"
 
-# Backend fixture keeps the full workspace tree and compiles before activation.
+# Backend fixture installs runtime dependencies and verifies compiled routes before activation.
 mkdir -p "$fixture/backend/server/backend/db/migrations" "$fixture/backend/server/backend/scripts/ops/migrations" "$fixture/backend/client/web" "$fixture/backend/deploy/scripts"
 mkdir -p "$fixture/backend/scripts/deploy"
 cp "$source_root/scripts/deploy/compare-deployed-files.mjs" "$fixture/backend/scripts/deploy/"
@@ -176,7 +176,8 @@ grep -q 'backend-current/deploy/ecosystem.config.cjs' "$DEPLOY_REPO/deploy/ecosy
 test "$(readlink -f "$DEPLOY_REPO/client/web/dist")" = "$frontend_before"
 grep -q ':ci' "$TEST_NPM_LOG"
 grep -q ':ci --workspace=@changmen/backend .*--include-workspace-root=false' "$TEST_NPM_LOG"
-grep -q ':run compile:router' "$TEST_NPM_LOG"
+grep -q -- '--omit=dev' "$TEST_NPM_LOG"
+if grep -q ':run compile:router' "$TEST_NPM_LOG"; then echo 'production tried to compile routes'; exit 1; fi
 export DEPLOY_SEQUENCE=6 DEPLOY_RELEASE_ID=be-db-fail
 before_activation="$(cat "$TEST_ACTIVATE_LOG")"
 touch "$TEST_FAIL_INSTALL"

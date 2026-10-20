@@ -1,17 +1,18 @@
 /**
  * Pack deployable repo from git HEAD only (no .turbo / .claude / untracked junk).
- * VPS compiles gitignored router.js via deploy-server-remote.sh.
+ * Backend artifacts include routes compiled from the extracted HEAD sources.
  */
 import { spawnSync, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { isVersionSource } from "../../devtools/runtime-tooling/runtime_version.js";
+import { compileBackendRouter } from "./compile-backend-router.mjs";
 
 /** Abort if pack exceeds this — local caches must never ship again. */
 export const REPO_PACK_MAX_MB = 40;
 
-export const BACKEND_ARCHIVE_PROFILE = "backend-runtime-v1";
+export const BACKEND_ARCHIVE_PROFILE = "backend-runtime-v2";
 const deploymentFiles = new Set(["deploy/ecosystem.config.cjs", "deploy/scripts/deploy-server-remote.sh",
   "scripts/deploy/install-backend.mjs", "scripts/deploy/backend-install-profile.mjs",
   "scripts/deploy/verify-backend-processes.mjs", "scripts/verification/component-install-inputs.mjs"]);
@@ -53,7 +54,9 @@ export function packBackendRepoArchive(repoRoot, outPath, opts = {}) {
     const source = path.join(temporary, "source"), full = path.join(temporary, "full.tgz"), list = path.join(temporary, "members");
     const original = packGitRepoArchive(repoRoot, full, opts);
     fs.mkdirSync(source); archiveCommand(["-xzf", full, "-C", source]);
-    const files = members.map(row => row.file).sort();
+    const timestamp = new Date(Number(run("git", ["show", "-s", "--format=%ct", "HEAD"]).trim()) * 1000);
+    const generated = compileBackendRouter(source, repoRoot, timestamp);
+    const files = [...new Set([...members.map(row => row.file), ...generated])].sort();
     fs.writeFileSync(list, files.join("\0") + "\0");
     const owner = gnu ? ["--owner=0", "--group=0", "--numeric-owner"]
       : ["--uid=0", "--gid=0", "--uname=root", "--gname=root"];

@@ -9,7 +9,7 @@
 - `verify-backend-processes.mjs`：核对既有 8 个进程的唯一实例、PID、状态、目录与入口。
 - `release-retention.mjs`：保留当前及上一成功版本，保护实际运行路径及共享数据。
 
-VPS 控制器位于 [`deploy/scripts/`](../../deploy/scripts/)：前端失败恢复旧入口；后端安装/编译和 `SELECT 1` 通过后才激活，失败恢复旧运行版本并核验。普通发布不运行迁移、历史账号导入、owner 回填、timer 清理或整库结构比较。回滚不逆向修改数据库。
+VPS 控制器位于 [`deploy/scripts/`](../../deploy/scripts/)：前端失败恢复旧入口；后端运行依赖安装、预编译路由校验和 `SELECT 1` 通过后才激活，失败恢复旧运行版本并核验。普通发布不运行迁移、历史账号导入、owner 回填、timer 清理或整库结构比较。回滚不逆向修改数据库。
 
 验证：`node scripts/deploy/check-controls.mjs`。测试涵盖独立发布、联动阻断、连接失败、错误版本、重试和 TERM/HUP/INT 恢复。FOK 551 保护、A8 前端与投注/账号逻辑保持原有实现。
 

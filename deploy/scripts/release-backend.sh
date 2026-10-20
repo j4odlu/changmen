@@ -40,7 +40,7 @@ if [[ "$previous" == "$repo" ]]; then
 fi
 cd "$release"
 node scripts/deploy/install-backend.mjs
-npm run compile:router --workspace=@changmen/backend
+node server/backend/scripts/ensure-router-compiled.mjs --verify
 command -v pm2 >/dev/null
 # Candidate requirements, read-only, before activation or rollback traps: failure
 # must leave the running processes, links and success marker untouched.

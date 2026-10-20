@@ -11,7 +11,8 @@ import { certifyBackendDynamicPaths, assertDynamicPathParity } from "../verifica
 import { readInstallWorkspaces } from "../verification/component-install-inputs.mjs";
 import { captureBackendResolution, assertBackendResolutionParity } from "../verification/backend-install-resolution.mjs";
 import { validationIdentity } from "../verification/verify-change.mjs";
-import { installBackend } from "../deploy/install-backend.mjs";
+import { installBackend, verifyBackendInstallation } from "../deploy/install-backend.mjs";
+import { COMPILED_PAIRS } from "../../server/backend/scripts/ensure-router-compiled.mjs";
 import { packBackendRepoArchive } from "../deploy/pack-git-repo.mjs";
 import { readSourceVersion } from "../../devtools/runtime-tooling/runtime_version.js";
 import { createHash } from "node:crypto";
@@ -77,18 +78,29 @@ try {
     sourceFingerprint: sourceVersion.sourceFingerprint, fingerprintParity: true, browserSourcesAbsent: true }; save();
   execute("full-install", process.execPath, [npm, "ci", "--include=dev", ...flags], full);
   installBackend(selected, { npm, run: (command, args) => execute("selected-install", command, [...args, ...flags], selected) });
-  for (const root of [full, selected]) {
-    for (const file of ["package.json", "package-lock.json"]) assert(fs.readFileSync(path.join(root, file)).equals(fs.readFileSync(path.join(repo, file))));
-    execute(root === full ? "full-router" : "selected-router", process.execPath, [npm, "run", "compile:router", "--workspace=@changmen/backend"], root);
-    const require = createRequire(path.join(root, "server/backend/package.json"));
-    const esbuild = require("esbuild"); assert.match(esbuild.transformSync("const value: number = 42", { loader: "ts" }).code, /value = 42/);
-    assert.match(fs.readFileSync(path.join(out, root === full ? "full-install.log" : "selected-install.log"), "utf8"), /esbuild@.*postinstall/);
+  for (const root of [full, selected]) for (const file of ["package.json", "package-lock.json"])
+    assert(fs.readFileSync(path.join(root, file)).equals(fs.readFileSync(path.join(repo, file))));
+  execute("full-router", process.execPath, [npm, "run", "compile:router", "--workspace=@changmen/backend"], full);
+  execute("selected-router-verify", process.execPath, ["server/backend/scripts/ensure-router-compiled.mjs", "--verify"], selected);
+  for (const [, js] of COMPILED_PAIRS) {
+    const file = `server/backend/core/esport-api/${js}`;
+    assert(fs.readFileSync(path.join(full, file)).equals(fs.readFileSync(path.join(selected, file))), `Precompiled route differs from full build: ${file}`);
   }
+  const installed = verifyBackendInstallation(selected);
+  report.developmentToolsAbsent = installed.developmentToolsAbsent;
+  report.precompiledRouterVerified = installed.precompiledRouterVerified;
+  report.routerBuildParity = true;
+  // The SDK still brings esbuild as a production dependency; retain native/lifecycle coverage.
+  for (const [root, name] of [[full, "full-install"], [selected, "selected-install"]]) {
+    const require = createRequire(path.join(root, "server/backend/package.json"));
+    assert.match(require("esbuild").transformSync("const value: number = 42", { loader: "ts" }).code, /value = 42/);
+    assert.match(fs.readFileSync(path.join(out, `${name}.log`), "utf8"), /esbuild@.*postinstall/);
+  }
+  report.nativeEsbuildExecuted = true;
   assertBackendInstalledLinks(profile, fs.readdirSync(path.join(selected, "node_modules/@changmen")));
   assertBackendBrowserPackagesAbsent(selected, profile);
   report.browserPackagesAbsent = true;
   report.installedWorkspaces = fs.readdirSync(path.join(selected, "node_modules/@changmen")).sort();
-  report.nativeEsbuildExecuted = true;
   const fullResolution = captureBackendResolution(full, profile.entries, env), selectedResolution = captureBackendResolution(selected, profile.entries, env);
   fs.writeFileSync(path.join(out, "full-resolution.json"), JSON.stringify(fullResolution, null, 2));
   fs.writeFileSync(path.join(out, "selected-resolution.json"), JSON.stringify(selectedResolution, null, 2));

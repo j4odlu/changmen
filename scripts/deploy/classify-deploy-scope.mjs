@@ -11,7 +11,7 @@ const ciOnlyFiles = new Set(["classify-deploy-scope.mjs", "classify-deploy-scope
   "check-controls.mjs", "release-checks.mjs", "release-summary.mjs", "read-deployed-versions.mjs", "check-database-compatibility.mjs", "release.test.sh"]
   .map(file => "scripts/deploy/" + file));
 const backendDeployFiles = new Set(["install-backend.mjs", "backend-install-profile.mjs", "verify-backend-processes.mjs",
-  "pack-git-repo.mjs", "deploy-hk-fast.mjs", "deploy-hk-remaining.mjs"].map(file => "scripts/deploy/" + file));
+  "pack-git-repo.mjs", "compile-backend-router.mjs", "deploy-hk-fast.mjs", "deploy-hk-remaining.mjs"].map(file => "scripts/deploy/" + file));
 
 export function isDatabaseMaintenancePath(p) {
   return /^(?:server\/backend\/db\/migrations\/|(?:rds|server\/db)\/(?:schema|assets|maintenance)\/|server\/backend\/scripts\/ops\/migrations\/)/.test(p)

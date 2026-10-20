@@ -7,7 +7,6 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { changePlan, deployedSelection, planHash } from "./change-plan.mjs";
 import { assertCommittedSource, validationInputs } from "../verification/verify-change.mjs";
-import { packBackendRepoArchive } from "./pack-git-repo.mjs";
 // Transport jobs use a source checkout without npm install; this module uses Node builtins only.
 import { readSourceVersion } from "../../devtools/runtime-tooling/runtime_version.js";
 import { supplementalReports, assertSupplemental } from "./acceptance-contract.mjs";
@@ -72,10 +71,11 @@ export function sealEvidence(root = process.cwd()) {
     assert.equal(expectedRuntime[scope].dirty, false, "Publication source must be clean");
     const archive = path.join(directory, `${scope}.tgz`);
     if (scope === "backend") {
-      packBackendRepoArchive(root, archive);
       const installation = JSON.parse(fs.readFileSync(path.join(directory, "backend-installation.json"), "utf8"));
-      assert.equal(sha256(fs.readFileSync(archive)), installation.archive.sha256, "Backend archive differs from Linux-tested artifact");
+      const testedArchive = fs.readFileSync(path.join(root, "output/backend-linux-runtime/backend.tgz"));
+      assert.equal(sha256(testedArchive), installation.archive.sha256, "Backend archive differs from Linux-tested artifact");
       assert.equal(expectedRuntime.backend.sourceFingerprint, installation.archive.sourceFingerprint, "Backend archive identity differs from Linux-tested artifact");
+      fs.writeFileSync(archive, testedArchive);
     }
     else {
       const dist = path.join(root, "client/web/dist");

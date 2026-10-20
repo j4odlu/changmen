@@ -15,7 +15,8 @@ test("candidate profile covers eight actual processes, six install roots and the
   for (const name of ["@changmen/polymarket-esports-collector", "@changmen/polymarket-football-collector", "@changmen/predictfun-collector",
     "@changmen/venue-node", "@changmen/runtime-tooling"]) assert(p.workspaces.includes(name));
   assert(!p.roots.includes("@changmen/sxbet-collector"));
-  assert(p.installArgs.includes("--include=dev")); assert(p.installArgs.includes("--include-workspace-root=false"));
+  assert(p.installArgs.includes("--omit=dev")); assert(!p.installArgs.includes("--include=dev"));
+  assert(p.installArgs.includes("--include-workspace-root=false"));
   assert(p.installArgs.includes("--ignore-scripts=false"));
   const links = p.workspaces.map(name => name.slice("@changmen/".length));
   assertBackendInstalledLinks(p, links);
@@ -37,7 +38,7 @@ for (const directory of ["", "server/backend", "server/ws_forward"]) test(`detec
     const require = createRequire(path.join(temporary, directory || "server/backend", "package.json"));
     assert.throws(() => require.resolve("@changmen/venue-browser"), { code: "ERR_PACKAGE_PATH_NOT_EXPORTED" });
     assert.equal(require.resolve("@changmen/venue-browser/entry"), path.join(target, "entry.js"));
-    assert.throws(() => assertBackendBrowserPackagesAbsent(temporary, profile), /Browser package @changmen\/venue-browser is installed/);
+    assert.throws(() => assertBackendBrowserPackagesAbsent(temporary, profile), /Forbidden package @changmen\/venue-browser is installed/);
   } finally {
     assert.equal(path.dirname(path.resolve(temporary)), path.resolve(os.tmpdir()));
     assert(path.basename(temporary).startsWith("changmen-browser-install-"));

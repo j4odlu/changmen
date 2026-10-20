@@ -5,8 +5,9 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { backendInstallProfile, assertBackendInstalledLinks, assertBackendBrowserPackagesAbsent } from "./backend-install-profile.mjs";
+import { backendInstallProfile, assertBackendInstalledLinks, assertBackendBrowserPackagesAbsent, backendDevelopmentTools } from "./backend-install-profile.mjs";
 import { readInstallWorkspaces } from "../verification/component-install-inputs.mjs";
+import { verifyPrecompiledRouter } from "../../server/backend/scripts/ensure-router-compiled.mjs";
 
 export function verifyBackendInstallation(root, profile = backendInstallProfile(root)) {
   const links = fs.readdirSync(path.join(root, "node_modules/@changmen"));
@@ -15,7 +16,10 @@ export function verifyBackendInstallation(root, profile = backendInstallProfile(
   for (const name of profile.workspaces) assert.equal(fs.realpathSync(path.join(root, "node_modules", name)),
     fs.realpathSync(path.join(root, packages.get(name).dir)), `Wrong installed workspace target: ${name}`);
   assertBackendBrowserPackagesAbsent(root, profile, { includeAncestors: false });
-  return { passed: true, workspaces: profile.workspaces, roots: profile.roots, browserPackagesAbsent: true };
+  assertBackendBrowserPackagesAbsent(root, profile, { includeAncestors: false, forbidden: backendDevelopmentTools });
+  verifyPrecompiledRouter(root);
+  return { passed: true, workspaces: profile.workspaces, roots: profile.roots, browserPackagesAbsent: true,
+    developmentToolsAbsent: true, precompiledRouterVerified: true };
 }
 
 export function installBackend(root, { run = spawnSync, npm = process.env.npm_execpath || [
@@ -24,6 +28,7 @@ export function installBackend(root, { run = spawnSync, npm = process.env.npm_ex
 ].find(file => fs.existsSync(file)) } = {}) {
   const profile = backendInstallProfile(root);
   assert(profile.productionEnabled, "Backend installation is not enabled");
+  verifyPrecompiledRouter(root);
   assert(npm && fs.existsSync(npm), "npm JavaScript CLI is unavailable");
   const hashes = () => ["package.json", "package-lock.json"].map(file => createHash("sha256").update(fs.readFileSync(path.join(root, file))).digest("hex"));
   const before = hashes();

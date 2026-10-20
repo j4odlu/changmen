@@ -12,6 +12,7 @@ import { readSourceVersion } from "../../devtools/runtime-tooling/runtime_versio
 import { installationProof } from "./fixtures/backend-installation.mjs";
 import { packBackendRepoArchive } from "./pack-git-repo.mjs";
 import { sha256 } from "./release-evidence.mjs";
+import { routerArtifactFixture } from "./fixtures/router-artifact.mjs";
 
 const env = { GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "1" };
 const clone = value => structuredClone(value);
@@ -25,6 +26,7 @@ function fixture(t, scope = "full") {
   const git = (...args) => execFileSync("git", args, { cwd: root, stdio: "pipe" });
   git("init", "-q");
   write(root, ".gitignore", "output/\nclient/web/dist*/\n");
+  routerArtifactFixture(root);
   write(root, "server/backend/server.js", "export const backend = true;");
   write(root, "client/web/src/App.vue", "<template>app</template>");
   write(root, "scripts/deploy/verify-runtime.mjs", fs.readFileSync(new URL("./verify-runtime.mjs", import.meta.url), "utf8"));
@@ -37,7 +39,8 @@ function fixture(t, scope = "full") {
   function run(_node, args) {
     calls.push(args);
     if (args.includes("scripts/testing/backend-linux-runtime.mjs")) {
-      const proof = installationProof(bundle.identity), archive = path.join(root, "output/test-backend.tgz");
+      const proof = installationProof(bundle.identity), archive = path.join(root, "output/backend-linux-runtime/backend.tgz");
+      fs.mkdirSync(path.dirname(archive), { recursive: true });
       proof.archive = { ...packBackendRepoArchive(root, archive), sha256: sha256(fs.readFileSync(archive)),
         sourceFingerprint: readSourceVersion(root, "backend").sourceFingerprint, fingerprintParity: true, browserSourcesAbsent: true };
       write(root, "output/backend-linux-runtime/verdict.json", proof);
@@ -81,10 +84,13 @@ test("all lane reports merge in planned order and seal the exact built artifact 
   const report = mergeReleaseReports(f.bundle, [...f.reports].reverse(), f.root, env);
   assert.deepEqual(report.results.map(row => row.check), f.bundle.plan.checks);
   fs.renameSync(path.join(f.root, "client/web/dist"), path.join(f.root, "client/web/dist.built"));
+  // The collector/sealer runs on a clean runner without npm install.
+  fs.unlinkSync(path.join(f.root, "node_modules"));
   collectRelease(f.root, env);
   assert.equal(fs.readFileSync(path.join(f.root, "client/web/dist/index.html"), "utf8"), "<html>verified build</html>");
   const evidence = sealEvidence(f.root);
   assert(evidence.archives.frontend); assert(evidence.archives.backend);
+  assert.equal(evidence.archives.backend, f.reports.find(row => row.lane === "backend").artifacts.backend);
   assert.equal(evidence.report.laneEvidence.length, 3);
   verifySupplementalEvidence(evidence, path.join(f.root, "output/release-validation"));
 });
@@ -131,7 +137,7 @@ test("failed and throwing commands replace any prior successful lane result", t 
 test("changed DB or frontend archives cannot leave an accepted verdict", t => {
   const f = fixture(t);
   fs.renameSync(path.join(f.root, "client/web/dist"), path.join(f.root, "client/web/dist.built"));
-  for (const file of ["database.json", "backend-installation.json", "frontend.tgz"]) {
+  for (const file of ["database.json", "backend-installation.json", "backend.tgz", "frontend.tgz"]) {
     const target = path.join(f.root, "output/release-lanes", file), original = fs.readFileSync(target);
     const tampered = file.endsWith("json") ? JSON.stringify({ ...JSON.parse(original), localOnly: false }) : "changed archive";
     fs.writeFileSync(target, tampered);

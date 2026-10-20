@@ -9,6 +9,7 @@ import { readInstallWorkspaces, declaredInstallClosure } from "../verification/c
 
 export const forbiddenBackendPackages = ["@changmen/web", "@changmen/chrome-extension", "@changmen/venue-adapter",
   "@changmen/client-core", "@changmen/pm-market-data-browser", "@changmen/venue-browser", "vue", "pinia"];
+export const backendDevelopmentTools = ["vitest", "vite", "vue-tsc", "turbo", "eslint"];
 const safeRelative = value => typeof value === "string" && value.length > 0 && !path.isAbsolute(value)
   && !value.includes("\\") && !value.includes(":") && !value.split("/").some(part => !part || part === "." || part === "..");
 
@@ -28,7 +29,7 @@ export function backendInstallProfile(root, { processes = backendProcesses, pack
     entries.push({ name, directory, script, workspace: owner.pkg.name }); roots.add(owner.pkg.name);
   }
   assert.equal(entries.length, 8, "All eight current production process entries are required");
-  const closures = [...roots].sort().map(name => declaredInstallClosure(root, packages, name, { build: true }));
+  const closures = [...roots].sort().map(name => declaredInstallClosure(root, packages, name));
   for (const closure of closures) {
     violations.push(...closure.violations);
     closure.workspaces.forEach(name => workspaces.add(name));
@@ -37,13 +38,20 @@ export function backendInstallProfile(root, { processes = backendProcesses, pack
       || edge.target && /^(?:client|chrome-extension)\//.test(edge.target))
       violations.push({ file: `${edge.from}/package.json`, spec: edge.name, pattern: `Browser installation through ${edge.via.join(" -> ")}` });
   }
+  // Keep declaration auditing for development edges even though production omits them.
+  for (const name of roots) {
+    const audit = declaredInstallClosure(root, packages, name, { build: true });
+    violations.push(...audit.violations, ...audit.edges.filter(edge => forbiddenBackendPackages.includes(edge.name)
+      || edge.target && /^(?:client|chrome-extension)\//.test(edge.target)));
+  }
   assert.deepEqual(violations, [], "Backend installation cannot contain unknown/local-target or browser dependencies");
   return { schemaVersion: 1, purpose: "backend-workspace-installation", productionEnabled: true,
     archiveSlimmingEnabled: true, entries, roots: [...roots].sort(), workspaces: [...workspaces].sort(),
     workspaceDirectories: [...directories].sort(), closures,
-    installArgs: ["ci", ...[...roots].sort().map(name => `--workspace=${name}`), "--include=dev", "--include-workspace-root=false", "--ignore-scripts=false"],
+    installArgs: ["ci", ...[...roots].sort().map(name => `--workspace=${name}`), "--omit=dev", "--include-workspace-root=false", "--ignore-scripts=false"],
     limitations: ["Original workspace manifests, Node loader resources and RDS assets remain required.",
-      "Development dependencies remain installed for the existing router compilation.",
+      "Precompiled router outputs must match the archived TypeScript sources before activation.",
+      "Polymarket SDK production dependencies still include TypeScript, tsx, ts-node and esbuild.",
       "Linux lifecycle and eight-process checks are required before backend publication."] };
 }
 
@@ -54,17 +62,18 @@ export function assertBackendInstalledLinks(profile, links) {
 
 // Package-root resolution can fail for an installed package with only subpath exports.
 // Check its directory in every selected workspace's Node lookup paths instead; never import it.
-export function assertBackendBrowserPackagesAbsent(root, profile, { includeAncestors = true } = {}) {
+export function assertBackendBrowserPackagesAbsent(root, profile, { includeAncestors = true,
+  forbidden = forbiddenBackendPackages } = {}) {
   for (const directory of profile.workspaceDirectories) {
     const require = createRequire(path.resolve(root, directory, "package.json"));
-    for (const name of forbiddenBackendPackages) {
+    for (const name of forbidden) {
       for (const lookup of require.resolve.paths(name) || []) {
         // A managed release can have a legacy full installation in an ancestor.
         // Verify the new installation without modifying a retained rollback tree.
         const relative = path.relative(path.resolve(root), path.resolve(lookup));
         if (!includeAncestors && (relative === ".." || relative.startsWith(".." + path.sep) || path.isAbsolute(relative))) continue;
         const target = path.join(lookup, name);
-        assert(!fs.existsSync(target), `Browser package ${name} is installed for ${directory}: ${target}`);
+        assert(!fs.existsSync(target), `Forbidden package ${name} is installed for ${directory}: ${target}`);
       }
     }
   }

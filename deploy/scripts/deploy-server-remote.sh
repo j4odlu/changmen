@@ -194,7 +194,7 @@ classify() {
 }
 
 if [ "${DEPLOY_RELEASE_MODE:-0}" = "1" ]; then
-  # release-backend.sh has already installed and compiled in an isolated tree.
+  # release-backend.sh has installed runtime dependencies and verified precompiled routes.
   # Select runtime targets; SQL/data maintenance is not part of activation.
   DO_PM2_WEB=1
   DO_PM2_PM_SPORTS=1

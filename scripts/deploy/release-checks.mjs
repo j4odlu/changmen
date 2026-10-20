@@ -75,6 +75,10 @@ export function runReleaseLane(lane, { root = process.cwd(), env = process.env, 
     if (report.passed && selected.checks.includes("backend-installation")) {
       const installation = read(path.join(root, "output/backend-linux-runtime/verdict.json"));
       assertSupplemental(installation, "backend-installation", { identity: bundle.identity });
+      const archive = fs.readFileSync(path.join(root, "output/backend-linux-runtime/backend.tgz"));
+      assert.equal(sha256(archive), installation.archive.sha256, "Backend archive differs from Linux-tested artifact");
+      fs.writeFileSync(path.join(directory, "backend.tgz"), archive);
+      report.artifacts.backend = installation.archive.sha256;
       write(path.join(directory, "backend-installation.json"), installation);
       report.artifacts.backendInstallation = sha256(fs.readFileSync(path.join(directory, "backend-installation.json")));
     }
@@ -136,7 +140,11 @@ export function collectRelease(root = process.cwd(), env = process.env) {
     const file = path.join(directory, "backend-installation.json"), installation = read(file);
     assert.equal(sha256(fs.readFileSync(file)), reports.find(item => item.lane === "backend").artifacts.backendInstallation, "Backend installation artifact changed");
     assertSupplemental(installation, "backend-installation", report);
+    const archive = fs.readFileSync(path.join(directory, "backend.tgz"));
+    assert.equal(sha256(archive), reports.find(item => item.lane === "backend").artifacts.backend, "Backend artifact changed");
+    assert.equal(sha256(archive), installation.archive.sha256, "Backend archive differs from Linux-tested artifact");
     write(path.join(root, "output/backend-linux-runtime/verdict.json"), installation);
+    fs.writeFileSync(path.join(root, "output/backend-linux-runtime/backend.tgz"), archive);
   }
   if (bundle.plan.deployment.components.includes("frontend")) {
     const archive = path.join(directory, "frontend.tgz");

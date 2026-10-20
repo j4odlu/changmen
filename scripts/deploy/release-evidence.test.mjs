@@ -12,10 +12,13 @@ import { planHash } from "./change-plan.mjs";
 import { checkDatabaseCompatibility } from "./check-database-compatibility.mjs";
 import { installationProof } from "./fixtures/backend-installation.mjs";
 import { packBackendRepoArchive } from "./pack-git-repo.mjs";
+import { routerArtifactFixture } from "./fixtures/router-artifact.mjs";
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: "pipe" }).trim();
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-evidence-"));
-  git(root, "init", "-q"); fs.writeFileSync(path.join(root, "runtime.js"), "original"); git(root, "add", ".");
+  git(root, "init", "-q");
+  fs.appendFileSync(path.join(root, ".git/info/exclude"), "\nnode_modules/\n"); routerArtifactFixture(root);
+  fs.writeFileSync(path.join(root, "runtime.js"), "original"); git(root, "add", ".");
   git(root, "-c", "user.name=Evidence", "-c", "user.email=evidence@example.invalid", "commit", "-qm", "fixture");
   return root;
 }
@@ -23,6 +26,7 @@ test("transport verification starts without installed workspace dependencies and
   const root = fixture();
   try {
     for (const file of [
+      "scripts/deploy/compile-backend-router.mjs", "server/backend/scripts/ensure-router-compiled.mjs",
       "scripts/deploy/release-evidence.mjs", "scripts/deploy/change-plan.mjs",
       "scripts/deploy/classify-deploy-scope.mjs", "scripts/deploy/pack-git-repo.mjs",
       "scripts/deploy/acceptance-contract.mjs", "scripts/verification/verify-change.mjs",
@@ -34,6 +38,7 @@ test("transport verification starts without installed workspace dependencies and
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.copyFileSync(new URL(`../../${file}`, import.meta.url), target);
     }
+    fs.unlinkSync(path.join(root, "node_modules"));
     assert.equal(fs.existsSync(path.join(root, "node_modules")), false);
     for (const scope of ["backend", "frontend"]) {
       const result = spawnSync(process.execPath, ["scripts/deploy/release-evidence.mjs", "verify", scope,
@@ -54,7 +59,8 @@ function proofs(root, acceptance) {
   fs.mkdirSync(path.join(root, "output/database-compatibility"), { recursive: true });
   fs.writeFileSync(path.join(root, "output/database-compatibility/verdict.json"), JSON.stringify(database));
   const installation = installationProof(acceptance.identity);
-  const archive = path.join(root, "output/proof-backend.tgz");
+  const archive = path.join(root, "output/backend-linux-runtime/backend.tgz");
+  fs.mkdirSync(path.dirname(archive), { recursive: true });
   installation.archive = { ...packBackendRepoArchive(root, archive), sha256: sha256(fs.readFileSync(archive)),
     sourceFingerprint: readSourceVersion(root, "backend").sourceFingerprint, fingerprintParity: true, browserSourcesAbsent: true };
   fs.mkdirSync(path.join(root, "output/backend-linux-runtime"), { recursive: true });

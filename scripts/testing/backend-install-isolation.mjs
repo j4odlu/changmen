@@ -9,6 +9,8 @@ import { backendInstallProfile, assertBackendInstalledLinks, assertBackendBrowse
 import { readInstallWorkspaces } from "../verification/component-install-inputs.mjs";
 import { validationIdentity } from "../verification/verify-change.mjs";
 import { captureBackendResolution, assertBackendResolutionParity } from "../verification/backend-install-resolution.mjs";
+import { compileBackendRouter } from "../deploy/compile-backend-router.mjs";
+import { verifyBackendInstallation } from "../deploy/install-backend.mjs";
 
 const repo = fileURLToPath(new URL("../../", import.meta.url)), out = path.join(repo, "output/backend-install-isolation");
 fs.mkdirSync(out, { recursive: true });
@@ -49,6 +51,7 @@ try {
   const options = ["--offline", "--ignore-scripts", "--no-audit", "--no-fund", ...(cache ? ["--cache", cache] : [])];
   const baseline = path.join(temporary, "full"), candidate = path.join(temporary, "selected");
   copy(baseline); copy(candidate);
+  compileBackendRouter(candidate, repo, new Date(0));
   command("full-install", baseline, [npm, "ci", "--include=dev", ...options]);
   command("selected-install", candidate, [npm, ...profile.installArgs, ...options]);
   for (const root of [baseline, candidate]) for (const file of ["package.json", "package-lock.json"])
@@ -57,8 +60,9 @@ try {
   assertBackendBrowserPackagesAbsent(candidate, profile);
   report.browserPackagesAbsent = true;
   report.installedWorkspaces = links.sort();
-  for (const root of [baseline, candidate]) command(root === baseline ? "full-router" : "selected-router", root,
-    [npm, "run", "compile:router", "--workspace=@changmen/backend"]);
+  command("full-router", baseline, [npm, "run", "compile:router", "--workspace=@changmen/backend"]);
+  command("selected-router-verify", candidate, ["server/backend/scripts/ensure-router-compiled.mjs", "--verify"]);
+  report.installation = verifyBackendInstallation(candidate, profile);
   const full = captureBackendResolution(baseline, profile.entries, env), selected = captureBackendResolution(candidate, profile.entries, env);
   fs.writeFileSync(path.join(out, "full-resolution.json"), JSON.stringify(full, null, 2));
   fs.writeFileSync(path.join(out, "selected-resolution.json"), JSON.stringify(selected, null, 2));

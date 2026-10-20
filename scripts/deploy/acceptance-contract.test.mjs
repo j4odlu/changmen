@@ -8,7 +8,9 @@ test("backend installation requires Linux lifecycle, native execution, all eight
   const report = installationProof(acceptance.identity);
   assertSupplemental(report, "backend-installation", acceptance);
   for (const mutate of [p => { p.identity.commit = "b".repeat(40); }, p => { p.platform = "win32"; },
-    p => { p.lifecycleScriptsEnabled = false; }, p => { p.nativeEsbuildExecuted = false; }, p => { p.browserPackagesAbsent = false; },
+    p => { p.lifecycleScriptsEnabled = false; }, p => { p.developmentToolsAbsent = false; },
+    p => { p.nativeEsbuildExecuted = false; },
+    p => { p.precompiledRouterVerified = false; }, p => { p.routerBuildParity = false; }, p => { p.browserPackagesAbsent = false; },
     p => { p.runtime.processes.pop(); }, p => { p.runtime.processes[1] = p.runtime.processes[0]; },
     p => { p.runtime.processes[0].ready = false; }, p => { p.runtime.processes[0].shutdown.code = 1; },
     p => { p.runtime.externalInterfaceCount = 1; }, p => { p.runtime.allChildrenExited = false; },

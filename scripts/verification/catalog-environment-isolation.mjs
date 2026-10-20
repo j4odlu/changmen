@@ -1,6 +1,6 @@
 // [changmen 扩展] Exact configuration extraction; historical reads are verification-only.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';

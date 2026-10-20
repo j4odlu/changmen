@@ -39,7 +39,7 @@ export function databaseAccessSites(file, source) {
   function importSite(node, spec, names, dynamic = false) {
     if (!spec) return;
     const resolved = spec.startsWith(".") ? path.posix.normalize(path.posix.join(path.posix.dirname(file), spec)) : spec;
-    if (/^(pg|pg-pool)(\/|$)/.test(spec) || resolved.startsWith("server/db/") || /^@changmen\/db\/(?:rds\/|pg(?:_pool)?\.js|impl_rds\.js|index\.js)/.test(spec)) record(node, "database-internal-import");
+    if (/^(pg|pg-pool)(\/|$)/.test(spec) || resolved.startsWith("rds/") || resolved.startsWith("server/db/") || /^@changmen\/db\/(?:rds\/|pg(?:_pool)?\.js|impl_rds\.js|index\.js)/.test(spec)) record(node, "database-internal-import");
     else if ((spec === "@changmen/db" || spec.startsWith("@changmen/db/")) && (dynamic && spec === "@changmen/db" || names.some(name => lowLevel.has(name) || name === "*"))) record(node, "database-pool-import");
   }
   function visit(node) {

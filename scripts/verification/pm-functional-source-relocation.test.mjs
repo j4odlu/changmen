@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory,adapterHistorySystem} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";

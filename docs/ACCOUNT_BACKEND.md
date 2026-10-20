@@ -32,7 +32,7 @@ players
 profiles.accounts jsonb ← 已弃写；部署时从 jsonb backfill 到 players 后运行时不再读写
 ```
 
-对外 `Client_GetData(ACCOUNT)` / `Client_SaveData(ACCOUNT)` 仍返回/接收完整 JSON 数组；后端在读写时与 `players` 行互转（`server/db/player_account_record.js`）。
+对外 `Client_GetData(ACCOUNT)` / `Client_SaveData(ACCOUNT)` 仍返回/接收完整 JSON 数组；后端在读写时与 `players` 行互转（`rds/player_account_record.js`）。
 
 ## 模型关系
 

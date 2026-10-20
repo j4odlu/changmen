@@ -9,19 +9,20 @@ const url = new URL(process.env.DATABASE_URL);
 assert.equal(url.hostname, "127.0.0.1", "Compatibility consumers require an isolated local database");
 assert.equal(url.username, "changmen_test");
 const load = file => import(pathToFileURL(path.join(root, file)).href);
-const { getPgPool } = await load("server/db/pg_pool.js");
+const dbRoot = root === process.env.CHANGMEN_REFERENCE_ROOT ? "server/db" : "rds";
+const { getPgPool } = await load(`${dbRoot}/pg_pool.js`);
 const pool = getPgPool();
 try {
   if (mode === "verify") {
-    const { verifyRdsSchema } = await load(root === process.env.CHANGMEN_REFERENCE_ROOT ? "server/backend/scripts/rds-schema-check.mjs" : "server/db/maintenance/rds-schema-check.mjs");
+    const { verifyRdsSchema } = await load(root === process.env.CHANGMEN_REFERENCE_ROOT ? "server/backend/scripts/rds-schema-check.mjs" : "rds/maintenance/rds-schema-check.mjs");
     const client = await pool.connect();
     try { console.log(JSON.stringify(await verifyRdsSchema(client, { log: () => {} }))); }
     finally { client.release(); }
   } else {
     assert(["read", "write", "create"].includes(mode));
-    const profiles = await load("server/db/rds/profile_store.js");
-    const users = await load("server/db/rds/admin_users_store.js");
-    const signals = await load("server/db/rds/value_signals_store.js");
+    const profiles = await load(`${dbRoot}/rds/profile_store.js`);
+    const users = await load(`${dbRoot}/rds/admin_users_store.js`);
+    const signals = await load(`${dbRoot}/rds/value_signals_store.js`);
     let selectedUser = userId;
     if (mode === "create") {
       const created = await users.createManagedUser(`fixture_${randomUUID()}`, "synthetic-not-used-for-login", 1);

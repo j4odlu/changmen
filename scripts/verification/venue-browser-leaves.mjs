@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Three pure modules move intact; old paths share their exact exports.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {readAdapterBrowserSource} from './adapter-browser-relocation.mjs';
 import {createHash} from 'node:crypto';
 import {restoreVenueBrowserContracts,restoreVenueBrowserContractImports,verifyVenueBrowserContracts} from './venue-browser-contracts.mjs';

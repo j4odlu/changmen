@@ -1,6 +1,6 @@
 // [changmen 扩展] 本机只读验收独立兼容包；无数据库、场馆、SSH 或部署调用。
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { deployedSource, immutableBaselines, read, gitSource, verifyPhase2Module, verifyProtectedSource } from './orders-phase2-release-boundary.mjs';

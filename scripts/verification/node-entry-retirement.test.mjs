@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {expect,it,vi} from 'vitest';
 import {NODE_ENTRY_RETIREMENT as record,inspectNodeEntryRetirement,previousRetiredNodeEntry,withRetiredNodeEntries} from './node-entry-retirement.mjs';

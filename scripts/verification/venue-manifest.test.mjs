@@ -1,6 +1,7 @@
 // [changmen 扩展] Generation and packaging must not alter runtime selection rules.
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import fs from 'node:fs';
+import {readPreviousWorkspaceFile} from './workspace-layout-history.mjs';
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -8,7 +9,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, expect, it } from "vitest";
 import { inspectVenueManifestCopies, VENUE_MANIFEST_SOURCE as source, VENUE_MANIFEST_COPIES as copies } from "../sync/venue-manifest.mjs";
 import { VENUE_MANIFEST_METADATA as record, restoreVenueManifestMetadata } from "./venue-manifest-metadata.mjs";
-import { syncPlatformAdapterBackendBundle } from "../../server/packages/venue-adapter-tools/sync-backend-bundle.mjs";
+import { syncPlatformAdapterBackendBundle } from "../../server/venues/sync-backend-bundle.mjs";
 
 const scratch = [];
 const sample = [{ id: "OB", dir: "ob", label: "fixture", collect: false, bet: false, collectionMode: "fixture_mode" }];
@@ -80,7 +81,7 @@ it("validates all destinations before writing and rejects an escaping directory 
 });
 it("restores only the exact reviewed metadata changes to the full previous source", () => {
   for (const row of record.changes) {
-    const current = withRetiredNodeEntries(file=>fs.readFileSync(file,"utf8"))(row.file);
+    const current = withRetiredNodeEntries(file=>readPreviousWorkspaceFile(file,"utf8"))(row.file);
     const baseline = execFileSync("git", ["show", `${record.baseline}:${row.file}`], { encoding: "utf8", windowsHide: true }).replaceAll("\r\n", "\n");
     expect(restoreVenueManifestMetadata(row.file, current)).toBe(baseline);
     expect(restoreVenueManifestMetadata(row.file, current + "\n")).not.toBe(baseline);
@@ -88,16 +89,15 @@ it("restores only the exact reviewed metadata changes to the full previous sourc
 });
 it("default packaging reads the authored asset even when the compatibility copy is stale or missing", () => {
   const root = fixture(); copyStorage(root);
-  const module = "server/packages/venue-adapter-tools/sync-backend-bundle.mjs";
+  const module = "server/venues/sync-backend-bundle.mjs";
   write(root, module, fs.readFileSync(module));
-  write(root, "server/packages/venue-adapter-tools/sync-backend-bundle.mjs", fs.readFileSync("server/packages/venue-adapter-tools/sync-backend-bundle.mjs"));
-  write(root, "server/packages/venue-adapter-tools/package.json", '{"type":"module"}');
+  write(root, "server/venues/sync-backend-bundle.mjs", fs.readFileSync("server/venues/sync-backend-bundle.mjs"));
+  write(root, "server/venues/package.json", '{"type":"module"}');
   write(root, "packages/venue-adapter/scripts/package.json", '{"type":"module"}');
-  write(root, "node_modules/@changmen/venue-node-loader/package.json", '{"type":"module","exports":"./adapter.mjs"}');
-  write(root, "node_modules/@changmen/venue-node-loader/adapter.mjs", 'export const fixture = true;');
-  write(root, "node_modules/@changmen/venue-node-registry/package.json", '{"type":"module","exports":{"./paths.js":"./paths.js","./feeds.js":"./feeds.js"}}');
-  write(root, "node_modules/@changmen/venue-node-registry/paths.js", 'export const pathsFixture = true;');
-  write(root, "node_modules/@changmen/venue-node-registry/feeds.js", 'export const feedsFixture = true;');
+  write(root, "node_modules/@changmen/venue-node/package.json", '{"type":"module","exports":{".":"./adapter.mjs","./registry/paths.js":"./paths.js","./registry/feeds.js":"./feeds.js"}}');
+  write(root, "node_modules/@changmen/venue-node/adapter.mjs", 'export const fixture = true;');
+  write(root, "node_modules/@changmen/venue-node/paths.js", 'export const pathsFixture = true;');
+  write(root, "node_modules/@changmen/venue-node/feeds.js", 'export const feedsFixture = true;');
   fs.symlinkSync(path.join(root, "packages/shared"), path.join(root, "node_modules/@changmen/shared"), "junction");
   write(root, copies[2], "[]");
   const run = () => child(root, `const {syncPlatformAdapterBackendBundle}=await import(${JSON.stringify(pathToFileURL(path.join(root, module)).href)});syncPlatformAdapterBackendBundle();`);

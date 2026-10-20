@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, expect, it } from "vitest";
 import { gitSource, manualBaselineAfterKnownCorrection, moduleTokens, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { checkOrdinaryOrderList } from "./fok-order-list-boundary.mjs";

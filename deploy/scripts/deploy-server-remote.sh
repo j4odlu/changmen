@@ -123,7 +123,7 @@ classify() {
   local p="${raw#changmen/}"
 
   case "$p" in
-    server/backend/db/migrations/*|server/db/schema/*|server/db/assets/*|server/db/maintenance/*|server/backend/scripts/ops/migrations/*|server/backend/scripts/apply-rds-schema.mjs|server/backend/scripts/apply-order-observation-schema.mjs|server/backend/scripts/ops/diagnostics/check-rds-schema.mjs|server/backend/scripts/check-rds-schema.mjs|server/backend/scripts/rds-schema-*|server/backend/scripts/rds-migrations.mjs|server/backend/scripts/rds-migrations.test.mjs)
+    server/backend/db/migrations/*|rds/schema/*|rds/assets/*|rds/maintenance/*|server/backend/scripts/ops/migrations/*|server/backend/scripts/apply-rds-schema.mjs|server/backend/scripts/apply-order-observation-schema.mjs|server/backend/scripts/ops/diagnostics/check-rds-schema.mjs|server/backend/scripts/check-rds-schema.mjs|server/backend/scripts/rds-schema-*|server/backend/scripts/rds-migrations.mjs|server/backend/scripts/rds-migrations.test.mjs)
       # RDS maintenance is never an application release operation.
       ;;
     package.json|package-lock.json)
@@ -136,7 +136,7 @@ classify() {
       DO_APP_BUILD=1
       DO_PM2_WEB=1
       ;;
-    server/db/*|server/platform-probes/*|devtools/platform-probes/*)
+    rds/*|server/platform-probes/*|devtools/platform-probes/*)
       DO_INSTALL_ROOT=1
       DO_PM2_WEB=1
       ;;

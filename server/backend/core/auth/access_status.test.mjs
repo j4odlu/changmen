@@ -1,10 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 const query = vi.hoisted(() => vi.fn());
-vi.mock("../../../db/rds/common.js", () => ({ getPgPool: () => ({ query }) }));
+vi.mock("../../../../rds/rds/common.js", () => ({ getPgPool: () => ({ query }) }));
 const previous = process.env.JWT_SECRET;
 process.env.JWT_SECRET = "access-status-test-secret-at-least-32";
-const { JWT_SECRET, signJwt } = await import("../../../db/rds/jwt.js");
-const { authGetUserStatus } = await import("../../../db/rds/auth_store.js");
+const { JWT_SECRET, signJwt } = await import("../../../../rds/rds/jwt.js");
+const { authGetUserStatus } = await import("../../../../rds/rds/auth_store.js");
 afterAll(() => { if (previous === undefined) delete process.env.JWT_SECRET; else process.env.JWT_SECRET = previous; });
 let sequence = 0;
 function token(ttl = 60, secret = JWT_SECRET, extra = {}) {

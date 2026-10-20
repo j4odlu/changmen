@@ -2,7 +2,7 @@
 
 - 任务类型：真实维护任务（调查变体，只读协议）
 - Resolver query：`modify pm-sports match writing`（输出存档 `resolver-outputs/TASK-01.json`）
-- 预定义 relevant set：collectors/polymarket-sports/**、server/db/rds/pm_sport_store.js、server/db/rds/client_matches_store.js、server/db/rds/matcher_store.js、core/db/store.js、matcher compose 路径、deploy/ecosystem.config.cjs、docs/DATA_STORAGE.md
+- 预定义 relevant set：collectors/polymarket-sports/**、rds/rds/pm_sport_store.js、rds/rds/client_matches_store.js、rds/rds/matcher_store.js、core/db/store.js、matcher compose 路径、deploy/ecosystem.config.cjs、docs/DATA_STORAGE.md
 
 ## Baseline
 - Files inspected：31（自报有序列表）

@@ -1,6 +1,6 @@
 // [changmen 扩展] 模拟候选提交状态，实际 Git 仅只读既有历史；测试不创建提交或修改索引。
 import { describe, it, expect } from 'vitest';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from 'node:child_process';
 import { createReadonlyGitScope, verifyGitScope, parseGitPaths, normalizedSha, scopePath } from './orders-phase2-git-scope.mjs';
 import { deployedSource } from './orders-phase2-release-boundary.mjs';

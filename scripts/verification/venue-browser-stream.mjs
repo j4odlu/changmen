@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Move the passive stream singleton intact; retain exact historical source checks.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {createHash} from 'node:crypto';
 import {restoreVenueBrowserQuotes,verifyVenueBrowserQuotes} from './venue-browser-quotes.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');

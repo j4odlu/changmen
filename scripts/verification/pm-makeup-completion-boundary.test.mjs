@@ -1,5 +1,5 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, expect, it } from "vitest";
 import { gitSource, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { pmMakeupCompletionIncrements } from "./pm-makeup-settlement-boundary.mjs";

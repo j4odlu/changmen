@@ -27,14 +27,10 @@
     "client/web/scripts/run-production-build.mjs",
     "client/devtools/venue-adapter",
     "client/packages",
-    "devtools/runtime-tooling"
+    "devtools/runtime-tooling",
+    "rds"
   ],
-  "compatibilityAssets": [
-    {
-      "file": "server/match/identity/teams/team_aliases.json",
-      "canonical": "packages/shared/match-identity/teams/team_aliases.json"
-    }
-  ],
+  "compatibilityAssets": [],
   "rules": [
     {
       "prefix": "client/packages/venue-browser",
@@ -71,7 +67,7 @@
     },
     {
       "files": [
-        "server/db/assets/schema-baseline.json"
+        "rds/assets/schema-baseline.json"
       ],
       "layer": "rds",
       "role": "asset"
@@ -117,7 +113,7 @@
       "role": "asset"
     },
     {
-      "prefix": "server/db",
+      "prefix": "rds",
       "layer": "rds"
     },
     {
@@ -167,68 +163,7 @@
       "layer": "backend"
     }
   ],
-  "compatibilityEntries": [
-    {
-      "file": "server/match/identity/index.js",
-      "canonical": "packages/shared/match-identity/index.js",
-      "spec": "@changmen/shared/match-identity"
-    },
-    {
-      "file": "server/match/identity/time_windows.js",
-      "canonical": "packages/shared/match-identity/time_windows.js",
-      "spec": "@changmen/shared/match-identity/time_windows.js"
-    },
-    {
-      "file": "server/match/identity/ids/client_match_ids.js",
-      "canonical": "packages/shared/match-identity/ids/client_match_ids.js",
-      "spec": "@changmen/shared/match-identity/ids/client_match_ids.js"
-    },
-    {
-      "file": "server/match/identity/teams/canonical_ob_name.js",
-      "canonical": "packages/shared/match-identity/teams/canonical_ob_name.js",
-      "spec": "@changmen/shared/match-identity/teams/canonical_ob_name.js"
-    },
-    {
-      "file": "server/match/identity/teams/match_utils.js",
-      "canonical": "packages/shared/match-identity/teams/match_utils.js",
-      "spec": "@changmen/shared/match-identity/teams/match_utils.js"
-    },
-    {
-      "file": "server/match/identity/teams/provider_priority.js",
-      "canonical": "packages/shared/match-identity/teams/provider_priority.js",
-      "spec": "@changmen/shared/match-identity/teams/provider_priority.js"
-    },
-    {
-      "file": "server/match/identity/teams/team_key.js",
-      "canonical": "packages/shared/match-identity/teams/team_key.js",
-      "spec": "@changmen/shared/match-identity/teams/team_key.js"
-    },
-    {
-      "file": "server/match/identity/profiles/esport.js",
-      "canonical": "packages/shared/match-identity/profiles/esport.js",
-      "spec": "@changmen/shared/match-identity/profiles/esport.js"
-    },
-    {
-      "file": "packages/shared/tooling/runtime_version.js",
-      "canonical": "devtools/runtime-tooling/runtime_version.js",
-      "spec": "@changmen/runtime-tooling/runtime_version.js"
-    },
-    {
-      "file": "packages/shared/tooling/runtime_version.d.ts",
-      "canonical": "devtools/runtime-tooling/runtime_version.d.ts",
-      "spec": "@changmen/runtime-tooling/runtime_version.js"
-    },
-    {
-      "file": "packages/shared/tooling/dev_web_port.js",
-      "canonical": "devtools/runtime-tooling/dev_web_port.js",
-      "spec": "@changmen/runtime-tooling/dev_web_port.js"
-    },
-    {
-      "file": "packages/shared/tooling/dev_web_port.d.ts",
-      "canonical": "devtools/runtime-tooling/dev_web_port.d.ts",
-      "spec": "@changmen/runtime-tooling/dev_web_port.js"
-    }
-  ],
+  "compatibilityEntries": [],
   "compatibilityCliEntries": [
     {
       "file": "packages/venue-adapter/scripts/list-web-venue-imports.mjs",

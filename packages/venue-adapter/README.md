@@ -6,9 +6,9 @@
 
 - Web 依赖 @changmen/venue-browser，使用其 adapter/ 子路径；不再依赖本包，也没有旧包的 Vite/TS 别名。
 - 本包没有运行时 exports；旧 loader 别名已退役，不能重新生成。
-- Node loader / registry 实现分别位于 server/packages/venue-node-loader 和 server/packages/venue-node-registry；消费者使用 @changmen/venue-node-loader、@changmen/venue-node-registry。
+- Node loader / registry 实现分别位于 server/packages/venue-node-loader 和 server/packages/venue-node-registry；消费者使用 @changmen/venue-node、@changmen/venue-node-registry。
 - registry/manifest.json 是生成副本，唯一维护源为 packages/shared/catalog/venue_manifest.json。修改后执行 npm run sync:venue-manifest。
-- 后端打包工具实现位于 [server/packages/venue-adapter-tools](../../server/packages/venue-adapter-tools/README.md)，旧 scripts/sync-backend-bundle.mjs 已删除。保留的 npm 命令直接调用服务端工具 workspace。默认资源根位于 Node registry workspace 的 runtime/；后端安装不复制本目录。
+- 后端打包工具实现位于 [server/packages/venue-adapter-tools](../../server/venues/README.md)，旧 scripts/sync-backend-bundle.mjs 已删除。保留的 npm 命令直接调用服务端工具 workspace。默认资源根位于 Node registry workspace 的 runtime/；后端安装不复制本目录。
 
 新增浏览器平台请按[新增平台清单](../../docs/ADD_PLATFORM_CHECKLIST.md)修改客户端包。可选 Node 探针位于 [server/platform-probes](../../server/platform-probes/README.md)。
 

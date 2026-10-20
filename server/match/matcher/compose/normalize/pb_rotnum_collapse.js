@@ -3,7 +3,7 @@
  * 有 RotNum：同 rot 归组（changmen 扩展上报）。
  * 无 RotNum（A8）：live 图 + 未开图残留仍并成一场，主盘选滚球账本。
  */
-import { normalizeTeam } from "@changmen/match-identity/teams/team_key.js";
+import { normalizeTeam } from "@changmen/shared/match-identity/teams/team_key.js";
 import { collectPlatformEntries } from "./platform_entry.js";
 import { betBucketKey } from "./native_bets.js";
 

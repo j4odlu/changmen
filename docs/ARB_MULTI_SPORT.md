@@ -263,7 +263,7 @@ POD 警报与场馆比赛、盘口、报价的匹配统一经 `client/web/src/ru
 ### N3 schema（已建 · 接线见下节）
 
 Migration：[`033_sport_matcher_tables.sql`](../server/backend/db/migrations/033_sport_matcher_tables.sql)（`apply-rds-schema` 已挂）。  
-Store：`server/db/rds/sport_{client_matches,venue,team}_store.js`；隔离 smoke：`npm run test:catalog-smoke` 含 `sport_matcher_tables.smoke`。
+Store：`rds/rds/sport_{client_matches,venue,team}_store.js`；隔离 smoke：`npm run test:catalog-smoke` 含 `sport_matcher_tables.smoke`。
 
 | 表 | 角色 |
 |----|------|

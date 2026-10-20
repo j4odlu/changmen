@@ -2,7 +2,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 // [changmen 扩展] Exact development/type dependency increment, with complete
 // original lock verification and negative cases for unrelated edits.
 import { restoreClientPackageMetadata } from "./client-package-relocation.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 import { restorePmCollectorTypeScriptMetadata as restore } from "./pm-collector-typescript-metadata.mjs";

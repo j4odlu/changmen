@@ -3,7 +3,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 // 原 FOK/VPS 基线及清单独立保留；不提供任意提交、文件或模式的豁免。
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { restorePmOrderBetLabelSource } from './pm-order-bet-label-boundary.mjs';
 import { restorePmPreflightSource } from './pm-preflight-boundary.mjs';
 import { restoreVenueBrowserQuotes } from './venue-browser-quotes.mjs';

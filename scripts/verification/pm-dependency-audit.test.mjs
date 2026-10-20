@@ -162,11 +162,11 @@ it("rejects private Vue runtimes, missing/required peers and a host range mismat
   for (const bad of [{}, { ...peer, dependencies: { vue: "^3.5.13" } }, { ...peer, peerDependenciesMeta: {} },
     { ...peer, peerDependencies: { vue: "^3.6.0" } }]) expect(checkPmVuePeer(bad, host).length).toBeGreaterThan(0);
 });
-for (const [name, file, addition, marker] of [
+for (const [name, file, addition, marker, diagnosticFile = file] of [
   ["computed PM input", "client/packages/venue-browser/adapter/polymarket/orderBook.ts", "void import(globalThis.unreviewedInput);", "[pm-dynamic-input]"],
   ["shared Node loader reaching PM browser", "server/backend/core/account/balance_provider.js", 'requirePlatform("Polymarket", "orderBook.ts");', "[pm-node-browser-loader]"],
   ["shared Node loader reaching the browser workspace", "server/backend/core/account/balance_provider.js", 'import { backendRequire } from "../shared/adapter_paths.js";backendRequire("@changmen/venue-browser/pm-book-source");', "[pm-node-browser-loader]"],
-  ["shared loader implementation changing without review", "server/packages/venue-node-loader/adapter_paths.mjs", "void 0;", "AssertionError [ERR_ASSERTION]:"],
+  ["shared loader implementation changing without review", "server/venues/loader/adapter_paths.mjs", "void 0;", "AssertionError [ERR_ASSERTION]:", "server/packages/venue-node-loader/adapter_paths.mjs"],
   ["namespace loader with unknown argument", "server/backend/core/esport-api/store.js", 'import * as boundLoader from "../shared/adapter_paths.js";boundLoader.backendRequire(globalThis.unknownModule);', "[pm-loader-unknown]"],
   ["namespace loader reaching PM browser", "server/backend/core/esport-api/store.js", 'import * as boundLoader from "../shared/adapter_paths.js";boundLoader.requirePlatform("Polymarket","orderBook.ts");', "[pm-node-browser-loader]"],
   ["opaque acquisition in a real preload file", "server/platform-probes/ray/ws.js", "void import(globalThis.unknownPreload);", "[pm-loader-unknown]"],
@@ -191,7 +191,7 @@ for (const [name, file, addition, marker] of [
   } else if (file.startsWith('server/platform-probes/')) {
     expect(result.stdout).toContain(`${marker} ${file}:`);
     expect(result.stderr).toContain(`${file}: complete relocated source required`);
-  } else expect(result.stderr).toContain(`${marker} ${file}:`);
+  } else expect(result.stderr).toContain(`${marker} ${diagnosticFile}:`);
   if (marker.startsWith("AssertionError")) expect(result.stderr).toContain("implementation changed");
 }, 40_000);
 it("recognizes a preload namespace's provenance while the complete source gate rejects unreviewed rewrites", () => {

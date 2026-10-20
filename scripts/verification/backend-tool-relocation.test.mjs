@@ -1,5 +1,5 @@
 // [changmen 扩展] Exercise both retained CLI/module identity and the actual relocated artifact.
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import os from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
@@ -9,7 +9,7 @@ import {BACKEND_TOOL_RELOCATION as record,verifyBackendToolRelocation,previousBa
 import {isVersionSource} from '../../devtools/runtime-tooling/runtime_version.js';
 import {classifyDeployScope} from '../deploy/classify-deploy-scope.mjs';
 import {restoreBackendProbeMetadata} from './backend-probe-relocation.mjs';
-import * as canonical from '../../server/packages/venue-adapter-tools/sync-backend-bundle.mjs';
+import * as canonical from "../../server/venues/sync-backend-bundle.mjs";
 const read=withRetiredNodeEntries(file=>fs.readFileSync(file,'utf8'));
 it('has exactly one server implementation and restores the complete previous tool and lock',()=>{
  expect(verifyBackendToolRelocation(read).implementations).toBe(1);

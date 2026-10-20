@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import ts from "typescript";
 import { readRelocatedPmFokSource } from "./pm-fok-source-relocation.mjs";
 import { readRelocatedPmFunctionalSource } from "./pm-functional-source-relocation.mjs";

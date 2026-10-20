@@ -286,7 +286,7 @@
       "changmenDeps": [
         "@changmen/api-contract",
         "@changmen/db",
-        "@changmen/match-identity",
+        "@changmen/shared/match-identity",
         "@changmen/matcher",
         "@changmen/platform-probes",
         "@changmen/polymarket-sports",
@@ -373,7 +373,7 @@
       ]
     },
     "@changmen/db": {
-      "dir": "server/db",
+      "dir": "rds",
       "version": "1.0.0",
       "private": true,
       "changmenDeps": [
@@ -383,11 +383,11 @@
       "derivation": "generated-from-package.json",
       "source": "package.json (workspaces)",
       "evidence": [
-        "server/db/package.json",
+        "rds/package.json",
         "package.json (workspaces)"
       ]
     },
-    "@changmen/match-identity": {
+    "@changmen/shared/match-identity": {
       "dir": "server/match/identity",
       "version": "1.0.0",
       "private": true,
@@ -408,7 +408,7 @@
       "private": null,
       "changmenDeps": [
         "@changmen/db",
-        "@changmen/match-identity",
+        "@changmen/shared/match-identity",
         "@changmen/shared",
         "@changmen/storage",
         "@changmen/team-resolver"
@@ -428,7 +428,7 @@
       "changmenDeps": [
         "@changmen/db",
         "@changmen/storage",
-        "@changmen/match-identity",
+        "@changmen/shared/match-identity",
         "@changmen/venue-adapter",
         "@changmen/shared"
       ],
@@ -527,7 +527,7 @@
       "label": "赛事归一化（内嵌 matchMerge 循环 + composeOnce 合场）",
       "implementedBy": [
         "@changmen/matcher",
-        "@changmen/match-identity"
+        "@changmen/shared/match-identity"
       ],
       "hostedBy": [
         "changmen-esport"
@@ -638,7 +638,7 @@
       ],
       "evidence": [
         "server/collectors/polymarket-esports/loop.js:66-69",
-        "server/db/rds/pm_sport_store.js:74"
+        "rds/rds/pm_sport_store.js:74"
       ],
       "status": "verified",
       "derivation": "audit-code-review-2026-09-19",
@@ -728,11 +728,11 @@
               "evidence": [
                 "server/backend/core/esport-api/router.ts:557",
                 "server/backend/core/esport-api/store.js:204,264",
-                "server/db/rds/platform_collector_store.js:683,713"
+                "rds/rds/platform_collector_store.js:683,713"
               ]
             }
           ],
-          "memoryFirst": "是：内存先写 + _writeRds fire-and-forget，队列满 drop（server/db/rds/common.js:71-103）",
+          "memoryFirst": "是：内存先写 + _writeRds fire-and-forget，队列满 drop（rds/rds/common.js:71-103）",
           "guard": "浏览器写路径对 VPS 馆被 isVpsOwnedPlatformCollect 拦截（warn+return，store.js:208）",
           "note": "与 collector-write 按 platform 前缀分区共存（刻意多写者）"
         },
@@ -748,7 +748,7 @@
               "status": "verified",
               "evidence": [
                 "server/collectors/polymarket-esports/loop.js:66-69",
-                "server/db/rds/platform_collector_store.js:713"
+                "rds/rds/platform_collector_store.js:713"
               ]
             },
             {
@@ -757,7 +757,7 @@
               "status": "verified-runtime-paused",
               "evidence": [
                 "server/collectors/predictfun-collector/loop.js:118,127,129",
-                "server/db/rds/platform_collector_store.js:713"
+                "rds/rds/platform_collector_store.js:713"
               ]
             },
             {
@@ -766,7 +766,7 @@
               "status": "verified-runtime-paused",
               "evidence": [
                 "server/collectors/sxbet-collector/loop.js:74,84,85",
-                "server/db/rds/platform_collector_store.js:713"
+                "rds/rds/platform_collector_store.js:713"
               ]
             }
           ],
@@ -783,7 +783,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/platform_collector_store.js:637",
+                "rds/rds/platform_collector_store.js:637",
                 "server/match/matcher/compose/compose_once.js:272-273"
               ]
             }
@@ -800,7 +800,7 @@
               "runtime": "changmen-esport / offline-scripts（经 @changmen/db 导出）",
               "status": "verified",
               "evidence": [
-                "server/db/rds/platform_collector_store.js:611"
+                "rds/rds/platform_collector_store.js:611"
               ],
               "note": "全仓无 in-repo 调用方（refactor_audit.mjs 符号表除外）；caller surface UNKNOWN"
             }
@@ -817,7 +817,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/matcher_store.js:537",
+                "rds/rds/matcher_store.js:537",
                 "server/match/matcher/ops/merge_client_matches.js:85"
               ]
             },
@@ -826,7 +826,7 @@
               "runtime": "changmen-esport / offline-scripts",
               "status": "verified",
               "evidence": [
-                "server/db/rds/matcher_store.js:543",
+                "rds/rds/matcher_store.js:543",
                 "server/backend/core/esport-api/store.js:291"
               ],
               "note": "无 in-repo 调用方（仅注释引用）；导出 API，caller surface UNKNOWN"
@@ -844,7 +844,7 @@
               "runtime": "changmen-predictfun-collector",
               "status": "verified-runtime-paused",
               "evidence": [
-                "server/db/rds/platform_collector_store.js:810",
+                "rds/rds/platform_collector_store.js:810",
                 "server/collectors/predictfun-collector/loop.js:86,134"
               ],
               "note": "Phase 4 completeness regression 发现的遗漏写者（TE-2 同类），已补入"
@@ -878,7 +878,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/platform_collector_store.js:740,115-120"
+                "rds/rds/platform_collector_store.js:740,115-120"
               ]
             }
           ]
@@ -908,7 +908,7 @@
               "evidence": [
                 "server/backend/core/esport-api/router.ts:567",
                 "server/backend/core/esport-api/store.js:313,337",
-                "server/db/rds/platform_collector_store.js:1050-1088"
+                "rds/rds/platform_collector_store.js:1050-1088"
               ]
             }
           ],
@@ -927,7 +927,7 @@
               "status": "verified",
               "evidence": [
                 "server/collectors/polymarket-esports/loop.js:66-69",
-                "server/db/rds/platform_collector_store.js:1062"
+                "rds/rds/platform_collector_store.js:1062"
               ]
             },
             {
@@ -936,7 +936,7 @@
               "status": "verified-runtime-paused",
               "evidence": [
                 "server/collectors/predictfun-collector/loop.js:118,127,129",
-                "server/db/rds/platform_collector_store.js:1062"
+                "rds/rds/platform_collector_store.js:1062"
               ]
             },
             {
@@ -945,7 +945,7 @@
               "status": "verified-runtime-paused",
               "evidence": [
                 "server/collectors/sxbet-collector/loop.js:74,84,85",
-                "server/db/rds/platform_collector_store.js:1062,1091"
+                "rds/rds/platform_collector_store.js:1062,1091"
               ]
             }
           ],
@@ -992,7 +992,7 @@
               "evidence": [
                 "server/backend/core/esport-api/router.ts:577",
                 "server/backend/core/esport-api/store.js:340,351-372",
-                "server/db/rds/platform_collector_store.js:1108,1119"
+                "rds/rds/platform_collector_store.js:1108,1119"
               ]
             }
           ],
@@ -1044,7 +1044,7 @@
                 "server/match/matcher/ops/match_merge_once.js:116",
                 "server/match/matcher/compose/compose_once.js:144",
                 "server/match/matcher/compose/io/write.js:16",
-                "server/db/rds/client_matches_store.js:270,280"
+                "rds/rds/client_matches_store.js:270,280"
               ],
               "mutualExclusion": "进程内 _matchMergeInFlight Promise（match_merge_once.js:115-128）+ write_guard pid 心跳（write_guard.js:41-50，非 DB 锁，不约束本表其他 operation 写者）"
             }
@@ -1063,7 +1063,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/matcher_store.js:48,116",
+                "rds/rds/matcher_store.js:48,116",
                 "server/match/identity/ids/client_match_ids.js:127"
               ]
             },
@@ -1089,7 +1089,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/platform_collector_store.js:908,935",
+                "rds/rds/platform_collector_store.js:908,935",
                 "server/match/matcher/loop.js:27"
               ]
             },
@@ -1132,7 +1132,7 @@
               "status": "verified",
               "evidence": [
                 "server/collectors/polymarket-sports/index.js:37",
-                "server/db/rds/pm_sport_store.js:74"
+                "rds/rds/pm_sport_store.js:74"
               ]
             }
           ],
@@ -1154,7 +1154,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/matcher_store.js:192",
+                "rds/rds/matcher_store.js:192",
                 "server/match/matcher/link/index.js:521,751",
                 "server/match/matcher/ui/api_routes.js"
               ]
@@ -1164,7 +1164,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/matcher_store.js:317",
+                "rds/rds/matcher_store.js:317",
                 "server/match/matcher/ui/api_routes.js:210"
               ]
             },
@@ -1173,7 +1173,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/matcher_store.js:462",
+                "rds/rds/matcher_store.js:462",
                 "server/match/matcher/ops/delete_client_match.js"
               ]
             },
@@ -1182,7 +1182,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/matcher_store.js:483",
+                "rds/rds/matcher_store.js:483",
                 "server/match/matcher/ops/restore_client_match.js:30"
               ]
             },
@@ -1191,7 +1191,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/matcher_store.js:557",
+                "rds/rds/matcher_store.js:557",
                 "server/match/matcher/ops/merge_client_matches.js:86"
               ]
             }
@@ -1217,7 +1217,7 @@
               "runtime": "changmen-esport",
               "status": "dead-code",
               "evidence": [
-                "server/db/rds/matcher_store.js:225"
+                "rds/rds/matcher_store.js:225"
               ]
             },
             {
@@ -1225,7 +1225,7 @@
               "runtime": "changmen-esport",
               "status": "dead-code",
               "evidence": [
-                "server/db/rds/matcher_store.js:497"
+                "rds/rds/matcher_store.js:497"
               ]
             }
           ]
@@ -1249,7 +1249,7 @@
               "runtime": "changmen-esport (scheduled/manual)",
               "status": "verified",
               "evidence": [
-                "server/db/archive_stale.js:41-51,89-101,117"
+                "rds/archive_stale.js:41-51,89-101,117"
               ]
             }
           ],
@@ -1283,7 +1283,7 @@
               "status": "verified",
               "evidence": [
                 "server/backend/core/account/order_store.js:161",
-                "server/db/rds/orders_store.js:224"
+                "rds/rds/orders_store.js:224"
               ]
             },
             {
@@ -1307,7 +1307,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/orders_store.js:1020,1045",
+                "rds/rds/orders_store.js:1020,1045",
                 "server/backend/core/admin_tools/admin_orders.js:247"
               ]
             },
@@ -1349,7 +1349,7 @@
               "status": "verified",
               "evidence": [
                 "server/backend/core/football/football_order_service.js:41",
-                "server/db/rds/football_orders_store.js:81"
+                "rds/rds/football_orders_store.js:81"
               ]
             },
             {
@@ -1357,7 +1357,7 @@
               "runtime": "changmen-esport",
               "status": "verified",
               "evidence": [
-                "server/db/rds/football_orders_store.js:166"
+                "rds/rds/football_orders_store.js:166"
               ]
             }
           ],
@@ -1577,7 +1577,7 @@
               "status": "verified",
               "evidence": [
                 "server/match/matcher/ops/sport_merge.js:534",
-                "server/db/rds/sport_client_matches_store.js:49,115,144"
+                "rds/rds/sport_client_matches_store.js:49,115,144"
               ]
             }
           ],
@@ -2127,8 +2127,8 @@
           "layer": "code",
           "says": "players 表为唯一真相；profiles.accounts jsonb 已弃写（028 backfill 后运行时不再读写）",
           "evidence": [
-            "server/db/player_account_record.js",
-            "server/db/venue_account_key.js",
+            "rds/player_account_record.js",
+            "rds/venue_account_key.js",
             "docs/ACCOUNT_BACKEND.md:15-26"
           ]
         },
@@ -2157,13 +2157,13 @@
           "layer": "code",
           "says": "7 类 operation 写者（Phase 4 重扫）：compose 主写/compose stub insert/prune ended/pm_sport 列/UI 人工/死代码/离线 ops；详见 index.json resources.client_matches.operations",
           "evidence": [
-            "server/db/rds/client_matches_store.js:270,280",
-            "server/db/rds/matcher_store.js:48,116,192,317,462,483,557",
-            "server/db/rds/platform_collector_store.js:908,935",
-            "server/db/rds/pm_sport_store.js:74",
+            "rds/rds/client_matches_store.js:270,280",
+            "rds/rds/matcher_store.js:48,116,192,317,462,483,557",
+            "rds/rds/platform_collector_store.js:908,935",
+            "rds/rds/pm_sport_store.js:74",
             "server/backend/core/db/store.js:358",
             "server/backend/scripts/ops/incidents/wipe-pf-esport-matches.mjs:163-171",
-            "server/db/archive_stale.js:41-51"
+            "rds/archive_stale.js:41-51"
           ]
         },
         {
@@ -2190,7 +2190,7 @@
           "layer": "code",
           "says": "backend router 未接入 sport_client_matches 读路径；GetBaseball 等 = M+J 不读写 RDS 赛表",
           "evidence": [
-            "server/db/rds/sport_client_matches_store.js",
+            "rds/rds/sport_client_matches_store.js",
             "grep: router 无接入"
           ]
         },

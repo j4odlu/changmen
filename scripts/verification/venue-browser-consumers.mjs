@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Direct browser consumers and one shared Worker composition; preserve historical proofs.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {createHash} from 'node:crypto';
 import {restoreVenueBrowserStream,verifyVenueBrowserStream} from './venue-browser-stream.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');

@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { listDuplicateOrderIds, listSharedVenueAccounts } from "./admin_maintenance.js";
 
 const mock = vi.hoisted(() => ({ query: vi.fn(async () => ({ rows: [] })) }));
-vi.mock("../../../db/pg_pool.js", () => ({ ensurePgPoolReady: async () => undefined, getPgPool: () => ({ query: mock.query }) }));
+vi.mock("../../../../rds/pg_pool.js", () => ({ ensurePgPoolReady: async () => undefined, getPgPool: () => ({ query: mock.query }) }));
 afterEach(() => vi.unstubAllEnvs());
 it.each([["shared venue finance count", listSharedVenueAccounts], ["duplicate finance orders", listDuplicateOrderIds]])("admin %s uses native orders independently of retired flags", async (_, read) => {
   vi.stubEnv("ORDERS_EXECUTION_COMPAT", "0");

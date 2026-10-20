@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 完整检查末尾再核验两端版本、进程、公开入口与本地检查输入没有漂移。
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import assert from "node:assert/strict";
 import { sshRead, layoutProgram, readLayout, assertStable, readPublicAsset, checkInputHashes, localHashes, PUBLIC_ASSET_WORKERS } from "./release-provenance.mjs";
 const snapshot = JSON.parse(readAdapterHistory("output/vps-fok-baseline.json", "utf8"));

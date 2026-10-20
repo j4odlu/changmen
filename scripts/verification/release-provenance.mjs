@@ -1,6 +1,6 @@
 // [changmen 扩展] 双端独立来源验证；实际版本与不可变 FOK 基线是两份证据。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";

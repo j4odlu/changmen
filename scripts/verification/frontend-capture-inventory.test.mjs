@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import os from 'node:os';
 import vm from 'node:vm';

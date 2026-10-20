@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, it } from "vitest";
 import { ADAPTER_BROWSER_RELOCATION, readAdapterBrowserSource, restoreAdapterBrowserSource,
   inspectAdapterBrowserRelocation, verifyAdapterBrowserRelocation } from "./adapter-browser-relocation.mjs";

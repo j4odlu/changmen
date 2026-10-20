@@ -1,6 +1,6 @@
 // [changmen 扩展] Preserve complete historical proofs around catalog tooling changes.
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { restoreVenueBrowserMetadata } from "./venue-browser-relocation.mjs";
 import { restoreBackendToolMetadata } from "./backend-tool-relocation.mjs";

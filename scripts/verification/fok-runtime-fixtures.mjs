@@ -2,7 +2,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 // [changmen 扩展] 单独运行实际旧/新代码的离线差分，严格发布检查继续使用原入口。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import vm from "node:vm";
 import ts from "typescript";
 

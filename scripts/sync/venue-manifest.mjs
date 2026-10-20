@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 export const VENUE_MANIFEST_SOURCE = "packages/shared/catalog/venue_manifest.json";
 export const VENUE_MANIFEST_COPIES = Object.freeze([
   "packages/venue-adapter/registry/manifest.json",
-  "server/packages/venue-node-registry/manifest.json",
-  "server/packages/venue-node-registry/runtime/registry/manifest.json",
+  "server/venues/registry/manifest.json",
+  "server/venues/registry/runtime/registry/manifest.json",
 ]);
 
 export function inspectVenueManifestCopies(root, { write = false } = {}) {

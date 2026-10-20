@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { setTeamPlugin } from "@changmen/match-identity/teams/team_key.js";
+import { setTeamPlugin } from "@changmen/shared/match-identity/teams/team_key.js";
 import { clusterByGbThenName } from "../compose/cluster/merge_clusters.js";
 import {
   GB_K27,

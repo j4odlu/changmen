@@ -2,7 +2,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 // [changmen 扩展] 仅登记原单核验收尾的并发修复；所有既有 FOK 基线及增量保持固定。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 
 const registered = readAdapterHistory(new URL("./pm-makeup-settlement-increments.json", import.meta.url), "utf8").replaceAll("\r\n", "\n");
 assert.equal(createHash("sha256").update(registered).digest("hex"), "968a6d4b9fa4e6136081d2a6b3218263e2947b62d9c3af7ba777feabe73c9b86", "PM makeup settlement corrections must remain fixed");

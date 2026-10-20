@@ -1,0 +1,41 @@
+# 源码目录与 workspace
+
+当前保持单仓，前端、后端和 RDS 数据层在根目录上区分归属。目录是职责边界；只有需要独立依赖、构建、测试或运行的模块才声明 npm workspace。
+
+| 位置 | 职责 | workspace 数量 |
+| --- | --- | ---: |
+| `client/` 与 `chrome-extension/` | 网页、扩展、浏览器平台与客户端内部库 | 6 |
+| `server/` | HTTP 后端、合场、平台设施和采集服务 | 14 |
+| `rds/` | `@changmen/db`：数据访问、SQL、结构基线和维护工具 | 1 |
+| `packages/` | `@changmen/shared` 与 `@changmen/api-contract` | 2 |
+| `devtools/` | `@changmen/runtime-tooling`；其它工具按普通目录组织 | 1 |
+| **合计** | | **24** |
+
+## 平台设施
+
+`server/venues/` 是一个 `@changmen/venue-node` workspace：
+
+- `loader/`：平台模块加载和宿主能力。
+- `registry/`：平台清单、路径和默认 `runtime/` 资源。
+- `sync-backend-bundle.mjs`：生成已有后端瘦包布局的工具。
+
+Node loader、registry 和打包工具不再各自占一个 workspace。调用方使用包公开入口；打包产物仍保持原 `loader/`、`registry/` 等结构。
+
+## RDS 数据层
+
+物理位置从 `server/db/` 改为根目录 `rds/`，包名仍为 `@changmen/db`。调用方无需知道数据层的物理位置；禁止客户端引用数据层。
+
+SQL、迁移校验和、事务以及业务行为不随目录调整改变。维护工具仍独立于应用发布执行；应用发布只核验所需数据库结构。
+
+## 已退役的 workspace
+
+- `@changmen/venue-adapter`：运行实现已归前端或服务端，验证命令由根脚本调用实际工具。
+- `@changmen/runtime-tooling-compat`：消费者直接使用 `@changmen/runtime-tooling`。
+- `@changmen/match-identity`：消费者使用 `@changmen/shared/match-identity`，测试随纯实现归入共享包。
+- `@changmen/venue-node-loader`、`@changmen/venue-node-registry`、`@changmen/venue-adapter-tools`：合并为 `@changmen/venue-node`。
+
+旧目录中的历史清单、冻结记录和文档不代表活动 workspace。原始源码保护继续核验；只读历史视图仅服务旧迁移证明，不参与 Node 运行时解析。
+
+## 验证
+
+`npm run check:boundaries` 同时检查当前目录、24 个 workspace、依赖方向、完整搬迁证明和原有源码保护。后端及 RDS 的安装实验、API 契约、前端类型检查和发布验收仍分别执行。

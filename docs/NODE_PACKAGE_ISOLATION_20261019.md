@@ -6,7 +6,7 @@
 
 | 公共包 | 唯一实现目录 | 原目录用途 |
 | --- | --- | --- |
-| `@changmen/venue-node-loader` | `server/packages/venue-node-loader` | `packages/venue-adapter/loader` 保留转导出与旧包配置 |
+| `@changmen/venue-node` | `server/packages/venue-node-loader` | `packages/venue-adapter/loader` 保留转导出与旧包配置 |
 | `@changmen/venue-node-registry` | `server/packages/venue-node-registry` | `packages/venue-adapter/registry` 保留转导出，以及浏览器注册代码和共享 catalog |
 
 迁移三个运行文件：`adapter_paths.mjs`、`paths.js`、`feeds.js`。原 Node 目录退出根 workspace，新目录接管相同包名与 exports；backend 和 resolver 的本地依赖、锁文件链接同步更新。925 个外部依赖条目与起点完全一致。

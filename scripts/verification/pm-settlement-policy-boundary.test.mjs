@@ -1,5 +1,5 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { readRelocatedPmFunctionalSource } from "./pm-functional-source-relocation.mjs";

@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { historicalMinimal } from "../../verification/historical-order-storage.mjs";
 const { minimalGtcSnapshot } = historicalMinimal;
-import { resolveGtcFinancialOrder } from "../../../server/db/rds/orderModes/gtc/pm_gtc_financial.js";
+import { resolveGtcFinancialOrder } from "../../../rds/rds/orderModes/gtc/pm_gtc_financial.js";
 
 export const MAX_BATCH = 25;
 const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;

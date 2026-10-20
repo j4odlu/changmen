@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { expect, it } from "vitest";
 import { historicalPackages, verifyHistoricalPackage } from "./historical-release-packages.mjs";
 import { createReadonlyGitScope } from "./orders-phase2-git-scope.mjs";

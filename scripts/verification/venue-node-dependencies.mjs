@@ -13,23 +13,28 @@ const resolverConsumers = {
   "server/match/resolver/scrapers/ray_scraper.js": "dynamic-import",
 };
 const nodeEntries = {
-  "server/packages/venue-node-loader": {
-    name: "@changmen/venue-node-loader",
-    exports: { ".": "./adapter_paths.mjs", "./adapter_paths.js": "./adapter_paths.mjs", "./adapter_paths.mjs": "./adapter_paths.mjs" },
-    files: ["adapter_paths.mjs"],
-    dependencies: {
-      "@changmen/platform-probes": "file:../../platform-probes",
-      "@changmen/shared": "file:../../../packages/shared",
-      "@changmen/storage": "file:../../storage",
-      "@changmen/venue-node-registry": "file:../venue-node-registry",
+  "server/venues": {
+    "name": "@changmen/venue-node",
+    "exports": {
+      ".": "./loader/adapter_paths.mjs",
+      "./adapter_paths.js": "./loader/adapter_paths.mjs",
+      "./adapter_paths.mjs": "./loader/adapter_paths.mjs",
+      "./registry/paths.js": "./registry/paths.js",
+      "./registry/feeds.js": "./registry/feeds.js",
+      "./registry/manifest.json": "./registry/manifest.json",
+      "./sync-backend-bundle.mjs": "./sync-backend-bundle.mjs"
     },
-  },
-  "server/packages/venue-node-registry": {
-    name: "@changmen/venue-node-registry",
-    exports: { "./paths.js": "./paths.js", "./feeds.js": "./feeds.js", "./manifest.json": "./manifest.json" },
-    files: ["paths.js", "feeds.js", "manifest.json", "runtime"],
-    dependencies: { "@changmen/storage": "file:../../storage" },
-  },
+    "files": [
+      "loader",
+      "registry",
+      "sync-backend-bundle.mjs"
+    ],
+    "dependencies": {
+      "@changmen/platform-probes": "file:../platform-probes",
+      "@changmen/shared": "file:../../packages/shared",
+      "@changmen/storage": "file:../storage"
+    }
+  }
 };
 
 export function inspectVenueNodeDependencies(root) {
@@ -55,15 +60,15 @@ export function inspectVenueNodeDependencies(root) {
       || pkg.type !== "module") fail(file, expected.name, "Node exports/files must contain only the reviewed original implementation and manifest");
     if (JSON.stringify(pkg.dependencies) !== JSON.stringify(expected.dependencies))
       fail(file, expected.name, "Node loader and registry must declare their reviewed runtime resources directly");
-    if (expected.name === "@changmen/venue-node-registry" && pkg.devDependencies && Object.keys(pkg.devDependencies).length)
+    if (expected.name === "@changmen/venue-node" && pkg.devDependencies && Object.keys(pkg.devDependencies).length)
       fail(file, expected.name, "Adjacent browser TypeScript hosts belong to the parent browser adapter, not the Node registry development install");
   }
   const backend = packages.get("@changmen/backend");
-  if (backend?.pkg.dependencies?.["@changmen/venue-node-loader"] !== "file:../packages/venue-node-loader")
-    fail("server/backend/package.json", "@changmen/venue-node-loader", "The backend facade requires its own production Node loader declaration");
-  if (backend?.pkg.devDependencies?.["@changmen/venue-adapter-tools"] !== "file:../packages/venue-adapter-tools")
-    fail("server/backend/package.json", "@changmen/venue-adapter-tools", "Backend bundle validation must declare its existing Node tool workspace");
-  if (backend?.pkg.scripts?.["sync:platform-adapter"] !== "npm run sync:backend-bundle --workspace=@changmen/venue-adapter-tools && npm run sync:backend-bundle --workspace=@changmen/platform-probes")
+  if (backend?.pkg.dependencies?.["@changmen/venue-node"] !== "file:../venues")
+    fail("server/backend/package.json", "@changmen/venue-node", "The backend facade requires its own production Node loader declaration");
+  if (backend?.pkg.dependencies?.["@changmen/venue-node"] !== "file:../venues")
+    fail("server/backend/package.json", "@changmen/venue-node", "Backend bundle validation must declare its existing Node tool workspace");
+  if (backend?.pkg.scripts?.["sync:platform-adapter"] !== "npm run sync:backend-bundle --workspace=@changmen/venue-node && npm run sync:backend-bundle --workspace=@changmen/platform-probes")
     fail("server/backend/package.json", "sync:platform-adapter", "Backend manual sync must keep the original adapter-then-probes sequence through the Node tool owner");
   for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"])
     for (const name of forbidden) if (backend?.pkg[group]?.[name])
@@ -71,9 +76,9 @@ export function inspectVenueNodeDependencies(root) {
   const bundleConsumerFile = "server/backend/scripts/test-packaged-adapter-layout.js";
   const bundleSites = fs.existsSync(path.join(root, bundleConsumerFile))
     ? componentImportSites(bundleConsumerFile, fs.readFileSync(path.join(root, bundleConsumerFile), "utf8")) : [];
-  const bundleConsumers = bundleSites.filter(site => site.spec === "@changmen/venue-adapter-tools/sync-backend-bundle.mjs");
+  const bundleConsumers = bundleSites.filter(site => site.spec === "@changmen/venue-node/sync-backend-bundle.mjs");
   if (bundleConsumers.length !== 1 || bundleConsumers[0].kind !== "static")
-    fail(bundleConsumerFile, "@changmen/venue-adapter-tools", "Packaged layout validation must statically import the original Node tool export");
+    fail(bundleConsumerFile, "@changmen/venue-node", "Packaged layout validation must statically import the original Node tool export");
   for (const site of bundleSites) {
     if (!site.spec) continue;
     const relative = site.spec.startsWith(".") ? path.relative(root, path.resolve(root, path.dirname(bundleConsumerFile), site.spec)).replaceAll("\\", "/") : "";
@@ -81,18 +86,18 @@ export function inspectVenueNodeDependencies(root) {
       fail(bundleConsumerFile, site.spec, "Backend bundle validation cannot bypass its Node tool owner through the mixed package/source");
   }
   const resolver = packages.get("@changmen/team-resolver");
-  if (resolver?.pkg.devDependencies?.["@changmen/venue-node-loader"] !== "file:../../packages/venue-node-loader")
-    fail("server/match/resolver/package.json", "@changmen/venue-node-loader", "Resolver scraper tools must declare the original Node loader as a development dependency");
+  if (resolver?.pkg.devDependencies?.["@changmen/venue-node"] !== "file:../../venues")
+    fail("server/match/resolver/package.json", "@changmen/venue-node", "Resolver scraper tools must declare the original Node loader as a development dependency");
   for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"])
     for (const name of forbidden) if (resolver?.pkg[group]?.[name])
       fail("server/match/resolver/package.json", name, `Resolver must not pull browser/mixed hosts through ${group}`);
   const consumers = [];
   for (const [file, kind] of Object.entries(resolverConsumers)) {
-    if (!fs.existsSync(path.join(root, file))) { fail(file, "@changmen/venue-node-loader", "Missing reviewed resolver scraper"); continue; }
+    if (!fs.existsSync(path.join(root, file))) { fail(file, "@changmen/venue-node", "Missing reviewed resolver scraper"); continue; }
     const sites = componentImportSites(file, fs.readFileSync(path.join(root, file), "utf8"));
-    const entries = sites.filter(site => site.spec === "@changmen/venue-node-loader");
+    const entries = sites.filter(site => site.spec === "@changmen/venue-node");
     if (entries.length !== 1 || entries[0].kind !== kind)
-      fail(file, "@changmen/venue-node-loader", "Scraper must keep its original static/dynamic loading timing through the Node package root");
+      fail(file, "@changmen/venue-node", "Scraper must keep its original static/dynamic loading timing through the Node package root");
     for (const site of sites) {
       if (!site.spec) continue; // Existing component/loader gates retain unknown-path handling.
       const relative = site.spec.startsWith(".") ? path.relative(root, path.resolve(root, path.dirname(file), site.spec)).replaceAll("\\", "/") : "";
@@ -104,7 +109,7 @@ export function inspectVenueNodeDependencies(root) {
     consumers.push(...entries);
   }
   const closures = {};
-  for (const name of ["@changmen/backend", "@changmen/team-resolver", "@changmen/venue-node-loader"]) {
+  for (const name of ["@changmen/backend", "@changmen/team-resolver", "@changmen/venue-node"]) {
     const seen = new Set(), external = new Set(), queue = [{ name, via: [name] }];
     while (queue.length) {
       const item = queue.shift();

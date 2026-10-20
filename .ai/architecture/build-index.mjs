@@ -28,7 +28,7 @@ const FINGERPRINT_FILE = path.join(ROOT, ".ai", "architecture", "verified-finger
 const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), "utf8"));
 const readText = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
 export const hashContent = (s) => crypto.createHash("sha1").update(s).digest("hex");
-// Evidence strings carry ":line" pointers (e.g. "server/db/rds/matcher_store.js:192"); the file
+// Evidence strings carry ":line" pointers (e.g. "rds/rds/matcher_store.js:192"); the file
 // path is the part before the first line-suffix colon.
 export function evidencePath(e) {
   const m = String(e).match(/^(.*?):[\d]+([,-][\d]+)*$/);
@@ -248,7 +248,7 @@ const CAPABILITY_DEFS = {
   },
   "match-merge": {
     label: "赛事归一化（内嵌 matchMerge 循环 + composeOnce 合场）",
-    implementedBy: ["@changmen/matcher", "@changmen/match-identity"],
+    implementedBy: ["@changmen/matcher", "@changmen/shared/match-identity"],
     hostedBy: ["changmen-esport"],
     ownsOperations: ["client_matches:compose-upsert-main", "client_matches:compose-id-stub-insert", "client_matches:prune-ended-mark"],
     evidence: ["server/backend/server.js:163-175,265", "server/match/matcher/ops/match_merge_once.js:116", "server/match/matcher/compose/compose_once.js:144", "server/match/matcher/lib/write_guard.js:41-50"],
@@ -284,7 +284,7 @@ const CAPABILITY_DEFS = {
     implementedBy: ["@changmen/polymarket-esports-collector", "@changmen/predictfun-collector", "@changmen/sxbet-collector", "@changmen/polymarket-sports"],
     hostedBy: ["changmen-polymarket-collector", "changmen-predictfun-collector", "changmen-sxbet-collector", "changmen-pm-sports"],
     ownsOperations: ["platform_matches:collector-write", "platform_bets:collector-write", "client_matches:update-pm_sport-field", "market_index_jsons:write"],
-    evidence: ["server/collectors/polymarket-esports/loop.js:66-69", "server/db/rds/pm_sport_store.js:74"],
+    evidence: ["server/collectors/polymarket-esports/loop.js:66-69", "rds/rds/pm_sport_store.js:74"],
     status: "verified", derivation: "audit-code-review-2026-09-19",
   },
   "ws-relay": {
@@ -360,9 +360,9 @@ const resources = {
         ownershipScope: "operation", writerCardinality: "multiple",
         writers: [
           W("esport-api/store.js saveMatches → sb.writePlatformMatches", "changmen-esport", "verified",
-            ["server/backend/core/esport-api/router.ts:557", "server/backend/core/esport-api/store.js:204,264", "server/db/rds/platform_collector_store.js:683,713"]),
+            ["server/backend/core/esport-api/router.ts:557", "server/backend/core/esport-api/store.js:204,264", "rds/rds/platform_collector_store.js:683,713"]),
         ],
-        memoryFirst: "是：内存先写 + _writeRds fire-and-forget，队列满 drop（server/db/rds/common.js:71-103）",
+        memoryFirst: "是：内存先写 + _writeRds fire-and-forget，队列满 drop（rds/rds/common.js:71-103）",
         guard: "浏览器写路径对 VPS 馆被 isVpsOwnedPlatformCollect 拦截（warn+return，store.js:208）",
         note: "与 collector-write 按 platform 前缀分区共存（刻意多写者）",
       },
@@ -370,9 +370,9 @@ const resources = {
         operation: "collector-write", target: "rows where platform=<vps-owned>",
         ownershipScope: "operation", writerCardinality: "multiple",
         writers: [
-          W("polymarket-esports loop（writePlatformMatchesAsync）", "changmen-polymarket-collector", "verified", ["server/collectors/polymarket-esports/loop.js:66-69", "server/db/rds/platform_collector_store.js:713"]),
-          W("predictfun-collector loop", "changmen-predictfun-collector", "verified-runtime-paused", ["server/collectors/predictfun-collector/loop.js:118,127,129", "server/db/rds/platform_collector_store.js:713"]),
-          W("sxbet-collector loop", "changmen-sxbet-collector", "verified-runtime-paused", ["server/collectors/sxbet-collector/loop.js:74,84,85", "server/db/rds/platform_collector_store.js:713"]),
+          W("polymarket-esports loop（writePlatformMatchesAsync）", "changmen-polymarket-collector", "verified", ["server/collectors/polymarket-esports/loop.js:66-69", "rds/rds/platform_collector_store.js:713"]),
+          W("predictfun-collector loop", "changmen-predictfun-collector", "verified-runtime-paused", ["server/collectors/predictfun-collector/loop.js:118,127,129", "rds/rds/platform_collector_store.js:713"]),
+          W("sxbet-collector loop", "changmen-sxbet-collector", "verified-runtime-paused", ["server/collectors/sxbet-collector/loop.js:74,84,85", "rds/rds/platform_collector_store.js:713"]),
         ],
         memoryFirst: "否（Async 直写）",
       },
@@ -380,29 +380,29 @@ const resources = {
         operation: "compose-unbind-sweep", target: "行（UPDATE 清 client_match_id 失效绑定）",
         ownershipScope: "operation", writerCardinality: "single",
         writers: [W("clearPlatformMatchIdsPointingAtEnded（platform_collector_store.js:637；compose_once.js:272-273 在合场写路径内调用）", "changmen-esport", "verified",
-          ["server/db/rds/platform_collector_store.js:637", "server/match/matcher/compose/compose_once.js:272-273"])],
+          ["rds/rds/platform_collector_store.js:637", "server/match/matcher/compose/compose_once.js:272-273"])],
       },
       {
         operation: "matcher-link-unbind", target: "行（UPDATE 清 client_match_id）",
         ownershipScope: "operation", writerCardinality: "unknown",
         writers: [
           W("clearPlatformMatchIdsForClientMatchIds（platform_collector_store.js:611）", "changmen-esport / offline-scripts（经 @changmen/db 导出）", "verified",
-            ["server/db/rds/platform_collector_store.js:611"], { note: "全仓无 in-repo 调用方（refactor_audit.mjs 符号表除外）；caller surface UNKNOWN" }),
+            ["rds/rds/platform_collector_store.js:611"], { note: "全仓无 in-repo 调用方（refactor_audit.mjs 符号表除外）；caller surface UNKNOWN" }),
         ],
       },
       {
         operation: "matcher-merge-reassign", target: "行（UPDATE source→target 重挂 / DELETE 平台行）",
         ownershipScope: "operation", writerCardinality: "multiple",
         writers: [
-          W("reassignPlatformMatchIds（matcher_store.js:537；merge_client_matches.js:85 UI merge）", "changmen-esport", "verified", ["server/db/rds/matcher_store.js:537", "server/match/matcher/ops/merge_client_matches.js:85"]),
-          W("deletePlatformMatchRow（matcher_store.js:543）", "changmen-esport / offline-scripts", "verified", ["server/db/rds/matcher_store.js:543", "server/backend/core/esport-api/store.js:291"], { note: "无 in-repo 调用方（仅注释引用）；导出 API，caller surface UNKNOWN" }),
+          W("reassignPlatformMatchIds（matcher_store.js:537；merge_client_matches.js:85 UI merge）", "changmen-esport", "verified", ["rds/rds/matcher_store.js:537", "server/match/matcher/ops/merge_client_matches.js:85"]),
+          W("deletePlatformMatchRow（matcher_store.js:543）", "changmen-esport / offline-scripts", "verified", ["rds/rds/matcher_store.js:543", "server/backend/core/esport-api/store.js:291"], { note: "无 in-repo 调用方（仅注释引用）；导出 API，caller surface UNKNOWN" }),
         ],
       },
       {
         operation: "collector-prune-pf", target: "PF 行（DELETE → platform_matches_history）",
         ownershipScope: "operation", writerCardinality: "single",
         writers: [W("prunePredictFunPlatformMatches（platform_collector_store.js:810；predictfun loop.js:86,134）", "changmen-predictfun-collector", "verified-runtime-paused",
-          ["server/db/rds/platform_collector_store.js:810", "server/collectors/predictfun-collector/loop.js:86,134"], { note: "Phase 4 completeness regression 发现的遗漏写者（TE-2 同类），已补入" })],
+          ["rds/rds/platform_collector_store.js:810", "server/collectors/predictfun-collector/loop.js:86,134"], { note: "Phase 4 completeness regression 发现的遗漏写者（TE-2 同类），已补入" })],
       },
       {
         operation: "offline-ops-wipe", target: "PF 行（事故脚本 DELETE）",
@@ -412,7 +412,7 @@ const resources = {
       {
         operation: "prune-orphan-archive", target: "orphan rows → platform_matches_history",
         ownershipScope: "operation", writerCardinality: "single",
-        writers: [W("prunePolymarketPlatformMatches", "changmen-esport", "verified", ["server/db/rds/platform_collector_store.js:740,115-120"])],
+        writers: [W("prunePolymarketPlatformMatches", "changmen-esport", "verified", ["rds/rds/platform_collector_store.js:740,115-120"])],
       },
     ],
     status: "verified", derivation: "audit-code-review-2026-09-19",
@@ -425,7 +425,7 @@ const resources = {
         operation: "browser-ingest-write", target: "rows per match (full replace)",
         ownershipScope: "operation", writerCardinality: "multiple",
         writers: [W("esport-api/store.js saveBets → sb.replacePlatformBetsForMatch", "changmen-esport", "verified",
-          ["server/backend/core/esport-api/router.ts:567", "server/backend/core/esport-api/store.js:313,337", "server/db/rds/platform_collector_store.js:1050-1088"])],
+          ["server/backend/core/esport-api/router.ts:567", "server/backend/core/esport-api/store.js:313,337", "rds/rds/platform_collector_store.js:1050-1088"])],
         memoryFirst: "是（同 platform_matches）",
         note: "sticky 平台（PB/OB/RAY）空快照不清（platform_collector_store.js:15,38）",
       },
@@ -433,9 +433,9 @@ const resources = {
         operation: "collector-write", target: "rows where platform=<vps-owned>（含 deleteOrphanPlatformBetsAsync 孤儿清理）",
         ownershipScope: "operation", writerCardinality: "multiple",
         writers: [
-          W("polymarket-esports loop（replacePlatformBetsForMatchAsync）", "changmen-polymarket-collector", "verified", ["server/collectors/polymarket-esports/loop.js:66-69", "server/db/rds/platform_collector_store.js:1062"]),
-          W("predictfun-collector loop（replacePlatformBetsForMatchAsync）", "changmen-predictfun-collector", "verified-runtime-paused", ["server/collectors/predictfun-collector/loop.js:118,127,129", "server/db/rds/platform_collector_store.js:1062"]),
-          W("sxbet-collector loop（replacePlatformBetsForMatchAsync + deleteOrphanPlatformBetsAsync）", "changmen-sxbet-collector", "verified-runtime-paused", ["server/collectors/sxbet-collector/loop.js:74,84,85", "server/db/rds/platform_collector_store.js:1062,1091"]),
+          W("polymarket-esports loop（replacePlatformBetsForMatchAsync）", "changmen-polymarket-collector", "verified", ["server/collectors/polymarket-esports/loop.js:66-69", "rds/rds/platform_collector_store.js:1062"]),
+          W("predictfun-collector loop（replacePlatformBetsForMatchAsync）", "changmen-predictfun-collector", "verified-runtime-paused", ["server/collectors/predictfun-collector/loop.js:118,127,129", "rds/rds/platform_collector_store.js:1062"]),
+          W("sxbet-collector loop（replacePlatformBetsForMatchAsync + deleteOrphanPlatformBetsAsync）", "changmen-sxbet-collector", "verified-runtime-paused", ["server/collectors/sxbet-collector/loop.js:74,84,85", "rds/rds/platform_collector_store.js:1062,1091"]),
         ],
         memoryFirst: "否（Async 直写）",
       },
@@ -455,7 +455,7 @@ const resources = {
         operation: "replace-per-platform", target: "rows per platform（全量替换）",
         ownershipScope: "table", writerCardinality: "single",
         writers: [W("store.saveLiveTimer → writeLiveTimersAsync (:1119, await)；fire-and-forget 变体 writeLiveTimers (:1108) 基本无活调用方", "changmen-esport", "verified",
-          ["server/backend/core/esport-api/router.ts:577", "server/backend/core/esport-api/store.js:340,351-372", "server/db/rds/platform_collector_store.js:1108,1119"])],
+          ["server/backend/core/esport-api/router.ts:577", "server/backend/core/esport-api/store.js:340,351-372", "rds/rds/platform_collector_store.js:1108,1119"])],
         memoryFirst: "否（await）；内存 _timers 先更新（store.js:373）",
         readers: ["matcher snapshot compose/io/snapshot.js:117", "启动回灌 server.js:146"],
       },
@@ -477,7 +477,7 @@ const resources = {
         ownershipScope: "operation", writerCardinality: "single",
         writers: [
           W("@changmen/matcher composeOnce → writeClientMatchesAsync（client_matches_store.js:280；sync 兜底 writeClientMatches :270）", "changmen-esport", "verified",
-            ["server/match/matcher/ops/match_merge_once.js:116", "server/match/matcher/compose/compose_once.js:144", "server/match/matcher/compose/io/write.js:16", "server/db/rds/client_matches_store.js:270,280"],
+            ["server/match/matcher/ops/match_merge_once.js:116", "server/match/matcher/compose/compose_once.js:144", "server/match/matcher/compose/io/write.js:16", "rds/rds/client_matches_store.js:270,280"],
             { mutualExclusion: "进程内 _matchMergeInFlight Promise（match_merge_once.js:115-128）+ write_guard pid 心跳（write_guard.js:41-50，非 DB 锁，不约束本表其他 operation 写者）" }),
         ],
         memoryFirst: "否（Async 直写；无 pool 降级 fire-and-forget :286）",
@@ -488,7 +488,7 @@ const resources = {
         ownershipScope: "operation", writerCardinality: "multiple",
         writers: [
           W("insertClientMatchStub（matcher_store.js:116 → :48 Rds；compose 内经 identity/ids/client_match_ids.js:127 调用）", "changmen-esport", "verified",
-            ["server/db/rds/matcher_store.js:48,116", "server/match/identity/ids/client_match_ids.js:127"]),
+            ["rds/rds/matcher_store.js:48,116", "server/match/identity/ids/client_match_ids.js:127"]),
           W("UI 人工 link 建 stub：ensureClientMatchId（link/index.js:359）", "changmen-esport", "verified", ["server/match/matcher/link/index.js:359"]),
         ],
         note: "Phase 3 发现的遗漏写者（TE-2），Phase 4 已补入",
@@ -498,7 +498,7 @@ const resources = {
         ownershipScope: "operation", writerCardinality: "multiple",
         writers: [
           W("markClientMatchesEndedByStartBefore（platform_collector_store.js:908，经 pruneMatchesOlderThanCollectPast :935）— matcher 循环", "changmen-esport", "verified",
-            ["server/db/rds/platform_collector_store.js:908,935", "server/match/matcher/loop.js:27"]),
+            ["rds/rds/platform_collector_store.js:908,935", "server/match/matcher/loop.js:27"]),
           W("同函数 — 独立 composer 循环（默认被 write_guard 拒绝写，但 prune 调用仍在代码路径中）", "changmen-esport (compose loop, guarded)", "verified",
             ["server/match/matcher/compose/loop.js:35"]),
           W("同函数 — predictfun collector 循环", "changmen-predictfun-collector", "verified-runtime-paused", ["server/collectors/predictfun-collector/loop.js:146"]),
@@ -510,7 +510,7 @@ const resources = {
         operation: "update-pm_sport-field", target: "field pm_sport (jsonb)",
         ownershipScope: "field", writerCardinality: "single",
         writers: [W("polymarket-sports daemon updateClientMatchPmSport", "changmen-pm-sports", "verified",
-          ["server/collectors/polymarket-sports/index.js:37", "server/db/rds/pm_sport_store.js:74"])],
+          ["server/collectors/polymarket-sports/index.js:37", "rds/rds/pm_sport_store.js:74"])],
         readers: ["matcher ended_filter compose/shape/ended_filter.js", "ws hub pushPmSportToBrowsers → realtime-hub", "Client_GetMatchs rev（fetchClientMatchesMeta）"],
         docGap: "docs/DATA_STORAGE.md 未单列该 field 写者（missing M-06）",
       },
@@ -518,11 +518,11 @@ const resources = {
         operation: "manual-row-ops", target: "行级（matchs patch / 翻锁 / forceEnd / restore / 删行 / merge）",
         ownershipScope: "operation", writerCardinality: "multiple",
         writers: [
-          W("patchClientMatchMatchs（matcher_store.js:192；link/index.js:521,751 人工连线）", "changmen-esport", "verified", ["server/db/rds/matcher_store.js:192", "server/match/matcher/link/index.js:521,751", "server/match/matcher/ui/api_routes.js"]),
-          W("swapClientMatchGbOrientation（matcher_store.js:317）", "changmen-esport", "verified", ["server/db/rds/matcher_store.js:317", "server/match/matcher/ui/api_routes.js:210"]),
-          W("forceEndClientMatch（matcher_store.js:462；ops/delete_client_match.js:21）", "changmen-esport", "verified", ["server/db/rds/matcher_store.js:462", "server/match/matcher/ops/delete_client_match.js"]),
-          W("clearClientMatchEndedAt（matcher_store.js:483；ops/restore_client_match.js:30）", "changmen-esport", "verified", ["server/db/rds/matcher_store.js:483", "server/match/matcher/ops/restore_client_match.js:30"]),
-          W("deleteClientMatchRow（matcher_store.js:557；merge/ops 入口）", "changmen-esport", "verified", ["server/db/rds/matcher_store.js:557", "server/match/matcher/ops/merge_client_matches.js:86"]),
+          W("patchClientMatchMatchs（matcher_store.js:192；link/index.js:521,751 人工连线）", "changmen-esport", "verified", ["rds/rds/matcher_store.js:192", "server/match/matcher/link/index.js:521,751", "server/match/matcher/ui/api_routes.js"]),
+          W("swapClientMatchGbOrientation（matcher_store.js:317）", "changmen-esport", "verified", ["rds/rds/matcher_store.js:317", "server/match/matcher/ui/api_routes.js:210"]),
+          W("forceEndClientMatch（matcher_store.js:462；ops/delete_client_match.js:21）", "changmen-esport", "verified", ["rds/rds/matcher_store.js:462", "server/match/matcher/ops/delete_client_match.js"]),
+          W("clearClientMatchEndedAt（matcher_store.js:483；ops/restore_client_match.js:30）", "changmen-esport", "verified", ["rds/rds/matcher_store.js:483", "server/match/matcher/ops/restore_client_match.js:30"]),
+          W("deleteClientMatchRow（matcher_store.js:557；merge/ops 入口）", "changmen-esport", "verified", ["rds/rds/matcher_store.js:557", "server/match/matcher/ops/merge_client_matches.js:86"]),
         ],
         trigger: "人工/UI 触发，随后通常 matchMergeOnce(afterInFlight) 重跑合场",
       },
@@ -531,8 +531,8 @@ const resources = {
         ownershipScope: "unknown", writerCardinality: "unknown",
         writers: [
           W("saveClientMatches → fire-and-forget writeClientMatches（core/db/store.js:358，全仓无调用方）", "changmen-esport", "dead-code", ["server/backend/core/db/store.js:358"]),
-          W("setClientMatchPlatformReverse（matcher_store.js:225，无调用方）", "changmen-esport", "dead-code", ["server/db/rds/matcher_store.js:225"]),
-          W("archiveClientMatch（matcher_store.js:497，deprecated 别名）", "changmen-esport", "dead-code", ["server/db/rds/matcher_store.js:497"]),
+          W("setClientMatchPlatformReverse（matcher_store.js:225，无调用方）", "changmen-esport", "dead-code", ["rds/rds/matcher_store.js:225"]),
+          W("archiveClientMatch（matcher_store.js:497，deprecated 别名）", "changmen-esport", "dead-code", ["rds/rds/matcher_store.js:497"]),
         ],
       },
       {
@@ -540,7 +540,7 @@ const resources = {
         ownershipScope: "operation", writerCardinality: "multiple",
         writers: [
           W("wipe-pf-esport-matches.mjs（直接 SQL：matchs 剥 PF + 空 matchs 行标 ended）", "offline-scripts", "verified", ["server/backend/scripts/ops/incidents/wipe-pf-esport-matches.mjs:163-171"]),
-          W("archive_stale --all scope（ended 行 DELETE → client_matches_history）", "changmen-esport (scheduled/manual)", "verified", ["server/db/archive_stale.js:41-51,89-101,117"]),
+          W("archive_stale --all scope（ended 行 DELETE → client_matches_history）", "changmen-esport (scheduled/manual)", "verified", ["rds/archive_stale.js:41-51,89-101,117"]),
         ],
         note: "非生产常驻路径；登记为完整性的边界事实",
       },
@@ -557,10 +557,10 @@ const resources = {
         operation: "upsert", target: "rows keyed (player, orderId)",
         ownershipScope: "table", writerCardinality: "multiple",
         writers: [
-          W("order_store.saveOrder（前置 strict 读防覆盖 :191-194）", "changmen-esport", "verified", ["server/backend/core/account/order_store.js:161", "server/db/rds/orders_store.js:224"]),
+          W("order_store.saveOrder（前置 strict 读防覆盖 :191-194）", "changmen-esport", "verified", ["server/backend/core/account/order_store.js:161", "rds/rds/orders_store.js:224"]),
           W("order_store.updateOrderBind / rebindOrderLink", "changmen-esport", "verified", ["server/backend/core/account/order_store.js:1178,1229"]),
           W("PF 集成 pf_server_order", "changmen-esport", "verified", ["server/backend/core/integrations/predictfun/pf_server_order.js:17"]),
-          W("admin 删除 deleteOrdersByIds / deletePolymarketSellOrders", "changmen-esport", "verified", ["server/db/rds/orders_store.js:1020,1045", "server/backend/core/admin_tools/admin_orders.js:247"]),
+          W("admin 删除 deleteOrdersByIds / deletePolymarketSellOrders", "changmen-esport", "verified", ["rds/rds/orders_store.js:1020,1045", "server/backend/core/admin_tools/admin_orders.js:247"]),
           W("ops 迁移脚本", "offline-scripts", "verified", ["server/backend/scripts/ops/"]),
         ],
         memoryFirst: "否（全 await）",
@@ -576,8 +576,8 @@ const resources = {
         operation: "upsert", target: "rows keyed (user_id, client_id) ON CONFLICT 覆盖",
         ownershipScope: "table", writerCardinality: "multiple",
         writers: [
-          W("football_order_service.saveFootballOrder（入口 football_order_routes.js:30）", "changmen-esport", "verified", ["server/backend/core/football/football_order_service.js:41", "server/db/rds/football_orders_store.js:81"]),
-          W("结算回写 patchFootballOrderStatus", "changmen-esport", "verified", ["server/db/rds/football_orders_store.js:166"]),
+          W("football_order_service.saveFootballOrder（入口 football_order_routes.js:30）", "changmen-esport", "verified", ["server/backend/core/football/football_order_service.js:41", "rds/rds/football_orders_store.js:81"]),
+          W("结算回写 patchFootballOrderStatus", "changmen-esport", "verified", ["rds/rds/football_orders_store.js:166"]),
         ],
         memoryFirst: "否",
       },
@@ -674,7 +674,7 @@ const resources = {
         operation: "replaceSportClientMatches", target: "rows（ON CONFLICT upsert + 旧行搬 history store :115）",
         ownershipScope: "table", writerCardinality: "single",
         writers: [W("sport_merge.js（由 GetBaseball/Football/Tennis/Basketball 请求触发）", "changmen-esport", "verified",
-          ["server/match/matcher/ops/sport_merge.js:534", "server/db/rds/sport_client_matches_store.js:49,115,144"])],
+          ["server/match/matcher/ops/sport_merge.js:534", "rds/rds/sport_client_matches_store.js:49,115,144"])],
         memoryFirst: "否",
       },
     ],
@@ -753,15 +753,15 @@ const C = (id, topic, sources, likelyCanonicalLayer, note) => ({
 });
 const conflicts = {
   "F-01": C("F-01", "账号存储模型（players vs profiles.accounts jsonb）", [
-    { layer: "code", says: "players 表为唯一真相；profiles.accounts jsonb 已弃写（028 backfill 后运行时不再读写）", evidence: ["server/db/player_account_record.js", "server/db/venue_account_key.js", "docs/ACCOUNT_BACKEND.md:15-26"] },
+    { layer: "code", says: "players 表为唯一真相；profiles.accounts jsonb 已弃写（028 backfill 后运行时不再读写）", evidence: ["rds/player_account_record.js", "rds/venue_account_key.js", "docs/ACCOUNT_BACKEND.md:15-26"] },
     { layer: "docs", says: "账号 → RDS profiles.accounts jsonb", evidence: ["CLAUDE.md:163", "CLAUDE.md:268"] },
   ], "code", "建议人工修订 CLAUDE.md 两行"),
   "F-02": C("F-02", "client_matches 写者范围（单写者宣称 vs operation/field 级多写者）", [
-    { layer: "code", says: "7 类 operation 写者（Phase 4 重扫）：compose 主写/compose stub insert/prune ended/pm_sport 列/UI 人工/死代码/离线 ops；详见 index.json resources.client_matches.operations", evidence: ["server/db/rds/client_matches_store.js:270,280", "server/db/rds/matcher_store.js:48,116,192,317,462,483,557", "server/db/rds/platform_collector_store.js:908,935", "server/db/rds/pm_sport_store.js:74", "server/backend/core/db/store.js:358", "server/backend/scripts/ops/incidents/wipe-pf-esport-matches.mjs:163-171", "server/db/archive_stale.js:41-51"] },
+    { layer: "code", says: "7 类 operation 写者（Phase 4 重扫）：compose 主写/compose stub insert/prune ended/pm_sport 列/UI 人工/死代码/离线 ops；详见 index.json resources.client_matches.operations", evidence: ["rds/rds/client_matches_store.js:270,280", "rds/rds/matcher_store.js:48,116,192,317,462,483,557", "rds/rds/platform_collector_store.js:908,935", "rds/rds/pm_sport_store.js:74", "server/backend/core/db/store.js:358", "server/backend/scripts/ops/incidents/wipe-pf-esport-matches.mjs:163-171", "rds/archive_stale.js:41-51"] },
     { layer: "docs", says: "生产唯一 writer = matchMergeOnce → composeOnce", evidence: ["server/match/matcher/README.md:47"] },
   ], "code", "Phase 4 已把 code 侧 writers 全量结构化（TE-2 FIXED）；文档侧措辞仍待人工裁决"),
   "F-03": C("F-03", "sport_client_matches 读路径（文档内部矛盾）", [
-    { layer: "code", says: "backend router 未接入 sport_client_matches 读路径；GetBaseball 等 = M+J 不读写 RDS 赛表", evidence: ["server/db/rds/sport_client_matches_store.js", "grep: router 无接入"] },
+    { layer: "code", says: "backend router 未接入 sport_client_matches 读路径；GetBaseball 等 = M+J 不读写 RDS 赛表", evidence: ["rds/rds/sport_client_matches_store.js", "grep: router 无接入"] },
     { layer: "docs", says: "读方=GetBaseball/FootballMatchs（:14）vs M+J 不读写（:81）", evidence: ["docs/DATA_STORAGE.md:14", "docs/DATA_STORAGE.md:81"] },
   ], "code", ":14 为未标注的目标态"),
   "F-04": C("F-04", "CHANGMEN_LAYOUT.baseball 键指向不存在的根目录 baseball/", [

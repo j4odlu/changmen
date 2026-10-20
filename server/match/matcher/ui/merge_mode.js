@@ -1,5 +1,5 @@
 import { isPlatformMatchRowFullyIdMapped, resolvePlatformMatchTeamId } from "@changmen/db";
-import { classifyMergeBasis, PROVIDER_PRIORITY, setTeamPlugin } from "@changmen/match-identity";
+import { classifyMergeBasis, PROVIDER_PRIORITY, setTeamPlugin } from "@changmen/shared/match-identity";
 import { resolvePlatformTeamId } from "@changmen/shared/catalog/pb_team_platform_id";
 
 let _pluginPromise = null;

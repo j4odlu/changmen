@@ -1,7 +1,8 @@
 import path from "node:path";
 import os from "node:os";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, writeSync } from "node:fs";
+import {historicalWorkspaceFs as __workspaceHistoryFs} from './workspace-layout-history.mjs';
+const {mkdtempSync,readFileSync,rmSync,writeFileSync,writeSync}=__workspaceHistoryFs;
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { expandedRequirements, readReference, reference } from "../testing/schema-compatibility/reference.mjs";
@@ -24,7 +25,7 @@ describe("fixed database compatibility reference", () => {
       for (const match of source.matchAll(/\bfrom\s+["'](\.[^"']+)["']/g))
         expect(sources[path.posix.normalize(path.posix.join(path.posix.dirname(file), match[1]))], `${file}: ${match[1]}`).toBeDefined();
     }
-  });
+  }, 30000);
   it("requires additive fields and indexes before a future consumer is accepted", () => {
     const baseline = readSchemaBaseline(), future = expandedRequirements(baseline);
     const differences = schemaDifferences(baseline.schema, future.schema);

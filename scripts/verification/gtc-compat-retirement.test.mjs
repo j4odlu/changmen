@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { withRdsLegacyEntries } from "./rds-legacy-relocation.mjs";
 import { expect, it } from "vitest";
 import { verifyGtcCompatibilityRetirement, retirementFiles, retiredHelpers, nativeOrdersPath, restoreRetiredOrdersCompatibility } from "./gtc-compat-retirement.mjs";

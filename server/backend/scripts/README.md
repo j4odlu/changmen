@@ -2,7 +2,7 @@
 
 后端运维与启动脚本。`npm run` 入口见 `server/backend/package.json`。
 
-数据库维护脚本已集中到 [`server/db/maintenance/`](../../db/maintenance/)；累计 140 个历史脚本归入 [`legacy/`](../../db/maintenance/legacy/)，旧文件删除。本目录保留启动、后台业务及平台编排、混合脚本和待拆的数据访问。
+数据库维护脚本已集中到 [`rds/maintenance/`](../../db/maintenance/)；累计 140 个历史脚本归入 [`legacy/`](../../db/maintenance/legacy/)，旧文件删除。本目录保留启动、后台业务及平台编排、混合脚本和待拆的数据访问。
 
 ## 目录
 
@@ -38,7 +38,7 @@
 ## 约定
 
 - **根目录冻结（阶段 19）**：保留既有启动/日常 CLI；**不再**向根目录新增脚本。
-- **纯数据库维护/诊断**：写在 `server/db/maintenance/`，不得再放回 backend。
+- **纯数据库维护/诊断**：写在 `rds/maintenance/`，不得再放回 backend。
 - **后台/平台编排脚本**：事故修复归 `ops/incidents/`；混合迁移/归档/补跑归 `ops/migrations/`；平台排障及 deploy 自检归 `ops/diagnostics/`；数据访问应继续拆至数据层。
 - **运行**：在 `server/backend` 下 `node scripts/<path>`。
 

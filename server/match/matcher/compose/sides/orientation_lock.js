@@ -6,8 +6,8 @@ import {
   lookupCanonicalTeamName,
   lookupGbTeamIdByPlatform,
   normalizeTeam,
-} from "@changmen/match-identity/teams/team_key.js";
-import { parseTitleTeams } from "@changmen/match-identity/teams/match_utils.js";
+} from "@changmen/shared/match-identity/teams/team_key.js";
+import { parseTitleTeams } from "@changmen/shared/match-identity/teams/match_utils.js";
 import { getGameCodeForPlatformId } from "@changmen/shared/catalog/game_catalog";
 import { resolvePlatformTeamId } from "@changmen/shared/catalog/pb_team_platform_id";
 

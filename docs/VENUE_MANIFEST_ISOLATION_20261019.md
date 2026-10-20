@@ -16,7 +16,7 @@ npm run check:venue-manifest
 | 消费者 | 实际读取位置 |
 | --- | --- |
 | 浏览器 registry 元数据、图标及图标生成工具 | `packages/venue-adapter/registry/manifest.json`，生成副本 |
-| Node registry 及原公共 catalog 导出 | `server/packages/venue-node-registry/manifest.json`，生成副本 |
+| Node registry 及原公共 catalog 导出 | `server/venues/registry/manifest.json`，生成副本 |
 | loader 资源根探测 | 原 `registry/manifest.json` 路径标记，规则不变 |
 | 默认后端瘦包工具 | 经 shared 公共导出读取主资产，并写入产物原位置 |
 | 指定外部目录的瘦包工具 | 外部源自己的 `registry/manifest.json` |

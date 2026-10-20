@@ -5,9 +5,9 @@ const m = vi.hoisted(() => ({
   rename: vi.fn(), admin: vi.fn(), role: vi.fn(), team: vi.fn(), teams: vi.fn(),
   deleteTeam: vi.fn(), reload: vi.fn(), visible: vi.fn(),
 }));
-vi.mock("../../../db/rds/common.js", async original => ({ ...await original(), getPgPool: () => m.available ? { query: m.query } : null }));
-vi.mock("../../../db/pg_pool.js", async original => ({ ...await original(), ensurePgPoolReady: (...args) => m.ready(...args) }));
-vi.mock("../../../db/rds/profile_store.js", async original => ({ ...await original(), insertProfile: (...args) => m.insert(...args) }));
+vi.mock("../../../../rds/rds/common.js", async original => ({ ...await original(), getPgPool: () => m.available ? { query: m.query } : null }));
+vi.mock("../../../../rds/pg_pool.js", async original => ({ ...await original(), ensurePgPoolReady: (...args) => m.ready(...args) }));
+vi.mock("../../../../rds/rds/profile_store.js", async original => ({ ...await original(), insertProfile: (...args) => m.insert(...args) }));
 vi.mock("@changmen/db", async original => ({
   ...await original(), getPgPool: () => m.available ? { query: m.query } : null,
   ensurePgPoolReady: (...args) => m.ready(...args), insertProfile: (...args) => m.insert(...args),

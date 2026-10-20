@@ -18,7 +18,7 @@ async function check(name, run) { await run(); checks.push(name); console.log(`P
 
 await withTemporaryPostgres(async ({ temporary }) => {
   process.env.DATABASE_POOL_MAX = "2";
-  const { getPgPool } = await import("../../server/db/pg_pool.js");
+  const { getPgPool } = await import("../../rds/pg_pool.js");
   const pool = getPgPool();
   const oldRoot = path.join(temporary, "published-reference");
   const oldSources = materializeReference(root, oldRoot);
@@ -60,7 +60,7 @@ await withTemporaryPostgres(async ({ temporary }) => {
     });
     await check("candidate empty initialization uses a separate database and refuses a second initialization", async () => {
       await pool.query("CREATE DATABASE round4_candidate_initialization");
-      const { default: pg } = await import("../../server/db/pg.js");
+      const { default: pg } = await import("../../rds/pg.js");
       const url = new URL(process.env.DATABASE_URL);
       url.pathname = "/round4_candidate_initialization";
       const client = new pg.Client({ connectionString: url.href, ssl: false });
@@ -193,7 +193,7 @@ await withTemporaryPostgres(async ({ temporary }) => {
       const before = await business(), records = await ledger();
       await pool.query("ALTER TABLE profiles RENAME COLUMN preferences TO round4_hidden_preferences");
       try {
-        await assert.rejects(exec(process.execPath, [path.join(root, "server/db/maintenance/check-rds-schema.mjs")],
+        await assert.rejects(exec(process.execPath, [path.join(root, "rds/maintenance/check-rds-schema.mjs")],
           { env, cwd: temporary, timeout: 30_000, windowsHide: true }), error => error.code === 1 && /columns.profiles.preferences: missing/.test(error.stderr));
       } finally { await pool.query("ALTER TABLE profiles RENAME COLUMN round4_hidden_preferences TO preferences"); }
       assert.deepEqual(await business(), before); assert.deepEqual(await ledger(), records);

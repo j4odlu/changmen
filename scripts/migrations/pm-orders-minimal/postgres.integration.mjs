@@ -6,15 +6,15 @@ import { isolatedConnection,verifyIsolatedDatabase } from "../pm-gtc-orders/inte
 import { accepted,facts,financialRow,OWNER,EXECUTION,HASH } from "../pm-gtc-orders/integration/fixtures.mjs";
 import { historicalCompatibility, historicalMinimal, loadHistoricalOrderStorage } from "../../verification/historical-order-storage.mjs";
 const { prepareOrdersExecutionCompatibility } = historicalCompatibility;
-const { mutatePmGtc,createPmGtc,listPmGtc,listPmGtcByIds } = loadHistoricalOrderStorage("server/db/rds/orderModes/gtc/pm_gtc_store.js");
+const { mutatePmGtc,createPmGtc,listPmGtc,listPmGtcByIds } = loadHistoricalOrderStorage("rds/rds/orderModes/gtc/pm_gtc_store.js");
 const { fetchMinimalOrderListPage,minimalClientOrder,pmOrdersMinimalEnabled } = historicalMinimal;
-const orders = loadHistoricalOrderStorage("server/db/rds/orders_store.js");
-const { fetchOrdersByExecutionPage } = loadHistoricalOrderStorage("server/db/rds/orderModes/read.js");
+const orders = loadHistoricalOrderStorage("rds/rds/orders_store.js");
+const { fetchOrdersByExecutionPage } = loadHistoricalOrderStorage("rds/rds/orderModes/read.js");
 import { applyBatch,digest,installSchema,planBatch,planSchema,readTarget,reconcileReceipt,rollbackBatch,seal } from "./production-tools.mjs";
 import { registerProductionCases } from "./postgres-tools-cases.mjs";
 
 const state=vi.hoisted(()=>({pool:null,before:null,trace:[]}));
-vi.mock("../../../server/db/rds/common.js",()=>({getPgPool:()=>state.pool,_jsonb:(v,f)=>JSON.stringify(v??f)}));
+vi.mock("../../../rds/rds/common.js",()=>({getPgPool:()=>state.pool,_jsonb:(v,f)=>JSON.stringify(v??f)}));
 const connection=isolatedConnection(process.env.PM_GTC_TEST_DATABASE_URL,process.env.PM_GTC_TEST_EXECUTION_TOKEN);
 const evidenceRoot=fs.realpathSync(fileURLToPath(new URL("../../../output/pm-orders-minimal-postgres-integration/",import.meta.url)));
 const evidenceDir=fs.realpathSync(process.env.PM_GTC_TEST_EVIDENCE_DIR??""),evidenceRelative=path.relative(evidenceRoot,evidenceDir);

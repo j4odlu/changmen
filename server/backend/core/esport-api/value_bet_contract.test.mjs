@@ -1,7 +1,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({ pool: null, getPool: vi.fn(), query: vi.fn(), matches: vi.fn(), now: 1000000 }));
 vi.mock("@changmen/db", async original => ({ ...await original(), getPgPool: (...a) => m.getPool(...a), fetchClientMatches: (...a) => m.matches(...a) }));
-vi.mock("../../../db/rds/common.js", async original => ({ ...await original(), getPgPool: (...a) => m.getPool(...a) }));
+vi.mock("../../../../rds/rds/common.js", async original => ({ ...await original(), getPgPool: (...a) => m.getPool(...a) }));
 vi.mock("../account/admin_service.js", () => ({}));
 vi.mock("../account/admin_leaderboard.js", () => ({}));
 vi.mock("../account/report_service.js", () => ({}));

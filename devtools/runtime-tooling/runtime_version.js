@@ -21,11 +21,11 @@ export function isVersionSource(file, role) {
   if (["package.json", "package-lock.json", "server/storage/runtime_version.js"].includes(file)) return true;
   // [changmen 扩展] 迁入 client 的包保留原 packages 的双端保守覆盖，既有排除规则仍先执行。
   if (file.startsWith("client/packages/")) return true;
-  if (/^server\/packages\/(?:venue-node-(?:loader|registry)|venue-adapter-tools)\//.test(file)) return true;
+  if (/^server\/packages\/(?:venue-node-(?:loader|registry)|venue-adapter-tools)\//.test(file) || file.startsWith("server/venues/")) return true;
   if (file.startsWith("devtools/runtime-tooling/")) return true;
   return role === "frontend"
     ? /^(?:client\/web\/(?:src\/|public\/|vite\/|vite\.config\.ts|package\.json|scripts\/run-production-build\.mjs)|packages\/)/.test(file)
-    : /^(?:server\/|packages\/|devtools\/platform-probes\/)/.test(file);
+    : /^(?:rds\/|server\/|packages\/|devtools\/platform-probes\/)/.test(file);
 }
 const contractSource = file => /^packages\/api-contract\//.test(file)
   || ["packages/shared/pm_gtc.ts", "packages/shared/pm_gtc_recovery.ts"].includes(file);
@@ -42,7 +42,7 @@ function walk(root) {
       else if (item.isFile()) files.push(file);
     }
   };
-  for (const dir of ["client/web/src", "client/web/public", "client/web/vite", "client/web/scripts", "client/packages", "devtools/runtime-tooling", "packages", "server", "devtools/platform-probes"])
+  for (const dir of ["client/web/src", "client/web/public", "client/web/vite", "client/web/scripts", "client/packages", "devtools/runtime-tooling", "packages", "server", "rds", "devtools/platform-probes"])
     if (fs.existsSync(path.join(root, dir))) visit(dir);
   for (const file of ["package.json", "package-lock.json", "client/web/package.json", "client/web/vite.config.ts"])
     if (fs.existsSync(path.join(root, file))) files.push(file);

@@ -5,39 +5,39 @@
   "publishScopeOptimizationEnabled": false,
   "sourceContracts": [
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "selector": "module",
       "signature": "0e9166ae1c24727470027191ab18601c6ae2ab6720a6dddde8790f6867111096"
     },
     {
-      "file": "server/db/pg_pool.js",
+      "file": "rds/pg_pool.js",
       "selector": "pg-loader",
-      "signature": "04c2dee833fe235d1b97c217a1425c339b532d5ea48d3e9fe98dd0735a0aa299"
+      "signature": "29359a651a1f2f34889133d31b20a5c4a2d6f8bb45738ff8b6a694d822a8260f"
     },
     {
-      "file": "server/db/resolve_database_url.js",
+      "file": "rds/resolve_database_url.js",
       "selector": "pg-loader",
-      "signature": "f82263431f03a11d45eb8869533b3db7b2558d92adb636c2fb5802a42be732b8"
+      "signature": "eb09bfe07a2b536cae3e041209a2a095b06f7e7be4f8f2bb7aeb51f6fd8e5852"
     },
     {
-      "file": "server/packages/venue-node-registry/paths.js",
+      "file": "server/venues/registry/paths.js",
       "selector": "module",
       "signature": "7e06d9c2c923f2bb0aff8b6ed94c4e0418b3c6db2287b9d44e40b3ec40f2c8eb"
     },
     {
-      "file": "server/packages/venue-node-registry/runtime/registry/paths.js",
+      "file": "server/venues/registry/runtime/registry/paths.js",
       "selector": "module",
       "signature": "000a51c9d1623aaf72853d0e060d2805bead2dad3929c6946cb8af6fea15d3ed"
     },
     {
-      "file": "server/packages/venue-node-registry/runtime/registry/feeds.js",
+      "file": "server/venues/registry/runtime/registry/feeds.js",
       "selector": "module",
       "signature": "a4672509cd1c8b1001b7eac4bfa7531972c10a1ab8f2523bfb7d6c7623d17f52"
     },
     {
       "file": "server/storage/paths.js",
       "selector": "module",
-      "signature": "5d89d696f2ff79b2386019f45cadb55bf518c49214f3ba6919a5e7bfd9ccc6a8"
+      "signature": "bea8ea468e880a60c64fe2c2df754ae33879ade504dda1982f3339830bde20c0"
     },
     {
       "file": "server/storage/changmen_root.js",
@@ -59,7 +59,7 @@
     {
       "file": "server/backend/core/account/balance_provider.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -72,7 +72,7 @@
     {
       "file": "server/backend/core/account/balance_provider.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -85,7 +85,7 @@
     {
       "file": "server/backend/core/account/balance_provider.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -98,7 +98,7 @@
     {
       "file": "server/backend/core/account/balance_provider.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -111,7 +111,7 @@
     {
       "file": "server/backend/core/account/balance_provider.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -124,7 +124,7 @@
     {
       "file": "server/backend/core/esport-api/platform_sync.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -137,7 +137,7 @@
     {
       "file": "server/backend/core/esport-api/platform_sync.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -150,7 +150,7 @@
     {
       "file": "server/backend/core/esport-api/platform_sync.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -163,7 +163,7 @@
     {
       "file": "server/backend/core/esport-api/platform_sync.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -176,7 +176,7 @@
     {
       "file": "server/backend/core/esport-api/platform_sync.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -189,7 +189,7 @@
     {
       "file": "server/backend/core/esport-api/router.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -202,7 +202,7 @@
     {
       "file": "server/backend/core/esport-api/router.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -215,7 +215,7 @@
     {
       "file": "server/backend/core/esport-api/store.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "adapterRequire"
       },
       "arguments": [
@@ -227,7 +227,7 @@
     {
       "file": "server/backend/http_routes.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "adapterRequire"
       },
       "arguments": [
@@ -239,7 +239,7 @@
     {
       "file": "server/backend/http_routes.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -252,7 +252,7 @@
     {
       "file": "server/backend/proxy/ob_http_proxy.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -265,7 +265,7 @@
     {
       "file": "server/backend/proxy/pb_http_proxy.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -278,7 +278,7 @@
     {
       "file": "server/backend/proxy/ray_http_proxy.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -291,7 +291,7 @@
     {
       "file": "server/backend/proxy/ray_http_proxy.js",
       "origin": {
-        "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+        "file": "server/venues/loader/adapter_paths.mjs",
         "symbol": "requirePlatform"
       },
       "arguments": [
@@ -337,7 +337,7 @@
   ],
   "dynamicSites": [
     {
-      "file": "server/db/pg_pool.js",
+      "file": "rds/pg_pool.js",
       "kind": "require",
       "spec": null,
       "expression": "require.resolve(\"pg\", { paths: searchPaths })",
@@ -347,7 +347,7 @@
       ]
     },
     {
-      "file": "server/db/resolve_database_url.js",
+      "file": "rds/resolve_database_url.js",
       "kind": "require",
       "spec": null,
       "expression": "require.resolve(\"pg\", { paths: searchPaths })",
@@ -357,7 +357,7 @@
       ]
     },
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/platform-probes/backend/_paths.cjs",
       "kind": "computed-loader",
       "spec": null,
       "expression": "entry",
@@ -368,7 +368,7 @@
       ]
     },
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/platform-probes/backend/_paths.cjs",
       "kind": "computed-loader",
       "spec": null,
       "expression": "specifier",
@@ -379,7 +379,91 @@
       ]
     },
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/platform-probes/backend/_paths.cjs",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.cjs",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.js",
+      "kind": "computed-loader",
+      "spec": null,
+      "expression": "entry",
+      "loader": "require.resolve",
+      "arguments": [
+        null,
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.js",
+      "kind": "computed-loader",
+      "spec": null,
+      "expression": "specifier",
+      "loader": "require.resolve",
+      "arguments": [
+        null,
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.js",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/platform-probes/backend/_paths.js",
+      "kind": "require",
+      "spec": null,
+      "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
+      "loader": "require",
+      "arguments": [
+        null
+      ]
+    },
+    {
+      "file": "server/venues/loader/adapter_paths.mjs",
+      "kind": "computed-loader",
+      "spec": null,
+      "expression": "entry",
+      "loader": "require.resolve",
+      "arguments": [
+        null,
+        null
+      ]
+    },
+    {
+      "file": "server/venues/loader/adapter_paths.mjs",
+      "kind": "computed-loader",
+      "spec": null,
+      "expression": "specifier",
+      "loader": "require.resolve",
+      "arguments": [
+        null,
+        null
+      ]
+    },
+    {
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "dynamic-import",
       "spec": null,
       "expression": "feedsUrl",
@@ -389,7 +473,7 @@
       ]
     },
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "dynamic-import",
       "spec": null,
       "expression": "pathsUrl",
@@ -399,7 +483,7 @@
       ]
     },
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "dynamic-import",
       "spec": null,
       "expression": "pathToFileURL(abs).href",
@@ -409,7 +493,7 @@
       ]
     },
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "require",
       "spec": null,
       "expression": "abs",
@@ -419,7 +503,7 @@
       ]
     },
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "require",
       "spec": null,
       "expression": "path.join(getAdapterRoot(), ...segments)",
@@ -429,7 +513,7 @@
       ]
     },
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "require",
       "spec": null,
       "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
@@ -439,91 +523,7 @@
       ]
     },
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
-      "kind": "require",
-      "spec": null,
-      "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
-      "loader": "require",
-      "arguments": [
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "kind": "computed-loader",
-      "spec": null,
-      "expression": "entry",
-      "loader": "require.resolve",
-      "arguments": [
-        null,
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "kind": "computed-loader",
-      "spec": null,
-      "expression": "specifier",
-      "loader": "require.resolve",
-      "arguments": [
-        null,
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "kind": "require",
-      "spec": null,
-      "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
-      "loader": "require",
-      "arguments": [
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "kind": "require",
-      "spec": null,
-      "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
-      "loader": "require",
-      "arguments": [
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.js",
-      "kind": "computed-loader",
-      "spec": null,
-      "expression": "entry",
-      "loader": "require.resolve",
-      "arguments": [
-        null,
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.js",
-      "kind": "computed-loader",
-      "spec": null,
-      "expression": "specifier",
-      "loader": "require.resolve",
-      "arguments": [
-        null,
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.js",
-      "kind": "require",
-      "spec": null,
-      "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
-      "loader": "require",
-      "arguments": [
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.js",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "require",
       "spec": null,
       "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",

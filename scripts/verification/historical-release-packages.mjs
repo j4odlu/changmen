@@ -1,6 +1,6 @@
 // [changmen 扩展] 历史发布包只验收原提交；当前版本继续由完整 FOK/VPS 和兼容组合保护。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createReadonlyGitScope, normalizedSha } from "./orders-phase2-git-scope.mjs";
 import { verifyPhase2Module } from "./orders-phase2-release-boundary.mjs";
 import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";

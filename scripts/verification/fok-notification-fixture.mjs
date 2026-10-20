@@ -2,7 +2,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 // [changmen 扩展] 真实 placeBet 的离线通知故障差分；HTTP、存储与场馆边界全部模拟。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import vm from "node:vm";
 import ts from "typescript";
 

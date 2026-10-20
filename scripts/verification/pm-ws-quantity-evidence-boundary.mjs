@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 只登记 WS 数量诊断增量；成交/拒单/补单与固定 FOK 基线保持原样。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { restoreVenueBrowserExecution } from './venue-browser-execution.mjs';
 const normalize = source => source.replaceAll("\r\n", "\n");

@@ -42,10 +42,10 @@ it("real core entry rejects rolling the gateway back to the old unisolated notif
   reject("verify-fok-execution-parity.mjs", "client/web/src/stores/account/betGateway.ts", "source => execFileSync(\"git\", [\"show\", \"219535c8:client/web/src/stores/account/betGateway.ts\"], { encoding: \"utf8\" })", "exact reject display increment");
 }, 30_000);
 it("real core entry rejects a native helper that switches the order table", () => {
-  reject("verify-fok-execution-parity.mjs", "server/db/rds/native_orders.js", "source => source.replace('const table = \"orders\"', 'const table = \"orders_financial\"')", "complete native orders helper");
+  reject("verify-fok-execution-parity.mjs", "rds/rds/native_orders.js", "source => source.replace('const table = \"orders\"', 'const table = \"orders_financial\"')", "complete native orders helper");
 }, 30_000);
 it("real VPS entry rejects deleting orders outside the requested IDs", () => {
-  reject("verify-vps-fok-baseline.mjs", "server/db/rds/orders_store.js", "source => source.replace(\"DELETE FROM orders WHERE id = ANY($1::bigint[])\", \"DELETE FROM orders WHERE true\")", "complete native retirement boundary");
+  reject("verify-vps-fok-baseline.mjs", "rds/rds/orders_store.js", "source => source.replace(\"DELETE FROM orders WHERE id = ANY($1::bigint[])\", \"DELETE FROM orders WHERE true\")", "complete native retirement boundary");
 }, 30_000);
 
 // [changmen 扩展] 新统一边界也必须由真实发布检查入口拒绝，不能只测试辅助函数。

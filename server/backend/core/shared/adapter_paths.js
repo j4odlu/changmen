@@ -13,4 +13,4 @@ export {
   requirePlatform,
   resetAdapterRootForTests,
   resolvePlatformFile,
-} from "@changmen/venue-node-loader";
+} from "@changmen/venue-node";

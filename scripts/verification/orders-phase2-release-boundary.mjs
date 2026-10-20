@@ -1,6 +1,6 @@
 // [changmen 扩展] 第二阶段独立包：保留固定历史基线，并全文核对实际已发布模块。
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from 'node:child_process';
 import ts from 'typescript';
 import { restoreOrdersConsumerCompatibility, restoreGtcOrdersCompatibility, verifyOrdersCompatHelper } from './orders-consumer-boundary.mjs';

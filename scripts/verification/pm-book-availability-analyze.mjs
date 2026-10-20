@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // Compare fixed-denominator observation periods. This is NOT a randomized fill-rate experiment.
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 const read = withAdapterHistoryReader(p => JSON.parse(readAdapterHistory(p, 'utf8')));

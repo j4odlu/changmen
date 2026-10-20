@@ -2,7 +2,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 // [changmen 扩展] 每个既有 manifest 条目都核对原始哈希并执行完整模块保护，没有文件跳过。
 import { verifyClientPackageRelocation } from "./client-package-relocation.mjs";
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { verifyProtectedSource } from './fok-exact-boundaries.mjs';

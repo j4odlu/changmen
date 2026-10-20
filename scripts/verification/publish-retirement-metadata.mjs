@@ -1,9 +1,10 @@
 // [changmen 扩展] Finite historical metadata views; no runtime aliases or baseline changes.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
+import {restoreWorkspaceLayoutSource} from './workspace-layout-history.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 export const retirementMetadataSha=source=>createHash('sha256').update(source.replaceAll('\r\n','\n')).digest('hex');
 const text=fs.readFileSync(new URL('./publish-retirement-metadata.json',import.meta.url),'utf8');
@@ -16,6 +17,7 @@ const historyFiles=new Set([...retiredManifestHistoryFiles,...record.metadata.ma
 const relative=file=>typeof file==='string'&&historyFiles.has(file)?file:path.relative(root,file instanceof URL?fileURLToPath(file):path.resolve(file)).replaceAll('\\','/');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 export function restoreRetirementComponentMetadata(file,source){
+ source=restoreWorkspaceLayoutSource(file,source);
  const row=record.metadata.find(row=>row.file===relative(file));if(!row||retirementMetadataSha(source)!==row.afterSha)return source;
  for(const manifest of record.retiredManifests)checkManifest(manifest,read);
  assert.equal(retirementMetadataSha(row.before),row.beforeSha);return row.before;

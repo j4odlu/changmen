@@ -6,7 +6,7 @@
 
 在现有后端内集中认证，不新增独立服务。Cookie 和 JWT 经统一身份校验产生 AuthContext，业务只消费身份并判断权限。数据库操作只经过 server/db。ACCOUNT 调用时序、合场和下注算法保持既有行为。
 
-服务端核心：core/auth/identity.js（凭证到身份）、request_auth.js（Client_* 接入）、http_identity.js（原生 HTTP 接入）、realtime_auth.js（WS 接入及频道权限）；登录及撤销事务在 server/db/rds/auth_store.js。
+服务端核心：core/auth/identity.js（凭证到身份）、request_auth.js（Client_* 接入）、http_identity.js（原生 HTTP 接入）、realtime_auth.js（WS 接入及频道权限）；登录及撤销事务在 rds/rds/auth_store.js。
 
 前端核心：lib/authSessionState.ts（公开会话状态）、webSession.ts（探测/唤醒/重试）、authCredentials.ts（请求凭证及外部 JWT 兼容）、runtime/sessionRecovery.ts（启动身份恢复）。api/client.ts 保留既有调用接口并委托会话状态模块。
 

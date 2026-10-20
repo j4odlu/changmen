@@ -1,6 +1,6 @@
 // [changmen 扩展] Reverse only the exact Node tooling migration before previous complete-source proofs.
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { restoreDependencySecurityMetadata } from "./dependency-security-metadata.mjs";
 import { restoreNodePackageMetadata } from "./node-package-relocation.mjs";

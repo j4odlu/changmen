@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact singleton relocation; no factories, duplicate state or new lifecycle hooks.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {createHash} from 'node:crypto';
 import {restoreVenueBrowserHost,verifyVenueBrowserHost} from './venue-browser-host.mjs';
 import {restoreVenueBrowserWorkspace} from './venue-browser-workspace.mjs';

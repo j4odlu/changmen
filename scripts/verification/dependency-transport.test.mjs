@@ -1,6 +1,6 @@
 // [changmen 扩展] Native patched transports preserve signed request bytes and UUID consumer APIs.
 import assert from "node:assert/strict";
-import { createRequire } from "node:module";
+import {historicalCreateRequire as createRequire} from './workspace-layout-history.mjs';
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { it } from "vitest";

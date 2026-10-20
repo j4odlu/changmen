@@ -1,5 +1,5 @@
 // [changmen 扩展] Only canonical data-layer assets remain; never generates backend copies.
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';

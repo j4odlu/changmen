@@ -2,7 +2,9 @@
 
 单一架构文档入口。命令与日常开发见 [../AGENTS.md](../AGENTS.md)。
 
-[changmen 扩展] 2026-10-20 当前物理归属：浏览器 adapter 与测试位于 `client/packages/venue-browser`，旧目录 595 个浏览器文件及 4 个 Node 兼容入口已退役；Node loader/registry 实现位于 `server/packages/venue-node-*`，后端瘦包工具实现位于 `server/packages/venue-adapter-tools`。旧 adapter 目录保留验证命令、生成 manifest 与配套文档，下方按日期保留历史记录。后端八进程的 19 个 workspace 已通过离线独立安装、路由编译和模块解析对比；原 11 处动态路径已在默认 workspace 根下完成有界认证，外部 SDK 内部与自定义运行根不在该结论内，详见 [动态路径认证](BACKEND_DYNAMIC_PATH_CERTIFICATION.md)。平台探针的 93 个文件已迁入 `server/platform-probes`；默认 Node 资源根也已收进 `server/packages/venue-node-registry/runtime`，后端独立安装不再复制旧 adapter 目录，生产发布方式未变。
+[changmen 扩展] 当前目录以 [workspace 总览](WORKSPACE_LAYOUT.md) 为准：前端 `client/`、后端 `server/`、数据层根目录 `rds/`；24 个 workspace。服务端平台基础设施合并为 `server/venues` / `@changmen/venue-node`，三个兼容 workspace 已退役。下方带日期的记录用于解释迁移历史。
+
+[changmen 扩展] 2026-10-20 当前物理归属：浏览器 adapter 与测试位于 `client/packages/venue-browser`，旧目录 595 个浏览器文件及 4 个 Node 兼容入口已退役；Node loader/registry 实现位于 `server/packages/venue-node-*`，后端瘦包工具实现位于 `server/packages/venue-adapter-tools`。旧 adapter 目录保留验证命令、生成 manifest 与配套文档，下方按日期保留历史记录。后端八进程的 19 个 workspace 已通过离线独立安装、路由编译和模块解析对比；原 11 处动态路径已在默认 workspace 根下完成有界认证，外部 SDK 内部与自定义运行根不在该结论内，详见 [动态路径认证](BACKEND_DYNAMIC_PATH_CERTIFICATION.md)。平台探针的 93 个文件已迁入 `server/platform-probes`；默认 Node 资源根也已收进 `server/venues/registry/runtime`，后端独立安装不再复制旧 adapter 目录，生产发布方式未变。
 
 [changmen 扩展] 2026-10-18 [文件夹隔离](FOLDER_ISOLATION.md)：浏览器公共簿包和前端维护工具已实际迁入 `client/packages` 与 `client/devtools`。下方目录树区分当前落点与冻结兼容区域；前端专属旧包、扩展及 Node 工具仍有剩余迁移项，不宣称全树已隔离。
 
@@ -12,7 +14,7 @@
 
 [changmen 扩展] 2026-10-19 [比赛显示一致性方案](MATCH_PUBLICATION_CONSISTENCY_PLAN.md)与[链路审计](audits/MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md)：确认 matcher 与用户列表存在筛选差异、active gap 旧盘口保留及失败被当作空结果的风险。当前收敛为三步公共读取与过滤修复，尚未实现；保持现有合场、生命周期与经典 FOK 规则，不新增发布状态机或通知协议，失败处理缺陷单独记录。
 
-[changmen 扩展] RDS 的 43 个有效迁移 SQL 与结构基线主文件位于 `server/db/assets/`，维护代码经本包 `maintenance/assets.mjs` 读取；backend 原路径的 44 份兼容副本和 7 个维护入口已退役，4 个维护测试迁入 `server/db/maintenance/`。无 backend 目录的干净安装与维护验收通过，历史 SQL/checksum 保持；详情见同一源码隔离记录。
+[changmen 扩展] RDS 的 43 个有效迁移 SQL 与结构基线主文件位于 `rds/assets/`，维护代码经本包 `maintenance/assets.mjs` 读取；backend 原路径的 44 份兼容副本和 7 个维护入口已退役，4 个维护测试迁入 `rds/maintenance/`。无 backend 目录的干净安装与维护验收通过，历史 SQL/checksum 保持；详情见同一源码隔离记录。
 
 ## 目标目录（monorepo，档 B）
 
@@ -28,7 +30,7 @@ changmen/
 │   │   └── scripts/             # 常驻运维；ops/；archive/
 │   ├── collectors/              # VPS daemon：polymarket-sports、predictfun-collector
 │   ├── match/                   # 赛事匹配模块（三层）
-│   │   ├── identity/            # @changmen/match-identity（纯库：队名/时间窗/ID）
+│   │   ├── identity/            # @changmen/shared/match-identity（纯库：队名/时间窗/ID）
 │   │   ├── resolver/            # @changmen/team-resolver（外部 provider + scraper）
 │   │   └── matcher/             # @changmen/matcher（compose/ 合场 + 调度 + 人工 UI）
 │   ├── db/                      # @changmen/db
@@ -100,11 +102,11 @@ chrome-extension ─（代理/凭证）─► 各平台源站
 packages/venue-adapter ──采集上报──► server/backend (API_SaveMatch/SaveBet)
 server/backend ──读写────► server/db (@changmen/db)
 server/match/matcher ──matchMerge──► 包内 compose/（合场算法）
-server/match/matcher ──共享工具──► @changmen/match-identity (teams / ids / time windows)
+server/match/matcher ──共享工具──► @changmen/shared/match-identity (teams / ids / time windows)
 server/match/matcher ──队名────► @changmen/team-resolver（workspace 依赖，可选）
-resolver 辅助 scraper（开发工具） ──requirePlatform──► @changmen/venue-node-loader（原实现）
+resolver 辅助 scraper（开发工具） ──requirePlatform──► @changmen/venue-node（原实现）
 
-server/backend ──requirePlatform──► @changmen/venue-node-loader（原冻结实现）
+server/backend ──requirePlatform──► @changmen/venue-node（原冻结实现）
 server/db ──公共队名规则──► @changmen/shared/match-identity
 server/backend ──可选拷贝──► server/backend/platform_adapter（瘦包 / GAMEBET_ADAPTER_ROOT）
 ```
@@ -133,9 +135,9 @@ npm workspace 成员；通过 `@changmen/shared` 包名引用。
 
 ## `server/match` — 赛事匹配模块
 
-三个包按依赖层划分，**不合成单包**：`server/db/rds/team_store.js` 依赖 identity，而 resolver 依赖 `@changmen/db`，四合一会造成包级循环；identity 唯一依赖是 `@changmen/shared`，这份纯度是 backend / db / 诊断脚本能安全引用它的前提。
+三个包按依赖层划分，**不合成单包**：`rds/rds/team_store.js` 依赖 identity，而 resolver 依赖 `@changmen/db`，四合一会造成包级循环；identity 唯一依赖是 `@changmen/shared`，这份纯度是 backend / db / 诊断脚本能安全引用它的前提。
 
-### `server/match/identity` (`@changmen/match-identity`)
+### `server/match/identity` (`@changmen/shared/match-identity`)
 
 队名工具、开赛时间窗、`client_match_ids` 与对应测试；旧 `merge/` 合并管线已下线。
 resolver 与 matcher 通过 workspace 依赖复用；测试：`npm run test --prefix server/match/identity`。

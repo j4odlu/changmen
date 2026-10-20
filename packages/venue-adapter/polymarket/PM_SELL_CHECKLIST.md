@@ -177,7 +177,7 @@ client/web/src/
   components/order/OrderList.vue
 
 server/backend/core/account/order_store.js
-server/db/rds/orders_store.js   # fetchPredictionSellsByBuyOrderIds
+rds/rds/orders_store.js   # fetchPredictionSellsByBuyOrderIds
 server/backend/scripts/ops/diagnostics/audit-order-sidebar-health.mjs
 server/backend/scripts/ops/incidents/scan-fix-pm-sell-pnl-double.mjs
 

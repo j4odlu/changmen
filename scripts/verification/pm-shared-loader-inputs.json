@@ -4,24 +4,24 @@
   "publishScopeOptimizationEnabled": false,
   "sourceContracts": [
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "selector": "module",
       "signature": "0e9166ae1c24727470027191ab18601c6ae2ab6720a6dddde8790f6867111096"
     },
     {
-      "file": "server/packages/venue-node-registry/paths.js",
+      "file": "server/venues/registry/paths.js",
       "selector": "module",
       "signature": "7e06d9c2c923f2bb0aff8b6ed94c4e0418b3c6db2287b9d44e40b3ec40f2c8eb"
     },
     {
-      "file": "server/packages/venue-node-registry/feeds.js",
+      "file": "server/venues/registry/feeds.js",
       "selector": "module",
       "signature": "1cccc39550dcb283ab1d286ad49b99e67d47a0f284a9af201962c3ee5441e19c"
     },
     {
       "file": "server/storage/paths.js",
       "selector": "module",
-      "signature": "5d89d696f2ff79b2386019f45cadb55bf518c49214f3ba6919a5e7bfd9ccc6a8"
+      "signature": "bea8ea468e880a60c64fe2c2df754ae33879ade504dda1982f3339830bde20c0"
     },
     {
       "file": "server/storage/changmen_root.js",
@@ -29,14 +29,14 @@
       "signature": "660c34b6b3bf37eee9dfcc1a17102ce80b01696ecc5ae904c30a2e54bf5c1077"
     },
     {
-      "file": "server/db/pg_pool.js",
+      "file": "rds/pg_pool.js",
       "selector": "pg-loader",
-      "signature": "04c2dee833fe235d1b97c217a1425c339b532d5ea48d3e9fe98dd0735a0aa299"
+      "signature": "29359a651a1f2f34889133d31b20a5c4a2d6f8bb45738ff8b6a694d822a8260f"
     },
     {
-      "file": "server/db/resolve_database_url.js",
+      "file": "rds/resolve_database_url.js",
       "selector": "pg-loader",
-      "signature": "f82263431f03a11d45eb8869533b3db7b2558d92adb636c2fb5802a42be732b8"
+      "signature": "eb09bfe07a2b536cae3e041209a2a095b06f7e7be4f8f2bb7aeb51f6fd8e5852"
     }
   ],
   "environmentPolicies": [
@@ -49,7 +49,7 @@
         "GAMEBET_BACKEND_ROOT"
       ],
       "defaults": [
-        "server/packages/venue-node-registry/runtime",
+        "server/venues/registry/runtime",
         "server/backend/platform_adapter",
         "platform_adapter"
       ],
@@ -102,7 +102,7 @@
   "records": [
     {
       "id": "shared-01",
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "loader-contract",
       "expression": null,
       "loaderSymbol": null,
@@ -243,7 +243,7 @@
     },
     {
       "id": "shared-08",
-      "file": "server/db/pg_pool.js",
+      "file": "rds/pg_pool.js",
       "kind": "require",
       "expression": "require.resolve(\"pg\", { paths: searchPaths })",
       "loaderSymbol": null,
@@ -259,7 +259,7 @@
     },
     {
       "id": "shared-09",
-      "file": "server/db/pg_pool.js",
+      "file": "rds/pg_pool.js",
       "kind": "computed-loader",
       "expression": "\"pg\"",
       "loaderSymbol": null,
@@ -276,7 +276,7 @@
     },
     {
       "id": "shared-10",
-      "file": "server/db/resolve_database_url.js",
+      "file": "rds/resolve_database_url.js",
       "kind": "require",
       "expression": "require.resolve(\"pg\", { paths: searchPaths })",
       "loaderSymbol": null,
@@ -292,7 +292,7 @@
     },
     {
       "id": "shared-11",
-      "file": "server/db/resolve_database_url.js",
+      "file": "rds/resolve_database_url.js",
       "kind": "computed-loader",
       "expression": "\"pg\"",
       "loaderSymbol": null,
@@ -309,7 +309,7 @@
     },
     {
       "id": "shared-12",
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "require",
       "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
       "loaderSymbol": null,
@@ -325,7 +325,7 @@
     },
     {
       "id": "shared-13",
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "computed-loader",
       "expression": "entry",
       "loaderSymbol": null,
@@ -342,7 +342,7 @@
     },
     {
       "id": "shared-14",
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "require",
       "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
       "loaderSymbol": null,
@@ -358,7 +358,7 @@
     },
     {
       "id": "shared-15",
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "computed-loader",
       "expression": "specifier",
       "loaderSymbol": null,
@@ -375,7 +375,7 @@
     },
     {
       "id": "shared-16",
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "dynamic-import",
       "expression": "pathsUrl",
       "loaderSymbol": null,
@@ -391,7 +391,7 @@
     },
     {
       "id": "shared-17",
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "dynamic-import",
       "expression": "feedsUrl",
       "loaderSymbol": null,
@@ -407,7 +407,7 @@
     },
     {
       "id": "shared-18",
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "require",
       "expression": "path.join(getAdapterRoot(), ...segments)",
       "loaderSymbol": null,
@@ -423,7 +423,7 @@
     },
     {
       "id": "shared-19",
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "dynamic-import",
       "expression": "pathToFileURL(abs).href",
       "loaderSymbol": null,
@@ -436,7 +436,7 @@
     },
     {
       "id": "shared-20",
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "kind": "require",
       "expression": "abs",
       "loaderSymbol": null,

@@ -3,7 +3,7 @@ import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 精确登记钱包初始化前移、Gamma 预热与交易赛况闸；原 FOK 固定基线不变。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { verifyPmAccountSigningContract } from "./pm-account-signing-boundary.mjs";
 import { restorePmOptimizedFokSource } from "./pm-optimized-fok-boundary.mjs";
 import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mjs";

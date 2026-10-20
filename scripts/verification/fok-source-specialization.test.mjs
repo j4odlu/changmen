@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { test } from "node:test";
 import { specializeFokSource } from "./fok-source-specialization.mjs";
 import { moduleTokens } from "./fok-exact-boundaries.mjs";

@@ -10,7 +10,7 @@ const pool = getPgPool();
 const result = await pool.query("SELECT current_database() AS name, host(inet_server_addr()) AS host");
 assert.deepEqual(result.rows[0], { name: "changmen_auth_acceptance", host: "127.0.0.1" });
 await pool.end();
-const applied = spawnSync(process.execPath, ["server/db/maintenance/apply-rds-schema.mjs"], {
+const applied = spawnSync(process.execPath, ["rds/maintenance/apply-rds-schema.mjs"], {
   cwd: new URL("../../../..", import.meta.url), env: process.env, stdio: "inherit",
 });
 if (applied.error) throw applied.error;

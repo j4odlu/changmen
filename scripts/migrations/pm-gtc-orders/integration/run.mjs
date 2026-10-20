@@ -30,8 +30,8 @@ else {
     fs.mkdirSync(evidence, { recursive: true });
     env.PM_GTC_TEST_EVIDENCE_DIR = evidence;
     // [changmen 扩展] 当前代码不再运行旧模式；这里只复验不可变 Git 中的历史存储实现。
-    const hash = name => crypto.createHash("sha256").update(name.startsWith("server/db/rds/") ? gitSource(retirementBase,name) : fs.readFileSync(path.join(root, name))).digest("hex");
-    const sources = ["scripts/migrations/pm-gtc-orders/phase2-schema.sql", "scripts/migrations/pm-gtc-orders/phase2-rollback.sql", "scripts/migrations/pm-gtc-orders/integration/postgres.integration.mjs", "scripts/migrations/pm-gtc-orders/integration/bootstrap.sql", "scripts/migrations/pm-gtc-orders/backfill-pending.mjs", "scripts/migrations/pm-gtc-orders/backfill.mjs", "scripts/migrations/pm-gtc-orders/plan.mjs", "server/db/rds/orders_execution_compat.js", "server/db/rds/orders_store.js", "server/db/rds/orderModes/gtc/pm_gtc_store.js", "server/db/rds/orderModes/gtc/pm_gtc_orders_store.js"];
+    const hash = name => crypto.createHash("sha256").update(name.startsWith("rds/rds/") ? gitSource(retirementBase,name) : fs.readFileSync(path.join(root, name))).digest("hex");
+    const sources = ["scripts/migrations/pm-gtc-orders/phase2-schema.sql", "scripts/migrations/pm-gtc-orders/phase2-rollback.sql", "scripts/migrations/pm-gtc-orders/integration/postgres.integration.mjs", "scripts/migrations/pm-gtc-orders/integration/bootstrap.sql", "scripts/migrations/pm-gtc-orders/backfill-pending.mjs", "scripts/migrations/pm-gtc-orders/backfill.mjs", "scripts/migrations/pm-gtc-orders/plan.mjs", "rds/rds/orders_execution_compat.js", "rds/rds/orders_store.js", "rds/rds/orderModes/gtc/pm_gtc_store.js", "rds/rds/orderModes/gtc/pm_gtc_orders_store.js"];
     const hashes = Object.fromEntries(sources.map(name => [name, hash(name)]));
     const result = spawnSync(process.execPath, [cli, "run", "--config", "scripts/migrations/pm-gtc-orders/integration/postgres.config.mjs", "--reporter=default", "--reporter=json", `--outputFile=${path.join(evidence, "vitest.json")}`], { cwd: root, env, stdio: "inherit", shell: false });
     let report;

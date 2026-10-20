@@ -113,6 +113,7 @@ function sortedExportsObject(exports) {
 }
 
 function readCurrentExports() {
+  if (!fs.existsSync(PKG_JSON)) return {};
   const pkg = JSON.parse(fs.readFileSync(PKG_JSON, "utf8"));
   return pkg.exports ?? {};
 }
@@ -138,6 +139,7 @@ if (CHECK) {
   process.exit(0);
 }
 
+if (!fs.existsSync(PKG_JSON)) throw new Error("The adapter workspace is retired; runtime exports belong to client/packages/venue-browser and server/venues");
 const pkg = JSON.parse(fs.readFileSync(PKG_JSON, "utf8"));
 pkg.exports = nextExports;
 fs.writeFileSync(PKG_JSON, `${JSON.stringify(pkg, null, 2)}\n`);

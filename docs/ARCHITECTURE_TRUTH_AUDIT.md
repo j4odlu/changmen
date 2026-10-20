@@ -169,9 +169,9 @@ capability 是从 runtime/代码取证**派生**出的归组（非仓库现有�
 
 | 主体 module | forbidden（import） | allowed 例外 |
 |---|---|---|
-| client-app（`client/web/src`、`chrome-extension/src`） | `@changmen/db`、`@changmen/match-identity`、`@changmen/platform-probes`、`server/backend`、`server/match`、`server/db`、`devtools/platform-probes` | — |
+| client-app（`client/web/src`、`chrome-extension/src`） | `@changmen/db`、`@changmen/shared/match-identity`、`@changmen/platform-probes`、`server/backend`、`server/match`、`server/db`、`devtools/platform-probes` | — |
 | client-scripts（`client/web/scripts`） | `@changmen/db`、`@changmen/platform-probes`、`server/backend`、`server/match/matcher` | matcher `compose/` 子树（纯归一化，:38-39 明文例外） |
-| platform-adapter-frontend（venue-adapter 各平台浏览器目录） | `@changmen/db`、`@changmen/match-identity`、`@changmen/platform-probes`、`server/backend`、`client/web`、`server/match`、`@/stores`、``@` 别名 | infra：`registry/loader/shared/contract/scripts/_template`（:97-105）；平台内 `shared/` |
+| platform-adapter-frontend（venue-adapter 各平台浏览器目录） | `@changmen/db`、`@changmen/shared/match-identity`、`@changmen/platform-probes`、`server/backend`、`client/web`、`server/match`、`@/stores`、``@` 别名 | infra：`registry/loader/shared/contract/scripts/_template`（:97-105）；平台内 `shared/` |
 | server-backend | venue-adapter 平台私有目录（仅可 `registry|loader|shared|contract|backend|scripts|_template` + 平台内 shared）；`client/web/src`；`server/match` | allowFiles：`scripts/test-packaged-adapter-layout.js`、`core/shared/adapter_paths.test.mjs` |
 | platform-probes | `@changmen/venue-adapter`、venue-adapter 平台私有目录 | infra 目录 |
 | server-match | `client/web`、venue-adapter 平台私有、`match-(engine|identity)/merge`、`merge/match_merge` | infra 目录 |
@@ -234,7 +234,7 @@ capability 是从 runtime/代码取证**派生**出的归组（非仓库现有�
 
 | ID | 主题 | 代码说（canonical 候选） | 文档说 | likely canonical | requires_human_decision |
 |---|---|---|---|---|---|
-| F-01 | 账号存储模型 | `players` 表为唯一真相，`profiles.accounts jsonb` 已弃写（`server/db/player_account_record.js`、`venue_account_key.js`；部署链 028 backfill） | CLAUDE.md:163「账号 → RDS `profiles.accounts` jsonb」、:268 重述 | 代码 + ACCOUNT_BACKEND.md:15-26 | true（改 CLAUDE.md 两行） |
+| F-01 | 账号存储模型 | `players` 表为唯一真相，`profiles.accounts jsonb` 已弃写（`rds/player_account_record.js`、`venue_account_key.js`；部署链 028 backfill） | CLAUDE.md:163「账号 → RDS `profiles.accounts` jsonb」、:268 重述 | 代码 + ACCOUNT_BACKEND.md:15-26 | true（改 CLAUDE.md 两行） |
 | F-02 | `client_matches` 写者 | 自动循环唯一，但表级有 3 类例外：`pm_sport` 列（`pm_sport_store.js:74`）、UI/ops 人工写（`matcher_store.js:192,225,462,497,557`）、死路径 `store.js:358` | matcher README.md:47「生产唯一 writer = matchMergeOnce → composeOnce」 | 代码 | true（文档补例外说明或删死路径） |
 | F-03 | `sport_client_matches` 读路径 | backend router 未接入该读路径（grep 仅命中 store/迁移/smoke/wipe）；GetBaseball 等 = M+J「不读写 RDS 赛表」 | DATA_STORAGE:14（读方=GetBaseball/FootballMatchs）vs :81（M+J）——文档**内部**矛盾 | 代码支持 :81；:14 是未标注的目标态 | true（:14 标「目标态」或修正） |
 | F-04 | layout 键 `baseball` | `paths.js:24` 键指向仓库根**不存在**的 `baseball/`；全仓零消费者 | PATH_REGISTRY.md:45 登记「棒球代码目录」 | 代码（键为遗留） | true（删键或重指） |

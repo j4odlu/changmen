@@ -97,7 +97,7 @@ for (const [table, cfg] of Object.entries(TARGETS)) {
     const rel = path.relative(ROOT, abs).replace(/\\/g, "/");
     if (dmlRe.test(text)) dmlFiles.add(rel);
     // Rule 2: flat exported functions whose body chunk mentions table DML
-    if (rel.startsWith("server/db/")) {
+    if (rel.startsWith("rds/")) {
       const clean = stripComments(text);
       for (const mk of exportedFunctionChunks(clean)) {
         const body = clean.slice(mk.start, mk.end);

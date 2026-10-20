@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 it("reports real frontend/backend/RDS declarations without claiming installation isolation", () => {
   const report = inspectComponentInstallInputs(root);
   expect(report.violations).toEqual([]); expect(report.profiles.frontend.workspaces).toHaveLength(7);
-  expect(report.profiles.backend.workspaces).toHaveLength(15);
+  expect(report.profiles.backend.workspaces).toHaveLength(13);
   expect(report.profiles.rds.workspaces).toEqual([
     "@changmen/api-contract", "@changmen/db", "@changmen/runtime-tooling", "@changmen/shared", "@changmen/storage",
   ]);
@@ -28,10 +28,10 @@ for (const group of ["dependencies", "optionalDependencies", "peerDependencies"]
       .some(row => row.spec === "@changmen/runtime-tooling")).toBe(true);
   });
 for (const [label, edit] of [
-  ["tool adds a Node/data dependency", packages => { packages.get("@changmen/runtime-tooling").pkg.dependencies = { "@changmen/db": "file:../../server/db" }; }],
+  ["tool adds a Node/data dependency", packages => { packages.get("@changmen/runtime-tooling").pkg.dependencies = { "@changmen/db": "file:../../rds" }; }],
   ["tool adds a lifecycle script", packages => { packages.get("@changmen/runtime-tooling").pkg.scripts = { postinstall: "node unsafe.js" }; }],
   ["shared adds even an optional Node peer", packages => { packages.get("@changmen/shared").pkg.peerDependencies = { "@changmen/runtime-tooling": "file:../../devtools/runtime-tooling" }; }],
-  ["legacy owner redirects the runtime dependency", packages => { packages.get("@changmen/runtime-tooling-compat").pkg.dependencies["@changmen/runtime-tooling"] = "file:../../../server/db"; }],
+  ["legacy owner redirects the runtime dependency", packages => { packages.set("@changmen/runtime-tooling-compat", {dir:"packages/shared/tooling",pkg:{name:"@changmen/runtime-tooling-compat"}}); }],
   ["server drops its runtime owner", packages => { delete packages.get("@changmen/storage").pkg.dependencies["@changmen/runtime-tooling"]; }],
   ["web drops its build owner", packages => { delete packages.get("@changmen/web").pkg.devDependencies["@changmen/runtime-tooling"]; }],
 ]) it(`rejects ${label}`, () => {
@@ -42,12 +42,10 @@ it("keeps shared free of Node declarations while the explicit legacy workspace o
   const packages = readInstallWorkspaces(root), profile = declaredInstallClosure(root, packages, "@changmen/shared");
   expect(profile.workspaces).toEqual(["@changmen/shared"]);
   expect(profile.edges).toEqual([]);
-  expect(declaredInstallClosure(root, packages, "@changmen/runtime-tooling-compat").workspaces)
-    .toEqual(["@changmen/runtime-tooling", "@changmen/runtime-tooling-compat"]);
+  expect(packages.has("@changmen/runtime-tooling-compat")).toBe(false);
 });
-for (const [name, target] of [["@changmen/db", "server/db"], ["@changmen/storage", "server/storage"],
-  ["@changmen/venue-node-loader", "packages/venue-adapter/loader"], ["@changmen/venue-node-registry", "packages/venue-adapter/registry"],
-  ["@changmen/venue-adapter-tools", "server/packages/venue-adapter-tools"], ["@changmen/runtime-tooling-compat", "packages/shared/tooling"]]) {
+for (const [name, target] of [["@changmen/db", "rds"], ["@changmen/storage", "server/storage"],
+  ["@changmen/venue-node", "server/venues"]]) {
   it(`rejects an indirect frontend install edge to ${name}`, () => {
     const packages = readInstallWorkspaces(root);
     packages.get("@changmen/shared").pkg.dependencies = { [name]: `file:../../${target}` };
@@ -57,27 +55,28 @@ for (const [name, target] of [["@changmen/db", "server/db"], ["@changmen/storage
 }
 for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
   it(`rejects reintroducing storage into adapter ${group}`, () => {
-    const packages = readInstallWorkspaces(root), pkg = packages.get("@changmen/venue-adapter").pkg;
+    const packages = readInstallWorkspaces(root), pkg = {name:"@changmen/venue-adapter"};
+    packages.set(pkg.name,{dir:"packages/venue-adapter",pkg});
     pkg[group] = { ...pkg[group], "@changmen/storage": "file:../../server/storage" };
     expect(venueBrowserDeclarationBoundary(packages).some(row => row.spec === "@changmen/storage")).toBe(true);
   });
 }
 it("rejects a missing or redirected tool owner while keeping old runtime exports retired", () => {
-  const packages = readInstallWorkspaces(root), adapter = packages.get("@changmen/venue-adapter").pkg;
-  expect(adapter.exports).toEqual({});
-  packages.get("@changmen/venue-adapter-tools").pkg.dependencies["@changmen/storage"] = "file:../../../server/db";
+  const packages = readInstallWorkspaces(root);
+  expect(packages.has("@changmen/venue-adapter")).toBe(false);
+  packages.get("@changmen/venue-node").pkg.dependencies["@changmen/storage"] = "file:../../../rds";
   expect(venueBrowserDeclarationBoundary(packages)).toHaveLength(1);
-  packages.delete("@changmen/venue-adapter-tools");
+  packages.delete("@changmen/venue-node");
   expect(venueBrowserDeclarationBoundary(packages)).toHaveLength(1);
 });
 it("rejects a Node tool CLI that redirects the unchanged bundle implementation", () => {
   const packages = readInstallWorkspaces(root);
-  packages.get("@changmen/venue-adapter-tools").pkg.scripts["sync:backend-bundle"] = "node ../registry/adapters.ts";
+  packages.get("@changmen/venue-node").pkg.scripts["sync:backend-bundle"] = "node ../registry/adapters.ts";
   expect(venueBrowserDeclarationBoundary(packages)).toHaveLength(1);
 });
 it("rejects a missing direct shared-catalog dependency in the bundle tool", () => {
   const packages = readInstallWorkspaces(root);
-  delete packages.get("@changmen/venue-adapter-tools").pkg.dependencies["@changmen/shared"];
+  delete packages.get("@changmen/venue-node").pkg.dependencies["@changmen/shared"];
   expect(venueBrowserDeclarationBoundary(packages)).toHaveLength(1);
 });
 it("keeps browser registry type hosts declared by their actual browser adapter owner", () => {
@@ -95,7 +94,7 @@ it("includes optional and peer declarations, excludes other workspaces' developm
 });
 it("terminates local dependency cycles and retains a reviewable dependency chain", () => {
   const packages = readInstallWorkspaces(root);
-  packages.get("@changmen/shared").pkg.dependencies = { "@changmen/db": "file:../../server/db" };
+  packages.get("@changmen/shared").pkg.dependencies = { "@changmen/db": "file:../../rds" };
   const report = declaredInstallClosure(root, packages, "@changmen/db");
   expect(report.workspaces).toEqual([
     "@changmen/api-contract", "@changmen/db", "@changmen/runtime-tooling", "@changmen/shared", "@changmen/storage",

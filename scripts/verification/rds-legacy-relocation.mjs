@@ -1,10 +1,11 @@
 // [changmen 扩展] Exact physical moves of pure legacy data scripts; never executes them.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {createRequire,isBuiltin} from 'node:module';
+import {isBuiltin} from 'node:module';
+import {historicalCreateRequire as createRequire} from './workspace-layout-history.mjs';
 import ts from 'typescript';
 import {restoreProfileRepairSource} from './profile-repair-isolation.mjs';
 import {rdsContextHistoryFiles,restoreRdsContextMetadata,previousRdsContextEntry} from './rds-context-relocation.mjs';

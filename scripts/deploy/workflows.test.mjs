@@ -122,10 +122,10 @@ test("master database checks have one owner while PR/manual coverage and all fiv
   assert.equal(database.on.push, undefined, "Master validation owns the DB check; a second push workflow duplicates it");
   assert.deepEqual(Object.keys(database.on).sort(), ["pull_request", "workflow_dispatch"]);
   assert.deepEqual(database.on.pull_request.paths, [".github/workflows/database-compatibility.yml", "scripts/testing/**",
-    "deploy/scripts/release-*.sh", "scripts/deploy/**", "server/db/**", "server/backend/db/**",
+    "deploy/scripts/release-*.sh", "scripts/deploy/**", "rds/**", "server/backend/db/**",
     "server/backend/scripts/*rds*", "server/backend/scripts/*order-observation-schema*", "package.json", "package-lock.json"]);
   const samples = [".github/workflows/database-compatibility.yml", "scripts/testing/nested/schema-postgres.mjs",
-    "deploy/scripts/release-frontend.sh", "scripts/deploy/nested/control.mjs", "server/db/assets/schema-baseline.json",
+    "deploy/scripts/release-frontend.sh", "scripts/deploy/nested/control.mjs", "rds/assets/schema-baseline.json",
     "server/backend/db/migrations/043_auth_session_audit.sql", "server/backend/scripts/check-rds-schema.mjs",
     "server/backend/scripts/apply-order-observation-schema.mjs", "package.json", "package-lock.json"];
   for (const file of samples) {
@@ -172,5 +172,6 @@ test("backend check still covers every server workspace and its dependencies", (
       if (pkg.scripts?.test) assert.ok(graph.tasks.some(t => t.taskId === `${pkg.name}#test`), pkg.name);
     }
   }
-  assert.equal(graph.tasks.filter(t => t.taskId === "@changmen/match-identity#test").length, 1);
+  assert.equal(graph.tasks.filter(t => t.taskId === "@changmen/shared#test").length, 1);
+  assert.equal(graph.tasks.filter(t => t.taskId === "@changmen/db#test").length, 1);
 });

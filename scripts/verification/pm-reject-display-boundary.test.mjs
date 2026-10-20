@@ -1,5 +1,5 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { expect, it } from "vitest";
 import { restorePmRejectDisplaySource, verifyPmRejectDisplayContract } from "./pm-reject-display-boundary.mjs";
 const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));

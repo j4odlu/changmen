@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact closed market lifecycle dependency group relocation.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {createHash} from 'node:crypto';
 import {restoreVenueBrowserExecution,verifyVenueBrowserExecution} from './venue-browser-execution.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');

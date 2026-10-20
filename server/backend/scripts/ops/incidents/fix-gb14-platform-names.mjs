@@ -5,7 +5,7 @@
  */
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 import { ensurePgPoolReady, getPgPool, upsertTagPlatformByName } from "@changmen/db";
-import { playerRowToAccountRecord } from "../../../../db/player_account_record.js";
+import { playerRowToAccountRecord } from "../../../../../rds/player_account_record.js";
 import { loadAccountsForUser } from "../../../core/db/store.js";
 
 const APPLY = process.argv.includes("--apply");

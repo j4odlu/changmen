@@ -11,7 +11,7 @@ import { loadChangmenEnv } from "@changmen/storage/load_env.js";
 import { parseVenueCreateAt } from "@changmen/shared/time/match_time";
 import { accountMultiplyScale } from "@changmen/shared/account_multiply";
 import { buildPbAuthHeaders } from "./lib/pb_auth.mjs";
-import { playerRowToAccountRecord } from "../../../../db/player_account_record.js";
+import { playerRowToAccountRecord } from "../../../../../rds/player_account_record.js";
 import { saveOrder } from "../../../core/account/order_store.js";
 
 loadChangmenEnv();

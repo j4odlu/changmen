@@ -1,4 +1,4 @@
-/// <reference path="../../db/collector_contracts.d.ts" />
+/// <reference path="../../../rds/collector_contracts.d.ts" />
 import type { CollectorPmSportSnapshot, CollectorPrematchRecord, LinkedPolymarketMatch } from "@changmen/db";
 
 export type StoredSportSnapshot = CollectorPmSportSnapshot;

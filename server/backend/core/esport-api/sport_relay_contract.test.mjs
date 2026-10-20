@@ -1,9 +1,9 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 const m=vi.hoisted(()=>({configured:true,available:true,ttl:900,now:1000000,query:vi.fn(),init:vi.fn(),getPool:vi.fn(),hasConfig:vi.fn(),sign:vi.fn(),fetch:vi.fn()}));
 vi.mock("@changmen/db", async original=>({...await original(),hasDatabaseUrlConfig:()=>m.hasConfig(),initDatabaseUrl:()=>m.init(),getPgPool:(...a)=>m.getPool(...a)}));
-vi.mock("../../../db/resolve_database_url.js",async original=>({...await original(),hasDatabaseUrlConfig:()=>m.hasConfig(),initDatabaseUrl:()=>m.init()}));
-vi.mock("../../../db/pg_pool.js",async original=>({...await original(),getPgPool:(...a)=>m.getPool(...a)}));
-vi.mock("../../../db/rds/jwt.js",async original=>({...await original(),get JWT_ACCESS_TTL_SEC(){return m.ttl;},signJwt:(...a)=>m.sign(...a)}));
+vi.mock("../../../../rds/resolve_database_url.js",async original=>({...await original(),hasDatabaseUrlConfig:()=>m.hasConfig(),initDatabaseUrl:()=>m.init()}));
+vi.mock("../../../../rds/pg_pool.js",async original=>({...await original(),getPgPool:(...a)=>m.getPool(...a)}));
+vi.mock("../../../../rds/rds/jwt.js",async original=>({...await original(),get JWT_ACCESS_TTL_SEC(){return m.ttl;},signJwt:(...a)=>m.sign(...a)}));
 vi.mock("./sport_list_cache.js",()=>({readFreshSportListCache:()=>null,readSportListCache:()=>null,writeSportListCache:vi.fn()}));
 const envKeys=["PROBE_TOKEN","ESPORT_TEST_TOKEN","PREDICT_FUN_HTTP_RELAY_TOKEN","HK_RELAY_ORIGIN","VITE_HK_RELAY_ORIGIN","VITE_PM_HK_RELAY_ORIGIN","VITE_PREDICT_FUN_API_KEY"];
 const request=async(key="test")=>(await import("./sport_predictfun_fetch.js")).fetchPredictFunSportAsClientMatchDtos({gameCode:"mlb",cacheKey:key});

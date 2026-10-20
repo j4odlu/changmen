@@ -35,8 +35,9 @@
     "./integrations/a8_dev_credentials": "./integrations/a8_dev_credentials.ts",
     "./catalog/pb_team_platform_id": "./catalog/pb_team_platform_id.ts",
     "./match-identity": "./match-identity/index.js",
-    "./match-identity/*": "./match-identity/*",
-    "./tooling/runtime_version.js": "./tooling/runtime_version.js",
-    "./tooling/dev_web_port.js": "./tooling/dev_web_port.js"
+    "./match-identity/*": "./match-identity/*"
+  },
+  "scripts": {
+    "test": "vitest run match-identity/tests"
   }
 }

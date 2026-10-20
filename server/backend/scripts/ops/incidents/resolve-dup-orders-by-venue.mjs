@@ -9,7 +9,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/resolve-dup-orders-by-venue.mjs --user GB13 --month 2026-07 --execute
  */
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
-import { playerRowToAccountRecord } from "../../../../db/player_account_record.js";
+import { playerRowToAccountRecord } from "../../../../../rds/player_account_record.js";
 
 loadChangmenEnv();
 const { initDatabaseUrl, getPgPool } = await import("@changmen/db");

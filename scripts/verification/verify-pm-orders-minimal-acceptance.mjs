@@ -1,5 +1,5 @@
 // [changmen 扩展] 本机最终入口：离线核对当前源码和明确指定的真实测试证据，无数据库或网络连接。
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from "node:path";
 import assert from "node:assert/strict";
 import {spawnSync} from "node:child_process";

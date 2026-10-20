@@ -1,5 +1,5 @@
 // [changmen 扩展] 全文保护执行源、恢复规则与运维接线；不运行任何运维命令。
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, it, expect } from 'vitest';
 import { verifyPhase2Module, moduleTokens, gitSource } from './orders-phase2-release-boundary.mjs';
 import { verifyOrdersCompatHelper } from './orders-consumer-boundary.mjs';

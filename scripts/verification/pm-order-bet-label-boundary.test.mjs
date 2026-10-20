@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, expect, it } from "vitest";
 import { PM_ORDER_LABEL_HELPER, restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";
 const readBeforeExecution = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));

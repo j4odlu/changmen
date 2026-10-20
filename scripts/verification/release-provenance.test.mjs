@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import * as provenance from "./release-provenance.mjs";
 import { gzipSync } from "node:zlib";
 import { assertLayout, assertStable, assertSourceHashes, assertPublicAsset, assertCaptureEvidence, sha, rawSha, runtime, sshRead, readPublicAsset, PUBLIC_ASSET_TIMEOUT_MS } from "./release-provenance.mjs";

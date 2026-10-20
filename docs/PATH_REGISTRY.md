@@ -32,7 +32,7 @@
 
 | 键 | 默认相对路径 | 用途 |
 |----|--------------|------|
-| `venueAdapter` | `server/packages/venue-node-registry/runtime` | 服务端 registry 资源根；旧目录仅保留兼容与验证 |
+| `venueAdapter` | `server/venues/registry/runtime` | 服务端 registry 资源根；旧目录仅保留兼容与验证 |
 | `clientWeb` | `client/web` | 电竞 Vue 控制台 |
 | `clientChromeExtension` | `chrome-extension` | MV3 插件 |
 | `platformProbes` | `server/platform-probes` | Node 探针 CLI |
@@ -52,8 +52,8 @@
 
 | 消费方 | 用法 |
 |--------|------|
-| `server/packages/venue-node-loader/adapter_paths.mjs` | `getAdapterRoot()` 优先 `VENUE_ADAPTER_ROOT` |
-| `server/packages/venue-node-registry/paths.js` | 开发态 `ADAPTER_ROOT`；探针 `PLATFORM_PROBES_ROOT` |
+| `server/venues/loader/adapter_paths.mjs` | `getAdapterRoot()` 优先 `VENUE_ADAPTER_ROOT` |
+| `server/venues/registry/paths.js` | 开发态 `ADAPTER_ROOT`；探针 `PLATFORM_PROBES_ROOT` |
 | `client/web/vite.config.ts` | `@changmen/venue-browser` 解析与 `venueChunkName` |
 | `scripts/check-team-boundaries.mjs` | 发现各平台浏览器根目录 |
 | `@changmen/venue-adapter/package.json` | 仅两个 Node loader 子路径 |

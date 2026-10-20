@@ -1,5 +1,5 @@
 import {readAdapterHistory} from "./browser-entry-history.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { expect, it } from "vitest";
 import { gitSource, moduleTokens, replaceExact, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { gtcClientStateHashes, restoreGtcClientStateSource, verifyGtcClientStateSource } from "./gtc-client-state-boundary.mjs";

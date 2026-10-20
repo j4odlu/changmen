@@ -1,6 +1,6 @@
 // [changmen 扩展] 固定已审查提交的完整撤销变换；原快照不变，当前模块不得包含其它修改。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from "node:child_process";
 import ts from "typescript";
 import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mjs";

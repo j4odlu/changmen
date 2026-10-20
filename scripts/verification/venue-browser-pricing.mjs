@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact pure pricing relocation and public consumer imports.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {createHash} from 'node:crypto';
 import {restoreVenueBrowserMetadataCache,verifyVenueBrowserMetadataCache} from './venue-browser-metadata.mjs';
 const normalize=s=>s.replaceAll('\r\n','\n');

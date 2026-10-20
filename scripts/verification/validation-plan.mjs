@@ -7,7 +7,7 @@ const controlPatterns = [
 ];
 const fullPatterns = [
   /^(?:package(?:-lock)?\.json|turbo\.json)$/,
-  /^(?:packages\/|server\/db\/|server\/backend\/db\/)/,
+  /^(?:packages\/|(?:rds|server\/db)\/|server\/backend\/db\/)/,
   /^server\/backend\/core\/(?:account|auth|certificates|integrations|orderModes|esport-api|http)\//,
   /^server\/backend\/(?:http_routes\.js|server\.js|proxy\/|scripts\/)/,
   /^client\/web\/src\/(?:api|lib|stores|runtime|orderModes|services|models|types|domain)\//,

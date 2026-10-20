@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
 import pg from "pg";
-import { getResolvedDatabaseUrl, buildPgClientConfig } from "../../../server/db/resolve_database_url.js";
+import { getResolvedDatabaseUrl, buildPgClientConfig } from "../../../rds/resolve_database_url.js";
 import { planResultCopies, applyResultCopyBatch, digest } from "./result-copies.mjs";
 const args = Object.fromEntries(process.argv.slice(2).map(arg => {
   const match = /^--(env|out|apply|confirm)=(.+)$/.exec(arg); assert(match, "explicit --env/--out/--apply/--confirm options only"); return [match[1], match[2]];

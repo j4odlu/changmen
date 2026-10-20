@@ -2,7 +2,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, it } from "vitest";
 import { specializeFokSource } from "./fok-source-specialization.mjs";
 import { VENUE_BROWSER_STATE } from "./venue-browser-state.mjs";

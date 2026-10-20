@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // Public/synthetic evidence only. Passing this analysis never authorizes active execution or release.
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 const base = process.argv.includes('--availability') ? 'output/pm-book-availability' : 'output/pm-execution-simulation';

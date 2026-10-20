@@ -6,7 +6,7 @@ import {
   JWT_ISSUER,
   signJwt,
   verifyJwt,
-} from "../../../db/rds/jwt.js";
+} from "../../../../rds/rds/jwt.js";
 
 const secret = "test-secret-that-is-long-enough-for-hs256";
 

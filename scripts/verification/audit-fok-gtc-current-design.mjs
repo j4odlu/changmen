@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import vm from "node:vm";
 import ts from "typescript";
 import { computed, effectScope, nextTick, reactive, toRefs, watch } from "vue";

@@ -26,7 +26,7 @@
         ],
         "evidence": [
           "server/collectors/polymarket-esports/loop.js:66-69",
-          "server/db/rds/pm_sport_store.js:74"
+          "rds/rds/pm_sport_store.js:74"
         ],
         "status": "verified",
         "derivation": "audit-code-review-2026-09-19"
@@ -215,11 +215,11 @@
                 "evidence": [
                   "server/backend/core/esport-api/router.ts:557",
                   "server/backend/core/esport-api/store.js:204,264",
-                  "server/db/rds/platform_collector_store.js:683,713"
+                  "rds/rds/platform_collector_store.js:683,713"
                 ]
               }
             ],
-            "memoryFirst": "是：内存先写 + _writeRds fire-and-forget，队列满 drop（server/db/rds/common.js:71-103）",
+            "memoryFirst": "是：内存先写 + _writeRds fire-and-forget，队列满 drop（rds/rds/common.js:71-103）",
             "guard": "浏览器写路径对 VPS 馆被 isVpsOwnedPlatformCollect 拦截（warn+return，store.js:208）",
             "note": "与 collector-write 按 platform 前缀分区共存（刻意多写者）"
           },
@@ -267,7 +267,7 @@
                 "runtime": "changmen-esport",
                 "status": "verified",
                 "evidence": [
-                  "server/db/rds/platform_collector_store.js:740,115-120"
+                  "rds/rds/platform_collector_store.js:740,115-120"
                 ]
               }
             ]
@@ -358,7 +358,7 @@
                   "server/match/matcher/ops/match_merge_once.js:116",
                   "server/match/matcher/compose/compose_once.js:144",
                   "server/match/matcher/compose/io/write.js:16",
-                  "server/db/rds/client_matches_store.js:280"
+                  "rds/rds/client_matches_store.js:280"
                 ],
                 "mutualExclusion": "本地 pid 心跳 write_guard.js:41-50（非 DB 锁，不约束其他 operation 的写者）"
               }
@@ -378,7 +378,7 @@
                 "status": "verified",
                 "evidence": [
                   "server/collectors/polymarket-sports/index.js:37",
-                  "server/db/rds/pm_sport_store.js:74"
+                  "rds/rds/pm_sport_store.js:74"
                 ]
               }
             ],
@@ -399,7 +399,7 @@
                 "runtime": "changmen-esport",
                 "status": "verified",
                 "evidence": [
-                  "server/db/rds/matcher_store.js:192,225,462,497,557",
+                  "rds/rds/matcher_store.js:192,225,462,497,557",
                   "server/match/matcher/ui/api_routes.js",
                   "server/match/matcher/ops/merge_client_matches.js"
                 ]
@@ -690,8 +690,8 @@
             "layer": "code",
             "says": "自动循环写路径唯一（composeOnce），但表级存在 pm_sport 列写者、UI/ops 人工写、死写路径 saveClientMatches",
             "evidence": [
-              "server/db/rds/pm_sport_store.js:74",
-              "server/db/rds/matcher_store.js:192,225,462,497,557",
+              "rds/rds/pm_sport_store.js:74",
+              "rds/rds/matcher_store.js:192,225,462,497,557",
               "server/backend/core/db/store.js:358"
             ]
           },

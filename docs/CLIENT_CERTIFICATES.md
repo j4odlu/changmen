@@ -29,7 +29,7 @@
 |---|---|
 | `server/backend/core/certificates/routes.js` | 管理权限、HTTP 接入和签发/登记/吊销编排 |
 | `core/certificates/issuer.js` | OpenSSL 信任链验证、客户端证书及加密 PKCS#12 生成 |
-| `server/db/rds/client_certificate_store.js` | 指纹归属、吊销事务、公开证书与管理审计持久化 |
+| `rds/rds/client_certificate_store.js` | 指纹归属、吊销事务、公开证书与管理审计持久化 |
 | `core/auth/identity.js` / `login_service.js` | 消费证书校验结果，输出统一用户身份 |
 | `client/web/src/views/AdminCertificatesView.vue` | 管理页面和一次性下载安装包 |
 
@@ -37,7 +37,7 @@
 
 ## 配置与迁移
 
-运行 `node server/db/maintenance/apply-client-certificate-schema.mjs`。这是需要显式执行、可重复的增量维护，仅新增证书/审计表和凭证指纹列；应用发布不自动执行该命令，也不触发全库 schema、账号归属回填或订单迁移。
+运行 `node rds/maintenance/apply-client-certificate-schema.mjs`。这是需要显式执行、可重复的增量维护，仅新增证书/审计表和凭证指纹列；应用发布不自动执行该命令，也不触发全库 schema、账号归属回填或订单迁移。
 
 签发配置：`CERT_ISSUER_CERT`、`CERT_ISSUER_KEY`、`CERT_ISSUER_CHAIN`（中间 CA + 根证书公开链）、`CERT_CA_BUNDLE`（根证书）；可选 `CERT_OPENSSL_BIN`。后台不允许上传根 CA 私钥。未启用登记校验或签发文件未配置时不可签发。
 

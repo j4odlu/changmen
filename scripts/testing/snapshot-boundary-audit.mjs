@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createVersionedSnapshotCache } from "../../server/db/versioned_snapshot_cache.js";
+import { createVersionedSnapshotCache } from "../../rds/versioned_snapshot_cache.js";
 
 function gate() {
   let resolve, reject;

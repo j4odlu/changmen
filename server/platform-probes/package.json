@@ -27,7 +27,7 @@
     "sync:backend-bundle": "node scripts/sync-backend-bundle.mjs"
   },
   "dependencies": {
-    "@changmen/db": "file:../db",
+    "@changmen/db": "file:../../rds",
     "@changmen/storage": "file:../storage",
     "@changmen/shared": "file:../../packages/shared"
   }

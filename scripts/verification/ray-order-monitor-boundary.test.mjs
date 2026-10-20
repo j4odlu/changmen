@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, expect, it } from "vitest";
 import { moduleTokens } from "./fok-exact-boundaries.mjs";
 import { rayMonitorReviewedCommit, restoreRayOrderMonitorSource } from "./ray-order-monitor-boundary.mjs";

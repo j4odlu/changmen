@@ -1,6 +1,6 @@
 // [changmen 扩展] 当前候选与不可变历史包分别验收。只读线上代码/版本；无数据库、交易或部署调用。
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {assertCaptureEvidence} from './release-provenance.mjs';

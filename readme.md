@@ -4,6 +4,8 @@
 
 **客户端 + 服务端**系统：浏览器采集/下注 → `API_SaveMatch` / `API_SaveBet` → RDS → matcher → `Client_GetMatchs`。不是单机本地工具。
 
+源码按 `client/`、`server/`、`rds/` 分层，另有共享 `packages/` 和开发 `devtools/`。当前共 24 个 npm workspace，入口和职责见 [目录与 workspace 总览](docs/WORKSPACE_LAYOUT.md)。
+
 ## 快速开始
 
 ```bat

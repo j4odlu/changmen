@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [A8 可证实] 精确登记补单消费/次数/option 锚点/即时重试修正；固定 FOK 基线不变。
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { restorePmMakeupSettlementSource } from "./pm-makeup-settlement-boundary.mjs";

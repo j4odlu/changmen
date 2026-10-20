@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Only frozen simulation inputs; the HTTP call and FOK algorithm are unchanged.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from 'node:crypto';
 import { restoreVenueBrowserContracts } from './venue-browser-contracts.mjs';
 const normalize = s => s.replaceAll('\r\n', '\n');

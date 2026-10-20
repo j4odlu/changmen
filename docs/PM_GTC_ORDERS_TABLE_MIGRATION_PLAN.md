@@ -78,11 +78,11 @@
 
 | 位置 | 后续必须处理的边界 |
 | --- | --- |
-| `server/db/rds/orders_store.js` | 所有用户/账号/日期/分页、后台、关联、统计和盈亏 SQL，包括 JOIN 两侧、COUNT、SUM、Pending 和 SQL 联合足球列表；保留原金融集合与分页，不能先分页再过滤 |
-| `server/db/rds/orderModes/read.js` | 全量执行身份读取改为控制列；普通财务页不能占用控制/未核实行的页槽；模式历史身份、父单和精确原单匹配保持 |
+| `rds/rds/orders_store.js` | 所有用户/账号/日期/分页、后台、关联、统计和盈亏 SQL，包括 JOIN 两侧、COUNT、SUM、Pending 和 SQL 联合足球列表；保留原金融集合与分页，不能先分页再过滤 |
+| `rds/rds/orderModes/read.js` | 全量执行身份读取改为控制列；普通财务页不能占用控制/未核实行的页槽；模式历史身份、父单和精确原单匹配保持 |
 | `server/backend/core/account/order/{dto,save_pm}.js` 与后台映射 | 专用控制列不能暴露为可写 raw；FALSE 行不通过默认零值制造已核实成本；旧接口形状保持 |
 | `server/backend/core/orderModes/gtc/{handler,orders}.js` | 继续归属、精确匹配、版本检查及可信身份保留；所有历史恢复/批量保存依赖纳入，不只替换主 store |
-| `server/db/rds/orderModes/gtc/pm_gtc_orders_store.js` | 原单/卖单资格、排序锁、canonical 成本、卖出流水和结算保护继续；避免同一控制/财务行上的锁升级死锁 |
+| `rds/rds/orderModes/gtc/pm_gtc_orders_store.js` | 原单/卖单资格、排序锁、canonical 成本、卖出流水和结算保护继续；避免同一控制/财务行上的锁升级死锁 |
 | 前端 OrderStore、订单查询、统计和操作 | 真实持久化控制原单可显示，原业务只消费原财务集合；普通卖出、重绑和未知成本盈亏保护用明确资格，不按 GTC 模式一刀切 |
 | 管理端删除及维护脚本 | `deleteOrdersByIds` 等不能物理删除附带控制的原单；删除财务的原效果通过移出财务集合保留，控制/恢复保持；普通无控制订单按旧路径删除 |
 | profiles 生命周期 | 新目标表已有 owner FK/ON DELETE CASCADE；旧控制表没有对应 FK。迁移拒绝孤儿 owner，用户删除/重建与控制保留语义必须先核实，不用 cascade 偷删控制或伪造 owner |

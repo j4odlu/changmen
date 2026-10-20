@@ -1,5 +1,5 @@
 import {readAdapterHistory} from "./browser-entry-history.mjs";
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from 'node:child_process';
 import { expect, it } from 'vitest';
 import { restoreMakeupOddsDisplaySource } from './makeup-odds-display-boundary.mjs';

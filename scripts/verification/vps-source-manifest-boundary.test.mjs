@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 清单完整性、来源及非 DisplayOnly 模块负向检查，避免只修首个失败后漏查。
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync,spawnSync } from 'node:child_process';
 import { describe,it,expect } from 'vitest';
 import { fixedManifestSources,verifyManifestSources } from './vps-source-manifest-boundary.mjs';

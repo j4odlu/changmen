@@ -20,7 +20,7 @@ async function bounded(promise) {
 }
 
 await withTemporaryPostgres(async () => {
-  const db = await import("../../server/db/index.js");
+  const db = await import("../../rds/index.js");
   const cache = await import("../../server/backend/core/db/store.js");
   const account = await import("../../server/backend/core/account/account_service.js");
   const pool = db.getPgPool(), query = pool.query.bind(pool), passed = [];

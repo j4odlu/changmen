@@ -17,6 +17,6 @@
 - `server/backend`、`server/match/matcher` → `shared`、`api-contract`（不经 `client-core`）
 - `packages/*` **不** import `client/*` 或 `server/*`
 
-数据层（RDS）在 [`server/db`](../server/db/)（`@changmen/db`），不在 `packages/`。
+数据层（RDS）在 [`server/db`](../rds/)（`@changmen/db`），不在 `packages/`。
 
 相关：[docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) · [docs/TEAM_BOUNDARIES.md](../docs/TEAM_BOUNDARIES.md)

@@ -1,6 +1,6 @@
 import {adapterCanonicalFile} from "./browser-entry-history.mjs";
 // [changmen 扩展] In-memory tampering only; never edits protected application sources.
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { fileURLToPath } from "node:url";
 import { expect, it, vi } from "vitest";
 import { inspectRetainedSourceBoundaries } from "./retained-source-boundaries.mjs";

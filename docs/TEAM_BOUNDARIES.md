@@ -1,10 +1,12 @@
 # 团队边界（单仓阶段 0）
 
+[changmen 扩展] 当前 workspace 与物理目录见 [WORKSPACE_LAYOUT](WORKSPACE_LAYOUT.md)：`rds/` 独立于 `server/`，数据公共包名仍为 `@changmen/db`；Node 平台基础设施合并为 `server/venues`；旧 adapter、Node 工具和 match-identity 的兼容 workspace 已退役。当前共 24 个 workspace，旧记录中的包数和目录仅对应当时阶段。
+
 [changmen 扩展] 2026-10-20 catalog 环境读取归属服务端：共享 `game_catalog.ts` 只接收显式筛选值，服务端的 `@changmen/storage/game_catalog.js` 每次读取 `AGGREGATE_GAME_CODES`。7 处 ESM 和 2 处 CJS 配置消费者已迁至新入口；目录映射与静态采集规则继续共享。`check:boundaries` 核验实际文件与消费者，环境行为用旧实现逐项对照，原冻结清单及 551 项源码基线不变。
 
 [changmen 扩展] 2026-10-20 Node 旧入口退役：删除 `packages/venue-adapter/loader/adapter_paths.mjs`、`registry/paths.js`、`registry/feeds.js`、`scripts/sync-backend-bundle.mjs` 四个文件；旧包的运行时 exports 为空，验证消费者改用 `server/` 下的入口。`check:boundaries` 检查旧文件不存在、真实源码不再导入旧入口，且当前受管源码中 `server/` 外的后端实现/入口为零。原冻结清单及 551 项保护不变，历史视图仅用于验证。
 
-[changmen 扩展] 2026-10-20 默认 Node 资源根已归属 `server/packages/venue-node-registry/runtime`，由 registry workspace 自身交付。生产 Node 模块不再用旧 adapter 文件路径定位自身；瘦包工具通过公开 Node 入口物化实现。独立后端安装验证不复制旧 adapter 源码或资源，同时保留显式外部资源根和旧命令兼容。
+[changmen 扩展] 2026-10-20 默认 Node 资源根已归属 `server/venues/registry/runtime`，由 registry workspace 自身交付。生产 Node 模块不再用旧 adapter 文件路径定位自身；瘦包工具通过公开 Node 入口物化实现。独立后端安装验证不复制旧 adapter 源码或资源，同时保留显式外部资源根和旧命令兼容。
 
 [changmen 扩展] 2026-10-20 Node 平台模块归属：`@changmen/platform-probes` 的 93 个文件已迁至 `server/platform-probes`，旧 `devtools/platform-probes` 不再承载源码，也没有新增旧源码转导出。Node loader、辅助 scraper、npm workspace 与瘦包工具使用新位置；包名、命令及显式根目录覆盖保持不变。真实目录门禁与逐字迁移证明共同检查，原 551 保护基线不变。
 
@@ -39,7 +41,7 @@ changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check
 | 团队 | 拥有目录 | 职责 |
 |------|----------|------|
 | **客户端** | `client/web/`、`client/packages/`、`client/devtools/`、`chrome-extension/`、`packages/venue-adapter/` | UI、采集、下注、插件、浏览器包及前端工具；旧 adapter 内仍有双端入口 |
-| **服务端（核心）** | `server/backend/`、`server/match/`（identity / resolver / matcher）、`server/db/`、`server/storage/` | API、合并、RDS、本机 JSON 路径、代理/余额、运维脚本 |
+| **服务端（核心）** | `server/backend/`、`server/match/`（identity / resolver / matcher）、`rds/`、`server/storage/` | API、合并、RDS、本机 JSON 路径、代理/余额、运维脚本 |
 | **服务端（库，backend 挂载）** | `server/ws_forward/`、`server/realtime-hub/` | WebSocket 转发、Changmen Socket.IO 推送（由 backend 进程加载，非独立主链路进程） |
 | **服务端（扩展守护进程）** | `server/collectors/`、`server/value-bet/` | VPS 采集 daemon；详见 [collectors/README.md](../server/collectors/README.md) |
 | **开发工具** | `server/platform-probes/` | 可选：直连各平台探针 CLI（非主链路） |
@@ -52,7 +54,7 @@ changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check
 
 `packages/venue-adapter` 内的 `loader/`、`registry/`、`scripts/` 属**适配器基础设施**（`reqS` / `backendRequire` 在 `loader/adapter_paths.mjs`）；各平台 `{platform}/shared/` 为**浏览器采集**内部模块（collect / markets / parse 共用），**不同步**到瘦包。
 
-`packages/venue-adapter` 整体仍有**双端入口**（浏览器 + Node）。2026-10-17 后端已通过嵌套 workspace `@changmen/venue-node-loader` 消费原 loader 定义，其依赖 `@changmen/venue-node-registry` 的 Node 清单读取入口；原源码、manifest 及旧入口保持。resolver 始终属于服务端；OB/PB/Ray 辅助 scraper 现也消费该 Node 包根，开发依赖已移除整个 adapter，原静态/动态加载时机保持。registry 相邻浏览器 TS 保留父 adapter 兼容入口，不纳入 Node exports/files。根目录从 `client/` 迁至 `packages/` 的历史为 2026-09-20。
+`packages/venue-adapter` 整体仍有**双端入口**（浏览器 + Node）。2026-10-17 后端已通过嵌套 workspace `@changmen/venue-node` 消费原 loader 定义，其依赖 `@changmen/venue-node-registry` 的 Node 清单读取入口；原源码、manifest 及旧入口保持。resolver 始终属于服务端；OB/PB/Ray 辅助 scraper 现也消费该 Node 包根，开发依赖已移除整个 adapter，原静态/动态加载时机保持。registry 相邻浏览器 TS 保留父 adapter 兼容入口，不纳入 Node exports/files。根目录从 `client/` 迁至 `packages/` 的历史为 2026-09-20。
 
 `check:boundaries` 另检查 backend / resolver / Node loader 的生产声明闭包及 backend/resolver 开发工具闭包，拒绝重新引入整个 adapter、浏览器簿、client-core、Vue / Pinia 或未知本地依赖。声明门禁本身不证明实际安装隔离；早期定向安装曾保留浏览器链接和 Vue，见[原 Node 入口依赖记录](audits/PM_NODE_ENTRY_DEPENDENCY_AUDIT_20261017.md)。最新候选的真实安装证据以下文及源码隔离记录为准，实际发布安装规则保持。
 
@@ -111,25 +113,25 @@ changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check
 
 | 允许 | 禁止 |
 |------|------|
-| `@changmen/venue-adapter/*` | `@changmen/db`、`@changmen/match-identity`、`@changmen/platform-probes` |
+| `@changmen/venue-adapter/*` | `@changmen/db`、`@changmen/shared/match-identity`、`@changmen/platform-probes` |
 | `@changmen/shared`（展示、时间窗、账号倍数等） | `server/backend`、`server/match` 任意路径 |
 | `@changmen/api-contract` | |
 | `@/` 应用内模块 | |
 
-`client/web/scripts/`：允许 `@changmen/match-identity` 做离线 parity 测试；仍禁止 `@changmen/db` 与直接引用 backend。
+`client/web/scripts/`：允许 `@changmen/shared/match-identity` 做离线 parity 测试；仍禁止 `@changmen/db` 与直接引用 backend。
 
 ### 各平台 `packages/venue-adapter/{platform}/`（根目录 ts，不含 `shared/`、`scripts/`）
 
 | 允许 | 禁止 |
 |------|------|
 | `@changmen/venue-adapter/contract`、`@changmen/venue-adapter/shared`、同平台 `shared/` | `@changmen/db`、`client/web`、`server/backend` |
-| `@changmen/shared` | `@changmen/platform-probes`、`@changmen/match-identity` |
+| `@changmen/shared` | `@changmen/platform-probes`、`@changmen/shared/match-identity` |
 
 ### 服务端（`server/backend`、`server/match`、扩展守护进程）
 
 | 允许 | 禁止 |
 |------|------|
-| `@changmen/db`、`@changmen/match-identity`、`@changmen/shared`、`@changmen/storage` | `packages/venue-adapter/*/`（平台根目录 ts 与 `shared/`） |
+| `@changmen/db`、`@changmen/shared/match-identity`、`@changmen/shared`、`@changmen/storage` | `packages/venue-adapter/*/`（平台根目录 ts 与 `shared/`） |
 | `@changmen/venue-adapter/loader`、`registry`、`requirePlatform` → **node** | `client/web/src/**` |
 | `@changmen/platform-probes`、`@changmen/polymarket-sports`、`@changmen/realtime-hub`、`@changmen/ws-forward`（backend 依赖） | |
 | `server/value-bet` 仅依赖 `@changmen/db` + `@changmen/shared` + `@changmen/storage` | |
@@ -156,9 +158,9 @@ changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check
 
 正 EV 仪表盘通过 `@changmen/db/value_signals.js` 读取信号与聚合，诊断计算仍在业务层。Predict.fun 体育 relay 通过 `@changmen/db/relay_identity.js` 选择原有用户身份，通过公开 `@changmen/db/jwt.js` 使用原签发器；token 优先级、缓存和请求策略不变。
 
-backend 业务目录现为零数据库访问例外：`admin_maintenance.js` 的三条只读查询与连接池访问已逐字迁至 `@changmen/db/admin_maintenance.js`，报表分组、排序、金额转换和提示文字仍在 backend。八处原例外的历史契约保留用于完整源码对照，不再作为当前放行项。运行版本观察的 SQL、指纹与缓存也已归入 `server/db/runtime_schema.js`；已迁移文件不得重新登记例外。边界规则是工程门禁，不替代运行时鉴权。
+backend 业务目录现为零数据库访问例外：`admin_maintenance.js` 的三条只读查询与连接池访问已逐字迁至 `@changmen/db/admin_maintenance.js`，报表分组、排序、金额转换和提示文字仍在 backend。八处原例外的历史契约保留用于完整源码对照，不再作为当前放行项。运行版本观察的 SQL、指纹与缓存也已归入 `rds/runtime_schema.js`；已迁移文件不得重新登记例外。边界规则是工程门禁，不替代运行时鉴权。
 
-数据库历史维护、诊断、事故修复及归档脚本归 `server/db/maintenance/legacy/`，累计从 backend 删除 140 个旧文件，不能加回转导出。边界检查比较完整原文、导入变换、迁移前后模块解析及环境/备份资源的原指向；数据层不得反向导入 backend、平台采集或客户端实现。其余混合脚本保留在 backend，后续应把其中的数据访问拆出，再确定剩余业务编排的归属。
+数据库历史维护、诊断、事故修复及归档脚本归 `rds/maintenance/legacy/`，累计从 backend 删除 140 个旧文件，不能加回转导出。边界检查比较完整原文、导入变换、迁移前后模块解析及环境/备份资源的原指向；数据层不得反向导入 backend、平台采集或客户端实现。其余混合脚本保留在 backend，后续应把其中的数据访问拆出，再确定剩余业务编排的归属。
 
 ### 探针（`server/platform-probes`）
 
@@ -208,11 +210,11 @@ adapter 的 PM 直接运行依赖已补齐，Vue 以与web相同范围的 option
 
 `check:boundaries` 通过同一解析器执行 frontend / backend / RDS / shared 方向检查，并拒绝兼容入口重新增加实现。冻结目录、旧 CLI/SQL 资产及包级安装耦合仍有保留项，详见 [源码隔离与剩余清单](SOURCE_FILE_ISOLATION_20261017.md)。
 
-后续工具收尾已迁出 adapter 的 3 个前端维护工具和 1 个跨端验证工具至 `devtools/venue-adapter/`；它们是 Node 执行的 tooling，不是运行库。RDS 结构检查、初始化命令及观察表维护实现统一位于 `server/db/maintenance`，旧 backend 命令只转导出或分派。门禁精确扫描新工具目录并检查 CLI 薄入口形状，不扩大到历史脚本。后端瘦包同步实现、历史 SQL/基线、冻结源码和安装耦合继续保留。
+后续工具收尾已迁出 adapter 的 3 个前端维护工具和 1 个跨端验证工具至 `devtools/venue-adapter/`；它们是 Node 执行的 tooling，不是运行库。RDS 结构检查、初始化命令及观察表维护实现统一位于 `rds/maintenance`，旧 backend 命令只转导出或分派。门禁精确扫描新工具目录并检查 CLI 薄入口形状，不扩大到历史脚本。后端瘦包同步实现、历史 SQL/基线、冻结源码和安装耦合继续保留。
 
 `retained-source-boundaries` 将上述保留项固定为 6 组、明确退出条件，并拒绝兼容入口静默退役、有效 SQL 资产遗漏、冻结路径退登和 DB 例外扩大。`component-install-inputs` 同时核对前端/后端/RDS 的声明闭包，当前为 7/14/3 个 workspace，后端含开发工具为 15 个；前端 9 包且带入 DB/storage 的结果属于早期批次，后续已解除。临时安装实验已验证后端生产 workspace 集合可排除浏览器依赖，RDS 定向安装也无浏览器依赖；生产配置未采纳精简安装，源码/资产布局仍有保留约束，详见[真实安装证据](SOURCE_FILE_ISOLATION_20261017.md)。
 
-RDS 维护资产归入 `server/db/assets/`，维护实现与测试归入 `server/db/maintenance/`，按自身包位置读取资产；backend 原 SQL/基线的 44 份兼容副本及 7 个维护入口已删除，禁止恢复。资产检查继续固定原历史内容/checksum，不允许主资产缺失时回退 backend。独立维护验收必须复制完整 RDS 运行时闭包：DB/shared/storage/api-contract，加上 storage 依赖的 `devtools/runtime-tooling`，完全没有 backend 目录；测试同时核对包链接和实际源码存在，不能把 npm 创建的悬空链接视为安装成功。固定旧消费者由原 Git 快照物化，历史运维脚本另行审查，见[资产独立记录](SOURCE_FILE_ISOLATION_20261017.md)。
+RDS 维护资产归入 `rds/assets/`，维护实现与测试归入 `rds/maintenance/`，按自身包位置读取资产；backend 原 SQL/基线的 44 份兼容副本及 7 个维护入口已删除，禁止恢复。资产检查继续固定原历史内容/checksum，不允许主资产缺失时回退 backend。独立维护验收必须复制完整 RDS 运行时闭包：DB/shared/storage/api-contract，加上 storage 依赖的 `devtools/runtime-tooling`，完全没有 backend 目录；测试同时核对包链接和实际源码存在，不能把 npm 创建的悬空链接视为安装成功。固定旧消费者由原 Git 快照物化，历史运维脚本另行审查，见[资产独立记录](SOURCE_FILE_ISOLATION_20261017.md)。
 
 ## CODEOWNERS
 
@@ -227,7 +229,7 @@ copy docs\CODEOWNERS.example .github\CODEOWNERS
 ## 开发习惯
 
 1. **客户端**改采集/下注 → 只动 `venue-adapter` + `client/web`；用 Save* API 验证，不直连 RDS。
-2. **服务端**改合并 → `server/match/matcher` / `resolver`；表结构主资产只在 `server/db/assets/migrations` 维护，backend 不保留副本。公共身份规则归 `packages/shared/match-identity`，旧 identity 包保留入口；用 `Client_GetMatchs` 契约测试或 web 冒烟验证。
+2. **服务端**改合并 → `server/match/matcher` / `resolver`；表结构主资产只在 `rds/assets/migrations` 维护，backend 不保留副本。公共身份规则归 `packages/shared/match-identity`，旧 identity 包保留入口；用 `Client_GetMatchs` 契约测试或 web 冒烟验证。
 3. **`packages/shared`** 变更：谁改谁提 PR，另一方扫一眼受影响 API 字段/展示。
 4. 生产发版按现有组件流程选择 frontend / backend / full；共享协议及当前隔离候选仍按保守范围、后端先行验收。构建、封包、切换和回滚规则见 [INDEPENDENT_DEPLOYMENT.md](INDEPENDENT_DEPLOYMENT.md)，`app:build` 或手工重启不能代替发布验收。
 
@@ -249,11 +251,11 @@ copy docs\CODEOWNERS.example .github\CODEOWNERS
 
 ## Node 基础包真实目录隔离（2026-10-19）
 
-[changmen 扩展] `@changmen/venue-node-loader` 与 `@changmen/venue-node-registry` 的 workspace 和三个运行实现已归 `server/packages/`。原路径转导出同一实现，包名和 exports 不变；瘦包内展开原实现，保持资源定位。浏览器 adapter、共享 catalog 的主资产和原资源根仍保留；Node catalog 导出副本受逐字一致性检查约束。新目录仍按原保守范围发布，未启用精简生产安装。详见 [第二轮迁移与验证](NODE_PACKAGE_ISOLATION_20261019.md)。
+[changmen 扩展] `@changmen/venue-node` 与 `@changmen/venue-node-registry` 的 workspace 和三个运行实现已归 `server/packages/`。原路径转导出同一实现，包名和 exports 不变；瘦包内展开原实现，保持资源定位。浏览器 adapter、共享 catalog 的主资产和原资源根仍保留；Node catalog 导出副本受逐字一致性检查约束。新目录仍按原保守范围发布，未启用精简生产安装。详见 [第二轮迁移与验证](NODE_PACKAGE_ISOLATION_20261019.md)。
 
 ## 平台 catalog 单源维护（2026-10-19，第三轮）
 
-[changmen 扩展] 平台目录的唯一维护源现为 `packages/shared/catalog/venue_manifest.json`，公共导出为 `@changmen/shared/catalog/venue_manifest.json`。`npm run sync:venue-manifest` 生成 `packages/venue-adapter/registry/manifest.json` 和 `server/packages/venue-node-registry/manifest.json`，后两者只作运行兼容资产。`npm run check:venue-manifest` 及既有 `check:boundaries` 只读检查三者逐字一致，不自动修复。
+[changmen 扩展] 平台目录的唯一维护源现为 `packages/shared/catalog/venue_manifest.json`，公共导出为 `@changmen/shared/catalog/venue_manifest.json`。`npm run sync:venue-manifest` 生成 `packages/venue-adapter/registry/manifest.json` 和 `server/venues/registry/manifest.json`，后两者只作运行兼容资产。`npm run check:venue-manifest` 及既有 `check:boundaries` 只读检查三者逐字一致，不自动修复。
 
 浏览器元数据、图标生成、Node registry 及资源根探测仍使用原路径，loader 的环境覆盖、缓存和初始化规则不变。默认瘦包从共享主资产取 catalog；显式外部源保留自己的 catalog。发布范围与生产安装规则不变，旧资源目录尚未退役。详见 [第三轮实施与验证](VENUE_MANIFEST_ISOLATION_20261019.md)。
 

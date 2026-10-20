@@ -1,7 +1,7 @@
 // [changmen 扩展] Native Node regression plus exact restoration of the original
 // protected module; no business-source or directory exclusion is introduced.
 import { readClientPackageSource } from "./client-package-relocation.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from "node:child_process";
 import { expect, it } from "vitest";
 import { gitSource, replaceExact, verifyProtectedSource } from "./fok-exact-boundaries.mjs";

@@ -68,12 +68,12 @@ try {
   const probe = `import assert from'node:assert/strict';import net from'node:net';import{pathToFileURL}from'node:url';
 let attempts=0;const blocked=()=>{attempts++;throw Error('Network forbidden in installation verification');};globalThis.fetch=blocked;net.Socket.prototype.connect=blocked;
 const root=process.cwd();
-const loader=await import('@changmen/venue-node-loader');const legacy=await import(pathToFileURL(root+'/server/packages/venue-node-loader/adapter_paths.mjs').href);
+const loader=await import('@changmen/venue-node');const legacy=await import(pathToFileURL(root+'/server/venues/loader/adapter_paths.mjs').href);
 assert.deepEqual(Object.keys(loader),Object.keys(legacy));for(const key of Object.keys(loader))assert.equal(loader[key],legacy[key]);
 await loader.initAdapterRegistry();await loader.initEsmPlatformBackends();
 for(const id of ['OB','PB','RAY'])assert(loader.requirePlatform(id,'node','session.js'));
 assert.equal(typeof(await import('@changmen/team-resolver')).resolve,'function');assert.equal(attempts,0);
-const fs=await import('node:fs');const bundle=await import('@changmen/venue-adapter-tools/sync-backend-bundle.mjs');
+const fs=await import('node:fs');const bundle=await import('@changmen/venue-node/sync-backend-bundle.mjs');
 const packed=bundle.syncPlatformAdapterBackendBundle({dst:root+'/output/isolated-adapter'});
 assert(fs.readFileSync(packed+'/registry/manifest.json').equals(fs.readFileSync(root+'/packages/shared/catalog/venue_manifest.json')));
 assert.equal(attempts,0);

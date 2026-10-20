@@ -21,9 +21,7 @@ export function inspectFrontendBuildInputs(root, { readFile = file => fs.readFil
   }
   for (const name of ["runtime_version.js", "runtime_version.d.ts", "dev_web_port.js", "dev_web_port.d.ts"]) {
     const file = `packages/shared/tooling/${name}`;
-    const entry = '// [changmen 扩展] 旧 Node 工具导出兼容；宿主显式提供 runtime-tooling。\n'
-      + `export * from "@changmen/runtime-tooling/${name.replace(".d.ts", ".js")}";\n`;
-    if (text(file) !== entry) fail(file, "Legacy tooling exports must only forward to the single Node workspace");
+    if (fs.existsSync(path.join(root,file))) fail(file, "Retired shared tooling entry must not return");
   }
   const wrapper = '// [changmen 扩展] 保留旧 Node 入口；完整来源识别实现位于独立 Node 工具包。\nexport * from "@changmen/runtime-tooling/runtime_version.js";\n';
   if (text("server/storage/runtime_version.js") !== wrapper) fail("server/storage/runtime_version.js", "Old source identity entry must only re-export the same canonical module");
@@ -34,7 +32,7 @@ export function inspectFrontendBuildInputs(root, { readFile = file => fs.readFil
   if (hash(devConfig) !== policy.originalDevConfigSha256) fail("server/storage/dev_web_config.js", "Complete original environment loading and port semantics must restore exactly");
   const shared = JSON.parse(text("packages/shared/package.json"));
   for (const name of ["runtime_version", "dev_web_port"])
-    if (shared.exports?.[`./tooling/${name}.js`] !== `./tooling/${name}.js`) fail("packages/shared/package.json", `Shared Node tooling export changed: ${name}`);
+    if (shared.exports?.[`./tooling/${name}.js`]) fail("packages/shared/package.json", `Retired shared Node tooling export returned: ${name}`);
   const ownership = JSON.parse(text("scripts/verification/source-ownership-inputs.json"));
   if (policy.activeBuildRoots.some(file => !ownership.toolingRoots?.includes(file) || !ownership.roots.includes(file)))
     fail("scripts/verification/source-ownership-inputs.json", "Every active frontend build input must remain a scoped ownership seed");

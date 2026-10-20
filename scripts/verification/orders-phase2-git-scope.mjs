@@ -1,6 +1,6 @@
 // [changmen 扩展] 固定候选基底的只读 Git 范围检查；不创建提交或修改暂存区。
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 

@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 执行状态只在客户端；真实结果同步、历史读取及独立发布组合均须有执行证据。
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import assert from "node:assert/strict";
 import { confirmedResultSyncScenario, exactMonitorApiScenario, legacyBackendScenario, loadOfflineModule } from "./gtc-legacy-backend-fixture.mjs";
 import { releasePlan, selectGtcRelease, verifyLegacyGtcBackendModules } from "./gtc-independent-release.mjs";

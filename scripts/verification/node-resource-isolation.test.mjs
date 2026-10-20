@@ -1,7 +1,7 @@
 // [changmen 扩展] Exercise server resources, actual legacy-root denial and packaging contracts.
-import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import{execFileSync}from'node:child_process';import{expect,it}from'vitest';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';import os from 'node:os';import path from 'node:path';import{execFileSync}from'node:child_process';import{expect,it}from'vitest';
 import{NODE_RESOURCE_ISOLATION as record,verifyNodeResourceIsolation}from'./node-resource-isolation.mjs';
-import{syncPlatformAdapterBackendBundle}from'../../server/packages/venue-adapter-tools/sync-backend-bundle.mjs';
+import{syncPlatformAdapterBackendBundle}from"../../server/venues/sync-backend-bundle.mjs";
 const read=file=>fs.readFileSync(file,'utf8');
 it('owns the runtime assets in the existing registry workspace and keeps the generated catalog exact',()=>{
  expect(verifyNodeResourceIsolation(read).oldAdapterRequired).toBe(false);
@@ -22,10 +22,10 @@ it('loads registry state and creates an artifact with every old adapter filesyst
    const old=path.join(process.cwd(),'packages/venue-adapter');let oldAccesses=0;
    for(const name of ['readFileSync','readdirSync','statSync','lstatSync','existsSync']){const original=fs[name];fs[name]=function(file,...args){const key=file instanceof URL?file.pathname:String(file);if(key.replaceAll('\\\\','/').includes('/packages/venue-adapter/')){oldAccesses++;throw Error('old adapter resource access forbidden');}return original.call(this,file,...args);};}
    net.Socket.prototype.connect=()=>{throw Error('network forbidden')};globalThis.fetch=()=>{throw Error('network forbidden')};
-   const loader=await import('@changmen/venue-node-loader');const registry=await import('@changmen/venue-node-registry/paths.js');
-   assert.equal(loader.getAdapterRoot(),path.join(process.cwd(),${JSON.stringify(record.runtime)}));
+   const loader=await import('@changmen/venue-node');const registry=await import('@changmen/venue-node/registry/paths.js');
+   assert.equal(loader.getAdapterRoot(),path.join(process.cwd(),${JSON.stringify("server/venues/registry/runtime")}));
    assert.equal(loader.getRegistryPaths().MANIFEST,registry.MANIFEST);assert.equal(loader.getRegistryPaths().getPlatformNodeRoot,registry.getPlatformNodeRoot);
-   const tool=await import('@changmen/venue-adapter-tools/sync-backend-bundle.mjs');tool.syncPlatformAdapterBackendBundle({dst:${JSON.stringify(dst)}});
+   const tool=await import('@changmen/venue-node/sync-backend-bundle.mjs');tool.syncPlatformAdapterBackendBundle({dst:${JSON.stringify(dst)}});
    assert.equal(oldAccesses,0);console.log('no legacy filesystem access: OK');
   `],{env,encoding:'utf8',windowsHide:true,timeout:20000});
   expect(result).toContain('no legacy filesystem access: OK');

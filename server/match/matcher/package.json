@@ -34,8 +34,7 @@
     "check:no-merge-import": "node scripts/check-no-merge-import.mjs"
   },
   "dependencies": {
-    "@changmen/db": "file:../../db",
-    "@changmen/match-identity": "file:../identity",
+    "@changmen/db": "file:../../../rds",
     "@changmen/shared": "file:../../../packages/shared",
     "@changmen/storage": "file:../../storage",
     "@changmen/team-resolver": "file:../resolver",

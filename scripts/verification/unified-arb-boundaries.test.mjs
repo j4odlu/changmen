@@ -1,7 +1,7 @@
 import {readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
 // [changmen 扩展] 正负向验证逐段还原与完整基线，不调用真实平台。
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, expect, it } from "vitest";
 import { gitSource, moduleTokens, replaceExact, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { restoreRayFinalizeSource } from "./ray-frontend-boundary.mjs";

@@ -1,5 +1,5 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, expect, it } from "vitest";
 import { verifyProtectedSource, gitSource } from "./fok-exact-boundaries.mjs";
 import { restoreRayMapOutcomeSource } from "./ray-frontend-boundary.mjs";

@@ -2,7 +2,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 // [changmen 扩展] 只放行历史公开盘口后台补查；仍逐字恢复原成交/财务实现。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { restoreVenueBrowserExecution } from './venue-browser-execution.mjs';
 const changes = JSON.parse(readAdapterHistory(new URL("./pm-stored-market-refresh-increments.json", import.meta.url), "utf8"));
 export function restorePmStoredMarketRefreshSource(file, input) {

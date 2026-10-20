@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {expect,it,vi} from 'vitest';
@@ -8,7 +8,7 @@ it('extracts ten unchanged SQL sites behind nine bounded operations without movi
  expect(inspectProfileRepairIsolation(root)).toEqual({scripts:3,querySites:10,operations:9,backendRawPoolHandles:0,reverseApplicationDependencies:0});
  const old=JSON.parse(record.metadata[0].before),next=JSON.parse(fs.readFileSync(record.metadata[0].file,'utf8'));
  delete next.exports['./maintenance/profile_repairs.js'];expect(next).toEqual(old);
- const syntax=spawnSync(process.execPath,['--check',record.dataFile],{encoding:'utf8',windowsHide:true});expect(syntax.status,syntax.stderr).toBe(0);
+ const syntax=spawnSync(process.execPath,['--check',record.dataFile.replace('server/db/','rds/')],{encoding:'utf8',windowsHide:true});expect(syntax.status,syntax.stderr).toBe(0);
 });
 const scenarios={
  dedupe:['apply','dryRun','noChange','noKeep','empty','missingUser','readFailure','writeFailure','cacheFailure','readyFailure'],

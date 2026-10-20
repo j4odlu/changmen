@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
-import {createRequire} from 'node:module';
+import {historicalCreateRequire as createRequire} from './workspace-layout-history.mjs';
 import {createHash} from 'node:crypto';
 import {expect,it} from 'vitest';
 import {VENUE_BROWSER_WORKSPACE as record,restoreVenueBrowserWorkspace,verifyVenueBrowserWorkspace} from './venue-browser-workspace.mjs';

@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { expect, test } from "vitest";
 import { restorePmAccountSigningSource, verifyPmAccountSigningContract } from "./pm-account-signing-boundary.mjs";
 const readBeforeExecution = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));

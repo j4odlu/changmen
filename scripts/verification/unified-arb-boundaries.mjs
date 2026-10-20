@@ -1,7 +1,7 @@
 // [changmen 扩展] 仅还原逐项审查的统一流程增量；还原后仍由原保护比较整个固定基线模块。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { gitSource, moduleTokens } from "./fok-exact-boundaries.mjs";
 import { restoreRayFinalizeSource, verifyRayFrontendSources } from "./ray-frontend-boundary.mjs";
 import { restorePmOrderBetLabelSource } from "./pm-order-bet-label-boundary.mjs";

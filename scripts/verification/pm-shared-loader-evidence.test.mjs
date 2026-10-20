@@ -34,8 +34,8 @@ it("records default target hashes, locked pg resolution and the bounded preload 
   expect(result.targetEvidence.map(row => row.file).sort()).toEqual([
     "server/platform-probes/hg/session.js", "server/platform-probes/ob/session.js",
     "server/platform-probes/pb/session.js", "server/platform-probes/ray/core.js",
-    "server/platform-probes/ray/session.js", "server/packages/venue-node-registry/runtime/registry/feeds.js",
-    "server/packages/venue-node-registry/runtime/registry/paths.js",
+    "server/platform-probes/ray/session.js", "server/venues/registry/runtime/registry/feeds.js",
+    "server/venues/registry/runtime/registry/paths.js",
   ].sort());
   for (const row of [...result.targetEvidence, ...result.preloadPackages, ...result.preloadFiles, result.pg, result.manifest]) {
     expect(row.sha256).toMatch(/^[a-f0-9]{64}$/);
@@ -83,7 +83,7 @@ it("does not certify application .env or remote configuration from an empty audi
   expect(result.runtimeRootsCertified).toBe(false);
 });
 it("ignores comment and whitespace edits for this extra interpretation check, leaving the separate exact FOK protection intact", () => {
-  const file = "server/packages/venue-node-loader/adapter_paths.mjs", text = source(file);
+  const file = "server/venues/loader/adapter_paths.mjs", text = source(file);
   expect(sharedLoaderSourceSignature(file, `// added comment\n${text}\n  /* comment */`)).toBe(sharedLoaderSourceSignature(file, text));
 });
 it("keeps code after template substitutions and regular expressions in the source contract", () => {
@@ -94,16 +94,16 @@ it("keeps code after template substitutions and regular expressions in the sourc
   expect(sharedLoaderSourceSignature("example.js", text.replace('/root/', '/different/'))).not.toBe(signature);
 });
 it("binds pg module/search selection without treating unrelated DB business functions as loader inputs", () => {
-  const file = "server/db/pg_pool.js", text = source(file);
+  const file = "rds/pg_pool.js", text = source(file);
   const signature = sharedLoaderSourceSignature(file, text, "pg-loader");
   expect(sharedLoaderSourceSignature(file, `${text}\nfunction unrelatedQuery() { return 1; }`, "pg-loader")).toBe(signature);
   expect(sharedLoaderSourceSignature(file, text.replace('"pg", { paths:', '"other-db", { paths:'), "pg-loader")).not.toBe(signature);
   expect(sharedLoaderSourceSignature(file, text.replace('"apps", "backend"', '"other", "backend"'), "pg-loader")).not.toBe(signature);
 });
 for (const [file, change] of [
-  ["server/packages/venue-node-loader/adapter_paths.mjs", text => `${text}\nvoid 0;`],
-  ["server/packages/venue-node-registry/paths.js", text => `${text}\nvoid 0;`],
-  ["server/db/pg_pool.js", text => text.replace('"pg", { paths:', '"other-db", { paths:')],
+  ["server/venues/loader/adapter_paths.mjs", text => `${text}\nvoid 0;`],
+  ["server/venues/registry/paths.js", text => `${text}\nvoid 0;`],
+  ["rds/pg_pool.js", text => text.replace('"pg", { paths:', '"other-db", { paths:')],
 ]) it(`invalidates classifications when the reviewed rules change in ${file}`, () => {
   const result = inspect(sites, { readSource: name => name === file ? change(source(name)) : source(name) });
   expect(result.violations.some(row => row.file === file && row.rule === "pm-shared-loader")).toBe(true);

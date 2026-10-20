@@ -4,7 +4,7 @@ import path from "node:path";
 import { it,expect,vi } from "vitest";
 import { accepted,facts,financialRow,OWNER,EXECUTION,HASH } from "../pm-gtc-orders/integration/fixtures.mjs";
 import { loadHistoricalOrderStorage } from "../../verification/historical-order-storage.mjs";
-const { mutatePmGtc,listPmGtcByIds } = loadHistoricalOrderStorage("server/db/rds/orderModes/gtc/pm_gtc_store.js");
+const { mutatePmGtc,listPmGtcByIds } = loadHistoricalOrderStorage("rds/rds/orderModes/gtc/pm_gtc_store.js");
 import { applyBatch,digest,installSchema,planBatch,planSchema,readTarget,reconcileReceipt,rollbackBatch,seal } from "./production-tools.mjs";
 import { writeImmutable } from "./production.mjs";
 

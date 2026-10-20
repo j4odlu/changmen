@@ -17,13 +17,13 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../../db/rds/common.js", () => ({ getPgPool: () => mocks.poolAvailable ? mocks.pool : null }));
+vi.mock("../../../../rds/rds/common.js", () => ({ getPgPool: () => mocks.poolAvailable ? mocks.pool : null }));
 
 const originalSecret = process.env.JWT_SECRET;
 process.env.JWT_SECRET = "rotation-test-secret-at-least-32-bytes";
 
 const { getBrowserSession, issueOpaqueRefreshToken, rotateOpaqueRefreshToken } = await import(
-  "../../../db/rds/auth_session_store.js"
+  "../../../../rds/rds/auth_session_store.js"
 );
 
 afterAll(() => {

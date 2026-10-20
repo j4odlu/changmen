@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { confirmedResultSyncScenario, exactMonitorApiScenario, legacyBackendScenario, modernMonitorOrdersScenario } from "./gtc-legacy-backend-fixture.mjs";
 const source = file => gitSource("832f3f76c30d6ad741ce850a68cd6ba1da7d06f9", file);
 it("the actual client sync consumer acknowledges only a confirmed result saved through the real handler", async () => {

@@ -43,8 +43,8 @@ it("publication rejects both staged and untracked source before running checks",
   expect(run).not.toHaveBeenCalled();
 });
 it("daily core checks stay offline and cannot claim complete release approval", () => {
-  const cwd = fixture(); fs.mkdirSync(path.join(cwd, "server/db"), { recursive: true });
-  fs.writeFileSync(path.join(cwd, "server/db/order.js"), "changed");
+  const cwd = fixture(); fs.mkdirSync(path.join(cwd, "rds"), { recursive: true });
+  fs.writeFileSync(path.join(cwd, "rds/order.js"), "changed");
   const run = vi.fn(() => ({ status: 0 }));
   const report = runChangeValidation([], { cwd, npm: "npm-cli.js", run });
   expect(report.tier).toBe("full"); expect(report.passed).toBe(true); expect(report.completeRelease).toBe(false);

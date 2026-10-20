@@ -20,7 +20,7 @@ flowchart LR
 | Client_* 接入 | `core/auth/request_auth.js` | 身份转换与统一错误语义；对业务提供用户上下文 |
 | HTTP 接入 | `core/auth/http_identity.js`、`web_session_routes.js` | 请求凭证、Origin/CSRF、公开会话与退出；原生登录处理函数由 HTTP 装配层注入 |
 | WS 接入 | `core/auth/realtime_auth.js` | 共享身份校验；频道授权函数作为独立导出，由 Hub 调用 |
-| 持久化适配 | `server/db/rds/auth_store.js`、`auth_session_store.js` | 登录与撤销事务、摘要存储、期限和登录代次；只能由 `@changmen/db` 公开入口访问 |
+| 持久化适配 | `rds/rds/auth_store.js`、`auth_session_store.js` | 登录与撤销事务、摘要存储、期限和登录代次；只能由 `@changmen/db` 公开入口访问 |
 | 应用装配 | `core/esport-api/router.ts`、`http_routes.js` | 注入业务策略和 profile/presence 钩子，保留原 Client_Login 包络；不在路由中实现登录算法 |
 | 权限策略 | `action_permissions.js`、`admin_auth.js`、业务 owner 检查 | 与凭证验证分开；权限失败不代表用户退出 |
 

@@ -2,7 +2,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 // [changmen 扩展] Verify the entire erased sports implementation before returning
 // its fixed pre-migration source to the unchanged legacy FOK input comparison.
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from "node:child_process";
 import ts from "typescript";
 const previousCommit = "84364793171244eca85378ef7bce3388f147b237";

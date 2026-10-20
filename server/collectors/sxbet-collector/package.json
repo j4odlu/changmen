@@ -13,7 +13,7 @@
     "test": "node --test parse.test.mjs"
   },
   "dependencies": {
-    "@changmen/db": "file:../../db",
+    "@changmen/db": "file:../../../rds",
     "@changmen/shared": "file:../../../packages/shared",
     "@changmen/storage": "file:../../storage"
   }

@@ -1,6 +1,6 @@
 // [changmen 扩展] 固定已发布 313c19e8 候选基底；不是 FOK/VPS 基线重设。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {createReadonlyGitScope,verifyGitScope} from "./orders-phase2-git-scope.mjs";
 import {restoreMinimalOrdersSource} from "./pm-orders-minimal-boundary.mjs";
 const base="313c19e8afc30d62b54363830974b6738eab84d8",metadataPath="scripts/verification/pm-orders-minimal-scope.json";

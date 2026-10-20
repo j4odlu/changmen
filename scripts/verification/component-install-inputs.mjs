@@ -53,7 +53,7 @@ export function declaredInstallClosure(root, packages, name, { build = false } =
 export function frontendInstallBoundary(profile) {
   const toolingEdge = edge => edge.name === "@changmen/runtime-tooling" && edge.target === "devtools/runtime-tooling"
     && profile.build === true && profile.root === "@changmen/web" && edge.from === "client/web" && edge.group === "devDependencies";
-  return profile.edges.filter(edge => edge.target && !toolingEdge(edge) && (/^(?:server|devtools)\//.test(edge.target)
+  return profile.edges.filter(edge => edge.target && !toolingEdge(edge) && (/^(?:server|devtools)(?:\/|$)|^rds(?:\/|$)/.test(edge.target)
     || edge.target === "packages/shared/tooling"
     || /^packages\/venue-adapter\/(?:loader|registry|scripts)(?:\/|$)/.test(edge.target)))
     .map(edge => ({ file: `${edge.from}/package.json`, spec: edge.name,
@@ -72,13 +72,8 @@ export function runtimeToolingDeclarationBoundary(packages) {
   const shared = packages.get("@changmen/shared")?.pkg;
   if (["dependencies", "optionalDependencies", "devDependencies", "peerDependencies"].some(group => shared?.[group]?.[name] || shared?.[group]?.["@changmen/runtime-tooling-compat"]))
     fail("packages/shared/package.json", "Shared runtime declarations must not install Node tooling or its legacy compatibility workspace");
-  const compat = packages.get("@changmen/runtime-tooling-compat");
-  if (!compat || compat.dir !== "packages/shared/tooling" || compat.pkg.type !== "module"
-    || JSON.stringify(compat.pkg.exports) !== JSON.stringify(expected)
-    || JSON.stringify(compat.pkg.files) !== JSON.stringify(["runtime_version.js", "runtime_version.d.ts", "dev_web_port.js", "dev_web_port.d.ts"])
-    || JSON.stringify(compat.pkg.dependencies) !== JSON.stringify({ [name]: "file:../../../devtools/runtime-tooling" })
-    || ["devDependencies", "optionalDependencies", "peerDependencies", "scripts"].some(group => Object.keys(compat.pkg[group] || {}).length))
-    fail("packages/shared/tooling/package.json", "Legacy Node entries must own only the single canonical Node tool dependency");
+  if (packages.has("@changmen/runtime-tooling-compat"))
+    fail("packages/shared/tooling/package.json", "Retired tooling compatibility workspace must not return");
   if (packages.get("@changmen/web")?.pkg.devDependencies?.[name] !== "file:../../devtools/runtime-tooling")
     fail("client/web/package.json", "Vite must explicitly own its Node tool as a development dependency");
   if (packages.get("@changmen/storage")?.pkg.dependencies?.[name] !== "file:../../devtools/runtime-tooling")
@@ -86,21 +81,22 @@ export function runtimeToolingDeclarationBoundary(packages) {
   return violations;
 }
 export function venueBrowserDeclarationBoundary(packages) {
-  const violations = [], adapter = packages.get("@changmen/venue-adapter"), browser = packages.get("@changmen/venue-browser"), tools = packages.get("@changmen/venue-adapter-tools");
+  const violations = [], adapter = packages.get("@changmen/venue-adapter"), browser = packages.get("@changmen/venue-browser"), tools = packages.get("@changmen/venue-node");
   for (const [name, target] of Object.entries({ "@changmen/api-contract": "file:../../../packages/api-contract", "@changmen/client-core": "file:../client-core" }))
     if (browser?.pkg.dependencies?.[name] !== target) violations.push({ file: "client/packages/venue-browser/package.json", spec: name,
       pattern: "The browser package must directly declare its registry TypeScript hosts" });
   for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"])
-    for (const name of ["@changmen/db", "@changmen/storage", "@changmen/venue-node-loader", "@changmen/venue-node-registry", "@changmen/venue-adapter-tools"])
+    for (const name of ["@changmen/db", "@changmen/storage", "@changmen/venue-node", "@changmen/venue-node", "@changmen/venue-node"])
       if (adapter?.pkg[group]?.[name]) violations.push({ file: "packages/venue-adapter/package.json", spec: name,
         pattern: `Browser adapter cannot own Node/data installation through ${group}; use the existing Node entry/tool workspace` });
-  if (!tools || tools.dir !== "server/packages/venue-adapter-tools" || tools.pkg.type !== "module"
-    || JSON.stringify(tools.pkg.exports) !== JSON.stringify({ "./sync-backend-bundle.mjs": "./sync-backend-bundle.mjs" })
-    || JSON.stringify(tools.pkg.files) !== JSON.stringify(["sync-backend-bundle.mjs"])
+  if (!tools || tools.dir !== "server/venues" || tools.pkg.type !== "module"
+    || tools.pkg.exports?.["./sync-backend-bundle.mjs"] !== "./sync-backend-bundle.mjs"
+    || JSON.stringify(tools.pkg.files) !== JSON.stringify(["loader", "registry", "sync-backend-bundle.mjs"])
     || JSON.stringify(tools.pkg.scripts) !== JSON.stringify({ "sync:backend-bundle": "node sync-backend-bundle.mjs" })
-    || JSON.stringify(tools.pkg.dependencies) !== JSON.stringify({ "@changmen/shared": "file:../../../packages/shared", "@changmen/storage": "file:../../storage", "@changmen/venue-node-loader": "file:../venue-node-loader", "@changmen/venue-node-registry": "file:../venue-node-registry" }))
-    violations.push({ file: "server/packages/venue-adapter-tools/package.json", spec: "@changmen/venue-adapter-tools",
+    || JSON.stringify(tools.pkg.dependencies) !== JSON.stringify({ "@changmen/platform-probes": "file:../platform-probes", "@changmen/shared": "file:../../packages/shared", "@changmen/storage": "file:../storage" }))
+    violations.push({ file: "server/venues/package.json", spec: "@changmen/venue-node",
       pattern: "Backend bundle tool must declare its shared catalog and Node storage dependencies from its server workspace" });
+  if (adapter) violations.push({ file: "packages/venue-adapter/package.json", spec: "@changmen/venue-adapter", pattern: "Retired adapter workspace must not return" });
   return violations;
 }
 export function inspectComponentInstallInputs(root) {

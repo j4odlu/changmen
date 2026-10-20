@@ -1,6 +1,6 @@
 // [changmen 扩展] Exact SQL extraction, preserving full prior report source for historical checks.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';

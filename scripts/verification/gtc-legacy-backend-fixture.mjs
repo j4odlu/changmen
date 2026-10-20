@@ -1,6 +1,6 @@
 // [changmen 扩展] 真实历史读/合组/归账/DTO/分区及新同步链路；存储与账号采用离线夹具，无真实 I/O。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import vm from "node:vm";
 import ts from "typescript";
 import { historicalMinimal } from "./historical-order-storage.mjs";

@@ -1,6 +1,6 @@
 // [changmen 扩展] Exact Node package relocation; preserve original source and metadata proofs.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { restoreVenueManifestMetadata } from './venue-manifest-metadata.mjs';

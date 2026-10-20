@@ -7,19 +7,17 @@
     "scripts/verification/source-ownership-inputs.json",
     "package.json",
     "package-lock.json",
-    "packages/venue-adapter/package.json",
+    "client/packages/venue-browser/package.json",
     "client/web/vite.config.ts",
     "client/web/tsconfig.app.json",
-    "server/packages/venue-adapter-tools/sync-backend-bundle.mjs",
+    "server/venues/sync-backend-bundle.mjs",
     "scripts/deploy/classify-deploy-scope.mjs",
     "scripts/deploy/change-plan.mjs",
     "scripts/deploy/release-evidence.mjs",
     "server/storage/runtime_version.js",
     ".github/workflows/release.yml",
     "client/packages/pm-market-data-browser/package.json",
-    "server/packages/venue-node-loader/package.json",
-    "server/packages/venue-node-registry/package.json",
-    "server/packages/venue-adapter-tools/package.json",
+    "server/venues/package.json",
     "devtools/runtime-tooling/package.json"
   ],
   "nodeRoots": [
@@ -27,8 +25,8 @@
     "devtools/runtime-tooling"
   ],
   "nodeOnlyPaths": [
-    "server/packages/venue-node-registry/paths.js",
-    "server/packages/venue-node-registry/feeds.js",
+    "server/venues/registry/paths.js",
+    "server/venues/registry/feeds.js",
     "packages/shared/tooling",
     "devtools/runtime-tooling"
   ],
@@ -205,11 +203,11 @@
     {
       "id": "venue-node-loader",
       "environment": "node",
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "specifiers": [
-        "@changmen/venue-node-loader",
-        "@changmen/venue-node-loader/adapter_paths.js",
-        "@changmen/venue-node-loader/adapter_paths.mjs"
+        "@changmen/venue-node",
+        "@changmen/venue-node/adapter_paths.js",
+        "@changmen/venue-node/adapter_paths.mjs"
       ]
     },
     {
@@ -257,7 +255,7 @@
   ],
   "dynamicLoaders": [
     {
-      "file": "server/packages/venue-node-loader/adapter_paths.mjs",
+      "file": "server/venues/loader/adapter_paths.mjs",
       "symbols": [
         "reqS",
         "backendRequire",
@@ -267,8 +265,8 @@
       ],
       "status": "opaque",
       "inputs": [
-        "server/packages/venue-node-registry/paths.js",
-        "server/packages/venue-node-registry/feeds.js",
+        "server/venues/registry/paths.js",
+        "server/venues/registry/feeds.js",
         "packages/venue-adapter/registry/manifest.json"
       ],
       "reason": "Computed module paths and CHANGMEN_ADAPTER_ROOT/GAMEBET_ADAPTER_ROOT overrides are not a closed static dependency proof."

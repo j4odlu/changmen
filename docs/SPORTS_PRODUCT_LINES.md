@@ -20,7 +20,7 @@ changmen（平台 monorepo）
 │   ├── packages/venue-adapter/  各平台采集/下注（按 platform 分）
 │   ├── chrome-extension/
 │   ├── server/backend/        HTTP /esport/*（名称历史遗留，实际为全平台 API）
-│   ├── server/db/
+│   ├── rds/
 │   ├── deploy/
 │   └── docs/
 │

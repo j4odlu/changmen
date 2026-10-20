@@ -22,13 +22,12 @@
     "scrape:pb:dry": "node scrapers/pb_scraper.mjs --dry-run"
   },
   "dependencies": {
-    "@changmen/db": "file:../../db",
+    "@changmen/db": "file:../../../rds",
     "@changmen/storage": "file:../../storage",
-    "@changmen/match-identity": "file:../identity",
     "@changmen/shared": "file:../../../packages/shared",
     "axios": "^1.7.2"
   },
   "devDependencies": {
-    "@changmen/venue-node-loader": "file:../../packages/venue-node-loader"
+    "@changmen/venue-node": "file:../../venues"
   }
 }

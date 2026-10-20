@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import pg from '../../server/db/pg.js';
+import pg from '../../rds/pg.js';
 import {withTemporaryPostgres} from './temporary-postgres.mjs';
 import {compareAdminMaintenance} from './admin-maintenance-comparison.mjs';
 await withTemporaryPostgres(async()=>{

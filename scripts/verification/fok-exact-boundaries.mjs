@@ -10,7 +10,7 @@ import { restoreRayProviderSource, restoreRayFinalizeSource } from "./ray-fronte
 import { restoreRayOrderSyncSource } from "./ray-client-monitor-boundary.mjs";
 import { restoreGtcClientStateSource } from "./gtc-client-state-boundary.mjs";
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import ts from "typescript";
 import { checkOrdinaryOrderView } from "./fok-order-view-fixture.mjs";
 import { specializeFokSource } from "./fok-source-specialization.mjs";

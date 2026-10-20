@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { replaceExact } from "./fok-exact-boundaries.mjs";
 import { restoreRayBackendDispatch } from "./ray-backend-dispatch-boundary.mjs";
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import ts from "typescript";
 import { specializeFokSource } from "./fok-source-specialization.mjs";
 import { restoreMinimalOrdersSource } from "./pm-orders-minimal-boundary.mjs";

@@ -1,6 +1,6 @@
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
-import { createRequire } from "node:module";
+import {historicalCreateRequire as createRequire} from './workspace-layout-history.mjs';
 import { it, expect } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 import { restoreRuntimeToolingMetadata } from "./runtime-tooling-migration.mjs";

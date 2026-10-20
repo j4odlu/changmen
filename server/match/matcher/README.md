@@ -48,7 +48,7 @@ platform_matches / bets / timers / client_matches / overrides
 
 ## 依赖
 
-- `server/match/identity`（`@changmen/match-identity`）— 队名、时间窗与 client_match ID 共享工具
+- `server/match/identity`（`@changmen/shared/match-identity`）— 队名、时间窗与 client_match ID 共享工具
 - `server/db` — 读写 `platform_matches` / `client_matches` 等（`@changmen/db`）
 - `server/match/resolver`（`@changmen/team-resolver`）— 可选队名 canonical 插件
 

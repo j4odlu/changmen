@@ -11,7 +11,7 @@ export const planHash = plan => createHash("sha256").update(JSON.stringify(plan)
 // Preserve the standalone DB workflow's original push coverage in this one chain.
 // Maintenance-only changes still need DB validation even when no app is published.
 const databaseWorkflowPath = file => file === ".github/workflows/database-compatibility.yml"
-  || /^(?:scripts\/(?:testing|deploy)\/|server\/db\/|server\/backend\/db\/)/.test(file)
+  || /^(?:scripts\/(?:testing|deploy)\/|(?:rds|server\/db)\/|server\/backend\/db\/)/.test(file)
   || /^deploy\/scripts\/release-[^/]*\.sh$/.test(file)
   || /^server\/backend\/scripts\/[^/]*(?:rds|order-observation-schema)[^/]*$/.test(file)
   || /^package(?:-lock)?\.json$/.test(file);
@@ -46,7 +46,7 @@ export function changePlan(paths, { unknownBase = false, requestedScope = null, 
     databaseCompatibility: (purpose === "release" && paths.some(databaseWorkflowPath))
       || (publication && (uncertain || components.includes("backend")
         || paths.some(file => isDatabaseMaintenancePath(file)
-          || /^(?:server\/db\/|server\/backend\/db\/|scripts\/testing\/|packages\/shared\/|package(?:-lock)?\.json$)/.test(file)))),
+          || /^(?:(?:rds|server\/db)\/|server\/backend\/db\/|scripts\/testing\/|packages\/shared\/|package(?:-lock)?\.json$)/.test(file)))),
   };
   if (requiredChecks.databaseCompatibility) validation.checks.push("database-compatibility");
   return { ...validation, changedPaths: [...new Set(paths)].sort(), unknownBase, requestedScope, deployedVersions, liveComponents, eventPaths,

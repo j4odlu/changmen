@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 固定原 VPS manifest，逐项完整保护源码；实际运行版本由独立来源核验验证。
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from 'node:child_process';
 import { verifyManifestSources } from './vps-source-manifest-boundary.mjs';
 import { replaceExact } from './fok-exact-boundaries.mjs';

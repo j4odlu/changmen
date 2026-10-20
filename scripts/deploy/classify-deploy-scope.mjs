@@ -5,7 +5,7 @@
  * @returns {'frontend' | 'backend' | 'full' | 'noop'}
  */
 export function isDatabaseMaintenancePath(p) {
-  return /^(?:server\/backend\/db\/migrations\/|server\/db\/(?:schema|assets|maintenance)\/|server\/backend\/scripts\/ops\/migrations\/)/.test(p)
+  return /^(?:server\/backend\/db\/migrations\/|(?:rds|server\/db)\/(?:schema|assets|maintenance)\/|server\/backend\/scripts\/ops\/migrations\/)/.test(p)
     || /^server\/backend\/scripts\/(?:apply-rds-schema|apply-order-observation-schema)\.mjs$/.test(p)
     || /^server\/backend\/scripts\/(?:check-rds-schema\.mjs|rds-schema-[^/]+|rds-migrations(?:\.test)?\.mjs)$/.test(p)
     || p === "server/backend/scripts/ops/diagnostics/check-rds-schema.mjs";
@@ -76,6 +76,7 @@ export function classifyDeployScope(paths) {
 
     if (
       p.startsWith("packages/venue-adapter/")
+      || p.startsWith("server/venues/")
       || /^server\/packages\/(?:venue-node-(?:loader|registry)|venue-adapter-tools)\//.test(p)
       || p.startsWith("client/platform-adapter/")
       || p.startsWith("packages/")
@@ -87,6 +88,7 @@ export function classifyDeployScope(paths) {
 
     if (
       p.startsWith("server/")
+      || p.startsWith("rds/")
       || p.startsWith("deploy/")
       || p.startsWith("devtools/")
       || p.startsWith("scripts/deploy/")

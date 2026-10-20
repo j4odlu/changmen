@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {expect,it} from 'vitest';
 import {BROWSER_ENTRY_RETIREMENT,readAdapterHistory,withAdapterHistoryReader} from './browser-entry-history.mjs';
 import {inspectBrowserEntryRetirement,verifyBrowserEntryRetirement} from './browser-entry-retirement.mjs';

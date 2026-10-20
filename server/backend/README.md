@@ -41,6 +41,6 @@ storage.example/     # 空模板
 public/              # 静态资源（URL 仍为 /esport2/*，见 public/README.md）
 ```
 
-RDS 迁移 SQL、结构基线与维护代码/测试统一位于 `server/db/assets/` 和 `server/db/maintenance/`；backend 的旧资产副本及 7 个维护分派入口已删除。
+RDS 迁移 SQL、结构基线与维护代码/测试统一位于 `rds/assets/` 和 `rds/maintenance/`；backend 的旧资产副本及 7 个维护分派入口已删除。
 
 平台 canonical 实现位于 `packages/venue-adapter/`，由 `core/shared/adapter_paths.js` 加载。

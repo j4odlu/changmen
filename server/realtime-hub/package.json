@@ -11,7 +11,7 @@
     "test": "node --test hub.test.mjs pubsub.test.mjs pm_maintenance.test.mjs pm_sport_broadcast.test.mjs dependency-security.test.mjs"
   },
   "dependencies": {
-    "@changmen/db": "file:../db",
+    "@changmen/db": "file:../../rds",
     "@changmen/polymarket-sports": "file:../collectors/polymarket-sports",
     "socket.io": "^4.8.3"
   },

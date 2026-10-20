@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, expect, it } from "vitest";
 import { gitSource, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { makeupQueryRecoveryIncrements } from "./pm-makeup-settlement-boundary.mjs";

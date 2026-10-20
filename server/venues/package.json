@@ -1,0 +1,29 @@
+{
+  "name": "@changmen/venue-node",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Server platform loading, registry, runtime resources and packaging tools",
+  "exports": {
+    ".": "./loader/adapter_paths.mjs",
+    "./adapter_paths.js": "./loader/adapter_paths.mjs",
+    "./adapter_paths.mjs": "./loader/adapter_paths.mjs",
+    "./registry/paths.js": "./registry/paths.js",
+    "./registry/feeds.js": "./registry/feeds.js",
+    "./registry/manifest.json": "./registry/manifest.json",
+    "./sync-backend-bundle.mjs": "./sync-backend-bundle.mjs"
+  },
+  "files": [
+    "loader",
+    "registry",
+    "sync-backend-bundle.mjs"
+  ],
+  "scripts": {
+    "sync:backend-bundle": "node sync-backend-bundle.mjs"
+  },
+  "dependencies": {
+    "@changmen/platform-probes": "file:../platform-probes",
+    "@changmen/shared": "file:../../packages/shared",
+    "@changmen/storage": "file:../storage"
+  }
+}

@@ -1,5 +1,5 @@
 // [changmen 扩展] 运行真实发布入口，隔离进程/VPS I/O，注入来源和组合故障。
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import vm from "node:vm";
 import assert from "node:assert/strict";
 import { expect, it } from "vitest";

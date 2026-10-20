@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Only exact read-only PM-M hooks; original fixed baselines are retained.
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { restoreVenueBrowserStream } from "./venue-browser-stream.mjs";
 const normalize = source => source.replaceAll("\r\n", "\n");

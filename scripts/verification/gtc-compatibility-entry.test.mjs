@@ -9,7 +9,7 @@ function check(plan, mutation = "source => source", backendRef = "832f3f76c30d6a
     import { publicFiles } from './scripts/verification/public-release-boundaries.mjs';
     const backend=${JSON.stringify(backendRef)},frontend='e901bb596952256284cd8a9eb8b73b572c963915';
     const files=[...publicFiles,...legacyBusinessFiles,'server/backend/core/orderModes/gtc/handler.js','server/backend/core/orderModes/gtc/orders.js'];
-    const backendSource=file=>backend==='candidate'?fs.readFileSync(file,'utf8'):gitSource(backend,file);
+    const backendSource=file=>backend==='candidate'?fs.readFileSync(file.replace('server/db/','rds/'),'utf8'):gitSource(backend,file);
     if(backendSource('server/backend/core/orderModes/gtc/handler.js').includes('"Pm_GtcRecover"')) files.push('server/backend/core/orderModes/gtc/recovery.js');
     if(backend==='candidate') files.push('server/backend/core/orderModes/gtc/results.js','server/db/rds/orderModes/gtc/pm_gtc_financial.js');
     const snapshot={captureId:'offline',frontendVersion:frontend,backendVersion:backend,sources:Object.fromEntries(files.map(file=>[file,file.startsWith('server/')?backendSource(file):gitSource(frontend,file)]))};

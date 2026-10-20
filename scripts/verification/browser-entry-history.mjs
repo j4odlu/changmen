@@ -1,5 +1,5 @@
 // [changmen 扩展] Historical source view for exact-source checks only. No runtime resolver or filesystem patch.
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {fileURLToPath} from 'node:url';

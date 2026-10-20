@@ -39,7 +39,7 @@
 | `server/` | [README.md](../server/README.md) — 包索引与进程图 |
 | `server/backend` | [README.md](../server/backend/README.md) |
 | `client/web` | [README.md](../client/web/README.md) · [MIGRATION.md](../client/web/MIGRATION.md) · [src/ARCHITECTURE.md](../client/web/src/ARCHITECTURE.md) |
-| `server/db` | [README.md](../server/db/README.md) |
+| `server/db` | [README.md](../rds/README.md) |
 | `server/storage` | [README.md](../server/storage/README.md) |
 | `server/match/identity` | [README.md](../server/match/identity/README.md) |
 | `server/match/resolver` | [README.md](../server/match/resolver/README.md) |

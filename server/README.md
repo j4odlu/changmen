@@ -1,6 +1,6 @@
 # server/ — 服务端 monorepo 包
 
-changmen 服务端由多个 **npm workspace** 组成：主进程 `backend` 提供 HTTP API 与静态托管；`matcher` 写 `client_matches`；其余包为数据层、算法库或可选守护进程。
+changmen 服务端包含 14 个 **npm workspace**：主进程 `backend` 提供 HTTP API 与静态托管；`matcher` 写 `client_matches`；其余为平台设施、内部库或采集进程。RDS 数据层位于根目录 `rds/`，包名仍为 `@changmen/db`。全仓 24 个包的职责见 [workspace 总览](../docs/WORKSPACE_LAYOUT.md)。
 
 **团队边界**：[docs/TEAM_BOUNDARIES.md](../docs/TEAM_BOUNDARIES.md) · **总架构**：[docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) · **部署**：[PRODUCTION_DEPLOYMENT.md](../PRODUCTION_DEPLOYMENT.md)
 
@@ -39,8 +39,8 @@ polymarket-sports ──WS──► 写 client_matches.pm_sport
 |------|----------|------|------|
 | [backend/](backend/README.md) | `@changmen/backend` | **主进程** | `Client_*` / `API_*`、HTTP 代理、`/esport/ws-forward`、静态 `/`、内嵌 matcher |
 | [match/matcher/](match/matcher/README.md) | `@changmen/matcher` | 进程 / 库 | 30s matchMerge 循环 + `compose/` 合场算法；人工 UI `:4567` |
-| [match/identity/](match/identity/README.md) | `@changmen/match-identity` | 库 | 队名、时间窗与 client_match ID 共享工具 |
-| [db/](db/README.md) | `@changmen/db` | 库 | PostgreSQL / RDS 唯一应用入口 |
+| [venues/](venues/README.md) | `@changmen/venue-node` | 库与工具 | 平台 loader、registry、Node 资源与瘦包工具 |
+| [../rds/](../rds/README.md) | `@changmen/db` | 外部数据层 | PostgreSQL / RDS 唯一应用入口，不属于 server workspace 计数 |
 | [storage/](storage/README.md) | `@changmen/storage` | 库 | 本机 `storage/` 路径与 JSON 读写（非 PG） |
 | [match/resolver/](match/resolver/README.md) | `@changmen/team-resolver` | 库 | 队名 canonical；matcher 动态加载 |
 | [ws_forward/](ws_forward/README.md) | `@changmen/ws-forward` | 库 | IA/OB/RAY WebSocket 转发（backend 挂载） |

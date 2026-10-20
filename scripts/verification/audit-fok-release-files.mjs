@@ -1,6 +1,6 @@
 // [changmen 扩展] 真实后端归档按后端 commit 校验；前端源码独立按前端 commit 比较。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { filesAt, gitSources, frontendSource, sha, assertStable, assertSourceHashes, sshRead, layoutProgram, localHashes, checkInputHashes, assertCaptureEvidence } from "./release-provenance.mjs";
 const snapshot = JSON.parse(fs.readFileSync("output/vps-fok-baseline.json", "utf8"));
 const capture = JSON.parse(fs.readFileSync("output/vps-fok-release-verification.json", "utf8"));

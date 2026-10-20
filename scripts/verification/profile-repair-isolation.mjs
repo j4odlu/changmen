@@ -1,6 +1,6 @@
 // [changmen 扩展] Exact extraction proof; historical views never affect runtime loading.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';

@@ -28,7 +28,7 @@
         "label": "赛事归一化（内嵌 matchMerge 循环 + composeOnce 合场）",
         "implementedBy": [
           "@changmen/matcher",
-          "@changmen/match-identity"
+          "@changmen/shared/match-identity"
         ],
         "hostedBy": [
           "changmen-esport"
@@ -47,7 +47,7 @@
       }
     },
     "modules": {
-      "@changmen/match-identity": {
+      "@changmen/shared/match-identity": {
         "dir": "server/match/identity",
         "version": "1.0.0",
         "private": true,
@@ -69,7 +69,7 @@
         "changmenDeps": [
           "@changmen/api-contract",
           "@changmen/db",
-          "@changmen/match-identity",
+          "@changmen/shared/match-identity",
           "@changmen/matcher",
           "@changmen/platform-probes",
           "@changmen/polymarket-sports",
@@ -94,7 +94,7 @@
         "private": null,
         "changmenDeps": [
           "@changmen/db",
-          "@changmen/match-identity",
+          "@changmen/shared/match-identity",
           "@changmen/shared",
           "@changmen/storage",
           "@changmen/team-resolver"
@@ -128,7 +128,7 @@
                 "evidence": [
                   "server/backend/core/esport-api/router.ts:577",
                   "server/backend/core/esport-api/store.js:340,351-372",
-                  "server/db/rds/platform_collector_store.js:1108,1119"
+                  "rds/rds/platform_collector_store.js:1108,1119"
                 ]
               }
             ],
@@ -249,12 +249,12 @@
     },
     {
       "from": "capability:match-merge",
-      "to": "module:@changmen/match-identity",
+      "to": "module:@changmen/shared/match-identity",
       "type": "implemented-by",
       "status": "derived"
     },
     {
-      "from": "module:@changmen/match-identity",
+      "from": "module:@changmen/shared/match-identity",
       "to": "capability:match-merge",
       "type": "implements",
       "status": "derived"

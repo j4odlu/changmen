@@ -43,11 +43,11 @@
                 "evidence": [
                   "server/backend/core/esport-api/router.ts:557",
                   "server/backend/core/esport-api/store.js:204,264",
-                  "server/db/rds/platform_collector_store.js:683,713"
+                  "rds/rds/platform_collector_store.js:683,713"
                 ]
               }
             ],
-            "memoryFirst": "是：内存先写 + _writeRds fire-and-forget，队列满 drop（server/db/rds/common.js:71-103）",
+            "memoryFirst": "是：内存先写 + _writeRds fire-and-forget，队列满 drop（rds/rds/common.js:71-103）",
             "guard": "浏览器写路径对 VPS 馆被 isVpsOwnedPlatformCollect 拦截（warn+return，store.js:208）",
             "note": "与 collector-write 按 platform 前缀分区共存（刻意多写者）"
           },
@@ -95,7 +95,7 @@
                 "runtime": "changmen-esport",
                 "status": "verified",
                 "evidence": [
-                  "server/db/rds/platform_collector_store.js:740,115-120"
+                  "rds/rds/platform_collector_store.js:740,115-120"
                 ]
               }
             ]

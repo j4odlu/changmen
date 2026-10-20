@@ -1,5 +1,5 @@
 // [changmen 扩展] Exercise both implementations and reject partial or redirected migrations.
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { describe, it, expect } from 'vitest';

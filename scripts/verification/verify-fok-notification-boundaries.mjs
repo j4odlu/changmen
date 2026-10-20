@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 真实 POST/通知故障保护；保留既有异常隔离，旧基线差异必须显式匹配。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { gitSource, notificationCommit, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { gateway } from "./fok-notification-fixture.mjs";
 

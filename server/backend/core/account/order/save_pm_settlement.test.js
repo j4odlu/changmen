@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mergePolymarketProviderSave } from "./save_pm.js";
-import { gtcOrderLedger } from "../../../../db/rds/orderModes/gtc/pm_gtc_ledger.js";
+import { gtcOrderLedger } from "../../../../../rds/rds/orderModes/gtc/pm_gtc_ledger.js";
 
 function settle(status, cost, money, extra = {}) {
   const raw = { status, betMoney: cost, money, pmOrigin: "changmen", pmSide: "buy",

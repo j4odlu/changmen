@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] One exact tooling declaration change; every prior lock proof remains in force.
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";

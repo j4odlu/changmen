@@ -1,7 +1,7 @@
 // [changmen 扩展] 用户要求的 GTC 选号历史前移；精确还原增量后继续比较原固定 FOK 基线。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 
 const registered = fs.readFileSync(new URL("./gtc-selection-history-increments.json", import.meta.url), "utf8").replace(/\r\n/g, "\n");
 assert.equal(createHash("sha256").update(registered).digest("hex"), "6d69ef135ade2e49cade5bacef826c26012f8a97aa93b2872badff2f84c83a18", "GTC history reviewed increments must remain fixed");

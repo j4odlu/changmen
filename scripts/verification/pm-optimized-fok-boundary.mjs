@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 优化 FOK 的精确增量；还原后继续核验原有固定基线，不改旧基线。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { restorePmAccountSigningSource } from "./pm-account-signing-boundary.mjs";
 import { createHash } from "node:crypto";
 const normalize = value => value.replaceAll("\r\n", "\n");

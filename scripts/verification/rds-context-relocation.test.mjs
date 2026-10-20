@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import os from 'node:os';
 import {spawnSync} from 'node:child_process';
@@ -7,7 +7,7 @@ import {inspectRdsContextRelocation,RDS_CONTEXT_RELOCATION as record,contextReso
 const root=process.cwd();
 it('moves ten scripts with unchanged SQL and resource context, repairing one broken historical import',()=>{
  expect(inspectRdsContextRelocation(root)).toMatchObject({moved:10,unchanged:4,repairedImports:1,resourceTargetsPreserved:true,newLockedPackageVersions:0});
- for(const row of record.moves){const result=spawnSync(process.execPath,['--check',row.canonical],{encoding:'utf8',windowsHide:true});expect(result.status,result.stderr).toBe(0);}
+ for(const row of record.moves){const result=spawnSync(process.execPath,['--check',row.canonical.replace('server/db/','rds/')],{encoding:'utf8',windowsHide:true});expect(result.status,result.stderr).toBe(0);}
 });
 it('preserves original environment files and default/explicit backup paths in different checkout roots',()=>{
  for(const base of [root,path.join(os.tmpdir(),'synthetic-context-checkout')])for(const row of record.moves){
@@ -20,7 +20,7 @@ it('preserves original environment files and default/explicit backup paths in di
  expect(contextResourceTargets(legacyEnv,fs.readFileSync(legacyEnv.canonical,'utf8'),path.resolve(legacyEnv.canonical)).env).toBe(path.join(root,'server/backend/scripts/ops/.env'));
 });
 it('uses the same actual pure identity functions without importing a match workspace from RDS',()=>{
- const code=`import assert from 'node:assert/strict';import * as old from '@changmen/match-identity/teams/team_key.js';import * as next from '@changmen/shared/match-identity/teams/team_key.js';assert.equal(old.normalizeTeam,next.normalizeTeam);assert.equal(old.canonicalMatchKeyByName,next.canonicalMatchKeyByName);console.log('same');`;
+ const code=`import assert from 'node:assert/strict';import * as old from '@changmen/shared/match-identity';import * as next from '@changmen/shared/match-identity/teams/team_key.js';assert.equal(old.normalizeTeam,next.normalizeTeam);assert.equal(old.canonicalMatchKeyByName,next.canonicalMatchKeyByName);await assert.rejects(import('@changmen/match-identity'),{code:'ERR_MODULE_NOT_FOUND'});console.log('same');`;
  const result=spawnSync(process.execPath,['--input-type=module','--eval',code],{encoding:'utf8',windowsHide:true});expect(result.status,result.stderr).toBe(0);expect(result.stdout.trim()).toBe('same');
 });
 for(const scenario of ['missingArgs','missingDb','missingJwt','create','updateAdmin','profileFailure','queryFailure'])it('keeps native user CLI behavior: '+scenario,()=>{

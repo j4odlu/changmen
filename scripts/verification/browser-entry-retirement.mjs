@@ -1,6 +1,6 @@
 // [changmen 扩展] Check real files and imports; historical readers are never used for this boundary.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {BROWSER_ENTRY_RETIREMENT,browserHistorySha,restoreBrowserEntryRetirement} from './browser-entry-history.mjs';
 import {componentImportSites} from './component-entry-boundary.mjs';

@@ -2,7 +2,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 用户授权的 FOK CANCELLATION 快速收尾；仅还原精确增量，固定基线不变。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 const normalize = source => source.replaceAll("\r\n", "\n");
 const digest = source => createHash("sha256").update(normalize(source)).digest("hex");

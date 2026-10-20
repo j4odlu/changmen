@@ -6,7 +6,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import pg from "../../server/db/pg.js";
+import pg from "../../rds/pg.js";
 import { applyRdsSchema, RDS_MIGRATIONS } from "@changmen/db/maintenance/apply-rds-schema.mjs";
 import { runRdsMigrations } from "@changmen/db/maintenance/rds-migrations.mjs";
 
@@ -32,7 +32,7 @@ async function connect(database, port) {
   const client = new pg.Client({ host: "127.0.0.1", port, user: "changmen_test", database, ssl: false });
   await client.connect(); clients.push(client); return client;
 }
-const readSql = name => readFileSync(new URL(`../../server/db/assets/migrations/${name}`, import.meta.url), "utf8");
+const readSql = name => readFileSync(new URL(`../../rds/assets/migrations/${name}`, import.meta.url), "utf8");
 try {
   const port = await new Promise((resolve, reject) => {
     const server = net.createServer(); server.on("error", reject);
@@ -100,7 +100,7 @@ try {
   process.env.CHANGMEN_STORAGE_DIR = path.join(temporary, "storage");
   process.env.ESPORT_DATA_DIR = path.join(temporary, "storage", "esport");
   process.env.DATABASE_APPLICATION_NAME = "changmen-phase1-local-test";
-  db = await import("../../server/db/index.js");
+  db = await import("../../rds/index.js");
   const account = await import("../../server/backend/core/account/account_service.js");
   const cache = await import("../../server/backend/core/db/store.js");
   const owner = randomUUID(), otherOwner = randomUUID(), emptyOwner = randomUUID();

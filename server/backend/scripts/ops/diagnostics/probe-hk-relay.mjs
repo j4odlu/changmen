@@ -67,7 +67,7 @@ async function resolveProbeToken() {
     const userId = String(rows[0]?.id || "").trim();
     if (!userId)
       return { token: "", source: "" };
-    const { signJwt, JWT_ACCESS_TTL_SEC } = await import("../../../../db/rds/jwt.js");
+    const { signJwt, JWT_ACCESS_TTL_SEC } = await import("../../../../../rds/rds/jwt.js");
     const token = signJwt(
       { sub: userId, typ: "access", session_id: "probe-hk-relay" },
       secret,

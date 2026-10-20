@@ -1,6 +1,6 @@
 // [changmen 扩展] Server tool ownership with an exact historical read view; no runtime resolver.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';

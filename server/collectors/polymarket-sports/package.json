@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@changmen/api-contract": "file:../../../packages/api-contract",
-    "@changmen/db": "file:../../db",
+    "@changmen/db": "file:../../../rds",
     "@changmen/shared": "file:../../../packages/shared",
     "@changmen/storage": "file:../../storage",
     "ws": "^8.21.0"

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks=vi.hoisted(()=>({query:vi.fn()}));
-vi.mock('../../../db/rds/common.js',()=>({getPgPool:()=>({query:mocks.query})}));
-import { authorizeClientCertificate } from '../../../db/rds/client_certificate_store.js';
+vi.mock('../../../../rds/rds/common.js',()=>({getPgPool:()=>({query:mocks.query})}));
+import { authorizeClientCertificate } from '../../../../rds/rds/client_certificate_store.js';
 import { authenticateIdentity } from './identity.js';
 import { readClientCertStatus } from '../shared/client_cert_gate.js';
 import { tryCertificateRoutes } from '../certificates/routes.js';

@@ -4,8 +4,8 @@ import {registerHooks} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {ADMIN_MAINTENANCE_ISOLATION as record} from '../verification/admin-maintenance-isolation.mjs';
 const root=new URL('../../',import.meta.url);
-const poolUrl=new URL('server/db/pg_pool.js',root).href;
-const relationUrl=new URL('server/db/rds/native_orders.js',root).href;
+const poolUrl=new URL('rds/pg_pool.js',root).href;
+const relationUrl=new URL('rds/rds/native_orders.js',root).href;
 const stub=`export {financialOrdersRelation} from ${JSON.stringify(relationUrl)};
 export async function ensurePgPoolReady(){globalThis.__adminComparison.ready++;if(globalThis.__adminComparison.readyError)throw Error('ready failed');}
 export function getPgPool(){globalThis.__adminComparison.pools++;return globalThis.__adminComparison.unavailable?null:{query:async(...args)=>{const c=globalThis.__adminComparison;c.queries.push(args);return c.query(...args);}};}`;

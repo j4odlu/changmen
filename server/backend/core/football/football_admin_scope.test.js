@@ -9,12 +9,12 @@ vi.mock("@changmen/db", () => ({
   fetchFootballOrdersAdmin: mocks.admin,
   fetchUnifiedFootballOrdersAdmin: mocks.unified,
 }));
-vi.mock("../../../db/rds/common.js", () => ({
+vi.mock("../../../../rds/rds/common.js", () => ({
   getPgPool: () => ({ query: mocks.query }),
 }));
 
 import { listAdminFootballOrders } from "./football_order_service.js";
-import { fetchFootballOrdersAdmin, fetchFootballOrdersForMonthAggregate } from "../../../db/rds/football_orders_store.js";
+import { fetchFootballOrdersAdmin, fetchFootballOrdersForMonthAggregate } from "../../../../rds/rds/football_orders_store.js";
 
 beforeEach(() => {
   vi.clearAllMocks();

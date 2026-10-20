@@ -4,7 +4,7 @@ import { withTemporaryPostgres } from "./temporary-postgres.mjs";
 import { applyRdsSchema } from "@changmen/db/maintenance/apply-rds-schema.mjs";
 
 await withTemporaryPostgres(async () => {
-  const db = await import("../../server/db/index.js");
+  const db = await import("../../rds/index.js");
   const admin = await import("../../server/backend/core/account/admin_service.js");
   const cache = await import("../../server/backend/core/db/store.js");
   const pool = db.getPgPool();

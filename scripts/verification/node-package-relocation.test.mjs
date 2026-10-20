@@ -1,11 +1,11 @@
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { expect, it } from 'vitest';
 import { NODE_PACKAGE_RELOCATION as record, verifyNodePackageRelocation, readNodePackageSource, restoreNodePackageMetadata } from './node-package-relocation.mjs';
-import { syncPlatformAdapterBackendBundle } from '../../server/packages/venue-adapter-tools/sync-backend-bundle.mjs';
+import { syncPlatformAdapterBackendBundle } from "../../server/venues/sync-backend-bundle.mjs";
 import { isVersionSource } from '../../devtools/runtime-tooling/runtime_version.js';
 import { classifyDeployScope } from '../deploy/classify-deploy-scope.mjs';
 const read=withRetiredNodeEntries(file=>fs.readFileSync(file,'utf8').replaceAll('\r\n','\n'));
@@ -34,11 +34,11 @@ it('keeps all canonical runtime files in both conservative version fingerprints'
 it('canonical and public package entry points share functions, cache reset and registry state',()=>{
  const result=execFileSync(process.execPath,['--import','./scripts/testing/offline-env.mjs','--input-type=module','-e',`
  import assert from 'node:assert/strict';
-  import * as current from './server/packages/venue-node-loader/adapter_paths.mjs';
- import * as pkg from '@changmen/venue-node-loader';
-  import * as paths from '@changmen/venue-node-registry/paths.js';
- import * as feeds from '@changmen/venue-node-registry/feeds.js';
- import manifest from '@changmen/venue-node-registry/manifest.json' with {type:'json'};
+  import * as current from './server/venues/loader/adapter_paths.mjs';
+ import * as pkg from '@changmen/venue-node';
+  import * as paths from '@changmen/venue-node/registry/paths.js';
+ import * as feeds from '@changmen/venue-node/registry/feeds.js';
+ import manifest from '@changmen/venue-node/registry/manifest.json' with {type:'json'};
  import legacyManifest from './packages/venue-adapter/registry/manifest.json' with {type:'json'};
  for(const key of Object.keys(current)){assert.equal(pkg[key],current[key]);assert.equal(pkg[key],current[key]);}
  assert.equal(current.getRegistryPaths().getPlatformNodeRoot,paths.getPlatformNodeRoot);

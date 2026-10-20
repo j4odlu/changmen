@@ -50,7 +50,7 @@ AI 助手每次执行优化任务都**按本文档进行**，用户可据此查�
 | ID | 条目 | 位置 | 风险 | 状态 |
 |----|------|------|------|------|
 | P0-2 | 用户设置写：await + 失败回滚 + `ok:false` | `core/db/store.js`、`profile_store.js` 等 | 低 | ✅ 已完成 |
-| P0-1 | RDS 写队列 drop 可观测 + 告警（先只加监控） | `server/db/rds/common.js` | 低（纯监控）/ 中（若改背压） | 🔶 第一步完成（可观测）；补 key / 背压待后续 |
+| P0-1 | RDS 写队列 drop 可观测 + 告警（先只加监控） | `rds/rds/common.js` | 低（纯监控）/ 中（若改背压） | 🔶 第一步完成（可观测）；补 key / 背压待后续 |
 | P0-4 | 数据层读接口区分「空」与「查询失败」 | `orders_store.js`、`client_matches_store.js`、`player_store.js`、`profile_store.js` 等 | 中 | ✅ D1~D5 已完成 |
 | P0-3 | 账号读路径 `listAccountsForUser` 写副作用竞态 | `core/db/store.js` | 中→偏高 | ✅ 已完成 |
 

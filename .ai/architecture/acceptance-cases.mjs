@@ -105,7 +105,7 @@ function check(caseName, cond, msg) {
 // Test A — stale fact: freshness is computed from content-hash snapshots
 {
   console.log(`\nTEST A  evidence freshness (snapshot vs tampered vs none)`);
-  const file = "server/db/rds/client_matches_store.js";
+  const file = "rds/rds/client_matches_store.js";
   const good = hashContent(fs.readFileSync(path.join(ROOT, file), "utf8"));
   const entryFiles = [`${file}:280`]; // line-suffixed evidence pointer form
   const cur = computeEvidenceStatus(entryFiles, { hashes: { [file]: good } });

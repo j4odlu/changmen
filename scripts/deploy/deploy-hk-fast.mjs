@@ -21,9 +21,9 @@ const FILES = [
   "client/web/src/components/account/AccountEditDialog.vue",
   "client/web/src/stores/account/accountCrud.ts",
   "server/backend/core/account/account_store.js",
-  "server/db/impl_rds.js",
-  "server/db/index.js",
-  "server/db/rds/player_store.js",
+  "rds/impl_rds.js",
+  "rds/index.js",
+  "rds/rds/player_store.js",
 ];
 
 const sshBase = [

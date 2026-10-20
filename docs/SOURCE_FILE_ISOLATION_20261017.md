@@ -14,7 +14,7 @@
 
 [changmen 扩展] 本批回到前后端分离，matcher 检查发现仅记录，未修算法、game 字段或三个 scraper 的既有语法错误。业务源码、原 loader/registry 冻结文件、实际发布规则保持。
 
-- backend 的开发依赖从整个 `@changmen/venue-adapter` 换成已有 `@changmen/venue-adapter-tools`。布局验证脚本通过该包的公开导出调用原函数；`sync:platform-adapter` 也改用该工具 workspace，仍先同步 adapter、再同步 probes。原 `test:adapter` 命令保留。
+- backend 的开发依赖从整个 `@changmen/venue-adapter` 换成已有 `@changmen/venue-node`。布局验证脚本通过该包的公开导出调用原函数；`sync:platform-adapter` 也改用该工具 workspace，仍先同步 adapter、再同步 probes。原 `test:adapter` 命令保留。
 - tools 仅增加指向原文件的 `sync:backend-bundle` npm 命令。同步实现全文、复制清单、源根选择、目标根和默认行为均未改；没有移动或复制第二套打包算法。
 - 去掉 Node registry 的 `api-contract` / `client-core` 开发声明：它们只用于相邻浏览器 TS，浏览器父 adapter 已直接声明这两个宿主。本批没有修改父 adapter 的声明或冻结浏览器文件；Node registry 的 exports/files/运行依赖不变。
 - 持续门禁增加 backend 开发工具闭包、布局验证消费者与命令顺序检查，拒绝整个 adapter/浏览器包回流及绕过工具包的源码深导入；同时要求浏览器父 adapter 保留类型宿主，拒绝在 Node registry 重新登记这组开发宿主。旧动态未知回退和发布保守处理保持。
@@ -42,7 +42,7 @@
 
 ## 后续批次：resolver 消费者与 Node 依赖收口（2026-10-17）
 
-[changmen 扩展] OB、PB、Ray 三个辅助 scraper 的导入从父 adapter 旧 loader 子路径改为 `@changmen/venue-node-loader`。OB/Ray 保持函数内动态 import，PB 保持顶层静态 import；其它代码经逆替换与本批前完整文件逐字一致。三个文件不在原 551 或电竞冻结清单内。本批没有执行 scraper、抓平台或读写生产 RDS。
+[changmen 扩展] OB、PB、Ray 三个辅助 scraper 的导入从父 adapter 旧 loader 子路径改为 `@changmen/venue-node`。OB/Ray 保持函数内动态 import，PB 保持顶层静态 import；其它代码经逆替换与本批前完整文件逐字一致。三个文件不在原 551 或电竞冻结清单内。本批没有执行 scraper、抓平台或读写生产 RDS。
 
 resolver 的唯一开发 workspace 依赖由整个 adapter 换成原 Node loader；生产依赖不变，生产闭包仍为 5 个 workspace、没有 loader。工具声明闭包为 8 个 workspace，含原 loader/registry/probes，不带父 adapter、client-core、浏览器簿、Vue 或 Pinia。工具仍依赖 Node 宿主和现有根目录规则，不将该闭包自动认定为可独立运行的 scraper 发行包。
 
@@ -104,7 +104,7 @@ lock 只替换 `server/match/resolver` 记录中的一条开发依赖，未增�
 [changmen 扩展] 本批已解除 `web → venue-adapter → DB/storage` 的包级安装耦合。原业务源码、原 551 路径/内容、loader、registry、打包工具实现及发布控制均未修改。
 
 - adapter 移除没有源码消费者的 DB 声明，以及仅用于 Node 的 storage 声明。既有 Node loader/registry workspace 继续直接声明自己的 storage 需求，原 loader 导出保留。
-- 在原 `packages/venue-adapter/scripts/` 增加 `package.json`，由 `@changmen/venue-adapter-tools` 声明打包工具直接使用的 storage。脚本原文件、函数、npm 命令、复制算法/白名单/目标保持不变；按原复制规则，临时瘦包中自然增加 `scripts/package.json`。四个前端/验证兼容命令仍需完整 monorepo，不将整个 scripts 目录认证为可独立发布的工具。
+- 在原 `packages/venue-adapter/scripts/` 增加 `package.json`，由 `@changmen/venue-node` 声明打包工具直接使用的 storage。脚本原文件、函数、npm 命令、复制算法/白名单/目标保持不变；按原复制规则，临时瘦包中自然增加 `scripts/package.json`。四个前端/验证兼容命令仍需完整 monorepo，不将整个 scripts 目录认证为可独立发布的工具。
 - Web 显式声明构建使用的 `dotenv` 17.4.2。该依赖原由 storage 间接提供，干净安装暴露遗漏；没有恢复 storage 包，也未改变端口解析规则。
 - Web 的 SocketCluster 声明从 `^19.2.0` 对齐到原 Vite 根别名实际使用的 `20.0.1`。Vite 别名和行情代码不变；原根目录 20.0.1 的锁记录及实际解析内容 hash 一致，仅移除原别名不使用的 `client/web/node_modules/socketcluster-client` 19.2.7 锁记录。其余外部依赖锁记录全部不变，不能把这项声明对齐描述成实际浏览器 SDK 升级。
 - 原安装输入门禁增加前端到 server/devtools/Node loader/registry/tools workspace 的拒绝；拒绝把 Node/data 依赖放回 adapter 的运行、开发、optional 或 peer 声明，也核对打包工具的原位导出和直接依赖。
@@ -142,8 +142,8 @@ lock 只替换 `server/match/resolver` 记录中的一条开发依赖，未增�
 | 前端 | `packages/venue-adapter/browser/pm-book-diagnostics/` | 原 wsBook 的 9 个实现迁入：HTTP 旁路、模拟计算、新鲜度、诊断 Worker 协议/客户端及观察插槽；旧文件只有转导出 |
 | 前端 | `packages/venue-adapter/browser/pm-book-source.ts` | 只读原行情 source 实现迁入；原 `polymarket/orderBookSource` 保留对象身份一致的兼容入口 |
 | 后端 | `server/backend`、`server/match/resolver`、`server/match/matcher` 等 | 保持服务端职责；Node loader/registry 的冻结实现不搬动，不把 resolver 归入 shared |
-| RDS 数据层 | `server/db/maintenance/` | 迁入 schema 检查、迁移 runner、结构统一和持久备份 4 个实现，增加明确的 db 包导出；原 backend 路径仅转导出 |
-| RDS 数据层 | `server/db/runtime_schema.js` | 从 backend 的运行版本诊断抽出原 schema SQL、指纹、60 秒缓存、请求合并、超时与失败处理；backend 只组合来源身份和数据层结果 |
+| RDS 数据层 | `rds/maintenance/` | 迁入 schema 检查、迁移 runner、结构统一和持久备份 4 个实现，增加明确的 db 包导出；原 backend 路径仅转导出 |
+| RDS 数据层 | `rds/runtime_schema.js` | 从 backend 的运行版本诊断抽出原 schema SQL、指纹、60 秒缓存、请求合并、超时与失败处理；backend 只组合来源身份和数据层结果 |
 | 真正共享 | `packages/shared/match-identity/` | 原 identity 的 8 个 JS 实现逐字迁入。旧 `server/match/identity` 路径保留转导出；RDS team_store 直接依赖 shared，db 补齐直接依赖声明 |
 
 共迁移 **22 个完整实现文件，另抽出 1 个数据层观察实现**。13 个完整文件逐字一致，另外 9 个仅调整模块或资源路径；原 schema SQL 和缓存函数体逐字一致。公共身份规则不导入 DB、网络或应用实现；原 team plugin 仍由宿主注入，旧、新入口共享同一状态。
@@ -188,7 +188,7 @@ backend 运行版本诊断的 2 个历史数据库访问例外已删除，并列
 
 1. **冻结 Node 源码仍在 adapter 原路径**：`loader/adapter_paths.mjs`、registry 的 paths/feeds，以及相邻冻结的浏览器 registry 文件；仍是混合物理目录。551 文件不得为搬目录改变原路径或内容。
 2. **旧兼容入口仍在原目录**：22 个源码文件只转导出，不再拥有实现。旧 `team_aliases.json` 公开路径保留一份逐字兼容资产；运行实现读取 shared canonical 文件，门禁拒绝两份资产不一致。
-3. **RDS 的旧 CLI 与资产兼容路径仍保留**：主实现位于 `server/db/maintenance`，SQL/结构基线主文件已归入 `server/db/assets`；backend 原命令只转导出或分派，原资产是逐字兼容副本。维护代码不再读取 backend 资产；其它历史运维/回填脚本与固定旧消费者未迁移，兼容副本暂不能删除。
+3. **RDS 的旧 CLI 与资产兼容路径仍保留**：主实现位于 `rds/maintenance`，SQL/结构基线主文件已归入 `rds/assets`；backend 原命令只转导出或分派，原资产是逐字兼容副本。维护代码不再读取 backend 资产；其它历史运维/回填脚本与固定旧消费者未迁移，兼容副本暂不能删除。
 4. **订单冻结诊断仍有直接 SQL**：`admin_maintenance.js` 受 orders-phase2 固定保护，保留 8 个精确位置；运行版本诊断已不再直接操作连接池或 SQL。
 5. **原 PM-M、经典 FOK 及其语义保护实现保留**：不为目录外观改动它们；browser 诊断仍复用这些原浏览器计算辅助函数。
 6. **包级安装与 Node 工具尚未物理拆净**：adapter 仍同时含 browser、冻结 Node 和后端瘦包同步实现；另外 4 个检查/维护工具已迁至 `devtools/venue-adapter`，原命令留下薄入口。统一 workspace/lock 的安装耦合仍在，不能把源码子树隔离等同于整个包独立安装。真实共享 SDK 继续由两端各自声明。
@@ -203,7 +203,7 @@ backend 运行版本诊断的 2 个历史数据库访问例外已删除，并列
 | --- | --- | --- |
 | 前端维护工具（Node 执行） | `devtools/venue-adapter/frontend/{list-web-venue-imports,relativize-internal-imports,sync-package-exports}.mjs` | adapter 原 scripts 文件仅导入工具；npm 命令不变 |
 | 跨端验证工具（Node 执行，非共享运行库） | `devtools/venue-adapter/verification/check-esport-freeze.mjs` | 原冻结检查命令仅导入工具；原 manifest、精确恢复器、默认拒绝及参数保持 |
-| RDS 数据维护 | `server/db/maintenance/{check-rds-schema,apply-rds-schema,apply-order-observation-schema}.mjs` | backend 原路径只转导出或按原直接执行判定分派 CLI；导入不加载环境或连接数据库 |
+| RDS 数据维护 | `rds/maintenance/{check-rds-schema,apply-rds-schema,apply-order-observation-schema}.mjs` | backend 原路径只转导出或按原直接执行判定分派 CLI；导入不加载环境或连接数据库 |
 
 **保留后端打包工具原位**：`packages/venue-adapter/scripts/sync-backend-bundle.mjs` 与本批开始时逐字相同，仍明确归 backend/tooling。其 `scripts/` 原样复制约定和包内源目录定位属于瘦包内容契约；直接搬到包外将使复制后的命令依赖包外实现。本批不改变复制白名单、目标目录或发布规则，因而没有强搬此项。原 scripts 中的开发/验证命令仍需完整 monorepo，不认证为独立瘦包维护工具。
 
@@ -285,8 +285,8 @@ backend 运行版本诊断的 2 个历史数据库访问例外已删除，并列
 
 [changmen 扩展] 数据层维护资产已解除对 backend 目录的读取依赖：
 
-- **主文件**：`server/db/assets/migrations/` 的 43 个有效迁移 SQL，以及 `server/db/assets/schema-baseline.json`；与本批开始时原文件逐字一致，没有重新录制结构基线或修改 checksum。
-- **读取入口**：`server/db/maintenance/assets.mjs` 按自身模块位置读取；结构核验、初始化、观察表维护、结构统一四个实现统一使用它。没有 backend 回退。四个实现除了资产读取/导入调整，全文还原后一致，原 SQL、事务、锁、顺序、超时、备份与错误处理不变。
+- **主文件**：`rds/assets/migrations/` 的 43 个有效迁移 SQL，以及 `rds/assets/schema-baseline.json`；与本批开始时原文件逐字一致，没有重新录制结构基线或修改 checksum。
+- **读取入口**：`rds/maintenance/assets.mjs` 按自身模块位置读取；结构核验、初始化、观察表维护、结构统一四个实现统一使用它。没有 backend 回退。四个实现除了资产读取/导入调整，全文还原后一致，原 SQL、事务、锁、顺序、超时、备份与错误处理不变。
 - **兼容副本**：backend 原路径 44 个文件原字节不变，旧 CLI、旧测试与固定历史消费者继续可用。退役 002 SQL 未迁入有效清单，原文件仍保留。
 - **生成与门禁**：`rds-assets.mjs --check` 检查完整主资产、历史 checksum 和旧副本逐字一致；显式 `--sync` 仅生成旧副本，全部主资产通过核验后才写入，不连接数据库。源码归属清单新增 44 组资产映射，六组保留边界同步登记主/旧两侧，原基线 checksum 保持。
 - **数据层自身检查**：三个 SQL smoke 改读数据层本地资产和当前初始化实现；原断言保留。它们另有跨端业务源码断言，仍属于仓库集成检查，不宣称整套测试可脱离 backend。
@@ -318,9 +318,9 @@ backend 运行版本诊断的 2 个历史数据库访问例外已删除，并列
 
 [changmen 扩展] 本节替代上文“仍保留兼容副本和旧 CLI”的当前状态说明，历史批次记录保留。
 
-- backend 的 43 份有效 SQL 副本和 1 份结构基线副本已删除；数据层主文件及原 checksum 不变。已退役的 `002_prune_pg_cron.sql` 原字节移至 `server/db/assets/archive/`，不加入有效迁移清单。
+- backend 的 43 份有效 SQL 副本和 1 份结构基线副本已删除；数据层主文件及原 checksum 不变。已退役的 `002_prune_pg_cron.sql` 原字节移至 `rds/assets/archive/`，不加入有效迁移清单。
 - 5 个转导出入口及 2 个 CLI 分派入口已删除。当前测试、初始化/核验命令和发布前只读检查直接使用 `@changmen/db/maintenance/*` 或数据层正式 CLI；backend 原 npm 命令名称保留。
-- 4 个维护测试移至 `server/db/maintenance/`，原测试断言保留，只调整 SQL 资源路径；公开导出身份、导入无初始化、副本缺席和历史资产防漂移另有检查。
+- 4 个维护测试移至 `rds/maintenance/`，原测试断言保留，只调整 SQL 资源路径；公开导出身份、导入无初始化、副本缺席和历史资产防漂移另有检查。
 - `rds-assets.mjs --sync` 生成副本的功能退役，`--check` 只核对主资产与旧位置缺席。边界检查也验证旧入口不得返回、服务端源码不得引用已删除的 SQL 路径。
 - RDS 正式维护路径沿用“只触发数据库验证、不选择应用发布”的既有规则；保留旧路径分类以处理删除旧文件的变更事件。没有实际发布或数据库维护操作。
 - 固定的 52 份旧消费者仍从原 Git 提交物化；旧版本的 checker 只在该独立历史目录加载，不恢复候选源码中的旧入口。
@@ -331,11 +331,11 @@ backend 运行版本诊断的 2 个历史数据库访问例外已删除，并列
 
 ## 后续批次：业务 SQL 例外清零与结构工具归位（2026-10-20）
 
-[changmen 扩展] 上一批保留的 `admin_maintenance.js` 已完成只读 SQL 抽取：三条查询、原连接就绪检查及未就绪错误原文逐字归入 `server/db/admin_maintenance.js`，通过 `@changmen/db/admin_maintenance.js` 暴露两个读取方法。backend 保留报表组装、分组、排序、金额/日期转换、提示文字和三个原公开方法。
+[changmen 扩展] 上一批保留的 `admin_maintenance.js` 已完成只读 SQL 抽取：三条查询、原连接就绪检查及未就绪错误原文逐字归入 `rds/admin_maintenance.js`，通过 `@changmen/db/admin_maintenance.js` 暴露两个读取方法。backend 保留报表组装、分组、排序、金额/日期转换、提示文字和三个原公开方法。
 
 - `backend-db-access-exceptions.json` 的八处访问位置已全部退役；固定历史基线未更换。AST 扫描确认 backend core 当前直接访问为零，已迁移文件不得重新登记例外。
 - 原订单阶段二基线和清单保持不变。新的有限抽取记录可从当前报表完整恢复迁移前源码，并要求三条 SQL 主实现、调用位置及所有显示逻辑逐字相等；额外语句或 SQL 改动仍拒绝。
-- 4 个只负责数据层结构维护的脚本移至 `server/db/maintenance/`：033 体育合场结构、036 队伍 provider 标识巡检、客户端证书结构、SQL 表引用检查。只调整资源路径及命令说明，旧 backend 文件删除，不添加转导出。
+- 4 个只负责数据层结构维护的脚本移至 `rds/maintenance/`：033 体育合场结构、036 队伍 provider 标识巡检、客户端证书结构、SQL 表引用检查。只调整资源路径及命令说明，旧 backend 文件删除，不添加转导出。
 - 原生 Node 对照覆盖六组输入/故障、三个公开方法共 18 次比较，同时核对 SQL 文本、查询顺序、连接就绪调用、错误与完整报告；网络调用为零。
 - 临时 PostgreSQL 中使用可包含历史重复数据的诊断样本，在数据库强制只读状态下对照原/新三个方法，覆盖同用户及跨用户重复订单、软删账号、订单数和小数金额；结果及原订单行一致，注入 DELETE 被数据库拒绝。完整新旧结构兼容的 17 项检查另行通过。
 
@@ -345,7 +345,7 @@ backend 运行版本诊断的 2 个历史数据库访问例外已删除，并列
 
 ## 后续批次：130 个纯数据库历史脚本归位（2026-10-20）
 
-[changmen 扩展] 对 backend scripts 的 224 个 JS/MJS 文件核对静态/动态导入、相对资源及环境/目录上下文后，将其中 130 个只依赖数据层、storage、纯共享规则和 Node 能力的数据库脚本移至 `server/db/maintenance/legacy/`：归档 39 个、诊断 27 个、事故修复 47 个、迁移 16 个、配置数据维护 1 个。旧文件全部删除，不保留转导出或副本。
+[changmen 扩展] 对 backend scripts 的 224 个 JS/MJS 文件核对静态/动态导入、相对资源及环境/目录上下文后，将其中 130 个只依赖数据层、storage、纯共享规则和 Node 能力的数据库脚本移至 `rds/maintenance/legacy/`：归档 39 个、诊断 27 个、事故修复 47 个、迁移 16 个、配置数据维护 1 个。旧文件全部删除，不保留转导出或副本。
 
 127 个文件正文不变；另 3 个文件的 5 个数据层相对导入按新位置调整，SQL、事务、业务字段、环境处理、参数及默认执行行为均不变。322 个非 builtin 导入逐项验证迁移前后的实际解析结果相同，数据层没有新增反向业务依赖。四个既有 npm 命令名称保留并改指向数据层；工作目录和原参数约定保留。
 
@@ -357,7 +357,7 @@ backend 运行版本诊断的 2 个历史数据库访问例外已删除，并列
 
 ## 后续批次：10 个带环境/路径上下文的数据脚本归位（2026-10-20）
 
-[changmen 扩展] 本轮从上述 52 个剩余项中迁走 10 个：用户创建、账号备份、三项数据诊断、三项历史事故修复、两项归档诊断/修复。累计迁入 `server/db/maintenance/legacy/` 为 140 个，旧入口均删除。四个正文不变，其余只调整明确登记的资源或导入位置；SQL、事务、参数和执行开关保持。
+[changmen 扩展] 本轮从上述 52 个剩余项中迁走 10 个：用户创建、账号备份、三项数据诊断、三项历史事故修复、两项归档诊断/修复。累计迁入 `rds/maintenance/legacy/` 为 140 个，旧入口均删除。四个正文不变，其余只调整明确登记的资源或导入位置；SQL、事务、参数和执行开关保持。
 
 - 环境文件指向和 caller cwd 语义保持原样，包括历史 `ops/.env` 指向，不借迁移改为另一份环境文件。默认及显式备份输出地址也保持。
 - 两个诊断改用共享纯身份规则，原 facade 和新入口导出的函数身份相同，数据层不再依赖 match workspace。
@@ -373,7 +373,7 @@ backend 运行版本诊断的 2 个历史数据库访问例外已删除，并列
 
 ## 后续批次：三份混合账号修复脚本的数据访问拆分（2026-10-20）
 
-[changmen 扩展] `fix-river-dedupe-pm.mjs`、`fix-river-prune-players.mjs`、`fix-sh01-river-accounts.mjs` 同时依赖数据库与后台缓存，故保留后台编排，将 10 处 SQL 的真实实现抽到 `server/db/maintenance/profile_repairs.js`，通过公开子入口提供 9 个限定用途的数据操作。后台脚本不再持有连接池，也不再包含 SQL；数据层只导入本包的连接池模块，没有导入后台缓存或平台代码。
+[changmen 扩展] `fix-river-dedupe-pm.mjs`、`fix-river-prune-players.mjs`、`fix-sh01-river-accounts.mjs` 同时依赖数据库与后台缓存，故保留后台编排，将 10 处 SQL 的真实实现抽到 `rds/maintenance/profile_repairs.js`，通过公开子入口提供 9 个限定用途的数据操作。后台脚本不再持有连接池，也不再包含 SQL；数据层只导入本包的连接池模块，没有导入后台缓存或平台代码。
 
 修复计划、账号字段构造、参数、日志、默认写入/dry-run、缓存刷新顺序及原连接关闭时机均保留。没有新增旧路径兼容入口，不计入此前 140 个整文件迁移。独立抽取记录核对完整前后源码、原 SQL 字面量、参数及数据层实现；历史验证只有在真实新实现完整存在时才恢复旧源码，原 551 清单和订单冻结范围不变。
 

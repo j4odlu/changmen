@@ -1,5 +1,5 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {execFileSync} from 'node:child_process';
 import {expect,it} from 'vitest';
 import {VENUE_BROWSER_RELOCATION as record,restoreVenueBrowserSource,restoreVenueBrowserMetadata,verifyVenueBrowserRelocation} from './venue-browser-relocation.mjs';

@@ -1,5 +1,5 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { readAdapterBrowserSource } from "./adapter-browser-relocation.mjs";
 import { expect, it } from "vitest";
 import { gitSource, moduleTokens, replaceExact } from "./fok-exact-boundaries.mjs";

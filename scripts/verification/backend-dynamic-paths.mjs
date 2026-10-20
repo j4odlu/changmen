@@ -9,12 +9,12 @@ import { captureBackendResolution } from "./backend-install-resolution.mjs";
 import { analyzePmLoaderBindings } from "./pm-loader-bindings.mjs";
 import { sharedLoaderSourceSignature } from "./pm-shared-loader-evidence.mjs";
 
-const central = "server/packages/venue-node-loader/adapter_paths.mjs";
-const registry = "server/packages/venue-node-registry";
+const central = "server/venues/loader/adapter_paths.mjs";
+const registry = "server/venues/registry";
 const runtime = `${registry}/runtime`;
 const probes = "server/platform-probes";
 const helpers = [`${probes}/backend/_paths.js`, `${probes}/backend/_paths.cjs`];
-const pgFiles = ["server/db/pg_pool.js", "server/db/resolve_database_url.js"];
+const pgFiles = ["rds/pg_pool.js", "rds/resolve_database_url.js"];
 export const dynamicPathEnvironmentKeys = ["CHANGMEN_ADAPTER_ROOT", "GAMEBET_ADAPTER_ROOT", "CHANGMEN_PLATFORM_PROBES_ROOT",
   "GAMEBET_PLATFORM_PROBES_ROOT", "CHANGMEN_NODE_ROOT", "GAMEBET_NODE_ROOT", "CHANGMEN_BACKEND_ROOT", "GAMEBET_BACKEND_ROOT", "NODE_PATH", "NODE_OPTIONS"];
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");

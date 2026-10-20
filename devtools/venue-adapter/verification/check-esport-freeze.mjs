@@ -14,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPmFolderFreeze } from "../../../scripts/verification/pm-folder-release-boundary.mjs";
+import {readPreviousWorkspaceFile} from '../../../scripts/verification/workspace-layout-history.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../..");
@@ -100,7 +101,7 @@ function main() {
   const base = detectBase();
   const changed = changedFiles(base);
   const { hits } = checkPmFolderFreeze(changed, fs.readFileSync(MANIFEST, "utf8"),
-    file => fs.readFileSync(path.join(REPO_ROOT, file), "utf8"),
+    file => readPreviousWorkspaceFile(path.join(REPO_ROOT, file), "utf8"),
     (ref, file) => git(["show", `${ref}:${file}`], { trim: false }));
 
   if (!hits.length) {

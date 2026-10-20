@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 精确还原三份源码隔离元数据；原历史基线和完整源码相等断言不变。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { restoreRuntimeToolingMetadata } from "./runtime-tooling-migration.mjs";
 import { restorePmCollectorTypeScriptMetadata } from "./pm-collector-typescript-metadata.mjs";

@@ -1,5 +1,5 @@
 // [changmen 扩展] A real server-owned resource root; exact historical views are verification-only.
-import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import{fileURLToPath}from'node:url';import{createHash}from'node:crypto';
+import assert from 'node:assert/strict';import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';import path from 'node:path';import{fileURLToPath}from'node:url';import{createHash}from'node:crypto';
 const root=fileURLToPath(new URL('../../',import.meta.url)),norm=s=>s.replaceAll('\r\n','\n');
 import {restoreRetiredNodeMetadata} from './node-entry-retirement.mjs';
 export const nodeResourceSha=s=>createHash('sha256').update(norm(s)).digest('hex');

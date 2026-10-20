@@ -14,7 +14,7 @@ const shellPath = value => process.platform === "win32"
   ? value.replaceAll("\\", "/").replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`) : value;
 
 await withTemporaryPostgres(async ({ temporary }) => {
-  const db = await import("../../server/db/index.js");
+  const db = await import("../../rds/index.js");
   const pool = db.getPgPool(), cases = [];
   try {
     const client = await pool.connect();
@@ -53,10 +53,10 @@ await withTemporaryPostgres(async ({ temporary }) => {
     for (const name of ["curl", "ssh", "scp"]) command(name, 'echo "Unexpected network access" >&2; exit 98');
     const manifest = path.join(fixture, "changes.txt"), nodeLog = path.join(fixture, "node.log"), pm2Log = path.join(fixture, "pm2.log");
     const scenarios = [
-      { name: "ordinary runtime activation does not access schema or change players, roles, profiles or sequences", files: ["server/backend/core/db/store.js", "server/db/rds/player_store.js"], full: "0", ledger: "unchanged" },
+      { name: "ordinary runtime activation does not access schema or change players, roles, profiles or sequences", files: ["server/backend/core/db/store.js", "rds/rds/player_store.js"], full: "0", ledger: "unchanged" },
       { name: "activation without a migration ledger does not replay or adopt migrations", files: ["server/backend/scripts/apply-rds-schema.mjs"], full: "0", dropLedger: true, ledger: null },
       { name: "activation with an empty ledger does not write migration records", files: ["server/backend/scripts/check-rds-schema.mjs"], full: "0", emptyLedger: true, ledger: 0 },
-      { name: "explicit full activation also does not invoke database maintenance", files: ["server/db/rds/player_store.js"], full: "1", ledger: 0 },
+      { name: "explicit full activation also does not invoke database maintenance", files: ["rds/rds/player_store.js"], full: "1", ledger: 0 },
       { name: "standalone check rejects a missing column while activation remains independent", files: ["server/backend/core/db/store.js"], full: "0", missingColumn: true, ledger: 0 },
     ];
     for (const scenario of scenarios) {

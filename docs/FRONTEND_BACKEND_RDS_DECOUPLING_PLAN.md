@@ -99,7 +99,7 @@
 
 ### 第一项 用户登录和在线信息
 
-来源：`server/backend/core/account/user_login_meta.js`、`user_presence.js`。数据方法落入现有 `server/db/rds/profile_store.js`，通过数据库包公开入口导出。
+来源：`server/backend/core/account/user_login_meta.js`、`user_presence.js`。数据方法落入现有 `rds/rds/profile_store.js`，通过数据库包公开入口导出。
 
 1. 先为当前读写和并发边界建立测试，再抽出按业务命名的方法，例如 `recordUserLoginMetadata`、`advanceUserLastActiveAt`；最终名称按现有导出约定确定。
 2. 登录时间、IP 与在线时间只修改自己拥有的 JSON 字段。保证旧快照不会覆盖并发写入的其它 preferences 字段，并明确同字段时间的新旧策略。仅把整对象 UPDATE 搬到 db 不满足要求。
@@ -110,7 +110,7 @@
 
 ### 第二项 管理用户和权限
 
-来源：`core/account/admin_service.js`、`admin_maintenance.js` 中实际使用 SQL 的业务。复用现有 profile/user 数据方法；新增持久化实现按领域放在 `server/db/rds/`，不新建通用 ORM 或万能 repository。
+来源：`core/account/admin_service.js`、`admin_maintenance.js` 中实际使用 SQL 的业务。复用现有 profile/user 数据方法；新增持久化实现按领域放在 `rds/rds/`，不新建通用 ORM 或万能 repository。
 
 鉴权、操作者权限与 HTTP 错误映射仍归后端业务层。数据层负责查询、锁、唯一约束和需要原子完成的变更；不能把原事务拆成多次互不关联调用。
 

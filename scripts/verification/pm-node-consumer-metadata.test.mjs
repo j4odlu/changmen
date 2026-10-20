@@ -1,5 +1,5 @@
 // [changmen 扩展] Keep the original full-file lock proof through one exact development-dependency replacement.
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";

@@ -1,5 +1,5 @@
 /**
- * 合场共享工具（@changmen/match-identity）：client_match ID、队伍键与时间窗。
+ * 合场共享工具（@changmen/shared/match-identity）：client_match ID、队伍键与时间窗。
  */
 
 export {

@@ -1,5 +1,5 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { expect, test } from "vitest";
 import { restorePmOptimizedFokSource, verifyPmOptimizedFokContract } from "./pm-optimized-fok-boundary.mjs";
 const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));

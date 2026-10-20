@@ -12,7 +12,7 @@ import { createReconciliationBackup } from '@changmen/db/maintenance/rds-reconci
 const exec = promisify(execFile), root = fileURLToPath(new URL('../../', import.meta.url));
 const cases=[]; const check=async(name,run)=>{await run();cases.push(name);console.log('PASS '+name);};
 await withTemporaryPostgres(async({temporary})=>{
-  const {getPgPool}=await import('../../server/db/pg_pool.js'); const pool=getPgPool();
+  const {getPgPool}=await import('../../rds/pg_pool.js'); const pool=getPgPool();
   const connection=async run=>{const c=await pool.connect();try{return await run(c);}finally{c.release();}};
   const schema=()=>connection(async c=>{await c.query("BEGIN READ ONLY");try{await c.query("SET LOCAL search_path=public,pg_catalog");return await readRdsSchema(c);}finally{await c.query("ROLLBACK");}});
   const verify=()=>connection(c=>verifyRdsSchema(c,{log:()=>{}}));
@@ -65,7 +65,7 @@ await withTemporaryPostgres(async({temporary})=>{
       await assert.rejects(connection(c=>reconcileRdsSchema(c,{apply:true,backup:async()=>{throw Error('backup failure');}})),/backup failure/);
       assert.deepEqual(await schema(),originalSchema);assert.deepEqual(await snapshot(),original);
     });
-    const {fetchPlatformMatchesForHiddenClientMatches}=await import('../../server/db/rds/matcher_store.js');
+    const {fetchPlatformMatchesForHiddenClientMatches}=await import('../../rds/rds/matcher_store.js');
     const hidden=async()=> (await fetchPlatformMatchesForHiddenClientMatches([{id:51,matchs:{OB:'history-51'}}])).map(r=>({...r,match_id:r.match_id==null?null:Number(r.match_id)}));
     // matcher_data.js normalizes match_id to Number before producing UI output.
     assert.match(readFileSync(path.join(root,'server/match/matcher/ui/matcher_data.js'),'utf8'),/match_id: raw.match_id != null \? Number\(raw.match_id\) : null/);
@@ -107,7 +107,7 @@ await withTemporaryPostgres(async({temporary})=>{
       assert.deepEqual(await snapshot(),original);assert.deepEqual(await ledger(),records);
     });
     await check('unchanged archive writer handles bigint IDs and preserves hidden-match output',async()=>{
-      const {archiveStaleRows,ARCHIVE_SCOPE_ALL}=await import('../../server/db/archive_stale.js');
+      const {archiveStaleRows,ARCHIVE_SCOPE_ALL}=await import('../../rds/archive_stale.js');
       await pool.query("INSERT INTO client_matches(id,title,built_at,ended_at,matchs) VALUES(2147483648,'A vs B',1,1,'{\"OB\":\"large-id\"}')");
       await pool.query("INSERT INTO platform_matches(platform,source_match_id,match_id,home,away,synced_at) VALUES('OB','large-id',2147483648,'A','B',1)");
       const from=Date.now(),result=await archiveStaleRows({scope:ARCHIVE_SCOPE_ALL,cutoffMs:10});
@@ -131,7 +131,7 @@ await withTemporaryPostgres(async({temporary})=>{
     });
     await check('preflight lock timeout fails within a bounded time without schema mutation',async()=>{
       const c=await pool.connect();try{await c.query('BEGIN');await c.query('LOCK TABLE changmen_schema_migrations IN ACCESS EXCLUSIVE MODE');
-        await assert.rejects(exec(process.execPath,[path.join(root,'server/db/maintenance/check-rds-schema.mjs')],{cwd:root,timeout:10000,windowsHide:true}),e=>e.code===1&&/lock timeout/.test(e.stderr));
+        await assert.rejects(exec(process.execPath,[path.join(root,'rds/maintenance/check-rds-schema.mjs')],{cwd:root,timeout:10000,windowsHide:true}),e=>e.code===1&&/lock timeout/.test(e.stderr));
       }finally{await c.query('ROLLBACK');c.release();}await verify();
     });
     await check('read-only preflight never creates a missing ledger',async()=>{

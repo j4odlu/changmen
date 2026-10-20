@@ -4,6 +4,7 @@
  * 规则见 docs/TEAM_BOUNDARIES.md
  */
 import { inspectBackendProbeRelocation } from "./verification/backend-probe-relocation.mjs";
+import {inspectWorkspaceLayout} from './verification/workspace-layout-relocation.mjs';
 import { inspectNodeResourceIsolation } from "./verification/node-resource-isolation.mjs";
 import { inspectNodeEntryRetirement } from './verification/node-entry-retirement.mjs';
 import {inspectCatalogEnvironmentIsolation} from './verification/catalog-environment-isolation.mjs';
@@ -308,6 +309,7 @@ function main() {
   }
 
   if (violations.length === 0) {
+    console.log('workspace-layout:',inspectWorkspaceLayout(CHANGMEN_ROOT));
     console.log("check-team-boundaries: OK");
     return;
   }

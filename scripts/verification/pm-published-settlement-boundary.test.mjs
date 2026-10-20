@@ -2,7 +2,7 @@ import {adapterCanonicalFile} from "./browser-entry-history.mjs";
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 已发布 PM 改动保留、精确还原及越界负向；不执行数据库/交易/Git 写入。
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';

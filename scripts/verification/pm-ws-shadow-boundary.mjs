@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 三个接入点逐字还原；沿用既有固定 FOK/VPS 哈希，不豁免任何原模块。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { restorePmSharedStreamSource, verifyPmSharedStreamContract } from "./pm-shared-stream-boundary.mjs";
 import { restorePmExecutionShadowSource, verifyPmExecutionShadowContract } from "./pm-execution-shadow-boundary.mjs";

@@ -1,8 +1,8 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Verify physical moves and complete metadata restoration without changing any historical proof.
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from "node:path";
-import { createRequire } from "node:module";
+import {historicalCreateRequire as createRequire} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";

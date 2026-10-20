@@ -240,7 +240,7 @@ CI 前端发布首版仍完整跑前端行为回归和一次生产构建；backe
 
 后续第 2–3 批已增加 6 组保留边界门禁和前端/后端/RDS 安装输入清单，并完成 5 个全新目录的真实安装对照。后端临时生产 workspace 集合可排除浏览器依赖，RDS 当前定向安装也没有浏览器依赖；前端仍经混合 adapter 带入 DB/storage，SQL 和冻结源码仍依赖现有布局。实验未改仓库 package.json/lock，未启用安装或发布配置；不等于 C/D 完成，具体结果见[源码隔离与安装记录](SOURCE_FILE_ISOLATION_20261017.md)。
 
-后续 RDS 资产批已把维护 SQL/结构基线主文件归入 `server/db/assets`，backend 原资产只留逐字兼容副本；在完全没有 backend 目录的三包干净安装中完成 8 组真实维护检查。历史 SQL/checksum、固定旧消费者及完整 551 保护不变，未修改安装或发布控制。该资产依赖已解除；前端混合 adapter 的安装声明耦合和原冻结目录仍是后续事项，见[当前源码隔离记录](SOURCE_FILE_ISOLATION_20261017.md)。
+后续 RDS 资产批已把维护 SQL/结构基线主文件归入 `rds/assets`，backend 原资产只留逐字兼容副本；在完全没有 backend 目录的三包干净安装中完成 8 组真实维护检查。历史 SQL/checksum、固定旧消费者及完整 551 保护不变，未修改安装或发布控制。该资产依赖已解除；前端混合 adapter 的安装声明耦合和原冻结目录仍是后续事项，见[当前源码隔离记录](SOURCE_FILE_ISOLATION_20261017.md)。
 
 ## 10. 2026-10-17 当日累计改动部署就绪检查
 
@@ -276,7 +276,7 @@ RDS 无 backend 目录的独立维护、历史结构、回滚及旧新 CLI 兼�
 
 失败均来自 `scripts/verification/pm-legacy-input-parity.test.mjs`，要求以下文件与固定历史提交 `a233e20534395b31401828e754432407b109053d` 完整源码相等：
 
-1. `server/db/package.json`：RDS 维护/运行观察导出及直接依赖声明改变。
+1. `rds/package.json`：RDS 维护/运行观察导出及直接依赖声明改变。
 2. `packages/shared/package.json`：新增真正共享的 match-identity 导出。
 3. `package-lock.json`：Node 入口和浏览器包 workspace 元数据改变。
 
@@ -336,7 +336,7 @@ RDS 无 backend 目录的独立维护、历史结构、回滚及旧新 CLI 兼�
 
 ### 10.7 后续推进：resolver 消费者与 Node 依赖收口
 
-[changmen 扩展] OB/PB/Ray 辅助 scraper 已从父 adapter 的旧 loader 子路径改为 `@changmen/venue-node-loader`，原导入时机与业务代码保持；resolver 开发依赖改为对应 Node workspace。生产声明不变，工具声明闭包为 8 包，持续门禁拒绝混合包回流及源码/旧入口旁路。原 loader、registry、17 项 manifest 和 551 保护文件不变；未生成第二套实现。
+[changmen 扩展] OB/PB/Ray 辅助 scraper 已从父 adapter 的旧 loader 子路径改为 `@changmen/venue-node`，原导入时机与业务代码保持；resolver 开发依赖改为对应 Node workspace。生产声明不变，工具声明闭包为 8 包，持续门禁拒绝混合包回流及源码/旧入口旁路。原 loader、registry、17 项 manifest 和 551 保护文件不变；未生成第二套实现。
 
 相关回归 195 项通过、1 项既有 expected-fail，原 551/551、FOK 和边界检查通过。临时 14 包后端宿主安装排除浏览器依赖后，原生 Node 的 resolver 解析、loader/registry 缓存身份和 OB/PB/Ray session 加载通过，网络请求尝试 0。三个 scraper 的既有语法错误在本批前后相同，不认证 scraper 命令能运行；未把 8 包工具闭包认证成独立发行包。
 

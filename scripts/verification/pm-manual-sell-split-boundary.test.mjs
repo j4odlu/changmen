@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 实际源码的完整比较与负向验证，不重录任何快照。
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, expect, it } from "vitest";
 import { gitSource, moduleTokens, verifyProtectedSource } from "./fok-exact-boundaries.mjs";
 import { restoreGtcSnapshotMetadata, restorePmManualSellSplit } from "./pm-manual-sell-split-boundary.mjs";

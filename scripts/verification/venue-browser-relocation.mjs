@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Exact physical relocation, without changing runtime behavior or release scope.
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {adapterBrowserSourceReader} from './adapter-browser-relocation.mjs';

@@ -1,5 +1,5 @@
 // [changmen 扩展] Real physical ownership, CLI forwarding, preload identity and slim artifact regressions.
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {restoreCatalogEnvironmentMetadata} from './catalog-environment-isolation.mjs';
 import os from 'node:os';
 import path from 'node:path';
@@ -29,7 +29,7 @@ it('loads the same platform modules through the package and Node loader, includi
  const output=execFileSync(process.execPath,['--import','./scripts/testing/offline-env.mjs','--input-type=module','-e',`
  import assert from 'node:assert/strict';import path from 'node:path';import net from 'node:net';
  let attempts=0;const blocked=()=>{attempts++;throw Error('network forbidden')};net.Socket.prototype.connect=blocked;globalThis.fetch=blocked;
- const loader=await import('@changmen/venue-node-loader');
+ const loader=await import('@changmen/venue-node');
  const probes=path.join(process.cwd(),'server/platform-probes');assert.equal(loader.getRegistryPaths().getPlatformNodeRoot(),probes);
  for(const id of ['OB','PB','RAY']){const module=await import('@changmen/platform-probes/'+id.toLowerCase()+'/session.js');assert.equal(loader.requirePlatform(id,'node','session.js'),module);assert.equal(loader.requirePlatform(id,'backend','session.js'),module);}
  for(const key of ['CHANGMEN_PLATFORM_PROBES_ROOT','GAMEBET_PLATFORM_PROBES_ROOT','CHANGMEN_NODE_ROOT','GAMEBET_NODE_ROOT']){process.env[key]=probes;loader.resetAdapterRootForTests();await loader.initAdapterRegistry();await loader.initEsmPlatformBackends();assert.equal(loader.getRegistryPaths().getPlatformNodeRoot(),probes);delete process.env[key];}

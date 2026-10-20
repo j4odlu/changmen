@@ -13,7 +13,7 @@ const npm = [process.env.CHANGMEN_TEST_NPM_CLI, process.env.npm_execpath,
 if (!npm) throw Error("Set CHANGMEN_TEST_NPM_CLI to an npm CLI JavaScript entry (offline cache required)");
 const out = process.env.CHANGMEN_TEST_EVIDENCE_DIR;
 await withTemporaryPostgres(async ({ temporary }) => {
-  const root = path.join(temporary, "standalone"), workspaces = ["server/db", "server/storage", "packages/shared", "packages/api-contract", "devtools/runtime-tooling"];
+  const root = path.join(temporary, "standalone"), workspaces = ["rds", "server/storage", "packages/shared", "packages/api-contract", "devtools/runtime-tooling"];
   fs.mkdirSync(root);
   const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
     { cwd: repo, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, windowsHide: true }).split("\0").filter(Boolean);
@@ -42,17 +42,17 @@ await withTemporaryPostgres(async ({ temporary }) => {
   noBackend(); checks.push("clean offline production install has only DB/shared/storage/api-contract/runtime-tooling, complete local workspace links, unchanged lock and no backend directory");
   const env = { ...process.env, NODE_PATH: "", NODE_OPTIONS: "", CHANGMEN_STORAGE_DIR: path.join(root, "local-storage"), ESPORT_DATA_DIR: path.join(root, "local-storage/esport") };
   const command = async (name, args = []) => {
-    try { return await exec(process.execPath, [path.join(root, `server/db/maintenance/${name}.mjs`), ...args],
+    try { return await exec(process.execPath, [path.join(root, `rds/maintenance/${name}.mjs`), ...args],
       { cwd: temporary, env, timeout: 30000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 }); }
     finally { noBackend(); }
   };
   const evaluate = code => exec(process.execPath, ["--input-type=module", "--eval", code], { cwd: root, env, timeout: 30000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 });
-  const { default: pg } = await import("../../server/db/pg.js"), client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  const { default: pg } = await import("../../rds/pg.js"), client = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
   const ledger = async () => (await client.query("SELECT name,checksum,applied_at FROM changmen_schema_migrations ORDER BY name")).rows;
   try {
     const read = await evaluate(`import assert from 'node:assert/strict';import{createRequire}from'node:module';
-      const assets=await import(${JSON.stringify(pathToFileURL(path.join(root, "server/db/maintenance/assets.mjs")).href)});
+      const assets=await import(${JSON.stringify(pathToFileURL(path.join(root, "rds/maintenance/assets.mjs")).href)});
       assert.equal(assets.listRdsMigrationNames().length,43);assert(assets.readRdsMigrationSql('001_baseline.sql').includes('CREATE'));
       const storage=await import('@changmen/storage/runtime_version.js');assert.equal(typeof storage.readSourceVersion,'function');
       const repairs=await import('@changmen/db/maintenance/profile_repairs.js');assert.equal(typeof repairs.openProfileRepairData,'function');

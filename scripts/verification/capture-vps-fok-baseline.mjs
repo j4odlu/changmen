@@ -1,5 +1,5 @@
 // [changmen 扩展] 只读核验双端实际来源，原固定 FOK 基线独立验证且保持不变。
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { frontendSource, filesAt, gitSources, assertLayout, assertStable, assertSourceHashes, readPublicAsset, sshRead, layoutProgram, readLayout, PUBLIC_ASSET_WORKERS } from "./release-provenance.mjs";

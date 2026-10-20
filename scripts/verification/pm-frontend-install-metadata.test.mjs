@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 第二阶段精确逆变换继承第一阶段全文证明，拒绝 Node 安装依赖回流。
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";

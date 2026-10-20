@@ -24,7 +24,7 @@ describe.skipIf(!enabled)("real PostgreSQL login isolation", () => {
     process.env.DATABASE_URL = testUrl;
     process.env.DATABASE_SSL = "0";
     process.env.JWT_SECRET = "disposable-pg-test-secret-at-least-32-bytes";
-    const pg = await import("../../../db/pg_pool.js");
+    const pg = await import("../../../../rds/pg_pool.js");
     pool = pg.getPgPool();
     await pool.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;
       CREATE TABLE IF NOT EXISTS users (id uuid PRIMARY KEY, user_name text NOT NULL, password_hash text NOT NULL,
@@ -34,9 +34,9 @@ describe.skipIf(!enabled)("real PostgreSQL login isolation", () => {
     for (const file of ["043_auth_session_audit.sql", "044_auth_sessions.sql"])
       await pool.query(await readFile(new URL(`../../../db/assets/migrations/${file}`, import.meta.url), "utf8"));
     await pool.query("CREATE OR REPLACE FUNCTION auth_test_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected failure'; END $$");
-    await pool.query(await readFile(new URL("../../../db/schema/client_certificates.sql", import.meta.url), "utf8"));
-    certificates = await import("../../../db/rds/client_certificate_store.js");
-    auth = await import("../../../db/rds/auth_store.js");
+    await pool.query(await readFile(new URL("../../../../rds/schema/client_certificates.sql", import.meta.url), "utf8"));
+    certificates = await import("../../../../rds/rds/client_certificate_store.js");
+    auth = await import("../../../../rds/rds/auth_store.js");
   });
   beforeEach(async () => {
     process.env.CLIENT_CERT_REGISTRY_ENABLED = "0";

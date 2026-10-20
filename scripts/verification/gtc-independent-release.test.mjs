@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 import { releasePlan, selectGtcRelease, verifyLegacyGtcBackendModules } from "./gtc-independent-release.mjs";

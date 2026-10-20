@@ -132,7 +132,7 @@ async function batchUpsert(rows) {
 // ── 主浝�?────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const { requirePlatform } = await import("@changmen/venue-node-loader");
+  const { requirePlatform } = await import("@changmen/venue-node");
   ({ login, obGet } = requirePlatform("OB", "node", "session.js"));
 
   console.log(DRY_RUN ? "[ob_scraper] 模弝：dry-run（坪打坰�? : "[ob_scraper] 模弝：写入队伝表（GAMEBET_DB_SCRIPT�?);

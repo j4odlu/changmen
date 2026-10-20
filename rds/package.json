@@ -1,0 +1,40 @@
+{
+  "name": "@changmen/db",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "description": "changmen PostgreSQL 数据层（RDS）",
+  "exports": {
+    ".": "./index.js",
+    "./order_link_filter.js": "./order_link_filter.js",
+    "./venue_account_key.js": "./venue_account_key.js",
+    "./pg.js": "./pg.js",
+    "./client_match_snapshot.js": "./client_match_snapshot.js",
+    "./profile_metadata.js": "./profile_metadata.js",
+    "./admin_users.js": "./admin_users.js",
+    "./value_signals.js": "./value_signals.js",
+    "./relay_identity.js": "./relay_identity.js",
+    "./jwt.js": "./jwt.js",
+    "./maintenance/rds-migrations.mjs": "./maintenance/rds-migrations.mjs",
+    "./maintenance/rds-schema-check.mjs": "./maintenance/rds-schema-check.mjs",
+    "./maintenance/reconcile-rds-schema.mjs": "./maintenance/reconcile-rds-schema.mjs",
+    "./maintenance/rds-reconciliation-backup.mjs": "./maintenance/rds-reconciliation-backup.mjs",
+    "./runtime_schema.js": "./runtime_schema.js",
+    "./maintenance/check-rds-schema.mjs": "./maintenance/check-rds-schema.mjs",
+    "./maintenance/apply-rds-schema.mjs": "./maintenance/apply-rds-schema.mjs",
+    "./maintenance/apply-order-observation-schema.mjs": "./maintenance/apply-order-observation-schema.mjs",
+    "./admin_maintenance.js": "./admin_maintenance.js",
+    "./maintenance/profile_repairs.js": "./maintenance/profile_repairs.js"
+  },
+  "main": "./index.js",
+  "scripts": {
+    "test": "vitest run && node --import ../scripts/testing/offline-env.mjs --test football_orders.smoke.test.mjs pod_bet_execution.smoke.test.mjs sport_matcher_tables.smoke.test.mjs"
+  },
+  "dependencies": {
+    "@changmen/api-contract": "file:../packages/api-contract",
+    "@changmen/storage": "file:../server/storage",
+    "pg": "^8.21.0",
+    "@changmen/shared": "file:../packages/shared",
+    "dotenv": "^17.4.2"
+  }
+}

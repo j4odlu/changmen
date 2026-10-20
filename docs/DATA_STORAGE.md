@@ -19,7 +19,7 @@ changmen 使用 **RDS（PostgreSQL）** 与 **本机 JSON**。数据层入口为
 | `football_orders` | 足球页 `Client_SaveFootballOrder` | 足球侧栏 Pinia / `Client_GetFootballOrders` / 管理端足球订单 | 与 `orders` 物理隔离；禁止 `Client_SaveOrder`；前端不写 localStorage；`status`/`profit` 由 C201 + `queryOrderStatus` / yewurecord 列表回写 |
 
 - **RDS 迁移**：`server/backend/db/migrations/`（含 `033_sport_matcher_tables.sql`；`node scripts/apply-rds-schema.mjs`）
-- **统一 DB 入口**：`@changmen/db`（`server/db/index.js`）
+- **统一 DB 入口**：`@changmen/db`（`rds/index.js`）
 
 ## 本机 JSON（开发 / 凭证 / legacy）
 
@@ -42,7 +42,7 @@ changmen 使用 **RDS（PostgreSQL）** 与 **本机 JSON**。数据层入口为
 |------|------|
 | `platform_matches` / `platform_bets` / `live_timers` | **SaveMatch / SaveLiveTimer 全量快照** + 孤儿删除（不在本批 = 平台认为已消失） |
 | `client_matches` 离开活跃列表 | matchMerge 每轮 diff 删除 → 移入 `client_matches_history` |
-| `client_matches` 长期未 matchMerge | matcher 每小时 **archive**（`server/db/archive_stale.js`，`built_at` 1h 阈值） |
+| `client_matches` 长期未 matchMerge | matcher 每小时 **archive**（`rds/archive_stale.js`，`built_at` 1h 阈值） |
 | 手动兜底 | `npm run db:archive-stale`（`scripts/ops/migrations/archive-stale-client-matches.mjs`） |
 
 详见 [ARCHITECTURE.md](./ARCHITECTURE.md) 数据流。
@@ -166,7 +166,7 @@ Predict.fun 体育 relay 的用户查询归 `@changmen/db/relay_identity.js`：�
 
 | 项 | 行为 |
 |----|------|
-| 入口 | [`server/db/rds/common.js`](../server/db/rds/common.js)；diag：`/health/diag` → `rdsWrite` |
+| 入口 | [`rds/rds/common.js`](../rds/rds/common.js)；diag：`/health/diag` → `rdsWrite` |
 | 同 `opts.key` | 队列内 **coalesce**，只留最新（含队列已满时）；计入 `coalesced`，**不丢最新** |
 | 满队列且无法 coalesce | **drop 本次**（第一版，不踢最旧）；计入 `dropped` + 醒目日志 |
 | 调参 | `RDS_WRITE_QUEUE_MAX`（默认 2000）、`RDS_WRITE_CONCURRENCY`（默认 3） |
@@ -188,7 +188,7 @@ Predict.fun 体育 relay 的用户查询归 `@changmen/db/relay_identity.js`：�
 |------|------|
 | `core/esport-api/store.js` | 采集内存 `_matches` / `_bets` / `_timers` |
 | `core/db/store.js` | profile / client_matches 内存与 built_at 缓存 |
-| `server/db/rds/common.js` | `_writeRds` 写队列 |
+| `rds/rds/common.js` | `_writeRds` 写队列 |
 | `server/match/matcher/ops/rds_snapshot_cache.js` | matchMerge 读路径（内嵌优先内存） |
 | `server/storage/platform_storage.js` | `platforms.json` |
 

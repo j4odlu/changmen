@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const query = vi.hoisted(() => vi.fn());
 
-vi.mock("../../../db/rds/common.js", () => ({
+vi.mock("../../../../rds/rds/common.js", () => ({
   getPgPool: () => ({ query }),
 }));
 
-const { recordAuthAudit } = await import("../../../db/rds/auth_store.js");
+const { recordAuthAudit } = await import("../../../../rds/rds/auth_store.js");
 
 describe("recordAuthAudit", () => {
   beforeEach(() => {

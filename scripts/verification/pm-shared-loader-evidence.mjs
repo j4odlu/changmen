@@ -83,7 +83,7 @@ export function inspectPmSharedLoaders(root, sites, { env = process.env, readSou
   }));
   let defaultScenario;
   if (contractsMatch && violations.length === 0) {
-    const manifest = readJson(path.join(root, "server/packages/venue-node-registry/runtime/registry/manifest.json"));
+    const manifest = readJson(path.join(root, "server/venues/registry/runtime/registry/manifest.json"));
     const targetEvidence = [], targetKeys = new Set();
     const addTarget = (file, allowedRoot) => {
       if (!targetKeys.has(file)) { targetKeys.add(file); targetEvidence.push(fileEvidence(root, file, allowedRoot)); }
@@ -91,14 +91,14 @@ export function inspectPmSharedLoaders(root, sites, { env = process.env, readSou
     };
     for (const record of records.filter(row => row.target?.request)) {
       const args = record.target.request;
-      if (record.loaderSymbol === "adapterRequire") addTarget(`server/packages/venue-node-registry/runtime/${args.join("/")}`, "server/packages/venue-node-registry/runtime/registry");
+      if (record.loaderSymbol === "adapterRequire") addTarget(`server/venues/registry/runtime/${args.join("/")}`, "server/venues/registry/runtime/registry");
       else if (record.loaderSymbol === "requirePlatform") {
         const entry = manifest.find(row => row.id.toLowerCase() === args[0].toLowerCase());
         if (!entry || !/^[a-zA-Z0-9_-]+$/.test(entry.dir) || !["node", "backend"].includes(args[1])) throw Error(`Unreviewed platform target: ${args.join("/")}`);
         addTarget(`server/platform-probes/${entry.dir}/${args.slice(2).join("/")}`, "server/platform-probes");
       }
     }
-    for (const file of ["server/packages/venue-node-registry/runtime/registry/paths.js", "server/packages/venue-node-registry/runtime/registry/feeds.js"]) addTarget(file, "server/packages/venue-node-registry/runtime/registry");
+    for (const file of ["server/venues/registry/runtime/registry/paths.js", "server/venues/registry/runtime/registry/feeds.js"]) addTarget(file, "server/venues/registry/runtime/registry");
     // Enumerate exactly the runtime's top-level ESM file rule; never import files or descend into scripts/.
     const preloadFiles = [], preloadPackages = [];
     for (const entry of manifest) {
@@ -113,7 +113,7 @@ export function inspectPmSharedLoaders(root, sites, { env = process.env, readSou
       for (const file of fs.readdirSync(path.join(root, dir)).sort()) if (file.endsWith(".js") && !file.startsWith("_") && fs.statSync(path.join(root, dir, file)).isFile()) preloadFiles.push(fileEvidence(root, `${dir}/${file}`, "server/platform-probes"));
     }
     const searchPaths = ["apps/backend/node_modules", "node_modules", "server/node_modules"];
-    const pg = createRequire(path.join(root, "server/db/pg_pool.js")).resolve("pg", { paths: searchPaths.map(file => path.join(root, file)) });
+    const pg = createRequire(path.join(root, "rds/pg_pool.js")).resolve("pg", { paths: searchPaths.map(file => path.join(root, file)) });
     const pgEvidence = fileEvidence(root, relative(root, pg));
     const lock = readJson(path.join(root, "package-lock.json"));
     let dir = path.dirname(pg), pgPackage;
@@ -126,7 +126,7 @@ export function inspectPmSharedLoaders(root, sites, { env = process.env, readSou
     defaultScenario = {
       assumption: "workspace default roots; no environment/programmatic override; current installation",
       applicableToAuditorProcess: environmentPolicies.every(row => row.processConfiguredKeys.length === 0),
-      manifest: fileEvidence(root, "server/packages/venue-node-registry/runtime/registry/manifest.json"), targetEvidence, preloadPackages, preloadFiles,
+      manifest: fileEvidence(root, "server/venues/registry/runtime/registry/manifest.json"), targetEvidence, preloadPackages, preloadFiles,
       pg: { ...pgEvidence, version: pgPackage.version, lockKey: relative(root, dir), searchPaths, ancestorSearch: true },
       runtimeExecuted: false, moduleDependencyClosuresCertified: false,
       recognizedRequests: {

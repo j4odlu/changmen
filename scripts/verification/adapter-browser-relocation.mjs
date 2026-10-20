@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader} from "./browser-entry-history.mjs";
 // [changmen 扩展] Browser implementation relocation only. Original protection baselines remain authoritative.
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from "node:path";
 import { createHash } from "node:crypto";
 import ts from "typescript";

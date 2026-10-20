@@ -30,7 +30,7 @@ function plan(paths, overrides = {}) {
   finally { rmSync(dir, { recursive: true, force: true }); }
 }
 test("auth-only archive release compiles and restarts without rerunning schema/backfills", () => {
-  const result = plan(["server/backend/core/auth/login_service.js", "server/db/rds/auth_store.js", "server/db/impl_rds.js", "server/realtime-hub/hub.js"]);
+  const result = plan(["server/backend/core/auth/login_service.js", "rds/rds/auth_store.js", "rds/impl_rds.js", "server/realtime-hub/hub.js"]);
   assert.match(result, /install=1 compile=1 web=1/);
 });
 test("database migrations do not deploy applications", () => {
@@ -43,11 +43,11 @@ test("explicit full release retains full-deploy behavior", () => {
   assert.match(plan(["server/backend/core/auth/identity.js"], { DEPLOY_FULL: "1" }), /full=1 install=1 compile=1 web=1/);
 });
 test('certificate schema does not deploy applications', () => {
-  assert.match(plan(['server/db/schema/client_certificates.sql']), /install=0 compile=0 web=0/);
+  assert.match(plan(['rds/schema/client_certificates.sql']), /install=0 compile=0 web=0/);
 });
 
 test('isolated release identifies certificate changes and skips install/compile', () => {
-  assert.match(plan(['server/db/schema/client_certificates.sql'], { DEPLOY_RELEASE_MODE: '1' }),
+  assert.match(plan(['rds/schema/client_certificates.sql'], { DEPLOY_RELEASE_MODE: '1' }),
     /install=0 compile=0 web=1/);
 });
 
@@ -57,7 +57,7 @@ test('isolated release still identifies actual account schema changes', () => {
 
 for (const file of [
   "server/backend/core/db/store.js", "server/backend/core/account/account_store.js",
-  "server/db/rds/player_store.js", "server/db/player_account_record.js",
+  "rds/rds/player_store.js", "rds/player_account_record.js",
 ]) {
   test(`ordinary account code change never requests legacy data backfill: ${file}`, () => {
     assert.match(plan([file]), new RegExp(`install=1 compile=${file.startsWith("server/backend/") ? 1 : 0} web=1`));

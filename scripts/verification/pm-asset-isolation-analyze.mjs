@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] Reproducible bounded browser evidence; never authorizes deployment.
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 const base = 'output/playwright/pm-asset-isolation';

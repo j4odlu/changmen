@@ -6,8 +6,8 @@ import { applyRdsSchema } from "@changmen/db/maintenance/apply-rds-schema.mjs";
 
 // Real SQL against a disposable cluster; database destinations are pinned before app imports.
 await withTemporaryPostgres(async () => {
-  const db = await import("../../server/db/index.js");
-  const { persistUserPresence } = await import("../../server/db/profile_metadata.js");
+  const db = await import("../../rds/index.js");
+  const { persistUserPresence } = await import("../../rds/profile_metadata.js");
   const { recordUserLastLogin } = await import("../../server/backend/core/account/user_login_meta.js");
   const pool = db.getPgPool(), query = pool.query.bind(pool);
   try {

@@ -5,8 +5,8 @@ import { applyRdsSchema } from "@changmen/db/maintenance/apply-rds-schema.mjs";
 import { withTemporaryPostgres } from "./temporary-postgres.mjs";
 
 await withTemporaryPostgres(async () => {
-  const db = await import("../../server/db/index.js");
-  const cache = await import("../../server/db/client_match_snapshot.js");
+  const db = await import("../../rds/index.js");
+  const cache = await import("../../rds/client_match_snapshot.js");
   const backend = await import("../../server/backend/core/db/store.js");
   const collector = (await import("../../server/backend/core/esport-api/store.js")).default;
   const matcher = await import("../../server/match/matcher/ops/rds_snapshot_cache.js");
@@ -123,8 +123,8 @@ await withTemporaryPostgres(async () => {
     await check("a fresh process reloads the same committed snapshot without backend hydration", async () => {
       await db.writeClientMatchesAsync({ activeRows: [row(9)], builtAt: 500 });
       const expected = await db.fetchClientMatches({ snapshot: true });
-      const script = `const { loadClientMatchSnapshot } = await import('./server/db/client_match_snapshot.js');
-        const { getPgPool } = await import('./server/db/pg_pool.js');
+      const script = `const { loadClientMatchSnapshot } = await import('./rds/client_match_snapshot.js');
+        const { getPgPool } = await import('./rds/pg_pool.js');
         try { console.log('SNAPSHOT=' + JSON.stringify(await loadClientMatchSnapshot())); } finally { await getPgPool()?.end(); }`;
       const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], { encoding: "utf8", windowsHide: true, timeout: 30000 });
       assert.equal(result.status, 0, result.stderr);

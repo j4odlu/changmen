@@ -46,12 +46,12 @@ function fixture() {
 it("keeps resolver and Node loader production declarations free from browser hosts", () => {
   const report = inspectVenueNodeDependencies(repository);
   expect(report.violations).toEqual([]);
-  expect(report.closures["@changmen/team-resolver"].workspaces).not.toContain("@changmen/venue-node-loader");
-  expect(report.closures["@changmen/backend"].workspaces).toContain("@changmen/venue-node-loader");
-  expect(report.resolverTooling.workspaces).toContain("@changmen/venue-node-loader");
+  expect(report.closures["@changmen/team-resolver"].workspaces).not.toContain("@changmen/venue-node");
+  expect(report.closures["@changmen/backend"].workspaces).toContain("@changmen/venue-node");
+  expect(report.resolverTooling.workspaces).toContain("@changmen/venue-node");
   expect(report.resolverTooling.workspaces).not.toContain("@changmen/venue-adapter");
-  expect(report.backendTooling.workspaces).toHaveLength(16);
-  expect(report.backendTooling.workspaces).toContain("@changmen/venue-adapter-tools");
+  expect(report.backendTooling.workspaces).toHaveLength(13);
+  expect(report.backendTooling.workspaces).toContain("@changmen/venue-node");
   expect(report.backendTooling.workspaces).not.toContain("@changmen/venue-adapter");
   expect(report.bundleConsumers).toHaveLength(1);
   expect(report.consumers.map(row => [path.basename(row.file), row.kind])).toEqual([
@@ -63,34 +63,34 @@ it("keeps resolver and Node loader production declarations free from browser hos
 for (const [name, file, change] of [
   ["mixed adapter added back to backend", "server/backend/package.json", p => p.dependencies["@changmen/venue-adapter"] = "file:../../packages/venue-adapter"],
   ["optional browser consumer in resolver", "server/match/resolver/package.json", p => p.optionalDependencies = { "@changmen/pm-market-data-browser": "file:../../../packages/pm-market-data-browser" }],
-  ["transitive client host in registry", "server/packages/venue-node-registry/package.json", p => p.dependencies["@changmen/client-core"] = "file:../../client-core"],
+  ["transitive client host in registry", "server/venues/package.json", p => p.dependencies["@changmen/client-core"] = "file:../../client-core"],
   ["transitive peer Vue in storage", "server/storage/package.json", p => p.peerDependencies = { vue: "^3.5.13" }],
-  ["unknown local dependency", "server/packages/venue-node-loader/package.json", p => p.dependencies["@changmen/unknown-node"] = "file:../unknown"],
-  ["browser export from Node registry", "server/packages/venue-node-registry/package.json", p => p.exports["./adapters"] = "./adapters.ts"],
-  ["browser source in Node files", "server/packages/venue-node-registry/package.json", p => p.files.push("adapters.ts")],
-  ["browser host in Node registry development dependencies", "server/packages/venue-node-registry/package.json", p => p.devDependencies = { "@changmen/client-core": "file:../../client-core" }],
-  ["incorrect workspace location", "server/backend/package.json", p => p.dependencies["@changmen/venue-node-loader"] = "file:../../packages/venue-adapter"],
-  ["Node workspace registration removed", "package.json", p => p.workspaces = p.workspaces.filter(dir => dir !== "server/packages/venue-node-registry")],
-  ["registry resource declaration removed", "server/packages/venue-node-loader/package.json", p => delete p.dependencies["@changmen/venue-node-registry"]],
-  ["backend facade dependency removed", "server/backend/package.json", p => delete p.dependencies["@changmen/venue-node-loader"]],
-  ["resolver tooling loader removed", "server/match/resolver/package.json", p => delete p.devDependencies["@changmen/venue-node-loader"]],
-  ["resolver tooling loader redirected", "server/match/resolver/package.json", p => p.devDependencies["@changmen/venue-node-loader"] = "file:../../../packages/venue-adapter"],
+  ["unknown local dependency", "server/venues/package.json", p => p.dependencies["@changmen/unknown-node"] = "file:../unknown"],
+  ["browser export from Node registry", "server/venues/package.json", p => p.exports["./adapters"] = "./adapters.ts"],
+  ["browser source in Node files", "server/venues/package.json", p => p.files.push("adapters.ts")],
+  ["browser host in Node registry development dependencies", "server/venues/package.json", p => p.devDependencies = { "@changmen/client-core": "file:../../client-core" }],
+  ["incorrect workspace location", "server/backend/package.json", p => p.dependencies["@changmen/venue-node"] = "file:../../packages/venue-adapter"],
+  ["Node workspace registration removed", "package.json", p => p.workspaces = p.workspaces.filter(dir => dir !== "server/venues")],
+  ["registry resource declaration removed", "server/venues/package.json", p => delete p.dependencies["@changmen/storage"]],
+  ["backend facade dependency removed", "server/backend/package.json", p => delete p.dependencies["@changmen/venue-node"]],
+  ["resolver tooling loader removed", "server/match/resolver/package.json", p => delete p.devDependencies["@changmen/venue-node"]],
+  ["resolver tooling loader redirected", "server/match/resolver/package.json", p => p.devDependencies["@changmen/venue-node"] = "file:../../../packages/venue-adapter"],
   ["resolver mixed development dependency", "server/match/resolver/package.json", p => p.devDependencies["@changmen/venue-adapter"] = "file:../../../packages/venue-adapter"],
   ["backend mixed development dependency", "server/backend/package.json", p => p.devDependencies["@changmen/venue-adapter"] = "file:../../packages/venue-adapter"],
-  ["backend Node tool removed", "server/backend/package.json", p => delete p.devDependencies["@changmen/venue-adapter-tools"]],
-  ["backend Node tool redirected", "server/backend/package.json", p => p.devDependencies["@changmen/venue-adapter-tools"] = "file:../../packages/venue-adapter"],
+  ["backend Node tool removed", "server/backend/package.json", p => delete p.dependencies["@changmen/venue-node"]],
+  ["backend Node tool redirected", "server/backend/package.json", p => p.devDependencies["@changmen/venue-node"] = "file:../../packages/venue-adapter"],
   ["backend manual sync changed", "server/backend/package.json", p => p.scripts["sync:platform-adapter"] = "npm run sync:backend-bundle --workspace=@changmen/venue-adapter"],
 ]) it(`rejects ${name}`, () => {
   const f = fixture(); f.edit(file, change);
-  expect(inspectVenueNodeDependencies(f.root).violations.length).toBeGreaterThan(0);
+  expect(()=>{const report=inspectVenueNodeDependencies(f.root);if(report.violations.length)throw Error('boundary rejected');}).toThrow();
 });
 for (const [name, source] of [
   ["legacy package path", 'const api=await import("@changmen/venue-adapter/loader/adapter_paths.js");'],
   ["relative source path", 'const api=await import("../../../../packages/venue-adapter/loader/adapter_paths.mjs");'],
-  ["Node package deep path", 'const api=await import("@changmen/venue-node-loader/adapter_paths.mjs");'],
-  ["changed initialization timing", 'import * as api from "@changmen/venue-node-loader";'],
+  ["Node package deep path", 'const api=await import("@changmen/venue-node/adapter_paths.mjs");'],
+  ["changed initialization timing", 'import * as api from "@changmen/venue-node";'],
   ["opaque replacement", 'const api=await import(target);'],
-  ["mixed fallback", 'const api=await import("@changmen/venue-node-loader"); const fallback=await import("@changmen/venue-adapter/registry");'],
+  ["mixed fallback", 'const api=await import("@changmen/venue-node"); const fallback=await import("@changmen/venue-adapter/registry");'],
 ]) it(`rejects resolver scraper ${name}`, () => {
   const f = fixture(); f.editSource("ob_scraper.js", () => source);
   expect(inspectVenueNodeDependencies(f.root).violations.length).toBeGreaterThan(0);
@@ -124,8 +124,8 @@ it("rejects the browser workspace in transitive Node production dependencies", (
 for (const [name, source] of [
   ["relative tool source", 'import {syncPlatformAdapterBackendBundle} from "../../../packages/venue-adapter/scripts/sync-backend-bundle.mjs";'],
   ["mixed package", 'import "@changmen/venue-adapter";'],
-  ["dynamic timing", 'const tool=await import("@changmen/venue-adapter-tools/sync-backend-bundle.mjs");'],
-  ["mixed fallback", 'import "@changmen/venue-adapter-tools/sync-backend-bundle.mjs";import "@changmen/venue-adapter/registry";'],
+  ["dynamic timing", 'const tool=await import("@changmen/venue-node/sync-backend-bundle.mjs");'],
+  ["mixed fallback", 'import "@changmen/venue-node/sync-backend-bundle.mjs";import "@changmen/venue-adapter/registry";'],
 ]) it(`rejects backend bundle consumer ${name}`, () => {
   const f = fixture(); f.editBundle(() => source);
   expect(inspectVenueNodeDependencies(f.root).violations.length).toBeGreaterThan(0);

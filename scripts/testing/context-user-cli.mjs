@@ -32,4 +32,4 @@ registerHooks({resolve(spec,context,next){if(spec==='@changmen/db')return{url:da
 process.on('exit',()=>process.stdout.write(JSON.stringify(state)+'\n'));
 const row=record.moves.find(row=>row.context==='data-user-cli');
 process.argv=['node',mode==='before'?row.file:row.canonical,...config.args];
-await import(mode==='before'?data(row.before):new URL('../../'+row.canonical,import.meta.url));
+await import(mode==='before'?data(row.before):new URL('../../'+row.canonical.replace('server/db/','rds/'),import.meta.url));

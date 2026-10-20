@@ -2,7 +2,7 @@ import {adapterCanonicalFile} from "./browser-entry-history.mjs";
 import {readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 使用当前完整迁移源码与不可变 Git 来源；不写回生产文件。
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";

@@ -2,7 +2,7 @@
 
 数据回填与一次性迁移脚本。`npm run db:migrate-*` / `db:finalize-*` / `db:check-players` 入口见 `server/backend/package.json`。
 
-累计 17 个数据库脚本已迁至 [`server/db/maintenance/legacy/migrations/`](../../../../db/maintenance/legacy/migrations/)，原路径删除。下表保留命令/用途索引，其中 `migrate-players-owner-user-id`、`finalize-players-owner-user-id`、`migrate-accounts-jsonb-to-players`、`check-players-rds-migrate`、`backup-profiles-accounts`、`migrate-pm-sell-pnl-to-buy`、`restore-pm-sell-money-from-pnl-usdc`、`restore-pm-buy-money-from-sell-pnl`、`migrate-order-hash-link-to-create-at` 位于新目录；对应 npm 入口已同步指向数据层。
+累计 17 个数据库脚本已迁至 [`rds/maintenance/legacy/migrations/`](../../../../db/maintenance/legacy/migrations/)，原路径删除。下表保留命令/用途索引，其中 `migrate-players-owner-user-id`、`finalize-players-owner-user-id`、`migrate-accounts-jsonb-to-players`、`check-players-rds-migrate`、`backup-profiles-accounts`、`migrate-pm-sell-pnl-to-buy`、`restore-pm-sell-money-from-pnl-usdc`、`restore-pm-buy-money-from-sell-pnl`、`migrate-order-hash-link-to-create-at` 位于新目录；对应 npm 入口已同步指向数据层。
 
 ## 脚本
 

@@ -62,10 +62,10 @@ describe("reviewable migration boundaries, without executing any DDL", () => {
       expect(schema).toContain(gate);
   });
   it("has no automatic integration with startup/deployment DDL", () => {
-    expect(read("server/db/maintenance/apply-rds-schema.mjs")).not.toContain("phase2-schema");
+    expect(read("rds/maintenance/apply-rds-schema.mjs")).not.toContain("phase2-schema");
     expect(read("server/backend/server.js")).not.toContain("phase2-schema");
-    expect(gitSource(retirementBase, "server/db/rds/orders_execution_compat.js")).not.toMatch(/(?:CREATE|ALTER|DROP) (?:TABLE|VIEW|FUNCTION)/);
-    expect(read("server/db/rds/native_orders.js")).not.toMatch(/(?:CREATE|ALTER|DROP) (?:TABLE|VIEW|FUNCTION)/);
+    expect(gitSource(retirementBase, "rds/rds/orders_execution_compat.js")).not.toMatch(/(?:CREATE|ALTER|DROP) (?:TABLE|VIEW|FUNCTION)/);
+    expect(read("rds/rds/native_orders.js")).not.toMatch(/(?:CREATE|ALTER|DROP) (?:TABLE|VIEW|FUNCTION)/);
   });
   it("historical schema validation preceded startup; current startup has no retired mode", () => {
     const startup = gitSource(retirementBase, "server/backend/server.js");

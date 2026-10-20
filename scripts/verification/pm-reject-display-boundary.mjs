@@ -1,7 +1,7 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 // [changmen 扩展] 仅还原用户要求的拒单报价展示和数量快照透传；不豁免下单/核验逻辑。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { restoreMakeupOddsDisplaySource } from "./makeup-odds-display-boundary.mjs";
 const normalize = source => source.replaceAll("\r\n", "\n");

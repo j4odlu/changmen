@@ -2,7 +2,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 按账号隔离钱包签名会话；精确还原后继续核验既有 FOK/GTC 基线。
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { restorePmPreflightLabels } from "./pm-preflight-labels-boundary.mjs";
 import { restorePmFastFokSource, verifyPmFastFokContract } from "./pm-fast-fok-boundary.mjs";

@@ -28,4 +28,4 @@
 
 默认数据目录：`server/backend/storage/`（可由 `ESPORT_DATA_DIR` / `CHANGMEN_STORAGE_DIR` 覆盖）。Monorepo 目录布局见 `CHANGMEN_LAYOUT`（[docs/PATH_REGISTRY.md](../../docs/PATH_REGISTRY.md)）。详见 [docs/DATA_STORAGE.md](../../docs/DATA_STORAGE.md)。
 
-相关：[server/db/README.md](../db/README.md)
+相关：[rds/README.md](../db/README.md)

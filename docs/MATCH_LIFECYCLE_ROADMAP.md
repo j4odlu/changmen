@@ -88,7 +88,7 @@ markEndedIds = previousActiveIds.filter(
 
 「本拍 `info` 没有 = 结束」——把 Match 缺口写成 End。
 
-**B. 写库**（`server/db/rds/client_matches_store.js` → `_rdsWriteClientMatchesLifecycle`）
+**B. 写库**（`rds/rds/client_matches_store.js` → `_rdsWriteClientMatchesLifecycle`）
 
 事务里：
 
@@ -135,7 +135,7 @@ markEndedIds = previousActiveIds.filter(
 
 - `server/match/matcher/compose/compose_once.js`
 - `server/match/matcher/compose/io/write.js`（注释/传参收紧，若需要）
-- `server/db/rds/client_matches_store.js`
+- `rds/rds/client_matches_store.js`
 - matcher/db 相关单测
 - 本文档（当前=M1 做完标志）
 

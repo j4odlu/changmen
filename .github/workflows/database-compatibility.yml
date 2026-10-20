@@ -9,7 +9,7 @@ on:
       - 'scripts/testing/**'
       - 'deploy/scripts/release-*.sh'
       - 'scripts/deploy/**'
-      - 'server/db/**'
+      - 'rds/**'
       - 'server/backend/db/**'
       - 'server/backend/scripts/*rds*'
       - 'server/backend/scripts/*order-observation-schema*'

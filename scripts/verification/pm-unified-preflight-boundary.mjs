@@ -2,7 +2,7 @@ import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-histo
 // [changmen 扩展] 公共预检提取和双 FOK 模式的精确增量；不修改任何原 FOK/VPS 基线。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { restorePmOptimizedFokSource, verifyPmOptimizedFokContract } from "./pm-optimized-fok-boundary.mjs";
 import { restorePmPreflightModeIsolation, verifyPmPreflightModeIsolation } from "./pm-preflight-mode-isolation-boundary.mjs";
 const normalize = value => value.replaceAll("\r\n", "\n");

@@ -1,6 +1,6 @@
 // [changmen 扩展] Reverse only the reviewed security patch; all older full-source proofs remain unchanged.
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from "node:crypto";
 import { restorePmCollectorTypeScriptMetadata } from "./pm-collector-typescript-metadata.mjs";
 const record = JSON.parse(fs.readFileSync(new URL("./dependency-security-metadata.json", import.meta.url), "utf8"));

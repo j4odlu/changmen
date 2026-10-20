@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {expect,it,vi} from 'vitest';
@@ -8,7 +8,7 @@ it('physically moves 130 scripts while preserving all native import targets and 
  expect(inspectRdsLegacyRelocation(root)).toMatchObject({moved:130,unchanged:127,relativeImportUpdates:3,reverseApplicationDependencies:0});
 });
 it('parses every moved script with native Node without importing or running maintenance',()=>{
- for(const row of record.moves){const result=spawnSync(process.execPath,['--check',row.canonical],{encoding:'utf8',windowsHide:true});expect(result.status,row.canonical+': '+result.stderr).toBe(0);}
+ for(const row of record.moves){const result=spawnSync(process.execPath,['--check',row.canonical.replace('server/db/','rds/')],{encoding:'utf8',windowsHide:true});expect(result.status,row.canonical+': '+result.stderr).toBe(0);}
 },30000);
 it('historical reads require the exact real moved implementation and never mask unrelated errors',()=>{
  for(const row of record.moves)expect(previousRdsLegacyEntry(row.file,file=>fs.readFileSync(file,'utf8'))).toBe(row.before);

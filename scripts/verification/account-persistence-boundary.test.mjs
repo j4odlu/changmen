@@ -1,5 +1,5 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { accountPersistenceContract, restoreAccountPersistenceSource } from "./account-persistence-boundary.mjs";

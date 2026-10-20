@@ -1,6 +1,6 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from "node:path";
 import { verifyGtcClientStateSources } from "./gtc-client-state-boundary.mjs";
 verifyGtcClientStateSources(file => readAdapterHistory(file, "utf8"));

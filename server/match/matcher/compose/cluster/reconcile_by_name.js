@@ -5,8 +5,8 @@
 import {
   lookupGbTeamIdByName,
   normalizeTeam,
-} from "@changmen/match-identity/teams/team_key.js";
-import { isPlaceholderTeamName } from "@changmen/match-identity/teams/match_utils.js";
+} from "@changmen/shared/match-identity/teams/team_key.js";
+import { isPlaceholderTeamName } from "@changmen/shared/match-identity/teams/match_utils.js";
 import { sameTeamPair } from "../sides/orientation_lock.js";
 import {
   ID_START_TOLERANCE_MS,

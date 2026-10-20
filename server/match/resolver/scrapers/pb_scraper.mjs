@@ -12,7 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { upsertTeamPlatformMapsBatched } from "@changmen/db";
-import { requirePlatform } from "@changmen/venue-node-loader";
+import { requirePlatform } from "@changmen/venue-node";
 import { getGameCodeForPlatformId } from "@changmen/shared/catalog/game_catalog";
 import { formatPbTeamPlatformId } from "@changmen/shared/catalog/pb_team_platform_id";
 

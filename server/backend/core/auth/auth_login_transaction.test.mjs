@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import crypto from "node:crypto";
 
 const mocks = vi.hoisted(() => ({ query: vi.fn(), tx: vi.fn(), release: vi.fn() }));
-vi.mock("../../../db/rds/common.js", () => ({ getPgPool: () => ({ query: mocks.query, connect: async () => ({ query: mocks.tx, release: mocks.release }) }) }));
+vi.mock("../../../../rds/rds/common.js", () => ({ getPgPool: () => ({ query: mocks.query, connect: async () => ({ query: mocks.tx, release: mocks.release }) }) }));
 const original = process.env.JWT_SECRET;
 process.env.JWT_SECRET = "login-transaction-test-secret-long-enough";
-const { authSignIn, authSignOut, authSignOutBrowserSession, authGetUserStatus, authRefreshToken, authBrowserSession, authResolveBrowserSession } = await import("../../../db/rds/auth_store.js");
-const { signJwt, JWT_SECRET } = await import("../../../db/rds/jwt.js");
+const { authSignIn, authSignOut, authSignOutBrowserSession, authGetUserStatus, authRefreshToken, authBrowserSession, authResolveBrowserSession } = await import("../../../../rds/rds/auth_store.js");
+const { signJwt, JWT_SECRET } = await import("../../../../rds/rds/jwt.js");
 if (original === undefined) delete process.env.JWT_SECRET;
 else process.env.JWT_SECRET = original;
 const user = { id: "153f91c6-ce36-4014-8f9b-3612bbe4c0d1", user_name: "river", password_hash: "$2a$12$hash", active_session_id: "old-login" };

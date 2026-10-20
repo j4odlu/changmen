@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {NODE_ENTRY_RETIREMENT} from './node-entry-retirement.mjs';
+import {WORKSPACE_LAYOUT_RELOCATION,currentWorkspaceFile} from './workspace-layout-history.mjs';
 
 const within = (file, prefix) => file === prefix || file.startsWith(`${prefix}/`);
 const test = file => /(?:^|\/)(?:tests?|__tests__|fixtures)(?:\/|$)|\.(?:test|spec)\.[^/]+$/.test(file);
@@ -46,6 +47,8 @@ export function sourceOwnershipInventory(root) {
   const relocation = JSON.parse(fs.readFileSync(path.join(root, "scripts/verification/adapter-browser-relocation.json"), "utf8"));
   const protectedOrigins = new Map(relocation.records.filter(row => Object.hasOwn(protectedPaths, row.file)).map(row => [row.canonical, row.file]));
   for(const row of NODE_ENTRY_RETIREMENT.removed)if(Object.hasOwn(protectedPaths,row.file))protectedOrigins.set(row.canonical,row.file);
+  for(const [file,origin]of [...protectedOrigins])protectedOrigins.set(currentWorkspaceFile(file),origin);
+  for(const row of WORKSPACE_LAYOUT_RELOCATION.files)if(row.canonical&&Object.hasOwn(protectedPaths,row.file))protectedOrigins.set(row.canonical,row.file);
   const files = [], unclassified = [], incompatibleAssets = [], incompatibleEntries = [];
   for (const entry of policy.compatibilityCliEntries || []) {
     for (const name of [entry.file, entry.canonical]) if (!name || path.isAbsolute(name) || name.split(/[\\/]/).includes("..")) throw Error("Invalid compatibility CLI path");

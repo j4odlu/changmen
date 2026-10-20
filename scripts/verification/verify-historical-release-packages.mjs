@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { historicalPackages, verifyHistoricalPackage } from "./historical-release-packages.mjs";
 const report = { passed: true, packages: historicalPackages.map(spec => verifyHistoricalPackage(spec)), currentReleaseAccepted: false };
 fs.mkdirSync("output", { recursive: true });

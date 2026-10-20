@@ -1,7 +1,7 @@
 import {adapterCanonicalFile} from "./browser-entry-history.mjs";
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { execFileSync, spawnSync } from "node:child_process";
-import fs from "node:fs";
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { describe, expect, it } from "vitest";
 import { PM_FOLDER_RELOCATIONS, certifyPmFolderRelease, checkPmFolderFreeze } from "./pm-folder-release-boundary.mjs";
 import { PM_UNIFIED_PREFLIGHT_HELPERS } from "./pm-unified-preflight-boundary.mjs";

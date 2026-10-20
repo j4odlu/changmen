@@ -1,6 +1,6 @@
 // [changmen 扩展] Restore only the reviewed presentation changes before historical checks.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { createHash } from 'node:crypto';
 const normalize = text => text.replaceAll('\r\n', '\n');
 const digest = text => createHash('sha256').update(normalize(text)).digest('hex');

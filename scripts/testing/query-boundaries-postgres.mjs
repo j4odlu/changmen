@@ -5,11 +5,11 @@ import { applyRdsSchema } from "@changmen/db/maintenance/apply-rds-schema.mjs";
 
 await withTemporaryPostgres(async () => {
   process.env.DATABASE_POOL_MAX = "1";
-  const db = await import("../../server/db/index.js");
-  const { createValueSignalDashboardReader } = await import("../../server/db/value_signals.js");
-  const { findSportRelayUserId } = await import("../../server/db/relay_identity.js");
-  const { signJwt, JWT_ACCESS_TTL_SEC } = await import("../../server/db/jwt.js");
-  const existingJwt = await import("../../server/db/rds/jwt.js");
+  const db = await import("../../rds/index.js");
+  const { createValueSignalDashboardReader } = await import("../../rds/value_signals.js");
+  const { findSportRelayUserId } = await import("../../rds/relay_identity.js");
+  const { signJwt, JWT_ACCESS_TTL_SEC } = await import("../../rds/jwt.js");
+  const existingJwt = await import("../../rds/rds/jwt.js");
   const pool = db.getPgPool();
   const read = () => createValueSignalDashboardReader()();
   try {

@@ -1,10 +1,11 @@
 // [changmen 扩展] Preserve historical environment/output context without running a maintenance script.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {createRequire,isBuiltin} from 'node:module';
+import {isBuiltin} from 'node:module';
+import {historicalCreateRequire as createRequire} from './workspace-layout-history.mjs';
 import ts from 'typescript';
 import {profileRepairHistoryFiles,restoreProfileRepairSource} from './profile-repair-isolation.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));

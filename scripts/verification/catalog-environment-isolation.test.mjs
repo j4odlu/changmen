@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {expect,it} from 'vitest';
 import {CATALOG_ENVIRONMENT_ISOLATION as record,verifyCatalogEnvironmentIsolation,inspectCatalogEnvironmentIsolation,restoreCatalogEnvironmentMetadata} from './catalog-environment-isolation.mjs';
 const read=file=>fs.readFileSync(file,'utf8');

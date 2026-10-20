@@ -1,12 +1,12 @@
 // [changmen 扩展] Canonical history is immutable; old copies must stay absent.
-import fs from 'node:fs';
+import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import os from 'node:os';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {expect,it} from 'vitest';
 import {inspectRdsAssets} from './rds-assets.mjs';
-import {listRdsMigrationNames,readRdsMigrationSql,readRdsSchemaBaseline} from '../../server/db/maintenance/assets.mjs';
+import {listRdsMigrationNames,readRdsMigrationSql,readRdsSchemaBaseline} from "../../rds/maintenance/assets.mjs";
 const checksum=text=>createHash('sha256').update(text.replaceAll('\r\n','\n')).digest('hex');
 function fixture(run){
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'changmen-rds-assets-'));

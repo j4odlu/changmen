@@ -12,7 +12,7 @@
 
 [changmen 扩展] 2026-10-18 [matcher 只读检查](audits/MATCHER_READONLY_AUDIT_20261018.md)：生产内嵌合场持续运行；三个 scraper 不在日常启动链，但保有历史补数标签，不能直接认定无用。发现映射 DAL 丢失 game 字段和三个辅助命令的既有语法错误；本轮未改匹配算法或生产数据。
 
-[changmen 扩展] 2026-10-19 [比赛显示一致性方案](MATCH_PUBLICATION_CONSISTENCY_PLAN.md)与[链路审计](audits/MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md)：确认 matcher 与用户列表存在筛选差异、active gap 旧盘口保留及失败被当作空结果的风险。当前收敛为三步公共读取与过滤修复，尚未实现；保持现有合场、生命周期与经典 FOK 规则，不新增发布状态机或通知协议，失败处理缺陷单独记录。
+[changmen 扩展] 2026-10-20 [matcher 统一产出有效比赛方案](MATCH_PUBLICATION_CONSISTENCY_PLAN.md)与[历史链路审计](audits/MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md)：方案为 matcher 计算并保存当前有效结果，用户接口与 matcher 当前列表直接读取，不在读取端另行过滤平台来源。分三步实施且每步可暂停；拟在 client_matches 增加最小结果字段，保持既有身份与结束规则，不新增发布服务或通知协议。方案尚未实施。
 
 [changmen 扩展] RDS 的 43 个有效迁移 SQL 与结构基线主文件位于 `rds/assets/`，维护代码经本包 `maintenance/assets.mjs` 读取；backend 原路径的 44 份兼容副本和 7 个维护入口已退役，4 个维护测试迁入 `rds/maintenance/`。无 backend 目录的干净安装与维护验收通过，历史 SQL/checksum 保持；详情见同一源码隔离记录。
 

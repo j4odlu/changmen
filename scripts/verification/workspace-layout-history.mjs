@@ -10,7 +10,7 @@ const root=fileURLToPath(new URL('../../',import.meta.url));
 const sha=s=>createHash('sha256').update(s.replaceAll('\r\n','\n')).digest('hex');
 const recordFile=new URL('./workspace-layout-relocation.json',import.meta.url);
 const text=native.readFileSync(recordFile,'utf8');
-assert.equal(sha(text),'fd990d5711890cfe5b3b9b09a1929d9d240821c9505b48e4ff919d39217f14f3');
+assert.equal(sha(text),'e050a080e7c8c255713585ed3225fea4a9abfb4548bf156dc0dd6178ad2bc83d');
 export const WORKSPACE_LAYOUT_RELOCATION=JSON.parse(text);
 assert.equal(WORKSPACE_LAYOUT_RELOCATION.baseline,'8758b45701b9f80472155df40435f75931683dbd');
 assert.equal(WORKSPACE_LAYOUT_RELOCATION.purpose,'root-rds-and-workspace-consolidation');

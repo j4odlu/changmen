@@ -22,12 +22,12 @@
   ],
   "nodeRoots": [
     "server",
+    "rds",
     "devtools/runtime-tooling"
   ],
   "nodeOnlyPaths": [
     "server/venues/registry/paths.js",
     "server/venues/registry/feeds.js",
-    "packages/shared/tooling",
     "devtools/runtime-tooling"
   ],
   "browserRoots": [

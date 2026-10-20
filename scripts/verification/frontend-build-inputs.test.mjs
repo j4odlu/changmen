@@ -61,7 +61,7 @@ it("rejects deregistering the active build inputs or allowing Node tools into br
   for (const file of ["scripts/verification/source-ownership-inputs.json", "scripts/deploy/component-inputs.json"]) {
     const contract = JSON.parse(read(file));
     if (contract.toolingRoots) contract.toolingRoots = contract.toolingRoots.filter(f => !f.startsWith("client/web/"));
-    else contract.nodeOnlyPaths = contract.nodeOnlyPaths.filter(f => f !== "packages/shared/tooling");
+    else contract.nodeOnlyPaths = contract.nodeOnlyPaths.filter(f => f !== "devtools/runtime-tooling");
     expect(inspectFrontendBuildInputs(root, { readFile: f => f === file ? Buffer.from(JSON.stringify(contract)) : read(f) }).violations.length).toBeGreaterThan(0);
   }
 });

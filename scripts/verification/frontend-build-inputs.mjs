@@ -37,7 +37,7 @@ export function inspectFrontendBuildInputs(root, { readFile = file => fs.readFil
   if (policy.activeBuildRoots.some(file => !ownership.toolingRoots?.includes(file) || !ownership.roots.includes(file)))
     fail("scripts/verification/source-ownership-inputs.json", "Every active frontend build input must remain a scoped ownership seed");
   const components = JSON.parse(text("scripts/deploy/component-inputs.json"));
-  if (!components.nodeOnlyPaths.includes("packages/shared/tooling")) fail("scripts/deploy/component-inputs.json", "Shared Node tooling must remain forbidden to browser runtime consumers");
+  if (components.nodeOnlyPaths.includes("packages/shared/tooling")) fail("scripts/deploy/component-inputs.json", "Retired shared tooling must not remain an active component root");
   if (!components.nodeOnlyPaths.includes("devtools/runtime-tooling")) fail("scripts/deploy/component-inputs.json", "Canonical Node tooling must remain forbidden to browser runtime consumers");
   const contract = JSON.parse(text(policy.assetContract)), prefix = "/esport2/assets/";
   if (contract.schemaVersion !== 1 || contract.prefix !== prefix || contract.owner !== "backend-public-contract" || !contract.assets || !Object.keys(contract.assets).length)

@@ -282,18 +282,19 @@ it("allows isolated internal modules and an explicitly declared type-only SDK", 
   expect(f.inspect().violations.some(row => row.pattern.includes("isolated browser core"))).toBe(true);
 });
 
-it("rejects RDS reaching backend implementation through a re-export", () => {
+it("rejects root-level RDS reaching backend implementation through a re-export", () => {
   const f = fixture();
+  f.manifest.nodeRoots.push("rds");
   f.manifest.sourceOwnership = "ownership.json";
   f.write("ownership.json", { schemaVersion: 1, purpose: "source-ownership-only", publishScopeOptimizationEnabled: false,
-    roots: ["server", "packages", "client"], rules: [
-      { prefix: "server/data", layer: "rds" }, { prefix: "server", layer: "backend" },
+    roots: ["server", "rds", "packages", "client"], rules: [
+      { prefix: "rds", layer: "rds" }, { prefix: "server", layer: "backend" },
       { prefix: "packages", layer: "shared" }, { prefix: "client", layer: "frontend" },
     ] });
-  f.write("server/main.mjs", 'import "./data/bridge.mjs";');
-  f.write("server/data/bridge.mjs", 'export * from "../business.mjs";');
+  f.write("server/main.mjs", 'export const main = 1;');
+  f.write("rds/bridge.mjs", 'export * from "../server/business.mjs";');
   f.write("server/business.mjs", 'export const business = 1;');
-  expect(f.inspect().violations.some(row => row.rule === "source-ownership" && row.file === "server/data/bridge.mjs")).toBe(true);
+  expect(f.inspect().violations.some(row => row.rule === "source-ownership" && row.file === "rds/bridge.mjs")).toBe(true);
 });
 it("checks explicitly scoped frontend tools without making historical tools new seeds", () => {
   const f = fixture();

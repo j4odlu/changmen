@@ -100,7 +100,7 @@
     },
     {
       "files": [
-        "server/match/identity/teams/team_aliases.json"
+        "packages/shared/match-identity/teams/team_aliases.json"
       ],
       "layer": "shared",
       "role": "asset"

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   CHANGMEN_ROOT,
+  CHANGMEN_LAYOUT,
   BACKEND_ROOT,
   ESPORT_DATA_DIR,
   VENUE_ADAPTER_ROOT,
@@ -23,9 +24,11 @@ if (path.basename(BACKEND_ROOT) !== "backend" || parent !== "server") {
 if (!fs.existsSync(ESPORT_DATA_DIR)) {
   throw new Error(`ESPORT_DATA_DIR missing: ${ESPORT_DATA_DIR}`);
 }
-const dbDir = path.join(CHANGMEN_ROOT, "server", "db");
-if (!fs.existsSync(dbDir)) {
-  throw new Error(`CHANGMEN_ROOT missing server/db: ${CHANGMEN_ROOT}`);
+const dbDir = path.join(CHANGMEN_ROOT, CHANGMEN_LAYOUT.serverDb);
+const dbPkg = path.join(dbDir, "package.json");
+if (CHANGMEN_LAYOUT.serverDb !== "rds" || !fs.existsSync(dbPkg)
+  || JSON.parse(fs.readFileSync(dbPkg, "utf8")).name !== "@changmen/db") {
+  throw new Error(`CHANGMEN_ROOT missing root RDS workspace: ${CHANGMEN_ROOT}`);
 }
 const manifest = path.join(VENUE_ADAPTER_ROOT, "registry", "manifest.json");
 if (!fs.existsSync(manifest)) {

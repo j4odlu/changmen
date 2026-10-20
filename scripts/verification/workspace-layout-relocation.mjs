@@ -10,6 +10,7 @@ const prefixes=[['server/db','rds'],['server/packages/venue-node-loader','server
 const moved=f=>prefixes.reduce((s,[a,b])=>s===a||s.startsWith(a+'/')?b+s.slice(a.length):s,f);
 const names=s=>s.replaceAll('@changmen/venue-node-registry/','@changmen/venue-node/registry/').replaceAll('@changmen/venue-node-loader','@changmen/venue-node').replaceAll('@changmen/venue-adapter-tools','@changmen/venue-node').replaceAll('@changmen/match-identity','@changmen/shared/match-identity');
 function tokens(file,source){
+ source=source.replaceAll('\r\n','\n');
  // Constant __dirname resources may need a different number of ".." segments.
  // Compare their resolved repository targets, rather than their segment count.
  const resources=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true),edits=[];

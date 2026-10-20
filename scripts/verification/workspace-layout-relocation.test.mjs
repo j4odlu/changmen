@@ -25,3 +25,8 @@ it('rejects executable changes even if a current-file checksum were re-recorded'
  const row=record.files.find(r=>r.file==='server/db/maintenance/rds-migrations.mjs');
  expect(()=>assertWorkspaceMoveSemantics(row,fs.readFileSync(row.canonical,'utf8').replace('pg_advisory_lock','pg_advisory_unlock'))).toThrow(/exceeds import\/resource relocation/);
 });
+it('accepts Git CRLF checkouts while preserving executable relocation checks',()=>{
+ const row=record.files.find(r=>r.file==='server/db/admin_maintenance.js');
+ const source=fs.readFileSync(row.canonical,'utf8').replace(/\r?\n/g,'\r\n');
+ expect(()=>assertWorkspaceMoveSemantics(row,source)).not.toThrow();
+});

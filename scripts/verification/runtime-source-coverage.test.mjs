@@ -11,7 +11,7 @@ it("restores the complete original identity source without replacing its histori
 });
 for (const [label, mutate] of [
   ["missing archive discovery", source => source.replace('"client/packages", ', "")],
-  ["missing migrated coverage", source => source.replace('  if (file.startsWith("client/packages/")) return true;\n', "")],
+  ["missing migrated coverage", source => source.replace('  if (file.startsWith("client/packages/")) return role === "frontend";\n', "")],
   ["broader client coverage", source => source.replace('file.startsWith("client/packages/")', 'file.startsWith("client/")')],
   ["weakened original exclusion", source => source.replace("node_modules|dist|", "dist|")],
   ["narrowed original package coverage", source => source.replace("|packages\\/", "")],

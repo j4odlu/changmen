@@ -56,7 +56,7 @@ it('classifies the new sources as browser-only for boundaries and publication',(
   expect(classifySourceFile(row.canonical,policy)?.layer).toBe('frontend');
   expect(sourceLayerViolation('server/backend/server.js',row.canonical,policy)).toBeTruthy();
   expect(sourceLayerViolation(row.canonical,'server/db/index.js',policy)).toBeTruthy();
-  expect(isVersionSource(row.canonical,'frontend')).toBe(true);expect(isVersionSource(row.canonical,'backend')).toBe(true);
+  expect(isVersionSource(row.canonical,'frontend')).toBe(true);expect(isVersionSource(row.canonical,'backend')).toBe(false);
   expect(classifyDeployScope([row.canonical])).toBe('frontend');
  }
  expect(pmNodeBrowserLoaderTarget({environment:'node',kind:'custom-loader',loaderSymbol:'adapterRequire',arguments:['..','..','client/packages/venue-browser/pm-book-source.ts']})).toBeTruthy();

@@ -19,18 +19,18 @@ function fixture(release = false) {
 }
 function commit(root) { git(root, "-c", "user.name=Version Test", "-c", "user.email=version-test@example.invalid", "commit", "-qm", "fixture"); }
 describe("actual runtime source identity", () => {
-  it.each(["frontend", "backend"])("preserves prior package coverage and exclusions after relocation for %s", role => {
+  it.each(["frontend", "backend"])("fingerprints relocated packages according to runtime ownership for %s", role => {
     for (const suffix of ["package.json", "src/book.ts", "src/worker.js", "src/style.css", "src/icon.png",
       "tests/book.test.ts", "src/book.test.ts", "node_modules/runtime.js", ".env", "src/.env.local"])
-      expect(isVersionSource(`client/packages/book/${suffix}`, role)).toBe(isVersionSource(`packages/book/${suffix}`, role));
-    expect(isVersionSource("client/packages/book/src/book.ts", role)).toBe(true);
+      expect(isVersionSource(`client/packages/book/${suffix}`, role)).toBe(role === "frontend" && isVersionSource(`packages/book/${suffix}`, role));
+    expect(isVersionSource("client/packages/book/src/book.ts", role)).toBe(role === "frontend");
     for (const suffix of ["package.json", "runtime_version.js", "tests/helper.test.js", "node_modules/library.js", ".env"])
-      expect(isVersionSource(`devtools/runtime-tooling/${suffix}`, role)).toBe(isVersionSource(`packages/tool/${suffix}`, role));
+      expect(isVersionSource(`devtools/runtime-tooling/${suffix}`, role)).toBe(isVersionSource(`packages/shared/tool/${suffix}`, role));
     expect(isVersionSource("devtools/runtime-tooling-other/helper.js", role)).toBe(false);
     expect(isVersionSource("client/devtools/venue-adapter/sync-package-exports.mjs", role)).toBe(false);
     expect(isVersionSource("client/packages-other/runtime.ts", role)).toBe(false);
   });
-  it.each(["frontend", "backend"].flatMap(role => ["client/packages/book", "devtools/runtime-tooling"].map(directory => [role, directory])))
+  it.each([["frontend", "client/packages/book"], ["frontend", "devtools/runtime-tooling"], ["backend", "devtools/runtime-tooling"]])
   ("detects edited, deleted, renamed and untracked relocated code for %s in %s", (role, directory) => {
     const root = fixture(), file = `${directory}/src/book.ts`, original = "export const value = 1;\n";
     try {
@@ -75,7 +75,9 @@ describe("actual runtime source identity", () => {
       }
       write(root, file, "export const value = 2;\n"); write(release, file, "export const value = 2;\n");
       for (const role of ["frontend", "backend"]) {
-        expect(readSourceVersion(release, role).sourceFingerprint).not.toBe(original[role].sourceFingerprint);
+        if (directory === "client/packages/book" && role === "backend")
+          expect(readSourceVersion(release, role).sourceFingerprint).toBe(original[role].sourceFingerprint);
+        else expect(readSourceVersion(release, role).sourceFingerprint).not.toBe(original[role].sourceFingerprint);
         expect(readSourceVersion(release, role).sourceFingerprint).toBe(readSourceVersion(root, role).sourceFingerprint);
       }
       for (const [name, body] of [[`${directory}/.env`, "TOKEN=secret"],

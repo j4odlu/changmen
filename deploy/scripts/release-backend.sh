@@ -8,7 +8,7 @@ prune_releases
 release="$repo/.releases/backend/$id"
 test ! -e "$release"
 mkdir -p "$release"
-# Full workspace layout, isolated from the live frontend and its node_modules.
+# Runtime sources and original workspace manifests, isolated from live dependencies.
 tar -xzf "$archive" -C "$release" \
   --exclude='client/web/dist' --exclude='./client/web/dist' \
   --exclude='server/backend/.env' --exclude='./server/backend/.env' \
@@ -31,6 +31,7 @@ done
 if [[ -f "$repo/server/match/matcher/.env" ]]; then
   ln -s "$repo/server/match/matcher/.env" "$release/server/match/matcher/.env"
 fi
+mkdir -p "$release/client/web"
 ln -s "$repo/client/web/dist" "$release/client/web/dist"
 bootstrap_config="$repo/.deploy-state/backend-bootstrap-ecosystem.cjs"
 if [[ "$previous" == "$repo" ]]; then

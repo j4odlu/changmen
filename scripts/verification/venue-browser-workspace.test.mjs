@@ -61,6 +61,6 @@ it('all adapter runtime consumers use declared exports instead of reaching into 
 });
 it('keeps the browser manifest in both fingerprints while publishing it only to the frontend',()=>{
  const file=sourceRoot+'/package.json';
- expect(isVersionSource(file,'frontend')).toBe(true);expect(isVersionSource(file,'backend')).toBe(true);
+ expect(isVersionSource(file,'frontend')).toBe(true);expect(isVersionSource(file,'backend')).toBe(false);
  expect(classifyDeployScope([file])).toBe('frontend');
 });

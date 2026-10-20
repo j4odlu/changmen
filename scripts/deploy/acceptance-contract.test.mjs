@@ -13,7 +13,9 @@ test("backend installation requires Linux lifecycle, native execution, all eight
     p => { p.runtime.processes[0].ready = false; }, p => { p.runtime.processes[0].shutdown.code = 1; },
     p => { p.runtime.externalInterfaceCount = 1; }, p => { p.runtime.allChildrenExited = false; },
     p => { p.dynamicPaths.uncertified = 1; }, p => { p.databaseStopped = false; }, p => { p.steps[0].errorCode = "ETIMEDOUT"; },
-    p => { p.runtime.failures.pop(); }, p => { p.runtime.failures[0].rejected = false; }]) {
+    p => { p.runtime.failures.pop(); }, p => { p.runtime.failures[0].rejected = false; },
+    p => { delete p.archive; }, p => { p.archive.profile = "full-repository"; }, p => { p.archive.sha256 = "unknown"; },
+    p => { p.archive.fingerprintParity = false; }, p => { p.archive.browserSourcesAbsent = false; }]) {
     const broken = structuredClone(report); mutate(broken);
     assert.throws(() => assertSupplemental(broken, "backend-installation", acceptance));
   }

@@ -10,6 +10,8 @@ import { DATABASE_PHASES } from "./acceptance-contract.mjs";
 import { sealEvidence, verifySupplementalEvidence } from "./release-evidence.mjs";
 import { readSourceVersion } from "../../devtools/runtime-tooling/runtime_version.js";
 import { installationProof } from "./fixtures/backend-installation.mjs";
+import { packBackendRepoArchive } from "./pack-git-repo.mjs";
+import { sha256 } from "./release-evidence.mjs";
 
 const env = { GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "1" };
 const clone = value => structuredClone(value);
@@ -34,7 +36,12 @@ function fixture(t, scope = "full") {
   const bundle = prepareRelease(root, env), calls = [];
   function run(_node, args) {
     calls.push(args);
-    if (args.includes("scripts/testing/backend-linux-runtime.mjs")) write(root, "output/backend-linux-runtime/verdict.json", installationProof(bundle.identity));
+    if (args.includes("scripts/testing/backend-linux-runtime.mjs")) {
+      const proof = installationProof(bundle.identity), archive = path.join(root, "output/test-backend.tgz");
+      proof.archive = { ...packBackendRepoArchive(root, archive), sha256: sha256(fs.readFileSync(archive)),
+        sourceFingerprint: readSourceVersion(root, "backend").sourceFingerprint, fingerprintParity: true, browserSourcesAbsent: true };
+      write(root, "output/backend-linux-runtime/verdict.json", proof);
+    }
     if (args.includes("scripts/deploy/check-database-compatibility.mjs")) write(root, "output/database-compatibility/verdict.json", {
       passed: true, sourceStable: true, localOnly: true, productionWrites: false, identity: bundle.identity,
       results: DATABASE_PHASES.map(phase => ({ phase, passed: true })),

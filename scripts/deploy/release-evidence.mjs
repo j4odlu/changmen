@@ -7,7 +7,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { changePlan, deployedSelection, planHash } from "./change-plan.mjs";
 import { assertCommittedSource, validationInputs } from "../verification/verify-change.mjs";
-import { packGitRepoArchive } from "./pack-git-repo.mjs";
+import { packBackendRepoArchive } from "./pack-git-repo.mjs";
 // Transport jobs use a source checkout without npm install; this module uses Node builtins only.
 import { readSourceVersion } from "../../devtools/runtime-tooling/runtime_version.js";
 import { supplementalReports, assertSupplemental } from "./acceptance-contract.mjs";
@@ -71,7 +71,12 @@ export function sealEvidence(root = process.cwd()) {
     expectedRuntime[scope] = readSourceVersion(root, scope);
     assert.equal(expectedRuntime[scope].dirty, false, "Publication source must be clean");
     const archive = path.join(directory, `${scope}.tgz`);
-    if (scope === "backend") packGitRepoArchive(root, archive);
+    if (scope === "backend") {
+      packBackendRepoArchive(root, archive);
+      const installation = JSON.parse(fs.readFileSync(path.join(directory, "backend-installation.json"), "utf8"));
+      assert.equal(sha256(fs.readFileSync(archive)), installation.archive.sha256, "Backend archive differs from Linux-tested artifact");
+      assert.equal(expectedRuntime.backend.sourceFingerprint, installation.archive.sourceFingerprint, "Backend archive identity differs from Linux-tested artifact");
+    }
     else {
       const dist = path.join(root, "client/web/dist");
       const metadata = JSON.parse(fs.readFileSync(path.join(dist, "runtime-version.json"), "utf8"));
@@ -111,7 +116,12 @@ export function verifySupplementalEvidence(evidence, directory) {
   for (const required of supplementalReports(evidence.report.plan)) {
     const bytes = fs.readFileSync(path.join(directory, required.sealed));
     assert.equal(sha256(bytes), evidence[required.digest], `${required.kind}: sealed acceptance changed`);
-    assertSupplemental(JSON.parse(bytes.toString("utf8")), required.kind, evidence.report);
+    const proof = JSON.parse(bytes.toString("utf8"));
+    assertSupplemental(proof, required.kind, evidence.report);
+    if (required.kind === "backend-installation" && evidence.archives.backend) {
+      assert.equal(proof.archive.sha256, evidence.archives.backend, "Backend artifact differs from installation proof");
+      assert.equal(proof.archive.sourceFingerprint, evidence.expectedRuntime.backend.sourceFingerprint, "Backend identity differs from installation proof");
+    }
   }
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -11,6 +11,7 @@ import { readSourceVersion } from "../../server/storage/runtime_version.js";
 import { planHash } from "./change-plan.mjs";
 import { checkDatabaseCompatibility } from "./check-database-compatibility.mjs";
 import { installationProof } from "./fixtures/backend-installation.mjs";
+import { packBackendRepoArchive } from "./pack-git-repo.mjs";
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: "pipe" }).trim();
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-evidence-"));
@@ -53,6 +54,9 @@ function proofs(root, acceptance) {
   fs.mkdirSync(path.join(root, "output/database-compatibility"), { recursive: true });
   fs.writeFileSync(path.join(root, "output/database-compatibility/verdict.json"), JSON.stringify(database));
   const installation = installationProof(acceptance.identity);
+  const archive = path.join(root, "output/proof-backend.tgz");
+  installation.archive = { ...packBackendRepoArchive(root, archive), sha256: sha256(fs.readFileSync(archive)),
+    sourceFingerprint: readSourceVersion(root, "backend").sourceFingerprint, fingerprintParity: true, browserSourcesAbsent: true };
   fs.mkdirSync(path.join(root, "output/backend-linux-runtime"), { recursive: true });
   fs.writeFileSync(path.join(root, "output/backend-linux-runtime/verdict.json"), JSON.stringify(installation));
   return { database, installation };
@@ -152,6 +156,12 @@ test("real Git archives and frontend build metadata seal successfully; an old bu
     assert.throws(() => verifySupplementalEvidence(evidence, path.join(root, "output/release-validation")), /changed/);
     for (const scope of ["frontend", "backend"])
       assertArchiveEvidence(evidence, scope, path.join(root, `output/release-validation/${scope}.tgz`), evidence.commit);
+    const installationFile = path.join(root, "output/backend-linux-runtime/verdict.json");
+    const wrongArtifact = structuredClone(proof.installation); wrongArtifact.archive.sha256 = "f".repeat(64);
+    fs.writeFileSync(installationFile, JSON.stringify(wrongArtifact));
+    assert.throws(() => sealEvidence(root), /Backend archive differs from Linux-tested artifact/);
+    assert.equal(fs.existsSync(path.join(root, "output/release-validation/evidence.json")), false);
+    fs.writeFileSync(installationFile, JSON.stringify(proof.installation));
     metadata.frontend.commit = "b".repeat(40); fs.writeFileSync(path.join(dist, "runtime-version.json"), JSON.stringify(metadata));
     assert.throws(() => sealEvidence(root), /another commit/);
     assert.equal(fs.existsSync(path.join(root, "output/release-validation/evidence.json")), false);

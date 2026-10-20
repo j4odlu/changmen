@@ -12,6 +12,9 @@ import { readInstallWorkspaces } from "../verification/component-install-inputs.
 import { captureBackendResolution, assertBackendResolutionParity } from "../verification/backend-install-resolution.mjs";
 import { validationIdentity } from "../verification/verify-change.mjs";
 import { installBackend } from "../deploy/install-backend.mjs";
+import { packBackendRepoArchive } from "../deploy/pack-git-repo.mjs";
+import { readSourceVersion } from "../../devtools/runtime-tooling/runtime_version.js";
+import { createHash } from "node:crypto";
 
 assert.equal(process.platform, "linux", "Linux runner required; Windows installation evidence is separate");
 assert.equal(process.getuid() === 0, false, "Run fixture database as an ordinary user");
@@ -59,7 +62,19 @@ let pgStarted = false;
 try {
   const flags = ["--offline", "--ignore-scripts=false", "--foreground-scripts", "--no-audit", "--no-fund",
     "--cache", process.env.CHANGMEN_TEST_NPM_CACHE || path.join(os.homedir(), ".npm")];
-  for (const root of [full, selected]) copy(root);
+  copy(full);
+  // Test the exact production archive, rather than a hand-picked copy of source.
+  const archive = path.join(out, "backend.tgz"), packed = packBackendRepoArchive(repo, archive);
+  fs.mkdirSync(selected);
+  execute("extract-archive", "tar", ["-xzf", archive, "-C", selected], temporary);
+  const browserFiles = execFileSync("tar", ["-tzf", archive], { encoding: "utf8" }).split("\n")
+    .filter(file => /^(?:client|chrome-extension)\//.test(file) && !file.endsWith("/package.json"));
+  assert.deepEqual(browserFiles, [], "Backend archive contains browser implementation");
+  const sourceVersion = readSourceVersion(repo, "backend"), archivedVersion = readSourceVersion(selected, "backend");
+  assert.equal(archivedVersion.sourceFingerprint, sourceVersion.sourceFingerprint, "Backend archive source coverage changed");
+  assert.equal(archivedVersion.contractFingerprint, sourceVersion.contractFingerprint);
+  report.archive = { ...packed, sha256: createHash("sha256").update(fs.readFileSync(archive)).digest("hex"),
+    sourceFingerprint: sourceVersion.sourceFingerprint, fingerprintParity: true, browserSourcesAbsent: true }; save();
   execute("full-install", process.execPath, [npm, "ci", "--include=dev", ...flags], full);
   installBackend(selected, { npm, run: (command, args) => execute("selected-install", command, [...args, ...flags], selected) });
   for (const root of [full, selected]) {

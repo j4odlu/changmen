@@ -39,10 +39,10 @@ export function backendInstallProfile(root, { processes = backendProcesses, pack
   }
   assert.deepEqual(violations, [], "Backend installation cannot contain unknown/local-target or browser dependencies");
   return { schemaVersion: 1, purpose: "backend-workspace-installation", productionEnabled: true,
-    archiveSlimmingEnabled: false, entries, roots: [...roots].sort(), workspaces: [...workspaces].sort(),
+    archiveSlimmingEnabled: true, entries, roots: [...roots].sort(), workspaces: [...workspaces].sort(),
     workspaceDirectories: [...directories].sort(), closures,
     installArgs: ["ci", ...[...roots].sort().map(name => `--workspace=${name}`), "--include=dev", "--include-workspace-root=false", "--ignore-scripts=false"],
-    limitations: ["The full repository archive and loader resources remain required.",
+    limitations: ["Original workspace manifests, Node loader resources and RDS assets remain required.",
       "Development dependencies remain installed for the existing router compilation.",
       "Linux lifecycle and eight-process checks are required before backend publication."] };
 }

@@ -2,11 +2,74 @@
  * Pack deployable repo from git HEAD only (no .turbo / .claude / untracked junk).
  * VPS compiles gitignored router.js via deploy-server-remote.sh.
  */
-import { spawnSync } from "node:child_process";
+import { spawnSync, execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { isVersionSource } from "../../devtools/runtime-tooling/runtime_version.js";
 
 /** Abort if pack exceeds this — local caches must never ship again. */
 export const REPO_PACK_MAX_MB = 40;
+
+export const BACKEND_ARCHIVE_PROFILE = "backend-runtime-v1";
+const deploymentFiles = new Set(["deploy/ecosystem.config.cjs", "deploy/scripts/deploy-server-remote.sh",
+  "scripts/deploy/install-backend.mjs", "scripts/deploy/backend-install-profile.mjs",
+  "scripts/deploy/verify-backend-processes.mjs", "scripts/verification/component-install-inputs.mjs"]);
+
+export function backendArchiveIncludes(file) {
+  if (typeof file !== "string" || !file || file.includes("\\") || file.includes(":") || file.includes("\0")
+    || file.split("/").some(part => !part || part === "." || part === "..")) throw Error("Unsafe archive path");
+  if (/(?:^|\/)(?:node_modules|dist|docs|output|test|tests|__tests__|\.git|\.turbo|\.ai|\.claude)(?:\/|$)|\.(?:test|spec)\.|\.md$/i.test(file)
+    || /(?:^|\/)(?:\.env(?:\.|$)|\.npmrc$)|\.(?:pem|key|pfx|p12)$/i.test(file)
+    || file.startsWith("server/backend/storage/")) return false;
+  // Retain every manifest unchanged: npm ci consumes the original root lock and
+  // workspace layout, even though only the sixteen Node workspaces are installed.
+  if (file === "package.json" || file === "package-lock.json" || file.endsWith("/package.json")) return true;
+  return deploymentFiles.has(file)
+    || /^(?:server\/|rds\/|packages\/(?:shared|api-contract)\/|devtools\/(?:runtime-tooling|platform-probes)\/)/.test(file);
+}
+
+/** A deterministic, HEAD-only backend artifact; legacy full-repository packing stays explicit. */
+export function packBackendRepoArchive(repoRoot, outPath, opts = {}) {
+  // Windows' bundled bsdtar can reject tracked non-ASCII names. Use the same
+  // MSYS GNU tar already required by the release integration tests when present.
+  const msysTar = "C:/msys64/usr/bin/tar.exe", gnu = process.platform !== "win32" || fs.existsSync(msysTar);
+  const tar = process.platform === "win32" && gnu ? msysTar : "tar";
+  const run = (command, args, extra = {}) => execFileSync(command, args,
+    { cwd: repoRoot, encoding: "utf8", windowsHide: true, maxBuffer: 30e6, ...extra });
+  const archiveCommand = args => run(tar, [...(process.platform === "win32" && gnu ? ["--force-local"] : []), ...args]);
+  const inventory = run("git", ["ls-tree", "-r", "-z", "HEAD"]).split("\0").filter(Boolean).map(row => {
+    const split = row.indexOf("\t"), [mode, type] = row.slice(0, split).split(" ");
+    return { file: row.slice(split + 1), mode, type };
+  });
+  const members = inventory.filter(row => backendArchiveIncludes(row.file));
+  for (const row of members) if (row.type !== "blob" || !["100644", "100755"].includes(row.mode))
+    throw Error(`Unsupported backend archive member: ${row.file}`);
+  const missing = inventory.filter(row => isVersionSource(row.file, "backend") && !backendArchiveIncludes(row.file));
+  if (missing.length) throw Error(`Backend identity sources would be omitted: ${missing.map(row => row.file).join(", ")}`);
+  if (!members.length) throw Error("Empty backend archive");
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-backend-pack-"));
+  try {
+    const source = path.join(temporary, "source"), full = path.join(temporary, "full.tgz"), list = path.join(temporary, "members");
+    const original = packGitRepoArchive(repoRoot, full, opts);
+    fs.mkdirSync(source); archiveCommand(["-xzf", full, "-C", source]);
+    const files = members.map(row => row.file).sort();
+    fs.writeFileSync(list, files.join("\0") + "\0");
+    const owner = gnu ? ["--owner=0", "--group=0", "--numeric-owner"]
+      : ["--uid=0", "--gid=0", "--uname=root", "--gname=root"];
+    fs.mkdirSync(path.dirname(path.resolve(outPath)), { recursive: true });
+    archiveCommand([...owner, "-czf", path.resolve(outPath), "-C", source, "--null", "-T", list]);
+    const bytes = fs.statSync(outPath).size, maxMb = Number(opts.maxMb) > 0 ? Number(opts.maxMb) : REPO_PACK_MAX_MB;
+    if (bytes > maxMb * 1024 * 1024) { fs.unlinkSync(outPath); throw Error("Backend archive exceeds size limit"); }
+    return { profile: BACKEND_ARCHIVE_PROFILE, head: original.head, bytes, mb: bytes / (1024 * 1024),
+      files: files.length, fullFiles: inventory.length, fullBytes: original.bytes };
+  } catch (error) { fs.rmSync(outPath, { force: true }); throw error; }
+  finally {
+    if (path.dirname(temporary) !== path.resolve(os.tmpdir()) || !path.basename(temporary).startsWith("changmen-backend-pack-"))
+      throw Error("Unexpected backend pack cleanup target");
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+}
 
 /**
  * @param {string} repoRoot git work tree root

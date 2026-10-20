@@ -70,9 +70,9 @@ RDS 是独立持久层。普通应用发布及回滚均不修改数据库结构�
 | 成功记录/验收证据 | `<root>/.deploy-state/` |
 | 持久配置与 storage | 原 `<root>/server/backend/.env`、`storage`，版本目录通过链接引用 |
 
-后端保留完整 workspace 包和每版本独立依赖，尚未拆成最小服务包。原根目录源码不随 Actions 更新，正在运行的源码以 PM2 cwd 为准。根 ecosystem 入口指向成功版本，避免 watchdog 拉起旧源码。发布不修改平台凭证、relay 配置或业务数据。
+后端发布 `backend-runtime-v1` 归档，保留服务端、RDS、共享契约/规则、Node 工具和安装/激活所需文件，移除浏览器实现、文档、测试及本地配置。根 package/lock 和 workspace manifest 保持原字节，用于定向安装；未安装的浏览器 workspace 仅保留 manifest。所有 Node loader 资源和 RDS SQL/维护实现继续交付，尚未按单个进程裁剪服务端源码。原根目录源码不随 Actions 更新，正在运行的源码以 PM2 cwd 为准。根 ecosystem 入口指向成功版本，避免 watchdog 拉起旧源码。发布不修改平台凭证、relay 配置或业务数据。
 
-[changmen 扩展] 2026-10-20 已启用后端定向安装：8 个现有进程对应 6 个安装根、16 个 Node workspace，新后端 release 不安装前端 workspace。Linux 生命周期、原生工具、八进程启动/退出及故障处理已接入候选验收。完整源码归档和现有路由编译依赖继续保留，见 [当前 workspace 与安装布局](WORKSPACE_LAYOUT.md)。10-18 的安装文档保留当时实验记录。
+[changmen 扩展] 2026-10-20 已启用后端定向安装：8 个现有进程对应 6 个安装根、16 个 Node workspace，新后端 release 不安装前端 workspace。Linux 验收直接解压最终后端归档，执行安装、编译、原生工具、动态路径认证、八进程启动/退出及故障检查；源码与契约指纹须与候选一致，最终封包和运输核对测试过的归档 SHA。后端源码指纹仅剔除客户端实现及旧客户端兼容目录，继续覆盖全部服务端、RDS、共享规则/契约和 Node loader 源码。现有路由编译依赖继续保留，见 [当前 workspace 与安装布局](WORKSPACE_LAYOUT.md)。10-18 的安装文档保留当时实验记录。
 
 每端保留当前及上一成功版本；清理只作用于受管版本目录，并保护运行进程引用的路径和共享数据。首次接管的原目录受保护。旧 fast/BAT 或原地覆盖脚本不用于生产；现有本地运输入口保留在仓库，日常操作仍统一用 Actions。
 

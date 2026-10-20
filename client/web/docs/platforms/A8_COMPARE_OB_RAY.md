@@ -222,7 +222,7 @@ startRayCollector
 
 ## 3. 下注
 
-### A8 原版（类 `vYe`）
+### A8 原版（`index0706.js` 类 `rHe`，旧版类名 `vYe`）
 
 | 步骤 | API | Header |
 |------|-----|--------|
@@ -234,15 +234,13 @@ startRayCollector
 
 凭证：**仅** `this.account`（剪贴板），与采集写死 JWT **无代码关联**。
 
-### changmen（[`providers/rayProvider.ts`](../../providers/rayProvider.ts)）
+### changmen（`client/packages/venue-browser/adapter/ray/bet.ts`）
 
-与 A8 `vYe` **接口一一对应**：`/v2/user`、`/v2/odds`、`/v2/order`、`GET /v2/order`（getOrders），`501` / `200` 语义相同。
+[A8 可证实] 2026-10-21 按本地 `A8/index0706.js` 的 `rHe.checkBet` 恢复预检：原样发送账号 token，强制直连 `/v2/odds?match_id=`；使用 `odds_id == itemId` 查项，要求 `enable_parlay === 1`、`status === 1`，直接读取 `bet_limit[0/1]` 检查场馆金额。先更新实时赔率，再按原生浮点表达式 `option.odds > liveOdds + 0.01` 拒绝跌价。业务失败与跌价直接返回，不新增错误、不清除旧 data；缺失结果、盘口或限额沿用原始异常路径，公共账号入口对 RAY 使用 `JSON.stringify(error)`。
 
-差异（实现细节）：
+[A8 可证实] 预检按取整金额生成完整 order JSON，保留 `total_bet_bonus`、`number`、`oddsId`、`betMin/Max`，以及 `last_update`、`bet_limit`、身份、状态、赛段等盘口字段。`isLive` 仅由响应顶层 `result.start_time < Date.now()` 决定。下单直接序列化该 data，不再按官网精简字段；不增加账号风险限额、WS 有效期、数值校验或双腿收益门控。
 
-- Header 多 `X-Unique`、`Origin`/`Referer`（来自账号 `referer`，见 `platformHttp.ts` `rayHeaders`）。
-- 限红：`messageStore.limitMessage`（对齐 A8 `LimitMessage`，限红金额为 `bet_limit[1]`）。
-- 支持账号 `proxyId` 走 HTTP relay。
+[changmen 扩展] 现有订单监控、观察日志和订单身份字段保留；这些不是 RAY 预检条件。对照测试使用从 A8 原样提取并固定哈希的 `rHe.checkBet`，比较成功、拒绝、异常、旧 data 保留、浮点边界、完整提交 JSON 和实时赔率更新。
 
 ---
 

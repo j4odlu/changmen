@@ -116,6 +116,14 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(option.checkError).toBe("closed");
     expect(mocks.betting).not.toHaveBeenCalled();
   });
+  it.each(["RAY", "OB"] as const)("%s keeps its own precheck exception serialization", async provider => {
+    const option = new BetOption(provider, "m", "b", "i", 100, "Home", 2);
+    mocks.check.mockRejectedValue(new TypeError("missing odds row"));
+    expect(await checkBetting(store, { ...account, provider } as PlatformAccount, option)).toBe(option);
+    expect(option.checkError).toBe(provider === "RAY" ? "{}" : "missing odds row");
+    expect(option.data).toBeNull();
+    expect(mocks.betting).not.toHaveBeenCalled();
+  });
   it.each(["matched", "delayed"])("records PM %s submission without claiming detection has started before settle", async status => {
     const option = new BetOption("Polymarket", "m", "b", "i", 10, "Home", 2);
     option.data = { quote: "prepared" };

@@ -5,6 +5,7 @@ import path from 'node:path';
 import {BROWSER_ENTRY_RETIREMENT,browserHistorySha,restoreBrowserEntryRetirement} from './browser-entry-history.mjs';
 import {componentImportSites} from './component-entry-boundary.mjs';
 import {restoreBackendToolMetadata} from './backend-tool-relocation.mjs';
+import {restoreRayA8PrecheckSource,verifyRayA8PrecheckSources} from './ray-a8-precheck-boundary.mjs';
 export function certifiedBrowserConsumerChanges(read){
  const first=new Map();for(const row of BROWSER_ENTRY_RETIREMENT.changes)if(!first.has(row.file))first.set(row.file,row);
  const certified=new Set();
@@ -15,7 +16,7 @@ export function verifyBrowserEntryRetirement(read,exists){
  const final=new Map(BROWSER_ENTRY_RETIREMENT.changes.map(row=>[row.file,row]));
  for(const row of BROWSER_ENTRY_RETIREMENT.changes)assert.equal(browserHistorySha(row.before),row.beforeSha,row.file+': original consumer snapshot');
  for(const file of BROWSER_ENTRY_RETIREMENT.retired)assert(!exists(file),file+': retired browser entry must not return');
- for(const row of final.values())assert.equal(browserHistorySha(restoreBackendToolMetadata(row.file,read(row.file))),row.afterSha,row.file+': complete reviewed consumer change');
+ for(const row of final.values())assert.equal(browserHistorySha(restoreBackendToolMetadata(row.file,restoreRayA8PrecheckSource(row.file,read(row.file)))),row.afterSha,row.file+': complete reviewed consumer change');
  return {retired:BROWSER_ENTRY_RETIREMENT.retired.length,consumers:final.size};
 }
 export function inspectBrowserEntryRetirement(root){
@@ -24,6 +25,7 @@ export function inspectBrowserEntryRetirement(root){
   assert(rel!=='..'&&!rel.startsWith('..'+path.sep)&&!path.isAbsolute(rel),'Retirement evidence escapes workspace');
   return fs.readFileSync(target,'utf8');
  };
+ verifyRayA8PrecheckSources(read);
  const result=verifyBrowserEntryRetirement(read,file=>Boolean(fs.lstatSync(path.join(base,file),{throwIfNoEntry:false})));
  const retired=new Set(BROWSER_ENTRY_RETIREMENT.retired);
  function walk(dir){for(const item of fs.readdirSync(path.join(base,dir),{withFileTypes:true})){

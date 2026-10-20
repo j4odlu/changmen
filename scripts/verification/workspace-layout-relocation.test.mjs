@@ -13,9 +13,31 @@ it('binds component roots to versioned source rather than leftover local directo
   expect(sources.some(file=>file===clean||file.startsWith(clean+'/')),root+': no versioned source beneath configured root').toBe(true);
  }
 });
-it('has three visible source roots, 24 workspaces and exact complete relocation proofs',()=>{
+it('has three visible source roots, 24 workspaces and exact executable relocation proofs',()=>{
  expect(inspectWorkspaceLayout(process.cwd())).toMatchObject({workspaces:24,rdsRoot:'rds',platformRoot:'server/venues',unchangedSqlAssets:45});
 },30000);
+it('allows architecture and matcher documentation maintenance without rewriting migration evidence',()=>{
+ const docs=new Set(['docs/ARCHITECTURE.md','server/match/matcher/README.md']);
+ expect(inspectWorkspaceLayout(process.cwd(),{
+  read:file=>fs.readFileSync(file,'utf8')+(docs.has(file)?'\n日常方案说明更新，不改变文件归属。\n':''),
+ })).toMatchObject({workspaces:24,unchangedSqlAssets:45});
+},30000);
+it('still requires documentation at the canonical path and rejects a retired documentation entry returning',()=>{
+ expect(()=>inspectWorkspaceLayout(process.cwd(),{read:file=>{
+  if(file==='docs/ARCHITECTURE.md')throw new Error('canonical documentation missing');
+  return fs.readFileSync(file,'utf8');
+ }})).toThrow('canonical documentation missing');
+ expect(()=>inspectWorkspaceLayout(process.cwd(),{
+  exists:file=>file==='server/db/README.md'||fs.existsSync(file),
+ })).toThrow('server/db/README.md: old implementation returned');
+});
+it('does not extend documentation maintenance to source or workspace configuration',()=>{
+ for(const file of ['rds/admin_maintenance.js','rds/package.json']){
+  expect(()=>inspectWorkspaceLayout(process.cwd(),{
+   read:current=>fs.readFileSync(current,'utf8')+(current===file?'\nchanged':'')
+  })).toThrow(file+': unreviewed relocation');
+ }
+});
 it('rejects a retired package returning and SQL changes at the new root',()=>{
  expect(()=>inspectWorkspaceLayout(process.cwd(),{exists:f=>f==='packages/venue-adapter/package.json'||fs.existsSync(f)})).toThrow(/retired entry returned/);
  const sql=record.files.find(r=>r.file.endsWith('.sql'));

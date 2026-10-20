@@ -112,7 +112,7 @@ type RayOddsGetRes = {
 };
 
 function findRayOddsRow(res: RayOddsGetRes, itemId: string): RayOddsRow | undefined {
-  return res.result?.odds?.find((d) => d.odds_id == itemId);
+  return res.result!.odds!.find((d) => d.odds_id == itemId);
 }
 
 function applyRayLockAndLimit(
@@ -121,12 +121,13 @@ function applyRayLockAndLimit(
   row: RayOddsRow | undefined,
 ): row is RayOddsRow {
   if (!row || row.enable_parlay !== 1 || row.status !== 1) {
-    option.checkError = `${row?.match_name} / [${row?.match_stage}] ${row?.group_name} / ${row?.name}@${row?.odds} 已封盘`;
+    // [A8 可证实] index0706.js rHe.checkBet：缺项时读取字段抛错，由公共预检入口接住。
+    option.checkError = `${row!.match_name} / [${row!.match_stage}] ${row!.group_name} / ${row!.name}@${row!.odds} 已封盘`;
     option.updateOdds(0);
     return false;
   }
-  const betMin = row.bet_limit?.[0] ?? 0;
-  const betMax = row.bet_limit?.[1] ?? 0;
+  const betMin = row.bet_limit![0];
+  const betMax = row.bet_limit![1];
   if (option.betMoney < betMin || option.betMoney > betMax) {
     option.checkError = useMessageStore().limitMessage(account, {
       match: option.match?.title,
@@ -143,22 +144,47 @@ function applyRayLockAndLimit(
 function buildRayOrderData(
   option: BetOption,
   row: RayOddsRow,
+  matchStartTime: string | undefined,
 ): Record<string, unknown> {
+  // [A8 可证实] rHe.checkBet：完整盘口快照直接成为 /v2/order 的 order JSON。
+  const stake = Math.round(option.betMoney);
   const title = `${row.group_name}\n${row.name}`;
   return {
-    total_stake: String(Math.round(option.betMoney)),
+    total_stake: stake.toString(),
+    total_bet_bonus: (stake * option.odds).toFixed(2),
     order: [
       {
+        number: 1,
+        oddsId: option.itemId,
         title,
         order_type: 0,
-        stake: String(Math.round(option.betMoney)),
+        stake: stake.toString(),
         order_detail: {
-          odds_id: row.odds_id,
-          odds: option.odds,
-          title,
-          match_name: row.match_name,
+          odds_group_id: row.odds_group_id,
+          value: row.value,
+          win: row.win,
+          status: 1,
+          bet_limit: row.bet_limit,
+          last_update: row.last_update,
           match_stage: row.match_stage,
+          match_name: row.match_name,
+          group_name: row.group_name,
+          group_short_name: row.group_short_name,
+          id: row.id,
+          odds_id: row.odds_id,
+          team_id: row.team_id,
+          name: row.name,
+          match_id: row.match_id,
+          odds: option.odds,
+          tag: row.tag,
+          enable_parlay: row.enable_parlay,
+          game_id: row.game_id,
+          start_time: row.start_time,
+          title,
+          isLive: new Date(matchStartTime!).getTime() < Date.now(),
         },
+        betMin: row.bet_limit![0],
+        betMax: row.bet_limit![1],
       },
     ],
   };
@@ -208,11 +234,8 @@ export const rayProvider: PlatformProvider = {
       { forceDirect: true },
     );
     option.response = res;
-    // [changmen 扩展] 保留原有拒单条件，补齐原因，避免被编排误报为“无盘口数据”。
-    if (res.code !== 200) {
-      option.checkError = "RAY 盘口请求失败";
-      return option;
-    }
+    // [A8 可证实] rHe.checkBet：业务失败及超出跌价容差时直接返回，不新增错误或清理旧 data。
+    if (res.code !== 200) return option;
 
     const row = findRayOddsRow(res, option.itemId);
     option.response = row ?? res;
@@ -220,13 +243,9 @@ export const rayProvider: PlatformProvider = {
 
     const liveOdds = Number(row.odds);
     option.updateOdds(liveOdds);
-    if (option.odds > liveOdds + 0.01) {
-      // [changmen 扩展] 仅补诊断；赔率门槛沿用原有 A8 行为。
-      option.checkError = `RAY 赔率下降：检测赔率 ${option.odds}，当前赔率 ${liveOdds}，超过允许差值 0.01`;
-      return option;
-    }
+    if (option.odds > liveOdds + 0.01) return option;
     option.odds = liveOdds;
-    option.data = buildRayOrderData(option, row);
+    option.data = buildRayOrderData(option, row, res.result!.start_time);
     return option;
   },
 

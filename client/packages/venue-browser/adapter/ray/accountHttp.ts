@@ -1,24 +1,16 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { accountHttpRequest, type AccountHttpOptions } from "@changmen/client-core/shared/platformHttp";
 
-export function normalizeRayAuthorization(token: string | undefined): string {
-  const raw = String(token || "").trim();
-  if (!raw) return "";
-  return raw.startsWith("Bearer ") ? raw : `Bearer ${raw}`;
-}
-
-/** [A8 可证实] RAY `kw`：仅 authorization + Content-Type */
+/** [A8 可证实] index0706.js l1：原样发送 account.token，不补前缀或去空格。 */
 function rayHeaders(account: PlatformAccount): Record<string, string> {
   return {
-    "authorization": normalizeRayAuthorization(account.token),
+    "authorization": account.token!,
     "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
   };
 }
 
 function rayUrl(account: PlatformAccount, path: string): string {
-  if (!account.gateway)
-    throw new Error("账号未配置 gateway");
-  return `${account.gateway.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+  return `${account.gateway}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 export async function accountGet<T = unknown>(

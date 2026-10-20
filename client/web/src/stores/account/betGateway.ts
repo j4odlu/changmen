@@ -454,7 +454,9 @@ export async function checkBetting(
   }
   catch (e) {
     observationError = e;
-    option.checkError = e instanceof Error ? e.message : JSON.stringify(e);
+    // [A8 可证实] RAY 预检沿用 account store 的 JSON.stringify(error)，包括盘口缺项异常。
+    option.checkError = account.provider === "RAY" ? JSON.stringify(e)
+      : e instanceof Error ? e.message : JSON.stringify(e);
     return option;
   }
   finally {

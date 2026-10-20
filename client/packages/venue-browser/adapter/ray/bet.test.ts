@@ -76,23 +76,21 @@ describe("rayProvider.checkBet", () => {
     );
   });
 
-  it("客户端赔率高于场馆超过 0.01 时不写 data（对齐 A8 vYe）", async () => {
+  it("客户端赔率高于场馆超过 0.01 时直接返回（对齐 A8 rHe）", async () => {
     accountGet.mockResolvedValue(oddsResponse(1.5));
     const option = makeOption(2);
     const out = await rayProvider.checkBet!(account, option);
     expect(out.data).toBeUndefined();
-    expect(out.checkError).toContain("赔率下降");
-    expect(out.checkError).toContain("检测赔率 2，当前赔率 1.5");
+    expect(out.checkError).toBeUndefined();
   });
 
-  it("盘口接口业务失败保留响应并给出原因，不误报无盘口数据", async () => {
+  it("盘口接口业务失败保留响应，不新增 checkError（对齐 A8）", async () => {
     const response = { code: 401, desc: "token=SECRET" };
     accountGet.mockResolvedValue(response);
     const out = await rayProvider.checkBet!(account, makeOption(1.8));
     expect(out.data).toBeUndefined();
     expect(out.response).toBe(response);
-    expect(out.checkError).toBe("RAY 盘口请求失败");
-    expect(out.checkError).not.toContain("SECRET");
+    expect(out.checkError).toBeUndefined();
   });
 
   it("滑点允许范围内写入 data 且 odds 取场馆价", async () => {
@@ -105,23 +103,45 @@ describe("rayProvider.checkBet", () => {
     expect(order.order_detail.odds).toBe(1.88);
   });
 
-  it("下单 payload 只保留官网提交字段，不携带预检快照字段", async () => {
+  it("下单 payload 保留 A8 完整盘口快照字段", async () => {
     accountGet.mockResolvedValue(oddsResponse(1.88));
     const out = await rayProvider.checkBet!(account, makeOption(1.88));
     expect(out.data).toEqual({
       total_stake: "100",
+      total_bet_bonus: "188.00",
       order: [
         {
+          number: 1,
+          oddsId: "oid-1",
           title: "独赢\n主队",
           order_type: 0,
           stake: "100",
           order_detail: {
-            odds_id: "oid-1",
-            odds: 1.88,
-            title: "独赢\n主队",
-            match_name: "A vs B",
+            odds_group_id: undefined,
+            value: undefined,
+            win: undefined,
+            status: 1,
+            bet_limit: [10, 10_000],
+            last_update: undefined,
             match_stage: "全场",
+            match_name: "A vs B",
+            group_name: "独赢",
+            group_short_name: undefined,
+            id: undefined,
+            odds_id: "oid-1",
+            team_id: undefined,
+            name: "主队",
+            match_id: undefined,
+            odds: 1.88,
+            tag: undefined,
+            enable_parlay: 1,
+            game_id: undefined,
+            start_time: undefined,
+            title: "独赢\n主队",
+            isLive: false,
           },
+          betMin: 10,
+          betMax: 10_000,
         },
       ],
     });

@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { restorePmOptimizedFokSource, verifyPmOptimizedFokContract } from "./pm-optimized-fok-boundary.mjs";
 import { restorePmPreflightModeIsolation, verifyPmPreflightModeIsolation } from "./pm-preflight-mode-isolation-boundary.mjs";
+import { restore9999CProbabilitySource } from "./single-leg-9999-c-probability-boundary.mjs";
 const normalize = value => value.replaceAll("\r\n", "\n");
 const digest = value => createHash("sha256").update(normalize(value)).digest("hex");
 const registered = normalize(readAdapterHistory(new URL("./pm-unified-preflight-increments.json", import.meta.url), "utf8"));
@@ -36,6 +37,7 @@ const markers = {
   "client/web/src/stores/betting/autoBet/phases/prepareArbAttempt.ts": "capturePmFokPreflightMode",
 };
 export function restorePmUnifiedPreflightSource(file, source, required = false) {
+  source = restore9999CProbabilitySource(file, source);
   source = restorePmOptimizedFokSource(file, source);
   source = restorePmPreflightModeIsolation(file, source);
   if (!changes[file] || (!required && !source.includes(markers[file]))) return source;

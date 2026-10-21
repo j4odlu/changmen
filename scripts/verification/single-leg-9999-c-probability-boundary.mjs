@@ -5,6 +5,15 @@ import {createHash} from 'node:crypto';
 const normalize = source => source.replaceAll('\r\n', '\n');
 const sha = source => createHash('sha256').update(normalize(source)).digest('hex');
 const runtimeChanges = new Map([
+  ['client/web/src/types/extensionPrefs.ts', {
+    beforeSha: '7770b8e01802361382389cea2cf8a45608a5bd77235aae49b89d54080edb5323',
+    afterSha: 'b32cfa1cc7976e0df2df5a80f79c72b72103e0c87b556b0a5e9d412e02724c02',
+    additions: [
+      '  /** [changmen 扩展] 9999 真下单腿仅允许当前盘口 C 行赛前概率较高的一方；无有效数据或同值时跳过。默认关闭。 */\n  singleLeg9999HigherCProbabilityOnly: boolean;\n',
+      '    singleLeg9999HigherCProbabilityOnly: false,\n',
+      '    singleLeg9999HigherCProbabilityOnly: row.singleLeg9999HigherCProbabilityOnly === true,\n',
+    ],
+  }],
   ['client/web/src/components/user/tabs/UserDiagExtensionsTab.vue', {
     beforeSha: '87e6b3d9e394028093a4167780d0dcd52a78b63aeb7d85aba52c61f018a3483c',
     afterSha: '173a28217610e51debc7cd8727f3e02308ad9ef77bda477b1e26ef33a4f89ce8',
@@ -103,6 +112,23 @@ const verificationChanges = new Map([
         [
           "restoreDeployCiSource(row.canonical,restore9999CProbabilityVerificationSource(row.canonical,read(row.canonical)))",
           "restoreDeployCiSource(row.canonical,read(row.canonical))"
+        ]
+      ]
+    }
+  ],
+  [
+    "scripts/verification/pm-unified-preflight-boundary.mjs",
+    {
+      "beforeSha": "887490f6f4c160a05ab87220d66d44831a72b7a4df9d6c056213752bad060cae",
+      "afterSha": "958c1b800582516f293457b42820d212ad0c86e5e7a06501152896b2a6e55c71",
+      "edits": [
+        [
+          "import { restore9999CProbabilitySource } from \"./single-leg-9999-c-probability-boundary.mjs\";\n",
+          ""
+        ],
+        [
+          "  source = restore9999CProbabilitySource(file, source);\n",
+          ""
         ]
       ]
     }

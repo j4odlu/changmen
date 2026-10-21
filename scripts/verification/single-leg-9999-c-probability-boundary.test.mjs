@@ -30,7 +30,7 @@ describe('9999 C probability increment preserves immutable migration proofs', ()
   });
 
   it('accepts the new feature while every old consumer snapshot and retired entry remains checked', () => {
-    expect(verify9999CProbabilitySources(read)).toEqual({files: 3});
+    expect(verify9999CProbabilitySources(read)).toEqual({files: 4});
     expect(verifyBrowserEntryRetirement(read, exists).retired).toBe(595);
     const certified = certifiedBrowserConsumerChanges(read);
     for (const file of consumers) expect(certified.has(file)).toBe(true);
@@ -77,10 +77,27 @@ describe('9999 C probability increment preserves immutable migration proofs', ()
       .toBe('unreviewed code');
   });
 
+  it('restores only the exact new preference field, default and normalizer', () => {
+    const file = 'client/web/src/types/extensionPrefs.ts';
+    const source = normalize(read(file));
+    expect(restore9999CProbabilitySource(file, source)).toBe(previous(file));
+    expect(restore9999CProbabilitySource(file, previous(file))).toBe(previous(file));
+    for (const changed of [
+      source.replace('singleLeg9999HigherCProbabilityOnly: false', 'singleLeg9999HigherCProbabilityOnly: true'),
+      source.replace('singleLeg9999MaxPerMap: 1', 'singleLeg9999MaxPerMap: 20'),
+      `${source}\nvoid unrelatedPreferenceChange();`,
+    ]) {
+      expect(restore9999CProbabilitySource(file, changed)).toBe(changed);
+      expect(() => verify9999CProbabilitySources(target => target === file ? changed : read(target)))
+        .toThrow('only the exact 9999 C probability change');
+    }
+  });
+
   it.each([
     'scripts/verification/browser-entry-history.mjs',
     'scripts/verification/browser-entry-retirement.mjs',
     'scripts/verification/workspace-layout-relocation.mjs',
+    'scripts/verification/pm-unified-preflight-boundary.mjs',
   ])('only restores the exact new calls in %s', file => {
     const source = normalize(fs.readFileSync(file, 'utf8'));
     expect(restore9999CProbabilityVerificationSource(file, source)).toBe(previous(file));

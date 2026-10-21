@@ -69,6 +69,7 @@ jobs:
           path: |
             output/change-validation/plan.json
             output/change-validation/bundle.json
+            output/change-validation/node-version
           if-no-files-found: error
           retention-days: 14
       - name: Remove capture key
@@ -88,14 +89,14 @@ jobs:
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '24'
-          cache: npm
       - uses: actions/download-artifact@v8
         with:
           name: release-plan
           path: output/change-validation/
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: output/change-validation/node-version
+          cache: npm
       - run: npm ci
       - name: Install PostgreSQL for required compatibility checks
         if: matrix.lane == 'backend' && needs.plan.outputs.database-compatibility == 'true'
@@ -147,13 +148,13 @@ jobs:
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '24'
       - uses: actions/download-artifact@v8
         with:
           name: release-plan
           path: output/change-validation/
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: output/change-validation/node-version
       - uses: actions/download-artifact@v8
         with:
           pattern: release-lane-*

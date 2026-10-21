@@ -149,6 +149,9 @@ test("changed DB or frontend archives cannot leave an accepted verdict", t => {
 });
 test("CI identity and planned lane assignment cannot be overridden", t => {
   const f = fixture(t, "backend");
+  assert.equal(fs.readFileSync(path.join(f.root, "output/change-validation/node-version"), "utf8"), `${process.version}\n`);
+  const otherRuntime = { ...f.bundle, nodeVersion: "v24.0.0-different-runner" };
+  assert.throws(() => mergeReleaseReports(otherRuntime, f.reports, f.root, env), /Node runtime differs/);
   assert.throws(() => runReleaseLane("frontend", { root: f.root, env, npm: "npm-cli.js" }), /Unexpected/);
   const altered = clone(f.bundle); altered.lanes[0].checks = [];
   write(f.root, "output/change-validation/bundle.json", altered);

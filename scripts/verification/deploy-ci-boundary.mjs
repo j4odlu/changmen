@@ -5,14 +5,29 @@ const sha = source => createHash('sha256').update(source.replaceAll('\r\n', '\n'
 const changes = new Map([
   ['scripts/deploy/workflows.test.mjs', {
     beforeSha: '084a7fb67b6aa9033c85256e6b497e678e41f5bf363e153da9cdeb23f8a9e903',
-    afterSha: 'cdec5827e8e08db361d10462d14efbf315c1ac4c63052d75baef10a03d2d4034',
+    afterSha: 'd54b616814672005e077dc7d153598d69aeb49a07e26f60595a423fcc62a4c19',
     edits: [[
-      `  // Runtime outputs can be dropped when a patch number matches a masked secret.
-  // Every runner must select the supported major without depending on that output.
-  for (const job of [release.jobs.plan, release.jobs.checks, release.jobs.validate])
-    assert.equal(job.steps.find(step => step.uses?.startsWith("actions/setup-node@")).with["node-version"], "24");
+      `  // An artifact carries the exact planner runtime without secret-filtered job outputs.
+  assert.equal(release.jobs.plan.steps.find(step => step.uses?.startsWith("actions/setup-node@")).with["node-version"], "24");
+  assert(release.jobs.plan.steps.find(step => step.with?.name === "release-plan").with.path.includes("output/change-validation/node-version"));
+  for (const job of [release.jobs.checks, release.jobs.validate]) {
+    const download = job.steps.findIndex(step => step.with?.name === "release-plan");
+    const setup = job.steps.findIndex(step => step.uses?.startsWith("actions/setup-node@"));
+    assert(download >= 0 && download < setup);
+    assert.equal(job.steps[setup].with["node-version-file"], "output/change-validation/node-version");
+    assert.equal(job.steps[setup].with["node-version"], undefined);
+  }
   assert.equal(release.jobs.plan.outputs["node-version"], undefined);`,
       '  for (const job of [release.jobs.checks, release.jobs.validate])\n    assert.equal(job.steps.find(step => step.uses?.startsWith("actions/setup-node@")).with["node-version"], "${{ needs.plan.outputs.node-version }}");',
+    ]],
+  }],
+  ['scripts/deploy/release-checks.test.mjs', {
+    beforeSha: '03a64c89aa60779ce52f7d15131024a7b341d4df5884b35244618231971ca84f',
+    afterSha: '3459b4dac9d9ae7623af6e4c1be4ef50483d695189fd2c508ea079f5c418161b',
+    edits: [[
+      '  assert.equal(fs.readFileSync(path.join(f.root, "output/change-validation/node-version"), "utf8"), `${process.version}\\n`);\n'
+      + '  const otherRuntime = { ...f.bundle, nodeVersion: "v24.0.0-different-runner" };\n'
+      + '  assert.throws(() => mergeReleaseReports(otherRuntime, f.reports, f.root, env), /Node runtime differs/);\n', '',
     ]],
   }],
   ['scripts/deploy/release-evidence.test.mjs', {

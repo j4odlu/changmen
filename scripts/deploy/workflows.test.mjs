@@ -80,10 +80,16 @@ test("independent runners require all planned checks before sealing and keep cre
   assert.deepEqual(release.jobs.validate.needs, ["plan", "checks"]);
   assert.equal(release.jobs.checks.strategy["fail-fast"], false);
   assert.equal(release.jobs.checks.strategy.matrix, "${{ fromJSON(needs.plan.outputs.matrix) }}");
-  // Runtime outputs can be dropped when a patch number matches a masked secret.
-  // Every runner must select the supported major without depending on that output.
-  for (const job of [release.jobs.plan, release.jobs.checks, release.jobs.validate])
-    assert.equal(job.steps.find(step => step.uses?.startsWith("actions/setup-node@")).with["node-version"], "24");
+  // An artifact carries the exact planner runtime without secret-filtered job outputs.
+  assert.equal(release.jobs.plan.steps.find(step => step.uses?.startsWith("actions/setup-node@")).with["node-version"], "24");
+  assert(release.jobs.plan.steps.find(step => step.with?.name === "release-plan").with.path.includes("output/change-validation/node-version"));
+  for (const job of [release.jobs.checks, release.jobs.validate]) {
+    const download = job.steps.findIndex(step => step.with?.name === "release-plan");
+    const setup = job.steps.findIndex(step => step.uses?.startsWith("actions/setup-node@"));
+    assert(download >= 0 && download < setup);
+    assert.equal(job.steps[setup].with["node-version-file"], "output/change-validation/node-version");
+    assert.equal(job.steps[setup].with["node-version"], undefined);
+  }
   assert.equal(release.jobs.plan.outputs["node-version"], undefined);
   assert(!JSON.stringify(release.jobs.checks).includes("secrets."));
   assert(!JSON.stringify(release.jobs.validate).includes("secrets."));

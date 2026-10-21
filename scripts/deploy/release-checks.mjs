@@ -28,6 +28,7 @@ export function releaseLanes(plan) {
 export function assertReleaseBundle(bundle, root, env = process.env) {
   assertCommittedSource(root);
   assert.equal(bundle.format, 1);
+  assert.equal(bundle.nodeVersion, process.version, "Release Node runtime differs from planner");
   const currentRun = runIdentity(env);
   assert.equal(bundle.run.runId, currentRun.runId, "Release belongs to another Actions run");
   // Re-running failed jobs keeps the successful planner and its immutable bundle.
@@ -46,10 +47,12 @@ export function assertReleaseBundle(bundle, root, env = process.env) {
 }
 export function prepareRelease(root = process.cwd(), env = process.env) {
   const plan = read(path.join(root, "output/change-validation/plan.json"));
-  const bundle = { format: 1, run: runIdentity(env), invocationId: randomUUID(), identity: validationIdentity(root),
+  const bundle = { format: 1, nodeVersion: process.version, run: runIdentity(env), invocationId: randomUUID(), identity: validationIdentity(root),
     plan, planFingerprint: planHash(plan), lanes: releaseLanes(plan) };
   assertReleaseBundle(bundle, root, env);
   write(path.join(root, "output/change-validation/bundle.json"), bundle);
+  // Artifact files retain the exact version even if Actions would mask a job output.
+  fs.writeFileSync(path.join(root, "output/change-validation/node-version"), `${bundle.nodeVersion}\n`);
   if (env.GITHUB_OUTPUT) fs.appendFileSync(env.GITHUB_OUTPUT, `matrix=${JSON.stringify({ lane: bundle.lanes.map(item => item.lane) })}\n`);
   return bundle;
 }

@@ -44,6 +44,7 @@ else {
   );
 }
 extensionPrefs.value.singleLeg9999MaxPerMap ??= 1;
+extensionPrefs.value.singleLeg9999HigherCProbabilityOnly ??= false;
 // [changmen 扩展] 历史测试偏好没有 V1 激活凭据时不切换实际下单。
 extensionPrefs.value.pmArbOrderMode ??= "FOK";
 extensionPrefs.value.pmFokPreflightMode ??= "legacy";
@@ -328,6 +329,25 @@ async function save() {
           </template>
           <el-switch
             v-model="extensionPrefs.singleLeg9999UseValueBetMoney"
+            inline-prompt
+            active-text="开"
+            inactive-text="关"
+          />
+        </el-form-item>
+
+        <el-form-item>
+          <template #label>
+            <el-tooltip
+              placement="top"
+              :show-after="200"
+              popper-class="extensions-tab-tip"
+              content="开：9999 真下单腿只允许当前盘口 C 行赛前概率较高的一方。C 行取 PM 登记开赛时间前历史价格；无有效数据或概率相同时跳过，不消耗同图次数。默认关闭。"
+            >
+              <span class="extensions-tab__tip-label">9999 仅下C行高胜率方</span>
+            </el-tooltip>
+          </template>
+          <el-switch
+            v-model="extensionPrefs.singleLeg9999HigherCProbabilityOnly"
             inline-prompt
             active-text="开"
             inactive-text="关"

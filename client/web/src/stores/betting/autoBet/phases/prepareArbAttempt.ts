@@ -13,6 +13,7 @@ import {
 } from "@/domain/betting/singleLegRate";
 import { opponentSide } from "@changmen/client-core/models/betOption";
 import { applyStakeScaleByProfit } from "@/extensions/arbBet/stakeScaleByProfit";
+import { explain9999CProbabilityRejection } from "@/extensions/arbBet/singleLeg9999CProbability";
 import {
   applyValueBetMoneyTo9999LiveLeg,
   resolve9999LiveSide,
@@ -227,6 +228,14 @@ export async function prepareArbAttempt(
     const maxPerMap = Number(prefs.singleLeg9999MaxPerMap) || 1;
     const liveSide = resolve9999LiveSide(accountA, accountB);
     const liveLeg = liveSide === "A" ? legA : liveSide === "B" ? legB : undefined;
+    // [changmen 扩展] 在同图次数占位和预检之前筛选，拒绝时不消耗次数。
+    if (prefs.singleLeg9999HigherCProbabilityOnly === true) {
+      const reason = explain9999CProbabilityRejection(bet, match, liveLeg?.target);
+      if (reason) {
+        trace?.finish("skip", reason);
+        return null;
+      }
+    }
     const liveSourceKey = liveLeg
       ? singleLeg9999SourceMarketKey(liveLeg.type, liveLeg.matchId, liveLeg.betId)
       : null;

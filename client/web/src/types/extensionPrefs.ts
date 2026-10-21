@@ -235,6 +235,8 @@ export interface ExtensionPrefs extends Record<string, unknown> {
    * 预检腿保持原套利计划额。默认关闭。
    */
   singleLeg9999UseValueBetMoney: boolean;
+  /** [changmen 扩展] 9999 真下单腿仅允许当前盘口 C 行赛前概率较高的一方；无有效数据或同值时跳过。默认关闭。 */
+  singleLeg9999HigherCProbabilityOnly: boolean;
   /**
    * 9999 单边同一比赛同一地图（ViewBet.round，含全场 0）最多下几笔。
    * 默认 1；独立于正 EV 同图次数。
@@ -395,6 +397,7 @@ export function createDefaultExtensionPrefs(): ExtensionPrefs {
     arbAllowedPlatforms: null,
     singleLeg9999Precheck: true,
     singleLeg9999UseValueBetMoney: false,
+    singleLeg9999HigherCProbabilityOnly: false,
     singleLeg9999MaxPerMap: 1,
     stakeScaleByProfit: createDefaultStakeScaleByProfit(),
     arbFailAutoSell: createDefaultArbFailAutoSell(),
@@ -548,6 +551,7 @@ export function normalizeExtensionPrefs(raw: unknown): ExtensionPrefs {
     arbAllowedPlatforms: normalizeArbAllowedPlatforms(row.arbAllowedPlatforms),
     singleLeg9999Precheck: row.singleLeg9999Precheck !== false,
     singleLeg9999UseValueBetMoney: row.singleLeg9999UseValueBetMoney === true,
+    singleLeg9999HigherCProbabilityOnly: row.singleLeg9999HigherCProbabilityOnly === true,
     singleLeg9999MaxPerMap: normalizeValueBetCount(row.singleLeg9999MaxPerMap, 1),
     stakeScaleByProfit: normalizeStakeScaleByProfit(row.stakeScaleByProfit),
     arbFailAutoSell: normalizeArbFailAutoSell(row.arbFailAutoSell),

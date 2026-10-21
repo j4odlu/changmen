@@ -34,6 +34,7 @@ const defaultPrefs = {
   arbAllowedPlatforms: null,
   singleLeg9999Precheck: true,
   singleLeg9999UseValueBetMoney: false,
+  singleLeg9999HigherCProbabilityOnly: false,
   singleLeg9999MaxPerMap: 1,
   stakeScaleByProfit: defaultStakeScale,
   arbFailAutoSell: { enabled: false },
@@ -204,6 +205,17 @@ describe("extensionPrefs", () => {
       ...defaultPrefs,
       singleLeg9999UseValueBetMoney: true,
     });
+  });
+
+  it("round-trips the 9999 C probability filter and only enables explicit true", () => {
+    for (const enabled of [false, true]) {
+      const prefs = { ...createDefaultExtensionPrefs(), singleLeg9999HigherCProbabilityOnly: enabled };
+      expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);
+    }
+    for (const raw of [undefined, null, "true", 1]) {
+      expect(normalizeExtensionPrefs({ singleLeg9999HigherCProbabilityOnly: raw })
+        .singleLeg9999HigherCProbabilityOnly).toBe(false);
+    }
   });
 
   it("reads and clamps singleLeg9999MaxPerMap", () => {

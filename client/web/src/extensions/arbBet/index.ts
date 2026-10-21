@@ -10,6 +10,7 @@
  * |------|-----|----------|
  * | 比例 9999 单边下注 | 缺任一侧账号则 `continue` | 本侧可选预检（扩展页开关）、不自动下单；对侧真下单 + 负 `linkId` |
  * | 9999 用正EV金额 | 无 | `singleLeg9999UseValueBetMoney`：真下单腿改用 `valueBetMoney`（预检腿不动） |
+ * | 9999 C 行方向 | 无 | `singleLeg9999HigherCProbabilityOnly`：真下单腿仅允许当前盘口 C 行赛前概率较高的一方 |
  * | 高利润加仓 | 无 | `stakeScaleByProfit`：implied 达阈值时两腿注码同乘；可选忽略账号比例 |
  * | 失败敞口减仓 | 无 | `arbFailAutoSell`：对侧拒单且未补单时自动卖 PM/PF 成交腿 |
  * | 提前锁利 | 无 | `arbEarlyLockSell`：仅双边 PM/PF，同卖净利优于锁定时两边一起卖 |

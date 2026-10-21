@@ -13,6 +13,7 @@ import {rdsRetirementHistoryFiles} from './rds-entry-retirement.mjs';
 import {adminIsolationHistoryFiles} from './admin-maintenance-isolation.mjs';
 import {rdsLegacyHistoryFiles,previousRdsLegacyEntry} from './rds-legacy-relocation.mjs';
 import {restoreRayA8PrecheckSource} from './ray-a8-precheck-boundary.mjs';
+import {restore9999CProbabilitySource} from './single-leg-9999-c-probability-boundary.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 export const browserHistorySha=s=>createHash('sha256').update(s.replaceAll('\r\n','\n')).digest('hex');
 const text=fs.readFileSync(new URL('./browser-entry-retirement.json',import.meta.url),'utf8');
@@ -28,7 +29,7 @@ assert.deepEqual(BROWSER_ENTRY_RETIREMENT.retired,[...entries.keys()]);
 const known=new Set([...entries.keys(),...previous.records.map(row=>row.canonical),...BROWSER_ENTRY_RETIREMENT.changes.map(row=>row.file),...backendToolHistoryFiles,...backendProbeHistoryFiles,...nodeResourceHistoryFiles,...nodeEntryHistoryFiles,...catalogEnvironmentHistoryFiles,...rdsRetirementHistoryFiles,...adminIsolationHistoryFiles,...rdsLegacyHistoryFiles]);
 const relative=file=>typeof file==='string'&&known.has(file)?file:path.relative(root,file instanceof URL?fileURLToPath(file):path.resolve(file)).replaceAll('\\','/');
 export function restoreBrowserEntryRetirement(file,source){
- source=restoreRayA8PrecheckSource(relative(file),source);
+ source=restoreRayA8PrecheckSource(relative(file),restore9999CProbabilitySource(relative(file),source));
  const key=typeof file==='string'&&entries.has(file)?file:relative(file);
  for(const row of [...BROWSER_ENTRY_RETIREMENT.changes].reverse())if(row.file===key&&browserHistorySha(source)===row.afterSha){
   assert.equal(browserHistorySha(row.before),row.beforeSha,'Previous consumer snapshot changed: '+key);source=row.before;

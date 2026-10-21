@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import { restore9999CProbabilityVerificationSource } from "./single-leg-9999-c-probability-boundary.mjs";
 
 const normalize = source => source.replaceAll("\r\n", "\n");
 const sha = source => createHash("sha256").update(normalize(source)).digest("hex");
@@ -11,6 +12,7 @@ const inventory = JSON.parse(text);
 const entries = new Map(inventory.files.map(row => [row.file, row]));
 
 export function restoreRayA8PrecheckSource(file, source) {
+  source = restore9999CProbabilityVerificationSource(file, source);
   const row = entries.get(file);
   if (!row) return source;
   source = normalize(source);
@@ -26,6 +28,6 @@ export function restoreRayA8PrecheckSource(file, source) {
 
 export function verifyRayA8PrecheckSources(read) {
   for (const row of entries.values())
-    assert.equal(sha(read(row.file)), row.afterSha, `${row.file}: only the exact RAY A8 precheck change is authorized`);
+    assert.equal(sha(restore9999CProbabilityVerificationSource(row.file, read(row.file))), row.afterSha, `${row.file}: only the exact RAY A8 precheck change is authorized`);
   return { files: entries.size };
 }

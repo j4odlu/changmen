@@ -31,6 +31,7 @@ export async function finalizeArbBet(
 
   const settle = await settleBothArbLegs(params, placed);
   const actions = placed.originalExecution?.actions;
+  const lowOddsSingle = placed.executionMode === "lowOddsSingle";
   await placed.originalExecution?.close();
 
   const registerRayLeg = (side: "A" | "B") => {
@@ -98,7 +99,7 @@ export async function finalizeArbBet(
     registerRayLeg("B");
   }
 
-  const makeup = actions?.makeup === false ? { enqueuedForLegA: false, enqueuedForLegB: false } : await applyArbMakeUpFromRejects(
+  const makeup = lowOddsSingle || actions?.makeup === false ? { enqueuedForLegA: false, enqueuedForLegB: false } : await applyArbMakeUpFromRejects(
     params,
     placed,
     settle.rejectA,
@@ -151,7 +152,7 @@ export async function finalizeArbBet(
     params.setMessage(placed.originalExecution.summary().message);
 
   // [changmen 扩展] 仅开启时加载；关闭时与改前 finalize 路径一致（无额外 await）
-  if (actions?.autoSell !== false && useUserStore().extensionPrefs?.arbFailAutoSell?.enabled === true) {
+  if (!lowOddsSingle && actions?.autoSell !== false && useUserStore().extensionPrefs?.arbFailAutoSell?.enabled === true) {
     try {
       const { maybeArbFailAutoSellAfterFinalize } = await import(
         "@/extensions/arbBet/arbFailAutoSell",

@@ -4,6 +4,7 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { ActiveBetLegStatus, ActiveBetRunPhase } from "@/types/activeBetRun";
 import type { MakeupRuntimePhase } from "@/types/order";
 import { getActivePinia } from "pinia";
+import { isLowOddsSingleLink } from "@changmen/client-core/shared/format";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
 import { useActiveBetRunStore } from "@/stores/activeBetRunStore";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
@@ -104,9 +105,9 @@ export function syncActiveBetBegin(params: {
     matchTitle: match.title,
     betName: bet.getBetName(),
     linkId,
-    mode: params.betBothLegs ? "arb" : "single9999",
+    mode: isLowOddsSingleLink(linkId) ? "lowOddsSingle" : params.betBothLegs ? "arb" : "single9999",
     phase: "preparing",
-    overallLabel: params.betBothLegs ? "准备双边套利" : "准备 9999 单边下单",
+    overallLabel: isLowOddsSingleLink(linkId) ? "🎯 双腿预检后只下低赔腿" : params.betBothLegs ? "准备双边套利" : "准备 9999 单边下单",
     legs,
   });
   if (checkAccountA)
@@ -561,8 +562,8 @@ export function syncActiveBetAfterRejectSync(
   }
 
   // [changmen 扩展] 9999 仅以下单腿收尾，不等待仅预检/不参与的另一腿成交。
-  if (run?.mode === "single9999" && ((flags.hasA && flags.okA) || (flags.hasB && flags.okB))) {
-    store.scheduleTerminalRemoval(betId, undefined, "单边下单已完成");
+  if ((run?.mode === "single9999" || run?.mode === "lowOddsSingle") && ((flags.hasA && flags.okA) || (flags.hasB && flags.okB))) {
+    store.scheduleTerminalRemoval(betId, undefined, run?.mode === "lowOddsSingle" ? "🎯 LOS已成交" : "单边下单已完成");
     return;
   }
 

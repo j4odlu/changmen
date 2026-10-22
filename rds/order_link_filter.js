@@ -3,6 +3,12 @@ export const ARB_LINK_MIN = 1_000_000_000_000;
 
 /** 与 client-core format.VALUE_BET_LINK_BASE 对齐：正 EV 编码基线 */
 export const VALUE_BET_LINK_BASE = 7_000_000_000_000_000;
+/** [changmen 扩展] 与 client-core 保持相同的低赔单边 Link 区间。 */
+export const LOW_ODDS_LINK_BASE = 6_000_000_000_000_000;
+export function isLowOddsSingleLink(link) {
+  const n = Number(link);
+  return Number.isFinite(n) && n < 0 && Math.abs(n) >= LOW_ODDS_LINK_BASE && Math.abs(n) < VALUE_BET_LINK_BASE;
+}
 
 /**
  * 侧栏/改绑排序键：正 EV 还原真实时间戳，其余取绝对值。
@@ -12,12 +18,14 @@ export function orderLinkSortKey(link) {
   const n = Math.abs(Number(link)) || 0;
   if (n >= VALUE_BET_LINK_BASE)
     return n - VALUE_BET_LINK_BASE;
+  if (n >= LOW_ODDS_LINK_BASE)
+    return n - LOW_ODDS_LINK_BASE;
   return n;
 }
 
 /** PostgreSQL：把 Link 还原成开弓毫秒（正 EV 去掉 7e15 基线） */
 export function sqlLinkHomeTsExpr(linkExpr = "link") {
-  return `(CASE WHEN ABS(${linkExpr}) >= ${VALUE_BET_LINK_BASE} THEN ABS(${linkExpr}) - ${VALUE_BET_LINK_BASE} ELSE ABS(${linkExpr}) END)`;
+  return `(CASE WHEN ABS(${linkExpr}) >= ${VALUE_BET_LINK_BASE} THEN ABS(${linkExpr}) - ${VALUE_BET_LINK_BASE} WHEN ABS(${linkExpr}) >= ${LOW_ODDS_LINK_BASE} THEN ABS(${linkExpr}) - ${LOW_ODDS_LINK_BASE} ELSE ABS(${linkExpr}) END)`;
 }
 
 /**
@@ -38,8 +46,7 @@ export function sqlOrderBelongsToRange(startParam, endParam, opts = {}) {
 
 /** 与 sqlOrderBelongsToRange 同一套规则（单测 / 文档） */
 export function orderBelongsToMsRange(link, createAt, start, end) {
-  const n = Math.abs(Number(link)) || 0;
-  const ts = n >= VALUE_BET_LINK_BASE ? n - VALUE_BET_LINK_BASE : n;
+  const ts = orderLinkSortKey(link);
   if (ts >= ARB_LINK_MIN)
     return ts >= start && ts < end;
   const at = Number(createAt) || 0;
@@ -221,14 +228,14 @@ export function isValueBetLink(link) {
 /** 比例 9999 单边：负时间戳且非正 EV */
 export function isSingleLegRateLink(link) {
   const n = Number(link);
-  return Number.isFinite(n) && n < 0 && Math.abs(n) < VALUE_BET_LINK_BASE;
+  return Number.isFinite(n) && n < 0 && Math.abs(n) < LOW_ODDS_LINK_BASE;
 }
 
 /**
  * SaveOrder 已确认的客户端分组 link（套利 / 正 EV / 9999），同步时不得被场馆占位覆盖。
  */
 export function isConfirmedClientBindLink(link) {
-  return isArbBindLink(link) || isValueBetLink(link) || isSingleLegRateLink(link);
+  return isArbBindLink(link) || isValueBetLink(link) || isSingleLegRateLink(link) || isLowOddsSingleLink(link);
 }
 
 /** 套利 linkId 与场馆 create_at 允许偏差（SaveOrderBind 用 Date.now()，通常 ≤ 数秒） */

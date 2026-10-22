@@ -16,7 +16,7 @@ import {
   handlePmSubmitOrder,
   handleRefreshPmBalance,
 } from "../integrations/polymarket/pm_client_handlers.js";
-import { handlePmGetSubmission } from "../integrations/polymarket/submission_handler.js";
+import { handlePmGetSubmission, handlePmGetPendingOrders } from "../integrations/polymarket/submission_handler.js";
 import {
   handlePfCheckBet,
   handlePfGetOrder,
@@ -96,6 +96,10 @@ export async function handlePmPfAction(
   }
 
   switch (action) {
+    case "Pm_GetPendingOrders": {
+      const pending = await handlePmGetPendingOrders(body, ctx.user.id);
+      return pending.ok ? ok(pending.info) : fail(pending.msg);
+    }
     case "Pm_GetSubmission": {
       const snapshot = await handlePmGetSubmission(body, ctx.user.id);
       return snapshot.ok ? ok(snapshot.info) : fail(snapshot.msg);

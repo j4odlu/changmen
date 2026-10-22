@@ -1022,4 +1022,19 @@ describe("finalizeArbBet makeup enqueue", () => {
       { pendingConfirmA: false, pendingConfirmB: false },
     );
   });
+  it("🎯 confirms only the submitted leg and bypasses makeup and auto-sell", async () => {
+    autoSellEnabled.value = true;
+    settleArbLeg.mockResolvedValueOnce(packLegSync({ orders: [venueOrder("ray-low-odds", "none", 1.8)], rejected: false }));
+    const placed = makePlaced({ executionMode: "lowOddsSingle", executionSide: "B", betBothLegs: false,
+      accountA: undefined, resultA: undefined, placeOutcomeA: "not_attempted" });
+    await finalizeArbBet({ match: makeMatch(), bet: makeBet(), config: { ...createDefaultUserConfig(), makeUp: true, anyOdds: true }, setMessage: vi.fn() }, placed);
+    expect(applyArbMakeUpFromRejects).not.toHaveBeenCalled();
+    expect(autoSell).not.toHaveBeenCalled();
+    expect(recordSingleLeg9999MapFill).not.toHaveBeenCalled();
+    expect(bettingMessage).toHaveBeenCalled();
+    const peers = bettingMessage.mock.calls[0]!;
+    expect(peers[0]).toMatchObject({ kind: "lowOddsSingle" });
+    expect(registerRayOrderContext).toHaveBeenCalledWith(expect.objectContaining({ anchorConfirmed: false }));
+  });
+
 });

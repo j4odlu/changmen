@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "vitest";
 import {
   ARB_LINK_MIN,
+  LOW_ODDS_LINK_BASE,
+  isLowOddsSingleLink,
   VALUE_BET_LINK_BASE,
   backendBindLinkFromCreateAt,
   CLIENT_ORDER_LIST_SQL,
@@ -266,4 +268,19 @@ describe("order_link_filter", () => {
       true,
     );
   });
+  it("🎯 restores booking time, protects sync binding, and stays separate from 9999/EV", () => {
+    const at = 1_792_680_000_123;
+    const link = -(LOW_ODDS_LINK_BASE + at);
+    assert.equal(isLowOddsSingleLink(link), true);
+    assert.equal(isSingleLegRateLink(link), false);
+    assert.equal(isValueBetLink(link), false);
+    assert.equal(isConfirmedClientBindLink(link), true);
+    assert.equal(orderLinkSortKey(link), at);
+    assert.equal(orderBelongsToMsRange(link, at + 86400000, at - 1, at + 1), true);
+    assert.equal(orderBelongsToMsRange(link, at, at + 1, at + 86400000), false);
+    assert.match(sqlOrderBelongsToRange(1, 2), /6000000000000000/);
+    assert.equal(isLowOddsSingleLink(-(VALUE_BET_LINK_BASE + at)), false);
+    assert.equal(isSingleLegRateLink(-at), true);
+  });
+
 });

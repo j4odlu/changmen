@@ -44,7 +44,7 @@ export interface ActiveBetRun {
   matchId: number;
   linkId?: number;
   /** [changmen 扩展] 启动时确定的下单模式，不随单腿失败或补单改变。 */
-  mode?: "arb" | "single9999" | "valueBet";
+  mode?: "arb" | "single9999" | "valueBet" | "lowOddsSingle";
   matchTitle: string;
   betName: string;
   phase: ActiveBetRunPhase;

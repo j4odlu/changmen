@@ -43,6 +43,8 @@ else {
     extensionPrefs.value.arbAllowedPlatforms,
   );
 }
+extensionPrefs.value.arbExecutionMode ??= "normal";
+extensionPrefs.value.lowOddsSingleHigherCProbabilityOnly ??= false;
 extensionPrefs.value.singleLeg9999MaxPerMap ??= 1;
 extensionPrefs.value.singleLeg9999HigherCProbabilityOnly ??= false;
 // [changmen 扩展] 历史测试偏好没有 V1 激活凭据时不切换实际下单。
@@ -136,6 +138,132 @@ async function save() {
 
 <template>
   <div class="extensions-tab">
+    <section class="extensions-tab__panel execution-mode">
+      <div class="execution-mode__header">
+        <div>
+          <h3 class="extensions-tab__heading">对冲下注模式</h3>
+          <p class="execution-mode__subtitle">套利触发后，选择双腿或单腿提交</p>
+        </div>
+        <el-radio-group v-model="extensionPrefs.arbExecutionMode" aria-label="对冲下注模式">
+          <el-radio-button value="normal">普通模式</el-radio-button>
+          <el-radio-button value="lowOddsSingle">LOS</el-radio-button>
+        </el-radio-group>
+      </div>
+      <div v-if="extensionPrefs.arbExecutionMode === 'lowOddsSingle'" class="execution-mode__details">
+        <div class="execution-mode__intro">
+          <span class="execution-mode__name">Low Odds Single</span>
+          <div class="execution-mode__rules" aria-label="LOS 提交规则">
+            <span>双腿预检</span><span>只下低赔腿</span><span>每盘口 1 次</span><span>不补单</span>
+          </div>
+        </div>
+        <div class="execution-mode__filter">
+          <div>
+            <span class="execution-mode__filter-label">仅下 C 行高胜率方</span>
+            <p class="execution-mode__filter-desc">低赔腿与 C 行高胜率方向一致才提交，否则跳过。</p>
+            <p id="los-c-filter-help" class="execution-mode__filter-note">参考当前盘口 C 行的赛前胜率；数据缺失或胜率相同时跳过。</p>
+          </div>
+          <el-switch
+            v-model="extensionPrefs.lowOddsSingleHigherCProbabilityOnly"
+            aria-label="LOS 仅下C行高胜率方"
+            aria-describedby="los-c-filter-help"
+            inline-prompt
+            active-text="开"
+            inactive-text="关"
+          />
+        </div>
+        <details class="execution-mode__more">
+          <summary>更多规则</summary>
+          <p>金额沿用原计划，两腿赔率相同时跳过。被 C 行筛选跳过不消耗盘口次数。</p>
+          <p>盘口次数按当前浏览器及用户保留，刷新不重置，不跨设备共享。LOS 暂不与 PM GTC 或 9999 单边组合。</p>
+        </details>
+      </div>
+      <p v-else class="execution-mode__normal-note">按原有下注设置执行。</p>
+      <el-form label-position="left" label-width="158px" class="execution-mode__9999" aria-label="9999 单边配置">
+        <h3 class="extensions-tab__heading">
+          9999
+        </h3>
+
+        <el-form-item>
+          <template #label>
+            <el-tooltip
+              placement="top"
+              :show-after="200"
+              popper-class="extensions-tab-tip"
+              content="开：9999 本侧参与预检（失败整笔不下，本侧仍不下单）。关：跳过预检，仅对侧下单。"
+            >
+              <span class="extensions-tab__tip-label">9999 单边预检</span>
+            </el-tooltip>
+          </template>
+          <el-switch
+            v-model="extensionPrefs.singleLeg9999Precheck"
+            inline-prompt
+            active-text="开"
+            inactive-text="关"
+          />
+        </el-form-item>
+
+        <el-form-item>
+          <template #label>
+            <el-tooltip
+              placement="top"
+              :show-after="200"
+              popper-class="extensions-tab-tip"
+              content="开：真下单腿用参数配置的正EV金额；预检腿仍用套利计划额。关：仍用套利拆分金额。"
+            >
+              <span class="extensions-tab__tip-label">9999 用正EV金额</span>
+            </el-tooltip>
+          </template>
+          <el-switch
+            v-model="extensionPrefs.singleLeg9999UseValueBetMoney"
+            inline-prompt
+            active-text="开"
+            inactive-text="关"
+          />
+        </el-form-item>
+
+        <el-form-item>
+          <template #label>
+            <el-tooltip
+              placement="top"
+              :show-after="200"
+              popper-class="extensions-tab-tip"
+              content="开：9999 真下单腿只允许当前盘口 C 行赛前概率较高的一方。C 行取 PM 登记开赛时间前历史价格；无有效数据或概率相同时跳过，不消耗同图次数。默认关闭。"
+            >
+              <span class="extensions-tab__tip-label">9999 仅下C行高胜率方</span>
+            </el-tooltip>
+          </template>
+          <el-switch
+            v-model="extensionPrefs.singleLeg9999HigherCProbabilityOnly"
+            inline-prompt
+            active-text="开"
+            inactive-text="关"
+          />
+        </el-form-item>
+
+        <el-form-item>
+          <template #label>
+            <el-tooltip
+              placement="top"
+              :show-after="200"
+              popper-class="extensions-tab-tip"
+              content="同一比赛同一地图最多触发几笔 9999 单边真下单。默认 1 次；独立于 EV 自动下注次数。"
+            >
+              <span class="extensions-tab__tip-label">9999 同图次数</span>
+            </el-tooltip>
+          </template>
+          <el-input-number
+            v-model="extensionPrefs.singleLeg9999MaxPerMap"
+            class="extensions-tab__num"
+            :min="1"
+            :max="20"
+            :step="1"
+            :precision="0"
+            controls-position="right"
+          />
+          <span class="extensions-tab__unit">次</span>
+        </el-form-item>
+      </el-form>
+    </section>
     <section class="extensions-tab__panel extensions-tab__venues">
       <h3 class="extensions-tab__heading">
         场馆参与
@@ -292,91 +420,7 @@ async function save() {
     </section>
 
     <div class="extensions-tab__cols">
-      <el-form label-position="left" label-width="158px" class="extensions-tab__panel">
-        <h3 class="extensions-tab__heading">
-          9999
-        </h3>
 
-        <el-form-item>
-          <template #label>
-            <el-tooltip
-              placement="top"
-              :show-after="200"
-              popper-class="extensions-tab-tip"
-              content="开：9999 本侧参与预检（失败整笔不下，本侧仍不下单）。关：跳过预检，仅对侧下单。"
-            >
-              <span class="extensions-tab__tip-label">9999 单边预检</span>
-            </el-tooltip>
-          </template>
-          <el-switch
-            v-model="extensionPrefs.singleLeg9999Precheck"
-            inline-prompt
-            active-text="开"
-            inactive-text="关"
-          />
-        </el-form-item>
-
-        <el-form-item>
-          <template #label>
-            <el-tooltip
-              placement="top"
-              :show-after="200"
-              popper-class="extensions-tab-tip"
-              content="开：真下单腿用参数配置的正EV金额；预检腿仍用套利计划额。关：仍用套利拆分金额。"
-            >
-              <span class="extensions-tab__tip-label">9999 用正EV金额</span>
-            </el-tooltip>
-          </template>
-          <el-switch
-            v-model="extensionPrefs.singleLeg9999UseValueBetMoney"
-            inline-prompt
-            active-text="开"
-            inactive-text="关"
-          />
-        </el-form-item>
-
-        <el-form-item>
-          <template #label>
-            <el-tooltip
-              placement="top"
-              :show-after="200"
-              popper-class="extensions-tab-tip"
-              content="开：9999 真下单腿只允许当前盘口 C 行赛前概率较高的一方。C 行取 PM 登记开赛时间前历史价格；无有效数据或概率相同时跳过，不消耗同图次数。默认关闭。"
-            >
-              <span class="extensions-tab__tip-label">9999 仅下C行高胜率方</span>
-            </el-tooltip>
-          </template>
-          <el-switch
-            v-model="extensionPrefs.singleLeg9999HigherCProbabilityOnly"
-            inline-prompt
-            active-text="开"
-            inactive-text="关"
-          />
-        </el-form-item>
-
-        <el-form-item>
-          <template #label>
-            <el-tooltip
-              placement="top"
-              :show-after="200"
-              popper-class="extensions-tab-tip"
-              content="同一比赛同一地图最多触发几笔 9999 单边真下单。默认 1 次；独立于 EV 自动下注次数。"
-            >
-              <span class="extensions-tab__tip-label">9999 同图次数</span>
-            </el-tooltip>
-          </template>
-          <el-input-number
-            v-model="extensionPrefs.singleLeg9999MaxPerMap"
-            class="extensions-tab__num"
-            :min="1"
-            :max="20"
-            :step="1"
-            :precision="0"
-            controls-position="right"
-          />
-          <span class="extensions-tab__unit">次</span>
-        </el-form-item>
-      </el-form>
 
       <div class="extensions-tab__panel">
         <el-form label-position="left" label-width="158px">
@@ -549,6 +593,84 @@ async function save() {
 <style scoped>
 .extensions-tab {
   min-width: min(780px, 92vw);
+}
+
+.extensions-tab__panel.execution-mode {
+  margin-bottom: 16px;
+  padding: 18px 20px;
+}
+
+.execution-mode__header,
+.execution-mode__intro,
+.execution-mode__filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.execution-mode__header .extensions-tab__heading { margin-bottom: 6px; }
+.execution-mode__subtitle,
+.execution-mode__normal-note,
+.execution-mode__filter-desc,
+.execution-mode__filter-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+.execution-mode__normal-note { margin-top: 14px; }
+.execution-mode__header :deep(.el-radio-button__inner) { min-width: 96px; }
+.execution-mode__details {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+.execution-mode__intro { flex-wrap: wrap; gap: 10px; }
+.execution-mode__name { font-size: 13px; font-weight: 600; color: var(--el-text-color-primary); }
+.execution-mode__rules { display: flex; flex-wrap: wrap; gap: 6px; }
+.execution-mode__rules span {
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--el-fill-color-light);
+  font-size: 11px;
+  color: var(--el-text-color-regular);
+}
+.execution-mode__filter {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+  background: var(--el-fill-color-lighter);
+}
+.execution-mode__filter :deep(.el-switch) { flex-shrink: 0; }
+.execution-mode__filter-label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 500; }
+.execution-mode__filter-note { margin-top: 3px; font-size: 11px; }
+.execution-mode__more { margin-top: 12px; color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.6; }
+.execution-mode__more summary { width: fit-content; cursor: pointer; }
+.execution-mode__more p { margin: 6px 0 0; }
+
+@media (max-width: 600px) {
+  .execution-mode__header { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .extensions-tab__panel.execution-mode { padding: 16px; }
+}
+
+
+.execution-mode__9999 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.execution-mode__9999 > .extensions-tab__heading {
+  grid-column: 1 / -1;
+}
+
+.extensions-tab__cols > .extensions-tab__panel:only-child {
+  grid-column: 1 / -1;
 }
 
 .extensions-tab__venues {

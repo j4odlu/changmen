@@ -1,0 +1,1271 @@
+{
+  "purpose": "pm-pending-order-single-row-lifecycle",
+  "baseline": "2d1efc55ffabdfbe62abe4a5dbe6335bed38822a",
+  "changes": {
+    "client/web/src/stores/account/betGateway.ts": {
+      "beforeSha": "1396ea91a3ebf29b2cec35e5891b94d79b435b74bedfb652e5e2a1fb95cdd1ab",
+      "afterSha": "a675fda529508ac1b18c8ce373a99f60ff9e8cc9de931b33d6e0488863a36dc4",
+      "edits": [
+        {
+          "start": 31,
+          "before": [
+            "import { getPmSubmission } from \"@/api/order\";"
+          ],
+          "after": [
+            "import { getPmSubmission, getPendingPmOrders, saveOrders } from \"@/api/order\";"
+          ]
+        },
+        {
+          "start": 33,
+          "before": [],
+          "after": [
+            "import { persistPendingPmOrder } from \"@/stores/account/pmPendingOrder\";",
+            "import { confirmVenueBet } from \"@/stores/betting/autoBet/confirmVenueBet\";"
+          ]
+        },
+        {
+          "start": 109,
+          "before": [],
+          "after": [
+            "  pendingOrderSave?: Promise<void>,"
+          ]
+        },
+        {
+          "start": 117,
+          "before": [
+            "  if (existing) { schedulePendingVenueBetConfirmation(store, existing); return; }"
+          ],
+          "after": [
+            "  if (existing) {",
+            "    if (pendingOrderSave) pendingVenueOrderWrites.set(existing, pendingOrderSave);",
+            "    schedulePendingVenueBetConfirmation(store, existing); return;",
+            "  }"
+          ]
+        },
+        {
+          "start": 143,
+          "before": [],
+          "after": [
+            "  if (pendingOrderSave) pendingVenueOrderWrites.set(task, pendingOrderSave);"
+          ]
+        },
+        {
+          "start": 189,
+          "before": [],
+          "after": [
+            "const pendingVenueConfirmationResumeVersions = new Map<string, string>();",
+            "// 只串行化同一订单的写入 Promise；名称属于正在保存的订单，不交给确认任务。",
+            "const pendingVenueOrderWrites = new WeakMap<PendingVenueBetConfirmation, Promise<void>>();",
+            "",
+            "function pendingVenueAccountMatches(store: AccountStoreContext, task: PendingVenueBetConfirmation): boolean {",
+            "  try {",
+            "    const live = store.findAccount(task.accountId);",
+            "    return live?.provider === task.provider && (!task.pmScope || task.pmScope === pmSubmitScope(live));",
+            "  }",
+            "  catch { return false; }",
+            "}"
+          ]
+        },
+        {
+          "start": 299,
+          "before": [
+            "    const { rejected, pendingConfirm, orders } = await settleArbLegUntilTerminal(account, result, {",
+            "      rejectWaitSec: 0,",
+            "      betOption: option,",
+            "    });",
+            "    if (!isAuthSessionCurrent(sessionVersion)",
+            "      || task.pmScope && task.pmScope !== pmSubmitScope(account)) return;"
+          ],
+          "after": [
+            "    const { rejected, pendingConfirm, orders } = task.provider === \"Polymarket\"",
+            "      ? await confirmVenueBet(account, result, { rejectWaitSec: 0, pmConditionId: task.venueBetId })",
+            "      : await settleArbLegUntilTerminal(account, result, { rejectWaitSec: 0, betOption: option });",
+            "    if (!isAuthSessionCurrent(sessionVersion) || !pendingVenueAccountMatches(store, task)) return;"
+          ]
+        },
+        {
+          "start": 323,
+          "before": [],
+          "after": [
+            "    if (task.provider === \"Polymarket\") {",
+            "      await pendingVenueOrderWrites.get(task);",
+            "      if (!isAuthSessionCurrent(sessionVersion) || !pendingVenueAccountMatches(store, task)) return;",
+            "      pendingVenueOrderWrites.delete(task);",
+            "      if (rejected) {",
+            "        const saved = await persistPolymarketExecutionReject(account, result, \"unfilled\", { linkId: task.linkId });",
+            "        if (!saved) throw new Error(\"PM 拒单结果保存失败\");",
+            "      }",
+            "      else {",
+            "        const filled = orders.find(order => String(order.orderId) === task.orderId",
+            "          && ![\"pending\", \"reject\"].includes(order.status) && Number(order.pmShares) > 0);",
+            "        // 成交明细尚未索引或保存失败：保留任务，续查/保存同一单号。",
+            "        if (!filled) throw new Error(\"PM 成交明细尚未同步\");",
+            "        await saveOrders(account, [filled]);",
+            "      }",
+            "    }",
+            "    if (!isAuthSessionCurrent(sessionVersion) || !pendingVenueAccountMatches(store, task)) return;"
+          ]
+        },
+        {
+          "start": 341,
+          "before": [],
+          "after": [
+            "    pendingVenueConfirmationResumeVersions.delete(task.key);"
+          ]
+        },
+        {
+          "start": 387,
+          "before": [
+            "    if (current && isAuthSessionCurrent(sessionVersion))"
+          ],
+          "after": [
+            "    const resumedVersion = pendingVenueConfirmationResumeVersions.get(task.key);",
+            "    if (current && pendingVenueAccountMatches(store, task)",
+            "      && (isAuthSessionCurrent(sessionVersion) || resumedVersion != null && isAuthSessionCurrent(resumedVersion)))"
+          ]
+        },
+        {
+          "start": 396,
+          "before": [],
+          "after": [
+            "  void restoreStoredPendingPmOrders(store);"
+          ]
+        },
+        {
+          "start": 408,
+          "before": [
+            "          ...(!attempt.acceptedOrderId ? { submitUnknown: true } : {}) };"
+          ],
+          "after": [
+            "          makerAddress: pmSubmitMaker(account),",
+            "          ...(attempt.takerAmount ? { takerAmount: attempt.takerAmount } : {}),",
+            "          submitUnknown: !attempt.acceptedOrderId };"
+          ]
+        },
+        {
+          "start": 413,
+          "before": [
+            "        if (legacy) { Object.assign(legacy, recovery, { pmScope, pmSubmission }); continue; }"
+          ],
+          "after": [
+            "        if (legacy) {",
+            "          Object.assign(legacy, recovery, { pmScope,",
+            "            pmSubmission: validatePmSubmission({ ...legacy.pmSubmission, ...pmSubmission }, orderId, account.accountId) ?? pmSubmission });",
+            "          continue;",
+            "        }"
+          ]
+        },
+        {
+          "start": 428,
+          "before": [
+            "  for (const task of pendingVenueBetConfirmations.values())"
+          ],
+          "after": [
+            "  for (const task of pendingVenueBetConfirmations.values()) {",
+            "    pendingVenueConfirmationResumeVersions.set(task.key, getAuthSessionVersion());"
+          ]
+        },
+        {
+          "start": 431,
+          "before": [],
+          "after": [
+            "  }",
+            "}",
+            "",
+            "",
+            "const pendingPmRestoreFlights = new Set<string>();",
+            "const pendingPmRestoreTimers = new Map<string, ReturnType<typeof setTimeout>>();",
+            "async function restoreStoredPendingPmOrders(store: AccountStoreContext): Promise<void> {",
+            "  await Promise.allSettled((store.accounts ?? []).filter(account => account.provider === \"Polymarket\")",
+            "    .map(account => restoreStoredPendingPmAccount(store, account)));",
+            "}",
+            "",
+            "async function restoreStoredPendingPmAccount(store: AccountStoreContext, account: PlatformAccount): Promise<void> {",
+            "  let scope: string;",
+            "  try { scope = pmSubmitScope(account); } catch { return; }",
+            "  const version = getAuthSessionVersion();",
+            "  const flightKey = JSON.stringify([version, scope, account.accountId]);",
+            "  if (pendingPmRestoreFlights.has(flightKey)) return;",
+            "  const retry = pendingPmRestoreTimers.get(flightKey);",
+            "  if (retry) { clearTimeout(retry); pendingPmRestoreTimers.delete(flightKey); }",
+            "  pendingPmRestoreFlights.add(flightKey);",
+            "  const current = () => {",
+            "    try {",
+            "      const live = store.findAccount(account.accountId);",
+            "      return isAuthSessionCurrent(version) && live?.provider === \"Polymarket\" && scope === pmSubmitScope(live);",
+            "    }",
+            "    catch { return false; }",
+            "  };",
+            "  try {",
+            "    const rows = await getPendingPmOrders(account.accountId);",
+            "    if (!current()) return;",
+            "    for (const row of rows) {",
+            "      const submission = validatePmSubmission(row.submission, row.orderId, account.accountId);",
+            "      if (!submission?.makerAddress || submission.makerAddress !== pmSubmitMaker(account)) continue;",
+            "      const existing = [...pendingVenueBetConfirmations.values()].find(task =>",
+            "        task.provider === \"Polymarket\" && task.accountId === account.accountId",
+            "        && task.orderId === row.orderId && (!task.pmScope || task.pmScope === scope));",
+            "      if (existing) {",
+            "        pendingVenueOrderWrites.delete(existing); // RDS 已证实完整订单已保存。",
+            "        existing.pmScope = scope;",
+            "        existing.pmSubmission = submission;",
+            "        existing.matchId ||= row.matchId;",
+            "        existing.venueBetId ||= row.conditionId;",
+            "        existing.itemId ||= row.tokenId;",
+            "        existing.linkId ||= row.linkId;",
+            "        persistPendingVenueBetConfirmations();",
+            "        schedulePendingVenueBetConfirmation(store, existing);",
+            "        continue;",
+            "      }",
+            "      const key = `${scope}:${row.orderId}`;",
+            "      const task: PendingVenueBetConfirmation = {",
+            "        key, pmScope: scope, accountId: account.accountId, provider: \"Polymarket\", orderId: row.orderId,",
+            "        matchId: row.matchId, venueBetId: row.conditionId, itemId: row.tokenId,",
+            "        target: row.target as BetOption[\"target\"], betRowId: 0, betMoney: submission.stakeUsdc,",
+            "        odds: row.odds, linkId: row.linkId, pmSubmission: submission, recoveryOnly: true,",
+            "        accountLine: \"\", detailHtml: \"\", toastSeconds: 3, attempts: 0, nextPollAt: Date.now(),",
+            "      };",
+            "      pendingVenueBetConfirmations.set(key, task);",
+            "      persistPendingVenueBetConfirmations();",
+            "      schedulePendingVenueBetConfirmation(store, task);",
+            "    }",
+            "  }",
+            "  catch {",
+            "    if (current()) pendingPmRestoreTimers.set(flightKey, setTimeout(() => {",
+            "      pendingPmRestoreTimers.delete(flightKey);",
+            "      if (current()) void restoreStoredPendingPmAccount(store, store.findAccount(account.accountId)!);",
+            "    }, 5_000));",
+            "  }",
+            "  finally { pendingPmRestoreFlights.delete(flightKey); }"
+          ]
+        },
+        {
+          "start": 641,
+          "before": [],
+          "after": [
+            "  let pendingOrderSave: Promise<void> | undefined;"
+          ]
+        },
+        {
+          "start": 660,
+          "before": [],
+          "after": [
+            "      if (account.provider === \"Polymarket\" && result.pending) {",
+            "        pendingOrderSave = persistPendingPmOrder(account, option, result);",
+            "        void pendingOrderSave.catch(error => { console.warn(\"[Polymarket] 待确认订单保存失败\", error); });",
+            "        // 收到场馆回执即可继续；完整订单保存与官方确认并行，终态写入等待该保存。",
+            "      }"
+          ]
+        },
+        {
+          "start": 759,
+          "before": [],
+          "after": [
+            "        pendingOrderSave,"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/arbLegSettle.ts": {
+      "beforeSha": "cd7171e25fdc7e2c8d0eff5857ff730c866b90f4ebfe14f7d8756fa296349dfa",
+      "afterSha": "3f8a56bbe780dbf80ba05fcd69cff8e11e8615062797216ca10e7a4b2f6a8063",
+      "edits": [
+        {
+          "start": 4,
+          "before": [
+            "import {",
+            "  isVenueLegConfirmedUnfilled,",
+            "  isVenueLegPendingConfirm,",
+            "} from \"@changmen/venue-browser/adapter/contract\";",
+            "import { resolveVenueLegOutcome } from \"@/domain/betting/resolveVenueLegOutcome\";",
+            "import { refreshOrderListAfterBind } from \"@/stores/betting/arbOrderBind\";",
+            "import { useAccountStore } from \"@/stores/accountStore\";",
+            "import { isPendingConfirmVenueProvider, isPolymarketProvider, isPredictFunProvider } from \"@changmen/shared/account_multiply\";"
+          ],
+          "after": [
+            "import { isPolymarketProvider, isPredictFunProvider } from \"@changmen/shared/account_multiply\";",
+            "import { confirmVenueBet } from \"./confirmVenueBet\";"
+          ]
+        },
+        {
+          "start": 39,
+          "before": [
+            "  const pendingBindOrderId = String(result?.orderId ?? \"\").trim() || undefined;",
+            "  // [changmen 扩展] 首轮拉单已带最终 Link 落库（venueOrders.stampPendingBindLink），",
+            "  // 侧栏无需等不确定重拉 / 另一腿 settle。PF 不经 Client_SaveOrder，跳过。",
+            "  const canRefreshEarly = Boolean(opts.pendingBindLinkId)",
+            "    && !isPredictFunProvider(account.provider);",
+            "  let refreshedSidebar = false;",
+            "  const outcome = await resolveVenueLegOutcome(",
+            "    account,",
+            "    result,",
+            "    async () => {",
+            "      const orders = await useAccountStore().updateVenueOrders(account, {",
+            "        pendingBindLinkId: opts.pendingBindLinkId,",
+            "        pendingBindOrderId,",
+            "        // 官方 delayed：matched 后 trades 可能滞后；等 orderId 出现再 save",
+            "        waitForOrderId: pendingBindOrderId,",
+            "        // RAY 成功响应不返回 orderId；首轮列表尚未索引时短重试，避免漏单后等全局轮询。",
+            "        waitForRecentOrderAfterMs: String(account.provider).toUpperCase() === \"RAY\"",
+            "          ? Number(result?.beginTime) || undefined",
+            "          : undefined,",
+            "      });",
+            "      if (canRefreshEarly && !refreshedSidebar && orders?.length) {",
+            "        refreshedSidebar = true;",
+            "        refreshOrderListAfterBind();",
+            "      }",
+            "      return orders;",
+            "    },",
+            "    {",
+            "      confirmPostAccepted: isPendingConfirmVenueProvider(account.provider) && Boolean(result),",
+            "      rejectWaitSec: opts.rejectWaitSec,",
+            "      pmConditionId: String(opts.betOption?.betId ?? \"\").trim() || undefined,",
+            "    },",
+            "  );",
+            "  const rejected = isVenueLegConfirmedUnfilled(outcome);",
+            "  const pendingConfirm = isVenueLegPendingConfirm(outcome);"
+          ],
+          "after": [
+            "  const confirmed = await confirmVenueBet(account, result, {",
+            "    rejectWaitSec: opts.rejectWaitSec,",
+            "    pendingBindLinkId: opts.pendingBindLinkId,",
+            "    pmConditionId: String(opts.betOption?.betId ?? \"\").trim() || undefined,",
+            "  });",
+            "  const { rejected } = confirmed;"
+          ]
+        },
+        {
+          "start": 57,
+          "before": [
+            "  return {",
+            "    orders: outcome.orders,",
+            "    rejected,",
+            "    pendingConfirm,",
+            "  };"
+          ],
+          "after": [
+            "  return confirmed;"
+          ]
+        }
+      ]
+    },
+    "packages/shared/pm_submission.ts": {
+      "beforeSha": "b640e745bf52c528530571a201112ba53109fbc2b4e3f971804326b312d81b40",
+      "afterSha": "f6a677746fe858308a1723147bf2d4c1b865662fa03f32bd0e388a7f68675098",
+      "edits": [
+        {
+          "start": 62,
+          "before": [],
+          "after": [
+            "/** [changmen 扩展] 从同一 RDS 待确认订单恢复拒单检测所需的查询身份。 */",
+            "export interface PmPendingOrderReceipt {",
+            "  orderId: string;",
+            "  submission: PmSubmission;",
+            "  matchId: string;",
+            "  conditionId: string;",
+            "  tokenId: string;",
+            "  target: string;",
+            "  odds: number;",
+            "  linkId: number;",
+            "}",
+            "",
+            "/** [changmen 扩展] Pending 表示提交结果待确认，不是已成交未结算（None）。 */",
+            "export function isPmPendingOrder(value: { provider?: unknown; Type?: unknown; status?: unknown; Status?: unknown } | null | undefined): boolean {",
+            "  return String(value?.provider ?? value?.Type ?? \"\") === \"Polymarket\"",
+            "    && String(value?.status ?? value?.Status ?? \"\").toLowerCase() === \"pending\";",
+            "}",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/api/order.ts": {
+      "beforeSha": "d0254a703f964c7b4b0447ba6149d21857d7530ff92380811a70dd5454f7acc7",
+      "afterSha": "51ffb5efeaae4cd6b6eb22523e0bccb8c7b90ac3e404b01fe6b289998b4478bc",
+      "edits": [
+        {
+          "start": 4,
+          "before": [
+            "import type { PmSubmission } from \"@changmen/shared/pm_submission\";"
+          ],
+          "after": [
+            "import type { PmSubmission, PmPendingOrderReceipt } from \"@changmen/shared/pm_submission\";"
+          ]
+        },
+        {
+          "start": 17,
+          "before": [],
+          "after": [
+            "}",
+            "",
+            "/** [changmen 扩展] 从 RDS 读取待确认订单，刷新恢复不依赖名称缓存。 */",
+            "export async function getPendingPmOrders(playerId: number): Promise<PmPendingOrderReceipt[]> {",
+            "  const response = await post<PmPendingOrderReceipt[]>(\"Pm_GetPendingOrders\", { playerId }, \"\", { errorTip: false });",
+            "  if (response.success !== 1) throw new Error(response.msg || \"待确认订单读取失败\");",
+            "  return response.info ?? [];"
+          ]
+        }
+      ]
+    },
+    "packages/api-contract/src/actions.ts": {
+      "beforeSha": "ae93deddc9afb53c63b826eefdb3bd94d5a2e554fd18c9a111bb9733458569c4",
+      "afterSha": "1568ecc7cf46282278d9770a60e2654cc76c1c8cc68a1ecc0030b43b1dfac3f8",
+      "edits": [
+        {
+          "start": 62,
+          "before": [],
+          "after": [
+            "  \"Pm_GetPendingOrders\","
+          ]
+        }
+      ]
+    },
+    "packages/api-contract/src/actions.js": {
+      "beforeSha": "c384f5cb5647dc4d170c4a824ee8b9c51d339269ecda381860b46378e2d7cb03",
+      "afterSha": "7c45a0510dc31de7787564903403ba840053a23c2c6ed24f0e1089ceed1255f3",
+      "edits": [
+        {
+          "start": 53,
+          "before": [],
+          "after": [
+            "    \"Pm_GetPendingOrders\","
+          ]
+        }
+      ]
+    },
+    "server/backend/core/account/order_store.js": {
+      "beforeSha": "298f49b489f01957bfd5b9f33e106f8f63419a06b44d9cf996d79073f4375d06",
+      "afterSha": "3901c1a9b0149926339ce694ed21816c935729b44f07b5970be5447546cc12e4",
+      "edits": [
+        {
+          "start": 25,
+          "before": [],
+          "after": [
+            "import { preparePmPendingOrderSave } from \"./order/pm_pending.js\";",
+            "import { isPmPendingOrder } from \"@changmen/shared/pm_submission\";"
+          ]
+        },
+        {
+          "start": 233,
+          "before": [
+            "    const orderForMerge = provider && !o.provider && !o.Type",
+            "      ? { ...o, provider }",
+            "      : o;"
+          ],
+          "after": [
+            "    const orderForMerge = preparePmPendingOrderSave(prevRow,",
+            "      provider && !o.provider && !o.Type ? { ...o, provider } : o, playerId, provider);",
+            "    if (!orderForMerge) continue;"
+          ]
+        },
+        {
+          "start": 269,
+          "before": [
+            "      match: o.match || o.Match || \"\",",
+            "      bet: o.bet || o.Bet || \"\",",
+            "      item: o.item || o.Item || \"\",",
+            "      odds: parseNum(o.odds, 0),"
+          ],
+          "after": [
+            "      match: orderForMerge.match || orderForMerge.Match || \"\",",
+            "      bet: orderForMerge.bet || orderForMerge.Bet || \"\",",
+            "      item: orderForMerge.item || orderForMerge.Item || \"\",",
+            "      odds: parseNum(orderForMerge.odds, 0),"
+          ]
+        },
+        {
+          "start": 334,
+          "before": [
+            "    if (status === \"Reject\")"
+          ],
+          "after": [
+            "    if (status === \"Reject\" || isPmPendingOrder(o))"
+          ]
+        }
+      ]
+    },
+    "server/backend/core/account/order/save_pm.js": {
+      "beforeSha": "57ea43e3ae66ab6e244e1c5ddd7b4e5758caac9a809ea2fa15917211925de5dc",
+      "afterSha": "6f7913ba3bb356b924bd884334812c597fa8a8aa02297902ad3aa070c4178fdf",
+      "edits": [
+        {
+          "start": 5,
+          "before": [
+            "import { validatePmSubmission } from \"@changmen/shared/pm_submission\";"
+          ],
+          "after": [
+            "import { isPmPendingOrder, validatePmSubmission } from \"@changmen/shared/pm_submission\";"
+          ]
+        },
+        {
+          "start": 57,
+          "before": [
+            "  const prevBet = parseNum(prevRaw.betMoney, parseNum(prevRow?.bet_money, 0));"
+          ],
+          "after": [
+            "  const requestedOnly = isPmPendingOrder(prevRow)",
+            "    || (String(prevRow?.status).toLowerCase() === \"reject\" && !(Number(prevRaw.pmShares) > 0)",
+            "      && validatePmSubmission(prevRaw.pmSubmission, String(prevRow.order_id), Number(prevRaw.pmSubmission?.accountId)));",
+            "  const prevBet = requestedOnly ? 0 : parseNum(prevRaw.betMoney, parseNum(prevRow?.bet_money, 0));"
+          ]
+        }
+      ]
+    },
+    "server/backend/core/account/order/profit_cny.js": {
+      "beforeSha": "f6f9e9b30f46b65d5a604ca3dd8de38b9dab3898d91d82466707d38d88edd9fd",
+      "afterSha": "a9a3e5c93f395c676458a48e71973706715c0b13ddb40d5efdf1a0cd2241ffb2",
+      "edits": [
+        {
+          "start": 0,
+          "before": [],
+          "after": [
+            "import { isPmPendingOrder } from \"@changmen/shared/pm_submission\";"
+          ]
+        },
+        {
+          "start": 9,
+          "before": [
+            "  if (isPredictionSellForCount(o))"
+          ],
+          "after": [
+            "  if (isPmPendingOrder(o) || isPredictionSellForCount(o))"
+          ]
+        },
+        {
+          "start": 18,
+          "before": [],
+          "after": [
+            "  if (isPmPendingOrder(o)) return 0;"
+          ]
+        }
+      ]
+    },
+    "server/backend/core/account/report_service.js": {
+      "beforeSha": "1cc83faefec99c6bd16a11f9189817f4f533527183b1c576b216fdc4113a3dec",
+      "afterSha": "83d45d29c88358076a37cfa783eec2a3950722b48a54e6b24a04beeb317dbcfc",
+      "edits": [
+        {
+          "start": 0,
+          "before": [],
+          "after": [
+            "import { isPmPendingOrder } from \"@changmen/shared/pm_submission\";"
+          ]
+        },
+        {
+          "start": 80,
+          "before": [
+            "      if (String(o.status || \"\") === \"Reject\")"
+          ],
+          "after": [
+            "      if (String(o.status || \"\") === \"Reject\" || isPmPendingOrder(o))"
+          ]
+        }
+      ]
+    },
+    "server/backend/core/integrations/polymarket/submission_handler.js": {
+      "beforeSha": "918bc5d5b80a751bc8ed0e34f0b967a5f5594181a6259c3a842af4c77c3e68df",
+      "afterSha": "9b3c8ca71e8034ace3d6f10a7ee35be3068179dd17773f4ef05166a06a99e60a",
+      "edits": [
+        {
+          "start": 0,
+          "before": [
+            "import { fetchPmSubmissionLogs } from \"@changmen/db\";"
+          ],
+          "after": [
+            "import { validatePmSubmission } from \"@changmen/shared/pm_submission\";",
+            "import { fetchPmSubmissionLogs, fetchOrdersByPlayerOrderIdsStrict, fetchOrdersByPlayerStrict } from \"@changmen/db\";"
+          ]
+        },
+        {
+          "start": 16,
+          "before": [],
+          "after": [
+            "  const orders = await fetchOrdersByPlayerOrderIdsStrict(Number(owned.player.id), userId, [orderId]);",
+            "  const stored = orders.find(row => row.provider === \"Polymarket\" && String(row.order_id).toLowerCase() === orderId.toLowerCase());",
+            "  const submission = validatePmSubmission(stored?.raw?.pmSubmission, stored?.order_id, Number(owned.player.id));",
+            "  if (submission) return { ok: true, info: submission };"
+          ]
+        },
+        {
+          "start": 25,
+          "before": [],
+          "after": [
+            "/** [changmen 扩展] 恢复检测只返回查询身份与提交证据，不把名称交给确认任务。 */",
+            "export async function handlePmGetPendingOrders(body, userId) {",
+            "  if (!userId) return { ok: false, msg: \"请先登录\" };",
+            "  const owned = await assertPlayerOwnedByUser(body.playerId, userId);",
+            "  if (!owned.ok) return owned;",
+            "  if (owned.player?.provider !== \"Polymarket\") return { ok: false, msg: \"不是 PM 账号\" };",
+            "  const rows = await fetchOrdersByPlayerStrict(Number(owned.player.id), userId, { pmPendingOnly: true });",
+            "  const info = [];",
+            "  for (const row of rows) {",
+            "    const raw = row.raw || {};",
+            "    const submission = validatePmSubmission(raw.pmSubmission, row.order_id, Number(owned.player.id));",
+            "    if (!submission || raw.pmGtcExecutionId) continue;",
+            "    info.push({ orderId: row.order_id, submission, matchId: String(raw.venueMatchId || \"\"),",
+            "      conditionId: String(raw.pmConditionId || \"\"), tokenId: String(raw.pmTokenId || \"\"),",
+            "      target: String(raw.venueItemId || \"Home\"), odds: Number(row.odds) || 0, linkId: Number(row.link) || 0 });",
+            "  }",
+            "  return { ok: true, info };",
+            "}",
+            ""
+          ]
+        }
+      ]
+    },
+    "server/backend/core/esport-api/pm_pf_routes.ts": {
+      "beforeSha": "f5d848ea924f38aa3ffeae70d136f8d2171c66a018e8530c5e700a8cea95c6ce",
+      "afterSha": "6154ce853a3984dfbc7581ed99aaaaaed998d5cc65eaab5abc3bab93ecdbf2f4",
+      "edits": [
+        {
+          "start": 18,
+          "before": [
+            "import { handlePmGetSubmission } from \"../integrations/polymarket/submission_handler.js\";"
+          ],
+          "after": [
+            "import { handlePmGetSubmission, handlePmGetPendingOrders } from \"../integrations/polymarket/submission_handler.js\";"
+          ]
+        },
+        {
+          "start": 98,
+          "before": [],
+          "after": [
+            "    case \"Pm_GetPendingOrders\": {",
+            "      const pending = await handlePmGetPendingOrders(body, ctx.user.id);",
+            "      return pending.ok ? ok(pending.info) : fail(pending.msg);",
+            "    }"
+          ]
+        }
+      ]
+    },
+    "server/backend/core/account/order/dto.js": {
+      "beforeSha": "64c7060e6fc7d9eb7a015c3d3018092cc79f387b373dd97e80cee9099acd3263",
+      "afterSha": "aa0c75562bc64fba9ddafe8e9fa1c25710277c8d4e8aaf1f48081c2562ff98d0",
+      "edits": [
+        {
+          "start": 64,
+          "before": [
+            "    && String(r.status).toLowerCase() === \"reject\""
+          ],
+          "after": [
+            "    && [\"reject\", \"pending\"].includes(String(r.status).toLowerCase())"
+          ]
+        }
+      ]
+    },
+    "rds/rds/orders_store.js": {
+      "beforeSha": "6ebd382c6801b716cda7f0b13a4c25c4bbd2b0cbf559252c3bdecbd0d6357923",
+      "afterSha": "d96560ff7121b71161f0d894f4631e0abdda805ca02be8b24ce0544f32f779ba",
+      "edits": [
+        {
+          "start": 15,
+          "before": [],
+          "after": [
+            "",
+            "/** [changmen 扩展] 已成交统计排除 PM 提交待确认单；列表仍读取 orders 全部状态。 */",
+            "function analyticsOrdersRelation(alias = \"\") {",
+            "  return `(SELECT * FROM ${financialOrdersRelation()} WHERE provider IS DISTINCT FROM 'Polymarket' OR status IS DISTINCT FROM 'Pending') ${alias || \"accounted_orders\"}`;",
+            "}"
+          ]
+        },
+        {
+          "start": 126,
+          "before": [],
+          "after": [
+            "  WHERE NOT (COALESCE(EXCLUDED.provider, '') = 'Polymarket' AND (",
+            "    (EXCLUDED.status = 'Pending' AND orders.status IS DISTINCT FROM 'Pending')",
+            "    OR (EXCLUDED.status IN ('Reject', 'Return') AND orders.raw ? 'pmSubmission'",
+            "      AND CASE WHEN jsonb_typeof(orders.raw->'pmShares') = 'number'",
+            "        THEN (orders.raw->>'pmShares')::float8 ELSE 0 END > 0)",
+            "  ))"
+          ]
+        },
+        {
+          "start": 682,
+          "before": [],
+          "after": [
+            "  if (opts?.pmPendingOnly) {",
+            "    const { rows } = await pool.query(",
+            "      `SELECT * FROM orders WHERE user_id = $1 AND player_id = $2",
+            "       AND provider = 'Polymarket' AND status = 'Pending'",
+            "       AND COALESCE(raw->>'pmSide', 'buy') = 'buy' ORDER BY create_at`,",
+            "      [String(userId), Number(playerId)],",
+            "    );",
+            "    return rows || [];",
+            "  }"
+          ]
+        },
+        {
+          "start": 996,
+          "before": [
+            "      `SELECT money, bet_money, status, provider, raw FROM ${financialOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`,"
+          ],
+          "after": [
+            "      `SELECT money, bet_money, status, provider, raw FROM ${analyticsOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`,"
+          ]
+        },
+        {
+          "start": 1212,
+          "before": [
+            "               FROM ${financialOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`;"
+          ],
+          "after": [
+            "               FROM ${analyticsOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`;"
+          ]
+        },
+        {
+          "start": 1239,
+          "before": [
+            "       FROM ${financialOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`,"
+          ],
+          "after": [
+            "       FROM ${analyticsOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`,"
+          ]
+        },
+        {
+          "start": 1403,
+          "before": [
+            "        FROM ${financialOrdersRelation(\"o\")}"
+          ],
+          "after": [
+            "        FROM ${analyticsOrdersRelation(\"o\")}"
+          ]
+        },
+        {
+          "start": 1447,
+          "before": [
+            "       FROM ${financialOrdersRelation()}"
+          ],
+          "after": [
+            "       FROM ${analyticsOrdersRelation()}"
+          ]
+        },
+        {
+          "start": 1569,
+          "before": [
+            "       FROM ${financialOrdersRelation(\"o\")}"
+          ],
+          "after": [
+            "       FROM ${analyticsOrdersRelation(\"o\")}"
+          ]
+        },
+        {
+          "start": 1609,
+          "before": [
+            "       FROM ${financialOrdersRelation()}"
+          ],
+          "after": [
+            "       FROM ${analyticsOrdersRelation()}"
+          ]
+        },
+        {
+          "start": 1672,
+          "before": [
+            "       FROM ${financialOrdersRelation()}"
+          ],
+          "after": [
+            "       FROM ${analyticsOrdersRelation()}"
+          ]
+        },
+        {
+          "start": 1680,
+          "before": [
+            "       FROM ${financialOrdersRelation()}"
+          ],
+          "after": [
+            "       FROM ${analyticsOrdersRelation()}"
+          ]
+        },
+        {
+          "start": 1838,
+          "before": [
+            "        FROM ${financialOrdersRelation(\"pm\")}"
+          ],
+          "after": [
+            "        FROM ${analyticsOrdersRelation(\"pm\")}"
+          ]
+        },
+        {
+          "start": 1891,
+          "before": [
+            "        LEFT JOIN ${financialOrdersRelation(\"o\")}"
+          ],
+          "after": [
+            "        LEFT JOIN ${analyticsOrdersRelation(\"o\")}"
+          ]
+        },
+        {
+          "start": 1941,
+          "before": [
+            "        JOIN ${financialOrdersRelation(\"other\")}"
+          ],
+          "after": [
+            "        JOIN ${analyticsOrdersRelation(\"other\")}"
+          ]
+        },
+        {
+          "start": 2060,
+          "before": [
+            "       FROM ${financialOrdersRelation(\"o\")}"
+          ],
+          "after": [
+            "       FROM ${analyticsOrdersRelation(\"o\")}"
+          ]
+        },
+        {
+          "start": 2134,
+          "before": [
+            "       FROM ${financialOrdersRelation(\"o\")}"
+          ],
+          "after": [
+            "       FROM ${analyticsOrdersRelation(\"o\")}"
+          ]
+        }
+      ]
+    },
+    "client/web/src/shared/pmOrderDisplay.ts": {
+      "beforeSha": "d68c53a3d560ae3ffff0772408378fe3f55845212222daef86d9f54fb310ab5d",
+      "afterSha": "6de2c3dc77656c0ca0792f2668e2b39b4c4c85b611d506fba4509f04fb726bf3",
+      "edits": [
+        {
+          "start": 0,
+          "before": [],
+          "after": [
+            "import { isPmPendingOrder } from \"@changmen/shared/pm_submission\";"
+          ]
+        },
+        {
+          "start": 51,
+          "before": [],
+          "after": [
+            "  if (isPmPendingOrder(row)) return \"待确认\";"
+          ]
+        },
+        {
+          "start": 79,
+          "before": [],
+          "after": [
+            "  if (isPmPendingOrder(row)) return \"PmPending\";"
+          ]
+        },
+        {
+          "start": 114,
+          "before": [],
+          "after": [
+            "  if (isPmPendingOrder(row)) return null;"
+          ]
+        },
+        {
+          "start": 345,
+          "before": [],
+          "after": [
+            "  if (isPmPendingOrder(row)) return null;"
+          ]
+        },
+        {
+          "start": 355,
+          "before": [
+            "    || String(normalizeOrderStatus(String(row.Status ?? \"\"))) !== \"Reject\")"
+          ],
+          "after": [
+            "    || ![\"Reject\", \"Pending\"].includes(String(normalizeOrderStatus(String(row.Status ?? \"\")))))"
+          ]
+        }
+      ]
+    },
+    "client/web/src/components/order/OrderList.vue": {
+      "beforeSha": "2e6adefc6b67850c12946cc9edd238c178b17d01f0e5b616ee96665236c6c0fb",
+      "afterSha": "3fdc9d3740f31feca1d3e42deae04dfe17e6016af5908d884f9edb8959f49cf0",
+      "edits": [
+        {
+          "start": 1,
+          "before": [],
+          "after": [
+            "import { isPmPendingOrder } from \"@changmen/shared/pm_submission\";"
+          ]
+        },
+        {
+          "start": 402,
+          "before": [
+            "  return isPmSellOrderListRow(row) ? \"回款\" : \"买入金额\";"
+          ],
+          "after": [
+            "  return isPmPendingOrder(row) ? \"申请金额\" : isPmSellOrderListRow(row) ? \"回款\" : \"买入金额\";"
+          ]
+        },
+        {
+          "start": 797,
+          "before": [
+            "                  <template v-if=\"isPendingRow(block.row) && !pmBuyLifecycleTagText(block.row)\">"
+          ],
+          "after": [
+            "                  <template v-if=\"isPmPendingOrder(block.row)\">",
+            "                    盈亏：待确认",
+            "                  </template>",
+            "                  <template v-else-if=\"isPendingRow(block.row) && !pmBuyLifecycleTagText(block.row)\">"
+          ]
+        }
+      ]
+    },
+    "client/web/src/styles/sidebar-orders.css": {
+      "beforeSha": "a0cc2d8443556460f68e7cee62ed00276af2783da65d3cabe35fea1a9989d7d4",
+      "afterSha": "a1ce5c762a042b64ffc9ceb3476776792c9e968def8f5dbd3d7d139f0580a38c",
+      "edits": [
+        {
+          "start": 778,
+          "before": [],
+          "after": [
+            "/* [changmen 扩展] 提交待确认与已成交待结算使用不同角标。 */",
+            ".orders .status.PmPending {",
+            "  background: #8a651f;",
+            "  color: #fff;",
+            "}",
+            ".orders .status.PmPending::after {",
+            "  content: \"待确认\";",
+            "}",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/shared/orderLink.ts": {
+      "beforeSha": "a5a0c5cbcf3094de50315b44bb01a505564a05b5543620fb550d10891980ed49",
+      "afterSha": "7f6fd5d2a829ac6048d1b17c9f309a5ae6dea12b58a1c25867d0e20b561688ec",
+      "edits": [
+        {
+          "start": 0,
+          "before": [],
+          "after": [
+            "import { isPmPendingOrder } from \"@changmen/shared/pm_submission\";"
+          ]
+        },
+        {
+          "start": 735,
+          "before": [],
+          "after": [
+            "  if (isPmPendingOrder(row)) return 0;"
+          ]
+        },
+        {
+          "start": 885,
+          "before": [],
+          "after": [
+            "  if (rows.some(isPmPendingOrder)) return \"订单待确认\";"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/orderStore.ts": {
+      "beforeSha": "14bf2cccc4abba811bd4c55105dede4eaff642f5521d7d3aa5022ab48214c7cd",
+      "afterSha": "cfcfe56138995e5aebe3457bf438b29c70ba4eb18f57bd39e2a06b5c08c9368d",
+      "edits": [
+        {
+          "start": 0,
+          "before": [],
+          "after": [
+            "import { isPmPendingOrder } from \"@changmen/shared/pm_submission\";"
+          ]
+        },
+        {
+          "start": 120,
+          "before": [
+            "            .filter(r => orderBelongsToDateKey(r, this.orderDate, reportBase))"
+          ],
+          "after": [
+            "            .filter(r => !isPmPendingOrder(r) && orderBelongsToDateKey(r, this.orderDate, reportBase))"
+          ]
+        },
+        {
+          "start": 166,
+          "before": [
+            "        const primaryCount = rows.filter(r => !isPredictionSellRow(r)).length;"
+          ],
+          "after": [
+            "        const primaryCount = rows.filter(r => !isPmPendingOrder(r) && !isPredictionSellRow(r)).length;"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/account/betGateway.recovery.test.ts": {
+      "beforeSha": "fc7ef84aea0d50fadfe987154581029b80fb8bfa13bae1fa73ece30e30f2aa04",
+      "afterSha": "679ef95574ea09d9827f050ec96781dc69fa81fca92a979c1a07606c45cac364",
+      "edits": [
+        {
+          "start": 6,
+          "before": [
+            "  recover: vi.fn(),"
+          ],
+          "after": [
+            "  recover: vi.fn(), pending: vi.fn(), save: vi.fn(),"
+          ]
+        },
+        {
+          "start": 10,
+          "before": [
+            "vi.mock(\"@/api/order\", () => ({ getPmSubmission: mocks.recover }));"
+          ],
+          "after": [
+            "vi.mock(\"@/api/order\", () => ({ getPmSubmission: mocks.recover, getPendingPmOrders: mocks.pending, saveOrders: mocks.save }));"
+          ]
+        },
+        {
+          "start": 14,
+          "before": [],
+          "after": [
+            "vi.mock(\"@/stores/betting/autoBet/confirmVenueBet\", () => ({ confirmVenueBet: mocks.settle }));"
+          ]
+        },
+        {
+          "start": 37,
+          "before": [],
+          "after": [
+            "  mocks.pending.mockResolvedValue([]); mocks.save.mockResolvedValue(undefined);"
+          ]
+        },
+        {
+          "start": 94,
+          "before": [],
+          "after": [
+            "const storedReceipt = () => ({ orderId: \"hash-one\", submission: { orderId: \"hash-one\", accountId: 9,",
+            "  makerAmount: original.makerAmount, stakeUsdc: 10, submittedAt: original.submittedAt,",
+            "  makerAddress: \"0x1111111111111111111111111111111111111111\", takerAmount: \"20000000\" },",
+            "  matchId: \"match\", conditionId: \"condition\", tokenId: \"token\", target: \"Home\", odds: 2 });",
+            "",
+            "test(\"RDS hydrates an existing scoped task with missing submission evidence\", async () => {",
+            "  sessionStorage.setItem(\"PENDING_VENUE_BET_CONFIRM\", JSON.stringify([{",
+            "    key: \"owner-one-wallet:hash-one\", pmScope: mocks.scope, accountId: 9, provider: \"Polymarket\", orderId: \"hash-one\",",
+            "    ...original.recovery, attempts: 2, nextPollAt: Date.now() + 1000,",
+            "  }]));",
+            "  mocks.pending.mockResolvedValue([storedReceipt()]);",
+            "  const api = await import(\"./betGateway\"); api.resumePendingVenueConfirmations(store);",
+            "  await vi.advanceTimersByTimeAsync(1000);",
+            "  expect(mocks.settle.mock.calls[0][1]).toMatchObject({ request: { order: {",
+            "    makerAmount: original.makerAmount, takerAmount: \"20000000\", maker: storedReceipt().submission.makerAddress,",
+            "  } } });",
+            "  expect(JSON.parse(sessionStorage.getItem(\"PENDING_VENUE_BET_CONFIRM\")!)[0].attempts).toBe(3);",
+            "});",
+            "",
+            "test(\"RDS recovery retries a failed read without requiring an account reload\", async () => {",
+            "  mocks.pending.mockRejectedValueOnce(new Error(\"temporary network failure\")).mockResolvedValue([storedReceipt()]);",
+            "  const api = await import(\"./betGateway\"); api.resumePendingVenueConfirmations(store);",
+            "  await vi.advanceTimersByTimeAsync(5001);",
+            "  expect(mocks.pending).toHaveBeenCalledTimes(2);",
+            "  expect(mocks.settle).toHaveBeenCalledOnce();",
+            "});",
+            "",
+            "test(\"a slow account does not block restoration of other accounts\", async () => {",
+            "  const second = { ...account, accountId: 10 };",
+            "  mocks.pending.mockImplementation((id: number) => id === 9 ? new Promise(() => {}) : Promise.resolve([",
+            "    { ...storedReceipt(), submission: { ...storedReceipt().submission, accountId: 10 } },",
+            "  ]));",
+            "  const api = await import(\"./betGateway\"); api.resumePendingVenueConfirmations({ ...store, accounts: [account, second],",
+            "    findAccount: (id: number) => id === 9 ? account : second } as AccountStoreContext);",
+            "  await vi.advanceTimersByTimeAsync(0);",
+            "  expect(mocks.pending).toHaveBeenCalledWith(10);",
+            "  expect(mocks.settle).toHaveBeenCalledOnce();",
+            "});",
+            "",
+            "test(\"a previous session's in-flight read does not suppress recovery after relogin\", async () => {",
+            "  mocks.pending.mockImplementationOnce(() => new Promise(() => {})).mockResolvedValue([storedReceipt()]);",
+            "  const api = await import(\"./betGateway\"); api.resumePendingVenueConfirmations(store);",
+            "  mocks.session = \"session-two\"; api.resumePendingVenueConfirmations(store);",
+            "  await vi.advanceTimersByTimeAsync(0);",
+            "  expect(mocks.pending).toHaveBeenCalledTimes(2);",
+            "  expect(mocks.settle).toHaveBeenCalledOnce();",
+            "});",
+            "",
+            "test.each([\"session\", \"scope\"] as const)(\"changing %s during terminal save preserves the task without notifying or counting\", async (field) => {",
+            "  mocks.attempts = [{ ...original, recovery: { ...original.recovery, betRowId: 20 } }];",
+            "  mocks.settle.mockResolvedValue({ pendingConfirm: false, rejected: false,",
+            "    orders: [{ orderId: \"hash-one\", status: \"none\", pmShares: 20 }] });",
+            "  let finish!: () => void;",
+            "  mocks.save.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));",
+            "  const api = await import(\"./betGateway\"); api.resumePendingVenueConfirmations(store);",
+            "  await vi.advanceTimersByTimeAsync(0);",
+            "  expect(mocks.save).toHaveBeenCalledOnce();",
+            "  mocks[field] = \"changed\"; finish();",
+            "  await vi.advanceTimersByTimeAsync(0);",
+            "  expect(mocks.notify).not.toHaveBeenCalled(); expect(mocks.mark).not.toHaveBeenCalled();",
+            "  expect(JSON.parse(sessionStorage.getItem(\"PENDING_VENUE_BET_CONFIRM\")!)).toHaveLength(1);",
+            "  expect(vi.getTimerCount()).toBe(0);",
+            "});",
+            "",
+            "test(\"a journal refresh retains the complete signed submission already in the task\", async () => {",
+            "  sessionStorage.setItem(\"PENDING_VENUE_BET_CONFIRM\", JSON.stringify([{",
+            "    key: \"owner-one-wallet:hash-one\", pmScope: mocks.scope, accountId: 9, provider: \"Polymarket\", orderId: \"hash-one\",",
+            "    ...original.recovery, attempts: 0, nextPollAt: 0, pmSubmission: storedReceipt().submission,",
+            "  }]));",
+            "  mocks.attempts = [original];",
+            "  const api = await import(\"./betGateway\"); api.resumePendingVenueConfirmations(store);",
+            "  await vi.advanceTimersByTimeAsync(0);",
+            "  expect(mocks.settle.mock.calls[0][1]).toMatchObject({ request: { order: {",
+            "    maker: storedReceipt().submission.makerAddress, takerAmount: \"20000000\",",
+            "  } } });",
+            "});",
+            "",
+            "test(\"recovery requested after relogin resumes once the previous session's confirmation finishes\", async () => {",
+            "  let finish!: (value: { pendingConfirm: boolean; rejected: boolean; orders: never[] }) => void;",
+            "  mocks.attempts = [original];",
+            "  mocks.settle.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));",
+            "  const api = await import(\"./betGateway\"); api.resumePendingVenueConfirmations(store);",
+            "  await vi.advanceTimersByTimeAsync(0);",
+            "  mocks.session = \"session-two\"; api.resumePendingVenueConfirmations(store);",
+            "  finish({ pendingConfirm: true, rejected: false, orders: [] });",
+            "  await vi.advanceTimersByTimeAsync(1);",
+            "  expect(mocks.settle).toHaveBeenCalledTimes(2);",
+            "  expect(mocks.notify).not.toHaveBeenCalled(); expect(mocks.mark).not.toHaveBeenCalled();",
+            "});",
+            "",
+            "test.each([\"session\", \"scope\"] as const)(\"a failed RDS read stops retrying after %s changes\", async (field) => {",
+            "  mocks.pending.mockRejectedValue(new Error(\"network unavailable\"));",
+            "  const api = await import(\"./betGateway\"); api.resumePendingVenueConfirmations(store);",
+            "  await vi.advanceTimersByTimeAsync(0);",
+            "  mocks[field] = \"changed\";",
+            "  await vi.advanceTimersByTimeAsync(5001);",
+            "  expect(mocks.pending).toHaveBeenCalledOnce();",
+            "  expect(vi.getTimerCount()).toBe(0);",
+            "});",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/account/polymarketVenueSync.ts": {
+      "beforeSha": "8c8e619b5bf683ef4d1591df6a9c2dab8d43c469459d96e450f8683b014f7d03",
+      "afterSha": "b6a097d89a11325e32bf2e27f5d2976ca6cec32b906b9b94948874e4329528f4",
+      "edits": [
+        {
+          "start": 8,
+          "before": [],
+          "after": [
+            "import { isPmPendingOrder } from \"@changmen/shared/pm_submission\";"
+          ]
+        },
+        {
+          "start": 26,
+          "before": [
+            "      .filter(o => String(o.Type ?? \"\") === \"Polymarket\")"
+          ],
+          "after": [
+            "      .filter(o => String(o.Type ?? \"\") === \"Polymarket\" && !isPmPendingOrder(o))"
+          ]
+        }
+      ]
+    },
+    "scripts/verification/pm-reject-display-boundary.mjs": {
+      "beforeSha": "ff2204fde72f529ce1aaa35760bb09af1ef421c8f3eaf2b497cd1d2eab1113be",
+      "afterSha": "b2c14a60ab1ae155f7f94cf2919c5f5f364de23d1b413439771f955f5a671fee",
+      "edits": [
+        {
+          "start": 6,
+          "before": [],
+          "after": [
+            "import { restorePendingOrderDisplaySource } from \"./pm-pending-order-display-boundary.mjs\";"
+          ]
+        },
+        {
+          "start": 14,
+          "before": [],
+          "after": [
+            "  source = restorePendingOrderDisplaySource(file, source);"
+          ]
+        }
+      ]
+    },
+    "client/web/src/shared/moneyRisk.ts": {
+      "beforeSha": "84a45dbbb5f4784aee6298218af6564e845f6b5823a68a1eb2d3efde677b0ec2",
+      "afterSha": "22af61fc8e8022c02700b51d662fd09156313fcfa071c4e032f0edd75601f3d1",
+      "edits": [
+        {
+          "start": 2,
+          "before": [],
+          "after": [
+            "import { isPmPendingOrder } from \"@changmen/shared/pm_submission\";"
+          ]
+        },
+        {
+          "start": 38,
+          "before": [
+            "  const orders = data.Orders;"
+          ],
+          "after": [
+            "  const orders = data.Orders.filter(order => !isPmPendingOrder(order));"
+          ]
+        }
+      ]
+    },
+    "rds/rds/native_orders.test.mjs": {
+      "beforeSha": "268977a16d3381d0e429341a5acc58bce0c608f77a53c6a70e83e68b0218cf91",
+      "afterSha": "6523aedd1f3fc624e0c486530425ba611521f83830dd41a228b5b988161f036d",
+      "edits": [
+        {
+          "start": 34,
+          "before": [],
+          "after": [
+            "// [changmen 扩展] 只剔除已授权的 PM 状态竞态保护；其余 SQL、参数、事务及 hook 仍逐项对照旧版。",
+            "const pendingRaceGuard = `  WHERE NOT (COALESCE(EXCLUDED.provider, '') = 'Polymarket' AND (",
+            "    (EXCLUDED.status = 'Pending' AND orders.status IS DISTINCT FROM 'Pending')",
+            "    OR (EXCLUDED.status IN ('Reject', 'Return') AND orders.raw ? 'pmSubmission'",
+            "      AND CASE WHEN jsonb_typeof(orders.raw->'pmShares') = 'number'",
+            "        THEN (orders.raw->>'pmShares')::float8 ELSE 0 END > 0)",
+            "  ))",
+            "`;",
+            "function expectHistoricalTrace(actual, previous, operation) {",
+            "  let guards = 0;",
+            "  const calls = actual.calls.map(call => {",
+            "    if (!call.sql?.includes(\"INSERT INTO orders\")) return call;",
+            "    expect(call.sql.split(pendingRaceGuard)).toHaveLength(2);",
+            "    guards++;",
+            "    return { ...call, sql: call.sql.replace(pendingRaceGuard, \"\") };",
+            "  });",
+            "  expect(guards).toBe(operation === \"save\" ? 1 : 0);",
+            "  expect({ ...actual, calls }).toEqual(previous);",
+            "}"
+          ]
+        },
+        {
+          "start": 56,
+          "before": [
+            "    flags(value); expect(await trace(current, operation)).toEqual(old);"
+          ],
+          "after": [
+            "    const ordinary = await trace(current, operation);",
+            "    expectHistoricalTrace(ordinary, old, operation);",
+            "    flags(value); expect(await trace(current, operation)).toEqual(ordinary);"
+          ]
+        },
+        {
+          "start": 61,
+          "before": [
+            "  flags(value); expect(await trace(current, \"save\", true)).toEqual(old);"
+          ],
+          "after": [
+            "  const ordinary = await trace(current, \"save\", true);",
+            "  expectHistoricalTrace(ordinary, old, \"save\");",
+            "  flags(value); expect(await trace(current, \"save\", true)).toEqual(ordinary);"
+          ]
+        }
+      ]
+    },
+    "scripts/verification/gtc-compat-retirement.test.mjs": {
+      "beforeSha": "5853fcfd946bece98480ee8e33b5ba0ebefaea1521e050108ace1debf445bc25",
+      "afterSha": "b7b36f1bd5cf465d33139bb2553f125854bdc5ea8be0433059962ed115d62fc6",
+      "edits": [
+        {
+          "start": 18,
+          "before": [
+            "  it(`${file}: extra work cannot hide behind the retirement`, () => expect(() => verifyGtcCompatibilityRetirement(target => target === file ? `${read(target)}\\nvoid unexpectedTrade();` : read(target))).toThrow(/complete native retirement boundary|complete source outside reject display change/));"
+          ],
+          "after": [
+            "  it(`${file}: extra work cannot hide behind the retirement`, () => expect(() => verifyGtcCompatibilityRetirement(target => target === file ? `${read(target)}\\nvoid unexpectedTrade();` : read(target))).toThrow(/complete native retirement boundary|complete source outside reject display change|exact reject display increment/));"
+          ]
+        }
+      ]
+    }
+  },
+  "helpers": {
+    "client/web/src/stores/account/pmPendingOrder.ts": "1f698cfc0f73f764085762242eecfeea6bfbb0ffab50011e480eaa665ad57d70",
+    "client/web/src/stores/betting/autoBet/confirmVenueBet.ts": "1956c3a9aa05701f89d8cf46b65b29976d871f5573ce07d7fa4ff07b09fa1790",
+    "server/backend/core/account/order/pm_pending.js": "c1f9ac9b2503648d5740fb95d82eb252edf997661f497b07b50b01988420a496"
+  }
+}

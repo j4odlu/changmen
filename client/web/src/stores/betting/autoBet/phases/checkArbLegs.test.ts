@@ -28,6 +28,7 @@ vi.mock("@/stores/accountStore", () => ({
 }));
 
 const extensionPrefs = vi.hoisted(() => ({
+  lowOddsSingleHigherCProbabilityOnly: false,
   stakeScaleByProfit: {
     enabled: false,
     minImplied: 1.05,
@@ -82,6 +83,7 @@ describe("checkArbLegs", () => {
     setPmFokPreflightMode("legacy"); prepareFast.mockReset();
     prepareGtc.mockReset();
     pendingOrders.clear();
+    extensionPrefs.lowOddsSingleHigherCProbabilityOnly = false;
     extensionPrefs.stakeScaleByProfit.skipAccountRateOnScale = false;
     getEntry.mockReturnValue(undefined);
     checkBetting.mockImplementation(async (_acc, option: BetOption) => {
@@ -343,4 +345,79 @@ describe("checkArbLegs", () => {
     expect(out).toBeNull();
     expect(checkBetting).toHaveBeenCalledTimes(2);
   });
+  it("🎯 waits for both checks, selects updated odds and preserves each stake", async () => {
+    const input = { ...ready(leg("OB", 100, 1.6), leg("RAY", 60, 3.0)), executionMode: "lowOddsSingle" as const };
+    let finishB!: () => void;
+    checkBetting.mockImplementation(async (_account, option: BetOption) => {
+      if (option === input.legB) await new Promise<void>(resolve => { finishB = resolve; });
+      option.newOdds = option === input.legA ? 2.3 : 1.9;
+      option.data = { ok: true };
+      return option;
+    });
+    let completed = false;
+    const pending = checkArbLegs(params, input).then(value => { completed = true; return value; });
+    await vi.waitFor(() => expect(checkBetting).toHaveBeenCalledTimes(2));
+    expect(completed).toBe(false);
+    finishB();
+    const checked = await pending;
+    expect(checked?.executionSide).toBe("B");
+    expect(checked?.accountA).toBeUndefined();
+    expect(checked?.checkAccountA).toBe(input.accountA);
+    expect(checked?.accountB).toBe(input.accountB);
+    expect(checked?.betBothLegs).toBe(false);
+    expect(checked?.legA.betMoney).toBe(100);
+    expect(checked?.legB.betMoney).toBe(60);
+    expect(checked?.legB.orderIndex).toBe(1);
+  });
+
+  it.each(["failed", "inconsistent", "equal"])("🎯 blocks %s precheck without producing an executable plan", async kind => {
+    const input = { ...ready(leg("OB", 100, 1.8), leg("RAY", 60, 2.5)), executionMode: "lowOddsSingle" as const };
+    checkBetting.mockImplementation(async (_account, option: BetOption) => {
+      option.data = kind === "failed" && option === input.legB ? null : { ok: true };
+      if (kind === "inconsistent" && option === input.legB) option.checkError = "invalid quote";
+      option.newOdds = kind === "equal" ? 2 : option.odds;
+      return option;
+    });
+    expect(await checkArbLegs(params, input)).toBeNull();
+    expect(checkBetting).toHaveBeenCalledTimes(2);
+  });
+
+  it("🎯 blocks GTC and missing live account instead of weakening the two-check requirement", async () => {
+    const input = { ...ready(leg("OB", 100, 1.8), leg("RAY", 60, 2.5)), executionMode: "lowOddsSingle" as const };
+    expect(await checkArbLegs(params, { ...input, accountB: undefined })).toBeNull();
+    expect(await checkArbLegs(params, { ...input, pmOrderMode: "GTC" })).toBeNull();
+    expect(checkBetting).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("LOS C filter only restricts the selected lower-odds leg (higherC=%s)", async higherC => {
+    extensionPrefs.lowOddsSingleHigherCProbabilityOnly = true;
+    const point = (tokenId: string, price: number) => ({ tokenId, price, marketId: "map-1", status: "ready",
+      cutoff: 100, observationTime: 99000, resolution: 0 });
+    const input = { ...ready(leg("OB", 100, 1.8), leg("RAY", 60, 2.5, { target: "Away" })), executionMode: "lowOddsSingle" as const };
+    const args = { ...params,
+      bet: { ...params.bet, round: 1, items: [{ type: "Polymarket", homeId: "home", awayId: "away" }] },
+      match: { ...params.match, pmPrematch: { home: point("home", higherC ? .7 : .3), away: point("away", higherC ? .3 : .7) } },
+    } as unknown as ArbBetAttemptParams;
+    const checked = await checkArbLegs(args, input);
+    expect(checkBetting).toHaveBeenCalledTimes(2);
+    if (higherC) {
+      expect(checked?.executionSide).toBe("A");
+      expect(checked?.accountB).toBeUndefined();
+      expect(checked?.legA.betMoney).toBe(100);
+    }
+    else {
+      expect(checked).toBeNull();
+      expect(args.setMessage).toHaveBeenCalledWith(expect.stringContaining("低于对侧"));
+    }
+    expect(input.accountA).toBeDefined(); expect(input.accountB).toBeDefined();
+  });
+
+  it("LOS rejects missing C data only when its own filter is enabled; ordinary mode is unaffected", async () => {
+    const input = { ...ready(leg("OB", 100, 1.8), leg("RAY", 60, 2.5)), executionMode: "lowOddsSingle" as const };
+    expect((await checkArbLegs(params, input))?.executionSide).toBe("A");
+    extensionPrefs.lowOddsSingleHigherCProbabilityOnly = true;
+    expect(await checkArbLegs({ ...params, bet: { ...params.bet, round: 1, items: [] } } as unknown as ArbBetAttemptParams, input)).toBeNull();
+    expect((await checkArbLegs(params, { ...input, executionMode: "normal" }))?.betBothLegs).toBe(true);
+  });
+
 });

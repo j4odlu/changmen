@@ -96,6 +96,16 @@ export function arbProfitRate(implied: number, digits = 1): string {
  */
 export const VALUE_BET_LINK_BASE = 7_000_000_000_000_000;
 
+/** [changmen 扩展] LOS：独立于 9999 和正 EV 的负 Link 区间。 */
+export const LOW_ODDS_LINK_BASE = 6_000_000_000_000_000;
+export function isLowOddsSingleLink(link: number | null | undefined): boolean {
+  const n = Number(link);
+  return Number.isFinite(n) && n < 0 && Math.abs(n) >= LOW_ODDS_LINK_BASE && Math.abs(n) < VALUE_BET_LINK_BASE;
+}
+export function createLowOddsSingleLinkId(ts = Date.now()): number {
+  return -(LOW_ODDS_LINK_BASE + ts);
+}
+
 /** 任意负 Link（9999 单边或正 EV）；双腿套利为正时间戳 */
 export function isSingleLegLink(link: number | null | undefined): boolean {
   const n = Number(link);
@@ -110,7 +120,7 @@ export function isValueBetLink(link: number | null | undefined): boolean {
 
 /** 比例 9999 单边（负时间戳，且非正 EV 编码） */
 export function isSingleLegRateLink(link: number | null | undefined): boolean {
-  return isSingleLegLink(link) && !isValueBetLink(link);
+  return isSingleLegLink(link) && !isValueBetLink(link) && !isLowOddsSingleLink(link);
 }
 
 export function createValueBetLinkId(linkTs = Date.now()): number {
@@ -122,6 +132,8 @@ export function orderLinkSortKey(link: number | null | undefined): number {
   const n = Math.abs(Number(link)) || 0;
   if (n >= VALUE_BET_LINK_BASE)
     return n - VALUE_BET_LINK_BASE;
+  if (n >= LOW_ODDS_LINK_BASE)
+    return n - LOW_ODDS_LINK_BASE;
   return n;
 }
 
@@ -132,13 +144,15 @@ export function formatLinkId(link: number | null | undefined): string {
     return "—";
   if (isValueBetLink(n))
     return "💎";
+  if (isLowOddsSingleLink(n))
+    return "🎯";
   if (n < 0)
     return "🏆";
   return String(n);
 }
 
 /** SaveOrderBind 时间戳 link vs SaveOrder linkFromOrder hash（u32） */
-export type LinkIdSource = "arb" | "single" | "valueBet" | "hash";
+export type LinkIdSource = "arb" | "single" | "valueBet" | "lowOddsSingle" | "hash";
 
 const ARB_LINK_MIN = 1_000_000_000_000;
 
@@ -148,6 +162,8 @@ export function classifyLinkId(link: number | null | undefined): LinkIdSource | 
     return null;
   if (isValueBetLink(n))
     return "valueBet";
+  if (isLowOddsSingleLink(n))
+    return "lowOddsSingle";
   if (n < 0)
     return "single";
   if (n >= ARB_LINK_MIN)
@@ -163,6 +179,8 @@ export function linkIdSourceLabel(source: LinkIdSource | null): string {
       return "单边";
     case "valueBet":
       return "正EV";
+    case "lowOddsSingle":
+      return "LOS";
     case "hash":
       return "hash";
     default:

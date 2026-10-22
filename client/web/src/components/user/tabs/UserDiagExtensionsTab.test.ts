@@ -189,4 +189,48 @@ describe("pm GTC V1 explicit activation in Extensions", () => {
     expect(useUserStore().extensionPrefs.pmArbOrderMode).toBe("FOK");
     expect(mocks.save).not.toHaveBeenCalled();
   });
+  it("renders LOS with a separate, default-off C filter and concise rules", async () => {
+    const user = useUserStore();
+    expect(user.extensionPrefs.arbExecutionMode).toBe("normal");
+    const normal = await renderToString(createSSRApp(Tab));
+    expect(normal).toContain("LOS");
+    expect(normal).not.toContain("仅下 C 行高胜率方");
+    expect(user.extensionPrefs.lowOddsSingleHigherCProbabilityOnly).toBe(false);
+    user.extensionPrefs.arbExecutionMode = "lowOddsSingle";
+    const html = await renderToString(createSSRApp(Tab));
+    expect(html).toContain("Low Odds Single");
+    expect(html).not.toContain("低赔单边");
+    expect(html).toContain("每盘口 1 次");
+    expect(html).toContain("不补单");
+    expect(html).toContain("更多规则");
+    expect(html).toContain("低赔腿与 C 行高胜率方向一致才提交，否则跳过");
+    expect(mocks.switches.get("LOS 仅下C行高胜率方")).toMatchObject({ disabled: false, value: false });
+    expect(html).toContain("不跨设备共享");
+    expect(html).toContain('data-mode="normal"');
+    expect(html).toContain('data-mode="lowOddsSingle"');
+    expect(user.extensionPrefs.pmArbOrderMode).toBe("FOK");
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+
+  it("places all four unchanged 9999 settings directly below hedge mode without changing saved preferences", async () => {
+    const user = useUserStore();
+    user.extensionPrefs.singleLeg9999Precheck = false;
+    user.extensionPrefs.singleLeg9999UseValueBetMoney = true;
+    user.extensionPrefs.singleLeg9999HigherCProbabilityOnly = true;
+    user.extensionPrefs.singleLeg9999MaxPerMap = 3;
+    const before = JSON.stringify(user.extensionPrefs);
+    const html = await renderToString(createSSRApp(Tab));
+    expect(html).toContain('aria-label="对冲下注模式"');
+    expect(html).not.toContain("自动下注模式");
+    const mode = html.indexOf("对冲下注模式");
+    const settings = html.indexOf('aria-label="9999 单边配置"');
+    const venues = html.indexOf("场馆参与");
+    expect(settings).toBeGreaterThan(mode);
+    expect(settings).toBeLessThan(venues);
+    for (const label of ["9999 单边预检", "9999 用正EV金额", "9999 仅下C行高胜率方", "9999 同图次数"])
+      expect(html.split(label)).toHaveLength(2);
+    expect(JSON.stringify(user.extensionPrefs)).toBe(before);
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+
 });

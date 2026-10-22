@@ -127,3 +127,24 @@ function seedHistory(fixture: ReturnType<typeof makeFixture>, history: typeof hi
     else markSuccessfulBet(account, fixture.params.bet.id, historicalSide, 2.1);
   });
 }
+
+
+it("🎯 keeps both normal accounts for precheck, skips a consumed market, and blocks PM GTC", async () => {
+  const fixture = makeFixture(["Polymarket", "RAY"], "FOK", "count");
+  const params = { ...fixture.params, executionMode: "lowOddsSingle" as const };
+  const ready = await prepareArbAttempt(params);
+  expect(ready?.executionMode).toBe("lowOddsSingle");
+  expect(ready?.betBothLegs).toBe(true);
+  expect(ready?.accountA).toBe(fixture.accounts[0]);
+  expect(ready?.accountB).toBe(fixture.accounts[1]);
+  expect(ready?.singleLegByRate).toBe(false);
+  expect(ready?.linkId).toBeLessThan(-6_000_000_000_000_000);
+  expect(ready?.linkId).toBeGreaterThan(-7_000_000_000_000_000);
+  const key = "LowOddsSingleSubmitted:v1";
+  try {
+    localStorage.setItem(key, JSON.stringify(ready!.lowOddsMarketKeys));
+    expect(await prepareArbAttempt(params)).toBeNull();
+  }
+  finally { localStorage.removeItem(key); }
+  expect(await prepareArbAttempt({ ...params, pmOrderMode: "GTC" })).toBeNull();
+});

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isPmPendingOrder } from "@changmen/shared/pm_submission";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type { OrderRow } from "@/types/order";
 import { onMounted, onUnmounted, computed, ref } from "vue";
@@ -399,7 +400,7 @@ async function onPfSell(row: OrderRow) {
 }
 
 function pmStakeLabel(row: OrderRow): string {
-  return isPmSellOrderListRow(row) ? "回款" : "买入金额";
+  return isPmPendingOrder(row) ? "申请金额" : isPmSellOrderListRow(row) ? "回款" : "买入金额";
 }
 
 function onCancelMakeup(row: OrderRow) {
@@ -794,7 +795,10 @@ function badgeTitle(row: OrderRow): string {
                 </div>
                 <div class="order__profit-line">
                   {{ pmStakeLabel(block.row) }}：<slot name="buy-amount" :row="block.row">{{ toFixed(pmOrderStakeDisplayCny(block.row), 0) }}</slot>
-                  <template v-if="isPendingRow(block.row) && !pmBuyLifecycleTagText(block.row)">
+                  <template v-if="isPmPendingOrder(block.row)">
+                    盈亏：待确认
+                  </template>
+                  <template v-else-if="isPendingRow(block.row) && !pmBuyLifecycleTagText(block.row)">
                     盈亏：待结算
                   </template>
                   <template v-else>

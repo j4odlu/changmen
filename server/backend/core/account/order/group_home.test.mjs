@@ -63,3 +63,14 @@ describe("group_home", () => {
     expect(booked).toEqual([{ homeKey: "2026-09-04", ids: ["pm", "ray"] }]);
   });
 });
+
+describe("single-leg strategy booking dates", () => {
+  const at = Date.parse("2026-10-22T23:59:00+08:00");
+  it.each([6_000_000_000_000_000, 7_000_000_000_000_000, 0])("restores the original date for negative Link base %s", base => {
+    const order = { link: -(base + at), create_at: at + 86_400_000, user_id: "owner", provider: "RAY", money: 10 };
+    expect(groupHomeTsFromRaw([order])).toBe(at);
+    const groups = [];
+    forEachBookedProfitGroup([order], (rows, date) => groups.push({ rows, date }));
+    expect(groups).toEqual([{ rows: [order], date: "2026-10-22" }]);
+  });
+});

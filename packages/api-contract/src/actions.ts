@@ -60,6 +60,7 @@ export const ESPORT_ACTIONS = [
   "Pm_GetTrades",
   "Pm_GetOrder",
   "Pm_GetSubmission",
+  "Pm_GetPendingOrders",
   "Pm_GetBook",
   "Pm_Heartbeat",
   "Pm_GetOpenOrders",

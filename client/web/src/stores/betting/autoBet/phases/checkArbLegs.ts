@@ -1,3 +1,4 @@
+import { explainLowOddsCProbabilityRejection, lowOddsExecutionSide } from "@/extensions/arbBet/lowOddsSingle";
 import { recordPmExecutionMetric } from "@changmen/venue-browser/adapter/polymarket";
 import { capturePmFokPreflightMode, prepareOptimizedFokExecution } from "@changmen/venue-browser/adapter/polymarket";
 import type { BetOption } from "@changmen/client-core/models/betOption";
@@ -59,6 +60,12 @@ export async function checkArbLegs(
 ): Promise<ArbBetChecked | null> {
   const { bet, config, setMessage, trace } = params;
   const accountStore = useAccountStore();
+  const requireHigherCProbability = ready.executionMode === "lowOddsSingle"
+    && useUserStore().extensionPrefs.lowOddsSingleHigherCProbabilityOnly === true;
+  if (ready.executionMode === "lowOddsSingle" && (!ready.accountA || !ready.accountB || ready.singleLegByRate || ready.pmOrderMode === "GTC")) {
+    trace?.finish("skip", "🎯 需要普通模式双腿预检，不支持 GTC 或 9999 单边");
+    return null;
+  }
   let {
     legA,
     legB,
@@ -202,7 +209,8 @@ export async function checkArbLegs(
     return base;
   }
 
-  const dualPrecheckFailed = (checkAccountA && !legA.data) || (checkAccountB && !legB.data);
+  const dualPrecheckFailed = (checkAccountA && !legA.data) || (checkAccountB && !legB.data)
+    || (ready.executionMode === "lowOddsSingle" && (legA.checkError || legB.checkError));
 
   if (dualPrecheckFailed) {
     const parts = [
@@ -274,8 +282,29 @@ export async function checkArbLegs(
     [accountA?.provider, accountB?.provider].filter(Boolean) as string[],
   );
 
+  let executionSide: "A" | "B" | undefined;
+  if (ready.executionMode === "lowOddsSingle") {
+    const side = lowOddsExecutionSide(legA, legB);
+    if (!side) {
+      const reason = "🎯 两腿赔率相同或无效，跳过本次";
+      trace?.finish("skip", reason); syncActiveBetFail(bet.id, reason); return null;
+    }
+    if (requireHigherCProbability) {
+      const reason = explainLowOddsCProbabilityRejection(bet, params.match, (side === "A" ? legA : legB).target);
+      if (reason) {
+        trace?.finish("skip", reason); setMessage(reason); syncActiveBetFail(bet.id, reason); return null;
+      }
+    }
+    executionSide = side;
+    (side === "A" ? legA : legB).orderIndex = 1;
+    // 双腿账号保留在 checkAccount，实际发送账号仅留下选中的一侧。
+    if (side === "A") accountB = undefined;
+    else accountA = undefined;
+    betBothLegs = false;
+  }
   return {
     ...ready,
+    ...(executionSide ? { executionSide, betBothLegs, checkAccountA, checkAccountB } : {}),
     precheckCompletedAt: performance.now(),
     legA,
     legB,

@@ -1,3 +1,4 @@
+import { isPmPendingOrder } from "@changmen/shared/pm_submission";
 import type { LoseOrderCancelledRecord, OrderRow } from "@/types/order";
 import type { LoseOrder } from "@/models/loseOrder";
 import type { MakeupOddsBandPrefs } from "@/types/extensionPrefs";
@@ -732,6 +733,7 @@ export function mergePendingMakeupIntoOrderGroups(
 
 /** 组内盈亏：PM/PF 只认买单 Money；卖单恒 0（防双计） */
 export function polymarketMoneyForAggregate(row: OrderRow, _peers: OrderRow[]): number {
+  if (isPmPendingOrder(row)) return 0;
   if (isMakeupSyntheticOrderRow(row))
     return 0;
 
@@ -881,6 +883,7 @@ export function groupRowsByOutcomeSide(rows: OrderRow[]): OrderRow[][] {
  * - PM 同 token 合并为一腿；其它场馆按订单各算一条
  */
 export function orderLinkLegend(rows: OrderRow[]): string {
+  if (rows.some(isPmPendingOrder)) return "订单待确认";
   const link = linkIdGroupKey(rows[0]?.Link);
   const prefix = isSingleLegLink(link) ? `${formatLinkId(link)} ` : "";
   const stake = rows

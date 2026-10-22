@@ -1,3 +1,5 @@
+import { createLowOddsSingleLinkId } from "@changmen/client-core/shared/format";
+import { lowOddsMarketKeys, lowOddsMarketSubmitted } from "@/extensions/arbBet/lowOddsSingle";
 import type { ArbBetAttemptParams, ArbBetReady } from "@/stores/betting/autoBet/phases/types";
 import { prewarmPmSportForCandidate } from "@changmen/venue-browser/adapter/polymarket";
 import { capturePmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket";
@@ -52,6 +54,9 @@ export async function prepareArbAttempt(
   bet.items.forEach(item => item.updateOdds());
 
   const accounts = accountStore.accounts;
+  const lowOddsSingle = params.executionMode === "lowOddsSingle";
+  const marketKeys = lowOddsSingle ? lowOddsMarketKeys(String(userStore.userId || ""), match, bet, []) : [];
+  if (lowOddsSingle && lowOddsMarketSubmitted(marketKeys)) return null;
 
   if (!accountsFundingReady(accountStore)) {
     return null;
@@ -86,6 +91,10 @@ export async function prepareArbAttempt(
     if (leg.type !== "Polymarket") continue;
     if (params.pmOrderMode === "GTC") prewarmPmSportForCandidate(leg);
     else capturePmFokPreflightMode(leg);
+  }
+  if (lowOddsSingle && params.pmOrderMode === "GTC" && options.some(leg => leg.type === "Polymarket")) {
+    const reason = "🎯 LOS暂不支持 PM GTC，请选择 FOK";
+    params.setMessage(reason); trace?.finish("skip", reason); return null;
   }
   const pmOrderMode = params.pmOrderMode === "GTC" && options.some(leg => leg.type === "Polymarket") ? "GTC" : undefined;
   // [changmen 扩展] 仅 PM GTC 读取独立历史；原选号过滤和 FOK 状态保持不变。
@@ -160,6 +169,12 @@ export async function prepareArbAttempt(
   });
 
   const betBothLegs = Boolean(accountA) && Boolean(accountB);
+  if (lowOddsSingle && !betBothLegs) {
+    trace?.finish("skip", "🎯 LOS需要两腿均有可用账号并通过预检");
+    return null;
+  }
+  const lowOddsKeys = lowOddsSingle ? lowOddsMarketKeys(String(userStore.userId || ""), match, bet, options) : undefined;
+  if (lowOddsKeys && lowOddsMarketSubmitted(lowOddsKeys)) return null;
   if (pmOrderMode === "GTC" && (!betBothLegs || options.filter(leg => leg.type === "Polymarket").length !== 1)) {
     trace?.finish("skip", "PM GTC 当前只支持一条 PM 腿的双边套利");
     return null;
@@ -299,7 +314,7 @@ export async function prepareArbAttempt(
     implied,
   });
 
-  const linkId = createArbLinkId(singleLegByRate, linkTs);
+  const linkId = lowOddsSingle ? createLowOddsSingleLinkId(linkTs) : createArbLinkId(singleLegByRate, linkTs);
   syncActiveBetBegin({
     match,
     bet,
@@ -314,6 +329,7 @@ export async function prepareArbAttempt(
   });
 
   return {
+    ...(lowOddsSingle ? { executionMode: "lowOddsSingle" as const, lowOddsMarketKeys: lowOddsKeys } : {}),
     ...(pmOrderMode ? { pmOrderMode } : {}),
     legA,
     legB,

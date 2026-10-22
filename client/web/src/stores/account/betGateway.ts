@@ -29,8 +29,10 @@ import { useUserStore } from "@/stores/userStore";
 import { pmSubmissionFromResult, validatePmSubmission, type PmSubmission } from "@changmen/shared/pm_submission";
 import { pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-browser/adapter/polymarket";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
-import { getPmSubmission } from "@/api/order";
+import { getPmSubmission, getPendingPmOrders, saveOrders } from "@/api/order";
 import { getRetainedPmPrivateKey } from "@/security/pmVault/retainedPmSession";
+import { persistPendingPmOrder } from "@/stores/account/pmPendingOrder";
+import { confirmVenueBet } from "@/stores/betting/autoBet/confirmVenueBet";
 import { capturePmFokPreflightMode, prepareOptimizedFokExecution } from "@changmen/venue-browser/adapter/polymarket";
 
 export type CheckBettingOpts = ResolveVenueStakeOpts & {
@@ -105,6 +107,7 @@ function notifyPendingVenueConfirm(
   result: BetResult,
   option: BetOption,
   toastSeconds: number,
+  pendingOrderSave?: Promise<void>,
 ) {
   const orderId = String(result.orderId ?? "").trim();
   if (!orderId)
@@ -112,7 +115,10 @@ function notifyPendingVenueConfirm(
   const pmScope = account.provider === "Polymarket" ? pmSubmitScope(account) : undefined;
   const key = pmScope ? `${pmScope}:${orderId}` : `${account.accountId}:${orderId}`;
   const existing = pendingVenueBetConfirmations.get(key);
-  if (existing) { schedulePendingVenueBetConfirmation(store, existing); return; }
+  if (existing) {
+    if (pendingOrderSave) pendingVenueOrderWrites.set(existing, pendingOrderSave);
+    schedulePendingVenueBetConfirmation(store, existing); return;
+  }
   const task: PendingVenueBetConfirmation = {
     observation: option.observation,
     linkId: option.diagnosticLinkId,
@@ -135,6 +141,7 @@ function notifyPendingVenueConfirm(
     nextPollAt: Date.now(),
     pmSubmission: account.provider === "Polymarket" ? pmSubmissionFromResult(result, account.accountId) ?? undefined : undefined,
   };
+  if (pendingOrderSave) pendingVenueOrderWrites.set(task, pendingOrderSave);
   pendingVenueBetConfirmations.set(task.key, task);
   persistPendingVenueBetConfirmations();
   void runPendingVenueBetConfirmation(store, task);
@@ -180,6 +187,17 @@ function loadPendingVenueBetConfirmations(): Map<string, PendingVenueBetConfirma
 const pendingVenueBetConfirmations = loadPendingVenueBetConfirmations();
 const pendingVenueConfirmationFlights = new Set<string>();
 const pendingVenueConfirmationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const pendingVenueConfirmationResumeVersions = new Map<string, string>();
+// 只串行化同一订单的写入 Promise；名称属于正在保存的订单，不交给确认任务。
+const pendingVenueOrderWrites = new WeakMap<PendingVenueBetConfirmation, Promise<void>>();
+
+function pendingVenueAccountMatches(store: AccountStoreContext, task: PendingVenueBetConfirmation): boolean {
+  try {
+    const live = store.findAccount(task.accountId);
+    return live?.provider === task.provider && (!task.pmScope || task.pmScope === pmSubmitScope(live));
+  }
+  catch { return false; }
+}
 
 function persistPendingVenueBetConfirmations(): void {
   try {
@@ -279,12 +297,10 @@ async function runPendingVenueBetConfirmation(
     );
     option.observation = task.observation;
     option.diagnosticLinkId = task.linkId;
-    const { rejected, pendingConfirm, orders } = await settleArbLegUntilTerminal(account, result, {
-      rejectWaitSec: 0,
-      betOption: option,
-    });
-    if (!isAuthSessionCurrent(sessionVersion)
-      || task.pmScope && task.pmScope !== pmSubmitScope(account)) return;
+    const { rejected, pendingConfirm, orders } = task.provider === "Polymarket"
+      ? await confirmVenueBet(account, result, { rejectWaitSec: 0, pmConditionId: task.venueBetId })
+      : await settleArbLegUntilTerminal(account, result, { rejectWaitSec: 0, betOption: option });
+    if (!isAuthSessionCurrent(sessionVersion) || !pendingVenueAccountMatches(store, task)) return;
     try {
       const exactObservedOrder = orders.find(order => String(order.orderId) === task.orderId);
       observeOption(option, account, "settlement_observed", {
@@ -305,7 +321,25 @@ async function runPendingVenueBetConfirmation(
       return;
     }
 
+    if (task.provider === "Polymarket") {
+      await pendingVenueOrderWrites.get(task);
+      if (!isAuthSessionCurrent(sessionVersion) || !pendingVenueAccountMatches(store, task)) return;
+      pendingVenueOrderWrites.delete(task);
+      if (rejected) {
+        const saved = await persistPolymarketExecutionReject(account, result, "unfilled", { linkId: task.linkId });
+        if (!saved) throw new Error("PM 拒单结果保存失败");
+      }
+      else {
+        const filled = orders.find(order => String(order.orderId) === task.orderId
+          && !["pending", "reject"].includes(order.status) && Number(order.pmShares) > 0);
+        // 成交明细尚未索引或保存失败：保留任务，续查/保存同一单号。
+        if (!filled) throw new Error("PM 成交明细尚未同步");
+        await saveOrders(account, [filled]);
+      }
+    }
+    if (!isAuthSessionCurrent(sessionVersion) || !pendingVenueAccountMatches(store, task)) return;
     pendingVenueBetConfirmations.delete(task.key);
+    pendingVenueConfirmationResumeVersions.delete(task.key);
     persistPendingVenueBetConfirmations();
     const titleSuffix = rejected ? "未成交" : "已成交";
     showBetResultNotification({ provider: account.provider, accountLine: task.accountLine, detailHtml: task.detailHtml }, {
@@ -351,13 +385,16 @@ async function runPendingVenueBetConfirmation(
   finally {
     pendingVenueConfirmationFlights.delete(task.key);
     const current = pendingVenueBetConfirmations.get(task.key);
-    if (current && isAuthSessionCurrent(sessionVersion))
+    const resumedVersion = pendingVenueConfirmationResumeVersions.get(task.key);
+    if (current && pendingVenueAccountMatches(store, task)
+      && (isAuthSessionCurrent(sessionVersion) || resumedVersion != null && isAuthSessionCurrent(resumedVersion)))
       schedulePendingVenueBetConfirmation(store, current);
   }
 }
 
 /** 账号加载后恢复手动/正 EV 单的场馆待确认任务。 */
 export function resumePendingVenueConfirmations(store: AccountStoreContext): void {
+  void restoreStoredPendingPmOrders(store);
   for (const account of store.accounts ?? []) {
     if (account.provider !== "Polymarket") continue;
     try {
@@ -369,10 +406,16 @@ export function resumePendingVenueConfirmations(store: AccountStoreContext): voi
         const key = `${pmScope}:${orderId}`;
         const pmSubmission: PmSubmission = { orderId, accountId: account.accountId, makerAmount: attempt.makerAmount,
           stakeUsdc: Number(attempt.makerAmount) / 1e6, submittedAt: attempt.submittedAt,
-          ...(!attempt.acceptedOrderId ? { submitUnknown: true } : {}) };
+          makerAddress: pmSubmitMaker(account),
+          ...(attempt.takerAmount ? { takerAmount: attempt.takerAmount } : {}),
+          submitUnknown: !attempt.acceptedOrderId };
         const legacy = [...pendingVenueBetConfirmations.values()].find(task => task.provider === "Polymarket"
           && task.accountId === account.accountId && task.orderId === orderId && (!task.pmScope || task.pmScope === pmScope));
-        if (legacy) { Object.assign(legacy, recovery, { pmScope, pmSubmission }); continue; }
+        if (legacy) {
+          Object.assign(legacy, recovery, { pmScope,
+            pmSubmission: validatePmSubmission({ ...legacy.pmSubmission, ...pmSubmission }, orderId, account.accountId) ?? pmSubmission });
+          continue;
+        }
         if (pendingVenueBetConfirmations.has(key)) continue;
         pendingVenueBetConfirmations.set(key, { ...recovery, target: recovery.target as BetOption["target"],
           key, pmScope, accountId: account.accountId, provider: "Polymarket", orderId,
@@ -383,8 +426,77 @@ export function resumePendingVenueConfirmations(store: AccountStoreContext): voi
     } catch { /* 凭证尚未加载时保留原记录，下次恢复 */ }
   }
   persistPendingVenueBetConfirmations();
-  for (const task of pendingVenueBetConfirmations.values())
+  for (const task of pendingVenueBetConfirmations.values()) {
+    pendingVenueConfirmationResumeVersions.set(task.key, getAuthSessionVersion());
     schedulePendingVenueBetConfirmation(store, task);
+  }
+}
+
+
+const pendingPmRestoreFlights = new Set<string>();
+const pendingPmRestoreTimers = new Map<string, ReturnType<typeof setTimeout>>();
+async function restoreStoredPendingPmOrders(store: AccountStoreContext): Promise<void> {
+  await Promise.allSettled((store.accounts ?? []).filter(account => account.provider === "Polymarket")
+    .map(account => restoreStoredPendingPmAccount(store, account)));
+}
+
+async function restoreStoredPendingPmAccount(store: AccountStoreContext, account: PlatformAccount): Promise<void> {
+  let scope: string;
+  try { scope = pmSubmitScope(account); } catch { return; }
+  const version = getAuthSessionVersion();
+  const flightKey = JSON.stringify([version, scope, account.accountId]);
+  if (pendingPmRestoreFlights.has(flightKey)) return;
+  const retry = pendingPmRestoreTimers.get(flightKey);
+  if (retry) { clearTimeout(retry); pendingPmRestoreTimers.delete(flightKey); }
+  pendingPmRestoreFlights.add(flightKey);
+  const current = () => {
+    try {
+      const live = store.findAccount(account.accountId);
+      return isAuthSessionCurrent(version) && live?.provider === "Polymarket" && scope === pmSubmitScope(live);
+    }
+    catch { return false; }
+  };
+  try {
+    const rows = await getPendingPmOrders(account.accountId);
+    if (!current()) return;
+    for (const row of rows) {
+      const submission = validatePmSubmission(row.submission, row.orderId, account.accountId);
+      if (!submission?.makerAddress || submission.makerAddress !== pmSubmitMaker(account)) continue;
+      const existing = [...pendingVenueBetConfirmations.values()].find(task =>
+        task.provider === "Polymarket" && task.accountId === account.accountId
+        && task.orderId === row.orderId && (!task.pmScope || task.pmScope === scope));
+      if (existing) {
+        pendingVenueOrderWrites.delete(existing); // RDS 已证实完整订单已保存。
+        existing.pmScope = scope;
+        existing.pmSubmission = submission;
+        existing.matchId ||= row.matchId;
+        existing.venueBetId ||= row.conditionId;
+        existing.itemId ||= row.tokenId;
+        existing.linkId ||= row.linkId;
+        persistPendingVenueBetConfirmations();
+        schedulePendingVenueBetConfirmation(store, existing);
+        continue;
+      }
+      const key = `${scope}:${row.orderId}`;
+      const task: PendingVenueBetConfirmation = {
+        key, pmScope: scope, accountId: account.accountId, provider: "Polymarket", orderId: row.orderId,
+        matchId: row.matchId, venueBetId: row.conditionId, itemId: row.tokenId,
+        target: row.target as BetOption["target"], betRowId: 0, betMoney: submission.stakeUsdc,
+        odds: row.odds, linkId: row.linkId, pmSubmission: submission, recoveryOnly: true,
+        accountLine: "", detailHtml: "", toastSeconds: 3, attempts: 0, nextPollAt: Date.now(),
+      };
+      pendingVenueBetConfirmations.set(key, task);
+      persistPendingVenueBetConfirmations();
+      schedulePendingVenueBetConfirmation(store, task);
+    }
+  }
+  catch {
+    if (current()) pendingPmRestoreTimers.set(flightKey, setTimeout(() => {
+      pendingPmRestoreTimers.delete(flightKey);
+      if (current()) void restoreStoredPendingPmAccount(store, store.findAccount(account.accountId)!);
+    }, 5_000));
+  }
+  finally { pendingPmRestoreFlights.delete(flightKey); }
 }
 
 export async function checkBetting(
@@ -527,6 +639,7 @@ export async function placeBet(
   let observationCallAt: number | undefined;
   let observationDuration: number | undefined;
   let observationError: unknown;
+  let pendingOrderSave: Promise<void> | undefined;
   try {
     if (!option.data) {
       if (opts?.requirePreparedQuote || account.provider === "Polymarket") {
@@ -545,6 +658,11 @@ export async function placeBet(
       observationCallAt = Date.now();
       result = await provider.betting(account, option);
       observationDuration = Date.now() - observationCallAt;
+      if (account.provider === "Polymarket" && result.pending) {
+        pendingOrderSave = persistPendingPmOrder(account, option, result);
+        void pendingOrderSave.catch(error => { console.warn("[Polymarket] 待确认订单保存失败", error); });
+        // 收到场馆回执即可继续；完整订单保存与官方确认并行，终态写入等待该保存。
+      }
       // PM matched：官方 POST 成交即真相，立刻落库，勿干等 /data/trades
       if (result.success && !result.pending && account.provider === "Polymarket") {
         try {
@@ -639,6 +757,7 @@ export async function placeBet(
         result,
         option,
         toastSeconds,
+        pendingOrderSave,
       );
     }
   }

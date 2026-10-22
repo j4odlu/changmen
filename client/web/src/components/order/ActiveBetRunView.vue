@@ -463,6 +463,11 @@ function nextAction(run: ActiveBetRun): string {
     : gtc.decision === "open" ? "正在核对 GTC 原单与对侧订单。"
       : "本轮提交已结束；继续展示原单核对结果，GTC 不自动补单。";
   const mode = activeBetRunMode(run);
+  if (mode === "lowOddsSingle") {
+    if (run.terminalAt) return "🎯 本轮已结束；高赔腿跳过，不补单。";
+    if (run.phase === "preparing" || run.phase === "checking") return "两腿均须通过预检，再选低赔腿提交。";
+    return "仅跟踪低赔腿原单；每盘口一次，不重发、不补单。";
+  }
   if (mode === "single9999") {
     if (run.terminalAt)
       return "本轮单边下单已结束；仅预检腿不计入成交结果。";
@@ -569,7 +574,8 @@ function orderLabel(run: ActiveBetRun, index: number): string {
             </div>
             <div class="active-bet-run__mode" :data-mode="activeBetRunMode(activeRun)">
               下单模式 · <strong>{{ activeBetRunModeLabel(activeRun) }}{{ activeGtc ? ' · PM GTC' : '' }}</strong>
-              <span v-if="activeBetRunMode(activeRun) === 'single9999'">只提交下单腿，9999 侧不下单</span>
+              <span v-if="activeBetRunMode(activeRun) === 'lowOddsSingle'">双腿预检，仅提交低赔腿；每盘口一次，不补单</span>
+              <span v-else-if="activeBetRunMode(activeRun) === 'single9999'">只提交下单腿，9999 侧不下单</span>
             </div>
             <div class="active-bet-run__run-meta">
               <span>完整 Link {{ activeRun.linkId || '未记录' }}</span><span v-if="executionId">执行 {{ executionId }}</span><span v-if="activeGtc">GTC {{ activeGtc.id }} · 原单核对 {{ activeGtc.observedAt ? eventTime(activeGtc.observedAt) : '尚未返回' }}</span>

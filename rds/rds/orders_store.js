@@ -14,6 +14,11 @@ import { Currency, getExchange } from "@changmen/shared/currency";
 import { _jsonb, getPgPool } from "./common.js";
 import { localDayBounds, localMonthBounds } from "./time_bounds.js";
 
+/** [changmen 扩展] 已成交统计排除 PM 提交待确认单；列表仍读取 orders 全部状态。 */
+function analyticsOrdersRelation(alias = "") {
+  return `(SELECT * FROM ${financialOrdersRelation()} WHERE provider IS DISTINCT FROM 'Polymarket' OR status IS DISTINCT FROM 'Pending') ${alias || "accounted_orders"}`;
+}
+
 /**
  * 聚合用 CNY 盈亏 SQL（对齐 profit_cny / 前端 polymarketMoneyForAggregate）。
  * @param {string} alias 表别名，如 "" / "o" / "a"
@@ -119,6 +124,12 @@ const UPSERT_ORDERS_BATCH_SQL = `
     status = EXCLUDED.status,
     create_at = EXCLUDED.create_at,
     raw = EXCLUDED.raw
+  WHERE NOT (COALESCE(EXCLUDED.provider, '') = 'Polymarket' AND (
+    (EXCLUDED.status = 'Pending' AND orders.status IS DISTINCT FROM 'Pending')
+    OR (EXCLUDED.status IN ('Reject', 'Return') AND orders.raw ? 'pmSubmission'
+      AND CASE WHEN jsonb_typeof(orders.raw->'pmShares') = 'number'
+        THEN (orders.raw->>'pmShares')::float8 ELSE 0 END > 0)
+  ))
   RETURNING *, (xmax = 0) AS was_inserted
 `;
 
@@ -669,6 +680,15 @@ export async function fetchOrdersByPlayerStrict(playerId, userId, opts = undefin
   const pool = getPgPool();
   if (!pool || !userId)
     return [];
+  if (opts?.pmPendingOnly) {
+    const { rows } = await pool.query(
+      `SELECT * FROM orders WHERE user_id = $1 AND player_id = $2
+       AND provider = 'Polymarket' AND status = 'Pending'
+       AND COALESCE(raw->>'pmSide', 'buy') = 'buy' ORDER BY create_at`,
+      [String(userId), Number(playerId)],
+    );
+    return rows || [];
+  }
   // [changmen 扩展] RAY 监控只恢复未结原单，已知单号额外返回终态以结束旧任务。
   if (Array.isArray(opts?.rayMonitorOrderIds)) {
     const ids = [...new Set(opts.rayMonitorOrderIds.map(id => String(id).trim().toLowerCase()).filter(Boolean))];
@@ -974,7 +994,7 @@ export async function fetchOrdersAdminStats(dateKey) {
     return { count: 0, money: 0, betMoney: 0 };
   try {
     const { rows } = await pool.query(
-      `SELECT money, bet_money, status, provider, raw FROM ${financialOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`,
+      `SELECT money, bet_money, status, provider, raw FROM ${analyticsOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`,
       [dayStart, dayEnd],
     );
     const fx = getExchange(Currency.USDT);
@@ -1190,7 +1210,7 @@ export async function fetchOrdersForMonthAggregate(monthKey, userId, userIds) {
   try {
     const params = [monthStart, monthEnd];
     let sql = `SELECT id, user_id, order_id, link, create_at, money, bet_money, status, provider, raw
-               FROM ${financialOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`;
+               FROM ${analyticsOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`;
     if (userId) {
       params.push(String(userId));
       sql += ` AND user_id = $${params.length}`;
@@ -1217,7 +1237,7 @@ export async function fetchOrdersForProfitAggregate(dateKey) {
   try {
     const { rows } = await pool.query(
       `SELECT id, user_id, player_id, order_id, link, create_at, money, bet_money, status, provider, raw
-       FROM ${financialOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`,
+       FROM ${analyticsOrdersRelation()} WHERE ${sqlOrderBelongsToRange(1, 2)}`,
       [dayStart, dayEnd],
     );
     return rows || [];
@@ -1381,7 +1401,7 @@ function appendUserIdsFilter(params, userIds) {
 function sqlArbUniqCtes(userFilterOnO = "") {
   return `legs AS (
         SELECT o.*
-        FROM ${financialOrdersRelation("o")}
+        FROM ${analyticsOrdersRelation("o")}
         WHERE ABS(o.link) >= 1000000000000
           AND o.create_at >= $1 AND o.create_at < $2
           AND o.provider IS NOT NULL AND o.provider != ''
@@ -1425,7 +1445,7 @@ export async function fetchPlatformAnalytics(startMs, endMs, userIds) {
         COUNT(*) FILTER (WHERE ${pending})::int AS pending,
         COALESCE(SUM(${betCny}), 0)::float AS total_bet,
         COALESCE(SUM(${moneyCny}), 0)::float AS total_profit
-       FROM ${financialOrdersRelation()}
+       FROM ${analyticsOrdersRelation()}
        WHERE create_at >= $1 AND create_at < $2 AND provider IS NOT NULL AND provider != ''
          AND NOT ${sqlIsPredictionSell("")}${uf}
        GROUP BY provider
@@ -1547,7 +1567,7 @@ export async function fetchGameAnalytics(startMs, endMs, userIds) {
         COUNT(*) FILTER (WHERE o.status = 'Reject')::int AS rejects,
         COALESCE(SUM(${betCny}), 0)::float AS total_bet,
         COALESCE(SUM(${moneyCny}), 0)::float AS total_profit
-       FROM ${financialOrdersRelation("o")}
+       FROM ${analyticsOrdersRelation("o")}
        LEFT JOIN LATERAL (
          SELECT game FROM client_matches
          WHERE title = o.match
@@ -1587,7 +1607,7 @@ export async function fetchHourlyAnalytics(startMs, endMs, userIds) {
         COUNT(*) FILTER (WHERE status = 'Lose')::int AS losses,
         COALESCE(SUM(${moneyCny}), 0)::float AS total_profit,
         COALESCE(SUM(${betCny}), 0)::float AS total_bet
-       FROM ${financialOrdersRelation()}
+       FROM ${analyticsOrdersRelation()}
        WHERE create_at >= $1 AND create_at < $2
          AND provider IS NOT NULL AND provider != ''
          AND NOT ${sqlIsPredictionSell("")}${uf}
@@ -1650,7 +1670,7 @@ export async function fetchValueBetOrderAnalytics(startMs, endMs, userIds) {
         AVG(odds)::float AS avg_odds`;
     const { rows: byProvider } = await pool.query(
       `SELECT provider,${aggSelect}
-       FROM ${financialOrdersRelation()}
+       FROM ${analyticsOrdersRelation()}
        WHERE ${where}
        GROUP BY provider
        ORDER BY total_orders DESC`,
@@ -1658,7 +1678,7 @@ export async function fetchValueBetOrderAnalytics(startMs, endMs, userIds) {
     );
     const { rows: byOddsBucket } = await pool.query(
       `SELECT ${oddsBucket} AS odds_bucket, provider,${aggSelect}
-       FROM ${financialOrdersRelation()}
+       FROM ${analyticsOrdersRelation()}
        WHERE ${where}
        GROUP BY odds_bucket, provider
        ORDER BY odds_bucket, provider`,
@@ -1816,7 +1836,7 @@ export async function fetchPolymarketOrderAnalytics(startMs, endMs, userIds) {
               THEN LOWER(pm.status)
             ELSE NULL
           END AS match_result
-        FROM ${financialOrdersRelation("pm")}
+        FROM ${analyticsOrdersRelation("pm")}
         WHERE pm.provider = 'Polymarket'
           AND LOWER(COALESCE(pm.raw->>'pmSide', '')) IS DISTINCT FROM 'sell'
           AND pm.create_at >= $1 AND pm.create_at < $2
@@ -1869,7 +1889,7 @@ export async function fetchPolymarketOrderAnalytics(startMs, endMs, userIds) {
               AND o.provider <> ''
           )::int AS other_venue_count
         FROM anchors a
-        LEFT JOIN ${financialOrdersRelation("o")}
+        LEFT JOIN ${analyticsOrdersRelation("o")}
           ON o.user_id = a.user_id
           AND ABS(o.link) = a.link_abs
         GROUP BY a.user_id, a.link_abs, a.pm_bet, a.hold_profit, a.fill_price,
@@ -1919,7 +1939,7 @@ export async function fetchPolymarketOrderAnalytics(startMs, endMs, userIds) {
           g.match_result,
           other.provider AS other_provider
         FROM groups g
-        JOIN ${financialOrdersRelation("other")}
+        JOIN ${analyticsOrdersRelation("other")}
           ON other.user_id = g.user_id
           AND ABS(other.link) = g.link_abs
           AND other.provider IS DISTINCT FROM 'Polymarket'
@@ -2038,7 +2058,7 @@ export async function fetchPolymarketOrderStatsInRange(startMs, endMs, userIds) 
         COUNT(*) FILTER (WHERE o.status IS DISTINCT FROM 'Win'
           AND o.status IS DISTINCT FROM 'Lose'
           AND o.status IS DISTINCT FROM 'Reject')::int AS pending
-       FROM ${financialOrdersRelation("o")}
+       FROM ${analyticsOrdersRelation("o")}
        WHERE ${where}`,
       params,
     );
@@ -2112,7 +2132,7 @@ export async function fetchAccountAnalytics(startMs, endMs, userIds) {
         COUNT(*) FILTER (WHERE o.status = 'Reject')::int AS rejects,
         COALESCE(SUM(${betCny}), 0)::float AS total_bet,
         COALESCE(SUM(${moneyCny}), 0)::float AS total_profit
-       FROM ${financialOrdersRelation("o")}
+       FROM ${analyticsOrdersRelation("o")}
        WHERE o.create_at >= $1 AND o.create_at < $2
          AND o.provider IS NOT NULL AND o.provider != ''
          AND NOT ${sqlIsPredictionSell("o")}${uf ? uf.replace("user_id", "o.user_id") : ""}

@@ -1,3 +1,4 @@
+import {restoreLowOddsSingleSource,verifyLowOddsSingleSources} from "./low-odds-single-boundary.mjs";
 // [changmen 扩展] 精确核对 9999 C 行增量，再还原原始迁移证明；不替换任何历史基线。
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
@@ -148,16 +149,17 @@ function restoreIncrement(changes, file, source) {
 }
 
 export function restore9999CProbabilitySource(file, source) {
-  return restoreIncrement(runtimeChanges, file, source);
+  return restoreIncrement(runtimeChanges, file, restoreLowOddsSingleSource(file, source));
 }
 
 export function restore9999CProbabilityVerificationSource(file, source) {
-  return restoreIncrement(verificationChanges, file, source);
+  return restoreIncrement(verificationChanges, file, restoreLowOddsSingleSource(file, source));
 }
 
 export function verify9999CProbabilitySources(read) {
+  verifyLowOddsSingleSources();
   for (const [file, change] of runtimeChanges)
-    assert.equal(sha(read(file)), change.afterSha, `${file}: only the exact 9999 C probability change is authorized`);
+    assert.equal(sha(restoreLowOddsSingleSource(file, read(file))), change.afterSha, `${file}: only the exact 9999 C probability change is authorized`);
   const helper = 'client/web/src/extensions/arbBet/singleLeg9999CProbability.ts';
   assert.equal(sha(read(helper)), 'eecfd7f6eaf4825e76a20fce1f2e1abb3194bcbc0cad4b1af24263ddfa27681b', `${helper}: exact C probability filter implementation`);
   return {files: runtimeChanges.size + 1};

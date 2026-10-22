@@ -4,14 +4,15 @@ import type { AccountStoreContext } from "./context";
 const mocks = vi.hoisted(() => ({
   scope: "owner-one-wallet", session: "session-one", settle: vi.fn(), notify: vi.fn(), mark: vi.fn(),
   attempts: [] as any[],
-  recover: vi.fn(),
+  recover: vi.fn(), pending: vi.fn(), save: vi.fn(),
 }));
 vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ pmSubmitScope: () => mocks.scope, pmAccountSubmitAttempts: () => mocks.attempts,
   pmSubmitMaker: () => "0x1111111111111111111111111111111111111111" }));
-vi.mock("@/api/order", () => ({ getPmSubmission: mocks.recover }));
+vi.mock("@/api/order", () => ({ getPmSubmission: mocks.recover, getPendingPmOrders: mocks.pending, saveOrders: mocks.save }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => mocks.session, isAuthSessionCurrent: (v: string) => v === mocks.session }));
 vi.mock("element-plus", () => ({ ElNotification: mocks.notify }));
 vi.mock("@/stores/betting/autoBet/arbLegSettle", () => ({ settleArbLegUntilTerminal: mocks.settle }));
+vi.mock("@/stores/betting/autoBet/confirmVenueBet", () => ({ confirmVenueBet: mocks.settle }));
 vi.mock("@/stores/betting/successMarkers", () => ({ markSuccessfulBet: mocks.mark }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: 1 }) }));
 vi.mock("@/stores/messageStore", () => ({ useMessageStore: () => ({}) }));
@@ -34,6 +35,7 @@ beforeEach(() => {
   mocks.scope = "owner-one-wallet"; mocks.session = "session-one"; mocks.attempts = [];
   mocks.settle.mockResolvedValue({ pendingConfirm: true, rejected: false, orders: [] });
   mocks.recover.mockResolvedValue(null);
+  mocks.pending.mockResolvedValue([]); mocks.save.mockResolvedValue(undefined);
 });
 
 test.each([true, false])("legacy accepted task resumes only with an owned original submission and matching maker: %s", async (matching) => {
@@ -88,4 +90,104 @@ test("migrating a legacy session task with an exact journal record creates one c
   expect(JSON.parse(sessionStorage.getItem("PENDING_VENUE_BET_CONFIRM")!)).toHaveLength(1);
   expect(mocks.settle.mock.calls[0][1]).toMatchObject({ pmSubmitUnknown: true,
     request: { order: { side: "BUY", makerAmount: original.makerAmount } } });
+});
+
+const storedReceipt = () => ({ orderId: "hash-one", submission: { orderId: "hash-one", accountId: 9,
+  makerAmount: original.makerAmount, stakeUsdc: 10, submittedAt: original.submittedAt,
+  makerAddress: "0x1111111111111111111111111111111111111111", takerAmount: "20000000" },
+  matchId: "match", conditionId: "condition", tokenId: "token", target: "Home", odds: 2 });
+
+test("RDS hydrates an existing scoped task with missing submission evidence", async () => {
+  sessionStorage.setItem("PENDING_VENUE_BET_CONFIRM", JSON.stringify([{
+    key: "owner-one-wallet:hash-one", pmScope: mocks.scope, accountId: 9, provider: "Polymarket", orderId: "hash-one",
+    ...original.recovery, attempts: 2, nextPollAt: Date.now() + 1000,
+  }]));
+  mocks.pending.mockResolvedValue([storedReceipt()]);
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(store);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(mocks.settle.mock.calls[0][1]).toMatchObject({ request: { order: {
+    makerAmount: original.makerAmount, takerAmount: "20000000", maker: storedReceipt().submission.makerAddress,
+  } } });
+  expect(JSON.parse(sessionStorage.getItem("PENDING_VENUE_BET_CONFIRM")!)[0].attempts).toBe(3);
+});
+
+test("RDS recovery retries a failed read without requiring an account reload", async () => {
+  mocks.pending.mockRejectedValueOnce(new Error("temporary network failure")).mockResolvedValue([storedReceipt()]);
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(store);
+  await vi.advanceTimersByTimeAsync(5001);
+  expect(mocks.pending).toHaveBeenCalledTimes(2);
+  expect(mocks.settle).toHaveBeenCalledOnce();
+});
+
+test("a slow account does not block restoration of other accounts", async () => {
+  const second = { ...account, accountId: 10 };
+  mocks.pending.mockImplementation((id: number) => id === 9 ? new Promise(() => {}) : Promise.resolve([
+    { ...storedReceipt(), submission: { ...storedReceipt().submission, accountId: 10 } },
+  ]));
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations({ ...store, accounts: [account, second],
+    findAccount: (id: number) => id === 9 ? account : second } as AccountStoreContext);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.pending).toHaveBeenCalledWith(10);
+  expect(mocks.settle).toHaveBeenCalledOnce();
+});
+
+test("a previous session's in-flight read does not suppress recovery after relogin", async () => {
+  mocks.pending.mockImplementationOnce(() => new Promise(() => {})).mockResolvedValue([storedReceipt()]);
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(store);
+  mocks.session = "session-two"; api.resumePendingVenueConfirmations(store);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.pending).toHaveBeenCalledTimes(2);
+  expect(mocks.settle).toHaveBeenCalledOnce();
+});
+
+test.each(["session", "scope"] as const)("changing %s during terminal save preserves the task without notifying or counting", async (field) => {
+  mocks.attempts = [{ ...original, recovery: { ...original.recovery, betRowId: 20 } }];
+  mocks.settle.mockResolvedValue({ pendingConfirm: false, rejected: false,
+    orders: [{ orderId: "hash-one", status: "none", pmShares: 20 }] });
+  let finish!: () => void;
+  mocks.save.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(store);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.save).toHaveBeenCalledOnce();
+  mocks[field] = "changed"; finish();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.notify).not.toHaveBeenCalled(); expect(mocks.mark).not.toHaveBeenCalled();
+  expect(JSON.parse(sessionStorage.getItem("PENDING_VENUE_BET_CONFIRM")!)).toHaveLength(1);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+test("a journal refresh retains the complete signed submission already in the task", async () => {
+  sessionStorage.setItem("PENDING_VENUE_BET_CONFIRM", JSON.stringify([{
+    key: "owner-one-wallet:hash-one", pmScope: mocks.scope, accountId: 9, provider: "Polymarket", orderId: "hash-one",
+    ...original.recovery, attempts: 0, nextPollAt: 0, pmSubmission: storedReceipt().submission,
+  }]));
+  mocks.attempts = [original];
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(store);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.settle.mock.calls[0][1]).toMatchObject({ request: { order: {
+    maker: storedReceipt().submission.makerAddress, takerAmount: "20000000",
+  } } });
+});
+
+test("recovery requested after relogin resumes once the previous session's confirmation finishes", async () => {
+  let finish!: (value: { pendingConfirm: boolean; rejected: boolean; orders: never[] }) => void;
+  mocks.attempts = [original];
+  mocks.settle.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(store);
+  await vi.advanceTimersByTimeAsync(0);
+  mocks.session = "session-two"; api.resumePendingVenueConfirmations(store);
+  finish({ pendingConfirm: true, rejected: false, orders: [] });
+  await vi.advanceTimersByTimeAsync(1);
+  expect(mocks.settle).toHaveBeenCalledTimes(2);
+  expect(mocks.notify).not.toHaveBeenCalled(); expect(mocks.mark).not.toHaveBeenCalled();
+});
+
+test.each(["session", "scope"] as const)("a failed RDS read stops retrying after %s changes", async (field) => {
+  mocks.pending.mockRejectedValue(new Error("network unavailable"));
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(store);
+  await vi.advanceTimersByTimeAsync(0);
+  mocks[field] = "changed";
+  await vi.advanceTimersByTimeAsync(5001);
+  expect(mocks.pending).toHaveBeenCalledOnce();
+  expect(vi.getTimerCount()).toBe(0);
 });

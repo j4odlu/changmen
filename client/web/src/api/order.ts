@@ -2,7 +2,7 @@ import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { OrderRow, PageResult } from "@/types/esport";
 import { post, unwrap } from "@/api/client";
-import type { PmSubmission } from "@changmen/shared/pm_submission";
+import type { PmSubmission, PmPendingOrderReceipt } from "@changmen/shared/pm_submission";
 
 /** [changmen 扩展] 同步专用投影；未注册或没有匹配原单时沿用原保存数组。 */
 let orderSyncProjection: ((account: PlatformAccount, orders: VenueOrder[]) => VenueOrder[] | Promise<VenueOrder[]>) | undefined;
@@ -15,6 +15,13 @@ export function registerOrderSyncProjection(project: NonNullable<typeof orderSyn
 export async function getPmSubmission(playerId: number, orderId: string): Promise<PmSubmission | null> {
   const response = await post<PmSubmission>("Pm_GetSubmission", { playerId, orderId }, "", { errorTip: false });
   return response.success === 1 ? response.info ?? null : null;
+}
+
+/** [changmen 扩展] 从 RDS 读取待确认订单，刷新恢复不依赖名称缓存。 */
+export async function getPendingPmOrders(playerId: number): Promise<PmPendingOrderReceipt[]> {
+  const response = await post<PmPendingOrderReceipt[]>("Pm_GetPendingOrders", { playerId }, "", { errorTip: false });
+  if (response.success !== 1) throw new Error(response.msg || "待确认订单读取失败");
+  return response.info ?? [];
 }
 
 /** [A8 可证实] `Ut.getOrders`：success!==1 时不更新侧栏（返回 null） */

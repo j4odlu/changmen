@@ -1,0 +1,993 @@
+{
+  "purpose": "low-odds-single-execution-only",
+  "baseline": "2d1efc55ffabdfbe62abe4a5dbe6335bed38822a",
+  "changes": {
+    "client/packages/client-core/src/shared/format.ts": {
+      "beforeSha": "b39e98920708891f55de790fc1f8366cf78570b2c1b4fa6a2439c73e8dd93843",
+      "afterSha": "33b56ba91f812eeee6739952d2174a48332634842b6f3ebb89aa768cc2e9bfbb",
+      "edits": [
+        {
+          "start": 98,
+          "before": [],
+          "after": [
+            "/** [changmen 扩展] 低赔单边：独立于 9999 和正 EV 的负 Link 区间。 */",
+            "export const LOW_ODDS_LINK_BASE = 6_000_000_000_000_000;",
+            "export function isLowOddsSingleLink(link: number | null | undefined): boolean {",
+            "  const n = Number(link);",
+            "  return Number.isFinite(n) && n < 0 && Math.abs(n) >= LOW_ODDS_LINK_BASE && Math.abs(n) < VALUE_BET_LINK_BASE;",
+            "}",
+            "export function createLowOddsSingleLinkId(ts = Date.now()): number {",
+            "  return -(LOW_ODDS_LINK_BASE + ts);",
+            "}",
+            ""
+          ]
+        },
+        {
+          "start": 122,
+          "before": [
+            "  return isSingleLegLink(link) && !isValueBetLink(link);"
+          ],
+          "after": [
+            "  return isSingleLegLink(link) && !isValueBetLink(link) && !isLowOddsSingleLink(link);"
+          ]
+        },
+        {
+          "start": 134,
+          "before": [],
+          "after": [
+            "  if (n >= LOW_ODDS_LINK_BASE)",
+            "    return n - LOW_ODDS_LINK_BASE;"
+          ]
+        },
+        {
+          "start": 146,
+          "before": [],
+          "after": [
+            "  if (isLowOddsSingleLink(n))",
+            "    return \"🎯\";"
+          ]
+        },
+        {
+          "start": 154,
+          "before": [
+            "export type LinkIdSource = \"arb\" | \"single\" | \"valueBet\" | \"hash\";"
+          ],
+          "after": [
+            "export type LinkIdSource = \"arb\" | \"single\" | \"valueBet\" | \"lowOddsSingle\" | \"hash\";"
+          ]
+        },
+        {
+          "start": 164,
+          "before": [],
+          "after": [
+            "  if (isLowOddsSingleLink(n))",
+            "    return \"lowOddsSingle\";"
+          ]
+        },
+        {
+          "start": 181,
+          "before": [],
+          "after": [
+            "    case \"lowOddsSingle\":",
+            "      return \"低赔单边\";"
+          ]
+        }
+      ]
+    },
+    "client/web/src/components/order/ActiveBetRunView.vue": {
+      "beforeSha": "6d66ff66de97a82b761e3bc23f6015658ff0421182742eb212666d2740a738f8",
+      "afterSha": "a12e01273233e9590a217d5f2baf2af83afc19671bd360dff502be459da46d15",
+      "edits": [
+        {
+          "start": 465,
+          "before": [],
+          "after": [
+            "  if (mode === \"lowOddsSingle\") {",
+            "    if (run.terminalAt) return \"🎯 本轮已结束；高赔腿跳过，不补单。\";",
+            "    if (run.phase === \"preparing\" || run.phase === \"checking\") return \"两腿均须通过预检，再选低赔腿提交。\";",
+            "    return \"仅跟踪低赔腿原单；每盘口一次，不重发、不补单。\";",
+            "  }"
+          ]
+        },
+        {
+          "start": 576,
+          "before": [
+            "              <span v-if=\"activeBetRunMode(activeRun) === 'single9999'\">只提交下单腿，9999 侧不下单</span>"
+          ],
+          "after": [
+            "              <span v-if=\"activeBetRunMode(activeRun) === 'lowOddsSingle'\">双腿预检，仅提交低赔腿；每盘口一次，不补单</span>",
+            "              <span v-else-if=\"activeBetRunMode(activeRun) === 'single9999'\">只提交下单腿，9999 侧不下单</span>"
+          ]
+        }
+      ]
+    },
+    "client/web/src/components/user/tabs/UserDiagExtensionsTab.test.ts": {
+      "beforeSha": "3c934cc2ed69f8a0ae5fb3be15abd27a706ea5c25b8630e5f18d9274ffd9d85c",
+      "afterSha": "93aeba5b5e5569747eb69daa8d0eae4b19854cd6e73a78654e6728996da1c847",
+      "edits": [
+        {
+          "start": 191,
+          "before": [],
+          "after": [
+            "  it(\"renders 🎯 as an independent opt-in strategy with its once-only/no-makeup boundaries\", async () => {",
+            "    const user = useUserStore();",
+            "    expect(user.extensionPrefs.arbExecutionMode).toBe(\"normal\");",
+            "    const html = await renderToString(createSSRApp(Tab));",
+            "    expect(html).toContain(\"🎯 低赔单边\");",
+            "    expect(html).toContain(\"每盘口最多提交一次\");",
+            "    expect(html).toContain(\"不跨设备共享\");",
+            "    expect(html).toContain('data-mode=\"normal\"');",
+            "    expect(html).toContain('data-mode=\"lowOddsSingle\"');",
+            "    expect(user.extensionPrefs.pmArbOrderMode).toBe(\"FOK\");",
+            "  });",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/components/user/tabs/UserDiagExtensionsTab.vue": {
+      "beforeSha": "173a28217610e51debc7cd8727f3e02308ad9ef77bda477b1e26ef33a4f89ce8",
+      "afterSha": "73b4542f06f526ec5a218e19dc6224cad91694e18af8ab1c015d24a165bd5811",
+      "edits": [
+        {
+          "start": 45,
+          "before": [],
+          "after": [
+            "extensionPrefs.value.arbExecutionMode ??= \"normal\";"
+          ]
+        },
+        {
+          "start": 139,
+          "before": [],
+          "after": [
+            "    <section class=\"extensions-tab__panel\">",
+            "      <h3 class=\"extensions-tab__heading\">自动下注模式</h3>",
+            "      <el-radio-group v-model=\"extensionPrefs.arbExecutionMode\" aria-label=\"自动下注模式\">",
+            "        <el-radio-button value=\"normal\">普通模式</el-radio-button>",
+            "        <el-radio-button value=\"lowOddsSingle\">🎯 低赔单边</el-radio-button>",
+            "      </el-radio-group>",
+            "      <p class=\"extensions-tab__section-desc\">",
+            "        🎯 两腿预检均通过后，仅提交低赔腿，金额沿用原计划。每盘口最多提交一次，不补单；相同赔率跳过。",
+            "        次数按当前浏览器及用户保存，刷新不清空，不跨设备共享。暂不支持 PM GTC 和 9999 单边组合。",
+            "      </p>",
+            "    </section>"
+          ]
+        }
+      ]
+    },
+    "client/web/src/shared/activeBetRunPresentation.ts": {
+      "beforeSha": "e7aef1516ad6688c588d0d4fb6f0ea32c3cd1de6977c7764d7305b02b76c4fa3",
+      "afterSha": "186f78664b346e0748ad813324f408c9a6b643cf0f1b76e1051978ffc4d0f96a",
+      "edits": [
+        {
+          "start": 25,
+          "before": [
+            "  return run.mode ?? (source === \"single\" ? \"single9999\" : source === \"arb\" ? \"arb\" : source === \"valueBet\" ? \"valueBet\" : undefined);"
+          ],
+          "after": [
+            "  return run.mode ?? (source === \"lowOddsSingle\" ? \"lowOddsSingle\" : source === \"single\" ? \"single9999\" : source === \"arb\" ? \"arb\" : source === \"valueBet\" ? \"valueBet\" : undefined);"
+          ]
+        },
+        {
+          "start": 30,
+          "before": [
+            "  return mode === \"single9999\" ? \"9999 单边下单\" : mode === \"arb\" ? \"双边套利\" : mode === \"valueBet\" ? \"正EV 单腿下单\" : \"模式未记录\";"
+          ],
+          "after": [
+            "  return mode === \"lowOddsSingle\" ? \"🎯 低赔单边\" : mode === \"single9999\" ? \"9999 单边下单\" : mode === \"arb\" ? \"双边套利\" : mode === \"valueBet\" ? \"正EV 单腿下单\" : \"模式未记录\";"
+          ]
+        }
+      ]
+    },
+    "client/web/src/shared/format.test.ts": {
+      "beforeSha": "b3f4b3308c892ae64784699013302d4c1ec55a203a984a746ca018bd9f994cf4",
+      "afterSha": "02ed039cb3f61aa8dd47e0c75c6e25a04d202822c9dc64f1098bc25e33d48971",
+      "edits": [
+        {
+          "start": 2,
+          "before": [],
+          "after": [
+            "  createLowOddsSingleLinkId,",
+            "  isLowOddsSingleLink,",
+            "  orderLinkSortKey as lowOddsSortKey,"
+          ]
+        },
+        {
+          "start": 82,
+          "before": [],
+          "after": [
+            "  it(\"🎯 uses an independent negative Link with the original booking timestamp\", () => {",
+            "    const at = 1_792_680_000_123;",
+            "    const link = createLowOddsSingleLinkId(at);",
+            "    expect(formatLinkId(link)).toBe(\"🎯\");",
+            "    expect(classifyLinkId(link)).toBe(\"lowOddsSingle\");",
+            "    expect(isLowOddsSingleLink(link)).toBe(true);",
+            "    expect(isSingleLegRateLink(link)).toBe(false);",
+            "    expect(isValueBetLink(link)).toBe(false);",
+            "    expect(lowOddsSortKey(link)).toBe(at);",
+            "  });",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/shared/linkDisplay.ts": {
+      "beforeSha": "0882423f957099197efbc47ea2cab8f64677622f3f2a65651c1088c3fd8ab5bc",
+      "afterSha": "6cfded4748937ee669b5c9fe293d99b1d92df668a5f85c06a121bea4f0b45abd",
+      "edits": [
+        {
+          "start": 20,
+          "before": [],
+          "after": [
+            "  lowOddsSingle: \"低赔单边：双腿预检后只提交低赔腿，每盘口一次，不补单\","
+          ]
+        },
+        {
+          "start": 42,
+          "before": [],
+          "after": [
+            "  if (badge.source === \"lowOddsSingle\")",
+            "    return `Link ${tail} · 🎯低赔`;"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/activeBetRunSync.ts": {
+      "beforeSha": "129f061b37b31ac63ea6f96f9b6d9b51914a2a08cf7091f8f329e939f693925a",
+      "afterSha": "46ac1e640c4acbe2ef1e2db4dc835929a88be8a780576a9245e1f3b058859b28",
+      "edits": [
+        {
+          "start": 6,
+          "before": [],
+          "after": [
+            "import { isLowOddsSingleLink } from \"@changmen/client-core/shared/format\";"
+          ]
+        },
+        {
+          "start": 107,
+          "before": [
+            "    mode: params.betBothLegs ? \"arb\" : \"single9999\","
+          ],
+          "after": [
+            "    mode: isLowOddsSingleLink(linkId) ? \"lowOddsSingle\" : params.betBothLegs ? \"arb\" : \"single9999\","
+          ]
+        },
+        {
+          "start": 109,
+          "before": [
+            "    overallLabel: params.betBothLegs ? \"准备双边套利\" : \"准备 9999 单边下单\","
+          ],
+          "after": [
+            "    overallLabel: isLowOddsSingleLink(linkId) ? \"🎯 双腿预检后只下低赔腿\" : params.betBothLegs ? \"准备双边套利\" : \"准备 9999 单边下单\","
+          ]
+        },
+        {
+          "start": 564,
+          "before": [
+            "  if (run?.mode === \"single9999\" && ((flags.hasA && flags.okA) || (flags.hasB && flags.okB))) {",
+            "    store.scheduleTerminalRemoval(betId, undefined, \"单边下单已完成\");"
+          ],
+          "after": [
+            "  if ((run?.mode === \"single9999\" || run?.mode === \"lowOddsSingle\") && ((flags.hasA && flags.okA) || (flags.hasB && flags.okB))) {",
+            "    store.scheduleTerminalRemoval(betId, undefined, run?.mode === \"lowOddsSingle\" ? \"🎯 低赔单边已成交\" : \"单边下单已完成\");"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/executeArbBet.ts": {
+      "beforeSha": "50d7edc82779f5516f585def6e9b28979e0304c5f62fb5e175fde7115431858f",
+      "afterSha": "91f68a440bf1e62a0a57584df0fd637ff865c486340ede0d5d8594012838c756",
+      "edits": [
+        {
+          "start": 54,
+          "before": [
+            "  const mode = captureArbExecutionSelection().orderMode;",
+            "  const attempt: ArbBetAttemptParams = { ...params, ...(mode === \"GTC\" ? { pmOrderMode: mode } : {}) };"
+          ],
+          "after": [
+            "  const selection = captureArbExecutionSelection();",
+            "  const mode = selection.orderMode;",
+            "  const attempt: ArbBetAttemptParams = { ...params, ...(selection.executionMode ? { executionMode: selection.executionMode } : {}), ...(mode === \"GTC\" ? { pmOrderMode: mode } : {}) };"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/checkArbLegs.test.ts": {
+      "beforeSha": "812e84cb04e583b13a4a2772c3548223fa39af0d59230152da97872da8eb8982",
+      "afterSha": "7ebe42fef22495d41ae77397ad9c7abace8fb72e13302371b5bfc445a827a581",
+      "edits": [
+        {
+          "start": 345,
+          "before": [],
+          "after": [
+            "  it(\"🎯 waits for both checks, selects updated odds and preserves each stake\", async () => {",
+            "    const input = { ...ready(leg(\"OB\", 100, 1.6), leg(\"RAY\", 60, 3.0)), executionMode: \"lowOddsSingle\" as const };",
+            "    let finishB!: () => void;",
+            "    checkBetting.mockImplementation(async (_account, option: BetOption) => {",
+            "      if (option === input.legB) await new Promise<void>(resolve => { finishB = resolve; });",
+            "      option.newOdds = option === input.legA ? 2.3 : 1.9;",
+            "      option.data = { ok: true };",
+            "      return option;",
+            "    });",
+            "    let completed = false;",
+            "    const pending = checkArbLegs(params, input).then(value => { completed = true; return value; });",
+            "    await vi.waitFor(() => expect(checkBetting).toHaveBeenCalledTimes(2));",
+            "    expect(completed).toBe(false);",
+            "    finishB();",
+            "    const checked = await pending;",
+            "    expect(checked?.executionSide).toBe(\"B\");",
+            "    expect(checked?.accountA).toBeUndefined();",
+            "    expect(checked?.checkAccountA).toBe(input.accountA);",
+            "    expect(checked?.accountB).toBe(input.accountB);",
+            "    expect(checked?.betBothLegs).toBe(false);",
+            "    expect(checked?.legA.betMoney).toBe(100);",
+            "    expect(checked?.legB.betMoney).toBe(60);",
+            "    expect(checked?.legB.orderIndex).toBe(1);",
+            "  });",
+            "",
+            "  it.each([\"failed\", \"inconsistent\", \"equal\"])(\"🎯 blocks %s precheck without producing an executable plan\", async kind => {",
+            "    const input = { ...ready(leg(\"OB\", 100, 1.8), leg(\"RAY\", 60, 2.5)), executionMode: \"lowOddsSingle\" as const };",
+            "    checkBetting.mockImplementation(async (_account, option: BetOption) => {",
+            "      option.data = kind === \"failed\" && option === input.legB ? null : { ok: true };",
+            "      if (kind === \"inconsistent\" && option === input.legB) option.checkError = \"invalid quote\";",
+            "      option.newOdds = kind === \"equal\" ? 2 : option.odds;",
+            "      return option;",
+            "    });",
+            "    expect(await checkArbLegs(params, input)).toBeNull();",
+            "    expect(checkBetting).toHaveBeenCalledTimes(2);",
+            "  });",
+            "",
+            "  it(\"🎯 blocks GTC and missing live account instead of weakening the two-check requirement\", async () => {",
+            "    const input = { ...ready(leg(\"OB\", 100, 1.8), leg(\"RAY\", 60, 2.5)), executionMode: \"lowOddsSingle\" as const };",
+            "    expect(await checkArbLegs(params, { ...input, accountB: undefined })).toBeNull();",
+            "    expect(await checkArbLegs(params, { ...input, pmOrderMode: \"GTC\" })).toBeNull();",
+            "    expect(checkBetting).not.toHaveBeenCalled();",
+            "  });",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/checkArbLegs.ts": {
+      "beforeSha": "1dfe92792a8b9f3dd14d485dbec7a1e291c0214741587e2da6d30f1d8980ca0a",
+      "afterSha": "41e3ad9da449944dcad32deea6835c50ca6ddc1ebf4085c25a1a4eeded52cd0b",
+      "edits": [
+        {
+          "start": 0,
+          "before": [],
+          "after": [
+            "import { lowOddsExecutionSide } from \"@/extensions/arbBet/lowOddsSingle\";"
+          ]
+        },
+        {
+          "start": 62,
+          "before": [],
+          "after": [
+            "  if (ready.executionMode === \"lowOddsSingle\" && (!ready.accountA || !ready.accountB || ready.singleLegByRate || ready.pmOrderMode === \"GTC\")) {",
+            "    trace?.finish(\"skip\", \"🎯 需要普通模式双腿预检，不支持 GTC 或 9999 单边\");",
+            "    return null;",
+            "  }"
+          ]
+        },
+        {
+          "start": 209,
+          "before": [
+            "  const dualPrecheckFailed = (checkAccountA && !legA.data) || (checkAccountB && !legB.data);"
+          ],
+          "after": [
+            "  const dualPrecheckFailed = (checkAccountA && !legA.data) || (checkAccountB && !legB.data)",
+            "    || (ready.executionMode === \"lowOddsSingle\" && (legA.checkError || legB.checkError));"
+          ]
+        },
+        {
+          "start": 282,
+          "before": [],
+          "after": [
+            "  let executionSide: \"A\" | \"B\" | undefined;",
+            "  if (ready.executionMode === \"lowOddsSingle\") {",
+            "    const side = lowOddsExecutionSide(legA, legB);",
+            "    if (!side) {",
+            "      const reason = \"🎯 两腿赔率相同或无效，跳过本次\";",
+            "      trace?.finish(\"skip\", reason); syncActiveBetFail(bet.id, reason); return null;",
+            "    }",
+            "    executionSide = side;",
+            "    (side === \"A\" ? legA : legB).orderIndex = 1;",
+            "    // 双腿账号保留在 checkAccount，实际发送账号仅留下选中的一侧。",
+            "    if (side === \"A\") accountB = undefined;",
+            "    else accountA = undefined;",
+            "    betBothLegs = false;",
+            "  }"
+          ]
+        },
+        {
+          "start": 298,
+          "before": [],
+          "after": [
+            "    ...(executionSide ? { executionSide, betBothLegs, checkAccountA, checkAccountB } : {}),"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/finalizeArbBet.test.ts": {
+      "beforeSha": "43cd1d39ffffcaca6db0e5bce647e299108563d89c0a8688eeaf6740e8a7f6e6",
+      "afterSha": "e10275895f5765a971bf81f9e4c8aa1a4339daf91e3ee08f92ef45953a7ef345",
+      "edits": [
+        {
+          "start": 1024,
+          "before": [],
+          "after": [
+            "  it(\"🎯 confirms only the submitted leg and bypasses makeup and auto-sell\", async () => {",
+            "    autoSellEnabled.value = true;",
+            "    settleArbLeg.mockResolvedValueOnce(packLegSync({ orders: [venueOrder(\"ray-low-odds\", \"none\", 1.8)], rejected: false }));",
+            "    const placed = makePlaced({ executionMode: \"lowOddsSingle\", executionSide: \"B\", betBothLegs: false,",
+            "      accountA: undefined, resultA: undefined, placeOutcomeA: \"not_attempted\" });",
+            "    await finalizeArbBet({ match: makeMatch(), bet: makeBet(), config: { ...createDefaultUserConfig(), makeUp: true, anyOdds: true }, setMessage: vi.fn() }, placed);",
+            "    expect(applyArbMakeUpFromRejects).not.toHaveBeenCalled();",
+            "    expect(autoSell).not.toHaveBeenCalled();",
+            "    expect(recordSingleLeg9999MapFill).not.toHaveBeenCalled();",
+            "    expect(bettingMessage).toHaveBeenCalled();",
+            "    const peers = bettingMessage.mock.calls[0]!;",
+            "    expect(peers[0]).toMatchObject({ kind: \"lowOddsSingle\" });",
+            "    expect(registerRayOrderContext).toHaveBeenCalledWith(expect.objectContaining({ anchorConfirmed: false }));",
+            "  });",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/finalizeArbBet.ts": {
+      "beforeSha": "c315a5886d0f4005622b20d75af5adb493da883a40a937ef2c5e733b42872b83",
+      "afterSha": "31042ea08553282c19c1c5bfdd5bcf57d633fe3b2cdfac69a387eddc29f920cb",
+      "edits": [
+        {
+          "start": 33,
+          "before": [],
+          "after": [
+            "  const lowOddsSingle = placed.executionMode === \"lowOddsSingle\";"
+          ]
+        },
+        {
+          "start": 101,
+          "before": [
+            "  const makeup = actions?.makeup === false ? { enqueuedForLegA: false, enqueuedForLegB: false } : await applyArbMakeUpFromRejects("
+          ],
+          "after": [
+            "  const makeup = lowOddsSingle || actions?.makeup === false ? { enqueuedForLegA: false, enqueuedForLegB: false } : await applyArbMakeUpFromRejects("
+          ]
+        },
+        {
+          "start": 154,
+          "before": [
+            "  if (actions?.autoSell !== false && useUserStore().extensionPrefs?.arbFailAutoSell?.enabled === true) {"
+          ],
+          "after": [
+            "  if (!lowOddsSingle && actions?.autoSell !== false && useUserStore().extensionPrefs?.arbFailAutoSell?.enabled === true) {"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/finalizeArbMessaging.ts": {
+      "beforeSha": "06dc71089d409a7a43eeb254cf5e460b5dc5152421995715118cf13ead7494b7",
+      "afterSha": "e565b05610e2bf341b6220b9724cde38358be3997d3f1335cfa6876ca7e874a3",
+      "edits": [
+        {
+          "start": 23,
+          "before": [],
+          "after": [
+            "  if (placed.executionMode === \"lowOddsSingle\") {",
+            "    const skippedLeg = placed.executionSide === \"A\" ? legB : legA;",
+            "    return { kind: \"lowOddsSingle\", options: skippedLeg, platformLabel: skippedLeg.type };",
+            "  }"
+          ]
+        },
+        {
+          "start": 136,
+          "before": [],
+          "after": [
+            "  if (placed.executionMode === \"lowOddsSingle\") {",
+            "    const side = placed.executionSide;",
+            "    const pending = side === \"A\" ? settle.pendingConfirmA : settle.pendingConfirmB;",
+            "    const ok = side === \"A\" ? outcome.okA : outcome.okB;",
+            "    trace?.finish(ok ? \"success\" : pending ? \"partial\" : \"fail\",",
+            "      ok ? \"🎯 低赔单边已成交\" : pending ? \"🎯 原单待确认，不重发\" : \"🎯 本次未成单，不补单\");",
+            "    return;",
+            "  }"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/placeArbLegs.test.ts": {
+      "beforeSha": "202402d34cf8acf3f03405a4294d81938e2dde1137fb58af88b943fda42b9c25",
+      "afterSha": "1ef366a5db8b871006c1b7ed21dad9d9da5c218e42aa7b35318008c0b08a91e1",
+      "edits": [
+        {
+          "start": 13,
+          "before": [],
+          "after": [
+            "",
+            "const claimLowOdds = vi.hoisted(() => vi.fn());",
+            "vi.mock(\"@/extensions/arbBet/lowOddsSingle\", () => ({ claimLowOddsMarket: claimLowOdds }));"
+          ]
+        },
+        {
+          "start": 655,
+          "before": [],
+          "after": [
+            "  it.each([\"A\", \"B\"] as const)(\"🎯 sends only %s even with Parallel/anyOdds, preserving identity and stake\", async side => {",
+            "    claimLowOdds.mockResolvedValueOnce(true);",
+            "    const input = checked({ executionMode: \"lowOddsSingle\", executionSide: side, betBothLegs: false,",
+            "      lowOddsMarketKeys: [\"market\"],",
+            "      accountA: side === \"A\" ? account(\"OB\") : undefined,",
+            "      accountB: side === \"B\" ? account(\"RAY\") : undefined,",
+            "      checkAccountA: account(\"OB\"), checkAccountB: account(\"RAY\"),",
+            "    });",
+            "    betting.mockResolvedValueOnce(new BetResult(side === \"A\" ? \"OB\" : \"RAY\", true));",
+            "    const out = await placeArbLegs({ ...params, config: { ...params.config, betSorting: \"Parallel\", anyOdds: true, makeUp: true } }, input);",
+            "    expect(betting).toHaveBeenCalledOnce();",
+            "    expect(betting.mock.calls[0]![1]).toBe(side === \"A\" ? input.legA : input.legB);",
+            "    expect(out.legA).toBe(input.legA);",
+            "    expect(out.legB).toBe(input.legB);",
+            "    expect(side === \"A\" ? out.placeOutcomeB : out.placeOutcomeA).toBe(\"not_attempted\");",
+            "    expect(retryFailedLeg).not.toHaveBeenCalled();",
+            "    expect(enqueueMakeUpOrder).not.toHaveBeenCalled();",
+            "    expect(claimLowOdds).toHaveBeenLastCalledWith([\"market\"]);",
+            "  });",
+            "",
+            "  it.each([false, \"storage_error\"])(\"🎯 never sends if its once-only claim is %s\", async result => {",
+            "    if (result === false) claimLowOdds.mockResolvedValueOnce(false);",
+            "    else claimLowOdds.mockRejectedValueOnce(new Error(\"storage unavailable\"));",
+            "    const input = checked({ executionMode: \"lowOddsSingle\", executionSide: \"A\", betBothLegs: false,",
+            "      lowOddsMarketKeys: [\"market\"], accountB: undefined, checkAccountA: account(\"OB\"), checkAccountB: account(\"RAY\") });",
+            "    const out = await placeArbLegs(params, input);",
+            "    expect(betting).not.toHaveBeenCalled();",
+            "    expect(out.placeOutcomeA).toBe(\"not_attempted\");",
+            "    expect(out.placeOutcomeB).toBe(\"not_attempted\");",
+            "  });",
+            "",
+            "  it(\"🎯 failed or unknown submission never switches to its reference leg\", async () => {",
+            "    for (const unknown of [false, true]) {",
+            "      claimLowOdds.mockResolvedValueOnce(true);",
+            "      betting.mockResolvedValueOnce(Object.assign(new BetResult(\"OB\", false), { pmSubmitUnknown: unknown }));",
+            "      const input = checked({ executionMode: \"lowOddsSingle\", executionSide: \"A\", betBothLegs: false,",
+            "        lowOddsMarketKeys: [\"market\"], accountB: undefined, checkAccountA: account(\"OB\"), checkAccountB: account(\"RAY\") });",
+            "      const out = await placeArbLegs(params, input);",
+            "      expect(out.placeOutcomeB).toBe(\"not_attempted\");",
+            "    }",
+            "    expect(betting).toHaveBeenCalledTimes(2);",
+            "    expect(retryFailedLeg).not.toHaveBeenCalled();",
+            "  });",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/placeArbLegs.ts": {
+      "beforeSha": "6af0f43fc9c342bcdb7ff459062c6fc8d1493d6b37e36da11bdf4f5ffa453a42",
+      "afterSha": "fe631323898848338fae1086395555b18003736712085c5228eb9545e72129f3",
+      "edits": [
+        {
+          "start": 0,
+          "before": [],
+          "after": [
+            "import { claimLowOddsMarket } from \"@/extensions/arbBet/lowOddsSingle\";"
+          ]
+        },
+        {
+          "start": 75,
+          "before": [],
+          "after": [
+            "  const lowOddsSingle = checked.executionMode === \"lowOddsSingle\";"
+          ]
+        },
+        {
+          "start": 116,
+          "before": [],
+          "after": [
+            "  }",
+            "  if (lowOddsSingle) {",
+            "    const validSingle = !betBothLegs && checked.executionSide",
+            "      && Boolean(accountA) !== Boolean(accountB)",
+            "      && (checked.executionSide === \"A\" ? Boolean(accountA) : Boolean(accountB))",
+            "      && checked.checkAccountA && checked.checkAccountB && legA.data && legB.data",
+            "      && !legA.checkError && !legB.checkError && checked.pmOrderMode !== \"GTC\";",
+            "    if (!validSingle) { mixedBlocked = true; mixedBlockReason = \"🎯 双预检或单腿执行计划不完整，未提交\"; }",
+            "    if (!mixedBlocked) {",
+            "      try {",
+            "        if (!await claimLowOddsMarket(checked.lowOddsMarketKeys ?? [])) {",
+            "          mixedBlocked = true; mixedBlockReason = \"🎯 本盘口已提交过，跳过\";",
+            "        }",
+            "      }",
+            "      catch (error) {",
+            "        mixedBlocked = true; mixedBlockReason = error instanceof Error ? error.message : \"🎯 盘口次数占位失败，未提交\";",
+            "      }",
+            "    }",
+            "    syncActiveBetLeg(bet.id, checked.executionSide === \"A\" ? \"B\" : \"A\", \"skipped\", \"🎯 高赔腿主动跳过，不补单\");",
+            "    trace?.event(\"模式\", \"🎯 低赔单边：高赔腿主动跳过，不补单\");"
+          ]
+        },
+        {
+          "start": 193,
+          "before": [
+            "  if (!original && resultB?.success && !resultA?.success) {"
+          ],
+          "after": [
+            "  if (!lowOddsSingle && !original && resultB?.success && !resultA?.success) {"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/prepareArbAttempt.history.test.ts": {
+      "beforeSha": "62dfed1b6d21fad3195433d9df1c561f0037cc6d83b0f7ce724ac15387ba7240",
+      "afterSha": "65f5bab11096a0c5c598cfb82fc2a7d7f0d8acab4b7e9c95bad79a93d2893387",
+      "edits": [
+        {
+          "start": 130,
+          "before": [],
+          "after": [
+            "",
+            "it(\"🎯 keeps both normal accounts for precheck, skips a consumed market, and blocks PM GTC\", async () => {",
+            "  const fixture = makeFixture([\"Polymarket\", \"RAY\"], \"FOK\", \"count\");",
+            "  const params = { ...fixture.params, executionMode: \"lowOddsSingle\" as const };",
+            "  const ready = await prepareArbAttempt(params);",
+            "  expect(ready?.executionMode).toBe(\"lowOddsSingle\");",
+            "  expect(ready?.betBothLegs).toBe(true);",
+            "  expect(ready?.accountA).toBe(fixture.accounts[0]);",
+            "  expect(ready?.accountB).toBe(fixture.accounts[1]);",
+            "  expect(ready?.singleLegByRate).toBe(false);",
+            "  expect(ready?.linkId).toBeLessThan(-6_000_000_000_000_000);",
+            "  expect(ready?.linkId).toBeGreaterThan(-7_000_000_000_000_000);",
+            "  const key = \"LowOddsSingleSubmitted:v1\";",
+            "  try {",
+            "    localStorage.setItem(key, JSON.stringify(ready!.lowOddsMarketKeys));",
+            "    expect(await prepareArbAttempt(params)).toBeNull();",
+            "  }",
+            "  finally { localStorage.removeItem(key); }",
+            "  expect(await prepareArbAttempt({ ...params, pmOrderMode: \"GTC\" })).toBeNull();",
+            "});",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/prepareArbAttempt.ts": {
+      "beforeSha": "cf4cd90818da461dfb8a99382f0a790e6115e6d519d9aebfa724d0ffefe4bbf7",
+      "afterSha": "009f7a53ec9c9128cd0e6f9f0b59df2d580247a1b0bacbe64b281b60fd266c42",
+      "edits": [
+        {
+          "start": 0,
+          "before": [],
+          "after": [
+            "import { createLowOddsSingleLinkId } from \"@changmen/client-core/shared/format\";",
+            "import { lowOddsMarketKeys, lowOddsMarketSubmitted } from \"@/extensions/arbBet/lowOddsSingle\";"
+          ]
+        },
+        {
+          "start": 56,
+          "before": [],
+          "after": [
+            "  const lowOddsSingle = params.executionMode === \"lowOddsSingle\";",
+            "  const marketKeys = lowOddsSingle ? lowOddsMarketKeys(String(userStore.userId || \"\"), match, bet, []) : [];",
+            "  if (lowOddsSingle && lowOddsMarketSubmitted(marketKeys)) return null;"
+          ]
+        },
+        {
+          "start": 93,
+          "before": [],
+          "after": [
+            "  }",
+            "  if (lowOddsSingle && params.pmOrderMode === \"GTC\" && options.some(leg => leg.type === \"Polymarket\")) {",
+            "    const reason = \"🎯 低赔单边暂不支持 PM GTC，请选择 FOK\";",
+            "    params.setMessage(reason); trace?.finish(\"skip\", reason); return null;"
+          ]
+        },
+        {
+          "start": 171,
+          "before": [],
+          "after": [
+            "  if (lowOddsSingle && !betBothLegs) {",
+            "    trace?.finish(\"skip\", \"🎯 低赔单边需要两腿均有可用账号并通过预检\");",
+            "    return null;",
+            "  }",
+            "  const lowOddsKeys = lowOddsSingle ? lowOddsMarketKeys(String(userStore.userId || \"\"), match, bet, options) : undefined;",
+            "  if (lowOddsKeys && lowOddsMarketSubmitted(lowOddsKeys)) return null;"
+          ]
+        },
+        {
+          "start": 316,
+          "before": [
+            "  const linkId = createArbLinkId(singleLegByRate, linkTs);"
+          ],
+          "after": [
+            "  const linkId = lowOddsSingle ? createLowOddsSingleLinkId(linkTs) : createArbLinkId(singleLegByRate, linkTs);"
+          ]
+        },
+        {
+          "start": 331,
+          "before": [],
+          "after": [
+            "    ...(lowOddsSingle ? { executionMode: \"lowOddsSingle\" as const, lowOddsMarketKeys: lowOddsKeys } : {}),"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/types.ts": {
+      "beforeSha": "6b3bdcdb97dae1ed9720df853e7fd2a353242fdb2d078d8d9b36f5be716b302a",
+      "afterSha": "fbfa338ddc1eed65efba8c46c22ecd248201f65d289799ceabcc67e36e42012b",
+      "edits": [
+        {
+          "start": 9,
+          "before": [],
+          "after": [
+            "  /** [changmen 扩展] 本次冻结的策略；缺省保持原流程。 */",
+            "  executionMode?: \"normal\" | \"lowOddsSingle\";",
+            "  executionSide?: \"A\" | \"B\";",
+            "  lowOddsMarketKeys?: string[];"
+          ]
+        },
+        {
+          "start": 92,
+          "before": [],
+          "after": [
+            "  executionMode?: \"normal\" | \"lowOddsSingle\";"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/execution/selection.ts": {
+      "beforeSha": "04f1529f8ff688256986028ceb63c0511a798b191fa133479c8a78e4c6722899",
+      "afterSha": "44cef7123d74fb77992df490561a1464c9a1752439c8f88321242dd4c9b539f4",
+      "edits": [
+        {
+          "start": 6,
+          "before": [],
+          "after": [
+            "  readonly executionMode?: \"normal\" | \"lowOddsSingle\";"
+          ]
+        },
+        {
+          "start": 14,
+          "before": [
+            "  return Object.freeze({ source: \"arb\", orderMode: active ? \"GTC\" : \"FOK\" });"
+          ],
+          "after": [
+            "  return Object.freeze({ source: \"arb\", orderMode: active ? \"GTC\" : \"FOK\",",
+            "    ...(user?.extensionPrefs.arbExecutionMode === \"lowOddsSingle\" ? { executionMode: \"lowOddsSingle\" as const } : {}),",
+            "  });"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/messageStore.ts": {
+      "beforeSha": "d4002cce7c1350a1180e084c68ede69f67dd06fbbf50e9fe793e5fd8aedd74c7",
+      "afterSha": "ee675a838b1f76167a96a31aa6b705ddda2cfc0b67cd9bc4b64ae65f0d5cd1ca",
+      "edits": [
+        {
+          "start": 38,
+          "before": [
+            "  kind: \"singleLegRate\";"
+          ],
+          "after": [
+            "  kind: \"singleLegRate\" | \"lowOddsSingle\";"
+          ]
+        },
+        {
+          "start": 48,
+          "before": [
+            "  return \"kind\" in leg && leg.kind === \"singleLegRate\";"
+          ],
+          "after": [
+            "  return \"kind\" in leg && (leg.kind === \"singleLegRate\" || leg.kind === \"lowOddsSingle\");"
+          ]
+        },
+        {
+          "start": 308,
+          "before": [],
+          "after": [
+            "          if (leg.kind === \"lowOddsSingle\") {",
+            "            return [",
+            "              `${leg.platformLabel}（🎯 高赔腿）`, \"<blockquote>\",",
+            "              `参考方向：${leg.options.target}`,",
+            "              `参考赔率：${leg.options.newOdds || leg.options.odds}`,",
+            "              \"预检通过，本侧按模式跳过下注；不补单。</blockquote>\",",
+            "            ].join(\"\\n\");",
+            "          }"
+          ]
+        }
+      ]
+    },
+    "client/web/src/types/activeBetRun.ts": {
+      "beforeSha": "4dcd0b8d48477cb04a35d606a2f7e56fe84f54d409c3f56b2c1181f830b8cfee",
+      "afterSha": "9a02fabee658e0d6e891a74df7157f472a0ad04946f4bb4d882b3eb66b24c3a1",
+      "edits": [
+        {
+          "start": 46,
+          "before": [
+            "  mode?: \"arb\" | \"single9999\" | \"valueBet\";"
+          ],
+          "after": [
+            "  mode?: \"arb\" | \"single9999\" | \"valueBet\" | \"lowOddsSingle\";"
+          ]
+        }
+      ]
+    },
+    "client/web/src/types/extensionPrefs.test.ts": {
+      "beforeSha": "bcecf3d383dfc3c0df2b5e00e2f98f6ceee0f59fe502627e9aae4dd6f62a12b9",
+      "afterSha": "aba01a742fa576991cb354b320cd58a223863678365fdf8cee5c956cce5d32a0",
+      "edits": [
+        {
+          "start": 30,
+          "before": [],
+          "after": [
+            "  arbExecutionMode: \"normal\" as const,"
+          ]
+        },
+        {
+          "start": 483,
+          "before": [],
+          "after": [
+            "  it(\"🎯 only activates explicitly and survives Extensions save/load\", () => {",
+            "    for (const mode of [undefined, null, \"low\", true, \"NORMAL\"])",
+            "      expect(normalizeExtensionPrefs({ arbExecutionMode: mode }).arbExecutionMode).toBe(\"normal\");",
+            "    const prefs = normalizeExtensionPrefs({ arbExecutionMode: \"lowOddsSingle\" });",
+            "    expect(prefs.arbExecutionMode).toBe(\"lowOddsSingle\");",
+            "    expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);",
+            "  });",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/types/extensionPrefs.ts": {
+      "beforeSha": "b32cfa1cc7976e0df2df5a80f79c72b72103e0c87b556b0a5e9d412e02724c02",
+      "afterSha": "b99f1fbf9a63b4cc725b1e20a7b1226d88c002a0e7dfbf8cef0c5a035732754d",
+      "edits": [
+        {
+          "start": 215,
+          "before": [],
+          "after": [
+            "  /** [changmen 扩展] 普通双腿流程或双预检后仅下低赔腿。 */",
+            "  arbExecutionMode: \"normal\" | \"lowOddsSingle\";"
+          ]
+        },
+        {
+          "start": 395,
+          "before": [],
+          "after": [
+            "    arbExecutionMode: \"normal\","
+          ]
+        },
+        {
+          "start": 550,
+          "before": [],
+          "after": [
+            "    arbExecutionMode: row.arbExecutionMode === \"lowOddsSingle\" ? \"lowOddsSingle\" : \"normal\","
+          ]
+        }
+      ]
+    },
+    "rds/order_link_filter.js": {
+      "beforeSha": "a57bdf3195b6333970732d5b9f0c207ead1effada45f7d2fe2bc5d71bb6cc81d",
+      "afterSha": "0156a1211737fe40bb8fb0ef4e98a800dfa1de497888fdea360e1f5510671c26",
+      "edits": [
+        {
+          "start": 5,
+          "before": [],
+          "after": [
+            "/** [changmen 扩展] 与 client-core 保持相同的低赔单边 Link 区间。 */",
+            "export const LOW_ODDS_LINK_BASE = 6_000_000_000_000_000;",
+            "export function isLowOddsSingleLink(link) {",
+            "  const n = Number(link);",
+            "  return Number.isFinite(n) && n < 0 && Math.abs(n) >= LOW_ODDS_LINK_BASE && Math.abs(n) < VALUE_BET_LINK_BASE;",
+            "}"
+          ]
+        },
+        {
+          "start": 20,
+          "before": [],
+          "after": [
+            "  if (n >= LOW_ODDS_LINK_BASE)",
+            "    return n - LOW_ODDS_LINK_BASE;"
+          ]
+        },
+        {
+          "start": 27,
+          "before": [
+            "  return `(CASE WHEN ABS(${linkExpr}) >= ${VALUE_BET_LINK_BASE} THEN ABS(${linkExpr}) - ${VALUE_BET_LINK_BASE} ELSE ABS(${linkExpr}) END)`;"
+          ],
+          "after": [
+            "  return `(CASE WHEN ABS(${linkExpr}) >= ${VALUE_BET_LINK_BASE} THEN ABS(${linkExpr}) - ${VALUE_BET_LINK_BASE} WHEN ABS(${linkExpr}) >= ${LOW_ODDS_LINK_BASE} THEN ABS(${linkExpr}) - ${LOW_ODDS_LINK_BASE} ELSE ABS(${linkExpr}) END)`;"
+          ]
+        },
+        {
+          "start": 48,
+          "before": [
+            "  const n = Math.abs(Number(link)) || 0;",
+            "  const ts = n >= VALUE_BET_LINK_BASE ? n - VALUE_BET_LINK_BASE : n;"
+          ],
+          "after": [
+            "  const ts = orderLinkSortKey(link);"
+          ]
+        },
+        {
+          "start": 230,
+          "before": [
+            "  return Number.isFinite(n) && n < 0 && Math.abs(n) < VALUE_BET_LINK_BASE;"
+          ],
+          "after": [
+            "  return Number.isFinite(n) && n < 0 && Math.abs(n) < LOW_ODDS_LINK_BASE;"
+          ]
+        },
+        {
+          "start": 237,
+          "before": [
+            "  return isArbBindLink(link) || isValueBetLink(link) || isSingleLegRateLink(link);"
+          ],
+          "after": [
+            "  return isArbBindLink(link) || isValueBetLink(link) || isSingleLegRateLink(link) || isLowOddsSingleLink(link);"
+          ]
+        }
+      ]
+    },
+    "rds/order_link_filter.test.mjs": {
+      "beforeSha": "e34cc0be18d20995340ec70ebfcbed3c704f95bc4e05db3c60cbefd3c42b4697",
+      "afterSha": "71c8b07e95c42a41ea14426a7c8af7c49e04422c025dde84e32406b2601c31bb",
+      "edits": [
+        {
+          "start": 4,
+          "before": [],
+          "after": [
+            "  LOW_ODDS_LINK_BASE,",
+            "  isLowOddsSingleLink,"
+          ]
+        },
+        {
+          "start": 270,
+          "before": [],
+          "after": [
+            "  it(\"🎯 restores booking time, protects sync binding, and stays separate from 9999/EV\", () => {",
+            "    const at = 1_792_680_000_123;",
+            "    const link = -(LOW_ODDS_LINK_BASE + at);",
+            "    assert.equal(isLowOddsSingleLink(link), true);",
+            "    assert.equal(isSingleLegRateLink(link), false);",
+            "    assert.equal(isValueBetLink(link), false);",
+            "    assert.equal(isConfirmedClientBindLink(link), true);",
+            "    assert.equal(orderLinkSortKey(link), at);",
+            "    assert.equal(orderBelongsToMsRange(link, at + 86400000, at - 1, at + 1), true);",
+            "    assert.equal(orderBelongsToMsRange(link, at, at + 1, at + 86400000), false);",
+            "    assert.match(sqlOrderBelongsToRange(1, 2), /6000000000000000/);",
+            "    assert.equal(isLowOddsSingleLink(-(VALUE_BET_LINK_BASE + at)), false);",
+            "    assert.equal(isSingleLegRateLink(-at), true);",
+            "  });",
+            ""
+          ]
+        }
+      ]
+    },
+    "server/backend/core/account/order/group_home.js": {
+      "beforeSha": "428f108e732d8ea279f0a6ce9c2ddc01f1896afdae5650e43b503c33919061bd",
+      "afterSha": "b89d4e23e52fce53974f1b07aa268cc8fd42fdebdd5173d199816363f1ae2d94",
+      "edits": [
+        {
+          "start": 10,
+          "before": [],
+          "after": [
+            "const LOW_ODDS_LINK_BASE = 6_000_000_000_000_000;"
+          ]
+        },
+        {
+          "start": 14,
+          "before": [
+            "  const ts = n >= VALUE_BET_LINK_BASE ? n - VALUE_BET_LINK_BASE : n;"
+          ],
+          "after": [
+            "  const ts = n >= VALUE_BET_LINK_BASE ? n - VALUE_BET_LINK_BASE",
+            "    : n >= LOW_ODDS_LINK_BASE ? n - LOW_ODDS_LINK_BASE : n;"
+          ]
+        }
+      ]
+    }
+  },
+  "helpers": {
+    "client/web/src/extensions/arbBet/lowOddsSingle.ts": "b421e3949c4e363bd1bf4aedcfa06f5873e8096751452a266f2d350603629178"
+  }
+}

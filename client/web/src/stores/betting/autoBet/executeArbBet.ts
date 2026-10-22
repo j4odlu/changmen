@@ -52,8 +52,9 @@ export async function executeArbBet(params: {
   if (isMapMuteActive(params.match.id, params.bet.round, params.match.liveRound))
     return;
 
-  const mode = captureArbExecutionSelection().orderMode;
-  const attempt: ArbBetAttemptParams = { ...params, ...(mode === "GTC" ? { pmOrderMode: mode } : {}) };
+  const selection = captureArbExecutionSelection();
+  const mode = selection.orderMode;
+  const attempt: ArbBetAttemptParams = { ...params, ...(selection.executionMode ? { executionMode: selection.executionMode } : {}), ...(mode === "GTC" ? { pmOrderMode: mode } : {}) };
 
   const phaseMsMap: Partial<Record<ArbAttemptPhase, number>> = {};
   const base = { at: Date.now(), matchId: params.match.id, betId: params.bet.id };

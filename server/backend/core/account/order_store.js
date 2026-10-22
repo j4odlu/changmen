@@ -23,6 +23,8 @@ import { mergeOtherProviderLogicalSave } from "./order/save_non_pm.js";
 import { mergePredictFunLogicalSave } from "./order/save_pf.js";
 import { mergePolymarketProviderSave } from "./order/save_pm.js";
 import { applyPositionEventsOnSave } from "./order/position_events.js";
+import { preparePmPendingOrderSave } from "./order/pm_pending.js";
+import { isPmPendingOrder } from "@changmen/shared/pm_submission";
 import { preserveOrderMode } from "../orderModes/orderMetadata.js";
 import { saveRowsByExecution } from "../orderModes/saveRows.js";
 
@@ -229,9 +231,9 @@ export async function saveOrder(playerId, orders, userId, typeFallback = "", opt
       : {};
     // typeFallback（如 upsertPfServerOrder）必须进入 merge，否则 PF 保护/卖单 meta 会漏判
     const provider = String(o.provider || o.Type || defaultProvider || prevRow?.provider || "").trim();
-    const orderForMerge = provider && !o.provider && !o.Type
-      ? { ...o, provider }
-      : o;
+    const orderForMerge = preparePmPendingOrderSave(prevRow,
+      provider && !o.provider && !o.Type ? { ...o, provider } : o, playerId, provider);
+    if (!orderForMerge) continue;
     const link = resolveSaveOrderLink(
       orderForMerge,
       prevRaw,
@@ -265,10 +267,10 @@ export async function saveOrder(playerId, orders, userId, typeFallback = "", opt
       order_id: storedOrderId,
       link,
       provider,
-      match: o.match || o.Match || "",
-      bet: o.bet || o.Bet || "",
-      item: o.item || o.Item || "",
-      odds: parseNum(o.odds, 0),
+      match: orderForMerge.match || orderForMerge.Match || "",
+      bet: orderForMerge.bet || orderForMerge.Bet || "",
+      item: orderForMerge.item || orderForMerge.Item || "",
+      odds: parseNum(orderForMerge.odds, 0),
       bet_money,
       money,
       status: mapStatus(raw.status ?? o.status ?? o.Status),
@@ -330,7 +332,7 @@ export async function listUserProfitRank(dateKey = toDateKey(Date.now()), { incl
       agg.set(uid, { money: 0, count: 0, betMoney: 0 });
     const row = agg.get(uid);
     const status = String(o.status || "");
-    if (status === "Reject")
+    if (status === "Reject" || isPmPendingOrder(o))
       continue;
     // PF USDT→CNY：moneyForProfitAggregate（对齐前端当日盈亏）
     row.money += moneyForProfitAggregate(o);

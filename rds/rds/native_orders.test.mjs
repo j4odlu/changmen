@@ -32,11 +32,34 @@ async function trace(store, operation, failure = false) {
   store.setOrdersInsertedHook(null);
   return structuredClone({ result, calls: mocks.calls });
 }
+// [changmen 扩展] 只剔除已授权的 PM 状态竞态保护；其余 SQL、参数、事务及 hook 仍逐项对照旧版。
+const pendingRaceGuard = `  WHERE NOT (COALESCE(EXCLUDED.provider, '') = 'Polymarket' AND (
+    (EXCLUDED.status = 'Pending' AND orders.status IS DISTINCT FROM 'Pending')
+    OR (EXCLUDED.status IN ('Reject', 'Return') AND orders.raw ? 'pmSubmission'
+      AND CASE WHEN jsonb_typeof(orders.raw->'pmShares') = 'number'
+        THEN (orders.raw->>'pmShares')::float8 ELSE 0 END > 0)
+  ))
+`;
+function expectHistoricalTrace(actual, previous, operation) {
+  let guards = 0;
+  const calls = actual.calls.map(call => {
+    if (!call.sql?.includes("INSERT INTO orders")) return call;
+    expect(call.sql.split(pendingRaceGuard)).toHaveLength(2);
+    guards++;
+    return { ...call, sql: call.sql.replace(pendingRaceGuard, "") };
+  });
+  expect(guards).toBe(operation === "save" ? 1 : 0);
+  expect({ ...actual, calls }).toEqual(previous);
+}
 it.each(["1", "invalid"])("deprecated flag values=%s cannot alter native FOK read/write/delete or hook/rollback behavior", async value => {
   for (const operation of ["save", "read", "delete"]) {
     flags("0"); const old = await trace(previous, operation);
-    flags(value); expect(await trace(current, operation)).toEqual(old);
+    const ordinary = await trace(current, operation);
+    expectHistoricalTrace(ordinary, old, operation);
+    flags(value); expect(await trace(current, operation)).toEqual(ordinary);
   }
   flags("0"); const old = await trace(previous, "save", true);
-  flags(value); expect(await trace(current, "save", true)).toEqual(old);
+  const ordinary = await trace(current, "save", true);
+  expectHistoricalTrace(ordinary, old, "save");
+  flags(value); expect(await trace(current, "save", true)).toEqual(ordinary);
 });

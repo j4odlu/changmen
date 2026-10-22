@@ -3,7 +3,7 @@
  */
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { normalizePmMatchResult, parseNum } from "./dto.js";
-import { validatePmSubmission } from "@changmen/shared/pm_submission";
+import { isPmPendingOrder, validatePmSubmission } from "@changmen/shared/pm_submission";
 
 /** pmShares = 官方 fill，取 RDS/CLOB/入参 最大值，避免 0 覆盖有效值 */
 function preservePmBuyFillShares(prevRaw, o, merged) {
@@ -55,7 +55,10 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
   const incomingSide = String(o.pmSide ?? prevRaw.pmSide ?? "buy").toLowerCase();
   const isSell = incomingSide === "sell";
   const isChangmen = pmOrigin === "changmen" || prevRaw.pmOrigin === "changmen";
-  const prevBet = parseNum(prevRaw.betMoney, parseNum(prevRow?.bet_money, 0));
+  const requestedOnly = isPmPendingOrder(prevRow)
+    || (String(prevRow?.status).toLowerCase() === "reject" && !(Number(prevRaw.pmShares) > 0)
+      && validatePmSubmission(prevRaw.pmSubmission, String(prevRow.order_id), Number(prevRaw.pmSubmission?.accountId)));
+  const prevBet = requestedOnly ? 0 : parseNum(prevRaw.betMoney, parseNum(prevRow?.bet_money, 0));
   const incomingBet = parseNum(o.betMoney ?? o.BetMoney, 0);
 
   merged.pmSide = isSell ? "sell" : "buy";

@@ -23,12 +23,12 @@ const FALLBACK_LABELS: Record<ActiveBetLegStatus, string> = {
 /** [changmen 扩展] 模式由本次启动参数确定；恢复记录可用 Link 编码兜底，不能按剩余腿数猜测。 */
 export function activeBetRunMode(run: Pick<ActiveBetRun, "mode" | "linkId">) {
   const source = classifyLinkId(run.linkId);
-  return run.mode ?? (source === "single" ? "single9999" : source === "arb" ? "arb" : source === "valueBet" ? "valueBet" : undefined);
+  return run.mode ?? (source === "lowOddsSingle" ? "lowOddsSingle" : source === "single" ? "single9999" : source === "arb" ? "arb" : source === "valueBet" ? "valueBet" : undefined);
 }
 
 export function activeBetRunModeLabel(run: Pick<ActiveBetRun, "mode" | "linkId">): string {
   const mode = activeBetRunMode(run);
-  return mode === "single9999" ? "9999 单边下单" : mode === "arb" ? "双边套利" : mode === "valueBet" ? "正EV 单腿下单" : "模式未记录";
+  return mode === "lowOddsSingle" ? "🎯 LOS" : mode === "single9999" ? "9999 单边下单" : mode === "arb" ? "双边套利" : mode === "valueBet" ? "正EV 单腿下单" : "模式未记录";
 }
 
 export function activeBetLegRole(leg: ActiveBetLeg): string {

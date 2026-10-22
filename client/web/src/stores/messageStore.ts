@@ -36,7 +36,7 @@ export interface BettingMessageLeg {
 
 /** 比例 9999 单边模式：对侧不下单，Telegram 仍保持双腿版式 */
 export interface BettingMessageSingleLegRatePeer {
-  kind: "singleLegRate";
+  kind: "singleLegRate" | "lowOddsSingle";
   options: BetOption;
   platformLabel: string;
 }
@@ -46,7 +46,7 @@ export type BettingMessagePeer = BettingMessageLeg | BettingMessageSingleLegRate
 function isSingleLegRatePeer(
   leg: BettingMessagePeer,
 ): leg is BettingMessageSingleLegRatePeer {
-  return "kind" in leg && leg.kind === "singleLegRate";
+  return "kind" in leg && (leg.kind === "singleLegRate" || leg.kind === "lowOddsSingle");
 }
 
 function htmlTitle(text: string, urgent = false) {
@@ -306,6 +306,14 @@ export const useMessageStore = defineStore("message", {
     bettingMessage(legA: BettingMessagePeer, legB: BettingMessagePeer, linkId?: number) {
       const formatPeer = (leg: BettingMessagePeer) => {
         if (isSingleLegRatePeer(leg)) {
+          if (leg.kind === "lowOddsSingle") {
+            return [
+              `${leg.platformLabel}（🎯 高赔腿）`, "<blockquote>",
+              `参考方向：${leg.options.target}`,
+              `参考赔率：${leg.options.newOdds || leg.options.odds}`,
+              "预检通过，本侧按模式跳过下注；不补单。</blockquote>",
+            ].join("\n");
+          }
           return [
             `${leg.platformLabel}（比例 9999 单边模式）`,
             "<blockquote>",

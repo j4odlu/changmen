@@ -1,3 +1,4 @@
+import { isPmPendingOrder } from "@changmen/shared/pm_submission";
 import * as sb from "@changmen/db";
 import { mergePredictionBuySellSiblings, toDateKey } from "./order_store.js";
 import { forEachBookedProfitGroup } from "./order/group_home.js";
@@ -77,7 +78,7 @@ export async function getMonthReport(month, userId, userIds) {
     if (!row)
       return;
     for (const o of group) {
-      if (String(o.status || "") === "Reject")
+      if (String(o.status || "") === "Reject" || isPmPendingOrder(o))
         continue;
       row.Profit += moneyForProfitAggregate(o);
       if (!isPredictionSellForCount(o)) {

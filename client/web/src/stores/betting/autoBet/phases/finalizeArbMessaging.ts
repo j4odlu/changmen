@@ -21,6 +21,10 @@ function singleLegRatePeer(
 ): BettingMessageSingleLegRatePeer | null {
   const { match, bet, config } = params;
   const { legA, legB, accountA, accountB } = placed;
+  if (placed.executionMode === "lowOddsSingle") {
+    const skippedLeg = placed.executionSide === "A" ? legB : legA;
+    return { kind: "lowOddsSingle", options: skippedLeg, platformLabel: skippedLeg.type };
+  }
   const matchStore = useMatchStore();
   const accountStore = useAccountStore();
 
@@ -130,6 +134,14 @@ export function finishArbExecutionTrace(
   outcome: ArbFinalizeOutcome,
 ): void {
   const { trace } = params;
+  if (placed.executionMode === "lowOddsSingle") {
+    const side = placed.executionSide;
+    const pending = side === "A" ? settle.pendingConfirmA : settle.pendingConfirmB;
+    const ok = side === "A" ? outcome.okA : outcome.okB;
+    trace?.finish(ok ? "success" : pending ? "partial" : "fail",
+      ok ? "🎯 LOS已成交" : pending ? "🎯 原单待确认，不重发" : "🎯 本次未成单，不补单");
+    return;
+  }
   if (placed.originalExecution) {
     const summary = placed.originalExecution.summary();
     trace?.finish(summary.traceStatus, summary.message);

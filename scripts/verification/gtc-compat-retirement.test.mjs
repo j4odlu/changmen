@@ -16,7 +16,7 @@ it("physical EOL normalization cannot conceal escaped SQL characters or changed 
   expect(() => verifyGtcCompatibilityRetirement(target => target === file ? altered : read(target))).toThrow("complete native retirement boundary");
 });
 for (const file of retirementFiles().filter(file => !retiredHelpers.includes(file))) {
-  it(`${file}: extra work cannot hide behind the retirement`, () => expect(() => verifyGtcCompatibilityRetirement(target => target === file ? `${read(target)}\nvoid unexpectedTrade();` : read(target))).toThrow(/complete native retirement boundary|complete source outside reject display change/));
+  it(`${file}: extra work cannot hide behind the retirement`, () => expect(() => verifyGtcCompatibilityRetirement(target => target === file ? `${read(target)}\nvoid unexpectedTrade();` : read(target))).toThrow(/complete native retirement boundary|complete source outside reject display change|exact reject display increment/));
 }
 it.each([
   source => source.replace('const table = "orders";', 'const table = "public.orders_financial";'),

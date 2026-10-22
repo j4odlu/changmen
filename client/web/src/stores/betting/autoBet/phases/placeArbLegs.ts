@@ -1,3 +1,4 @@
+import { claimLowOddsMarket } from "@/extensions/arbBet/lowOddsSingle";
 import { recordPmExecutionMetric } from "@changmen/venue-browser/adapter/polymarket";
 import { validatePolymarketPreparedBuy } from "@changmen/venue-browser/adapter/polymarket";
 import type { BetOption } from "@changmen/client-core/models/betOption";
@@ -72,6 +73,7 @@ export async function placeArbLegs(
   const dispatchStart = checked.precheckCompletedAt ?? performance.now();
   const hasPm = [legA.type, legB.type].includes("Polymarket");
   const original = checked.originalExecution;
+  const lowOddsSingle = checked.executionMode === "lowOddsSingle";
   function submitLeg(account: PlatformAccount, leg: BetOption) {
     if (hasPm) recordPmExecutionMetric({ kind: "dispatch", tokenId: leg.itemId,
       stage: leg.type, linkId, ms: performance.now() - dispatchStart, success: true });
@@ -112,6 +114,26 @@ export async function placeArbLegs(
     mixedBlockReason = "双侧预检未齐，不提交订单";
     trace?.event("预检", mixedBlockReason);
     mixedBlocked = true;
+  }
+  if (lowOddsSingle) {
+    const validSingle = !betBothLegs && checked.executionSide
+      && Boolean(accountA) !== Boolean(accountB)
+      && (checked.executionSide === "A" ? Boolean(accountA) : Boolean(accountB))
+      && checked.checkAccountA && checked.checkAccountB && legA.data && legB.data
+      && !legA.checkError && !legB.checkError && checked.pmOrderMode !== "GTC";
+    if (!validSingle) { mixedBlocked = true; mixedBlockReason = "🎯 双预检或单腿执行计划不完整，未提交"; }
+    if (!mixedBlocked) {
+      try {
+        if (!await claimLowOddsMarket(checked.lowOddsMarketKeys ?? [])) {
+          mixedBlocked = true; mixedBlockReason = "🎯 本盘口已提交过，跳过";
+        }
+      }
+      catch (error) {
+        mixedBlocked = true; mixedBlockReason = error instanceof Error ? error.message : "🎯 盘口次数占位失败，未提交";
+      }
+    }
+    syncActiveBetLeg(bet.id, checked.executionSide === "A" ? "B" : "A", "skipped", "🎯 高赔腿主动跳过，不补单");
+    trace?.event("模式", "🎯 LOS：高赔腿主动跳过，不补单");
   }
   if (mixedBlocked)
     observeArbSubmissionBlocked(checked, "pair_submit_blocked", mixedBlockReason);
@@ -169,7 +191,7 @@ export async function placeArbLegs(
   }
 
   // [changmen 扩展] 持久化原腿的 A/B 身份供挂单监控关联，不随回执成功换位。
-  if (!original && resultB?.success && !resultA?.success) {
+  if (!lowOddsSingle && !original && resultB?.success && !resultA?.success) {
     [legA, legB] = [legB, legA];
     [accountA, accountB] = [accountB, accountA];
     [resultA, resultB] = [resultB, resultA];

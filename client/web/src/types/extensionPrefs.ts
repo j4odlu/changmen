@@ -213,6 +213,10 @@ export interface ValueBetMarkerPrefs {
  * EV 软盘 / 套利场馆白名单及其余扩展项在「扩展」Tab。
  */
 export interface ExtensionPrefs extends Record<string, unknown> {
+  /** [changmen 扩展] 普通双腿流程或双预检后仅下低赔腿。 */
+  arbExecutionMode: "normal" | "lowOddsSingle";
+  /** [changmen 扩展] LOS 低赔腿须同时为当前盘口 C 行赛前概率较高方；无有效数据或同值时跳过。 */
+  lowOddsSingleHigherCProbabilityOnly: boolean;
   /** BetRow 套利划线、利润角标、赔率 flash、EV 标记（「界面」Tab） */
   betRowUi: boolean;
   /** EV 金色标记基准与阈值（「界面」Tab） */
@@ -391,6 +395,8 @@ export function toggleArbAllowedPlatform(
 
 export function createDefaultExtensionPrefs(): ExtensionPrefs {
   return {
+    arbExecutionMode: "normal",
+    lowOddsSingleHigherCProbabilityOnly: false,
     betRowUi: false,
     valueBet: createDefaultValueBetMarkerPrefs(),
     valueBetSoftPlatforms: createDefaultValueBetSoftPlatforms(),
@@ -545,6 +551,8 @@ export function normalizeExtensionPrefs(raw: unknown): ExtensionPrefs {
     return createDefaultExtensionPrefs();
   const row = raw as Record<string, unknown>;
   return {
+    arbExecutionMode: row.arbExecutionMode === "lowOddsSingle" ? "lowOddsSingle" : "normal",
+    lowOddsSingleHigherCProbabilityOnly: row.lowOddsSingleHigherCProbabilityOnly === true,
     betRowUi: row.betRowUi === true,
     valueBet: normalizeValueBetMarkerPrefs(row.valueBet),
     valueBetSoftPlatforms: normalizeValueBetSoftPlatforms(row.valueBetSoftPlatforms),

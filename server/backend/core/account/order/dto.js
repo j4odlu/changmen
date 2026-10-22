@@ -62,7 +62,7 @@ export function rowToOrder(r) {
   const pfHoldShares = resolvePfHoldSharesFromRaw(raw);
   // [changmen 扩展] 拒单展示原始签单限价，不写入成交价，也不查历史日志。
   const submission = r.provider === "Polymarket" && raw.pmSide !== "sell" && !raw.pmGtcExecutionId
-    && String(r.status).toLowerCase() === "reject"
+    && ["reject", "pending"].includes(String(r.status).toLowerCase())
     ? validatePmSubmission(raw.pmSubmission, String(r.order_id), Number(r.player_id)) : null;
   const submittedShares = submission?.takerAmount ? pmMakerAmountUsdc(submission.takerAmount) : null;
   const submittedPrice = submission && submittedShares ? submission.stakeUsdc / submittedShares : undefined;

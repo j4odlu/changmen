@@ -1,5 +1,6 @@
 import type { OrderRow } from "@/types/order";
 import { getExchange } from "@/shared/currency";
+import { isPmPendingOrder } from "@changmen/shared/pm_submission";
 
 export type RiskLevel = "info" | "success" | "warning" | "danger";
 
@@ -35,7 +36,7 @@ function percent(n: number, digits = 0) {
 /** 对齐 bundle `rDe.execute`（简化版，保留 6 条策略） */
 export function executeMoneyRisk(data: MoneyRiskInput): RiskTag[] {
   const logs = [...data.MoneyLog].sort((a, b) => (b.CreateAt ?? 0) - (a.CreateAt ?? 0));
-  const orders = data.Orders;
+  const orders = data.Orders.filter(order => !isPmPendingOrder(order));
   const balance = data.Balance;
 
   const tags: RiskTag[] = [];

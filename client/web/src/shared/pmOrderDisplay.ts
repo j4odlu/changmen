@@ -1,3 +1,4 @@
+import { isPmPendingOrder } from "@changmen/shared/pm_submission";
 import type { OrderRow } from "@/types/order";
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 import { toFixed } from "@changmen/client-core/shared/format";
@@ -48,6 +49,7 @@ export function isPmMarketSettledBuy(row: OrderRow): boolean {
 
 /** 侧栏买单生命周期小标签文案（角标输赢另见 resolvePmOrderListStatusClass） */
 export function pmBuyLifecycleTagText(row: OrderRow): string | null {
+  if (isPmPendingOrder(row)) return "待确认";
   if (isPmManuallySoldBuy(row)) {
     const state = String(row.PmSellState ?? "").toLowerCase();
     // 仍有剩余仓：部分卖出；已卖光不再打「已卖出」（角标改输赢，卖出看附属块）
@@ -75,6 +77,7 @@ export function statusClassFromRealizedMoney(money: unknown): "Win" | "Lose" {
  * - 部分卖 / 未结：待结算（None/Pending）
  */
 export function resolvePmOrderListStatusClass(row: OrderRow): string {
+  if (isPmPendingOrder(row)) return "PmPending";
   if (!isPmOrderListRow(row))
     return String(normalizeOrderStatus(String(row.Status ?? "None")));
 
@@ -109,6 +112,7 @@ export function resolvePmOrderListStatusClass(row: OrderRow): string {
 }
 
 export function pmOrderSharesText(row: OrderRow): string | null {
+  if (isPmPendingOrder(row)) return null;
   if (isPmSellOrderListRow(row)) {
     const sold = Number(row.PmShares);
     if (!Number.isFinite(sold) || sold <= 0.0001)
@@ -339,6 +343,7 @@ export function resolvePmFillPrice(row: OrderRow): number | null {
 }
 
 export function pmOrderFillPriceText(row: OrderRow): string | null {
+  if (isPmPendingOrder(row)) return null;
   const price = resolvePmFillPrice(row);
   if (price == null)
     return null;
@@ -348,7 +353,7 @@ export function pmOrderFillPriceText(row: OrderRow): string | null {
 /** [changmen 扩展] FOK 拒单只展示提交报价；旧订单价格由已保存赔率反算，明确标为约值。 */
 export function pmOrderSubmissionQuote(row: OrderRow): { priceText: string; oddsText: string } | null {
   if (!isPmBuyOrderListRow(row) || row.PmGtcExecutionId
-    || String(normalizeOrderStatus(String(row.Status ?? ""))) !== "Reject")
+    || !["Reject", "Pending"].includes(String(normalizeOrderStatus(String(row.Status ?? "")))))
     return null;
   const submittedPrice = Number(row.PmSubmittedPrice);
   const hasPrice = Number.isFinite(submittedPrice) && submittedPrice > 0 && submittedPrice < 1;

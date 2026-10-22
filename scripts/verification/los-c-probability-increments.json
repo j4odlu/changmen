@@ -1,0 +1,751 @@
+{
+  "purpose": "los-name-ui-and-opt-in-higher-c-probability-filter",
+  "changes": {
+    "client/packages/client-core/src/shared/format.ts": {
+      "beforeSha": "33b56ba91f812eeee6739952d2174a48332634842b6f3ebb89aa768cc2e9bfbb",
+      "afterSha": "7fee15e2e660bc812b37334fafce3d15e45e4d65bd88bda0cb65aaa7dd156586",
+      "edits": [
+        {
+          "start": 98,
+          "before": [
+            "/** [changmen 扩展] 低赔单边：独立于 9999 和正 EV 的负 Link 区间。 */"
+          ],
+          "after": [
+            "/** [changmen 扩展] LOS：独立于 9999 和正 EV 的负 Link 区间。 */"
+          ]
+        },
+        {
+          "start": 182,
+          "before": [
+            "      return \"低赔单边\";"
+          ],
+          "after": [
+            "      return \"LOS\";"
+          ]
+        }
+      ]
+    },
+    "client/web/src/components/user/tabs/UserDiagExtensionsTab.test.ts": {
+      "beforeSha": "93aeba5b5e5569747eb69daa8d0eae4b19854cd6e73a78654e6728996da1c847",
+      "afterSha": "80ce5df327d10c794cbf5efc8b45ed95457c8c628711574c6e1092ebbb439841",
+      "edits": [
+        {
+          "start": 191,
+          "before": [
+            "  it(\"renders 🎯 as an independent opt-in strategy with its once-only/no-makeup boundaries\", async () => {"
+          ],
+          "after": [
+            "  it(\"renders LOS with a separate, default-off C filter and concise rules\", async () => {"
+          ]
+        },
+        {
+          "start": 194,
+          "before": [],
+          "after": [
+            "    const normal = await renderToString(createSSRApp(Tab));",
+            "    expect(normal).toContain(\"LOS\");",
+            "    expect(normal).not.toContain(\"仅下 C 行高胜率方\");",
+            "    expect(user.extensionPrefs.lowOddsSingleHigherCProbabilityOnly).toBe(false);",
+            "    user.extensionPrefs.arbExecutionMode = \"lowOddsSingle\";"
+          ]
+        },
+        {
+          "start": 200,
+          "before": [
+            "    expect(html).toContain(\"🎯 低赔单边\");",
+            "    expect(html).toContain(\"每盘口最多提交一次\");"
+          ],
+          "after": [
+            "    expect(html).toContain(\"Low Odds Single\");",
+            "    expect(html).not.toContain(\"低赔单边\");",
+            "    expect(html).toContain(\"每盘口 1 次\");",
+            "    expect(html).toContain(\"不补单\");",
+            "    expect(html).toContain(\"更多规则\");",
+            "    expect(html).toContain(\"低赔腿与 C 行高胜率方向一致才提交，否则跳过\");",
+            "    expect(mocks.switches.get(\"LOS 仅下C行高胜率方\")).toMatchObject({ disabled: false, value: false });"
+          ]
+        },
+        {
+          "start": 211,
+          "before": [],
+          "after": [
+            "    expect(mocks.save).not.toHaveBeenCalled();",
+            "  });",
+            "",
+            "  it(\"places all four unchanged 9999 settings directly below hedge mode without changing saved preferences\", async () => {",
+            "    const user = useUserStore();",
+            "    user.extensionPrefs.singleLeg9999Precheck = false;",
+            "    user.extensionPrefs.singleLeg9999UseValueBetMoney = true;",
+            "    user.extensionPrefs.singleLeg9999HigherCProbabilityOnly = true;",
+            "    user.extensionPrefs.singleLeg9999MaxPerMap = 3;",
+            "    const before = JSON.stringify(user.extensionPrefs);",
+            "    const html = await renderToString(createSSRApp(Tab));",
+            "    expect(html).toContain('aria-label=\"对冲下注模式\"');",
+            "    expect(html).not.toContain(\"自动下注模式\");",
+            "    const mode = html.indexOf(\"对冲下注模式\");",
+            "    const settings = html.indexOf('aria-label=\"9999 单边配置\"');",
+            "    const venues = html.indexOf(\"场馆参与\");",
+            "    expect(settings).toBeGreaterThan(mode);",
+            "    expect(settings).toBeLessThan(venues);",
+            "    for (const label of [\"9999 单边预检\", \"9999 用正EV金额\", \"9999 仅下C行高胜率方\", \"9999 同图次数\"])",
+            "      expect(html.split(label)).toHaveLength(2);",
+            "    expect(JSON.stringify(user.extensionPrefs)).toBe(before);",
+            "    expect(mocks.save).not.toHaveBeenCalled();"
+          ]
+        }
+      ]
+    },
+    "client/web/src/components/user/tabs/UserDiagExtensionsTab.vue": {
+      "beforeSha": "73b4542f06f526ec5a218e19dc6224cad91694e18af8ab1c015d24a165bd5811",
+      "afterSha": "cef3d48f98843ef0d444ce100d9d396db72458f537a18605a62e692af980d6d0",
+      "edits": [
+        {
+          "start": 46,
+          "before": [],
+          "after": [
+            "extensionPrefs.value.lowOddsSingleHigherCProbabilityOnly ??= false;"
+          ]
+        },
+        {
+          "start": 140,
+          "before": [
+            "    <section class=\"extensions-tab__panel\">",
+            "      <h3 class=\"extensions-tab__heading\">自动下注模式</h3>",
+            "      <el-radio-group v-model=\"extensionPrefs.arbExecutionMode\" aria-label=\"自动下注模式\">",
+            "        <el-radio-button value=\"normal\">普通模式</el-radio-button>",
+            "        <el-radio-button value=\"lowOddsSingle\">🎯 低赔单边</el-radio-button>",
+            "      </el-radio-group>",
+            "      <p class=\"extensions-tab__section-desc\">",
+            "        🎯 两腿预检均通过后，仅提交低赔腿，金额沿用原计划。每盘口最多提交一次，不补单；相同赔率跳过。",
+            "        次数按当前浏览器及用户保存，刷新不清空，不跨设备共享。暂不支持 PM GTC 和 9999 单边组合。",
+            "      </p>"
+          ],
+          "after": [
+            "    <section class=\"extensions-tab__panel execution-mode\">",
+            "      <div class=\"execution-mode__header\">",
+            "        <div>",
+            "          <h3 class=\"extensions-tab__heading\">对冲下注模式</h3>",
+            "          <p class=\"execution-mode__subtitle\">套利触发后，选择双腿或单腿提交</p>",
+            "        </div>",
+            "        <el-radio-group v-model=\"extensionPrefs.arbExecutionMode\" aria-label=\"对冲下注模式\">",
+            "          <el-radio-button value=\"normal\">普通模式</el-radio-button>",
+            "          <el-radio-button value=\"lowOddsSingle\">LOS</el-radio-button>",
+            "        </el-radio-group>",
+            "      </div>",
+            "      <div v-if=\"extensionPrefs.arbExecutionMode === 'lowOddsSingle'\" class=\"execution-mode__details\">",
+            "        <div class=\"execution-mode__intro\">",
+            "          <span class=\"execution-mode__name\">Low Odds Single</span>",
+            "          <div class=\"execution-mode__rules\" aria-label=\"LOS 提交规则\">",
+            "            <span>双腿预检</span><span>只下低赔腿</span><span>每盘口 1 次</span><span>不补单</span>",
+            "          </div>",
+            "        </div>",
+            "        <div class=\"execution-mode__filter\">",
+            "          <div>",
+            "            <span class=\"execution-mode__filter-label\">仅下 C 行高胜率方</span>",
+            "            <p class=\"execution-mode__filter-desc\">低赔腿与 C 行高胜率方向一致才提交，否则跳过。</p>",
+            "            <p id=\"los-c-filter-help\" class=\"execution-mode__filter-note\">参考当前盘口 C 行的赛前胜率；数据缺失或胜率相同时跳过。</p>",
+            "          </div>",
+            "          <el-switch",
+            "            v-model=\"extensionPrefs.lowOddsSingleHigherCProbabilityOnly\"",
+            "            aria-label=\"LOS 仅下C行高胜率方\"",
+            "            aria-describedby=\"los-c-filter-help\"",
+            "            inline-prompt",
+            "            active-text=\"开\"",
+            "            inactive-text=\"关\"",
+            "          />",
+            "        </div>",
+            "        <details class=\"execution-mode__more\">",
+            "          <summary>更多规则</summary>",
+            "          <p>金额沿用原计划，两腿赔率相同时跳过。被 C 行筛选跳过不消耗盘口次数。</p>",
+            "          <p>盘口次数按当前浏览器及用户保留，刷新不重置，不跨设备共享。LOS 暂不与 PM GTC 或 9999 单边组合。</p>",
+            "        </details>",
+            "      </div>",
+            "      <p v-else class=\"execution-mode__normal-note\">按原有下注设置执行。</p>",
+            "      <el-form label-position=\"left\" label-width=\"158px\" class=\"execution-mode__9999\" aria-label=\"9999 单边配置\">",
+            "        <h3 class=\"extensions-tab__heading\">",
+            "          9999",
+            "        </h3>",
+            "",
+            "        <el-form-item>",
+            "          <template #label>",
+            "            <el-tooltip",
+            "              placement=\"top\"",
+            "              :show-after=\"200\"",
+            "              popper-class=\"extensions-tab-tip\"",
+            "              content=\"开：9999 本侧参与预检（失败整笔不下，本侧仍不下单）。关：跳过预检，仅对侧下单。\"",
+            "            >",
+            "              <span class=\"extensions-tab__tip-label\">9999 单边预检</span>",
+            "            </el-tooltip>",
+            "          </template>",
+            "          <el-switch",
+            "            v-model=\"extensionPrefs.singleLeg9999Precheck\"",
+            "            inline-prompt",
+            "            active-text=\"开\"",
+            "            inactive-text=\"关\"",
+            "          />",
+            "        </el-form-item>",
+            "",
+            "        <el-form-item>",
+            "          <template #label>",
+            "            <el-tooltip",
+            "              placement=\"top\"",
+            "              :show-after=\"200\"",
+            "              popper-class=\"extensions-tab-tip\"",
+            "              content=\"开：真下单腿用参数配置的正EV金额；预检腿仍用套利计划额。关：仍用套利拆分金额。\"",
+            "            >",
+            "              <span class=\"extensions-tab__tip-label\">9999 用正EV金额</span>",
+            "            </el-tooltip>",
+            "          </template>",
+            "          <el-switch",
+            "            v-model=\"extensionPrefs.singleLeg9999UseValueBetMoney\"",
+            "            inline-prompt",
+            "            active-text=\"开\"",
+            "            inactive-text=\"关\"",
+            "          />",
+            "        </el-form-item>",
+            "",
+            "        <el-form-item>",
+            "          <template #label>",
+            "            <el-tooltip",
+            "              placement=\"top\"",
+            "              :show-after=\"200\"",
+            "              popper-class=\"extensions-tab-tip\"",
+            "              content=\"开：9999 真下单腿只允许当前盘口 C 行赛前概率较高的一方。C 行取 PM 登记开赛时间前历史价格；无有效数据或概率相同时跳过，不消耗同图次数。默认关闭。\"",
+            "            >",
+            "              <span class=\"extensions-tab__tip-label\">9999 仅下C行高胜率方</span>",
+            "            </el-tooltip>",
+            "          </template>",
+            "          <el-switch",
+            "            v-model=\"extensionPrefs.singleLeg9999HigherCProbabilityOnly\"",
+            "            inline-prompt",
+            "            active-text=\"开\"",
+            "            inactive-text=\"关\"",
+            "          />",
+            "        </el-form-item>",
+            "",
+            "        <el-form-item>",
+            "          <template #label>",
+            "            <el-tooltip",
+            "              placement=\"top\"",
+            "              :show-after=\"200\"",
+            "              popper-class=\"extensions-tab-tip\"",
+            "              content=\"同一比赛同一地图最多触发几笔 9999 单边真下单。默认 1 次；独立于 EV 自动下注次数。\"",
+            "            >",
+            "              <span class=\"extensions-tab__tip-label\">9999 同图次数</span>",
+            "            </el-tooltip>",
+            "          </template>",
+            "          <el-input-number",
+            "            v-model=\"extensionPrefs.singleLeg9999MaxPerMap\"",
+            "            class=\"extensions-tab__num\"",
+            "            :min=\"1\"",
+            "            :max=\"20\"",
+            "            :step=\"1\"",
+            "            :precision=\"0\"",
+            "            controls-position=\"right\"",
+            "          />",
+            "          <span class=\"extensions-tab__unit\">次</span>",
+            "        </el-form-item>",
+            "      </el-form>"
+          ]
+        },
+        {
+          "start": 422,
+          "before": [
+            "      <el-form label-position=\"left\" label-width=\"158px\" class=\"extensions-tab__panel\">",
+            "        <h3 class=\"extensions-tab__heading\">",
+            "          9999",
+            "        </h3>"
+          ],
+          "after": []
+        },
+        {
+          "start": 423,
+          "before": [
+            "        <el-form-item>",
+            "          <template #label>",
+            "            <el-tooltip",
+            "              placement=\"top\"",
+            "              :show-after=\"200\"",
+            "              popper-class=\"extensions-tab-tip\"",
+            "              content=\"开：9999 本侧参与预检（失败整笔不下，本侧仍不下单）。关：跳过预检，仅对侧下单。\"",
+            "            >",
+            "              <span class=\"extensions-tab__tip-label\">9999 单边预检</span>",
+            "            </el-tooltip>",
+            "          </template>",
+            "          <el-switch",
+            "            v-model=\"extensionPrefs.singleLeg9999Precheck\"",
+            "            inline-prompt",
+            "            active-text=\"开\"",
+            "            inactive-text=\"关\"",
+            "          />",
+            "        </el-form-item>",
+            "",
+            "        <el-form-item>",
+            "          <template #label>",
+            "            <el-tooltip",
+            "              placement=\"top\"",
+            "              :show-after=\"200\"",
+            "              popper-class=\"extensions-tab-tip\"",
+            "              content=\"开：真下单腿用参数配置的正EV金额；预检腿仍用套利计划额。关：仍用套利拆分金额。\"",
+            "            >",
+            "              <span class=\"extensions-tab__tip-label\">9999 用正EV金额</span>",
+            "            </el-tooltip>",
+            "          </template>",
+            "          <el-switch",
+            "            v-model=\"extensionPrefs.singleLeg9999UseValueBetMoney\"",
+            "            inline-prompt",
+            "            active-text=\"开\"",
+            "            inactive-text=\"关\"",
+            "          />",
+            "        </el-form-item>",
+            "",
+            "        <el-form-item>",
+            "          <template #label>",
+            "            <el-tooltip",
+            "              placement=\"top\"",
+            "              :show-after=\"200\"",
+            "              popper-class=\"extensions-tab-tip\"",
+            "              content=\"开：9999 真下单腿只允许当前盘口 C 行赛前概率较高的一方。C 行取 PM 登记开赛时间前历史价格；无有效数据或概率相同时跳过，不消耗同图次数。默认关闭。\"",
+            "            >",
+            "              <span class=\"extensions-tab__tip-label\">9999 仅下C行高胜率方</span>",
+            "            </el-tooltip>",
+            "          </template>",
+            "          <el-switch",
+            "            v-model=\"extensionPrefs.singleLeg9999HigherCProbabilityOnly\"",
+            "            inline-prompt",
+            "            active-text=\"开\"",
+            "            inactive-text=\"关\"",
+            "          />",
+            "        </el-form-item>",
+            "",
+            "        <el-form-item>",
+            "          <template #label>",
+            "            <el-tooltip",
+            "              placement=\"top\"",
+            "              :show-after=\"200\"",
+            "              popper-class=\"extensions-tab-tip\"",
+            "              content=\"同一比赛同一地图最多触发几笔 9999 单边真下单。默认 1 次；独立于 EV 自动下注次数。\"",
+            "            >",
+            "              <span class=\"extensions-tab__tip-label\">9999 同图次数</span>",
+            "            </el-tooltip>",
+            "          </template>",
+            "          <el-input-number",
+            "            v-model=\"extensionPrefs.singleLeg9999MaxPerMap\"",
+            "            class=\"extensions-tab__num\"",
+            "            :min=\"1\"",
+            "            :max=\"20\"",
+            "            :step=\"1\"",
+            "            :precision=\"0\"",
+            "            controls-position=\"right\"",
+            "          />",
+            "          <span class=\"extensions-tab__unit\">次</span>",
+            "        </el-form-item>",
+            "      </el-form>"
+          ],
+          "after": []
+        },
+        {
+          "start": 595,
+          "before": [],
+          "after": [
+            "}",
+            "",
+            ".extensions-tab__panel.execution-mode {",
+            "  margin-bottom: 16px;",
+            "  padding: 18px 20px;",
+            "}",
+            "",
+            ".execution-mode__header,",
+            ".execution-mode__intro,",
+            ".execution-mode__filter {",
+            "  display: flex;",
+            "  align-items: center;",
+            "  justify-content: space-between;",
+            "  gap: 20px;",
+            "}",
+            "",
+            ".execution-mode__header .extensions-tab__heading { margin-bottom: 6px; }",
+            ".execution-mode__subtitle,",
+            ".execution-mode__normal-note,",
+            ".execution-mode__filter-desc,",
+            ".execution-mode__filter-note {",
+            "  margin: 0;",
+            "  font-size: 12px;",
+            "  line-height: 1.6;",
+            "  color: var(--el-text-color-secondary);",
+            "}",
+            ".execution-mode__normal-note { margin-top: 14px; }",
+            ".execution-mode__header :deep(.el-radio-button__inner) { min-width: 96px; }",
+            ".execution-mode__details {",
+            "  margin-top: 18px;",
+            "  padding-top: 16px;",
+            "  border-top: 1px solid var(--el-border-color-lighter);",
+            "}",
+            ".execution-mode__intro { flex-wrap: wrap; gap: 10px; }",
+            ".execution-mode__name { font-size: 13px; font-weight: 600; color: var(--el-text-color-primary); }",
+            ".execution-mode__rules { display: flex; flex-wrap: wrap; gap: 6px; }",
+            ".execution-mode__rules span {",
+            "  padding: 3px 8px;",
+            "  border-radius: 4px;",
+            "  background: var(--el-fill-color-light);",
+            "  font-size: 11px;",
+            "  color: var(--el-text-color-regular);",
+            "}",
+            ".execution-mode__filter {",
+            "  margin-top: 14px;",
+            "  padding: 14px;",
+            "  border: 1px solid var(--el-border-color-lighter);",
+            "  border-radius: 6px;",
+            "  background: var(--el-fill-color-lighter);",
+            "}",
+            ".execution-mode__filter :deep(.el-switch) { flex-shrink: 0; }",
+            ".execution-mode__filter-label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 500; }",
+            ".execution-mode__filter-note { margin-top: 3px; font-size: 11px; }",
+            ".execution-mode__more { margin-top: 12px; color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.6; }",
+            ".execution-mode__more summary { width: fit-content; cursor: pointer; }",
+            ".execution-mode__more p { margin: 6px 0 0; }",
+            "",
+            "@media (max-width: 600px) {",
+            "  .execution-mode__header { align-items: flex-start; flex-direction: column; gap: 12px; }",
+            "  .extensions-tab__panel.execution-mode { padding: 16px; }",
+            "}",
+            "",
+            "",
+            ".execution-mode__9999 {",
+            "  display: grid;",
+            "  grid-template-columns: repeat(2, minmax(0, 1fr));",
+            "  column-gap: 24px;",
+            "  margin-top: 18px;",
+            "  padding-top: 16px;",
+            "  border-top: 1px solid var(--el-border-color-lighter);",
+            "}",
+            "",
+            ".execution-mode__9999 > .extensions-tab__heading {",
+            "  grid-column: 1 / -1;",
+            "}",
+            "",
+            ".extensions-tab__cols > .extensions-tab__panel:only-child {",
+            "  grid-column: 1 / -1;"
+          ]
+        }
+      ]
+    },
+    "client/web/src/extensions/arbBet/lowOddsSingle.ts": {
+      "beforeSha": "b421e3949c4e363bd1bf4aedcfa06f5873e8096751452a266f2d350603629178",
+      "afterSha": "0f614f69687baa2afedf6158074f71e6b5c648b0ca4cf3b4044a420aceddb0ca",
+      "edits": [
+        {
+          "start": 2,
+          "before": [],
+          "after": [
+            "import { readPrematchProbability } from \"@/shared/pmPrematchProbability\";",
+            "",
+            "/** [changmen 扩展] LOS 仅筛选已选定的低赔腿；不能改下另一腿或消耗盘口次数。 */",
+            "export function explainLowOddsCProbabilityRejection(bet: ViewBet, match: ViewMatch, target: BetOption[\"target\"]): string | null {",
+            "  const prefix = \"LOS C 行过滤：\";",
+            "  if (bet.marketCode || !(bet.round >= 0)) return `${prefix}当前盘口无 C 行`;",
+            "  const pm = bet.items.find(item => item.type === \"Polymarket\");",
+            "  if (!pm) return `${prefix}当前盘口无 PM C 行数据`;",
+            "  const result = readPrematchProbability(pm.homeId, pm.awayId, match.pmPrematch);",
+            "  if (result.status !== \"ready\") {",
+            "    const reasons = { waiting: \"等待 VPS 历史价\", pending: \"等待登记开赛时间\", missing: \"暂无有效历史数据\", error: \"VPS 查询失败\" };",
+            "    return `${prefix}${reasons[result.status]}`;",
+            "  }",
+            "  const { home, away } = result.value;",
+            "  if (home === away) return `${prefix}主客赛前概率相同（${home.toFixed(1)}%）`;",
+            "  if (target !== \"Home\" && target !== \"Away\") return `${prefix}无法确定实际下单方向`;",
+            "  const selected = target === \"Home\" ? home : away;",
+            "  const opposite = target === \"Home\" ? away : home;",
+            "  return selected > opposite ? null : `${prefix}低赔腿 ${selected.toFixed(1)}%，低于对侧 ${opposite.toFixed(1)}%`;",
+            "}"
+          ]
+        }
+      ]
+    },
+    "client/web/src/shared/activeBetRunPresentation.ts": {
+      "beforeSha": "186f78664b346e0748ad813324f408c9a6b643cf0f1b76e1051978ffc4d0f96a",
+      "afterSha": "f550345461beb590ddff8aa61b44f0b3b6e46d9e8d563df60d7cf78cba458b30",
+      "edits": [
+        {
+          "start": 30,
+          "before": [
+            "  return mode === \"lowOddsSingle\" ? \"🎯 低赔单边\" : mode === \"single9999\" ? \"9999 单边下单\" : mode === \"arb\" ? \"双边套利\" : mode === \"valueBet\" ? \"正EV 单腿下单\" : \"模式未记录\";"
+          ],
+          "after": [
+            "  return mode === \"lowOddsSingle\" ? \"🎯 LOS\" : mode === \"single9999\" ? \"9999 单边下单\" : mode === \"arb\" ? \"双边套利\" : mode === \"valueBet\" ? \"正EV 单腿下单\" : \"模式未记录\";"
+          ]
+        }
+      ]
+    },
+    "client/web/src/shared/linkDisplay.ts": {
+      "beforeSha": "6cfded4748937ee669b5c9fe293d99b1d92df668a5f85c06a121bea4f0b45abd",
+      "afterSha": "219e84bcd5803b140dc855c821b07a6802fff3eab303405c4d609e4cd2a06678",
+      "edits": [
+        {
+          "start": 20,
+          "before": [
+            "  lowOddsSingle: \"低赔单边：双腿预检后只提交低赔腿，每盘口一次，不补单\","
+          ],
+          "after": [
+            "  lowOddsSingle: \"LOS：双腿预检后只提交低赔腿，每盘口一次，不补单\","
+          ]
+        },
+        {
+          "start": 43,
+          "before": [
+            "    return `Link ${tail} · 🎯低赔`;"
+          ],
+          "after": [
+            "    return `Link ${tail} · 🎯LOS`;"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/activeBetRunSync.ts": {
+      "beforeSha": "46ac1e640c4acbe2ef1e2db4dc835929a88be8a780576a9245e1f3b058859b28",
+      "afterSha": "b85f7e612ab6d22cbef82b1a1f0d33d99991a0dd451e8ac809e8a3c6d7cea9ba",
+      "edits": [
+        {
+          "start": 565,
+          "before": [
+            "    store.scheduleTerminalRemoval(betId, undefined, run?.mode === \"lowOddsSingle\" ? \"🎯 低赔单边已成交\" : \"单边下单已完成\");"
+          ],
+          "after": [
+            "    store.scheduleTerminalRemoval(betId, undefined, run?.mode === \"lowOddsSingle\" ? \"🎯 LOS已成交\" : \"单边下单已完成\");"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/checkArbLegs.test.ts": {
+      "beforeSha": "7ebe42fef22495d41ae77397ad9c7abace8fb72e13302371b5bfc445a827a581",
+      "afterSha": "1af71e178a04db3c8560a0f0375c4149aa42ba46e914cc5349c013a77433b6be",
+      "edits": [
+        {
+          "start": 30,
+          "before": [],
+          "after": [
+            "  lowOddsSingleHigherCProbabilityOnly: false,"
+          ]
+        },
+        {
+          "start": 85,
+          "before": [],
+          "after": [
+            "    extensionPrefs.lowOddsSingleHigherCProbabilityOnly = false;"
+          ]
+        },
+        {
+          "start": 391,
+          "before": [],
+          "after": [
+            "  it.each([false, true])(\"LOS C filter only restricts the selected lower-odds leg (higherC=%s)\", async higherC => {",
+            "    extensionPrefs.lowOddsSingleHigherCProbabilityOnly = true;",
+            "    const point = (tokenId: string, price: number) => ({ tokenId, price, marketId: \"map-1\", status: \"ready\",",
+            "      cutoff: 100, observationTime: 99000, resolution: 0 });",
+            "    const input = { ...ready(leg(\"OB\", 100, 1.8), leg(\"RAY\", 60, 2.5, { target: \"Away\" })), executionMode: \"lowOddsSingle\" as const };",
+            "    const args = { ...params,",
+            "      bet: { ...params.bet, round: 1, items: [{ type: \"Polymarket\", homeId: \"home\", awayId: \"away\" }] },",
+            "      match: { ...params.match, pmPrematch: { home: point(\"home\", higherC ? .7 : .3), away: point(\"away\", higherC ? .3 : .7) } },",
+            "    } as unknown as ArbBetAttemptParams;",
+            "    const checked = await checkArbLegs(args, input);",
+            "    expect(checkBetting).toHaveBeenCalledTimes(2);",
+            "    if (higherC) {",
+            "      expect(checked?.executionSide).toBe(\"A\");",
+            "      expect(checked?.accountB).toBeUndefined();",
+            "      expect(checked?.legA.betMoney).toBe(100);",
+            "    }",
+            "    else {",
+            "      expect(checked).toBeNull();",
+            "      expect(args.setMessage).toHaveBeenCalledWith(expect.stringContaining(\"低于对侧\"));",
+            "    }",
+            "    expect(input.accountA).toBeDefined(); expect(input.accountB).toBeDefined();",
+            "  });",
+            "",
+            "  it(\"LOS rejects missing C data only when its own filter is enabled; ordinary mode is unaffected\", async () => {",
+            "    const input = { ...ready(leg(\"OB\", 100, 1.8), leg(\"RAY\", 60, 2.5)), executionMode: \"lowOddsSingle\" as const };",
+            "    expect((await checkArbLegs(params, input))?.executionSide).toBe(\"A\");",
+            "    extensionPrefs.lowOddsSingleHigherCProbabilityOnly = true;",
+            "    expect(await checkArbLegs({ ...params, bet: { ...params.bet, round: 1, items: [] } } as unknown as ArbBetAttemptParams, input)).toBeNull();",
+            "    expect((await checkArbLegs(params, { ...input, executionMode: \"normal\" }))?.betBothLegs).toBe(true);",
+            "  });",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/checkArbLegs.ts": {
+      "beforeSha": "41e3ad9da449944dcad32deea6835c50ca6ddc1ebf4085c25a1a4eeded52cd0b",
+      "afterSha": "0d105e9d17b73b635485692adeb0c489e568e4e590baa00efec61d4a729ef485",
+      "edits": [
+        {
+          "start": 0,
+          "before": [
+            "import { lowOddsExecutionSide } from \"@/extensions/arbBet/lowOddsSingle\";"
+          ],
+          "after": [
+            "import { explainLowOddsCProbabilityRejection, lowOddsExecutionSide } from \"@/extensions/arbBet/lowOddsSingle\";"
+          ]
+        },
+        {
+          "start": 62,
+          "before": [],
+          "after": [
+            "  const requireHigherCProbability = ready.executionMode === \"lowOddsSingle\"",
+            "    && useUserStore().extensionPrefs.lowOddsSingleHigherCProbabilityOnly === true;"
+          ]
+        },
+        {
+          "start": 291,
+          "before": [],
+          "after": [
+            "    if (requireHigherCProbability) {",
+            "      const reason = explainLowOddsCProbabilityRejection(bet, params.match, (side === \"A\" ? legA : legB).target);",
+            "      if (reason) {",
+            "        trace?.finish(\"skip\", reason); setMessage(reason); syncActiveBetFail(bet.id, reason); return null;",
+            "      }",
+            "    }"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/finalizeArbMessaging.ts": {
+      "beforeSha": "e565b05610e2bf341b6220b9724cde38358be3997d3f1335cfa6876ca7e874a3",
+      "afterSha": "bf14a896e66e19e512f8fc7dbe4cf24e85bdb0f88be85fd7303869219295ebe1",
+      "edits": [
+        {
+          "start": 141,
+          "before": [
+            "      ok ? \"🎯 低赔单边已成交\" : pending ? \"🎯 原单待确认，不重发\" : \"🎯 本次未成单，不补单\");"
+          ],
+          "after": [
+            "      ok ? \"🎯 LOS已成交\" : pending ? \"🎯 原单待确认，不重发\" : \"🎯 本次未成单，不补单\");"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/placeArbLegs.ts": {
+      "beforeSha": "fe631323898848338fae1086395555b18003736712085c5228eb9545e72129f3",
+      "afterSha": "a79f5550c863a5afcff6af57334ee195f81253d56e7da2a7d384c4e633594cf2",
+      "edits": [
+        {
+          "start": 135,
+          "before": [
+            "    trace?.event(\"模式\", \"🎯 低赔单边：高赔腿主动跳过，不补单\");"
+          ],
+          "after": [
+            "    trace?.event(\"模式\", \"🎯 LOS：高赔腿主动跳过，不补单\");"
+          ]
+        }
+      ]
+    },
+    "client/web/src/stores/betting/autoBet/phases/prepareArbAttempt.ts": {
+      "beforeSha": "009f7a53ec9c9128cd0e6f9f0b59df2d580247a1b0bacbe64b281b60fd266c42",
+      "afterSha": "b7bcc2daf2748092d425a69102852faf789ac93d6d1f47d0993b2d5bd12c49b9",
+      "edits": [
+        {
+          "start": 95,
+          "before": [
+            "    const reason = \"🎯 低赔单边暂不支持 PM GTC，请选择 FOK\";"
+          ],
+          "after": [
+            "    const reason = \"🎯 LOS暂不支持 PM GTC，请选择 FOK\";"
+          ]
+        },
+        {
+          "start": 172,
+          "before": [
+            "    trace?.finish(\"skip\", \"🎯 低赔单边需要两腿均有可用账号并通过预检\");"
+          ],
+          "after": [
+            "    trace?.finish(\"skip\", \"🎯 LOS需要两腿均有可用账号并通过预检\");"
+          ]
+        }
+      ]
+    },
+    "client/web/src/types/extensionPrefs.test.ts": {
+      "beforeSha": "aba01a742fa576991cb354b320cd58a223863678365fdf8cee5c956cce5d32a0",
+      "afterSha": "3ee76a1b7086d2ebdc40356e8e35bb10abc18f7dd8a77f739dd7f5cf8163a5a9",
+      "edits": [
+        {
+          "start": 31,
+          "before": [],
+          "after": [
+            "  lowOddsSingleHigherCProbabilityOnly: false,"
+          ]
+        },
+        {
+          "start": 492,
+          "before": [],
+          "after": [
+            "  it(\"LOS C filtering is independently default-off and preserves only explicit true through save/load\", () => {",
+            "    for (const value of [undefined, null, 1, \"true\", false])",
+            "      expect(normalizeExtensionPrefs({ lowOddsSingleHigherCProbabilityOnly: value }).lowOddsSingleHigherCProbabilityOnly).toBe(false);",
+            "    const prefs = normalizeExtensionPrefs({ arbExecutionMode: \"lowOddsSingle\", lowOddsSingleHigherCProbabilityOnly: true });",
+            "    expect(prefs.lowOddsSingleHigherCProbabilityOnly).toBe(true);",
+            "    expect(prefs.singleLeg9999HigherCProbabilityOnly).toBe(false);",
+            "    expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);",
+            "  });",
+            ""
+          ]
+        }
+      ]
+    },
+    "client/web/src/types/extensionPrefs.ts": {
+      "beforeSha": "b99f1fbf9a63b4cc725b1e20a7b1226d88c002a0e7dfbf8cef0c5a035732754d",
+      "afterSha": "961aaef10ffd4ca09b9e6c246787bbc8f755871037de41539ae74d69441fb835",
+      "edits": [
+        {
+          "start": 217,
+          "before": [],
+          "after": [
+            "  /** [changmen 扩展] LOS 低赔腿须同时为当前盘口 C 行赛前概率较高方；无有效数据或同值时跳过。 */",
+            "  lowOddsSingleHigherCProbabilityOnly: boolean;"
+          ]
+        },
+        {
+          "start": 398,
+          "before": [],
+          "after": [
+            "    lowOddsSingleHigherCProbabilityOnly: false,"
+          ]
+        },
+        {
+          "start": 554,
+          "before": [],
+          "after": [
+            "    lowOddsSingleHigherCProbabilityOnly: row.lowOddsSingleHigherCProbabilityOnly === true,"
+          ]
+        }
+      ]
+    },
+    "scripts/verification/low-odds-single-boundary.mjs": {
+      "beforeSha": "9081737dc4447f9d3db930a6339118514615dc0698c6fc80d758a81f03439f22",
+      "afterSha": "e738a9d52860a9e768a151c177f8de6612d010d6e2b857de9cb12f3c7e9c89a0",
+      "edits": [
+        {
+          "start": 7,
+          "before": [],
+          "after": [
+            "import { restoreLosCProbabilitySource, verifyLosCProbabilitySources } from \"./los-c-probability-boundary.mjs\";"
+          ]
+        },
+        {
+          "start": 27,
+          "before": [],
+          "after": [
+            "  source = restoreLosCProbabilitySource(file, source);"
+          ]
+        },
+        {
+          "start": 42,
+          "before": [],
+          "after": [
+            "  verifyLosCProbabilitySources(read);",
+            "  const currentRead = read;",
+            "  read = file => restoreLosCProbabilitySource(file, currentRead(file));"
+          ]
+        }
+      ]
+    }
+  }
+}

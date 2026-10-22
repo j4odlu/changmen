@@ -8,10 +8,12 @@ import { isPredictionSellForCount } from "./kinds.js";
 /** 与 @changmen/db order_link_filter 对齐，避免本文件依赖被整包 mock 的 @changmen/db */
 const ARB_LINK_MIN = 1_000_000_000_000;
 const VALUE_BET_LINK_BASE = 7_000_000_000_000_000;
+const LOW_ODDS_LINK_BASE = 6_000_000_000_000_000;
 
 function linkHomeTs(link) {
   const n = Math.abs(Number(link)) || 0;
-  const ts = n >= VALUE_BET_LINK_BASE ? n - VALUE_BET_LINK_BASE : n;
+  const ts = n >= VALUE_BET_LINK_BASE ? n - VALUE_BET_LINK_BASE
+    : n >= LOW_ODDS_LINK_BASE ? n - LOW_ODDS_LINK_BASE : n;
   return ts >= ARB_LINK_MIN ? ts : 0;
 }
 

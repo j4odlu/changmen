@@ -28,6 +28,8 @@ const defaultValueBet = {
 };
 
 const defaultPrefs = {
+  arbExecutionMode: "normal" as const,
+  lowOddsSingleHigherCProbabilityOnly: false,
   betRowUi: false,
   valueBet: defaultValueBet,
   valueBetSoftPlatforms: ["OB", "RAY", "IA", "SABA", "IMT", "Polymarket", "PB"],
@@ -480,4 +482,21 @@ describe("extensionPrefs", () => {
     expect(toggleArbAllowedPlatform(["PB"], "PB", all)).toEqual(["PB"]);
     expect(toggleArbAllowedPlatform(["PB", "IM"], "PB", all)).toEqual(["PB", "IM"]);
   });
+  it("🎯 only activates explicitly and survives Extensions save/load", () => {
+    for (const mode of [undefined, null, "low", true, "NORMAL"])
+      expect(normalizeExtensionPrefs({ arbExecutionMode: mode }).arbExecutionMode).toBe("normal");
+    const prefs = normalizeExtensionPrefs({ arbExecutionMode: "lowOddsSingle" });
+    expect(prefs.arbExecutionMode).toBe("lowOddsSingle");
+    expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);
+  });
+
+  it("LOS C filtering is independently default-off and preserves only explicit true through save/load", () => {
+    for (const value of [undefined, null, 1, "true", false])
+      expect(normalizeExtensionPrefs({ lowOddsSingleHigherCProbabilityOnly: value }).lowOddsSingleHigherCProbabilityOnly).toBe(false);
+    const prefs = normalizeExtensionPrefs({ arbExecutionMode: "lowOddsSingle", lowOddsSingleHigherCProbabilityOnly: true });
+    expect(prefs.lowOddsSingleHigherCProbabilityOnly).toBe(true);
+    expect(prefs.singleLeg9999HigherCProbabilityOnly).toBe(false);
+    expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);
+  });
+
 });

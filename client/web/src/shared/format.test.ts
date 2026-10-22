@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  createLowOddsSingleLinkId,
+  isLowOddsSingleLink,
+  orderLinkSortKey as lowOddsSortKey,
   arbPercent,
   arbProfitRate,
   classifyLinkId,
@@ -77,4 +80,15 @@ describe("format shared helpers", () => {
     expect(linkIdSourceLabel("hash")).toBe("hash");
     expect(classifyLinkId(0)).toBeNull();
   });
+  it("🎯 uses an independent negative Link with the original booking timestamp", () => {
+    const at = 1_792_680_000_123;
+    const link = createLowOddsSingleLinkId(at);
+    expect(formatLinkId(link)).toBe("🎯");
+    expect(classifyLinkId(link)).toBe("lowOddsSingle");
+    expect(isLowOddsSingleLink(link)).toBe(true);
+    expect(isSingleLegRateLink(link)).toBe(false);
+    expect(isValueBetLink(link)).toBe(false);
+    expect(lowOddsSortKey(link)).toBe(at);
+  });
+
 });

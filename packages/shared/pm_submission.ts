@@ -59,3 +59,21 @@ export function validatePmSubmission(value: unknown, orderId: string, accountId:
   }, accountId);
   return parsed && parsed.stakeUsdc === row.stakeUsdc ? parsed : null;
 }
+
+/** [changmen 扩展] 从同一 RDS 待确认订单恢复拒单检测所需的查询身份。 */
+export interface PmPendingOrderReceipt {
+  orderId: string;
+  submission: PmSubmission;
+  matchId: string;
+  conditionId: string;
+  tokenId: string;
+  target: string;
+  odds: number;
+  linkId: number;
+}
+
+/** [changmen 扩展] Pending 表示提交结果待确认，不是已成交未结算（None）。 */
+export function isPmPendingOrder(value: { provider?: unknown; Type?: unknown; status?: unknown; Status?: unknown } | null | undefined): boolean {
+  return String(value?.provider ?? value?.Type ?? "") === "Polymarket"
+    && String(value?.status ?? value?.Status ?? "").toLowerCase() === "pending";
+}

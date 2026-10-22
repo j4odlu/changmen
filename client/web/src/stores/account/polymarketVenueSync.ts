@@ -6,6 +6,7 @@
  * 窗口对齐 PM_ORDER_FULL_LOOKBACK_MS（3 天），后端额外保留未结/未 settled 买单。
  */
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
+import { isPmPendingOrder } from "@changmen/shared/pm_submission";
 import { getPlayerOrder } from "@/api/chat";
 import {
   PM_ORDER_FULL_LOOKBACK_MS,
@@ -23,7 +24,7 @@ async function loadStoredPmVenueOrders(account: PlatformAccount) {
   });
   return stripPolymarketSellOrders(
     (info.orders ?? [])
-      .filter(o => String(o.Type ?? "") === "Polymarket")
+      .filter(o => String(o.Type ?? "") === "Polymarket" && !isPmPendingOrder(o))
       .map(o => venueOrderFromOrderRow(o)),
   );
 }

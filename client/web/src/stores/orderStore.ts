@@ -1,3 +1,4 @@
+import { isPmPendingOrder } from "@changmen/shared/pm_submission";
 import type { OrderRow } from "@/types/order";
 import { defineStore } from "pinia";
 import { getOrderList } from "@/api/esport";
@@ -117,7 +118,7 @@ export const useOrderStore = defineStore("order", {
           this.updateTodayProfit(list);
           const reportBase = list.filter(r => !isSportsOrder(r));
           const reportRows = reportBase
-            .filter(r => orderBelongsToDateKey(r, this.orderDate, reportBase))
+            .filter(r => !isPmPendingOrder(r) && orderBelongsToDateKey(r, this.orderDate, reportBase))
             .map(r => ({ ...r, Money: polymarketMoneyForAggregate(r, reportBase) }));
           useMessageStore().orderReportMessage(accountStore.accounts, reportRows);
           // 恢复「平仓中」会话：跑完 CLOB 终态（已平仓 / 可再卖）
@@ -163,7 +164,7 @@ export const useOrderStore = defineStore("order", {
         const profit = rows.reduce((sum, r) => sum + moneyOf(r), 0);
         acc.today = Math.round(profit);
         // 笔数不计 PM/PF 卖单（依附买单）
-        const primaryCount = rows.filter(r => !isPredictionSellRow(r)).length;
+        const primaryCount = rows.filter(r => !isPmPendingOrder(r) && !isPredictionSellRow(r)).length;
         acc.orderCount = primaryCount;
         if (today === todayKey()) {
           acc.todayOrder = primaryCount;

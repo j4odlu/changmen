@@ -12,6 +12,9 @@ import { createDefaultUserConfig } from "@/types/userConfig";
 import { observeArbSubmissionBlocked } from "@/services/orderExecutionObservation";
 vi.mock("@/services/orderExecutionObservation", () => ({ observeArbSubmissionBlocked: vi.fn() }));
 
+const claimLowOdds = vi.hoisted(() => vi.fn());
+vi.mock("@/extensions/arbBet/lowOddsSingle", () => ({ claimLowOddsMarket: claimLowOdds }));
+
 const validatePrepared = vi.hoisted(() => vi.fn((): string | null => null));
 vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ validatePolymarketPreparedBuy: validatePrepared, recordPmExecutionMetric: vi.fn() }));
 const betting = vi.hoisted(() => vi.fn());
@@ -650,4 +653,48 @@ describe("placeArbLegs two-leg report contract", () => {
     expect(getOddsEntry).not.toHaveBeenCalled();
     expect(betting).toHaveBeenCalledTimes(1);
   });
+  it.each(["A", "B"] as const)("🎯 sends only %s even with Parallel/anyOdds, preserving identity and stake", async side => {
+    claimLowOdds.mockResolvedValueOnce(true);
+    const input = checked({ executionMode: "lowOddsSingle", executionSide: side, betBothLegs: false,
+      lowOddsMarketKeys: ["market"],
+      accountA: side === "A" ? account("OB") : undefined,
+      accountB: side === "B" ? account("RAY") : undefined,
+      checkAccountA: account("OB"), checkAccountB: account("RAY"),
+    });
+    betting.mockResolvedValueOnce(new BetResult(side === "A" ? "OB" : "RAY", true));
+    const out = await placeArbLegs({ ...params, config: { ...params.config, betSorting: "Parallel", anyOdds: true, makeUp: true } }, input);
+    expect(betting).toHaveBeenCalledOnce();
+    expect(betting.mock.calls[0]![1]).toBe(side === "A" ? input.legA : input.legB);
+    expect(out.legA).toBe(input.legA);
+    expect(out.legB).toBe(input.legB);
+    expect(side === "A" ? out.placeOutcomeB : out.placeOutcomeA).toBe("not_attempted");
+    expect(retryFailedLeg).not.toHaveBeenCalled();
+    expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
+    expect(claimLowOdds).toHaveBeenLastCalledWith(["market"]);
+  });
+
+  it.each([false, "storage_error"])("🎯 never sends if its once-only claim is %s", async result => {
+    if (result === false) claimLowOdds.mockResolvedValueOnce(false);
+    else claimLowOdds.mockRejectedValueOnce(new Error("storage unavailable"));
+    const input = checked({ executionMode: "lowOddsSingle", executionSide: "A", betBothLegs: false,
+      lowOddsMarketKeys: ["market"], accountB: undefined, checkAccountA: account("OB"), checkAccountB: account("RAY") });
+    const out = await placeArbLegs(params, input);
+    expect(betting).not.toHaveBeenCalled();
+    expect(out.placeOutcomeA).toBe("not_attempted");
+    expect(out.placeOutcomeB).toBe("not_attempted");
+  });
+
+  it("🎯 failed or unknown submission never switches to its reference leg", async () => {
+    for (const unknown of [false, true]) {
+      claimLowOdds.mockResolvedValueOnce(true);
+      betting.mockResolvedValueOnce(Object.assign(new BetResult("OB", false), { pmSubmitUnknown: unknown }));
+      const input = checked({ executionMode: "lowOddsSingle", executionSide: "A", betBothLegs: false,
+        lowOddsMarketKeys: ["market"], accountB: undefined, checkAccountA: account("OB"), checkAccountB: account("RAY") });
+      const out = await placeArbLegs(params, input);
+      expect(out.placeOutcomeB).toBe("not_attempted");
+    }
+    expect(betting).toHaveBeenCalledTimes(2);
+    expect(retryFailedLeg).not.toHaveBeenCalled();
+  });
+
 });

@@ -1,5 +1,7 @@
 # 团队边界（单仓阶段 0）
 
+> [changmen 扩展] **文档状态（2026-10-22）：现行边界文档，含历史执行状态。下文“2026-10-18 当前执行状态”及全量安装、待迁移描述只对应当时批次；当前物理布局、已退役 workspace 和定向安装见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，当前发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 当前 workspace 与物理目录见 [WORKSPACE_LAYOUT](WORKSPACE_LAYOUT.md)：`rds/` 独立于 `server/`，数据公共包名仍为 `@changmen/db`；Node 平台基础设施合并为 `server/venues`；旧 adapter、Node 工具和 match-identity 的兼容 workspace 已退役。当前共 24 个 workspace，旧记录中的包数和目录仅对应当时阶段。
 
 [changmen 扩展] 2026-10-20 catalog 环境读取归属服务端：共享 `game_catalog.ts` 只接收显式筛选值，服务端的 `@changmen/storage/game_catalog.js` 每次读取 `AGGREGATE_GAME_CODES`。7 处 ESM 和 2 处 CJS 配置消费者已迁至新入口；目录映射与静态采集规则继续共享。`check:boundaries` 核验实际文件与消费者，环境行为用旧实现逐项对照，原冻结清单及 551 项源码基线不变。

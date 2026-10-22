@@ -1,5 +1,7 @@
 # 发布验收版本范围审计（2026-10-14）
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史范围审计，保留固定版本及保护证据；当前通用发布检查以 [ACTIONS_VALIDATION_PERFORMANCE](./ACTIONS_VALIDATION_PERFORMANCE_20261019.md) 为准，专项按需执行**
+
 [changmen 扩展] 本次修复沿用 `3465fe5d3089e3935778e3e8eb4f8dd9709aa36d`。固定 FOK/VPS 基线、场馆冻结清单和历史发布范围清单均不重新生成。
 
 ## 版本范围

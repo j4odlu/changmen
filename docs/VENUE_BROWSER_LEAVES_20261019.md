@@ -1,5 +1,7 @@
 # 浏览器 adapter 隔离：纯工具模块
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 以 3126c8de0462aaca96b96be432618fd852285755 为起点，继续解除客户端实现对旧 adapter 的反向依赖。本批暂未提交或部署。
 
 ## 改动

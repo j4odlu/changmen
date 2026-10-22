@@ -1,5 +1,7 @@
 # 前端、后端、数据层与共享代码的文件夹隔离
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 2026-10-18，用户选择按四类代码的真实目录隔离推进。工作目录 `E:\River\arb\changmen`，基线 `master` / `42b07aab`。本批实际移动未冻结文件，保持包名、运行源码及旧 CLI 调用；不改变 551 固定基线、业务语义或发布范围。
 
 ## 目录规则与本批结果

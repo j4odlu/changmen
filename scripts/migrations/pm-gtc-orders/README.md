@@ -1,6 +1,8 @@
 # PM GTC orders 并表工具（阶段一、二）
 
-[changmen 扩展] 最终目标是把完整 GTC 执行控制和原单事实一起放入 `orders` 并撤掉旧表。阶段一为纯离线预检；阶段二完整结构在专用本机 PostgreSQL 40/40 通过。生产已增加 7 列，后续按指定 37 条的新授权，在实际旧版兼容验收后仅复制六个控制字段；原字段和财务资格不动，未建控制索引/视图/函数/触发器或切换读写，完整 schema 和兼容开关未启用。旧表仍为执行控制权威。见 [37 条回填验收](../../../output/pm-gtc-orders-legacy-compat-backfill-20261011/验收报告.md)、[仅增列验收](../../../output/pm-gtc-orders-production-add-columns-20261011/验收报告.md)及 [迁移方案](../../../docs/PM_GTC_ORDERS_TABLE_MIGRATION_PLAN.md)。
+> [changmen 扩展] **文档状态（2026-10-22）：历史并表工具说明。下文旧兼容开关与控制切换不再作为当前执行步骤；当前保留两张表，最小模式生产迁移入口已退役，见 [GTC_COMPAT_RETIREMENT](../../../docs/GTC_COMPAT_RETIREMENT_20261014.md)。工具及原验收证据保留**
+
+[changmen 扩展] 最终目标是把完整 GTC 执行控制和原单事实一起放入 `orders` 并撤掉旧表。阶段一为纯离线预检；阶段二完整结构在专用本机 PostgreSQL 40/40 通过。生产已增加 7 列，后续按指定 37 条的新授权，在实际旧版兼容验收后仅复制六个控制字段；原字段和财务资格不动，未建控制索引/视图/函数/触发器或切换读写，完整 schema 和兼容开关未启用。旧表仍为执行控制权威。见 [37 条回填验收](../../../output/pm-gtc-orders-legacy-compat-backfill-20261011/验收报告.md)、[仅增列验收](../../../output/pm-gtc-orders-production-add-columns-20261011/验收报告.md)及 [迁移方案](../../../docs/archive/20261022-retired-plans/PM_GTC_ORDERS_TABLE_MIGRATION_PLAN.md)。
 
 输入须符合 `schemaVersion=1`，包含 `complete=true`、同一次只读 REPEATABLE READ 快照标识、完整 `profiles` / `executions` / `orders`。可使用 [只读导出模板](export-snapshot.sql) 准备数据；该模板本轮未连接数据库执行。不可按用户或日期截取后改成 complete，也不可拼接不同事务。BIGINT `orders.id`、`player_id`、执行更新时间按字符串保存。
 
@@ -36,7 +38,7 @@ node scripts/migrations/pm-gtc-orders/integration/local.mjs --execute-local
 
 完整阶段二脚本为 `phase2-schema.sql`、`phase2-rollback.sql`、`phase2-validate.sql`，均须单独审查并另行授权执行，没有 apply CLI 或自动部署接线。前两者带事务、锁/语句超时及独立 schema 锁；回退只允许无控制数据、无 FALSE 行的空扩展，拒绝有数据回退和 CASCADE。只新增 7 列不足以通过完整 schema 验证，不能启用兼容开关，也不能据此直接执行完整回退脚本。
 
-消费者兼容默认关闭；`ORDERS_EXECUTION_COMPAT=1` 需要启动只读验证通过才可使用 `orders_financial`。缺 schema 时不能降级使用普通表。在生产完整结构验收、所有生产消费者启用兼容前不能创建或回填生产 FALSE 行；应用环境开关未修改，生产原 37 条 TRUE 行仅附加非权威控制副本。详细资格、删除、锁及 hook 说明见 [阶段二记录](../../../docs/PM_GTC_ORDERS_PHASE2_ACCEPTANCE.md)。
+消费者兼容默认关闭；`ORDERS_EXECUTION_COMPAT=1` 需要启动只读验证通过才可使用 `orders_financial`。缺 schema 时不能降级使用普通表。在生产完整结构验收、所有生产消费者启用兼容前不能创建或回填生产 FALSE 行；应用环境开关未修改，生产原 37 条 TRUE 行仅附加非权威控制副本。详细资格、删除、锁及 hook 说明见 [阶段二记录](../../../docs/archive/20261022-retired-plans/PM_GTC_ORDERS_PHASE2_ACCEPTANCE.md)。
 
 结构迁移保留旧字段和键约束。旧版期间不安装新删除保护、控制索引及财务视图，不创建 FALSE 行；仅明确授权且通过实际旧版验证的已有订单允许复制非权威控制副本。原硬删会连副本一并删除，旧表仍保留恢复权威；旧源更新也不会自动同步副本，切换前须再次核对。只有活动消费者具备完整兼容后才能完整回填，最后切换控制读写并撤旧表。37 条已经有控制数据，不能执行仅限空扩展的回退。
 

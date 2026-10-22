@@ -1,5 +1,7 @@
 # 浏览器职责隔离：行情订阅与连接生命周期
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 本轮按完整依赖组迁移，保留现有业务逻辑、模块单例及旧公开入口。全部工作在 master 当前目录完成，本轮不提交、推送、部署或迁移数据库。
 
 ## 已迁移范围

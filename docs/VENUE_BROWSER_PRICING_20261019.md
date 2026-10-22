@@ -1,5 +1,7 @@
 # 浏览器职责隔离：报价计算与后续顺序
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 目标是继续迁移真实实现及其消费者，让客户端能力由客户端包承载，并保持业务行为。当前全部浏览器职责隔离尚未完成；本轮完成纯报价计算与校验迁移，后续按依赖顺序处理元数据、订阅和账号订单宿主。
 
 ## 本轮范围

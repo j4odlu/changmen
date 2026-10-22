@@ -1,5 +1,7 @@
 # 浏览器隔离：类型与纯规则拆分
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 本批接续未提交的三个纯工具迁移，源码基线仍为 3126c8de。所有本地拆分尚未提交、推送或部署；线上仍为 3126c8de。
 
 ## 改动范围

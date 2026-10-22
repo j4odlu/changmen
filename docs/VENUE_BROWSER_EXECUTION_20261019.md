@@ -1,5 +1,7 @@
 # 浏览器职责隔离：私有通道、鉴权、签名与订单编排
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 本轮在 master 当前工作目录继续职责拆包，保持既有业务逻辑、协议和数据不变。未执行数据库迁移、真实交易、提交、推送或部署。
 
 ## 实现归属

@@ -1,5 +1,7 @@
 # PM GTC 监控卡片独立发布验收
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史 GTC 显示发布验收。版本与部署结论仅对应当次执行；当前存储边界见 [GTC_COMPAT_RETIREMENT](./GTC_COMPAT_RETIREMENT_20261014.md)，恢复接口见 [PM_GTC_RECOVER_API](./PM_GTC_RECOVER_API.md)**
+
 2026-10-12（Asia/Shanghai）。基线：`38883ca32a42ec53e6647446f39aac87c62c50b5`。
 
 ## 范围与行为

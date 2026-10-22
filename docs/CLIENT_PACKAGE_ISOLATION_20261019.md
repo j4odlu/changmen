@@ -1,5 +1,7 @@
 # 客户端基础包目录隔离第一轮验收
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 2026-10-19，在 `E:\River\arb\changmen` 的 `master` 工作目录实施，起点为 `ce39897bd33ec11a438332323e9419a379517a93`。本轮完成客户端基础包真实目录迁移；未提交、推送或部署，未访问生产数据库或执行迁移。
 
 ## 实施范围

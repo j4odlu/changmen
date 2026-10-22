@@ -1,5 +1,7 @@
 # Node 基础包目录隔离第二轮
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 2026-10-19，在 `E:\River\arb\changmen` 的 `master` 工作目录实施，起点为 `92c0d7d6a223cfc421c29590f495ec115c9aec49`。本轮只调整源码归属、安装声明、打包和检查入口，未执行数据库迁移。
 
 ## 实施范围

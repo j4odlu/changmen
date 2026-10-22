@@ -1,5 +1,7 @@
 # 用户证书管理功能升级验收 — 2026-10-03
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史证书发布或验收记录，保留当时证据；当前功能说明见 [CLIENT_CERTIFICATES](./CLIENT_CERTIFICATES.md)**
+
 主体功能 `ccd810b9` 和前端并发修正 `02c3e47f` 已推送并部署。发布 [37069745424](https://github.com/j4odlu/changmen/actions/runs/37069745424) 与 [37070108549](https://github.com/j4odlu/changmen/actions/runs/37070108549) 全部成功。
 
 页面：`https://changmen.fun/admin/certificates`。操作说明见 [证书管理模块](CLIENT_CERTIFICATES.md)。

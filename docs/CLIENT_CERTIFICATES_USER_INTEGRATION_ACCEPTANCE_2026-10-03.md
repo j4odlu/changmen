@@ -1,5 +1,7 @@
 # 用户管理集成证书验收（2026-10-03）
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史证书发布或验收记录，保留当时证据；当前功能说明见 [CLIENT_CERTIFICATES](./CLIENT_CERTIFICATES.md)**
+
 [changmen 扩展] 功能提交 `0fda18bf`，GitHub 发布工作流 `37105908484`。
 
 ## 功能与边界

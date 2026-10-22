@@ -1,5 +1,7 @@
 # 源码文件隔离：前端、后端、RDS 与真正共享
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 2026-10-18 收口：本文历史批次与原证据保留；当前精简安装、瘦包及进一步独立发布暂缓，新增 Linux 实验脚本已归档。继续沿用全量安装与发布范围；本地 WSL 不作为部署要求。当前源码/构建独立成果、仍需保留的冻结混合目录与兼容入口，以及累计待提交清单见[候选收口记录](audits/SOURCE_ISOLATION_CLOSEOUT_20261018.md)。
 
 [changmen 扩展] 2026-10-17，工作目录 `E:\River\arb\changmen`，提交基线 `abdfce46d46f562c208ea0d832b6cafc02fd2360`。本批在已有未提交改动上实施源码归属迁移，不修改实际发布规则；未 commit/push、未部署，不访问或维护生产 RDS。

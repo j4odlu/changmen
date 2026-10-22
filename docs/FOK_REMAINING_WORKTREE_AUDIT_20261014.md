@@ -1,5 +1,7 @@
 # 剩余未提交改动的 FOK 审计（2026-10-14）
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史范围审计，保留固定版本及保护证据；当前通用发布检查以 [ACTIONS_VALIDATION_PERFORMANCE](./ACTIONS_VALIDATION_PERFORMANCE_20261019.md) 为准，专项按需执行**
+
 [changmen 扩展] 审计起点为 `3465fe5d3089e3935778e3e8eb4f8dd9709aa36d`，针对剩余代码、保护检查、兼容读写和订单显示改动。修复纳入后续版本范围验收及同一次提交；本次没有部署或真实交易。随后经用户明确选择执行的 RIVER 结果副本迁移见 [版本范围审计](./FOK_RELEASE_VERSION_RANGE_AUDIT_20261014.md)。
 
 ## 已修复的问题

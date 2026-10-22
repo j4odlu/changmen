@@ -1,5 +1,7 @@
 # 浏览器 adapter 目录隔离：第四轮首批
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 本轮以已上线的 aecea38cc30a31bdb2028be655cb6ac40f7df470 为基线，迁移 10 个浏览器专属实现，保持原业务行为。
 
 ## 最终范围

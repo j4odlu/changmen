@@ -1,5 +1,7 @@
 # 认证生产发布与验收记录
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史认证验收、排查或发布记录。环境、版本和结论仅对应当次执行；当前凭证政策见 [COOKIE_ONLY_AUTH](./COOKIE_ONLY_AUTH.md)，职责见 [AUTH_MODULE_BOUNDARIES](./AUTH_MODULE_BOUNDARIES.md)**
+
 本次沿用 GitHub master 的登录身份方向，认证模块在现有进程内独立。模块职责与依赖规则见 [认证模块边界](AUTH_MODULE_BOUNDARIES.md)。账号归属、比赛、订单、下注算法保持各自的业务边界。
 
 ## 生产准备

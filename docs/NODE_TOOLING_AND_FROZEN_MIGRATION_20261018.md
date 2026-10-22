@@ -1,5 +1,7 @@
 # 第二批目录隔离与冻结包迁移方案
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 2026-10-18，基于 `master` / `02b5092c` 执行下一步第 1、2 项及第 3 项方案：核对剩余目录、迁出两个 Node 工具实现、设计冻结文件后续迁移。冻结包、Chrome 扩展和探针本批不搬迁；生产安装、运输、激活及默认交易模式保持。
 
 ## 已完成的 Node 工具归位

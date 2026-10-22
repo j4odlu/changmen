@@ -1,5 +1,7 @@
 # 零成交 GTC 订单显示独立发布验收
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史 GTC 显示发布验收。版本与部署结论仅对应当次执行；当前存储边界见 [GTC_COMPAT_RETIREMENT](./GTC_COMPAT_RETIREMENT_20261014.md)，恢复接口见 [PM_GTC_RECOVER_API](./PM_GTC_RECOVER_API.md)**
+
 日期：2026-10-11。基线：`4dd2c5e967fbd2101e3c848f2d48c221ec7c4e72`。
 
 ## 问题与结果

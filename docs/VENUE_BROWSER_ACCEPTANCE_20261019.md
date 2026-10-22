@@ -1,5 +1,7 @@
 # 浏览器职责拆包累计验收与后端安装隔离
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 > 2026-10-20 更新：前文保留首轮验收记录；私有通道、账号执行、采集和市场宿主全部迁移后的最新验收见末节。
 
 日期：2026-10-19。Git 基线：3126c8de0462aaca96b96be432618fd852285755，master 本地累计改动。

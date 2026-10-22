@@ -1,5 +1,7 @@
 # PM 模块解耦与验证、发布流程精简方案
 
+> [changmen 扩展] **文档状态（2026-10-22）：混合历史方案。下文“精简安装暂缓”“继续全量安装”及旧 workspace 路径已被后续实现取代；当前定向安装和 backend-runtime-v2 归档见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md) 与 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)。其余未实施项须分别核验，不因本次整理宣称完成；本地簿启用结论仍看对应审计**
+
 [changmen 扩展] **2026-10-18 当前安排：收口已有源码隔离、兼容检查及已授权的 Actions 验收改动；精简安装、瘦包和独立发布 C–E 暂缓。** 本地 WSL 不是现有全量部署的要求。下文按批次保留历史状态；累计候选已包含 Actions 验收绑定及验证复用，不能将早期“工作流未改”的批次说明当作当前全部差异。当前边界、实验归档和逐文件清单见[候选收口记录](audits/SOURCE_ISOLATION_CLOSEOUT_20261018.md)。未 commit/push、未部署；原 551 保护、经典 `legacy` FOK、HTTP 预检及本地簿/旁路默认关闭保持。
 
 [changmen 扩展] 2026-10-17，基于已发布提交 `abdfce46d46f562c208ea0d832b6cafc02fd2360`。**批次 A 及后续依赖证据收口、批次 B 浏览器模块拆分均已在本机实施并验证，C–E 仍为方案。** B 已新增 `packages/pm-market-data-browser`，由 web 显式注入只读源和 Worker 工厂，旧路径保留兼容；实际发布分类、工作流、原 551 固定保护不变，未 commit/push、未部署。原行情、经典 FOK、实际 HTTP 预检保持现状；本地簿及对照开关继续默认关闭，生产旁路启用仍 NO-GO。结果见 [批次 A](./audits/PM_COMPONENT_ENTRY_BOUNDARY_AUDIT_20261017.md)及[批次 B 验证记录](./audits/PM_BROWSER_MODULE_EXTRACTION_AUDIT_20261017.md)。
@@ -366,7 +368,7 @@ RDS 无 backend 目录的独立维护、历史结构、回滚及旧新 CLI 兼�
 
 完整审计及数据库结果绑定同一 commit、candidateTree、inputFingerprint；完整报告保留原 22 阶段、原固定参考及实际生产来源，数据库报告覆盖结构兼容、历史结构/备份恢复、新旧 CLI、RDS 独立安装维护和账号部署保护。封包记录报告自身哈希，运输前再核对；缺失、失败、超时、错误候选/基线、阶段缺少/替换及报告篡改不能放行。Actions Summary 和失败附件增加阶段、退出原因及数据库日志。
 
-本批保留原门禁，不做测试去重或产物瘦身；完整独立发布 C–E 仍未完成，不能将此门禁收口当作组件独立发布已经启用。551 原 manifest/hash 和应用源码不改，本地簿/旁路默认关闭，经典 `legacy` FOK 与实际 HTTP 预检保持。实现、范围、拒绝用例和本机验证见 [Actions 第一批验收门禁](ACTIONS_ACCEPTANCE_GATES_20261018.md)，机器证据在 `output/actions-gates-20261018/`；未 commit/push、触发工作流或部署。
+本批保留原门禁，不做测试去重或产物瘦身；完整独立发布 C–E 仍未完成，不能将此门禁收口当作组件独立发布已经启用。551 原 manifest/hash 和应用源码不改，本地簿/旁路默认关闭，经典 `legacy` FOK 与实际 HTTP 预检保持。实现、范围、拒绝用例和本机验证见 [Actions 第一批验收门禁](./archive/20261022-retired-plans/ACTIONS_ACCEPTANCE_GATES_20261018.md)，机器证据在 `output/actions-gates-20261018/`；未 commit/push、触发工作流或部署。
 
 最终本机结果：完整 22 阶段、79 项发布控制及回滚集成、76 文件/2,264 项验证、后端 12 个无缓存任务、前端 4,537 项及类型/生产构建、临时 PostgreSQL 五组均通过。两份实际必要报告绑定同一最终输入指纹；首轮 VM 夹具缺依赖导致的 21 项失败及修复后的完整重跑分别保留。应用源码、根 package/lock、551 原保护及实际运输/激活脚本未改。当前仍为未提交候选，正式 GitHub Actions 验收尚未执行。
 
@@ -374,7 +376,7 @@ RDS 无 backend 目录的独立维护、历史结构、回滚及旧新 CLI 兼�
 
 [changmen 扩展] 必要完整审计先执行，组件检查只引用本次审计中实际执行、成功且命令/工作目录等价的阶段。原逻辑检查清单、551 入口保护和完整 22 阶段保留；运行标识、环境摘要、候选指纹、实际命令、退出状态和报告内容哈希共同校验引用，封包及运输前继续检查。当前候选已验证少执行一轮后端、前端、构建、路由编译；审计内部的专项重叠本批保持。
 
-实际发布、安装 profile、独立发布 C–E、应用源码与默认开关不改。实现、范围及完成后的本机验证见 [Actions 第二批验证复用](ACTIONS_VALIDATION_REUSE_20261018.md)，机器证据在 `output/actions-dedup-20261018/`；未 commit/push 或部署。
+实际发布、安装 profile、独立发布 C–E、应用源码与默认开关不改。实现、范围及完成后的本机验证见 [Actions 第二批验证复用](./archive/20261022-retired-plans/ACTIONS_VALIDATION_REUSE_20261018.md)，机器证据在 `output/actions-dedup-20261018/`；未 commit/push 或部署。
 
 最终本机结果：完整 22/22、数据库 5/5、551/551、80 项发布控制及本地回滚集成、76 文件/2,278 项验证、后端 12 个无缓存任务、前端 4,537 项及类型/生产构建通过，保留 3 项既有 pending。实际四条复用与完整/数据库报告绑定同一候选指纹；对应阶段本地耗时合计约 226 秒，仅是重复成本估算，不是 Actions 提速实测。本批 11 个验证/证据/测试代码路径改变，业务源码、根 package/lock、实际 workflow、分类/运输/激活及原保护不改；正式提交的真实 Actions 验收尚未执行。
 
@@ -386,7 +388,7 @@ RDS 无 backend 目录的独立维护、历史结构、回滚及旧新 CLI 兼�
 
 清单 7 项、发布控制 87 项及回滚集成、相关 50 项和 loader/声明专项 146 项、FOK 等价、551/551 和边界通过。仅新增 5 个验证/测试代码文件；业务源码、package/lock、实际 workflow/分类/安装/激活及原保护未改。没有重复前端构建或把上一批 22 阶段报告当作新指纹报告；最终提交仍须 Actions 正式验收。
 
-**本机 Windows 离线安装与解析对照通过，暂不切换生产安装。** 本批原提出的 Linux 生命周期/native optional、八进程隔离启动及安装规则切换，现随精简安装优化一起暂缓，不作为沿用全量部署的条件；C–E 与瘦包尚未启用。可选 Linux 实验未完成，四个新增实验脚本已归档，失败与清理证据保留。详情见 [八进程后端安装清单与验收](BACKEND_INSTALL_PROFILE_20261018.md)，本批成功证据仍在 `output/backend-install-profile-20261018/` 和 `output/backend-install-isolation/`；未 commit/push 或部署，本地簿继续默认关闭。
+**本机 Windows 离线安装与解析对照通过，暂不切换生产安装。** 本批原提出的 Linux 生命周期/native optional、八进程隔离启动及安装规则切换，现随精简安装优化一起暂缓，不作为沿用全量部署的条件；C–E 与瘦包尚未启用。可选 Linux 实验未完成，四个新增实验脚本已归档，失败与清理证据保留。详情见 [八进程后端安装清单与验收](./archive/20261022-retired-plans/BACKEND_INSTALL_PROFILE_20261018.md)，本批成功证据仍在 `output/backend-install-profile-20261018/` 和 `output/backend-install-isolation/`；未 commit/push 或部署，本地簿继续默认关闭。
 
 ### 10.13 候选收口：停止扩展安装实验
 

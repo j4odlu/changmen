@@ -1,5 +1,7 @@
 # PM 行情报文解析职责迁移
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 日期：2026-10-19，master 本地累计拆包工作。
 
 [changmen 扩展] 先复查上一轮行情观察流：同一状态实例、观察者容量与异常移除、连接代际过滤、通知顺序及旧入口回归共 44 项通过，未发现迁移引入的业务问题。本轮继续隔离行情报文解析职责。

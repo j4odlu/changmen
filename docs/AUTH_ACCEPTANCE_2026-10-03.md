@@ -1,5 +1,7 @@
 # 统一认证执行验收
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史认证验收、排查或发布记录。环境、版本和结论仅对应当次执行；当前凭证政策见 [COOKIE_ONLY_AUTH](./COOKIE_ONLY_AUTH.md)，职责见 [AUTH_MODULE_BOUNDARIES](./AUTH_MODULE_BOUNDARIES.md)**
+
 执行日期：2026-10-03。分支：`codex/unified-auth`。验收使用本机专用 PostgreSQL、实际 Vue 页面、实际 HTTP 路由及私有 Socket.IO Hub；River 为隔离库测试账号。未发布认证代码到生产。
 
 后续扩展验收与当前发布结论见 [全面验收记录](AUTH_COMPREHENSIVE_ACCEPTANCE_2026-10-03.md)。下文保留第一次执行结果与事故记录。

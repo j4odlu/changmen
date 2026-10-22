@@ -1,5 +1,7 @@
 # 用户证书模块生产验收 — 2026-10-03
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史证书发布或验收记录，保留当时证据；当前功能说明见 [CLIENT_CERTIFICATES](./CLIENT_CERTIFICATES.md)**
+
 代码 `68c62bb1` 已推送 GitHub master 并发布。自动发布 [37067479897](https://github.com/j4odlu/changmen/actions/runs/37067479897) 全部成功。管理页面：`https://changmen.fun/admin/certificates`，导航为“用户证书”，仅完整管理员使用。
 
 ## 已完成

@@ -1,5 +1,7 @@
 # 浏览器隔离：只读行情宿主拆分
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 本轮解除 client/packages/venue-browser 对旧 adapter 的最后两处直接引用。前几批本地改动一并参加验证；未提交、推送、部署或执行数据库迁移。
 
 ## 实现与行为

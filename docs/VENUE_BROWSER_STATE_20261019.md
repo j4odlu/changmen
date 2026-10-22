@@ -1,5 +1,7 @@
 # 浏览器隔离：共享状态的唯一实现
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 先复查前两批未提交改动，再迁移深度偏好与 tick 控制状态。复查的 6 个测试文件、23 项检查通过，包括错误类身份和原算法对照，未发现业务行为回归。当前本地各批拆分仍未提交、推送或部署。
 
 ## 范围与行为

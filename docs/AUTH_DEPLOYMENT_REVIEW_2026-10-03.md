@@ -1,5 +1,7 @@
 # GitHub 对比与认证部署审查
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史认证验收、排查或发布记录。环境、版本和结论仅对应当次执行；当前凭证政策见 [COOKIE_ONLY_AUTH](./COOKIE_ONLY_AUTH.md)，职责见 [AUTH_MODULE_BOUNDARIES](./AUTH_MODULE_BOUNDARIES.md)**
+
 执行日期：2026-10-03。源工作区：`E:\River\arb\changmen`。隔离候选：`codex/auth-deployment-review`。
 
 ## 对比结论

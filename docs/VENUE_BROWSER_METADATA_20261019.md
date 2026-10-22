@@ -1,5 +1,7 @@
 # 浏览器职责隔离：行情 tick 元数据
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 本轮先复查上一轮纯报价迁移，再继续执行行情元数据职责拆分。工作位于 master 当前目录；本轮不包含提交、推送、部署或数据库迁移。
 
 ## 复查与实现

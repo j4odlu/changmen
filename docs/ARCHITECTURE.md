@@ -1,5 +1,7 @@
 # changmen 架构
 
+> [changmen 扩展] **文档状态（2026-10-22）：现行入口，含历史迁移段落。下文带日期的 server/packages/venue-node-*、server/db 和 19 个后端 workspace 等记录不代表当前目录；物理位置与安装清单统一以 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md) 为准**
+
 单一架构文档入口。命令与日常开发见 [../AGENTS.md](../AGENTS.md)。
 
 [changmen 扩展] 当前目录以 [workspace 总览](WORKSPACE_LAYOUT.md) 为准：前端 `client/`、后端 `server/`、数据层根目录 `rds/`；24 个 workspace。服务端平台基础设施合并为 `server/venues` / `@changmen/venue-node`，三个兼容 workspace 已退役。下方带日期的记录用于解释迁移历史。

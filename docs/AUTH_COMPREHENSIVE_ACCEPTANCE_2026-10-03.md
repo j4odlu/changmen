@@ -1,5 +1,7 @@
 # 统一认证全面验收结果
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史认证验收、排查或发布记录。环境、版本和结论仅对应当次执行；当前凭证政策见 [COOKIE_ONLY_AUTH](./COOKIE_ONLY_AUTH.md)，职责见 [AUTH_MODULE_BOUNDARIES](./AUTH_MODULE_BOUNDARIES.md)**
+
 执行日期：2026-10-03。分支：`codex/unified-auth`。结论：代码回归与隔离环境认证验收通过，**生产发布验收未通过**。本次没有部署认证代码、重载生产 Caddy 或发送真实交易。
 
 ## 本次实际执行

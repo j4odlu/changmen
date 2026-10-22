@@ -1,5 +1,7 @@
 # 浏览器隔离：实际消费者与 Worker 入口收口
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 在独立 workspace 之后，前端开始直接消费所属包，移除诊断链路经过旧 adapter 中间入口的依赖。业务行为保持原样，未提交、推送、部署或执行数据库迁移。
 
 ## 改动

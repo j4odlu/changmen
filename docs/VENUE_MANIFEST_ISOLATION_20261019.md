@@ -1,5 +1,7 @@
 # 平台 catalog 单源维护与隔离（第三轮）
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 [changmen 扩展] 本轮以 `17afa9c5c39331c9945b5fdf45f7c63738b80b4f` 为起点，将平台目录的维护源归入共享包，保持现有业务逻辑、平台定义与资源选择语义不变。
 
 ## 维护与消费者

@@ -1,5 +1,7 @@
 # PM 行情观察流职责迁移
 
+> [changmen 扩展] **文档状态（2026-10-22）：历史迁移与验收记录。文中的旧目录、兼容入口、workspace 数量、未提交及未部署状态仅对应各自批次；当前布局见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，安装与发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
+
 日期：2026-10-19；基于 master 的现有未提交拆包改动继续推进。
 
 [changmen 扩展] 本轮将行情观察流的唯一实现迁至 client/packages/venue-browser/polymarket/marketStream.ts。职责是维护连接状态、帧序号与观察者通知；不创建网络连接、订阅、定时器或行情缓存。

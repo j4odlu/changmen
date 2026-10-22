@@ -1,0 +1,170 @@
+{
+  "purpose": "A8 RAY full execution audit and user-approved empty-quote repair, 2026-10-22; historical evidence remains unchanged",
+  "baseline": "dcf46f77781c9ac1eaebefa2ab2948cbfcf073f1",
+  "files": [
+    {
+      "file": "client/packages/client-core/src/shared/platformHttp.ts",
+      "beforeSha": "237af6635f3a148f348130df87bfedf82458d80240c959d63a047753fd499a49",
+      "afterSha": "95814a8c6bb2c151afbf934e4becb6dd910ddee304473dfb5410d3661c3e300e",
+      "changes": [
+        {
+          "afterOffset": 2384,
+          "before": "",
+          "after": "  // [A8 可证实] RAY 使用 Axios validateStatus 的原始响应，业务码由 provider 判断。\n  // 其它调用方继续使用原有 JSON HTTP 错误处理。\n  responseOptions?: { preserveAcceptedResponse?: boolean },\n"
+        },
+        {
+          "afterOffset": 3633,
+          "before": "    if (res.status >= 400 && /json/i.test(String(res.headers[\"content-type\"] || \"\"))) {\n",
+          "after": "    if (!responseOptions?.preserveAcceptedResponse && res.status >= 400 && /json/i.test(String(res.headers[\"content-type\"] || \"\"))) {\n"
+        }
+      ]
+    },
+    {
+      "file": "client/packages/client-core/src/shared/a8Axios.ts",
+      "beforeSha": "bd6873289198cd7f3b4045a64c3752e5b0da58b01048501b132b2ae0656d83d7",
+      "afterSha": "621a92c2862622398e4d15cf5ecdb34f1a5868dd2a9a3d5e9d80225433ee34d1",
+      "changes": [
+        {
+          "afterOffset": 32,
+          "before": " * 对齐 A8 bundle `Nr` / `mr`：浏览器端 Axios（XHR 适配器），非 fetch。\n",
+          "after": " * [A8 可证实] index0706.js `Mr` / `gr`：浏览器端 Axios（XHR 适配器），非 fetch。\n"
+        },
+        {
+          "afterOffset": 119,
+          "before": " * - validateStatus: 500/504 不视为 throw（与 A8 `![500,504].includes` 一致）\n",
+          "after": " * - validateStatus: 500/504 拒绝，其余状态交由场馆业务判断（A8 `![500,504].includes`）\n"
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/adapter/ray/bet.ts",
+      "beforeSha": "da3e991e6cb47c272e0dbfaadba49a9e5a1ea447cf0a7aa3ddc2bbb40ebd28e2",
+      "afterSha": "26c467e90e5d88b720c9f371604c04794bd35bb112393d38a8d5438512a78811",
+      "changes": [
+        {
+          "afterOffset": 3164,
+          "before": "  result?: { odds?: RayOddsRow[]; start_time?: string };\n",
+          "after": "  result?: { odds?: RayOddsRow[]; start_time?: string } | null;\n"
+        },
+        {
+          "afterOffset": 3318,
+          "before": "  return res.result!.odds!.find((d) => d.odds_id == itemId);\n",
+          "after": "  return res.result?.odds?.find((d) => d?.odds_id == itemId);\n}\n\n/** [changmen 扩展] 用户确认修复 A8 空盘口缺陷：失效旧报价和旧订单，等待采集恢复有效赔率。 */\nfunction rejectMissingRayQuote(option: BetOption, reason: string): BetOption {\n  option.data = null;\n  option.checkError = `RAY 无盘口数据：${reason}`;\n  option.updateOdds(0);\n  return option;\n"
+        },
+        {
+          "afterOffset": 3827,
+          "before": "    // [A8 可证实] index0706.js rHe.checkBet：缺项时读取字段抛错，由公共预检入口接住。\n",
+          "after": "    // [A8 可证实] 已有盘口的封盘分支仍按原版执行；缺项由入口单独失效旧报价。\n"
+        },
+        {
+          "afterOffset": 6368,
+          "before": "      { forceDirect: true },\n",
+          "after": ""
+        },
+        {
+          "afterOffset": 7052,
+          "before": "",
+          "after": "    if (!res) return rejectMissingRayQuote(option, \"响应为空\");\n"
+        },
+        {
+          "afterOffset": 7216,
+          "before": "",
+          "after": "    if (!Array.isArray(res.result?.odds))\n      return rejectMissingRayQuote(option, \"响应缺少有效盘口列表\");\n"
+        },
+        {
+          "afterOffset": 7402,
+          "before": "",
+          "after": "    if (!row) return rejectMissingRayQuote(option, \"当前选项已不存在\");\n    if (row.enable_parlay === 1 && row.status === 1\n      && (!Array.isArray(row.bet_limit) || row.bet_limit.length < 2\n        || row.bet_limit.slice(0, 2).some(value => value == null || !Number.isFinite(Number(value)))))\n      return rejectMissingRayQuote(option, \"盘口缺少有效限额\");\n    if (row.enable_parlay === 1 && row.status === 1\n      && (!Number.isFinite(Number(row.odds)) || Number(row.odds) <= 0))\n      return rejectMissingRayQuote(option, \"盘口缺少有效赔率\");\n"
+        },
+        {
+          "afterOffset": 8917,
+          "before": "      { forceDirect: true },\n",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/adapter/ray/accountHttp.ts",
+      "beforeSha": "c19e3f0188cc0f4431787a7257dcb4b0fe92dffe39e075ec137b78283de42c1f",
+      "afterSha": "1c7223b6f379f548544588ac878e6af0486e4bbd16274ecd491c7b5ae0c063c2",
+      "changes": [
+        {
+          "afterOffset": 595,
+          "before": "",
+          "after": "/** [A8 可证实] rHe.betting 使用 qs.stringify 的 RFC3986 表单编码（空格为 %20）。 */\nfunction encodeRayFormPart(value: string): string {\n  return encodeURIComponent(value).replace(/[!'()*]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);\n}\n\n"
+        },
+        {
+          "afterOffset": 1137,
+          "before": "",
+          "after": "    { preserveAcceptedResponse: true },\n"
+        },
+        {
+          "afterOffset": 1639,
+          "before": "      body: new URLSearchParams(\n        Object.fromEntries(Object.entries(body).map(([k, v]) => [k, String(v)])),\n      ).toString(),\n",
+          "after": "      body: Object.entries(body).map(([key, value]) => `${encodeRayFormPart(key)}=${encodeRayFormPart(String(value))}`).join(\"&\"),\n"
+        },
+        {
+          "afterOffset": 1809,
+          "before": "",
+          "after": "    { preserveAcceptedResponse: true },\n"
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/adapter/ray/accountHttp.test.ts",
+      "beforeSha": "603dcbce65ff19f007d951881c20733f63c1329be81caf0c0d73d7b5827124c3",
+      "afterSha": "6e30201ed106e2bb5ceeab1dbc579e320a68104c895cbf9730da1a2aa22f63dd",
+      "changes": [
+        {
+          "afterOffset": 1169,
+          "before": "",
+          "after": "      { preserveAcceptedResponse: true },\n"
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/adapter/ray/a8PrecheckParity.test.ts",
+      "beforeSha": "32b13d59bb86e837b33160662a27860c36cde148634330950f829f6e5a28dc18",
+      "afterSha": "bd776099053e2de789067546b8f3bd026fa5f649ff249f2015c3b90218d488c2",
+      "changes": [
+        {
+          "afterOffset": 3561,
+          "before": "    [\"missing row\", () => ({ code: 200, result: { odds: [] } })],\n    [\"missing result\", () => ({ code: 200 })],\n    [\"missing odds list\", () => ({ code: 200, result: {} })],\n    [\"missing limits\", () => quote({ bet_limit: undefined })],\n    [\"invalid limits\", () => quote({ bet_limit: [\"bad\", \"bad\"] })],\n    [\"invalid odds\", () => quote({ odds: \"bad\" })],\n",
+          "after": ""
+        },
+        {
+          "afterOffset": 5765,
+          "before": "    expect(http.post).toHaveBeenCalledExactlyOnceWith(account, \"/v2/order\", { order: wire(expected.data) }, { forceDirect: true });\n",
+          "after": "    expect(http.post).toHaveBeenCalledExactlyOnceWith(account, \"/v2/order\", { order: wire(expected.data) });\n"
+        }
+      ]
+    },
+    {
+      "file": "scripts/verification/ray-a8-precheck-boundary.mjs",
+      "beforeSha": "4487e7a8ea8ca6cc53c8770517dbe68309aebea59938be6f532ff0c3475e905f",
+      "afterSha": "a0ae1b43d52402835bf4d9ee1432c9d2b22d4a122513393fcb387545dd8353ae",
+      "changes": [
+        {
+          "afterOffset": 273,
+          "before": "",
+          "after": "import { restoreRayExecutionRepairSource, verifyRayExecutionRepairSources } from \"./ray-a8-execution-repair-boundary.mjs\";\n"
+        },
+        {
+          "afterOffset": 940,
+          "before": "",
+          "after": "  source = restoreRayExecutionRepairSource(file, source);\n"
+        },
+        {
+          "afterOffset": 1706,
+          "before": "",
+          "after": "  verifyRayExecutionRepairSources(read);\n"
+        },
+        {
+          "afterOffset": 1785,
+          "before": "    assert.equal(sha(restore9999CProbabilityVerificationSource(row.file, read(row.file))), row.afterSha, `${row.file}: only the exact RAY A8 precheck change is authorized`);\n",
+          "after": "    assert.equal(sha(restore9999CProbabilityVerificationSource(row.file, restoreRayExecutionRepairSource(row.file, read(row.file)))), row.afterSha, `${row.file}: only the exact RAY A8 precheck change is authorized`);\n"
+        }
+      ]
+    }
+  ]
+}

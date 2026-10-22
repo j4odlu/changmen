@@ -65,12 +65,6 @@ describe("RAY precheck matches original A8", () => {
     ["locked", () => quote({ status: 2 })],
     ["string status", () => quote({ status: "1" })],
     ["business error", () => ({ code: 401, desc: "not authorized" })],
-    ["missing row", () => ({ code: 200, result: { odds: [] } })],
-    ["missing result", () => ({ code: 200 })],
-    ["missing odds list", () => ({ code: 200, result: {} })],
-    ["missing limits", () => quote({ bet_limit: undefined })],
-    ["invalid limits", () => quote({ bet_limit: ["bad", "bad"] })],
-    ["invalid odds", () => quote({ odds: "bad" })],
     ["live match", () => ({ ...quote(), result: { ...quote().result, start_time: "2000-01-01" } })],
     ["live determined by response, not row", () => quote({ start_time: "2000-01-01" })],
     ["exact start time is not live", () => ({ ...quote(), result: { ...quote().result, start_time: new Date().toISOString() } })],
@@ -107,7 +101,7 @@ describe("RAY precheck matches original A8", () => {
     http.post.mockResolvedValue({ code: 200, result: 900 });
     const result = await rayProvider.betting(account, input);
     expect(result.success).toBe(true);
-    expect(http.post).toHaveBeenCalledExactlyOnceWith(account, "/v2/order", { order: wire(expected.data) }, { forceDirect: true });
+    expect(http.post).toHaveBeenCalledExactlyOnceWith(account, "/v2/order", { order: wire(expected.data) });
     expect(input.data).toEqual(expected.data);
   });
 });

@@ -1,0 +1,60 @@
+{
+  "source": "A8/index0706.js",
+  "sourceSha256": "1b07f16f69846aedb3f863cf85a2c1f3497aec0e69ce0b2b3aef054c1c5aa0e2",
+  "fragments": {
+    "rayProvider": {
+      "start": 2544668,
+      "end": 2547491,
+      "sha256": "d22fa7ef72c7d8046ab8f1f3c417cd4a43cf483ce03d8bb66ec5059c90b2b620",
+      "text": "class rHe extends lu{async getBalance(){let r=(await gr.get(this.account,`${this.account.gateway}/v2/user`,{headers:l1(this.account)},wr.axios)).data;if(!(!r||r.code!==200))return{currency:_r.getCurrency(),balance:Number(r.result.balance)}}async checkBet(e){var u,c;const r=`${this.account.gateway}/v2/odds?match_id=${e.matchId}`,s=(await gr.get(this.account,r,{headers:l1(this.account)},wr.axios,!0)).data;if(e.response=s,s.code!==200)return e;let o=s.result.odds.find(d=>d.odds_id==e.itemId);if(e.response=o??s,!o||o.enable_parlay!==1||o.status!==1)return e.checkError=`${o.match_name} / [${o.match_stage}] ${o.group_name} / ${o.name}@${o.odds} 已封盘`,e.updateOdds(0),e;if(e.betMoney<o.bet_limit[0]||e.betMoney>o.bet_limit[1])return e.checkError=Ha().send.LimitMessage(this.account,{match:(u=e.match)==null?void 0:u.title,bet:(c=e.bet)==null?void 0:c.getBetName(),odds:e.odds,betMoney:e.betMoney,limit:o.bet_limit[1]}),e;let a=Number(o.odds);if(e.updateOdds(a),e.odds>a+.01)return e;e.odds=a;const i=Math.round(e.betMoney),l=`${o.group_name}\n${o.name}`;return e.data={total_stake:i.toString(),total_bet_bonus:(i*e.odds).toFixed(2),order:[{number:1,oddsId:e.itemId,title:l,order_type:0,stake:i.toString(),order_detail:{odds_group_id:o.odds_group_id,value:o.value,win:o.win,status:1,bet_limit:o.bet_limit,last_update:o.last_update,match_stage:o.match_stage,match_name:o.match_name,group_name:o.group_name,group_short_name:o.group_short_name,id:o.id,odds_id:o.odds_id,team_id:o.team_id,name:o.name,match_id:o.match_id,odds:e.odds,tag:o.tag,enable_parlay:o.enable_parlay,game_id:o.game_id,start_time:o.start_time,title:l,isLive:new Date(s.result.start_time).getTime()<Date.now()},betMin:o.bet_limit[0],betMax:o.bet_limit[1]}]},e}async getOrders(){const e=[],r=`${this.account.gateway}/v2/order`;return(await gr.get(this.account,r,{headers:l1(this.account)},wr.axios,!0)).data.result.forEach(s=>{let o=s.detail[0],a=Yt.none,i=0;if(s.status===0)a=Yt.none;else if(s.status===1)switch(i=s.total_bonus-o.stake,s.win){case 1:a=Yt.win;break;case 0:a=Yt.lose;break}else s.status===4&&(a=Yt.reject);let l=o.title.split(`\n`),u=l,c=\"\";l.length===2&&(u=l[0],c=l[1]),e.push({provider:Gt.RAY,orderId:s.order_number,odds:o.odds,createAt:new Date(s.create_time).getTime(),game:o.game_id,match:o.match_name,bet:`${o.match_stage} ${u}`,item:c,betMoney:o.stake,reward:s.total_bonus,status:a,money:i})}),e}async betting(e){const r=`${this.account.gateway}/v2/order`;let s=(await gr.post(this.account,r,pa.stringify({order:JSON.stringify(e.data)}),{headers:l1(this.account)},wr.axios)).data,o=null,a=0;switch(s.code){case 501:a=Number(s.result&&s.result.length&&s.result[0].odds)||0,o=`赔率下降�?{a||\"\"}`;break;case 200:o=`当前余额:${s.result}`;break;default:a=0;break}return e==null||e.updateOdds(a),new Jn(Gt.RAY,s&&s.code===200,o||s.desc||\"\",e.data,s)}}"
+    },
+    "betOption": {
+      "start": 2663648,
+      "end": 2665099,
+      "sha256": "ceae48e426aa121271b688be3d82db20977bfd4846e7c15f9388a7cdf9b3e074",
+      "text": "class If{constructor(e,r,n,s,o,a,i){Te(this,\"type\");Te(this,\"match\");Te(this,\"bet\");Te(this,\"item\");Te(this,\"target\");Te(this,\"matchId\");Te(this,\"betId\");Te(this,\"itemId\");Te(this,\"odds\");Te(this,\"newOdds\");Te(this,\"betMoney\");Te(this,\"betCount\",0);Te(this,\"config\");Te(this,\"loseOrder\",!1);Te(this,\"data\",null);Te(this,\"checkError\");Te(this,\"orderIndex\",0);Te(this,\"request\");Te(this,\"response\");Te(this,\"startTime\");this.startTime=Date.now(),typeof e==\"string\"?(this.matchId=e,this.betId=r,this.itemId=n,this.betMoney=Math.round(o),this.type=s,this.target=a,this.odds=i):(this.type=n.type,this.match=e,this.bet=r,this.item=n,this.target=s,this.matchId=n.matchId,this.betId=n.betId,this.itemId=n.getItemId(s),this.odds=n.getOdds(s),this.betMoney=Math.round(o))}saveLog(e){var o,a;const r=fo(),n=`[${this.type}](${r.getPlatform(e.platformId)},${e.playerName}) 请求盘口数据 => ${!!this.data} / 耗时${Date.now()-this.startTime}ms / ${this.odds}:${this.newOdds||\"N/A\"}`,s={options:{type:this.type,match:(o=this.match)==null?void 0:o.title,matchId:this.matchId,bet:(a=this.bet)==null?void 0:a.getBetName(),betId:this.betId,target:this.target,itemId:this.itemId,odds:this.odds,newOdds:this.newOdds,betMoney:this.betMoney,betCount:this.betCount,config:this.config,loseOrder:this.loseOrder},checkError:this.checkError,response:this.response,request:this.request,data:this.data};Ut.saveLog(n,s)}updateOdds(e){Qn().save(this.type,new _n(this.itemId,e,!1,this.betId))}}"
+    },
+    "oddsEntry": {
+      "start": 1065904,
+      "end": 1066091,
+      "sha256": "b1635a40e4b6493e8df0cfd15367e65228851154cda9503f87b75d281466fe8d",
+      "text": "class _n{constructor(e,r,n,s,o){Te(this,\"id\");Te(this,\"betId\");Te(this,\"time\");Te(this,\"odds\");Te(this,\"isLock\");this.id=e,this.odds=r,this.isLock=n,this.time=o??Date.now(),this.betId=s}}"
+    },
+    "viewItem": {
+      "start": 2667857,
+      "end": 2668647,
+      "sha256": "a9b01fbf94747cfa3a97ad0ef97b391e291c847c7f661e5f2b807fbfb9445284",
+      "text": "class iZ{constructor(e,r){Te(this,\"type\");Te(this,\"matchId\");Te(this,\"betId\");Te(this,\"homeId\");Te(this,\"awayId\");Te(this,\"homeOdds\");Te(this,\"awayOdds\");this.type=e.Type,this.matchId=r,this.betId=e.BetID,this.homeId=e.HomeID,this.awayId=e.AwayID,[Gt.HG].includes(e.Type)?(this.homeOdds=e.HomeOdds,this.awayOdds=e.AwayOdds):(this.homeOdds=0,this.awayOdds=0)}getItemId(e){let r=\"\";switch(e){case\"Home\":r=this.homeId;break;case\"Away\":r=this.awayId;break}return r}getOdds(e){let r=0;switch(e){case\"Home\":r=this.homeOdds;break;case\"Away\":r=this.awayOdds;break}return Number(r)}updateOdds(){const e=Qn();this.homeOdds=e.getOdds(this.type,this.homeId,this.homeOdds)||0,this.awayOdds=e.getOdds(this.type,this.awayId,this.awayOdds)||0}showTarget(e){return this.homeId===this.awayId?e:e.toString()}}"
+    },
+    "http": {
+      "start": 2490944,
+      "end": 2492117,
+      "sha256": "e3ab6ae4145b03e01cb0ea1c5d210a6e6765bfe12ff873bf171e17e1f3332d1d",
+      "text": "{get:async(t,e,r,n=0,s=!1)=>{const o=Pn();if(r||(r={}),r.headers||(r.headers={}),t.proxyId&&!s){const a=o.proxylist.get(t.proxyId);r!=null&&r.headers&&(r.headers[\"x-proxy\"]=a==null?void 0:a.url,r.headers[\"x-proxy-url\"]=e,t.referer&&(r.headers[\"x-proxy-referer\"]=t.referer),t.userAgent&&(r.headers[\"x-proxy-useragent\"]=t.userAgent)),e=PT}else s=!0;return r.validateStatus=a=>![500,504].includes(a),r.timeout=15e3,n===0||!s?await Mr.get(e,r):await Un.get(e,r)},post:async(t,e,r,n,s=0,o=!1)=>{const a=Pn();if(n||(n={}),n.headers||(n.headers={}),t.proxyId&&!o){const i=a.proxylist.get(t.proxyId);n!=null&&n.headers&&(n.headers[\"x-proxy\"]=i==null?void 0:i.url,n.headers[\"x-proxy-url\"]=e,t.referer&&(n.headers[\"x-proxy-referer\"]=t.referer),t.userAgent&&(n.headers[\"x-proxy-useragent\"]=t.userAgent)),e=PT}else o=!0;return n.validateStatus=i=>![500,504].includes(i),n.timeout=15e3,s===0||!o?await Mr.post(e,r,n):await Un.post(e,r,n)},test:async t=>{const e=Date.now(),r=\"https://api.a8.to/IP\";try{const n=await Mr.get(PT,{headers:{\"x-proxy\":t,\"x-proxy-url\":r}});if(n.status===200){const s=n.data;return{delay:Date.now()-e,ip:s.info.IP,address:s.info.Address}}return}catch{return}}}"
+    },
+    "headers": {
+      "start": 2544573,
+      "end": 2544667,
+      "sha256": "b1c216a1246963f94ae1c27ee27aa51c51195c35a5aef81821e1dc751780dc5a",
+      "text": "t=>({authorization:t.token,\"Content-Type\":\"application/x-www-form-urlencoded; charset=UTF-8\"})"
+    },
+    "oddsStore": {
+      "start": 1066487,
+      "end": 1068225,
+      "sha256": "8ca54649621fd8d9fd3088bc90ca3049f45fd1b23bbbdfe4c38807bde679302b",
+      "text": "wp(\"counter\",()=>{const t=new Map,e=new Map,r=se(new Map),n=se(new Map),s=(y,v)=>{if(!n.value.has(y))return!1;for(const w of v)if(n.value.get(y).has(w))return!0;return!1},o=(y,v)=>{var w,b;if(!(!y||!v))return(b=(w=n.value)==null?void 0:w.get(y))==null?void 0:b.get(v)},a=(y,v,w,b,C)=>{n.value.has(y)||n.value.set(y,new Map);const E=C&&Date.now()+C*1e3||void 0;n.value.get(y).set(v,new kPe(w,b,E))},i=(y,v)=>{var w,b;(b=(w=n.value)==null?void 0:w.get(y))==null||b.delete(v)},l=y=>{const v=Date.now();y||n.value.forEach(w=>{const b=[];w.forEach((C,E)=>{C.expireTime&&C.expireTime<v&&b.push(E)}),b.forEach(C=>{w.delete(C)})})},u=(y,v)=>{var w;return!!((w=e.get(y))!=null&&w.get(v))},c=(y,v)=>{var b,C,E,P,A,S,_;e.has(y)||e.set(y,new Map);const w=v.id;(b=e.get(y))==null||b.set(w,v),t.has(y)||t.set(y,new Map),v.betId&&((C=t.get(y))!=null&&C.has(v.betId)?((A=(P=t.get(y))==null?void 0:P.get(v.betId))==null?void 0:A.includes(v.id))===!1&&((_=(S=t.get(y))==null?void 0:S.get(v.betId))==null||_.push(v.id)):(E=t.get(y))==null||E.set(v.betId,[v.id]))},d=(y,v,w)=>{var C;const b=(C=e.get(y))==null?void 0:C.get(v);b&&(b.isLock=w)};return{save:c,clean:y=>{var v;if(y)e.set(y,new Map);else{const w=Date.now()-36e5;for(const b of Object.values(Gt)){if(!e.get(b))continue;const C=[];(v=e.get(b))==null||v.forEach((E,P)=>{E.time<w&&C.push(P)}),C.forEach(E=>{e.get(b).delete(E)})}}},bet:t,data:e,updateOddsLock:d,updateBetLock:(y,v,w)=>{var b,C;(C=(b=t.get(y))==null?void 0:b.get(v))==null||C.forEach(E=>{d(y,E,w)})},message:r,updateMessage:(y,v)=>{r.value.set(y,v)},getOdds:(y,v,w)=>{var C;const b=(C=e.get(y))==null?void 0:C.get(v);return b===void 0?w:b.isLock?0:b.odds},isOdds:u,limit:n,setLimit:a,getLimit:o,deleteLimit:i,cleanLimit:l,hasLimit:s}})"
+    },
+    "accountCheck": {
+      "start": 1166077,
+      "end": 1166358,
+      "sha256": "f9a86321d6c21378556fe3ffcd77bbc6b263208637e8af3aaa9374e2e1b2d84e",
+      "text": "async(P,A)=>{if(!P)return A.checkError=`场馆${A.type}没有可用账号`,A;const S=Pd.GetProvider(P);if(!S)return A.checkError=`场馆${A.type}不被支持`,A;try{return A.betMoney=P.getBetMoney(A.betMoney,A.odds),A=await S.checkBet(A)}catch(_){return A.checkError=JSON.stringify(_),A}finally{A.saveLog(P)}}"
+    },
+    "pairPrecheck": {
+      "start": 1153061,
+      "end": 1153218,
+      "sha256": "9a89eaaf29845eb30424d35878d016768d55fac2793b6b818e474fc00d9d328d",
+      "text": "const Ie=Date.now(),be=await Promise.all([h.checkBetting(ne,ge),h.checkBetting(Oe,ve)]);if(ge=be[0],ve=be[1],!ge.data||!ve.data){await dt.wait(1e3);continue}"
+    }
+  }
+}

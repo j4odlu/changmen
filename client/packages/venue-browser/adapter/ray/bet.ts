@@ -108,11 +108,19 @@ function mapRayOrderRow(row: RayOrderRow): VenueOrder | null {
 
 type RayOddsGetRes = {
   code?: number;
-  result?: { odds?: RayOddsRow[]; start_time?: string };
+  result?: { odds?: RayOddsRow[]; start_time?: string } | null;
 };
 
 function findRayOddsRow(res: RayOddsGetRes, itemId: string): RayOddsRow | undefined {
-  return res.result!.odds!.find((d) => d.odds_id == itemId);
+  return res.result?.odds?.find((d) => d?.odds_id == itemId);
+}
+
+/** [changmen 扩展] 用户确认修复 A8 空盘口缺陷：失效旧报价和旧订单，等待采集恢复有效赔率。 */
+function rejectMissingRayQuote(option: BetOption, reason: string): BetOption {
+  option.data = null;
+  option.checkError = `RAY 无盘口数据：${reason}`;
+  option.updateOdds(0);
+  return option;
 }
 
 function applyRayLockAndLimit(
@@ -121,7 +129,7 @@ function applyRayLockAndLimit(
   row: RayOddsRow | undefined,
 ): row is RayOddsRow {
   if (!row || row.enable_parlay !== 1 || row.status !== 1) {
-    // [A8 可证实] index0706.js rHe.checkBet：缺项时读取字段抛错，由公共预检入口接住。
+    // [A8 可证实] 已有盘口的封盘分支仍按原版执行；缺项由入口单独失效旧报价。
     option.checkError = `${row!.match_name} / [${row!.match_stage}] ${row!.group_name} / ${row!.name}@${row!.odds} 已封盘`;
     option.updateOdds(0);
     return false;
@@ -210,7 +218,6 @@ export const rayProvider: PlatformProvider = {
     }>(
       account,
       RAY_A8_V2.user,
-      { forceDirect: true },
     );
     if (!res || res.code !== 200) return undefined;
     const result = res.result;
@@ -234,11 +241,22 @@ export const rayProvider: PlatformProvider = {
       { forceDirect: true },
     );
     option.response = res;
+    if (!res) return rejectMissingRayQuote(option, "响应为空");
     // [A8 可证实] rHe.checkBet：业务失败及超出跌价容差时直接返回，不新增错误或清理旧 data。
     if (res.code !== 200) return option;
 
+    if (!Array.isArray(res.result?.odds))
+      return rejectMissingRayQuote(option, "响应缺少有效盘口列表");
     const row = findRayOddsRow(res, option.itemId);
     option.response = row ?? res;
+    if (!row) return rejectMissingRayQuote(option, "当前选项已不存在");
+    if (row.enable_parlay === 1 && row.status === 1
+      && (!Array.isArray(row.bet_limit) || row.bet_limit.length < 2
+        || row.bet_limit.slice(0, 2).some(value => value == null || !Number.isFinite(Number(value)))))
+      return rejectMissingRayQuote(option, "盘口缺少有效限额");
+    if (row.enable_parlay === 1 && row.status === 1
+      && (!Number.isFinite(Number(row.odds)) || Number(row.odds) <= 0))
+      return rejectMissingRayQuote(option, "盘口缺少有效赔率");
     if (!applyRayLockAndLimit(account, option, row)) return option;
 
     const liveOdds = Number(row.odds);
@@ -269,7 +287,6 @@ export const rayProvider: PlatformProvider = {
       account,
       RAY_A8_V2.order,
       { order: JSON.stringify(option.data) },
-      { forceDirect: true },
     );
     let message: string | null = null;
     let newOdds = 0;

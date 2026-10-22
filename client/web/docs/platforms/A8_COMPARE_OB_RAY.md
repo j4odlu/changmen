@@ -236,11 +236,31 @@ startRayCollector
 
 ### changmen（`client/packages/venue-browser/adapter/ray/bet.ts`）
 
-[A8 可证实] 2026-10-21 按本地 `A8/index0706.js` 的 `rHe.checkBet` 恢复预检：原样发送账号 token，强制直连 `/v2/odds?match_id=`；使用 `odds_id == itemId` 查项，要求 `enable_parlay === 1`、`status === 1`，直接读取 `bet_limit[0/1]` 检查场馆金额。先更新实时赔率，再按原生浮点表达式 `option.odds > liveOdds + 0.01` 拒绝跌价。业务失败与跌价直接返回，不新增错误、不清除旧 data；缺失结果、盘口或限额沿用原始异常路径，公共账号入口对 RAY 使用 `JSON.stringify(error)`。
+[A8 可证实] 2026-10-22 全链核对 `A8/index0706.js`（SHA256 `1b07f16f69846aedb3f863cf85a2c1f3497aec0e69ce0b2b3aef054c1c5aa0e2`）：正常盘口按 `rHe.checkBet` 原样发送账号 token，强制直连 `/v2/odds?match_id=`；使用 `odds_id == itemId` 查项，要求 `enable_parlay === 1`、`status === 1`，读取 `bet_limit[0/1]` 检查场馆金额。先更新实时赔率，再按原生浮点表达式 `option.odds > liveOdds + 0.01` 拒绝跌价。业务失败与跌价直接返回，不新增错误、不清除旧 data。公共账号入口对未处理的 RAY 异常仍使用 `JSON.stringify(error)`。
 
 [A8 可证实] 预检按取整金额生成完整 order JSON，保留 `total_bet_bonus`、`number`、`oddsId`、`betMin/Max`，以及 `last_update`、`bet_limit`、身份、状态、赛段等盘口字段。`isLive` 仅由响应顶层 `result.start_time < Date.now()` 决定。下单直接序列化该 data，不再按官网精简字段；不增加账号风险限额、WS 有效期、数值校验或双腿收益门控。
 
 [changmen 扩展] 现有订单监控、观察日志和订单身份字段保留；这些不是 RAY 预检条件。对照测试使用从 A8 原样提取并固定哈希的 `rHe.checkBet`，比较成功、拒绝、异常、旧 data 保留、浮点边界、完整提交 JSON 和实时赔率更新。
+
+### 2026-10-22 完整调用链核对与已确认的修复例外
+
+[A8 可证实] 从原 bundle 提取并固定哈希的片段保存在 `client/packages/venue-browser/adapter/ray/fixtures/a8RayExecution.json`，包含 `gr`、`l1`、`rHe`、账号预检 `fo.y`、`If`、`_n`、`iZ`、`Qn` 和双腿预检失败分支。逐段执行这些原文，与真实 changmen HTTP、RAY provider、公共账号入口和赔率读取比较；测试不向真实场馆发送投注。
+
+| 环节 | 原 A8 前端行为 | 本次核对/修正 |
+|---|---|---|
+| 请求路由 | 预检和订单查询强制直连；余额与下注提交遵循账号代理 | 修正此前余额、提交也强制直连的差异；本站 relay 的 Cookie/CSRF 仍由公共封装添加 |
+| HTTP | `gr` 使用 Axios，15 秒；只拒绝 HTTP 500/504，其余返回交给 provider 判断 | RAY 保留已被 Axios 接受的原始 JSON 业务响应；其他场馆仍使用原 HTTP 错误策略 |
+| 表单 | `qs.stringify({order:JSON.stringify(data)})`，默认 RFC3986 | 空格使用 `%20`，保留 Unicode、换行与符号编码；完整订单快照不变 |
+| 金额 | 账号入口调用 `getBetMoney` 后预检，再按预检数据提交 | 公共入口集成测试验证只换算一次，提交时不再预检或重算 |
+| 赔率缓存 | `If.updateOdds` 写 `Qn`；成功提交写 0，业务码 501 写响应新赔率，其余业务码写 0 | 与原 provider、原缓存执行结果逐项对照 |
+| 自动失败 | 双腿 `Promise.all` 预检；缺 data 则等待 1 秒并继续；重试前清除原 data/request/response | 已核对主循环与即时重试；现有独立扩展不作为 A8 行为证据 |
+| 空响应 | `result:null`、缺 odds、找不到选项、缺限额可能提前抛错；账号 catch 只写 `{}` 和日志；外围没有补清赔率 | 按下面的用户确认例外修复 |
+
+[changmen 扩展] 用户明确确认：保留 A8 正常规则，修复空盘口缺陷。响应为空、code=200 但盘口列表缺失/不是数组、选项不存在，或可下注选项缺少有效赔率/完整限额时，明确返回“RAY 无盘口数据”，清空旧 data，并将该选项本地赔率置 0。必要数字字段不能为 null、非有限数，赔率须大于 0；有效数字字符串沿用原版转换。不会提交旧订单，也不增加永久黑名单；之后采集或有效预检可以恢复报价。正常封盘、限额、赔率容差及完整提交字段继续按 A8 执行。
+
+[changmen 扩展] 新增的原文链路测试、公共账号集成测试和精确增量证明分别覆盖以上修正。迁移原始清单与先前 RAY 预检证明保留，不改基线、不整目录豁免。本次没有更改 9999、PM FOK/GTC、账号持久化及后端发布策略。
+
+[A8 可证实] 本地 bundle 的部分中文提示已存在乱码，例如 501 提示文本；测试对这些分支核对业务码、提交结果和新赔率，不把损坏提示复制到 UI。A8 服务端不可见，前端对照与模拟响应不能证明真实场馆永远不会拒单；上线后仍需按实际失败记录确认修复效果。
 
 ---
 

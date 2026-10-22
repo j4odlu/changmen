@@ -80,6 +80,9 @@ export async function accountHttpRequest(
     body?: string;
   },
   forceDirect = false,
+  // [A8 可证实] RAY 使用 Axios validateStatus 的原始响应，业务码由 provider 判断。
+  // 其它调用方继续使用原有 JSON HTTP 错误处理。
+  responseOptions?: { preserveAcceptedResponse?: boolean },
 ): Promise<AccountHttpResult> {
   const method = (init.method || "GET").toUpperCase();
   const headers: Record<string, string> = { ...(init.headers || {}) };
@@ -114,7 +117,7 @@ export async function accountHttpRequest(
       transformResponse: [d => d],
     });
     const text = responseBodyText(res.data);
-    if (res.status >= 400 && /json/i.test(String(res.headers["content-type"] || ""))) {
+    if (!responseOptions?.preserveAcceptedResponse && res.status >= 400 && /json/i.test(String(res.headers["content-type"] || ""))) {
       try {
         const parsed = JSON.parse(text) as { msg?: string; error?: string };
         throw new Error(parsed.msg || parsed.error || `HTTP ${res.status}`);

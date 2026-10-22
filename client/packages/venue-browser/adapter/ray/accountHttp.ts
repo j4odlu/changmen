@@ -13,6 +13,11 @@ function rayUrl(account: PlatformAccount, path: string): string {
   return `${account.gateway}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+/** [A8 可证实] rHe.betting 使用 qs.stringify 的 RFC3986 表单编码（空格为 %20）。 */
+function encodeRayFormPart(value: string): string {
+  return encodeURIComponent(value).replace(/[!'()*]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
 export async function accountGet<T = unknown>(
   account: PlatformAccount,
   path: string,
@@ -23,6 +28,7 @@ export async function accountGet<T = unknown>(
     rayUrl(account, path),
     { method: "GET", headers: rayHeaders(account) },
     opts?.forceDirect ?? false,
+    { preserveAcceptedResponse: true },
   );
   try {
     return JSON.parse(res.text) as T;
@@ -44,11 +50,10 @@ export async function accountPostForm<T = unknown>(
     {
       method: "POST",
       headers: rayHeaders(account),
-      body: new URLSearchParams(
-        Object.fromEntries(Object.entries(body).map(([k, v]) => [k, String(v)])),
-      ).toString(),
+      body: Object.entries(body).map(([key, value]) => `${encodeRayFormPart(key)}=${encodeRayFormPart(String(value))}`).join("&"),
     },
     opts?.forceDirect ?? false,
+    { preserveAcceptedResponse: true },
   );
   try {
     return JSON.parse(res.text) as T;

@@ -1,9 +1,9 @@
 import axios from "axios";
 
 /**
- * 对齐 A8 bundle `Nr` / `mr`：浏览器端 Axios（XHR 适配器），非 fetch。
+ * [A8 可证实] index0706.js `Mr` / `gr`：浏览器端 Axios（XHR 适配器），非 fetch。
  * - timeout: 15_000
- * - validateStatus: 500/504 不视为 throw（与 A8 `![500,504].includes` 一致）
+ * - validateStatus: 500/504 拒绝，其余状态交由场馆业务判断（A8 `![500,504].includes`）
  */
 export const a8Axios = axios.create({
   timeout: 15_000,

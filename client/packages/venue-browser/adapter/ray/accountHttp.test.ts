@@ -35,6 +35,7 @@ describe("accountGet", () => {
         },
       },
       true,
+      { preserveAcceptedResponse: true },
     );
   });
 });

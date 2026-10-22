@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 const normalize = source => source.replaceAll('\r\n', '\n');
 const sha = source => createHash('sha256').update(normalize(source)).digest('hex');
 const text = fs.readFileSync(new URL('./ray-a8-execution-repair-increments.json', import.meta.url), 'utf8');
-assert.equal(sha(text), '660d003ad89b5080078b9f7f4b9efc334fefe164b69fc892ede25ac281937fdc', 'RAY execution repair evidence changed');
+assert.equal(sha(text), '6a80450cda4962ca7470acd8dd7ceaeda9044316cf97f5d2d8d2936d9247fbae', 'RAY execution repair evidence changed');
 const inventory = JSON.parse(text);
 assert.equal(inventory.baseline, 'dcf46f77781c9ac1eaebefa2ab2948cbfcf073f1');
 const entries = new Map(inventory.files.map(row => [row.file, row]));

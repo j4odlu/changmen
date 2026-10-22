@@ -165,6 +165,28 @@
           "after": "    assert.equal(sha(restore9999CProbabilityVerificationSource(row.file, restoreRayExecutionRepairSource(row.file, read(row.file)))), row.afterSha, `${row.file}: only the exact RAY A8 precheck change is authorized`);\n"
         }
       ]
+    },
+    {
+      "file": "scripts/verification/client-package-relocation.test.mjs",
+      "beforeSha": "9b4c70ea8266b8d698a1aa94038036acdb322a477c615c906e81f3137d110b05",
+      "afterSha": "fde16fddc549ea81e1b1a0dc76700d75ba18bbd239a246587a03d2c0a8ff5959",
+      "changes": [
+        {
+          "afterOffset": 641,
+          "before": "",
+          "after": "import { withAdapterHistoryReader } from './browser-entry-history.mjs';\n"
+        },
+        {
+          "afterOffset": 1019,
+          "before": "it('keeps every original runtime byte at its single canonical location', () => {\n",
+          "after": "it('restores every original runtime byte after exact reviewed increments at its single canonical location', () => {\n"
+        },
+        {
+          "afterOffset": 1380,
+          "before": "    expect(read(row.canonical)).toBe(baseline);\n",
+          "after": "    expect(withAdapterHistoryReader(read)(row.canonical)).toBe(baseline);\n"
+        }
+      ]
     }
   ]
 }

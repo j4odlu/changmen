@@ -15,6 +15,8 @@ import { browserNodeBuiltins } from "./vite/plugins/browserNodeBuiltins";
 import { backendPublicAssets } from "./vite/plugins/backendPublicAssets";
 import { matcherDevRedirect } from "./vite/plugins/matcherDevRedirect";
 import { runtimeVersionPlugin } from "./vite/plugins/runtimeVersion";
+import { acyclicChunks } from "./vite/plugins/acyclicChunks";
+import { venueManualChunk } from "./vite/venueChunks";
 import { resolveDevWebPort } from "@changmen/runtime-tooling/dev_web_port.js";
 
 const elementPlusResolver = ElementPlusResolver({ importStyle: "css" });
@@ -90,49 +92,6 @@ const INTENTIONAL_MIXED_IMPORTS = [
   "/src/stores/userStore.ts",
 ];
 
-function sharedVenueChunk(id: string): string | undefined {
-  // client-core / monorepo shared 被各 venue 共用
-  if (
-    id.includes("packages/arb-core")
-    || id.includes("@changmen/arb-core")
-    || id.includes("packages/client-core")
-    || id.includes("@changmen/client-core")
-    || id.includes("packages/shared")
-    || id.includes("@changmen/shared")
-    || id.includes("packages/api-contract")
-    || id.includes("@changmen/api-contract")
-  ) {
-    return "venue-shared";
-  }
-  // socket.io 同时被 venue-shared/socket 与各平台 WS 使用；落到单一平台 chunk 会与
-  // venue-shared 形成循环依赖（Cannot access 'O' before initialization 白屏）。
-  if (
-    id.includes("node_modules/socket.io-client")
-    || id.includes("node_modules/engine.io-client")
-    || id.includes("node_modules/socket.io-parser")
-  ) {
-    return "venue-shared";
-  }
-  return undefined;
-}
-
-function venueChunkName(id: string): string | undefined {
-  // Workspace 内嵌依赖也属于 node_modules，交给 Rollup 分包，不能误归为场馆源码。
-  if (id.replace(/\\/g, "/").includes("/node_modules/"))
-    return undefined;
-  const normalized = id.replace(/\\/g, "/");
-  const marker = ["client/packages/venue-browser/adapter/"]
-    .find(value => normalized.includes(value));
-  if (!marker)
-    return undefined;
-  const idx = normalized.indexOf(marker);
-  const rest = id.slice(idx + marker.length);
-  const dir = rest.split(/[/\\]/)[0];
-  if (!dir || dir === "registry" || dir === "adaptation") return undefined;
-  if (dir === "shared" || dir === "contract") return "venue-shared";
-  return `venue-${dir}`;
-}
-
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, fileURLToPath(new URL(".", import.meta.url)), "");
   const apiTarget = String(env.VITE_API_PROXY || process.env.VITE_API_PROXY || "")
@@ -196,6 +155,7 @@ export default defineConfig(({ command, mode }) => {
     browserNodeBuiltins(),
     backendPublicAssets(),
     runtimeVersionPlugin(WORKSPACE_ROOT, env.VITE_API_BASE || process.env.VITE_API_BASE || ""),
+    acyclicChunks(),
     vue(),
     AutoImport({
       resolvers: [elementPlusResolver],
@@ -231,7 +191,7 @@ export default defineConfig(({ command, mode }) => {
     },
   },
   build: {
-    // venue adapters 按平台目录分包；shared/registry/contract 留在主包。
+    // 新旧平台目录按馆分包；共享实现及兼容入口统一归 venue-shared。
     // 阈值按当前最大单平台 chunk 留余量。
     chunkSizeWarningLimit: 900,
     rollupOptions: {
@@ -256,15 +216,9 @@ export default defineConfig(({ command, mode }) => {
         warn(warning);
       },
       output: {
-        manualChunks(id) {
-          const shared = sharedVenueChunk(id);
-          if (shared) return shared;
-          const venueChunk = venueChunkName(id);
-          if (venueChunk) return venueChunk;
-          // 让 Rollup 自行处理 node_modules 分块；手动 vendor 拆包会和
-          // platform-all 形成循环 chunk，在浏览器里触发 TDZ 白屏。
-          return undefined;
-        },
+        // 保留依赖自动归并；onlyExplicitManualChunks 在当前模块图中会引入更多环。
+        // 第三方依赖不单独强拆 vendor；acyclicChunks 校验最终静态依赖图。
+        manualChunks: venueManualChunk,
       },
     },
   },

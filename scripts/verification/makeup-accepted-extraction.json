@@ -1,0 +1,20 @@
+{
+  "file": "client/web/src/stores/betting/loseOrderExecution.ts",
+  "beforeSha": "b219b4e087560422ac216b2393ed615ff3a40d096add840a31d71a5d92ed845c",
+  "helperFile": "client/web/src/stores/betting/makeUpAccepted.ts",
+  "helperSha": "5a6b870039ea9825c61a63476b500e31690d04bb1e994d4bf3a86ef279232698",
+  "changes": [
+    [
+      "import { completeAcceptedMakeUpLeg } from \"@/stores/betting/makeUpAccepted\";\n",
+      "import { isPendingConfirmVenueProvider, isPolymarketProvider } from \"@changmen/shared/account_multiply\";\nimport { pmSubmissionFromResult } from \"@changmen/shared/pm_submission\";\n"
+    ],
+    [
+      "import { schedulePendingVenueMakeUpResume } from \"@/stores/betting/loseOrderPm\";\n",
+      "import {\n  processPmMakeUpLeg,\n  schedulePendingVenueMakeUpResume,\n} from \"@/stores/betting/loseOrderPm\";\nimport { processA8RegularVenueMakeUpLeg } from \"@/stores/betting/loseOrderRegular\";\n"
+    ],
+    [
+      "      await completeAcceptedMakeUpLeg({\n        betId, order, match, bet, item, account, checked, result, isCurrentOrder,\n        waitSec, accountStore, loseStore, removeIds, setMessage,\n      });\n",
+      "      if (isCurrentOrder && !isPendingConfirmVenueProvider(account.provider) && !order.isCreateOrder && waitSec !== 0) {\n        try {\n          loseStore.setPendingVenueOrder(betId, String(result.orderId ?? \"\"), account.accountId, {\n            role: \"target\", pendingTarget: order.target, observation: checked.observation,\n            conditionId: String(checked.betId ?? \"\"), submittedAt: result.beginTime,\n            odds: checked.odds, betMoney: checked.betMoney,\n            regularReceipt: { checkAt: Date.now() + waitSec * 1000 },\n          });\n        }\n        catch { /* 已受理回执仍在本页继续收尾，存储失败不得重发。 */ }\n      }\n\n      // [A8 可证实] 手动队列、waitTime=-1：接口成功即完成本次消费，不做拒单复检。\n      if (isPendingConfirmVenueProvider(account.provider) && (!isCurrentOrder || (!order.isCreateOrder && waitSec !== 0))) {\n        // [changmen 扩展] 受理回执先保存原单 ID；刷新后只核验原单，不能再次发送补单。\n        if (isCurrentOrder) {\n          try {\n            loseStore.setPendingVenueOrder(betId, String(result.orderId ?? \"\"), account.accountId, {\n              role: \"target\", pendingTarget: order.target, observation: checked.observation,\n              conditionId: String(checked.betId ?? \"\"), submittedAt: result.beginTime,\n              pmSubmission: isPolymarketProvider(account.provider) ? pmSubmissionFromResult(result, account.accountId) : null,\n              odds: checked.newOdds || checked.odds, betMoney: checked.betMoney,\n            });\n          }\n          catch { /* 存储失败不能丢弃已经受理的订单回执。 */ }\n        }\n        await processPmMakeUpLeg({\n          betId,\n          order,\n          match,\n          bet,\n          account,\n          checked,\n          result,\n          platformLabel: item.type,\n          loseStore,\n          removeIds,\n          setMessage,\n        });\n        // [A8 可证实] 确认拒单后继续下一候选；出队或仍待检测由循环顶部停止新提交。\n        continue;\n      }\n\n      await processA8RegularVenueMakeUpLeg({\n        betId,\n        order,\n        bet,\n        account,\n        checked,\n        result,\n        waitSec,\n        accountStore,\n        removeIds,\n        setMessage,\n      });\n"
+    ]
+  ]
+}

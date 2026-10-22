@@ -1,0 +1,24 @@
+{
+  "file": "client/web/src/stores/betting/autoBet/arbMakeUpFromRejects.ts",
+  "beforeSha": "263d8ef3c0a29e47094b8b1ce78301eb4134b32fb1fb27efb0a43d04e6baac86",
+  "enqueueFile": "client/web/src/stores/betting/autoBet/arbMakeUpEnqueue.ts",
+  "enqueueSha": "d4bae1dbb3a5c66650903c8e22823d6b8b3774f272f1757acacd96049a1839cb",
+  "changes": [
+    [
+      "import type { VenueOrder } from \"@changmen/venue-browser/adapter/contract\";\nimport type { ArbBetAttemptParams, ArbBetPlaced } from \"@/stores/betting/autoBet/phases/types\";\nimport { enqueueArbMakeUpSide } from \"@/stores/betting/autoBet/arbMakeUpEnqueue\";\nimport { resumeArbMakeUpPending } from \"@/stores/betting/autoBet/arbMakeUpPending\";\nimport { decideArbMakeUp } from \"@/stores/betting/autoBet/arbMakeUpPolicy\";\nimport { useLoseOrderStore } from \"@/stores/loseOrderStore\";\n\nexport { resolveArbMakeUpSuccessRef } from \"@/stores/betting/autoBet/arbMakeUpEnqueue\";\n\n",
+      "import type { BetOption } from \"@changmen/client-core/models/betOption\";\nimport type { VenueOrder } from \"@changmen/venue-browser/adapter/contract\";\nimport type { PlatformAccount } from \"@/models/platformAccount\";\nimport type { ArbBetAttemptParams, ArbBetPlaced } from \"@/stores/betting/autoBet/phases/types\";\nimport { isPendingConfirmVenueProvider } from \"@changmen/shared/account_multiply\";\nimport { resumeArbMakeUpPending } from \"@/stores/betting/autoBet/arbMakeUpPending\";\nimport { decideArbMakeUp } from \"@/stores/betting/autoBet/arbMakeUpPolicy\";\nimport { enqueueMakeUpOrder } from \"@/stores/betting/autoBet/makeUp\";\nimport { resolveMakeUpSuccessReference } from \"@/stores/betting/makeUpReference\";\nimport { useLoseOrderStore } from \"@/stores/loseOrderStore\";\n\n/** [A8 可证实] LoseOrder 用成功腿 option 的 betMoney/odds，不用场馆实单 */\nfunction a8SuccessLegRef(leg: BetOption): { betMoney: number; betOdds: number } {\n  return {\n    betMoney: Math.round(Number(leg.betMoney) || 0),\n    betOdds: Number(leg.odds) || 0,\n  };\n}\n\n/** 成功腿锚点的唯一解析口径；旁路延迟拒单也复用，避免产生第二套补单计算。 */\nexport function resolveArbMakeUpSuccessRef(\n  leg: BetOption,\n  orders: VenueOrder[],\n  rejected: boolean,\n  account?: PlatformAccount,\n  orderId?: string | null,\n): { betMoney: number; betOdds: number } {\n  if (account && isPendingConfirmVenueProvider(account.provider))\n    return resolveMakeUpSuccessReference(leg, orders, rejected, account, orderId);\n  return a8SuccessLegRef(leg);\n}\n\n"
+    ],
+    [
+      "  // [A8 可证实] 入队不看 makeUp；消费段 `orders && config.makeUp` 才 jb",
+      "  const { match, bet, config, setMessage } = params;\n  // [A8 可证实] 入队不看 makeUp；消费段 `orders && config.makeUp` 才 jb"
+    ],
+    [
+      "  const { betBothLegs, resultA, resultB } = placed;",
+      "  const {\n    legA,\n    legB,\n    accountA,\n    accountB,\n    betBothLegs,\n    linkId,\n    resultA,\n    resultB,\n  } = placed;"
+    ],
+    [
+      "  return enqueueArbMakeUpSide({ params, placed, rejectA, rejectB, venue, loseStore }, decision.side);\n}\n",
+      "  if (decision.side === \"B\" && accountA) {\n    const successRef = resolveArbMakeUpSuccessRef(\n      legA,\n      venue.ordersA,\n      rejectA,\n      accountA,\n      resultA?.orderId,\n    );\n    result.enqueuedForLegB = await enqueueMakeUpOrder({\n      loseStore,\n      match,\n      bet,\n      config,\n      setMessage,\n      linkId,\n      accountId: accountA.accountId,\n      target: legB.target,\n      betMoney: successRef.betMoney,\n      betOdds: successRef.betOdds,\n      failedLegOdds: legB.odds,\n      failedPlatformLabel: legB.type,\n      observation: { executionId: legA.observation?.executionId, parentAttemptId: legA.observation?.attemptId, ownerUserId: legA.observation?.ownerUserId, anchorAttemptId: legA.observation?.attemptId, anchorOrderId: resultA?.orderId || undefined },\n    });\n  }\n  else if (decision.side === \"A\" && accountB) {\n    const successRef = resolveArbMakeUpSuccessRef(\n      legB,\n      venue.ordersB,\n      rejectB,\n      accountB,\n      resultB?.orderId,\n    );\n    result.enqueuedForLegA = await enqueueMakeUpOrder({\n      loseStore,\n      match,\n      bet,\n      config,\n      setMessage,\n      linkId,\n      accountId: accountB.accountId,\n      target: legA.target,\n      betMoney: successRef.betMoney,\n      betOdds: successRef.betOdds,\n      failedLegOdds: legA.odds,\n      failedPlatformLabel: legA.type,\n      observation: { executionId: legB.observation?.executionId, parentAttemptId: legB.observation?.attemptId, ownerUserId: legB.observation?.ownerUserId, anchorAttemptId: legB.observation?.attemptId, anchorOrderId: resultB?.orderId || undefined },\n    });\n  }\n\n  return result;\n}\n"
+    ]
+  ]
+}

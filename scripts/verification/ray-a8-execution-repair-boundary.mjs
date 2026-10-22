@@ -2,6 +2,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
+import {restoreArbMakeUpPolicySource} from './arb-makeup-policy-boundary.mjs';
+import {restoreVenueChunkPolicySource, verifyVenueChunkPolicySources} from './venue-chunk-policy-boundary.mjs';
 const normalize = source => source.replaceAll('\r\n', '\n');
 const sha = source => createHash('sha256').update(normalize(source)).digest('hex');
 const text = fs.readFileSync(new URL('./ray-a8-execution-repair-increments.json', import.meta.url), 'utf8');
@@ -10,6 +12,10 @@ const inventory = JSON.parse(text);
 assert.equal(inventory.baseline, 'dcf46f77781c9ac1eaebefa2ab2948cbfcf073f1');
 const entries = new Map(inventory.files.map(row => [row.file, row]));
 export function restoreRayExecutionRepairSource(file, source) {
+  // 后续构建配置先精确还原；原迁移证明和交易源码基线保持。
+  source = restoreVenueChunkPolicySource(file, source);
+  // 后续纯提取先精确还原，再继续核对原迁移与预检基线。
+  source = restoreArbMakeUpPolicySource(file, source);
   const row = entries.get(file);
   if (!row || sha(source) !== row.afterSha) return source;
   source = normalize(source);
@@ -21,6 +27,7 @@ export function restoreRayExecutionRepairSource(file, source) {
   return source;
 }
 export function verifyRayExecutionRepairSources(read) {
+  verifyVenueChunkPolicySources(read);
   for (const row of entries.values())
     assert.equal(sha(read(row.file)), row.afterSha, `${row.file}: only the exact RAY A8 precheck change is authorized (execution repair)`);
   return {files: entries.size};

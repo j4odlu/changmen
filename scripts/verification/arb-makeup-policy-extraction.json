@@ -1,0 +1,25 @@
+{
+  "baseline": "86e722cc0e2498175cc167f95e63c25839dedaa0",
+  "file": "client/web/src/stores/betting/autoBet/arbMakeUpFromRejects.ts",
+  "beforeSha": "3c600fe9dbd20f482d01baeb895c14b5e49761c748d1b3dce8a9085dc0cc629d",
+  "policyFile": "client/web/src/stores/betting/autoBet/arbMakeUpPolicy.ts",
+  "policySha": "e771b58fec253543f7a3c8ae43aa427b7a1da0d313d7809fd869b85d53ec386e",
+  "changes": [
+    [
+      "import { decideArbMakeUp } from \"@/stores/betting/autoBet/arbMakeUpPolicy\";",
+      "import { arbMakeUpSides } from \"@/stores/betting/autoBet/arbMakeUpPair\";"
+    ],
+    [
+      "  const decision = decideArbMakeUp({\n    betBothLegs,\n    resultA,\n    resultB,\n    rejectA,\n    rejectB,\n    pendingConfirmA: pending.pendingConfirmA,\n    pendingConfirmB: pending.pendingConfirmB,\n  });\n  if (decision.kind === \"none\")\n    return result;\n\n",
+      "  if (!betBothLegs)\n    return result;\n\n  const pendingConfirmA = Boolean(pending.pendingConfirmA);\n  const pendingConfirmB = Boolean(pending.pendingConfirmB);\n\n"
+    ],
+    [
+      "  if (decision.kind === \"observe\") {\n    const { pendingSide, role } = decision;\n    const queued = await resumePending(pendingSide, role);\n    const targetSide = role === \"target\" ? pendingSide : pendingSide === \"A\" ? \"B\" : \"A\";\n    if (targetSide === \"A\")\n      result.enqueuedForLegA = queued;\n    else\n      result.enqueuedForLegB = queued;\n    return result;\n  }\n\n  if (decision.side === \"B\" && accountA) {\n",
+      "  if (pendingConfirmA && !pendingConfirmB) {\n    const role = resultB?.success && !rejectB ? \"target\" : \"anchor\";\n    const queued = await resumePending(\"A\", role);\n    if (role === \"target\")\n      result.enqueuedForLegA = queued;\n    else\n      result.enqueuedForLegB = queued;\n    return result;\n  }\n  if (pendingConfirmB && !pendingConfirmA) {\n    const role = resultA?.success && !rejectA ? \"target\" : \"anchor\";\n    const queued = await resumePending(\"B\", role);\n    if (role === \"target\")\n      result.enqueuedForLegB = queued;\n    else\n      result.enqueuedForLegA = queued;\n    return result;\n  }\n\n  const side = arbMakeUpSides(\n    resultA,\n    rejectA,\n    resultB,\n    rejectB,\n    pendingConfirmA,\n    pendingConfirmB,\n  );\n\n  if (side === \"enqueueB\" && accountA) {\n"
+    ],
+    [
+      "else if (decision.side === \"A\" && accountB)",
+      "else if (side === \"enqueueA\" && accountB)"
+    ]
+  ]
+}

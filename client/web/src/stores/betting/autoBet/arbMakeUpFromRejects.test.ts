@@ -71,6 +71,178 @@ describe("applyArbMakeUpFromRejects", () => {
     });
   });
 
+  it.each(["A", "B"] as const)("does not enqueue or observe a 9999 single leg with %s pending", async (side) => {
+    const placed = basePlaced();
+    placed.betBothLegs = false;
+    placed.singleLegByRate = true;
+    const out = await applyArbMakeUpFromRejects(params(), placed, false, false, undefined,
+      { pendingConfirmA: side === "A", pendingConfirmB: side === "B" });
+
+    expect(out).toEqual({ enqueuedForLegA: false, enqueuedForLegB: false });
+    expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
+    expect(createOrder).not.toHaveBeenCalled();
+    expect(setPendingVenueOrder).not.toHaveBeenCalled();
+  });
+
+  it.each(["filled", "failed", "pending"])("leaves the queue untouched when both legs are %s", async (state) => {
+    const placed = basePlaced();
+    placed.resultA = new BetResult("RAY", state !== "failed");
+    placed.resultB = new BetResult("OB", state !== "failed");
+    const out = await applyArbMakeUpFromRejects(params(), placed, false, false, undefined,
+      { pendingConfirmA: state === "pending", pendingConfirmB: state === "pending" });
+
+    expect(out).toEqual({ enqueuedForLegA: false, enqueuedForLegB: false });
+    expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
+    expect(createOrder).not.toHaveBeenCalled();
+    expect(setPendingVenueOrder).not.toHaveBeenCalled();
+  });
+
+  it("does not enqueue without the successful leg account", async () => {
+    const placed = basePlaced();
+    placed.accountB = undefined;
+    expect(await applyArbMakeUpFromRejects(params(), placed, false, false))
+      .toEqual({ enqueuedForLegA: false, enqueuedForLegB: false });
+    expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["A", "accepted"], ["B", "accepted"],
+    ["A", "denied"], ["B", "denied"],
+    ["A", "error"], ["B", "error"],
+  ] as const)("preserves normal %s enqueue references and observation metadata when %s", async (side, outcome) => {
+    const placed = basePlaced();
+    placed.resultA = new BetResult("RAY", side !== "A");
+    placed.resultB = new BetResult("OB", side !== "B");
+    const anchor = side === "A" ? placed.legB : placed.legA;
+    const anchorResult = side === "A" ? placed.resultB : placed.resultA;
+    anchor.betMoney = 41.7;
+    anchor.odds = 2.25;
+    anchor.newOdds = 9.99;
+    anchor.observation = { executionId: "execution", attemptId: "anchor-attempt", ownerUserId: "owner" };
+    anchorResult.orderId = "anchor-order";
+    const error = new Error("admission query failed");
+    if (outcome === "error")
+      enqueueMakeUpOrder.mockRejectedValueOnce(error);
+    else
+      enqueueMakeUpOrder.mockResolvedValueOnce(outcome === "accepted");
+
+    const pending = applyArbMakeUpFromRejects(params(), placed, false, false);
+    if (outcome === "error") {
+      await expect(pending).rejects.toBe(error);
+    }
+    else {
+      expect(await pending).toEqual({
+        enqueuedForLegA: side === "A" && outcome === "accepted",
+        enqueuedForLegB: side === "B" && outcome === "accepted",
+      });
+    }
+    expect(enqueueMakeUpOrder).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      target: side === "A" ? "Home" : "Away",
+      accountId: side === "A" ? 23 : 14,
+      betMoney: 42,
+      betOdds: 2.25,
+      observation: {
+        executionId: "execution", parentAttemptId: "anchor-attempt", ownerUserId: "owner",
+        anchorAttemptId: "anchor-attempt", anchorOrderId: "anchor-order",
+      },
+    }));
+    expect(createOrder).not.toHaveBeenCalled();
+    expect(setPendingVenueOrder).not.toHaveBeenCalled();
+  });
+
+  it.each(["missing order", "unsupported provider"])("does not fall back to new makeup when pending resume has %s", async (reason) => {
+    const placed = basePlaced();
+    placed.accountA = { accountId: 14, provider: reason === "missing order" ? "Polymarket" : "OB" } as never;
+    placed.resultA = Object.assign(new BetResult("Polymarket", true), {
+      orderId: reason === "missing order" ? null : "original-pending",
+    });
+    const out = await applyArbMakeUpFromRejects(params(), placed, false, false, undefined, { pendingConfirmA: true });
+
+    expect(out).toEqual({ enqueuedForLegA: false, enqueuedForLegB: false });
+    expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
+    expect(setPendingVenueOrder).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["A", "target"],
+    ["B", "anchor"],
+  ] as const)("attaches pending %s as %s to an existing task without replacing it", async (pendingSide, role) => {
+    const placed = basePlaced();
+    placed.accountA = { accountId: 14, provider: "Polymarket" } as never;
+    placed.accountB = { accountId: 23, provider: "Polymarket" } as never;
+    placed.resultA = new BetResult("Polymarket", role === "target");
+    placed.resultB = new BetResult("Polymarket", true);
+    const pendingResult = pendingSide === "A" ? placed.resultA : placed.resultB;
+    pendingResult.orderId = "original-pending";
+    const existing = { marker: "existing task" };
+    const orders = new Map([[100, existing]]);
+    useLoseOrderStore.mockReturnValue({ orders, setPendingVenueOrder, createOrder });
+
+    const out = await applyArbMakeUpFromRejects(params(), placed, false, false, undefined,
+      { pendingConfirmA: pendingSide === "A", pendingConfirmB: pendingSide === "B" });
+
+    expect(out).toEqual({ enqueuedForLegA: true, enqueuedForLegB: false });
+    expect(setPendingVenueOrder).toHaveBeenCalledWith(100, "original-pending", pendingSide === "A" ? 14 : 23,
+      expect.objectContaining({ role, pendingTarget: pendingSide === "A" ? "Home" : "Away" }));
+    expect(orders.get(100)).toBe(existing);
+    expect(enqueueMakeUpOrder).not.toHaveBeenCalled();
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["A", "target", true], ["A", "target", false],
+    ["B", "target", true], ["B", "target", false],
+    ["A", "anchor", true], ["A", "anchor", false],
+    ["B", "anchor", true], ["B", "anchor", false],
+  ] as const)("preserves pending %s %s handoff with admission=%s", async (pendingSide, role, eligible) => {
+    const placed = basePlaced();
+    placed.accountA = { accountId: 14, provider: "Polymarket" } as never;
+    placed.accountB = { accountId: 23, provider: "PredictFun" } as never;
+    placed.legA = new BetOption("Polymarket" as never, "m1", "b1", "h1", 40, "Home", 1.36);
+    placed.legB = new BetOption("PredictFun" as never, "m2", "b2", "a1", 70, "Away", 4.095);
+    placed.resultA = new BetResult("Polymarket", pendingSide === "A" || role === "target");
+    placed.resultB = new BetResult("PredictFun", pendingSide === "B" || role === "target");
+    const pendingResult = pendingSide === "A" ? placed.resultA : placed.resultB;
+    pendingResult.orderId = "original-pending";
+    enqueueMakeUpOrder.mockResolvedValueOnce(eligible);
+
+    const out = await applyArbMakeUpFromRejects(params(), placed, false, false, undefined,
+      { pendingConfirmA: pendingSide === "A", pendingConfirmB: pendingSide === "B" });
+
+    const targetA = role === "target" ? pendingSide === "A" : pendingSide === "B";
+    expect(out).toEqual({ enqueuedForLegA: targetA, enqueuedForLegB: !targetA });
+    expect(enqueueMakeUpOrder).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      target: targetA ? "Home" : "Away",
+      accountId: targetA ? 23 : 14,
+    }));
+    expect(setPendingVenueOrder).toHaveBeenCalledExactlyOnceWith(100, "original-pending", pendingSide === "A" ? 14 : 23,
+      expect.objectContaining({ role, pendingTarget: pendingSide === "A" ? "Home" : "Away", makeUpEligible: eligible }));
+    expect(enqueueMakeUpOrder.mock.invocationCallOrder[0]).toBeLessThan(setPendingVenueOrder.mock.invocationCallOrder[0]);
+    if (eligible) {
+      expect(createOrder).not.toHaveBeenCalled();
+    }
+    else {
+      expect(createOrder).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        betId: 100, target: targetA ? "Home" : "Away", linkId: placed.linkId,
+      }));
+      expect(enqueueMakeUpOrder.mock.invocationCallOrder[0]).toBeLessThan(createOrder.mock.invocationCallOrder[0]);
+      expect(createOrder.mock.invocationCallOrder[0]).toBeLessThan(setPendingVenueOrder.mock.invocationCallOrder[0]);
+    }
+  });
+
+  it("propagates pending admission errors without creating a fallback task", async () => {
+    const placed = basePlaced();
+    placed.accountA = { accountId: 14, provider: "Polymarket" } as never;
+    placed.resultA = Object.assign(new BetResult("Polymarket", true), { orderId: "original-pending" });
+    const error = new Error("admission query failed");
+    enqueueMakeUpOrder.mockRejectedValueOnce(error);
+
+    await expect(applyArbMakeUpFromRejects(params(), placed, false, false, undefined, { pendingConfirmA: true }))
+      .rejects.toBe(error);
+    expect(createOrder).not.toHaveBeenCalled();
+    expect(setPendingVenueOrder).not.toHaveBeenCalled();
+  });
+
   it("enqueues venue-confirmed success leg reference when B wins and A fails", async () => {
     const out = await applyArbMakeUpFromRejects(
       params(),

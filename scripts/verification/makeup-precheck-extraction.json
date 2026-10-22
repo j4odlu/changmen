@@ -1,0 +1,16 @@
+{
+  "file": "client/web/src/stores/betting/loseOrderExecution.ts",
+  "beforeSha": "38231b24e039017494b7e7e74251bbbf00206918a4753eec3c8a85c402964635",
+  "helperFile": "client/web/src/stores/betting/makeUpPrecheck.ts",
+  "helperSha": "cadfe97cfd798e0bbebc44284c5fab4024989b9aab16110d0c561eb7b94d91b5",
+  "changes": [
+    [
+      "import { passesMakeUpPrecheck } from \"@/stores/betting/makeUpPrecheck\";\n",
+      "import { legStakeCny } from \"@/domain/polymarket/pmArbStake\";\nimport {\n  checkMakeupProfitRateCandidate,\n  isMakeupProfitRateMode,\n} from \"@/extensions/arbBet/makeupOddsBand\";\n"
+    ],
+    [
+      "      if (!passesMakeUpPrecheck({ order, checked, account, sideOdds, useBand, bandPrefs }))\n        continue;\n\n",
+      "      if (useBand && bandPrefs && isMakeupProfitRateMode(bandPrefs)) {\n        const checkedOdds = Number(checked.odds) || sideOdds;\n        const checkedStakeCny = legStakeCny(\n          checked.betMoney,\n          checked.type,\n          account,\n        );\n        const rateCheck = checkMakeupProfitRateCandidate(\n          order.betMoney,\n          order.betOdds,\n          checkedStakeCny,\n          checkedOdds,\n          bandPrefs,\n        );\n        if (!rateCheck?.allowed)\n          continue;\n      }\n\n"
+    ]
+  ]
+}

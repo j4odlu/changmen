@@ -1,0 +1,20 @@
+{
+  "file": "client/web/src/stores/betting/loseOrderExecution.ts",
+  "beforeSha": "9c761eceaf95a93c10395044f38b90db774327e8c5c8fcc68453a11b9c883512",
+  "candidateFile": "client/web/src/stores/betting/makeUpCandidates.ts",
+  "candidateSha": "ca25efbe2a50e1d1764ca2af80a76df3cb80e050c003274b22df626dbb8f5240",
+  "changes": [
+    [
+      "import { selectMakeUpCandidates } from \"@/stores/betting/makeUpCandidates\";\n",
+      ""
+    ],
+    [
+      "  checkMakeupProfitRateCandidate,\n  isMakeupProfitRateMode,",
+      "  checkMakeupProfitRateCandidate,\n  filterMakeupOddsBandCandidates,\n  isMakeupOddsBandEnabled,\n  isMakeupProfitRateMode,"
+    ],
+    [
+      "    const { useBand, candidates } = selectMakeUpCandidates({ order, bet, config, bandPrefs });\n\n",
+      "    const useBand = isMakeupOddsBandEnabled(bandPrefs) && !order.isCreateOrder;\n    const minOdds = order.getOdds(config.makeProfit);\n    const banded = useBand && bandPrefs\n      ? filterMakeupOddsBandCandidates(\n          [...bet.items].sort(\n            (a, b) => b.getOdds(order.target) - a.getOdds(order.target),\n          ),\n          item => item.getOdds(order.target),\n          order.betOdds,\n          bandPrefs,\n          {\n            filledStake: order.betMoney,\n            getMakeupStake: (_item, odds) => order.getBetMoney(odds),\n          },\n        )\n      : null;\n    const candidates = banded ?? bet.items\n      .filter(item => item.getOdds(order.target) >= minOdds)\n      .sort((a, b) => b.getOdds(order.target) - a.getOdds(order.target));\n\n"
+    ]
+  ]
+}

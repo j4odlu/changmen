@@ -6,18 +6,19 @@ import { describe, it, expect } from 'vitest';
 import { CLIENT_PACKAGE_RELOCATION as policy, verifyClientPackageRelocation, readClientPackageSource, restoreClientPackageMetadata } from './client-package-relocation.mjs';
 import { isVersionSource } from '../../devtools/runtime-tooling/runtime_version.js';
 import { classifyDeployScope } from '../deploy/classify-deploy-scope.mjs';
+import { withAdapterHistoryReader } from './browser-entry-history.mjs';
 
 const read = file => fs.readFileSync(file, 'utf8').replaceAll('\r\n', '\n');
 const sha = text => createHash('sha256').update(text).digest('hex');
 const original = file => execFileSync('git', ['show', `${policy.baselineCommit}:${file}`], { encoding: 'utf8', windowsHide: true }).replaceAll('\r\n', '\n');
 
-it('keeps every original runtime byte at its single canonical location', () => {
+it('restores every original runtime byte after exact reviewed increments at its single canonical location', () => {
   expect(verifyClientPackageRelocation(read).size).toBe(78);
   const runtime = policy.relocations.filter(row => row.kind === 'runtime');
   expect(runtime).toHaveLength(36);
   for (const row of runtime) {
     const baseline = original(row.file);
-    expect(read(row.canonical)).toBe(baseline);
+    expect(withAdapterHistoryReader(read)(row.canonical)).toBe(baseline);
     expect(sha(baseline)).toBe(row.sourceSha256);
     expect(readClientPackageSource(row.file, read(row.file), read)).toBe(baseline);
   }

@@ -219,15 +219,27 @@ describe("pmOrderDisplay", () => {
   });
 
   it("keeps submitted odds distinct from the actual buy price", () => {
-    expect(pmOrderOddsText({ ...pmBuy, Odds: 1.3 })).toBe("1.300");
+    expect(pmOrderOddsText({ ...pmBuy, Odds: 1.3 })).toBe("1.300 / 1.351");
     expect(pmOrderFillPriceText({ ...pmBuy, Odds: 1.3 })).toBe("0.74");
   });
 
   it("does not replace missing submitted odds with reciprocal buy price", () => {
     for (const Odds of [undefined, 0, 1, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-      expect(pmOrderOddsText({ ...pmBuy, Odds })).toBe("—");
-      expect(pmOrderOddsText({ ...pmBuy, Odds, PmFillPrice: undefined })).toBe("—");
+      expect(pmOrderOddsText({ ...pmBuy, Odds })).toBe("— / 1.351");
+      expect(pmOrderOddsText({ ...pmBuy, Odds, PmFillPrice: undefined })).toBe("— / 1.351");
     }
+  });
+
+  it("keeps unavailable fill odds separate from submitted odds", () => {
+    expect(pmOrderOddsText({ Type: "Polymarket", Odds: 1.3 })).toBe("1.300");
+    expect(pmOrderOddsText({ Type: "Polymarket" })).toBe("—");
+    for (const Status of ["Pending", "Reject"])
+      expect(pmOrderOddsText({ ...pmBuy, Odds: 1.3, Status })).toBe("1.300");
+  });
+
+  it("shows only submitted odds when the formatted fill odds are the same", () => {
+    expect(pmOrderOddsText({ ...pmBuy, Odds: 2, PmFillPrice: 0.5 })).toBe("2.000");
+    expect(pmOrderOddsText(pmBuy)).toBe("1.351");
   });
 
   it("preserves the fill-price odds display for GTC buys and sells", () => {

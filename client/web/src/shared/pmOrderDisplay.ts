@@ -424,14 +424,21 @@ export function pmOrderDisplayPriceText(
   return formatPolymarketApiDecimal(price);
 }
 
-/** 普通 PM 买单只展示保存的提交赔率；GTC 和卖单保留成交价赔率口径。 */
+/** 普通 PM 买单成交赔率与提交赔率显示值不同时追加「/ 成交赔率」；GTC 和卖单沿用原口径。 */
 export function pmOrderOddsText(row: OrderRow): string {
   const storedOdds = Number(row.Odds);
-  if (Number.isFinite(storedOdds) && storedOdds > 1)
-    return toFixed(truncateOddsTo3(storedOdds), 3);
-  // 缺失提交赔率不能用实际买入价反算，否则会混淆提交与成交。
-  if (isPmBuyOrderListRow(row) && !row.PmGtcExecutionId)
-    return "—";
+  const submitted = Number.isFinite(storedOdds) && storedOdds > 1
+    ? toFixed(truncateOddsTo3(storedOdds), 3) : "—";
+  if (isPmBuyOrderListRow(row) && !row.PmGtcExecutionId) {
+    const status = normalizeOrderStatus(String(row.Status ?? ""));
+    const fillPrice = status === "Reject" || status === "Pending" ? null : resolvePmFillPrice(row);
+    const filled = fillPrice != null ? toFixed(truncateOddsTo3(1 / fillPrice), 3) : "—";
+    if (filled === "—" || filled === submitted)
+      return submitted;
+    return `${submitted} / ${filled}`;
+  }
+  if (submitted !== "—")
+    return submitted;
   const price = resolvePmFillPrice(row);
   return price != null ? toFixed(truncateOddsTo3(1 / price), 3) : "—";
 }

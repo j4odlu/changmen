@@ -24,8 +24,8 @@ function canonical(file) {
 }
 
 export function restorePendingOrderDisplaySource(file, source) {
-  source = restoreFrontendDependencySource(canonical(file), source);
   source = restorePmSubmittedOddsDisplaySource(canonical(file), source);
+  source = restoreFrontendDependencySource(canonical(file), source);
   const row = PENDING_ORDER_DISPLAY_INCREMENTS.changes[canonical(file)];
   if (!row || pendingOrderDisplaySha(source) !== row.afterSha) return source;
   const lines = normalize(source).split("\n");
@@ -40,7 +40,7 @@ export function restorePendingOrderDisplaySource(file, source) {
 
 export function verifyPendingOrderDisplaySources(read = file => fs.readFileSync(path.join(root, file), "utf8")) {
   for (const [file, row] of Object.entries(PENDING_ORDER_DISPLAY_INCREMENTS.changes)) {
-    const source = restorePmSubmittedOddsDisplaySource(file, restoreFrontendDependencySource(file, read(file)));
+    const source = restoreFrontendDependencySource(file, restorePmSubmittedOddsDisplaySource(file, read(file)));
     assert.equal(pendingOrderDisplaySha(source), row.afterSha, `${file}: unregistered original-order display change`);
     assert.equal(pendingOrderDisplaySha(restorePendingOrderDisplaySource(file, source)), row.beforeSha);
   }

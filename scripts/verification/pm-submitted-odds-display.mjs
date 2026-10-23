@@ -1,6 +1,7 @@
 // [changmen 扩展] 只还原 FOK 买单缺失提交赔率的展示修正，保留原始展示基线。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { restorePmOrderOddsPairSource } from "./pm-order-odds-pair.mjs";
 
 export const PM_SUBMITTED_ODDS_DISPLAY_FILE = "client/web/src/shared/pmOrderDisplay.ts";
 const normalize = source => source.replaceAll("\r\n", "\n");
@@ -31,6 +32,7 @@ export function pmOrderOddsText(row: OrderRow): string {
 }`;
 
 export function restorePmSubmittedOddsDisplaySource(file, source) {
+  source = restorePmOrderOddsPairSource(file, source);
   if (file !== PM_SUBMITTED_ODDS_DISPLAY_FILE || sha(source) !== AFTER_SHA)
     return source;
   const text = normalize(source);

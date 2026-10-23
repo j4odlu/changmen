@@ -786,12 +786,12 @@ function badgeTitle(row: OrderRow): string {
               <template v-else>
                 <div v-if="pmOrderSubmissionQuote(block.row)" class="order__profit-line">
                   <span>提交限价：{{ pmOrderSubmissionQuote(block.row)?.priceText }} </span>
-                  <span>提交赔率：<span class="order__odds">{{ pmOrderSubmissionQuote(block.row)?.oddsText }}</span></span>
+                  <span title="提交赔率 / 成交赔率">赔率：<span class="order__odds">{{ pmOrderSubmissionQuote(block.row)?.oddsText }}</span></span>
                 </div>
                 <div v-else class="order__profit-line">
                   <span v-if="pmOrderSharesText(block.row)">份额：{{ pmOrderSharesText(block.row) }} </span>
                   <span v-if="pmOrderFillPriceText(block.row)">{{ pmOrderPriceLabel(block.row) }}：{{ pmOrderFillPriceText(block.row) }} </span>
-                  <span v-if="pmOrderFillPriceText(block.row)">赔率：<span class="order__odds">{{ pmOrderOddsText(block.row) }}</span></span>
+                  <span v-if="!block.row.PmGtcExecutionId || pmOrderFillPriceText(block.row)" :title="block.row.PmGtcExecutionId ? undefined : '提交赔率 / 成交赔率'">赔率：<span class="order__odds">{{ pmOrderOddsText(block.row) }}</span></span>
                 </div>
                 <div class="order__profit-line">
                   {{ pmStakeLabel(block.row) }}：<slot name="buy-amount" :row="block.row">{{ toFixed(pmOrderStakeDisplayCny(block.row), 0) }}</slot>

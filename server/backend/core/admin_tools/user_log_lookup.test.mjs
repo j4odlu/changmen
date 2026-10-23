@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import ts from "typescript";
+import * as lookupPublicApi from "./user_log_lookup.js";
+import { lookupExtractionGroups, originalLookupFunctions, originalLookupConstants, originalLookupExports } from "./user_log_lookup/__tests__/original.mjs";
 import {
   buildLegSections,
   buildLogSegments,
@@ -15,6 +19,37 @@ import {
   summarizeUserLog,
   toAdminOrderLogPayload,
 } from "./user_log_lookup.js";
+
+describe("backend order lookup extraction preserves its original implementation", () => {
+  const executable = source => ts.transpileModule(source.replace(/^export /m, ""), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, removeComments: true },
+  }).outputText;
+  it("keeps all 41 complete function bodies, including query order, validation and data whitelists", () => {
+    let count = 0;
+    for (const [module, names] of Object.entries(lookupExtractionGroups)) {
+      const source = fs.readFileSync(new URL(`./user_log_lookup/${module}.js`, import.meta.url), "utf8");
+      const tree = ts.createSourceFile("next.js", source, ts.ScriptTarget.Latest, true);
+      const functions = new Map(tree.statements.filter(ts.isFunctionDeclaration).map(node => [node.name.text, node.getText(tree)]));
+      expect([...functions.keys()].sort()).toEqual([...names].sort());
+      for (const name of names) {
+        expect(executable(functions.get(name)), name).toBe(executable(originalLookupFunctions.get(name)));
+        count++;
+      }
+    }
+    expect(count).toBe(41);
+  });
+  it("keeps every constant and all 22 public exports behind the original import path", () => {
+    expect(Object.keys(lookupPublicApi).sort()).toEqual([...originalLookupExports].sort());
+    const source = fs.readFileSync(new URL("./user_log_lookup/rules.js", import.meta.url), "utf8");
+    const tree = ts.createSourceFile("rules.js", source, ts.ScriptTarget.Latest, true);
+    for (const node of tree.statements.filter(ts.isVariableStatement)) {
+      const name = node.declarationList.declarations[0].name.getText(tree);
+      expect(executable(node.getText(tree)), name).toBe(executable(originalLookupConstants.get(name)));
+    }
+    expect(lookupPublicApi.ARB_LINK_MIN).toBe(1_000_000_000_000);
+    expect(lookupPublicApi.DEFAULT_LOG_PADDING_MS).toBe(180_000);
+  });
+});
 
 describe("user_log_lookup", () => {
   it("never attaches a conflicting explicit Link result to the previous check", () => {

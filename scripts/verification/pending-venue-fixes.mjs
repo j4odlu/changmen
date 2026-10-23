@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import { restorePendingVenueExtractionSource } from "./pending-venue-extraction.mjs";
 const normalize = source => source.replaceAll("\r\n", "\n");
 const sha = source => createHash("sha256").update(normalize(source)).digest("hex");
 const text = fs.readFileSync(new URL("./pending-venue-fixes.json", import.meta.url), "utf8");
@@ -15,6 +16,7 @@ const rows = new Map(PENDING_VENUE_FIXES.files.map(row => {
 }));
 export const pendingVenueFixFiles = new Set(rows.keys());
 export function restorePendingVenueFixSource(file, source) {
+  source = restorePendingVenueExtractionSource(file, source);
   const row = rows.get(file);
   if (!row || sha(source) !== row.afterSha) return source;
   for (const asset of PENDING_VENUE_FIXES.assets)
@@ -23,7 +25,7 @@ export function restorePendingVenueFixSource(file, source) {
   return row.before;
 }
 export function verifyPendingVenueFixes(read) {
-  for (const row of rows.values()) assert.equal(sha(read(row.file)), row.afterSha, row.file + ": unreviewed pending venue fix");
+  for (const row of rows.values()) assert.equal(sha(restorePendingVenueExtractionSource(row.file, read(row.file), read)), row.afterSha, row.file + ": unreviewed pending venue fix");
   for (const row of PENDING_VENUE_FIXES.assets) assert.equal(sha(read(row.file)), row.sha, row.file + ": pending venue fix implementation changed");
   return { files: rows.size, assets: PENDING_VENUE_FIXES.assets.length };
 }

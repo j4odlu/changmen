@@ -12,6 +12,8 @@ import {inspectBackendCommandPaths,restoreBackendCommandPaths} from './backend-c
 import {restoreFrontendDependencySource,verifyFrontendDependencyRefactor} from './frontend-dependency-refactor.mjs';
 import {verifyAccountEditExtraction} from './account-edit-extraction.mjs';
 import {verifyPendingVenueFixes} from './pending-venue-fixes.mjs';
+import {verifyObFootballExtraction} from './ob-football-extraction.mjs';
+import {restorePendingVenueVerificationSource,verifyPendingVenueExtraction} from './pending-venue-extraction.mjs';
 const sha=s=>createHash('sha256').update(s.replaceAll('\r\n','\n')).digest('hex');
 const prefixes=[['server/db','rds'],['server/packages/venue-node-loader','server/venues/loader'],['server/packages/venue-node-registry','server/venues/registry'],['server/packages/venue-adapter-tools','server/venues'],['server/match/identity','packages/shared/match-identity']];
 const moved=f=>prefixes.reduce((s,[a,b])=>s===a||s.startsWith(a+'/')?b+s.slice(a.length):s,f);
@@ -58,11 +60,13 @@ export function inspectWorkspaceLayout(root,{read=f=>fs.readFileSync(path.join(r
  const frontendDependencies=verifyFrontendDependencyRefactor(read);
  verifyAccountEditExtraction(read);
  verifyPendingVenueFixes(read);
+ verifyPendingVenueExtraction(read);
+ verifyObFootballExtraction(read);
  let sql=0,moves=0;
  for(const row of record.files){
   assert.equal(sha(row.before),row.beforeSha,'Original source proof changed');
   if(!row.canonical){assert(!exists(row.file),row.file+': retired entry returned');continue;}
-  const source=restoreBackendCommandPaths(row.canonical,restoreRayA8PrecheckSource(row.canonical,restoreDeployCiSource(row.canonical,restore9999CProbabilityVerificationSource(row.canonical,restoreFrontendDependencySource(row.canonical,read(row.canonical))))));
+  const source=restoreBackendCommandPaths(row.canonical,restoreRayA8PrecheckSource(row.canonical,restoreDeployCiSource(row.canonical,restore9999CProbabilityVerificationSource(row.canonical,restoreFrontendDependencySource(row.canonical,restorePendingVenueVerificationSource(row.canonical,read(row.canonical)))))));
   // [changmen 扩展] Markdown 正文允许日常维护；仍读取当前位置并检查旧入口退役。
   // 原迁移证据不变，源码、配置和 SQL 继续完整哈希与语义校验。
   if(!row.canonical.endsWith('.md'))assert.equal(sha(source),row.afterSha,row.canonical+': unreviewed relocation');

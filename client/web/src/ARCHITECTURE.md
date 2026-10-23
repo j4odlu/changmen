@@ -168,6 +168,13 @@ matchStore.runMainLoopTick（A8 `P()`，轮间 100ms）
 
 `models/match.ts` 的 `ViewBet.getOrderOptions` 委托 `buildOrderOptions`，保持模型 API 不变。
 
+### 管理端订单诊断
+
+[changmen 扩展] 管理端订单诊断弹窗 `components/admin/AdminOrderLogsDialog.vue`
+持有查询序号、打开/关闭、扩大查询和复制摘要；`adminOrderLogGrouping.ts` 保留旧日志归组兜底，
+`adminOrderLogDisplay.ts` 提供原有格式化函数，`useAdminOrderLogPresentation.ts` 从当前响应式查询结果计算展示数据。
+新后端返回的腿关联仍只做安全过滤，旧后端没有腿关联时才走原有兜底；金额和诊断规则继续复用 `shared/adminOrder*`。
+
 ### `stores/account/`（账号与下注网关）
 
 | 路径 | 用途 |
@@ -282,7 +289,13 @@ matchStore.runMainLoopTick（A8 `P()`，轮间 100ms）
 
 [changmen 扩展] `services/pendingPmOrderWrites.ts` 按会话版本、账号和原单号登记 Pending 保存。`api/order.ts` 的 PM 后续写入在原 Pending 完整保存后继续；状态查询与场馆 POST 回执不等待该屏障，原 Pending 写入也不等待自身。同步投影前保留原屏障，投影后再次匹配原单，避免异步投影或会话切换绕过保存顺序。
 
-`betGateway.ts` 的待确认任务只保留 `realtime/bettingEventPayload.ts` 定义的原广播字段，包括客户端比赛与盘口 ID；不从场馆 ID 推算广播 ID。退出/切换工作区经 `accountStore.resetSession()` 同步暂停确认与 RDS 恢复定时器，保留原单记录，待账号重新加载后恢复。旧会话或旧暂停代次的响应不能计数、通知或重启定时器。
+`stores/account/betGateway.ts` 保留预检、下单以及暂停/恢复的公开入口。待确认任务按职责拆分，共用同一组模块单例：
+
+- `pendingVenueConfirmationState.ts`：任务类型、sessionStorage、单飞集合、定时器、写入屏障及会话代次。
+- `pendingVenueConfirmationRunner.ts`：受理任务登记、退避调度、原单确认、终态保存及成交副作用。
+- `pendingVenueConfirmationRecovery.ts`：暂停/恢复、钱包提交记录与 RDS 原单恢复。
+
+任务只保留 `realtime/bettingEventPayload.ts` 定义的原广播字段，包括客户端比赛与盘口 ID；不从场馆 ID 推算广播 ID。退出/切换工作区经 `accountStore.resetSession()` 同步暂停确认与 RDS 恢复定时器，保留原单记录，待账号重新加载后恢复。旧会话或旧暂停代次的响应不能计数、通知或重启定时器。
 
 ## 账号编辑弹窗
 

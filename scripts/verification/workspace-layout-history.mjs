@@ -10,6 +10,9 @@ import {restoreBackendCommandPaths} from './backend-command-paths.mjs';
 import {frontendDependencyFiles,restoreFrontendDependencySource} from './frontend-dependency-refactor.mjs';
 import {ACCOUNT_EDIT_EXTRACTION,restoreAccountEditSource} from './account-edit-extraction.mjs';
 import {pendingVenueFixFiles} from './pending-venue-fixes.mjs';
+import {OB_FOOTBALL_EXTRACTION,restoreObFootballSource} from './ob-football-extraction.mjs';
+import {restorePendingVenueVerificationSource} from './pending-venue-extraction.mjs';
+import {restoreValidationAuditSource} from './validation-audit-boundary.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const sha=s=>createHash('sha256').update(s.replaceAll('\r\n','\n')).digest('hex');
 const recordFile=new URL('./workspace-layout-relocation.json',import.meta.url);
@@ -21,6 +24,8 @@ assert.equal(WORKSPACE_LAYOUT_RELOCATION.purpose,'root-rds-and-workspace-consoli
 const rows=new Map(WORKSPACE_LAYOUT_RELOCATION.files.map(row=>[row.file,row]));
 const reverse=new Map([...rows.values()].filter(row=>row.canonical).map(row=>[row.canonical,row.file]));
 export function restoreWorkspaceLayoutSource(file,source){
+ source=restoreValidationAuditSource(file,source);
+ source=restorePendingVenueVerificationSource(file,restoreObFootballSource(file,source));
  source=restoreBackendCommandPaths(file,restoreFrontendDependencySource(file,source));
  const row=rows.get(file)??rows.get(reverse.get(file));
  if(row?.canonical&&sha(source)===row.afterSha){assert.equal(sha(row.before),row.beforeSha);return row.before;}
@@ -36,14 +41,14 @@ function actual(row){
  if(!row.canonical)return undefined;
  const target=path.join(root,row.canonical),real=native.realpathSync(target),rel=path.relative(root,real);
  assert(rel!=='..'&&!rel.startsWith('..'+path.sep)&&!path.isAbsolute(rel),'Historical proof target escapes repository');
- return restoreBackendCommandPaths(row.canonical,restoreFrontendDependencySource(row.canonical,native.readFileSync(real,'utf8')));
+ return restoreBackendCommandPaths(row.canonical,restoreFrontendDependencySource(row.canonical,restorePendingVenueVerificationSource(row.canonical,restoreValidationAuditSource(row.canonical,native.readFileSync(real,'utf8')))));
 }
 export function readPreviousWorkspaceFile(file,options){
  const row=rows.get(key(file));
  if(!row){
   const source=native.readFileSync(file,options);
-  if(!frontendDependencyFiles.has(key(file))&&key(file)!==ACCOUNT_EDIT_EXTRACTION.file&&!pendingVenueFixFiles.has(key(file)))return source;
-  const restored=restoreFrontendDependencySource(key(file),restoreAccountEditSource(key(file),source.toString()));
+  if(!frontendDependencyFiles.has(key(file))&&key(file)!==ACCOUNT_EDIT_EXTRACTION.file&&!pendingVenueFixFiles.has(key(file))&&key(file)!==OB_FOOTBALL_EXTRACTION.file)return source;
+  const restored=restoreFrontendDependencySource(key(file),restoreAccountEditSource(key(file),restoreObFootballSource(key(file),source.toString())));
   return Buffer.isBuffer(source)?Buffer.from(restored):restored;
  }
  if(row.canonical){const source=actual(row);if(sha(source)!==row.afterSha)return typeof options==='string'||options?.encoding?source:Buffer.from(source);}

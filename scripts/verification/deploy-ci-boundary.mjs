@@ -1,6 +1,7 @@
 // [changmen 扩展] Exact deployment fixes on top of the immutable workspace migration proof.
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {restoreValidationAuditSource} from './validation-audit-boundary.mjs';
 const sha = source => createHash('sha256').update(source.replaceAll('\r\n', '\n')).digest('hex');
 const changes = new Map([
   ['scripts/deploy/workflows.test.mjs', {
@@ -40,6 +41,7 @@ const changes = new Map([
   }],
 ]);
 export function restoreDeployCiSource(file, source) {
+  source = restoreValidationAuditSource(file, source);
   const change = changes.get(file);
   if (!change || sha(source) !== change.afterSha) return source;
   source = source.replaceAll('\r\n', '\n');

@@ -23,8 +23,18 @@ function reject(script, file, change, expected) {
   expect(result.status).toBe(1);
   expect(result.stderr).toContain(expected);
 }
-it("real core entry rejects a changed POST payload inside notification wrappers", () => {
-  reject("verify-fok-execution-parity.mjs", "client/web/src/stores/account/betGateway.ts", "source => source.replace(\"provider.betting(account, option)\", \"provider.betting(account, { ...option, betMoney: 0 })\")", "complete source outside reject display change");
+it("real core entry rejects a changed POST payload after the exact lifecycle extraction", () => {
+  // A changed full gateway cannot use the extraction inverse; the historical
+  // display guard consequently rejects its moved notification body first.
+  reject("verify-fok-execution-parity.mjs", "client/web/src/stores/account/betGateway.ts", "source => source.replace(\"provider.betting(account, option)\", \"provider.betting(account, { ...option, betMoney: 0 })\")", "exact reject display increment");
+}, 30_000);
+for (const [module, change] of [
+  ["State", 'source => source.replace("epoch: 0", "epoch: 1")'],
+  ["Runner", 'source => source.replace("await pendingVenueOrderWrites.get(task)", "await Promise.resolve()")'],
+  ["Recovery", 'source => source.replace("if (!current()) return;", "if (false) return;")'],
+]) it(`real core entry rejects changed pending lifecycle ${module} implementation`, () => {
+  reject("verify-fok-execution-parity.mjs", `client/web/src/stores/account/pendingVenueConfirmation${module}.ts`, change,
+    "extracted pending implementation changed");
 }, 30_000);
 it("real VPS entry rejects added makeup work instead of exempting a protected module", () => {
   reject("verify-vps-fok-baseline.mjs", "client/web/src/stores/betting/autoBet/arbMakeUpFromRejects.ts", "source => source + \"\\nvoid unexpectedMakeup();\\n\"", "unregistered protected source difference");

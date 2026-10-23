@@ -155,6 +155,13 @@ resolver 与 matcher 通过 workspace 依赖复用；测试：`npm run test --pr
 
 ## client / server 说明
 
+### 后端订单日志诊断
+
+[changmen 扩展] `server/backend/core/admin_tools/user_log_lookup.js` 保留原有公共导出，
+内部由 `user_log_lookup/query.js` 编排用户、订单、执行观察及旧日志的只读查询；
+`rules.js` 保留时间窗与相关性匹配，`logs.js` 解析日志和切分尝试，`sections.js` 组织平台、订单和主客腿，
+`payload.js` 处理订单字段白名单、API 投影及 CLI 报告。权限检查仍由外层 `core/account/admin_orders.js` 执行。
+
 ### 本地开发端口
 
 | 组件 | Windows | Linux / 其它 |

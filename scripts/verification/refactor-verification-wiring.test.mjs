@@ -15,5 +15,8 @@ test("restores the entire original checker only for the exact added refactor cal
     `${source}\nvoid skipGuard();\n`,
     source.replace(" verifyPendingVenueFixes(read);", " // verifyPendingVenueFixes(read);"),
     source.replace("assertWorkspaceMoveSemantics(row,source);", "// assertWorkspaceMoveSemantics(row,source);"),
+    source.replace(" verifyObFootballExtraction(read);", " // verifyObFootballExtraction(read);"),
+    source.replace(" verifyPendingVenueExtraction(read);", " // verifyPendingVenueExtraction(read);"),
+    source.replace("restorePendingVenueVerificationSource(row.canonical,read(row.canonical))", "read(row.canonical)"),
   ]) expect(restoreRefactorVerificationWiring(file, mutation)).toBe(mutation);
 });

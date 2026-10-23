@@ -82,6 +82,14 @@ WS  wss://{api origin}/yewuws2/push?requestId={token}
 
 **[changmen 实现]** 足球页 Axios 直连 `yewu11`（`obSportFootballFetch.ts`，与电竞 OB `directGet` 同路），不经 Chrome 扩展、不经 VPS、不写电竞 `client_matches`。2026-09-08 预检：`Access-Control-Allow-Origin: *`，允许头含 `requestId` / `lang` / `checkId` / `request-code`。足球 store 默认 **30s** 再拉快照。
 
+[changmen 扩展] 足球 HTTP 实现按职责拆分，公开入口仍为 `runtime/obSportFootballFetch.ts`：
+
+- `obSportFootballResponse.ts`：赛程袋、电子赛事过滤、赔率行合并与详情解析；只处理传入数据，保留原有 Map 和详情行的引用语义。
+- `obSportFootballDto.ts`：稳定 ID、队名与占位标题、列表 DTO、六类主盘及盘口去重；时钟由宿主传入，读取次数和计算位置保持。
+- `obSportFootballFetch.ts`：请求头、英文会话、请求顺序、限流退避、详情补查、中英文名称缓存、列表单飞与 10 秒内存缓存。
+
+离线对照覆盖旧实现的响应、DTO 及请求/缓存时序，不需要真实 token 或连接场馆。
+
 场次集合对齐试玩同一套菜单（滚球 `30002` + 今日 `3020101`，`csid=1`）。相对试玩只故意裁三处：
 
 | 保留的差异 | 说明 |

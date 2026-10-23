@@ -2,7 +2,7 @@
  * 统一 SDK Relayer HMAC（@polymarket/client.buildHmacSignature）。
  * 与 BuilderSigner.createBuilderHeaderPayload 签名结果一致；响应字段保持 POLY_BUILDER_*。
  *
- * 启用：POLYMARKET_RELAYER_SIGN_SDK=unified
+ * 唯一 HMAC 实现；保留旧默认入口的时间戳与 header 行为。
  */
 
 import { buildHmacSignature } from "@polymarket/client";
@@ -32,24 +32,19 @@ export async function signPolymarketRelayerRequestUnified(payload) {
   const timestamp = payload?.timestamp === undefined || payload?.timestamp === null
     ? Math.floor(Date.now() / 1000)
     : Number(payload.timestamp);
-  if (!Number.isFinite(timestamp))
-    return { ok: false, msg: "timestamp 无效" };
+  const effectiveTimestamp = Number.isFinite(timestamp) ? timestamp : Math.floor(Date.now() / 1000);
 
-  const signature = await buildHmacSignature(
-    creds.secret,
-    timestamp,
-    method,
-    path,
-    body,
-  );
+  const headers = await createPolymarketBuilderHeaders(creds, method, path, body, effectiveTimestamp);
+  return { ok: true, headers };
+}
 
+/** Shared by Relayer signing and Builder trade queries; keep the exact signed bytes. */
+export async function createPolymarketBuilderHeaders(creds, method, path, body, timestamp = Math.floor(Date.now() / 1000)) {
+  const signature = await buildHmacSignature(creds.secret, timestamp, method, path, body);
   return {
-    ok: true,
-    headers: {
-      POLY_BUILDER_API_KEY: creds.key,
-      POLY_BUILDER_PASSPHRASE: creds.passphrase,
-      POLY_BUILDER_SIGNATURE: signature,
-      POLY_BUILDER_TIMESTAMP: String(Math.floor(timestamp)),
-    },
+    POLY_BUILDER_API_KEY: creds.key,
+    POLY_BUILDER_PASSPHRASE: creds.passphrase,
+    POLY_BUILDER_SIGNATURE: signature,
+    POLY_BUILDER_TIMESTAMP: String(timestamp),
   };
 }

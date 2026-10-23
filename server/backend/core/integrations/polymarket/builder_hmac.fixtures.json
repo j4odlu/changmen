@@ -1,0 +1,433 @@
+{
+  "source": "builder-signing-sdk@0.0.8; captured before retirement; synthetic credentials only",
+  "creds": {
+    "key": "test-key",
+    "secret": "dGVzdC1zZWNyZXQ=",
+    "passphrase": "test-pass"
+  },
+  "cases": [
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "rn-8tquniD1COugOqixi5akHwpaxMb2OqU59coyV4b8=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "Q5C6iVENorGtzyCaJ1n-9W7xWSwusdQ46kdkv65glAg=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "AGGiQRN42zvTWa67gC8VX72xY6NYIosGMfTwU2bgAXQ=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "body": "",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "rn-8tquniD1COugOqixi5akHwpaxMb2OqU59coyV4b8=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "body": "",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "Q5C6iVENorGtzyCaJ1n-9W7xWSwusdQ46kdkv65glAg=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "body": "",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "AGGiQRN42zvTWa67gC8VX72xY6NYIosGMfTwU2bgAXQ=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "body": "{}",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "11QG6ixIfQqbKcq2q1fVv28_UtN3uz0PtNixGswBiPY=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "body": "{}",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "30j0b64vSYpts5uv6Y8rSJbWqyv4Tsw6SyifNGzSpyQ=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "body": "{}",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "t6rA_VUus3eCazGSIjtLiQF-cdzk27vMP3If1NQRhHA=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "body": "{\"name\":\"测试\",\"lines\":\"a\\nb\"}",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "Zdf3uvpYuFm4Z7lsea4cS6vNjVxe5ly7PvYOq088oRY=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "body": "{\"name\":\"测试\",\"lines\":\"a\\nb\"}",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "FD1m6M0SncuCNyG9QVW3VtJm2B6Q2p-0nkzay2VIUqg=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/builder/trades?builder_code=0x123&after=42&next_cursor=a%2Bb%3D",
+      "body": "{\"name\":\"测试\",\"lines\":\"a\\nb\"}",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "6gJQiaNPycEzWjyC9DToyS1Iw5T4VYVT98xyWtLuc1g=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "u4apwGUKor5wGN-w7alRMeHuLpbDlIACTMi0i9H8tmI=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "BMlMjRqxit06JLRuAoDyoe7VaDbNVkepx4d-iJUIlEo=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "CtqKMXevEjBBjC7ZCbOBrgpj5eI8FQSA6zyjzc7i49g=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "body": "",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "u4apwGUKor5wGN-w7alRMeHuLpbDlIACTMi0i9H8tmI=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "body": "",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "BMlMjRqxit06JLRuAoDyoe7VaDbNVkepx4d-iJUIlEo=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "body": "",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "CtqKMXevEjBBjC7ZCbOBrgpj5eI8FQSA6zyjzc7i49g=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "body": "{}",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "MH4VkJ5esWkY0nObI6tJIj0qKRR2d3VeEwMEk4MsnWA=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "body": "{}",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "u972kzVlg10bLin4hJyVpmvYqmZ3_RyZeWB3ohmre3Y=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "body": "{}",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "bk3NAPGOcc5doa0YreiQXoqnG754qOSaRODRp6gGBz8=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "body": "{\"name\":\"测试\",\"lines\":\"a\\nb\"}",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "2POAwQt_903ub2CjCf6fERoXnD-w6-KOC_AHdZFEXxI=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "body": "{\"name\":\"测试\",\"lines\":\"a\\nb\"}",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "nccczjYFH8PSftajONpXk3nmIJjeGkmfTg5_OQPXQew=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "body": "{\"name\":\"测试\",\"lines\":\"a\\nb\"}",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "5o1vz5juDHAIjYef2LtGSEk-gqhXpmz3a0r6ue9HkVc=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "ECPxeUV6Feov2Larw09oGNYI6iGDvdlnn7-mb6N8UsY=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "xu2375bpZ29f2oRsAH76vATjZ7mWQsrzdYHg51XNoXo=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "CING7iUtCcB8wA_hYCLr_BFahYLEq9u6xdOZ4g-u5Lc=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "body": "",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "ECPxeUV6Feov2Larw09oGNYI6iGDvdlnn7-mb6N8UsY=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "body": "",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "xu2375bpZ29f2oRsAH76vATjZ7mWQsrzdYHg51XNoXo=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "body": "",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "CING7iUtCcB8wA_hYCLr_BFahYLEq9u6xdOZ4g-u5Lc=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "body": "{}",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "kdbjVxjJj8upWjZQyXwxH8WUoeC6yr15ttkG1HjU6CQ=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "body": "{}",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "eapzePqjK8OJc9o3AfAz3eeeOYLsE11Y8Q8Ioua77zg=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "body": "{}",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "xhBcoZlpZIppnfT6yAU3ivUFFKx4NE09shOnrK35unk=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "body": "{\"name\":\"测试\",\"lines\":\"a\\nb\"}",
+      "timestamp": 0,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "_QgIHgok2iXEky93EdzS0gVsnbU_ZBsk49h0N_6ANvM=",
+        "POLY_BUILDER_TIMESTAMP": "0"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "body": "{\"name\":\"测试\",\"lines\":\"a\\nb\"}",
+      "timestamp": 1700000000,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "yOIfhvKC4pTbXEE3jq3q8b9Q_mXkydbp0nwCXvN3CQY=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/submit",
+      "body": "{\"name\":\"测试\",\"lines\":\"a\\nb\"}",
+      "timestamp": 1700000000.75,
+      "headers": {
+        "POLY_BUILDER_API_KEY": "test-key",
+        "POLY_BUILDER_PASSPHRASE": "test-pass",
+        "POLY_BUILDER_SIGNATURE": "RYPr47dGcDae3QZ9avh-I4_snuDlIQnUCqq16a5qrBs=",
+        "POLY_BUILDER_TIMESTAMP": "1700000000.75"
+      }
+    }
+  ]
+}

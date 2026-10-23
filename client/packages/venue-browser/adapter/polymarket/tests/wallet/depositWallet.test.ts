@@ -3,7 +3,6 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { POLYGON_POLYMARKET, polymarketTradeSpenders } from "@changmen/venue-browser/polymarket/wallet/contracts";
 import {
   buildDepositWalletApprovalCalls,
-  createPolymarketRelayClient,
   derivePolymarketDepositWalletAddress,
 } from "@changmen/venue-browser/polymarket/wallet/depositWallet";
 import { buildStandardApprovalTransactions } from "@changmen/venue-browser/polymarket/wallet/relayer";
@@ -16,7 +15,7 @@ const DEPOSIT_FACTORY = "0x00000000000fb5c9adea0298d729a0cb3823cc07";
 const FACTORY_BEACON_SELECTOR = "0x49493a4d";
 const FIXTURE_BEACON = "0x3333333333333333333333333333333333333333";
 
-// [changmen 扩展] Keep the real SDK, wallet signer and fallback transport in
+// [changmen 扩展] Keep the native derivation, wallet signer and fallback transport in
 // these unit tests; only the external JSON-RPC boundary receives fixtures.
 function mockFactoryRpc(beacon: Hex = zeroAddress, deployed = false) {
   return vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
@@ -151,22 +150,8 @@ describe("polygonRpc", () => {
   });
 });
 
-describe("createPolymarketRelayClient", () => {
-  test("patches publicClient so deriveDepositWalletAddress works with multi-RPC", async () => {
-    const rpc = mockFactoryRpc();
-    const client = await createPolymarketRelayClient({
-      privateKey: "0x1111111111111111111111111111111111111111111111111111111111111111",
-    });
-    const transport = (client as { publicClient: { transport: { type?: string } } }).publicClient.transport;
-    expect(transport.type).toBe("fallback");
-    const funder = await client.deriveDepositWalletAddress();
-    expect(funder).toMatch(/^0x[0-9a-fA-F]{40}$/);
-    expect(rpc).toHaveBeenCalledTimes(1);
-  }, 30_000);
-});
-
 describe("derivePolymarketDepositWalletAddress", () => {
-  test("returns a deposit wallet address via official RelayClient", async () => {
+  test("returns a deposit wallet address via native viem", async () => {
     const rpc = mockFactoryRpc();
     const funder = await derivePolymarketDepositWalletAddress({
       privateKey: "0x2222222222222222222222222222222222222222222222222222222222222222",
@@ -193,7 +178,7 @@ describe("derivePolymarketDepositWalletAddress", () => {
 
   // Explicit read-only online smoke remains available without making every
   // offline frontend run depend on public Polygon RPC health.
-  test.runIf(process.env.POLYMARKET_WALLET_LIVE_RPC === "1")("live RPC smoke derives through official RelayClient", async () => {
+  test.runIf(process.env.POLYMARKET_WALLET_LIVE_RPC === "1")("live RPC smoke derives through native viem", async () => {
     expect(await derivePolymarketDepositWalletAddress({ privateKey: `0x${"2".repeat(64)}` }))
       .toMatch(/^0x[0-9a-fA-F]{40}$/);
   }, 30_000);

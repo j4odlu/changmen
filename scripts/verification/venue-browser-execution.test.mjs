@@ -1,4 +1,5 @@
 import {withAdapterHistoryReader,readAdapterHistory,adapterHistorySystem} from "./browser-entry-history.mjs";
+import {historicalRetiredPmSdkTarget} from "./pm-sdk-retirement.mjs";
 import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import path from 'node:path';
 import ts from 'typescript';
@@ -53,6 +54,8 @@ it('preserves the actual target of every static, dynamic and type dependency aft
   visit(sf);return result;
  };
  const resolve=(file,spec)=>{
+  const retired=historicalRetiredPmSdkTarget(file,spec);
+  if(retired!==undefined)return retired;
   const resolved=ts.resolveModuleName(spec,path.resolve(file),{moduleResolution:ts.ModuleResolutionKind.Bundler},adapterHistorySystem(ts.sys)).resolvedModule;
   expect(resolved,file+' -> '+spec).toBeDefined();
   let target=path.relative(process.cwd(),resolved.resolvedFileName).replaceAll('\\','/');

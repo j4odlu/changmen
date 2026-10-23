@@ -1,0 +1,325 @@
+{
+  "source": "builder-relayer-client@0.0.10; captured before retirement; synthetic keys and offline RPC",
+  "cases": [
+    {
+      "key": 1,
+      "state": "zero",
+      "address": "0x73310C2E333fB7fb177Dcb43e164958a9D443d6f"
+    },
+    {
+      "key": 1,
+      "state": "beacon-new",
+      "address": "0x81888b2D59F38FA9D22CB359E82Ca759139dDd49"
+    },
+    {
+      "key": 1,
+      "state": "beacon-uups",
+      "address": "0x73310C2E333fB7fb177Dcb43e164958a9D443d6f"
+    },
+    {
+      "key": 1,
+      "state": "beacon-zero-byte",
+      "address": "0x73310C2E333fB7fb177Dcb43e164958a9D443d6f"
+    },
+    {
+      "key": 1,
+      "state": "beacon-null-code",
+      "address": "0x73310C2E333fB7fb177Dcb43e164958a9D443d6f"
+    },
+    {
+      "key": 1,
+      "state": "empty",
+      "address": "0x73310C2E333fB7fb177Dcb43e164958a9D443d6f"
+    },
+    {
+      "key": 1,
+      "state": "short",
+      "address": "0x73310C2E333fB7fb177Dcb43e164958a9D443d6f"
+    },
+    {
+      "key": 1,
+      "state": "trailing-address",
+      "address": "0x81888b2D59F38FA9D22CB359E82Ca759139dDd49"
+    },
+    {
+      "key": 2,
+      "state": "zero",
+      "address": "0x6CeaCd4E15953a3648cEc7B68b07a36Aaf0C67f6"
+    },
+    {
+      "key": 2,
+      "state": "beacon-new",
+      "address": "0x2C7c89222d098e0C61595BdD6909721ad54cCa8B"
+    },
+    {
+      "key": 2,
+      "state": "beacon-uups",
+      "address": "0x6CeaCd4E15953a3648cEc7B68b07a36Aaf0C67f6"
+    },
+    {
+      "key": 2,
+      "state": "beacon-zero-byte",
+      "address": "0x6CeaCd4E15953a3648cEc7B68b07a36Aaf0C67f6"
+    },
+    {
+      "key": 2,
+      "state": "beacon-null-code",
+      "address": "0x6CeaCd4E15953a3648cEc7B68b07a36Aaf0C67f6"
+    },
+    {
+      "key": 2,
+      "state": "empty",
+      "address": "0x6CeaCd4E15953a3648cEc7B68b07a36Aaf0C67f6"
+    },
+    {
+      "key": 2,
+      "state": "short",
+      "address": "0x6CeaCd4E15953a3648cEc7B68b07a36Aaf0C67f6"
+    },
+    {
+      "key": 2,
+      "state": "trailing-address",
+      "address": "0x2C7c89222d098e0C61595BdD6909721ad54cCa8B"
+    },
+    {
+      "key": 3,
+      "state": "zero",
+      "address": "0x29b58E89EB61dFA0497F562aDA227c808CcBD61c"
+    },
+    {
+      "key": 3,
+      "state": "beacon-new",
+      "address": "0xe400C8eFcDF03c6684c9c26C0Ea281d98E229881"
+    },
+    {
+      "key": 3,
+      "state": "beacon-uups",
+      "address": "0x29b58E89EB61dFA0497F562aDA227c808CcBD61c"
+    },
+    {
+      "key": 3,
+      "state": "beacon-zero-byte",
+      "address": "0x29b58E89EB61dFA0497F562aDA227c808CcBD61c"
+    },
+    {
+      "key": 3,
+      "state": "beacon-null-code",
+      "address": "0x29b58E89EB61dFA0497F562aDA227c808CcBD61c"
+    },
+    {
+      "key": 3,
+      "state": "empty",
+      "address": "0x29b58E89EB61dFA0497F562aDA227c808CcBD61c"
+    },
+    {
+      "key": 3,
+      "state": "short",
+      "address": "0x29b58E89EB61dFA0497F562aDA227c808CcBD61c"
+    },
+    {
+      "key": 3,
+      "state": "trailing-address",
+      "address": "0xe400C8eFcDF03c6684c9c26C0Ea281d98E229881"
+    },
+    {
+      "key": 7,
+      "state": "zero",
+      "address": "0x9a4736ed4254A68ac0b3212c681cDD9F1637BFf0"
+    },
+    {
+      "key": 7,
+      "state": "beacon-new",
+      "address": "0x0f0eA0B3c6A9774f457Eaf9F03da96D12D50F822"
+    },
+    {
+      "key": 7,
+      "state": "beacon-uups",
+      "address": "0x9a4736ed4254A68ac0b3212c681cDD9F1637BFf0"
+    },
+    {
+      "key": 7,
+      "state": "beacon-zero-byte",
+      "address": "0x9a4736ed4254A68ac0b3212c681cDD9F1637BFf0"
+    },
+    {
+      "key": 7,
+      "state": "beacon-null-code",
+      "address": "0x9a4736ed4254A68ac0b3212c681cDD9F1637BFf0"
+    },
+    {
+      "key": 7,
+      "state": "empty",
+      "address": "0x9a4736ed4254A68ac0b3212c681cDD9F1637BFf0"
+    },
+    {
+      "key": 7,
+      "state": "short",
+      "address": "0x9a4736ed4254A68ac0b3212c681cDD9F1637BFf0"
+    },
+    {
+      "key": 7,
+      "state": "trailing-address",
+      "address": "0x0f0eA0B3c6A9774f457Eaf9F03da96D12D50F822"
+    },
+    {
+      "key": 42,
+      "state": "zero",
+      "address": "0xa7bA79e258c717Fb4270F32719B787f0F563da99"
+    },
+    {
+      "key": 42,
+      "state": "beacon-new",
+      "address": "0x7388904005e9b95Cff35172E4c0F18f25A670C6c"
+    },
+    {
+      "key": 42,
+      "state": "beacon-uups",
+      "address": "0xa7bA79e258c717Fb4270F32719B787f0F563da99"
+    },
+    {
+      "key": 42,
+      "state": "beacon-zero-byte",
+      "address": "0xa7bA79e258c717Fb4270F32719B787f0F563da99"
+    },
+    {
+      "key": 42,
+      "state": "beacon-null-code",
+      "address": "0xa7bA79e258c717Fb4270F32719B787f0F563da99"
+    },
+    {
+      "key": 42,
+      "state": "empty",
+      "address": "0xa7bA79e258c717Fb4270F32719B787f0F563da99"
+    },
+    {
+      "key": 42,
+      "state": "short",
+      "address": "0xa7bA79e258c717Fb4270F32719B787f0F563da99"
+    },
+    {
+      "key": 42,
+      "state": "trailing-address",
+      "address": "0x7388904005e9b95Cff35172E4c0F18f25A670C6c"
+    },
+    {
+      "key": 255,
+      "state": "zero",
+      "address": "0x4501113738eEd2d51C0D409D024aB7A7D63d32BB"
+    },
+    {
+      "key": 255,
+      "state": "beacon-new",
+      "address": "0xB40AB932dB3A21aDc3a9614CEBe9E893Af6381f8"
+    },
+    {
+      "key": 255,
+      "state": "beacon-uups",
+      "address": "0x4501113738eEd2d51C0D409D024aB7A7D63d32BB"
+    },
+    {
+      "key": 255,
+      "state": "beacon-zero-byte",
+      "address": "0x4501113738eEd2d51C0D409D024aB7A7D63d32BB"
+    },
+    {
+      "key": 255,
+      "state": "beacon-null-code",
+      "address": "0x4501113738eEd2d51C0D409D024aB7A7D63d32BB"
+    },
+    {
+      "key": 255,
+      "state": "empty",
+      "address": "0x4501113738eEd2d51C0D409D024aB7A7D63d32BB"
+    },
+    {
+      "key": 255,
+      "state": "short",
+      "address": "0x4501113738eEd2d51C0D409D024aB7A7D63d32BB"
+    },
+    {
+      "key": 255,
+      "state": "trailing-address",
+      "address": "0xB40AB932dB3A21aDc3a9614CEBe9E893Af6381f8"
+    },
+    {
+      "key": 65535,
+      "state": "zero",
+      "address": "0xAd387F69734Ca5E566A014402159B565316b11d0"
+    },
+    {
+      "key": 65535,
+      "state": "beacon-new",
+      "address": "0x9e2176bbD06F1d5e0CDAd5D316d04Aa696A09a08"
+    },
+    {
+      "key": 65535,
+      "state": "beacon-uups",
+      "address": "0xAd387F69734Ca5E566A014402159B565316b11d0"
+    },
+    {
+      "key": 65535,
+      "state": "beacon-zero-byte",
+      "address": "0xAd387F69734Ca5E566A014402159B565316b11d0"
+    },
+    {
+      "key": 65535,
+      "state": "beacon-null-code",
+      "address": "0xAd387F69734Ca5E566A014402159B565316b11d0"
+    },
+    {
+      "key": 65535,
+      "state": "empty",
+      "address": "0xAd387F69734Ca5E566A014402159B565316b11d0"
+    },
+    {
+      "key": 65535,
+      "state": "short",
+      "address": "0xAd387F69734Ca5E566A014402159B565316b11d0"
+    },
+    {
+      "key": 65535,
+      "state": "trailing-address",
+      "address": "0x9e2176bbD06F1d5e0CDAd5D316d04Aa696A09a08"
+    },
+    {
+      "key": 123456789,
+      "state": "zero",
+      "address": "0xf4EdB7B8305D4a5E62C23Ff271f5e889FeaEAe9c"
+    },
+    {
+      "key": 123456789,
+      "state": "beacon-new",
+      "address": "0x3D7Be3Ef95cFD5EE1dc5dEEb610aa520c723B0b5"
+    },
+    {
+      "key": 123456789,
+      "state": "beacon-uups",
+      "address": "0xf4EdB7B8305D4a5E62C23Ff271f5e889FeaEAe9c"
+    },
+    {
+      "key": 123456789,
+      "state": "beacon-zero-byte",
+      "address": "0xf4EdB7B8305D4a5E62C23Ff271f5e889FeaEAe9c"
+    },
+    {
+      "key": 123456789,
+      "state": "beacon-null-code",
+      "address": "0xf4EdB7B8305D4a5E62C23Ff271f5e889FeaEAe9c"
+    },
+    {
+      "key": 123456789,
+      "state": "empty",
+      "address": "0xf4EdB7B8305D4a5E62C23Ff271f5e889FeaEAe9c"
+    },
+    {
+      "key": 123456789,
+      "state": "short",
+      "address": "0xf4EdB7B8305D4a5E62C23Ff271f5e889FeaEAe9c"
+    },
+    {
+      "key": 123456789,
+      "state": "trailing-address",
+      "address": "0x3D7Be3Ef95cFD5EE1dc5dEEb610aa520c723B0b5"
+    }
+  ]
+}

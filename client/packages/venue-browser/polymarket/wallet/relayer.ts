@@ -1,26 +1,22 @@
-import { RelayerTxType, type Transaction } from "@polymarket/builder-relayer-client";
 import { encodeFunctionData, maxUint256, type Hex } from "viem";
 import {
-  buildDepositWalletApprovalCalls,
-  createPolymarketRelayClient,
-  normalizePolymarketPrivateKey,
   POLYMARKET_RELAYER_URL_DEFAULT,
   POLYGON_CHAIN_ID,
 } from "./depositWallet";
 import { POLYGON_POLYMARKET, polymarketTradeSpenders } from "./contracts";
-import { resolvePmWalletPrepSdk } from "./pmWalletPrepSdk";
 import { preparePolymarketWalletUnified } from "./walletPrepUnified";
 
 export {
   buildDepositWalletApprovalCalls,
-  createPolymarketRelayClient,
-  derivePolymarketDepositWalletAddress,
   normalizePolymarketPrivateKey,
+  derivePolymarketDepositWalletAddress,
   resolvePolymarketDepositWalletFromPrivateKey,
   resolvePolymarketSignerAddress,
 } from "./depositWallet";
 
 export { POLYGON_POLYMARKET, polymarketTradeSpenders } from "./contracts";
+
+interface Transaction { to: string; data: string; value: string }
 
 type SignatureType = string | number | undefined;
 
@@ -76,11 +72,6 @@ const ERC1155_SET_APPROVAL_FOR_ALL_ABI = [
     outputs: [],
   },
 ] as const;
-
-function resolveLegacyRelayerTxType(signatureType: SignatureType): RelayerTxType {
-  const numeric = Number(signatureType ?? 2);
-  return numeric === 1 ? RelayerTxType.PROXY : RelayerTxType.SAFE;
-}
 
 function createApproveTransaction(tokenAddress: string, spenderAddress: string): Transaction {
   return {
@@ -156,93 +147,6 @@ export async function preparePolymarketWallet(
   }
 }
 
-async function prepareDepositPolymarketWallet(
-  input: PolymarketRelayerPrepareInput,
-): Promise<PolymarketRelayerPrepareResult> {
-  const privateKey = normalizePolymarketPrivateKey(input.privateKey);
-  const authToken = input.authToken?.trim();
-  if (!authToken && !input.getAuthHeaders)
-    return { ok: false, message: "未登录，无法调用 Relayer 远程签名" };
-
-  const relayerUrl = (input.relayerUrl?.trim() || POLYMARKET_RELAYER_URL_DEFAULT).replace(/\/+$/, "");
-  const client = await createPolymarketRelayClient({
-    privateKey,
-    signUrl: input.signUrl,
-    authToken,
-    getAuthToken: input.getAuthToken,
-    getAuthHeaders: input.getAuthHeaders,
-    relayerUrl,
-  });
-
-  const depositWallet = await client.deriveDepositWalletAddress();
-  const deployed = await client.getDeployed(depositWallet, "WALLET");
-  if (!deployed) {
-    const deployResponse = await client.deployDepositWallet();
-    const deployResult = await deployResponse.wait();
-    if (!deployResult?.transactionHash) {
-      return {
-        ok: false,
-        message: "Deposit Wallet 部署未完成（请检查 Relayer / Builder 配置）",
-        funder: depositWallet,
-      };
-    }
-  }
-
-  const calls = buildDepositWalletApprovalCalls();
-  const deadline = Math.floor(Date.now() / 1000 + 600).toString();
-  const batchResponse = await client.executeDepositWalletBatch(calls, depositWallet, deadline);
-  const batchResult = await batchResponse.wait();
-  if (!batchResult?.transactionHash) {
-    return {
-      ok: false,
-      message: "Deposit Wallet 链上授权未完成",
-      funder: depositWallet,
-    };
-  }
-  return {
-    ok: true,
-    message: "Polymarket Deposit Wallet 已部署并完成授权（Relayer 免 gas）",
-    transactionHash: batchResult.transactionHash,
-    funder: depositWallet,
-  };
-}
-
-async function prepareLegacyPolymarketWallet(
-  input: PolymarketRelayerPrepareInput,
-): Promise<PolymarketRelayerPrepareResult> {
-  const privateKey = normalizePolymarketPrivateKey(input.privateKey);
-  const authToken = input.authToken?.trim();
-  if (!authToken && !input.getAuthHeaders)
-    return { ok: false, message: "未登录，无法调用 Relayer 远程签名" };
-
-  const relayerUrl = (input.relayerUrl?.trim() || POLYMARKET_RELAYER_URL_DEFAULT).replace(/\/+$/, "");
-  const relayTxType = resolveLegacyRelayerTxType(input.signatureType);
-  const client = await createPolymarketRelayClient({
-    privateKey,
-    signUrl: input.signUrl,
-    authToken,
-    getAuthToken: input.getAuthToken,
-    getAuthHeaders: input.getAuthHeaders,
-    relayerUrl,
-    relayTxType,
-  });
-
-  const transactions = buildStandardApprovalTransactions();
-  const response = await client.execute(transactions, "changmen polymarket wallet prep buy+sell");
-  const result = await response.wait();
-  if (!result?.transactionHash) {
-    return {
-      ok: false,
-      message: "Relayer 链上授权未完成（可能 Relayer 未配置或交易失败）",
-    };
-  }
-  return {
-    ok: true,
-    message: "Polymarket 链上授权已完成（Relayer 免 gas）",
-    transactionHash: result.transactionHash,
-  };
-}
-
 async function preparePolymarketWalletInner(
   input: PolymarketRelayerPrepareInput,
 ): Promise<PolymarketRelayerPrepareResult> {
@@ -250,14 +154,7 @@ async function preparePolymarketWalletInner(
   if (!signUrl.startsWith("http://") && !signUrl.startsWith("https://"))
     return { ok: false, message: "Relayer 远程签名 URL 必须是绝对地址" };
 
-  // [changmen 扩展] Deposit Wallet 默认使用官方 @polymarket/client；旧路径只作显式回滚。
-  if (resolvePmWalletPrepSdk() === "unified")
-    return preparePolymarketWalletUnified(input);
-
-  const numeric = Number(input.signatureType ?? 3);
-  if (numeric === 3)
-    return prepareDepositPolymarketWallet(input);
-  return prepareLegacyPolymarketWallet(input);
+  return preparePolymarketWalletUnified(input);
 }
 
 export async function fetchPolymarketRelayerStatus(

@@ -1,20 +1,15 @@
-import { BuilderConfig } from "@polymarket/builder-signing-sdk";
-import { SessionBuilderConfig } from "./sessionBuilderConfig";
-import {
-  RelayClient,
-  RelayerTxType,
-  type DepositWalletCall,
-} from "@polymarket/builder-relayer-client";
 import { encodeFunctionData, maxUint256, type Hex } from "viem";
 import { POLYGON_POLYMARKET, polymarketTradeSpenders } from "./contracts";
-import {
-  createPolygonHttpTransport,
-  patchRelayClientPublicClient,
-  polygonChainForRpc,
-} from "./polygonRpc";
+import { deriveDepositWalletAddress } from "./depositWalletAddress";
 
 export const POLYMARKET_RELAYER_URL_DEFAULT = "https://relayer-v2.polymarket.com";
 export const POLYGON_CHAIN_ID = 137;
+
+export interface DepositWalletCall {
+  target: string;
+  value: string;
+  data: string;
+}
 
 const ERC20_APPROVE_ABI = [
   {
@@ -53,79 +48,13 @@ export async function resolvePolymarketSignerAddress(privateKey: string): Promis
   return accounts.privateKeyToAccount(normalizePolymarketPrivateKey(privateKey)).address;
 }
 
-function joinSignUrl(signUrl: string): string {
-  const url = signUrl.trim();
-  if (!url.startsWith("http://") && !url.startsWith("https://"))
-    throw new Error("Relayer 远程签名 URL 必须是绝对地址");
-  return url;
-}
-
-export interface PolymarketRelayClientInput {
-  privateKey: string;
-  signUrl?: string;
-  authToken?: string;
-  getAuthToken?: () => Promise<string>;
-  getAuthHeaders?: () => Promise<Record<string, string>>;
-  relayerUrl?: string;
-  relayTxType?: RelayerTxType;
-}
-
-/**
- * [官方] docs / README：`transport: http(process.env.RPC_URL)`，勿依赖 viem 默认 polygon.drpc.org。
- * RelayClient 第 6 参 `options.chain` 供其内部 publicClient 读 rpcUrls。
- */
-export async function createPolymarketRelayClient(
-  input: PolymarketRelayClientInput,
-): Promise<RelayClient> {
-  const privateKey = normalizePolymarketPrivateKey(input.privateKey);
-  const relayerUrl = (input.relayerUrl?.trim() || POLYMARKET_RELAYER_URL_DEFAULT).replace(/\/+$/, "");
-  const [
-    accounts,
-    viem,
-  ] = await Promise.all([
-    import("viem/accounts"),
-    import("viem"),
-  ]);
-  const account = accounts.privateKeyToAccount(privateKey);
-  const chain = polygonChainForRpc();
-  const wallet = viem.createWalletClient({
-    account,
-    chain,
-    transport: createPolygonHttpTransport(),
-  });
-  const signUrl = input.signUrl?.trim();
-  const authToken = input.authToken?.trim();
-  const builderConfig = signUrl && (authToken || input.getAuthHeaders)
-    ? input.getAuthToken || input.getAuthHeaders ? new SessionBuilderConfig(joinSignUrl(signUrl), input.getAuthToken, input.getAuthHeaders) : new BuilderConfig({
-        remoteBuilderConfig: {
-          url: joinSignUrl(signUrl),
-          token: authToken,
-        },
-      })
-    : undefined;
-  const client = new RelayClient(
-    relayerUrl,
-    POLYGON_CHAIN_ID,
-    wallet,
-    builderConfig,
-    input.relayTxType,
-    { chain },
-  );
-  // SDK 内 publicClient 无 fallback；替换后 deriveDepositWalletAddress eth_call 才走多节点
-  patchRelayClientPublicClient(client, chain);
-  return client;
-}
-
-/** [官方] Prefer `client.deriveDepositWalletAddress()`（含 beacon / UUPS 判断） */
+/** [changmen 扩展] 与官方 SDK 相同的 beacon / UUPS 判断，旧 SDK 不进入地址派生路径。 */
 export async function derivePolymarketDepositWalletAddress(input: {
   privateKey: string;
   relayerUrl?: string;
 }): Promise<string> {
-  const client = await createPolymarketRelayClient({
-    privateKey: input.privateKey,
-    relayerUrl: input.relayerUrl,
-  });
-  return client.deriveDepositWalletAddress();
+  const owner = await resolvePolymarketSignerAddress(input.privateKey);
+  return deriveDepositWalletAddress(owner as Hex);
 }
 
 export async function resolvePolymarketDepositWalletFromPrivateKey(input: {

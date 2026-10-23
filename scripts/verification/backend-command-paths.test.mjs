@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { expect, it } from "vitest";
 import { inspectBackendCommandPaths, restoreBackendCommandPaths } from "./backend-command-paths.mjs";
 import { WORKSPACE_LAYOUT_RELOCATION, restoreWorkspaceLayoutSource, historicalWorkspaceFs } from "./workspace-layout-history.mjs";
+import { restorePmSdkRetirementSource } from "./pm-sdk-retirement.mjs";
 
 const manifest = "server/backend/package.json";
 const source = fs.readFileSync(manifest, "utf8");
@@ -42,8 +43,9 @@ it("checks quoted entries and chained commands without treating their arguments 
 
 it("restores the complete original package proof, including CRLF checkouts", () => {
   for (const current of [source, source.replace(/\r?\n/g, "\r\n")]) {
-    expect(restoreBackendCommandPaths(manifest, current).replaceAll("\r\n", "\n"))
-      .toBe(source.replaceAll("\r\n", "\n").replaceAll("node ../../rds/maintenance/", "node ../db/maintenance/"));
+    const previous = restorePmSdkRetirementSource(manifest, current);
+    expect(restoreBackendCommandPaths(manifest, previous).replaceAll("\r\n", "\n"))
+      .toBe(previous.replaceAll("\r\n", "\n").replaceAll("node ../../rds/maintenance/", "node ../db/maintenance/"));
     expect(restoreWorkspaceLayoutSource(manifest, current)).toBe(original.before);
   }
   expect(historicalWorkspaceFs.readFileSync(manifest, "utf8")).toBe(original.before);

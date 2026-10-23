@@ -5,11 +5,10 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import { it } from "vitest";
 const require = createRequire(import.meta.url);
-const relayRequire = createRequire(require.resolve("@polymarket/builder-relayer-client"));
-const sdkAxios = relayRequire("axios");
-const rootAxios = require("axios");
+const clobRequire = createRequire(require.resolve("@polymarket/clob-client-v2"));
+const sdkAxios = clobRequire("axios");
 
-for (const [name, axios] of [["legacy relay Axios 0.34", sdkAxios], ["application Axios 1.20", rootAxios]])
+for (const [name, axios] of [["Polymarket CLOB Axios 1.20", sdkAxios]])
   it(`${name}: preserves signed JSON, auth headers, query and HTTP error evidence`, async () => {
     const requests = [];
     const server = createServer(async (req, res) => {

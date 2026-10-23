@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { afterEach, it } from "vitest";
-import { BuilderSigner } from "@polymarket/builder-signing-sdk";
+import fixtures from "./builder_hmac.fixtures.json" with { type: "json" };
+import { vi } from "vitest";
+import { createPolymarketBuilderHeaders } from "./relayer_sign_unified.js";
 import {
   getPolymarketRelayerPublicStatus,
   resolvePolymarketRelayerSignSdk,
@@ -23,6 +25,7 @@ function clearRelayerEnv() {
 
 afterEach(() => {
   clearRelayerEnv();
+  vi.useRealTimers();
 });
 
 it("signPolymarketRelayerRequest fails when creds missing", async () => {
@@ -59,29 +62,26 @@ it("signPolymarketRelayerRequest returns POLY_BUILDER_* when no relayer key", as
   assert.match(r.headers.POLY_BUILDER_SIGNATURE, /^[A-Za-z0-9_=-]+$/);
 });
 
-it("unified sign sdk matches legacy BuilderSigner HMAC", async () => {
-  process.env.POLY_BUILDER_API_KEY = "test-key";
-  process.env.POLY_BUILDER_SECRET = "dGVzdC1zZWNyZXQ=";
-  process.env.POLY_BUILDER_PASSPHRASE = "test-pass";
-  process.env.POLYMARKET_RELAYER_SIGN_SDK = "unified";
+for (const [index, row] of fixtures.cases.entries()) it(`ESM signing preserves captured SDK headers #${index}`, async () => {
+  clearRelayerEnv();
+  process.env.POLY_BUILDER_API_KEY = fixtures.creds.key;
+  process.env.POLY_BUILDER_SECRET = fixtures.creds.secret;
+  process.env.POLY_BUILDER_PASSPHRASE = fixtures.creds.passphrase;
+  assert.deepEqual(await createPolymarketBuilderHeaders(fixtures.creds, row.method, row.path, row.body, row.timestamp), row.headers);
+  assert.deepEqual(await signPolymarketRelayerRequest(row), { ok: true, headers: row.headers });
+});
+
+it("retired selectors cannot restore the old SDK; invalid timestamps retain the current-time fallback", async () => {
+  clearRelayerEnv();
+  process.env.POLY_BUILDER_API_KEY = fixtures.creds.key;
+  process.env.POLY_BUILDER_SECRET = fixtures.creds.secret;
+  process.env.POLY_BUILDER_PASSPHRASE = fixtures.creds.passphrase;
+  process.env.POLYMARKET_RELAYER_SIGN_SDK = "legacy";
+  vi.useFakeTimers(); vi.setSystemTime(new Date(1700000000000));
   assert.equal(resolvePolymarketRelayerSignSdk(), "unified");
-
-  const method = "POST";
-  const path = "/submit";
-  const body = "{\"foo\":1}";
-  const timestamp = 1_700_000_000;
-  const r = await signPolymarketRelayerRequest({ method, path, body, timestamp });
-  assert.equal(r.ok, true);
-
-  const legacy = new BuilderSigner({
-    key: "test-key",
-    secret: "dGVzdC1zZWNyZXQ=",
-    passphrase: "test-pass",
-  }).createBuilderHeaderPayload(method, path, body, timestamp);
-
-  assert.equal(r.headers.POLY_BUILDER_SIGNATURE, legacy.POLY_BUILDER_SIGNATURE);
-  assert.equal(r.headers.POLY_BUILDER_API_KEY, "test-key");
-  assert.equal(r.headers.POLY_BUILDER_TIMESTAMP, "1700000000");
+  const expected = await signPolymarketRelayerRequest({ method: "POST", path: "/submit" });
+  for (const timestamp of ["invalid", Infinity, NaN, null])
+    assert.deepEqual(await signPolymarketRelayerRequest({ method: "POST", path: "/submit", timestamp }), expected);
 });
 
 it("getPolymarketRelayerPublicStatus reflects env", () => {
@@ -92,7 +92,7 @@ it("getPolymarketRelayerPublicStatus reflects env", () => {
   const s = getPolymarketRelayerPublicStatus();
   assert.equal(s.configured, true);
   assert.equal(s.authMode, "relayer_api_key");
-  assert.equal(s.signSdk, "legacy");
+  assert.equal(s.signSdk, "unified");
 });
 
 it("prefers builder_hmac when both relayer key and builder creds exist", () => {

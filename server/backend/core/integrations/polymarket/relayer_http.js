@@ -8,7 +8,7 @@ import { getPolymarketRelayerUrl } from "./relayer_config.js";
 /**
  * POST /api/polymarket/relayer/sign
  * Body JSON: { method, path, body?, timestamp? }
- * 供 @polymarket/builder-relayer-client 的 remoteBuilderConfig 调用。
+ * 供官方 ESM SDK 的 remoteBuilderSigning 调用。
  */
 export async function handlePolymarketRelayerSign(req, res, readJsonBody) {
   if (req.method !== "POST") {

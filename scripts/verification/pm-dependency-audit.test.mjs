@@ -110,7 +110,7 @@ it("records the nearest installed copy and exact owning workspace rather than a 
 });
 it("PM imports have declarations and a Vue host peer while inherited uncertainty remains explicit", () => {
   const report = inspectPmDependencies(fileURLToPath(new URL("../../", import.meta.url)));
-  expect(report.violations).toEqual([]); expect(report.dynamicSites).toHaveLength(54);
+  expect(report.violations).toEqual([]); expect(report.dynamicSites).toHaveLength(52);
   expect(report.unknownSummary).toEqual({ raw: 20, primary: 0, explainedPrimary: 0, unexplainedPrimary: 0, inherited: 20 });
   expect(report.sharedLoaderEvidence.byClass).toEqual({ "fixed-target": 12, "environment-dependent": 3, "parameter-unknown": 5 });
   expect(report.loaderBindings.calls).toHaveLength(9);

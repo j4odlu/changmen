@@ -1,3 +1,4 @@
+import {pmSdkRetirementFiles,pmSdkRetiredFiles,readRetiredPmSdkSource} from "./pm-sdk-retirement.mjs";
 // Explicit pre-migration source view for historical proofs only. Never installed
 // as a Node loader and never patches the process filesystem or module resolver.
 import native from 'node:fs';
@@ -13,6 +14,7 @@ import {pendingVenueFixFiles} from './pending-venue-fixes.mjs';
 import {OB_FOOTBALL_EXTRACTION,restoreObFootballSource} from './ob-football-extraction.mjs';
 import {restorePendingVenueVerificationSource} from './pending-venue-extraction.mjs';
 import {restoreValidationAuditSource} from './validation-audit-boundary.mjs';
+import {pmWalletAddressOptimizationFiles} from './pm-wallet-address-optimization.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const sha=s=>createHash('sha256').update(s.replaceAll('\r\n','\n')).digest('hex');
 const recordFile=new URL('./workspace-layout-relocation.json',import.meta.url);
@@ -46,8 +48,9 @@ function actual(row){
 export function readPreviousWorkspaceFile(file,options){
  const row=rows.get(key(file));
  if(!row){
-  const source=native.readFileSync(file,options);
-  if(!frontendDependencyFiles.has(key(file))&&key(file)!==ACCOUNT_EDIT_EXTRACTION.file&&!pendingVenueFixFiles.has(key(file))&&key(file)!==OB_FOOTBALL_EXTRACTION.file)return source;
+  const retired=readRetiredPmSdkSource(key(file));
+  const source=retired===undefined?native.readFileSync(file,options):(typeof options==='string'||options?.encoding?retired:Buffer.from(retired));
+  if(!frontendDependencyFiles.has(key(file))&&key(file)!==ACCOUNT_EDIT_EXTRACTION.file&&!pendingVenueFixFiles.has(key(file))&&key(file)!==OB_FOOTBALL_EXTRACTION.file&&!pmWalletAddressOptimizationFiles.has(key(file))&&!pmSdkRetirementFiles.has(key(file)))return source;
   const restored=restoreFrontendDependencySource(key(file),restoreAccountEditSource(key(file),restoreObFootballSource(key(file),source.toString())));
   return Buffer.isBuffer(source)?Buffer.from(restored):restored;
  }
@@ -57,7 +60,7 @@ export function readPreviousWorkspaceFile(file,options){
  return typeof options==='string'||options?.encoding?row.before:Buffer.from(row.before);
 }
 function mapped(file){const row=rows.get(key(file));return row?.canonical?path.join(root,row.canonical):file;}
-function isVirtual(file){const k=key(file);return rows.has(k)||directories.has(k);}
+function isVirtual(file){const k=key(file);return rows.has(k)||directories.has(k)||pmSdkRetiredFiles.has(k);}
 function historicalRealpath(file,options){
  if(isVirtual(file)){
   const row=rows.get(key(file));if(row?.canonical)actual(row);

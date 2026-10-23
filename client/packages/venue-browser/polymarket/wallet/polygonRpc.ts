@@ -1,5 +1,5 @@
 import type { Chain, Transport } from "viem";
-import { createPublicClient, fallback, http } from "viem";
+import { fallback, http } from "viem";
 import { polygon } from "viem/chains";
 
 /**
@@ -59,16 +59,4 @@ export function polygonChainForRpc(): Chain {
       default: { http: urls },
     },
   };
-}
-
-/**
- * `@polymarket/builder-relayer-client` RelayClient 构造时固定
- * `transport: http()`（只吃 chain.rpcUrls.default.http[0]）。
- * 构造后替换 publicClient，使 deriveDepositWalletAddress 的 eth_call 走 fallback。
- */
-export function patchRelayClientPublicClient(client: object, chain: Chain = polygonChainForRpc()): void {
-  Reflect.set(client, "publicClient", createPublicClient({
-    chain,
-    transport: createPolygonHttpTransport(),
-  }));
 }

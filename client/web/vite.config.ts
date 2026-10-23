@@ -151,7 +151,7 @@ export default defineConfig(({ command, mode }) => {
   return {
   base: "/",
   plugins: [
-    // 须靠前：alias/optimizeDeps 影响 builder-relayer-client 预构建
+    // 须靠前：alias/optimizeDeps 配置浏览器 Node 全局兼容
     browserNodeBuiltins(),
     backendPublicAssets(),
     runtimeVersionPlugin(WORKSPACE_ROOT, env.VITE_API_BASE || process.env.VITE_API_BASE || ""),

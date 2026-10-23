@@ -23,7 +23,7 @@ it('retains every pre-workspace source and rejects changed metadata, host code a
 it('registers a browser-only workspace with declared direct dependencies and exports resolving to the same physical files',()=>{
  const packages=readInstallWorkspaces(root),pkg=packages.get('@changmen/venue-browser');
  expect(pkg.dir).toBe(sourceRoot);expect(pkg.pkg.changmen.runtime).toBe('browser');
- expect(Object.keys(pkg.pkg.dependencies).sort()).toEqual(['@changmen/api-contract','@changmen/client-core','@changmen/pm-market-data-browser','@changmen/shared','@noble/hashes','@polymarket/builder-relayer-client','@polymarket/builder-signing-sdk','@polymarket/client','@polymarket/clob-client-v2','@predictdotfun/sdk','centrifuge','ethers','mqtt','socket.io-client','socketcluster-client','viem']);
+ expect(Object.keys(pkg.pkg.dependencies).sort()).toEqual(['@changmen/api-contract','@changmen/client-core','@changmen/pm-market-data-browser','@changmen/shared','@noble/hashes','@polymarket/client','@polymarket/clob-client-v2','@predictdotfun/sdk','centrifuge','ethers','mqtt','socket.io-client','socketcluster-client','viem']);
  const require=createRequire(path.join(root,'packages/venue-adapter/package.json'));
  expect(Object.keys(pkg.pkg.exports)).toHaveLength(739);
  for(const [spec,target] of Object.entries(pkg.pkg.exports)){

@@ -216,14 +216,8 @@
     {
       "file": "client/packages/venue-browser/polymarket/wallet/depositWallet.ts",
       "kind": "dynamic-import",
-      "spec": "viem",
-      "count": 1
-    },
-    {
-      "file": "client/packages/venue-browser/polymarket/wallet/depositWallet.ts",
-      "kind": "dynamic-import",
       "spec": "viem/accounts",
-      "count": 2
+      "count": 1
     },
     {
       "file": "client/packages/venue-browser/polymarket/wallet/walletPrepUnified.ts",
@@ -278,7 +272,6 @@
     "client/web/vite.config.ts",
     "client/web/tsconfig.app.json",
     "client/web/vite/plugins/browserNodeBuiltins.ts",
-    "client/web/src/polyfills/builderSigningHmac.ts",
     "server/venues/sync-backend-bundle.mjs",
     "package.json",
     "package-lock.json",

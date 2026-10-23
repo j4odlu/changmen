@@ -11,6 +11,8 @@ it.each([
   ["adapter/contract/index.ts", "venue-shared"],
   ["polymarket/auth/l2Auth.ts", "venue-polymarket"],
   ["adapter/polymarket/auth/l2Auth.ts", "venue-polymarket"],
+  ["polymarket/wallet/sessionBuilderConfig.ts", "venue-polymarket"],
+  ["adapter/polymarket/wallet/sessionBuilderConfig.ts", "venue-polymarket"],
   ["adapter/predictfun/bet.ts", "venue-predictfun"],
   ["adapter/registry/index.ts", undefined],
   ["adapter/adaptation/index.ts", undefined],

@@ -27,6 +27,7 @@ import { preparePolymarketWalletUnified } from "@changmen/venue-browser/polymark
 import { preparePolymarketWallet } from "@changmen/venue-browser/polymarket/wallet/relayer";
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   setPmWalletPrepSdkForTests(null);
   createSecureClient.mockReset();
   remoteBuilderSigning.mockClear();
@@ -43,12 +44,14 @@ describe("resolvePmWalletPrepSdk", () => {
     setPmWalletPrepSdkForTests("unified");
     expect(resolvePmWalletPrepSdk()).toBe("unified");
   });
-  test("retains an explicit legacy rollback", () => {
+  test("ignores retired legacy settings", () => {
     setPmWalletPrepSdkForTests("legacy");
-    expect(resolvePmWalletPrepSdk()).toBe("legacy");
+    expect(resolvePmWalletPrepSdk()).toBe("unified");
   });
   test("the default entry prepares Deposit Wallet through the official unified SDK", async () => {
     createSecureClient.mockResolvedValue({ account: { wallet: "deposit-wallet" }, setupTradingApprovals });
+    setPmWalletPrepSdkForTests("legacy");
+    vi.stubGlobal("localStorage", { getItem: () => "legacy" });
     const result = await preparePolymarketWallet({
       privateKey: `0x${"11".repeat(32)}`,
       signUrl: "https://api.changmen.fun/api/polymarket/relayer/sign",
@@ -130,6 +133,6 @@ describe("preparePolymarketWalletUnified", () => {
     });
     expect(result.ok).toBe(false);
     expect(result.message).toMatch(/可达 CLOB/);
-    expect(result.message).toMatch(/legacy/);
+    expect(result.message).not.toMatch(/legacy/);
   });
 });

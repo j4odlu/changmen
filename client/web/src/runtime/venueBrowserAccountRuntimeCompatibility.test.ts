@@ -1,10 +1,10 @@
 import { expect, it } from "vitest";
-it("shares wallet SDK selection across old and canonical entries", async () => {
+it("keeps old and canonical entries on unified after retiring legacy selection", async () => {
  const old = await import("@changmen/venue-browser/adapter/polymarket/wallet/pmWalletPrepSdk");
  const canonical = await import("@changmen/venue-browser/polymarket/wallet/pmWalletPrepSdk");
  try {
   old.setPmWalletPrepSdkForTests("legacy");
-  expect(canonical.resolvePmWalletPrepSdk()).toBe("legacy");
+  expect(canonical.resolvePmWalletPrepSdk()).toBe("unified");
   canonical.setPmWalletPrepSdkForTests("unified");
   expect(old.resolvePmWalletPrepSdk()).toBe("unified");
  } finally {

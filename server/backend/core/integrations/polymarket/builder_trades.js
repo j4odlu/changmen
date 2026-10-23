@@ -1,4 +1,4 @@
-import { BuilderSigner } from "@polymarket/builder-signing-sdk";
+import { createPolymarketBuilderHeaders } from "./relayer_sign_unified.js";
 import { loadPolymarketBuilderCreds } from "./relayer_config.js";
 import { resolvePolymarketBuilderCode } from "./builder_code.js";
 
@@ -6,11 +6,11 @@ const CLOB_HOST = String(process.env.POLYMARKET_CLOB_API || "https://clob.polyma
 const MICRO = 1_000_000;
 const NO_MORE_CURSOR = "LTE=";
 
-function requireBuilderSigner() {
+function requireBuilderCreds() {
   const creds = loadPolymarketBuilderCreds();
   if (!creds)
     throw new Error("未配置 POLY_BUILDER_API_KEY/SECRET/PASSPHRASE，无法查询 Builder 成交");
-  return new BuilderSigner(creds);
+  return creds;
 }
 
 function causeText(err) {
@@ -151,8 +151,7 @@ export async function fetchBuilderTradesPage(opts = {}) {
     params.set("next_cursor", opts.nextCursor);
 
   const reqPath = `/builder/trades?${params.toString()}`;
-  const signer = requireBuilderSigner();
-  const headers = signer.createBuilderHeaderPayload("GET", reqPath);
+  const headers = await createPolymarketBuilderHeaders(requireBuilderCreds(), "GET", reqPath);
   const url = `${CLOB_HOST}${reqPath}`;
 
   try {

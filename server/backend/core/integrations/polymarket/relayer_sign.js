@@ -1,22 +1,13 @@
-import { BuilderSigner } from "@polymarket/builder-signing-sdk";
 import {
   getPolymarketRelayerAuthMode,
   isPolymarketRelayerConfigured,
-  loadPolymarketBuilderCreds,
   loadPolymarketRelayerApiKeyAuth,
 } from "./relayer_config.js";
 import { signPolymarketRelayerRequestUnified } from "./relayer_sign_unified.js";
 
-/**
- * Relayer HMAC 实现选型。默认 legacy（builder-signing-sdk）。
- * 备选 unified → relayer_sign_unified.js（@polymarket/client.buildHmacSignature）。
- * 环境变量：POLYMARKET_RELAYER_SIGN_SDK=legacy|unified
- */
+/** 兼容旧状态 API；Relayer HMAC 统一使用官方 ESM SDK。 */
 export function resolvePolymarketRelayerSignSdk() {
-  const raw = String(process.env.POLYMARKET_RELAYER_SIGN_SDK || "").trim().toLowerCase();
-  if (raw === "unified" || raw === "client" || raw === "ts-sdk")
-    return "unified";
-  return "legacy";
+  return "unified";
 }
 
 /**
@@ -35,37 +26,7 @@ export async function signPolymarketRelayerRequest(payload) {
       return { ok: true, headers: { ...relayerHeaders } };
   }
 
-  if (resolvePolymarketRelayerSignSdk() === "unified")
-    return signPolymarketRelayerRequestUnified(payload);
-
-  const creds = loadPolymarketBuilderCreds();
-  if (!creds) {
-    return {
-      ok: false,
-      msg: "Polymarket Relayer 未配置（changmen 推荐 POLY_BUILDER_* 三组；或 RELAYER_API_KEY + 与用户私钥同地址的 ADDRESS）",
-    };
-  }
-
-  const method = String(payload?.method || "").trim().toUpperCase();
-  const path = String(payload?.path || "").trim();
-  if (!method || !path)
-    return { ok: false, msg: "缺少 method 或 path" };
-
-  const body = payload?.body === undefined || payload?.body === null
-    ? undefined
-    : String(payload.body);
-  const timestamp = payload?.timestamp === undefined || payload?.timestamp === null
-    ? undefined
-    : Number(payload.timestamp);
-
-  const signer = new BuilderSigner(creds);
-  const headers = signer.createBuilderHeaderPayload(
-    method,
-    path,
-    body,
-    Number.isFinite(timestamp) ? timestamp : undefined,
-  );
-  return { ok: true, headers };
+  return signPolymarketRelayerRequestUnified(payload);
 }
 
 export function getPolymarketRelayerPublicStatus() {

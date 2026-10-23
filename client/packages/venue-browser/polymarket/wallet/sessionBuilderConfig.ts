@@ -1,12 +1,12 @@
-import { BuilderConfig, type BuilderHeaderPayload } from "@polymarket/builder-signing-sdk";
+type BuilderHeaderPayload = Record<string, string>;
 
 /** Fetch current application credentials for each signing call, never replay a transaction. */
-export class SessionBuilderConfig extends BuilderConfig {
+/** @deprecated 独立远程签名兼容入口；钱包准备使用 remoteBuilderSigning。 */
+export class SessionBuilderConfig {
   constructor(private readonly signUrl: string, private readonly getAuthToken?: () => Promise<string>, private readonly getAuthHeaders?: () => Promise<Record<string, string>>) {
-    super({ remoteBuilderConfig: { url: signUrl } });
   }
 
-  override async generateBuilderHeaders(method: string, path: string, body?: string, timestamp?: number): Promise<BuilderHeaderPayload> {
+  async generateBuilderHeaders(method: string, path: string, body?: string, timestamp?: number): Promise<BuilderHeaderPayload> {
     const token = this.getAuthHeaders ? "" : await this.getAuthToken?.();
     if (!this.getAuthHeaders && !token)
       throw new Error("登录凭证暂时无法恢复");

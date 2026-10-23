@@ -1,11 +1,37 @@
 import assert from "node:assert/strict";
-import { it } from "vitest";
+import { afterEach, it, vi } from "vitest";
+import fixtures from "./builder_hmac.fixtures.json" with { type: "json" };
 import {
   amountToNumber,
   describeBuilderTradesFetchError,
   normalizeBuilderTrade,
   summarizeBuilderTrades,
+  fetchBuilderTradesPage,
 } from "./builder_trades.js";
+
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.useRealTimers(); });
+
+it("signs the exact Builder query, including filters and cursor, with captured SDK headers", async () => {
+  vi.stubEnv("POLY_BUILDER_API_KEY", fixtures.creds.key);
+  vi.stubEnv("POLY_BUILDER_SECRET", fixtures.creds.secret);
+  vi.stubEnv("POLY_BUILDER_PASSPHRASE", fixtures.creds.passphrase);
+  vi.useFakeTimers(); vi.setSystemTime(new Date(1700000000000));
+  const fetch = vi.fn().mockResolvedValue({ ok: true, text: async () => '{"data":[],"next_cursor":"LTE="}' });
+  vi.stubGlobal("fetch", fetch);
+  const page = await fetchBuilderTradesPage({ builderCode: "0x123", afterSec: 42.9, nextCursor: "a+b=" });
+  assert.deepEqual(page, { data: [], next_cursor: "LTE=" });
+  const row = fixtures.cases.find(row => row.method === "GET" && row.timestamp === 1700000000 && row.body === undefined);
+  assert.equal(new URL(fetch.mock.calls[0][0]).pathname + new URL(fetch.mock.calls[0][0]).search, row.path);
+  assert.deepEqual(fetch.mock.calls[0][1].headers, { ...row.headers, Accept: "application/json" });
+  assert.equal(fetch.mock.calls.length, 1);
+});
+
+it("refuses Builder queries before HTTP when credentials are missing", async () => {
+  for (const key of ["POLY_BUILDER_API_KEY", "POLY_BUILDER_SECRET", "POLY_BUILDER_PASSPHRASE"]) vi.stubEnv(key, "");
+  const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
+  await assert.rejects(fetchBuilderTradesPage({ builderCode: "0x123" }), /未配置 POLY_BUILDER/);
+  assert.equal(fetch.mock.calls.length, 0);
+});
 
 it("amountToNumber accepts live decimals and docs micro integers", () => {
   assert.equal(amountToNumber("5.88"), 5.88);

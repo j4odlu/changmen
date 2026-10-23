@@ -309,6 +309,8 @@ matchStore.runMainLoopTick（A8 `P()`，轮间 100ms）
 
 模块通过 `accountEditContext.ts` 接收当前表单的 getter，共享原有响应式对象与 props；`v-model:form` 替换表单后仍读取最新对象。PM 异步序号归各编辑器实例所有，原有重置及关闭监听器在原位置调用取消操作。创建账号、写入本机密钥仓、保存和关闭后刷新的顺序保持原样。行为对照测试直接执行固定 Git 版本中的原函数，覆盖保存失败、场馆身份校验、密钥来源和异步取消；完整模板、监听器和 37 个迁移函数另作源码比较。
 
+[changmen 扩展] changmen 的 PM 账号以 Deposit Wallet（`signatureType=3`）为产品范围。地址派生由 `venue-browser/polymarket/wallet/depositWalletAddress.ts` 使用 viem 原生 ESM 完成：先计算 UUPS 地址、读取工厂 beacon，必要时检查 UUPS 部署状态；零/短返回及已有 UUPS 钱包的选择规则保持原样，RPC 失败继续上抛。该流程只读链，不创建 Relayer/钱包客户端，也不触发部署或授权。钱包准备统一使用官方 ESM `@polymarket/client`，旧 Relayer/Signing SDK 已从依赖树退役，历史 SDK 选型设置不再切换路径。后端 Relayer 与 Builder 成交查询共用官方 HMAC 实现，保留签名原文和 header 格式。账号编辑器的调用条件和保存时序保持原样。
+
 ## 新增平台 Checklist
 
 **权威清单**（browser / plugin / vps-house 三类）：[docs/ADD_PLATFORM_CHECKLIST.md](../../../docs/ADD_PLATFORM_CHECKLIST.md)。

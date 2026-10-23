@@ -1,9 +1,4 @@
-/**
- * 浏览器侧补齐 Node 全局，供 CJS 依赖（bn.js / ethers v5 via builder-relayer-client）使用。
- * 须在任何会拉到 @polymarket/builder-relayer-client 的 import 之前执行。
- *
- * 使用命名空间 import：buffer@5 / process 均为 CJS，default 在部分 Vite 预构建路径下不稳定。
- */
+/** 浏览器侧补齐依赖使用的 Node 全局；buffer / process 仍由 mqtt 等依赖使用。 */
 import * as bufferPkg from "buffer";
 import * as processPkg from "process";
 

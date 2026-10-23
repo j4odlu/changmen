@@ -5,9 +5,9 @@
  * - 省略 wallet → Deposit Wallet（按需部署）
  * - setupTradingApprovals → 买卖所需 authorize
  *
- * 默认钱包准备入口；PM_WALLET_PREP_SDK=legacy 仅用于显式回滚。
+ * 钱包准备唯一入口，仅支持 Deposit Wallet。
  * 注意：createSecureClient 会走 CLOB beginAuthentication（校验/派生 apiCreds）；
- * 本机直连 CLOB 不稳时，请先生成凭证再准备，或保持 legacy。
+ * 本机直连 CLOB 不稳时，请先生成凭证再准备，再重试。
  */
 
 import { normalizePolymarketPrivateKey, POLYMARKET_RELAYER_URL_DEFAULT } from "./depositWallet";
@@ -65,7 +65,7 @@ function formatUnifiedPrepError(err: unknown): string {
   if (/fetch failed|Failed to fetch|NetworkError|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|cors|CLOB|clob\.polymarket/i.test(text)) {
     return [
       "unified 钱包准备需要本机可达 CLOB（createSecureClient 会校验/派生 API 凭证）。",
-      "可先「生成 API Creds」再重试，或改回 PM_WALLET_PREP_SDK=legacy。",
+      "请检查 CLOB 网络连接，或先「生成 API Creds」再重试。",
       text,
     ].join(" ");
   }
@@ -98,7 +98,7 @@ async function preparePolymarketWalletUnifiedInner(
   if (numeric !== 3) {
     return {
       ok: false,
-      message: "unified SDK 钱包准备目前仅支持 Deposit Wallet（signatureType=3）；Safe/Proxy 请改回 PM_WALLET_PREP_SDK=legacy",
+      message: "CHANGMEN 仅支持 Deposit Wallet（signatureType=3）",
     };
   }
 
@@ -117,7 +117,7 @@ async function preparePolymarketWalletUnifiedInner(
   });
 
   const relayerRest = (input.relayerUrl?.trim() || POLYMARKET_RELAYER_URL_DEFAULT).replace(/\/+$/, "");
-  // SDK production 默认 rpc=polygon.drpc.org，部分网络 eth_call 会挂；与 legacy patch 对齐
+  // SDK production 默认 rpc=polygon.drpc.org，部分网络 eth_call 会挂；保持多节点 RPC 配置
   const environment = forkEnvironmentConfig({
     name: "changmen-wallet-prep",
     rpc: resolvePolygonRpcUrls()[0],

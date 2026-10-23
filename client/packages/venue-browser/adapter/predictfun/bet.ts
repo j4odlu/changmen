@@ -107,7 +107,10 @@ function resolveMarketIdSync(option: BetOption, tokenId: string): string {
     : "";
   const cached = getVenueOddsEntry(PLATFORM, tokenId)?.marketId;
   const fromIndex = lookupPredictFunMarketIdByToken(tokenId);
-  return String(fromData?.marketId ?? fromItem ?? cached ?? fromIndex ?? "").trim();
+  // 空串和纯空白也表示缺失，不能阻断后续缓存与 MarketIndex 回退。
+  return [fromData?.marketId, fromItem, cached, fromIndex]
+    .map(value => String(value ?? "").trim())
+    .find(value => value.length > 0) ?? "";
 }
 
 async function ensureMarketId(option: BetOption, tokenId: string): Promise<string> {

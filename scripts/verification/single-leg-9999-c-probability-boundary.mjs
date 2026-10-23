@@ -2,6 +2,7 @@ import {restoreLowOddsSingleSource,verifyLowOddsSingleSources} from "./low-odds-
 // [changmen 扩展] 精确核对 9999 C 行增量，再还原原始迁移证明；不替换任何历史基线。
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {restoreRefactorVerificationWiring} from './refactor-verification-wiring.mjs';
 
 const normalize = source => source.replaceAll('\r\n', '\n');
 const sha = source => createHash('sha256').update(normalize(source)).digest('hex');
@@ -153,7 +154,7 @@ export function restore9999CProbabilitySource(file, source) {
 }
 
 export function restore9999CProbabilityVerificationSource(file, source) {
-  return restoreIncrement(verificationChanges, file, restoreLowOddsSingleSource(file, source));
+  return restoreIncrement(verificationChanges, file, restoreLowOddsSingleSource(file, restoreRefactorVerificationWiring(file, source)));
 }
 
 export function verify9999CProbabilitySources(read) {

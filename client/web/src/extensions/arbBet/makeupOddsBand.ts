@@ -7,6 +7,7 @@
  * 例：已成 2 → 打平 2，默认 [2×0.96, 2×1.02] = [1.92, 2.04] 内不补。
  * 利润率模式按整数计划金额计算两侧较低返还对应的总体保底利润率。
  */
+import type { MakeupOddsBandDisplay } from "@/types/order";
 import { toFixed } from "@changmen/client-core/shared/format";
 import { calcBreakEvenOdds } from "@/domain/betting/makeupStakeCalc";
 import { normalizeMakeupOddsBand, type MakeupOddsBandPrefs } from "@/types/extensionPrefs";
@@ -173,13 +174,7 @@ export function previewMakeupOddsBand(
   return resolveMakeupOddsBandBounds(filledOdds, prefs);
 }
 
-export interface MakeupOddsBandDisplay {
-  breakEvenOdds: number;
-  upperOdds: number | null;
-  lowerOdds: number | null;
-  /** 利润率模式按未取整的等返还金额折算，实际门槛仍由整数计划金额判断。 */
-  approximate: boolean;
-}
+export type { MakeupOddsBandDisplay } from "@/types/order";
 
 /** [changmen 扩展] 自动补单行的上下沿展示；只提供参考，不参与候选过滤。 */
 export function makeupDisplayBand(

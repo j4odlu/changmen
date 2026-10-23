@@ -19,8 +19,8 @@ vi.mock("@/stores/messageStore", () => ({ useMessageStore: () => ({}) }));
 vi.mock("@/runtime/providers", () => ({ getProvider: vi.fn() }));
 vi.mock("@/services/orderObservation", () => ({ createObservationContext: vi.fn(), observeOption: vi.fn() }));
 vi.mock("@/services/orderObservationEvidence", () => ({ observationFailureEvidence: vi.fn() }));
-vi.mock("@/domain/polymarket/attachDetectionQuote", () => ({ attachPolymarketDetectionQuote: vi.fn() }));
-vi.mock("@/domain/predictfun/attachDetectionQuote", () => ({ attachPredictFunDetectionQuote: vi.fn() }));
+vi.mock("@/services/polymarketQuotes", () => ({ attachPolymarketDetectionQuote: vi.fn() }));
+vi.mock("@/services/predictFunQuotes", () => ({ attachPredictFunDetectionQuote: vi.fn() }));
 vi.mock("@/realtime/publishBetting", () => ({ publishBettingEvent: vi.fn() }));
 vi.mock("@/shared/orderSound", () => ({ playOrderSuccessSound: vi.fn() }));
 vi.mock("@/shared/a8Notify", () => ({ bettingResultMessageHtml: () => "result" }));
@@ -190,4 +190,62 @@ test.each(["session", "scope"] as const)("a failed RDS read stops retrying after
   await vi.advanceTimersByTimeAsync(5001);
   expect(mocks.pending).toHaveBeenCalledOnce();
   expect(vi.getTimerCount()).toBe(0);
+});
+
+test("logout before a scheduled retry stops the timer while retaining the original task", async () => {
+  mocks.attempts = [original];
+  const context = { ...store, findAccount: () => account as PlatformAccount | undefined };
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(context);
+  await vi.advanceTimersByTimeAsync(0); expect(mocks.settle).toHaveBeenCalledOnce();
+  mocks.session = "logged-out"; context.accounts = []; context.findAccount = () => undefined;
+  await vi.advanceTimersByTimeAsync(21_000);
+  expect(vi.getTimerCount()).toBe(0); expect(mocks.settle).toHaveBeenCalledOnce();
+  expect(JSON.parse(sessionStorage.getItem("PENDING_VENUE_BET_CONFIRM")!)).toHaveLength(1);
+  mocks.session = "relogged-in"; context.accounts = [account]; context.findAccount = () => account;
+  api.resumePendingVenueConfirmations(context); await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.settle).toHaveBeenCalledTimes(2);
+});
+
+test("pause clears confirmation and RDS retry timers immediately, then resume starts one continuation", async () => {
+  mocks.attempts = [original]; mocks.pending.mockRejectedValue(new Error("offline"));
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(store);
+  await vi.advanceTimersByTimeAsync(0); expect(vi.getTimerCount()).toBe(2);
+  api.pausePendingVenueConfirmations(); expect(vi.getTimerCount()).toBe(0);
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(mocks.settle).toHaveBeenCalledOnce(); expect(mocks.pending).toHaveBeenCalledOnce();
+  mocks.pending.mockResolvedValue([]); api.resumePendingVenueConfirmations(store);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.settle).toHaveBeenCalledTimes(2); expect(mocks.pending).toHaveBeenCalledTimes(2);
+  expect(vi.getTimerCount()).toBe(1);
+});
+
+test("an in-flight completion after pause cannot notify, save, count or create another timer", async () => {
+  let finish!: (value: unknown) => void;
+  mocks.attempts = [original]; mocks.settle.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(store); await vi.advanceTimersByTimeAsync(0);
+  api.pausePendingVenueConfirmations(); finish({ pendingConfirm: false, rejected: false, orders: [{ orderId: "hash-one", status: "none", pmShares: 20 }] });
+  await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.mark).not.toHaveBeenCalled(); expect(mocks.notify).not.toHaveBeenCalled();
+  expect(vi.getTimerCount()).toBe(0);
+  api.resumePendingVenueConfirmations(store); await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.settle).toHaveBeenCalledTimes(2);
+});
+
+test("pause/resume during the previous confirmation keeps the resumed generation live", async () => {
+  let finish!: (value: unknown) => void;
+  mocks.attempts = [original]; mocks.settle.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(store); await vi.advanceTimersByTimeAsync(0);
+  api.pausePendingVenueConfirmations(); api.resumePendingVenueConfirmations(store);
+  finish({ pendingConfirm: true, rejected: false, orders: [] }); await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.settle).toHaveBeenCalledTimes(2); expect(vi.getTimerCount()).toBe(1);
+});
+
+test("a failed legacy submission read after pause does not schedule a stale retry", async () => {
+  sessionStorage.setItem("PENDING_VENUE_BET_CONFIRM", JSON.stringify([{ key: "9:hash-one", accountId: 9, provider: "Polymarket",
+    orderId: "hash-one", ...original.recovery, attempts: 0, nextPollAt: 0 }]));
+  let fail!: (error: Error) => void;
+  mocks.recover.mockImplementationOnce(() => new Promise((_, reject) => { fail = reject; }));
+  const api = await import("./betGateway"); api.resumePendingVenueConfirmations(store); await vi.advanceTimersByTimeAsync(0);
+  api.pausePendingVenueConfirmations(); fail(new Error("previous session unavailable")); await vi.advanceTimersByTimeAsync(0);
+  expect(vi.getTimerCount()).toBe(0); expect(mocks.settle).not.toHaveBeenCalled();
 });

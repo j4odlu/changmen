@@ -1,4 +1,4 @@
-import type { ValueBetSharpPlatform } from "@/extensions/valueBet/evConfig";
+import type { ValueBetSharpPlatform } from "@/config/valueBet";
 import type { PlatformId } from "@/types/esport";
 import {
   clampValueBetEdgePctRange,
@@ -16,13 +16,13 @@ import {
   normalizeValueBetSharp,
   normalizeValueBetSoftPlatforms,
 
-} from "@/extensions/valueBet/evConfig";
+} from "@/config/valueBet";
 import { ALL_PLATFORMS } from "@/types/userConfig";
 
 export {
   createDefaultValueBetSoftPlatforms,
   normalizeValueBetSoftPlatforms,
-} from "@/extensions/valueBet/evConfig";
+} from "@/config/valueBet";
 
 /** [changmen 扩展] 高利润时放大总注（比例仍按 1/odds） */
 export interface StakeScaleByProfitPrefs {

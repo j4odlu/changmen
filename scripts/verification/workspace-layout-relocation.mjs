@@ -8,6 +8,10 @@ import {readInstallWorkspaces,declaredInstallClosure,frontendInstallBoundary} fr
 import {restoreRayA8PrecheckSource} from './ray-a8-precheck-boundary.mjs';
 import {restoreDeployCiSource} from './deploy-ci-boundary.mjs';
 import {restore9999CProbabilityVerificationSource} from './single-leg-9999-c-probability-boundary.mjs';
+import {inspectBackendCommandPaths,restoreBackendCommandPaths} from './backend-command-paths.mjs';
+import {restoreFrontendDependencySource,verifyFrontendDependencyRefactor} from './frontend-dependency-refactor.mjs';
+import {verifyAccountEditExtraction} from './account-edit-extraction.mjs';
+import {verifyPendingVenueFixes} from './pending-venue-fixes.mjs';
 const sha=s=>createHash('sha256').update(s.replaceAll('\r\n','\n')).digest('hex');
 const prefixes=[['server/db','rds'],['server/packages/venue-node-loader','server/venues/loader'],['server/packages/venue-node-registry','server/venues/registry'],['server/packages/venue-adapter-tools','server/venues'],['server/match/identity','packages/shared/match-identity']];
 const moved=f=>prefixes.reduce((s,[a,b])=>s===a||s.startsWith(a+'/')?b+s.slice(a.length):s,f);
@@ -50,11 +54,15 @@ export function assertWorkspaceMoveSemantics(row,source){
  }
 }
 export function inspectWorkspaceLayout(root,{read=f=>fs.readFileSync(path.join(root,f),'utf8'),exists=f=>fs.existsSync(path.join(root,f))}={}){
+ const backendCommands=inspectBackendCommandPaths(root,{read});
+ const frontendDependencies=verifyFrontendDependencyRefactor(read);
+ verifyAccountEditExtraction(read);
+ verifyPendingVenueFixes(read);
  let sql=0,moves=0;
  for(const row of record.files){
   assert.equal(sha(row.before),row.beforeSha,'Original source proof changed');
   if(!row.canonical){assert(!exists(row.file),row.file+': retired entry returned');continue;}
-  const source=restoreRayA8PrecheckSource(row.canonical,restoreDeployCiSource(row.canonical,restore9999CProbabilityVerificationSource(row.canonical,read(row.canonical))));
+  const source=restoreBackendCommandPaths(row.canonical,restoreRayA8PrecheckSource(row.canonical,restoreDeployCiSource(row.canonical,restore9999CProbabilityVerificationSource(row.canonical,restoreFrontendDependencySource(row.canonical,read(row.canonical))))));
   // [changmen 扩展] Markdown 正文允许日常维护；仍读取当前位置并检查旧入口退役。
   // 原迁移证据不变，源码、配置和 SQL 继续完整哈希与语义校验。
   if(!row.canonical.endsWith('.md'))assert.equal(sha(source),row.afterSha,row.canonical+': unreviewed relocation');
@@ -67,5 +75,5 @@ export function inspectWorkspaceLayout(root,{read=f=>fs.readFileSync(path.join(r
  for(const name of ['venue-adapter','runtime-tooling-compat','match-identity','venue-node-loader','venue-node-registry','venue-adapter-tools'])assert(!packages.has('@changmen/'+name),'Retired workspace returned: '+name);
  for(const name of ['@changmen/web','@changmen/backend','@changmen/db'])assert.deepEqual(declaredInstallClosure(root,packages,name,{build:true}).violations,[]);
  assert.deepEqual(frontendInstallBoundary(declaredInstallClosure(root,packages,'@changmen/web',{build:true})),[]);
- return{workspaces:packages.size,movedFiles:moves,unchangedSqlAssets:sql,rdsRoot:'rds',platformRoot:'server/venues'};
+ return{workspaces:packages.size,movedFiles:moves,unchangedSqlAssets:sql,rdsRoot:'rds',platformRoot:'server/venues',backendCommands:backendCommands.commands,frontendDependencies};
 }

@@ -7,7 +7,7 @@ import { getExchange } from "@/shared/currency";
 import * as accountCrud from "@/stores/account/accountCrud";
 import { getProviders, pickAccount } from "@/stores/account/accountPicker";
 import * as balanceRefresh from "@/stores/account/balanceRefresh";
-import { checkBetting, placeBet } from "@/stores/account/betGateway";
+import { checkBetting, placeBet, pausePendingVenueConfirmations } from "@/stores/account/betGateway";
 
 /** 对齐 A8 Pinia `Io` */
 export const useAccountStore = defineStore("account", {
@@ -134,6 +134,7 @@ export const useAccountStore = defineStore("account", {
     /** logout / 切换用户：清空内存账号，避免上一用户列表被误保存 */
     resetSession() {
       this.stopBalanceRefreshLoop();
+      pausePendingVenueConfirmations();
       this.adminWorkspacePreview = false;
       this.accounts = [];
       this.loaded = false;

@@ -2,8 +2,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { ViewBetItem } from "@/models/match";
-import { capturePmPriceQuote } from "@/domain/polymarket/tickBufferQuote";
-import { attachPolymarketDetectionQuote } from "@/domain/polymarket/attachDetectionQuote";
+import { capturePmPriceQuote } from "@/services/polymarketQuotes";
+import { attachPolymarketDetectionQuote } from "@/services/polymarketQuotes";
 import { clearPmTickBufferMetadata, notePmTickBufferBook, resetPmArbPriceBufferPrefsForTests,
   setPmArbPriceBufferPrefs } from "@changmen/venue-browser/adapter/polymarket";
 import { useOddsStore } from "./oddsStore";

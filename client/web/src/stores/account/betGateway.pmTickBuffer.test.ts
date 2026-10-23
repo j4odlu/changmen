@@ -5,7 +5,7 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { AccountStoreContext } from "./context";
 import { checkBetting } from "./betGateway";
 import { useOddsStore } from "@/stores/oddsStore";
-import { capturePmTickBufferQuote } from "@/domain/polymarket/tickBufferQuote";
+import { capturePmTickBufferQuote } from "@/services/polymarketQuotes";
 import { notePmTickBufferBook, clearPmTickBufferMetadata, setPmArbPriceBufferPrefs,
   resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-browser/adapter/polymarket";
 

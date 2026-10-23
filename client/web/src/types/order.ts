@@ -7,6 +7,14 @@ export type {
   OrderStatus,
 } from "@changmen/client-core/types/order";
 
+export interface MakeupOddsBandDisplay {
+  breakEvenOdds: number;
+  upperOdds: number | null;
+  lowerOdds: number | null;
+  /** 利润率模式按未取整的等返还金额折算，实际门槛仍由整数计划金额判断。 */
+  approximate: boolean;
+}
+
 /** 订单列表/UI 用 OrderRow（含 [changmen 扩展] PM 字段） */
 export interface OrderRow {
   /** [changmen 扩展] 尚未落库的只读展示行；不能改绑或卖出，原单监控仍可取消剩余挂单。 */
@@ -19,7 +27,7 @@ export interface OrderRow {
   Item?: string;
   Odds?: number;
   /** [changmen 扩展] 自动补单占位行的上下沿展示，不写入订单。 */
-  MakeupOddsBand?: import("@/extensions/arbBet/makeupOddsBand").MakeupOddsBandDisplay;
+  MakeupOddsBand?: MakeupOddsBandDisplay;
   BetMoney?: number;
   Money?: number;
   Status?: import("@changmen/client-core/types/order").OrderStatus;

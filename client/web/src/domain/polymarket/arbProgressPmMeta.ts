@@ -1,7 +1,7 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
-import type { ArbProgressPolymarketMeta } from "@/stores/betting/autoBet/arbExecutionTrace";
+import type { ArbProgressPolymarketMeta } from "@/types/arbProgress";
 import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
-import { useOddsStore } from "@/stores/oddsStore";
+import type { DetectionQuoteSource } from "@/domain/betting/quoteSource";
 import type { PolymarketBuyCheckData } from "@changmen/venue-browser/adapter/polymarket";
 import {
   detectionMaxPriceFromOdds,
@@ -34,9 +34,9 @@ function resolveCapSource(
 }
 
 /** PM 腿 Telegram 进度块：检测价 / fo clob / 盘口 ask */
-export function buildPolymarketArbProgressMeta(option: BetOption): ArbProgressPolymarketMeta {
+export function buildPolymarketArbProgressMeta(option: BetOption, quotes: DetectionQuoteSource): ArbProgressPolymarketMeta {
   const data = readQuoteData(option);
-  const foClobPrice = useOddsStore().getEntry(PLATFORMS.Polymarket, option.itemId)?.clobPrice;
+  const foClobPrice = quotes.getEntry(PLATFORMS.Polymarket, option.itemId)?.clobPrice;
   const detectionOdds = Number(data.detectionOdds) > 1
     ? Number(data.detectionOdds)
     : option.odds;

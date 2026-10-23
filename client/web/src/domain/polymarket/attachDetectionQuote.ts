@@ -2,7 +2,7 @@ import { validatePmPriceQuote } from "@changmen/venue-browser/polymarket/priceQu
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { capturePmPriceQuote, pmAttemptUsesTickBuffer, pmAttemptPricePolicy } from "./tickBufferQuote";
 import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
-import { useOddsStore } from "@/stores/oddsStore";
+import type { DetectionQuoteSource } from "@/domain/betting/quoteSource";
 import {
   hasLockedPolymarketDetectionQuote,
   isPmArbPriceBufferActive,
@@ -19,13 +19,13 @@ import {
  * PM 预检前验证建腿时冻结的统一报价；未经过建腿入口的尝试在此首次冻结。
  * 体育及未启用调整的路径保留同档原始卖一兼容逻辑。
  */
-export function attachPolymarketDetectionQuote(option: BetOption, scope: "esport" | "sport" = "esport"): void {
+export function attachPolymarketDetectionQuote(option: BetOption, quotes: DetectionQuoteSource, scope: "esport" | "sport" = "esport"): void {
   if (option.type !== PLATFORMS.Polymarket)
     return;
   // [changmen 扩展] 体育板/POD 使用独立报价，不套用电竞 fo 的 tick 缓冲；百分比仍走原路径。
   if (scope === "sport" && isPmTickBufferActive() && !pmAttemptPricePolicy(option)) return;
   try {
-    if (scope === "esport") capturePmPriceQuote(option);
+    if (scope === "esport") capturePmPriceQuote(option, quotes);
     if (option.data?.pmPriceQuote) {
       validatePmPriceQuote(option.data.pmPriceQuote, option.itemId, Number(option.data.detectionOdds ?? option.odds));
       if (pmAttemptUsesTickBuffer(option))
@@ -46,8 +46,8 @@ export function attachPolymarketDetectionQuote(option: BetOption, scope: "esport
     : {}) as PolymarketOptionQuoteData;
   if (hasLockedPolymarketDetectionQuote(prior))
     return;
-  const row = scope === "esport" ? useOddsStore().getPmQuoteEntry(option.itemId)
-    : useOddsStore().getEntry(PLATFORMS.Polymarket, option.itemId);
+  const row = scope === "esport" ? quotes.getPmQuoteEntry(option.itemId)
+    : quotes.getEntry(PLATFORMS.Polymarket, option.itemId);
   const clobPrice = Number(row?.clobPrice);
   if (!isValidClobPrice(clobPrice))
     return;

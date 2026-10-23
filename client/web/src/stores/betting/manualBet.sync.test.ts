@@ -6,7 +6,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { accountPassesMainBetFilter } from "@/domain/betting/betFilters";
-import { attachPolymarketDetectionQuote } from "@/domain/polymarket/attachDetectionQuote";
+import { attachPolymarketDetectionQuote } from "@/services/polymarketQuotes";
 import { resetMapBetMuteForTests, setFullMatchMuteGlobal } from "@/extensions/mapBetMute";
 import { resetPrematchFullOnlyForTests, setPrematchFullMode } from "@/extensions/prematchFullOnly";
 import { PlatformAccount } from "@/models/platformAccount";

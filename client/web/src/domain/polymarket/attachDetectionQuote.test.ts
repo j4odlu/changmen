@@ -1,7 +1,7 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { attachPolymarketDetectionQuote } from "@/domain/polymarket/attachDetectionQuote";
+import { attachPolymarketDetectionQuote } from "@/services/polymarketQuotes";
 import { useOddsStore } from "@/stores/oddsStore";
 import { resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs } from "@changmen/venue-browser/adapter/polymarket";
 

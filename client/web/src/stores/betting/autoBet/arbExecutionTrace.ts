@@ -1,19 +1,11 @@
+import type { ArbProgressPolymarketMeta } from "@/types/arbProgress";
 import type { ViewBet, ViewMatch } from "@/models/match";
 import { arbProfitRate } from "@changmen/client-core/shared/format";
 
 /** [changmen 扩展] 套利执行进度追踪结果 */
 export type ArbProgressOutcome = "success" | "partial" | "fail" | "skip";
 
-export interface ArbProgressPolymarketMeta {
-  tokenId: string;
-  tokenShort: string;
-  detectionOdds: number;
-  detectionMaxPrice: number;
-  foClobPrice?: number;
-  bookPrice?: number;
-  apiBetMoney?: number;
-  capSource: "clob" | "odds" | "locked";
-}
+export type { ArbProgressPolymarketMeta } from "@/types/arbProgress";
 
 export interface ArbProgressLegPrecheck {
   ok: boolean;

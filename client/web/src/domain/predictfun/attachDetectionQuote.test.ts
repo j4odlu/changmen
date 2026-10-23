@@ -1,7 +1,7 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { attachPredictFunDetectionQuote } from "@/domain/predictfun/attachDetectionQuote";
+import { attachPredictFunDetectionQuote } from "@/services/predictFunQuotes";
 import { useOddsStore } from "@/stores/oddsStore";
 import { resetPfArbPriceBufferPrefsForTests, setPfArbPriceBufferPrefs } from "@changmen/venue-browser/adapter/predictfun";
 

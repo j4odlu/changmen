@@ -7,9 +7,10 @@ import { BetResult } from "@changmen/client-core/models/betResult";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
 import { getExchange } from "@changmen/shared/currency";
 import { resolveVenueStakeFromPlanCny } from "@changmen/venue-browser/adapter/adaptation";
-import { attachPolymarketDetectionQuote } from "@/domain/polymarket/attachDetectionQuote";
-import { attachPredictFunDetectionQuote } from "@/domain/predictfun/attachDetectionQuote";
+import { attachPolymarketDetectionQuote } from "@/services/polymarketQuotes";
+import { attachPredictFunDetectionQuote } from "@/services/predictFunQuotes";
 import { publishBettingEvent } from "@/realtime/publishBetting";
+import { captureBettingEventPayload, type BettingEventPayload } from "@/realtime/bettingEventPayload";
 import { getProvider } from "@/runtime/providers";
 import { createObservationContext, observeOption } from "@/services/orderObservation";
 import { observationFailureEvidence } from "@/services/orderObservationEvidence";
@@ -117,6 +118,7 @@ function notifyPendingVenueConfirm(
   const existing = pendingVenueBetConfirmations.get(key);
   if (existing) {
     if (pendingOrderSave) pendingVenueOrderWrites.set(existing, pendingOrderSave);
+    existing.publishData ??= captureBettingEventPayload(option);
     schedulePendingVenueBetConfirmation(store, existing); return;
   }
   const task: PendingVenueBetConfirmation = {
@@ -140,6 +142,7 @@ function notifyPendingVenueConfirm(
     attempts: 0,
     nextPollAt: Date.now(),
     pmSubmission: account.provider === "Polymarket" ? pmSubmissionFromResult(result, account.accountId) ?? undefined : undefined,
+    publishData: captureBettingEventPayload(option),
   };
   if (pendingOrderSave) pendingVenueOrderWrites.set(task, pendingOrderSave);
   pendingVenueBetConfirmations.set(task.key, task);
@@ -150,6 +153,7 @@ function notifyPendingVenueConfirm(
 const PENDING_VENUE_CONFIRM_KEY = "PENDING_VENUE_BET_CONFIRM";
 
 interface PendingVenueBetConfirmation {
+  publishData?: BettingEventPayload;
   pmScope?: string;
   pmSubmission?: PmSubmission;
   /** 已由套利/补单队列计数的尝试，恢复页只核对与同步原单。 */
@@ -186,8 +190,10 @@ function loadPendingVenueBetConfirmations(): Map<string, PendingVenueBetConfirma
 
 const pendingVenueBetConfirmations = loadPendingVenueBetConfirmations();
 const pendingVenueConfirmationFlights = new Set<string>();
-const pendingVenueConfirmationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const pendingVenueConfirmationTimers = new Map<string, { timer: ReturnType<typeof setTimeout>; version: string }>();
 const pendingVenueConfirmationResumeVersions = new Map<string, string>();
+let pendingVenueConfirmationsPaused = false;
+let pendingVenueConfirmationEpoch = 0;
 // 只串行化同一订单的写入 Promise；名称属于正在保存的订单，不交给确认任务。
 const pendingVenueOrderWrites = new WeakMap<PendingVenueBetConfirmation, Promise<void>>();
 
@@ -215,20 +221,31 @@ function schedulePendingVenueBetConfirmation(
   store: AccountStoreContext,
   task: PendingVenueBetConfirmation,
 ): void {
-  if (pendingVenueConfirmationTimers.has(task.key) || pendingVenueConfirmationFlights.has(task.key))
+  if (pendingVenueConfirmationsPaused || !pendingVenueAccountMatches(store, task)) return;
+  const version = getAuthSessionVersion();
+  const existing = pendingVenueConfirmationTimers.get(task.key);
+  if (existing && isAuthSessionCurrent(existing.version)) return;
+  if (existing) {
+    clearTimeout(existing.timer);
+    pendingVenueConfirmationTimers.delete(task.key);
+  }
+  if (pendingVenueConfirmationFlights.has(task.key))
     return;
   const delay = Math.max(0, task.nextPollAt - Date.now());
   const timer = setTimeout(() => {
     pendingVenueConfirmationTimers.delete(task.key);
+    if (!isAuthSessionCurrent(version) || pendingVenueConfirmationsPaused || !pendingVenueAccountMatches(store, task)) return;
     void runPendingVenueBetConfirmation(store, task);
   }, delay);
-  pendingVenueConfirmationTimers.set(task.key, timer);
+  pendingVenueConfirmationTimers.set(task.key, { timer, version });
 }
 
 async function runPendingVenueBetConfirmation(
   store: AccountStoreContext,
   task: PendingVenueBetConfirmation,
 ): Promise<void> {
+  if (pendingVenueConfirmationsPaused) return;
+  const epoch = pendingVenueConfirmationEpoch;
   if (pendingVenueConfirmationFlights.has(task.key))
     return;
   if (task.nextPollAt > Date.now()) {
@@ -236,13 +253,7 @@ async function runPendingVenueBetConfirmation(
     return;
   }
   const account = store.findAccount(task.accountId);
-  if (!account) {
-    task.nextPollAt = Date.now() + 5_000;
-    pendingVenueBetConfirmations.set(task.key, task);
-    persistPendingVenueBetConfirmations();
-    schedulePendingVenueBetConfirmation(store, task);
-    return;
-  }
+  if (!account) return;
   // 新任务绑定用户/钱包；旧会话仅在当前钱包的持久化原单能核实时迁移。
   if (task.provider === "Polymarket") {
     try {
@@ -256,11 +267,12 @@ async function runPendingVenueBetConfirmation(
         let recovered;
         try { recovered = validatePmSubmission(await getPmSubmission(account.accountId, task.orderId), task.orderId, account.accountId); }
         catch {
+          if (!isAuthSessionCurrent(version) || epoch !== pendingVenueConfirmationEpoch || !pendingVenueAccountMatches(store, task)) return;
           task.nextPollAt = Date.now() + 5_000;
           schedulePendingVenueBetConfirmation(store, task);
           return;
         }
-        if (!isAuthSessionCurrent(version) || scope !== pmSubmitScope(account)) return;
+        if (!isAuthSessionCurrent(version) || epoch !== pendingVenueConfirmationEpoch || scope !== pmSubmitScope(account)) return;
         if (!recovered?.makerAddress || recovered.makerAddress !== pmSubmitMaker(account)) return;
         task.pmSubmission = recovered;
         task.pmScope = scope;
@@ -300,7 +312,7 @@ async function runPendingVenueBetConfirmation(
     const { rejected, pendingConfirm, orders } = task.provider === "Polymarket"
       ? await confirmVenueBet(account, result, { rejectWaitSec: 0, pmConditionId: task.venueBetId })
       : await settleArbLegUntilTerminal(account, result, { rejectWaitSec: 0, betOption: option });
-    if (!isAuthSessionCurrent(sessionVersion) || !pendingVenueAccountMatches(store, task)) return;
+    if (!isAuthSessionCurrent(sessionVersion) || epoch !== pendingVenueConfirmationEpoch || !pendingVenueAccountMatches(store, task)) return;
     try {
       const exactObservedOrder = orders.find(order => String(order.orderId) === task.orderId);
       observeOption(option, account, "settlement_observed", {
@@ -323,7 +335,7 @@ async function runPendingVenueBetConfirmation(
 
     if (task.provider === "Polymarket") {
       await pendingVenueOrderWrites.get(task);
-      if (!isAuthSessionCurrent(sessionVersion) || !pendingVenueAccountMatches(store, task)) return;
+      if (!isAuthSessionCurrent(sessionVersion) || epoch !== pendingVenueConfirmationEpoch || !pendingVenueAccountMatches(store, task)) return;
       pendingVenueOrderWrites.delete(task);
       if (rejected) {
         const saved = await persistPolymarketExecutionReject(account, result, "unfilled", { linkId: task.linkId });
@@ -337,7 +349,7 @@ async function runPendingVenueBetConfirmation(
         await saveOrders(account, [filled]);
       }
     }
-    if (!isAuthSessionCurrent(sessionVersion) || !pendingVenueAccountMatches(store, task)) return;
+    if (!isAuthSessionCurrent(sessionVersion) || epoch !== pendingVenueConfirmationEpoch || !pendingVenueAccountMatches(store, task)) return;
     pendingVenueBetConfirmations.delete(task.key);
     pendingVenueConfirmationResumeVersions.delete(task.key);
     persistPendingVenueBetConfirmations();
@@ -348,8 +360,10 @@ async function runPendingVenueBetConfirmation(
       type: rejected ? "error" : "success",
     }, task.toastSeconds);
     if (!rejected && !task.recoveryOnly) {
-      void playOrderSuccessSound({ betRowId: task.betRowId || task.venueBetId });
-      void publishBettingEvent(option);
+      try { void playOrderSuccessSound({ betRowId: task.betRowId || task.venueBetId }).catch(() => {}); }
+      catch { /* 音效失败不阻断成交计数。 */ }
+      try { void publishBettingEvent(task.publishData ?? option).catch(() => {}); }
+      catch { /* 广播失败不阻断成交计数。 */ }
       // PF/PM：受理≠成交；成功计数推迟到 filled
       if (isPendingConfirmVenueProvider(account.provider)) {
         const betRowId = Number(task.betRowId);
@@ -375,7 +389,7 @@ async function runPendingVenueBetConfirmation(
     }
   }
   catch {
-    if (pendingVenueBetConfirmations.has(task.key)) {
+    if (epoch === pendingVenueConfirmationEpoch && pendingVenueBetConfirmations.has(task.key)) {
       task.attempts += 1;
       task.nextPollAt = Date.now() + Math.min(30_000, 1_000 * 2 ** Math.min(task.attempts - 1, 5));
       pendingVenueBetConfirmations.set(task.key, task);
@@ -386,14 +400,26 @@ async function runPendingVenueBetConfirmation(
     pendingVenueConfirmationFlights.delete(task.key);
     const current = pendingVenueBetConfirmations.get(task.key);
     const resumedVersion = pendingVenueConfirmationResumeVersions.get(task.key);
-    if (current && pendingVenueAccountMatches(store, task)
-      && (isAuthSessionCurrent(sessionVersion) || resumedVersion != null && isAuthSessionCurrent(resumedVersion)))
+    if (current && !pendingVenueConfirmationsPaused && pendingVenueAccountMatches(store, task)
+      && (epoch === pendingVenueConfirmationEpoch && isAuthSessionCurrent(sessionVersion) || resumedVersion != null && isAuthSessionCurrent(resumedVersion)))
       schedulePendingVenueBetConfirmation(store, current);
   }
 }
 
+/** [changmen 扩展] 退出/切换工作区时暂停调度，保留原单以便账号加载后恢复。 */
+export function pausePendingVenueConfirmations(): void {
+  pendingVenueConfirmationsPaused = true;
+  pendingVenueConfirmationEpoch += 1;
+  for (const { timer } of pendingVenueConfirmationTimers.values()) clearTimeout(timer);
+  pendingVenueConfirmationTimers.clear();
+  for (const timer of pendingPmRestoreTimers.values()) clearTimeout(timer);
+  pendingPmRestoreTimers.clear();
+  pendingVenueConfirmationResumeVersions.clear();
+}
+
 /** 账号加载后恢复手动/正 EV 单的场馆待确认任务。 */
 export function resumePendingVenueConfirmations(store: AccountStoreContext): void {
+  pendingVenueConfirmationsPaused = false;
   void restoreStoredPendingPmOrders(store);
   for (const account of store.accounts ?? []) {
     if (account.provider !== "Polymarket") continue;
@@ -444,7 +470,8 @@ async function restoreStoredPendingPmAccount(store: AccountStoreContext, account
   let scope: string;
   try { scope = pmSubmitScope(account); } catch { return; }
   const version = getAuthSessionVersion();
-  const flightKey = JSON.stringify([version, scope, account.accountId]);
+  const epoch = pendingVenueConfirmationEpoch;
+  const flightKey = JSON.stringify([version, scope, account.accountId, epoch]);
   if (pendingPmRestoreFlights.has(flightKey)) return;
   const retry = pendingPmRestoreTimers.get(flightKey);
   if (retry) { clearTimeout(retry); pendingPmRestoreTimers.delete(flightKey); }
@@ -452,7 +479,8 @@ async function restoreStoredPendingPmAccount(store: AccountStoreContext, account
   const current = () => {
     try {
       const live = store.findAccount(account.accountId);
-      return isAuthSessionCurrent(version) && live?.provider === "Polymarket" && scope === pmSubmitScope(live);
+      return !pendingVenueConfirmationsPaused && epoch === pendingVenueConfirmationEpoch
+        && isAuthSessionCurrent(version) && live?.provider === "Polymarket" && scope === pmSubmitScope(live);
     }
     catch { return false; }
   };

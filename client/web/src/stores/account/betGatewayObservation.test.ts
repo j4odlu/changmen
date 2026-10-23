@@ -27,8 +27,8 @@ vi.mock("@/shared/orderSound", () => ({ playOrderSuccessSound: mocks.sound }));
 vi.mock("@/stores/account/pmOptimisticOrder", () => ({ persistPolymarketMatchedBuyOrder: vi.fn() }));
 vi.mock("@/stores/account/pmRejectOrder", () => ({ persistPolymarketExecutionReject: vi.fn() }));
 vi.mock("@/stores/betting/autoBet/arbLegSettle", () => ({ settleArbLegUntilTerminal: vi.fn() }));
-vi.mock("@/domain/polymarket/attachDetectionQuote", () => ({ attachPolymarketDetectionQuote: () => {} }));
-vi.mock("@/domain/predictfun/attachDetectionQuote", () => ({ attachPredictFunDetectionQuote: () => {} }));
+vi.mock("@/services/polymarketQuotes", () => ({ attachPolymarketDetectionQuote: () => {} }));
+vi.mock("@/services/predictFunQuotes", () => ({ attachPredictFunDetectionQuote: () => {} }));
 vi.mock("@changmen/venue-browser/adapter/adaptation", () => ({ resolveVenueStakeFromPlanCny: mocks.stake }));
 
 describe("下注主链路与旁路故障隔离", () => {

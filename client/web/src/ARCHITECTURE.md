@@ -140,6 +140,19 @@ matchStore.runMainLoopTick（A8 `P()`，轮间 100ms）
 
 与 Pinia / Vue 解耦，优先放这里便于单测与 A8 对照。
 
+[changmen 扩展] 报价规则通过 `domain/betting/quoteSource.ts` 的只读端口取数；
+`services/quoteSource.ts` 在原有读取位置解析当前 Pinia。PM 与 PF 的应用入口分别为
+`services/polymarketQuotes.ts`、`services/predictFunQuotes.ts`，PM 建腿和预检共用原有冻结状态。
+纯 EV 配置归 `config/valueBet.ts`，扩展旧入口只转导出；订单展示与进度公共类型归 `types/`。
+
+`npm test --workspace=@changmen/web` 会先执行依赖方向检查。该检查统计生产源码，
+测试文件仍由 Vitest 和前端类型检查验证。
+
+[changmen 扩展] POD 跟单执行由 `runtime/podFollowPayload.ts` 构造原有请求，
+`podFollowOrderGate.ts` 读取当前订单与限额，`podFollowPlacement.ts` 处理下单及回执，
+`podFollowAutoRunner.ts` 串行调度与恢复。面板持有原有响应式状态和唤醒事件。
+停止或重启执行器后，旧轮次只完成已经发送的订单，不再向下一馆发单，旧恢复请求也不发布就绪状态。
+
 | 路径 | 用途 | 对齐 A8 |
 |------|------|---------|
 | `@changmen/arb-core` `pickArbLegs` | 跨平台选最优主客腿、隐含利润率 | bundle 套利检测 |
@@ -264,6 +277,24 @@ matchStore.runMainLoopTick（A8 `P()`，轮间 100ms）
 新增接口字段先改 `types/`，再在 store/model 里组装。
 
 ---
+
+## 待确认订单的写入与会话
+
+[changmen 扩展] `services/pendingPmOrderWrites.ts` 按会话版本、账号和原单号登记 Pending 保存。`api/order.ts` 的 PM 后续写入在原 Pending 完整保存后继续；状态查询与场馆 POST 回执不等待该屏障，原 Pending 写入也不等待自身。同步投影前保留原屏障，投影后再次匹配原单，避免异步投影或会话切换绕过保存顺序。
+
+`betGateway.ts` 的待确认任务只保留 `realtime/bettingEventPayload.ts` 定义的原广播字段，包括客户端比赛与盘口 ID；不从场馆 ID 推算广播 ID。退出/切换工作区经 `accountStore.resetSession()` 同步暂停确认与 RDS 恢复定时器，保留原单记录，待账号重新加载后恢复。旧会话或旧暂停代次的响应不能计数、通知或重启定时器。
+
+## 账号编辑弹窗
+
+[changmen 扩展] `components/account/AccountEditDialog.vue` 保留表单、监听器与界面装配；钱包与保存流程按职责拆到同目录模块：
+
+- `polymarketAccountEditor.ts`：PM 密钥来源、本机仓、地址/API 凭证及 Relayer。
+- `predictFunAccountEditor.ts`：PF Privy 密钥、地址显示、内存与持久化 token。
+- `obSportAccountEditor.ts`：OB 体育凭证表单与保存前身份校验。
+- `accountCredentialPaste.ts`：粘贴识别、凭证填充与网关测速。
+- `accountEditSave.ts`：字段规范化、会员绑定、新建/编辑及管理端乘网保存。
+
+模块通过 `accountEditContext.ts` 接收当前表单的 getter，共享原有响应式对象与 props；`v-model:form` 替换表单后仍读取最新对象。PM 异步序号归各编辑器实例所有，原有重置及关闭监听器在原位置调用取消操作。创建账号、写入本机密钥仓、保存和关闭后刷新的顺序保持原样。行为对照测试直接执行固定 Git 版本中的原函数，覆盖保存失败、场馆身份校验、密钥来源和异步取消；完整模板、监听器和 37 个迁移函数另作源码比较。
 
 ## 新增平台 Checklist
 

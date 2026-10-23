@@ -6,10 +6,9 @@ import { createDefaultExtensionPrefs, normalizeExtensionPrefs, serializeExtensio
 import { useOddsStore } from "@/stores/oddsStore";
 import { ViewBet, type ViewMatch } from "@/models/match";
 import type { BetRowDto } from "@/types/esport";
-import { buildOrderOptions } from "@/domain/betting/buildOrderOptions";
 import { createDefaultUserConfig } from "@/types/userConfig";
-import { capturePmTickBufferQuote } from "./tickBufferQuote";
-import { attachPolymarketDetectionQuote } from "./attachDetectionQuote";
+import { capturePmTickBufferQuote } from "@/services/polymarketQuotes";
+import { attachPolymarketDetectionQuote } from "@/services/polymarketQuotes";
 import { clearPmTickBufferMetadata, notePmTickBufferBook, setPmArbPriceBufferPrefs,
   resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-browser/adapter/polymarket";
 
@@ -93,14 +92,14 @@ it("real arbitrage leg construction sizes both legs using the displayed buffered
   const config = createDefaultUserConfig(); config.profit = 1; config.maxProfit = 2; config.minOdds = 1.01; config.betSorting = "Parallel";
   const match = { id: 100, game: "英雄联盟" } as ViewMatch;
   setPmArbPriceBufferPrefs({ enabled: true, multiplier: 1.01, mode: "tick" });
-  const tick = buildOrderOptions(bet, match, config, [], ["Polymarket", "PB"])!;
+  const tick = bet.getOrderOptions(match, config, [], ["Polymarket", "PB"])!;
   expect(tick).toHaveLength(2);
   expect(tick[0]).toMatchObject({ type: "Polymarket", odds: 1.960, betMoney: 100, data: { detectionMaxPrice: 0.51 } });
   expect(tick[1]).toMatchObject({ type: "PB", odds: 2.1, betMoney: 93.33 });
   const percentRuns = [undefined, "percent"] as const;
   for (const mode of percentRuns) {
     setPmArbPriceBufferPrefs({ enabled: true, multiplier: 1.01, mode });
-    const percent = buildOrderOptions(bet, match, config, [], ["Polymarket", "PB"])!;
+    const percent = bet.getOrderOptions(match, config, [], ["Polymarket", "PB"])!;
     expect(percent[0]).toMatchObject({ type: "Polymarket", odds: 1.980, betMoney: 100, data: { pmPriceQuote: { mode: "percent", cap: 0.505 } } });
     expect(percent[1]).toMatchObject({ type: "PB", odds: 2.1, betMoney: 94.29 });
   }

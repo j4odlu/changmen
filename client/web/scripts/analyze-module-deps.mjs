@@ -12,7 +12,7 @@ function walk(dir, files = []) {
     if (skipDirs.has(ent.name)) continue
     const p = path.join(dir, ent.name)
     if (ent.isDirectory()) walk(p, files)
-    else if (exts.some((e) => ent.name.endsWith(e))) files.push(p)
+    else if (exts.some((e) => ent.name.endsWith(e)) && !/\.(?:test|spec)\.[^.]+$/.test(ent.name)) files.push(p)
   }
   return files
 }

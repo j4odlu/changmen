@@ -1,6 +1,6 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
-import { useOddsStore } from "@/stores/oddsStore";
+import type { DetectionQuoteSource } from "@/domain/betting/quoteSource";
 import {
   isPfArbPriceBufferActive,
   isValidPredictClobPrice,
@@ -20,13 +20,13 @@ function hasLockedPredictFunDetectionQuote(data: PredictFunOptionQuoteData): boo
  * 关：仅当 fo 卖一与建腿赔率同档才锁原卖一。
  * 开：getOdds 已是 effective → 锁 execCap，供 resolve 同档命中。
  */
-export function attachPredictFunDetectionQuote(option: BetOption): void {
+export function attachPredictFunDetectionQuote(option: BetOption, quotes: DetectionQuoteSource): void {
   if (option.type !== PLATFORMS.PredictFun)
     return;
   const prior = (option.data && typeof option.data === "object"
     ? option.data
     : {}) as PredictFunOptionQuoteData & { marketId?: string };
-  const row = useOddsStore().getEntry(PLATFORMS.PredictFun, option.itemId);
+  const row = quotes.getEntry(PLATFORMS.PredictFun, option.itemId);
   const marketId = String(
     prior.marketId
     || row?.marketId

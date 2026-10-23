@@ -4,7 +4,7 @@ import type { PlatformId } from "@/types/esport";
 import type { UserConfig } from "@/types/userConfig";
 import { pickArbLegs } from "@changmen/arb-core";
 import { arbProfitRate } from "@changmen/client-core/shared/format";
-import { formatAccountFundingHint } from "@/stores/account/accountPicker";
+import { formatAccountFundingHint } from "@/domain/betting/accountFundingHint";
 
 /** 主循环扫描阶段跳过（未选出双腿，不应发套利执行 Telegram） */
 export function isArbScanSkipSummary(summary: string): boolean {

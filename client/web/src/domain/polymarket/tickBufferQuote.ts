@@ -2,11 +2,11 @@ import { validatePmPriceQuote } from "@changmen/venue-browser/polymarket/priceQu
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { getPmArbPriceBufferPrefs, resolvePmDisplayQuote,
   type PmArbPriceBufferPrefs } from "@changmen/venue-browser/adapter/polymarket";
-import { useOddsStore } from "@/stores/oddsStore";
+import type { DetectionQuoteSource } from "@/domain/betting/quoteSource";
 
 const policies = new WeakMap<BetOption, PmArbPriceBufferPrefs>();
 /** [changmen 扩展] 同步建腿时冻结转换规则及完整报价，后续不按新行情/配置重算。 */
-export function capturePmPriceQuote(option: BetOption): void {
+export function capturePmPriceQuote(option: BetOption, quotes: DetectionQuoteSource): void {
   if (option.type !== "Polymarket") return;
   if (policies.has(option)) {
     if (policies.get(option)!.enabled && !option.data?.pmPriceQuote)
@@ -16,7 +16,7 @@ export function capturePmPriceQuote(option: BetOption): void {
   const policy = getPmArbPriceBufferPrefs();
   policies.set(option, policy);
   if (!policy.enabled) return;
-  const result = resolvePmDisplayQuote(option.itemId, useOddsStore().getPmQuoteEntry(option.itemId), policy);
+  const result = resolvePmDisplayQuote(option.itemId, quotes.getPmQuoteEntry(option.itemId), policy);
   if (result.status !== "ready" || result.quote.displayOdds !== option.odds)
     throw new Error(policy.mode === "tick" ? "PM +1 tick 报价未就绪或已改变" : "PM 调整报价未就绪或已改变");
   const quote = validatePmPriceQuote(result.quote, option.itemId, option.odds);

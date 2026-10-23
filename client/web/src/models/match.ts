@@ -2,6 +2,7 @@ import type { PlatformId } from "@changmen/api-contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { UserConfig } from "@/types/userConfig";
 import type { BetOption } from "@changmen/client-core/models/betOption";
+import { storeQuoteSource } from "@/services/quoteSource";
 import { buildOrderOptions } from "@/domain/betting";
 import {
   ViewBet,
@@ -36,5 +37,5 @@ ViewBet.prototype.getOrderOptions = function (
   accounts: PlatformAccount[] = [],
   providerKeys: PlatformId[],
 ): BetOption[] | undefined {
-  return buildOrderOptions(this, match, config, accounts, providerKeys);
+  return buildOrderOptions(this, match, config, accounts, providerKeys, storeQuoteSource);
 };

@@ -138,12 +138,12 @@ describe("podPmFollowPlace", () => {
 
   it("persists POD identity fields through PM football orders", () => {
     const storeSource = readFileSync(join(process.cwd(), "src/stores/footballOrderStore.ts"), "utf8");
-    const panelSource = readFileSync(join(process.cwd(), "src/components/football/PodFollowPanel.vue"), "utf8");
+    const gateSource = readFileSync(join(process.cwd(), "src/runtime/podFollowOrderGate.ts"), "utf8");
     expect(storeSource).toMatch(/podClientId:/);
     expect(storeSource).toMatch(/podPmMatchId:/);
-    expect(panelSource).toMatch(/pmUnifiedFootballRows/);
-    expect(panelSource).toMatch(/PodClientId/);
-    expect(panelSource).toMatch(/PodPmMatchId/);
+    expect(gateSource).toMatch(/pmUnifiedFootballRows/);
+    expect(gateSource).toMatch(/PodClientId/);
+    expect(gateSource).toMatch(/PodPmMatchId/);
   });
 
   it("keeps football wallet checks read-only during order execution", () => {

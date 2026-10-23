@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
+import { restoreFrontendDependencySource } from "./frontend-dependency-refactor.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const normalize = source => source.replaceAll("\r\n", "\n");
@@ -22,6 +23,7 @@ function canonical(file) {
 }
 
 export function restorePendingOrderDisplaySource(file, source) {
+  source = restoreFrontendDependencySource(canonical(file), source);
   const row = PENDING_ORDER_DISPLAY_INCREMENTS.changes[canonical(file)];
   if (!row || pendingOrderDisplaySha(source) !== row.afterSha) return source;
   const lines = normalize(source).split("\n");
@@ -36,11 +38,11 @@ export function restorePendingOrderDisplaySource(file, source) {
 
 export function verifyPendingOrderDisplaySources(read = file => fs.readFileSync(path.join(root, file), "utf8")) {
   for (const [file, row] of Object.entries(PENDING_ORDER_DISPLAY_INCREMENTS.changes)) {
-    const source = read(file);
+    const source = restoreFrontendDependencySource(file, read(file));
     assert.equal(pendingOrderDisplaySha(source), row.afterSha, `${file}: unregistered original-order display change`);
     assert.equal(pendingOrderDisplaySha(restorePendingOrderDisplaySource(file, source)), row.beforeSha);
   }
   for (const [file, sha] of Object.entries(PENDING_ORDER_DISPLAY_INCREMENTS.helpers))
-    assert.equal(pendingOrderDisplaySha(read(file)), sha, `${file}: complete original-order display helper changed`);
+    assert.equal(pendingOrderDisplaySha(restoreFrontendDependencySource(file, read(file))), sha, `${file}: complete original-order display helper changed`);
   return { files: Object.keys(PENDING_ORDER_DISPLAY_INCREMENTS.changes).length };
 }

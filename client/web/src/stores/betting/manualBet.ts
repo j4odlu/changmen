@@ -4,7 +4,7 @@ import { BetOption } from "@changmen/client-core/models/betOption";
 import { ElMessageBox } from "element-plus";
 import { h, ref } from "vue";
 import PmManualOrderPrompt from "@/components/betting/PmManualOrderPrompt.vue";
-import { capturePmPriceQuote } from "@/domain/polymarket/tickBufferQuote";
+import { capturePmPriceQuote } from "@/services/polymarketQuotes";
 import { isMapMuteActive } from "@/extensions/mapBetMute";
 import { isPrematchFullMarketAllowed } from "@/extensions/prematchFullOnly";
 import { readValueBetMoney } from "@/extensions/valueBet/valueBetStake";

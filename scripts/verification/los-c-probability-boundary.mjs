@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
+import { restoreFrontendDependencySource } from "./frontend-dependency-refactor.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const normalize = source => source.replaceAll("\r\n", "\n");
@@ -20,6 +21,7 @@ function canonical(file) {
 }
 
 export function restoreLosCProbabilitySource(file, source) {
+  source = restoreFrontendDependencySource(canonical(file), source);
   const row = LOS_C_INCREMENTS.changes[canonical(file)];
   if (!row || sha(source) !== row.afterSha) return source;
   const lines = normalize(source).split("\n");
@@ -34,7 +36,7 @@ export function restoreLosCProbabilitySource(file, source) {
 
 export function verifyLosCProbabilitySources(read = file => fs.readFileSync(path.join(root, file), "utf8")) {
   for (const [file, row] of Object.entries(LOS_C_INCREMENTS.changes)) {
-    const source = read(file);
+    const source = restoreFrontendDependencySource(file, read(file));
     const message = file === "client/web/src/extensions/arbBet/lowOddsSingle.ts" ? "complete 🎯 helper changed" : "unregistered 🎯 change";
     assert.equal(sha(source), row.afterSha, `${file}: ${message} (LOS C filter)`);
     assert.equal(sha(restoreLosCProbabilitySource(file, source)), row.beforeSha);

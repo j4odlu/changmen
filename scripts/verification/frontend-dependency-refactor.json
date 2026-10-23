@@ -1,0 +1,465 @@
+{
+  "purpose": "frontend-dependency-injection-only",
+  "baseline": "21e45cdee305f3e2ce44b8f475803ef0b0fc8324",
+  "files": [
+    {
+      "file": "client/web/package.json",
+      "beforeSha": "7368a33df54699e820c31aaa6d1ce614a090e2cb477ca6ca9fa43d4e3ac29f2e",
+      "afterSha": "7529831477fe87a973396313d05799a58de2a1ebf08279852cba000ad77dfd71",
+      "edits": [
+        {
+          "offset": 661,
+          "before": "    \"test\": \"vitest run\",\n",
+          "after": "    \"test\": \"node scripts/analyze-module-deps.mjs --check && vitest run\",\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/scripts/analyze-module-deps.mjs",
+      "beforeSha": "41d3bd0778bead69d0ca02ed200641d86204a91186352d413313fcaacc5e7906",
+      "afterSha": "5bb932d98bb9fe07d13f77aaac237c1e7872a2148783549add382cdc6604af7a",
+      "edits": [
+        {
+          "offset": 527,
+          "before": "    else if (exts.some((e) => ent.name.endsWith(e))) files.push(p)\n",
+          "after": "    else if (exts.some((e) => ent.name.endsWith(e)) && !/\\.(?:test|spec)\\.[^.]+$/.test(ent.name)) files.push(p)\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/betting/buildOrderOptions.ts",
+      "beforeSha": "cb93da72ec46d644241cc40e7b6914989e187d6860e5cd8d436d5ff31da6a3ab",
+      "afterSha": "df989e84438630f04d7253602f27ddc1d9cddcf77eb05e1c4ab16ff72fe5d54e",
+      "edits": [
+        {
+          "offset": 423,
+          "before": "",
+          "after": "import type { DetectionQuoteSource } from \"./quoteSource\";\n"
+        },
+        {
+          "offset": 818,
+          "before": "",
+          "after": "  quotes: DetectionQuoteSource,\n"
+        },
+        {
+          "offset": 2157,
+          "before": "  try { for (const option of options) capturePmPriceQuote(option); }\n",
+          "after": "  try { for (const option of options) capturePmPriceQuote(option, quotes); }\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/betting/describeArbPrepareSkip.ts",
+      "beforeSha": "265dad2b077f011f5ea060e741ac9235a1cd156564e7dbbbfb66f329334460c8",
+      "afterSha": "e949dc3c8cc25971b63336ffdc0334e34c79079aa01c74fca25ddb70020c1ad9",
+      "edits": [
+        {
+          "offset": 346,
+          "before": "import { formatAccountFundingHint } from \"@/stores/account/accountPicker\";\n",
+          "after": "import { formatAccountFundingHint } from \"@/domain/betting/accountFundingHint\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/polymarket/arbProgressPmMeta.test.ts",
+      "beforeSha": "c5ecb68b14d4f0e33d89eb222c77e043eeee42c78ae7a14d83f023c08d780d45",
+      "afterSha": "f56408603290f2fb660c7710020404b4e880c1e000b976a83d72f79f0a4a28a3",
+      "edits": [
+        {
+          "offset": 149,
+          "before": "import { buildPolymarketArbProgressMeta } from \"@/domain/polymarket/arbProgressPmMeta\";\n",
+          "after": "import { buildPolymarketArbProgressMeta } from \"@/services/polymarketQuotes\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/polymarket/arbProgressPmMeta.ts",
+      "beforeSha": "b7f825bc80d52ba1ca224fe591ab001f6e5ae7026008f56864f07c3c108540a1",
+      "afterSha": "55fabfe81d2b85df64df4e3123c176a628e5dc8689cedeae73606ee031da2cd7",
+      "edits": [
+        {
+          "offset": 73,
+          "before": "import type { ArbProgressPolymarketMeta } from \"@/stores/betting/autoBet/arbExecutionTrace\";\n",
+          "after": "import type { ArbProgressPolymarketMeta } from \"@/types/arbProgress\";\n"
+        },
+        {
+          "offset": 211,
+          "before": "import { useOddsStore } from \"@/stores/oddsStore\";\n",
+          "after": "import type { DetectionQuoteSource } from \"@/domain/betting/quoteSource\";\n"
+        },
+        {
+          "offset": 1347,
+          "before": "export function buildPolymarketArbProgressMeta(option: BetOption): ArbProgressPolymarketMeta {\n",
+          "after": "export function buildPolymarketArbProgressMeta(option: BetOption, quotes: DetectionQuoteSource): ArbProgressPolymarketMeta {\n"
+        },
+        {
+          "offset": 1510,
+          "before": "  const foClobPrice = useOddsStore().getEntry(PLATFORMS.Polymarket, option.itemId)?.clobPrice;\n",
+          "after": "  const foClobPrice = quotes.getEntry(PLATFORMS.Polymarket, option.itemId)?.clobPrice;\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/polymarket/attachDetectionQuote.test.ts",
+      "beforeSha": "d43ca037ce3a69e6330747b8078ae95dcae64f0f2fa6fd21520cfd82bfd06b53",
+      "afterSha": "e4bcfc1e853f3632d485e0f42502e0b05faa88ef013d12e7a6f8400c6f82ab43",
+      "edits": [
+        {
+          "offset": 198,
+          "before": "import { attachPolymarketDetectionQuote } from \"@/domain/polymarket/attachDetectionQuote\";\n",
+          "after": "import { attachPolymarketDetectionQuote } from \"@/services/polymarketQuotes\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/polymarket/attachDetectionQuote.ts",
+      "beforeSha": "d2107326da9b703ab2a5f9e74236eb3d863635405c85d59ae7a64b9a0b5fcf71",
+      "afterSha": "4428f49a4ba094d31df9497d50e59e8eca19ad3b6444906f33a009f02c294116",
+      "edits": [
+        {
+          "offset": 331,
+          "before": "import { useOddsStore } from \"@/stores/oddsStore\";\n",
+          "after": "import type { DetectionQuoteSource } from \"@/domain/betting/quoteSource\";\n"
+        },
+        {
+          "offset": 796,
+          "before": "export function attachPolymarketDetectionQuote(option: BetOption, scope: \"esport\" | \"sport\" = \"esport\"): void {\n",
+          "after": "export function attachPolymarketDetectionQuote(option: BetOption, quotes: DetectionQuoteSource, scope: \"esport\" | \"sport\" = \"esport\"): void {\n"
+        },
+        {
+          "offset": 1157,
+          "before": "    if (scope === \"esport\") capturePmPriceQuote(option);\n",
+          "after": "    if (scope === \"esport\") capturePmPriceQuote(option, quotes);\n"
+        },
+        {
+          "offset": 2087,
+          "before": "  const row = scope === \"esport\" ? useOddsStore().getPmQuoteEntry(option.itemId)\n    : useOddsStore().getEntry(PLATFORMS.Polymarket, option.itemId);\n",
+          "after": "  const row = scope === \"esport\" ? quotes.getPmQuoteEntry(option.itemId)\n    : quotes.getEntry(PLATFORMS.Polymarket, option.itemId);\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/polymarket/tickBufferQuote.test.ts",
+      "beforeSha": "c027dd68b6dae5a15ab76b518f65d08fa9c2aef872a9edd96c4e2fdb6953e69e",
+      "afterSha": "29fd9a936cef055a93c9fae6435230c0688b6c47d68c173aa0f422f159f914e7",
+      "edits": [
+        {
+          "offset": 557,
+          "before": "import { buildOrderOptions } from \"@/domain/betting/buildOrderOptions\";\n",
+          "after": ""
+        },
+        {
+          "offset": 619,
+          "before": "import { capturePmTickBufferQuote } from \"./tickBufferQuote\";\nimport { attachPolymarketDetectionQuote } from \"./attachDetectionQuote\";\n",
+          "after": "import { capturePmTickBufferQuote } from \"@/services/polymarketQuotes\";\nimport { attachPolymarketDetectionQuote } from \"@/services/polymarketQuotes\";\n"
+        },
+        {
+          "offset": 6242,
+          "before": "  const tick = buildOrderOptions(bet, match, config, [], [\"Polymarket\", \"PB\"])!;\n",
+          "after": "  const tick = bet.getOrderOptions(match, config, [], [\"Polymarket\", \"PB\"])!;\n"
+        },
+        {
+          "offset": 6713,
+          "before": "    const percent = buildOrderOptions(bet, match, config, [], [\"Polymarket\", \"PB\"])!;\n",
+          "after": "    const percent = bet.getOrderOptions(match, config, [], [\"Polymarket\", \"PB\"])!;\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/polymarket/tickBufferQuote.ts",
+      "beforeSha": "a542825b6ee23fca0d0242752c665b0c5de1e022d060f44246ae3d94b7410ac3",
+      "afterSha": "c65887dc830cd0d19ee911219e2cc601c7942b8f83cb101a266784c86bcdd340",
+      "edits": [
+        {
+          "offset": 299,
+          "before": "import { useOddsStore } from \"@/stores/oddsStore\";\n",
+          "after": "import type { DetectionQuoteSource } from \"@/domain/betting/quoteSource\";\n"
+        },
+        {
+          "offset": 492,
+          "before": "export function capturePmPriceQuote(option: BetOption): void {\n",
+          "after": "export function capturePmPriceQuote(option: BetOption, quotes: DetectionQuoteSource): void {\n"
+        },
+        {
+          "offset": 896,
+          "before": "  const result = resolvePmDisplayQuote(option.itemId, useOddsStore().getPmQuoteEntry(option.itemId), policy);\n",
+          "after": "  const result = resolvePmDisplayQuote(option.itemId, quotes.getPmQuoteEntry(option.itemId), policy);\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/predictfun/attachDetectionQuote.test.ts",
+      "beforeSha": "7b3982b4c7d9655605948b9ab3161b84b81ca996ad06762381c4aa763aa9cab0",
+      "afterSha": "2d9d9a66ccaf30c79a31fbc92d7161f2f6f934525a823063eaff7dba0ad0dd40",
+      "edits": [
+        {
+          "offset": 198,
+          "before": "import { attachPredictFunDetectionQuote } from \"@/domain/predictfun/attachDetectionQuote\";\n",
+          "after": "import { attachPredictFunDetectionQuote } from \"@/services/predictFunQuotes\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/domain/predictfun/attachDetectionQuote.ts",
+      "beforeSha": "93e04fa7a98d2d03099150a385a972c97b130497cbd23d645d8472a7e9deeb01",
+      "afterSha": "cdbf917b636f9ae8b6ad228646689cc324e02ec4b09e29895352ab52803b20f3",
+      "edits": [
+        {
+          "offset": 141,
+          "before": "import { useOddsStore } from \"@/stores/oddsStore\";\n",
+          "after": "import type { DetectionQuoteSource } from \"@/domain/betting/quoteSource\";\n"
+        },
+        {
+          "offset": 813,
+          "before": "export function attachPredictFunDetectionQuote(option: BetOption): void {\n",
+          "after": "export function attachPredictFunDetectionQuote(option: BetOption, quotes: DetectionQuoteSource): void {\n"
+        },
+        {
+          "offset": 1119,
+          "before": "  const row = useOddsStore().getEntry(PLATFORMS.PredictFun, option.itemId);\n",
+          "after": "  const row = quotes.getEntry(PLATFORMS.PredictFun, option.itemId);\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/extensions/arbBet/makeupOddsBand.ts",
+      "beforeSha": "f8b182a4e94c0838c8dd7e30c3844626fe423b9bf122a42e29eaba56a9e291a5",
+      "afterSha": "0a8d0100f5c54c9c7dee9caa492b882d4db4f249b016f1dfb5554a6485302f5c",
+      "edits": [
+        {
+          "offset": 284,
+          "before": "",
+          "after": "import type { MakeupOddsBandDisplay } from \"@/types/order\";\n"
+        },
+        {
+          "offset": 5618,
+          "before": "export interface MakeupOddsBandDisplay {\n  breakEvenOdds: number;\n  upperOdds: number | null;\n  lowerOdds: number | null;\n  /** 利润率模式按未取整的等返还金额折算，实际门槛仍由整数计划金额判断。 */\n  approximate: boolean;\n}\n",
+          "after": "export type { MakeupOddsBandDisplay } from \"@/types/order\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/extensions/valueBet/evConfig.ts",
+      "beforeSha": "2529e106d91a80c8f3af44234e6c15b83b8d7b41346fd18e9913be3ebbe597fe",
+      "afterSha": "495eb9d2673eb054eaef2884868d931423160a6dec2a3d67729267e576ba8df9",
+      "edits": [
+        {
+          "offset": 0,
+          "before": "import type { PlatformId } from \"@/types/esport\";\n\n/** [changmen 扩展] EV 金色标记 / 正 EV 确认可用的 sharp 基准 */\nexport const VALUE_BET_SHARP_OPTIONS = [\"PB\", \"RAY\", \"OB\"] as const;\nexport type ValueBetSharpPlatform = (typeof VALUE_BET_SHARP_OPTIONS)[number];\n\nexport const DEFAULT_SHARP_PLATFORM: ValueBetSharpPlatform = \"PB\";\nexport const DEFAULT_MIN_EDGE_PCT = 3;\nexport const DEFAULT_NEAR_EDGE_PCT = 1;\nexport const DEFAULT_AUTO_BET_MIN_EDGE_PCT = 3;\nexport const DEFAULT_AUTO_BET_MAX_EDGE_PCT = 20;\nexport const DEFAULT_AUTO_BET_MIN_ODDS = 1.3;\nexport const DEFAULT_AUTO_BET_MAX_ODDS = 10;\nexport const DEFAULT_AUTO_BET_MAX_PER_MAP = 1;\n\n/** 历史默认（sharp=PB）；运行时请用 valueBetCalcOptsFromPrefs */\nexport const SHARP_PLATFORM: PlatformId = DEFAULT_SHARP_PLATFORM;\nexport const MIN_EDGE = DEFAULT_MIN_EDGE_PCT / 100;\nexport const NEAR_EDGE = DEFAULT_NEAR_EDGE_PCT / 100;\n\n/**\n * 可被标记的软盘候选。所选基准从中剔除；其它基准（PB/RAY/OB）可作为软盘。\n * 名单沿用现网白名单，含 PB 以便非 PB 作基准时能标 PB。\n */\nexport const VALUE_BET_SOFT_CANDIDATES: readonly PlatformId[] = [\n  \"OB\",\n  \"RAY\",\n  \"IA\",\n  \"SABA\",\n  \"IMT\",\n  \"Polymarket\",\n  \"PB\",\n];\n\nexport function resolveSoftPlatforms(sharp: PlatformId): PlatformId[] {\n  return VALUE_BET_SOFT_CANDIDATES.filter(p => p !== sharp);\n}\n\nexport function createDefaultValueBetSoftPlatforms(): PlatformId[] {\n  return [...VALUE_BET_SOFT_CANDIDATES];\n}\n\n/** EV 软盘：只保留候选表内 id，按候选表顺序；空/脏 → 全候选。 */\nexport function normalizeValueBetSoftPlatforms(raw: unknown): PlatformId[] {\n  const defaults = createDefaultValueBetSoftPlatforms();\n  if (!Array.isArray(raw))\n    return defaults;\n  const allowed = new Set<string>(VALUE_BET_SOFT_CANDIDATES);\n  const picked = new Set<string>();\n  for (const item of raw) {\n    if (typeof item === \"string\" && allowed.has(item))\n      picked.add(item);\n  }\n  const ordered = VALUE_BET_SOFT_CANDIDATES.filter(p => picked.has(p));\n  return ordered.length > 0 ? [...ordered] : defaults;\n}\n\n/**\n * 从已 normalize 的软盘 prefs 剔 sharp。\n * 剔空不回退成全员：只勾基准 = 没有 EV 目标。\n */\nexport function resolveSoftPlatformsFromAllowed(\n  sharp: PlatformId,\n  allowed: readonly PlatformId[] | null | undefined,\n): PlatformId[] {\n  const base = allowed?.length\n    ? VALUE_BET_SOFT_CANDIDATES.filter(p => allowed.includes(p))\n    : [...VALUE_BET_SOFT_CANDIDATES];\n  return base.filter(p => p !== sharp);\n}\n\n/** sharp=PB 时的软盘名单（与改前白名单一致：不含 PB） */\nexport const SOFT_PLATFORMS: PlatformId[] = resolveSoftPlatforms(DEFAULT_SHARP_PLATFORM);\n\nexport interface ValueBetCalcOpts {\n  sharp: PlatformId;\n  minEdge: number;\n  nearEdge: number;\n  softPlatforms: PlatformId[];\n}\n\nexport function normalizeValueBetSharp(raw: unknown): ValueBetSharpPlatform {\n  return (VALUE_BET_SHARP_OPTIONS as readonly string[]).includes(raw as string)\n    ? (raw as ValueBetSharpPlatform)\n    : DEFAULT_SHARP_PLATFORM;\n}\n\nexport function normalizeValueBetEdgePct(raw: unknown, fallback: number): number {\n  if (raw == null || raw === \"\")\n    return fallback;\n  const n = Number(raw);\n  if (!Number.isFinite(n))\n    return fallback;\n  const rounded = Math.round(n * 10) / 10;\n  return Math.min(20, Math.max(0.1, rounded));\n}\n\n/** 接近阈值不得高于正 EV，否则会把已达正 EV 的格子滤出 map。 */\nexport function clampValueBetNearEdgePct(nearEdgePct: number, minEdgePct: number): number {\n  return Math.min(nearEdgePct, minEdgePct);\n}\n\nexport function valueBetCalcOptsFromPrefs(prefs?: {\n  sharp?: unknown;\n  minEdgePct?: unknown;\n  /** 已选软盘；缺省 = 全候选。调用方传 extensionPrefs.valueBetSoftPlatforms */\n  softPlatforms?: unknown;\n} | null): ValueBetCalcOpts {\n  const sharp = normalizeValueBetSharp(prefs?.sharp);\n  const minEdgePct = normalizeValueBetEdgePct(prefs?.minEdgePct, DEFAULT_MIN_EDGE_PCT);\n  const nearEdgePct = clampValueBetNearEdgePct(DEFAULT_NEAR_EDGE_PCT, minEdgePct);\n  const allowed = normalizeValueBetSoftPlatforms(\n    prefs?.softPlatforms === undefined ? VALUE_BET_SOFT_CANDIDATES : prefs.softPlatforms,\n  );\n  return {\n    sharp,\n    minEdge: minEdgePct / 100,\n    nearEdge: nearEdgePct / 100,\n    softPlatforms: resolveSoftPlatformsFromAllowed(sharp, allowed),\n  };\n}\n\n/** 角标可见下限：正 EV 与接近取较小者，避免接近>正EV 时漏标金色。 */\nexport function evMarkerFloor(nearEdge: number, minEdge: number): number {\n  return Math.min(nearEdge, minEdge);\n}\n\nexport function normalizeValueBetOdds(raw: unknown, fallback: number): number {\n  if (raw == null || raw === \"\")\n    return fallback;\n  const n = Number(raw);\n  if (!Number.isFinite(n))\n    return fallback;\n  const rounded = Math.round(n * 100) / 100;\n  return Math.min(20, Math.max(1.01, rounded));\n}\n\n/** EV% 区间：上限不得低于下限。 */\nexport function clampValueBetEdgePctRange(minEdgePct: number, maxEdgePct: number): {\n  minEdgePct: number;\n  maxEdgePct: number;\n} {\n  if (maxEdgePct < minEdgePct)\n    return { minEdgePct, maxEdgePct: minEdgePct };\n  return { minEdgePct, maxEdgePct };\n}\n\n/** 基准赔率区间：上限不得低于下限。 */\nexport function clampValueBetOddsRange(minOdds: number, maxOdds: number): { minOdds: number; maxOdds: number } {\n  if (maxOdds < minOdds)\n    return { minOdds, maxOdds: minOdds };\n  return { minOdds, maxOdds };\n}\n\n/** 扫描/落单用：把界面清空的 null、倒区间收成合法上下限，避免当 0 下出。 */\nexport function coerceValueBetAutoBetRuntime(raw?: {\n  minEdgePct?: unknown;\n  maxEdgePct?: unknown;\n  minOdds?: unknown;\n  maxOdds?: unknown;\n  maxPerMap?: unknown;\n} | null): {\n  minEdgePct: number;\n  maxEdgePct: number;\n  minOdds: number;\n  maxOdds: number;\n  maxPerMap: number;\n  minEdge: number;\n  maxEdge: number;\n} {\n  const minEdgePct = normalizeValueBetEdgePct(raw?.minEdgePct, DEFAULT_AUTO_BET_MIN_EDGE_PCT);\n  const maxEdgePct = normalizeValueBetEdgePct(raw?.maxEdgePct, DEFAULT_AUTO_BET_MAX_EDGE_PCT);\n  const edge = clampValueBetEdgePctRange(minEdgePct, maxEdgePct);\n  const minOdds = normalizeValueBetOdds(raw?.minOdds, DEFAULT_AUTO_BET_MIN_ODDS);\n  const maxOdds = normalizeValueBetOdds(raw?.maxOdds, DEFAULT_AUTO_BET_MAX_ODDS);\n  const odds = clampValueBetOddsRange(minOdds, maxOdds);\n  const maxPerMap = normalizeValueBetCount(raw?.maxPerMap, DEFAULT_AUTO_BET_MAX_PER_MAP);\n  return {\n    minEdgePct: edge.minEdgePct,\n    maxEdgePct: edge.maxEdgePct,\n    minOdds: odds.minOdds,\n    maxOdds: odds.maxOdds,\n    maxPerMap,\n    minEdge: edge.minEdgePct / 100,\n    maxEdge: edge.maxEdgePct / 100,\n  };\n}\n\n/** 同一地图 EV 下注次数：1–20，非法回退 fallback。 */\nexport function normalizeValueBetCount(raw: unknown, fallback: number): number {\n  if (raw == null || raw === \"\")\n    return fallback;\n  const n = Number(raw);\n  if (!Number.isFinite(n))\n    return fallback;\n  return Math.min(20, Math.max(1, Math.round(n)));\n}\n",
+          "after": "// [changmen 扩展] 兼容入口；纯配置的唯一实现归应用公共配置层。\nexport * from \"@/config/valueBet\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/models/match.ts",
+      "beforeSha": "4c64bd0857882b1e7e10fbf9c845b66ec93ee53bb19bcf1ea7485ce13f75f2d3",
+      "afterSha": "5629fe14fc056172dde1320a16f02606ff05f0568e1e92409d99c51aa06f4bfa",
+      "edits": [
+        {
+          "offset": 250,
+          "before": "",
+          "after": "import { storeQuoteSource } from \"@/services/quoteSource\";\n"
+        },
+        {
+          "offset": 1016,
+          "before": "  return buildOrderOptions(this, match, config, accounts, providerKeys);\n",
+          "after": "  return buildOrderOptions(this, match, config, accounts, providerKeys, storeQuoteSource);\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/shared/arbProgressLegMeta.ts",
+      "beforeSha": "3bdf4c16d632cfc4f94d072c42e46d1b1d3a43e0de5e81f65a7f4c969bc206d2",
+      "afterSha": "1b58947f768d2b223d2aafa66e2997f01eb5ea232ba6e83ecd626b008aae2b05",
+      "edits": [
+        {
+          "offset": 224,
+          "before": "import { buildPolymarketArbProgressMeta } from \"@/domain/polymarket/arbProgressPmMeta\";\n",
+          "after": "import { buildPolymarketArbProgressMeta } from \"@/services/polymarketQuotes\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/stores/account/accountPicker.ts",
+      "beforeSha": "9bc2fa6200d23e4b1312d613dcbe4d111862cbee29bf7a89e01dea684e717a21",
+      "afterSha": "744f95696269875c827779153b2bf8ec7be6223764090e502de7814e2432a953",
+      "edits": [
+        {
+          "offset": 1208,
+          "before": "export function formatAccountFundingHint(\n  accounts: PlatformAccount[],\n  threshold: number,\n): string {\n  if (!accounts.length)\n    return \"无已加载账号\";\n  return accounts\n    .map((acc) => {\n      const bal = acc.getBalance();\n      if (bal === undefined)\n        return `${acc.provider}/${acc.playerName}:未加载`;\n      const mark = bal < threshold ? `<${threshold}` : \"\";\n      return `${acc.provider}/${acc.playerName}:${Math.floor(bal)}${mark}`;\n    })\n    .join(\"，\");\n}\n",
+          "after": "export { formatAccountFundingHint } from \"@/domain/betting/accountFundingHint\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/stores/account/betGateway.pmTickBuffer.test.ts",
+      "beforeSha": "471a61ef706483116d038ac89e508c3d4de89d6f4ff38f6cb17c4c1a246da549",
+      "afterSha": "983ef6ecc52e2d6e4e82ff1856f792bc521aa33c6223da7cc458e4f2fa944867",
+      "edits": [
+        {
+          "offset": 400,
+          "before": "import { capturePmTickBufferQuote } from \"@/domain/polymarket/tickBufferQuote\";\n",
+          "after": "import { capturePmTickBufferQuote } from \"@/services/polymarketQuotes\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/stores/account/betGateway.recovery.test.ts",
+      "beforeSha": "679ef95574ea09d9827f050ec96781dc69fa81fca92a979c1a07606c45cac364",
+      "afterSha": "bd9c3ba26cd37424f68bc87864d876d9be23b1f4c368fda05790f1631e677ca5",
+      "edits": [
+        {
+          "offset": 1669,
+          "before": "vi.mock(\"@/domain/polymarket/attachDetectionQuote\", () => ({ attachPolymarketDetectionQuote: vi.fn() }));\nvi.mock(\"@/domain/predictfun/attachDetectionQuote\", () => ({ attachPredictFunDetectionQuote: vi.fn() }));\n",
+          "after": "vi.mock(\"@/services/polymarketQuotes\", () => ({ attachPolymarketDetectionQuote: vi.fn() }));\nvi.mock(\"@/services/predictFunQuotes\", () => ({ attachPredictFunDetectionQuote: vi.fn() }));\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/stores/account/betGateway.ts",
+      "beforeSha": "a675fda529508ac1b18c8ce373a99f60ff9e8cc9de931b33d6e0488863a36dc4",
+      "afterSha": "cd39eb5184861e84173e19124fe5ee97256cc8d970e09f2975b1d133927f0805",
+      "edits": [
+        {
+          "offset": 668,
+          "before": "import { attachPolymarketDetectionQuote } from \"@/domain/polymarket/attachDetectionQuote\";\nimport { attachPredictFunDetectionQuote } from \"@/domain/predictfun/attachDetectionQuote\";\n",
+          "after": "import { attachPolymarketDetectionQuote } from \"@/services/polymarketQuotes\";\nimport { attachPredictFunDetectionQuote } from \"@/services/predictFunQuotes\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/stores/account/betGatewayObservation.test.ts",
+      "beforeSha": "5e13df250617552ccf3e0e4375445dcf682ea16d7f8d496a608891205ddcc10b",
+      "afterSha": "46d73ae52e90e632c1a88457aabe71c8f52602ff0f089d18b2bee32cf4607b7b",
+      "edits": [
+        {
+          "offset": 3070,
+          "before": "vi.mock(\"@/domain/polymarket/attachDetectionQuote\", () => ({ attachPolymarketDetectionQuote: () => {} }));\nvi.mock(\"@/domain/predictfun/attachDetectionQuote\", () => ({ attachPredictFunDetectionQuote: () => {} }));\n",
+          "after": "vi.mock(\"@/services/polymarketQuotes\", () => ({ attachPolymarketDetectionQuote: () => {} }));\nvi.mock(\"@/services/predictFunQuotes\", () => ({ attachPredictFunDetectionQuote: () => {} }));\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/stores/betting/autoBet/arbExecutionTrace.ts",
+      "beforeSha": "a64e9e3d341d8617a6fd16894ba3d2c062da006a536f82a99ce94d9df4bcc477",
+      "afterSha": "0bd065913aab8960c938e49669a17a0311d59ee3a3489e892bca2af0c463088d",
+      "edits": [
+        {
+          "offset": 0,
+          "before": "",
+          "after": "import type { ArbProgressPolymarketMeta } from \"@/types/arbProgress\";\n"
+        },
+        {
+          "offset": 305,
+          "before": "export interface ArbProgressPolymarketMeta {\n  tokenId: string;\n  tokenShort: string;\n  detectionOdds: number;\n  detectionMaxPrice: number;\n  foClobPrice?: number;\n  bookPrice?: number;\n  apiBetMoney?: number;\n  capSource: \"clob\" | \"odds\" | \"locked\";\n}\n",
+          "after": "export type { ArbProgressPolymarketMeta } from \"@/types/arbProgress\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/stores/betting/manualBet.sync.test.ts",
+      "beforeSha": "7de97bbda31781dbcca30f8361dd10a847bc83526b8a9b825ced01fdcae7c784",
+      "afterSha": "9ac0670bacb983ac56015e15161c124ad443e24c3a7741061e5739f27551fbdb",
+      "edits": [
+        {
+          "offset": 596,
+          "before": "import { attachPolymarketDetectionQuote } from \"@/domain/polymarket/attachDetectionQuote\";\n",
+          "after": "import { attachPolymarketDetectionQuote } from \"@/services/polymarketQuotes\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/stores/betting/manualBet.ts",
+      "beforeSha": "23f1147047546d4c15f46250407263fb6772e5d57cf5cf7b735877406ac2c8d4",
+      "afterSha": "dc4a201880cc6838f0f7812e0099c00386509a0f7b754d065580ad50a12055c0",
+      "edits": [
+        {
+          "offset": 357,
+          "before": "import { capturePmPriceQuote } from \"@/domain/polymarket/tickBufferQuote\";\n",
+          "after": "import { capturePmPriceQuote } from \"@/services/polymarketQuotes\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/stores/oddsStore.pmQuoteSnapshot.test.ts",
+      "beforeSha": "519344f067c59130f48eca998881619a16bd4bc7b76d34eba7c8b4c99181b0ad",
+      "afterSha": "6ccd41bf21e1996334c49fa41626fdc84d5c632fb2ac9392c90c2e485579de7c",
+      "edits": [
+        {
+          "offset": 236,
+          "before": "import { capturePmPriceQuote } from \"@/domain/polymarket/tickBufferQuote\";\nimport { attachPolymarketDetectionQuote } from \"@/domain/polymarket/attachDetectionQuote\";\n",
+          "after": "import { capturePmPriceQuote } from \"@/services/polymarketQuotes\";\nimport { attachPolymarketDetectionQuote } from \"@/services/polymarketQuotes\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/types/extensionPrefs.ts",
+      "beforeSha": "961aaef10ffd4ca09b9e6c246787bbc8f755871037de41539ae74d69441fb835",
+      "afterSha": "4c0f79f7afb5b012b416fb8f47abd15e5b56b70b15dd38cec1c79b97d85bd427",
+      "edits": [
+        {
+          "offset": 0,
+          "before": "import type { ValueBetSharpPlatform } from \"@/extensions/valueBet/evConfig\";\n",
+          "after": "import type { ValueBetSharpPlatform } from \"@/config/valueBet\";\n"
+        },
+        {
+          "offset": 536,
+          "before": "} from \"@/extensions/valueBet/evConfig\";\n",
+          "after": "} from \"@/config/valueBet\";\n"
+        },
+        {
+          "offset": 698,
+          "before": "} from \"@/extensions/valueBet/evConfig\";\n",
+          "after": "} from \"@/config/valueBet\";\n"
+        }
+      ]
+    },
+    {
+      "file": "client/web/src/types/order.ts",
+      "beforeSha": "a4088fb0738785f331ba6de79d6c73e73ae12b605b92d1ccf8f84a8fdb47566d",
+      "afterSha": "85595e9bf6171e96685aa5185c954c8affaf53b519b35c945704ab1eb7057b22",
+      "edits": [
+        {
+          "offset": 214,
+          "before": "",
+          "after": "export interface MakeupOddsBandDisplay {\n  breakEvenOdds: number;\n  upperOdds: number | null;\n  lowerOdds: number | null;\n  /** 利润率模式按未取整的等返还金额折算，实际门槛仍由整数计划金额判断。 */\n  approximate: boolean;\n}\n\n"
+        },
+        {
+          "offset": 749,
+          "before": "  MakeupOddsBand?: import(\"@/extensions/arbBet/makeupOddsBand\").MakeupOddsBandDisplay;\n",
+          "after": "  MakeupOddsBand?: MakeupOddsBandDisplay;\n"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "file": "client/web/src/config/valueBet.ts",
+      "sha": "2529e106d91a80c8f3af44234e6c15b83b8d7b41346fd18e9913be3ebbe597fe"
+    },
+    {
+      "file": "client/web/src/domain/betting/accountFundingHint.ts",
+      "sha": "6c14ebc23b29c30a0c6cefa94fb494cd7d69d033107db091324a9bb76c99e763"
+    },
+    {
+      "file": "client/web/src/domain/betting/quoteSource.ts",
+      "sha": "8eaa4d38d916758ca0c4fd6dd37c6edabb4fe93d9f99ce37bada25738105aabd"
+    },
+    {
+      "file": "client/web/src/services/quoteSource.ts",
+      "sha": "610e7f5d0ee9f465e1eb9b36d02d9c40956b5c0b7d918d9a2fca0b391ba8643b"
+    },
+    {
+      "file": "client/web/src/services/polymarketQuotes.ts",
+      "sha": "278c56f25126369be619e07098a2252b2d7198487f0bf75a32c9564c27bf8f78"
+    },
+    {
+      "file": "client/web/src/services/predictFunQuotes.ts",
+      "sha": "7f98382c002be5d671bc23f5be02558eb4bc48a1954c3efc9a840fb92693ac23"
+    },
+    {
+      "file": "client/web/src/types/arbProgress.ts",
+      "sha": "cc746c74271d85ed5e1c3907c8f0c956e080932e268b4d268f09659b3791df7e"
+    }
+  ]
+}

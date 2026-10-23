@@ -3,6 +3,7 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { OrderRow, PageResult } from "@/types/esport";
 import { post, unwrap } from "@/api/client";
 import type { PmSubmission, PmPendingOrderReceipt } from "@changmen/shared/pm_submission";
+import { pendingPmOrderWriteBarrier } from "@/services/pendingPmOrderWrites";
 
 /** [changmen 扩展] 同步专用投影；未注册或没有匹配原单时沿用原保存数组。 */
 let orderSyncProjection: ((account: PlatformAccount, orders: VenueOrder[]) => VenueOrder[] | Promise<VenueOrder[]>) | undefined;
@@ -41,6 +42,7 @@ export async function saveOrder(body: Record<string, unknown>) {
  * [changmen 扩展] PredictFun 禁止客户端回写：订单只经 Pf_* 服务端落库。
  */
 export async function saveOrders(account: PlatformAccount, orders: VenueOrder[]): Promise<void> {
+  const originalPendingWrite = pendingPmOrderWriteBarrier(account.accountId, orders);
   orders = await (orderSyncProjection?.(account, orders) ?? orders);
   if (String(account.provider ?? "").trim() === "PredictFun")
     return;
@@ -54,6 +56,9 @@ export async function saveOrders(account: PlatformAccount, orders: VenueOrder[])
     byProvider.set(provider, list);
   }
   for (const [type, list] of byProvider) {
+    if (type === "Polymarket" && originalPendingWrite) await originalPendingWrite();
+    const pendingWrite = type === "Polymarket" ? pendingPmOrderWriteBarrier(account.accountId, list) : undefined;
+    if (pendingWrite) await pendingWrite();
     await saveOrder({
       type,
       playerId: account.accountId,

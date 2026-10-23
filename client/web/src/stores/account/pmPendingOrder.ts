@@ -9,6 +9,7 @@ import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { saveOrders } from "@/api/order";
 import { resolveOrderItemLabel } from "@/shared/orderItemDisplay";
 import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
+import { runPendingPmOrderWrite } from "@/services/pendingPmOrderWrites";
 
 /** [changmen 扩展] delayed/提交未知仍是同一笔订单；Pending 不代表已成交持仓。 */
 export async function persistPendingPmOrder(
@@ -33,13 +34,15 @@ export async function persistPendingPmOrder(
     ...(Number(option.diagnosticLinkId) ? { link: Number(option.diagnosticLinkId) } : {}),
   };
   const version = getAuthSessionVersion();
-  for (let attempt = 0; ; attempt++) {
-    if (!isAuthSessionCurrent(version)) throw new Error("会话已切换，停止保存待确认订单");
-    try { await saveOrders(account, [order]); break; }
-    catch {
-      // 只重试同一份订单写入；不能在缺少完整订单时另建一条无名称的拒单。
-      await wait(Math.min(30_000, 500 * 2 ** Math.min(attempt, 6)));
+  await runPendingPmOrderWrite(account.accountId, submission.orderId, async () => {
+    for (let attempt = 0; ; attempt++) {
+      if (!isAuthSessionCurrent(version)) throw new Error("会话已切换，停止保存待确认订单");
+      try { await saveOrders(account, [order]); break; }
+      catch {
+        // 只重试同一份订单写入；不能在缺少完整订单时另建一条无名称的拒单。
+        await wait(Math.min(30_000, 500 * 2 ** Math.min(attempt, 6)));
+      }
     }
-  }
+  });
   if (isAuthSessionCurrent(version)) refreshOrderListAfterBind();
 }

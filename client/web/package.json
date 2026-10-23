@@ -12,7 +12,7 @@
     "build": "node scripts/run-production-build.mjs",
     "build:analyze": "node scripts/run-production-build.mjs build --base=/ --mode analyze",
     "preview": "vite preview --base /",
-    "test": "vitest run",
+    "test": "node scripts/analyze-module-deps.mjs --check && vitest run",
     "test:watch": "vitest",
     "test:v4": "node scripts/test-v4-credit-plate.mjs",
     "test:ob-getmatchs": "node scripts/test-ob-getmatchs-shape.mjs",

@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createRequire } from "node:module";
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { backendInstallProfile, assertBackendInstalledLinks, assertBackendBrowserPackagesAbsent } from "../deploy/backend-install-profile.mjs";
@@ -16,6 +15,7 @@ import { COMPILED_PAIRS } from "../../server/backend/scripts/ensure-router-compi
 import { packBackendRepoArchive } from "../deploy/pack-git-repo.mjs";
 import { readSourceVersion } from "../../devtools/runtime-tooling/runtime_version.js";
 import { createHash } from "node:crypto";
+import { verifyInstalledEsbuild } from "./backend-native-lifecycle.mjs";
 
 assert.equal(process.platform, "linux", "Linux runner required; Windows installation evidence is separate");
 assert.equal(process.getuid() === 0, false, "Run fixture database as an ordinary user");
@@ -90,13 +90,14 @@ try {
   report.developmentToolsAbsent = installed.developmentToolsAbsent;
   report.precompiledRouterVerified = installed.precompiledRouterVerified;
   report.routerBuildParity = true;
-  // The SDK still brings esbuild as a production dependency; retain native/lifecycle coverage.
-  for (const [root, name] of [[full, "full-install"], [selected, "selected-install"]]) {
-    const require = createRequire(path.join(root, "server/backend/package.json"));
-    assert.match(require("esbuild").transformSync("const value: number = 42", { loader: "ts" }).code, /value = 42/);
-    assert.match(fs.readFileSync(path.join(out, `${name}.log`), "utf8"), /esbuild@.*postinstall/);
-  }
-  report.nativeEsbuildExecuted = true;
+  // Build tools must execute their native lifecycle in the full build install.
+  // Retiring the legacy SDK removed its production compiler dependency. If a
+  // runtime dependency brings esbuild back, its binary/lifecycle must still pass.
+  report.esbuild = {
+    build: verifyInstalledEsbuild(full, fs.readFileSync(path.join(out, "full-install.log"), "utf8")),
+    production: verifyInstalledEsbuild(selected, fs.readFileSync(path.join(out, "selected-install.log"), "utf8"), { optional: true }),
+  };
+  report.nativeEsbuildExecuted = report.esbuild.build.nativeExecuted;
   assertBackendInstalledLinks(profile, fs.readdirSync(path.join(selected, "node_modules/@changmen")));
   assertBackendBrowserPackagesAbsent(selected, profile);
   report.browserPackagesAbsent = true;

@@ -27,7 +27,7 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - name: Verify changed scope and FOK protection
+      - name: Verify changed scope
         env:
           CHANGMEN_STORAGE_DIR: ${{ runner.temp }}/changmen-pr-storage
           ESPORT_DATA_DIR: ${{ runner.temp }}/changmen-pr-storage/esport

@@ -47,15 +47,17 @@ export function validationPlan(changedPaths, { publication = false, components =
   const validationControls = new Set(["validation-plan.mjs", "validation-plan.test.mjs", "verify-change.mjs", "verify-change.test.mjs"]);
   const verificationChanged = relevant.some(file => /^scripts\/verification\//.test(file)
     && !validationControls.has(file.slice("scripts/verification/".length)));
-  const releaseChecks = ["validation-control", ...(verificationChanged ? ["verification-control", "verification-node"] : [])];
+  // Historical FOK snapshots belong to explicit audits. Application risk alone
+  // must not trigger the verifier's own source-mutation regression suite.
+  const controlChecks = ["validation-control", ...(verificationChanged ? ["verification-control", "verification-node"] : [])];
+  const releaseChecks = [...controlChecks];
   if (publication) {
     if (!components.includes("backend") || !testsNeeded) releaseChecks.push("boundaries");
     if (components.includes("backend")) releaseChecks.push("router-compile", ...(testsNeeded ? ["backend"] : []));
     if (components.includes("frontend")) releaseChecks.push(...(testsNeeded ? ["frontend"] : []), "build");
   }
-  return { tier, paths, fullReasons, immutableFokEntries: release ? 0 : 551, snapshotOverridesAllowed: false,
-    checks: release ? releaseChecks : ["fok-551", "validation-control",
-      ...(controls || full ? ["verification-control", "verification-node"] : []),
+  return { tier, paths, fullReasons, immutableFokEntries: 0, snapshotOverridesAllowed: false,
+    checks: release ? releaseChecks : [...controlChecks,
       ...(checkFrontend && !checkBackend ? ["boundaries"] : []),
       ...(checkBackend ? ["router-compile", "backend"] : []), ...(checkFrontend ? ["frontend-typecheck", "frontend", "build"] : [])] };
 }

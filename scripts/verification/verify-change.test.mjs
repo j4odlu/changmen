@@ -12,11 +12,13 @@ function fixture() {
   fs.mkdirSync(path.join(root, "docs")); fs.writeFileSync(path.join(root, "docs/notes.md"), "new");
   return root;
 }
-it("even documents run the real immutable gate first; its failure stops acceptance", () => {
+it("documents run only validation controls, whose failure still stops acceptance", () => {
   const cwd = fixture(), run = vi.fn(() => ({ status: 1 }));
   const report = runChangeValidation([], { cwd, npm: "npm-cli.js", run });
   expect(report.tier).toBe("docs"); expect(report.passed).toBe(false);
-  expect(run.mock.calls[0][1]).toEqual(["npm-cli.js", "run", "check:fok-vps"]); expect(run).toHaveBeenCalledOnce();
+  expect(report.immutableFokEntries).toBe(0);
+  expect(report.executionOrder).toEqual(["validation-control"]);
+  expect(run.mock.calls[0][1]).toContain("scripts/verification/validation-plan.test.mjs"); expect(run).toHaveBeenCalledOnce();
 });
 it("a successful scoped check is not a complete release approval, and input drift is rejected", () => {
   const cwd = fixture(); const clean = runChangeValidation([], { cwd, npm: "npm-cli.js", run: () => ({ status: 0 }) });
@@ -49,7 +51,11 @@ it("daily core checks stay offline and cannot claim complete release approval", 
   const report = runChangeValidation([], { cwd, npm: "npm-cli.js", run });
   expect(report.tier).toBe("full"); expect(report.passed).toBe(true); expect(report.completeRelease).toBe(false);
   expect(report.plan.purpose).toBe("change");
-  expect(run.mock.calls.every(call => !call[1].includes("check:fok-release") && !call[1].includes("scripts/verification/verify-fok-release.mjs"))).toBe(true);
+  expect(report.immutableFokEntries).toBe(0);
+  for (const check of ["fok-551", "verification-control", "verification-node"])
+    expect(report.executionOrder).not.toContain(check);
+  expect(report.executionOrder).toEqual(["validation-control", "router-compile", "backend", "frontend-typecheck", "frontend", "build"]);
+  expect(run.mock.calls.every(call => !call[1].some(arg => /check:fok|verify-fok/.test(arg)))).toBe(true);
 });
 it.each(["frontend", "backend", "full"])("%s publication executes its component checks without a FOK or live audit", scope => {
   const cwd = fixture(), run = vi.fn(() => ({ status: 0 }));

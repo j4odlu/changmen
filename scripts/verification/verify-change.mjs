@@ -53,7 +53,6 @@ export function validationCommands(plan, npm, releasePlan) {
     "deployment-control": { command: [process.execPath, "scripts/deploy/check-controls.mjs"] },
     "database-compatibility": { command: [process.execPath, "scripts/deploy/check-database-compatibility.mjs"] },
     "backend-installation": { command: [process.execPath, "scripts/testing/backend-linux-runtime.mjs"] },
-    "fok-551": { command: cmd("run", "check:fok-vps") },
     // Source proofs are CPU-heavy; avoid oversubscribing the two-core CI runner.
     "verification-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification", "--exclude", "scripts/verification/fok-source-specialization.test.mjs", "--maxWorkers=2", "--testTimeout=15000") },
     "verification-node": { command: [process.execPath, "--test", "scripts/verification/fok-source-specialization.test.mjs"] },

@@ -42,9 +42,9 @@ test("one plan preserves risk while accounting for cross-component dependencies"
     [["mystery/file.js"], "full", "full"],
   ]) {
     const plan = changePlan(paths);
-    assert.equal(plan.tier, tier); assert.equal(plan.deployment.scope, scope); assert.equal(plan.immutableFokEntries, 551);
+    assert.equal(plan.tier, tier); assert.equal(plan.deployment.scope, scope); assert.equal(plan.immutableFokEntries, 0);
     assert.equal(plan.releasePlan, scope === "frontend" ? "frontend-only" : "backend-first");
-    assert(plan.checks.includes("fok-551")); assert(!plan.checks.includes("complete-release"));
+    assert(!plan.checks.includes("fok-551")); assert(!plan.checks.includes("complete-release"));
   }
 });
 test("unpublished changes survive failed/partial earlier pushes and documentation-only followups", () => {

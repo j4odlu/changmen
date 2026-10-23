@@ -146,6 +146,22 @@ export function resolvePrivateKey(config: PolymarketTokenConfig): Hex | undefine
   return /^0x[0-9a-fA-F]{64}$/.test(hex) ? hex as Hex : undefined;
 }
 
+/** [changmen 扩展] 只返回缺失字段的名称与状态，供 FOK/GTC 预检日志诊断；不包含凭据值。 */
+export function describePolymarketMissingCredentials(
+  config: PolymarketTokenConfig,
+  message = "PM 钱包或 API 凭据未就绪",
+): string {
+  const creds = resolveApiCreds(config);
+  const missing: string[] = [];
+  if (!resolvePrivateKey(config))
+    missing.push(config.privateKey || config.private_key ? "privateKey 格式无效" : "当前页面未加载 privateKey（私钥）");
+  if (!creds.address) missing.push("缺少 walletAddress（钱包地址）");
+  if (!creds.apiKey) missing.push("缺少 API Key");
+  if (!creds.secret) missing.push("缺少 API Secret");
+  if (!creds.passphrase) missing.push("缺少 API Passphrase");
+  return `${message.split("，请")[0]}；具体原因：${missing.join("、") || "凭据状态已改变，请重新预检"}`;
+}
+
 function base64UrlToBytes(value: string): Uint8Array {
   const normalized = value
     .replace(/-/g, "+")

@@ -5,6 +5,7 @@ import {historicalWorkspaceFs} from './workspace-layout-history.mjs';
 import {BROWSER_ENTRY_RETIREMENT, browserHistorySha, restoreBrowserEntryRetirement} from './browser-entry-history.mjs';
 import {verifyBrowserEntryRetirement, certifiedBrowserConsumerChanges} from './browser-entry-retirement.mjs';
 import {restore9999CProbabilitySource, restore9999CProbabilityVerificationSource, verify9999CProbabilitySources} from './single-leg-9999-c-probability-boundary.mjs';
+import {restorePmBalanceCredentialsSource} from './pm-balance-credentials-boundary.mjs';
 
 const normalize = source => source.replaceAll('\r\n', '\n');
 const read = file => historicalWorkspaceFs.readFileSync(file, 'utf8');
@@ -99,7 +100,7 @@ describe('9999 C probability increment preserves immutable migration proofs', ()
     'scripts/verification/workspace-layout-relocation.mjs',
     'scripts/verification/pm-unified-preflight-boundary.mjs',
   ])('only restores the exact new calls in %s', file => {
-    const source = normalize(fs.readFileSync(file, 'utf8'));
+    const source = normalize(restorePmBalanceCredentialsSource(file, fs.readFileSync(file, 'utf8')));
     expect(restore9999CProbabilityVerificationSource(file, source)).toBe(previous(file));
     expect(restore9999CProbabilityVerificationSource(file, `${source}\nvoid skipGuard();`)).toBe(`${source}\nvoid skipGuard();`);
     expect(restore9999CProbabilityVerificationSource(file, previous(file))).toBe(previous(file));

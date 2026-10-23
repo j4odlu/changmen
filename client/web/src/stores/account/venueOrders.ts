@@ -8,6 +8,7 @@ import { truncateShareUsdtAmount } from "@/shared/pfOrderDisplay";
 import { saveOrders } from "@/api/order";
 import { getProvider } from "@/runtime/providers";
 import { isObSportBetToken, sportObSessionFromAccount } from "@/runtime/obSportBetAccount";
+import { beginPmAccountLoading } from "@/domain/polymarket/pmBalanceRejection";
 
 /** PM 下单后等 CLOB trades 索引：最多尝试次数 / 间隔 */
 const WAIT_FOR_ORDER_ATTEMPTS_DEFAULT = 5;
@@ -212,6 +213,7 @@ export async function updateVenueOrders(
   opts?: SyncVenueOrdersOpts,
 ): Promise<VenueOrder[] | undefined> {
   let fetchedOrders: VenueOrder[] | undefined;
+  const endPmLoading = account.provider === "Polymarket" ? beginPmAccountLoading(account) : undefined;
   account.loadingBalance = true;
   try {
     return await syncVenueOrders(account, opts, (orders) => { fetchedOrders = orders; });
@@ -222,6 +224,7 @@ export async function updateVenueOrders(
     return fetchedOrders;
   }
   finally {
-    account.loadingBalance = false;
+    if (endPmLoading) endPmLoading();
+    else account.loadingBalance = false;
   }
 }

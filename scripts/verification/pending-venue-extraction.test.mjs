@@ -5,7 +5,8 @@ import { PENDING_VENUE_EXTRACTION as evidence, restorePendingVenueExtractionSour
 import { readPreviousWorkspaceFile, WORKSPACE_LAYOUT_RELOCATION } from "./workspace-layout-history.mjs";
 import { PENDING_VENUE_FIXES, restorePendingVenueFixSource, verifyPendingVenueFixes } from "./pending-venue-fixes.mjs";
 import { restoreFrontendDependencySource } from "./frontend-dependency-refactor.mjs";
-const read = file => fs.readFileSync(file, "utf8");
+import { restorePmBalanceCredentialsSource } from "./pm-balance-credentials-boundary.mjs";
+const read = file => restorePmBalanceCredentialsSource(file, fs.readFileSync(file, "utf8"));
 const normalize = source => source.replaceAll("\r\n", "\n");
 it("authenticates the complete extraction and composes exact inverses through the unchanged pending and FOK proofs", () => {
   expect(verifyPendingVenueExtraction(read)).toEqual({ files: 1, assets: 3 });

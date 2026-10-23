@@ -1,6 +1,6 @@
 import type { Hex } from "viem";
 import type { PolymarketTokenConfig } from "../../auth/l2Auth";
-import { parseTokenConfig, resolveApiCreds, resolvePrivateKey, resolveFunder } from "../../auth/l2Auth";
+import { parseTokenConfig, resolveApiCreds, resolvePrivateKey, resolveFunder, describePolymarketMissingCredentials } from "../../auth/l2Auth";
 import { resolvePolymarketBuilderCode } from "./builder";
 
 export interface PolymarketOrderClientRuntime {
@@ -123,7 +123,7 @@ function accountInput(account: SigningAccount): PolymarketOrderClientInput {
   const creds = resolveApiCreds(config);
   const privateKey = resolvePrivateKey(config);
   if (!privateKey || !creds.address || !creds.apiKey || !creds.secret || !creds.passphrase)
-    throw new Error("PM 钱包或 API 凭据未就绪");
+    throw new Error(describePolymarketMissingCredentials(config));
   const signatureType = Number(creds.signatureType ?? 0);
   return { gateway: account.gateway || "https://clob.polymarket.com", config, creds, privateKey,
     signatureType: [1, 2, 3].includes(signatureType) ? signatureType : 0 };

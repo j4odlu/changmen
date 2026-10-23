@@ -3,7 +3,8 @@ import { execFileSync } from "node:child_process";
 import { expect, it } from "vitest";
 import { PENDING_VENUE_FIXES as evidence, restorePendingVenueFixSource, verifyPendingVenueFixes } from "./pending-venue-fixes.mjs";
 import { restoreFrontendDependencySource } from "./frontend-dependency-refactor.mjs";
-const read = file => fs.readFileSync(file, "utf8");
+import { restorePmBalanceCredentialsSource } from "./pm-balance-credentials-boundary.mjs";
+const read = file => restorePmBalanceCredentialsSource(file, fs.readFileSync(file, "utf8"));
 const normalize = source => source.replaceAll("\r\n", "\n");
 it("certifies exact bug fixes and restores every complete pre-refactor source without replacing old inventories", () => {
   expect(verifyPendingVenueFixes(read)).toEqual({ files: 6, assets: 2 });

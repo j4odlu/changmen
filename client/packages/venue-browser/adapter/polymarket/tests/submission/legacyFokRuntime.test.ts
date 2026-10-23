@@ -78,3 +78,20 @@ it("GTC retains explicit signer preparation and does not inherit legacy auto ini
   await preparePolymarketAccountRuntimes([a]);
   expect((await check(a)).runtime.status).toBe("fulfilled");
 });
+
+it.each(["legacy", undefined] as const)("%s 预检日志区分私钥未加载和 API 字段缺失且不输出密钥", async mode => {
+  const a = account();
+  a.token = JSON.stringify({ ...config, privateKey: undefined });
+  const missingKey = await check(a, "execute", mode);
+  expect(missingKey.runtime.status).toBe("rejected");
+  if (missingKey.runtime.status !== "rejected") throw new Error("expected rejection");
+  expect(missingKey.runtime.reason.message).toContain("当前页面未加载 privateKey（私钥）");
+  expect(missingKey.runtime.reason.message).not.toContain("缺少 API");
+  a.token = JSON.stringify({ ...config, apiCreds: { apiKey: "present", secret: "", passphrase: "" } });
+  const missingApi = await check(a, "execute", mode);
+  expect(missingApi.runtime.status).toBe("rejected");
+  if (missingApi.runtime.status !== "rejected") throw new Error("expected rejection");
+  expect(missingApi.runtime.reason.message).toContain("缺少 API Secret、缺少 API Passphrase");
+  expect(missingApi.runtime.reason.message).not.toContain("未加载 privateKey");
+  expect(missingApi.runtime.reason.message).not.toContain(config.privateKey);
+});

@@ -2,9 +2,10 @@ import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import { expect, test } from "vitest";
 import { restoreRefactorVerificationWiring } from "./refactor-verification-wiring.mjs";
+import { restorePmBalanceCredentialsSource } from "./pm-balance-credentials-boundary.mjs";
 
 const file = "scripts/verification/workspace-layout-relocation.mjs";
-const source = fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+const source = restorePmBalanceCredentialsSource(file, fs.readFileSync(file, "utf8")).replaceAll("\r\n", "\n");
 const before = execFileSync("git", ["show", `21e45cdee305f3e2ce44b8f475803ef0b0fc8324:${file}`], { encoding: "utf8" }).replaceAll("\r\n", "\n");
 test("restores the entire original checker only for the exact added refactor calls", () => {
   expect(restoreRefactorVerificationWiring(file, source)).toBe(before);

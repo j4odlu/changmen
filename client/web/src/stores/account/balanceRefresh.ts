@@ -6,6 +6,11 @@ import { getAdapter } from "@/runtime/venueAdapters";
 import { isObSportBetToken, sportObSessionFromAccount } from "@/runtime/obSportBetAccount";
 import { Currency } from "@/shared/currency";
 import { syncModifyHeaderRules } from "@/stores/account/modifyHeaderSync";
+import { pmBalanceRevision, beginPmAccountLoading } from "@/domain/polymarket/pmBalanceRejection";
+import { toRaw } from "vue";
+import { getAuthSessionVersion, isAuthSessionCurrent } from "@/lib/authSession";
+
+const balanceRefreshFlights = new WeakSet<PlatformAccount>();
 
 function a8RefreshDelayMs() {
   return 120_000 + Math.random() * 60_000;
@@ -99,9 +104,22 @@ function applyRefreshFailure(account: PlatformAccount, hadBalance: boolean, reas
 export async function refreshAccountBalance(
   _store: AccountStoreContext,
   account: PlatformAccount,
+  opts?: { afterPmBalanceRejection?: boolean },
 ): Promise<void> {
-  if (account.loadingBalance)
+  const identity = toRaw(account);
+  const isPm = account.provider === "Polymarket";
+  const forcePm = isPm && opts?.afterPmBalanceRejection === true;
+  if ((isPm && balanceRefreshFlights.has(identity)) || (account.loadingBalance && !forcePm))
     return;
+  if (isPm) balanceRefreshFlights.add(identity);
+  const balanceRevision = pmBalanceRevision(account);
+  const token = account.token;
+  const gateway = account.gateway;
+  const accountId = account.accountId;
+  const authVersion = isPm ? getAuthSessionVersion() : "";
+  const currentPmScope = () => token === account.token && gateway === account.gateway
+    && accountId === account.accountId && account.provider === "Polymarket" && isAuthSessionCurrent(authVersion);
+  const endPmLoading = isPm ? beginPmAccountLoading(account) : undefined;
   account.loadingBalance = true;
   const hadBalance = account.balance !== undefined;
   try {
@@ -145,6 +163,9 @@ export async function refreshAccountBalance(
       }
     }
     const result = await fetchVenueBalance(account);
+    // [changmen 扩展] 旧查询晚于余额拒单或凭据变更返回，不能把旧余额写回选号缓存。
+    if (isPm && (balanceRevision !== pmBalanceRevision(account) || !currentPmScope()))
+      return;
     if (result) {
       account.balance = result.balance;
       account.currency = result.currency ?? Currency.CNY;
@@ -171,6 +192,8 @@ export async function refreshAccountBalance(
       }
 
       const info = await updateBalance(account.accountId, account.balance);
+      if (isPm && (balanceRevision !== pmBalanceRevision(account) || !currentPmScope()))
+        return;
       if (info) {
         account.totalProfit = info.total - (account.credit ?? 0);
         if (info.platformId)
@@ -193,11 +216,18 @@ export async function refreshAccountBalance(
     }
   }
   catch (err) {
+    if (isPm && (balanceRevision !== pmBalanceRevision(account) || !currentPmScope()))
+      return;
     const reason = err instanceof Error ? err.message : String(err ?? "refresh failed");
     applyRefreshFailure(account, hadBalance, reason);
   }
   finally {
-    account.loadingBalance = false;
+    if (endPmLoading) endPmLoading();
+    else account.loadingBalance = false;
+    if (isPm) balanceRefreshFlights.delete(identity);
+    // 新余额事实出现时已有查询在途：只补查一次新版本，不接受旧结果，也不重叠请求。
+    if (isPm && balanceRevision !== pmBalanceRevision(account) && currentPmScope())
+      void refreshAccountBalance(_store, account, { afterPmBalanceRejection: true }).catch(() => {});
   }
 }
 

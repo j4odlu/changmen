@@ -28,6 +28,19 @@ export function rayRejectFailureEvidence(reason: unknown): Partial<OrderObservat
 }
 /** [changmen 扩展] 只保留已知原因和白名单数值，不复制错误全文、资产 ID 或凭证。 */
 function specificFailure(text: string, headline: string): FailureReason | undefined {
+  // [changmen 扩展] 从适配层具体原因中仅提取固定状态，不把凭据值或错误全文放进诊断时间线。
+  if (headline.startsWith("PM 钱包或 API 凭据未就绪") && headline.includes("具体原因：")) {
+    const causes = [
+      ["当前页面未加载 privateKey（私钥）", "当前页面未加载私钥"],
+      ["privateKey 格式无效", "私钥格式无效"],
+      ["缺少 walletAddress（钱包地址）", "缺少钱包地址"],
+      ["缺少 API Key", "缺少 API Key"],
+      ["缺少 API Secret", "缺少 API Secret"],
+      ["缺少 API Passphrase", "缺少 API Passphrase"],
+    ].filter(([pattern]) => headline.includes(pattern!)).map(([, label]) => label);
+    if (causes.length)
+      return ["authentication", "pm_credentials_unready", `PM 下单凭据未就绪：${causes.join("、")}`];
+  }
   // [changmen 扩展] 只保留固定校验原因，不复制账号凭证或冻结参数。
   const gtcPreparation = /^PM 手动 GTC 预检已失效或已消费，禁止重发：(缺少本轮预检|本轮签单已消费|预检数据已改变|钱包会话已改变|下单参数或账号已改变)$/.exec(headline.trim());
   if (gtcPreparation)

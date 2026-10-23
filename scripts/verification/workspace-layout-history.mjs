@@ -15,6 +15,7 @@ import {OB_FOOTBALL_EXTRACTION,restoreObFootballSource} from './ob-football-extr
 import {restorePendingVenueVerificationSource} from './pending-venue-extraction.mjs';
 import {restoreValidationAuditSource} from './validation-audit-boundary.mjs';
 import {pmWalletAddressOptimizationFiles} from './pm-wallet-address-optimization.mjs';
+import {pmBalanceCredentialFiles,restorePmBalanceCredentialsSource} from './pm-balance-credentials-boundary.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const sha=s=>createHash('sha256').update(s.replaceAll('\r\n','\n')).digest('hex');
 const recordFile=new URL('./workspace-layout-relocation.json',import.meta.url);
@@ -26,6 +27,7 @@ assert.equal(WORKSPACE_LAYOUT_RELOCATION.purpose,'root-rds-and-workspace-consoli
 const rows=new Map(WORKSPACE_LAYOUT_RELOCATION.files.map(row=>[row.file,row]));
 const reverse=new Map([...rows.values()].filter(row=>row.canonical).map(row=>[row.canonical,row.file]));
 export function restoreWorkspaceLayoutSource(file,source){
+ source=restorePmBalanceCredentialsSource(file,source);
  source=restoreValidationAuditSource(file,source);
  source=restorePendingVenueVerificationSource(file,restoreObFootballSource(file,source));
  source=restoreBackendCommandPaths(file,restoreFrontendDependencySource(file,source));
@@ -49,7 +51,8 @@ export function readPreviousWorkspaceFile(file,options){
  const row=rows.get(key(file));
  if(!row){
   const retired=readRetiredPmSdkSource(key(file));
-  const source=retired===undefined?native.readFileSync(file,options):(typeof options==='string'||options?.encoding?retired:Buffer.from(retired));
+  let source=retired===undefined?native.readFileSync(file,options):(typeof options==='string'||options?.encoding?retired:Buffer.from(retired));
+  if(pmBalanceCredentialFiles.has(key(file))){const restored=restorePmBalanceCredentialsSource(key(file),source.toString());source=Buffer.isBuffer(source)?Buffer.from(restored):restored;}
   if(!frontendDependencyFiles.has(key(file))&&key(file)!==ACCOUNT_EDIT_EXTRACTION.file&&!pendingVenueFixFiles.has(key(file))&&key(file)!==OB_FOOTBALL_EXTRACTION.file&&!pmWalletAddressOptimizationFiles.has(key(file))&&!pmSdkRetirementFiles.has(key(file)))return source;
   const restored=restoreFrontendDependencySource(key(file),restoreAccountEditSource(key(file),restoreObFootballSource(key(file),source.toString())));
   return Buffer.isBuffer(source)?Buffer.from(restored):restored;

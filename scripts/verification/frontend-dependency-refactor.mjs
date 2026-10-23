@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { restorePendingVenueFixSource } from "./pending-venue-fixes.mjs";
 import { restorePmWalletAddressOptimizationSource } from "./pm-wallet-address-optimization.mjs";
+import {restorePmBalanceCredentialsSource} from './pm-balance-credentials-boundary.mjs';
 
 const normalize = source => source.replaceAll("\r\n", "\n");
 const sha = source => createHash("sha256").update(normalize(source)).digest("hex");
@@ -16,6 +17,7 @@ const rows = new Map(FRONTEND_DEPENDENCY_REFACTOR.files.map(row => [row.file, ro
 export const frontendDependencyFiles = new Set(rows.keys());
 
 export function restoreFrontendDependencySource(file, source) {
+  source = restorePmBalanceCredentialsSource(file, source);
   source = restorePmWalletAddressOptimizationSource(file, source);
   source = restorePendingVenueFixSource(file, source);
   const row = rows.get(file);
@@ -30,6 +32,8 @@ export function restoreFrontendDependencySource(file, source) {
 }
 
 export function verifyFrontendDependencyRefactor(read) {
+  const currentRead = read;
+  read = file => restorePmBalanceCredentialsSource(file, currentRead(file));
   for (const row of rows.values()) {
     const source = restorePendingVenueFixSource(row.file, restorePmWalletAddressOptimizationSource(row.file, read(row.file)));
     assert.equal(sha(source), row.afterSha, `${row.file}: unreviewed dependency repair`);

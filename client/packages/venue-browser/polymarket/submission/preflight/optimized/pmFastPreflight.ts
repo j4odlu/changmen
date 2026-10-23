@@ -1,7 +1,7 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import type { PmBuyPreflightTasks } from "../pmBuyPreflight";
-import { parseTokenConfig, resolveApiCreds, resolvePrivateKey } from "../../../auth/l2Auth";
+import { parseTokenConfig, resolveApiCreds, resolvePrivateKey, describePolymarketMissingCredentials } from "../../../auth/l2Auth";
 import { getPolymarketOrderClientRuntime, polymarketSigningGeneration } from "../../client/pmOrderClientCache";
 import { pmPrepareSubmit, pmSubmitClockReady } from "../../../orders/pmClientApi";
 import { measurePmExecution, recordPmExecutionMetric } from "../../../pmExecutionMetrics";
@@ -12,7 +12,8 @@ function readRuntime(account: PlatformAccount, gateway: string, missing = "PM é’
   const config = parseTokenConfig(account.token);
   const creds = resolveApiCreds(config);
   const privateKey = resolvePrivateKey(config);
-  if (!privateKey || !creds.address || !creds.apiKey || !creds.secret || !creds.passphrase) throw new Error(missing);
+  if (!privateKey || !creds.address || !creds.apiKey || !creds.secret || !creds.passphrase)
+    throw new Error(describePolymarketMissingCredentials(config, missing));
   const signatureType = Number(creds.signatureType ?? 0);
   return getPolymarketOrderClientRuntime({ gateway, config, creds, privateKey,
     signatureType: [1, 2, 3].includes(signatureType) ? signatureType : 0 });

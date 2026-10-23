@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import { createDefaultUserConfig } from "@/types/userConfig";
+import { pmBalanceRevision } from "@/domain/polymarket/pmBalanceRejection";
 
 const wait = vi.hoisted(() => vi.fn(async () => {}));
 const settleArbLegUntilTerminal = vi.hoisted(() => vi.fn());
@@ -73,6 +74,7 @@ function placed(a: string, b: string): ArbBetPlaced {
 describe("settleBothArbLegs A8 wait", () => {
   beforeEach(() => {
     wait.mockClear();
+    refreshBalance.mockReset();
     showRejectDetectionTip.mockClear();
     settleArbLegUntilTerminal.mockReset();
     settleArbLegUntilTerminal.mockResolvedValue({
@@ -173,6 +175,69 @@ describe("settleBothArbLegs A8 wait", () => {
     expect(out).toMatchObject({ pendingConfirmA: true, rejectA: false });
     expect(bindArbLegOrder).not.toHaveBeenCalled();
     expect(refreshBalance).not.toHaveBeenCalled();
+  });
+  it.each(["A", "B"] as const)("PM %s delayed 确认清除 pending 后仍补刷余额", async side => {
+    const input = placed(side === "A" ? "Polymarket" : "OB", side === "B" ? "Polymarket" : "OB");
+    const result = side === "A" ? input.resultA! : input.resultB!;
+    const account = side === "A" ? input.accountA! : input.accountB!;
+    result.pending = true;
+    settleArbLegUntilTerminal.mockImplementation(async (_account, receipt) => {
+      receipt.pending = false;
+      return { orders: [], rejected: false, pendingConfirm: false };
+    });
+    await settleBothArbLegs(params(), input);
+    expect(result.pending).toBe(false);
+    expect(refreshBalance.mock.calls.filter(([value]) => value === account)).toHaveLength(1);
+  });
+
+  it("PM delayed 仍未确认时不触发终态补刷", async () => {
+    const input = placed("Polymarket", "OB"); input.resultA!.pending = true;
+    settleArbLegUntilTerminal.mockResolvedValue({ orders: [], rejected: false, pendingConfirm: true });
+    await settleBothArbLegs(params(), input);
+    expect(refreshBalance.mock.calls.filter(([value]) => value === input.accountA)).toHaveLength(0);
+  });
+  it("PM 直接成交照常刷新一次，并使成交前的余额查询失效", async () => {
+    const input = placed("Polymarket", "OB");
+    await settleBothArbLegs(params(), input);
+    expect(refreshBalance.mock.calls.filter(([value]) => value === input.accountA)).toHaveLength(1);
+    expect(pmBalanceRevision(input.accountA!)).toBe(1);
+    expect(pmBalanceRevision(input.accountB!)).toBe(0);
+  });
+  it("PF 仍按原逻辑读取确认后的 pending，不套用 PM 刷新快照", async () => {
+    const input = placed("PredictFun", "OB"); input.resultA!.pending = true;
+    settleArbLegUntilTerminal.mockImplementation(async (_account, receipt) => {
+      receipt.pending = false;
+      return { orders: [], rejected: false, pendingConfirm: false };
+    });
+    await settleBothArbLegs(params(), input);
+    expect(refreshBalance.mock.calls.filter(([value]) => value === input.accountA)).toHaveLength(0);
+    expect(pmBalanceRevision(input.accountA!)).toBe(0);
+  });
+  it.each(["throw", "reject"])("PM 终态补刷 %s 不影响原成交与绑单结果", async failure => {
+    const input = placed("Polymarket", "OB"); input.resultA!.pending = true; input.resultB!.success = false;
+    settleArbLegUntilTerminal.mockImplementation(async (_account, receipt) => {
+      receipt.pending = false;
+      return { orders: [], rejected: false, pendingConfirm: false };
+    });
+    refreshBalance.mockImplementationOnce(() => {
+      if (failure === "throw") throw new Error("balance unavailable");
+      return Promise.reject(new Error("balance unavailable"));
+    });
+    bindArbLegOrder.mockClear();
+    const out = await settleBothArbLegs(params(), input);
+    expect(out).toMatchObject({ rejectA: false, pendingConfirmA: false });
+    expect(input.resultA!.success).toBe(true);
+    expect(bindArbLegOrder).toHaveBeenCalledOnce();
+  });
+  it("PM 延迟订单确认未成交也补刷，但保留原拒单事实", async () => {
+    const input = placed("Polymarket", "OB"); input.resultA!.pending = true;
+    settleArbLegUntilTerminal.mockImplementation(async (account, receipt) => {
+      receipt.pending = false;
+      return { orders: [], rejected: account.provider === "Polymarket", pendingConfirm: false };
+    });
+    const out = await settleBothArbLegs(params(), input);
+    expect(out).toMatchObject({ rejectA: true, pendingConfirmA: false });
+    expect(refreshBalance.mock.calls.filter(([value]) => value === input.accountA)).toHaveLength(1);
   });
   it("original PF counterpart waits once in common settle while PM facts confirm immediately", async () => {
     const input = placed("Polymarket", "PredictFun");

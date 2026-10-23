@@ -424,16 +424,16 @@ export function pmOrderDisplayPriceText(
   return formatPolymarketApiDecimal(price);
 }
 
-/** 赔率：优先订单 Odds（盘口/撮合）；否则 1/买入价 */
+/** 普通 PM 买单只展示保存的提交赔率；GTC 和卖单保留成交价赔率口径。 */
 export function pmOrderOddsText(row: OrderRow): string {
   const storedOdds = Number(row.Odds);
   if (Number.isFinite(storedOdds) && storedOdds > 1)
     return toFixed(truncateOddsTo3(storedOdds), 3);
+  // 缺失提交赔率不能用实际买入价反算，否则会混淆提交与成交。
+  if (isPmBuyOrderListRow(row) && !row.PmGtcExecutionId)
+    return "—";
   const price = resolvePmFillPrice(row);
-  const odds = price != null
-    ? truncateOddsTo3(1 / price)
-    : truncateOddsTo3(0);
-  return toFixed(odds, 3);
+  return price != null ? toFixed(truncateOddsTo3(1 / price), 3) : "—";
 }
 
 /**

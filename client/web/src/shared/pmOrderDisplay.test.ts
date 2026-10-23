@@ -218,8 +218,21 @@ describe("pmOrderDisplay", () => {
     expect(resolvePmListDisplayPrice({ ...pmBuy, Status: "Win", PmSellState: "open" }, 0.61)).toBe(0.61);
   });
 
-  it("odds text stays on fill price", () => {
-    expect(pmOrderOddsText(pmBuy)).toBe("1.351");
+  it("keeps submitted odds distinct from the actual buy price", () => {
+    expect(pmOrderOddsText({ ...pmBuy, Odds: 1.3 })).toBe("1.300");
+    expect(pmOrderFillPriceText({ ...pmBuy, Odds: 1.3 })).toBe("0.74");
+  });
+
+  it("does not replace missing submitted odds with reciprocal buy price", () => {
+    for (const Odds of [undefined, 0, 1, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(pmOrderOddsText({ ...pmBuy, Odds })).toBe("—");
+      expect(pmOrderOddsText({ ...pmBuy, Odds, PmFillPrice: undefined })).toBe("—");
+    }
+  });
+
+  it("preserves the fill-price odds display for GTC buys and sells", () => {
+    expect(pmOrderOddsText({ ...pmBuy, Odds: undefined, PmGtcExecutionId: "gtc" })).toBe("1.351");
+    expect(pmOrderOddsText({ ...pmBuy, Odds: undefined, PmSide: "sell" })).toBe("1.351");
   });
 
   it("marks unrealized pnl from live price without using odds", () => {

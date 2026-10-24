@@ -9,7 +9,6 @@ import type {
 import { wait } from "@changmen/client-core/shared/wait";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
 import { saveVenueSettlementLog } from "@/services/bettingLog";
-import { invalidatePmBalanceQueries } from "@/domain/polymarket/pmBalanceRejection";
 import { useAccountStore } from "@/stores/accountStore";
 import { syncActiveBetLegSettleResult, syncActiveBetPhase } from "@/stores/betting/activeBetRunSync";
 import { bindArbLegOrder, resolveArbBindOrderId } from "@/stores/betting/arbOrderBind";
@@ -78,27 +77,17 @@ export async function settleBothArbLegs(
     placeOutcomeB,
   } = placed;
 
-  const refreshPmBalance = (account: PlatformAccount) => {
-    invalidatePmBalanceQueries(account);
-    try { void Promise.resolve(accountStore.refreshBalance(account)).catch(() => {}); }
-    catch { /* 余额补刷失败不能影响已取得的原单事实和绑单。 */ }
-  };
-
   const successAccounts: PlatformAccount[] = [];
   if (resultA?.success && accountA) {
     successAccounts.push(accountA);
-    // delayed 在原单确认终态后补刷；pending 状态本身不能说明场馆是否已占用资金。
-    if (!resultA.pending) {
-      if (accountA.provider === "Polymarket") refreshPmBalance(accountA);
-      else void accountStore.refreshBalance(accountA);
-    }
+    // delayed：CLOB 尚未扣款；早刷若慢于 settle 后补刷，会把旧余额盖回去
+    if (!resultA.pending)
+      void accountStore.refreshBalance(accountA);
   }
   if (resultB?.success && accountB) {
     successAccounts.push(accountB);
-    if (!resultB.pending) {
-      if (accountB.provider === "Polymarket") refreshPmBalance(accountB);
-      else void accountStore.refreshBalance(accountB);
-    }
+    if (!resultB.pending)
+      void accountStore.refreshBalance(accountB);
   }
 
   if (!successAccounts.length && !resultA?.pmSubmitUnknown && !resultB?.pmSubmitUnknown) {
@@ -142,8 +131,6 @@ export async function settleBothArbLegs(
     const placeOutcome = side === "A" ? placeOutcomeA : placeOutcomeB;
     if (!account || !result)
       return;
-    // [changmen 扩展] adapter 确认终态会清除 result.pending，补刷判断必须保留确认前状态。
-    const wasPending = result.pending === true;
     const execution = original?.legs.get(leg);
     const synced = execution ? await execution.confirm(result) : await settleArbLegUntilTerminal(account, result, {
       // 编排层已空等 max；场馆层不再 sleep（A8 一次 wait 后立刻 updateOrders）
@@ -162,8 +149,6 @@ export async function settleBothArbLegs(
       snapshot.pendingConfirmB = synced.pendingConfirm;
     }
     const rejected = synced.rejected;
-    if (account.provider === "Polymarket" && wasPending && !synced.pendingConfirm)
-      refreshPmBalance(account);
     saveVenueSettlementLog({
       account,
       option: leg,
@@ -205,10 +190,13 @@ export async function settleBothArbLegs(
         side,
       });
     }
-    // 非 PM 场馆保留原来的刷新时点与判断，不把 PM 的 pending 快照策略扩展到其他平台。
-    if (account.provider !== "Polymarket" && isPendingConfirmVenueProvider(account.provider)
-      && result.pending && !synced.pendingConfirm)
+    if (
+      isPendingConfirmVenueProvider(account.provider)
+      && result.pending
+      && !synced.pendingConfirm
+    ) {
       void accountStore.refreshBalance(account);
+    }
   };
 
   const settleA = Boolean((resultA?.success || resultA?.pmSubmitUnknown) && accountA);

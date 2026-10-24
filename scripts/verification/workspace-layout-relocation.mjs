@@ -6,7 +6,6 @@ import ts from 'typescript';
 import {WORKSPACE_LAYOUT_RELOCATION as record} from './workspace-layout-history.mjs';
 import {readInstallWorkspaces,declaredInstallClosure,frontendInstallBoundary} from './component-install-inputs.mjs';
 import {restoreRayA8PrecheckSource} from './ray-a8-precheck-boundary.mjs';
-import {restorePmBalanceCredentialsSource} from './pm-balance-credentials-boundary.mjs';
 import {restoreDeployCiSource} from './deploy-ci-boundary.mjs';
 import {restore9999CProbabilityVerificationSource} from './single-leg-9999-c-probability-boundary.mjs';
 import {inspectBackendCommandPaths,restoreBackendCommandPaths} from './backend-command-paths.mjs';
@@ -57,7 +56,6 @@ export function assertWorkspaceMoveSemantics(row,source){
  }
 }
 export function inspectWorkspaceLayout(root,{read=f=>fs.readFileSync(path.join(root,f),'utf8'),exists=f=>fs.existsSync(path.join(root,f))}={}){
- const currentRead=read;read=file=>restorePmBalanceCredentialsSource(file,currentRead(file));
  const backendCommands=inspectBackendCommandPaths(root,{read});
  const frontendDependencies=verifyFrontendDependencyRefactor(read);
  verifyAccountEditExtraction(read);

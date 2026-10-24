@@ -1,6 +1,6 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import { parseTokenConfig, resolveApiCreds, resolvePrivateKey, describePolymarketMissingCredentials } from "../../auth/l2Auth";
+import { parseTokenConfig, resolveApiCreds, resolvePrivateKey } from "../../auth/l2Auth";
 import { getPolymarketOrderClientRuntime, preparePolymarketOrderClientRuntime, polymarketSigningGeneration, polymarketSigningSessionGeneration } from "../client/pmOrderClientCache";
 import { pmPrepareSubmit } from "../../orders/pmClientApi";
 import { resolvePolymarketBetBlockReason } from "./pmBetGuard";
@@ -65,7 +65,7 @@ export async function runPmBuyPreflight<T>(account: PlatformAccount, option: Bet
     const creds = resolveApiCreds(config);
     const privateKey = resolvePrivateKey(config);
     if (!privateKey || !creds.address || !creds.apiKey || !creds.secret || !creds.passphrase)
-      throw new Error(describePolymarketMissingCredentials(config, tasks.missingCredentialsMessage));
+      throw new Error(tasks.missingCredentialsMessage);
     const token = account.token;
     const snapshot = capturePmPreflightBinding(account, tasks.runtimeBinding);
     const sessionGeneration = tasks.sportMode === "legacy" ? polymarketSigningSessionGeneration(account) : 0;

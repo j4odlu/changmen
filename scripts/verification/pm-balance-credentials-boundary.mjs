@@ -1,49 +1,25 @@
-// [changmen 扩展] 仅还原用户授权的 PM 凭据日志与余额修复增量，原迁移和 A8/FOK 基线保持。
-import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import {createHash} from 'node:crypto';
-import {pmCredentialSdkFiles,restorePmCredentialSdkSource,verifyPmCredentialSdkSources} from './pm-credential-sdk-boundary.mjs';
-import {pmOrderHashContractFiles,restorePmOrderHashContractSource,verifyPmOrderHashContractSources} from './pm-order-hash-contract-boundary.mjs';
-import {restorePmOfficialOrderPriceSource} from './pm-official-order-price.mjs';
+// [changmen 扩展] bda8e916 已撤销；此兼容入口仅保留后续 SDK、订单哈希及价格展示的历史校验接线。
+import fs from "node:fs";
+import { pmCredentialSdkFiles, restorePmCredentialSdkSource, verifyPmCredentialSdkSources } from "./pm-credential-sdk-boundary.mjs";
+import { pmOrderHashContractFiles, restorePmOrderHashContractSource, verifyPmOrderHashContractSources } from "./pm-order-hash-contract-boundary.mjs";
+import { PM_OFFICIAL_ORDER_PRICE, restorePmOfficialOrderPriceSource, verifyPmOfficialOrderPriceSources } from "./pm-official-order-price.mjs";
 
-const normalize = source => source.replaceAll('\r\n', '\n');
-export const pmFundingSha = source => createHash('sha256').update(normalize(source)).digest('hex');
-const text = fs.readFileSync(new URL('./pm-balance-credentials-increments.json', import.meta.url), 'utf8');
-assert.equal(pmFundingSha(text), "aca91d789ab8f4ac5fc020a6027b520ed98ccd53243ee412ee27470e8f813340", 'PM balance/credentials exact increments changed');
-export const PM_BALANCE_CREDENTIALS = JSON.parse(text);
-const files = new Map(PM_BALANCE_CREDENTIALS.files.map(row => [row.file, row]));
-export const pmBalanceCredentialFiles = new Set([...files.keys(), ...pmCredentialSdkFiles, ...pmOrderHashContractFiles]);
+export const pmBalanceCredentialFiles = new Set([
+  ...pmCredentialSdkFiles,
+  ...pmOrderHashContractFiles,
+  ...PM_OFFICIAL_ORDER_PRICE.files.map(row => row.file),
+]);
 
 export function restorePmBalanceCredentialsSource(file, source) {
-  source = restorePmOfficialOrderPriceSource(file, source);
-  source = restorePmOrderHashContractSource(file, source);
-  source = restorePmCredentialSdkSource(file, source);
-  const row = files.get(file);
-  if (!row || pmFundingSha(source) !== row.afterSha) return source;
-  source = normalize(source);
-  for (const edit of [...row.changes].reverse()) {
-    assert.equal(source.slice(edit.offset, edit.offset + edit.after.length), edit.after, file + ': exact PM funding repair');
-    source = source.slice(0, edit.offset) + edit.before + source.slice(edit.offset + edit.after.length);
-  }
-  assert.equal(pmFundingSha(source), row.beforeSha, file + ': entire pre-repair source must restore');
-  return source;
+  return restorePmCredentialSdkSource(file, restorePmOrderHashContractSource(file,
+    restorePmOfficialOrderPriceSource(file, source)));
 }
 
-export function verifyPmBalanceCredentialsSources(read = file => fs.readFileSync(new URL('../../' + file, import.meta.url), 'utf8')) {
+export function verifyPmBalanceCredentialsSources(read = file => fs.readFileSync(new URL("../../" + file, import.meta.url), "utf8")) {
+  verifyPmOfficialOrderPriceSources(read);
   const officialRead = read;
   read = file => restorePmOfficialOrderPriceSource(file, officialRead(file));
   verifyPmOrderHashContractSources(read);
-  const latestRead = read;
-  read = file => restorePmOrderHashContractSource(file, latestRead(file));
-  verifyPmCredentialSdkSources(read);
-  const currentRead = read;
-  read = file => restorePmCredentialSdkSource(file, currentRead(file));
-  for (const row of files.values()) {
-    const source = read(row.file);
-    assert.equal(pmFundingSha(source), row.afterSha, row.file + ': only the exact PM balance/credentials repair is authorized');
-    assert.equal(pmFundingSha(restorePmBalanceCredentialsSource(row.file, source)), row.beforeSha);
-  }
-  for (const row of PM_BALANCE_CREDENTIALS.added)
-    assert.equal(pmFundingSha(read(row.file)), row.sha, row.file + ': complete added PM funding implementation');
-  return {files: files.size, added: PM_BALANCE_CREDENTIALS.added.length};
+  const hashRead = read;
+  return verifyPmCredentialSdkSources(file => restorePmOrderHashContractSource(file, hashRead(file)));
 }

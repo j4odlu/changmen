@@ -185,13 +185,3 @@ describe("旁路失败证据", () => {
     expect(observationFailureEvidence("timeout", { get code() { throw new Error("bad getter"); } })).toEqual({});
   });
 });
-
-describe("PM 凭据具体原因的安全诊断", () => {
-  it("保留多项缺失原因，但丢弃消息里的凭据内容", () => {
-    const result = observationFailureEvidence("PM 钱包或 API 凭据未就绪；具体原因：当前页面未加载 privateKey（私钥）、缺少 API Secret signature=DO_NOT_LEAK");
-    expect(result).toMatchObject({ reasonCode: "pm_credentials_unready", errorCategory: "authentication",
-      safeSummary: "PM 下单凭据未就绪：当前页面未加载私钥、缺少 API Secret" });
-    expect(JSON.stringify(result)).not.toContain("DO_NOT_LEAK");
-    expect(JSON.stringify(result)).not.toContain("signature=");
-  });
-});

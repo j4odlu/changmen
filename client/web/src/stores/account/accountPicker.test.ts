@@ -3,8 +3,6 @@ import type { AccountStoreContext } from "@/stores/account/context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 import { accountsFundingReady, getProviders, pickAccount } from "@/stores/account/accountPicker";
-import { applyPmBalanceRejection } from "@/domain/polymarket/pmBalanceRejection";
-import { BetResult } from "@changmen/client-core/models/betResult";
 
 const config = vi.hoisted(() => ({ profit: 1.03, betMoney: 100, betMoneyMode: "buy" }));
 
@@ -100,18 +98,6 @@ describe("pickAccount", () => {
   it("returns undefined when no candidate matches provider or balance", () => {
     const store = makeStore([makeAccount({ provider: "OB", balance: 10 })]);
     expect(pickAccount(store, "RAY", 100)).toBeUndefined();
-  });
-  it("PM 余额拒单只更新目标账号资金，充足账号继续轮换，小额仍可选原账号", () => {
-    const accounts = [1, 2, 3].map(accountId => makeAccount({ accountId, provider: "Polymarket", currency: "USDT", balance: 50 }));
-    const store = makeStore(accounts);
-    applyPmBalanceRejection(accounts[0]!, new BetResult("Polymarket", false, "balance rejected", undefined, {
-      success: false, pmSubmitRejected: true,
-      errorMsg: "not enough balance / allowance: the balance is not enough -> balance: 22300936, order amount: 27377400",
-    }));
-    expect([pickAccount(store, "Polymarket", 183)?.accountId, pickAccount(store, "Polymarket", 183)?.accountId,
-      pickAccount(store, "Polymarket", 183)?.accountId]).toEqual([2, 3, 2]);
-    expect(pickAccount(store, "Polymarket", 100)?.accountId).toBe(1);
-    expect(getProviders(store, 183).get("Polymarket")?.map(a => a.accountId)).toEqual([2, 3]);
   });
 
   it("rotates among multiple accounts on the same provider", () => {

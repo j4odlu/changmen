@@ -12,8 +12,6 @@ import { checkBetting as checkGtcBetting, prepareOtherLeg } from "@/orderModes/g
 import * as observation from "@/services/orderObservation";
 
 const mocks = vi.hoisted(() => ({ vaultProvider: vi.fn(), sharedCheck: vi.fn(), sharedPlace: vi.fn(), delay: vi.fn(), sound: vi.fn(), publish: vi.fn(), gtcCheck: vi.fn(), stake: vi.fn((_account: unknown, amount: number) => amount), betting: vi.fn(), check: vi.fn(), post: vi.fn(), user: { isLoggedIn: true, userId: "u1" }, notify: vi.fn(() => ({ close: vi.fn() })) }));
-const funding = vi.hoisted(() => ({ refresh: vi.fn(async () => {}) }));
-vi.mock("@/stores/account/balanceRefresh", () => ({ refreshAccountBalance: funding.refresh }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ checkBetting: mocks.sharedCheck, betting: mocks.sharedPlace }) }));
 vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ checkGtcBuy: mocks.gtcCheck }));
 vi.mock("@/services/orderObservationTransport", () => ({ uploadObservationBatch: mocks.post }));
@@ -38,7 +36,6 @@ describe("下注主链路与旁路故障隔离", () => {
   const store = { getPlatformName: () => "OB" } as unknown as AccountStoreContext;
   beforeEach(() => {
     mocks.notify.mockClear();
-    funding.refresh.mockReset().mockResolvedValue(undefined);
     setActivePinia(createPinia());
     vi.useFakeTimers();
     mocks.post.mockReset();
@@ -85,44 +82,6 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(result.message).toBe("closed");
     expect(mocks.betting).not.toHaveBeenCalled();
     expect(mocks.check).not.toHaveBeenCalled();
-  });
-  it("PM 明确余额不足发布场馆余额并补刷；失败补刷不丢原始拒单回执", async () => {
-    const pm = { ...account, accountId: 327, provider: "Polymarket", currency: "USDT", balance: 50 } as PlatformAccount;
-    const option = new BetOption("Polymarket", "m", "b", "i", 26.49, "Away", 2.222); option.data = { frozen: true };
-    const receipt = new BetResult("Polymarket", false, "balance rejected", undefined, {
-      success: false, pmSubmitRejected: true,
-      errorMsg: "not enough balance / allowance: the balance is not enough -> balance: 22300936, order amount: 27377400",
-    });
-    mocks.betting.mockResolvedValue(receipt);
-    funding.refresh.mockRejectedValue(new Error("refresh unavailable"));
-    expect(await placeBet(store, pm, option, 10, { requirePreparedQuote: true })).toBe(receipt);
-    expect(pm.balance).toBe(22.300936);
-    await vi.dynamicImportSettled();
-    expect(funding.refresh).toHaveBeenCalledExactlyOnceWith(store, pm, { afterPmBalanceRejection: true });
-    expect(mocks.betting).toHaveBeenCalledOnce();
-  });
-  it.each(["network error", "insufficient allowance", "not enough balance / allowance"])("PM %s 不触发余额清除或额外补刷", async errorMsg => {
-    const pm = { ...account, provider: "Polymarket", balance: 50 } as PlatformAccount;
-    const option = new BetOption("Polymarket", "m", "b", "i", 10, "Home", 2); option.data = {};
-    mocks.betting.mockResolvedValue(new BetResult("Polymarket", false, errorMsg, undefined, {
-      success: false, pmSubmitRejected: true, errorMsg,
-    }));
-    await placeBet(store, pm, option, 10, { requirePreparedQuote: true });
-    await vi.dynamicImportSettled();
-    expect(pm.balance).toBe(50); expect(funding.refresh).not.toHaveBeenCalled();
-  });
-  it.each(["OB", "RAY", "PB", "PredictFun"] as const)("%s 不进入 PM 余额拒单更新和补刷", async provider => {
-    const other = { ...account, provider, balance: 50 } as PlatformAccount;
-    const option = new BetOption(provider, "m", "b", "i", 10, "Home", 2); option.data = {};
-    const receipt = new BetResult(provider, false, "balance rejected", undefined, {
-      success: false, pmSubmitRejected: true,
-      errorMsg: "the balance is not enough -> balance: 22300936, order amount: 27377400",
-    });
-    mocks.betting.mockResolvedValue(receipt);
-    expect(await placeBet(store, other, option, 10, { requirePreparedQuote: true })).toBe(receipt);
-    await vi.dynamicImportSettled();
-    expect(other.balance).toBe(50); expect(funding.refresh).not.toHaveBeenCalled();
-    expect(mocks.betting).toHaveBeenCalledOnce();
   });
   it("shows concrete odds and tolerance in the blocked precheck timeline", async () => {
     const option = new BetOption("RAY", "m", "b", "i", 100, "Home", 1.65);

@@ -21,7 +21,6 @@ import { persistPolymarketExecutionReject } from "@/stores/account/pmRejectOrder
 import { useMessageStore } from "@/stores/messageStore";
 import { useUserStore } from "@/stores/userStore";
 import { getRetainedPmPrivateKey } from "@/security/pmVault/retainedPmSession";
-import { applyPmBalanceRejection } from "@/domain/polymarket/pmBalanceRejection";
 import { persistPendingPmOrder } from "@/stores/account/pmPendingOrder";
 import { capturePmFokPreflightMode, prepareOptimizedFokExecution } from "@changmen/venue-browser/adapter/polymarket";
 import { notifyPendingVenueConfirm } from "./pendingVenueConfirmationRunner";
@@ -247,11 +246,6 @@ export async function placeBet(
       observationCallAt = Date.now();
       result = await provider.betting(account, option);
       observationDuration = Date.now() - observationCallAt;
-      // [changmen 扩展] 先发布场馆余额事实，再异步补刷；A8 的余额筛选和账号轮换保持原样。
-      if (account.provider === "Polymarket" && applyPmBalanceRejection(account, result))
-        void import("@/stores/account/balanceRefresh")
-          .then(({ refreshAccountBalance }) => refreshAccountBalance(store, account, { afterPmBalanceRejection: true }))
-          .catch(() => {});
       if (account.provider === "Polymarket" && result.pending) {
         pendingOrderSave = persistPendingPmOrder(account, option, result);
         void pendingOrderSave.catch(error => { console.warn("[Polymarket] 待确认订单保存失败", error); });

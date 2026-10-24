@@ -4,7 +4,6 @@ import fs from "node:fs";
 import { createHash } from "node:crypto";
 import { restore9999CProbabilityVerificationSource } from "./single-leg-9999-c-probability-boundary.mjs";
 import { restoreRayExecutionRepairSource, verifyRayExecutionRepairSources } from "./ray-a8-execution-repair-boundary.mjs";
-import {restorePmBalanceCredentialsSource,verifyPmBalanceCredentialsSources} from './pm-balance-credentials-boundary.mjs';
 
 const normalize = source => source.replaceAll("\r\n", "\n");
 const sha = source => createHash("sha256").update(normalize(source)).digest("hex");
@@ -14,7 +13,6 @@ const inventory = JSON.parse(text);
 const entries = new Map(inventory.files.map(row => [row.file, row]));
 
 export function restoreRayA8PrecheckSource(file, source) {
-  source = restorePmBalanceCredentialsSource(file, source);
   source = restoreRayExecutionRepairSource(file, source);
   source = restore9999CProbabilityVerificationSource(file, source);
   const row = entries.get(file);
@@ -31,9 +29,6 @@ export function restoreRayA8PrecheckSource(file, source) {
 }
 
 export function verifyRayA8PrecheckSources(read) {
-  verifyPmBalanceCredentialsSources();
-  const currentRead = read;
-  read = file => restorePmBalanceCredentialsSource(file, currentRead(file));
   verifyRayExecutionRepairSources(read);
   for (const row of entries.values())
     assert.equal(sha(restore9999CProbabilityVerificationSource(row.file, restoreRayExecutionRepairSource(row.file, read(row.file)))), row.afterSha, `${row.file}: only the exact RAY A8 precheck change is authorized`);

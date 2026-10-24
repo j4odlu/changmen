@@ -2,59 +2,6 @@ import type { VenueOrder } from "@changmen/client-core/contract";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 import { applyUnsettledStats, syncVenueOrders, updateVenueOrders } from "@/stores/account/venueOrders";
-import { beginPmAccountLoading } from "@/domain/polymarket/pmBalanceRejection";
-
-describe("仅 PM 余额查询与查单并行的加载状态", () => {
-  beforeEach(() => {
-    getOrders.mockReset();
-    saveOrders.mockReset();
-  });
-
-  it.each([
-    { start: "balance", first: "balance" },
-    { start: "balance", first: "orders" },
-    { start: "orders", first: "balance" },
-    { start: "orders", first: "orders" },
-  ])("先开始 $start、先结束 $first 时保留另一项的加载状态", async ({ start, first }) => {
-    const account = makeAccount(50);
-    account.provider = "Polymarket";
-    let finishOrders!: (orders: VenueOrder[]) => void;
-    getOrders.mockImplementationOnce(() => new Promise(resolve => { finishOrders = resolve; }));
-    let finishBalance!: () => void;
-    let orderQuery!: ReturnType<typeof updateVenueOrders>;
-    if (start === "balance") {
-      finishBalance = beginPmAccountLoading(account);
-      orderQuery = updateVenueOrders(account);
-    }
-    else {
-      orderQuery = updateVenueOrders(account);
-      finishBalance = beginPmAccountLoading(account);
-    }
-    await vi.waitFor(() => expect(getOrders).toHaveBeenCalledOnce());
-    if (first === "balance") finishBalance();
-    else {
-      finishOrders([]);
-      await orderQuery;
-    }
-    expect(account.loadingBalance).toBe(true);
-    if (first === "balance") {
-      finishOrders([]);
-      await orderQuery;
-    }
-    else finishBalance();
-    expect(account.loadingBalance).toBe(false);
-    expect(saveOrders).toHaveBeenCalledOnce();
-  });
-
-  it.each(["OB", "RAY", "PredictFun"] as const)("%s 不进入 PM 加载计数", provider => {
-    const account = makeAccount(50);
-    account.provider = provider;
-    const finish = beginPmAccountLoading(account);
-    expect(account.loadingBalance).toBe(false);
-    finish();
-    expect(account.loadingBalance).toBe(false);
-  });
-});
 
 const saveOrders = vi.hoisted(() => vi.fn(async () => undefined));
 const getOrders = vi.hoisted(() => vi.fn(async () => [] as VenueOrder[]));

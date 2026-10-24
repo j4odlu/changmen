@@ -1,11 +1,6 @@
 import { expect, test } from "vitest";
 import ts from "typescript";
-import { createRequire } from "node:module";
 import { originalPendingGateway, pendingGroups, pendingHarness, readPending } from "./__tests__/pendingVenueOriginal";
-
-const { restorePmBalanceCredentialsSource } = createRequire(import.meta.url)(
-  "../../../../../scripts/verification/pm-balance-credentials-boundary.mjs",
-) as { restorePmBalanceCredentialsSource: (file: string, source: string) => string };
 
 const parse = (source: string) => ts.createSourceFile("module.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const functions = (source: string) => new Map(parse(source).statements.filter(ts.isFunctionDeclaration).map(n => [n.name!.text, n.getText()]));
@@ -15,9 +10,7 @@ const executable = (source: string) => ts.transpileModule(source.replace(/^expor
 const original = functions(originalPendingGateway);
 for (const [module, names] of Object.entries(pendingGroups)) {
   test.each(names)(`${module}: %s retains its original complete executable body`, name => {
-    // 只精确还原已登记的 PM 余额增量，再继续对比完整历史函数；其他改动仍会失败。
-    const source = restorePmBalanceCredentialsSource(`client/web/src/stores/account/${module}.ts`, readPending(module));
-    const current = functions(source).get(name)!;
+    const current = functions(readPending(module)).get(name)!;
     expect(current).toBeTruthy();
     const restored = current.replaceAll("pendingVenueConfirmationSession.paused", "pendingVenueConfirmationsPaused")
       .replaceAll("pendingVenueConfirmationSession.epoch", "pendingVenueConfirmationEpoch");

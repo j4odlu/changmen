@@ -3,7 +3,6 @@
  * 不写库。由 order_store.js re-export，对外路径不变。
  */
 import { placeholderLinkFromCreateAt } from "@changmen/db";
-import { validatePmSubmission, pmMakerAmountUsdc } from "@changmen/shared/pm_submission";
 import { computePfHoldShares } from "../../integrations/predictfun/pf_fee.js";
 import { isPredictionSellForCount } from "./kinds.js";
 import { readPositionSellEvents } from "./position_events.js";
@@ -60,11 +59,10 @@ export function rowToOrder(r) {
   let betMoney = r.bet_money || 0;
   let money = r.money || 0;
   const pfHoldShares = resolvePfHoldSharesFromRaw(raw);
-  // [changmen 扩展] FOK 买单各状态均从原始签单数量还原限价，与成交均价分开。
-  const submission = r.provider === "Polymarket" && raw.pmSide !== "sell" && !raw.pmGtcExecutionId
-    ? validatePmSubmission(raw.pmSubmission, String(r.order_id), Number(r.player_id)) : null;
-  const submittedShares = submission?.takerAmount ? pmMakerAmountUsdc(submission.takerAmount) : null;
-  const submittedPrice = submission && submittedShares ? submission.stakeUsdc / submittedShares : undefined;
+  // [changmen 扩展] 左侧限价只读官方订单 price，不从签单数量或预检赔率推算。
+  const officialPrice = parseNum(raw.pmOrderPrice, 0);
+  const submittedPrice = r.provider === "Polymarket" && raw.pmSide !== "sell" && !raw.pmGtcExecutionId
+    && officialPrice > 0 && officialPrice < 1 ? officialPrice : undefined;
   // 按 provider 判卖单（对齐 kinds / order_store），避免 PF 买单误带 pmSide=sell 时清零盈亏
   if (isPredictionSellForCount({ provider: r.provider, raw }))
     money = 0;

@@ -22,6 +22,7 @@ import { pmGetTrades } from "../pmClientApi";
 import { polymarketFailedBuyTradeRow } from "../facts/tradeFailure";
 import { lookupPolymarketOrderBetLabel, rememberPolymarketMarketBetLabel } from "../../markets/orderBetLabel";
 import { storedMarketRefresh } from "./storedMarketRefresh";
+import { enrichPolymarketOrderPrices } from "./pmOrderPrice";
 
 export { lookupPolymarketOrderBetLabel } from "../../markets/orderBetLabel";
 
@@ -1416,7 +1417,8 @@ export async function fetchPolymarketVenueOrdersMerged(
     proxyWallet,
     txHashesByOrderId,
   });
-  return scalePolymarketVenueOrdersForDisplay(withFees);
+  const withOrderPrices = await enrichPolymarketOrderPrices(account, withFees, stored);
+  return scalePolymarketVenueOrdersForDisplay(withOrderPrices);
 }
 
 /** 纯映射（单测 / 调试）：CLOB trades → VenueOrder（买 + 卖） */

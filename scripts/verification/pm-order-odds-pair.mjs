@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
-import { restorePmSignedLimitDisplaySource } from "./pm-signed-limit-display.mjs";
+import { restorePmOfficialOrderPriceSource } from "./pm-official-order-price.mjs";
 
 const normalize = source => source.replaceAll("\r\n", "\n");
 const sha = source => createHash("sha256").update(normalize(source)).digest("hex");
@@ -12,7 +12,7 @@ assert.equal(sha(text), EXPECTED_SHA, "PM odds pair display inventory changed");
 export const PM_ORDER_ODDS_PAIR = JSON.parse(text);
 
 export function restorePmOrderOddsPairSource(file, source) {
-  source = restorePmSignedLimitDisplaySource(file, source);
+  source = restorePmOfficialOrderPriceSource(file, source);
   const row = PM_ORDER_ODDS_PAIR.files.find(item => item.file === file);
   if (!row || sha(source) !== row.afterSha)
     return source;

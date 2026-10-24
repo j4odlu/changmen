@@ -34,11 +34,15 @@ it("keeps signed quantities as optional display evidence through reject saves an
   const synced = mergePolymarketProviderSave({ order_id: "original" }, saved.raw,
     { orderId: "original", status: "reject" }, "changmen", saved.raw, 0, saved.bet_money);
   const dto = rowToOrder({ order_id: "original", player_id: 317, provider: "Polymarket", status: "Reject", raw: synced.raw });
-  expect(dto.PmSubmittedPrice).toBe(0.5);
+  expect(dto.PmSubmittedPrice).toBeUndefined();
   expect(dto.PmFillPrice).toBeUndefined();
   expect(dto.PmShares).toBeUndefined();
   expect(dto.pmSubmission).toBeUndefined();
   expect(synced.bet_money).toBeCloseTo(14.93 * 6.7);
+  const known = { ...synced.raw, pmOrderPrice: 0.51 };
+  const refreshed = mergePolymarketProviderSave({ order_id: "original" }, known,
+    { orderId: "original", status: "reject" }, "changmen", {}, 0, synced.bet_money);
+  expect(rowToOrder({ provider: "Polymarket", raw: refreshed.raw }).PmSubmittedPrice).toBe(0.51);
 });
 
 it("accepts old submission snapshots and never derives a price from mismatched or malformed evidence", () => {
@@ -50,23 +54,39 @@ it("accepts old submission snapshots and never derives a price from mismatched o
     expect(rowToOrder({ ...row, raw: { pmSubmission: value } }).PmSubmittedPrice).toBeUndefined();
   const raw = { pmSubmission: { ...snapshot, takerAmount: "29860000" } };
   for (const status of ["None", "Win", "Lose", "Return"])
-    expect(rowToOrder({ ...row, status, raw }).PmSubmittedPrice).toBe(0.5);
+    expect(rowToOrder({ ...row, status, raw }).PmSubmittedPrice).toBeUndefined();
   expect(rowToOrder({ ...row, raw: { ...raw, pmSide: "sell" } }).PmSubmittedPrice).toBeUndefined();
   expect(rowToOrder({ ...row, raw: { ...raw, pmGtcExecutionId: "gtc" } }).PmSubmittedPrice).toBeUndefined();
   expect(rowToOrder({ ...row, provider: "RAY", raw }).PmSubmittedPrice).toBeUndefined();
 });
 
-it("keeps the signed limit distinct from precheck odds and fills through later sync and settlement", () => {
+it("reads the official order price independently of signed quantities, precheck odds and fills", () => {
   const submission = { ...snapshot, makerAmount: "5100000", takerAmount: "10000000", stakeUsdc: 5.1 };
   const filled = { orderId: "original", provider: "Polymarket", status: "none", odds: 2, pmSide: "buy",
-    pmSubmission: submission, pmShares: 10, pmFillPrice: 0.5044, pmStakeUsdc: 5.044, betMoney: 33.7948 };
+    pmOrderPrice: 0.52, pmSubmission: submission, pmShares: 10, pmFillPrice: 0.5044, pmStakeUsdc: 5.044, betMoney: 33.7948 };
   const row = { order_id: "original", player_id: 317, provider: "Polymarket", status: "None", odds: 2, raw: filled };
   const synced = preparePmPendingOrderSave(row, { orderId: "original", status: "lose", odds: 1.982,
     pmFillPrice: 0.5044, pmShares: 10 }, 317, "Polymarket");
   const dto = rowToOrder({ ...row, status: "Lose", raw: synced });
-  expect(dto.PmSubmittedPrice).toBe(0.51);
+  expect(dto.PmSubmittedPrice).toBe(0.52);
   expect(dto.PmFillPrice).toBe(0.5044);
   expect(dto.Odds).toBe(2);
   expect(synced.pmSubmission).toEqual(submission);
   expect(dto.pmSubmission).toBeUndefined();
+});
+
+it("preserves an official price on ordinary fill saves without any submission snapshot", () => {
+  const incoming = { orderId: "original", provider: "Polymarket", status: "none", pmSide: "buy",
+    pmOrderPrice: 0.51, pmShares: 10, pmFillPrice: 0.5044, pmStakeUsdc: 5.044, betMoney: 33.7948 };
+  const saved = mergePolymarketProviderSave({}, {}, incoming, "changmen", { ...incoming }, 0, incoming.betMoney);
+  const base = { order_id: "original", player_id: 317, provider: "Polymarket", raw: saved.raw };
+  for (const status of ["None", "Win", "Lose", "Reject", "Pending"])
+    expect(rowToOrder({ ...base, status }).PmSubmittedPrice).toBe(0.51);
+  expect(saved.raw.pmSubmission).toBeUndefined();
+  const stale = { ...incoming, pmOrderPrice: undefined };
+  const synced = mergePolymarketProviderSave({}, saved.raw, stale, "changmen", { ...stale }, 0, stale.betMoney);
+  expect(synced.raw.pmOrderPrice).toBe(0.51);
+  expect(rowToOrder({ ...base, raw: { ...saved.raw, pmSide: "sell" } }).PmSubmittedPrice).toBeUndefined();
+  for (const pmOrderPrice of [undefined, 0, 1, -1, "bad", Infinity])
+    expect(rowToOrder({ ...base, raw: { ...saved.raw, pmOrderPrice } }).PmSubmittedPrice).toBeUndefined();
 });

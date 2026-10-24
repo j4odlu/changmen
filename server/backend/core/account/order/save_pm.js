@@ -100,6 +100,15 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
     return { raw: merged, money, bet_money };
   }
 
+  // 官方订单限价不随成交、卖出或赛果改变；旧同步缺字段时保留已取得的值。
+  const savedOrderPrice = parseNum(prevRaw.pmOrderPrice, 0);
+  const incomingOrderPrice = parseNum(o.pmOrderPrice, 0);
+  const orderPrice = savedOrderPrice > 0 && savedOrderPrice < 1 ? savedOrderPrice : incomingOrderPrice;
+  if (orderPrice > 0 && orderPrice < 1)
+    merged.pmOrderPrice = orderPrice;
+  else
+    delete merged.pmOrderPrice;
+
   // [changmen 扩展] 拒单本金来自原始 POST；旧客户端同步不得重新污染已恢复的金额。
   const isReject = String(o.status ?? o.Status ?? merged.status).toLowerCase() === "reject";
   if (isReject && !(Number(prevRaw.pmShares) > 0) && !(Number(o.pmShares) > 0)) {

@@ -350,7 +350,7 @@ export function pmOrderFillPriceText(row: OrderRow): string | null {
   return formatPolymarketApiDecimal(price);
 }
 
-/** [changmen 扩展] FOK 未成交只展示原始签单报价，缺失时不使用预检赔率推算。 */
+/** [changmen 扩展] FOK 未成交只展示官方订单限价，缺失时不使用预检赔率推算。 */
 export function pmOrderSubmissionQuote(row: OrderRow): { priceText: string; oddsText: string } | null {
   if (!isPmBuyOrderListRow(row) || row.PmGtcExecutionId
     || !["Reject", "Pending"].includes(String(normalizeOrderStatus(String(row.Status ?? "")))))
@@ -423,9 +423,9 @@ export function pmOrderDisplayPriceText(
 /** 普通 PM 买单成交赔率与提交赔率显示值不同时追加「/ 成交赔率」；GTC 和卖单沿用原口径。 */
 export function pmOrderOddsText(row: OrderRow): string {
   if (isPmBuyOrderListRow(row) && !row.PmGtcExecutionId) {
-    const signedPrice = Number(row.PmSubmittedPrice);
-    const submitted = Number.isFinite(signedPrice) && signedPrice > 0 && signedPrice < 1
-      ? toFixed(truncateOddsTo3(1 / signedPrice), 3) : "—";
+    const orderPrice = Number(row.PmSubmittedPrice);
+    const submitted = Number.isFinite(orderPrice) && orderPrice > 0 && orderPrice < 1
+      ? toFixed(truncateOddsTo3(1 / orderPrice), 3) : "—";
     const status = normalizeOrderStatus(String(row.Status ?? ""));
     const fillPrice = status === "Reject" || status === "Pending" ? null : resolvePmFillPrice(row);
     const filled = fillPrice != null ? toFixed(truncateOddsTo3(1 / fillPrice), 3) : "—";

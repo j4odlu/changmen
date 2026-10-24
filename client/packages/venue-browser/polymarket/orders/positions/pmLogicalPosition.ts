@@ -17,6 +17,7 @@ export interface OrderRowLike {
   PmTokenId?: string;
   PmShares?: number;
   PmFillPrice?: number;
+  PmSubmittedPrice?: number;
   PmStakeUsdc?: number;
   PmFeeUsdc?: number;
   PmConditionId?: string;
@@ -120,6 +121,7 @@ export function venueOrderFromOrderRow(row: OrderRowLike): VenueOrder {
     pmTokenId: row.PmTokenId,
     pmShares: row.PmShares,
     pmFillPrice: row.PmFillPrice,
+    pmOrderPrice: row.PmSubmittedPrice,
     pmStakeUsdc: row.PmStakeUsdc,
     pmFeeUsdc: row.PmFeeUsdc,
     pmConditionId: row.PmConditionId,

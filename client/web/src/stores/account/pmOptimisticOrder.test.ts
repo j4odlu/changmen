@@ -25,10 +25,10 @@ function result() {
   } }, { orderID: "original" }), { orderId: "original", beginTime: 1790000000000 });
 }
 
-it("persists the exact signed quantities for an immediate fill without substituting precheck or fill prices", async () => {
+it("saves the immediate fill without adding signed quantities for odds display", async () => {
   const saved = await persistPolymarketMatchedBuyOrder(account, option, result());
-  expect(saved?.pmSubmission).toEqual({ orderId: "original", accountId: 317, makerAmount: "5100000",
-    takerAmount: "10000000", stakeUsdc: 5.1, submittedAt: 1790000000000 });
+  expect(saved?.pmSubmission).toBeUndefined();
+  expect(saved?.pmOrderPrice).toBeUndefined();
   expect(saved?.pmFillPrice).toBe(0.5044);
   expect(saved?.odds).toBe(2);
   expect(io.save).toHaveBeenCalledWith(account, [saved]);

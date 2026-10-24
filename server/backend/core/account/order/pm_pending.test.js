@@ -29,7 +29,7 @@ it("creates one complete Pending order, then preserves its labels, identity, Lin
   const dto = rowToOrder(stored);
   expect(dto).toMatchObject({ OrderID: "same-order", Status: "Pending", Match: pending.match,
     Bet: pending.bet, Item: pending.item, BetMoney: 100.031 });
-  expect(dto.PmSubmittedPrice).toBeCloseTo(0.66);
+  expect(dto.PmSubmittedPrice).toBeUndefined();
   expect(dto.PmFillPrice).toBeUndefined(); expect(dto.PmShares).toBeUndefined();
   expect(moneyForProfitAggregate(stored)).toBe(0); expect(betMoneyForProfitAggregate(stored)).toBe(0);
   await saveOrder(292, [{ provider: "Polymarket", orderId: "same-order", status: "reject", bet: "FOK未成交",

@@ -11,14 +11,14 @@ import * as pf from "@changmen/venue-browser/adapter/predictfun";
 import * as vault from "@/security/pmVault";
 import { ElMessage } from "element-plus";
 
-const m = vi.hoisted(() => ({ unlocked: true, exists: true, cached: "", signer: vi.fn(), deposit: vi.fn(), creds: vi.fn(), unlock: vi.fn(), has: vi.fn(), message: vi.fn() }));
+const m = vi.hoisted(() => ({ unlocked: true, exists: true, cached: "", signer: vi.fn(), deposit: vi.fn(), creds: vi.fn(), unlock: vi.fn(), has: vi.fn(), message: vi.fn(), prepare: vi.fn() }));
 vi.mock("element-plus", () => ({ ElMessage: { success: m.message, error: m.message } }));
 vi.mock("@/config/apiBase", () => ({ getApiBase: () => "https://app.test" }));
 vi.mock("@/lib/authCredentials", () => ({ createRequestAuthProvider: () => async () => ({}), getRequestAuthHeaders: async () => ({}) }));
 vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
   normalizePolymarketPrivateKey: (key: string) => key,
   resolvePolymarketSignerAddress: m.signer, resolvePolymarketDepositWalletFromPrivateKey: m.deposit,
-  createOrDerivePolymarketApiCreds: m.creds, fetchPolymarketRelayerStatus: async () => ({ configured: true }), preparePolymarketWallet: async () => ({ ok: true }),
+  createOrDerivePolymarketApiCreds: m.creds, fetchPolymarketRelayerStatus: async () => ({ configured: true }), preparePolymarketWallet: m.prepare,
 }));
 vi.mock("@changmen/venue-browser/adapter/predictfun", () => ({
   parsePredictFunTokenConfig: (token: string) => { try { return JSON.parse(token || "{}"); } catch { return {}; } },
@@ -43,6 +43,7 @@ beforeEach(() => {
   m.unlock.mockImplementation(async () => { m.unlocked = true; return true; });
   m.signer.mockResolvedValue(wallet); m.deposit.mockResolvedValue({ walletAddress: wallet, funder });
   m.creds.mockResolvedValue({ signerAddress: wallet, apiCreds: { apiKey: "api", secret: "synthetic-secret", passphrase: "synthetic-passphrase" } });
+  m.prepare.mockResolvedValue({ ok: true });
 });
 const deps = { ...parse, ...pm, ...pf, ...vault, ElMessage, getApiBase: () => "https://app.test",
   createRequestAuthProvider: () => async () => ({}), getRequestAuthHeaders: async () => ({}) };
@@ -109,4 +110,20 @@ test("editors use the current form after a v-model replacement and keep instance
   expect(JSON.parse(ctx.form.token).privateKey).toBe(key);
   expect(first.polymarketCredentialFingerprint()).toContain("https://changed.test");
   expect(second.polyPrivateKey.value).toBe(""); expect(second.polyWalletAddress.value).toBe("");
+});
+
+
+test("PM save reports connection stages, reuses credentials and never prepares the wallet automatically", async () => {
+  const { ctx } = context("Polymarket", "account");
+  const api = createPolymarketAccountEditor(ctx);
+  api.syncPolymarketFieldsFromToken(ctx.props.account!.token!);
+  const stages: string[] = [];
+  await api.ensurePolymarketToken(stage => stages.push(stage));
+  expect(stages).toEqual(["识别钱包", "获取 API 凭证"]);
+  expect(m.creds).toHaveBeenCalledOnce();
+  m.creds.mockClear();
+  ctx.form.pause = !ctx.form.pause;
+  await api.ensurePolymarketToken();
+  expect(m.creds).not.toHaveBeenCalled();
+  expect(m.prepare).not.toHaveBeenCalled();
 });

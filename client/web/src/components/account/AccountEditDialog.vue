@@ -42,6 +42,7 @@ const visible = computed({
 });
 const pasteRaw = ref("");
 const gameShow = ref(false);
+const polyAdvancedSections = ref<string[]>([]);
 /** A8：PB 默认锁定比例，legend「买」双击解锁 */
 const rateLocked = ref(false);
 
@@ -68,6 +69,9 @@ const {
   polyRelayerConfigured,
   polyAdvancedMode,
   polyDerivingAddresses,
+  polySaveStage,
+  polySaveError,
+  copyPolymarketWalletAddress,
   syncPolymarketFieldsFromToken,
   syncPolymarketWalletAddressFromPrivateKey,
   onGeneratePolymarketApiCreds,
@@ -111,6 +115,7 @@ const editSave = createAccountEditSave({
   sportObFromForm,
   probeObSportCredentialForSave,
   polymarket: polymarketEditor,
+  onPolymarketSaveProgress: polymarketEditor.setSaveProgress,
   predictFun: predictFunEditor,
 });
 const { save, saveAdminAccountFields } = editSave;
@@ -147,6 +152,7 @@ const proxyOptions = computed(() => {
 function resetForm(acc?: PlatformAccount) {
   // 废止上一账号未完成的推导/apiCreds，避免串写到当前表单
   polymarketEditor.cancelPending();
+  polyAdvancedSections.value = [];
   const src = acc ?? new PlatformAccount({ accountId: 0, playerName: "", provider: "Polymarket" });
   Object.assign(form, createAccountEditFormStateFromPlatformAccount(src));
   pasteRaw.value = "";
@@ -246,6 +252,7 @@ watch(
     refreshPfPrivyAddressDisplay();
   },
 );
+
 
 function queryPlatforms(query: string, cb: (rows: PlatformSuggestion[]) => void) {
   const q = query.trim();
@@ -414,128 +421,105 @@ function unlockRate() {
 
       <template v-if="form.provider === 'Polymarket'" #token>
         <fieldset class="poly-token-fieldset">
-          <legend>Token</legend>
+          <legend>钱包连接</legend>
           <el-form-item label="钱包私钥：">
             <el-input
               v-model="polyPrivateKey"
               show-password
               autocomplete="off"
               :placeholder="polyPrivateKeyPlaceholder"
-              :disabled="readonly"
+              :disabled="readonly || saving || polyRelayerPreparing"
               style="font-family: monospace; font-size: 12px"
             />
             <span v-if="polyLocalKeyReady && !polyPrivateKey.trim()" class="poly-credential-hint">
               {{ polyPrivateKeyHintText }}
             </span>
           </el-form-item>
-          <el-form-item v-if="!readonly" label="地址：">
-            <el-button
-              type="primary"
-              plain
-              :loading="polyDerivingAddresses"
-              :disabled="!polyPrivateKey.trim() && !polyLocalKeyReady"
-              @click="onDerivePolymarketAddresses"
-            >
-              从私钥推导 EOA / funder
-            </el-button>
-            <span class="poly-credential-hint">
-              保存账号时会自动推导 EOA 与充值地址
-            </span>
+          <el-form-item label="钱包地址：">
+            <div class="pf-privy-address-row">
+              <el-input :model-value="polyWalletAddress" placeholder="由私钥自动识别" readonly style="font-family: monospace; font-size: 12px; flex: 1" />
+              <el-button v-if="polyWalletAddress" plain @click="copyPolymarketWalletAddress">复制</el-button>
+            </div>
           </el-form-item>
-          <el-form-item label="EOA 地址：">
-            <el-input
-              v-model="polyWalletAddress"
-              placeholder="由私钥自动推导"
-              :readonly="!polyAdvancedMode"
-              :disabled="readonly && !polyWalletAddress"
-              style="font-family: monospace; font-size: 12px"
+          <el-form-item label="连接状态：">
+            <span>{{ polyApiCreds ? '已有 API 凭证，保存时验证连接' : '保存时自动连接钱包' }}</span>
+          </el-form-item>
+          <div v-if="polySaveStage" class="poly-save-progress" aria-live="polite">
+            <p>识别钱包 → 获取 API 凭证 → 验证连接 → 保存账号</p>
+            <el-alert
+              :type="polySaveError ? 'error' : 'info'"
+              :title="polySaveError ? polySaveStage + '失败' : polySaveStage + '…'"
+              :description="polySaveError || undefined"
+              :closable="false"
+              show-icon
             />
-          </el-form-item>
-          <el-form-item label="充值地址：">
-            <el-input
-              v-model="polyFunder"
-              placeholder="由私钥自动推导的 Deposit Wallet（funder）"
-              :readonly="!polyAdvancedMode"
-              :disabled="readonly && !polyFunder"
-              class="poly-funder-input"
-              :class="{ 'poly-credential-readonly': !polyAdvancedMode }"
-              style="font-family: monospace; font-size: 12px"
-            />
-            <p class="poly-funder-deposit-hint">
-              请向此地址充值 <strong>Polygon</strong> 链上的 <strong>USDC</strong>
-              （勿充 ETH 主网或其它链）。
-              <template v-if="!polyAdvancedMode">
-                地址由私钥自动推导，不可修改。
-              </template>
-              <template v-else>
-                当前为高级模式，可手动指定（官网 Proxy/Safe 导入）。
-              </template>
-            </p>
-          </el-form-item>
-          <el-form-item v-if="!readonly" label="高级：">
-            <el-checkbox v-model="polyAdvancedMode">
-              手动指定 EOA / 充值地址（官网 Proxy/Safe 导入）
-            </el-checkbox>
-          </el-form-item>
-          <el-form-item v-if="!readonly" label="API 凭证：">
-            <el-button
-              type="primary"
-              plain
-              :loading="polyGenerating"
-              @click="onGeneratePolymarketApiCreds"
-            >
-              生成/验证 apiCreds
+            <el-button v-if="polySaveError && !readonly" class="poly-retry-save" :loading="saving" @click="save">
+              重试保存
             </el-button>
-            <el-button
-              type="success"
-              plain
-              :loading="polyRelayerPreparing"
-              :disabled="polyRelayerConfigured === false"
-              @click="onPreparePolymarketWallet"
-            >
-              部署钱包并授权交易
-            </el-button>
-            <span class="poly-credential-hint">
-              钱包未部署时自动部署，并完成买卖所需授权。
-            </span>
-            <span class="poly-credential-hint">
-              {{ polyApiCreds ? "已生成，保存时会写入 token（signatureType=3）" : "保存时也会自动生成 apiCreds" }}
-              <template v-if="polyRelayerConfigured === false">
-                · 服务端 Relayer 未配置
+          </div>
+          <el-collapse v-model="polyAdvancedSections" class="poly-advanced-information">
+            <el-collapse-item title="高级信息" name="connection">
+              <el-form-item label="网关：">
+                <el-input v-model="form.gateway" :disabled="readonly || saving" />
+              </el-form-item>
+              <el-form-item v-if="polyAdvancedMode" label="签名地址：">
+                <el-input v-model="polyWalletAddress" placeholder="由私钥自动识别" :readonly="!polyAdvancedMode" :disabled="readonly || saving" />
+              </el-form-item>
+              <el-form-item label="资金地址：">
+                <el-input v-model="polyFunder" placeholder="自动识别" :readonly="!polyAdvancedMode" :disabled="readonly || saving" />
+              </el-form-item>
+              <el-form-item v-if="!readonly" label="手动配置：">
+                <el-checkbox v-model="polyAdvancedMode" :disabled="saving">手动指定钱包地址（导入已有钱包）</el-checkbox>
+              </el-form-item>
+              <el-form-item v-if="!readonly" label="地址：">
+                <el-button
+                  type="primary"
+                  plain
+                  :loading="polyDerivingAddresses"
+                  :disabled="!polyPrivateKey.trim() && !polyLocalKeyReady"
+                  @click="onDerivePolymarketAddresses"
+                >
+                  从私钥推导 EOA / funder
+                </el-button>
+                <span class="poly-credential-hint">
+                  保存账号时会自动推导 EOA 与充值地址
+                </span>
+              </el-form-item>
+              <el-form-item v-if="!readonly" label="API 凭证：">
+                <el-button
+                  type="primary"
+                  plain
+                  :loading="polyGenerating"
+                  @click="onGeneratePolymarketApiCreds"
+                >
+                  生成/验证 apiCreds
+                </el-button>
+                <el-button
+                  type="success"
+                  plain
+                  :loading="polyRelayerPreparing"
+                  :disabled="polyRelayerConfigured === false"
+                  @click="onPreparePolymarketWallet"
+                >
+                  部署钱包并授权交易
+                </el-button>
+                <span class="poly-credential-hint">
+                  钱包未部署时自动部署，并完成买卖所需授权。
+                </span>
+                <span class="poly-credential-hint">
+                  {{ polyApiCreds ? "已生成，保存时会写入 token（signatureType=3）" : "保存时也会自动生成 apiCreds" }}
+                  <template v-if="polyRelayerConfigured === false">
+                    · 服务端 Relayer 未配置
+                  </template>
+                </span>
+              </el-form-item>
+              <template v-if="polyApiCreds">
+                <el-form-item label="API Key："><el-input :model-value="polyApiCreds.apiKey" readonly /></el-form-item>
+                <el-form-item label="Secret："><el-input :model-value="polyApiCreds.secret" readonly show-password /></el-form-item>
+                <el-form-item label="Passphrase："><el-input :model-value="polyApiCreds.passphrase" readonly show-password /></el-form-item>
               </template>
-            </span>
-          </el-form-item>
-          <template v-if="polyApiCreds">
-            <p class="poly-credential-readonly-hint">
-              以下凭证由「生成/验证 apiCreds」自动派生，只读不可手改；变更钱包/私钥后请重新生成。
-            </p>
-            <el-form-item label="apiKey：">
-              <el-input
-                :model-value="polyApiCreds.apiKey"
-                readonly
-                class="poly-credential-readonly"
-                style="font-family: monospace; font-size: 12px"
-              />
-            </el-form-item>
-            <el-form-item label="secret：">
-              <el-input
-                :model-value="polyApiCreds.secret"
-                readonly
-                show-password
-                class="poly-credential-readonly"
-                style="font-family: monospace; font-size: 12px"
-              />
-            </el-form-item>
-            <el-form-item label="passphrase：">
-              <el-input
-                :model-value="polyApiCreds.passphrase"
-                readonly
-                show-password
-                class="poly-credential-readonly"
-                style="font-family: monospace; font-size: 12px"
-              />
-            </el-form-item>
-          </template>
+            </el-collapse-item>
+          </el-collapse>
         </fieldset>
       </template>
 
@@ -633,7 +617,7 @@ function unlockRate() {
       </template>
 
       <template v-else-if="!readonly" #footer>
-        <el-form-item label="快速填充：">
+        <el-form-item v-if="form.provider !== 'Polymarket'" label="快速填充：">
           <el-input
             v-model="pasteRaw"
             :placeholder="form.provider === 'OB'
@@ -656,6 +640,7 @@ function unlockRate() {
             size="large"
             style="width: 98%"
             :loading="saving"
+            :disabled="form.provider === 'Polymarket' && (polyGenerating || polyDerivingAddresses || polyRelayerPreparing)"
             @click="save"
           >
             保存
@@ -837,4 +822,9 @@ function unlockRate() {
   color: var(--el-color-warning-dark-2);
   font-weight: 600;
 }
+.poly-save-progress { margin: 0 0 16px; }
+.poly-save-progress p { color: var(--el-text-color-secondary); font-size: 12px; }
+.poly-retry-save { margin-top: 8px; }
+.poly-advanced-information { margin-bottom: 12px; }
+.poly-advanced-information :deep(.el-collapse-item__header) { color: var(--el-text-color-secondary); }
 </style>

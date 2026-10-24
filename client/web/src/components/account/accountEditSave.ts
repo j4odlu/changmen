@@ -24,6 +24,7 @@ interface AccountEditSaveContext extends AccountEditContext {
   sportObFromForm: ObSportAccountEditor["sportObFromForm"];
   probeObSportCredentialForSave: ObSportAccountEditor["probeObSportCredentialForSave"];
   emit: AccountEditEmit;
+  onPolymarketSaveProgress?: (stage: string, error?: string) => void;
   polymarket: Pick<PolymarketAccountEditor,
     "polyPrivateKey" | "polyLocalKeyStatus" | "resolvePolymarketPrivateKeyForSave"
     | "ensurePrivateKeyInVault" | "ensurePmVaultReadyBeforeCreate" | "buildPolyToken" | "ensurePolymarketToken">;
@@ -33,6 +34,12 @@ interface AccountEditSaveContext extends AccountEditContext {
 }
 
 export function createAccountEditSave(ctx: AccountEditSaveContext) {
+  let polymarketSaveStage = "";
+  function reportPolymarketSaveProgress(stage: string, error?: string) {
+    if (ctx.form.provider !== "Polymarket") return;
+    polymarketSaveStage = stage;
+    ctx.onPolymarketSaveProgress?.(stage, error);
+  }
   const {
     props,
     accountStore,
@@ -85,7 +92,7 @@ export function createAccountEditSave(ctx: AccountEditSaveContext) {
     provider: AccountRecord["provider"];
   }> {
     const token = ctx.form.provider === "Polymarket"
-      ? await ensurePolymarketToken()
+      ? await ensurePolymarketToken(stage => reportPolymarketSaveProgress(stage))
       : ctx.form.provider === "PredictFun"
         ? await ensurePredictFunToken()
         : ctx.form.token.trim() || undefined;
@@ -235,7 +242,7 @@ export function createAccountEditSave(ctx: AccountEditSaveContext) {
   }
 
   async function save() {
-    if (props.readonly)
+    if (props.readonly || saving.value)
       return;
     if (!ctx.form.platformName.trim()) {
       ElMessage.error("平台名必填");
@@ -249,6 +256,7 @@ export function createAccountEditSave(ctx: AccountEditSaveContext) {
     saving.value = true;
     let loading: ReturnType<typeof ElLoading.service> | undefined;
     try {
+      reportPolymarketSaveProgress("识别钱包");
       const patch = await buildPatch();
       if (isObSportBetToken(String(patch.token || ""))) {
         if (!sportObForm.token.trim()) {
@@ -289,6 +297,7 @@ export function createAccountEditSave(ctx: AccountEditSaveContext) {
         loading = undefined;
       }
       else if (bindVenueMember) {
+        reportPolymarketSaveProgress("验证连接");
         loading = ElLoading.service({ fullscreen: true, text: "校验余额与场馆账号..." });
         venue = await probeVenueIdentityForSave(patch);
         patch.venueAccountName = venue.venueAccountName;
@@ -306,6 +315,7 @@ export function createAccountEditSave(ctx: AccountEditSaveContext) {
         return;
       }
 
+      reportPolymarketSaveProgress("保存账号");
       loading = ElLoading.service({ fullscreen: true, text: "保存中..." });
 
       // 编辑已有账号：必须保留原 accountId。
@@ -458,6 +468,7 @@ export function createAccountEditSave(ctx: AccountEditSaveContext) {
       });
     }
     catch (err) {
+      reportPolymarketSaveProgress(polymarketSaveStage, err instanceof Error ? err.message : "保存失败");
       ElMessage.error(err instanceof Error ? err.message : "保存失败");
     }
     finally {

@@ -42,7 +42,7 @@ export function createPolymarketAccountEditor(ctx: AccountEditContext) {
       return "私钥已就绪（不显示明文）；留空沿用，或粘贴新私钥覆盖";
     if (polyLocalKeyStatus.value === "stored")
       return "本机已存加密私钥（未解锁，自动下注不可用）；解锁后可用，或粘贴新钥覆盖";
-    return "0x... 或不带前缀的 hex 私钥（必填，EOA 与 funder 将自动推导）";
+    return "粘贴钱包私钥，保存时自动连接";
   });
   const polyPrivateKeyHintText = computed(() => {
     if (polyLocalKeyStatus.value === "ready")
@@ -58,6 +58,8 @@ export function createPolymarketAccountEditor(ctx: AccountEditContext) {
   const polyRelayerConfigured = ref<boolean | null>(null);
   const polyAdvancedMode = ref(false);
   const polyDerivingAddresses = ref(false);
+  const polySaveStage = ref("");
+  const polySaveError = ref("");
   /** 地址推导 / apiCreds 异步防串写 */
   let polyAsyncOpSeq = 0;
 
@@ -264,8 +266,9 @@ export function createPolymarketAccountEditor(ctx: AccountEditContext) {
     return JSON.stringify(token);
   }
 
-  async function ensurePolymarketToken(): Promise<string> {
+  async function ensurePolymarketToken(onProgress?: (stage: string) => void): Promise<string> {
     const op = ++polyAsyncOpSeq;
+    onProgress?.("识别钱包");
     const privateKey = await resolvePolymarketPrivateKeyForSave();
     if (op !== polyAsyncOpSeq)
       throw new Error("操作已取消，请重试保存");
@@ -273,6 +276,7 @@ export function createPolymarketAccountEditor(ctx: AccountEditContext) {
     await syncPolymarketDerivedAddresses(false, privateKey, op);
     if (op !== polyAsyncOpSeq)
       throw new Error("操作已取消，请重试保存");
+    onProgress?.("获取 API 凭证");
     if (!polyApiCreds.value || polyApiCredsFingerprint.value !== polymarketCredentialFingerprint())
       await generatePolymarketApiCreds(true, privateKey, op);
     if (op !== polyAsyncOpSeq)
@@ -404,10 +408,28 @@ export function createPolymarketAccountEditor(ctx: AccountEditContext) {
     }
   }
 
+  function setSaveProgress(stage: string, error = "") {
+    polySaveStage.value = stage;
+    polySaveError.value = error;
+  }
+
+  async function copyPolymarketWalletAddress() {
+    if (!polyWalletAddress.value) return;
+    try {
+      await navigator.clipboard.writeText(polyWalletAddress.value);
+      ElMessage.success("钱包地址已复制");
+    }
+    catch {
+      ElMessage.error("复制失败，请手动复制钱包地址");
+    }
+  }
+
   function cancelPending() {
     polyAsyncOpSeq += 1;
     polyGenerating.value = false;
     polyDerivingAddresses.value = false;
+    polySaveStage.value = "";
+    polySaveError.value = "";
   }
 
   return {
@@ -425,6 +447,10 @@ export function createPolymarketAccountEditor(ctx: AccountEditContext) {
     polyRelayerConfigured,
     polyAdvancedMode,
     polyDerivingAddresses,
+    polySaveStage,
+    polySaveError,
+    setSaveProgress,
+    copyPolymarketWalletAddress,
     syncPolymarketFieldsFromToken,
     resolvePolymarketPrivateKeyForSave,
     ensurePrivateKeyInVault,

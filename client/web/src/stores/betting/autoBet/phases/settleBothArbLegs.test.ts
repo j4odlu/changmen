@@ -73,6 +73,7 @@ function placed(a: string, b: string): ArbBetPlaced {
 describe("settleBothArbLegs A8 wait", () => {
   beforeEach(() => {
     wait.mockClear();
+    refreshBalance.mockClear();
     showRejectDetectionTip.mockClear();
     settleArbLegUntilTerminal.mockReset();
     settleArbLegUntilTerminal.mockResolvedValue({
@@ -83,6 +84,67 @@ describe("settleBothArbLegs A8 wait", () => {
     bindArbLegOrder.mockResolvedValue(true);
     maxLegRejectWaitSec.mockReturnValue(30);
   });
+
+  it.each((["A", "B"] as const).flatMap(side => [false, true].flatMap(original => [
+    { state: "delayed 成交", pending: true, terminal: true, rejected: false },
+    { state: "delayed 未成交", pending: true, terminal: true, rejected: true },
+    { state: "仍待确认", pending: true, terminal: false, rejected: false },
+    { state: "立即成交", pending: false, terminal: true, rejected: false },
+  ].map(scenario => ({ side, original, ...scenario })))))(
+    "PM 在 $side 腿，original=$original，$state：终态后补刷且不重复刷新",
+    async ({ side, original, pending, terminal, rejected }) => {
+      const input = side === "A" ? placed("Polymarket", "OB") : placed("OB", "Polymarket");
+      const account = side === "A" ? input.accountA! : input.accountB!;
+      const leg = side === "A" ? input.legA : input.legB;
+      const result = side === "A" ? input.resultA! : input.resultB!;
+      result.pending = pending;
+      if (side === "A") {
+        input.resultB!.success = false;
+        input.placeOutcomeA = pending ? "accepted_pending_confirm" : "filled_pending_settle";
+        input.placeOutcomeB = "api_failed";
+      }
+      else {
+        input.resultA!.success = false;
+        input.placeOutcomeA = "api_failed";
+        input.placeOutcomeB = pending ? "accepted_pending_confirm" : "filled_pending_settle";
+      }
+      let release!: () => void;
+      const confirmation = new Promise<void>(resolve => { release = resolve; });
+      const confirm = vi.fn<OriginalLegExecution["confirm"]>(async confirmedResult => {
+        await confirmation;
+        // 真实 PM settle 会改写原 result.pending，不能用改写后的值判断是否漏刷。
+        confirmedResult.pending = !terminal;
+        return { orders: [], rejected, pendingConfirm: !terminal };
+      });
+      if (original) {
+        input.originalExecution = {
+          legs: new Map([[leg, {
+            validate: () => {}, submit: vi.fn(), confirm,
+            facts: () => ({ submission: "accepted", fill: "unknown" }),
+            markConfirmed: () => {}, rejectWaitSec: 0,
+          }]]),
+          finishSubmission: vi.fn(),
+          actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
+          close: async () => {},
+          summary: () => ({ message: "", traceStatus: "success", failed: false }),
+        };
+      }
+      else {
+        settleArbLegUntilTerminal.mockImplementation(() => confirm(result));
+      }
+
+      const task = settleBothArbLegs(params(), input);
+      await vi.waitFor(() => expect(confirm).toHaveBeenCalledOnce());
+      expect(refreshBalance).toHaveBeenCalledTimes(pending ? 0 : 1);
+      release();
+      const settled = await task;
+
+      expect(side === "A" ? settled.pendingConfirmA : settled.pendingConfirmB).toBe(!terminal);
+      expect(refreshBalance).toHaveBeenCalledTimes(terminal ? 1 : 0);
+      if (terminal)
+        expect(refreshBalance).toHaveBeenCalledExactlyOnceWith(account);
+    },
+  );
 
   it.each([
     { pmReject: false, otherReject: false, expected: null },

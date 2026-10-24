@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createRequire } from "node:module";
 import ts from "typescript";
 import { expect, it } from "vitest";
 import { accountEditGroups, executableAccountSource, originalAccountDialog, originalAccountFunctions, originalAccountScript } from "./__tests__/accountEditOriginal";
 
-const read = (file: string) => readFileSync(join(process.cwd(), "src/components/account", file), "utf8").replaceAll("\r\n", "\n");
+const { restorePmAccountConnectionSource } = createRequire(import.meta.url)(join(process.cwd(), "../../scripts/verification/pm-account-connection.mjs"));
+const read = (file: string): string => restorePmAccountConnectionSource("client/web/src/components/account/" + file,
+  readFileSync(join(process.cwd(), "src/components/account", file), "utf8").replaceAll("\r\n", "\n"));
 const tree = (source: string) => ts.createSourceFile("account.ts", source, ts.ScriptTarget.Latest, true);
 const undoAccess = (source: string) => source.replaceAll("ctx.form", "form");
 const undoCancel = (source: string) => source.replaceAll("polymarketEditor.cancelPending();",

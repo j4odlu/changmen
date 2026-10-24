@@ -556,7 +556,7 @@ function unlockRate() {
           {{ PREDICT_FUN_OFFICIAL_REFERRAL_URL }}
         </a>
       </el-form-item>
-      <el-form-item v-if="form.provider !== 'PredictFun' && !useObTokenTabs" label="网关：">
+      <el-form-item v-if="form.provider !== 'Polymarket' && form.provider !== 'PredictFun' && !useObTokenTabs" label="网关：">
         <el-input v-model="form.gateway" :disabled="fieldDisabled()" />
       </el-form-item>
       <slot name="token" />

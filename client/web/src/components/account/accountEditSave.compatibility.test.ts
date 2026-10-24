@@ -20,7 +20,7 @@ vi.mock("@changmen/venue-browser/adapter/predictfun", () => ({
   buildPredictFunPersistToken: (predictAccount: string) => JSON.stringify({ predictAccount }),
 }));
 
-type Options = { provider: PlatformAccount["provider"]; edit: boolean; sport?: boolean; fail?: string; readonly?: boolean; blankName?: boolean; duplicate?: boolean; mismatch?: boolean; invalidRate?: boolean; blankPlatform?: boolean; admin?: boolean };
+type Options = { provider: PlatformAccount["provider"]; edit: boolean; sport?: boolean; fail?: string; readonly?: boolean; blankName?: boolean; duplicate?: boolean; mismatch?: boolean; invalidRate?: boolean; blankPlatform?: boolean; admin?: boolean; progress?: boolean; retry?: boolean };
 const cases: Options[] = [];
 for (const provider of ["Stake", "OB", "RAY", "PB", "Polymarket", "PredictFun", "SABA"] as const)
   for (const edit of [false, true])
@@ -67,7 +67,7 @@ async function exercise(old: boolean, opts: Options) {
     ensurePrivateKeyInVault: async (...args: unknown[]) => { step("vault-write", ...args); },
     ensurePmVaultReadyBeforeCreate: async () => { step("vault-ready"); },
     buildPolyToken: (privateKey: string) => JSON.stringify({ privateKey, walletAddress: "wallet", funder: "funder" }),
-    ensurePolymarketToken: async () => { step("pm-token"); form.token = JSON.stringify({ privateKey: "synthetic-pm-key" }); return form.token; },
+    ensurePolymarketToken: async (onProgress?: (stage: string) => void) => { step("pm-token"); onProgress?.("识别钱包"); onProgress?.("获取 API 凭证"); form.token = JSON.stringify({ privateKey: "synthetic-pm-key" }); return form.token; },
   };
   const predictFun = {
     pfPrivyPrivateKey: ref(""), pfPredictAccount: ref("predict-wallet"), pfLocalKeyStatus: ref("ready"),
@@ -76,6 +76,7 @@ async function exercise(old: boolean, opts: Options) {
     refreshPfPrivyAddressDisplay: () => { step("pf-display"); },
   };
   const ctx = { get form() { return form; }, props, userStore, accountStore, saving, obTokenTab, sportObForm, polymarket, predictFun,
+    ...(opts.progress ? { onPolymarketSaveProgress: (stage: string, error?: string) => { trace.push(["progress", stage, error || ""]); } } : {}),
     emit: (...args: unknown[]) => { step("emit", ...args); },
     sportObFromForm: () => opts.sport ? { ...sportObForm } : undefined,
     probeObSportCredentialForSave: async () => { step("sport-probe"); return { amount: 17, venueMemberId: "1234567890123456789", venueAccountName: "Sport" }; },
@@ -94,6 +95,7 @@ async function exercise(old: boolean, opts: Options) {
   const api = old ? createOriginalAccountModule<ReturnType<typeof createAccountEditSave>>("accountEditSave", ctx as unknown as AccountEditContext, dependencies)
     : createAccountEditSave(ctx as unknown as Parameters<typeof createAccountEditSave>[0]);
   if (opts.admin) await api.saveAdminAccountFields(); else await api.save();
+  if (opts.retry) { opts.fail = undefined; await api.save(); }
   for (let i = 0; i < 12; i++) await Promise.resolve();
   return snapshot({ trace, form, account: { accountId: source.accountId, provider: source.provider, token: source.token, sportOb: source.sportOb, sportBalance: source.sportBalance },
     saving: saving.value, pmKey: polymarket.polyPrivateKey.value, pfKey: predictFun.pfPrivyPrivateKey.value });
@@ -122,4 +124,23 @@ test("keeps vault/create/close order and edit identity without new account creat
   expect(edited.trace.some((row: unknown[]) => row[0] === "create-tag")).toBe(false);
   const probe = edited.trace.find((row: unknown[]) => row[0] === "balance");
   expect(probe[1].token).toContain("synthetic-pf-key");
+});
+
+test("PM save reports connection stages and preserves original save behavior", async () => {
+  const result = await exercise(false, { provider: "Polymarket", edit: true, progress: true });
+  expect(result.trace.filter((row: unknown[]) => row[0] === "progress").map((row: unknown[]) => row[1]))
+    .toEqual(["识别钱包", "识别钱包", "获取 API 凭证", "验证连接", "保存账号"]);
+  expect(result.trace.some((row: unknown[]) => row[0] === "loading")).toBe(true);
+  expect(result.trace).toContainEqual(["emit", "close"]);
+});
+
+test.each([
+  { fail: "pm-token", stage: "识别钱包" },
+  { fail: "balance", stage: "验证连接" },
+  { fail: "save-accounts", stage: "保存账号" },
+])("PM $fail failure reports its stage and permits retry", async ({ fail, stage }) => {
+  const result = await exercise(false, { provider: "Polymarket", edit: true, progress: true, fail, retry: true });
+  expect(result.trace).toContainEqual(["progress", stage, `${fail} failed`]);
+  expect(result.trace).toContainEqual(["emit", "close"]);
+  expect(result.saving).toBe(false);
 });

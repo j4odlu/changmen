@@ -131,6 +131,7 @@ export async function settleBothArbLegs(
     const placeOutcome = side === "A" ? placeOutcomeA : placeOutcomeB;
     if (!account || !result)
       return;
+    const wasPending = result.pending;
     const execution = original?.legs.get(leg);
     const synced = execution ? await execution.confirm(result) : await settleArbLegUntilTerminal(account, result, {
       // 编排层已空等 max；场馆层不再 sleep（A8 一次 wait 后立刻 updateOrders）
@@ -138,6 +139,9 @@ export async function settleBothArbLegs(
       pendingBindLinkId: linkId,
       betOption: leg,
     });
+    // [changmen 扩展] confirm 会清除 pending；以确认前状态补刷，且不受下方绑单分支提前返回影响。
+    if (isPendingConfirmVenueProvider(account.provider) && wasPending && !synced.pendingConfirm)
+      void accountStore.refreshBalance(account);
     if (side === "A") {
       snapshot.ordersA = synced.orders;
       snapshot.rejectA = synced.rejected;
@@ -189,13 +193,6 @@ export async function settleBothArbLegs(
         betId: bet.id,
         side,
       });
-    }
-    if (
-      isPendingConfirmVenueProvider(account.provider)
-      && result.pending
-      && !synced.pendingConfirm
-    ) {
-      void accountStore.refreshBalance(account);
     }
   };
 

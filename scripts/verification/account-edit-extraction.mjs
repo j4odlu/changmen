@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import { restorePmAccountConnectionSource } from "./pm-account-connection.mjs";
 
 const normalize = source => source.replaceAll("\r\n", "\n");
 const sha = source => createHash("sha256").update(normalize(source)).digest("hex");
@@ -12,16 +13,19 @@ assert.equal(ACCOUNT_EDIT_EXTRACTION.purpose, "account-edit-dialog-extraction-on
 assert.equal(sha(ACCOUNT_EDIT_EXTRACTION.before), ACCOUNT_EDIT_EXTRACTION.beforeSha);
 
 export function restoreAccountEditSource(file, source) {
+  source = restorePmAccountConnectionSource(file, source);
   if (file !== ACCOUNT_EDIT_EXTRACTION.file || sha(source) !== ACCOUNT_EDIT_EXTRACTION.afterSha) return source;
   // A historical source view may only hide this exact extraction when every new
   // implementation is still authenticated on disk. This is never a runtime loader.
   for (const row of ACCOUNT_EDIT_EXTRACTION.assets)
-    assert.equal(sha(fs.readFileSync(new URL("../../" + row.file, import.meta.url), "utf8")), row.sha,
+    assert.equal(sha(restorePmAccountConnectionSource(row.file, fs.readFileSync(new URL("../../" + row.file, import.meta.url), "utf8"))), row.sha,
       row.file + ": extracted account implementation changed");
   return ACCOUNT_EDIT_EXTRACTION.before;
 }
 
 export function verifyAccountEditExtraction(read) {
+  const currentRead = read;
+  read = file => restorePmAccountConnectionSource(file, currentRead(file));
   assert.equal(sha(read(ACCOUNT_EDIT_EXTRACTION.file)), ACCOUNT_EDIT_EXTRACTION.afterSha, "Unreviewed account dialog extraction");
   for (const row of ACCOUNT_EDIT_EXTRACTION.assets)
     assert.equal(sha(read(row.file)), row.sha, row.file + ": extracted account implementation changed");

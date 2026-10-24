@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {pmCredentialSdkFiles,restorePmCredentialSdkSource,verifyPmCredentialSdkSources} from './pm-credential-sdk-boundary.mjs';
+import {pmOrderHashContractFiles,restorePmOrderHashContractSource,verifyPmOrderHashContractSources} from './pm-order-hash-contract-boundary.mjs';
 
 const normalize = source => source.replaceAll('\r\n', '\n');
 export const pmFundingSha = source => createHash('sha256').update(normalize(source)).digest('hex');
@@ -10,9 +11,10 @@ const text = fs.readFileSync(new URL('./pm-balance-credentials-increments.json',
 assert.equal(pmFundingSha(text), "aca91d789ab8f4ac5fc020a6027b520ed98ccd53243ee412ee27470e8f813340", 'PM balance/credentials exact increments changed');
 export const PM_BALANCE_CREDENTIALS = JSON.parse(text);
 const files = new Map(PM_BALANCE_CREDENTIALS.files.map(row => [row.file, row]));
-export const pmBalanceCredentialFiles = new Set([...files.keys(), ...pmCredentialSdkFiles]);
+export const pmBalanceCredentialFiles = new Set([...files.keys(), ...pmCredentialSdkFiles, ...pmOrderHashContractFiles]);
 
 export function restorePmBalanceCredentialsSource(file, source) {
+  source = restorePmOrderHashContractSource(file, source);
   source = restorePmCredentialSdkSource(file, source);
   const row = files.get(file);
   if (!row || pmFundingSha(source) !== row.afterSha) return source;
@@ -26,6 +28,9 @@ export function restorePmBalanceCredentialsSource(file, source) {
 }
 
 export function verifyPmBalanceCredentialsSources(read = file => fs.readFileSync(new URL('../../' + file, import.meta.url), 'utf8')) {
+  verifyPmOrderHashContractSources(read);
+  const latestRead = read;
+  read = file => restorePmOrderHashContractSource(file, latestRead(file));
   verifyPmCredentialSdkSources(read);
   const currentRead = read;
   read = file => restorePmCredentialSdkSource(file, currentRead(file));

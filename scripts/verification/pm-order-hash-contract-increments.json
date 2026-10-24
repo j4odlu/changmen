@@ -1,0 +1,35 @@
+{
+  "baseline": "71c8fbc9d6e924bcbc1789e8cf5a14039cf6bbbd",
+  "purpose": "decouple-pm-recovery-hash-contract-config",
+  "files": [
+    {
+      "file": "client/packages/venue-browser/polymarket/submission/recovery/pmSubmitJournal.ts",
+      "beforeSha": "3ee146efdf906a39f643378545a4c6b1c2e32ec7285de49a5180461480c5a4d9",
+      "afterSha": "22648a0f7327b2b73c41139e3d054029796c55ab761dfdc3f99def7d99521b85",
+      "changes": [
+        {
+          "offset": 143,
+          "before": "import { getContractConfig } from \"@polymarket/clob-client-v2\";",
+          "after": "import { POLYGON_POLYMARKET } from \"../../wallet/contracts\";"
+        },
+        {
+          "offset": 5383,
+          "before": "  const contracts = getContractConfig(137);\n  const verifyingContract = context.version === 3 ? contracts.exchangeV3\n    : context.negRisk ? contracts.negRiskExchangeV2 : contracts.exchangeV2;",
+          "after": "  const verifyingContract = context.version === 3 ? POLYGON_POLYMARKET.CTF_EXCHANGE_V3\n    : context.negRisk ? POLYGON_POLYMARKET.NEG_RISK_EXCHANGE : POLYGON_POLYMARKET.CTF_EXCHANGE;"
+        }
+      ]
+    },
+    {
+      "file": "client/packages/venue-browser/polymarket/wallet/contracts.ts",
+      "beforeSha": "c94882007e5beb7f8eb2c587aa5e5cdae34698e40ec15f5c44c3e3e0fe8940b3",
+      "afterSha": "a353c13c0d3651f55f44a41a9b26305123aa53d784b9b928fc1d7e1928b54b23",
+      "changes": [
+        {
+          "offset": 763,
+          "before": "  /**\n   * CLOB v1 Neg Risk Adapter",
+          "after": "  /** CLOB 1.2.0 Polygon exchangeV3；仅保留订单哈希的既有签名域，不扩展 V2 授权列表。 */\n  CTF_EXCHANGE_V3: \"0xe3333700cA9d93003F00f0F71f8515005F6c00Aa\",\n  /**\n   * CLOB v1 Neg Risk Adapter"
+        }
+      ]
+    }
+  ]
+}

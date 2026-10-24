@@ -2,6 +2,18 @@
 
 日期：2026-10-07。状态：阶段二至四代码已实施并进行回归；统一 SDK 下单保持评估阶段。2026-10-08 按用户要求恢复 BUY 提交异常的普通失败/重试语义，见下述修订；其余实施与发布记录见文末。
 
+## 2026-10-24 恢复哈希的合约配置解耦
+
+[changmen 扩展] `pmSignedOrderHash` 改读现有 `wallet/contracts.ts` 中的 Polygon 合约配置，移除对旧 CLOB SDK `getContractConfig(137)` 的直接依赖。新增 `CTF_EXCHANGE_V3` 地址与已固定的 CLOB 1.2.0 完全一致；V2 普通、V2 负风险与 V3 三条签名域路由保持，V3 仍优先于负风险分支。这是配置来源替换，不启用新订单协议或迁移订单构造器。
+
+EIP-712 字段、域名/版本/chainId、side 编码及哈希算法保持；BUY/SELL 金额与份额计算、FOK/GTC、持久化格式、旧记录恢复、互斥与重试保持。`polymarketTradeSpenders()` 的四个 V2 spender 不变，新增 V3 常量不进入授权列表。依赖声明与锁文件不变。
+
+验证：先在迁移前运行新增 17 项回归，再替换实现；固定哈希覆盖 BUY/SELL、V2 普通/负风险、V3 两种负风险标志和数字 side，旧恢复记录可读取、阻断重复提交、关联官方 ID 并清理。迁移后 PM 专项 110 文件、1559 项通过（3 文件、4 项原有跳过），包含既有 432 组真实 SDK 签名/哈希向量；GTC 与账号恢复 42 文件、457 项通过。前端类型检查、边界和 adapter 检查通过。
+
+源码冻结保护通过新增 `pm-order-hash-contract-increments.json` 精确登记两个运行时文件，接入既有历史 reader；原迁移清单、源码哈希和冻结规则保持。相关验证器 9 文件、231 项通过，覆盖完整原文恢复、额外地址/chainId/源码修改及撤回迁移仍被拒绝。日志为 `output/pm-order-hash-{tests,gtc-recovery,verifiers,typecheck,boundaries,adapter}.log`。本轮仅本机离线验证，未真实下单或部署。
+
+发布前按用户要求全面复核：两个运行时文件撤回已登记增量后，与 `71c8fbc9` 完整原文一致；除合约配置读取来源之外没有业务实现变化。前端全量 578 文件、6436 项通过（3 文件、4 项原有跳过）；后端验证 12 个任务成功，其中 backend 96 文件、1186 项通过（1 文件、16 项原有跳过），matcher 39 文件、228 项通过。验证器全量 167 文件、3711 项通过，另有 Node 验证 9 项、验证控制 75 项、发布控制 136 项通过；WSL Linux 发布集成、生产构建（含类型检查）、边界/契约等 `test:checks` 通过。构建保留原有大 chunk 提示。日志为 `output/pm-order-hash-prepush-*`。发布计划仅更新前端；生产变更由 GitHub Actions 验收与发布，本机只提交、推送和只读核验。
+
 ## 2026-10-24 浏览器凭证签名迁移与废弃服务端 L1 清理
 
 [changmen 扩展] 本批仅迁移凭证链路并清理无调用方的服务端实现。`client/packages/venue-browser/polymarket/auth/credentials.ts` 使用已安装 `@polymarket/client@0.12.0` 的公开 `signerFrom` / `Signer.signTypedData` 替代 CLOB `createL1Headers`；保留现有 ClobAuth EIP-712 载荷、Polygon chainId 137、nonce 0、地址校验和输入/响应规范化。新版 SDK 的认证载荷 helper 为内部接口，因此载荷和请求头由本模块明确构造，不导入 SDK 内部文件，也不创建会接管凭证回退或钱包准备的 `SecureClient`。

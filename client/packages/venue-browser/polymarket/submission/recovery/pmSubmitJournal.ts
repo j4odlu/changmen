@@ -1,6 +1,6 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { hashTypedData, keccak256, toBytes } from "viem";
-import { getContractConfig } from "@polymarket/clob-client-v2";
+import { POLYGON_POLYMARKET } from "../../wallet/contracts";
 import { parseTokenConfig, resolveApiCreds, resolveFunder } from "../../auth/l2Auth";
 import { useUserStore } from "../../../shared/webBridge";
 import { resolvePmOrderSubmitHttpMode } from "../../pmOrderSubmitMode";
@@ -109,9 +109,8 @@ export class PmSubmitUnknownError extends Error {
 
 /** CLOB 的 Order 哈希，独立于 Deposit Wallet 的 ERC7739 签名包装。 */
 export function pmSignedOrderHash(order: Record<string, any>, context: PmSubmitContext): string {
-  const contracts = getContractConfig(137);
-  const verifyingContract = context.version === 3 ? contracts.exchangeV3
-    : context.negRisk ? contracts.negRiskExchangeV2 : contracts.exchangeV2;
+  const verifyingContract = context.version === 3 ? POLYGON_POLYMARKET.CTF_EXCHANGE_V3
+    : context.negRisk ? POLYGON_POLYMARKET.NEG_RISK_EXCHANGE : POLYGON_POLYMARKET.CTF_EXCHANGE;
   const fields = [
     ["salt", "uint256"], ["maker", "address"], ["signer", "address"], ["tokenId", "uint256"],
     ["makerAmount", "uint256"], ["takerAmount", "uint256"], ["side", "uint8"],

@@ -30,12 +30,13 @@ it("shows the stored Pending order with its full labels, requested amount and a 
 });
 
 it("shows submitted and filled odds independently on filled PM buys", async () => {
-  const row: OrderRow = { ...pending, Status: "None", Odds: 1.5, PmFillPrice: 0.6, PmShares: 10, PmStakeUsdc: 6 };
+  const row: OrderRow = { ...pending, Status: "None", Odds: 2, PmSubmittedPrice: 0.51, PmFillPrice: 0.5044, PmShares: 10, PmStakeUsdc: 5.044 };
   const app = createSSRApp(OrderList, { orderEntries: [[123, [row]]] });
   app.use(createPinia());
   const text = (await renderToString(app)).replace(/<[^>]*>/g, "").replace(/\s+/g, " ");
-  expect(text).toContain("买入价：0.6");
-  expect(text).toContain("赔率：1.500 / 1.666");
+  expect(text).toContain("买入价：0.5044");
+  expect(text).toContain("赔率：1.960 / 1.982");
+  expect(text).not.toContain("2.000 /");
 });
 
 it.each(["Pending", "Reject"])("preserves the submitted-price quote for %s rows without saved odds", async Status => {
@@ -57,11 +58,21 @@ it("shows only submitted odds while the fill price is missing", async () => {
 });
 
 it("does not repeat the odds when submission and fill have the same display value", async () => {
-  const row: OrderRow = { ...pending, Status: "None", Odds: 2, PmFillPrice: 0.5, PmShares: 10, PmStakeUsdc: 5 };
+  const row: OrderRow = { ...pending, Status: "None", Odds: 1.9, PmSubmittedPrice: 0.5, PmFillPrice: 0.5, PmShares: 10, PmStakeUsdc: 5 };
   const app = createSSRApp(OrderList, { orderEntries: [[123, [row]]] });
   app.use(createPinia());
   const text = (await renderToString(app)).replace(/<[^>]*>/g, "").replace(/\s+/g, " ");
   expect(text).toContain("赔率：2.000");
+  expect(text).not.toContain("2.000 /");
+});
+
+it("does not present historical precheck odds as a signed limit when the snapshot is missing", async () => {
+  const row: OrderRow = { ...pending, Status: "None", Odds: 2, PmSubmittedPrice: undefined,
+    PmFillPrice: 0.5044, PmShares: 10, PmStakeUsdc: 5.044 };
+  const app = createSSRApp(OrderList, { orderEntries: [[123, [row]]] });
+  app.use(createPinia());
+  const text = (await renderToString(app)).replace(/<[^>]*>/g, "").replace(/\s+/g, " ");
+  expect(text).toContain("赔率：— / 1.982");
   expect(text).not.toContain("2.000 /");
 });
 

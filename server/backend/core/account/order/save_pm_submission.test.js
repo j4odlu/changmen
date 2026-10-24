@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import { mergePolymarketProviderSave } from "./save_pm.js";
 import { rowToOrder } from "./dto.js";
 import { pmSubmissionFromResult, validatePmSubmission } from "@changmen/shared/pm_submission";
+import { preparePmPendingOrderSave } from "./pm_pending.js";
 const snapshot = { orderId: "original", accountId: 317, makerAmount: "14930000", stakeUsdc: 14.93, submittedAt: 1790697330729 };
 it("restores reject principal and repeated stale sync cannot inflate it or add fees", () => {
   const old = { betMoney: 790.6, pmStakeUsdc: 118, pmOrigin: "changmen" };
@@ -48,7 +49,24 @@ it("accepts old submission snapshots and never derives a price from mismatched o
     { ...snapshot, accountId: 318, takerAmount: "29860000" }])
     expect(rowToOrder({ ...row, raw: { pmSubmission: value } }).PmSubmittedPrice).toBeUndefined();
   const raw = { pmSubmission: { ...snapshot, takerAmount: "29860000" } };
-  expect(rowToOrder({ ...row, status: "Win", raw }).PmSubmittedPrice).toBeUndefined();
+  for (const status of ["None", "Win", "Lose", "Return"])
+    expect(rowToOrder({ ...row, status, raw }).PmSubmittedPrice).toBe(0.5);
   expect(rowToOrder({ ...row, raw: { ...raw, pmSide: "sell" } }).PmSubmittedPrice).toBeUndefined();
   expect(rowToOrder({ ...row, raw: { ...raw, pmGtcExecutionId: "gtc" } }).PmSubmittedPrice).toBeUndefined();
+  expect(rowToOrder({ ...row, provider: "RAY", raw }).PmSubmittedPrice).toBeUndefined();
+});
+
+it("keeps the signed limit distinct from precheck odds and fills through later sync and settlement", () => {
+  const submission = { ...snapshot, makerAmount: "5100000", takerAmount: "10000000", stakeUsdc: 5.1 };
+  const filled = { orderId: "original", provider: "Polymarket", status: "none", odds: 2, pmSide: "buy",
+    pmSubmission: submission, pmShares: 10, pmFillPrice: 0.5044, pmStakeUsdc: 5.044, betMoney: 33.7948 };
+  const row = { order_id: "original", player_id: 317, provider: "Polymarket", status: "None", odds: 2, raw: filled };
+  const synced = preparePmPendingOrderSave(row, { orderId: "original", status: "lose", odds: 1.982,
+    pmFillPrice: 0.5044, pmShares: 10 }, 317, "Polymarket");
+  const dto = rowToOrder({ ...row, status: "Lose", raw: synced });
+  expect(dto.PmSubmittedPrice).toBe(0.51);
+  expect(dto.PmFillPrice).toBe(0.5044);
+  expect(dto.Odds).toBe(2);
+  expect(synced.pmSubmission).toEqual(submission);
+  expect(dto.pmSubmission).toBeUndefined();
 });

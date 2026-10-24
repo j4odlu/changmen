@@ -350,20 +350,16 @@ export function pmOrderFillPriceText(row: OrderRow): string | null {
   return formatPolymarketApiDecimal(price);
 }
 
-/** [changmen 扩展] FOK 拒单只展示提交报价；旧订单价格由已保存赔率反算，明确标为约值。 */
+/** [changmen 扩展] FOK 未成交只展示原始签单报价，缺失时不使用预检赔率推算。 */
 export function pmOrderSubmissionQuote(row: OrderRow): { priceText: string; oddsText: string } | null {
   if (!isPmBuyOrderListRow(row) || row.PmGtcExecutionId
     || !["Reject", "Pending"].includes(String(normalizeOrderStatus(String(row.Status ?? "")))))
     return null;
   const submittedPrice = Number(row.PmSubmittedPrice);
   const hasPrice = Number.isFinite(submittedPrice) && submittedPrice > 0 && submittedPrice < 1;
-  const storedOdds = Number(row.Odds);
-  const hasOdds = Number.isFinite(storedOdds) && storedOdds > 1;
-  const odds = hasOdds ? storedOdds : hasPrice ? 1 / submittedPrice : null;
   return {
-    priceText: hasPrice ? formatPolymarketApiDecimal(submittedPrice, 4)
-      : hasOdds ? `≈${formatPolymarketApiDecimal(1 / storedOdds, 4)}` : "—",
-    oddsText: odds == null ? "—" : toFixed(truncateOddsTo3(odds), 3),
+    priceText: hasPrice ? formatPolymarketApiDecimal(submittedPrice, 4) : "—",
+    oddsText: hasPrice ? toFixed(truncateOddsTo3(1 / submittedPrice), 3) : "—",
   };
 }
 
@@ -426,10 +422,10 @@ export function pmOrderDisplayPriceText(
 
 /** 普通 PM 买单成交赔率与提交赔率显示值不同时追加「/ 成交赔率」；GTC 和卖单沿用原口径。 */
 export function pmOrderOddsText(row: OrderRow): string {
-  const storedOdds = Number(row.Odds);
-  const submitted = Number.isFinite(storedOdds) && storedOdds > 1
-    ? toFixed(truncateOddsTo3(storedOdds), 3) : "—";
   if (isPmBuyOrderListRow(row) && !row.PmGtcExecutionId) {
+    const signedPrice = Number(row.PmSubmittedPrice);
+    const submitted = Number.isFinite(signedPrice) && signedPrice > 0 && signedPrice < 1
+      ? toFixed(truncateOddsTo3(1 / signedPrice), 3) : "—";
     const status = normalizeOrderStatus(String(row.Status ?? ""));
     const fillPrice = status === "Reject" || status === "Pending" ? null : resolvePmFillPrice(row);
     const filled = fillPrice != null ? toFixed(truncateOddsTo3(1 / fillPrice), 3) : "—";
@@ -437,8 +433,9 @@ export function pmOrderOddsText(row: OrderRow): string {
       return submitted;
     return `${submitted} / ${filled}`;
   }
-  if (submitted !== "—")
-    return submitted;
+  const storedOdds = Number(row.Odds);
+  if (Number.isFinite(storedOdds) && storedOdds > 1)
+    return toFixed(truncateOddsTo3(storedOdds), 3);
   const price = resolvePmFillPrice(row);
   return price != null ? toFixed(truncateOddsTo3(1 / price), 3) : "—";
 }

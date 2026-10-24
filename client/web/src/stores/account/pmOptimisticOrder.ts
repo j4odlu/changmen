@@ -4,6 +4,7 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import { buildPolymarketMatchedBuyVenueOrderFromBet } from "@changmen/venue-browser/adapter/polymarket";
 import { saveOrders } from "@/api/order";
+import { pmSubmissionFromResult } from "@changmen/shared/pm_submission";
 
 /**
  * [changmen 扩展] PM FOK matched：用 POST 成交金额立刻 saveOrders，
@@ -20,6 +21,9 @@ export async function persistPolymarketMatchedBuyOrder(
   const order = await buildPolymarketMatchedBuyVenueOrderFromBet(option, result);
   if (!order)
     return null;
+  const submission = pmSubmissionFromResult(result, account.accountId);
+  if (submission)
+    order.pmSubmission = submission;
   await saveOrders(account, [order]);
   return order;
 }

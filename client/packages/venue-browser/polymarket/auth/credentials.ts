@@ -1,6 +1,5 @@
-import type { ApiKeyRaw, L1PolyHeader } from "@polymarket/clob-client-v2";
 import { POLYMARKET_CLOB_API } from "../api";
-import { normalizePolymarketPrivateKey } from "../wallet/depositWallet";
+import { normalizePolymarketPrivateKey, POLYGON_CHAIN_ID } from "../wallet/depositWallet";
 import { polymarketPluginGet, polymarketPluginPost } from "../transport/transport";
 
 type Hex = `0x${string}`;
@@ -21,7 +20,7 @@ export interface PolymarketCredentialInput {
 export interface PolymarketCredentialRequestOptions {
   /** changmen API 根（空 = 浏览器同源） */
   apiBase?: string;
-  /** 登录 JWT；有则走服务端直连 CLOB L1（推荐生产） */
+  /** @deprecated 仅保留调用兼容；凭证始终在浏览器签名，不上传私钥。 */
   authToken?: string;
 }
 
@@ -43,12 +42,6 @@ function normalizeAddress(raw: string | undefined): string {
   return raw?.trim().toLowerCase() ?? "";
 }
 
-function stringifyHeaders(headers: L1PolyHeader): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(headers).map(([key, value]) => [key, String(value)]),
-  );
-}
-
 async function fetchClobServerTime(gateway: string): Promise<number> {
   const raw = await polymarketPluginGet<unknown>(`${gateway}/time`);
   const timestamp = Number(raw);
@@ -57,10 +50,10 @@ async function fetchClobServerTime(gateway: string): Promise<number> {
   return Math.floor(timestamp);
 }
 
-function normalizeApiCreds(raw: ApiKeyRaw | unknown): PolymarketApiCreds | undefined {
+function normalizeApiCreds(raw: unknown): PolymarketApiCreds | undefined {
   if (!raw || typeof raw !== "object")
     return undefined;
-  const item = raw as Partial<ApiKeyRaw> & { key?: unknown };
+  const item = raw as { apiKey?: unknown; key?: unknown; secret?: unknown; passphrase?: unknown };
   const apiKey = String(item.apiKey ?? item.key ?? "");
   const secret = String(item.secret ?? "");
   const passphrase = String(item.passphrase ?? "");
@@ -77,11 +70,11 @@ export async function createOrDerivePolymarketApiCreds(
   const gateway = normalizeGateway(input.gateway);
   const privateKey = normalizePrivateKey(input.privateKey);
   const [
-    clob,
+    unified,
     viem,
     accounts,
   ] = await Promise.all([
-    import("@polymarket/clob-client-v2"),
+    import("@polymarket/client/viem"),
     import("viem"),
     import("viem/accounts"),
   ]);
@@ -94,24 +87,46 @@ export async function createOrDerivePolymarketApiCreds(
   }
 
   const { createPolygonHttpTransport, polygonChainForRpc } = await import("../wallet/polygonRpc");
-  const signer = viem.createWalletClient({
+  const signer = unified.signerFrom(viem.createWalletClient({
     account,
     chain: polygonChainForRpc(),
     transport: createPolygonHttpTransport(),
-  });
+  }));
   const createL1Headers = async (): Promise<Record<string, string>> => {
     // L1 timestamp is validated by CLOB. Use its clock and generate a fresh
     // signature for each create/derive request, matching the official client.
     const timestamp = await fetchClobServerTime(gateway);
-    return stringifyHeaders(
-      await clob.createL1Headers(signer, clob.Chain.POLYGON, undefined, timestamp),
-    );
+    // [changmen 扩展] Use the public unified Signer with the existing CLOB L1
+    // payload. Its SDK payload helper is internal; do not create a SecureClient
+    // here, which would take over credential fallback and wallet preparation.
+    const signature = await signer.signTypedData({
+      domain: { name: "ClobAuthDomain", version: "1", chainId: POLYGON_CHAIN_ID },
+      types: { ClobAuth: [
+        { name: "address", type: "address" },
+        { name: "timestamp", type: "string" },
+        { name: "nonce", type: "uint256" },
+        { name: "message", type: "string" },
+      ] },
+      primaryType: "ClobAuth",
+      message: {
+        address: signerAddress,
+        timestamp: String(timestamp),
+        nonce: 0,
+        message: "This message attests that I control the given wallet",
+      },
+    });
+    return {
+      POLY_ADDRESS: signerAddress,
+      POLY_SIGNATURE: signature,
+      POLY_TIMESTAMP: String(timestamp),
+      POLY_NONCE: "0",
+    };
   };
 
   let created: PolymarketApiCreds | undefined;
   try {
     created = normalizeApiCreds(
-      await polymarketPluginPost<ApiKeyRaw>(`${gateway}/auth/api-key`, undefined, {
+      await polymarketPluginPost<unknown>(`${gateway}/auth/api-key`, undefined, {
         headers: await createL1Headers(),
       }),
     );
@@ -123,7 +138,7 @@ export async function createOrDerivePolymarketApiCreds(
     return { signerAddress, apiCreds: created };
 
   const derived = normalizeApiCreds(
-    await polymarketPluginGet<ApiKeyRaw>(`${gateway}/auth/derive-api-key`, {
+    await polymarketPluginGet<unknown>(`${gateway}/auth/derive-api-key`, {
       headers: await createL1Headers(),
     }),
   );

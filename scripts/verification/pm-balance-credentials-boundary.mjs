@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
+import {pmCredentialSdkFiles,restorePmCredentialSdkSource,verifyPmCredentialSdkSources} from './pm-credential-sdk-boundary.mjs';
 
 const normalize = source => source.replaceAll('\r\n', '\n');
 export const pmFundingSha = source => createHash('sha256').update(normalize(source)).digest('hex');
@@ -9,9 +10,10 @@ const text = fs.readFileSync(new URL('./pm-balance-credentials-increments.json',
 assert.equal(pmFundingSha(text), "aca91d789ab8f4ac5fc020a6027b520ed98ccd53243ee412ee27470e8f813340", 'PM balance/credentials exact increments changed');
 export const PM_BALANCE_CREDENTIALS = JSON.parse(text);
 const files = new Map(PM_BALANCE_CREDENTIALS.files.map(row => [row.file, row]));
-export const pmBalanceCredentialFiles = new Set(files.keys());
+export const pmBalanceCredentialFiles = new Set([...files.keys(), ...pmCredentialSdkFiles]);
 
 export function restorePmBalanceCredentialsSource(file, source) {
+  source = restorePmCredentialSdkSource(file, source);
   const row = files.get(file);
   if (!row || pmFundingSha(source) !== row.afterSha) return source;
   source = normalize(source);
@@ -24,6 +26,9 @@ export function restorePmBalanceCredentialsSource(file, source) {
 }
 
 export function verifyPmBalanceCredentialsSources(read = file => fs.readFileSync(new URL('../../' + file, import.meta.url), 'utf8')) {
+  verifyPmCredentialSdkSources(read);
+  const currentRead = read;
+  read = file => restorePmCredentialSdkSource(file, currentRead(file));
   for (const row of files.values()) {
     const source = read(row.file);
     assert.equal(pmFundingSha(source), row.afterSha, row.file + ': only the exact PM balance/credentials repair is authorized');

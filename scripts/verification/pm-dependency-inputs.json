@@ -126,7 +126,7 @@
     {
       "file": "client/packages/venue-browser/polymarket/auth/credentials.ts",
       "kind": "dynamic-import",
-      "spec": "@polymarket/clob-client-v2",
+      "spec": "@polymarket/client/viem",
       "count": 1
     },
     {
@@ -229,30 +229,6 @@
       "file": "client/packages/venue-browser/polymarket/wallet/walletPrepUnified.ts",
       "kind": "dynamic-import",
       "spec": "@polymarket/client/viem",
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/integrations/polymarket/clob_l1.js",
-      "kind": "dynamic-import",
-      "spec": "@polymarket/clob-client-v2",
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/integrations/polymarket/clob_l1.js",
-      "kind": "dynamic-import",
-      "spec": "viem",
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/integrations/polymarket/clob_l1.js",
-      "kind": "dynamic-import",
-      "spec": "viem/accounts",
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/integrations/polymarket/clob_l1.js",
-      "kind": "dynamic-import",
-      "spec": "viem/chains",
       "count": 1
     },
     {

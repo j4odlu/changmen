@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import { restorePmCredentialSdkSource } from "./pm-credential-sdk-boundary.mjs";
 const sha = source => createHash("sha256").update(source.replaceAll("\r\n", "\n")).digest("hex");
 const text = fs.readFileSync(new URL("./pm-sdk-retirement.json", import.meta.url), "utf8");
 assert.equal(sha(text), "aa14677447d6416ecc4aeec5c317d18bd0fd8bc7f0420733580bbd6f8c69635b", "PM SDK retirement evidence changed");
@@ -15,6 +16,7 @@ function verifyAssets(read) {
   for (const row of PM_SDK_RETIREMENT.assets) assert.equal(sha(read(row.file)), row.sha, row.file + ": captured SDK fixture changed");
 }
 export function restorePmSdkRetirementSource(file, source, read = readNative) {
+  source = restorePmCredentialSdkSource(file, source);
   if (file === "package-lock.json" && sha(source) === PM_SDK_RETIREMENT.lock.afterSha) {
     verifyAssets(read);
     const lock = JSON.parse(source);
@@ -41,6 +43,8 @@ export function readRetiredPmSdkSource(file) {
   return PM_SDK_RETIREMENT.files.find(row => row.file === file).before;
 }
 export function verifyPmSdkRetirement(read = readNative) {
+  const currentRead = read;
+  read = file => restorePmCredentialSdkSource(file, currentRead(file));
   verifyAssets(read);
   for (const row of PM_SDK_RETIREMENT.files) {
     if (row.afterSha === null) readRetiredPmSdkSource(row.file);

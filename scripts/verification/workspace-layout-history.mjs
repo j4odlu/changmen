@@ -16,6 +16,7 @@ import {restorePendingVenueVerificationSource} from './pending-venue-extraction.
 import {restoreValidationAuditSource} from './validation-audit-boundary.mjs';
 import {pmWalletAddressOptimizationFiles} from './pm-wallet-address-optimization.mjs';
 import {pmBalanceCredentialFiles,restorePmBalanceCredentialsSource} from './pm-balance-credentials-boundary.mjs';
+import {pmCredentialSdkRetiredFiles,readRetiredPmCredentialSdkSource} from './pm-credential-sdk-boundary.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const sha=s=>createHash('sha256').update(s.replaceAll('\r\n','\n')).digest('hex');
 const recordFile=new URL('./workspace-layout-relocation.json',import.meta.url);
@@ -50,7 +51,7 @@ function actual(row){
 export function readPreviousWorkspaceFile(file,options){
  const row=rows.get(key(file));
  if(!row){
-  const retired=readRetiredPmSdkSource(key(file));
+  const retired=readRetiredPmCredentialSdkSource(key(file))??readRetiredPmSdkSource(key(file));
   let source=retired===undefined?native.readFileSync(file,options):(typeof options==='string'||options?.encoding?retired:Buffer.from(retired));
   if(pmBalanceCredentialFiles.has(key(file))){const restored=restorePmBalanceCredentialsSource(key(file),source.toString());source=Buffer.isBuffer(source)?Buffer.from(restored):restored;}
   if(!frontendDependencyFiles.has(key(file))&&key(file)!==ACCOUNT_EDIT_EXTRACTION.file&&!pendingVenueFixFiles.has(key(file))&&key(file)!==OB_FOOTBALL_EXTRACTION.file&&!pmWalletAddressOptimizationFiles.has(key(file))&&!pmSdkRetirementFiles.has(key(file)))return source;
@@ -63,7 +64,7 @@ export function readPreviousWorkspaceFile(file,options){
  return typeof options==='string'||options?.encoding?row.before:Buffer.from(row.before);
 }
 function mapped(file){const row=rows.get(key(file));return row?.canonical?path.join(root,row.canonical):file;}
-function isVirtual(file){const k=key(file);return rows.has(k)||directories.has(k)||pmSdkRetiredFiles.has(k);}
+function isVirtual(file){const k=key(file);return rows.has(k)||directories.has(k)||pmSdkRetiredFiles.has(k)||pmCredentialSdkRetiredFiles.has(k);}
 function historicalRealpath(file,options){
  if(isVirtual(file)){
   const row=rows.get(key(file));if(row?.canonical)actual(row);

@@ -110,7 +110,10 @@ it("records the nearest installed copy and exact owning workspace rather than a 
 });
 it("PM imports have declarations and a Vue host peer while inherited uncertainty remains explicit", () => {
   const report = inspectPmDependencies(fileURLToPath(new URL("../../", import.meta.url)));
-  expect(report.violations).toEqual([]); expect(report.dynamicSites).toHaveLength(52);
+  expect(report.violations).toEqual([]); expect(report.dynamicSites).toHaveLength(48);
+  expect(report.dynamicSites.filter(site => site.file === "client/packages/venue-browser/polymarket/auth/credentials.ts")
+    .map(site => site.spec).sort()).toEqual(["../wallet/polygonRpc", "@polymarket/client/viem", "viem", "viem/accounts"]);
+  expect(report.dynamicSites.some(site => site.file === "server/backend/core/integrations/polymarket/clob_l1.js")).toBe(false);
   expect(report.unknownSummary).toEqual({ raw: 20, primary: 0, explainedPrimary: 0, unexplainedPrimary: 0, inherited: 20 });
   expect(report.sharedLoaderEvidence.byClass).toEqual({ "fixed-target": 12, "environment-dependent": 3, "parameter-unknown": 5 });
   expect(report.loaderBindings.calls).toHaveLength(9);
@@ -122,7 +125,7 @@ it("PM imports have declarations and a Vue host peer while inherited uncertainty
     .toMatchObject({ spec: "@polymarket/client/actions", typeOnly: true, declaredDevelopment: true });
   expect(report.externalDependencies.find(fact => fact.name === "vue" && fact.owner === "client/packages/venue-browser/package.json"))
     .toMatchObject({ declaration: "peerDependencies", peerOptional: true, declarationRange: "^3.5.13" });
-  expect(report.sharedExternalPackages).toEqual(expect.arrayContaining(["@polymarket/client", "@polymarket/clob-client-v2", "viem"]));
+  expect(report.sharedExternalPackages).toEqual(["@polymarket/client"]);
   expect(report.safeToNarrowPublishScope).toBe(false);
 }, 60_000); // Full graph scans take up to 32 seconds on the shared CI runner.
 it("does not classify a later runtime use as type-only or merge different SDK subpaths", () => {

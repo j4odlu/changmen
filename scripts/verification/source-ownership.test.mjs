@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, it, vi } from "vitest";
 import { classifySourceFile, sourceLayerViolation, sourceOwnershipInventory, validateSourceOwnership } from "./source-ownership.mjs";
+import { PM_CREDENTIAL_SDK, verifyPmCredentialSdkSources } from "./pm-credential-sdk-boundary.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const policy = validateSourceOwnership(JSON.parse(fs.readFileSync(path.join(root, "scripts/verification/source-ownership-inputs.json"), "utf8")));
@@ -39,7 +40,12 @@ it("classifies every inventoried source and keeps compatibility JSON identical",
   const report = sourceOwnershipInventory(root);
   expect(report.unclassified).toEqual([]); expect(report.incompatibleAssets).toEqual([]);
   expect(report.incompatibleEntries).toEqual([]);
-  expect(report.files.filter(row => row.protected551)).toHaveLength(551);
+  const retired = PM_CREDENTIAL_SDK.retired;
+  expect(retired.map(row => row.file)).toEqual(["server/backend/core/integrations/polymarket/clob_l1.js"]);
+  const protectedFiles = JSON.parse(fs.readFileSync(path.join(root, "scripts/verification/vps-fok-baseline.json"), "utf8")).protectedFiles;
+  for (const row of retired) expect(Object.hasOwn(protectedFiles, row.file)).toBe(true);
+  verifyPmCredentialSdkSources();
+  expect(report.files.filter(row => row.protected551).length + retired.length).toBe(551);
   expect(report.publishScopeOptimizationEnabled).toBe(false);
 });
 it("has no retired identity or shared-tooling implementation aliases", () => {

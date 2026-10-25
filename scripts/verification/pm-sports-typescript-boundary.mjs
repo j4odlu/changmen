@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import { execFileSync } from "node:child_process";
 import ts from "typescript";
+import { restoreMatcherLifecycleSource } from "./matcher-lifecycle-boundary.mjs";
 const previousCommit = "84364793171244eca85378ef7bce3388f147b237";
 const names = ["index", "gamma_poll", "sport_state", "parse_sport"];
 export function erasePmSportsTypes(source) {
@@ -20,7 +21,9 @@ export function restorePmSportsTypeScriptSource(file, source, typedSource) {
   if (source === original) return source;
   const shim = `// Compatibility entry; implementation is TypeScript.\n${name === "index" ? 'import "./index.ts";' : `export * from "./${name}.ts";`}\n`;
   assert.equal(source.replaceAll("\r\n", "\n"), shim, `${file}: only the exact compatibility entry is accepted`);
-  const typed = typedSource ?? readAdapterHistory(file.replace(/\.js$/, ".ts"), "utf8");
+  const typedFile = file.replace(/\.js$/, ".ts");
+  // 只逆转完整摘要已登记的原生场次状态接入，仍逐字核对原固定历史实现。
+  const typed = restoreMatcherLifecycleSource(typedFile, typedSource ?? readAdapterHistory(typedFile, "utf8"));
   assert.equal(erasePmSportsTypes(typed), erasePmSportsTypes(original), `${file}: the complete runtime implementation must remain identical`);
   return original;
 }

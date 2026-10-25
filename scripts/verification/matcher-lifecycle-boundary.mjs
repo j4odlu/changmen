@@ -6,7 +6,7 @@ import fs from 'node:fs';
 const sha=source=>createHash('sha256').update(source.replaceAll('\r\n','\n')).digest('hex');
 const nativeRead=file=>fs.readFileSync(new URL('../../'+file,import.meta.url),'utf8');
 const text=fs.readFileSync(new URL('./matcher-lifecycle-increments.json',import.meta.url),'utf8');
-assert.equal(sha(text),'6261bf1a46067d321bc27c04977abe7ca6d40bbbaed2ea926c2fab68ec6d3949','Matcher lifecycle inventory changed');
+assert.equal(sha(text),'de41628233444431001ffe301bcfbe17afb7e858a9888ed22575472cfbd02ef7','Matcher lifecycle inventory changed');
 export const MATCHER_LIFECYCLE_INCREMENTS=JSON.parse(text);
 assert.equal(MATCHER_LIFECYCLE_INCREMENTS.purpose,'matcher-end-preserves-platform-associations');
 const rows=new Map(MATCHER_LIFECYCLE_INCREMENTS.files.map(row=>{

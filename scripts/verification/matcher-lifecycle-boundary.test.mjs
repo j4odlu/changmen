@@ -4,20 +4,21 @@ import {expect,it} from 'vitest';
 import {MATCHER_LIFECYCLE_INCREMENTS as evidence,restoreMatcherLifecycleSource,restoreMatcherLifecycleVerificationSource,verifyMatcherLifecycleSources} from './matcher-lifecycle-boundary.mjs';
 import {inspectWorkspaceLayout} from './workspace-layout-relocation.mjs';
 import {WORKSPACE_LAYOUT_RELOCATION as relocation,restoreWorkspaceLayoutSource,readPreviousWorkspaceFile} from './workspace-layout-history.mjs';
+import {restorePmSportsTypeScriptSource} from './pm-sports-typescript-boundary.mjs';
 const read=file=>fs.readFileSync(file,'utf8');
 const normalize=source=>source.replaceAll('\r\n','\n');
 it('restores the complete original matcher source and keeps the original relocation evidence',()=>{
- expect(verifyMatcherLifecycleSources(read)).toEqual({files:4,assets:2,wiring:2});
+ expect(verifyMatcherLifecycleSources(read)).toEqual({files:6,assets:4,wiring:2});
  for(const row of evidence.files){
   const original=normalize(execFileSync('git',['show',`${evidence.baseline}:${row.file}`],{encoding:'utf8',windowsHide:true}));
   expect(row.before).toBe(original);
   const historical=relocation.files.find(old=>old.canonical===row.file);
-  expect(historical.afterSha).toBe(row.beforeSha);
+  if(historical) expect(historical.afterSha).toBe(row.beforeSha);
   for(const source of [read(row.file),normalize(read(row.file)).replaceAll('\n','\r\n')]){
    expect(restoreMatcherLifecycleSource(row.file,source,read)).toBe(original);
-   expect(restoreWorkspaceLayoutSource(row.file,source)).toBe(historical.before);
+   expect(restoreWorkspaceLayoutSource(row.file,source)).toBe(historical?.before ?? original);
   }
-  expect(readPreviousWorkspaceFile(new URL('../../'+historical.file,import.meta.url),'utf8')).toBe(historical.before);
+  if(historical) expect(readPreviousWorkspaceFile(new URL('../../'+historical.file,import.meta.url),'utf8')).toBe(historical.before);
  }
 });
 it('only restores the registered verification calls and rejects extra changes to either reader',()=>{
@@ -48,4 +49,11 @@ it('rejects changes to lifecycle ownership or PM status dependencies in both off
   expect(()=>restoreMatcherLifecycleSource(row.file,read(row.file),mutated)).toThrow('matcher lifecycle implementation changed');
   expect(()=>inspectWorkspaceLayout(process.cwd(),{read:mutated})).toThrow('matcher lifecycle implementation changed');
  }
+});
+it('rejects changing the registered WS persistence hook while retaining the fixed sports baseline',()=>{
+ const file='server/collectors/polymarket-sports/index.js';
+ const typed=read(file.replace(/\.js$/,'.ts'));
+ const changed=typed.replace('persistSourceEventStates([sourceMessage], "ws")','persistSourceEventStates([sourceMessage], "gamma")');
+ expect(changed).not.toBe(typed);
+ expect(()=>restorePmSportsTypeScriptSource(file,read(file),changed)).toThrow('complete runtime implementation');
 });

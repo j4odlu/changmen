@@ -36,9 +36,9 @@ test("one plan preserves risk while accounting for cross-component dependencies"
     [["docs/note.md"], "docs", "noop"],
     [["client/web/src/components/admin/Report.vue"], "frontend", "frontend"],
     [["server/backend/core/observability/memory.js"], "backend", "backend"],
-    [["server/storage/runtime_version.js"], "integration", "full"],
+    [["server/storage/runtime_version.js"], "full", "full"],
     [["scripts/deploy/publish.sh"], "controls", "full"],
-    [["client/web/src/orderModes/gtc/api.ts"], "full", "frontend"],
+    [["client/web/src/orderModes/gtc/api.ts"], "frontend", "frontend"],
     [["mystery/file.js"], "full", "full"],
   ]) {
     const plan = changePlan(paths);
@@ -65,12 +65,12 @@ test("unpublished changes survive failed/partial earlier pushes and documentatio
     assert.equal(changePlan(partial.paths, partial).releasePlan, "frontend-only");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
-test("manual publication preserves requested components and database checks without specialized audits", () => {
+test("manual publication preserves requested components and tests data compatibility for backend/full", () => {
   for (const scope of ["frontend", "backend", "full"]) {
     const plan = changePlan(["docs/note.md"], { requestedScope: scope });
     assert.equal(plan.tier, scope === "full" ? "integration" : scope); assert.equal(plan.deployment.scope, scope);
     assert.equal(plan.purpose, "release"); assert(!plan.checks.includes("complete-release")); assert(!plan.checks.includes("fok-551"));
-    assert(plan.checks.includes("database-compatibility"));
+    assert.equal(plan.checks.includes("database-compatibility"), scope !== "frontend");
     assert.equal(plan.checks.includes("backend"), scope !== "frontend");
     assert.equal(plan.checks.includes("build"), scope !== "backend");
     assert.equal(plan.releasePlan, scope === "frontend" ? "frontend-only" : "backend-first");
@@ -98,11 +98,13 @@ test("required publication checks follow risk without expanding component select
   const cases = [
     [["client/web/src/components/admin/Report.vue"], false],
     [["client/web/src/orderModes/gtc/api.ts"], false],
-    [["server/backend/core/observability/memory.js"], true],
+    [["server/backend/core/observability/memory.js"], false],
     [["server/backend/core/account/order_store.js"], true],
+    [["server/backend/core/db/store.js"], true],
+    [["server/backend/core/football/pod_bet_executions.js"], true],
     [["packages/shared/contract.js"], true],
     [["client/web/src/components/admin/Report.vue", "server/backend/scripts/apply-rds-schema.mjs"], true],
-    [["scripts/deploy/publish.sh"], true],
+    [["scripts/deploy/publish.sh"], false],
     [["unknown/file.js"], true],
     [["docs/note.md"], false],
     [[".github/workflows/release.yml"], false],

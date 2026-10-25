@@ -12,17 +12,19 @@ function fixture() {
   fs.mkdirSync(path.join(root, "docs")); fs.writeFileSync(path.join(root, "docs/notes.md"), "new");
   return root;
 }
-it("documents run only validation controls, whose failure still stops acceptance", () => {
+it("documents require no commands and still produce a scoped report", () => {
   const cwd = fixture(), run = vi.fn(() => ({ status: 1 }));
   const report = runChangeValidation([], { cwd, npm: "npm-cli.js", run });
-  expect(report.tier).toBe("docs"); expect(report.passed).toBe(false);
+  expect(report.tier).toBe("docs"); expect(report.passed).toBe(true);
   expect(report.immutableFokEntries).toBe(0);
-  expect(report.executionOrder).toEqual(["validation-control"]);
-  expect(run.mock.calls[0][1]).toContain("scripts/verification/validation-plan.test.mjs"); expect(run).toHaveBeenCalledOnce();
+  expect(report.executionOrder).toEqual([]);
+  expect(run).not.toHaveBeenCalled();
 });
 it("a successful scoped check is not a complete release approval, and input drift is rejected", () => {
   const cwd = fixture(); const clean = runChangeValidation([], { cwd, npm: "npm-cli.js", run: () => ({ status: 0 }) });
   expect(clean.passed).toBe(true); expect(clean.completeRelease).toBe(false);
+  fs.mkdirSync(path.join(cwd, "client/web"), { recursive: true });
+  fs.writeFileSync(path.join(cwd, "client/web/app.ts"), "changed");
   const run = () => { fs.writeFileSync(path.join(cwd, "added.js"), "unexpected work"); return { status: 0 }; };
   const drift = runChangeValidation([], { cwd, npm: "npm-cli.js", run }); expect(drift.sourceStable).toBe(false); expect(drift.passed).toBe(false);
 });
@@ -49,12 +51,12 @@ it("daily core checks stay offline and cannot claim complete release approval", 
   fs.writeFileSync(path.join(cwd, "rds/order.js"), "changed");
   const run = vi.fn(() => ({ status: 0 }));
   const report = runChangeValidation([], { cwd, npm: "npm-cli.js", run });
-  expect(report.tier).toBe("full"); expect(report.passed).toBe(true); expect(report.completeRelease).toBe(false);
+  expect(report.tier).toBe("backend"); expect(report.passed).toBe(true); expect(report.completeRelease).toBe(false);
   expect(report.plan.purpose).toBe("change");
   expect(report.immutableFokEntries).toBe(0);
   for (const check of ["fok-551", "verification-control", "verification-node"])
     expect(report.executionOrder).not.toContain(check);
-  expect(report.executionOrder).toEqual(["validation-control", "router-compile", "backend", "frontend-typecheck", "frontend", "build"]);
+  expect(report.executionOrder).toEqual(["router-compile", "backend"]);
   expect(run.mock.calls.every(call => !call[1].some(arg => /check:fok|verify-fok/.test(arg)))).toBe(true);
 });
 it.each(["frontend", "backend", "full"])("%s publication executes its component checks without a FOK or live audit", scope => {
@@ -70,7 +72,7 @@ it.each(["frontend", "backend", "full"])("%s publication executes its component 
   expect(report.plan.checks.includes("build")).toBe(scope !== "backend");
 });
 
-it.each(["validation-control", "backend", "build", "database-compatibility", "backend-installation"])("a failed %s still stops publication before subsequent checks", failure => {
+it.each(["backend", "build", "database-compatibility", "backend-installation"])("a failed %s still stops publication before subsequent checks", failure => {
   const cwd = fixture(); let failed = false;
   const run = vi.fn((_node, args) => {
     const hit = failure === "validation-control" ? args.includes("scripts/verification/validation-plan.test.mjs")
@@ -108,6 +110,16 @@ it("a check that fails to launch cannot leave an earlier acceptance usable", () 
 
 it("a zero-status timeout is still a failure and stops the next check", () => {
   const cwd = fixture(), run = vi.fn(() => ({ status: 0, error: { code: "ETIMEDOUT" } }));
-  expect(runChangeValidation([], { cwd, npm: "npm-cli.js", run }).passed).toBe(false);
+  expect(runChangeValidation(["--publish=full"], { cwd, npm: "npm-cli.js", run }).passed).toBe(false);
   expect(run).toHaveBeenCalledOnce();
+});
+
+it("planner regressions still fail closed when the planner itself changes", () => {
+  const cwd = fixture(); fs.mkdirSync(path.join(cwd, "scripts/verification"), { recursive: true });
+  fs.writeFileSync(path.join(cwd, "scripts/verification/validation-plan.mjs"), "changed");
+  const run = vi.fn((_node, args) => ({ status: args.includes("scripts/verification/validation-plan.test.mjs") ? 23 : 0 }));
+  const report = runChangeValidation([], { cwd, npm: "npm-cli.js", run });
+  expect(report.passed).toBe(false);
+  expect(report.results.at(-1)).toMatchObject({ check: "validation-control", passed: false, exitCode: 23 });
+  expect(run).toHaveBeenCalledTimes(2);
 });

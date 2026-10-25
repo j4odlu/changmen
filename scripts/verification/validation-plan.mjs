@@ -1,19 +1,11 @@
 /** [changmen 扩展] 日常检查和发布按范围离线验证；完整专项审计保留独立入口。 */
+import { classifyDeployScope } from "../deploy/classify-deploy-scope.mjs";
+
 const controlPatterns = [
   /^scripts\/(?:verification|deploy)\//,
   /^\.github\//,
   /^sh\/(?:deploy-[^/]+\.sh|_common\.sh)$/,
-  /^deploy\/release-(?:common|backend|frontend)\.sh$/,
-];
-const fullPatterns = [
-  /^(?:package(?:-lock)?\.json|turbo\.json)$/,
-  /^(?:packages\/|(?:rds|server\/db)\/|server\/backend\/db\/)/,
-  /^server\/backend\/core\/(?:account|auth|certificates|integrations|orderModes|esport-api|http)\//,
-  /^server\/backend\/(?:http_routes\.js|server\.js|proxy\/|scripts\/)/,
-  /^client\/web\/src\/(?:api|lib|stores|runtime|orderModes|services|models|types|domain)\//,
-  /^client\/web\/src\/App(?:\.[^/]+)?\.(?:vue|ts)$/,
-  /^client\/web\/src\/components\/(?:account|betting)\//,
-  /^(?:scripts\/(?:verification|migrations|deploy)\/|deploy\/|\.github\/|chrome-extension\/|lines\/)/,
+  /^deploy\/scripts\/release-(?:common|backend|frontend)\.sh$/,
 ];
 function normalize(file) {
   const clean = file.replaceAll("\\", "/").replace(/^\.\//, "");
@@ -27,13 +19,13 @@ export function validationPlan(changedPaths, { publication = false, components =
   let frontend = false, backend = false, controls = false; const fullReasons = [];
   for (const file of relevant) {
     if (controlPatterns.some(p => p.test(file))) { controls = true; continue; }
-    if (fullPatterns.some(p => p.test(file))) { fullReasons.push(file); continue; }
-    if (/^client\/web\//.test(file)) frontend = true;
-    else if (/^server\/backend\/core\/observability\//.test(file) || /^server\/backend\/core\/shared\/runtime_version(?:\.test)?\.mjs$/.test(file) || file === "server/backend/core/shared/runtime_version.js" || /^server\/storage\/runtime_version\./.test(file)) backend = true;
+    // Validation follows the same physical ownership as publication. RDS maintenance
+    // still exercises backend behavior even though it never publishes an application.
+    const scope = /^(?:(?:rds|server\/db)\/|server\/backend\/db\/)/.test(file) ? "backend" : classifyDeployScope([file]);
+    if (scope === "frontend") frontend = true;
+    else if (scope === "backend") backend = true;
     else fullReasons.push(file);
   }
-  // 同时影响客户端和服务端的独立工具也不能冒充单端检查。
-  if (relevant.some(p => /^server\/storage\/runtime_version\./.test(p))) { frontend = true; backend = true; }
   const full = fullReasons.length > 0 || !paths.length || forceTests;
   const testsNeeded = forceTests || !relevant.length || !relevant.every(file => controlPatterns.some(pattern => pattern.test(file))
     || /^deploy\/scripts\/release-(?:common|frontend|backend)\.sh$/.test(file));
@@ -49,7 +41,10 @@ export function validationPlan(changedPaths, { publication = false, components =
     && !validationControls.has(file.slice("scripts/verification/".length)));
   // Historical FOK snapshots belong to explicit audits. Application risk alone
   // must not trigger the verifier's own source-mutation regression suite.
-  const controlChecks = ["validation-control", ...(verificationChanged ? ["verification-control", "verification-node"] : [])];
+  const validationChanged = relevant.some(file => /^scripts\/verification\/(?:validation-plan|verify-change)(?:\.test)?\.mjs$/.test(file)
+    || /^scripts\/deploy\/change-plan(?:\.test)?\.mjs$/.test(file));
+  const controlChecks = [...(validationChanged ? ["validation-control"] : []),
+    ...(verificationChanged ? ["verification-control", "verification-node"] : [])];
   const releaseChecks = [...controlChecks];
   if (publication) {
     if (!components.includes("backend") || !testsNeeded) releaseChecks.push("boundaries");
@@ -59,7 +54,7 @@ export function validationPlan(changedPaths, { publication = false, components =
   return { tier, paths, fullReasons, immutableFokEntries: 0, snapshotOverridesAllowed: false,
     checks: release ? releaseChecks : [...controlChecks,
       ...(checkFrontend && !checkBackend ? ["boundaries"] : []),
-      ...(checkBackend ? ["router-compile", "backend"] : []), ...(checkFrontend ? ["frontend-typecheck", "frontend", "build"] : [])] };
+      ...(checkBackend ? ["router-compile", "backend"] : []), ...(checkFrontend ? ["frontend", "build"] : [])] };
 }
 export function parseValidationArgs(args) {
   const options = { planOnly: false, staged: false, base: null, releasePlan: "backend-first", event: null, publish: null };

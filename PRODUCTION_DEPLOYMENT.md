@@ -299,7 +299,7 @@ npm run build
 
 Actions → **Validate and release** → Run workflow → 选择 `frontend` / `backend` / `full`（仅 master）。推送 master 则对比各端已发布版本自动选择组件；失败留下的未发布变化会继续纳入计划。
 
-[changmen 扩展] **历史记录（2026-10-18，不代表当前发布门槛；当前见 [验收规则](docs/ACTIONS_VALIDATION_PERFORMANCE_20261019.md)）**：当时同一 checkout 按风险执行完整 22 阶段审计与所需临时 PostgreSQL 五组检查，全部通过并核对相同提交/输入后才封包。第二批让等价组件检查引用本次完整审计的实际成功阶段，增加运行标识、环境和命令/目录核验，保留 551 入口保护及全部 22 阶段。低风险自动前端仍独立检查；手动或未知基线保守补齐审计，可能只读访问生产双端来源。Actions Summary 及失败附件统一记录阶段、引用来源和退出原因；见 [第一批结果绑定](./docs/archive/20261022-retired-plans/ACTIONS_ACCEPTANCE_GATES_20261018.md) 与 [第二批验证复用](./docs/archive/20261022-retired-plans/ACTIONS_VALIDATION_REUSE_20261018.md)。实际发布范围或重启规则不改。
+[changmen 扩展] 2026-10-25：检查、构建和封包已合并到一个 `validate` job。前后端按范围检查；数据库兼容演练只随数据相关改动执行。后端 Linux 制品验收、版本校验、健康检查和自动回滚保留。当前规则见 [独立部署](./docs/INDEPENDENT_DEPLOYMENT.md)。
 
 | 变更范围 | 发布动作 | 是否重启后端 |
 |---|---|---|

@@ -11,24 +11,21 @@ on:
         options: [full, backend, frontend]
 permissions:
   contents: read
-# Independent runners validate the same pinned candidate before sealing.
 concurrency:
   group: changmen-release-production
   cancel-in-progress: false
   queue: max
 jobs:
-  plan:
+  validate:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 45
     env:
       TZ: Asia/Shanghai
     outputs:
       backend: ${{ steps.plan.outputs.backend }}
       frontend: ${{ steps.plan.outputs.frontend }}
       backend-first: ${{ steps.plan.outputs.backend-first }}
-      matrix: ${{ steps.lanes.outputs.matrix }}
-      database-compatibility: ${{ steps.plan.outputs.database-compatibility }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -39,6 +36,7 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Prepare read-only version check
+        if: github.event_name == 'push'
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
@@ -56,50 +54,19 @@ jobs:
         run: |
           node scripts/deploy/read-deployed-versions.mjs
           echo 'CI_DEPLOYED_VERSIONS_FILE=output/change-validation/deployed-versions.json' >> "$GITHUB_ENV"
-      - name: Resolve shared change plan
-        id: plan
-        run: node scripts/deploy/change-plan.mjs
-      - name: Assign independent checks
-        id: lanes
-        run: node scripts/deploy/release-checks.mjs prepare
-      - uses: actions/upload-artifact@v7
-        with:
-          name: release-plan
-          overwrite: true
-          path: |
-            output/change-validation/plan.json
-            output/change-validation/bundle.json
-            output/change-validation/node-version
-          if-no-files-found: error
-          retention-days: 14
       - name: Remove capture key
         if: always()
-        run: rm -f "$RUNNER_TEMP/release-capture-key"
-  checks:
-    needs: plan
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
-    env:
-      TZ: Asia/Shanghai
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-      - uses: actions/download-artifact@v8
-        with:
-          name: release-plan
-          path: output/change-validation/
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: output/change-validation/node-version
-          cache: npm
+        run: |
+          rm -f "$RUNNER_TEMP/release-capture-key"
+          echo 'FOK_BASELINE_SSH_KEY=' >> "$GITHUB_ENV"
+          echo 'FOK_BASELINE_SSH_TARGET=' >> "$GITHUB_ENV"
+      - name: Resolve change plan
+        id: plan
+        run: node scripts/deploy/change-plan.mjs
       - run: npm ci
-      - name: Install PostgreSQL for required compatibility checks
-        if: matrix.lane == 'backend' && needs.plan.outputs.database-compatibility == 'true'
+        if: steps.plan.outputs.tier != 'docs'
+      - name: Install PostgreSQL for required checks
+        if: steps.plan.outputs.database-compatibility == 'true' || steps.plan.outputs.backend-installation == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql
@@ -109,62 +76,10 @@ jobs:
       - name: Check selected components and build
         env:
           VITE_PREDICT_FUN_API_BASE: https://api.predict.fun
-          RELEASE_LANE: ${{ matrix.lane }}
-        run: node scripts/deploy/release-checks.mjs run "$RELEASE_LANE"
-      - name: Store lane results and artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-lane-${{ matrix.lane }}
-          overwrite: true
-          path: output/release-lanes/
-          if-no-files-found: error
-          retention-days: 14
-      - name: Store failed check diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: failed-acceptance-${{ matrix.lane }}
-          overwrite: true
-          path: |
-            output/orders-phase2-protection/*.log
-            output/orders-phase2-protection/*.json
-            output/database-compatibility/
-            output/backend-linux-runtime/
-            output/release-lanes/
-          retention-days: 7
-  validate:
-    needs: [plan, checks]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    env:
-      TZ: Asia/Shanghai
-    outputs:
-      backend: ${{ needs.plan.outputs.backend }}
-      frontend: ${{ needs.plan.outputs.frontend }}
-      backend-first: ${{ needs.plan.outputs.backend-first }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-      - uses: actions/download-artifact@v8
-        with:
-          name: release-plan
-          path: output/change-validation/
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: output/change-validation/node-version
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: release-lane-*
-          path: output/release-lanes/
-          merge-multiple: true
-      - name: Require every planned check for this candidate
-        run: node scripts/deploy/release-checks.mjs collect
+        run: npm run check:change -- --event="$GITHUB_EVENT_PATH"
       - name: Seal commit and artifacts
         run: node scripts/deploy/release-evidence.mjs seal
-      - name: Store acceptance and exact release archives
+      - name: Store verified release
         uses: actions/upload-artifact@v7
         with:
           name: verified-release
@@ -172,7 +87,7 @@ jobs:
           path: output/release-validation/
           if-no-files-found: error
           retention-days: 14
-      - name: Store failed acceptance report
+      - name: Store failed check diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
         with:
@@ -180,10 +95,9 @@ jobs:
           overwrite: true
           path: |
             output/change-validation/
-            output/orders-phase2-protection/*.log
-            output/orders-phase2-protection/*.json
-            output/fok-release-verdict.json
             output/database-compatibility/
+            output/backend-linux-runtime/*.log
+            output/backend-linux-runtime/verdict.json
           retention-days: 7
       - name: Summarize acceptance and failures
         if: always()

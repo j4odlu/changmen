@@ -8,13 +8,17 @@ import { validationPlan } from "../verification/validation-plan.mjs";
 import { classifyDeployScope, isDatabaseMaintenancePath } from "./classify-deploy-scope.mjs";
 
 export const planHash = plan => createHash("sha256").update(JSON.stringify(plan)).digest("hex");
-// Preserve the standalone DB workflow's original push coverage in this one chain.
-// Maintenance-only changes still need DB validation even when no app is published.
+// Exercise DB compatibility for data contracts and their test/installation controls.
+// Ordinary observability, UI and release orchestration changes do not alter the DB.
 const databaseWorkflowPath = file => file === ".github/workflows/database-compatibility.yml"
-  || /^(?:scripts\/(?:testing|deploy)\/|(?:rds|server\/db)\/|server\/backend\/db\/)/.test(file)
-  || /^deploy\/scripts\/release-[^/]*\.sh$/.test(file)
+  || /^(?:(?:rds|server\/db)\/|server\/backend\/db\/)/.test(file)
+  || /^server\/backend\/core\/(?:account|auth|certificates|db|admin_tools|football|integrations|orderModes|esport-api)\//.test(file)
+  || /^scripts\/testing\/(?:.*-postgres|backend-(?:linux-runtime|process-smoke|runtime-fixture|runtime-namespace))\.(?:mjs|sh)$/.test(file)
+  || /^scripts\/deploy\/(?:check-database-compatibility|acceptance-contract|install-backend|backend-install-profile)(?:\.test)?\.mjs$/.test(file)
   || /^server\/backend\/scripts\/[^/]*(?:rds|order-observation-schema)[^/]*$/.test(file)
-  || /^package(?:-lock)?\.json$/.test(file);
+  || /^package(?:-lock)?\.json$/.test(file)
+  || (classifyDeployScope([file]) === "full"
+    && !/^(?:scripts\/deploy\/|sh\/deploy-|deploy\/|devtools\/runtime-tooling\/|server\/storage\/runtime_version\.|turbo\.json$)/.test(file));
 export function changePlan(paths, { unknownBase = false, requestedScope = null, deployedVersions = null, liveComponents = null, eventPaths = null, purpose = requestedScope ? "release" : "change" } = {}) {
   if (requestedScope !== null && !["frontend", "backend", "full"].includes(requestedScope))
     throw Error("Invalid requested publication scope");
@@ -45,10 +49,9 @@ export function changePlan(paths, { unknownBase = false, requestedScope = null, 
     completeRelease: false,
     backendInstallation: (publication && components.includes("backend")) || (purpose === "release"
       && paths.some(file => /^scripts\/testing\/backend-(?:linux-runtime|process-smoke|runtime-fixture|runtime-namespace)\.(?:mjs|sh)$/.test(file))),
-    databaseCompatibility: (purpose === "release" && paths.some(databaseWorkflowPath))
-      || (publication && (uncertain || components.includes("backend")
-        || paths.some(file => isDatabaseMaintenancePath(file)
-          || /^(?:(?:rds|server\/db)\/|server\/backend\/db\/|scripts\/testing\/|packages\/shared\/|package(?:-lock)?\.json$)/.test(file)))),
+    databaseCompatibility: purpose === "release" && (paths.some(databaseWorkflowPath)
+      || (publication && ((uncertain && components.includes("backend"))
+        || paths.some(file => isDatabaseMaintenancePath(file) || /^packages\/(?:shared|api-contract)\//.test(file))))),
   };
   if (requiredChecks.databaseCompatibility) validation.checks.push("database-compatibility");
   if (requiredChecks.backendInstallation) validation.checks.push("backend-installation");
@@ -91,6 +94,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   fs.mkdirSync("output/change-validation", { recursive: true });
   fs.writeFileSync("output/change-validation/plan.json", JSON.stringify(plan, null, 2));
   if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT,
-    `tier=${plan.tier}\nbackend=${plan.deployment.components.includes("backend")}\nfrontend=${plan.deployment.components.includes("frontend")}\nbackend-first=${plan.deployment.backendFirst}\ncomplete-release=${plan.requiredChecks.completeRelease}\ndatabase-compatibility=${plan.requiredChecks.databaseCompatibility}\n`);
+    `tier=${plan.tier}\nbackend=${plan.deployment.components.includes("backend")}\nfrontend=${plan.deployment.components.includes("frontend")}\nbackend-first=${plan.deployment.backendFirst}\ncomplete-release=${plan.requiredChecks.completeRelease}\ndatabase-compatibility=${plan.requiredChecks.databaseCompatibility}\nbackend-installation=${plan.requiredChecks.backendInstallation}\n`);
   console.log(JSON.stringify(plan));
 }

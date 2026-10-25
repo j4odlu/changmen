@@ -34,9 +34,9 @@ test("one push entry covers every path and validates before either component", (
   assert.equal(release.concurrency["cancel-in-progress"], false);
   assert.equal(release.concurrency.queue, "max");
   assert.equal(release.jobs.validate.env.TZ, "Asia/Shanghai", "Date attribution must match production");
-  const baseline = release.jobs.plan.steps.find(s => s.run?.includes("node scripts/deploy/read-deployed-versions.mjs"));
+  const baseline = release.jobs.validate.steps.find(s => s.run?.includes("node scripts/deploy/read-deployed-versions.mjs"));
   assert.equal(baseline.if, "github.event_name == 'push'");
-  assert.equal(release.jobs.plan.env.CI_DEPLOYED_VERSIONS_FILE, undefined);
+  assert.equal(release.jobs.validate.env.CI_DEPLOYED_VERSIONS_FILE, undefined);
   assert.match(baseline.run, /CI_DEPLOYED_VERSIONS_FILE=.*GITHUB_ENV/);
   assert.deepEqual(release.jobs.backend.needs, "validate");
   assert.equal(release.jobs.frontend.needs, "validate");
@@ -49,16 +49,16 @@ test("one push entry covers every path and validates before either component", (
 });
 test("component checks run once, and artifacts are sealed only after success", () => {
   const steps = release.jobs.validate.steps;
-  const checks = steps.findIndex(s => s.run === "node scripts/deploy/release-checks.mjs collect");
+  const checks = steps.findIndex(s => s.run === 'npm run check:change -- --event="$GITHUB_EVENT_PATH"');
   const seal = steps.findIndex(s => s.run === "node scripts/deploy/release-evidence.mjs seal");
   const upload = steps.findIndex(s => s.uses?.startsWith("actions/upload-artifact@") && s.with.name === "verified-release");
   assert.ok(checks >= 0 && checks < seal && seal < upload);
   assert.equal(steps[seal].if, undefined);
   assert.equal(steps[seal]["continue-on-error"], undefined);
   assert.equal(steps[upload].with["if-no-files-found"], "error");
-  assert.ok(steps.find(s => s.with?.name === "failed-acceptance").with.path.includes("output/orders-phase2-protection/*.log"));
+  assert.ok(steps.find(s => s.with?.name === "failed-acceptance").with.path.includes("output/backend-linux-runtime/*.log"));
   assert.ok(!JSON.stringify(steps[checks]).includes("secrets."));
-  assert.equal(steps.filter(s => s.run?.endsWith("release-checks.mjs collect")).length, 1);
+  assert.equal(steps.filter(s => s.run?.startsWith("npm run check:change -- --event=")).length, 1);
   assert.equal(steps.find(s => s.uses?.startsWith("actions/checkout@")).with["fetch-depth"], 0);
   assert.deepEqual(release.on.workflow_dispatch.inputs.component.options, ["full", "backend", "frontend"]);
 });
@@ -73,46 +73,40 @@ test("the standalone full audit remains manual and cannot publish components", (
   assert(!JSON.stringify(audit).includes("publish.sh"));
 });
 
-test("independent runners require all planned checks before sealing and keep credentials in the planning job", () => {
-  const steps = release.jobs.validate.steps;
-  assert.equal(release.jobs.plan.steps.find(s => s.name === "Prepare read-only version check").if, undefined);
-  assert.deepEqual(release.jobs.checks.needs, "plan");
-  assert.deepEqual(release.jobs.validate.needs, ["plan", "checks"]);
-  assert.equal(release.jobs.checks.strategy["fail-fast"], false);
-  assert.equal(release.jobs.checks.strategy.matrix, "${{ fromJSON(needs.plan.outputs.matrix) }}");
-  // An artifact carries the exact planner runtime without secret-filtered job outputs.
-  assert.equal(release.jobs.plan.steps.find(step => step.uses?.startsWith("actions/setup-node@")).with["node-version"], "24");
-  assert(release.jobs.plan.steps.find(step => step.with?.name === "release-plan").with.path.includes("output/change-validation/node-version"));
-  for (const job of [release.jobs.checks, release.jobs.validate]) {
-    const download = job.steps.findIndex(step => step.with?.name === "release-plan");
-    const setup = job.steps.findIndex(step => step.uses?.startsWith("actions/setup-node@"));
-    assert(download >= 0 && download < setup);
-    assert.equal(job.steps[setup].with["node-version-file"], "output/change-validation/node-version");
-    assert.equal(job.steps[setup].with["node-version"], undefined);
-  }
-  assert.equal(release.jobs.plan.outputs["node-version"], undefined);
-  assert(!JSON.stringify(release.jobs.checks).includes("secrets."));
-  assert(!JSON.stringify(release.jobs.validate).includes("secrets."));
-  assert(!steps.some(s => s.run === "npm ci" || s.run?.includes("app:build")), "Collector never rebuilds");
-  const laneSteps = release.jobs.checks.steps;
-  const postgres = laneSteps.findIndex(s => s.name === "Install PostgreSQL for required compatibility checks");
-  const check = laneSteps.findIndex(s => s.run?.startsWith("node scripts/deploy/release-checks.mjs run "));
-  assert(postgres >= 0 && postgres < check);
-  assert.equal(laneSteps[postgres].if, "matrix.lane == 'backend' && needs.plan.outputs.database-compatibility == 'true'");
-  assert.match(laneSteps[postgres].run, /CHANGMEN_TEST_PG_BIN/);
+test("one runner plans, validates, builds and seals without intermediate lane artifacts", () => {
+  assert.deepEqual(Object.keys(release.jobs), ["validate", "backend", "frontend", "frontend_after_backend"]);
+  const job = release.jobs.validate, steps = job.steps;
+  const prepare = steps.findIndex(s => s.name === "Prepare read-only version check");
+  const cleanup = steps.findIndex(s => s.name === "Remove capture key");
+  const plan = steps.findIndex(s => s.id === "plan");
+  const install = steps.findIndex(s => s.run === "npm ci");
+  const postgres = steps.findIndex(s => s.name === "Install PostgreSQL for required checks");
+  const check = steps.findIndex(s => s.run?.startsWith("npm run check:change -- --event="));
+  const seal = steps.findIndex(s => s.run === "node scripts/deploy/release-evidence.mjs seal");
+  assert(prepare < cleanup && cleanup < plan && plan < install && install < postgres && postgres < check && check < seal);
+  assert.equal(steps[prepare].if, "github.event_name == 'push'");
+  assert.equal(steps[cleanup].if, "always()");
+  assert.match(steps[cleanup].run, /rm -f/);
+  assert.match(steps[cleanup].run, /FOK_BASELINE_SSH_KEY=/);
+  assert.equal(steps[postgres].if, "steps.plan.outputs.database-compatibility == 'true' || steps.plan.outputs.backend-installation == 'true'");
+  assert.match(steps[postgres].run, /CHANGMEN_TEST_PG_BIN/);
+  assert.equal(steps.find(s => s.uses?.startsWith("actions/setup-node@")).with["node-version"], "24");
+  assert.equal(steps.filter(s => s.uses?.startsWith("actions/checkout@")).length, 1);
+  assert.equal(steps.filter(s => s.run === "npm ci").length, 1);
+  assert.equal(steps[install].if, "steps.plan.outputs.tier != 'docs'");
+  for (const forbidden of ["release-checks.mjs", "release-lanes/", "actions/download-artifact@", "strategy"])
+    assert(!JSON.stringify(job).includes(forbidden), forbidden);
+  assert.equal(job.env.CAPTURE_SSH_KEY, undefined);
+  assert(!JSON.stringify(steps[check]).includes("secrets."));
   const commands = validationCommands({}, "npm-cli.js", "backend-first");
-  assert.equal(commands["complete-release"], undefined, "Specialized audits have no automatic publication command");
+  assert.equal(commands["complete-release"], undefined);
   assert.equal(commands["database-compatibility"].command[1], "scripts/deploy/check-database-compatibility.mjs");
   assert.equal(commands["backend-installation"].command[1], "scripts/testing/backend-linux-runtime.mjs");
-  assert(laneSteps.find(s => s.with?.name === "failed-acceptance-${{ matrix.lane }}").with.path.includes("output/backend-linux-runtime/"));
-  assert(release.jobs.checks["timeout-minutes"] >= 15);
   const summary = steps.find(s => s.run === "node scripts/deploy/release-summary.mjs");
   assert.equal(summary.if, "always()"); assert.equal(summary.env.ACCEPTANCE_JOB_STATUS, "${{ job.status }}");
   assert.match(steps.find(s => s.with?.name === "failed-acceptance").with.path, /output\/database-compatibility\//);
-  const database = workflow("database-compatibility");
-  assert.equal(database.jobs.compatibility.steps.find(s => s.uses?.startsWith("actions/checkout@")).with.ref, "${{ github.sha }}");
-  assert(database.jobs.compatibility.steps.some(s => s.run === "node scripts/deploy/check-database-compatibility.mjs"));
 });
+
 test("component transports consume the same checked artifact and never rebuild", () => {
   for (const scope of ["frontend", "backend"]) {
     const component = workflow(`deploy-${scope}`);
@@ -128,31 +122,28 @@ test("component transports consume the same checked artifact and never rebuild",
   assert.notEqual(workflow("deploy-frontend").concurrency.group, workflow("deploy-backend").concurrency.group);
 });
 
-test("master database checks have one owner while PR/manual coverage and all five phases remain", () => {
+test("database checks follow data changes and remain separate offline PR/manual diagnostics", () => {
   const database = workflow("database-compatibility");
-  assert.equal(database.on.push, undefined, "Master validation owns the DB check; a second push workflow duplicates it");
+  assert.equal(database.on.push, undefined);
   assert.deepEqual(Object.keys(database.on).sort(), ["pull_request", "workflow_dispatch"]);
-  assert.deepEqual(database.on.pull_request.paths, [".github/workflows/database-compatibility.yml", "scripts/testing/**",
-    "deploy/scripts/release-*.sh", "scripts/deploy/**", "rds/**", "server/backend/db/**",
-    "server/backend/scripts/*rds*", "server/backend/scripts/*order-observation-schema*", "package.json", "package-lock.json"]);
-  const samples = [".github/workflows/database-compatibility.yml", "scripts/testing/nested/schema-postgres.mjs",
-    "deploy/scripts/release-frontend.sh", "scripts/deploy/nested/control.mjs", "rds/assets/schema-baseline.json",
-    "server/backend/db/migrations/043_auth_session_audit.sql", "server/backend/scripts/check-rds-schema.mjs",
-    "server/backend/scripts/apply-order-observation-schema.mjs", "package.json", "package-lock.json"];
-  for (const file of samples) {
-    const plan = changePlan([file], { purpose: "release" });
-    assert.equal(plan.requiredChecks.databaseCompatibility, true, file);
-    assert.equal(plan.checks.filter(check => check === "database-compatibility").length, 1, file);
-  }
+  for (const file of [".github/workflows/database-compatibility.yml", "scripts/testing/schema-compatibility-postgres.mjs",
+    "rds/assets/schema-baseline.json", "server/backend/core/account/order_store.js", "package.json", "package-lock.json"])
+    assert.equal(changePlan([file], { purpose: "release" }).requiredChecks.databaseCompatibility, true, file);
+  for (const file of [".github/workflows/release.yml", "scripts/deploy/workflows.test.mjs",
+    "deploy/scripts/release-frontend.sh", "scripts/deploy/publish.sh", "server/backend/core/observability/memory.js"])
+    assert.equal(changePlan([file], { purpose: "release" }).requiredChecks.databaseCompatibility, false, file);
+  assert(!database.on.pull_request.paths.includes("scripts/deploy/**"));
+  assert(!database.on.pull_request.paths.includes("scripts/testing/**"));
+  assert(database.on.pull_request.paths.includes("server/backend/core/account/**"));
   assert.deepEqual(database.permissions, { contents: "read" });
   assert(!JSON.stringify(database).includes("secrets."));
   assert(!JSON.stringify(database).includes("publish.sh"));
   const command = "node scripts/deploy/check-database-compatibility.mjs";
   assert.equal(database.jobs.compatibility.steps.filter(step => step.run === command).length, 1);
-  assert.equal(release.jobs.checks.steps.filter(step => step.run?.startsWith("node scripts/deploy/release-checks.mjs run ")).length, 1);
   assert.deepEqual(DATABASE_PHASES, ["schema-compatibility", "history-schema", "rds-cli-isolation",
     "rds-assets-standalone", "deploy-account-preservation"]);
 });
+
 test("local entry points share acceptance and seal before transport; transport rejects stale proof before SSH", () => {
   for (const scope of ["frontend", "backend"]) {
     const entry = read(`sh/deploy-${scope}.sh`);

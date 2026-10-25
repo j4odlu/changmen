@@ -11,6 +11,7 @@ import {
   withGammaSportIdentity,
 } from "./gamma_map.js";
 import { buildPmSportSnapshot } from "./parse_sport.js";
+import { sourceEventSnapshot } from "./event_states.ts";
 
 test("Gamma score index uses the same configured sport keys and series fallback as discovery", async () => {
   const originalFetch = globalThis.fetch;
@@ -100,6 +101,15 @@ test("Gamma fallback requires explicit state fields and preserves cancellation/p
   assert.equal(gammaEventToSportMessage({ ended: true }).status, "finished");
   assert.equal(gammaEventToSportMessage({ status: "postponed", live: false, ended: false }).status, "postponed");
   assert.equal(gammaEventToSportMessage({ status: "canceled", ended: true }).status, "canceled");
+});
+
+test("a non-NBA basketball event with only NS and settled markets remains unknown", () => {
+  // 2026-10-26 线上同形响应：盘口结算与 period=NS 不能代替比赛状态。
+  const message = gammaEventToSportMessage({ id: "1216482", gameId: 5998765,
+    slug: "bkbsl-ana-man-2026-10-25", title: "Anadolu Efes vs. Manisa BB",
+    period: "NS", closed: true, markets: [{ sportsMarketType: "moneyline", closed: true, umaResolutionStatus: "resolved" }] });
+  assert.equal(message.status, "");
+  assert.equal(sourceEventSnapshot(message, "gamma"), null);
 });
 
 test("gammaEventToSportMessage maps live score without inferring map winners", () => {

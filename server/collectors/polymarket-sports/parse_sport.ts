@@ -9,18 +9,18 @@ export function parsePeriodToCurrentMap(period: unknown) {
   if (!period)
     return null;
   const head = String(period).split("/")[0];
-  const n = Number.parseInt(head, 10);
-  return Number.isFinite(n) && n > 0 ? n : null;
+  const n = Number(head);
+  return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-/** @param {string | undefined} score 例如 "000-000|1-0|Bo3" */
+/** PM 比分：电竞 "000-000|1-0|Bo3"，篮球等项目 "98-94"。 */
 export function parseEsportsScore(score: unknown) {
   const raw = String(score || "").trim();
   if (!raw)
     return { mapScore: { home: 0, away: 0 }, bo: null };
 
   const parts = raw.split("|");
-  const mapPart = parts[1] || "0-0";
+  const mapPart = parts.length === 1 && /^\d+\s*-\s*\d+$/.test(raw) ? raw : parts[1] || "0-0";
   const boPart = parts[2] || "";
   const mapNums = mapPart.split("-").map(v => Number.parseInt(v, 10));
   const home = Number.isFinite(mapNums[0]) ? mapNums[0] : 0;
@@ -101,7 +101,7 @@ export function buildPmSportLabel({ status, ended, live, period, mapScore }: Pic
   const scoreText = `${ms.home}-${ms.away}`;
   const st = String(status || "").toLowerCase();
 
-  if (ended || st === "finished" || st === "final")
+  if (ended || st === "finished" || st === "final" || st === "f/ot")
     return `已结束 · ${scoreText}`;
   if (st === "postponed")
     return "延期";
@@ -109,6 +109,14 @@ export function buildPmSportLabel({ status, ended, live, period, mapScore }: Pic
     return "取消";
   if (st === "not_started" || st === "scheduled")
     return "未开始";
+  if (st === "suspended")
+    return "暂停";
+  if (st === "delayed")
+    return "延迟";
+  if (st === "forfeit")
+    return "弃权";
+  if (st === "notnecessary")
+    return "无需进行";
   if (live || st === "running" || st === "inprogress") {
     const periodText = period ? String(period) : "";
     return periodText ? `进行中 · ${periodText} · ${scoreText}` : `进行中 · ${scoreText}`;
@@ -154,7 +162,7 @@ export function buildPmSportSnapshot(msg: SportMessage, prev: StoredSportSnapsho
   const homeTeam = String(msg.homeTeam || "").trim();
   const awayTeam = String(msg.awayTeam || "").trim();
   const status = String(msg.status || "").trim();
-  const ended = msg.ended === true || status.toLowerCase() === "finished" || status === "Final";
+  const ended = msg.ended === true || ["finished", "final", "f/ot"].includes(status.toLowerCase());
   const live = msg.live === true;
   const resolutionSource = msg.resolutionSource
     ? String(msg.resolutionSource)

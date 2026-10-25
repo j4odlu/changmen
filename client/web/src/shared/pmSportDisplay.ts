@@ -6,7 +6,7 @@ export type PmSportDisplayPart =
 
 export interface PmMatchStatusDisplay {
   label: string;
-  kind: "pending" | "live" | "finished" | "postponed" | "canceled" | "unknown";
+  kind: "pending" | "live" | "finished" | "postponed" | "canceled" | "suspended" | "delayed" | "forfeit" | "notnecessary" | "unknown";
 }
 
 /** [changmen 扩展] 标题仅展示整场状态；缺值不按登记时间推断开赛。 */
@@ -18,8 +18,16 @@ export function formatPmMatchStatus(snapshot: PmSportSnapshot | undefined): PmMa
     return { label: "延期", kind: "postponed" };
   if (status === "canceled" || status === "cancelled")
     return { label: "已取消", kind: "canceled" };
-  if (snapshot?.ended || status === "finished" || status === "final")
+  if (snapshot?.ended || status === "finished" || status === "final" || status === "f/ot")
     return { label: ["已结束", formatPmMapScore(snapshot, true)].filter(Boolean).join(" · "), kind: "finished" };
+  if (status === "suspended")
+    return { label: "暂停", kind: "suspended" };
+  if (status === "delayed")
+    return { label: "延迟", kind: "delayed" };
+  if (status === "forfeit")
+    return { label: "弃权", kind: "forfeit" };
+  if (status === "notnecessary")
+    return { label: "无需进行", kind: "notnecessary" };
   if (snapshot?.live || status === "running" || status === "inprogress")
     return { label: ["进行中", formatPmMapPeriod(snapshot), formatPmMapScore(snapshot), formatElapsed(snapshot.elapsed)].filter(Boolean).join(" · "), kind: "live" };
   if (status === "not_started" || status === "scheduled")

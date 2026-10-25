@@ -27,7 +27,7 @@ export function createPmSportMessageQueue<M extends SportMessage, R>(handle: (ms
 export function hasPmSportStatus(snapshot: Pick<SportMessage, "status" | "live" | "ended"> | null | undefined): boolean {
   const status = String(snapshot?.status ?? "").trim().toLowerCase();
   return snapshot?.live === true || snapshot?.ended === true
-    || ["not_started", "scheduled", "running", "inprogress", "finished", "final", "postponed", "canceled", "cancelled"].includes(status);
+    || ["not_started", "scheduled", "running", "inprogress", "finished", "final", "f/ot", "suspended", "delayed", "postponed", "canceled", "cancelled", "forfeit", "notnecessary"].includes(status);
 }
 
 export function isWsSportState(snapshot: StoredSportSnapshot | null | undefined): boolean {

@@ -13,6 +13,25 @@ for (const [name, hash] of Object.entries(baseline.hashes)) {
   it(`${name}.ts erases to the accepted pre-migration implementation`, () => {
     assert.equal(ts.version, baseline.compiler);
     let source = fs.readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8").replaceAll("\r\n", "\n");
+    // 精确逆转纯数字比分格式兼容，历史迁移摘要及电竞解析基线保持不变。
+    if (name === "parse_sport") {
+      const current = '  const mapPart = parts.length === 1 && /^\\d+\\s*-\\s*\\d+$/.test(raw) ? raw : parts[1] || "0-0";';
+      assert.equal(source.split(current).length, 2, "missing/duplicate plain score compatibility hook");
+      source = source.replace(current, '  const mapPart = parts[1] || "0-0";');
+    }
+    // 只逆转本次官方篮球状态兼容，继续核对未改动的历史电竞实现。
+    const basketballStatusHooks = name === "sport_state" ? [
+      ['"final", "f/ot", "suspended", "delayed", "postponed", "canceled", "cancelled", "forfeit", "notnecessary"', '"final", "postponed", "canceled", "cancelled"'],
+    ] : name === "parse_sport" ? [
+      ['  const n = Number(head);\n  return Number.isInteger(n) && n > 0 ? n : null;', '  const n = Number.parseInt(head, 10);\n  return Number.isFinite(n) && n > 0 ? n : null;'],
+      ['  if (ended || st === "finished" || st === "final" || st === "f/ot")', '  if (ended || st === "finished" || st === "final")'],
+      ['  if (st === "suspended")\n    return "暂停";\n  if (st === "delayed")\n    return "延迟";\n  if (st === "forfeit")\n    return "弃权";\n  if (st === "notnecessary")\n    return "无需进行";\n', ''],
+      ['  const ended = msg.ended === true || ["finished", "final", "f/ot"].includes(status.toLowerCase());', '  const ended = msg.ended === true || status.toLowerCase() === "finished" || status === "Final";'],
+    ] : [];
+    for (const [after, before] of basketballStatusHooks) {
+      assert.equal(source.split(after).length, 2, `missing/duplicate basketball status hook: ${name}`);
+      source = source.replace(after, before);
+    }
     // [changmen 扩展] 只逆转 PM 原生场次状态的精确接入，原 TS 迁移摘要不变。
     const eventStateHooks = name === "index" ? [
       ['import { persistSourceEventStates } from "./event_states.ts";\n', ""],

@@ -40,6 +40,11 @@ describe("pmSportDisplay", () => {
     ["finished", "已结束", "finished"],
     ["postponed", "延期", "postponed"],
     ["canceled", "已取消", "canceled"],
+    ["F/OT", "已结束", "finished"],
+    ["Suspended", "暂停", "suspended"],
+    ["Delayed", "延迟", "delayed"],
+    ["Forfeit", "弃权", "forfeit"],
+    ["NotNecessary", "无需进行", "notnecessary"],
   ])("formats whole-match status %s", (status, label, kind) => {
     expect(formatPmMatchStatus({ status })).toEqual({ label, kind });
   });
@@ -58,6 +63,26 @@ describe("pmSportDisplay", () => {
       status: "finished", period: "3/3", elapsed: "35:00",
       scoreRaw: "13-8|2-1|Bo3", mapScore: { home: 2, away: 1 },
     }).label).toBe("已结束 · 最终大比分2–1");
+  });
+
+  it("shows an official basketball overtime final with observed points", () => {
+    expect(formatPmMatchStatus({ status: "F/OT", live: false, ended: false,
+      scoreRaw: "110-108", mapScore: { home: 110, away: 108 }, period: "OT", elapsed: "0:00" }))
+      .toEqual({ label: "已结束 · 最终大比分110–108", kind: "finished" });
+  });
+
+  it("shows basketball periods without inventing an esports map", () => {
+    for (const period of ["1Q", "2Q", "Q4"])
+      expect(formatPmMatchStatus({ status: "InProgress", period, currentMap: null,
+        scoreRaw: "98-94", mapScore: { home: 98, away: 94 } }).label)
+        .toBe(`进行中 · 阶段${period} · 大比分98–94`);
+  });
+
+  it("does not treat basketball exceptional statuses as live or infer an absent state", () => {
+    for (const status of ["Suspended", "Delayed", "Forfeit", "NotNecessary"])
+      expect(isPmMapLive({ status, live: true, currentMap: 2 }, 2)).toBe(false);
+    expect(formatPmMatchStatus({ period: "NS", scoreRaw: "98-94", mapScore: { home: 98, away: 94 } }))
+      .toEqual({ label: "状态待更新", kind: "unknown" });
   });
 
   it("shows observed in-map score separately from the series score", () => {

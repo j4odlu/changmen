@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 // eslint-disable-next-line no-restricted-imports, test/no-import-node-test -- Collector tests run with node --test.
 import test from "node:test";
-import { createPmSportMessageQueue, createPmSportStateWriter } from "./sport_state.js";
+import { createPmSportMessageQueue, createPmSportStateWriter, hasPmSportStatus } from "./sport_state.js";
 import { sourceEventSnapshot } from "./event_states.ts";
 
 const scheduled = { gameId: 10, eventId: "event-10", status: "not_started", live: false, ended: false };
@@ -55,6 +55,46 @@ test("unknown WS messages do not disable Gamma or erase the last status", async 
   assert.equal(await f.apply(1, scheduled, "gamma", f.write), true);
   assert.equal(await f.apply(1, { gameId: 10, status: "unknown" }, "ws", f.write), false);
   assert.equal((await f.read()).status, "not_started");
+});
+
+test("all documented NBA/CBB statuses reach matched and unmatched event storage", async () => {
+  for (const status of ["Scheduled", "InProgress", "Final", "F/OT", "Suspended", "Postponed", "Delayed", "Canceled", "Forfeit", "NotNecessary"]) {
+    const message = { gameId: 5127839, eventId: "basketball-native", status, live: false, ended: false };
+    assert.equal(hasPmSportStatus(message), true, status);
+    const source = sourceEventSnapshot(message, "ws");
+    assert.equal(source.status, status);
+    assert.equal(source.eventId, "basketball-native");
+    const f = fixture();
+    assert.equal(await f.apply(1, message, "ws", f.write), true, status);
+    assert.equal((await f.read()).status, status);
+    assert.equal((await f.read()).ended, ["Final", "F/OT"].includes(status));
+    assert.equal(await f.apply(1, scheduled, "gamma", f.write), false);
+  }
+});
+
+test("a final overtime update replaces the live state and repeated frames deduplicate", async () => {
+  const f = fixture();
+  const live = { gameId: 5127839, eventId: "basketball-native", status: "InProgress", live: true, ended: false, score: "108-108" };
+  assert.equal(await f.apply(1, live, "ws", f.write), true);
+  const final = { ...live, status: "F/OT", live: false, score: "110-108" };
+  assert.equal(await f.apply(1, final, "ws", f.write), true);
+  assert.equal((await f.read()).ended, true);
+  assert.equal((await f.read()).label, "已结束 · 110-108");
+  assert.equal(await f.apply(1, final, "ws", f.write), false);
+  assert.equal(f.writes.length, 2);
+});
+
+test("next basketball WS update corrects a stored zero score and keeps deduplication and WS ownership", async () => {
+  const message = { gameId: 5127839, status: "InProgress", live: true, ended: false,
+    score: "98-94", period: "Q4" };
+  const f = fixture({ ...message, source: "ws", scoreRaw: "98-94",
+    mapScore: { home: 0, away: 0 }, label: "进行中 · Q4 · 0-0" });
+  assert.equal(await f.apply(1, message, "ws", f.write), true);
+  assert.deepEqual((await f.read()).mapScore, { home: 98, away: 94 });
+  assert.equal((await f.read()).label, "进行中 · Q4 · 98-94");
+  assert.equal(await f.apply(1, message, "ws", f.write), false);
+  assert.equal(await f.apply(1, scheduled, "gamma", f.write), false);
+  assert.equal(f.writes.length, 1);
 });
 
 test("Gamma awaiting its initial DB read is discarded when WS arrives", async () => {

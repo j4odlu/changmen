@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import ts from "typescript";
 import { clientMatchWithPmStatus } from "./matcher_data.js";
 import { formatPmMatchStatus } from "./pm_match_status.js";
+import { buildPmSportSnapshot } from "../../../collectors/polymarket-sports/parse_sport.ts";
 
 const html = readFileSync(new URL("./public/index.html", import.meta.url), "utf8");
 function extract(name, next) {
@@ -38,7 +39,10 @@ describe("matcher PM status presentation", () => {
       { status: "final", scoreRaw: "3-2", mapScore: { home: 3, away: 2 } },
       { status: "running", period: "2/3", elapsed: "89", scoreRaw: "8-5|1-0", mapScore: { home: 1, away: 0 } },
       { live: true, currentMap: 3, bo: 5, mapScore: { home: 0, away: 0 } },
-      { status: "inprogress", period: "OT", elapsed: "12:34" }];
+      { status: "inprogress", period: "OT", elapsed: "12:34" },
+      { status: "F/OT", ended: false, scoreRaw: "110-108", mapScore: { home: 110, away: 108 } },
+      ...["1Q", "2Q", "Q4"].map(period => buildPmSportSnapshot({ status: "InProgress", period, score: "98-94" })),
+      ...["Suspended", "Delayed", "Forfeit", "NotNecessary"].flatMap(status => [{ status }, { status, live: true }, { status, ended: true }])];
     for (const snapshot of snapshots)
       expect(formatPmMatchStatus(snapshot)).toEqual(userPage.formatPmMatchStatus(snapshot));
   });
@@ -55,6 +59,23 @@ describe("matcher PM status presentation", () => {
   it("shows waiting for linked PM without a snapshot, and no PM badge for other venues", () => {
     expect(render(clientMatchWithPmStatus({ matchs: { Polymarket: "pm1" } }))).toContain("PM · 状态待更新");
     expect(render(clientMatchWithPmStatus({ matchs: { OB: "ob1" } }))).not.toContain("pm-match-status");
+  });
+
+  it("shows official basketball states instead of waiting, without guessing an absent state", () => {
+    for (const [status, label, kind] of [["F/OT", "已结束", "finished"], ["Suspended", "暂停", "suspended"],
+      ["Delayed", "延迟", "delayed"], ["Forfeit", "弃权", "forfeit"], ["NotNecessary", "无需进行", "notnecessary"]]) {
+      const cm = clientMatchWithPmStatus({ matchs: { Polymarket: "pm1" }, pm_sport: { status } });
+      expect(cm.pm_match_status).toEqual({ label, kind });
+      expect(render(cm)).toContain(`PM · ${label}`);
+    }
+    expect(formatPmMatchStatus({ period: "NS", mapScore: { home: 98, away: 94 } }).kind).toBe("unknown");
+  });
+
+  it("shows basketball quarter fields as periods rather than maps", () => {
+    for (const period of ["1Q", "2Q", "Q4"]) {
+      const snapshot = buildPmSportSnapshot({ status: "InProgress", period, score: "98-94" });
+      expect(formatPmMatchStatus(snapshot).label).toBe(`进行中 · 阶段${period} · 大比分98–94`);
+    }
   });
 
   it("escapes status text coming from the snapshot", () => {

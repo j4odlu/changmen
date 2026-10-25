@@ -34,6 +34,8 @@ wss://sports-api.polymarket.com/ws
 
 matcher 右栏按 PM event ID 读取对应平台场次的状态，复用中栏的展示。没有有效状态时显示“状态待更新”，不按时间猜测；滚动发布期间字段尚未初始化时也按未知处理。已匹配比赛原有的 `pm_sport` 写入与客户端广播保持原路径。
 
+[changmen 扩展] 篮球消费官方直接状态，兼容 NBA/CBB 的 `Scheduled`、`InProgress`、`Final`、`F/OT`、`Suspended`、`Postponed`、`Delayed`、`Canceled`、`Forfeit`、`NotNecessary`；`Final` 与 `F/OT` 直接表示结束，其他异常状态不额外推断结束。官方状态说明见 [Sports Stream](https://docs.polymarket.com/market-data/realtime-data#sports-stream)。2026-10-26 对当前收录的 28 场非 NBA 篮球查询发现 Gamma 缺少 `live`、`ended`、`status` 和比分；同源 NBA 对照场次有直接终态。数据缺失时保持未知，`period=NS`、开赛时间、盘口关闭或结算均不作为比赛状态。短时 WS 未收到篮球消息也不能证明联赛永久不支持。
+
 ## 模块
 
 | 文件 | 职责 |

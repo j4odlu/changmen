@@ -8,7 +8,7 @@ import {restorePmSportsTypeScriptSource} from './pm-sports-typescript-boundary.m
 const read=file=>fs.readFileSync(file,'utf8');
 const normalize=source=>source.replaceAll('\r\n','\n');
 it('restores the complete original matcher source and keeps the original relocation evidence',()=>{
- expect(verifyMatcherLifecycleSources(read)).toEqual({files:6,assets:4,wiring:2});
+ expect(verifyMatcherLifecycleSources(read)).toEqual({files:14,assets:5,wiring:2});
  for(const row of evidence.files){
   const original=normalize(execFileSync('git',['show',`${evidence.baseline}:${row.file}`],{encoding:'utf8',windowsHide:true}));
   expect(row.before).toBe(original);

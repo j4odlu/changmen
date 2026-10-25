@@ -11,6 +11,7 @@ import { assertComposerMayWrite, withMatcherWriteLock } from "../lib/write_guard
 import { loadSnapshot } from "./io/snapshot.js";
 import { snapshotFromVenuesOnly } from "./io/venues_only.js";
 import { writeClientMatches } from "./io/write.js";
+import { refreshExistingMatches } from "./refresh_matches.js";
 import {
   composeFromSnapshot,
   resolveMatchIdsForWrite,
@@ -175,10 +176,12 @@ async function composeOnceUnlocked({
 
   const tMatch = Date.now();
   const match = runMatchPass(list, snapshot, passOpts);
+  // 先刷新全部未结束的 changmen 比赛并保留完整映射，再统一执行原有结束规则。
+  const matchesForEnd = refreshExistingMatches(match.info, snapshot, passOpts);
   const matchMs = Date.now() - tMatch;
 
   const tEnd = Date.now();
-  const end = runEndPass(match.info, snapshot, passOpts);
+  const end = runEndPass(matchesForEnd, snapshot, passOpts);
   const endMs = Date.now() - tEnd;
 
   let info = end.info;
@@ -215,7 +218,7 @@ async function composeOnceUnlocked({
   const endedCount = composedEndedCount + markEndedIds.length;
 
   console.log(
-    `[match-composer] matchPass ${matchMs}ms rows=${match.preEndedCount}`
+    `[match-composer] matchPass ${matchMs}ms rows=${matchesForEnd.length}`
     + ` · endPass ${endMs}ms ended=${endedCount} live=${info.length}`
     + ` · cluster ${clusterMs}ms`,
   );
@@ -247,7 +250,7 @@ async function composeOnceUnlocked({
       info,
       endedCount,
       allowEmptyWrite,
-      processedActiveIds: match.processedActiveIds,
+      processedActiveIds: new Set(matchesForEnd.map(row => Number(row.ID)).filter(id => id > 0)),
       previousActiveIds,
       markEndedIds,
       endedRowIds: endedRows.map(row => Number(row.ID)),

@@ -76,6 +76,24 @@ it("blocks linked rows in either order before returning any match", async () => 
   ])).toEqual([]);
 });
 
+it("applies the same risk protection to wire and stored rows after another process records a risk", async () => {
+  const risk = await import("../ray_match_risk.js");
+  const wire = [{ ID: 1, Matchs: { RAY: "910001" } }, { ID: 2, Matchs: { OB: "normal" } }];
+  expect(risk.filterRayRiskMatches(wire, { persist: false })).toEqual(wire);
+  storage.data = ["RAY:910001"];
+  const rows = wire.map(row => ({ id: row.ID, matchs: row.Matchs }));
+  expect(risk.filterRayRiskMatches(wire, { persist: false })).toEqual([wire[1]]);
+  expect(risk.filterRayRiskMatches(rows, { persist: false })).toEqual([rows[1]]);
+  expect(storage.write).not.toHaveBeenCalled();
+});
+
+it("treats a malformed optional risk file as empty without changing match data", async () => {
+  const risk = await import("../ray_match_risk.js");
+  storage.data = null;
+  const rows = [{ id: 1, matchs: { OB: "ob1" } }];
+  expect(risk.filterRayRiskMatches(rows, { persist: false })).toEqual(rows);
+});
+
 it("does not link unrelated matches through absent or invalid canonical IDs", async () => {
   const risk = await import("../ray_match_risk.js");
   risk.observeRayMatchResult("910001", payload(), now);

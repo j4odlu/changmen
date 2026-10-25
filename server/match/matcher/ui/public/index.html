@@ -67,20 +67,12 @@
     .matcher-status.warn .matcher-dot { background: var(--warn); }
     .matcher-status.off .matcher-dot { background: var(--danger); }
 
-    .writer-chip {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: 11px; font-weight: 650; padding: 4px 9px; border-radius: 999px;
-      border: 1px solid var(--line); background: var(--chip); color: var(--muted);
-      white-space: nowrap;
-    }
-    .writer-chip.composer { color: var(--ok); border-color: #2a6a4a; }
-
-    a.composer-link {
+    a.admin-link {
       font-size: 12px; color: #9ec5ff; text-decoration: none;
       border: 1px solid #3a5a8a; background: var(--chip);
       padding: 5px 10px; border-radius: 6px; white-space: nowrap;
     }
-    a.composer-link:hover { filter: brightness(1.08); color: #c5dcff; }
+    a.admin-link:hover { filter: brightness(1.08); color: #c5dcff; }
     .updated-at { font-size: 12px; color: var(--muted); }
     .merge-key {
       font-family: "IBM Plex Mono", Consolas, monospace;
@@ -638,19 +630,15 @@
 <div class="header">
   <div>
     <h1>Matcher · 人工关联</h1>
-    <div class="header-sub">本页：队伍映射 / 手动合场 / 强制结束 · 自动合场写库看顶栏「写路径」· 只读对照见 Composer</div>
+    <div class="header-sub">队伍映射 / 赛事关联 / 比赛状态 · composer 在后端自动合场</div>
   </div>
   <div class="header-right">
-    <span class="writer-chip composer" id="writer-chip" title="唯一写路径：match-composer">写路径 composer</span>
-    <span class="matcher-status off" id="matcher-status">
+    <span class="matcher-status off" id="matcher-status" title="composer 随后端自动运行；这里只显示合场状态，不代表采集数据一定最新">
       <span class="matcher-dot"></span>
       <span class="matcher-label">检测中…</span>
     </span>
-    <a class="composer-link" id="admin-back-link" href="/admin" target="_blank" rel="noopener" title="返回管理后台" hidden>管理后台</a>
-    <a class="composer-link" id="composer-ui-link" href="http://127.0.0.1:4568/" target="_blank" rel="noopener" title="match-composer 只读对照页（默认 4568）">Composer 对照</a>
-    <button class="btn btn-sm btn-success" id="btn-matcher-start" type="button">启动匹配循环</button>
-    <button class="btn btn-sm btn-danger" id="btn-matcher-stop" type="button" style="display:none">停止匹配循环</button>
-    <button class="btn btn-sm btn-ghost" id="btn-match-merge-now" type="button" title="立即执行一次 composeOnce 写库">立即执行赛事合并</button>
+    <a class="admin-link" id="admin-back-link" href="/admin" target="_blank" rel="noopener" title="返回管理后台" hidden>管理后台</a>
+    <button class="btn btn-sm btn-ghost" id="btn-match-merge-now" type="button" title="立即调用后端 composer 合场并保存结果">立即合场</button>
     <span class="updated-at" id="updated-at">—</span>
     <button class="btn btn-sm" type="button" onclick="load()">刷新</button>
   </div>
@@ -659,7 +647,7 @@
 <div class="workflow-hint">
   <strong>工作流：</strong>圆点关联队伍；<strong>黄色方点</strong>关联赛事（拖到左/中栏<strong>绿色方点</strong>或<strong>比赛 ID 绿底</strong>合并）。
   右栏<strong>推荐组</strong>确认跨平台候选；搜索旁可切「仅看待补全」缩小到缺 ID / 队名阶段场次。
-  翻锁、强制结束前会二次确认。合场依据细节请开 <strong>Composer 对照</strong>。
+  人工关联后由同一个 composer 更新结果；强制结束前会二次确认。
 </div>
 
 <div class="stats" id="stats-bar"></div>
@@ -786,7 +774,6 @@ let _pendingRec = null;
 let _pendingTeamLink = null;
 let _linkModalKind = null;
 let _linkSubmitting = false;
-let _matcherBusy = false;
 let _matchMergeBusy = false;
 let _unmatchedFilter = 'all';
 /** 已匹配列表：all | attention（缺 ID / 队名阶段 / 有失效挂载） */
@@ -829,12 +816,9 @@ function liveLinkedPlatformCount(cm, platforms) {
   return n;
 }
 
-/** 至少 2 个挂载，且至少 1 个平台行仍在活跃快照（避免僵尸 client_matches 占栏） */
+/** 当前集合已经由 matcher 保存，浏览器不再二次判断平台存活或两馆门槛。 */
 function isDisplayClientMatch(cm, platforms) {
-  if (clientMatchPlatformCount(cm) < 2) return false;
-  const byPlatform = platforms || _lastData?.platforms;
-  if (!byPlatform) return true;
-  return liveLinkedPlatformCount(cm, byPlatform) >= 1;
+  return !!cm;
 }
 
 function resolvePlatformClientMatchId(m, platform, cms, platforms) {
@@ -1161,7 +1145,6 @@ function isMatcherModalOpen() {
 function isMatcherUiBusy() {
   return Boolean(
     _linkSubmitting
-    || _matcherBusy
     || _matchMergeBusy
     || _teamLinkSubmitting
     || _teamRegisterSubmitting
@@ -1488,12 +1471,10 @@ function renderStats(d, displayCms) {
   const unmatched = countUnmatched(d.platforms, d.clientMatches);
   const orphan = countOrphans(d.platforms, d.recommendations, d.clientMatches);
   const idMatched = displayCms.filter(cm => clientMatchMergeMode(cm) === 'id').length;
-  const nameMatched = displayCms.filter(cm => clientMatchMergeMode(cm) === 'name').length;
+  const nameMatched = displayCms.filter(cm => clientMatchMergeMode(cm) !== 'id').length;
   const attention = displayCms.filter(cm => clientMatchNeedsAttention(cm, d.platforms, d.teamMaps || {})).length;
   const debug = d.debug || {};
-  const writer = d.matcherStatus?.writer || _lastMatcherStatus?.writer;
   document.getElementById('stats-bar').innerHTML = `
-    <div class="stat"><div class="label">写路径</div><div class="value c-slate" style="font-size:16px">${esc(writer || '—')}</div></div>
     <div class="stat"><div class="label">平台原始</div><div class="value c-slate">${debug.platformMatches ?? '—'}</div></div>
     <div class="stat"><div class="label">ID 已匹配</div><div class="value c-green">${idMatched}</div></div>
     <div class="stat"><div class="label">队名已匹配</div><div class="value c-amber">${nameMatched}</div></div>
@@ -1854,7 +1835,7 @@ function renderMatchedListForMode(cms, platforms, teamMaps, searchQuery, mode, c
   const container = document.getElementById(containerId);
   const q = searchQuery != null ? searchQuery : _teamSearchQuery;
   const list = filterDisplayClientMatches(cms, platforms)
-    .filter(cm => clientMatchMergeMode(cm) === mode)
+    .filter(cm => mode === 'id' ? clientMatchMergeMode(cm) === 'id' : clientMatchMergeMode(cm) !== 'id')
     .filter(cm => _matchedFilter !== 'attention' || clientMatchNeedsAttention(cm, platforms, teamMaps));
   const filtered = list
     .filter(cm => clientMatchMatchesTeamSearch(cm, platforms, q))
@@ -2196,7 +2177,6 @@ function renderClientMatchCard(cm, platforms, teamMaps, searchQuery, columnMode)
   const ended = cm.ended_at != null && cm.ended_at !== '';
   const rows = resolveClientMatchRows(cm, platforms);
   const liveRows = rows.filter(r => !r._platformMissing);
-  if (!ended && !liveRows.length) return '';
   const gameCode = clientMatchGameCode(cm, liveRows.length ? liveRows : rows);
   const tableHtml = rows.length ? renderMatchedTable(rows, gameCode, teamMaps, searchQuery, cm, platforms, ended)
     : '<div class="empty" style="padding:12px">无平台关联</div>';
@@ -2250,9 +2230,7 @@ function renderClientMatchCard(cm, platforms, teamMaps, searchQuery, columnMode)
     ${tableHtml}
     <div class="team-card-footer">
       <div class="team-card-hint">${footerHint}</div>
-      ${ended ? `<button type="button" class="btn btn-sm btn-success" data-restore-cm="${cm.id}">恢复展示</button>` : `<button type="button" class="btn btn-sm btn-ghost" data-swap-gb-cm="${cm.id}"
-        title="交换 home/away gb 锁与 Title 主客；下轮 merge 重算各平台 Reverse">主客对调（翻锁）</button>
-      <button type="button" class="btn btn-sm btn-ghost" data-end-cm="${cm.id}" title="强制结束：写 ended_at，保留 matchs 与平台关联；Client_GetMatchs 不再返回">强制结束</button>`}
+      ${ended ? `<button type="button" class="btn btn-sm btn-success" data-restore-cm="${cm.id}">恢复展示</button>` : `<button type="button" class="btn btn-sm btn-ghost" data-end-cm="${cm.id}" title="强制结束：写 ended_at，保留 matchs 与平台关联；Client_GetMatchs 不再返回">强制结束</button>`}
     </div>
   </article>`;
 }
@@ -3378,67 +3356,22 @@ function matcherStatusClass(s) {
   return 'off';
 }
 
-function writerChipLabel() {
-  return { text: '写路径 composer', cls: 'composer' };
-}
-
-function applyWriterChip(s) {
-  const chip = document.getElementById('writer-chip');
-  if (!chip) return;
-  const { text, cls } = writerChipLabel();
-  chip.className = `writer-chip ${cls}`;
-  chip.textContent = text;
-  const sticky = s?.stickyOrientation ? ' · sticky 开' : '';
-  chip.title = `唯一写路径：matchMerge 整段由 match-composer 写库${sticky}`;
-  const link = document.getElementById('composer-ui-link');
-  if (link && s?.composerUiPort) {
-    const host = location.hostname || '127.0.0.1';
-    link.href = `http://${host}:${s.composerUiPort}/`;
-  }
-}
-
 function matcherStatusLabel(s) {
-  if (!s) return '匹配循环状态未知';
-  const embeddedMode = s.matcherMode === 'embedded';
-  if (s.processRunning) {
-    const source = s.processSource === 'embedded' ? 'web 内嵌循环' : s.processSource === 'pm2' ? 'PM2 独立脚本' : '独立脚本';
-    let t = `${source}运行中`;
-    if (s.matchCount != null) t += ` · ${s.matchCount} 场`;
-    if (s.processAgeMs != null) t += ` · ${fmtDiff(s.processAgeMs)}前刷新`;
-    return t;
+  if (!s) return 'composer 合场状态未知';
+  let text = s.processRunning ? 'composer 自动合场运行中' : '未检测到 composer 自动合场';
+  if (s.processRunning && s.matchCount != null) {
+    text += ` · ${s.matchCount} 场`;
+    if (s.processAgeMs != null) text += ` · 最近合场 ${fmtDiff(s.processAgeMs)}前`;
+  } else if (s.lastBuiltAt && s.dataAgeMs != null) {
+    text += ` · 列表写入 ${fmtDiff(s.dataAgeMs)}前`;
   }
-  if (s.dataFresh) {
-    const label = embeddedMode ? '内嵌循环未运行' : '匹配脚本未运行';
-    return `${label} · 列表 ${fmtDiff(s.dataAgeMs)}前仍较新`;
-  }
-  if (s.lastBuiltAt || s.processLastRun) {
-    const age = s.dataAgeMs ?? s.processAgeMs;
-    const label = embeddedMode ? '内嵌循环未运行' : '匹配脚本未运行';
-    return `${label} · 末次 ${fmtDiff(age)}前`;
-  }
-  return embeddedMode ? '内嵌循环未运行' : '匹配脚本未运行';
+  return text;
 }
 
-function setMatcherButtons(s) {
-  const btnStart = document.getElementById('btn-matcher-start');
-  const btnStop = document.getElementById('btn-matcher-stop');
+function setMatchMergeButton() {
   const btnMatchMerge = document.getElementById('btn-match-merge-now');
-  if (!btnStart || !btnStop) return;
-  btnStart.textContent = '启动内嵌循环';
-  btnStop.textContent = '暂停内嵌循环';
-  btnStart.title = '正常会随 changmen-esport 自动启动；仅在检测到未运行时手动启动。';
-  btnStop.title = '仅开发环境可用：临时暂停当前 web 进程内的合并循环。';
-  btnStart.style.display = s?.canStart ? '' : 'none';
-  btnStop.style.display = s?.canStop ? '' : 'none';
-  btnStart.disabled = _matcherBusy || _matchMergeBusy;
-  btnStop.disabled = _matcherBusy || _matchMergeBusy;
-  if (btnMatchMerge) {
-    btnMatchMerge.disabled = _matchMergeBusy || _matcherBusy;
-    btnMatchMerge.title = '立即执行一次 composeOnce 写库';
-  }
+  if (btnMatchMerge) btnMatchMerge.disabled = _matchMergeBusy;
 }
-
-let _lastMatcherStatus = null;
 
 async function refreshMatcherStatus() {
   const el = document.getElementById('matcher-status');
@@ -3446,29 +3379,24 @@ async function refreshMatcherStatus() {
   if (!el || !label) return;
   try {
     const { data: s } = await fetchJson('/api/matcher-status');
-    _lastMatcherStatus = s;
-    setMatcherButtons(s);
-    applyWriterChip(s);
     el.className = 'matcher-status ' + matcherStatusClass(s);
     label.textContent = matcherStatusLabel(s);
   } catch {
-    setMatcherButtons(null);
-    applyWriterChip(null);
     el.className = 'matcher-status off';
-    label.textContent = '匹配循环状态未知';
+    label.textContent = 'composer 合场状态未知';
   }
 }
 
 async function runMatchMergeNow() {
-  if (_matchMergeBusy || _matcherBusy) return;
+  if (_matchMergeBusy) return;
   const btn = document.getElementById('btn-match-merge-now');
   _matchMergeBusy = true;
   const prevText = btn?.textContent;
   if (btn) {
     btn.disabled = true;
-    btn.textContent = '合并中…';
+    btn.textContent = '合场中…';
   }
-  setMatcherButtons(null);
+  setMatchMergeButton();
   try {
     const { res, data } = await fetchJson('/api/match-merge', { method: 'POST' });
     if (!res.ok || data.error) throw new Error(data.error || '赛事合并失败');
@@ -3481,32 +3409,10 @@ async function runMatchMergeNow() {
   } finally {
     _matchMergeBusy = false;
     if (btn) {
-      btn.textContent = prevText || '立即执行赛事合并';
+      btn.textContent = prevText || '立即合场';
     }
+    setMatchMergeButton();
     await refreshMatcherStatus();
-  }
-}
-
-async function matcherAction(action) {
-  if (_matcherBusy || _matchMergeBusy) return;
-  _matcherBusy = true;
-  try {
-    const { res, data } = await fetchJson('/api/matcher/' + action, { method: 'POST' });
-    if (!res.ok || data.error) throw new Error(data.error || '操作失败');
-    await refreshMatcherStatus();
-    if (action === 'stop') {
-      const via = data.source === 'embedded' ? '（web 内嵌循环，重启 web 后自动恢复）' : data.source === 'pm2' ? '（PM2）' : data.pid ? `（PID ${data.pid}）` : '';
-      showActionToast(`匹配循环已停止${via}`, 'ok', 4200);
-    }
-    if (action === 'start') {
-      showActionToast(data.warning || '匹配循环已启动', 'ok', 3200);
-      setTimeout(refreshMatcherStatus, 2000);
-    }
-  } catch (err) {
-    alert(err.message);
-    await refreshMatcherStatus();
-  } finally {
-    _matcherBusy = false;
   }
 }
 
@@ -3542,34 +3448,6 @@ async function toggleClientMatchPlatformReverse(btn) {
     await refreshMatcherStatus();
   } catch (err) {
     showActionToast(`主客方向更新失败\n${err.message}`, 'err', 6000);
-    btn.disabled = false;
-    btn.textContent = oldText;
-  } finally {
-    _reverseSubmitting = false;
-  }
-}
-
-async function swapClientMatchGbLock(btn) {
-  if (_reverseSubmitting) return;
-  const cmId = btn?.dataset?.swapGbCm;
-  if (!cmId) return;
-  if (!confirm(`确认对调场次 #${cmId} 的主客 gb 锁与 Title？\n（会重算各平台 Reverse，并清除该场 platform overrides）`)) return;
-  _reverseSubmitting = true;
-  const oldText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = '处理中…';
-  try {
-    const { res, data } = await fetchJson(`/api/client-match/${encodeURIComponent(cmId)}/swap-gb`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-    });
-    if (!res.ok || data.error) throw new Error(data.error || '对调失败');
-    showActionToast(data.summary || `场次 #${cmId} 主客锁已对调`, 'ok', 3600);
-    await load();
-    await refreshMatcherStatus();
-  } catch (err) {
-    showActionToast(`主客对调失败\n${err.message}`, 'err', 6000);
     btn.disabled = false;
     btn.textContent = oldText;
   } finally {
@@ -3684,8 +3562,6 @@ async function load(opts = {}) {
   }
 }
 
-document.getElementById('btn-matcher-start')?.addEventListener('click', () => matcherAction('start'));
-document.getElementById('btn-matcher-stop')?.addEventListener('click', () => matcherAction('stop'));
 document.getElementById('btn-match-merge-now')?.addEventListener('click', runMatchMergeNow);
 document.querySelectorAll('[data-middle-tab]').forEach(button => {
   button.addEventListener('click', () => setMiddleTab(button.dataset.middleTab));
@@ -3711,8 +3587,6 @@ document.getElementById('link-modal')?.addEventListener('click', e => {
 document.addEventListener('click', e => {
   const btn = e.target?.closest?.('[data-reverse-toggle]');
   if (btn) toggleClientMatchPlatformReverse(btn);
-  const swapBtn = e.target?.closest?.('[data-swap-gb-cm]');
-  if (swapBtn) swapClientMatchGbLock(swapBtn);
 });
 
 document.querySelectorAll('[data-unmatched-filter]').forEach(btn => {

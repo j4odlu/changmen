@@ -753,7 +753,7 @@ export async function handleEsportRequest(
   catch (err: any) {
     console.error("[esport]", action || urlPath, err);
     if (!res.headersSent)
-      sendJson(res, 200, fail(err.message || "服务器错误"));
+      sendJson(res, action === "Client_GetMatchs" ? 500 : 200, fail(err.message || "服务器错误"));
     return true;
   }
   finally {

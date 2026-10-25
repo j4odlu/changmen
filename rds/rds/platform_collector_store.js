@@ -952,15 +952,18 @@ export async function pruneMatchesOlderThanTwoDays(opts = {}) {
 }
 
 /** 启动时读取 platform_matches，按平台分组，返回可直接传给 store.saveMatches 的格式 */
-export async function fetchPlatformMatches() {
+export async function fetchPlatformMatches({ strict = false } = {}) {
   const pool = getPgPool();
-  if (!pool)
+  if (!pool) {
+    if (strict) throw new Error("platform_matches 数据库不可用");
     return {};
+  }
   try {
     return await _rdsFetchPlatformMatches(pool);
   }
   catch (err) {
     console.warn("[rds] fetchPlatformMatches 失败:", err.message);
+    if (strict) throw err;
     return {};
   }
 }
@@ -980,29 +983,35 @@ export async function fetchPlatformCollectorMeta() {
 }
 
 /** 从 RDS 读取 platform_bets，重组为 store._bets 格式 */
-export async function fetchPlatformBets() {
+export async function fetchPlatformBets({ strict = false } = {}) {
   const pool = getPgPool();
-  if (!pool)
+  if (!pool) {
+    if (strict) throw new Error("platform_bets 数据库不可用");
     return {};
+  }
   try {
     return await _rdsFetchPlatformBets(pool);
   }
   catch (err) {
     console.warn("[rds] fetchPlatformBets 失败:", err.message);
+    if (strict) throw err;
     return {};
   }
 }
 
 /** 从 RDS 读取 live_timers，重组为 store._timers 格式 */
-export async function fetchLiveTimers() {
+export async function fetchLiveTimers({ strict = false } = {}) {
   const pool = getPgPool();
-  if (!pool)
+  if (!pool) {
+    if (strict) throw new Error("live_timers 数据库不可用");
     return {};
+  }
   try {
     return await _rdsFetchLiveTimers(pool);
   }
   catch (err) {
     console.warn("[rds] fetchLiveTimers 失败:", err.message);
+    if (strict) throw err;
     return {};
   }
 }

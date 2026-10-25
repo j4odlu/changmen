@@ -21,7 +21,7 @@ import {
   STALE_FACTOR,
 } from "../lib/heartbeat.js";
 import { fetchMatcherRdsSnapshot } from "../ops/rds_snapshot_cache.js";
-import { readRayRiskIds } from "../ray_match_risk.js";
+import { filterRayRiskMatches, readRayRiskIds } from "../ray_match_risk.js";
 import {
   getEmbeddedMatcherState,
   isManagedByServer,
@@ -61,19 +61,8 @@ function isPlatformMatchLinkedForRec(m, clientMatches, platforms = null) {
 }
 
 function filterVisibleClientMatches(clientMatches, platforms = null) {
-  return (clientMatches || []).filter((cm) => {
-    if (Object.keys(cm.matchs || {}).length < 2)
-      return false;
-    if (!platforms)
-      return true;
-    let live = 0;
-    for (const [plat, srcId] of Object.entries(cm.matchs || {})) {
-      const list = platforms[plat] || [];
-      if (list.some(m => String(m.source_match_id) === String(srcId)))
-        live++;
-    }
-    return live >= 1;
-  });
+  // 输入已由共用快照读取器选择；此处不再根据另一次平台快照增删比赛。
+  return clientMatches || [];
 }
 
 function resolveVisibleClientMatchId(m, clientMatches, platforms = null) {
@@ -400,7 +389,7 @@ async function fetchMatcherDashboard() {
     fetchClientMatchesHiddenCount(),
     fetchClientMatchesForAlign(),
   ]);
-  const clientMatchesRaw = snapshot.clientRows || [];
+  const clientMatchesRaw = filterRayRiskMatches(snapshot.clientRows || [], { persist: false });
   if (!lifecycleRows) throw new Error("比赛关联读取失败，无法确认已结束来源");
   const pmSourceIds = Object.values(normalizeMatchesShape(snapshot.matchesRaw).Polymarket || {})
     .map(row => String(row.SourceMatchID ?? row.source_match_id ?? "")).filter(Boolean);
@@ -457,7 +446,7 @@ async function fetchMatcherDashboard() {
   const dashboard = {
     platforms: byPlatform,
     clientMatches,
-    rayRiskMatches: buildRayRiskMatches(readRayRiskIds(), clientMatches, byPlatform.RAY || []),
+    rayRiskMatches: buildRayRiskMatches(readRayRiskIds(), lifecycleRows.filter(row => !isEndedClientMatch(row)), byPlatform.RAY || []),
     hiddenClientMatches: [],
     hiddenClientMatchCount,
     recommendations,

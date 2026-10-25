@@ -71,14 +71,15 @@ export function observeRayMatchResult(matchId, payload, now = Date.now()) {
 }
 
 /** 整场过滤，保留合场记录和历史订单；关联来源变化不自动解除已经命中的异常。 */
-export function filterRayRiskMatches(matches) {
+export function filterRayRiskMatches(matches, { persist = true } = {}) {
   const keysFor = row => [
-    ...(Number.isSafeInteger(Number(row.ID)) && Number(row.ID) > 0 ? [`match:${row.ID}`] : []),
-    ...Object.entries(row.Matchs || {}).filter(([, id]) => id != null && String(id) !== "")
+    ...(Number.isSafeInteger(Number(row.ID ?? row.id)) && Number(row.ID ?? row.id) > 0 ? [`match:${row.ID ?? row.id}`] : []),
+    ...Object.entries(row.Matchs ?? row.matchs ?? {}).filter(([, id]) => id != null && String(id) !== "")
       .map(([provider, id]) => `${provider}:${id}`),
   ];
   // 同一批列表中相互关联的行也必须一起排除，不依赖返回顺序。
-  const blocked = new Set(closedKeys());
+  const saved = readJsonFile(FILE, []);
+  const blocked = new Set([...closedKeys(), ...(Array.isArray(saved) ? saved : [])]);
   let previousSize;
   do {
     previousSize = blocked.size;
@@ -87,6 +88,6 @@ export function filterRayRiskMatches(matches) {
       if (keys.some(key => blocked.has(key))) for (const key of keys) blocked.add(key);
     }
   } while (blocked.size !== previousSize);
-  remember(blocked);
+  if (persist) remember(blocked);
   return matches.filter(row => !keysFor(row).some(key => blocked.has(key)));
 }

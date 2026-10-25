@@ -9,6 +9,7 @@ import * as db from "@changmen/db";
 import { invalidateClientMatchSnapshot } from "@changmen/db/client_match_snapshot.js";
 import { collectorRuntime, publishCommittedClientMatches } from "../../runtime_ports.js";
 import { clientMatchWriteRow } from "../write_payload.js";
+import { filterRayRiskMatches } from "../../ray_match_risk.js";
 
 /**
  * @param {object[]} info 活跃行
@@ -38,7 +39,11 @@ export async function writeClientMatches(info, builtAt = Date.now(), opts = {}) 
 
   const activeRows = (info || [])
     .filter(m => Number.isFinite(Number(m.ID)) && Number(m.ID) > 0)
-    .map(m => clientMatchWriteRow(m, builtAt, { endedAt: null }));
+    .map(m => {
+      const row = clientMatchWriteRow(m, builtAt, { endedAt: null });
+      row.matchs = { ...existingById.get(row.id)?.matchs, ...row.matchs };
+      return row;
+    });
 
   await db.writeClientMatchesAsync({
     activeRows,
@@ -48,6 +53,10 @@ export async function writeClientMatches(info, builtAt = Date.now(), opts = {}) 
   });
 
   invalidateClientMatchSnapshot();
+  try {
+    filterRayRiskMatches([...activeRows, ...(opts.existingClientRows || [])]
+      .map(row => ({ ID: row.id, Matchs: row.matchs || {} })));
+  } catch (err) { console.warn("[match-composer] save RAY risk identities:", err.message); }
   try { await publishCommittedClientMatches(); }
   catch (err) { console.warn("[match-composer] publish committed snapshot:", err.message); }
   const endedForMemory = endedRowsRaw.map(row => {

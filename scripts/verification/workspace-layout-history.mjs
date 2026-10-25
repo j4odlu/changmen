@@ -55,6 +55,7 @@ export function readPreviousWorkspaceFile(file,options){
  if(!row){
   const retired=readRetiredPmCredentialSdkSource(key(file))??readRetiredPmSdkSource(key(file));
   let source=retired===undefined?native.readFileSync(file,options):(typeof options==='string'||options?.encoding?retired:Buffer.from(retired));
+  {const restored=restoreMatcherLifecycleSource(key(file),source.toString());source=Buffer.isBuffer(source)?Buffer.from(restored):restored;}
   if(pmBalanceCredentialFiles.has(key(file))){const restored=restorePmBalanceCredentialsSource(key(file),source.toString());source=Buffer.isBuffer(source)?Buffer.from(restored):restored;}
   if(!frontendDependencyFiles.has(key(file))&&key(file)!==ACCOUNT_EDIT_EXTRACTION.file&&!pendingVenueFixFiles.has(key(file))&&key(file)!==OB_FOOTBALL_EXTRACTION.file&&!pmWalletAddressOptimizationFiles.has(key(file))&&!pmSdkRetirementFiles.has(key(file)))return source;
   const restored=restoreFrontendDependencySource(key(file),restoreAccountEditSource(key(file),restoreObFootballSource(key(file),source.toString())));

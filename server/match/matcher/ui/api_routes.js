@@ -8,7 +8,6 @@ import {
   previewLinkPlatformTeams,
   registerTeamPlatformMap,
   setClientMatchPlatformSideOverride,
-  swapClientMatchGbOrientation,
 } from "../link/index.js";
 import { clientMatchToHistory } from "../ops/delete_client_match.js";
 import { mergeClientMatches, previewMergeClientMatches } from "../ops/merge_client_matches.js";
@@ -201,27 +200,6 @@ function registerMatcherApiRoutes(app) {
     }
     catch (err) {
       logMatcherApiErr("/api/client-match/reverse", err);
-      res.status(400).json({ ok: false, error: err.message });
-    }
-  });
-
-  app.post("/api/client-match/:id/swap-gb", async (req, res) => {
-    try {
-      const update = await swapClientMatchGbOrientation({
-        clientMatchId: req.params.id,
-      });
-      invalidateMatcherRdsSnapshot(["clientMatches", "platformMatches"]);
-      const matchMerge = await matchMergeOnce({ afterInFlight: true });
-      const body = {
-        ok: true,
-        ...update,
-        matchMerge: { matchCount: matchMerge?.matchCount ?? null },
-      };
-      logMatcherApiOk("/api/client-match/swap-gb", body);
-      res.json(body);
-    }
-    catch (err) {
-      logMatcherApiErr("/api/client-match/swap-gb", err);
       res.status(400).json({ ok: false, error: err.message });
     }
   });

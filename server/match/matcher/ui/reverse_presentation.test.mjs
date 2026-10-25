@@ -49,7 +49,7 @@ async function toggle({ reverse = ["OB"], refreshed = true, error = null } = {})
   };
   await runInNewContext(
     "let _reverseSubmitting = false; async "
-    + extract("toggleClientMatchPlatformReverse", "swapClientMatchGbLock").replace(/async\s*$/, "")
+    + extract("toggleClientMatchPlatformReverse", "focusLinkedClientMatch")
     + "toggleClientMatchPlatformReverse(button);", context,
   );
   return { requests, toasts, button };

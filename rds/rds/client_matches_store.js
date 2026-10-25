@@ -306,8 +306,7 @@ export async function writeClientMatchesAsync(rowsOrPayload, builtAt = Date.now(
     return;
   const pool = getPgPool();
   if (!pool) {
-    writeClientMatches(payload);
-    return;
+    throw new Error("比赛写入数据库不可用");
   }
   await _rdsWriteClientMatchesLifecycle(pool, payload);
 }

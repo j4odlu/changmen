@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { applyRdsSchema } from "@changmen/db/maintenance/apply-rds-schema.mjs";
 import { withTemporaryPostgres } from "./temporary-postgres.mjs";
+import { dropCurrentResultColumn } from "../../rds/maintenance/drop-client-match-current-result.mjs";
 
 await withTemporaryPostgres(async () => {
   const db = await import("../../rds/index.js");
@@ -18,7 +19,13 @@ await withTemporaryPostgres(async () => {
   async function check(name, run) { await run(); checks.push(name); console.log(`PASS ${name}`); }
   try {
     const client = await pool.connect();
-    try { await applyRdsSchema(client); } finally { client.release(); }
+    try {
+      await applyRdsSchema(client);
+      await client.query("ALTER TABLE client_matches ADD COLUMN current_result jsonb");
+      assert.equal((await dropCurrentResultColumn(client)).exists, true);
+      assert.equal((await dropCurrentResultColumn(client, { apply: true })).removed, true);
+      assert.equal((await dropCurrentResultColumn(client, { apply: true })).removed, false);
+    } finally { client.release(); }
     const version = (await pool.query("SHOW server_version")).rows[0].server_version;
     const row = id => ({ id, title: `Home${id} vs Away${id}`, game: "cs2", game_id: "1",
       start_time: 1700000000000, round_start: 0, bo: 3, round: 0, reverse: ["OB"],
@@ -45,7 +52,7 @@ await withTemporaryPostgres(async () => {
       assert.deepEqual(snapshot.rows, await db.fetchClientMatches());
       const { wire } = await lists(); assert.deepEqual(wire[0].Reverse, ["OB"]);
     });
-    await check("same-count and same-builtAt manual reversal invalidates the shared snapshot", async () => {
+    await check("same-count and same-builtAt committed reversal invalidates the shared snapshot", async () => {
       const before = cache.getClientMatchSnapshotStats().version;
       await pool.query("UPDATE client_matches SET reverse='[]'::jsonb WHERE id=1");
       const meta = await db.fetchClientMatchesMeta(); assert.equal(meta.count, 2); assert.equal(meta.builtAt, 100);
@@ -89,11 +96,39 @@ await withTemporaryPostgres(async () => {
       assert.equal(snapshot.clientRows.find(m => m.id === "1").pm_sport.ended, true);
       assert.equal(wire.length, 2); // an absent compose row is not implicitly ended
     });
-    await check("write rollback neither publishes nor patches collector links", async () => {
+    await check("unended matches keep their associations and locked markets in ordinary fields on both consumers", async () => {
+      const matchs = { OB: "ob1", RAY: "absent" };
+      const bets = [{ ID: 4096, Map: 0, Sources: { OB: { BetID: "ob-market", HomeID: "", AwayID: "", HomeOdds: 0, AwayOdds: 0, Status: "Locked" } } }];
+      await db.writeClientMatchesAsync({ activeRows: [{ ...row(1), matchs, bets }], builtAt: 201 });
+      const { wire, snapshot } = await lists();
+      assert.deepEqual(wire.find(m => m.ID === 1).Matchs, matchs);
+      assert.deepEqual(snapshot.clientRows.find(m => Number(m.id) === 1).bets, bets);
+      assert.deepEqual(wire.map(m => m.ID).sort((a, b) => a - b), [1, 2]);
+      assert.equal((await db.fetchClientMatchRow(1, "ended_at")).ended_at, null);
+    });
+    await check("replacing a venue mapping locks its previous native options while preserving canonical orientation", async () => {
+      const bets = [{ ID: 4096, Map: 0, HomeName: "Home1", AwayName: "Away1", Sources: {
+        OB: { BetID: "ob-market", HomeID: "h", AwayID: "a", HomeOdds: 1.5, AwayOdds: 2.5,
+          HomeMarketID: "hm", AwayMarketID: "am", Status: "Normal" } } }];
+      await db.writeClientMatchesAsync({ activeRows: [{ ...row(1), bets }], builtAt: 202 });
+      await db.patchClientMatchMatchs(1, { OB: "replacement" });
+      const { wire, snapshot } = await lists();
+      const replaced = wire.find(m => m.ID === 1);
+      assert.equal(replaced.Title, "Home1 vs Away1");
+      assert.equal(replaced.Bets[0].HomeName, "Home1");
+      assert.equal(replaced.Bets[0].AwayName, "Away1");
+      assert.equal(replaced.Bets[0].Sources.OB.HomeMarketID, "hm");
+      assert.deepEqual(replaced.Bets, snapshot.clientRows.find(m => Number(m.id) === 1).bets);
+      assert.equal(replaced.Matchs.OB, "replacement");
+      assert.equal(replaced.Bets[0].Sources.OB.HomeID, "");
+      assert.equal(replaced.Bets[0].Sources.OB.Status, "Locked");
+    });
+    await check("result update failure rolls back identity changes and neither publishes nor patches collector links", async () => {
       let calls = 0;
       runtime.configureMatcherRuntime({ clientMatchesCommitted: () => calls++, patchCollectorMatchClientIds: () => calls++ });
       const before = await db.fetchClientMatches({ snapshot: true });
-      await pool.query(`CREATE FUNCTION phase2_reject() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'phase2 injected write failure'; END $$;
+      await pool.query(`CREATE FUNCTION phase2_reject() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+        IF NEW.title = 'uncommitted' THEN RAISE EXCEPTION 'phase2 injected write failure'; END IF; RETURN NEW; END $$;
         CREATE TRIGGER phase2_reject BEFORE UPDATE ON client_matches FOR EACH ROW EXECUTE FUNCTION phase2_reject()`);
       try { await assert.rejects(writer.writeClientMatches([{ ID: 1, Title: "uncommitted" }], 300), /phase2 injected/); }
       finally { await pool.query("DROP TRIGGER phase2_reject ON client_matches; DROP FUNCTION phase2_reject()"); }
@@ -116,13 +151,21 @@ await withTemporaryPostgres(async () => {
       assert(ended.ended_at); assert.equal(ended.pm_sport.ended, true);
       assert.equal(lifecycle.clientMatchSnapshotVersion, (await db.fetchClientMatchesAll({ snapshot: true })).version);
     });
+    await check("manual restore locks old markets and retains identity while clearing only the end state", async () => {
+      const before = await db.fetchClientMatchRow(1, "id,matchs,bets,reverse");
+      await db.clearClientMatchEndedAt(1);
+      assert.deepEqual((await lists()).wire.map(m => m.ID).sort((a, b) => a - b), [1, 2]);
+      const after = await db.fetchClientMatchRow(1, "id,matchs,bets,reverse,ended_at");
+      assert.deepEqual({ id: after.id, matchs: after.matchs, bets: after.bets, reverse: after.reverse }, before);
+      assert.equal(after.ended_at, null);
+    });
     await check("deletion down to empty clears backend and matcher caches", async () => {
       await pool.query("DELETE FROM client_matches");
       const { wire, snapshot } = await lists(); assert.deepEqual(wire, []); assert.deepEqual(snapshot.clientRows, []);
     });
     await check("a fresh process reloads the same committed snapshot without backend hydration", async () => {
       await db.writeClientMatchesAsync({ activeRows: [row(9)], builtAt: 500 });
-      const expected = await db.fetchClientMatches({ snapshot: true });
+      const expected = await cache.loadClientMatchSnapshot();
       const script = `const { loadClientMatchSnapshot } = await import('./rds/client_match_snapshot.js');
         const { getPgPool } = await import('./rds/pg_pool.js');
         try { console.log('SNAPSHOT=' + JSON.stringify(await loadClientMatchSnapshot())); } finally { await getPgPool()?.end(); }`;

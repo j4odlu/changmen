@@ -1056,31 +1056,6 @@ async function setClientMatchPlatformSideOverride({ clientMatchId, platform, rev
   };
 }
 
-/**
- * 对调场次 gb 锁（Title 主客翻转）；与单平台 force_reversed 不同。
- */
-async function swapClientMatchGbOrientation({ clientMatchId }) {
-  const cmId = Number(clientMatchId);
-  if (!Number.isFinite(cmId) || cmId <= 0)
-    throw new Error("无效的赛事 ID");
-
-  const before = await db.fetchClientMatchRow(cmId, "id,title,home_gb_team_id,away_gb_team_id");
-  if (!before)
-    throw new Error("赛事不存在");
-
-  const update = await db.swapClientMatchGbOrientation(cmId);
-  return {
-    ok: true,
-    ...update,
-    summary: `场次 #${cmId} 主客锁已对调：${update.title}`,
-    logLines: [
-      `对调 gb 锁 · client_match #${cmId}`,
-      `原 Title ${before.title || ""} · home_gb=${before.home_gb_team_id} away_gb=${before.away_gb_team_id}`,
-      `新 Title ${update.title} · home_gb=${update.home_gb_team_id} away_gb=${update.away_gb_team_id}`,
-    ],
-  };
-}
-
 export {
   analyzeSideAlignment,
   linkPlatformTeams,
@@ -1091,5 +1066,4 @@ export {
   previewLinkPlatformTeams,
   registerTeamPlatformMap,
   setClientMatchPlatformSideOverride,
-  swapClientMatchGbOrientation,
 };

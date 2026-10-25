@@ -13,7 +13,7 @@ import { fetchMatcherHiddenClientMatches } from "./matcher_data.js";
 const html = readFileSync(new URL("./public/index.html", import.meta.url), "utf8");
 const script = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1])
   .find(source => source.includes("function renderClientMatchCard("));
-const definitions = script.slice(0, script.indexOf("document.getElementById('btn-matcher-start')?.addEventListener"));
+const definitions = script.slice(0, script.indexOf("document.getElementById('btn-match-merge-now')?.addEventListener"));
 const from = Date.parse("2026-10-19T00:00:00+08:00");
 const to = from + 86400000;
 const match = { id: 42, title: "Alpha vs Beta", game_id: 1, start_time: from,
@@ -33,6 +33,28 @@ beforeEach(() => {
   mocks.maps.mockResolvedValue({});
 });
 
+it.each(["embedded", "heartbeat"])("shows the same composer for a %s status observation", processSource => {
+  const state = { processRunning: true, processSource, matchCount: 3, processAgeMs: 30000 };
+  const label = runInContext("matcherStatusLabel(state)", context({ state }));
+  expect(label).toBe("composer 自动合场运行中 · 3 场 · 最近合场 30s前");
+});
+
+it.each([true, false])("keeps one manual compose request in flight and releases the button after success=%s", async ok => {
+  const button = { textContent: "立即合场", disabled: false };
+  let complete;
+  const pending = new Promise(resolve => { complete = resolve; });
+  const fetchJson = vi.fn(() => pending);
+  const ctx = context({ document: { getElementById: () => button }, request: fetchJson });
+  runInContext("fetchJson = request; load = refreshMatcherStatus = async () => {}; showActionToast = () => {};", ctx);
+  const first = runInContext("runMatchMergeNow()", ctx);
+  await runInContext("runMatchMergeNow()", ctx);
+  expect(fetchJson).toHaveBeenCalledExactlyOnceWith("/api/match-merge", { method: "POST" });
+  expect(button.disabled).toBe(true);
+  complete({ res: { ok }, data: ok ? { ok: true } : { error: "合场失败" } });
+  await first;
+  expect(button).toEqual({ textContent: "立即合场", disabled: false });
+});
+
 it("uses the shared card and system orientation, with only restore available after ending", () => {
   const active = card(match);
   const ended = card({ ...match, ended_at: to });
@@ -45,6 +67,7 @@ it("uses the shared card and system orientation, with only restore available aft
     expect(row.indexOf('class="team-name">Alpha')).toBeLessThan(row.indexOf('class="team-name">Beta'));
   }
   expect(active).toContain('data-end-cm="42"');
+  expect(active).not.toContain('data-swap-gb-cm=');
   expect(active).toContain('data-reverse-toggle="1"');
   expect(ended).toContain('data-restore-cm="42"');
   expect(ended).toContain("标记结束");
@@ -53,7 +76,8 @@ it("uses the shared card and system orientation, with only restore available aft
 });
 
 it("keeps ended cards visible when all venue sources or all associations are gone", () => {
-  expect(card(match, {})).toBe("");
+  // 平台快照可能已变化，卡片仍服从已提交的当前结果，等待下一轮 matcher 更新。
+  expect(card(match, {})).toContain('data-cm-id="42"');
   const ended = { ...match, ended_at: to };
   expect(card(ended, {})).toContain("已失效");
   const orphan = card({ ...ended, matchs: {} }, {});
@@ -61,6 +85,17 @@ it("keeps ended cards visible when all venue sources or all associations are gon
   expect(orphan).toContain("Beta");
   expect(orphan).toContain("无平台关联");
   expect(orphan).toContain('data-restore-cm="42"');
+});
+
+it("keeps committed single-source and unknown-classification matches visible despite a newer empty platform snapshot", () => {
+  const row = { ...match, matchs: { OB: "ob1" }, merge_mode: { mode: "unknown" } };
+  const ctx = context({ row });
+  expect(runInContext("filterDisplayClientMatches([row], {}).length", ctx)).toBe(1);
+  expect(card(row, {})).toContain('data-cm-id="42"');
+  const elements = new Map();
+  ctx.elements = elements;
+  runInContext("document = { getElementById: id => { if (!elements.has(id)) elements.set(id, {addEventListener(){},querySelectorAll(){return []}}); return elements.get(id); } }; renderMatchedListForMode([row], {}, {}, '', 'name', 'list', 'count', '')", ctx);
+  expect(elements.get("list").innerHTML).toContain('data-cm-id="42"');
 });
 
 it("shows the same PM state in right-column recommendation and unmatched rows", () => {

@@ -136,7 +136,10 @@ export function runMatchPass(list, snapshot, opts = {}) {
 
   const deduped = dedupeRowsById(info);
   info = deduped.list;
-  info = info.filter(r => Object.keys(r.Matchs || {}).length >= MIN_PLATFORMS);
+  const existingIds = activeClientIdSet(clientRows);
+  const keepExistingSingle = r => opts.allowExistingSingle === true
+    && existingIds.has(Number(r.ID)) && Object.keys(r.Matchs || {}).length >= 1;
+  info = info.filter(r => Object.keys(r.Matchs || {}).length >= MIN_PLATFORMS || keepExistingSingle(r));
 
   resolveMatchStructure(info, { matches, timers, bets });
 
@@ -150,7 +153,7 @@ export function runMatchPass(list, snapshot, opts = {}) {
   });
 
   applyLiveShape(info, { matches });
-  info = filterMultiPlatform(info, MIN_PLATFORMS);
+  info = info.filter(r => keepExistingSingle(r) || filterMultiPlatform([r], MIN_PLATFORMS).length);
 
   const processedActiveIds = new Set(
     info.map(r => Number(r.ID)).filter(id => Number.isFinite(id) && id > 0),

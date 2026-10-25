@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ write: vi.fn(), patch: vi.fn() }));
 vi.mock("@changmen/db", () => ({ isMatcherStoreReady: () => true, writeClientMatchesAsync: mocks.write }));
 vi.mock("@changmen/db/client_match_snapshot.js", () => ({ invalidateClientMatchSnapshot: vi.fn() }));
+vi.mock("../../ray_match_risk.js", () => ({ filterRayRiskMatches: rows => rows }));
 vi.mock("../../runtime_ports.js", () => ({
   publishCommittedClientMatches: vi.fn(), collectorRuntime: { patchCollectorMatchClientIds: mocks.patch },
 }));
@@ -26,4 +27,21 @@ it("keeps active writes and gap lifecycle updates in the same commit", async () 
   expect(payload.markEndedIds).toEqual([42]);
   expect(payload.endedRows).toEqual([]);
   expect(mocks.patch.mock.calls[0][0]).toContainEqual({ ID: 42, Matchs: { OB: "old", RAY: "old" } });
+});
+
+it("commits the final match directly to existing fields, retaining missing venue associations", async () => {
+  const existing = { id: 7, matchs: { OB: "old", RAY: "live" } };
+  const bets = [{ ID: 28672, Map: 0, Sources: { OB: { BetID: "old", Status: "Locked", HomeID: "", AwayID: "" } } }];
+  await writeClientMatches([{ ID: 7, Matchs: { RAY: "live" }, Bets: bets, Reverse: ["OB"] }], 6000,
+    { existingClientRows: [existing] });
+  expect(mocks.write.mock.calls[0][0].activeRows[0].matchs).toEqual(existing.matchs);
+  expect(mocks.write.mock.calls[0][0].activeRows[0].bets).toEqual(bets);
+  expect(mocks.write.mock.calls[0][0].activeRows[0].reverse).toEqual(["OB"]);
+});
+
+it("does not publish or patch caches when the transaction fails", async () => {
+  mocks.write.mockRejectedValueOnce(new Error("synthetic transaction failure"));
+  await expect(writeClientMatches([{ ID: 7, Matchs: { OB: "old" } }], 6000))
+    .rejects.toThrow("synthetic transaction failure");
+  expect(mocks.patch).not.toHaveBeenCalled();
 });

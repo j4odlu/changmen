@@ -113,9 +113,10 @@ export async function loadSnapshot({ registerTeams = true } = {}) {
   let nameSync = null;
 
   if (db.isMatcherStoreReady()) {
-    matchesRaw = (await db.fetchPlatformMatches()) || {};
-    bets = (await db.fetchPlatformBets()) || {};
-    timers = (await db.fetchLiveTimers()) || {};
+    matchesRaw = await db.fetchPlatformMatches({ strict: true });
+    bets = await db.fetchPlatformBets({ strict: true });
+    timers = await db.fetchLiveTimers({ strict: true });
+    if (!matchesRaw || !bets || !timers) throw new Error("matcher input snapshot unavailable; abort compose");
     const lifecycleSnapshot = await db.fetchClientMatchesAll({ snapshot: true });
     if (!lifecycleSnapshot)
       throw new Error("client_matches lifecycle snapshot unavailable; abort compose");

@@ -4,6 +4,8 @@
 
 matchMerge 循环**内嵌在 `changmen-esport`**（`npm run web` / PM2 `changmen-esport`），本目录提供合并库、运维 API 与可选人工 UI。
 
+matcher 页面按这一套 composer 合场链路展示状态、最近合场时间和“立即合场”；人工关联也调用同一个 composer。页面不再提供启停循环按钮、重复的写路径标签或独立 Composer 对照入口。下文独立 UI、对照和试算命令是开发工具，不是另一套生产合场进程。
+
 ## 目录
 
 | 目录 | 内容 |
@@ -67,7 +69,9 @@ backend 列表与 matcher 面板共用 DB 包的活跃列表快照缓存。行�
 
 [changmen 扩展] matcher 已合场及已结束卡片展示 PM 比赛状态，读取 VPS `changmen-pm-sports` 保存的 `client_matches.pm_sport`，沿用用户页的状态文案（地图、整场比分和计时）。PM 关联缺少状态时显示“状态待更新”，不按开赛时间推断。卡片悬停提示快照更新时间；刷新沿用面板现有轮询。状态展示不另行计算比赛有效性；结束处理由上文 matcher 生命周期规则执行。
 
-[changmen 扩展] 共用活跃行缓存不代表展示集合已一致：matcher 页面还按当前平台来源过滤，用户接口仍可能收到 active gap 保留的旧挂载与盘口。2026-10-20 的[统一产出方案](../../../docs/MATCH_PUBLICATION_CONSISTENCY_PLAN.md)改为由 matcher 计算并保存当前有效比赛，两端直接读取保存结果；不在用户接口重新判断平台有效性。三步依次为产出与保存、两端接入、实查收尾，均可暂停；拟增加最小结果字段，尚未实现。历史取证见[审计报告](../../../docs/audits/MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md)。
+[changmen 扩展] 2026-10-25：composer 直接更新 `client_matches` 原有比赛、盘口与方向字段，不增加比赛副本或展示状态。已有单馆比赛继续刷新，缺席场馆保留盘口 ID 和关联，输出 `Locked`、零赔率和空选项 ID，复用 A8 前端锁盘；来源恢复后重新输出原生选项。全部来源缺席但尚未结束时仍保留比赛并锁盘，是否结束沿用 changmen 原有规则，已结束赛事不下发。两端共用 RDS 快照，页面不再二次判断两馆门槛或来源存活；PM 独立状态和既有 RAY 风险保护保留。数据同事务提交后再失效缓存。
+
+已撤销的 `current_result` 字段由 `node rds/maintenance/drop-client-match-current-result.mjs` 独立维护，默认只读核验，`--apply` 执行删除；不进入部署或启动。运行时直接读取原有比赛字段，必需输入读取失败中止本轮。详见[统一产出方案及当前验收状态](../../../docs/MATCH_PUBLICATION_CONSISTENCY_PLAN.md)。历史取证见[审计报告](../../../docs/audits/MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md)。
 
 环境变量：与 backend 共用 `server/backend/.env`（或本目录 `.env`）。`CHANGMEN_DB_SCRIPT` 与 backend 保持一致（兼容 `GAMEBET_DB_SCRIPT`）。
 
@@ -99,7 +103,7 @@ npm run composer:test   # 单测 + 禁止 merge import
 
 ### 主客朝向（gb 锁）
 
-锚点链定初值：**Polymarket → OB → RAY**（第一个双侧 `gb_team_id` 已映射平台的 native 主客槽位）。无锚点平台时回落 min/max 投票。已写入的 `home_gb_team_id` / `away_gb_team_id` **永不自动翻转**；人工纠错用 UI「主客对调（翻锁）」。
+锚点链定初值：**Polymarket → OB → RAY**（第一个双侧 `gb_team_id` 已映射平台的 native 主客槽位）。无锚点平台时回落 min/max 投票。已写入的 `home_gb_team_id` / `away_gb_team_id` **永不自动翻转**。不提供整场比赛的人工主客对调；平台盘口仍按各平台相对该主客方向投影。
 
 `Client_GetMatchs` 只读 `client_matches`。`SaveLiveTimer` debounce 触发 matchMerge（`MATCHER_TIMER_DEBOUNCE_MS`，默认 3s），常规循环由 `MATCHER_INTERVAL_MS` 驱动。
 

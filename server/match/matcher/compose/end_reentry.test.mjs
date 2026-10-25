@@ -1,10 +1,10 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { installPlugin, pmOb, pmPm, pmRay } from "../tests/fixtures.mjs";
+import { installPlugin, makeBets, pmOb, pmPm, pmRay, rawOb, rawRay } from "../tests/fixtures.mjs";
 
-const state = vi.hoisted(() => ({ rows: [], matches: {}, writes: [], inserts: vi.fn() }));
+const state = vi.hoisted(() => ({ rows: [], matches: {}, bets: {}, writes: [], inserts: vi.fn() }));
 vi.mock("./io/snapshot.js", () => ({
   loadSnapshot: async () => structuredClone({ matches: state.matches, clientRows: state.rows,
-    alignClientRows: state.rows, bets: {}, timers: {} }),
+    alignClientRows: state.rows, bets: state.bets, timers: {} }),
 }));
 vi.mock("@changmen/db", () => ({
   DEFAULT_CLIENT_MATCH_ARCHIVE_INTERVAL_MS: 3600000,
@@ -47,7 +47,59 @@ beforeEach(() => {
   state.rows = [];
   state.writes = [];
   state.matches = {};
+  state.bets = {};
   state.inserts.mockReset().mockImplementation(async () => { throw new Error("unexpected new match"); });
+});
+
+function closedMarkets() {
+  return makeBets({
+    OB: { 0: { ...rawOb, Status: "Locked" }, 1: { ...rawOb, BetID: "m1", Status: "Locked" } },
+    RAY: { 0: { ...rawRay, Status: "Locked" }, 1: { ...rawRay, BetID: "r1", Status: "Locked" } },
+  });
+}
+
+it("checks the original end rules for an existing match even when only one venue is matched this cycle", async () => {
+  const existing = row(42, null);
+  delete existing.matchs.Polymarket;
+  state.rows = [existing];
+  state.matches = { OB: { ob1: { ...pmOb, StartTime: start, IsLive: 1 } } };
+  state.bets = closedMarkets();
+  const result = await composeOnce({ write: true, viaMatcherWriter: true, registerTeams: false });
+  expect(result.endedCount).toBe(1);
+  expect(result.info).toEqual([]);
+  expect(state.rows[0].ended_at).toBeGreaterThan(0);
+  expect(state.writes[0].active).toEqual([]);
+  expect(state.rows[0].matchs).toEqual({ OB: "ob1", RAY: "ray1" });
+  expect(state.inserts).not.toHaveBeenCalled();
+});
+
+it("uses the stored PM mapping when its snapshot is absent, keeping a PM-unended match active", async () => {
+  state.rows = [row(42, null, { eventId: "pm1", ended: false, status: "inprogress" })];
+  state.matches = sources(42);
+  delete state.matches.Polymarket;
+  state.matches.OB.ob1.IsLive = 1;
+  state.matches.RAY.ray1.IsLive = 1;
+  state.bets = closedMarkets();
+  const result = await composeOnce({ write: true, viaMatcherWriter: true, registerTeams: false });
+  expect(result.endedCount).toBe(0);
+  expect(result.info.map(match => match.ID)).toEqual([42]);
+  expect(state.rows[0].ended_at).toBeNull();
+  expect(state.writes[0].active[0].Matchs).toEqual(links);
+  expect(state.inserts).not.toHaveBeenCalled();
+});
+
+it("still ends a PM-confirmed match with a missing PM snapshot and closed remaining venues", async () => {
+  state.rows = [row(42, null, { eventId: "pm1", ended: true, status: "finished" })];
+  state.matches = sources(42);
+  delete state.matches.Polymarket;
+  state.matches.OB.ob1.IsLive = 1;
+  state.bets = closedMarkets();
+  const result = await composeOnce({ write: true, viaMatcherWriter: true, registerTeams: false });
+  expect(result.endedCount).toBe(1);
+  expect(result.info).toEqual([]);
+  expect(state.rows[0].matchs).toEqual(links);
+  expect(state.rows[0].ended_at).toBeGreaterThan(0);
+  expect(state.inserts).not.toHaveBeenCalled();
 });
 
 it("ends the original ID once and does not allocate another ID across repeated collector refreshes", async () => {

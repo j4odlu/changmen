@@ -64,7 +64,7 @@ import { handleEsportRequest } from "./router.ts";
 
 const ok = info => ({ success: 1, msg: "ok", info });
 const failure = msg => ({ success: 0, msg, info: null });
-async function request(action, body = {}, { json = false, raw } = {}) {
+async function request(action, body = {}, { json = false, raw, status = 200 } = {}) {
   const encoded = raw ?? (json ? JSON.stringify(body) : new URLSearchParams(body).toString());
   const req = Readable.from([Buffer.from(encoded)]);
   Object.assign(req, { method: "POST", url: `/esport/${action}`, socket: { remoteAddress: "127.0.0.1" },
@@ -73,7 +73,7 @@ async function request(action, body = {}, { json = false, raw } = {}) {
     writeHead(status, headers) { this.status = status; Object.assign(this.headers, headers); this.headersSent = true; },
     end(value) { this.body = JSON.parse(value); } };
   await handleEsportRequest(req, res, req.url);
-  expect(res.status).toBe(200);
+  expect(res.status).toBe(status);
   expect(res.headers["Content-Type"]).toBe("application/json; charset=utf-8");
   return res;
 }
@@ -199,6 +199,10 @@ describe.each(["legacy", "registry"])("core HTTP consumer contracts (%s dispatch
       } }], PmSport: { live: true, currentMap: 1 } }];
     h.store.buildMatchList.mockResolvedValue(rows);
     expect((await request("Client_GetMatchs")).body).toEqual(ok(rows));
+  });
+  it("returns a real HTTP failure when current matches cannot be read, preserving A8 polling failure behavior", async () => {
+    h.store.buildMatchList.mockRejectedValueOnce(new Error("current result unavailable"));
+    expect((await request("Client_GetMatchs", {}, { status: 500 })).body).toEqual(failure("current result unavailable"));
   });
   it("keeps outbound warnings non-blocking", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});

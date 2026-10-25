@@ -43,9 +43,9 @@ export async function migratePolymarketOfficialTeamIds(client, plan, { apply = f
       if (existing?.gb_team_id != null) expectedIds.add(String(existing.gb_team_id));
       assert(expectedIds.size <= 1, `Conflicting canonical mappings for official team ${id}`);
       const original = group.find(e => e.expected.gb_team_id != null)?.expected || group[0].expected;
+      const metadata = existing?.gb_team_id != null || original.gb_team_id == null ? existing ?? original : original;
       replacements.push({ id, gb: [...expectedIds][0] ?? null, name: group[0].name,
-        game: group[0].game, source: existing?.source ?? original.source,
-        confidence: existing?.confidence ?? original.confidence });
+        game: group[0].game, source: metadata.source, confidence: metadata.confidence });
     }
     const byMatch = new Map(plan.matches.map(m => [m.sourceMatchId, m]));
     assert.equal(byMatch.size, plan.matches.length, "Duplicate source matches");
@@ -83,6 +83,10 @@ export async function migratePolymarketOfficialTeamIds(client, plan, { apply = f
         SELECT 'Polymarket',r.id,r.gb::bigint,r.name,r.game,r.source,r.confidence::numeric
         FROM jsonb_to_recordset($1::jsonb) AS r(id text,gb text,name text,game text,source text,confidence text)
         ON CONFLICT(venue,venue_team_id) DO UPDATE SET
+          source=CASE WHEN team_venue_maps.gb_team_id IS NULL AND EXCLUDED.gb_team_id IS NOT NULL
+            THEN EXCLUDED.source ELSE team_venue_maps.source END,
+          confidence=CASE WHEN team_venue_maps.gb_team_id IS NULL AND EXCLUDED.gb_team_id IS NOT NULL
+            THEN EXCLUDED.confidence ELSE team_venue_maps.confidence END,
           gb_team_id=COALESCE(team_venue_maps.gb_team_id,EXCLUDED.gb_team_id),
           venue_name=EXCLUDED.venue_name,game=EXCLUDED.game`, [JSON.stringify(requiredTargets)]);
       await client.query(`UPDATE platform_matches AS pm SET home_id=r.home_id,away_id=r.away_id,

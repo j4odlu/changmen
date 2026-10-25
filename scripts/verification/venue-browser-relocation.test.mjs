@@ -1,4 +1,5 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
+import {sourceFixture} from './fixtures/source-fixture.mjs';
 import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import {execFileSync} from 'node:child_process';
 import {expect,it} from 'vitest';
@@ -9,7 +10,7 @@ import {classifySourceFile,sourceLayerViolation} from './source-ownership.mjs';
 import {isVersionSource} from '../../devtools/runtime-tooling/runtime_version.js';
 import {classifyDeployScope} from '../deploy/classify-deploy-scope.mjs';
 import {restoreVenueBrowserWorkspace} from './venue-browser-workspace.mjs';
-const read=withAdapterHistoryReader(file=>readAdapterHistory(file,'utf8').replaceAll('\r\n','\n'));
+const read=sourceFixture(withAdapterHistoryReader(file=>readAdapterHistory(file,'utf8').replaceAll('\r\n','\n')));
 const original=file=>execFileSync('git',['show',record.baseline+':'+file],{encoding:'utf8',windowsHide:true}).replaceAll('\r\n','\n');
 it('retains the full original implementation after reversing only relative imports',()=>{
  expect(verifyVenueBrowserRelocation(read).entries).toBe(10);

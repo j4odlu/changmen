@@ -108,12 +108,12 @@ export function installedPmDependency(root, importer, spec, lock = readJson(path
   };
 }
 
-export function inspectPmDependencies(root) {
+export function inspectPmDependencies(root, { inspection = createComponentInspection(root) } = {}) {
   root = fs.realpathSync(root);
+  if (inspection.root !== root) throw Error("PM inspection belongs to another source root");
   const manifest = readJson(path.join(root, "scripts/deploy/component-inputs.json"));
   const contract = readJson(path.join(root, "scripts/verification/pm-dependency-inputs.json"));
   if (contract.schemaVersion !== 1 || contract.purpose !== "pm-dynamic-input-review-only" || contract.publishScopeOptimizationEnabled !== false) throw Error("PM evidence cannot enable publish scope optimization");
-  const inspection = createComponentInspection(root);
   const graph = inspection.inspect(manifest, { scope: "pm" });
   const roots = [...manifest.scopes.pm.nodeRoots, ...manifest.scopes.pm.browserRoots];
   const primary = file => roots.some(dir => inside(file, dir));

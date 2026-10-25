@@ -1,4 +1,5 @@
 import {adapterCanonicalFile} from "./browser-entry-history.mjs";
+import {sourceFixture} from './fixtures/source-fixture.mjs';
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
 import { execFileSync, spawnSync } from "node:child_process";
 import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
@@ -7,7 +8,7 @@ import { PM_FOLDER_RELOCATIONS, certifyPmFolderRelease, checkPmFolderFreeze } fr
 import { PM_UNIFIED_PREFLIGHT_HELPERS } from "./pm-unified-preflight-boundary.mjs";
 import { restoreVenueBrowserExecution } from './venue-browser-execution.mjs';
 const manifestFile = "packages/venue-adapter/esport-freeze.json";
-const read = withAdapterHistoryReader(file => readAdapterHistory(file, "utf8"));
+const read = sourceFixture(withAdapterHistoryReader(file => readAdapterHistory(file, "utf8")));
 const manifest = read(manifestFile);
 const sources = new Map();
 const gitRead = (base, file) => {

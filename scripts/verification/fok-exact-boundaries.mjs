@@ -34,7 +34,23 @@ export function gitSource(base, file) {
     cache.set(key, normalize(execFileSync("git", ["show", key], { encoding: "utf8", maxBuffer: 5 * 1024 * 1024 })));
   return cache.get(key);
 }
-function tokens(source) {
+// Cache pure text computations only. Readers and source guards still see every
+// fresh input; changed payload whitespace, syntax errors and injected text differ.
+function memoizeSource(compute) {
+  const entries = new Map(); let units = 0;
+  return source => {
+    if (entries.has(source)) {
+      const value = entries.get(source); entries.delete(source); entries.set(source, value); return value;
+    }
+    const value = compute(source);
+    if (source.length > 4_000_000) return value;
+    while (entries.size >= 512 || units + source.length > 4_000_000) {
+      const oldest = entries.keys().next().value; entries.delete(oldest); units -= oldest.length;
+    }
+    entries.set(source, value); units += source.length; return value;
+  };
+}
+const tokens = memoizeSource(source => {
   // 所有受保护文件都是模块；片段也用相同模块上下文解析 await，位置仍指向原文本。
   const prefix = "export {};\n";
   const tree = ts.createSourceFile("tokens.ts", prefix + source, ts.ScriptTarget.Latest, true);
@@ -50,11 +66,15 @@ function tokens(source) {
   }
   visit(tree);
   return result;
-}
-export function moduleTokens(source) {
+});
+const cachedModuleTokens = memoizeSource(source => {
   const tree = ts.createSourceFile("protected.ts", source, ts.ScriptTarget.Latest, true);
   assert.equal(tree.parseDiagnostics.length, 0, "protected module must parse");
   return tokens(printer.printFile(tree)).map(token => [token.kind, token.text]);
+});
+export function moduleTokens(source) {
+  // Callers own their result; mutation must never poison a later comparison.
+  return cachedModuleTokens(source).map(token => [...token]);
 }
 // 精确 token 序列保留字符串内部空白；仅忽略语法外的格式和注释。
 export function replaceExact(source, before, after = "") {

@@ -97,6 +97,7 @@ export function createComponentInspection(root) {
     safe: new Map(), walks: new Map(), files: new Map(), imports: new Map(), resolutions: new Map(),
   };
   return {
+    root,
     inspect: (manifest, options = {}) => inspectComponentSnapshot(root,
       manifest === undefined ? JSON.parse(snapshot.read(path.join(root, "scripts/deploy/component-inputs.json"))) : manifest, options, snapshot),
     readSource: file => snapshot.read(path.join(root, file)),

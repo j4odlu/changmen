@@ -33,7 +33,13 @@ export function restoreVenueBrowserSource(row,source){
  assert.equal(sha(source),row.beforeSha,row.file+': complete original source');return source;
 }
 export function verifyVenueBrowserRelocation(read){
- read=adapterBrowserSourceReader(read);
+ // A complete proof uses one source snapshot. Never share it with a later proof:
+ // changed/missing inputs and each fault-injection case must be read again.
+ const snapshot=load=>{
+  const sources=new Map();
+  return file=>{if(!sources.has(file))sources.set(file,load(file));return sources.get(file);};
+ };
+ read=snapshot(adapterBrowserSourceReader(snapshot(read)));
  verifyVenueBrowserLeaves(read);
  assert.equal(VENUE_BROWSER_RELOCATION.rows.length,10);
  for(const row of VENUE_BROWSER_RELOCATION.rows){

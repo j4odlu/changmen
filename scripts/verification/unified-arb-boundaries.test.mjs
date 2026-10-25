@@ -1,4 +1,5 @@
 import {readAdapterHistory} from "./browser-entry-history.mjs";
+import {sourceFixture} from './fixtures/source-fixture.mjs';
 import assert from "node:assert/strict";
 // [changmen 扩展] 正负向验证逐段还原与完整基线，不调用真实平台。
 import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
@@ -9,7 +10,7 @@ import { restorePmPreflightSource } from "./pm-preflight-boundary.mjs";
 import { restoreA8MakeupTiming } from "./a8-makeup-timing-boundary.mjs";
 import { readReviewedCapabilityContracts, restoreUnifiedArbitrageSource, UNIFIED_ARBITRAGE_BOUNDARIES, verifyUnifiedArbitrageContract } from "./unified-arb-boundaries.mjs";
 
-const read = file => readAdapterHistory(file, "utf8");
+const read = sourceFixture(file => readAdapterHistory(file, "utf8"));
 const bases = ["219535c8", "75b1efac66625e5f2bc9884a965b244bfaf337ed"];
 const prior = "e901bb596952256284cd8a9eb8b73b572c963915";
 const verify = (file, source, base) => verifyProtectedSource(file, source, gitSource(base, file), read, target => gitSource(base, target));

@@ -1,4 +1,5 @@
 import {adapterCanonicalFile} from "./browser-entry-history.mjs";
+import {sourceFixture} from './fixtures/source-fixture.mjs';
 import {readAdapterHistory} from "./browser-entry-history.mjs";
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 // [changmen 扩展] 使用当前完整迁移源码与不可变 Git 来源；不写回生产文件。
@@ -8,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { gitSource } from "./fok-exact-boundaries.mjs";
 import { FROZEN_PM_RELOCATIONS, FROZEN_RELOCATION_DOCUMENTS, certifyEsportRelocations, checkEsportChanges } from "./esport-relocation-boundaries.mjs";
 const manifestFile = "packages/venue-adapter/esport-freeze.json";
-const read = file => readAdapterHistory(file, "utf8");
+const read = sourceFixture(file => readAdapterHistory(file, "utf8"));
 const options = { manifestText: read(manifestFile), readSource: read, baselineRead: gitSource };
 describe("default freeze verifies exact full relocation instead of an exemption", () => {
   it("certifies only seventeen existing module pairs and one exact document", () => {

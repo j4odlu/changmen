@@ -57,12 +57,28 @@ export function analyzePmLoaderBindings({ files, dependencies, origins, expected
     exports.set(file, new Map()); exportNames.set(file, new Set());
     for (const diagnostic of tree.parseDiagnostics) reject(tree, ts.flattenDiagnosticMessageText(diagnostic.messageText, " "), "pm-loader-syntax");
   }
-  const symbol = node => ts.isShorthandPropertyAssignment(node.parent) ? checker.getShorthandAssignmentValueSymbol(node.parent) : checker.getSymbolAtLocation(node);
+  // Lexical symbols never change during capability propagation. Keep this cache
+  // local to this program so a later audit always binds the new source again.
+  const symbols = new WeakMap(), valueCache = new WeakMap(), valueNames = new Set();
+  let revision = 0;
+  const symbol = node => {
+    if (!symbols.has(node)) symbols.set(node, ts.isShorthandPropertyAssignment(node.parent)
+      ? checker.getShorthandAssignmentValueSymbol(node.parent) : checker.getSymbolAtLocation(node));
+    return symbols.get(node);
+  };
   function add(map, key, value) {
     if (!key || !value.size) return false;
     const previous = map.get(key) || empty(), next = union(previous, value);
     if (next.size === previous.size) return false;
-    map.set(key, next); return true;
+    map.set(key, next);
+    if (map === values) {
+      valueNames.add(key.getName());
+      // A named default function's symbol is called "default", but its local
+      // references use the declaration's name. Preserve both spellings.
+      for (const declaration of key.declarations || [])
+        if (declaration.name && ts.isIdentifier(declaration.name)) valueNames.add(declaration.name.text);
+    }
+    revision++; return true;
   }
   const registered = new Map();
   for (const origin of origins) {
@@ -71,7 +87,7 @@ export function analyzePmLoaderBindings({ files, dependencies, origins, expected
     registered.set(key, origin);
     const matches = tree?.statements.filter(node => ts.isFunctionDeclaration(node) && node.name?.text === origin.symbol) || [];
     if (matches.length !== 1) { violations.push({ rule: "pm-loader-origin", file: origin.file, line: 0, spec: origin.symbol, pattern: "reviewed loader must remain one real top-level function definition" }); continue; }
-    values.set(symbol(matches[0].name), new Set([`fn:${key}`]));
+    add(values, symbol(matches[0].name), new Set([`fn:${key}`]));
   }
   const isGlobal = (node, name) => {
     if (!ts.isIdentifier(node) || node.text !== name) return false;
@@ -89,8 +105,14 @@ export function analyzePmLoaderBindings({ files, dependencies, origins, expected
     return null;
   }
   // Remember non-loader exports too, so metadata reads are distinct from missing members.
+  const flowNodes = new Map();
   for (const [file, tree] of trees) {
+    const nodes = []; flowNodes.set(file, nodes);
     function visit(node) {
+      if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node) || ts.isVariableDeclaration(node)
+        || ts.isFunctionDeclaration(node) || ts.isVariableStatement(node) || ts.isExportAssignment(node)
+        || ts.isExportDeclaration(node) || ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken)
+        nodes.push(node);
       if ((ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) && modifiers(node)) exportNames.get(file).add(node.modifiers.some(m => m.kind === ts.SyntaxKind.DefaultKeyword) ? "default" : node.name?.text);
       if (ts.isVariableStatement(node) && modifiers(node)) for (const d of node.declarationList.declarations) if (ts.isIdentifier(d.name)) exportNames.get(file).add(d.name.text);
       if (ts.isExportAssignment(node)) exportNames.get(file).add("default");
@@ -140,7 +162,16 @@ export function analyzePmLoaderBindings({ files, dependencies, origins, expected
   }
   function value(node) {
     if (!node) return empty();
+    const cached = valueCache.get(node);
+    if (cached?.revision === revision) return cached.value;
+    const result = readValue(node);
+    valueCache.set(node, { revision, value: result }); return result;
+  }
+  function readValue(node) {
     if (ts.isIdentifier(node)) {
+      // Only names already assigned a value can occur in `values`. This is a
+      // negative filter; candidates still undergo the same lexical resolution.
+      if (!valueNames.has(node.text) && node.text !== "require" && node.text !== "module") return empty();
       const own = values.get(symbol(node));
       return own || (isGlobal(node, "require") ? new Set(["require"]) : isGlobal(node, "module") ? new Set(["cjs-module"]) : empty());
     }
@@ -173,6 +204,7 @@ export function analyzePmLoaderBindings({ files, dependencies, origins, expected
     return false;
   }
   function bind(name, tokens) {
+    if (!tokens.size) return false;
     let changed = false;
     if (ts.isIdentifier(name)) return add(values, symbol(name), tokens);
     if (ts.isObjectBindingPattern(name)) for (const element of name.elements) {
@@ -185,9 +217,9 @@ export function analyzePmLoaderBindings({ files, dependencies, origins, expected
   let changed = true, passes = 0;
   while (changed && passes++ < Math.max(16, trees.size * 2 + 4)) {
     changed = false;
-    for (const [file, tree] of trees) {
+    for (const [file, nodes] of flowNodes) {
       const exported = exports.get(file);
-      function visit(node) {
+      for (const node of nodes) {
         if (ts.isImportDeclaration(node)) {
           const spec = literal(node.moduleSpecifier), clause = node.importClause, targets = modules.get(`${file}\0${spec}`) || empty();
           const ns = new Set([...targets].map(file => `ns:${file}`));
@@ -230,9 +262,7 @@ export function analyzePmLoaderBindings({ files, dependencies, origins, expected
             } else changed = add(cjs, file, value(node.right)) || changed;
           }
         }
-        ts.forEachChild(node, visit);
       }
-      visit(tree);
     }
   }
   if (changed) violations.push({ rule: "pm-loader-unknown", file: "<graph>", line: 0, pattern: "loader provenance did not converge", spec: "fixed point" });
@@ -262,7 +292,7 @@ export function analyzePmLoaderBindings({ files, dependencies, origins, expected
         }
       }
       // Validate every capability-valued expression, not just recognizable call spellings.
-      if (ts.isExpression(node) && hasCapability(value(node)) && !typeOnly(node)) {
+      if (ts.isExpression(node) && !typeOnly(node) && hasCapability(value(node))) {
         const parent = node.parent;
         let safe = false;
         if (ts.isIdentifier(node) && (ts.isFunctionDeclaration(parent) && parent.name === node || ts.isImportSpecifier(parent) || ts.isNamespaceImport(parent) || ts.isImportClause(parent) || ts.isImportEqualsDeclaration(parent) || ts.isExportSpecifier(parent))) safe = true;

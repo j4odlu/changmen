@@ -1,11 +1,12 @@
 import {withAdapterHistoryReader,readAdapterHistory} from "./browser-entry-history.mjs";
+import {sourceFixture} from './fixtures/source-fixture.mjs';
 import { restoreVenueBrowserExecution } from "./venue-browser-execution.mjs";
 import {historicalWorkspaceFs as fs} from './workspace-layout-history.mjs';
 import ts from 'typescript';
 import {expect,it} from 'vitest';
 import {VENUE_BROWSER_LIFECYCLE as record,restoreVenueBrowserLifecycle,verifyVenueBrowserLifecycle} from './venue-browser-lifecycle.mjs';
 import {verifyVenueBrowserRelocation} from './venue-browser-relocation.mjs';
-const read=withAdapterHistoryReader(f=>readAdapterHistory(f,'utf8').replaceAll('\r\n','\n'));
+const read=sourceFixture(withAdapterHistoryReader(f=>readAdapterHistory(f,'utf8').replaceAll('\r\n','\n')));
 const after=f=>restoreVenueBrowserExecution(f,read(f));
 const root='client/packages/venue-browser/';
 const moved=record.changes.filter(row=>/^export \* from "@changmen\/venue-browser\//.test(after(row.file)));

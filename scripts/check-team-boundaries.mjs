@@ -17,7 +17,7 @@ import { inspectVenueManifestCopies } from "./sync/venue-manifest.mjs";
 import { inspectVenueBrowserRelocation } from "./verification/venue-browser-relocation.mjs";
 import fs from "node:fs";
 import { checkDatabaseAccessBoundaries } from "./verification/backend-db-boundary.mjs";
-import { inspectComponentEntries } from "./verification/component-entry-boundary.mjs";
+import { createComponentInspection } from "./verification/component-entry-boundary.mjs";
 import { inspectPmDependencies } from "./verification/pm-dependency-audit.mjs";
 import { inspectVenueNodeDependencies } from "./verification/venue-node-dependencies.mjs";
 import { sourceOwnershipInventory } from "./verification/source-ownership.mjs";
@@ -284,10 +284,12 @@ function main() {
   const nodeDependencies = inspectVenueNodeDependencies(CHANGMEN_ROOT);
   violations.push(...nodeDependencies.violations);
   console.log(`venue-node-install: ${Object.keys(nodeDependencies.closures).length} production closures; resolver tooling ${nodeDependencies.resolverTooling.workspaces.length} workspaces and ${nodeDependencies.consumers.length} explicit Node consumers; backend tooling ${nodeDependencies.backendTooling.workspaces.length} workspaces and ${nodeDependencies.bundleConsumers.length} explicit tool consumer; browser/mixed dependencies forbidden; publish scope unchanged`);
-  const components = inspectComponentEntries(CHANGMEN_ROOT);
+  // One invocation shares immutable source reads/parsing, not graph membership.
+  const inspection = createComponentInspection(CHANGMEN_ROOT);
+  const components = inspection.inspect();
   violations.push(...components.violations);
   console.log(`component-entry: ${components.entries.length} entries; ${components.unknown.length} unknown inputs; publish scope unchanged (details: node scripts/verification/component-entry-boundary.mjs --json)`);
-  const pm = inspectPmDependencies(CHANGMEN_ROOT);
+  const pm = inspectPmDependencies(CHANGMEN_ROOT, { inspection });
   violations.push(...pm.violations);
   console.log(`pm-dependency: ${pm.dynamicSites.length} reviewed dynamic sites; ${pm.unknownSummary.unexplainedPrimary} unexplained PM inputs; ${pm.unknownSummary.inherited} shared uncertainties (details: node scripts/verification/pm-dependency-audit.mjs --json)`);
   console.log(`pm-shared-loader: ${JSON.stringify(pm.sharedLoaderEvidence.byClass)}; production roots remain uncertified`);

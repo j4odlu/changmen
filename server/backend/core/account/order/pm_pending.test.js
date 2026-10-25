@@ -29,7 +29,7 @@ it("creates one complete Pending order, then preserves its labels, identity, Lin
   const dto = rowToOrder(stored);
   expect(dto).toMatchObject({ OrderID: "same-order", Status: "Pending", Match: pending.match,
     Bet: pending.bet, Item: pending.item, BetMoney: 100.031 });
-  expect(dto.PmSubmittedPrice).toBeUndefined();
+  expect(dto.PmSubmittedPrice).toBe(Number(submission.makerAmount) / Number(submission.takerAmount));
   expect(dto.PmFillPrice).toBeUndefined(); expect(dto.PmShares).toBeUndefined();
   expect(moneyForProfitAggregate(stored)).toBe(0); expect(betMoneyForProfitAggregate(stored)).toBe(0);
   await saveOrder(292, [{ provider: "Polymarket", orderId: "same-order", status: "reject", bet: "FOK未成交",
@@ -38,6 +38,7 @@ it("creates one complete Pending order, then preserves its labels, identity, Lin
     match: pending.match, bet: pending.bet, item: pending.item, odds: pending.odds,
     link: pending.link, create_at: pending.createAt, bet_money: pending.betMoney });
   expect(stored.raw.pmSubmission).toEqual(submission);
+  expect(rowToOrder(stored).PmSubmittedPrice).toBe(dto.PmSubmittedPrice);
 });
 
 it("uses actual fill cost instead of pinning the requested Pending amount, and never regresses a final result", async () => {

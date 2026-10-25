@@ -34,7 +34,7 @@ it("keeps signed quantities as optional display evidence through reject saves an
   const synced = mergePolymarketProviderSave({ order_id: "original" }, saved.raw,
     { orderId: "original", status: "reject" }, "changmen", saved.raw, 0, saved.bet_money);
   const dto = rowToOrder({ order_id: "original", player_id: 317, provider: "Polymarket", status: "Reject", raw: synced.raw });
-  expect(dto.PmSubmittedPrice).toBeUndefined();
+  expect(dto.PmSubmittedPrice).toBe(0.5);
   expect(dto.PmFillPrice).toBeUndefined();
   expect(dto.PmShares).toBeUndefined();
   expect(dto.pmSubmission).toBeUndefined();
@@ -49,15 +49,36 @@ it("accepts old submission snapshots and never derives a price from mismatched o
   expect(validatePmSubmission(snapshot, "original", 317)).toEqual(snapshot);
   const row = { order_id: "original", player_id: 317, provider: "Polymarket", status: "Reject" };
   for (const value of [snapshot, { ...snapshot, takerAmount: "0" }, { ...snapshot, takerAmount: "NaN" },
-    { ...snapshot, takerAmount: "1000000" }, { ...snapshot, orderId: "another", takerAmount: "29860000" },
+    { ...snapshot, takerAmount: "1000000" }, { ...snapshot, takerAmount: "9007199254740992" },
+    { ...snapshot, makerAmount: "9007199254740992", takerAmount: "18014398509481984" },
+    { ...snapshot, stakeUsdc: 15, takerAmount: "29860000" },
+    { ...snapshot, orderId: "another", takerAmount: "29860000" },
     { ...snapshot, accountId: 318, takerAmount: "29860000" }])
     expect(rowToOrder({ ...row, raw: { pmSubmission: value } }).PmSubmittedPrice).toBeUndefined();
   const raw = { pmSubmission: { ...snapshot, takerAmount: "29860000" } };
-  for (const status of ["None", "Win", "Lose", "Return"])
-    expect(rowToOrder({ ...row, status, raw }).PmSubmittedPrice).toBeUndefined();
+  for (const status of ["Pending", "Reject", "None", "Win", "Lose", "Return"])
+    expect(rowToOrder({ ...row, status, raw }).PmSubmittedPrice).toBe(0.5);
   expect(rowToOrder({ ...row, raw: { ...raw, pmSide: "sell" } }).PmSubmittedPrice).toBeUndefined();
   expect(rowToOrder({ ...row, raw: { ...raw, pmGtcExecutionId: "gtc" } }).PmSubmittedPrice).toBeUndefined();
   expect(rowToOrder({ ...row, provider: "RAY", raw }).PmSubmittedPrice).toBeUndefined();
+  expect(rowToOrder({ ...row, player_id: undefined, raw }).PmSubmittedPrice).toBeUndefined();
+  expect(rowToOrder({ ...row, order_id: undefined, raw }).PmSubmittedPrice).toBeUndefined();
+});
+
+it.each([
+  { match: "Tropa do KinGui vs Yawara E-Sports", status: "Lose", takerAmount: "16290900", fillPrice: 0.5016, odds: 2 },
+  { match: "Legacy vs DENDELE CS", status: "Win", takerAmount: "16905600", fillPrice: 0.53, odds: 1.8868 },
+])("restores submitted price from the saved signed order for $match", ({ match, status, takerAmount, fillPrice, odds }) => {
+  const submission = { ...snapshot, makerAmount: "8960000", takerAmount, stakeUsdc: 8.96 };
+  const row = { order_id: "original", player_id: "317", provider: "Polymarket", match, status, odds,
+    raw: { pmSide: "buy", pmSubmission: submission, pmFillPrice: fillPrice } };
+  const dto = rowToOrder(row);
+  expect(dto.PmSubmittedPrice).toBe(8960000 / Number(takerAmount));
+  expect(dto.PmFillPrice).toBe(fillPrice);
+  expect(dto.Odds).toBe(odds);
+  expect(dto.pmSubmission).toBeUndefined();
+  expect(row.raw).not.toHaveProperty("pmOrderPrice");
+  expect(rowToOrder({ ...row, raw: { ...row.raw, pmSubmission: undefined } }).PmSubmittedPrice).toBeUndefined();
 });
 
 it("reads the official order price independently of signed quantities, precheck odds and fills", () => {

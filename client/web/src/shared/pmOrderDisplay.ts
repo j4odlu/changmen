@@ -350,7 +350,7 @@ export function pmOrderFillPriceText(row: OrderRow): string | null {
   return formatPolymarketApiDecimal(price);
 }
 
-/** [changmen 扩展] FOK 未成交只展示官方订单限价，缺失时不使用预检赔率推算。 */
+/** [changmen 扩展] FOK 未成交展示后端提供的提交限价，缺失时不使用预检赔率推算。 */
 export function pmOrderSubmissionQuote(row: OrderRow): { priceText: string; oddsText: string } | null {
   if (!isPmBuyOrderListRow(row) || row.PmGtcExecutionId
     || !["Reject", "Pending"].includes(String(normalizeOrderStatus(String(row.Status ?? "")))))

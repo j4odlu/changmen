@@ -5,7 +5,6 @@ import {
 } from "@changmen/shared/account_multiply";
 import { accountsPersistUnchanged } from "@changmen/shared/account_persist";
 import { normalizeEpochMs } from "@changmen/shared/time/match_time";
-import { getGameByCode, resolveGameCode } from "@changmen/shared/catalog/game_catalog";
 import { loadClientMatchSnapshot, invalidateClientMatchSnapshot,
   getClientMatchSnapshotStats } from "@changmen/db/client_match_snapshot.js";
 import { parseFormBool } from "../shared/parse_form_bool.js";
@@ -376,13 +375,7 @@ function _applyClientMatchRows(data) {
 export function getClientMatches() {
   if (!_clientMatches.size)
     return null;
-  // 取消篮球单馆下发；历史单馆行保留身份供后续关联，不视为比赛结束。
-  const basketballGameId = getGameByCode("basketball")?.clientGameId;
-  return [..._clientMatches.values()].filter(row => {
-    const basketball = resolveGameCode(row.Game) === "basketball"
-      || (basketballGameId != null && Number(row.GameID) === basketballGameId);
-    return !basketball || Object.values(row.Matchs || {}).filter(id => id != null && String(id).trim()).length >= 2;
-  }).sort(
+  return [..._clientMatches.values()].sort(
     (a, b) => (a.StartTime || 0) - (b.StartTime || 0),
   );
 }

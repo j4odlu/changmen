@@ -28,6 +28,7 @@ export { listPmGtcClientImport } from "./rds/orderModes/gtc/pm_gtc_client_import
 export { resolveGtcFinancialOrder } from "./rds/orderModes/gtc/pm_gtc_financial.js";
 export { certificateRegistryEnabled, getClientCertificate, listClientCertificates, getClientCertificateDetail, updateClientCertificateLabel, revokeClientCertificates, registerClientCertificate, revokeClientCertificate, authorizeClientCertificate } from './rds/client_certificate_store.js';
 export { fetchPmSubmissionLogs } from "./rds/pm_submission_store.js";
+export { fetchPlatformPmSports, writePlatformPmSports } from "./rds/platform_pm_sport.js";
 export { insertOrderObservations, fetchOrderObservations } from "./rds/order_observation_store.js";
 export { ensurePmPrematchSchema, fetchPmPrematchPrices, writePmPrematchPrices } from "./rds/pm_prematch_store.js";
 

@@ -42,6 +42,7 @@ export interface GammaIdentity {
 export interface GammaIndex {
   byGameId: Map<number, GammaIdentity>;
   bySlug: Map<string, GammaIdentity>;
+  sportMessages?: SportMessage[];
 }
 export interface NormalizedSportSnapshot extends StoredSportSnapshot {
   homeTeam: string;

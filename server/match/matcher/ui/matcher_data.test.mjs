@@ -10,6 +10,19 @@ import {
 const T0 = Date.parse("2026-08-08T01:45:00+08:00");
 
 describe("matcher PM status", () => {
+  it("passes source-event PM status to unmatched rows without assigning a client match", () => {
+    const raw = { Polymarket: [{ SourceMatchID: "pm1", SourceGameID: "cs2", StartTime: T0, Home: "Alpha", Away: "Beta" }],
+      OB: [{ SourceMatchID: "pm1", StartTime: T0, Home: "Alpha", Away: "Beta" }] };
+    const snapshot = { eventId: "pm1", source: "ws", live: true, period: "2/3", updatedAt: T0 };
+    const rows = dashboardRowsFromSnapshot(raw, [], [], new Map([["pm1", snapshot]]));
+    const pm = rows.find(row => row.platform === "Polymarket");
+    expect(pm.pm_match_status).toEqual({ kind: "live", label: "进行中 · 地图2/3" });
+    expect(pm.pm_sport).toEqual(snapshot);
+    expect(pm.match_id).toBeNull();
+    expect(rows.find(row => row.platform === "OB").pm_match_status).toBeUndefined();
+    const missing = dashboardRowsFromSnapshot(raw, [], [], new Map([["another-event", snapshot]]));
+    expect(missing.find(row => row.platform === "Polymarket").pm_match_status.kind).toBe("unknown");
+  });
   it("shows the stored live status and preserves the source snapshot", () => {
     const input = { id: 42, start_time: T0 / 1000, matchs: { Polymarket: "pm1" },
       pm_sport: { source: "ws", status: "inprogress", period: "5/5", scoreRaw: "8-5|2-2",

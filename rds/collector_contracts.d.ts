@@ -49,6 +49,8 @@ declare module "@changmen/db" {
     slug?: string; gameId?: number | null; eventId?: string;
   }): Promise<number | null>;
   export function fetchPmSportByClientMatchIds(ids: number[]): Promise<Map<number, CollectorPmSportSnapshot>>;
+  export function fetchPlatformPmSports(eventIds: string[]): Promise<Map<string, CollectorPmSportSnapshot>>;
+  export function writePlatformPmSports(snapshots: CollectorPmSportSnapshot[]): Promise<number>;
   export function updateClientMatchPmSport(id: number, snapshot: CollectorPmSportSnapshot): Promise<boolean>;
   export function fetchLinkedPolymarketPlatformMatches(): Promise<LinkedPolymarketMatch[]>;
 }

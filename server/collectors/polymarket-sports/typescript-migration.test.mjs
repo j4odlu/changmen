@@ -12,7 +12,21 @@ import baseline from "./typescript-runtime-baseline.json" with { type: "json" };
 for (const [name, hash] of Object.entries(baseline.hashes)) {
   it(`${name}.ts erases to the accepted pre-migration implementation`, () => {
     assert.equal(ts.version, baseline.compiler);
-    const source = fs.readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8");
+    let source = fs.readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8").replaceAll("\r\n", "\n");
+    // [changmen 扩展] 只逆转 PM 原生场次状态的精确接入，原 TS 迁移摘要不变。
+    const eventStateHooks = name === "index" ? [
+      ['import { persistSourceEventStates } from "./event_states.ts";\n', ""],
+      ['    await persistSourceEventStates(gammaIndex.sportMessages || [], "gamma")\n      .catch(err => console.warn("[pm-sports] event Gamma state:", (err as Error).message));\n', ""],
+      ['  const sourceMessage = withGammaSportIdentity(msg, gammaIndex);\n  await persistSourceEventStates([sourceMessage], "ws")\n    .catch(err => console.warn("[pm-sports] event WS state:", (err as Error).message));\n', ""],
+    ] : name === "gamma_map" ? [
+      ["  const sportMessages: SportMessage[] = [];\n", ""],
+      ["      const sport = gammaEventToSportMessage(event);\n      if (sport) sportMessages.push(sport);\n", ""],
+      ["  return { byGameId, bySlug, sportMessages };", "  return { byGameId, bySlug };"],
+    ] : [];
+    for (const [after, before] of eventStateHooks) {
+      assert.equal(source.split(after).length, 2, `missing/duplicate event state hook: ${name}`);
+      source = source.replace(after, before);
+    }
     const runtime = ts.transpileModule(source, {
       compilerOptions: { target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.ESNext, removeComments: true },
     }).outputText.replace(/(from\s+|import\s+)(["'])\.\/(index|gamma_map|gamma_poll|sport_state|resolve_match|parse_sport|prematch_prices|broadcast_notify)\.ts\2/g, "$1$2./$3.js$2");
@@ -55,11 +69,11 @@ it("the original PM2 entry boots, handles a WS frame, persists and broadcasts be
   const script = `
     import assert from "node:assert/strict";
     import {registerHooks} from "node:module";
-    const state={intervals:[],writes:[],broadcasts:[],schema:false};
+    const state={intervals:[],writes:[],broadcasts:[],schema:false,sourceWrites:[]};
     globalThis.__pmSportBoot=state;
     const modules={
       "@changmen/db":
-        'const state=globalThis.__pmSportBoot; export const hasDatabaseUrlConfig=()=>true; export const initDatabaseUrl=async()=>null; export const getResolvedDatabaseLabel=()=>"test"; export const ensurePmPrematchSchema=async()=>{state.schema=true;}; export const updateClientMatchPmSport=async(id,s)=>{state.writes.push([id,s]);return true;}; export const fetchLinkedPolymarketPlatformMatches=async()=>[]; export const fetchPmSportByClientMatchIds=async()=>new Map(); export const resolveClientMatchIdForPmSport=async()=>11; export const fetchPmPrematchPrices=async()=>({}); export const writePmPrematchPrices=async()=>{};',
+        'const state=globalThis.__pmSportBoot; export const hasDatabaseUrlConfig=()=>true; export const initDatabaseUrl=async()=>null; export const getResolvedDatabaseLabel=()=>"test"; export const ensurePmPrematchSchema=async()=>{state.schema=true;}; export const writePlatformPmSports=async snapshots=>{state.sourceWrites.push(...snapshots);return snapshots.length;}; export const updateClientMatchPmSport=async(id,s)=>{state.writes.push([id,s]);return true;}; export const fetchLinkedPolymarketPlatformMatches=async()=>[]; export const fetchPmSportByClientMatchIds=async()=>new Map(); export const resolveClientMatchIdForPmSport=async query=>query.slug==="unmatched"?null:11; export const fetchPmPrematchPrices=async()=>({}); export const writePmPrematchPrices=async()=>{};',
       "@changmen/storage/load_env.js": 'export const loadChangmenEnv=()=>{};',
       "./gamma_map.ts":
         'export const refreshGammaEventIndex=async()=>({byGameId:new Map(),bySlug:new Map()}); export const withGammaSportIdentity=m=>m; export const gammaEventToSportMessage=m=>m; export const fetchGammaEventById=async()=>null; export const fetchGammaEventByGameId=async()=>null; export const fetchGammaEventBySlug=async()=>null; export const rememberGammaEvent=()=>{};',
@@ -73,7 +87,7 @@ it("the original PM2 entry boots, handles a WS frame, persists and broadcasts be
     assert.equal(state.schema,true);
     assert.deepEqual(state.intervals,[60000,60000,60000]);
     assert.equal(state.ws.url,"wss://sports-api.polymarket.com/ws");
-    state.ws.emit("message",Buffer.from(JSON.stringify({gameId:123,slug:"fixture",live:true,status:"running",score:"0-0|1-0|Bo3",period:"2/3",elapsed:0})));
+    state.ws.emit("message",Buffer.from(JSON.stringify({gameId:123,eventId:"pm1",slug:"fixture",live:true,status:"running",score:"0-0|1-0|Bo3",period:"2/3",elapsed:0})));
     await new Promise(resolve=>setImmediate(resolve));
     assert.equal(state.writes.length,1);
     assert.equal(state.writes[0][0],11);
@@ -82,6 +96,11 @@ it("the original PM2 entry boots, handles a WS frame, persists and broadcasts be
     assert.deepEqual(state.writes[0][1].mapScore,{home:1,away:0});
     assert.equal(state.broadcasts[0].clientMatchId,11);
     assert.deepEqual(state.broadcasts[0].pmSport,JSON.parse(JSON.stringify(state.writes[0][1])));
+    state.ws.emit("message",Buffer.from(JSON.stringify({gameId:456,eventId:"pm2",slug:"unmatched",status:"running",live:true})));
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.deepEqual(state.sourceWrites.map(row=>row.eventId),["pm1","pm2"]);
+    assert.equal(state.writes.length,1);
+    assert.equal(state.broadcasts.length,1);
     console.log("pm-sports native TS boot, WS, storage and broadcast OK");
     process.emit("SIGTERM");
   `;

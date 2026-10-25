@@ -9,17 +9,18 @@ const html = readFileSync(new URL("./public/index.html", import.meta.url), "utf8
 function extract(name, next) {
   return html.slice(html.indexOf(`function ${name}(`), html.indexOf(`function ${next}(`));
 }
-const badge = extract("renderPmMatchStatus", "renderMatchedCard");
+const badge = extract("renderPmMatchStatus", "renderClientMatchCard");
 const esc = value => String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll('"', "&quot;");
 
 function render(cm, ended = false, column = "id") {
+  if (ended) cm = { ...cm, ended_at: 456 };
   return runInNewContext(badge
-    + (ended ? extract("renderEndedMatchCard", "renderHiddenPanel") : extract("renderMatchedCard", "collectUnmatchedRows"))
-    + (ended ? "renderEndedMatchCard(cm, {}, {});" : "renderMatchedCard(cm, {}, {}, '', column);"), {
+    + extract("renderClientMatchCard", "collectUnmatchedRows")
+    + "renderClientMatchCard(cm, {}, {}, '', column);", {
     cm, column, esc, fmtTime: value => `time:${value}`,
     resolveClientMatchRows: () => [{ platform: "Polymarket" }],
     clientMatchGameCode: () => "cs2", renderTitleTeamSlot: side => side,
-    renderMatchedTable: () => "<table></table>", renderEndedMatchTable: () => "<table></table>",
+    renderMatchedTable: () => "<table></table>",
     clientMatchTeamsFullyIdMapped: () => true, clientMatchNeedsAttention: () => false,
     renderMatchMergeTarget: () => "", pbadge: String, gbadge: String, formatVsTitle: esc,
   });

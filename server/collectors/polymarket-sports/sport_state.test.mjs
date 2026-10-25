@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 // eslint-disable-next-line no-restricted-imports, test/no-import-node-test -- Collector tests run with node --test.
 import test from "node:test";
 import { createPmSportMessageQueue, createPmSportStateWriter } from "./sport_state.js";
+import { sourceEventSnapshot } from "./event_states.ts";
 
 const scheduled = { gameId: 10, eventId: "event-10", status: "not_started", live: false, ended: false };
 const running = { ...scheduled, status: "running", live: true, score: "000-000|1-0|Bo3", period: "2/3" };
@@ -166,4 +167,15 @@ test("a slow WS match does not block other games and errors do not poison its qu
   await rejected;
   await next;
   assert.deepEqual(handled, [11, 10]);
+});
+test("source-event snapshots reuse received state without a client match or guessed start status", () => {
+  const snapshot = sourceEventSnapshot({ ...running, eventId: "pm-native", elapsed: 0 }, "ws");
+  assert.equal(snapshot.eventId, "pm-native");
+  assert.equal(snapshot.source, "ws");
+  assert.equal(snapshot.status, "running");
+  assert.equal(snapshot.elapsed, "0");
+  assert.deepEqual(snapshot.mapScore, { home: 1, away: 0 });
+  assert.equal(sourceEventSnapshot({ gameId: 10, live: true }, "ws"), null);
+  assert.equal(sourceEventSnapshot({ eventId: "pm-native" }, "gamma"), null);
+  assert.equal(sourceEventSnapshot({ event_id: "pm-native", status: "scheduled" }, "ws").eventId, "pm-native");
 });

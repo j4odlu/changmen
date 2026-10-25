@@ -24,7 +24,7 @@ function render(reverse) {
   };
   const output = runInNewContext(
     extract("renderReverseCell", "renderMatchedTable")
-    + extract("renderMatchedTable", "renderMatchedCard")
+    + extract("renderMatchedTable", "renderClientMatchCard")
     + "renderMatchedTable(rows, 'lol', {}, '', cm, {});", context,
   );
   return { output, cells, rows };

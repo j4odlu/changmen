@@ -266,7 +266,10 @@ function registerMatcherApiRoutes(app) {
 
   app.get("/api/hidden-client-matches", async (req, res) => {
     try {
-      res.json(await fetchMatcherHiddenClientMatches());
+      res.json(await fetchMatcherHiddenClientMatches({
+        startFrom: req.query.startFrom,
+        startTo: req.query.startTo,
+      }));
     }
     catch (err) {
       console.error("[matcher] /api/hidden-client-matches error:", err.message);

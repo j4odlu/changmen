@@ -24,11 +24,14 @@ test("Gamma score index uses the same configured sport keys and series fallback 
         { sport: "unconfigured-fixture", series: "must-not-collect" },
       ]);
       requested.push(parsed.searchParams.getAll("series_id"));
-      return Response.json({ events: [{ id: "event", slug: "lol-fixture", gameId: 123 }] });
+      return Response.json({ events: [{ id: "event", slug: "lol-fixture", gameId: 123, live: true, score: "0-0|1-0|Bo3" }] });
     };
     const index = await refreshGammaEventIndex();
     assert.deepEqual(requested, [config.sportKeys.map((_, index) => `configured-${index}`)]);
     assert.equal(index.byGameId.get(123).id, "event");
+    assert.equal(index.sportMessages[0].eventId, "event");
+    assert.equal(index.sportMessages[0].live, true);
+    assert.equal(index.sportMessages[0].score, "0-0|1-0|Bo3");
     requested.length = 0;
     globalThis.fetch = async (url) => {
       const parsed = new URL(url);

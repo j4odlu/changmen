@@ -1,7 +1,8 @@
 import {
-  fetchClientMatchesHidden,
+  fetchClientMatchesAll,
   fetchClientMatchesForAlign,
   fetchClientMatchesHiddenCount,
+  fetchPlatformPmSports,
   fetchLatestClientMatchBuiltAt,
   fetchPlatformMatchesForHiddenClientMatches,
   loadTeamMapsForMatcher,
@@ -243,7 +244,7 @@ function normalizeIsLiveFlag(...values) {
   return null;
 }
 
-function dashboardRowsFromSnapshot(matchesRaw, clientMatches, lifecycleRows = []) {
+function dashboardRowsFromSnapshot(matchesRaw, clientMatches, lifecycleRows = [], pmStates = new Map()) {
   const normalized = normalizeMatchesShape(matchesRaw);
   const endedOwners = buildEndedSourceOwners(lifecycleRows);
   const endedIds = new Set(lifecycleRows.filter(isEndedClientMatch).map(row => Number(row.id ?? row.ID)));
@@ -292,6 +293,10 @@ function dashboardRowsFromSnapshot(matchesRaw, clientMatches, lifecycleRows = []
         rot_num: String(firstValue(m.RotNum, m.rotNum, m.rot_num, "") || "").trim() || "",
         is_live: normalizeIsLiveFlag(m.IsLive, m.isLive, m.is_live, m.live),
         teams: Array.isArray(m.Teams) ? m.Teams : (Array.isArray(m.teams) ? m.teams : []),
+        ...(platform === "Polymarket" ? {
+          pm_sport: pmStates.get(String(sourceMatchId)) || null,
+          pm_match_status: formatPmMatchStatus(pmStates.get(String(sourceMatchId))),
+        } : {}),
       });
     }
   }
@@ -397,7 +402,10 @@ async function fetchMatcherDashboard() {
   ]);
   const clientMatchesRaw = snapshot.clientRows || [];
   if (!lifecycleRows) throw new Error("比赛关联读取失败，无法确认已结束来源");
-  const allMatchesRaw = dashboardRowsFromSnapshot(snapshot.matchesRaw, clientMatchesRaw, lifecycleRows);
+  const pmSourceIds = Object.values(normalizeMatchesShape(snapshot.matchesRaw).Polymarket || {})
+    .map(row => String(row.SourceMatchID ?? row.source_match_id ?? "")).filter(Boolean);
+  const pmStates = await fetchPlatformPmSports(pmSourceIds);
+  const allMatchesRaw = dashboardRowsFromSnapshot(snapshot.matchesRaw, clientMatchesRaw, lifecycleRows, pmStates);
 
   const clientMatchesNorm = (clientMatchesRaw || []).map(clientMatchWithPmStatus);
 
@@ -460,12 +468,20 @@ async function fetchMatcherDashboard() {
   return dashboard;
 }
 
-async function fetchMatcherHiddenClientMatches() {
-  const [rows, count] = await Promise.all([
-    fetchClientMatchesHidden(),
-    fetchClientMatchesHiddenCount(),
-  ]);
-  const clientRows = (rows || []).map(clientMatchWithPmStatus);
+async function fetchMatcherHiddenClientMatches({ startFrom, startTo } = {}) {
+  const hasDate = startFrom != null || startTo != null;
+  const from = Number(startFrom);
+  const to = Number(startTo);
+  if (hasDate && (!Number.isFinite(from) || !Number.isFinite(to) || from <= 0 || to <= from))
+    throw new Error("无效的开赛日期范围");
+  const rows = await fetchClientMatchesAll();
+  if (!Array.isArray(rows)) throw new Error("已结束赛事读取失败");
+  const ended = rows.filter(isEndedClientMatch);
+  // 先按开赛日期筛选，再取最近 100 条结束记录，避免早期日期被截断。
+  const filtered = ended.filter(row => !hasDate || (
+    normalizeEpochMs(row.start_time) >= from && normalizeEpochMs(row.start_time) < to
+  )).sort((a, b) => Number(b.ended_at) - Number(a.ended_at));
+  const clientRows = filtered.slice(0, 100).map(clientMatchWithPmStatus);
   const venueRows = await fetchPlatformMatchesForHiddenClientMatches(clientRows);
   const byPlatform = {};
   for (const raw of venueRows || []) {
@@ -495,7 +511,8 @@ async function fetchMatcherHiddenClientMatches() {
   );
   return {
     hiddenClientMatches: clientRows,
-    hiddenClientMatchCount: count,
+    hiddenClientMatchCount: ended.length,
+    hiddenClientMatchFilteredCount: filtered.length,
     hiddenPlatforms: byPlatform,
     teamMaps,
     updatedAt: Date.now(),

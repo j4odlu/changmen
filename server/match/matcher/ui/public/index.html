@@ -196,6 +196,19 @@
     .split-col-matched-id .split-col-header { border-left: 3px solid var(--ok); }
     .split-col-pending .split-col-header { border-left: 3px solid var(--pending); }
     .split-col-title { font-size: 13px; font-weight: 650; color: var(--text); }
+    .middle-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+    .middle-tab {
+      border: 1px solid transparent; border-radius: 6px; background: transparent;
+      color: var(--muted); cursor: pointer; padding: 5px 8px; font: inherit; font-weight: 650;
+    }
+    .middle-tab:hover { background: var(--chip); color: var(--text); }
+    .middle-tab[aria-selected="true"] { color: var(--ok); border-color: #2a6a4a; background: #1e3d2f55; }
+    .middle-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .middle-tab-panel[hidden], .split-col-desc[hidden] { display: none; }
+    .ended-date-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; }
+    .ended-date-filter[hidden] { display: none; }
+    .ended-date-filter input { color-scheme: dark; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 4px 7px; font: inherit; }
+    .ended-filter-summary { color: var(--muted); font-size: 11px; }
     .split-col-desc { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
     .split-col-toolbar {
       display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
@@ -591,20 +604,11 @@
     .ray-risk-body { max-height: 280px; overflow: auto; padding: 0 14px 12px; }
     .ray-risk-body table { min-width: 620px; }
     .ray-risk-body .risk-status { color: #fbbf24; white-space: nowrap; }
-    .hidden-panel-wrap { margin: 0 18px 12px; }
-    .hidden-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-    .hidden-panel-header {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 10px 14px; background: #15202b; border-bottom: 1px solid var(--line);
-    }
-    .hidden-panel-title { font-size: 13px; font-weight: 650; color: var(--muted); }
-    .hidden-panel-body { padding: 12px 14px; max-height: min(70vh, 720px); overflow-y: auto; }
     .hidden-cards { display: flex; flex-direction: column; gap: 12px; }
     .hidden-cards .team-card { margin: 0; }
     .hidden-cards .team-card.ended { opacity: 0.96; border-color: #2a3a4a; }
     .hidden-cards .team-link-handle { display: none; }
     .hidden-ended-meta { color: var(--muted); font-size: 11px; display: flex; flex-wrap: wrap; gap: 10px; }
-    .btn-hidden-toggle.active { border-color: #3a5a8a; color: #9ec5ff; background: #1a2a3f; }
     .reverse-tag {
       font-size: 10px; font-weight: 650; color: var(--warn); background: var(--chip);
       border: 1px solid #6a5a2a; padding: 1px 6px; border-radius: 999px; margin-left: 6px;
@@ -647,7 +651,6 @@
     <button class="btn btn-sm btn-success" id="btn-matcher-start" type="button">启动匹配循环</button>
     <button class="btn btn-sm btn-danger" id="btn-matcher-stop" type="button" style="display:none">停止匹配循环</button>
     <button class="btn btn-sm btn-ghost" id="btn-match-merge-now" type="button" title="立即执行一次 composeOnce 写库">立即执行赛事合并</button>
-    <button class="btn btn-sm btn-ghost btn-hidden-toggle" id="btn-hidden-toggle" type="button" title="查看已结束的赛事">已结束 <span class="badge" id="hidden-count-badge">0</span></button>
     <span class="updated-at" id="updated-at">—</span>
     <button class="btn btn-sm" type="button" onclick="load()">刷新</button>
   </div>
@@ -666,16 +669,6 @@
   <p class="ray-risk-hint">赛前前面所有地图均无赛果，最后一张地图却已出赛果：可能存在让局，此局关闭。以下比赛整场不向客户端下发，异常记录不会自动解除。</p>
   <div class="ray-risk-body" id="ray-risk-body"><div class="empty" style="padding:16px">加载中…</div></div>
 </details>
-
-<div class="hidden-panel-wrap" id="hidden-panel-wrap" style="display:none">
-  <div class="hidden-panel">
-    <div class="hidden-panel-header">
-      <div class="hidden-panel-title">已结束赛事 <span class="badge" id="hidden-panel-count">0</span></div>
-      <span class="queue-search-hint">ended_at 已设置 · 不在 Client_GetMatchs 列表中 · 下方展示完整 matchs / 主客 gb / 各馆映射</span>
-    </div>
-    <div class="hidden-panel-body" id="hidden-panel-body"><div class="empty" style="padding:20px">加载中…</div></div>
-  </div>
-</div>
 
 <div class="content">
   <div id="panel-main">
@@ -701,11 +694,24 @@
         </section>
         <section class="split-col split-col-matched split-col-matched-id">
           <div class="split-col-header">
-            <div class="split-col-title">中 · ID 已匹配 <span class="badge" id="matched-id-count">0</span></div>
-            <div class="split-col-desc">主客平台 ID 均已映射 gb_team_id · 多平台合并稳定 · 可跨栏拖线合并</div>
+            <div class="split-col-title middle-tabs" role="tablist" aria-label="中栏赛事">
+              <button type="button" class="middle-tab" id="middle-tab-active" role="tab" aria-selected="true" aria-controls="middle-panel-active" data-middle-tab="active">ID 已匹配 <span class="badge" id="matched-id-count">0</span></button>
+              <button type="button" class="middle-tab" id="middle-tab-ended" role="tab" aria-selected="false" aria-controls="middle-panel-ended" tabindex="-1" data-middle-tab="ended">已结束赛事 <span class="badge" id="hidden-count-badge">0</span></button>
+            </div>
+            <div class="split-col-desc" id="middle-desc-active">主客平台 ID 均已映射 gb_team_id · 多平台合并稳定 · 可跨栏拖线合并</div>
+            <div class="split-col-desc" id="middle-desc-ended" hidden>查看已结束赛事的各平台关联，支持恢复比赛</div>
+            <div class="ended-date-filter" id="ended-date-filter" hidden>
+              <label for="hidden-start-date">开赛日期</label>
+              <input type="date" id="hidden-start-date" title="按浏览器当地日期筛选比赛开赛时间，留空显示全部日期">
+              <button type="button" class="btn btn-sm btn-ghost" id="btn-hidden-date-clear">全部日期</button>
+              <span class="ended-filter-summary" id="hidden-filter-summary"></span>
+            </div>
           </div>
-          <div class="split-col-body">
+          <div class="split-col-body middle-tab-panel" id="middle-panel-active" role="tabpanel" aria-labelledby="middle-tab-active" tabindex="0">
             <div class="game-sections" id="matched-id-panels"><div class="empty">加载中…</div></div>
+          </div>
+          <div class="split-col-body middle-tab-panel" id="middle-panel-ended" role="tabpanel" aria-labelledby="middle-tab-ended" tabindex="0" hidden>
+            <div id="hidden-panel-body"><div class="empty" style="padding:20px">切换到“已结束赛事”后加载</div></div>
           </div>
         </section>
         <section class="split-col split-col-pending">
@@ -798,6 +804,9 @@ let _matchLinkSubmitting = false;
 let _hiddenPanelOpen = false;
 let _hiddenClientMatchesLoaded = false;
 let _hiddenClientMatchesLoading = false;
+let _hiddenData = null;
+let _hiddenRequestSeq = 0;
+let _hiddenLoadingDate = '';
 let _reverseSubmitting = false;
 /** 队名搜索防抖（仅 input；筛选 chip / search 清空仍立即应用） */
 let _teamSearchDebounceTimer = null;
@@ -1325,6 +1334,7 @@ function renderTeamCell(m, side, gameCode, teamMaps, platformHint, linkCtx) {
   let { canonical, pending, updatedBy } = lookupCanonical(teamMaps, platform, pid, gameCode);
   const missingFromMaps = canonical == null && !pending;
   const cmId = linkCtx?.cmId;
+  const readOnly = Boolean(linkCtx?.readOnly);
   const linkSide = linkCtx?.side || side;
   const cmAttr = cmId != null && cmId !== '' ? ` data-cm-id="${esc(String(cmId))}"` : '';
   const sideAttr = ` data-team-side="${esc(linkSide)}"`;
@@ -1337,7 +1347,7 @@ function renderTeamCell(m, side, gameCode, teamMaps, platformHint, linkCtx) {
   } else {
     canonHtml = `<div class="team-canonical missing">gb_team_id: —</div>`;
   }
-  const registerBtn = missingFromMaps
+  const registerBtn = missingFromMaps && !readOnly
     ? `<div class="team-cell-action"><button type="button" class="team-register-map-btn"
         ${pid ? '' : 'disabled'}
         title="${pid ? '写入 team_venue_maps（尚无 gb_team_id）' : '缺少平台队伍 ID，无法收录'}"
@@ -1349,7 +1359,7 @@ function renderTeamCell(m, side, gameCode, teamMaps, platformHint, linkCtx) {
   const idHint = resolved.source && resolved.source !== 'column'
     ? ` title="来自 teams 字段（${resolved.source}）"`
     : '';
-  const handle = pid
+  const handle = readOnly ? '' : pid
     ? `<button type="button" class="team-link-handle" title="拖到另一平台的队伍圆点以关联（同平台不可合并）"
         data-team-platform="${esc(platform)}"
         data-team-id="${esc(pid)}"
@@ -1501,150 +1511,54 @@ function renderStats(d, displayCms) {
   if (nameCountEl) nameCountEl.textContent = nameMatched;
 }
 
-function toggleHiddenPanel() {
-  _hiddenPanelOpen = !_hiddenPanelOpen;
-  const wrap = document.getElementById('hidden-panel-wrap');
-  const btn = document.getElementById('btn-hidden-toggle');
-  if (wrap) wrap.style.display = _hiddenPanelOpen ? '' : 'none';
-  if (btn) btn.classList.toggle('active', _hiddenPanelOpen);
+function setMiddleTab(tab) {
+  _hiddenPanelOpen = tab === 'ended';
+  for (const name of ['active', 'ended']) {
+    const selected = name === (_hiddenPanelOpen ? 'ended' : 'active');
+    const button = document.getElementById('middle-tab-' + name);
+    button.setAttribute('aria-selected', String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    document.getElementById('middle-panel-' + name).hidden = !selected;
+    document.getElementById('middle-desc-' + name).hidden = !selected;
+  }
+  document.getElementById('ended-date-filter').hidden = !_hiddenPanelOpen;
   if (_hiddenPanelOpen && !_hiddenClientMatchesLoaded) {
     void loadHiddenClientMatches();
   }
+  scheduleRedrawCanonicalTeamLinks();
 }
 
 function setHiddenMatchCount(count) {
   const n = Number(count || 0);
   const badge = document.getElementById('hidden-count-badge');
-  const panelCount = document.getElementById('hidden-panel-count');
   if (badge) badge.textContent = n;
-  if (panelCount) panelCount.textContent = n;
-}
-
-function renderEndedTeamCell(m, side, gameCode, teamMaps) {
-  const platform = String(m.platform || '').trim();
-  const isHome = side === 'home';
-  const name = isHome ? m.home : m.away;
-  const resolved = resolveMatchTeamId(m, side, gameCode);
-  const pid = resolved.id;
-  const { canonical, pending, updatedBy } = lookupCanonical(teamMaps, platform, pid, gameCode);
-  let canonHtml;
-  if (canonical != null) {
-    const manualTag = updatedBy === '手动' ? ' · 手动' : '';
-    canonHtml = `<div class="team-canonical">gb_team_id: ${canonical}${manualTag}</div>`;
-  } else if (pending) {
-    canonHtml = `<div class="team-canonical pending">gb_team_id: 待识别</div>`;
-  } else {
-    canonHtml = `<div class="team-canonical missing">gb_team_id: —</div>`;
-  }
-  return `<div class="team-cell"><div class="team-cell-body">
-    <div class="team-name">${esc(name || '?')}</div>
-    ${pid
-      ? `<div class="team-id">平台 id ${esc(pid)}</div>`
-      : `<div class="team-id missing">平台 id —</div>`}
-    ${canonHtml}
-  </div></div>`;
-}
-
-function renderEndedMatchTable(cm, platforms, teamMaps) {
-  const rows = resolveClientMatchRows(cm, platforms);
-  if (!rows.length) return '<div class="empty" style="padding:12px">无 matchs 映射</div>';
-  const gameCode = clientMatchGameCode(cm, rows);
-  const reverseSet = new Set(Array.isArray(cm?.reverse) ? cm.reverse : []);
-  const rowsHtml = rows.map(m => {
-    const isReversed = reverseSet.has(m.platform);
-    const status = m._platformMissing
-      ? '<span class="team-status ts-warn" title="平台场次已不在活跃/历史快照">已失效</span>'
-      : '<span class="team-status ts-done">已映射</span>';
-    const dir = isReversed
-      ? '<span class="reverse-tag">反</span>'
-      : '<span class="aligned-tag">正</span>';
-    return `<tr>
-      <td class="col-platform">${pbadge(m.platform)} ${status}</td>
-      <td>${renderEndedTeamCell(m, 'home', gameCode, teamMaps)}</td>
-      <td style="color:#64748b;font-size:11px">${fmtTime(m.start_time)}</td>
-      <td>${renderEndedTeamCell(m, 'away', gameCode, teamMaps)}</td>
-      ${renderVenueIdCell(m, platforms, cm)}
-      <td>${dir}</td>
-    </tr>`;
-  }).join('');
-  return `<table class="team-table">
-    <thead><tr><th>平台</th><th>主</th><th>开赛</th><th>客</th><th>场次 ID<span class="th-hint">PB：event.id / rotNum</span></th><th>方向</th></tr></thead>
-    <tbody>${rowsHtml}</tbody>
-  </table>`;
-}
-
-function renderEndedMatchCard(cm, platforms, teamMaps) {
-  const rows = resolveClientMatchRows(cm, platforms);
-  const liveRows = rows.filter(r => !r._platformMissing);
-  const gameCode = clientMatchGameCode(cm, liveRows.length ? liveRows : rows);
-  const slotRows = liveRows.length ? liveRows : rows;
-  const homeSlot = slotRows.length
-    ? renderTitleTeamSlot('home', slotRows, teamMaps, gameCode, cm.id, cm)
-    : `<span class="title-team-slot title-team-home"><span class="title-id-row"><span class="title-gb-id missing">—</span></span></span>`;
-  const awaySlot = slotRows.length
-    ? renderTitleTeamSlot('away', slotRows, teamMaps, gameCode, cm.id, cm)
-    : `<span class="title-team-slot title-team-away"><span class="title-id-row"><span class="title-gb-id missing">—</span></span></span>`;
-  const mergeKey = String(cm.merge_key || '').trim();
-  const platCount = Object.keys(cm.matchs || {}).length;
-  const missingCount = rows.length - liveRows.length;
-  const tableHtml = renderEndedMatchTable(cm, platforms, teamMaps);
-  const titleFallback = cm.title
-    ? `<div class="meta-line">${formatVsTitle(cm.title)}</div>`
-    : '';
-  return `<article class="team-card matched ended" data-cm-id="${cm.id}">
-    <div class="team-card-header">
-      <div class="matched-header-layout">
-        <div class="matched-header-home">${homeSlot}</div>
-        <div class="matched-header-center">
-          ${gbadge(gameCode)}
-          <div class="client-match-id-banner">
-            <div>
-              <span class="match-id-label">比赛 ID</span>
-              <span class="match-id-value">#${cm.id}</span>
-            </div>
-          </div>
-          <div class="matched-header-meta">
-            ${titleFallback}
-            <div class="meta-line">开赛 ${fmtTime(cm.start_time)} · 结束 ${fmtTime(cm.ended_at || cm.built_at)}</div>
-            ${renderPmMatchStatus(cm)}
-            <div class="meta-line">
-              <span class="platform-badges">${platCount}馆 ${Object.keys(cm.matchs || {}).map(pbadge).join('')}</span>
-              ${missingCount ? `<span>${missingCount} 馆场次已失效</span>` : ''}
-            </div>
-            ${mergeKey ? `<div class="meta-line merge-key" title="MergeKey">MK ${esc(mergeKey)}</div>` : ''}
-          </div>
-        </div>
-        <div class="matched-header-away">${awaySlot}</div>
-      </div>
-    </div>
-    ${tableHtml}
-    <div class="team-card-footer">
-      <div class="team-card-hint hidden-ended-meta">完整 matchs 映射 · 只读 · 恢复后可再参与合场</div>
-      <button type="button" class="btn btn-sm btn-success" data-restore-cm="${cm.id}">恢复展示</button>
-    </div>
-  </article>`;
 }
 
 function renderHiddenPanel(list) {
   const items = list || [];
-  setHiddenMatchCount(_lastData?.hiddenClientMatchCount ?? items.length);
+  setHiddenMatchCount(_hiddenData?.hiddenClientMatchCount ?? items.length);
+  const filteredCount = _hiddenData?.hiddenClientMatchFilteredCount ?? items.length;
+  document.getElementById('hidden-filter-summary').textContent = filteredCount > items.length
+    ? `共 ${filteredCount} 场，显示最近 ${items.length} 场` : `共 ${filteredCount} 场`;
   const body = document.getElementById('hidden-panel-body');
   if (!body) return;
   if (!items.length) {
-    body.innerHTML = '<div class="empty" style="padding:20px">暂无已结束赛事</div>';
+    body.innerHTML = document.getElementById('hidden-start-date').value
+      ? '<div class="empty" style="padding:20px">该开赛日期暂无已结束赛事</div>'
+      : '<div class="empty" style="padding:20px">暂无已结束赛事</div>';
     return;
   }
   const merged = { ...(_lastData?.platforms || {}) };
-  for (const [plat, rows] of Object.entries(_lastData?.hiddenPlatforms || {})) {
+  for (const [plat, rows] of Object.entries(_hiddenData?.hiddenPlatforms || {})) {
     const byId = new Map((merged[plat] || []).map(r => [String(r.source_match_id), r]));
     for (const r of rows || []) byId.set(String(r.source_match_id), r);
     merged[plat] = [...byId.values()];
   }
   const teamMaps = {
     ...(_lastData?.teamMaps || {}),
-    ...(_lastData?.hiddenTeamMaps || {}),
+    ...(_hiddenData?.teamMaps || {}),
   };
-  const cards = items.map(cm => renderEndedMatchCard(cm, merged, teamMaps)).join('');
+  const cards = items.map(cm => renderClientMatchCard(cm, merged, teamMaps, '', 'ended')).join('');
   body.innerHTML = `<div class="hidden-cards">${cards}</div>`;
   body.querySelectorAll('[data-restore-cm]').forEach(btn => {
     btn.addEventListener('click', () => restoreClientMatch(Number(btn.dataset.restoreCm)));
@@ -1652,24 +1566,34 @@ function renderHiddenPanel(list) {
 }
 
 async function loadHiddenClientMatches() {
-  if (_hiddenClientMatchesLoading) return;
+  const selectedDate = document.getElementById('hidden-start-date').value;
+  if (_hiddenClientMatchesLoading && _hiddenLoadingDate === selectedDate) return;
+  const seq = ++_hiddenRequestSeq;
+  _hiddenLoadingDate = selectedDate;
   _hiddenClientMatchesLoading = true;
+  _hiddenClientMatchesLoaded = false;
   const body = document.getElementById('hidden-panel-body');
   if (body) body.innerHTML = '<div class="empty" style="padding:20px">加载已结束赛事…</div>';
   try {
-    const { data } = await fetchJson('/api/hidden-client-matches');
+    const query = new URLSearchParams();
+    if (selectedDate) {
+      const from = new Date(selectedDate + 'T00:00:00');
+      const to = new Date(from);
+      to.setDate(to.getDate() + 1);
+      query.set('startFrom', String(from.getTime()));
+      query.set('startTo', String(to.getTime()));
+    }
+    const { data } = await fetchJson('/api/hidden-client-matches' + (query.size ? '?' + query : ''));
+    if (seq !== _hiddenRequestSeq) return;
     if (data.error) throw new Error(data.error);
-    if (!_lastData) _lastData = {};
-    _lastData.hiddenClientMatches = data.hiddenClientMatches || [];
-    _lastData.hiddenClientMatchCount = data.hiddenClientMatchCount ?? _lastData.hiddenClientMatches.length;
-    _lastData.hiddenPlatforms = data.hiddenPlatforms || {};
-    _lastData.hiddenTeamMaps = data.teamMaps || {};
+    _hiddenData = data;
     _hiddenClientMatchesLoaded = true;
-    renderHiddenPanel(_lastData.hiddenClientMatches);
+    renderHiddenPanel(data.hiddenClientMatches || []);
   } catch (err) {
+    if (seq !== _hiddenRequestSeq) return;
     if (body) body.innerHTML = `<div class="empty" style="color:#f87171;padding:20px">已结束赛事加载失败: ${esc(err.message)}</div>`;
   } finally {
-    _hiddenClientMatchesLoading = false;
+    if (seq === _hiddenRequestSeq) _hiddenClientMatchesLoading = false;
   }
 }
 
@@ -1797,7 +1721,7 @@ function renderTeamTable(rec, recIdx, cms, teamMaps) {
       <td class="col-platform">${pbadge(m.platform)} ${status}</td>
       <td>${renderTeamCell(m, 'home', gameCode, teamMaps, m.platform)}</td>
       <td>${renderTeamCell(m, 'away', gameCode, teamMaps, m.platform)}</td>
-      <td style="color:#64748b;font-size:11px">${fmtTime(m.start_time)}</td>
+      <td style="color:#64748b;font-size:11px">${fmtTime(m.start_time)}${renderPmMatchStatus(m)}</td>
       <td class="col-action">${action}</td>
     </tr>`;
   }).join('');
@@ -1956,7 +1880,7 @@ function renderMatchedListForMode(cms, platforms, teamMaps, searchQuery, mode, c
   }
 
   const cards = filtered
-    .map(cm => renderMatchedCard(cm, platforms, teamMaps, q, mode))
+    .map(cm => renderClientMatchCard(cm, platforms, teamMaps, q, mode))
     .filter(Boolean)
     .join('');
 
@@ -2169,10 +2093,13 @@ function clientMatchSideAnchorName(cm, rows, side) {
   return String((side === 'home' ? row?.home : row?.away) || '').trim();
 }
 
-function renderTitleTeamSlot(side, rows, teamMaps, gameCode, cmId, cm) {
-  const anchorName = clientMatchSideAnchorName(cm, rows, side);
-  const canonical = resolveClientMatchSideCanonical(rows, teamMaps, side, gameCode, anchorName, cm);
-  const { row, platformId } = pickClientMatchSideRow(rows, side, gameCode, anchorName);
+function renderTitleTeamSlot(side, rows, teamMaps, gameCode, cmId, cm, readOnly = false) {
+  const titleParts = String(cm?.title || '').split(/\s+vs\s+/i);
+  const anchorName = rows.length ? clientMatchSideAnchorName(cm, rows, side)
+    : titleParts.length === 2 ? titleParts[side === 'home' ? 0 : 1].trim() : '';
+  const canonical = rows.length ? resolveClientMatchSideCanonical(rows, teamMaps, side, gameCode, anchorName, cm)
+    : lockedGbForSide(cm, side);
+  const { row, platformId } = rows.length ? pickClientMatchSideRow(rows, side, gameCode, anchorName) : { row: {}, platformId: null };
   const platform = row.platform;
   // client_matches.title 是 changmen 自有队名；平台行仅作挂载明细
   const name = anchorName || (side === 'home' ? row.home : row.away) || '';
@@ -2183,7 +2110,7 @@ function renderTitleTeamSlot(side, rows, teamMaps, gameCode, cmId, cm) {
   else if (canonical != null) gbLabel = `<span class="title-gb-id">#${esc(canonVal)}</span>`;
   else gbLabel = '<span class="title-gb-id missing">—</span>';
   const sub = name ? `<span class="title-team-sub" title="${esc(name)}">${esc(name)}</span>` : '';
-  const handle = platformId && canonVal
+  const handle = !readOnly && platformId && canonVal
     ? `<button type="button" class="team-link-handle team-title-handle"
         title="标题队伍 · gb_team_id ${esc(canonVal)} · 连线至下方同 gb_team_id 的平台队伍（主客列可能相反）"
         data-title-handle="1"
@@ -2204,10 +2131,11 @@ function displayClientMatchTitleGbIds(cm, rows, teamMaps, gameCode) {
   return `<span class="team-card-title-id">${home}<span class="vs">vs</span>${away}</span>`;
 }
 
-function renderReverseCell(cmId, platform, isReversed) {
+function renderReverseCell(cmId, platform, isReversed, readOnly = false) {
   const tag = isReversed
     ? '<span class="reverse-tag">已反转 · 生效中</span>'
     : '<span class="aligned-tag">正向 · 生效中</span>';
+  if (readOnly) return `<span class="reverse-cell">${tag}</span>`;
   const nextReversed = !isReversed;
   const btnClass = isReversed ? 'reverse-toggle-btn reverse-on' : 'reverse-toggle-btn';
   const btnText = isReversed ? '取消反转' : '主客反转';
@@ -2223,7 +2151,7 @@ function renderReverseCell(cmId, platform, isReversed) {
     title="${title}">${btnText}</button></span>`;
 }
 
-function renderMatchedTable(rows, gameCode, teamMaps, searchQuery, cm, platforms) {
+function renderMatchedTable(rows, gameCode, teamMaps, searchQuery, cm, platforms, readOnly = false) {
   const visible = searchQuery
     ? rows.filter(m => matchMatchesTeamSearch(m, searchQuery))
     : rows;
@@ -2241,13 +2169,13 @@ function renderMatchedTable(rows, gameCode, teamMaps, searchQuery, cm, platforms
       ? '<span class="team-status ts-warn" title="平台场次已不在活跃快照">已失效</span>'
       : '<span class="team-status ts-done">已映射</span>';
     return `<tr class="${isReversed ? 'reverse-row' : ''}">
-      <td class="col-match-id">${renderMatchLinkCell(m, m.platform, cms)}</td>
+      <td class="col-match-id">${readOnly ? `<span class="match-cm-id">#${esc(String(cm.id))}</span>` : renderMatchLinkCell(m, m.platform, cms)}</td>
       <td class="col-platform">${pbadge(m.platform)} ${status}</td>
-      <td>${renderTeamCell(m, homeSide, gameCode, teamMaps, m.platform, linkCmId != null ? { cmId: linkCmId, side: 'home' } : null)}</td>
+      <td>${renderTeamCell(m, homeSide, gameCode, teamMaps, m.platform, { cmId: linkCmId, side: 'home', readOnly })}</td>
       <td style="color:#64748b;font-size:11px">${fmtTime(m.start_time)}</td>
-      <td>${renderTeamCell(m, awaySide, gameCode, teamMaps, m.platform, linkCmId != null ? { cmId: linkCmId, side: 'away' } : null)}</td>
+      <td>${renderTeamCell(m, awaySide, gameCode, teamMaps, m.platform, { cmId: linkCmId, side: 'away', readOnly })}</td>
       ${renderVenueIdCell(m, platIndex, cm)}
-      <td>${renderReverseCell(cm.id, m.platform, isReversed)}<div class="native-orientation">场馆原始：主 ${esc(m.home || '?')} / 客 ${esc(m.away || '?')}</div></td>
+      <td>${renderReverseCell(cm.id, m.platform, isReversed, readOnly)}<div class="native-orientation">场馆原始：主 ${esc(m.home || '?')} / 客 ${esc(m.away || '?')}</div></td>
     </tr>`;
   }).join('');
   return `<table class="team-table">
@@ -2264,41 +2192,42 @@ function renderPmMatchStatus(cm) {
   return `<div class="meta-line"><span class="pm-match-status ${esc(status.kind)}" title="${esc(title)}">PM · ${esc(status.label)}</span></div>`;
 }
 
-function renderMatchedCard(cm, platforms, teamMaps, searchQuery, columnMode) {
+function renderClientMatchCard(cm, platforms, teamMaps, searchQuery, columnMode) {
+  const ended = cm.ended_at != null && cm.ended_at !== '';
   const rows = resolveClientMatchRows(cm, platforms);
-  if (!rows.length) return '';
   const liveRows = rows.filter(r => !r._platformMissing);
-  if (!liveRows.length) return '';
+  if (!ended && !liveRows.length) return '';
   const gameCode = clientMatchGameCode(cm, liveRows.length ? liveRows : rows);
-  const tableHtml = renderMatchedTable(rows, gameCode, teamMaps, searchQuery, cm, platforms);
+  const tableHtml = rows.length ? renderMatchedTable(rows, gameCode, teamMaps, searchQuery, cm, platforms, ended)
+    : '<div class="empty" style="padding:12px">无平台关联</div>';
   if (!tableHtml) return '';
   const teamsIdMapped = clientMatchTeamsFullyIdMapped(liveRows, teamMaps, gameCode);
-  const needsAttention = clientMatchNeedsAttention(cm, platforms, teamMaps);
+  const needsAttention = !ended && clientMatchNeedsAttention(cm, platforms, teamMaps);
   const idBannerClass = teamsIdMapped ? 'client-match-id-banner teams-id-mapped' : 'client-match-id-banner';
   const idBannerTitle = teamsIdMapped
     ? '主客队平台 ID 均已映射 gb_team_id · 可接收未匹配场次拖入合并'
     : '接收未匹配场次拖入合并';
   const missingCount = rows.length - liveRows.length;
-  const footerHint = columnMode === 'id'
+  const footerHint = ended ? '已结束 · 平台关联保留 · 只读 · 可恢复比赛' : columnMode === 'id'
     ? `ID 已匹配 · ${liveRows.length} 个平台${missingCount ? ` · ${missingCount} 个已失效` : ''} · 可拖黄方点合并其它赛事`
     : teamsIdMapped
       ? `ID 映射已齐 · ${liveRows.length} 个平台 · 合并依据仍为队名阶段 · 可拖黄方点合并同场`
       : `队名已匹配 · ${liveRows.length} 个平台 · 建议补队伍 ID · 可拖黄方点合并同场`;
-  const homeSlot = renderTitleTeamSlot('home', liveRows.length ? liveRows : rows, teamMaps, gameCode, cm.id, cm);
-  const awaySlot = renderTitleTeamSlot('away', liveRows.length ? liveRows : rows, teamMaps, gameCode, cm.id, cm);
+  const homeSlot = renderTitleTeamSlot('home', liveRows.length ? liveRows : rows, teamMaps, gameCode, cm.id, cm, ended);
+  const awaySlot = renderTitleTeamSlot('away', liveRows.length ? liveRows : rows, teamMaps, gameCode, cm.id, cm, ended);
   const mergeKey = String(cm.merge_key || '').trim();
   const attentionTag = needsAttention
     ? `<span class="attention-tag">${esc(attentionReasonLabel(cm, platforms, teamMaps))}</span>`
     : '';
-  const cardClass = needsAttention ? 'team-card matched needs-attention' : 'team-card matched';
+  const cardClass = ended ? 'team-card matched ended' : needsAttention ? 'team-card matched needs-attention' : 'team-card matched';
   return `<article class="${cardClass}" data-cm-id="${cm.id}">
     <div class="team-card-header">
       <div class="matched-header-layout">
         <div class="matched-header-home">${homeSlot}</div>
         <div class="matched-header-center">
           ${gbadge(gameCode)}${attentionTag}
-          <div class="${idBannerClass}" data-merge-cm-id="${cm.id}" title="${esc(idBannerTitle)}">
-            ${renderMatchMergeTarget(cm.id)}
+          <div class="${idBannerClass}" ${ended ? '' : `data-merge-cm-id="${cm.id}" title="${esc(idBannerTitle)}"`}>
+            ${ended ? '' : renderMatchMergeTarget(cm.id)}
             <div>
               <span class="match-id-label">比赛 ID</span>
               <span class="match-id-value">#${cm.id}</span>
@@ -2306,9 +2235,10 @@ function renderMatchedCard(cm, platforms, teamMaps, searchQuery, columnMode) {
           </div>
           <div class="matched-header-meta">
             <div class="meta-line">开赛 ${fmtTime(cm.start_time)}</div>
+            ${ended ? `<div class="meta-line" title="changmen 将比赛标记为已结束的时间">标记结束 ${fmtTime(cm.ended_at)}</div>` : ''}
             ${renderPmMatchStatus(cm)}
             <div class="meta-line">
-              <span class="platform-badges">${liveRows.length}馆 ${Object.keys(cm.matchs || {}).map(pbadge).join('')}</span>
+              <span class="platform-badges">${ended ? rows.length : liveRows.length}馆 ${Object.keys(cm.matchs || {}).map(pbadge).join('')}</span>
               ${cm.merge_mode?.label ? `<span>合并依据 ${esc(cm.merge_mode.label)}</span>` : ''}
             </div>
             ${mergeKey ? `<div class="meta-line merge-key" title="MergeKey">MK ${esc(mergeKey)}</div>` : ''}
@@ -2320,9 +2250,9 @@ function renderMatchedCard(cm, platforms, teamMaps, searchQuery, columnMode) {
     ${tableHtml}
     <div class="team-card-footer">
       <div class="team-card-hint">${footerHint}</div>
-      <button type="button" class="btn btn-sm btn-ghost" data-swap-gb-cm="${cm.id}"
+      ${ended ? `<button type="button" class="btn btn-sm btn-success" data-restore-cm="${cm.id}">恢复展示</button>` : `<button type="button" class="btn btn-sm btn-ghost" data-swap-gb-cm="${cm.id}"
         title="交换 home/away gb 锁与 Title 主客；下轮 merge 重算各平台 Reverse">主客对调（翻锁）</button>
-      <button type="button" class="btn btn-sm btn-ghost" data-end-cm="${cm.id}" title="强制结束：写 ended_at，保留 matchs 与平台关联；Client_GetMatchs 不再返回">强制结束</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-end-cm="${cm.id}" title="强制结束：写 ended_at，保留 matchs 与平台关联；Client_GetMatchs 不再返回">强制结束</button>`}
     </div>
   </article>`;
 }
@@ -2397,7 +2327,7 @@ function renderUnmatchedPlatforms(platforms, recs, cms, teamMaps, searchQuery) {
         <td>${pbadge(p)}${tag}</td>
         <td>${renderTeamCell(m, 'home', gameCode, teamMaps, p)}</td>
         <td>${renderTeamCell(m, 'away', gameCode, teamMaps, p)}</td>
-        <td style="color:#64748b;white-space:nowrap">${fmtTime(m.start_time)}</td>
+        <td style="color:#64748b;white-space:nowrap">${fmtTime(m.start_time)}${renderPmMatchStatus(m)}</td>
       </tr>`;
     }).join('');
 
@@ -2632,6 +2562,7 @@ function redrawCanonicalTeamLinks() {
   const handles = [...board.querySelectorAll('.team-link-handle[data-canonical-id]:not([data-canonical-id=""])')];
   const byCanonical = new Map();
   for (const handle of handles) {
+    if (!handle.getClientRects().length) continue;
     const id = handle.dataset.canonicalId;
     if (!id) continue;
     if (!byCanonical.has(id)) byCanonical.set(id, []);
@@ -3408,7 +3339,7 @@ async function endClientMatch(cmId) {
 }
 
 async function restoreClientMatch(cmId) {
-  const cm = (_lastData?.hiddenClientMatches || []).find(c => Number(c.id) === Number(cmId));
+  const cm = (_hiddenData?.hiddenClientMatches || []).find(c => Number(c.id) === Number(cmId));
   const msg = [
     `恢复展示？`,
     `#${cmId} ${cm?.title || ''}`,
@@ -3651,6 +3582,7 @@ function focusLinkedClientMatch(cmId) {
   if (!Number.isFinite(id)) return false;
   const el = document.querySelector(`.team-card.matched[data-cm-id="${id}"]`);
   if (!el) return false;
+  if (el.closest('#middle-panel-active')) setMiddleTab('active');
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   el.classList.add('linked-flash');
   setTimeout(() => el.classList.remove('linked-flash'), 2800);
@@ -3700,8 +3632,8 @@ async function load(opts = {}) {
     if (!_hiddenPanelOpen) {
       _hiddenClientMatchesLoaded = false;
       const body = document.getElementById('hidden-panel-body');
-      if (body) body.innerHTML = '<div class="empty" style="padding:20px">点击“已结束”后加载</div>';
-    } else if (!_hiddenClientMatchesLoaded) {
+      if (body) body.innerHTML = '<div class="empty" style="padding:20px">切换到“已结束赛事”后加载</div>';
+    } else if (!_hiddenClientMatchesLoaded || !opts.allowSkipRender || _hiddenData?.hiddenClientMatchCount !== d.hiddenClientMatchCount) {
       await loadHiddenClientMatches();
       if (seq !== _loadSeq) return;
     }
@@ -3755,7 +3687,22 @@ async function load(opts = {}) {
 document.getElementById('btn-matcher-start')?.addEventListener('click', () => matcherAction('start'));
 document.getElementById('btn-matcher-stop')?.addEventListener('click', () => matcherAction('stop'));
 document.getElementById('btn-match-merge-now')?.addEventListener('click', runMatchMergeNow);
-document.getElementById('btn-hidden-toggle')?.addEventListener('click', toggleHiddenPanel);
+document.querySelectorAll('[data-middle-tab]').forEach(button => {
+  button.addEventListener('click', () => setMiddleTab(button.dataset.middleTab));
+  button.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const tab = event.key === 'Home' ? 'active' : event.key === 'End' ? 'ended'
+      : button.dataset.middleTab === 'active' ? 'ended' : 'active';
+    setMiddleTab(tab);
+    document.getElementById('middle-tab-' + tab).focus();
+  });
+});
+document.getElementById('hidden-start-date').addEventListener('change', () => { void loadHiddenClientMatches(); });
+document.getElementById('btn-hidden-date-clear').addEventListener('click', () => {
+  document.getElementById('hidden-start-date').value = '';
+  void loadHiddenClientMatches();
+});
 document.getElementById('link-modal-cancel')?.addEventListener('click', hideLinkModal);
 document.getElementById('link-modal-confirm')?.addEventListener('click', confirmLinkModal);
 document.getElementById('link-modal')?.addEventListener('click', e => {

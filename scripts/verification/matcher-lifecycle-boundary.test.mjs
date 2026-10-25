@@ -7,7 +7,7 @@ import {WORKSPACE_LAYOUT_RELOCATION as relocation,restoreWorkspaceLayoutSource,r
 const read=file=>fs.readFileSync(file,'utf8');
 const normalize=source=>source.replaceAll('\r\n','\n');
 it('restores the complete original matcher source and keeps the original relocation evidence',()=>{
- expect(verifyMatcherLifecycleSources(read)).toEqual({files:1,assets:2,wiring:2});
+ expect(verifyMatcherLifecycleSources(read)).toEqual({files:4,assets:2,wiring:2});
  for(const row of evidence.files){
   const original=normalize(execFileSync('git',['show',`${evidence.baseline}:${row.file}`],{encoding:'utf8',windowsHide:true}));
   expect(row.before).toBe(original);
@@ -17,7 +17,7 @@ it('restores the complete original matcher source and keeps the original relocat
    expect(restoreMatcherLifecycleSource(row.file,source,read)).toBe(original);
    expect(restoreWorkspaceLayoutSource(row.file,source)).toBe(historical.before);
   }
-  expect(readPreviousWorkspaceFile(new URL('../../'+row.file,import.meta.url),'utf8')).toBe(historical.before);
+  expect(readPreviousWorkspaceFile(new URL('../../'+historical.file,import.meta.url),'utf8')).toBe(historical.before);
  }
 });
 it('only restores the registered verification calls and rejects extra changes to either reader',()=>{

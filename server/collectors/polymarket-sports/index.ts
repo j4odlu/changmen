@@ -18,6 +18,7 @@ import { refreshGammaEventIndex, withGammaSportIdentity } from "./gamma_map.ts";
 import { applyPmSportFromMessage, pollLinkedGammaSportStates, pollLinkedPrematchPrices } from "./gamma_poll.ts";
 import { resolveClientMatchIdFromSportMessage } from "./resolve_match.ts";
 import { createPmSportMessageQueue } from "./sport_state.ts";
+import { persistSourceEventStates } from "./event_states.ts";
 
 loadChangmenEnv();
 
@@ -59,6 +60,8 @@ async function writePmSport(clientMatchId: number, snapshot: StoredSportSnapshot
 async function refreshGamma() {
   try {
     gammaIndex = await refreshGammaEventIndex();
+    await persistSourceEventStates(gammaIndex.sportMessages || [], "gamma")
+      .catch(err => console.warn("[pm-sports] event Gamma state:", (err as Error).message));
     console.log(
       `[pm-sports] Gamma index: gameIds=${gammaIndex.byGameId.size} slugs=${gammaIndex.bySlug.size}`,
     );
@@ -107,6 +110,9 @@ async function handleSportMessage(raw: string): Promise<void> {
 async function applySportMessage(msg: SportMessage): Promise<void> {
   const gameId = Number(msg.gameId);
   const clientMatchId = await resolveClientMatchIdFromSportMessage(msg, gammaIndex);
+  const sourceMessage = withGammaSportIdentity(msg, gammaIndex);
+  await persistSourceEventStates([sourceMessage], "ws")
+    .catch(err => console.warn("[pm-sports] event WS state:", (err as Error).message));
   if (!clientMatchId) {
     const now = Date.now();
     const last = unresolvedLogAt.get(gameId) || 0;

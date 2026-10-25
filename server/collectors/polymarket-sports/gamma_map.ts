@@ -104,6 +104,7 @@ export function rememberGammaEvent(gammaIndex: GammaIndex | null | undefined, ro
 export async function refreshGammaEventIndex(): Promise<GammaIndex> {
   const byGameId = new Map<number, GammaIdentity>();
   const bySlug = new Map<string, GammaIdentity>();
+  const sportMessages: SportMessage[] = [];
   const seriesIds = await fetchEsportsSeriesIds();
   let cursor = "";
 
@@ -125,6 +126,8 @@ export async function refreshGammaEventIndex(): Promise<GammaIndex> {
     const data = await fetchJson(`${POLYMARKET_GAMMA_API}/events/keyset?${params.toString()}`);
     const events = unwrapEvents(data);
     for (const event of events) {
+      const sport = gammaEventToSportMessage(event);
+      if (sport) sportMessages.push(sport);
       const row = gammaEventRowFromApi(event);
       if (!row)
         continue;
@@ -140,7 +143,7 @@ export async function refreshGammaEventIndex(): Promise<GammaIndex> {
       break;
   }
 
-  return { byGameId, bySlug };
+  return { byGameId, bySlug, sportMessages };
 }
 
 /** Gamma 单条 gameId 查询（WS 常无 slug，keyset 也可能未收录） */

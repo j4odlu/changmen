@@ -70,7 +70,7 @@ it("other verifier changes keep their complete regression, including mixed diffs
     ["client/web/src/App.vue", "scripts/verification/new-helper.mjs"]]) {
     const plan = validationPlan(paths);
     expect(plan.checks).toContain("verification-control");
-    expect(plan.checks).toContain("verification-node");
+    expect(plan.checks).not.toContain("verification-node");
   }
 });
 it("deletions, both sides of a rename, and Windows paths keep the appropriate suites", () => {

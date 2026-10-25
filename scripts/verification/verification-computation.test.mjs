@@ -102,7 +102,7 @@ it("optimizing the real boundary command runs its verifier regressions without p
     const plan = changePlan(selection, { purpose: "release" });
     expect(plan.tier).toBe("controls");
     expect(plan.deployment.scope).toBe("noop");
-    expect(plan.checks).toEqual(["verification-control", "verification-node"]);
+    expect(plan.checks).toEqual(["verification-control"]);
   }
   expect(changePlan([...paths, "client/web/src/App.vue"]).deployment.scope).toBe("frontend");
   expect(changePlan([...paths, "server/backend/server.js"]).deployment.scope).toBe("backend");

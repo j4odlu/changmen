@@ -14,6 +14,7 @@ jobs:
     env:
       TZ: Asia/Shanghai
       VITE_PREDICT_FUN_API_BASE: https://api.predict.fun
+      CHANGMEN_HISTORICAL_AUDIT: '1'
     steps:
       - uses: actions/checkout@v5
         with:
@@ -37,6 +38,8 @@ jobs:
           printf 'Host 47.57.10.202\n  Port %s\n' "${DEPLOY_PORT:-22}" >> ~/.ssh/config
           printf 'FOK_BASELINE_SSH_KEY=%s\nFOK_BASELINE_SSH_TARGET=%s@47.57.10.202\n' "$RUNNER_TEMP/audit-key" "${DEPLOY_USER:-root}" >> "$GITHUB_ENV"
       - run: npm ci
+      - name: Run historical migration audit
+        run: node scripts/verification/check-historical-migrations.mjs
       - name: Run all 22 audit stages
         run: npm run check:fok-release -- --release-plan=backend-first
       - uses: actions/upload-artifact@v7

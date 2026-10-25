@@ -54,7 +54,7 @@ export function validationCommands(plan, npm, releasePlan) {
     "database-compatibility": { command: [process.execPath, "scripts/deploy/check-database-compatibility.mjs"] },
     "backend-installation": { command: [process.execPath, "scripts/testing/backend-linux-runtime.mjs"] },
     // Source proofs are CPU-heavy; avoid oversubscribing the two-core CI runner.
-    "verification-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification", "--exclude", "scripts/verification/fok-source-specialization.test.mjs", "--maxWorkers=2", "--testTimeout=15000") },
+    "verification-control": { command: [process.execPath, "scripts/verification/run-self-tests.mjs", ...(plan.paths ?? [])] },
     "verification-node": { command: [process.execPath, "--test", "scripts/verification/fok-source-specialization.test.mjs"] },
     "validation-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification/validation-plan.test.mjs", "scripts/verification/verify-change.test.mjs", "server/storage/runtime_version.test.mjs", "server/backend/core/shared/runtime_version.test.mjs", "client/web/vite/plugins/runtimeVersion.test.ts", "--maxWorkers=4") },
     "boundaries": { command: cmd("run", "test:checks") },
@@ -67,10 +67,16 @@ export function validationCommands(plan, npm, releasePlan) {
 }
 export function executeValidationChecks(plan, { run = spawnSync, npm, cwd }) {
   const commands = validationCommands(plan, npm, plan.releasePlan), results = [], invocationId = randomUUID();
-  const env = { ...process.env, npm_execpath: npm, CHANGMEN_ACCEPTANCE_INVOCATION: invocationId };
+  const pathsFile = path.join(cwd, "output/change-validation/changed-paths.json");
+  fs.mkdirSync(path.dirname(pathsFile), { recursive: true });
+  fs.writeFileSync(pathsFile, JSON.stringify({ invocationId, root: fs.realpathSync(cwd), paths: plan.paths ?? [] }));
+  const env = { ...process.env, npm_execpath: npm, CHANGMEN_ACCEPTANCE_INVOCATION: invocationId,
+    CHANGMEN_HISTORICAL_AUDIT: "", CHANGMEN_VALIDATION_PATHS_FILE: pathsFile };
   const context = executionContext(env), executionOrder = [];
   for (const check of plan.checks) {
     const selected = commands[check], started = Date.now();
+    const selectionFile = path.join(cwd, "output/change-validation/verification-selection.json");
+    if (check === "verification-control") fs.rmSync(selectionFile, { force: true });
     assert(selected, "Unknown validation check: " + check);
     console.log("[validate] " + check + ": START");
     const execution = { command: selected.command, cwd: selected.cwd ?? "." };
@@ -81,6 +87,7 @@ export function executeValidationChecks(plan, { run = spawnSync, npm, cwd }) {
     });
     const row = { check, passed: result.status === 0 && !result.error, elapsedMs: Date.now() - started,
       exitCode: result.status, errorCode: result.error?.code ?? null, signal: result.signal ?? null, execution };
+    if (check === "verification-control" && fs.existsSync(selectionFile)) row.selection = JSON.parse(fs.readFileSync(selectionFile, "utf8"));
     results.push(row);
     console.log("[validate] " + check + ": " + (row.passed ? "PASS" : "FAIL") + " (" + ((Date.now() - started) / 1000).toFixed(1) + "s)");
     if (!row.passed) break;

@@ -3,6 +3,21 @@ import assert from "node:assert/strict";
 import { FULL_AUDIT_PHASES, DATABASE_PHASES, assertSupplemental, proofHash } from "./acceptance-contract.mjs";
 import { installationProof } from "./fixtures/backend-installation.mjs";
 
+test("selected verifier commands cannot reuse the old full-directory audit command", () => {
+  const { acceptance, report } = fixture("full");
+  acceptance.plan.requiredChecks = { completeRelease: true };
+  acceptance.invocationId = report.invocationId = "12345678-1234-1234-1234-123456789abc";
+  acceptance.context = report.context = { environmentHash: "d".repeat(64) };
+  Object.assign(report.results.find(row => row.phase === "protection-negative"), {
+    exitCode: 0, errorCode: null, signal: null,
+    execution: { command: ["node", "npm", "exec", "--", "vitest", "run", "scripts/verification"], cwd: "." },
+  });
+  acceptance.results = [{ check: "verification-control", passed: true,
+    execution: { command: ["node", "scripts/verification/run-self-tests.mjs", "scripts/verification/pm-loader-bindings.mjs"], cwd: "." },
+    reusedFrom: { kind: "full", phase: "protection-negative", reportHash: proofHash(report), invocationId: report.invocationId } }];
+  assert.throws(() => assertSupplemental(report, "full", acceptance), /Command or working directory differs/);
+});
+
 test("backend installation requires Linux lifecycle, native execution, all eight entries, isolation and cleanup for this candidate", () => {
   const acceptance = { identity: { commit: "a".repeat(40), candidateTree: "b".repeat(40), inputFingerprint: "c".repeat(64) } };
   const report = installationProof(acceptance.identity);

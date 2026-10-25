@@ -37,7 +37,8 @@ describe("classifyDeployScope", () => {
     for (const file of ["scripts/deploy/classify-deploy-scope.mjs", "scripts/deploy/change-plan.mjs",
       "scripts/deploy/release-checks.mjs", "scripts/deploy/backend-install-profile.test.mjs", "scripts/deploy/release.test.sh",
       "scripts/deploy/fixtures/backend-installation.mjs", "scripts/verification/source-ownership-inputs.json",
-      "scripts/testing/backend-linux-runtime.mjs", "scripts/check-team-boundaries.mjs"])
+      "scripts/testing/backend-linux-runtime.mjs", "scripts/check-team-boundaries.mjs",
+      "devtools/venue-adapter/verification/check-esport-freeze.mjs"])
       assert.equal(classifyDeployScope([file]), "noop", file);
     assert.equal(classifyDeployScope(["scripts/deploy/install-backend.mjs"]), "backend");
     assert.equal(classifyDeployScope(["scripts/deploy/acceptance-contract.mjs"]), "full");

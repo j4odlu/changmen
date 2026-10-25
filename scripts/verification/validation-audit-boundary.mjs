@@ -16,6 +16,7 @@ for (const row of VALIDATION_AUDIT_BOUNDARY.files)
 // Historical audits read their existing baseline; current behavior is covered by
 // planner, workflow and release tests. Never freeze evolving CI to a source hash.
 const liveFixtureControls = new Set([
+  "scripts/verification/source-ownership.mjs", "devtools/venue-adapter/verification/check-esport-freeze.mjs",
   "scripts/deploy/classify-deploy-scope.mjs", "scripts/deploy/classify-deploy-scope.test.mjs",
   "scripts/verification/fok-exact-boundaries.mjs", "scripts/verification/pm-loader-bindings.mjs",
   "scripts/verification/pm-dependency-audit.mjs",
@@ -32,7 +33,8 @@ const historicalSources = new Map();
 export function readHistoricalValidationSource(file) {
   if (!historicalControls.has(file)) return undefined;
   if (!historicalSources.has(file)) historicalSources.set(file, execFileSync("git",
-    ["show", `${VALIDATION_AUDIT_BOUNDARY.baseline}:${file}`], {
+    ["show", `${file === "devtools/venue-adapter/verification/check-esport-freeze.mjs"
+      ? "46385c53183b596dc663cb25f2481bc367ec3626" : VALIDATION_AUDIT_BOUNDARY.baseline}:${file}`], {
       cwd: new URL("../../", import.meta.url), encoding: "utf8", windowsHide: true,
     }).replaceAll("\r\n", "\n"));
   return historicalSources.get(file);

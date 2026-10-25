@@ -69,6 +69,8 @@ test("the standalone full audit remains manual and cannot publish components", (
   assert.equal(audit.concurrency.group, release.concurrency.group);
   assert.equal(Object.keys(audit.jobs).length, 1);
   assert(audit.jobs.audit.steps.some(s => s.run === "npm run check:fok-release -- --release-plan=backend-first"));
+  assert(audit.jobs.audit.steps.some(s => s.run === "node scripts/verification/check-historical-migrations.mjs"));
+  assert.equal(audit.jobs.audit.env.CHANGMEN_HISTORICAL_AUDIT, "1");
   assert(!JSON.stringify(release).includes("check:fok-release"));
   assert(!JSON.stringify(audit).includes("publish.sh"));
 });
@@ -100,6 +102,8 @@ test("one runner plans, validates, builds and seals without intermediate lane ar
   assert(!JSON.stringify(steps[check]).includes("secrets."));
   const commands = validationCommands({}, "npm-cli.js", "backend-first");
   assert.equal(commands["complete-release"], undefined);
+  assert.equal(commands["verification-control"].command[1], "scripts/verification/run-self-tests.mjs");
+  assert(!commands["verification-control"].command.includes("scripts/verification"));
   assert.equal(commands["database-compatibility"].command[1], "scripts/deploy/check-database-compatibility.mjs");
   assert.equal(commands["backend-installation"].command[1], "scripts/testing/backend-linux-runtime.mjs");
   const summary = steps.find(s => s.run === "node scripts/deploy/release-summary.mjs");

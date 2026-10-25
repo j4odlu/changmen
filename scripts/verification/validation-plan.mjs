@@ -3,6 +3,7 @@ import { classifyDeployScope } from "../deploy/classify-deploy-scope.mjs";
 
 const controlPatterns = [
   /^scripts\/check-team-boundaries\.mjs$/,
+  /^devtools\/venue-adapter\/verification\/check-esport-freeze\.mjs$/,
   /^scripts\/(?:verification|deploy)\//,
   /^\.github\//,
   /^sh\/(?:deploy-[^/]+\.sh|_common\.sh)$/,
@@ -34,18 +35,28 @@ export function validationPlan(changedPaths, { publication = false, components =
     : full ? "full" : frontend && backend ? "integration" : frontend ? "frontend" : backend ? "backend" : controls ? "controls" : "docs";
   // 后端入口本身含 test:checks，避免再串联一次相同边界检查。
   const checkBackend = backend || full, checkFrontend = frontend || full;
-  // These entry points and their tests are already covered by validation-control
-  // (and their deploy consumers by deployment-control). Unknown/shared audit
-  // implementations still require the entire verification suite.
+  // Planner regressions have their own check. Other verifiers select related
+  // self-tests at execution time; historical evidence does not request a full audit.
   const validationControls = new Set(["validation-plan.mjs", "validation-plan.test.mjs", "verify-change.mjs", "verify-change.test.mjs"]);
+  const currentPolicies = new Set(["source-ownership-inputs", "component-install-inputs", "frontend-build-inputs",
+    "backend-db-access-exceptions", "pm-dependency-inputs", "pm-loader-binding-inputs", "pm-shared-loader-inputs",
+    "venue-node-dependency-inputs", "retained-source-boundaries", "vps-fok-baseline", "adapter-browser-relocation",
+    "client-package-relocation", "node-package-relocation", "workspace-layout-relocation", "node-entry-retirement",
+    "browser-entry-retirement", "rds-entry-retirement", "backend-probe-relocation", "rds-legacy-relocation",
+    "rds-maintenance-relocation", "pm-sdk-retirement", "pm-credential-sdk-increments"].map(name => `scripts/verification/${name}.json`));
+  const nodeVerifierChanged = relevant.some(file => /^scripts\/verification\/fok-source-specialization(?:\.test)?\.mjs$/.test(file));
   const verificationChanged = relevant.some(file => file === "scripts/check-team-boundaries.mjs"
-    || /^scripts\/verification\//.test(file) && !validationControls.has(file.slice("scripts/verification/".length)));
+    || file === "devtools/venue-adapter/verification/check-esport-freeze.mjs" || currentPolicies.has(file)
+    || /^scripts\/verification\/venue-browser-.*\.json$/.test(file)
+    || /^scripts\/verification\/.+\.[cm]?[jt]sx?$/.test(file)
+      && !/^scripts\/verification\/fok-source-specialization(?:\.test)?\.mjs$/.test(file)
+      && !validationControls.has(file.slice("scripts/verification/".length)));
   // Historical FOK snapshots belong to explicit audits. Application risk alone
   // must not trigger the verifier's own source-mutation regression suite.
   const validationChanged = relevant.some(file => /^scripts\/verification\/(?:validation-plan|verify-change)(?:\.test)?\.mjs$/.test(file)
     || /^scripts\/deploy\/change-plan(?:\.test)?\.mjs$/.test(file));
   const controlChecks = [...(validationChanged ? ["validation-control"] : []),
-    ...(verificationChanged ? ["verification-control", "verification-node"] : [])];
+    ...(verificationChanged ? ["verification-control"] : []), ...(nodeVerifierChanged ? ["verification-node"] : [])];
   const releaseChecks = [...controlChecks];
   if (publication) {
     if (!components.includes("backend") || !testsNeeded) releaseChecks.push("boundaries");

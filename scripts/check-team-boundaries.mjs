@@ -3,47 +3,30 @@
  * 单仓团队边界：扫描 import/require，禁止跨团队源码耦合。
  * 规则见 docs/TEAM_BOUNDARIES.md
  */
-import { inspectBackendProbeRelocation } from "./verification/backend-probe-relocation.mjs";
-import {inspectWorkspaceLayout} from './verification/workspace-layout-relocation.mjs';
-import { inspectNodeResourceIsolation } from "./verification/node-resource-isolation.mjs";
-import { inspectNodeEntryRetirement } from './verification/node-entry-retirement.mjs';
-import {inspectCatalogEnvironmentIsolation} from './verification/catalog-environment-isolation.mjs';
-import { inspectClientPackageRelocation } from "./verification/client-package-relocation.mjs";
-import { inspectBackendToolRelocation } from "./verification/backend-tool-relocation.mjs";
-import { inspectAdapterBrowserRelocation } from "./verification/adapter-browser-relocation.mjs";
-import { inspectBrowserEntryRetirement } from "./verification/browser-entry-retirement.mjs";
-import { inspectNodePackageRelocation } from "./verification/node-package-relocation.mjs";
 import { inspectVenueManifestCopies } from "./sync/venue-manifest.mjs";
-import { inspectVenueBrowserRelocation } from "./verification/venue-browser-relocation.mjs";
 import fs from "node:fs";
 import { checkDatabaseAccessBoundaries } from "./verification/backend-db-boundary.mjs";
 import { createComponentInspection } from "./verification/component-entry-boundary.mjs";
 import { inspectPmDependencies } from "./verification/pm-dependency-audit.mjs";
 import { inspectVenueNodeDependencies } from "./verification/venue-node-dependencies.mjs";
 import { sourceOwnershipInventory } from "./verification/source-ownership.mjs";
-import { inspectRetainedSourceBoundaries } from "./verification/retained-source-boundaries.mjs";
+import { inspectCurrentSourceBoundaries } from "./verification/current-source-boundaries.mjs";
 import { inspectComponentInstallInputs } from "./verification/component-install-inputs.mjs";
-import { inspectFrontendBuildInputs } from "./verification/frontend-build-inputs.mjs";
+import { inspectFrontendBuildContracts } from "./verification/frontend-build-contracts.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CHANGMEN_LAYOUT, VENUE_ADAPTER_REL } from "../server/storage/paths.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CHANGMEN_ROOT = path.resolve(__dirname, "..");
-console.log('catalog-environment-isolation:',inspectCatalogEnvironmentIsolation(CHANGMEN_ROOT));
-console.log('node-entry-retirement:', inspectNodeEntryRetirement(CHANGMEN_ROOT));
-console.log('node-resource-isolation:', inspectNodeResourceIsolation(CHANGMEN_ROOT));
-console.log('backend-probe-relocation:', inspectBackendProbeRelocation(CHANGMEN_ROOT));
-console.log('backend-tool-relocation:', inspectBackendToolRelocation(CHANGMEN_ROOT));
-console.log('browser-entry-retirement:', inspectBrowserEntryRetirement(CHANGMEN_ROOT));
-console.log('adapter-browser-relocation:', inspectAdapterBrowserRelocation(CHANGMEN_ROOT));
-console.log('venue-browser-relocation:', inspectVenueBrowserRelocation(CHANGMEN_ROOT));
+// Explicit historical self-tests opt in; ordinary checks never import restoration modules.
+if (process.env.CHANGMEN_HISTORICAL_AUDIT === "1") {
+  const { inspectHistoricalMigrations } = await import("./verification/check-historical-migrations.mjs");
+  inspectHistoricalMigrations(CHANGMEN_ROOT);
+}
 const venueManifest = inspectVenueManifestCopies(CHANGMEN_ROOT);
 if (venueManifest.violations.length) throw Error(JSON.stringify(venueManifest.violations));
 console.log(`venue-manifest: ${venueManifest.copies.length} generated copies checked against the shared source`);
-console.log(`node-package-relocation: ${inspectNodePackageRelocation(CHANGMEN_ROOT).entries} canonical Node implementations checked`);
-const clientRelocation = inspectClientPackageRelocation(CHANGMEN_ROOT);
-console.log(`client-package-relocation: ${clientRelocation.entries} exact facades and canonical implementations checked`);
 
 const SOURCE_EXT = new Set([".js", ".mjs", ".cjs", ".ts", ".tsx", ".vue"]);
 
@@ -267,17 +250,17 @@ function checkLegacyDirs(violations) {
 
 function main() {
   const violations = checkDatabaseAccessBoundaries(CHANGMEN_ROOT);
-  const buildInputs = inspectFrontendBuildInputs(CHANGMEN_ROOT);
+  const buildInputs = inspectFrontendBuildContracts(CHANGMEN_ROOT);
   violations.push(...buildInputs.violations);
-  console.log(`frontend-build-inputs: shared Node implementations and ${buildInputs.assets} public asset contracts checked`);
+  console.log(`frontend-build-contracts: Node tooling ownership and ${buildInputs.assets} public asset contracts checked`);
   const ownership = sourceOwnershipInventory(CHANGMEN_ROOT);
   for (const file of ownership.unclassified) violations.push({ rule: "source-ownership", file, line: 0, spec: "unclassified source", pattern: "New source roots require explicit frontend/backend/RDS/shared ownership" });
   for (const { file, canonical } of ownership.incompatibleAssets) violations.push({ rule: "source-ownership", file, line: 0, spec: canonical, pattern: "Compatibility asset differs from its canonical copy" });
   for (const { file, canonical } of ownership.incompatibleEntries) violations.push({ rule: "source-ownership", file, line: 0, spec: canonical, pattern: "Compatibility entry must remain a pure re-export of its single canonical implementation" });
   console.log(`source-ownership: ${JSON.stringify(ownership.counts)}; ${ownership.unclassified.length} unclassified files`);
-  const retained = inspectRetainedSourceBoundaries(CHANGMEN_ROOT);
+  const retained = inspectCurrentSourceBoundaries(CHANGMEN_ROOT);
   violations.push(...retained.violations);
-  console.log(`retained-source: ${retained.groups.length} explicit boundaries; no source or installation exemptions`);
+  console.log(`current-source: ${retained.retiredPaths} retired paths and ${retained.sqlAssets} SQL assets checked`);
   const installInputs = inspectComponentInstallInputs(CHANGMEN_ROOT);
   violations.push(...installInputs.violations.map(row => ({ ...row, rule: "component-install-input", line: 0 })));
   console.log(`component-install-inputs: frontend/backend/RDS declarations inspected; actual installation remains uncertified`);
@@ -311,7 +294,6 @@ function main() {
   }
 
   if (violations.length === 0) {
-    console.log('workspace-layout:',inspectWorkspaceLayout(CHANGMEN_ROOT));
     console.log("check-team-boundaries: OK");
     return;
   }

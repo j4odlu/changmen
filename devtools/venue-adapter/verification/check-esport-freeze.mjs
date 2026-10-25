@@ -13,8 +13,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkPmFolderFreeze } from "../../../scripts/verification/pm-folder-release-boundary.mjs";
-import {readPreviousWorkspaceFile} from '../../../scripts/verification/workspace-layout-history.mjs';
+import { currentFreezePaths, currentFrozenChanges, validateFreezeManifest, changedFreezeFiles, validationFreezeFiles } from "../../../scripts/verification/current-esport-freeze.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../..");
@@ -44,7 +43,7 @@ function git(args, opts = {}) {
 }
 
 function loadManifest() {
-  const raw = JSON.parse(fs.readFileSync(MANIFEST, "utf8"));
+  const raw = validateFreezeManifest(fs.readFileSync(MANIFEST, "utf8"));
   const paths = (raw.paths || []).map(p => String(p).replace(/\\/g, "/"));
   return { ...raw, paths };
 }
@@ -63,34 +62,7 @@ function detectBase() {
   return "HEAD";
 }
 
-function changedFiles(base) {
-  const out = new Set();
-  const addLines = (text) => {
-    for (const line of text.split(/\r?\n/)) {
-      const p = line.trim().replace(/\\/g, "/");
-      if (p)
-        out.add(p);
-    }
-  };
-  // 已提交相对 base
-  addLines(git(["diff", "--name-only", `${base}...HEAD`]));
-  // 工作区相对 base（含未提交）
-  addLines(git(["diff", "--name-only", base]));
-  addLines(git(["ls-files", "--others", "--exclude-standard", "--", "packages"]));
-  // 暂存区
-  addLines(git(["diff", "--name-only", "--cached"]));
-  return [...out];
-}
-
-function isFrozen(file, freezePaths) {
-  const norm = file.replace(/\\/g, "/");
-  // 测试文件不挡（可补 lifecycle / isolation）
-  if (/\.(test|spec)\.(ts|tsx|js|mjs)$/.test(norm))
-    return false;
-  return freezePaths.some(fp => norm === fp || norm.endsWith(`/${fp}`) || norm.startsWith(`${fp}/`));
-}
-
-function main() {
+async function main() {
   const manifest = loadManifest();
   if (LIST_ONLY) {
     for (const p of manifest.paths)
@@ -99,10 +71,15 @@ function main() {
   }
 
   const base = detectBase();
-  const changed = changedFiles(base);
-  const { hits } = checkPmFolderFreeze(changed, fs.readFileSync(MANIFEST, "utf8"),
-    file => readPreviousWorkspaceFile(path.join(REPO_ROOT, file), "utf8"),
-    (ref, file) => git(["show", `${ref}:${file}`], { trim: false }));
+  const changed = validationFreezeFiles(changedFreezeFiles(git, base), { root: REPO_ROOT });
+  let hits;
+  if (process.env.CHANGMEN_HISTORICAL_AUDIT === "1") {
+    const { checkPmFolderFreeze } = await import("../../../scripts/verification/pm-folder-release-boundary.mjs");
+    const { readPreviousWorkspaceFile } = await import("../../../scripts/verification/workspace-layout-history.mjs");
+    ({ hits } = checkPmFolderFreeze(changed, fs.readFileSync(MANIFEST, "utf8"),
+      file => readPreviousWorkspaceFile(path.join(REPO_ROOT, file), "utf8"),
+      (ref, file) => git(["show", `${ref}:${file}`], { trim: false })));
+  } else hits = currentFrozenChanges(changed, currentFreezePaths(REPO_ROOT, manifest.paths));
 
   if (!hits.length) {
     console.log(`[esport-freeze] ok (base=${base}, changed=${changed.length}, frozen hits=0)`);
@@ -127,4 +104,4 @@ function main() {
   process.exit(1);
 }
 
-main();
+await main();

@@ -2,8 +2,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {NODE_ENTRY_RETIREMENT} from './node-entry-retirement.mjs';
-import {WORKSPACE_LAYOUT_RELOCATION,currentWorkspaceFile} from './workspace-layout-history.mjs';
+// Origin labels are metadata only. Do not import historical proof/restoration code
+// into current ownership checks or require business modules to match old hashes.
+const NODE_ENTRY_RETIREMENT = JSON.parse(fs.readFileSync(new URL('./node-entry-retirement.json', import.meta.url), 'utf8'));
+const WORKSPACE_LAYOUT_RELOCATION = JSON.parse(fs.readFileSync(new URL('./workspace-layout-relocation.json', import.meta.url), 'utf8'));
+const currentPaths = new Map(WORKSPACE_LAYOUT_RELOCATION.files.map(row => [row.file, row.canonical ?? row.file]));
+const currentWorkspaceFile = file => currentPaths.get(file) ?? file;
 
 const within = (file, prefix) => file === prefix || file.startsWith(`${prefix}/`);
 const test = file => /(?:^|\/)(?:tests?|__tests__|fixtures)(?:\/|$)|\.(?:test|spec)\.[^/]+$/.test(file);

@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import { restoreMatcherLifecycleVerificationSource } from "./matcher-lifecycle-boundary.mjs";
 
 const normalize = source => source.replaceAll("\r\n", "\n");
 export const pmCredentialSdkSha = source => createHash("sha256").update(normalize(source)).digest("hex");
@@ -23,6 +24,7 @@ export function readRetiredPmCredentialSdkSource(file) {
 }
 
 export function restorePmCredentialSdkSource(file, source) {
+  source = restoreMatcherLifecycleVerificationSource(file, source);
   const row = files.get(file);
   if (!row || pmCredentialSdkSha(source) !== row.afterSha) return source;
   source = normalize(source);
@@ -36,7 +38,7 @@ export function restorePmCredentialSdkSource(file, source) {
 
 export function verifyPmCredentialSdkSources(read = file => fs.readFileSync(new URL("../../" + file, import.meta.url), "utf8")) {
   for (const row of files.values()) {
-    const source = read(row.file);
+    const source = restoreMatcherLifecycleVerificationSource(row.file, read(row.file), read);
     assert.equal(pmCredentialSdkSha(source), row.afterSha, row.file + ": only the exact credential SDK migration is authorized");
     assert.equal(pmCredentialSdkSha(restorePmCredentialSdkSource(row.file, source)), row.beforeSha);
   }

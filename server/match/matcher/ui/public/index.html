@@ -158,7 +158,7 @@
 
     .queue-split {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 3fr) minmax(0, 4fr) minmax(0, 3fr);
       gap: 0;
       align-items: stretch;
       border: 1px solid var(--line);
@@ -324,9 +324,9 @@
     .team-card-title-id { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 2px 4px; }
     .title-team-slot { display: inline-flex; align-items: center; gap: 5px; max-width: 46%; }
     .matched-header-layout { display: flex; align-items: center; gap: 8px; width: 100%; }
-    .matched-header-home { flex: 1; min-width: 0; }
+    .matched-header-home { flex: 1; min-width: 0; text-align: left; }
     .matched-header-center { flex-shrink: 0; text-align: center; display: flex; flex-direction: row; align-items: center; gap: 10px; }
-    .matched-header-away { flex: 1; min-width: 0; }
+    .matched-header-away { flex: 1; min-width: 0; text-align: right; }
     .matched-header-home .title-team-slot,
     .matched-header-away .title-team-slot { flex-direction: column; align-items: flex-start; gap: 2px; max-width: 100%; }
     .matched-header-away .title-team-slot { align-items: flex-end; }
@@ -387,6 +387,17 @@
     .ts-pending { color: var(--warn); border-color: #6a5a2a; }
     .ts-done { color: var(--ok); border-color: #2a6a4a; }
     .ts-warn { color: var(--danger); border-color: #6a2a2a; }
+    .pm-match-status { font-size: 11px; padding: 2px 7px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); }
+    .pm-match-status.live { color: var(--ok); border-color: #2a6a4a; }
+    .pm-match-status.pending, .pm-match-status.postponed { color: var(--warn); border-color: #6a5a2a; }
+    .pm-match-status.canceled { color: var(--danger); border-color: #6a2a2a; }
+    .pm-match-status.finished {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; font-size: 13px; font-weight: 800; line-height: 1.4;
+      color: #fff1f2; background: #881337; border-color: #fb7185;
+      box-shadow: 0 0 0 2px rgba(251, 113, 133, .16);
+    }
+    .pm-match-status.finished::before { content: ''; width: 8px; height: 8px; background: currentColor; border-radius: 1px; flex-shrink: 0; }
 
     .team-card-footer {
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -1595,6 +1606,7 @@ function renderEndedMatchCard(cm, platforms, teamMaps) {
           <div class="matched-header-meta">
             ${titleFallback}
             <div class="meta-line">开赛 ${fmtTime(cm.start_time)} · 结束 ${fmtTime(cm.ended_at || cm.built_at)}</div>
+            ${renderPmMatchStatus(cm)}
             <div class="meta-line">
               <span class="platform-badges">${platCount}馆 ${Object.keys(cm.matchs || {}).map(pbadge).join('')}</span>
               ${missingCount ? `<span>${missingCount} 馆场次已失效</span>` : ''}
@@ -2244,6 +2256,14 @@ function renderMatchedTable(rows, gameCode, teamMaps, searchQuery, cm, platforms
   </table>`;
 }
 
+function renderPmMatchStatus(cm) {
+  const status = cm.pm_match_status;
+  if (!status) return '';
+  const updated = cm.pm_sport?.updatedAt;
+  const title = updated ? `数据来源：PM · 快照更新 ${fmtTime(updated)}` : '数据来源：PM';
+  return `<div class="meta-line"><span class="pm-match-status ${esc(status.kind)}" title="${esc(title)}">PM · ${esc(status.label)}</span></div>`;
+}
+
 function renderMatchedCard(cm, platforms, teamMaps, searchQuery, columnMode) {
   const rows = resolveClientMatchRows(cm, platforms);
   if (!rows.length) return '';
@@ -2286,6 +2306,7 @@ function renderMatchedCard(cm, platforms, teamMaps, searchQuery, columnMode) {
           </div>
           <div class="matched-header-meta">
             <div class="meta-line">开赛 ${fmtTime(cm.start_time)}</div>
+            ${renderPmMatchStatus(cm)}
             <div class="meta-line">
               <span class="platform-badges">${liveRows.length}馆 ${Object.keys(cm.matchs || {}).map(pbadge).join('')}</span>
               ${cm.merge_mode?.label ? `<span>合并依据 ${esc(cm.merge_mode.label)}</span>` : ''}

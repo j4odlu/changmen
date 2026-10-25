@@ -18,10 +18,12 @@ import {
   buildEndedPmSportByPolymarketLink,
   buildPmSportByClientId,
   filterActiveClientMatches,
+  isClientMatchPmEnded,
 } from "./shape/ended_filter.js";
 import { applyLiveShape, filterMultiPlatform } from "./shape/live_shape.js";
 import { projectList } from "./sides/project_sources.js";
 import { resolveMatchStructure } from "./structure/resolve_structure.js";
+import { matchingPlatformSources } from "../lib/match_lifecycle.js";
 
 function isEndedClientMatchRow(row) {
   const ended = row?.ended_at ?? row?.endedAt;
@@ -40,38 +42,6 @@ function activeClientIdSet(clientRows) {
   return ids;
 }
 
-/** M4：去掉指向 ended CM 的内存链接，让馆源可重新 align / 成簇 */
-export function stripEndedClientMatchLinks(matches, clientRows) {
-  const endedIds = new Set();
-  for (const r of clientRows || []) {
-    if (!isEndedClientMatchRow(r))
-      continue;
-    const id = Number(r.id ?? r.ID);
-    if (Number.isFinite(id) && id > 0)
-      endedIds.add(id);
-  }
-  if (!endedIds.size || !matches)
-    return 0;
-  let cleared = 0;
-  for (const byId of Object.values(matches)) {
-    if (!byId || typeof byId !== "object")
-      continue;
-    for (const match of Object.values(byId)) {
-      const raw = match?.ClientMatchId ?? match?.client_match_id ?? match?.match_id;
-      if (raw == null || raw === "")
-        continue;
-      const cid = Number(raw);
-      if (!endedIds.has(cid))
-        continue;
-      delete match.ClientMatchId;
-      delete match.client_match_id;
-      delete match.match_id;
-      cleared += 1;
-    }
-  }
-  return cleared;
-}
-
 function filterBindingsToActive(bindingsByClientId, activeIds) {
   if (!bindingsByClientId?.size)
     return bindingsByClientId;
@@ -87,21 +57,19 @@ function filterBindingsToActive(bindingsByClientId, activeIds) {
 export function composeFromSnapshot(snapshot, opts = {}) {
   const fromVenuesOnly = !!opts.fromVenuesOnly || !!snapshot._fromVenuesOnly;
   const {
-    matches,
+    matches: rawMatches,
     clientRows: rawClientRows,
     alignClientRows: rawAlignRows,
     platformBindingsByClientId: rawBindings,
   } = snapshot;
 
   const clientRows = fromVenuesOnly ? [] : (rawClientRows || []);
+  const matches = fromVenuesOnly ? rawMatches : matchingPlatformSources(rawMatches, clientRows);
   const alignClientRows = fromVenuesOnly ? [] : (rawAlignRows || []);
   const activeIds = activeClientIdSet(clientRows);
   const platformBindingsByClientId = fromVenuesOnly
     ? null
     : filterBindingsToActive(rawBindings, activeIds);
-
-  if (!fromVenuesOnly)
-    stripEndedClientMatchLinks(matches, clientRows);
 
   const alignRows = alignClientRows?.length ? alignClientRows : clientRows;
   const alignStats = fromVenuesOnly
@@ -145,12 +113,13 @@ export function runMatchPass(list, snapshot, opts = {}) {
     stickyOrientation,
   } = opts;
   const {
-    matches,
+    matches: rawMatches,
     bets,
     timers,
   } = snapshot;
 
   const clientRows = fromVenuesOnly ? [] : (snapshot.clientRows || []);
+  const matches = fromVenuesOnly ? rawMatches : matchingPlatformSources(rawMatches, clientRows);
   const alignClientRows = fromVenuesOnly ? [] : (snapshot.alignClientRows || []);
   const platformOverrides = fromVenuesOnly ? {} : (snapshot.platformOverrides || {});
 
@@ -213,6 +182,10 @@ export function runEndPass(info, snapshot, opts = {}) {
   const endedAtByClientId = fromVenuesOnly
     ? new Map()
     : buildEndedAtByClientId(clientRows);
+  // 已有比赛的 PM 终态不依赖本轮聚类是否还带齐原平台挂载。
+  for (const row of clientRows) {
+    if (isClientMatchPmEnded(row)) endedAtByClientId.set(Number(row.id ?? row.ID), Date.now());
+  }
   const endedPmSportByPolymarketLink = fromVenuesOnly
     ? new Map()
     : buildEndedPmSportByPolymarketLink(clientRows);

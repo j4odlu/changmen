@@ -13,7 +13,7 @@ import {
 } from "../lib/config.js";
 import "../lib/env_composer.js";
 import { writeComposerHeartbeat } from "../lib/heartbeat.js";
-import { assertComposerMayWrite } from "../lib/write_guard.js";
+import { assertComposerMayWrite, withMatcherWriteLock } from "../lib/write_guard.js";
 import { composeOnce } from "./compose_once.js";
 
 let timer = null;
@@ -30,7 +30,7 @@ async function maybeArchiveStaleClientMatches() {
     return;
   if (archiveInFlight)
     return archiveInFlight;
-  archiveInFlight = (async () => {
+  archiveInFlight = withMatcherWriteLock(async () => {
     try {
       const past = await pruneMatchesOlderThanCollectPast();
       if (past?.platform?.deleted || past?.client?.ended) {
@@ -50,7 +50,7 @@ async function maybeArchiveStaleClientMatches() {
         `[match-composer] archive client_matches (scope=${ar.scope}): ${formatArchiveCounts(ar.rds)}`,
       );
     }
-  })().finally(() => {
+  }).finally(() => {
     archiveInFlight = null;
   });
   return archiveInFlight;

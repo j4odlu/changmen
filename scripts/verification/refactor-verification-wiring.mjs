@@ -2,6 +2,7 @@
 // This offline inverse preserves the original 9999 and workspace proof hashes.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { restoreMatcherLifecycleVerificationSource } from "./matcher-lifecycle-boundary.mjs";
 
 const sha = source => createHash("sha256").update(source.replaceAll("\r\n", "\n")).digest("hex");
 const fileName = "scripts/verification/workspace-layout-relocation.mjs";
@@ -21,6 +22,7 @@ const edits = [
   ["platformRoot:'server/venues',backendCommands:backendCommands.commands,frontendDependencies", "platformRoot:'server/venues'"],
 ];
 export function restoreRefactorVerificationWiring(file, source) {
+  source = restoreMatcherLifecycleVerificationSource(file, source);
   const currentSha = sha(source);
   if (file !== fileName || currentSha !== afterSha && currentSha !== lifecycleAndFootballSha) return source;
   source = source.replaceAll("\r\n", "\n");

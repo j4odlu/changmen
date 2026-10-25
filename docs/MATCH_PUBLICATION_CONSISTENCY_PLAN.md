@@ -2,6 +2,8 @@
 
 [changmen 扩展] 2026-10-20。状态：未实施，仅更新文档。已有取证见[审计报告](audits/MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md)。
 
+[changmen 扩展] 2026-10-25 先行工作：在 matcher 比赛卡片显示用户页已有的 PM 比赛状态。来源为 VPS PM Sports 采集服务写入的 `client_matches.pm_sport`；首次有效 WS 状态前由 Gamma 补充，之后由 Sports WS 接管。仅增加状态展示，独立验收后可停；下文的有效比赛统一产出与读取三步仍待实施。
+
 ## 一句话说明
 
 **matcher 决定哪些比赛和盘口当前有效，并把完整结果保存下来；用户接口和 matcher 已合场页面直接读取该结果。**

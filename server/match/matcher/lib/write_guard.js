@@ -11,12 +11,25 @@ import {
   isMatcherRunning,
   readMatcherHeartbeat,
   sanitizeMatcherHeartbeat,
-} from "./heartbeat.js";
-import {
   COMPOSER_HEARTBEAT_PATH,
   sanitizeComposerHeartbeat,
 } from "./heartbeat.js";
 
+let lifecycleWriteQueue = Promise.resolve();
+
+/** 同进程内，合场写入与人工结束/恢复串行；状态操作不能插进旧快照的写回。 */
+export async function withMatcherWriteLock(action) {
+  const previous = lifecycleWriteQueue;
+  let release;
+  lifecycleWriteQueue = new Promise(resolve => { release = resolve; });
+  await previous;
+  try {
+    return await action();
+  }
+  finally {
+    release();
+  }
+}
 export function isForceWriteEnabled() {
   return String(process.env.MATCH_COMPOSER_FORCE_WRITE || "").trim() === "1";
 }

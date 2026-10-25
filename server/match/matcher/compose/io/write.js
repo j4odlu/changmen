@@ -1,7 +1,7 @@
 /**
  * 写 client_matches + 对齐 post-hooks。
  * active 写 ended_at=NULL（DB sticky 不会清已有 ended_at）；
- * 新判定 ended 全量 UPSERT（endedRows）；
+ * 已有比赛结束只写 ended_at，保留原匹配、方向、盘口及其它字段；
  * markEndedIds：sources-gone 的 active gap（或 sticky 再确认）；
  * 不用「本拍未合出」整表差量归档（M1 / #1669）。
  */
@@ -13,7 +13,7 @@ import { clientMatchWriteRow } from "../write_payload.js";
 /**
  * @param {object[]} info 活跃行
  * @param {number} [builtAt]
- * @param {{ endedRows?: object[], markEndedIds?: number[], stickyEndedIds?: Set<number>|number[] }} [opts]
+ * @param {{ endedRows?: object[], markEndedIds?: number[], stickyEndedIds?: Set<number>|number[], existingClientRows?: object[] }} [opts]
  */
 export async function writeClientMatches(info, builtAt = Date.now(), opts = {}) {
   if (!db.isMatcherStoreReady())
@@ -23,13 +23,14 @@ export async function writeClientMatches(info, builtAt = Date.now(), opts = {}) 
     [...(opts.stickyEndedIds || [])].map(Number).filter(id => Number.isFinite(id) && id > 0),
   );
   const endedRowsRaw = Array.isArray(opts.endedRows) ? opts.endedRows : [];
+  const existingById = new Map((opts.existingClientRows || []).map(row => [Number(row.id ?? row.ID), row]));
   const newlyEnded = [];
   const stickyOnlyIds = [];
   for (const m of endedRowsRaw) {
     const id = Number(m.ID);
     if (!Number.isFinite(id) || id <= 0)
       continue;
-    if (stickyEndedIds.has(id))
+    if (stickyEndedIds.has(id) || existingById.has(id))
       stickyOnlyIds.push(id);
     else
       newlyEnded.push(clientMatchWriteRow(m, builtAt, { endedAt: builtAt }));
@@ -49,7 +50,17 @@ export async function writeClientMatches(info, builtAt = Date.now(), opts = {}) 
   invalidateClientMatchSnapshot();
   try { await publishCommittedClientMatches(); }
   catch (err) { console.warn("[match-composer] publish committed snapshot:", err.message); }
-  try { collectorRuntime.patchCollectorMatchClientIds([...(info || []), ...endedRowsRaw]); }
+  const endedForMemory = endedRowsRaw.map(row => {
+    const existing = existingById.get(Number(row.ID));
+    return existing ? { ...row, Matchs: existing.matchs ?? existing.Matchs ?? {} } : row;
+  });
+  const publishedEndedIds = new Set(endedForMemory.map(row => Number(row.ID)));
+  for (const id of opts.markEndedIds || []) {
+    const existing = existingById.get(Number(id));
+    if (existing && !publishedEndedIds.has(Number(id)))
+      endedForMemory.push({ ID: Number(id), Matchs: existing.matchs ?? existing.Matchs ?? {} });
+  }
+  try { collectorRuntime.patchCollectorMatchClientIds([...(info || []), ...endedForMemory]); }
   catch (err) { console.warn("[match-composer] patchCollectorMatchClientIds:", err.message); }
 
   return { wrote: true, builtAt };

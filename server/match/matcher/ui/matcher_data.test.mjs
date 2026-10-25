@@ -1,12 +1,69 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRayRiskMatches,
+  clientMatchWithPmStatus,
   computeRecommendations,
   dashboardRowsFromSnapshot,
   isPlatformMatchLinkedForRec,
 } from "./matcher_data.js";
 
 const T0 = Date.parse("2026-08-08T01:45:00+08:00");
+
+describe("matcher PM status", () => {
+  it("shows the stored live status and preserves the source snapshot", () => {
+    const input = { id: 42, start_time: T0 / 1000, matchs: { Polymarket: "pm1" },
+      pm_sport: { source: "ws", status: "inprogress", period: "5/5", scoreRaw: "8-5|2-2",
+        mapScore: { home: 2, away: 2 }, elapsed: "89" } };
+    const original = structuredClone(input);
+    const output = clientMatchWithPmStatus(input);
+    expect(output.pm_match_status).toEqual({ kind: "live", label: "进行中 · 地图5/5 · 大比分2–2 · 已进行1:29" });
+    expect(output.start_time).toBe(T0);
+    expect(output.pm_sport).toEqual(input.pm_sport);
+    expect(input).toEqual(original);
+  });
+
+  it.each([
+    [{ status: "scheduled" }, "pending", "未开赛"],
+    [{ status: "final", scoreRaw: "3-2", mapScore: { home: 3, away: 2 } }, "finished", "已结束 · 最终大比分3–2"],
+    [{ status: "postponed", live: true }, "postponed", "延期"],
+    [{ status: "canceled", ended: true }, "canceled", "已取消"],
+  ])("uses PM state for active and hidden rows: %j", (snapshot, kind, label) => {
+    for (const ended_at of [null, T0]) {
+      expect(clientMatchWithPmStatus({ pm_sport: snapshot, ended_at }).pm_match_status)
+        .toEqual({ kind, label });
+    }
+  });
+
+  it("does not infer status from a past start time or add PM to an unrelated match", () => {
+    expect(clientMatchWithPmStatus({ start_time: T0, matchs: { Polymarket: "pm1" } }).pm_match_status)
+      .toEqual({ kind: "unknown", label: "状态待更新" });
+    expect(clientMatchWithPmStatus({ start_time: T0, matchs: { OB: "ob1" } }).pm_match_status).toBeNull();
+  });
+});
+
+it("keeps legacy ended sources out of recommendations after their reverse link was cleared", () => {
+  const rows = dashboardRowsFromSnapshot({
+    OB: [{ SourceMatchID: "ob1", SourceGameID: "2", Home: "Alpha", Away: "Beta", StartTime: T0 }],
+    RAY: [{ SourceMatchID: "ray1", SourceGameID: "2", Home: "Alpha", Away: "Beta", StartTime: T0 }],
+  }, [], [{ id: 42, ended_at: T0, matchs: { OB: "ob1", RAY: "ray1" } }]);
+  expect(rows.every(row => row.bound_client_match_id === 42 && row.match_id === null)).toBe(true);
+  expect(rows.every(row => isPlatformMatchLinkedForRec(row, []))).toBe(true);
+  expect(computeRecommendations(rows, [])).toEqual([]);
+  // 已结束来源也不能充当新推荐的另一侧平台。
+  expect(computeRecommendations([...rows, { ...rows[0], platform: "Polymarket", source_match_id: "new",
+    source_game_id: "dota2", match_id: null, bound_client_match_id: null, ended_client_match_id: null }], [])).toEqual([]);
+});
+
+it("keeps a restored active association ahead of duplicate ended history", () => {
+  const active = { id: 42, ended_at: null, matchs: { OB: "ob1", RAY: "ray1" } };
+  const history = { ...active, id: 41, ended_at: T0 };
+  const rows = dashboardRowsFromSnapshot({
+    OB: [{ SourceMatchID: "ob1", ClientMatchId: 42 }],
+    RAY: [{ SourceMatchID: "ray1", ClientMatchId: 42 }],
+  }, [active], [history, active]);
+  expect(rows.every(row => row.bound_client_match_id === 42 && row.match_id === 42)).toBe(true);
+  expect(rows.every(row => row.ended_client_match_id === null)).toBe(true);
+});
 
 describe("abnormal match dashboard details", () => {
   it("lists only recorded anomalies, preferring the merged title and normalized time", () => {

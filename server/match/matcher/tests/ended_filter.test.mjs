@@ -103,7 +103,7 @@ describe("ended_filter + multi platform", () => {
     assert.equal(kept[0].Matchs.OB, "1");
   });
 
-  it("dual link requires PM and OB both confirm", () => {
+  it("PM confirms the whole match ended even if OB still reports live", () => {
     const now = Date.now();
     const row = {
       ID: 3,
@@ -129,8 +129,15 @@ describe("ended_filter + multi platform", () => {
         now,
         { slug: "pm1", ended: true, status: "finished" },
       ),
-      false,
+      true,
     );
+    assert.equal(isClientMatchEnded({ ...row, Round: 1 }, matches,
+      { OB: { timer: [{ MatchID: "ob1", Round: 1 }] } }, now,
+      { eventId: "pm1", ended: true }), true);
+    assert.equal(isClientMatchEnded(row, matches, {}, now,
+      { eventId: "another-event", ended: true }), false);
+    assert.equal(isClientMatchEnded({ ...row, StartTime: now + 60000 }, matches, {}, now,
+      { eventId: "pm1", ended: true }), false);
   });
 
   it("inherits ended pm_sport by Polymarket link when active row has null pm_sport", () => {

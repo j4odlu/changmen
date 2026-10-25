@@ -1,6 +1,7 @@
 import * as db from "@changmen/db";
 import { matchMergeOnce } from "./match_merge_once.js";
 import { invalidateMatcherRdsSnapshot } from "./rds_snapshot_cache.js";
+import { withMatcherWriteLock } from "../lib/write_guard.js";
 import "../lib/env.js";
 
 /**
@@ -13,9 +14,15 @@ async function restoreClientMatch(clientMatchId) {
   if (!Number.isFinite(cmId))
     throw new Error("无效的赛事 ID");
 
-  const cm = await db.fetchClientMatchRow(cmId, "id, title, ended_at");
-  if (!cm)
-    throw new Error("赛事不存在");
+  const cm = await withMatcherWriteLock(async () => {
+    const cm = await db.fetchClientMatchRow(cmId, "id, title, ended_at");
+    if (!cm) throw new Error("赛事不存在");
+    if (cm.ended_at != null) {
+      await db.clearClientMatchEndedAt(cmId);
+      invalidateMatcherRdsSnapshot(["clientMatches", "platformMatches"]);
+    }
+    return cm;
+  });
 
   if (cm.ended_at == null) {
     return {
@@ -27,9 +34,6 @@ async function restoreClientMatch(clientMatchId) {
     };
   }
 
-  await db.clearClientMatchEndedAt(cmId);
-
-  invalidateMatcherRdsSnapshot(["clientMatches", "platformMatches"]);
   const matchMerge = await matchMergeOnce({ afterInFlight: true });
 
   const after = await db.fetchClientMatchRow(cmId, "id, title, ended_at");

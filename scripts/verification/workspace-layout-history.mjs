@@ -17,6 +17,7 @@ import {restoreValidationAuditSource} from './validation-audit-boundary.mjs';
 import {pmWalletAddressOptimizationFiles} from './pm-wallet-address-optimization.mjs';
 import {pmBalanceCredentialFiles,restorePmBalanceCredentialsSource} from './pm-balance-credentials-boundary.mjs';
 import {pmCredentialSdkRetiredFiles,readRetiredPmCredentialSdkSource} from './pm-credential-sdk-boundary.mjs';
+import {restoreMatcherLifecycleSource} from './matcher-lifecycle-boundary.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const sha=s=>createHash('sha256').update(s.replaceAll('\r\n','\n')).digest('hex');
 const recordFile=new URL('./workspace-layout-relocation.json',import.meta.url);
@@ -28,6 +29,7 @@ assert.equal(WORKSPACE_LAYOUT_RELOCATION.purpose,'root-rds-and-workspace-consoli
 const rows=new Map(WORKSPACE_LAYOUT_RELOCATION.files.map(row=>[row.file,row]));
 const reverse=new Map([...rows.values()].filter(row=>row.canonical).map(row=>[row.canonical,row.file]));
 export function restoreWorkspaceLayoutSource(file,source){
+ source=restoreMatcherLifecycleSource(file,source);
  source=restorePmBalanceCredentialsSource(file,source);
  source=restoreValidationAuditSource(file,source);
  source=restorePendingVenueVerificationSource(file,restoreObFootballSource(file,source));
@@ -46,7 +48,7 @@ function actual(row){
  if(!row.canonical)return undefined;
  const target=path.join(root,row.canonical),real=native.realpathSync(target),rel=path.relative(root,real);
  assert(rel!=='..'&&!rel.startsWith('..'+path.sep)&&!path.isAbsolute(rel),'Historical proof target escapes repository');
- return restoreBackendCommandPaths(row.canonical,restoreFrontendDependencySource(row.canonical,restorePendingVenueVerificationSource(row.canonical,restoreValidationAuditSource(row.canonical,native.readFileSync(real,'utf8')))));
+ return restoreBackendCommandPaths(row.canonical,restoreFrontendDependencySource(row.canonical,restorePendingVenueVerificationSource(row.canonical,restoreValidationAuditSource(row.canonical,restoreMatcherLifecycleSource(row.canonical,native.readFileSync(real,'utf8'))))));
 }
 export function readPreviousWorkspaceFile(file,options){
  const row=rows.get(key(file));

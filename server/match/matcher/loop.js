@@ -5,6 +5,7 @@ import {
 } from "@changmen/db";
 import { MATCHER_CLIENT_MATCH_ARCHIVE_INTERVAL_MS, MATCHER_INTERVAL_MS } from "./lib/config.js";
 import { writeMatcherHeartbeat } from "./lib/heartbeat.js";
+import { withMatcherWriteLock } from "./lib/write_guard.js";
 import { ensureTeamPlugin, matchMergeOnce } from "./ops/match_merge_once.js";
 import "./lib/env.js";
 
@@ -22,7 +23,7 @@ async function maybeArchiveStaleClientMatches() {
     return;
   if (archiveInFlight)
     return archiveInFlight;
-  archiveInFlight = (async () => {
+  archiveInFlight = withMatcherWriteLock(async () => {
     try {
       const past = await pruneMatchesOlderThanCollectPast();
       if (past?.platform?.deleted || past?.client?.ended) {
@@ -40,7 +41,7 @@ async function maybeArchiveStaleClientMatches() {
     if (ar.rds) {
       console.log(`[matcher] archive client_matches (scope=${ar.scope}): ${formatArchiveCounts(ar.rds)}`);
     }
-  })().finally(() => {
+  }).finally(() => {
     archiveInFlight = null;
   });
   return archiveInFlight;

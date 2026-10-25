@@ -2,11 +2,12 @@ import * as db from "@changmen/db";
 import { removeClientMatchFromMemory } from "../runtime_ports.js";
 import { invalidateMatcherRdsSnapshot } from "./rds_snapshot_cache.js";
 import { matchMergeOnce } from "./match_merge_once.js";
+import { withMatcherWriteLock } from "../lib/write_guard.js";
 import "../lib/env.js";
 
 /**
  * 强制结束：写 ended_at，保留 matchs 与 platform_matches；不搬 history。
- * 场馆继续上报时合场复用同一 client_matches.id，Client_GetMatchs 不再返回。
+ * 场馆继续上报时仍归属原比赛，不重新参与合场；Client_GetMatchs 不再返回。
  */
 
 async function forceEndClientMatch(clientMatchId) {
@@ -14,14 +15,14 @@ async function forceEndClientMatch(clientMatchId) {
   if (!Number.isFinite(cmId))
     throw new Error("无效的赛事 ID");
 
-  const cm = await db.fetchClientMatchRow(cmId, "id, title, matchs, ended_at");
-  if (!cm)
-    throw new Error("赛事不存在");
-
-  const result = await db.forceEndClientMatch(cmId);
-  removeClientMatchFromMemory(cmId);
-
-  invalidateMatcherRdsSnapshot(["platformMatches", "clientMatches"]);
+  const { cm, result } = await withMatcherWriteLock(async () => {
+    const cm = await db.fetchClientMatchRow(cmId, "id, title, matchs, ended_at");
+    if (!cm) throw new Error("赛事不存在");
+    const result = await db.forceEndClientMatch(cmId);
+    removeClientMatchFromMemory(cmId);
+    invalidateMatcherRdsSnapshot(["platformMatches", "clientMatches"]);
+    return { cm, result };
+  });
   const matchMerge = await matchMergeOnce({ afterInFlight: true });
 
   return {

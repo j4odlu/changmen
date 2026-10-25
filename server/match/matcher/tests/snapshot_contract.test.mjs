@@ -46,7 +46,7 @@ describe("snapshot row contract", () => {
     assert.equal(row2.HomeGbTeamId, GB_NIP);
   });
 
-  it("pm_sport dual-confirm needs full clientRows + matching identity", () => {
+  it("PM completion uses the full snapshot and matching identity regardless of OB live status", () => {
     const now = Date.now();
     const row = {
       ID: 9,
@@ -70,12 +70,12 @@ describe("snapshot row contract", () => {
       id: 9,
       pm_sport: { slug: "pm1", status: "finished", ended: true },
     }]);
-    // OB still live → dual confirm fails
+    // PM 终态优先于 OB 仍进行中的状态。
     assert.equal(
       isClientMatchEnded(row, matchesLive, {}, now, byPm.get(9)),
-      false,
+      true,
     );
-    // OB ended + PM ended + identity → archived
+    // OB 也结束时，结论相同。
     assert.equal(
       isClientMatchEnded(row, matchesEnded, {}, now, byPm.get(9)),
       true,

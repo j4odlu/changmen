@@ -7,7 +7,7 @@ import {
 } from "../lib/config.js";
 import "../lib/env_composer.js";
 import { writeComposerHeartbeat } from "../lib/heartbeat.js";
-import { assertComposerMayWrite } from "../lib/write_guard.js";
+import { assertComposerMayWrite, withMatcherWriteLock } from "../lib/write_guard.js";
 import { loadSnapshot } from "./io/snapshot.js";
 import { snapshotFromVenuesOnly } from "./io/venues_only.js";
 import { writeClientMatches } from "./io/write.js";
@@ -20,12 +20,13 @@ import {
 import {
   ALL_SOURCES_GONE_MS,
   allPlatformSourcesGone,
+  isClientMatchPmEnded,
 } from "./shape/ended_filter.js";
 
 /**
  * M1：匹配缺口 ≠ 结束。
- * 例外（根治用户侧僵尸场）：gap 且馆源在当前 snapshot 全部消失、且已过
- * ALL_SOURCES_GONE 时间门 → 才进 markEndedIds（只写 ended_at）。
+ * PM 已确认结束，或 gap 的全部馆源消失且超过 ALL_SOURCES_GONE 时间门，
+ * 才进 markEndedIds（只写 ended_at）。
  * 馆源仍在、本拍只是没合出来 → 仍只记 activeGaps，不结束。
  */
 export function resolveComposeEndPatch({
@@ -46,10 +47,6 @@ export function resolveComposeEndPatch({
     .map(Number)
     .filter(id => Number.isFinite(id) && id > 0 && !activeIds.has(id) && !endedIds.has(id));
 
-  if (platformMatches == null) {
-    return { markEndedIds: [], activeGaps: gaps };
-  }
-
   const byId = new Map();
   for (const row of clientRows || []) {
     const id = Number(row?.id ?? row?.ID);
@@ -68,9 +65,10 @@ export function resolveComposeEndPatch({
     const matchs = row.matchs ?? row.Matchs ?? {};
     const startMs = normalizeEpochMs(row.start_time ?? row.StartTime);
     if (
-      startMs > 0
+      isClientMatchPmEnded(row, row.pm_sport ?? row.PmSport, now)
+      || (platformMatches != null && startMs > 0
       && startMs <= now - ALL_SOURCES_GONE_MS
-      && allPlatformSourcesGone(matchs, platformMatches)
+      && allPlatformSourcesGone(matchs, platformMatches))
     ) {
       markEndedIds.push(id);
     }
@@ -88,6 +86,7 @@ export function resolveComposeEndPatch({
  * - endedCount>0 且本拍处理过的正 ID + sources-gone markEndedIds 覆盖 RDS 全部 active → 允许
  * - info 空、endedCount=0，但 markEndedIds 已覆盖全部 previous active（全是僵尸收尾）→ 允许
  * - 其余 → 拒写
+ * - 明确指定结束 ID 时允许仅更新状态，其它未处理活跃场保持原样。
  */
 export function shouldAllowEmptyWrite({
   info,
@@ -96,6 +95,7 @@ export function shouldAllowEmptyWrite({
   processedActiveIds,
   previousActiveIds,
   markEndedIds = [],
+  endedRowIds = [],
 } = {}) {
   if (info?.length)
     return { ok: true, reason: "nonempty" };
@@ -118,6 +118,9 @@ export function shouldAllowEmptyWrite({
 
   const uncovered = prev.filter(id => !processed.has(id) && !marked.has(id));
   if (uncovered.length) {
+    // 明确的状态更新只触及指定 ID，其它未合出的活跃记录保持原样。
+    const explicit = new Set([...marked, ...endedRowIds].map(Number));
+    if (prev.some(id => explicit.has(id))) return { ok: true, reason: "lifecycle_only" };
     return {
       ok: false,
       reason: ended <= 0 && !marked.size
@@ -141,7 +144,7 @@ export function shouldAllowEmptyWrite({
  * 默认不写库（MATCH_COMPOSER_WRITE=1 才写）。
  * @param {boolean} [opts.fromVenuesOnly] 忽略 RDS client_matches / 绑定 / sticky，纯场馆合场（检验用；禁止写库）
  */
-export async function composeOnce({
+async function composeOnceUnlocked({
   write = isComposerWriteEnabled(),
   registerTeams = true,
   forceReanchorOrientation = isComposerForceReanchor(),
@@ -180,7 +183,7 @@ export async function composeOnce({
 
   let info = end.info;
   const endedRows = end.endedRows;
-  const endedCount = end.endedCount;
+  const composedEndedCount = end.endedCount;
 
   const adapter = write && db.isMatcherStoreReady()
     ? db.getClientMatchIdAdapter()
@@ -201,6 +204,16 @@ export async function composeOnce({
       .map(r => Number(r.id ?? r.ID))
       .filter(id => Number.isFinite(id) && id > 0);
 
+  // 试算和写入使用同一份结束计划，包含本轮未合出的已有比赛。
+  const { markEndedIds, activeGaps } = resolveComposeEndPatch({
+    previousActiveIds,
+    info,
+    endedRows,
+    clientRows: snapshot.clientRows,
+    platformMatches: snapshot.matches,
+  });
+  const endedCount = composedEndedCount + markEndedIds.length;
+
   console.log(
     `[match-composer] matchPass ${matchMs}ms rows=${match.preEndedCount}`
     + ` · endPass ${endMs}ms ended=${endedCount} live=${info.length}`
@@ -217,17 +230,9 @@ export async function composeOnce({
     if (!guard.ok)
       throw new Error(`[match-composer] ${guard.reason}`);
 
-    const { markEndedIds, activeGaps } = resolveComposeEndPatch({
-      previousActiveIds,
-      info,
-      endedRows,
-      clientRows: snapshot.clientRows,
-      platformMatches: snapshot.matches,
-      now,
-    });
     if (markEndedIds.length) {
       console.log(
-        `[match-composer] sources-gone end: ${markEndedIds.slice(0, 20).join(",")}`
+        `[match-composer] lifecycle end: ${markEndedIds.slice(0, 20).join(",")}`
         + (markEndedIds.length > 20 ? `…(+${markEndedIds.length - 20})` : ""),
       );
     }
@@ -245,6 +250,7 @@ export async function composeOnce({
       processedActiveIds: match.processedActiveIds,
       previousActiveIds,
       markEndedIds,
+      endedRowIds: endedRows.map(row => Number(row.ID)),
     });
     if (!emptyOk.ok) {
       throw new Error(
@@ -259,35 +265,13 @@ export async function composeOnce({
       .map(r => Number(r.id ?? r.ID))
       .filter(id => Number.isFinite(id) && id > 0);
 
-    await writeClientMatches(info, now, { endedRows, markEndedIds, stickyEndedIds });
+    await writeClientMatches(info, now, { endedRows, markEndedIds, stickyEndedIds, existingClientRows: snapshot.clientRows });
     wrote = true;
     writeComposerHeartbeat({
       matchCount: info.length,
       builtAt: now,
       wrote: true,
     });
-
-    try {
-      // M4：只清「仍挂在 ended CM 上」的 match_id；JOIN 自愈，勿扫全表 sticky id
-      if (typeof db.clearPlatformMatchIdsPointingAtEnded === "function") {
-        const cleared = await db.clearPlatformMatchIdsPointingAtEnded();
-        if (cleared?.cleared) {
-          console.log(
-            `[match-composer] cleared platform_matches.match_id pointing at ended (${cleared.cleared} rows)`,
-          );
-          try {
-            const { invalidateMatcherRdsSnapshot } = await import(
-              "../ops/rds_snapshot_cache.js"
-            );
-            invalidateMatcherRdsSnapshot(["platformMatches", "clientMatches"]);
-          }
-          catch { /* 独立进程无 cache */ }
-        }
-      }
-    }
-    catch (err) {
-      console.error("[match-composer] clearPlatformMatchIds FAILED:", err.message);
-    }
 
     try {
       const { backfillPlatformMatchIdsForIdMerges } = await import(
@@ -317,6 +301,8 @@ export async function composeOnce({
     alignStats,
     skippedBindings,
     endedCount,
+    markEndedIds,
+    activeGaps,
     mergedDuplicateIds: match.mergedDuplicateIds,
     matchIdBackfill,
     teamReg: snapshot.teamReg,
@@ -327,4 +313,11 @@ export async function composeOnce({
     info,
     timing: { clusterMs, matchMs, endMs },
   };
+}
+
+export function composeOnce(options = {}) {
+  const write = options.write === undefined ? isComposerWriteEnabled() : options.write;
+  return write
+    ? withMatcherWriteLock(() => composeOnceUnlocked(options))
+    : composeOnceUnlocked(options);
 }

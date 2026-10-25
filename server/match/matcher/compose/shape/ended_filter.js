@@ -1,13 +1,13 @@
 /**
  * 已结束场剔除（逻辑对齐 match_lifecycle，不 import merge）。
  *
- * 有 Polymarket+OB 双 link：须 PM∧OB 双确认才归档。
- * 仅 PM：身份一致且 pm_sport ended。
+ * 有 PM：身份一致且 PM 确认结束即结束整场，不等待其它场馆。
  * 仅 OB：原 Round/timer/锁盘/is_live 逻辑。
  */
 import { normalizeEpochMs } from "@changmen/shared/time/match_time";
 import { findPlatformMatch } from "../sides/orientation_lock.js";
 import { liveRound } from "../structure/resolve_structure.js";
+import { buildEndedSourceOwners } from "../../lib/match_lifecycle.js";
 
 const PAST_START_FALLBACK_MS = 30 * 60 * 1000;
 export const ALL_SOURCES_GONE_MS = 3 * 60 * 1000;
@@ -41,19 +41,6 @@ function pickCanonicalIsLive(matchs, platformMatches) {
   return null;
 }
 
-function pickObIsLive(matchs, platformMatches) {
-  const obId = matchs?.OB;
-  if (obId == null || obId === "")
-    return null;
-  const pm = findPlatformMatch(platformMatches, "OB", obId);
-  if (!pm)
-    return null;
-  const raw = pm.IsLive ?? pm.is_live;
-  if (raw == null || raw === "")
-    return null;
-  return Number(raw);
-}
-
 export function allMapBetsClosed(bets) {
   const list = bets || [];
   const full = list.find(b => (Number(b.Map) || 0) === 0);
@@ -70,18 +57,6 @@ export function allMapBetsClosed(bets) {
     if (!sources.length)
       return false;
     if (sources.some(s => String(s?.Status || "Normal") === "Normal"))
-      return false;
-  }
-  return true;
-}
-
-function obMapSourcesLockedOrAbsent(bets) {
-  const list = bets || [];
-  for (const bet of list) {
-    const ob = bet?.Sources?.OB;
-    if (!ob)
-      continue;
-    if (String(ob.Status || "Normal") === "Normal")
       return false;
   }
   return true;
@@ -134,36 +109,14 @@ function isPmConfirmEnded(link, pmSport, startMs, now) {
   return true;
 }
 
-/**
- * 已 ended 且 pm_sport 确认结束的馆源 → `"Platform:sourceId"`。
- * （Match 层剔除复活源用；当前 pipeline 未挂接，避免与 activeGap 竞态。）
- */
+export function isClientMatchPmEnded(row, pmSport = row?.pm_sport ?? row?.PmSport, now = Date.now()) {
+  const link = (row?.Matchs ?? row?.matchs)?.Polymarket;
+  return isPmConfirmEnded(link, pmSport, normalizeEpochMs(row?.StartTime ?? row?.start_time), now);
+}
+
+/** 历史诊断入口：所有已结束来源均保留归属；生产匹配使用 matchingPlatformSources。 */
 export function buildEndedSourceTombstones(clientRows) {
-  const out = new Set();
-  for (const row of clientRows || []) {
-    const ended = row?.ended_at ?? row?.endedAt;
-    if (ended == null || ended === "")
-      continue;
-    const pmSport = row?.pm_sport ?? row?.PmSport;
-    const matchs = row?.matchs ?? row?.Matchs ?? {};
-    const pmLink = matchs?.Polymarket;
-    // 有 PM：须 pm_sport 身份一致且已结束，才整场馆源进墓碑
-    if (pmLink != null && pmLink !== "") {
-      if (!isPmSportEnded(pmSport) || !pmSportMatchesLink(pmLink, pmSport))
-        continue;
-    }
-    else if (!isPmSportEnded(pmSport)) {
-      // 无 PM 链接时不靠 pm_sport 墓碑（避免误伤）
-      continue;
-    }
-    for (const [platform, sourceId] of Object.entries(matchs || {})) {
-      const sid = String(sourceId ?? "").trim();
-      if (!platform || !sid)
-        continue;
-      out.add(`${platform}:${sid}`);
-    }
-  }
-  return out;
+  return new Set(buildEndedSourceOwners(clientRows).keys());
 }
 
 /**
@@ -194,40 +147,6 @@ export function buildEndedPmSportByPolymarketLink(clientRows) {
   return out;
 }
 
-/** 从 matches 去掉墓碑馆源（原地）。@returns {number} 清除条数
- *  当前未挂 pipeline：先 strip 会导致活跃幽灵进 activeGap 而关不掉。
- */
-export function stripTombstonedPlatformSources(matches, tombstones) {
-  if (!matches || !tombstones?.size)
-    return 0;
-  let cleared = 0;
-  for (const [platform, byId] of Object.entries(matches)) {
-    if (!byId || typeof byId !== "object")
-      continue;
-    for (const sid of Object.keys(byId)) {
-      if (!tombstones.has(`${platform}:${sid}`))
-        continue;
-      delete byId[sid];
-      cleared += 1;
-    }
-  }
-  return cleared;
-}
-
-function isObConfirmEnded(row, platformMatches, timersByProvider) {
-  const hasOb = row?.Matchs?.OB != null && row.Matchs.OB !== "";
-  if (!hasOb)
-    return null;
-  if (Number(row?.Round) > 0)
-    return false;
-  if (isInLiveTimer(row?.Matchs, timersByProvider))
-    return false;
-  const isLive = pickObIsLive(row?.Matchs, platformMatches);
-  if (isLive === 2)
-    return false;
-  return obMapSourcesLockedOrAbsent(row?.Bets);
-}
-
 export function isClientMatchEnded(row, platformMatches, timersByProvider, now = Date.now(), pmSport = null) {
   const startMs = normalizeEpochMs(row?.StartTime);
 
@@ -240,13 +159,7 @@ export function isClientMatchEnded(row, platformMatches, timersByProvider, now =
   const hasOb = row?.Matchs?.OB != null && row.Matchs.OB !== "";
   const pmLink = row?.Matchs?.Polymarket;
 
-  if (hasPm && hasOb) {
-    const pmOk = isPmConfirmEnded(pmLink, pmSport, startMs, now);
-    const obOk = isObConfirmEnded(row, platformMatches, timersByProvider) === true;
-    return pmOk && obOk;
-  }
-
-  if (hasPm && !hasOb)
+  if (hasPm)
     return isPmConfirmEnded(pmLink, pmSport, startMs, now);
 
   if (Number(row?.Round) > 0)

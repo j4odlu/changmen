@@ -1,5 +1,6 @@
 import {
   fetchClientMatchesHidden,
+  fetchClientMatchesForAlign,
   fetchClientMatchesHiddenCount,
   fetchLatestClientMatchBuiltAt,
   fetchPlatformMatchesForHiddenClientMatches,
@@ -7,6 +8,7 @@ import {
 } from "@changmen/db";
 import { normalizeTeam } from "@changmen/shared/match-identity/teams/team_key.js";
 import { normalizeEpochMs } from "@changmen/shared/time/match_time";
+import { formatPmMatchStatus } from "./pm_match_status.js";
 import { isComposerStickyOrientation } from "../lib/config.js";
 import { normalizeMatchesShape } from "../compose/io/snapshot.js";
 import { isMatcherProduction, MATCHER_INTERVAL_MS } from "../lib/config.js";
@@ -24,6 +26,7 @@ import {
   isManagedByServer,
 } from "./matcher_process.js";
 import { enrichClientMatchesMergeMode } from "./merge_mode.js";
+import { buildEndedSourceOwners, isEndedClientMatch } from "../lib/match_lifecycle.js";
 
 function recommendationGroupKey(m) {
   const game = resolveUiGame(m.platform, m.source_game_id);
@@ -100,6 +103,7 @@ function computeRecommendations(allMatches, clientMatches = []) {
   const groups = new Map();
 
   for (const m of allMatches) {
+    if (m.ended_client_match_id != null) continue;
     const gk = recommendationGroupKey(m);
     if (!gk)
       continue;
@@ -207,6 +211,16 @@ function normalizeDashboardStartTime(row) {
   return { ...row, start_time: normalizeEpochMs(row.start_time) };
 }
 
+/** [changmen 扩展] 展示用户页同源 PM 状态；不推断比赛生命周期。 */
+export function clientMatchWithPmStatus(row) {
+  const snapshot = row.pm_sport;
+  const hasPm = snapshot || row.matchs?.Polymarket;
+  return {
+    ...normalizeDashboardStartTime(row),
+    pm_match_status: hasPm ? formatPmMatchStatus(snapshot || undefined) : null,
+  };
+}
+
 function firstValue(...values) {
   return values.find(v => v != null && v !== "");
 }
@@ -229,8 +243,10 @@ function normalizeIsLiveFlag(...values) {
   return null;
 }
 
-function dashboardRowsFromSnapshot(matchesRaw, clientMatches) {
+function dashboardRowsFromSnapshot(matchesRaw, clientMatches, lifecycleRows = []) {
   const normalized = normalizeMatchesShape(matchesRaw);
+  const endedOwners = buildEndedSourceOwners(lifecycleRows);
+  const endedIds = new Set(lifecycleRows.filter(isEndedClientMatch).map(row => Number(row.id ?? row.ID)));
   // 用当前快照建平台索引，过滤掉挂载已全部失效的僵尸 client_matches
   const livePlatformIndex = {};
   for (const [platform, byId] of Object.entries(normalized || {})) {
@@ -250,7 +266,7 @@ function dashboardRowsFromSnapshot(matchesRaw, clientMatches) {
       const sourceMatchId = firstValue(m.SourceMatchID, m.source_match_id);
       if (sourceMatchId == null)
         continue;
-      const rawMatchId = firstValue(m.ClientMatchId, m.client_match_id, m.match_id);
+      const rawMatchId = firstValue(m.ClientMatchId, m.client_match_id, m.match_id, endedOwners.get(`${platform}:${sourceMatchId}`));
       const boundId = rawMatchId != null && rawMatchId !== ""
         ? Number(rawMatchId)
         : null;
@@ -271,6 +287,7 @@ function dashboardRowsFromSnapshot(matchesRaw, clientMatches) {
         bo: Number(firstValue(m.BO, m.bo, 0)) || 0,
         match_id: matchId,
         bound_client_match_id: boundCmId,
+        ended_client_match_id: endedIds.has(boundCmId) ? boundCmId : null,
         synced_at: Number(firstValue(m.savedAt, m.synced_at, 0)) || 0,
         rot_num: String(firstValue(m.RotNum, m.rotNum, m.rot_num, "") || "").trim() || "",
         is_live: normalizeIsLiveFlag(m.IsLive, m.isLive, m.is_live, m.live),
@@ -373,14 +390,16 @@ export function buildRayRiskMatches(ids, clientMatches, rayMatches) {
 }
 
 async function fetchMatcherDashboard() {
-  const [snapshot, hiddenClientMatchCount] = await Promise.all([
+  const [snapshot, hiddenClientMatchCount, lifecycleRows] = await Promise.all([
     fetchMatcherRdsSnapshot(),
     fetchClientMatchesHiddenCount(),
+    fetchClientMatchesForAlign(),
   ]);
   const clientMatchesRaw = snapshot.clientRows || [];
-  const allMatchesRaw = dashboardRowsFromSnapshot(snapshot.matchesRaw, clientMatchesRaw);
+  if (!lifecycleRows) throw new Error("比赛关联读取失败，无法确认已结束来源");
+  const allMatchesRaw = dashboardRowsFromSnapshot(snapshot.matchesRaw, clientMatchesRaw, lifecycleRows);
 
-  const clientMatchesNorm = (clientMatchesRaw || []).map(normalizeDashboardStartTime);
+  const clientMatchesNorm = (clientMatchesRaw || []).map(clientMatchWithPmStatus);
 
   const gameByPlatformMatch = new Map();
   for (const cm of clientMatchesNorm) {
@@ -446,7 +465,7 @@ async function fetchMatcherHiddenClientMatches() {
     fetchClientMatchesHidden(),
     fetchClientMatchesHiddenCount(),
   ]);
-  const clientRows = (rows || []).map(normalizeDashboardStartTime);
+  const clientRows = (rows || []).map(clientMatchWithPmStatus);
   const venueRows = await fetchPlatformMatchesForHiddenClientMatches(clientRows);
   const byPlatform = {};
   for (const raw of venueRows || []) {

@@ -46,6 +46,12 @@ platform_matches / bets / timers / client_matches / overrides
 
 生产自动合场写路径是内嵌 `matchMergeOnce` → `composeOnce`；PM2 不注册独立 composer 写进程。人工运维及 PM 附加字段写入另有各自入口。
 
+[changmen 扩展] 2026-10-25：匹配关系与比赛状态分开。自动或人工结束已有比赛只写 `ended_at`，保留原 `matchs`、方向、盘口和平台 `match_id`，不隐式解绑。结束来源按平台场次 ID 跳过合场和待办，原始采集快照不变；旧反向指针已被清空的来源也按历史 `matchs` 识别。恢复展示清除 `ended_at` 后原关联重新可用，同队下一场的新平台 ID 不受影响。
+
+PM 赛事身份匹配、已到开赛时间且明确结束时，整场结束，不等待其它平台的 Round、计时或锁盘；已有比赛即使本轮没合出来也检查 PM 终态。未关联 PM 的比赛沿用原结束规则。平台原始数据保留供“已结束”详情诊断。
+
+同进程的合场写入、自动过期处理与人工结束/恢复串行，防止旧快照在状态操作后覆盖匹配字段。恢复或纠正后的当前活跃归属优先于重复历史记录；原有跨进程单写者守卫保持生效。
+
 ## 依赖
 
 - `server/match/identity`（`@changmen/shared/match-identity`）— 队名、时间窗与 client_match ID 共享工具
@@ -58,6 +64,8 @@ matcher 源码不导入 backend。backend 经 `runtime_ports.js` 注入采集热
 backend 列表与 matcher 面板共用 DB 包的活跃列表快照缓存。行与版本在同一 SQL 语句中读取，版本覆盖人工修改及 PM 附加状态；失效会阻止在途旧读取发布。
 合场的身份和 align 则复用一次含 ended 行的完整生命周期快照，保留 gb 锁与 PM 状态。
 这些内部快照字段不进入 `Client_*` 线协议。
+
+[changmen 扩展] matcher 已合场及已结束卡片展示 PM 比赛状态，读取 VPS `changmen-pm-sports` 保存的 `client_matches.pm_sport`，沿用用户页的状态文案（地图、整场比分和计时）。PM 关联缺少状态时显示“状态待更新”，不按开赛时间推断。卡片悬停提示快照更新时间；刷新沿用面板现有轮询。状态展示不另行计算比赛有效性；结束处理由上文 matcher 生命周期规则执行。
 
 [changmen 扩展] 共用活跃行缓存不代表展示集合已一致：matcher 页面还按当前平台来源过滤，用户接口仍可能收到 active gap 保留的旧挂载与盘口。2026-10-20 的[统一产出方案](../../../docs/MATCH_PUBLICATION_CONSISTENCY_PLAN.md)改为由 matcher 计算并保存当前有效比赛，两端直接读取保存结果；不在用户接口重新判断平台有效性。三步依次为产出与保存、两端接入、实查收尾，均可暂停；拟增加最小结果字段，尚未实现。历史取证见[审计报告](../../../docs/audits/MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md)。
 

@@ -4,6 +4,16 @@ import { resolveComposeEndPatch } from "../compose/compose_once.js";
 import { ALL_SOURCES_GONE_MS } from "../compose/shape/ended_filter.js";
 
 describe("M1 resolveComposeEndPatch", () => {
+  it("ends a PM-confirmed active gap without changing its original platform links", () => {
+    const now = Date.now();
+    const row = { id: 8673, start_time: now - 3600000, round: 1,
+      matchs: { OB: "ob1", Polymarket: "pm1" }, pm_sport: { ended: true, eventId: "pm1" } };
+    const original = structuredClone(row);
+    const patch = resolveComposeEndPatch({ previousActiveIds: [8673], clientRows: [row],
+      platformMatches: { Polymarket: { pm1: { SourceMatchID: "pm1" } } }, now });
+    assert.deepEqual(patch, { markEndedIds: [8673], activeGaps: [] });
+    assert.deepEqual(row, original);
+  });
   it("does not markEnded when previous active drops out of info (sources still live)", () => {
     const now = Date.now();
     const { markEndedIds, activeGaps } = resolveComposeEndPatch({

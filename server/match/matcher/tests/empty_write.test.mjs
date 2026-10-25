@@ -3,6 +3,12 @@ import { describe, it } from "vitest";
 import { shouldAllowEmptyWrite } from "../compose/compose_once.js";
 
 describe("shouldAllowEmptyWrite", () => {
+  it("allows a targeted end while unrelated active gaps remain unchanged", () => {
+    assert.deepEqual(shouldAllowEmptyWrite({ info: [], previousActiveIds: [42, 99],
+      processedActiveIds: new Set(), markEndedIds: [42] }), { ok: true, reason: "lifecycle_only" });
+    assert.deepEqual(shouldAllowEmptyWrite({ info: [], previousActiveIds: [42, 99],
+      processedActiveIds: new Set([42]), endedCount: 1, endedRowIds: [42] }), { ok: true, reason: "lifecycle_only" });
+  });
   it("allows nonempty", () => {
     assert.equal(shouldAllowEmptyWrite({ info: [{}], endedCount: 0 }).ok, true);
   });

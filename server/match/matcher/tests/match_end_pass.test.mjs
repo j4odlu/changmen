@@ -3,22 +3,24 @@ import { describe, it } from "vitest";
 import {
   runEndPass,
   runMatchPass,
-  stripEndedClientMatchLinks,
 } from "../compose/pipeline.js";
+import { matchingPlatformSources } from "../lib/match_lifecycle.js";
 import { ALL_SOURCES_GONE_MS } from "../compose/shape/ended_filter.js";
 
 describe("M2 runMatchPass / runEndPass", () => {
-  it("stripEndedClientMatchLinks clears stale ClientMatchId (M4)", () => {
+  it("ended sources leave matching candidates while their links remain intact", () => {
     const matches = {
       OB: { ob1: { SourceMatchID: "ob1", ClientMatchId: 1459, match_id: 1459 } },
       RAY: { ray1: { SourceMatchID: "ray1", ClientMatchId: 88 } },
     };
-    const cleared = stripEndedClientMatchLinks(matches, [
+    const eligible = matchingPlatformSources(matches, [
       { id: 1459, ended_at: 1 },
       { id: 88, ended_at: null },
     ]);
-    assert.equal(cleared, 1);
-    assert.equal(matches.OB.ob1.ClientMatchId, undefined);
+    assert.deepEqual(eligible.OB, {});
+    assert.equal(matches.OB.ob1.ClientMatchId, 1459);
+    assert.equal(matches.OB.ob1.match_id, 1459);
+    assert.equal(eligible.RAY.ray1.ClientMatchId, 88);
     assert.equal(matches.RAY.ray1.ClientMatchId, 88);
   });
   it("runEndPass splits ended without changing match clustering inputs", () => {

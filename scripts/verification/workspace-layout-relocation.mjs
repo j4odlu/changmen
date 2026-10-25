@@ -14,6 +14,7 @@ import {verifyAccountEditExtraction} from './account-edit-extraction.mjs';
 import {verifyPendingVenueFixes} from './pending-venue-fixes.mjs';
 import {verifyObFootballExtraction} from './ob-football-extraction.mjs';
 import {restorePendingVenueVerificationSource,verifyPendingVenueExtraction} from './pending-venue-extraction.mjs';
+import {restoreMatcherLifecycleSource,verifyMatcherLifecycleSources} from './matcher-lifecycle-boundary.mjs';
 const sha=s=>createHash('sha256').update(s.replaceAll('\r\n','\n')).digest('hex');
 const prefixes=[['server/db','rds'],['server/packages/venue-node-loader','server/venues/loader'],['server/packages/venue-node-registry','server/venues/registry'],['server/packages/venue-adapter-tools','server/venues'],['server/match/identity','packages/shared/match-identity']];
 const moved=f=>prefixes.reduce((s,[a,b])=>s===a||s.startsWith(a+'/')?b+s.slice(a.length):s,f);
@@ -56,6 +57,9 @@ export function assertWorkspaceMoveSemantics(row,source){
  }
 }
 export function inspectWorkspaceLayout(root,{read=f=>fs.readFileSync(path.join(root,f),'utf8'),exists=f=>fs.existsSync(path.join(root,f))}={}){
+ verifyMatcherLifecycleSources(read);
+ const currentRead=read;
+ read=file=>restoreMatcherLifecycleSource(file,currentRead(file),currentRead);
  const backendCommands=inspectBackendCommandPaths(root,{read});
  const frontendDependencies=verifyFrontendDependencyRefactor(read);
  verifyAccountEditExtraction(read);

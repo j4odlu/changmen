@@ -24,7 +24,6 @@ import { applyLiveShape, filterMultiPlatform } from "./shape/live_shape.js";
 import { projectList } from "./sides/project_sources.js";
 import { resolveMatchStructure } from "./structure/resolve_structure.js";
 import { matchingPlatformSources } from "../lib/match_lifecycle.js";
-import { hasRequiredPlatforms } from "./venue_policy.js";
 
 function isEndedClientMatchRow(row) {
   const ended = row?.ended_at ?? row?.endedAt;
@@ -140,7 +139,7 @@ export function runMatchPass(list, snapshot, opts = {}) {
   const existingIds = activeClientIdSet(clientRows);
   const keepExistingSingle = r => opts.allowExistingSingle === true
     && existingIds.has(Number(r.ID)) && Object.keys(r.Matchs || {}).length >= 1;
-  info = info.filter(r => hasRequiredPlatforms(r) || keepExistingSingle(r));
+  info = info.filter(r => Object.keys(r.Matchs || {}).length >= MIN_PLATFORMS || keepExistingSingle(r));
 
   resolveMatchStructure(info, { matches, timers, bets });
 

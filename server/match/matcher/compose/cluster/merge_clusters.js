@@ -1,5 +1,5 @@
 /**
- * 自研合场聚类：gb 对 → 队名+严格时间；篮球允许单馆，其它最少 2 馆。
+ * 自研合场聚类：gb 对 → 队名+严格时间；最少 2 馆。
  * MergeKey 使用 match:id: / match:name: 格式。
  */
 import { isComposerPbRotnumCollapse } from "../../lib/config.js";
@@ -22,9 +22,8 @@ import {
   teamIdsFromPm,
 } from "../sides/orientation_lock.js";
 import { reconcileClustersByName } from "./reconcile_by_name.js";
-import { hasRequiredPlatforms, minimumPlatformsForGame, MIN_PLATFORMS } from "../venue_policy.js";
 
-export { MIN_PLATFORMS } from "../venue_policy.js";
+export const MIN_PLATFORMS = 2;
 
 const META_PLATFORM_ORDER = ["Polymarket", "OB", "RAY", "IA", "PB", "TF"];
 
@@ -155,7 +154,7 @@ function seedFromExisting(entries, existingClientRows) {
       if (Number(e.clientMatchId) === Number(cm.id) && Number.isFinite(Number(cm.id)))
         chain.push(e);
     }
-    if (chain.length < minimumPlatformsForGame(chain[0]?.gameCode))
+    if (chain.length < MIN_PLATFORMS)
       continue;
     for (const e of chain)
       used.add(e.rowKey);
@@ -267,7 +266,7 @@ export function applyPlatformBindings(list, platformBindingsByClientId, matches 
     }
   }
   return {
-    list: list.filter(hasRequiredPlatforms),
+    list: list.filter(r => Object.keys(r.Matchs || {}).length >= MIN_PLATFORMS),
     skippedBindings,
   };
 }
@@ -302,14 +301,6 @@ export function clusterByGbThenName(matches, existingClientRows = [], opts = {})
   // ④ 队名补合并：漏网馆贴场 + id/name 裂场再并
   const reconciled = reconcileClustersByName(list, all);
   list = reconciled.list;
-  // 先完成原有跨馆匹配；仅剩余篮球可单馆成场。来源 ID 保证同队下一场不会塌成同一比赛。
-  const clustered = new Set(list.flatMap(row => Object.entries(row.Matchs || {}).map(([p, sid]) => `${p}:${sid}`)));
-  for (const entry of all) {
-    if (clustered.has(entry.rowKey) || entry.gameCode !== "basketball" || !canUseNameKey(entry)
-      || !entry.homeId || !entry.awayId || entry.homeId === entry.awayId || !(entry.startMs > 0))
-      continue;
-    list.push(toClusterRow([entry], `match:single:basketball:${entry.rowKey}`, "single"));
-  }
   list.sort((a, b) => (a.StartTime || 0) - (b.StartTime || 0));
   return list;
 }

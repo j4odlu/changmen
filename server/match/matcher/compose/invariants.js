@@ -3,7 +3,6 @@
  */
 import { lookupGbTeamIdByPlatform } from "@changmen/shared/match-identity/teams/team_key.js";
 import { findPlatformMatch } from "./sides/orientation_lock.js";
-import { minimumPlatformsForGame } from "./venue_policy.js";
 
 export function checkHomeSlotConsistency(row, nativeByPlatformMap = {}) {
   const violations = [];
@@ -158,17 +157,10 @@ export function checkSourcesMatchLockTeams(row, {
 
 export function checkUnlockedEmpty(row) {
   const violations = [];
-  const links = Object.keys(row.Matchs || {});
-  const nativeBasketball = minimumPlatformsForGame(row.Game) === 1 && links.length === 1;
   if (!row.HomeGbTeamId && !row.AwayGbTeamId) {
     if (Array.isArray(row.Reverse) && row.Reverse.length)
       violations.push(`#${row.ID}: unlocked but Reverse nonempty`);
     for (const bet of row.Bets || []) {
-      // 单馆篮球可按原生方向输出全场盘；I1 另行核对选项方向，禁止额外馆或局盘混入。
-      const source = bet.Sources?.[links[0]];
-      if (nativeBasketball && Number(bet.Map) === 0 && Object.keys(bet.Sources || {}).length === 1
-        && source?.HomeID && source?.AwayID && String(source.HomeID) !== String(source.AwayID))
-        continue;
       if (Object.keys(bet.Sources || {}).length)
         violations.push(`#${row.ID}: unlocked but Sources nonempty map=${bet.Map}`);
     }

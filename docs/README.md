@@ -32,7 +32,7 @@
 | [ARB_MULTI_SPORT.md](./ARB_MULTI_SPORT.md) | **多运动维护态**：棒/足 Tab + PM∥PF + N3 moneyline 合并；不开 N4；电竞主线见 `client/web/docs/A8_NEXT_STEPS.md`；熊猫体育试玩协议见 [OB_SPORT.md](../client/web/docs/platforms/OB_SPORT.md) |
 | [SPORTS_PRODUCT_LINES.md](./SPORTS_PRODUCT_LINES.md) | monorepo 目录 / `lines/` manifest / 脚本落点（服从 ARB_MULTI_SPORT） |
 | [CATALOG.md](./CATALOG.md) | `sport` / `game` / `market` catalog 字段与扩展规则（**配置单一入口**） |
-| [RAY_PM_BASKETBALL_PHASE1_PLAN.md](./RAY_PM_BASKETBALL_PHASE1_PLAN.md) | 篮球加入电竞分类：RAY/PM 仅增加采集配置、全场获胜；篮球图标与单馆下发例外，含验证记录 |
+| [RAY_PM_BASKETBALL_PHASE1_PLAN.md](./RAY_PM_BASKETBALL_PHASE1_PLAN.md) | 篮球加入电竞分类：RAY/PM 仅增加采集配置、全场获胜；篮球图标、至少双馆下发，含验证记录 |
 | [../server/README.md](../server/README.md) | **服务端包索引**、进程图、常用命令 |
 | [DATA_STORAGE.md](./DATA_STORAGE.md) | 云库 vs 本机 JSON、迁移目录、快照生命周期与 archive |
 | [TEAM_BOUNDARIES.md](./TEAM_BOUNDARIES.md) | 客户端 / 服务端目录边界 |

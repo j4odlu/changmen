@@ -2,6 +2,7 @@
 import { classifyDeployScope } from "../deploy/classify-deploy-scope.mjs";
 
 const controlPatterns = [
+  /^scripts\/check-team-boundaries\.mjs$/,
   /^scripts\/(?:verification|deploy)\//,
   /^\.github\//,
   /^sh\/(?:deploy-[^/]+\.sh|_common\.sh)$/,
@@ -37,8 +38,8 @@ export function validationPlan(changedPaths, { publication = false, components =
   // (and their deploy consumers by deployment-control). Unknown/shared audit
   // implementations still require the entire verification suite.
   const validationControls = new Set(["validation-plan.mjs", "validation-plan.test.mjs", "verify-change.mjs", "verify-change.test.mjs"]);
-  const verificationChanged = relevant.some(file => /^scripts\/verification\//.test(file)
-    && !validationControls.has(file.slice("scripts/verification/".length)));
+  const verificationChanged = relevant.some(file => file === "scripts/check-team-boundaries.mjs"
+    || /^scripts\/verification\//.test(file) && !validationControls.has(file.slice("scripts/verification/".length)));
   // Historical FOK snapshots belong to explicit audits. Application risk alone
   // must not trigger the verifier's own source-mutation regression suite.
   const validationChanged = relevant.some(file => /^scripts\/verification\/(?:validation-plan|verify-change)(?:\.test)?\.mjs$/.test(file)

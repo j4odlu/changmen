@@ -7,6 +7,7 @@ import { readHistoricalValidationSource, restoreValidationAuditSource } from "./
 import { inspectPmDependencies } from "./pm-dependency-audit.mjs";
 import { withAdapterHistoryReader, readAdapterHistory } from "./browser-entry-history.mjs";
 import { VENUE_BROWSER_RELOCATION, verifyVenueBrowserRelocation } from "./venue-browser-relocation.mjs";
+import { changePlan } from "../deploy/change-plan.mjs";
 
 it("repeated token comparisons cannot reuse a caller's corrupted result", () => {
   const source = 'const payload = "a b"; send(payload);';
@@ -93,4 +94,17 @@ it("a complete relocation proof reads each input once and a later proof rejects 
   expect(() => verifyVenueBrowserRelocation(file => {
     if (file === changed) throw Error("missing"); return baseline(file);
   })).toThrow("missing");
+});
+
+it("optimizing the real boundary command runs its verifier regressions without publishing applications", () => {
+  const paths = ["scripts/check-team-boundaries.mjs", "scripts/verification/pm-loader-bindings.mjs"];
+  for (const selection of [[paths[0]], paths]) {
+    const plan = changePlan(selection, { purpose: "release" });
+    expect(plan.tier).toBe("controls");
+    expect(plan.deployment.scope).toBe("noop");
+    expect(plan.checks).toEqual(["verification-control", "verification-node"]);
+  }
+  expect(changePlan([...paths, "client/web/src/App.vue"]).deployment.scope).toBe("frontend");
+  expect(changePlan([...paths, "server/backend/server.js"]).deployment.scope).toBe("backend");
+  expect(changePlan(["scripts/check-team-boundaries.mjs.runtime.js"]).deployment.scope).toBe("full");
 });

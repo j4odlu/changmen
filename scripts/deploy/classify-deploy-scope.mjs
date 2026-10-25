@@ -57,7 +57,7 @@ export function classifyDeployScope(paths) {
 
     // These sources run in CI/local verification, never in the eight app entries.
     // Validation and database compatibility selection still see the full diff.
-    if (ciOnlyFiles.has(p) || /^scripts\/(?:verification|testing)\//.test(p)
+    if (p === "scripts/check-team-boundaries.mjs" || ciOnlyFiles.has(p) || /^scripts\/(?:verification|testing)\//.test(p)
       || /^scripts\/deploy\/(?:[^/]+\.test\.mjs$|fixtures\/)/.test(p)) continue;
 
     sawDeployRelevant = true;

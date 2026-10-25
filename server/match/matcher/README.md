@@ -71,6 +71,8 @@ backend 列表与 matcher 面板共用 DB 包的活跃列表快照缓存。行�
 
 [changmen 扩展] 2026-10-25：composer 直接更新 `client_matches` 原有比赛、盘口与方向字段，不增加比赛副本或展示状态。已有单馆比赛继续刷新，缺席场馆保留盘口 ID 和关联，输出 `Locked`、零赔率和空选项 ID，复用 A8 前端锁盘；来源恢复后重新输出原生选项。全部来源缺席但尚未结束时仍保留比赛并锁盘，是否结束沿用 changmen 原有规则，已结束赛事不下发。两端共用 RDS 快照，页面不再二次判断两馆门槛或来源存活；PM 独立状态和既有 RAY 风险保护保留。数据同事务提交后再失效缓存。
 
+[changmen 扩展] 篮球测试例外：`basketball` 新比赛可只有一馆映射，原游戏仍至少两馆。先完成原跨馆匹配，再为剩余有效篮球来源单独成场，来源 ID 隔离同队不同场次；后续复用比赛 ID 和原生命周期。单馆篮球尚无规范球队关联时，全场盘口按来源原生主客输出，不创建虚假 gb 锁；缺边不输出盘口。用户数值 `GameID=10001` 为 changmen 扩展。此例外不放宽多馆朝向判断、其它游戏门槛或结束/风险过滤。
+
 已撤销的 `current_result` 字段由 `node rds/maintenance/drop-client-match-current-result.mjs` 独立维护，默认只读核验，`--apply` 执行删除；不进入部署或启动。运行时直接读取原有比赛字段，必需输入读取失败中止本轮。详见[统一产出方案及当前验收状态](../../../docs/MATCH_PUBLICATION_CONSISTENCY_PLAN.md)。历史取证见[审计报告](../../../docs/audits/MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md)。
 
 环境变量：与 backend 共用 `server/backend/.env`（或本目录 `.env`）。`CHANGMEN_DB_SCRIPT` 与 backend 保持一致（兼容 `GAMEBET_DB_SCRIPT`）。

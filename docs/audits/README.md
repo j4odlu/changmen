@@ -9,6 +9,7 @@
 | 当前目录与安装布局 | [WORKSPACE_LAYOUT](../WORKSPACE_LAYOUT.md) |
 | 当前发布与验收 | [INDEPENDENT_DEPLOYMENT](../INDEPENDENT_DEPLOYMENT.md) · [ACTIONS_VALIDATION_PERFORMANCE](../ACTIONS_VALIDATION_PERFORMANCE_20261019.md) |
 | 合场发布一致性审计 | [2026-10-19 审计](./MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md) · [未实施方案](../MATCH_PUBLICATION_CONSISTENCY_PLAN.md) |
+| 篮球全场获胜源站标识 | [2026-10-25 RAY 只读快照](./2026-10-25-ray-basketball/research.json) · [第一期接入方案](../RAY_PM_BASKETBALL_PHASE1_PLAN.md) |
 | PM 本地簿证据及启用限制 | [浏览器持续观察审计](./PM_BOOK_BROWSER_CONTINUITY_AUDIT_20261017.md) · [恢复与取证设计](../PM_BOOK_RECOVERY_AND_EVIDENCE_PLAN_20261017.md) |
 | 已退役方案 | [归档清单](../archive/20261022-retired-plans/README.md) |
 

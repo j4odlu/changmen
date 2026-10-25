@@ -1,0 +1,613 @@
+{
+  "schema_version": 1,
+  "purpose": "PM basketball configuration-only integration validation",
+  "read_only": true,
+  "metadata": {
+    "basketballTag": {
+      "id": "28",
+      "label": "Basketball",
+      "slug": "basketball"
+    },
+    "source": "https://gamma-api.polymarket.com/sports",
+    "capturedAt": "2026-10-25T06:58:41.6636631Z",
+    "sports": [
+      {
+        "sport": "bkfibaw",
+        "series": "12783",
+        "tags": "1,100639,28,104188"
+      },
+      {
+        "sport": "euroleague",
+        "series": "10371",
+        "tags": "1,100639,102669"
+      },
+      {
+        "sport": "bkcl",
+        "series": "10879",
+        "tags": "1,100639,28,103093"
+      },
+      {
+        "sport": "bkfr1",
+        "series": "10872",
+        "tags": "1,100639,28,103098"
+      },
+      {
+        "sport": "bkligend",
+        "series": "10878",
+        "tags": "1,100639,28,103094"
+      },
+      {
+        "sport": "bkvtb",
+        "series": "11465",
+        "tags": "1,100639,28,104344"
+      },
+      {
+        "sport": "bkjpn",
+        "series": "11470",
+        "tags": "1,100639,28,104349"
+      },
+      {
+        "sport": "bkarg",
+        "series": "10873",
+        "tags": "1,100639,28,103099"
+      },
+      {
+        "sport": "bknbl",
+        "series": "10876",
+        "tags": "1,100639,28,103096"
+      },
+      {
+        "sport": "bkseriea",
+        "series": "10877",
+        "tags": "1,100639,28,103095"
+      },
+      {
+        "sport": "bkcba",
+        "series": "10875",
+        "tags": "1,100639,28,103097"
+      },
+      {
+        "sport": "bkaba",
+        "series": "11467",
+        "tags": "1,100639,28,104346"
+      },
+      {
+        "sport": "bkbbl",
+        "series": "11466",
+        "tags": "1,100639,28,104345"
+      },
+      {
+        "sport": "bkbsl",
+        "series": "11468",
+        "tags": "1,100639,28,104347"
+      },
+      {
+        "sport": "bkfibaqaf",
+        "series": "11471",
+        "tags": "1,100639,28,104350"
+      },
+      {
+        "sport": "bkfibaqam",
+        "series": "11472",
+        "tags": "1,100639,28,104351"
+      },
+      {
+        "sport": "bkgr1",
+        "series": "11469",
+        "tags": "1,100639,28,104348"
+      },
+      {
+        "sport": "bkkbl",
+        "series": "10874",
+        "tags": "1,100639,28,103100"
+      },
+      {
+        "sport": "bkbsn",
+        "series": "11890",
+        "tags": "1,100639,28,105272"
+      },
+      {
+        "sport": "bkcebl",
+        "series": "11893",
+        "tags": "1,100639,28,105275"
+      },
+      {
+        "sport": "bklnbp",
+        "series": "12969",
+        "tags": "1,100639,28,106403"
+      },
+      {
+        "sport": "bkeurocup",
+        "series": "11884",
+        "tags": "1,100639,28,105266"
+      },
+      {
+        "sport": "bkibl",
+        "series": "11892",
+        "tags": "1,100639,28,105274"
+      },
+      {
+        "sport": "bkisrsl",
+        "series": "11886",
+        "tags": "1,100639,28,105268"
+      },
+      {
+        "sport": "bklkl",
+        "series": "11885",
+        "tags": "1,100639,28,105267"
+      },
+      {
+        "sport": "bkplk",
+        "series": "11887",
+        "tags": "1,100639,28,105269"
+      },
+      {
+        "sport": "bkkls",
+        "series": "11888",
+        "tags": "1,100639,28,105270"
+      },
+      {
+        "sport": "bkvensl",
+        "series": "11891",
+        "tags": "1,100639,28,105273"
+      },
+      {
+        "sport": "bknznbl",
+        "series": "12552",
+        "tags": "1,100639,28,105918"
+      },
+      {
+        "sport": "bkligarg",
+        "series": "11894",
+        "tags": "1,100639,28,105276"
+      },
+      {
+        "sport": "bknbb",
+        "series": "11889",
+        "tags": "1,100639,28,105271"
+      },
+      {
+        "sport": "bkbul",
+        "series": "12433",
+        "tags": "1,100639,28,105819"
+      },
+      {
+        "sport": "bkfi2",
+        "series": "12447",
+        "tags": "1,100639,28,105833"
+      },
+      {
+        "sport": "bkfr2",
+        "series": "12443",
+        "tags": "1,100639,28,105829"
+      },
+      {
+        "sport": "bkaut",
+        "series": "12432",
+        "tags": "1,100639,28,105818"
+      },
+      {
+        "sport": "bkblr",
+        "series": "12450",
+        "tags": "1,100639,28,105836"
+      },
+      {
+        "sport": "bkcyp",
+        "series": "12434",
+        "tags": "1,100639,28,105820"
+      },
+      {
+        "sport": "bkden",
+        "series": "12435",
+        "tags": "1,100639,28,105821"
+      },
+      {
+        "sport": "bkes2",
+        "series": "12446",
+        "tags": "1,100639,28,105832"
+      },
+      {
+        "sport": "bkest",
+        "series": "12436",
+        "tags": "1,100639,28,105822"
+      },
+      {
+        "sport": "bkcze",
+        "series": "12428",
+        "tags": "1,100639,28,105814"
+      },
+      {
+        "sport": "bksvk",
+        "series": "12440",
+        "tags": "1,100639,28,105826"
+      },
+      {
+        "sport": "bkmkd",
+        "series": "12438",
+        "tags": "1,100639,28,105824"
+      },
+      {
+        "sport": "bknor",
+        "series": "12439",
+        "tags": "1,100639,28,105825"
+      },
+      {
+        "sport": "bksvn",
+        "series": "12441",
+        "tags": "1,100639,28,105827"
+      },
+      {
+        "sport": "bkukr",
+        "series": "12442",
+        "tags": "1,100639,28,105828"
+      },
+      {
+        "sport": "bkbel",
+        "series": "12426",
+        "tags": "1,100639,28,105812"
+      },
+      {
+        "sport": "bkfibaqas",
+        "series": "11473",
+        "tags": "1,100639,28,104352"
+      },
+      {
+        "sport": "bkfibaqeu",
+        "series": "11474",
+        "tags": "1,100639,28,104353"
+      },
+      {
+        "sport": "bkcro",
+        "series": "12424",
+        "tags": "1,100639,28,105810"
+      },
+      {
+        "sport": "bkfin",
+        "series": "12427",
+        "tags": "1,100639,28,105813"
+      },
+      {
+        "sport": "bkrus",
+        "series": "12449",
+        "tags": "1,100639,28,105835"
+      },
+      {
+        "sport": "bkgr2",
+        "series": "12444",
+        "tags": "1,100639,28,105830"
+      },
+      {
+        "sport": "bkit2",
+        "series": "12445",
+        "tags": "1,100639,28,105831"
+      },
+      {
+        "sport": "bkkaz",
+        "series": "12437",
+        "tags": "1,100639,28,105823"
+      },
+      {
+        "sport": "bkkz2",
+        "series": "12448",
+        "tags": "1,100639,28,105834"
+      },
+      {
+        "sport": "bklat",
+        "series": "12423",
+        "tags": "1,100639,28,105809"
+      },
+      {
+        "sport": "bkgbr",
+        "series": "12431",
+        "tags": "1,100639,28,105817"
+      },
+      {
+        "sport": "bkhun",
+        "series": "12429",
+        "tags": "1,100639,28,105815"
+      },
+      {
+        "sport": "bkmex",
+        "series": "12430",
+        "tags": "1,100639,28,105816"
+      },
+      {
+        "sport": "bkned",
+        "series": "12425",
+        "tags": "1,100639,28,105811"
+      },
+      {
+        "sport": "cwbb",
+        "series": "10471",
+        "tags": "1,28,100639,102003"
+      },
+      {
+        "sport": "nba",
+        "series": "10345",
+        "tags": "1,745,100639"
+      },
+      {
+        "sport": "ncaab",
+        "series": "39",
+        "tags": "1,100149,100639"
+      },
+      {
+        "sport": "wnba",
+        "series": "10105",
+        "tags": "1,100639,100254"
+      },
+      {
+        "sport": "cbb",
+        "series": "10470",
+        "tags": "1,101178,100639,101954"
+      }
+    ]
+  },
+  "discovery": {
+    "capturedAt": "2026-10-25T07:03:26.576Z",
+    "rawEvents": 10,
+    "rawMarkets": 71,
+    "counts": {
+      "basketball": 14,
+      "kog": 10,
+      "dota2": 22,
+      "cs2": 25
+    },
+    "basketballMapped": 6,
+    "mapped": [
+      {
+        "match": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1210293",
+          "SourceGameID": "basketball",
+          "StartTime": 1792900800000,
+          "HomeID": "basketball:cairns-taipans",
+          "Home": "Cairns Taipans",
+          "AwayID": "basketball:new-zealand-breakers",
+          "Away": "New Zealand Breakers",
+          "Teams": [
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:cairns-taipans",
+              "Name": "Cairns Taipans",
+              "GameID": "basketball",
+              "Logo": ""
+            },
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:new-zealand-breakers",
+              "Name": "New Zealand Breakers",
+              "GameID": "basketball",
+              "Logo": ""
+            }
+          ]
+        },
+        "bet": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1210293",
+          "SourceBetID": "0x710053cea2af76c251f7b0b5c65a89203711efaf27466cd88a46b36652f1b8d3",
+          "Map": 0,
+          "BetName": "[全场] 获胜者",
+          "SourceHomeID": "31963088161773501065648685601640514589515147750602397369222270578388111873462",
+          "HomeName": "Cairns Taipans",
+          "HomeOdds": 0,
+          "SourceAwayID": "27246173555565765663936380404142272363838650230661549053429184533735744705501",
+          "AwayName": "New Zealand Breakers",
+          "AwayOdds": 1000,
+          "Status": "Locked"
+        }
+      },
+      {
+        "match": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1234010",
+          "SourceGameID": "basketball",
+          "StartTime": 1792904400000,
+          "HomeID": "basketball:anyang",
+          "Home": "Anyang",
+          "AwayID": "basketball:wonju-db-promy",
+          "Away": "Wonju DB Promy",
+          "Teams": [
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:anyang",
+              "Name": "Anyang",
+              "GameID": "basketball",
+              "Logo": ""
+            },
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:wonju-db-promy",
+              "Name": "Wonju DB Promy",
+              "GameID": "basketball",
+              "Logo": ""
+            }
+          ]
+        },
+        "bet": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1234010",
+          "SourceBetID": "0xf19afb09b18bc7b85c22b05a3048fd9e048a5d1f84133927253af68c0b23f4da",
+          "Map": 0,
+          "BetName": "[全场] 获胜者",
+          "SourceHomeID": "86503318908498713043366793460482821294138840931775241741297191080211987307940",
+          "HomeName": "Anyang",
+          "HomeOdds": 7.692,
+          "SourceAwayID": "2949706193499324618240813986592211486934531128348479444223254422194711238915",
+          "AwayName": "Wonju DB Promy",
+          "AwayOdds": 1.136,
+          "Status": "Normal"
+        }
+      },
+      {
+        "match": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1234011",
+          "SourceGameID": "basketball",
+          "StartTime": 1792904400000,
+          "HomeID": "basketball:seoul-knights",
+          "Home": "Seoul Knights",
+          "AwayID": "basketball:sonic-boom",
+          "Away": "Sonic Boom",
+          "Teams": [
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:seoul-knights",
+              "Name": "Seoul Knights",
+              "GameID": "basketball",
+              "Logo": ""
+            },
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:sonic-boom",
+              "Name": "Sonic Boom",
+              "GameID": "basketball",
+              "Logo": ""
+            }
+          ]
+        },
+        "bet": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1234011",
+          "SourceBetID": "0x5d16adc6a690bff1758d8aa6b5be1f966bd4f178892d2ab75a32d6b096633d80",
+          "Map": 0,
+          "BetName": "[全场] 获胜者",
+          "SourceHomeID": "106753063691586091084926015487466942908073901513889233908435278551547520585925",
+          "HomeName": "Seoul Knights",
+          "HomeOdds": 0,
+          "SourceAwayID": "38022075139977177926685833358143448667971599113801482461525555930185375603578",
+          "AwayName": "Sonic Boom",
+          "AwayOdds": 1000,
+          "Status": "Locked"
+        }
+      },
+      {
+        "match": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1210294",
+          "SourceGameID": "basketball",
+          "StartTime": 1792908000000,
+          "HomeID": "basketball:melbourne-united",
+          "Home": "Melbourne United",
+          "AwayID": "basketball:sydney-kings",
+          "Away": "Sydney Kings",
+          "Teams": [
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:melbourne-united",
+              "Name": "Melbourne United",
+              "GameID": "basketball",
+              "Logo": ""
+            },
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:sydney-kings",
+              "Name": "Sydney Kings",
+              "GameID": "basketball",
+              "Logo": ""
+            }
+          ]
+        },
+        "bet": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1210294",
+          "SourceBetID": "0x592157db73ffb4e6e805120a627456a592d6ca62413337374020134b3cbf1e7d",
+          "Map": 0,
+          "BetName": "[全场] 获胜者",
+          "SourceHomeID": "52744841783619188289320793697608975068486965121971436189622377138853297416091",
+          "HomeName": "Melbourne United",
+          "HomeOdds": 1.818,
+          "SourceAwayID": "36962534894581382984070326540437639988761016069268840268400547408018743355274",
+          "AwayName": "Sydney Kings",
+          "AwayOdds": 2.173,
+          "Status": "Normal"
+        }
+      },
+      {
+        "match": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1210310",
+          "SourceGameID": "basketball",
+          "StartTime": 1792911900000,
+          "HomeID": "basketball:osaka-evessa",
+          "Home": "Osaka Evessa",
+          "AwayID": "basketball:chiba-jets",
+          "Away": "Chiba Jets",
+          "Teams": [
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:osaka-evessa",
+              "Name": "Osaka Evessa",
+              "GameID": "basketball",
+              "Logo": ""
+            },
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:chiba-jets",
+              "Name": "Chiba Jets",
+              "GameID": "basketball",
+              "Logo": ""
+            }
+          ]
+        },
+        "bet": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1210310",
+          "SourceBetID": "0x7108434b266a1f599a6d97fe6dd8db3cab978854b685b809fb87d799c62705e2",
+          "Map": 0,
+          "BetName": "[全场] 获胜者",
+          "SourceHomeID": "52624065678077626239111825468387695800198842730745729903004356198316394110021",
+          "HomeName": "Osaka Evessa",
+          "HomeOdds": 14.285,
+          "SourceAwayID": "73502353108954637073417264025798173928143534846860337451241346685460540252919",
+          "AwayName": "Chiba Jets",
+          "AwayOdds": 1.022,
+          "Status": "Normal"
+        }
+      },
+      {
+        "match": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1234012",
+          "SourceGameID": "basketball",
+          "StartTime": 1792913400000,
+          "HomeID": "basketball:daegu-pegasus",
+          "Home": "Daegu Pegasus",
+          "AwayID": "basketball:seoul-thunders",
+          "Away": "Seoul Thunders",
+          "Teams": [
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:daegu-pegasus",
+              "Name": "Daegu Pegasus",
+              "GameID": "basketball",
+              "Logo": ""
+            },
+            {
+              "Type": "Polymarket",
+              "TeamID": "basketball:seoul-thunders",
+              "Name": "Seoul Thunders",
+              "GameID": "basketball",
+              "Logo": ""
+            }
+          ]
+        },
+        "bet": {
+          "Type": "Polymarket",
+          "SourceMatchID": "1234012",
+          "SourceBetID": "0xf9899611e7fb2b262e77a38b4cbecd4abadb275478362a027095e93fd229d226",
+          "Map": 0,
+          "BetName": "[全场] 获胜者",
+          "SourceHomeID": "58382376807566050496614705760481353137958274889720519888082478454416385872551",
+          "HomeName": "Daegu Pegasus",
+          "HomeOdds": 2.38,
+          "SourceAwayID": "31385014955809311012318048522767978966564123958345763191651969575142060128594",
+          "AwayName": "Seoul Thunders",
+          "AwayOdds": 1.694,
+          "Status": "Normal"
+        }
+      }
+    ],
+    "nonFullBasketball": 0
+  }
+}

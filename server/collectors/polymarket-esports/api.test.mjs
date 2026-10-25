@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { getConfiguredPlatformDiscovery } from "@changmen/shared/catalog/game_catalog";
 
 import {
   fetchPolymarketEsportsMarkets,
@@ -13,6 +14,7 @@ import {
 
 describe("polymarket-esports api helpers", () => {
   it("uses configured sport keys and retains the original series fallback", async () => {
+    const configured = getConfiguredPlatformDiscovery("Polymarket");
     const realFetch = globalThis.fetch;
     try {
       for (const unavailable of [false, true]) {
@@ -24,8 +26,8 @@ describe("polymarket-esports api helpers", () => {
             if (unavailable)
               throw new Error("metadata unavailable");
             return { ok: true, json: async () => [
-              ...["cs2", "lol", "dota2", "hok", "val"].map(sport => ({ sport, series: `live-${sport}` })),
-              { sport: "nba", series: "must-not-collect" },
+              ...configured.sportKeys.map(sport => ({ sport, series: `live-${sport}` })),
+              { sport: "epl", series: "must-not-collect" },
             ] };
           }
           if (path.endsWith("/sports/market-types"))
@@ -38,8 +40,10 @@ describe("polymarket-esports api helpers", () => {
         assert.ok(eventUrls.length > 0);
         for (const url of eventUrls) {
           assert.deepEqual(url.searchParams.getAll("series_id"), unavailable
-            ? ["10310", "10311", "10309", "10434", "10369"]
-            : ["live-cs2", "live-lol", "live-dota2", "live-hok", "live-val"]);
+            ? configured.fallbackSeriesIds
+            : configured.sportKeys.map(sport => `live-${sport}`));
+          assert.ok(url.searchParams.getAll("series_id").includes(unavailable ? "10874" : "live-bkkbl"));
+          assert.ok(!url.searchParams.getAll("series_id").includes("must-not-collect"));
         }
       }
     }

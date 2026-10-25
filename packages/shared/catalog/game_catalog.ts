@@ -16,6 +16,7 @@ interface GameEntry {
   name: string;
   nameEn: string;
   a8GameId?: number;
+  clientGameId?: number;
   a8Name?: string;
   platforms?: Record<string, string>;
 }
@@ -138,7 +139,8 @@ function getGameCodeForPlatformId(platform: string, gameId: string | number): st
   if (alias)
     return alias;
   for (const game of catalog.games as GameEntry[]) {
-    if (String(game.platforms?.[platform]) === id) {
+    const nativeId = game.platforms?.[platform];
+    if (nativeId != null && String(nativeId) === id) {
       return game.code;
     }
   }
@@ -197,9 +199,10 @@ interface ClientGameResult {
 /** Client_GetMatchs 的 Game / GameID（A8 服务端整理后下发，前端直接展示 Game） */
 function resolveClientGame(platform: string, sourceGameId: string | number): ClientGameResult {
   const info = describePlatformGame(platform, sourceGameId);
+  const game = getGameByCode(info.gameCode);
   return {
     Game: info.gameName,
-    GameID: info.a8GameId ?? 0,
+    GameID: game?.clientGameId ?? info.a8GameId ?? 0,
   };
 }
 

@@ -8,6 +8,31 @@ import {
 
 const BET_RE = /^获胜者$/;
 
+describe("RAY basketball full match winner", () => {
+  const payload = () => ({
+    id: 38458886,
+    team: [{ pos: 1, team_id: 1072954 }, { pos: 2, team_id: 1072895 }],
+    odds: [
+      { odds_group_id: 1279801, match_stage: "final", odds_id: 76821218, team_id: 1072895, match_id: 38458886, status: 1, odds: 3.04, group_name: "获胜者(含加时)" },
+      { odds_group_id: 1279801, match_stage: "final", odds_id: 76821217, team_id: 1072954, match_id: 38458886, status: 1, odds: 1.25, group_name: "获胜者(含加时)" },
+    ],
+  });
+
+  test("selects only the configured full winner and aligns reversed odds rows by team ID", () => {
+    const data = payload();
+    data.odds.push(...data.odds.map(row => ({ ...row, odds_group_id: 2275849, match_stage: "1st", group_name: "获胜者" })),
+      ...data.odds.map(row => ({ ...row, odds_group_id: 2276305, match_stage: "q1", group_name: "获胜者" })),
+      ...data.odds.map(row => ({ ...row, odds_group_id: 3304426, group_name: "冠军" })));
+    const bets = groupRayOddsToSaveBets(data, BET_RE, "RAY", "basketball");
+    expect(bets).toHaveLength(1);
+    expect(bets[0]).toMatchObject({ SourceBetID: "1279801", Map: 0, SourceHomeID: "76821217", SourceAwayID: "76821218", HomeOdds: 1.25, AwayOdds: 3.04 });
+    expect(listRayFoOddEntries(data, BET_RE, "basketball").map(row => row.id)).toEqual(["76821218", "76821217"]);
+    // 仍用原 ID 白名单与缺 ID 时名称回退，不新增篮球专用规则。
+    expect(isRayOddCollectable({ group_name: "获胜者", match_stage: "final", status: 1 }, BET_RE, "basketball")).toBe(true);
+    expect(isRayOddCollectable({ odds_group_id: 2276305, match_stage: "q1", status: 1 }, BET_RE, "basketball")).toBe(false);
+  });
+});
+
 describe("RAY match_stage", () => {
   test("parses live API match_stage strings", () => {
     expect(rayMatchStage("final")).toBe(0);

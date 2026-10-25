@@ -16,6 +16,7 @@ import { listPbEventIdsForProjection } from "../normalize/pb_rotnum_collapse.js"
 import { rawSourceForMap } from "../normalize/native_bets.js";
 import { resolveRowStructure } from "../structure/resolve_structure.js";
 import { swapBetSource } from "../util/swap.js";
+import { minimumPlatformsForGame } from "../venue_policy.js";
 import {
   findPlatformMatch,
   resolveOrientationLock,
@@ -165,6 +166,20 @@ export function projectClientMatchSides(row, {
     for (const bet of row.Bets || [])
       bet.Sources = {};
     delete row.SideAlignAmbiguous;
+    // [changmen 扩展] 单馆篮球没有跨馆方向问题，按该馆原生主客输出全场盘；不伪造 gb 队伍锁。
+    const links = Object.entries(row.Matchs || {});
+    if (minimumPlatformsForGame(row.Game) === 1 && links.length === 1) {
+      const [platform, sourceMatchId] = links[0];
+      const pm = findPlatformMatch(matches, platform, sourceMatchId);
+      if (pm && getGameCodeForPlatformId(platform, pm.SourceGameID ?? pm.GameID) === "basketball") {
+        const { raw } = resolveRawSourceForMap({ platform, primarySourceMatchId: sourceMatchId, mapNum: 0, bets, matches, row });
+        const full = row.Bets.find(bet => (Number(bet.Map) || 0) === 0);
+        const home = String(raw?.HomeID ?? "").trim();
+        const away = String(raw?.AwayID ?? "").trim();
+        if (full && home && away && home !== away)
+          full.Sources = { [platform]: { ...raw } };
+      }
+    }
     return { reverse: [], omitted: [], locked: false, lockSource: lock.lockSource };
   }
 

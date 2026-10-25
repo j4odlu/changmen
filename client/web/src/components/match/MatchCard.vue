@@ -18,13 +18,14 @@ import {
 } from "@changmen/venue-browser/adapter/polymarket";
 import { computed } from "vue";
 
-/** Polymarket 电竞侧栏 SVG（从 polymarket.com/esports 抠出）；未知/联赛仍走文字标签 */
+/** 原电竞使用 Polymarket 侧栏 SVG；篮球使用自有球形徽标，未知/联赛仍走文字标签。 */
 const ESPORT_GAME_ICONS: Record<string, string> = {
   cs2: "/assets/games/cs2.svg",
   lol: "/assets/games/lol.svg",
   dota2: "/assets/games/dota2.svg",
   valorant: "/assets/games/valorant.svg",
   kog: "/assets/games/kog.svg",
+  basketball: "/assets/games/basketball.svg",
 };
 
 /** 默认 true：电竞 HomeView 不传时必须允许下注。

@@ -5,8 +5,7 @@
  */
 import { parseTitleTeams } from "@changmen/shared/match-identity/teams/match_utils.js";
 import { findPlatformMatch } from "../sides/orientation_lock.js";
-
-const MIN_PLATFORMS = 2;
+import { MIN_PLATFORMS, minimumPlatformsForGame } from "../venue_policy.js";
 
 export function preserveInitialOddsFromSources(bet) {
   if (!bet)
@@ -119,12 +118,12 @@ export function sortBets(rows) {
   }
 }
 
-/** strip 后仍不足多馆的场剔除；进行中（Round>0）允许暂留单馆，避免源抖动误归档 */
+/** 篮球允许一馆；其它游戏保留原多馆门槛及 live 单馆保留规则。 */
 export function filterMultiPlatform(rows, minPlatforms = MIN_PLATFORMS) {
   const min = Math.max(1, Number(minPlatforms) || MIN_PLATFORMS);
   return (rows || []).filter((r) => {
     const n = Object.keys(r?.Matchs || {}).length;
-    if (n >= min)
+    if (n >= (minimumPlatformsForGame(r?.Game) === 1 ? 1 : min))
       return true;
     // live：至少还剩 1 馆则保留，等缺席馆恢复
     if (n >= 1 && (Number(r?.Round) || 0) > 0)

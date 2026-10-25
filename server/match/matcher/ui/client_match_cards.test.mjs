@@ -114,6 +114,19 @@ it("shows the same PM state in right-column recommendation and unmatched rows", 
   }
 });
 
+it("shows a single RAY basketball source in the unmatched panel without requiring a second venue", () => {
+  const ray = { platform: "RAY", source_match_id: "38458886", source_game_id: 1072082,
+    game: { code: "basketball", name: "篮球" }, start_time: from, bo: 0,
+    home: "Phoenix Suns", away: "Golden State Warriors", home_id: "1072954", away_id: "1072895" };
+  const body = {}, count = {};
+  const ctx = context({ ray, document: { getElementById: id => id === "unmatched-panels" ? body : count } });
+  runInContext("renderUnmatchedPlatforms({RAY:[ray]}, [], [], {}, '')", ctx);
+  expect(body.innerHTML).toContain("篮球");
+  expect(body.innerHTML).toContain("Phoenix Suns");
+  expect(body.innerHTML).toContain("Golden State Warriors");
+  expect(body.innerHTML).toContain("38458886");
+});
+
 it("filters by start time before the 100-record limit, independent of the ending date", async () => {
   const rows = [
     { ...match, ended_at: to + 10 * 86400000, pm_sport: { status: "final" } },

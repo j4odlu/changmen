@@ -17,11 +17,31 @@ describe("polymarket-esports parse", () => {
       assert.equal(mapPolymarketGameId({ tags: [{ slug }] }), code);
     }
     assert.equal(mapPolymarketGameId({ question: "CS2 vs LoL exhibition" }), "lol", "original match priority");
-    assert.equal(mapPolymarketGameId({ events: [{ slug: "nba-a-b" }] }), null);
+    assert.equal(mapPolymarketGameId({ events: [{ slug: "nba-a-b" }] }), "basketball");
+    assert.equal(mapPolymarketGameId({ events: [{ slug: "epl-a-b" }] }), null);
     assert.equal(mapPolymarketGameId({}), null);
   });
   it("parseJsonArray accepts stringified arrays", () => {
     assert.deepEqual(parseJsonArray("[\"a\",\"b\"]"), ["a", "b"]);
+  });
+
+  it("maps basketball through the existing full-match moneyline path and keeps current team identity rules", () => {
+    const base = { conditionId: "kbl-full", sportsMarketType: "moneyline", active: true,
+      clobTokenIds: '["dae-token","seo-token"]', outcomes: '["Daegu Pegasus","Seoul Thunders"]',
+      gameStartTime: "2026-10-25T07:30:00Z", events: [{ id: "1234012", slug: "bkkbl-dae-seo2-2026-10-25" }],
+      tags: [{ slug: "basketball" }, { slug: "kbl" }] };
+    const mapped = buildPolymarketMappedMarket(base, { "dae-token": 0.45, "seo-token": 0.6 });
+    assert.ok(mapped);
+    assert.equal(mapped.match.SourceGameID, "basketball");
+    assert.equal(mapped.match.HomeID, "basketball:daegu-pegasus");
+    assert.equal(mapped.match.AwayID, "basketball:seoul-thunders");
+    assert.equal(mapped.match.StartTime, Date.parse("2026-10-25T07:30:00Z"));
+    assert.equal(mapped.bet.Map, 0);
+    assert.equal(mapped.bet.SourceHomeID, "dae-token");
+    assert.equal(mapped.bet.SourceAwayID, "seo-token");
+    assert.equal(mapped.bet.Status, "Normal");
+    for (const sportsMarketType of ["spreads", "totals", "child_moneyline"])
+      assert.equal(buildPolymarketMappedMarket({ ...base, sportsMarketType, question: "First Quarter Winner" }), null);
   });
 
   it("decimalOddsFromProbability truncates to 3 decimals", () => {

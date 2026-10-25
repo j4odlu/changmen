@@ -1,0 +1,3183 @@
+{
+  "schema_version": 1,
+  "purpose": "RAY basketball full match winner source identifiers and phase one plan evidence",
+  "client_date": "2026-10-25",
+  "client_timezone": "Asia/Taipei",
+  "read_only": true,
+  "source_capture": {
+    "captured_at_utc": "2026-10-25T10:20:02.6151737+08:00",
+    "gateway": "https://cfinfo.365raylinks.com/v2",
+    "basketball_game_id": "1072082",
+    "scope": "match_type 1,2,3; up to 8 pages each; odds fetched for every observed unique basketball match",
+    "page_size_observed": 30,
+    "page_cap": 8,
+    "pages": [
+      {
+        "match_type": 1,
+        "page": 1,
+        "count": 2,
+        "basketball": 2
+      },
+      {
+        "match_type": 2,
+        "page": 1,
+        "count": 30,
+        "basketball": 7
+      },
+      {
+        "match_type": 2,
+        "page": 2,
+        "count": 30,
+        "basketball": 3
+      },
+      {
+        "match_type": 2,
+        "page": 3,
+        "count": 13,
+        "basketball": 2
+      },
+      {
+        "match_type": 3,
+        "page": 1,
+        "count": 30,
+        "basketball": 4
+      },
+      {
+        "match_type": 3,
+        "page": 2,
+        "count": 30,
+        "basketball": 1
+      },
+      {
+        "match_type": 3,
+        "page": 3,
+        "count": 30,
+        "basketball": 0
+      },
+      {
+        "match_type": 3,
+        "page": 4,
+        "count": 1,
+        "basketball": 0
+      }
+    ],
+    "unique_basketball_matches": 17,
+    "leagues": [
+      {
+        "tournament_id": "1280496",
+        "tournament_name": "NBA美国职业篮球联赛",
+        "matches": 1,
+        "sample_match_id": 38458886
+      },
+      {
+        "tournament_id": "12143373",
+        "tournament_name": "法国篮球甲级联赛",
+        "matches": 3,
+        "sample_match_id": 38460695
+      },
+      {
+        "tournament_id": "19867419",
+        "tournament_name": "欧洲篮球联赛(包括季后赛）",
+        "matches": 1,
+        "sample_match_id": 38444835
+      },
+      {
+        "tournament_id": "21690925",
+        "tournament_name": "澳洲国家篮球联赛",
+        "matches": 2,
+        "sample_match_id": 38461044
+      },
+      {
+        "tournament_id": "21997333",
+        "tournament_name": "韩国篮球联赛",
+        "matches": 2,
+        "sample_match_id": 38461083
+      },
+      {
+        "tournament_id": "37265462",
+        "tournament_name": "西班牙篮球甲级联赛",
+        "matches": 6,
+        "sample_match_id": 38461122
+      },
+      {
+        "tournament_id": "37296023",
+        "tournament_name": "澳洲女子国家篮球联赛",
+        "matches": 1,
+        "sample_match_id": 38461050
+      },
+      {
+        "tournament_id": "37863740",
+        "tournament_name": "Esports Battle Basketball",
+        "matches": 1,
+        "sample_match_id": 38461235
+      }
+    ],
+    "list_basketball_matches": [
+      {
+        "match_id": 38444835,
+        "game_id": 1072082,
+        "tournament_id": 19867419,
+        "tournament_name": "欧洲篮球联赛(包括季后赛）",
+        "start_time": "2026-10-28 00:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 19867741,
+            "team_name": "帕纳辛奈科斯",
+            "team_short_name": "Panathinaikos"
+          },
+          {
+            "pos": 2,
+            "team_id": 19867751,
+            "team_name": "奧林比亚高斯",
+            "team_short_name": "Olympiacos Piraeus"
+          },
+          {
+            "pos": 3,
+            "team_id": 19867709,
+            "team_name": "费内巴切",
+            "team_short_name": "Fenerbahce S.K."
+          },
+          {
+            "pos": 4,
+            "team_id": 12148370,
+            "team_name": "皇家马德里",
+            "team_short_name": "Real Madrid Baloncesto"
+          },
+          {
+            "pos": 5,
+            "team_id": 37856381,
+            "team_name": "特拉维夫工人",
+            "team_short_name": "Hapoel Tel Aviv"
+          },
+          {
+            "pos": 6,
+            "team_id": 38259509,
+            "team_name": "BC迪拜",
+            "team_short_name": "BC Dubai"
+          },
+          {
+            "pos": 7,
+            "team_id": 12148443,
+            "team_name": "巴塞罗那",
+            "team_short_name": "FC Barcelona Basquet"
+          },
+          {
+            "pos": 8,
+            "team_id": 19867775,
+            "team_name": "萨拉基利斯",
+            "team_short_name": "BC Zalgiris"
+          },
+          {
+            "pos": 9,
+            "team_id": 19867733,
+            "team_name": "阿纳多卢艾菲斯",
+            "team_short_name": "Anadolu Efes"
+          },
+          {
+            "pos": 10,
+            "team_id": 19867797,
+            "team_name": "贝尔格莱德红星",
+            "team_short_name": "KK Crvena Zvezda MTS"
+          },
+          {
+            "pos": 11,
+            "team_id": 12148513,
+            "team_name": "瓦伦西亚",
+            "team_short_name": "Valencia Basket"
+          },
+          {
+            "pos": 12,
+            "team_id": 12140668,
+            "team_name": "米兰奥林匹亚",
+            "team_short_name": "Olimpia Milano Pallacanestro"
+          },
+          {
+            "pos": 13,
+            "team_id": 37676366,
+            "team_name": "KK游击队",
+            "team_short_name": "KK Partizan"
+          },
+          {
+            "pos": 14,
+            "team_id": 19867760,
+            "team_name": "特拉维夫马卡比",
+            "team_short_name": "Maccabi Tel Aviv"
+          },
+          {
+            "pos": 15,
+            "team_id": 37855962,
+            "team_name": "贝西克塔斯",
+            "team_short_name": "Besiktas JK"
+          },
+          {
+            "pos": 16,
+            "team_id": 12148483,
+            "team_name": "沙斯基贝斯克尼亚",
+            "team_short_name": "Saski Baskonia"
+          },
+          {
+            "pos": 17,
+            "team_id": 19867809,
+            "team_name": "艾斯维尔",
+            "team_short_name": "Asvel Basket"
+          },
+          {
+            "pos": 18,
+            "team_id": 21451924,
+            "team_name": "维图斯博洛尼亚",
+            "team_short_name": "Virtus Segafredo Bologna"
+          },
+          {
+            "pos": 19,
+            "team_id": 12138277,
+            "team_name": "拜仁慕尼黑",
+            "team_short_name": "FC Bayern Munich Basketball"
+          },
+          {
+            "pos": 20,
+            "team_id": 12146153,
+            "team_name": "巴黎篮球",
+            "team_short_name": "Paris Basketball"
+          }
+        ]
+      },
+      {
+        "match_id": 38458886,
+        "game_id": 1072082,
+        "tournament_id": 1280496,
+        "tournament_name": "NBA美国职业篮球联赛",
+        "start_time": "2026-10-25 10:00:00",
+        "round": "bo4",
+        "status": 2,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 1072954,
+            "team_name": "菲尼克斯太阳",
+            "team_short_name": "Phoenix Suns"
+          },
+          {
+            "pos": 2,
+            "team_id": 1072895,
+            "team_name": "金州勇士",
+            "team_short_name": "Golden State Warriors"
+          }
+        ]
+      },
+      {
+        "match_id": 38460695,
+        "game_id": 1072082,
+        "tournament_id": 12143373,
+        "tournament_name": "法国篮球甲级联赛",
+        "start_time": "2026-10-25 23:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 21201957,
+            "team_name": "罗恩哥拿尔",
+            "team_short_name": "Chorale Roanne Basket"
+          },
+          {
+            "pos": 2,
+            "team_id": 12146153,
+            "team_name": "巴黎篮球",
+            "team_short_name": "Paris Basketball"
+          }
+        ]
+      },
+      {
+        "match_id": 38460698,
+        "game_id": 1072082,
+        "tournament_id": 12143373,
+        "tournament_name": "法国篮球甲级联赛",
+        "start_time": "2026-10-25 23:30:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 19867809,
+            "team_name": "艾斯维尔",
+            "team_short_name": "Asvel Basket"
+          },
+          {
+            "pos": 2,
+            "team_id": 37672641,
+            "team_name": "南锡",
+            "team_short_name": "SLUC Nancy Basket"
+          }
+        ]
+      },
+      {
+        "match_id": 38460701,
+        "game_id": 1072082,
+        "tournament_id": 12143373,
+        "tournament_name": "法国篮球甲级联赛",
+        "start_time": "2026-10-26 02:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 12146031,
+            "team_name": "巴奧夫斯",
+            "team_short_name": "Elan Bearnais Pau-Lacq-Orthez"
+          },
+          {
+            "pos": 2,
+            "team_id": 12146062,
+            "team_name": "利摩日",
+            "team_short_name": "Limoges CSP"
+          }
+        ]
+      },
+      {
+        "match_id": 38461044,
+        "game_id": 1072082,
+        "tournament_id": 21690925,
+        "tournament_name": "澳洲国家篮球联赛",
+        "start_time": "2026-10-25 12:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 21269916,
+            "team_name": "坎斯大班",
+            "team_short_name": "Cairns Taipans"
+          },
+          {
+            "pos": 2,
+            "team_id": 21269927,
+            "team_name": "新西兰破坏者",
+            "team_short_name": "New Zealand Breakers"
+          }
+        ]
+      },
+      {
+        "match_id": 38461047,
+        "game_id": 1072082,
+        "tournament_id": 21690925,
+        "tournament_name": "澳洲国家篮球联赛",
+        "start_time": "2026-10-25 14:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 21269919,
+            "team_name": "墨尔本联队",
+            "team_short_name": "Melbourne United"
+          },
+          {
+            "pos": 2,
+            "team_id": 21269928,
+            "team_name": "悉尼国王",
+            "team_short_name": "Sydney Kings"
+          }
+        ]
+      },
+      {
+        "match_id": 38461050,
+        "game_id": 1072082,
+        "tournament_id": 37296023,
+        "tournament_name": "澳洲女子国家篮球联赛",
+        "start_time": "2026-10-25 12:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 37296030,
+            "team_name": "汤斯维尔火焰",
+            "team_short_name": "Townsville Fire"
+          },
+          {
+            "pos": 2,
+            "team_id": 37296029,
+            "team_name": "悉尼火焰",
+            "team_short_name": "Sydney Flames"
+          }
+        ]
+      },
+      {
+        "match_id": 38461083,
+        "game_id": 1072082,
+        "tournament_id": 21997333,
+        "tournament_name": "韩国篮球联赛",
+        "start_time": "2026-10-25 13:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 21733485,
+            "team_name": "首尔SK骑士",
+            "team_short_name": "Seoul SK Knights"
+          },
+          {
+            "pos": 2,
+            "team_id": 21733577,
+            "team_name": "水原KT爆音",
+            "team_short_name": "Suwon KT Sonicboom"
+          }
+        ]
+      },
+      {
+        "match_id": 38461086,
+        "game_id": 1072082,
+        "tournament_id": 21997333,
+        "tournament_name": "韩国篮球联赛",
+        "start_time": "2026-10-25 13:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 21733573,
+            "team_name": "安阳正官庄RB",
+            "team_short_name": "Anyang Jung Kwan Jang Red Boosters"
+          },
+          {
+            "pos": 2,
+            "team_id": 21733396,
+            "team_name": "原州东浦新世代",
+            "team_short_name": "Wonju DB Promy"
+          }
+        ]
+      },
+      {
+        "match_id": 38461122,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "start_time": "2026-10-25 19:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 37675096,
+            "team_name": "赫罗纳",
+            "team_short_name": "Girona"
+          },
+          {
+            "pos": 2,
+            "team_id": 12148552,
+            "team_name": "尤文图特巴达洛纳",
+            "team_short_name": "Joventut Badalona"
+          }
+        ]
+      },
+      {
+        "match_id": 38461125,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "start_time": "2026-10-25 19:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 17656685,
+            "team_name": "毕尔包",
+            "team_short_name": "Bilbao Basket"
+          },
+          {
+            "pos": 2,
+            "team_id": 12148634,
+            "team_name": "安道尔",
+            "team_short_name": "BC Andorra"
+          }
+        ]
+      },
+      {
+        "match_id": 38461128,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "start_time": "2026-10-25 20:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 12148588,
+            "team_name": "卡纳里亚",
+            "team_short_name": "CB 1939 Canarias"
+          },
+          {
+            "pos": 2,
+            "team_id": 12226378,
+            "team_name": "奥布拉多伊洛",
+            "team_short_name": "Obradoiro CAB"
+          }
+        ]
+      },
+      {
+        "match_id": 38461131,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "start_time": "2026-10-26 00:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 12148513,
+            "team_name": "瓦伦西亚",
+            "team_short_name": "Valencia Basket"
+          },
+          {
+            "pos": 2,
+            "team_id": 12148483,
+            "team_name": "沙斯基贝斯克尼亚",
+            "team_short_name": "Saski Baskonia"
+          }
+        ]
+      },
+      {
+        "match_id": 38461134,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "start_time": "2026-10-26 01:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 12151244,
+            "team_name": "布雷奥干",
+            "team_short_name": "CB Breogan"
+          },
+          {
+            "pos": 2,
+            "team_id": 12148534,
+            "team_name": "乌尼卡查马拉加",
+            "team_short_name": "Unicaja Malaga"
+          }
+        ]
+      },
+      {
+        "match_id": 38461137,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "start_time": "2026-10-26 02:00:00",
+        "round": "bo1",
+        "status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 38047932,
+            "team_name": "莱里达俱乐部",
+            "team_short_name": "Forca Lleida Club Esportiu"
+          },
+          {
+            "pos": 2,
+            "team_id": 12148370,
+            "team_name": "皇家马德里",
+            "team_short_name": "Real Madrid Baloncesto"
+          }
+        ]
+      },
+      {
+        "match_id": 38461235,
+        "game_id": 1072082,
+        "tournament_id": 37863740,
+        "tournament_name": "Esports Battle Basketball",
+        "start_time": "2026-10-25 10:00:00",
+        "round": "bo1",
+        "status": 2,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 37864350,
+            "team_name": "克里夫兰骑士(NBA2K)",
+            "team_short_name": "Cleveland Cavaliers(NBA2K)"
+          },
+          {
+            "pos": 2,
+            "team_id": 37864367,
+            "team_name": "费城76人(NBA2K)",
+            "team_short_name": "Philadelphia 76ers(NBA2K)"
+          }
+        ]
+      }
+    ],
+    "details": [
+      {
+        "match_id": 38444835,
+        "game_id": 1072082,
+        "tournament_id": 19867419,
+        "tournament_name": "欧洲篮球联赛(包括季后赛）",
+        "game_name": "篮球",
+        "match_name": "欧洲篮球联赛(包括季后赛） 冠军竞猜",
+        "start_time": "2026-10-28 00:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "list_request_types": [
+          3
+        ],
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 19867741,
+            "team_name": "帕纳辛奈科斯",
+            "team_short_name": "Panathinaikos"
+          },
+          {
+            "pos": 2,
+            "team_id": 19867751,
+            "team_name": "奧林比亚高斯",
+            "team_short_name": "Olympiacos Piraeus"
+          },
+          {
+            "pos": 3,
+            "team_id": 19867709,
+            "team_name": "费内巴切",
+            "team_short_name": "Fenerbahce S.K."
+          },
+          {
+            "pos": 4,
+            "team_id": 12148370,
+            "team_name": "皇家马德里",
+            "team_short_name": "Real Madrid Baloncesto"
+          },
+          {
+            "pos": 5,
+            "team_id": 37856381,
+            "team_name": "特拉维夫工人",
+            "team_short_name": "Hapoel Tel Aviv"
+          },
+          {
+            "pos": 6,
+            "team_id": 38259509,
+            "team_name": "BC迪拜",
+            "team_short_name": "BC Dubai"
+          },
+          {
+            "pos": 7,
+            "team_id": 12148443,
+            "team_name": "巴塞罗那",
+            "team_short_name": "FC Barcelona Basquet"
+          },
+          {
+            "pos": 8,
+            "team_id": 19867775,
+            "team_name": "萨拉基利斯",
+            "team_short_name": "BC Zalgiris"
+          },
+          {
+            "pos": 9,
+            "team_id": 19867733,
+            "team_name": "阿纳多卢艾菲斯",
+            "team_short_name": "Anadolu Efes"
+          },
+          {
+            "pos": 10,
+            "team_id": 19867797,
+            "team_name": "贝尔格莱德红星",
+            "team_short_name": "KK Crvena Zvezda MTS"
+          },
+          {
+            "pos": 11,
+            "team_id": 12148513,
+            "team_name": "瓦伦西亚",
+            "team_short_name": "Valencia Basket"
+          },
+          {
+            "pos": 12,
+            "team_id": 12140668,
+            "team_name": "米兰奥林匹亚",
+            "team_short_name": "Olimpia Milano Pallacanestro"
+          },
+          {
+            "pos": 13,
+            "team_id": 37676366,
+            "team_name": "KK游击队",
+            "team_short_name": "KK Partizan"
+          },
+          {
+            "pos": 14,
+            "team_id": 19867760,
+            "team_name": "特拉维夫马卡比",
+            "team_short_name": "Maccabi Tel Aviv"
+          },
+          {
+            "pos": 15,
+            "team_id": 37855962,
+            "team_name": "贝西克塔斯",
+            "team_short_name": "Besiktas JK"
+          },
+          {
+            "pos": 16,
+            "team_id": 12148483,
+            "team_name": "沙斯基贝斯克尼亚",
+            "team_short_name": "Saski Baskonia"
+          },
+          {
+            "pos": 17,
+            "team_id": 19867809,
+            "team_name": "艾斯维尔",
+            "team_short_name": "Asvel Basket"
+          },
+          {
+            "pos": 18,
+            "team_id": 21451924,
+            "team_name": "维图斯博洛尼亚",
+            "team_short_name": "Virtus Segafredo Bologna"
+          },
+          {
+            "pos": 19,
+            "team_id": 12138277,
+            "team_name": "拜仁慕尼黑",
+            "team_short_name": "FC Bayern Munich Basketball"
+          },
+          {
+            "pos": 20,
+            "team_id": 12146153,
+            "team_name": "巴黎篮球",
+            "team_short_name": "Paris Basketball"
+          }
+        ],
+        "list_fields": [
+          "game_id",
+          "tournament_id",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "status",
+          "id",
+          "enable_parlay",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "team",
+          "play_count"
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [],
+        "winner_row_fields": []
+      },
+      {
+        "match_id": 38458886,
+        "game_id": 1072082,
+        "tournament_id": 1280496,
+        "tournament_name": "NBA美国职业篮球联赛",
+        "game_name": "篮球",
+        "match_name": "菲尼克斯太阳 - VS - 金州勇士",
+        "start_time": "2026-10-25 10:00:00",
+        "round": "bo4",
+        "match_status": 2,
+        "list_request_types": [
+          1,
+          2
+        ],
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 1072954,
+            "team_name": "菲尼克斯太阳",
+            "team_short_name": "Phoenix Suns"
+          },
+          {
+            "pos": 2,
+            "team_id": 1072895,
+            "team_name": "金州勇士",
+            "team_short_name": "Golden State Warriors"
+          }
+        ],
+        "list_fields": [
+          "game_id",
+          "tournament_id",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "status",
+          "id",
+          "enable_parlay",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "team",
+          "odds",
+          "play_count"
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76821218,
+            "game_id": 1072082,
+            "match_id": 38458886,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76821218,
+            "team_id": 1072895,
+            "name": "金州勇士",
+            "value": "",
+            "odds": "3.04",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              10000
+            ],
+            "last_update": "1792894797",
+            "tag": "win"
+          },
+          {
+            "id": 76821217,
+            "game_id": 1072082,
+            "match_id": 38458886,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76821217,
+            "team_id": 1072954,
+            "name": "菲尼克斯太阳",
+            "value": "",
+            "odds": "1.25",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              10000
+            ],
+            "last_update": "1792894797",
+            "tag": "win"
+          },
+          {
+            "id": 76827740,
+            "game_id": 1072082,
+            "match_id": 38458886,
+            "odds_group_id": 2275849,
+            "group_name": "获胜者",
+            "group_short_name": "Winner",
+            "match_stage": "1st",
+            "odds_id": 76827740,
+            "team_id": 1072954,
+            "name": "菲尼克斯太阳",
+            "value": "",
+            "odds": "1.32",
+            "status": 4,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              10000
+            ],
+            "last_update": "1792893338",
+            "tag": "win"
+          },
+          {
+            "id": 76827741,
+            "game_id": 1072082,
+            "match_id": 38458886,
+            "odds_group_id": 2275849,
+            "group_name": "获胜者",
+            "group_short_name": "Winner",
+            "match_stage": "1st",
+            "odds_id": 76827741,
+            "team_id": 1072895,
+            "name": "金州勇士",
+            "value": "",
+            "odds": "2.92",
+            "status": 4,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              10000
+            ],
+            "last_update": "1792893338",
+            "tag": "win"
+          },
+          {
+            "id": 76827753,
+            "game_id": 1072082,
+            "match_id": 38458886,
+            "odds_group_id": 2276305,
+            "group_name": "获胜者",
+            "group_short_name": "Winner",
+            "match_stage": "q1",
+            "odds_id": 76827753,
+            "team_id": 1072895,
+            "name": "金州勇士",
+            "value": "",
+            "odds": "2.49",
+            "status": 4,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              10000
+            ],
+            "last_update": "1792893338",
+            "tag": "win"
+          },
+          {
+            "id": 76827752,
+            "game_id": 1072082,
+            "match_id": 38458886,
+            "odds_group_id": 2276305,
+            "group_name": "获胜者",
+            "group_short_name": "Winner",
+            "match_stage": "q1",
+            "odds_id": 76827752,
+            "team_id": 1072954,
+            "name": "菲尼克斯太阳",
+            "value": "",
+            "odds": "1.47",
+            "status": 4,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              10000
+            ],
+            "last_update": "1792893338",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "match_id": 38460695,
+        "game_id": 1072082,
+        "tournament_id": 12143373,
+        "tournament_name": "法国篮球甲级联赛",
+        "game_name": "篮球",
+        "match_name": "罗恩哥拿尔 - VS - 巴黎篮球",
+        "start_time": "2026-10-25 23:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "list_request_types": [
+          2
+        ],
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 21201957,
+            "team_name": "罗恩哥拿尔",
+            "team_short_name": "Chorale Roanne Basket"
+          },
+          {
+            "pos": 2,
+            "team_id": 12146153,
+            "team_name": "巴黎篮球",
+            "team_short_name": "Paris Basketball"
+          }
+        ],
+        "list_fields": [
+          "game_id",
+          "tournament_id",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "status",
+          "id",
+          "enable_parlay",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "team",
+          "odds",
+          "play_count"
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76834366,
+            "game_id": 1072082,
+            "match_id": 38460695,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834366,
+            "team_id": 12146153,
+            "name": "巴黎篮球",
+            "value": "",
+            "odds": "1.31",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874346",
+            "tag": "win"
+          },
+          {
+            "id": 76834365,
+            "game_id": 1072082,
+            "match_id": 38460695,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834365,
+            "team_id": 21201957,
+            "name": "罗恩哥拿尔",
+            "value": "",
+            "odds": "2.96",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874346",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "match_id": 38461044,
+        "game_id": 1072082,
+        "tournament_id": 21690925,
+        "tournament_name": "澳洲国家篮球联赛",
+        "game_name": "篮球",
+        "match_name": "坎斯大班 - VS - 新西兰破坏者",
+        "start_time": "2026-10-25 12:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "list_request_types": [
+          2
+        ],
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 21269916,
+            "team_name": "坎斯大班",
+            "team_short_name": "Cairns Taipans"
+          },
+          {
+            "pos": 2,
+            "team_id": 21269927,
+            "team_name": "新西兰破坏者",
+            "team_short_name": "New Zealand Breakers"
+          }
+        ],
+        "list_fields": [
+          "game_id",
+          "tournament_id",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "status",
+          "id",
+          "enable_parlay",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "team",
+          "odds",
+          "play_count"
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76828377,
+            "game_id": 1072082,
+            "match_id": 38461044,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76828377,
+            "team_id": 21269916,
+            "name": "坎斯大班",
+            "value": "",
+            "odds": "2.08",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792894722",
+            "tag": "win"
+          },
+          {
+            "id": 76828378,
+            "game_id": 1072082,
+            "match_id": 38461044,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76828378,
+            "team_id": 21269927,
+            "name": "新西兰破坏者",
+            "value": "",
+            "odds": "1.73",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792894722",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "match_id": 38461050,
+        "game_id": 1072082,
+        "tournament_id": 37296023,
+        "tournament_name": "澳洲女子国家篮球联赛",
+        "game_name": "篮球",
+        "match_name": "汤斯维尔火焰 - VS - 悉尼火焰",
+        "start_time": "2026-10-25 12:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "list_request_types": [
+          2
+        ],
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 37296030,
+            "team_name": "汤斯维尔火焰",
+            "team_short_name": "Townsville Fire"
+          },
+          {
+            "pos": 2,
+            "team_id": 37296029,
+            "team_name": "悉尼火焰",
+            "team_short_name": "Sydney Flames"
+          }
+        ],
+        "list_fields": [
+          "game_id",
+          "tournament_id",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "status",
+          "id",
+          "enable_parlay",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "team",
+          "odds",
+          "play_count"
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76837966,
+            "game_id": 1072082,
+            "match_id": 38461050,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76837966,
+            "team_id": 37296030,
+            "name": "汤斯维尔火焰",
+            "value": "",
+            "odds": "1.27",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792890522",
+            "tag": "win"
+          },
+          {
+            "id": 76837967,
+            "game_id": 1072082,
+            "match_id": 38461050,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76837967,
+            "team_id": 37296029,
+            "name": "悉尼火焰",
+            "value": "",
+            "odds": "3.13",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792890522",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "match_id": 38461083,
+        "game_id": 1072082,
+        "tournament_id": 21997333,
+        "tournament_name": "韩国篮球联赛",
+        "game_name": "篮球",
+        "match_name": "首尔SK骑士 - VS - 水原KT爆音",
+        "start_time": "2026-10-25 13:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "list_request_types": [
+          2
+        ],
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 21733485,
+            "team_name": "首尔SK骑士",
+            "team_short_name": "Seoul SK Knights"
+          },
+          {
+            "pos": 2,
+            "team_id": 21733577,
+            "team_name": "水原KT爆音",
+            "team_short_name": "Suwon KT Sonicboom"
+          }
+        ],
+        "list_fields": [
+          "game_id",
+          "tournament_id",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "status",
+          "id",
+          "enable_parlay",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "team",
+          "odds",
+          "play_count"
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76838022,
+            "game_id": 1072082,
+            "match_id": 38461083,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76838022,
+            "team_id": 21733485,
+            "name": "首尔SK骑士",
+            "value": "",
+            "odds": "1.43",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792892664",
+            "tag": "win"
+          },
+          {
+            "id": 76838023,
+            "game_id": 1072082,
+            "match_id": 38461083,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76838023,
+            "team_id": 21733577,
+            "name": "水原KT爆音",
+            "value": "",
+            "odds": "2.59",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792892664",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "match_id": 38461122,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "game_name": "篮球",
+        "match_name": "赫罗纳 - VS - 尤文图特巴达洛纳",
+        "start_time": "2026-10-25 19:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "list_request_types": [
+          2
+        ],
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 37675096,
+            "team_name": "赫罗纳",
+            "team_short_name": "Girona"
+          },
+          {
+            "pos": 2,
+            "team_id": 12148552,
+            "team_name": "尤文图特巴达洛纳",
+            "team_short_name": "Joventut Badalona"
+          }
+        ],
+        "list_fields": [
+          "game_id",
+          "tournament_id",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "status",
+          "id",
+          "enable_parlay",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "team",
+          "odds",
+          "play_count"
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76834471,
+            "game_id": 1072082,
+            "match_id": 38461122,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834471,
+            "team_id": 37675096,
+            "name": "赫罗纳",
+            "value": "",
+            "odds": "2.25",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874697",
+            "tag": "win"
+          },
+          {
+            "id": 76834472,
+            "game_id": 1072082,
+            "match_id": 38461122,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834472,
+            "team_id": 12148552,
+            "name": "尤文图特巴达洛纳",
+            "value": "",
+            "odds": "1.60",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874697",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "match_id": 38461235,
+        "game_id": 1072082,
+        "tournament_id": 37863740,
+        "tournament_name": "Esports Battle Basketball",
+        "game_name": "篮球",
+        "match_name": "克里夫兰骑士(NBA2K) - VS - 费城76人(NBA2K)",
+        "start_time": "2026-10-25 10:00:00",
+        "round": "bo1",
+        "match_status": 2,
+        "list_request_types": [
+          1,
+          2
+        ],
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 37864350,
+            "team_name": "克里夫兰骑士(NBA2K)",
+            "team_short_name": "Cleveland Cavaliers(NBA2K)"
+          },
+          {
+            "pos": 2,
+            "team_id": 37864367,
+            "team_name": "费城76人(NBA2K)",
+            "team_short_name": "Philadelphia 76ers(NBA2K)"
+          }
+        ],
+        "list_fields": [
+          "game_id",
+          "tournament_id",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "status",
+          "id",
+          "enable_parlay",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "team",
+          "play_count"
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [],
+        "winner_row_fields": []
+      },
+      {
+        "captured_at_utc": "2026-10-25T02:23:42.7437758+00:00",
+        "match_id": 38460698,
+        "game_id": 1072082,
+        "tournament_id": 12143373,
+        "tournament_name": "法国篮球甲级联赛",
+        "game_name": "篮球",
+        "match_name": "艾斯维尔 - VS - 南锡",
+        "start_time": "2026-10-25 23:30:00",
+        "round": "bo1",
+        "match_status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 19867809,
+            "team_name": "艾斯维尔",
+            "team_short_name": "Asvel Basket"
+          },
+          {
+            "pos": 2,
+            "team_id": 37672641,
+            "team_name": "南锡",
+            "team_short_name": "SLUC Nancy Basket"
+          }
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76834390,
+            "game_id": 1072082,
+            "match_id": 38460698,
+            "tournament_id": 12143373,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834390,
+            "team_id": 37672641,
+            "name": "南锡",
+            "value": "",
+            "odds": "3.94",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874422",
+            "tag": "win"
+          },
+          {
+            "id": 76834389,
+            "game_id": 1072082,
+            "match_id": 38460698,
+            "tournament_id": 12143373,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834389,
+            "team_id": 19867809,
+            "name": "艾斯维尔",
+            "value": "",
+            "odds": "1.14",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874422",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "captured_at_utc": "2026-10-25T02:23:42.9678302+00:00",
+        "match_id": 38460701,
+        "game_id": 1072082,
+        "tournament_id": 12143373,
+        "tournament_name": "法国篮球甲级联赛",
+        "game_name": "篮球",
+        "match_name": "巴奧夫斯 - VS - 利摩日",
+        "start_time": "2026-10-26 02:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 12146031,
+            "team_name": "巴奧夫斯",
+            "team_short_name": "Elan Bearnais Pau-Lacq-Orthez"
+          },
+          {
+            "pos": 2,
+            "team_id": 12146062,
+            "team_name": "利摩日",
+            "team_short_name": "Limoges CSP"
+          }
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76834403,
+            "game_id": 1072082,
+            "match_id": 38460701,
+            "tournament_id": 12143373,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834403,
+            "team_id": 12146031,
+            "name": "巴奧夫斯",
+            "value": "",
+            "odds": "1.91",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874513",
+            "tag": "win"
+          },
+          {
+            "id": 76834404,
+            "game_id": 1072082,
+            "match_id": 38460701,
+            "tournament_id": 12143373,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834404,
+            "team_id": 12146062,
+            "name": "利摩日",
+            "value": "",
+            "odds": "1.90",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874513",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "captured_at_utc": "2026-10-25T02:23:43.1939137+00:00",
+        "match_id": 38461047,
+        "game_id": 1072082,
+        "tournament_id": 21690925,
+        "tournament_name": "澳洲国家篮球联赛",
+        "game_name": "篮球",
+        "match_name": "墨尔本联队 - VS - 悉尼国王",
+        "start_time": "2026-10-25 14:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 21269919,
+            "team_name": "墨尔本联队",
+            "team_short_name": "Melbourne United"
+          },
+          {
+            "pos": 2,
+            "team_id": 21269928,
+            "team_name": "悉尼国王",
+            "team_short_name": "Sydney Kings"
+          }
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76828402,
+            "game_id": 1072082,
+            "match_id": 38461047,
+            "tournament_id": 21690925,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76828402,
+            "team_id": 21269928,
+            "name": "悉尼国王",
+            "value": "",
+            "odds": "1.64",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792888347",
+            "tag": "win"
+          },
+          {
+            "id": 76828401,
+            "game_id": 1072082,
+            "match_id": 38461047,
+            "tournament_id": 21690925,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76828401,
+            "team_id": 21269919,
+            "name": "墨尔本联队",
+            "value": "",
+            "odds": "2.19",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792888346",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "captured_at_utc": "2026-10-25T02:23:43.4070334+00:00",
+        "match_id": 38461086,
+        "game_id": 1072082,
+        "tournament_id": 21997333,
+        "tournament_name": "韩国篮球联赛",
+        "game_name": "篮球",
+        "match_name": "安阳正官庄RB - VS - 原州东浦新世代",
+        "start_time": "2026-10-25 13:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 21733573,
+            "team_name": "安阳正官庄RB",
+            "team_short_name": "Anyang Jung Kwan Jang Red Boosters"
+          },
+          {
+            "pos": 2,
+            "team_id": 21733396,
+            "team_name": "原州东浦新世代",
+            "team_short_name": "Wonju DB Promy"
+          }
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76838001,
+            "game_id": 1072082,
+            "match_id": 38461086,
+            "tournament_id": 21997333,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76838001,
+            "team_id": 21733396,
+            "name": "原州东浦新世代",
+            "value": "",
+            "odds": "1.99",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792890853",
+            "tag": "win"
+          },
+          {
+            "id": 76838000,
+            "game_id": 1072082,
+            "match_id": 38461086,
+            "tournament_id": 21997333,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76838000,
+            "team_id": 21733573,
+            "name": "安阳正官庄RB",
+            "value": "",
+            "odds": "1.81",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792890853",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "captured_at_utc": "2026-10-25T02:23:43.6804148+00:00",
+        "match_id": 38461125,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "game_name": "篮球",
+        "match_name": "毕尔包 - VS - 安道尔",
+        "start_time": "2026-10-25 19:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 17656685,
+            "team_name": "毕尔包",
+            "team_short_name": "Bilbao Basket"
+          },
+          {
+            "pos": 2,
+            "team_id": 12148634,
+            "team_name": "安道尔",
+            "team_short_name": "BC Andorra"
+          }
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76836638,
+            "game_id": 1072082,
+            "match_id": 38461125,
+            "tournament_id": 37265462,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76836638,
+            "team_id": 12148634,
+            "name": "安道尔",
+            "value": "",
+            "odds": "3.13",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792880158",
+            "tag": "win"
+          },
+          {
+            "id": 76836637,
+            "game_id": 1072082,
+            "match_id": 38461125,
+            "tournament_id": 37265462,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76836637,
+            "team_id": 17656685,
+            "name": "毕尔包",
+            "value": "",
+            "odds": "1.27",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792880158",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "captured_at_utc": "2026-10-25T02:23:43.9211747+00:00",
+        "match_id": 38461128,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "game_name": "篮球",
+        "match_name": "卡纳里亚 - VS - 奥布拉多伊洛",
+        "start_time": "2026-10-25 20:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 12148588,
+            "team_name": "卡纳里亚",
+            "team_short_name": "CB 1939 Canarias"
+          },
+          {
+            "pos": 2,
+            "team_id": 12226378,
+            "team_name": "奥布拉多伊洛",
+            "team_short_name": "Obradoiro CAB"
+          }
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76836664,
+            "game_id": 1072082,
+            "match_id": 38461128,
+            "tournament_id": 37265462,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76836664,
+            "team_id": 12226378,
+            "name": "奥布拉多伊洛",
+            "value": "",
+            "odds": "3.63",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792880253",
+            "tag": "win"
+          },
+          {
+            "id": 76836663,
+            "game_id": 1072082,
+            "match_id": 38461128,
+            "tournament_id": 37265462,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76836663,
+            "team_id": 12148588,
+            "name": "卡纳里亚",
+            "value": "",
+            "odds": "1.18",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792880253",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "captured_at_utc": "2026-10-25T02:23:44.1447782+00:00",
+        "match_id": 38461131,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "game_name": "篮球",
+        "match_name": "瓦伦西亚 - VS - 沙斯基贝斯克尼亚",
+        "start_time": "2026-10-26 00:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 12148513,
+            "team_name": "瓦伦西亚",
+            "team_short_name": "Valencia Basket"
+          },
+          {
+            "pos": 2,
+            "team_id": 12148483,
+            "team_name": "沙斯基贝斯克尼亚",
+            "team_short_name": "Saski Baskonia"
+          }
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76834500,
+            "game_id": 1072082,
+            "match_id": 38461131,
+            "tournament_id": 37265462,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834500,
+            "team_id": 12148483,
+            "name": "沙斯基贝斯克尼亚",
+            "value": "",
+            "odds": "3.38",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874857",
+            "tag": "win"
+          },
+          {
+            "id": 76834499,
+            "game_id": 1072082,
+            "match_id": 38461131,
+            "tournament_id": 37265462,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834499,
+            "team_id": 12148513,
+            "name": "瓦伦西亚",
+            "value": "",
+            "odds": "1.22",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874857",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "captured_at_utc": "2026-10-25T02:23:44.3493572+00:00",
+        "match_id": 38461134,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "game_name": "篮球",
+        "match_name": "布雷奥干 - VS - 乌尼卡查马拉加",
+        "start_time": "2026-10-26 01:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 12151244,
+            "team_name": "布雷奥干",
+            "team_short_name": "CB Breogan"
+          },
+          {
+            "pos": 2,
+            "team_id": 12148534,
+            "team_name": "乌尼卡查马拉加",
+            "team_short_name": "Unicaja Malaga"
+          }
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76834509,
+            "game_id": 1072082,
+            "match_id": 38461134,
+            "tournament_id": 37265462,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834509,
+            "team_id": 12151244,
+            "name": "布雷奥干",
+            "value": "",
+            "odds": "2.03",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874947",
+            "tag": "win"
+          },
+          {
+            "id": 76834510,
+            "game_id": 1072082,
+            "match_id": 38461134,
+            "tournament_id": 37265462,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834510,
+            "team_id": 12148534,
+            "name": "乌尼卡查马拉加",
+            "value": "",
+            "odds": "1.77",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792874947",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      },
+      {
+        "captured_at_utc": "2026-10-25T02:23:44.5549080+00:00",
+        "match_id": 38461137,
+        "game_id": 1072082,
+        "tournament_id": 37265462,
+        "tournament_name": "西班牙篮球甲级联赛",
+        "game_name": "篮球",
+        "match_name": "莱里达俱乐部 - VS - 皇家马德里",
+        "start_time": "2026-10-26 02:00:00",
+        "round": "bo1",
+        "match_status": 1,
+        "teams": [
+          {
+            "pos": 1,
+            "team_id": 38047932,
+            "team_name": "莱里达俱乐部",
+            "team_short_name": "Forca Lleida Club Esportiu"
+          },
+          {
+            "pos": 2,
+            "team_id": 12148370,
+            "team_name": "皇家马德里",
+            "team_short_name": "Real Madrid Baloncesto"
+          }
+        ],
+        "detail_fields": [
+          "enable_parlay",
+          "game_id",
+          "id",
+          "status",
+          "game_name",
+          "match_name",
+          "match_short_name",
+          "start_time",
+          "end_time",
+          "round",
+          "tournament_name",
+          "tournament_short_name",
+          "tournament_logo",
+          "tournament_logo_v2",
+          "live_url",
+          "team",
+          "odds"
+        ],
+        "winner_rows": [
+          {
+            "id": 76834538,
+            "game_id": 1072082,
+            "match_id": 38461137,
+            "tournament_id": 37265462,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834538,
+            "team_id": 12148370,
+            "name": "皇家马德里",
+            "value": "",
+            "odds": "1.20",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792875008",
+            "tag": "win"
+          },
+          {
+            "id": 76834537,
+            "game_id": 1072082,
+            "match_id": 38461137,
+            "tournament_id": 37265462,
+            "odds_group_id": 1279801,
+            "group_name": "获胜者(含加时)",
+            "group_short_name": "Winner (Inc. Overtime)",
+            "match_stage": "final",
+            "odds_id": 76834537,
+            "team_id": 38047932,
+            "name": "莱里达俱乐部",
+            "value": "",
+            "odds": "3.50",
+            "status": 1,
+            "win": -1,
+            "enable_parlay": 1,
+            "bet_limit": [
+              10,
+              1000
+            ],
+            "last_update": "1792875008",
+            "tag": "win"
+          }
+        ],
+        "winner_row_fields": [
+          "enable_parlay",
+          "odds_group_id",
+          "game_id",
+          "tournament_id",
+          "value",
+          "win",
+          "status",
+          "bet_limit",
+          "last_update",
+          "match_name",
+          "group_name",
+          "group_short_name",
+          "id",
+          "odds_id",
+          "sort_index",
+          "tag",
+          "tab",
+          "match_stage",
+          "team_id",
+          "name",
+          "match_id",
+          "odds"
+        ]
+      }
+    ],
+    "errors": [],
+    "detail_collection_finished_at_utc": "2026-10-25T02:23:44.5563020+00:00"
+  },
+  "additional_group_observations": [
+    {
+      "captured_at_utc": "2026-10-25T02:20:38.2288278+00:00",
+      "id": 38444835,
+      "game_id": 1072082,
+      "match_name": "冠军竞猜",
+      "status": 1,
+      "team_count": 20,
+      "odds_count": 20,
+      "groups": [
+        {
+          "id": "3304426",
+          "name": "冠军",
+          "name_en": "Winner",
+          "stage": "final",
+          "count": 20
+        }
+      ],
+      "full_rows": []
+    },
+    {
+      "captured_at_utc": "2026-10-25T02:20:38.4712067+00:00",
+      "id": 38461235,
+      "game_id": 1072082,
+      "match_name": "克里夫兰骑士(NBA2K) - VS - 费城76人(NBA2K)",
+      "status": 2,
+      "team_count": 2,
+      "odds_count": 40,
+      "groups": [
+        {
+          "id": "1279840",
+          "name": "让分(含加时)",
+          "name_en": "Handicap (Inc. Overtime)",
+          "stage": "final",
+          "count": 38
+        },
+        {
+          "id": "1280234",
+          "name": "总分单双(含加时）",
+          "name_en": "Total Points Odd/Even  (Inc. Overtime)",
+          "stage": "final",
+          "count": 2
+        }
+      ],
+      "full_rows": []
+    },
+    {
+      "captured_at_utc": "2026-10-25T02:20:38.6706044+00:00",
+      "id": 38458886,
+      "game_id": 1072082,
+      "match_name": "菲尼克斯太阳 - VS - 金州勇士",
+      "status": 2,
+      "team_count": 2,
+      "odds_count": 86,
+      "groups": [
+        {
+          "id": "1279801",
+          "name": "获胜者(含加时)",
+          "name_en": "Winner (Inc. Overtime)",
+          "stage": "final",
+          "count": 2
+        },
+        {
+          "id": "1279840",
+          "name": "让分(含加时)",
+          "name_en": "Handicap (Inc. Overtime)",
+          "stage": "final",
+          "count": 12
+        },
+        {
+          "id": "1280153",
+          "name": "总分大小(含加时)",
+          "name_en": "Total Points  (Inc. Overtime)",
+          "stage": "final",
+          "count": 6
+        },
+        {
+          "id": "1280234",
+          "name": "总分单双(含加时）",
+          "name_en": "Total Points Odd/Even  (Inc. Overtime)",
+          "stage": "final",
+          "count": 2
+        },
+        {
+          "id": "1280447",
+          "name": "让分",
+          "name_en": "Handicap",
+          "stage": "q1",
+          "count": 20
+        },
+        {
+          "id": "1280625",
+          "name": "总分大小",
+          "name_en": "Total Points",
+          "stage": "q1",
+          "count": 2
+        },
+        {
+          "id": "1280661",
+          "name": "总分单双",
+          "name_en": "Total Points Odd/Even",
+          "stage": "q1",
+          "count": 2
+        },
+        {
+          "id": "1280843",
+          "name": "(单节)得分单双",
+          "name_en": "Total Points Odd/Even (3rd Quarter only)",
+          "stage": "q3",
+          "count": 2
+        },
+        {
+          "id": "2275779",
+          "name": "总分大小",
+          "name_en": "Total Points",
+          "stage": "1st",
+          "count": 4
+        },
+        {
+          "id": "2275849",
+          "name": "获胜者",
+          "name_en": "Winner",
+          "stage": "1st",
+          "count": 2
+        },
+        {
+          "id": "2275879",
+          "name": "让分",
+          "name_en": "Handicap",
+          "stage": "1st",
+          "count": 10
+        },
+        {
+          "id": "2275902",
+          "name": "总分单双",
+          "name_en": "Total Points Odd/Even",
+          "stage": "1st",
+          "count": 2
+        },
+        {
+          "id": "2276305",
+          "name": "获胜者",
+          "name_en": "Winner",
+          "stage": "q1",
+          "count": 2
+        },
+        {
+          "id": "18478287",
+          "name": "$T1 总分大小(含加时)",
+          "name_en": "$T1 Total Points (Inc. Overtime)",
+          "stage": "final",
+          "count": 4
+        },
+        {
+          "id": "18478621",
+          "name": "$T2 总分大小(含加时）",
+          "name_en": "$T2 Total Points (Inc. Overtime)",
+          "stage": "final",
+          "count": 4
+        },
+        {
+          "id": "18478856",
+          "name": "$T1 总分大小",
+          "name_en": "$T1 Total Points",
+          "stage": "1st",
+          "count": 4
+        },
+        {
+          "id": "18478966",
+          "name": "$T2 总分大小",
+          "name_en": "$T2 Total Points",
+          "stage": "1st",
+          "count": 2
+        },
+        {
+          "id": "18479454",
+          "name": "$T1 总分大小",
+          "name_en": "$T1 Total Points",
+          "stage": "q1",
+          "count": 2
+        },
+        {
+          "id": "18479718",
+          "name": "$T2 总分大小",
+          "name_en": "$T2 Total Points",
+          "stage": "q1",
+          "count": 2
+        }
+      ],
+      "full_rows": [
+        {
+          "odds_id": 76821218,
+          "odds_group_id": 1279801,
+          "match_id": 38458886,
+          "tournament_id": 1280496,
+          "team_id": 1072895,
+          "match_stage": "final",
+          "status": 1,
+          "odds": "3.04",
+          "bet_limit": [
+            10,
+            10000
+          ],
+          "enable_parlay": 1,
+          "last_update": "1792894797"
+        },
+        {
+          "odds_id": 76821217,
+          "odds_group_id": 1279801,
+          "match_id": 38458886,
+          "tournament_id": 1280496,
+          "team_id": 1072954,
+          "match_stage": "final",
+          "status": 1,
+          "odds": "1.25",
+          "bet_limit": [
+            10,
+            10000
+          ],
+          "enable_parlay": 1,
+          "last_update": "1792894797"
+        }
+      ]
+    }
+  ],
+  "identifier_checks": {
+    "checked_at_utc": "2026-10-25T02:24:13.089Z",
+    "observed_matches": 17,
+    "full_winner_matches": 15,
+    "full_winner_leagues": 6,
+    "checked_selections": 30,
+    "distinct_selection_ids": 30,
+    "unique_teams": 47,
+    "teams_with_english_short_name": 47,
+    "all_identifiers_consistent": true,
+    "required_selection_fields": [
+      "game_id",
+      "match_id",
+      "odds_group_id",
+      "group_name",
+      "group_short_name",
+      "match_stage",
+      "odds_id",
+      "team_id",
+      "name",
+      "odds",
+      "status",
+      "win",
+      "enable_parlay",
+      "bet_limit",
+      "last_update",
+      "tag",
+      "value"
+    ],
+    "scope": "Read-only consistency checks on captured source identifiers. No authenticated bet precheck or order submission."
+  },
+  "websocket_observation": {
+    "captured_at_utc": "2026-10-25T02:21:36.283Z",
+    "endpoint": "wss://cfsocket.365raylinks.com/socketcluster/",
+    "channel": "match",
+    "observation_ms": 12000,
+    "connected": true,
+    "subscribed": true,
+    "packets": 115,
+    "odds_rows": 115,
+    "target_match_id": "38458886",
+    "target_odds_ids": [
+      "76821217",
+      "76821218"
+    ],
+    "matched_updates": [],
+    "errors": []
+  },
+  "pm_discovery_metadata": {
+    "captured_at_utc": "2026-10-25T02:26:48.9161167+00:00",
+    "source": "https://gamma-api.polymarket.com/sports",
+    "rows": [
+      {
+        "sport": "euroleague",
+        "series": "10371",
+        "tags": "1,100639,102669"
+      },
+      {
+        "sport": "bkfr1",
+        "series": "10872",
+        "tags": "1,100639,28,103098"
+      },
+      {
+        "sport": "bknbl",
+        "series": "10876",
+        "tags": "1,100639,28,103096"
+      },
+      {
+        "sport": "bkcba",
+        "series": "10875",
+        "tags": "1,100639,28,103097"
+      },
+      {
+        "sport": "bkkbl",
+        "series": "10874",
+        "tags": "1,100639,28,103100"
+      },
+      {
+        "sport": "cwbb",
+        "series": "10471",
+        "tags": "1,28,100639,102003"
+      },
+      {
+        "sport": "nba",
+        "series": "10345",
+        "tags": "1,745,100639"
+      },
+      {
+        "sport": "wnba",
+        "series": "10105",
+        "tags": "1,100639,100254"
+      }
+    ]
+  }
+}

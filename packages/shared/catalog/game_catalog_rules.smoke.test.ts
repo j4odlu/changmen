@@ -41,7 +41,8 @@ const stripSettings = (game: Record<string, unknown>) => {
   const { platformSettings: _settings, ...existing } = game;
   return existing;
 };
-assert.deepEqual(gameCatalog.games.map(stripSettings), previousCatalog.games,
+const previousCodes = new Set(previousCatalog.games.map((game: { code: string }) => game.code));
+assert.deepEqual(gameCatalog.games.filter(game => previousCodes.has(game.code)).map(stripSettings), previousCatalog.games,
   "all existing game identities and venue IDs are preserved");
 
 const platforms = ["PB", "Stake", "Polymarket", "Limitless", "SXBet", "Azuro", "TF", "RAY", "OB", "PredictFun"];
@@ -60,6 +61,15 @@ let comparisons = 0;
 for (const platform of platforms) {
   for (const spelling of [platform, platform.toLowerCase(), ` ${platform} `]) {
     for (const alias of aliases) {
+      // Missing venue IDs must not stringify into a match on a newly added game.
+      if (alias === "undefined") {
+        assert.equal(getGameCodeForPlatformId(spelling, alias), null);
+        continue;
+      }
+      if (platform === "RAY" && alias === "1072082") {
+        assert.equal(getGameCodeForPlatformId(spelling, alias), "basketball");
+        continue;
+      }
       assert.equal(getGameCodeForPlatformId(spelling, alias), previous.getGameCodeForPlatformId(spelling, alias),
         `${spelling}: original alias, casing and whitespace behavior for ${JSON.stringify(alias)}`);
       comparisons++;
@@ -67,16 +77,21 @@ for (const platform of platforms) {
   }
 }
 
-assert.deepEqual(getConfiguredPlatformGameIds("RAY"), ["70", "151", "140", "74", "37197927"]);
-assert.deepEqual(getConfiguredPlatformDiscovery("Polymarket"), {
+assert.deepEqual(getConfiguredPlatformGameIds("RAY"), ["70", "151", "140", "74", "37197927", "1072082"]);
+const pmDiscovery = getConfiguredPlatformDiscovery("Polymarket");
+assert.deepEqual({ sportKeys: pmDiscovery.sportKeys.slice(0, 5), fallbackSeriesIds: pmDiscovery.fallbackSeriesIds.slice(0, 5) }, {
   sportKeys: ["cs2", "lol", "dota2", "hok", "val"],
   fallbackSeriesIds: ["10310", "10311", "10309", "10434", "10369"],
 });
-assert.ok(!getConfiguredPlatformDiscovery("Polymarket").sportKeys.includes("nba"));
+for (const key of ["nba", "wnba", "ncaab", "euroleague", "bkkbl", "bknbl", "bkfr1"])
+  assert.ok(pmDiscovery.sportKeys.includes(key), `basketball discovery includes ${key}`);
+assert.ok(pmDiscovery.fallbackSeriesIds.includes("10874"));
+assert.ok(!pmDiscovery.sportKeys.includes("epl"));
+assert.equal(matchConfiguredPlatformGameText("Polymarket", "bkkbl-dae-seo2-2026-10-25"), "basketball");
 assert.deepEqual(getConfiguredPlatformGameIds("unknown"), []);
 const ids = getConfiguredPlatformGameIds("RAY");
 ids.length = 0;
-assert.equal(getConfiguredPlatformGameIds("RAY").length, 5, "callers cannot mutate the collector scope");
+assert.equal(getConfiguredPlatformGameIds("RAY").length, 6, "callers cannot mutate the collector scope");
 
 // Replay the original PM parser's entire classification function, including precedence.
 const oldParser = oldSource("server/collectors/polymarket-esports/parse.js");
@@ -87,6 +102,10 @@ const samples = ["league of legends", "LEAGUE-OF-LEGENDS", "lol", "dota", "dota2
   "王者荣耀", "valorant", "VALORANT", "nba", "football", "val", "unknown", "lollipop", "cs2 lol",
   "valorant dota2", "kog cs2", "valorant 王者荣耀"];
 for (const text of samples) {
+  if (text === "nba") {
+    assert.equal(matchConfiguredPlatformGameText("Polymarket", text), "basketball");
+    continue;
+  }
   assert.equal(matchConfiguredPlatformGameText("Polymarket", text), legacyPm({ question: text }),
     `original PM classification: ${text}`);
 }

@@ -12,7 +12,8 @@ vi.mock("@changmen/client-core/bridge/oddsAccess", () => ({
 
 describe("handleRayRealtimeMessage", () => {
   test("catalog-derived collector scope retains the original five games and order", () => {
-    expect(RAY_A8_COLLECT.games).toEqual(["70", "151", "140", "74", "37197927"]);
+    expect(RAY_A8_COLLECT.games.slice(0, 5)).toEqual(["70", "151", "140", "74", "37197927"]);
+    expect(RAY_A8_COLLECT.games.slice(5)).toEqual(["1072082"]);
   });
   beforeEach(() => {
     vi.clearAllMocks();

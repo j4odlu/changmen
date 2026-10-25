@@ -24,7 +24,7 @@ beforeEach(() => {
 });
 afterEach(() => { stop?.(); vi.restoreAllMocks(); });
 
-it("collects configured basketball through the unchanged first-page flow, names, BO and sequential odds order", async () => {
+it("uses short team names for every game while preserving first-page collection, BO and sequential odds order", async () => {
   mock.get.mockResolvedValueOnce({ code: 200, result: [legacy, basketball] });
   stop = startRayCollector();
   await vi.waitFor(() => expect(mock.saveBets).toHaveBeenCalledTimes(2));
@@ -33,9 +33,11 @@ it("collects configured basketball through the unchanged first-page flow, names,
   expect(mock.saveMatch.mock.calls[0]![0]).toBe("RAY");
   const rows = mock.saveMatch.mock.calls[0]![1];
   expect(rows).toHaveLength(2);
-  expect(rows[0]).toMatchObject({ SourceMatchID: 1, SourceGameID: 70, BO: 3, Home: "原主队", Away: "原客队", HomeID: 10, AwayID: 20, StartTime: now });
-  expect(rows[1]).toMatchObject({ SourceMatchID: 100, SourceGameID: 1072082, BO: 4, Home: "太阳", Away: "勇士", HomeID: 1000, AwayID: 2000, StartTime: now });
-  expect(rows[1].Teams.map((team: { Name: string }) => team.Name)).toEqual(["太阳", "勇士"]);
+  // Missing team_short_name must not fall back to team_name.
+  expect(rows[0]).toMatchObject({ SourceMatchID: 1, SourceGameID: 70, BO: 3, Home: "Original Home", Away: "", HomeID: 10, AwayID: 20, StartTime: now });
+  expect(rows[0].Teams.map((team: { Name: string }) => team.Name)).toEqual(["Original Home", ""]);
+  expect(rows[1]).toMatchObject({ SourceMatchID: 100, SourceGameID: 1072082, BO: 4, Home: "Phoenix Suns", Away: "Golden State Warriors", HomeID: 1000, AwayID: 2000, StartTime: now });
+  expect(rows[1].Teams.map((team: { Name: string }) => team.Name)).toEqual(["Phoenix Suns", "Golden State Warriors"]);
   expect(mock.calls).toEqual(["matches", "odds:1", "odds:100"]);
 });
 
@@ -44,7 +46,7 @@ it("keeps the original first-page scope even when the page is full", async () =>
   stop = startRayCollector();
   await vi.waitFor(() => expect(mock.saveBets).toHaveBeenCalledTimes(1));
   expect(mock.saveMatch).toHaveBeenCalledOnce();
-  expect(mock.saveMatch.mock.calls[0]![1]).toMatchObject([{ SourceMatchID: 1, SourceGameID: 70, Home: "原主队", BO: 3 }]);
+  expect(mock.saveMatch.mock.calls[0]![1]).toMatchObject([{ SourceMatchID: 1, SourceGameID: 70, Home: "Original Home", BO: 3 }]);
   expect(mock.calls).toEqual(["matches", "odds:1"]);
   expect(mock.get).toHaveBeenCalledOnce();
   expect(mock.get.mock.calls[0]![2]).toBe("match_type=2&page=1");

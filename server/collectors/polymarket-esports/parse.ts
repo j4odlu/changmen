@@ -8,6 +8,7 @@ import type { GammaEvent, GammaMarket, MappedMarket } from "./types.ts";
 
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 import { matchConfiguredPlatformGameText } from "@changmen/shared/catalog/game_catalog";
+import { resolvePolymarketMatchTeams } from "./team_identity.ts";
 
 const PLATFORM = "Polymarket";
 const YES_NO = /^(?:yes|no|是|否)$/i;
@@ -218,8 +219,11 @@ export function buildPolymarketMappedMarket(market: GammaMarket, buyPrices: Reco
   const [homeName, awayName] = outcomes.map(String);
   const sourceMatchId = sourceMatchIdOf(market, marketId);
   const startTime = startTimeOf(market);
-  const matchHomeId = sourceTeamId(gameId, homeName);
-  const matchAwayId = sourceTeamId(gameId, awayName);
+  const matchTeams = resolvePolymarketMatchTeams(eventOf(market), gameId, [homeName, awayName]);
+  if (!matchTeams)
+    return null;
+  const matchHomeId = matchTeams[0].TeamID;
+  const matchAwayId = matchTeams[1].TeamID;
 
   const homeOdds = open ? decimalOddsFromProbability(buyPrices[homeId]) : 0;
   const awayOdds = open ? decimalOddsFromProbability(buyPrices[awayId]) : 0;
@@ -246,13 +250,10 @@ export function buildPolymarketMappedMarket(market: GammaMarket, buyPrices: Reco
       SourceGameID: gameId,
       StartTime: startTime,
       HomeID: matchHomeId,
-      Home: homeName,
+      Home: matchTeams[0].Name,
       AwayID: matchAwayId,
-      Away: awayName,
-      Teams: [
-        { Type: PLATFORM, TeamID: matchHomeId, Name: homeName, GameID: gameId, Logo: "" },
-        { Type: PLATFORM, TeamID: matchAwayId, Name: awayName, GameID: gameId, Logo: "" },
-      ],
+      Away: matchTeams[1].Name,
+      Teams: matchTeams,
     },
     bet: {
       Type: PLATFORM,

@@ -36,6 +36,21 @@ for (const [name, hash] of Object.entries(baseline.hashes)) {
   it(`${name}.ts erases to the pre-migration implementation`, () => {
     assert.equal(ts.version, baseline.compiler);
     let source = fs.readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8").replaceAll("\r\n", "\n");
+    // Restore only the official-team-ID hook; the historical runtime hashes remain unchanged.
+    if (name === "parse") {
+      const edits = [
+        ['import { resolvePolymarketMatchTeams } from "./team_identity.ts";\n', ""],
+        ['  const matchTeams = resolvePolymarketMatchTeams(eventOf(market), gameId, [homeName, awayName]);\n  if (!matchTeams)\n    return null;\n  const matchHomeId = matchTeams[0].TeamID;\n  const matchAwayId = matchTeams[1].TeamID;',
+          '  const matchHomeId = sourceTeamId(gameId, homeName);\n  const matchAwayId = sourceTeamId(gameId, awayName);'],
+        ['      Teams: matchTeams,', '      Teams: [\n        { Type: PLATFORM, TeamID: matchHomeId, Name: homeName, GameID: gameId, Logo: "" },\n        { Type: PLATFORM, TeamID: matchAwayId, Name: awayName, GameID: gameId, Logo: "" },\n      ],'],
+        ['      Home: matchTeams[0].Name,', '      Home: homeName,'],
+        ['      Away: matchTeams[1].Name,', '      Away: awayName,'],
+      ];
+      for (const [current, previous] of edits) {
+        assert.equal(source.split(current).length, 2, "missing/duplicate team identity hook");
+        source = source.replace(current, previous);
+      }
+    }
     // [changmen 扩展] 精确逆转赛果补采的三个接入点；保留原始迁移摘要，不放行其它改动。
     const outcomeHooks = name === "index" ? [
       'import { refreshPolymarketOutcomes } from "./outcomes.ts";\n',

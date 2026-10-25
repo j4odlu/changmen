@@ -16,6 +16,14 @@ TS 开发依赖与 API 类型依赖在 workspace 记录中声明。`scripts/veri
 
 **职责一句话**：只有 VPS 写 Polymarket 电竞库；浏览器只吃 Index → Market WS → fo（可经 VPS 或直连官网；**不**镜像列表 discovery）。
 
+## 队伍身份与盘口选项
+
+[changmen 扩展] 有效的 Gamma `event.teams[].id` 用作平台队伍 ID，`teams[].name` 用作比赛及 Teams 队名；盘口 `HomeName` / `AwayName` 仍来自 `outcomes`，与同下标 token、价格绑定。不会按 `teams` 数组位置或 `ordering` 重排盘口：先按官方队名/别名唯一对应选项，只有一侧名称对应时才将另一支队伍配给剩余选项。身份重复、冲突或两侧都无法对应时跳过解析，不猜测选项归属。官方主客标记与盘口顺序可能不同，matcher 原有朝向处理保持。
+
+Gamma 暂缺 teams 时跳过该场不完整响应，保留已有快照，不用空 ID 覆盖旧身份；本次不加入运行时映射迁移。部署切换前需核对旧队名 ID 对应的已有队伍映射。
+
+官方依据：[队伍主客标记](https://docs.polymarket.com/market-data/discover-markets#identify-home-and-away-teams)、[盘口名称与 token 对应](https://docs.polymarket.com/market-data/market-details#market-outcomes)。
+
 对齐官方文档：
 
 - [events/keyset](https://docs.polymarket.com/api-reference/events/list-events-keyset-pagination)（cursor，非 offset）
@@ -65,3 +73,8 @@ TS 开发依赖与 API 类型依赖在 workspace 记录中声明。`scripts/veri
 | 窗内无 ML | Index 剔 ended 保留其余 + prune(ended∪synced 过旧)，**不**硬清空 |
 
 索引：[collectors/README.md](../README.md) · [PRODUCTION_DEPLOYMENT.md](../../../PRODUCTION_DEPLOYMENT.md)
+### 旧队伍 ID 的一次性切换
+
+历史 `game:name` 队伍 ID 使用 `rds/maintenance/polymarket_official_team_plan.js` 生成逐条核实的迁移清单，再执行 `rds/maintenance/migrate-polymarket-official-team-ids.mjs --plan=/absolute/plan.json` 只读核验；加 `--apply` 才写入。该维护工具不进入采集或 matcher 运行链路。
+
+先通过 GitHub Actions 发布官方队伍 ID 采集器，确认现网采集已使用官方 ID，再短暂停止 PM HTTP 采集进程、刷新核对清单并执行迁移，完成后恢复采集。不得在旧采集器仍会写回名称 ID 时直接迁移。写入前落盘备份，事务内保留原 `gb_team_id`，只替换 PM 外部队伍标识及赛事队伍资料；合场关联、盘口、赔率及 token 保持原值。未识别且无可靠对应的历史记录保留，已识别记录或现有官方映射出现冲突时整次拒绝执行。

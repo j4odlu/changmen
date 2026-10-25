@@ -2,18 +2,43 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { runPolymarketEsportsDiscoveryCycle as runDiscovery } from "./loop.js";
+import { withOfficialTeams } from "./test_fixtures.mjs";
 
 // 现有写库安全测试不访问外部服务；官方结果入口由下方集成用例单独验证。
 function runPolymarketEsportsDiscoveryCycle(deps) {
   return runDiscovery({
     fetchOfficialMarkets: async markets => markets,
     ...deps,
+    ...(deps.fetchMarkets ? { fetchMarkets: async () => {
+      const result = await deps.fetchMarkets();
+      return { ...result, markets: result.markets.map(withOfficialTeams) };
+    } } : {}),
   });
 }
 
 const MONEYLINE_TYPES = new Set(["moneyline", "child_moneyline"]);
 
 describe("polymarket-esports write safety", () => {
+  it("keeps existing snapshots when official team metadata is temporarily missing", async () => {
+    for (const teams of [undefined, null, []]) {
+      const writes = [];
+      const result = await runPolymarketEsportsDiscoveryCycle({
+        writePlatform: true, resolveTypes: async () => MONEYLINE_TYPES,
+        fetchMarkets: async () => ({ rawEventCount: 1, rawMarketCount: 1, markets: [{
+          conditionId: "missing-teams", sportsMarketType: "moneyline", groupItemTitle: "Match Winner",
+          clobTokenIds: '["h","a"]', outcomes: '["T1","GEN"]',
+          events: [{ id: "existing-event", slug: "lol-t1-gen", teams }],
+        }] }),
+        fetchPrices: async () => ({}),
+        writeMatches: () => writes.push("matches"), replaceBets: () => writes.push("bets"),
+        pruneMatches: async () => { writes.push("prune"); return []; },
+        persistIndex: () => writes.push("index"),
+      });
+      assert.equal(result.skipped, true);
+      assert.deepEqual(writes, []);
+    }
+  });
+
   it("queries CLOB before mapping, preserves closed map winners, and prices only open markets", async () => {
     const base = { sportsMarketType: "child_moneyline", groupItemTitle: "Map 1 Winner", gameStartTime: Date.now() - 3600_000, clobTokenIds: "[\"h\",\"a\"]", outcomes: "[\"STATE\",\"Teletubisie\"]", events: [{ id: "evt", slug: "cs2-sta-ttbs" }], outcomePrices: "[\"1\",\"0\"]" };
     let queried;

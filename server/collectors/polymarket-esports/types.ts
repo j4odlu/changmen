@@ -7,7 +7,15 @@ export interface GammaSeries {
   slug?: unknown;
 }
 
+export interface GammaTeam {
+  id?: unknown;
+  name?: unknown;
+  alias?: unknown;
+  ordering?: unknown;
+}
+
 export interface GammaEvent {
+  teams?: GammaTeam[] | null;
   id?: unknown;
   slug?: unknown;
   title?: unknown;

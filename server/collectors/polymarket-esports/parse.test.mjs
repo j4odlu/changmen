@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  buildPolymarketMappedMarket,
+  buildPolymarketMappedMarket as buildMarket,
   decimalOddsFromProbability,
   mapPolymarketGameId,
   parseJsonArray,
   resolvePolymarketMapMarketOutcome,
 } from "./parse.js";
+import { withOfficialTeams } from "./test_fixtures.mjs";
+const buildPolymarketMappedMarket = (market, ...args) => buildMarket(withOfficialTeams(market), ...args);
 
 describe("polymarket-esports parse", () => {
   it("uses configured game recognition across event metadata and keeps unknown sports out", () => {
@@ -25,16 +27,17 @@ describe("polymarket-esports parse", () => {
     assert.deepEqual(parseJsonArray("[\"a\",\"b\"]"), ["a", "b"]);
   });
 
-  it("maps basketball through the existing full-match moneyline path and keeps current team identity rules", () => {
+  it("maps basketball with official team IDs without changing the full-match moneyline or token order", () => {
     const base = { conditionId: "kbl-full", sportsMarketType: "moneyline", active: true,
       clobTokenIds: '["dae-token","seo-token"]', outcomes: '["Daegu Pegasus","Seoul Thunders"]',
-      gameStartTime: "2026-10-25T07:30:00Z", events: [{ id: "1234012", slug: "bkkbl-dae-seo2-2026-10-25" }],
+      gameStartTime: "2026-10-25T07:30:00Z", events: [{ id: "1234012", slug: "bkkbl-dae-seo2-2026-10-25",
+        teams: [{ id: 229474, name: "Daegu Pegasus", ordering: "home" }, { id: 229471, name: "Seoul Thunders", ordering: "away" }] }],
       tags: [{ slug: "basketball" }, { slug: "kbl" }] };
     const mapped = buildPolymarketMappedMarket(base, { "dae-token": 0.45, "seo-token": 0.6 });
     assert.ok(mapped);
     assert.equal(mapped.match.SourceGameID, "basketball");
-    assert.equal(mapped.match.HomeID, "basketball:daegu-pegasus");
-    assert.equal(mapped.match.AwayID, "basketball:seoul-thunders");
+    assert.equal(mapped.match.HomeID, "229474");
+    assert.equal(mapped.match.AwayID, "229471");
     assert.equal(mapped.match.StartTime, Date.parse("2026-10-25T07:30:00Z"));
     assert.equal(mapped.bet.Map, 0);
     assert.equal(mapped.bet.SourceHomeID, "dae-token");
@@ -47,6 +50,67 @@ describe("polymarket-esports parse", () => {
   it("decimalOddsFromProbability truncates to 3 decimals", () => {
     assert.equal(decimalOddsFromProbability(0.5), 2);
     assert.equal(decimalOddsFromProbability(0.51), 1.96);
+  });
+
+  it("uses official team names and IDs separately from outcome labels and trading tokens", () => {
+    const base = { conditionId: "efes-man", sportsMarketType: "moneyline", active: true,
+      clobTokenIds: '["efes-token","man-token"]', outcomes: '["Anadolu Efes","Korfez Basket"]',
+      events: [{ id: "1216482", slug: "bkbsl-ana-man-2026-10-25", teams: [
+        { id: 3270013, name: "Manisa BB", alias: "Manisa", ordering: "away" },
+        { id: 3270017, name: "Anadolu Efes", ordering: "home" },
+      ] }] };
+    const mapped = buildPolymarketMappedMarket(base, { "efes-token": 0.8, "man-token": 0.2 });
+    assert.equal(mapped.match.HomeID, "3270017");
+    assert.equal(mapped.match.AwayID, "3270013");
+    assert.equal(mapped.match.Away, "Manisa BB");
+    assert.deepEqual(mapped.match.Teams.map(t => t.TeamID), ["3270017", "3270013"]);
+    assert.equal(mapped.bet.SourceHomeID, "efes-token");
+    assert.equal(mapped.bet.SourceAwayID, "man-token");
+    assert.equal(mapped.bet.HomeName, "Anadolu Efes");
+    assert.equal(mapped.bet.AwayName, "Korfez Basket");
+    const renamed = buildPolymarketMappedMarket({ ...base, outcomes: '["Anadolu Efes","Manisa BB"]' });
+    assert.equal(renamed.match.AwayID, mapped.match.AwayID);
+    assert.equal(renamed.match.Away, mapped.match.Away);
+  });
+
+  it("keeps IDs tied to outcome order when the official home designation or array order changes", () => {
+    const mapped = buildPolymarketMappedMarket({ conditionId: "lol-reversed", sportsMarketType: "moneyline",
+      groupItemTitle: "Match Winner", clobTokenIds: '["t1-token","gen-token"]', outcomes: '["T1","GEN"]',
+      events: [{ id: "lol-event", slug: "lol-t1-gen", teams: [
+        { id: 12, name: "GEN", ordering: "home" }, { id: 11, name: "T1", ordering: "away" },
+      ] }] }, { "t1-token": 0.6, "gen-token": 0.4 });
+    assert.equal(mapped.match.HomeID, "11");
+    assert.equal(mapped.match.AwayID, "12");
+    assert.equal(mapped.bet.SourceHomeID, "t1-token");
+    assert.equal(mapped.bet.SourceAwayID, "gen-token");
+    assert.equal(mapped.match.Home, "T1");
+  });
+
+  it("uses aliases and a unique opposite-team anchor for basketball abbreviations", () => {
+    const mapped = buildPolymarketMappedMarket({ conditionId: "jpn", sportsMarketType: "moneyline",
+      clobTokenIds: '["sun-token","dia-token"]', outcomes: '["Tokyo Sunrockers","Diamond Dolphins"]',
+      events: [{ slug: "bkjpn-sun-dia-2026-10-25", teams: [
+        { id: 3270041, name: "Nagoya Diamond Dolphins", alias: "Diamond Dolphins" },
+        { id: 3270048, name: "Sun Rockers Shibuya", alias: "Sun Rockers" },
+      ] }] });
+    assert.deepEqual([mapped.match.HomeID, mapped.match.AwayID], ["3270048", "3270041"]);
+  });
+
+  it("does not invent identities from ambiguous, duplicate or invalid official team metadata", () => {
+    const base = { conditionId: "ambiguous", sportsMarketType: "moneyline", clobTokenIds: '["h","a"]',
+      outcomes: '["Home","Away"]', events: [{ slug: "bkkbl-home-away" }] };
+    for (const teams of [
+      undefined, null, [],
+      [{ id: 1, name: "Unknown A" }, { id: 2, name: "Unknown B" }],
+      [{ id: 1, name: "Home" }, { id: 1, name: "Away" }],
+      [{ id: 1, name: "Home" }, { id: 0, name: "Away" }],
+      [{ id: true, name: "Home" }, { id: 2, name: "Away" }],
+      [{ id: 1, name: "Home", alias: "Away" }, { id: 2, name: "Away" }],
+      [{ id: 1, name: "Home" }],
+    ]) {
+      assert.equal(buildPolymarketMappedMarket({ ...base, events: [{ ...base.events[0], teams }] }), null);
+    }
+    assert.equal(buildMarket(base), null, "missing identity must not overwrite a previous snapshot");
   });
 
   it("resolvePolymarketMapMarketOutcome prefers official winner", () => {

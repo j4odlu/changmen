@@ -98,6 +98,22 @@ async function save() {
       </div>
 
       <div class="ui-tab__row">
+        <el-form-item label="地图降赔信号:" class="ui-tab__control">
+          <el-switch
+            v-model="extensionPrefs.pmOddsDropCardUi"
+            aria-label="地图降赔率信号显示"
+            inline-prompt
+            active-text="开启"
+            inactive-text="关闭"
+            size="large"
+          />
+        </el-form-item>
+        <p class="ui-tab__desc">
+          默认关闭。开启后在全场及各地图赔率上方显示降赔信号；监测需在降赔浮窗中开启。
+        </p>
+      </div>
+
+      <div class="ui-tab__row">
         <el-form-item label="EV 金色标记:" class="ui-tab__control">
           <div class="ev-marker-prefs">
             <div class="ev-marker-prefs__row">

@@ -14,6 +14,7 @@ import { storeToRefs } from "pinia";
 import { computed, onUnmounted, ref, watch } from "vue";
 import LimitDiagDialog from "@/components/match/LimitDiagDialog.vue";
 import PmPrematchProbability from "@/components/match/PmPrematchProbability.vue";
+import MatchOddsDropSignals from "@/extensions/pmOddsDropSignal/MatchOddsDropSignals.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { useBetRowExtensionUiEnabled } from "@/composables/useExtensionPrefs";
 import { isPmMapLive } from "@/shared/pmSportDisplay";
@@ -505,6 +506,7 @@ function onBetTitleDblClick() {
     <div class="bet-title" @dblclick="onBetTitleDblClick">
       {{ bet.getBetName() }} - {{ arb }}
     </div>
+    <MatchOddsDropSignals v-if="allowBetting && extensionPrefs.pmOddsDropCardUi === true" :match="match" :bet="bet" />
     <div v-show="!mapMuted || showManualOdds" ref="itemsContainerRef" class="bet-items">
       <PmPrematchProbability v-if="!bet.marketCode && bet.round >= 0" :bet="bet" :match="match" />
       <div v-if="showDefaultOdds" class="item flex defaultOdds">

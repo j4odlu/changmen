@@ -13,6 +13,8 @@ export interface PmOddsDropVenueQuote {
 
 export interface PmOddsDropVenueSnapshot {
   matchId: number;
+  /** 触发时的合场盘口；旧内存快照可通过 selection / PM token 定位。 */
+  betId?: number;
   matchTitle: string;
   marketTitle: string;
   side: BetSide;
@@ -126,6 +128,7 @@ export function resolvePmOddsDropVenueSnapshot(
   );
   return {
     matchId: match.id,
+    betId: bet.id,
     matchTitle: match.title,
     marketTitle: bet.getBetName(),
     side,

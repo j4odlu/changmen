@@ -31,6 +31,7 @@ const defaultPrefs = {
   arbExecutionMode: "normal" as const,
   lowOddsSingleHigherCProbabilityOnly: false,
   betRowUi: false,
+  pmOddsDropCardUi: false,
   valueBet: defaultValueBet,
   valueBetSoftPlatforms: ["OB", "RAY", "IA", "SABA", "IMT", "Polymarket", "PB"],
   arbAllowedPlatforms: null,
@@ -59,6 +60,16 @@ const defaultPrefs = {
 };
 
 describe("extensionPrefs", () => {
+  it("defaults map odds drop display off for existing users and persists explicit choices", () => {
+    expect(createDefaultExtensionPrefs().pmOddsDropCardUi).toBe(false);
+    for (const value of [undefined, null, false, "true", 1])
+      expect(normalizeExtensionPrefs({ pmOddsDropCardUi: value }).pmOddsDropCardUi).toBe(false);
+    for (const enabled of [true, false]) {
+      const prefs = { ...createDefaultExtensionPrefs(), pmOddsDropCardUi: enabled };
+      expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs))))
+        .toEqual(prefs);
+    }
+  });
   it("defaults missing or invalid FOK preflight preferences to legacy and round-trips both modes", () => {
     for (const mode of [undefined, null, "unknown", "OPTIMIZED", false])
       expect(normalizeExtensionPrefs({ pmFokPreflightMode: mode }).pmFokPreflightMode).toBe("legacy");

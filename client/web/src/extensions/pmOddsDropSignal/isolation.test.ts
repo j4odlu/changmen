@@ -11,6 +11,8 @@ describe("pm odds drop signal isolation", () => {
       "extensions/pmOddsDropSignal/runtime.ts",
       "extensions/pmOddsDropSignal/venueSnapshot.ts",
       "extensions/pmOddsDropSignal/PmOddsDropSignalPanel.vue",
+      "extensions/pmOddsDropSignal/MatchOddsDropSignals.vue",
+      "extensions/pmOddsDropSignal/matchSignals.ts",
     ];
     const source = files
       .map(file => readFileSync(join(root, "src", file), "utf8"))

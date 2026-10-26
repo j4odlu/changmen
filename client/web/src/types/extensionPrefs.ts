@@ -219,6 +219,8 @@ export interface ExtensionPrefs extends Record<string, unknown> {
   lowOddsSingleHigherCProbabilityOnly: boolean;
   /** BetRow 套利划线、利润角标、赔率 flash、EV 标记（「界面」Tab） */
   betRowUi: boolean;
+  /** 全场/各地图卡片的降赔率信号显示；独立于监测开关，默认关闭（「界面」Tab）。 */
+  pmOddsDropCardUi: boolean;
   /** EV 金色标记基准与阈值（「界面」Tab） */
   valueBet: ValueBetMarkerPrefs;
   /**
@@ -398,6 +400,7 @@ export function createDefaultExtensionPrefs(): ExtensionPrefs {
     arbExecutionMode: "normal",
     lowOddsSingleHigherCProbabilityOnly: false,
     betRowUi: false,
+    pmOddsDropCardUi: false,
     valueBet: createDefaultValueBetMarkerPrefs(),
     valueBetSoftPlatforms: createDefaultValueBetSoftPlatforms(),
     arbAllowedPlatforms: null,
@@ -554,6 +557,7 @@ export function normalizeExtensionPrefs(raw: unknown): ExtensionPrefs {
     arbExecutionMode: row.arbExecutionMode === "lowOddsSingle" ? "lowOddsSingle" : "normal",
     lowOddsSingleHigherCProbabilityOnly: row.lowOddsSingleHigherCProbabilityOnly === true,
     betRowUi: row.betRowUi === true,
+    pmOddsDropCardUi: row.pmOddsDropCardUi === true,
     valueBet: normalizeValueBetMarkerPrefs(row.valueBet),
     valueBetSoftPlatforms: normalizeValueBetSoftPlatforms(row.valueBetSoftPlatforms),
     arbAllowedPlatforms: normalizeArbAllowedPlatforms(row.arbAllowedPlatforms),

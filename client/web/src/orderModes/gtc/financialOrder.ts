@@ -1,9 +1,10 @@
-import type { GtcExecution, GtcFinancialOrder } from "@changmen/shared/pm_gtc";
+import type { GtcOrderState, GtcFinancialOrder } from "@changmen/shared/pm_gtc_order";
 import { buildPolymarketMatchedBuyVenueOrderUsdc } from "@changmen/venue-browser/adapter/polymarket";
 import { scalePolymarketVenueOrdersForDisplay } from "@changmen/venue-browser/adapter/polymarket/orders";
 
 /** [changmen 扩展] 原单事实适配；金额、费用舍入、赔率和汇率均由普通 PM 助手处理。 */
-export function gtcMatchedOrder(row: GtcExecution, fee: number) {
+type FinancialState = Pick<GtcOrderState, "orderId" | "matched" | "principal" | "fee" | "complete" | "fills"> & { id: string };
+export function gtcMatchedOrder(row: FinancialState, fee: number) {
   const usdc = buildPolymarketMatchedBuyVenueOrderUsdc(row.orderId ?? `gtc-pending:${row.id}`, {
     status: "matched",
     takingAmount: row.matched,
@@ -16,7 +17,7 @@ export function gtcMatchedOrder(row: GtcExecution, fee: number) {
   return scalePolymarketVenueOrdersForDisplay([usdc])[0]!;
 }
 
-export function gtcFinancialOrder(row: GtcExecution): GtcFinancialOrder | undefined {
+export function gtcFinancialOrder(row: FinancialState): GtcFinancialOrder | undefined {
   if (!row.orderId || row.fee == null || (!row.complete && !Object.values(row.fills).some(fill => fill.status === "FAILED")))
     return;
   if (Number(row.matched) === 0 && Object.values(row.fills).some(fill => fill.status === "FAILED"))

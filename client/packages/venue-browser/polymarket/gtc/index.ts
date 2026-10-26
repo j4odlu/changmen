@@ -1,10 +1,10 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 /** [changmen 扩展] GTC V1：定量限价签单、单次发送及原单事实读取；不调用 FOK settlement。 */
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import type { GtcFacts, GtcFeeProof, GtcFill, GtcPlan } from "@changmen/shared/pm_gtc";
+import type { GtcFacts, GtcFeeProof, GtcFill, GtcOrderReference } from "@changmen/shared/pm_gtc_order";
 import type { PolymarketOrderClientRuntime } from "../submission/client/pmOrderClientCache";
 import type { GtcBuyCheckData } from "./contract";
-import { gtcDecimal, gtcFillPrice, gtcUnits } from "@changmen/shared/pm_gtc";
+import { gtcDecimal, gtcFillPrice, gtcUnits } from "@changmen/shared/pm_gtc_order";
 import { POLYMARKET_CLOB_API } from "../api";
 import { parseTokenConfig, resolveApiCreds } from "../auth/l2Auth";
 import { pmCancelOrder, pmGetOrder, pmSubmitOrder } from "../orders/pmClientApi";
@@ -62,7 +62,7 @@ export async function buildPreparedGtcBuy(account: PlatformAccount, option: BetO
 export interface GtcAck { success?: boolean; orderID?: string; status?: string; errorMsg?: string; pmSubmitNotSent?: boolean }
 interface Trade { id?: string; taker_order_id?: string; asset_id?: string; side?: string; size?: string; price?: string; status?: string; last_update?: string; match_time?: string; fee_rate_bps?: string; maker_orders?: Array<{ order_id?: string; asset_id?: string; side?: string; matched_amount?: string; price?: string }> }
 
-export function gtcTradeFills(trade: Trade, plan: GtcPlan, id: string): GtcFill[] {
+export function gtcTradeFills(trade: Trade, plan: GtcOrderReference, id: string): GtcFill[] {
   if (!trade.id)
     throw new Error("GTC tradeId 缺失");
   const own: Array<{ bucket: string; role: "MAKER" | "TAKER"; shares?: string; price?: string; asset?: string; side?: string }> = [];
@@ -109,7 +109,7 @@ export async function readGtcTradeHistory(account: PlatformAccount, since: numbe
 }
 
 /** 不完整分页、查单失败都保持未知；只按 exact orderId 聚合 maker 明细。 */
-export async function readGtcFacts(account: PlatformAccount, plan: GtcPlan, id: string, since: number, sharedHistory?: Promise<GtcTradeHistory>): Promise<GtcFacts> {
+export async function readGtcFacts(account: PlatformAccount, plan: GtcOrderReference, id: string, since: number, sharedHistory?: Promise<GtcTradeHistory>): Promise<GtcFacts> {
   let order: Record<string, unknown> | null = null;
   let orderError = "GTC 本次原单查询未返回记录";
   try { order = await pmGetOrder<Record<string, unknown> | null>(account, id); }

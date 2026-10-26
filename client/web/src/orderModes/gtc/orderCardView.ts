@@ -1,12 +1,12 @@
-import type { GtcExecution } from "@changmen/shared/pm_gtc";
-import { gtcDecimal, gtcPmNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc";
+import type { GtcOrderState } from "@changmen/shared/pm_gtc_order";
+import { gtcDecimal, gtcOrderNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc_order";
 import { resolveGtcFillFee } from "@changmen/venue-browser/adapter/polymarket/gtc";
 import { gtcOriginalOrderActions } from "@/orderModes/gtc/executionIdentity";
 import { legacyGtcQueryIssue } from "./syncStatus";
 
 /** [changmen 扩展] 只整理 GTC 附加信息，普通订单字段由 OrderList 显示。 */
-export function gtcOrderCardView(row: GtcExecution) {
-  const unsubmitted = gtcPmNeverSubmitted(row);
+export function gtcOrderCardView(row: GtcOrderState & { id: string }) {
+  const unsubmitted = gtcOrderNeverSubmitted(row);
   const matched = gtcUnits(row.matched);
   const total = gtcUnits(row.plan.shares);
   const fills = Object.values(row.fills).filter(fill => fill.status !== "FAILED");

@@ -1,5 +1,4 @@
 import type { ArbBetAttemptParams, ArbBetPlaced } from "./types";
-import type { OriginalLegExecution } from "@/domain/betting/originalLegExecution";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { BetResult } from "@changmen/client-core/models/betResult";
@@ -85,17 +84,16 @@ describe("settleBothArbLegs A8 wait", () => {
     maxLegRejectWaitSec.mockReturnValue(30);
   });
 
-  it.each((["A", "B"] as const).flatMap(side => [false, true].flatMap(original => [
+  it.each((["A", "B"] as const).flatMap(side => [
     { state: "delayed 成交", pending: true, terminal: true, rejected: false },
     { state: "delayed 未成交", pending: true, terminal: true, rejected: true },
     { state: "仍待确认", pending: true, terminal: false, rejected: false },
     { state: "立即成交", pending: false, terminal: true, rejected: false },
-  ].map(scenario => ({ side, original, ...scenario })))))(
-    "PM 在 $side 腿，original=$original，$state：终态后补刷且不重复刷新",
-    async ({ side, original, pending, terminal, rejected }) => {
+  ].map(scenario => ({ side, ...scenario }))))(
+    "PM 在 $side 腿，$state：终态后补刷且不重复刷新",
+    async ({ side, pending, terminal, rejected }) => {
       const input = side === "A" ? placed("Polymarket", "OB") : placed("OB", "Polymarket");
       const account = side === "A" ? input.accountA! : input.accountB!;
-      const leg = side === "A" ? input.legA : input.legB;
       const result = side === "A" ? input.resultA! : input.resultB!;
       result.pending = pending;
       if (side === "A") {
@@ -110,28 +108,13 @@ describe("settleBothArbLegs A8 wait", () => {
       }
       let release!: () => void;
       const confirmation = new Promise<void>(resolve => { release = resolve; });
-      const confirm = vi.fn<OriginalLegExecution["confirm"]>(async confirmedResult => {
+      const confirm = vi.fn(async (confirmedResult: BetResult) => {
         await confirmation;
         // 真实 PM settle 会改写原 result.pending，不能用改写后的值判断是否漏刷。
         confirmedResult.pending = !terminal;
         return { orders: [], rejected, pendingConfirm: !terminal };
       });
-      if (original) {
-        input.originalExecution = {
-          legs: new Map([[leg, {
-            validate: () => {}, submit: vi.fn(), confirm,
-            facts: () => ({ submission: "accepted", fill: "unknown" }),
-            markConfirmed: () => {}, rejectWaitSec: 0,
-          }]]),
-          finishSubmission: vi.fn(),
-          actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
-          close: async () => {},
-          summary: () => ({ message: "", traceStatus: "success", failed: false }),
-        };
-      }
-      else {
-        settleArbLegUntilTerminal.mockImplementation(() => confirm(result));
-      }
+      settleArbLegUntilTerminal.mockImplementation(() => confirm(result));
 
       const task = settleBothArbLegs(params(), input);
       await vi.waitFor(() => expect(confirm).toHaveBeenCalledOnce());
@@ -235,24 +218,5 @@ describe("settleBothArbLegs A8 wait", () => {
     expect(out).toMatchObject({ pendingConfirmA: true, rejectA: false });
     expect(bindArbLegOrder).not.toHaveBeenCalled();
     expect(refreshBalance).not.toHaveBeenCalled();
-  });
-  it("original PF counterpart waits once in common settle while PM facts confirm immediately", async () => {
-    const input = placed("Polymarket", "PredictFun");
-    const order: string[] = [];
-    const execution = (provider: string, seconds: number): OriginalLegExecution => ({
-      validate: () => {}, submit: vi.fn(),
-      confirm: async () => { order.push(provider); return { orders: [], rejected: false, pendingConfirm: true }; },
-      facts: () => ({ submission: "accepted", fill: "partial" }), markConfirmed: () => {}, rejectWaitSec: seconds,
-    });
-    input.originalExecution = {
-      legs: new Map([[input.legA, execution("PM", 0)], [input.legB, execution("PF", 30)]]),
-      finishSubmission: vi.fn(), actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
-      close: async () => {}, summary: () => ({ message: "pending", traceStatus: "partial", failed: false }),
-    };
-    wait.mockImplementation(async () => { order.push("wait"); });
-    await settleBothArbLegs(params(), input);
-    expect(order).toEqual(["PM", "wait", "PF"]);
-    expect(wait).toHaveBeenCalledExactlyOnceWith(30_000);
-    expect(settleArbLegUntilTerminal).not.toHaveBeenCalled();
   });
 });

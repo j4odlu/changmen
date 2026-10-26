@@ -33,7 +33,7 @@ export async function savePmGtcConfirmedResult(owner, result) {
       throw new Error("GTC 成交量减少缺少已确认成交的 FAILED 证据");
     if (!previous && result.financial.pmShares === 0) { await client.query("COMMIT"); return true; }
     const financial = result.financial;
-    const raw = { pmGtcExecutionId: result.executionId, pmGtcResultRevision: result.revision,
+    const raw = { pmOrderType: "GTC", pmGtcExecutionId: result.executionId, pmGtcResultRevision: result.revision,
       pmGtcConfirmedFills: result.fills, pmTokenId: result.tokenId, pmConditionId: result.conditionId,
       pmSide: "buy", pmOrigin: "changmen", pmShares: financial.pmShares, pmFillPrice: financial.pmFillPrice,
       pmStakeUsdc: financial.pmStakeUsdc, pmFeeUsdc: financial.pmFeeUsdc,

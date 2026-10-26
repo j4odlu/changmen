@@ -62,8 +62,8 @@ export async function checkArbLegs(
   const accountStore = useAccountStore();
   const requireHigherCProbability = ready.executionMode === "lowOddsSingle"
     && useUserStore().extensionPrefs.lowOddsSingleHigherCProbabilityOnly === true;
-  if (ready.executionMode === "lowOddsSingle" && (!ready.accountA || !ready.accountB || ready.singleLegByRate || ready.pmOrderMode === "GTC")) {
-    trace?.finish("skip", "🎯 需要普通模式双腿预检，不支持 GTC 或 9999 单边");
+  if (ready.executionMode === "lowOddsSingle" && (!ready.accountA || !ready.accountB || ready.singleLegByRate)) {
+    trace?.finish("skip", "🎯 需要普通模式双腿预检，不支持 9999 单边");
     return null;
   }
   let {
@@ -98,7 +98,7 @@ export async function checkArbLegs(
   }
 
   // [changmen 扩展] 只为动态 FOK 的真实执行腿准备；此时传统腿尚未检查，不占用其报价有效窗口。
-  const preparing = ready.pmOrderMode === "GTC" ? [] : [[accountA, legA], [accountB, legB]] as const;
+  const preparing = [[accountA, legA], [accountB, legB]] as const;
   const dynamicAccounts = preparing.flatMap(([account, leg]) => account?.provider === "Polymarket"
     && capturePmFokPreflightMode(leg) === "optimized" ? [account] : []);
   if (dynamicAccounts.length) {
@@ -157,7 +157,6 @@ export async function checkArbLegs(
         ...(dynamicAccounts.includes(checkAccountA) ? { pmDynamicPrepared: true as const } : {}),
         role: isSingleLegPrecheckOnly("A", accountA, accountB, checkAccountA, checkAccountB) ? "precheckOnly" : "execute",
         skipAccountRate: resolveSkipAccountRate("A", ready),
-        ...(legA.type === "Polymarket" && ready.pmOrderMode === "GTC" ? { pmOrderMode: ready.pmOrderMode } : {}),
       })
     : undefined;
   const taskB = checkAccountB
@@ -166,7 +165,6 @@ export async function checkArbLegs(
         ...(dynamicAccounts.includes(checkAccountB) ? { pmDynamicPrepared: true as const } : {}),
         role: isSingleLegPrecheckOnly("B", accountA, accountB, checkAccountA, checkAccountB) ? "precheckOnly" : "execute",
         skipAccountRate: resolveSkipAccountRate("B", ready),
-        ...(legB.type === "Polymarket" && ready.pmOrderMode === "GTC" ? { pmOrderMode: ready.pmOrderMode } : {}),
       })
     : undefined;
 
@@ -233,25 +231,6 @@ export async function checkArbLegs(
     scheduleActiveBetRunRemoval(bet.id);
     await wait(1000);
     return null;
-  }
-
-  // [changmen 扩展] 历史在选号前恢复；GTC 签单、利润及执行准备完成后才报告双腿通过。
-  if (ready.pmOrderMode === "GTC" && [legA.type, legB.type].includes("Polymarket")) {
-    try {
-      const { prepareGtcLegExecution } = await import("@/orderModes/gtc/arbLeg");
-      ready.originalExecution = params.originalExecution = await prepareGtcLegExecution(params, {
-        ...ready, legA, legB, accountA, accountB, scanOddsA, scanOddsB,
-        precheckCompletedAt: performance.now(),
-        waitSec: arbBetToastSeconds(config, [accountA?.provider, accountB?.provider].filter(Boolean) as string[]),
-      });
-      for (const execution of ready.originalExecution.legs.values()) execution.validate();
-    }
-    catch (error) {
-      const reason = error instanceof Error ? error.message : "GTC 发送准备失败";
-      observeArbSubmissionBlocked({ ...ready, legA, legB }, "pair_preparation_failed", reason);
-      setMessage(reason); trace?.finish("fail", reason); syncActiveBetFail(bet.id, reason);
-      return null;
-    }
   }
 
   syncActiveBetPrecheckResults(bet.id, {

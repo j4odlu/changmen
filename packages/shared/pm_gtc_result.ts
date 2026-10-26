@@ -1,5 +1,5 @@
 /** [changmen 扩展] 已确认 GTC 买单结果；不含发送授权、撤单过程或监控状态。 */
-import type { GtcFill, GtcFinancialOrder } from "./pm_gtc";
+import type { GtcFill, GtcFinancialOrder } from "./pm_gtc_order";
 export interface GtcConfirmedResult {
   executionId: string;
   orderId: string;

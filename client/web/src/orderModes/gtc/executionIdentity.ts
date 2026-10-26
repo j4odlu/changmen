@@ -1,6 +1,6 @@
-import type { GtcExecution } from "@changmen/shared/pm_gtc";
+import type { GtcOrderState } from "@changmen/shared/pm_gtc_order";
 import type { OrderRow } from "@/types/order";
-import { gtcCanCancel, gtcPmNeverSubmitted } from "@changmen/shared/pm_gtc";
+import { canCancelGtcOrder as gtcCanCancel, gtcOrderNeverSubmitted as gtcPmNeverSubmitted } from "@changmen/shared/pm_gtc_order";
 
 /** [changmen 扩展] 原单类型与整组来源不同；不读取配置，也不按 Link 猜测。 */
 export interface OrderExecutionIdentity {
@@ -28,7 +28,7 @@ export function orderExecutionIdentity(row: OrderRow): OrderExecutionIdentity {
   };
 }
 
-export function gtcOriginalOrderActions(row: GtcExecution) {
+export function gtcOriginalOrderActions(row: GtcOrderState & { id: string }) {
   const identity = orderExecutionIdentity({ Type: "Polymarket", PmSide: "buy", PmGtcExecutionId: row.id });
   return { identity, ...orderExecutionActions(identity, { submitted: !gtcPmNeverSubmitted(row), canCancel: gtcCanCancel(row) }) };
 }

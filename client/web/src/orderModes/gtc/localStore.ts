@@ -1,86 +1,17 @@
 /** [changmen 扩展] GTC 执行由客户端 IndexedDB 原子持久化；同源多标签页共用防重记录。 */
-import type { GtcExecution, GtcCommand, GtcPlan } from "@changmen/shared/pm_gtc";
+import type { GtcExecution, GtcCommand } from "@changmen/shared/pm_gtc";
 import type { GtcConfirmedResult } from "@changmen/shared/pm_gtc_result";
-import { applyGtcCommand, createGtcExecution } from "@changmen/shared/pm_gtc";
-import { shallowReactive } from "vue";
+import { applyGtcCommand } from "@changmen/shared/pm_gtc";
 import { confirmedGtcResult, gtcResultKey } from "./confirmedResult";
 import { gtcFinancialOrder } from "./financialOrder";
 
-const DB_NAME = "changmen_gtc_client_v1";
+import { changed, clone, key, request, transaction } from "./storage";
+export { localGtcChanges, listenLocalGtcChanges } from "./storage";
 type Stored = { key: string; owner: string; hashKey: string; row: GtcExecution; resultKey?: string; senders?: Partial<Record<"PM" | "OTHER", string>> };
 const senderId = crypto.randomUUID();
 export interface PendingGtcResult { key: string; owner: string; result: GtcConfirmedResult; at: number; failures: number }
-export const localGtcChanges = shallowReactive({ revision: 0 });
-const key = (owner: string, id: string) => JSON.stringify([owner, id]);
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-function changed() {
-  localGtcChanges.revision++;
-  if (typeof BroadcastChannel !== "undefined") {
-    try {
-      const channel = new BroadcastChannel(DB_NAME);
-      channel.postMessage("changed"); channel.close();
-    }
-    catch { /* 通知不可用不改变已提交的执行许可；各页面仍定期读取本地数据库。 */ }
-  }
-}
-export function listenLocalGtcChanges(): () => void {
-  if (typeof BroadcastChannel === "undefined") return () => {};
-  try {
-    const receiver = new BroadcastChannel(DB_NAME);
-    receiver.onmessage = () => { localGtcChanges.revision++; };
-    return () => receiver.close();
-  }
-  catch { return () => {}; }
-}
-async function open(): Promise<IDBDatabase> {
-  if (typeof indexedDB === "undefined") throw new Error("GTC 需要可用的客户端持久化，尚未发送订单");
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      const records = db.createObjectStore("records", { keyPath: "key" });
-      records.createIndex("owner", "owner"); records.createIndex("hash", "hashKey", { unique: true });
-      db.createObjectStore("results", { keyPath: "key" }).createIndex("owner", "owner");
-      db.createObjectStore("meta");
-    };
-    request.onerror = () => reject(request.error ?? new Error("GTC 本地数据库不可用"));
-    request.onblocked = () => reject(new Error("GTC 本地数据库被占用，尚未发送订单"));
-    request.onsuccess = () => resolve(request.result);
-  });
-}
-function request<T>(req: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); });
-}
-function complete(tx: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve(); tx.onabort = () => reject(tx.error ?? new Error("GTC 本地事务未提交"));
-    tx.onerror = () => reject(tx.error ?? new Error("GTC 本地写入失败"));
-  });
-}
 function stored(owner: string, row: GtcExecution, resultKey?: string): Stored {
   return { key: key(owner, row.id), owner, hashKey: JSON.stringify([owner, row.plan.playerId, row.plan.orderHash.toLowerCase()]), row: clone(row), resultKey };
-}
-async function transaction<T>(stores: string[], mode: IDBTransactionMode, run: (tx: IDBTransaction) => Promise<T>): Promise<T> {
-  const db = await open();
-  const tx = db.transaction(stores, mode); const done = complete(tx);
-  void done.catch(() => {});
-  try { const value = await run(tx); await done; return value; }
-  catch (error) { try { tx.abort(); } catch {} await done.catch(() => {}); throw error; }
-  finally { db.close(); }
-}
-export async function createLocalGtc(owner: string, id: string, maker: string, plan: GtcPlan): Promise<GtcExecution> {
-  const row = await transaction(["records"], "readwrite", async (tx) => {
-    const store = tx.objectStore("records"); const old = await request(store.get(key(owner, id))) as Stored | undefined;
-    if (old) {
-      if (old.row.maker !== maker || JSON.stringify(old.row.plan) !== JSON.stringify(plan)) throw new Error("GTC 执行身份冲突");
-      return old.row;
-    }
-    const hashKey = JSON.stringify([owner, plan.playerId, plan.orderHash.toLowerCase()]);
-    if (await request(store.index("hash").get(hashKey))) throw new Error("GTC 原签单已有执行记录，禁止重复发送");
-    const created = createGtcExecution(id, owner, `137:polymarket-collateral:${maker}`, maker, clone(plan), Date.now());
-    await request(store.add(stored(owner, created))); return created;
-  });
-  changed(); return clone(row);
 }
 export async function listLocalGtc(owner: string): Promise<GtcExecution[]> {
   return transaction(["records"], "readonly", async tx => (await request(tx.objectStore("records").index("owner").getAll(owner)) as Stored[]).map(record => record.row));

@@ -7,6 +7,7 @@
   "exports": {
     "./catalog/venue_manifest.json": "./catalog/venue_manifest.json",
     "./pm_gtc": "./pm_gtc.ts",
+    "./pm_gtc_order": "./pm_gtc_order.ts",
     "./pm_sport_score": "./pm_sport_score.ts",
     "./pm_gtc_recovery": "./pm_gtc_recovery.ts",
     "./pm_gtc_result": "./pm_gtc_result.ts",

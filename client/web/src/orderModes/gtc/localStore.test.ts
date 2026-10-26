@@ -1,7 +1,8 @@
+import { createLegacyGtc as createLocalGtc } from "@/test/legacyGtcWriter";
 import type { GtcPlan } from "@changmen/shared/pm_gtc";
 import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, expect, it, vi } from "vitest";
-import { createLocalGtc, listLocalGtc, mutateLocalGtc, pendingGtcResults, finishGtcResult } from "./localStore";
+import { listLocalGtc, mutateLocalGtc, pendingGtcResults, finishGtcResult } from "./localStore";
 const hash = `0x${"a".repeat(64)}`;
 const plan = { playerId: 1, otherPlayerId: 2, otherProvider: "RAY", orderHash: hash, shares: "10", match: "m", bet: "b", item: "i", linkId: 123, tokenId: "token", conditionId: "condition" } as GtcPlan;
 beforeEach(() => { vi.stubGlobal("indexedDB", new IDBFactory()); });

@@ -104,6 +104,7 @@ export function rowToOrder(r) {
     PodPmMatchId: raw.podPmMatchId ? String(raw.podPmMatchId) : undefined,
     Game: raw.game ? String(raw.game) : undefined,
     PmTokenId: raw.pmTokenId ? String(raw.pmTokenId) : undefined,
+    ...(raw.pmOrderType === "GTC" || raw.pmOrderType === "FOK" ? { PmOrderType: raw.pmOrderType } : {}),
     PmShares: parseNum(raw.pmShares, 0) || undefined,
     ...(submittedPrice != null ? { PmSubmittedPrice: submittedPrice } : {}),
     ...(raw.pmGtcExecutionId ? {

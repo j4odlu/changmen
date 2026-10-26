@@ -20,6 +20,12 @@ function financialRow(row: OrderRow, source: string): OrderRow {
     return row;
   return { ...row, PmGtcExecutionId: source, ...(needsGross ? { PmShares: gross } : {}) };
 }
+/** [changmen 扩展] 单笔记录仅登记自己的 PM 原单，不构造双腿执行对象。 */
+export function rememberGtcOrderReference(id: string, owner: string, accountId: number, orderId: string | null, orderHash: string): void {
+  if (identityOwner && identityOwner !== owner) identities.clear();
+  identityOwner = owner;
+  for (const original of [orderId, orderHash].filter(Boolean)) identities.set(key(accountId, "Polymarket", original), id);
+}
 export function rememberGtcOrderIdentity(row: GtcExecution): void {
   if (identityOwner && identityOwner !== row.owner)
     identities.clear();

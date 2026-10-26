@@ -4,16 +4,12 @@ import type { ViewBet, ViewMatch } from "@/models/match";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { ArbExecutionTrace } from "@/stores/betting/autoBet/arbExecutionTrace";
 import type { UserConfig } from "@/types/userConfig";
-import type { OriginalExecutionLifecycle } from "@/domain/betting/originalLegExecution";
 
 export interface ArbBetReady {
   /** [changmen 扩展] 本次冻结的策略；缺省保持原流程。 */
   executionMode?: "normal" | "lowOddsSingle";
   executionSide?: "A" | "B";
   lowOddsMarketKeys?: string[];
-  /** [changmen 扩展] 只作用于本次 PM 腿，在准备开始前冻结。 */
-  pmOrderMode?: "FOK" | "GTC";
-  originalExecution?: OriginalExecutionLifecycle;
   legA: BetOption;
   legB: BetOption;
   /** 本腿自动下单账号（9999 侧无） */
@@ -91,9 +87,6 @@ export function resolveArbLegPlaceOutcome(
 
 export interface ArbBetAttemptParams {
   executionMode?: "normal" | "lowOddsSingle";
-  pmOrderMode?: "FOK" | "GTC";
-  /** 一次性发送资源，异常时也由公共入口关闭。 */
-  originalExecution?: OriginalExecutionLifecycle;
   match: ViewMatch;
   bet: ViewBet;
   config: UserConfig;

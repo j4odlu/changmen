@@ -39,7 +39,7 @@ beforeEach(() => {
   state.save.mockResolvedValue(undefined);
 });
 
-it.each([["FOK", "legacy"], ["FOK", "optimized"], ["GTC", "legacy"]])(
+it.each([["FOK", "legacy"], ["FOK", "optimized"]])(
   "%s/%s keeps automatic rounds available during historical reads and saves the eventual result",
   async (mode, preflight) => {
     state.mode = mode; state.preflight = preflight;

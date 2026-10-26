@@ -9,6 +9,7 @@ import Tab from "./UserDiagExtensionsTab.vue";
 
 const mocks = vi.hoisted(() => ({
   alert: vi.fn(),
+  buttons: new Map<string, () => Promise<void>>(),
   save: vi.fn(),
   select: undefined as ((value: string) => void) | undefined,
   selectPreflight: undefined as ((value: string) => void) | undefined,
@@ -61,7 +62,12 @@ vi.mock("element-plus/es", async () => {
         return () => h("span");
       },
     }),
-    ElButton: defineComponent({ setup: (_props, { slots }) => () => h("button", slots.default?.()) }),
+    ElButton: defineComponent({ setup: (_props, { slots, attrs }) => () => {
+      const children = slots.default?.();
+      const label = children?.map(child => String(child.children)).join("").trim() ?? "";
+      if (attrs.onClick) mocks.buttons.set(label, attrs.onClick as () => Promise<void>);
+      return h("button", children);
+    } }),
     ElRadioGroup: defineComponent({
       props: ["modelValue"],
       emits: ["update:modelValue", "change"],
@@ -84,23 +90,11 @@ vi.mock("element-plus/es", async () => {
   };
 });
 
-async function mount() {
-  const html = await renderToString(createSSRApp(Tab));
-  expect(html).toContain("data-mode=\"FOK\"");
-  expect(html).toContain("data-mode=\"GTC\"");
-  expect(html).toContain("FOK 沿用现有流程");
-  return {
-    select(mode: string) {
-      expect(mocks.select).toBeDefined();
-      mocks.select!(mode);
-    },
-  };
-}
-
 beforeEach(() => {
   setActivePinia(createPinia());
   mocks.alert.mockReset().mockResolvedValue("confirm");
   mocks.save.mockReset().mockResolvedValue(undefined);
+  mocks.buttons.clear();
   mocks.select = undefined;
   mocks.selectPreflight = undefined;
   mocks.switches.clear();
@@ -112,7 +106,7 @@ afterEach(() => {
   for (const key of Object.values(PM_BOOK_KEYS)) localStorage.removeItem(key);
 });
 
-describe("pm GTC V1 explicit activation in Extensions", () => {
+describe("PM arbitrage retirement and preflight settings", () => {
   it("keeps local observation switches off and disabled for saved classic despite an unsaved dynamic form", async () => {
     useUserStore().extensionPrefs.pmFokPreflightMode = "optimized";
     const html = await renderToString(createSSRApp(Tab));
@@ -151,43 +145,24 @@ describe("pm GTC V1 explicit activation in Extensions", () => {
     expect(user.extensionPrefs.pmFokPreflightMode).toBe("legacy");
     mocks.selectPreflight!("optimized");
     expect(user.extensionPrefs.pmFokPreflightMode).toBe("optimized");
-    expect(user.extensionPrefs.pmArbOrderMode).toBe("FOK");
-    expect(mocks.alert).not.toHaveBeenCalled();
-    expect(mocks.save).not.toHaveBeenCalled();
-  });
-  it("defaults to FOK and selecting FOK does not show a dialog or save", async () => {
-    const tab = await mount();
-    expect(useUserStore().extensionPrefs.pmArbOrderMode).toBe("FOK");
-    tab.select("FOK");
+    expect(user.extensionPrefs).not.toHaveProperty("pmArbOrderMode");
     expect(mocks.alert).not.toHaveBeenCalled();
     expect(mocks.save).not.toHaveBeenCalled();
   });
 
-  it("requires confirmation and saves recovery marker before enabling real GTC", async () => {
-    const tab = await mount();
+
+  it("does not render automatic PM order mode selection or a migration panel", async () => {
+    const html = await renderToString(createSSRApp(Tab));
+    expect(html).not.toContain("PM 自动套利"); expect(html).not.toContain('data-mode="GTC"');
+    expect(html).not.toContain("使用 FOK 并保存"); expect(html).not.toContain("当前模式：FOK");
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+  it("legacy preferences cannot restore the removed mode controls", async () => {
     const user = useUserStore();
-    const before = JSON.parse(JSON.stringify(user.extensionPrefs));
-    tab.select("GTC");
-    for (let n = 0; n < 8; n++) await Promise.resolve();
-    expect(user.extensionPrefs).toEqual({ ...before, pmArbOrderMode: "GTC", pmGtcV1Activation: "1:12", pmGtcV1Participant: true });
-    expect(mocks.alert).toHaveBeenCalledExactlyOnceWith(
-      expect.stringContaining("确认保存并启用"),
-      "启用真实 GTC V1",
-      expect.objectContaining({ type: "warning" }),
-    );
-    expect(mocks.save).toHaveBeenCalledTimes(2);
-    tab.select("FOK");
-    expect(user.extensionPrefs).toEqual({ ...before, pmGtcV1Participant: true });
-    expect(mocks.alert).toHaveBeenCalledTimes(1);
-  });
-
-  it("canceling activation leaves actual mode FOK without saving", async () => {
-    mocks.alert.mockRejectedValueOnce("close");
-    const tab = await mount();
-    tab.select("GTC");
-    await Promise.resolve();
-    expect(useUserStore().extensionPrefs.pmArbOrderMode).toBe("FOK");
-    expect(mocks.save).not.toHaveBeenCalled();
+    Object.assign(user.extensionPrefs, { pmArbOrderMode: "GTC", pmGtcV1Activation: "1:12", pmGtcV1Participant: true });
+    const html = await renderToString(createSSRApp(Tab));
+    expect(html).not.toContain("PM 自动套利"); expect(html).not.toContain("使用 FOK 并保存");
+    expect(user.extensionPrefs.pmGtcV1Participant).toBe(true); expect(mocks.alert).not.toHaveBeenCalled();
   });
   it("renders LOS with a separate, default-off C filter and concise rules", async () => {
     const user = useUserStore();
@@ -208,7 +183,7 @@ describe("pm GTC V1 explicit activation in Extensions", () => {
     expect(html).toContain("不跨设备共享");
     expect(html).toContain('data-mode="normal"');
     expect(html).toContain('data-mode="lowOddsSingle"');
-    expect(user.extensionPrefs.pmArbOrderMode).toBe("FOK");
+    expect(user.extensionPrefs).not.toHaveProperty("pmArbOrderMode");
     expect(mocks.save).not.toHaveBeenCalled();
   });
 

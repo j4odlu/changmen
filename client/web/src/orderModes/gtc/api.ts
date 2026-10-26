@@ -1,9 +1,7 @@
-import type { GtcCommand, GtcExecution, GtcPlan } from "@changmen/shared/pm_gtc";
+import type { GtcCommand, GtcExecution } from "@changmen/shared/pm_gtc";
 import { getAuthSessionVersion, isAuthSessionCurrent, post, unwrap } from "@/api/client";
 import { useUserStore } from "@/stores/userStore";
-import { useAccountStore } from "@/stores/accountStore";
-import { prepareLocalGtcPlan } from "./localPlan";
-import { createLocalGtc, finishLocalGtcMigration, importLocalGtc, listLocalGtc, localGtcMigrationDone, mutateLocalGtc } from "./localStore";
+import { finishLocalGtcMigration, importLocalGtc, listLocalGtc, localGtcMigrationDone, mutateLocalGtc } from "./localStore";
 
 const migrations = new Map<string, Promise<void>>();
 const migrationRetries = new Map<string, { failures: number; at: number }>();
@@ -47,23 +45,10 @@ export async function listGtc(betRowId?: number, knownRevisions?: Record<string,
   return rows.filter(row => (betRowId == null || row.plan.betRowId === betRowId)
     && (!knownRevisions || knownRevisions[row.id] !== row.revision));
 }
-export async function createGtc(id: string, maker: string, plan: GtcPlan): Promise<GtcExecution> {
-  const userId = owner(); const session = getAuthSessionVersion();
-  const prepared = prepareLocalGtcPlan(plan);
-  if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) throw new Error("GTC 执行 ID 无效");
-  const accounts = useAccountStore();
-  const account = accounts.findAccount(prepared.playerId);
-  if (!account || account.provider !== "Polymarket" || accounts.adminWorkspacePreview) throw new Error("PM 账号身份无效");
-  if (prepared.source !== "manual" && accounts.findAccount(prepared.otherPlayerId)?.provider !== prepared.otherProvider)
-    throw new Error("GTC 对侧账号身份不一致");
-  const { pmSubmitMaker } = await import("@changmen/venue-browser/adapter/polymarket");
-  const wallet = pmSubmitMaker(account).toLowerCase();
-  if (!/^0x[0-9a-f]{40}$/.test(wallet) || maker.toLowerCase() !== wallet) throw new Error("GTC 客户端与钱包不一致");
-  if (!isAuthSessionCurrent(session) || owner() !== userId) throw new Error("GTC 会话已变更");
-  return createLocalGtc(userId, id, wallet, prepared);
-}
 export async function commandGtc(row: GtcExecution, command: GtcCommand): Promise<GtcExecution> {
   const userId = owner();
+  if (command.kind === "authorize_pm" || command.kind === "authorize_other")
+    throw new Error("旧 GTC 记录只允许查询和撤单，禁止重发或新增发送");
   if (row.owner !== userId) throw new Error("GTC 执行归属无效");
   return mutateLocalGtc(userId, row.id, row.revision, command);
 }

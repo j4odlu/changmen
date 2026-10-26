@@ -1,4 +1,4 @@
-import type { GtcFeeProof } from "@changmen/shared/pm_gtc";
+import type { GtcFeeProof } from "@changmen/shared/pm_gtc_order";
 import { POLYMARKET_CLOB_API } from "../api";
 import { computePolymarketPlatformFeeUsdc } from "../orders/pmFee";
 import { polymarketPluginGet } from "../transport/transport";

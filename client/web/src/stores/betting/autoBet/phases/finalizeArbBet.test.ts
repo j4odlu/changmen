@@ -1,7 +1,6 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { VenueOrder } from "@changmen/client-core/contract";
 import type { ArbBetAttemptParams, ArbBetPlaced } from "./types";
-import type { OriginalExecutionLifecycle } from "@/domain/betting/originalLegExecution";
 import type { ViewBet, ViewMatch } from "@/models/match";
 import type { PlatformId } from "@/types/esport";
 import { BetResult } from "@changmen/client-core/models/betResult";
@@ -332,59 +331,21 @@ describe("finalizeArbBet makeup enqueue", () => {
     expect(enqueueMakeUpOrder).not.toHaveBeenCalled(); expect(loseOrderStore.removeOrder).not.toHaveBeenCalled();
   });
 
-  it("public finalize keeps original partial facts and permissions even when automatic remedies are enabled", async () => {
-    autoSellEnabled.value = true;
-    const placed = makePlaced(); placed.legA.type = "Polymarket"; placed.accountA = makeAccount("Polymarket");
-    placed.resultA = new BetResult("Polymarket", true); placed.resultA.pending = true;
-    const pmMark = vi.fn(); const otherMark = vi.fn(); const close = vi.fn(async () => {});
-    const pmConfirm = vi.fn(async () => ({ orders: [], rejected: false, pendingConfirm: true }));
-    const otherConfirm = vi.fn(async () => ({ orders: [venueOrder("original-ray", "reject", Date.now())], rejected: true, pendingConfirm: false }));
-    const summary = { message: "PM 部分成交挂单中；RAY 原单拒单；本组由人工处理", traceStatus: "partial" as const, failed: false };
-    const facts = { submission: "accepted" as const, fill: "partial" as const, matchedShares: "5", remainingShares: "5" };
-    placed.originalExecution = {
-      close,
-      summary: () => summary,
-      finishSubmission: vi.fn(), actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: false, broadcast: false },
-      legs: new Map([
-        [placed.legA, { validate() {}, submit: vi.fn(), confirm: pmConfirm, facts: () => facts, markConfirmed: pmMark, rejectWaitSec: 0 }],
-        [placed.legB, { validate() {}, submit: vi.fn(), confirm: otherConfirm, facts: () => ({ submission: "rejected" as const, fill: "none" as const }), markConfirmed: otherMark, rejectWaitSec: 30 }],
-      ]),
-    } as OriginalExecutionLifecycle;
-    await finalizeArbBet(params, placed);
-    expect(showRejectDetectionTip).toHaveBeenCalledExactlyOnceWith(10);
-    expect(rejectWait).toHaveBeenCalledExactlyOnceWith(30_000);
-    expect(close).toHaveBeenCalledOnce(); expect(pmConfirm).toHaveBeenCalledOnce(); expect(otherConfirm).toHaveBeenCalledOnce();
-    expect(close.mock.invocationCallOrder[0]).toBeGreaterThan(otherConfirm.mock.invocationCallOrder[0]!);
-    expect(params.setMessage).toHaveBeenCalledWith(summary.message);
-    expect(settleArbLeg).not.toHaveBeenCalled(); expect(saveOrderBind).toHaveBeenCalledOnce();
-    expect(markSuccessfulBet).not.toHaveBeenCalled(); expect(pmMark).toHaveBeenCalledOnce(); expect(otherMark).toHaveBeenCalledOnce();
-    expect(applyArbMakeUpFromRejects).not.toHaveBeenCalled(); expect(registerRayOrderContext).not.toHaveBeenCalled();
-    expect(autoSell).not.toHaveBeenCalled(); expect(bettingMessage).not.toHaveBeenCalled();
-  });
-
-  it.each([false, true])("PM GTC pending=%s preserves common RAY binding and monitoring", async (pending) => {
+  it.each([false, true])("PM pending=%s preserves common RAY binding and monitoring", async (pending) => {
     const placed = makePlaced();
     placed.legA.type = "Polymarket"; placed.accountA = makeAccount("Polymarket");
+    placed.accountA.accountId = 1;
     placed.resultA = new BetResult("Polymarket", true); placed.resultA.pending = true;
-    const original = venueOrder("gtc-original-ray", "none", Date.now());
-    const pmConfirm = vi.fn(async () => ({ orders: [], rejected: false, pendingConfirm: pending }));
-    const rayConfirm = vi.fn(async () => ({ orders: [original], rejected: false, pendingConfirm: false }));
-    placed.originalExecution = {
-      close: vi.fn(async () => {}),
-      summary: () => ({ message: "PM GTC", traceStatus: "partial", failed: false }),
-      finishSubmission: vi.fn(), actions: { retry: false, makeup: false, autoSell: false, registerRejectMonitor: true, broadcast: false },
-      legs: new Map([
-        [placed.legA, { validate() {}, submit: vi.fn(), confirm: pmConfirm, facts: () => ({ submission: "accepted", fill: pending ? "partial" : "full" }), markConfirmed: vi.fn(), rejectWaitSec: 0 }],
-        [placed.legB, { validate() {}, submit: vi.fn(), confirm: rayConfirm, facts: () => ({ submission: "accepted", fill: "full" }), markConfirmed: vi.fn(), rejectWaitSec: 30 }],
-      ]),
-    } as OriginalExecutionLifecycle;
+    const original = venueOrder("ray-original", "none", Date.now());
+    mockDualLegVenueSync(
+      { orders: [], rejected: false, pendingConfirm: pending },
+      { orders: [original], rejected: false, pendingConfirm: false },
+    );
     rejectWait.mockImplementationOnce(async () => { expect(registerRayOrderContext).not.toHaveBeenCalled(); });
     await finalizeArbBet(params, placed);
-    expect(rejectWait).toHaveBeenCalledExactlyOnceWith(30000);
-    expect(rayConfirm).toHaveBeenCalledOnce();
     expect(registerRayOrderContext).toHaveBeenCalledWith(expect.objectContaining({ initialOrders: [original], anchorConfirmed: !pending }));
-    expect(saveOrderBind).toHaveBeenCalledOnce();
-    expect(applyArbMakeUpFromRejects).not.toHaveBeenCalled(); expect(settleArbLeg).not.toHaveBeenCalled();
+    expect(saveOrderBind).toHaveBeenCalled();
+    expect(applyArbMakeUpFromRejects).toHaveBeenCalledOnce();
   });
 
   it("registers RAY only after the original wait and first detection have finished", async () => {

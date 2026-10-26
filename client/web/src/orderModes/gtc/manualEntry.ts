@@ -7,6 +7,7 @@ import { useUserStore } from "@/stores/userStore";
 import { gtcAccountAllows } from "./accountFilter";
 import { executeManualGtc } from "./manual";
 import { refreshGtcOrders } from "./ordersApi";
+import { presentGtcOrder } from "./orderPresentation";
 
 export interface GtcManualContext {
   match: ViewMatch;
@@ -26,7 +27,7 @@ export async function runManualGtc(account: PlatformAccount, option: BetOption, 
       return;
     }
     const result = await executeManualGtc(account, option, context);
-    context.setMessage(result.message);
+    context.setMessage(presentGtcOrder(result).message);
     await refreshGtcOrders().catch(() => {});
     void context.accountStore.refreshBalance(account).catch(() => {});
   }

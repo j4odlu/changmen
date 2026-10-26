@@ -131,12 +131,6 @@ describe("placeArbLegs two-leg report contract", () => {
     });
   });
 
-  it("GTC 未完成发送准备时回传未尝试结果，不在 place 临时准备或误发 FOK", async () => {
-    const out = await placeArbLegs(params, checked({ pmOrderMode: "GTC", accountB: account("Polymarket"), legB: leg("Polymarket") }));
-    expect(betting).not.toHaveBeenCalled(); expect(checkBetting).not.toHaveBeenCalled();
-    expect(out.placeOutcomeA).toBe("not_attempted"); expect(out.placeOutcomeB).toBe("not_attempted");
-    expect(observeArbSubmissionBlocked).toHaveBeenCalledWith(expect.anything(), "pair_submit_blocked", "GTC 发送准备未完成");
-  });
 
   it("顺序 A API 失败：B 为 not_attempted，仍返回 placed（不 abort）", async () => {
     betting.mockResolvedValueOnce(new BetResult("OB", false));

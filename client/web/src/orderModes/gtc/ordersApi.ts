@@ -8,6 +8,8 @@ import { reconcileGtcSellFinancials } from "./sellFinancials";
 import { listGtc } from "./api";
 import { pendingGtcResults } from "./localStore";
 import { confirmedGtcResult } from "./confirmedResult";
+import { listStoredGtcOrders } from "./orderStore";
+import { useUserStore } from "@/stores/userStore";
 
 /** [changmen 扩展] 监控恢复按原单身份取数，不受侧栏日期限制，不建立第二份财务列表。 */
 export async function loadGtcMonitorOrders(ids: string[], isCurrent: () => boolean = () => true): Promise<OrderRow[]> {
@@ -69,7 +71,13 @@ export async function saveOrders(account: PlatformAccount, orders: VenueOrder[])
   const tagged = await reconcileGtcSellFinancials(account, tagKnownGtcVenueOrders(account.accountId, orders));
   checkCurrent();
   const groups = new Map<string, VenueOrder[]>();
-  const records = await listGtc();
+  // 新单只按自己的持久记录确认身份；旧格式查询只服务于旧单。
+  const native = await (async () => {
+    try { return await listStoredGtcOrders(String(useUserStore().userId)); }
+    catch { return []; }
+  })();
+  const records = tagged.some(order => !native.some(row => row.id === (order as VenueOrder & { pmGtcExecutionId?: string }).pmGtcExecutionId))
+    ? await listGtc() : [];
   checkCurrent();
   for (const order of tagged) {
     const type = String(order.provider ?? account.provider);
@@ -83,6 +91,9 @@ export async function saveOrders(account: PlatformAccount, orders: VenueOrder[])
     const origins = list.map(order => {
       const id = (order as VenueOrder & { pmGtcExecutionId?: string }).pmGtcExecutionId;
       const execution = records.find(row => row.id === id);
+      const single = native.find(row => row.id === id && row.accountId === account.accountId && type === "Polymarket"
+        && [row.orderId, row.plan.orderHash].some(original => original && original.toLowerCase() === String(order.pmBuyOrderId ?? order.orderId).toLowerCase()));
+      if (single) return { executionId: single.id, playerId: account.accountId, provider: type, orderId: order.pmBuyOrderId ?? order.orderId };
       if (!execution || ![execution.plan.playerId, execution.plan.otherPlayerId].includes(account.accountId))
         throw new Error("GTC 已确认原单身份缺失");
       return { executionId: execution.id, playerId: account.accountId, provider: type,

@@ -1,25 +1,23 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
-import type { GtcPlan } from "@changmen/shared/pm_gtc";
 import type { ViewBet, ViewMatch } from "@/models/match";
 import type { PlatformAccount } from "@/models/platformAccount";
-import type { GtcExecutionResult } from "@/orderModes/gtc/executionResult";
+import type { GtcOrderRecord } from "./core/orderRecord";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import { getExchange, resolveAccountCurrency } from "@changmen/shared/currency";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { useUserStore } from "@/stores/userStore";
-import { createGtc } from "./api";
 import { checkBetting } from "./gateway";
-import { gtcExecutionResult } from "./result";
-import { acceptGtc, currentGtc, mutateGtc, pollGtc, startGtcRuntime } from "./runtime";
+import { startNativeGtcOrders } from "./orderRuntime";
+import { prepareGtcOrder, submitGtcOrder } from "./orders";
 import { notifyBet } from "@/shared/betNotification";
-import { gtcPmNotice } from "./notifications";
+import { nativeGtcNotice } from "./orderPresentation";
 import { lookupPolymarketOrderBetLabel } from "@changmen/venue-browser/adapter/polymarket/orders";
 
 /** [changmen 扩展] 单次手动 GTC，不依赖自动下注开关、不触发另一腿或旧 FOK 编排。 */
 export async function executeManualGtc(account: PlatformAccount, input: BetOption, context: {
   match: ViewMatch;
   bet: ViewBet;
-}): Promise<GtcExecutionResult> {
+}): Promise<GtcOrderRecord> {
   const user = useUserStore(); const owner = String(user.userId);
   const session = getAuthSessionVersion();
   if (!user.isLoggedIn || !user.userId || account.provider !== "Polymarket" || input.type !== "Polymarket")
@@ -33,49 +31,29 @@ export async function executeManualGtc(account: PlatformAccount, input: BetOptio
     user.extensionPrefs.pmGtcV1Participant = true;
     await user.saveExtensionPrefs();
   }
-  checkSession(); startGtcRuntime(owner); checkSession();
-  const { pmSubmitMaker, prepareManualGtcBuy } = await import("@changmen/venue-browser/adapter/polymarket/gtc");
-  const maker = pmSubmitMaker(account);
+  checkSession(); startNativeGtcOrders(owner); checkSession();
   // [changmen 扩展] 每次人工下单是独立订单；历史执行或现有挂单不限制新手动单。
   const option = await checkBetting(account, input, { skipAccountRate: true, manual: true });
   checkSession();
   if (!option.data || option.checkError)
     throw new Error(option.checkError || "PM 手动 GTC 预检未通过，未发送订单");
   return notifyBet(account, option, async () => {
-    const prepared = await prepareManualGtcBuy(account, option);
+    const prepared = await prepareGtcOrder(account, option);
     checkSession();
     const fx = getExchange(resolveAccountCurrency(account.provider, account.currency));
     if (option.stakeExchange != null && option.stakeExchange !== fx)
       throw new Error("PM 手动 GTC 金额币种不一致，未发送订单");
-    const { submit, validate, prepareSubmit, ...frozen } = prepared;
-    const plan: GtcPlan = { ...frozen, source: "manual", playerId: Number(account.accountId), otherPlayerId: 0, originalPmLeg: "A", otherProvider: "", otherTarget: option.target === "Home" ? "Away" : "Home", otherOdds: 0, otherStake: 0, otherVenueMatchId: "", otherVenueItemId: "", parallel: false, matchId: context.match.id, betRowId: context.bet.id, linkId: -Date.now(), tokenId: option.itemId, conditionId: option.betId, target: option.target, match: context.match.title, bet: lookupPolymarketOrderBetLabel(option.betId, option.itemId) || "盘口待核实", item: option.target === "Home" ? context.bet.homeName : context.bet.awayName, fx };
-    const id = crypto.randomUUID();
-    validate(); checkSession();
-    acceptGtc(await createGtc(id, maker, plan));
-    try {
-      await prepareSubmit(); checkSession();
-      await mutateGtc(id, { kind: "authorize_pm" });
-      checkSession();
-      const submittedAt = Date.now();
-      try {
-        const ack = await submit();
-        const accepted = ack.success === true && Boolean(ack.orderID);
-        await mutateGtc(id, ack.pmSubmitNotSent && ack.success === false && !ack.orderID
-          ? { kind: "not_sent", leg: "PM", message: ack.errorMsg || "发送前检查失败，未提交" }
-          : { kind: "ack", state: accepted ? "accepted" : ack.success === false ? "rejected" : "unknown", orderId: ack.orderID, message: accepted ? "" : ack.errorMsg || "官方受理结果待核实，请勿重复下单" });
-        const result = new BetResult("Polymarket", accepted, accepted ? "手动 GTC 已受理，成交继续核对" : "手动 GTC 未确认受理", { orderType: "GTC", source: "manual" }, ack);
-        result.orderId = ack.orderID ?? null; result.link = plan.linkId; result.pending = accepted;
-        result.saveLog(account, submittedAt);
-      }
-      catch (error) {
-        await mutateGtc(id, { kind: "ack", state: "unknown", message: error instanceof Error ? error.message : "提交结果待核实，请勿重复下单" });
-      }
-    }
-    finally {
-      // 关闭的只是本次发送窗口，绝不取消 PM 剩余挂单；恢复时只查同一个订单。
-      await mutateGtc(id, { kind: "close" });
-    }
-    await pollGtc(id).catch(() => {});
-    return gtcExecutionResult(currentGtc(id));
-  }, gtcPmNotice, 10, { matchTitle: context.match.title, betName: context.bet.getBetName() });
+    const linkId = -Date.now();
+    const order = await submitGtcOrder(account, prepared, {
+      linkId,
+      match: context.match.title, bet: lookupPolymarketOrderBetLabel(option.betId, option.itemId) || "盘口待核实",
+      item: option.target === "Home" ? context.bet.homeName : context.bet.awayName,
+    }, (ack, submittedAt) => {
+      const accepted = ack.success === true && Boolean(ack.orderID);
+      const result = new BetResult("Polymarket", accepted, accepted ? "手动 GTC 已受理，成交继续核对" : "手动 GTC 未确认受理", { orderType: "GTC", source: "manual" }, ack);
+      result.orderId = ack.orderID ?? null; result.link = linkId; result.pending = accepted;
+      result.saveLog(account, submittedAt);
+    });
+    return order;
+  }, nativeGtcNotice, 10, { matchTitle: context.match.title, betName: context.bet.getBetName() });
 }

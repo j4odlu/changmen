@@ -2,7 +2,7 @@
 import { pollGtc } from "@/runtime/gtcOrderMonitor/pm";
 import { gtcProgress, mutateGtc, refreshGtcRecords } from "./executionState";
 
-export { acceptGtc, beginGtcInitialDispatch, currentGtc, gtcActivated, gtcProgress, markGtcLegOnce, mutateGtc, refreshGtcRecords } from "./executionState";
+export { acceptGtc, beginGtcInitialDispatch, currentGtc, gtcProgress, markGtcLegOnce, mutateGtc, refreshGtcRecords } from "./executionState";
 export { cancelGtc, pollGtc } from "@/runtime/gtcOrderMonitor/pm";
 export { pollGtcOther } from "@/runtime/gtcOrderMonitor/counterpart";
 export { startGtcOrderMonitoring as startGtcRuntime, stopGtcOrderMonitoring as stopGtcRuntime } from "@/runtime/gtcOrderMonitor/runtime";

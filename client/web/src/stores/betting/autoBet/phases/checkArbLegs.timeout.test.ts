@@ -1,10 +1,9 @@
+/** [changmen 扩展] 自动套利公共预检总耗时门控；PM 固定使用 FOK。 */
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { ArbBetAttemptParams, ArbBetReady } from "@/stores/betting/autoBet/phases/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { checkArbLegs as checkGtc } from "@/stores/betting/autoBet/phases/checkArbLegs";
 import { checkArbLegs as checkFok } from "@/stores/betting/autoBet/phases/checkArbLegs";
 const mocks = vi.hoisted(() => ({ check: vi.fn(), blocked: vi.fn(), results: vi.fn(), fail: vi.fn() }));
-vi.mock("./arbLeg", () => ({ prepareGtcLegExecution: async () => ({ legs: new Map(), close: vi.fn() }) }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ checkBetting: mocks.check }) }));
 vi.mock("@/stores/loseOrderStore", () => ({ useLoseOrderStore: () => ({ orders: new Map() }) }));
 vi.mock("@/stores/oddsStore", () => ({ useOddsStore: () => ({ getEntry: () => undefined }) }));
@@ -26,23 +25,21 @@ beforeEach(() => {
   mocks.check.mockImplementation(async (_account, option: BetOption) => { option.data = { quote: true }; return option; });
 });
 afterEach(() => vi.useRealTimers());
-describe.each([["FOK", checkFok], ["GTC", checkGtc]] as const)("%s paired precheck total-time gate", (mode, check) => {
+describe("FOK paired precheck total-time gate", () => {
   it("both legs pass and enter submission when total time is within the limit", async () => {
     const pair = input();
-    if (mode === "GTC") pair.pmOrderMode = "GTC";
-    expect(await check(params(3000), pair)).toMatchObject({ legA: { data: { quote: true } }, legB: { data: { quote: true } } });
+    expect(await checkFok(params(3000), pair)).toMatchObject({ legA: { data: { quote: true } }, legB: { data: { quote: true } } });
     expect(mocks.blocked).not.toHaveBeenCalled();
     expect(mocks.fail).not.toHaveBeenCalled();
     expect(mocks.check.mock.calls[0]?.[2]).not.toHaveProperty("pmOrderMode");
-    expect(mocks.check.mock.calls[1]?.[2].pmOrderMode).toBe(mode === "GTC" ? "GTC" : undefined);
+    expect(mocks.check.mock.calls[1]?.[2]).not.toHaveProperty("pmOrderMode");
   });
   it("retains both passed results but records why neither leg will submit when total time exceeds the limit", async () => {
     const at = Date.now(); const pair = input();
-    if (mode === "GTC") pair.pmOrderMode = "GTC";
     mocks.check.mockImplementation(async (_account, option: BetOption) => {
       option.data = { quote: true }; vi.setSystemTime(at + 3100); return option;
     });
-    expect(await check(params(3000), pair)).toBeNull();
+    expect(await checkFok(params(3000), pair)).toBeNull();
     expect(mocks.results).toHaveBeenCalledWith(10, { hasA: true, hasB: true, okA: true, okB: true });
     expect(mocks.blocked).toHaveBeenCalledWith(expect.objectContaining({ legA: pair.legA, legB: pair.legB }),
       "precheck_timeout", "超时时间：3100ms，大于设定值：3000ms");

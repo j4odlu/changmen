@@ -8,6 +8,8 @@ import { useOrderStore } from "@/stores/orderStore";
 import { useUserStore } from "@/stores/userStore";
 import { gtcProgress } from "./gtc/gtcProgressState";
 import { gtcPendingDisplayRows, mergeGtcPendingDisplayEntries } from "./gtc/orderDisplayProjection";
+import { gtcOrders } from "./gtc/orderState";
+import { nativeGtcPendingRows } from "./gtc/orderDisplay";
 
 const props = withDefaults(defineProps<{ embedded?: boolean; embeddedUserId?: string; workspace?: "esport" | "sports" }>(), { embedded: false, workspace: "esport" });
 const orders = useOrderStore();
@@ -15,13 +17,15 @@ const user = useUserStore();
 const executions = computed(() => props.embedded || !user.userId || gtcProgress.owner !== String(user.userId)
   ? []
   : gtcProgress.records.filter(row => row.owner === String(user.userId)));
-const pendingRows = computed(() => gtcPendingDisplayRows([...orders.orders.values()].flat(), executions.value, orders.orderDate, orders.filterAccountId));
+const nativeOrders = computed(() => props.embedded || !user.userId || gtcOrders.owner !== String(user.userId) ? [] : gtcOrders.records);
+const pendingRows = computed(() => [...gtcPendingDisplayRows([...orders.orders.values()].flat(), executions.value, orders.orderDate, orders.filterAccountId),
+  ...nativeGtcPendingRows([...orders.orders.values()].flat(), nativeOrders.value, orders.orderDate, orders.filterAccountId)]);
 const projectOrderEntries = (entries: ReadonlyArray<OrderListEntry>) => mergeGtcPendingDisplayEntries(entries, pendingRows.value, executions.value);
 </script>
 
 <template>
   <div class="order-mode-host">
-    <OrderView :embedded="embedded" :embedded-user-id="embeddedUserId" :workspace="workspace" :project-order-entries="executions.length ? projectOrderEntries : undefined">
+    <OrderView :embedded="embedded" :embedded-user-id="embeddedUserId" :workspace="workspace" :project-order-entries="executions.length || nativeOrders.length ? projectOrderEntries : undefined">
       <template v-if="pendingRows.length" #buy-amount="{ row }">
         {{ row.PmGtcExecutionId && row.BetMoney == null ? '待核实' : toFixed(pmOrderStakeDisplayCny(row), 0) }}
       </template>

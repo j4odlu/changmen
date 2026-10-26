@@ -8,7 +8,7 @@ import { useOrderObservationStore } from "../orderObservationStore";
 import { observationEventLabel } from "@changmen/shared/order_observation_view";
 import { startOrderObservation } from "@/services/orderObservation";
 import { checkBetting, placeBet } from "./betGateway";
-import { checkBetting as checkGtcBetting, prepareOtherLeg } from "@/orderModes/gtc/gateway";
+import { checkBetting as checkGtcBetting } from "@/orderModes/gtc/gateway";
 import * as observation from "@/services/orderObservation";
 
 const mocks = vi.hoisted(() => ({ vaultProvider: vi.fn(), sharedCheck: vi.fn(), sharedPlace: vi.fn(), delay: vi.fn(), sound: vi.fn(), publish: vi.fn(), gtcCheck: vi.fn(), stake: vi.fn((_account: unknown, amount: number) => amount), betting: vi.fn(), check: vi.fn(), post: vi.fn(), user: { isLoggedIn: true, userId: "u1" }, notify: vi.fn(() => ({ close: vi.fn() })) }));
@@ -278,7 +278,7 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(mocks.check).toHaveBeenCalledTimes(2); expect(mocks.gtcCheck).not.toHaveBeenCalled();
   });
 
-  it.each([false, true])("ordinary/GTC counterpart=%s keeps the real receipt when observation and log fail", async (gtc) => {
+  it("ordinary prepared order keeps the real receipt when observation and log fail", async () => {
     const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
     option.data = { quote: "prepared" };
     const expected = new BetResult("OB", true); expected.orderId = "original";
@@ -286,8 +286,7 @@ describe("下注主链路与旁路故障隔离", () => {
     vi.spyOn(observation, "observeOption").mockImplementation(() => { throw new Error("observer offline"); });
     mocks.delay.mockImplementation(() => { throw new Error("stats offline"); });
     mocks.betting.mockResolvedValue(expected);
-    const result = gtc ? await prepareOtherLeg(account, option, 123, 30)()
-      : await placeBet(store, account, option, 30, { linkId: 123, requirePreparedQuote: true });
+    const result = await placeBet(store, account, option, 30, { linkId: 123, requirePreparedQuote: true });
     expect(result).toBe(expected); expect(result.success).toBe(true); expect(result.link).toBe(123);
     expect(mocks.betting).toHaveBeenCalledExactlyOnceWith(account, option);
     expect(mocks.check).not.toHaveBeenCalled();
@@ -303,17 +302,17 @@ describe("下注主链路与旁路故障隔离", () => {
       if (fault === "throw") effect.mockImplementation(() => { throw new Error("effect offline"); });
       else effect.mockRejectedValue(new Error("effect offline"));
     }
-    expect(await prepareOtherLeg(account, option, 123)()).toBe(result);
+    expect(await placeBet(store, account, option, 10, { linkId: 123, requirePreparedQuote: true })).toBe(result);
     expect(mocks.betting).toHaveBeenCalledOnce();
     await Promise.resolve();
   });
 
-  it("an accepted pending GTC counterpart does not start a second confirmation or publish a fill", async () => {
+  it("an accepted pending ordinary order does not start a second confirmation or publish a fill", async () => {
     const ray = { ...account, provider: "RAY" } as PlatformAccount;
-    const option = new BetOption("RAY", "m", "b", "i", 100, "Away", 2); option.data = {};
+    const option = new BetOption("RAY", "m", "b", "i", 100, "Away", 2); option.data = {}; option.deferPostAcceptSettlement = true;
     const expected = new BetResult("RAY", true); expected.pending = true; expected.orderId = "pending-original";
     mocks.betting.mockResolvedValue(expected);
-    const result = await prepareOtherLeg(ray, option, 123)();
+    const result = await placeBet(store, ray, option, 10, { linkId: 123, requirePreparedQuote: true });
     expect(result).toBe(expected); expect(result.pending).toBe(true);
     expect(option.deferPostAcceptSettlement).toBe(true);
     expect(mocks.betting).toHaveBeenCalledOnce(); expect(mocks.check).not.toHaveBeenCalled();
@@ -321,7 +320,7 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(mocks.notify).toHaveBeenLastCalledWith(expect.objectContaining({ type: "warning" }));
   });
 
-  it.each([false, true])("prepared ordinary/GTC=%s sends directly without restarting wallet preparation", async (gtc) => {
+  it("prepared ordinary order sends without restarting wallet preparation", async () => {
     const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2);
     mocks.check.mockImplementation(async (_account, checked) => { checked.data = { frozen: true }; return checked; });
     await checkBetting(store, account, option);
@@ -329,8 +328,7 @@ describe("下注主链路与旁路故障隔离", () => {
     mocks.vaultProvider.mockImplementation(() => { throw new Error("late wallet preparation"); });
     const receipt = new BetResult("OB", true); receipt.orderId = "prepared-original";
     mocks.betting.mockResolvedValue(receipt);
-    const result = gtc ? await prepareOtherLeg(account, option, 123)()
-      : await placeBet(store, account, option, 10, { linkId: 123, requirePreparedQuote: true });
+    const result = await placeBet(store, account, option, 10, { linkId: 123, requirePreparedQuote: true });
     expect(result).toBe(receipt);
     expect(mocks.vaultProvider).toHaveBeenCalledOnce();
     expect(mocks.check).toHaveBeenCalledOnce();
@@ -343,7 +341,7 @@ describe("下注主链路与旁路故障隔离", () => {
     mocks.check.mockImplementation(async (_account, checked) => { checked.data = { frozen: true }; return checked; });
     expect(await checkBetting(store, account, option)).toBe(option);
     const receipt = new BetResult("OB", true); mocks.betting.mockResolvedValue(receipt);
-    expect(await prepareOtherLeg(account, option, 123)()).toBe(receipt);
+    expect(await placeBet(store, account, option, 10, { linkId: 123, requirePreparedQuote: true })).toBe(receipt);
     expect(mocks.betting).toHaveBeenCalledOnce();
   });
 
@@ -357,12 +355,11 @@ describe("下注主链路与旁路故障隔离", () => {
     expect(oldLog).not.toHaveBeenCalled();
   });
 
-  it.each([false, true])("broken display data cannot stop a prepared ordinary/GTC=%s POST", async (gtc) => {
+  it("broken display data cannot stop a prepared ordinary POST", async () => {
     const option = new BetOption("OB", "m", "b", "i", 100, "Home", 2); option.data = { frozen: true };
     Object.defineProperty(option, "match", { get: () => { throw new Error("display unavailable"); } });
     const receipt = new BetResult("OB", true); receipt.orderId = "original"; mocks.betting.mockResolvedValue(receipt);
-    const result = gtc ? await prepareOtherLeg(account, option, 123)()
-      : await placeBet(store, account, option, 10, { linkId: 123, requirePreparedQuote: true });
+    const result = await placeBet(store, account, option, 10, { linkId: 123, requirePreparedQuote: true });
     expect(result).toBe(receipt);
     expect(mocks.betting).toHaveBeenCalledOnce();
     expect(mocks.betting.mock.calls[0]![0]).toBe(account);
@@ -386,7 +383,7 @@ describe("下注主链路与旁路故障隔离", () => {
     vi.spyOn(receipt, "saveLog").mockImplementation(() => { throw new Error("log unavailable"); });
     mocks.delay.mockImplementation(() => { throw new Error("stats unavailable"); });
     mocks.betting.mockResolvedValue(receipt);
-    expect(await prepareOtherLeg(account, option, 123)()).toBe(receipt);
+    expect(await placeBet(store, account, option, 10, { linkId: 123, requirePreparedQuote: true })).toBe(receipt);
     expect(receipt.orderId).toBe("rejected-original");
     expect(receipt.success).toBe(false);
     expect(mocks.betting).toHaveBeenCalledOnce();

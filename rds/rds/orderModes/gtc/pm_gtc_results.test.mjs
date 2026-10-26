@@ -8,6 +8,13 @@ const fill = { key: "one", tradeId: "one", role: "MAKER", shares: "3", price: "0
 const result = () => ({ executionId: "id", orderId: hash, playerId: 1, revision: 4, createdAt: 1, linkId: 10, match: "m", bet: "b", item: "i", tokenId: "t", conditionId: "c", fills: [fill], financial: { pmShares: 3, pmFillPrice: 0.5, pmStakeUsdc: 1.5, pmFeeUsdc: 0, odds: 2, betMoney: 10.05 } });
 const previous = (raw = {}) => ({ player_id: 1, provider: "Polymarket", order_id: hash.toUpperCase(), raw: { pmGtcExecutionId: "id", pmGtcBuyShares: 3, pmGtcConfirmedFills: [fill], ...raw } });
 const inserted = () => mock.query.mock.calls.find(([sql]) => sql.startsWith("INSERT INTO orders"));
+it("writes GTC type into the shared order row without creating an execution or a second financial order", async () => {
+  await savePmGtcConfirmedResult("owner", result());
+  const [sql, params] = inserted();
+  expect(sql).toContain("INSERT INTO orders"); expect(params[10]).toMatchObject({ pmOrderType: "GTC", pmGtcExecutionId: "id" });
+  expect(mock.query.mock.calls.filter(([statement]) => statement.startsWith("INSERT INTO orders"))).toHaveLength(1);
+  expect(mock.query.mock.calls.some(([statement]) => statement.includes("pm_gtc_executions"))).toBe(false);
+});
 beforeEach(() => { vi.clearAllMocks(); mock.rows = []; mock.noDb = false; mock.settled.mockResolvedValue([]);
   mock.query.mockImplementation(async sql => ({ rows: sql.startsWith("SELECT player_id") ? mock.rows : [] })); });
 it("writes confirmed results only to orders, with atomic settlement correction", async () => {

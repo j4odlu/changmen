@@ -166,10 +166,6 @@ export function captureGtcSession(): () => boolean {
 export function financialOrders() {
   return settlement.rows([...useOrderStore().orders.values()].flat());
 }
-export function gtcActivated(): boolean {
-  const user = useUserStore();
-  return user.extensionPrefs.pmArbOrderMode === "GTC" && user.extensionPrefs.pmGtcV1Activation === `1:${user.userId}`;
-}
 export function acceptGtc(row: GtcExecution): GtcExecution {
   if (row.owner !== gtcProgress.owner)
     return row;

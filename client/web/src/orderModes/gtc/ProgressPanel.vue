@@ -1,27 +1,32 @@
 <script setup lang="ts">
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
+import type { GtcOrderRecord } from "./core/orderRecord";
+import { isNativeGtcOrder } from "./core/orderRecord";
+import { gtcOrders } from "./orderState";
 import { formatOrderTime } from "@changmen/client-core/shared/format";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, ref } from "vue";
 import { gtcProgress } from "./gtcProgressState";
-import { pmGtcMonitorCardView } from "./monitorCardView";
+import { pmGtcMonitorCardView, nativeGtcMonitorCardView } from "./monitorCardView";
 import { gtcOrderCardView } from "./orderCardView";
 import { gtcSyncNotice } from "./syncStatus";
 
-const props = defineProps<{ execution: GtcExecution; readOnly?: boolean }>();
+const props = defineProps<{ execution: GtcExecution | GtcOrderRecord; readOnly?: boolean }>();
 const cancelBusy = ref(false);
+const native = computed(() => isNativeGtcOrder(props.execution));
+const progress = computed(() => native.value ? gtcOrders : gtcProgress);
 const syncIssue = computed(() => {
-  const issue = gtcProgress.queryIssues[props.execution.id];
+  const issue = progress.value.queryIssues[props.execution.id];
   if (issue)
     return issue;
   const kind = gtcOrderCardView(props.execution).queryErrorKind;
-  if (kind && !(kind === "auth" && gtcProgress.recoveredAt > props.execution.observedAt))
+  if (kind && !(kind === "auth" && !native.value && gtcProgress.recoveredAt > props.execution.observedAt))
     return { kind, message: props.execution.error, at: props.execution.observedAt };
   return undefined;
 });
-const view = computed(() => pmGtcMonitorCardView(props.execution, syncIssue.value));
+const view = computed(() => isNativeGtcOrder(props.execution) ? nativeGtcMonitorCardView(props.execution, syncIssue.value) : pmGtcMonitorCardView(props.execution, syncIssue.value));
 const syncNotice = computed(() => syncIssue.value ? gtcSyncNotice(syncIssue.value) : "");
-const saveNotice = computed(() => gtcProgress.saveIssues[props.execution.id]
+const saveNotice = computed(() => progress.value.saveIssues[props.execution.id] || (native.value && gtcOrders.resultIssues[props.execution.id])
   ? "后台副本同步失败，正在重试；当前订单状态按 PM 官方结果显示。"
   : "");
 const observedTime = computed(() => props.execution.observedAt > 0 ? formatOrderTime(props.execution.observedAt) : "尚未取得核对结果");
@@ -32,10 +37,16 @@ async function cancel() {
   cancelBusy.value = true;
   try {
     await ElMessageBox.confirm("只取消这笔 PM 原挂单的剩余份额。已成交部分保留。", "取消 PM 剩余挂单", { type: "warning" });
-    const { cancelGtc } = await import("@/runtime/gtcOrderMonitor/pm");
-    if (props.execution.id !== id || props.execution.owner !== owner || gtcProgress.owner !== owner || !view.value.canCancel)
+    if (props.execution.id !== id || props.execution.owner !== owner || progress.value.owner !== owner || !view.value.canCancel)
       throw new Error("原单状态或用户会话已变更，请重新核对");
-    await cancelGtc(id);
+    if (native.value) {
+      const { cancelGtcOrder } = await import("./orders");
+      await cancelGtcOrder(id);
+    }
+    else {
+      const { cancelGtc } = await import("@/runtime/gtcOrderMonitor/pm");
+      await cancelGtc(id);
+    }
   }
   catch (error) {
     if (error instanceof Error)
@@ -72,7 +83,7 @@ async function cancel() {
       </div>
     </dl>
     <div class="pm-gtc-monitor__footer">
-      <span role="status">GTC · {{ execution.plan.source === 'manual' ? '手动' : '套利' }} · {{ view.state }}</span>
+      <span role="status">GTC · {{ isNativeGtcOrder(execution) ? '订单' : execution.plan.source === 'manual' ? '手动' : '套利' }} · {{ view.state }}</span>
       <span :title="`最近核对：${observedTime}；价格单位：USDC / 份`">核对 {{ execution.observedAt > 0 ? observedTime.slice(-8) : '待核实' }}</span>
     </div>
     <div v-if="view.verification.length" class="pm-gtc-monitor__notice">

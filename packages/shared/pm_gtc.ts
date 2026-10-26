@@ -1,46 +1,13 @@
+import type { GtcFacts, GtcFinancialOrder, GtcOrderPlan, GtcOrderState } from "./pm_gtc_order.ts";
+import { canCancelGtcOrder, gtcOrderNeverSubmitted, gtcUnits, mergeGtcOrderFacts } from "./pm_gtc_order.ts";
+export type { GtcSubmitState, GtcFeeProof, GtcFill, GtcOrderFact, GtcFacts, GtcFinancialOrder } from "./pm_gtc_order.ts";
+export { gtcUnits, gtcDecimal, gtcNumber, gtcFillPrice } from "./pm_gtc_order.ts";
 /** [changmen 扩展] GTC V1 独立事实与决策契约；不被 FOK adapter 消费。 */
 export const PM_GTC_VERSION = 1;
 export const PM_GTC_INITIAL_MS = 10_000;
-export type GtcSubmitState = "prepared" | "not_attempted" | "dispatching" | "accepted" | "rejected" | "unknown";
 export type GtcOtherState = "not_attempted" | "authorized" | "accepted" | "pending" | "filled" | "rejected" | "unknown";
-export interface GtcFeeProof { rate: string; exponent: 1; takerOnly: true; observedAt: number }
-export interface GtcFill {
-  key: string;
-  tradeId: string;
-  bucket: string;
-  role: "MAKER" | "TAKER";
-  shares: string;
-  price: string;
-  fee: string | null;
-  status: string;
-  updatedAt: number;
-}
-export interface GtcOrderFact {
-  /** 原单查询缺失时，只有完整原单 CONFIRMED 成交可证明全部成交。 */
-  source?: "confirmed-trades";
-  id: string;
-  original: string;
-  matched: string;
-  status: string;
-  tradeIds: string[];
-}
-export interface GtcFacts {
-  order: GtcOrderFact | null;
-  fills: GtcFill[];
-  complete: boolean;
-  observedAt: number;
-  error?: string;
-}
-/** 普通 PM 成交助手的财务结果；GTC 持久化不另算费用、金额或赔率。 */
-export interface GtcFinancialOrder {
-  pmShares: number;
-  pmFillPrice: number;
-  pmStakeUsdc: number;
-  pmFeeUsdc: number;
-  odds: number;
-  betMoney: number;
-}
-export interface GtcPlan {
+/** [changmen 扩展] 旧执行存储兼容结构；新业务使用 GtcOrderPlan。 */
+export interface GtcPlan extends GtcOrderPlan {
   /** [changmen 扩展] 缺省为原双腿套利；manual 是独立单腿手动订单。 */
   source?: "manual";
   playerId: number;
@@ -55,28 +22,14 @@ export interface GtcPlan {
   linkId: number;
   otherVenueMatchId: string;
   otherVenueItemId: string;
-  tokenId: string;
-  conditionId: string;
   target: "Home" | "Away";
   match: string;
   bet: string;
   item: string;
-  shares: string;
-  targetShares: string;
-  price: string;
-  maxPrincipal: string;
-  /** 兼容既有持久化字段名；新订单保存用户下注本金上限，不含费用预留。 */
-  allInBudget: string;
-  /** 旧订单的费用证明；新订单在成交后查询，不作为发送前提。 */
-  feeProof?: GtcFeeProof;
   fx: number;
   parallel: boolean;
-  protocol: 2 | 3;
-  negRisk: boolean;
-  route: string;
-  orderHash: string;
 }
-export interface GtcExecution {
+export interface GtcExecution extends GtcOrderState {
   financialOrder?: GtcFinancialOrder;
   id: string;
   owner: string;
@@ -85,67 +38,17 @@ export interface GtcExecution {
   plan: GtcPlan;
   createdAt: number;
   revision: number;
-  submit: GtcSubmitState;
-  orderId: string | null;
   decision: "open" | "closed";
   deadlineAt: number;
-  pmAuthorized: boolean;
-  /** [changmen 扩展] 已获一次性授权但尚未调用场馆发送；保留授权，禁止重发。 */
-  submitNotSent?: boolean;
   other: { state: GtcOtherState; orderId: string | null; submittedAt: number; message: string; notSent?: boolean };
   manual: boolean;
   released: boolean;
   releaseRevision?: number;
-  cancel: { commandId: string; state: "requested" | "dispatching" | "acknowledged" | "unknown" | "failed"; message: string } | null;
-  fills: Record<string, GtcFill>;
-  order: GtcOrderFact | null;
-  matched: string;
-  principal: string;
-  fee: string | null;
-  open: string | null;
-  terminal: boolean;
-  complete: boolean;
   groupComplete: boolean;
-  observedAt: number;
-  error: string;
   counted: boolean;
 }
-const UNIT = 1_000_000n;
-export function gtcUnits(value: unknown): bigint {
-  const s = String(value ?? "").trim();
-  if (!/^\d+(?:\.\d{1,6})?$/.test(s))
-    throw new Error("GTC 数值须为最多六位的非负十进制");
-  const [a, b = ""] = s.split(".");
-  return BigInt(a!) * UNIT + BigInt(b.padEnd(6, "0"));
-}
-export function gtcDecimal(value: bigint): string {
-  if (value < 0n)
-    throw new Error("GTC 数值不可为负");
-  const fraction = String(value % UNIT).padStart(6, "0").replace(/0+$/, "");
-  return String(value / UNIT) + (fraction ? `.${fraction}` : "");
-}
-export function gtcNumber(value: unknown): number { return Number(gtcDecimal(gtcUnits(value))); }
-/** [changmen 扩展] 成交价是金额/份数的比值，CLOB maker 明细可超过六位；数量和预算仍严格使用 gtcUnits。 */
-export function gtcFillPrice(value: unknown): string {
-  const s = String(value ?? "").trim();
-  if (!/^\d+(?:\.\d+)?$/.test(s))
-    throw new Error("GTC 成交价格须为非负十进制");
-  const [integer, fraction = ""] = s.split(".");
-  const a = BigInt(integer!).toString();
-  const b = fraction.replace(/0+$/, "");
-  return a + (b ? `.${b}` : "");
-}
-function fillPriceRatio(value: unknown): { numerator: bigint; denominator: bigint } {
-  const [a, b = ""] = gtcFillPrice(value).split(".");
-  const denominator = 10n ** BigInt(b.length);
-  return { numerator: BigInt(a!) * denominator + BigInt(b || "0"), denominator };
-}
 /** [changmen 扩展] 兼容旧版把未授权 PM 腿写成 rejected 的记录；有任何订单证据就不能据此结束。 */
-export function gtcPmNeverSubmitted(row: GtcExecution): boolean {
-  return (!row.pmAuthorized || row.submitNotSent === true) && !row.orderId && !row.order && !row.cancel
-    && ["prepared", "not_attempted", "rejected"].includes(row.submit)
-    && !Object.keys(row.fills).length && gtcUnits(row.matched) === 0n && gtcUnits(row.principal) === 0n;
-}
+export const gtcPmNeverSubmitted = gtcOrderNeverSubmitted;
 export function gtcCanFinishWithoutOrders(row: GtcExecution): boolean {
   return row.decision === "closed" && gtcPmNeverSubmitted(row)
     && ["not_attempted", "rejected"].includes(row.other.state) && !row.other.orderId;
@@ -180,10 +83,7 @@ export function gtcCanAuthorizeOther(row: GtcExecution): boolean {
   // [A8 可证实] 顺序首腿成功后发送第二腿；[changmen 扩展] GTC 保留一次性授权与主动关闭检查。
   return row.pmAuthorized && row.submit === "accepted";
 }
-export function gtcCanCancel(row: GtcExecution): boolean {
-  return row.submit === "accepted" && Boolean(row.orderId) && !row.terminal
-    && row.order?.status !== "DELAYED" && row.open !== "0";
-}
+export const gtcCanCancel = canCancelGtcOrder;
 export function gtcCanRelease(row: GtcExecution): boolean {
   return row.decision === "closed" && row.terminal && row.complete && !row.error
     && Object.values(row.fills).every(fill => ["CONFIRMED", "FAILED"].includes(fill.status))
@@ -196,102 +96,15 @@ function canFinishManualGtc(row: GtcExecution): boolean {
       && gtcUnits(row.matched) === 0n && !Object.keys(row.fills).length));
 }
 
-/** 合并单个事实，而不是把每次累计快照相加；永久失败不可被旧撮合回放恢复。 */
+/** [changmen 扩展] 单笔事实由订单核心归并，旧双腿协调仅在兼容入口处理。 */
 export function mergeGtcFacts(previous: GtcExecution, facts: GtcFacts): GtcExecution {
-  const row = structuredClone(previous);
-  const errors: string[] = [];
-  const expectedId = (row.orderId || row.plan.orderHash).toLowerCase();
-  if (facts.order) {
-    if (facts.order.id.toLowerCase() !== expectedId || gtcUnits(facts.order.original) !== gtcUnits(row.plan.shares))
-      throw new Error("GTC 原单身份或签单数量不一致");
-    const incoming = facts.order;
-    // 成交回滚由明确 FAILED 证据解释；普通迟到累计量不得倒退。
-    const decreases = row.order && gtcUnits(incoming.matched) < gtcUnits(row.order.matched);
-    const failed = facts.fills.some(fill => fill.status === "FAILED");
-    const wasCanceled = ["CANCELED", "CANCELLED"].includes(row.order?.status ?? "");
-    if (!decreases || failed)
-      row.order = structuredClone(incoming);
-    if (wasCanceled && row.order) {
-      if (!["CANCELED", "CANCELLED", "MATCHED"].includes(incoming.status))
-        row.order.status = "CANCELED";
-    }
-    row.orderId ||= facts.order.id;
-    row.submitNotSent = false;
-    row.submit = "accepted";
-  }
-  for (const fill of facts.fills) {
-    if (!fill.key || !fill.tradeId || !["MAKER", "TAKER"].includes(fill.role))
-      throw new Error("GTC 成交身份缺失");
-    const old = row.fills[fill.key];
-    if (old?.status === "FAILED" && fill.status !== "FAILED")
-      continue;
-    if (old && fill.updatedAt < old.updatedAt)
-      continue;
-    if (old?.status === "CONFIRMED" && fill.status !== "CONFIRMED" && fill.status !== "FAILED")
-      continue;
-    if (old && (gtcUnits(old.shares) !== gtcUnits(fill.shares) || gtcFillPrice(old.price) !== gtcFillPrice(fill.price))) {
-      errors.push("同一成交明细数量或价格冲突"); continue;
-    }
-    row.fills[fill.key] = fill;
-  }
-  let quantity = 0n;
-  let principal = 0n;
-  let fee = 0n;
-  let feeUnknown = false;
-  for (const fill of Object.values(row.fills)) {
-    if (fill.status === "FAILED")
-      continue;
-    const q = gtcUnits(fill.shares); const p = fillPriceRatio(fill.price);
-    if (p.numerator <= 0n || p.numerator >= p.denominator || q <= 0n) { errors.push("成交数量或价格异常"); continue; }
-    quantity += q; principal += q * p.numerator / p.denominator;
-    if (fill.fee == null)
-      feeUnknown = true;
-    else fee += gtcUnits(fill.fee);
-  }
-  const total = gtcUnits(row.plan.shares);
-  if (quantity > total)
-    errors.push("成交数量超过原签单量");
-  const orderMatched = row.order ? gtcUnits(row.order.matched) : null;
-  if (orderMatched != null && orderMatched !== quantity)
-    errors.push("原单累计量与成交明细未一致");
-  const failedAmount = Object.values(row.fills).filter(f => f.status === "FAILED").reduce((q, f) => q + gtcUnits(f.shares), 0n);
-  // FAILED 量不继续计作已买入；官方累计量未修订时显示冲突并保留阻断。
-  row.matched = gtcDecimal(failedAmount > 0n ? quantity : orderMatched != null && orderMatched > quantity ? orderMatched : quantity);
-  row.principal = gtcDecimal(principal);
-  row.fee = feeUnknown ? null : gtcDecimal(fee);
-  if (feeUnknown)
-    errors.push("成交费用待核实");
-  const status = row.order?.status ?? "";
-  const canceled = ["CANCELED", "CANCELLED", "EXPIRED", "REJECTED"].includes(status);
-  const full = orderMatched != null && orderMatched === total && quantity === total;
-  // 官方原单 MATCHED 已退出挂单；结算舍入可能留下签单数量差额，不能虚构成交或可撤余量。
-  const matchedTerminal = status === "MATCHED";
-  row.terminal = canceled || matchedTerminal || full || row.submit === "rejected";
-  row.open = canceled || matchedTerminal || full
-    ? "0"
-    : row.order && ["LIVE", "DELAYED", "UNMATCHED", "MATCHED"].includes(status)
-      && orderMatched != null && orderMatched <= total
-      ? gtcDecimal(total - orderMatched)
-      : null;
-  const knownIds = new Set(Object.values(row.fills).map(f => f.tradeId));
-  if (row.order?.tradeIds.some(id => !knownIds.has(id)))
-    errors.push("原单关联成交明细缺失");
-  row.complete = Boolean(facts.complete && row.order && !errors.length && !facts.error);
-  row.error = facts.error || errors.join("；");
-  row.observedAt = Math.max(row.observedAt, facts.observedAt);
-  row.groupComplete = !row.manual && full && row.complete && row.other.state === "filled";
-  if (row.cancel && row.terminal) {
-    row.cancel.state = "acknowledged";
-    row.cancel.message = canceled
-      ? "原单余量已终止，已成交部分保留"
-      : "原单已撮合结束，无可取消挂单；已成交部分保留";
-  }
+  const row = mergeGtcOrderFacts(previous, facts);
+  row.groupComplete = !row.manual && row.complete && gtcUnits(row.matched) === gtcUnits(row.plan.shares) && row.other.state === "filled";
   if (row.released && (!row.complete || row.error || !row.terminal)) {
     row.released = false; row.manual = true;
   }
   if (!row.manual && row.groupComplete && gtcCanRelease(row))
     row.released = true;
-  // 手动单没有第二腿/套利恢复操作；原单已终止且明细确认后自动释放协调占用。
   if (canFinishManualGtc(row))
     row.released = true;
   return row;

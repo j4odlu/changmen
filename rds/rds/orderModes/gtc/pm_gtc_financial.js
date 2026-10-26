@@ -1,6 +1,6 @@
 import { scaleUsdtToCnyDisplay } from "@changmen/shared/currency";
 /** [changmen 扩展] 校验普通 PM 助手输出与原单事实的对应关系，不另算财务值。 */
-import { gtcUnits } from "@changmen/shared/pm_gtc";
+import { gtcUnits } from "@changmen/shared/pm_gtc_order";
 
 export function resolveGtcFinancialOrder(row, incoming) {
   if (!row.orderId || row.fee == null || (!row.complete && !Object.values(row.fills).some(fill => fill.status === "FAILED")))

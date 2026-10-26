@@ -9,6 +9,9 @@ import { useAccountStore } from "@/stores/accountStore";
 import { registerOrderSyncProjection } from "@/api/order";
 import { rememberGtcOrderIdentity } from "@/orderModes/gtc/executionProjection";
 import { synchronizeGtcCounterparts } from "./gtcCounterpartSync";
+import { listStoredGtcOrders } from "@/orderModes/gtc/orderStore";
+import { gtcOrders } from "@/orderModes/gtc/orderState";
+import { rememberGtcOrderReference } from "@/orderModes/gtc/executionProjection";
 
 let owner = "";
 let generation = 0;
@@ -32,11 +35,13 @@ export function flushGtcResults(): Promise<void> {
         if (saved !== true) throw new Error("GTC 订单结果同步未确认成功");
         if (!current()) return;
         await finishGtcResult(entry); delete gtcProgress.saveIssues[entry.result.executionId];
+        delete gtcOrders.resultIssues[entry.result.executionId];
       }
       catch (error) {
         if (!current()) return;
         await finishGtcResult(entry, true);
         gtcProgress.saveIssues[entry.result.executionId] = gtcSyncIssue(error);
+        gtcOrders.resultIssues[entry.result.executionId] = gtcSyncIssue(error);
       }
     }
   })().finally(() => { if (pending === task) pending = undefined; });
@@ -53,6 +58,10 @@ export function startGtcOrderSync(userId: string): void {
   });
   void listLocalGtc(userId).then(rows => {
     if (generation === stamp && owner === userId) rows.forEach(rememberGtcOrderIdentity);
+  }).catch(() => {});
+  void listStoredGtcOrders(userId).then(rows => {
+    if (generation === stamp && owner === userId)
+      rows.forEach(row => rememberGtcOrderReference(row.id, row.owner, row.accountId, row.orderId, row.plan.orderHash));
   }).catch(() => {});
   const tick = () => {
     if (generation !== stamp) return;

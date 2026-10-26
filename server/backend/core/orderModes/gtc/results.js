@@ -1,6 +1,6 @@
 /** [changmen 扩展] 结果同步与精确财务读取；执行控制及监控过程不写 RDS。 */
 import * as db from "@changmen/db";
-import { mergeGtcFacts, createGtcExecution } from "@changmen/shared/pm_gtc";
+import { mergeGtcOrderFacts } from "@changmen/shared/pm_gtc_order";
 import { assertPlayerOwnedByUser } from "../../account/player_ownership.js";
 import { toClientOrder } from "../../account/order/dto.js";
 import * as orderStore from "../../account/order_store.js";
@@ -25,8 +25,10 @@ export function validateGtcConfirmedResult(input, owner) {
     || input.fills.some(fill => !fill || Object.keys(fill).some(key => !fillFields.has(key)) || !["CONFIRMED", "FAILED"].includes(fill.status) || (fill.status === "CONFIRMED" && fill.fee == null)))
     throw new Error("GTC 同步只能接收已确认订单结果");
   if (new Set(input.fills.map(fill => fill.key)).size !== input.fills.length) throw new Error("GTC 成交明细重复");
-  const calculation = createGtcExecution(input.executionId, owner, "", "", { orderHash: input.orderId, shares: input.buyShares }, input.createdAt);
-  const totals = mergeGtcFacts(calculation, { order: null, fills: input.fills, complete: true, observedAt: 0 });
+  const totals = mergeGtcOrderFacts({ plan: { orderHash: input.orderId, shares: input.buyShares },
+    submit: "accepted", orderId: input.orderId, pmAuthorized: true, cancel: null, fills: {}, order: null,
+    matched: "0", principal: "0", fee: "0", open: null, terminal: false, complete: false, observedAt: 0, error: "" },
+  { order: null, fills: input.fills, complete: true, observedAt: 0 });
   if (totals.matched !== input.buyShares || totals.principal !== input.principalUsdc || totals.fee !== input.feeUsdc
     || totals.error.split("；").some(error => error && error !== ""))
     throw new Error("GTC 已确认成交明细与结果不一致");

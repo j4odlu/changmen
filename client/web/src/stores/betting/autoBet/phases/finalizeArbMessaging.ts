@@ -142,11 +142,6 @@ export function finishArbExecutionTrace(
       ok ? "🎯 LOS已成交" : pending ? "🎯 原单待确认，不重发" : "🎯 本次未成单，不补单");
     return;
   }
-  if (placed.originalExecution) {
-    const summary = placed.originalExecution.summary();
-    trace?.finish(summary.traceStatus, summary.message);
-    return;
-  }
   const { legA, legB, resultA, resultB } = placed;
   const { okA, okB, makeupQueued } = outcome;
 

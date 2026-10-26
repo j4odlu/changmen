@@ -17,6 +17,8 @@ export interface MakeupOddsBandDisplay {
 
 /** 订单列表/UI 用 OrderRow（含 [changmen 扩展] PM 字段） */
 export interface OrderRow {
+  /** [changmen 扩展] 原单的执行类型；缺省继续沿用现有来源识别。 */
+  PmOrderType?: "FOK" | "GTC";
   /** [changmen 扩展] 尚未落库的只读展示行；不能改绑或卖出，原单监控仍可取消剩余挂单。 */
   DisplayOnly?: true;
   OrderID?: number | string;

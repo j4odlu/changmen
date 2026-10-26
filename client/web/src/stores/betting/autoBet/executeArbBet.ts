@@ -53,8 +53,7 @@ export async function executeArbBet(params: {
     return;
 
   const selection = captureArbExecutionSelection();
-  const mode = selection.orderMode;
-  const attempt: ArbBetAttemptParams = { ...params, ...(selection.executionMode ? { executionMode: selection.executionMode } : {}), ...(mode === "GTC" ? { pmOrderMode: mode } : {}) };
+  const attempt: ArbBetAttemptParams = { ...params, ...(selection.executionMode ? { executionMode: selection.executionMode } : {}) };
 
   const phaseMsMap: Partial<Record<ArbAttemptPhase, number>> = {};
   const base = { at: Date.now(), matchId: params.match.id, betId: params.bet.id };
@@ -119,15 +118,6 @@ export async function executeArbBet(params: {
     recordArbAttemptMetric({ ...base, phaseMs: phaseMsMap, stop: "error" });
   }
   finally {
-    // [changmen 扩展] 关闭发送窗口不取消原挂单；异常和正常收尾共用同一个幂等关闭。
-    if (attempt.originalExecution) {
-      try { await attempt.originalExecution.close(); }
-      catch (error) {
-        observationOutcome = "exception";
-        observationMessage = errorMessage(error);
-        params.setMessage(`原单发送窗口收尾失败：${errorMessage(error)}`);
-      }
-    }
     finishExecutionObservation(observation, ready?.linkId, observationOutcome, phase, observationMessage);
   }
 }

@@ -12,8 +12,6 @@ vi.mock("@changmen/venue-browser/adapter/polymarket", async importOriginal => ({
   ...await importOriginal<typeof import("@changmen/venue-browser/adapter/polymarket")>(), prepareOptimizedFokExecution: prepareFast,
 }));
 
-const prepareGtc = vi.hoisted(() => vi.fn());
-vi.mock("@/orderModes/gtc/arbLeg", () => ({ prepareGtcLegExecution: prepareGtc }));
 vi.mock("@/stores/betting/activeBetRunSync", () => ({
   syncActiveBetPrecheckResults: vi.fn(), syncActiveBetPhase: vi.fn(), syncActiveBetFail: vi.fn(), scheduleActiveBetRunRemoval: vi.fn(),
 }));
@@ -81,7 +79,6 @@ describe("checkArbLegs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setPmFokPreflightMode("legacy"); prepareFast.mockReset();
-    prepareGtc.mockReset();
     pendingOrders.clear();
     extensionPrefs.lowOddsSingleHigherCProbabilityOnly = false;
     extensionPrefs.stakeScaleByProfit.skipAccountRateOnScale = false;
@@ -92,7 +89,7 @@ describe("checkArbLegs", () => {
     });
   });
 
-  it("dynamic cold preparation finishes before either leg starts; classic/GTC never use it", async () => {
+  it("dynamic cold preparation finishes before either leg starts; classic never uses it", async () => {
     setPmFokPreflightMode("optimized");
     const input = ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125));
     let release!: () => void;
@@ -108,13 +105,8 @@ describe("checkArbLegs", () => {
     expect(prepareFast).not.toHaveBeenCalled();
   });
 
-  it("dynamic preference does not prepare GTC or a PM precheck-only leg", async () => {
+  it("dynamic preference does not prepare a PM precheck-only leg", async () => {
     setPmFokPreflightMode("optimized");
-    const gtc = ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125));
-    gtc.pmOrderMode = "GTC";
-    prepareGtc.mockResolvedValue({ legs: new Map() });
-    await checkArbLegs({ ...params }, gtc);
-    expect(prepareFast).not.toHaveBeenCalled();
     const input = ready(leg("Polymarket", 22, 3.125), leg("RAY", 80, 1.36));
     input.checkAccountA = input.accountA; input.accountA = undefined;
     input.betBothLegs = false; input.singleLegByRate = true;
@@ -127,32 +119,6 @@ describe("checkArbLegs", () => {
     setPmFokPreflightMode("optimized"); prepareFast.mockRejectedValueOnce(new Error("clock unavailable"));
     expect(await checkArbLegs(params, ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125)))).toBeNull();
     expect(checkBetting).not.toHaveBeenCalled(); expect(syncActiveBetPrecheckResults).not.toHaveBeenCalled();
-  });
-
-  it("GTC 完成发送准备和冻结校验后才报告双腿通过，准备期间不能进入 place", async () => {
-    const input = ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125)); input.pmOrderMode = "GTC";
-    const validate = vi.fn();
-    const lifecycle = { legs: new Map([[input.legA, { validate }], [input.legB, { validate }]]) } as never;
-    let release!: (value: typeof lifecycle) => void;
-    prepareGtc.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
-    const args = { ...params };
-    const task = checkArbLegs(args, input);
-    await vi.waitFor(() => expect(prepareGtc).toHaveBeenCalledOnce());
-    expect(checkBetting).toHaveBeenCalledWith(input.accountB, input.legB, expect.objectContaining({ requireClobConfirmation: true }));
-    expect(syncActiveBetPrecheckResults).not.toHaveBeenCalled();
-    release(lifecycle);
-    const result = await task;
-    expect(result?.originalExecution).toBe(lifecycle); expect(args.originalExecution).toBe(lifecycle);
-    expect(validate).toHaveBeenCalledTimes(2);
-    expect(syncActiveBetPrecheckResults).toHaveBeenCalledOnce();
-  });
-
-  it.each(["历史读取失败", "签单失败", "利润不足", "执行持久化失败", "时钟未就绪"])("GTC %s 归为预检失败，不宣称通过", async (message) => {
-    const input = ready(leg("RAY", 80, 1.36), leg("Polymarket", 22, 3.125)); input.pmOrderMode = "GTC";
-    prepareGtc.mockRejectedValueOnce(new Error(message));
-    expect(await checkArbLegs({ ...params }, input)).toBeNull();
-    expect(syncActiveBetPrecheckResults).not.toHaveBeenCalled();
-    expect(params.setMessage).toHaveBeenCalledWith(message);
   });
 
   it("核验异常账号阻止新增套利，原单解除后恢复预检", async () => {
@@ -382,10 +348,9 @@ describe("checkArbLegs", () => {
     expect(checkBetting).toHaveBeenCalledTimes(2);
   });
 
-  it("🎯 blocks GTC and missing live account instead of weakening the two-check requirement", async () => {
+  it("🎯 blocks missing live account instead of weakening the two-check requirement", async () => {
     const input = { ...ready(leg("OB", 100, 1.8), leg("RAY", 60, 2.5)), executionMode: "lowOddsSingle" as const };
     expect(await checkArbLegs(params, { ...input, accountB: undefined })).toBeNull();
-    expect(await checkArbLegs(params, { ...input, pmOrderMode: "GTC" })).toBeNull();
     expect(checkBetting).not.toHaveBeenCalled();
   });
 

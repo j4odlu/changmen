@@ -72,12 +72,11 @@ export async function placeArbLegs(
   const placeOpts = { linkId, requirePreparedQuote: true };
   const dispatchStart = checked.precheckCompletedAt ?? performance.now();
   const hasPm = [legA.type, legB.type].includes("Polymarket");
-  const original = checked.originalExecution;
   const lowOddsSingle = checked.executionMode === "lowOddsSingle";
   function submitLeg(account: PlatformAccount, leg: BetOption) {
     if (hasPm) recordPmExecutionMetric({ kind: "dispatch", tokenId: leg.itemId,
       stage: leg.type, linkId, ms: performance.now() - dispatchStart, success: true });
-    return original?.legs.get(leg)?.submit() ?? accountStore.betting(account, leg, waitSec, placeOpts);
+    return accountStore.betting(account, leg, waitSec, placeOpts);
   }
 
   if (isPendingConfirmVenueProvider(legA.type))
@@ -99,13 +98,7 @@ export async function placeArbLegs(
 
   let mixedBlocked = false;
   let mixedBlockReason = "";
-  // [changmen 扩展] 预检未建立原腿能力时禁止误走 FOK；仍回传结果交给正常收尾。
-  if (checked.pmOrderMode === "GTC" && hasPm && !original) {
-    mixedBlocked = true; mixedBlockReason = "GTC 发送准备未完成";
-  }
   for (const [account, leg] of [[accountA, legA], [accountB, legB]] as const) {
-    const execution = original?.legs.get(leg);
-    if (execution) { continue; }
     if (account?.provider !== "Polymarket") continue;
     const reason = validatePolymarketPreparedBuy(account, leg);
     if (reason) { mixedBlocked = true; mixedBlockReason = reason; trace?.event("预检", reason); }
@@ -120,7 +113,7 @@ export async function placeArbLegs(
       && Boolean(accountA) !== Boolean(accountB)
       && (checked.executionSide === "A" ? Boolean(accountA) : Boolean(accountB))
       && checked.checkAccountA && checked.checkAccountB && legA.data && legB.data
-      && !legA.checkError && !legB.checkError && checked.pmOrderMode !== "GTC";
+      && !legA.checkError && !legB.checkError;
     if (!validSingle) { mixedBlocked = true; mixedBlockReason = "🎯 双预检或单腿执行计划不完整，未提交"; }
     if (!mixedBlocked) {
       try {
@@ -158,11 +151,10 @@ export async function placeArbLegs(
       submitLeg(accountA!, legA),
       submitLeg(accountB!, legB),
     ];
-    // [changmen 扩展] 一次性原腿必须都结束后才能关闭发送窗口。
-    const pair = original ? (await Promise.allSettled(tasks)).map(row => row.status === "fulfilled" ? row.value : undefined) : await Promise.all(tasks);
+    const pair = await Promise.all(tasks);
     resultA = pair[0];
     resultB = pair[1];
-    if (original || resultA?.success || !pair.some(r => r?.success)) {
+    if (resultA?.success || !pair.some(r => r?.success)) {
       // keep leg/account assignment
     }
     else if (resultB?.success) {
@@ -190,8 +182,7 @@ export async function placeArbLegs(
     // A 失败：B 保持 not_attempted，仍回传编排层
   }
 
-  // [changmen 扩展] 持久化原腿的 A/B 身份供挂单监控关联，不随回执成功换位。
-  if (!lowOddsSingle && !original && resultB?.success && !resultA?.success) {
+  if (!lowOddsSingle && resultB?.success && !resultA?.success) {
     [legA, legB] = [legB, legA];
     [accountA, accountB] = [accountB, accountA];
     [resultA, resultB] = [resultB, resultA];
@@ -212,7 +203,7 @@ export async function placeArbLegs(
       .join(" · "),
   );
 
-  if (original?.actions.retry !== false && betBothLegs && resultA?.success && !resultB?.success && !resultB?.pmSubmitUnknown && attemptedB) {
+  if (betBothLegs && resultA?.success && !resultB?.success && !resultB?.pmSubmitUnknown && attemptedB) {
     trace?.event("重试", `anyOdds 换腿补 ${legB.type} ${legB.target}`);
     const retry = await retryFailedLeg(
       match,
@@ -255,7 +246,6 @@ export async function placeArbLegs(
     mixedBlocked ? mixedBlockReason || undefined : undefined,
   );
 
-  original?.finishSubmission();
   return buildPlaced(
     checked,
     legA,

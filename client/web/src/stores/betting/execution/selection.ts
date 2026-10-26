@@ -1,18 +1,15 @@
 import { getActivePinia } from "pinia";
 import { useUserStore } from "@/stores/userStore";
 
-/** [changmen 扩展] 模式在准备前冻结；只决定本次新执行，不解释历史订单。 */
+/** [changmen 扩展] 手动订单模式仅作用于本次下单，不解释历史订单。 */
 export interface ExecutionSelection {
-  readonly source: "arb" | "manual";
-  readonly executionMode?: "normal" | "lowOddsSingle";
+  readonly source: "manual";
   readonly orderMode: "FOK" | "GTC";
 }
 
-export function captureArbExecutionSelection(): ExecutionSelection {
+export function captureArbExecutionSelection(): { readonly executionMode?: "lowOddsSingle" } {
   const user = getActivePinia() ? useUserStore() : undefined;
-  const active = user?.extensionPrefs.pmArbOrderMode === "GTC"
-    && user.extensionPrefs.pmGtcV1Activation === `1:${user.userId}`;
-  return Object.freeze({ source: "arb", orderMode: active ? "GTC" : "FOK",
+  return Object.freeze({
     ...(user?.extensionPrefs.arbExecutionMode === "lowOddsSingle" ? { executionMode: "lowOddsSingle" as const } : {}),
   });
 }

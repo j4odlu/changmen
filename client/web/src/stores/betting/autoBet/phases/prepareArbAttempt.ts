@@ -1,7 +1,6 @@
 import { createLowOddsSingleLinkId } from "@changmen/client-core/shared/format";
 import { lowOddsMarketKeys, lowOddsMarketSubmitted } from "@/extensions/arbBet/lowOddsSingle";
 import type { ArbBetAttemptParams, ArbBetReady } from "@/stores/betting/autoBet/phases/types";
-import { prewarmPmSportForCandidate } from "@changmen/venue-browser/adapter/polymarket";
 import { capturePmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket";
 import type { PlatformId } from "@/types/esport";
 import {
@@ -86,32 +85,11 @@ export async function prepareArbAttempt(
 
   const legA = options[0];
   const legB = options[1];
-  // [changmen 扩展] FOK 冻结方式；只有 GTC 仍需 Gamma 候选预热。
+  // [changmen 扩展] PM 自动套利固定使用 FOK，在选号前冻结预检方式。
   for (const leg of options) {
     if (leg.type !== "Polymarket") continue;
-    if (params.pmOrderMode === "GTC") prewarmPmSportForCandidate(leg);
-    else capturePmFokPreflightMode(leg);
+    capturePmFokPreflightMode(leg);
   }
-  if (lowOddsSingle && params.pmOrderMode === "GTC" && options.some(leg => leg.type === "Polymarket")) {
-    const reason = "🎯 LOS暂不支持 PM GTC，请选择 FOK";
-    params.setMessage(reason); trace?.finish("skip", reason); return null;
-  }
-  const pmOrderMode = params.pmOrderMode === "GTC" && options.some(leg => leg.type === "Polymarket") ? "GTC" : undefined;
-  // [changmen 扩展] 仅 PM GTC 读取独立历史；原选号过滤和 FOK 状态保持不变。
-  let gtcHistoryFilter: ((account: typeof accounts[number], leg: typeof legA) => boolean) | undefined;
-  if (pmOrderMode === "GTC") {
-    const { gtcSelectionHistoryStatus, gtcHistoryAllowsAccount } = await import("@/orderModes/gtc/selectionHistory");
-    const owner = String(userStore.userId);
-    const candidates = accounts.filter(account => options.some(leg => leg.type === account.provider));
-    const historyStatus = gtcSelectionHistoryStatus(owner, bet.id, candidates, config.noSameBet);
-    if (historyStatus) {
-      params.setMessage(historyStatus);
-      trace?.finish("skip", historyStatus);
-      return null;
-    }
-    gtcHistoryFilter = (account, leg) => gtcHistoryAllowsAccount(owner, account, bet.id, leg.target, leg.odds, config.noSameBet);
-  }
-  // [changmen 扩展] 模式只影响 PM；保留现有 GTC 双腿支持范围，不扩大 9999 组合。
   const implied = 1 / options.reduce((sum, o) => sum + 1 / o.odds, 0);
   // [changmen 扩展] 高利润加仓：仅放大两腿注码，不改 config.betMoney / 对冲比例
   const stakeScale = applyStakeScaleByProfit(
@@ -143,14 +121,14 @@ export async function prepareArbAttempt(
     legA.type,
     legA.betMoney,
     config.noSameBet ? readUsedAccounts(bet.id, opponentSide(legA.target)) : [],
-    acc => arbAccountPickerFilter(acc, bet, match, legA, matchStore, implied) && (!gtcHistoryFilter || gtcHistoryFilter(acc, legA)),
+    acc => arbAccountPickerFilter(acc, bet, match, legA, matchStore, implied),
     options,
   );
   const accountB = accountStore.getAccount(
     legB.type,
     legB.betMoney,
     config.noSameBet ? readUsedAccounts(bet.id, opponentSide(legB.target)) : [],
-    acc => arbAccountPickerFilter(acc, bet, match, legB, matchStore, implied) && (!gtcHistoryFilter || gtcHistoryFilter(acc, legB)),
+    acc => arbAccountPickerFilter(acc, bet, match, legB, matchStore, implied),
     options,
   );
   if (!accountA && !accountB) {
@@ -175,10 +153,6 @@ export async function prepareArbAttempt(
   }
   const lowOddsKeys = lowOddsSingle ? lowOddsMarketKeys(String(userStore.userId || ""), match, bet, options) : undefined;
   if (lowOddsKeys && lowOddsMarketSubmitted(lowOddsKeys)) return null;
-  if (pmOrderMode === "GTC" && (!betBothLegs || options.filter(leg => leg.type === "Polymarket").length !== 1)) {
-    trace?.finish("skip", "PM GTC 当前只支持一条 PM 腿的双边套利");
-    return null;
-  }
   const excludeA = config.noSameBet ? readUsedAccounts(bet.id, opponentSide(legA.target)) : [];
   const excludeB = config.noSameBet ? readUsedAccounts(bet.id, opponentSide(legB.target)) : [];
   const singleLegByRate = resolveSingleLegByRate({
@@ -330,7 +304,6 @@ export async function prepareArbAttempt(
 
   return {
     ...(lowOddsSingle ? { executionMode: "lowOddsSingle" as const, lowOddsMarketKeys: lowOddsKeys } : {}),
-    ...(pmOrderMode ? { pmOrderMode } : {}),
     legA,
     legB,
     accountA,

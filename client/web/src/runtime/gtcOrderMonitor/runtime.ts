@@ -7,6 +7,7 @@ import { resetMonitorRecovery } from "./recovery";
 import { watch } from "vue";
 import { localGtcChanges } from "@/orderModes/gtc/localStore";
 import { refreshGtcRecords } from "@/orderModes/gtc/executionState";
+import { startNativeGtcOrders, stopNativeGtcOrders } from "@/orderModes/gtc/orderRuntime";
 
 let monitoringOwner = "";
 let stopLocalChanges: (() => void) | undefined;
@@ -15,10 +16,12 @@ export function startGtcOrderMonitoring(owner: string): void {
   if (monitoringOwner === owner && gtcProgress.owner === owner)
     return;
   stopMonitoring(); initializeGtcState(owner); monitoringOwner = owner;
+  startNativeGtcOrders(owner);
   stopLocalChanges = watch(() => localGtcChanges.revision, () => { void refreshGtcRecords().catch(() => {}); });
   startGtcCoordinator(); startPmGtcMonitoring(); startGtcCounterpartMonitoring();
 }
 function stopMonitoring(): void {
+  stopNativeGtcOrders();
   monitoringOwner = "";
   stopLocalChanges?.(); stopLocalChanges = undefined;
   stopPmGtcMonitoring(); stopGtcCounterpartMonitoring(); stopGtcCoordinator();

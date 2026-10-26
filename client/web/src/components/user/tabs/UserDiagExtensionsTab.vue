@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PlatformId } from "@/types/esport";
 import { betPlatformIds } from "@changmen/venue-browser/adapter/registry";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import { storeToRefs } from "pinia";
 import { computed, ref } from "vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
@@ -47,8 +47,6 @@ extensionPrefs.value.arbExecutionMode ??= "normal";
 extensionPrefs.value.lowOddsSingleHigherCProbabilityOnly ??= false;
 extensionPrefs.value.singleLeg9999MaxPerMap ??= 1;
 extensionPrefs.value.singleLeg9999HigherCProbabilityOnly ??= false;
-// [changmen 扩展] 历史测试偏好没有 V1 激活凭据时不切换实际下单。
-extensionPrefs.value.pmArbOrderMode ??= "FOK";
 extensionPrefs.value.pmFokPreflightMode ??= "legacy";
 if (!extensionPrefs.value.rayLateRejectAutoMakeup) {
   extensionPrefs.value.rayLateRejectAutoMakeup = {
@@ -93,37 +91,9 @@ function toggleArbAllowed(platform: PlatformId) {
   );
 }
 
-async function onPmArbOrderModeChange(value: unknown) {
-  if (value !== "GTC") {
-    delete extensionPrefs.value.pmGtcV1Activation;
-    return;
-  }
-  try {
-    await ElMessageBox.confirm(
-      "启用 GTC V1 后，PM 受理即为下单成功，零成交或部分成交的余量可能持续挂单。本组剩余操作由您处理，系统不会自动补单或卖出；可使用‘取消PM挂单’。历史测试选项不会自动启用。确认保存并启用？",
-      "启用真实 GTC V1",
-      { type: "warning", confirmButtonText: "确认启用", cancelButtonText: "取消" },
-    );
-    if (!user.userId)
-      throw new Error("请先登录");
-    extensionPrefs.value.pmGtcV1Participant = true;
-    // 先保存恢复标记；正式激活前关闭/刷新仍能发现已存在的 GTC 原单。
-    delete extensionPrefs.value.pmGtcV1Activation;
-    await user.saveExtensionPrefs();
-    extensionPrefs.value.pmGtcV1Activation = `1:${user.userId}`;
-    await user.saveExtensionPrefs();
-  }
-  catch {
-    extensionPrefs.value.pmArbOrderMode = "FOK";
-    delete extensionPrefs.value.pmGtcV1Activation;
-  }
-}
-
 async function save() {
   saving.value = true;
   try {
-    if (extensionPrefs.value.pmArbOrderMode === "GTC" && extensionPrefs.value.pmGtcV1Activation !== `1:${user.userId}`)
-      await onPmArbOrderModeChange("GTC");
     await user.saveExtensionPrefs();
     ElMessage.success("保存成功");
   }
@@ -326,42 +296,12 @@ async function save() {
       </div>
     </section>
 
-    <section class="extensions-tab__panel extensions-tab__pm-mode">
-      <div class="extensions-tab__section-head">
-        <div>
-          <h3 class="extensions-tab__heading">
-            PM 自动套利下单模式
-          </h3>
-          <p class="extensions-tab__section-desc">
-            FOK 沿用现有流程。GTC V1 需明确确认启用，未完成的本组转人工处理；历史测试偏好仍按 FOK 执行。
-          </p>
-        </div>
-        <span class="extensions-tab__badge">changmen 扩展</span>
-      </div>
-      <el-form label-position="left" label-width="190px">
-        <el-form-item label="下单模式">
-          <el-radio-group
-            v-model="extensionPrefs.pmArbOrderMode"
-            aria-label="PM 自动套利下单模式"
-            @change="onPmArbOrderModeChange"
-          >
-            <el-radio-button value="FOK">
-              FOK
-            </el-radio-button>
-            <el-radio-button value="GTC">
-              GTC V1（人工接管）
-            </el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-    </section>
-
     <section class="extensions-tab__panel">
       <div class="extensions-tab__section-head">
         <div>
           <h3 class="extensions-tab__heading">预检方式</h3>
           <p class="extensions-tab__section-desc">
-            预检方式与下单模式分别配置。经典预检沿用现有检查流程；动态复核预检检查最新盘口的限价与足额深度，并保留锁盘和赛况复核。
+            经典预检沿用现有检查流程；动态复核预检检查最新盘口的限价与足额深度，并保留锁盘和赛况复核。
             保存后对新的预检尝试生效，进行中的预检沿用原配置。
           </p>
         </div>
@@ -674,11 +614,6 @@ async function save() {
 }
 
 .extensions-tab__venues {
-  margin-bottom: 16px;
-  padding-bottom: 14px;
-}
-
-.extensions-tab__panel.extensions-tab__pm-mode {
   margin-bottom: 16px;
   padding-bottom: 14px;
 }

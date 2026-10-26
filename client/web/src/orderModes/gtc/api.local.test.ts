@@ -14,14 +14,13 @@ const plan = { playerId: 1, otherPlayerId: 2, originalPmLeg: "A", otherProvider:
 let api: typeof import("./api");
 beforeEach(async () => { vi.resetModules(); vi.clearAllMocks(); vi.stubGlobal("indexedDB", new IDBFactory());
   mock.session = 1; mock.user = "owner"; mock.preview = false; mock.post.mockResolvedValue({ success: 1, info: [] }); api = await import("./api"); });
-it("creates and grants one durable send without any server execution RPC", async () => {
-  let row = await api.createGtc(id, mock.maker, plan);
-  row = await api.commandGtc(row, { kind: "authorize_pm" });
+it("has no old creation entry and never grants another send for restored records", async () => {
+  expect(api).not.toHaveProperty("createGtc");
+  const { createGtcExecution } = await import("@changmen/shared/pm_gtc");
+  const row = createGtcExecution(id, "owner", "wallet", mock.maker, plan, 1);
+  await expect(api.commandGtc(row, { kind: "authorize_pm" })).rejects.toThrow("禁止重发");
+  await expect(api.commandGtc(row, { kind: "authorize_other" })).rejects.toThrow("禁止重发");
   expect(mock.post).not.toHaveBeenCalled();
-  vi.resetModules(); const reload = await import("./api");
-  expect((await reload.listGtc(42))[0]!.pmAuthorized).toBe(true);
-  await expect(reload.commandGtc(row, { kind: "authorize_pm" })).rejects.toThrow("禁止重发");
-  expect(mock.post.mock.calls.every(([action]) => action === "Pm_GtcList")).toBe(true);
 });
 it("imports legacy execution once as read-only, retaining consumed send permits", async () => {
   const { createGtcExecution } = await import("@changmen/shared/pm_gtc");
@@ -33,15 +32,13 @@ it("imports legacy execution once as read-only, retaining consumed send permits"
   expect(mock.post.mock.calls[0]![0]).toBe("Pm_GtcList");
 });
 it("local recovery works when RDS is unavailable and legacy reads back off", async () => {
-  await api.createGtc(id, mock.maker, plan); mock.post.mockRejectedValue(new Error("offline"));
+  const { createGtcExecution } = await import("@changmen/shared/pm_gtc");
+  const { importLocalGtc } = await import("./localStore");
+  await importLocalGtc("owner", [createGtcExecution(id, "owner", "wallet", mock.maker, plan, 1)]);
+  mock.post.mockRejectedValue(new Error("offline"));
   const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
   expect(await api.listGtc()).toHaveLength(1);
   await vi.waitFor(() => expect(warn).toHaveBeenCalledOnce());
   await api.listGtc(); expect(mock.post).toHaveBeenCalledOnce(); warn.mockRestore();
   await expect(api.listGtc(42)).rejects.toThrow("旧成交历史尚未恢复");
-});
-it("rejects mismatched wallets and workspace preview before persistence", async () => {
-  await expect(api.createGtc(id, `0x${"c".repeat(40)}`, plan)).rejects.toThrow("钱包不一致");
-  mock.preview = true; await expect(api.createGtc(id, mock.maker, plan)).rejects.toThrow("身份无效");
-  expect(mock.post).not.toHaveBeenCalled();
 });

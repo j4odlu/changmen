@@ -43,7 +43,6 @@ const defaultPrefs = {
   arbFailAutoSell: { enabled: false },
   rayLateRejectAutoMakeup: { enabled: false },
   arbEarlyLockSell: { enabled: false, mode: "floor" as const, minExtraProfitPct: 0 },
-  pmArbOrderMode: "FOK" as const,
   pmFokPreflightMode: "legacy" as const,
   pmArbPriceBuffer: { enabled: false, multiplier: 1.01 },
   pmFokDepthBuffer: { enabled: false, multiplier: 1.5 },
@@ -82,17 +81,18 @@ describe("extensionPrefs", () => {
     vi.unstubAllEnvs();
   });
 
-  it("defaults old or invalid PM mode preferences to FOK without changing other settings", () => {
+  it("ignores retired PM mode preferences without changing other settings", () => {
     for (const raw of [{}, { pmArbOrderMode: "FOK" }, { pmArbOrderMode: "gtc" }, { pmArbOrderMode: "invalid" }, { pmArbOrderMode: null }]) {
       expect(normalizeExtensionPrefs(raw)).toEqual(defaultPrefs);
     }
   });
 
-  it("round-trips the GTC placeholder through Extensions without changing other preferences", () => {
-    const prefs = normalizeExtensionPrefs({ ...defaultPrefs, pmArbOrderMode: "GTC" });
-    expect(prefs).toEqual({ ...defaultPrefs, pmArbOrderMode: "GTC" });
-    expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs))))
-      .toEqual(prefs);
+  it("drops retired arbitrage mode and activation fields while retaining GTC recovery metadata", () => {
+    const prefs = normalizeExtensionPrefs({ ...defaultPrefs, pmArbOrderMode: "GTC", pmGtcV1Activation: "1:12", pmGtcV1Participant: true });
+    expect(prefs).toEqual({ ...defaultPrefs, pmGtcV1Participant: true });
+    const saved = JSON.parse(serializeExtensionPrefsForSave(prefs));
+    expect(saved).not.toHaveProperty("pmArbOrderMode"); expect(saved).not.toHaveProperty("pmGtcV1Activation");
+    expect(saved.pmGtcV1Participant).toBe(true);
   });
 
   it("defaults valueBet marker prefs to PB / 3%", () => {

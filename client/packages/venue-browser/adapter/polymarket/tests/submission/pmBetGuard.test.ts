@@ -3,6 +3,8 @@ import { BetOption as BetOptionClass } from "@changmen/client-core/models/betOpt
 import { resolvePolymarketBetBlockReason } from "@changmen/venue-browser/polymarket/submission/preflight/pmBetGuard";
 import { polymarketPluginGet } from "@changmen/venue-browser/polymarket/transport/transport";
 import { clearPmGammaCacheForTests } from "@changmen/venue-browser/polymarket/markets/pmSportGamma";
+import { resolvePolymarketBetBlockReason as resolveLegacyBlockReason } from "@changmen/venue-browser/polymarket/submission/preflight/legacy/pmBetGuard";
+import { resolveOptimizedFokBlockReason } from "@changmen/venue-browser/polymarket/submission/preflight/optimized/pmBetGuard";
 
 vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({
   polymarketPluginGet: vi.fn(),
@@ -102,6 +104,23 @@ describe("resolvePolymarketBetBlockReason", () => {
     const reason = await resolvePolymarketBetBlockReason(o);
     expect(reason).toContain("系列赛已决出");
     expect(polymarketPluginGet).not.toHaveBeenCalled();
+  });
+
+  test("basketball local and Gamma points pass GTC, classic and dynamic FOK sport guards", async () => {
+    vi.mocked(polymarketPluginGet).mockImplementation(async url => {
+      if (url.includes("/events/")) return { score: "79-71", period: "Q4", live: true, ended: false };
+      if (url.includes("/markets?")) return [{ active: true, acceptingOrders: true }];
+      return { accepting_orders: true };
+    });
+    const input = option();
+    input.match!.pmSport = { scoreRaw: "79-71", period: "Q4", live: true, mapScore: { home: 79, away: 71 } };
+    expect(await resolvePolymarketBetBlockReason(input, true)).toBeNull();
+    expect(await resolveLegacyBlockReason(input)).toBeNull();
+    expect(resolveOptimizedFokBlockReason(input)).toBeNull();
+    input.match!.pmSport.ended = true;
+    expect(await resolvePolymarketBetBlockReason(input)).toContain("比赛已结束");
+    expect(await resolveLegacyBlockReason(input)).toContain("比赛已结束");
+    expect(resolveOptimizedFokBlockReason(input)).toContain("比赛已结束");
   });
 
   test("gamma event 1-2 blocks when pm_sport stale", async () => {

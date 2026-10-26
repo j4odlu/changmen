@@ -1,4 +1,5 @@
 import type { StoredSportSnapshot, NormalizedSportSnapshot, SportMessage } from "./types.ts";
+import { getPmSportScoreKind, parsePmSportMapPeriod, parsePmSportScore } from "@changmen/shared/pm_sport_score";
 /**
  * Polymarket Sports WS 消息解析（纯函数；赛程线权威在本包，与电竞 discovery 无关）
  * 只消费 PM 直接字段：score / period / status；不推断每图胜者或图内小分。
@@ -6,32 +7,12 @@ import type { StoredSportSnapshot, NormalizedSportSnapshot, SportMessage } from 
 
 /** @param {string | undefined} period */
 export function parsePeriodToCurrentMap(period: unknown) {
-  if (!period)
-    return null;
-  const head = String(period).split("/")[0];
-  const n = Number(head);
-  return Number.isInteger(n) && n > 0 ? n : null;
+  return parsePmSportMapPeriod(period);
 }
 
 /** PM 比分：电竞 "000-000|1-0|Bo3"，篮球等项目 "98-94"。 */
 export function parseEsportsScore(score: unknown) {
-  const raw = String(score || "").trim();
-  if (!raw)
-    return { mapScore: { home: 0, away: 0 }, bo: null };
-
-  const parts = raw.split("|");
-  const mapPart = parts.length === 1 && /^\d+\s*-\s*\d+$/.test(raw) ? raw : parts[1] || "0-0";
-  const boPart = parts[2] || "";
-  const mapNums = mapPart.split("-").map(v => Number.parseInt(v, 10));
-  const home = Number.isFinite(mapNums[0]) ? mapNums[0] : 0;
-  const away = Number.isFinite(mapNums[1]) ? mapNums[1] : 0;
-  const boMatch = /bo\s*(\d+)/i.exec(boPart);
-  const bo = boMatch ? Number.parseInt(boMatch[1], 10) : null;
-
-  return {
-    mapScore: { home, away },
-    bo: Number.isFinite(bo) && (bo as number) > 0 ? bo : null,
-  };
+  return parsePmSportScore(score);
 }
 
 /** @param {string | null | undefined} raw */
@@ -188,6 +169,7 @@ export function buildPmSportSnapshot(msg: SportMessage, prev: StoredSportSnapsho
     currentMap,
     bo: parsed.bo ?? undefined,
     scoreRaw: msg.score ? String(msg.score) : undefined,
+    scoreKind: getPmSportScoreKind(msg.score),
     mapScore: parsed.mapScore,
     elapsed: msg.elapsed != null ? String(msg.elapsed) : undefined,
     finishedTimestamp: msg.finished_timestamp ? String(msg.finished_timestamp) : undefined,

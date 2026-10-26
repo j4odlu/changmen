@@ -235,6 +235,8 @@ export interface PmSportSnapshot {
   currentMap?: number | null;
   bo?: number;
   scoreRaw?: string;
+  /** [changmen 扩展] series=电竞地图胜局；points=体育得分。旧快照可通过 scoreRaw 识别。 */
+  scoreKind?: "series" | "points";
   mapScore?: { home: number; away: number };
   /** @deprecated 旧快照可能仍有；新写入不再包含 */
   inMapScore?: string | null;

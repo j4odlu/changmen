@@ -38,11 +38,13 @@ test("basketball snapshot and reversed display use actual points", () => {
   });
   assert.deepEqual(snapshot.mapScore, { home: 98, away: 94 });
   assert.equal(snapshot.scoreRaw, "98-94");
+  assert.equal(snapshot.scoreKind, "points");
   assert.equal(snapshot.bo, undefined);
   assert.equal(snapshot.currentMap, null);
   assert.equal(snapshot.label, "进行中 · Q4 · 98-94 · 已进行05:12");
   const reversed = alignPmSportSnapshot(snapshot, true);
   assert.deepEqual(reversed.mapScore, { home: 94, away: 98 });
+  assert.equal(reversed.scoreKind, "points");
   assert.equal(reversed.homeTeam, "Away");
   assert.equal(reversed.awayTeam, "Home");
   assert.equal(reversed.label, "进行中 · Q4 · 94-98 · 已进行05:12");
@@ -52,6 +54,15 @@ test("basketball snapshot and reversed display use actual points", () => {
 test("esports series scores still come from the second segment, not in-map points", () => {
   assert.deepEqual(parseEsportsScore("13-8|2-1|Bo5"), { mapScore: { home: 2, away: 1 }, bo: 5 });
   assert.deepEqual(parseEsportsScore("13-8||Bo3"), { mapScore: { home: 0, away: 0 }, bo: 3 });
+  const snapshot = buildPmSportSnapshot({ score: "15-10|1-0|Bo3", period: "2/3", live: true });
+  assert.equal(snapshot.scoreKind, "series");
+  assert.deepEqual(snapshot.mapScore, { home: 1, away: 0 });
+  assert.equal(snapshot.bo, 3);
+});
+
+test("malformed map scores never partially parse a win count", () => {
+  for (const raw of ["15-10|2oops-0|Bo3", "15-10|2-0oops|Bo3", "15-10|-2-0|Bo3"])
+    assert.deepEqual(parseEsportsScore(raw), { mapScore: { home: 0, away: 0 }, bo: 3 });
 });
 
 test("parsePeriodToCurrentMap", () => {

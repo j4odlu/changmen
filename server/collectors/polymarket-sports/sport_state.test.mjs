@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 // eslint-disable-next-line no-restricted-imports, test/no-import-node-test -- Collector tests run with node --test.
 import test from "node:test";
-import { createPmSportMessageQueue, createPmSportStateWriter, hasPmSportStatus } from "./sport_state.js";
+import { createPmSportMessageQueue, createPmSportStateWriter, hasPmSportStatus, shouldWritePmSport } from "./sport_state.js";
 import { sourceEventSnapshot } from "./event_states.ts";
 
 const scheduled = { gameId: 10, eventId: "event-10", status: "not_started", live: false, ended: false };
 const running = { ...scheduled, status: "running", live: true, score: "000-000|1-0|Bo3", period: "2/3" };
+
+test("score semantics and BO corrections persist even when the displayed score is unchanged", () => {
+  const previous = { status: "running", scoreRaw: "79-71", mapScore: { home: 79, away: 71 } };
+  assert.equal(shouldWritePmSport({ ...previous, scoreKind: "points" }, previous), true);
+  assert.equal(shouldWritePmSport({ ...previous, bo: 5 }, { ...previous, bo: 3 }), true);
+});
 function fixture(stored = null) {
   let snapshot = stored;
   const writes = [];

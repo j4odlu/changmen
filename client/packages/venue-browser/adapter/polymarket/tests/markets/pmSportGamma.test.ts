@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   clearPmGammaCacheForTests, fetchGammaEventById, fetchGammaMarketByTokenId,
   fetchClobMarketByConditionId,
+  gammaEventToPmSportLike,
 } from "@changmen/venue-browser/polymarket/markets/pmSportGamma";
+import { gammaEventToPmSportLike as legacyGammaEventToPmSportLike } from "@changmen/venue-browser/polymarket/submission/preflight/legacy/pmSportGamma";
+import { getPolymarketPmSportBlockReason } from "@changmen/venue-browser/polymarket/markets/pmSportGuard";
 import { PM_GAMMA_CACHE_MS } from "@changmen/venue-browser/polymarket/markets/pmGammaCache";
 import { polymarketPluginGet } from "@changmen/venue-browser/polymarket/transport/transport";
 
@@ -14,6 +17,24 @@ beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(now);
 });
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
+
+describe.each([gammaEventToPmSportLike, legacyGammaEventToPmSportLike])("PM score parsing in both preflight modes", (parseEvent) => {
+  test("basketball points are preserved without a series or a map number", () => {
+    const snapshot = parseEvent({ score: "79-71", period: "1Q", live: true, ended: false });
+    expect(snapshot).toMatchObject({ scoreKind: "points", scoreRaw: "79-71", mapScore: { home: 79, away: 71 }, bo: null, currentMap: null });
+    expect(getPolymarketPmSportBlockReason(snapshot, 0)).toBeNull();
+    expect(getPolymarketPmSportBlockReason(snapshot, 1)).toBeNull();
+    expect(getPolymarketPmSportBlockReason(parseEvent({ score: "110-108", ended: true }), 0)).toContain("比赛已结束");
+  });
+
+  test("LoL kills stay separate from series wins and BO3 victories still block", () => {
+    const running = parseEvent({ score: "15-10|1-0|Bo3", period: "2/3", live: true });
+    expect(running).toMatchObject({ scoreKind: "series", mapScore: { home: 1, away: 0 }, bo: 3, currentMap: 2 });
+    expect(getPolymarketPmSportBlockReason(running, 0)).toBeNull();
+    expect(getPolymarketPmSportBlockReason(running, 1)).toContain("地图1已结束");
+    expect(getPolymarketPmSportBlockReason(parseEvent({ score: "15-10|2-0|Bo3", live: true }), 0)).toContain("系列赛已决出");
+  });
+});
 
 describe("Gamma short cache", () => {
   test.each(["market", "event"])("%s coalesces concurrent reads and expires from request start", async kind => {

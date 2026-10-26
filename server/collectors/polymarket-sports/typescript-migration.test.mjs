@@ -13,6 +13,35 @@ for (const [name, hash] of Object.entries(baseline.hashes)) {
   it(`${name}.ts erases to the accepted pre-migration implementation`, () => {
     assert.equal(ts.version, baseline.compiler);
     let source = fs.readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8").replaceAll("\r\n", "\n");
+    // [changmen 扩展] 仅逆转本次比分语义接入；行为由 parse_sport / sport_state 回归验证，历史摘要不变。
+    const scoreSemanticsHooks = name === "parse_sport" ? [
+      ['import { getPmSportScoreKind, parsePmSportMapPeriod, parsePmSportScore } from "@changmen/shared/pm_sport_score";\n', ""],
+      ['  return parsePmSportMapPeriod(period);', '  if (!period)\n    return null;\n  const head = String(period).split("/")[0];\n  const n = Number(head);\n  return Number.isInteger(n) && n > 0 ? n : null;'],
+      ['  return parsePmSportScore(score);', `  const raw = String(score || "").trim();
+  if (!raw)
+    return { mapScore: { home: 0, away: 0 }, bo: null };
+
+  const parts = raw.split("|");
+  const mapPart = parts.length === 1 && /^\\d+\\s*-\\s*\\d+$/.test(raw) ? raw : parts[1] || "0-0";
+  const boPart = parts[2] || "";
+  const mapNums = mapPart.split("-").map(v => Number.parseInt(v, 10));
+  const home = Number.isFinite(mapNums[0]) ? mapNums[0] : 0;
+  const away = Number.isFinite(mapNums[1]) ? mapNums[1] : 0;
+  const boMatch = /bo\\s*(\\d+)/i.exec(boPart);
+  const bo = boMatch ? Number.parseInt(boMatch[1], 10) : null;
+
+  return {
+    mapScore: { home, away },
+    bo: Number.isFinite(bo) && (bo as number) > 0 ? bo : null,
+  };`],
+      ['    scoreKind: getPmSportScoreKind(msg.score),\n', ""],
+    ] : name === "sport_state" ? [
+      ['    "scoreKind",\n    "bo",\n', ""],
+    ] : [];
+    for (const [after, before] of scoreSemanticsHooks) {
+      assert.equal(source.split(after).length, 2, `missing/duplicate score semantics hook: ${name}`);
+      source = source.replace(after, before);
+    }
     // 精确逆转纯数字比分格式兼容，历史迁移摘要及电竞解析基线保持不变。
     if (name === "parse_sport") {
       const current = '  const mapPart = parts.length === 1 && /^\\d+\\s*-\\s*\\d+$/.test(raw) ? raw : parts[1] || "0-0";';

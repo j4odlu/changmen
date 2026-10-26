@@ -1,4 +1,5 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
+import { getPmSportScoreKind } from "@changmen/shared/pm_sport_score";
 import { POLYMARKET_CLOB_API, POLYMARKET_GAMMA_API } from "../api";
 import { parsePeriodHead, type PmSportLike } from "./pmSportGuard";
 import { parseEsportsScore } from "./parseEsportsScore";
@@ -50,6 +51,8 @@ export function gammaEventToPmSportLike(event: GammaEventLike | null | undefined
     period: event.period ? String(event.period) : undefined,
     currentMap: parsePeriodHead(event.period ? String(event.period) : undefined),
     mapScore: parsed.mapScore,
+    scoreRaw: event.score,
+    scoreKind: getPmSportScoreKind(event.score),
   };
 }
 

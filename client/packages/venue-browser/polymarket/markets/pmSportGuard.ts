@@ -1,4 +1,5 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
+import { getPmSportScoreKind, parsePmSportMapPeriod, type PmSportScoreKind } from "@changmen/shared/pm_sport_score";
 
 /** 与 client_matches.pm_sport / PmSportSnapshot 对齐的最小字段 */
 export interface PmSportLike {
@@ -8,6 +9,8 @@ export interface PmSportLike {
   bo?: number | null;
   period?: string;
   currentMap?: number | null;
+  scoreRaw?: string;
+  scoreKind?: PmSportScoreKind;
   mapScore?: { home: number; away: number };
 }
 
@@ -16,16 +19,20 @@ export function isPmSportEnded(pm: PmSportLike | null | undefined): boolean {
     return false;
   if (pm.ended === true)
     return true;
-  const st = String(pm.status ?? "").toLowerCase();
-  return st === "finished" || st === "final";
+  const st = String(pm.status ?? "").trim().toLowerCase();
+  return st === "finished" || st === "final" || st === "f/ot";
 }
 
-/** BO3 等：一方地图胜场已达 ceil(bo/2) */
+function isPointsScore(pm: PmSportLike): boolean {
+  return pm.scoreKind === "points" || getPmSportScoreKind(pm.scoreRaw) === "points";
+}
+
+/** [changmen 扩展] 只按明确 BO 判断系列赛；体育得分、缺失 BO 不推断胜局门槛。 */
 export function isPmSeriesDecided(pm: PmSportLike | null | undefined): boolean {
-  if (!pm?.mapScore)
+  if (!pm?.mapScore || isPointsScore(pm))
     return false;
-  const bo = pm.bo ?? 3;
-  if (!Number.isFinite(bo) || bo < 2)
+  const bo = pm.bo;
+  if (typeof bo !== "number" || !Number.isSafeInteger(bo) || bo < 2)
     return false;
   const need = Math.ceil(bo / 2);
   const home = Number(pm.mapScore.home) || 0;
@@ -60,11 +67,11 @@ export function getPolymarketPmSportBlockReason(
   }
 
   if (isPmSeriesDecided(pm)) {
-    const bo = pm.bo ?? 3;
+    const bo = pm.bo;
     return `Polymarket 系列赛已决出（${scoreText} BO${bo}）`;
   }
 
-  if (betMap > 0) {
+  if (betMap > 0 && !isPointsScore(pm)) {
     const currentMap = pm.currentMap ?? parsePeriodHead(pm.period);
     if (currentMap != null && betMap < currentMap)
       return `Polymarket 地图${betMap}已结束（当前第${currentMap}图）`;
@@ -74,11 +81,7 @@ export function getPolymarketPmSportBlockReason(
 }
 
 export function parsePeriodHead(period: string | undefined): number | null {
-  if (!period)
-    return null;
-  const head = String(period).split("/")[0];
-  const n = Number.parseInt(head, 10);
-  return Number.isFinite(n) && n > 0 ? n : null;
+  return parsePmSportMapPeriod(period);
 }
 
 export function getPolymarketPmSportBlockReasonFromOption(option: BetOption): string | null {

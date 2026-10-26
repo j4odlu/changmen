@@ -1,5 +1,6 @@
-// [changmen 扩展] 原有赛况预检：线上 1632d6905061f56fcc7af7039914ca26d743ed48 原文，仅调整引用路径。
+// [changmen 扩展] 原有赛况预检；比分解析共用体育兼容规则，其余经典预检行为保留。
 import type { BetOption } from "@changmen/client-core/models/betOption";
+import { getPmSportScoreKind } from "@changmen/shared/pm_sport_score";
 import { POLYMARKET_CLOB_API, POLYMARKET_GAMMA_API } from "../../../api";
 import { parsePeriodHead, type PmSportLike } from "../../../markets/pmSportGuard";
 import { parseEsportsScore } from "../../../markets/parseEsportsScore";
@@ -49,6 +50,8 @@ export function gammaEventToPmSportLike(event: GammaEventLike | null | undefined
     period: event.period ? String(event.period) : undefined,
     currentMap: parsePeriodHead(event.period ? String(event.period) : undefined),
     mapScore: parsed.mapScore,
+    scoreRaw: event.score,
+    scoreKind: getPmSportScoreKind(event.score),
   };
 }
 

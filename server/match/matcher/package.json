@@ -17,7 +17,7 @@
     "./ops/rds_snapshot_cache.js": "./ops/rds_snapshot_cache.js",
     "./compose/compose_once.js": "./compose/compose_once.js",
     "./compose/normalize/native_bets.js": "./compose/normalize/native_bets.js",
-    "./compose/util/swap.js": "./compose/util/swap.js",
+    "./compose/util/swap": "./compose/util/swap.ts",
     "./ui/http_bridge.js": "./ui/http_bridge.js",
     "./ui/public": "./ui/public/index.html",
     "./package.json": "./package.json"
@@ -29,7 +29,8 @@
     "compose": "node compose/loop.js",
     "compose:once": "node scripts/once.mjs",
     "compose:diff": "node scripts/diff.mjs",
-    "test": "node scripts/check-no-merge-import.mjs && vitest run --no-file-parallelism",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "npm run typecheck && node scripts/check-no-merge-import.mjs && vitest run --no-file-parallelism && node --test tests/compose-helpers.node.mjs",
     "test:with-deps": "npm run test --workspace=@changmen/match-identity && npm test",
     "check:no-merge-import": "node scripts/check-no-merge-import.mjs"
   },
@@ -41,5 +42,10 @@
     "dotenv": "^16.0.0",
     "express": "^4.18.0",
     "@changmen/match-identity": "file:../../../packages/match-identity"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "@types/node": "^25.9.1",
+    "vitest": "^4.1.8"
   }
 }

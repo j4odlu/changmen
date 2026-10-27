@@ -9,7 +9,7 @@ import { ensurePgPoolReady, fetchClientMatches, fetchPlatformBets } from "@chang
  */
 import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { composeOnce } from "../compose/compose_once.js";
-import { swapBetSource } from "../compose/util/swap.js";
+import { swapBetSource } from "@changmen/matcher/compose/util/swap";
 
 loadChangmenEnv();
 process.env.CHANGMEN_DB_SCRIPT = process.env.CHANGMEN_DB_SCRIPT || "rds";

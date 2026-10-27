@@ -12,7 +12,7 @@ import {
   ID_START_TOLERANCE_MS,
   NAME_START_TOLERANCE_MS,
   normalizeEpochMs,
-} from "../util/time.js";
+} from "../util/time.ts";
 
 /** 多候选贴馆：最优与次优都够近且彼此差 &lt; 此值 → 歧义不贴 */
 export const AMBIGUOUS_ATTACH_GAP_MS = 10 * 60 * 1000;

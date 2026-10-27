@@ -2,6 +2,8 @@
 
 `@changmen/matcher`：合场算法（`compose/`）、调度循环、人工关联 Web 面板。
 
+`compose/util/time.ts`、`compose/util/swap.ts`、`compose/ids/dedupe_rows.ts` 使用严格 TypeScript，由 Node 24 直接加载；`npm run typecheck --workspace=@changmen/matcher` 覆盖包内全部 TS 源码与类型契约。其余 JS 模块仍按原入口运行。主客交换公共入口为 `@changmen/matcher/compose/util/swap`，旧 `.js` 子路径已移除。
+
 matchMerge 循环**内嵌在 `changmen-esport`**（`npm run web` / PM2 `changmen-esport`），本目录提供合并库、运维 API 与可选人工 UI。
 
 matcher 页面按这一套 composer 合场链路展示状态、最近合场时间和“立即合场”；人工关联也调用同一个 composer。页面不再提供启停循环按钮、重复的写路径标签或独立 Composer 对照入口。下文独立 UI、对照和试算命令是开发工具，不是另一套生产合场进程。

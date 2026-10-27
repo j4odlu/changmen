@@ -7,7 +7,7 @@ export const ID_START_TOLERANCE_MS = 60 * 60 * 1000;
 
 export { normalizeEpochMs };
 
-export function startTimesCompatibleId(aMs, bMs) {
+export function startTimesCompatibleId(aMs: unknown, bMs: unknown): boolean {
   const a = normalizeEpochMs(aMs);
   const b = normalizeEpochMs(bMs);
   if (!a || !b)
@@ -15,7 +15,7 @@ export function startTimesCompatibleId(aMs, bMs) {
   return Math.abs(a - b) <= ID_START_TOLERANCE_MS;
 }
 
-export function startTimesCompatibleName(aMs, bMs) {
+export function startTimesCompatibleName(aMs: unknown, bMs: unknown): boolean {
   const a = normalizeEpochMs(aMs);
   const b = normalizeEpochMs(bMs);
   if (!a || !b)

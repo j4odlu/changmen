@@ -15,7 +15,7 @@ import {
   indexEntriesWithPbAliases,
   pickPrimaryPbSourceId,
 } from "../normalize/pb_rotnum_collapse.js";
-import { startTimesCompatibleId, startTimesCompatibleName } from "../util/time.js";
+import { startTimesCompatibleId, startTimesCompatibleName } from "../util/time.ts";
 import {
   findPlatformMatch,
   sameTeamPair,

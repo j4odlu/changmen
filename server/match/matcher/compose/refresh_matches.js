@@ -1,7 +1,7 @@
 import { runMatchPass } from "./pipeline.js";
 import { findPlatformMatch } from "./sides/orientation_lock.js";
 import { matchingPlatformSources } from "../lib/match_lifecycle.js";
-import { swapBetSource } from "./util/swap.js";
+import { swapBetSource } from "./util/swap.ts";
 import { refreshBetNames } from "./shape/live_shape.js";
 
 function fromStoredRow(row) {

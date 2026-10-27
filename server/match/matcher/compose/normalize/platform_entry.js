@@ -13,7 +13,7 @@ import {
   resolveClientGame,
 } from "@changmen/shared/catalog/game_catalog";
 import { resolvePlatformTeamId } from "@changmen/shared/catalog/pb_team_platform_id";
-import { normalizeEpochMs } from "../util/time.js";
+import { normalizeEpochMs } from "../util/time.ts";
 
 export function collectPlatformEntries(matches) {
   const entries = [];

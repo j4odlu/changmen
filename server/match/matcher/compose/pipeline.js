@@ -11,7 +11,7 @@ import {
   clusterByGbThenName,
   MIN_PLATFORMS,
 } from "./cluster/merge_clusters.js";
-import { dedupeRowsById } from "./ids/dedupe_rows.js";
+import { dedupeRowsById } from "./ids/dedupe_rows.ts";
 import { resolveIdsDryRun, resolveIdsForWrite } from "./ids/resolve_ids.js";
 import {
   buildEndedAtByClientId,

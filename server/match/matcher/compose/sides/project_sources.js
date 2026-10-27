@@ -15,7 +15,7 @@ import { isComposerPbRotnumCollapse } from "../../lib/config.js";
 import { listPbEventIdsForProjection } from "../normalize/pb_rotnum_collapse.js";
 import { rawSourceForMap } from "../normalize/native_bets.js";
 import { resolveRowStructure } from "../structure/resolve_structure.js";
-import { swapBetSource } from "../util/swap.js";
+import { swapBetSource } from "../util/swap.ts";
 import {
   findPlatformMatch,
   resolveOrientationLock,

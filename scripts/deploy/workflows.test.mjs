@@ -34,9 +34,9 @@ test("one push entry covers every path and validates before either component", (
   assert.equal(release.concurrency["cancel-in-progress"], false);
   assert.equal(release.concurrency.queue, "max");
   assert.equal(release.jobs.validate.env.TZ, "Asia/Shanghai", "Date attribution must match production");
-  const baseline = release.jobs.validate.steps.find(s => s.run?.includes("node scripts/deploy/read-deployed-versions.mjs"));
+  const baseline = release.jobs.plan.steps.find(s => s.run?.includes("node scripts/deploy/read-deployed-versions.mjs"));
   assert.equal(baseline.if, "github.event_name == 'push'");
-  assert.equal(release.jobs.validate.env.CI_DEPLOYED_VERSIONS_FILE, undefined);
+  assert.equal(release.jobs.plan.env.CI_DEPLOYED_VERSIONS_FILE, undefined);
   assert.match(baseline.run, /CI_DEPLOYED_VERSIONS_FILE=.*GITHUB_ENV/);
   assert.deepEqual(release.jobs.backend.needs, "validate");
   assert.equal(release.jobs.frontend.needs, "validate");
@@ -49,16 +49,21 @@ test("one push entry covers every path and validates before either component", (
 });
 test("component checks run once, and artifacts are sealed only after success", () => {
   const steps = release.jobs.validate.steps;
-  const checks = steps.findIndex(s => s.run === 'npm run check:change -- --event="$GITHUB_EVENT_PATH"');
+  const checks = steps.findIndex(s => s.run === 'node scripts/deploy/release-checks.mjs collect');
+  const jobResults = steps.findIndex(s => s.name === "Require successful check jobs");
   const seal = steps.findIndex(s => s.run === "node scripts/deploy/release-evidence.mjs seal");
   const upload = steps.findIndex(s => s.uses?.startsWith("actions/upload-artifact@") && s.with.name === "verified-release");
-  assert.ok(checks >= 0 && checks < seal && seal < upload);
+  assert.ok(checks >= 0 && checks < jobResults && jobResults < seal && seal < upload);
+  assert.equal(steps[jobResults].env.CHECKS_RESULT, "${{ needs.checks.result }}");
+  assert.match(steps[jobResults].run, /test "\$CHECKS_RESULT" = 'success'/);
+  assert.equal(steps[jobResults].if, undefined);
+  assert.equal(steps[jobResults]["continue-on-error"], undefined);
   assert.equal(steps[seal].if, undefined);
   assert.equal(steps[seal]["continue-on-error"], undefined);
   assert.equal(steps[upload].with["if-no-files-found"], "error");
-  assert.ok(steps.find(s => s.with?.name === "failed-acceptance").with.path.includes("output/backend-linux-runtime/*.log"));
+  assert.ok(release.jobs.checks.steps.find(s => s.with?.name === "failed-acceptance-${{ matrix.lane }}").with.path.includes("output/backend-linux-runtime/*.log"));
   assert.ok(!JSON.stringify(steps[checks]).includes("secrets."));
-  assert.equal(steps.filter(s => s.run?.startsWith("npm run check:change -- --event=")).length, 1);
+  assert.equal(steps.filter(s => s.run === "node scripts/deploy/release-checks.mjs collect").length, 1);
   assert.equal(steps.find(s => s.uses?.startsWith("actions/checkout@")).with["fetch-depth"], 0);
   assert.deepEqual(release.on.workflow_dispatch.inputs.component.options, ["full", "backend", "frontend"]);
 });
@@ -75,40 +80,54 @@ test("the standalone full audit remains manual and cannot publish components", (
   assert(!JSON.stringify(audit).includes("publish.sh"));
 });
 
-test("one runner plans, validates, builds and seals without intermediate lane artifacts", () => {
-  assert.deepEqual(Object.keys(release.jobs), ["validate", "backend", "frontend", "frontend_after_backend"]);
-  const job = release.jobs.validate, steps = job.steps;
+test("independent check runners share a pinned plan; only the collector seals artifacts", () => {
+  assert.deepEqual(Object.keys(release.jobs), ["plan", "checks", "validate", "backend", "frontend", "frontend_after_backend"]);
+  const plan = release.jobs.plan, checks = release.jobs.checks, validate = release.jobs.validate;
+  const steps = plan.steps;
   const prepare = steps.findIndex(s => s.name === "Prepare read-only version check");
   const cleanup = steps.findIndex(s => s.name === "Remove capture key");
-  const plan = steps.findIndex(s => s.id === "plan");
-  const install = steps.findIndex(s => s.run === "npm ci");
-  const postgres = steps.findIndex(s => s.name === "Install PostgreSQL for required checks");
-  const check = steps.findIndex(s => s.run?.startsWith("npm run check:change -- --event="));
-  const seal = steps.findIndex(s => s.run === "node scripts/deploy/release-evidence.mjs seal");
-  assert(prepare < cleanup && cleanup < plan && plan < install && install < postgres && postgres < check && check < seal);
+  const resolve = steps.findIndex(s => s.id === "plan");
+  const assign = steps.findIndex(s => s.run === "node scripts/deploy/release-checks.mjs prepare");
+  assert(prepare < cleanup && cleanup < resolve && resolve < assign);
   assert.equal(steps[prepare].if, "github.event_name == 'push'");
   assert.equal(steps[cleanup].if, "always()");
-  assert.match(steps[cleanup].run, /rm -f/);
   assert.match(steps[cleanup].run, /FOK_BASELINE_SSH_KEY=/);
-  assert.equal(steps[postgres].if, "steps.plan.outputs.database-compatibility == 'true' || steps.plan.outputs.backend-installation == 'true'");
-  assert.match(steps[postgres].run, /CHANGMEN_TEST_PG_BIN/);
   assert.equal(steps.find(s => s.uses?.startsWith("actions/setup-node@")).with["node-version"], "24");
-  assert.equal(steps.filter(s => s.uses?.startsWith("actions/checkout@")).length, 1);
-  assert.equal(steps.filter(s => s.run === "npm ci").length, 1);
-  assert.equal(steps[install].if, "steps.plan.outputs.tier != 'docs'");
-  for (const forbidden of ["release-checks.mjs", "release-lanes/", "actions/download-artifact@", "strategy"])
-    assert(!JSON.stringify(job).includes(forbidden), forbidden);
-  assert.equal(job.env.CAPTURE_SSH_KEY, undefined);
-  assert(!JSON.stringify(steps[check]).includes("secrets."));
+  assert.equal(steps.find(s => s.with?.name === "release-plan").with["if-no-files-found"], "error");
+  assert(!steps.some(s => s.run === "npm ci"));
+  assert.equal(checks.needs, "plan");
+  assert.equal(checks.if, "needs.plan.outputs.has-checks == 'true'", "Empty docs plans must skip the matrix");
+  assert.equal(checks.strategy["fail-fast"], false);
+  assert.equal(checks.strategy.matrix, "${{ fromJSON(needs.plan.outputs.matrix) }}");
+  assert.equal(checks.steps.filter(s => s.run === "npm ci").length, 1);
+  const pg = checks.steps.find(s => s.name === "Install PostgreSQL for required checks");
+  assert.equal(pg.if, "matrix.lane == 'backend' && (needs.plan.outputs.database-compatibility == 'true' || needs.plan.outputs.backend-installation == 'true')");
+  assert.match(pg.run, /CHANGMEN_TEST_PG_BIN/);
+  assert(checks.steps.find(s => s.run?.includes("release-checks.mjs run")).run.includes('"$RELEASE_LANE"'));
+  const laneUpload = checks.steps.find(s => s.with?.name === "release-lane-${{ matrix.lane }}");
+  assert.equal(laneUpload.if, "always()");
+  assert.equal(laneUpload.with["if-no-files-found"], "error");
+  assert.deepEqual(validate.needs, ["plan", "checks"]);
+  assert.match(validate.if, /!cancelled\(\).*needs.plan.result == 'success'/, "Failed lanes still reach collector diagnostics");
+  assert(!validate.steps.some(s => s.run === "npm ci" || /app:build/.test(s.run ?? "")));
+  for (const job of [checks, validate]) {
+    assert.equal(job.env.TZ, "Asia/Shanghai");
+    assert(!JSON.stringify(job).includes("secrets."));
+    assert.equal(job.steps.find(s => s.uses?.startsWith("actions/setup-node@")).with["node-version-file"], "output/change-validation/node-version");
+    assert.equal(job.steps.find(s => s.with?.name === "release-plan").with.path, "output/change-validation/");
+    assert.equal(job.steps.find(s => s.uses?.startsWith("actions/checkout@")).with.ref, "${{ github.sha }}");
+  }
+  const merged = validate.steps.find(s => s.with?.pattern === "release-lane-*");
+  assert.equal(merged.with["merge-multiple"], true);
+  assert.equal(merged.if, "needs.plan.outputs.has-checks == 'true'");
   const commands = validationCommands({}, "npm-cli.js", "backend-first");
   assert.equal(commands["complete-release"], undefined);
   assert.equal(commands["verification-control"].command[1], "scripts/verification/run-self-tests.mjs");
-  assert(!commands["verification-control"].command.includes("scripts/verification"));
   assert.equal(commands["database-compatibility"].command[1], "scripts/deploy/check-database-compatibility.mjs");
   assert.equal(commands["backend-installation"].command[1], "scripts/testing/backend-linux-runtime.mjs");
-  const summary = steps.find(s => s.run === "node scripts/deploy/release-summary.mjs");
-  assert.equal(summary.if, "always()"); assert.equal(summary.env.ACCEPTANCE_JOB_STATUS, "${{ job.status }}");
-  assert.match(steps.find(s => s.with?.name === "failed-acceptance").with.path, /output\/database-compatibility\//);
+  const summary = validate.steps.find(s => s.run === "node scripts/deploy/release-summary.mjs");
+  assert.equal(summary.if, "always()");
+  assert.equal(summary.env.ACCEPTANCE_JOB_STATUS, "${{ job.status }}");
 });
 
 test("component transports consume the same checked artifact and never rebuild", () => {

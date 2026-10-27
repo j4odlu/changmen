@@ -299,7 +299,7 @@ npm run build
 
 Actions → **Validate and release** → Run workflow → 选择 `frontend` / `backend` / `full`（仅 master）。推送 master 则对比各端已发布版本自动选择组件；失败留下的未发布变化会继续纳入计划。
 
-[changmen 扩展] 2026-10-25：检查、构建和封包已合并到一个 `validate` job。前后端按范围检查；数据库兼容演练只随数据相关改动执行。后端 Linux 制品验收、版本校验、健康检查和自动回滚保留。当前规则见 [独立部署](./docs/INDEPENDENT_DEPLOYMENT.md)。
+[changmen 扩展] 2026-10-27：控制、后端和前端检查按同一候选与计划分组，在独立 runner 并行执行，再由 `validate` 核对全部结果和制品后封包。空计划跳过检查矩阵，分组失败或证据不一致阻断发布。前后端按范围检查；数据库兼容演练只随数据相关改动执行。后端 Linux 制品验收、版本校验、健康检查和自动回滚保留。当前规则见 [独立部署](./docs/INDEPENDENT_DEPLOYMENT.md)。
 
 | 变更范围 | 发布动作 | 是否重启后端 |
 |---|---|---|

@@ -10,6 +10,7 @@ import DirectRealtimeBadge from "@/components/layout/DirectRealtimeBadge.vue";
 import CreateLoseDialog from "@/components/match/CreateLoseDialog.vue";
 import MatchCard from "@/components/match/MatchCard.vue";
 import ActiveBetRunView from "@/components/order/ActiveBetRunView.vue";
+import SingleLegMonitor from "@/components/order/SingleLegMonitor.vue";
 import MakeupCalcBar from "@/components/user/MakeupCalcBar.vue";
 import { useExtensionGate } from "@/composables/useExtensionGate";
 import {
@@ -176,6 +177,7 @@ async function logout() {
     @close="createLoseDialog.close()"
   />
   <PmOddsDropSignalPanel />
+  <SingleLegMonitor />
   <el-container class="common-layout home-view">
     <el-aside width="300px">
       <AppSidebar @logout="logout" />

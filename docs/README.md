@@ -88,6 +88,8 @@
 | [PM_GTC_RECOVER_API.md](./PM_GTC_RECOVER_API.md) | 当前增量恢复接口 |
 | [PM_PRECHECK_OPTIMIZATION_PLAN.md](./PM_PRECHECK_OPTIMIZATION_PLAN.md) | PM 预检优化方案：第一期代码与本地验收完成；一次预检确定订单、本地构单、请求并行、路由冷却及出口校时；待部署与真实性能验收 |
 | [PM_SINGLE_LEG_9999_TRADING_STRATEGY_PLAN.md](./PM_SINGLE_LEG_9999_TRADING_STRATEGY_PLAN.md) | PM 9999 单边仓位交易策略研究：多场馆公允价收敛、跟价与做市候选、动态退出、费用、回测对照及分阶段验收；尚未实施或回测 |
+| [SINGLE_LEG_POSITION_TRADING_RESEARCH.md](./SINGLE_LEG_POSITION_TRADING_RESEARCH.md) | 9999 与 LOS 共用仓位管理研究：套利信号入场、平台退出能力、情景敞口、卖出及反向对冲、同入场对照验证；尚未实施 |
+| [SINGLE_LEG_MONITOR.md](./SINGLE_LEG_MONITOR.md) | LOS 与 9999 纯前端仓位模块：监听已有订单缓存、维护会话仓位集合与独立策略接口；具体交易策略待接入 |
 
 ## 未实施设计与历史记录
 

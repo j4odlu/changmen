@@ -6,6 +6,7 @@ import { watchEffect } from "vue";
 import PmVaultDialogs from "@/components/account/PmVaultDialogs.vue";
 import { setupGtcOrderMonitoring } from "@/runtime/gtcOrderMonitor/lifecycle";
 import { setupRayOrderMonitoring } from "@/runtime/rayOrderMonitor/lifecycle";
+import { setupSingleLegStrategy } from "@/runtime/singleLegStrategy";
 import { setupGtcOrderSynchronization } from "@/stores/account/gtcOrderSync";
 import { applyUiTheme } from "@/shared/applyUiTheme";
 import { useUserStore } from "@/stores/userStore";
@@ -15,6 +16,7 @@ const { extensionPrefs } = storeToRefs(user);
 setupGtcOrderMonitoring();
 setupRayOrderMonitoring();
 setupGtcOrderSynchronization();
+setupSingleLegStrategy();
 
 watchEffect(() => {
   applyUiTheme(extensionPrefs.value.uiTheme);

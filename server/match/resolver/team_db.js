@@ -189,7 +189,7 @@ export async function loadAndCreatePlugin() {
     return gbTeamGameMap.get(String(gbTeamId)) || null;
   }
 
-  /** 查询某 canonical team 在某数据源（pandascore/liquipedia/reep…）下的 ID */
+  /** 查询某 canonical team 在指定数据源下的 ID */
   function lookupProviderId(teamId, provider) {
     const tid = String(teamId);
     const p = String(provider || "").trim();

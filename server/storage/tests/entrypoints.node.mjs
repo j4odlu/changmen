@@ -35,7 +35,10 @@ test("repository consumers and maintenance scripts use the canonical storage spe
     if (!/\.(?:[cm]?[jt]sx?|vue|sh|ps1|bat)$/.test(file)) continue;
     // This verifier checks the archived extraction snapshot; its literal is historical evidence.
     if (file === "scripts/verification/catalog-environment-isolation.mjs") continue;
-    const source = fs.readFileSync(path.join(root, file), "utf8");
+    // The index still lists working-tree deletions until they are staged.
+    const absolutePath = path.join(root, file);
+    if (!fs.existsSync(absolutePath)) continue;
+    const source = fs.readFileSync(absolutePath, "utf8");
     if (/@changmen\/storage\/[A-Za-z0-9_/-]+\.js\b/.test(source)) violations.push(file);
   }
   assert.deepEqual(violations, []);

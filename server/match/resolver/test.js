@@ -19,7 +19,7 @@ const noPandascore = process.argv.includes("--no-pandascore");
 const fresh = process.argv.includes("--fresh");
 
 if (noPandascore) {
-  process.env.PANDASCORE_TOKEN = "";
+  pandascore.setToken("");
 }
 if (fresh) {
   cache.clear();
@@ -46,7 +46,7 @@ const CASES = [
 ];
 
 async function run() {
-  console.log(`PandaScore: ${pandascore.isConfigured() ? "✅ 已配置" : "❌ 未配置（仅测试 Liquipedia）"}\n`);
+  console.log(`PandaScore: ${pandascore.isConfigured() ? "✅ 已配置" : "❌ 未配置（仅读取已有缓存）"}\n`);
   console.log(
     "队名".padEnd(20) +
     "游戏".padEnd(10) +

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Standalone esports team name resolver — maps platform-specific team names to canonical IDs via PandaScore / Liquipedia",
+  "description": "Standalone esports team name resolver — maps platform-specific team names to canonical IDs via PandaScore / local cache",
   "main": "./index.js",
   "exports": {
     ".": "./index.js",

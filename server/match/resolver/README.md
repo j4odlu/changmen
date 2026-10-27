@@ -1,6 +1,7 @@
 # @changmen/team-resolver
 
-电竞 **队名解析**：平台队名 → canonical team id（PandaScore / Liquipedia / 本地缓存）。
+电竞 **队名解析**：平台队名 → canonical team id（PandaScore / 本地缓存）。
+matcher 使用 `team_db.js` 从 RDS 加载队伍映射，不经过在线 provider 查询。
 
 ## 使用方
 
@@ -15,7 +16,7 @@
 |------|------|
 | `index.js` | `resolve(teamName, gameCode)` 主入口 |
 | `team_db.js` | matcher 用的 DB 插件面 |
-| `providers/` | PandaScore、Liquipedia |
+| `providers/` | PandaScore |
 | `scrapers/` | RAY / OB / PB 队名爬取（`npm run scrape:*`） |
 | `cache/` | 本地 TTL 缓存 |
 
@@ -28,8 +29,10 @@ npm test
 ```
 
 `npm test` 使用模拟 provider 与独立缓存做离线断言，并执行体育队名冒烟。
-原 `test.js` 是会访问 PandaScore / Liquipedia、读取和写入本地缓存的诊断程序，
+原 `test.js` 是会访问 PandaScore、读取和写入本地缓存的诊断程序，
 改由 `npm run probe:live` 显式执行；它的打印结果不作为自动验收成功依据。
+未配置 `PANDASCORE_TOKEN` 或指定 `--no-pandascore` 时仅查询已有缓存。
+在线解析只接受 PandaScore 来源的缓存；未命中或查询失败返回 `null`。
 离线套件中有一个 `it.fails` 登记旧版 `scoreMatchPair` 未正确识别反向队伍的缺口，
 匹配算法保持原状；修复算法时须同步处理该预期失败用例。
 

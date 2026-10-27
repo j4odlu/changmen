@@ -4,14 +4,11 @@
  * 解析顺序：
  *   1. 本地缓存（cache/teams.json，TTL 7天）
  *   2. PandaScore（需 PANDASCORE_TOKEN 环境变量）
- *   3. Liquipedia（无需 token，有限速 2s/req）
  */
 
 import * as cache from "./cache.js";
 import * as pandascore from "./providers/pandascore.js";
-import * as liquipedia from "./providers/liquipedia.js";
 import { normalize } from "./normalize.js";
-import { getLiquipediaSlug } from "./game_map.js";
 
 const ENABLE_ACRONYM_MATCHING = false;
 
@@ -21,12 +18,11 @@ export async function resolve(teamName, gameCode, opts = {}) {
 
   if (!opts.forceRefresh) {
     const cached = cache.get(normalizedName, gameCode);
-    if (cached && (ENABLE_ACRONYM_MATCHING || !String(cached.matchType || "").startsWith("acronym"))) {
+    if (cached && cached.source === "pandascore"
+      && (ENABLE_ACRONYM_MATCHING || !String(cached.matchType || "").startsWith("acronym"))) {
       return { ...cached, source: "cache" };
     }
   }
-
-  const lpSlug = getLiquipediaSlug(gameCode);
 
   let result = null;
 
@@ -35,14 +31,6 @@ export async function resolve(teamName, gameCode, opts = {}) {
       result = await pandascore.resolve(teamName, gameCode);
     } catch (err) {
       console.warn(`[pandascore] ${teamName}/${gameCode} 查询失败:`, err.message);
-    }
-  }
-
-  if (!result && !opts.pandascoreOnly && lpSlug) {
-    try {
-      result = await liquipedia.resolve(teamName, lpSlug);
-    } catch (err) {
-      console.warn(`[liquipedia] ${teamName}/${gameCode} 查询失败:`, err.message);
     }
   }
 

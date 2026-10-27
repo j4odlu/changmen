@@ -54,7 +54,7 @@ await withTemporaryPostgres(async ({ temporary }) => {
     const read = await evaluate(`import assert from 'node:assert/strict';import{createRequire}from'node:module';
       const assets=await import(${JSON.stringify(pathToFileURL(path.join(root, "rds/maintenance/assets.mjs")).href)});
       assert.equal(assets.listRdsMigrationNames().length,43);assert(assets.readRdsMigrationSql('001_baseline.sql').includes('CREATE'));
-      const storage=await import('@changmen/storage/runtime_version.js');assert.equal(typeof storage.readSourceVersion,'function');
+      const storage=await import('@changmen/storage/runtime_version');assert.equal(typeof storage.readSourceVersion,'function');
       const identity=await import('@changmen/match-identity');const keys=await import('@changmen/match-identity/teams/team_key.js');
       assert.equal(identity.normalizeTeam('LAG Gaming'),'lag');assert.equal(keys.normalizeTeam,identity.normalizeTeam);assert.equal(identity.stableBetId(2,3),8195);
       const repairs=await import('@changmen/db/maintenance/profile_repairs.js');assert.equal(typeof repairs.openProfileRepairData,'function');

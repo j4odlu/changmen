@@ -2,7 +2,7 @@
 /**
  * Live-probe one GB14 OB account balance via its gateway+token (read-only).
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 if (!process.env.DATABASE_RDS_TARGET)

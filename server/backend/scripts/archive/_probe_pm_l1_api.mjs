@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { getPgPool } from "@changmen/db";
 import { signJwt, JWT_SECRET, JWT_ACCESS_TTL_SEC } from "../../db/rds/jwt.js";
 import { generatePrivateKey } from "viem/accounts";

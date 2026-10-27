@@ -35,7 +35,7 @@ const pg=`const {state:s,config:c,pool}=globalThis.__profileRepairFixture;export
 const cache=`const {state:s,config:c}=globalThis.__profileRepairFixture;async function record(name,args){s.events.push([name,...args]);if(c.failCache&&name!=='pullProfilesFromDb')throw Error('synthetic cache failure');}export const loadProfileById=(...args)=>record('loadProfileById',args);export const loadAccountsForUser=(...args)=>record('loadAccountsForUser',args);export const pullProfilesFromDb=(...args)=>record('pullProfilesFromDb',args);`;
 registerHooks({resolve(spec,context,next){
  if(spec==='@changmen/db'||spec==='../pg_pool.js'&&context.parentURL?.endsWith('/maintenance/profile_repairs.js'))return{url:data(pg),shortCircuit:true};
- if(spec==='@changmen/storage/load_env.js')return{url:data(`export function loadChangmenEnv(){globalThis.__profileRepairFixture.state.events.push(['env']);}`),shortCircuit:true};
+ if(spec==='@changmen/storage/load_env')return{url:data(`export function loadChangmenEnv(){globalThis.__profileRepairFixture.state.events.push(['env']);}`),shortCircuit:true};
  if(spec.endsWith('/core/db/store.js'))return{url:data(cache),shortCircuit:true};
  return next(spec,context);
 }});

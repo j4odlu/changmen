@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { captureRuntimeVersion, readSourceVersion, isVersionSource } from "@changmen/storage/runtime_version.js";
+import { captureRuntimeVersion, readSourceVersion, isVersionSource } from "@changmen/storage/runtime_version";
 
 const write = (root, file, body) => { fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true }); fs.writeFileSync(path.join(root, file), body); };
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }).trim();

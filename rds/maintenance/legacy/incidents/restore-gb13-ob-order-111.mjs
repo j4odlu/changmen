@@ -9,7 +9,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/restore-gb13-ob-order-111.mjs --dry-run
  *   node scripts/restore-gb13-ob-order-111.mjs
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 const dryRun = process.argv.includes("--dry-run");
 const USER_NAME = "GB13";

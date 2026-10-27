@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** One-off: PM HK relay L2 balance probe (VPS) */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { loadAccountsForUser, listProfileRows, pullProfilesFromDb } from "../core/db/store.js";
 import store from "../core/esport-api/store.js";
 import { buildPolymarketL2HeadersFromToken } from "../core/integrations/polymarket/clob_l2.js";

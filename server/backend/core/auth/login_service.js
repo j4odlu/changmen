@@ -1,5 +1,5 @@
 import { LoginRequest } from "@changmen/api-contract/schemas";
-import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode";
 import { browserSessionEnabled, setBrowserSessionCookie } from "./browser_session.js";
 import { checkLoginRateLimit, recordLoginFailure, recordLoginSuccess } from "./login_rate_limit.js";
 import { certLoginBindError, clientCertCnFromSubject } from "../shared/client_cert_gate.js";

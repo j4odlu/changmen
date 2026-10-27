@@ -7,7 +7,7 @@ import { ensurePgPoolReady, fetchClientMatches, fetchPlatformBets } from "@chang
  *   node server/match/matcher/scripts/audit-client-sources.mjs --quick # 仅静态规则
  *   node server/match/matcher/scripts/audit-client-sources.mjs --strict # 有问题 exit 1
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { composeOnce } from "../compose/compose_once.js";
 import { swapBetSource } from "../compose/util/swap.js";
 

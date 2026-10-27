@@ -3,7 +3,7 @@ import type { PolymarketMarketIndex } from "@changmen/api-contract";
 /**
  * VPS polymarket-esports-collector 写入；浏览器经 Client_GetCollectPlatform.MarketIndex 读取。
  */
-import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store.js";
+import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store";
 
 const INDEX_NAME = "polymarket_market_index";
 

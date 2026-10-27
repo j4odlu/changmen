@@ -6,7 +6,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/incidents/backfill-river-pf-fee-rates-today.mjs
  *   node scripts/ops/incidents/backfill-river-pf-fee-rates-today.mjs --apply
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, getPgPool } from "@changmen/db";
 import { fetchPredictMarket } from "../../../core/integrations/predictfun/pf_api.js";
 

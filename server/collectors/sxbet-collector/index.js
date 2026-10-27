@@ -3,7 +3,7 @@
  * 浏览器仅 Index → Centrifugo best_odds → fo（不经 discovery Save*）
  */
 
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import {
   getResolvedDatabaseLabel,
   hasDatabaseUrlConfig,

@@ -3,7 +3,7 @@
  * Merge Life's A Game (100767) into LAG Gaming (100766), then clear stale override if needed.
  * Usage: node scripts/fix-merge-lag-life.mjs [--dry-run|--execute]
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, reassignGbTeamId } from "@changmen/db";
 
 loadChangmenEnv();

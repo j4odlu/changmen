@@ -5,7 +5,7 @@ import { mergePolymarketOutcomeEntries } from "./outcomes.ts";
 import {
   readPolymarketMarketIndex,
   writePolymarketMarketIndex,
-} from "@changmen/storage/polymarket_market_index.js";
+} from "@changmen/storage/polymarket_market_index";
 
 /** @param {import("@changmen/api-contract").PolymarketMarketIndexEntry[]} entries */
 export function buildPolymarketMarketIndexFromEntries(entries: PolymarketMarketIndexEntry[]): PolymarketMarketIndex {

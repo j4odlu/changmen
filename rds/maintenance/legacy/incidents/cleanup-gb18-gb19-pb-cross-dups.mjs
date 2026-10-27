@@ -8,7 +8,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   DATABASE_RDS_TARGET=public node server/backend/scripts/ops/incidents/cleanup-gb18-gb19-pb-cross-dups.mjs
  *   DATABASE_RDS_TARGET=public node server/backend/scripts/ops/incidents/cleanup-gb18-gb19-pb-cross-dups.mjs --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 const dryRun = !process.argv.includes("--execute");
 const KEEP_USER = "GB19";

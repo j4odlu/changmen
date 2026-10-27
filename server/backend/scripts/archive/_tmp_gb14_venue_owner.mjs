@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** 在 GB14 四个 OB 账号上查重复 order_id 是否存在于场馆 */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { playerRowToAccountRecord } from "../../db/player_account_record.js";
 import { parseVenueCreateAt } from "@changmen/shared/time/match_time";
 

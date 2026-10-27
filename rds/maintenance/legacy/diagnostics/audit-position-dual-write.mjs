@@ -13,7 +13,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/diagnostics/audit-position-dual-write.mjs --days 30
  *   node scripts/ops/diagnostics/audit-position-dual-write.mjs --user GB13 --limit 20
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 

@@ -7,7 +7,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/sync-venue-orders-month.mjs --user GB13 --month 2026-07 --execute
  *   node scripts/sync-venue-orders-month.mjs --user GB13 --month 2026-07 --player-id 79 --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { parseVenueCreateAt } from "@changmen/shared/time/match_time";
 import { accountMultiplyScale } from "@changmen/shared/account_multiply";
 import { buildPbAuthHeaders } from "./lib/pb_auth.mjs";

@@ -1,4 +1,4 @@
-import { writePredictFunMarketIndex } from "@changmen/storage/predictfun_market_index.js";
+import { writePredictFunMarketIndex } from "@changmen/storage/predictfun_market_index";
 import {
   bestAskFromPredictBook,
   predictBuyAskFromYesBook,

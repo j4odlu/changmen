@@ -5,7 +5,7 @@
  * primaryUsers → primaryOrigin（默认 ws.changmen.fun / 202）
  * 其他人：默认全员 202。单一 hub，不再允许配置 secondary。
  */
-import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store.js";
+import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store";
 
 const FILE = "market_hub_route";
 

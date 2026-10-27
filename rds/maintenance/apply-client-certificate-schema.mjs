@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { loadChangmenEnv } from '@changmen/storage/load_env.js';
+import { loadChangmenEnv } from '@changmen/storage/load_env';
 import { ensurePgPoolReady, getPgPool } from '@changmen/db';
 loadChangmenEnv();
 await ensurePgPoolReady();

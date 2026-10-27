@@ -6,7 +6,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/migrations/restore-pm-sell-money-from-pnl-usdc.mjs --dry-run
  *   node scripts/ops/migrations/restore-pm-sell-money-from-pnl-usdc.mjs --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { Currency, getExchange } from "@changmen/shared/currency";
 
 loadChangmenEnv();

@@ -13,6 +13,12 @@ for (const [name, hash] of Object.entries(baseline.hashes)) {
   it(`${name}.ts erases to the accepted pre-migration implementation`, () => {
     assert.equal(ts.version, baseline.compiler);
     let source = fs.readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8").replaceAll("\r\n", "\n");
+    // Restore the reviewed storage subpath rename without replacing the historical runtime hash.
+    if (name === "index") {
+      const subpath = "load_env", current = `from "@changmen/storage/${subpath}";`;
+      assert.equal(source.split(current).length, 2, "missing/duplicate canonical storage import");
+      source = source.replace(current, `from "@changmen/storage/${subpath}.js";`);
+    }
     // [changmen 扩展] 仅逆转本次比分语义接入；行为由 parse_sport / sport_state 回归验证，历史摘要不变。
     const scoreSemanticsHooks = name === "parse_sport" ? [
       ['import { getPmSportScoreKind, parsePmSportMapPeriod, parsePmSportScore } from "@changmen/shared/pm_sport_score";\n', ""],
@@ -95,8 +101,8 @@ it("both PM packages and canonical storage declarations compile in one isolated 
     import {buildPmSportSnapshot} from "@changmen/polymarket-sports/parse_sport.js";
     import {refreshGammaEventIndex} from "@changmen/polymarket-sports/gamma_map.js";
     import {runPolymarketEsportsDiscoveryCycle} from "@changmen/polymarket-esports-collector/loop.js";
-    import {readPolymarketMarketIndex} from "@changmen/storage/polymarket_market_index.js";
-    import {loadChangmenEnv} from "@changmen/storage/load_env.js";
+    import {readPolymarketMarketIndex} from "@changmen/storage/polymarket_market_index";
+    import {loadChangmenEnv} from "@changmen/storage/load_env";
     void [buildPmSportSnapshot,refreshGammaEventIndex,runPolymarketEsportsDiscoveryCycle,readPolymarketMarketIndex,loadChangmenEnv];
   `;
   const options = {
@@ -122,7 +128,7 @@ it("the original PM2 entry boots, handles a WS frame, persists and broadcasts be
     const modules={
       "@changmen/db":
         'const state=globalThis.__pmSportBoot; export const hasDatabaseUrlConfig=()=>true; export const initDatabaseUrl=async()=>null; export const getResolvedDatabaseLabel=()=>"test"; export const ensurePmPrematchSchema=async()=>{state.schema=true;}; export const writePlatformPmSports=async snapshots=>{state.sourceWrites.push(...snapshots);return snapshots.length;}; export const updateClientMatchPmSport=async(id,s)=>{state.writes.push([id,s]);return true;}; export const fetchLinkedPolymarketPlatformMatches=async()=>[]; export const fetchPmSportByClientMatchIds=async()=>new Map(); export const resolveClientMatchIdForPmSport=async query=>query.slug==="unmatched"?null:11; export const fetchPmPrematchPrices=async()=>({}); export const writePmPrematchPrices=async()=>{};',
-      "@changmen/storage/load_env.js": 'export const loadChangmenEnv=()=>{};',
+      "@changmen/storage/load_env": 'export const loadChangmenEnv=()=>{};',
       "./gamma_map.ts":
         'export const refreshGammaEventIndex=async()=>({byGameId:new Map(),bySlug:new Map()}); export const withGammaSportIdentity=m=>m; export const gammaEventToSportMessage=m=>m; export const fetchGammaEventById=async()=>null; export const fetchGammaEventByGameId=async()=>null; export const fetchGammaEventBySlug=async()=>null; export const rememberGammaEvent=()=>{};',
       "ws": 'import {EventEmitter} from "node:events"; export default class WebSocket extends EventEmitter {constructor(url){super();this.url=url;globalThis.__pmSportBoot.ws=this;}close(){this.emit("close");}send(){}}',

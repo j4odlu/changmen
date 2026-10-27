@@ -2,7 +2,7 @@
  * storage/tag_platforms.json + players.json → RDS（幂等合并，可重复执行）。
  * VPS 部署后运行：cd server/backend && npm run db:migrate-players
  */
-import { readJsonFile } from "@changmen/storage/json_file_store.js";
+import { readJsonFile } from "@changmen/storage/json_file_store";
 import { getPgPool } from "./pg_pool.js";
 
 function rowId(row) {

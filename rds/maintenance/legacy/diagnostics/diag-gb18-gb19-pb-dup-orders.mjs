@@ -5,7 +5,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *
  *   DATABASE_RDS_TARGET=public node server/backend/scripts/ops/diagnostics/diag-gb18-gb19-pb-dup-orders.mjs
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, getPgPool, initDatabaseUrl } from "@changmen/db";
 
 loadChangmenEnv();

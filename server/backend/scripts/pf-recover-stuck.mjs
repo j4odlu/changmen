@@ -8,7 +8,7 @@
  * 也可用 esport API：Pf_RecoverStuckOrders { playerId, dryRun?: true }
  */
 
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 

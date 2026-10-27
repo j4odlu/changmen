@@ -4,4 +4,4 @@ export {
   ensureStoragePaths,
   ESPORT_DATA_DIR,
   STORAGE_DIR,
-} from "@changmen/storage/paths.js";
+} from "@changmen/storage/paths";

@@ -9,7 +9,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/incidents/fix-pm-sold-out-stake-left.mjs --user River --dry-run
  *   node scripts/ops/incidents/fix-pm-sold-out-stake-left.mjs --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 

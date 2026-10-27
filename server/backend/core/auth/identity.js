@@ -1,4 +1,4 @@
-import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode";
 /** Transport-independent credential validation. Business permissions belong to callers. */
 export async function authenticateIdentity(input, deps) {
   try { return await resolveIdentity(input, deps); }

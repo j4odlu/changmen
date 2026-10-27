@@ -1,4 +1,4 @@
-import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store.js";
+import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store";
 
 const FILE = "ray_match_risks";
 let closed;

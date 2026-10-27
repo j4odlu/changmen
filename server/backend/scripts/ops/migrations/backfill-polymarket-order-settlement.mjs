@@ -7,7 +7,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/migrations/backfill-polymarket-order-settlement.mjs --user gb12 --days 90 --execute
  *   node scripts/ops/migrations/backfill-polymarket-order-settlement.mjs --player-id 42 --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { accountMultiplyScale } from "@changmen/shared/account_multiply";
 import { Currency, getExchange, scaleUsdtToCnyDisplay } from "@changmen/shared/currency";
 import {

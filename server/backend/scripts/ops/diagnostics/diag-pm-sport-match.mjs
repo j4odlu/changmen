@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** 诊断单场 client_match 的 pm_sport + Gamma 源 */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady } from "@changmen/db";
 import { fetchGammaEventById, gammaEventToSportMessage } from "@changmen/polymarket-sports/gamma_map.js";
 import { buildPmSportSnapshot } from "@changmen/polymarket-sports/parse_sport.js";

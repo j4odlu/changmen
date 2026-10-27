@@ -1,10 +1,10 @@
 import type { PolymarketMarketIndex, PredictFunMarketIndex, SxBetMarketIndex } from "@changmen/api-contract";
 import { readJsonFile, writeJsonFile, setPlatform, loadChangmenEnv } from "@changmen/storage";
-import { readPolymarketMarketIndex, writePolymarketMarketIndex } from "@changmen/storage/polymarket_market_index.js";
-import { readPredictFunMarketIndex } from "@changmen/storage/predictfun_market_index.js";
-import { readSxBetMarketIndex } from "@changmen/storage/sxbet_market_index.js";
-import { readDevWebPort } from "@changmen/storage/dev_web_config.js";
-import { CHANGMEN_LAYOUT } from "@changmen/storage/paths.js";
+import { readPolymarketMarketIndex, writePolymarketMarketIndex } from "@changmen/storage/polymarket_market_index";
+import { readPredictFunMarketIndex } from "@changmen/storage/predictfun_market_index";
+import { readSxBetMarketIndex } from "@changmen/storage/sxbet_market_index";
+import { readDevWebPort } from "@changmen/storage/dev_web_config";
+import { CHANGMEN_LAYOUT } from "@changmen/storage/paths";
 
 // @ts-expect-error preserve the readonly layout fields from the previous declaration file.
 CHANGMEN_LAYOUT.serverDb = "moved";

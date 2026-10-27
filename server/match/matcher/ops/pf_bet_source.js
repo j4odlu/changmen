@@ -2,7 +2,7 @@
  * PredictFun Sources 扩展：把 platform_bets.MarketID（或 Index token 映射）
  * 投影为 GetMatchs 的 HomeMarketID / AwayMarketID。
  */
-import { readPredictFunMarketIndex } from "@changmen/storage/predictfun_market_index.js";
+import { readPredictFunMarketIndex } from "@changmen/storage/predictfun_market_index";
 
 let _pfTokenMarketCache = { updatedAt: -1, byToken: new Map() };
 

@@ -9,7 +9,7 @@ import {
   obSavedBetIsMatchWinner,
   rayLegacyWinBetName,
 } from "@changmen/shared/catalog/market_catalog";
-import { readPredictFunMarketIndex } from "@changmen/storage/predictfun_market_index.js";
+import { readPredictFunMarketIndex } from "@changmen/storage/predictfun_market_index";
 
 export function betBucketKey(platform, sourceMatchId) {
   return `${platform}:${sourceMatchId}`;

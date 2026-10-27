@@ -2,7 +2,7 @@
 /**
  * GB14 重复 OB 订单：逐单分析能否区分归属 player
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { playerRowToAccountRecord } from "../../../player_account_record.js";
 loadChangmenEnv();
 const { ensurePgPoolReady } = await import("@changmen/db");

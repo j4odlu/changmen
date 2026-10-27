@@ -3,7 +3,7 @@ import type { PredictFunMarketIndex } from "@changmen/api-contract";
 /**
  * VPS predictfun-collector 写入；浏览器经 Client_GetCollectPlatform.MarketIndex 读取。
  */
-import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store.js";
+import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store";
 
 const INDEX_NAME = "predictfun_market_index";
 

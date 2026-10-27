@@ -2,7 +2,7 @@ import { getPgPool } from "@changmen/db";
 import { requireHttpUser } from "./core/auth/http_identity.js";
 import { tryWebSessionRoutes } from "./core/auth/web_session_routes.js";
 import { tryCertificateRoutes } from './core/certificates/routes.js';
-import { getCatalogSummary } from "@changmen/storage/game_catalog.js";
+import { getCatalogSummary } from "@changmen/storage/game_catalog";
 import { getCatalogSummary as getMarketCatalogSummary } from "@changmen/shared/catalog/market_catalog";
 import { getWsForwardStatus, isWsForwardHttpPath } from "@changmen/ws-forward";
 import {

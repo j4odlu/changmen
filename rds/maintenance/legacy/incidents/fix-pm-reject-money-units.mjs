@@ -12,7 +12,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/incidents/fix-pm-reject-money-units.mjs --user GB18 --dry-run
  *   node scripts/ops/incidents/fix-pm-reject-money-units.mjs --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { Currency, getExchange } from "@changmen/shared/currency";
 
 loadChangmenEnv();

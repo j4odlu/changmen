@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 const storage = vi.hoisted(() => ({ data: [], read: vi.fn(), write: vi.fn() }));
-vi.mock("@changmen/storage/json_file_store.js", () => ({ readJsonFile: storage.read, writeJsonFile: storage.write }));
+vi.mock("@changmen/storage/json_file_store", () => ({ readJsonFile: storage.read, writeJsonFile: storage.write }));
 const now = Date.UTC(2026, 9, 19, 0);
 function payload(bo = 3) {
   return { id: "910001", status: 1, round: `bo${bo}`, start_time: "2026-10-19 09:00:00",

@@ -3,7 +3,7 @@
  * GB14 player 90：platform_name 好博zmmzmm1 → 好博（仅显示标签，不改凭证）
  * Usage: node scripts/fix-gb14-haobo-platform-name.mjs [--apply]
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, getPgPool, upsertTagPlatformByName } from "@changmen/db";
 import { playerRowToAccountRecord } from "../../../../../rds/player_account_record.js";
 import { loadAccountsForUser } from "../../../core/db/store.js";

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { CHANGMEN_ROOT_FROM_PKG, findChangmenRoot } from "@changmen/storage/changmen_root.js";
+import { CHANGMEN_ROOT_FROM_PKG, findChangmenRoot } from "@changmen/storage/changmen_root";
 
 export { findChangmenRoot };
 

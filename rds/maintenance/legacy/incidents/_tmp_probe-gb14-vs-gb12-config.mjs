@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { financialOrdersRelation } from "@changmen/db";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 if (!process.env.DATABASE_RDS_TARGET)

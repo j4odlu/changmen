@@ -77,7 +77,7 @@ it("discovery persists and removes live markets without losing the independent r
     import assert from 'node:assert/strict';
     import { registerHooks } from 'node:module';
     const storage = 'export const readPolymarketMarketIndex=()=>globalThis.testIndex; export const writePolymarketMarketIndex=index=>{globalThis.testIndex=index};';
-    registerHooks({resolve(spec,ctx,next){return spec==='@changmen/storage/polymarket_market_index.js'
+    registerHooks({resolve(spec,ctx,next){return spec==='@changmen/storage/polymarket_market_index'
       ? {url:'data:text/javascript,'+encodeURIComponent(storage),shortCircuit:true} : next(spec,ctx);}});
     const {persistPolymarketMarketIndex}=await import(${JSON.stringify(indexUrl)});
     const {refreshPolymarketOutcomes}=await import(${JSON.stringify(outcomesUrl)});

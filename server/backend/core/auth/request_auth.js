@@ -1,5 +1,5 @@
 import { authenticateIdentity } from "./identity.js";
-import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode";
 
 const MESSAGES = {
   JWT_DISABLED: "旧登录凭证已停用，请刷新网页并重新登录；插件请更新至 1.3.74 或以上",

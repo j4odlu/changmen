@@ -1,4 +1,4 @@
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { handleSendMessage } from "../core/esport-api/telegram_send.js";
 
 loadChangmenEnv();

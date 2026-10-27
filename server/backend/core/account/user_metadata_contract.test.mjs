@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ pool: null, query: vi.fn(), ready: vi.fn(), sessions: {} }));
 vi.mock("../../../../rds/rds/common.js", () => ({ getPgPool: () => state.pool, _jsonb: value => JSON.stringify(value) }));
 vi.mock("../../../../rds/pg_pool.js", () => ({ ensurePgPoolReady: state.ready }));
-vi.mock("@changmen/storage/json_file_store.js", () => ({ readJsonFile: () => state.sessions }));
+vi.mock("@changmen/storage/json_file_store", () => ({ readJsonFile: () => state.sessions }));
 let login, presence;
 beforeEach(async () => {
   vi.resetModules(); vi.resetAllMocks(); vi.useFakeTimers(); vi.setSystemTime(1700000000000);

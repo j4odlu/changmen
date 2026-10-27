@@ -1,4 +1,4 @@
-﻿import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+﻿import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady } from "@changmen/db";
 loadChangmenEnv();
 const pool = await ensurePgPoolReady();

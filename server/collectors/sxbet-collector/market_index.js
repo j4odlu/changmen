@@ -1,4 +1,4 @@
-import { writeSxBetMarketIndex } from "@changmen/storage/sxbet_market_index.js";
+import { writeSxBetMarketIndex } from "@changmen/storage/sxbet_market_index";
 
 /**
  * @param {ReturnType<import("./parse.js").buildSxMappedMarket>[]} candidates

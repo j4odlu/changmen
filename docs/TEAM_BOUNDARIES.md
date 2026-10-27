@@ -6,7 +6,7 @@
 
 [changmen 扩展] 当前 workspace 与物理目录见 [WORKSPACE_LAYOUT](WORKSPACE_LAYOUT.md)：`rds/` 独立于 `server/`，数据公共包名仍为 `@changmen/db`；Node 平台基础设施合并为 `server/venues`；旧 adapter 与 Node 工具的兼容 workspace 已退役；赛事身份规则由独立的 `packages/match-identity` 领域包承载。当前共 25 个 workspace，旧记录中的包数和目录仅对应当时阶段。
 
-[changmen 扩展] 2026-10-20 catalog 环境读取归属服务端：共享 `game_catalog.ts` 只接收显式筛选值，服务端的 `@changmen/storage/game_catalog.js` 每次读取 `AGGREGATE_GAME_CODES`。7 处 ESM 和 2 处 CJS 配置消费者已迁至新入口；目录映射与静态采集规则继续共享。`check:boundaries` 核验实际文件与消费者，环境行为用旧实现逐项对照，原冻结清单及 551 项源码基线不变。
+[changmen 扩展] 2026-10-20 catalog 环境读取归属服务端：共享 `game_catalog.ts` 只接收显式筛选值，服务端的 `@changmen/storage/game_catalog` 每次读取 `AGGREGATE_GAME_CODES`。7 处 ESM 和 2 处 CJS 配置消费者已迁至新入口；目录映射与静态采集规则继续共享。`check:boundaries` 核验实际文件与消费者，环境行为用旧实现逐项对照，原冻结清单及 551 项源码基线不变。
 
 [changmen 扩展] 2026-10-20 Node 旧入口退役：删除 `packages/venue-adapter/loader/adapter_paths.mjs`、`registry/paths.js`、`registry/feeds.js`、`scripts/sync-backend-bundle.mjs` 四个文件；旧包的运行时 exports 为空，验证消费者改用 `server/` 下的入口。`check:boundaries` 检查旧文件不存在、真实源码不再导入旧入口，且当前受管源码中 `server/` 外的后端实现/入口为零。原冻结清单及 551 项保护不变，历史视图仅用于验证。
 

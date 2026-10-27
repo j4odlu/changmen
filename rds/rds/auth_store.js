@@ -3,7 +3,7 @@
  */
 
 import crypto from "node:crypto";
-import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode";
 import { authorizeClientCertificate } from "./client_certificate_store.js";
 import { hasDatabaseUrlConfig } from "../resolve_database_url.js";
 import { getPgPool } from "./common.js";

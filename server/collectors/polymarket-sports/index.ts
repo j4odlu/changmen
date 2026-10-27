@@ -11,7 +11,7 @@ import {
   initDatabaseUrl,
   updateClientMatchPmSport,
 } from "@changmen/db";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import WebSocket from "ws";
 import { notifyPmSportBroadcast } from "./broadcast_notify.ts";
 import { refreshGammaEventIndex, withGammaSportIdentity } from "./gamma_map.ts";

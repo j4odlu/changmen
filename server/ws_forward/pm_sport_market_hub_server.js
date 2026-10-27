@@ -5,7 +5,7 @@
  * 实现副本：`core/pm_sport_market_hub.js`（不修改电竞 `core/pm_market_hub.js`）。
  */
 import http from "node:http";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { initHubIdentity, resolveHubIdentity } from "./core/hub_identity.js";
 import {
   attachPmSportMarketHub,

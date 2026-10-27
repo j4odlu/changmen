@@ -1,7 +1,7 @@
 import { financialOrdersRelation } from "@changmen/db";
 import fs from "node:fs";
 import path from "node:path";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { resolveGtcFinancialOrder } from "../../../rds/orderModes/gtc/pm_gtc_financial.js";
 import { syncPmGtcSettledOrderFinancials } from "../../../rds/orderModes/gtc/pm_gtc_settlement.js";

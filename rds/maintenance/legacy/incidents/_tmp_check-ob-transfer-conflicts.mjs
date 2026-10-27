@@ -2,7 +2,7 @@
 /**
  * Check conflicts before transferring GB12/GB13 OB players → GB14.
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 if (!process.env.DATABASE_RDS_TARGET)

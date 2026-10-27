@@ -3,7 +3,7 @@ import { financialOrdersRelation } from "@changmen/db";
 /**
  * One-off: list OB players for GB12/GB13/GB14 (read-only).
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 if (!process.env.DATABASE_RDS_TARGET)

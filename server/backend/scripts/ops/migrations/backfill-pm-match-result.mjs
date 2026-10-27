@@ -13,7 +13,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/migrations/backfill-pm-match-result.mjs --user gb12 --days 90 --dry-run
  *   node scripts/ops/migrations/backfill-pm-match-result.mjs --days 365 --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import {
   fetchGammaMarketsByConditionIds,
   enrichMarketsFromClob,

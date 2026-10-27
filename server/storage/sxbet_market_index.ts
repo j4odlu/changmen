@@ -3,7 +3,7 @@ import type { SxBetMarketIndex } from "@changmen/api-contract";
 /**
  * VPS sxbet-collector 写入；浏览器经 Client_GetCollectPlatform.MarketIndex 读取。
  */
-import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store.js";
+import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store";
 
 const INDEX_NAME = "sxbet_market_index";
 

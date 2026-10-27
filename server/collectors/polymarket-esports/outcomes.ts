@@ -1,7 +1,7 @@
 /// <reference path="./legacy-modules.d.ts" />
 /** [changmen 扩展] 官方赛果独立于 discovery 生命周期；不写 platform_* 或报价。 */
 import type { PolymarketMarketIndex, PolymarketMarketIndexEntry, PolymarketOutcomeEntry } from "@changmen/api-contract";
-import { readPolymarketMarketIndex, writePolymarketMarketIndex } from "@changmen/storage/polymarket_market_index.js";
+import { readPolymarketMarketIndex, writePolymarketMarketIndex } from "@changmen/storage/polymarket_market_index";
 import { fetchPolymarketOfficialMarkets } from "./api.ts";
 import { resolvePolymarketMapMarketOutcome } from "./parse.ts";
 

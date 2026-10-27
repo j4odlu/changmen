@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { ESPORT_DATA_DIR } from "@changmen/storage/paths.js";
-import { getActivePlatformGameIds } from "@changmen/storage/game_catalog.js";
+import { ESPORT_DATA_DIR } from "@changmen/storage/paths";
+import { getActivePlatformGameIds } from "@changmen/storage/game_catalog";
 
 export const DEFAULT_GATEWAY = "https://pc.ilustre-analytics.org";
 

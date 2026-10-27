@@ -4,7 +4,7 @@ import { financialOrdersRelation } from "@changmen/db";
  * Delete Polymarket sell orders (raw.pmSide = 'sell' only).
  * Usage: node scripts/delete-polymarket-sell-orders.mjs [--dry-run] [--player-id=N] [--user=NAME]
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { deletePolymarketSellOrders, ensurePgPoolReady, getPgPool } from "@changmen/db";
 
 const dryRun = process.argv.includes("--dry-run");

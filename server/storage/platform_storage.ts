@@ -3,8 +3,8 @@ export type PlatformConfig = Record<string, unknown>;
 /**
  * platforms.json / tag_platforms.json — 与 server/backend store 共享的本地 JSON 存储。
  */
-import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store.js";
-import { ensureDefaultJsonFiles, ensureStorageSeed } from "@changmen/storage/ensure_storage_seed.js";
+import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store";
+import { ensureDefaultJsonFiles, ensureStorageSeed } from "@changmen/storage/ensure_storage_seed";
 
 export { ensureDefaultJsonFiles, ensureStorageSeed };
 

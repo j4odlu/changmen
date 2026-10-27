@@ -1,4 +1,4 @@
-import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode";
 const PROD_COOKIE_NAME = "__Host-cm_session";
 const DEV_COOKIE_NAME = "cm_session";
 

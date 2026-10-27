@@ -2,12 +2,12 @@ import * as sb from "@changmen/db";
 import { filterRayRiskMatches, observeRayMatchResult } from "@changmen/matcher/ray_match_risk.js";
 import { formatBetOdds } from "@changmen/shared/odds_format";
 import { a8StartTimeListAllowed, normalizeEpochMs } from "@changmen/shared/time/match_time";
-import { readJsonFile, writeJsonFile, writeJsonFileDebounced } from "@changmen/storage/json_file_store.js";
+import { readJsonFile, writeJsonFile, writeJsonFileDebounced } from "@changmen/storage/json_file_store";
 import {
   ensureStorageSeed,
   getPlatform as getPlatformRow,
   setPlatform as setPlatformRow,
-} from "@changmen/storage/platform_storage.js";
+} from "@changmen/storage/platform_storage";
 import * as dbStore from "../db/store.js";
 import { installBackendMatcherRuntime } from "../matcher/runtime.js";
 import { adapterRequire } from "../shared/adapter_paths.js";

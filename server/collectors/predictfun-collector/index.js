@@ -3,7 +3,7 @@
  * 浏览器仅 WS → fo（不经 http-relay 打 discovery）
  */
 
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import {
   getResolvedDatabaseLabel,
   hasDatabaseUrlConfig,

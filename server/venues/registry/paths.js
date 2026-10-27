@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import manifest from "./manifest.json" with { type: "json" };
-import { BACKEND_ROOT, CHANGMEN_ROOT, PLATFORM_PROBES_ROOT, VENUE_ADAPTER_ROOT } from "@changmen/storage/paths.js";
+import { BACKEND_ROOT, CHANGMEN_ROOT, PLATFORM_PROBES_ROOT, VENUE_ADAPTER_ROOT } from "@changmen/storage/paths";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

@@ -15,8 +15,8 @@ it('matches the original environment-driven catalog across unset, wildcard, alia
   for(const name of ['game_catalog.json','game_catalog_sports.json','game_catalog_rules.js','game_catalog_rules.ts'])fs.copyFileSync(path.join(repo,'packages/shared/catalog',name),path.join(root,name));
   const script=`import assert from 'node:assert/strict';import net from 'node:net';import{createRequire}from'node:module';
 let networkAttempts=0;const blocked=()=>{networkAttempts++;throw Error('Network forbidden');};net.Socket.prototype.connect=blocked;globalThis.fetch=blocked;
-const original=await import(${JSON.stringify(pathToFileURL(path.join(root,'game_catalog.ts')).href)}),pure=await import('@changmen/shared/catalog/game_catalog'),server=await import('@changmen/storage/game_catalog.js');
-const require=createRequire(import.meta.url),cjs=require('./server/platform-probes/backend/_paths.cjs').backendRequire('@changmen/storage/game_catalog.js');
+const original=await import(${JSON.stringify(pathToFileURL(path.join(root,'game_catalog.ts')).href)}),pure=await import('@changmen/shared/catalog/game_catalog'),server=await import('@changmen/storage/game_catalog');
+const require=createRequire(import.meta.url),cjs=require('./server/platform-probes/backend/_paths.cjs').backendRequire('@changmen/storage/game_catalog');
 for(const name of Object.keys(server))assert.equal(cjs[name],server[name]);
 for(const file of ['saba','imt'])assert(Object.keys(require('./server/platform-probes/'+file+'/session.js')).length>0);
 const values=[undefined,'','*','CS2','lol,cs2','CS2; \\tlol CS2','unknown','chi,mlb','  ',' * ','cs-go','valorant'];

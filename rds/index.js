@@ -18,7 +18,7 @@
  * 本地 JSON / 路径见 @changmen/storage（非本包职责）。
  */
 
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 export { upsertPmGtcOrders } from "./rds/orderModes/gtc/pm_gtc_orders_store.js";
 export { financialOrdersRelation } from "./rds/native_orders.js";
 export { fetchOrderExecutionIdentities, fetchOrdersByExecutionPage } from "./rds/orderModes/read.js";

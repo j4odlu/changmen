@@ -7,7 +7,7 @@
  *   node scripts/ops/incidents/fix-mcon-onceupon-gb-mixup.mjs
  *   node scripts/ops/incidents/fix-mcon-onceupon-gb-mixup.mjs --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady } from "@changmen/db";
 
 loadChangmenEnv();

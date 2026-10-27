@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { financialOrdersRelation } from "@changmen/db";
 /** 诊断指定用户/账号/比赛的 orders + user_logs */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady } from "@changmen/db";
 
 loadChangmenEnv();

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { financialOrdersRelation } from "@changmen/db";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady } from "@changmen/db";
 
 loadChangmenEnv();

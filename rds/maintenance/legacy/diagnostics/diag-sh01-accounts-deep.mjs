@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady } from "@changmen/db";
 
 const userName = String(process.argv[2] || "SH01").trim();

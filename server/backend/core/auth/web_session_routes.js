@@ -3,7 +3,7 @@ import { loadProfileById } from "../db/store.js";
 import { jsonResponse, readJsonBody } from "../http/body.js";
 import { readClientCertStatus, clientCertCnFromSubject, clientCertificateAudit } from "../shared/client_cert_gate.js";
 import { browserSessionEnabled, readBrowserSessionCookie, setBrowserSessionCookie } from "./browser_session.js";
-import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode";
 import { browserAuthAudit, sessionCsrf, validAuthOrigin, validSessionCsrf, webCookieEnabled } from "./web_session_security.js";
 import { tryPmWalletIdentity } from "./pm_wallet_identity.js";
 

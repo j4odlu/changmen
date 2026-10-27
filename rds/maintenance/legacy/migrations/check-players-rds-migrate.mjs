@@ -6,7 +6,7 @@
  */
 
 import { getPgPool, initDatabaseUrl } from "@changmen/db";
-import { readJsonFile } from "@changmen/storage/json_file_store.js";
+import { readJsonFile } from "@changmen/storage/json_file_store";
 
 function rowId(row) {
   return Number(row?.id ?? row?.ID ?? row?.playerId ?? 0);

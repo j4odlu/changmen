@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** 检查跨用户是否共用同一场馆操盘账号（venue_member_id / gateway+token） */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 loadChangmenEnv();
 const { ensurePgPoolReady } = await import("@changmen/db");
 const pool = await ensurePgPoolReady();

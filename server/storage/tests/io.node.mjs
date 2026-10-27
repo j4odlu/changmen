@@ -2,8 +2,8 @@ import { test } from "node:test";
 import { runStorageFixture } from "./fixture.mjs";
 
 test("JSON reads preserve fallback identity, JSON values and write errors", t => runStorageFixture(t, `
-const {readJsonFile,writeJsonFile}=await import('@changmen/storage/json_file_store.js');
-const {ESPORT_DATA_DIR}=await import('@changmen/storage/paths.js');
+const {readJsonFile,writeJsonFile}=await import('@changmen/storage/json_file_store');
+const {ESPORT_DATA_DIR}=await import('@changmen/storage/paths');
 const fallback={missing:true}; assert.equal(readJsonFile('missing',fallback),fallback);
 fs.writeFileSync(path.join(ESPORT_DATA_DIR,'broken.json'),'{'); assert.equal(readJsonFile('broken',fallback),fallback);
 for(const value of [null,false,0,'value',[1],{nested:{ok:true}}]){
@@ -19,7 +19,7 @@ assert.throws(()=>writeJsonFile('bigint',1n));
 
 test("debounce keeps the first deadline, latest value and independent file timers", t => runStorageFixture(t, `
 const {mock}=await import('node:test'); mock.timers.enable({apis:['setTimeout']});
-const {readJsonFile,writeJsonFileDebounced}=await import('@changmen/storage/json_file_store.js');
+const {readJsonFile,writeJsonFileDebounced}=await import('@changmen/storage/json_file_store');
 writeJsonFileDebounced('one',{v:1},1000); mock.timers.tick(500);
 writeJsonFileDebounced('one',{v:2},10000); writeJsonFileDebounced('two',{v:3},1000);
 mock.timers.tick(499); assert.equal(readJsonFile('one',null),null);
@@ -32,7 +32,7 @@ mock.timers.reset();
 
 test("flush writes immediately and cancels the old timer without touching other files", t => runStorageFixture(t, `
 const {mock}=await import('node:test'); mock.timers.enable({apis:['setTimeout']});
-const {readJsonFile,writeJsonFile,writeJsonFileDebounced,flushJsonFileDebounced}=await import('@changmen/storage/json_file_store.js');
+const {readJsonFile,writeJsonFile,writeJsonFileDebounced,flushJsonFileDebounced}=await import('@changmen/storage/json_file_store');
 writeJsonFileDebounced('one',{v:1},1000); writeJsonFileDebounced('two',{v:2},1000);
 flushJsonFileDebounced('one'); assert.deepEqual(readJsonFile('one',null),{v:1});
 assert.equal(readJsonFile('two',null),null); writeJsonFile('one',{manual:true});
@@ -43,7 +43,7 @@ mock.timers.tick(1000); assert.equal(readJsonFile('skip',null),null); mock.timer
 `));
 
 test("pending debounced writes do not hold a native Node process open", t => runStorageFixture(t, `
-const {writeJsonFileDebounced}=await import('@changmen/storage/json_file_store.js');
+const {writeJsonFileDebounced}=await import('@changmen/storage/json_file_store');
 writeJsonFileDebounced('pending',{value:1},600000);
 `, { timeout: 5000 }));
 
@@ -63,12 +63,12 @@ ensureStorageSeed(); assert.deepEqual(readJsonFile('platforms',null),{});
 `));
 
 test("all three market indexes retain their existing permissive disk-read behavior", t => runStorageFixture(t, `
-const {writeJsonFile}=await import('@changmen/storage/json_file_store.js');
+const {writeJsonFile}=await import('@changmen/storage/json_file_store');
 for(const [file,reader,writer] of [
  ['polymarket_market_index','readPolymarketMarketIndex','writePolymarketMarketIndex'],
  ['predictfun_market_index','readPredictFunMarketIndex','writePredictFunMarketIndex'],
  ['sxbet_market_index','readSxBetMarketIndex','writeSxBetMarketIndex']]){
- const api=await import('@changmen/storage/'+file+'.js'); assert.equal(api[reader](),null);
+ const api=await import('@changmen/storage/'+file); assert.equal(api[reader](),null);
  for(const value of [{entries:[]},[],{legacy:true}]){api[writer](value);assert.deepEqual(api[reader](),value);}
  for(const value of [null,0,'invalid']){writeJsonFile(file,value);assert.equal(api[reader](),null);}
 }

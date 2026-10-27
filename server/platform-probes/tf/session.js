@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import { ESPORT_DATA_DIR } from "@changmen/storage/paths.js";
+import { ESPORT_DATA_DIR } from "@changmen/storage/paths";
 import {
   ensureDefaultJsonFiles,
   setPlatform,
-} from "@changmen/storage/platform_storage.js";
-import { getActivePlatformGameIds } from "@changmen/storage/game_catalog.js";
+} from "@changmen/storage/platform_storage";
+import { getActivePlatformGameIds } from "@changmen/storage/game_catalog";
 import { tfRequestHeaders } from "./auth.js";
 
 export const DEFAULT_GATEWAY = "https://api-v4.tf-api-rr3h.com";

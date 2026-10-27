@@ -4,7 +4,7 @@
  * 浏览器仅 Index → Market WS → fo；POLYMARKET_COLLECTOR_WRITE_PLATFORM=0 可改 shadow
  */
 
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import {
   getResolvedDatabaseLabel,
   hasDatabaseUrlConfig,

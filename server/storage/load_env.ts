@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
-import { CHANGMEN_ROOT_FROM_PKG } from "@changmen/storage/changmen_root.js";
+import { CHANGMEN_ROOT_FROM_PKG } from "@changmen/storage/changmen_root";
 
 function hasDatabaseUrl() {
   return !!(

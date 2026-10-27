@@ -6,7 +6,7 @@
  *   node scripts/ops/incidents/wipe-pf-esport-matches.mjs
  *   node scripts/ops/incidents/wipe-pf-esport-matches.mjs --apply
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady } from "@changmen/db";
 
 loadChangmenEnv();

@@ -1,5 +1,5 @@
 /** VPS：Polymarket Gamma 足球 discovery → storage/sport/soccer6/match_list.json。 */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { runPmFootballDiscoveryCycle } from "./loop.js";
 
 loadChangmenEnv();

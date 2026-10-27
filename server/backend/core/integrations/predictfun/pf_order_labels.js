@@ -2,7 +2,7 @@
  * PredictFun 订单 Match/Bet/Item 文案（对齐 PM 可读侧栏，勿裸 marketId/tokenId）
  */
 
-import { readPredictFunMarketIndex } from "@changmen/storage/predictfun_market_index.js";
+import { readPredictFunMarketIndex } from "@changmen/storage/predictfun_market_index";
 
 function trimStr(v) {
   return String(v ?? "").trim();

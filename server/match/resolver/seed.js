@@ -7,7 +7,7 @@
  *   node seed.js --game=lol    只跑一个游戏
  */
 
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import axios from "axios";
 
 loadChangmenEnv();

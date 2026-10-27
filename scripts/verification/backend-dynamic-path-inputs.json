@@ -7,7 +7,7 @@
     {
       "file": "server/venues/loader/adapter_paths.mjs",
       "selector": "module",
-      "signature": "0e9166ae1c24727470027191ab18601c6ae2ab6720a6dddde8790f6867111096"
+      "signature": "cde7904563c9a40702213b08af36b0c05013dc0000badb23a8c0546e8951a009"
     },
     {
       "file": "rds/pg_pool.js",
@@ -22,7 +22,7 @@
     {
       "file": "server/venues/registry/paths.js",
       "selector": "module",
-      "signature": "7e06d9c2c923f2bb0aff8b6ed94c4e0418b3c6db2287b9d44e40b3ec40f2c8eb"
+      "signature": "0bca072c5069e618ded921921e149bf04af20b411739425c0d54728943120f30"
     },
     {
       "file": "server/venues/registry/runtime/registry/paths.js",
@@ -37,7 +37,7 @@
     {
       "file": "server/storage/paths.ts",
       "selector": "module",
-      "signature": "e15949858d972dd35510609ed6265f4361d79283a952a7639ceeb1461a915a6e"
+      "signature": "2a212c4f838463040122f8a1db4392d2422ee6c0639ab5ac960e7afd13f660f3"
     },
     {
       "file": "server/storage/changmen_root.ts",
@@ -47,7 +47,7 @@
     {
       "file": "server/platform-probes/backend/_paths.js",
       "selector": "module",
-      "signature": "0f85746eaafb7792a6b224a4b3b214078f8368bab409c176c99c20cf5c93c24a"
+      "signature": "a58af42214cd5b09cd9d3baa94ada6a5fba6a225e2953316deb0072fe396e1f6"
     },
     {
       "file": "server/platform-probes/backend/_paths.cjs",

@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { readDevWebPort } from "@changmen/storage/dev_web_config.js";
+import { readDevWebPort } from "@changmen/storage/dev_web_config";
 
 let devOrigins;
 function localAuthOrigins() {

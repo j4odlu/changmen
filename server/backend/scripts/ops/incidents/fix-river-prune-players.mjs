@@ -5,7 +5,7 @@
  *
  *   node scripts/fix-river-prune-players.mjs [--dry-run]
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { openProfileRepairData } from "@changmen/db/maintenance/profile_repairs.js";
 import { loadAccountsForUser, loadProfileById } from "../../../core/db/store.js";
 

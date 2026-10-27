@@ -6,7 +6,7 @@
  *   cd changmen/server/backend && node scripts/ops/migrations/migrate-accounts-jsonb-to-players.mjs
  *   node scripts/ops/migrations/migrate-accounts-jsonb-to-players.mjs --dry-run
  */
-import "@changmen/storage/load_env.js";
+import "@changmen/storage/load_env";
 import * as sb from "@changmen/db";
 import { mergeJsonbAccountIntoPlayerPatch } from "../../../player_account_record.js";
 import { getPgPool } from "../../../rds/common.js";

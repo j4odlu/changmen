@@ -4,7 +4,7 @@
  * 浏览器仍连 /esport/ws-forward/PREDICTFUN-MARKET；Caddy 反代到 PREDICTFUN_MARKET_HUB_PORT（默认 3458）。
  */
 import http from "node:http";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import {
   attachPredictFunMarketHub,
   closePredictFunMarketHub,

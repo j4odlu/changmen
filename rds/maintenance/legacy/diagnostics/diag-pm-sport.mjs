@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** 诊断 Polymarket pm_sport 数据链 */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, getResolvedDatabaseLabel } from "@changmen/db";
 
 loadChangmenEnv();

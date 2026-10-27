@@ -8,7 +8,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   cd changmen/server/backend
  *   node scripts/ops/migrations/migrate-players-owner-user-id.mjs [--dry-run]
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, getPgPool } from "@changmen/db";
 
 const dryRun = process.argv.includes("--dry-run");

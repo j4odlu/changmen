@@ -6,7 +6,7 @@
  *
  * 默认 dry-run；加 --apply 才写库。执行前请备份。
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, getPgPool } from "@changmen/db";
 import { stripPolymarketPrivateKeyFromToken } from "../../../core/account/pm_token_strip.js";
 

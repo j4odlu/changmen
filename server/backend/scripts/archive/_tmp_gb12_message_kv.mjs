@@ -1,4 +1,4 @@
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import * as accountService from "../core/account/account_service.js";
 import * as store from "../core/esport-api/store.js";
 

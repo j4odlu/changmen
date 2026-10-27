@@ -11,7 +11,7 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, getPgPool, initDatabaseUrl } from "@changmen/db";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

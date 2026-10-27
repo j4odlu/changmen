@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-vi.mock("@changmen/storage/dev_web_config.js", () => ({ readDevWebPort: () => 6007 }));
+vi.mock("@changmen/storage/dev_web_config", () => ({ readDevWebPort: () => 6007 }));
 import { sessionCsrf, validAuthOrigin, validSessionCsrf, webCookieEnabled } from "./web_session_security.js";
 const saved = { ...process.env };
 afterEach(() => { process.env = { ...saved }; });

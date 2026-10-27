@@ -3,7 +3,7 @@
  * 用真实 L1 签名探测 relay → CLOB /auth/api-key。
  * node scripts/_probe_pm_l1_relay.mjs [userId] [relayBase]
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { getPgPool } from "@changmen/db";
 import { signJwt, JWT_SECRET, JWT_ACCESS_TTL_SEC } from "../../db/rds/jwt.js";
 import { createWalletClient, http } from "viem";

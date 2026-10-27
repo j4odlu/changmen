@@ -1,5 +1,5 @@
 import * as Core from "./core.js";
-import { getActivePlatformGameIds } from "@changmen/storage/game_catalog.js";
+import { getActivePlatformGameIds } from "@changmen/storage/game_catalog";
 
 const DEFAULT_SITE_ORIGIN = "https://ray164.com";
 

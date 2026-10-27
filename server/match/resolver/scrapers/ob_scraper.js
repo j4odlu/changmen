@@ -9,7 +9,7 @@
  * 违行�? *   node ob_scraper.js                  # flag=6 + 过去 60 �? *   node ob_scraper.js --days=30        # flag=6 + 过去 30 �? *   node ob_scraper.js --no-flag6       # �?flag=5 逝日
  *   node ob_scraper.js --dry-run        # 坪打坰，丝写�? */
 
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { getGameCodeForPlatformId } from "@changmen/shared/catalog/game_catalog";
 import { loadAndCreatePlugin } from "../team_db.js";
 

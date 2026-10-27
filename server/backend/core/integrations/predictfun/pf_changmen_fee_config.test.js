@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mem = new Map();
 
-vi.mock("@changmen/storage/json_file_store.js", () => ({
+vi.mock("@changmen/storage/json_file_store", () => ({
   readJsonFile: (name, fallback) => (mem.has(name) ? mem.get(name) : fallback),
   writeJsonFile: (name, data) => {
     mem.set(name, data);

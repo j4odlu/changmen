@@ -8,22 +8,22 @@ export {
   ESPORT_DATA_DIR,
   ensureStoragePaths,
   findChangmenRoot,
-} from "@changmen/storage/paths.js";
+} from "@changmen/storage/paths";
 
-export { CHANGMEN_ROOT_FROM_PKG } from "@changmen/storage/changmen_root.js";
+export { CHANGMEN_ROOT_FROM_PKG } from "@changmen/storage/changmen_root";
 
 export {
   readJsonFile,
   writeJsonFile,
   writeJsonFileDebounced,
   flushJsonFileDebounced,
-} from "@changmen/storage/json_file_store.js";
+} from "@changmen/storage/json_file_store";
 
 export {
   ensureDefaultJsonFiles,
   ensureStorageSeed,
   getPlatform,
   setPlatform,
-} from "@changmen/storage/platform_storage.js";
+} from "@changmen/storage/platform_storage";
 
-export { loadChangmenEnv } from "@changmen/storage/load_env.js";
+export { loadChangmenEnv } from "@changmen/storage/load_env";

@@ -7,7 +7,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/diagnostics/audit-order-sidebar-health.mjs --user gb14
  *   node scripts/ops/diagnostics/audit-order-sidebar-health.mjs --days 14
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { Currency, getExchange } from "@changmen/shared/currency";
 
 loadChangmenEnv();

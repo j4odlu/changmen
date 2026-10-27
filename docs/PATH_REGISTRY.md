@@ -1,6 +1,6 @@
 # 路径登记表（I1）
 
-> **目的**：monorepo 内关键目录只在本表 + `@changmen/storage/paths.js` 的 `CHANGMEN_LAYOUT` 登记一次。  
+> **目的**：monorepo 内关键目录只在本表 + `@changmen/storage/paths` 的 `CHANGMEN_LAYOUT` 登记一次。
 > **阶段 19 后**不大规模物理搬家；若必须挪目录，先改 `CHANGMEN_LAYOUT`，再按本表扫消费方。
 
 相关：[ARCHITECTURE.md](./ARCHITECTURE.md) · [TEAM_BOUNDARIES.md](./TEAM_BOUNDARIES.md) · [SPORTS_PRODUCT_LINES.md](./SPORTS_PRODUCT_LINES.md)
@@ -11,7 +11,7 @@
 
 | 符号 | 定义位置 | 说明 |
 |------|----------|------|
-| `CHANGMEN_ROOT` | `server/storage/paths.js` | monorepo 根（向上查找 `server/backend`） |
+| `CHANGMEN_ROOT` | `server/storage/paths.ts` | monorepo 根（向上查找 `server/backend`） |
 | `CHANGMEN_LAYOUT` | 同上 | 各目录相对根的 **POSIX** 段 |
 | `VENUE_ADAPTER_ROOT` | 同上 | `join(CHANGMEN_ROOT, layout.venueAdapter)` |
 | `CLIENT_WEB_ROOT` | 同上 | `client/web` 绝对路径 |

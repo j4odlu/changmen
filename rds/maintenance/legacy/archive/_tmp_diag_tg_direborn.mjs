@@ -3,7 +3,7 @@ import {
   isPbHashOrder,
   shouldFireOrderBoundHook,
 } from "@changmen/db";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 

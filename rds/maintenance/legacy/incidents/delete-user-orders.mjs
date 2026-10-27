@@ -4,7 +4,7 @@ import { financialOrdersRelation } from "@changmen/db";
  * Delete all orders for a user.
  * Usage: node scripts/delete-user-orders.mjs <userName> [--dry-run]
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, getPgPool } from "@changmen/db";
 
 const userName = String(process.argv[2] || "").trim();

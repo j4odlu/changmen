@@ -36,6 +36,13 @@ for (const [name, hash] of Object.entries(baseline.hashes)) {
   it(`${name}.ts erases to the pre-migration implementation`, () => {
     assert.equal(ts.version, baseline.compiler);
     let source = fs.readFileSync(new URL(`./${name}.ts`, import.meta.url), "utf8").replaceAll("\r\n", "\n");
+    // Restore only the two reviewed storage subpath renames; runtime baseline hashes stay unchanged.
+    const storageImports = name === "index" ? ["load_env"] : name === "market_index" ? ["polymarket_market_index"] : [];
+    for (const subpath of storageImports) {
+      const current = `from "@changmen/storage/${subpath}";`;
+      assert.equal(source.split(current).length, 2, `missing/duplicate canonical storage import: ${name}`);
+      source = source.replace(current, `from "@changmen/storage/${subpath}.js";`);
+    }
     // Restore only the official-team-ID hook; the historical runtime hashes remain unchanged.
     if (name === "parse") {
       const edits = [
@@ -84,7 +91,7 @@ it("the unchanged PM2 JS entry boots and shuts down through native Node TS", () 
     import { registerHooks } from "node:module";
     const modules = {
       "@changmen/db": 'export const hasDatabaseUrlConfig=()=>true; export const initDatabaseUrl=async()=>null; export const getResolvedDatabaseLabel=()=>"test";',
-      "@changmen/storage/load_env.js": 'export const loadChangmenEnv=()=>{};',
+      "@changmen/storage/load_env": 'export const loadChangmenEnv=()=>{};',
       "./loop.ts": 'export const runPolymarketEsportsDiscoveryCycle=async()=>{if(!globalThis.outcomesRan)throw Error("outcome refresh must precede discovery");return {skipped:false,matches:1,bets:2,writePlatform:true,collectTypes:["moneyline"]};};',
       "./outcomes.ts": 'export const refreshPolymarketOutcomes=async()=>{globalThis.outcomesRan=true;throw Error("test outcome outage");};',
     };

@@ -1,8 +1,8 @@
 import path from "node:path";
-import { getActivePlatformGameIds } from "@changmen/storage/game_catalog.js";
-import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store.js";
-import { ESPORT_DATA_DIR } from "@changmen/storage/paths.js";
-import { ensureDefaultJsonFiles } from "@changmen/storage/platform_storage.js";
+import { getActivePlatformGameIds } from "@changmen/storage/game_catalog";
+import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store";
+import { ESPORT_DATA_DIR } from "@changmen/storage/paths";
+import { ensureDefaultJsonFiles } from "@changmen/storage/platform_storage";
 import { parseClipboardCredential } from "../account/clipboard_credential.js";
 
 const PLATFORMS_FILE = path.join(ESPORT_DATA_DIR, "platforms.json");

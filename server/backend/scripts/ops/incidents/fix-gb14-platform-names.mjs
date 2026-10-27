@@ -3,7 +3,7 @@
  * GB14：将 platform_name「品牌+账号」改为纯品牌名（对齐赢博/雷竞技显示）
  * Usage: node scripts/fix-gb14-platform-names.mjs [--apply]
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, getPgPool, upsertTagPlatformByName } from "@changmen/db";
 import { playerRowToAccountRecord } from "../../../../../rds/player_account_record.js";
 import { loadAccountsForUser } from "../../../core/db/store.js";

@@ -21,7 +21,7 @@ import { normalizeClientIp, recordUserLastLogin } from "../account/user_login_me
 import { touchUserPresence } from "../account/user_presence.js";
 import { checkActionAuth, PUBLIC_ACTIONS } from "../auth/action_permissions.js";
 import { authFailure, resolveRequestAuth, shouldAuditAccessFailure } from "../auth/request_auth.js";
-import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode";
 import { validAuthOrigin, validSessionCsrf } from "../auth/web_session_security.js";
 import { isAdminUser } from "../auth/admin_auth.js";
 import {
@@ -60,16 +60,16 @@ async function attachFilteredVpsMarketIndex(provider: string, target: Record<str
   const matches = await dbStore.loadClientMatchesFromDb();
   const rows = Array.isArray(matches) ? matches : [];
   if (provider === "Polymarket") {
-    const { readPolymarketMarketIndex } = await import("@changmen/storage/polymarket_market_index.js");
+    const { readPolymarketMarketIndex } = await import("@changmen/storage/polymarket_market_index");
     target.MarketIndex = filterMarketIndexByClientMatches("Polymarket", readPolymarketMarketIndex(), rows);
     return;
   }
   if (provider === "PredictFun") {
-    const { readPredictFunMarketIndex } = await import("@changmen/storage/predictfun_market_index.js");
+    const { readPredictFunMarketIndex } = await import("@changmen/storage/predictfun_market_index");
     target.MarketIndex = filterMarketIndexByClientMatches("PredictFun", readPredictFunMarketIndex(), rows);
     return;
   }
-  const { readSxBetMarketIndex } = await import("@changmen/storage/sxbet_market_index.js");
+  const { readSxBetMarketIndex } = await import("@changmen/storage/sxbet_market_index");
   target.MarketIndex = filterMarketIndexByClientMatches("SXBet", readSxBetMarketIndex(), rows);
 }
 

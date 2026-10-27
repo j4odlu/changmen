@@ -4,7 +4,7 @@
  * 浏览器仍连 /esport/ws-forward/PM-MARKET；Caddy 反代到本进程 PM_MARKET_HUB_PORT（默认 3457）。
  */
 import http from "node:http";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { initHubIdentity, resolveHubIdentity } from "./core/hub_identity.js";
 import {
   attachPmMarketHub,

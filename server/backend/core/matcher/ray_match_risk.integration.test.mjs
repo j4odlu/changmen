@@ -2,11 +2,11 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ rows: [], saved: {}, replace: vi.fn(), write: vi.fn(), prices: vi.fn(), record: vi.fn() }));
 vi.mock("@changmen/db", () => ({ replacePlatformBetsForMatch: h.replace, writePlatformBets: h.write }));
-vi.mock("@changmen/storage/json_file_store.js", () => ({
+vi.mock("@changmen/storage/json_file_store", () => ({
   readJsonFile: (name, fallback) => h.saved[name] ?? fallback,
   writeJsonFile: (name, data) => { h.saved[name] = structuredClone(data); }, writeJsonFileDebounced: vi.fn(),
 }));
-vi.mock("@changmen/storage/platform_storage.js", () => ({ ensureStorageSeed: vi.fn(), getPlatform: vi.fn(), setPlatform: vi.fn() }));
+vi.mock("@changmen/storage/platform_storage", () => ({ ensureStorageSeed: vi.fn(), getPlatform: vi.fn(), setPlatform: vi.fn() }));
 vi.mock("../db/store.js", () => ({ loadClientMatchesFromDb: async () => h.rows }));
 vi.mock("./runtime.js", () => ({ installBackendMatcherRuntime: vi.fn() }));
 vi.mock("../shared/adapter_paths.js", () => ({ adapterRequire: () => ({ isVpsOwnedPlatformCollect: provider => provider === "Polymarket" }) }));

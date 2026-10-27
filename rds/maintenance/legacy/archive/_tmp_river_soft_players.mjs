@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 loadChangmenEnv();
 const { ensurePgPoolReady } = await import("@changmen/db");
 const pool = await ensurePgPoolReady();

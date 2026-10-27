@@ -11,7 +11,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/migrations/backfill-position-sell-events.mjs --user gb12 --days 90 --dry-run
  *   node scripts/ops/migrations/backfill-position-sell-events.mjs --days 365 --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import {
   readPositionSellEvents,
   sellDbRowToPositionEvent,

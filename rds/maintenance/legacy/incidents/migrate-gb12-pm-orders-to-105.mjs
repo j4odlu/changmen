@@ -9,7 +9,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/migrate-gb12-pm-orders-to-105.mjs --dry-run
  *   node scripts/migrate-gb12-pm-orders-to-105.mjs
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 const dryRun = process.argv.includes("--dry-run");
 const USER_NAME = "GB12";

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { pullProfilesFromDb, loadAccountsForUser } from "../core/db/store.js";
 import store from "../core/esport-api/store.js";
 import { buildPolymarketL2HeadersFromToken } from "../core/integrations/polymarket/clob_l2.js";

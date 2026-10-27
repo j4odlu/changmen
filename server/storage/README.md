@@ -2,7 +2,7 @@
 
 **本机 JSON** 与 monorepo **路径解析**（非 PostgreSQL）。云库读写见 [`@changmen/db`](../../rds/README.md)。
 
-实现使用严格 TypeScript，由 Node 24 原生加载。既有 `.js` 公共子路径通过 package exports 指向唯一的 `.ts` 实现；包内也使用公共入口，避免相对 `.js` 路径在 Node 和类型检查时指向不同文件。不保留 JS 实现副本或并行的手写声明。
+实现使用严格 TypeScript，由 Node 24 原生加载。公共子路径统一不带后缀，例如 `@changmen/storage/load_env`，通过 package exports 指向唯一的 `.ts` 实现；包内也使用公共入口。旧 `.js` 子路径已移除，不保留 JS 实现副本或并行的手写声明。
 
 ## 使用方
 
@@ -16,13 +16,13 @@
 
 | 路径 | 内容 |
 |------|------|
-| `@changmen/storage/paths.js` | `CHANGMEN_ROOT`、`CHANGMEN_LAYOUT`、`VENUE_ADAPTER_ROOT`、`ESPORT_DATA_DIR` |
-| `@changmen/storage/load_env.js` | 加载 `server/backend/.env` |
-| `@changmen/storage/game_catalog.js` | 每次调用读取 `AGGREGATE_GAME_CODES`，提供配置后的电竞范围与平台游戏 ID；共享 catalog 保持纯计算 |
-| `@changmen/storage/platform_storage.js` | 平台凭证 JSON 读写 |
-| `@changmen/storage/predictfun_market_index.js` | PF 市场索引 |
-| `@changmen/storage/polymarket_market_index.js` | PM 电竞市场索引 |
-| `@changmen/storage/sxbet_market_index.js` | SXBet 电竞市场索引 |
+| `@changmen/storage/paths` | `CHANGMEN_ROOT`、`CHANGMEN_LAYOUT`、`VENUE_ADAPTER_ROOT`、`ESPORT_DATA_DIR` |
+| `@changmen/storage/load_env` | 加载 `server/backend/.env` |
+| `@changmen/storage/game_catalog` | 每次调用读取 `AGGREGATE_GAME_CODES`，提供配置后的电竞范围与平台游戏 ID；共享 catalog 保持纯计算 |
+| `@changmen/storage/platform_storage` | 平台凭证 JSON 读写 |
+| `@changmen/storage/predictfun_market_index` | PF 市场索引 |
+| `@changmen/storage/polymarket_market_index` | PM 电竞市场索引 |
+| `@changmen/storage/sxbet_market_index` | SXBet 电竞市场索引 |
 
 ## 路径规则
 

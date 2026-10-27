@@ -1,5 +1,5 @@
 import { hasProfileMetadataStorage, persistUserPresence } from "@changmen/db/profile_metadata.js";
-import { readJsonFile } from "@changmen/storage/json_file_store.js";
+import { readJsonFile } from "@changmen/storage/json_file_store";
 
 /** 与 A8 Client_GetUsers 一致：30 分钟内活跃视为在线 */
 export const ONLINE_WINDOW_MS = 30 * 60 * 1000;

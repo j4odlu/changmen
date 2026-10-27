@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@changmen/storage/predictfun_market_index.js", () => ({
+vi.mock("@changmen/storage/predictfun_market_index", () => ({
   readPredictFunMarketIndex: () => ({
     updatedAt: 1,
     marketIds: ["844582"],

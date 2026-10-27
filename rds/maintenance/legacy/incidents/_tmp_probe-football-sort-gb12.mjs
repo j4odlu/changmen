@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { financialOrdersRelation } from "@changmen/db";
 // 一次性探针：对比足球订单「按操盘账号」分列在 不同排序规则 下的左右顺序，定位 gb12 的位置
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 if (!process.env.DATABASE_RDS_TARGET)

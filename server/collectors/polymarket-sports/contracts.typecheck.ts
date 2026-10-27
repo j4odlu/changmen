@@ -1,7 +1,7 @@
 import type { PmSportSnapshot, PmPrematchTokenSnapshot } from "@changmen/api-contract";
 import type { CollectorPmSportSnapshot, CollectorPrematchRecord } from "@changmen/db";
 import { writePmPrematchPrices } from "@changmen/db";
-import { readPolymarketMarketIndex } from "@changmen/storage/polymarket_market_index.js";
+import { readPolymarketMarketIndex } from "@changmen/storage/polymarket_market_index";
 import { buildPmSportSnapshot } from "./parse_sport.ts";
 import { createPmSportStateWriter } from "./sport_state.ts";
 import { pollLinkedGammaSportStates } from "./gamma_poll.ts";

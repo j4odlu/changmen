@@ -2,7 +2,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createDatabaseSchemaObserver, createConfiguredDatabaseSchemaObserver } from "@changmen/db/runtime_schema.js";
-import { captureRuntimeVersion, readSourceVersion } from "@changmen/storage/runtime_version.js";
+import { captureRuntimeVersion, readSourceVersion } from "@changmen/storage/runtime_version";
 
 const root = fileURLToPath(new URL("../../../../", import.meta.url));
 export const backendRuntimeVersion = captureRuntimeVersion(path.resolve(root), "backend");

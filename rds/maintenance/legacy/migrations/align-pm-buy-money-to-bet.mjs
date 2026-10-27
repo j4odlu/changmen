@@ -10,7 +10,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/migrations/align-pm-buy-money-to-bet.mjs --dry-run
  *   node scripts/ops/migrations/align-pm-buy-money-to-bet.mjs --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { Currency, getExchange } from "@changmen/shared/currency";
 
 loadChangmenEnv();

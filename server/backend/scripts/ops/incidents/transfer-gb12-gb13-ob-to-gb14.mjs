@@ -6,7 +6,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *
  *   node scripts/ops/incidents/transfer-gb12-gb13-ob-to-gb14.mjs [--dry-run]
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, getPgPool } from "@changmen/db";
 import { loadAccountsForUser, loadProfileById } from "../../../core/db/store.js";
 

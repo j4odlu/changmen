@@ -10,7 +10,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/migrations/migrate-pm-sell-pnl-to-buy.mjs --execute
  *   node scripts/ops/migrations/migrate-pm-sell-pnl-to-buy.mjs --user gb12 --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 

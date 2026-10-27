@@ -3,7 +3,7 @@
  * One-off: fix SH01 (empty) and River (PM47 + PB48 + RAY46) profiles.accounts
  * Usage: node scripts/fix-sh01-river-accounts.mjs [--dry-run]
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { openProfileRepairData } from "@changmen/db/maintenance/profile_repairs.js";
 import { loadProfileById, pullProfilesFromDb } from "../../../core/db/store.js";
 

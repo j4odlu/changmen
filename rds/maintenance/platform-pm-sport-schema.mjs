@@ -37,7 +37,7 @@ export async function maintainPlatformPmSportSchema(client, { apply = false } = 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   assert(args.every(arg => arg === "--apply"), "仅支持 --apply；不带参数时只读检查");
-  const { loadChangmenEnv } = await import("@changmen/storage/load_env.js");
+  const { loadChangmenEnv } = await import("@changmen/storage/load_env");
   loadChangmenEnv();
   const { ensurePgPoolReady } = await import("@changmen/db");
   const pool = await ensurePgPoolReady();

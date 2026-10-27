@@ -18,7 +18,7 @@ import {
  *
  * 退出码 0 = 全过；非 0 = 至少一项失败（CI / deploy 脚本直接失败）。
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import {
   isAdminNotifyEnabled,
   sendAdminNotify,

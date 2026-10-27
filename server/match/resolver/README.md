@@ -33,6 +33,6 @@ npm test
 离线套件中有一个 `it.fails` 登记旧版 `scoreMatchPair` 未正确识别反向队伍的缺口，
 匹配算法保持原状；修复算法时须同步处理该预期失败用例。
 
-环境：`PANDASCORE_TOKEN`（可选）。`.env` 经 `@changmen/storage/load_env.js` 加载。
+环境：`PANDASCORE_TOKEN`（可选）。`.env` 经 `@changmen/storage/load_env` 加载。
 
 相关：[packages/match-identity/README.md](../../../packages/match-identity/README.md)

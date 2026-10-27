@@ -57,7 +57,7 @@ const port=await import('@changmen/runtime-tooling/dev_web_port.js');
 for(const spec of ['@changmen/runtime-tooling-compat/runtime_version.js','@changmen/runtime-tooling-compat/dev_web_port.js','@changmen/shared/tooling/runtime_version.js','@changmen/shared/tooling/dev_web_port.js'])
  await assert.rejects(()=>import(spec),error=>['ERR_MODULE_NOT_FOUND','ERR_PACKAGE_PATH_NOT_EXPORTED'].includes(error.code));
 assert.equal(port.resolveDevWebPort({},'win32'),5274);assert.equal(port.resolveDevWebPort({},'linux'),5174);assert.throws(()=>port.resolveDevWebPort({VITE_DEV_PORT:'65536'}));
-${workspace === "@changmen/storage" ? `const storage=await import('@changmen/storage/runtime_version.js');assert.equal(storage.readSourceVersion,canonical.readSourceVersion);const config=await import('@changmen/storage/dev_web_config.js');assert.equal(config.resolveDevWebPort,port.resolveDevWebPort);` : ""}
+${workspace === "@changmen/storage" ? `const storage=await import('@changmen/storage/runtime_version');assert.equal(storage.readSourceVersion,canonical.readSourceVersion);const config=await import('@changmen/storage/dev_web_config');assert.equal(config.resolveDevWebPort,port.resolveDevWebPort);` : ""}
 assert.equal(attempts,0);console.log('canonical exports work and retired compatibility exports are unavailable; network attempts=0');`;
       fs.writeFileSync(path.join(out, `${name}-exports.log`), execFileSync(process.execPath, ["--input-type=module", "--eval", code],
         { cwd: root, env, encoding: "utf8", windowsHide: true, timeout: 15000 }));

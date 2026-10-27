@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { ESPORT_DATA_DIR } = require("../backend/_paths.cjs");
 const { getDefaultSportIds } = require("./sport_ids.js");
-const { getActivePlatformGameIds } = require("./_require.js").backendRequire("@changmen/storage/game_catalog.js");
+const { getActivePlatformGameIds } = require("./_require.js").backendRequire("@changmen/storage/game_catalog");
 
 const PLATFORMS_FILE = path.join(ESPORT_DATA_DIR, "platforms.json");
 

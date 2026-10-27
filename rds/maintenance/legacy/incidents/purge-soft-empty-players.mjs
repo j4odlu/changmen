@@ -7,7 +7,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/purge-soft-empty-players.mjs --execute
  *   node scripts/purge-soft-empty-players.mjs --user GB15 --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 const dryRun = !process.argv.includes("--execute");
 const userFilter = process.argv.find(a => a.startsWith("--user="))?.slice(7) || "";

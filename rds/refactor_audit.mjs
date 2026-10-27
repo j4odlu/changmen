@@ -241,8 +241,8 @@ catch (err) {
   fail(`order_link_filter 子路径: ${err.message}`);
 }
 try {
-  await import("@changmen/storage/paths.js");
-  ok("@changmen/storage/paths.js 可 import");
+  await import("@changmen/storage/paths");
+  ok("@changmen/storage/paths 可 import");
 }
 catch (err) {
   fail(`storage paths 子路径: ${err.message}`);

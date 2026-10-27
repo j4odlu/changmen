@@ -6,7 +6,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/cleanup-river-ray-41-46-dupes.mjs --dry-run
  *   node scripts/cleanup-river-ray-41-46-dupes.mjs --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 const dryRun = !process.argv.includes("--execute");
 const USER_NAME = "River";

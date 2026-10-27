@@ -3,7 +3,7 @@ import { financialOrdersRelation } from "@changmen/db";
 /**
  * Probe why GB14 OB accounts may not bet.
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 if (!process.env.DATABASE_RDS_TARGET)

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** Remove duplicate Polymarket account 45 from River; keep 47 (primary PM). */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { openProfileRepairData } from "@changmen/db/maintenance/profile_repairs.js";
 import { loadProfileById } from "../../../core/db/store.js";
 

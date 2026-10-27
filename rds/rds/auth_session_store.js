@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { cookieOnlyAuth } from "@changmen/storage/auth_mode.js";
+import { cookieOnlyAuth } from "@changmen/storage/auth_mode";
 import { getPgPool } from "./common.js";
 import { querySessionWithReconnect } from "./connection_retry.js";
 import { certificateRegistryEnabled, authorizeClientCertificate } from './client_certificate_store.js';

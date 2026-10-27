@@ -21,8 +21,8 @@ it("binds serving asset hashes to exact Git archive and checkout bytes", () => {
 });
 it("uses exactly the same native Node exports at old and shared entry points", () => {
   const code = `import assert from 'node:assert/strict';
-    const old=await import('@changmen/storage/runtime_version.js'),shared=await import('@changmen/runtime-tooling/runtime_version.js'),canonical=await import('@changmen/runtime-tooling/runtime_version.js');assert.deepEqual(Object.keys(old),Object.keys(shared));for(const key of Object.keys(shared)){assert.equal(old[key],shared[key]);assert.equal(old[key],canonical[key]);}
-    const oldPort=await import('@changmen/storage/dev_web_config.js'),sharedPort=await import('@changmen/runtime-tooling/dev_web_port.js');assert.equal(oldPort.resolveDevWebPort,sharedPort.resolveDevWebPort);
+    const old=await import('@changmen/storage/runtime_version'),shared=await import('@changmen/runtime-tooling/runtime_version.js'),canonical=await import('@changmen/runtime-tooling/runtime_version.js');assert.deepEqual(Object.keys(old),Object.keys(shared));for(const key of Object.keys(shared)){assert.equal(old[key],shared[key]);assert.equal(old[key],canonical[key]);}
+    const oldPort=await import('@changmen/storage/dev_web_config'),sharedPort=await import('@changmen/runtime-tooling/dev_web_port.js');assert.equal(oldPort.resolveDevWebPort,sharedPort.resolveDevWebPort);
     console.log('same native exports');`;
   expect(execFileSync(process.execPath, ["--input-type=module", "--eval", code], { cwd: root, encoding: "utf8", windowsHide: true })).toContain("same native exports");
 });

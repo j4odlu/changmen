@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../..");
 const collector = path.join(root, "server/collectors/predictfun-collector");

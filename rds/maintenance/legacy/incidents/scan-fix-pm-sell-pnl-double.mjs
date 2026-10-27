@@ -10,7 +10,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/incidents/scan-fix-pm-sell-pnl-double.mjs --match "SAW Youngsters" --execute
  *   node scripts/ops/incidents/scan-fix-pm-sell-pnl-double.mjs --user gb14 --dry-run
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { Currency, getExchange } from "@changmen/shared/currency";
 
 loadChangmenEnv();

@@ -12,7 +12,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/ops/diagnostics/audit-position-sell-events.mjs --user gb12 --days 30
  *   node scripts/ops/diagnostics/audit-position-sell-events.mjs --days 365 --samples 40
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { readPositionSellEvents } from "../../../core/account/order/position_events.js";
 
 loadChangmenEnv();

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** Full account audit — players 为唯一真相 */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady, getPgPool } from "@changmen/db";
 import { playerRowToAccountRecord } from "../../../player_account_record.js";
 

@@ -6,7 +6,7 @@
  *   node scripts/ops/incidents/lookup-order-logs.mjs --user gb12 --order 1679490229898760669
  *   node scripts/ops/incidents/lookup-order-logs.mjs --user gb12 --link 1781802360547 --json
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 

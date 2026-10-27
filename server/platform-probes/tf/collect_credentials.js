@@ -2,7 +2,7 @@
  * TF 采集凭证 — 仅本地：TF_GATEWAY+TF_TOKEN / platforms.json / session。
  * 不再请求 api.a8.to/esport。
  */
-import { getPlatform } from "@changmen/storage/platform_storage.js";
+import { getPlatform } from "@changmen/storage/platform_storage";
 import { tryLoadSession } from "./session.js";
 
 function fromPlatformRow(row) {

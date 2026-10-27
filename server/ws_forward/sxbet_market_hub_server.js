@@ -5,7 +5,7 @@
  * 上游 Centrifugo 用 SXBET_API_KEY 换 realtime token。
  */
 import http from "node:http";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import {
   attachSxBetMarketHub,
   closeSxBetMarketHub,

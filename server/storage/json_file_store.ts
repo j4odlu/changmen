@@ -3,7 +3,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { ESPORT_DATA_DIR } from "@changmen/storage/paths.js";
+import { ESPORT_DATA_DIR } from "@changmen/storage/paths";
 
 function resolvePath(name: string): string {
   const base = String(name).replace(/\.json$/i, "");

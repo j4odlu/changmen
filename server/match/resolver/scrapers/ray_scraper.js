@@ -8,7 +8,7 @@
  *   node ray_scraper.js --types=1,2,3     # 只抓指定 match_type
  *   node ray_scraper.js --dry-run         # 只打印，不写�? */
 
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { getGameCodeForPlatformId } from "@changmen/shared/catalog/game_catalog";
 import { loadAndCreatePlugin } from "../team_db.js";
 

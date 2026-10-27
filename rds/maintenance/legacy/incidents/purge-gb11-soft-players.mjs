@@ -6,7 +6,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/purge-gb11-soft-players.mjs --dry-run
  *   node scripts/purge-gb11-soft-players.mjs --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 const dryRun = !process.argv.includes("--execute");
 const USER_NAME = "GB11";

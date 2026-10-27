@@ -6,7 +6,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/manual-fix-pm-order-by-prefix.mjs --order-prefix 0x4a8d25e298ab95e84e --dry-run
  *   node scripts/manual-fix-pm-order-by-prefix.mjs --order-prefix 0x4a8d25e298ab95e84e --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { Currency, getExchange, scaleUsdtToCnyDisplay } from "@changmen/shared/currency";
 import {
   fetchGammaMarketsByConditionIds,

@@ -1,5 +1,5 @@
 import { getPgPool } from './common.js';
-import { cookieOnlyAuth } from '@changmen/storage/auth_mode.js';
+import { cookieOnlyAuth } from '@changmen/storage/auth_mode';
 export const certificateRegistryEnabled = () => process.env.CLIENT_CERT_REGISTRY_ENABLED === '1';
 const pool = () => { const p = getPgPool(); if (!p) throw new Error('Certificate database unavailable'); return p; };
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });

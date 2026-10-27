@@ -2,7 +2,7 @@
 /**
  * River pm/f43e：BetBoom vs Team Neme 买单+卖单 RDS vs Polymarket CLOB 对照
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { ensurePgPoolReady } from "@changmen/db";
 import {
   buildPolymarketL2HeadersFromToken,

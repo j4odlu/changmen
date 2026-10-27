@@ -18,7 +18,7 @@
  */
 import http from "node:http";
 import https from "node:https";
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 import { buildHttpRelayUrl } from "@changmen/api-contract/urls";
 import WebSocket from "ws";
 

@@ -3,8 +3,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { BACKEND_ROOT, ESPORT_DATA_DIR } from "@changmen/storage/paths.js";
-import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store.js";
+import { BACKEND_ROOT, ESPORT_DATA_DIR } from "@changmen/storage/paths";
+import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store";
 
 const EMPTY_OBJECTS = [
   "default_odds",

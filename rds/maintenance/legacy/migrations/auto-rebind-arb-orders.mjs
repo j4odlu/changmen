@@ -6,7 +6,7 @@ import { financialOrdersRelation } from "@changmen/db";
  *   node scripts/auto-rebind-arb-orders.mjs --user gb12 --days 5 --dry-run
  *   node scripts/auto-rebind-arb-orders.mjs --user gb12 --days 5 --execute
  */
-import { loadChangmenEnv } from "@changmen/storage/load_env.js";
+import { loadChangmenEnv } from "@changmen/storage/load_env";
 
 loadChangmenEnv();
 

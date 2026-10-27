@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { it } from "vitest";
-import { normalizeTeam } from "../teams/team_key.js";
+import { normalizeTeam } from "../teams/team_key.ts";
 
 it("normalizeTeam decodes &apos; and aliases Life's A Game → lag", () => {
   assert.equal(normalizeTeam("LAG Gaming"), "lag");

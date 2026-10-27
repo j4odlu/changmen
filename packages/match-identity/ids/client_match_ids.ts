@@ -1,6 +1,7 @@
-import { stableBetId } from "../teams/match_utils.js";
+import type { AssignedMatch, BuiltClientMatch, ClientMatchIdentityAdapter, ClientMatchIndexRow, ClientMatchStub, IdentityMatchRow, LinkedClientIdOptions, OptionalIdentityId, PlatformMatchIds, PlatformMatchLinks, ResolveClientMatchOptions } from "../types.ts";
+import { stableBetId } from "../teams/match_utils.ts";
 
-function matchsSignature(matchs) {
+function matchsSignature(matchs: PlatformMatchIds | null | undefined): string {
   return Object.entries(matchs || {})
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([plat, srcId]) => `${plat}:${String(srcId)}`)
@@ -8,7 +9,7 @@ function matchsSignature(matchs) {
 }
 
 /** existing ⊆ built（平台与 source id 一致）时视为同场升级，复用旧 client_matches.id */
-function matchsIsSubset(subMatchs, superMatchs) {
+function matchsIsSubset(subMatchs: PlatformMatchIds | null | undefined, superMatchs: PlatformMatchIds | null | undefined): boolean {
   const sub = Object.entries(subMatchs || {});
   if (!sub.length)
     return false;
@@ -19,12 +20,12 @@ function matchsIsSubset(subMatchs, superMatchs) {
   return true;
 }
 
-function isEndedClientMatchRow(row) {
+function isEndedClientMatchRow(row: ClientMatchIndexRow | null | undefined): boolean {
   const ended = row?.ended_at ?? row?.endedAt;
   return ended != null && ended !== "";
 }
 
-function findReuseIdByMatchsSuperset(existingRows, builtMatchs) {
+function findReuseIdByMatchsSuperset(existingRows: readonly ClientMatchIndexRow[] | null | undefined, builtMatchs: PlatformMatchIds | null | undefined): number {
   let bestId = 0;
   let bestCount = 0;
   for (const row of existingRows || []) {
@@ -41,7 +42,7 @@ function findReuseIdByMatchsSuperset(existingRows, builtMatchs) {
   return bestId;
 }
 
-function findPlatformMatch(matches, provider, sourceMatchId) {
+function findPlatformMatch(matches: PlatformMatchLinks | null | undefined, provider: string, sourceMatchId: OptionalIdentityId) {
   const sid = String(sourceMatchId);
   const byId = matches?.[provider];
   if (!byId)
@@ -52,8 +53,8 @@ function findPlatformMatch(matches, provider, sourceMatchId) {
 }
 
 /** 对齐阶段已在内存写入的 ClientMatchId（链接到已有 client 行，禁止新建 id） */
-function findLinkedClientIdFromMatchs(builtMatchs, matches, { mergeKey, existingIdKeyIndex } = {}) {
-  const ids = new Set();
+function findLinkedClientIdFromMatchs(builtMatchs: PlatformMatchIds | null | undefined, matches: PlatformMatchLinks | null | undefined, { mergeKey, existingIdKeyIndex }: LinkedClientIdOptions = {}): number {
+  const ids = new Set<number>();
   for (const [plat, srcId] of Object.entries(builtMatchs || {})) {
     const m = findPlatformMatch(matches, plat, srcId);
     const cid = m?.ClientMatchId ?? m?.client_match_id ?? m?.match_id;
@@ -83,7 +84,7 @@ function findLinkedClientIdFromMatchs(builtMatchs, matches, { mergeKey, existing
 }
 
 /** 与已有 client 行存在相同 platform:sourceId 时复用其 id */
-function findReuseIdByPlatformOverlap(existingRows, builtMatchs) {
+function findReuseIdByPlatformOverlap(existingRows: readonly ClientMatchIndexRow[] | null | undefined, builtMatchs: PlatformMatchIds | null | undefined): number {
   let bestId = 0;
   let bestOverlap = 0;
   for (const row of existingRows || []) {
@@ -102,7 +103,7 @@ function findReuseIdByPlatformOverlap(existingRows, builtMatchs) {
   return bestOverlap > 0 ? bestId : 0;
 }
 
-function manualMergeKey(platformA, sourceIdA, platformB, sourceIdB) {
+function manualMergeKey(platformA: string, sourceIdA: OptionalIdentityId, platformB: string, sourceIdB: OptionalIdentityId): string {
   const keys = [
     `${String(platformA)}:${String(sourceIdA)}`,
     `${String(platformB)}:${String(sourceIdB)}`,
@@ -110,7 +111,7 @@ function manualMergeKey(platformA, sourceIdA, platformB, sourceIdB) {
   return `manual:${keys.join("|")}`;
 }
 
-function assignMatchIds(row, id) {
+function assignMatchIds<T extends IdentityMatchRow>(row: T, id: OptionalIdentityId): AssignedMatch<T> {
   const numericId = Number(id);
   return {
     ...row,
@@ -120,10 +121,10 @@ function assignMatchIds(row, id) {
       MatchID: numericId,
       ID: stableBetId(numericId, bet.Map ?? 0),
     })),
-  };
+  } as AssignedMatch<T>;
 }
 
-async function insertClientMatchRow(adapter, mergeKey, stub) {
+async function insertClientMatchRow(adapter: Pick<ClientMatchIdentityAdapter, "insertClientMatchStub">, mergeKey: string, stub: ClientMatchStub): Promise<number> {
   return adapter.insertClientMatchStub(mergeKey, stub);
 }
 
@@ -131,18 +132,18 @@ async function insertClientMatchRow(adapter, mergeKey, stub) {
  * 为 buildClientMatchList 产出的行分配 id。
  * 优先复用已有 client_matches.id（含对齐链接、平台重叠）；仅全新场次才 insert。
  */
-async function resolveClientMatchIds(adapter, builtRows, { matches, existingIdKeyIndex } = {}) {
+async function resolveClientMatchIds<T extends BuiltClientMatch>(adapter: ClientMatchIdentityAdapter, builtRows: readonly T[] | null | undefined, { matches, existingIdKeyIndex }: ResolveClientMatchOptions = {}) {
   if (!adapter)
     throw new Error("client match adapter required");
   if (!builtRows?.length)
     return [];
 
   const existing = await adapter.fetchClientMatchIndex();
-  const idKeyIndex = existingIdKeyIndex || new Map();
+  const idKeyIndex = existingIdKeyIndex || new Map<string, number>();
 
-  const byMergeKey = new Map();
-  const byMatchsSig = new Map();
-  const activeIds = new Set();
+  const byMergeKey = new Map<string, number>();
+  const byMatchsSig = new Map<string, number>();
+  const activeIds = new Set<number>();
   for (const row of existing || []) {
     if (isEndedClientMatchRow(row))
       continue;
@@ -162,8 +163,8 @@ async function resolveClientMatchIds(adapter, builtRows, { matches, existingIdKe
       byMergeKey.set(key, id);
   }
 
-  const batchAssigned = new Map();
-  const resolved = [];
+  const batchAssigned = new Map<string, number>();
+  const resolved: ReturnType<typeof assignMatchIds<T>>[] = [];
 
   for (const row of builtRows) {
     const mergeKey = row.MergeKey ? String(row.MergeKey) : null;
@@ -227,7 +228,7 @@ async function resolveClientMatchIds(adapter, builtRows, { matches, existingIdKe
 }
 
 /** 人工关联前确保 client_matches 行存在，返回自增 id */
-async function ensureClientMatchId(adapter, mergeKey, stub = {}) {
+async function ensureClientMatchId(adapter: Pick<ClientMatchIdentityAdapter, "findClientMatchIdByMergeKey" | "insertClientMatchStub">, mergeKey: string, stub: ClientMatchStub = {}): Promise<number> {
   if (!adapter)
     throw new Error("client match adapter required");
   const key = String(mergeKey || "").trim();

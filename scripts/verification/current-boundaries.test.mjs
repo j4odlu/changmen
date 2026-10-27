@@ -37,6 +37,8 @@ it("current invariants accept business evolution without a historical source has
   expect(inspectCurrentSourceBoundaries(f.root).violations).toEqual([]);
 });
 for (const [file, value] of [["old/entry.js", "returned"], ["server/db/new.js", "returned"],
+  ["packages/shared/match-identity/teams/team_key.ts", "returned identity implementation"],
+  ["packages/shared/match-identity/index.js", "returned identity facade"],
   ["server/backend/core/integrations/polymarket/clob_l1.js", "retired SDK returned"],
   ["rds/assets/migrations/001_fixture.sql", "changed SQL"], ["rds/assets/migrations/002_new.sql", "unregistered SQL"],
   ["scripts/verification/backend-db-access-exceptions.json", { sites: [{ file: "new exception" }] }]])

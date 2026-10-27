@@ -1,4 +1,5 @@
-import { isPlaceholderTeamName } from "./match_utils.js";
+import type { CanonicalMatchKey, IdentityId, OptionalIdentityId, TeamKeyContext, TeamPlugin } from "../types.ts";
+import { isPlaceholderTeamName } from "./match_utils.ts";
 import teamAliasesJson from "./team_aliases.json" with { type: "json" };
 
 /**
@@ -8,11 +9,11 @@ import teamAliasesJson from "./team_aliases.json" with { type: "json" };
 
 // ── team-resolver 插件桥 ──────────────────────────────────────────────────────
 
-let _teamPlugin = null;
+let _teamPlugin: TeamPlugin | null = null;
 
-function setTeamPlugin(plugin) { _teamPlugin = plugin; }
+function setTeamPlugin(plugin: TeamPlugin | null): void { _teamPlugin = plugin; }
 
-function _lookupByName(gameCode, normalizedName) {
+function _lookupByName(gameCode: string, normalizedName: string): OptionalIdentityId {
   if (!_teamPlugin)
     return null;
   if (typeof _teamPlugin === "function")
@@ -20,23 +21,25 @@ function _lookupByName(gameCode, normalizedName) {
   return _teamPlugin.lookupByName?.(gameCode, normalizedName) || null;
 }
 
-function _lookupById(platform, platformId) {
+function _lookupById(platform: string, platformId: OptionalIdentityId): OptionalIdentityId {
   if (!_teamPlugin || typeof _teamPlugin === "function")
     return null;
   return _teamPlugin.lookupById?.(platform, platformId) || null;
 }
 
-function _saveMapping(canonId, platform, platformId, platformName) {
+// The legacy caller supplies gameCode, but this bridge has always forwarded four arguments.
+function _saveMapping(canonId: IdentityId, platform: string, platformId: IdentityId, platformName: unknown, gameCode?: string): void;
+function _saveMapping(canonId: IdentityId, platform: string, platformId: IdentityId, platformName: unknown) {
   if (!_teamPlugin || typeof _teamPlugin === "function")
     return;
   _teamPlugin.saveMapping?.(canonId, platform, platformId, platformName);
 }
 
-function lookupGbTeamIdByPlatform(platform, platformId) {
+function lookupGbTeamIdByPlatform(platform: string, platformId: OptionalIdentityId): OptionalIdentityId {
   return _lookupById(platform, platformId);
 }
 
-function lookupCanonicalTeamName(gbTeamId) {
+function lookupCanonicalTeamName(gbTeamId: OptionalIdentityId): string | null | undefined {
   if (!_teamPlugin || typeof _teamPlugin === "function")
     return null;
   return _teamPlugin.lookupCanonicalName?.(String(gbTeamId)) || null;
@@ -52,7 +55,7 @@ function getAliases() {
 }
 
 /** OB 等场馆偶发把 `'` 存成 `&apos;`；先解码再归一，避免 `lifeaposs a game` */
-function decodeHtmlEntities(s) {
+function decodeHtmlEntities(s: unknown): string {
   return String(s || "")
     .replace(/&apos;/gi, "'")
     .replace(/&#39;/g, "'")
@@ -66,7 +69,7 @@ function decodeHtmlEntities(s) {
  * 小写 → 去标点 → 去末尾通用后缀（esports/gaming）→ 别名替换。
  * 保留 CJK 字符，支持 team_aliases.json 扩展。
  */
-function normalizeTeam(name) {
+function normalizeTeam(name: unknown): string {
   const base = decodeHtmlEntities(name)
     .toLowerCase()
     .replace(/[·\-—_•\s]+/g, " ")
@@ -83,7 +86,7 @@ function normalizeTeam(name) {
  * 计算赛事的规范化 key（兼容旧逻辑：ID / canonical 队名 / 归一化队名混合）。
  * 新合并流程请用 canonicalMatchKeyByIdOnly + canonicalMatchKeyByName 两阶段。
  */
-function canonicalMatchKey(gameId, home, away, gameCode, ctx) {
+function canonicalMatchKey(gameId: OptionalIdentityId, home: unknown, away: unknown, gameCode?: string, ctx?: TeamKeyContext): CanonicalMatchKey | null {
   const nh = normalizeTeam(home);
   const na = normalizeTeam(away);
   if (!nh || !na)
@@ -91,8 +94,8 @@ function canonicalMatchKey(gameId, home, away, gameCode, ctx) {
   if (isPlaceholderTeamName(nh) || isPlaceholderTeamName(na))
     return null;
 
-  let hk = nh;
-  let ak = na;
+  let hk: IdentityId = nh;
+  let ak: IdentityId = na;
 
   if (_teamPlugin && gameCode) {
     const provider = ctx?.provider;
@@ -120,7 +123,7 @@ function canonicalMatchKey(gameId, home, away, gameCode, ctx) {
 }
 
 /** 第一阶段：仅 platform_id → gb_team_id，主客两队都必须映射成功 */
-function canonicalMatchKeyByIdOnly(gameId, home, away, gameCode, ctx) {
+function canonicalMatchKeyByIdOnly(gameId: OptionalIdentityId, home: unknown, away: unknown, gameCode?: string, ctx?: TeamKeyContext): CanonicalMatchKey | null {
   const nh = normalizeTeam(home);
   const na = normalizeTeam(away);
   if (!nh || !na)
@@ -144,7 +147,7 @@ function canonicalMatchKeyByIdOnly(gameId, home, away, gameCode, ctx) {
 }
 
 /** 第二阶段：仅队名归一化（不做 ID / canonical 队名查找） */
-function canonicalMatchKeyByName(gameId, home, away) {
+function canonicalMatchKeyByName(gameId: OptionalIdentityId, home: unknown, away: unknown): CanonicalMatchKey | null {
   const nh = normalizeTeam(home);
   const na = normalizeTeam(away);
   if (!nh || !na)
@@ -154,7 +157,7 @@ function canonicalMatchKeyByName(gameId, home, away) {
   return _packMatchKey(gameId, nh, na, "name");
 }
 
-function _packMatchKey(gameId, hk, ak, kind) {
+function _packMatchKey(gameId: OptionalIdentityId, hk: IdentityId, ak: IdentityId, kind: CanonicalMatchKey["basis"]): CanonicalMatchKey {
   const reversed = hk > ak;
   const [first, second] = reversed ? [ak, hk] : [hk, ak];
   const prefix = kind === "id" ? "match:id:" : kind === "name" ? "match:name:" : "match:";
@@ -168,7 +171,7 @@ function _packMatchKey(gameId, hk, ak, kind) {
 }
 
 /** 判定跨平台合并键是否由平台队伍 ID（team_venue_maps）解析成功 */
-function classifyMergeBasis(home, away, gameCode, ctx) {
+function classifyMergeBasis(home: unknown, away: unknown, gameCode?: string, ctx?: TeamKeyContext): "id" | "name" | "unknown" {
   const nh = normalizeTeam(home);
   const na = normalizeTeam(away);
   if (!nh || !na)
@@ -188,14 +191,14 @@ function classifyMergeBasis(home, away, gameCode, ctx) {
 }
 
 /** canonical / map 上的「未知(N)」占位，不能当真实 game 做串线校验 */
-function isUnresolvedGameLabel(game) {
+function isUnresolvedGameLabel(game: unknown): boolean {
   const g = String(game || "").trim().toLowerCase();
   if (!g)
     return true;
   return g === "unknown" || g.startsWith("未知");
 }
 
-function lookupGbTeamIdByName(teamName, gameCode) {
+function lookupGbTeamIdByName(teamName: unknown, gameCode?: string): OptionalIdentityId {
   const normalized = normalizeTeam(teamName);
   if (!normalized)
     return null;
@@ -221,14 +224,14 @@ function lookupGbTeamIdByName(teamName, gameCode) {
   return unscoped;
 }
 
-function lookupGameForGbTeamId(gbTeamId) {
+function lookupGameForGbTeamId(gbTeamId: OptionalIdentityId): string | null | undefined {
   if (!_teamPlugin || typeof _teamPlugin === "function")
     return null;
   return _teamPlugin.lookupGameForGbTeamId?.(String(gbTeamId)) || null;
 }
 
 /** 锚点 gb 须与本场 gameCode 一致，防止 cs2/valorant 等同名队串线 */
-function anchorGbValidForGame(gbTeamId, gameCode) {
+function anchorGbValidForGame(gbTeamId: OptionalIdentityId, gameCode?: string): boolean {
   const gb = gbTeamId == null || gbTeamId === "" ? null : String(gbTeamId).trim();
   const game = String(gameCode || "").trim().toLowerCase();
   if (!gb || !game)

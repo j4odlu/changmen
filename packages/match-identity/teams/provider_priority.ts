@@ -1,8 +1,9 @@
-import { formatTitle, isPlaceholderTeamName } from "./match_utils.js";
-import { normalizeTeam } from "./team_key.js";
+import type { CanonicalTeamSideNames, OptionalIdentityId, PickedPlatformTeamRow, PlatformTeamRow, TeamNameResolvers, TeamSideNames } from "../types.ts";
+import { formatTitle, isPlaceholderTeamName } from "./match_utils.ts";
+import { normalizeTeam } from "./team_key.ts";
 
 /** 平台优先级：数值越大，队名 / Title 越优先采用 */
-const PROVIDER_PRIORITY = {
+const PROVIDER_PRIORITY: Readonly<Record<string, number>> = {
   OB: 10,
   RAY: 9,
   PB: 8,
@@ -19,30 +20,30 @@ const PROVIDER_PRIORITY = {
 /** canonical 主客 gb 锁初值：按序取第一个双侧 gb 已映射平台的 native 槽位（PF 最后兜底） */
 const CANONICAL_ANCHOR_PLATFORMS = ["Polymarket", "OB", "RAY", "PredictFun"];
 
-function providerPriority(platform) {
+function providerPriority(platform: unknown): number {
   return PROVIDER_PRIORITY[String(platform || "").trim()] || 0;
 }
 
-function sortByProviderPriority(rows, platformKey = "platform") {
+function sortByProviderPriority<T extends PlatformTeamRow>(rows: readonly T[] | null | undefined, platformKey: keyof T = "platform") {
   return [...(rows || [])].sort(
     (a, b) => providerPriority(b[platformKey]) - providerPriority(a[platformKey]),
   );
 }
 
 /** 从带 platform/home/away 的行中取最高优先级平台 */
-function pickCanonicalPlatformRow(rows, platformKey = "platform") {
+function pickCanonicalPlatformRow<T extends PlatformTeamRow, K extends keyof T = "platform">(rows: readonly T[] | null | undefined, platformKey: K = "platform" as K): PickedPlatformTeamRow<T, K> | null {
   const sorted = sortByProviderPriority(rows, platformKey);
   for (const row of sorted) {
     const home = String(row.home ?? row.Home ?? "").trim();
     const away = String(row.away ?? row.Away ?? "").trim();
     if (isPlaceholderTeamName(home) && isPlaceholderTeamName(away))
       continue;
-    return { ...row, home, away, platform: row[platformKey] ?? row.platform };
+    return { ...row, home, away, platform: row[platformKey] ?? row.platform } as PickedPlatformTeamRow<T, K>;
   }
   return null;
 }
 
-function titleFromPlatformRow(row) {
+function titleFromPlatformRow(row: PlatformTeamRow | null | undefined): string | null {
   if (!row)
     return null;
   const home = String(row.home ?? row.Home ?? "").trim();
@@ -52,7 +53,7 @@ function titleFromPlatformRow(row) {
   return formatTitle(home, away);
 }
 
-function resolveCanonicalNameForId(resolvers, platform, platformId) {
+function resolveCanonicalNameForId(resolvers: TeamNameResolvers, platform: string | undefined, platformId: OptionalIdentityId): string | null {
   const id = String(platformId ?? "").trim();
   if (!id)
     return null;
@@ -69,7 +70,7 @@ function resolveCanonicalNameForId(resolvers, platform, platformId) {
  * 按最高优先级平台的 canonical 主客取向解析队名。
  * 各平台 home/away 槽位可能颠倒（如 TF），需用队名对齐后再取对应 platform_id 映射。
  */
-function resolveCanonicalSideNames(rows, resolvers) {
+function resolveCanonicalSideNames<T extends PlatformTeamRow>(rows: readonly T[] | null | undefined, resolvers?: TeamNameResolvers | null): CanonicalTeamSideNames | null {
   if (!resolvers?.lookupGbTeamId || !resolvers?.lookupCanonicalName)
     return null;
 
@@ -120,7 +121,7 @@ function resolveCanonicalSideNames(rows, resolvers) {
   };
 }
 
-function teamsFromPlatformRows(rows, resolvers) {
+function teamsFromPlatformRows<T extends PlatformTeamRow>(rows: readonly T[] | null | undefined, resolvers?: TeamNameResolvers | null): TeamSideNames | null {
   const canonical = resolveCanonicalSideNames(rows, resolvers);
   if (canonical)
     return canonical;

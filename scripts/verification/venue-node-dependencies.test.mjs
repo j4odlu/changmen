@@ -50,7 +50,7 @@ it("keeps resolver and Node loader production declarations free from browser hos
   expect(report.closures["@changmen/backend"].workspaces).toContain("@changmen/venue-node");
   expect(report.resolverTooling.workspaces).toContain("@changmen/venue-node");
   expect(report.resolverTooling.workspaces).not.toContain("@changmen/venue-adapter");
-  expect(report.backendTooling.workspaces).toHaveLength(13);
+  expect(report.backendTooling.workspaces).toHaveLength(14);
   expect(report.backendTooling.workspaces).toContain("@changmen/venue-node");
   expect(report.backendTooling.workspaces).not.toContain("@changmen/venue-adapter");
   expect(report.bundleConsumers).toHaveLength(1);

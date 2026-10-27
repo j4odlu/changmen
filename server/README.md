@@ -16,7 +16,7 @@ server/backend  ──写入──►  RDS platform_* / live_timers
     │  matchMerge 内嵌调度循环（随 web 启动）
     ▼
 server/match/matcher ──compose/──► 唯一合场写路径
-    │                      server/match/identity（teams / ids / time windows）
+    │                      packages/match-identity（teams / ids / time windows）
     │                      server/match/resolver（可选队名）
     └──读写──► @changmen/db ──► RDS client_matches
 
@@ -90,7 +90,7 @@ Windows 一键：`BAT\dev.bat`（backend + Vite，内嵌 matchMerge）。生产 
 | 需求 | 先改 |
 |------|------|
 | API 形状 / 鉴权 / 代理 | `server/backend` |
-| 合并规则 / 新平台入 client_matches | `server/match/identity` + `server/match/matcher` |
+| 合并规则 / 新平台入 client_matches | `packages/match-identity` + `server/match/matcher` |
 | 表结构 / 查询 | `server/db`（SQL 位于 `assets/migrations/`） |
 | 本地 platforms.json / 路径 | `@changmen/storage` |
 | 浏览器采集 | **`packages/venue-adapter`**（不在 server 内实现采集） |

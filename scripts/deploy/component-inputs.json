@@ -257,7 +257,7 @@
     {
       "id": "match-identity",
       "environment": "node",
-      "file": "packages/match-identity/index.js",
+      "file": "packages/match-identity/index.ts",
       "specifiers": [
         "@changmen/match-identity"
       ]

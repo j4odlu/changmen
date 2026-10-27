@@ -6,7 +6,7 @@ import {
   stableBetId,
   stableId,
   stablePendingBetId,
-} from "../teams/match_utils.js";
+} from "../teams/match_utils.ts";
 
 describe("match_utils", () => {
   it("builds stable non-zero ids from the same seed", () => {

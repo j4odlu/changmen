@@ -35,7 +35,7 @@ PostgreSQL / RDS **数据层唯一入口**。业务代码只 `import` 本包，�
 | `maintenance/assets.mjs` | 维护代码统一按自身包位置读取资产，不回退 backend 路径 |
 | `assets/archive/` | 不参与有效迁移的历史 SQL；目前保留已退役的 `002_prune_pg_cron.sql` |
 
-[changmen 扩展] 队伍存取直接使用 `@changmen/shared/match-identity`，不再引用 server/match 实现；shared 已直接声明。维护逻辑、SQL、结构基线与维护测试均归本包，backend 原有 44 份资产副本和 7 个维护入口已删除，初始化、只读核验及显式维护语义保持不变。批次记录见 [源码隔离记录](../../docs/SOURCE_FILE_ISOLATION_20261017.md)。
+[changmen 扩展] 队伍存取直接使用 `@changmen/match-identity`，不再引用 server/match 实现；身份领域包已直接声明。维护逻辑、SQL、结构基线与维护测试均归本包，backend 原有 44 份资产副本和 7 个维护入口已删除，初始化、只读核验及显式维护语义保持不变。批次记录见 [源码隔离记录](../../docs/SOURCE_FILE_ISOLATION_20261017.md)。
 
 `check-rds-schema.mjs` 与 `apply-rds-schema.mjs` 位于本包 `maintenance/`，可直接执行；backend npm 命令直接执行此处文件。默认命令只读，只有显式 `--initialize` 可初始化空库，已有业务表仍拒绝初始化。导入这些模块不加载 `.env` 或打开连接。
 

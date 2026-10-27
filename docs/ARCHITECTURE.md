@@ -4,7 +4,7 @@
 
 单一架构文档入口。命令与日常开发见 [../AGENTS.md](../AGENTS.md)。
 
-[changmen 扩展] 当前目录以 [workspace 总览](WORKSPACE_LAYOUT.md) 为准：前端 `client/`、后端 `server/`、数据层根目录 `rds/`；24 个 workspace。服务端平台基础设施合并为 `server/venues` / `@changmen/venue-node`，三个兼容 workspace 已退役。下方带日期的记录用于解释迁移历史。
+[changmen 扩展] 当前目录以 [workspace 总览](WORKSPACE_LAYOUT.md) 为准：前端 `client/`、后端 `server/`、数据层根目录 `rds/`；25 个 workspace。服务端平台基础设施合并为 `server/venues` / `@changmen/venue-node`，三个兼容 workspace 已退役。赛事身份规则归独立领域包 `packages/match-identity` / `@changmen/match-identity`，供 matcher、resolver 和 RDS 使用；客户端与 shared 不得依赖它。下方带日期的记录用于解释迁移历史。
 
 [changmen 扩展] 2026-10-20 当前物理归属：浏览器 adapter 与测试位于 `client/packages/venue-browser`，旧目录 595 个浏览器文件及 4 个 Node 兼容入口已退役；Node loader/registry 实现位于 `server/packages/venue-node-*`，后端瘦包工具实现位于 `server/packages/venue-adapter-tools`。旧 adapter 目录保留验证命令、生成 manifest 与配套文档，下方按日期保留历史记录。后端八进程的 19 个 workspace 已通过离线独立安装、路由编译和模块解析对比；原 11 处动态路径已在默认 workspace 根下完成有界认证，外部 SDK 内部与自定义运行根不在该结论内，详见 [动态路径认证](BACKEND_DYNAMIC_PATH_CERTIFICATION.md)。平台探针的 93 个文件已迁入 `server/platform-probes`；默认 Node 资源根也已收进 `server/venues/registry/runtime`，后端独立安装不再复制旧 adapter 目录，生产发布方式未变。
 
@@ -18,7 +18,7 @@
 
 [changmen 扩展] RDS 的 43 个有效迁移 SQL 与结构基线主文件位于 `rds/assets/`，维护代码经本包 `maintenance/assets.mjs` 读取；backend 原路径的 44 份兼容副本和 7 个维护入口已退役，4 个维护测试迁入 `rds/maintenance/`。无 backend 目录的干净安装与维护验收通过，历史 SQL/checksum 保持；详情见同一源码隔离记录。
 
-## 目标目录（monorepo，档 B）
+## 目标目录（monorepo，档 B；未更新的旧目录以 workspace 总览为准）
 
 ```
 changmen/
@@ -32,7 +32,6 @@ changmen/
 │   │   └── scripts/             # 常驻运维；ops/；archive/
 │   ├── collectors/              # VPS daemon：polymarket-sports、predictfun-collector
 │   ├── match/                   # 赛事匹配模块（三层）
-│   │   ├── identity/            # @changmen/match-identity（纯库：队名/时间窗/ID）
 │   │   ├── resolver/            # @changmen/team-resolver（外部 provider + scraper）
 │   │   └── matcher/             # @changmen/matcher（compose/ 合场 + 调度 + 人工 UI）
 │   ├── db/                      # @changmen/db
@@ -49,6 +48,7 @@ changmen/
 ├── lines/                       # 产品线锚点（line.json；电竞代码仍在根）
 ├── server/platform-probes/    # 可选探针 CLI
 ├── packages/
+│   ├── match-identity/          # @changmen/match-identity：身份领域规则（严格 TS）
 │   ├── shared/                  # @changmen/shared
 │   ├── api-contract/            # HTTP 契约
 │   ├── client-core/             # 前端共享模型；冻结旧目录，尚未迁入 client

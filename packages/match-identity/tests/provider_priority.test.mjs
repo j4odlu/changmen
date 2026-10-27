@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { providerPriority, teamsFromPlatformRows } from "../teams/provider_priority.js";
+import { providerPriority, teamsFromPlatformRows } from "../teams/provider_priority.ts";
 
 describe("provider_priority", () => {
   it("ranks OB above PB and picks higher-priority team names", () => {

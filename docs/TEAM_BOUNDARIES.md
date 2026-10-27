@@ -1,5 +1,7 @@
 # 团队边界（单仓阶段 0）
 
+2026-10-27：`packages/match-identity` 归属独立的身份领域层（`domain`）。matcher、resolver 与 RDS 可以依赖它；客户端和 `packages/shared` 不得依赖它。领域包只允许依赖自身及 shared，数据库/网络/宿主能力通过接口注入。此规则同时覆盖源码导入、前端安装闭包、后端封包与版本指纹；历史目录迁移记录不作为当前放行项。
+
 > [changmen 扩展] **文档状态（2026-10-22）：现行边界文档，含历史执行状态。下文“2026-10-18 当前执行状态”及全量安装、待迁移描述只对应当时批次；当前物理布局、已退役 workspace 和定向安装见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，当前发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
 
 [changmen 扩展] 当前 workspace 与物理目录见 [WORKSPACE_LAYOUT](WORKSPACE_LAYOUT.md)：`rds/` 独立于 `server/`，数据公共包名仍为 `@changmen/db`；Node 平台基础设施合并为 `server/venues`；旧 adapter 与 Node 工具的兼容 workspace 已退役；赛事身份规则由独立的 `packages/match-identity` 领域包承载。当前共 25 个 workspace，旧记录中的包数和目录仅对应当时阶段。

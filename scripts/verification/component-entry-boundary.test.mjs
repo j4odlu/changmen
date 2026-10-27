@@ -233,7 +233,7 @@ describe("component entry boundaries", () => {
   it("audits the current repository with 27 active reviewed entries and no static environment crossing", () => {
     const root = fileURLToPath(new URL("../../", import.meta.url));
     const report = inspectComponentEntries(root);
-    expect(report.entries).toHaveLength(27);
+    expect(report.entries).toHaveLength(28);
     expect(report.entries.some(entry=>entry.id==="venue-node-loader-compat")).toBe(false);
     expect(report.violations).toEqual([]);
     expect(report.safeToNarrowPublishScope).toBe(false);

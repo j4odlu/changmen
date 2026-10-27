@@ -5,20 +5,24 @@
   "type": "module",
   "description": "赛事与队伍身份领域规则，供 matcher、resolver 和 RDS 使用",
   "exports": {
-    ".": "./index.js",
-    "./ids/*.js": "./ids/*.js",
-    "./teams/*.js": "./teams/*.js",
+    ".": "./index.ts",
+    "./ids/*.js": "./ids/*.ts",
+    "./teams/*.js": "./teams/*.ts",
     "./teams/team_aliases.json": "./teams/team_aliases.json",
-    "./time_windows.js": "./time_windows.js",
-    "./profiles/esport.js": "./profiles/esport.js"
+    "./time_windows.js": "./time_windows.ts",
+    "./profiles/esport.js": "./profiles/esport.ts",
+    "./types": "./types.ts"
   },
   "scripts": {
-    "test": "vitest run tests"
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "npm run typecheck && vitest run tests && node --test tests/package_boundary.node.mjs"
   },
   "dependencies": {
     "@changmen/shared": "file:../shared"
   },
   "devDependencies": {
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "typescript": "6.0.3",
+    "@types/node": "^25.9.1"
   }
 }

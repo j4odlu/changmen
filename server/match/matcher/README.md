@@ -56,7 +56,7 @@ PM 赛事身份匹配、已到开赛时间且明确结束时，整场结束，�
 
 ## 依赖
 
-- `server/match/identity`（`@changmen/shared/match-identity`）— 队名、时间窗与 client_match ID 共享工具
+- `packages/match-identity`（`@changmen/match-identity`）— 队名、时间窗与 client_match ID 共享工具
 - `server/db` — 读写 `platform_matches` / `client_matches` 等（`@changmen/db`）
 - `server/match/resolver`（`@changmen/team-resolver`）— 可选队名 canonical 插件
 

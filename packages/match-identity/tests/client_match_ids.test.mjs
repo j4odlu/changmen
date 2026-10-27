@@ -6,8 +6,8 @@ import {
   findReuseIdByPlatformOverlap,
   matchsIsSubset,
   resolveClientMatchIds,
-} from "../ids/client_match_ids.js";
-import { stableBetId } from "../teams/match_utils.js";
+} from "../ids/client_match_ids.ts";
+import { stableBetId } from "../teams/match_utils.ts";
 
 describe("client_match_ids", () => {
   it("detects when existing matchs are a subset of rebuilt matchs", () => {

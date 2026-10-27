@@ -35,14 +35,13 @@ SQL、迁移校验和、事务以及业务行为不随目录调整改变。维�
 
 - `@changmen/venue-adapter`：运行实现已归前端或服务端，验证命令由根脚本调用实际工具。
 - `@changmen/runtime-tooling-compat`：消费者直接使用 `@changmen/runtime-tooling`。
-- `@changmen/match-identity`：消费者使用 `@changmen/shared/match-identity`，测试随纯实现归入共享包。
 - `@changmen/venue-node-loader`、`@changmen/venue-node-registry`、`@changmen/venue-adapter-tools`：合并为 `@changmen/venue-node`。
 
 旧目录中的历史清单、冻结记录和文档不代表活动 workspace。原始源码保护继续核验；只读历史视图仅服务旧迁移证明，不参与 Node 运行时解析。
 
 ## 验证
 
-`npm run check:boundaries` 同时检查当前目录、25 个 workspace和依赖方向；历史搬迁证明由显式历史审计执行。后端及 RDS 的安装实验、API 契约、前端类型检查和发布验收仍分别执行。
+`npm run check:boundaries` 同时检查当前目录、25 个 workspace 和依赖方向；历史搬迁证明由显式历史审计执行。后端及 RDS 的安装实验、API 契约、前端类型检查和发布验收仍分别执行。
 
 ## 后端生产安装
 

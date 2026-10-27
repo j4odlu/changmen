@@ -7,7 +7,7 @@
 | 包 | 关系 |
 |----|------|
 | `server/match/matcher` | `matchMerge` 前队名归一（`requirePlatform` 加载 `team_db.js`） |
-| `server/match/identity` | `resolveCanonicalTeamName` 等工具 |
+| `packages/match-identity` | `resolveCanonicalTeamName` 等工具 |
 
 ## 目录
 
@@ -35,4 +35,4 @@ npm test
 
 环境：`PANDASCORE_TOKEN`（可选）。`.env` 经 `@changmen/storage/load_env.js` 加载。
 
-相关：[server/match/identity/README.md](../identity/README.md)
+相关：[packages/match-identity/README.md](../../../packages/match-identity/README.md)

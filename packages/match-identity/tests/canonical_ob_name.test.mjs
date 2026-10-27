@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCanonicalTeamName } from "../teams/canonical_ob_name.js";
+import { resolveCanonicalTeamName } from "../teams/canonical_ob_name.ts";
 
 describe("canonical_ob_name", () => {
   it("prefers OB platform_name over stored canonical name", () => {

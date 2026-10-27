@@ -1,14 +1,14 @@
 import type { TeamLookupMethods } from "@changmen/match-identity/types";
-import { loadAndCreatePlugin } from "@changmen/team-resolver/team_db";
-import { createSportTeamPlugin, resolveSportTeamKey } from "@changmen/team-resolver/sport_team_plugin";
+import { loadAndCreatePlugin, createSportTeamPlugin, resolveSportTeamKey } from "@changmen/team-resolver";
+import type { SportTeamPlugin, TeamResolverPlugin } from "@changmen/team-resolver";
 
 // Compile-only consumer contract; this function never opens a database.
 export async function checkPluginContracts() {
-  const plugin = await loadAndCreatePlugin();
+  const plugin: TeamResolverPlugin = await loadAndCreatePlugin();
   const injected: TeamLookupMethods = plugin;
   injected.lookupById?.("OB", 12);
   plugin.saveMapping("100001", "OB", 12, "Team", "lol");
-  const sport = createSportTeamPlugin({ games: ["mlb", "epl"] });
+  const sport: SportTeamPlugin = createSportTeamPlugin({ games: ["mlb", "epl"] });
   const key: string | null = sport.pairKey("A", "B", 1700000000000, "mlb");
   const name: string = resolveSportTeamKey("曼城", "epl");
   // @ts-expect-error A platform identifier is a string or number.

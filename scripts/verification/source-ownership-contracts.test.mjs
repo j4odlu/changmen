@@ -14,14 +14,14 @@ it("separates frontend, backend, RDS and shared implementations while preserving
     ["server/venues/registry/paths.js", "backend"],
     ["packages/venue-adapter/registry/adapters.ts", "frontend"],
     ["rds/maintenance/rds-schema-check.mjs", "rds"],
-    ["server/match/resolver/index.js", "backend"],
+    ["server/match/resolver/index.ts", "backend"],
     ["packages/match-identity/teams/team_key.ts", "domain"],
   ]) expect(classifySourceFile(file, policy)?.layer).toBe(layer);
 });
 for (const [file, target] of [
   ["packages/venue-adapter/browser/main.ts", "rds/index.js"],
   ["server/backend/main.js", "packages/venue-adapter/browser/pm-book-diagnostics/bookRuntime.ts"],
-  ["rds/main.js", "server/match/resolver/index.js"],
+  ["rds/main.js", "server/match/resolver/index.ts"],
   ["rds/main.js", "server/backend/core/business.js"],
   ["packages/shared/rule.ts", "rds/index.js"],
   ["packages/shared/rule.ts", "packages/client-core/src/bridge/clientApi.ts"],
@@ -29,7 +29,7 @@ for (const [file, target] of [
   ["client/web/src/main.ts", "packages/match-identity/index.ts"],
   ["packages/shared/rule.ts", "packages/match-identity/index.ts"],
   ["packages/match-identity/index.ts", "rds/index.js"],
-  ["packages/match-identity/index.ts", "server/match/resolver/index.js"],
+  ["packages/match-identity/index.ts", "server/match/resolver/index.ts"],
   ["packages/match-identity/index.ts", "server/storage/paths.ts"],
 ]) it(`rejects ${file} reaching ${target}`, () => expect(sourceLayerViolation(file, target, policy)).toBeTruthy());
 it("allows reviewed public data operations, shared rules and Node storage infrastructure", () => {

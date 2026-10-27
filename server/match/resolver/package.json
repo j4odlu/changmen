@@ -3,24 +3,21 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Standalone esports team name resolver — maps platform-specific team names to canonical IDs via PandaScore / local cache",
-  "main": "./index.js",
+  "description": "RDS team lookup plugins and pure sport team name rules",
+  "main": "./index.ts",
   "exports": {
-    ".": "./index.js",
+    ".": "./index.ts",
     "./team_db": "./team_db.ts",
     "./sport_team_plugin": "./sport_team_plugin.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "npm run typecheck && vitest run resolver.offline.test.mjs team_db.test.mjs && node --test sport_team_plugin.smoke.test.mjs entrypoints.node.mjs",
-    "probe:live": "node test.js",
-    "seed": "node seed.js"
+    "test": "npm run typecheck && vitest run team_db.test.mjs && node --test sport_team_plugin.smoke.test.mjs entrypoints.node.mjs"
   },
   "dependencies": {
     "@changmen/db": "file:../../../rds",
     "@changmen/storage": "file:../../storage",
     "@changmen/shared": "file:../../../packages/shared",
-    "axios": "^1.7.2",
     "@changmen/match-identity": "file:../../../packages/match-identity"
   },
   "devDependencies": {

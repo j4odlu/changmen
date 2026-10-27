@@ -32,7 +32,7 @@ changmen/
 │   │   └── scripts/             # 常驻运维；ops/；archive/
 │   ├── collectors/              # VPS daemon：polymarket-sports、predictfun-collector
 │   ├── match/                   # 赛事匹配模块（三层）
-│   │   ├── resolver/            # @changmen/team-resolver（外部 provider + scraper）
+│   │   ├── resolver/            # @changmen/team-resolver（RDS 队伍映射 + 体育队名规则）
 │   │   └── matcher/             # @changmen/matcher（compose/ 合场 + 调度 + 人工 UI）
 │   ├── db/                      # @changmen/db
 │   ├── storage/                 # @changmen/storage（本机 JSON 路径）
@@ -146,8 +146,8 @@ resolver 与 matcher 通过 workspace 依赖复用；测试：`npm run test --wo
 
 ### `server/match/resolver` (`@changmen/team-resolver`)
 
-队名规范化插件；matcher `matchMerge` 与 UI `merge_mode` 动态加载 `@changmen/team-resolver/team_db`（源码 `team_db.ts`）；backend 经 `@changmen/team-resolver/sport_team_plugin` 使用体育队名规则。两处现用插件参加严格 TS 检查。
-旧 RAY / OB / PB 手动队伍爬虫及其 npm 命令已退役，resolver 不再依赖平台 Node loader。环境变量通过 `@changmen/storage` 的 `loadChangmenEnv()` 加载。
+队名规范化插件；TS 根入口统一导出 RDS 队伍映射和体育队名规则。matcher `matchMerge` 与 UI `merge_mode` 动态加载 `@changmen/team-resolver/team_db`（源码 `team_db.ts`）；backend 经 `@changmen/team-resolver/sport_team_plugin` 使用体育队名规则。包内实现均参加严格 TS 检查。
+旧 RAY / OB / PB 手动队伍爬虫、外部 provider 在线查询、本地队伍缓存和 seed/在线诊断命令已退役，resolver 不再依赖平台 Node loader 或 HTTP 客户端。RDS 字段、通用 provider ID 索引和历史 SQL 保留。环境变量通过 `@changmen/storage` 的 `loadChangmenEnv()` 加载。
 
 ### `server/match/matcher` (`@changmen/matcher`)
 

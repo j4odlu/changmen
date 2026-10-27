@@ -143,14 +143,13 @@
 
 ### I1 身份解析唯一入口 — 不成立
 
-队名归一化有 **4 套独立实现**:
+队名归一化有 **3 套独立实现**（旧 resolver 在线解析的另一套后缀规则已随工具退役）:
 
 | 实现 | 位置 | 差异 |
 |------|------|------|
 | `normalizeTeam` | `match-identity/teams/team_key.js:69-78` | HTML 实体解码 + `team_aliases.json` 别名表 |
 | `_norm` | `match/resolver/team_db.ts` | 上者的副本,已漂移 |
 | `normalizeTeamName` | `match/matcher/ui/public/index.html:825-833` | 无解码、无别名表 |
-| `normalize` | `match/resolver/normalize.js:11-27` | 另一套后缀表(去 `team`/`club`/`fc`) |
 
 后果举例:`PARIVISION` 与 `TEAM VISION` 在合场侧判为同队(别名表),在 matcher UI 判为不同队。
 

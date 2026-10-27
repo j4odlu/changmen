@@ -31,32 +31,24 @@ function fixture() {
       if (fs.existsSync(path.join(repository, file))) write(file, JSON.parse(fs.readFileSync(path.join(repository, file), "utf8")));
     }
   }
-  for (const name of ["ob_scraper.js", "pb_scraper.mjs", "ray_scraper.js"]) {
-    const file = `server/match/resolver/scrapers/${name}`;
-    fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
-    fs.copyFileSync(path.join(repository, file), path.join(root, file));
-  }
   const bundleFile = "server/backend/scripts/test-packaged-adapter-layout.js";
   fs.mkdirSync(path.dirname(path.join(root, bundleFile)), { recursive: true });
   fs.copyFileSync(path.join(repository, bundleFile), path.join(root, bundleFile));
   return { root, edit(file, change) { const pkg = JSON.parse(fs.readFileSync(path.join(root, file), "utf8")); change(pkg); write(file, pkg); },
     editBundle(change) { const file = path.join(root, bundleFile); fs.writeFileSync(file, change(fs.readFileSync(file, "utf8"))); },
-    editSource(name, change) { const file = path.join(root, "server/match/resolver/scrapers", name); fs.writeFileSync(file, change(fs.readFileSync(file, "utf8"))); } };
+    restoreScraper(name) { const file = path.join(root, "server/match/resolver/scrapers", name); fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, "// retired scraper restored\n"); } };
 }
 it("keeps resolver and Node loader production declarations free from browser hosts", () => {
   const report = inspectVenueNodeDependencies(repository);
   expect(report.violations).toEqual([]);
   expect(report.closures["@changmen/team-resolver"].workspaces).not.toContain("@changmen/venue-node");
   expect(report.closures["@changmen/backend"].workspaces).toContain("@changmen/venue-node");
-  expect(report.resolverTooling.workspaces).toContain("@changmen/venue-node");
+  expect(report.resolverTooling.workspaces).not.toContain("@changmen/venue-node");
   expect(report.resolverTooling.workspaces).not.toContain("@changmen/venue-adapter");
   expect(report.backendTooling.workspaces).toHaveLength(14);
   expect(report.backendTooling.workspaces).toContain("@changmen/venue-node");
   expect(report.backendTooling.workspaces).not.toContain("@changmen/venue-adapter");
   expect(report.bundleConsumers).toHaveLength(1);
-  expect(report.consumers.map(row => [path.basename(row.file), row.kind])).toEqual([
-    ["ob_scraper.js", "dynamic-import"], ["pb_scraper.mjs", "static"], ["ray_scraper.js", "dynamic-import"],
-  ]);
   expect(report.installationCertified).toBe(false);
   expect(report.publishScopeOptimizationEnabled).toBe(false);
 });
@@ -73,9 +65,7 @@ for (const [name, file, change] of [
   ["Node workspace registration removed", "package.json", p => p.workspaces = p.workspaces.filter(dir => dir !== "server/venues")],
   ["registry resource declaration removed", "server/venues/package.json", p => delete p.dependencies["@changmen/storage"]],
   ["backend facade dependency removed", "server/backend/package.json", p => delete p.dependencies["@changmen/venue-node"]],
-  ["resolver tooling loader removed", "server/match/resolver/package.json", p => delete p.devDependencies["@changmen/venue-node"]],
-  ["resolver tooling loader redirected", "server/match/resolver/package.json", p => p.devDependencies["@changmen/venue-node"] = "file:../../../packages/venue-adapter"],
-  ["resolver mixed development dependency", "server/match/resolver/package.json", p => p.devDependencies["@changmen/venue-adapter"] = "file:../../../packages/venue-adapter"],
+  ["resolver mixed development dependency", "server/match/resolver/package.json", p => p.devDependencies = { "@changmen/venue-adapter": "file:../../../packages/venue-adapter" }],
   ["backend mixed development dependency", "server/backend/package.json", p => p.devDependencies["@changmen/venue-adapter"] = "file:../../packages/venue-adapter"],
   ["backend Node tool removed", "server/backend/package.json", p => delete p.dependencies["@changmen/venue-node"]],
   ["backend Node tool redirected", "server/backend/package.json", p => p.devDependencies["@changmen/venue-node"] = "file:../../packages/venue-adapter"],
@@ -84,19 +74,27 @@ for (const [name, file, change] of [
   const f = fixture(); f.edit(file, change);
   expect(()=>{const report=inspectVenueNodeDependencies(f.root);if(report.violations.length)throw Error('boundary rejected');}).toThrow();
 });
-for (const [name, source] of [
-  ["legacy package path", 'const api=await import("@changmen/venue-adapter/loader/adapter_paths.js");'],
-  ["relative source path", 'const api=await import("../../../../packages/venue-adapter/loader/adapter_paths.mjs");'],
-  ["Node package deep path", 'const api=await import("@changmen/venue-node/adapter_paths.mjs");'],
-  ["changed initialization timing", 'import * as api from "@changmen/venue-node";'],
-  ["opaque replacement", 'const api=await import(target);'],
-  ["mixed fallback", 'const api=await import("@changmen/venue-node"); const fallback=await import("@changmen/venue-adapter/registry");'],
-]) it(`rejects resolver scraper ${name}`, () => {
-  const f = fixture(); f.editSource("ob_scraper.js", () => source);
-  expect(inspectVenueNodeDependencies(f.root).violations.length).toBeGreaterThan(0);
+for (const name of ["ob_scraper.js", "pb_scraper.mjs", "ray_scraper.js"])
+it(`rejects restoring retired resolver scraper ${name}`, () => {
+  const f = fixture(); f.restoreScraper(name);
+  expect(inspectVenueNodeDependencies(f.root).violations.some(row => row.pattern === "Retired resolver scraper must not return")).toBe(true);
+});
+for (const name of ["scrape:ray", "scrape:ray:dry", "scrape:ob", "scrape:ob:dry", "scrape:pb", "scrape:pb:dry"])
+it(`rejects restoring retired command ${name}`, () => {
+  const f = fixture(); f.edit("server/match/resolver/package.json", p => p.scripts[name] = "node retired.js");
+  expect(inspectVenueNodeDependencies(f.root).violations.some(row => row.spec === name
+    && row.pattern === "Retired resolver scraper command must not return")).toBe(true);
+});
+for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"])
+it(`rejects restoring the resolver loader through ${group}`, () => {
+  const f = fixture(); f.edit("server/match/resolver/package.json", p => {
+    p[group] = { ...p[group], "@changmen/venue-node": "file:../../venues" };
+  });
+  expect(inspectVenueNodeDependencies(f.root).violations.some(row => row.spec === "@changmen/venue-node"
+    && row.pattern === `Retired resolver scraper loader must not return through ${group}`)).toBe(true);
 });
 it("includes transitive resolver tooling production peers without including unrelated development hosts", () => {
-  const f = fixture(); f.edit("server/platform-probes/package.json", p => p.peerDependencies = { vue: "^3.5.13" });
+  const f = fixture(); f.edit("server/storage/package.json", p => p.peerDependencies = { vue: "^3.5.13" });
   const report = inspectVenueNodeDependencies(f.root);
   expect(report.resolverTooling.directExternalPackages).toContain("vue");
   expect(report.violations.some(row => row.pattern.includes("resolver tooling closure"))).toBe(true);

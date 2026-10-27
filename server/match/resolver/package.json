@@ -13,13 +13,7 @@
   "scripts": {
     "test": "vitest run resolver.offline.test.mjs && node --test sport_team_plugin.smoke.test.mjs",
     "probe:live": "node test.js",
-    "seed": "node seed.js",
-    "scrape:ray": "node scrapers/ray_scraper.js",
-    "scrape:ray:dry": "node scrapers/ray_scraper.js --dry-run",
-    "scrape:ob": "node scrapers/ob_scraper.js",
-    "scrape:ob:dry": "node scrapers/ob_scraper.js --dry-run",
-    "scrape:pb": "node scrapers/pb_scraper.mjs",
-    "scrape:pb:dry": "node scrapers/pb_scraper.mjs --dry-run"
+    "seed": "node seed.js"
   },
   "dependencies": {
     "@changmen/db": "file:../../../rds",
@@ -27,8 +21,5 @@
     "@changmen/shared": "file:../../../packages/shared",
     "axios": "^1.7.2",
     "@changmen/match-identity": "file:../../../packages/match-identity"
-  },
-  "devDependencies": {
-    "@changmen/venue-node": "file:../../venues"
   }
 }

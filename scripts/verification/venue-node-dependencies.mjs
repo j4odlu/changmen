@@ -7,11 +7,7 @@ import { declaredInstallClosure } from "./component-install-inputs.mjs";
 
 const read = file => JSON.parse(fs.readFileSync(file, "utf8"));
 const forbidden = new Set(["@changmen/venue-adapter", "@changmen/pm-market-data-browser", "@changmen/venue-browser", "@changmen/client-core", "vue", "pinia"]);
-const resolverConsumers = {
-  "server/match/resolver/scrapers/ob_scraper.js": "dynamic-import",
-  "server/match/resolver/scrapers/pb_scraper.mjs": "static",
-  "server/match/resolver/scrapers/ray_scraper.js": "dynamic-import",
-};
+const retiredResolverScrapers = ["ob_scraper.js", "pb_scraper.mjs", "ray_scraper.js"];
 const nodeEntries = {
   "server/venues": {
     "name": "@changmen/venue-node",
@@ -86,27 +82,18 @@ export function inspectVenueNodeDependencies(root) {
       fail(bundleConsumerFile, site.spec, "Backend bundle validation cannot bypass its Node tool owner through the mixed package/source");
   }
   const resolver = packages.get("@changmen/team-resolver");
-  if (resolver?.pkg.devDependencies?.["@changmen/venue-node"] !== "file:../../venues")
-    fail("server/match/resolver/package.json", "@changmen/venue-node", "Resolver scraper tools must declare the original Node loader as a development dependency");
-  for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"])
+  for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
+    if (resolver?.pkg[group]?.["@changmen/venue-node"])
+      fail("server/match/resolver/package.json", "@changmen/venue-node", `Retired resolver scraper loader must not return through ${group}`);
     for (const name of forbidden) if (resolver?.pkg[group]?.[name])
       fail("server/match/resolver/package.json", name, `Resolver must not pull browser/mixed hosts through ${group}`);
-  const consumers = [];
-  for (const [file, kind] of Object.entries(resolverConsumers)) {
-    if (!fs.existsSync(path.join(root, file))) { fail(file, "@changmen/venue-node", "Missing reviewed resolver scraper"); continue; }
-    const sites = componentImportSites(file, fs.readFileSync(path.join(root, file), "utf8"));
-    const entries = sites.filter(site => site.spec === "@changmen/venue-node");
-    if (entries.length !== 1 || entries[0].kind !== kind)
-      fail(file, "@changmen/venue-node", "Scraper must keep its original static/dynamic loading timing through the Node package root");
-    for (const site of sites) {
-      if (!site.spec) continue; // Existing component/loader gates retain unknown-path handling.
-      const relative = site.spec.startsWith(".") ? path.relative(root, path.resolve(root, path.dirname(file), site.spec)).replaceAll("\\", "/") : "";
-      if (/^@changmen\/venue-adapter(?:\/|$)/.test(site.spec)
-        || /^@changmen\/venue-node-loader\//.test(site.spec)
-        || /^packages\/venue-adapter(?:\/|$)/.test(relative))
-        fail(file, site.spec, "Resolver scraper cannot bypass its declared Node loader with a mixed-package or source-path import");
-    }
-    consumers.push(...entries);
+  }
+  for (const name of Object.keys(resolver?.pkg.scripts || {}))
+    if (/^scrape:(?:ray|ob|pb)(?::|$)/.test(name))
+      fail("server/match/resolver/package.json", name, "Retired resolver scraper command must not return");
+  for (const name of retiredResolverScrapers) {
+    const file = `server/match/resolver/scrapers/${name}`;
+    if (fs.existsSync(path.join(root, file))) fail(file, "resolver-scraper", "Retired resolver scraper must not return");
   }
   const closures = {};
   for (const name of ["@changmen/backend", "@changmen/team-resolver", "@changmen/venue-node"]) {
@@ -143,7 +130,7 @@ export function inspectVenueNodeDependencies(root) {
   for (const edge of backendTooling.edges) if (forbidden.has(edge.name))
     fail(`${edge.from}/package.json`, edge.name, `Browser/mixed package in backend tooling closure: ${edge.via.join(" -> ")}`);
   return { schemaVersion: 1, purpose: "node-declaration-boundary-only", publishScopeOptimizationEnabled: false,
-    installationCertified: false, closures, resolverTooling, consumers, backendTooling, bundleConsumers, violations };
+    installationCertified: false, closures, resolverTooling, backendTooling, bundleConsumers, violations };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

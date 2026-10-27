@@ -147,7 +147,7 @@ resolver 与 matcher 通过 workspace 依赖复用；测试：`npm run test --wo
 ### `server/match/resolver` (`@changmen/team-resolver`)
 
 队名规范化插件；matcher `matchMerge` 与 UI `merge_mode` 动态加载 `team_db.js`。  
-爬虫脚本在 `scrapers/`，为手动队伍映射补数工具，当前不进入日常启动链；环境变量通过 `@changmen/storage` 的 `loadChangmenEnv()` 加载。当前可用性见上述只读检查，不以包声明或静态解析通过代替命令验收。
+旧 RAY / OB / PB 手动队伍爬虫及其 npm 命令已退役，resolver 不再依赖平台 Node loader。环境变量通过 `@changmen/storage` 的 `loadChangmenEnv()` 加载。
 
 ### `server/match/matcher` (`@changmen/matcher`)
 

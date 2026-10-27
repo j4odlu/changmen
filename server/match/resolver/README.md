@@ -7,8 +7,10 @@ matcher 使用 `team_db.js` 从 RDS 加载队伍映射，不经过在线 provide
 
 | 包 | 关系 |
 |----|------|
-| `server/match/matcher` | `matchMerge` 前队名归一（`requirePlatform` 加载 `team_db.js`） |
-| `packages/match-identity` | `resolveCanonicalTeamName` 等工具 |
+| `server/match/matcher` | 动态加载 `team_db.js` 构建 RDS 队伍映射插件 |
+| `server/backend` | 使用 `sport_team_plugin.js` 规范化体育队名 |
+
+resolver 依赖 `packages/match-identity` 提供的 `resolveCanonicalTeamName` 等工具。
 
 ## 目录
 
@@ -17,14 +19,12 @@ matcher 使用 `team_db.js` 从 RDS 加载队伍映射，不经过在线 provide
 | `index.js` | `resolve(teamName, gameCode)` 主入口 |
 | `team_db.js` | matcher 用的 DB 插件面 |
 | `providers/` | PandaScore |
-| `scrapers/` | RAY / OB / PB 队名爬取（`npm run scrape:*`） |
 | `cache/` | 本地 TTL 缓存 |
 
 ## 命令
 
 ```bat
 cd server/match/resolver
-npm run scrape:ray:dry
 npm test
 ```
 
@@ -36,5 +36,7 @@ npm test
 离线套件覆盖正向、反向队伍配对及仅单边队伍一致时拒绝合场的场景。
 
 环境：`PANDASCORE_TOKEN`（可选）。`.env` 经 `@changmen/storage/load_env` 加载。
+
+旧 RAY / OB / PB 队伍爬虫及其 npm 命令已退役；resolver 不再依赖平台 Node loader。
 
 相关：[packages/match-identity/README.md](../../../packages/match-identity/README.md)

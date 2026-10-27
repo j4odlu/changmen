@@ -266,7 +266,7 @@ function main() {
   console.log(`component-install-inputs: frontend/backend/RDS declarations inspected; actual installation remains uncertified`);
   const nodeDependencies = inspectVenueNodeDependencies(CHANGMEN_ROOT);
   violations.push(...nodeDependencies.violations);
-  console.log(`venue-node-install: ${Object.keys(nodeDependencies.closures).length} production closures; resolver tooling ${nodeDependencies.resolverTooling.workspaces.length} workspaces and ${nodeDependencies.consumers.length} explicit Node consumers; backend tooling ${nodeDependencies.backendTooling.workspaces.length} workspaces and ${nodeDependencies.bundleConsumers.length} explicit tool consumer; browser/mixed dependencies forbidden; publish scope unchanged`);
+  console.log(`venue-node-install: ${Object.keys(nodeDependencies.closures).length} production closures; resolver tooling ${nodeDependencies.resolverTooling.workspaces.length} workspaces; backend tooling ${nodeDependencies.backendTooling.workspaces.length} workspaces and ${nodeDependencies.bundleConsumers.length} explicit tool consumer; browser/mixed dependencies forbidden; publish scope unchanged`);
   // One invocation shares immutable source reads/parsing, not graph membership.
   const inspection = createComponentInspection(CHANGMEN_ROOT);
   const components = inspection.inspect();

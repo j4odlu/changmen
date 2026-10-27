@@ -30,12 +30,12 @@ for (const [file, target] of [
   ["packages/shared/rule.ts", "packages/match-identity/index.ts"],
   ["packages/match-identity/index.ts", "rds/index.js"],
   ["packages/match-identity/index.ts", "server/match/resolver/index.js"],
-  ["packages/match-identity/index.ts", "server/storage/paths.js"],
+  ["packages/match-identity/index.ts", "server/storage/paths.ts"],
 ]) it(`rejects ${file} reaching ${target}`, () => expect(sourceLayerViolation(file, target, policy)).toBeTruthy());
 it("allows reviewed public data operations, shared rules and Node storage infrastructure", () => {
   for (const [file, target] of [
     ["server/backend/main.js", "rds/profile_metadata.js"],
-    ["rds/main.js", "server/storage/load_env.js"],
+    ["rds/main.js", "server/storage/load_env.ts"],
     ["rds/rds/team_store.js", "packages/match-identity/index.ts"],
     ["server/match/matcher/index.js", "packages/match-identity/index.ts"],
     ["packages/match-identity/index.ts", "packages/shared/time/match_time.ts"],

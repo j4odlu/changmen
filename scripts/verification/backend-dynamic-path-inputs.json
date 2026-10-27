@@ -35,14 +35,14 @@
       "signature": "a4672509cd1c8b1001b7eac4bfa7531972c10a1ab8f2523bfb7d6c7623d17f52"
     },
     {
-      "file": "server/storage/paths.js",
+      "file": "server/storage/paths.ts",
       "selector": "module",
-      "signature": "bea8ea468e880a60c64fe2c2df754ae33879ade504dda1982f3339830bde20c0"
+      "signature": "e15949858d972dd35510609ed6265f4361d79283a952a7639ceeb1461a915a6e"
     },
     {
-      "file": "server/storage/changmen_root.js",
+      "file": "server/storage/changmen_root.ts",
       "selector": "module",
-      "signature": "660c34b6b3bf37eee9dfcc1a17102ce80b01696ecc5ae904c30a2e54bf5c1077"
+      "signature": "0dc81fac1638c650cb119be44704f0ceeb651ff673f7ba6f85a72d0013321aa5"
     },
     {
       "file": "server/platform-probes/backend/_paths.js",

@@ -9,7 +9,7 @@ test('frontend-only stays independent; shared/API/deployment changes wait', () =
   for (const file of ['client/packages/venue-browser/polymarket/fok/bet.ts', 'client/packages/client-core/src/shared/http.ts',
     'client/packages/pm-market-data-browser/src/index.ts']) assert.equal(needsBackendRelease([file]), false);
   for (const path of ['packages/venue-adapter/polymarket/bet.ts', 'server/backend/server.js',
-    'scripts/deploy/wait-for-backend.mjs', 'package-lock.json', 'server/storage/runtime_version.js'])
+    'scripts/deploy/wait-for-backend.mjs', 'package-lock.json', 'server/storage/runtime_version.ts'])
     assert.equal(needsBackendRelease([path]), true, path);
 });
 test('absent, queued and running backend are awaited before success', async () => {

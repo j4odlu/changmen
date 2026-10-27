@@ -5,7 +5,7 @@ import test from "node:test";
 test("explicitly cleared database alternatives cannot be restored from backend .env", () => {
   const url = "postgresql://auth_test@127.0.0.1:4927/changmen_auth_acceptance";
   const output = execFileSync(process.execPath, ["--input-type=module", "-e", `
-    import { loadChangmenEnv } from './server/storage/load_env.js';
+    import { loadChangmenEnv } from '@changmen/storage/load_env.js';
     loadChangmenEnv();
     console.log('DATABASE_TARGET_CHECK=' + JSON.stringify([
       process.env.DATABASE_URL, process.env.DATABASE_URL_INTERNAL, process.env.DATABASE_URL_PUBLIC

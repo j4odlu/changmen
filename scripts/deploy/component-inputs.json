@@ -14,7 +14,7 @@
     "scripts/deploy/classify-deploy-scope.mjs",
     "scripts/deploy/change-plan.mjs",
     "scripts/deploy/release-evidence.mjs",
-    "server/storage/runtime_version.js",
+    "server/storage/runtime_version.ts",
     ".github/workflows/release.yml",
     "client/packages/pm-market-data-browser/package.json",
     "server/venues/package.json",

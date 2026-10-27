@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
-import { CHANGMEN_ROOT_FROM_PKG } from "./changmen_root.js";
+import { CHANGMEN_ROOT_FROM_PKG } from "@changmen/storage/changmen_root.js";
 
 function hasDatabaseUrl() {
   return !!(
@@ -30,7 +30,7 @@ function clearEmptyEnvPlaceholders() {
 }
 
 /** @param {{ prepend?: string[] }} [options] */
-export function loadChangmenEnv(options = {}) {
+export function loadChangmenEnv(options: { prepend?: string[] } = {}): void {
   clearEmptyEnvPlaceholders();
   const rels = [...(options.prepend ?? []), "server/backend/.env"];
   for (const rel of rels) {

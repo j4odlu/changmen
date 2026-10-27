@@ -36,7 +36,7 @@ test("one plan preserves risk while accounting for cross-component dependencies"
     [["docs/note.md"], "docs", "noop"],
     [["client/web/src/components/admin/Report.vue"], "frontend", "frontend"],
     [["server/backend/core/observability/memory.js"], "backend", "backend"],
-    [["server/storage/runtime_version.js"], "full", "full"],
+    [["server/storage/runtime_version.ts"], "full", "full"],
     [["scripts/deploy/publish.sh"], "controls", "full"],
     [["client/web/src/orderModes/gtc/api.ts"], "frontend", "frontend"],
     [["mystery/file.js"], "full", "full"],

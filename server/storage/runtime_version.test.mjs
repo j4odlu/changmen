@@ -3,10 +3,15 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { captureRuntimeVersion, readSourceVersion, isVersionSource } from "./runtime_version.js";
+import { captureRuntimeVersion, readSourceVersion, isVersionSource } from "@changmen/storage/runtime_version.js";
 
 const write = (root, file, body) => { fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true }); fs.writeFileSync(path.join(root, file), body); };
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }).trim();
+it("keeps the migrated runtime identity wrapper in both component fingerprints", () => {
+  for (const role of ["frontend", "backend"]) expect(isVersionSource("server/storage/runtime_version.ts", role)).toBe(true);
+  expect(isVersionSource("server/storage/paths.ts", "frontend")).toBe(false);
+  expect(isVersionSource("server/storage/paths.ts", "backend")).toBe(true);
+});
 function fixture(release = false) {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-runtime-version-"));
   const root = release ? path.join(base, `backend-${"a".repeat(40)}-123-1`) : base;

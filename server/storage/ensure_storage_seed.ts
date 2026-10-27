@@ -3,8 +3,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { BACKEND_ROOT, ESPORT_DATA_DIR } from "./paths.js";
-import { readJsonFile, writeJsonFile } from "./json_file_store.js";
+import { BACKEND_ROOT, ESPORT_DATA_DIR } from "@changmen/storage/paths.js";
+import { readJsonFile, writeJsonFile } from "@changmen/storage/json_file_store.js";
 
 const EMPTY_OBJECTS = [
   "default_odds",
@@ -31,6 +31,6 @@ export function ensureStorageSeed() {
   }
 }
 
-function filePath(name) {
+function filePath(name: string): string {
   return path.join(ESPORT_DATA_DIR, `${name}.json`);
 }

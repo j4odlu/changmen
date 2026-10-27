@@ -15,7 +15,7 @@ import { inspectComponentInstallInputs } from "./verification/component-install-
 import { inspectFrontendBuildContracts } from "./verification/frontend-build-contracts.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CHANGMEN_LAYOUT, VENUE_ADAPTER_REL } from "../server/storage/paths.js";
+import { CHANGMEN_LAYOUT, VENUE_ADAPTER_REL } from "@changmen/storage/paths.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CHANGMEN_ROOT = path.resolve(__dirname, "..");

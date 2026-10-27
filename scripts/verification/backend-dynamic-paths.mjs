@@ -28,7 +28,7 @@ export const dynamicPathOrigins = [
 export const dynamicPathContractFiles = [
   { file: central, selector: "module" }, ...pgFiles.map(file => ({ file, selector: "pg-loader" })),
   ...[`${registry}/paths.js`, `${runtime}/registry/paths.js`, `${runtime}/registry/feeds.js`,
-    "server/storage/paths.js", "server/storage/changmen_root.js", ...helpers].map(file => ({ file, selector: "module" })),
+    "server/storage/paths.ts", "server/storage/changmen_root.ts", ...helpers].map(file => ({ file, selector: "module" })),
 ];
 
 function safe(root, file) {

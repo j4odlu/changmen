@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { readDevWebPort, resolveDevWebPort } from "./dev_web_config.js";
+import { readDevWebPort, resolveDevWebPort } from "@changmen/storage/dev_web_config.js";
 
 test("frontend and backend resolve the same configured development port", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-dev-port-"));

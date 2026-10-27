@@ -10,10 +10,10 @@ it.each([
   [["client/packages/arb-core/src/arbitrage/check.ts"], "frontend"],
   [["server/backend/core/observability/memory.js"], "backend"],
   [["server/backend/http_routes.js"], "backend"], [["server/backend/core/http/security_headers.js"], "backend"],
-  [["server/backend/core/account/order_store.js"], "backend"], [["server/storage/auth_mode.js"], "backend"],
+  [["server/backend/core/account/order_store.js"], "backend"], [["server/storage/auth_mode.ts"], "backend"],
   [["rds/rds/orders_store.js"], "backend"], [["rds/assets/schema.sql"], "backend"],
   [["server/collectors/polymarket-esports/api.js"], "backend"],
-  [["server/storage/runtime_version.js"], "full"], [["packages/shared/new.ts"], "full"],
+  [["server/storage/runtime_version.ts"], "full"], [["packages/shared/new.ts"], "full"],
   [["scripts/verification/validation-plan.mjs"], "controls"], [["scripts/deploy/publish.sh"], "controls"],
   [[".github/workflows/release.yml"], "controls"], [["unknown/new.js"], "full"], [[], "full"],
 ])("%j selects %s by component ownership", (paths, tier) => {

@@ -16,11 +16,11 @@ export function getActiveGames() {
   return selectGames(process.env.AGGREGATE_GAME_CODES);
 }
 
-export function getActivePlatformGameIds(platform) {
+export function getActivePlatformGameIds(platform: string) {
   return selectPlatformGameIds(platform, process.env.AGGREGATE_GAME_CODES);
 }
 
-export function isAllowedPlatformGameId(platform, gameId) {
+export function isAllowedPlatformGameId(platform: string, gameId: string | number) {
   return allowsPlatformGameId(platform, gameId, process.env.AGGREGATE_GAME_CODES);
 }
 

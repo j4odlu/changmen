@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { CHANGMEN_ROOT_FROM_PKG, findChangmenRoot } from "./changmen_root.js";
+import { CHANGMEN_ROOT_FROM_PKG, findChangmenRoot } from "@changmen/storage/changmen_root.js";
 
 export { findChangmenRoot };
 
@@ -22,7 +22,7 @@ export const CHANGMEN_LAYOUT = {
   serverCollectors: "server/collectors",
   lines: "lines",
   baseball: "baseball",
-};
+} as const;
 
 /** @deprecated 使用 CHANGMEN_LAYOUT.venueAdapter */
 export const VENUE_ADAPTER_REL = CHANGMEN_LAYOUT.venueAdapter;
@@ -32,7 +32,7 @@ export const CLIENT_WEB_ROOT = path.join(CHANGMEN_ROOT, CHANGMEN_LAYOUT.clientWe
 export const PLATFORM_PROBES_ROOT = path.join(CHANGMEN_ROOT, CHANGMEN_LAYOUT.platformProbes);
 
 /** 将 layout 相对段解析为绝对路径 */
-export function changmenPath(...relSegments) {
+export function changmenPath(...relSegments: string[]): string {
   return path.join(CHANGMEN_ROOT, ...relSegments);
 }
 

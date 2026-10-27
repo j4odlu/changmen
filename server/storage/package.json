@@ -5,25 +5,34 @@
   "type": "module",
   "description": "changmen 本地 storage 路径与 JSON 读写（非 PostgreSQL）",
   "exports": {
-    ".": "./index.js",
-    "./paths.js": "./paths.js",
-    "./changmen_root.js": "./changmen_root.js",
-    "./json_file_store.js": "./json_file_store.js",
-    "./platform_storage.js": "./platform_storage.js",
-    "./ensure_storage_seed.js": "./ensure_storage_seed.js",
-    "./load_env.js": "./load_env.js",
-    "./dev_web_config.js": "./dev_web_config.js",
-    "./runtime_version.js": "./runtime_version.js",
-    "./auth_mode.js": "./auth_mode.js",
-    "./predictfun_market_index.js": "./predictfun_market_index.js",
-    "./polymarket_market_index.js": "./polymarket_market_index.js",
-    "./sxbet_market_index.js": "./sxbet_market_index.js",
-    "./game_catalog.js": "./game_catalog.js"
+    ".": "./index.ts",
+    "./paths.js": "./paths.ts",
+    "./changmen_root.js": "./changmen_root.ts",
+    "./json_file_store.js": "./json_file_store.ts",
+    "./platform_storage.js": "./platform_storage.ts",
+    "./ensure_storage_seed.js": "./ensure_storage_seed.ts",
+    "./load_env.js": "./load_env.ts",
+    "./dev_web_config.js": "./dev_web_config.ts",
+    "./runtime_version.js": "./runtime_version.ts",
+    "./auth_mode.js": "./auth_mode.ts",
+    "./predictfun_market_index.js": "./predictfun_market_index.ts",
+    "./polymarket_market_index.js": "./polymarket_market_index.ts",
+    "./sxbet_market_index.js": "./sxbet_market_index.ts",
+    "./game_catalog.js": "./game_catalog.ts"
   },
   "dependencies": {
     "@changmen/api-contract": "file:../../packages/api-contract",
     "dotenv": "^17.4.2",
     "@changmen/shared": "file:../../packages/shared",
     "@changmen/runtime-tooling": "file:../../devtools/runtime-tooling"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "npm run typecheck && vitest run game_catalog.test.mjs runtime_version.test.mjs && node --test dev_web_config.test.mjs load_env.test.mjs tests/*.node.mjs && node paths_smoke.test.mjs"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.8",
+    "typescript": "6.0.3",
+    "@types/node": "^25.9.1"
   }
 }

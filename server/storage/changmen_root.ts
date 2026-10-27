@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** 从任意 changmen 子目录向上查找 monorepo 根（含 server/backend）。 */
-export function findChangmenRoot(fromDir) {
+export function findChangmenRoot(fromDir: string): string {
   let cur = fromDir;
   for (let i = 0; i < 12; i++) {
     const backendPkg = path.join(cur, "server/backend/package.json");

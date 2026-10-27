@@ -171,7 +171,7 @@ it("covers the real PM graph, runtime preload dependencies and nine reviewed sou
   for (const name of ["index.js", "index.ts", "gamma_map.ts", "gamma_poll.ts", "sport_state.ts", "resolve_match.ts", "parse_sport.ts", "prematch_prices.ts", "broadcast_notify.ts", "types.ts"])
     expect(report.loaderBindings.inputEvidence.some(row => row.file === `server/collectors/polymarket-sports/${name}`)).toBe(true);
   // [changmen 扩展] 保留旧端口配置覆盖，并明确覆盖迁出的完整 Node 端口解析实现。
-  for (const file of ["server/storage/dev_web_config.js", "devtools/runtime-tooling/dev_web_port.js"])
+  for (const file of ["server/storage/dev_web_config.ts", "devtools/runtime-tooling/dev_web_port.js"])
     expect(report.loaderBindings.inputEvidence.some(row => row.file === file)).toBe(true);
   expect(report.loaderBindings.inputEvidence.some(row => row.file.includes("/scripts/"))).toBe(false);
   expect(report.loaderBindings.runtimeRoots).toHaveLength(21);

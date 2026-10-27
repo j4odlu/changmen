@@ -12,14 +12,14 @@ export function inspectFrontendBuildContracts(root, { readFile = file => fs.read
   if (policy.schemaVersion !== 1 || policy.purpose !== "frontend-build-source-isolation-only" || policy.publishScopeOptimizationEnabled !== false)
     throw Error("Invalid frontend build source policy");
   const fail = (file, pattern) => violations.push({ rule: "frontend-build-input", file, line: 0, spec: "build contract", pattern });
-  for (const file of ["devtools/runtime-tooling/runtime_version.js", "devtools/runtime-tooling/dev_web_port.js", "server/storage/dev_web_config.js"])
+  for (const file of ["devtools/runtime-tooling/runtime_version.js", "devtools/runtime-tooling/dev_web_port.js", "server/storage/dev_web_config.ts"])
     try { text(file); } catch { fail(file, "Active shared tooling source is missing"); }
   for (const name of ["runtime_version.js", "runtime_version.d.ts", "dev_web_port.js", "dev_web_port.d.ts"]) {
     const file = `packages/shared/tooling/${name}`;
     if (fs.existsSync(path.join(root,file))) fail(file, "Retired shared tooling entry must not return");
   }
   const wrapper = '// [changmen 扩展] 保留旧 Node 入口；完整来源识别实现位于独立 Node 工具包。\nexport * from "@changmen/runtime-tooling/runtime_version.js";\n';
-  if (text("server/storage/runtime_version.js") !== wrapper) fail("server/storage/runtime_version.js", "Old source identity entry must only re-export the same canonical module");
+  if (text("server/storage/runtime_version.ts") !== wrapper) fail("server/storage/runtime_version.ts", "Old source identity entry must only re-export the same canonical module");
   const shared = JSON.parse(text("packages/shared/package.json"));
   for (const name of ["runtime_version", "dev_web_port"])
     if (shared.exports?.[`./tooling/${name}.js`]) fail("packages/shared/package.json", `Retired shared Node tooling export returned: ${name}`);

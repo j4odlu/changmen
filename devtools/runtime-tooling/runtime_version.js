@@ -18,7 +18,7 @@ export function isVersionSource(file, role) {
   // Compiled routes are represented by tracked TS; heartbeats are runtime data.
   if (generatedRoutes.has(file) || /^server\/match\/matcher\/\.(?:composer|matcher)-heartbeat\.json$/.test(file)) return false;
   if (/^server\/backend\/(?:storage|scripts\/ops)\//.test(file)) return false;
-  if (["package.json", "package-lock.json", "server/storage/runtime_version.js"].includes(file)) return true;
+  if (["package.json", "package-lock.json", "server/storage/runtime_version.js", "server/storage/runtime_version.ts"].includes(file)) return true;
   // Browser-owned implementations are absent from backend release artifacts.
   // Shared contracts/rules and all Node loader resources remain fingerprinted.
   if (file.startsWith("packages/match-identity/")) return role === "backend";

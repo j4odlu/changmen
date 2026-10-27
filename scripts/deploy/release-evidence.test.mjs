@@ -7,7 +7,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { runChangeValidation } from "../verification/verify-change.mjs";
 import { assertAccepted, assertCandidate, assertArchiveEvidence, sealEvidence, sha256, verifySupplementalEvidence } from "./release-evidence.mjs";
 import { DATABASE_PHASES } from "./acceptance-contract.mjs";
-import { readSourceVersion } from "../../server/storage/runtime_version.js";
+import { readSourceVersion } from "../../server/storage/runtime_version.ts";
 import { planHash } from "./change-plan.mjs";
 import { checkDatabaseCompatibility } from "./check-database-compatibility.mjs";
 import { installationProof } from "./fixtures/backend-installation.mjs";
@@ -31,7 +31,7 @@ test("transport verification starts without installed workspace dependencies and
       "scripts/deploy/classify-deploy-scope.mjs", "scripts/deploy/pack-git-repo.mjs",
       "scripts/deploy/acceptance-contract.mjs", "scripts/verification/verify-change.mjs",
       "scripts/deploy/verify-backend-processes.mjs",
-      "scripts/verification/validation-plan.mjs", "server/storage/runtime_version.js",
+      "scripts/verification/validation-plan.mjs", "server/storage/runtime_version.ts",
       "devtools/runtime-tooling/runtime_version.js", "devtools/runtime-tooling/package.json",
     ]) {
       const target = path.join(root, file);

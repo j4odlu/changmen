@@ -40,6 +40,13 @@ it("rejects external root overrides/search hooks, changed processes and changed 
   expect(() => certifyBackendDynamicPaths(root, entries.slice(1), env)).toThrow(/process entries changed/);
   const changed = structuredClone(policy); changed.sourceContracts[0].signature = "0".repeat(64);
   expect(() => certifyBackendDynamicPaths(root, entries, env, { policy: changed })).toThrow(/interpretation changed/);
+  for (const file of ["server/storage/paths.ts", "server/storage/changmen_root.ts"]) {
+    const changedStorage = structuredClone(policy);
+    const contract = changedStorage.sourceContracts.find(row => row.file === file);
+    expect(contract).toBeDefined();
+    contract.signature = "0".repeat(64);
+    expect(() => certifyBackendDynamicPaths(root, entries, env, { policy: changedStorage })).toThrow(/interpretation changed/);
+  }
 });
 
 it("parity fails on dropped uncertainty/proofs, SDK identity changes and missing expanded targets", () => {

@@ -254,7 +254,7 @@
     "client/packages/venue-browser/package.json",
     "client/web/package.json",
     "server/backend/package.json",
-    "server/storage/runtime_version.js",
+    "server/storage/runtime_version.ts",
     "client/packages/pm-market-data-browser/package.json"
   ]
 }

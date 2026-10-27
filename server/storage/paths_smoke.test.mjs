@@ -7,7 +7,7 @@ import {
   ESPORT_DATA_DIR,
   VENUE_ADAPTER_ROOT,
   VENUE_ADAPTER_REL,
-} from "./paths.js";
+} from "@changmen/storage/paths.js";
 
 const backendPkg = path.join(BACKEND_ROOT, "package.json");
 if (!fs.existsSync(backendPkg)) {

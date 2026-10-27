@@ -3,7 +3,7 @@
  *
  * Round / BO / periods 由 structure/resolve_structure.js 在投影前定型，此处只读。
  */
-import { parseTitleTeams } from "@changmen/shared/match-identity/teams/match_utils.js";
+import { parseTitleTeams } from "@changmen/match-identity/teams/match_utils.js";
 import { findPlatformMatch } from "../sides/orientation_lock.js";
 
 const MIN_PLATFORMS = 2;

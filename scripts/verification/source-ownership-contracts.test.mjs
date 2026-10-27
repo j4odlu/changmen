@@ -15,7 +15,7 @@ it("separates frontend, backend, RDS and shared implementations while preserving
     ["packages/venue-adapter/registry/adapters.ts", "frontend"],
     ["rds/maintenance/rds-schema-check.mjs", "rds"],
     ["server/match/resolver/index.js", "backend"],
-    ["packages/shared/match-identity/teams/team_key.js", "shared"],
+    ["packages/match-identity/teams/team_key.js", "domain"],
   ]) expect(classifySourceFile(file, policy)?.layer).toBe(layer);
 });
 for (const [file, target] of [
@@ -26,12 +26,19 @@ for (const [file, target] of [
   ["packages/shared/rule.ts", "rds/index.js"],
   ["packages/shared/rule.ts", "packages/client-core/src/bridge/clientApi.ts"],
   ["server/backend/main.js", "packages/unreviewed/main.js"],
+  ["client/web/src/main.ts", "packages/match-identity/index.js"],
+  ["packages/shared/rule.ts", "packages/match-identity/index.js"],
+  ["packages/match-identity/index.js", "rds/index.js"],
+  ["packages/match-identity/index.js", "server/match/resolver/index.js"],
+  ["packages/match-identity/index.js", "server/storage/paths.js"],
 ]) it(`rejects ${file} reaching ${target}`, () => expect(sourceLayerViolation(file, target, policy)).toBeTruthy());
 it("allows reviewed public data operations, shared rules and Node storage infrastructure", () => {
   for (const [file, target] of [
     ["server/backend/main.js", "rds/profile_metadata.js"],
     ["rds/main.js", "server/storage/load_env.js"],
-    ["rds/rds/team_store.js", "packages/shared/match-identity/index.js"],
+    ["rds/rds/team_store.js", "packages/match-identity/index.js"],
+    ["server/match/matcher/index.js", "packages/match-identity/index.js"],
+    ["packages/match-identity/index.js", "packages/shared/time/match_time.ts"],
     ["client/web/src/main.ts", "packages/shared/odds_format.ts"],
   ]) expect(sourceLayerViolation(file, target, policy)).toBeNull();
 });
@@ -45,7 +52,7 @@ it("has no retired identity or shared-tooling implementation aliases", () => {
   expect(policy.compatibilityEntries).toEqual([]);
   for(const file of ["server/match/identity/index.js","packages/shared/tooling/package.json"])
     expect(fs.existsSync(path.join(root,file))).toBe(false);
-  expect(classifySourceFile("packages/shared/match-identity/index.js",policy).layer).toBe("shared");
+  expect(classifySourceFile("packages/match-identity/index.js",policy).layer).toBe("domain");
 });
 it("never permits ownership metadata to grant a release exemption", () => {
   expect(() => validateSourceOwnership({ ...policy, publishScopeOptimizationEnabled: true })).toThrow("Invalid");

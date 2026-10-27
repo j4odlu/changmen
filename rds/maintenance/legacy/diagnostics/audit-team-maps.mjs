@@ -20,7 +20,7 @@
  */
 import "dotenv/config";
 import { ensurePgPoolReady } from "@changmen/db";
-import { normalizeTeam } from "@changmen/shared/match-identity/teams/team_key.js";
+import { normalizeTeam } from "@changmen/match-identity/teams/team_key.js";
 import { resolveGameCode } from "@changmen/shared/catalog/game_catalog";
 
 const limitArg = process.argv.indexOf("--limit");

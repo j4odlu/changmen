@@ -1,5 +1,5 @@
 /**
- * client_matches ID 分配：复用 @changmen/shared/match-identity/ids（非 merge）。
+ * client_matches ID 分配：复用 @changmen/match-identity/ids（非 merge）。
  * dry-run 时不 insert stub，仅复用已有 id，否则分配临时负 ID。
  */
 import {
@@ -9,7 +9,7 @@ import {
   findReuseIdByPlatformOverlap,
   matchsSignature,
   resolveClientMatchIds,
-} from "@changmen/shared/match-identity/ids/client_match_ids.js";
+} from "@changmen/match-identity/ids/client_match_ids.js";
 
 /** M3：已结束行不参与身份复用 */
 export function isEndedClientMatchRow(row) {

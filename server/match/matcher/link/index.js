@@ -7,7 +7,7 @@ import {
   manualMergeKey,
   normalizeTeam,
   teamsFromPlatformRows,
-} from "@changmen/shared/match-identity";
+} from "@changmen/match-identity";
 import { getGameCodeForPlatformId, getPlatformGameId, resolveClientGame } from "@changmen/shared/catalog/game_catalog";
 import { formatPbTeamPlatformId, resolvePlatformTeamId } from "@changmen/shared/catalog/pb_team_platform_id";
 import { collectorRuntime as store } from "../runtime_ports.js";

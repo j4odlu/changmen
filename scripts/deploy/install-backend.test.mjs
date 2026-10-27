@@ -45,7 +45,7 @@ test("the production installer selects six Node roots, enables lifecycle scripts
     assert(args.includes("--omit=dev")); assert(!args.includes("--include=dev"));
     assert.equal(options.cwd, f.root); f.installed(); return { status: 0 };
   } });
-  assert.equal(report.passed, true); assert.equal(report.workspaces.length, 16);
+  assert.equal(report.passed, true); assert.equal(report.workspaces.length, 17);
   assert.equal(report.developmentToolsAbsent, true); assert.equal(report.precompiledRouterVerified, true);
 });
 test("failed or timed-out installation cannot be accepted even with existing links", t => {

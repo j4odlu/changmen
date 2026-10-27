@@ -21,12 +21,13 @@ export function isVersionSource(file, role) {
   if (["package.json", "package-lock.json", "server/storage/runtime_version.js"].includes(file)) return true;
   // Browser-owned implementations are absent from backend release artifacts.
   // Shared contracts/rules and all Node loader resources remain fingerprinted.
+  if (file.startsWith("packages/match-identity/")) return role === "backend";
   if (file.startsWith("client/packages/")) return role === "frontend";
   if (/^server\/packages\/(?:venue-node-(?:loader|registry)|venue-adapter-tools)\//.test(file) || file.startsWith("server/venues/")) return true;
   if (file.startsWith("devtools/runtime-tooling/")) return true;
   return role === "frontend"
     ? /^(?:client\/web\/(?:src\/|public\/|vite\/|vite\.config\.ts|package\.json|scripts\/run-production-build\.mjs)|packages\/)/.test(file)
-    : /^(?:rds\/|server\/|packages\/(?:shared|api-contract)\/|devtools\/platform-probes\/)/.test(file);
+    : /^(?:rds\/|server\/|packages\/(?:shared|api-contract|match-identity)\/|devtools\/platform-probes\/)/.test(file);
 }
 const contractSource = file => /^packages\/api-contract\//.test(file)
   || ["packages/shared/pm_gtc.ts", "packages/shared/pm_gtc_recovery.ts"].includes(file);

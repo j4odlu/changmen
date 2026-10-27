@@ -1,0 +1,24 @@
+{
+  "name": "@changmen/match-identity",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "赛事与队伍身份领域规则，供 matcher、resolver 和 RDS 使用",
+  "exports": {
+    ".": "./index.js",
+    "./ids/*.js": "./ids/*.js",
+    "./teams/*.js": "./teams/*.js",
+    "./teams/team_aliases.json": "./teams/team_aliases.json",
+    "./time_windows.js": "./time_windows.js",
+    "./profiles/esport.js": "./profiles/esport.js"
+  },
+  "scripts": {
+    "test": "vitest run tests"
+  },
+  "dependencies": {
+    "@changmen/shared": "file:../shared"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.8"
+  }
+}

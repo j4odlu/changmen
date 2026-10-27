@@ -32,7 +32,7 @@ changmen/
 │   │   └── scripts/             # 常驻运维；ops/；archive/
 │   ├── collectors/              # VPS daemon：polymarket-sports、predictfun-collector
 │   ├── match/                   # 赛事匹配模块（三层）
-│   │   ├── identity/            # @changmen/shared/match-identity（纯库：队名/时间窗/ID）
+│   │   ├── identity/            # @changmen/match-identity（纯库：队名/时间窗/ID）
 │   │   ├── resolver/            # @changmen/team-resolver（外部 provider + scraper）
 │   │   └── matcher/             # @changmen/matcher（compose/ 合场 + 调度 + 人工 UI）
 │   ├── db/                      # @changmen/db
@@ -104,12 +104,12 @@ chrome-extension ─（代理/凭证）─► 各平台源站
 packages/venue-adapter ──采集上报──► server/backend (API_SaveMatch/SaveBet)
 server/backend ──读写────► server/db (@changmen/db)
 server/match/matcher ──matchMerge──► 包内 compose/（合场算法）
-server/match/matcher ──共享工具──► @changmen/shared/match-identity (teams / ids / time windows)
+server/match/matcher ──共享工具──► @changmen/match-identity (teams / ids / time windows)
 server/match/matcher ──队名────► @changmen/team-resolver（workspace 依赖，可选）
 resolver 辅助 scraper（开发工具） ──requirePlatform──► @changmen/venue-node（原实现）
 
 server/backend ──requirePlatform──► @changmen/venue-node（原冻结实现）
-server/db ──公共队名规则──► @changmen/shared/match-identity
+server/db ──公共队名规则──► @changmen/match-identity
 server/backend ──可选拷贝──► server/backend/platform_adapter（瘦包 / GAMEBET_ADAPTER_ROOT）
 ```
 
@@ -137,12 +137,12 @@ npm workspace 成员；通过 `@changmen/shared` 包名引用。
 
 ## `server/match` — 赛事匹配模块
 
-三个包按依赖层划分，**不合成单包**：`rds/rds/team_store.js` 依赖 identity，而 resolver 依赖 `@changmen/db`，四合一会造成包级循环；identity 唯一依赖是 `@changmen/shared`，这份纯度是 backend / db / 诊断脚本能安全引用它的前提。
+身份领域包位于 `packages/match-identity`，resolver 与 matcher 位于 `server/match`；三个包按依赖层划分，**不合成单包**：`rds/rds/team_store.js` 依赖 identity，而 resolver 依赖 `@changmen/db`，四合一会造成包级循环；identity 唯一依赖是 `@changmen/shared`，这份纯度是 backend / db / 诊断脚本能安全引用它的前提。
 
-### `server/match/identity` (`@changmen/shared/match-identity`)
+### `packages/match-identity` (`@changmen/match-identity`)
 
 队名工具、开赛时间窗、`client_match_ids` 与对应测试；旧 `merge/` 合并管线已下线。
-resolver 与 matcher 通过 workspace 依赖复用；测试：`npm run test --prefix server/match/identity`。
+resolver 与 matcher 通过 workspace 依赖复用；测试：`npm run test --workspace=@changmen/match-identity`。
 
 ### `server/match/resolver` (`@changmen/team-resolver`)
 

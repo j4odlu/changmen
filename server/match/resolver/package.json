@@ -25,7 +25,8 @@
     "@changmen/db": "file:../../../rds",
     "@changmen/storage": "file:../../storage",
     "@changmen/shared": "file:../../../packages/shared",
-    "axios": "^1.7.2"
+    "axios": "^1.7.2",
+    "@changmen/match-identity": "file:../../../packages/match-identity"
   },
   "devDependencies": {
     "@changmen/venue-node": "file:../../venues"

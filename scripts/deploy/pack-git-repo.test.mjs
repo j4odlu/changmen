@@ -27,6 +27,8 @@ test("HEAD-only backend artifacts exclude browser code and tests, retain assets 
     "server/venues/registry/runtime/provider.json": '{"loader":"resource"}',
     "rds/assets/migrations/001.sql": "CREATE TABLE example(id int);", "rds/maintenance/check.mjs": "export {};",
     "packages/shared/rules.js": "export const rule = 1;", "packages/api-contract/package.json": '{"version":"1"}',
+    "packages/match-identity/index.ts": 'export const identity = "one";',
+    "packages/match-identity/teams/team_aliases.json": '{"alias":"team"}',
     "packages/api-contract/action.ts": 'export const action = "one";', "deploy/ecosystem.config.cjs": "module.exports={};",
     "scripts/deploy/install-backend.mjs": "export {};" };
   const omitted = ["client/web/src/App.vue", "client/packages/venue-browser/adapter.js", "packages/client-core/old.js",

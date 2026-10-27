@@ -9,7 +9,7 @@
  * PB B1 / S2：主 event（Matchs.PB）缺某 Map 时，从同 rotNum sibling 取该 Map；
  * Source.HomeID / BetID / LineID 仍是那条腿自己的 event；Matchs.PB 不变。
  */
-import { parseTitleTeams } from "@changmen/shared/match-identity/teams/match_utils.js";
+import { parseTitleTeams } from "@changmen/match-identity/teams/match_utils.js";
 import { getGameCodeForPlatformId } from "@changmen/shared/catalog/game_catalog";
 import { isComposerPbRotnumCollapse } from "../../lib/config.js";
 import { listPbEventIdsForProjection } from "../normalize/pb_rotnum_collapse.js";

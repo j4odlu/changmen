@@ -3,7 +3,7 @@ import { describe, it } from "vitest";
 import {
   findReuseIdByPlatformOverlap,
   matchsSignature,
-} from "@changmen/shared/match-identity/ids/client_match_ids.js";
+} from "@changmen/match-identity/ids/client_match_ids.js";
 import { clientMatchWriteRow } from "../compose/write_payload.js";
 import { resolveIdsDryRun } from "../compose/ids/resolve_ids.js";
 

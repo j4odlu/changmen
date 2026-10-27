@@ -24,10 +24,10 @@ export function backendArchiveIncludes(file) {
     || /(?:^|\/)(?:\.env(?:\.|$)|\.npmrc$)|\.(?:pem|key|pfx|p12)$/i.test(file)
     || file.startsWith("server/backend/storage/")) return false;
   // Retain every manifest unchanged: npm ci consumes the original root lock and
-  // workspace layout, even though only the sixteen Node workspaces are installed.
+  // workspace layout, even though only the seventeen Node workspaces are installed.
   if (file === "package.json" || file === "package-lock.json" || file.endsWith("/package.json")) return true;
   return deploymentFiles.has(file)
-    || /^(?:server\/|rds\/|packages\/(?:shared|api-contract)\/|devtools\/(?:runtime-tooling|platform-probes)\/)/.test(file);
+    || /^(?:server\/|rds\/|packages\/(?:shared|api-contract|match-identity)\/|devtools\/(?:runtime-tooling|platform-probes)\/)/.test(file);
 }
 
 /** A deterministic, HEAD-only backend artifact; legacy full-repository packing stays explicit. */

@@ -4,7 +4,7 @@ import {
   alignUnmatchedToClientMatches,
   MERGE_START_TIME_TOLERANCE_MS,
 } from "../ops/align_unmatched_to_client.js";
-import { setTeamPlugin } from "@changmen/shared/match-identity/teams/team_key.js";
+import { setTeamPlugin } from "@changmen/match-identity/teams/team_key.js";
 
 const START = 1_700_000_000_000;
 

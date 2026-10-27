@@ -23,12 +23,14 @@
   "nodeRoots": [
     "server",
     "rds",
-    "devtools/runtime-tooling"
+    "devtools/runtime-tooling",
+    "packages/match-identity"
   ],
   "nodeOnlyPaths": [
     "server/venues/registry/paths.js",
     "server/venues/registry/feeds.js",
-    "devtools/runtime-tooling"
+    "devtools/runtime-tooling",
+    "packages/match-identity"
   ],
   "browserRoots": [
     "client/web/src",
@@ -250,6 +252,14 @@
       "file": "client/packages/venue-browser/adapter/polymarket/orderBookSource.ts",
       "specifiers": [
         "@changmen/venue-browser/adapter/polymarket/orderBookSource"
+      ]
+    },
+    {
+      "id": "match-identity",
+      "environment": "node",
+      "file": "packages/match-identity/index.js",
+      "specifiers": [
+        "@changmen/match-identity"
       ]
     }
   ],

@@ -7,7 +7,7 @@ import {
   fetchPlatformMatchesForHiddenClientMatches,
   loadTeamMapsForMatcher,
 } from "@changmen/db";
-import { normalizeTeam } from "@changmen/shared/match-identity/teams/team_key.js";
+import { normalizeTeam } from "@changmen/match-identity/teams/team_key.js";
 import { normalizeEpochMs } from "@changmen/shared/time/match_time";
 import { formatPmMatchStatus } from "./pm_match_status.js";
 import { isComposerStickyOrientation } from "../lib/config.js";

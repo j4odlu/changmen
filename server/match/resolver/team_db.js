@@ -3,8 +3,8 @@
  */
 
 import { loadChangmenEnv } from "@changmen/storage/load_env.js";
-import teamAliasesRaw from "@changmen/shared/match-identity/teams/team_aliases.json" with { type: "json" };
-import { resolveCanonicalTeamName } from "@changmen/shared/match-identity/teams/canonical_ob_name.js";
+import teamAliasesRaw from "@changmen/match-identity/teams/team_aliases.json" with { type: "json" };
+import { resolveCanonicalTeamName } from "@changmen/match-identity/teams/canonical_ob_name.js";
 
 loadChangmenEnv();
 

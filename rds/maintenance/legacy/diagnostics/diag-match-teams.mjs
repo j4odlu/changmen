@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { ensurePgPoolReady } from "@changmen/db";
-import { canonicalMatchKeyByName, normalizeTeam } from "@changmen/shared/match-identity/teams/team_key.js";
+import { canonicalMatchKeyByName, normalizeTeam } from "@changmen/match-identity/teams/team_key.js";
 import { normalizeEpochMs } from "@changmen/shared/time/match_time";
 
 const terms = (process.argv[2] || "1w,INOX").split(",").map(s => s.trim()).filter(Boolean);

@@ -4,7 +4,7 @@ import { clientMatchWriteRow } from "./write_payload.js";
 import { installPlugin, pmRay } from "../tests/fixtures.mjs";
 import { filterMultiPlatform } from "./shape/live_shape.js";
 import { checkUnlockedEmpty } from "./invariants.js";
-import { setTeamPlugin } from "@changmen/shared/match-identity/teams/team_key.js";
+import { setTeamPlugin } from "@changmen/match-identity/teams/team_key.js";
 
 const ray = { SourceMatchID: "basket1", SourceGameID: 1072082, Home: "Melbourne United", Away: "Sydney Kings",
   HomeID: "21269919", AwayID: "21269928", StartTime: Date.now() + 3600000, BO: 0 };

@@ -28,7 +28,7 @@ describe("classifyDeployScope", () => {
   it("covers every active workspace while keeping shared contracts and build tooling joint", () => {
     for (const { dir } of readInstallWorkspaces(process.cwd()).values()) {
       const expected = dir === "chrome-extension" ? "noop" : dir.startsWith("client/") ? "frontend"
-        : dir.startsWith("server/") || dir === "rds" ? "backend" : "full";
+        : dir.startsWith("server/") || dir === "rds" || dir === "packages/match-identity" ? "backend" : "full";
       assert.equal(classifyDeployScope([dir + "/package.json"]), expected, dir);
     }
   });

@@ -1,7 +1,7 @@
 /**
  * 投影后不变式检查（测试与 dry-run 自检共用）。
  */
-import { lookupGbTeamIdByPlatform } from "@changmen/shared/match-identity/teams/team_key.js";
+import { lookupGbTeamIdByPlatform } from "@changmen/match-identity/teams/team_key.js";
 import { findPlatformMatch } from "./sides/orientation_lock.js";
 
 export function checkHomeSlotConsistency(row, nativeByPlatformMap = {}) {

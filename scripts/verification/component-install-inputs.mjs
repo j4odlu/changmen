@@ -55,6 +55,7 @@ export function frontendInstallBoundary(profile) {
     && profile.build === true && profile.root === "@changmen/web" && edge.from === "client/web" && edge.group === "devDependencies";
   return profile.edges.filter(edge => edge.target && !toolingEdge(edge) && (/^(?:server|devtools)(?:\/|$)|^rds(?:\/|$)/.test(edge.target)
     || edge.target === "packages/shared/tooling"
+    || edge.target === "packages/match-identity"
     || /^packages\/venue-adapter\/(?:loader|registry|scripts)(?:\/|$)/.test(edge.target)))
     .map(edge => ({ file: `${edge.from}/package.json`, spec: edge.name,
       pattern: `Frontend install reaches a Node/data workspace: ${edge.via.join(" -> ")}` }));

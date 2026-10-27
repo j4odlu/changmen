@@ -178,6 +178,6 @@ test("backend check still covers every server workspace and its dependencies", (
       if (pkg.scripts?.test) assert.ok(graph.tasks.some(t => t.taskId === `${pkg.name}#test`), pkg.name);
     }
   }
-  assert.equal(graph.tasks.filter(t => t.taskId === "@changmen/shared#test").length, 1);
+  assert.equal(graph.tasks.filter(t => t.taskId === "@changmen/match-identity#test").length, 1);
   assert.equal(graph.tasks.filter(t => t.taskId === "@changmen/db#test").length, 1);
 });

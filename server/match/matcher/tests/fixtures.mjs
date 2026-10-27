@@ -1,4 +1,4 @@
-import { setTeamPlugin } from "@changmen/shared/match-identity/teams/team_key.js";
+import { setTeamPlugin } from "@changmen/match-identity/teams/team_key.js";
 
 export const GB_NIP = "100631";
 export const GB_K27 = "100297";

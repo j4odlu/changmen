@@ -36,16 +36,17 @@ export function inspectCurrentSourceBoundaries(root) {
   ]);
   for (const file of retired) if (file.startsWith("client/packages/venue-browser/adapter/")) retired.add(file.replace("/adapter/", "/"));
   for (const file of retired) if (fs.lstatSync(safe(file), { throwIfNoEntry: false })) fail(file, "Retired source entry must not return");
-  const scanRetiredRoot = directory => {
+  const scanRetiredRoot = (directory, reason = "Source must live in the current RDS root") => {
     if (!fs.existsSync(safe(directory))) return;
     for (const item of fs.readdirSync(safe(directory), { withFileTypes: true })) {
       if (item.name.startsWith(".") || ["node_modules", "dist", "coverage"].includes(item.name)) continue;
       const file = directory + "/" + item.name;
-      if (item.isDirectory()) scanRetiredRoot(file);
-      else if (/\.(?:[cm]?[jt]s|sql|json)$/.test(item.name)) fail(file, "Source must live in the current RDS root");
+      if (item.isDirectory()) scanRetiredRoot(file, reason);
+      else if (/\.(?:[cm]?[jt]s|sql|json)$/.test(item.name)) fail(file, reason);
     }
   };
   for (const directory of ["server/backend/db", "server/db"]) scanRetiredRoot(directory);
+  scanRetiredRoot("packages/shared/match-identity", "Identity implementations belong to packages/match-identity");
 
   // The old forwarding entries remain forwarding entries, but the canonical
   // implementation may evolve freely. Compare targets, never implementation hashes.

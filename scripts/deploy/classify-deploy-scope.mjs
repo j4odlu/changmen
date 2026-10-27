@@ -91,6 +91,11 @@ export function classifyDeployScope(paths) {
       continue;
     }
 
+    if (p.startsWith("packages/match-identity/")) {
+      backend = true;
+      continue;
+    }
+
     if (
       p.startsWith("packages/venue-adapter/")
       || /^server\/packages\/(?:venue-node-(?:loader|registry)|venue-adapter-tools)\//.test(p)

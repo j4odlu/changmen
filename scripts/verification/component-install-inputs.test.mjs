@@ -7,9 +7,9 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 it("reports real frontend/backend/RDS declarations without claiming installation isolation", () => {
   const report = inspectComponentInstallInputs(root);
   expect(report.violations).toEqual([]); expect(report.profiles.frontend.workspaces).toHaveLength(7);
-  expect(report.profiles.backend.workspaces).toHaveLength(13);
+  expect(report.profiles.backend.workspaces).toHaveLength(14);
   expect(report.profiles.rds.workspaces).toEqual([
-    "@changmen/api-contract", "@changmen/db", "@changmen/runtime-tooling", "@changmen/shared", "@changmen/storage",
+    "@changmen/api-contract", "@changmen/db", "@changmen/match-identity", "@changmen/runtime-tooling", "@changmen/shared", "@changmen/storage",
   ]);
   expect(report.profiles.backend.workspaces).not.toContain("@changmen/venue-adapter");
   expect(report.frontendBackendEdges).toEqual([]); expect(report.frontendDeclarationsIsolated).toBe(true);
@@ -45,7 +45,7 @@ it("keeps shared free of Node declarations while the explicit legacy workspace o
   expect(packages.has("@changmen/runtime-tooling-compat")).toBe(false);
 });
 for (const [name, target] of [["@changmen/db", "rds"], ["@changmen/storage", "server/storage"],
-  ["@changmen/venue-node", "server/venues"]]) {
+  ["@changmen/venue-node", "server/venues"], ["@changmen/match-identity", "packages/match-identity"]]) {
   it(`rejects an indirect frontend install edge to ${name}`, () => {
     const packages = readInstallWorkspaces(root);
     packages.get("@changmen/shared").pkg.dependencies = { [name]: `file:../../${target}` };
@@ -97,7 +97,7 @@ it("terminates local dependency cycles and retains a reviewable dependency chain
   packages.get("@changmen/shared").pkg.dependencies = { "@changmen/db": "file:../../rds" };
   const report = declaredInstallClosure(root, packages, "@changmen/db");
   expect(report.workspaces).toEqual([
-    "@changmen/api-contract", "@changmen/db", "@changmen/runtime-tooling", "@changmen/shared", "@changmen/storage",
+    "@changmen/api-contract", "@changmen/db", "@changmen/match-identity", "@changmen/runtime-tooling", "@changmen/shared", "@changmen/storage",
   ]);
   expect(report.edges.some(edge => edge.via.join(" -> ") === "@changmen/db -> @changmen/shared -> @changmen/db")).toBe(true);
 });

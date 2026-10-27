@@ -9,6 +9,7 @@
   "workspaces": [
     "client/packages/arb-core",
     "packages/shared",
+    "packages/match-identity",
     "client/packages/client-core",
     "packages/api-contract",
     "client/web",

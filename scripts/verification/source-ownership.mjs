@@ -23,7 +23,7 @@ export function validateSourceOwnership(policy) {
     || !Array.isArray(policy.roots) || !Array.isArray(policy.rules) || !policy.rules.length) throw Error("Invalid source ownership policy");
   for (const file of [...policy.roots, ...(policy.toolingRoots || [])]) if (typeof file !== "string" || !file || file.includes("\\") || path.posix.isAbsolute(file) || file.split("/").includes("..") || /^[a-z]:/i.test(file)) throw Error("Invalid source ownership root");
   for (const rule of policy.rules) {
-    if (!["frontend", "backend", "rds", "shared"].includes(rule.layer) || Boolean(rule.prefix) === Boolean(rule.files)) throw Error("Invalid source ownership rule");
+    if (!["frontend", "backend", "rds", "shared", "domain"].includes(rule.layer) || Boolean(rule.prefix) === Boolean(rule.files)) throw Error("Invalid source ownership rule");
     for (const file of rule.files || [rule.prefix]) if (!file || file.includes("\\") || path.posix.isAbsolute(file) || file.split("/").includes("..") || /^[a-z]:/i.test(file)) throw Error("Invalid source ownership path");
   }
   return policy;
@@ -39,7 +39,8 @@ export function sourceLayerViolation(file, target, policy) {
     const missing = !source ? file : target;
     return policy.roots.some(root => within(missing, root)) ? `Unclassified source dependency: ${missing}` : null;
   }
-  const blocked = source.layer === "frontend" && ["backend", "rds"].includes(destination.layer)
+  const blocked = source.layer === "domain" && !["domain", "shared"].includes(destination.layer)
+    || source.layer === "frontend" && ["backend", "rds", "domain"].includes(destination.layer)
     || ["backend", "rds"].includes(source.layer) && destination.layer === "frontend"
     || source.layer === "shared" && destination.layer !== "shared"
     || source.layer === "rds" && destination.layer === "backend" && destination.role !== "infrastructure";
@@ -89,7 +90,7 @@ export function sourceOwnershipInventory(root) {
     }
   }
   for (const directory of policy.roots) walk(directory);
-  const counts = Object.fromEntries(["frontend", "backend", "rds", "shared"].map(layer => [layer, files.filter(row => row.layer === layer).length]));
+  const counts = Object.fromEntries(["frontend", "backend", "rds", "shared", "domain"].map(layer => [layer, files.filter(row => row.layer === layer).length]));
   return { schemaVersion: 1, purpose: policy.purpose, publishScopeOptimizationEnabled: false, files, counts, unclassified, incompatibleAssets, incompatibleEntries };
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

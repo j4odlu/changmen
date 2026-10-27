@@ -1,8 +1,8 @@
 import { afterEach, expect, it } from "vitest";
 import * as legacy from "../index.js";
-import * as shared from "@changmen/shared/match-identity";
+import * as shared from "@changmen/match-identity";
 import * as legacyKeys from "../teams/team_key.js";
-import * as sharedKeys from "@changmen/shared/match-identity/teams/team_key.js";
+import * as sharedKeys from "@changmen/match-identity/teams/team_key.js";
 
 afterEach(() => shared.setTeamPlugin(null));
 it("keeps all legacy exports bound to one canonical shared implementation", () => {

@@ -7,7 +7,7 @@ vi.mock("@changmen/db", () => ({
   fetchClientMatchPlatformOverrides: async () => ({}), fetchTeamMapsRevision: async () => "test",
 }));
 vi.mock("@changmen/team-resolver/team_db.js", () => ({ loadAndCreatePlugin: async () => ({}) }));
-vi.mock("@changmen/shared/match-identity/teams/team_key.js", () => ({ setTeamPlugin: vi.fn() }));
+vi.mock("@changmen/match-identity/teams/team_key.js", () => ({ setTeamPlugin: vi.fn() }));
 import { loadSnapshot, resetTeamPluginCache } from "./snapshot.js";
 beforeEach(() => { vi.clearAllMocks(); resetTeamPluginCache(); });
 it("does not compose from degraded identity rows when the lifecycle query failed", async () => {

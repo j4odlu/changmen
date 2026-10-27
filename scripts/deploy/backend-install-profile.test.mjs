@@ -11,7 +11,7 @@ const root = process.cwd();
 test("candidate profile covers eight actual processes, six install roots and their Node build resources", () => {
   const p = backendInstallProfile(root);
   assert.equal(p.productionEnabled, true); assert.equal(p.archiveSlimmingEnabled, true);
-  assert.equal(p.entries.length, 8); assert.equal(p.roots.length, 6); assert.equal(p.workspaces.length, 16);
+  assert.equal(p.entries.length, 8); assert.equal(p.roots.length, 6); assert.equal(p.workspaces.length, 17);
   for (const name of ["@changmen/polymarket-esports-collector", "@changmen/polymarket-football-collector", "@changmen/predictfun-collector",
     "@changmen/venue-node", "@changmen/runtime-tooling"]) assert(p.workspaces.includes(name));
   assert(!p.roots.includes("@changmen/sxbet-collector"));

@@ -33,6 +33,10 @@
   "compatibilityAssets": [],
   "rules": [
     {
+      "prefix": "packages/match-identity",
+      "layer": "domain"
+    },
+    {
       "prefix": "client/packages/venue-browser",
       "layer": "frontend"
     },
@@ -97,13 +101,6 @@
       ],
       "layer": "shared",
       "role": "tooling"
-    },
-    {
-      "files": [
-        "packages/shared/match-identity/teams/team_aliases.json"
-      ],
-      "layer": "shared",
-      "role": "asset"
     },
     {
       "files": [

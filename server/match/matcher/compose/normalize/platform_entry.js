@@ -6,8 +6,8 @@ import {
   canonicalMatchKeyByName,
   lookupGbTeamIdByPlatform,
   normalizeTeam,
-} from "@changmen/shared/match-identity/teams/team_key.js";
-import { isPlaceholderTeamName } from "@changmen/shared/match-identity/teams/match_utils.js";
+} from "@changmen/match-identity/teams/team_key.js";
+import { isPlaceholderTeamName } from "@changmen/match-identity/teams/match_utils.js";
 import {
   getGameCodeForPlatformId,
   resolveClientGame,

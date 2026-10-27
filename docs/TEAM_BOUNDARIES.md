@@ -2,7 +2,7 @@
 
 > [changmen 扩展] **文档状态（2026-10-22）：现行边界文档，含历史执行状态。下文“2026-10-18 当前执行状态”及全量安装、待迁移描述只对应当时批次；当前物理布局、已退役 workspace 和定向安装见 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md)，当前发布见 [INDEPENDENT_DEPLOYMENT](./INDEPENDENT_DEPLOYMENT.md)**
 
-[changmen 扩展] 当前 workspace 与物理目录见 [WORKSPACE_LAYOUT](WORKSPACE_LAYOUT.md)：`rds/` 独立于 `server/`，数据公共包名仍为 `@changmen/db`；Node 平台基础设施合并为 `server/venues`；旧 adapter、Node 工具和 match-identity 的兼容 workspace 已退役。当前共 24 个 workspace，旧记录中的包数和目录仅对应当时阶段。
+[changmen 扩展] 当前 workspace 与物理目录见 [WORKSPACE_LAYOUT](WORKSPACE_LAYOUT.md)：`rds/` 独立于 `server/`，数据公共包名仍为 `@changmen/db`；Node 平台基础设施合并为 `server/venues`；旧 adapter 与 Node 工具的兼容 workspace 已退役；赛事身份规则由独立的 `packages/match-identity` 领域包承载。当前共 25 个 workspace，旧记录中的包数和目录仅对应当时阶段。
 
 [changmen 扩展] 2026-10-20 catalog 环境读取归属服务端：共享 `game_catalog.ts` 只接收显式筛选值，服务端的 `@changmen/storage/game_catalog.js` 每次读取 `AGGREGATE_GAME_CODES`。7 处 ESM 和 2 处 CJS 配置消费者已迁至新入口；目录映射与静态采集规则继续共享。`check:boundaries` 核验实际文件与消费者，环境行为用旧实现逐项对照，原冻结清单及 551 项源码基线不变。
 
@@ -115,25 +115,25 @@ changmen 仍为 **一个 monorepo**，通过目录归属、CODEOWNERS 与 `check
 
 | 允许 | 禁止 |
 |------|------|
-| `@changmen/venue-adapter/*` | `@changmen/db`、`@changmen/shared/match-identity`、`@changmen/platform-probes` |
+| `@changmen/venue-adapter/*` | `@changmen/db`、`@changmen/match-identity`、`@changmen/platform-probes` |
 | `@changmen/shared`（展示、时间窗、账号倍数等） | `server/backend`、`server/match` 任意路径 |
 | `@changmen/api-contract` | |
 | `@/` 应用内模块 | |
 
-`client/web/scripts/`：允许 `@changmen/shared/match-identity` 做离线 parity 测试；仍禁止 `@changmen/db` 与直接引用 backend。
+`client/web/scripts/`：允许 `@changmen/match-identity` 做离线 parity 测试；仍禁止 `@changmen/db` 与直接引用 backend。
 
 ### 各平台 `packages/venue-adapter/{platform}/`（根目录 ts，不含 `shared/`、`scripts/`）
 
 | 允许 | 禁止 |
 |------|------|
 | `@changmen/venue-adapter/contract`、`@changmen/venue-adapter/shared`、同平台 `shared/` | `@changmen/db`、`client/web`、`server/backend` |
-| `@changmen/shared` | `@changmen/platform-probes`、`@changmen/shared/match-identity` |
+| `@changmen/shared` | `@changmen/platform-probes`、`@changmen/match-identity` |
 
 ### 服务端（`server/backend`、`server/match`、扩展守护进程）
 
 | 允许 | 禁止 |
 |------|------|
-| `@changmen/db`、`@changmen/shared/match-identity`、`@changmen/shared`、`@changmen/storage` | `packages/venue-adapter/*/`（平台根目录 ts 与 `shared/`） |
+| `@changmen/db`、`@changmen/match-identity`、`@changmen/shared`、`@changmen/storage` | `packages/venue-adapter/*/`（平台根目录 ts 与 `shared/`） |
 | `@changmen/venue-adapter/loader`、`registry`、`requirePlatform` → **node** | `client/web/src/**` |
 | `@changmen/platform-probes`、`@changmen/polymarket-sports`、`@changmen/realtime-hub`、`@changmen/ws-forward`（backend 依赖） | |
 | `server/value-bet` 仅依赖 `@changmen/db` + `@changmen/shared` + `@changmen/storage` | |

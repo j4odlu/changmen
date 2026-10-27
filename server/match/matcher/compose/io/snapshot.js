@@ -5,7 +5,7 @@
  * alignClientRows 与 clientRows 来自同一次含 ended 的版本化读取。
  */
 import * as db from "@changmen/db";
-import { setTeamPlugin } from "@changmen/shared/match-identity/teams/team_key.js";
+import { setTeamPlugin } from "@changmen/match-identity/teams/team_key.js";
 
 let _pluginReady = null;
 /** @type {string|null} */

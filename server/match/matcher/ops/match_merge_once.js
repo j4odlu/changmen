@@ -1,5 +1,5 @@
 import * as db from "@changmen/db";
-import { setTeamPlugin } from "@changmen/shared/match-identity";
+import { setTeamPlugin } from "@changmen/match-identity";
 import {
   invalidateMatcherRdsSnapshot,
 } from "./rds_snapshot_cache.js";

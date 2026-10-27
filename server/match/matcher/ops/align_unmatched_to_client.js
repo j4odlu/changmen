@@ -3,12 +3,12 @@ import {
   MERGE_START_TIME_TOLERANCE_MS,
   startTimesCompatible,
   startTimesCompatibleStrict,
-} from "@changmen/shared/match-identity";
-import { parseTitleTeams } from "@changmen/shared/match-identity/teams/match_utils.js";
+} from "@changmen/match-identity";
+import { parseTitleTeams } from "@changmen/match-identity/teams/match_utils.js";
 import {
   canonicalMatchKeyByIdOnly,
   canonicalMatchKeyByName,
-} from "@changmen/shared/match-identity/teams/team_key.js";
+} from "@changmen/match-identity/teams/team_key.js";
 import { getGameCodeForPlatformId, resolveClientGame } from "@changmen/shared/catalog/game_catalog";
 import { resolvePlatformTeamId } from "@changmen/shared/catalog/pb_team_platform_id";
 import { normalizeEpochMs } from "@changmen/shared/time/match_time";

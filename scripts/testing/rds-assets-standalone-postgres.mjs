@@ -13,7 +13,7 @@ const npm = [process.env.CHANGMEN_TEST_NPM_CLI, process.env.npm_execpath,
 if (!npm) throw Error("Set CHANGMEN_TEST_NPM_CLI to an npm CLI JavaScript entry (offline cache required)");
 const out = process.env.CHANGMEN_TEST_EVIDENCE_DIR;
 await withTemporaryPostgres(async ({ temporary }) => {
-  const root = path.join(temporary, "standalone"), workspaces = ["rds", "server/storage", "packages/shared", "packages/api-contract", "devtools/runtime-tooling"];
+  const root = path.join(temporary, "standalone"), workspaces = ["rds", "server/storage", "packages/shared", "packages/api-contract", "packages/match-identity", "devtools/runtime-tooling"];
   fs.mkdirSync(root);
   const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
     { cwd: repo, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, windowsHide: true }).split("\0").filter(Boolean);
@@ -30,7 +30,7 @@ await withTemporaryPostgres(async ({ temporary }) => {
   const installed = await exec(process.execPath, args, { cwd: root, timeout: 180000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 });
   if (out) { fs.mkdirSync(out, { recursive: true }); fs.writeFileSync(path.join(out, "standalone-install.log"), installed.stdout + installed.stderr); }
   assert(fs.readFileSync(path.join(root, "package-lock.json")).equals(fs.readFileSync(path.join(repo, "package-lock.json"))));
-  assert.deepEqual(fs.readdirSync(path.join(root, "node_modules/@changmen")).sort(), ["api-contract", "db", "runtime-tooling", "shared", "storage"]);
+  assert.deepEqual(fs.readdirSync(path.join(root, "node_modules/@changmen")).sort(), ["api-contract", "db", "match-identity", "runtime-tooling", "shared", "storage"]);
   // npm can create a dangling file: workspace link when its source was not copied.
   for (const workspace of workspaces) {
     assert(fs.existsSync(path.join(root, workspace, "package.json")), `Missing standalone workspace source: ${workspace}`);
@@ -39,7 +39,7 @@ await withTemporaryPostgres(async ({ temporary }) => {
       `Standalone dependency must resolve to its copied source: ${name}`);
   }
   const noBackend = () => assert(!fs.existsSync(path.join(root, "server/backend")), "Standalone maintenance must never require/create a backend directory");
-  noBackend(); checks.push("clean offline production install has only DB/shared/storage/api-contract/runtime-tooling, complete local workspace links, unchanged lock and no backend directory");
+  noBackend(); checks.push("clean offline production install has only DB/shared/storage/api-contract/match-identity/runtime-tooling, complete local workspace links, unchanged lock and no backend directory");
   const env = { ...process.env, NODE_PATH: "", NODE_OPTIONS: "", CHANGMEN_STORAGE_DIR: path.join(root, "local-storage"), ESPORT_DATA_DIR: path.join(root, "local-storage/esport") };
   const command = async (name, args = []) => {
     try { return await exec(process.execPath, [path.join(root, `rds/maintenance/${name}.mjs`), ...args],
@@ -55,9 +55,11 @@ await withTemporaryPostgres(async ({ temporary }) => {
       const assets=await import(${JSON.stringify(pathToFileURL(path.join(root, "rds/maintenance/assets.mjs")).href)});
       assert.equal(assets.listRdsMigrationNames().length,43);assert(assets.readRdsMigrationSql('001_baseline.sql').includes('CREATE'));
       const storage=await import('@changmen/storage/runtime_version.js');assert.equal(typeof storage.readSourceVersion,'function');
+      const identity=await import('@changmen/match-identity');const keys=await import('@changmen/match-identity/teams/team_key.js');
+      assert.equal(identity.normalizeTeam('LAG Gaming'),'lag');assert.equal(keys.normalizeTeam,identity.normalizeTeam);assert.equal(identity.stableBetId(2,3),8195);
       const repairs=await import('@changmen/db/maintenance/profile_repairs.js');assert.equal(typeof repairs.openProfileRepairData,'function');
       const req=createRequire(import.meta.url);for(const spec of ['vue','pinia','@changmen/venue-adapter','@changmen/client-core','@changmen/pm-market-data-browser'])assert.throws(()=>req.resolve(spec));console.log('local-assets-only');`);
-    assert.match(read.stdout, /local-assets-only/); noBackend(); checks.push("reads canonical assets and imports the profile repair public data interface with no backend tree or browser dependencies");
+    assert.match(read.stdout, /local-assets-only/); noBackend(); checks.push("reads canonical assets, runs native TS identity rules, and imports the profile repair public data interface with no backend tree or browser dependencies");
     for (const name of ["check-rds-schema", "apply-rds-schema"])
       await assert.rejects(command(name), error => error.code === 1 && /数据库结构核验失败/.test(error.stderr));
     assert.equal((await client.query("SELECT count(*)::int AS n FROM pg_tables WHERE schemaname='public'")).rows[0].n, 0);

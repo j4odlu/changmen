@@ -81,8 +81,8 @@ export async function scoreMatchPair(matchA, matchB) {
     return { shouldMerge: true, confidence, reason: "both_teams_matched" };
   }
 
-  const [crossHomeA, crossAwayB] = [resHomeA, resAwayB];
-  const [crossAwayA, crossHomeB] = [resAwayA, resHomeB];
+  const [crossHomeA, crossHomeB] = [resHomeA, resAwayB];
+  const [crossAwayA, crossAwayB] = [resAwayA, resHomeB];
   const crossHome = crossHomeA && crossHomeB && crossHomeA.id === crossHomeB.id;
   const crossAway = crossAwayA && crossAwayB && crossAwayA.id === crossAwayB.id;
   if (crossHome && crossAway) {

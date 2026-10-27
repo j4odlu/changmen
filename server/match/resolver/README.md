@@ -33,8 +33,7 @@ npm test
 改由 `npm run probe:live` 显式执行；它的打印结果不作为自动验收成功依据。
 未配置 `PANDASCORE_TOKEN` 或指定 `--no-pandascore` 时仅查询已有缓存。
 在线解析只接受 PandaScore 来源的缓存；未命中或查询失败返回 `null`。
-离线套件中有一个 `it.fails` 登记旧版 `scoreMatchPair` 未正确识别反向队伍的缺口，
-匹配算法保持原状；修复算法时须同步处理该预期失败用例。
+离线套件覆盖正向、反向队伍配对及仅单边队伍一致时拒绝合场的场景。
 
 环境：`PANDASCORE_TOKEN`（可选）。`.env` 经 `@changmen/storage/load_env` 加载。
 

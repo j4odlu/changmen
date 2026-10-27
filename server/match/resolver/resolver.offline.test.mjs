@@ -76,13 +76,17 @@ describe("resolver with offline provider ports", () => {
     const pair = { home: "A", away: "B", gameCode: "lol", startTimeMs: 1000 };
     expect(await scoreMatchPair(pair, pair)).toMatchObject({ shouldMerge: true, reason: "both_teams_matched" });
   });
-  // Existing resolver/index.js compares the wrong cross legs. Keep this known defect visible;
-  // phase 1 changes test wiring only and must not alter matching behavior.
-  it.fails("known legacy gap: reversed canonical pairs should be recognized", async () => {
+  it("recognizes reversed canonical pairs", async () => {
     ports.get.mockImplementation(name => ({ id: name, confidence: 1, matchType: "exact", source: "pandascore" }));
     const pair = { home: "A", away: "B", gameCode: "lol", startTimeMs: 1000 };
     expect(await scoreMatchPair(pair, { ...pair, home: "B", away: "A" }))
       .toMatchObject({ shouldMerge: true, reversed: true });
+  });
+  it("does not merge pairs sharing only one canonical team", async () => {
+    ports.get.mockImplementation(name => ({ id: name, confidence: 1, matchType: "exact", source: "pandascore" }));
+    const pair = { home: "A", away: "B", gameCode: "lol", startTimeMs: 1000 };
+    expect(await scoreMatchPair(pair, { ...pair, away: "C" })).toMatchObject({ shouldMerge: false });
+    expect(await scoreMatchPair(pair, { ...pair, home: "C", away: "A" })).toMatchObject({ shouldMerge: false });
   });
   it("rejects different games and distant schedules before resolving", async () => {
     const pair = { home: "A", away: "B", gameCode: "lol", startTimeMs: 1000 };

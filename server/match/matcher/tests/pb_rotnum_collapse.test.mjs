@@ -4,7 +4,7 @@ import {
   applyPlatformBindings,
   clusterByGbThenName,
 } from "../compose/cluster/merge_clusters.js";
-import { collectPlatformEntries } from "../compose/normalize/platform_entry.js";
+import { collectPlatformEntries } from "../compose/normalize/platform_entry.ts";
 import {
   collapsePbEntriesByRotNum,
   isPbRotGroupCollision,

@@ -1,6 +1,7 @@
 /**
  * 将 platform_matches 归一成可聚类条目。
  */
+import type { IdKeyEntry, NameKeyEntry, NamePairKeyEntry, PairKeyEntry, PlatformEntry, PlatformMatchBuckets, PlatformMatchInput } from "./types.ts";
 import {
   canonicalMatchKeyByIdOnly,
   canonicalMatchKeyByName,
@@ -15,8 +16,8 @@ import {
 import { resolvePlatformTeamId } from "@changmen/shared/catalog/pb_team_platform_id";
 import { normalizeEpochMs } from "../util/time.ts";
 
-export function collectPlatformEntries(matches) {
-  const entries = [];
+export function collectPlatformEntries<T extends PlatformMatchInput>(matches: PlatformMatchBuckets<T> | null | undefined): PlatformEntry<T>[] {
+  const entries: PlatformEntry<T>[] = [];
   for (const [platform, bucket] of Object.entries(matches || {})) {
     if (!bucket || typeof bucket !== "object")
       continue;
@@ -71,7 +72,7 @@ export function collectPlatformEntries(matches) {
   return entries;
 }
 
-export function canUseIdKey(entry) {
+export function canUseIdKey(entry: IdKeyEntry): boolean {
   if (!entry.homeGb || !entry.awayGb || entry.homeGb === entry.awayGb)
     return false;
   if (!entry.homeN || !entry.awayN)
@@ -81,7 +82,7 @@ export function canUseIdKey(entry) {
   return true;
 }
 
-export function canUseNameKey(entry) {
+export function canUseNameKey(entry: NameKeyEntry): boolean {
   if (!entry.homeN || !entry.awayN)
     return false;
   if (isPlaceholderTeamName(entry.homeN) || isPlaceholderTeamName(entry.awayN))
@@ -90,7 +91,7 @@ export function canUseNameKey(entry) {
 }
 
 /** MergeKey 格式：match:id:GameID:gb:gb */
-export function pairKeyId(entry) {
+export function pairKeyId(entry: PairKeyEntry): string | null {
   const ck = canonicalMatchKeyByIdOnly(
     entry.GameID,
     entry.homeName,
@@ -109,7 +110,7 @@ export function pairKeyId(entry) {
 }
 
 /** 与 legacy 一致：match:name:GameID:name:name */
-export function pairKeyName(entry) {
+export function pairKeyName(entry: NamePairKeyEntry): string | null {
   const ck = canonicalMatchKeyByName(entry.GameID, entry.homeName, entry.awayName);
   if (ck?.mergeKey)
     return ck.mergeKey;

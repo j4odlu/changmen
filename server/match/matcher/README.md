@@ -2,7 +2,9 @@
 
 `@changmen/matcher`：合场算法（`compose/`）、调度循环、人工关联 Web 面板。
 
-`compose/util/time.ts`、`compose/util/swap.ts`、`compose/ids/dedupe_rows.ts` 使用严格 TypeScript，由 Node 24 直接加载；`npm run typecheck --workspace=@changmen/matcher` 覆盖包内全部 TS 源码与类型契约。其余 JS 模块仍按原入口运行。主客交换公共入口为 `@changmen/matcher/compose/util/swap`，旧 `.js` 子路径已移除。
+`compose/util/time.ts`、`compose/util/swap.ts`、`compose/ids/dedupe_rows.ts`、`compose/normalize/platform_entry.ts` 和 `compose/normalize/native_bets.ts` 使用严格 TypeScript，由 Node 24 直接加载；`npm run typecheck --workspace=@changmen/matcher` 覆盖包内全部 TS 源码与类型契约。归一化输入与输出类型位于 `compose/normalize/types.ts`，原始快照保留额外字段，比赛条目保留原始行引用。其余 JS 模块仍按原入口运行。
+
+主客交换公共入口为 `@changmen/matcher/compose/util/swap`，盘口归一化公共入口为 `@changmen/matcher/compose/normalize/native_bets`；两者旧 `.js` 子路径已移除。原盘口筛选、同图优先级、赔率舍入/截断及 PF token/marketId 缓存规则保持不变。
 
 matchMerge 循环**内嵌在 `changmen-esport`**（`npm run web` / PM2 `changmen-esport`），本目录提供合并库、运维 API 与可选人工 UI。
 

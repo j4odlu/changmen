@@ -19,7 +19,7 @@ import {
 } from "./ob-test-helpers.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const { nativeSourcesByMap } = await import("../../../server/match/matcher/compose/normalize/native_bets.js");
+const { nativeSourcesByMap } = await import("../../../server/match/matcher/compose/normalize/native_bets.ts");
 
 const TJ01_PATH = path.resolve(__dirname, "../../../TJ01.JSON");
 

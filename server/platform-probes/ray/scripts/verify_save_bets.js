@@ -5,7 +5,7 @@
  * Usage: node verify_save_bets.js [matchId]
  */
 
-import { nativeSourcesByMap } from "../../../../server/match/matcher/compose/normalize/native_bets.js";
+import { nativeSourcesByMap } from "../../../../server/match/matcher/compose/normalize/native_bets.ts";
 import { fetchOdds, login } from "../session.js";
 import { groupRayOddsToSaveBets } from "../shared/save_bets.js";
 

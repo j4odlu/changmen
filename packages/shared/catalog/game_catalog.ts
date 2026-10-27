@@ -132,7 +132,7 @@ function getPlatformGameId(platform: string, code: string): string | null {
   return id != null ? String(id) : null;
 }
 
-function getGameCodeForPlatformId(platform: string, gameId: string | number): string | null {
+function getGameCodeForPlatformId(platform: string, gameId: string | number | null | undefined): string | null {
   platform = normalizePlatformKey(platform);
   const id = String(gameId);
   const alias = getConfiguredGameAlias(platform, id);
@@ -170,7 +170,7 @@ interface PlatformGameDescription {
   inCatalog: boolean;
 }
 
-function describePlatformGame(platform: string, gameId: string | number): PlatformGameDescription {
+function describePlatformGame(platform: string, gameId: string | number | null | undefined): PlatformGameDescription {
   const code = getGameCodeForPlatformId(platform, gameId);
   if (code) {
     const game = getGameByCode(code);
@@ -197,7 +197,7 @@ interface ClientGameResult {
 }
 
 /** Client_GetMatchs 的 Game / GameID（A8 服务端整理后下发，前端直接展示 Game） */
-function resolveClientGame(platform: string, sourceGameId: string | number): ClientGameResult {
+function resolveClientGame(platform: string, sourceGameId: string | number | null | undefined): ClientGameResult {
   const info = describePlatformGame(platform, sourceGameId);
   const game = getGameByCode(info.gameCode);
   return {

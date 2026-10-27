@@ -4,8 +4,8 @@
  * 无 RotNum（A8）：live 图 + 未开图残留仍并成一场，主盘选滚球账本。
  */
 import { normalizeTeam } from "@changmen/match-identity/teams/team_key.js";
-import { collectPlatformEntries } from "./platform_entry.js";
-import { betBucketKey } from "./native_bets.js";
+import { collectPlatformEntries } from "./platform_entry.ts";
+import { betBucketKey } from "./native_bets.ts";
 
 export function readRotNum(pmOrEntry) {
   const raw = pmOrEntry?.rotNum

@@ -13,7 +13,7 @@ import { parseTitleTeams } from "@changmen/match-identity/teams/match_utils.js";
 import { getGameCodeForPlatformId } from "@changmen/shared/catalog/game_catalog";
 import { isComposerPbRotnumCollapse } from "../../lib/config.js";
 import { listPbEventIdsForProjection } from "../normalize/pb_rotnum_collapse.js";
-import { rawSourceForMap } from "../normalize/native_bets.js";
+import { rawSourceForMap } from "../normalize/native_bets.ts";
 import { resolveRowStructure } from "../structure/resolve_structure.js";
 import { swapBetSource } from "../util/swap.ts";
 import {

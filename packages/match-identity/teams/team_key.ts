@@ -123,7 +123,7 @@ function canonicalMatchKey(gameId: OptionalIdentityId, home: unknown, away: unkn
 }
 
 /** 第一阶段：仅 platform_id → gb_team_id，主客两队都必须映射成功 */
-function canonicalMatchKeyByIdOnly(gameId: OptionalIdentityId, home: unknown, away: unknown, gameCode?: string, ctx?: TeamKeyContext): CanonicalMatchKey | null {
+function canonicalMatchKeyByIdOnly(gameId: OptionalIdentityId, home: unknown, away: unknown, gameCode?: string | null, ctx?: TeamKeyContext): CanonicalMatchKey | null {
   const nh = normalizeTeam(home);
   const na = normalizeTeam(away);
   if (!nh || !na)

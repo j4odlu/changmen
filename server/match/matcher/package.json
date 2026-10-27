@@ -16,7 +16,7 @@
     "./ops/match_merge_once.js": "./ops/match_merge_once.js",
     "./ops/rds_snapshot_cache.js": "./ops/rds_snapshot_cache.js",
     "./compose/compose_once.js": "./compose/compose_once.js",
-    "./compose/normalize/native_bets.js": "./compose/normalize/native_bets.js",
+    "./compose/normalize/native_bets": "./compose/normalize/native_bets.ts",
     "./compose/util/swap": "./compose/util/swap.ts",
     "./ui/http_bridge.js": "./ui/http_bridge.js",
     "./ui/public": "./ui/public/index.html",
@@ -30,7 +30,7 @@
     "compose:once": "node scripts/once.mjs",
     "compose:diff": "node scripts/diff.mjs",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "npm run typecheck && node scripts/check-no-merge-import.mjs && vitest run --no-file-parallelism && node --test tests/compose-helpers.node.mjs",
+    "test": "npm run typecheck && node scripts/check-no-merge-import.mjs && vitest run --no-file-parallelism && node --test tests/compose-helpers.node.mjs tests/normalization.node.mjs",
     "test:with-deps": "npm run test --workspace=@changmen/match-identity && npm test",
     "check:no-merge-import": "node scripts/check-no-merge-import.mjs"
   },

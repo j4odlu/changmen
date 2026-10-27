@@ -9,7 +9,7 @@ import {
   collectPlatformEntries,
   pairKeyId,
   pairKeyName,
-} from "../normalize/platform_entry.js";
+} from "../normalize/platform_entry.ts";
 import {
   collapsePbEntriesByRotNum,
   indexEntriesWithPbAliases,

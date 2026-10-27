@@ -1,4 +1,4 @@
-export { CORE_INTEGRATION_ACTIONS, ESPORT_ACTIONS } from "./actions.js";
-export type { EsportAction } from "./actions.js";
-export type * from "./dto.js";
-export type { ApiEnvelope, ApiFailure, ApiSuccess } from "./envelope.js";
+export { CORE_INTEGRATION_ACTIONS, ESPORT_ACTIONS } from "@changmen/api-contract/actions";
+export type { EsportAction } from "@changmen/api-contract/actions";
+export type * from "@changmen/api-contract/dto";
+export type { ApiEnvelope, ApiFailure, ApiSuccess } from "@changmen/api-contract/envelope";

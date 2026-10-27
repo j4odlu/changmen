@@ -18,6 +18,8 @@
 | `@changmen/api-contract/urls` | `buildEsportUrl`、`buildHttpRelayUrl` |
 | `@changmen/api-contract/openapi.yaml` | OpenAPI 3 索引 |
 
+运行入口直接使用 TS 源码；根入口与 `/actions` 共用 `src/actions.ts` 中的常量，`/schemas` 使用 `src/schemas.ts`，不维护并行的 JS 副本。
+
 ## 版本
 
 `0.1.0` — monorepo workspace `*`；拆仓后按 semver 发版，破坏性 DTO 变更升 major。
@@ -25,5 +27,7 @@
 ## 校验
 
 ```bat
-node packages/api-contract/urls.test.mjs
+npm run test:api-contract
 ```
+
+包含原生 Node 入口一致性、URL 拼装、出站 schema 和后端契约回归；原生 Node 检查避免构建工具的模块解析掩盖入口差异。

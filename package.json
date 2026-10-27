@@ -56,7 +56,7 @@
     "version:check": "node scripts/diagnostics/runtime-version.mjs",
     "check:venue-adapter": "node client/devtools/venue-adapter/sync-package-exports.mjs --check && node client/devtools/venue-adapter/relativize-internal-imports.mjs --check && node client/devtools/venue-adapter/list-web-venue-imports.mjs --check && node devtools/venue-adapter/verification/check-esport-freeze.mjs",
     "check:client-core": "npm run check:exports --workspace=@changmen/client-core && npm run check:internal-imports --workspace=@changmen/client-core && npm run check:consumer-imports --workspace=@changmen/client-core",
-    "test:api-contract": "node packages/api-contract/urls.test.mjs && vitest run packages/api-contract/get_matchs_outbound.test.mjs && npm run test:api-contract --workspace=@changmen/backend",
+    "test:api-contract": "node --test packages/api-contract/entrypoints.node.mjs && node packages/api-contract/urls.test.mjs && vitest run packages/api-contract/get_matchs_outbound.test.mjs && npm run test:api-contract --workspace=@changmen/backend",
     "test:checks": "npm run check:boundaries && npm run check:venue-adapter && npm run check:client-core && npm run test:api-contract && npm run test:catalog-smoke",
     "test": "npm run test:checks && turbo run test",
     "test:backend": "npm run test:checks && turbo run test --filter=./server/**...",

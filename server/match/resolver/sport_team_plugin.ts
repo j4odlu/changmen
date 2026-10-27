@@ -2,6 +2,7 @@
  * Sport N3 队名解析（MLB 读本包 JSON；足球走 @changmen/shared 单一来源）。
  * 禁止 import 电竞 team_db / fetchAllCanonicalTeams。
  */
+import type { SportTeamPlugin } from "./types.ts";
 import mlbAliasesRaw from "./sport_mlb_aliases.json" with { type: "json" };
 import {
   normFootballTeamName,
@@ -37,7 +38,7 @@ const FOOTBALL_GAMES = new Set([
 ]);
 
 /** @type {Map<string, string>|null} */
-let mlbMap = null;
+let mlbMap: Map<string, string> | null = null;
 
 function loadMlbMap() {
   if (mlbMap)
@@ -54,12 +55,12 @@ function loadMlbMap() {
   return mlbMap;
 }
 
-function isFootballGame(gameCode) {
+function isFootballGame(gameCode: unknown) {
   return FOOTBALL_GAMES.has(String(gameCode || "").toLowerCase());
 }
 
 /** MLB 归一（保持原状）：去撇号后再折叠空白，避免 A's → "a s"。 */
-export function baseNormSportTeamName(name) {
+export function baseNormSportTeamName(name: unknown) {
   return String(name || "")
     .toLowerCase()
     .replace(/[''`´]/g, "")
@@ -74,7 +75,7 @@ export function baseNormSportTeamName(name) {
  * @param {string} [gameCode] mlb | soccer | …
  * @returns {string} 用于配对的 canonical key
  */
-export function resolveSportTeamKey(name, gameCode = "mlb") {
+export function resolveSportTeamKey(name: string, gameCode = "mlb") {
   const game = String(gameCode || "mlb").toLowerCase();
   if (game === "mlb") {
     const n = baseNormSportTeamName(name);
@@ -97,7 +98,7 @@ export { normFootballTeamName };
  * @param {string} [gameCode]
  * @returns {string|null}
  */
-export function sportPairKeyResolved(home, away, startTimeMs, gameCode = "mlb") {
+export function sportPairKeyResolved(home: string, away: string, startTimeMs: number, gameCode = "mlb") {
   const game = String(gameCode || "mlb").toLowerCase().trim() || "mlb";
   const h = resolveSportTeamKey(home, game);
   const a = resolveSportTeamKey(away, game);
@@ -116,7 +117,7 @@ export function sportPairKeyResolved(home, away, startTimeMs, gameCode = "mlb") 
  * 同步插件形状（供 merge / 测试）；不读 RDS。
  * @param {{ games?: string[] }} [opts]
  */
-export function createSportTeamPlugin(opts = {}) {
+export function createSportTeamPlugin(opts: { games?: string[] } = {}): SportTeamPlugin {
   const games = (opts.games || ["mlb"]).map(g => String(g).toLowerCase());
   const defaultGame = games[0] || "mlb";
   return {

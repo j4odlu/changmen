@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rdsDir = join(__dirname, "rds");
-const teamDbPath = join(__dirname, "../server/match/resolver/team_db.js");
+const teamDbPath = join(__dirname, "../server/match/resolver/team_db.ts");
 const migrationPath = join(
   __dirname,
   "assets/migrations/033_sport_matcher_tables.sql",
@@ -75,7 +75,7 @@ assert.match(teamDb, /fetchAllCanonicalTeams/);
 assert.doesNotMatch(
   teamDb,
   /fetchAllSportCanonicalTeams|sport_canonical_teams|sport_team_venue_maps|sport_mlb_aliases|sport_team_plugin/,
-  "电竞 team_db.js 不得加载 sport_* 队名",
+  "电竞 team_db.ts 不得加载 sport_* 队名",
 );
 
 const sportMergeSrc = readFileSync(
@@ -83,7 +83,7 @@ const sportMergeSrc = readFileSync(
   "utf8",
 );
 assert.match(sportMergeSrc, /sport_team_plugin/);
-assert.doesNotMatch(sportMergeSrc, /team_db\.js|fetchAllCanonicalTeams/);
+assert.doesNotMatch(sportMergeSrc, /\/team_db(?:\.[cm]?[jt]s)?["']|fetchAllCanonicalTeams/);
 
 const migration = readFileSync(migrationPath, "utf8");
 for (const t of SPORT_MATCHER_TABLES) {

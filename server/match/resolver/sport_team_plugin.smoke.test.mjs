@@ -6,7 +6,7 @@ import {
   createSportTeamPlugin,
   resolveSportTeamKey,
   sportPairKeyResolved,
-} from "./sport_team_plugin.js";
+} from "@changmen/team-resolver/sport_team_plugin";
 
 assert.equal(resolveSportTeamKey("Oakland Athletics", "mlb"), "athletics");
 assert.equal(resolveSportTeamKey("A's", "mlb"), "athletics");

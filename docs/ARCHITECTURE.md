@@ -146,7 +146,7 @@ resolver 与 matcher 通过 workspace 依赖复用；测试：`npm run test --wo
 
 ### `server/match/resolver` (`@changmen/team-resolver`)
 
-队名规范化插件；matcher `matchMerge` 与 UI `merge_mode` 动态加载 `team_db.js`。  
+队名规范化插件；matcher `matchMerge` 与 UI `merge_mode` 动态加载 `@changmen/team-resolver/team_db`（源码 `team_db.ts`）；backend 经 `@changmen/team-resolver/sport_team_plugin` 使用体育队名规则。两处现用插件参加严格 TS 检查。
 旧 RAY / OB / PB 手动队伍爬虫及其 npm 命令已退役，resolver 不再依赖平台 Node loader。环境变量通过 `@changmen/storage` 的 `loadChangmenEnv()` 加载。
 
 ### `server/match/matcher` (`@changmen/matcher`)

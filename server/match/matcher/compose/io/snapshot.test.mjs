@@ -6,7 +6,7 @@ vi.mock("@changmen/db", () => ({
   fetchClientMatchesAll: mocks.lifecycle, fetchAllPlatformMatchBindings: async () => new Map(),
   fetchClientMatchPlatformOverrides: async () => ({}), fetchTeamMapsRevision: async () => "test",
 }));
-vi.mock("@changmen/team-resolver/team_db.js", () => ({ loadAndCreatePlugin: async () => ({}) }));
+vi.mock("@changmen/team-resolver/team_db", () => ({ loadAndCreatePlugin: async () => ({}) }));
 vi.mock("@changmen/match-identity/teams/team_key.js", () => ({ setTeamPlugin: vi.fn() }));
 import { loadSnapshot, resetTeamPluginCache } from "./snapshot.js";
 beforeEach(() => { vi.clearAllMocks(); resetTeamPluginCache(); });

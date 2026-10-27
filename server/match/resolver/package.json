@@ -7,11 +7,12 @@
   "main": "./index.js",
   "exports": {
     ".": "./index.js",
-    "./team_db.js": "./team_db.js",
-    "./sport_team_plugin.js": "./sport_team_plugin.js"
+    "./team_db": "./team_db.ts",
+    "./sport_team_plugin": "./sport_team_plugin.ts"
   },
   "scripts": {
-    "test": "vitest run resolver.offline.test.mjs && node --test sport_team_plugin.smoke.test.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "npm run typecheck && vitest run resolver.offline.test.mjs team_db.test.mjs && node --test sport_team_plugin.smoke.test.mjs entrypoints.node.mjs",
     "probe:live": "node test.js",
     "seed": "node seed.js"
   },
@@ -21,5 +22,10 @@
     "@changmen/shared": "file:../../../packages/shared",
     "axios": "^1.7.2",
     "@changmen/match-identity": "file:../../../packages/match-identity"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "@types/node": "^25.9.1",
+    "vitest": "^4.1.8"
   }
 }

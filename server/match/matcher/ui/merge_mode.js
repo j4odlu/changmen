@@ -12,7 +12,7 @@ export function getTeamPlugin() {
   if (!_pluginPromise) {
     _pluginPromise = (async () => {
       try {
-        const { loadAndCreatePlugin } = await import("@changmen/team-resolver/team_db.js");
+        const { loadAndCreatePlugin } = await import("@changmen/team-resolver/team_db");
         const plugin = await loadAndCreatePlugin();
         setTeamPlugin(plugin);
         return plugin;

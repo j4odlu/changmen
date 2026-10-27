@@ -2,13 +2,16 @@
  * 从 RDS 加载队伍映射，构建同步查找插件。
  */
 
+/// <reference path="./database-port.d.ts" />
+import type { IdentityId, OptionalIdentityId } from "@changmen/match-identity/types";
+import type { TeamProviderRow, TeamResolverPlugin } from "./types.ts";
 import { loadChangmenEnv } from "@changmen/storage/load_env";
 import teamAliasesRaw from "@changmen/match-identity/teams/team_aliases.json" with { type: "json" };
 import { resolveCanonicalTeamName } from "@changmen/match-identity/teams/canonical_ob_name.js";
 
 loadChangmenEnv();
 
-let _aliases = null;
+let _aliases: Record<string, string> | null = null;
 function _getAliases() {
   if (!_aliases) {
     _aliases = Object.fromEntries(
@@ -18,7 +21,7 @@ function _getAliases() {
   return _aliases;
 }
 
-function _decodeHtmlEntities(s) {
+function _decodeHtmlEntities(s: unknown) {
   return String(s || "")
     .replace(/&apos;/gi, "'")
     .replace(/&#39;/g, "'")
@@ -28,7 +31,7 @@ function _decodeHtmlEntities(s) {
     .replace(/&gt;/gi, ">");
 }
 
-function _norm(name) {
+function _norm(name: unknown) {
   const base = _decodeHtmlEntities(name)
     .toLowerCase()
     .replace(/[·\-—_·•\s]+/g, " ")
@@ -40,20 +43,20 @@ function _norm(name) {
 }
 
 /** catalog 未识别时 scrapers 会写成「未知(N)」，不能当真实 game */
-function _isUnresolvedGame(game) {
+function _isUnresolvedGame(game: unknown) {
   const g = String(game || "").trim().toLowerCase();
   if (!g)
     return true;
   return g === "unknown" || g.startsWith("未知");
 }
 
-export async function loadAndCreatePlugin() {
+export async function loadAndCreatePlugin(): Promise<TeamResolverPlugin> {
   const teamDb = await import("@changmen/db");
 
   const allTeams = await teamDb.fetchAllCanonicalTeams();
 
-  const nameMap = new Map();
-  const gbTeamNameMap = new Map();
+  const nameMap = new Map<string, string>();
+  const gbTeamNameMap = new Map<string, string>();
   for (const team of allTeams) {
     const id = String(team.id);
     const g = team.game;
@@ -71,27 +74,27 @@ export async function loadAndCreatePlugin() {
   }
 
   // team_provider_ids（多数据源 provider 索引）：team_id → [{provider, provider_id, game}]
-  const providerIdMap = new Map();
+  const providerIdMap = new Map<string, TeamProviderRow[]>();
   try {
     const allProviderIds = await teamDb.fetchAllTeamProviderIds();
     for (const row of allProviderIds || []) {
       const tid = String(row.team_id);
       if (!providerIdMap.has(tid))
         providerIdMap.set(tid, []);
-      providerIdMap.get(tid).push(row);
+      providerIdMap.get(tid)!.push(row);
     }
   }
   catch (err) {
-    console.warn("[team-resolver] fetchAllTeamProviderIds 失败:", err.message);
+    console.warn("[team-resolver] fetchAllTeamProviderIds 失败:", (err as { message?: unknown }).message);
   }
 
   const allMaps = await teamDb.fetchAllTeamPlatformMaps();
 
-  const idMap = new Map();
-  const obNameByGbId = new Map();
-  const _savedIds = new Set();
+  const idMap = new Map<string, string>();
+  const obNameByGbId = new Map<string, string>();
+  const _savedIds = new Set<string>();
   /** gb → 场馆侧已识别 game（优先 OB），用于纠正 canonical「未知(N)」 */
-  const gameFromMaps = new Map();
+  const gameFromMaps = new Map<string, string>();
 
   for (const row of allMaps) {
     if (!row.venue_team_id) continue;
@@ -112,15 +115,15 @@ export async function loadAndCreatePlugin() {
     }
   }
 
-  const nameOnlyMap = new Map();
-  const gbTeamIdByGameName = new Map();
-  const gbTeamGameMap = new Map();
+  const nameOnlyMap = new Map<string, string>();
+  const gbTeamIdByGameName = new Map<string, string>();
+  const gbTeamGameMap = new Map<string, string | null>();
   for (const team of allTeams) {
     if (team.gb_team_id == null) continue;
     const gbKey = String(team.gb_team_id);
     let g = team.game;
     if (_isUnresolvedGame(g) && gameFromMaps.has(gbKey))
-      g = gameFromMaps.get(gbKey);
+      g = gameFromMaps.get(gbKey)!;
     gbTeamGameMap.set(gbKey, g);
     const displayName = resolveCanonicalTeamName(
       obNameByGbId.get(gbKey),
@@ -139,22 +142,22 @@ export async function loadAndCreatePlugin() {
     `[team-resolver] 加载完成 — ${allTeams.length} 支队伍 / ${nameMap.size} 个名称映射 / ${idMap.size} 个平台ID映射`,
   );
 
-  function lookupByName(gameCode, normalizedName) {
+  function lookupByName(gameCode: string, normalizedName: string) {
     return nameMap.get(`${gameCode}:${normalizedName}`) || null;
   }
 
-  function lookupById(platform, platformId) {
+  function lookupById(platform: string, platformId: OptionalIdentityId) {
     if (!platformId) return null;
     return idMap.get(`${platform}:${platformId}`) || null;
   }
 
-  function lookupCanonicalName(gbTeamId) {
+  function lookupCanonicalName(gbTeamId: OptionalIdentityId) {
     if (gbTeamId == null || gbTeamId === "") return null;
     const key = String(gbTeamId);
     return resolveCanonicalTeamName(obNameByGbId.get(key), gbTeamNameMap.get(key));
   }
 
-  function saveMapping(gbTeamId, platform, platformId, platformName, gameCode) {
+  function saveMapping(gbTeamId: IdentityId, platform: string, platformId: IdentityId, platformName: unknown, gameCode?: string) {
     const manualId = Number(gbTeamId);
     if (!platformId || !Number.isFinite(manualId) || manualId < 100000) return;
     const key = `${platform}:${platformId}`;
@@ -173,24 +176,24 @@ export async function loadAndCreatePlugin() {
     });
   }
 
-  function lookupGbTeamIdByNormalizedName(normalizedName) {
+  function lookupGbTeamIdByNormalizedName(normalizedName: string) {
     return nameOnlyMap.get(normalizedName) || null;
   }
 
-  function lookupGbTeamIdByNormalizedNameForGame(gameCode, normalizedName) {
+  function lookupGbTeamIdByNormalizedNameForGame(gameCode: string, normalizedName: string) {
     if (!gameCode || !normalizedName)
       return null;
     return gbTeamIdByGameName.get(`${gameCode}:${normalizedName}`) || null;
   }
 
-  function lookupGameForGbTeamId(gbTeamId) {
+  function lookupGameForGbTeamId(gbTeamId: OptionalIdentityId) {
     if (gbTeamId == null || gbTeamId === "")
       return null;
     return gbTeamGameMap.get(String(gbTeamId)) || null;
   }
 
   /** 查询某 canonical team 在指定数据源下的 ID */
-  function lookupProviderId(teamId, provider) {
+  function lookupProviderId(teamId: OptionalIdentityId, provider: string) {
     const tid = String(teamId);
     const p = String(provider || "").trim();
     if (!p)

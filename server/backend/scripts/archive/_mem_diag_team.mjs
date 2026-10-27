@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { loadAndCreatePlugin } from "@changmen/team-resolver/team_db.js";
+import { loadAndCreatePlugin } from "@changmen/team-resolver/team_db";
 
 const b = process.memoryUsage();
 await loadAndCreatePlugin();

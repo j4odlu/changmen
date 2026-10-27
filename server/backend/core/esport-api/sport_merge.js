@@ -10,7 +10,7 @@ import {
   upsertSportVenueBets,
   upsertSportVenueMatches,
 } from "@changmen/db";
-import { createSportTeamPlugin } from "@changmen/team-resolver/sport_team_plugin.js";
+import { createSportTeamPlugin } from "@changmen/team-resolver/sport_team_plugin";
 import {
   clientMatchDtosToSportVenueRows,
   sportMergedMatchId,

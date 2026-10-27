@@ -54,7 +54,7 @@ export async function ensureTeamPlugin() {
   _pluginMapsRevision = revision;
   _pluginReady = (async () => {
     try {
-      const { loadAndCreatePlugin } = await import("@changmen/team-resolver/team_db.js");
+      const { loadAndCreatePlugin } = await import("@changmen/team-resolver/team_db");
       const plugin = await loadAndCreatePlugin();
       setTeamPlugin(plugin);
     }

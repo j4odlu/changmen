@@ -3,6 +3,7 @@ import { ElMessage } from "element-plus";
 import { storeToRefs } from "pinia";
 import { ref, watch } from "vue";
 import PmPfBufferSettings from "@/components/user/PmPfBufferSettings.vue";
+import { createDefaultPmUpPrefs } from "@/extensions/pm_up/settings";
 import {
   createDefaultValueBetAutoBetPrefs,
   createDefaultValueBetMarkerPrefs,
@@ -13,6 +14,8 @@ import { useUserStore } from "@/stores/userStore";
 
 const user = useUserStore();
 const { extensionPrefs } = storeToRefs(user);
+if (!extensionPrefs.value.pmUp)
+  extensionPrefs.value.pmUp = createDefaultPmUpPrefs();
 if (!extensionPrefs.value.valueBet)
   extensionPrefs.value.valueBet = createDefaultValueBetMarkerPrefs();
 else if (!extensionPrefs.value.valueBet.autoBet)
@@ -97,21 +100,60 @@ async function save() {
         </p>
       </div>
 
-      <div class="ui-tab__row">
-        <el-form-item label="地图降赔信号:" class="ui-tab__control">
-          <el-switch
-            v-model="extensionPrefs.pmOddsDropCardUi"
-            aria-label="地图降赔率信号显示"
-            inline-prompt
-            active-text="开启"
-            inactive-text="关闭"
-            size="large"
-          />
-        </el-form-item>
-        <p class="ui-tab__desc">
-          默认关闭。开启后在全场及各地图赔率上方显示降赔信号；监测需在降赔浮窗中开启。
-        </p>
-      </div>
+      <section class="ui-tab__signal-group" aria-label="pm_down 降赔信号配置">
+        <h3>pm_down 降赔信号</h3>
+        <div class="ui-tab__row">
+          <el-form-item label="开启显示:" class="ui-tab__control">
+            <el-switch
+              v-model="extensionPrefs.pmOddsDropCardUi"
+              aria-label="pm_down 降赔信号显示"
+              inline-prompt
+              active-text="开启"
+              inactive-text="关闭"
+              size="large"
+            />
+          </el-form-item>
+          <p class="ui-tab__desc">
+            默认关闭。开启后在全场及各地图赔率上方显示 pm_down 降赔信号；监测需在降赔浮窗中开启。
+          </p>
+        </div>
+      </section>
+
+      <section class="ui-tab__signal-group" aria-label="pm_up 涨赔信号配置">
+        <h3>pm_up 涨赔信号</h3>
+        <div class="ui-tab__row">
+          <el-form-item label="开启检测与显示:" class="ui-tab__control">
+            <el-switch
+              v-model="extensionPrefs.pmUp.enabled"
+              aria-label="pm_up 开启检测与显示"
+              inline-prompt active-text="开启" inactive-text="关闭" size="large"
+            />
+          </el-form-item>
+          <p class="ui-tab__desc">
+            开启后监测 changmen 收到的 PM 原始行情。PM 一侧涨赔且与其他场馆对侧形成套利时，
+            在独立浮窗及对应盘口显示信号和场馆关注方向。仅检测展示，不自动下注；保存后持久生效。
+          </p>
+        </div>
+        <div class="ui-tab__signal-fields">
+          <el-form-item label="PM 最小涨幅:" class="ui-tab__control">
+            <el-input-number v-model="extensionPrefs.pmUp.minRisePct" :min="0" :max="1000" :step="0.5" :precision="2" controls-position="right" aria-label="pm_up PM 最小涨幅" />
+            <span class="ui-tab__signal-unit">%</span>
+          </el-form-item>
+          <el-form-item label="最小套利利润:" class="ui-tab__control">
+            <el-input-number v-model="extensionPrefs.pmUp.minArbPct" :min="0" :max="100" :step="0.5" :precision="2" controls-position="right" aria-label="pm_up 最小套利利润" />
+            <span class="ui-tab__signal-unit">%</span>
+          </el-form-item>
+          <el-form-item label="涨幅窗口:" class="ui-tab__control">
+            <el-input-number v-model="extensionPrefs.pmUp.windowMs" :min="500" :max="60000" :step="500" controls-position="right" aria-label="pm_up 涨幅窗口毫秒" />
+            <span class="ui-tab__signal-unit">ms</span>
+          </el-form-item>
+          <el-form-item label="同方向场馆冷却:" class="ui-tab__control">
+            <el-input-number v-model="extensionPrefs.pmUp.cooldownMs" :min="0" :max="300000" :step="1000" controls-position="right" aria-label="pm_up 冷却毫秒" />
+            <span class="ui-tab__signal-unit">ms</span>
+          </el-form-item>
+        </div>
+        <p class="ui-tab__signal-hint">最小涨幅 0 表示任意实际涨赔；涨幅以窗口内最低赔率为基线。两个信号模块的配置互不影响。</p>
+      </section>
 
       <div class="ui-tab__row">
         <el-form-item label="EV 金色标记:" class="ui-tab__control">
@@ -241,6 +283,18 @@ async function save() {
 </template>
 
 <style scoped>
+.ui-tab__signal-group {
+  margin: 12px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 8px;
+}
+.ui-tab__signal-group h3 { margin: 0 0 12px; font-size: 14px; color: var(--el-text-color-primary); }
+.ui-tab__signal-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 8px 16px; margin-top: 14px; }
+.ui-tab__signal-fields :deep(.el-input-number) { width: 130px; }
+.ui-tab__signal-unit { margin-left: 6px; }
+.ui-tab__signal-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.5; color: var(--el-text-color-secondary); }
+@media (max-width: 600px) { .ui-tab__signal-fields { grid-template-columns: minmax(0, 1fr); } }
 .ui-tab__panel {
   margin-bottom: 16px;
   padding: 14px 16px 12px;

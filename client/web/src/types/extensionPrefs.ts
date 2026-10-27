@@ -1,5 +1,6 @@
 import type { ValueBetSharpPlatform } from "@/config/valueBet";
 import type { PlatformId } from "@/types/esport";
+import { createDefaultPmUpPrefs, normalizePmUpPrefs, type PmUpPrefs } from "@/extensions/pm_up/settings";
 import {
   clampValueBetEdgePctRange,
   clampValueBetOddsRange,
@@ -218,6 +219,8 @@ export interface ExtensionPrefs extends Record<string, unknown> {
   betRowUi: boolean;
   /** 全场/各地图卡片的降赔率信号显示；独立于监测开关，默认关闭（「界面」Tab）。 */
   pmOddsDropCardUi: boolean;
+  /** [changmen 扩展] PM 涨赔 + 对侧场馆套利信号；界面 Tab 开启后仅检测展示。 */
+  pmUp: PmUpPrefs;
   /** EV 金色标记基准与阈值（「界面」Tab） */
   valueBet: ValueBetMarkerPrefs;
   /**
@@ -395,6 +398,7 @@ export function createDefaultExtensionPrefs(): ExtensionPrefs {
     lowOddsSingleHigherCProbabilityOnly: false,
     betRowUi: false,
     pmOddsDropCardUi: false,
+    pmUp: createDefaultPmUpPrefs(),
     valueBet: createDefaultValueBetMarkerPrefs(),
     valueBetSoftPlatforms: createDefaultValueBetSoftPlatforms(),
     arbAllowedPlatforms: null,
@@ -551,6 +555,7 @@ export function normalizeExtensionPrefs(raw: unknown): ExtensionPrefs {
     lowOddsSingleHigherCProbabilityOnly: row.lowOddsSingleHigherCProbabilityOnly === true,
     betRowUi: row.betRowUi === true,
     pmOddsDropCardUi: row.pmOddsDropCardUi === true,
+    pmUp: normalizePmUpPrefs(row.pmUp),
     valueBet: normalizeValueBetMarkerPrefs(row.valueBet),
     valueBetSoftPlatforms: normalizeValueBetSoftPlatforms(row.valueBetSoftPlatforms),
     arbAllowedPlatforms: normalizeArbAllowedPlatforms(row.arbAllowedPlatforms),

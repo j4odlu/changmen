@@ -32,6 +32,7 @@ const defaultPrefs = {
   lowOddsSingleHigherCProbabilityOnly: false,
   betRowUi: false,
   pmOddsDropCardUi: false,
+  pmUp: { enabled: false, minRisePct: 0, minArbPct: 1, windowMs: 5_000, cooldownMs: 10_000 },
   valueBet: defaultValueBet,
   valueBetSoftPlatforms: ["OB", "RAY", "IA", "SABA", "IMT", "Polymarket", "PB"],
   arbAllowedPlatforms: null,
@@ -59,6 +60,14 @@ const defaultPrefs = {
 };
 
 describe("extensionPrefs", () => {
+  it("defaults pm_up off and persists independent display and detection thresholds", () => {
+    expect(createDefaultExtensionPrefs().pmUp).toEqual(defaultPrefs.pmUp);
+    const prefs = createDefaultExtensionPrefs();
+    prefs.pmUp = { enabled: true, minRisePct: 2, minArbPct: 3, windowMs: 2_000, cooldownMs: 5_000 };
+    expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);
+    expect(normalizeExtensionPrefs({ pmUp: { enabled: "true", minArbPct: -2, windowMs: Infinity } }).pmUp)
+      .toEqual({ ...defaultPrefs.pmUp, minArbPct: 0 });
+  });
   it("defaults map odds drop display off for existing users and persists explicit choices", () => {
     expect(createDefaultExtensionPrefs().pmOddsDropCardUi).toBe(false);
     for (const value of [undefined, null, false, "true", 1])

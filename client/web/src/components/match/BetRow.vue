@@ -15,6 +15,7 @@ import { computed, onUnmounted, ref, watch } from "vue";
 import LimitDiagDialog from "@/components/match/LimitDiagDialog.vue";
 import PmPrematchProbability from "@/components/match/PmPrematchProbability.vue";
 import MatchOddsDropSignals from "@/extensions/pmOddsDropSignal/MatchOddsDropSignals.vue";
+import MatchPmUpSignals from "@/extensions/pm_up/MatchPmUpSignals.vue";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { useBetRowExtensionUiEnabled } from "@/composables/useExtensionPrefs";
 import { isPmMapLive } from "@/shared/pmSportDisplay";
@@ -507,6 +508,7 @@ function onBetTitleDblClick() {
       {{ bet.getBetName() }} - {{ arb }}
     </div>
     <MatchOddsDropSignals v-if="allowBetting && extensionPrefs.pmOddsDropCardUi === true" :match="match" :bet="bet" />
+    <MatchPmUpSignals v-if="allowBetting && extensionPrefs.pmUp?.enabled === true" :match-id="match.id" :bet-id="bet.id" />
     <div v-show="!mapMuted || showManualOdds" ref="itemsContainerRef" class="bet-items">
       <PmPrematchProbability v-if="!bet.marketCode && bet.round >= 0" :bet="bet" :match="match" />
       <div v-if="showDefaultOdds" class="item flex defaultOdds">

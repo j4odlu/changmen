@@ -38,6 +38,7 @@ const wait = vi.hoisted(() => vi.fn(async () => undefined));
 const prompt = vi.hoisted(() => vi.fn(async (_message?: unknown, _title?: string, _options?: unknown) => ({ value: "25" })));
 const executeManualGtc = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock("@/orderModes/gtc/manual", () => ({ executeManualGtc }));
+vi.mock("@/orderModes/gtc/orderPresentation", () => ({ presentGtcOrder: () => ({ message: "GTC 下单成功" }) }));
 
 vi.mock("@/stores/accountStore", () => ({
   useAccountStore: () => ({
@@ -435,6 +436,7 @@ describe("pM manual mode selection", () => {
   const item = { type: "Polymarket", matchId: "m1", betId: "b1", getOdds: () => 1.8, getItemId: () => "i1" } as unknown as ViewBetItem;
   beforeEach(() => {
     vi.clearAllMocks(); setActivePinia(createPinia()); resetMapBetMuteForTests(); resetPrematchFullOnlyForTests();
+    resetPmArbPriceBufferPrefsForTests(); clearPmTickBufferMetadata();
     getAccount.mockReturnValue(manualTestAccount());
     prompt.mockResolvedValue({ value: "25" });
   });
@@ -446,6 +448,50 @@ describe("pM manual mode selection", () => {
     await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
     expect(executeManualGtc).toHaveBeenCalledOnce(); expect(checkBetting).not.toHaveBeenCalled();
     expect(betting).not.toHaveBeenCalled(); expect(updateVenueOrders).not.toHaveBeenCalled();
+  });
+  it("passes the edited GTC odds and amount to its independent order", async () => {
+    prompt.mockImplementationOnce(async (message, _title, options) => {
+      const props = (message as { props: { initialOdds: string; "onUpdate:modelValue": (mode: string) => void; "onUpdate:odds": (odds: string) => void } }).props;
+      expect(props.initialOdds).toBe("1.8");
+      props["onUpdate:modelValue"]("GTC"); props["onUpdate:odds"]("2.35");
+      expect((options as { inputValidator: (value: string) => unknown }).inputValidator("25")).toBe(true);
+      return { value: "25" };
+    });
+    await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
+    expect(executeManualGtc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ odds: 2.35, betMoney: 25, data: null }), expect.anything());
+    expect(betting).not.toHaveBeenCalled();
+  });
+  it.each(["", "1", "0", "-2", "Infinity", "NaN"])("rejects invalid GTC odds %j before execution", async (odds) => {
+    prompt.mockImplementationOnce(async (message, _title, options) => {
+      const props = (message as { props: { "onUpdate:modelValue": (mode: string) => void; "onUpdate:odds": (odds: string) => void } }).props;
+      props["onUpdate:modelValue"]("GTC"); props["onUpdate:odds"](odds);
+      expect((options as { inputValidator: (value: string) => unknown }).inputValidator("25")).toBe("请输入大于 1 的有效挂单赔率");
+      return { value: "25" };
+    });
+    await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
+    expect(executeManualGtc).not.toHaveBeenCalled(); expect(checkBetting).not.toHaveBeenCalled(); expect(betting).not.toHaveBeenCalled();
+  });
+  it("switching back to FOK ignores edited GTC odds", async () => {
+    prompt.mockImplementationOnce(async (message) => {
+      const props = (message as { props: { "onUpdate:modelValue": (mode: string) => void; "onUpdate:odds": (odds: string) => void } }).props;
+      props["onUpdate:modelValue"]("GTC"); props["onUpdate:odds"]("2.35"); props["onUpdate:modelValue"]("FOK");
+      return { value: "25" };
+    });
+    await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
+    expect(executeManualGtc).not.toHaveBeenCalled();
+    expect(betting).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ odds: 1.8 }), expect.any(Number));
+  });
+  it("GTC custom odds do not require an automatic buffer quote", async () => {
+    setPmArbPriceBufferPrefs({ enabled: true, mode: "tick", multiplier: 1.01 });
+    prompt.mockImplementationOnce(async (message) => {
+      const props = (message as { props: { "onUpdate:modelValue": (mode: string) => void; "onUpdate:odds": (odds: string) => void } }).props;
+      props["onUpdate:modelValue"]("GTC"); props["onUpdate:odds"]("2.5");
+      return { value: "25" };
+    });
+    await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
+    expect(executeManualGtc).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ odds: 2.5 }), expect.anything());
+    expect(ElMessageBox.alert).not.toHaveBeenCalled();
+    resetPmArbPriceBufferPrefsForTests();
   });
   it("[changmen 扩展] GTC retains its principal balance check", async () => {
     const account = manualTestAccount();

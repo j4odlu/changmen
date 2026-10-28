@@ -5,6 +5,14 @@ import { getPmArbPriceBufferPrefs, resolvePmDisplayQuote,
 import type { DetectionQuoteSource } from "@/domain/betting/quoteSource";
 
 const policies = new WeakMap<BetOption, PmArbPriceBufferPrefs>();
+/** [changmen 扩展] 人工 GTC 直接冻结输入赔率，不继承自动报价缓冲或旧行情元数据。 */
+export function capturePmManualGtcLimitQuote(option: BetOption): void {
+  if (option.type !== "Polymarket" || !Number.isFinite(option.odds) || option.odds <= 1)
+    throw new Error("请输入大于 1 的有效挂单赔率");
+  policies.set(option, { ...getPmArbPriceBufferPrefs(), enabled: false });
+  const cap = 1 / option.odds;
+  option.data = { detectionOdds: option.odds, detectionMaxPrice: cap, detectionClobPrice: cap };
+}
 /** [changmen 扩展] 同步建腿时冻结转换规则及完整报价，后续不按新行情/配置重算。 */
 export function capturePmPriceQuote(option: BetOption, quotes: DetectionQuoteSource): void {
   if (option.type !== "Polymarket") return;

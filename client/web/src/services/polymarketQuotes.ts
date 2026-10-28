@@ -3,6 +3,7 @@ import { capturePmPriceQuote as capturePmQuote } from "@/domain/polymarket/tickB
 import { attachPolymarketDetectionQuote as attachPmQuote } from "@/domain/polymarket/attachDetectionQuote";
 import { buildPolymarketArbProgressMeta as buildPmMeta } from "@/domain/polymarket/arbProgressPmMeta";
 import { storeQuoteSource } from "./quoteSource";
+export { capturePmManualGtcLimitQuote } from "@/domain/polymarket/tickBufferQuote";
 
 export function capturePmPriceQuote(option: BetOption): void {
   capturePmQuote(option, storeQuoteSource);

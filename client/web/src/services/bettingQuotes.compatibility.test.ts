@@ -1,8 +1,7 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { DetectionQuoteSource } from "@/domain/betting/quoteSource";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { execFileSync } from "node:child_process";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { afterEach, expect, it } from "vitest";
@@ -18,19 +17,15 @@ import * as config from "@/config/valueBet";
 import * as legacyConfig from "@/extensions/valueBet/evConfig";
 import evidence from "../../../../scripts/verification/frontend-dependency-refactor.json";
 
-const root = resolve(process.cwd(), "../..");
 const sha = (source: string) => createHash("sha256").update(source).digest("hex");
 
 /** Run the complete, hash-bound pre-refactor source; no hand-written replica of its rules. */
 function original<T>(relative: string, modules: Record<string, unknown>): T {
   const file = `client/web/src/${relative}`;
   const row = evidence.files.find(row => row.file === file)!;
-  let source = readFileSync(resolve(root, file), "utf8").replaceAll("\r\n", "\n");
-  expect(sha(source)).toBe(row.afterSha);
-  for (const edit of [...row.edits].reverse()) {
-    expect(source.slice(edit.offset, edit.offset + edit.after.length)).toBe(edit.after);
-    source = source.slice(0, edit.offset) + edit.before + source.slice(edit.offset + edit.after.length);
-  }
+  // Historical inputs come from their recorded revision so later business changes
+  // remain testable against the same original behavior without rewriting hashes.
+  const source = execFileSync("git", ["show", `${evidence.baseline}:${file}`], { encoding: "utf8", windowsHide: true }).replaceAll("\r\n", "\n");
   expect(sha(source)).toBe(row.beforeSha);
   const exports = {};
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } });

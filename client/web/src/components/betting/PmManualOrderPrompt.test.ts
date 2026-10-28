@@ -8,11 +8,13 @@ describe("pM manual order mode prompt", () => {
     const html = await renderToString(createSSRApp(Prompt, { context: "A vs B\n买入 A" }));
     expect(html).toMatch(/value="FOK" checked/); expect(html).not.toMatch(/value="GTC" checked/);
     expect(html).toContain("GTC"); expect(html).toContain("本次默认使用 FOK");
+    expect(html).not.toContain('type="number"');
   });
   it("explains remaining GTC quantity without promising full execution", async () => {
-    const html = await renderToString(createSSRApp(Prompt, { context: "A", modelValue: "GTC" }));
+    const html = await renderToString(createSSRApp(Prompt, { context: "A", modelValue: "GTC", initialOdds: "2.35" }));
     expect(html).toMatch(/value="GTC" checked/); expect(html).toContain("未成交份额继续挂单");
     expect(html).toContain("已成交部分保留");
+    expect(html).toContain("挂单赔率"); expect(html).toContain('value="2.35" type="number"');
   });
   it("escapes match context", async () => {
     const html = await renderToString(createSSRApp(Prompt, { context: "<script>credential()</script>" }));

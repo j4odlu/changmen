@@ -27,7 +27,7 @@ vi.mock("@/shared/orderSound", () => ({ playOrderSuccessSound: mocks.sound }));
 vi.mock("@/stores/account/pmOptimisticOrder", () => ({ persistPolymarketMatchedBuyOrder: vi.fn() }));
 vi.mock("@/stores/account/pmRejectOrder", () => ({ persistPolymarketExecutionReject: vi.fn() }));
 vi.mock("@/stores/betting/autoBet/arbLegSettle", () => ({ settleArbLegUntilTerminal: vi.fn() }));
-vi.mock("@/services/polymarketQuotes", () => ({ attachPolymarketDetectionQuote: () => {} }));
+vi.mock("@/services/polymarketQuotes", () => ({ attachPolymarketDetectionQuote: () => {}, capturePmManualGtcLimitQuote: () => {} }));
 vi.mock("@/services/predictFunQuotes", () => ({ attachPredictFunDetectionQuote: () => {} }));
 vi.mock("@changmen/venue-browser/adapter/adaptation", () => ({ resolveVenueStakeFromPlanCny: mocks.stake }));
 

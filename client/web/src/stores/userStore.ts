@@ -2,6 +2,7 @@ import type { UserInfo } from "@/types/esport";
 import { setPmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket";
 import type { FollowConfig } from "@/types/order";
 import type { ExtensionPrefs } from "@/types/extensionPrefs";
+import { readLegacyPmOddsDropSettings } from "@/extensions/pmSignals/downSettings";
 import type { MessageConfig, ProxyRow } from "@/types/userExtras";
 import type { UserConfig } from "@/types/userConfig";
 import { createDefaultExtensionPrefs, normalizeExtensionPrefs, serializeExtensionPrefsForSave } from "@/types/extensionPrefs";
@@ -278,6 +279,10 @@ export const useUserStore = defineStore("user", {
         return;
       this.message = msg ?? {};
       this.extensionPrefs = normalizeExtensionPrefs(ext);
+      if (ext?.pmDown === undefined) {
+        const legacyDownSettings = readLegacyPmOddsDropSettings();
+        if (legacyDownSettings) this.extensionPrefs.pmDown = legacyDownSettings;
+      }
       setPmFokPreflightMode(this.extensionPrefs.pmFokPreflightMode);
       await this.syncPbCollectModeFromLocal();
       await this.syncPmArbPriceBufferFromPrefs();

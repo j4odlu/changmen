@@ -20,7 +20,7 @@ P1 指会直接影响信号真实性、研究数据完整性或收益结论的�
 - [赔率缓存](../client/web/src/stores/oddsStore.ts)与[赔率读写桥](../packages/client-core/src/bridge/oddsAccess.ts)。
 - [PM 行情总线](../packages/venue-adapter/polymarket/quotes/marketQuoteHub.ts)、[PM 报价写入](../packages/venue-adapter/polymarket/quotes/pmTokenQuote.ts)和[PM 电竞采集](../packages/venue-adapter/polymarket/markets/collect.ts)。
 - [PB 采集](../packages/venue-adapter/pb/collect.ts)、[PB 行情写入](../packages/venue-adapter/pb/markets.ts)、[OB 行情写入](../packages/venue-adapter/ob/markets.ts)和[RAY 采集](../packages/venue-adapter/ray/collect.ts)。
-- [现有降赔观察运行时](../client/web/src/extensions/pmOddsDropSignal/runtime.ts)与[隔离测试](../client/web/src/extensions/pmOddsDropSignal/isolation.test.ts)。
+- [现有统一观察运行时](../client/web/src/extensions/pmSignals/runtime.ts)与[隔离测试](../client/web/src/extensions/pmSignals/isolation.test.ts)。
 - [正 EV 数学](../client/web/src/extensions/valueBet/evCalc.ts)、[FOK 保护脚本](../scripts/verification/verify-fok-execution-parity.mjs)与[前端测试配置](../client/web/vite.config.ts)。
 
 PM 官方文档确认买入使用卖一、页面显示价可能是中间价；市场流的上游消息存在可选 timestamp，而当前项目对外 quote 回调仅保留 assetId、bestAsk。上游存在某字段，不等于前端已保留或可追溯。[官方价格与订单簿说明](https://docs.polymarket.com/concepts/prices-orderbook)、[官方实时行情说明](https://docs.polymarket.com/market-data/realtime-data)

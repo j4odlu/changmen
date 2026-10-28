@@ -19,8 +19,7 @@ import {
   toggleFullMatchMuteGlobal,
   toggleMapMuteGlobal,
 } from "@/extensions/mapBetMute";
-import PmOddsDropSignalPanel from "@/extensions/pmOddsDropSignal/PmOddsDropSignalPanel.vue";
-import PmUpPanel from "@/extensions/pm_up/PmUpPanel.vue";
+import PmSignalsPanel from "@/extensions/pmSignals/PmSignalsPanel.vue";
 import {
   filterMatchesForPrematchFull,
   prematchFullMode,
@@ -177,8 +176,7 @@ async function logout() {
     :bet="createLoseBet"
     @close="createLoseDialog.close()"
   />
-  <PmOddsDropSignalPanel />
-  <PmUpPanel v-if="user.extensionPrefs.pmUp?.enabled === true" />
+  <PmSignalsPanel />
   <SingleLegMonitor />
   <el-container class="common-layout home-view">
     <el-aside width="300px">

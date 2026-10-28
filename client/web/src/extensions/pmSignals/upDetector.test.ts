@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PmUpDetector, type PmUpObservation } from "./detector";
-import { createDefaultPmUpPrefs } from "./settings";
+import { PmUpDetector, type PmUpObservation } from "./upDetector";
+import { createDefaultPmUpPrefs } from "./upSettings";
 
 function observation(odds: number, at: number, patch: Partial<PmUpObservation> = {}): PmUpObservation {
   return {
@@ -16,7 +16,7 @@ function detector(patch = {}) {
   return new PmUpDetector({ ...createDefaultPmUpPrefs(), enabled: true, ...patch });
 }
 
-describe("pm_up rise and opposite-side arbitrage", () => {
+describe("PM rise and opposite-side arbitrage", () => {
   it("ignores first quotes and triggers the opposite venue when PM rises into arbitrage", () => {
     const d = detector();
     expect(d.push(observation(1.8, 1_000))).toEqual([]);

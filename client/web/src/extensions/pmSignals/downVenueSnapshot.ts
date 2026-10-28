@@ -1,14 +1,16 @@
-import type { PmOddsDropSignal } from "./detector";
 import type {
   OddsDropReferenceVenue,
   OddsDropSelection,
   ReferenceVenueQuote,
-} from "./runtime";
+  PmOddsDropSnapshotQuote,
+} from "./downSettings";
 import type { BetSide, ViewBet, ViewMatch } from "@/models/match";
 
 export interface PmOddsDropVenueQuote {
   odds: number;
   evPercent: number;
+  /** 触发时最高报价的真实选项；用于 BetRow 定位，不用当前最高价反推历史选项。 */
+  itemId?: string;
 }
 
 export interface PmOddsDropVenueSnapshot {
@@ -42,23 +44,28 @@ function readBestVenueOddsForBet(
   side: BetSide,
   type: OddsDropReferenceVenue,
 ): number {
-  let best = 0;
+  return readBestVenueSelection(bet, side, type)?.odds ?? 0;
+}
+
+function readBestVenueSelection(bet: ViewBet, side: BetSide, type: OddsDropReferenceVenue): { odds: number; itemId: string } | null {
+  let best: { odds: number; itemId: string } | null = null;
   for (const item of bet.items) {
-    if (item.type !== type)
+    if (item.type !== type || (item.sourceStatus && item.sourceStatus !== "Normal"))
       continue;
     const odds = Number(item.getOdds(side));
-    if (Number.isFinite(odds) && odds > best)
-      best = odds;
+    if (Number.isFinite(odds) && odds > 1 && odds > (best?.odds ?? 0))
+      best = { odds, itemId: side === "Home" ? item.homeId : item.awayId };
   }
   return best;
 }
 
-function venueQuote(odds: number, referenceOdds: number): PmOddsDropVenueQuote | null {
+function venueQuote(odds: number, referenceOdds: number, itemId?: string): PmOddsDropVenueQuote | null {
   if (!(odds > 0))
     return null;
   return {
     odds,
     evPercent: pmVenueEvPercent(odds, referenceOdds),
+    itemId,
   };
 }
 
@@ -84,7 +91,7 @@ export function readReferenceVenueQuotes(
 
 function locateSelection(
   matches: readonly ViewMatch[],
-  signal: PmOddsDropSignal,
+  signal: PmOddsDropSnapshotQuote,
   referenceVenue: OddsDropReferenceVenue,
   selection: OddsDropSelection | null,
 ): { match: ViewMatch; bet: ViewBet; side: BetSide } | null {
@@ -115,7 +122,7 @@ function locateSelection(
  */
 export function resolvePmOddsDropVenueSnapshot(
   matches: readonly ViewMatch[],
-  signal: PmOddsDropSignal,
+  signal: PmOddsDropSnapshotQuote,
   referenceVenue: OddsDropReferenceVenue = "Polymarket",
   selection: OddsDropSelection | null = null,
 ): PmOddsDropVenueSnapshot | null {
@@ -123,9 +130,21 @@ export function resolvePmOddsDropVenueSnapshot(
   if (!located)
     return null;
   const { match, bet, side } = located;
-  const read = (venue: OddsDropReferenceVenue) => (
-    venue === referenceVenue ? signal.currentOdds : readBestVenueOddsForBet(bet, side, venue)
-  );
+  return capturePmOddsDropVenueSnapshot(match, bet, side, signal.currentOdds, referenceVenue);
+}
+
+/** 已定位盘口的常数范围捕获，供 PM 行情入队时冻结同侧报价。 */
+export function capturePmOddsDropVenueSnapshot(
+  match: ViewMatch,
+  bet: ViewBet,
+  side: BetSide,
+  currentOdds: number,
+  referenceVenue: OddsDropReferenceVenue,
+): PmOddsDropVenueSnapshot {
+  const read = (venue: OddsDropReferenceVenue) => {
+    const selected = readBestVenueSelection(bet, side, venue);
+    return venueQuote(venue === referenceVenue ? currentOdds : selected?.odds ?? 0, currentOdds, selected?.itemId);
+  };
   return {
     matchId: match.id,
     betId: bet.id,
@@ -134,9 +153,9 @@ export function resolvePmOddsDropVenueSnapshot(
     side,
     sideLabel: side === "Home" ? (bet.homeName || "主队") : (bet.awayName || "客队"),
     referenceVenue,
-    pm: venueQuote(read("Polymarket"), signal.currentOdds),
-    ob: venueQuote(read("OB"), signal.currentOdds),
-    ray: venueQuote(read("RAY"), signal.currentOdds),
-    pb: venueQuote(read("PB"), signal.currentOdds),
+    pm: read("Polymarket"),
+    ob: read("OB"),
+    ray: read("RAY"),
+    pb: read("PB"),
   };
 }

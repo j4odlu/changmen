@@ -1,5 +1,5 @@
 import type { BetSide, ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
-import type { PmUpMarket } from "./detector";
+import type { PmUpMarket } from "./upDetector";
 
 interface Location { match: ViewMatch; bet: ViewBet; pm: ViewBetItem; side: BetSide; key: string }
 

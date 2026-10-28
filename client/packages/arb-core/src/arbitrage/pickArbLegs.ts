@@ -27,12 +27,13 @@ export function pickArbLegs(
   providerKeys: PlatformId[],
   accounts: ArbProfitAccount[] = [],
   _gameName?: string,
+  readOdds: (item: ViewBetItem, side: BetSide) => number = (item, side) => item.getOdds(side),
 ): ArbLegs | undefined {
   if (!config)
     return undefined;
 
   const allowSame = new Set(config.allowSameBet ?? []);
-  const oddsOf = (item: ViewBetItem, side: BetSide) => item.getOdds(side);
+  const oddsOf = readOdds;
 
   const homeCandidates = bet.items.filter((v) => {
     if (config.noSameBet && !allowSame.has(v.type) && isBetStub()) {

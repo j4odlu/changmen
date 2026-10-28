@@ -173,6 +173,7 @@ describe("indexOpportunities", () => {
       betName: "地图1",
       homePlatform: "PB" as const,
       awayPlatform: "RAY" as const,
+      homeItemId: "h1", awayItemId: "a2",
       homeOdds: 2.1,
       awayOdds: 2.2,
       implied: 1.05,

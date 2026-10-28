@@ -5,6 +5,9 @@ import { createPinia, getActivePinia, setActivePinia } from "pinia";
 import type { BetSide, ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useMatchStore } from "@/stores/matchStore";
+import { useUserStore } from "@/stores/userStore";
+import { pmOddsDropSignals, pmUpSignals } from "@/extensions/pmSignals/records";
+import { clearAllSignals, signalNow } from "@/extensions/pmSignals/state";
 import { isMapMuteActive, resetMapBetMuteForTests, setFullMatchMuteGlobal } from "@/extensions/mapBetMute";
 import {
   clearPmTickStateForTests, resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs,
@@ -78,6 +81,51 @@ afterEach(() => {
   for (const app of apps.splice(0)) app.unmount();
   resetPmArbPriceBufferPrefsForTests(); vi.restoreAllMocks();
   resetMapBetMuteForTests();
+  clearAllSignals();
+});
+
+it("places PM signal badges in real odds cells and suppresses them on read-only, closed or display-disabled markets", async () => {
+  const { match, bet, pm, pb } = mount();
+  const user = useUserStore();
+  user.extensionPrefs.pmOddsDropCardUi = true;
+  user.extensionPrefs.pmUp.enabled = true;
+  user.extensionPrefs.pmUpCardUi = true;
+  const at = Date.now();
+  signalNow.value = at;
+  pmOddsDropSignals.value = [{
+    id: "drop", assetId: pm.homeId, referenceVenue: "Polymarket", sourceMode: "official", selection: null,
+    beforeOdds: 2, currentOdds: 1.8, beforeBestAsk: .5, currentBestAsk: 1 / 1.8,
+    dropPct: 10, windowMs: 1000, baselineAt: at - 1000, detectedAt: at,
+    venueSnapshot: { matchId: match.id, betId: bet.id, matchTitle: "Alpha vs Beta", marketTitle: "地图3", side: "Home", sideLabel: "Alpha",
+      referenceVenue: "Polymarket", pm: { odds: 1.8, evPercent: 0 }, ob: null, ray: null, pb: { odds: 1.9, evPercent: 5.56, itemId: pb.homeId } },
+  }];
+  pmUpSignals.value = [{
+    key: "pm-up", id: "up", assetId: pm.homeId, matchId: match.id, betId: bet.id,
+    matchTitle: "Alpha vs Beta", marketTitle: "地图3", pmSide: "Home", pmSideLabel: "Alpha", targetSide: "Away", targetSideLabel: "Beta",
+    beforeOdds: 1.8, pmOdds: 2.2, risePct: 22.22, baselineAt: at - 1000, detectedAt: at,
+    target: { provider: "PB", itemId: pb.awayId, odds: 2 }, arbPct: 4.76,
+  }];
+  const render = (allowBetting = true) => renderToString(createSSRApp(BetRow, { match, bet, allowBetting }).use(getActivePinia()!));
+  const html = await render();
+  expect(html).toContain("with-odds-signals");
+  expect(html.replace(/<[^>]*>/g, "")).toContain("↓10.0%");
+  expect(html.replace(/<[^>]*>/g, "")).toContain("↑22.2%");
+  expect(html.replace(/<[^>]*>/g, "")).toContain("2.0001.800");
+  expect(html.replace(/<[^>]*>/g, "")).toContain("2.2001.800");
+  expect(html).toContain("高+5.6%");
+  expect(html).toContain("套+4.8%");
+  user.extensionPrefs.pmUp.enabled = false;
+  expect((await render()).replace(/<[^>]*>/g, "")).toContain("↑22.2%");
+  user.extensionPrefs.pmUpCardUi = false;
+  expect((await render()).replace(/<[^>]*>/g, "")).not.toContain("↑22.2%");
+  expect((await render()).replace(/<[^>]*>/g, "")).toContain("↓10.0%");
+  expect(await render(false)).not.toContain('class="pm-odds-badge ');
+  match.pmSport = { ended: true, status: "finished" };
+  expect(await render()).not.toContain('class="pm-odds-badge ');
+  match.pmSport = undefined;
+  user.extensionPrefs.pmOddsDropCardUi = false;
+  user.extensionPrefs.pmUp.enabled = false;
+  expect(await render()).not.toContain('class="pm-odds-badge ');
 });
 
 it("updates PM LIVE from VPS snapshots without elapsed independently of the OB live map", async () => {

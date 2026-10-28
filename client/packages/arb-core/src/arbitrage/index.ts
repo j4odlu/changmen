@@ -11,3 +11,4 @@ export {
   resolveArbTargetProfit,
 } from "./arbStakeMath";
 export { arbLegsIncludePolymarket } from "./polymarketArbPrecheck";
+export { detectArbLegs, type ArbLegDetection } from "./detectArbLegs";

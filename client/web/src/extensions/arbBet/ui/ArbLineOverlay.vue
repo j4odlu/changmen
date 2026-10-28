@@ -5,6 +5,8 @@ defineProps<{
   line: ArbLineSegment | null;
   badge: ArbLineBadge | null;
   label?: string;
+  /** PM 角标占用赔率右侧时，将利润放到盘口标题旁。 */
+  badgePosition?: "anchor" | "header";
 }>();
 </script>
 
@@ -15,7 +17,9 @@ defineProps<{
   <div
     v-if="line && badge && label"
     class="arb-profit-badge"
-    :style="{ left: `${badge.x}px`, top: `${badge.y}px` }"
+    :style="badgePosition === 'header'
+      ? { right: '26px', top: '-20px', transform: 'none', fontSize: '9px', padding: '1px 4px' }
+      : { left: `${badge.x}px`, top: `${badge.y}px` }"
   >
     {{ label }}
   </div>

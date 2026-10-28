@@ -2,7 +2,7 @@ import type { MaybeRefOrGetter, Ref, WatchSource } from "vue";
 import type { ArbLineBadge, ArbLineSegment } from "@/extensions/arbBet/ui/arb_line";
 import type { BetSide } from "@/models/match";
 import type { PlatformId } from "@/types/esport";
-import { computed, nextTick, onMounted, onUnmounted, ref, toValue, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, toValue, watch } from "vue";
 import {
 
   computeArbLineOverlay,
@@ -13,22 +13,27 @@ import {
 /** 登记赔率格 DOM，供套利划线取 anchor */
 export function useOddsAnchorMap() {
   const map = new Map<string, HTMLElement>();
+  const binders = new Map<string, (el: unknown) => void>();
+  const version = ref(0);
 
-  function bind(type: PlatformId, side: BetSide) {
-    return (el: unknown) => {
-      const key = oddsAnchorKey(type, side);
+  function bind(type: PlatformId, side: BetSide, itemId: string) {
+    const key = oddsAnchorKey(type, side, itemId);
+    const existing = binders.get(key);
+    if (existing) return existing;
+    const binder = (el: unknown) => {
       const node = resolveVueElement(el);
-      if (node)
-        map.set(key, node);
-      else map.delete(key);
+      if (node && map.get(key) !== node) { map.set(key, node); version.value++; }
+      else if (!node && map.delete(key)) version.value++;
     };
+    binders.set(key, binder);
+    return binder;
   }
 
-  function get(type: PlatformId, side: BetSide): HTMLElement | undefined {
-    return map.get(oddsAnchorKey(type, side));
+  function get(type: PlatformId, side: BetSide, itemId: string): HTMLElement | undefined {
+    return map.get(oddsAnchorKey(type, side, itemId));
   }
 
-  return { bind, get };
+  return { bind, get, version };
 }
 
 /**
@@ -46,6 +51,19 @@ export function useArbLineOverlay(
   const active = computed(() => toValue(enabled) !== false);
   const line = ref<ArbLineSegment | null>(null);
   const badge = ref<ArbLineBadge | null>(null);
+  let frame: number | null = null;
+  let disposed = false;
+
+  // 只在 UI 帧测量 DOM；同帧多次检测/布局变化合并，不让业务等待绘图。
+  function scheduleRefresh() {
+    if (disposed || !active.value || frame !== null || typeof requestAnimationFrame !== "function") return;
+    frame = requestAnimationFrame(() => { frame = null; refresh(); });
+  }
+
+  function cancelRefresh() {
+    if (frame !== null) cancelAnimationFrame(frame);
+    frame = null;
+  }
 
   function clearOverlay() {
     line.value = null;
@@ -79,7 +97,9 @@ export function useArbLineOverlay(
   let resizeObserver: ResizeObserver | null = null;
 
   onMounted(() => {
-    resizeObserver = new ResizeObserver(() => refresh());
+    resizeObserver = new ResizeObserver(scheduleRefresh);
+    syncObserver(containerRef.value);
+    scheduleRefresh();
   });
 
   function syncObserver(el: HTMLElement | null) {
@@ -93,27 +113,30 @@ export function useArbLineOverlay(
     containerRef,
     (el) => {
       syncObserver(el);
-      nextTick(refresh);
+      scheduleRefresh();
     },
-    { immediate: true },
+    { immediate: true, flush: "post" },
   );
 
   watch(active, (on) => {
     if (!on) {
       resizeObserver?.disconnect();
+      cancelRefresh();
       clearOverlay();
       return;
     }
     syncObserver(containerRef.value);
-    nextTick(refresh);
-  });
+    scheduleRefresh();
+  }, { flush: "post" });
 
   onUnmounted(() => {
+    disposed = true;
+    cancelRefresh();
     resizeObserver?.disconnect();
     resizeObserver = null;
   });
 
-  watch(watchSources, () => nextTick(refresh), { deep: true });
+  watch(watchSources, scheduleRefresh, { flush: "post" });
 
   return { line, badge, refresh };
 }

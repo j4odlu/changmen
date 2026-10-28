@@ -1,7 +1,7 @@
 import type { ViewMatch } from "@/models/match";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { indexPmUpMarkets, snapshotPmUpMarket } from "./markets";
-import { createDefaultPmUpPrefs } from "./settings";
+import { indexPmUpMarkets, snapshotPmUpMarket } from "./upMarkets";
+import { createDefaultPmUpPrefs } from "./upSettings";
 
 const hub = vi.hoisted(() => ({ listener: null as ((quote: { assetId: string; bestAsk: number }) => void) | null, subscribe: vi.fn(), unsubscribe: vi.fn() }));
 vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
@@ -9,8 +9,14 @@ vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
     hub.subscribe(); hub.listener = listener;
     return () => { hub.listener = null; hub.unsubscribe(); };
   },
+  getPmMarketWsSourceMode: () => "official",
 }));
-const { startPmUpMonitor, pmUpSignals, clearPmUpSignals } = await import("./runtime");
+const { pmUpSignals, clearPmUpSignals } = await import("./records");
+const { createDefaultPmOddsDropSettings } = await import("./downSettings");
+const { startPmSignalMonitor } = await import("./runtime");
+function startPmUpMonitor(config: ReturnType<typeof createDefaultPmUpPrefs>, readMatches: () => readonly ViewMatch[]) {
+  return startPmSignalMonitor(() => ({ up: config, down: { ...createDefaultPmOddsDropSettings(), enabled: false } }), readMatches);
+}
 
 function fixture() {
   const prices = { obHome: 3, obAway: 2, rayHome: 2.2, rayAway: 0 };
@@ -30,7 +36,7 @@ function emit(assetId: string, odds: number) { hub.listener?.({ assetId, bestAsk
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(1_000); vi.clearAllMocks(); clearPmUpSignals(); });
 afterEach(() => { stop?.(); stop = undefined; vi.useRealTimers(); });
 
-describe("pm_up local quote monitoring", () => {
+describe("PM rise local quote monitoring", () => {
   it("does no work when disabled and unsubscribes/cancels queued work on stop", async () => {
     startPmUpMonitor(createDefaultPmUpPrefs(), () => [] )();
     expect(hub.subscribe).not.toHaveBeenCalled();

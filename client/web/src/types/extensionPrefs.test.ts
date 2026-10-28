@@ -32,6 +32,8 @@ const defaultPrefs = {
   lowOddsSingleHigherCProbabilityOnly: false,
   betRowUi: false,
   pmOddsDropCardUi: false,
+  pmUpCardUi: false,
+  pmDown: { enabled: false, windowMs: 5_000, thresholdPct: 5, cooldownMs: 10_000, minReferenceOdds: 1.01, maxReferenceOdds: 100, referenceVenue: "Polymarket" },
   pmUp: { enabled: false, minRisePct: 0, minArbPct: 1, windowMs: 5_000, cooldownMs: 10_000 },
   valueBet: defaultValueBet,
   valueBetSoftPlatforms: ["OB", "RAY", "IA", "SABA", "IMT", "Polymarket", "PB"],
@@ -60,7 +62,17 @@ const defaultPrefs = {
 };
 
 describe("extensionPrefs", () => {
-  it("defaults pm_up off and persists independent display and detection thresholds", () => {
+  it("preserves old up badge visibility once and persists both independent display switches", () => {
+    expect(normalizeExtensionPrefs({ pmUp: { enabled: true } }).pmUpCardUi).toBe(true);
+    expect(normalizeExtensionPrefs({ pmUp: { enabled: true }, pmUpCardUi: false }).pmUpCardUi).toBe(false);
+    const prefs = createDefaultExtensionPrefs();
+    prefs.pmDown = { ...prefs.pmDown, enabled: true, referenceVenue: "RAY", thresholdPct: 3, cooldownMs: 0 };
+    prefs.pmUp.enabled = true;
+    prefs.pmUpCardUi = false;
+    prefs.pmOddsDropCardUi = true;
+    expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);
+  });
+  it("defaults PM rise off and persists independent display and detection thresholds", () => {
     expect(createDefaultExtensionPrefs().pmUp).toEqual(defaultPrefs.pmUp);
     const prefs = createDefaultExtensionPrefs();
     prefs.pmUp = { enabled: true, minRisePct: 2, minArbPct: 3, windowMs: 2_000, cooldownMs: 5_000 };

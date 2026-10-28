@@ -1,6 +1,7 @@
 import type { ValueBetSharpPlatform } from "@/config/valueBet";
 import type { PlatformId } from "@/types/esport";
-import { createDefaultPmUpPrefs, normalizePmUpPrefs, type PmUpPrefs } from "@/extensions/pm_up/settings";
+import { createDefaultPmUpPrefs, normalizePmUpPrefs, type PmUpPrefs } from "@/extensions/pmSignals/upSettings";
+import { createDefaultPmOddsDropSettings, normalizePmOddsDropSettings, type BrowserPmOddsDropSettings } from "@/extensions/pmSignals/downSettings";
 import {
   clampValueBetEdgePctRange,
   clampValueBetOddsRange,
@@ -217,9 +218,13 @@ export interface ExtensionPrefs extends Record<string, unknown> {
   lowOddsSingleHigherCProbabilityOnly: boolean;
   /** BetRow 套利划线、利润角标、赔率 flash、EV 标记（「界面」Tab） */
   betRowUi: boolean;
-  /** 全场/各地图卡片的降赔率信号显示；独立于监测开关，默认关闭（「界面」Tab）。 */
+  /** 全场/各地图赔率右侧的降赔角标；需 BetRow 扩展 UI，独立于监测开关，默认关闭。 */
   pmOddsDropCardUi: boolean;
-  /** [changmen 扩展] PM 涨赔 + 对侧场馆套利信号；界面 Tab 开启后仅检测展示。 */
+  /** 涨赔角标显示，独立于监测开关；需 BetRow 扩展 UI。 */
+  pmUpCardUi: boolean;
+  /** 降赔监测参数；与涨赔统一保存到用户 Extensions。 */
+  pmDown: BrowserPmOddsDropSettings;
+  /** [changmen 扩展] PM 涨赔且存在对侧套利空间；不自动下注。 */
   pmUp: PmUpPrefs;
   /** EV 金色标记基准与阈值（「界面」Tab） */
   valueBet: ValueBetMarkerPrefs;
@@ -398,6 +403,8 @@ export function createDefaultExtensionPrefs(): ExtensionPrefs {
     lowOddsSingleHigherCProbabilityOnly: false,
     betRowUi: false,
     pmOddsDropCardUi: false,
+    pmUpCardUi: false,
+    pmDown: createDefaultPmOddsDropSettings(),
     pmUp: createDefaultPmUpPrefs(),
     valueBet: createDefaultValueBetMarkerPrefs(),
     valueBetSoftPlatforms: createDefaultValueBetSoftPlatforms(),
@@ -555,6 +562,9 @@ export function normalizeExtensionPrefs(raw: unknown): ExtensionPrefs {
     lowOddsSingleHigherCProbabilityOnly: row.lowOddsSingleHigherCProbabilityOnly === true,
     betRowUi: row.betRowUi === true,
     pmOddsDropCardUi: row.pmOddsDropCardUi === true,
+    // 旧配置涨赔开启时也显示角标；仅缺少新字段时沿用旧行为。
+    pmUpCardUi: row.pmUpCardUi === undefined ? normalizePmUpPrefs(row.pmUp).enabled : row.pmUpCardUi === true,
+    pmDown: normalizePmOddsDropSettings(row.pmDown),
     pmUp: normalizePmUpPrefs(row.pmUp),
     valueBet: normalizeValueBetMarkerPrefs(row.valueBet),
     valueBetSoftPlatforms: normalizeValueBetSoftPlatforms(row.valueBetSoftPlatforms),

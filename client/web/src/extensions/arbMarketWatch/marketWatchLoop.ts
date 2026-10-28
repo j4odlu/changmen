@@ -16,6 +16,7 @@ import { useAccountStore } from "@/stores/accountStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useUserStore } from "@/stores/userStore";
+import { filterArbProviderKeys } from "@/types/extensionPrefs";
 
 export const MARKET_WATCH_LOOP_DEBOUNCE_MS = 250;
 export const MARKET_WATCH_LOOP_FALLBACK_MS = 5_000;
@@ -70,7 +71,7 @@ export function startMarketWatchLoop(): void {
       matches: [],
       config,
       accounts: accountStore.accounts,
-      actionablePlatforms: accountStore.getProviders().keys(),
+      actionablePlatforms: filterArbProviderKeys([...accountStore.getProviders().keys()], user.extensionPrefs.arbAllowedPlatforms),
     };
 
     const matches = user.userId && matchStore.matchs.length ? matchStore.matchs : [];

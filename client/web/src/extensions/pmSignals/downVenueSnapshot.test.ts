@@ -1,4 +1,4 @@
-import type { PmOddsDropSignal } from "./detector";
+import type { PmOddsDropSignal } from "./downDetector";
 import type { ViewMatch } from "@/models/match";
 import { describe, expect, it } from "vitest";
 import {
@@ -6,7 +6,7 @@ import {
   readReferenceVenueQuotes,
   referenceQuoteKey,
   resolvePmOddsDropVenueSnapshot,
-} from "./venueSnapshot";
+} from "./downVenueSnapshot";
 
 function signal(assetId = "pm-home", currentOdds = 2): PmOddsDropSignal {
   return {
@@ -63,8 +63,8 @@ describe("pm odds drop venue EV snapshot", () => {
       marketTitle: "[地图1] 获胜",
       side: "Home",
       sideLabel: "Alpha",
-      ob: { odds: 2.1, evPercent: 5 },
-      ray: { odds: 1.9, evPercent: -5 },
+      ob: { odds: 2.1, evPercent: 5, itemId: "ob-home" },
+      ray: { odds: 1.9, evPercent: -5, itemId: "ray-home" },
     });
   });
 

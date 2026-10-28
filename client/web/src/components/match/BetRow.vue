@@ -14,8 +14,10 @@ import { storeToRefs } from "pinia";
 import { computed, onUnmounted, ref, watch } from "vue";
 import LimitDiagDialog from "@/components/match/LimitDiagDialog.vue";
 import PmPrematchProbability from "@/components/match/PmPrematchProbability.vue";
-import MatchOddsDropSignals from "@/extensions/pmOddsDropSignal/MatchOddsDropSignals.vue";
-import MatchPmUpSignals from "@/extensions/pm_up/MatchPmUpSignals.vue";
+import OddsSignalBadges from "@/extensions/pmSignals/OddsSignalBadges.vue";
+import { buildOddsSignalBadges, oddsBadgeKey, type OddsSignalBadge } from "@/extensions/pmSignals/oddsBadges";
+import { pmOddsDropSignals, pmUpSignals } from "@/extensions/pmSignals/records";
+import { signalNow } from "@/extensions/pmSignals/state";
 import PlatformIcon from "@/components/platform/PlatformIcon.vue";
 import { useBetRowExtensionUiEnabled } from "@/composables/useExtensionPrefs";
 import { isPmMapLive } from "@/shared/pmSportDisplay";
@@ -125,6 +127,17 @@ const extensionsEnabled = computed(() => betRowUiEnabled.value && bettingEnabled
 const pmQuoteBlocked = computed(() => props.allowBetting && Boolean(
   getPolymarketPmSportBlockReason(props.match.pmSport, props.bet.round),
 ));
+
+const pmSignalsAllowed = computed(() => props.allowBetting && betRowUiEnabled.value
+  && (extensionPrefs.value.pmOddsDropCardUi === true || extensionPrefs.value.pmUpCardUi === true));
+const signalBadges = computed(() => pmSignalsAllowed.value && extensionsEnabled.value && !pmQuoteBlocked.value
+  ? buildOddsSignalBadges(props.match, props.bet, pmOddsDropSignals.value, pmUpSignals.value, signalNow.value, {
+    down: extensionPrefs.value.pmOddsDropCardUi === true,
+    up: extensionPrefs.value.pmUpCardUi === true,
+  }) : new Map<string, OddsSignalBadge[]>());
+function cellSignalBadges(item: ViewBet["items"][0], side: BetSide): OddsSignalBadge[] {
+  return itemOdds(item, side) > 1 ? signalBadges.value.get(oddsBadgeKey(item, side)) ?? [] : [];
+}
 
 /** [changmen 扩展] 显示已锁定的 PM 不再参与本行套利/EV 标记；保留其它场馆。 */
 const extensionBet = computed(() => {
@@ -457,7 +470,7 @@ function onBetTitleDblClick() {
 </script>
 
 <template>
-  <div class="bet" :class="{ 'is-map-muted': mapMuted }">
+  <div class="bet" :class="{ 'is-map-muted': mapMuted, 'with-odds-signals': pmSignalsAllowed }">
     <el-tag
       v-if="showPmLive"
       class="pm-live"
@@ -507,8 +520,6 @@ function onBetTitleDblClick() {
     <div class="bet-title" @dblclick="onBetTitleDblClick">
       {{ bet.getBetName() }} - {{ arb }}
     </div>
-    <MatchOddsDropSignals v-if="allowBetting && extensionPrefs.pmOddsDropCardUi === true" :match="match" :bet="bet" />
-    <MatchPmUpSignals v-if="allowBetting && extensionPrefs.pmUp?.enabled === true" :match-id="match.id" :bet-id="bet.id" />
     <div v-show="!mapMuted || showManualOdds" ref="itemsContainerRef" class="bet-items">
       <PmPrematchProbability v-if="!bet.marketCode && bet.round >= 0" :bet="bet" :match="match" />
       <div v-if="showDefaultOdds" class="item flex defaultOdds">
@@ -531,7 +542,7 @@ function onBetTitleDblClick() {
           @click="openLimit(item)"
         />
         <div
-          :ref="bindOddsAnchor(item.type, 'Home')"
+          :ref="bindOddsAnchor(item, 'Home')"
           class="item-odds home"
           :data-pb-home-id="item.type === 'PB' ? item.homeId : undefined"
           :class="{
@@ -548,7 +559,7 @@ function onBetTitleDblClick() {
           @dblclick.stop="onOddsDblClick(item, 'Home')"
         >
           <span v-if="item.type === 'RAY' && rayWinner === 'Home'" class="ray-map-win-badge" title="RAY 已确认本方赢得该地图">WIN</span>
-          {{ itemOdds(item, "Home") || (itemQuotePending(item, 'Home') ? '等待报价' : '')
+          <span class="item-odds__value">{{ itemOdds(item, "Home") || (itemQuotePending(item, 'Home') ? '等待报价' : '')
           }}<span
             v-if="pbShadowLabel(item, 'Home')"
             class="pb-ws-shadow"
@@ -569,10 +580,11 @@ function onBetTitleDblClick() {
             evMarker.evLabel(item, "Home")
           }}</span><span v-if="sourceLabel(item, 'Home')" class="odds-src">{{
             sourceLabel(item, "Home")
-          }}</span>
+          }}</span></span>
+          <OddsSignalBadges v-if="pmSignalsAllowed" :badges="cellSignalBadges(item, 'Home')" :now="signalNow" />
         </div>
         <div
-          :ref="bindOddsAnchor(item.type, 'Away')"
+          :ref="bindOddsAnchor(item, 'Away')"
           class="item-odds away"
           :data-pb-home-id="item.type === 'PB' ? item.awayId : undefined"
           :class="{
@@ -589,7 +601,7 @@ function onBetTitleDblClick() {
           @dblclick.stop="onOddsDblClick(item, 'Away')"
         >
           <span v-if="item.type === 'RAY' && rayWinner === 'Away'" class="ray-map-win-badge" title="RAY 已确认本方赢得该地图">WIN</span>
-          {{ itemOdds(item, "Away") || (itemQuotePending(item, 'Away') ? '等待报价' : '')
+          <span class="item-odds__value">{{ itemOdds(item, "Away") || (itemQuotePending(item, 'Away') ? '等待报价' : '')
           }}<span
             v-if="pbShadowLabel(item, 'Away')"
             class="pb-ws-shadow"
@@ -610,7 +622,8 @@ function onBetTitleDblClick() {
             evMarker.evLabel(item, "Away")
           }}</span><span v-if="sourceLabel(item, 'Away')" class="odds-src">{{
             sourceLabel(item, "Away")
-          }}</span>
+          }}</span></span>
+          <OddsSignalBadges v-if="pmSignalsAllowed" :badges="cellSignalBadges(item, 'Away')" :now="signalNow" />
         </div>
       </div>
       <ArbLineOverlay
@@ -618,6 +631,7 @@ function onBetTitleDblClick() {
         :line="arbLine"
         :badge="arbBadge"
         :label="overlayLabel"
+        :badge-position="pmSignalsAllowed ? 'header' : 'anchor'"
       />
     </div>
 

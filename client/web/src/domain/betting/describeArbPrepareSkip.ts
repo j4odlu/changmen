@@ -2,7 +2,7 @@ import type { ViewBet, ViewMatch } from "@/models/match";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { PlatformId } from "@/types/esport";
 import type { UserConfig } from "@/types/userConfig";
-import { pickArbLegs } from "@changmen/arb-core";
+import { detectArbLegs } from "@changmen/arb-core";
 import { arbProfitRate } from "@changmen/client-core/shared/format";
 import { formatAccountFundingHint } from "@/domain/betting/accountFundingHint";
 
@@ -32,7 +32,7 @@ export function describeGetOrderOptionsSkip(
     return `仅 ${providerKeys[0]} 有余额账号，套利需至少两个不同平台`;
   }
 
-  const legs = pickArbLegs(bet, config, providerKeys, accounts, match.game);
+  const legs = detectArbLegs(bet, config, providerKeys, accounts, match.game);
   if (!legs) {
     return `利润/赔率未达阈值（要求对冲 ≥ ${arbProfitRate(config.profit)}，minOdds ≥ ${config.minOdds}）`;
   }

@@ -1,8 +1,8 @@
-import type { BrowserPmOddsDropSignal } from "./runtime";
-import type { PmOddsDropVenueSnapshot } from "./venueSnapshot";
+import type { BrowserPmOddsDropSignal } from "./downSettings";
+import type { PmOddsDropVenueSnapshot } from "./downVenueSnapshot";
 import type { ViewBet, ViewMatch } from "@/models/match";
 import { describe, expect, it } from "vitest";
-import { betOddsDropSignals, matchOddsDropSignals } from "./matchSignals";
+import { betOddsDropSignals, matchOddsDropSignals } from "./downMatchSignals";
 
 const match = {
   id: 11,

@@ -64,6 +64,31 @@ describe("FOK preflight preference persistence", () => {
     await useUserStore().loadExtras(true);
     expect(modeForNewAttempt()).toBe("legacy");
   });
+  it("migrates local drop settings only when user preferences lack them and persists both branches together", async () => {
+    const legacyKey = "changmen:pm-odds-drop:settings:v1";
+    const previous = localStorage.getItem(legacyKey);
+    try {
+      localStorage.setItem(legacyKey, JSON.stringify({ enabled: true, referenceVenue: "OB", thresholdPct: 7 }));
+      vi.mocked(getClientData).mockResolvedValue({ pmUp: { enabled: true } });
+      const user = useUserStore();
+      await user.loadExtras(true);
+      expect(user.extensionPrefs.pmDown).toMatchObject({ enabled: true, referenceVenue: "OB", thresholdPct: 7 });
+      expect(user.extensionPrefs.pmUpCardUi).toBe(true);
+      user.extensionPrefs.pmDown.referenceVenue = "RAY";
+      user.extensionPrefs.pmUpCardUi = false;
+      vi.mocked(saveClientDataDetailed).mockResolvedValue({ ok: true } as any);
+      await user.saveExtensionPrefs();
+      const saved = JSON.parse(vi.mocked(saveClientDataDetailed).mock.calls[0]![1]);
+      expect(saved).toMatchObject({ pmDown: { referenceVenue: "RAY" }, pmUpCardUi: false, pmUp: { enabled: true } });
+      vi.mocked(getClientData).mockResolvedValue(saved);
+      await user.loadExtras(true);
+      expect(user.extensionPrefs.pmDown.referenceVenue).toBe("RAY");
+      expect(user.extensionPrefs.pmUpCardUi).toBe(false);
+    } finally {
+      if (previous == null) localStorage.removeItem(legacyKey);
+      else localStorage.setItem(legacyKey, previous);
+    }
+  });
   it("does not activate an unsaved edit or a failed save", async () => {
     useUserStore().extensionPrefs.pmFokPreflightMode = "optimized";
     expect(modeForNewAttempt()).toBe("legacy");

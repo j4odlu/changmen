@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { shallowRef } from "vue";
 
 let emitPmQuote: ((quote: { assetId: string; bestAsk: number }) => void) | null = null;
 let subscribeCalls = 0;
@@ -15,12 +16,23 @@ vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
 }));
 
 const {
-  clearPmOddsDropSignals,
   isReferenceOddsInSignalRange,
-  pmOddsDropSignals,
-  startPmOddsDropSignalMonitor,
-  updatePmOddsDropSettings,
-} = await import("./runtime");
+  createDefaultPmOddsDropSettings,
+  patchPmOddsDropSettings,
+} = await import("./downSettings");
+const pmOddsDropSettings = shallowRef(createDefaultPmOddsDropSettings());
+function updatePmOddsDropSettings(patch: Partial<import("./downSettings").BrowserPmOddsDropSettings>) {
+  pmOddsDropSettings.value = patchPmOddsDropSettings(pmOddsDropSettings.value, patch);
+}
+const { clearPmOddsDropSignals, pmOddsDropSignals } = await import("./records");
+const { startPmSignalMonitor } = await import("./runtime");
+const { createDefaultPmUpPrefs } = await import("./upSettings");
+function startPmOddsDropSignalMonitor(
+  resolveSnapshot?: import("./downSettings").PmOddsDropSnapshotResolver,
+  readReferenceQuotes?: import("./downSettings").ReferenceVenueQuoteReader,
+) {
+  return startPmSignalMonitor(() => ({ down: pmOddsDropSettings.value, up: createDefaultPmUpPrefs() }), () => [], { resolveSnapshot, readReferenceQuotes });
+}
 
 describe("selectable odds drop reference venue runtime", () => {
   beforeEach(() => {

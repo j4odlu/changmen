@@ -25,7 +25,7 @@ vi.mock("@/components/match/CreateLoseDialog.vue", () => ({ default: {} }));
 vi.mock("@/components/match/MatchCard.vue", () => ({ default: {} }));
 vi.mock("@/components/order/ActiveBetRunView.vue", () => ({ default: {} }));
 vi.mock("@/components/user/MakeupCalcBar.vue", () => ({ default: {} }));
-vi.mock("@/extensions/pmOddsDropSignal/PmOddsDropSignalPanel.vue", () => ({ default: {} }));
+vi.mock("@/extensions/pmSignals/PmSignalsPanel.vue", () => ({ default: {} }));
 
 interface Host { children: Host[]; parent: Host | null }
 const node = (): Host => ({ children: [], parent: null });

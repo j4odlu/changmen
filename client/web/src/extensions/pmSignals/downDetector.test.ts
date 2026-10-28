@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PmOddsDropDetector } from "./detector";
+import { PmOddsDropDetector } from "./downDetector";
 
 describe("pmOddsDropDetector", () => {
   it("emits when decimal odds fall through the configured threshold", () => {

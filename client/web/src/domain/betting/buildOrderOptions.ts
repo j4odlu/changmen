@@ -2,7 +2,7 @@ import type { ViewBet, ViewMatch } from "@/models/match";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { PlatformId } from "@/types/esport";
 import type { UserConfig } from "@/types/userConfig";
-import { initialArbBaseStake, pickArbLegs } from "@changmen/arb-core";
+import { initialArbBaseStake, detectArbLegs } from "@changmen/arb-core";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { sortOptionsByWinRate } from "@/shared/winRate";
 import type { DetectionQuoteSource } from "./quoteSource";
@@ -21,7 +21,7 @@ export function buildOrderOptions(
   const totalMode = config.betMoneyMode === "total";
   if (totalMode && (!Number.isFinite(config.betMoney) || config.betMoney <= 0))
     return undefined;
-  const legs = pickArbLegs(bet, config, providerKeys, accounts, match.game);
+  const legs = detectArbLegs(bet, config, providerKeys, accounts, match.game);
   if (!legs)
     return undefined;
 

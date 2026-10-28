@@ -3,7 +3,7 @@
 defineProps<{
   label: string;
   caption: string;
-  kind: "progress" | "odds" | "odds-up";
+  kind: "progress" | "odds" | "odds-up" | "odds-move";
   count: number;
   active: boolean;
 }>();
@@ -22,6 +22,9 @@ defineEmits<{ open: [] }>();
     <svg v-if="kind === 'progress'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <rect x="5" y="4" width="14" height="17" rx="2" />
       <path d="M9 4V2h6v2M9 10h6M9 14h6M9 18h3" />
+    </svg>
+    <svg v-else-if="kind === 'odds-move'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M7 20V4m-4 4 4-4 4 4M17 4v16m-4-4 4 4 4-4" />
     </svg>
     <svg v-else-if="kind === 'odds-up'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="m4 18 6-6 4 4 6-9M14 7h6v6" />

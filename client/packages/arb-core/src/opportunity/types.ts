@@ -12,6 +12,8 @@ export interface ArbOpportunity {
   betName: string;
   homePlatform: PlatformId;
   awayPlatform: PlatformId;
+  homeItemId: string;
+  awayItemId: string;
   homeOdds: number;
   awayOdds: number;
   /** 隐含利润率，与 pickArbLegs.implied 一致 */

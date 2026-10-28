@@ -220,7 +220,7 @@ P0 按游戏和平台建立版本化资格表，核实地图获胜玩法、双�
 
 - `packages/client-core/src/models/match.ts` 提供 `ViewBet.round`、主客方向和各馆选项映射；初期不修改该共享模型。
 - `client/web/src/stores/oddsStore.ts` 提供原始赔率条目及 PM 原始卖一快照；`getOdds` 可能包含 PM 报价缓冲，不作为本信号的原始 PM 概率入口。
-- `client/web/src/extensions/pmOddsDropSignal/venueSnapshot.ts` 已有 `venue/reference - 1` 形式的差值计算可供核对，但返回的展示赔率及 `evPercent` 名称不直接沿用。
+- `client/web/src/extensions/pmSignals/downVenueSnapshot.ts` 已有 `venue/reference - 1` 形式的差值计算可供核对，但返回的展示赔率及 `evPercent` 名称不直接沿用。
 - `client/web/src/extensions/valueBet/evCalc.ts` 可参考归一化数学，不能全局放开现有 sharp 选项、修改原正 EV 行为或混用其自动下注入口。
 - `client/web/src/views/HomeView.vue` 是现有观察面板挂载点，可加入新面板；独立面板负责按开关启停，确保路由切换和反复开关不重复注册监听。
 
@@ -486,7 +486,7 @@ npx vitest run src/extensions/pmOppositeSideSignal
 - [PM 报价转换边界](../client/web/docs/PM_PRICE_QUOTE_PIPELINE.md)：原始卖一、展示缓冲与冻结订单报价的分工。
 - [合场与盘口模型](../packages/client-core/src/models/match.ts)：地图编号、主客两侧和场馆映射。
 - [实时赔率缓存](../client/web/src/stores/oddsStore.ts)：原始行情、缓存时间、锁盘和 PM 报价快照。
-- [现有跨馆快照](../client/web/src/extensions/pmOddsDropSignal/venueSnapshot.ts)：现有同侧赔率比较示例。
+- [现有跨馆快照](../client/web/src/extensions/pmSignals/downVenueSnapshot.ts)：现有同侧赔率比较示例。
 - [现有正 EV 计算](../client/web/src/extensions/valueBet/evCalc.ts)与[基准配置](../client/web/src/extensions/valueBet/evConfig.ts)：归一化计算和当前基准集合。
 - [Polymarket 官方价格说明](https://help.polymarket.com/en/articles/13364488-how-are-prices-calculated)：页面展示概率可能为中间价或最新成交价，不能等同于可买入卖一。
 - [Polymarket 官方费用说明](https://help.polymarket.com/en/articles/13364478-trading-fees)：实际交易时按市场适用规则核对费用；费用不是本策略单边观察值的替代定义。

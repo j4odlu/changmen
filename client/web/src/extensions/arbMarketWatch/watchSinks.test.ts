@@ -17,6 +17,7 @@ function makeOpp(patch: Partial<ArbOpportunity> = {}): ArbOpportunity {
     betName: "[地图1] 获胜",
     homePlatform: "PB",
     awayPlatform: "RAY",
+    homeItemId: "h1", awayItemId: "a2",
     homeOdds: 2.1,
     awayOdds: 2.2,
     implied: 1.05,

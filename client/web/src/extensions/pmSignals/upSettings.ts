@@ -1,4 +1,4 @@
-/** [changmen 扩展] pm_up 仅检测、展示；不参与选号、下单或 POD。 */
+/** [changmen 扩展] PM 涨赔策略仅检测、展示；不参与选号、下单或 POD。 */
 export interface PmUpPrefs {
   enabled: boolean;
   minRisePct: number;

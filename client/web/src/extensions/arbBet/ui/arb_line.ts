@@ -32,8 +32,8 @@ export function resolveVueElement(el: unknown): HTMLElement | null {
   return null;
 }
 
-export function oddsAnchorKey(type: PlatformId, side: BetSide): string {
-  return `${type}:${side}`;
+export function oddsAnchorKey(type: PlatformId, side: BetSide, itemId: string): string {
+  return `${type}:${side}:${itemId}`;
 }
 
 export function centerInContainer(el: HTMLElement, container: DOMRect): { x: number; y: number } {

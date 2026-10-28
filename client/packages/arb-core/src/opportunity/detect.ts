@@ -1,7 +1,7 @@
 import type { PlatformId } from "@changmen/api-contract";
 import type { ViewMatch } from "@changmen/client-core/models/match";
 import type { UserConfig } from "@changmen/client-core/types/userConfig";
-import { pickArbLegs } from "../arbitrage/pickArbLegs";
+import { detectArbLegs } from "../arbitrage/detectArbLegs";
 import type { ArbProviderScope } from "../providerKeys";
 import { resolveArbProviderKeys } from "../providerKeys";
 import type { ArbProfitAccount } from "../types";
@@ -28,7 +28,7 @@ function resolveProviderKeys(
   });
 }
 
-/** 遍历赛事列表，对每个 bet 调 pickArbLegs */
+/** 遍历赛事列表，消费与订单/连线相同的选腿快照。 */
 export function detectOpportunities(
   params: DetectOpportunitiesParams,
   scope: ArbDetectScope,
@@ -42,7 +42,7 @@ export function detectOpportunities(
       if (scope === "funded" && !providerKeys.length)
         continue;
 
-      const legs = pickArbLegs(bet, config, providerKeys, accounts, match.game);
+      const legs = detectArbLegs(bet, config, providerKeys, accounts, match.game);
       if (!legs)
         continue;
 
@@ -54,6 +54,8 @@ export function detectOpportunities(
         betName: bet.getBetName(),
         homePlatform: legs.homeItem.type,
         awayPlatform: legs.awayItem.type,
+        homeItemId: legs.homeItemId,
+        awayItemId: legs.awayItemId,
         homeOdds: legs.homeOdds,
         awayOdds: legs.awayOdds,
         implied: legs.implied,

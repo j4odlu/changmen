@@ -197,7 +197,7 @@ async function save() {
               placement="top"
               :show-after="200"
               popper-class="extensions-tab-tip"
-              content="开：9999 真下单腿只允许当前盘口 C 行赛前概率较高的一方。C 行取 PM 登记开赛时间前历史价格；无有效数据或概率相同时跳过，不消耗同图次数。默认关闭。"
+              content="开：9999 真下单腿只允许当前盘口 C 行赛前概率较高的一方。C 行取 PM 登记开赛前 1 小时历史价格；无有效数据或概率相同时跳过，不消耗同图次数。默认关闭。"
             >
               <span class="extensions-tab__tip-label">9999 仅下C行高胜率方</span>
             </el-tooltip>

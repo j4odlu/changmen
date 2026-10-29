@@ -50,7 +50,7 @@ const outcomeDetail = computed(() => winner.value
 const status = computed(() => {
   switch (result.value.status) {
     case "waiting": return "等待 VPS 历史价";
-    case "pending": return "等待登记开赛时间";
+    case "pending": return "等待登记开赛前 1 小时";
     case "missing": return "暂无历史数据";
     case "error": return "VPS 查询失败，稍后重试";
     default: return "";
@@ -59,13 +59,13 @@ const status = computed(() => {
 
 /** [changmen 扩展] 临时采用登记时间口径，不标作实际清单前最后价。 */
 const detail = computed(() => value.value
-  ? `C · ${props.bet.getBetName()} · PM 登记开赛时间前价格，非实际清单确认价。取价截止：${formatOrderTime(value.value.cutoff)}；${props.bet.homeName}记录：${formatOrderTime(value.value.homeTime)}；${props.bet.awayName}记录：${formatOrderTime(value.value.awayTime)}；采样窗口 ${value.value.resolution} 秒。`
-  : `C · ${props.bet.getBetName()} · ${status.value}；VPS 按 PM 登记开赛时间前 1 秒查询并保存该盘口历史价格。`);
+  ? `C · ${props.bet.getBetName()} · PM 登记开赛时间前 1 小时价格，非实际清单确认价。取价截止：${formatOrderTime(value.value.cutoff)}；${props.bet.homeName}记录：${formatOrderTime(value.value.homeTime)}；${props.bet.awayName}记录：${formatOrderTime(value.value.awayTime)}；采样窗口 ${value.value.resolution} 秒。`
+  : `C · ${props.bet.getBetName()} · ${status.value}；VPS 按 PM 登记开赛时间前 1 小时查询并保存该盘口历史价格。`);
 </script>
 
 <template>
   <div v-if="pm" class="item flex pm-prematch" :title="detail" @dblclick.stop>
-    <div class="item-type pm-prematch-badge" :aria-label="roundScore ? 'C：PM 局内比分及登记开赛时间前胜率' : 'C：PM 登记开赛时间前胜率'">
+    <div class="item-type pm-prematch-badge" :aria-label="roundScore ? 'C：PM 局内比分及登记开赛前 1 小时胜率' : 'C：PM 登记开赛前 1 小时胜率'">
       C
       <span v-if="awaitingSettlement" class="pm-settlement-pending" title="该地图或全场已打完，等待 PM 官方胜方确认">待结算</span>
     </div>

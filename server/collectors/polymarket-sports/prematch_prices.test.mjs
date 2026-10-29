@@ -13,28 +13,56 @@ const setup = () => {
   } };
 };
 
-test("persists per-map tokens at start minus one second, reuses DB cache after restart", async () => {
+test("persists per-map tokens at start minus one hour, reuses DB cache after restart", async () => {
   const { options, db, calls } = setup();
   assert.equal(await collectPrematchPrices(event(), options), 2);
   assert.equal(db.a.price, .435);
   assert.equal(db.b.price, .565);
-  assert.equal(db.a.cutoff, start / 1000 - 1);
+  assert.equal(db.a.cutoff, start / 1000 - 3600);
   assert.equal(await collectPrematchPrices(event(), { ...options, now: start + 60_000 }), 0);
   assert.equal(calls.length, 2);
 });
 
-test("changed registered start invalidates old values immediately and waits until new start", async () => {
+test("changed registered start invalidates old values immediately and waits until new cutoff", async () => {
   const { options, db, calls } = setup();
   await collectPrematchPrices(event(), options);
   const shifted = event();
-  shifted.markets[0].gameStartTime = new Date(start + 3600_000).toISOString();
+  shifted.markets[0].gameStartTime = new Date(start + 7200_000).toISOString();
   await collectPrematchPrices(shifted, { ...options, now: start + 60_000 });
   assert.equal(db.a.status, "pending");
   assert.equal(db.a.price, undefined);
   assert.equal(calls.length, 2);
   await collectPrematchPrices(shifted, { ...options, now: start + 3600_000 });
   assert.equal(db.a.status, "ready");
-  assert.equal(calls[2][1], (start + 3600_000) / 1000 - 1);
+  assert.equal(calls[2][1], (start + 7200_000) / 1000 - 3600);
+});
+
+test("waits before the one-hour cutoff and fetches exactly at it, before match start", async () => {
+  const { options, db, calls } = setup();
+  const cutoff = start - 3600_000;
+  await collectPrematchPrices(event(), { ...options, now: cutoff - 1000 });
+  assert.equal(db.a.status, "pending");
+  assert.equal(db.a.nextCheckAt, cutoff);
+  assert.equal(calls.length, 0);
+  await collectPrematchPrices(event(), { ...options, now: cutoff });
+  assert.equal(db.a.status, "ready");
+  assert.equal(db.a.observationTime, cutoff);
+  assert.deepEqual(calls, [["a", cutoff / 1000], ["b", cutoff / 1000]]);
+});
+
+test("replaces cached one-second-cutoff prices immediately even before their next check", async () => {
+  const { options, db, calls } = setup();
+  await collectPrematchPrices(event(), options);
+  for (const row of Object.values(db)) {
+    row.cutoff = start / 1000 - 1;
+    row.observationTime = start - 1000;
+    row.price = .9;
+  }
+  await collectPrematchPrices(event(), { ...options, now: start + 2000 });
+  assert.equal(calls.length, 4);
+  assert.equal(db.a.cutoff, start / 1000 - 3600);
+  assert.equal(db.a.price, .435);
+  assert.equal(db.a.observationTime, start - 3600_000);
 });
 
 test("retry failure preserves a valid same-cutoff observation, uses one-minute backoff", async () => {

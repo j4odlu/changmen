@@ -1,5 +1,5 @@
 import type { GammaMarket, GammaEvent, HistoryPoint, PrematchOptions, PrematchRecord } from "./types.ts";
-/** [changmen 扩展] VPS 统一取登记开赛时间前 1 秒历史价，不代表实际清单时刻。 */
+/** [changmen 扩展] VPS 统一取登记开赛时间前 1 小时历史价，不代表实际清单时刻。 */
 import { fetchPmPrematchPrices, writePmPrematchPrices } from "@changmen/db";
 
 function tokenIds(market: GammaMarket): string[] {
@@ -37,7 +37,7 @@ export async function collectPrematchPrices(event: GammaEvent | null | undefined
   const tasks = markets.flatMap(market => {
     const start = Date.parse(String(market.gameStartTime ?? ""));
     const registeredStart = Number.isFinite(start) ? start : null;
-    const cutoff = registeredStart == null ? 0 : Math.floor(start / 1000) - 1;
+    const cutoff = registeredStart == null ? 0 : Math.floor(start / 1000) - 3600;
     return tokenIds(market).map(tokenId => ({ tokenId, marketId: String(market.id), registeredStart, cutoff }));
   });
   const records: PrematchRecord[] = [];
@@ -53,8 +53,8 @@ export async function collectPrematchPrices(event: GammaEvent | null | undefined
         records.push({ ...base, status: "missing" });
         continue;
       }
-      if (task.registeredStart > now) {
-        records.push({ ...base, status: "pending", nextCheckAt: Math.min(now + 60_000, task.registeredStart) });
+      if (task.cutoff * 1000 > now) {
+        records.push({ ...base, status: "pending", nextCheckAt: Math.min(now + 60_000, task.cutoff * 1000) });
         continue;
       }
       try {

@@ -81,6 +81,16 @@ for (const [name, hash] of Object.entries(baseline.hashes)) {
       assert.equal(source.split(after).length, 2, `missing/duplicate event state hook: ${name}`);
       source = source.replace(after, before);
     }
+    // [changmen 扩展] 精确逆转赛前一小时取价变更以保留历史迁移摘要；新截止点和缓存行为由 prematch_prices.test.mjs 验证。
+    const prematchCutoffHooks = name === "prematch_prices" ? [
+      ['Math.floor(start / 1000) - 3600', 'Math.floor(start / 1000) - 1'],
+      ['if (task.cutoff * 1000 > now)', 'if (task.registeredStart > now)'],
+      ['Math.min(now + 60_000, task.cutoff * 1000)', 'Math.min(now + 60_000, task.registeredStart)'],
+    ] : [];
+    for (const [after, before] of prematchCutoffHooks) {
+      assert.equal(source.split(after).length, 2, `missing/duplicate prematch cutoff hook: ${name}`);
+      source = source.replace(after, before);
+    }
     const runtime = ts.transpileModule(source, {
       compilerOptions: { target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.ESNext, removeComments: true },
     }).outputText.replace(/(from\s+|import\s+)(["'])\.\/(index|gamma_map|gamma_poll|sport_state|resolve_match|parse_sport|prematch_prices|broadcast_notify)\.ts\2/g, "$1$2./$3.js$2");

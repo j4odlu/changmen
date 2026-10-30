@@ -31,6 +31,7 @@ function vitest(label, args) {
 /** @type {{ label: string, cmd: string, args: string[], shown?: string[] }[]} */
 const STEPS = [
   ts("shared/catalog: market", "packages/shared/catalog/market_catalog_smoke.test.ts"),
+  vitest("shared/catalog: RAY venue markets", ["run", "packages/shared/catalog/venues/ray.test.ts"]),
   ts("shared/catalog: game", "packages/shared/catalog/game_catalog_smoke.test.ts"),
   ts("shared/catalog: centralized game rules", "packages/shared/catalog/game_catalog_rules.smoke.test.ts"),
   ts("shared/catalog: sport", "packages/shared/catalog/sport_catalog_smoke.test.ts"),

@@ -1,0 +1,2508 @@
+{
+  "schemaVersion": 1,
+  "clientDate": "2026-10-27",
+  "timezone": "Asia/Taipei",
+  "scope": "Current public RAY frontend read-only source analysis, not A8 or changmen implementation.",
+  "source": {
+    "homepage": "https://ray164.com/",
+    "mainBundle": "https://ray164.com/js/app.9f7716dc.js",
+    "capturedAt": "2026-10-27T04:14:05.371Z",
+    "mainSha256": "74b70656aa23609045950bfd2f659f715075eb256c026003bd59fd9f1bd74ac2",
+    "assetCount": 9,
+    "errors": []
+  },
+  "finding": "The inspected frontend contains tag-driven rendering/parsing, a stage translation dictionary, and soccer tab classification keyed by raw stage plus English group name. It consumes group IDs and localized names from the odds API. No hardcoded table for the 1079 observed group IDs was found in inspected script assets.",
+  "stageTranslations": [
+    {
+      "line": 379,
+      "entries": {
+        "final": "全场",
+        "1st": "上半场",
+        "h2": "下半场",
+        "ot": "加时 & 点球",
+        "pt": "分",
+        "q1": "第1节",
+        "q2": "第2节",
+        "q3": "第3节",
+        "q4": "第4节",
+        "p1": "第1节",
+        "p2": "第2节",
+        "p3": "第3节",
+        "s1": "第1盘",
+        "s2": "第2盘",
+        "s3": "第3盘",
+        "s4": "第4盘",
+        "s5": "第5盘",
+        "s6": "第6盘",
+        "s7": "第7盘",
+        "s8": "第8盘",
+        "s9": "第9盘",
+        "r1": "第1局",
+        "r2": "第2局",
+        "r3": "第3局",
+        "r4": "第4局",
+        "r5": "第5局",
+        "r6": "第6局",
+        "r7": "第7局",
+        "r8": "第8局",
+        "r9": "第9局",
+        "map1": "地图1",
+        "map2": "地图2",
+        "map3": "地图3",
+        "map4": "地图4",
+        "map5": "地图5",
+        "map6": "地图6",
+        "map7": "地图7",
+        "map8": "地图8",
+        "map9": "地图9",
+        "f5in": "前5局",
+        "b1": "回合1",
+        "b2": "回合2",
+        "b3": "回合3",
+        "b4": "回合4",
+        "b5": "回合5",
+        "b6": "回合6",
+        "b7": "回合7",
+        "b8": "回合8",
+        "b9": "回合9",
+        "b10": "回合10",
+        "b11": "回合11",
+        "b12": "回合12",
+        "b13": "回合13",
+        "b14": "回合14",
+        "b15": "回合15",
+        "b16": "回合16",
+        "b17": "回合17",
+        "b18": "回合18",
+        "b19": "回合19",
+        "goals": "进球",
+        "others": "其他"
+      }
+    },
+    {
+      "line": 18943,
+      "entries": {
+        "final": "Full Match",
+        "1st": "1st half",
+        "h2": "2nd half",
+        "ot": "OT",
+        "pt": "PT",
+        "q1": "Q1",
+        "q2": "Q2",
+        "q3": "Q3",
+        "q4": "Q4",
+        "p1": "P1",
+        "p2": "P2",
+        "p3": "P3",
+        "s1": "S1",
+        "s2": "S2",
+        "s3": "S3",
+        "s4": "S4",
+        "s5": "S5",
+        "s6": "S6",
+        "s7": "S7",
+        "s8": "S8",
+        "s9": "S9",
+        "r1": "R1",
+        "r2": "R2",
+        "r3": "R3",
+        "r4": "R4",
+        "r5": "R5",
+        "r6": "R6",
+        "r7": "R7",
+        "r8": "R8",
+        "r9": "R9",
+        "map1": "Map1",
+        "map2": "Map2",
+        "map3": "Map3",
+        "map4": "Map4",
+        "map5": "Map5",
+        "map6": "Map6",
+        "map7": "Map7",
+        "map8": "Map8",
+        "map9": "Map9",
+        "f5in": "F5in",
+        "b1": "B1",
+        "b2": "B2",
+        "b3": "B3",
+        "b4": "B4",
+        "b5": "B5",
+        "b6": "B6",
+        "b7": "B7",
+        "b8": "B8",
+        "b9": "B9",
+        "b10": "B10",
+        "b11": "B11",
+        "b12": "B12",
+        "b13": "B13",
+        "b14": "B14",
+        "b15": "B15",
+        "b16": "B16",
+        "b17": "B17",
+        "b18": "B18",
+        "b19": "B19",
+        "goals": "Goals",
+        "others": "Others"
+      }
+    }
+  ],
+  "officialSoccerTabs": [
+    {
+      "key": "hot",
+      "all": false,
+      "catchAll": false,
+      "markets": [
+        "final|Handicap",
+        "final|Asian Handicap",
+        "final|Asian Handicap(Extra Time)",
+        "1st|Handicap",
+        "1st|Asian Handicap",
+        "1st|Asian Handicap(Extra Time)",
+        "final|Total Goal",
+        "final|Total Goal(Extra Time)",
+        "1st|Total Goal",
+        "1st|Total Goal(Extra Time)",
+        "final|1X2",
+        "final|1X2(Extra Time)",
+        "1st|1X2",
+        "1st|1X2(Extra Time)",
+        "goals|Correct Score",
+        "goals|1st Half-Correct Score",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-1X2",
+        "final|Total Goals",
+        "goals|1st Half-Total Goals",
+        "goals|Both Teams To Score",
+        "goals|1st Half-Both Teams To Score",
+        "goals|$T1 Total Goals",
+        "goals|$T2 Total Goals",
+        "goals|1st Half-$T1 Total Goals",
+        "goals|1st Half-$T2 Total Goals",
+        "final|Total Goal Odd/Even",
+        "1st|Total Goal Odd/Even",
+        "final|Half Time / Full Time",
+        "final|Double Chance",
+        "goals|First Goal Method",
+        "others|Corners Handicap",
+        "others|Total Corners",
+        "others|Booking Handicap",
+        "others|Total Booking",
+        "others|15 Minute Goals: 15:00-29:59 Mins-Handicap",
+        "others|15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+        "others|15 Minute Goals: 15:00-29:59 Mins-1X2",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-1X2",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-1X2",
+        "others|15 Minute Goals: 60:00-74:59 Mins-Handicap",
+        "others|15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+        "others|15 Minute Goals: 60:00-74:59 Mins-1X2",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-Total Goal",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-1X2"
+      ]
+    },
+    {
+      "key": "handicapOu",
+      "all": false,
+      "catchAll": false,
+      "markets": [
+        "final|Handicap",
+        "final|Asian Handicap",
+        "final|Asian Handicap(Extra Time)",
+        "1st|Handicap",
+        "1st|Asian Handicap",
+        "1st|Asian Handicap(Extra Time)",
+        "final|Total Goal",
+        "final|Total Goal(Extra Time)",
+        "1st|Total Goal",
+        "1st|Total Goal(Extra Time)",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+        "goals|$T1 Total Goals",
+        "goals|$T2 Total Goals",
+        "goals|1st Half-$T1 Total Goals",
+        "goals|1st Half-$T2 Total Goals",
+        "others|Corners Handicap",
+        "others|Total Corners",
+        "others|Booking Handicap",
+        "others|Total Booking",
+        "others|15 Minute Goals: 15:00-29:59 Mins-Handicap",
+        "others|15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+        "others|15 Minute Goals: 60:00-74:59 Mins-Handicap",
+        "others|15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-Total Goal"
+      ]
+    },
+    {
+      "key": "goals",
+      "all": false,
+      "catchAll": false,
+      "markets": [
+        "final|Total Goal",
+        "final|Total Goal(Extra Time)",
+        "1st|Total Goal",
+        "1st|Total Goal(Extra Time)",
+        "goals|Correct Score",
+        "goals|1st Half-Correct Score",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-1X2",
+        "final|Total Goals",
+        "goals|1st Half-Total Goals",
+        "goals|Both Teams To Score",
+        "goals|1st Half-Both Teams To Score",
+        "goals|$T1 Total Goals",
+        "goals|$T2 Total Goals",
+        "goals|1st Half-$T1 Total Goals",
+        "goals|1st Half-$T2 Total Goals",
+        "goals|Half With Most Goals-1X2",
+        "goals|First Goal Method",
+        "others|Time Of 1st Goal-3 way",
+        "others|Time of 1st Goal",
+        "others|15 Minute Goals: 15:00-29:59 Mins-Handicap",
+        "others|15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+        "others|15 Minute Goals: 15:00-29:59 Mins-1X2",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-1X2",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-1X2",
+        "others|15 Minute Goals: 60:00-74:59 Mins-Handicap",
+        "others|15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+        "others|15 Minute Goals: 60:00-74:59 Mins-1X2",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-Total Goal",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-1X2"
+      ]
+    },
+    {
+      "key": "half",
+      "all": false,
+      "catchAll": false,
+      "markets": [
+        "1st|Handicap",
+        "1st|Total Goal",
+        "1st|Total Goal(Extra Time)",
+        "1st|1X2",
+        "1st|1X2(Extra Time)",
+        "goals|1st Half-Correct Score",
+        "goals|1st Half-Total Goals",
+        "goals|1st Half-Both Teams To Score",
+        "goals|1st Half-$T1 Total Goals",
+        "goals|1st Half-$T2 Total Goals",
+        "1st|Total Goal Odd/Even",
+        "final|Half Time / Full Time",
+        "goals|Half With Most Goals-1X2"
+      ]
+    },
+    {
+      "key": "interval",
+      "all": false,
+      "catchAll": false,
+      "markets": [
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-1X2",
+        "others|15 Minute Goals: 15:00-29:59 Mins-Handicap",
+        "others|15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+        "others|15 Minute Goals: 15:00-29:59 Mins-1X2",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-1X2",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-1X2",
+        "others|15 Minute Goals: 60:00-74:59 Mins-Handicap",
+        "others|15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+        "others|15 Minute Goals: 60:00-74:59 Mins-1X2",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-Total Goal",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-1X2"
+      ]
+    },
+    {
+      "key": "corner",
+      "all": false,
+      "catchAll": false,
+      "markets": [
+        "others|Corners Handicap",
+        "others|Total Corners"
+      ]
+    },
+    {
+      "key": "booking",
+      "all": false,
+      "catchAll": false,
+      "markets": [
+        "others|Booking Handicap",
+        "others|Total Booking",
+        "others|Red Card In Match"
+      ]
+    },
+    {
+      "key": "other",
+      "all": false,
+      "catchAll": true,
+      "markets": []
+    },
+    {
+      "key": "all",
+      "all": true,
+      "catchAll": false,
+      "markets": [
+        "final|Handicap",
+        "final|Asian Handicap",
+        "final|Asian Handicap(Extra Time)",
+        "1st|Handicap",
+        "1st|Asian Handicap",
+        "1st|Asian Handicap(Extra Time)",
+        "final|Total Goal",
+        "final|Total Goal(Extra Time)",
+        "1st|Total Goal",
+        "1st|Total Goal(Extra Time)",
+        "final|1X2",
+        "final|1X2(Extra Time)",
+        "1st|1X2",
+        "1st|1X2(Extra Time)",
+        "goals|Correct Score",
+        "goals|1st Half-Correct Score",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+        "others|15 Minute Goals: Start Of Match-14:59 Mins-1X2",
+        "final|Total Goals",
+        "goals|1st Half-Total Goals",
+        "goals|Both Teams To Score",
+        "goals|1st Half-Both Teams To Score",
+        "goals|$T1 Total Goals",
+        "goals|$T2 Total Goals",
+        "goals|1st Half-$T1 Total Goals",
+        "goals|1st Half-$T2 Total Goals",
+        "final|Total Goal Odd/Even",
+        "1st|Total Goal Odd/Even",
+        "final|Half Time / Full Time",
+        "final|Double Chance",
+        "others|Corners Handicap",
+        "others|Total Corners",
+        "others|Booking Handicap",
+        "others|Total Booking",
+        "others|Red Card In Match",
+        "goals|Half With Most Goals-1X2",
+        "goals|First Goal Method",
+        "others|Time Of 1st Goal-3 way",
+        "others|Time of 1st Goal",
+        "others|15 Minute Goals: 15:00-29:59 Mins-Handicap",
+        "others|15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+        "others|15 Minute Goals: 15:00-29:59 Mins-1X2",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+        "others|15 Minute Goals: 30:00 Mins-Half Time-1X2",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+        "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-1X2",
+        "others|15 Minute Goals: 60:00-74:59 Mins-Handicap",
+        "others|15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+        "others|15 Minute Goals: 60:00-74:59 Mins-1X2",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-Total Goal",
+        "others|15 Minute Goals: 75:00 Mins-Full Time-1X2"
+      ]
+    }
+  ],
+  "sourceLocations": {
+    "onClick": {
+      "prettyLine": 2257,
+      "prettyEndLine": 2259
+    },
+    "showLockIcon": {
+      "prettyLine": 2287,
+      "prettyEndLine": 2290
+    },
+    "getGroupName": {
+      "prettyLine": 3784,
+      "prettyEndLine": 3795
+    },
+    "getGroup": {
+      "prettyLine": 3805,
+      "prettyEndLine": 3807
+    },
+    "getTeamName": {
+      "prettyLine": 3807,
+      "prettyEndLine": 3809
+    },
+    "leftTeam": {
+      "prettyLine": 3950,
+      "prettyEndLine": 3954
+    },
+    "rightTeam": {
+      "prettyLine": 3954,
+      "prettyEndLine": 3958
+    },
+    "showGroup": {
+      "prettyLine": 3616,
+      "prettyEndLine": 3621
+    },
+    "groupIsOver": {
+      "prettyLine": 3621,
+      "prettyEndLine": 3625
+    },
+    "parseAhdpValue": {
+      "prettyLine": 3642,
+      "prettyEndLine": 3645
+    },
+    "getOddsName": {
+      "prettyLine": 3645,
+      "prettyEndLine": 3662
+    },
+    "oddsToGroupList": {
+      "prettyLine": 3662,
+      "prettyEndLine": 3692
+    },
+    "getScoreOrder": {
+      "prettyLine": 3692,
+      "prettyEndLine": 3699
+    },
+    "groupToStageList": {
+      "prettyLine": 3699,
+      "prettyEndLine": 3709
+    },
+    "sortByPosition": {
+      "prettyLine": 3709,
+      "prettyEndLine": 3714
+    },
+    "sortByValue": {
+      "prettyLine": 3714,
+      "prettyEndLine": 3718
+    },
+    "sortByInt": {
+      "prettyLine": 3718,
+      "prettyEndLine": 3725
+    },
+    "sortByOverUnder": {
+      "prettyLine": 3725,
+      "prettyEndLine": 3727
+    },
+    "sortButton": {
+      "prettyLine": 3727,
+      "prettyEndLine": 3763
+    },
+    "getVisibleOdds": {
+      "prettyLine": 3763,
+      "prettyEndLine": 3774
+    },
+    "getBaseGroupName": {
+      "prettyLine": 3802,
+      "prettyEndLine": 3805
+    },
+    "isSoccer": {
+      "prettyLine": 3982,
+      "prettyEndLine": 3987
+    }
+  },
+  "parseAndDisplayRules": {
+    "normalGrouping": "odds_group_id + match_stage; all concrete options remain in groupOddsList.",
+    "asianHandicapGrouping": "odds_group_id + match_stage + parsed score prefix.",
+    "handicapSorting": "Split by left/right team identity, order signed lines oppositely, place visible status 1/2 before remaining; rendering order is not a settlement-equivalence proof.",
+    "totalsSorting": "Order over/under values then numeric thresholds and interleave two halves.",
+    "teamNames": "getGroup reads Chinese group_name / English group_short_name / Vietnamese API dictionary; $T1/$T2 placeholders replaced with pos 1/2 team names.",
+    "optionLabels": "tag controls formatting; ou parses >/< for over/under; hdp uses team plus signed value; text selection families use value; crs and acrs use score labels.",
+    "asianHandicap": "parseAhdpValue splits a score-looking prefix before comma into score and remaining value into line; display group includes score.",
+    "stage": "groupToStageList retains raw match_stage and translates through Match.Stage, not a numeric Map.",
+    "status": "showGroup accepts 1/2/5 for presentation. Odds button onClick requires status=1 and no lock; lock shown for status=2 or status=1 and odds<1.01. Presentation state is not execution eligibility.",
+    "round": "matchTitle/streamLeagueName call round.toUpperCase() directly. BO4 display is a source label, not a frontend interpretation of basketball rules."
+  },
+  "replayValidation": {
+    "method": "AST-extracted reviewed pure frontend methods replayed in isolated VM with minimal display/helper stubs; no full application execution, network access or order actions.",
+    "events": 236,
+    "options": 33769,
+    "preservedOptions": 33769,
+    "allOptionsPreserved": true,
+    "ahdpTests": [
+      {
+        "value": "0-0,+0.25",
+        "actual": {
+          "score": "0-0",
+          "line": "+0.25"
+        }
+      },
+      {
+        "value": "2-1,-0.75",
+        "actual": {
+          "score": "2-1",
+          "line": "-0.75"
+        }
+      },
+      {
+        "value": "+1.5",
+        "actual": {
+          "score": "",
+          "line": "+1.5"
+        }
+      }
+    ],
+    "betStates": [
+      {
+        "status": 1,
+        "odds": "1.9",
+        "showLock": false
+      },
+      {
+        "status": 1,
+        "odds": "1.00",
+        "showLock": true
+      },
+      {
+        "status": 2,
+        "odds": "1.9",
+        "showLock": true
+      },
+      {
+        "status": 4,
+        "odds": "1.9",
+        "showLock": false
+      },
+      {
+        "status": 5,
+        "odds": "1.9",
+        "showLock": false
+      }
+    ],
+    "teamLabelTests": [
+      {
+        "groupId": 18478287,
+        "rawName": "$T1 总分大小(含加时)",
+        "actual": "丹佛掘金 总分大小(含加时)"
+      },
+      {
+        "groupId": 18478621,
+        "rawName": "$T2 总分大小(含加时）",
+        "actual": "金州勇士 总分大小(含加时）"
+      }
+    ],
+    "soccerCoverage": {
+      "observedGroupCodes": 45,
+      "matched": 44,
+      "unmatched": [
+        {
+          "groupId": "3304446",
+          "key": "final|Winner",
+          "name": "冠军"
+        }
+      ],
+      "semanticKeys": 55
+    },
+    "knownGroupIdLiteralHitsInMain": 0,
+    "numericTokenHitsAcrossAssets": [],
+    "eventsChecked": [
+      {
+        "matchId": 38460427,
+        "game": "英雄联盟",
+        "inputOptions": 97,
+        "groupCount": 46,
+        "preservedOptions": 97,
+        "rawGroupCount": 46
+      },
+      {
+        "matchId": 38462828,
+        "game": "英雄联盟",
+        "inputOptions": 417,
+        "groupCount": 170,
+        "preservedOptions": 417,
+        "rawGroupCount": 170
+      },
+      {
+        "matchId": 38462834,
+        "game": "英雄联盟",
+        "inputOptions": 427,
+        "groupCount": 164,
+        "preservedOptions": 427,
+        "rawGroupCount": 164
+      },
+      {
+        "matchId": 38462840,
+        "game": "英雄联盟",
+        "inputOptions": 425,
+        "groupCount": 164,
+        "preservedOptions": 425,
+        "rawGroupCount": 164
+      },
+      {
+        "matchId": 38462831,
+        "game": "英雄联盟",
+        "inputOptions": 397,
+        "groupCount": 164,
+        "preservedOptions": 397,
+        "rawGroupCount": 164
+      },
+      {
+        "matchId": 38462837,
+        "game": "英雄联盟",
+        "inputOptions": 401,
+        "groupCount": 164,
+        "preservedOptions": 401,
+        "rawGroupCount": 164
+      },
+      {
+        "matchId": 38462843,
+        "game": "英雄联盟",
+        "inputOptions": 449,
+        "groupCount": 164,
+        "preservedOptions": 449,
+        "rawGroupCount": 164
+      },
+      {
+        "matchId": 38459732,
+        "game": "王者荣耀",
+        "inputOptions": 675,
+        "groupCount": 319,
+        "preservedOptions": 675,
+        "rawGroupCount": 319
+      },
+      {
+        "matchId": 38459735,
+        "game": "王者荣耀",
+        "inputOptions": 675,
+        "groupCount": 319,
+        "preservedOptions": 675,
+        "rawGroupCount": 319
+      },
+      {
+        "matchId": 38462675,
+        "game": "守望先锋",
+        "inputOptions": 2,
+        "groupCount": 1,
+        "preservedOptions": 2,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38459738,
+        "game": "王者荣耀",
+        "inputOptions": 673,
+        "groupCount": 319,
+        "preservedOptions": 673,
+        "rawGroupCount": 319
+      },
+      {
+        "matchId": 38459741,
+        "game": "王者荣耀",
+        "inputOptions": 673,
+        "groupCount": 319,
+        "preservedOptions": 673,
+        "rawGroupCount": 319
+      },
+      {
+        "matchId": 38462681,
+        "game": "守望先锋",
+        "inputOptions": 2,
+        "groupCount": 1,
+        "preservedOptions": 2,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462684,
+        "game": "守望先锋",
+        "inputOptions": 2,
+        "groupCount": 1,
+        "preservedOptions": 2,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462678,
+        "game": "守望先锋",
+        "inputOptions": 2,
+        "groupCount": 1,
+        "preservedOptions": 2,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462687,
+        "game": "守望先锋",
+        "inputOptions": 2,
+        "groupCount": 1,
+        "preservedOptions": 2,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462690,
+        "game": "守望先锋",
+        "inputOptions": 2,
+        "groupCount": 1,
+        "preservedOptions": 2,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462792,
+        "game": "CS2",
+        "inputOptions": 428,
+        "groupCount": 190,
+        "preservedOptions": 428,
+        "rawGroupCount": 190
+      },
+      {
+        "matchId": 38462795,
+        "game": "CS2",
+        "inputOptions": 526,
+        "groupCount": 247,
+        "preservedOptions": 526,
+        "rawGroupCount": 247
+      },
+      {
+        "matchId": 38459667,
+        "game": "CS2",
+        "inputOptions": 510,
+        "groupCount": 232,
+        "preservedOptions": 510,
+        "rawGroupCount": 232
+      },
+      {
+        "matchId": 38459338,
+        "game": "CS2",
+        "inputOptions": 496,
+        "groupCount": 232,
+        "preservedOptions": 496,
+        "rawGroupCount": 232
+      },
+      {
+        "matchId": 38462798,
+        "game": "CS2",
+        "inputOptions": 526,
+        "groupCount": 247,
+        "preservedOptions": 526,
+        "rawGroupCount": 247
+      },
+      {
+        "matchId": 38462801,
+        "game": "CS2",
+        "inputOptions": 526,
+        "groupCount": 247,
+        "preservedOptions": 526,
+        "rawGroupCount": 247
+      },
+      {
+        "matchId": 38462804,
+        "game": "CS2",
+        "inputOptions": 526,
+        "groupCount": 247,
+        "preservedOptions": 526,
+        "rawGroupCount": 247
+      },
+      {
+        "matchId": 38462807,
+        "game": "CS2",
+        "inputOptions": 530,
+        "groupCount": 247,
+        "preservedOptions": 530,
+        "rawGroupCount": 247
+      },
+      {
+        "matchId": 38462825,
+        "game": "DOTA2",
+        "inputOptions": 110,
+        "groupCount": 49,
+        "preservedOptions": 110,
+        "rawGroupCount": 49
+      },
+      {
+        "matchId": 38462723,
+        "game": "DOTA2",
+        "inputOptions": 104,
+        "groupCount": 52,
+        "preservedOptions": 104,
+        "rawGroupCount": 52
+      },
+      {
+        "matchId": 38462819,
+        "game": "DOTA2",
+        "inputOptions": 112,
+        "groupCount": 47,
+        "preservedOptions": 112,
+        "rawGroupCount": 47
+      },
+      {
+        "matchId": 38462720,
+        "game": "DOTA2",
+        "inputOptions": 70,
+        "groupCount": 35,
+        "preservedOptions": 70,
+        "rawGroupCount": 35
+      },
+      {
+        "matchId": 38462822,
+        "game": "DOTA2",
+        "inputOptions": 106,
+        "groupCount": 47,
+        "preservedOptions": 106,
+        "rawGroupCount": 47
+      },
+      {
+        "matchId": 38450023,
+        "game": "足球",
+        "inputOptions": 201,
+        "groupCount": 44,
+        "preservedOptions": 201,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460349,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450083,
+        "game": "足球",
+        "inputOptions": 199,
+        "groupCount": 44,
+        "preservedOptions": 199,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38462514,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38450086,
+        "game": "足球",
+        "inputOptions": 201,
+        "groupCount": 44,
+        "preservedOptions": 201,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450026,
+        "game": "足球",
+        "inputOptions": 197,
+        "groupCount": 44,
+        "preservedOptions": 197,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450029,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450032,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38461945,
+        "game": "篮球",
+        "inputOptions": 176,
+        "groupCount": 21,
+        "preservedOptions": 176,
+        "rawGroupCount": 21
+      },
+      {
+        "matchId": 38462741,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462972,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462738,
+        "game": "篮球",
+        "inputOptions": 30,
+        "groupCount": 6,
+        "preservedOptions": 30,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462981,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462975,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462978,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462948,
+        "game": "FIFA",
+        "inputOptions": 9,
+        "groupCount": 4,
+        "preservedOptions": 9,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38462927,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462951,
+        "game": "FIFA",
+        "inputOptions": 9,
+        "groupCount": 4,
+        "preservedOptions": 9,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38462960,
+        "game": "FIFA",
+        "inputOptions": 9,
+        "groupCount": 4,
+        "preservedOptions": 9,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38462957,
+        "game": "FIFA",
+        "inputOptions": 9,
+        "groupCount": 4,
+        "preservedOptions": 9,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38462954,
+        "game": "FIFA",
+        "inputOptions": 9,
+        "groupCount": 4,
+        "preservedOptions": 9,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38462963,
+        "game": "FIFA",
+        "inputOptions": 9,
+        "groupCount": 4,
+        "preservedOptions": 9,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38462966,
+        "game": "FIFA",
+        "inputOptions": 9,
+        "groupCount": 4,
+        "preservedOptions": 9,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38462969,
+        "game": "FIFA",
+        "inputOptions": 9,
+        "groupCount": 4,
+        "preservedOptions": 9,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38460821,
+        "game": "穿越火线",
+        "inputOptions": 6,
+        "groupCount": 3,
+        "preservedOptions": 6,
+        "rawGroupCount": 3
+      },
+      {
+        "matchId": 38460818,
+        "game": "穿越火线",
+        "inputOptions": 18,
+        "groupCount": 9,
+        "preservedOptions": 18,
+        "rawGroupCount": 9
+      },
+      {
+        "matchId": 38460815,
+        "game": "穿越火线",
+        "inputOptions": 34,
+        "groupCount": 16,
+        "preservedOptions": 34,
+        "rawGroupCount": 16
+      },
+      {
+        "matchId": 38460824,
+        "game": "穿越火线",
+        "inputOptions": 6,
+        "groupCount": 3,
+        "preservedOptions": 6,
+        "rawGroupCount": 3
+      },
+      {
+        "matchId": 38460830,
+        "game": "穿越火线",
+        "inputOptions": 6,
+        "groupCount": 3,
+        "preservedOptions": 6,
+        "rawGroupCount": 3
+      },
+      {
+        "matchId": 38460827,
+        "game": "穿越火线",
+        "inputOptions": 6,
+        "groupCount": 3,
+        "preservedOptions": 6,
+        "rawGroupCount": 3
+      },
+      {
+        "matchId": 38462487,
+        "game": "无畏契约",
+        "inputOptions": 262,
+        "groupCount": 130,
+        "preservedOptions": 262,
+        "rawGroupCount": 130
+      },
+      {
+        "matchId": 38461262,
+        "game": "无畏契约",
+        "inputOptions": 268,
+        "groupCount": 133,
+        "preservedOptions": 268,
+        "rawGroupCount": 133
+      },
+      {
+        "matchId": 38461265,
+        "game": "无畏契约",
+        "inputOptions": 268,
+        "groupCount": 133,
+        "preservedOptions": 268,
+        "rawGroupCount": 133
+      },
+      {
+        "matchId": 38462264,
+        "game": "无畏契约",
+        "inputOptions": 262,
+        "groupCount": 130,
+        "preservedOptions": 262,
+        "rawGroupCount": 130
+      },
+      {
+        "matchId": 38462261,
+        "game": "无畏契约",
+        "inputOptions": 262,
+        "groupCount": 130,
+        "preservedOptions": 262,
+        "rawGroupCount": 130
+      },
+      {
+        "matchId": 38462258,
+        "game": "无畏契约",
+        "inputOptions": 262,
+        "groupCount": 130,
+        "preservedOptions": 262,
+        "rawGroupCount": 130
+      },
+      {
+        "matchId": 38458100,
+        "game": "无尽对决",
+        "inputOptions": 8,
+        "groupCount": 4,
+        "preservedOptions": 8,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38458190,
+        "game": "无尽对决",
+        "inputOptions": 8,
+        "groupCount": 4,
+        "preservedOptions": 8,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38457542,
+        "game": "传说对决",
+        "inputOptions": 2,
+        "groupCount": 1,
+        "preservedOptions": 2,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38458103,
+        "game": "无尽对决",
+        "inputOptions": 8,
+        "groupCount": 4,
+        "preservedOptions": 8,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38458193,
+        "game": "无尽对决",
+        "inputOptions": 8,
+        "groupCount": 4,
+        "preservedOptions": 8,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38461301,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461313,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461307,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461319,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461304,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461316,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461310,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461322,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461394,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461373,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461457,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461415,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461436,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461478,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461501,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461522,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462653,
+        "game": "CS2",
+        "inputOptions": 58,
+        "groupCount": 18,
+        "preservedOptions": 58,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462699,
+        "game": "足球",
+        "inputOptions": 26,
+        "groupCount": 10,
+        "preservedOptions": 26,
+        "rawGroupCount": 10
+      },
+      {
+        "matchId": 38462696,
+        "game": "足球",
+        "inputOptions": 26,
+        "groupCount": 10,
+        "preservedOptions": 26,
+        "rawGroupCount": 10
+      },
+      {
+        "matchId": 38462705,
+        "game": "足球",
+        "inputOptions": 28,
+        "groupCount": 10,
+        "preservedOptions": 28,
+        "rawGroupCount": 10
+      },
+      {
+        "matchId": 38462702,
+        "game": "足球",
+        "inputOptions": 26,
+        "groupCount": 10,
+        "preservedOptions": 26,
+        "rawGroupCount": 10
+      },
+      {
+        "matchId": 38459670,
+        "game": "CS2",
+        "inputOptions": 498,
+        "groupCount": 232,
+        "preservedOptions": 498,
+        "rawGroupCount": 232
+      },
+      {
+        "matchId": 38462708,
+        "game": "足球",
+        "inputOptions": 28,
+        "groupCount": 10,
+        "preservedOptions": 28,
+        "rawGroupCount": 10
+      },
+      {
+        "matchId": 38462656,
+        "game": "CS2",
+        "inputOptions": 58,
+        "groupCount": 18,
+        "preservedOptions": 58,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462726,
+        "game": "CS2",
+        "inputOptions": 326,
+        "groupCount": 152,
+        "preservedOptions": 326,
+        "rawGroupCount": 152
+      },
+      {
+        "matchId": 38462711,
+        "game": "足球",
+        "inputOptions": 28,
+        "groupCount": 10,
+        "preservedOptions": 28,
+        "rawGroupCount": 10
+      },
+      {
+        "matchId": 38462729,
+        "game": "CS2",
+        "inputOptions": 326,
+        "groupCount": 152,
+        "preservedOptions": 326,
+        "rawGroupCount": 152
+      },
+      {
+        "matchId": 38459341,
+        "game": "CS2",
+        "inputOptions": 504,
+        "groupCount": 232,
+        "preservedOptions": 504,
+        "rawGroupCount": 232
+      },
+      {
+        "matchId": 38462924,
+        "game": "篮球",
+        "inputOptions": 18,
+        "groupCount": 4,
+        "preservedOptions": 18,
+        "rawGroupCount": 4
+      },
+      {
+        "matchId": 38444835,
+        "game": "篮球",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38459344,
+        "game": "CS2",
+        "inputOptions": 496,
+        "groupCount": 232,
+        "preservedOptions": 496,
+        "rawGroupCount": 232
+      },
+      {
+        "matchId": 38462423,
+        "game": "足球",
+        "inputOptions": 121,
+        "groupCount": 18,
+        "preservedOptions": 121,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462810,
+        "game": "CS2",
+        "inputOptions": 454,
+        "groupCount": 211,
+        "preservedOptions": 454,
+        "rawGroupCount": 211
+      },
+      {
+        "matchId": 38459673,
+        "game": "CS2",
+        "inputOptions": 498,
+        "groupCount": 232,
+        "preservedOptions": 498,
+        "rawGroupCount": 232
+      },
+      {
+        "matchId": 38462426,
+        "game": "足球",
+        "inputOptions": 121,
+        "groupCount": 18,
+        "preservedOptions": 121,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462732,
+        "game": "CS2",
+        "inputOptions": 326,
+        "groupCount": 152,
+        "preservedOptions": 326,
+        "rawGroupCount": 152
+      },
+      {
+        "matchId": 38459347,
+        "game": "CS2",
+        "inputOptions": 496,
+        "groupCount": 232,
+        "preservedOptions": 496,
+        "rawGroupCount": 232
+      },
+      {
+        "matchId": 38462435,
+        "game": "足球",
+        "inputOptions": 121,
+        "groupCount": 18,
+        "preservedOptions": 121,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462429,
+        "game": "足球",
+        "inputOptions": 121,
+        "groupCount": 18,
+        "preservedOptions": 121,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462432,
+        "game": "足球",
+        "inputOptions": 121,
+        "groupCount": 18,
+        "preservedOptions": 121,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462930,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462441,
+        "game": "足球",
+        "inputOptions": 121,
+        "groupCount": 18,
+        "preservedOptions": 121,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462438,
+        "game": "足球",
+        "inputOptions": 121,
+        "groupCount": 18,
+        "preservedOptions": 121,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462990,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462987,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462984,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462933,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462936,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38459676,
+        "game": "CS2",
+        "inputOptions": 508,
+        "groupCount": 232,
+        "preservedOptions": 508,
+        "rawGroupCount": 232
+      },
+      {
+        "matchId": 38462939,
+        "game": "篮球",
+        "inputOptions": 22,
+        "groupCount": 6,
+        "preservedOptions": 22,
+        "rawGroupCount": 6
+      },
+      {
+        "matchId": 38462662,
+        "game": "CS2",
+        "inputOptions": 58,
+        "groupCount": 18,
+        "preservedOptions": 58,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462659,
+        "game": "CS2",
+        "inputOptions": 58,
+        "groupCount": 18,
+        "preservedOptions": 58,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462444,
+        "game": "足球",
+        "inputOptions": 120,
+        "groupCount": 19,
+        "preservedOptions": 120,
+        "rawGroupCount": 19
+      },
+      {
+        "matchId": 38462447,
+        "game": "足球",
+        "inputOptions": 117,
+        "groupCount": 18,
+        "preservedOptions": 117,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38462450,
+        "game": "足球",
+        "inputOptions": 120,
+        "groupCount": 19,
+        "preservedOptions": 120,
+        "rawGroupCount": 19
+      },
+      {
+        "matchId": 38461564,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461543,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462665,
+        "game": "CS2",
+        "inputOptions": 58,
+        "groupCount": 18,
+        "preservedOptions": 58,
+        "rawGroupCount": 18
+      },
+      {
+        "matchId": 38461585,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461606,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461627,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461690,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461648,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461669,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461753,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461732,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461711,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461816,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461774,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461795,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461837,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38411050,
+        "game": "足球",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461858,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461948,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461879,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461912,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462063,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461999,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462032,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462153,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462090,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462117,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462216,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462174,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38462195,
+        "game": "Apex 英雄",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461295,
+        "game": "永劫无间",
+        "inputOptions": 2,
+        "groupCount": 1,
+        "preservedOptions": 2,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461298,
+        "game": "永劫无间",
+        "inputOptions": 2,
+        "groupCount": 1,
+        "preservedOptions": 2,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38420698,
+        "game": "足球",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38461331,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461325,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461328,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461340,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461334,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38461337,
+        "game": "永劫无间",
+        "inputOptions": 4,
+        "groupCount": 2,
+        "preservedOptions": 4,
+        "rawGroupCount": 2
+      },
+      {
+        "matchId": 38458257,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38413162,
+        "game": "足球",
+        "inputOptions": 20,
+        "groupCount": 1,
+        "preservedOptions": 20,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38450035,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38445034,
+        "game": "篮球",
+        "inputOptions": 18,
+        "groupCount": 1,
+        "preservedOptions": 18,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38450038,
+        "game": "足球",
+        "inputOptions": 201,
+        "groupCount": 44,
+        "preservedOptions": 201,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450089,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450092,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450095,
+        "game": "足球",
+        "inputOptions": 197,
+        "groupCount": 44,
+        "preservedOptions": 197,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450041,
+        "game": "足球",
+        "inputOptions": 197,
+        "groupCount": 44,
+        "preservedOptions": 197,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450044,
+        "game": "足球",
+        "inputOptions": 197,
+        "groupCount": 44,
+        "preservedOptions": 197,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450098,
+        "game": "足球",
+        "inputOptions": 199,
+        "groupCount": 44,
+        "preservedOptions": 199,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450101,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450047,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450104,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450107,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460352,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38434860,
+        "game": "足球",
+        "inputOptions": 36,
+        "groupCount": 1,
+        "preservedOptions": 36,
+        "rawGroupCount": 1
+      },
+      {
+        "matchId": 38450110,
+        "game": "足球",
+        "inputOptions": 197,
+        "groupCount": 44,
+        "preservedOptions": 197,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460361,
+        "game": "足球",
+        "inputOptions": 197,
+        "groupCount": 44,
+        "preservedOptions": 197,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460355,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460358,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460364,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460370,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460367,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460379,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460373,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460376,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460388,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460385,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460382,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460397,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460394,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460391,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38460400,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38462520,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462517,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462532,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462526,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462529,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462541,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462535,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462538,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462544,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462547,
+        "game": "足球",
+        "inputOptions": 189,
+        "groupCount": 43,
+        "preservedOptions": 189,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462550,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462559,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462556,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462553,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462562,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462574,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462571,
+        "game": "足球",
+        "inputOptions": 183,
+        "groupCount": 43,
+        "preservedOptions": 183,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462744,
+        "game": "足球",
+        "inputOptions": 190,
+        "groupCount": 43,
+        "preservedOptions": 190,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38450156,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450159,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450165,
+        "game": "足球",
+        "inputOptions": 197,
+        "groupCount": 44,
+        "preservedOptions": 197,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450162,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38462747,
+        "game": "足球",
+        "inputOptions": 190,
+        "groupCount": 43,
+        "preservedOptions": 190,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462753,
+        "game": "足球",
+        "inputOptions": 190,
+        "groupCount": 43,
+        "preservedOptions": 190,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38450168,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38462750,
+        "game": "足球",
+        "inputOptions": 190,
+        "groupCount": 43,
+        "preservedOptions": 190,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462756,
+        "game": "足球",
+        "inputOptions": 190,
+        "groupCount": 43,
+        "preservedOptions": 190,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38450171,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38462759,
+        "game": "足球",
+        "inputOptions": 190,
+        "groupCount": 43,
+        "preservedOptions": 190,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38450177,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450174,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38450180,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38462765,
+        "game": "足球",
+        "inputOptions": 190,
+        "groupCount": 43,
+        "preservedOptions": 190,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38450183,
+        "game": "足球",
+        "inputOptions": 195,
+        "groupCount": 44,
+        "preservedOptions": 195,
+        "rawGroupCount": 44
+      },
+      {
+        "matchId": 38462762,
+        "game": "足球",
+        "inputOptions": 190,
+        "groupCount": 43,
+        "preservedOptions": 190,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462768,
+        "game": "足球",
+        "inputOptions": 190,
+        "groupCount": 43,
+        "preservedOptions": 190,
+        "rawGroupCount": 43
+      },
+      {
+        "matchId": 38462771,
+        "game": "足球",
+        "inputOptions": 190,
+        "groupCount": 43,
+        "preservedOptions": 190,
+        "rawGroupCount": 43
+      }
+    ]
+  },
+  "implications": [
+    "Use official generic field parsing and preserve all options; the official frontend does not collapse all lines into one pair.",
+    "Build changmen cross-venue semantic mapping from API-defined group identity and scope, with official source tables as evidence; the frontend UI is not itself a full cross-venue hedge/settlement mapping.",
+    "The soccer table is reusable as a classification reference but its tab categories overlap; do not treat a tab as a unique settlement market type.",
+    "Stage labels can be recognized from source even when a market with that stage was not seen in the snapshot; this does not establish the group IDs for unobserved q2/q4/h2 markets.",
+    "Official sorting is UI behavior. Hedge pairing must still match exact predicates, signed lines, score context, overtime and settlement rules."
+  ],
+  "limitations": [
+    "No official group-ID-to-settlement dictionary was found in these assets; absence is scoped to the nine downloaded current script resources.",
+    "Original third-party bundles are retained in ignored tmp_ray_frontend for inspection; evidence records URLs, SHA256 hashes and formatted line locations.",
+    "No product code changed; no credentials are included in this report."
+  ]
+}

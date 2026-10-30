@@ -1,0 +1,1736 @@
+{
+  "schemaVersion": 1,
+  "documentType": "venue_frontend_market_rules",
+  "provider": "RAY",
+  "version": "2026-10-27.1",
+  "updatedAt": "2026-10-27",
+  "title": "Ray 官网盘口解析、分组与展示规则参考",
+  "description": "供后续 Ray 场馆适配使用的结构化规则文档。内容来自官网当前前端脚本及其纯函数重放，不是跨场馆对冲或完整结算规则。",
+  "usage": {
+    "status": "reference_only",
+    "runtimeIntegrated": false,
+    "existingMarketCatalogChanged": false,
+    "representation": "declarative_reference",
+    "scope": [
+      "esports",
+      "sports"
+    ],
+    "sourceEvidence": "ray_official_frontend",
+    "notes": [
+      "本文件尚未被当前采集、合场或下单链路读取；后续接入需显式实现消费者。",
+      "保留源站原始字段、周期代码、带方向分数线和全部选项，不将未知项默认成全场或胜负。",
+      "本文件未写入从 API 样本反推的 1079 个组代码；官网脚本未发现这批组 ID 的硬编码字典。"
+    ]
+  },
+  "provenance": {
+    "homepage": "https://ray164.com/",
+    "mainBundle": {
+      "url": "https://ray164.com/js/app.9f7716dc.js",
+      "sha256": "74b70656aa23609045950bfd2f659f715075eb256c026003bd59fd9f1bd74ac2",
+      "capturedAt": "2026-10-27T04:14:05.371Z"
+    },
+    "scriptAssetCount": 9,
+    "evidence": {
+      "report": "docs/audits/2026-10-27-ray-frontend/frontend-rules.json",
+      "assets": "docs/audits/2026-10-27-ray-frontend/source-assets.json",
+      "apiComparison": "docs/audits/2026-10-27-ray-cross-sport/comparison.json"
+    },
+    "ruleEvidenceKinds": {
+      "official_source": "官网脚本直接可追溯的处理规则",
+      "source_replay": "从官网提取的纯函数在样本上的重放结果",
+      "integration_note": "changmen 后续接入时需要遵守的范围说明，不冒充源站业务语义"
+    }
+  },
+  "sourceFields": {
+    "gameId": {
+      "field": "game_id",
+      "purpose": "项目身份；不能仅据此判定真实赛事、虚拟赛事或冠军竞猜"
+    },
+    "eventId": {
+      "field": "match_id",
+      "eventContainerField": "id"
+    },
+    "groupId": {
+      "field": "odds_group_id",
+      "purpose": "玩法分组标识，同组可含多个分数线与选项"
+    },
+    "optionId": {
+      "field": "odds_id",
+      "purpose": "具体投注选项；官网投注单以此判断是否已选中"
+    },
+    "stage": {
+      "field": "match_stage",
+      "preserveRaw": true
+    },
+    "tag": {
+      "field": "tag",
+      "purpose": "选择展示与解析分支；不单独确定统计对象、周期或结算语义"
+    },
+    "value": {
+      "field": "value",
+      "preserveRaw": true
+    },
+    "team": {
+      "field": "team_id",
+      "positionField": "team[].pos",
+      "leftPosition": 1,
+      "rightPosition": 2
+    },
+    "localizedNames": {
+      "zh": "group_name",
+      "en": "group_short_name",
+      "vi": {
+        "lookupKey": "group_short_name",
+        "dictionaryEndpoint": "/v2/i18n",
+        "fallback": "group_short_name"
+      }
+    },
+    "optionName": {
+      "field": "name"
+    },
+    "displayOrder": {
+      "field": "sort_index",
+      "direction": "descending"
+    },
+    "status": {
+      "field": "status",
+      "scope": "option_not_event_status"
+    },
+    "result": {
+      "field": "win",
+      "scope": "option_result_not_event_state"
+    }
+  },
+  "stageLabels": {
+    "evidence": "official_source",
+    "sourceKeyPrefix": "Match.Stage.",
+    "preserveCode": true,
+    "unknownFallback": "preserve_raw_without_period_inference",
+    "entries": {
+      "final": {
+        "zh": "全场",
+        "en": "Full Match"
+      },
+      "1st": {
+        "zh": "上半场",
+        "en": "1st half"
+      },
+      "h2": {
+        "zh": "下半场",
+        "en": "2nd half"
+      },
+      "ot": {
+        "zh": "加时 & 点球",
+        "en": "OT"
+      },
+      "pt": {
+        "zh": "分",
+        "en": "PT"
+      },
+      "q1": {
+        "zh": "第1节",
+        "en": "Q1"
+      },
+      "q2": {
+        "zh": "第2节",
+        "en": "Q2"
+      },
+      "q3": {
+        "zh": "第3节",
+        "en": "Q3"
+      },
+      "q4": {
+        "zh": "第4节",
+        "en": "Q4"
+      },
+      "p1": {
+        "zh": "第1节",
+        "en": "P1"
+      },
+      "p2": {
+        "zh": "第2节",
+        "en": "P2"
+      },
+      "p3": {
+        "zh": "第3节",
+        "en": "P3"
+      },
+      "s1": {
+        "zh": "第1盘",
+        "en": "S1"
+      },
+      "s2": {
+        "zh": "第2盘",
+        "en": "S2"
+      },
+      "s3": {
+        "zh": "第3盘",
+        "en": "S3"
+      },
+      "s4": {
+        "zh": "第4盘",
+        "en": "S4"
+      },
+      "s5": {
+        "zh": "第5盘",
+        "en": "S5"
+      },
+      "s6": {
+        "zh": "第6盘",
+        "en": "S6"
+      },
+      "s7": {
+        "zh": "第7盘",
+        "en": "S7"
+      },
+      "s8": {
+        "zh": "第8盘",
+        "en": "S8"
+      },
+      "s9": {
+        "zh": "第9盘",
+        "en": "S9"
+      },
+      "r1": {
+        "zh": "第1局",
+        "en": "R1"
+      },
+      "r2": {
+        "zh": "第2局",
+        "en": "R2"
+      },
+      "r3": {
+        "zh": "第3局",
+        "en": "R3"
+      },
+      "r4": {
+        "zh": "第4局",
+        "en": "R4"
+      },
+      "r5": {
+        "zh": "第5局",
+        "en": "R5"
+      },
+      "r6": {
+        "zh": "第6局",
+        "en": "R6"
+      },
+      "r7": {
+        "zh": "第7局",
+        "en": "R7"
+      },
+      "r8": {
+        "zh": "第8局",
+        "en": "R8"
+      },
+      "r9": {
+        "zh": "第9局",
+        "en": "R9"
+      },
+      "map1": {
+        "zh": "地图1",
+        "en": "Map1"
+      },
+      "map2": {
+        "zh": "地图2",
+        "en": "Map2"
+      },
+      "map3": {
+        "zh": "地图3",
+        "en": "Map3"
+      },
+      "map4": {
+        "zh": "地图4",
+        "en": "Map4"
+      },
+      "map5": {
+        "zh": "地图5",
+        "en": "Map5"
+      },
+      "map6": {
+        "zh": "地图6",
+        "en": "Map6"
+      },
+      "map7": {
+        "zh": "地图7",
+        "en": "Map7"
+      },
+      "map8": {
+        "zh": "地图8",
+        "en": "Map8"
+      },
+      "map9": {
+        "zh": "地图9",
+        "en": "Map9"
+      },
+      "f5in": {
+        "zh": "前5局",
+        "en": "F5in"
+      },
+      "b1": {
+        "zh": "回合1",
+        "en": "B1"
+      },
+      "b2": {
+        "zh": "回合2",
+        "en": "B2"
+      },
+      "b3": {
+        "zh": "回合3",
+        "en": "B3"
+      },
+      "b4": {
+        "zh": "回合4",
+        "en": "B4"
+      },
+      "b5": {
+        "zh": "回合5",
+        "en": "B5"
+      },
+      "b6": {
+        "zh": "回合6",
+        "en": "B6"
+      },
+      "b7": {
+        "zh": "回合7",
+        "en": "B7"
+      },
+      "b8": {
+        "zh": "回合8",
+        "en": "B8"
+      },
+      "b9": {
+        "zh": "回合9",
+        "en": "B9"
+      },
+      "b10": {
+        "zh": "回合10",
+        "en": "B10"
+      },
+      "b11": {
+        "zh": "回合11",
+        "en": "B11"
+      },
+      "b12": {
+        "zh": "回合12",
+        "en": "B12"
+      },
+      "b13": {
+        "zh": "回合13",
+        "en": "B13"
+      },
+      "b14": {
+        "zh": "回合14",
+        "en": "B14"
+      },
+      "b15": {
+        "zh": "回合15",
+        "en": "B15"
+      },
+      "b16": {
+        "zh": "回合16",
+        "en": "B16"
+      },
+      "b17": {
+        "zh": "回合17",
+        "en": "B17"
+      },
+      "b18": {
+        "zh": "回合18",
+        "en": "B18"
+      },
+      "b19": {
+        "zh": "回合19",
+        "en": "B19"
+      },
+      "goals": {
+        "zh": "进球",
+        "en": "Goals"
+      },
+      "others": {
+        "zh": "其他",
+        "en": "Others"
+      }
+    },
+    "notes": [
+      "1st 与 q1 是不同代码：上半场与第一节。",
+      "goals 和 others 是源站展示分类，不能独立确定盘口的具体结算时间范围。",
+      "ot 的中文原文是“加时 & 点球”，英文是“OT”；这是标签，不是所有项目都采用同一加时、点球结算政策。",
+      "pt 中文原文是“分”；仅保留原文，不另行推断其业务含义。",
+      "字典中存在一个周期标签，不证明当前已发现该周期的盘口组代码。"
+    ]
+  },
+  "groupNames": {
+    "evidence": "official_source",
+    "sourceFunction": "getBaseGroupName",
+    "languageSelection": {
+      "zh": "group_name",
+      "en": "group_short_name",
+      "vi": "i18nNames[group_short_name] || group_short_name"
+    },
+    "placeholders": {
+      "$T1": {
+        "teamPosition": 1,
+        "nameField": {
+          "zh": "team_name",
+          "other": "team_short_name"
+        }
+      },
+      "$T2": {
+        "teamPosition": 2,
+        "nameField": {
+          "zh": "team_name",
+          "other": "team_short_name"
+        }
+      }
+    },
+    "soccerPrefix": {
+      "groupHeading": {
+        "stages": [
+          "final",
+          "1st"
+        ],
+        "format": "{translatedStage}-{groupName}"
+      },
+      "orderTitle": {
+        "stages": [
+          "1st"
+        ],
+        "format": "{translatedStage} - {groupName}"
+      }
+    },
+    "asianHandicapScoreSuffix": {
+      "tag": "ahdp",
+      "when": "parsed score is nonempty",
+      "format": "{groupName} ({score})"
+    }
+  },
+  "grouping": {
+    "evidence": "official_source",
+    "sourceFunction": "oddsToGroupList",
+    "eventScoped": true,
+    "defaultKeyFields": [
+      "odds_group_id",
+      "match_stage"
+    ],
+    "asianHandicap": {
+      "tag": "ahdp",
+      "keyFields": [
+        "odds_group_id",
+        "match_stage",
+        "parsedValue.score"
+      ],
+      "shareStageDisplayOrder": true,
+      "displayOverStateSharedAcrossSameStage": true
+    },
+    "optionCollectionField": "groupOddsList",
+    "preserveEveryOption": true,
+    "stageGrouping": {
+      "sourceFunction": "groupToStageList",
+      "keyField": "match_stage",
+      "displayOrderField": "sort_index",
+      "displayOrderDirection": "descending"
+    },
+    "notes": [
+      "这是官网展示分组，不是单条分数线的身份。",
+      "官网将同组全部选项保留在数组中；不能取最后两个选项替代整组。",
+      "后续对冲消费者仍需在组内按分数线、方向、目标对象及结算条件形成具体候选。"
+    ]
+  },
+  "tagDispatch": {
+    "evidence": "official_source",
+    "sourceFunction": "getOddsName / sortButton",
+    "chineseDefaultLabelField": "name",
+    "englishLabel": {
+      "ahdp": {
+        "strategy": "team_short_name_plus_parsed_line",
+        "scorePrefixRemovedFromOptionLabel": true
+      },
+      "ou": {
+        "strategy": "replace_value_comparator",
+        "replacements": {
+          ">": "over ",
+          "<": "under "
+        }
+      },
+      "hdp": {
+        "strategy": "team_short_name_plus_raw_value"
+      },
+      "crs": {
+        "strategy": "left_team_plus_value_plus_right_team"
+      },
+      "acrs": {
+        "strategy": "raw_value"
+      },
+      "firstn": {
+        "strategy": "team_name_or_raw_value"
+      },
+      "wdl": {
+        "strategy": "team_name_or_raw_value",
+        "drawValue": "draw"
+      },
+      "textValueTags": [
+        "oe",
+        "ab",
+        "abn",
+        "select",
+        "mselect",
+        "o.select",
+        "o.mselect"
+      ],
+      "default": {
+        "strategy": "team_short_name_or_api_name"
+      }
+    },
+    "sorting": {
+      "overUnderTags": [
+        "ou"
+      ],
+      "handicapTags": [
+        "hdp",
+        "ahdp"
+      ],
+      "correctScoreTags": [
+        "crs",
+        "acrs"
+      ],
+      "teamOrderedTags": [
+        "win",
+        "wdl",
+        "outright",
+        "first",
+        "firstn"
+      ],
+      "optionIdOrderedTags": [
+        "ab",
+        "abn",
+        "select",
+        "o.select"
+      ],
+      "oddEvenTags": [
+        "oe"
+      ],
+      "outrightOddsAscendingTags": [
+        "outright"
+      ]
+    },
+    "outrightCategoryTags": [
+      "outright",
+      "moutright",
+      "o.select",
+      "o.mselect"
+    ],
+    "notes": [
+      "tag=win 不只表示整场获胜者；具体命题由玩法组及接口名称定义。",
+      "tag=ou 不区分得分、击杀、回合、地图、时长或单队总量。",
+      "二选项结构不自动证明二者在所有结算情形下互为补集。",
+      "分类分支中出现的 tag 不代表本次 API 样本中均有对应盘口。"
+    ]
+  },
+  "valueParsing": {
+    "asianHandicap": {
+      "evidence": "official_source",
+      "sourceFunctions": [
+        "parseAhdpValue",
+        "Mn"
+      ],
+      "tag": "ahdp",
+      "delimiter": ",",
+      "scorePrefixPattern": "^\\d+-\\d+$",
+      "resultFields": [
+        "score",
+        "line"
+      ],
+      "recognizedPrefix": {
+        "score": "trim(first segment)",
+        "line": "trim(join(remaining segments, comma))"
+      },
+      "unrecognizedPrefix": {
+        "score": "",
+        "line": "trim(original value)"
+      },
+      "numericSorting": {
+        "scoreLeft": "parseFloat(first score component)",
+        "scoreRight": "parseFloat(second score component)",
+        "line": "parseFloat(line)"
+      },
+      "examples": [
+        {
+          "input": "0-0,+0.25",
+          "output": {
+            "score": "0-0",
+            "line": "+0.25"
+          }
+        },
+        {
+          "input": "2-1,-0.75",
+          "output": {
+            "score": "2-1",
+            "line": "-0.75"
+          }
+        },
+        {
+          "input": "+1.5",
+          "output": {
+            "score": "",
+            "line": "+1.5"
+          }
+        }
+      ],
+      "notes": [
+        "保留原始 value；score 是官网给前缀使用的字段名。",
+        "score 必须参与该类盘口的分组；不能只保留逗号后的分数线。",
+        "此解析不等于已经确认滚球基准比分或该盘的完整结算方式。"
+      ]
+    },
+    "overUnder": {
+      "evidence": "official_source",
+      "tag": "ou",
+      "rawComparatorSymbols": [
+        ">",
+        "<"
+      ],
+      "displayReplacements": {
+        ">": "over ",
+        "<": "under "
+      },
+      "preserveRawThreshold": true
+    },
+    "quarterLineDisplay": {
+      "evidence": "official_source",
+      "sourceModule": "9160",
+      "enabledTags": [
+        "ahdp",
+        "ou"
+      ],
+      "fractionalParts": [
+        0.25,
+        0.75
+      ],
+      "numericTolerance": 1e-8,
+      "preserveExplicitSign": true,
+      "displayRule": "绝对值落在 .25 或 .75 时，显示为两条相邻半分线；两项分别保留原符号。",
+      "examples": [
+        {
+          "input": "+0.25",
+          "output": "+0, +0.5"
+        },
+        {
+          "input": "-0.75",
+          "output": "-0.5, -1"
+        },
+        {
+          "input": "3.25",
+          "output": "3, 3.5"
+        }
+      ],
+      "notes": [
+        "这里记录官网的显示格式转换，不据此声明分注比例、退款或半赢半输结算规则。",
+        "该显示分支允许的 tag 是 ahdp、ou，不能擅自扩展成所有 hdp。"
+      ]
+    }
+  },
+  "displaySorting": {
+    "evidence": "official_source",
+    "sourceFunctions": [
+      "Fn",
+      "Rn",
+      "sortByOverUnder",
+      "getVisibleOdds"
+    ],
+    "handicap": {
+      "teamMatch": "String(option.team_id) === String(leftTeam.team_id)",
+      "leftLines": "ascending",
+      "rightLines": "descending",
+      "interleaveSides": true,
+      "preferredStatusCodes": [
+        1,
+        2
+      ],
+      "preferredStatusFirst": true,
+      "asianHandicapScoreOrder": [
+        "scoreLeft_ascending",
+        "scoreRight_ascending"
+      ]
+    },
+    "overUnder": {
+      "strategy": "按 value 排列后分成两半，各自按数字阈值升序，再交错排列"
+    },
+    "draw": {
+      "rawValue": "draw",
+      "placement": "index_1_when_present"
+    },
+    "visibleHandicapReduction": {
+      "tag": "hdp",
+      "minimumVisibleOptions": 10,
+      "when": "前四项以及第七项起的所有项均为 status=2",
+      "keepSlice": {
+        "startInclusive": 4,
+        "endExclusive": 6
+      }
+    },
+    "notes": [
+      "排序与裁剪是界面行为，不作为对冲配对或可成交深度依据。",
+      "对冲计算应独立验证每个选项的真实身份和条件。"
+    ]
+  },
+  "optionDisplayState": {
+    "evidence": "official_source",
+    "sourceFunctions": [
+      "showGroup",
+      "groupIsOver",
+      "showLockIcon",
+      "onClick"
+    ],
+    "groupVisibleWhenAnyStatusIn": [
+      1,
+      2,
+      5
+    ],
+    "buttonSortIncludesStatusIn": [
+      1,
+      2,
+      5
+    ],
+    "showLockWhen": {
+      "any": [
+        {
+          "field": "status",
+          "operator": "eq",
+          "value": 2
+        },
+        {
+          "all": [
+            {
+              "field": "status",
+              "operator": "eq",
+              "value": 1
+            },
+            {
+              "field": "odds",
+              "operator": "numeric_lt",
+              "value": 1.01
+            }
+          ]
+        }
+      ]
+    },
+    "buttonClickGuard": {
+      "statusEquals": 1,
+      "showLockIcon": false
+    },
+    "groupDisplayOverWhenAllOptionsMatch": {
+      "any": [
+        {
+          "field": "win",
+          "operator": "ne",
+          "value": -1
+        },
+        {
+          "field": "status",
+          "operator": "in",
+          "value": [
+            4,
+            99
+          ]
+        }
+      ]
+    },
+    "notes": [
+      "显示、锁图标、按钮点击和 groupIsOver 分组状态并非完整的服务端投注受理或赛果状态契约。",
+      "不能因为 groupIsOver 为 true 就认定整场比赛已经结束或某选项已结算。"
+    ]
+  },
+  "soccerClassification": {
+    "evidence": "official_source",
+    "sourceFunctions": [
+      "tr",
+      "er",
+      "getGroupMarketKey",
+      "getSoccerTabGroups"
+    ],
+    "applicability": {
+      "gameListShortName": "Soccer",
+      "fallbackGameName": "足球"
+    },
+    "lookup": {
+      "fields": [
+        "match_stage",
+        "group_short_name"
+      ],
+      "trimFields": [
+        "group_short_name"
+      ],
+      "delimiter": "|",
+      "caseNormalization": "none"
+    },
+    "tabs": [
+      {
+        "key": "hot",
+        "label": {
+          "zh": "热门",
+          "en": "Hot"
+        },
+        "all": false,
+        "catchAll": false,
+        "marketKeys": [
+          "final|Handicap",
+          "final|Asian Handicap",
+          "final|Asian Handicap(Extra Time)",
+          "1st|Handicap",
+          "1st|Asian Handicap",
+          "1st|Asian Handicap(Extra Time)",
+          "final|Total Goal",
+          "final|Total Goal(Extra Time)",
+          "1st|Total Goal",
+          "1st|Total Goal(Extra Time)",
+          "final|1X2",
+          "final|1X2(Extra Time)",
+          "1st|1X2",
+          "1st|1X2(Extra Time)",
+          "goals|Correct Score",
+          "goals|1st Half-Correct Score",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-1X2",
+          "final|Total Goals",
+          "goals|1st Half-Total Goals",
+          "goals|Both Teams To Score",
+          "goals|1st Half-Both Teams To Score",
+          "goals|$T1 Total Goals",
+          "goals|$T2 Total Goals",
+          "goals|1st Half-$T1 Total Goals",
+          "goals|1st Half-$T2 Total Goals",
+          "final|Total Goal Odd/Even",
+          "1st|Total Goal Odd/Even",
+          "final|Half Time / Full Time",
+          "final|Double Chance",
+          "goals|First Goal Method",
+          "others|Corners Handicap",
+          "others|Total Corners",
+          "others|Booking Handicap",
+          "others|Total Booking",
+          "others|15 Minute Goals: 15:00-29:59 Mins-Handicap",
+          "others|15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+          "others|15 Minute Goals: 15:00-29:59 Mins-1X2",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-1X2",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-1X2",
+          "others|15 Minute Goals: 60:00-74:59 Mins-Handicap",
+          "others|15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+          "others|15 Minute Goals: 60:00-74:59 Mins-1X2",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-Total Goal",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-1X2"
+        ]
+      },
+      {
+        "key": "handicapOu",
+        "label": {
+          "zh": "让球/大小",
+          "en": "HDP & O/U"
+        },
+        "all": false,
+        "catchAll": false,
+        "marketKeys": [
+          "final|Handicap",
+          "final|Asian Handicap",
+          "final|Asian Handicap(Extra Time)",
+          "1st|Handicap",
+          "1st|Asian Handicap",
+          "1st|Asian Handicap(Extra Time)",
+          "final|Total Goal",
+          "final|Total Goal(Extra Time)",
+          "1st|Total Goal",
+          "1st|Total Goal(Extra Time)",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+          "goals|$T1 Total Goals",
+          "goals|$T2 Total Goals",
+          "goals|1st Half-$T1 Total Goals",
+          "goals|1st Half-$T2 Total Goals",
+          "others|Corners Handicap",
+          "others|Total Corners",
+          "others|Booking Handicap",
+          "others|Total Booking",
+          "others|15 Minute Goals: 15:00-29:59 Mins-Handicap",
+          "others|15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+          "others|15 Minute Goals: 60:00-74:59 Mins-Handicap",
+          "others|15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-Total Goal"
+        ]
+      },
+      {
+        "key": "goals",
+        "label": {
+          "zh": "进球数",
+          "en": "Goals"
+        },
+        "all": false,
+        "catchAll": false,
+        "marketKeys": [
+          "final|Total Goal",
+          "final|Total Goal(Extra Time)",
+          "1st|Total Goal",
+          "1st|Total Goal(Extra Time)",
+          "goals|Correct Score",
+          "goals|1st Half-Correct Score",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-1X2",
+          "final|Total Goals",
+          "goals|1st Half-Total Goals",
+          "goals|Both Teams To Score",
+          "goals|1st Half-Both Teams To Score",
+          "goals|$T1 Total Goals",
+          "goals|$T2 Total Goals",
+          "goals|1st Half-$T1 Total Goals",
+          "goals|1st Half-$T2 Total Goals",
+          "goals|Half With Most Goals-1X2",
+          "goals|First Goal Method",
+          "others|Time Of 1st Goal-3 way",
+          "others|Time of 1st Goal",
+          "others|15 Minute Goals: 15:00-29:59 Mins-Handicap",
+          "others|15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+          "others|15 Minute Goals: 15:00-29:59 Mins-1X2",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-1X2",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-1X2",
+          "others|15 Minute Goals: 60:00-74:59 Mins-Handicap",
+          "others|15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+          "others|15 Minute Goals: 60:00-74:59 Mins-1X2",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-Total Goal",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-1X2"
+        ]
+      },
+      {
+        "key": "half",
+        "label": {
+          "zh": "半场",
+          "en": "Halves"
+        },
+        "all": false,
+        "catchAll": false,
+        "marketKeys": [
+          "1st|Handicap",
+          "1st|Total Goal",
+          "1st|Total Goal(Extra Time)",
+          "1st|1X2",
+          "1st|1X2(Extra Time)",
+          "goals|1st Half-Correct Score",
+          "goals|1st Half-Total Goals",
+          "goals|1st Half-Both Teams To Score",
+          "goals|1st Half-$T1 Total Goals",
+          "goals|1st Half-$T2 Total Goals",
+          "1st|Total Goal Odd/Even",
+          "final|Half Time / Full Time",
+          "goals|Half With Most Goals-1X2"
+        ]
+      },
+      {
+        "key": "interval",
+        "label": {
+          "zh": "区间",
+          "en": "Intervals"
+        },
+        "all": false,
+        "catchAll": false,
+        "marketKeys": [
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-1X2",
+          "others|15 Minute Goals: 15:00-29:59 Mins-Handicap",
+          "others|15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+          "others|15 Minute Goals: 15:00-29:59 Mins-1X2",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-1X2",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-1X2",
+          "others|15 Minute Goals: 60:00-74:59 Mins-Handicap",
+          "others|15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+          "others|15 Minute Goals: 60:00-74:59 Mins-1X2",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-Total Goal",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-1X2"
+        ]
+      },
+      {
+        "key": "corner",
+        "label": {
+          "zh": "角球",
+          "en": "Corners"
+        },
+        "all": false,
+        "catchAll": false,
+        "marketKeys": [
+          "others|Corners Handicap",
+          "others|Total Corners"
+        ]
+      },
+      {
+        "key": "booking",
+        "label": {
+          "zh": "罚牌数",
+          "en": "Cards"
+        },
+        "all": false,
+        "catchAll": false,
+        "marketKeys": [
+          "others|Booking Handicap",
+          "others|Total Booking",
+          "others|Red Card In Match"
+        ]
+      },
+      {
+        "key": "other",
+        "label": {
+          "zh": "其他",
+          "en": "Others"
+        },
+        "all": false,
+        "catchAll": true,
+        "marketKeys": []
+      },
+      {
+        "key": "all",
+        "label": {
+          "zh": "所有盘口",
+          "en": "All"
+        },
+        "all": true,
+        "catchAll": false,
+        "marketKeys": [
+          "final|Handicap",
+          "final|Asian Handicap",
+          "final|Asian Handicap(Extra Time)",
+          "1st|Handicap",
+          "1st|Asian Handicap",
+          "1st|Asian Handicap(Extra Time)",
+          "final|Total Goal",
+          "final|Total Goal(Extra Time)",
+          "1st|Total Goal",
+          "1st|Total Goal(Extra Time)",
+          "final|1X2",
+          "final|1X2(Extra Time)",
+          "1st|1X2",
+          "1st|1X2(Extra Time)",
+          "goals|Correct Score",
+          "goals|1st Half-Correct Score",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+          "others|15 Minute Goals: Start Of Match-14:59 Mins-1X2",
+          "final|Total Goals",
+          "goals|1st Half-Total Goals",
+          "goals|Both Teams To Score",
+          "goals|1st Half-Both Teams To Score",
+          "goals|$T1 Total Goals",
+          "goals|$T2 Total Goals",
+          "goals|1st Half-$T1 Total Goals",
+          "goals|1st Half-$T2 Total Goals",
+          "final|Total Goal Odd/Even",
+          "1st|Total Goal Odd/Even",
+          "final|Half Time / Full Time",
+          "final|Double Chance",
+          "others|Corners Handicap",
+          "others|Total Corners",
+          "others|Booking Handicap",
+          "others|Total Booking",
+          "others|Red Card In Match",
+          "goals|Half With Most Goals-1X2",
+          "goals|First Goal Method",
+          "others|Time Of 1st Goal-3 way",
+          "others|Time of 1st Goal",
+          "others|15 Minute Goals: 15:00-29:59 Mins-Handicap",
+          "others|15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+          "others|15 Minute Goals: 15:00-29:59 Mins-1X2",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+          "others|15 Minute Goals: 30:00 Mins-Half Time-1X2",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+          "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-1X2",
+          "others|15 Minute Goals: 60:00-74:59 Mins-Handicap",
+          "others|15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+          "others|15 Minute Goals: 60:00-74:59 Mins-1X2",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-Total Goal",
+          "others|15 Minute Goals: 75:00 Mins-Full Time-1X2"
+        ]
+      }
+    ],
+    "marketDefinitions": [
+      {
+        "key": "final|Handicap",
+        "matchStage": "final",
+        "englishGroupName": "Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "all"
+        ]
+      },
+      {
+        "key": "final|Asian Handicap",
+        "matchStage": "final",
+        "englishGroupName": "Asian Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "all"
+        ]
+      },
+      {
+        "key": "final|Asian Handicap(Extra Time)",
+        "matchStage": "final",
+        "englishGroupName": "Asian Handicap(Extra Time)",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "all"
+        ]
+      },
+      {
+        "key": "1st|Handicap",
+        "matchStage": "1st",
+        "englishGroupName": "Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "1st|Asian Handicap",
+        "matchStage": "1st",
+        "englishGroupName": "Asian Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "all"
+        ]
+      },
+      {
+        "key": "1st|Asian Handicap(Extra Time)",
+        "matchStage": "1st",
+        "englishGroupName": "Asian Handicap(Extra Time)",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "all"
+        ]
+      },
+      {
+        "key": "final|Total Goal",
+        "matchStage": "final",
+        "englishGroupName": "Total Goal",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "all"
+        ]
+      },
+      {
+        "key": "final|Total Goal(Extra Time)",
+        "matchStage": "final",
+        "englishGroupName": "Total Goal(Extra Time)",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "all"
+        ]
+      },
+      {
+        "key": "1st|Total Goal",
+        "matchStage": "1st",
+        "englishGroupName": "Total Goal",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "1st|Total Goal(Extra Time)",
+        "matchStage": "1st",
+        "englishGroupName": "Total Goal(Extra Time)",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "final|1X2",
+        "matchStage": "final",
+        "englishGroupName": "1X2",
+        "tabKeys": [
+          "hot",
+          "all"
+        ]
+      },
+      {
+        "key": "final|1X2(Extra Time)",
+        "matchStage": "final",
+        "englishGroupName": "1X2(Extra Time)",
+        "tabKeys": [
+          "hot",
+          "all"
+        ]
+      },
+      {
+        "key": "1st|1X2",
+        "matchStage": "1st",
+        "englishGroupName": "1X2",
+        "tabKeys": [
+          "hot",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "1st|1X2(Extra Time)",
+        "matchStage": "1st",
+        "englishGroupName": "1X2(Extra Time)",
+        "tabKeys": [
+          "hot",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "goals|Correct Score",
+        "matchStage": "goals",
+        "englishGroupName": "Correct Score",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "all"
+        ]
+      },
+      {
+        "key": "goals|1st Half-Correct Score",
+        "matchStage": "goals",
+        "englishGroupName": "1st Half-Correct Score",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: Start Of Match-14:59 Mins-Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: Start Of Match-14:59 Mins-Total Goal",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: Start Of Match-14:59 Mins-1X2",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: Start Of Match-14:59 Mins-1X2",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "final|Total Goals",
+        "matchStage": "final",
+        "englishGroupName": "Total Goals",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "all"
+        ]
+      },
+      {
+        "key": "goals|1st Half-Total Goals",
+        "matchStage": "goals",
+        "englishGroupName": "1st Half-Total Goals",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "goals|Both Teams To Score",
+        "matchStage": "goals",
+        "englishGroupName": "Both Teams To Score",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "all"
+        ]
+      },
+      {
+        "key": "goals|1st Half-Both Teams To Score",
+        "matchStage": "goals",
+        "englishGroupName": "1st Half-Both Teams To Score",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "goals|$T1 Total Goals",
+        "matchStage": "goals",
+        "englishGroupName": "$T1 Total Goals",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "all"
+        ]
+      },
+      {
+        "key": "goals|$T2 Total Goals",
+        "matchStage": "goals",
+        "englishGroupName": "$T2 Total Goals",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "all"
+        ]
+      },
+      {
+        "key": "goals|1st Half-$T1 Total Goals",
+        "matchStage": "goals",
+        "englishGroupName": "1st Half-$T1 Total Goals",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "goals|1st Half-$T2 Total Goals",
+        "matchStage": "goals",
+        "englishGroupName": "1st Half-$T2 Total Goals",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "final|Total Goal Odd/Even",
+        "matchStage": "final",
+        "englishGroupName": "Total Goal Odd/Even",
+        "tabKeys": [
+          "hot",
+          "all"
+        ]
+      },
+      {
+        "key": "1st|Total Goal Odd/Even",
+        "matchStage": "1st",
+        "englishGroupName": "Total Goal Odd/Even",
+        "tabKeys": [
+          "hot",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "final|Half Time / Full Time",
+        "matchStage": "final",
+        "englishGroupName": "Half Time / Full Time",
+        "tabKeys": [
+          "hot",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "final|Double Chance",
+        "matchStage": "final",
+        "englishGroupName": "Double Chance",
+        "tabKeys": [
+          "hot",
+          "all"
+        ]
+      },
+      {
+        "key": "goals|First Goal Method",
+        "matchStage": "goals",
+        "englishGroupName": "First Goal Method",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "all"
+        ]
+      },
+      {
+        "key": "others|Corners Handicap",
+        "matchStage": "others",
+        "englishGroupName": "Corners Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "corner",
+          "all"
+        ]
+      },
+      {
+        "key": "others|Total Corners",
+        "matchStage": "others",
+        "englishGroupName": "Total Corners",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "corner",
+          "all"
+        ]
+      },
+      {
+        "key": "others|Booking Handicap",
+        "matchStage": "others",
+        "englishGroupName": "Booking Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "booking",
+          "all"
+        ]
+      },
+      {
+        "key": "others|Total Booking",
+        "matchStage": "others",
+        "englishGroupName": "Total Booking",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "booking",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 15:00-29:59 Mins-Handicap",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 15:00-29:59 Mins-Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 15:00-29:59 Mins-Total Goal",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 15:00-29:59 Mins-1X2",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 15:00-29:59 Mins-1X2",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 30:00 Mins-Half Time-Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 30:00 Mins-Half Time-Total Goal",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 30:00 Mins-Half Time-1X2",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 30:00 Mins-Half Time-1X2",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: Start Of 2nd Half-59:59 Mins-Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: Start Of 2nd Half-59:59 Mins-Total Goal",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: Start Of 2nd Half-59:59 Mins-1X2",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: Start Of 2nd Half-59:59 Mins-1X2",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 60:00-74:59 Mins-Handicap",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 60:00-74:59 Mins-Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 60:00-74:59 Mins-Total Goal",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 60:00-74:59 Mins-1X2",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 60:00-74:59 Mins-1X2",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 75:00 Mins-Full Time-Handicap",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 75:00 Mins-Full Time-Total Goal",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 75:00 Mins-Full Time-Total Goal",
+        "tabKeys": [
+          "hot",
+          "handicapOu",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "others|15 Minute Goals: 75:00 Mins-Full Time-1X2",
+        "matchStage": "others",
+        "englishGroupName": "15 Minute Goals: 75:00 Mins-Full Time-1X2",
+        "tabKeys": [
+          "hot",
+          "goals",
+          "interval",
+          "all"
+        ]
+      },
+      {
+        "key": "goals|Half With Most Goals-1X2",
+        "matchStage": "goals",
+        "englishGroupName": "Half With Most Goals-1X2",
+        "tabKeys": [
+          "goals",
+          "half",
+          "all"
+        ]
+      },
+      {
+        "key": "others|Time Of 1st Goal-3 way",
+        "matchStage": "others",
+        "englishGroupName": "Time Of 1st Goal-3 way",
+        "tabKeys": [
+          "goals",
+          "all"
+        ]
+      },
+      {
+        "key": "others|Time of 1st Goal",
+        "matchStage": "others",
+        "englishGroupName": "Time of 1st Goal",
+        "tabKeys": [
+          "goals",
+          "all"
+        ]
+      },
+      {
+        "key": "others|Red Card In Match",
+        "matchStage": "others",
+        "englishGroupName": "Red Card In Match",
+        "tabKeys": [
+          "booking",
+          "all"
+        ]
+      }
+    ],
+    "tabSelection": {
+      "all": "include all visible groups",
+      "catchAll": "groups absent from every non-all, non-catchAll tab definition",
+      "normal": "lookup key appears in this tab marketKeys"
+    },
+    "order": [
+      "definition_index_ascending",
+      "sort_index_descending",
+      "asian_score_order_ascending"
+    ],
+    "inactiveGroupsAfterActive": true,
+    "notes": [
+      "同一玩法可以出现在多个标签页，tabKeys 不是互斥的玩法类型。",
+      "保持名称精确匹配，包括空格、大小写、$T1/$T2 和 Extra Time 等限定。"
+    ]
+  },
+  "roundDisplay": {
+    "evidence": "official_source",
+    "sourceFunctions": [
+      "matchTitle",
+      "streamLeagueName"
+    ],
+    "field": "round",
+    "format": "String(round).toUpperCase()",
+    "semanticInference": false,
+    "notes": [
+      "官网 BO4 展示来自源站 round 的大写形式；这里没有将其解析为电竞局数或篮球节数。"
+    ]
+  },
+  "validation": {
+    "evidence": "source_replay",
+    "events": 236,
+    "optionRows": 33769,
+    "preservedOptionRows": 33769,
+    "allOptionsPreserved": true,
+    "stageLabelCount": 61,
+    "soccerSemanticKeyCount": 55,
+    "soccerTabCount": 9,
+    "soccerObservedCoverage": {
+      "observedGroupCodes": 45,
+      "matched": 44,
+      "unmatched": [
+        {
+          "groupId": "3304446",
+          "key": "final|Winner",
+          "name": "冠军"
+        }
+      ],
+      "semanticKeys": 55
+    },
+    "method": "AST-extracted reviewed pure frontend methods replayed in isolated VM with minimal display/helper stubs; no full application execution, network access or order actions."
+  },
+  "integrationLimits": {
+    "evidence": "integration_note",
+    "unknownStage": "保留原始代码，不回退成 final 或数字 Map=0。",
+    "unknownTag": "保留原始选项，不默认归为胜负或双边盘口。",
+    "unknownGroup": "不能仅靠 tag、名称相似或相同分数线认定跨场馆等价。",
+    "settlementNotEstablished": [
+      "不同项目和玩法是否包含加时、点球",
+      "整数盘走水或退本金",
+      "四分之一盘的赔付与分注契约",
+      "取消、延期、弃赛、未发生事件的结算",
+      "赛果修正与结算撤回"
+    ],
+    "runtimeActivation": "后续显式接入 Ray adapter，按目标盘口增加必要行为验证；本次仅生成参考 JSON。"
+  }
+}

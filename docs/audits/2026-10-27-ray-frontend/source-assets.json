@@ -1,0 +1,71 @@
+{
+  "startedAt": "2026-10-27T04:14:05.371Z",
+  "origin": "https://ray164.com",
+  "assets": [
+    {
+      "path": "/js/chunk-4d883de8.29661832.js",
+      "url": "https://ray164.com/js/chunk-4d883de8.29661832.js",
+      "bytes": 681,
+      "sha256": "66aed82fb47a12ca8deca0402035681a5696f42680e4bd56a101545d7cd9a3e2",
+      "local": "tmp_ray_frontend/chunk-4d883de8.29661832.js"
+    },
+    {
+      "path": "/js/chunk-3262c693.11faca2a.js",
+      "url": "https://ray164.com/js/chunk-3262c693.11faca2a.js",
+      "bytes": 2169,
+      "sha256": "f4d96ef2477044444bc206859f92ef20e307643f257d714bfcd2caa4c7850783",
+      "local": "tmp_ray_frontend/chunk-3262c693.11faca2a.js"
+    },
+    {
+      "path": "/js/chunk-2d0c0e51.80db49dd.js",
+      "url": "https://ray164.com/js/chunk-2d0c0e51.80db49dd.js",
+      "bytes": 359129,
+      "sha256": "1afed30592a70213625f8264b0afe5e68f4cfe1c6abe1741cdf655efcbbcf3f7",
+      "local": "tmp_ray_frontend/chunk-2d0c0e51.80db49dd.js"
+    },
+    {
+      "path": "/js/chunk-5b7ddab4.f80470c7.js",
+      "url": "https://ray164.com/js/chunk-5b7ddab4.f80470c7.js",
+      "bytes": 4398,
+      "sha256": "6e0e43e318d003b2e6c14f9a526d1496912bc469803dad583e002e471bb56bd3",
+      "local": "tmp_ray_frontend/chunk-5b7ddab4.f80470c7.js"
+    },
+    {
+      "path": "/js/chunk-6d939695.d36f1b3b.js",
+      "url": "https://ray164.com/js/chunk-6d939695.d36f1b3b.js",
+      "bytes": 4807,
+      "sha256": "02800809be01d0997ab87b853e7214824cc605855694e6f55cdb4fafbd2c647d",
+      "local": "tmp_ray_frontend/chunk-6d939695.d36f1b3b.js"
+    },
+    {
+      "path": "/js/chunk-93e2cb52.e46243d2.js",
+      "url": "https://ray164.com/js/chunk-93e2cb52.e46243d2.js",
+      "bytes": 11000,
+      "sha256": "7a47ce673316c003281e47e9753b4fdcbe5b3b0bf957e6c27d051c15e2304449",
+      "local": "tmp_ray_frontend/chunk-93e2cb52.e46243d2.js"
+    },
+    {
+      "path": "/js/chunk-vuetify.876caac1.js",
+      "url": "https://ray164.com/js/chunk-vuetify.876caac1.js",
+      "bytes": 100205,
+      "sha256": "05c42e500ca12f84e1023f31a0e894397792e0ac2097d9cc277a4f86de4d25c0",
+      "local": "tmp_ray_frontend/chunk-vuetify.876caac1.js"
+    },
+    {
+      "path": "/js/app.9f7716dc.js",
+      "url": "https://ray164.com/js/app.9f7716dc.js",
+      "bytes": 728997,
+      "sha256": "74b70656aa23609045950bfd2f659f715075eb256c026003bd59fd9f1bd74ac2",
+      "local": "tmp_ray_frontend/app.9f7716dc.js"
+    },
+    {
+      "path": "/js/vendors~app.278428e5.js",
+      "url": "https://ray164.com/js/vendors~app.278428e5.js",
+      "bytes": 674325,
+      "sha256": "f949afd4673bc8aa6afe9b8ba5d3194e1b41833e2b2f04aa1940010c9de50588",
+      "local": "tmp_ray_frontend/vendors~app.278428e5.js"
+    }
+  ],
+  "errors": [],
+  "finishedAt": "2026-10-27T04:14:06.888Z"
+}

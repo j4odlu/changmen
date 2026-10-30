@@ -1,0 +1,483 @@
+{
+  "scope": "Specific market lines on Warriors vs Nuggets, based on previously captured non-atomic 2026-10-27 09:54-09:57 Asia/Taipei snapshots",
+  "calculation": "PM opposite-outcome best ask plus reciprocal Ray decimal odds, normalized to one dollar payout. Gross return = 1 / cost - 1. Excludes fees, FX, stake rounding and quote movement; neither venue order submission nor Ray precheck performed.",
+  "specificLines": 11,
+  "linesExcludingUnverifiedHalfWinnerTie": 10,
+  "positiveGrossLines": 0,
+  "selectionRule": "Up to seven individual event/period/market/line/team identities, dynamically selected only after complementary settlement, exact-line coverage (or separately proven full outcome coverage), net return and both venue executable size checks. No fixed seven-type recommendation.",
+  "rows": [
+    {
+      "type": "first_half_spreads",
+      "line": -4.5,
+      "team": null,
+      "pmMarketId": "6236140",
+      "question": "1H Spread: Nuggets (-4.5)",
+      "tieRuleNotVerified": false,
+      "bestDirection": {
+        "raySelectionId": 76871767,
+        "raySelection": "Golden State Warriors",
+        "rayOdds": 1.87,
+        "pmOppositeOutcome": "Nuggets",
+        "pmAsk": 0.48,
+        "pmSharesAtBest": 182,
+        "pmAskUsdAtBest": 87.36,
+        "normalizedCostPerDollarPayout": 1.01475935828877,
+        "grossReturnOnTotalStake": -0.01454468802698139
+      },
+      "directions": [
+        {
+          "raySelectionId": 76871767,
+          "raySelection": "Golden State Warriors",
+          "rayOdds": 1.87,
+          "pmOppositeOutcome": "Nuggets",
+          "pmAsk": 0.48,
+          "pmSharesAtBest": 182,
+          "pmAskUsdAtBest": 87.36,
+          "normalizedCostPerDollarPayout": 1.01475935828877,
+          "grossReturnOnTotalStake": -0.01454468802698139
+        },
+        {
+          "raySelectionId": 76871766,
+          "raySelection": "Denver Nuggets",
+          "rayOdds": 1.93,
+          "pmOppositeOutcome": "Warriors",
+          "pmAsk": 0.54,
+          "pmSharesAtBest": 415.03,
+          "pmAskUsdAtBest": 224.1162,
+          "normalizedCostPerDollarPayout": 1.0581347150259068,
+          "grossReturnOnTotalStake": -0.05494075017138389
+        }
+      ]
+    },
+    {
+      "type": "first_half_totals",
+      "line": 114.5,
+      "team": null,
+      "pmMarketId": "6250880",
+      "question": "Warriors vs. Nuggets: 1H O/U 114.5",
+      "tieRuleNotVerified": false,
+      "bestDirection": {
+        "raySelectionId": 76871771,
+        "raySelection": "<114.5",
+        "rayOdds": 2.02,
+        "pmOppositeOutcome": "Over",
+        "pmAsk": 0.53,
+        "pmSharesAtBest": 2170.53,
+        "pmAskUsdAtBest": 1150.3809,
+        "normalizedCostPerDollarPayout": 1.025049504950495,
+        "grossReturnOnTotalStake": -0.024437361151357084
+      },
+      "directions": [
+        {
+          "raySelectionId": 76871771,
+          "raySelection": "<114.5",
+          "rayOdds": 2.02,
+          "pmOppositeOutcome": "Over",
+          "pmAsk": 0.53,
+          "pmSharesAtBest": 2170.53,
+          "pmAskUsdAtBest": 1150.3809,
+          "normalizedCostPerDollarPayout": 1.025049504950495,
+          "grossReturnOnTotalStake": -0.024437361151357084
+        },
+        {
+          "raySelectionId": 76871770,
+          "raySelection": ">114.5",
+          "rayOdds": 1.78,
+          "pmOppositeOutcome": "Under",
+          "pmAsk": 0.5,
+          "pmSharesAtBest": 378,
+          "pmAskUsdAtBest": 189,
+          "normalizedCostPerDollarPayout": 1.0617977528089888,
+          "grossReturnOnTotalStake": -0.05820105820105825
+        }
+      ]
+    },
+    {
+      "type": "first_half_team_totals",
+      "line": 59.5,
+      "team": "Nuggets",
+      "pmMarketId": "6252985",
+      "question": "Nuggets 1H Team Total: O/U 59.5",
+      "tieRuleNotVerified": false,
+      "bestDirection": {
+        "raySelectionId": 76871773,
+        "raySelection": "<59.5",
+        "rayOdds": 1.98,
+        "pmOppositeOutcome": "Over",
+        "pmAsk": 0.52,
+        "pmSharesAtBest": 2730.91,
+        "pmAskUsdAtBest": 1420.0732,
+        "normalizedCostPerDollarPayout": 1.0250505050505052,
+        "grossReturnOnTotalStake": -0.02443831296807264
+      },
+      "directions": [
+        {
+          "raySelectionId": 76871773,
+          "raySelection": "<59.5",
+          "rayOdds": 1.98,
+          "pmOppositeOutcome": "Over",
+          "pmAsk": 0.52,
+          "pmSharesAtBest": 2730.91,
+          "pmAskUsdAtBest": 1420.0732,
+          "normalizedCostPerDollarPayout": 1.0250505050505052,
+          "grossReturnOnTotalStake": -0.02443831296807264
+        },
+        {
+          "raySelectionId": 76871772,
+          "raySelection": ">59.5",
+          "rayOdds": 1.82,
+          "pmOppositeOutcome": "Under",
+          "pmAsk": 0.53,
+          "pmSharesAtBest": 2752.25,
+          "pmAskUsdAtBest": 1458.6925,
+          "normalizedCostPerDollarPayout": 1.0794505494505495,
+          "grossReturnOnTotalStake": -0.07360276901150364
+        }
+      ]
+    },
+    {
+      "type": "first_half_moneyline",
+      "line": null,
+      "team": null,
+      "pmMarketId": "6236142",
+      "question": "Warriors vs. Nuggets: 1H Moneyline",
+      "tieRuleNotVerified": true,
+      "bestDirection": {
+        "raySelectionId": 76871765,
+        "raySelection": "Golden State Warriors",
+        "rayOdds": 2.73,
+        "pmOppositeOutcome": "Nuggets",
+        "pmAsk": 0.66,
+        "pmSharesAtBest": 51.04,
+        "pmAskUsdAtBest": 33.6864,
+        "normalizedCostPerDollarPayout": 1.0263003663003663,
+        "grossReturnOnTotalStake": -0.02562638303947462
+      },
+      "directions": [
+        {
+          "raySelectionId": 76871765,
+          "raySelection": "Golden State Warriors",
+          "rayOdds": 2.73,
+          "pmOppositeOutcome": "Nuggets",
+          "pmAsk": 0.66,
+          "pmSharesAtBest": 51.04,
+          "pmAskUsdAtBest": 33.6864,
+          "normalizedCostPerDollarPayout": 1.0263003663003663,
+          "grossReturnOnTotalStake": -0.02562638303947462
+        },
+        {
+          "raySelectionId": 76871764,
+          "raySelection": "Denver Nuggets",
+          "rayOdds": 1.44,
+          "pmOppositeOutcome": "Warriors",
+          "pmAsk": 0.35,
+          "pmSharesAtBest": 5.07,
+          "pmAskUsdAtBest": 1.7745,
+          "normalizedCostPerDollarPayout": 1.0444444444444443,
+          "grossReturnOnTotalStake": -0.04255319148936154
+        }
+      ]
+    },
+    {
+      "type": "moneyline",
+      "line": null,
+      "team": null,
+      "pmMarketId": "5962892",
+      "question": "Warriors vs. Nuggets",
+      "tieRuleNotVerified": false,
+      "bestDirection": {
+        "raySelectionId": 76864105,
+        "raySelection": "Denver Nuggets",
+        "rayOdds": 1.37,
+        "pmOppositeOutcome": "Warriors",
+        "pmAsk": 0.3,
+        "pmSharesAtBest": 728368.87,
+        "pmAskUsdAtBest": 218510.661,
+        "normalizedCostPerDollarPayout": 1.0299270072992701,
+        "grossReturnOnTotalStake": -0.029057406094968097
+      },
+      "directions": [
+        {
+          "raySelectionId": 76864105,
+          "raySelection": "Denver Nuggets",
+          "rayOdds": 1.37,
+          "pmOppositeOutcome": "Warriors",
+          "pmAsk": 0.3,
+          "pmSharesAtBest": 728368.87,
+          "pmAskUsdAtBest": 218510.661,
+          "normalizedCostPerDollarPayout": 1.0299270072992701,
+          "grossReturnOnTotalStake": -0.029057406094968097
+        },
+        {
+          "raySelectionId": 76864106,
+          "raySelection": "Golden State Warriors",
+          "rayOdds": 2.75,
+          "pmOppositeOutcome": "Nuggets",
+          "pmAsk": 0.71,
+          "pmSharesAtBest": 151196.75,
+          "pmAskUsdAtBest": 107349.69249999999,
+          "normalizedCostPerDollarPayout": 1.0736363636363637,
+          "grossReturnOnTotalStake": -0.06858594411515673
+        }
+      ]
+    },
+    {
+      "type": "first_half_spreads",
+      "line": -2.5,
+      "team": null,
+      "pmMarketId": "6250861",
+      "question": "1H Spread: Nuggets (-2.5)",
+      "tieRuleNotVerified": false,
+      "bestDirection": {
+        "raySelectionId": 76871794,
+        "raySelection": "Denver Nuggets",
+        "rayOdds": 1.72,
+        "pmOppositeOutcome": "Warriors",
+        "pmAsk": 0.45,
+        "pmSharesAtBest": 120,
+        "pmAskUsdAtBest": 54,
+        "normalizedCostPerDollarPayout": 1.0313953488372094,
+        "grossReturnOnTotalStake": -0.030439684329199634
+      },
+      "directions": [
+        {
+          "raySelectionId": 76871794,
+          "raySelection": "Denver Nuggets",
+          "rayOdds": 1.72,
+          "pmOppositeOutcome": "Warriors",
+          "pmAsk": 0.45,
+          "pmSharesAtBest": 120,
+          "pmAskUsdAtBest": 54,
+          "normalizedCostPerDollarPayout": 1.0313953488372094,
+          "grossReturnOnTotalStake": -0.030439684329199634
+        },
+        {
+          "raySelectionId": 76871795,
+          "raySelection": "Golden State Warriors",
+          "rayOdds": 2.09,
+          "pmOppositeOutcome": "Nuggets",
+          "pmAsk": 0.57,
+          "pmSharesAtBest": 93.61,
+          "pmAskUsdAtBest": 53.357699999999994,
+          "normalizedCostPerDollarPayout": 1.0484688995215312,
+          "grossReturnOnTotalStake": -0.04622826632592536
+        }
+      ]
+    },
+    {
+      "type": "spreads",
+      "line": -8.5,
+      "team": null,
+      "pmMarketId": "6213368",
+      "question": "Spread: Nuggets (-8.5)",
+      "tieRuleNotVerified": false,
+      "bestDirection": {
+        "raySelectionId": 76864199,
+        "raySelection": "Denver Nuggets",
+        "rayOdds": 2.15,
+        "pmOppositeOutcome": "Warriors",
+        "pmAsk": 0.57,
+        "pmSharesAtBest": 68318.27,
+        "pmAskUsdAtBest": 38941.4139,
+        "normalizedCostPerDollarPayout": 1.0351162790697674,
+        "grossReturnOnTotalStake": -0.033924960682992555
+      },
+      "directions": [
+        {
+          "raySelectionId": 76864199,
+          "raySelection": "Denver Nuggets",
+          "rayOdds": 2.15,
+          "pmOppositeOutcome": "Warriors",
+          "pmAsk": 0.57,
+          "pmSharesAtBest": 68318.27,
+          "pmAskUsdAtBest": 38941.4139,
+          "normalizedCostPerDollarPayout": 1.0351162790697674,
+          "grossReturnOnTotalStake": -0.033924960682992555
+        },
+        {
+          "raySelectionId": 76864200,
+          "raySelection": "Golden State Warriors",
+          "rayOdds": 1.67,
+          "pmOppositeOutcome": "Nuggets",
+          "pmAsk": 0.44,
+          "pmSharesAtBest": 201586,
+          "pmAskUsdAtBest": 88697.84,
+          "normalizedCostPerDollarPayout": 1.0388023952095808,
+          "grossReturnOnTotalStake": -0.037353008992391024
+        }
+      ]
+    },
+    {
+      "type": "team_totals",
+      "line": 114.5,
+      "team": "Warriors",
+      "pmMarketId": "6252097",
+      "question": "Warriors Team Total: O/U 114.5",
+      "tieRuleNotVerified": false,
+      "bestDirection": {
+        "raySelectionId": 76869103,
+        "raySelection": ">114.5",
+        "rayOdds": 1.91,
+        "pmOppositeOutcome": "Under",
+        "pmAsk": 0.52,
+        "pmSharesAtBest": 10.43,
+        "pmAskUsdAtBest": 5.4236,
+        "normalizedCostPerDollarPayout": 1.0435602094240837,
+        "grossReturnOnTotalStake": -0.041741922536624454
+      },
+      "directions": [
+        {
+          "raySelectionId": 76869103,
+          "raySelection": ">114.5",
+          "rayOdds": 1.91,
+          "pmOppositeOutcome": "Under",
+          "pmAsk": 0.52,
+          "pmSharesAtBest": 10.43,
+          "pmAskUsdAtBest": 5.4236,
+          "normalizedCostPerDollarPayout": 1.0435602094240837,
+          "grossReturnOnTotalStake": -0.041741922536624454
+        },
+        {
+          "raySelectionId": 76869104,
+          "raySelection": "<114.5",
+          "rayOdds": 1.9,
+          "pmOppositeOutcome": "Over",
+          "pmAsk": 0.52,
+          "pmSharesAtBest": 250,
+          "pmAskUsdAtBest": 130,
+          "normalizedCostPerDollarPayout": 1.046315789473684,
+          "grossReturnOnTotalStake": -0.044265593561368055
+        }
+      ]
+    },
+    {
+      "type": "first_half_team_totals",
+      "line": 55.5,
+      "team": "Warriors",
+      "pmMarketId": "6252992",
+      "question": "Warriors 1H Team Total: O/U 55.5",
+      "tieRuleNotVerified": false,
+      "bestDirection": {
+        "raySelectionId": 76877296,
+        "raySelection": ">55.5",
+        "rayOdds": 1.91,
+        "pmOppositeOutcome": "Under",
+        "pmAsk": 0.52,
+        "pmSharesAtBest": 1050,
+        "pmAskUsdAtBest": 546,
+        "normalizedCostPerDollarPayout": 1.0435602094240837,
+        "grossReturnOnTotalStake": -0.041741922536624454
+      },
+      "directions": [
+        {
+          "raySelectionId": 76877296,
+          "raySelection": ">55.5",
+          "rayOdds": 1.91,
+          "pmOppositeOutcome": "Under",
+          "pmAsk": 0.52,
+          "pmSharesAtBest": 1050,
+          "pmAskUsdAtBest": 546,
+          "normalizedCostPerDollarPayout": 1.0435602094240837,
+          "grossReturnOnTotalStake": -0.041741922536624454
+        },
+        {
+          "raySelectionId": 76877297,
+          "raySelection": "<55.5",
+          "rayOdds": 1.9,
+          "pmOppositeOutcome": "Over",
+          "pmAsk": 0.52,
+          "pmSharesAtBest": 1060.43,
+          "pmAskUsdAtBest": 551.4236000000001,
+          "normalizedCostPerDollarPayout": 1.046315789473684,
+          "grossReturnOnTotalStake": -0.044265593561368055
+        }
+      ]
+    },
+    {
+      "type": "q1_spreads",
+      "line": -2.5,
+      "team": null,
+      "pmMarketId": "6252042",
+      "question": "1Q Spread: Nuggets (-2.5)",
+      "tieRuleNotVerified": false,
+      "bestDirection": {
+        "raySelectionId": 76871780,
+        "raySelection": "Denver Nuggets",
+        "rayOdds": 2,
+        "pmOppositeOutcome": "Warriors",
+        "pmAsk": 0.55,
+        "pmSharesAtBest": 8309.03,
+        "pmAskUsdAtBest": 4569.9665,
+        "normalizedCostPerDollarPayout": 1.05,
+        "grossReturnOnTotalStake": -0.04761904761904767
+      },
+      "directions": [
+        {
+          "raySelectionId": 76871780,
+          "raySelection": "Denver Nuggets",
+          "rayOdds": 2,
+          "pmOppositeOutcome": "Warriors",
+          "pmAsk": 0.55,
+          "pmSharesAtBest": 8309.03,
+          "pmAskUsdAtBest": 4569.9665,
+          "normalizedCostPerDollarPayout": 1.05,
+          "grossReturnOnTotalStake": -0.04761904761904767
+        },
+        {
+          "raySelectionId": 76871781,
+          "raySelection": "Golden State Warriors",
+          "rayOdds": 1.8,
+          "pmOppositeOutcome": "Nuggets",
+          "pmAsk": 0.5,
+          "pmSharesAtBest": 3270.02,
+          "pmAskUsdAtBest": 1635.01,
+          "normalizedCostPerDollarPayout": 1.0555555555555556,
+          "grossReturnOnTotalStake": -0.052631578947368474
+        }
+      ]
+    },
+    {
+      "type": "basketball_odd_even",
+      "line": null,
+      "team": null,
+      "pmMarketId": "5962894",
+      "question": "Warriors vs. Nuggets: Odd/Even Score",
+      "tieRuleNotVerified": false,
+      "bestDirection": {
+        "raySelectionId": 76864115,
+        "raySelection": "odd",
+        "rayOdds": 1.94,
+        "pmOppositeOutcome": "Even",
+        "pmAsk": 0.57,
+        "pmSharesAtBest": 414.66,
+        "pmAskUsdAtBest": 236.3562,
+        "normalizedCostPerDollarPayout": 1.0854639175257732,
+        "grossReturnOnTotalStake": -0.07873492259473835
+      },
+      "directions": [
+        {
+          "raySelectionId": 76864115,
+          "raySelection": "odd",
+          "rayOdds": 1.94,
+          "pmOppositeOutcome": "Even",
+          "pmAsk": 0.57,
+          "pmSharesAtBest": 414.66,
+          "pmAskUsdAtBest": 236.3562,
+          "normalizedCostPerDollarPayout": 1.0854639175257732,
+          "grossReturnOnTotalStake": -0.07873492259473835
+        },
+        {
+          "raySelectionId": 76864116,
+          "raySelection": "even",
+          "rayOdds": 1.94,
+          "pmOppositeOutcome": "Odd",
+          "pmAsk": 0.57,
+          "pmSharesAtBest": 418.64,
+          "pmAskUsdAtBest": 238.62479999999996,
+          "normalizedCostPerDollarPayout": 1.0854639175257732,
+          "grossReturnOnTotalStake": -0.07873492259473835
+        }
+      ]
+    }
+  ]
+}

@@ -140,6 +140,7 @@ declare module 'vue' {
     PodFollowPanel: typeof import('./src/components/football/PodFollowPanel.vue')['default']
     PodFollowTable: typeof import('./src/components/football/PodFollowTable.vue')['default']
     PodYaboSettings: typeof import('./src/components/football/PodYaboSettings.vue')['default']
+    RayBasketballSpreads: typeof import('./src/components/match/RayBasketballSpreads.vue')['default']
     RayLinkMonitorCard: typeof import('./src/components/order/RayLinkMonitorCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

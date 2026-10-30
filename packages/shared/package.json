@@ -28,6 +28,7 @@
     "./catalog/market_catalog": "./catalog/market_catalog.ts",
     "./catalog/market_catalog.json": "./catalog/market_catalog.json",
     "./catalog/market_catalog.browser": "./catalog/market_catalog.browser.ts",
+    "./catalog/venues/ray": "./catalog/venues/ray.ts",
     "./odds_format": "./odds_format.ts",
     "./time/match_time": "./time/match_time.ts",
     "./im_parse": "./im_parse.ts",

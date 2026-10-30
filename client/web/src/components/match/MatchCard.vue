@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ViewMatch } from "@/models/match";
 import BetRow from "@/components/match/BetRow.vue";
+import RayBasketballSpreads from "@/components/match/RayBasketballSpreads.vue";
 import { formatDate } from "@changmen/client-core/shared/format";
 import {
   getGameDisplayName,
@@ -103,14 +104,18 @@ const pmMatchStatus = computed(() => props.match.pmSport || props.match.provider
       </span>
     </div>
     <div class="bets flex flex-wrap">
-      <BetRow
-        v-for="bet in match.bets"
-        :key="bet.id"
-        :match="match"
-        :bet="bet"
-        :odds-display-tick="oddsDisplayTick"
-        :allow-betting="allowBetting"
-      />
+      <template v-for="bet in match.bets" :key="bet.id">
+        <BetRow
+          :match="match"
+          :bet="bet"
+          :odds-display-tick="oddsDisplayTick"
+          :allow-betting="allowBetting"
+        />
+        <RayBasketballSpreads
+          v-if="gameCode === 'basketball' && match.providers.RAY && bet.round === 0 && !bet.marketCode"
+          :match="match" :home-name="bet.homeName" :away-name="bet.awayName"
+        />
+      </template>
     </div>
   </div>
 </template>

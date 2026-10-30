@@ -4,6 +4,10 @@ import type { CollectBetDto } from "@changmen/client-core/types/collect";
 import type { CollectPlatformInfo } from "@changmen/api-contract";
 import { PLATFORMS } from "../shared/platforms";
 import { updateRayMapOutcomes } from "./rayMapOutcome";
+import { ingestRayBasketballSpreads } from "./basketballSpreads";
+
+export { getRayBasketballSpreads, clearRayBasketballSpreads, ingestRayBasketballSpreads } from "./basketballSpreads";
+export type { RayBasketballSpreadOption } from "./basketballSpreads";
 
 import {
   groupRayOddsToSaveBets,
@@ -77,6 +81,7 @@ export async function loadRayBets(
   betRe: RegExp,
   gameCode?: string | null,
 ): Promise<{ bets: CollectBetDto[]; matchResult?: Record<string, unknown> }> {
+  const requestedAt = Date.now();
   const res = await collectRayGet<{ code: number; result?: Record<string, unknown> }>(
     platform,
     "odds",
@@ -85,6 +90,7 @@ export async function loadRayBets(
   if (res.code !== 200 || !res.result) return { bets: [] };
 
   const payload = res.result as unknown as RayOddsPayload;
+  ingestRayBasketballSpreads(matchId, payload, gameCode, requestedAt);
   updateRayMapOutcomes(matchId, payload, betRe, gameCode);
   ingestRayOddsPayloadToFo(payload, betRe, gameCode);
   const { id, status, round, start_time } = res.result;

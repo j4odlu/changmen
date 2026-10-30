@@ -57,12 +57,12 @@ describe("collectValueBetAutoCandidates", () => {
     };
   }
 
-  it("picks soft Home vs PB when edge and sharp odds pass", () => {
-    const pb = stubItem("PB", 1.9, 1.95);
+  it.each(["PB", "Polymarket"])("picks soft Home vs %s when edge and sharp odds pass", (sharp) => {
+    const pb = stubItem(sharp, 1.95, 1.95);
     const ray = stubItem("RAY", 2.2, 1.7);
     const bet = { round: 1, items: [pb, ray] };
     const match = { id: 9, liveRound: 0, bets: [bet] };
-    const calcOpts = valueBetCalcOptsFromPrefs({ sharp: "PB" });
+    const calcOpts = valueBetCalcOptsFromPrefs({ sharp });
     const rows = collectValueBetAutoCandidates(
       [match] as never,
       calcOpts,
@@ -97,6 +97,25 @@ describe("collectValueBetAutoCandidates", () => {
       { enabled: true, minEdgePct: 3, maxEdgePct: 20, minOdds: 1.3, maxOdds: 10, maxPerMap: 1 },
       { isMuted: () => false, mapCount: () => 1, isCooling: () => false },
     )).toEqual([]);
+  });
+
+  it("skips a poor PM baseline and respects a custom overround limit", () => {
+    const pm = stubItem("Polymarket", 1.9, 1.9);
+    const ray = stubItem("RAY", 2.2, 1.7);
+    const match = { id: 9, liveRound: 0, bets: [{ round: 1, items: [pm, ray] }] };
+    const auto = { enabled: true, minEdgePct: 3, maxEdgePct: 20, minOdds: 1.3, maxOdds: 10, maxPerMap: 1 };
+    const deps = { isMuted: () => false, mapCount: () => 0, isCooling: () => false };
+    expect(collectValueBetAutoCandidates([match] as never, valueBetCalcOptsFromPrefs({ sharp: "Polymarket" }), auto, deps))
+      .toEqual([]);
+    const rows = collectValueBetAutoCandidates(
+      [match] as never,
+      valueBetCalcOptsFromPrefs({ sharp: "Polymarket", pmMaxOverroundPct: 6 }),
+      auto,
+      deps,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].item.type).toBe("RAY");
+    expect(rows[0].snap.edge).toBeCloseTo(0.1);
   });
 
   it("skips when edge is above the auto max", () => {

@@ -20,6 +20,7 @@ else if (!extensionPrefs.value.valueBet.autoBet)
   extensionPrefs.value.valueBet.autoBet = createDefaultValueBetAutoBetPrefs();
 if (extensionPrefs.value.valueBet.autoBet.maxEdgePct == null)
   extensionPrefs.value.valueBet.autoBet.maxEdgePct = createDefaultValueBetAutoBetPrefs().maxEdgePct;
+extensionPrefs.value.valueBet.pmMaxOverroundPct ??= createDefaultValueBetMarkerPrefs().pmMaxOverroundPct;
 const saving = ref(false);
 
 watch(
@@ -114,9 +115,23 @@ async function save() {
                   :key="p"
                   :value="p"
                 >
-                  {{ p }}
+                  {{ p === "Polymarket" ? "PM" : p }}
                 </el-radio-button>
               </el-radio-group>
+            </div>
+            <div class="ev-marker-prefs__row">
+              <span class="ev-marker-prefs__label ev-marker-prefs__label--wide">PM 最大偏离率</span>
+              <el-input-number
+                v-model="extensionPrefs.valueBet.pmMaxOverroundPct"
+                aria-label="PM 最大偏离率"
+                class="ev-marker-prefs__num"
+                :min="0"
+                :max="100"
+                :step="0.5"
+                :precision="1"
+                controls-position="right"
+              />
+              <span class="ev-marker-prefs__unit">%</span>
             </div>
             <div class="ev-marker-prefs__row">
               <span class="ev-marker-prefs__label">正EV</span>
@@ -135,6 +150,7 @@ async function save() {
         </el-form-item>
         <p class="ui-tab__desc">
           相对所选基准去水后算 edge。≥正EV 金色并可点角标确认下单。未达正EV 但 ≥1% 时虚线金框。基准馆自身不标记。
+          PM 最大偏离率仅在 PM 作基准时生效：偏离率 = (1/主赔率 + 1/客赔率 − 1) × 100%，超过上限跳过该盘口的 EV 标记、确认下单及自动下注。修改立即生效，保存后下次打开仍保留。
         </p>
       </div>
 
@@ -288,6 +304,10 @@ async function save() {
 
 .ev-marker-prefs__num {
   width: 110px;
+}
+
+.ev-marker-prefs__label--wide {
+  flex-basis: 110px;
 }
 
 .ev-marker-prefs__unit {

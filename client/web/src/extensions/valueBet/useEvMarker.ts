@@ -3,7 +3,7 @@ import type { BetSide, ViewBet, ViewBetItem } from "@/models/match";
 import { computed, toValue } from "vue";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useUserStore } from "@/stores/userStore";
-import { calcEdge, removVig } from "./evCalc";
+import { calcEdge, valueBetFairOdds } from "./evCalc";
 import { evMarkerFloor, valueBetCalcOptsFromPrefs } from "./evConfig";
 
 interface EvEntry {
@@ -46,7 +46,7 @@ export function useEvMarker(
     if (!sharpHome || !sharpAway)
       return map;
 
-    const fair = removVig(sharpHome, sharpAway);
+    const fair = valueBetFairOdds(sharpHome, sharpAway, calcOpts.value);
     if (!fair)
       return map;
 
@@ -98,7 +98,7 @@ export function useEvMarker(
     const sharpItem = b.items.find(it => it.type === calcOpts.value.sharp);
     if (!sharpItem)
       return false;
-    return !!readOdds(sharpItem, "Home") && !!readOdds(sharpItem, "Away");
+    return !!valueBetFairOdds(readOdds(sharpItem, "Home"), readOdds(sharpItem, "Away"), calcOpts.value);
   });
 
   return { isPositiveEv, isNearEv, evLabel, hasSharpBaseline };

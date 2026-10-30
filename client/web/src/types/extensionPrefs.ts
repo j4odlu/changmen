@@ -12,6 +12,8 @@ import {
   DEFAULT_AUTO_BET_MIN_EDGE_PCT,
   DEFAULT_AUTO_BET_MIN_ODDS,
   DEFAULT_MIN_EDGE_PCT,
+  DEFAULT_PM_MAX_OVERROUND_PCT,
+  normalizePmMaxOverroundPct,
   normalizeValueBetCount,
   normalizeValueBetEdgePct,
   normalizeValueBetOdds,
@@ -201,6 +203,8 @@ export interface ValueBetAutoBetPrefs {
 
 export interface ValueBetMarkerPrefs {
   sharp: ValueBetSharpPlatform;
+  /** 仅 PM 作基准时，(1/主赔率 + 1/客赔率 - 1) × 100 的上限，默认 3%。 */
+  pmMaxOverroundPct: number;
   /** 正 EV 阈值（百分比）。≥ 此值金色，并可点角标确认下单。默认 3 */
   minEdgePct: number;
   autoBet: ValueBetAutoBetPrefs;
@@ -324,6 +328,7 @@ export function createDefaultValueBetMarkerPrefs(): ValueBetMarkerPrefs {
   return {
     sharp: "PB",
     minEdgePct: DEFAULT_MIN_EDGE_PCT,
+    pmMaxOverroundPct: DEFAULT_PM_MAX_OVERROUND_PCT,
     autoBet: createDefaultValueBetAutoBetPrefs(),
   };
 }
@@ -617,6 +622,7 @@ function normalizeValueBetMarkerPrefs(raw: unknown): ValueBetMarkerPrefs {
   const minEdgePct = normalizeValueBetEdgePct(row.minEdgePct, defaults.minEdgePct);
   return {
     sharp: normalizeValueBetSharp(row.sharp),
+    pmMaxOverroundPct: normalizePmMaxOverroundPct(row.pmMaxOverroundPct),
     minEdgePct,
     autoBet: normalizeValueBetAutoBetPrefs(row.autoBet),
   };

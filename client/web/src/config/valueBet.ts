@@ -1,11 +1,12 @@
 import type { PlatformId } from "@/types/esport";
 
 /** [changmen 扩展] EV 金色标记 / 正 EV 确认可用的 sharp 基准 */
-export const VALUE_BET_SHARP_OPTIONS = ["PB", "RAY", "OB"] as const;
+export const VALUE_BET_SHARP_OPTIONS = ["PB", "RAY", "OB", "Polymarket"] as const;
 export type ValueBetSharpPlatform = (typeof VALUE_BET_SHARP_OPTIONS)[number];
 
 export const DEFAULT_SHARP_PLATFORM: ValueBetSharpPlatform = "PB";
 export const DEFAULT_MIN_EDGE_PCT = 3;
+export const DEFAULT_PM_MAX_OVERROUND_PCT = 3;
 export const DEFAULT_NEAR_EDGE_PCT = 1;
 export const DEFAULT_AUTO_BET_MIN_EDGE_PCT = 3;
 export const DEFAULT_AUTO_BET_MAX_EDGE_PCT = 20;
@@ -19,7 +20,7 @@ export const MIN_EDGE = DEFAULT_MIN_EDGE_PCT / 100;
 export const NEAR_EDGE = DEFAULT_NEAR_EDGE_PCT / 100;
 
 /**
- * 可被标记的软盘候选。所选基准从中剔除；其它基准（PB/RAY/OB）可作为软盘。
+ * 可被标记的软盘候选。所选基准从中剔除；其它基准（PB/RAY/OB/PM）可作为软盘。
  * 名单沿用现网白名单，含 PB 以便非 PB 作基准时能标 PB。
  */
 export const VALUE_BET_SOFT_CANDIDATES: readonly PlatformId[] = [
@@ -77,6 +78,7 @@ export interface ValueBetCalcOpts {
   minEdge: number;
   nearEdge: number;
   softPlatforms: PlatformId[];
+  pmMaxOverroundPct?: number;
 }
 
 export function normalizeValueBetSharp(raw: unknown): ValueBetSharpPlatform {
@@ -95,6 +97,16 @@ export function normalizeValueBetEdgePct(raw: unknown, fallback: number): number
   return Math.min(20, Math.max(0.1, rounded));
 }
 
+/** PM 基准最大偏离率（百分比）：0–100，缺失/非法回退 3%。 */
+export function normalizePmMaxOverroundPct(raw: unknown): number {
+  if (raw == null || raw === "" || (typeof raw !== "number" && typeof raw !== "string"))
+    return DEFAULT_PM_MAX_OVERROUND_PCT;
+  const n = Number(raw);
+  if (!Number.isFinite(n))
+    return DEFAULT_PM_MAX_OVERROUND_PCT;
+  return Math.min(100, Math.max(0, Math.round(n * 10) / 10));
+}
+
 /** 接近阈值不得高于正 EV，否则会把已达正 EV 的格子滤出 map。 */
 export function clampValueBetNearEdgePct(nearEdgePct: number, minEdgePct: number): number {
   return Math.min(nearEdgePct, minEdgePct);
@@ -103,6 +115,7 @@ export function clampValueBetNearEdgePct(nearEdgePct: number, minEdgePct: number
 export function valueBetCalcOptsFromPrefs(prefs?: {
   sharp?: unknown;
   minEdgePct?: unknown;
+  pmMaxOverroundPct?: unknown;
   /** 已选软盘；缺省 = 全候选。调用方传 extensionPrefs.valueBetSoftPlatforms */
   softPlatforms?: unknown;
 } | null): ValueBetCalcOpts {
@@ -114,6 +127,7 @@ export function valueBetCalcOptsFromPrefs(prefs?: {
   );
   return {
     sharp,
+    pmMaxOverroundPct: normalizePmMaxOverroundPct(prefs?.pmMaxOverroundPct),
     minEdge: minEdgePct / 100,
     nearEdge: nearEdgePct / 100,
     softPlatforms: resolveSoftPlatformsFromAllowed(sharp, allowed),

@@ -17,6 +17,7 @@ const defaultStakeScale = {
 const defaultValueBet = {
   sharp: "PB" as const,
   minEdgePct: 3,
+  pmMaxOverroundPct: 3,
   autoBet: {
     enabled: false,
     minEdgePct: 3,
@@ -121,12 +122,20 @@ describe("extensionPrefs", () => {
     expect(normalizeExtensionPrefs({}).valueBet).toEqual(defaultValueBet);
   });
 
+  it("persists PM as the valueBet baseline across save and reload", () => {
+    const prefs = normalizeExtensionPrefs({ valueBet: { sharp: "Polymarket", minEdgePct: 4, pmMaxOverroundPct: 2.5 } });
+    expect(prefs.valueBet.sharp).toBe("Polymarket");
+    expect(prefs.valueBet.pmMaxOverroundPct).toBe(2.5);
+    expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);
+  });
+
   it("accepts RAY/OB as valueBet sharp and clamps out-of-range thresholds", () => {
     expect(normalizeExtensionPrefs({
       valueBet: { sharp: "RAY", minEdgePct: 5 },
     }).valueBet).toEqual({
       sharp: "RAY",
       minEdgePct: 5,
+      pmMaxOverroundPct: 3,
       autoBet: defaultValueBet.autoBet,
     });
     expect(normalizeExtensionPrefs({
@@ -134,6 +143,7 @@ describe("extensionPrefs", () => {
     }).valueBet).toEqual({
       sharp: "OB",
       minEdgePct: 4,
+      pmMaxOverroundPct: 3,
       autoBet: defaultValueBet.autoBet,
     });
     expect(normalizeExtensionPrefs({
@@ -141,6 +151,7 @@ describe("extensionPrefs", () => {
     }).valueBet).toEqual({
       sharp: "PB",
       minEdgePct: 20,
+      pmMaxOverroundPct: 3,
       autoBet: defaultValueBet.autoBet,
     });
   });
@@ -149,7 +160,7 @@ describe("extensionPrefs", () => {
     const vb = normalizeExtensionPrefs({
       valueBet: { sharp: "PB", minEdgePct: 3, nearEdgePct: 8 },
     }).valueBet;
-    expect(vb).toEqual({ sharp: "PB", minEdgePct: 3, autoBet: defaultValueBet.autoBet });
+    expect(vb).toEqual({ ...defaultValueBet });
     expect(vb).not.toHaveProperty("nearEdgePct");
   });
 

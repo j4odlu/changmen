@@ -26,6 +26,7 @@ import {
 } from "@/stores/betting/arbOrderBind";
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
 import { useMatchStore } from "@/stores/matchStore";
+import { useUserStore } from "@/stores/userStore";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
 import { buildPolymarketMatchedBuyVenueOrderFromBet } from "@changmen/venue-browser/adapter/polymarket";
 
@@ -78,7 +79,7 @@ export interface PlaceValueBetParams {
   item: ViewBetItem;
   side: BetSide;
   amount: number;
-  calcOpts: Pick<ValueBetCalcOpts, "sharp" | "softPlatforms">;
+  calcOpts: Pick<ValueBetCalcOpts, "sharp" | "softPlatforms" | "pmMaxOverroundPct">;
   minEdge: number;
   /** 自动下单无 toast；确认下单沿用手动 toast 秒数 */
   silent?: boolean;
@@ -158,7 +159,12 @@ async function placeValueBetOrderUnlocked(params: PlaceValueBetParams): Promise<
   if (!(Number.isFinite(amount) && amount > 0))
     return { ok: false, code: "place_fail", message: "金额无效", amount };
 
-  let snap = computeValueBetEdge(bet, item, side, calcOpts);
+  // 弹窗、Web Lock 等待和平台预检期间设置可能改变；PM 质量上限始终读取当前值。
+  const currentCalcOpts = () => ({
+    ...calcOpts,
+    pmMaxOverroundPct: useUserStore().extensionPrefs?.valueBet?.pmMaxOverroundPct,
+  });
+  let snap = computeValueBetEdge(bet, item, side, currentCalcOpts());
   if (!snap || !isValueBetPositiveEdge(snap.edge, minEdge))
     return { ok: false, code: "gone", snap: snap ?? undefined, amount };
 
@@ -196,7 +202,7 @@ async function placeValueBetOrderUnlocked(params: PlaceValueBetParams): Promise<
     };
   }
 
-  const liveSnap = computeValueBetEdge(bet, item, side, calcOpts);
+  const liveSnap = computeValueBetEdge(bet, item, side, currentCalcOpts());
   if (!liveSnap)
     return { ok: false, code: "gone", snap, amount };
   const placeOdds = Number(option.odds);

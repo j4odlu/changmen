@@ -6,6 +6,7 @@ import {
   coerceValueBetAutoBetRuntime,
   evMarkerFloor,
   normalizeValueBetOdds,
+  normalizePmMaxOverroundPct,
   resolveSoftPlatforms,
   resolveSoftPlatformsFromAllowed,
   valueBetCalcOptsFromPrefs,
@@ -40,6 +41,7 @@ describe("valueBetCalcOptsFromPrefs", () => {
     const opts = valueBetCalcOptsFromPrefs(null);
     expect(opts.sharp).toBe(DEFAULT_SHARP_PLATFORM);
     expect(opts.minEdge).toBe(0.03);
+    expect(opts.pmMaxOverroundPct).toBe(3);
     expect(opts.nearEdge).toBe(0.01);
     expect(opts.softPlatforms).toEqual(resolveSoftPlatforms("PB"));
   });
@@ -57,6 +59,19 @@ describe("valueBetCalcOptsFromPrefs", () => {
     expect(opts.sharp).toBe("OB");
     expect(opts.minEdge).toBe(0.04);
     expect(opts.softPlatforms).toEqual(resolveSoftPlatforms("OB"));
+  });
+
+  it("reads PM baseline and excludes it from the selected EV targets", () => {
+    const opts = valueBetCalcOptsFromPrefs({
+      sharp: "Polymarket",
+      minEdgePct: 4,
+      softPlatforms: ["Polymarket", "PB", "RAY", "OB"],
+    });
+    expect(opts.sharp).toBe("Polymarket");
+    expect(opts.minEdge).toBe(0.04);
+    expect(opts.softPlatforms).toEqual(["OB", "RAY", "PB"]);
+    expect(valueBetCalcOptsFromPrefs({ sharp: "Polymarket", softPlatforms: ["Polymarket"] }).softPlatforms)
+      .toEqual([]);
   });
 
   it("caps near at minEdge when 正EV is below 1%", () => {
@@ -97,6 +112,19 @@ describe("resolveSoftPlatformsFromAllowed", () => {
 
   it("returns empty when allowed is only sharp", () => {
     expect(resolveSoftPlatformsFromAllowed("OB", ["OB"])).toEqual([]);
+  });
+});
+
+describe("PM baseline overround settings", () => {
+  it.each([undefined, null, "", Number.NaN, Infinity, "invalid", false, {}, []])("defaults invalid input %s to 3%%", (raw) => {
+    expect(normalizePmMaxOverroundPct(raw)).toBe(3);
+  });
+
+  it("clamps to 0–100%, rounds to one decimal and propagates the configured limit", () => {
+    expect(normalizePmMaxOverroundPct(-1)).toBe(0);
+    expect(normalizePmMaxOverroundPct(101)).toBe(100);
+    expect(normalizePmMaxOverroundPct("2.56")).toBe(2.6);
+    expect(valueBetCalcOptsFromPrefs({ sharp: "Polymarket", pmMaxOverroundPct: 1.5 }).pmMaxOverroundPct).toBe(1.5);
   });
 });
 

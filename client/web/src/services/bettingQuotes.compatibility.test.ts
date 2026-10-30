@@ -123,9 +123,11 @@ it("preserves progress metadata fallback values and read order", () => {
   }
 });
 
-it("moves EV configuration byte-for-byte and keeps its compatibility exports identical", () => {
+it("preserves historical EV exports and forwards all current configuration exports", () => {
   const old = original<Record<string, unknown>>("extensions/valueBet/evConfig.ts", {});
-  expect(Object.keys(config).sort()).toEqual(Object.keys(old).sort());
+  // 业务可新增配置；历史 API 仍保留，旧入口必须完整转出当前唯一实现。
+  expect(Object.keys(config)).toEqual(expect.arrayContaining(Object.keys(old)));
+  expect(Object.keys(legacyConfig).sort()).toEqual(Object.keys(config).sort());
   for (const name of Object.keys(config) as (keyof typeof config)[]) expect(legacyConfig[name]).toBe(config[name]);
   expect(config.createDefaultValueBetSoftPlatforms()).toEqual((old.createDefaultValueBetSoftPlatforms as () => unknown)());
 });

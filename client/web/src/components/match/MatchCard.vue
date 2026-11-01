@@ -68,6 +68,11 @@ const resolutionSource = computed(() => {
 const resolutionLabel = computed(() => formatResolutionSourceLabel(resolutionSource.value || undefined));
 const resolutionHref = computed(() => normalizeResolutionSourceHref(resolutionSource.value || undefined));
 
+const rayLiveHref = computed(() => {
+  const matchId = String(props.match.providers?.RAY || "").trim();
+  return matchId ? `/ray-live.html?matchId=${encodeURIComponent(matchId)}` : null;
+});
+
 const pmMatchStatus = computed(() => props.match.pmSport || props.match.providers?.Polymarket
   ? formatPmMatchStatus(props.match.pmSport)
   : null);
@@ -94,6 +99,15 @@ const pmMatchStatus = computed(() => props.match.pmSport || props.match.provider
         :class="`pm-match-status--${pmMatchStatus.kind}`"
         title="PM 实时赛况；比分按标题左右队伍排列，地图阶段沿用 PM 编号"
       >PM · {{ pmMatchStatus.label }}</span>
+      <a
+        v-if="rayLiveHref"
+        class="ray-live-button"
+        :href="rayLiveHref"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="在新标签页播放 RAY 比赛直播"
+        aria-label="在新标签页播放 RAY 比赛直播"
+      ><span aria-hidden="true">▶</span> 直播</a>
       <span v-if="resolutionLabel && resolutionHref" class="pm-sport">
         <a
           class="pm-sport-link"
@@ -121,6 +135,27 @@ const pmMatchStatus = computed(() => props.match.pmSport || props.match.provider
 </template>
 
 <style scoped>
+.ray-live-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 1px 7px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  color: var(--cm-color-success, #67c23a);
+  font-size: 12px;
+  line-height: 18px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ray-live-button:hover,
+.ray-live-button:focus-visible {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.match-title .ray-live-button + .pm-sport {
+  margin-left: 0;
+}
 .pm-match-status {
   margin-left: 10px;
   padding: 1px 6px;

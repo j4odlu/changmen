@@ -37,6 +37,7 @@
     "dayjs": "^1.11.21",
     "element-plus": "^2.14.0",
     "ethers": "^6.17.0",
+    "hls.js": "1.6.16",
     "mqtt": "^5.14.1",
     "pinia": "^3.0.2",
     "socket.io-client": "^4.8.1",

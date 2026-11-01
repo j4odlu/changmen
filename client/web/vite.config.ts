@@ -195,6 +195,10 @@ export default defineConfig(({ command, mode }) => {
     // 阈值按当前最大单平台 chunk 留余量。
     chunkSizeWarningLimit: 900,
     rollupOptions: {
+      input: {
+        main: path.resolve(WEB_ROOT, "index.html"),
+        rayLive: path.resolve(WEB_ROOT, "ray-live.html"),
+      },
       onwarn(warning, warn) {
         const message = warning.message ?? "";
         if (

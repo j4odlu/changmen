@@ -651,6 +651,7 @@
     "./adapter/ray/collect.test": "./adapter/ray/collect.test.ts",
     "./adapter/ray/collect": "./adapter/ray/collect.ts",
     "./adapter/ray/index": "./adapter/ray/index.ts",
+    "./adapter/ray/liveStream": "./adapter/ray/liveStream.ts",
     "./adapter/ray/markets": "./adapter/ray/markets.ts",
     "./adapter/ray/rayMapOutcome.test": "./adapter/ray/rayMapOutcome.test.ts",
     "./adapter/ray/rayMapOutcome": "./adapter/ray/rayMapOutcome.ts",

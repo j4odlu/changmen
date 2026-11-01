@@ -196,7 +196,7 @@ export default defineConfig(({ command, mode }) => {
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       input: {
-        main: path.resolve(WEB_ROOT, "index.html"),
+        index: path.resolve(WEB_ROOT, "index.html"),
         rayLive: path.resolve(WEB_ROOT, "ray-live.html"),
       },
       onwarn(warning, warn) {

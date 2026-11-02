@@ -41,6 +41,30 @@ test("invalid /time response is never marked ready", async () => {
   expect(() => clobTimestamp(origin)).toThrow("未就绪");
 });
 
+test("a cold cancellation reaches DELETE even when the optional time endpoint is unavailable", async () => {
+  const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async url => {
+    if (String(url).endsWith("/time")) throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    return new Response('{"canceled":["original"],"not_canceled":{}}');
+  });
+  const body = { orderID: "original" };
+  const result = await executePolymarketHttpRequest({ url: `${origin}/order`, method: "DELETE", l2Path: "/order", accountToken: token, body });
+  expect(JSON.parse(result.text)).toEqual({ canceled: ["original"], not_canceled: {} });
+  expect(fetchMock.mock.calls.map(call => call[0])).toEqual([`${origin}/order`]);
+  expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "DELETE", body: JSON.stringify(body),
+    headers: buildPolymarketL2HeadersFromToken(token, "DELETE", "/order", JSON.stringify(body), Math.floor(Date.now() / 1_000)) });
+});
+
+test("cancellation uses an existing valid clock sample without fetching time again", async () => {
+  const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async url =>
+    new Response(String(url).endsWith("/time") ? "1700000100" : '{"canceled":["original"]}'));
+  await prepareClobClock(origin);
+  const timestamp = clobTimestamp(origin);
+  fetchMock.mockClear();
+  await executePolymarketHttpRequest({ url: `${origin}/order`, method: "DELETE", l2Path: "/order", accountToken: token, body: { orderID: "original" } });
+  expect(fetchMock).toHaveBeenCalledOnce();
+  expect(fetchMock.mock.calls[0][1].headers.POLY_TIMESTAMP).toBe(String(timestamp));
+});
+
 
 test("background calibration resumes after a transient failure", async () => {
   const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(String(Date.now() / 1_000)));

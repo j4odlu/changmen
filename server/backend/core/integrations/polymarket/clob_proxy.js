@@ -93,8 +93,9 @@ export async function executePolymarketHttpRequest(input) {
   const authStart = performance.now();
   let authHeaders = null;
   if (l2Path && input?.accountToken) {
-    // POST /order 不得重新校时；冷启动准备由预检负责。
-    if (!(method === "POST" && l2Path === "/order")) await prepareClobClock(url);
+    const cancelOrder = method === "DELETE" && l2Path === "/order";
+    // POST /order 的冷启动准备由预检负责；撤单不能被提交预检的 /time 门控阻断。
+    if (!(method === "POST" && l2Path === "/order") && !cancelOrder) await prepareClobClock(url);
     let timestamp;
     if (input.clientL2Timestamp !== undefined) {
       if (method !== "POST" || l2Path !== "/order"
@@ -104,7 +105,11 @@ export async function executePolymarketHttpRequest(input) {
       timestamp = input.clientL2Timestamp;
     } else {
       try { timestamp = clobTimestamp(url); }
-      catch (err) { throw Object.assign(err, { pmSubmitNotSent: true }); }
+      catch (err) {
+        if (!cancelOrder) throw Object.assign(err, { pmSubmitNotSent: true });
+        // 与官方 SDK 默认 L2 鉴权一致：无可用样本时以当前 Unix 秒签名，仅限撤单。
+        timestamp = Math.floor(Date.now() / 1_000);
+      }
     }
     try { authHeaders = buildPolymarketL2HeadersFromToken(
       input.accountToken,

@@ -20,12 +20,12 @@ function sortedPrices(movement: NonNullable<OddsSignalBadge["movement"]>) {
 </template>
 
 <style scoped>
-.pm-odds-badges { position: relative; z-index: 4; display: inline-grid; flex: none; gap: 2px; align-content: center; max-width: 100px; vertical-align: middle; }
-.pm-odds-badge { display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box; min-width: 0; min-height: 18px; padding: 0 3px; border: 1px solid #d99b3659; border-radius: 3px; color: #9b6200; background: #fff0ce; font: 700 10px/1.3 system-ui, sans-serif; white-space: nowrap; cursor: pointer; font-variant-numeric: tabular-nums; }
+.pm-odds-badges { position: relative; z-index: 4; display: inline-flex; flex: none; flex-wrap: nowrap; gap: 2px; align-items: center; height: 22px; vertical-align: middle; }
+.pm-odds-badge { display: flex; flex: none; align-items: center; justify-content: center; gap: 2px; box-sizing: border-box; min-width: 0; height: 22px; padding: 0 2px; border: 1px solid #d99b3659; border-radius: 3px; color: #9b6200; background: #fff0ce; font: 700 9px/1 system-ui, sans-serif; white-space: nowrap; cursor: pointer; font-variant-numeric: tabular-nums; }
 .pm-odds-badge__metric { display: inline-flex; align-items: center; justify-content: center; gap: 1px; }
-.pm-odds-badge__prices { display: grid; gap: 1px; padding: 2px 0; font-size: 10px; font-weight: 600; line-height: 1.3; }
+.pm-odds-badge__prices { display: grid; grid-template-rows: repeat(2, 10px); gap: 0; padding: 0; font-size: 9px; font-weight: 600; line-height: 10px; }
 .pm-odds-badge__price { text-align: right; }
-.pm-odds-badge__arrow { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 12px; height: 16px; font-size: 20px; font-weight: 900; line-height: 1; }
+.pm-odds-badge__arrow { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 10px; height: 16px; font-size: 18px; font-weight: 900; line-height: 1; }
 .pm-odds-badge.is-up { border-color: #409eff66; color: #075cae; background: #e0efff; }
 .pm-odds-badge.is-aging { opacity: .65; }
 .pm-odds-badge:hover { opacity: 1; filter: brightness(.95); }

@@ -99,15 +99,16 @@
   min-width:100px;height:24px;line-height:22px;margin:auto 3px;text-align:center;background-image:linear-gradient(1deg,#2223 4%,#13141280 50%,#25252533 97%);border:1px solid hsla(0,0%,100%,.3);display:block;border-radius:4px;color:#fff;position:relative;font-size:13px;cursor:default;
 }
 
-/* [changmen 扩展] 左侧即时 flash 不变；右侧留出 PM 异动角标，信号出现时不挤动赔率。 */
-.matchs .bet.with-odds-signals { width:332px; }
+/* [changmen 扩展] 保留实时价和两行历史价；信息较多时横向扩展，不能把赔率行撑高。 */
+.matchs .bet.with-odds-signals { width:max-content;min-width:332px;flex-shrink:0; }
 .matchs .bet.with-odds-signals .bet-title { padding-right:80px; }
 .matchs .bet.with-odds-signals .item .item-odds {
-  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px;
-  box-sizing:border-box;min-width:140px;width:140px;height:auto;min-height:24px;
-  padding:2px 3px 2px 14px;line-height:18px;
+  display:flex;flex-wrap:nowrap;align-items:center;justify-content:center;gap:3px;
+  flex:1 0 auto;box-sizing:border-box;min-width:140px;width:auto;height:24px;min-height:24px;max-height:24px;
+  padding:0 3px 0 14px;line-height:20px;white-space:nowrap;
 }
 .matchs .bet.with-odds-signals .item-odds__value { flex:1 0 auto;min-width:0;white-space:nowrap; }
+.matchs .bet.with-odds-signals .item .item-type { flex-shrink:0; }
 
 /* [changmen 扩展] PB 影子旁显：蓝下划线=可点（单击选边 / 双击下单）；不改主价、不写 fo */
 .matchs .bet .item .item-odds .pb-ws-shadow {
@@ -144,7 +145,7 @@
   color:#e3b341;
   text-decoration-color:#4da3ff;
 }
-.matchs .bet .item .item-odds:has(.pb-ws-shadow) {
+.matchs .bet:not(.with-odds-signals) .item .item-odds:has(.pb-ws-shadow) {
   height:auto;
   min-height:24px;
   line-height:1.2;

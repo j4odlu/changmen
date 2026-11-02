@@ -43,6 +43,17 @@ test("production Node upgrades require a successful release of the same master c
   assert(steps[mutate].run.includes("< scripts/deploy/upgrade-node-runtime.sh"));
 });
 
+test("runtime workflow accepts Node version files with Windows and Unix line endings", () => {
+  const script = workflow("node-runtime").jobs.upgrade.steps.find(step => step.name === "Upgrade and verify production Node").run;
+  const extract = script.split("\n").find(line => line.startsWith('version="$(')).replace(" < .node-version", "");
+  const guard = script.split("\n").find(line => line.startsWith('[[ "$version"'));
+  const bash = process.platform === "win32" ? "C:/msys64/usr/bin/bash.exe" : "bash";
+  for (const input of ["26.13.0\n", "26.13.0\r\n"]) {
+    assert.equal(execFileSync(bash, ["-e", "-c", extract + "\n" + guard + '\nprintf "%s" "$version"'],
+      { input, encoding: "utf8", windowsHide: true }), "26.13.0");
+  }
+});
+
 test("pull requests validate offline without deployment credentials or publication", () => {
   const pr = workflow("pull-request");
   assert.deepEqual(pr.on.pull_request.branches, ["master"]);

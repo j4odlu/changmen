@@ -49,6 +49,6 @@ jobs:
           ssh-keyscan -p "${DEPLOY_PORT:-22}" -H 47.57.10.202 >> ~/.ssh/known_hosts
           repo="${DEPLOY_REPO:-/root/changmen}"
           [[ "$repo" =~ ^/[a-zA-Z0-9_./-]+$ && "$repo" != / && "$repo" != *..* ]]
-          version="$(cat .node-version)"
+          version="$(tr -d '\r\n' < .node-version)"
           [[ "$version" =~ ^26\.[0-9]+\.[0-9]+$ ]]
           ssh -p "${DEPLOY_PORT:-22}" -i "$key" -o BatchMode=yes -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=8 "${DEPLOY_USER:-root}@47.57.10.202" "DEPLOY_REPO='$repo' NODE_RUNTIME_VERSION='$version' bash -s" < scripts/deploy/upgrade-node-runtime.sh

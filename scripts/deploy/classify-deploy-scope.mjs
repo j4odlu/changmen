@@ -8,7 +8,7 @@
 const frontendRoots = ["client/web/", "client/packages/client-core/", "client/packages/arb-core/",
   "client/packages/venue-browser/", "client/packages/pm-market-data-browser/", "client/devtools/"];
 const ciOnlyFiles = new Set(["classify-deploy-scope.mjs", "classify-deploy-scope-cli.mjs", "change-plan.mjs",
-  "check-controls.mjs", "release-checks.mjs", "release-summary.mjs", "read-deployed-versions.mjs", "check-database-compatibility.mjs", "release.test.sh"]
+  "check-controls.mjs", "release-checks.mjs", "release-summary.mjs", "read-deployed-versions.mjs", "check-database-compatibility.mjs", "release.test.sh", "upgrade-node-runtime.sh"]
   .map(file => "scripts/deploy/" + file));
 const backendDeployFiles = new Set(["install-backend.mjs", "backend-install-profile.mjs", "verify-backend-processes.mjs",
   "pack-git-repo.mjs", "compile-backend-router.mjs", "deploy-hk-fast.mjs", "deploy-hk-remaining.mjs"].map(file => "scripts/deploy/" + file));

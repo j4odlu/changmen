@@ -84,7 +84,7 @@ RDS 是独立持久层。普通应用发布及回滚均不修改数据库结构�
 
 ## 配置与版本目录
 
-[changmen 扩展] 2026-11-02：Node.js 基线统一为 **26.13.0 LTS**。CI、Linux 制品验收和生产使用 26 系列，根 .node-version 记录准确版本。生产运行时通过 Actions **Upgrade Node runtime** 单独切换：输入同一 master 提交已成功的 **Validate and release** run ID，工作流先核对提交和结果，再校验官方压缩包 SHA-256。切换保留当前应用目录，在独立 .runtimes 目录安装运行时，以 /usr/local/bin/node 链接启用，并更新 PM2 daemon 和既有 8 个进程。进程版本、目录、HTTP、数据库连接或内嵌 matcher 核验失败时恢复原链接和进程运行时；不执行数据库维护或替换应用源码。
+[changmen 扩展] 2026-11-02：Node.js 基线统一为 **26.13.0 LTS**。CI、Linux 制品验收和生产使用 26 系列，根 .node-version 记录准确版本。生产运行时通过 Actions **Upgrade Node runtime** 单独切换：输入同一 master 提交已成功的 **Validate and release** run ID，工作流先核对提交和结果，再校验官方压缩包 SHA-256。切换保留当前应用目录，在独立 .runtimes 目录安装运行时，以 /usr/local/bin/node 链接启用。先单独保存既有 8 个进程的受保护快照，由 systemd 停止 PM2 服务并等待清理完成，再恢复快照和启动新运行时；不在 systemd 管理的 daemon 上执行 pm2 update。进程版本、目录、HTTP、数据库连接或内嵌 matcher 核验失败时恢复原链接、快照和服务；不执行数据库维护或替换应用源码。
 
 保持现有 `DEPLOY_SSH_KEY`、`DEPLOY_USER`、`DEPLOY_PORT`、`DEPLOY_REPO`；目标 VPS 47.57.10.202，应用根 `/root/changmen`，Node 26、PM2、GNU tar/coreutils、flock、curl。版本基线读取使用现网固定应用根。
 
@@ -109,5 +109,7 @@ RDS 是独立持久层。普通应用发布及回滚均不修改数据库结构�
 node scripts/deploy/check-controls.mjs
 npm run check:change -- --base=<本次修改前的提交>
 ```
+
+运行时切换另有显式真实演练：在空闲 3456 端口的独立 Linux/root 环境，用 Node 22 或 24 执行 `node scripts/testing/node-runtime-systemd.mjs <PM2-CLI绝对路径> <官方26.13.0-linux-x64.tar.xz> <报告路径>`。它使用独立 PM2_HOME、临时 systemd unit 和 8 个模拟应用，覆盖孤立 daemon 接管、部分启动失败后恢复及 Node 26 切换，不连接 RDS。日常离线控制回归继续使用无外部依赖的模拟用例。
 
 离线集成覆盖原子切换、静态资源保留、旧代次拒绝、失败重试、数据库连接失败不触碰进程、后端不可用时的独立前端发布、联动发布阻断、错误版本拒绝、进程恢复和中断回滚。模拟测试通过不等于真实 Actions/VPS 发布已验收；上线后仍需检查实际健康与版本记录。

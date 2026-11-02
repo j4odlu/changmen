@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # Explicit infrastructure operation: keep the active application and its data intact.
 set -Eeuo pipefail
+umask 077
 repo="${DEPLOY_REPO:?DEPLOY_REPO required}"
 version="${NODE_RUNTIME_VERSION:?NODE_RUNTIME_VERSION required}"
 link="${NODE_RUNTIME_LINK:-/usr/local/bin/node}"
+service="${NODE_RUNTIME_SERVICE:-pm2-root.service}"
+pm2_home="${PM2_HOME:-$HOME/.pm2}"
 [[ "$repo" =~ ^/[a-zA-Z0-9_./-]+$ && "$repo" != / && "$repo" != *..* ]]
 [[ "$version" =~ ^26\.[0-9]+\.[0-9]+$ ]]
+[[ "$service" =~ ^[a-zA-Z0-9_-]+\.service$ ]]
+systemctl cat "$service" > /dev/null
 [[ "$link" == /*/node && "$link" != *..* && ! -d "$link" ]]
 [[ ! -e "$link" || -L "$link" ]] || { echo 'Refusing to overwrite an unmanaged Node binary' >&2; exit 1; }
 mkdir -p "$repo/.deploy-state" "$repo/.runtimes"
@@ -18,6 +23,7 @@ previous="$(node --version)"
 old_link="$(readlink "$link" || true)"
 state="$repo/.deploy-state/node-runtime"
 mkdir -p "$state"
+chmod 700 "$state"
 verify() {
   local expected="$1"
   pm2 jlist | node "$checker" "$active" || return 1
@@ -41,16 +47,36 @@ curl --fail --silent --show-error --location --max-time 30 "https://nodejs.org/d
 tar -xJf "$work/$archive" -C "$work"
 candidate="$work/node-v$version-linux-x64"
 [[ "$("$candidate/bin/node" --version)" == "v$version" ]]
-[[ ! -e "$runtime" ]] || { echo "Runtime directory already exists: $runtime" >&2; exit 1; }
-mv "$candidate" "$runtime"
+if [[ -e "$runtime" ]]; then
+  cmp "$candidate/bin/node" "$runtime/bin/node"
+else
+  mv "$candidate" "$runtime"
+fi
+verify "$previous"
+pm2 save > /dev/null
+cp "$pm2_home/dump.pm2" "$state/dump.before.pm2"
+stop_manager() {
+  # Wait for systemd's ExecStop and cgroup cleanup before starting a new daemon.
+  systemctl stop "$service"
+  local pid="$(cat "$pm2_home/pm2.pid" 2>/dev/null || true)"
+  if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+    pm2 kill >> "$state/stop-pm2.log" 2>&1
+  fi
+}
+start_manager() {
+  # Never depend on a live dump that a failing daemon may have overwritten.
+  cp "$state/dump.before.pm2" "$pm2_home/dump.pm2"
+  systemctl start "$service" > "$1" 2>&1
+}
 rollback() {
   local status="$1"
   trap - ERR
   trap '' HUP INT TERM
   echo "Node upgrade failed; restoring $previous" >&2
+  stop_manager
   if [[ -n "$old_link" ]]; then ln -sfn "$old_link" "$link.next"; mv -Tf "$link.next" "$link"; else rm -f "$link"; fi
   hash -r
-  pm2 update > "$state/rollback-pm2.log" 2>&1
+  start_manager "$state/rollback-pm2.log"
   for attempt in $(seq 1 45); do if verify "$previous"; then echo 'Node rollback verified' >&2; exit "$status"; fi; sleep 2; done
   echo 'ERROR: Node rollback health failed; inspect PM2 immediately' >&2
   exit 1
@@ -59,15 +85,17 @@ trap 'rollback $?' ERR
 trap 'rollback 129' HUP
 trap 'rollback 130' INT
 trap 'rollback 143' TERM
+stop_manager
 ln -sfn "$runtime/bin/node" "$link.next"
 mv -Tf "$link.next" "$link"
 hash -r
 [[ "$(node --version)" == "v$version" ]]
-# Refresh the PM2 daemon as well as the eight preflight-verified applications.
-pm2 update > "$state/upgrade-pm2.log" 2>&1
+# The service owns both the daemon and its eight applications.
+start_manager "$state/upgrade-pm2.log"
 recovered=0
 for attempt in $(seq 1 45); do if verify "v$version"; then recovered=1; break; fi; sleep 2; done
 [[ "$recovered" == 1 ]]
+systemctl is-active --quiet "$service"
 pm2 save > /dev/null
 node -e 'const fs=require("node:fs"); fs.writeFileSync(process.argv[1],JSON.stringify({passed:true,node:process.version,previous:process.argv[2],active:process.argv[3],checkedAt:new Date().toISOString()},null,2));' "$state/verdict.json.next" "$previous" "$active"
 trap '' HUP INT TERM

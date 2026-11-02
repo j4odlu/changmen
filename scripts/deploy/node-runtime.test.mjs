@@ -30,6 +30,8 @@ function fixture(t) {
     pm2_env: { status: "online", node_version: "24.19.0", pm_cwd: path.join(active, dir), pm_exec_path: path.join(active, dir, script) } }));
   const apps = path.join(root, "apps.json");
   write(apps, JSON.stringify(entries));
+  const pm2Home = path.join(root, "pm2");
+  fs.mkdirSync(pm2Home);
   const source = path.join(root, "source"), archive = path.join(root, "node-v26.13.0-linux-x64.tar.xz");
   write(path.join(source, "node-v26.13.0-linux-x64/bin/node"), '#!/usr/bin/env bash\necho v26.13.0\n', true);
   execFileSync("tar", ["-cJf", archive, "-C", source, "."]);
@@ -50,16 +52,26 @@ else cp "$TEST_ARCHIVE" "$out"; fi
   write(path.join(bin, "pm2"), `#!/usr/bin/env bash
 case "$1" in
  jlist) cat "$TEST_APPS";;
- update)
+ save) cp "$TEST_APPS" "$PM2_HOME/dump.pm2"; echo saved > "$TEST_ROOT/saved";;
+ kill) echo '[]' > "$TEST_APPS"; rm -f "$PM2_HOME/pm2.pid";;
+ *) exit 2;; esac
+`, true);
+  write(path.join(bin, "systemctl"), `#!/usr/bin/env bash
+case "$1" in
+ cat) exit 0;;
+ stop) echo '[]' > "$TEST_APPS"; echo '[]' > "$PM2_HOME/dump.pm2"; rm -f "$PM2_HOME/pm2.pid" "$TEST_ROOT/active";;
+ start)
    if [[ -L "$NODE_RUNTIME_LINK" ]]; then version=26.13.0; else version=24.19.0; fi
+   cp "$PM2_HOME/dump.pm2" "$TEST_APPS"
    "$TEST_REAL_NODE" -e 'const fs=require("node:fs"),f=process.argv[1],a=JSON.parse(fs.readFileSync(f)); for(const p of a)p.pm2_env.node_version=process.argv[2]; fs.writeFileSync(f,JSON.stringify(a));' "$TEST_APPS" "$version"
    echo "$version" >> "$TEST_ROOT/updates"
-   if [[ "\u0024{TEST_FAIL_UPDATE:-}" == 1 && "$version" == 26.13.0 ]]; then exit 23; fi;;
- save) echo saved > "$TEST_ROOT/saved";;
+   if [[ "\u0024{TEST_FAIL_UPDATE:-}" == 1 && "$version" == 26.13.0 ]]; then echo '[]' > "$PM2_HOME/dump.pm2"; echo '[]' > "$TEST_APPS"; exit 23; fi
+   touch "$TEST_ROOT/active";;
+ is-active) test -f "$TEST_ROOT/active";;
  *) exit 2;; esac
 `, true);
   const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, DEPLOY_REPO: repo, NODE_RUNTIME_VERSION: "26.13.0",
-    NODE_RUNTIME_LINK: link, TEST_REAL_NODE: process.execPath, TEST_ROOT: root, TEST_APPS: apps, TEST_ARCHIVE: archive };
+    NODE_RUNTIME_LINK: link, PM2_HOME: pm2Home, TEST_REAL_NODE: process.execPath, TEST_ROOT: root, TEST_APPS: apps, TEST_ARCHIVE: archive };
   const run = overrides => spawnSync("bash", [new URL("./upgrade-node-runtime.sh", import.meta.url).pathname],
     { env: { ...env, ...overrides }, encoding: "utf8", timeout: 30000 });
   return { root, repo, active, link, apps, run };
@@ -81,7 +93,16 @@ test("failed PM2 upgrade restores the original Node and verifies the previous ei
   assert.match(result.stderr, /Node rollback verified/);
   assert(!fs.existsSync(f.link));
   assert.equal(fs.readFileSync(path.join(f.root, "updates"), "utf8"), "26.13.0\n24.19.0\n");
+  assert.equal(JSON.parse(fs.readFileSync(f.apps)).length, 8, "Protected snapshot must survive an emptied live PM2 dump");
   assert(!fs.existsSync(path.join(f.repo, ".deploy-state/node-runtime/verdict.json")));
+});
+
+test("a verified runtime directory left by a previous rollback can be reused", linux, t => {
+  const f = fixture(t);
+  assert.notEqual(f.run({ TEST_FAIL_UPDATE: "1" }).status, 0);
+  const retry = f.run();
+  assert.equal(retry.status, 0, retry.stdout + retry.stderr);
+  assert.equal(JSON.parse(fs.readFileSync(f.apps)).length, 8);
 });
 
 for (const mode of ["checksum", "processes", "unmanaged binary"])

@@ -72,11 +72,40 @@ it("does not send a cancel after dismissal, owner switch, or a terminal update d
   await p.state.cancel(); expect(mocks.cancel).not.toHaveBeenCalled();
 });
 it("allows retrying an unknown cancellation while keeping its verification notice", async () => {
-  const row = execution(); row.cancel = { commandId: "cancel", state: "unknown", message: "结果待核实" };
+  const row = execution(); row.cancel = { commandId: "cancel", state: "unknown", message: "PM timeout" };
   const p = await panel(row);
   expect(p.html).toContain("取消结果待核实"); expect(p.html).toContain("重试取消 PM 剩余挂单");
+  expect(p.html).toContain("PM timeout"); expect(p.html).toContain("正在查询原单状态");
   expect(p.html).not.toMatch(/<button[^>]*class="pm-gtc-monitor__cancel"[^>]* disabled/); await p.state.cancel();
   expect(mocks.cancel).toHaveBeenCalledExactlyOnceWith("original");
+});
+it("shows official cancellation acknowledgement without an unknown result or another cancel action", async () => {
+  const row = execution(); row.cancel = { commandId: "cancel", state: "acknowledged", message: "PM 已确认取消剩余挂单，成交明细继续核对" };
+  const p = await panel(row);
+  expect(p.html).toContain("PM 已确认取消剩余挂单，正在同步订单状态");
+  expect(p.html).not.toContain("取消结果待核实"); expect(p.html).not.toContain("pm-gtc-monitor__cancel");
+  await p.state.cancel(); expect(mocks.cancel).not.toHaveBeenCalled();
+});
+it("shows a rejected cancellation's reason and offers retry", async () => {
+  const row = execution(); row.cancel = { commandId: "cancel", state: "failed", message: "still processing" };
+  const p = await panel(row);
+  expect(p.html).toContain("取消失败"); expect(p.html).toContain("still processing");
+  expect(p.html).toContain("重试取消 PM 剩余挂单"); expect(p.html).not.toContain("取消结果待核实");
+  await p.state.cancel(); expect(mocks.cancel).toHaveBeenCalledExactlyOnceWith("original");
+});
+it.each(["requested", "dispatching"] as const)("keeps a %s cancellation in progress without a verification warning", async (state) => {
+  const row = execution(); row.cancel = { commandId: "cancel", state, message: "正在核对原单取消结果" };
+  const p = await panel(row);
+  expect(p.html).toContain("取消中"); expect(p.html).not.toContain("取消结果待核实");
+  expect(p.html).not.toContain("重试取消 PM 剩余挂单");
+});
+it("keeps a confirmed cancellation distinct from pending fill details", async () => {
+  const row = execution(); row.terminal = true; row.open = "0"; row.complete = false; row.order!.status = "CANCELED";
+  row.cancel = { commandId: "cancel", state: "acknowledged", message: "原单余量已终止，已成交部分保留" };
+  const p = await panel(row);
+  expect(p.html).toContain("部分成交 · 剩余挂单已取消"); expect(p.html).toContain("成交明细待核实");
+  expect(p.html).toContain("原单余量已终止，已成交部分保留");
+  expect(p.html).not.toContain("取消结果待核实"); expect(p.html).not.toContain("pm-gtc-monitor__cancel");
 });
 it("keeps PM monitoring and order facts independent of RAY errors and unavailable fee facts", () => {
   const row = execution(); row.plan.price = "0.9"; row.fills.trade!.fee = null; row.fills.trade!.role = "TAKER";
@@ -84,4 +113,18 @@ it("keeps PM monitoring and order facts independent of RAY errors and unavailabl
   expect(view).toMatchObject({ state: "部分成交", averagePrice: "0.5", fee: null, monitorLabel: "监控重试中" });
   row.fills = {};
   expect(pmGtcMonitorCardView(row).averagePrice).toBeNull();
+});
+it.each(["0", "4"])("shows market-resolution cancellation with %s fills and no retry action", async (matched) => {
+  const row = execution(); row.terminal = true; row.open = "0"; row.order!.status = "CANCELED_MARKET_RESOLVED"; row.matched = matched;
+  row.cancel = { commandId: "cancel", state: "acknowledged", message: "原单余量已终止，已成交部分保留" };
+  const p = await panel(row);
+  expect(p.html).toContain(matched === "0" ? "市场已结算，挂单已取消" : "部分成交 · 市场已结算，剩余挂单已取消");
+  expect(p.html).not.toContain("取消结果待核实"); expect(p.html).not.toContain("pm-gtc-monitor__cancel");
+});
+it("shows an invalid original as unresolved rather than resting or canceled", async () => {
+  const row = execution(); row.order!.status = "INVALID"; row.open = null; row.complete = false;
+  row.error = "PM 返回订单无效（INVALID），剩余挂单与成交仍需核实";
+  const p = await panel(row);
+  expect(p.html).toContain("订单无效 · 余量待核实"); expect(p.html).toContain("INVALID");
+  expect(p.html).not.toContain("GTC · 套利 · 挂单中");
 });

@@ -190,6 +190,11 @@ describe("gTC V1 durable state decisions", () => {
     row = mergeGtcFacts(row, facts("5", "LIVE"));
     expect(row.open).toBe("0"); expect(row.matched).toBe("5"); expect(row.principal).toBe("2.5");
   });
+  it("market-resolution cancellation survives stale LIVE facts without losing fills or its reason", () => {
+    let row = mergeGtcFacts(accepted(), facts("5", "CANCELED_MARKET_RESOLVED"));
+    row = mergeGtcFacts(row, facts("5", "LIVE"));
+    expect(row).toMatchObject({ open: "0", terminal: true, matched: "5", principal: "2.5", order: { status: "CANCELED_MARKET_RESOLVED" } });
+  });
   it("repeated snapshots never double-count a trade", () => {
     const row = mergeGtcFacts(mergeGtcFacts(accepted(), facts()), facts());
     expect(row.matched).toBe("5"); expect(row.principal).toBe("2.5"); expect(row.fee).toBe("0");

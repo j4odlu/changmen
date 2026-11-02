@@ -101,12 +101,12 @@ async function cancel() {
     <div v-if="view.cancelLabel" role="status" class="pm-gtc-monitor__notice">
       {{ view.cancelLabel }}
     </div>
-    <button v-if="view.showCancel" type="button" class="pm-gtc-monitor__cancel" title="仅取消剩余挂单，已成交部分保留。" :disabled="readOnly || !view.canCancel || cancelBusy" @click="cancel">
-      {{ cancelBusy || view.cancelInFlight ? '取消中' : view.cancelPending ? '重试取消 PM 剩余挂单' : '取消 PM 剩余挂单' }}
-    </button>
-    <div v-if="execution.cancel?.message && !view.cancelLabel" class="pm-gtc-monitor__notice">
-      {{ execution.cancel.message }}
+    <div v-if="view.cancelDetail" class="pm-gtc-monitor__notice">
+      {{ view.cancelDetail }}
     </div>
+    <button v-if="view.showCancel" type="button" class="pm-gtc-monitor__cancel" title="仅取消剩余挂单，已成交部分保留。" :disabled="readOnly || !view.canCancel || cancelBusy" @click="cancel">
+      {{ cancelBusy || view.cancelInFlight ? '取消中' : view.cancelRetry ? '重试取消 PM 剩余挂单' : '取消 PM 剩余挂单' }}
+    </button>
     <div v-if="view.queryDiagnostic" class="pm-gtc-monitor__notice">
       最近查询：{{ view.queryDiagnostic }}；已确认成交记录仍有效。
     </div>

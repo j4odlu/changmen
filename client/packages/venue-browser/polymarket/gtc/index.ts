@@ -118,8 +118,11 @@ export async function readGtcFacts(account: PlatformAccount, plan: GtcOrderRefer
     throw new Error("GTC 原单身份不一致");
   if (order && (String(order.asset_id) !== plan.tokenId || String(order.side).toUpperCase() !== "BUY"))
     throw new Error("GTC 原单资产或方向不一致");
-  if (order && !["LIVE", "DELAYED", "MATCHED", "UNMATCHED", "CANCELED", "CANCELLED", "EXPIRED", "REJECTED"].includes(String(order.status).toUpperCase()))
-    throw new Error("GTC 原单状态不支持，需人工核实");
+  const status = String(order?.status ?? "").trim().toUpperCase();
+  // 官方 GET /data/order/{orderID} 还包含 INVALID 和 CANCELED_MARKET_RESOLVED：
+  // https://docs.polymarket.com/api-reference/trade/get-single-order-by-id
+  if (order && !["LIVE", "DELAYED", "MATCHED", "UNMATCHED", "CANCELED", "CANCELLED", "CANCELED_MARKET_RESOLVED", "INVALID", "EXPIRED", "REJECTED"].includes(status))
+    throw new Error(`GTC 原单状态不支持（${status.slice(0, 80) || "缺失"}），需人工核实`);
   const history = await (sharedHistory ?? readGtcTradeHistory(account, since));
   const { complete } = history;
   const fills = new Map<string, GtcFill>();
@@ -152,7 +155,9 @@ export async function readGtcFacts(account: PlatformAccount, plan: GtcOrderRefer
     return { order: null, fills: ownFills, complete: false, observedAt: Date.now(), error: orderError };
   }
   const associated = order.associate_trades;
-  if (!Array.isArray(associated))
-    throw new Error("GTC 原单关联 tradeId 字段缺失");
-  return { order: { id, original: String(order.original_size), matched: String(order.size_matched), status: String(order.status).toUpperCase(), tradeIds: associated.map(String) }, fills: [...fills.values()], complete, observedAt: Date.now(), ...(!complete ? { error: "GTC 成交分页截断" } : {}) };
+  // 官方将 associate_trades 标为可选；缺省时仍由完整分页和累计量核对成交。
+  if (associated !== undefined && !Array.isArray(associated))
+    throw new Error("GTC 原单关联 tradeId 字段格式无效");
+  const error = status === "INVALID" ? "PM 返回订单无效（INVALID），剩余挂单与成交仍需核实" : !complete ? "GTC 成交分页截断" : "";
+  return { order: { id, original: String(order.original_size), matched: String(order.size_matched), status, tradeIds: (associated ?? []).map(String) }, fills: [...fills.values()], complete: complete && !error, observedAt: Date.now(), ...(error ? { error } : {}) };
 }

@@ -127,12 +127,16 @@ export function mergeGtcOrderFacts<T extends GtcOrderFactsState>(previous: T, fa
     // 成交回滚由明确 FAILED 证据解释；普通迟到累计量不得倒退。
     const decreases = row.order && gtcUnits(incoming.matched) < gtcUnits(row.order.matched);
     const failed = facts.fills.some(fill => fill.status === "FAILED");
-    const wasCanceled = ["CANCELED", "CANCELLED"].includes(row.order?.status ?? "");
-    if (!decreases || failed)
-      row.order = structuredClone(incoming);
+    const previousCancelStatus = row.order?.status;
+    const wasCanceled = ["CANCELED", "CANCELLED", "CANCELED_MARKET_RESOLVED"].includes(previousCancelStatus ?? "");
+    if (!decreases || failed) {
+      // 后续可选字段缺省不能抹掉已知成交引用；每个引用仍须取得成交或 FAILED 证据。
+      const tradeIds = [...new Set([...(row.order?.tradeIds ?? []), ...incoming.tradeIds])];
+      row.order = { ...structuredClone(incoming), tradeIds };
+    }
     if (wasCanceled && row.order) {
-      if (!["CANCELED", "CANCELLED", "MATCHED"].includes(incoming.status))
-        row.order.status = "CANCELED";
+      if (!["CANCELED", "CANCELLED", "CANCELED_MARKET_RESOLVED", "MATCHED"].includes(incoming.status))
+        row.order.status = previousCancelStatus!;
     }
     row.orderId ||= facts.order.id;
     row.submitNotSent = false;
@@ -181,7 +185,8 @@ export function mergeGtcOrderFacts<T extends GtcOrderFactsState>(previous: T, fa
   if (feeUnknown)
     errors.push("成交费用待核实");
   const status = row.order?.status ?? "";
-  const canceled = ["CANCELED", "CANCELLED", "EXPIRED", "REJECTED"].includes(status);
+  // 官方市场结算撤销仅终止未成交余量，不回滚任何成交明细。
+  const canceled = ["CANCELED", "CANCELLED", "CANCELED_MARKET_RESOLVED", "EXPIRED", "REJECTED"].includes(status);
   const full = orderMatched != null && orderMatched === total && quantity === total;
   // 官方原单 MATCHED 已退出挂单；结算舍入可能留下签单数量差额，不能虚构成交或可撤余量。
   const matchedTerminal = status === "MATCHED";

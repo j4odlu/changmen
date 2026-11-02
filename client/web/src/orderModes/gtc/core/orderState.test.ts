@@ -25,6 +25,14 @@ it("unknown fees and missing trade details remain unresolved", () => {
   const next = mergeGtcOrderFacts(order(), { order: { id: "hash", original: "10", matched: "5", status: "LIVE", tradeIds: ["trade", "missing"] }, fills: [{ ...fill, fee: null }], complete: true, observedAt: 1 });
   expect(next.complete).toBe(false); expect(next.fee).toBeNull(); expect(next.error).toContain("费用待核实"); expect(next.error).toContain("明细缺失");
 });
+it("a later snapshot cannot erase an earlier unresolved trade reference and finish reconciliation", () => {
+  let next = mergeGtcOrderFacts(order(), { order: { id: "hash", original: "10", matched: "0", status: "LIVE", tradeIds: ["pending"] }, fills: [], complete: true, observedAt: 1 });
+  next = mergeGtcOrderFacts(next, { order: { id: "hash", original: "10", matched: "0", status: "CANCELED_MARKET_RESOLVED", tradeIds: [] }, fills: [], complete: true, observedAt: 2 });
+  expect(next).toMatchObject({ terminal: true, open: "0", complete: false, order: { tradeIds: ["pending"] } });
+  expect(next.error).toContain("明细缺失");
+  next = mergeGtcOrderFacts(next, { order: null, fills: [{ ...fill, key: "pending:maker", tradeId: "pending", status: "FAILED", updatedAt: 3 }], complete: true, observedAt: 3 });
+  expect(next).toMatchObject({ matched: "0", principal: "0", terminal: true, complete: true, error: "" });
+});
 it("explicit FAILED evidence removes the fill and cannot be undone by stale successful replay", () => {
   let next = mergeGtcOrderFacts(order(), { order: { id: "hash", original: "10", matched: "3", status: "LIVE", tradeIds: ["trade"] }, fills: [fill], complete: true, observedAt: 1 });
   next = mergeGtcOrderFacts(next, { order: { id: "hash", original: "10", matched: "0", status: "CANCELED", tradeIds: ["trade"] }, fills: [{ ...fill, status: "FAILED", updatedAt: 2 }], complete: true, observedAt: 2 });

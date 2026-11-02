@@ -25,6 +25,40 @@ it("shares one complete account history across originals while retaining exact f
 });
 beforeEach(() => { vi.clearAllMocks(); mocks.market.mockResolvedValue({ fd: { r: 0, e: 1, to: true } }); mocks.build.mockImplementation(async ({ size, price }: { size: number; price: number }) => ({ makerAmount: String(Math.round(size * price * 1_000_000)), takerAmount: String(Math.round(size * 1_000_000)) })); mocks.json.mockReturnValue({ orderType: "GTC", order: {} }); });
 describe("isolated GTC adapter", () => {
+  it.each(["0", "3"])("reconciles market-resolution cancellation while retaining %s matched shares", async (matched) => {
+    mocks.getOrder.mockResolvedValue({ id: "order", asset_id: "token", side: "BUY", original_size: "10", size_matched: matched,
+      status: "CANCELED_MARKET_RESOLVED", associate_trades: matched === "0" ? [] : ["t"] });
+    mocks.trades.mockResolvedValue({ data: matched === "0" ? [] : [trade], next_cursor: "LTE=" });
+    const initial = createGtcExecution("execution", "owner", "wallet", "maker", { ...plan, orderHash: "order" }, 1);
+    initial.cancel = { commandId: "cancel", state: "unknown", message: "timeout" };
+    const row = mergeGtcFacts(initial, await readGtcFacts({} as never, plan, "order", 1));
+    expect(row).toMatchObject({ matched, principal: matched === "0" ? "0" : "1.5", open: "0", terminal: true, complete: true, error: "",
+      order: { status: "CANCELED_MARKET_RESOLVED" }, cancel: { state: "acknowledged" } });
+    expect(gtcCanCancel(row)).toBe(false);
+  });
+  it("keeps INVALID diagnostics and confirmed fills without claiming a successful cancellation", async () => {
+    mocks.getOrder.mockResolvedValue({ id: "order", asset_id: "token", side: "BUY", original_size: "10", size_matched: "3", status: "INVALID", associate_trades: ["t"] });
+    mocks.trades.mockResolvedValue({ data: [trade], next_cursor: "LTE=" });
+    const facts = await readGtcFacts({} as never, plan, "order", 1);
+    const initial = createGtcExecution("execution", "owner", "wallet", "maker", { ...plan, orderHash: "order" }, 1);
+    initial.cancel = { commandId: "cancel", state: "unknown", message: "timeout" };
+    const row = mergeGtcFacts(initial, facts);
+    expect(row).toMatchObject({ matched: "3", principal: "1.5", complete: false, terminal: false, open: null,
+      order: { status: "INVALID" }, cancel: { state: "unknown" } });
+    expect(row.error).toContain("INVALID"); expect(facts.fills).toHaveLength(1);
+  });
+  it.each(["0", "3"])("accepts omitted optional trade ids and checks %s matched shares against exact fills", async (matched) => {
+    mocks.getOrder.mockResolvedValue({ id: "order", asset_id: "token", side: "BUY", original_size: "10", size_matched: matched, status: "CANCELED_MARKET_RESOLVED" });
+    mocks.trades.mockResolvedValue({ data: matched === "0" ? [] : [trade], next_cursor: "LTE=" });
+    const initial = createGtcExecution("execution", "owner", "wallet", "maker", { ...plan, orderHash: "order" }, 1);
+    const facts = await readGtcFacts({} as never, plan, "order", 1);
+    expect(mergeGtcFacts(initial, facts)).toMatchObject({ matched, open: "0", terminal: true, complete: true });
+    if (matched !== "0") expect(mergeGtcFacts(initial, { ...facts, fills: [] }).complete).toBe(false);
+  });
+  it("includes an unsupported raw status in the diagnostic instead of silently accepting it", async () => {
+    mocks.getOrder.mockResolvedValue({ id: "order", asset_id: "token", side: "BUY", status: "NEW_UNKNOWN_STATUS" });
+    await expect(readGtcFacts({} as never, plan, "order", 1)).rejects.toThrow("原单状态不支持（NEW_UNKNOWN_STATUS）");
+  });
   it("reconciles confirmed maker fills with long ratio prices and a MATCHED rounding remainder", async () => {
     const inputPlan = { ...plan, shares: "29.27", orderHash: "order" };
     const parts = [["3.416735", "0.510000043901561"], ["2.163266", "0.5100001571697609"], ["5", "0.51"], ["18.68", "0.51"]];

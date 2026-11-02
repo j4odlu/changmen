@@ -26,10 +26,13 @@ import {
   canFoldMap,
   clearMapMute,
   isMapMuteActive,
+  isMap4MuteGlobalActive,
   mapBetMuteFullMatchGlobal,
   mapBetMuteGlobal,
   mapBetMuteGlobalOpenKeys,
   mapBetMuteKeys,
+  mapBetMuteMap4Global,
+  mapBetMuteMap4LiveOpenKeys,
   toggleMapMute,
 } from "@/extensions/mapBetMute";
 import { useEvMarker } from "@/extensions/valueBet";
@@ -63,6 +66,8 @@ const muteKeysRef = mapBetMuteKeys();
 const muteGlobalRef = mapBetMuteGlobal();
 const muteFullMatchGlobalRef = mapBetMuteFullMatchGlobal();
 const muteGlobalOpenRef = mapBetMuteGlobalOpenKeys();
+const muteMap4GlobalRef = mapBetMuteMap4Global();
+const muteMap4LiveOpenRef = mapBetMuteMap4LiveOpenKeys();
 
 const oddsStore = useOddsStore();
 const matchStore = useMatchStore();
@@ -107,15 +112,23 @@ const mapMuted = computed(() => {
   void muteGlobalRef.value;
   void muteFullMatchGlobalRef.value;
   void muteGlobalOpenRef.value;
+  void muteMap4GlobalRef.value;
+  void muteMap4LiveOpenRef.value;
   return isMapMuteActive(props.match.id, props.bet.round, props.match.liveRound);
 });
+const map4MuteGlobalActive = computed(() => isMap4MuteGlobalActive(
+  props.match.id, props.bet.round, props.match.liveRound,
+));
+const globalMuteReason = computed(() => props.bet.round === 0 && muteFullMatchGlobalRef.value
+  ? "已由全场胜负总开关关闭"
+  : map4MuteGlobalActive.value ? "已由地图4总开关关闭；进入 live 自动恢复" : "");
 const bettingEnabled = computed(() => props.allowBetting && !mapMuted.value);
 // [changmen 扩展] 仅展开赔率供手动下注，不改变静音状态或自动下注开关。
 const showManualOdds = ref(false);
 
 function onToggleMapMute(e: MouseEvent) {
   e.stopPropagation();
-  if (!canFold.value || (props.bet.round === 0 && muteFullMatchGlobalRef.value))
+  if (!canFold.value || globalMuteReason.value)
     return;
   toggleMapMute(props.match.id, props.bet.round);
 }
@@ -384,6 +397,12 @@ watch(showLiveTimer, (on) => {
   }
 }, { immediate: true });
 
+// [changmen 扩展] 已在 live 时打开地图4开关（或重启关闭周期），仍登记自动解除。
+watch([muteMap4GlobalRef, muteMap4LiveOpenRef], () => {
+  if (showLiveTimer.value && props.bet.round === 4 && muteMap4GlobalRef.value)
+    clearMapMute(props.match.id, props.bet.round);
+});
+
 onUnmounted(stopLocalLiveClock);
 
 const liveSeconds = computed(() => {
@@ -498,14 +517,12 @@ function onBetTitleDblClick() {
       v-if="canFold"
       type="button"
       class="map-mute-toggle"
-      :disabled="bet.round === 0 && muteFullMatchGlobalRef"
-      :title="bet.round === 0 && muteFullMatchGlobalRef
-        ? '已由全场胜负总开关关闭'
-        : mapMuted ? '展开并允许自动下注' : '折叠并禁止自动下注（手动可查看盘口）'"
+      :disabled="Boolean(globalMuteReason)"
+      :title="globalMuteReason || (mapMuted ? '展开并允许自动下注' : '折叠并禁止自动下注（手动可查看盘口）')"
       :aria-pressed="mapMuted"
       @click="onToggleMapMute"
     >
-      {{ bet.round === 0 && muteFullMatchGlobalRef ? "总关" : mapMuted ? "开" : "关" }}
+      {{ globalMuteReason ? "总关" : mapMuted ? "开" : "关" }}
     </button>
     <button
       v-if="mapMuted && allowBetting"

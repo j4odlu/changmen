@@ -1,6 +1,7 @@
 import type { PlaceValueBetParams } from "./placeValueBet";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { valueBetCalcOptsFromPrefs } from "@/extensions/valueBet/evConfig";
+import { resetMapBetMuteForTests, setMap4MuteGlobal } from "@/extensions/mapBetMute";
 import { placeValueBetOrder } from "./placeValueBet";
 
 const mocks = vi.hoisted(() => ({
@@ -17,7 +18,6 @@ vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({
 vi.mock("@/stores/matchStore", () => ({ useMatchStore: () => ({}) }));
 vi.mock("@/domain/betting/betFilters", () => ({ accountPassesMainBetFilter: () => true }));
 vi.mock("@/domain/betting/singleLegRate", () => ({ isSingleLegRateAtOdds: () => false }));
-vi.mock("@/extensions/mapBetMute", () => ({ isMapMuteActive: () => false }));
 vi.mock("@/extensions/prematchFullOnly", () => ({ isPrematchFullMarketAllowed: () => true }));
 vi.mock("@/extensions/valueBet/valueBetMapCount", () => ({ getValueBetMapCount: () => 0, recordValueBetMapFill: vi.fn() }));
 vi.mock("@/stores/betting/arbOrderBind", () => ({ bindArbLegOrder: vi.fn(), refreshOrderListAfterBind: vi.fn() }));
@@ -41,6 +41,7 @@ function params(): PlaceValueBetParams {
 describe("PM baseline validation before placing EV orders", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetMapBetMuteForTests();
     mocks.prefs.pmMaxOverroundPct = 6;
     mocks.checkBetting.mockImplementation(async (_account, option) => option);
     // No test submits a real order, even when a valid candidate reaches this mock.
@@ -78,5 +79,28 @@ describe("PM baseline validation before placing EV orders", () => {
     mocks.prefs.pmMaxOverroundPct = 0;
     expect(await placeValueBetOrder(input)).toMatchObject({ ok: false, code: "place_fail" });
     expect(mocks.betting).toHaveBeenCalledOnce();
+  });
+
+  it("blocks map4 before preflight while leaving map3 available", async () => {
+    setMap4MuteGlobal(true);
+    const input = params();
+    input.bet.round = 4;
+    expect(await placeValueBetOrder(input)).toMatchObject({ ok: false, code: "muted" });
+    expect(mocks.checkBetting).not.toHaveBeenCalled();
+    input.bet.round = 3;
+    expect(await placeValueBetOrder(input)).toMatchObject({ ok: false, code: "place_fail" });
+    expect(mocks.betting).toHaveBeenCalledOnce();
+  });
+
+  it("rechecks map4 closure after asynchronous platform preflight", async () => {
+    const input = params();
+    input.bet.round = 4;
+    mocks.checkBetting.mockImplementation(async (_account, option) => {
+      setMap4MuteGlobal(true);
+      return option;
+    });
+    expect(await placeValueBetOrder(input)).toMatchObject({ ok: false, code: "muted" });
+    expect(mocks.checkBetting).toHaveBeenCalledOnce();
+    expect(mocks.betting).not.toHaveBeenCalled();
   });
 });

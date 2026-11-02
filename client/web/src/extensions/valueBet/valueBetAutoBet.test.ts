@@ -7,6 +7,7 @@ import {
   resetValueBetAutoBetForTests,
 } from "@/extensions/valueBet/valueBetAutoBet";
 import { valueBetCalcOptsFromPrefs } from "@/extensions/valueBet/evConfig";
+import { isMapMuteActive, resetMapBetMuteForTests, setMap4MuteGlobal } from "@/extensions/mapBetMute";
 import {
   resetPrematchFullOnlyForTests,
   setPrematchFullMode,
@@ -48,6 +49,7 @@ describe("isValueBetAutoEligible", () => {
 describe("collectValueBetAutoCandidates", () => {
   beforeEach(() => {
     resetPrematchFullOnlyForTests();
+    resetMapBetMuteForTests();
   });
 
   function stubItem(type: string, home: number, away: number) {
@@ -97,6 +99,23 @@ describe("collectValueBetAutoCandidates", () => {
       { enabled: true, minEdgePct: 3, maxEdgePct: 20, minOdds: 1.3, maxOdds: 10, maxPerMap: 1 },
       { isMuted: () => false, mapCount: () => 1, isCooling: () => false },
     )).toEqual([]);
+  });
+
+  it("excludes map4 candidates through the real mute gate and restores them on live", () => {
+    const items = [stubItem("PB", 1.95, 1.95), stubItem("RAY", 2.2, 1.7)];
+    const match = { id: 9, liveRound: 0, bets: [{ round: 3, items }, { round: 4, items }] };
+    const collect = () => collectValueBetAutoCandidates(
+      [match] as never, valueBetCalcOptsFromPrefs({ sharp: "PB" }),
+      { enabled: true, minEdgePct: 3, maxEdgePct: 20, minOdds: 1.3, maxOdds: 10, maxPerMap: 1 },
+      { isMuted: isMapMuteActive, mapCount: () => 0, isCooling: () => false },
+    ).map(row => row.bet.round);
+    setMap4MuteGlobal(true);
+    expect(collect()).toEqual([3]);
+    match.liveRound = 4;
+    expect(collect()).toEqual([3, 4]);
+    match.liveRound = 0;
+    setMap4MuteGlobal(false);
+    expect(collect()).toEqual([3, 4]);
   });
 
   it("skips a poor PM baseline and respects a custom overround limit", () => {

@@ -8,7 +8,7 @@ import { useMatchStore } from "@/stores/matchStore";
 import { useUserStore } from "@/stores/userStore";
 import { pmOddsDropSignals, pmUpSignals } from "@/extensions/pmSignals/records";
 import { clearAllSignals, signalNow } from "@/extensions/pmSignals/state";
-import { isMapMuteActive, resetMapBetMuteForTests, setFullMatchMuteGlobal } from "@/extensions/mapBetMute";
+import { isMapMuteActive, resetMapBetMuteForTests, setFullMatchMuteGlobal, setMap4MuteGlobal } from "@/extensions/mapBetMute";
 import {
   clearPmTickStateForTests, resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs,
 } from "@changmen/venue-browser/adapter/polymarket";
@@ -41,6 +41,9 @@ const renderer = createRenderer<Host, Host>({
 });
 const apps: ReturnType<typeof renderer.createApp>[] = [];
 type State = {
+  mapMuted: boolean;
+  globalMuteReason: string;
+  canFold: boolean;
   showPmLive: boolean;
   extensionBet: ViewBet;
   itemOdds: (item: ViewBetItem, side: BetSide) => number;
@@ -57,10 +60,10 @@ function item(type: ViewBetItem["type"]): ViewBetItem {
     getItemId(side: BetSide) { return side === "Home" ? this.homeId : this.awayId; },
   } as ViewBetItem;
 }
-function mount(pmSport?: ViewMatch["pmSport"], round = 3, allowBetting = true) {
+function mount(pmSport?: ViewMatch["pmSport"], round = 3, allowBetting = true, liveRound = 0) {
   const pm = item("Polymarket"); const pb = item("PB");
   const bet = reactive({ id: 1, round, items: [pm, pb], getBetName: () => `地图${round}` } as ViewBet);
-  const match = reactive({ id: 1, liveRound: 0, pmSport } as ViewMatch);
+  const match = reactive({ id: 1, liveRound, pmSport } as ViewMatch);
   const odds = useOddsStore();
   for (const entry of bet.items) for (const side of ["Home", "Away"] as const)
     odds.save(entry.type, { id: entry.getItemId(side), odds: entry.type === "Polymarket" ? 3 : 1.9,
@@ -242,4 +245,43 @@ it("sports read-only rows still reject manual double-clicks", () => {
   state.onOddsDblClick(pb, "Away");
   state.onPbShadowDblClick(pb, "Home", { stopPropagation: vi.fn() } as unknown as MouseEvent);
   expect(manual).not.toHaveBeenCalled();
+});
+
+it("map4 rows react immediately to the switch, keep manual entry and recover after live", async () => {
+  const { state, match, pb } = mount(undefined, 4);
+  const other = mount(undefined, 3);
+  expect(state.mapMuted).toBe(false);
+  setMap4MuteGlobal(true);
+  expect(state.mapMuted).toBe(true);
+  expect(state.globalMuteReason).toContain("地图4总开关");
+  expect(other.state.mapMuted).toBe(false);
+  const manual = vi.spyOn(useMatchStore(), "manualBet").mockResolvedValue(undefined);
+  state.onOddsDblClick(pb, "Home");
+  expect(manual).toHaveBeenCalledOnce();
+  match.liveRound = 4;
+  await nextTick();
+  expect(state.mapMuted).toBe(false);
+  expect(state.globalMuteReason).toBe("");
+  expect(state.canFold).toBe(false);
+  match.liveRound = 5;
+  await nextTick();
+  expect(state.mapMuted).toBe(false);
+  expect(state.globalMuteReason).toBe("");
+  setMap4MuteGlobal(false);
+  setMap4MuteGlobal(true);
+  expect(state.mapMuted).toBe(true);
+  setMap4MuteGlobal(false);
+  expect(state.mapMuted).toBe(false);
+});
+
+it.each([false, true])("records map4 live recovery when mounted live, initially enabled=%s", async (enabled) => {
+  if (enabled) setMap4MuteGlobal(true);
+  const { state, match } = mount(undefined, 4, true, 4);
+  setMap4MuteGlobal(true);
+  await nextTick();
+  expect(state.mapMuted).toBe(false);
+  match.liveRound = 5;
+  await nextTick();
+  expect(state.mapMuted).toBe(false);
+  expect(state.globalMuteReason).toBe("");
 });

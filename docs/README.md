@@ -67,6 +67,7 @@
 
 | 文档 | 内容 |
 |------|------|
+| [MAP4_MARKET_MUTE_PLAN.md](./MAP4_MARKET_MUTE_PLAN.md) | 地图4一键关闭：沿用 live 自动恢复与现有手动入口；本地源码已实施，统一检查通过 |
 | [../LOCAL_DEV.md](../LOCAL_DEV.md) | 本机 `A8/` 布局：`index0706.js` + `A8插件/` |
 | [../client/web/docs/README.md](../client/web/docs/README.md) | A8 parity 文档集索引 |
 | [../client/web/docs/A8_PARITY_REGISTRY.md](../client/web/docs/A8_PARITY_REGISTRY.md) | 对齐总览 |

@@ -16,8 +16,10 @@ import { useExtensionGate } from "@/composables/useExtensionGate";
 import {
   mapBetMuteFullMatchGlobal,
   mapBetMuteGlobal,
+  mapBetMuteMap4Global,
   toggleFullMatchMuteGlobal,
   toggleMapMuteGlobal,
+  toggleMap4MuteGlobal,
 } from "@/extensions/mapBetMute";
 import PmSignalsPanel from "@/extensions/pmSignals/PmSignalsPanel.vue";
 import {
@@ -64,6 +66,14 @@ const fullMatchMuteGlobalOn = computed(() => muteFullMatchGlobalRef.value);
 
 function onToggleFullMatchMuteGlobal() {
   toggleFullMatchMuteGlobal();
+}
+
+/** [changmen 扩展] 一键关闭地图4自动下注；进入 live 后自动恢复。 */
+const muteMap4GlobalRef = mapBetMuteMap4Global();
+const map4MuteGlobalOn = computed(() => muteMap4GlobalRef.value);
+
+function onToggleMap4MuteGlobal() {
+  toggleMap4MuteGlobal();
 }
 
 /** [changmen 扩展] 只看赛前全场；默认 off，与折叠正交 */
@@ -231,6 +241,18 @@ async function logout() {
               @click="onToggleFullMatchMuteGlobal"
             >
               {{ fullMatchMuteGlobalOn ? "开" : "关" }} 全场胜负
+            </button>
+            <button
+              type="button"
+              class="map-mute-global-toggle"
+              :class="{ 'is-on': map4MuteGlobalOn }"
+              :title="map4MuteGlobalOn
+                ? '解除地图4独立限制；其他总开关仍有效'
+                : '折叠地图4并关闭自动下注；进入 live 自动恢复，仍可手动展开'"
+              :aria-pressed="map4MuteGlobalOn"
+              @click="onToggleMap4MuteGlobal"
+            >
+              {{ map4MuteGlobalOn ? "开" : "关" }} 地图4
             </button>
             <div class="prematch-full-toggle-group">
               <button

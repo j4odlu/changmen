@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { accountPassesMainBetFilter } from "@/domain/betting/betFilters";
 import { attachPolymarketDetectionQuote } from "@/services/polymarketQuotes";
-import { resetMapBetMuteForTests, setFullMatchMuteGlobal } from "@/extensions/mapBetMute";
+import { resetMapBetMuteForTests, setFullMatchMuteGlobal, setMap4MuteGlobal } from "@/extensions/mapBetMute";
 import { resetPrematchFullOnlyForTests, setPrematchFullMode } from "@/extensions/prematchFullOnly";
 import { PlatformAccount } from "@/models/platformAccount";
 import { incrementBetCount, setLastBetOdds } from "@/shared/betTiming";
@@ -285,8 +285,9 @@ describe("runManualBet post-success sync", () => {
     expect(betting).toHaveBeenCalledOnce();
   });
 
-  it("[A8 可证实] manual FOK executes while full-match automatic betting is muted", async () => {
-    setFullMatchMuteGlobal(true);
+  it.each([0, 4])("manual FOK executes while round %s automatic betting is muted", async (round) => {
+    if (round === 0) setFullMatchMuteGlobal(true);
+    else setMap4MuteGlobal(true);
     const match = {
       id: 1,
       title: "A vs B",
@@ -296,7 +297,7 @@ describe("runManualBet post-success sync", () => {
     } as unknown as ViewMatch;
     const bet = {
       id: 1,
-      round: 0,
+      round,
       homeName: "A",
       awayName: "B",
       getBetName: () => "Full Match",
@@ -507,15 +508,16 @@ describe("pM manual mode selection", () => {
     expect(betting).not.toHaveBeenCalled();
     expect(ElMessageBox.alert).toHaveBeenCalledWith("余额不足（5 < 25）", "Polymarket");
   });
-  it.each(["muted", "prematch"] as const)("[changmen 扩展] GTC retains the %s market gate", async (gate) => {
+  it.each(["muted", "map4", "prematch"] as const)("[changmen 扩展] GTC retains the %s market gate", async (gate) => {
     if (gate === "muted")
       setFullMatchMuteGlobal(true);
+    else if (gate === "map4") setMap4MuteGlobal(true);
     else setPrematchFullMode("liveRound");
     prompt.mockImplementationOnce(async (...args: unknown[]) => {
       (args[0] as { props: { "onUpdate:modelValue": (value: string) => void } }).props["onUpdate:modelValue"]("GTC");
       return { value: "25" };
     });
-    await runManualBet({ ...match, liveRound: 0 } as ViewMatch, { ...bet, round: gate === "muted" ? 0 : 1 } as ViewBet, item, "Home", { setMessage: vi.fn() });
+    await runManualBet({ ...match, liveRound: 0 } as ViewMatch, { ...bet, round: gate === "muted" ? 0 : gate === "map4" ? 4 : 1 } as ViewBet, item, "Home", { setMessage: vi.fn() });
     expect(executeManualGtc).not.toHaveBeenCalled();
     expect(checkBetting).not.toHaveBeenCalled();
     expect(betting).not.toHaveBeenCalled();

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   resetMapBetMuteForTests,
   setFullMatchMuteGlobal,
+  setMap4MuteGlobal,
   toggleMapMute,
 } from "@/extensions/mapBetMute";
 import {
@@ -131,6 +132,25 @@ describe("executeArbBet orchestration", () => {
       setMessage: vi.fn(),
     });
     expect(prepareArbAttempt).toHaveBeenCalledOnce();
+  });
+
+  it("map4 global mute skips prepare only for map4 and allows it again on restore or live", async () => {
+    const run = (round: number, liveRound = 0) => executeArbBet({
+      match: { id: 1, liveRound } as never,
+      bet: { id: 10, round } as never,
+      config: createDefaultUserConfig(),
+      setMessage: vi.fn(),
+    });
+    prepareArbAttempt.mockResolvedValue(null);
+    setMap4MuteGlobal(true);
+    await run(4);
+    expect(prepareArbAttempt).not.toHaveBeenCalled();
+    await run(3);
+    await run(0);
+    await run(4, 4);
+    setMap4MuteGlobal(false);
+    await run(4);
+    expect(prepareArbAttempt).toHaveBeenCalledTimes(4);
   });
 
   it("预检通过后 place 失败结果仍调用 finalize", async () => {

@@ -11,6 +11,38 @@ const read = p => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
 const workflow = name => YAML.parse(read(`.github/workflows/${name}.yml`));
 const release = workflow("release");
 
+test("all workflow entry points use the repository Node 26 LTS baseline", () => {
+  const version = read(".node-version").trim();
+  assert.equal(version, "26.13.0");
+  assert.equal(JSON.parse(read("package.json")).engines.node, ">=26.13.0 <27");
+  assert.equal(JSON.parse(read("package-lock.json")).packages[""].engines.node, ">=26.13.0 <27");
+  for (const file of readdirSync(new URL("../../.github/workflows/", import.meta.url)).filter(f => f.endsWith(".yml"))) {
+    for (const job of Object.values(YAML.parse(read(`.github/workflows/${file}`)).jobs)) {
+      for (const step of job.steps ?? []) {
+        if (!step.uses?.startsWith("actions/setup-node@")) continue;
+        assert.equal(step.with["node-version"] ?? step.with["node-version-file"],
+          step.with["node-version-file"] ? "output/change-validation/node-version" : version, file);
+      }
+    }
+  }
+});
+
+test("production Node upgrades require a successful release of the same master commit", () => {
+  const runtime = workflow("node-runtime");
+  assert.deepEqual(Object.keys(runtime.on), ["workflow_dispatch"]);
+  assert.equal(runtime.concurrency.group, release.concurrency.group);
+  assert.equal(runtime.concurrency["cancel-in-progress"], false);
+  assert.equal(runtime.jobs.upgrade.if, "github.ref == 'refs/heads/master'");
+  const steps = runtime.jobs.upgrade.steps;
+  const check = steps.findIndex(step => step.name === "Require successful candidate validation");
+  const mutate = steps.findIndex(step => step.name === "Upgrade and verify production Node");
+  assert(check >= 0 && check < mutate);
+  for (const required of ['r.head_sha,process.env.GITHUB_SHA', 'r.conclusion,"success"', 'r.path,".github/workflows/release.yml"'])
+    assert(steps[check].run.includes(required), required);
+  assert(!JSON.stringify(steps[check]).includes("secrets."));
+  assert(steps[mutate].run.includes("< scripts/deploy/upgrade-node-runtime.sh"));
+});
+
 test("pull requests validate offline without deployment credentials or publication", () => {
   const pr = workflow("pull-request");
   assert.deepEqual(pr.on.pull_request.branches, ["master"]);
@@ -92,7 +124,7 @@ test("independent check runners share a pinned plan; only the collector seals ar
   assert.equal(steps[prepare].if, "github.event_name == 'push'");
   assert.equal(steps[cleanup].if, "always()");
   assert.match(steps[cleanup].run, /FOK_BASELINE_SSH_KEY=/);
-  assert.equal(steps.find(s => s.uses?.startsWith("actions/setup-node@")).with["node-version"], "24");
+  assert.equal(steps.find(s => s.uses?.startsWith("actions/setup-node@")).with["node-version"], "26.13.0");
   assert.equal(steps.find(s => s.with?.name === "release-plan").with["if-no-files-found"], "error");
   assert(!steps.some(s => s.run === "npm ci"));
   assert.equal(checks.needs, "plan");

@@ -19,7 +19,7 @@ import { verifyInstalledEsbuild } from "./backend-native-lifecycle.mjs";
 
 assert.equal(process.platform, "linux", "Linux runner required; Windows installation evidence is separate");
 assert.equal(process.getuid() === 0, false, "Run fixture database as an ordinary user");
-assert(process.version.startsWith("v24."), "Node 24 required");
+assert(process.version.startsWith("v26."), "Node 26 required");
 const repo = fileURLToPath(new URL("../../", import.meta.url)), out = path.join(repo, "output/backend-linux-runtime");
 fs.mkdirSync(out, { recursive: true });
 const identity = validationIdentity(repo), profile = backendInstallProfile(repo), temporary = fs.mkdtempSync("/tmp/changmen-linux-check-");

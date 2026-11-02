@@ -2,7 +2,7 @@
 
 **本机 JSON** 与 monorepo **路径解析**（非 PostgreSQL）。云库读写见 [`@changmen/db`](../../rds/README.md)。
 
-实现使用严格 TypeScript，由 Node 24 原生加载。公共子路径统一不带后缀，例如 `@changmen/storage/load_env`，通过 package exports 指向唯一的 `.ts` 实现；包内也使用公共入口。旧 `.js` 子路径已移除，不保留 JS 实现副本或并行的手写声明。
+实现使用严格 TypeScript，由 Node 26 原生加载。公共子路径统一不带后缀，例如 `@changmen/storage/load_env`，通过 package exports 指向唯一的 `.ts` 实现；包内也使用公共入口。旧 `.js` 子路径已移除，不保留 JS 实现副本或并行的手写声明。
 
 ## 使用方
 

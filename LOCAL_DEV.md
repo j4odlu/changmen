@@ -25,6 +25,10 @@ Parity 真源是仓库根 `A8/`，**没有**旧文档写的 `A8/A8frontendscipts
 
 `BAT\` / `sh/` 会自动检测：仓库根即应用根（`package.json` 在根目录），或旧布局 `../changmen/`。
 
+## Node.js 版本
+
+本机、CI 和生产统一使用 Node.js **26.13.0 LTS**；根 .node-version 记录版本，package.json 限定 26 系列。安装后重新打开终端并运行 node --version。npm 版本沿用根 packageManager，运行时升级不修改第三方依赖的 engines 或历史验收记录。
+
 ## 两种拓扑
 
 | 模式 | 命令 | 本机起什么 | API 指哪 |

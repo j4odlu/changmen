@@ -48,9 +48,9 @@ install_deps() {
   fi
   if need_cmd apt-get; then
     sudo apt-get update -qq
-    if ! need_cmd node || ! node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 24 ? 0 : 1)" 2>/dev/null; then
-      log "install node 24 (nodesource)"
-      curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+    if ! need_cmd node || ! node -e "process.exit(Number(process.versions.node.split('.')[0]) === 26 ? 0 : 1)" 2>/dev/null; then
+      log "install node 26 (nodesource)"
+      curl -fsSL https://deb.nodesource.com/setup_26.x | sudo -E bash -
       sudo apt-get install -y nodejs
     fi
     if ! need_cmd git; then
@@ -73,7 +73,7 @@ install_deps() {
     fi
     return 0
   fi
-  warn "unsupported OS for auto-install; ensure node>=24, npm, git, pm2, caddy exist"
+  warn "unsupported OS for auto-install; ensure Node 26 LTS, npm, git, pm2, caddy exist"
 }
 
 ensure_repo() {

@@ -10,6 +10,8 @@ changmen 是 **客户端 + 服务端** 系统。`localhost` 与 `.bat` 仅用于
 
 最后更新：2026-06-14
 
+[changmen 扩展] 2026-11-02 运行时基线：Node.js **26.13.0 LTS**。新机使用 Node 26 安装源；存量 VPS 运行时切换通过 Actions **Upgrade Node runtime** 执行，并要求同一提交的 **Validate and release** 已成功。具体校验与回滚见 [独立发布配置](./docs/INDEPENDENT_DEPLOYMENT.md#配置与版本目录)。下文历史发布记录中的旧版本号保留当时事实。
+
 ---
 
 ## 1. 架构（冻结）

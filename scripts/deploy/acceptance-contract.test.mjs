@@ -22,6 +22,7 @@ test("backend installation requires Linux lifecycle, native execution, all eight
   const acceptance = { identity: { commit: "a".repeat(40), candidateTree: "b".repeat(40), inputFingerprint: "c".repeat(64) } };
   const report = installationProof(acceptance.identity);
   assertSupplemental(report, "backend-installation", acceptance);
+  assert.throws(() => assertSupplemental({ ...report, node: "v24.22.2" }, "backend-installation", acceptance));
   for (const mutate of [p => { p.identity.commit = "b".repeat(40); }, p => { p.platform = "win32"; },
     p => { p.lifecycleScriptsEnabled = false; }, p => { p.developmentToolsAbsent = false; },
     p => { p.nativeEsbuildExecuted = false; },

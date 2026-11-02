@@ -1,6 +1,6 @@
 import { backendProcesses } from "../verify-backend-processes.mjs";
 export function installationProof(identity) {
-  return { passed: true, sourceStable: true, identity: structuredClone(identity), platform: "linux", node: "v24.15.0",
+  return { passed: true, sourceStable: true, identity: structuredClone(identity), platform: "linux", node: "v26.13.0",
     lifecycleScriptsEnabled: true, nativeEsbuildExecuted: true, developmentToolsAbsent: true, precompiledRouterVerified: true, routerBuildParity: true,
     browserPackagesAbsent: true, productionWrites: false,
     databaseStopped: true, resolution: { parityPassed: true }, dynamicPaths: { passed: true, uncertified: 0 },

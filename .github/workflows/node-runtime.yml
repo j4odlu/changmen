@@ -1,0 +1,54 @@
+name: Upgrade Node runtime
+on:
+  workflow_dispatch:
+    inputs:
+      release_run_id:
+        description: Successful Validate and release run for this exact commit
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: changmen-release-production
+  cancel-in-progress: false
+jobs:
+  upgrade:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '26.13.0'
+      - name: Require successful candidate validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_RUN_ID: ${{ inputs.release_run_id }}
+        run: |
+          [[ "$RELEASE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_RUN_ID" > "$RUNNER_TEMP/release-run.json"
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r=JSON.parse(fs.readFileSync(process.argv[1])); assert.equal(r.head_sha,process.env.GITHUB_SHA); assert.equal(r.status,"completed"); assert.equal(r.conclusion,"success"); assert.equal(r.path,".github/workflows/release.yml");' "$RUNNER_TEMP/release-run.json"
+          bash -n scripts/deploy/upgrade-node-runtime.sh
+      - name: Upgrade and verify production Node
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_REPO: ${{ secrets.DEPLOY_REPO }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/node-runtime-key"
+          trap 'rm -f "$key"' EXIT
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$key"
+          chmod 600 "$key"
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H 47.57.10.202 >> ~/.ssh/known_hosts
+          repo="${DEPLOY_REPO:-/root/changmen}"
+          [[ "$repo" =~ ^/[a-zA-Z0-9_./-]+$ && "$repo" != / && "$repo" != *..* ]]
+          version="$(cat .node-version)"
+          [[ "$version" =~ ^26\.[0-9]+\.[0-9]+$ ]]
+          ssh -p "${DEPLOY_PORT:-22}" -i "$key" -o BatchMode=yes -o IdentitiesOnly=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=8 "${DEPLOY_USER:-root}@47.57.10.202" "DEPLOY_REPO='$repo' NODE_RUNTIME_VERSION='$version' bash -s" < scripts/deploy/upgrade-node-runtime.sh

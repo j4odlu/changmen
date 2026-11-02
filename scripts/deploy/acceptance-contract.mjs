@@ -65,7 +65,7 @@ export function assertSupplemental(report, kind, acceptance) {
     assert.equal(report.archive.fingerprintParity, true);
     assert.equal(report.archive.browserSourcesAbsent, true);
     assert(report.archive.files > 0 && report.archive.bytes > 0);
-    assert.equal(report.platform, "linux"); assert.match(report.node, /^v24\./);
+    assert.equal(report.platform, "linux"); assert.match(report.node, /^v26\./);
     for (const flag of ["lifecycleScriptsEnabled", "nativeEsbuildExecuted", "developmentToolsAbsent", "precompiledRouterVerified", "routerBuildParity", "browserPackagesAbsent"])
       assert.equal(report[flag], true, `${kind}: ${flag}`);
     assert.equal(report.productionWrites, false);

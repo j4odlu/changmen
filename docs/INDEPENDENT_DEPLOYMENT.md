@@ -84,7 +84,9 @@ RDS 是独立持久层。普通应用发布及回滚均不修改数据库结构�
 
 ## 配置与版本目录
 
-保持现有 `DEPLOY_SSH_KEY`、`DEPLOY_USER`、`DEPLOY_PORT`、`DEPLOY_REPO`；目标 VPS 47.57.10.202，应用根 `/root/changmen`，Node 24、PM2、GNU tar/coreutils、flock、curl。版本基线读取使用现网固定应用根。
+[changmen 扩展] 2026-11-02：Node.js 基线统一为 **26.13.0 LTS**。CI、Linux 制品验收和生产使用 26 系列，根 .node-version 记录准确版本。生产运行时通过 Actions **Upgrade Node runtime** 单独切换：输入同一 master 提交已成功的 **Validate and release** run ID，工作流先核对提交和结果，再校验官方压缩包 SHA-256。切换保留当前应用目录，在独立 .runtimes 目录安装运行时，以 /usr/local/bin/node 链接启用，并更新 PM2 daemon 和既有 8 个进程。进程版本、目录、HTTP、数据库连接或内嵌 matcher 核验失败时恢复原链接和进程运行时；不执行数据库维护或替换应用源码。
+
+保持现有 `DEPLOY_SSH_KEY`、`DEPLOY_USER`、`DEPLOY_PORT`、`DEPLOY_REPO`；目标 VPS 47.57.10.202，应用根 `/root/changmen`，Node 26、PM2、GNU tar/coreutils、flock、curl。版本基线读取使用现网固定应用根。
 
 | 内容 | 路径 |
 |---|---|

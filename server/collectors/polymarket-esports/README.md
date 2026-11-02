@@ -4,7 +4,7 @@ VPS 守护进程：Polymarket **Gamma + CLOB /prices discovery（唯一权威）
 
 ## TypeScript 实现与兼容入口
 
-`index.ts`、`api.ts`、`parse.ts`、`loop.ts`、`market_index.ts` 是实现源码，`types.ts` 定义采集、写库和索引契约。Node 24 原生擦除类型运行，无需生成 dist；`tsconfig.json` 启用 strict、noEmit、erasableSyntaxOnly。
+`index.ts`、`api.ts`、`parse.ts`、`loop.ts`、`market_index.ts` 是实现源码，`types.ts` 定义采集、写库和索引契约。Node 26 原生擦除类型运行，无需生成 dist；`tsconfig.json` 启用 strict、noEmit、erasableSyntaxOnly。
 
 同名 `.js` 仅转发到 `.ts`，保留 PM2 的 `index.js`、包 exports 和旧导入路径，因此部署与回滚仍使用原启动配置。上线须连同 TS 源码发布。
 

@@ -15,7 +15,7 @@
 | `types` | 队伍插件、比赛行与宿主数据接口类型 |
 | `teams/team_aliases.json` | 队名别名资产 |
 
-源码使用严格 TypeScript，由 Node 24 原生执行；公开 `.js` 子路径通过 package exports 映射到唯一的 `.ts` 实现，无第二套 JS 实现或编译产物。包根、子路径与源码入口使用同一份插件状态。
+源码使用严格 TypeScript，由 Node 26 原生执行；公开 `.js` 子路径通过 package exports 映射到唯一的 `.ts` 实现，无第二套 JS 实现或编译产物。包根、子路径与源码入口使用同一份插件状态。
 
 运行依赖仅为 `@changmen/shared`。本包不导入数据库、HTTP、resolver 或应用实现；ID 分配所需读写通过 `ClientMatchIdentityAdapter` 注入，队伍映射通过 `TeamPlugin` 注入。现有插件对象与函数两种形式均保留。历史 `canonicalMatchKey` 映射桥只向插件传递四个参数，本轮类型迁移保持该行为。
 

@@ -46,7 +46,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: '24'
+          node-version: '26.13.0'
           cache: npm
       - run: npm ci
       - name: Install local PostgreSQL tools

@@ -1,5 +1,5 @@
 
-/** [changmen 扩展] 下单出口独立于行情/查询路由，保存在当前浏览器。 */
+/** [changmen 扩展] 下单和撤单共用订单出口，独立于行情/查询路由，保存在当前浏览器。 */
 export type PmOrderSubmitMode = "local" | "vps";
 export const PM_ORDER_SUBMIT_MODE_KEY = "changmen:pm:order-submit-mode";
 

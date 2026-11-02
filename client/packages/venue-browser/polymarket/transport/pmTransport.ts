@@ -692,7 +692,7 @@ async function pmPrivateReadDirectFirst<T>(
 /**
  * pmClientApi 底层：按 mode 走 VPS 语义 API / 直连 / 插件。
  * 官网模式的读取优先直连，网络失败/超时回落 VPS；relay 模式固定 VPS。
- * 官方 PM-M 用户：公开/私有读取 direct-first；下单使用独立出口偏好。
+ * 官方 PM-M 用户：公开/私有读取 direct-first；下单、撤单共用独立订单出口偏好。
  * Pm_SubmitOrder：HTTP 只等 POST ACK（30s），失败或超时均不切换出口重发。
  * 官方 delayed 撮合不占这个窗，见 marketDelay `sd`。
  */
@@ -705,7 +705,8 @@ export async function pmEsportCall<T>(
   if (action === "Pm_PrepareSubmit") return changmenPmEsportCall<T>(action, stripEsportBodyForVps(body));
   if (shouldDirectFirstPrivateRead(action))
     return pmPrivateReadDirectFirst<T>(action, body);
-  const mode = action === "Pm_SubmitOrder" ? resolvePmOrderSubmitHttpMode() : resolvePmHttpMode();
+  const orderAction = action === "Pm_SubmitOrder" || action === "Pm_CancelOrder";
+  const mode = orderAction ? resolvePmOrderSubmitHttpMode() : resolvePmHttpMode();
   if (mode === "vps") {
     const opts = vpsEsportOpts(action);
     return opts

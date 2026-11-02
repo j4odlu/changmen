@@ -1,7 +1,7 @@
 import { clearPmPublicRoutesForTests } from "@changmen/venue-browser/polymarket/transport/pmPublicRoute";
 import { a8PluginGet, a8PluginPost } from "@changmen/client-core/chrome-plugin/bridge";
 
-import { directGet, directPostJson } from "@changmen/client-core/shared/http";
+import { directDeleteJson, directGet, directPostJson } from "@changmen/client-core/shared/http";
 
 import { changmenPmEsportCall, changmenPmHttpRequest } from "@changmen/client-core/shared/platformHttp";
 
@@ -186,6 +186,8 @@ describe("pmTransport mode", () => {
     vi.mocked(directGet).mockReset();
 
     vi.mocked(directPostJson).mockReset();
+
+    vi.mocked(directDeleteJson).mockReset();
 
     vi.mocked(a8PluginGet).mockReset();
 
@@ -597,14 +599,32 @@ describe("pmTransport mode", () => {
     expect(a8PluginPost).not.toHaveBeenCalled();
   });
 
-  it("local order preference leaves cancellation on the existing VPS route", async () => {
+  it("local order preference cancels directly from the browser even when query routing uses VPS", async () => {
     setPmHttpModeForTests("vps");
     setPmOrderSubmitMode("local");
-    vi.mocked(changmenPmEsportCall).mockResolvedValue({ canceled: ["oid"] });
-    await pmEsportCall("Pm_CancelOrder", { playerId: 42, orderId: "oid", _account: pmAccount });
-    expect(changmenPmEsportCall).toHaveBeenCalledWith("Pm_CancelOrder", { playerId: 42, orderId: "oid" });
+    vi.mocked(directDeleteJson).mockResolvedValue({ canceled: ["oid"] });
+    expect(await pmEsportCall("Pm_CancelOrder", { playerId: 42, orderId: "oid", _account: pmAccount })).toEqual({ canceled: ["oid"] });
+    expect(directDeleteJson).toHaveBeenCalledExactlyOnceWith("https://clob.polymarket.com/order",
+      expect.objectContaining({ POLY_API_KEY: "key" }), { orderID: "oid" });
+    expect(changmenPmEsportCall).not.toHaveBeenCalled();
     expect(directPostJson).not.toHaveBeenCalled();
     expect(a8PluginPost).not.toHaveBeenCalled();
+  });
+
+  it.each(["direct", "extension"] as const)("explicit VPS order preference keeps cancellation on VPS despite %s query routing", async mode => {
+    setPmHttpModeForTests(mode); setPmOrderSubmitMode("vps");
+    vi.mocked(changmenPmEsportCall).mockResolvedValue({ canceled: ["oid"] });
+    await pmEsportCall("Pm_CancelOrder", { playerId: 42, orderId: "oid", _account: pmAccount });
+    expect(changmenPmEsportCall).toHaveBeenCalledExactlyOnceWith("Pm_CancelOrder", { playerId: 42, orderId: "oid" });
+    expect(directDeleteJson).not.toHaveBeenCalled();
+  });
+
+  it("an uncertain local cancellation is not automatically replayed through VPS", async () => {
+    setPmHttpModeForTests("vps"); setPmOrderSubmitMode("local");
+    vi.mocked(directDeleteJson).mockRejectedValue(Object.assign(new Error("Network Error"), { code: "ERR_NETWORK" }));
+    await expect(pmEsportCall("Pm_CancelOrder", { playerId: 42, orderId: "oid", _account: pmAccount })).rejects.toThrow("Network Error");
+    expect(directDeleteJson).toHaveBeenCalledOnce(); expect(changmenPmEsportCall).not.toHaveBeenCalled();
+    expect(getPmOrderSubmitMode()).toBe("local");
   });
 
   it.each(["direct", "extension"] as const)("default order route remains VPS when legacy HTTP is %s", async mode => {

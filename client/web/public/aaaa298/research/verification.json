@@ -1,0 +1,6 @@
+{
+  "maps": 1458,
+  "maxRiskDifference": 1.8189894035458565e-12,
+  "maxFirstPriceDifference": 0,
+  "trainTestEventsDisjoint": true
+}

@@ -1,0 +1,183 @@
+{
+  "2026-09": {
+    "within_map": {
+      "strata": 385,
+      "maps": 385,
+      "observations_in_comparable_strata": 7145,
+      "odds_ratio": 1.5233156600380435,
+      "map_bootstrap_95": [
+        1.3517523125080717,
+        1.7366051312469024
+      ]
+    },
+    "within_map_and_fill_price_decile": {
+      "strata": 945,
+      "maps": 356,
+      "observations_in_comparable_strata": 3887,
+      "odds_ratio": 0.8203210283525257,
+      "map_bootstrap_95": [
+        0.689351049556079,
+        0.9571878087061295
+      ],
+      "same_supported_rows_map_only": {
+        "strata": 356,
+        "maps": 356,
+        "observations_in_comparable_strata": 3887,
+        "odds_ratio": 0.9631736592098747,
+        "map_bootstrap_95": [
+          0.8256461377921577,
+          1.1177432445611435
+        ]
+      }
+    },
+    "within_map_price_and5min": {
+      "strata": 745,
+      "maps": 326,
+      "observations_in_comparable_strata": 2903,
+      "odds_ratio": 0.8209152214735148,
+      "map_bootstrap_95": [
+        0.6645418806802282,
+        1.0012918186979172
+      ],
+      "same_supported_rows_map_only": {
+        "strata": 326,
+        "maps": 326,
+        "observations_in_comparable_strata": 2903,
+        "odds_ratio": 0.9580424013442392,
+        "map_bootstrap_95": [
+          0.7942745893796697,
+          1.1459296741096596
+        ]
+      }
+    },
+    "thousand_cash_groups": 725,
+    "thousand_price_atleast90": 152,
+    "thousand_price_atleast95": 85,
+    "thousand_risk_increase": 509,
+    "both_positive_before": 438,
+    "both_positive_to_negative": 107,
+    "large_own_negative_before": 338,
+    "large_own_negative_after": 221,
+    "shares_by_fill_price": {
+      "0": {
+        "n": 2082,
+        "median_shares": 101.35,
+        "atleast1000shares_fraction": 0.14457252641690682
+      },
+      "0.3": {
+        "n": 2411,
+        "median_shares": 137.81,
+        "atleast1000shares_fraction": 0.15595188718374117
+      },
+      "0.5": {
+        "n": 2726,
+        "median_shares": 152.915,
+        "atleast1000shares_fraction": 0.1467351430667645
+      },
+      "0.7": {
+        "n": 2401,
+        "median_shares": 135.25,
+        "atleast1000shares_fraction": 0.12328196584756351
+      },
+      "0.9": {
+        "n": 1379,
+        "median_shares": 120.6,
+        "atleast1000shares_fraction": 0.11820159535895576
+      }
+    }
+  },
+  "2026-10": {
+    "within_map": {
+      "strata": 347,
+      "maps": 347,
+      "observations_in_comparable_strata": 5733,
+      "odds_ratio": 1.6832987855783474,
+      "map_bootstrap_95": [
+        1.4784359685985768,
+        1.9290058749553813
+      ]
+    },
+    "within_map_and_fill_price_decile": {
+      "strata": 859,
+      "maps": 309,
+      "observations_in_comparable_strata": 3380,
+      "odds_ratio": 0.9326826000396291,
+      "map_bootstrap_95": [
+        0.7847914067745172,
+        1.0955136979400293
+      ],
+      "same_supported_rows_map_only": {
+        "strata": 309,
+        "maps": 309,
+        "observations_in_comparable_strata": 3380,
+        "odds_ratio": 1.1324877447603396,
+        "map_bootstrap_95": [
+          0.9644823865797864,
+          1.3278820056104064
+        ]
+      }
+    },
+    "within_map_price_and5min": {
+      "strata": 681,
+      "maps": 291,
+      "observations_in_comparable_strata": 2580,
+      "odds_ratio": 0.9517017865676011,
+      "map_bootstrap_95": [
+        0.7746978664641575,
+        1.1407797702272018
+      ],
+      "same_supported_rows_map_only": {
+        "strata": 291,
+        "maps": 291,
+        "observations_in_comparable_strata": 2580,
+        "odds_ratio": 1.110822749790405,
+        "map_bootstrap_95": [
+          0.9154952520859704,
+          1.3242643354696209
+        ]
+      }
+    },
+    "thousand_cash_groups": 653,
+    "thousand_price_atleast90": 125,
+    "thousand_price_atleast95": 62,
+    "thousand_risk_increase": 445,
+    "both_positive_before": 477,
+    "both_positive_to_negative": 83,
+    "large_own_negative_before": 285,
+    "large_own_negative_after": 189,
+    "shares_by_fill_price": {
+      "0": {
+        "n": 1697,
+        "median_shares": 149.42,
+        "atleast1000shares_fraction": 0.17972893341190335
+      },
+      "0.3": {
+        "n": 1923,
+        "median_shares": 150.0,
+        "atleast1000shares_fraction": 0.1440457618304732
+      },
+      "0.5": {
+        "n": 2411,
+        "median_shares": 143.0,
+        "atleast1000shares_fraction": 0.1443384487764413
+      },
+      "0.7": {
+        "n": 2143,
+        "median_shares": 152.25,
+        "atleast1000shares_fraction": 0.1245916938870742
+      },
+      "0.9": {
+        "n": 960,
+        "median_shares": 212.18,
+        "atleast1000shares_fraction": 0.13645833333333332
+      }
+    }
+  },
+  "minute_rise_minus_fall_large_rate": {
+    "difference": 0.039192136520380796,
+    "event_bootstrap_95": [
+      0.0018442552459580356,
+      0.06792389453848184
+    ]
+  }
+}

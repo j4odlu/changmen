@@ -1,0 +1,1565 @@
+{
+  "scope": {
+    "all_groups": 39189,
+    "sep_post_entry": 10999,
+    "oct_post_entry": 9134,
+    "event_overlap": 0,
+    "minutes": 5924,
+    "minute_train": 4339,
+    "minute_test": 1585
+  },
+  "monthly": {
+    "2026-09": {
+      "groups": 10999,
+      "rate250": {
+        "n": 10999,
+        "large": 2844,
+        "rate": 0.2585689608146195
+      },
+      "rate1000": {
+        "n": 10999,
+        "large": 725,
+        "rate": 0.06591508318938086
+      },
+      "prior_size": {
+        "under50": {
+          "n": 4693,
+          "large": 835,
+          "rate": 0.17792456850628596
+        },
+        "50to250": {
+          "n": 3122,
+          "large": 809,
+          "rate": 0.2591287636130685
+        },
+        "250to1000": {
+          "n": 2061,
+          "large": 758,
+          "rate": 0.3677826297913634
+        },
+        "1000plus": {
+          "n": 702,
+          "large": 353,
+          "rate": 0.5028490028490028
+        }
+      },
+      "small_streak": {
+        "zero": {
+          "n": 5885,
+          "large": 1920,
+          "rate": 0.3262531860662702
+        },
+        "one": {
+          "n": 2311,
+          "large": 507,
+          "rate": 0.21938554738208568
+        },
+        "two": {
+          "n": 1071,
+          "large": 173,
+          "rate": 0.161531279178338
+        },
+        "three_plus": {
+          "n": 1311,
+          "large": 155,
+          "rate": 0.11823035850495804
+        }
+      },
+      "price": {
+        "0": {
+          "n": 2082,
+          "large": 208,
+          "rate": 0.09990393852065321
+        },
+        "0.3": {
+          "n": 2411,
+          "large": 571,
+          "rate": 0.23683119037743675
+        },
+        "0.5": {
+          "n": 2726,
+          "large": 811,
+          "rate": 0.297505502567865
+        },
+        "0.7": {
+          "n": 2401,
+          "large": 790,
+          "rate": 0.3290295710120783
+        },
+        "0.9": {
+          "n": 1379,
+          "large": 464,
+          "rate": 0.3364757070340827
+        }
+      },
+      "risk_before": {
+        "both_profit": {
+          "n": 438,
+          "large": 114,
+          "rate": 0.2602739726027397
+        },
+        "bought_side_losing": {
+          "n": 5737,
+          "large": 1298,
+          "rate": 0.22625065365173436
+        },
+        "bought_side_profitable_other_losing": {
+          "n": 4824,
+          "large": 1432,
+          "rate": 0.296849087893864
+        }
+      },
+      "net_before": {
+        "same_direction": {
+          "n": 5301,
+          "large": 1600,
+          "rate": 0.30182984342576874
+        },
+        "opposite_direction": {
+          "n": 4961,
+          "large": 1131,
+          "rate": 0.2279782301955251
+        },
+        "near_balanced": {
+          "n": 737,
+          "large": 113,
+          "rate": 0.15332428765264586
+        }
+      },
+      "size_effect": {
+        "under50": {
+          "n": 4911,
+          "roles": {
+            "hedge": 2591,
+            "same_direction_add": 2229,
+            "new_direction": 2,
+            "reverse": 89
+          },
+          "risk_increase": 2163,
+          "risk_decrease": 2567,
+          "both_profit_to_one_loss": 17,
+          "both_profit_after": 200,
+          "cash": 83417.617543,
+          "risk_change": {
+            "n": 4911,
+            "p10": -44.374280000000454,
+            "median": -0.8147300000000541,
+            "p90": 30.068239999999605
+          },
+          "price": {
+            "n": 4911,
+            "p10": 0.113030303,
+            "median": 0.47,
+            "p90": 0.8800000000000001
+          },
+          "counter_direction_n": 2680,
+          "counter_q_over_net": {
+            "n": 2680,
+            "p10": 0.0027899977534872355,
+            "median": 0.020900206632768523,
+            "p90": 0.24456579769728312
+          },
+          "counter_close_within5pct": 12,
+          "counter_flip": 89
+        },
+        "50to250": {
+          "n": 3244,
+          "roles": {
+            "hedge": 1287,
+            "reverse": 174,
+            "same_direction_add": 1783
+          },
+          "risk_increase": 1841,
+          "risk_decrease": 1304,
+          "both_profit_to_one_loss": 29,
+          "both_profit_after": 140,
+          "cash": 402285.817103,
+          "risk_change": {
+            "n": 3244,
+            "p10": -165.342794,
+            "median": 58.344319999999925,
+            "p90": 187.6032500000007
+          },
+          "price": {
+            "n": 3244,
+            "p10": 0.25059281167999997,
+            "median": 0.61998121925,
+            "p90": 0.9300000000000002
+          },
+          "counter_direction_n": 1461,
+          "counter_q_over_net": {
+            "n": 1461,
+            "p10": 0.025043944083674993,
+            "median": 0.13147718197009653,
+            "p90": 1.2910134224600531
+          },
+          "counter_close_within5pct": 11,
+          "counter_flip": 174
+        },
+        "250to1000": {
+          "n": 2119,
+          "roles": {
+            "hedge": 627,
+            "same_direction_add": 1245,
+            "reverse": 247
+          },
+          "risk_increase": 1380,
+          "risk_decrease": 702,
+          "both_profit_to_one_loss": 40,
+          "both_profit_after": 83,
+          "cash": 1087294.05389,
+          "risk_change": {
+            "n": 2119,
+            "p10": -463.25342400000017,
+            "median": 307.3017899999999,
+            "p90": 747.1675123999999
+          },
+          "price": {
+            "n": 2119,
+            "p10": 0.31545862731999996,
+            "median": 0.6528899418,
+            "p90": 0.93
+          },
+          "counter_direction_n": 874,
+          "counter_q_over_net": {
+            "n": 874,
+            "p10": 0.08405986471790809,
+            "median": 0.411213385723999,
+            "p90": 3.7747775999945024
+          },
+          "counter_close_within5pct": 12,
+          "counter_flip": 247
+        },
+        "1000plus": {
+          "n": 725,
+          "roles": {
+            "reverse": 144,
+            "same_direction_add": 414,
+            "hedge": 167
+          },
+          "risk_increase": 509,
+          "risk_decrease": 200,
+          "both_profit_to_one_loss": 21,
+          "both_profit_after": 36,
+          "cash": 1411923.743977,
+          "risk_change": {
+            "n": 725,
+            "p10": -814.868040399998,
+            "median": 1150.4025000000001,
+            "p90": 2670.4386340000005
+          },
+          "price": {
+            "n": 725,
+            "p10": 0.44973001204,
+            "median": 0.71,
+            "p90": 0.9568314862399999
+          },
+          "counter_direction_n": 311,
+          "counter_q_over_net": {
+            "n": 311,
+            "p10": 0.1651163683705429,
+            "median": 0.8864856144207028,
+            "p90": 6.115068302202387
+          },
+          "counter_close_within5pct": 14,
+          "counter_flip": 144
+        }
+      }
+    },
+    "2026-10": {
+      "groups": 9134,
+      "rate250": {
+        "n": 9134,
+        "large": 2485,
+        "rate": 0.2720604335449967
+      },
+      "rate1000": {
+        "n": 9134,
+        "large": 653,
+        "rate": 0.07149113203415809
+      },
+      "prior_size": {
+        "under50": {
+          "n": 3482,
+          "large": 678,
+          "rate": 0.19471568064330844
+        },
+        "50to250": {
+          "n": 2875,
+          "large": 788,
+          "rate": 0.27408695652173914
+        },
+        "250to1000": {
+          "n": 1779,
+          "large": 649,
+          "rate": 0.36481169196177626
+        },
+        "1000plus": {
+          "n": 637,
+          "large": 285,
+          "rate": 0.4474097331240188
+        }
+      },
+      "small_streak": {
+        "zero": {
+          "n": 5291,
+          "large": 1722,
+          "rate": 0.3254583254583255
+        },
+        "one": {
+          "n": 1909,
+          "large": 425,
+          "rate": 0.22262964903090623
+        },
+        "two": {
+          "n": 799,
+          "large": 145,
+          "rate": 0.18147684605757197
+        },
+        "three_plus": {
+          "n": 774,
+          "large": 108,
+          "rate": 0.13953488372093023
+        }
+      },
+      "price": {
+        "0": {
+          "n": 1697,
+          "large": 184,
+          "rate": 0.10842663523865645
+        },
+        "0.3": {
+          "n": 1923,
+          "large": 462,
+          "rate": 0.24024960998439937
+        },
+        "0.5": {
+          "n": 2411,
+          "large": 696,
+          "rate": 0.2886768975528826
+        },
+        "0.7": {
+          "n": 2143,
+          "large": 717,
+          "rate": 0.33457769482034533
+        },
+        "0.9": {
+          "n": 960,
+          "large": 426,
+          "rate": 0.44375
+        }
+      },
+      "risk_before": {
+        "both_profit": {
+          "n": 477,
+          "large": 157,
+          "rate": 0.32914046121593293
+        },
+        "bought_side_losing": {
+          "n": 4016,
+          "large": 998,
+          "rate": 0.24850597609561753
+        },
+        "bought_side_profitable_other_losing": {
+          "n": 4641,
+          "large": 1330,
+          "rate": 0.2865761689291101
+        }
+      },
+      "net_before": {
+        "same_direction": {
+          "n": 4956,
+          "large": 1436,
+          "rate": 0.2897497982243745
+        },
+        "opposite_direction": {
+          "n": 3772,
+          "large": 952,
+          "rate": 0.2523860021208908
+        },
+        "near_balanced": {
+          "n": 406,
+          "large": 97,
+          "rate": 0.23891625615763548
+        }
+      },
+      "size_effect": {
+        "under50": {
+          "n": 3675,
+          "roles": {
+            "hedge": 1695,
+            "same_direction_add": 1943,
+            "reverse": 37
+          },
+          "risk_increase": 1870,
+          "risk_decrease": 1637,
+          "both_profit_to_one_loss": 7,
+          "both_profit_after": 175,
+          "cash": 67251.145389,
+          "risk_change": {
+            "n": 3675,
+            "p10": -45.08944800000063,
+            "median": 0.8852699999999913,
+            "p90": 34.477323999999676
+          },
+          "price": {
+            "n": 3675,
+            "p10": 0.12030427508000002,
+            "median": 0.4699999999999999,
+            "p90": 0.84
+          },
+          "counter_direction_n": 1732,
+          "counter_q_over_net": {
+            "n": 1732,
+            "p10": 0.0015731791954749685,
+            "median": 0.012964556044608206,
+            "p90": 0.1490392365385611
+          },
+          "counter_close_within5pct": 3,
+          "counter_flip": 37
+        },
+        "50to250": {
+          "n": 2974,
+          "roles": {
+            "reverse": 116,
+            "hedge": 1087,
+            "same_direction_add": 1771
+          },
+          "risk_increase": 1768,
+          "risk_decrease": 1078,
+          "both_profit_to_one_loss": 17,
+          "both_profit_after": 157,
+          "cash": 361301.788331,
+          "risk_change": {
+            "n": 2974,
+            "p10": -136.911425,
+            "median": 64.03665999999996,
+            "p90": 185.24349300000006
+          },
+          "price": {
+            "n": 2974,
+            "p10": 0.23069859157,
+            "median": 0.6157506548,
+            "p90": 0.9021233928299999
+          },
+          "counter_direction_n": 1203,
+          "counter_q_over_net": {
+            "n": 1203,
+            "p10": 0.02023357421078133,
+            "median": 0.09551568457817844,
+            "p90": 0.9426918649027589
+          },
+          "counter_close_within5pct": 10,
+          "counter_flip": 116
+        },
+        "250to1000": {
+          "n": 1832,
+          "roles": {
+            "reverse": 162,
+            "same_direction_add": 1141,
+            "hedge": 529
+          },
+          "risk_increase": 1197,
+          "risk_decrease": 560,
+          "both_profit_to_one_loss": 22,
+          "both_profit_after": 117,
+          "cash": 924079.785273,
+          "risk_change": {
+            "n": 1832,
+            "p10": -331.93410400000005,
+            "median": 317.072895,
+            "p90": 727.602846
+          },
+          "price": {
+            "n": 1832,
+            "p10": 0.31080814406,
+            "median": 0.66312457115,
+            "p90": 0.9464479172800001
+          },
+          "counter_direction_n": 691,
+          "counter_q_over_net": {
+            "n": 691,
+            "p10": 0.07896970055193131,
+            "median": 0.35349133957978596,
+            "p90": 2.581236291724425
+          },
+          "counter_close_within5pct": 18,
+          "counter_flip": 162
+        },
+        "1000plus": {
+          "n": 653,
+          "roles": {
+            "same_direction_add": 358,
+            "hedge": 162,
+            "reverse": 133
+          },
+          "risk_increase": 445,
+          "risk_decrease": 185,
+          "both_profit_to_one_loss": 37,
+          "both_profit_after": 45,
+          "cash": 1289521.969968,
+          "risk_change": {
+            "n": 653,
+            "p10": -791.3519287999991,
+            "median": 1144.1642700000002,
+            "p90": 2561.8774480000016
+          },
+          "price": {
+            "n": 653,
+            "p10": 0.43789677592000004,
+            "median": 0.701489257,
+            "p90": 0.9457565439400001
+          },
+          "counter_direction_n": 295,
+          "counter_q_over_net": {
+            "n": 295,
+            "p10": 0.2552517091555551,
+            "median": 0.8433146673200403,
+            "p90": 7.010995815541487
+          },
+          "counter_close_within5pct": 14,
+          "counter_flip": 133
+        }
+      }
+    }
+  },
+  "conditional_buy_models": {
+    "250": {
+      "train_n": 10999,
+      "test_n": 9134,
+      "train_large": 2844,
+      "test_large": 2485,
+      "constant": {
+        "auc": 0.5,
+        "brier": 0.1982255738807396,
+        "logloss": 0.5857669503542006,
+        "top20_precision": 0.2720604335449967,
+        "top20_recall": 0.2,
+        "base_rate": 0.2720604335449967
+      },
+      "models": {
+        "price": {
+          "auc": 0.6321172939274994,
+          "brier": 0.1903754331261365,
+          "logloss": 0.5644946272921861,
+          "top20_precision": 0.400328587075575,
+          "top20_recall": 0.2941649899396378,
+          "base_rate": 0.2720604335449967,
+          "auc_event_bootstrap_95": [
+            0.6172146839456685,
+            0.6500697892369991
+          ]
+        },
+        "recent": {
+          "auc": 0.6640996225510681,
+          "brier": 0.18506696634658534,
+          "logloss": 0.5514230366899175,
+          "top20_precision": 0.4419496166484118,
+          "top20_recall": 0.32474849094567404,
+          "base_rate": 0.2720604335449967,
+          "auc_event_bootstrap_95": [
+            0.6487174486179268,
+            0.6780185049631893
+          ]
+        },
+        "inventory": {
+          "auc": 0.6520547559685077,
+          "brier": 0.18689161954935005,
+          "logloss": 0.5571095414043209,
+          "top20_precision": 0.4315443592552026,
+          "top20_recall": 0.317102615694165,
+          "base_rate": 0.2720604335449967,
+          "auc_event_bootstrap_95": [
+            0.6343471273604914,
+            0.6664887156050969
+          ]
+        },
+        "full": {
+          "auc": 0.6730017040126153,
+          "brier": 0.18358674557902285,
+          "logloss": 0.5480822704658416,
+          "top20_precision": 0.4605695509309967,
+          "top20_recall": 0.338430583501006,
+          "base_rate": 0.2720604335449967,
+          "auc_event_bootstrap_95": [
+            0.6597190043839286,
+            0.6888469343715585
+          ]
+        }
+      }
+    },
+    "1000": {
+      "train_n": 10999,
+      "test_n": 9134,
+      "train_large": 725,
+      "test_large": 653,
+      "constant": {
+        "auc": 0.5,
+        "brier": 0.066411242395352,
+        "logloss": 0.25772522079470184,
+        "top20_precision": 0.07149113203415809,
+        "top20_recall": 0.2,
+        "base_rate": 0.07149113203415809
+      },
+      "models": {
+        "price": {
+          "auc": 0.6473118093177561,
+          "brier": 0.0653583283097582,
+          "logloss": 0.24881633283840116,
+          "top20_precision": 0.11500547645125958,
+          "top20_recall": 0.3215926493108729,
+          "base_rate": 0.07149113203415809,
+          "auc_event_bootstrap_95": [
+            0.6204888066747317,
+            0.6690521056258365
+          ]
+        },
+        "recent": {
+          "auc": 0.6775263615110834,
+          "brier": 0.06426063802302269,
+          "logloss": 0.2434666094500014,
+          "top20_precision": 0.14512595837897044,
+          "top20_recall": 0.4058192955589586,
+          "base_rate": 0.07149113203415809,
+          "auc_event_bootstrap_95": [
+            0.6505552432346653,
+            0.6994551385362155
+          ]
+        },
+        "inventory": {
+          "auc": 0.676680131590423,
+          "brier": 0.06410562784106054,
+          "logloss": 0.2441533821817617,
+          "top20_precision": 0.15443592552026286,
+          "top20_recall": 0.4318529862174579,
+          "base_rate": 0.07149113203415809,
+          "auc_event_bootstrap_95": [
+            0.6468569881891941,
+            0.6972237703603442
+          ]
+        },
+        "full": {
+          "auc": 0.6961824223609101,
+          "brier": 0.06339817313722254,
+          "logloss": 0.2399873598867427,
+          "top20_precision": 0.16319824753559695,
+          "top20_recall": 0.4563552833078101,
+          "base_rate": 0.07149113203415809,
+          "auc_event_bootstrap_95": [
+            0.6726521558219534,
+            0.7137015980301493
+          ]
+        }
+      }
+    }
+  },
+  "minute_models": {
+    "250": {
+      "train_n": 4339,
+      "test_n": 1585,
+      "train_large": 290,
+      "test_large": 132,
+      "constant": {
+        "auc": 0.5,
+        "brier": 0.07661551327340622,
+        "logloss": 0.288730718461973,
+        "top20_precision": 0.0832807570977918,
+        "top20_recall": 0.2,
+        "base_rate": 0.0832807570977918
+      },
+      "models": {
+        "price": {
+          "auc": 0.7037242695363825,
+          "brier": 0.0739380747780601,
+          "logloss": 0.2693224058974542,
+          "top20_precision": 0.1608832807570978,
+          "top20_recall": 0.38636363636363635,
+          "base_rate": 0.0832807570977918,
+          "auc_event_bootstrap_95": [
+            0.675305579030142,
+            0.725428792503749
+          ]
+        },
+        "recent": {
+          "auc": 0.7184404262862625,
+          "brier": 0.0733036743035365,
+          "logloss": 0.2653931931607933,
+          "top20_precision": 0.17034700315457413,
+          "top20_recall": 0.4090909090909091,
+          "base_rate": 0.0832807570977918,
+          "auc_event_bootstrap_95": [
+            0.6565364231312955,
+            0.7534169401013862
+          ]
+        },
+        "inventory": {
+          "auc": 0.7140581659680076,
+          "brier": 0.0733436393479966,
+          "logloss": 0.2666530756003205,
+          "top20_precision": 0.1861198738170347,
+          "top20_recall": 0.44696969696969696,
+          "base_rate": 0.0832807570977918,
+          "auc_event_bootstrap_95": [
+            0.6789726105528237,
+            0.7417952692524551
+          ]
+        },
+        "full": {
+          "auc": 0.7283467851258629,
+          "brier": 0.07273197915714427,
+          "logloss": 0.26274739133481495,
+          "top20_precision": 0.17665615141955837,
+          "top20_recall": 0.42424242424242425,
+          "base_rate": 0.0832807570977918,
+          "auc_event_bootstrap_95": [
+            0.6826482338099243,
+            0.7543732554400617
+          ]
+        }
+      }
+    },
+    "1000": {
+      "train_n": 4339,
+      "test_n": 1585,
+      "train_large": 130,
+      "test_large": 46,
+      "constant": {
+        "auc": 0.5,
+        "brier": 0.02818068200408525,
+        "logloss": 0.1313415376855021,
+        "top20_precision": 0.029022082018927444,
+        "top20_recall": 0.2,
+        "base_rate": 0.029022082018927444
+      },
+      "models": {
+        "price": {
+          "auc": 0.738996242619431,
+          "brier": 0.027810821799242557,
+          "logloss": 0.1226510788386253,
+          "top20_precision": 0.056782334384858045,
+          "top20_recall": 0.391304347826087,
+          "base_rate": 0.029022082018927444,
+          "auc_event_bootstrap_95": [
+            0.6755766464118781,
+            0.7737952787943231
+          ]
+        },
+        "recent": {
+          "auc": 0.7348221600700624,
+          "brier": 0.027841411675089217,
+          "logloss": 0.12230196150398354,
+          "top20_precision": 0.0694006309148265,
+          "top20_recall": 0.4782608695652174,
+          "base_rate": 0.029022082018927444,
+          "auc_event_bootstrap_95": [
+            0.6491524895905905,
+            0.7822019390712946
+          ]
+        },
+        "inventory": {
+          "auc": 0.7602409808740854,
+          "brier": 0.027472737962797263,
+          "logloss": 0.11992514222710907,
+          "top20_precision": 0.08201892744479496,
+          "top20_recall": 0.5652173913043478,
+          "base_rate": 0.029022082018927444,
+          "auc_event_bootstrap_95": [
+            0.7190115881006883,
+            0.804659641418043
+          ]
+        },
+        "full": {
+          "auc": 0.7580162160635082,
+          "brier": 0.027581703901920235,
+          "logloss": 0.11961667696037752,
+          "top20_precision": 0.07255520504731862,
+          "top20_recall": 0.5,
+          "base_rate": 0.029022082018927444,
+          "auc_event_bootstrap_95": [
+            0.7098544999624937,
+            0.7870035661524384
+          ]
+        }
+      }
+    }
+  },
+  "minute_tables": {
+    "train": {
+      "motion": {
+        "drop_over5c": {
+          "n": 1147,
+          "large": 87,
+          "rate": 0.07585004359197908
+        },
+        "drop_0.5to5c": {
+          "n": 606,
+          "large": 37,
+          "rate": 0.06105610561056106
+        },
+        "flat": {
+          "n": 816,
+          "large": 12,
+          "rate": 0.014705882352941176
+        },
+        "rise_0.5to5c": {
+          "n": 595,
+          "large": 32,
+          "rate": 0.05378151260504202
+        },
+        "rise_over5c": {
+          "n": 1175,
+          "large": 122,
+          "rate": 0.10382978723404256
+        }
+      },
+      "previous_size": {
+        "under50": {
+          "n": 1461,
+          "large": 90,
+          "rate": 0.061601642710472276
+        },
+        "50to250": {
+          "n": 813,
+          "large": 67,
+          "rate": 0.08241082410824108
+        },
+        "250to1000": {
+          "n": 845,
+          "large": 66,
+          "rate": 0.07810650887573964
+        },
+        "1000plus": {
+          "n": 546,
+          "large": 58,
+          "rate": 0.10622710622710622
+        }
+      },
+      "small_streak": {
+        "none": {
+          "n": 2204,
+          "large": 191,
+          "rate": 0.0866606170598911
+        },
+        "one": {
+          "n": 951,
+          "large": 50,
+          "rate": 0.052576235541535225
+        },
+        "two_plus": {
+          "n": 510,
+          "large": 40,
+          "rate": 0.0784313725490196
+        }
+      }
+    },
+    "test": {
+      "motion": {
+        "drop_over5c": {
+          "n": 518,
+          "large": 40,
+          "rate": 0.07722007722007722
+        },
+        "drop_0.5to5c": {
+          "n": 198,
+          "large": 18,
+          "rate": 0.09090909090909091
+        },
+        "flat": {
+          "n": 151,
+          "large": 4,
+          "rate": 0.026490066225165563
+        },
+        "rise_0.5to5c": {
+          "n": 194,
+          "large": 9,
+          "rate": 0.04639175257731959
+        },
+        "rise_over5c": {
+          "n": 524,
+          "large": 61,
+          "rate": 0.11641221374045801
+        }
+      },
+      "previous_size": {
+        "under50": {
+          "n": 613,
+          "large": 42,
+          "rate": 0.06851549755301795
+        },
+        "50to250": {
+          "n": 380,
+          "large": 27,
+          "rate": 0.07105263157894737
+        },
+        "250to1000": {
+          "n": 328,
+          "large": 42,
+          "rate": 0.12804878048780488
+        },
+        "1000plus": {
+          "n": 114,
+          "large": 17,
+          "rate": 0.14912280701754385
+        }
+      },
+      "small_streak": {
+        "none": {
+          "n": 822,
+          "large": 86,
+          "rate": 0.10462287104622871
+        },
+        "one": {
+          "n": 278,
+          "large": 25,
+          "rate": 0.08992805755395683
+        },
+        "two_plus": {
+          "n": 335,
+          "large": 17,
+          "rate": 0.050746268656716415
+        }
+      }
+    }
+  },
+  "small_to_large_within5min": {
+    "n": 2842,
+    "over250": {
+      "n": 2842,
+      "large": 581,
+      "rate": 0.2044334975369458
+    },
+    "over1000": {
+      "n": 2842,
+      "large": 149,
+      "rate": 0.05242786769880366
+    },
+    "roles250": {
+      "same_direction_add": 345,
+      "hedge": 166,
+      "reverse": 70
+    }
+  },
+  "examples": [
+    {
+      "id": "0x12eb344d93cfbc4e22d1ceaf5ec30c46beccef6c9645f8ef971252e7cd6d08b8",
+      "event": "cs2-ts7-mouz-2026-10-27",
+      "timestamp": 1793117328,
+      "month": "2026-10",
+      "outcome": "MOUZ",
+      "index": 1,
+      "price": 0.9797433219,
+      "shares": 15883.711225,
+      "cash": 15577.72168,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 15577.72168,
+      "net_before_in_bought_side": 9296.838886999998,
+      "delta_price": 0.25974332190000005,
+      "dt": 115,
+      "size_ratio": 1588.3711225,
+      "cash_ratio": 2133.700646504493,
+      "risk_before": 3213.7342240000035,
+      "risk_after": 18791.455904000002,
+      "floor_change": -15577.721679999999,
+      "reopen": false,
+      "opposite_average_cost": 0.17524348205858728,
+      "first": false,
+      "own_balance_before": 9397.671927999996,
+      "final_pnl": 6389.094207999995,
+      "pair_cost": null,
+      "net_before": 9296.838886999998,
+      "own_pnl_before": 6083.104662999995,
+      "other_pnl_before": -3213.7342240000035,
+      "floor_before": -3213.7342240000035,
+      "cash_before": -3314.5672650000015,
+      "cum_buy_before": 16665.667265000007,
+      "peak_cash_before": 10378.326283000002,
+      "prior_same_cash": 7.3008,
+      "prior_same_price": 0.72,
+      "prior_same_delta": -0.18999999980000004,
+      "has_prior": 1,
+      "since_prior_min": 1.9166666666666667,
+      "recent_same_buys": 1,
+      "recent_same_cash": 7.3008,
+      "recent_other_cash": 0.8336,
+      "small_streak": 1,
+      "recent_small_count": 1,
+      "previous_any_cash": 0.8336,
+      "title": "Counter-Strike: Spirit vs MOUZ - Map 2 Winner",
+      "own_pnl_after": 6389.094207999993,
+      "other_pnl_after": -18791.455904000002,
+      "net_after": 25180.550111999997
+    },
+    {
+      "id": "0xb64c138c7faf4019fb0806991ac48ad61789146dac2503bc4418147b99007c58",
+      "event": "cs2-g2-aur1-2026-10-25",
+      "timestamp": 1792936874,
+      "month": "2026-10",
+      "outcome": "Aurora Gaming",
+      "index": 1,
+      "price": 0.9890221248000001,
+      "shares": 9762.81,
+      "cash": 9660.935,
+      "fills": 1,
+      "role": "reverse",
+      "hedge_cash": 8038.0776160964715,
+      "directional_cash": 1622.8573839035278,
+      "net_before_in_bought_side": -8122.839511000001,
+      "delta_price": 0.04902212480000023,
+      "dt": 11,
+      "size_ratio": 976.281,
+      "cash_ratio": 1024.6849875904202,
+      "risk_before": 5730.135528999998,
+      "risk_after": 7268.231017999997,
+      "floor_change": -1538.0954889999985,
+      "reopen": false,
+      "opposite_average_cost": 0.42466519940592473,
+      "first": false,
+      "own_balance_before": 9.99999999999909,
+      "final_pnl": -5529.847258999997,
+      "pair_cost": 1.4142301914522721,
+      "net_before": -8122.839511000001,
+      "own_pnl_before": -5730.135528999998,
+      "other_pnl_before": 2392.7039820000027,
+      "floor_before": -5730.135528999998,
+      "cash_before": -5740.135528999997,
+      "cum_buy_before": 13532.205528999999,
+      "peak_cash_before": 11587.801498999997,
+      "prior_same_cash": 9.4282,
+      "prior_same_price": 0.9399999999999998,
+      "prior_same_delta": -0.0141742264000001,
+      "has_prior": 1,
+      "since_prior_min": 0.18333333333333332,
+      "recent_same_buys": 4,
+      "recent_same_cash": 5072.278439999999,
+      "recent_other_cash": 9.20583,
+      "small_streak": 1,
+      "recent_small_count": 2,
+      "previous_any_cash": 9.4282,
+      "title": "Counter-Strike: G2 vs Aurora Gaming - Map 1 Winner",
+      "own_pnl_after": -5628.260528999998,
+      "other_pnl_after": -7268.231017999997,
+      "net_after": 1639.9704889999985
+    },
+    {
+      "id": "0x6e939f12ca39b5bd3972b3b2b9efe9631273885f876fb6b4be0886271342fb7a",
+      "event": "cs2-vit-navi-2026-10-29",
+      "timestamp": 1793275382,
+      "month": "2026-10",
+      "outcome": "Vitality",
+      "index": 0,
+      "price": 0.9695388394999999,
+      "shares": 8922.489366,
+      "cash": 8663.875495,
+      "fills": 1,
+      "role": "reverse",
+      "hedge_cash": 5009.673611957145,
+      "directional_cash": 3654.201883042854,
+      "net_before_in_bought_side": -5159.210743,
+      "delta_price": 0.03953883949999981,
+      "dt": 91,
+      "size_ratio": 178.44978731999998,
+      "cash_ratio": 185.67005791557506,
+      "risk_before": 2239.4067459999987,
+      "risk_after": 5744.071497999999,
+      "floor_change": -3504.6647520000006,
+      "reopen": false,
+      "opposite_average_cost": 0.30747660243360453,
+      "first": false,
+      "own_balance_before": 160.00897199999986,
+      "final_pnl": -1905.1354249999986,
+      "pair_cost": 1.278492104902515,
+      "net_before": -5159.210743,
+      "own_pnl_before": -2239.4067459999987,
+      "other_pnl_before": 2919.8039970000004,
+      "floor_before": -2239.4067459999987,
+      "cash_before": -2399.415717999999,
+      "cum_buy_before": 6233.245718,
+      "peak_cash_before": 4180.164517999999,
+      "prior_same_cash": 46.66275,
+      "prior_same_price": 0.93,
+      "prior_same_delta": 0.040000000000000036,
+      "has_prior": 1,
+      "since_prior_min": 1.5166666666666666,
+      "recent_same_buys": 5,
+      "recent_same_cash": 1255.517108,
+      "recent_other_cash": 0,
+      "small_streak": 1,
+      "recent_small_count": 2,
+      "previous_any_cash": 46.66275,
+      "title": "Counter-Strike: Vitality vs Natus Vincere - Map 2 Winner",
+      "own_pnl_after": -1980.7928749999992,
+      "other_pnl_after": -5744.071497999999,
+      "net_after": 3763.278623
+    },
+    {
+      "id": "0xed0446285f1c0b52b0ef193172adbd338a684048f1a65f8f8ad1c75902acd7c3",
+      "event": "cs2-furia-dendel-2026-10-24",
+      "timestamp": 1792860650,
+      "month": "2026-10",
+      "outcome": "FURIA",
+      "index": 0,
+      "price": 0.8517417725000002,
+      "shares": 6722.29,
+      "cash": 5768.09897,
+      "fills": 1,
+      "role": "reverse",
+      "hedge_cash": 2633.008856723273,
+      "directional_cash": 3135.090113276727,
+      "net_before_in_bought_side": -3068.575834,
+      "delta_price": 0.01174177250000008,
+      "dt": 116,
+      "size_ratio": 672.229,
+      "cash_ratio": 681.228619850718,
+      "risk_before": 770.2659039999996,
+      "risk_after": 3469.789039999999,
+      "floor_change": -2699.523136,
+      "reopen": false,
+      "opposite_average_cost": 0.28856088823741477,
+      "first": false,
+      "own_balance_before": 88.20273800000035,
+      "final_pnl": 295.4215640000046,
+      "pair_cost": 1.1466165463539197,
+      "net_before": -3068.575834,
+      "own_pnl_before": -770.2659039999996,
+      "other_pnl_before": 2298.3099300000003,
+      "floor_before": -770.2659039999996,
+      "cash_before": -858.468642,
+      "cum_buy_before": 9738.678642,
+      "peak_cash_before": 4451.961704,
+      "prior_same_cash": 8.4672,
+      "prior_same_price": 0.8400000000000001,
+      "prior_same_delta": 0.08000000000000007,
+      "has_prior": 1,
+      "since_prior_min": 1.9333333333333333,
+      "recent_same_buys": 3,
+      "recent_same_cash": 68.62232,
+      "recent_other_cash": 792.81598,
+      "small_streak": 3,
+      "recent_small_count": 3,
+      "previous_any_cash": 792.03598,
+      "title": "Counter-Strike: FURIA vs DENDELE CS - Map 1 Winner",
+      "own_pnl_after": 183.9251260000001,
+      "other_pnl_after": -3469.7890399999997,
+      "net_after": 3653.7141659999998
+    },
+    {
+      "id": "0x5525f70994e23436d2d149809188d3d88d094fc126a7838252722f51e025f13a",
+      "event": "cs2-fut-nemi1-2026-10-29",
+      "timestamp": 1793263084,
+      "month": "2026-10",
+      "outcome": "FUT Esports",
+      "index": 0,
+      "price": 0.7784205406,
+      "shares": 6750.284359,
+      "cash": 5312.77512,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 5312.77512,
+      "net_before_in_bought_side": 1414.0448780000004,
+      "delta_price": 0.06842054060000002,
+      "dt": 122,
+      "size_ratio": 1350.0568718,
+      "cash_ratio": 1475.1685061933044,
+      "risk_before": 0,
+      "risk_after": 5290.275615000002,
+      "floor_change": -5312.775120000001,
+      "reopen": true,
+      "opposite_average_cost": 0.12402625101169382,
+      "first": false,
+      "own_balance_before": 3205.594878,
+      "final_pnl": -1345.245425000001,
+      "pair_cost": null,
+      "net_before": 1414.0448780000004,
+      "own_pnl_before": 1436.544382999999,
+      "other_pnl_before": 22.499504999998635,
+      "floor_before": 22.499504999998635,
+      "cash_before": -1769.0504950000009,
+      "cum_buy_before": 6994.160495000001,
+      "peak_cash_before": 3095.1285700000008,
+      "prior_same_cash": 3.60147,
+      "prior_same_price": 0.71,
+      "prior_same_delta": 0.09999999999999998,
+      "has_prior": 1,
+      "since_prior_min": 2.033333333333333,
+      "recent_same_buys": 6,
+      "recent_same_cash": 303.74427,
+      "recent_other_cash": 0,
+      "small_streak": 3,
+      "recent_small_count": 5,
+      "previous_any_cash": 3.60147,
+      "title": "Counter-Strike: FUT Esports vs Nemiga - Map 1 Winner",
+      "own_pnl_after": 2874.0536219999995,
+      "other_pnl_after": -5290.275615000001,
+      "net_after": 8164.329237000001
+    },
+    {
+      "id": "0xb64c138c7faf4019fb0806991ac48ad61789146dac2503bc4418147b99007c58",
+      "event": "cs2-g2-aur1-2026-10-25",
+      "timestamp": 1792936652,
+      "month": "2026-10",
+      "outcome": "Aurora Gaming",
+      "index": 1,
+      "price": 0.9541742263999999,
+      "shares": 5047.57,
+      "cash": 4827.29664,
+      "fills": 1,
+      "role": "hedge",
+      "hedge_cash": 4827.29664,
+      "directional_cash": 0.0,
+      "net_before_in_bought_side": -12887.742844,
+      "delta_price": 0.034174226399999785,
+      "dt": 3,
+      "size_ratio": 252.37849999999997,
+      "cash_ratio": 261.30784687337604,
+      "risk_before": 5941.774858999999,
+      "risk_after": 5721.501498999998,
+      "floor_change": 220.27336000000105,
+      "reopen": false,
+      "opposite_average_cost": 0.43934338581722204,
+      "first": false,
+      "own_balance_before": 818.73,
+      "final_pnl": -5529.847258999997,
+      "pair_cost": 1.3957038998863682,
+      "net_before": -12887.742844,
+      "own_pnl_before": -5941.774858999999,
+      "other_pnl_before": 6945.967985000001,
+      "floor_before": -5941.774858999999,
+      "cash_before": -6760.504858999999,
+      "cum_buy_before": 8686.274858999997,
+      "peak_cash_before": 8081.191208999999,
+      "prior_same_cash": 18.4736,
+      "prior_same_price": 0.9200000000000002,
+      "prior_same_delta": 0.02000000000000013,
+      "has_prior": 1,
+      "since_prior_min": 0.05,
+      "recent_same_buys": 4,
+      "recent_same_cash": 1188.07319,
+      "recent_other_cash": 0,
+      "small_streak": 1,
+      "recent_small_count": 1,
+      "previous_any_cash": 18.4736,
+      "title": "Counter-Strike: G2 vs Aurora Gaming - Map 1 Winner",
+      "own_pnl_after": -5721.501498999999,
+      "other_pnl_after": 2118.6713450000016,
+      "net_after": -7840.172844000001
+    },
+    {
+      "id": "0xd4b2f9bfb7a7d5dc8d1154801d19275061c09d07a72cf4358e3c741f6b40ac2d",
+      "event": "cs2-fnc-ef1-2026-10-30",
+      "timestamp": 1793388477,
+      "month": "2026-10",
+      "outcome": "Eternal Fire",
+      "index": 1,
+      "price": 0.8497531109,
+      "shares": 5345.046628,
+      "cash": 4576.09084,
+      "fills": 1,
+      "role": "reverse",
+      "hedge_cash": 1501.5385713074193,
+      "directional_cash": 3074.5522686925806,
+      "net_before_in_bought_side": -1753.8536620000007,
+      "delta_price": -0.00024688909999992514,
+      "dt": 8,
+      "size_ratio": 168.5071446406053,
+      "cash_ratio": 168.46029536658713,
+      "risk_before": 1364.4212390000005,
+      "risk_after": 4186.658417,
+      "floor_change": -2822.2371779999994,
+      "reopen": false,
+      "opposite_average_cost": 0.4844748584358523,
+      "first": false,
+      "own_balance_before": 404.8663379999996,
+      "final_pnl": 231.0197790000002,
+      "pair_cost": 1.3406116068092286,
+      "net_before": -1753.8536620000007,
+      "own_pnl_before": -1364.4212390000005,
+      "other_pnl_before": 389.4324230000002,
+      "floor_before": -1364.4212390000005,
+      "cash_before": -1769.287577,
+      "cum_buy_before": 6465.487576999998,
+      "peak_cash_before": 4550.85429,
+      "prior_same_cash": 27.16421,
+      "prior_same_price": 0.85,
+      "prior_same_delta": 0.03000000039999995,
+      "has_prior": 1,
+      "since_prior_min": 0.13333333333333333,
+      "recent_same_buys": 6,
+      "recent_same_cash": 1146.896297,
+      "recent_other_cash": 0,
+      "small_streak": 1,
+      "recent_small_count": 1,
+      "previous_any_cash": 27.16421,
+      "title": "Counter-Strike: fnatic vs Eternal Fire - Map 4 Winner",
+      "own_pnl_after": -595.465451,
+      "other_pnl_after": -4186.658417,
+      "net_after": 3591.1929659999996
+    },
+    {
+      "id": "0x1360d3e71c8a0f0243bad7fcb5ea1288bdbff73d0b5e820f191df7bd7449dae3",
+      "event": "cs2-9z-tyloo-2026-10-26",
+      "timestamp": 1793013017,
+      "month": "2026-10",
+      "outcome": "9z",
+      "index": 0,
+      "price": 0.9192390682999999,
+      "shares": 4930.534562,
+      "cash": 4550.641797,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 4550.641797,
+      "net_before_in_bought_side": 2682.727696,
+      "delta_price": -0.0007609317000001337,
+      "dt": 27,
+      "size_ratio": 98.61069124,
+      "cash_ratio": 98.53286413043479,
+      "risk_before": 2533.945700000002,
+      "risk_after": 7084.587497000001,
+      "floor_change": -4550.641796999999,
+      "reopen": false,
+      "opposite_average_cost": 0.12833362871934198,
+      "first": false,
+      "own_balance_before": 3991.409235,
+      "final_pnl": -2571.6403060000002,
+      "pair_cost": null,
+      "net_before": 2682.727696,
+      "own_pnl_before": 148.78199599999834,
+      "other_pnl_before": -2533.945700000002,
+      "floor_before": -2533.945700000002,
+      "cash_before": -3842.6272390000017,
+      "cum_buy_before": 7273.997239,
+      "peak_cash_before": 3842.6272390000017,
+      "prior_same_cash": 46.184,
+      "prior_same_price": 0.92,
+      "prior_same_delta": 1.000000082740371e-10,
+      "has_prior": 1,
+      "since_prior_min": 0.45,
+      "recent_same_buys": 5,
+      "recent_same_cash": 1402.581089,
+      "recent_other_cash": 118.98714,
+      "small_streak": 1,
+      "recent_small_count": 2,
+      "previous_any_cash": 46.184,
+      "title": "Counter-Strike: 9z vs TYLOO - Map 1 Winner",
+      "own_pnl_after": 528.6747609999984,
+      "other_pnl_after": -7084.587497000002,
+      "net_after": 7613.262258
+    },
+    {
+      "id": "0x3a3533a2c2d328a9cd3d13570b45b19ef1dc07010e7df92dfe70d1b5bb563dcc",
+      "event": "cs2-ast10-sashi-2026-10-14",
+      "timestamp": 1791975848,
+      "month": "2026-10",
+      "outcome": "Astralis",
+      "index": 0,
+      "price": 0.8226350847,
+      "shares": 5387.88,
+      "cash": 4471.56548,
+      "fills": 1,
+      "role": "hedge",
+      "hedge_cash": 4471.56548,
+      "directional_cash": 0.0,
+      "net_before_in_bought_side": -11553.836532000001,
+      "delta_price": 0.0036350847000000686,
+      "dt": 58,
+      "size_ratio": 2181.327935222672,
+      "cash_ratio": 2190.623045908594,
+      "risk_before": 4402.003276999999,
+      "risk_after": 3485.688756999998,
+      "floor_change": 916.3145200000008,
+      "reopen": false,
+      "opposite_average_cost": 0.4240436414720541,
+      "first": false,
+      "own_balance_before": 2.47,
+      "final_pnl": -3436.278086999998,
+      "pair_cost": 1.2539740556609373,
+      "net_before": -11553.836532000001,
+      "own_pnl_before": -4402.003276999999,
+      "other_pnl_before": 7151.833255000001,
+      "floor_before": -4402.003276999999,
+      "cash_before": -4404.473276999999,
+      "cum_buy_before": 5423.0732769999995,
+      "peak_cash_before": 5421.032047,
+      "prior_same_cash": 2.04123,
+      "prior_same_price": 0.819,
+      "prior_same_delta": 0.3341140770999999,
+      "has_prior": 1,
+      "since_prior_min": 0.9666666666666667,
+      "recent_same_buys": 1,
+      "recent_same_cash": 2.04123,
+      "recent_other_cash": 0,
+      "small_streak": 7,
+      "recent_small_count": 1,
+      "previous_any_cash": 2.04123,
+      "title": "Counter-Strike: Astralis vs Sashi Esport - Map 1 Winner",
+      "own_pnl_after": -3485.688756999999,
+      "other_pnl_after": 2680.267775000001,
+      "net_after": -6165.956532000001
+    },
+    {
+      "id": "0x940c9ee1ff09034e64f8f6199b0d8433da8241fefecaa87dccfeff9d22923eda",
+      "event": "cs2-ast10-big5-2026-10-03",
+      "timestamp": 1791027521,
+      "month": "2026-10",
+      "outcome": "BIG",
+      "index": 1,
+      "price": 0.5799419367,
+      "shares": 6889.034483,
+      "cash": 4079.15163,
+      "fills": 1,
+      "role": "hedge",
+      "hedge_cash": 4079.15163,
+      "directional_cash": 0.0,
+      "net_before_in_bought_side": -10911.337357,
+      "delta_price": 0.04994193670000002,
+      "dt": 12,
+      "size_ratio": 688.9034483,
+      "cash_ratio": 751.9797273506558,
+      "risk_before": 6427.090948999999,
+      "risk_after": 3617.2080959999976,
+      "floor_change": 2809.882853000001,
+      "reopen": false,
+      "opposite_average_cost": 0.5870035434225398,
+      "first": false,
+      "own_balance_before": 287.0,
+      "final_pnl": -3295.706965999996,
+      "pair_cost": 1.1791259431675374,
+      "net_before": -10911.337357,
+      "own_pnl_before": -6427.090948999999,
+      "other_pnl_before": 4484.246408000002,
+      "floor_before": -6427.090948999999,
+      "cash_before": -6714.090948999999,
+      "cum_buy_before": 6714.090948999999,
+      "peak_cash_before": 6714.090948999999,
+      "prior_same_cash": 5.42455,
+      "prior_same_price": 0.53,
+      "prior_same_delta": 0.024600000000000066,
+      "has_prior": 1,
+      "since_prior_min": 0.2,
+      "recent_same_buys": 3,
+      "recent_same_cash": 140.62724,
+      "recent_other_cash": 94.93121,
+      "small_streak": 1,
+      "recent_small_count": 2,
+      "previous_any_cash": 5.42455,
+      "title": "Counter-Strike: Astralis vs BIG - Map 2 Winner",
+      "own_pnl_after": -3617.208095999998,
+      "other_pnl_after": 405.09477800000195,
+      "net_after": -4022.302874
+    },
+    {
+      "id": "0x858717afa33d4496779754221332e290b38d2d62e4091a16630de4e4f098fb04",
+      "event": "cs2-ts7-navi-2026-10-28",
+      "timestamp": 1793208107,
+      "month": "2026-10",
+      "outcome": "Natus Vincere",
+      "index": 1,
+      "price": 0.8015487567,
+      "shares": 4773.7,
+      "cash": 3864.32052,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 3864.32052,
+      "net_before_in_bought_side": 3654.631133,
+      "delta_price": 0.04154875670000002,
+      "dt": 67,
+      "size_ratio": 318.24666666666667,
+      "cash_ratio": 334.9560120657375,
+      "risk_before": 1677.0896290000003,
+      "risk_after": 5541.410149,
+      "floor_change": -3864.32052,
+      "reopen": false,
+      "opposite_average_cost": 0.49800214126220754,
+      "first": false,
+      "own_balance_before": 3886.6400220000005,
+      "final_pnl": -2711.821964999999,
+      "pair_cost": null,
+      "net_before": 3654.631133,
+      "own_pnl_before": 1977.5415039999996,
+      "other_pnl_before": -1677.0896290000003,
+      "floor_before": -1677.0896290000003,
+      "cash_before": -1909.098518000001,
+      "cum_buy_before": 13841.228518000002,
+      "peak_cash_before": 10906.849900000001,
+      "prior_same_cash": 11.5368,
+      "prior_same_price": 0.76,
+      "prior_same_delta": 0.07584795320000004,
+      "has_prior": 1,
+      "since_prior_min": 1.1166666666666667,
+      "recent_same_buys": 5,
+      "recent_same_cash": 556.888238,
+      "recent_other_cash": 0,
+      "small_streak": 4,
+      "recent_small_count": 4,
+      "previous_any_cash": 11.5368,
+      "title": "Counter-Strike: Spirit vs Natus Vincere - Map 2 Winner",
+      "own_pnl_after": 2886.9209839999994,
+      "other_pnl_after": -5541.410149,
+      "net_after": 8428.331133
+    },
+    {
+      "id": "0xd86dc563f63534ca7fdb2379f57decc06029df24e6d64a237e3c300390390ae0",
+      "event": "cs2-bb3-nemi1-2026-10-25",
+      "timestamp": 1792928751,
+      "month": "2026-10",
+      "outcome": "BetBoom Team",
+      "index": 0,
+      "price": 0.85,
+      "shares": 4145.5,
+      "cash": 3550.10256,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 3550.10256,
+      "net_before_in_bought_side": 8141.104605,
+      "delta_price": 0.08999999999999997,
+      "dt": 67,
+      "size_ratio": 829.1,
+      "cash_ratio": 923.1596005824838,
+      "risk_before": 5354.313897000001,
+      "risk_after": 8904.416457000001,
+      "floor_change": -3550.1025600000003,
+      "reopen": false,
+      "opposite_average_cost": 0.2285800000000104,
+      "first": false,
+      "own_balance_before": 8146.104605,
+      "final_pnl": 3372.081347999998,
+      "pair_cost": null,
+      "net_before": 8141.104605,
+      "own_pnl_before": 2786.7907079999995,
+      "other_pnl_before": -5354.313897000001,
+      "floor_before": -5354.313897000001,
+      "cash_before": -5359.313897000001,
+      "cum_buy_before": 9739.283897000003,
+      "peak_cash_before": 5359.313897000001,
+      "prior_same_cash": 3.8456,
+      "prior_same_price": 0.76,
+      "prior_same_delta": -0.04769230769999999,
+      "has_prior": 1,
+      "since_prior_min": 1.1166666666666667,
+      "recent_same_buys": 5,
+      "recent_same_cash": 1383.91456,
+      "recent_other_cash": 1.1429,
+      "small_streak": 1,
+      "recent_small_count": 2,
+      "previous_any_cash": 1.1429,
+      "title": "Counter-Strike: BetBoom Team vs Nemiga - Map 2 Winner",
+      "own_pnl_after": 3382.1881479999997,
+      "other_pnl_after": -8904.416457000001,
+      "net_after": 12286.604605
+    }
+  ],
+  "limitations": [
+    "Data ends October31 morning. These are activity groups, not original orders.",
+    "Conditional models predict size GIVEN a BUY; minute models also include non-buy minutes.",
+    "No current fill price/cash/shares, future map maximum or final outcome used as predictive features.",
+    "Effects on risk and reversal depend mechanically on transaction size; they describe consequences, not independent triggers.",
+    "Same archived October test window has been explored before; this is exploratory replication, not fresh prospective validation.",
+    "Minute large means total same-side cash >=threshold in the next minute; group large means same-second same-side cash >=threshold.",
+    "No order book depth, order submission/cancellation timestamps, live score or external odds."
+  ]
+}

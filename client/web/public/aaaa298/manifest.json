@@ -1,0 +1,109 @@
+{
+  "files": [
+    {
+      "path": "index.html",
+      "bytes": 17344776,
+      "sha256": "9e4c65782a341f6d4e331d9fc102188bce148be3317f5fe1bebdb9745ce198ae"
+    },
+    {
+      "path": "research/buy-groups.csv.gz",
+      "bytes": 3128697,
+      "sha256": "42ef78b2f96ac1008d169173d255c5d18cbf348a569056a0cb904b3d291e94b4"
+    },
+    {
+      "path": "research/maps.csv.gz",
+      "bytes": 137181,
+      "sha256": "c5ebbca5b9e945356fee7b28a1868719a72f094ceeaa39c68055c3374c80513e"
+    },
+    {
+      "path": "research/minute-samples.csv.gz",
+      "bytes": 137369,
+      "sha256": "04fd87efa32c549139e8c6367cefdd375baf4fea40e5f7b177e006779d9aa76a"
+    },
+    {
+      "path": "research/summary.json",
+      "bytes": 63764,
+      "sha256": "70207d30234e5442513adb06ad97aa04dcbfccd827be31c23961d459b034ad9c"
+    },
+    {
+      "path": "research/continuous-summary.json",
+      "bytes": 26825,
+      "sha256": "0f97659b9100f45c654faecb24ebd901fd56a9a36667457ee78f5be9a8d6e04b"
+    },
+    {
+      "path": "research/verification.json",
+      "bytes": 132,
+      "sha256": "fce467932fb98e39204d8d66652bcc9cbcfae68ad5ce0422a40c83d92b19d2ca"
+    },
+    {
+      "path": "research/index.html",
+      "bytes": 313321,
+      "sha256": "36481d38f971a938f6c69e3ad9bc692ecc4b2b8dbe06b81f817b7000ab96d9a1"
+    },
+    {
+      "path": "research/map-funding.csv.gz",
+      "bytes": 240222,
+      "sha256": "461e7d89619bb9be710c60a79c083290fef1a2e4892af97d47957eb098a69149"
+    },
+    {
+      "path": "research/escalation-groups.csv.gz",
+      "bytes": 5404875,
+      "sha256": "48d4e176c28e327e2245ff749bbf41a25c84209501481efcc40e0f81161384bb"
+    },
+    {
+      "path": "research/escalation-minutes.csv.gz",
+      "bytes": 243898,
+      "sha256": "e974f9869e411aa6b482f5eb5913ced4e4a4a67f0cc71240471c0c47d613990d"
+    },
+    {
+      "path": "research/escalation-summary.json",
+      "bytes": 47463,
+      "sha256": "51105f004c9b94e5d5748a7af610d166fc2cfa0bb40465766286b9dfc2d8d7a4"
+    },
+    {
+      "path": "research/escalation-checks.json",
+      "bytes": 4881,
+      "sha256": "8a221a8980a7e05af7048f739eb2052f1e2e84f194a10d69e26fec2f08ee09a8"
+    },
+    {
+      "path": "research/escalation.html",
+      "bytes": 15695,
+      "sha256": "341c2a119b06300172f9be20534249539000cf67fb19d68f20d9b6ac52008d53"
+    },
+    {
+      "path": "research/price_only_plan.json",
+      "bytes": 2569,
+      "sha256": "186a2f3fc299c1b3ea1f60b56a468ec14fd530c5ebf47d81d3d578b221c2ad26"
+    },
+    {
+      "path": "research/price-only-summary.json",
+      "bytes": 159678,
+      "sha256": "4d2d13ee46245af276b499121d187a05bdd08e52f6dadae9491e3688191b4230"
+    },
+    {
+      "path": "research/price-only-trades.csv.gz",
+      "bytes": 27496,
+      "sha256": "a229ca312d8d2de841b34ddf5b21e9e915686d4e41c9ecad25b8bb325acbc772"
+    },
+    {
+      "path": "research/price-only-forward.csv.gz",
+      "bytes": 1093888,
+      "sha256": "54a94aa32c7f4b03b1cca4c1df743b5bb4aff7674ec86350b109ffa5eb7a2a26"
+    },
+    {
+      "path": "research/price-only-diagnostics.json",
+      "bytes": 2137,
+      "sha256": "44e5f39b6241c5d9fed2ac6aa411332adbd18cd8faabee767b1aa7d1ae3b5aab"
+    },
+    {
+      "path": "research/price-only-data/manifest.json",
+      "bytes": 134,
+      "sha256": "2e3bfb2d350893f69f6c57316faeb2aa9ec1e04271200e0cc7ecc41e8aeaa157"
+    },
+    {
+      "path": "research/price-only.html",
+      "bytes": 14348,
+      "sha256": "80b2d8b45d5616323f18a9debc16715e451864dabcd147556ec48d3f41896907"
+    }
+  ]
+}

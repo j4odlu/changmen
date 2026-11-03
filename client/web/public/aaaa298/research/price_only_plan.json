@@ -1,0 +1,20 @@
+{
+  "created_before_new_data_analysis": "2026-11-03",
+  "objective": "Test price-only rules on actual token histories, without wallet actions as signals.",
+  "universe": "CS map markets from wallet's existing Oct27-30 sample plus public activity from Oct31 onward. Selection remains wallet-conditioned, so cannot infer all-PM profitability.",
+  "window": "Fixed UTC event-slug date minus 6 hours through plus 30 hours, not first/last wallet trade; 60-second raw history only.",
+  "development": "Event dates Oct27-28",
+  "validation": "Event dates Oct29-30 (previously inspected price data; exploratory)",
+  "new_test": "Event dates Oct31 onward, newly fetched after these fixed rules; not prospective live trading",
+  "coverage_audit_amendment": "Strict new_test excludes entire events previously inspected in the earlier 65-map study. Audit found zero overlapping new-test events; the reserved late_seen bucket is empty. Four older cached maps have Oct26 event dates and lie outside this fixed calendar scope. No trading rule or parameter changed.",
+  "rules": {
+    "momentum": "Token price +5 cents or more over 5 minutes AND last minute positive.",
+    "rebound": "Token price -5 cents or more over 5 minutes AND last minute rebounds +1 cent or more.",
+    "pullback": "Rise >=5 cents from t-10 to t-3; drop >=2 cents from t-3 to t-1; rebound >=1 cent from t-1 to t."
+  },
+  "entry": "Signal and next reference execution price both 15-85 cents. Use actual token prices; no synthetic 1-p fills. One position at a time per map, fixed 100 shares, max 3 filled entries per map, 2-minute cooldown after exit.",
+  "exit": "At observed +8 cents, -5 cents, or 10 minutes holding, queue exit for next observation. Gaps/terminal missing executions marked separately, never silently removed.",
+  "availability": "Each 60-second bucket usable only after timestamp+60. Queue executes using a subsequent price point, at least 60 seconds after signal availability; also test 120-second delay. Irregular points must satisfy tolerance, no future-filled signals.",
+  "costs": "Sports fee coefficient 0.05 per leg, fee per share=0.05*p*(1-p), treated as explicit scenario pending per-market historical fee verification; no rebates. Slippage 0,0.5,1 cents per leg. Include gross zero-fee comparison.",
+  "constraints": "No parameter grid or post-test retuning in primary analysis. Report all three rules and no-trade benchmark. Bootstrap by whole event. No claims of executable fills from chart prices. Censored positions retain last mark and separate zero-payout downside stress."
+}

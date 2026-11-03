@@ -1,0 +1,935 @@
+{
+  "scope": {
+    "maps": 65,
+    "events": 32,
+    "side_minutes": 5924,
+    "buy_minutes": 1019,
+    "train_events": 22,
+    "test_events": 10,
+    "train_maps": 44,
+    "test_maps": 21,
+    "train_n": 4339,
+    "test_n": 1585,
+    "test_start": 1793279220,
+    "test_end": 1793389380,
+    "train_event_names": [
+      "cs2-ast10-fnc-2026-10-27",
+      "cs2-ast10-mgc-2026-10-28",
+      "cs2-bb3-navi-2026-10-26",
+      "cs2-big5-ef1-2026-10-29",
+      "cs2-fnc-big5-2026-10-28",
+      "cs2-furia-tyloo-2026-10-27",
+      "cs2-fut-nemi1-2026-10-29",
+      "cs2-g2-dendel-2026-10-26",
+      "cs2-ice-mibr-2026-10-28",
+      "cs2-ice-nem-2026-10-27",
+      "cs2-mgc-big5-2026-10-27",
+      "cs2-mglz-lgc-2026-10-27",
+      "cs2-mglz-nemi1-2026-10-28",
+      "cs2-mibr-ef1-2026-10-27",
+      "cs2-nem-ef1-2026-10-28",
+      "cs2-nemi1-dendel-2026-10-27",
+      "cs2-tl1-aur1-2026-10-27",
+      "cs2-tl1-furia-2026-10-28",
+      "cs2-ts7-mouz-2026-10-27",
+      "cs2-ts7-navi-2026-10-28",
+      "cs2-vit-navi-2026-10-27",
+      "cs2-vit-navi-2026-10-29"
+    ],
+    "test_event_names": [
+      "cs2-aur1-mouz-2026-10-29",
+      "cs2-bb3-furia-2026-10-29",
+      "cs2-ef1-ast10-2026-10-29",
+      "cs2-fnc-ef1-2026-10-30",
+      "cs2-fnc-mibr-2026-10-29",
+      "cs2-ice-ast10-2026-10-29",
+      "cs2-mibr-ef1-2026-10-30",
+      "cs2-mouz-furia-2026-10-30",
+      "cs2-nemi1-vit-2026-10-30",
+      "cs2-shin-isg-2026-10-30"
+    ]
+  },
+  "models": {
+    "constant_train_rate": {
+      "auc": 0.5,
+      "brier": 0.16593830134097975,
+      "logloss": 0.516640114805103,
+      "top20_precision": 0.19558359621451105,
+      "top20_recall": 0.18960244648318042,
+      "base_rate": 0.20630914826498423
+    },
+    "price_only": {
+      "auc": 0.5328235683065689,
+      "brier": 0.1656948543110772,
+      "logloss": 0.5162381046845129,
+      "top20_precision": 0.24290220820189273,
+      "top20_recall": 0.23547400611620795,
+      "base_rate": 0.20630914826498423
+    },
+    "price_motion": {
+      "auc": 0.5905179329356339,
+      "brier": 0.1628598123188799,
+      "logloss": 0.5072173214225794,
+      "top20_precision": 0.28391167192429023,
+      "top20_recall": 0.27522935779816515,
+      "base_rate": 0.20630914826498423
+    },
+    "motion_inventory": {
+      "auc": 0.580457548752206,
+      "brier": 0.1641422466016493,
+      "logloss": 0.5114420998360519,
+      "top20_precision": 0.27129337539432175,
+      "top20_recall": 0.26299694189602446,
+      "base_rate": 0.20630914826498423
+    },
+    "motion_recent": {
+      "auc": 0.6359956826767404,
+      "brier": 0.1580060311022503,
+      "logloss": 0.49293606541524265,
+      "top20_precision": 0.3186119873817035,
+      "top20_recall": 0.308868501529052,
+      "base_rate": 0.20630914826498423
+    },
+    "motion_clock": {
+      "auc": 0.6362898246330518,
+      "brier": 0.15799306765031,
+      "logloss": 0.49280537722847034,
+      "top20_precision": 0.3280757097791798,
+      "top20_recall": 0.3180428134556575,
+      "base_rate": 0.20630914826498423
+    },
+    "motion_reference": {
+      "auc": 0.6066410447144392,
+      "brier": 0.16098857346743678,
+      "logloss": 0.5004055504047462,
+      "top20_precision": 0.2902208201892745,
+      "top20_recall": 0.28134556574923547,
+      "base_rate": 0.20630914826498423
+    },
+    "price_inventory": {
+      "auc": 0.6318874189894158,
+      "brier": 0.1581903962838078,
+      "logloss": 0.4932740756655722,
+      "top20_precision": 0.30914826498422715,
+      "top20_recall": 0.2996941896024465,
+      "base_rate": 0.20630914826498423
+    },
+    "price_bins_5c": {
+      "auc": 0.5469970780278389,
+      "brier": 0.16479099715647436,
+      "logloss": 0.5151580046497357,
+      "top20_precision": 0.24605678233438485,
+      "top20_recall": 0.23853211009174313,
+      "base_rate": 0.20630914826498423
+    }
+  },
+  "auc_event_bootstrap_95": {
+    "price_only": [
+      0.4971917101648968,
+      0.5614983796079339
+    ],
+    "price_motion": [
+      0.5454763426262601,
+      0.6285611562168468
+    ],
+    "motion_inventory": [
+      0.5435255322169926,
+      0.6092526101947527
+    ],
+    "motion_recent": [
+      0.593326941466928,
+      0.671882212714266
+    ],
+    "motion_clock": [
+      0.5937886589672259,
+      0.6714292527996246
+    ],
+    "motion_reference": [
+      0.559667431821679,
+      0.650500806831421
+    ],
+    "price_inventory": [
+      0.5930895758916835,
+      0.6688929197370986
+    ],
+    "price_bins_5c": [
+      0.4967448863628314,
+      0.5947881658180301
+    ]
+  },
+  "tables": {
+    "all": {
+      "ret5": [
+        {
+          "label": "drop_over_5c",
+          "side_minutes": 1665,
+          "buys": 382,
+          "buy_rate": 0.22942942942942943,
+          "buy_cash": 148317.663282
+        },
+        {
+          "label": "drop_0.5_to_5c",
+          "side_minutes": 804,
+          "buys": 122,
+          "buy_rate": 0.1517412935323383,
+          "buy_cash": 70866.50442699999
+        },
+        {
+          "label": "flat_within_0.5c",
+          "side_minutes": 967,
+          "buys": 27,
+          "buy_rate": 0.027921406411582212,
+          "buy_cash": 19213.14641
+        },
+        {
+          "label": "rise_0.5_to_5c",
+          "side_minutes": 789,
+          "buys": 111,
+          "buy_rate": 0.14068441064638784,
+          "buy_cash": 72935.105514
+        },
+        {
+          "label": "rise_over_5c",
+          "side_minutes": 1699,
+          "buys": 377,
+          "buy_rate": 0.22189523248969983,
+          "buy_cash": 275660.416005
+        }
+      ],
+      "price": [
+        {
+          "label": "0.0_0.1",
+          "side_minutes": 393,
+          "buys": 57,
+          "buy_rate": 0.1450381679389313,
+          "buy_cash": 5711.2549
+        },
+        {
+          "label": "0.1_0.2",
+          "side_minutes": 589,
+          "buys": 85,
+          "buy_rate": 0.14431239388794567,
+          "buy_cash": 10843.70538
+        },
+        {
+          "label": "0.2_0.3",
+          "side_minutes": 563,
+          "buys": 89,
+          "buy_rate": 0.15808170515097691,
+          "buy_cash": 19170.29065
+        },
+        {
+          "label": "0.3_0.4",
+          "side_minutes": 765,
+          "buys": 78,
+          "buy_rate": 0.10196078431372549,
+          "buy_cash": 24770.772680000002
+        },
+        {
+          "label": "0.4_0.5",
+          "side_minutes": 634,
+          "buys": 131,
+          "buy_rate": 0.20662460567823343,
+          "buy_cash": 55645.356148
+        },
+        {
+          "label": "0.5_0.6",
+          "side_minutes": 640,
+          "buys": 129,
+          "buy_rate": 0.2015625,
+          "buy_cash": 61182.908339
+        },
+        {
+          "label": "0.6_0.7",
+          "side_minutes": 770,
+          "buys": 144,
+          "buy_rate": 0.18701298701298702,
+          "buy_cash": 90867.515043
+        },
+        {
+          "label": "0.7_0.8",
+          "side_minutes": 569,
+          "buys": 126,
+          "buy_rate": 0.22144112478031636,
+          "buy_cash": 112274.592218
+        },
+        {
+          "label": "0.8_0.9",
+          "side_minutes": 601,
+          "buys": 118,
+          "buy_rate": 0.19633943427620631,
+          "buy_cash": 153179.284952
+        },
+        {
+          "label": "0.9_1.0",
+          "side_minutes": 400,
+          "buys": 62,
+          "buy_rate": 0.155,
+          "buy_cash": 53347.155328
+        }
+      ]
+    },
+    "train": {
+      "ret5": [
+        {
+          "label": "drop_over_5c",
+          "side_minutes": 1147,
+          "buys": 255,
+          "buy_rate": 0.22231909328683522,
+          "buy_cash": 107843.945856
+        },
+        {
+          "label": "drop_0.5_to_5c",
+          "side_minutes": 606,
+          "buys": 92,
+          "buy_rate": 0.15181518151815182,
+          "buy_cash": 48730.811344
+        },
+        {
+          "label": "flat_within_0.5c",
+          "side_minutes": 816,
+          "buys": 18,
+          "buy_rate": 0.022058823529411766,
+          "buy_cash": 12036.648701
+        },
+        {
+          "label": "rise_0.5_to_5c",
+          "side_minutes": 595,
+          "buys": 77,
+          "buy_rate": 0.12941176470588237,
+          "buy_cash": 53022.159328
+        },
+        {
+          "label": "rise_over_5c",
+          "side_minutes": 1175,
+          "buys": 250,
+          "buy_rate": 0.2127659574468085,
+          "buy_cash": 190000.093857
+        }
+      ],
+      "price": [
+        {
+          "label": "0.0_0.1",
+          "side_minutes": 268,
+          "buys": 33,
+          "buy_rate": 0.12313432835820895,
+          "buy_cash": 3869.85864
+        },
+        {
+          "label": "0.1_0.2",
+          "side_minutes": 457,
+          "buys": 60,
+          "buy_rate": 0.13129102844638948,
+          "buy_cash": 8039.31992
+        },
+        {
+          "label": "0.2_0.3",
+          "side_minutes": 410,
+          "buys": 58,
+          "buy_rate": 0.14146341463414633,
+          "buy_cash": 11904.0229
+        },
+        {
+          "label": "0.3_0.4",
+          "side_minutes": 630,
+          "buys": 53,
+          "buy_rate": 0.08412698412698413,
+          "buy_cash": 18102.92999
+        },
+        {
+          "label": "0.4_0.5",
+          "side_minutes": 387,
+          "buys": 82,
+          "buy_rate": 0.21188630490956073,
+          "buy_cash": 41229.177899
+        },
+        {
+          "label": "0.5_0.6",
+          "side_minutes": 395,
+          "buys": 89,
+          "buy_rate": 0.22531645569620254,
+          "buy_cash": 48150.93722
+        },
+        {
+          "label": "0.6_0.7",
+          "side_minutes": 639,
+          "buys": 110,
+          "buy_rate": 0.17214397496087636,
+          "buy_cash": 67573.108359
+        },
+        {
+          "label": "0.7_0.8",
+          "side_minutes": 412,
+          "buys": 82,
+          "buy_rate": 0.19902912621359223,
+          "buy_cash": 79359.461066
+        },
+        {
+          "label": "0.8_0.9",
+          "side_minutes": 467,
+          "buys": 83,
+          "buy_rate": 0.1777301927194861,
+          "buy_cash": 95988.66726
+        },
+        {
+          "label": "0.9_1.0",
+          "side_minutes": 274,
+          "buys": 42,
+          "buy_rate": 0.15328467153284672,
+          "buy_cash": 37416.175832
+        }
+      ],
+      "since_buy": [
+        {
+          "label": "within_1m",
+          "side_minutes": 694,
+          "buys": 204,
+          "buy_rate": 0.29394812680115273,
+          "buy_cash": 149680.71780399999
+        },
+        {
+          "label": "1_to_3m",
+          "side_minutes": 829,
+          "buys": 230,
+          "buy_rate": 0.27744270205066346,
+          "buy_cash": 134123.608116
+        },
+        {
+          "label": "3_to_10m",
+          "side_minutes": 1023,
+          "buys": 179,
+          "buy_rate": 0.17497556207233628,
+          "buy_cash": 89817.993832
+        },
+        {
+          "label": "over_10m_or_never",
+          "side_minutes": 1793,
+          "buys": 79,
+          "buy_rate": 0.044060234244283326,
+          "buy_cash": 38011.339334
+        }
+      ],
+      "inventory": [
+        {
+          "label": "same_direction",
+          "side_minutes": 1961,
+          "buys": 355,
+          "buy_rate": 0.18103008669046405,
+          "buy_cash": 204614.27306099999
+        },
+        {
+          "label": "neutral",
+          "side_minutes": 444,
+          "buys": 9,
+          "buy_rate": 0.02027027027027027,
+          "buy_cash": 13986.5487
+        },
+        {
+          "label": "opposite_direction",
+          "side_minutes": 1934,
+          "buys": 328,
+          "buy_rate": 0.16959669079627715,
+          "buy_cash": 193032.837325
+        }
+      ]
+    },
+    "test": {
+      "ret5": [
+        {
+          "label": "drop_over_5c",
+          "side_minutes": 518,
+          "buys": 127,
+          "buy_rate": 0.24517374517374518,
+          "buy_cash": 40473.717426
+        },
+        {
+          "label": "drop_0.5_to_5c",
+          "side_minutes": 198,
+          "buys": 30,
+          "buy_rate": 0.15151515151515152,
+          "buy_cash": 22135.693083
+        },
+        {
+          "label": "flat_within_0.5c",
+          "side_minutes": 151,
+          "buys": 9,
+          "buy_rate": 0.059602649006622516,
+          "buy_cash": 7176.497709
+        },
+        {
+          "label": "rise_0.5_to_5c",
+          "side_minutes": 194,
+          "buys": 34,
+          "buy_rate": 0.17525773195876287,
+          "buy_cash": 19912.946186
+        },
+        {
+          "label": "rise_over_5c",
+          "side_minutes": 524,
+          "buys": 127,
+          "buy_rate": 0.24236641221374045,
+          "buy_cash": 85660.32214799999
+        }
+      ],
+      "price": [
+        {
+          "label": "0.0_0.1",
+          "side_minutes": 125,
+          "buys": 24,
+          "buy_rate": 0.192,
+          "buy_cash": 1841.39626
+        },
+        {
+          "label": "0.1_0.2",
+          "side_minutes": 132,
+          "buys": 25,
+          "buy_rate": 0.1893939393939394,
+          "buy_cash": 2804.38546
+        },
+        {
+          "label": "0.2_0.3",
+          "side_minutes": 153,
+          "buys": 31,
+          "buy_rate": 0.20261437908496732,
+          "buy_cash": 7266.26775
+        },
+        {
+          "label": "0.3_0.4",
+          "side_minutes": 135,
+          "buys": 25,
+          "buy_rate": 0.18518518518518517,
+          "buy_cash": 6667.84269
+        },
+        {
+          "label": "0.4_0.5",
+          "side_minutes": 247,
+          "buys": 49,
+          "buy_rate": 0.19838056680161945,
+          "buy_cash": 14416.178249
+        },
+        {
+          "label": "0.5_0.6",
+          "side_minutes": 245,
+          "buys": 40,
+          "buy_rate": 0.16326530612244897,
+          "buy_cash": 13031.971119
+        },
+        {
+          "label": "0.6_0.7",
+          "side_minutes": 131,
+          "buys": 34,
+          "buy_rate": 0.2595419847328244,
+          "buy_cash": 23294.406684
+        },
+        {
+          "label": "0.7_0.8",
+          "side_minutes": 157,
+          "buys": 44,
+          "buy_rate": 0.2802547770700637,
+          "buy_cash": 32915.131152
+        },
+        {
+          "label": "0.8_0.9",
+          "side_minutes": 134,
+          "buys": 35,
+          "buy_rate": 0.26119402985074625,
+          "buy_cash": 57190.617692
+        },
+        {
+          "label": "0.9_1.0",
+          "side_minutes": 126,
+          "buys": 20,
+          "buy_rate": 0.15873015873015872,
+          "buy_cash": 15930.979496
+        }
+      ],
+      "since_buy": [
+        {
+          "label": "within_1m",
+          "side_minutes": 323,
+          "buys": 92,
+          "buy_rate": 0.2848297213622291,
+          "buy_cash": 43376.047067
+        },
+        {
+          "label": "1_to_3m",
+          "side_minutes": 406,
+          "buys": 101,
+          "buy_rate": 0.24876847290640394,
+          "buy_cash": 65524.179981
+        },
+        {
+          "label": "3_to_10m",
+          "side_minutes": 480,
+          "buys": 97,
+          "buy_rate": 0.20208333333333334,
+          "buy_cash": 48773.349982
+        },
+        {
+          "label": "over_10m_or_never",
+          "side_minutes": 376,
+          "buys": 37,
+          "buy_rate": 0.09840425531914894,
+          "buy_cash": 17685.599522
+        }
+      ],
+      "inventory": [
+        {
+          "label": "same_direction",
+          "side_minutes": 781,
+          "buys": 166,
+          "buy_rate": 0.21254801536491677,
+          "buy_cash": 81270.395339
+        },
+        {
+          "label": "neutral",
+          "side_minutes": 28,
+          "buys": 6,
+          "buy_rate": 0.21428571428571427,
+          "buy_cash": 2879.638908
+        },
+        {
+          "label": "opposite_direction",
+          "side_minutes": 776,
+          "buys": 155,
+          "buy_rate": 0.19974226804123713,
+          "buy_cash": 91209.142305
+        }
+      ]
+    }
+  },
+  "coverage": [
+    {
+      "id": "0x01c34ca02d38cc946967bd38d76f1a55f2ca05b7c32f73ccc1ad751c5f3b9f3f",
+      "eligible_side_minutes": 122,
+      "usable_side_minutes": 122
+    },
+    {
+      "id": "0x039527d80499b78b18423cb59113192046d0b4ffc68c316bb1159485f844585e",
+      "eligible_side_minutes": 54,
+      "usable_side_minutes": 54
+    },
+    {
+      "id": "0x109047735744ef752b1038abc3bf3d1a0401aaa9c30a66efb35b5ad98010298a",
+      "eligible_side_minutes": 52,
+      "usable_side_minutes": 52
+    },
+    {
+      "id": "0x12eb344d93cfbc4e22d1ceaf5ec30c46beccef6c9645f8ef971252e7cd6d08b8",
+      "eligible_side_minutes": 78,
+      "usable_side_minutes": 78
+    },
+    {
+      "id": "0x19625596544dc73b22eb6e0f424ae91a5ed29b7f175884560d35ea0601d03f97",
+      "eligible_side_minutes": 146,
+      "usable_side_minutes": 146
+    },
+    {
+      "id": "0x1a96a86a5e23fe5bfeb541b111e1487a62176545a7e38779a6a77e92886d2c63",
+      "eligible_side_minutes": 66,
+      "usable_side_minutes": 66
+    },
+    {
+      "id": "0x1b384b13d0e8588f7796ac2b2d08b8c1d999488b1ce159b8814ad650a9399ae4",
+      "eligible_side_minutes": 68,
+      "usable_side_minutes": 68
+    },
+    {
+      "id": "0x1b7959d225d7c69b8ef5c783b01c9773af9060d4edb89c9207b284ee4011a75b",
+      "eligible_side_minutes": 82,
+      "usable_side_minutes": 82
+    },
+    {
+      "id": "0x213bb8d7c59a22d320604264aa7bef2b8584e4392d14a14fbcd6e433637448cc",
+      "eligible_side_minutes": 54,
+      "usable_side_minutes": 54
+    },
+    {
+      "id": "0x258766c2740b7db11874da15721ddcc15f7a225324a662e23792cd19be096d31",
+      "eligible_side_minutes": 90,
+      "usable_side_minutes": 90
+    },
+    {
+      "id": "0x25fbe19a708c6e5ca39c406e820d08c8fd1f1cb042f3c038c225588ad4b00258",
+      "eligible_side_minutes": 60,
+      "usable_side_minutes": 60
+    },
+    {
+      "id": "0x2ae5c555b61252ce25876cbd295b57ae1bc9ec57cbab523c7b6626981aa109e4",
+      "eligible_side_minutes": 110,
+      "usable_side_minutes": 110
+    },
+    {
+      "id": "0x383855ff5b0f1f174d00a2d19655ee7e3ed437399f3ccf39fc6b862dcddcfea4",
+      "eligible_side_minutes": 64,
+      "usable_side_minutes": 64
+    },
+    {
+      "id": "0x3f45ecd1024b8733ca3c15b84dc5647869e4ecb406dce59a58bb0cc17584551a",
+      "eligible_side_minutes": 110,
+      "usable_side_minutes": 110
+    },
+    {
+      "id": "0x405ab3ae6e95c93093de04bf23355042b023ebd0ca51cbd0e65fb14bf1d83392",
+      "eligible_side_minutes": 90,
+      "usable_side_minutes": 90
+    },
+    {
+      "id": "0x42761ec977b8f8de642afaaf4215b63ad433c7b1360be51dd46d5686c8b44c85",
+      "eligible_side_minutes": 36,
+      "usable_side_minutes": 36
+    },
+    {
+      "id": "0x48ba81c09722fd14ead536819c38f49dc7d1955a136252f9df82548d946dacd6",
+      "eligible_side_minutes": 56,
+      "usable_side_minutes": 56
+    },
+    {
+      "id": "0x4d013918cc45f39259e42cbaa6e4f93bdffd7ae1fe13c44b1dc75905acd636bf",
+      "eligible_side_minutes": 70,
+      "usable_side_minutes": 70
+    },
+    {
+      "id": "0x509c387c607d8f41ded572bc71c45b63e59e8e2b4e8ccb1428d898a546a6a714",
+      "eligible_side_minutes": 76,
+      "usable_side_minutes": 76
+    },
+    {
+      "id": "0x50cbb83530db10cdd5cfb0fd5eab093d6d69df661e97833342f35ed241107d39",
+      "eligible_side_minutes": 96,
+      "usable_side_minutes": 96
+    },
+    {
+      "id": "0x5525f70994e23436d2d149809188d3d88d094fc126a7838252722f51e025f13a",
+      "eligible_side_minutes": 490,
+      "usable_side_minutes": 490
+    },
+    {
+      "id": "0x57db850edf12d9973672ef85f178292ce9915598576b9995b69bbe2a86027b43",
+      "eligible_side_minutes": 90,
+      "usable_side_minutes": 90
+    },
+    {
+      "id": "0x580cfbcb4c7c23b8b9d26804aaa8a38fa6f0df81e74dbe5758fb5719b8d2aff3",
+      "eligible_side_minutes": 40,
+      "usable_side_minutes": 40
+    },
+    {
+      "id": "0x5adee6f1de0d299e02c675a5e3cabe3f7425c01b6f4f3aa185761b7c1336c295",
+      "eligible_side_minutes": 76,
+      "usable_side_minutes": 76
+    },
+    {
+      "id": "0x5f9950fbcf95cef54ac1e64bd2e6e64167174aa3cfcdc0705a2a331a057e204f",
+      "eligible_side_minutes": 46,
+      "usable_side_minutes": 46
+    },
+    {
+      "id": "0x652beb2d7d7f809ee683672f1f2a0107601cdd58cee92fe32e287f4f75c08333",
+      "eligible_side_minutes": 66,
+      "usable_side_minutes": 66
+    },
+    {
+      "id": "0x65d374333b22245c66b83c873f0023d3a7574b322c1d28303f316c7e2ce55908",
+      "eligible_side_minutes": 76,
+      "usable_side_minutes": 76
+    },
+    {
+      "id": "0x6e939f12ca39b5bd3972b3b2b9efe9631273885f876fb6b4be0886271342fb7a",
+      "eligible_side_minutes": 120,
+      "usable_side_minutes": 120
+    },
+    {
+      "id": "0x782dc8642f1aa9146c9fe8d666d91f66fe37927b788d6c54cd722746385a5772",
+      "eligible_side_minutes": 72,
+      "usable_side_minutes": 72
+    },
+    {
+      "id": "0x80d9649acad922f94dbcc453a47f89203deb6e7129e6ee7da3f50dc40f64afc1",
+      "eligible_side_minutes": 136,
+      "usable_side_minutes": 136
+    },
+    {
+      "id": "0x83bb6cfe6c1c9a73c7174b0a96b6caf2d46fbc7e4b94333bf2805d8fe3ec2f5f",
+      "eligible_side_minutes": 290,
+      "usable_side_minutes": 290
+    },
+    {
+      "id": "0x84e738688d64fd07ed68849d340ad28cc4d7d0bded53a57d5ef3157a8a67b300",
+      "eligible_side_minutes": 50,
+      "usable_side_minutes": 50
+    },
+    {
+      "id": "0x858717afa33d4496779754221332e290b38d2d62e4091a16630de4e4f098fb04",
+      "eligible_side_minutes": 84,
+      "usable_side_minutes": 84
+    },
+    {
+      "id": "0x872b43cf581c2907ca1bb1c326a42b9c736188e3c3fc1d085708c520892c17c5",
+      "eligible_side_minutes": 54,
+      "usable_side_minutes": 54
+    },
+    {
+      "id": "0x8bd45900bdfdffefa0f674dac6d16a519ae1a6bcaa281ca04ad6db83ba7c1828",
+      "eligible_side_minutes": 52,
+      "usable_side_minutes": 52
+    },
+    {
+      "id": "0x8c0d59be2c3f0bc3ef1befdb8ce9de5c5938eed2ab6550f835d23fe56c1a6c83",
+      "eligible_side_minutes": 27,
+      "usable_side_minutes": 27
+    },
+    {
+      "id": "0x8ce61ac9eaa402c82fe610c94c69e25a37f31c37c822f6814bc441a00680fb16",
+      "eligible_side_minutes": 46,
+      "usable_side_minutes": 46
+    },
+    {
+      "id": "0x8fe8751ec29e277985b3f91fbf2478723e6baacac5ea8e7343416f25b82f8413",
+      "eligible_side_minutes": 84,
+      "usable_side_minutes": 84
+    },
+    {
+      "id": "0x9786a091e0ccd17991de15142d4a447928d3efdb7eb2eb1d77398dc022e27721",
+      "eligible_side_minutes": 74,
+      "usable_side_minutes": 74
+    },
+    {
+      "id": "0x9826826bc0002afacaff0f636c42bde4e7435491c2bf6dc3dd0faaea128e3356",
+      "eligible_side_minutes": 66,
+      "usable_side_minutes": 66
+    },
+    {
+      "id": "0x9a53e4162b3122543db133a049550c94499d0d60526f1626bcebb153b03858c9",
+      "eligible_side_minutes": 64,
+      "usable_side_minutes": 64
+    },
+    {
+      "id": "0x9b6757cc966c84f2f7c67d799029494531df89e7d0403e75520d077b38b3072b",
+      "eligible_side_minutes": 78,
+      "usable_side_minutes": 78
+    },
+    {
+      "id": "0x9e6b690ed152ec623badb0cfbca08a4ba20c66c3e6e1edb8d1cfcad145e2de1a",
+      "eligible_side_minutes": 88,
+      "usable_side_minutes": 88
+    },
+    {
+      "id": "0xa1d51b6742b5a6770a09c7250e01d6c4a686b431406655fb6b28eb284fe4a04a",
+      "eligible_side_minutes": 94,
+      "usable_side_minutes": 94
+    },
+    {
+      "id": "0xa424d014b5af46bef6a6a026ed6a35572d61e69c9697f7f36e644ad634e5a93b",
+      "eligible_side_minutes": 232,
+      "usable_side_minutes": 232
+    },
+    {
+      "id": "0xa67ae31ade39026226896e0edce6de44d9a7e2259a8f750c7399a693ebe8f839",
+      "eligible_side_minutes": 92,
+      "usable_side_minutes": 92
+    },
+    {
+      "id": "0xbb5c7cf67b4231a4d8d494290f29ef83c34305a14ea765af93cdbd786d1baa0a",
+      "eligible_side_minutes": 278,
+      "usable_side_minutes": 278
+    },
+    {
+      "id": "0xc04244e415bcceb962c50914c850b093de59915ea2e44eb6e1593634ab7ad171",
+      "eligible_side_minutes": 98,
+      "usable_side_minutes": 98
+    },
+    {
+      "id": "0xc2642fdc2cb37ffe16204f86ddc961f9a5bb35983a67263fdbbc4951a0f346bf",
+      "eligible_side_minutes": 40,
+      "usable_side_minutes": 40
+    },
+    {
+      "id": "0xd2d726bc300b96d4ff0d75ab6987409fc895f760215f9629d75f475d9e83f038",
+      "eligible_side_minutes": 168,
+      "usable_side_minutes": 168
+    },
+    {
+      "id": "0xd4b2f9bfb7a7d5dc8d1154801d19275061c09d07a72cf4358e3c741f6b40ac2d",
+      "eligible_side_minutes": 90,
+      "usable_side_minutes": 90
+    },
+    {
+      "id": "0xd4c594954a55520912e1f3c1da5c797dba9651b0e0347a2d60058f98d249e4df",
+      "eligible_side_minutes": 132,
+      "usable_side_minutes": 132
+    },
+    {
+      "id": "0xd8c03dff6364f115911778519a035fc36628e18d1b44f5a7b31a5cf487f44453",
+      "eligible_side_minutes": 86,
+      "usable_side_minutes": 86
+    },
+    {
+      "id": "0xda7e25402431319b1bcd61acb8d16a56dc717b9264f1328cb1b22925b26eb1d6",
+      "eligible_side_minutes": 70,
+      "usable_side_minutes": 70
+    },
+    {
+      "id": "0xdb4c0c4b5c3668e009c1d7344e055bedf67a9b205b31717691fa3e980092816d",
+      "eligible_side_minutes": 5,
+      "usable_side_minutes": 5
+    },
+    {
+      "id": "0xdcc25fb1ac208aed9cb727dfa9b6e0c9932691a6bc332e0caa7c699790b8334c",
+      "eligible_side_minutes": 78,
+      "usable_side_minutes": 78
+    },
+    {
+      "id": "0xdea920d238730be77c95801da4745a53a7a33f78c847adb172aebb8bc55f553d",
+      "eligible_side_minutes": 58,
+      "usable_side_minutes": 58
+    },
+    {
+      "id": "0xe076c7daf1209ae395b024c76aa5675b80e9c9a3b56b29f8ca7080d4fcfdd84b",
+      "eligible_side_minutes": 114,
+      "usable_side_minutes": 114
+    },
+    {
+      "id": "0xe166df7b965b0fd7ddb0280c824f44ec6a120b8ca09c881796e60230c61287b3",
+      "eligible_side_minutes": 66,
+      "usable_side_minutes": 66
+    },
+    {
+      "id": "0xe2691be37f7e66eda99dfc3a46c26eb5f29f98758cd104ded57b07d2aba7abca",
+      "eligible_side_minutes": 36,
+      "usable_side_minutes": 36
+    },
+    {
+      "id": "0xe29a16068e96afaf86eb900da8c1e47afb0c8271dd5af127ad0adc123f218263",
+      "eligible_side_minutes": 64,
+      "usable_side_minutes": 64
+    },
+    {
+      "id": "0xe3f8d1e93df33d8d517f2b80b494df46550f587c7217a6dadcf63ec532077cc7",
+      "eligible_side_minutes": 86,
+      "usable_side_minutes": 86
+    },
+    {
+      "id": "0xe94daf74d0f4aa7c18a9dbe91c287e2ac7e445a0d21f4cd03de52fe6f53ed04b",
+      "eligible_side_minutes": 36,
+      "usable_side_minutes": 36
+    },
+    {
+      "id": "0xf1c7ce73e812e066822e424cf07bfe7f9decb7c2e615baaa7f3ba3dc4b54855d",
+      "eligible_side_minutes": 72,
+      "usable_side_minutes": 72
+    },
+    {
+      "id": "0xf7016d42873fb90e8e5e5fc0ee8118e5e91dfd6b3e0287e39210656609c0b01d",
+      "eligible_side_minutes": 80,
+      "usable_side_minutes": 80
+    }
+  ],
+  "caveats": [
+    "Only active interval from first trade + 5 min to final trade; entry timing not tested.",
+    "Minute price history is not order-book executable quotes; no spreads, depth, maker queue or order submission time.",
+    "Bucket price delayed by full resolution_seconds to prevent within-bucket look-ahead.",
+    "Map and event chronological holdout; no samples from a match occur in both train/test.",
+    "Positive and negative minutes are conditional on these selected traded maps, not all available markets."
+  ]
+}

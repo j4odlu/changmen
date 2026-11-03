@@ -1,0 +1,82 @@
+{
+  "development": {
+    "after_fall": {
+      "events": 17,
+      "mean_cents": 0.7248854262144822,
+      "event_bootstrap_95": [
+        -0.8046590741788996,
+        2.4542826868619123
+      ]
+    },
+    "after_rise": {
+      "events": 17,
+      "mean_cents": -0.820504587155963,
+      "event_bootstrap_95": [
+        -2.5874010627791586,
+        0.7396087817761632
+      ]
+    }
+  },
+  "validation": {
+    "after_fall": {
+      "events": 13,
+      "mean_cents": 1.3892467248908298,
+      "event_bootstrap_95": [
+        0.11531708437761086,
+        2.8547354729174654
+      ]
+    },
+    "after_rise": {
+      "events": 13,
+      "mean_cents": -1.3787812840043525,
+      "event_bootstrap_95": [
+        -2.837321687265513,
+        -0.12315159411404052
+      ]
+    }
+  },
+  "new_test": {
+    "after_fall": {
+      "events": 9,
+      "mean_cents": 0.814275956284153,
+      "event_bootstrap_95": [
+        -0.5605787386584143,
+        2.643843527432746
+      ]
+    },
+    "after_rise": {
+      "events": 9,
+      "mean_cents": -0.6854309165526672,
+      "event_bootstrap_95": [
+        -2.504229600309868,
+        0.6510637564574968
+      ]
+    }
+  },
+  "rebound_cost_margin": {
+    "development": {
+      "trades": 72,
+      "gross_edge_cents_per_share": 2.9027777777777786,
+      "fee_cents_per_share": 2.178677083333333,
+      "remaining_edge_before_slippage": 0.7241006944444451,
+      "approx_break_even_slippage_cents_each_leg": 0.36205034722222257,
+      "already_negative_with_fees": false
+    },
+    "validation": {
+      "trades": 61,
+      "gross_edge_cents_per_share": 1.117213114754098,
+      "fee_cents_per_share": 2.147694856557377,
+      "remaining_edge_before_slippage": -1.030481741803279,
+      "approx_break_even_slippage_cents_each_leg": 0,
+      "already_negative_with_fees": true
+    },
+    "new_test": {
+      "trades": 49,
+      "gross_edge_cents_per_share": 2.7040816326530606,
+      "fee_cents_per_share": 2.2387168367346937,
+      "remaining_edge_before_slippage": 0.4653647959183667,
+      "approx_break_even_slippage_cents_each_leg": 0.23268239795918336,
+      "already_negative_with_fees": false
+    }
+  }
+}

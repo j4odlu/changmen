@@ -1,0 +1,2285 @@
+{
+  "scope": {
+    "all_activity": 119030,
+    "cs_maps": 1458,
+    "cs_activity": 61436,
+    "cs_buy_fills": 41174,
+    "sources": [
+      {
+        "start": 1777593600,
+        "end": 1780271999,
+        "pages": 16,
+        "complete": true
+      },
+      {
+        "start": 1780272000,
+        "end": 1782863999,
+        "pages": 34,
+        "complete": true
+      },
+      {
+        "start": 1782864000,
+        "end": 1785542399,
+        "pages": 65,
+        "complete": true
+      },
+      {
+        "start": 1785542400,
+        "end": 1788220799,
+        "pages": 35,
+        "complete": true
+      },
+      {
+        "start": 1788220800,
+        "end": 1790812799,
+        "pages": 52,
+        "complete": true
+      },
+      {
+        "start": 1790812800,
+        "end": 1793412662,
+        "pages": 40,
+        "complete": true
+      }
+    ],
+    "audit": {
+      "ambiguous_or_unknown_buy_groups": 1306,
+      "ambiguous_or_unknown_buy_fills": 1383
+    },
+    "accounting_crosscheck": {
+      "maps": 1286,
+      "max_difference": 2.091837814077735e-11
+    }
+  },
+  "first_group_at_least_100": {
+    "maps": 1411,
+    "within_40_60": 543,
+    "within_45_55": 314,
+    "prices": {
+      "n": 1411,
+      "mean": 0.5619608075827142,
+      "p10": 0.3382111196,
+      "p25": 0.43,
+      "median": 0.55,
+      "p75": 0.67979969605,
+      "p90": 0.8099999997
+    }
+  },
+  "entries": {
+    "maps": 1458,
+    "price": {
+      "n": 1458,
+      "mean": 0.5233560474862262,
+      "p10": 0.32,
+      "p25": 0.40039292730000003,
+      "median": 0.52,
+      "p75": 0.64,
+      "p90": 0.7343187204499999
+    },
+    "within_45_55": 349,
+    "within_40_60": 622,
+    "at_least_90": 16,
+    "entry_cash": {
+      "n": 1458,
+      "mean": 313.96198706652945,
+      "p10": 4.755370000000002,
+      "p25": 15.88935,
+      "median": 72.16808449999999,
+      "p75": 335.83070499999997,
+      "p90": 919.4270103999993
+    },
+    "first_share_of_total": {
+      "n": 1458,
+      "mean": 0.07997899513740868,
+      "p10": 0.0014297781973389237,
+      "p25": 0.005481145868804072,
+      "median": 0.022534807794026418,
+      "p75": 0.08225590444504498,
+      "p90": 0.20213065150784754
+    },
+    "later_group_larger": 1313,
+    "peak_risk": {
+      "n": 1458,
+      "mean": 2943.552193281894,
+      "p10": 394.56801250000007,
+      "p25": 931.9207485,
+      "median": 2031.172087,
+      "p75": 3909.1448530000007,
+      "p90": 6723.595031299999
+    },
+    "reopen_maps": 399
+  },
+  "buys": {
+    "buy_groups": 39189,
+    "fills": 39791,
+    "cash": 8812179.29318,
+    "roles": {
+      "initial": 1458,
+      "reverse": 1618,
+      "same_direction_add": 24399,
+      "hedge": 10593,
+      "new_direction": 1121
+    },
+    "hedge_cash_fraction": 0.24806395335664708,
+    "high_price_groups": 6047,
+    "high_price_roles": {
+      "reverse": 139,
+      "same_direction_add": 4536,
+      "hedge": 1304,
+      "new_direction": 52,
+      "initial": 16
+    },
+    "high_price_hedge_cash_fraction": 0.23733920919065288,
+    "dynamics": {
+      "eligible": 36469,
+      "up": {
+        "n": 21838,
+        "cash": 5466068.13215,
+        "median_cash": 67.32329999999999,
+        "median_shares": 110.0,
+        "median_size_ratio": 1.0032792160822326,
+        "double_size_fraction": 0.3721494642366517,
+        "same_direction_fraction": 0.6796409927649052
+      },
+      "down": {
+        "n": 10030,
+        "cash": 1874537.081262,
+        "median_cash": 45.290400000000005,
+        "median_shares": 112.04,
+        "median_size_ratio": 0.9829474439556489,
+        "double_size_fraction": 0.3622133599202393,
+        "same_direction_fraction": 0.5641076769690927
+      },
+      "flat": 4601
+    },
+    "large_moves_5c": {
+      "eligible": 36469,
+      "up": {
+        "n": 9488,
+        "cash": 2420583.284763,
+        "median_cash": 74.243605,
+        "median_shares": 115.99000000000001,
+        "median_size_ratio": 0.976040407206558,
+        "double_size_fraction": 0.36214165261382797,
+        "same_direction_fraction": 0.6172006745362564
+      },
+      "down": {
+        "n": 6113,
+        "cash": 1054145.117674,
+        "median_cash": 40.57295,
+        "median_shares": 116.68,
+        "median_size_ratio": 1.0,
+        "double_size_fraction": 0.3698674955013905,
+        "same_direction_fraction": 0.4902666448552266
+      },
+      "flat": 20868
+    },
+    "same_direction_dynamics": {
+      "eligible": 24399,
+      "up": {
+        "n": 14842,
+        "cash": 3652524.105669,
+        "median_cash": 71.486875,
+        "median_shares": 112.17,
+        "median_size_ratio": 0.9892463016088564,
+        "double_size_fraction": 0.35460180568656513,
+        "same_direction_fraction": 1.0
+      },
+      "down": {
+        "n": 5658,
+        "cash": 1139618.189342,
+        "median_cash": 53.9070545,
+        "median_shares": 122.0,
+        "median_size_ratio": 0.8317890813596921,
+        "double_size_fraction": 0.331389183457052,
+        "same_direction_fraction": 1.0
+      },
+      "flat": 3899
+    },
+    "between_60_and_300sec": {
+      "eligible": 12349,
+      "up": {
+        "n": 7202,
+        "cash": 1829813.40476,
+        "median_cash": 67.96441,
+        "median_shares": 110.0,
+        "median_size_ratio": 1.0043596251884224,
+        "double_size_fraction": 0.3747570119411275,
+        "same_direction_fraction": 0.6535684532074424
+      },
+      "down": {
+        "n": 4505,
+        "cash": 896644.464296,
+        "median_cash": 50.01665,
+        "median_shares": 122.44,
+        "median_size_ratio": 1.0,
+        "double_size_fraction": 0.37780244173140953,
+        "same_direction_fraction": 0.5664816870144284
+      },
+      "flat": 642
+    },
+    "price_buckets": [
+      {
+        "lower": 0.0,
+        "n": 1580,
+        "cash": 54146.973667
+      },
+      {
+        "lower": 0.1,
+        "n": 2294,
+        "cash": 170726.680268
+      },
+      {
+        "lower": 0.2,
+        "n": 2799,
+        "cash": 313318.341761
+      },
+      {
+        "lower": 0.3,
+        "n": 3514,
+        "cash": 582790.49569
+      },
+      {
+        "lower": 0.4,
+        "n": 4534,
+        "cash": 942822.894403
+      },
+      {
+        "lower": 0.5,
+        "n": 4234,
+        "cash": 995596.793552
+      },
+      {
+        "lower": 0.6,
+        "n": 4998,
+        "cash": 1292058.41627
+      },
+      {
+        "lower": 0.7,
+        "n": 4707,
+        "cash": 1229591.253661
+      },
+      {
+        "lower": 0.8,
+        "n": 4482,
+        "cash": 1339678.591766
+      },
+      {
+        "lower": 0.9,
+        "n": 6047,
+        "cash": 1891448.852142
+      }
+    ]
+  },
+  "monthly": {
+    "2026-05": {
+      "entries": {
+        "maps": 43,
+        "price": {
+          "n": 43,
+          "mean": 0.5127906973162791,
+          "p10": 0.316,
+          "p25": 0.405,
+          "median": 0.5299999998,
+          "p75": 0.605,
+          "p90": 0.6660000000000001
+        },
+        "within_45_55": 12,
+        "within_40_60": 21,
+        "at_least_90": 0,
+        "entry_cash": {
+          "n": 43,
+          "mean": 393.20403081395347,
+          "p10": 5.916378000000001,
+          "p25": 15.72381,
+          "median": 172.31288,
+          "p75": 702.81033,
+          "p90": 1322.1655832000006
+        },
+        "first_share_of_total": {
+          "n": 43,
+          "mean": 0.10109006139112348,
+          "p10": 0.0009898861701829343,
+          "p25": 0.0030040247190583113,
+          "median": 0.03674703103767877,
+          "p75": 0.1469680768305323,
+          "p90": 0.22950666108935208
+        },
+        "later_group_larger": 37,
+        "peak_risk": {
+          "n": 43,
+          "mean": 1892.2387183953488,
+          "p10": 700.0978463999999,
+          "p25": 1258.15692,
+          "median": 1885.0913900000005,
+          "p75": 2638.2215155000004,
+          "p90": 2957.4873920000005
+        },
+        "reopen_maps": 29
+      },
+      "buys": {
+        "buy_groups": 1490,
+        "fills": 1494,
+        "cash": 217248.349374,
+        "roles": {
+          "initial": 43,
+          "reverse": 130,
+          "same_direction_add": 1167,
+          "hedge": 149,
+          "new_direction": 1
+        },
+        "hedge_cash_fraction": 0.0775194419944827,
+        "high_price_groups": 227,
+        "high_price_roles": {
+          "reverse": 17,
+          "same_direction_add": 172,
+          "hedge": 38
+        },
+        "high_price_hedge_cash_fraction": 0.16381414607809944,
+        "dynamics": {
+          "eligible": 1410,
+          "up": {
+            "n": 837,
+            "cash": 122649.156162,
+            "median_cash": 38.42212,
+            "median_shares": 69.89,
+            "median_size_ratio": 1.0306324110671936,
+            "double_size_fraction": 0.4026284348864994,
+            "same_direction_fraction": 0.8422939068100358
+          },
+          "down": {
+            "n": 392,
+            "cash": 46764.149781,
+            "median_cash": 28.498915,
+            "median_shares": 91.594633,
+            "median_size_ratio": 0.995774788739437,
+            "double_size_fraction": 0.35714285714285715,
+            "same_direction_fraction": 0.7474489795918368
+          },
+          "flat": 181
+        },
+        "large_moves_5c": {
+          "eligible": 1410,
+          "up": {
+            "n": 245,
+            "cash": 37430.59243,
+            "median_cash": 42.77352,
+            "median_shares": 61.93,
+            "median_size_ratio": 0.9090909090909091,
+            "double_size_fraction": 0.35918367346938773,
+            "same_direction_fraction": 0.7387755102040816
+          },
+          "down": {
+            "n": 204,
+            "cash": 23751.066299,
+            "median_cash": 25.677205,
+            "median_shares": 76.71000000000001,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.4117647058823529,
+            "same_direction_fraction": 0.6519607843137255
+          },
+          "flat": 961
+        },
+        "same_direction_dynamics": {
+          "eligible": 1167,
+          "up": {
+            "n": 705,
+            "cash": 98887.820329,
+            "median_cash": 34.32058,
+            "median_shares": 61.93,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.39574468085106385,
+            "same_direction_fraction": 1.0
+          },
+          "down": {
+            "n": 293,
+            "cash": 34099.510341,
+            "median_cash": 22.19945,
+            "median_shares": 80.0,
+            "median_size_ratio": 0.7118456364439312,
+            "double_size_fraction": 0.3174061433447099,
+            "same_direction_fraction": 1.0
+          },
+          "flat": 169
+        },
+        "between_60_and_300sec": {
+          "eligible": 446,
+          "up": {
+            "n": 251,
+            "cash": 43599.424328,
+            "median_cash": 49.11153,
+            "median_shares": 92.99,
+            "median_size_ratio": 1.1910509272887844,
+            "double_size_fraction": 0.3944223107569721,
+            "same_direction_fraction": 0.7689243027888446
+          },
+          "down": {
+            "n": 163,
+            "cash": 16672.531177,
+            "median_cash": 25.68583,
+            "median_shares": 80.0,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.3619631901840491,
+            "same_direction_fraction": 0.7423312883435583
+          },
+          "flat": 32
+        },
+        "price_buckets": [
+          {
+            "lower": 0.0,
+            "n": 163,
+            "cash": 5839.9532
+          },
+          {
+            "lower": 0.1,
+            "n": 115,
+            "cash": 6410.89327
+          },
+          {
+            "lower": 0.2,
+            "n": 115,
+            "cash": 13685.332028
+          },
+          {
+            "lower": 0.3,
+            "n": 124,
+            "cash": 27292.399226
+          },
+          {
+            "lower": 0.4,
+            "n": 131,
+            "cash": 16188.392704
+          },
+          {
+            "lower": 0.5,
+            "n": 121,
+            "cash": 16182.788265
+          },
+          {
+            "lower": 0.6,
+            "n": 188,
+            "cash": 45365.437233
+          },
+          {
+            "lower": 0.7,
+            "n": 132,
+            "cash": 20643.163824
+          },
+          {
+            "lower": 0.8,
+            "n": 174,
+            "cash": 28855.380613
+          },
+          {
+            "lower": 0.9,
+            "n": 227,
+            "cash": 36784.609011
+          }
+        ]
+      },
+      "merges": {
+        "n": 0,
+        "full": 0,
+        "within60": 0
+      },
+      "sells": {
+        "n": 2245,
+        "at_least_99": 45
+      }
+    },
+    "2026-06": {
+      "entries": {
+        "maps": 123,
+        "price": {
+          "n": 123,
+          "mean": 0.5629929858235965,
+          "p10": 0.38,
+          "p25": 0.44499999999999995,
+          "median": 0.55,
+          "p75": 0.67,
+          "p90": 0.76
+        },
+        "within_45_55": 31,
+        "within_40_60": 50,
+        "at_least_90": 1,
+        "entry_cash": {
+          "n": 123,
+          "mean": 103.24704282926828,
+          "p10": 4.291218,
+          "p25": 10.200235,
+          "median": 44.2323,
+          "p75": 141.084035,
+          "p90": 264.35918
+        },
+        "first_share_of_total": {
+          "n": 123,
+          "mean": 0.07092039840556814,
+          "p10": 0.0014881067368346268,
+          "p25": 0.005497016349325834,
+          "median": 0.018289187447040566,
+          "p75": 0.06225967355214729,
+          "p90": 0.17126341886459392
+        },
+        "later_group_larger": 112,
+        "peak_risk": {
+          "n": 123,
+          "mean": 1684.4935874715445,
+          "p10": 324.467066,
+          "p25": 484.7175950000001,
+          "median": 1225.154361,
+          "p75": 2272.0103299999996,
+          "p90": 4130.563964999999
+        },
+        "reopen_maps": 71
+      },
+      "buys": {
+        "buy_groups": 4330,
+        "fills": 4337,
+        "cash": 418080.400158,
+        "roles": {
+          "initial": 123,
+          "hedge": 315,
+          "same_direction_add": 3243,
+          "reverse": 96,
+          "new_direction": 553
+        },
+        "hedge_cash_fraction": 0.04261552524122786,
+        "high_price_groups": 831,
+        "high_price_roles": {
+          "same_direction_add": 756,
+          "hedge": 52,
+          "new_direction": 12,
+          "reverse": 10,
+          "initial": 1
+        },
+        "high_price_hedge_cash_fraction": 0.04418468692719668,
+        "dynamics": {
+          "eligible": 4116,
+          "up": {
+            "n": 2451,
+            "cash": 249950.37128,
+            "median_cash": 28.6048,
+            "median_shares": 43.0,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.36311709506323947,
+            "same_direction_fraction": 0.8086495308037536
+          },
+          "down": {
+            "n": 905,
+            "cash": 80485.447469,
+            "median_cash": 22.69568,
+            "median_shares": 50.0,
+            "median_size_ratio": 0.9583333333333334,
+            "double_size_fraction": 0.35359116022099446,
+            "same_direction_fraction": 0.605524861878453
+          },
+          "flat": 760
+        },
+        "large_moves_5c": {
+          "eligible": 4116,
+          "up": {
+            "n": 716,
+            "cash": 65655.500105,
+            "median_cash": 24.03662,
+            "median_shares": 40.0,
+            "median_size_ratio": 0.952,
+            "double_size_fraction": 0.3407821229050279,
+            "same_direction_fraction": 0.6424581005586593
+          },
+          "down": {
+            "n": 445,
+            "cash": 36761.091623,
+            "median_cash": 20.48,
+            "median_shares": 56.21,
+            "median_size_ratio": 1.125,
+            "double_size_fraction": 0.3865168539325843,
+            "same_direction_fraction": 0.3865168539325843
+          },
+          "flat": 2955
+        },
+        "same_direction_dynamics": {
+          "eligible": 3243,
+          "up": {
+            "n": 1982,
+            "cash": 211994.063116,
+            "median_cash": 30.744315,
+            "median_shares": 45.095,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.3577194752774975,
+            "same_direction_fraction": 1.0
+          },
+          "down": {
+            "n": 548,
+            "cash": 56885.3679,
+            "median_cash": 29.83088,
+            "median_shares": 50.0,
+            "median_size_ratio": 0.8709008875183442,
+            "double_size_fraction": 0.3302919708029197,
+            "same_direction_fraction": 1.0
+          },
+          "flat": 713
+        },
+        "between_60_and_300sec": {
+          "eligible": 1071,
+          "up": {
+            "n": 627,
+            "cash": 54636.504967,
+            "median_cash": 21.97024,
+            "median_shares": 33.0,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.3397129186602871,
+            "same_direction_fraction": 0.6555023923444976
+          },
+          "down": {
+            "n": 353,
+            "cash": 37323.721351,
+            "median_cash": 29.02786,
+            "median_shares": 55.55,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.3654390934844193,
+            "same_direction_fraction": 0.5580736543909348
+          },
+          "flat": 91
+        },
+        "price_buckets": [
+          {
+            "lower": 0.0,
+            "n": 71,
+            "cash": 730.565979
+          },
+          {
+            "lower": 0.1,
+            "n": 128,
+            "cash": 3470.041188
+          },
+          {
+            "lower": 0.2,
+            "n": 215,
+            "cash": 12939.316971
+          },
+          {
+            "lower": 0.3,
+            "n": 288,
+            "cash": 22031.159322
+          },
+          {
+            "lower": 0.4,
+            "n": 476,
+            "cash": 53279.348017
+          },
+          {
+            "lower": 0.5,
+            "n": 475,
+            "cash": 50127.208298
+          },
+          {
+            "lower": 0.6,
+            "n": 572,
+            "cash": 53732.888659000004
+          },
+          {
+            "lower": 0.7,
+            "n": 634,
+            "cash": 66946.85783
+          },
+          {
+            "lower": 0.8,
+            "n": 640,
+            "cash": 71225.524898
+          },
+          {
+            "lower": 0.9,
+            "n": 831,
+            "cash": 83597.488996
+          }
+        ]
+      },
+      "merges": {
+        "n": 0,
+        "full": 0,
+        "within60": 0
+      },
+      "sells": {
+        "n": 3590,
+        "at_least_99": 111
+      }
+    },
+    "2026-07": {
+      "entries": {
+        "maps": 274,
+        "price": {
+          "n": 274,
+          "mean": 0.5175637517215178,
+          "p10": 0.3168825705,
+          "p25": 0.40075471697500004,
+          "median": 0.51225517035,
+          "p75": 0.63,
+          "p90": 0.7313024291000001
+        },
+        "within_45_55": 73,
+        "within_40_60": 124,
+        "at_least_90": 4,
+        "entry_cash": {
+          "n": 274,
+          "mean": 202.109505540146,
+          "p10": 3.723297,
+          "p25": 8.23143,
+          "median": 50.67389,
+          "p75": 233.54648,
+          "p90": 654.1719527000004
+        },
+        "first_share_of_total": {
+          "n": 274,
+          "mean": 0.05279365312071204,
+          "p10": 0.0009425364064875331,
+          "p25": 0.0037732233731043096,
+          "median": 0.016360546886156176,
+          "p75": 0.05789500406976117,
+          "p90": 0.12765853393439563
+        },
+        "later_group_larger": 261,
+        "peak_risk": {
+          "n": 274,
+          "mean": 3072.14520789781,
+          "p10": 349.30893219999984,
+          "p25": 980.1334742499998,
+          "median": 2052.7967985,
+          "p75": 4390.915429500001,
+          "p90": 7388.806131000002
+        },
+        "reopen_maps": 118
+      },
+      "buys": {
+        "buy_groups": 7974,
+        "fills": 8253,
+        "cash": 1690609.354442,
+        "roles": {
+          "initial": 274,
+          "same_direction_add": 5945,
+          "hedge": 1174,
+          "new_direction": 408,
+          "reverse": 173
+        },
+        "hedge_cash_fraction": 0.10370321329794834,
+        "high_price_groups": 1513,
+        "high_price_roles": {
+          "hedge": 181,
+          "same_direction_add": 1292,
+          "initial": 4,
+          "new_direction": 23,
+          "reverse": 13
+        },
+        "high_price_hedge_cash_fraction": 0.07686845764426432,
+        "dynamics": {
+          "eligible": 7498,
+          "up": {
+            "n": 4057,
+            "cash": 992155.940111,
+            "median_cash": 77.924989,
+            "median_shares": 124.0,
+            "median_size_ratio": 1.0091826529684518,
+            "double_size_fraction": 0.3746610796154794,
+            "same_direction_fraction": 0.8183386738969682
+          },
+          "down": {
+            "n": 1760,
+            "cash": 349825.540066,
+            "median_cash": 53.15529,
+            "median_shares": 140.0,
+            "median_size_ratio": 1.0576588574732448,
+            "double_size_fraction": 0.38295454545454544,
+            "same_direction_fraction": 0.6215909090909091
+          },
+          "flat": 1681
+        },
+        "large_moves_5c": {
+          "eligible": 7498,
+          "up": {
+            "n": 1490,
+            "cash": 378560.480225,
+            "median_cash": 91.37779499999999,
+            "median_shares": 146.95499999999998,
+            "median_size_ratio": 1.0070593235915817,
+            "double_size_fraction": 0.37651006711409396,
+            "same_direction_fraction": 0.7416107382550335
+          },
+          "down": {
+            "n": 924,
+            "cash": 153558.38298,
+            "median_cash": 42.29653,
+            "median_shares": 137.39999999999998,
+            "median_size_ratio": 1.164409514679613,
+            "double_size_fraction": 0.4090909090909091,
+            "same_direction_fraction": 0.47619047619047616
+          },
+          "flat": 5084
+        },
+        "same_direction_dynamics": {
+          "eligible": 5945,
+          "up": {
+            "n": 3320,
+            "cash": 844020.733057,
+            "median_cash": 81.39115000000001,
+            "median_shares": 128.3,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.366566265060241,
+            "same_direction_fraction": 1.0
+          },
+          "down": {
+            "n": 1094,
+            "cash": 244631.823012,
+            "median_cash": 69.32012950000001,
+            "median_shares": 157.83499999999998,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.3555758683729433,
+            "same_direction_fraction": 1.0
+          },
+          "flat": 1531
+        },
+        "between_60_and_300sec": {
+          "eligible": 2079,
+          "up": {
+            "n": 1293,
+            "cash": 305515.987281,
+            "median_cash": 81.19309,
+            "median_shares": 121.45,
+            "median_size_ratio": 1.0716049382716049,
+            "double_size_fraction": 0.38979118329466356,
+            "same_direction_fraction": 0.7927300850734725
+          },
+          "down": {
+            "n": 652,
+            "cash": 119627.559453,
+            "median_cash": 49.601684500000005,
+            "median_shares": 140.16500000000002,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.38190184049079756,
+            "same_direction_fraction": 0.6380368098159509
+          },
+          "flat": 134
+        },
+        "price_buckets": [
+          {
+            "lower": 0.0,
+            "n": 308,
+            "cash": 10621.486615
+          },
+          {
+            "lower": 0.1,
+            "n": 454,
+            "cash": 30360.07535
+          },
+          {
+            "lower": 0.2,
+            "n": 599,
+            "cash": 62975.150745
+          },
+          {
+            "lower": 0.3,
+            "n": 598,
+            "cash": 83935.100559
+          },
+          {
+            "lower": 0.4,
+            "n": 935,
+            "cash": 182841.532723
+          },
+          {
+            "lower": 0.5,
+            "n": 690,
+            "cash": 154741.252079
+          },
+          {
+            "lower": 0.6,
+            "n": 893,
+            "cash": 201709.138265
+          },
+          {
+            "lower": 0.7,
+            "n": 972,
+            "cash": 236401.117798
+          },
+          {
+            "lower": 0.8,
+            "n": 1012,
+            "cash": 260689.617205
+          },
+          {
+            "lower": 0.9,
+            "n": 1513,
+            "cash": 466334.883103
+          }
+        ]
+      },
+      "merges": {
+        "n": 0,
+        "full": 0,
+        "within60": 0
+      },
+      "sells": {
+        "n": 8293,
+        "at_least_99": 349
+      }
+    },
+    "2026-08": {
+      "entries": {
+        "maps": 196,
+        "price": {
+          "n": 196,
+          "mean": 0.5421318158917131,
+          "p10": 0.31,
+          "p25": 0.39038176080000003,
+          "median": 0.55019158155,
+          "p75": 0.69,
+          "p90": 0.77
+        },
+        "within_45_55": 34,
+        "within_40_60": 66,
+        "at_least_90": 1,
+        "entry_cash": {
+          "n": 196,
+          "mean": 133.56743551020406,
+          "p10": 3.26356,
+          "p25": 8.30595,
+          "median": 28.69932,
+          "p75": 152.6395975,
+          "p90": 362.19817
+        },
+        "first_share_of_total": {
+          "n": 196,
+          "mean": 0.07537376868008223,
+          "p10": 0.0013518296388802516,
+          "p25": 0.004343513411661226,
+          "median": 0.01467711173359475,
+          "p75": 0.06418654731778226,
+          "p90": 0.2135819780756295
+        },
+        "later_group_larger": 178,
+        "peak_risk": {
+          "n": 196,
+          "mean": 1712.8348673622447,
+          "p10": 317.86102800000003,
+          "p25": 656.9688925000002,
+          "median": 1463.249902,
+          "p75": 2309.7427235,
+          "p90": 3440.8500544999997
+        },
+        "reopen_maps": 53
+      },
+      "buys": {
+        "buy_groups": 4440,
+        "fills": 4628,
+        "cash": 512573.07206,
+        "roles": {
+          "initial": 196,
+          "same_direction_add": 3160,
+          "new_direction": 157,
+          "hedge": 810,
+          "reverse": 117
+        },
+        "hedge_cash_fraction": 0.11531688191827012,
+        "high_price_groups": 1118,
+        "high_price_roles": {
+          "same_direction_add": 920,
+          "hedge": 164,
+          "reverse": 16,
+          "new_direction": 17,
+          "initial": 1
+        },
+        "high_price_hedge_cash_fraction": 0.081537757985282,
+        "dynamics": {
+          "eligible": 4094,
+          "up": {
+            "n": 2359,
+            "cash": 309700.94389,
+            "median_cash": 37.88674,
+            "median_shares": 60.0,
+            "median_size_ratio": 1.0427451560420056,
+            "double_size_fraction": 0.3836371343789741,
+            "same_direction_fraction": 0.7897414158541755
+          },
+          "down": {
+            "n": 946,
+            "cash": 100145.078855,
+            "median_cash": 27.546979999999998,
+            "median_shares": 69.99000000000001,
+            "median_size_ratio": 1.063275039745628,
+            "double_size_fraction": 0.38054968287526425,
+            "same_direction_fraction": 0.6437632135306554
+          },
+          "flat": 789
+        },
+        "large_moves_5c": {
+          "eligible": 4094,
+          "up": {
+            "n": 1006,
+            "cash": 124597.486358,
+            "median_cash": 43.731805,
+            "median_shares": 70.125,
+            "median_size_ratio": 0.9969727547931382,
+            "double_size_fraction": 0.37077534791252487,
+            "same_direction_fraction": 0.7435387673956262
+          },
+          "down": {
+            "n": 545,
+            "cash": 47864.441276,
+            "median_cash": 22.46517,
+            "median_shares": 74.0,
+            "median_size_ratio": 1.0521355152324763,
+            "double_size_fraction": 0.3706422018348624,
+            "same_direction_fraction": 0.5467889908256881
+          },
+          "flat": 2543
+        },
+        "same_direction_dynamics": {
+          "eligible": 3160,
+          "up": {
+            "n": 1863,
+            "cash": 252755.633071,
+            "median_cash": 41.0657,
+            "median_shares": 63.14,
+            "median_size_ratio": 1.0303030303030303,
+            "double_size_fraction": 0.3784219001610306,
+            "same_direction_fraction": 1.0
+          },
+          "down": {
+            "n": 609,
+            "cash": 74307.067096,
+            "median_cash": 31.1335,
+            "median_shares": 69.98,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.35960591133004927,
+            "same_direction_fraction": 1.0
+          },
+          "flat": 688
+        },
+        "between_60_and_300sec": {
+          "eligible": 1292,
+          "up": {
+            "n": 816,
+            "cash": 106243.468407,
+            "median_cash": 40.476864500000005,
+            "median_shares": 67.82,
+            "median_size_ratio": 1.1040714285714288,
+            "double_size_fraction": 0.39950980392156865,
+            "same_direction_fraction": 0.7745098039215687
+          },
+          "down": {
+            "n": 393,
+            "cash": 42753.563127,
+            "median_cash": 37.61397,
+            "median_shares": 79.99,
+            "median_size_ratio": 1.2010686485615953,
+            "double_size_fraction": 0.3969465648854962,
+            "same_direction_fraction": 0.6921119592875318
+          },
+          "flat": 83
+        },
+        "price_buckets": [
+          {
+            "lower": 0.0,
+            "n": 209,
+            "cash": 2209.673206
+          },
+          {
+            "lower": 0.1,
+            "n": 192,
+            "cash": 6405.126928
+          },
+          {
+            "lower": 0.2,
+            "n": 269,
+            "cash": 16849.116264
+          },
+          {
+            "lower": 0.3,
+            "n": 380,
+            "cash": 34119.204229
+          },
+          {
+            "lower": 0.4,
+            "n": 453,
+            "cash": 52492.484588
+          },
+          {
+            "lower": 0.5,
+            "n": 381,
+            "cash": 39565.427899
+          },
+          {
+            "lower": 0.6,
+            "n": 454,
+            "cash": 49899.893453
+          },
+          {
+            "lower": 0.7,
+            "n": 468,
+            "cash": 58892.090998
+          },
+          {
+            "lower": 0.8,
+            "n": 516,
+            "cash": 72652.588368
+          },
+          {
+            "lower": 0.9,
+            "n": 1118,
+            "cash": 179487.466127
+          }
+        ]
+      },
+      "merges": {
+        "n": 0,
+        "full": 0,
+        "within60": 0
+      },
+      "sells": {
+        "n": 2958,
+        "at_least_99": 191
+      }
+    },
+    "2026-09": {
+      "entries": {
+        "maps": 441,
+        "price": {
+          "n": 441,
+          "mean": 0.5244955867495328,
+          "p10": 0.3099999999,
+          "p25": 0.41,
+          "median": 0.5256755826,
+          "p75": 0.64,
+          "p90": 0.7308829231
+        },
+        "within_45_55": 101,
+        "within_40_60": 190,
+        "at_least_90": 6,
+        "entry_cash": {
+          "n": 441,
+          "mean": 397.0435993514739,
+          "p10": 5.63769,
+          "p25": 21.04269,
+          "median": 103.1504,
+          "p75": 428.03835,
+          "p90": 1190.90916
+        },
+        "first_share_of_total": {
+          "n": 441,
+          "mean": 0.09109476742234993,
+          "p10": 0.0014177118514778796,
+          "p25": 0.0058825763062725364,
+          "median": 0.028050779943590145,
+          "p75": 0.08475191226975887,
+          "p90": 0.24043088176373026
+        },
+        "later_group_larger": 391,
+        "peak_risk": {
+          "n": 441,
+          "mean": 3322.1500892675735,
+          "p10": 432.86397,
+          "p25": 868.9006790000001,
+          "median": 2142.9997390000003,
+          "p75": 4243.918635,
+          "p90": 7660.693018
+        },
+        "reopen_maps": 71
+      },
+      "buys": {
+        "buy_groups": 11440,
+        "fills": 11543,
+        "cash": 3160017.459827,
+        "roles": {
+          "hedge": 4672,
+          "same_direction_add": 5671,
+          "initial": 441,
+          "new_direction": 2,
+          "reverse": 654
+        },
+        "hedge_cash_fraction": 0.3244884952004397,
+        "high_price_groups": 1392,
+        "high_price_roles": {
+          "same_direction_add": 846,
+          "hedge": 494,
+          "initial": 6,
+          "reverse": 46
+        },
+        "high_price_hedge_cash_fraction": 0.3063961951812027,
+        "dynamics": {
+          "eligible": 10578,
+          "up": {
+            "n": 6575,
+            "cash": 2050670.796704,
+            "median_cash": 80.74137,
+            "median_shares": 133.48,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.36897338403041824,
+            "same_direction_fraction": 0.5522433460076046
+          },
+          "down": {
+            "n": 3258,
+            "cash": 665087.126634,
+            "median_cash": 50.07385,
+            "median_shares": 132.04000000000002,
+            "median_size_ratio": 0.9491330390290522,
+            "double_size_fraction": 0.35481890730509513,
+            "same_direction_fraction": 0.47483118477593617
+          },
+          "flat": 745
+        },
+        "large_moves_5c": {
+          "eligible": 10578,
+          "up": {
+            "n": 3261,
+            "cash": 966414.746588,
+            "median_cash": 81.47731,
+            "median_shares": 131.23,
+            "median_size_ratio": 0.8780392156862745,
+            "double_size_fraction": 0.35111928856179087,
+            "same_direction_fraction": 0.547378104875805
+          },
+          "down": {
+            "n": 2157,
+            "cash": 406984.591809,
+            "median_cash": 45.79667,
+            "median_shares": 130.99,
+            "median_size_ratio": 0.9192563627632572,
+            "double_size_fraction": 0.35095039406583217,
+            "same_direction_fraction": 0.44552619378766806
+          },
+          "flat": 5160
+        },
+        "same_direction_dynamics": {
+          "eligible": 5671,
+          "up": {
+            "n": 3631,
+            "cash": 1200635.161566,
+            "median_cash": 102.42035,
+            "median_shares": 166.8,
+            "median_size_ratio": 0.8447782486468342,
+            "double_size_fraction": 0.33599559350041314,
+            "same_direction_fraction": 1.0
+          },
+          "down": {
+            "n": 1547,
+            "cash": 356507.185275,
+            "median_cash": 68.89684,
+            "median_shares": 167.49,
+            "median_size_ratio": 0.779106463878327,
+            "double_size_fraction": 0.31221719457013575,
+            "same_direction_fraction": 1.0
+          },
+          "flat": 493
+        },
+        "between_60_and_300sec": {
+          "eligible": 4055,
+          "up": {
+            "n": 2302,
+            "cash": 706914.352808,
+            "median_cash": 78.06239,
+            "median_shares": 126.0095625,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.36707211120764555,
+            "same_direction_fraction": 0.5621198957428323
+          },
+          "down": {
+            "n": 1580,
+            "cash": 336399.431794,
+            "median_cash": 55.90723,
+            "median_shares": 137.4,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.37468354430379747,
+            "same_direction_fraction": 0.4829113924050633
+          },
+          "flat": 173
+        },
+        "price_buckets": [
+          {
+            "lower": 0.0,
+            "n": 459,
+            "cash": 13117.534207
+          },
+          {
+            "lower": 0.1,
+            "n": 765,
+            "cash": 72325.384552
+          },
+          {
+            "lower": 0.2,
+            "n": 891,
+            "cash": 105481.116583
+          },
+          {
+            "lower": 0.3,
+            "n": 1188,
+            "cash": 223424.197424
+          },
+          {
+            "lower": 0.4,
+            "n": 1388,
+            "cash": 342138.854132
+          },
+          {
+            "lower": 0.5,
+            "n": 1378,
+            "cash": 360118.270859
+          },
+          {
+            "lower": 0.6,
+            "n": 1519,
+            "cash": 512486.267575
+          },
+          {
+            "lower": 0.7,
+            "n": 1296,
+            "cash": 440672.052736
+          },
+          {
+            "lower": 0.8,
+            "n": 1164,
+            "cash": 476437.440052
+          },
+          {
+            "lower": 0.9,
+            "n": 1392,
+            "cash": 613816.341707
+          }
+        ]
+      },
+      "merges": {
+        "n": 1102,
+        "full": 1096,
+        "within60": 1009
+      },
+      "sells": {
+        "n": 330,
+        "at_least_99": 314
+      }
+    },
+    "2026-10": {
+      "entries": {
+        "maps": 381,
+        "price": {
+          "n": 381,
+          "mean": 0.5049399536771654,
+          "p10": 0.33,
+          "p25": 0.39,
+          "median": 0.5,
+          "p75": 0.6128581631,
+          "p90": 0.6923088226000002
+        },
+        "within_45_55": 98,
+        "within_40_60": 171,
+        "at_least_90": 4,
+        "entry_cash": {
+          "n": 381,
+          "mean": 450.1206518582678,
+          "p10": 9.92062,
+          "p25": 36.65129,
+          "median": 149.80487,
+          "p75": 578.06661,
+          "p90": 1318.69482
+        },
+        "first_share_of_total": {
+          "n": 381,
+          "mean": 0.08957422891603972,
+          "p10": 0.0023090869924379752,
+          "p25": 0.007414677273724767,
+          "median": 0.03207572592722306,
+          "p75": 0.11301556578012742,
+          "p90": 0.2336289483246141
+        },
+        "later_group_larger": 334,
+        "peak_risk": {
+          "n": 381,
+          "mean": 3571.098454910761,
+          "p10": 609.1149400000002,
+          "p25": 1598.60013,
+          "median": 2810.7963,
+          "p75": 4808.86506,
+          "p90": 7141.013063000001
+        },
+        "reopen_maps": 57
+      },
+      "buys": {
+        "buy_groups": 9515,
+        "fills": 9536,
+        "cash": 2813650.657319,
+        "roles": {
+          "initial": 381,
+          "hedge": 3473,
+          "reverse": 448,
+          "same_direction_add": 5213
+        },
+        "hedge_cash_fraction": 0.3168506662021034,
+        "high_price_groups": 966,
+        "high_price_roles": {
+          "hedge": 375,
+          "same_direction_add": 550,
+          "initial": 4,
+          "reverse": 37
+        },
+        "high_price_hedge_cash_fraction": 0.39231903881222674,
+        "dynamics": {
+          "eligible": 8773,
+          "up": {
+            "n": 5559,
+            "cash": 1740940.924003,
+            "median_cash": 94.76312,
+            "median_shares": 161.89,
+            "median_size_ratio": 1.011794871794872,
+            "double_size_fraction": 0.36859147328656233,
+            "same_direction_fraction": 0.6010073754272351
+          },
+          "down": {
+            "n": 2769,
+            "cash": 632229.738457,
+            "median_cash": 57.475,
+            "median_shares": 144.36,
+            "median_size_ratio": 0.8656125559071852,
+            "double_size_fraction": 0.35500180570603107,
+            "same_direction_fraction": 0.5659082701336222
+          },
+          "flat": 445
+        },
+        "large_moves_5c": {
+          "eligible": 8773,
+          "up": {
+            "n": 2770,
+            "cash": 847924.479057,
+            "median_cash": 96.50256,
+            "median_shares": 150.13,
+            "median_size_ratio": 1.0043596251884224,
+            "double_size_fraction": 0.3700361010830325,
+            "same_direction_fraction": 0.5693140794223827
+          },
+          "down": {
+            "n": 1838,
+            "cash": 385225.543687,
+            "median_cash": 51.38122,
+            "median_shares": 142.93,
+            "median_size_ratio": 0.8916510787035928,
+            "double_size_fraction": 0.3634385201305767,
+            "same_direction_fraction": 0.5402611534276387
+          },
+          "flat": 4165
+        },
+        "same_direction_dynamics": {
+          "eligible": 5213,
+          "up": {
+            "n": 3341,
+            "cash": 1044230.69453,
+            "median_cash": 105.5179,
+            "median_shares": 173.42,
+            "median_size_ratio": 0.9101609832092781,
+            "double_size_fraction": 0.3391200239449267,
+            "same_direction_fraction": 1.0
+          },
+          "down": {
+            "n": 1567,
+            "cash": 373187.235718,
+            "median_cash": 63.97428,
+            "median_shares": 159.67,
+            "median_size_ratio": 0.719833335,
+            "double_size_fraction": 0.32546266751754943,
+            "same_direction_fraction": 1.0
+          },
+          "flat": 305
+        },
+        "between_60_and_300sec": {
+          "eligible": 3406,
+          "up": {
+            "n": 1913,
+            "cash": 612903.666969,
+            "median_cash": 92.21067,
+            "median_shares": 157.28,
+            "median_size_ratio": 1.0191,
+            "double_size_fraction": 0.3721902770517512,
+            "same_direction_fraction": 0.6021955044432828
+          },
+          "down": {
+            "n": 1364,
+            "cash": 343867.657394,
+            "median_cash": 66.710025,
+            "median_shares": 154.81,
+            "median_size_ratio": 0.9748967665133745,
+            "double_size_fraction": 0.3790322580645161,
+            "same_direction_fraction": 0.5740469208211144
+          },
+          "flat": 129
+        },
+        "price_buckets": [
+          {
+            "lower": 0.0,
+            "n": 370,
+            "cash": 21627.76046
+          },
+          {
+            "lower": 0.1,
+            "n": 640,
+            "cash": 51755.15898
+          },
+          {
+            "lower": 0.2,
+            "n": 710,
+            "cash": 101388.30917
+          },
+          {
+            "lower": 0.3,
+            "n": 936,
+            "cash": 191988.43493
+          },
+          {
+            "lower": 0.4,
+            "n": 1151,
+            "cash": 295882.282239
+          },
+          {
+            "lower": 0.5,
+            "n": 1189,
+            "cash": 374861.846152
+          },
+          {
+            "lower": 0.6,
+            "n": 1372,
+            "cash": 428864.791085
+          },
+          {
+            "lower": 0.7,
+            "n": 1205,
+            "cash": 406035.970475
+          },
+          {
+            "lower": 0.8,
+            "n": 976,
+            "cash": 429818.04063
+          },
+          {
+            "lower": 0.9,
+            "n": 966,
+            "cash": 511428.063198
+          }
+        ]
+      },
+      "merges": {
+        "n": 1169,
+        "full": 1163,
+        "within60": 1064
+      },
+      "sells": {
+        "n": 282,
+        "at_least_99": 256
+      }
+    }
+  },
+  "outcomes": {
+    "profitable": {
+      "maps": {
+        "maps": 745,
+        "known": 745,
+        "wins": 745,
+        "losses": 0,
+        "pnl": 946231.679389,
+        "avg_win": 1270.1096367637585,
+        "avg_loss": null
+      },
+      "buys": {
+        "buy_groups": 11934,
+        "fills": 12012,
+        "cash": 3465729.563197,
+        "roles": {
+          "initial": 484,
+          "hedge": 4103,
+          "new_direction": 2,
+          "reverse": 609,
+          "same_direction_add": 6736
+        },
+        "hedge_cash_fraction": 0.23194580611089438,
+        "high_price_groups": 1293,
+        "high_price_roles": {
+          "same_direction_add": 1122,
+          "hedge": 138,
+          "initial": 9,
+          "reverse": 24
+        },
+        "high_price_hedge_cash_fraction": 0.10541160917187345,
+        "dynamics": {
+          "eligible": 11000,
+          "up": {
+            "n": 6946,
+            "cash": 2185149.557529,
+            "median_cash": 90.45,
+            "median_shares": 151.5432185,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.35847970054707745,
+            "same_direction_fraction": 0.6634033976389289
+          },
+          "down": {
+            "n": 3400,
+            "cash": 776710.341278,
+            "median_cash": 54.971959999999996,
+            "median_shares": 140.285,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.37058823529411766,
+            "same_direction_fraction": 0.48911764705882355
+          },
+          "flat": 654
+        },
+        "large_moves_5c": {
+          "eligible": 11000,
+          "up": {
+            "n": 3487,
+            "cash": 1070786.70363,
+            "median_cash": 89.27791,
+            "median_shares": 141.81,
+            "median_size_ratio": 0.9015139503688799,
+            "double_size_fraction": 0.3421279036420992,
+            "same_direction_fraction": 0.6633209062231145
+          },
+          "down": {
+            "n": 2224,
+            "cash": 460232.50571,
+            "median_cash": 48.702135,
+            "median_shares": 139.87,
+            "median_size_ratio": 1.0,
+            "double_size_fraction": 0.37634892086330934,
+            "same_direction_fraction": 0.44109712230215825
+          },
+          "flat": 5289
+        },
+        "same_direction_dynamics": {
+          "eligible": 6736,
+          "up": {
+            "n": 4608,
+            "cash": 1576682.12034,
+            "median_cash": 111.61941,
+            "median_shares": 170.0,
+            "median_size_ratio": 0.8450388887389432,
+            "double_size_fraction": 0.3318142361111111,
+            "same_direction_fraction": 1.0
+          },
+          "down": {
+            "n": 1663,
+            "cash": 451031.904658,
+            "median_cash": 85.70695,
+            "median_shares": 166.91,
+            "median_size_ratio": 0.8469387755102041,
+            "double_size_fraction": 0.3319302465423933,
+            "same_direction_fraction": 1.0
+          },
+          "flat": 465
+        },
+        "between_60_and_300sec": {
+          "eligible": 4281,
+          "up": {
+            "n": 2424,
+            "cash": 743753.324893,
+            "median_cash": 82.729585,
+            "median_shares": 135.1,
+            "median_size_ratio": 0.9378458721857115,
+            "double_size_fraction": 0.3527227722772277,
+            "same_direction_fraction": 0.6806930693069307
+          },
+          "down": {
+            "n": 1686,
+            "cash": 405116.035583,
+            "median_cash": 61.26061,
+            "median_shares": 144.125,
+            "median_size_ratio": 1.023589577277421,
+            "double_size_fraction": 0.38552787663107946,
+            "same_direction_fraction": 0.5106761565836299
+          },
+          "flat": 171
+        },
+        "price_buckets": [
+          {
+            "lower": 0.0,
+            "n": 455,
+            "cash": 19489.086597
+          },
+          {
+            "lower": 0.1,
+            "n": 788,
+            "cash": 65222.864436
+          },
+          {
+            "lower": 0.2,
+            "n": 855,
+            "cash": 100543.229286
+          },
+          {
+            "lower": 0.3,
+            "n": 1200,
+            "cash": 213794.736566
+          },
+          {
+            "lower": 0.4,
+            "n": 1426,
+            "cash": 367075.614431
+          },
+          {
+            "lower": 0.5,
+            "n": 1516,
+            "cash": 431321.461082
+          },
+          {
+            "lower": 0.6,
+            "n": 1676,
+            "cash": 569086.461456
+          },
+          {
+            "lower": 0.7,
+            "n": 1494,
+            "cash": 527848.558733
+          },
+          {
+            "lower": 0.8,
+            "n": 1231,
+            "cash": 524373.766266
+          },
+          {
+            "lower": 0.9,
+            "n": 1293,
+            "cash": 646973.784344
+          }
+        ]
+      }
+    },
+    "losing": {
+      "maps": {
+        "maps": 541,
+        "known": 541,
+        "wins": 0,
+        "losses": 541,
+        "pnl": -802408.9982949999,
+        "avg_win": null,
+        "avg_loss": -1483.1959303049907
+      },
+      "buys": {
+        "buy_groups": 9019,
+        "fills": 9065,
+        "cash": 2507902.032949,
+        "roles": {
+          "hedge": 4042,
+          "same_direction_add": 4147,
+          "initial": 337,
+          "reverse": 493
+        },
+        "hedge_cash_fraction": 0.44381117908780715,
+        "high_price_groups": 1065,
+        "high_price_roles": {
+          "hedge": 731,
+          "same_direction_add": 274,
+          "reverse": 59,
+          "initial": 1
+        },
+        "high_price_hedge_cash_fraction": 0.6701549213682273,
+        "dynamics": {
+          "eligible": 8350,
+          "up": {
+            "n": 5187,
+            "cash": 1606456.744328,
+            "median_cash": 84.672,
+            "median_shares": 145.19,
+            "median_size_ratio": 1.0844788732394366,
+            "double_size_fraction": 0.38268748795064583,
+            "same_direction_fraction": 0.45556198187777136
+          },
+          "down": {
+            "n": 2627,
+            "cash": 520606.523813,
+            "median_cash": 51.5,
+            "median_shares": 134.8,
+            "median_size_ratio": 0.8,
+            "double_size_fraction": 0.33460220784164446,
+            "same_direction_fraction": 0.552341073467834
+          },
+          "flat": 536
+        },
+        "large_moves_5c": {
+          "eligible": 8350,
+          "up": {
+            "n": 2543,
+            "cash": 743547.103165,
+            "median_cash": 87.45389,
+            "median_shares": 145.26,
+            "median_size_ratio": 1.02,
+            "double_size_fraction": 0.3841918993314982,
+            "same_direction_fraction": 0.4121116791191506
+          },
+          "down": {
+            "n": 1771,
+            "cash": 331977.629786,
+            "median_cash": 48.23122,
+            "median_shares": 134.6,
+            "median_size_ratio": 0.75282612661923,
+            "double_size_fraction": 0.33201581027667987,
+            "same_direction_fraction": 0.549407114624506
+          },
+          "flat": 4036
+        },
+        "same_direction_dynamics": {
+          "eligible": 4147,
+          "up": {
+            "n": 2363,
+            "cash": 668178.316906,
+            "median_cash": 89.48055,
+            "median_shares": 170.0,
+            "median_size_ratio": 0.9453310168457822,
+            "double_size_fraction": 0.3487092678798138,
+            "same_direction_fraction": 1.0
+          },
+          "down": {
+            "n": 1451,
+            "cash": 278662.516335,
+            "median_cash": 50.83232,
+            "median_shares": 159.51,
+            "median_size_ratio": 0.6635649384600166,
+            "double_size_fraction": 0.3039283252929014,
+            "same_direction_fraction": 1.0
+          },
+          "flat": 333
+        },
+        "between_60_and_300sec": {
+          "eligible": 3180,
+          "up": {
+            "n": 1791,
+            "cash": 576064.694884,
+            "median_cash": 86.05762,
+            "median_shares": 150.0,
+            "median_size_ratio": 1.1525945945945946,
+            "double_size_fraction": 0.39195979899497485,
+            "same_direction_fraction": 0.4444444444444444
+          },
+          "down": {
+            "n": 1258,
+            "cash": 275151.053605,
+            "median_cash": 59.468115,
+            "median_shares": 150.0,
+            "median_size_ratio": 0.8838908011319682,
+            "double_size_fraction": 0.36486486486486486,
+            "same_direction_fraction": 0.5445151033386327
+          },
+          "flat": 131
+        },
+        "price_buckets": [
+          {
+            "lower": 0.0,
+            "n": 374,
+            "cash": 15256.20807
+          },
+          {
+            "lower": 0.1,
+            "n": 617,
+            "cash": 58857.679096
+          },
+          {
+            "lower": 0.2,
+            "n": 746,
+            "cash": 106326.196467
+          },
+          {
+            "lower": 0.3,
+            "n": 924,
+            "cash": 201617.895788
+          },
+          {
+            "lower": 0.4,
+            "n": 1113,
+            "cash": 270945.52194
+          },
+          {
+            "lower": 0.5,
+            "n": 1049,
+            "cash": 303622.134929
+          },
+          {
+            "lower": 0.6,
+            "n": 1215,
+            "cash": 372264.597204
+          },
+          {
+            "lower": 0.7,
+            "n": 1007,
+            "cash": 318859.464478
+          },
+          {
+            "lower": 0.8,
+            "n": 909,
+            "cash": 381881.714416
+          },
+          {
+            "lower": 0.9,
+            "n": 1065,
+            "cash": 478270.620561
+          }
+        ]
+      }
+    }
+  },
+  "entry_outcomes": {
+    "2026-09": {
+      "40_60": {
+        "maps": 190,
+        "known": 189,
+        "wins": 118,
+        "losses": 71,
+        "pnl": 35359.33833099997,
+        "avg_win": 1661.1426847033895,
+        "avg_loss": -2262.753499492958
+      },
+      "outside": {
+        "maps": 251,
+        "known": 251,
+        "wins": 138,
+        "losses": 113,
+        "pnl": 22440.30425600008,
+        "avg_win": 1210.4289927028988,
+        "avg_loss": -1279.6362543097343
+      }
+    },
+    "2026-10": {
+      "40_60": {
+        "maps": 171,
+        "known": 171,
+        "wins": 100,
+        "losses": 71,
+        "pnl": 53881.903315999996,
+        "avg_win": 1928.55036641,
+        "avg_loss": -1957.368075
+      },
+      "outside": {
+        "maps": 210,
+        "known": 210,
+        "wins": 128,
+        "losses": 82,
+        "pnl": 58294.426084000035,
+        "avg_win": 1724.5283752265627,
+        "avg_loss": -1981.0390968902434
+      }
+    }
+  },
+  "cluster_bootstrap": {
+    "2026-09": {
+      "maps": 432,
+      "up_fraction_of_nonflat": 0.6686667344655751,
+      "cluster_bootstrap_95": [
+        0.6610730126958836,
+        0.6759268516008378
+      ],
+      "median_map_up_fraction": 0.6666666666666666
+    },
+    "2026-10": {
+      "maps": 379,
+      "up_fraction_of_nonflat": 0.667507204610951,
+      "cluster_bootstrap_95": [
+        0.6584836615487453,
+        0.6765476920285418
+      ],
+      "median_map_up_fraction": 0.6666666666666666
+    }
+  },
+  "pair_cost_proxy_recent": {
+    "groups": 9096,
+    "below1": 3582,
+    "distribution": {
+      "n": 9096,
+      "mean": 1.0497180356434166,
+      "p10": 0.8098560993480077,
+      "p25": 0.9306096152965103,
+      "median": 1.0420304932433058,
+      "p75": 1.1694743836671415,
+      "p90": 1.3034906030637807
+    }
+  },
+  "examples": [
+    {
+      "id": "0x83bb6cfe6c1c9a73c7174b0a96b6caf2d46fbc7e4b94333bf2805d8fe3ec2f5f",
+      "event": "cs2-tl1-aur1-2026-10-27",
+      "timestamp": 1793106576,
+      "month": "2026-10",
+      "outcome": "Liquid",
+      "index": 0,
+      "price": 0.8951643183,
+      "shares": 19819.77,
+      "cash": 17834.95037,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 17834.95037,
+      "net_before_in_bought_side": 318.62201499999924,
+      "delta_price": 0.260712992,
+      "dt": 52,
+      "size_ratio": 36.53481170159819,
+      "cash_ratio": 50.88804194453179,
+      "risk_before": 0,
+      "risk_after": 9664.827795999998,
+      "floor_change": -17834.95037,
+      "reopen": true,
+      "opposite_average_cost": 0.12214178041582413,
+      "first": false,
+      "own_balance_before": 602.4978580000009,
+      "final_pnl": 10452.419909000007,
+      "pair_cost": null
+    },
+    {
+      "id": "0xd0a2f8d701bc8feb7f0c5d1aac9dded60a7ca3a1d04b2c129776d21b11e87474",
+      "event": "cs2-g2-lgc-2026-09-13",
+      "timestamp": 1789301988,
+      "month": "2026-09",
+      "outcome": "Legacy",
+      "index": 1,
+      "price": 0.9294951483,
+      "shares": 7878.75,
+      "cash": 7349.07616,
+      "fills": 1,
+      "role": "reverse",
+      "hedge_cash": 0.8088419106115285,
+      "directional_cash": 7348.267318089388,
+      "net_before_in_bought_side": -0.8671380000000681,
+      "delta_price": 0.032695148299999977,
+      "dt": 114,
+      "size_ratio": 31.515,
+      "cash_ratio": 32.610837024848635,
+      "risk_before": 0,
+      "risk_after": 6347.424958,
+      "floor_change": -7348.209022,
+      "reopen": true,
+      "opposite_average_cost": 0.135655031341949,
+      "first": false,
+      "own_balance_before": 0.009632000000237895,
+      "final_pnl": 1749.3099390000061,
+      "pair_cost": 1.0684268745911953
+    },
+    {
+      "id": "0xaf0f24dca76e6b6caf0cc7b1808a97056916e626311dc4796d52a59b30fefc4a",
+      "event": "cs2-fut-tl1-2026-10-25",
+      "timestamp": 1792920398,
+      "month": "2026-10",
+      "outcome": "FUT Esports",
+      "index": 0,
+      "price": 0.939,
+      "shares": 7116.517557,
+      "cash": 6702.791336,
+      "fills": 1,
+      "role": "reverse",
+      "hedge_cash": 2194.618127353234,
+      "directional_cash": 4508.173208646766,
+      "net_before_in_bought_side": -2330.079761,
+      "delta_price": -0.0035217391000000875,
+      "dt": 95,
+      "size_ratio": 7.735345170652174,
+      "cash_ratio": 7.707795179740041,
+      "risk_before": 0,
+      "risk_after": 3592.0497270000005,
+      "floor_change": -4372.711575,
+      "reopen": true,
+      "opposite_average_cost": 0.05737132791003531,
+      "first": false,
+      "own_balance_before": 920.0014339999998,
+      "final_pnl": 3451.174092000002,
+      "pair_cost": 0.9992352778425346
+    },
+    {
+      "id": "0x3f45ecd1024b8733ca3c15b84dc5647869e4ecb406dce59a58bb0cc17584551a",
+      "event": "cs2-bb3-furia-2026-10-29",
+      "timestamp": 1793291275,
+      "month": "2026-10",
+      "outcome": "FURIA",
+      "index": 1,
+      "price": 0.8688052821000001,
+      "shares": 6429.3,
+      "cash": 5622.45123,
+      "fills": 1,
+      "role": "reverse",
+      "hedge_cash": 290.03004746010845,
+      "directional_cash": 5332.421182539892,
+      "net_before_in_bought_side": -331.6507529999999,
+      "delta_price": 0.0742338977000001,
+      "dt": 3,
+      "size_ratio": 5.091829219035852,
+      "cash_ratio": 5.54708531164649,
+      "risk_before": 0,
+      "risk_after": 5023.558433999999,
+      "floor_change": -5290.800477,
+      "reopen": true,
+      "opposite_average_cost": 0.3060371528735496,
+      "first": false,
+      "own_balance_before": 2887.1201910000013,
+      "final_pnl": 1099.2197430000006,
+      "pair_cost": 1.180541567039944
+    },
+    {
+      "id": "0x87a85c902e711000188e24784d92a60076edce557a77ba20743edfac08379477",
+      "event": "cs2-mglz-mouz-2026-10-26",
+      "timestamp": 1793004495,
+      "month": "2026-10",
+      "outcome": "MOUZ",
+      "index": 1,
+      "price": 0.9754760379,
+      "shares": 5685.9008,
+      "cash": 5553.261034,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 5553.261034,
+      "net_before_in_bought_side": 181.10321300000032,
+      "delta_price": 0.07178605520000003,
+      "dt": 3,
+      "size_ratio": 2.486357069143447,
+      "cash_ratio": 2.674277776681941,
+      "risk_before": 0,
+      "risk_after": 4750.982607000001,
+      "floor_change": -5553.261034,
+      "reopen": true,
+      "opposite_average_cost": 0.2790188822744721,
+      "first": false,
+      "own_balance_before": 2851.8399999999992,
+      "final_pnl": 1197.8159660000042,
+      "pair_cost": null
+    },
+    {
+      "id": "0x5525f70994e23436d2d149809188d3d88d094fc126a7838252722f51e025f13a",
+      "event": "cs2-fut-nemi1-2026-10-29",
+      "timestamp": 1793263084,
+      "month": "2026-10",
+      "outcome": "FUT Esports",
+      "index": 0,
+      "price": 0.7784205406,
+      "shares": 6750.284359,
+      "cash": 5312.77512,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 5312.77512,
+      "net_before_in_bought_side": 1414.0448780000004,
+      "delta_price": 0.06842054060000002,
+      "dt": 122,
+      "size_ratio": 1350.0568718,
+      "cash_ratio": 1475.1685061933044,
+      "risk_before": 0,
+      "risk_after": 5290.275615000002,
+      "floor_change": -5312.775120000001,
+      "reopen": true,
+      "opposite_average_cost": 0.12402625101169382,
+      "first": false,
+      "own_balance_before": 3205.594878,
+      "final_pnl": -1345.245425000001,
+      "pair_cost": null
+    },
+    {
+      "id": "0x9c9759f8635e9e52a2bcf2810ca2192d35632f2dbf33fa1ba1dde759a8e67b6d",
+      "event": "cs2-prv-faze-2026-07-11",
+      "timestamp": 1783784651,
+      "month": "2026-07",
+      "outcome": "FaZe",
+      "index": 1,
+      "price": 0.9148036146,
+      "shares": 4213.90989,
+      "cash": 3871.321169,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 3871.321169,
+      "net_before_in_bought_side": 2431.530405999999,
+      "delta_price": 0.03502583680000004,
+      "dt": 55,
+      "size_ratio": 93.642442,
+      "cash_ratio": 97.20106671266448,
+      "risk_before": 0,
+      "risk_after": 3863.3591460000002,
+      "floor_change": -3871.321169,
+      "reopen": true,
+      "opposite_average_cost": null,
+      "first": false,
+      "own_balance_before": 2431.539999999999,
+      "final_pnl": 4579.701757000015,
+      "pair_cost": null
+    },
+    {
+      "id": "0x5fd3f0aa7fa383949be5d194de82a462d30fcb10f7a7f1c39375395a087584d6",
+      "event": "cs2-faze-bb3-2026-07-10",
+      "timestamp": 1783692115,
+      "month": "2026-07",
+      "outcome": "FaZe",
+      "index": 0,
+      "price": 0.870640456,
+      "shares": 4415.393254,
+      "cash": 3869.084316,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 3869.084316,
+      "net_before_in_bought_side": 153.2477049999997,
+      "delta_price": 0.010640456000000076,
+      "dt": 5,
+      "size_ratio": 28.81170149429037,
+      "cash_ratio": 29.152768601231067,
+      "risk_before": 0,
+      "risk_after": 3685.3442699999996,
+      "floor_change": -3869.0843160000004,
+      "reopen": true,
+      "opposite_average_cost": null,
+      "first": false,
+      "own_balance_before": 153.25085900000028,
+      "final_pnl": -173.23441900000216,
+      "pair_cost": null
+    },
+    {
+      "id": "0x4a4dece0652b0cd701eecaa994a5f3e63052064cbc7e4c5554a4c5de297d4159",
+      "event": "cs2-faze-nemi1-2026-10-01",
+      "timestamp": 1790884926,
+      "month": "2026-10",
+      "outcome": "FaZe",
+      "index": 0,
+      "price": 0.9335565933,
+      "shares": 4068.5,
+      "cash": 3810.79318,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 3810.79318,
+      "net_before_in_bought_side": 8.630799999999454,
+      "delta_price": 0.014292807699999965,
+      "dt": 3,
+      "size_ratio": 29.952882279319734,
+      "cash_ratio": 30.396941954323943,
+      "risk_before": 0,
+      "risk_after": 2454.06487,
+      "floor_change": -3810.79318,
+      "reopen": true,
+      "opposite_average_cost": 0.20912349682292472,
+      "first": false,
+      "own_balance_before": 1857.0507999999995,
+      "final_pnl": 5870.916311000001,
+      "pair_cost": null
+    },
+    {
+      "id": "0xd368f9d2ee61bb840a2c9a644e7b4dc07ba50aeac58d1e14df0375f4092eae56",
+      "event": "cs2-nip-k271-2026-07-15",
+      "timestamp": 1784111963,
+      "month": "2026-07",
+      "outcome": "NIP",
+      "index": 0,
+      "price": 0.8615247427,
+      "shares": 4367.95,
+      "cash": 3789.15179,
+      "fills": 1,
+      "role": "same_direction_add",
+      "hedge_cash": 0.0,
+      "directional_cash": 3789.15179,
+      "net_before_in_bought_side": 95.16774299999952,
+      "delta_price": 0.08152474269999999,
+      "dt": 60,
+      "size_ratio": 2.5419886866241446,
+      "cash_ratio": 2.7963543361659484,
+      "risk_before": 0,
+      "risk_after": 3028.9790319999993,
+      "floor_change": -3789.15179,
+      "reopen": true,
+      "opposite_average_cost": 0.08974017880836781,
+      "first": false,
+      "own_balance_before": 1757.6,
+      "final_pnl": 1445.1698209999986,
+      "pair_cost": null
+    }
+  ]
+}

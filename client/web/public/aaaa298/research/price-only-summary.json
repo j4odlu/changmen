@@ -1,0 +1,4144 @@
+{
+  "plan": {
+    "created_before_new_data_analysis": "2026-11-03",
+    "objective": "Test price-only rules on actual token histories, without wallet actions as signals.",
+    "universe": "CS map markets from wallet's existing Oct27-30 sample plus public activity from Oct31 onward. Selection remains wallet-conditioned, so cannot infer all-PM profitability.",
+    "window": "Fixed UTC event-slug date minus 6 hours through plus 30 hours, not first/last wallet trade; 60-second raw history only.",
+    "development": "Event dates Oct27-28",
+    "validation": "Event dates Oct29-30 (previously inspected price data; exploratory)",
+    "new_test": "Event dates Oct31 onward, newly fetched after these fixed rules; not prospective live trading",
+    "coverage_audit_amendment": "Strict new_test excludes entire events previously inspected in the earlier 65-map study. Audit found zero overlapping new-test events; the reserved late_seen bucket is empty. Four older cached maps have Oct26 event dates and lie outside this fixed calendar scope. No trading rule or parameter changed.",
+    "rules": {
+      "momentum": "Token price +5 cents or more over 5 minutes AND last minute positive.",
+      "rebound": "Token price -5 cents or more over 5 minutes AND last minute rebounds +1 cent or more.",
+      "pullback": "Rise >=5 cents from t-10 to t-3; drop >=2 cents from t-3 to t-1; rebound >=1 cent from t-1 to t."
+    },
+    "entry": "Signal and next reference execution price both 15-85 cents. Use actual token prices; no synthetic 1-p fills. One position at a time per map, fixed 100 shares, max 3 filled entries per map, 2-minute cooldown after exit.",
+    "exit": "At observed +8 cents, -5 cents, or 10 minutes holding, queue exit for next observation. Gaps/terminal missing executions marked separately, never silently removed.",
+    "availability": "Each 60-second bucket usable only after timestamp+60. Queue executes using a subsequent price point, at least 60 seconds after signal availability; also test 120-second delay. Irregular points must satisfy tolerance, no future-filled signals.",
+    "costs": "Sports fee coefficient 0.05 per leg, fee per share=0.05*p*(1-p), treated as explicit scenario pending per-market historical fee verification; no rebates. Slippage 0,0.5,1 cents per leg. Include gross zero-fee comparison.",
+    "constraints": "No parameter grid or post-test retuning in primary analysis. Report all three rules and no-trade benchmark. Bootstrap by whole event. No claims of executable fills from chart prices. Censored positions retain last mark and separate zero-payout downside stress."
+  },
+  "scope": {
+    "requested_maps": 80,
+    "usable_maps": 78,
+    "events": 39,
+    "excluded": [
+      {
+        "id": "0x8c0d59be2c3f0bc3ef1befdb8ce9de5c5938eed2ab6550f835d23fe56c1a6c83",
+        "reason": "missing_two_token_histories"
+      },
+      {
+        "id": "0xdb4c0c4b5c3668e009c1d7344e055bedf67a9b205b31717691fa3e980092816d",
+        "reason": "missing_two_token_histories"
+      }
+    ],
+    "raw_points_60": 201169,
+    "cohorts": {
+      "development": {
+        "maps": 33,
+        "events": 17,
+        "dates": [
+          "2026-10-27",
+          "2026-10-28"
+        ]
+      },
+      "validation": {
+        "maps": 26,
+        "events": 13,
+        "dates": [
+          "2026-10-29",
+          "2026-10-30"
+        ]
+      },
+      "late_seen": {
+        "maps": 0,
+        "events": 0,
+        "dates": []
+      },
+      "new_test": {
+        "maps": 19,
+        "events": 9,
+        "dates": [
+          "2026-10-31",
+          "2026-11-01"
+        ]
+      }
+    }
+  },
+  "results": {
+    "development": {
+      "momentum": {
+        "60": {
+          "gross": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 33,
+            "trades": 95,
+            "censored": 0,
+            "net_total": -172.0,
+            "gross_total": -172.0,
+            "fees_total": 0.0,
+            "net_per_trade": -1.8105263157894738,
+            "net_per_event": -10.117647058823529,
+            "event_bootstrap_95": [
+              -20.52941176470588,
+              -0.13897058823530278
+            ],
+            "win_fraction": 0.3684210526315789,
+            "profit_factor": 0.5667506297229219,
+            "closed_equity_drawdown": 213.5,
+            "censored_zero_payout_total": -172.0,
+            "without_best_event_total": -197.0,
+            "positive_events": 4,
+            "negative_events": 12,
+            "exit_reasons": {
+              "stop_loss": 29,
+              "take_profit": 16,
+              "time_limit": 50
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": -8.499999999999996,
+              "cs2-ice-mibr-2026-10-28": 8.499999999999996,
+              "cs2-ts7-mouz-2026-10-27": -40.5,
+              "cs2-mglz-nemi1-2026-10-28": -0.9999999999999929,
+              "cs2-mgc-big5-2026-10-27": -35.99999999999999,
+              "cs2-fnc-big5-2026-10-28": -12.500000000000005,
+              "cs2-tl1-furia-2026-10-28": -9.5,
+              "cs2-tl1-aur1-2026-10-27": -15.999999999999993,
+              "cs2-nem-ef1-2026-10-28": 24.99999999999999,
+              "cs2-vit-navi-2026-10-27": 11.500000000000004,
+              "cs2-ast10-mgc-2026-10-28": -37.5,
+              "cs2-mibr-ef1-2026-10-27": -59.0,
+              "cs2-mglz-lgc-2026-10-27": -5.499999999999987,
+              "cs2-furia-tyloo-2026-10-27": 20.499999999999993,
+              "cs2-ast10-fnc-2026-10-27": -4.5,
+              "cs2-ts7-navi-2026-10-28": -7.0,
+              "cs2-ice-nem-2026-10-27": 0.0
+            }
+          },
+          "fee_only": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 33,
+            "trades": 95,
+            "censored": 0,
+            "net_total": -381.77175,
+            "gross_total": -172.0,
+            "fees_total": 209.77175,
+            "net_per_trade": -4.01865,
+            "net_per_event": -22.457161764705884,
+            "event_bootstrap_95": [
+              -33.4077775735294,
+              -12.010683639705881
+            ],
+            "win_fraction": 0.22105263157894736,
+            "profit_factor": 0.3036981915651057,
+            "closed_equity_drawdown": 403.15387499999986,
+            "censored_zero_payout_total": -381.77175,
+            "without_best_event_total": -395.899875,
+            "positive_events": 3,
+            "negative_events": 14,
+            "exit_reasons": {
+              "stop_loss": 29,
+              "take_profit": 16,
+              "time_limit": 50
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": -20.044374999999995,
+              "cs2-ice-mibr-2026-10-28": -5.296375000000001,
+              "cs2-ts7-mouz-2026-10-27": -54.551625,
+              "cs2-mglz-nemi1-2026-10-28": -14.357249999999993,
+              "cs2-mgc-big5-2026-10-27": -49.51275,
+              "cs2-fnc-big5-2026-10-28": -27.347875000000002,
+              "cs2-tl1-furia-2026-10-28": -21.876375000000003,
+              "cs2-tl1-aur1-2026-10-27": -29.946499999999993,
+              "cs2-nem-ef1-2026-10-28": 12.908999999999992,
+              "cs2-vit-navi-2026-10-27": 0.9111250000000064,
+              "cs2-ast10-mgc-2026-10-28": -51.677125,
+              "cs2-mibr-ef1-2026-10-27": -72.344,
+              "cs2-mglz-lgc-2026-10-27": -20.28512499999999,
+              "cs2-furia-tyloo-2026-10-27": 14.12812499999999,
+              "cs2-ast10-fnc-2026-10-27": -19.051874999999995,
+              "cs2-ts7-navi-2026-10-28": -13.512500000000003,
+              "cs2-ice-nem-2026-10-27": -9.916249999999998
+            }
+          },
+          "fee_halfcent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 33,
+            "trades": 95,
+            "censored": 0,
+            "net_total": -476.6620000000001,
+            "gross_total": -172.0,
+            "fees_total": 209.662,
+            "net_per_trade": -5.017494736842107,
+            "net_per_event": -28.038941176470598,
+            "event_bootstrap_95": [
+              -39.16221911764707,
+              -17.49123106617648
+            ],
+            "win_fraction": 0.2,
+            "profit_factor": 0.2349669022978301,
+            "closed_equity_drawdown": 491.0271249999999,
+            "censored_zero_payout_total": -476.6620000000001,
+            "without_best_event_total": -486.7808750000001,
+            "positive_events": 2,
+            "negative_events": 15,
+            "exit_reasons": {
+              "stop_loss": 29,
+              "take_profit": 16,
+              "time_limit": 50
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": -26.038625000000007,
+              "cs2-ice-mibr-2026-10-28": -11.299125000000009,
+              "cs2-ts7-mouz-2026-10-27": -60.52987500000002,
+              "cs2-mglz-nemi1-2026-10-28": -20.355250000000005,
+              "cs2-mgc-big5-2026-10-27": -55.49325,
+              "cs2-fnc-big5-2026-10-28": -33.34012500000001,
+              "cs2-tl1-furia-2026-10-28": -27.870125,
+              "cs2-tl1-aur1-2026-10-27": -35.937,
+              "cs2-nem-ef1-2026-10-28": 6.8979999999999855,
+              "cs2-vit-navi-2026-10-27": -4.093374999999998,
+              "cs2-ast10-mgc-2026-10-28": -57.656875000000014,
+              "cs2-mibr-ef1-2026-10-27": -78.31300000000002,
+              "cs2-mglz-lgc-2026-10-27": -26.280874999999995,
+              "cs2-furia-tyloo-2026-10-27": 10.118874999999985,
+              "cs2-ast10-fnc-2026-10-27": -25.048125,
+              "cs2-ts7-navi-2026-10-28": -16.508250000000004,
+              "cs2-ice-nem-2026-10-27": -14.915000000000004
+            }
+          },
+          "fee_onecent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 33,
+            "trades": 95,
+            "censored": 0,
+            "net_total": -571.5047500000002,
+            "gross_total": -172.0,
+            "fees_total": 209.50475,
+            "net_per_trade": -6.0158394736842125,
+            "net_per_event": -33.617926470588245,
+            "event_bootstrap_95": [
+              -44.804262132352946,
+              -22.66461654411766
+            ],
+            "win_fraction": 0.18947368421052632,
+            "profit_factor": 0.18324873513576848,
+            "closed_equity_drawdown": 580.58375,
+            "censored_zero_payout_total": -571.5047500000002,
+            "without_best_event_total": -577.6163750000002,
+            "positive_events": 2,
+            "negative_events": 15,
+            "exit_reasons": {
+              "stop_loss": 29,
+              "take_profit": 16,
+              "time_limit": 50
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": -32.02987500000001,
+              "cs2-ice-mibr-2026-10-28": -17.298875000000017,
+              "cs2-ts7-mouz-2026-10-27": -66.50512500000002,
+              "cs2-mglz-nemi1-2026-10-28": -26.350250000000003,
+              "cs2-mgc-big5-2026-10-27": -61.470749999999995,
+              "cs2-fnc-big5-2026-10-28": -39.32937500000001,
+              "cs2-tl1-furia-2026-10-28": -33.86087500000001,
+              "cs2-tl1-aur1-2026-10-27": -41.924499999999995,
+              "cs2-nem-ef1-2026-10-28": 0.8899999999999793,
+              "cs2-vit-navi-2026-10-27": -9.095375000000004,
+              "cs2-ast10-mgc-2026-10-28": -63.63362500000002,
+              "cs2-mibr-ef1-2026-10-27": -84.27900000000001,
+              "cs2-mglz-lgc-2026-10-27": -32.273624999999996,
+              "cs2-furia-tyloo-2026-10-27": 6.111624999999982,
+              "cs2-ast10-fnc-2026-10-27": -31.04137500000001,
+              "cs2-ts7-navi-2026-10-28": -19.502500000000005,
+              "cs2-ice-nem-2026-10-27": -19.911250000000006
+            }
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 33,
+            "trades": 93,
+            "censored": 0,
+            "net_total": -316.5,
+            "gross_total": -316.5,
+            "fees_total": 0.0,
+            "net_per_trade": -3.403225806451613,
+            "net_per_event": -18.61764705882353,
+            "event_bootstrap_95": [
+              -33.18088235294118,
+              -5.322794117647061
+            ],
+            "win_fraction": 0.3010752688172043,
+            "profit_factor": 0.3878143133462282,
+            "closed_equity_drawdown": 346.99999999999994,
+            "censored_zero_payout_total": -316.5,
+            "without_best_event_total": -340.0,
+            "positive_events": 4,
+            "negative_events": 13,
+            "exit_reasons": {
+              "stop_loss": 36,
+              "take_profit": 12,
+              "time_limit": 45
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": -28.999999999999982,
+              "cs2-ice-mibr-2026-10-28": -6.499999999999995,
+              "cs2-ts7-mouz-2026-10-27": -42.5,
+              "cs2-mglz-nemi1-2026-10-28": 5.0,
+              "cs2-mgc-big5-2026-10-27": -69.0,
+              "cs2-fnc-big5-2026-10-28": -9.000000000000002,
+              "cs2-tl1-furia-2026-10-28": -20.500000000000004,
+              "cs2-tl1-aur1-2026-10-27": -5.5,
+              "cs2-nem-ef1-2026-10-28": 23.499999999999986,
+              "cs2-vit-navi-2026-10-27": 15.999999999999998,
+              "cs2-ast10-mgc-2026-10-28": -37.500000000000014,
+              "cs2-mibr-ef1-2026-10-27": -93.5,
+              "cs2-mglz-lgc-2026-10-27": -26.500000000000007,
+              "cs2-furia-tyloo-2026-10-27": 16.49999999999999,
+              "cs2-ast10-fnc-2026-10-27": -5.999999999999995,
+              "cs2-ts7-navi-2026-10-28": -30.000000000000007,
+              "cs2-ice-nem-2026-10-27": -2.0000000000000018
+            }
+          },
+          "fee_only": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 33,
+            "trades": 93,
+            "censored": 0,
+            "net_total": -521.0411250000001,
+            "gross_total": -316.5,
+            "fees_total": 204.541125,
+            "net_per_trade": -5.602592741935485,
+            "net_per_event": -30.649477941176468,
+            "event_bootstrap_95": [
+              -45.330040073529425,
+              -16.919322058823532
+            ],
+            "win_fraction": 0.17204301075268819,
+            "profit_factor": 0.22673357638844438,
+            "closed_equity_drawdown": 539.6205000000001,
+            "censored_zero_payout_total": -521.0411250000001,
+            "without_best_event_total": -532.39475,
+            "positive_events": 3,
+            "negative_events": 14,
+            "exit_reasons": {
+              "stop_loss": 36,
+              "take_profit": 12,
+              "time_limit": 45
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": -38.309249999999984,
+              "cs2-ice-mibr-2026-10-28": -20.435124999999996,
+              "cs2-ts7-mouz-2026-10-27": -56.456625,
+              "cs2-mglz-nemi1-2026-10-28": -8.277000000000001,
+              "cs2-mgc-big5-2026-10-27": -82.37849999999999,
+              "cs2-fnc-big5-2026-10-28": -23.8595,
+              "cs2-tl1-furia-2026-10-28": -32.798625,
+              "cs2-tl1-aur1-2026-10-27": -19.601875,
+              "cs2-nem-ef1-2026-10-28": 11.353624999999987,
+              "cs2-vit-navi-2026-10-27": 5.682749999999998,
+              "cs2-ast10-mgc-2026-10-28": -51.703375000000015,
+              "cs2-mibr-ef1-2026-10-27": -106.854375,
+              "cs2-mglz-lgc-2026-10-27": -41.18412500000001,
+              "cs2-furia-tyloo-2026-10-27": 10.054124999999988,
+              "cs2-ast10-fnc-2026-10-27": -18.9135,
+              "cs2-ts7-navi-2026-10-28": -36.572250000000004,
+              "cs2-ice-nem-2026-10-27": -10.7875
+            }
+          },
+          "fee_halfcent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 33,
+            "trades": 93,
+            "censored": 0,
+            "net_total": -613.8596250000002,
+            "gross_total": -316.5,
+            "fees_total": 204.359625,
+            "net_per_trade": -6.60064112903226,
+            "net_per_event": -36.10938970588236,
+            "event_bootstrap_95": [
+              -50.956500367647074,
+              -22.23455238970589
+            ],
+            "win_fraction": 0.17204301075268819,
+            "profit_factor": 0.18211741797111733,
+            "closed_equity_drawdown": 628.42625,
+            "censored_zero_payout_total": -613.8596250000002,
+            "without_best_event_total": -619.9065000000002,
+            "positive_events": 3,
+            "negative_events": 14,
+            "exit_reasons": {
+              "stop_loss": 36,
+              "take_profit": 12,
+              "time_limit": 45
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": -43.29349999999999,
+              "cs2-ice-mibr-2026-10-28": -26.430374999999998,
+              "cs2-ts7-mouz-2026-10-27": -62.433875000000015,
+              "cs2-mglz-nemi1-2026-10-28": -14.278000000000008,
+              "cs2-mgc-big5-2026-10-27": -88.3425,
+              "cs2-fnc-big5-2026-10-28": -29.853500000000007,
+              "cs2-tl1-furia-2026-10-28": -38.78687500000001,
+              "cs2-tl1-aur1-2026-10-27": -25.597625,
+              "cs2-nem-ef1-2026-10-28": 5.343374999999983,
+              "cs2-vit-navi-2026-10-27": 0.675999999999993,
+              "cs2-ast10-mgc-2026-10-28": -57.68312500000002,
+              "cs2-mibr-ef1-2026-10-27": -112.80612500000001,
+              "cs2-mglz-lgc-2026-10-27": -47.16937500000002,
+              "cs2-furia-tyloo-2026-10-27": 6.046874999999982,
+              "cs2-ast10-fnc-2026-10-27": -24.909,
+              "cs2-ts7-navi-2026-10-28": -39.556500000000014,
+              "cs2-ice-nem-2026-10-27": -14.785500000000006
+            }
+          },
+          "fee_onecent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 33,
+            "trades": 93,
+            "censored": 0,
+            "net_total": -706.6316250000002,
+            "gross_total": -316.5,
+            "fees_total": 204.13162499999999,
+            "net_per_trade": -7.598189516129034,
+            "net_per_event": -41.5665661764706,
+            "event_bootstrap_95": [
+              -56.57815625000001,
+              -27.59520202205884
+            ],
+            "win_fraction": 0.17204301075268819,
+            "profit_factor": 0.14579391689482296,
+            "closed_equity_drawdown": 717.1875000000002,
+            "censored_zero_payout_total": -706.6316250000002,
+            "without_best_event_total": -708.6732500000002,
+            "positive_events": 1,
+            "negative_events": 16,
+            "exit_reasons": {
+              "stop_loss": 36,
+              "take_profit": 12,
+              "time_limit": 45
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": -48.275249999999986,
+              "cs2-ice-mibr-2026-10-28": -32.422625000000004,
+              "cs2-ts7-mouz-2026-10-27": -68.40812500000001,
+              "cs2-mglz-nemi1-2026-10-28": -20.27600000000001,
+              "cs2-mgc-big5-2026-10-27": -94.3035,
+              "cs2-fnc-big5-2026-10-28": -35.84450000000001,
+              "cs2-tl1-furia-2026-10-28": -44.77212500000002,
+              "cs2-tl1-aur1-2026-10-27": -31.59037500000001,
+              "cs2-nem-ef1-2026-10-28": -0.6638750000000226,
+              "cs2-vit-navi-2026-10-27": -4.328250000000012,
+              "cs2-ast10-mgc-2026-10-28": -63.659875000000014,
+              "cs2-mibr-ef1-2026-10-27": -118.75487500000001,
+              "cs2-mglz-lgc-2026-10-27": -53.15162500000002,
+              "cs2-furia-tyloo-2026-10-27": 2.041624999999982,
+              "cs2-ast10-fnc-2026-10-27": -30.901500000000006,
+              "cs2-ts7-navi-2026-10-28": -42.53925,
+              "cs2-ice-nem-2026-10-27": -18.78150000000001
+            }
+          }
+        }
+      },
+      "rebound": {
+        "60": {
+          "gross": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 30,
+            "trades": 72,
+            "censored": 0,
+            "net_total": 209.00000000000006,
+            "gross_total": 209.00000000000006,
+            "fees_total": 0.0,
+            "net_per_trade": 2.9027777777777786,
+            "net_per_event": 12.294117647058826,
+            "event_bootstrap_95": [
+              -1.9448529411764675,
+              29.676470588235293
+            ],
+            "win_fraction": 0.5833333333333334,
+            "profit_factor": 1.9086956521739133,
+            "closed_equity_drawdown": 58.499999999999986,
+            "censored_zero_payout_total": 209.00000000000006,
+            "without_best_event_total": 95.50000000000006,
+            "positive_events": 10,
+            "negative_events": 6,
+            "exit_reasons": {
+              "take_profit": 30,
+              "stop_loss": 24,
+              "time_limit": 18
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 36.49999999999999,
+              "cs2-ice-mibr-2026-10-28": 3.000000000000009,
+              "cs2-ts7-mouz-2026-10-27": -0.49999999999999467,
+              "cs2-mglz-nemi1-2026-10-28": -31.500000000000004,
+              "cs2-mgc-big5-2026-10-27": -20.99999999999999,
+              "cs2-fnc-big5-2026-10-28": -8.999999999999996,
+              "cs2-tl1-furia-2026-10-28": 28.5,
+              "cs2-tl1-aur1-2026-10-27": 16.0,
+              "cs2-nem-ef1-2026-10-28": -7.499999999999998,
+              "cs2-vit-navi-2026-10-27": -28.0,
+              "cs2-ast10-mgc-2026-10-28": 47.5,
+              "cs2-mibr-ef1-2026-10-27": 113.5,
+              "cs2-mglz-lgc-2026-10-27": 2.0000000000000107,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": 14.5,
+              "cs2-ts7-navi-2026-10-28": 27.000000000000014,
+              "cs2-ice-nem-2026-10-27": 18.0
+            }
+          },
+          "fee_only": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 30,
+            "trades": 72,
+            "censored": 0,
+            "net_total": 52.13525000000005,
+            "gross_total": 209.00000000000006,
+            "fees_total": 156.86475,
+            "net_per_trade": 0.7241006944444451,
+            "net_per_event": 3.0667794117647085,
+            "event_bootstrap_95": [
+              -10.036716360294113,
+              19.57474338235293
+            ],
+            "win_fraction": 0.5,
+            "profit_factor": 1.174620964882129,
+            "closed_equity_drawdown": 72.72475,
+            "censored_zero_payout_total": 52.13525000000005,
+            "without_best_event_total": -48.298874999999946,
+            "positive_events": 8,
+            "negative_events": 8,
+            "exit_reasons": {
+              "take_profit": 30,
+              "stop_loss": 24,
+              "time_limit": 18
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 28.42187499999999,
+              "cs2-ice-mibr-2026-10-28": -6.72774999999999,
+              "cs2-ts7-mouz-2026-10-27": -7.568124999999994,
+              "cs2-mglz-nemi1-2026-10-28": -39.647125,
+              "cs2-mgc-big5-2026-10-27": -27.112499999999986,
+              "cs2-fnc-big5-2026-10-28": -19.804249999999996,
+              "cs2-tl1-furia-2026-10-28": 18.391625,
+              "cs2-tl1-aur1-2026-10-27": 2.0112499999999986,
+              "cs2-nem-ef1-2026-10-28": -18.839875000000003,
+              "cs2-vit-navi-2026-10-27": -36.05725,
+              "cs2-ast10-mgc-2026-10-28": 35.63037500000001,
+              "cs2-mibr-ef1-2026-10-27": 100.434125,
+              "cs2-mglz-lgc-2026-10-27": -12.125249999999994,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": 0.7953750000000026,
+              "cs2-ts7-navi-2026-10-28": 20.412000000000013,
+              "cs2-ice-nem-2026-10-27": 13.92075
+            }
+          },
+          "fee_halfcent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 30,
+            "trades": 72,
+            "censored": 0,
+            "net_total": -19.951250000000012,
+            "gross_total": 209.00000000000006,
+            "fees_total": 156.95125,
+            "net_per_trade": -0.27710069444444463,
+            "net_per_event": -1.1736029411764708,
+            "event_bootstrap_95": [
+              -14.489583272058827,
+              15.15144669117647
+            ],
+            "win_fraction": 0.4305555555555556,
+            "profit_factor": 0.940896896355722,
+            "closed_equity_drawdown": 81.69612500000002,
+            "censored_zero_payout_total": -19.951250000000012,
+            "without_best_event_total": -114.33012500000002,
+            "positive_events": 6,
+            "negative_events": 10,
+            "exit_reasons": {
+              "take_profit": 30,
+              "stop_loss": 24,
+              "time_limit": 18
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 24.404624999999992,
+              "cs2-ice-mibr-2026-10-28": -10.728249999999996,
+              "cs2-ts7-mouz-2026-10-27": -10.567124999999997,
+              "cs2-mglz-nemi1-2026-10-28": -43.63037500000001,
+              "cs2-mgc-big5-2026-10-27": -30.101249999999997,
+              "cs2-fnc-big5-2026-10-28": -24.798500000000004,
+              "cs2-tl1-furia-2026-10-28": 13.378625,
+              "cs2-tl1-aur1-2026-10-27": -3.995250000000002,
+              "cs2-nem-ef1-2026-10-28": -24.834625000000003,
+              "cs2-vit-navi-2026-10-27": -40.04225000000001,
+              "cs2-ast10-mgc-2026-10-28": 30.607875000000003,
+              "cs2-mibr-ef1-2026-10-27": 94.37887500000001,
+              "cs2-mglz-lgc-2026-10-27": -18.124749999999995,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": -5.2103750000000035,
+              "cs2-ts7-navi-2026-10-28": 17.399250000000006,
+              "cs2-ice-nem-2026-10-27": 11.912249999999998
+            }
+          },
+          "fee_onecent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 30,
+            "trades": 72,
+            "censored": 0,
+            "net_total": -92.00175000000009,
+            "gross_total": 209.00000000000006,
+            "fees_total": 157.00175,
+            "net_per_trade": -1.2778020833333346,
+            "net_per_event": -5.411867647058829,
+            "event_bootstrap_95": [
+              -18.42819466911765,
+              11.019836397058818
+            ],
+            "win_fraction": 0.4305555555555556,
+            "profit_factor": 0.7568865689320815,
+            "closed_equity_drawdown": 133.5656250000001,
+            "censored_zero_payout_total": -92.00175000000009,
+            "without_best_event_total": -180.32837500000005,
+            "positive_events": 6,
+            "negative_events": 10,
+            "exit_reasons": {
+              "take_profit": 30,
+              "stop_loss": 24,
+              "time_limit": 18
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 20.389374999999983,
+              "cs2-ice-mibr-2026-10-28": -14.726749999999997,
+              "cs2-ts7-mouz-2026-10-27": -13.564625,
+              "cs2-mglz-nemi1-2026-10-28": -47.61162500000001,
+              "cs2-mgc-big5-2026-10-27": -33.088499999999996,
+              "cs2-fnc-big5-2026-10-28": -29.790250000000007,
+              "cs2-tl1-furia-2026-10-28": 8.368124999999994,
+              "cs2-tl1-aur1-2026-10-27": -9.998750000000006,
+              "cs2-nem-ef1-2026-10-28": -30.826375000000006,
+              "cs2-vit-navi-2026-10-27": -44.02525000000001,
+              "cs2-ast10-mgc-2026-10-28": 25.587874999999993,
+              "cs2-mibr-ef1-2026-10-27": 88.32662499999998,
+              "cs2-mglz-lgc-2026-10-27": -24.121250000000003,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": -11.21312500000001,
+              "cs2-ts7-navi-2026-10-28": 14.388000000000005,
+              "cs2-ice-nem-2026-10-27": 9.904749999999995
+            }
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 30,
+            "trades": 68,
+            "censored": 0,
+            "net_total": 135.54999999999998,
+            "gross_total": 135.54999999999998,
+            "fees_total": 0.0,
+            "net_per_trade": 1.9933823529411763,
+            "net_per_event": 7.973529411764705,
+            "event_bootstrap_95": [
+              -6.318382352941179,
+              20.766176470588235
+            ],
+            "win_fraction": 0.6176470588235294,
+            "profit_factor": 1.5380035721373286,
+            "closed_equity_drawdown": 93.5,
+            "censored_zero_payout_total": 135.54999999999998,
+            "without_best_event_total": 94.54999999999998,
+            "positive_events": 11,
+            "negative_events": 5,
+            "exit_reasons": {
+              "take_profit": 30,
+              "stop_loss": 21,
+              "time_limit": 17
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 34.0,
+              "cs2-ice-mibr-2026-10-28": 41.0,
+              "cs2-ts7-mouz-2026-10-27": -28.0,
+              "cs2-mglz-nemi1-2026-10-28": -15.50000000000001,
+              "cs2-mgc-big5-2026-10-27": 35.0,
+              "cs2-fnc-big5-2026-10-28": -64.45,
+              "cs2-tl1-furia-2026-10-28": 28.0,
+              "cs2-tl1-aur1-2026-10-27": 13.0,
+              "cs2-nem-ef1-2026-10-28": 36.50000000000001,
+              "cs2-vit-navi-2026-10-27": -23.5,
+              "cs2-ast10-mgc-2026-10-28": 19.499999999999993,
+              "cs2-mibr-ef1-2026-10-27": 26.5,
+              "cs2-mglz-lgc-2026-10-27": 40.50000000000001,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": -32.50000000000001,
+              "cs2-ts7-navi-2026-10-28": 21.0,
+              "cs2-ice-nem-2026-10-27": 4.500000000000002
+            }
+          },
+          "fee_only": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 30,
+            "trades": 68,
+            "censored": 0,
+            "net_total": -9.939623750000017,
+            "gross_total": 135.54999999999998,
+            "fees_total": 145.48962375,
+            "net_per_trade": -0.14617093750000024,
+            "net_per_event": -0.5846837500000017,
+            "event_bootstrap_95": [
+              -15.720623452205889,
+              12.680819485294107
+            ],
+            "win_fraction": 0.4852941176470588,
+            "profit_factor": 0.9687445377272837,
+            "closed_equity_drawdown": 124.674625,
+            "censored_zero_payout_total": -9.939623750000017,
+            "without_best_event_total": -43.89962375000001,
+            "positive_events": 10,
+            "negative_events": 6,
+            "exit_reasons": {
+              "take_profit": 30,
+              "stop_loss": 21,
+              "time_limit": 17
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 27.7205,
+              "cs2-ice-mibr-2026-10-28": 33.959999999999994,
+              "cs2-ts7-mouz-2026-10-27": -36.26625,
+              "cs2-mglz-nemi1-2026-10-28": -23.687375000000014,
+              "cs2-mgc-big5-2026-10-27": 30.294500000000006,
+              "cs2-fnc-big5-2026-10-28": -74.02912375000001,
+              "cs2-tl1-furia-2026-10-28": 17.931250000000002,
+              "cs2-tl1-aur1-2026-10-27": -1.0892499999999998,
+              "cs2-nem-ef1-2026-10-28": 24.52012500000001,
+              "cs2-vit-navi-2026-10-27": -29.109875000000002,
+              "cs2-ast10-mgc-2026-10-28": 10.64387499999999,
+              "cs2-mibr-ef1-2026-10-27": 12.93412499999999,
+              "cs2-mglz-lgc-2026-10-27": 26.38212500000001,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": -44.92037500000001,
+              "cs2-ts7-navi-2026-10-28": 14.306750000000003,
+              "cs2-ice-nem-2026-10-27": 0.4693750000000012
+            }
+          },
+          "fee_halfcent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 30,
+            "trades": 68,
+            "censored": 0,
+            "net_total": -77.56300000000009,
+            "gross_total": 135.54999999999998,
+            "fees_total": 145.563,
+            "net_per_trade": -1.1406323529411777,
+            "net_per_event": -4.56252941176471,
+            "event_bootstrap_95": [
+              -19.6151049632353,
+              8.957542095588229
+            ],
+            "win_fraction": 0.4117647058823529,
+            "profit_factor": 0.7819761303173498,
+            "closed_equity_drawdown": 158.05312500000005,
+            "censored_zero_payout_total": -77.56300000000009,
+            "without_best_event_total": -108.50325000000008,
+            "positive_events": 9,
+            "negative_events": 7,
+            "exit_reasons": {
+              "take_profit": 30,
+              "stop_loss": 21,
+              "time_limit": 17
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 24.704250000000002,
+              "cs2-ice-mibr-2026-10-28": 30.940249999999992,
+              "cs2-ts7-mouz-2026-10-27": -40.251250000000006,
+              "cs2-mglz-nemi1-2026-10-28": -27.67862500000001,
+              "cs2-mgc-big5-2026-10-27": 28.277500000000003,
+              "cs2-fnc-big5-2026-10-28": -78.56825,
+              "cs2-tl1-furia-2026-10-28": 12.918499999999998,
+              "cs2-tl1-aur1-2026-10-27": -7.094250000000004,
+              "cs2-nem-ef1-2026-10-28": 18.50337500000001,
+              "cs2-vit-navi-2026-10-27": -32.09737500000001,
+              "cs2-ast10-mgc-2026-10-28": 6.635124999999986,
+              "cs2-mibr-ef1-2026-10-27": 6.922374999999986,
+              "cs2-mglz-lgc-2026-10-27": 20.363374999999998,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": -50.902625000000015,
+              "cs2-ts7-navi-2026-10-28": 11.297,
+              "cs2-ice-nem-2026-10-27": -1.5323750000000007
+            }
+          },
+          "fee_onecent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 30,
+            "trades": 68,
+            "censored": 0,
+            "net_total": -145.10512500000013,
+            "gross_total": 135.54999999999998,
+            "fees_total": 145.605125,
+            "net_per_trade": -2.1338988970588253,
+            "net_per_event": -8.535595588235301,
+            "event_bootstrap_95": [
+              -23.90578731617648,
+              5.343078676470585
+            ],
+            "win_fraction": 0.36764705882352944,
+            "profit_factor": 0.6336953650910252,
+            "closed_equity_drawdown": 204.53625000000017,
+            "censored_zero_payout_total": -145.10512500000013,
+            "without_best_event_total": -173.02712500000013,
+            "positive_events": 9,
+            "negative_events": 7,
+            "exit_reasons": {
+              "take_profit": 30,
+              "stop_loss": 21,
+              "time_limit": 17
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 21.6895,
+              "cs2-ice-mibr-2026-10-28": 27.92199999999999,
+              "cs2-ts7-mouz-2026-10-27": -44.23425,
+              "cs2-mglz-nemi1-2026-10-28": -31.667875000000016,
+              "cs2-mgc-big5-2026-10-27": 26.261500000000005,
+              "cs2-fnc-big5-2026-10-28": -83.057625,
+              "cs2-tl1-furia-2026-10-28": 7.908249999999987,
+              "cs2-tl1-aur1-2026-10-27": -13.096250000000008,
+              "cs2-nem-ef1-2026-10-28": 12.489625,
+              "cs2-vit-navi-2026-10-27": -35.083375000000004,
+              "cs2-ast10-mgc-2026-10-28": 2.628374999999984,
+              "cs2-mibr-ef1-2026-10-27": 0.9136249999999855,
+              "cs2-mglz-lgc-2026-10-27": 14.347624999999992,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": -56.88187500000002,
+              "cs2-ts7-navi-2026-10-28": 8.288749999999999,
+              "cs2-ice-nem-2026-10-27": -3.533125000000002
+            }
+          }
+        }
+      },
+      "pullback": {
+        "60": {
+          "gross": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 29,
+            "trades": 65,
+            "censored": 0,
+            "net_total": -92.50000000000006,
+            "gross_total": -92.50000000000006,
+            "fees_total": 0.0,
+            "net_per_trade": -1.423076923076924,
+            "net_per_event": -5.441176470588237,
+            "event_bootstrap_95": [
+              -20.55955882352941,
+              7.736764705882348
+            ],
+            "win_fraction": 0.4461538461538462,
+            "profit_factor": 0.7773766546329722,
+            "closed_equity_drawdown": 236.0,
+            "censored_zero_payout_total": -92.50000000000006,
+            "without_best_event_total": -140.00000000000006,
+            "positive_events": 8,
+            "negative_events": 8,
+            "exit_reasons": {
+              "take_profit": 24,
+              "stop_loss": 31,
+              "time_limit": 10
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 18.999999999999993,
+              "cs2-ice-mibr-2026-10-28": -19.499999999999986,
+              "cs2-ts7-mouz-2026-10-27": -17.999999999999993,
+              "cs2-mglz-nemi1-2026-10-28": 2.999999999999997,
+              "cs2-mgc-big5-2026-10-27": -26.49999999999999,
+              "cs2-fnc-big5-2026-10-28": 47.5,
+              "cs2-tl1-furia-2026-10-28": 4.499999999999993,
+              "cs2-tl1-aur1-2026-10-27": 1.9999999999999805,
+              "cs2-nem-ef1-2026-10-28": 8.499999999999982,
+              "cs2-vit-navi-2026-10-27": -2.500000000000007,
+              "cs2-ast10-mgc-2026-10-28": -11.500000000000004,
+              "cs2-mibr-ef1-2026-10-27": -10.500000000000004,
+              "cs2-mglz-lgc-2026-10-27": -99.5,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": 1.5,
+              "cs2-ts7-navi-2026-10-28": 27.999999999999996,
+              "cs2-ice-nem-2026-10-27": -18.500000000000007
+            }
+          },
+          "fee_only": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 29,
+            "trades": 65,
+            "censored": 0,
+            "net_total": -229.83012500000004,
+            "gross_total": -92.50000000000006,
+            "fees_total": 137.330125,
+            "net_per_trade": -3.5358480769230773,
+            "net_per_event": -13.519419117647063,
+            "event_bootstrap_95": [
+              -28.85466544117647,
+              0.25702996323528776
+            ],
+            "win_fraction": 0.4,
+            "profit_factor": 0.5385545328489594,
+            "closed_equity_drawdown": 320.00787500000007,
+            "censored_zero_payout_total": -229.83012500000004,
+            "without_best_event_total": -267.27925000000005,
+            "positive_events": 3,
+            "negative_events": 13,
+            "exit_reasons": {
+              "take_profit": 24,
+              "stop_loss": 31,
+              "time_limit": 10
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 16.06124999999999,
+              "cs2-ice-mibr-2026-10-28": -33.56962499999999,
+              "cs2-ts7-mouz-2026-10-27": -22.320499999999996,
+              "cs2-mglz-nemi1-2026-10-28": -8.89075,
+              "cs2-mgc-big5-2026-10-27": -34.54762499999999,
+              "cs2-fnc-big5-2026-10-28": 37.449124999999995,
+              "cs2-tl1-furia-2026-10-28": -5.578625000000006,
+              "cs2-tl1-aur1-2026-10-27": -8.003000000000018,
+              "cs2-nem-ef1-2026-10-28": -3.3213750000000175,
+              "cs2-vit-navi-2026-10-27": -9.517875000000005,
+              "cs2-ast10-mgc-2026-10-28": -18.021375,
+              "cs2-mibr-ef1-2026-10-27": -19.617125,
+              "cs2-mglz-lgc-2026-10-27": -112.48937500000001,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": -5.741875000000002,
+              "cs2-ts7-navi-2026-10-28": 21.055749999999996,
+              "cs2-ice-nem-2026-10-27": -22.777125000000005
+            }
+          },
+          "fee_halfcent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 29,
+            "trades": 65,
+            "censored": 0,
+            "net_total": -294.7676250000001,
+            "gross_total": -92.50000000000006,
+            "fees_total": 137.267625,
+            "net_per_trade": -4.53488653846154,
+            "net_per_event": -17.339272058823536,
+            "event_bootstrap_95": [
+              -33.129943198529425,
+              -3.6189777573529542
+            ],
+            "win_fraction": 0.38461538461538464,
+            "profit_factor": 0.45188115783298183,
+            "closed_equity_drawdown": 367.88612500000005,
+            "censored_zero_payout_total": -294.7676250000001,
+            "without_best_event_total": -327.1942500000001,
+            "positive_events": 3,
+            "negative_events": 13,
+            "exit_reasons": {
+              "take_profit": 24,
+              "stop_loss": 31,
+              "time_limit": 10
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 14.052249999999992,
+              "cs2-ice-mibr-2026-10-28": -39.55837499999999,
+              "cs2-ts7-mouz-2026-10-27": -24.310999999999996,
+              "cs2-mglz-nemi1-2026-10-28": -14.890750000000006,
+              "cs2-mgc-big5-2026-10-27": -38.53337499999999,
+              "cs2-fnc-big5-2026-10-28": 32.42662499999998,
+              "cs2-tl1-furia-2026-10-28": -10.579625000000014,
+              "cs2-tl1-aur1-2026-10-27": -13.00275000000002,
+              "cs2-nem-ef1-2026-10-28": -9.32412500000002,
+              "cs2-vit-navi-2026-10-27": -12.51587500000001,
+              "cs2-ast10-mgc-2026-10-28": -21.014875000000007,
+              "cs2-mibr-ef1-2026-10-27": -23.610875000000007,
+              "cs2-mglz-lgc-2026-10-27": -118.43812500000001,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": -8.741875,
+              "cs2-ts7-navi-2026-10-28": 18.042499999999997,
+              "cs2-ice-nem-2026-10-27": -24.767375000000005
+            }
+          },
+          "fee_onecent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 29,
+            "trades": 65,
+            "censored": 0,
+            "net_total": -359.67262500000015,
+            "gross_total": -92.50000000000006,
+            "fees_total": 137.17262499999998,
+            "net_per_trade": -5.533425000000002,
+            "net_per_event": -21.157213235294126,
+            "event_bootstrap_95": [
+              -37.4729724264706,
+              -7.134263602941189
+            ],
+            "win_fraction": 0.35384615384615387,
+            "profit_factor": 0.37902549478230335,
+            "closed_equity_drawdown": 415.7403750000002,
+            "censored_zero_payout_total": -359.67262500000015,
+            "without_best_event_total": -387.0792500000001,
+            "positive_events": 3,
+            "negative_events": 13,
+            "exit_reasons": {
+              "take_profit": 24,
+              "stop_loss": 31,
+              "time_limit": 10
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 12.044249999999991,
+              "cs2-ice-mibr-2026-10-28": -45.544125,
+              "cs2-ts7-mouz-2026-10-27": -26.3005,
+              "cs2-mglz-nemi1-2026-10-28": -20.88775000000001,
+              "cs2-mgc-big5-2026-10-27": -42.517125,
+              "cs2-fnc-big5-2026-10-28": 27.406624999999988,
+              "cs2-tl1-furia-2026-10-28": -15.578125000000025,
+              "cs2-tl1-aur1-2026-10-27": -18.00000000000003,
+              "cs2-nem-ef1-2026-10-28": -15.323875000000022,
+              "cs2-vit-navi-2026-10-27": -15.51237500000001,
+              "cs2-ast10-mgc-2026-10-28": -24.006875000000008,
+              "cs2-mibr-ef1-2026-10-27": -27.60262500000001,
+              "cs2-mglz-lgc-2026-10-27": -124.383875,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": -11.740375000000002,
+              "cs2-ts7-navi-2026-10-28": 15.030749999999994,
+              "cs2-ice-nem-2026-10-27": -26.756625000000007
+            }
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 28,
+            "trades": 61,
+            "censored": 0,
+            "net_total": 0.49999999999998157,
+            "gross_total": 0.49999999999998157,
+            "fees_total": 0.0,
+            "net_per_trade": 0.008196721311475108,
+            "net_per_event": 0.029411764705882353,
+            "event_bootstrap_95": [
+              -20.030882352941173,
+              13.97205882352941
+            ],
+            "win_fraction": 0.45901639344262296,
+            "profit_factor": 1.0013333333333332,
+            "closed_equity_drawdown": 186.5,
+            "censored_zero_payout_total": 0.49999999999998157,
+            "without_best_event_total": -47.50000000000002,
+            "positive_events": 8,
+            "negative_events": 8,
+            "exit_reasons": {
+              "stop_loss": 26,
+              "take_profit": 25,
+              "time_limit": 10
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 12.0,
+              "cs2-ice-mibr-2026-10-28": -6.999999999999981,
+              "cs2-ts7-mouz-2026-10-27": -2.0000000000000018,
+              "cs2-mglz-nemi1-2026-10-28": 29.499999999999986,
+              "cs2-mgc-big5-2026-10-27": 21.0,
+              "cs2-fnc-big5-2026-10-28": 4.0000000000000036,
+              "cs2-tl1-furia-2026-10-28": 48.0,
+              "cs2-tl1-aur1-2026-10-27": -3.0000000000000036,
+              "cs2-nem-ef1-2026-10-28": 21.5,
+              "cs2-vit-navi-2026-10-27": -4.000000000000014,
+              "cs2-ast10-mgc-2026-10-28": -1.999999999999993,
+              "cs2-mibr-ef1-2026-10-27": -0.5000000000000071,
+              "cs2-mglz-lgc-2026-10-27": -134.5,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": 34.5,
+              "cs2-ts7-navi-2026-10-28": 4.000000000000009,
+              "cs2-ice-nem-2026-10-27": -20.999999999999986
+            }
+          },
+          "fee_only": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 28,
+            "trades": 61,
+            "censored": 0,
+            "net_total": -123.77012500000002,
+            "gross_total": 0.49999999999998157,
+            "fees_total": 124.270125,
+            "net_per_trade": -2.0290184426229514,
+            "net_per_event": -7.280595588235296,
+            "event_bootstrap_95": [
+              -27.93813051470588,
+              7.1507417279411705
+            ],
+            "win_fraction": 0.3770491803278688,
+            "profit_factor": 0.7248924615564998,
+            "closed_equity_drawdown": 238.25362500000006,
+            "censored_zero_payout_total": -123.77012500000002,
+            "without_best_event_total": -162.622125,
+            "positive_events": 6,
+            "negative_events": 10,
+            "exit_reasons": {
+              "stop_loss": 26,
+              "take_profit": 25,
+              "time_limit": 10
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 10.65825,
+              "cs2-ice-mibr-2026-10-28": -20.63324999999998,
+              "cs2-ts7-mouz-2026-10-27": -6.229500000000002,
+              "cs2-mglz-nemi1-2026-10-28": 19.798124999999988,
+              "cs2-mgc-big5-2026-10-27": 14.693749999999998,
+              "cs2-fnc-big5-2026-10-28": -6.604249999999998,
+              "cs2-tl1-furia-2026-10-28": 38.85199999999999,
+              "cs2-tl1-aur1-2026-10-27": -11.512500000000001,
+              "cs2-nem-ef1-2026-10-28": 12.350374999999994,
+              "cs2-vit-navi-2026-10-27": -10.827500000000017,
+              "cs2-ast10-mgc-2026-10-28": -7.94024999999999,
+              "cs2-mibr-ef1-2026-10-27": -7.8191250000000085,
+              "cs2-mglz-lgc-2026-10-27": -146.91037500000002,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": 28.064625,
+              "cs2-ts7-navi-2026-10-28": -3.0342499999999877,
+              "cs2-ice-nem-2026-10-27": -26.676249999999985
+            }
+          },
+          "fee_halfcent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 28,
+            "trades": 61,
+            "censored": 0,
+            "net_total": -184.75512500000008,
+            "gross_total": 0.49999999999998157,
+            "fees_total": 124.255125,
+            "net_per_trade": -3.0287725409836077,
+            "net_per_event": -10.867948529411768,
+            "event_bootstrap_95": [
+              -31.9803362132353,
+              3.7094101102941135
+            ],
+            "win_fraction": 0.3442622950819672,
+            "profit_factor": 0.6219501714477473,
+            "closed_equity_drawdown": 265.1566250000001,
+            "censored_zero_payout_total": -184.75512500000008,
+            "without_best_event_total": -218.58437500000008,
+            "positive_events": 6,
+            "negative_events": 10,
+            "exit_reasons": {
+              "stop_loss": 26,
+              "take_profit": 25,
+              "time_limit": 10
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 9.652499999999998,
+              "cs2-ice-mibr-2026-10-28": -26.628249999999987,
+              "cs2-ts7-mouz-2026-10-27": -8.228000000000005,
+              "cs2-mglz-nemi1-2026-10-28": 14.784624999999984,
+              "cs2-mgc-big5-2026-10-27": 11.683999999999994,
+              "cs2-fnc-big5-2026-10-28": -11.605000000000004,
+              "cs2-tl1-furia-2026-10-28": 33.82924999999999,
+              "cs2-tl1-aur1-2026-10-27": -15.510000000000003,
+              "cs2-nem-ef1-2026-10-28": 6.341124999999991,
+              "cs2-vit-navi-2026-10-27": -13.82475000000002,
+              "cs2-ast10-mgc-2026-10-28": -10.938500000000001,
+              "cs2-mibr-ef1-2026-10-27": -10.818125000000004,
+              "cs2-mglz-lgc-2026-10-27": -152.84162500000002,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": 25.048124999999995,
+              "cs2-ts7-navi-2026-10-28": -6.035499999999992,
+              "cs2-ice-nem-2026-10-27": -29.66499999999999
+            }
+          },
+          "fee_onecent": {
+            "maps": 33,
+            "events": 17,
+            "maps_traded": 28,
+            "trades": 61,
+            "censored": 0,
+            "net_total": -245.70962500000013,
+            "gross_total": 0.49999999999998157,
+            "fees_total": 124.209625,
+            "net_per_trade": -4.028026639344264,
+            "net_per_event": -14.453507352941182,
+            "event_bootstrap_95": [
+              -35.860758639705885,
+              0.3163873161764597
+            ],
+            "win_fraction": 0.32786885245901637,
+            "profit_factor": 0.535514191829661,
+            "closed_equity_drawdown": 292.046125,
+            "censored_zero_payout_total": -245.70962500000013,
+            "without_best_event_total": -274.5186250000001,
+            "positive_events": 6,
+            "negative_events": 10,
+            "exit_reasons": {
+              "stop_loss": 26,
+              "take_profit": 25,
+              "time_limit": 10
+            },
+            "event_net": {
+              "cs2-nemi1-dendel-2026-10-27": 8.647249999999998,
+              "cs2-ice-mibr-2026-10-28": -32.62025,
+              "cs2-ts7-mouz-2026-10-27": -10.225500000000004,
+              "cs2-mglz-nemi1-2026-10-28": 9.77362499999998,
+              "cs2-mgc-big5-2026-10-27": 8.67574999999999,
+              "cs2-fnc-big5-2026-10-28": -16.603250000000006,
+              "cs2-tl1-furia-2026-10-28": 28.808999999999983,
+              "cs2-tl1-aur1-2026-10-27": -19.505500000000012,
+              "cs2-nem-ef1-2026-10-28": 0.33487499999998604,
+              "cs2-vit-navi-2026-10-27": -16.820500000000017,
+              "cs2-ast10-mgc-2026-10-28": -13.935250000000002,
+              "cs2-mibr-ef1-2026-10-27": -13.81562500000001,
+              "cs2-mglz-lgc-2026-10-27": -158.769875,
+              "cs2-furia-tyloo-2026-10-27": 0.0,
+              "cs2-ast10-fnc-2026-10-27": 22.033124999999995,
+              "cs2-ts7-navi-2026-10-28": -9.035249999999998,
+              "cs2-ice-nem-2026-10-27": -32.65224999999999
+            }
+          }
+        }
+      }
+    },
+    "validation": {
+      "momentum": {
+        "60": {
+          "gross": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 26,
+            "trades": 77,
+            "censored": 1,
+            "net_total": -152.5,
+            "gross_total": -152.5,
+            "fees_total": 0.0,
+            "net_per_trade": -1.9805194805194806,
+            "net_per_event": -11.73076923076923,
+            "event_bootstrap_95": [
+              -20.577884615384615,
+              -3.8057692307692315
+            ],
+            "win_fraction": 0.35064935064935066,
+            "profit_factor": 0.5226917057902973,
+            "closed_equity_drawdown": 175.5,
+            "censored_zero_payout_total": -198.0,
+            "without_best_event_total": -161.0,
+            "positive_events": 3,
+            "negative_events": 9,
+            "exit_reasons": {
+              "time_limit": 34,
+              "take_profit": 15,
+              "stop_loss": 27,
+              "price_gap": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": 5.000000000000004,
+              "cs2-big5-ef1-2026-10-29": -29.000000000000004,
+              "cs2-aur1-mouz-2026-10-29": 8.499999999999996,
+              "cs2-ef1-ast10-2026-10-29": 0.0,
+              "cs2-ice-ast10-2026-10-29": -10.499999999999998,
+              "cs2-bb3-furia-2026-10-29": -10.999999999999998,
+              "cs2-fut-nemi1-2026-10-29": -33.0,
+              "cs2-fnc-ef1-2026-10-30": -14.499999999999993,
+              "cs2-fnc-mibr-2026-10-29": -19.000000000000007,
+              "cs2-nemi1-vit-2026-10-30": -6.4999999999999964,
+              "cs2-mouz-furia-2026-10-30": -44.49999999999999,
+              "cs2-mibr-ef1-2026-10-30": 6.500000000000002,
+              "cs2-shin-isg-2026-10-30": -4.499999999999998
+            }
+          },
+          "fee_only": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 26,
+            "trades": 77,
+            "censored": 1,
+            "net_total": -323.407375,
+            "gross_total": -152.5,
+            "fees_total": 170.907375,
+            "net_per_trade": -4.20009577922078,
+            "net_per_event": -24.877490384615385,
+            "event_bootstrap_95": [
+              -34.591421394230764,
+              -15.962287019230768
+            ],
+            "win_fraction": 0.22077922077922077,
+            "profit_factor": 0.2751608452341764,
+            "closed_equity_drawdown": 331.80549999999994,
+            "censored_zero_payout_total": -367.66749999999996,
+            "without_best_event_total": -318.52825,
+            "positive_events": 0,
+            "negative_events": 13,
+            "exit_reasons": {
+              "time_limit": 34,
+              "take_profit": 15,
+              "stop_loss": 27,
+              "price_gap": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -6.953249999999995,
+              "cs2-big5-ef1-2026-10-29": -42.723000000000006,
+              "cs2-aur1-mouz-2026-10-29": -4.879125000000002,
+              "cs2-ef1-ast10-2026-10-29": -4.915749999999999,
+              "cs2-ice-ast10-2026-10-29": -24.271124999999994,
+              "cs2-bb3-furia-2026-10-29": -24.308249999999994,
+              "cs2-fut-nemi1-2026-10-29": -45.546,
+              "cs2-fnc-ef1-2026-10-30": -42.021124999999984,
+              "cs2-fnc-mibr-2026-10-29": -32.102250000000005,
+              "cs2-nemi1-vit-2026-10-30": -19.360375,
+              "cs2-mouz-furia-2026-10-30": -58.297375,
+              "cs2-mibr-ef1-2026-10-30": -7.817625,
+              "cs2-shin-isg-2026-10-30": -10.212124999999997
+            }
+          },
+          "fee_halfcent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 26,
+            "trades": 77,
+            "censored": 1,
+            "net_total": -400.31187500000004,
+            "gross_total": -152.5,
+            "fees_total": 170.81187500000001,
+            "net_per_trade": -5.19885551948052,
+            "net_per_event": -30.79322115384616,
+            "event_bootstrap_95": [
+              -41.381348798076914,
+              -21.339073557692316
+            ],
+            "win_fraction": 0.22077922077922077,
+            "profit_factor": 0.20888134288556562,
+            "closed_equity_drawdown": 407.70500000000004,
+            "censored_zero_payout_total": -444.07437500000003,
+            "without_best_event_total": -393.39662500000003,
+            "positive_events": 0,
+            "negative_events": 13,
+            "exit_reasons": {
+              "time_limit": 34,
+              "take_profit": 15,
+              "stop_loss": 27,
+              "price_gap": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -12.954249999999998,
+              "cs2-big5-ef1-2026-10-29": -48.70700000000001,
+              "cs2-aur1-mouz-2026-10-29": -10.881875000000008,
+              "cs2-ef1-ast10-2026-10-29": -6.915250000000001,
+              "cs2-ice-ast10-2026-10-29": -30.26437500000001,
+              "cs2-bb3-furia-2026-10-29": -30.301250000000007,
+              "cs2-fut-nemi1-2026-10-29": -51.528000000000006,
+              "cs2-fnc-ef1-2026-10-30": -54.01087499999999,
+              "cs2-fnc-mibr-2026-10-29": -38.09125000000002,
+              "cs2-nemi1-vit-2026-10-30": -25.355625000000003,
+              "cs2-mouz-furia-2026-10-30": -64.273625,
+              "cs2-mibr-ef1-2026-10-30": -13.81937500000001,
+              "cs2-shin-isg-2026-10-30": -13.209125000000002
+            }
+          },
+          "fee_onecent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 26,
+            "trades": 77,
+            "censored": 1,
+            "net_total": -477.1778750000001,
+            "gross_total": -152.5,
+            "fees_total": 170.677875,
+            "net_per_trade": -6.197115259740261,
+            "net_per_event": -36.7059903846154,
+            "event_bootstrap_95": [
+              -47.92749399038462,
+              -26.48311826923078
+            ],
+            "win_fraction": 0.22077922077922077,
+            "profit_factor": 0.15664141437014806,
+            "closed_equity_drawdown": 483.56650000000025,
+            "censored_zero_payout_total": -520.4430000000001,
+            "without_best_event_total": -468.2641250000001,
+            "positive_events": 0,
+            "negative_events": 13,
+            "exit_reasons": {
+              "time_limit": 34,
+              "take_profit": 15,
+              "stop_loss": 27,
+              "price_gap": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -18.952250000000006,
+              "cs2-big5-ef1-2026-10-29": -54.68800000000002,
+              "cs2-aur1-mouz-2026-10-29": -16.881625000000014,
+              "cs2-ef1-ast10-2026-10-29": -8.913750000000004,
+              "cs2-ice-ast10-2026-10-29": -36.25462500000001,
+              "cs2-bb3-furia-2026-10-29": -36.291250000000005,
+              "cs2-fut-nemi1-2026-10-29": -57.507000000000005,
+              "cs2-fnc-ef1-2026-10-30": -65.994625,
+              "cs2-fnc-mibr-2026-10-29": -44.07725000000002,
+              "cs2-nemi1-vit-2026-10-30": -31.347875000000016,
+              "cs2-mouz-furia-2026-10-30": -70.24687499999999,
+              "cs2-mibr-ef1-2026-10-30": -19.818125000000013,
+              "cs2-shin-isg-2026-10-30": -16.204625000000004
+            }
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 26,
+            "trades": 77,
+            "censored": 1,
+            "net_total": -243.5,
+            "gross_total": -243.5,
+            "fees_total": 0.0,
+            "net_per_trade": -3.1623376623376624,
+            "net_per_event": -18.73076923076923,
+            "event_bootstrap_95": [
+              -30.040384615384617,
+              -8.382692307692311
+            ],
+            "win_fraction": 0.2857142857142857,
+            "profit_factor": 0.40171990171990174,
+            "closed_equity_drawdown": 267.5,
+            "censored_zero_payout_total": -289.0,
+            "without_best_event_total": -256.0,
+            "positive_events": 2,
+            "negative_events": 10,
+            "exit_reasons": {
+              "time_limit": 33,
+              "stop_loss": 27,
+              "take_profit": 16,
+              "price_gap": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -21.000000000000007,
+              "cs2-big5-ef1-2026-10-29": -64.5,
+              "cs2-aur1-mouz-2026-10-29": 12.499999999999996,
+              "cs2-ef1-ast10-2026-10-29": 0.0,
+              "cs2-ice-ast10-2026-10-29": -1.0000000000000004,
+              "cs2-bb3-furia-2026-10-29": -6.500000000000005,
+              "cs2-fut-nemi1-2026-10-29": -26.5,
+              "cs2-fnc-ef1-2026-10-30": -14.500000000000002,
+              "cs2-fnc-mibr-2026-10-29": -35.0,
+              "cs2-nemi1-vit-2026-10-30": -43.5,
+              "cs2-mouz-furia-2026-10-30": 5.000000000000013,
+              "cs2-mibr-ef1-2026-10-30": -43.50000000000001,
+              "cs2-shin-isg-2026-10-30": -4.999999999999998
+            }
+          },
+          "fee_only": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 26,
+            "trades": 77,
+            "censored": 1,
+            "net_total": -411.837625,
+            "gross_total": -243.5,
+            "fees_total": 168.337625,
+            "net_per_trade": -5.348540584415584,
+            "net_per_event": -31.679817307692307,
+            "event_bootstrap_95": [
+              -43.55317668269232,
+              -20.96379951923077
+            ],
+            "win_fraction": 0.22077922077922077,
+            "profit_factor": 0.22893364366012428,
+            "closed_equity_drawdown": 411.83762499999995,
+            "censored_zero_payout_total": -456.09775,
+            "without_best_event_total": -411.01175,
+            "positive_events": 0,
+            "negative_events": 13,
+            "exit_reasons": {
+              "time_limit": 33,
+              "stop_loss": 27,
+              "take_profit": 16,
+              "price_gap": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -33.25775000000001,
+              "cs2-big5-ef1-2026-10-29": -78.446625,
+              "cs2-aur1-mouz-2026-10-29": -0.8258750000000052,
+              "cs2-ef1-ast10-2026-10-29": -4.915749999999999,
+              "cs2-ice-ast10-2026-10-29": -14.9675,
+              "cs2-bb3-furia-2026-10-29": -19.731625,
+              "cs2-fut-nemi1-2026-10-29": -38.551874999999995,
+              "cs2-fnc-ef1-2026-10-30": -41.41887500000001,
+              "cs2-fnc-mibr-2026-10-29": -47.8465,
+              "cs2-nemi1-vit-2026-10-30": -55.97237500000001,
+              "cs2-mouz-furia-2026-10-30": -8.526999999999987,
+              "cs2-mibr-ef1-2026-10-30": -56.696875000000006,
+              "cs2-shin-isg-2026-10-30": -10.678999999999998
+            }
+          },
+          "fee_halfcent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 26,
+            "trades": 77,
+            "censored": 1,
+            "net_total": -488.6966250000001,
+            "gross_total": -243.5,
+            "fees_total": 168.196625,
+            "net_per_trade": -6.346709415584417,
+            "net_per_event": -37.59204807692308,
+            "event_bootstrap_95": [
+              -49.56869230769232,
+              -25.77754495192308
+            ],
+            "win_fraction": 0.2077922077922078,
+            "profit_factor": 0.1775174344324597,
+            "closed_equity_drawdown": 488.6966250000004,
+            "censored_zero_payout_total": -532.4591250000001,
+            "without_best_event_total": -481.8660000000001,
+            "positive_events": 0,
+            "negative_events": 13,
+            "exit_reasons": {
+              "time_limit": 33,
+              "stop_loss": 27,
+              "take_profit": 16,
+              "price_gap": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -39.245750000000015,
+              "cs2-big5-ef1-2026-10-29": -84.412875,
+              "cs2-aur1-mouz-2026-10-29": -6.83062500000001,
+              "cs2-ef1-ast10-2026-10-29": -6.915250000000001,
+              "cs2-ice-ast10-2026-10-29": -20.96550000000001,
+              "cs2-bb3-furia-2026-10-29": -25.726875000000014,
+              "cs2-fut-nemi1-2026-10-29": -44.537125,
+              "cs2-fnc-ef1-2026-10-30": -53.408625,
+              "cs2-fnc-mibr-2026-10-29": -53.8275,
+              "cs2-nemi1-vit-2026-10-30": -61.94912500000001,
+              "cs2-mouz-furia-2026-10-30": -14.527999999999992,
+              "cs2-mibr-ef1-2026-10-30": -62.673625000000015,
+              "cs2-shin-isg-2026-10-30": -13.67575
+            }
+          },
+          "fee_onecent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 26,
+            "trades": 77,
+            "censored": 1,
+            "net_total": -565.5171250000001,
+            "gross_total": -243.5,
+            "fees_total": 168.017125,
+            "net_per_trade": -7.344378246753248,
+            "net_per_event": -43.50131730769231,
+            "event_bootstrap_95": [
+              -56.39206322115385,
+              -30.975123798076933
+            ],
+            "win_fraction": 0.19480519480519481,
+            "profit_factor": 0.13705823974748838,
+            "closed_equity_drawdown": 565.5171250000003,
+            "censored_zero_payout_total": -608.7822500000001,
+            "without_best_event_total": -556.603375,
+            "positive_events": 0,
+            "negative_events": 13,
+            "exit_reasons": {
+              "time_limit": 33,
+              "stop_loss": 27,
+              "take_profit": 16,
+              "price_gap": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -45.230750000000015,
+              "cs2-big5-ef1-2026-10-29": -90.376125,
+              "cs2-aur1-mouz-2026-10-29": -12.832375000000013,
+              "cs2-ef1-ast10-2026-10-29": -8.913750000000004,
+              "cs2-ice-ast10-2026-10-29": -26.960500000000014,
+              "cs2-bb3-furia-2026-10-29": -31.719125000000016,
+              "cs2-fut-nemi1-2026-10-29": -50.519375,
+              "cs2-fnc-ef1-2026-10-30": -65.39237500000002,
+              "cs2-fnc-mibr-2026-10-29": -59.80550000000001,
+              "cs2-nemi1-vit-2026-10-30": -67.92287500000002,
+              "cs2-mouz-furia-2026-10-30": -20.525999999999996,
+              "cs2-mibr-ef1-2026-10-30": -68.64737500000001,
+              "cs2-shin-isg-2026-10-30": -16.671000000000006
+            }
+          }
+        }
+      },
+      "rebound": {
+        "60": {
+          "gross": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 25,
+            "trades": 61,
+            "censored": 0,
+            "net_total": 68.14999999999998,
+            "gross_total": 68.14999999999998,
+            "fees_total": 0.0,
+            "net_per_trade": 1.117213114754098,
+            "net_per_event": 5.2423076923076914,
+            "event_bootstrap_95": [
+              -9.011826923076923,
+              19.404615384615383
+            ],
+            "win_fraction": 0.5081967213114754,
+            "profit_factor": 1.260512232415902,
+            "closed_equity_drawdown": 103.35,
+            "censored_zero_payout_total": 68.14999999999998,
+            "without_best_event_total": 15.649999999999977,
+            "positive_events": 6,
+            "negative_events": 6,
+            "exit_reasons": {
+              "take_profit": 25,
+              "stop_loss": 29,
+              "time_limit": 7
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": 21.999999999999993,
+              "cs2-big5-ef1-2026-10-29": 52.5,
+              "cs2-aur1-mouz-2026-10-29": -15.500000000000007,
+              "cs2-ef1-ast10-2026-10-29": -21.500000000000004,
+              "cs2-ice-ast10-2026-10-29": -14.59999999999999,
+              "cs2-bb3-furia-2026-10-29": 15.749999999999996,
+              "cs2-fut-nemi1-2026-10-29": 43.499999999999986,
+              "cs2-fnc-ef1-2026-10-30": 20.0,
+              "cs2-fnc-mibr-2026-10-29": 29.0,
+              "cs2-nemi1-vit-2026-10-30": -12.999999999999982,
+              "cs2-mouz-furia-2026-10-30": -46.0,
+              "cs2-mibr-ef1-2026-10-30": -4.000000000000004,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_only": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 25,
+            "trades": 61,
+            "censored": 0,
+            "net_total": -62.85938625000002,
+            "gross_total": 68.14999999999998,
+            "fees_total": 131.00938625,
+            "net_per_trade": -1.030481741803279,
+            "net_per_event": -4.835337403846155,
+            "event_bootstrap_95": [
+              -19.162902747596153,
+              8.956857396634614
+            ],
+            "win_fraction": 0.4098360655737705,
+            "profit_factor": 0.8093855639373373,
+            "closed_equity_drawdown": 184.04176125,
+            "censored_zero_payout_total": -62.85938625000002,
+            "without_best_event_total": -103.79251125000002,
+            "positive_events": 6,
+            "negative_events": 6,
+            "exit_reasons": {
+              "take_profit": 25,
+              "stop_loss": 29,
+              "time_limit": 7
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": 8.762999999999993,
+              "cs2-big5-ef1-2026-10-29": 40.933125000000004,
+              "cs2-aur1-mouz-2026-10-29": -23.52512500000001,
+              "cs2-ef1-ast10-2026-10-29": -26.051125000000006,
+              "cs2-ice-ast10-2026-10-29": -27.20255749999999,
+              "cs2-bb3-furia-2026-10-29": 11.684421249999998,
+              "cs2-fut-nemi1-2026-10-29": 29.749624999999988,
+              "cs2-fnc-ef1-2026-10-30": 1.4014999999999969,
+              "cs2-fnc-mibr-2026-10-29": 15.855,
+              "cs2-nemi1-vit-2026-10-30": -24.43274999999998,
+              "cs2-mouz-furia-2026-10-30": -59.974500000000006,
+              "cs2-mibr-ef1-2026-10-30": -10.060000000000006,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_halfcent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 25,
+            "trades": 61,
+            "censored": 0,
+            "net_total": -123.87821125000008,
+            "gross_total": 68.14999999999998,
+            "fees_total": 131.02821125,
+            "net_per_trade": -2.030790348360657,
+            "net_per_event": -9.52909317307693,
+            "event_bootstrap_95": [
+              -23.908778632211543,
+              3.9731748485576817
+            ],
+            "win_fraction": 0.4098360655737705,
+            "profit_factor": 0.6611974191255955,
+            "closed_equity_drawdown": 221.98058625000004,
+            "censored_zero_payout_total": -123.87821125000008,
+            "without_best_event_total": -159.7863362500001,
+            "positive_events": 5,
+            "negative_events": 7,
+            "exit_reasons": {
+              "take_profit": 25,
+              "stop_loss": 29,
+              "time_limit": 7
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": 2.753499999999983,
+              "cs2-big5-ef1-2026-10-29": 35.908125,
+              "cs2-aur1-mouz-2026-10-29": -27.51637500000001,
+              "cs2-ef1-ast10-2026-10-29": -28.039875000000006,
+              "cs2-ice-ast10-2026-10-29": -33.1937575,
+              "cs2-bb3-furia-2026-10-29": 9.677046249999997,
+              "cs2-fut-nemi1-2026-10-29": 23.729374999999983,
+              "cs2-fnc-ef1-2026-10-30": -8.606000000000005,
+              "cs2-fnc-mibr-2026-10-29": 9.841999999999992,
+              "cs2-nemi1-vit-2026-10-30": -29.42499999999999,
+              "cs2-mouz-furia-2026-10-30": -65.95000000000002,
+              "cs2-mibr-ef1-2026-10-30": -13.057250000000005,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_onecent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 25,
+            "trades": 61,
+            "censored": 0,
+            "net_total": -184.8665362500001,
+            "gross_total": 68.14999999999998,
+            "fees_total": 131.01653625,
+            "net_per_trade": -3.0305989549180348,
+            "net_per_event": -14.220502788461546,
+            "event_bootstrap_95": [
+              -28.741458576923087,
+              -0.9021953293269345
+            ],
+            "win_fraction": 0.4098360655737705,
+            "profit_factor": 0.5395377524501774,
+            "closed_equity_drawdown": 259.90041125000005,
+            "censored_zero_payout_total": -184.8665362500001,
+            "without_best_event_total": -215.75216125000009,
+            "positive_events": 4,
+            "negative_events": 8,
+            "exit_reasons": {
+              "take_profit": 25,
+              "stop_loss": 29,
+              "time_limit": 7
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -3.2530000000000188,
+              "cs2-big5-ef1-2026-10-29": 30.88562499999999,
+              "cs2-aur1-mouz-2026-10-29": -31.50562500000001,
+              "cs2-ef1-ast10-2026-10-29": -30.027625,
+              "cs2-ice-ast10-2026-10-29": -39.18195750000001,
+              "cs2-bb3-furia-2026-10-29": 7.6706712499999945,
+              "cs2-fut-nemi1-2026-10-29": 17.71212499999998,
+              "cs2-fnc-ef1-2026-10-30": -18.608500000000017,
+              "cs2-fnc-mibr-2026-10-29": 3.83199999999999,
+              "cs2-nemi1-vit-2026-10-30": -34.41474999999999,
+              "cs2-mouz-furia-2026-10-30": -71.92250000000001,
+              "cs2-mibr-ef1-2026-10-30": -16.053000000000004,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 25,
+            "trades": 60,
+            "censored": 0,
+            "net_total": 110.85000000000004,
+            "gross_total": 110.85000000000004,
+            "fees_total": 0.0,
+            "net_per_trade": 1.8475000000000006,
+            "net_per_event": 8.52692307692308,
+            "event_bootstrap_95": [
+              -10.70480769230769,
+              27.413173076923076
+            ],
+            "win_fraction": 0.5333333333333333,
+            "profit_factor": 1.3268947213211444,
+            "closed_equity_drawdown": 112.5,
+            "censored_zero_payout_total": 110.85000000000004,
+            "without_best_event_total": 33.85000000000004,
+            "positive_events": 7,
+            "negative_events": 5,
+            "exit_reasons": {
+              "take_profit": 27,
+              "stop_loss": 26,
+              "time_limit": 7
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": 23.999999999999986,
+              "cs2-big5-ef1-2026-10-29": -21.999999999999986,
+              "cs2-aur1-mouz-2026-10-29": 1.5000000000000004,
+              "cs2-ef1-ast10-2026-10-29": 77.0,
+              "cs2-ice-ast10-2026-10-29": -8.599999999999984,
+              "cs2-bb3-furia-2026-10-29": 54.95000000000001,
+              "cs2-fut-nemi1-2026-10-29": 15.500000000000004,
+              "cs2-fnc-ef1-2026-10-30": 53.5,
+              "cs2-fnc-mibr-2026-10-29": 10.500000000000014,
+              "cs2-nemi1-vit-2026-10-30": -2.0000000000000044,
+              "cs2-mouz-furia-2026-10-30": -49.5,
+              "cs2-mibr-ef1-2026-10-30": -44.0,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_only": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 25,
+            "trades": 60,
+            "censored": 0,
+            "net_total": -17.362928749999963,
+            "gross_total": 110.85000000000004,
+            "fees_total": 128.21292875,
+            "net_per_trade": -0.2893821458333327,
+            "net_per_event": -1.3356099038461506,
+            "event_bootstrap_95": [
+              -21.679148519230765,
+              19.167807379807694
+            ],
+            "win_fraction": 0.4666666666666667,
+            "profit_factor": 0.9569208945981241,
+            "closed_equity_drawdown": 132.666625,
+            "censored_zero_payout_total": -17.362928749999963,
+            "without_best_event_total": -90.42642874999997,
+            "positive_events": 5,
+            "negative_events": 7,
+            "exit_reasons": {
+              "take_profit": 27,
+              "stop_loss": 26,
+              "time_limit": 7
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": 11.073249999999984,
+              "cs2-big5-ef1-2026-10-29": -33.49049999999999,
+              "cs2-aur1-mouz-2026-10-29": -6.586624999999998,
+              "cs2-ef1-ast10-2026-10-29": 73.0635,
+              "cs2-ice-ast10-2026-10-29": -22.512569999999986,
+              "cs2-bb3-furia-2026-10-29": 51.21876625000001,
+              "cs2-fut-nemi1-2026-10-29": 1.8201250000000062,
+              "cs2-fnc-ef1-2026-10-30": 36.805125000000004,
+              "cs2-fnc-mibr-2026-10-29": -2.580374999999986,
+              "cs2-nemi1-vit-2026-10-30": -13.358999999999998,
+              "cs2-mouz-furia-2026-10-30": -63.297374999999995,
+              "cs2-mibr-ef1-2026-10-30": -49.517250000000004,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_halfcent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 25,
+            "trades": 60,
+            "censored": 0,
+            "net_total": -77.40335375000001,
+            "gross_total": 110.85000000000004,
+            "fees_total": 128.25335375,
+            "net_per_trade": -1.2900558958333335,
+            "net_per_event": -5.954104134615386,
+            "event_bootstrap_95": [
+              -26.45451463461539,
+              14.960400127403837
+            ],
+            "win_fraction": 0.43333333333333335,
+            "profit_factor": 0.8220556392504067,
+            "closed_equity_drawdown": 144.535,
+            "censored_zero_payout_total": -77.40335375000001,
+            "without_best_event_total": -148.42885375,
+            "positive_events": 4,
+            "negative_events": 8,
+            "exit_reasons": {
+              "take_profit": 27,
+              "stop_loss": 26,
+              "time_limit": 7
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": 5.0627499999999745,
+              "cs2-big5-ef1-2026-10-29": -38.47825,
+              "cs2-aur1-mouz-2026-10-29": -10.586375000000004,
+              "cs2-ef1-ast10-2026-10-29": 71.0255,
+              "cs2-ice-ast10-2026-10-29": -28.50676999999998,
+              "cs2-bb3-furia-2026-10-29": 49.19179125000001,
+              "cs2-fut-nemi1-2026-10-29": -4.186124999999997,
+              "cs2-fnc-ef1-2026-10-30": 27.780624999999997,
+              "cs2-fnc-mibr-2026-10-29": -8.584124999999995,
+              "cs2-nemi1-vit-2026-10-30": -18.35675,
+              "cs2-mouz-furia-2026-10-30": -69.27112500000001,
+              "cs2-mibr-ef1-2026-10-30": -52.4945,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_onecent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 25,
+            "trades": 60,
+            "censored": 0,
+            "net_total": -137.4137787500001,
+            "gross_total": 110.85000000000004,
+            "fees_total": 128.26377875,
+            "net_per_trade": -2.290229645833335,
+            "net_per_event": -10.570290673076927,
+            "event_bootstrap_95": [
+              -31.03530607692309,
+              10.952709798076917
+            ],
+            "win_fraction": 0.4166666666666667,
+            "profit_factor": 0.7071768306463995,
+            "closed_equity_drawdown": 180.65327875000008,
+            "censored_zero_payout_total": -137.4137787500001,
+            "without_best_event_total": -206.40227875000008,
+            "positive_events": 3,
+            "negative_events": 9,
+            "exit_reasons": {
+              "take_profit": 27,
+              "stop_loss": 26,
+              "time_limit": 7
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -0.9447500000000328,
+              "cs2-big5-ef1-2026-10-29": -43.463499999999996,
+              "cs2-aur1-mouz-2026-10-29": -14.584125000000006,
+              "cs2-ef1-ast10-2026-10-29": 68.98849999999999,
+              "cs2-ice-ast10-2026-10-29": -34.497969999999995,
+              "cs2-bb3-furia-2026-10-29": 47.165816250000006,
+              "cs2-fut-nemi1-2026-10-29": -10.189374999999998,
+              "cs2-fnc-ef1-2026-10-30": 18.76062499999999,
+              "cs2-fnc-mibr-2026-10-29": -14.584875,
+              "cs2-nemi1-vit-2026-10-30": -23.352000000000004,
+              "cs2-mouz-furia-2026-10-30": -75.24187500000002,
+              "cs2-mibr-ef1-2026-10-30": -55.47025000000001,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          }
+        }
+      },
+      "pullback": {
+        "60": {
+          "gross": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 24,
+            "trades": 53,
+            "censored": 0,
+            "net_total": -61.59999999999998,
+            "gross_total": -61.59999999999998,
+            "fees_total": 0.0,
+            "net_per_trade": -1.1622641509433957,
+            "net_per_event": -4.738461538461537,
+            "event_bootstrap_95": [
+              -17.697115384615383,
+              9.035192307692308
+            ],
+            "win_fraction": 0.4716981132075472,
+            "profit_factor": 0.8355579284570209,
+            "closed_equity_drawdown": 142.0,
+            "censored_zero_payout_total": -61.59999999999998,
+            "without_best_event_total": -101.09999999999998,
+            "positive_events": 5,
+            "negative_events": 7,
+            "exit_reasons": {
+              "take_profit": 23,
+              "stop_loss": 29,
+              "time_limit": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -19.000000000000007,
+              "cs2-big5-ef1-2026-10-29": 39.5,
+              "cs2-aur1-mouz-2026-10-29": 7.499999999999996,
+              "cs2-ef1-ast10-2026-10-29": -20.49999999999999,
+              "cs2-ice-ast10-2026-10-29": 18.400000000000006,
+              "cs2-bb3-furia-2026-10-29": 39.000000000000014,
+              "cs2-fut-nemi1-2026-10-29": -25.5,
+              "cs2-fnc-ef1-2026-10-30": -32.99999999999999,
+              "cs2-fnc-mibr-2026-10-29": 5.4999999999999964,
+              "cs2-nemi1-vit-2026-10-30": -14.000000000000007,
+              "cs2-mouz-furia-2026-10-30": -29.999999999999993,
+              "cs2-mibr-ef1-2026-10-30": -29.5,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_only": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 24,
+            "trades": 53,
+            "censored": 0,
+            "net_total": -168.44680749999998,
+            "gross_total": -61.59999999999998,
+            "fees_total": 106.8468075,
+            "net_per_trade": -3.178241650943396,
+            "net_per_event": -12.95744673076923,
+            "event_bootstrap_95": [
+              -26.335134004807692,
+              1.0319309326923034
+            ],
+            "win_fraction": 0.4528301886792453,
+            "profit_factor": 0.6111890924436111,
+            "closed_equity_drawdown": 189.56975000000006,
+            "censored_zero_payout_total": -168.44680749999998,
+            "without_best_event_total": -201.3378075,
+            "positive_events": 4,
+            "negative_events": 8,
+            "exit_reasons": {
+              "take_profit": 23,
+              "stop_loss": 29,
+              "time_limit": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -25.908750000000012,
+              "cs2-big5-ef1-2026-10-29": 30.472875,
+              "cs2-aur1-mouz-2026-10-29": 5.990624999999995,
+              "cs2-ef1-ast10-2026-10-29": -27.31537499999999,
+              "cs2-ice-ast10-2026-10-29": 5.18444250000001,
+              "cs2-bb3-furia-2026-10-29": 32.89100000000001,
+              "cs2-fut-nemi1-2026-10-29": -39.18162499999999,
+              "cs2-fnc-ef1-2026-10-30": -45.661750000000005,
+              "cs2-fnc-mibr-2026-10-29": -5.2853750000000055,
+              "cs2-nemi1-vit-2026-10-30": -25.993500000000004,
+              "cs2-mouz-furia-2026-10-30": -39.56599999999999,
+              "cs2-mibr-ef1-2026-10-30": -34.073375000000006,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_halfcent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 24,
+            "trades": 53,
+            "censored": 0,
+            "net_total": -221.4027575,
+            "gross_total": -61.59999999999998,
+            "fees_total": 106.8027575,
+            "net_per_trade": -4.177410518867925,
+            "net_per_event": -17.030981346153848,
+            "event_bootstrap_95": [
+              -30.79870458173077,
+              -2.6961948269230795
+            ],
+            "win_fraction": 0.4528301886792453,
+            "profit_factor": 0.520816562775714,
+            "closed_equity_drawdown": 225.51838250000003,
+            "censored_zero_payout_total": -221.4027575,
+            "without_best_event_total": -250.2752575,
+            "positive_events": 3,
+            "negative_events": 9,
+            "exit_reasons": {
+              "take_profit": 23,
+              "stop_loss": 29,
+              "time_limit": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -28.89850000000001,
+              "cs2-big5-ef1-2026-10-29": 26.454124999999998,
+              "cs2-aur1-mouz-2026-10-29": 4.987124999999995,
+              "cs2-ef1-ast10-2026-10-29": -30.30437499999999,
+              "cs2-ice-ast10-2026-10-29": -0.8232574999999969,
+              "cs2-bb3-furia-2026-10-29": 28.872500000000006,
+              "cs2-fut-nemi1-2026-10-29": -45.16737499999999,
+              "cs2-fnc-ef1-2026-10-30": -53.643249999999995,
+              "cs2-fnc-mibr-2026-10-29": -10.286875000000016,
+              "cs2-nemi1-vit-2026-10-30": -31.985000000000014,
+              "cs2-mouz-furia-2026-10-30": -43.55,
+              "cs2-mibr-ef1-2026-10-30": -37.057875,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_onecent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 24,
+            "trades": 53,
+            "censored": 0,
+            "net_total": -273.38245750000004,
+            "gross_total": -61.59999999999998,
+            "fees_total": 106.78245749999999,
+            "net_per_trade": -5.158159575471699,
+            "net_per_event": -21.02941980769231,
+            "event_bootstrap_95": [
+              -35.46049552884615,
+              -6.338200658653852
+            ],
+            "win_fraction": 0.4528301886792453,
+            "profit_factor": 0.4419438882563206,
+            "closed_equity_drawdown": 276.4950825000001,
+            "censored_zero_payout_total": -273.38245750000004,
+            "without_best_event_total": -298.23845750000004,
+            "positive_events": 3,
+            "negative_events": 9,
+            "exit_reasons": {
+              "take_profit": 23,
+              "stop_loss": 29,
+              "time_limit": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -31.88675000000001,
+              "cs2-big5-ef1-2026-10-29": 22.43737499999999,
+              "cs2-aur1-mouz-2026-10-29": 3.984124999999994,
+              "cs2-ef1-ast10-2026-10-29": -33.291875,
+              "cs2-ice-ast10-2026-10-29": -6.827957500000004,
+              "cs2-bb3-furia-2026-10-29": 24.85600000000001,
+              "cs2-fut-nemi1-2026-10-29": -51.150125,
+              "cs2-fnc-ef1-2026-10-30": -61.145875000000004,
+              "cs2-fnc-mibr-2026-10-29": -15.285875000000011,
+              "cs2-nemi1-vit-2026-10-30": -37.973500000000016,
+              "cs2-mouz-furia-2026-10-30": -47.532,
+              "cs2-mibr-ef1-2026-10-30": -39.56600000000001,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 23,
+            "trades": 47,
+            "censored": 0,
+            "net_total": 45.14999999999998,
+            "gross_total": 45.14999999999998,
+            "fees_total": 0.0,
+            "net_per_trade": 0.9606382978723399,
+            "net_per_event": 3.4730769230769196,
+            "event_bootstrap_95": [
+              -12.800961538461545,
+              21.824711538461536
+            ],
+            "win_fraction": 0.5957446808510638,
+            "profit_factor": 1.1387736284001844,
+            "closed_equity_drawdown": 97.5,
+            "censored_zero_payout_total": 45.14999999999998,
+            "without_best_event_total": -15.350000000000009,
+            "positive_events": 8,
+            "negative_events": 4,
+            "exit_reasons": {
+              "take_profit": 19,
+              "stop_loss": 27,
+              "time_limit": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": 7.000000000000007,
+              "cs2-big5-ef1-2026-10-29": 60.499999999999986,
+              "cs2-aur1-mouz-2026-10-29": 10.999999999999998,
+              "cs2-ef1-ast10-2026-10-29": -48.00000000000001,
+              "cs2-ice-ast10-2026-10-29": 49.69999999999999,
+              "cs2-bb3-furia-2026-10-29": 7.400000000000002,
+              "cs2-fut-nemi1-2026-10-29": -33.00000000000001,
+              "cs2-fnc-ef1-2026-10-30": -26.450000000000003,
+              "cs2-fnc-mibr-2026-10-29": 6.5000000000000195,
+              "cs2-nemi1-vit-2026-10-30": 41.999999999999986,
+              "cs2-mouz-furia-2026-10-30": 3.9999999999999893,
+              "cs2-mibr-ef1-2026-10-30": -35.50000000000001,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_only": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 23,
+            "trades": 47,
+            "censored": 0,
+            "net_total": -46.313666250000026,
+            "gross_total": 45.14999999999998,
+            "fees_total": 91.46366625,
+            "net_per_trade": -0.9853971542553197,
+            "net_per_event": -3.5625897115384624,
+            "event_bootstrap_95": [
+              -19.81297113461538,
+              13.399261067307684
+            ],
+            "win_fraction": 0.5957446808510638,
+            "profit_factor": 0.8722444322241245,
+            "closed_equity_drawdown": 130.22274875000002,
+            "censored_zero_payout_total": -46.313666250000026,
+            "without_best_event_total": -98.19854125000002,
+            "positive_events": 6,
+            "negative_events": 6,
+            "exit_reasons": {
+              "take_profit": 19,
+              "stop_loss": 27,
+              "time_limit": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": 2.337750000000006,
+              "cs2-big5-ef1-2026-10-29": 51.884874999999994,
+              "cs2-aur1-mouz-2026-10-29": 9.554249999999998,
+              "cs2-ef1-ast10-2026-10-29": -51.5895,
+              "cs2-ice-ast10-2026-10-29": 36.00944499999999,
+              "cs2-bb3-furia-2026-10-29": 3.212387500000002,
+              "cs2-fut-nemi1-2026-10-29": -43.7225,
+              "cs2-fnc-ef1-2026-10-30": -39.44762375,
+              "cs2-fnc-mibr-2026-10-29": -4.323874999999982,
+              "cs2-nemi1-vit-2026-10-30": 31.21549999999999,
+              "cs2-mouz-furia-2026-10-30": -2.556250000000013,
+              "cs2-mibr-ef1-2026-10-30": -38.88812500000001,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_halfcent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 23,
+            "trades": 47,
+            "censored": 0,
+            "net_total": -92.89709250000007,
+            "gross_total": 45.14999999999998,
+            "fees_total": 91.4970925,
+            "net_per_trade": -1.976533882978725,
+            "net_per_event": -7.1459301923076985,
+            "event_bootstrap_95": [
+              -23.465091673076927,
+              9.883324865384603
+            ],
+            "win_fraction": 0.574468085106383,
+            "profit_factor": 0.7565282560521246,
+            "closed_equity_drawdown": 151.74437500000005,
+            "censored_zero_payout_total": -92.89709250000007,
+            "without_best_event_total": -140.75271750000005,
+            "positive_events": 6,
+            "negative_events": 6,
+            "exit_reasons": {
+              "take_profit": 19,
+              "stop_loss": 27,
+              "time_limit": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": 0.3347500000000041,
+              "cs2-big5-ef1-2026-10-29": 47.855624999999975,
+              "cs2-aur1-mouz-2026-10-29": 8.548999999999998,
+              "cs2-ef1-ast10-2026-10-29": -53.56500000000001,
+              "cs2-ice-ast10-2026-10-29": 29.98609499999999,
+              "cs2-bb3-furia-2026-10-29": 0.2094374999999964,
+              "cs2-fut-nemi1-2026-10-29": -48.70475000000001,
+              "cs2-fnc-ef1-2026-10-30": -47.00500000000002,
+              "cs2-fnc-mibr-2026-10-29": -9.325874999999987,
+              "cs2-nemi1-vit-2026-10-30": 25.19599999999999,
+              "cs2-mouz-furia-2026-10-30": -5.557500000000008,
+              "cs2-mibr-ef1-2026-10-30": -40.86987500000001,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          },
+          "fee_onecent": {
+            "maps": 26,
+            "events": 13,
+            "maps_traded": 23,
+            "trades": 47,
+            "censored": 0,
+            "net_total": -138.93489250000013,
+            "gross_total": 45.14999999999998,
+            "fees_total": 91.5348925,
+            "net_per_trade": -2.9560615425531944,
+            "net_per_event": -10.687299423076931,
+            "event_bootstrap_95": [
+              -27.289395591346167,
+              6.140947509615373
+            ],
+            "win_fraction": 0.5319148936170213,
+            "profit_factor": 0.6541766257007673,
+            "closed_equity_drawdown": 172.7328750000001,
+            "censored_zero_payout_total": -138.93489250000013,
+            "without_best_event_total": -182.7632675000001,
+            "positive_events": 4,
+            "negative_events": 8,
+            "exit_reasons": {
+              "take_profit": 19,
+              "stop_loss": 27,
+              "time_limit": 1
+            },
+            "event_net": {
+              "cs2-vit-navi-2026-10-29": -1.6672499999999966,
+              "cs2-big5-ef1-2026-10-29": 43.82837499999998,
+              "cs2-aur1-mouz-2026-10-29": 7.544249999999997,
+              "cs2-ef1-ast10-2026-10-29": -55.53950000000001,
+              "cs2-ice-ast10-2026-10-29": 23.96574499999998,
+              "cs2-bb3-furia-2026-10-29": -2.792012500000002,
+              "cs2-fut-nemi1-2026-10-29": -53.6845,
+              "cs2-fnc-ef1-2026-10-30": -54.51112500000001,
+              "cs2-fnc-mibr-2026-10-29": -14.325374999999994,
+              "cs2-nemi1-vit-2026-10-30": 19.179499999999976,
+              "cs2-mouz-furia-2026-10-30": -8.557250000000014,
+              "cs2-mibr-ef1-2026-10-30": -42.37575000000001,
+              "cs2-shin-isg-2026-10-30": 0.0
+            }
+          }
+        }
+      }
+    },
+    "late_seen": {
+      "momentum": {
+        "60": {
+          "gross": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_only": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_halfcent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_onecent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_only": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_halfcent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_onecent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          }
+        }
+      },
+      "rebound": {
+        "60": {
+          "gross": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_only": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_halfcent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_onecent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_only": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_halfcent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_onecent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          }
+        }
+      },
+      "pullback": {
+        "60": {
+          "gross": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_only": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_halfcent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_onecent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_only": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_halfcent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          },
+          "fee_onecent": {
+            "maps": 0,
+            "events": 0,
+            "maps_traded": 0,
+            "trades": 0,
+            "censored": 0,
+            "net_total": 0,
+            "gross_total": 0,
+            "fees_total": 0,
+            "net_per_trade": null,
+            "net_per_event": null,
+            "event_bootstrap_95": [
+              0.0,
+              0.0
+            ],
+            "win_fraction": null,
+            "profit_factor": null,
+            "closed_equity_drawdown": 0.0,
+            "censored_zero_payout_total": 0,
+            "without_best_event_total": 0,
+            "positive_events": 0,
+            "negative_events": 0,
+            "exit_reasons": {},
+            "event_net": {}
+          }
+        }
+      }
+    },
+    "new_test": {
+      "momentum": {
+        "60": {
+          "gross": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 19,
+            "trades": 57,
+            "censored": 0,
+            "net_total": -27.999999999999996,
+            "gross_total": -27.999999999999996,
+            "fees_total": 0.0,
+            "net_per_trade": -0.4912280701754385,
+            "net_per_event": -3.1111111111111103,
+            "event_bootstrap_95": [
+              -11.944444444444443,
+              5.837499999999997
+            ],
+            "win_fraction": 0.42105263157894735,
+            "profit_factor": 0.8348082595870207,
+            "closed_equity_drawdown": 64.5,
+            "censored_zero_payout_total": -27.999999999999996,
+            "without_best_event_total": -45.5,
+            "positive_events": 4,
+            "negative_events": 5,
+            "exit_reasons": {
+              "time_limit": 27,
+              "stop_loss": 20,
+              "take_profit": 10
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -1.0,
+              "cs2-hotu-1win-2026-11-01": -15.499999999999996,
+              "cs2-wc1-bar2-2026-11-01": -21.500000000000004,
+              "cs2-100t-bst-2026-11-01": 14.999999999999996,
+              "cs2-bst-bar2-2026-11-01": 2.500000000000014,
+              "cs2-vit-mouz-2026-10-31": 2.499999999999991,
+              "cs2-nrg-wc1-2026-10-31": -19.00000000000002,
+              "cs2-nemi1-furia-2026-10-31": -8.499999999999984,
+              "cs2-bst-pcy-2026-10-31": 17.500000000000007
+            }
+          },
+          "fee_only": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 19,
+            "trades": 57,
+            "censored": 0,
+            "net_total": -159.21075,
+            "gross_total": -27.999999999999996,
+            "fees_total": 131.21075,
+            "net_per_trade": -2.7931710526315787,
+            "net_per_event": -17.690083333333334,
+            "event_bootstrap_95": [
+              -28.472560069444445,
+              -7.349339583333339
+            ],
+            "win_fraction": 0.2807017543859649,
+            "profit_factor": 0.371847799766333,
+            "closed_equity_drawdown": 167.66600000000003,
+            "censored_zero_payout_total": -159.21075,
+            "without_best_event_total": -169.64612499999998,
+            "positive_events": 2,
+            "negative_events": 7,
+            "exit_reasons": {
+              "time_limit": 27,
+              "stop_loss": 20,
+              "take_profit": 10
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -12.471250000000003,
+              "cs2-hotu-1win-2026-11-01": -29.819374999999994,
+              "cs2-wc1-bar2-2026-11-01": -36.261625,
+              "cs2-100t-bst-2026-11-01": 1.6059999999999945,
+              "cs2-bst-bar2-2026-11-01": -11.305124999999993,
+              "cs2-vit-mouz-2026-10-31": -11.27762500000001,
+              "cs2-nrg-wc1-2026-10-31": -33.01900000000001,
+              "cs2-nemi1-furia-2026-10-31": -37.09812499999998,
+              "cs2-bst-pcy-2026-10-31": 10.435375000000006
+            }
+          },
+          "fee_halfcent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 19,
+            "trades": 57,
+            "censored": 0,
+            "net_total": -216.18250000000003,
+            "gross_total": -27.999999999999996,
+            "fees_total": 131.1825,
+            "net_per_trade": -3.7926754385964916,
+            "net_per_event": -24.020277777777782,
+            "event_bootstrap_95": [
+              -35.717528125,
+              -12.549843750000004
+            ],
+            "win_fraction": 0.24561403508771928,
+            "profit_factor": 0.2687687040142334,
+            "closed_equity_drawdown": 223.63300000000004,
+            "censored_zero_payout_total": -216.18250000000003,
+            "without_best_event_total": -223.60987500000005,
+            "positive_events": 1,
+            "negative_events": 8,
+            "exit_reasons": {
+              "time_limit": 27,
+              "stop_loss": 20,
+              "take_profit": 10
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -18.469250000000006,
+              "cs2-hotu-1win-2026-11-01": -35.810125,
+              "cs2-wc1-bar2-2026-11-01": -42.24937500000001,
+              "cs2-100t-bst-2026-11-01": -4.4000000000000075,
+              "cs2-bst-bar2-2026-11-01": -17.30487499999999,
+              "cs2-vit-mouz-2026-10-31": -17.277375000000013,
+              "cs2-nrg-wc1-2026-10-31": -39.008000000000024,
+              "cs2-nemi1-furia-2026-10-31": -49.090875,
+              "cs2-bst-pcy-2026-10-31": 7.427375000000001
+            }
+          },
+          "fee_onecent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 19,
+            "trades": 57,
+            "censored": 0,
+            "net_total": -273.1257500000001,
+            "gross_total": -27.999999999999996,
+            "fees_total": 131.12575,
+            "net_per_trade": -4.791679824561405,
+            "net_per_event": -30.34730555555556,
+            "event_bootstrap_95": [
+              -43.04151979166668,
+              -18.15898611111112
+            ],
+            "win_fraction": 0.17543859649122806,
+            "profit_factor": 0.19949485882938253,
+            "closed_equity_drawdown": 279.5720000000001,
+            "censored_zero_payout_total": -273.1257500000001,
+            "without_best_event_total": -277.5466250000001,
+            "positive_events": 1,
+            "negative_events": 8,
+            "exit_reasons": {
+              "time_limit": 27,
+              "stop_loss": 20,
+              "take_profit": 10
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -24.46425000000001,
+              "cs2-hotu-1win-2026-11-01": -41.797875000000005,
+              "cs2-wc1-bar2-2026-11-01": -48.234125000000006,
+              "cs2-100t-bst-2026-11-01": -10.403000000000011,
+              "cs2-bst-bar2-2026-11-01": -23.301625,
+              "cs2-vit-mouz-2026-10-31": -23.27412500000002,
+              "cs2-nrg-wc1-2026-10-31": -44.99400000000003,
+              "cs2-nemi1-furia-2026-10-31": -61.07762500000002,
+              "cs2-bst-pcy-2026-10-31": 4.420875
+            }
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 19,
+            "trades": 57,
+            "censored": 0,
+            "net_total": -61.50000000000003,
+            "gross_total": -61.50000000000003,
+            "fees_total": 0.0,
+            "net_per_trade": -1.078947368421053,
+            "net_per_event": -6.8333333333333375,
+            "event_bootstrap_95": [
+              -18.504166666666674,
+              5.7805555555555515
+            ],
+            "win_fraction": 0.42105263157894735,
+            "profit_factor": 0.7126168224299064,
+            "closed_equity_drawdown": 121.5,
+            "censored_zero_payout_total": -61.50000000000003,
+            "without_best_event_total": -95.50000000000003,
+            "positive_events": 2,
+            "negative_events": 7,
+            "exit_reasons": {
+              "time_limit": 27,
+              "stop_loss": 21,
+              "take_profit": 9
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": 33.99999999999999,
+              "cs2-hotu-1win-2026-11-01": -16.499999999999996,
+              "cs2-wc1-bar2-2026-11-01": -30.500000000000014,
+              "cs2-100t-bst-2026-11-01": -6.500000000000005,
+              "cs2-bst-bar2-2026-11-01": -31.499999999999993,
+              "cs2-vit-mouz-2026-10-31": -12.99999999999999,
+              "cs2-nrg-wc1-2026-10-31": -5.5000000000000195,
+              "cs2-nemi1-furia-2026-10-31": 12.500000000000007,
+              "cs2-bst-pcy-2026-10-31": -4.500000000000004
+            }
+          },
+          "fee_only": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 19,
+            "trades": 57,
+            "censored": 0,
+            "net_total": -191.89212500000002,
+            "gross_total": -61.50000000000003,
+            "fees_total": 130.392125,
+            "net_per_trade": -3.36652850877193,
+            "net_per_event": -21.321347222222222,
+            "event_bootstrap_95": [
+              -32.63803229166667,
+              -8.821835763888892
+            ],
+            "win_fraction": 0.24561403508771928,
+            "profit_factor": 0.37019710456010446,
+            "closed_equity_drawdown": 232.623125,
+            "censored_zero_payout_total": -191.89212500000002,
+            "without_best_event_total": -213.719375,
+            "positive_events": 1,
+            "negative_events": 8,
+            "exit_reasons": {
+              "time_limit": 27,
+              "stop_loss": 21,
+              "take_profit": 9
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": 21.827249999999992,
+              "cs2-hotu-1win-2026-11-01": -30.818124999999995,
+              "cs2-wc1-bar2-2026-11-01": -45.22087500000002,
+              "cs2-100t-bst-2026-11-01": -18.980125000000008,
+              "cs2-bst-bar2-2026-11-01": -45.58862499999999,
+              "cs2-vit-mouz-2026-10-31": -26.940749999999987,
+              "cs2-nrg-wc1-2026-10-31": -19.413125000000015,
+              "cs2-nemi1-furia-2026-10-31": -15.264624999999995,
+              "cs2-bst-pcy-2026-10-31": -11.493125000000003
+            }
+          },
+          "fee_halfcent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 19,
+            "trades": 57,
+            "censored": 0,
+            "net_total": -248.8471250000001,
+            "gross_total": -61.50000000000003,
+            "fees_total": 130.347125,
+            "net_per_trade": -4.365739035087721,
+            "net_per_event": -27.649680555555562,
+            "event_bootstrap_95": [
+              -38.666569444444455,
+              -15.646709722222244
+            ],
+            "win_fraction": 0.19298245614035087,
+            "profit_factor": 0.28861339471978364,
+            "closed_equity_drawdown": 284.55387500000006,
+            "censored_zero_payout_total": -248.8471250000001,
+            "without_best_event_total": -264.6588750000001,
+            "positive_events": 1,
+            "negative_events": 8,
+            "exit_reasons": {
+              "time_limit": 27,
+              "stop_loss": 21,
+              "take_profit": 9
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": 15.811749999999982,
+              "cs2-hotu-1win-2026-11-01": -36.808375000000005,
+              "cs2-wc1-bar2-2026-11-01": -51.20412500000002,
+              "cs2-100t-bst-2026-11-01": -24.975375000000007,
+              "cs2-bst-bar2-2026-11-01": -51.571374999999996,
+              "cs2-vit-mouz-2026-10-31": -32.93275,
+              "cs2-nrg-wc1-2026-10-31": -25.408875000000023,
+              "cs2-nemi1-furia-2026-10-31": -27.267875000000007,
+              "cs2-bst-pcy-2026-10-31": -14.490125000000006
+            }
+          },
+          "fee_onecent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 19,
+            "trades": 57,
+            "censored": 0,
+            "net_total": -305.7736250000001,
+            "gross_total": -61.50000000000003,
+            "fees_total": 130.273625,
+            "net_per_trade": -5.364449561403511,
+            "net_per_event": -33.97484722222224,
+            "event_bootstrap_95": [
+              -45.25371423611111,
+              -21.337568750000017
+            ],
+            "win_fraction": 0.19298245614035087,
+            "profit_factor": 0.22720672928988742,
+            "closed_equity_drawdown": 336.45862500000015,
+            "censored_zero_payout_total": -305.7736250000001,
+            "without_best_event_total": -315.57287500000007,
+            "positive_events": 1,
+            "negative_events": 8,
+            "exit_reasons": {
+              "time_limit": 27,
+              "stop_loss": 21,
+              "take_profit": 9
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": 9.799249999999981,
+              "cs2-hotu-1win-2026-11-01": -42.795625,
+              "cs2-wc1-bar2-2026-11-01": -57.18437500000003,
+              "cs2-100t-bst-2026-11-01": -30.96762500000002,
+              "cs2-bst-bar2-2026-11-01": -57.551125,
+              "cs2-vit-mouz-2026-10-31": -38.921749999999996,
+              "cs2-nrg-wc1-2026-10-31": -31.401625000000024,
+              "cs2-nemi1-furia-2026-10-31": -39.265125000000026,
+              "cs2-bst-pcy-2026-10-31": -17.48562500000001
+            }
+          }
+        }
+      },
+      "rebound": {
+        "60": {
+          "gross": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 49,
+            "censored": 0,
+            "net_total": 132.49999999999997,
+            "gross_total": 132.49999999999997,
+            "fees_total": 0.0,
+            "net_per_trade": 2.7040816326530606,
+            "net_per_event": 14.722222222222216,
+            "event_bootstrap_95": [
+              3.5527777777777723,
+              28.951388888888882
+            ],
+            "win_fraction": 0.5510204081632653,
+            "profit_factor": 1.9566787003610104,
+            "closed_equity_drawdown": 28.999999999999986,
+            "censored_zero_payout_total": 132.49999999999997,
+            "without_best_event_total": 72.99999999999997,
+            "positive_events": 7,
+            "negative_events": 2,
+            "exit_reasons": {
+              "time_limit": 11,
+              "take_profit": 20,
+              "stop_loss": 18
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": 27.99999999999999,
+              "cs2-hotu-1win-2026-11-01": 1.5000000000000107,
+              "cs2-wc1-bar2-2026-11-01": 2.4999999999999964,
+              "cs2-100t-bst-2026-11-01": 2.999999999999993,
+              "cs2-bst-bar2-2026-11-01": 31.999999999999993,
+              "cs2-vit-mouz-2026-10-31": 10.499999999999993,
+              "cs2-nrg-wc1-2026-10-31": 59.5,
+              "cs2-nemi1-furia-2026-10-31": -2.5000000000000053,
+              "cs2-bst-pcy-2026-10-31": -2.000000000000007
+            }
+          },
+          "fee_only": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 49,
+            "censored": 0,
+            "net_total": 22.80287499999997,
+            "gross_total": 132.49999999999997,
+            "fees_total": 109.697125,
+            "net_per_trade": 0.4653647959183667,
+            "net_per_event": 2.5336527777777755,
+            "event_bootstrap_95": [
+              -9.047025000000003,
+              16.570595138888887
+            ],
+            "win_fraction": 0.46938775510204084,
+            "profit_factor": 1.1175754411745749,
+            "closed_equity_drawdown": 39.99950000000001,
+            "censored_zero_payout_total": 22.80287499999997,
+            "without_best_event_total": -23.05625000000003,
+            "positive_events": 3,
+            "negative_events": 6,
+            "exit_reasons": {
+              "time_limit": 11,
+              "take_profit": 20,
+              "stop_loss": 18
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": 17.99374999999999,
+              "cs2-hotu-1win-2026-11-01": -12.052374999999987,
+              "cs2-wc1-bar2-2026-11-01": -9.656125000000001,
+              "cs2-100t-bst-2026-11-01": -9.347250000000006,
+              "cs2-bst-bar2-2026-11-01": 20.852249999999998,
+              "cs2-vit-mouz-2026-10-31": -1.4591250000000073,
+              "cs2-nrg-wc1-2026-10-31": 45.859125,
+              "cs2-nemi1-furia-2026-10-31": -20.276375,
+              "cs2-bst-pcy-2026-10-31": -9.111000000000006
+            }
+          },
+          "fee_halfcent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 49,
+            "censored": 0,
+            "net_total": -26.251125000000087,
+            "gross_total": 132.49999999999997,
+            "fees_total": 109.751125,
+            "net_per_trade": -0.5357372448979609,
+            "net_per_event": -2.9167916666666764,
+            "event_bootstrap_95": [
+              -14.650267708333345,
+              11.284402777777764
+            ],
+            "win_fraction": 0.4489795918367347,
+            "profit_factor": 0.881141535687422,
+            "closed_equity_drawdown": 57.59687500000008,
+            "censored_zero_payout_total": -26.251125000000087,
+            "without_best_event_total": -66.08200000000008,
+            "positive_events": 3,
+            "negative_events": 6,
+            "exit_reasons": {
+              "time_limit": 11,
+              "take_profit": 20,
+              "stop_loss": 18
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": 12.980999999999987,
+              "cs2-hotu-1win-2026-11-01": -18.051624999999998,
+              "cs2-wc1-bar2-2026-11-01": -14.656125000000008,
+              "cs2-100t-bst-2026-11-01": -15.347250000000018,
+              "cs2-bst-bar2-2026-11-01": 15.837499999999991,
+              "cs2-vit-mouz-2026-10-31": -6.463125000000012,
+              "cs2-nrg-wc1-2026-10-31": 39.830875,
+              "cs2-nemi1-furia-2026-10-31": -28.273125000000014,
+              "cs2-bst-pcy-2026-10-31": -12.109250000000012
+            }
+          },
+          "fee_onecent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 49,
+            "censored": 0,
+            "net_total": -75.28062500000011,
+            "gross_total": 132.49999999999997,
+            "fees_total": 109.780625,
+            "net_per_trade": -1.5363392857142881,
+            "net_per_event": -8.3645138888889,
+            "event_bootstrap_95": [
+              -20.659681944444458,
+              5.884753472222205
+            ],
+            "win_fraction": 0.40816326530612246,
+            "profit_factor": 0.6972353042904712,
+            "closed_equity_drawdown": 99.05900000000007,
+            "censored_zero_payout_total": -75.28062500000011,
+            "without_best_event_total": -109.08625000000009,
+            "positive_events": 3,
+            "negative_events": 6,
+            "exit_reasons": {
+              "time_limit": 11,
+              "take_profit": 20,
+              "stop_loss": 18
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": 7.970749999999983,
+              "cs2-hotu-1win-2026-11-01": -24.047874999999998,
+              "cs2-wc1-bar2-2026-11-01": -19.653625000000012,
+              "cs2-100t-bst-2026-11-01": -21.344250000000017,
+              "cs2-bst-bar2-2026-11-01": 10.825249999999984,
+              "cs2-vit-mouz-2026-10-31": -11.464625000000012,
+              "cs2-nrg-wc1-2026-10-31": 33.805624999999985,
+              "cs2-nemi1-furia-2026-10-31": -36.265875000000015,
+              "cs2-bst-pcy-2026-10-31": -15.106000000000009
+            }
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 46,
+            "censored": 0,
+            "net_total": 117.50000000000001,
+            "gross_total": 117.50000000000001,
+            "fees_total": 0.0,
+            "net_per_trade": 2.554347826086957,
+            "net_per_event": 13.05555555555556,
+            "event_bootstrap_95": [
+              -1.7277777777777814,
+              27.39166666666667
+            ],
+            "win_fraction": 0.5217391304347826,
+            "profit_factor": 1.7807308970099667,
+            "closed_equity_drawdown": 37.500000000000014,
+            "censored_zero_payout_total": 117.50000000000001,
+            "without_best_event_total": 71.5,
+            "positive_events": 7,
+            "negative_events": 2,
+            "exit_reasons": {
+              "time_limit": 8,
+              "stop_loss": 18,
+              "take_profit": 20
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": 13.000000000000012,
+              "cs2-hotu-1win-2026-11-01": 10.500000000000007,
+              "cs2-wc1-bar2-2026-11-01": 11.499999999999993,
+              "cs2-100t-bst-2026-11-01": 35.0,
+              "cs2-bst-bar2-2026-11-01": 29.000000000000014,
+              "cs2-vit-mouz-2026-10-31": -3.5000000000000018,
+              "cs2-nrg-wc1-2026-10-31": 46.000000000000014,
+              "cs2-nemi1-furia-2026-10-31": 13.499999999999996,
+              "cs2-bst-pcy-2026-10-31": -37.500000000000014
+            }
+          },
+          "fee_only": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 46,
+            "censored": 0,
+            "net_total": 16.839375000000025,
+            "gross_total": 117.50000000000001,
+            "fees_total": 100.660625,
+            "net_per_trade": 0.36607336956521797,
+            "net_per_event": 1.8710416666666687,
+            "event_bootstrap_95": [
+              -11.948148958333338,
+              15.804235763888892
+            ],
+            "win_fraction": 0.391304347826087,
+            "profit_factor": 1.0818038068843567,
+            "closed_equity_drawdown": 58.723125000000024,
+            "censored_zero_payout_total": 16.839375000000025,
+            "without_best_event_total": -18.207874999999987,
+            "positive_events": 4,
+            "negative_events": 5,
+            "exit_reasons": {
+              "time_limit": 8,
+              "stop_loss": 18,
+              "take_profit": 20
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": 2.2512500000000166,
+              "cs2-hotu-1win-2026-11-01": -2.7778749999999945,
+              "cs2-wc1-bar2-2026-11-01": -0.7498750000000061,
+              "cs2-100t-bst-2026-11-01": 23.63575,
+              "cs2-bst-bar2-2026-11-01": 18.15600000000001,
+              "cs2-vit-mouz-2026-10-31": -12.691875000000003,
+              "cs2-nrg-wc1-2026-10-31": 35.04725000000001,
+              "cs2-nemi1-furia-2026-10-31": -1.4698750000000036,
+              "cs2-bst-pcy-2026-10-31": -44.56137500000001
+            }
+          },
+          "fee_halfcent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 46,
+            "censored": 0,
+            "net_total": -29.207875000000023,
+            "gross_total": 117.50000000000001,
+            "fees_total": 100.707875,
+            "net_per_trade": -0.6349538043478266,
+            "net_per_event": -3.2453194444444478,
+            "event_bootstrap_95": [
+              -16.75190520833334,
+              10.269705208333328
+            ],
+            "win_fraction": 0.391304347826087,
+            "profit_factor": 0.8750581496694959,
+            "closed_equity_drawdown": 72.70587500000003,
+            "censored_zero_payout_total": -29.207875000000023,
+            "without_best_event_total": -59.23337500000003,
+            "positive_events": 3,
+            "negative_events": 6,
+            "exit_reasons": {
+              "time_limit": 8,
+              "stop_loss": 18,
+              "take_profit": 20
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -2.7539999999999942,
+              "cs2-hotu-1win-2026-11-01": -8.781624999999995,
+              "cs2-wc1-bar2-2026-11-01": -5.754375000000012,
+              "cs2-100t-bst-2026-11-01": 17.619750000000003,
+              "cs2-bst-bar2-2026-11-01": 13.142750000000001,
+              "cs2-vit-mouz-2026-10-31": -16.68912500000001,
+              "cs2-nrg-wc1-2026-10-31": 30.025500000000008,
+              "cs2-nemi1-furia-2026-10-31": -8.474875000000013,
+              "cs2-bst-pcy-2026-10-31": -47.54187500000002
+            }
+          },
+          "fee_onecent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 46,
+            "censored": 0,
+            "net_total": -75.23212500000007,
+            "gross_total": 117.50000000000001,
+            "fees_total": 100.732125,
+            "net_per_trade": -1.635480978260871,
+            "net_per_event": -8.359125000000008,
+            "event_bootstrap_95": [
+              -21.312122222222236,
+              5.031251736111105
+            ],
+            "win_fraction": 0.3695652173913043,
+            "profit_factor": 0.7128188611182683,
+            "closed_equity_drawdown": 97.82700000000004,
+            "censored_zero_payout_total": -75.23212500000007,
+            "without_best_event_total": -100.23837500000008,
+            "positive_events": 3,
+            "negative_events": 6,
+            "exit_reasons": {
+              "time_limit": 8,
+              "stop_loss": 18,
+              "take_profit": 20
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -7.756749999999993,
+              "cs2-hotu-1win-2026-11-01": -14.782375000000007,
+              "cs2-wc1-bar2-2026-11-01": -10.756375000000016,
+              "cs2-100t-bst-2026-11-01": 11.606749999999991,
+              "cs2-bst-bar2-2026-11-01": 8.131999999999994,
+              "cs2-vit-mouz-2026-10-31": -20.684375000000014,
+              "cs2-nrg-wc1-2026-10-31": 25.006250000000005,
+              "cs2-nemi1-furia-2026-10-31": -15.476375000000015,
+              "cs2-bst-pcy-2026-10-31": -50.52087500000002
+            }
+          }
+        }
+      },
+      "pullback": {
+        "60": {
+          "gross": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 38,
+            "censored": 0,
+            "net_total": -10.0,
+            "gross_total": -10.0,
+            "fees_total": 0.0,
+            "net_per_trade": -0.2631578947368421,
+            "net_per_event": -1.1111111111111134,
+            "event_bootstrap_95": [
+              -17.00416666666667,
+              17.169444444444437
+            ],
+            "win_fraction": 0.5,
+            "profit_factor": 0.9527186761229315,
+            "closed_equity_drawdown": 115.00000000000001,
+            "censored_zero_payout_total": -10.0,
+            "without_best_event_total": -56.499999999999986,
+            "positive_events": 2,
+            "negative_events": 7,
+            "exit_reasons": {
+              "stop_loss": 21,
+              "time_limit": 3,
+              "take_profit": 14
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -12.499999999999995,
+              "cs2-hotu-1win-2026-11-01": -21.499999999999996,
+              "cs2-wc1-bar2-2026-11-01": -0.5000000000000018,
+              "cs2-100t-bst-2026-11-01": -39.5,
+              "cs2-bst-bar2-2026-11-01": 46.499999999999986,
+              "cs2-vit-mouz-2026-10-31": -0.49999999999998934,
+              "cs2-nrg-wc1-2026-10-31": -18.500000000000014,
+              "cs2-nemi1-furia-2026-10-31": 38.49999999999999,
+              "cs2-bst-pcy-2026-10-31": -1.999999999999993
+            }
+          },
+          "fee_only": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 38,
+            "censored": 0,
+            "net_total": -94.815,
+            "gross_total": -10.0,
+            "fees_total": 84.815,
+            "net_per_trade": -2.4951315789473685,
+            "net_per_event": -10.535,
+            "event_bootstrap_95": [
+              -26.387309374999997,
+              6.670472916666653
+            ],
+            "win_fraction": 0.4473684210526316,
+            "profit_factor": 0.6330156272678892,
+            "closed_equity_drawdown": 160.9395,
+            "censored_zero_payout_total": -94.815,
+            "without_best_event_total": -130.62212499999998,
+            "positive_events": 2,
+            "negative_events": 7,
+            "exit_reasons": {
+              "stop_loss": 21,
+              "time_limit": 3,
+              "take_profit": 14
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -20.485874999999993,
+              "cs2-hotu-1win-2026-11-01": -35.180625,
+              "cs2-wc1-bar2-2026-11-01": -7.536375000000001,
+              "cs2-100t-bst-2026-11-01": -46.40187499999999,
+              "cs2-bst-bar2-2026-11-01": 35.807124999999985,
+              "cs2-vit-mouz-2026-10-31": -5.24112499999999,
+              "cs2-nrg-wc1-2026-10-31": -32.19537500000001,
+              "cs2-nemi1-furia-2026-10-31": 25.493374999999997,
+              "cs2-bst-pcy-2026-10-31": -9.07424999999999
+            }
+          },
+          "fee_halfcent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 38,
+            "censored": 0,
+            "net_total": -132.80050000000006,
+            "gross_total": -10.0,
+            "fees_total": 84.8005,
+            "net_per_trade": -3.4947500000000016,
+            "net_per_event": -14.755611111111117,
+            "event_bootstrap_95": [
+              -30.982250000000004,
+              2.4516510416666515
+            ],
+            "win_fraction": 0.39473684210526316,
+            "profit_factor": 0.5273938386161018,
+            "closed_equity_drawdown": 180.877,
+            "censored_zero_payout_total": -132.80050000000006,
+            "without_best_event_total": -163.58562500000005,
+            "positive_events": 2,
+            "negative_events": 7,
+            "exit_reasons": {
+              "stop_loss": 21,
+              "time_limit": 3,
+              "take_profit": 14
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -24.478625,
+              "cs2-hotu-1win-2026-11-01": -41.168375000000005,
+              "cs2-wc1-bar2-2026-11-01": -10.535375000000002,
+              "cs2-100t-bst-2026-11-01": -49.381375000000006,
+              "cs2-bst-bar2-2026-11-01": 30.785124999999983,
+              "cs2-vit-mouz-2026-10-31": -7.240374999999988,
+              "cs2-nrg-wc1-2026-10-31": -38.184625000000025,
+              "cs2-nemi1-furia-2026-10-31": 19.475624999999987,
+              "cs2-bst-pcy-2026-10-31": -12.072499999999994
+            }
+          },
+          "fee_onecent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 38,
+            "censored": 0,
+            "net_total": -170.76700000000005,
+            "gross_total": -10.0,
+            "fees_total": 84.767,
+            "net_per_trade": -4.493868421052633,
+            "net_per_event": -18.974111111111114,
+            "event_bootstrap_95": [
+              -34.98515486111111,
+              -2.167429166666676
+            ],
+            "win_fraction": 0.39473684210526316,
+            "profit_factor": 0.4380374568749024,
+            "closed_equity_drawdown": 200.80450000000002,
+            "censored_zero_payout_total": -170.76700000000005,
+            "without_best_event_total": -196.53262500000002,
+            "positive_events": 2,
+            "negative_events": 7,
+            "exit_reasons": {
+              "stop_loss": 21,
+              "time_limit": 3,
+              "take_profit": 14
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -28.469375,
+              "cs2-hotu-1win-2026-11-01": -47.153125,
+              "cs2-wc1-bar2-2026-11-01": -13.532875000000006,
+              "cs2-100t-bst-2026-11-01": -52.359375,
+              "cs2-bst-bar2-2026-11-01": 25.76562499999997,
+              "cs2-vit-mouz-2026-10-31": -9.238624999999992,
+              "cs2-nrg-wc1-2026-10-31": -44.170875000000024,
+              "cs2-nemi1-furia-2026-10-31": 13.460874999999987,
+              "cs2-bst-pcy-2026-10-31": -15.069249999999993
+            }
+          }
+        },
+        "120": {
+          "gross": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 37,
+            "censored": 0,
+            "net_total": 34.50000000000001,
+            "gross_total": 34.50000000000001,
+            "fees_total": 0.0,
+            "net_per_trade": 0.9324324324324327,
+            "net_per_event": 3.8333333333333357,
+            "event_bootstrap_95": [
+              -16.166666666666668,
+              25.004166666666663
+            ],
+            "win_fraction": 0.5405405405405406,
+            "profit_factor": 1.1965811965811965,
+            "closed_equity_drawdown": 67.5,
+            "censored_zero_payout_total": 34.50000000000001,
+            "without_best_event_total": -29.49999999999998,
+            "positive_events": 6,
+            "negative_events": 3,
+            "exit_reasons": {
+              "stop_loss": 18,
+              "time_limit": 4,
+              "take_profit": 15
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -44.99999999999999,
+              "cs2-hotu-1win-2026-11-01": 3.0000000000000053,
+              "cs2-wc1-bar2-2026-11-01": 19.999999999999996,
+              "cs2-100t-bst-2026-11-01": -38.5,
+              "cs2-bst-bar2-2026-11-01": 8.00000000000001,
+              "cs2-vit-mouz-2026-10-31": -15.000000000000002,
+              "cs2-nrg-wc1-2026-10-31": 23.0,
+              "cs2-nemi1-furia-2026-10-31": 63.999999999999986,
+              "cs2-bst-pcy-2026-10-31": 15.000000000000007
+            }
+          },
+          "fee_only": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 37,
+            "censored": 0,
+            "net_total": -43.820874999999994,
+            "gross_total": 34.50000000000001,
+            "fees_total": 78.320875,
+            "net_per_trade": -1.184347972972973,
+            "net_per_event": -4.868986111111111,
+            "event_bootstrap_95": [
+              -23.33644548611111,
+              15.083359722222218
+            ],
+            "win_fraction": 0.4594594594594595,
+            "profit_factor": 0.7957823275083681,
+            "closed_equity_drawdown": 108.63162499999999,
+            "censored_zero_payout_total": -43.820874999999994,
+            "without_best_event_total": -95.38662499999998,
+            "positive_events": 4,
+            "negative_events": 5,
+            "exit_reasons": {
+              "stop_loss": 18,
+              "time_limit": 4,
+              "take_profit": 15
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -52.20025,
+              "cs2-hotu-1win-2026-11-01": -10.218749999999996,
+              "cs2-wc1-bar2-2026-11-01": 13.412999999999997,
+              "cs2-100t-bst-2026-11-01": -44.383375,
+              "cs2-bst-bar2-2026-11-01": -0.4897499999999906,
+              "cs2-vit-mouz-2026-10-31": -19.83475,
+              "cs2-nrg-wc1-2026-10-31": 10.647749999999998,
+              "cs2-nemi1-furia-2026-10-31": 51.56574999999998,
+              "cs2-bst-pcy-2026-10-31": 7.679500000000008
+            }
+          },
+          "fee_halfcent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 37,
+            "censored": 0,
+            "net_total": -80.82887500000004,
+            "gross_total": 34.50000000000001,
+            "fees_total": 78.328875,
+            "net_per_trade": -2.18456418918919,
+            "net_per_event": -8.980986111111115,
+            "event_bootstrap_95": [
+              -27.44106354166667,
+              10.42785520833332
+            ],
+            "win_fraction": 0.3783783783783784,
+            "profit_factor": 0.6584938324809291,
+            "closed_equity_drawdown": 128.59287500000002,
+            "censored_zero_payout_total": -80.82887500000004,
+            "without_best_event_total": -126.36412500000002,
+            "positive_events": 4,
+            "negative_events": 5,
+            "exit_reasons": {
+              "stop_loss": 18,
+              "time_limit": 4,
+              "take_profit": 15
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -56.17675,
+              "cs2-hotu-1win-2026-11-01": -16.218750000000004,
+              "cs2-wc1-bar2-2026-11-01": 10.403749999999995,
+              "cs2-100t-bst-2026-11-01": -47.363375000000005,
+              "cs2-bst-bar2-2026-11-01": -4.492749999999999,
+              "cs2-vit-mouz-2026-10-31": -21.826750000000004,
+              "cs2-nrg-wc1-2026-10-31": 4.63774999999999,
+              "cs2-nemi1-furia-2026-10-31": 45.53524999999998,
+              "cs2-bst-pcy-2026-10-31": 4.672750000000004
+            }
+          },
+          "fee_onecent": {
+            "maps": 19,
+            "events": 9,
+            "maps_traded": 18,
+            "trades": 37,
+            "censored": 0,
+            "net_total": -117.81837500000006,
+            "gross_total": 34.50000000000001,
+            "fees_total": 78.318375,
+            "net_per_trade": -3.1842804054054072,
+            "net_per_event": -13.090930555555564,
+            "event_bootstrap_95": [
+              -31.472110763888896,
+              5.801847222222214
+            ],
+            "win_fraction": 0.35135135135135137,
+            "profit_factor": 0.5469970163370922,
+            "closed_equity_drawdown": 148.544125,
+            "censored_zero_payout_total": -117.81837500000006,
+            "without_best_event_total": -157.32612500000005,
+            "positive_events": 3,
+            "negative_events": 6,
+            "exit_reasons": {
+              "stop_loss": 18,
+              "time_limit": 4,
+              "take_profit": 15
+            },
+            "event_net": {
+              "cs2-100t-wc1-2026-11-01": -60.151250000000005,
+              "cs2-hotu-1win-2026-11-01": -22.215750000000007,
+              "cs2-wc1-bar2-2026-11-01": 7.395999999999988,
+              "cs2-100t-bst-2026-11-01": -50.341875,
+              "cs2-bst-bar2-2026-11-01": -8.493749999999997,
+              "cs2-vit-mouz-2026-10-31": -23.817750000000007,
+              "cs2-nrg-wc1-2026-10-31": -1.3692500000000116,
+              "cs2-nemi1-furia-2026-10-31": 39.50774999999997,
+              "cs2-bst-pcy-2026-10-31": 1.6675000000000013
+            }
+          }
+        }
+      }
+    }
+  },
+  "forward_price_response": {
+    "development": {
+      "down5plus": {
+        "1": {
+          "n": 1091,
+          "mean_cents": 0.15256645279560044,
+          "positive": 0.34188817598533455
+        },
+        "3": {
+          "n": 1091,
+          "mean_cents": 0.49092575618698453,
+          "positive": 0.41979835013748856
+        },
+        "5": {
+          "n": 1091,
+          "mean_cents": 0.7248854262144822,
+          "positive": 0.4381301558203483
+        },
+        "10": {
+          "n": 1091,
+          "mean_cents": 0.23900091659028455,
+          "positive": 0.4692942254812099
+        }
+      },
+      "flat": {
+        "1": {
+          "n": 59064,
+          "mean_cents": 0.0006433699038331288,
+          "positive": 0.03221928755248544
+        },
+        "3": {
+          "n": 59060,
+          "mean_cents": 0.0003217067389095768,
+          "positive": 0.05756857433118862
+        },
+        "5": {
+          "n": 59056,
+          "mean_cents": 0.0004741262530479483,
+          "positive": 0.0759279328095367
+        },
+        "10": {
+          "n": 59046,
+          "mean_cents": 0.0003048470683873506,
+          "positive": 0.10608677979880093
+        }
+      },
+      "up5plus": {
+        "1": {
+          "n": 1090,
+          "mean_cents": -0.16096330275229362,
+          "positive": 0.41376146788990825
+        },
+        "3": {
+          "n": 1090,
+          "mean_cents": -0.5753211009174312,
+          "positive": 0.43761467889908257
+        },
+        "5": {
+          "n": 1090,
+          "mean_cents": -0.8205045871559634,
+          "positive": 0.44587155963302755
+        },
+        "10": {
+          "n": 1090,
+          "mean_cents": -0.2263761467889905,
+          "positive": 0.44587155963302755
+        }
+      }
+    },
+    "validation": {
+      "down5plus": {
+        "1": {
+          "n": 916,
+          "mean_cents": 0.1061681222707424,
+          "positive": 0.35262008733624456
+        },
+        "3": {
+          "n": 916,
+          "mean_cents": 0.37510917030567686,
+          "positive": 0.39956331877729256
+        },
+        "5": {
+          "n": 916,
+          "mean_cents": 1.3892467248908298,
+          "positive": 0.4683406113537118
+        },
+        "10": {
+          "n": 911,
+          "mean_cents": 1.402744237102086,
+          "positive": 0.4862788144895719
+        }
+      },
+      "flat": {
+        "1": {
+          "n": 37164,
+          "mean_cents": 0.0008475944462382973,
+          "positive": 0.028064793886556885
+        },
+        "3": {
+          "n": 37160,
+          "mean_cents": 0.0007669537136706148,
+          "positive": 0.05384822389666308
+        },
+        "5": {
+          "n": 37152,
+          "mean_cents": 0.001816860465116279,
+          "positive": 0.07019810508182601
+        },
+        "10": {
+          "n": 37142,
+          "mean_cents": 0.0031904582413440257,
+          "positive": 0.101529266059986
+        }
+      },
+      "up5plus": {
+        "1": {
+          "n": 919,
+          "mean_cents": -0.10473340587595201,
+          "positive": 0.3721436343852013
+        },
+        "3": {
+          "n": 919,
+          "mean_cents": -0.3821001088139281,
+          "positive": 0.4232861806311208
+        },
+        "5": {
+          "n": 919,
+          "mean_cents": -1.3787812840043523,
+          "positive": 0.39173014145810664
+        },
+        "10": {
+          "n": 914,
+          "mean_cents": -1.448741794310722,
+          "positive": 0.4113785557986871
+        }
+      }
+    },
+    "late_seen": {
+      "down5plus": {
+        "1": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        },
+        "3": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        },
+        "5": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        },
+        "10": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        }
+      },
+      "flat": {
+        "1": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        },
+        "3": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        },
+        "5": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        },
+        "10": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        }
+      },
+      "up5plus": {
+        "1": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        },
+        "3": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        },
+        "5": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        },
+        "10": {
+          "n": 0,
+          "mean_cents": null,
+          "positive": null
+        }
+      }
+    },
+    "new_test": {
+      "down5plus": {
+        "1": {
+          "n": 733,
+          "mean_cents": 0.2975443383356071,
+          "positive": 0.3587994542974079
+        },
+        "3": {
+          "n": 732,
+          "mean_cents": 0.7592896174863388,
+          "positive": 0.4262295081967213
+        },
+        "5": {
+          "n": 732,
+          "mean_cents": 0.8142759562841528,
+          "positive": 0.44672131147540983
+        },
+        "10": {
+          "n": 732,
+          "mean_cents": 0.9092213114754101,
+          "positive": 0.45491803278688525
+        }
+      },
+      "flat": {
+        "1": {
+          "n": 18581,
+          "mean_cents": 0.00021527366664872349,
+          "positive": 0.044454012162962166
+        },
+        "3": {
+          "n": 18582,
+          "mean_cents": -0.0008072328059412336,
+          "positive": 0.07754816489075449
+        },
+        "5": {
+          "n": 18585,
+          "mean_cents": -0.0024213075060532624,
+          "positive": 0.09534570890503094
+        },
+        "10": {
+          "n": 18585,
+          "mean_cents": -0.0020715630885122316,
+          "positive": 0.13392520850147968
+        }
+      },
+      "up5plus": {
+        "1": {
+          "n": 732,
+          "mean_cents": -0.29931693989071034,
+          "positive": 0.3797814207650273
+        },
+        "3": {
+          "n": 731,
+          "mean_cents": -0.6844049247606017,
+          "positive": 0.3912448700410397
+        },
+        "5": {
+          "n": 731,
+          "mean_cents": -0.6854309165526674,
+          "positive": 0.4103967168262654
+        },
+        "10": {
+          "n": 731,
+          "mean_cents": -0.7811901504787963,
+          "positive": 0.45006839945280436
+        }
+      }
+    }
+  },
+  "checks": {
+    "accounting": true,
+    "entry_delay": true,
+    "cost_monotonicity": true,
+    "prefix_invariance_maps": 8
+  },
+  "caveats": [
+    "Chart history is not historical bid/ask or depth. All simulated fills are indicative.",
+    "Universe was discovered from wallet activity; market selection is not independently price-only.",
+    "No full-account bankroll, concurrent allocation limit, rebates or execution queue model.",
+    "New test is newly analyzed historical Oct31-Nov1 data, not prospective trades.",
+    "Fee coefficient .05 is an explicit sports-fee scenario, not a reconstruction of every historical market fee.",
+    "Censored trades remain at last price mark; zero-payout stress separately counts full loss.",
+    "Closed-equity drawdown excludes intratrade unrealized drawdown and is not account drawdown."
+  ]
+}

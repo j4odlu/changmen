@@ -1,3 +1,4 @@
+import { normalizeOrderMarketIdentity } from "@changmen/shared/order_market_identity";
 /** [changmen 扩展] 结果同步与精确财务读取；执行控制及监控过程不写 RDS。 */
 import * as db from "@changmen/db";
 import { mergeGtcOrderFacts } from "@changmen/shared/pm_gtc_order";
@@ -14,7 +15,7 @@ function jsonField(value, name) {
   catch { throw new Error(`GTC ${name} JSON 无效`); }
 }
 export function validateGtcConfirmedResult(input, owner) {
-  const allowed = new Set(["executionId", "orderId", "playerId", "linkId", "createdAt", "revision", "match", "bet", "item", "tokenId", "conditionId", "buyShares", "principalUsdc", "feeUsdc", "fills", "financial"]);
+  const allowed = new Set(["clientMarket", "executionId", "orderId", "playerId", "linkId", "createdAt", "revision", "match", "bet", "item", "tokenId", "conditionId", "buyShares", "principalUsdc", "feeUsdc", "fills", "financial"]);
   const fillFields = new Set(["key", "tradeId", "bucket", "role", "shares", "price", "fee", "status", "updatedAt"]);
   if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some(key => !allowed.has(key)) || !uuid(input.executionId)
     || typeof input.orderId !== "string" || !/^0x[0-9a-f]{64}$/i.test(input.orderId)
@@ -35,7 +36,9 @@ export function validateGtcConfirmedResult(input, owner) {
   const financial = db.resolveGtcFinancialOrder({ ...totals, orderId: input.orderId, complete: true }, input.financial);
   if (!financial || (financial.pmShares === 0 && !input.fills.some(fill => fill.status === "FAILED")))
     throw new Error("GTC 零成交意向不能建立财务订单");
-  return { ...input, financial };
+  const clientMarket = normalizeOrderMarketIdentity(input.clientMarket);
+  if (input.clientMarket != null && !clientMarket) throw new Error("GTC 合场盘口身份无效");
+  return { ...input, financial, ...(clientMarket ? { clientMarket } : {}) };
 }
 export async function syncGtcConfirmedResult(body, owner) {
   const result = validateGtcConfirmedResult(jsonField(body.result, "result"), owner);

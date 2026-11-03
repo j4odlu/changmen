@@ -127,4 +127,14 @@ describe("bindArbLegOrder", () => {
       }]),
     });
   });
+
+  it("binds the captured strategy map without replacing the venue's full-match label", async () => {
+    saveOrderBind.mockResolvedValue(true);
+    const clientMarket = { matchId: 17, betId: 22, round: 3, game: "CS2", matchTitle: "A vs B", betName: "[地图3] 获胜" };
+    const result = Object.assign(new BetResult("Polymarket", true), { orderId: "pm-full", clientMarket });
+    const order = { ...makeVenueOrder({ orderId: "pm-full", status: "none", odds: 2, betMoney: 100 }), bet: "全场" };
+    expect(await bindArbLegOrder(1700000000000, { accountId: 7 } as never, result, [order], false)).toBe(true);
+    expect(JSON.parse(saveOrderBind.mock.calls[0][0].orders)[0]).toMatchObject({ ClientMarket: clientMarket, OrderID: "pm-full" });
+    expect(order.bet).toBe("全场");
+  });
 });

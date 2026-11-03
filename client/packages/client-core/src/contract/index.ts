@@ -1,3 +1,4 @@
+import type { OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { PlatformId } from "@changmen/api-contract";
 import type { BetOption } from "../models/betOption";
 import type { BetResult } from "../models/betResult";
@@ -128,6 +129,8 @@ export interface PredictFunVenueOrderExtras {
 }
 
 export interface VenueOrder extends PolymarketVenueOrderExtras, PredictFunVenueOrderExtras {
+  /** [changmen 扩展] 下单时固定的合场身份，不替代场馆原生市场。 */
+  clientMarket?: OrderMarketIdentity;
   provider: PlatformId;
   orderId: string;
   odds: number;

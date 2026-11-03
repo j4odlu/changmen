@@ -103,6 +103,7 @@ export async function processA8RegularVenueMakeUpLeg(params: {
     setMessage,
   } = params;
 
+  result.clientMarket ??= order.clientMarket ?? checked.clientMarket;
   const loseStore = useLoseOrderStore();
   const isCurrentOrder = () => loseStore.orders.get(betId) === order;
   // [A8 可证实] 受理尝试收尾后计数；成功只消费一次，拒单保留队列继续下一候选。
@@ -140,6 +141,7 @@ export async function processA8RegularVenueMakeUpLeg(params: {
     result,
     () => accountStore.updateVenueOrders(account, {
       pendingBindLinkId: order.linkId || undefined,
+      pendingBindMarket: order.clientMarket ?? checked.clientMarket,
       pendingBindOrderId: String(result.orderId ?? "").trim() || undefined,
     }),
     { rejectWaitSec: waitSec },
@@ -181,9 +183,9 @@ export async function processA8RegularVenueMakeUpLeg(params: {
   // [changmen 扩展] 绑定/补绑安排完成后，才计数并保存出队；刷新期间原回执仍可恢复。
   const bound = legOutcome
     ? await bindArbLegOrder(order.linkId, account, result, venueOrders, rejected)
-    : orderId ? await bindArbOrderId(order.linkId, result.provider, account.accountId, orderId) : false;
+    : orderId ? await bindArbOrderId(order.linkId, result.provider, account.accountId, orderId, order.clientMarket ?? checked.clientMarket) : false;
   if (!bound && orderId) {
-    enqueuePendingOrderBind({ observation: result.observation, target: checked.target,
+    enqueuePendingOrderBind({ clientMarket: order.clientMarket ?? checked.clientMarket, observation: result.observation, target: checked.target,
       linkId: order.linkId, provider: result.provider, accountId: account.accountId, orderId, betId });
   }
   finish(rejected);

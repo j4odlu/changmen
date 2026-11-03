@@ -1,3 +1,4 @@
+import type { OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { saveOrderBind } from "@/api/esport";
@@ -8,6 +9,7 @@ import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
 
 /** [changmen 扩展] 当场 Bind 重试耗尽后，挂到主循环下一轮再补绑 */
 export interface PendingOrderBindItem {
+  clientMarket?: OrderMarketIdentity;
   observation?: ObservationContext;
   target?: string;
   linkId: number;
@@ -83,6 +85,7 @@ async function tryBindOne(item: PendingOrderBindItem): Promise<boolean> {
         Provider: item.provider,
         PlayerID: playerId,
         OrderID: item.orderId,
+        ...(item.clientMarket ? { ClientMarket: item.clientMarket } : {}),
       },
     ]),
   });

@@ -1,3 +1,4 @@
+import { captureOrderMarketIdentity, type OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { PlatformId } from "@changmen/api-contract";
 import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { UserConfig } from "../types/userConfig";
@@ -17,6 +18,7 @@ function normalizeOptionStake(value: unknown): number {
 
 /** 对齐 A8 bundle `Tp` */
 export class BetOption {
+  clientMarket?: OrderMarketIdentity;
   type: PlatformId;
   match?: ViewMatch;
   bet?: ViewBet;
@@ -76,6 +78,7 @@ export class BetOption {
       const item = itemOrBetId as ViewBetItem;
       const target = targetOrItemId as BetSide;
       this.type = item.type;
+      this.clientMarket = captureOrderMarketIdentity(match, bet);
       this.match = match;
       this.bet = bet;
       this.item = item;

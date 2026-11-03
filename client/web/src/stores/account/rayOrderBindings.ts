@@ -39,7 +39,8 @@ export async function syncRayOrderBindings(account: PlatformAccount, orders: rea
     }
     contexts.patch(task.key, { orderSaved: true });
     try {
-      if (known?.Link !== task.linkId && !await bindArbOrderId(task.linkId, "RAY", account.accountId, task.boundOrderId))
+      if ((known?.Link !== task.linkId || (task.clientMarket && !known.ClientMarket))
+        && !await bindArbOrderId(task.linkId, "RAY", account.accountId, task.boundOrderId, ...(task.clientMarket ? [task.clientMarket] : [])))
         throw new Error("RAY 原单关联保存失败，等待订单同步重试");
       if (current())
         contexts.patch(task.key, { bindingSaved: true, lastError: undefined });

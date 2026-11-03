@@ -286,6 +286,22 @@ describe("updateOrderBind bound hook", () => {
     setOrdersBoundHook(null);
   });
 
+  it("writes market metadata with the owner/account-qualified Link update", async () => {
+    const clientMarket = { matchId: 17, betId: 22, round: 3, game: "CS2", matchTitle: "A vs B", betName: "地图3" };
+    queryMock.mockResolvedValueOnce({ rows: [{ order_id: "o1", link: 123, raw: {} }] }).mockResolvedValueOnce({ rowCount: 1 });
+    expect(await updateOrderBind("o1", "u1", 1700000000000, { playerId: 7, clientMarket })).toBe(true);
+    const [sql, params] = queryMock.mock.calls[1];
+    expect(sql).toContain("user_id = $4 AND order_id = $5 AND player_id = $6");
+    expect(params).toEqual([1700000000000, { clientMarket }, { matchId: 17, betId: 22, round: 3 }, "u1", "o1", 7]);
+  });
+
+  it("refuses a conflicting captured map without modifying the Link", async () => {
+    const clientMarket = { matchId: 17, betId: 22, round: 3, game: "CS2", matchTitle: "A vs B", betName: "地图3" };
+    queryMock.mockResolvedValueOnce({ rows: [{ order_id: "o1", link: 1700000000000, raw: { clientMarket } }] });
+    expect(await updateOrderBind("o1", "u1", 1700000000000, { playerId: 7, clientMarket: { ...clientMarket, round: 2 } })).toBe(false);
+    expect(queryMock).toHaveBeenCalledTimes(1);
+  });
+
   it("fires when link changes from create_at placeholder to arb", async () => {
     const ca = 1_781_882_462_790;
     const prev = {

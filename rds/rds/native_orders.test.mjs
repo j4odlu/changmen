@@ -32,7 +32,11 @@ async function trace(store, operation, failure = false) {
   store.setOrdersInsertedHook(null);
   return structuredClone({ result, calls: mocks.calls });
 }
-// [changmen 扩展] 只剔除已授权的 PM 状态竞态保护；其余 SQL、参数、事务及 hook 仍逐项对照旧版。
+// [changmen 扩展] 只剔除 PM 状态竞态保护和订单身份快照保留；其余 SQL、参数、事务及 hook 仍逐项对照旧版。
+// 身份快照的保存、冲突拒绝与同步保留另有业务回归，不放宽金额或订单状态比较。
+const marketIdentityRetention = `raw = CASE WHEN orders.raw ? 'clientMarket'
+      THEN EXCLUDED.raw || jsonb_build_object('clientMarket', orders.raw->'clientMarket')
+      ELSE EXCLUDED.raw END`;
 const pendingRaceGuard = `  WHERE NOT (COALESCE(EXCLUDED.provider, '') = 'Polymarket' AND (
     (EXCLUDED.status = 'Pending' AND orders.status IS DISTINCT FROM 'Pending')
     OR (EXCLUDED.status IN ('Reject', 'Return') AND orders.raw ? 'pmSubmission'
@@ -45,8 +49,9 @@ function expectHistoricalTrace(actual, previous, operation) {
   const calls = actual.calls.map(call => {
     if (!call.sql?.includes("INSERT INTO orders")) return call;
     expect(call.sql.split(pendingRaceGuard)).toHaveLength(2);
+    expect(call.sql.split(marketIdentityRetention)).toHaveLength(2);
     guards++;
-    return { ...call, sql: call.sql.replace(pendingRaceGuard, "") };
+    return { ...call, sql: call.sql.replace(pendingRaceGuard, "").replace(marketIdentityRetention, "raw = EXCLUDED.raw") };
   });
   expect(guards).toBe(operation === "save" ? 1 : 0);
   expect({ ...actual, calls }).toEqual(previous);

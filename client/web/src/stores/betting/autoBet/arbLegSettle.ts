@@ -40,6 +40,7 @@ export async function settleArbLeg(
   const confirmed = await confirmVenueBet(account, result, {
     rejectWaitSec: opts.rejectWaitSec,
     pendingBindLinkId: opts.pendingBindLinkId,
+    ...(opts.betOption?.clientMarket ? { pendingBindMarket: opts.betOption.clientMarket } : {}),
     pmConditionId: String(opts.betOption?.betId ?? "").trim() || undefined,
   });
   const { rejected } = confirmed;

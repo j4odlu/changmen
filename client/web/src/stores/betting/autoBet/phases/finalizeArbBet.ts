@@ -57,6 +57,7 @@ export async function finalizeArbBet(
       : { betMoney: 0, betOdds: 0 };
     const anchorProvider = String(anchorAccount?.provider || "").toUpperCase();
     registerRayOrderContext({
+      clientMarket: leg.clientMarket,
       observation: leg.observation,
       linkId,
       matchId: match.id,

@@ -20,6 +20,7 @@ export function nativeGtcPendingRows(financial: OrderRow[], orders: GtcOrderReco
     const display = view.quantitiesAgree && matched > 0 ? gtcMatchedOrder(order, Number(view.fee ?? 0)) : null;
     return { OrderID: order.orderId ?? `gtc-pending:${order.id}`, DisplayOnly: true, PmGtcExecutionId: order.id,
       Type: "Polymarket", PlayerID: order.accountId, PmOrderType: "GTC", PmSide: "buy", PmOrigin: "changmen", PmTokenId: order.plan.tokenId, PmConditionId: order.plan.conditionId,
+      ...(order.context.clientMarket ? { ClientMarket: order.context.clientMarket } : {}),
       Link: order.context.linkId, Match: order.context.match, Bet: order.context.bet, Item: gtcOrderItemText(order.context.item, order.context.match), CreateAt: order.createdAt,
       Status: order.submit === "rejected" ? "Reject" : order.terminal && order.complete && !order.error && matched === 0 ? "Return" : "None",
       ...(view.quantitiesAgree ? { PmShares: matched } : {}),

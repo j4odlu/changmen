@@ -1,3 +1,4 @@
+import { normalizeOrderMarketIdentity, type OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { PmSubmission } from "@changmen/shared/pm_submission";
 import type { LoseOrderRecord, MakeupRuntimePhase } from "../types/order";
@@ -25,6 +26,7 @@ function normalizeMakeupRuntimePhase(raw: unknown): MakeupRuntimePhase | undefin
 
 /** 对齐 A8 bundle `eb`（补单队列项） */
 export class LoseOrder implements LoseOrderRecord {
+  clientMarket?: OrderMarketIdentity;
   observation?: ObservationContext;
   pendingObservation?: ObservationContext;
   accountId: number;
@@ -60,6 +62,7 @@ export class LoseOrder implements LoseOrderRecord {
     pendingPmOrderId?: string;
     pendingPmAccountId?: number;
   }) {
+    this.clientMarket = normalizeOrderMarketIdentity(raw.clientMarket);
     this.observation = raw.observation ? { ...raw.observation } : undefined;
     this.pendingObservation = raw.pendingObservation ? { ...raw.pendingObservation } : undefined;
     this.accountId = Number(raw.accountId) || 0;
@@ -146,6 +149,7 @@ export class LoseOrder implements LoseOrderRecord {
 
   toJSON(): LoseOrderRecord {
     return {
+      ...(this.clientMarket ? { clientMarket: { ...this.clientMarket } } : {}),
       ...(this.observation ? { observation: { ...this.observation } } : {}),
       ...(this.pendingObservation ? { pendingObservation: { ...this.pendingObservation } } : {}),
       accountId: this.accountId,

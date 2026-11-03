@@ -1,3 +1,4 @@
+import type { OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { PlatformId } from "@changmen/api-contract";
 import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { PlatformAccount } from "./platformAccount";
@@ -5,6 +6,7 @@ import { saveBetResultLog } from "../bridge/bettingLog";
 
 /** 对齐 A8 bundle `uo` */
 export class BetResult {
+  clientMarket?: OrderMarketIdentity;
   provider: PlatformId;
   success: boolean;
   message: string | null | undefined;

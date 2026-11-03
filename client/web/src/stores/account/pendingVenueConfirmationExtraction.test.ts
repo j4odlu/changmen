@@ -1,5 +1,7 @@
 import { expect, test } from "vitest";
 import ts from "typescript";
+import { BetOption } from "@changmen/client-core/models/betOption";
+import { BetResult } from "@changmen/client-core/models/betResult";
 import { originalPendingGateway, pendingGroups, pendingHarness, readPending } from "./__tests__/pendingVenueOriginal";
 
 const parse = (source: string) => ts.createSourceFile("module.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
@@ -8,12 +10,24 @@ const executable = (source: string) => ts.transpileModule(source.replace(/^expor
   compilerOptions: { target: ts.ScriptTarget.ES2022, removeComments: true },
 }).outputText.trim();
 const original = functions(originalPendingGateway);
+// [changmen 扩展] 精确扣除本次授权的旁路身份传递；其余执行体继续与原迁移证据比较。
+// 不更新历史源码或哈希；身份在待确认任务中的恢复另有以下行为回归。
+const marketMetadataAdditions: Record<string, string[]> = {
+  notifyPendingVenueConfirm: ["    clientMarket: option.clientMarket,\n"],
+  runPendingVenueBetConfirmation: ["      clientMarket: task.clientMarket,\n", "    option.clientMarket = task.clientMarket;\n"],
+  checkBetting: ["    try { checked.clientMarket = option.clientMarket; }\n    catch { /* 只读 adapter 结果不能因旁路身份写入失败而改变预检结论。 */ }\n"],
+  placeBet: ["    result.clientMarket = option.clientMarket;\n"],
+};
 for (const [module, names] of Object.entries(pendingGroups)) {
   test.each(names)(`${module}: %s retains its original complete executable body`, name => {
     const current = functions(readPending(module)).get(name)!;
     expect(current).toBeTruthy();
-    const restored = current.replaceAll("pendingVenueConfirmationSession.paused", "pendingVenueConfirmationsPaused")
+    let restored = current.replaceAll("pendingVenueConfirmationSession.paused", "pendingVenueConfirmationsPaused")
       .replaceAll("pendingVenueConfirmationSession.epoch", "pendingVenueConfirmationEpoch");
+    for (const addition of marketMetadataAdditions[name] ?? []) {
+      expect(restored.split(addition)).toHaveLength(2);
+      restored = restored.replace(addition, "");
+    }
     expect(executable(restored)).toBe(executable(original.get(name)!));
   });
 }
@@ -33,11 +47,29 @@ test("retains the task schema, every singleton collection initializer and public
   }
   const schema = (tree: ts.SourceFile) => tree.statements.filter(ts.isInterfaceDeclaration)
     .find(n => n.name.text === "PendingVenueBetConfirmation")!.getText().replace(/^export /, "");
-  expect(schema(state)).toBe(schema(baseline));
+  expect(schema(state).replace("  clientMarket?: OrderMarketIdentity;\n", "")).toBe(schema(baseline));
   const exported = (source: string) => parse(source).statements.flatMap(n => ts.isExportDeclaration(n)
     && n.exportClause && ts.isNamedExports(n.exportClause) ? n.exportClause.elements.map(e => e.name.text)
     : ts.isFunctionDeclaration(n) && n.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword) ? [n.name!.text] : []).sort();
   expect(exported(readPending("betGateway"))).toEqual(exported(originalPendingGateway));
+});
+
+test("pending task storage and resumed confirmation retain the captured strategy map", async () => {
+  const clientMarket = { matchId: 17, betId: 22, round: 3, game: "CS2", matchTitle: "A vs B", betName: "地图3" };
+  const h = pendingHarness(false);
+  const option = Object.assign(new BetOption("Polymarket", "native-match", "condition", "token", 10, "Home", 2), { clientMarket });
+  const result = Object.assign(new BetResult("Polymarket", true), { orderId: "hash-one", pending: true,
+    pmSubmittedAt: h.submission.submittedAt, request: { order: { side: "BUY", makerAmount: h.submission.makerAmount, maker: h.submission.makerAddress } } });
+  h.api.notifyPendingVenueConfirm(h.store, h.control.accounts[0], "account", "details", result, option, 3);
+  await h.tick(0);
+  const stored = h.snapshot().tasks;
+  expect(JSON.parse(stored)[0].clientMarket).toEqual(clientMarket);
+  const restored = pendingHarness(false, "Polymarket", stored);
+  restored.control.outcome = "filled";
+  restored.api.resumePendingVenueConfirmations(restored.store);
+  await restored.tick(5001);
+  const confirmation = restored.log.find(row => row[0] === "confirm");
+  expect(confirmation?.[1]).toMatchObject({ clientMarket });
 });
 
 const scenarios = ["pending-backoff", "filled", "reject", "confirm-error", "save-error", "duplicate", "write-barrier",

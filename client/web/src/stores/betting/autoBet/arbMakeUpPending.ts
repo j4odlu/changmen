@@ -1,3 +1,4 @@
+import { captureOrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { ArbBetAttemptParams, ArbBetPlaced } from "@/stores/betting/autoBet/phases/types";
 import type { useLoseOrderStore } from "@/stores/loseOrderStore";
@@ -74,6 +75,7 @@ export async function resumeArbMakeUpPending(
     successResult?.orderId,
   );
   const enqueued = await enqueueMakeUpOrder({
+    clientMarket: makeupTargetLeg.clientMarket,
     loseStore,
     match,
     bet,
@@ -91,6 +93,7 @@ export async function resumeArbMakeUpPending(
   // delayed 原单必须继续观察，即使补单赔率门槛不允许后续补单。
   if (!enqueued) {
     loseStore.createOrder(new LoseOrder({
+      clientMarket: makeupTargetLeg.clientMarket ?? captureOrderMarketIdentity(match, bet),
       accountId: successAccount.accountId,
       matchId: match.id,
       betId: bet.id,

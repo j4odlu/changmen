@@ -57,6 +57,18 @@ describe("pendingOrderBind", () => {
     expect(peekPendingOrderBinds()).toHaveLength(1);
   });
 
+  it("retains the frozen market identity while retrying a failed bind", async () => {
+    const clientMarket = { matchId: 17, betId: 22, round: 3, game: "CS2", matchTitle: "A vs B", betName: "[地图3] 获胜" };
+    saveOrderBind.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    enqueuePendingOrderBind({ linkId: 1700000000000, provider: "OB", accountId: 7, orderId: "o1", clientMarket });
+    await processPendingOrderBinds();
+    await processPendingOrderBinds();
+    expect(saveOrderBind).toHaveBeenCalledTimes(2);
+    for (const [payload] of saveOrderBind.mock.calls)
+      expect(JSON.parse(payload.orders)[0].ClientMarket).toEqual(clientMarket);
+    expect(peekPendingOrderBinds()).toHaveLength(0);
+  });
+
   it("retries on next process until success", async () => {
     enqueuePendingOrderBind({
       linkId: 1_700_000_000_000,

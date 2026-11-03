@@ -46,6 +46,7 @@ export async function executeManualGtc(account: PlatformAccount, input: BetOptio
     const linkId = -Date.now();
     const order = await submitGtcOrder(account, prepared, {
       linkId,
+      clientMarket: option.clientMarket,
       match: context.match.title, bet: lookupPolymarketOrderBetLabel(option.betId, option.itemId) || "盘口待核实",
       item: option.target === "Home" ? context.bet.homeName : context.bet.awayName,
     }, (ack, submittedAt) => {

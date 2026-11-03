@@ -112,6 +112,7 @@ export async function handleRayLateRejectAutoMakeup(task: RayOrderContext, curre
       updatedAt: Date.now(),
     });
     const enqueued = await enqueueMakeUpOrder({
+      clientMarket: latest.clientMarket,
       loseStore,
       match,
       bet,

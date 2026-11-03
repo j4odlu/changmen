@@ -136,6 +136,8 @@ export async function checkBetting(
       ? await (await import("@changmen/venue-browser/adapter/polymarket/gtc")).checkGtcBuy(account, option, undefined, opts?.pmGtcAllowResting !== true)
       : await provider.checkBet(account, option, { role: opts?.role ?? "execute", ...(opts?.requireClobConfirmation ? { requireClobConfirmation: true } : {}) });
     checkedOption = checked;
+    try { checked.clientMarket = option.clientMarket; }
+    catch { /* 只读 adapter 结果不能因旁路身份写入失败而改变预检结论。 */ }
     // [changmen 扩展] adapter 返回新对象时只传递观察元数据，原业务返回值不变。
     try { checked.observation ??= option.observation; }
     catch { /* 观察字段写入失败不改变返回值 */ }
@@ -300,6 +302,7 @@ export async function placeBet(
   }
   finally {
     result.link = result.pmSubmitUnknown && result.link > 0 ? result.link : Number(opts?.linkId || option.diagnosticLinkId) || 0;
+    result.clientMarket = option.clientMarket;
     result.diagnosticAttempt = option.diagnosticAttempt;
     try {
       result.observation = option.observation;

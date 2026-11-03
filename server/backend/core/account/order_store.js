@@ -1,3 +1,4 @@
+import { mergeOrderMarketIdentity, normalizeOrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import * as sb from "@changmen/db";
 import { parseVenueCreateAt } from "@changmen/shared/time/match_time";
 import { isAdminUser } from "../auth/admin_auth.js";
@@ -97,6 +98,9 @@ export function mergeOrderLogicalSave(prevRow, prevRaw, o, pmOrigin) {
     : provider === "PredictFun"
       ? sidePf === "sell"
       : false;
+  const clientMarket = mergeOrderMarketIdentity(prevRaw?.clientMarket, o.clientMarket ?? o.ClientMarket);
+  if (clientMarket) result.raw.clientMarket = clientMarket;
+  else delete result.raw.clientMarket;
   applyPositionEventsOnSave(result.raw, prevRaw || {}, o, { isSellRow });
   return result;
 }
@@ -260,6 +264,11 @@ export async function saveOrder(playerId, orders, userId, typeFallback = "", opt
       orderForMerge,
       pmOrigin,
     );
+    const parentId = provider === "Polymarket" && raw.pmSide === "sell" ? raw.pmBuyOrderId
+      : provider === "PredictFun" && raw.pfSide === "sell" ? raw.pfBuyOrderId : undefined;
+    const parent = parentId ? findOrderRowById(existingByOrderId, String(parentId)) : undefined;
+    const clientMarket = mergeOrderMarketIdentity(parent?.raw?.clientMarket, raw.clientMarket);
+    if (clientMarket) raw.clientMarket = clientMarket;
     preserveOrderMode(raw, prevRaw, o, existingByOrderId);
     rows.push({
       user_id: String(userId),
@@ -377,9 +386,12 @@ export async function saveOrderBind(orders, userId) {
     const { orderId, playerId, linkId, provider } = parseOrderBindRow(raw);
     if (!orderId || !linkId)
       continue;
+    const clientMarket = normalizeOrderMarketIdentity(raw.clientMarket ?? raw.ClientMarket);
+    if ((raw.clientMarket != null || raw.ClientMarket != null) && !clientMarket) { ok = false; continue; }
     const updated = await sb.updateOrderBind(orderId, userId, linkId, {
       playerId,
       provider,
+      ...(clientMarket ? { clientMarket } : {}),
     });
     if (!updated)
       ok = false;

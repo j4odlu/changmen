@@ -106,6 +106,7 @@ export async function runLoseOrderExecution(ctx: LoseOrderTickContext, deps: Los
         continue;
 
       const option = new BetOption(match, bet, item, order.target, stake);
+      option.clientMarket = order.clientMarket ?? option.clientMarket;
       option.loseOrder = true;
       option.diagnosticLinkId = order.linkId;
       option.diagnosticAttempt = "makeup";

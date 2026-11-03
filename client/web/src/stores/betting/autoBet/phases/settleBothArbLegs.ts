@@ -168,6 +168,7 @@ export async function settleBothArbLegs(
       snapshot.bindFailedLegLabels.push(leg.type);
       snapshot.bindFailedSides.push(side);
       enqueuePendingOrderBind({
+        clientMarket: result.clientMarket ?? leg.clientMarket,
         observation: result.observation,
         target: leg.target,
         linkId,

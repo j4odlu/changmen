@@ -1,4 +1,5 @@
 import { financialOrdersHookRow, financialOrdersRelation } from "./native_orders.js";
+import { normalizeOrderMarketIdentity } from "@changmen/shared/order_market_identity";
 /**
  * orders 表读写 — upsert、查询、管理端、SaveOrderBind。
  */
@@ -123,7 +124,9 @@ const UPSERT_ORDERS_BATCH_SQL = `
     money = EXCLUDED.money,
     status = EXCLUDED.status,
     create_at = EXCLUDED.create_at,
-    raw = EXCLUDED.raw
+    raw = CASE WHEN orders.raw ? 'clientMarket'
+      THEN EXCLUDED.raw || jsonb_build_object('clientMarket', orders.raw->'clientMarket')
+      ELSE EXCLUDED.raw END
   WHERE NOT (COALESCE(EXCLUDED.provider, '') = 'Polymarket' AND (
     (EXCLUDED.status = 'Pending' AND orders.status IS DISTINCT FROM 'Pending')
     OR (EXCLUDED.status IN ('Reject', 'Return') AND orders.raw ? 'pmSubmission'
@@ -1293,14 +1296,27 @@ export async function updateOrderBind(orderId, userId, link, opts = {}) {
       );
       return false;
     }
-    const updateWhere = offsetSqlPlaceholders(where, 1);
-    const res = await pool.query(
-      `UPDATE ${financialOrdersRelation()} SET link = $1 WHERE ${updateWhere}`,
-      [linkVal, ...params],
-    );
+    const clientMarket = normalizeOrderMarketIdentity(opts.clientMarket);
+    if (opts.clientMarket != null && !clientMarket) return false;
+    const previousMarket = normalizeOrderMarketIdentity(prev.raw?.clientMarket);
+    if (clientMarket && previousMarket && ["matchId", "betId", "round"].some(key => previousMarket[key] !== clientMarket[key]))
+      return false;
+    const updateWhere = offsetSqlPlaceholders(where, clientMarket ? 3 : 1);
+    const res = clientMarket
+      ? await pool.query(
+          `UPDATE ${financialOrdersRelation()} SET link = $1,
+            raw = CASE WHEN raw ? 'clientMarket' THEN raw ELSE COALESCE(raw, '{}'::jsonb) || $2::jsonb END
+            WHERE ${updateWhere} AND (raw->'clientMarket' IS NULL OR raw->'clientMarket' @> $3::jsonb)`,
+          [linkVal, { clientMarket }, { matchId: clientMarket.matchId, betId: clientMarket.betId, round: clientMarket.round }, ...params],
+        )
+      : await pool.query(
+          `UPDATE ${financialOrdersRelation()} SET link = $1 WHERE ${updateWhere}`,
+          [linkVal, ...params],
+        );
     if (res.rowCount > 0 && shouldFireOrderBoundHook(prev, linkVal) && _ordersBoundHook) {
       try {
-        _ordersBoundHook([{ ...prev, link: linkVal }]);
+        _ordersBoundHook([{ ...prev, link: linkVal,
+          ...(clientMarket ? { raw: { ...prev.raw, clientMarket: previousMarket ?? clientMarket } } : {}) }]);
       }
       catch (hookErr) {
         console.warn("[rds] ordersBoundHook:", hookErr.message);

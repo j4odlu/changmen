@@ -1,3 +1,4 @@
+import type { OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 // [changmen 扩展] 待确认订单生命周期；与 betGateway 共用单例，保持原有业务时序。
 import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { AccountStoreContext } from "@/stores/account/context";
@@ -9,6 +10,7 @@ import { pmSubmitScope } from "@changmen/venue-browser/adapter/polymarket";
 const PENDING_VENUE_CONFIRM_KEY = "PENDING_VENUE_BET_CONFIRM";
 
 export interface PendingVenueBetConfirmation {
+  clientMarket?: OrderMarketIdentity;
   publishData?: BettingEventPayload;
   pmScope?: string;
   pmSubmission?: PmSubmission;

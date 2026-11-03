@@ -1,3 +1,4 @@
+import type { OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { VenueOrder, VenueOrderStatus } from "@changmen/venue-browser/adapter/contract";
 
@@ -18,6 +19,7 @@ export type RayLateRejectMakeupStatus
     | "failed";
 
 export interface RayOrderContext {
+  clientMarket?: OrderMarketIdentity;
   observation?: ObservationContext;
   key: string;
   userId: string;
@@ -62,6 +64,7 @@ export interface RayOrderContext {
 }
 
 export interface RegisterRayOrderContextInput {
+  clientMarket?: OrderMarketIdentity;
   observation?: ObservationContext;
   linkId: number;
   matchId: number;

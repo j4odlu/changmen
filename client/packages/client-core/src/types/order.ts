@@ -1,8 +1,10 @@
+import type { OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { BetSide } from "../models/match";
 
 /** 对齐 A8 bundle `eb` 持久化形状 */
 export interface LoseOrderRecord {
+  clientMarket?: OrderMarketIdentity;
   /** [changmen 扩展] 只保留旁路元数据，业务队列仍按 betId 索引。 */
   observation?: ObservationContext;
   pendingObservation?: ObservationContext;

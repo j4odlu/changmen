@@ -43,6 +43,7 @@ export function notifyPendingVenueConfirm(
     schedulePendingVenueBetConfirmation(store, existing); return;
   }
   const task: PendingVenueBetConfirmation = {
+    clientMarket: option.clientMarket,
     observation: option.observation,
     linkId: option.diagnosticLinkId,
     key,
@@ -149,6 +150,7 @@ async function runPendingVenueBetConfirmation(
           ...(task.pmSubmission.takerAmount ? { takerAmount: task.pmSubmission.takerAmount } : {}) } } } : {}),
       orderId: task.orderId,
       pending: true,
+      clientMarket: task.clientMarket,
       observation: task.observation,
       link: task.linkId || 0,
     });
@@ -162,6 +164,7 @@ async function runPendingVenueBetConfirmation(
       task.odds,
     );
     option.observation = task.observation;
+    option.clientMarket = task.clientMarket;
     option.diagnosticLinkId = task.linkId;
     const { rejected, pendingConfirm, orders } = task.provider === "Polymarket"
       ? await confirmVenueBet(account, result, { rejectWaitSec: 0, pmConditionId: task.venueBetId })

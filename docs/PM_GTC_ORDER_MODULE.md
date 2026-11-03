@@ -22,7 +22,7 @@
 
 `prepareGtcOrder(account, checkedOption)` 接收已完成账号预检的客户端订单选项，返回绑定账号和登录会话的冻结签单句柄。未来业务可以在自身入口映射输入，不能把选号、配对或补单规则放回订单核心。
 
-`submitGtcOrder(account, prepared, context?, onReceipt?)` 只维护一张 PM 原单。可选 context 仅包含关联 linkId 和展示用的 match、bet、item，不要求赛事 ID、盘口行 ID、另一腿或业务激活标记。订单快照直接来自单笔记录。
+`submitGtcOrder(account, prepared, context?, onReceipt?)` 只维护一张 PM 原单。可选 context 包含关联 linkId、展示用的 match、bet、item，以及调用方提供的可选 `clientMarket` 合场身份快照；不要求赛事 ID、盘口行 ID、另一腿或业务激活标记。订单快照直接来自单笔记录。合场身份仅用于追溯，不能驱动订单发送、对侧执行或财务计算。
 
 业务关联属于调用方；GTC/FOK 类型不决定业务来源。一张原单可以包含多笔成交明细，累计结果仍更新同一张订单。日志观察异常不能把已经记录的回执改为未知，也不能触发重发。
 

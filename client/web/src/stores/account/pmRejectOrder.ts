@@ -81,6 +81,7 @@ export async function persistPolymarketExecutionReject(
     reason,
     contextFromBetOption(opts?.betOption, opts?.linkId),
   );
+  order.clientMarket = opts?.betOption?.clientMarket;
   order.pmStakeUsdc = stakeUsdc;
   order.betMoney = scaleUsdtToCnyDisplay(stakeUsdc);
   order.pmSubmission = pmSubmissionFromResult(result, account.accountId) ?? undefined;

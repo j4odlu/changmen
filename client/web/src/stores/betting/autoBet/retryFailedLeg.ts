@@ -139,6 +139,7 @@ export async function retryFailedLeg(
     tried.push(pickedAccount.provider);
     let retryLeg = new BetOption(match, bet, pickedItem, failedLeg.target, stake);
     retryLeg.odds = pickedItem.getOdds(failedLeg.target);
+    retryLeg.clientMarket = failedLeg.clientMarket ?? retryLeg.clientMarket;
     retryLeg.diagnosticLinkId = linkId;
     retryLeg.diagnosticAttempt = "retry";
     retryLeg.observation = createObservationContext({ ownerUserId: failedLeg.observation?.ownerUserId, executionId: failedLeg.observation?.executionId, parentAttemptId: failedLeg.observation?.attemptId, retryRound: round + 1, anchorAttemptId: successLeg.observation?.attemptId });

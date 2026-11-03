@@ -1,3 +1,4 @@
+import type { OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { ArbLegSettleResult } from "./arbLegSettle";
@@ -9,6 +10,7 @@ import { useAccountStore } from "@/stores/accountStore";
 
 /** [changmen 扩展] 确认只接收查询身份与等待策略；不读取名称、不创建拒单。 */
 export interface ConfirmVenueBetOpts {
+  pendingBindMarket?: OrderMarketIdentity;
   rejectWaitSec?: number;
   pendingBindLinkId?: number;
   pmConditionId?: string;
@@ -31,6 +33,7 @@ export async function confirmVenueBet(
     async () => {
       const orders = await useAccountStore().updateVenueOrders(account, {
         pendingBindLinkId: opts.pendingBindLinkId,
+        ...(opts.pendingBindMarket ?? result?.clientMarket ? { pendingBindMarket: opts.pendingBindMarket ?? result?.clientMarket } : {}),
         pendingBindOrderId,
         // 官方 delayed：matched 后 trades 可能滞后；等 orderId 出现再 save
         waitForOrderId: pendingBindOrderId,

@@ -1,3 +1,4 @@
+import type { OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
@@ -53,7 +54,7 @@ export async function bindArbLegOrder(
   if (!orderId)
     return false;
 
-  const bound = await bindArbOrderId(linkId, result.provider, account.accountId, orderId);
+  const bound = await bindArbOrderId(linkId, result.provider, account.accountId, orderId, result.clientMarket);
   try {
     observeOrder(result.observation, linkId, "bind_result", { provider: result.provider, accountId: account.accountId, orderId, outcome: bound ? "saved" : "failed", source: "bind_api_ack" });
   }
@@ -67,6 +68,7 @@ export async function bindArbOrderId(
   provider: string,
   accountId: number,
   orderId: string,
+  clientMarket?: OrderMarketIdentity,
 ): Promise<boolean> {
   if (!linkId || !accountId || !String(orderId).trim())
     return false;
@@ -78,6 +80,7 @@ export async function bindArbOrderId(
         Provider: provider,
         PlayerID: accountId,
         OrderID: orderId,
+        ...(clientMarket ? { ClientMarket: clientMarket } : {}),
       },
     ]),
   };

@@ -88,6 +88,7 @@ export async function applyVenueJbSettlementOutcome(
     removeIds,
     setMessage,
   } = ctx;
+  result.clientMarket ??= order.clientMarket ?? checked.clientMarket;
   const pendingRole = order.pendingVenueRole ?? "target";
   const pendingTarget = order.pendingVenueTarget ?? order.target;
   const makeUpEligible = order.pendingVenueMakeUpEligible !== false;
@@ -132,6 +133,7 @@ export async function applyVenueJbSettlementOutcome(
         result,
         () => useAccountStore().updateVenueOrders(account, {
           pendingBindLinkId: order.linkId || undefined,
+          pendingBindMarket: order.clientMarket ?? checked.clientMarket,
           pendingBindOrderId: String(result.orderId ?? "").trim() || undefined,
           waitForOrderId: String(result.orderId ?? "").trim() || undefined,
         }),
@@ -174,10 +176,11 @@ export async function applyVenueJbSettlementOutcome(
   if (!isVenueLegRejected(legOutcome)) {
     const orderId = receipt ? receipt.bindOrderId : resolveArbBindOrderId(venueOrders, result, false);
     const bound = receipt
-      ? orderId ? await bindArbOrderId(order.linkId, result.provider, account.accountId, orderId) : false
+      ? orderId ? await bindArbOrderId(order.linkId, result.provider, account.accountId, orderId, order.clientMarket ?? checked.clientMarket) : false
       : await bindArbLegOrder(order.linkId, account, result, venueOrders, false);
     if (!bound && orderId) {
       enqueuePendingOrderBind({
+        clientMarket: order.clientMarket ?? checked.clientMarket,
         observation: result.observation,
         target: checked.target,
         linkId: order.linkId,
@@ -277,10 +280,11 @@ export async function applyVenueJbSettlementOutcome(
   }
   const orderId = receipt ? receipt.bindOrderId : resolveArbBindOrderId(venueOrders, result, true);
   const bound = receipt
-    ? orderId ? await bindArbOrderId(order.linkId, result.provider, account.accountId, orderId) : false
+    ? orderId ? await bindArbOrderId(order.linkId, result.provider, account.accountId, orderId, order.clientMarket ?? checked.clientMarket) : false
     : await bindArbLegOrder(order.linkId, account, result, venueOrders, true);
   if (!bound && orderId) {
     enqueuePendingOrderBind({
+      clientMarket: order.clientMarket ?? checked.clientMarket,
       observation: result.observation,
       target: checked.target,
       linkId: order.linkId,
@@ -431,6 +435,7 @@ export async function tryResumePendingVenueMakeUp(
       );
   checked.odds = sideOdds;
   checked.newOdds = sideOdds;
+  checked.clientMarket = order.clientMarket ?? checked.clientMarket;
   checked.loseOrder = true;
   checked.diagnosticLinkId = order.linkId;
   checked.diagnosticAttempt = "makeup";

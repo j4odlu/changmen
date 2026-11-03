@@ -25,6 +25,14 @@ it("writes confirmed results only to orders, with atomic settlement correction",
   expect(mock.settled).toHaveBeenCalledWith(expect.anything(), "owner", 1, hash, "id");
   expect(mock.query.mock.calls.at(-1)[0]).toBe("COMMIT");
 });
+it("persists optional market identity and retains it on later confirmed results", async () => {
+  const clientMarket = { matchId: 17, betId: 22, round: 3, game: "CS2", matchTitle: "A vs B", betName: "地图3" };
+  await savePmGtcConfirmedResult("owner", { ...result(), clientMarket });
+  expect(inserted()[1][10].clientMarket).toEqual(clientMarket);
+  mock.query.mockClear(); mock.rows = [previous({ clientMarket })];
+  await savePmGtcConfirmedResult("owner", result());
+  expect(inserted()[1][10].clientMarket).toEqual(clientMarket);
+});
 it.each([4, 8])("ignores equal or newer saved result version %s", async revision => {
   mock.rows = [previous({ pmGtcResultRevision: revision })]; await savePmGtcConfirmedResult("owner", result());
   expect(inserted()).toBeUndefined(); expect(mock.settled).not.toHaveBeenCalled(); expect(mock.query.mock.calls.at(-1)[0]).toBe("COMMIT");

@@ -1,3 +1,4 @@
+import { normalizeOrderMarketIdentity } from "@changmen/shared/order_market_identity";
 /**
  * 订单读路径 DTO：RDS 行 → 工作台 / 管理端形状。
  * 不写库。由 order_store.js re-export，对外路径不变。
@@ -60,6 +61,7 @@ export function rowToOrder(r) {
   let betMoney = r.bet_money || 0;
   let money = r.money || 0;
   const pfHoldShares = resolvePfHoldSharesFromRaw(raw);
+  const clientMarket = normalizeOrderMarketIdentity(raw.clientMarket);
   // [changmen 扩展] 官方限价缺失时读取同笔 BUY 签单的金额/份额，无需补查；不使用预检或成交价。
   const submittedPrice = (() => {
     if (r.provider !== "Polymarket" || raw.pmSide === "sell" || raw.pmGtcExecutionId)
@@ -80,6 +82,7 @@ export function rowToOrder(r) {
     OrderID: r.order_id,
     Link: resolveStoredLink(r.link, r.order_id, r.create_at),
     Type: r.provider || "",
+    ...(clientMarket ? { ClientMarket: clientMarket } : {}),
     Match: r.match || "",
     Bet: r.bet || "",
     Item: r.item || "",

@@ -1,8 +1,10 @@
+import { normalizeOrderMarketIdentity, type OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { GtcOrderPlan, GtcOrderState } from "@changmen/shared/pm_gtc_order";
 import { canCancelGtcOrder, gtcOrderNeverSubmitted, gtcUnits, mergeGtcOrderFacts } from "@changmen/shared/pm_gtc_order";
 import type { GtcOrderReceipt } from "./orderService";
 
 export interface GtcOrderContext {
+  clientMarket?: OrderMarketIdentity;
   linkId?: number;
   match?: string;
   bet?: string;
@@ -19,7 +21,7 @@ export interface GtcOrderRecord extends GtcOrderState {
   createdAt: number;
   revision: number;
   submissionClosed: boolean;
-  context: { linkId: number; match: string; bet: string; item: string };
+  context: { linkId: number; match: string; bet: string; item: string; clientMarket?: OrderMarketIdentity };
 }
 export function isNativeGtcOrder(value: unknown): value is GtcOrderRecord {
   return Boolean(value && typeof value === "object" && "formatVersion" in value && value.formatVersion === 2);
@@ -44,12 +46,14 @@ export function createGtcOrderRecord(id: string, owner: string, accountId: numbe
   if (!Number.isSafeInteger(linkId) || !Number.isFinite(now) || now <= 0
     || [context.match ?? "", context.bet ?? "", context.item ?? ""].some(value => typeof value !== "string" || value.length > 10000))
     throw new Error("GTC 订单关联或展示信息无效，尚未发送订单");
+  const clientMarket = normalizeOrderMarketIdentity(context.clientMarket);
   // 显式拷贝白名单，发送函数、凭证与业务额外字段不能进入记录。
   const frozen: GtcOrderPlan = { tokenId: plan.tokenId, conditionId: plan.conditionId, shares: plan.shares, targetShares: plan.targetShares,
     price: plan.price, maxPrincipal: plan.maxPrincipal, allInBudget: plan.allInBudget, protocol: plan.protocol,
     negRisk: plan.negRisk, route: plan.route, orderHash: plan.orderHash };
   return { formatVersion: 2, orderType: "GTC", id, owner, accountId, maker, plan: frozen, createdAt: now, revision: 0,
-    submissionClosed: false, context: { linkId, match: context.match ?? "", bet: context.bet ?? "", item: context.item ?? "" },
+    submissionClosed: false, context: { linkId, match: context.match ?? "", bet: context.bet ?? "", item: context.item ?? "",
+      ...(clientMarket ? { clientMarket } : {}) },
     submit: "prepared", orderId: null, pmAuthorized: false, cancel: null, fills: {}, order: null,
     matched: "0", principal: "0", fee: "0", open: null, terminal: false, complete: false, observedAt: 0, error: "" };
 }

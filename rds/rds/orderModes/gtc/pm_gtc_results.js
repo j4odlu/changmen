@@ -1,3 +1,4 @@
+import { mergeOrderMarketIdentity } from "@changmen/shared/order_market_identity";
 /** [changmen 扩展] 只保存已确认 GTC 买单结果；不读写 pm_gtc_executions。 */
 import { getPgPool } from "../../common.js";
 import { syncPmGtcSettledOrderFinancials } from "./pm_gtc_settlement.js";
@@ -33,7 +34,8 @@ export async function savePmGtcConfirmedResult(owner, result) {
       throw new Error("GTC 成交量减少缺少已确认成交的 FAILED 证据");
     if (!previous && result.financial.pmShares === 0) { await client.query("COMMIT"); return true; }
     const financial = result.financial;
-    const raw = { pmOrderType: "GTC", pmGtcExecutionId: result.executionId, pmGtcResultRevision: result.revision,
+    const clientMarket = mergeOrderMarketIdentity(previous?.raw?.clientMarket, result.clientMarket);
+    const raw = { ...(clientMarket ? { clientMarket } : {}), pmOrderType: "GTC", pmGtcExecutionId: result.executionId, pmGtcResultRevision: result.revision,
       pmGtcConfirmedFills: result.fills, pmTokenId: result.tokenId, pmConditionId: result.conditionId,
       pmSide: "buy", pmOrigin: "changmen", pmShares: financial.pmShares, pmFillPrice: financial.pmFillPrice,
       pmStakeUsdc: financial.pmStakeUsdc, pmFeeUsdc: financial.pmFeeUsdc,

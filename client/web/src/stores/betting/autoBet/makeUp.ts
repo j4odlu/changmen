@@ -1,3 +1,4 @@
+import { captureOrderMarketIdentity, type OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { ObservationContext } from "@changmen/shared/order_observation";
 import type { BetSide, ViewBet, ViewMatch } from "@/models/match";
 import type { useLoseOrderStore } from "@/stores/loseOrderStore";
@@ -55,6 +56,7 @@ export async function allowMakeUpForLeg(
 
 /** [A8 可证实] 入队：先 `B(败腿)`，通过才 createOrder + tip「补单提醒」 */
 export async function enqueueMakeUpOrder(params: {
+  clientMarket?: OrderMarketIdentity;
   observation?: ObservationContext;
   loseStore: ReturnType<typeof useLoseOrderStore>;
   match: ViewMatch;
@@ -101,6 +103,7 @@ export async function enqueueMakeUpOrder(params: {
   loseStore.createOrder(
     new LoseOrder({
       observation: createObservationContext(params.observation, true),
+      clientMarket: params.clientMarket ?? captureOrderMarketIdentity(match, bet),
       accountId,
       matchId: match.id,
       betId: bet.id,

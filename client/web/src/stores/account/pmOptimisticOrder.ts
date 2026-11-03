@@ -20,6 +20,7 @@ export async function persistPolymarketMatchedBuyOrder(
   const order = await buildPolymarketMatchedBuyVenueOrderFromBet(option, result);
   if (!order)
     return null;
+  order.clientMarket = option.clientMarket;
   await saveOrders(account, [order]);
   return order;
 }

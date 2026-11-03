@@ -52,6 +52,12 @@ it("accepts confirmed partial fills with six-decimal shares and saves no control
   await expect(syncGtcConfirmedResult({ result: result() }, "owner")).resolves.toBe(true);
   expect(mock.owned).toHaveBeenCalledExactlyOnceWith(1, "owner"); expect(mock.save).toHaveBeenCalledExactlyOnceWith("owner", result());
 });
+it("accepts optional composed market identity and keeps native order labels", async () => {
+  const clientMarket = { matchId: 17, betId: 22, round: 3, game: "CS2", matchTitle: "A vs B", betName: "地图3" };
+  await syncGtcConfirmedResult({ result: { ...result(), bet: "全场", clientMarket } }, "owner");
+  expect(mock.save).toHaveBeenCalledWith("owner", expect.objectContaining({ clientMarket, bet: "全场" }));
+  expect(() => validateGtcConfirmedResult({ ...result(), clientMarket: { ...clientMarket, matchId: "17" } }, "owner")).toThrow("身份无效");
+});
 it.each(["MATCHED", "MINED", "RETRYING"])("refuses intermediate %s fills", status => {
   expect(() => validateGtcConfirmedResult({ ...result(), fills: [{ ...fill, status }] }, "owner")).toThrow("已确认");
 });

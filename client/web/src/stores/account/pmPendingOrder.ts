@@ -28,6 +28,7 @@ export async function persistPendingPmOrder(
     game: String(option.match?.game ?? ""), match,
     bet: String(option.bet?.getBetName?.() ?? ""),
     item: String(named ?? "").trim() || resolveOrderItemLabel(target, match) || target,
+    clientMarket: option.clientMarket,
     pmSubmission: submission, pmSide: "buy", pmOrigin: "changmen",
     pmConditionId: option.betId, pmTokenId: option.itemId,
     venueMatchId: String(option.matchId), venueItemId: target,

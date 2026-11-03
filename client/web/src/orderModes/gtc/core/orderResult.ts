@@ -13,6 +13,7 @@ export function confirmedOrderResult(row: GtcOrderRecord): GtcConfirmedResult | 
   if (!financial) return null;
   return { executionId: row.id, orderId: row.orderId, playerId: row.accountId, linkId: row.context.linkId,
     createdAt: row.createdAt, revision: row.revision, match: row.context.match, bet: row.context.bet, item: row.context.item,
+    ...(row.context.clientMarket ? { clientMarket: row.context.clientMarket } : {}),
     tokenId: row.plan.tokenId, conditionId: row.plan.conditionId, buyShares: totals.matched,
     principalUsdc: totals.principal, feeUsdc: totals.fee!, fills, financial };
 }

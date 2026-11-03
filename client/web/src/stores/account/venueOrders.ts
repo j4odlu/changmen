@@ -1,3 +1,4 @@
+import type { OrderMarketIdentity } from "@changmen/shared/order_market_identity";
 import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import { sortVenueOrdersNewestFirst } from "@changmen/venue-browser/adapter/contract";
@@ -66,6 +67,7 @@ export function applyUnsettledStats(account: PlatformAccount, orders: VenueOrder
 
 /** [changmen 扩展] 拉单入库时附带最终套利 Link，缩短占位窗口（见 docs/ARB_LINK_ID.md） */
 export interface SyncVenueOrdersOpts {
+  pendingBindMarket?: OrderMarketIdentity;
   pendingBindLinkId?: number;
   pendingBindOrderId?: string;
   /**
@@ -88,18 +90,23 @@ function ordersIncludeId(orders: VenueOrder[], orderId: string): boolean {
 
 function stampPendingBindLink(orders: VenueOrder[], opts?: SyncVenueOrdersOpts): void {
   const linkId = Number(opts?.pendingBindLinkId);
-  if (!Number.isFinite(linkId) || linkId === 0)
+  const hasLink = Number.isFinite(linkId) && linkId !== 0;
+  if (!hasLink && !opts?.pendingBindMarket)
     return;
   const targetId = String(opts?.pendingBindOrderId ?? "").trim();
   if (targetId) {
     const hit = orders.find(o => String(o.orderId ?? "").trim() === targetId);
-    if (hit)
-      hit.link = linkId;
+    if (hit) {
+      if (hasLink) hit.link = linkId;
+      hit.clientMarket ??= opts?.pendingBindMarket;
+    }
     return;
   }
   // 无明确 orderId 时只标最新一条（与 A8 绑 orders[0] 一致）
-  if (orders[0])
+  if (hasLink && orders[0]) {
     orders[0].link = linkId;
+    orders[0].clientMarket ??= opts?.pendingBindMarket;
+  }
 }
 
 function ordersIncludeRecent(orders: VenueOrder[], submittedAt: number): boolean {

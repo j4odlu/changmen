@@ -60,6 +60,7 @@ export async function enqueueArbMakeUpSide(
       resultA?.orderId,
     );
     result.enqueuedForLegB = await enqueueMakeUpOrder({
+      clientMarket: legB.clientMarket,
       loseStore,
       match,
       bet,
@@ -84,6 +85,7 @@ export async function enqueueArbMakeUpSide(
       resultB?.orderId,
     );
     result.enqueuedForLegA = await enqueueMakeUpOrder({
+      clientMarket: legA.clientMarket,
       loseStore,
       match,
       bet,

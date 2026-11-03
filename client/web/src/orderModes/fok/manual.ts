@@ -56,19 +56,22 @@ export async function executeManualFok(account: PlatformAccount, option: BetOpti
       const optimisticOk = Boolean(
         (result.tip as { pmOptimisticSaved?: boolean } | null | undefined)?.pmOptimisticSaved,
       );
+      const identityOpts = option.clientMarket && result.orderId
+        ? { pendingBindMarket: option.clientMarket, pendingBindOrderId: String(result.orderId) } : undefined;
       if (result.pending || provider !== "Polymarket") {
         await wait(result.orderId ? 400 : 1500);
-        await accountStore.updateVenueOrders(account);
+        await accountStore.updateVenueOrders(account, ...(identityOpts ? [identityOpts] : []));
       }
       else if (!optimisticOk) {
         // matched 但乐观落库失败：短重试等 trades，避免侧栏空窗
         await wait(400);
         await accountStore.updateVenueOrders(account, {
+          ...identityOpts,
           waitForOrderId: String(result.orderId ?? "").trim() || undefined,
         });
       }
       else {
-        void accountStore.updateVenueOrders(account);
+        void accountStore.updateVenueOrders(account, ...(identityOpts ? [identityOpts] : []));
       }
       refreshOrderListAfterBind();
     }

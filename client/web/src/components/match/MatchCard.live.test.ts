@@ -6,6 +6,7 @@ import MatchCard from "./MatchCard.vue";
 
 vi.mock("./BetRow.vue", () => ({ default: { render: () => null } }));
 vi.mock("./RayBasketballSpreads.vue", () => ({ default: { render: () => null } }));
+vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ extensionPrefs: { pmPriceTrendUi: false } }) }));
 vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
   pmMapOutcomeTick: { value: 0 }, lookupResolutionSourceBySourceMatchId: () => "https://www.hltv.org/",
 }));

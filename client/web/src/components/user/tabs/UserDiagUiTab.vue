@@ -99,6 +99,23 @@ async function save() {
         </p>
       </div>
 
+      <div class="ui-tab__row">
+        <el-form-item label="PM 价格趋势:" class="ui-tab__control">
+          <el-switch
+            v-model="extensionPrefs.pmPriceTrendUi"
+            aria-label="显示 PM 价格趋势"
+            inline-prompt
+            active-text="开启"
+            inactive-text="关闭"
+            size="large"
+          />
+        </el-form-item>
+        <p class="ui-tab__desc">
+          在赛事卡片末尾显示当前 PM LIVE 地图双方最近 30 分钟的买入价格走势。默认关闭，独立于 BetRow 扩展 UI。
+          开启后开始记录，关闭后清空走势；修改立即生效，保存后下次打开仍保留。
+        </p>
+      </div>
+
       <SignalSettings />
 
       <div class="ui-tab__row">

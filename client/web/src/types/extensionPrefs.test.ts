@@ -32,6 +32,7 @@ const defaultPrefs = {
   arbExecutionMode: "normal" as const,
   lowOddsSingleHigherCProbabilityOnly: false,
   betRowUi: false,
+  pmPriceTrendUi: false,
   pmOddsDropCardUi: false,
   pmUpCardUi: false,
   pmDown: { enabled: false, windowMs: 5_000, thresholdPct: 5, cooldownMs: 10_000, minReferenceOdds: 1.01, maxReferenceOdds: 100, referenceVenue: "Polymarket" },
@@ -63,6 +64,17 @@ const defaultPrefs = {
 };
 
 describe("extensionPrefs", () => {
+  it("keeps PM price trends off for existing or malformed preferences and persists an explicit opt-in", () => {
+    expect(createDefaultExtensionPrefs().pmPriceTrendUi).toBe(false);
+    for (const value of [undefined, null, false, "true", 1])
+      expect(normalizeExtensionPrefs({ pmPriceTrendUi: value, betRowUi: true }).pmPriceTrendUi).toBe(false);
+    const prefs = createDefaultExtensionPrefs();
+    prefs.pmPriceTrendUi = true;
+    const saved = JSON.parse(serializeExtensionPrefsForSave(prefs));
+    expect(normalizeExtensionPrefs(saved).pmPriceTrendUi).toBe(true);
+    expect(normalizeExtensionPrefs(saved).betRowUi).toBe(false);
+  });
+
   it("preserves old up badge visibility once and persists both independent display switches", () => {
     expect(normalizeExtensionPrefs({ pmUp: { enabled: true } }).pmUpCardUi).toBe(true);
     expect(normalizeExtensionPrefs({ pmUp: { enabled: true }, pmUpCardUi: false }).pmUpCardUi).toBe(false);

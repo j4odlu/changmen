@@ -2,6 +2,8 @@
 import type { ViewMatch } from "@/models/match";
 import BetRow from "@/components/match/BetRow.vue";
 import RayBasketballSpreads from "@/components/match/RayBasketballSpreads.vue";
+import PmPriceTrend from "@/extensions/pmPriceTrend/PmPriceTrend.vue";
+import { useUserStore } from "@/stores/userStore";
 import { formatDate } from "@changmen/client-core/shared/format";
 import {
   getGameDisplayName,
@@ -41,6 +43,8 @@ const props = withDefaults(
   }>(),
   { allowBetting: true },
 );
+
+const user = useUserStore();
 
 /** catalog code → 中文名；电竞 DTO 已是中文名时原样 */
 const gameTag = computed(() => getGameDisplayName(props.match.game || ""));
@@ -130,6 +134,7 @@ const pmMatchStatus = computed(() => props.match.pmSport || props.match.provider
           :match="match" :home-name="bet.homeName" :away-name="bet.awayName"
         />
       </template>
+      <PmPriceTrend v-if="user.extensionPrefs.pmPriceTrendUi === true" :match="match" />
     </div>
   </div>
 </template>

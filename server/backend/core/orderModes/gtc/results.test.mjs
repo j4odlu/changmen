@@ -75,6 +75,12 @@ it("does not accept an unsent intent, invented fill totals or process data as an
   expect(() => validateGtcConfirmedResult({ ...acceptedResult(), acceptedOrder: { ...acceptedOrder(), authorize: true } }, "owner")).toThrow("受理原单");
   expect(() => validateGtcConfirmedResult({ ...result(), acceptedOrder: { ...acceptedOrder(), shares: "1" } }, "owner")).toThrow("超过原单");
 });
+it("accepts ordinary Return only for a zero-fill order and leaves partial fills pending settlement", () => {
+  expect(validateGtcConfirmedResult({ ...acceptedResult(), status: "Return" }, "owner").status).toBe("Return");
+  expect(() => validateGtcConfirmedResult({ ...result(), status: "Return" }, "owner")).toThrow("零成交");
+  expect(() => validateGtcConfirmedResult({ ...acceptedResult(), status: "Win" }, "owner")).toThrow("退单状态");
+  expect(validateGtcConfirmedResult({ ...result(), status: "None" }, "owner").status).toBe("None");
+});
 it.each(["MATCHED", "MINED", "RETRYING"])("refuses intermediate %s fills", status => {
   expect(() => validateGtcConfirmedResult({ ...result(), fills: [{ ...fill, status }] }, "owner")).toThrow("已确认");
 });

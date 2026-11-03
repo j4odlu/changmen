@@ -1,5 +1,8 @@
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
 import type { OrderRow } from "@/types/order";
+import type { GtcOrderRecord } from "./core/orderRecord";
+import { gtcOrderResultStatus } from "@changmen/shared/pm_gtc_result";
+import { isNativeGtcBuy } from "./orderDisplay";
 import { gtcPmNeverSubmitted } from "@changmen/shared/pm_gtc";
 import { orderExecutionIdentity } from "@/orderModes/gtc/executionIdentity";
 import { isFootballOrderRow } from "@/shared/orderDomain";
@@ -134,14 +137,20 @@ export function gtcPendingDisplayRows(financialRows: OrderRow[], executions: Gtc
 }
 
 /** [changmen 扩展] 精确原单恢复监控标识，再合入同 Link 展示行；FOK 原组保持原对象。 */
-export function mergeGtcPendingDisplayEntries(entries: readonly (readonly [number, OrderRow[]])[], pendingRows: OrderRow[], executions: GtcExecution[] = []) {
-  if (!pendingRows.length && !executions.length)
+export function mergeGtcPendingDisplayEntries(entries: readonly (readonly [number, OrderRow[]])[], pendingRows: OrderRow[], executions: GtcExecution[] = [], nativeOrders: GtcOrderRecord[] = []) {
+  if (!pendingRows.length && !executions.length && !nativeOrders.length)
     return entries;
   const groups = new Map(entries);
   let changed = false;
   for (const [link, rows] of groups) {
     let tagged = false;
     const next = rows.map((row) => {
+      const original = nativeOrders.find(order => isNativeGtcBuy(row, order))
+        ?? executions.find(execution => isGtcOriginalBuy(row, execution));
+      if (original && row.PmGtcBuyShares === 0 && String(row.Status ?? "None") === "None" && gtcOrderResultStatus(original) === "Return") {
+        tagged = true;
+        return { ...row, Status: "Return" };
+      }
       if (row.PmGtcExecutionId || row.Type !== "Polymarket" || row.PmSide === "sell")
         return row;
       const originals = executions.filter(execution => isGtcOriginalBuy(row, execution));

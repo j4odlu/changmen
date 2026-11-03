@@ -26,9 +26,10 @@ const syncIssue = computed(() => {
 });
 const view = computed(() => isNativeGtcOrder(props.execution) ? nativeGtcMonitorCardView(props.execution, syncIssue.value) : pmGtcMonitorCardView(props.execution, syncIssue.value));
 const syncNotice = computed(() => syncIssue.value ? gtcSyncNotice(syncIssue.value) : "");
-const saveNotice = computed(() => progress.value.saveIssues[props.execution.id] || (native.value && gtcOrders.resultIssues[props.execution.id])
-  ? "后台副本同步失败，正在重试；当前订单状态按 PM 官方结果显示。"
-  : "");
+const saveNotice = computed(() => {
+  const issue = progress.value.saveIssues[props.execution.id] || (native.value && gtcOrders.resultIssues[props.execution.id]);
+  return issue ? `后台副本同步失败（${issue.message}），正在重试；当前订单状态按 PM 官方结果显示。` : "";
+});
 const observedTime = computed(() => props.execution.observedAt > 0 ? formatOrderTime(props.execution.observedAt) : "尚未取得核对结果");
 async function cancel() {
   if (props.readOnly || cancelBusy.value || !view.value.canCancel)

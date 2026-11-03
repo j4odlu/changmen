@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { startGtcOrderSync, stopGtcOrderSync, flushGtcResults } from "./gtcOrderSync";
+import { gtcOrders } from "@/orderModes/gtc/orderState";
 const mock = vi.hoisted(() => ({ pending: vi.fn(), finish: vi.fn(), post: vi.fn(), refresh: vi.fn(), restored: vi.fn(),
   date: "2026-11-03", session: 1, issues: {} }));
 vi.mock("@/api/client", () => ({ post: mock.post, getAuthSessionVersion: () => mock.session,
@@ -12,6 +13,7 @@ vi.mock("@/orderModes/gtc/orderStore", () => ({ listStoredGtcOrders: mock.restor
 vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ get orderDate() { return mock.date; }, fetchOrders: mock.refresh }) }));
 const entry = { key: "k", owner: "owner", at: 0, failures: 0, result: { executionId: "id", revision: 8, fills: [{ status: "CONFIRMED" }], financial: { pmShares: 3 } } };
 beforeEach(() => { vi.useFakeTimers(); stopGtcOrderSync(); vi.clearAllMocks(); mock.session = 1;
+  gtcOrders.resultIssues = {};
   mock.date = "2026-11-03"; mock.restored.mockResolvedValue([]); mock.refresh.mockResolvedValue(true);
   mock.pending.mockResolvedValue([entry]); mock.finish.mockImplementation(async (_entry, failure) => {
     if (!failure) mock.pending.mockResolvedValue([]);
@@ -55,6 +57,26 @@ it("refreshes once for a batch of acknowledged results", async () => {
   mock.pending.mockResolvedValue([entry, { ...entry, key: "second", result: { ...entry.result, executionId: "second" } }]);
   startGtcOrderSync("owner"); await flushGtcResults();
   expect(mock.post).toHaveBeenCalledTimes(2); expect(mock.refresh).toHaveBeenCalledOnce();
+});
+it("keeps the local diagnostic card until the acknowledged original is loaded into the common list", async () => {
+  const issue = { kind: "query" as const, message: "old backend", at: 1 };
+  gtcOrders.resultIssues.id = issue;
+  let resolveRead!: (loaded: boolean) => void;
+  mock.refresh.mockReturnValue(new Promise(resolve => { resolveRead = resolve; }));
+  startGtcOrderSync("owner"); const task = flushGtcResults();
+  await vi.waitFor(() => expect(mock.refresh).toHaveBeenCalledOnce());
+  expect(mock.finish).toHaveBeenCalledExactlyOnceWith(entry);
+  expect(gtcOrders.resultIssues.id).toEqual(issue);
+  resolveRead(true); await task;
+  expect(gtcOrders.resultIssues.id).toBeUndefined();
+});
+it("does not clear a newer upload failure when an older acknowledged result finally becomes readable", async () => {
+  mock.refresh.mockRejectedValueOnce(new Error("read offline"));
+  startGtcOrderSync("owner"); await flushGtcResults();
+  mock.pending.mockResolvedValue([{ ...entry, result: { ...entry.result, revision: 9 } }]);
+  mock.post.mockRejectedValueOnce(new Error("newer upload failed"));
+  await flushGtcResults();
+  expect(gtcOrders.resultIssues.id?.message).toBe("newer upload failed");
 });
 it("reloads recovered native fills even if a previous page already acknowledged the upload", async () => {
   mock.pending.mockResolvedValue([]);

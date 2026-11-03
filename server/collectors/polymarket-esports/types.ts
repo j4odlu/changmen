@@ -40,6 +40,9 @@ export interface ClobToken {
 }
 
 export interface GammaMarket {
+  version?: unknown;
+  positionIds?: unknown;
+  position_ids?: unknown;
   condition_id?: unknown;
   conditionId?: unknown;
   market?: unknown;
@@ -105,6 +108,7 @@ export interface PlatformBet extends Record<string, unknown> {
 }
 
 export interface IndexCandidate {
+  marketVersion?: "v1" | "v2";
   marketId: string;
   assetIds: [string, string];
   match: { SourceMatchID: string; StartTime?: number };

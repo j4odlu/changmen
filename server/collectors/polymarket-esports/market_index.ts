@@ -225,6 +225,7 @@ export function persistPolymarketMarketIndex(candidates: IndexCandidate[], buyPr
     const startTime = Number(mapped.match?.StartTime) || 0;
     return {
       sourceMatchId: String(mapped.match.SourceMatchID),
+      ...(mapped.marketVersion ? { marketVersion: mapped.marketVersion } : {}),
       marketId: String(mapped.marketId),
       homeTokenId,
       awayTokenId,

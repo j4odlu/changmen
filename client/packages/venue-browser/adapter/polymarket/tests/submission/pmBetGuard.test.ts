@@ -35,6 +35,34 @@ describe("resolvePolymarketBetBlockReason", () => {
     vi.mocked(polymarketPluginGet).mockReset();
   });
 
+  test.each([resolvePolymarketBetBlockReason, resolveLegacyBlockReason])("blocks modern Gamma identity conflicts through the complete preflight chain", async check => {
+    for (const market of [
+      { version: "v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]' },
+      { version: "v2", clobTokenIds: '["101","102"]' },
+      { version: "v3", positionIds: ["101", "102"] },
+      { positionIds: ["101", "102"], clobTokenIds: '["101","102"]' },
+    ]) {
+      clearPmGammaCacheForTests();
+      vi.mocked(polymarketPluginGet).mockImplementation(async url => {
+        if (url.includes("/events/")) return { live: true, ended: false };
+        if (url.includes("/markets?")) return [{ ...market, active: true, acceptingOrders: true }];
+        return { accepting_orders: true };
+      });
+      const input = option({ itemId: "101" });
+      expect(await check(input)).toContain("交易资产或版本不一致");
+    }
+  });
+
+  test.each([resolvePolymarketBetBlockReason, resolveLegacyBlockReason])("retains an identity conflict when the position fallback is offline", async check => {
+    vi.mocked(polymarketPluginGet).mockImplementation(async raw => {
+      const url = new URL(raw);
+      if (url.searchParams.has("position_ids")) throw new Error("fallback offline");
+      if (url.searchParams.has("clob_token_ids")) return [{ version: "v2", clobTokenIds: '["101","102"]', positionIds: ["201", "202"] }];
+      return { accepting_orders: true };
+    });
+    expect(await check(option({ itemId: "101" }))).toContain("交易资产或版本不一致");
+  });
+
   test("metadata-only Gamma event cannot mask an embedded ended state", async () => {
     vi.mocked(polymarketPluginGet).mockImplementation(async url => {
       if (url.includes("/events/")) return { id: "650650", title: "metadata only" };

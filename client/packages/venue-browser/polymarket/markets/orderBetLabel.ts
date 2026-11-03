@@ -1,5 +1,6 @@
+import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
 import type { PolymarketMarketIndexEntry } from "@changmen/api-contract";
-import { parseJsonArray, polymarketOrderContextFromMarket, type PolymarketRawMarket } from "./parse";
+import { polymarketOrderContextFromMarket, type PolymarketRawMarket } from "./parse";
 
 // [changmen 扩展] 订单盘口只认 PM 原生市场元数据；合场 Map（含决胜局投影）不进入此缓存。
 const labels = new Map<string, string>();
@@ -25,8 +26,8 @@ export function rememberPolymarketIndexBetLabel(entry: PolymarketMarketIndexEntr
 }
 
 export function rememberPolymarketMarketBetLabel(market: PolymarketRawMarket): void {
-  const tokens = parseJsonArray(market.clobTokenIds ?? market.clob_token_ids);
-  if (!tokens.length)
+  const tokens = polymarketMarketAssetIds(market);
+  if (!tokens.length && market.version == null && market.positionIds == null && market.position_ids == null)
     tokens.push(...(market.tokens ?? []).map(token => String(token.token_id ?? "")).filter(Boolean));
   remember(String(market.conditionId ?? market.condition_id ?? "").trim(), tokens, polymarketOrderContextFromMarket(market).bet);
 }

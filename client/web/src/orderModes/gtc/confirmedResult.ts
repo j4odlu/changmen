@@ -1,7 +1,7 @@
 /** [changmen 扩展] 只投影 CONFIRMED 成交和明确 FAILED 修正，沿用原份额、费用与金额算法。 */
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
 import type { GtcConfirmedResult } from "@changmen/shared/pm_gtc_result";
-import { gtcAcceptedOrder } from "@changmen/shared/pm_gtc_result";
+import { gtcAcceptedOrder, gtcOrderResultStatus } from "@changmen/shared/pm_gtc_result";
 import { mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { gtcFinancialOrder } from "./financialOrder";
 
@@ -18,7 +18,8 @@ export function confirmedGtcResult(row: GtcExecution): GtcConfirmedResult | null
     : { pmShares: 0, pmFillPrice: 0, pmStakeUsdc: 0, pmFeeUsdc: 0, odds: 0, betMoney: 0 };
   if (!financial)
     return null;
-  return { ...(acceptedOrder ? { acceptedOrder } : {}), executionId: row.id, orderId: row.orderId, playerId: row.plan.playerId, linkId: row.plan.linkId,
+  const status = gtcOrderResultStatus(row);
+  return { ...(status === "Return" || row.terminal ? { status } : {}), ...(acceptedOrder ? { acceptedOrder } : {}), executionId: row.id, orderId: row.orderId, playerId: row.plan.playerId, linkId: row.plan.linkId,
     createdAt: row.createdAt, revision: row.revision, match: row.plan.match, bet: row.plan.bet, item: row.plan.item,
     tokenId: row.plan.tokenId, conditionId: row.plan.conditionId, buyShares: totals.matched,
     principalUsdc: totals.principal, feeUsdc: totals.fee!, fills, financial };

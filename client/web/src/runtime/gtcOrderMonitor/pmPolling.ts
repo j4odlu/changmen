@@ -6,6 +6,7 @@ import { gtcCanCancel, gtcPmNeverSubmitted, gtcUnits } from "@changmen/shared/pm
 import { gtcProgress } from "@/orderModes/gtc/gtcProgressState";
 import { gtcPmReconciled } from "@/orderModes/gtc/pollingPolicy";
 import { gtcSyncIssue } from "@/orderModes/gtc/syncStatus";
+import { waitForGtcCancelReceipt } from "@/orderModes/gtc/cancelReceipt";
 import { useAccountStore } from "@/stores/accountStore";
 
 interface Context {
@@ -26,12 +27,13 @@ export function createGtcPmOrderPolling(context: Context) {
   const watches = new Map<string, Promise<void>>();
   const cancellations = new Map<string, Promise<void>>();
 
-  async function poll(id: string, shared?: () => Promise<GtcTradeHistory>): Promise<GtcExecution> {
+  async function poll(id: string, shared?: () => Promise<GtcTradeHistory>, fresh = false): Promise<GtcExecution> {
     const existing = polls.get(id);
-    if (existing)
+    if (existing && !fresh)
       return existing;
     const isCurrent = captureCurrent();
-    const task = (async () => {
+    let task!: Promise<GtcExecution>;
+    task = (async () => {
       const row = current(id);
       if (!row.pmAuthorized || gtcPmNeverSubmitted(row) || row.submit === "rejected")
         return row;
@@ -49,14 +51,16 @@ export function createGtcPmOrderPolling(context: Context) {
         const facts = context.read ? await context.read(account, row, shared) : await readGtcFacts(account, row.plan, row.orderId || row.plan.orderHash, row.createdAt);
         if (!validBinding())
           throw new Error("GTC 会话已变更");
+        if (polls.get(id) !== task) return current(id);
         result = await mutate(id, { kind: "facts", facts });
         if (!validBinding())
           throw new Error("GTC 会话已变更");
+        if (polls.get(id) !== task) return current(id);
         delete gtcProgress.queryIssues[id];
       }
       catch (error) {
         // 查询失败不是订单事实，不覆写已确认成交/费用，也不重发订单。
-        if (isCurrent())
+        if (isCurrent() && polls.get(id) === task)
           gtcProgress.queryIssues[id] = gtcSyncIssue(error);
         throw error;
       }
@@ -111,7 +115,7 @@ export function createGtcPmOrderPolling(context: Context) {
     if (!validBinding())
       throw new Error("用户会话已变更，取消结果需要核实");
     try {
-      const result = await pmCancelOrder<{ canceled?: string[]; not_canceled?: Record<string, string> }>(account, authorized.orderId!);
+      const result = await waitForGtcCancelReceipt(account, authorized.orderId!, () => pmCancelOrder(account, authorized.orderId!), validBinding);
       if (!validBinding())
         return;
       const rejected = result.not_canceled?.[authorized.orderId!];
@@ -119,7 +123,7 @@ export function createGtcPmOrderPolling(context: Context) {
       await mutate(id, { kind: "cancel_result", commandId, state: canceled ? "acknowledged" : rejected ? "failed" : "unknown", message: canceled ? "PM 已确认取消剩余挂单，成交明细继续核对" : rejected || "取消结果待核实，可继续查询或重试原单撤单" });
       if (canceled) {
         const latest = current(id);
-        await mutate(id, { kind: "facts", facts: { order: { id: authorized.orderId!, original: latest.plan.shares, matched: latest.order?.matched ?? latest.matched, status: "CANCELED", tradeIds: latest.order?.tradeIds ?? [] }, fills: [], complete: false, observedAt: Date.now() } });
+        await mutate(id, { kind: "facts", facts: { order: { id: authorized.orderId!, original: latest.plan.shares, matched: latest.order?.matched ?? latest.matched, status: "CANCELED", tradeIds: [...(latest.order?.tradeIds ?? [])] }, fills: [], complete: false, observedAt: Date.now() } });
       }
     }
     catch (error) {
@@ -127,7 +131,7 @@ export function createGtcPmOrderPolling(context: Context) {
         return;
       await mutate(id, { kind: "cancel_result", commandId, state: "unknown", message: error instanceof Error ? error.message : "取消结果待核实" });
     }
-    await poll(id).catch(() => {});
+    if (validBinding()) void poll(id, undefined, true).catch(() => {});
   }
 
   async function watch(id: string): Promise<void> {

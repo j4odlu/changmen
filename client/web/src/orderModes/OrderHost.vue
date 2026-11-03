@@ -22,7 +22,7 @@ const pendingRows = computed(() => [...gtcPendingDisplayRows([...orders.orders.v
   // 已受理的正常订单由公共列表显示；同步失败时保留本地诊断卡。
   ...nativeGtcPendingRows([...orders.orders.values()].flat(), nativeOrders.value.filter(row => row.submit !== "accepted"
     || gtcOrders.saveIssues[row.id] || gtcOrders.resultIssues[row.id]), orders.orderDate, orders.filterAccountId)]);
-const projectOrderEntries = (entries: ReadonlyArray<OrderListEntry>) => mergeGtcPendingDisplayEntries(entries, pendingRows.value, executions.value);
+const projectOrderEntries = (entries: ReadonlyArray<OrderListEntry>) => mergeGtcPendingDisplayEntries(entries, pendingRows.value, executions.value, nativeOrders.value);
 </script>
 
 <template>

@@ -114,6 +114,22 @@ it("allows retry after PM transport failure and a successful LIVE query", async 
   await polling.cancel("original"); expect(mocks.cancel).toHaveBeenCalledTimes(2);
   expect(currentGtc("original").open).toBe("0");
 });
+it("does not hold cancellation on trade history and supersedes the poll started before cancellation", async () => {
+  let finishOld!: (value: ReturnType<typeof live>) => void;
+  let finishFresh!: (value: ReturnType<typeof live>) => void;
+  mocks.read.mockReturnValueOnce(new Promise(resolve => { finishOld = resolve; }))
+    .mockReturnValueOnce(new Promise(resolve => { finishFresh = resolve; }));
+  const old = polling.poll("original"); await vi.advanceTimersByTimeAsync(0);
+  await polling.cancel("original"); await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.read).toHaveBeenCalledTimes(2);
+  expect(gtcProgress.cancelInFlight.original).toBeUndefined();
+  expect(currentGtc("original")).toMatchObject({ terminal: true, open: "0", complete: false });
+  finishOld(live()); await old;
+  expect(currentGtc("original")).toMatchObject({ terminal: true, open: "0", complete: false });
+  finishFresh({ ...live(), order: { ...live().order, status: "CANCELED" } });
+  await vi.advanceTimersByTimeAsync(0);
+  expect(currentGtc("original")).toMatchObject({ terminal: true, open: "0", complete: true });
+});
 it("keeps an official cancel acknowledgement effective when another page updated the cancellation intent", async () => {
   mocks.cancel.mockImplementation(async () => {
     server.cancel = { commandId: "another-page", state: "dispatching", message: "pending" }; server.revision++;

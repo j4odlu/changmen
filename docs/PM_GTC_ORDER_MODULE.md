@@ -42,9 +42,33 @@
 
 受理时附带原单份额和限价；尚无已确认成交时，成交份额、成本和费用为零，不计入成交笔数、持仓或盈亏统计。费用未知及中间成交状态继续等待确认，不预先计算财务金额。旧客户端的成交结果协议仍可使用，本地已有受理原单在启动时补入同步队列，不重发订单。
 
+原单核实为零成交且已终止时，沿用普通订单 `Return`（退）状态；部分成交后取消剩余挂单，已成交部分仍待结算。状态变化同样进入同步队列，不能只比较成交金额。已有已核实的本地记录可立即修正展示，后台同步更新原行，不改写已结算输赢。
+
+若后续核对发现尚未最终确认的迟到成交，已终止原单显式同步 `None`，即使已确认财务份额暂为零，也撤回先前的零成交 `Return`。只有完整核对确实没有成交后才再次显示“退”。
+
 新写入的 GTC 买单附带 `pmOrderType: GTC`，接口展示为可选 `PmOrderType`；缺省的现有 FOK 行保持原字段和识别方式。原 `pmGtcExecutionId` 等身份字段保留为线协议和历史数据的字段名，不再表示新订单依赖双腿执行结构。
 
 金额、费用舍入和汇率沿用原 PM 财务助手；普通 FOK 下单、补单、自动卖出和配置沿用原行为。订单汇总只增加零成交 GTC 的排除条件。旧 GTC 的订单标识继续保护原单，不能让普通自动卖出或普通同步接管其未确认结果。
+
+[changmen 扩展] GTC 买入成交与卖出回款共用成交状态规范化：兼容官方 `TRADE_STATUS_*` 和无前缀形式，转换后只保存内部状态。`MATCHED_NOT_BROADCASTED` 归为尚未最终确认的 `MATCHED`，`MINED` / `RETRYING` 同样不作为最终成功；`FAILED` 不计成交或净回款，只有 `CONFIRMED` 成交可计入最终成功份额和回款。未知值继续阻断。依据：[成交接口](https://docs.polymarket.com/api-reference/trade/get-trades)、[用户实时事件](https://docs.polymarket.com/trading/realtime-order-updates)。
+
+GTC 费率和曲线参数在查询边界统一校验：合法数值零可以证明免费，空字符串、布尔值、数组及其它畸形字段均保持未知，不能借 JavaScript 数值强转生成零手续费。
+
+## 市场交易资产
+
+[changmen 扩展] 按 [PM Market Details](https://docs.polymarket.com/market-data/market-details) 的 `version` 选择交易资产：`v1` 解析 `clobTokenIds`，`v2` 使用数组 `positionIds`，两组字段同时存在时也不混用。统一入口为 `@changmen/shared/pm_market_assets`，覆盖采集索引、行情、下单前市场核对、历史订单与赛果。ID 始终保留十进制字符串精度；V2 字段缺失、格式错误或不支持的版本不回退到 CTF。旧无版本且没有 V2 字段的 CTF 快照保留兼容。
+
+索引的 `homeTokenId` / `awayTokenId` 保留兼容字段名，保存所选协议的交易资产 ID；新增 `marketVersion` 供持久化后的赛果补查恢复身份。Gamma 资产补查覆盖 `position_ids`，并包含已关闭市场；CLOB 结果不得把 V2 的 ID 换回旧 CTF ID。本次修复不扩展链上 split / merge / redeem 能力。
+
+Gamma 已明确返回资产或版本冲突时，查询以专用错误交给新旧下单预检并阻断发送；不能将其吞成普通“未查到”。补查的网络错误也不能清除已取得的冲突证据。
+
+采集器迁移测试的旧源码哈希仅在 `CHANGMEN_HISTORICAL_AUDIT=1` 时显式核对，原基线不修改；日常仍执行业务回归、严格类型、兼容导出和启动测试，遵循仓库的历史审计与业务验证分离规则。
+
+## 撤单确认
+
+[changmen 扩展] 按 [PM 撤单接口](https://docs.polymarket.com/trading/manage-orders) 和 [用户实时事件](https://docs.polymarket.com/trading/realtime-order-updates) 区分余量撤销与成交结算：HTTP `canceled` 包含原单 ID，或当前原账号的用户 WS 返回 `CANCELLATION` / `CANCELED`，即可确认余量撤销，结束按钮的“取消中”。HTTP 200、普通成交事件或 trade `FAILED` 本身不能证明撤单成功。无额外固定秒数期限，传输失败只标记“取消结果待确认”，不自动重发。
+
+撤单前安装账号隔离的事件观察器；已有明确撤单缓存时不再发送 DELETE。确认之后异步发起新一轮原单核对，不复用撤单前的查询，也不接受其迟到结果覆盖新事实。确认余量撤销时保留已知成交，完整成交量、费用与终态仍由原单和成交明细核实；核对期间显示“余量已取消，成交核对中”。新单与旧 GTC 记录使用相同规则。
 
 ## 验证
 

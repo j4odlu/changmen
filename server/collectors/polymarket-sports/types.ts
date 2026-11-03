@@ -23,6 +23,9 @@ export interface SportMessage {
   resolutionSource?: unknown;
 }
 export interface GammaMarket {
+  version?: unknown;
+  positionIds?: unknown;
+  position_ids?: unknown;
   id?: unknown;
   sportsMarketType?: unknown;
   gameStartTime?: unknown;

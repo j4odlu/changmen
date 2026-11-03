@@ -2,6 +2,7 @@
 import { measurePmExecution } from "../../../pmExecutionMetrics";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { getPolymarketMarketBlockReason } from "../../../markets/pmMarketGuard";
+import { PmGammaAssetIdentityError } from "../../../markets/gammaAssetLookup";
 import {
   fetchClobMarketByConditionId,
   fetchGammaEventById,
@@ -30,6 +31,8 @@ export async function resolvePolymarketBetBlockReason(option: BetOption): Promis
       conditionId ? measurePmExecution("gamma", { tokenId: option.itemId, stage: "clob_market" }, () => fetchClobMarketByConditionId(conditionId)) : Promise.resolve(null),
       refreshSport && eventId ? measurePmExecution("gamma", { tokenId: option.itemId, stage: "gamma_event" }, () => fetchGammaEventById(eventId)) : Promise.resolve(null),
     ]);
+    if (gammaSettled.status === "rejected" && gammaSettled.reason instanceof PmGammaAssetIdentityError)
+      return gammaSettled.reason.message;
     const market = gammaSettled.status === "fulfilled" ? gammaSettled.value : null;
     const clob = clobSettled.status === "fulfilled" ? clobSettled.value : null;
 

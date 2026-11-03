@@ -1,5 +1,5 @@
 import type { GtcConfirmedResult } from "@changmen/shared/pm_gtc_result";
-import { gtcAcceptedOrder } from "@changmen/shared/pm_gtc_result";
+import { gtcAcceptedOrder, gtcOrderResultStatus } from "@changmen/shared/pm_gtc_result";
 import { mergeGtcOrderFacts } from "@changmen/shared/pm_gtc_order";
 import type { GtcOrderRecord } from "./orderRecord";
 import { gtcFinancialOrder } from "../financialOrder";
@@ -14,7 +14,9 @@ export function confirmedOrderResult(row: GtcOrderRecord): GtcConfirmedResult | 
   const financial = fills.length ? gtcFinancialOrder({ ...totals, complete: true })
     : { pmShares: 0, pmFillPrice: 0, pmStakeUsdc: 0, pmFeeUsdc: 0, odds: 0, betMoney: 0 };
   if (!financial) return null;
-  return { ...(acceptedOrder ? { acceptedOrder } : {}), executionId: row.id, orderId: row.orderId, playerId: row.accountId, linkId: row.context.linkId,
+  // 已终止原单的后续核对可能发现迟到成交；显式 None 可清除先前的零成交 Return。
+  const status = gtcOrderResultStatus(row);
+  return { ...(status === "Return" || row.terminal ? { status } : {}), ...(acceptedOrder ? { acceptedOrder } : {}), executionId: row.id, orderId: row.orderId, playerId: row.accountId, linkId: row.context.linkId,
     createdAt: row.createdAt, revision: row.revision, match: row.context.match, bet: row.context.bet, item: row.context.item,
     ...(row.context.clientMarket ? { clientMarket: row.context.clientMarket } : {}),
     tokenId: row.plan.tokenId, conditionId: row.plan.conditionId, buyShares: totals.matched,

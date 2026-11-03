@@ -48,8 +48,12 @@ const EVENTS = [
   ev(3, "Argentina vs Brazil", "copaam", now + 7200e3, "Copa America"), // 美洲杯别名 → copa
   ev(4, "Club X vs Club Y", "col", now + 7200e3, "UEFA Conference League"), // 欧协联 → uecl
 ];
+Object.assign(EVENTS[0].markets[0], { version: "v2", clobTokenIds: '["101","102"]', positionIds: ["201", "202"] });
+const invalidV2 = ev(5, "Invalid vs Missing", "epl", now + 3600e3);
+Object.assign(invalidV2.markets[0], { version: "v2" });
+EVENTS.push(invalidV2);
 
-globalThis.fetch = async (url) => {
+globalThis.fetch = async (url, init) => {
   const u = String(url);
   if (u.includes("/events/keyset")) {
     keysetUrls.push(u);
@@ -57,14 +61,22 @@ globalThis.fetch = async (url) => {
     assert.ok(!u.includes("series_id"), "tag 拉取不得带 series_id 白名单");
     return { ok: true, json: async () => EVENTS };
   }
-  if (u.includes("/prices"))
-    return { ok: true, json: async () => ({}) };
+  if (u.includes("/prices")) {
+    const ids = JSON.parse(init.body).map(row => row.token_id);
+    assert.ok(ids.includes("201") && ids.includes("202"));
+    assert.ok(!ids.includes("101") && !ids.includes("102"));
+    return { ok: true, json: async () => ({ 201: { SELL: .4 }, 202: { SELL: .2 } }) };
+  }
   throw new Error(`unexpected fetch: ${u}`);
 };
 
 try {
   const rows = await fetchSportAsClientMatchDtos({ ...FOOTBALL_OPTS, cacheKey: KEY });
   assert.equal(rows.length, 4, `应有 4 场，实际 ${rows.length}`);
+  const v2Source = rows.find(row => row.Title === "Arsenal vs Chelsea").Bets[0].Sources.Polymarket;
+  assert.equal(v2Source.HomeID, "201");
+  assert.equal(v2Source.AwayID, "202");
+  assert.equal(v2Source.HomeOdds, 2.5);
   const byTitle = new Map(rows.map(r => [r.Title, r.Game]));
   assert.equal(byTitle.get("Arsenal vs Chelsea"), "epl");
   assert.equal(byTitle.get("Seoul vs Busan"), "unknown_fb");

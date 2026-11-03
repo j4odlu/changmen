@@ -56,7 +56,7 @@ it("cancels only the remaining quantity and keeps all prior confirmed fills", as
   await cancelNativeGtcOrder("id");
   expect(mock.cancel).toHaveBeenCalledExactlyOnceWith(mock.account, hash);
   expect(currentGtcOrder("id")).toMatchObject({ matched: "3", principal: "1.5", open: "0", terminal: true, cancel: { state: "acknowledged" } });
-  expect(gtcOrderReconciled(currentGtcOrder("id"))).toBe(true);
+  await vi.waitFor(() => expect(gtcOrderReconciled(currentGtcOrder("id"))).toBe(true));
   expect((await pendingGtcResults("owner"))[0]!.result).toMatchObject({ executionId: "id", buyShares: "3", principalUsdc: "1.5" });
 });
 it("query failure leaves confirmed quantities intact and retry uses the same original id", async () => {
@@ -64,6 +64,29 @@ it("query failure leaves confirmed quantities intact and retry uses the same ori
   await expect(pollGtcOrder("id")).rejects.toThrow("offline");
   expect(currentGtcOrder("id")).toMatchObject({ matched: "3", principal: "1.5" }); expect(gtcOrders.queryIssues.id).toBeDefined();
   await pollGtcOrder("id"); expect(gtcOrders.queryIssues.id).toBeUndefined(); expect(mock.read.mock.calls.every(call => call[2] === hash)).toBe(true);
+});
+it("releases cancellation after the receipt while a fresh reconciliation is stalled, and ignores a pre-cancel LIVE response", async () => {
+  await seed(); await pollGtcOrder("id");
+  let finishOld!: (value: GtcFacts) => void;
+  let finishFresh!: (value: GtcFacts) => void;
+  mock.read.mockReturnValueOnce(new Promise(resolve => { finishOld = resolve; }))
+    .mockReturnValueOnce(new Promise(resolve => { finishFresh = resolve; }));
+  const old = pollGtcOrder("id");
+  await vi.waitFor(() => expect(mock.read).toHaveBeenCalledTimes(2));
+  await cancelNativeGtcOrder("id");
+  await vi.waitFor(() => expect(mock.read).toHaveBeenCalledTimes(3));
+  expect(gtcOrders.cancelInFlight.id).toBeUndefined();
+  expect(currentGtcOrder("id")).toMatchObject({ terminal: true, open: "0", matched: "3", complete: false });
+  expect(gtcOrderReconciled(currentGtcOrder("id"))).toBe(false);
+  finishOld(facts("4", "LIVE")); await old;
+  expect(currentGtcOrder("id")).toMatchObject({ terminal: true, open: "0", matched: "3" });
+  const fresh = facts("3", "CANCELED");
+  fresh.order!.matched = "4"; fresh.order!.tradeIds.push("trade-2");
+  fresh.fills.push({ ...fresh.fills[0]!, key: "trade-2", tradeId: "trade-2", shares: "1" });
+  finishFresh(fresh);
+  await vi.waitFor(() => expect(gtcOrderReconciled(currentGtcOrder("id"))).toBe(true));
+  expect(currentGtcOrder("id")).toMatchObject({ matched: "4", principal: "2", open: "0" });
+  expect(mock.cancel).toHaveBeenCalledOnce();
 });
 it("keeps unresolved fees active even after the remainder is canceled", async () => {
   await seed(); mock.read.mockResolvedValue(facts("3", "CANCELED", null)); await pollGtcOrder("id");

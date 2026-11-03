@@ -4,6 +4,7 @@
  * 缓存：进程内存 + storage/sport/{key}/（见 sport_list_cache.js）。
  */
 
+import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
 import {
   readFreshSportListCache,
   readSportListCache,
@@ -473,7 +474,9 @@ async function fetchSportRowsFromGamma(opts) {
             continue;
           const outcomes = parseJsonArray(market.outcomes);
           const prices = parseJsonArray(market.outcomePrices ?? market.outcome_prices);
-          const tokenIds = parseJsonArray(market.clobTokenIds ?? market.clob_token_ids);
+          const tokenIds = polymarketMarketAssetIds(market);
+          if (!tokenIds.length && (market.version != null || market.positionIds != null || market.position_ids != null))
+            continue;
           if (outcomes.length < 2)
             continue;
           // moneyline 可无无 CLOB token（靠 outcomePrices）；spreads/totals 至少要有双边 outcome

@@ -1,3 +1,4 @@
+import { polymarketMarketAssetIds, polymarketMarketAssetFields } from "@changmen/shared/pm_market_assets";
 /**
  * Polymarket 订单结算（服务端 / 运维脚本；对齐 venue-adapter/polymarket/orders.ts）
  * - 官方 tokens[].winner：判赢/输
@@ -32,7 +33,7 @@ export function normalizeConditionId(id) {
 }
 
 function gammaTokenIds(market) {
-  return parseJsonArray(market?.clobTokenIds ?? market?.clob_token_ids);
+  return polymarketMarketAssetIds(market);
 }
 
 export function polymarketShareCount(sizeRaw) {
@@ -58,7 +59,9 @@ export function resolvePolymarketOfficialWinningAssetId(market) {
   const tokens = market?.tokens;
   if (!Array.isArray(tokens) || !tokens.length)
     return null;
-  const winning = tokens.find(t => t?.winner === true);
+  const ids = market?.version == null && market?.positionIds == null && market?.position_ids == null
+    ? null : polymarketMarketAssetIds(market);
+  const winning = tokens.find(t => t?.winner === true && (!ids || ids.includes(String(t.token_id ?? ""))));
   const id = String(winning?.token_id ?? "").trim();
   return id || null;
 }
@@ -223,7 +226,7 @@ export function lookupGammaMarket(marketMap, trade) {
   return undefined;
 }
 
-/** batch Gamma lookup（condition_ids + clob_token_ids 双路） */
+/** batch Gamma lookup（condition_ids + clob_token_ids / position_ids） */
 export async function fetchGammaMarketsByConditionIds(ids, tokenIds = []) {
   const out = new Map();
   const unique = [...new Set(ids.map(id => normalizeConditionId(id)).filter(Boolean))];
@@ -232,7 +235,7 @@ export async function fetchGammaMarketsByConditionIds(ids, tokenIds = []) {
   const chunkSize = 20;
   for (let i = 0; i < unique.length; i += chunkSize) {
     const chunk = unique.slice(i, i + chunkSize);
-    const params = new URLSearchParams({ limit: String(chunk.length) });
+    const params = new URLSearchParams({ limit: String(chunk.length), closed: "any" });
     for (const id of chunk)
       params.append("condition_ids", id);
     storeGammaMarkets(out, await fetchGammaMarketsChunk(params));
@@ -240,9 +243,17 @@ export async function fetchGammaMarketsByConditionIds(ids, tokenIds = []) {
 
   for (let i = 0; i < uniqueTokens.length; i += chunkSize) {
     const chunk = uniqueTokens.slice(i, i + chunkSize);
-    const params = new URLSearchParams({ limit: String(chunk.length) });
+    const params = new URLSearchParams({ limit: String(chunk.length), closed: "any" });
     for (const id of chunk)
       params.append("clob_token_ids", id);
+    storeGammaMarkets(out, await fetchGammaMarketsChunk(params));
+  }
+
+  const unresolvedPositions = uniqueTokens.filter(id => /^\d+$/.test(id) && !out.has(`token:${normalizeConditionId(id)}`));
+  for (let i = 0; i < unresolvedPositions.length; i += chunkSize) {
+    const chunk = unresolvedPositions.slice(i, i + chunkSize);
+    const params = new URLSearchParams({ limit: String(chunk.length), closed: "any" });
+    for (const id of chunk) params.append("position_ids", id);
     storeGammaMarkets(out, await fetchGammaMarketsChunk(params));
   }
 
@@ -250,7 +261,7 @@ export async function fetchGammaMarketsByConditionIds(ids, tokenIds = []) {
     if (out.has(id))
       continue;
     try {
-      const params = new URLSearchParams({ limit: "1", condition_ids: id });
+      const params = new URLSearchParams({ limit: "1", condition_ids: id, closed: "any" });
       storeGammaMarkets(out, await fetchGammaMarketsChunk(params));
     }
     catch { /* skip */ }
@@ -260,7 +271,7 @@ export async function fetchGammaMarketsByConditionIds(ids, tokenIds = []) {
     if (out.has(`token:${normalizeConditionId(tokenId)}`))
       continue;
     try {
-      const params = new URLSearchParams({ limit: "1", clob_token_ids: tokenId });
+      const params = new URLSearchParams({ limit: "1", clob_token_ids: tokenId, closed: "any" });
       storeGammaMarkets(out, await fetchGammaMarketsChunk(params));
     }
     catch { /* skip */ }
@@ -279,7 +290,11 @@ export function mapDbStatus(raw) {
 
 /** CLOB /markets/{condition_id} → 结算形状（保留官方 tokens[].winner） */
 export function clobMarketToGammaShape(clob, base) {
-  const tokens = Array.isArray(clob?.tokens) ? clob.tokens : [];
+  let tokens = Array.isArray(clob?.tokens) ? clob.tokens : [];
+  if (base?.version === "v2") {
+    const ids = gammaTokenIds(base);
+    tokens = tokens.filter(token => ids.includes(String(token.token_id ?? "")));
+  }
   if (!tokens.length)
     return base || null;
   const hasWinner = tokens.some(t => t?.winner === true);
@@ -294,6 +309,7 @@ export function clobMarketToGammaShape(clob, base) {
     : tokens.map(t => String(t?.token_id ?? ""));
   return {
     ...(base || {}),
+    version: base?.version ?? clob?.version,
     condition_id: clob?.condition_id || base?.condition_id,
     question: base?.question ?? clob?.question,
     title: base?.title ?? base?.question ?? clob?.question,
@@ -304,7 +320,7 @@ export function clobMarketToGammaShape(clob, base) {
       ? parseJsonArray(base?.outcomes)
       : tokens.map(t => String(t?.outcome ?? ""))),
     outcomePrices,
-    clobTokenIds: JSON.stringify(priceTokenIds),
+    ...polymarketMarketAssetFields(base ?? clob, priceTokenIds),
     umaResolutionStatus: hasWinner
       ? (base?.umaResolutionStatus || base?.uma_resolution_status || "settled_normal")
       : (base?.umaResolutionStatus ?? base?.uma_resolution_status),

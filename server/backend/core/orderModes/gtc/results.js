@@ -16,7 +16,7 @@ function jsonField(value, name) {
   catch { throw new Error(`GTC ${name} JSON 无效`); }
 }
 export function validateGtcConfirmedResult(input, owner) {
-  const allowed = new Set(["acceptedOrder", "clientMarket", "executionId", "orderId", "playerId", "linkId", "createdAt", "revision", "match", "bet", "item", "tokenId", "conditionId", "buyShares", "principalUsdc", "feeUsdc", "fills", "financial"]);
+  const allowed = new Set(["status", "acceptedOrder", "clientMarket", "executionId", "orderId", "playerId", "linkId", "createdAt", "revision", "match", "bet", "item", "tokenId", "conditionId", "buyShares", "principalUsdc", "feeUsdc", "fills", "financial"]);
   const fillFields = new Set(["key", "tradeId", "bucket", "role", "shares", "price", "fee", "status", "updatedAt"]);
   if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some(key => !allowed.has(key)) || !uuid(input.executionId)
     || typeof input.orderId !== "string" || !/^0x[0-9a-f]{64}$/i.test(input.orderId)
@@ -42,6 +42,8 @@ export function validateGtcConfirmedResult(input, owner) {
     throw new Error("GTC 零成交意向不能建立财务订单");
   if (acceptedOrder && gtcUnits(input.buyShares) > gtcUnits(acceptedOrder.shares))
     throw new Error("GTC 已确认成交超过原单累计量");
+  if (input.status != null && (!["None", "Return"].includes(input.status) || (input.status === "Return" && financial.pmShares !== 0)))
+    throw new Error("GTC 退单状态只适用于零成交订单");
   const clientMarket = normalizeOrderMarketIdentity(input.clientMarket);
   if (input.clientMarket != null && !clientMarket) throw new Error("GTC 合场盘口身份无效");
   return { ...input, financial, ...(acceptedOrder ? { acceptedOrder } : {}), ...(clientMarket ? { clientMarket } : {}) };

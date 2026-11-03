@@ -8,6 +8,7 @@
 <button id="run" disabled>运行 12 次前后对比</button><button id="download" disabled>下载结果</button>
 <pre id="result">加载中</pre>
 <script type="module">
+import { polymarketMarketAssetIds } from '@changmen/shared/pm_market_assets';
 import { checkFokBuy } from '@changmen/venue-browser/adapter/polymarket/fok/preflight';
 import { checkFokBuy as beforeFastCheck } from '@changmen/venue-browser/adapter/polymarket/tests/submission/fixtures/pmBeforeFastFok';
 import { setPmFokPreflightMode } from '@changmen/venue-browser/adapter/polymarket/submission/preflight/pmFokPreflightMode';
@@ -61,7 +62,9 @@ run.onclick = async () => {
     const event = await polymarketPluginGet(`https://gamma-api.polymarket.com/events/${eventId}`);
     const market = event.markets.find(row => String(row.id) === marketId);
     if (!market || !market.acceptingOrders || event.ended) throw new Error('请选择仍在接单的未结束盘口');
-    const tokenId = JSON.parse(market.clobTokenIds)[0], book = await pmGetBook(tokenId);
+    const tokenId = polymarketMarketAssetIds(market)[0];
+    if (!tokenId) throw new Error('市场交易资产不可用或版本不受支持');
+    const book = await pmGetBook(tokenId);
     const ask = Math.min(...book.asks.map(row => Number(row.price))), tick = Number(book.tick_size);
     const limit = Math.min(1 - tick, Math.ceil((ask + 2 * tick) / tick - 1e-9) * tick);
     report.market = { eventId, marketId, title: market.question, tokenId, conditionId: market.conditionId, amount: 10, limit };

@@ -3,6 +3,18 @@ import { exactGtcSellCash } from "@changmen/venue-browser/polymarket/gtc/sellCas
 const trade = { id: "t", taker_order_id: "sell", asset_id: "token", side: "SELL", size: "4", status: "CONFIRMED", transaction_hash: "tx" };
 const activity = { type: "TRADE", side: "SELL", asset: "token", size: 4, usdcSize: 2.352, transactionHash: "tx" };
 describe("GTC sell cash proof", () => {
+  it.each(["CONFIRMED", "TRADE_STATUS_CONFIRMED", " trade_status_confirmed "])("accepts %s for both exact taker and maker net credits", (status) => {
+    expect(exactGtcSellCash([{ ...trade, status }], [activity], "sell", "token", 4)).toBe(2.352);
+    expect(exactGtcSellCash([{ ...trade, status, taker_order_id: "other", maker_orders: [{ order_id: "sell", asset_id: "token", side: "SELL", matched_amount: "4" }] }],
+      [activity], "sell", "token", 4)).toBe(2.352);
+  });
+  it.each(["MATCHED", "MATCHED_NOT_BROADCASTED", "MINED", "RETRYING", "FAILED", "UNKNOWN"])("does not count prefixed %s as confirmed sale proceeds", (status) => {
+    expect(() => exactGtcSellCash([{ ...trade, status: `TRADE_STATUS_${status}` }], [activity], "sell", "token", 4)).toThrow("GTC");
+  });
+  it("ignores prefixed failed fills without losing a different confirmed fill", () => {
+    expect(exactGtcSellCash([{ ...trade, status: "TRADE_STATUS_CONFIRMED" },
+      { ...trade, id: "failed", status: "TRADE_STATUS_FAILED", transaction_hash: "failed-tx" }], [activity], "sell", "token", 4)).toBe(2.352);
+  });
   it("uses net wallet credit once rather than subtracting a fee from it again", () => {
     expect(exactGtcSellCash([trade, trade], [activity], "SELL", "token", 4)).toBe(2.352);
   });

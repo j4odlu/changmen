@@ -6,6 +6,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { createStoredGtcOrder, listStoredGtcOrders, mutateStoredGtcOrder, queueStoredGtcOrderResults } from "./orderStore";
 import { listLocalGtc, pendingGtcResults, finishGtcResult } from "./localStore";
 import { request, transaction } from "./storage";
+import { orderResultKey } from "./core/orderResult";
 
 const hash = `0x${"c".repeat(64)}`;
 const maker = `0x${"a".repeat(40)}`;
@@ -57,6 +58,7 @@ it("queues confirmed partial fills under one original id, and FAILED evidence co
   row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "receipt", receipt: { success: true, orderID: hash } });
   expect((await pendingGtcResults("owner"))[0]!.result).toMatchObject({ buyShares: "0", fills: [],
     acceptedOrder: { shares: "10", price: "0.5" }, financial: { pmShares: 0, betMoney: 0 } });
+  expect((await pendingGtcResults("owner"))[0]!.result).not.toHaveProperty("status");
   const fill = { key: "one", tradeId: "one", bucket: "maker", role: "MAKER" as const, shares: "3", price: "0.5", fee: "0", status: "CONFIRMED", updatedAt: 1 };
   row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "facts", facts: { order: { id: hash, original: "10", matched: "3", status: "LIVE", tradeIds: ["one"] }, fills: [fill], complete: true, observedAt: 1 } });
   const before = (await pendingGtcResults("owner"))[0]!;
@@ -99,4 +101,38 @@ it("does not acknowledge a replaced payload at the same local revision", async (
   await finishGtcResult({ ...queued, result: oldResult });
   expect(await pendingGtcResults("owner")).toHaveLength(1);
   await finishGtcResult(queued); expect(await pendingGtcResults("owner")).toEqual([]);
+});
+it("queues ordinary Return status when a resting order is canceled without any fill", async () => {
+  let row = await createStoredGtcOrder("id", "owner", 1, maker, plan, {});
+  row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "authorize" });
+  row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "receipt", receipt: { success: true, orderID: hash } });
+  await finishGtcResult((await pendingGtcResults("owner"))[0]!);
+  row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "facts", facts: {
+    order: { id: hash, original: "10", matched: "0", status: "CANCELED", tradeIds: [] }, fills: [], complete: true, observedAt: 20 } });
+  const queued = (await pendingGtcResults("owner"))[0]!;
+  expect(queued.result).toMatchObject({ orderId: hash, status: "Return", buyShares: "0", financial: { betMoney: 0 } });
+  expect(queued.result.revision).toBe(row.revision);
+  await finishGtcResult(queued);
+  // 撤单期间的迟到撮合尚未 CONFIRMED，财务仍为零，但不能继续保留“退”。
+  await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "facts", facts: {
+    order: { id: hash, original: "10", matched: "3", status: "CANCELED", tradeIds: ["late"] },
+    fills: [{ key: "late", tradeId: "late", bucket: "maker", role: "MAKER", shares: "3", price: "0.5", fee: "0", status: "MATCHED", updatedAt: 21 }],
+    complete: true, observedAt: 21,
+  } });
+  expect((await pendingGtcResults("owner"))[0]!.result).toMatchObject({ status: "None", financial: { pmShares: 0 } });
+});
+it("rebuilds a pending resting-order payload from the incompatible status=None format without resending the order", async () => {
+  let row = await createStoredGtcOrder("id", "owner", 1, maker, plan, {});
+  row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "authorize" });
+  row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "receipt", receipt: { success: true, orderID: hash } });
+  const entry = (await pendingGtcResults("owner"))[0]!;
+  const incompatible = { ...entry.result, status: "None" as const };
+  await transaction(["records", "results"], "readwrite", async tx => {
+    const records = tx.objectStore("records"); const values = await request(records.getAll());
+    await request(records.put({ ...values[0], resultKey: orderResultKey(incompatible) }));
+    await request(tx.objectStore("results").put({ ...entry, result: incompatible, failures: 1 }));
+  });
+  await queueStoredGtcOrderResults("owner");
+  expect((await pendingGtcResults("owner"))[0]!.result).not.toHaveProperty("status");
+  expect((await listStoredGtcOrders("owner"))[0]!.revision).toBe(row.revision);
 });

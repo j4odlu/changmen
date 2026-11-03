@@ -130,6 +130,14 @@ describe("interpretPolymarketUserWsMessage", () => {
 });
 
 describe("polymarketOrderRowFromUserWsMessage", () => {
+  it("preserves a partial-fill CANCELLATION even when the optional status is absent", () => {
+    const message = { event_type: "order", type: "CANCELLATION", id: ORDER_ID,
+      size_matched: "3", original_size: "10", associate_trades: ["trade-1"] };
+    expect(interpretPolymarketUserWsMessage(message, ORDER_ID)).toBe("matched");
+    expect(polymarketOrderRowFromUserWsMessage(message, "matched")).toMatchObject({
+      status: "CANCELED", size_matched: "3", original_size: "10", associate_trades: ["trade-1"],
+    });
+  });
   it("builds matched row with size", () => {
     const row = polymarketOrderRowFromUserWsMessage({
       status: "CONFIRMED",

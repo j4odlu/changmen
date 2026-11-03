@@ -1,3 +1,4 @@
+import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
 import { resolvePolymarketOfficialWinningAssetId } from "../orders/history/orders";
 import { parseJsonArray, type PolymarketRawMarket } from "./parse";
 
@@ -64,13 +65,18 @@ export function getPolymarketMarketBlockReason(
     return POLYMARKET_TRADING_DISABLED_MESSAGE;
   const asset = String(tokenId || "").trim();
   if (!asset) return null;
+  const tokens = polymarketMarketAssetIds(market);
+  if (market.version != null && market.version !== "v1" && market.version !== "v2")
+    return "Polymarket 市场版本不支持";
+  if ((market.version != null || market.positionIds != null || market.position_ids != null)
+    && !tokens.includes(asset))
+    return "Polymarket 市场交易资产或版本不一致";
 
   // [changmen 扩展] 价格提前判定不改变现有下单闸；此处仍只认官方赢家。
   const winning = resolvePolymarketOfficialWinningAssetId(market);
   if (winning && winning !== asset)
     return "Polymarket 市场已决出胜负";
 
-  const tokens = parseJsonArray(market.clobTokenIds ?? market.clob_token_ids);
   const prices = parseJsonArray(market.outcomePrices ?? market.outcome_prices).map(Number);
   const idx = tokens.indexOf(asset);
   if (idx < 0 || !prices.length)

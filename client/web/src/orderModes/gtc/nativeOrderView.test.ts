@@ -43,6 +43,13 @@ it("native original details stay read-only in admin/historical preview", async (
   const html = await renderToString(createSSRApp({ render: () => h(OrderDetails, { row: display, readonly: true }) }));
   expect(html).not.toContain("取消 PM 剩余挂单"); expect(mocks.cancel).not.toHaveBeenCalled();
 });
+it("shows the actual backend sync error instead of only a generic retry notice", async () => {
+  const row = order(); gtcOrders.records = [row];
+  gtcOrders.resultIssues[row.id] = { kind: "query", message: "GTC 同步只能接收已确认订单结果", at: 1 };
+  const display: OrderRow = { Type: "Polymarket", PlayerID: 1, OrderID: hash, PmGtcExecutionId: row.id };
+  const html = await renderToString(createSSRApp({ render: () => h(OrderDetails, { row: display }) }));
+  expect(html).toContain("后台副本同步失败（GTC 同步只能接收已确认订单结果）");
+});
 it("merges only a missing native display row, preserving all FOK rows and the original empty-case references", () => {
   const native = order(); const fok: OrderRow = { OrderID: "fok", Type: "Polymarket", PlayerID: 1, Link: 12, BetMoney: 100 };
   const entries: [number, OrderRow[]][] = [[12, [fok]]];
@@ -61,4 +68,17 @@ it("unknown fees never become a zero-fee stake or a fabricated full fill in pend
 it("keeps the existing plain-text item display for escaped team names", () => {
   const row = order(); row.context.item = "A &amp; B";
   expect(nativeGtcPendingRows([], [row], toOrderDateKeyLocal(Date.now()), 0)[0]!.Item).toBe("A & B");
+});
+it("uses ordinary Return for a verified zero-fill cancellation while its saved row is still None", () => {
+  const native = order();
+  native.matched = "0"; native.fills = {}; native.open = "0"; native.terminal = true;
+  native.order = { ...native.order!, matched: "0", status: "CANCELED", tradeIds: [] };
+  const persisted: OrderRow = { OrderID: hash, Type: "Polymarket", PlayerID: 1, Link: 12,
+    PmGtcExecutionId: native.id, PmGtcBuyShares: 0, BetMoney: 0, Status: "None" };
+  const projected = mergeGtcPendingDisplayEntries([[12, [persisted]]], [], [], [native]);
+  expect(projected[0]![1][0]!.Status).toBe("Return");
+  expect(persisted.Status).toBe("None");
+  expect(mergeGtcPendingDisplayEntries([[12, [{ ...persisted, PmGtcBuyShares: 3 }]]], [], [], [native])[0]![1][0]!.Status).toBe("None");
+  native.complete = false;
+  expect(mergeGtcPendingDisplayEntries([[12, [persisted]]], [], [], [native])[0]![1][0]!.Status).toBe("None");
 });

@@ -4,7 +4,7 @@ import {
   fetchClobMarketByConditionId,
   gammaEventToPmSportLike,
 } from "@changmen/venue-browser/polymarket/markets/pmSportGamma";
-import { gammaEventToPmSportLike as legacyGammaEventToPmSportLike } from "@changmen/venue-browser/polymarket/submission/preflight/legacy/pmSportGamma";
+import { fetchGammaMarketByTokenId as legacyFetchGammaMarketByTokenId, gammaEventToPmSportLike as legacyGammaEventToPmSportLike } from "@changmen/venue-browser/polymarket/submission/preflight/legacy/pmSportGamma";
 import { getPolymarketPmSportBlockReason } from "@changmen/venue-browser/polymarket/markets/pmSportGuard";
 import { PM_GAMMA_CACHE_MS } from "@changmen/venue-browser/polymarket/markets/pmGammaCache";
 import { polymarketPluginGet } from "@changmen/venue-browser/polymarket/transport/transport";
@@ -17,6 +17,20 @@ beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(now);
 });
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
+
+describe.each([fetchGammaMarketByTokenId, legacyFetchGammaMarketByTokenId])("version-aware Gamma lookup in both preflight modes", read => {
+  test("falls back to position_ids and rejects a V2 response found through the old CTF ID", async () => {
+    const market = { version: "v2", clobTokenIds: '["101","102"]', positionIds: ["201", "202"], closed: false };
+    vi.mocked(polymarketPluginGet).mockImplementation(async url => new URL(url).searchParams.has("position_ids") ? [market] : []);
+    expect(await read("201")).toEqual(market);
+    const urls = vi.mocked(polymarketPluginGet).mock.calls.map(([url]) => new URL(url));
+    expect(urls.map(url => url.searchParams.get("clob_token_ids") ?? url.searchParams.get("position_ids"))).toEqual(["201", "201"]);
+    expect(urls[1]!.searchParams.get("position_ids")).toBe("201");
+    expect(urls.every(url => url.searchParams.get("closed") === "any")).toBe(true);
+    vi.mocked(polymarketPluginGet).mockResolvedValue([market]);
+    await expect(read("101")).rejects.toThrow("交易资产或版本不一致");
+  });
+});
 
 describe.each([gammaEventToPmSportLike, legacyGammaEventToPmSportLike])("PM score parsing in both preflight modes", (parseEvent) => {
   test("basketball points are preserved without a series or a map number", () => {

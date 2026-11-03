@@ -18,8 +18,8 @@ function monitorCardView(row: GtcOrderState & { id: string }, reconciled: boolea
   const cancelLabel = !row.terminal && row.cancel ? {
     requested: "取消中",
     dispatching: "取消中",
-    acknowledged: "PM 已确认取消剩余挂单，正在同步订单状态",
-    unknown: "取消结果待核实，正在查询原单状态",
+    acknowledged: "余量已取消，成交核对中",
+    unknown: "取消结果待确认，正在查询原单状态",
     failed: "取消失败",
   }[row.cancel.state] : "";
   // 查询仍在继续时也展示撤单错误，避免统一提示遮住超时、鉴权或官方拒绝原因。
@@ -42,7 +42,7 @@ function monitorCardView(row: GtcOrderState & { id: string }, reconciled: boolea
     averagePrice,
     reconciled,
     cancelPending,
-    cancelLabel,
+    cancelLabel: canceled && !reconciled ? "余量已取消，成交核对中" : cancelLabel,
     cancelDetail,
     cancelRetry,
     cancelInFlight: cancelInFlight,

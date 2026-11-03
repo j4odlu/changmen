@@ -89,6 +89,8 @@ export type PolymarketMapOutcomeKind = "official" | "price";
 
 /** [changmen 扩展] VPS polymarket-esports-collector 写入，浏览器 WS 订阅用 */
 export interface PolymarketMarketIndexEntry {
+  /** Gamma 协议版本；homeTokenId/awayTokenId 兼容字段承载所选交易资产 ID。 */
+  marketVersion?: "v1" | "v2";
   sourceMatchId: string;
   marketId: string;
   homeTokenId: string;

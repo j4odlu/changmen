@@ -13,6 +13,19 @@ const setup = () => {
   } };
 };
 
+test("V2 prematch history uses position IDs and never the populated CTF IDs", async () => {
+  const { options, calls, db } = setup();
+  const source = event();
+  Object.assign(source.markets[0], { version: "v2", positionIds: ["201", "202"] });
+  assert.equal(await collectPrematchPrices(source, options), 2);
+  assert.deepEqual(calls.map(call => call[0]), ["201", "202"]);
+  assert.deepEqual(Object.keys(db).sort(), ["201", "202"]);
+  source.markets[0].positionIds = [];
+  calls.length = 0;
+  assert.equal(await collectPrematchPrices(source, options), 0);
+  assert.deepEqual(calls, []);
+});
+
 test("persists per-map tokens at start minus one hour, reuses DB cache after restart", async () => {
   const { options, db, calls } = setup();
   assert.equal(await collectPrematchPrices(event(), options), 2);

@@ -4,6 +4,40 @@ import { clearPmFootballDirectCache, fetchPmFootballDirect } from "@changmen/ven
 afterEach(clearPmFootballDirectCache);
 
 describe("pM football official discovery", () => {
+  it.each([{ version: "v2" }, { version: "v3", positionIds: ["201", "202"] }, { positionIds: ["201", "202"] }])("excludes markets with ambiguous or missing selected assets: %j", metadata => {
+    return expect(fetchPmFootballDirect({
+      async get<T>() {
+        return { events: [{ id: "invalid", title: "Arsenal vs Chelsea", startTime: new Date(Date.now() + 60_000).toISOString(),
+          sport: { sport: "epl" }, markets: [{ ...metadata, sportsMarketType: "moneyline", outcomes: ["Arsenal", "Chelsea"],
+            clobTokenIds: ["101", "102"], outcomePrices: [.5, .5] }],
+        }], next_cursor: "" } as T;
+      },
+      async post<T>(): Promise<T> { throw new Error("invalid markets must not request prices"); },
+    })).resolves.toEqual([]);
+  });
+
+  it("uses V2 positions for quote requests and published source IDs", async () => {
+    const rows = await fetchPmFootballDirect({
+      async get<T>() {
+        return { events: [{ id: "v2-event", title: "Arsenal vs Chelsea", sport: { sport: "epl" },
+          startTime: new Date(Date.now() + 60_000).toISOString(), markets: [{
+            version: "v2", conditionId: "v2-cond", sportsMarketType: "moneyline",
+            outcomes: ["Arsenal", "Chelsea"], clobTokenIds: ["101", "102"], positionIds: ["201", "202"],
+          }],
+        }], next_cursor: "" } as T;
+      },
+      async post<T>(_url: string, body: unknown) {
+        expect(JSON.stringify(body)).toContain('"201"');
+        expect(JSON.stringify(body)).not.toContain('"101"');
+        return { 201: { SELL: .4 }, 202: { SELL: .2 } } as T;
+      },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.Bets[0]?.Sources.Polymarket).toMatchObject({ HomeOdds: 2.5, AwayOdds: 5 });
+    expect(JSON.stringify(rows)).toContain("201");
+    expect(JSON.stringify(rows)).not.toContain('"101"');
+  });
+
   it("maps official Gamma moneyline and CLOB prices without VPS", async () => {
     const urls: string[] = [];
     const rows = await fetchPmFootballDirect({

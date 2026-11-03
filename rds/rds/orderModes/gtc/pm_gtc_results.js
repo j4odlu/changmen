@@ -10,7 +10,7 @@ export async function savePmGtcConfirmedResult(owner, result) {
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [JSON.stringify([owner, result.orderId.toLowerCase()])]);
-    const existing = await client.query("SELECT player_id,provider,order_id,raw FROM orders WHERE user_id=$1 AND lower(order_id)=lower($2) FOR UPDATE", [owner, result.orderId]);
+    const existing = await client.query("SELECT player_id,provider,order_id,status,raw FROM orders WHERE user_id=$1 AND lower(order_id)=lower($2) FOR UPDATE", [owner, result.orderId]);
     if (existing.rows.some(row => Number(row.player_id) !== result.playerId && row.provider === "Polymarket" && row.raw?.pmGtcExecutionId))
       throw new Error("GTC 原单结果已属于其他账号");
     const previous = existing.rows.find(row => Number(row.player_id) === result.playerId);
@@ -25,7 +25,8 @@ export async function savePmGtcConfirmedResult(owner, result) {
     const savedOrder = previous?.raw?.pmGtcAcceptedOrder;
     const savedRevision = Number(previous?.raw?.pmGtcResultRevision ?? -1);
     const enrichAcceptedOrder = savedRevision === result.revision && result.acceptedOrder && !savedOrder;
-    if (savedRevision >= result.revision && !enrichAcceptedOrder) {
+    const enrichReturnStatus = savedRevision === result.revision && result.status === "Return" && previous?.status === "None";
+    if (savedRevision >= result.revision && !enrichAcceptedOrder && !enrichReturnStatus) {
       await client.query("COMMIT"); return true;
     }
     const oldShares = Number(previous?.raw?.pmGtcBuyShares) || 0;
@@ -44,6 +45,7 @@ export async function savePmGtcConfirmedResult(owner, result) {
       throw new Error("GTC 成交量减少缺少已确认成交的 FAILED 证据");
     if (!previous && result.financial.pmShares === 0 && !acceptedOrder) { await client.query("COMMIT"); return true; }
     const financial = result.financial;
+    const status = result.status ?? (financial.pmShares > 0 ? "None" : previous?.status === "Return" ? "Return" : "None");
     const clientMarket = mergeOrderMarketIdentity(previous?.raw?.clientMarket, result.clientMarket);
     const raw = { ...(clientMarket ? { clientMarket } : {}), pmOrderType: "GTC", pmGtcExecutionId: result.executionId, pmGtcResultRevision: result.revision,
       ...(acceptedOrder ? { pmGtcAcceptedOrder: acceptedOrder, pmSubmittedPrice: Number(acceptedOrder.price) } : {}),
@@ -52,14 +54,15 @@ export async function savePmGtcConfirmedResult(owner, result) {
       pmStakeUsdc: financial.pmStakeUsdc, pmFeeUsdc: financial.pmFeeUsdc,
       pmGtcBuyShares: financial.pmShares, pmGtcBuyCost: financial.pmStakeUsdc, betMoney: financial.betMoney };
     await client.query(`INSERT INTO orders(user_id,player_id,order_id,link,provider,match,bet,item,odds,bet_money,money,status,create_at,raw)
-      VALUES($1,$2,$3,$4,'Polymarket',$5,$6,$7,$8,$9,0,'None',$10,$11)
+      VALUES($1,$2,$3,$4,'Polymarket',$5,$6,$7,$8,$9,0,$14,$10,$11)
       ON CONFLICT(user_id,order_id,player_id) DO UPDATE SET odds=EXCLUDED.odds,bet_money=EXCLUDED.bet_money,
+      status=CASE WHEN orders.status IN ('None','Return') THEN EXCLUDED.status ELSE orders.status END,
       link=CASE WHEN orders.raw->>'pmGtcExecutionId' IS NULL THEN EXCLUDED.link ELSE orders.link END,
       raw=(COALESCE(orders.raw,'{}'::jsonb) - ARRAY['pmGtcOrderSnapshot','pmGtcRevision']::text[]) || EXCLUDED.raw || jsonb_build_object(
         'pmShares',$12::float8,
         'pmStakeUsdc',CASE WHEN $12::float8>0 THEN greatest(0,$13-COALESCE((orders.raw->>'pmSellProceeds')::float8,0)+COALESCE((orders.raw->>'pmRealizedPnlUsdc')::float8,0)) ELSE 0 END)`,
     [owner, result.playerId, previous?.order_id ?? result.orderId, result.linkId, result.match, result.bet, result.item,
-      financial.odds, financial.betMoney, result.createdAt, raw, financial.pmShares, financial.pmStakeUsdc]);
+      financial.odds, financial.betMoney, result.createdAt, raw, financial.pmShares, financial.pmStakeUsdc, status]);
     await syncPmGtcSettledOrderFinancials(client, owner, result.playerId, result.orderId, result.executionId);
     await client.query("COMMIT"); return true;
   }

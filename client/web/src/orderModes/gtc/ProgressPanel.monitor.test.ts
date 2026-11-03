@@ -74,7 +74,7 @@ it("does not send a cancel after dismissal, owner switch, or a terminal update d
 it("allows retrying an unknown cancellation while keeping its verification notice", async () => {
   const row = execution(); row.cancel = { commandId: "cancel", state: "unknown", message: "PM timeout" };
   const p = await panel(row);
-  expect(p.html).toContain("取消结果待核实"); expect(p.html).toContain("重试取消 PM 剩余挂单");
+    expect(p.html).toContain("取消结果待确认"); expect(p.html).toContain("重试取消 PM 剩余挂单");
   expect(p.html).toContain("PM timeout"); expect(p.html).toContain("正在查询原单状态");
   expect(p.html).not.toMatch(/<button[^>]*class="pm-gtc-monitor__cancel"[^>]* disabled/); await p.state.cancel();
   expect(mocks.cancel).toHaveBeenCalledExactlyOnceWith("original");
@@ -82,7 +82,7 @@ it("allows retrying an unknown cancellation while keeping its verification notic
 it("shows official cancellation acknowledgement without an unknown result or another cancel action", async () => {
   const row = execution(); row.cancel = { commandId: "cancel", state: "acknowledged", message: "PM 已确认取消剩余挂单，成交明细继续核对" };
   const p = await panel(row);
-  expect(p.html).toContain("PM 已确认取消剩余挂单，正在同步订单状态");
+    expect(p.html).toContain("余量已取消，成交核对中");
   expect(p.html).not.toContain("取消结果待核实"); expect(p.html).not.toContain("pm-gtc-monitor__cancel");
   await p.state.cancel(); expect(mocks.cancel).not.toHaveBeenCalled();
 });

@@ -105,7 +105,8 @@ export function polymarketOrderRowFromUserWsMessage(
   }
   const size = msg.size_matched ?? msg.size;
   return {
-    status: String(msg.status ?? "MATCHED"),
+    // 官方 CANCELLATION 即余量撤销；部分成交仍为 matched，不能丢失撤单状态。
+    status: String(msg.type ?? "").toUpperCase() === "CANCELLATION" ? "CANCELED" : String(msg.status ?? "MATCHED"),
     size_matched: String(size ?? ""),
     original_size: msg.original_size == null ? undefined : String(msg.original_size),
     associate_trades: Array.isArray(msg.associate_trades)

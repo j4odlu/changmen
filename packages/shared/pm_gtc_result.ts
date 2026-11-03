@@ -24,12 +24,18 @@ export function gtcAcceptedOrder(row: Pick<GtcOrderState, "submit" | "orderId">
   if (row.submit !== "accepted" || !row.orderId) return;
   return normalizeGtcAcceptedOrder({ shares: row.plan.shares, price: row.plan.price });
 }
+/** [changmen 扩展] 沿用普通订单状态：核实零成交且原单已终止时为退；部分成交仍待结算。 */
+export function gtcOrderResultStatus(row: Pick<GtcOrderState, "submit" | "terminal" | "complete" | "error" | "matched" | "order">): "None" | "Return" {
+  return row.submit === "accepted" && row.terminal && row.complete && !row.error && row.order
+    && gtcUnits(row.matched) === 0n && gtcUnits(row.order.matched) === 0n ? "Return" : "None";
+}
 /** 只排除明确尚无已确认成交的新格式买单；旧订单及卖单沿用原口径。 */
 export function isUnfilledGtcOrder(row: { Type?: string; PmSide?: string; PmOrderType?: string; PmGtcExecutionId?: string; PmGtcBuyShares?: number }): boolean {
   return row.Type === "Polymarket" && row.PmSide !== "sell" && Boolean(row.PmOrderType === "GTC" || row.PmGtcExecutionId)
     && row.PmGtcBuyShares === 0;
 }
 export interface GtcConfirmedResult {
+  status?: "None" | "Return";
   acceptedOrder?: GtcAcceptedOrder;
   clientMarket?: OrderMarketIdentity;
   executionId: string;

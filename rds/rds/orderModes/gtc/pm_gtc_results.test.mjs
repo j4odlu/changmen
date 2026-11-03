@@ -75,6 +75,30 @@ it("creates an accepted zero-fill order with no invented cost or fill price", as
     pmShares: 0, pmStakeUsdc: 0, pmFillPrice: 0 });
   expect(inserted()[0]).toContain("ELSE orders.link END");
 });
+it("writes ordinary Return for zero-fill cancellation and keeps partial fills as None", async () => {
+  await savePmGtcConfirmedResult("owner", { ...result(), status: "Return", acceptedOrder: accepted(), fills: [],
+    financial: { pmShares: 0, pmFillPrice: 0, pmStakeUsdc: 0, pmFeeUsdc: 0, odds: 0, betMoney: 0 } });
+  expect(inserted()[1][13]).toBe("Return");
+  expect(inserted()[0]).toContain("WHEN orders.status IN ('None','Return') THEN EXCLUDED.status ELSE orders.status END");
+  mock.query.mockClear(); await savePmGtcConfirmedResult("owner", { ...result(), status: "None" });
+  expect(inserted()[1][13]).toBe("None");
+});
+it("backfills Return for an already reconciled zero-fill original at the same revision", async () => {
+  mock.rows = [{ ...previous({ pmGtcResultRevision: 4, pmGtcBuyShares: 0, pmGtcConfirmedFills: [], pmGtcAcceptedOrder: accepted() }), status: "None" }];
+  const zero = { ...result(), status: "Return", acceptedOrder: accepted(), fills: [],
+    financial: { pmShares: 0, pmFillPrice: 0, pmStakeUsdc: 0, pmFeeUsdc: 0, odds: 0, betMoney: 0 } };
+  await savePmGtcConfirmedResult("owner", zero);
+  expect(inserted()[1][13]).toBe("Return");
+  mock.query.mockClear(); mock.rows[0].status = "Return";
+  await savePmGtcConfirmedResult("owner", zero); expect(inserted()).toBeUndefined();
+});
+it("clears Return while late fills are pending even though confirmed financial shares remain zero", async () => {
+  mock.rows = [{ ...previous({ pmGtcResultRevision: 3, pmGtcBuyShares: 0, pmGtcConfirmedFills: [], pmGtcAcceptedOrder: accepted() }), status: "Return" }];
+  await savePmGtcConfirmedResult("owner", { ...result(), status: "None", acceptedOrder: accepted(), fills: [],
+    financial: { pmShares: 0, pmFillPrice: 0, pmStakeUsdc: 0, pmFeeUsdc: 0, odds: 0, betMoney: 0 } });
+  expect(inserted()[1][13]).toBe("None");
+  expect(inserted()[0]).toContain("ELSE orders.status END");
+});
 it("retains one original and manual Link when its first fill arrives after zero-fill acceptance", async () => {
   mock.rows = [previous({ pmGtcBuyShares: 0, pmGtcConfirmedFills: [], pmGtcAcceptedOrder: accepted(), pmGtcResultRevision: 2 })];
   await savePmGtcConfirmedResult("owner", { ...result(), acceptedOrder: accepted() });

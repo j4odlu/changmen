@@ -10,6 +10,7 @@ import { applyGtcOrderCommand, gtcOrderReconciled } from "./core/orderRecord";
 import { createStoredGtcOrder, listStoredGtcOrders, mutateStoredGtcOrder } from "./orderStore";
 import { gtcOrders } from "./orderState";
 import { gtcSyncIssue } from "./syncStatus";
+import { waitForGtcCancelReceipt } from "./cancelReceipt";
 import { clone, localGtcChanges } from "./storage";
 import { rememberGtcOrderReference } from "./executionProjection";
 
@@ -132,10 +133,11 @@ export function recoverGtcOrders(): Promise<void> {
 }
 const accountBinding = (account: ReturnType<ReturnType<typeof useAccountStore>["findAccount"]>) => account
   ? JSON.stringify([account.accountId, account.provider, account.token, account.gateway]) : "";
-export function pollGtcOrder(id: string, history?: () => Promise<GtcTradeHistory>): Promise<GtcOrderRecord> {
-  const existing = polls.get(id); if (existing) return existing;
+export function pollGtcOrder(id: string, history?: () => Promise<GtcTradeHistory>, fresh = false): Promise<GtcOrderRecord> {
+  const existing = polls.get(id); if (existing && !fresh) return existing;
   const isCurrent = capture();
-  const task = (async () => {
+  let task!: Promise<GtcOrderRecord>;
+  task = (async () => {
     const row = clone(currentGtcOrder(id));
     if (!row.pmAuthorized || gtcOrderNeverSubmitted(row) || row.submit === "rejected") return row;
     const account = useAccountStore().findAccount(row.accountId);
@@ -146,12 +148,14 @@ export function pollGtcOrder(id: string, history?: () => Promise<GtcTradeHistory
     if (!valid()) throw new Error("GTC 会话或原账号已变更");
     const facts = await api.readGtcFacts(account, row.plan, row.orderId || row.plan.orderHash, row.createdAt, history?.());
     if (!valid()) throw new Error("GTC 会话或原账号已变更");
+    if (polls.get(id) !== task) return currentGtcOrder(id);
     const next = await changeGtcOrder(id, { kind: "facts", facts });
     if (!valid()) throw new Error("GTC 会话或原账号已变更");
+    if (polls.get(id) !== task) return currentGtcOrder(id);
     delete gtcOrders.queryIssues[id];
     if (gtcOrderReconciled(next)) { listeners.get(id)?.(); listeners.delete(id); }
     return next;
-  })().catch(error => { if (isCurrent()) gtcOrders.queryIssues[id] = gtcSyncIssue(error); throw error; })
+  })().catch(error => { if (isCurrent() && polls.get(id) === task) gtcOrders.queryIssues[id] = gtcSyncIssue(error); throw error; })
     .finally(() => { if (polls.get(id) === task) polls.delete(id); });
   polls.set(id, task); return task;
 }
@@ -170,7 +174,7 @@ export function cancelNativeGtcOrder(id: string): Promise<void> {
     const { pmCancelOrder } = await import("@changmen/venue-browser/adapter/polymarket/gtc");
     if (!valid()) throw new Error("GTC 会话或原账号已变更");
     try {
-      const result = await pmCancelOrder<{ canceled?: string[]; not_canceled?: Record<string, string> }>(account, original.orderId!);
+      const result = await waitForGtcCancelReceipt(account, original.orderId!, () => pmCancelOrder(account, original.orderId!), valid);
       if (!valid()) return;
       const canceled = result.canceled?.some(value => value.toLowerCase() === original.orderId!.toLowerCase());
       const rejected = result.not_canceled?.[original.orderId!];
@@ -179,14 +183,15 @@ export function cancelNativeGtcOrder(id: string): Promise<void> {
       if (canceled) {
         const latest = currentGtcOrder(id);
         await changeGtcOrder(id, { kind: "facts", facts: { order: { id: original.orderId!, original: latest.plan.shares,
-          matched: latest.order?.matched ?? latest.matched, status: "CANCELED", tradeIds: latest.order?.tradeIds ?? [] },
+          matched: latest.order?.matched ?? latest.matched, status: "CANCELED", tradeIds: [...(latest.order?.tradeIds ?? [])] },
           fills: [], complete: false, observedAt: Date.now() } });
       }
     }
     catch (error) {
       if (valid()) await changeGtcOrder(id, { kind: "cancel_result", commandId, state: "unknown", message: error instanceof Error ? error.message : "取消结果待核实" });
     }
-    if (valid()) await pollGtcOrder(id).catch(() => {});
+    // 回执等待结束即释放按钮；撤单后的新查询不复用旧的慢请求，旧回包也不能覆盖新事实。
+    if (valid()) void pollGtcOrder(id, undefined, true).catch(() => {});
   })().finally(() => {
     if (cancellations.get(id) === task) cancellations.delete(id);
     if (isCurrent()) delete gtcOrders.cancelInFlight[id];

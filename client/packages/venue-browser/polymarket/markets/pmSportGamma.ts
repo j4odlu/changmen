@@ -1,3 +1,4 @@
+import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { getPmSportScoreKind } from "@changmen/shared/pm_sport_score";
 import { POLYMARKET_CLOB_API, POLYMARKET_GAMMA_API } from "../api";
@@ -6,6 +7,7 @@ import { parseEsportsScore } from "./parseEsportsScore";
 import { parseJsonArray, type PolymarketRawMarket } from "./parse";
 import { polymarketPluginGet } from "../transport/transport";
 import { createPmGammaReader } from "./pmGammaCache";
+import { lookupGammaMarketAsset } from "./gammaAssetLookup";
 
 export interface GammaEventLike {
   id?: string | number;
@@ -18,12 +20,6 @@ export interface GammaEventLike {
   ended?: boolean;
   elapsed?: string | number;
   resolutionSource?: string;
-}
-
-function unwrapArray<T>(data: unknown): T[] {
-  if (Array.isArray(data))
-    return data as T[];
-  return [];
 }
 
 export function gammaEventToPmSportLike(event: GammaEventLike | null | undefined): PmSportLike | null {
@@ -57,17 +53,12 @@ export function gammaEventToPmSportLike(event: GammaEventLike | null | undefined
 }
 
 const gammaMarkets = createPmGammaReader<PolymarketRawMarket>(async id => {
-  const params = new URLSearchParams({ clob_token_ids: id });
-  const data = await polymarketPluginGet<unknown>(
-    `${POLYMARKET_GAMMA_API}/markets?${params.toString()}`,
-  );
-  const rows = unwrapArray<PolymarketRawMarket>(data);
-  const row = rows[0];
+  const row = await lookupGammaMarketAsset(id, polymarketPluginGet);
   if (!row || typeof row !== "object" || Array.isArray(row)) return null;
   // [changmen 扩展] 错误/纯元数据不能占据短缓存，下一轮应立即重查交易状态。
   const hasStatus = [row.active, row.closed, row.archived, row.acceptingOrders, row.accepting_orders,
     row.enableOrderBook, row.enable_order_book].some(value => typeof value === "boolean");
-  const hasPrices = parseJsonArray(row.clobTokenIds ?? row.clob_token_ids).length > 0
+  const hasPrices = polymarketMarketAssetIds(row).length > 0
     && parseJsonArray(row.outcomePrices ?? row.outcome_prices).length > 0;
   const hasWinner = Array.isArray(row.tokens) && row.tokens.some(token => token?.winner === true && token.token_id);
   const hasSport = Array.isArray(row.events) && row.events.some(event => gammaEventToPmSportLike(event as GammaEventLike));

@@ -18,7 +18,8 @@ export function mergePolymarketOutcomeEntries(
     if (!entry.marketId || !entry.homeTokenId || !entry.awayTokenId)
       continue;
     const prev = byId.get(entry.marketId);
-    const sameTokens = prev?.homeTokenId === entry.homeTokenId && prev?.awayTokenId === entry.awayTokenId;
+    const sameTokens = prev?.homeTokenId === entry.homeTokenId && prev?.awayTokenId === entry.awayTokenId
+      && prev?.marketVersion === entry.marketVersion;
     const base = sameTokens ? prev : undefined;
     const { homeClobPrice: _home, awayClobPrice: _away, ...metadata } = entry;
     byId.set(entry.marketId, {
@@ -51,7 +52,9 @@ export async function refreshPolymarketOutcomes(deps: {
     && Number(entry.nextCheckAt ?? 0) <= now && Number(entry.startTime ?? 0) <= now)
     .sort((a, b) => Number(a.lastCheckedAt ?? 0) - Number(b.lastCheckedAt ?? 0)).slice(0, 48);
   const fetched = await (deps.fetchOfficial ?? fetchPolymarketOfficialMarkets)(due.map(entry => ({
-    conditionId: entry.marketId, clobTokenIds: [entry.homeTokenId, entry.awayTokenId],
+    conditionId: entry.marketId,
+    ...(entry.marketVersion === "v2" ? { version: "v2", positionIds: [entry.homeTokenId, entry.awayTokenId] }
+      : { ...(entry.marketVersion ? { version: entry.marketVersion } : {}), clobTokenIds: [entry.homeTokenId, entry.awayTokenId] }),
   })));
   const byId = new Map(fetched.map(market => [String(market.conditionId ?? ""), market]));
   let resolved = 0;

@@ -12,6 +12,20 @@ import { withOfficialTeams } from "./test_fixtures.mjs";
 const buildPolymarketMappedMarket = (market, ...args) => buildMarket(withOfficialTeams(market), ...args);
 
 describe("polymarket-esports parse", () => {
+  it("uses V2 position IDs even when CTF token IDs are populated", () => {
+    const market = { version: "v2", conditionId: "v2-market", sportsMarketType: "moneyline", active: true,
+      clobTokenIds: '["101","102"]', positionIds: ["201", "202"], outcomes: '["Team A","Team B"]',
+      events: [{ id: "v2-event", slug: "nba-a-b" }], tags: [{ slug: "basketball" }] };
+    const mapped = buildPolymarketMappedMarket(market, { "101": 0.1, "102": 0.9, "201": 0.5, "202": 0.5 });
+    assert.deepEqual(mapped.assetIds, ["201", "202"]);
+    assert.equal(mapped.marketVersion, "v2"); assert.equal(mapped.bet.SourceHomeID, "201");
+    assert.equal(mapped.bet.HomeOdds, 2);
+    assert.deepEqual(resolvePolymarketMapMarketOutcome({ ...market, tokens: [{ token_id: "202", winner: true }] }), { mapOutcome: "away", outcomeKind: "official" });
+    assert.equal(resolvePolymarketMapMarketOutcome({ ...market, tokens: [{ token_id: "101", winner: true }] }), null);
+    assert.ok(buildPolymarketMappedMarket({ ...market, clobTokenIds: null }));
+    assert.equal(buildPolymarketMappedMarket({ ...market, positionIds: null }), null);
+    assert.equal(buildPolymarketMappedMarket({ ...market, version: "v3" }), null);
+  });
   it("uses configured game recognition across event metadata and keeps unknown sports out", () => {
     for (const [slug, code] of [["counter-strike-2", "cs2"], ["league-of-legends", "lol"],
       ["dota-2", "dota2"], ["honor-of-kings", "kog"], ["valorant", "valorant"]]) {

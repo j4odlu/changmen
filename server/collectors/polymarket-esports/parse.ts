@@ -1,3 +1,4 @@
+import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
 import type { GammaEvent, GammaMarket, MappedMarket } from "./types.ts";
 /**
  * Polymarket 电竞 discovery 解析（**唯一权威**）。
@@ -161,12 +162,12 @@ export function decimalOddsFromProbability(price: unknown): number {
 
 /**
  * [changmen 扩展] 比赛卡只认 PM 官方胜方，不复用订单输赢的价格判断。
- * 胜方相对 clob_token_ids[0]=home / [1]=away。
+ * 胜方相对按 version 选出的交易资产 [0]=home / [1]=away。
  * @param {object} market
  * @returns {{ mapOutcome: "home"|"away", outcomeKind: "official" } | null}
  */
 export function resolvePolymarketMapMarketOutcome(market: GammaMarket): { mapOutcome: "home" | "away"; outcomeKind: "official" } | null {
-  const assetIds = parseJsonArray(market?.clob_token_ids ?? market?.clobTokenIds);
+  const assetIds = polymarketMarketAssetIds(market);
   if (assetIds.length < 2)
     return null;
   const homeId = String(assetIds[0] ?? "").trim();
@@ -203,7 +204,7 @@ export function buildPolymarketMappedMarket(market: GammaMarket, buyPrices: Reco
   if (map === null)
     return null;
 
-  const assetIds = parseJsonArray(market.clob_token_ids ?? market.clobTokenIds);
+  const assetIds = polymarketMarketAssetIds(market);
   const outcomes = parseJsonArray(market.outcomes);
   if (assetIds.length !== 2 || outcomes.length !== 2)
     return null;
@@ -239,6 +240,7 @@ export function buildPolymarketMappedMarket(market: GammaMarket, buyPrices: Reco
 
   return {
     marketId,
+    ...(market.version === "v1" || market.version === "v2" ? { marketVersion: market.version } : {}),
     assetIds: [homeId, awayId],
     gameId: pandascoreId,
     ...(outcome ? { mapOutcome: outcome.mapOutcome, outcomeKind: outcome.outcomeKind } : {}),

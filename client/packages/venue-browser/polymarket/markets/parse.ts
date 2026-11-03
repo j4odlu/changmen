@@ -12,6 +12,9 @@ import type { CollectBetDto, CollectMatchDto } from "@changmen/client-core/types
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
 
 export interface PolymarketRawMarket {
+  version?: string;
+  positionIds?: unknown;
+  position_ids?: unknown;
   id?: string | number;
   condition_id?: string;
   conditionId?: string;

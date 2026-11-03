@@ -1,3 +1,4 @@
+import { polymarketMarketAssetIds, polymarketMarketAssetFields } from "@changmen/shared/pm_market_assets";
 import type { VenueOrder } from "@changmen/client-core/contract";
 import { sortVenueOrdersNewestFirst } from "@changmen/client-core/contract";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
@@ -299,7 +300,7 @@ export async function resolvePolymarketSellFillWithRetry(
 }
 
 function gammaTokenIds(market: PolymarketRawMarket): string[] {
-  return parseJsonArray(market.clobTokenIds ?? market.clob_token_ids);
+  return polymarketMarketAssetIds(market);
 }
 
 /** [changmen 扩展] 用户授权恢复价格提前判定；官方赢家始终优先。 */
@@ -328,7 +329,9 @@ export function resolvePolymarketOfficialWinningAssetId(
 ): string | null {
   const tokens = market?.tokens;
   if (!Array.isArray(tokens) || !tokens.length) return null;
-  const winning = tokens.find(t => t?.winner === true);
+  const ids = market?.version == null && market?.positionIds == null && market?.position_ids == null
+    ? null : polymarketMarketAssetIds(market);
+  const winning = tokens.find(t => t?.winner === true && (!ids || ids.includes(String(t.token_id ?? ""))));
   const id = String(winning?.token_id ?? "").trim();
   return id || null;
 }
@@ -1231,7 +1234,7 @@ async function fetchMarketsByConditionIds(
   const chunkSize = 20;
   for (let i = 0; i < unique.length; i += chunkSize) {
     const chunk = unique.slice(i, i + chunkSize);
-    const params = new URLSearchParams({ limit: String(chunk.length) });
+    const params = new URLSearchParams({ limit: String(chunk.length), closed: "any" });
     for (const id of chunk)
       params.append("condition_ids", id);
     try {
@@ -1245,7 +1248,7 @@ async function fetchMarketsByConditionIds(
 
   for (let i = 0; i < uniqueTokens.length; i += chunkSize) {
     const chunk = uniqueTokens.slice(i, i + chunkSize);
-    const params = new URLSearchParams({ limit: String(chunk.length) });
+    const params = new URLSearchParams({ limit: String(chunk.length), closed: "any" });
     for (const id of chunk)
       params.append("clob_token_ids", id);
     try {
@@ -1257,13 +1260,26 @@ async function fetchMarketsByConditionIds(
     }
   }
 
+  const unresolvedPositions = uniqueTokens.filter(id => /^\d+$/.test(id) && !out.has(`token:${normalizeConditionId(id)}`));
+  for (let i = 0; i < unresolvedPositions.length; i += chunkSize) {
+    const chunk = unresolvedPositions.slice(i, i + chunkSize);
+    const params = new URLSearchParams({ limit: String(chunk.length), closed: "any" });
+    for (const id of chunk) params.append("position_ids", id);
+    try { for (const market of await fetchGammaMarketsChunk(params)) rememberGammaMarket(out, market); }
+    catch (error) { console.warn("[Polymarket] Gamma position lookup failed", error); }
+  }
+
   // 每条 condition 都 overlay CLOB：持有买单结算以官方 tokens[].winner 为准
   for (const id of unique) {
     try {
       const clob = await polymarketPluginGet<PolymarketRawMarket>(
         `${POLYMARKET_CLOB_API}/markets/${encodeURIComponent(id)}`,
       );
-      const tokens = Array.isArray(clob?.tokens) ? clob.tokens : [];
+      let tokens = Array.isArray(clob?.tokens) ? clob.tokens : [];
+      if (out.get(id)?.version === "v2") {
+        const ids = gammaTokenIds(out.get(id)!);
+        tokens = tokens.filter(token => ids.includes(String(token.token_id ?? "")));
+      }
       if (!tokens.length)
         continue;
       const hasWinner = tokens.some(t => t?.winner === true);
@@ -1275,10 +1291,11 @@ async function fetchMarketsByConditionIds(
           ?? JSON.stringify(tokens.map(t => String(t?.price ?? 0))));
       // [changmen 扩展] Gamma 价格保留其 token 顺序，不能套用 CLOB 返回的另一种顺序。
       const priceTokenIds = !hasWinner && existingPrices != null
-        ? parseJsonArray(existing?.clobTokenIds ?? existing?.clob_token_ids)
+        ? polymarketMarketAssetIds(existing)
         : tokens.map(t => String(t?.token_id ?? ""));
       rememberGammaMarket(out, {
         ...(existing || {}),
+        version: existing?.version ?? clob?.version,
         condition_id: id,
         question: existing?.question ?? clob?.question,
         title: existing?.title ?? existing?.question ?? clob?.question,
@@ -1289,7 +1306,7 @@ async function fetchMarketsByConditionIds(
           ? parseJsonArray(existing?.outcomes)
           : tokens.map(t => String(t?.outcome ?? ""))),
         outcomePrices,
-        clobTokenIds: JSON.stringify(priceTokenIds),
+        ...polymarketMarketAssetFields(existing ?? clob, priceTokenIds),
         umaResolutionStatus: hasWinner
           ? (existing?.umaResolutionStatus || existing?.uma_resolution_status || "settled_normal")
           : (existing?.umaResolutionStatus ?? existing?.uma_resolution_status),

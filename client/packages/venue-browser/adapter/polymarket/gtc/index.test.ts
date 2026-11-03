@@ -25,6 +25,17 @@ it("shares one complete account history across originals while retaining exact f
 });
 beforeEach(() => { vi.clearAllMocks(); mocks.market.mockResolvedValue({ fd: { r: 0, e: 1, to: true } }); mocks.build.mockImplementation(async ({ size, price }: { size: number; price: number }) => ({ makerAmount: String(Math.round(size * price * 1_000_000)), takerAmount: String(Math.round(size * 1_000_000)) })); mocks.json.mockReturnValue({ orderType: "GTC", order: {} }); });
 describe("isolated GTC adapter", () => {
+  it.each(["MATCHED", "MINED", "CONFIRMED", "RETRYING", "FAILED", "MATCHED_NOT_BROADCASTED"])("normalizes both wire forms of %s for exact maker and taker fills", (status) => {
+    const expected = status === "MATCHED_NOT_BROADCASTED" ? "MATCHED" : status;
+    for (const wire of [status, `TRADE_STATUS_${status}`, ` trade_status_${status.toLowerCase()} `]) {
+      expect(gtcTradeFills({ ...trade, status: wire }, plan, "order")[0]).toMatchObject({ status: expected, role: "MAKER", shares: "3" });
+      expect(gtcTradeFills({ ...trade, status: wire, taker_order_id: "order", side: "BUY", size: "2", maker_orders: [] }, plan, "order")[0])
+        .toMatchObject({ status: expected, role: "TAKER", shares: "2" });
+    }
+  });
+  it.each([undefined, "", "LIVE", "NEW_UNKNOWN_STATUS", "TRADE_STATUS_UNKNOWN", "TRADE_STATUS_TRADE_STATUS_CONFIRMED"])("keeps unsupported trade status %s blocked", (status) => {
+    expect(() => gtcTradeFills({ ...trade, status }, plan, "order")).toThrow("GTC 成交状态未知");
+  });
   it.each(["0", "3"])("reconciles market-resolution cancellation while retaining %s matched shares", async (matched) => {
     mocks.getOrder.mockResolvedValue({ id: "order", asset_id: "token", side: "BUY", original_size: "10", size_matched: matched,
       status: "CANCELED_MARKET_RESOLVED", associate_trades: matched === "0" ? [] : ["t"] });
@@ -162,7 +173,10 @@ describe("isolated GTC adapter", () => {
     expect(facts.fills[0]?.fee).toBe("0.07971"); expect(facts.complete).toBe(true);
     expect(mocks.market).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("/clob-markets/condition"));
   });
-  it.each([{}, { fd: { r: 0.05, e: 2, to: true } }, new Error("fee lookup unavailable")])("unknown post-fill fees stay unknown without losing confirmed fills: %s", async (market) => {
+  it.each([{}, { fd: { r: 0.05, e: 2, to: true } },
+    ...["", " ", false, true, [], {}].map(r => ({ fd: { r, e: 1, to: true } })),
+    ...[true, " ", []].map(e => ({ fd: { r: 0.05, e, to: true } })),
+    new Error("fee lookup unavailable")])("unknown post-fill fees stay unknown without losing confirmed fills: %s", async (market) => {
     if (market instanceof Error)
       mocks.market.mockRejectedValue(market);
     else mocks.market.mockResolvedValue(market);
@@ -194,6 +208,28 @@ describe("isolated GTC adapter", () => {
     mocks.getOrder.mockResolvedValue(null);
     mocks.trades.mockResolvedValue({ data: [{ ...trade, taker_order_id: "order", side: "BUY", size: "10", status, maker_orders: [] }], next_cursor: "LTE=" });
     expect(await readGtcFacts({} as never, plan, "order", 1)).toMatchObject({ order: null, complete: false });
+  });
+  it.each(["TRADE_STATUS_MATCHED", "TRADE_STATUS_MATCHED_NOT_BROADCASTED", "TRADE_STATUS_MINED", "TRADE_STATUS_RETRYING", "TRADE_STATUS_FAILED"])("does not infer full confirmation from prefixed intermediate or failed status %s", async (status) => {
+    mocks.getOrder.mockResolvedValue(null);
+    mocks.trades.mockResolvedValue({ data: [{ ...trade, taker_order_id: "order", side: "BUY", size: "10", status, maker_orders: [] }], next_cursor: "LTE=" });
+    expect(await readGtcFacts({} as never, plan, "order", 1)).toMatchObject({ order: null, complete: false });
+  });
+  it("reconciles prefixed matched fills, then removes a prefixed failed fill from totals", async () => {
+    mocks.getOrder.mockResolvedValue({ id: "order", asset_id: "token", side: "BUY", original_size: "10", size_matched: "3", status: "CANCELED", associate_trades: ["t"] });
+    mocks.trades.mockResolvedValue({ data: [{ ...trade, status: "TRADE_STATUS_MATCHED" }], next_cursor: "LTE=" });
+    const initial = createGtcExecution("execution", "owner", "wallet", "maker", { ...plan, orderHash: "order" }, 1);
+    const matched = mergeGtcFacts(initial, await readGtcFacts({} as never, plan, "order", 1));
+    expect(matched).toMatchObject({ matched: "3", principal: "1.5", complete: true, fills: { "t:order": { status: "MATCHED" } } });
+    mocks.getOrder.mockResolvedValue({ id: "order", asset_id: "token", side: "BUY", original_size: "10", size_matched: "0", status: "CANCELED", associate_trades: ["t"] });
+    mocks.trades.mockResolvedValue({ data: [{ ...trade, status: "TRADE_STATUS_FAILED", last_update: "1001" }], next_cursor: "LTE=" });
+    expect(mergeGtcFacts(matched, await readGtcFacts({} as never, plan, "order", 1)))
+      .toMatchObject({ matched: "0", principal: "0", complete: true, fills: { "t:order": { status: "FAILED" } } });
+  });
+  it("can prove a full fill with prefixed confirmed trades when the order read is missing", async () => {
+    mocks.getOrder.mockResolvedValue(null);
+    mocks.trades.mockResolvedValue({ data: [{ ...trade, taker_order_id: "order", side: "BUY", size: "10", status: "TRADE_STATUS_CONFIRMED", maker_orders: [] }], next_cursor: "LTE=" });
+    expect(await readGtcFacts({} as never, plan, "order", 1)).toMatchObject({ complete: true,
+      order: { status: "MATCHED", source: "confirmed-trades", matched: "10" }, fills: [{ status: "CONFIRMED" }] });
   });
   it("keeps confirmed partial fills while a missing order still leaves remainder unknown", async () => {
     mocks.getOrder.mockResolvedValue(null); mocks.trades.mockResolvedValue({ data: [trade], next_cursor: "LTE=" });

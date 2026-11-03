@@ -22,6 +22,7 @@ let stopListening: (() => void) | undefined;
 let stopProjection: (() => void) | undefined;
 let refreshRevision = 0;
 let refreshedRevision = 0;
+const synchronized = new Set<string>();
 
 export function flushGtcResults(): Promise<void> {
   if (pending) return pending;
@@ -38,12 +39,12 @@ export function flushGtcResults(): Promise<void> {
         if (!current()) return;
         await finishGtcResult(entry);
         if (!current()) return;
-        delete gtcProgress.saveIssues[entry.result.executionId];
-        delete gtcOrders.resultIssues[entry.result.executionId];
+        synchronized.add(entry.result.executionId);
         refreshRevision++;
       }
       catch (error) {
         if (!current()) return;
+        synchronized.delete(entry.result.executionId);
         await finishGtcResult(entry, true);
         gtcProgress.saveIssues[entry.result.executionId] = gtcSyncIssue(error);
         gtcOrders.resultIssues[entry.result.executionId] = gtcSyncIssue(error);
@@ -59,7 +60,15 @@ export function flushGtcResults(): Promise<void> {
         const store = useOrderStore(); const date = store.orderDate;
         const refreshed = await store.fetchOrders(date, { sideEffects: false,
           isCurrent: () => current() && store.orderDate === date });
-        if (current() && refreshed) refreshedRevision = revision;
+        if (current() && refreshed) {
+          refreshedRevision = revision;
+          // 列表读取成功后才移除本地诊断卡，避免上传确认与原单显示之间出现空档。
+          for (const id of synchronized) {
+            delete gtcProgress.saveIssues[id];
+            delete gtcOrders.resultIssues[id];
+          }
+          synchronized.clear();
+        }
       }
       catch { /* 下轮只重试读取；后台已保存的订单结果不重复上传。 */ }
     }
@@ -99,6 +108,7 @@ export function startGtcOrderSync(userId: string): void {
 export function stopGtcOrderSync(): void {
   generation++; owner = ""; clearTimeout(timer); timer = undefined; pending = undefined;
   refreshRevision = 0; refreshedRevision = 0;
+  synchronized.clear();
   dispose?.(); dispose = undefined; stopListening?.(); stopListening = undefined;
   stopProjection?.(); stopProjection = undefined;
 }

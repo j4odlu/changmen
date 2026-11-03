@@ -22,6 +22,14 @@ import {
 import { collectPolymarketUserAddresses } from "@changmen/venue-browser/polymarket/auth/l2Auth";
 import { polymarketOrderContextFromMarket, type PolymarketRawMarket } from "@changmen/venue-browser/polymarket/markets/parse";
 
+test("V2 settlement binds prices and official winners only to selected position IDs", () => {
+  const market = { version: "v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]', outcomePrices: '["0.01","0.99"]' };
+  expect(resolvePolymarketSettlement(market)).toEqual({ winningAssetId: "202", kind: "price" });
+  expect(resolvePolymarketSettlement({ ...market, tokens: [{ token_id: "201", winner: true }] })).toEqual({ winningAssetId: "201", kind: "official" });
+  expect(resolvePolymarketSettlement({ ...market, tokens: [{ token_id: "101", winner: true }] })).toEqual({ winningAssetId: "202", kind: "price" });
+  expect(resolvePolymarketSettlement({ ...market, positionIds: undefined })).toBeNull();
+});
+
 describe("parsePolymarketMicroUsdc", () => {
   test("parses micro collateral strings", () => {
     expect(parsePolymarketMicroUsdc("85000000")).toBe(85);

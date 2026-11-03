@@ -12,6 +12,20 @@ const entry = (map = 2, extra = {}) => ({
   homeOdds: 3, awayOdds: 1.5, status: "Normal", startTime: now - 3 * 60 * minute, ...extra,
 });
 
+it("restores V2 identifiers from the persisted index for official outcome queries", async () => {
+  let index = { updatedAt: now, entries: [entry(1, { marketVersion: "v2", homeTokenId: "201", awayTokenId: "202" })], assetIds: [] };
+  const result = await refreshPolymarketOutcomes({ readIndex: () => index, writeIndex: value => { index = value; }, nowMs: now,
+    fetchOfficial: async markets => {
+      assert.equal(markets[0].version, "v2");
+      assert.deepEqual(markets[0].positionIds, ["201", "202"]);
+      assert.equal(markets[0].clobTokenIds, undefined);
+      return markets.map(m => ({ ...m, tokens: [{ token_id: "202", winner: true }] }));
+    },
+  });
+  assert.equal(result.resolved, 1);
+  assert.equal(index.outcomeEntries[0].mapOutcome, "away");
+});
+
 it("backfills a removed map's official winner and leaves the unresolved decider pending without touching quotes", async () => {
   const archive = mergePolymarketOutcomeEntries([], [entry(), entry(0)], now);
   let index = { updatedAt: now - minute, entries: [], assetIds: [], outcomeEntries: archive };
@@ -81,11 +95,13 @@ it("discovery persists and removes live markets without losing the independent r
       ? {url:'data:text/javascript,'+encodeURIComponent(storage),shortCircuit:true} : next(spec,ctx);}});
     const {persistPolymarketMarketIndex}=await import(${JSON.stringify(indexUrl)});
     const {refreshPolymarketOutcomes}=await import(${JSON.stringify(outcomesUrl)});
-    const candidate={marketId:'m',assetIds:['h','a'],match:{SourceMatchID:'e',StartTime:Date.now()-1000},
+    const candidate={marketId:'m',marketVersion:'v2',assetIds:['201','202'],match:{SourceMatchID:'e',StartTime:Date.now()-1000},
       bet:{SourceBetID:'m',Map:2,HomeName:'H',AwayName:'A',HomeOdds:2,AwayOdds:2,Status:'Normal'}};
-    persistPolymarketMarketIndex([candidate],{h:.5,a:.5},{});
+    persistPolymarketMarketIndex([candidate],{201:.5,202:.5},{});
+    assert.equal(globalThis.testIndex.entries[0].marketVersion,'v2');
+    assert.equal(globalThis.testIndex.entries[0].homeTokenId,'201');
     assert.equal(globalThis.testIndex.outcomeEntries.length,1);
-    await refreshPolymarketOutcomes({fetchOfficial:async rows=>rows.map(row=>({...row,tokens:[{token_id:'a',winner:true}]}))});
+    await refreshPolymarketOutcomes({fetchOfficial:async rows=>rows.map(row=>({...row,tokens:[{token_id:'202',winner:true}]}))});
     // discovery 暂时缺胜方不能清掉已补到的官方结果。
     persistPolymarketMarketIndex([candidate],{},{});
     assert.equal(globalThis.testIndex.outcomeEntries[0].mapOutcome,'away');

@@ -19,6 +19,27 @@ function runPolymarketEsportsDiscoveryCycle(deps) {
 const MONEYLINE_TYPES = new Set(["moneyline", "child_moneyline"]);
 
 describe("polymarket-esports write safety", () => {
+  it("quotes and persists only V2 position IDs when both protocol IDs are present", async () => {
+    let indexed;
+    let bets;
+    const stats = await runPolymarketEsportsDiscoveryCycle({
+      writePlatform: true, resolveTypes: async () => MONEYLINE_TYPES,
+      fetchMarkets: async () => ({ rawEventCount: 1, rawMarketCount: 1, markets: [{
+        version: "v2", conditionId: "v2-map", sportsMarketType: "child_moneyline", groupItemTitle: "Map 1 Winner",
+        clobTokenIds: '["101","102"]', positionIds: ["201", "202"], outcomes: '["STATE","Teletubisie"]',
+        events: [{ id: "v2-event", slug: "cs2-sta-ttbs" }],
+      }] }),
+      fetchPrices: async ids => { assert.deepEqual(ids, ["201", "202"]); return { 201: .4, 202: .2, 101: .9 }; },
+      writeMatches: () => {}, replaceBets: (_p, _s, rows) => { bets = rows; },
+      pruneMatches: async () => [], persistIndex: rows => { indexed = rows; },
+    });
+    assert.equal(stats.bets, 1);
+    assert.equal(bets[0].HomeOdds, 2.5);
+    assert.equal(bets[0].AwayOdds, 5);
+    assert.equal(indexed[0].marketVersion, "v2");
+    assert.deepEqual(indexed[0].assetIds, ["201", "202"]);
+  });
+
   it("keeps existing snapshots when official team metadata is temporarily missing", async () => {
     for (const teams of [undefined, null, []]) {
       const writes = [];

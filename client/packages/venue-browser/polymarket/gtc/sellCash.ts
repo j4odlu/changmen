@@ -5,6 +5,7 @@ import { POLYMARKET_CLOB_API } from "../api";
 import { parseTokenConfig, resolveApiCreds, resolveFunder } from "../auth/l2Auth";
 import { fetchPolymarketActivityV2 } from "../orders/history/pmActivityV2";
 import { polymarketL2Get } from "../transport/transport";
+import { normalizeGtcTradeStatus } from "./tradeStatus";
 
 interface SellTrade {
   id?: string; taker_order_id?: string; asset_id?: string; side?: string;
@@ -18,6 +19,7 @@ export function exactGtcSellCash(trades: SellTrade[], activity: PolymarketActivi
     throw new Error("GTC 卖单份数或身份缺失，净回款待核实");
   const fills = new Map<string, { tx: string; shares: number }>();
   for (const trade of trades) {
+    const status = normalizeGtcTradeStatus(trade.status);
     const parts = [];
     if (trade.taker_order_id?.toLowerCase() === orderId.toLowerCase())
       parts.push({ id: "taker", token: trade.asset_id, side: trade.side, shares: Number(trade.size) });
@@ -26,8 +28,8 @@ export function exactGtcSellCash(trades: SellTrade[], activity: PolymarketActivi
         parts.push({ id: maker.order_id.toLowerCase(), token: maker.asset_id, side: maker.side, shares: Number(maker.matched_amount) });
     }
     for (const part of parts) {
-      if (trade.status === "FAILED") continue;
-      if (!trade.id || trade.status !== "CONFIRMED" || !trade.transaction_hash || part.token !== tokenId
+      if (status === "FAILED") continue;
+      if (!trade.id || status !== "CONFIRMED" || !trade.transaction_hash || part.token !== tokenId
         || part.side !== "SELL" || !Number.isFinite(part.shares) || part.shares <= 0)
         throw new Error("GTC 卖单成交或净回款仍待核实");
       fills.set(`${trade.id}:${part.id}`, { tx: trade.transaction_hash.toLowerCase(), shares: part.shares });

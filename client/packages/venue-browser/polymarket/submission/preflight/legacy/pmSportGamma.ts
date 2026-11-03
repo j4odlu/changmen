@@ -1,5 +1,6 @@
 // [changmen 扩展] 原有赛况预检；比分解析共用体育兼容规则，其余经典预检行为保留。
 import type { BetOption } from "@changmen/client-core/models/betOption";
+import { lookupGammaMarketAsset } from "../../../markets/gammaAssetLookup";
 import { getPmSportScoreKind } from "@changmen/shared/pm_sport_score";
 import { POLYMARKET_CLOB_API, POLYMARKET_GAMMA_API } from "../../../api";
 import { parsePeriodHead, type PmSportLike } from "../../../markets/pmSportGuard";
@@ -21,12 +22,6 @@ export interface GammaEventLike {
   ended?: boolean;
   elapsed?: string | number;
   resolutionSource?: string;
-}
-
-function unwrapArray<T>(data: unknown): T[] {
-  if (Array.isArray(data))
-    return data as T[];
-  return [];
 }
 
 export function gammaEventToPmSportLike(event: GammaEventLike | null | undefined): PmSportLike | null {
@@ -85,12 +80,7 @@ export async function fetchGammaMarketByTokenId(tokenId: string): Promise<Polyma
   const id = String(tokenId ?? "").trim();
   if (!id)
     return null;
-  const params = new URLSearchParams({ clob_token_ids: id });
-  const data = await polymarketPluginGet<unknown>(
-    `${POLYMARKET_GAMMA_API}/markets?${params.toString()}`,
-  );
-  const rows = unwrapArray<PolymarketRawMarket>(data);
-  return rows[0] ?? null;
+  return lookupGammaMarketAsset(id, polymarketPluginGet);
 }
 
 /** CLOB 市场行：`accepting_orders` / closed 比 Gamma 更接近 POST /order 闸门 */

@@ -1,7 +1,7 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
 /** [changmen 扩展] GTC V1：定量限价签单、单次发送及原单事实读取；不调用 FOK settlement。 */
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import type { GtcFacts, GtcFeeProof, GtcFill, GtcOrderReference } from "@changmen/shared/pm_gtc_order";
+import type { GtcFacts, GtcFill, GtcOrderReference } from "@changmen/shared/pm_gtc_order";
 import type { PolymarketOrderClientRuntime } from "../submission/client/pmOrderClientCache";
 import type { GtcBuyCheckData } from "./contract";
 import { gtcDecimal, gtcFillPrice, gtcUnits } from "@changmen/shared/pm_gtc_order";
@@ -12,8 +12,9 @@ import { resolvePmOrderSubmitHttpMode } from "../pmOrderSubmitMode";
 import { pmSignedOrderHash, pmSubmitMaker } from "../submission/recovery/pmSubmitJournal";
 import { polymarketL2Get, polymarketPluginGet } from "../transport/transport";
 import { warmPolymarketUserWs } from "../realtime/userWs";
-import { resolveGtcFillFee } from "./fee";
+import { parseGtcFeeProof, resolveGtcFillFee } from "./fee";
 import { prepareManualGtcBuy } from "./preparation";
+import { normalizeGtcTradeStatus } from "./tradeStatus";
 
 export { pmCancelOrder, pmSubmitMaker };
 export { resolveGtcFillFee } from "./fee";
@@ -77,8 +78,8 @@ export function gtcTradeFills(trade: Trade, plan: GtcOrderReference, id: string)
       throw new Error("GTC 原单成交 token/方向不一致");
     const shares = gtcDecimal(gtcUnits(part.shares)); const price = gtcFillPrice(part.price);
     const q = Number(shares); const p = Number(price);
-    const status = String(trade.status ?? "").toUpperCase();
-    if (!["MATCHED", "MINED", "CONFIRMED", "RETRYING", "FAILED"].includes(status))
+    const status = normalizeGtcTradeStatus(trade.status);
+    if (!status)
       throw new Error("GTC 成交状态未知");
     const timestamp = Number(trade.last_update || trade.match_time);
     if (!Number.isFinite(timestamp) || timestamp <= 0)
@@ -133,9 +134,8 @@ export async function readGtcFacts(account: PlatformAccount, plan: GtcOrderRefer
   if (ownFills.some(fill => fill.role === "TAKER" && fill.status !== "FAILED" && fill.fee == null)) {
     try {
       const market = await polymarketPluginGet<{ fd?: { r?: unknown; e?: unknown; to?: unknown } }>(`${POLYMARKET_CLOB_API}/clob-markets/${encodeURIComponent(plan.conditionId)}`);
-      const fd = market?.fd;
-      if (fd && fd.r != null && Number.isFinite(Number(fd.r)) && Number(fd.r) >= 0 && Number(fd.e) === 1 && fd.to === true) {
-        const proof: GtcFeeProof = { rate: decimal(Number(fd.r)), exponent: 1, takerOnly: true, observedAt: Date.now() };
+      const proof = parseGtcFeeProof(market?.fd);
+      if (proof) {
         for (const fill of ownFills.filter(fill => fill.role === "TAKER" && fill.fee == null)) {
           const fee = resolveGtcFillFee(proof, fill.role, Number(fill.shares), Number(fill.price));
           if (fee != null)

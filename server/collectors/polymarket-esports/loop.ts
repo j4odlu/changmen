@@ -1,4 +1,5 @@
 /// <reference path="./legacy-modules.d.ts" />
+import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
 import type { CycleDependencies, CycleStats, GammaMarket, MappedMarket } from "./types.ts";
 /**
  * Polymarket 电竞 discovery 一轮（官方对齐 + VPS 独占写库）。
@@ -32,7 +33,6 @@ import {
 import { persistPolymarketMarketIndex } from "./market_index.ts";
 import {
   buildPolymarketMappedMarket,
-  parseJsonArray,
 } from "./parse.ts";
 
 const PLATFORM = "Polymarket";
@@ -90,7 +90,7 @@ export async function runPolymarketEsportsDiscoveryCycle(deps: CycleDependencies
     const mtype = normalizeSportsMarketType(raw);
     if (!collectTypes.has(mtype))
       continue;
-    const assetIds = parseJsonArray(raw.clob_token_ids ?? raw.clobTokenIds);
+    const assetIds = polymarketMarketAssetIds(raw);
     if (assetIds.length !== 2)
       continue;
     typedMlRaw.push(raw);
@@ -113,7 +113,7 @@ export async function runPolymarketEsportsDiscoveryCycle(deps: CycleDependencies
   );
   const officialMarkets = await fetchOfficialMarkets(tracked);
   const allAssetIds = officialMarkets.filter(raw => !raw.closed && !raw.archived).flatMap(raw =>
-    parseJsonArray(raw.clob_token_ids ?? raw.clobTokenIds));
+    polymarketMarketAssetIds(raw));
   const buyPrices = await fetchPrices(allAssetIds);
 
   /** @type {ReturnType<typeof buildPolymarketMappedMarket>[]} */

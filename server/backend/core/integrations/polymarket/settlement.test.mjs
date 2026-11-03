@@ -1,10 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   computePolymarketSettlement,
   computePolymarketSettlementFromOrderRaw,
   isPolymarketMarketResolved,
   clobMarketToGammaShape,
   resolvePolymarketSettlement,
+  fetchGammaMarketsByConditionIds,
+  lookupGammaMarket,
 } from "./settlement.js";
 
 const ilbirsTokenWin = "12876938733604859423663202044051912631612545733461708116502231340403727260024";
@@ -27,6 +29,35 @@ const ilbirsTrade = {
 };
 
 describe("polymarket settlement (server)", () => {
+  it("looks up V2 positions when the old Gamma token filter misses, including closed markets", async () => {
+    const urls = [];
+    const market = { version: "v2", conditionId: "cond-v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]', closed: true };
+    const request = vi.spyOn(globalThis, "fetch").mockImplementation(async raw => {
+      const url = new URL(String(raw));
+      urls.push(url);
+      return { ok: true, json: async () => url.searchParams.has("position_ids") ? [market] : [] };
+    });
+    try {
+      const markets = await fetchGammaMarketsByConditionIds([], ["201"]);
+      expect(lookupGammaMarket(markets, { asset_id: "201" })).toEqual(market);
+      expect(lookupGammaMarket(markets, { asset_id: "101" })).toBeUndefined();
+      expect(urls).toHaveLength(2);
+      expect(urls[1].searchParams.get("position_ids")).toBe("201");
+      expect(urls.every(url => url.searchParams.get("closed") === "any")).toBe(true);
+    }
+    finally { request.mockRestore(); }
+  });
+
+  it("keeps V2 price ordering and CLOB overlay on the selected position IDs", () => {
+    const base = { version: "v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]', outcomePrices: '["0.99","0.01"]' };
+    expect(resolvePolymarketSettlement(base)).toEqual({ winningAssetId: "201", kind: "price" });
+    const reversed = clobMarketToGammaShape({ tokens: [{ token_id: "202", winner: true }, { token_id: "201", winner: false }] }, base);
+    expect(reversed.positionIds).toEqual(["202", "201"]);
+    expect(resolvePolymarketSettlement(reversed)).toEqual({ winningAssetId: "202", kind: "official" });
+    expect(resolvePolymarketSettlement(clobMarketToGammaShape({ tokens: [{ token_id: "101", winner: true }] }, base)))
+      .toEqual({ winningAssetId: "201", kind: "price" });
+    expect(resolvePolymarketSettlement({ ...base, positionIds: undefined })).toBeNull();
+  });
   it.each([["0.99", "0.01"], ["0.9995", "0.0005"], ["1", "0"]])("uses endpoint prices before an official winner: %j", (home, away) => {
     const market = { ...ilbirsMarket, closed: true, umaResolutionStatus: "proposed",
       outcomePrices: JSON.stringify([home, away]),

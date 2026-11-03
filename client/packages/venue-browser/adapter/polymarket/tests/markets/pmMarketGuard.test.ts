@@ -7,6 +7,13 @@ import {
 import type { PolymarketRawMarket } from "@changmen/venue-browser/polymarket/markets/parse";
 
 describe("getPolymarketMarketBlockReason", () => {
+  test("checks V2 prices against position IDs and blocks CTF or unsupported identities", () => {
+    const market = { version: "v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]', outcomePrices: '["0.01","0.99"]' };
+    expect(getPolymarketMarketBlockReason(market, "201")).toContain("几乎不可能");
+    expect(getPolymarketMarketBlockReason(market, "101")).toContain("不一致");
+    expect(getPolymarketMarketBlockReason({ ...market, version: "v3" }, "201")).toContain("版本不支持");
+    expect(getPolymarketMarketBlockReason({ ...market, version: undefined }, "201")).toContain("不一致");
+  });
   test("endpoint prices only apply the underdog guard and do not declare an official result", () => {
     const market: PolymarketRawMarket = {
       clob_token_ids: JSON.stringify(["token-home", "token-away"]),

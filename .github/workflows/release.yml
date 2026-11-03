@@ -9,6 +9,10 @@ on:
         type: choice
         default: full
         options: [full, backend, frontend]
+      allow_esport_touch:
+        description: Explicitly allow reviewed changes to frozen esport paths
+        type: boolean
+        default: false
 permissions:
   contents: read
 # Independent runners validate the same pinned candidate before sealing.
@@ -91,6 +95,7 @@ jobs:
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       TZ: Asia/Shanghai
+      ALLOW_ESPORT_TOUCH: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_esport_touch && '1' || '0' }}
     steps:
       - uses: actions/checkout@v5
         with:

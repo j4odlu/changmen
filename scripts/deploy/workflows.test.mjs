@@ -123,6 +123,18 @@ test("the standalone full audit remains manual and cannot publish components", (
   assert(!JSON.stringify(audit).includes("publish.sh"));
 });
 
+test("frozen esport changes require an explicit manual release opt-in", () => {
+  const input = release.on.workflow_dispatch.inputs.allow_esport_touch;
+  assert.equal(input.type, "boolean");
+  assert.equal(input.default, false);
+  assert.equal(release.jobs.checks.env.ALLOW_ESPORT_TOUCH,
+    "${{ github.event_name == 'workflow_dispatch' && inputs.allow_esport_touch && '1' || '0' }}");
+  for (const [name, job] of Object.entries(release.jobs)) {
+    if (name !== "checks") assert.equal(job.env?.ALLOW_ESPORT_TOUCH, undefined);
+    assert(!job.steps?.some(step => step.env?.ALLOW_ESPORT_TOUCH !== undefined));
+  }
+});
+
 test("independent check runners share a pinned plan; only the collector seals artifacts", () => {
   assert.deepEqual(Object.keys(release.jobs), ["plan", "checks", "validate", "backend", "frontend", "frontend_after_backend"]);
   const plan = release.jobs.plan, checks = release.jobs.checks, validate = release.jobs.validate;

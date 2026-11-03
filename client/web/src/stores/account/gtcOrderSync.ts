@@ -20,6 +20,8 @@ let pending: Promise<void> | undefined;
 let dispose: (() => void) | undefined;
 let stopListening: (() => void) | undefined;
 let stopProjection: (() => void) | undefined;
+let refreshRevision = 0;
+let refreshedRevision = 0;
 
 export function flushGtcResults(): Promise<void> {
   if (pending) return pending;
@@ -34,8 +36,11 @@ export function flushGtcResults(): Promise<void> {
         const saved = unwrap(await post("Pm_GtcSyncResult", { result: entry.result }, "", { errorTip: false }));
         if (saved !== true) throw new Error("GTC 订单结果同步未确认成功");
         if (!current()) return;
-        await finishGtcResult(entry); delete gtcProgress.saveIssues[entry.result.executionId];
+        await finishGtcResult(entry);
+        if (!current()) return;
+        delete gtcProgress.saveIssues[entry.result.executionId];
         delete gtcOrders.resultIssues[entry.result.executionId];
+        refreshRevision++;
       }
       catch (error) {
         if (!current()) return;
@@ -43,6 +48,20 @@ export function flushGtcResults(): Promise<void> {
         gtcProgress.saveIssues[entry.result.executionId] = gtcSyncIssue(error);
         gtcOrders.resultIssues[entry.result.executionId] = gtcSyncIssue(error);
       }
+    }
+    // [changmen 扩展] 上传确认后读取公共订单，替换禁止改绑的 DisplayOnly 原单。
+    // 读取失败单独重试，不把已确认结果放回上传队列，也不触发账号刷新或订单通知。
+    if (current() && refreshedRevision < refreshRevision) {
+      const revision = refreshRevision;
+      try {
+        const { useOrderStore } = await import("@/stores/orderStore");
+        if (!current()) return;
+        const store = useOrderStore(); const date = store.orderDate;
+        const refreshed = await store.fetchOrders(date, { sideEffects: false,
+          isCurrent: () => current() && store.orderDate === date });
+        if (current() && refreshed) refreshedRevision = revision;
+      }
+      catch { /* 下轮只重试读取；后台已保存的订单结果不重复上传。 */ }
     }
   })().finally(() => { if (pending === task) pending = undefined; });
   pending = task; return task;
@@ -60,8 +79,13 @@ export function startGtcOrderSync(userId: string): void {
     if (generation === stamp && owner === userId) rows.forEach(rememberGtcOrderIdentity);
   }).catch(() => {});
   void listStoredGtcOrders(userId).then(rows => {
-    if (generation === stamp && owner === userId)
-      rows.forEach(row => rememberGtcOrderReference(row.id, row.owner, row.accountId, row.orderId, row.plan.orderHash));
+    if (generation !== stamp || owner !== userId) return;
+    rows.forEach(row => rememberGtcOrderReference(row.id, row.owner, row.accountId, row.orderId, row.plan.orderHash));
+    // 已在先前页面完成上传的原单，也须用公共财务行替换本地展示行。
+    if (rows.some(row => Number(row.matched) > 0)) {
+      refreshRevision++;
+      void flushGtcResults().catch(() => {});
+    }
   }).catch(() => {});
   const tick = () => {
     if (generation !== stamp) return;
@@ -74,6 +98,7 @@ export function startGtcOrderSync(userId: string): void {
 }
 export function stopGtcOrderSync(): void {
   generation++; owner = ""; clearTimeout(timer); timer = undefined; pending = undefined;
+  refreshRevision = 0; refreshedRevision = 0;
   dispose?.(); dispose = undefined; stopListening?.(); stopListening = undefined;
   stopProjection?.(); stopProjection = undefined;
 }

@@ -34,6 +34,8 @@ function isSportsOrder(row: OrderRow): boolean {
 
 type FetchOrdersOptions = {
   sideEffects?: boolean;
+  /** [changmen 扩展] 后台刷新只在原会话及所选日期仍有效时应用结果。 */
+  isCurrent?: () => boolean;
 };
 
 export { isLinkedArbOrderGroup as isLinkedArbGroup };
@@ -97,7 +99,7 @@ export const useOrderStore = defineStore("order", {
     /** [A8 可证实] `Io.getOrders` / `E()`：`groupBy(Link)` + `updateTodayProfit` */
     async fetchOrders(date?: string, options: FetchOrdersOptions = {}) {
       const userStore = useUserStore();
-      if (!userStore.userId)
+      if (!userStore.userId || options.isCurrent?.() === false)
         return false;
       const sideEffects = options.sideEffects !== false;
       const accountStore = useAccountStore();
@@ -109,7 +111,7 @@ export const useOrderStore = defineStore("order", {
         const nextDate = date ?? todayKey();
         this.orderDate = nextDate;
         const page = await getOrderList({ date: this.orderDate, pageSize: 1024 });
-        if (!page)
+        if (!page || options.isCurrent?.() === false)
           return false;
         // 后端已按 Link 开弓日取数并过滤；前端再滤一次防脏数据
         const list = filterOrdersBelongingToDate(page.list ?? [], this.orderDate);

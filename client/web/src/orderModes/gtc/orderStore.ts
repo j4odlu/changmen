@@ -32,6 +32,26 @@ export async function listStoredGtcOrders(owner: string): Promise<GtcOrderRecord
     return values.filter(value => value.order?.formatVersion === 2 && value.order.owner === owner).map(value => value.order);
   });
 }
+/** 旧页面已受理的原单按新同步格式补队列；不改变原单版本、授权或发送者。 */
+export async function queueStoredGtcOrderResults(owner: string): Promise<void> {
+  const count = await transaction(["records", "results"], "readwrite", async tx => {
+    const store = tx.objectStore("records");
+    const range = IDBKeyRange.bound(prefix(owner), `${prefix(owner)}\uffff`);
+    const values = await request(store.getAll(range)) as StoredOrder[];
+    let queued = 0;
+    for (const value of values) {
+      if (value.order?.formatVersion !== 2 || value.order.owner !== owner) continue;
+      const result = confirmedOrderResult(value.order);
+      if (!result) continue;
+      const fingerprint = orderResultKey(result);
+      if (fingerprint === value.resultKey) continue;
+      await request(tx.objectStore("results").put({ key: JSON.stringify([owner, value.order.id]), owner, result, at: 0, failures: 0 }));
+      await request(store.put({ ...value, resultKey: fingerprint })); queued++;
+    }
+    return queued;
+  });
+  if (count) changed();
+}
 export async function mutateStoredGtcOrder(owner: string, id: string, revision: number, command: GtcOrderCommand): Promise<GtcOrderRecord> {
   const row = await transaction(["records", "results"], "readwrite", async tx => {
     const store = tx.objectStore("records");

@@ -577,6 +577,16 @@ describe("fetchPlatformAnalytics SQL", () => {
     expect(sql).toMatch(/user_id = ANY\(\$4::uuid\[\]\)/);
     expect(params[3]).toEqual(userIds);
   });
+  it("excludes unfilled GTC from analytics while keeping it in the ordinary order list", async () => {
+    queryMock.mockResolvedValue({ rows: [] });
+    const { fetchPlatformAnalytics } = await import("./orders_store.js");
+    await fetchPlatformAnalytics(1, 2, null);
+    expect(queryMock.mock.calls[0][0]).toContain("COALESCE(raw->>'pmGtcBuyShares', '') = '0'");
+    expect(queryMock.mock.calls[0][0]).toContain("COALESCE(raw->>'pmOrderType', '') = 'GTC'");
+    queryMock.mockClear();
+    await fetchOrdersByDate("2026-11-03", "owner");
+    expect(queryMock.mock.calls[0][0]).not.toContain("pmGtcBuyShares");
+  });
 });
 
 describe("fetchArbPairAnalytics SQL", () => {

@@ -63,7 +63,7 @@ export async function pendingGtcResults(owner: string): Promise<PendingGtcResult
 export async function finishGtcResult(entry: PendingGtcResult, failure = false): Promise<void> {
   await transaction(["results"], "readwrite", async tx => {
     const store = tx.objectStore("results"); const current = await request(store.get(entry.key)) as PendingGtcResult | undefined;
-    if (!current || current.result.revision !== entry.result.revision) return;
+    if (!current || current.result.revision !== entry.result.revision || gtcResultKey(current.result) !== gtcResultKey(entry.result)) return;
     if (!failure) await request(store.delete(entry.key));
     else await request(store.put({ ...current, failures: current.failures + 1, at: Date.now() + Math.min(60000, 5000 * 2 ** Math.min(current.failures, 4)) }));
   });

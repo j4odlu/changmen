@@ -67,3 +67,33 @@ it("no zero intent row is created and unavailable RDS never acknowledges a resul
   await savePmGtcConfirmedResult("owner", zero); expect(inserted()).toBeUndefined();
   mock.noDb = true; await expect(savePmGtcConfirmedResult("owner", result())).rejects.toThrow("RDS");
 });
+const accepted = (patch = {}) => ({ shares: "10", price: "0.5", ...patch });
+it("creates an accepted zero-fill order with no invented cost or fill price", async () => {
+  await savePmGtcConfirmedResult("owner", { ...result(), acceptedOrder: accepted(), fills: [],
+    financial: { pmShares: 0, pmFillPrice: 0, pmStakeUsdc: 0, pmFeeUsdc: 0, odds: 0, betMoney: 0 } });
+  expect(inserted()[1][10]).toMatchObject({ pmGtcAcceptedOrder: accepted(), pmGtcBuyShares: 0, pmGtcBuyCost: 0,
+    pmShares: 0, pmStakeUsdc: 0, pmFillPrice: 0 });
+  expect(inserted()[0]).toContain("ELSE orders.link END");
+});
+it("retains one original and manual Link when its first fill arrives after zero-fill acceptance", async () => {
+  mock.rows = [previous({ pmGtcBuyShares: 0, pmGtcConfirmedFills: [], pmGtcAcceptedOrder: accepted(), pmGtcResultRevision: 2 })];
+  await savePmGtcConfirmedResult("owner", { ...result(), acceptedOrder: accepted() });
+  expect(inserted()[1][2]).toBe(hash.toUpperCase());
+  expect(inserted()[1][10].pmGtcBuyShares).toBe(3);
+  expect(inserted()[0]).toContain("ELSE orders.link END");
+});
+it("enriches a saved result at the same revision and retains acceptance for legacy updates", async () => {
+  mock.rows = [previous({ pmGtcResultRevision: 4 })];
+  await savePmGtcConfirmedResult("owner", { ...result(), acceptedOrder: accepted() });
+  expect(inserted()[1][10].pmGtcAcceptedOrder).toEqual(accepted());
+  mock.query.mockClear();
+  const original = accepted();
+  mock.rows = [previous({ pmGtcAcceptedOrder: original })];
+  await savePmGtcConfirmedResult("owner", result());
+  expect(inserted()[1][10].pmGtcAcceptedOrder).toEqual(original);
+});
+it("rejects changed original parameters and omitted confirmed fills", async () => {
+  mock.rows = [previous({ pmGtcAcceptedOrder: accepted() })];
+  await expect(savePmGtcConfirmedResult("owner", { ...result(), acceptedOrder: accepted({ price: "0.4" }) })).rejects.toThrow("不可变更");
+  await expect(savePmGtcConfirmedResult("owner", { ...result(), fills: [] })).rejects.toThrow("不可遗漏");
+});

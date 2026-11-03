@@ -58,6 +58,23 @@ it("accepts optional composed market identity and keeps native order labels", as
   expect(mock.save).toHaveBeenCalledWith("owner", expect.objectContaining({ clientMarket, bet: "全场" }));
   expect(() => validateGtcConfirmedResult({ ...result(), clientMarket: { ...clientMarket, matchId: "17" } }, "owner")).toThrow("身份无效");
 });
+const acceptedOrder = () => ({ shares: "10", price: "0.5" });
+const acceptedResult = () => ({ ...result(), acceptedOrder: acceptedOrder(), buyShares: "0", principalUsdc: "0", feeUsdc: "0", fills: [],
+  financial: { pmShares: 0, pmFillPrice: 0, pmStakeUsdc: 0, pmFeeUsdc: 0, odds: 0, betMoney: 0 } });
+it("saves an accepted zero-fill original through the same owner-checked order endpoint", async () => {
+  await expect(syncGtcConfirmedResult(formBody({ result: acceptedResult() }), "owner")).resolves.toBe(true);
+  expect(mock.owned).toHaveBeenCalledWith(1, "owner");
+  expect(mock.save).toHaveBeenCalledWith("owner", acceptedResult());
+  mock.owned.mockResolvedValue({ ok: false, msg: "不属于当前用户" });
+  await expect(syncGtcConfirmedResult({ result: acceptedResult() }, "owner")).rejects.toThrow("不属于");
+});
+it("does not accept an unsent intent, invented fill totals or process data as an accepted original", () => {
+  const zero = acceptedResult(); delete zero.acceptedOrder;
+  expect(() => validateGtcConfirmedResult(zero, "owner")).toThrow("零成交");
+  expect(() => validateGtcConfirmedResult({ ...acceptedResult(), buyShares: "1" }, "owner")).toThrow("不一致");
+  expect(() => validateGtcConfirmedResult({ ...acceptedResult(), acceptedOrder: { ...acceptedOrder(), authorize: true } }, "owner")).toThrow("受理原单");
+  expect(() => validateGtcConfirmedResult({ ...result(), acceptedOrder: { ...acceptedOrder(), shares: "1" } }, "owner")).toThrow("超过原单");
+});
 it.each(["MATCHED", "MINED", "RETRYING"])("refuses intermediate %s fills", status => {
   expect(() => validateGtcConfirmedResult({ ...result(), fills: [{ ...fill, status }] }, "owner")).toThrow("已确认");
 });

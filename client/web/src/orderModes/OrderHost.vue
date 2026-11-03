@@ -19,7 +19,9 @@ const executions = computed(() => props.embedded || !user.userId || gtcProgress.
   : gtcProgress.records.filter(row => row.owner === String(user.userId)));
 const nativeOrders = computed(() => props.embedded || !user.userId || gtcOrders.owner !== String(user.userId) ? [] : gtcOrders.records);
 const pendingRows = computed(() => [...gtcPendingDisplayRows([...orders.orders.values()].flat(), executions.value, orders.orderDate, orders.filterAccountId),
-  ...nativeGtcPendingRows([...orders.orders.values()].flat(), nativeOrders.value, orders.orderDate, orders.filterAccountId)]);
+  // 已受理的正常订单由公共列表显示；同步失败时保留本地诊断卡。
+  ...nativeGtcPendingRows([...orders.orders.values()].flat(), nativeOrders.value.filter(row => row.submit !== "accepted"
+    || gtcOrders.saveIssues[row.id] || gtcOrders.resultIssues[row.id]), orders.orderDate, orders.filterAccountId)]);
 const projectOrderEntries = (entries: ReadonlyArray<OrderListEntry>) => mergeGtcPendingDisplayEntries(entries, pendingRows.value, executions.value);
 </script>
 

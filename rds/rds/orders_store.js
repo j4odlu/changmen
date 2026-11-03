@@ -15,9 +15,13 @@ import { Currency, getExchange } from "@changmen/shared/currency";
 import { _jsonb, getPgPool } from "./common.js";
 import { localDayBounds, localMonthBounds } from "./time_bounds.js";
 
-/** [changmen 扩展] 已成交统计排除 PM 提交待确认单；列表仍读取 orders 全部状态。 */
+/** [changmen 扩展] 已成交统计排除 PM 提交待确认及尚无已确认成交的受理挂单；列表仍读取全部订单。 */
 function analyticsOrdersRelation(alias = "") {
-  return `(SELECT * FROM ${financialOrdersRelation()} WHERE provider IS DISTINCT FROM 'Polymarket' OR status IS DISTINCT FROM 'Pending') ${alias || "accounted_orders"}`;
+  return `(SELECT * FROM ${financialOrdersRelation()} WHERE provider IS DISTINCT FROM 'Polymarket'
+    OR (status IS DISTINCT FROM 'Pending' AND NOT (
+      COALESCE(raw->>'pmSide', 'buy') <> 'sell' AND (COALESCE(raw->>'pmOrderType', '') = 'GTC' OR COALESCE(raw->>'pmGtcExecutionId', '') <> '')
+      AND COALESCE(raw->>'pmGtcBuyShares', '') = '0'
+    ))) ${alias || "accounted_orders"}`;
 }
 
 /**

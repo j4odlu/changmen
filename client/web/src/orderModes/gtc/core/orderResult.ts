@@ -1,4 +1,5 @@
 import type { GtcConfirmedResult } from "@changmen/shared/pm_gtc_result";
+import { gtcAcceptedOrder } from "@changmen/shared/pm_gtc_result";
 import { mergeGtcOrderFacts } from "@changmen/shared/pm_gtc_order";
 import type { GtcOrderRecord } from "./orderRecord";
 import { gtcFinancialOrder } from "../financialOrder";
@@ -7,11 +8,13 @@ import { gtcFinancialOrder } from "../financialOrder";
 export function confirmedOrderResult(row: GtcOrderRecord): GtcConfirmedResult | null {
   if (!row.orderId) return null;
   const fills = Object.values(row.fills).filter(fill => fill.status === "FAILED" || (fill.status === "CONFIRMED" && fill.fee != null));
-  if (!fills.length) return null;
+  const acceptedOrder = gtcAcceptedOrder(row);
+  if (!fills.length && !acceptedOrder) return null;
   const totals = mergeGtcOrderFacts({ ...row, fills: {}, order: null }, { order: null, fills, complete: true, observedAt: row.observedAt });
-  const financial = gtcFinancialOrder({ ...totals, complete: true });
+  const financial = fills.length ? gtcFinancialOrder({ ...totals, complete: true })
+    : { pmShares: 0, pmFillPrice: 0, pmStakeUsdc: 0, pmFeeUsdc: 0, odds: 0, betMoney: 0 };
   if (!financial) return null;
-  return { executionId: row.id, orderId: row.orderId, playerId: row.accountId, linkId: row.context.linkId,
+  return { ...(acceptedOrder ? { acceptedOrder } : {}), executionId: row.id, orderId: row.orderId, playerId: row.accountId, linkId: row.context.linkId,
     createdAt: row.createdAt, revision: row.revision, match: row.context.match, bet: row.context.bet, item: row.context.item,
     ...(row.context.clientMarket ? { clientMarket: row.context.clientMarket } : {}),
     tokenId: row.plan.tokenId, conditionId: row.plan.conditionId, buyShares: totals.matched,

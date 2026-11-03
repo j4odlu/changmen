@@ -1,5 +1,5 @@
 import { mergeOrderMarketIdentity } from "@changmen/shared/order_market_identity";
-/** [changmen 扩展] 只保存已确认 GTC 买单结果；不读写 pm_gtc_executions。 */
+/** [changmen 扩展] 受理后建立同一张公共订单，已确认成交逐次更新原行。 */
 import { getPgPool } from "../../common.js";
 import { syncPmGtcSettledOrderFinancials } from "./pm_gtc_settlement.js";
 
@@ -17,11 +17,21 @@ export async function savePmGtcConfirmedResult(owner, result) {
     if (previous && (previous.provider !== "Polymarket" || previous.raw?.pmSide === "sell"
       || (previous.raw?.pmGtcExecutionId && previous.raw.pmGtcExecutionId !== result.executionId)))
       throw new Error("GTC 原单结果身份冲突");
-    if (Number(previous?.raw?.pmGtcResultRevision ?? -1) >= result.revision) {
+    const acceptedOrder = result.acceptedOrder ?? previous?.raw?.pmGtcAcceptedOrder;
+    if (result.acceptedOrder && previous?.raw?.pmGtcAcceptedOrder
+      && (Number(result.acceptedOrder.shares) !== Number(previous.raw.pmGtcAcceptedOrder.shares)
+        || Number(result.acceptedOrder.price) !== Number(previous.raw.pmGtcAcceptedOrder.price)))
+      throw new Error("GTC 受理原单数量或限价不可变更");
+    const savedOrder = previous?.raw?.pmGtcAcceptedOrder;
+    const savedRevision = Number(previous?.raw?.pmGtcResultRevision ?? -1);
+    const enrichAcceptedOrder = savedRevision === result.revision && result.acceptedOrder && !savedOrder;
+    if (savedRevision >= result.revision && !enrichAcceptedOrder) {
       await client.query("COMMIT"); return true;
     }
     const oldShares = Number(previous?.raw?.pmGtcBuyShares) || 0;
     const oldFills = previous?.raw?.pmGtcConfirmedFills ?? [];
+    if (oldFills.some(old => !result.fills.some(fill => fill.key === old.key)))
+      throw new Error("GTC 已确认成交明细不可遗漏");
     const failed = result.fills.filter(fill => fill.status === "FAILED");
     for (const fill of result.fills) {
       const old = oldFills.find(old => old.key === fill.key);
@@ -32,10 +42,11 @@ export async function savePmGtcConfirmedResult(owner, result) {
       .reduce((sum, fill) => sum + Number(fill.shares), 0);
     if (result.financial.pmShares + 0.000001 < oldShares - reversed)
       throw new Error("GTC 成交量减少缺少已确认成交的 FAILED 证据");
-    if (!previous && result.financial.pmShares === 0) { await client.query("COMMIT"); return true; }
+    if (!previous && result.financial.pmShares === 0 && !acceptedOrder) { await client.query("COMMIT"); return true; }
     const financial = result.financial;
     const clientMarket = mergeOrderMarketIdentity(previous?.raw?.clientMarket, result.clientMarket);
     const raw = { ...(clientMarket ? { clientMarket } : {}), pmOrderType: "GTC", pmGtcExecutionId: result.executionId, pmGtcResultRevision: result.revision,
+      ...(acceptedOrder ? { pmGtcAcceptedOrder: acceptedOrder, pmSubmittedPrice: Number(acceptedOrder.price) } : {}),
       pmGtcConfirmedFills: result.fills, pmTokenId: result.tokenId, pmConditionId: result.conditionId,
       pmSide: "buy", pmOrigin: "changmen", pmShares: financial.pmShares, pmFillPrice: financial.pmFillPrice,
       pmStakeUsdc: financial.pmStakeUsdc, pmFeeUsdc: financial.pmFeeUsdc,

@@ -3,7 +3,7 @@ import type { GtcPlan } from "@changmen/shared/pm_gtc";
 import type { GtcOrderPlan } from "@changmen/shared/pm_gtc_order";
 import { IDBFactory, IDBKeyRange } from "fake-indexeddb";
 import { beforeEach, expect, it, vi } from "vitest";
-import { createStoredGtcOrder, listStoredGtcOrders, mutateStoredGtcOrder } from "./orderStore";
+import { createStoredGtcOrder, listStoredGtcOrders, mutateStoredGtcOrder, queueStoredGtcOrderResults } from "./orderStore";
 import { listLocalGtc, pendingGtcResults, finishGtcResult } from "./localStore";
 import { request, transaction } from "./storage";
 
@@ -55,7 +55,8 @@ it("queues confirmed partial fills under one original id, and FAILED evidence co
   let row = await createStoredGtcOrder("id", "owner", 1, maker, plan, { linkId: -10, match: "M", bet: "B", item: "YES" });
   row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "authorize" });
   row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "receipt", receipt: { success: true, orderID: hash } });
-  expect(await pendingGtcResults("owner")).toEqual([]);
+  expect((await pendingGtcResults("owner"))[0]!.result).toMatchObject({ buyShares: "0", fills: [],
+    acceptedOrder: { shares: "10", price: "0.5" }, financial: { pmShares: 0, betMoney: 0 } });
   const fill = { key: "one", tradeId: "one", bucket: "maker", role: "MAKER" as const, shares: "3", price: "0.5", fee: "0", status: "CONFIRMED", updatedAt: 1 };
   row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "facts", facts: { order: { id: hash, original: "10", matched: "3", status: "LIVE", tradeIds: ["one"] }, fills: [fill], complete: true, observedAt: 1 } });
   const before = (await pendingGtcResults("owner"))[0]!;
@@ -65,4 +66,37 @@ it("queues confirmed partial fills under one original id, and FAILED evidence co
   const latest = (await pendingGtcResults("owner"))[0]!;
   expect(latest.result).toMatchObject({ executionId: "id", buyShares: "0", principalUsdc: "0", financial: { pmShares: 0 } });
   expect(latest.result.revision).toBe(row.revision); expect(await listStoredGtcOrders("owner")).toHaveLength(1);
+});
+it("backfills accepted originals without authorizing or resending and deduplicates unchanged observations", async () => {
+  let row = await createStoredGtcOrder("id", "owner", 1, maker, plan, {});
+  expect(await pendingGtcResults("owner")).toEqual([]);
+  row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "authorize" });
+  expect(await pendingGtcResults("owner")).toEqual([]);
+  row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "receipt", receipt: { success: true, orderID: hash } });
+  await finishGtcResult((await pendingGtcResults("owner"))[0]!);
+  await transaction(["records"], "readwrite", async tx => {
+    const store = tx.objectStore("records"); const values = await request(store.getAll());
+    const value = values[0]!; delete value.resultKey; await request(store.put(value));
+  });
+  await queueStoredGtcOrderResults("owner");
+  expect((await pendingGtcResults("owner"))[0]!.result.acceptedOrder).toEqual({ shares: "10", price: "0.5" });
+  expect((await listStoredGtcOrders("owner"))[0]!.revision).toBe(row.revision);
+  await finishGtcResult((await pendingGtcResults("owner"))[0]!);
+  await queueStoredGtcOrderResults("owner"); expect(await pendingGtcResults("owner")).toEqual([]);
+  row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "facts", facts: {
+    order: { id: hash, original: "10", matched: "0", status: "LIVE", tradeIds: [] }, fills: [], complete: true, observedAt: 10 } });
+  expect(await pendingGtcResults("owner")).toEqual([]);
+  await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "facts", facts: {
+    order: row.order, fills: [], complete: true, observedAt: 20 } });
+  expect(await pendingGtcResults("owner")).toEqual([]);
+});
+it("does not acknowledge a replaced payload at the same local revision", async () => {
+  let row = await createStoredGtcOrder("id", "owner", 1, maker, plan, {});
+  row = await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "authorize" });
+  await mutateStoredGtcOrder("owner", row.id, row.revision, { kind: "receipt", receipt: { success: true, orderID: hash } });
+  const queued = (await pendingGtcResults("owner"))[0]!;
+  const oldResult = { ...queued.result }; delete oldResult.acceptedOrder;
+  await finishGtcResult({ ...queued, result: oldResult });
+  expect(await pendingGtcResults("owner")).toHaveLength(1);
+  await finishGtcResult(queued); expect(await pendingGtcResults("owner")).toEqual([]);
 });

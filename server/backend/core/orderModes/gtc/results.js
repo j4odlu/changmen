@@ -1,7 +1,8 @@
 import { normalizeOrderMarketIdentity } from "@changmen/shared/order_market_identity";
+import { normalizeGtcAcceptedOrder } from "@changmen/shared/pm_gtc_result";
 /** [changmen 扩展] 结果同步与精确财务读取；执行控制及监控过程不写 RDS。 */
 import * as db from "@changmen/db";
-import { mergeGtcOrderFacts } from "@changmen/shared/pm_gtc_order";
+import { gtcUnits, mergeGtcOrderFacts } from "@changmen/shared/pm_gtc_order";
 import { assertPlayerOwnedByUser } from "../../account/player_ownership.js";
 import { toClientOrder } from "../../account/order/dto.js";
 import * as orderStore from "../../account/order_store.js";
@@ -15,16 +16,19 @@ function jsonField(value, name) {
   catch { throw new Error(`GTC ${name} JSON 无效`); }
 }
 export function validateGtcConfirmedResult(input, owner) {
-  const allowed = new Set(["clientMarket", "executionId", "orderId", "playerId", "linkId", "createdAt", "revision", "match", "bet", "item", "tokenId", "conditionId", "buyShares", "principalUsdc", "feeUsdc", "fills", "financial"]);
+  const allowed = new Set(["acceptedOrder", "clientMarket", "executionId", "orderId", "playerId", "linkId", "createdAt", "revision", "match", "bet", "item", "tokenId", "conditionId", "buyShares", "principalUsdc", "feeUsdc", "fills", "financial"]);
   const fillFields = new Set(["key", "tradeId", "bucket", "role", "shares", "price", "fee", "status", "updatedAt"]);
   if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some(key => !allowed.has(key)) || !uuid(input.executionId)
     || typeof input.orderId !== "string" || !/^0x[0-9a-f]{64}$/i.test(input.orderId)
     || !Number.isSafeInteger(input.playerId) || input.playerId <= 0 || !Number.isSafeInteger(input.linkId)
     || !Number.isSafeInteger(input.revision) || input.revision < 0 || !Number.isFinite(input.createdAt) || input.createdAt <= 0
     || [input.match, input.bet, input.item, input.tokenId, input.conditionId].some(value => typeof value !== "string" || value.length > 10000)
-    || !Array.isArray(input.fills) || !input.fills.length || input.fills.length > 10000
+    || !Array.isArray(input.fills) || input.fills.length > 10000
     || input.fills.some(fill => !fill || Object.keys(fill).some(key => !fillFields.has(key)) || !["CONFIRMED", "FAILED"].includes(fill.status) || (fill.status === "CONFIRMED" && fill.fee == null)))
     throw new Error("GTC 同步只能接收已确认订单结果");
+  const acceptedOrder = normalizeGtcAcceptedOrder(input.acceptedOrder);
+  if (input.acceptedOrder != null && !acceptedOrder) throw new Error("GTC 受理原单信息无效");
+  if (!input.fills.length && !acceptedOrder) throw new Error("GTC 零成交意向不能建立订单");
   if (new Set(input.fills.map(fill => fill.key)).size !== input.fills.length) throw new Error("GTC 成交明细重复");
   const totals = mergeGtcOrderFacts({ plan: { orderHash: input.orderId, shares: input.buyShares },
     submit: "accepted", orderId: input.orderId, pmAuthorized: true, cancel: null, fills: {}, order: null,
@@ -34,11 +38,13 @@ export function validateGtcConfirmedResult(input, owner) {
     || totals.error.split("；").some(error => error && error !== ""))
     throw new Error("GTC 已确认成交明细与结果不一致");
   const financial = db.resolveGtcFinancialOrder({ ...totals, orderId: input.orderId, complete: true }, input.financial);
-  if (!financial || (financial.pmShares === 0 && !input.fills.some(fill => fill.status === "FAILED")))
+  if (!financial || (financial.pmShares === 0 && !acceptedOrder && !input.fills.some(fill => fill.status === "FAILED")))
     throw new Error("GTC 零成交意向不能建立财务订单");
+  if (acceptedOrder && gtcUnits(input.buyShares) > gtcUnits(acceptedOrder.shares))
+    throw new Error("GTC 已确认成交超过原单累计量");
   const clientMarket = normalizeOrderMarketIdentity(input.clientMarket);
   if (input.clientMarket != null && !clientMarket) throw new Error("GTC 合场盘口身份无效");
-  return { ...input, financial, ...(clientMarket ? { clientMarket } : {}) };
+  return { ...input, financial, ...(acceptedOrder ? { acceptedOrder } : {}), ...(clientMarket ? { clientMarket } : {}) };
 }
 export async function syncGtcConfirmedResult(body, owner) {
   const result = validateGtcConfirmedResult(jsonField(body.result, "result"), owner);

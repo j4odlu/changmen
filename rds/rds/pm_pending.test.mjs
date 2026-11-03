@@ -43,6 +43,8 @@ it.each([
 ])("excludes PM Pending from %s without changing other venue statuses", async (read, args) => {
   await read(...args);
   expect(mocks.query).toHaveBeenCalled();
-  for (const [sql] of mocks.query.mock.calls)
-    expect(sql).toContain("WHERE provider IS DISTINCT FROM 'Polymarket' OR status IS DISTINCT FROM 'Pending'");
+  for (const [sql] of mocks.query.mock.calls) {
+    expect(sql).toMatch(/WHERE provider IS DISTINCT FROM 'Polymarket'\s+OR \(status IS DISTINCT FROM 'Pending' AND NOT \(/);
+    expect(sql).toContain("COALESCE(raw->>'pmGtcBuyShares', '') = '0'");
+  }
 });

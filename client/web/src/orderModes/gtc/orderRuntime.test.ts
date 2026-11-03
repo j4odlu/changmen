@@ -67,7 +67,9 @@ it("query failure leaves confirmed quantities intact and retry uses the same ori
 });
 it("keeps unresolved fees active even after the remainder is canceled", async () => {
   await seed(); mock.read.mockResolvedValue(facts("3", "CANCELED", null)); await pollGtcOrder("id");
-  expect(gtcOrderReconciled(currentGtcOrder("id"))).toBe(false); expect(await pendingGtcResults("owner")).toEqual([]);
+  expect(gtcOrderReconciled(currentGtcOrder("id"))).toBe(false);
+  expect((await pendingGtcResults("owner"))[0]!.result).toMatchObject({ buyShares: "0", financial: { betMoney: 0 },
+    acceptedOrder: { shares: "10", price: "0.5" } });
   mock.read.mockResolvedValue(facts("3", "CANCELED")); await pollGtcOrder("id");
   expect(gtcOrderReconciled(currentGtcOrder("id"))).toBe(true); expect(await pendingGtcResults("owner")).toHaveLength(1);
 });

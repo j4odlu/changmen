@@ -1,4 +1,5 @@
 import { isPmPendingOrder } from "@changmen/shared/pm_submission";
+import { isUnfilledGtcOrder } from "@changmen/shared/pm_gtc_result";
 import type { LoseOrderCancelledRecord, OrderRow } from "@/types/order";
 import type { LoseOrder } from "@/models/loseOrder";
 import type { MakeupOddsBandPrefs } from "@/types/extensionPrefs";
@@ -64,6 +65,7 @@ function isPredictFunOrderRow(row: OrderRow): boolean {
 
 /** PM 仍有持仓；卖单永远不算持仓 */
 export function isPolymarketOpenPosition(row: OrderRow): boolean {
+  if (isUnfilledGtcOrder(row)) return false;
   return hasOpenPolymarketPosition(row);
 }
 
@@ -733,7 +735,7 @@ export function mergePendingMakeupIntoOrderGroups(
 
 /** 组内盈亏：PM/PF 只认买单 Money；卖单恒 0（防双计） */
 export function polymarketMoneyForAggregate(row: OrderRow, _peers: OrderRow[]): number {
-  if (isPmPendingOrder(row)) return 0;
+  if (isPmPendingOrder(row) || isUnfilledGtcOrder(row)) return 0;
   if (isMakeupSyntheticOrderRow(row))
     return 0;
 
@@ -897,7 +899,7 @@ export function orderLinkLegend(rows: OrderRow[]): string {
   const hasMakeup = rows.some(isMakeupPendingOrderRow);
   const makeupPrefix = hasMakeup ? "补单中 · " : "";
   const unsettled = rows.filter(r =>
-    String(r.Status ?? "") === "None"
+    String(r.Status ?? "") === "None" && !isUnfilledGtcOrder(r)
     && !isPredictionSellRow(r)
     && !isExitedPredictionBuy(r),
   );
@@ -932,7 +934,7 @@ export function estimateArbLockedProfitCny(rows: OrderRow[]): number | null {
   if (!(stake > 0))
     return null;
   const unsettled = rows.filter(r =>
-    String(r.Status ?? "") === "None"
+    String(r.Status ?? "") === "None" && !isUnfilledGtcOrder(r)
     && !isPredictionSellRow(r)
     && !isExitedPredictionBuy(r),
   );

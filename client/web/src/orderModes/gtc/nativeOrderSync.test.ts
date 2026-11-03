@@ -14,12 +14,12 @@ import { saveOrders } from "./ordersApi";
 import { flushGtcResults, startGtcOrderSync, stopGtcOrderSync } from "@/stores/account/gtcOrderSync";
 import { rememberGtcOrderReference } from "./executionProjection";
 
-const mock = vi.hoisted(() => ({ post: vi.fn(), legacy: vi.fn(), list: vi.fn(), report: vi.fn() }));
+const mock = vi.hoisted(() => ({ post: vi.fn(), legacy: vi.fn(), list: vi.fn(), report: vi.fn(), accounts: [] as PlatformAccount[] }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "session", isAuthSessionCurrent: () => true, post: mock.post,
   unwrap: (response: { success: number; info: unknown }) => { if (response.success !== 1) throw new Error("offline"); return response.info; } }));
 vi.mock("@/api/order", () => ({ registerOrderSyncProjection: () => () => {} }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: "owner", isLoggedIn: true }) }));
-vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ accounts: [], loaded: true }) }));
+vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ accounts: mock.accounts, loaded: true }) }));
 vi.mock("@/stores/messageStore", () => ({ useMessageStore: () => ({ orderReportMessage: mock.report }) }));
 vi.mock("@/api/esport", () => ({ getOrderList: mock.list }));
 vi.mock("./api", () => ({ listGtc: mock.legacy }));
@@ -30,6 +30,7 @@ const plan: GtcOrderPlan = { tokenId: "t", conditionId: "c", shares: "10", targe
 beforeEach(() => {
   stopGtcOrderSync(); vi.clearAllMocks(); vi.stubGlobal("indexedDB", new IDBFactory()); vi.stubGlobal("IDBKeyRange", IDBKeyRange);
   setActivePinia(createPinia()); mock.list.mockResolvedValue({ list: [] });
+  mock.accounts.length = 0;
   mock.post.mockResolvedValue({ success: 1, info: true }); mock.legacy.mockRejectedValue(new Error("old history unavailable"));
 });
 afterEach(stopGtcOrderSync);
@@ -73,6 +74,33 @@ it("replaces the completed display-only original with the persisted row so its b
   expect(rows).toHaveLength(1); expect(rows[0]!.DisplayOnly).toBeUndefined();
   expect(isRebindableOrderRow(rows[0]!)).toBe(true);
   expect(store.filterAccountId).toBe(1); expect(mock.report).not.toHaveBeenCalled();
+});
+it("loads an accepted zero-fill original as an ordinary draggable row and counts its later fill once", async () => {
+  const row = await original();
+  const account = { accountId: 1, provider: "Polymarket", balance: 0 } as PlatformAccount;
+  mock.accounts.push(account);
+  const store = useOrderStore();
+  const persisted = { OrderID: hash, PlayerID: 1, Type: "Polymarket", Link: row.context.linkId,
+    CreateAt: row.createdAt, PmGtcExecutionId: id, PmOrderType: "GTC" as const, PmSide: "buy" as const,
+    PmGtcBuyShares: 0, PmShares: 0, BetMoney: 0, Money: 0, Status: "None" };
+  mock.list.mockResolvedValue({ list: [persisted] });
+  startGtcOrderSync("owner"); await flushGtcResults();
+  expect(mock.post).toHaveBeenCalledWith("Pm_GtcSyncResult", { result: expect.objectContaining({ orderId: hash,
+    buyShares: "0", fills: [], acceptedOrder: { shares: "10", price: "0.5" } }) }, "", { errorTip: false });
+  expect([...store.orders.values()].flat()).toHaveLength(1);
+  expect(isRebindableOrderRow([...store.orders.values()].flat()[0]!)).toBe(true);
+  store.updateTodayProfit([persisted]);
+  expect(account.orderCount).toBe(0); expect(account.unsettle).toBe(0);
+  const filled = { ...persisted, PmGtcBuyShares: 3, PmShares: 3, BetMoney: 10, PmFillPrice: 0.5 };
+  await mutateStoredGtcOrder("owner", id, row.revision, { kind: "facts", facts: {
+    order: { id: hash, original: "10", matched: "3", status: "CANCELED", tradeIds: ["one"] },
+    fills: [{ key: "one", tradeId: "one", bucket: "maker", role: "MAKER", shares: "3", price: "0.5", fee: "0", status: "CONFIRMED", updatedAt: 1 }],
+    complete: true, observedAt: 1 } });
+  mock.list.mockResolvedValue({ list: [filled] });
+  await flushGtcResults();
+  expect([...store.orders.values()].flat()).toHaveLength(1);
+  expect([...store.orders.values()].flat()[0]!.OrderID).toBe(hash);
+  store.updateTodayProfit([filled]); expect(account.orderCount).toBe(1); expect(account.unsettle).toBe(1);
 });
 it.each(["date", "session"])("ignores a late background order-list read after the %s changes", async stage => {
   const store = useOrderStore(); const date = store.orderDate;

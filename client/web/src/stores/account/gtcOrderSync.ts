@@ -9,7 +9,7 @@ import { useAccountStore } from "@/stores/accountStore";
 import { registerOrderSyncProjection } from "@/api/order";
 import { rememberGtcOrderIdentity } from "@/orderModes/gtc/executionProjection";
 import { synchronizeGtcCounterparts } from "./gtcCounterpartSync";
-import { listStoredGtcOrders } from "@/orderModes/gtc/orderStore";
+import { listStoredGtcOrders, queueStoredGtcOrderResults } from "@/orderModes/gtc/orderStore";
 import { gtcOrders } from "@/orderModes/gtc/orderState";
 import { rememberGtcOrderReference } from "@/orderModes/gtc/executionProjection";
 
@@ -78,11 +78,11 @@ export function startGtcOrderSync(userId: string): void {
   void listLocalGtc(userId).then(rows => {
     if (generation === stamp && owner === userId) rows.forEach(rememberGtcOrderIdentity);
   }).catch(() => {});
-  void listStoredGtcOrders(userId).then(rows => {
+  void queueStoredGtcOrderResults(userId).then(() => listStoredGtcOrders(userId)).then(rows => {
     if (generation !== stamp || owner !== userId) return;
     rows.forEach(row => rememberGtcOrderReference(row.id, row.owner, row.accountId, row.orderId, row.plan.orderHash));
     // 已在先前页面完成上传的原单，也须用公共财务行替换本地展示行。
-    if (rows.some(row => Number(row.matched) > 0)) {
+    if (rows.some(row => row.submit === "accepted" && row.orderId)) {
       refreshRevision++;
       void flushGtcResults().catch(() => {});
     }

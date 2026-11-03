@@ -8,7 +8,7 @@ vi.mock("@/api/client", () => ({ post: mock.post, getAuthSessionVersion: () => m
 vi.mock("@/orderModes/gtc/localStore", () => ({ listLocalGtc: async () => [], pendingGtcResults: mock.pending, finishGtcResult: mock.finish, localGtcChanges: { revision: 0 }, listenLocalGtcChanges: () => () => {} }));
 vi.mock("@/orderModes/gtc/gtcProgressState", () => ({ gtcProgress: { saveIssues: mock.issues } }));
 vi.mock("@/api/order", () => ({ registerOrderSyncProjection: () => () => {} }));
-vi.mock("@/orderModes/gtc/orderStore", () => ({ listStoredGtcOrders: mock.restored }));
+vi.mock("@/orderModes/gtc/orderStore", () => ({ listStoredGtcOrders: mock.restored, queueStoredGtcOrderResults: async () => {} }));
 vi.mock("@/stores/orderStore", () => ({ useOrderStore: () => ({ get orderDate() { return mock.date; }, fetchOrders: mock.refresh }) }));
 const entry = { key: "k", owner: "owner", at: 0, failures: 0, result: { executionId: "id", revision: 8, fills: [{ status: "CONFIRMED" }], financial: { pmShares: 3 } } };
 beforeEach(() => { vi.useFakeTimers(); stopGtcOrderSync(); vi.clearAllMocks(); mock.session = 1;
@@ -58,8 +58,9 @@ it("refreshes once for a batch of acknowledged results", async () => {
 });
 it("reloads recovered native fills even if a previous page already acknowledged the upload", async () => {
   mock.pending.mockResolvedValue([]);
-  mock.restored.mockResolvedValue([{ id: "id", owner: "owner", accountId: 1, orderId: "hash", plan: { orderHash: "hash" }, matched: "3" }]);
+  mock.restored.mockResolvedValue([{ id: "id", owner: "owner", accountId: 1, submit: "accepted", orderId: "hash", plan: { orderHash: "hash" }, matched: "3" }]);
   startGtcOrderSync("owner"); await flushGtcResults();
+  await vi.waitFor(() => expect(mock.refresh).toHaveBeenCalledOnce());
   expect(mock.refresh).toHaveBeenCalledOnce(); expect(mock.post).not.toHaveBeenCalled();
 });
 it.each(["logout", "session", "date"])("invalidates an in-flight order-list refresh after %s", async stage => {

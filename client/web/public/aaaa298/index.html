@@ -331,9 +331,107 @@
  };
 })(window);
 </script>
+<script>/* PM public history overlay helpers. No account credentials or order operations. */
+(function (root) {
+  'use strict';
+  function normalize(rows) {
+    const byTime = new Map();
+    for (const row of rows) {
+      const t = Number(row.timestamp), p = Number(row.price), resolution = Number(row.resolution_seconds);
+      // Resolution 0 is a settlement payout, not a market-price observation.
+      if (row.price == null || !Number.isFinite(t) || !Number.isFinite(p) || p < 0 || p > 1 || !(resolution > 0)) continue;
+      byTime.set(t, { timestamp: t, price: p, resolution });
+    }
+    return [...byTime.values()].sort((a, b) => a.timestamp - b.timestamp);
+  }
+  function atOrBefore(rows, timestamp) {
+    let lo = 0, hi = rows.length;
+    while (lo < hi) { const mid = (lo + hi) >>> 1; if (rows[mid].timestamp <= timestamp) lo = mid + 1; else hi = mid; }
+    const p = rows[lo - 1];
+    return p && timestamp - p.timestamp <= Math.max(120, p.resolution * 2) ? p : null;
+  }
+  function segments(rows, first, last) {
+    const result = []; let previous;
+    for (const p of rows) {
+      if (p.timestamp < first || p.timestamp > last) continue;
+      if (!previous || p.timestamp - previous.timestamp > Math.max(previous.resolution, p.resolution) * 3) result.push([]);
+      result.at(-1).push(p); previous = p;
+    }
+    return result;
+  }
+  function tokensFor(m, metadata) {
+    const known = [new Set(), new Set()];
+    for (const r of [...m.activities, ...m.positions]) {
+      if (r.token_id && [0, 1].includes(r.outcome_index)) known[r.outcome_index].add(String(r.token_id));
+    }
+    const rows = metadata.filter(r => String(r.condition_id).toLowerCase() === m.id.toLowerCase());
+    const tokens = known.map(set => set.size === 1 ? [...set][0] : null);
+    for (let i = 0; i < 2; i++) {
+      if (tokens[i]) continue;
+      const opposite = rows.find(r => String(r.token_id) === tokens[1 - i] && Number(r.outcome_index) === 1 - i)?.opposite_token_id;
+      const choices = [...new Set(rows.filter(r => Number(r.outcome_index) === i).map(r => String(r.token_id)))];
+      tokens[i] = opposite ? String(opposite) : choices.length === 1 ? choices[0] : null;
+    }
+    return tokens;
+  }
+  function createLoader(request) {
+    const cache = new Map();
+    async function history(token, start, end) {
+      const rows = [];
+      // The API caps explicit time windows at 15 days. Retain all pages in each window.
+      for (let from = start; from < end; from += 14 * 86400) {
+        const until = Math.min(end, from + 14 * 86400), seen = new Set(); let cursor;
+        do {
+          const page = await request('prices-history', { token_id: token, start: from, end: until, limit: 10000, cursor });
+          if (!Array.isArray(page.data) || !page.pagination) throw new Error('行情响应格式异常');
+          rows.push(...page.data);
+          const next = page.pagination.next_cursor;
+          if (page.pagination.has_more && !next) throw new Error('行情分页未完成');
+          if (next && seen.has(next)) throw new Error('行情分页游标重复');
+          if (next) seen.add(next);
+          cursor = next;
+        } while (cursor);
+      }
+      return normalize(rows).filter(p => p.timestamp >= start && p.timestamp < end);
+    }
+    function get(m, now = Date.now()) {
+      const trades = m.activities.filter(r => r.type === 'TRADE' && Number.isFinite(Number(r.timestamp)));
+      if (!trades.length) return { status: 'empty', sides: [[], []], errors: ['没有成交时间范围'] };
+      const start = Math.min(...trades.map(r => Number(r.timestamp))) - 600;
+      const last = Math.max(...trades.map(r => Number(r.timestamp)));
+      const live = m.open && now / 1000 - last < 86400;
+      const end = Math.min(Math.floor(now / 1000), live ? Math.ceil(now / 60000) * 60 : last + 600);
+      const signature = JSON.stringify([start, live ? 'live' : end, m.activities.filter(r => r.token_id).map(r => [r.outcome_index, r.token_id]).sort().filter((r, i, a) => !i || String(r) !== String(a[i - 1]))]);
+      let entry = cache.get(m.id);
+      const ttl = entry?.errors.some(Boolean) ? 60000 : live ? 60000 : 3600000;
+      if (entry && entry.signature === signature && (entry.status === 'loading' || now - entry.checkedAt < ttl)) return entry;
+      entry = { signature, status: 'loading', sides: [[], []], errors: [], checkedAt: now, start, end };
+      cache.set(m.id, entry);
+      entry.promise = (async () => {
+        let metadata = [], lookupError;
+        try { const d = await request('tokens', { condition: m.id }); metadata = d.data || []; }
+        catch (e) { lookupError = e.message; }
+        const tokens = tokensFor(m, metadata);
+        await Promise.all(tokens.map(async (token, i) => {
+          if (!token) { entry.errors[i] = lookupError || '未能唯一确认本方 token'; return; }
+          try { entry.sides[i] = await history(token, start, end); }
+          catch (e) { entry.errors[i] = e.message; }
+        }));
+        entry.status = 'ready'; entry.checkedAt = Date.now();
+        return entry;
+      })();
+      return entry;
+    }
+    return { get };
+  }
+  root.PMHistory = { normalize, atOrBefore, segments, tokensFor, createLoader };
+})(globalThis);
+</script>
 <script>(function () {
   'use strict';
   const C = window.TrackerCore;
+  const H = window.PMHistory, marketHistory = H.createLoader(api);
+  const watchingPrices = new WeakSet();
   const WALLET = '0x4ebc2722adc772bde8680792d0a6fdf15499a33d';
   const CACHE = 'aaaa298-map-tracker-v1';
   const $ = id => document.getElementById(id);
@@ -352,7 +450,7 @@
     positions:initial.positions || [], activities:initial.activities || [], cursor:initial.cursor || null,
     savedAt:initial.savedAt || 0, positionsAt:initial.positionsAt || initial.savedAt || 0,
     activityAt:initial.activityAt || initial.savedAt || 0, full:initial.full || {}, selected:'', scope:'all', kind:'map', query:'', listLimit:80,
-    resolutions:initial.resolutions || {}, resultBusy:false, chartAxis:'sequence', chartMode:'all', chartPrice:true, chartAwayPrice:true, chartStep:null, type:'ALL', order:'ASC', page:0, connected:false, busy:false, olderBusy:false, loadingMaps:new Set(), errors:{}, interval:15, timer:0
+    resolutions:initial.resolutions || {}, resultBusy:false, chartAxis:'time', chartMarket:true, chartMode:'all', chartPrice:true, chartAwayPrice:true, chartStep:null, type:'ALL', order:'ASC', page:0, connected:false, busy:false, olderBusy:false, loadingMaps:new Set(), errors:{}, interval:15, timer:0
   };
   Object.assign(state,C.restoreActivityCache(state.activities,state.full));
   const repairAt=new Map();
@@ -373,7 +471,7 @@
       requestMs=Math.round(performance.now()-start);
       if (!r.ok) throw new Error('公开接口返回 HTTP '+r.status+(r.status===429?'，请降低刷新频率':''));
       const result=await r.json();
-      if (!['status','resolutions'].includes(path) && (!Array.isArray(result.data) || !result.pagination)) throw new Error('公开接口返回了无法识别的数据格式');
+      if (!['status','resolutions','tokens'].includes(path) && (!Array.isArray(result.data) || !result.pagination)) throw new Error('公开接口返回了无法识别的数据格式');
       return result;
     } finally { clearTimeout(timeout); }
   }
@@ -535,13 +633,13 @@
   }
   function renderHoldingsChart(m,replay,homeIndex,teams) {
     const host=$('chartArea');
-    const heading='<div class="sectionhead"><div><h3>双方持仓与净持仓变化</h3><div class="small muted">'+esc(mapLabel(m))+' · '+esc(marketBadge(m))+' · 左轴：持仓份数；右轴：双方买入价</div></div><div class="chart-legend"><span class="net-home">━ 主队 '+esc(teams.home)+'</span><span class="net-away">━ 客队 '+esc(teams.away)+'</span><span class="net-line-label">┄ 净持仓（主 − 客）</span><span class="buy-price-label">● 主队买入价（右轴）</span><span class="buy-price-label away-buy-price">● 客队买入价（右轴）</span></div></div>';
+    const heading='<div class="sectionhead"><div><h3>持仓、净持仓与 PM 市场价格</h3><div class="small muted">'+esc(mapLabel(m))+' · '+esc(marketBadge(m))+' · 左轴：持仓份数；右轴：PM 市场价格 / 玩家买入价</div></div><div class="chart-legend"><span class="net-home">━ 主队 '+esc(teams.home)+'</span><span class="net-away">━ 客队 '+esc(teams.away)+'</span><span class="net-line-label">┄ 净持仓（主 − 客）</span><span style="color:#00ee22">┄ 主队 PM 价格</span><span style="color:#ff2020">┄ 客队 PM 价格</span><span class="buy-price-label">● 主队买入价（右轴）</span><span class="buy-price-label away-buy-price">● 客队买入价（右轴）</span></div></div>';
     const series=C.holdingSeries(m.activities,replay);
     if(homeIndex==null || !state.full[m.id] || !series.some(p=>p.after)) {
       host.innerHTML='<section class="positionbox">'+heading+'<div class="empty">'+esc(!state.full[m.id]?'正在补齐本图历史，完成后绘制持仓曲线':replay.reason||'暂无法确认队伍对应关系')+'</div></section>';return;
     }
     const points=[{timestamp:series[0].timestamp-1,rows:[],after:[0,0]},...series];
-    const width=1200,height=310,left=75,right=(state.chartPrice||state.chartAwayPrice)?85:25,top=25,bottom=55,plotW=width-left-right,plotH=height-top-bottom;
+    const width=1200,height=310,left=75,right=85,top=25,bottom=55,plotW=width-left-right,plotH=height-top-bottom;
     const netValue=p=>p.after?p.after[homeIndex]-p.after[1-homeIndex]:null;
     const values=points.flatMap(p=>p.after?(state.chartMode==='net'?[netValue(p)]:[...p.after,netValue(p)]):[]);
     const low=Math.min(0,...values),high=Math.max(0,...values),padding=Math.max(1,high-low)*.08;
@@ -561,9 +659,9 @@
     ];
     const priceY=n=>top+plotH*(1-n);
     let priceOverlay='';
-    if(state.chartPrice||state.chartAwayPrice){
+    {
       for(let i=0;i<=4;i++){const price=i/4;priceOverlay+='<text class="price-axis" x="'+(width-right+12)+'" y="'+(priceY(price)+4)+'">'+fmt(price*100,0)+'¢</text>';}
-      priceOverlay+='<text class="price-axis" x="'+(width-right+12)+'" y="12">买入价</text>';
+      priceOverlay+='<text class="price-axis" x="'+(width-right+12)+'" y="12">价格</text>';
       for(const series of priceSeries){
         if(!series.visible)continue;
         let priceLine='',priceStarted=false,markers='';
@@ -577,6 +675,36 @@
         priceOverlay+='<path class="buy-price-path'+modifier+'" d="'+priceLine+'"/>'+markers;
       }
     }
+    const market = state.chartMarket ? marketHistory.get(m) : null;
+    if(market?.promise && market.status==='loading' && !watchingPrices.has(market)) {
+      watchingPrices.add(market);
+      market.promise.then(()=>{if(state.selected===m.id && state.chartMarket)renderDetail();});
+    }
+    const pmVisible=state.chartMarket && state.chartAxis==='time';
+    let pmOverlay='', pmStatus='';
+    const marketReadout=timestamp=>{
+      if(!pmVisible || market?.status!=='ready')return '';
+      return [homeIndex,1-homeIndex].map((side,i)=>{
+        const p=H.atOrBefore(market.sides[side],timestamp);
+        return '<strong style="color:'+(i?'#ff2020':'#00ee22')+'">'+(i?'客队':'主队')+' PM '+(p?cents(p.price)+' <span class="small muted">('+esc(time(p.timestamp))+'，'+p.resolution+'s 采样)</span>':'—（此时无近期行情）')+'</strong>';
+      }).join('');
+    };
+    if(pmVisible && market) {
+      pmStatus=market.status==='loading'?'正在读取本图 PM 历史行情…':
+        [homeIndex,1-homeIndex].map((side,i)=>{
+          const rows=market.sides[side], resolutions=[...new Set(rows.map(p=>p.resolution))].sort((a,b)=>a-b);
+          return (i?'客队':'主队')+'：'+(market.errors[side]?'读取失败 '+market.errors[side]:rows.length?rows.length+' 个价格点 · 采样 '+resolutions.map(r=>r+'s').join('/'):'该时间范围暂无历史价格');
+        }).join('；');
+      [homeIndex,1-homeIndex].forEach((side,i)=>{
+        const paths=H.segments(market.sides[side],first,last);
+        const color=i?'#ff2020':'#00ee22';
+        for(const group of paths){
+          const d=group.map((p,j)=>(j?'L':'M')+x(p,0)+' '+priceY(p.price)).join(' ');
+          pmOverlay+='<path class="pm-market-path" data-side="'+(i?'away':'home')+'" d="'+d+'" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-dasharray="6 4"/>';
+          for(const p of group)pmOverlay+='<circle class="pm-market-point" cx="'+x(p,0)+'" cy="'+priceY(p.price)+'" r="1.8" fill="'+color+'"><title>'+esc((i?teams.away:teams.home)+' PM '+time(p.timestamp)+' · '+cents(p.price)+' · '+p.resolution+'s 采样')+'</title></circle>';
+        }
+      });
+    }
     let grid='';
     for(let i=0;i<=4;i++){const n=min+(max-min)*i/4,py=y(n);grid+='<line x1="'+left+'" x2="'+(width-right)+'" y1="'+py+'" y2="'+py+'" stroke="#263344"/><text x="'+(left-10)+'" y="'+(py+4)+'" text-anchor="end">'+fmt(n,0)+'</text>';}
     grid+='<line class="zero-line" x1="'+left+'" x2="'+(width-right)+'" y1="'+y(0)+'" y2="'+y(0)+'"/><text class="zero-label" x="'+(width-right-3)+'" y="'+(y(0)-6)+'" text-anchor="end">0 · 双边平衡</text>';
@@ -585,7 +713,7 @@
       const stamp=state.chartAxis==='time'?first+(last-first)*i/4:p.timestamp;
       grid+='<text x="'+px+'" y="'+(height-25)+'" text-anchor="'+(i===0?'start':i===4?'end':'middle')+'">'+(state.chartAxis==='sequence'?'#'+idx+' · ':'')+esc(time(stamp).slice(6))+'</text>';
     }
-    host.innerHTML='<section class="positionbox holdings-chart">'+heading+'<div class="chart-controls"><label for="chartMode">曲线</label><select id="chartMode"><option value="all">双方持仓 + 净持仓</option><option value="net">仅净持仓</option></select><label for="chartAxis">横轴</label><select id="chartAxis"><option value="sequence">交易步骤（同秒合并）</option><option value="time">实际时间间隔</option></select><label class="price-toggle"><input id="chartPrice" type="checkbox">主队买入价</label><label class="price-toggle away-buy-price"><input id="chartAwayPrice" type="checkbox">客队买入价</label><button id="chartLatest">查看最新点</button><span class="small muted">移动鼠标或拖动下方滑块查看；与交易表筛选无关</span></div><svg id="holdingsSvg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="主客队及净持仓阶梯折线图"><title>净持仓等于主队减客队，正值偏主队，负值偏客队，单位份</title>'+grid+'<path class="home-path" style="display:'+(state.chartMode==='net'?'none':'')+'" d="'+path(homeIndex)+'"/><path class="away-path" style="display:'+(state.chartMode==='net'?'none':'')+'" d="'+path(1-homeIndex)+'"/><path class="net-path" d="'+path('net')+'"/>'+priceOverlay+'<line id="chartCursor" y1="'+top+'" y2="'+(top+plotH)+'" stroke="#e9eff7" stroke-dasharray="3 4"/><circle id="chartHomeDot" r="5" fill="var(--chart-home)"/><circle id="chartAwayDot" r="5" fill="var(--chart-away)"/><circle id="chartNetDot" r="5" fill="#f3ce85"/></svg><input id="chartStep" type="range" min="0" max="'+(points.length-1)+'" step="1" aria-label="查看持仓变化步骤"><div id="chartReadout" class="chart-readout" aria-live="polite"></div><div class="small muted">阶梯线只在交易或仓位变动时跳变，合并同时减少双方份数。同秒活动按合计后仓位绘制。金色线为净持仓 = 主队份数 − 客队份数；零线上方偏主队，下方偏客队。双边等量合并不改变净持仓。紫色圆点为主队买入价，青色圆点为客队买入价，均取各自实际买入成交价（不含手续费），不是实时行情；连线仅连接买入观测点，同秒多笔按份数加权连接，单笔圆点仍全部保留。'+(!replay.ready?'曲线在无法继续核对的活动处中断：'+esc(replay.reason)+'。':'')+'</div></section>';
+    host.innerHTML='<section class="positionbox holdings-chart">'+heading+'<div class="chart-controls"><label for="chartMode">曲线</label><select id="chartMode"><option value="all">双方持仓 + 净持仓</option><option value="net">仅净持仓</option></select><label for="chartAxis">横轴</label><select id="chartAxis"><option value="sequence">交易步骤（同秒合并）</option><option value="time">实际时间间隔</option></select><label class="price-toggle"><input id="chartPrice" type="checkbox">主队买入价</label><label class="price-toggle away-buy-price"><input id="chartAwayPrice" type="checkbox">客队买入价</label><label class="price-toggle"><input id="chartMarket" type="checkbox">PM 市场价格</label><button id="chartLatest">查看最新点</button><span class="small muted">移动鼠标或拖动下方滑块查看；与交易表筛选无关</span></div><svg id="holdingsSvg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="主客队及净持仓阶梯折线图"><title>净持仓等于主队减客队，正值偏主队，负值偏客队，单位份</title>'+grid+pmOverlay+'<path class="home-path" style="display:'+(state.chartMode==='net'?'none':'')+'" d="'+path(homeIndex)+'"/><path class="away-path" style="display:'+(state.chartMode==='net'?'none':'')+'" d="'+path(1-homeIndex)+'"/><path class="net-path" d="'+path('net')+'"/>'+priceOverlay+'<line id="chartCursor" y1="'+top+'" y2="'+(top+plotH)+'" stroke="#e9eff7" stroke-dasharray="3 4"/><circle id="chartHomeDot" r="5" fill="var(--chart-home)"/><circle id="chartAwayDot" r="5" fill="var(--chart-away)"/><circle id="chartNetDot" r="5" fill="#f3ce85"/></svg><input id="chartStep" type="range" min="0" max="'+(points.length-1)+'" step="1" aria-label="查看持仓变化步骤"><div id="chartReadout" class="chart-readout" aria-live="polite"></div><div class="small muted" id="pmHistoryStatus">'+esc(pmStatus)+'</div><div class="small muted">红绿实线为持仓，红绿虚线为对应队伍 PM 市场历史价格（右轴 0–100¢），按真实时间对齐；点上可悬停查看时间与价格。行情缺口超过三个采样间隔断线，结算兑付点不当作行情。聚合采样不代表下单瞬间的可成交报价，也不能据此判断秒级先后。下方 PM 读数取所选交易时刻之前的最近价格，并显示采样时间；价格较旧则留空。切回交易步骤横轴会隐藏 PM 行情。<a href="https://docs.polymarket.com/api-reference/markets/get-a-tokens-price-history" target="_blank" rel="noopener noreferrer">价格数据说明 ↗</a> 阶梯线只在交易或仓位变动时跳变，合并同时减少双方份数。同秒活动按合计后仓位绘制。金色线为净持仓 = 主队份数 − 客队份数；零线上方偏主队，下方偏客队。双边等量合并不改变净持仓。紫色圆点为主队买入价，青色圆点为客队买入价，均取各自实际买入成交价（不含手续费），不是实时行情；连线仅连接买入观测点，同秒多笔按份数加权连接，单笔圆点仍全部保留。'+(!replay.ready?'曲线在无法继续核对的活动处中断：'+esc(replay.reason)+'。':'')+'</div></section>';
     const show=index=>{
       index=Math.max(0,Math.min(points.length-1,Number(index)));const p=points[index],px=x(p,index);
       $('chartStep').value=String(index);$('chartCursor').setAttribute('x1',px);$('chartCursor').setAttribute('x2',px);
@@ -602,8 +730,10 @@
       const previous=index>0?netValue(points[index-1]):0;
       const change=net==null||previous==null?'未知':signed(net-previous)+' 份';
       const netLabel=net==null?'未知':Math.abs(net)<.00001?'双边平衡':(net>0?teams.home:teams.away)+' '+fmt(Math.abs(net))+' 份';
-      $('chartReadout').innerHTML='<span class="small muted">'+(index?'步骤 '+index+' · '+time(p.timestamp)+(p.rows.length>1?' · 同秒 '+p.rows.length+' 条合计':''):'首次记录之前 · 零仓位起点')+'</span><strong class="net-home">主队 '+(p.after?fmt(p.after[homeIndex]):'—')+' 份</strong><strong class="net-away">客队 '+(p.after?fmt(p.after[1-homeIndex]):'—')+' 份</strong><strong class="net-line-label">净持仓 '+(net==null?'—':signed(net))+' 份</strong>'+priceReadout+'<strong>较上一步 '+change+'</strong><strong>净方向 '+esc(netLabel)+'</strong><div class="chart-actions small muted">'+esc(index?actions.join('；'):'按已补齐的该图完整流水，从零仓位开始推算')+'</div>';
+      $('chartReadout').innerHTML='<span class="small muted">'+(index?'步骤 '+index+' · '+time(p.timestamp)+(p.rows.length>1?' · 同秒 '+p.rows.length+' 条合计':''):'首次记录之前 · 零仓位起点')+'</span><strong class="net-home">主队 '+(p.after?fmt(p.after[homeIndex]):'—')+' 份</strong><strong class="net-away">客队 '+(p.after?fmt(p.after[1-homeIndex]):'—')+' 份</strong><strong class="net-line-label">净持仓 '+(net==null?'—':signed(net))+' 份</strong>'+priceReadout+marketReadout(p.timestamp)+'<strong>较上一步 '+change+'</strong><strong>净方向 '+esc(netLabel)+'</strong><div class="chart-actions small muted">'+esc(index?actions.join('；'):'按已补齐的该图完整流水，从零仓位开始推算')+'</div>';
     };
+    $('chartMarket').checked=state.chartMarket;
+    $('chartMarket').onchange=e=>{state.chartMarket=e.target.checked;if(state.chartMarket)state.chartAxis='time';renderHoldingsChart(m,replay,homeIndex,teams);};
     $('chartPrice').checked=state.chartPrice;
     $('chartPrice').onchange=e=>{state.chartPrice=e.target.checked;renderHoldingsChart(m,replay,homeIndex,teams);};
     $('chartAwayPrice').checked=state.chartAwayPrice;
@@ -611,7 +741,7 @@
     $('chartMode').value=state.chartMode;
     $('chartMode').onchange=e=>{state.chartMode=e.target.value;renderHoldingsChart(m,replay,homeIndex,teams);};
     $('chartAxis').value=state.chartAxis;
-    $('chartAxis').onchange=e=>{state.chartAxis=e.target.value;renderHoldingsChart(m,replay,homeIndex,teams);};
+    $('chartAxis').onchange=e=>{state.chartAxis=e.target.value;if(state.chartAxis==='sequence')state.chartMarket=false;renderHoldingsChart(m,replay,homeIndex,teams);};
     $('chartStep').oninput=e=>{state.chartStep=Number(e.target.value);show(state.chartStep);};
     $('chartLatest').onclick=()=>{state.chartStep=null;show(points.length-1);};
     $('holdingsSvg').onpointermove=e=>{

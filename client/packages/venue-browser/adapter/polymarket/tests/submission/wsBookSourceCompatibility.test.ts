@@ -1,14 +1,14 @@
 import { expect, test, vi } from "vitest";
 import * as legacy from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 import * as browser from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
-import { WsBookShadowRuntime as LegacyRuntime } from "../../submission/preflight/optimized/wsBook/bookRuntime";
+import { WsBookShadowRuntime as LegacyRuntime } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/bookRuntime";
 import { WsBookShadowRuntime as BrowserRuntime } from "../../../browser/pm-book-diagnostics/bookRuntime";
-import { pmOrderBookSource as legacySource } from "../../orderBookSource";
+import { pmOrderBookSource as legacySource } from "@changmen/venue-browser/adapter/browser/pm-book-source";
 import { pmOrderBookSource as browserSource } from "../../../browser/pm-book-source";
 import * as canonical from "../../../../pm-book-diagnostics/shadowObserver";
 import { WsBookShadowRuntime as CanonicalRuntime } from "../../../../pm-book-diagnostics/bookRuntime";
 import { pmOrderBookSource as hostSource } from "../../../browser/pm-book-source-host";
-import { observePmMarketStream } from "../../realtime/marketStream";
+import { observePmMarketStream } from "@changmen/venue-browser/polymarket/marketStream";
 
 test("legacy and browser paths share the same observer slot and HTTP completion", () => {
   expect(legacy.beginWsBookShadow).toBe(browser.beginWsBookShadow);

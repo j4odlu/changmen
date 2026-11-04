@@ -26,14 +26,14 @@ vi.mock("@/stores/loseOrderStore", () => ({ useLoseOrderStore: () => ({ orders: 
 vi.mock("@/stores/betting/pendingOrderBind", () => ({ peekPendingOrderBinds: () => [], processPendingOrderBinds: vi.fn() }));
 vi.mock("@/stores/betting/a8/runA8ArbRound", () => ({ runA8ArbRound: state.round }));
 
-const market = { conditionId: "history-condition", question: "LoL: Team WE vs HANJIN BRION - Game 3 Winner",
-  clobTokenIds: ["home-token", "away-token"], outcomes: ["Team WE", "HANJIN BRION"], outcomePrices: ["0.5", "0.5"] };
+const market = { version: "v1", conditionId: "history-condition", question: "LoL: Team WE vs HANJIN BRION - Game 3 Winner",
+  clobTokenIds: '["101","102"]', outcomes: ["Team WE", "HANJIN BRION"], outcomePrices: ["0.5", "0.5"] };
 const ctx = { setMessage: vi.fn(), processLoseOrders: vi.fn() };
 beforeEach(() => {
   vi.clearAllMocks(); storedMarketRefresh.clear();
   state.account = { accountId: 292, provider: "Polymarket", token: "{}", balance: 100, loadingBalance: false } as PlatformAccount;
   state.stored = [{ provider: "Polymarket", orderId: "historical-order", pmOrigin: "changmen", pmSide: "buy",
-    pmConditionId: market.conditionId, pmTokenId: "away-token", pmShares: 10, pmStakeUsdc: 5,
+    pmConditionId: market.conditionId, pmTokenId: "102", pmShares: 10, pmStakeUsdc: 5,
     pmSellState: "open", status: "none", betMoney: 33.5, reward: 67, money: 0, odds: 2, createAt: 1, link: 123,
     game: "lol", match: market.question, bet: "地图3", item: "HANJIN BRION" }];
   state.save.mockResolvedValue(undefined);
@@ -57,7 +57,7 @@ it.each([["FOK", "legacy"], ["FOK", "optimized"]])(
     const calls = state.get.mock.calls.length;
     await updateVenueOrders(state.account);
     expect(state.get).toHaveBeenCalledTimes(calls);
-    finish({ tokens: [{ token_id: "home-token", winner: false }, { token_id: "away-token", winner: true }] });
+    finish({ tokens: [{ token_id: "101", winner: false }, { token_id: "102", winner: true }] });
     await vi.waitFor(async () => {
       await updateVenueOrders(state.account);
       expect(state.save.mock.calls.at(-1)![1][0]).toMatchObject({

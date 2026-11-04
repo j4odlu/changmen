@@ -4,7 +4,7 @@ import { indexPmUpMarkets, snapshotPmUpMarket } from "./upMarkets";
 import { createDefaultPmUpPrefs } from "./upSettings";
 
 const hub = vi.hoisted(() => ({ listener: null as ((quote: { assetId: string; bestAsk: number }) => void) | null, subscribe: vi.fn(), unsubscribe: vi.fn() }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/polymarket", () => ({
   onPolymarketMarketQuote: (listener: typeof hub.listener) => {
     hub.subscribe(); hub.listener = listener;
     return () => { hub.listener = null; hub.unsubscribe(); };

@@ -2,7 +2,7 @@
  * sportQuoteHub 独立总线：过滤 + ready；lifecycle 与电竞 marketQuoteHub / ws.ts 隔离。
  */
 import { afterEach, describe, expect, test, vi } from "vitest";
-import * as sportHub from "../../sportQuoteHub";
+import * as sportHub from "@changmen/venue-browser/polymarket/sportQuoteHub";
 import * as sportWs from "@changmen/venue-browser/polymarket/sportMarketWs";
 import * as esportWs from "@changmen/venue-browser/polymarket/ws";
 

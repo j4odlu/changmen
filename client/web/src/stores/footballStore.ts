@@ -2,7 +2,7 @@ import type { ClientMatchDto } from "@/types/esport";
 import {
   fetchPmFootballDirect,
   getPmMarketWsSourceMode,
-} from "@changmen/venue-browser/adapter/polymarket";
+} from "@changmen/venue-browser/polymarket";
 import { fetchRayFootballAsClientMatchDtos } from "@changmen/venue-browser/adapter/ray";
 import { getFootballMatchs } from "@/api/esport";
 import { collectIndependentFootballVenueRows } from "@/runtime/footballVenueLists";

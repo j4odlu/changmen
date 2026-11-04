@@ -21,7 +21,7 @@ export async function waitForGtcCancelReceipt(
   const wsReceipt = new Promise<GtcCancelReceipt>(resolve => { confirm = resolve; });
   try {
     try {
-      const api = await import("@changmen/venue-browser/adapter/polymarket");
+      const api = await import("@changmen/venue-browser/polymarket");
       if (!valid()) throw new Error("GTC 会话或原账号已变更");
       const check = () => {
         if (!valid()) return;

@@ -13,7 +13,7 @@ import {
   registerPolymarketStoredVenueOrdersLoader,
   stripPolymarketSellOrders,
   venueOrderFromOrderRow,
-} from "@changmen/venue-browser/adapter/polymarket";
+} from "@changmen/venue-browser/polymarket";
 
 async function loadStoredPmVenueOrders(account: PlatformAccount) {
   const sinceCreateAt = Date.now() - PM_ORDER_FULL_LOOKBACK_MS;

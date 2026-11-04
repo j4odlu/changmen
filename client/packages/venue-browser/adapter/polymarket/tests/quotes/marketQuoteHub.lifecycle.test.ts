@@ -15,7 +15,7 @@ import {
   registerPolymarketQuoteAssets,
   stopPolymarketMarketQuoteHub,
   unregisterPolymarketQuoteConsumer,
-} from "../../marketQuoteHub";
+} from "@changmen/venue-browser/polymarket/marketQuoteHub";
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as canonical from "@changmen/venue-browser/polymarket/pmTickMetadata";
-import * as legacy from "../../pmTickMetadata";
-import * as nested from "../../quotes/pmTickMetadata";
-import * as buffer from "../../pmTickBuffer";
+import * as legacy from "@changmen/venue-browser/polymarket/quotes/pmTickMetadata";
+import * as nested from "@changmen/venue-browser/polymarket/quotes/pmTickMetadata";
+import * as buffer from "@changmen/venue-browser/polymarket/quotes/pmTickBuffer";
 import { clearPmTickStateForTests, notePmTickFrame, notePmTickReconnect } from "@changmen/venue-browser/polymarket/pmTickState";
 
 beforeEach(() => {

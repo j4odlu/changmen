@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ load: vi.fn(), register: vi.fn(), convert: vi.fn((value: unknown) => value) }));
 vi.mock("@/api/chat", () => ({ getPlayerOrder: mocks.load }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/polymarket", () => ({
   PM_ORDER_FULL_LOOKBACK_MS: 3 * 86400000,
   registerPolymarketStoredVenueOrdersLoader: mocks.register,
   stripPolymarketSellOrders: (rows: unknown[]) => rows,

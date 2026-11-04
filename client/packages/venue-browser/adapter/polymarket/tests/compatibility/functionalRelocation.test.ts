@@ -3,85 +3,85 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 // [changmen 扩展] 同时消费旧入口与新实现，检查导出身份及实际可变状态只有一份。
 const entries = [
-  ["credentials", () => import("../../credentials"), () => import("../../auth/credentials")],
-  ["l2Auth", () => import("../../l2Auth"), () => import("../../auth/l2Auth")],
-  ["profile", () => import("../../profile"), () => import("../../auth/profile")],
-  ["balance", () => import("../../balance"), () => import("../../wallet/balance")],
-  ["contracts", () => import("../../contracts"), () => import("../../wallet/contracts")],
-  ["depositWallet", () => import("../../depositWallet"), () => import("../../wallet/depositWallet")],
-  ["polygonRpc", () => import("../../polygonRpc"), () => import("../../wallet/polygonRpc")],
-  ["relayer", () => import("../../relayer"), () => import("../../wallet/relayer")],
-  ["sessionBuilderConfig", () => import("../../sessionBuilderConfig"), () => import("../../wallet/sessionBuilderConfig")],
-  ["walletPrepUnified", () => import("../../walletPrepUnified"), () => import("../../wallet/walletPrepUnified")],
-  ["pmWalletPrepSdk", () => import("../../pmWalletPrepSdk"), () => import("../../wallet/pmWalletPrepSdk")],
-  ["api", () => import("../../api"), () => import("../../transport/api")],
-  ["transport", () => import("../../transport"), () => import("../../transport/transport")],
-  ["pmTransport", () => import("../../pmTransport"), () => import("../../transport/pmTransport")],
-  ["pmTransportMode", () => import("../../pmTransportMode"), () => import("../../transport/pmTransportMode")],
-  ["pmAutoTransport", () => import("../../pmAutoTransport"), () => import("../../transport/pmAutoTransport")],
-  ["pmOfficialReachability", () => import("../../pmOfficialReachability"), () => import("../../transport/pmOfficialReachability")],
-  ["pmRoutingPreference", () => import("../../pmRoutingPreference"), () => import("../../transport/pmRoutingPreference")],
-  ["pmPublicRoute", () => import("../../pmPublicRoute"), () => import("../../transport/pmPublicRoute")],
-  ["collect", () => import("../../collect"), () => import("../../markets/collect")],
-  ["marketIndex", () => import("../../marketIndex"), () => import("../../markets/marketIndex")],
-  ["parse", () => import("../../parse"), () => import("../../markets/parse")],
-  ["parseEsportsScore", () => import("../../parseEsportsScore"), () => import("../../markets/parseEsportsScore")],
-  ["pmFootballDiscovery", () => import("../../pmFootballDiscovery"), () => import("../../markets/pmFootballDiscovery")],
-  ["pmSportGamma", () => import("../../pmSportGamma"), () => import("../../markets/pmSportGamma")],
-  ["pmSportGuard", () => import("../../pmSportGuard"), () => import("../../markets/pmSportGuard")],
-  ["pmMarketGuard", () => import("../../pmMarketGuard"), () => import("../../markets/pmMarketGuard")],
-  ["pmMapOutcomeStore", () => import("../../pmMapOutcomeStore"), () => import("../../markets/pmMapOutcomeStore")],
-  ["marketQuoteHub", () => import("../../marketQuoteHub"), () => import("../../quotes/marketQuoteHub")],
-  ["sportQuoteHub", () => import("../../sportQuoteHub"), () => import("../../quotes/sportQuoteHub")],
-  ["pmTokenQuote", () => import("../../pmTokenQuote"), () => import("../../quotes/pmTokenQuote")],
-  ["priceQuote", () => import("../../priceQuote"), () => import("../../quotes/priceQuote")],
-  ["pmTickBuffer", () => import("../../pmTickBuffer"), () => import("../../quotes/pmTickBuffer")],
-  ["pmTickMetadata", () => import("../../pmTickMetadata"), () => import("../../quotes/pmTickMetadata")],
-  ["pmTickPrice", () => import("../../pmTickPrice"), () => import("../../quotes/pmTickPrice")],
-  ["pmTickState", () => import("../../pmTickState"), () => import("../../quotes/pmTickState")],
-  ["pmArbPriceBufferMode", () => import("../../pmArbPriceBufferMode"), () => import("../../quotes/pmArbPriceBufferMode")],
-  ["ws", () => import("../../ws"), () => import("../../realtime/ws")],
-  ["wsConfig", () => import("../../wsConfig"), () => import("../../realtime/wsConfig")],
-  ["wsQuotes", () => import("../../wsQuotes"), () => import("../../realtime/wsQuotes")],
-  ["sportMarketWs", () => import("../../sportMarketWs"), () => import("../../realtime/sportMarketWs")],
-  ["sportWsConfig", () => import("../../sportWsConfig"), () => import("../../realtime/sportWsConfig")],
-  ["userWs", () => import("../../userWs"), () => import("../../realtime/userWs")],
-  ["userWsMessages", () => import("../../userWsMessages"), () => import("../../realtime/userWsMessages")],
-  ["pmMarketWsMode", () => import("../../pmMarketWsMode"), () => import("../../realtime/pmMarketWsMode")],
-  ["pmUserWsMode", () => import("../../pmUserWsMode"), () => import("../../realtime/pmUserWsMode")],
-  ["pmWsSourceMode", () => import("../../pmWsSourceMode"), () => import("../../realtime/pmWsSourceMode")],
-  ["orders", () => import("../../orders"), () => import("../../orders/history/orders")],
-  ["orderStatus", () => import("../../orderStatus"), () => import("../../orders/facts/orderStatus")],
-  ["orderTypes", () => import("../../orderTypes"), () => import("../../orders/facts/orderTypes")],
-  ["legOutcome", () => import("../../legOutcome"), () => import("../../orders/confirmation/legOutcome")],
-  ["marketDelay", () => import("../../marketDelay"), () => import("../../orders/confirmation/marketDelay")],
-  ["pmActivity", () => import("../../pmActivity"), () => import("../../orders/history/pmActivity")],
-  ["pmActivityV2", () => import("../../pmActivityV2"), () => import("../../orders/history/pmActivityV2")],
-  ["pmClientApi", () => import("../../pmClientApi"), () => import("../../orders/pmClientApi")],
-  ["pmHeartbeat", () => import("../../pmHeartbeat"), () => import("../../orders/confirmation/pmHeartbeat")],
-  ["pmLogicalPosition", () => import("../../pmLogicalPosition"), () => import("../../orders/positions/pmLogicalPosition")],
-  ["pmOrigin", () => import("../../pmOrigin"), () => import("../../orders/positions/pmOrigin")],
-  ["pmOrderSync", () => import("../../pmOrderSync"), () => import("../../orders/history/pmOrderSync")],
-  ["pmPostFillOrder", () => import("../../pmPostFillOrder"), () => import("../../orders/facts/pmPostFillOrder")],
-  ["pmStoredOrders", () => import("../../pmStoredOrders"), () => import("../../orders/history/pmStoredOrders")],
-  ["pmTradeHashes", () => import("../../pmTradeHashes"), () => import("../../orders/facts/pmTradeHashes")],
-  ["tradeFailure", () => import("../../tradeFailure"), () => import("../../orders/facts/tradeFailure")],
-  ["pmFee", () => import("../../pmFee"), () => import("../../orders/pmFee")],
-  ["builder", () => import("../../builder"), () => import("../../submission/client/builder")],
-  ["pmBetGuard", () => import("../../pmBetGuard"), () => import("../../submission/preflight/pmBetGuard")],
-  ["pmBrowserSubmitClock", () => import("../../pmBrowserSubmitClock"), () => import("../../submission/client/pmBrowserSubmitClock")],
-  ["pmBuyOrderShares", () => import("../../pmBuyOrderShares"), () => import("../../submission/preflight/pmBuyOrderShares")],
-  ["pmDetection", () => import("../../pmDetection"), () => import("../../submission/preflight/pmDetection")],
-  ["pmManualSell", () => import("../../pmManualSell"), () => import("../../submission/pmManualSell")],
-  ["pmMarketOrderOptions", () => import("../../pmMarketOrderOptions"), () => import("../../submission/preflight/pmMarketOrderOptions")],
-  ["pmOrderClientCache", () => import("../../pmOrderClientCache"), () => import("../../submission/client/pmOrderClientCache")],
-  ["pmOrderSubmitMode", () => import("../../pmOrderSubmitMode"), () => import("../../submission/client/pmOrderSubmitMode")],
-  ["pmStake", () => import("../../pmStake"), () => import("../../submission/preflight/pmStake")],
-  ["pmSubmitJournal", () => import("../../pmSubmitJournal"), () => import("../../submission/recovery/pmSubmitJournal")],
-  ["pmUnknownSubmitRecovery", () => import("../../pmUnknownSubmitRecovery"), () => import("../../submission/recovery/pmUnknownSubmitRecovery")],
-  ["orderTrace", () => import("../../orderTrace"), () => import("../../diagnostics/orderTrace")],
-  ["pmExecutionMetrics", () => import("../../pmExecutionMetrics"), () => import("../../diagnostics/pmExecutionMetrics")],
-  ["pmMarketClientMetrics", () => import("../../pmMarketClientMetrics"), () => import("../../diagnostics/pmMarketClientMetrics")],
+  ["credentials", () => import("@changmen/venue-browser/polymarket/auth/credentials"), () => import("@changmen/venue-browser/polymarket/auth/credentials")],
+  ["l2Auth", () => import("@changmen/venue-browser/polymarket/auth/l2Auth"), () => import("@changmen/venue-browser/polymarket/auth/l2Auth")],
+  ["profile", () => import("@changmen/venue-browser/polymarket/auth/profile"), () => import("@changmen/venue-browser/polymarket/auth/profile")],
+  ["balance", () => import("@changmen/venue-browser/polymarket/wallet/balance"), () => import("@changmen/venue-browser/polymarket/wallet/balance")],
+  ["contracts", () => import("@changmen/venue-browser/polymarket/wallet/contracts"), () => import("@changmen/venue-browser/polymarket/wallet/contracts")],
+  ["depositWallet", () => import("@changmen/venue-browser/polymarket/wallet/depositWallet"), () => import("@changmen/venue-browser/polymarket/wallet/depositWallet")],
+  ["polygonRpc", () => import("@changmen/venue-browser/polymarket/wallet/polygonRpc"), () => import("@changmen/venue-browser/polymarket/wallet/polygonRpc")],
+  ["relayer", () => import("@changmen/venue-browser/polymarket/wallet/relayer"), () => import("@changmen/venue-browser/polymarket/wallet/relayer")],
+  ["sessionBuilderConfig", () => import("@changmen/venue-browser/polymarket/wallet/sessionBuilderConfig"), () => import("@changmen/venue-browser/polymarket/wallet/sessionBuilderConfig")],
+  ["walletPrepUnified", () => import("@changmen/venue-browser/polymarket/wallet/walletPrepUnified"), () => import("@changmen/venue-browser/polymarket/wallet/walletPrepUnified")],
+  ["pmWalletPrepSdk", () => import("@changmen/venue-browser/polymarket/wallet/pmWalletPrepSdk"), () => import("@changmen/venue-browser/polymarket/wallet/pmWalletPrepSdk")],
+  ["api", () => import("@changmen/venue-browser/polymarket/api"), () => import("@changmen/venue-browser/polymarket/api")],
+  ["transport", () => import("@changmen/venue-browser/polymarket/transport/transport"), () => import("@changmen/venue-browser/polymarket/transport/transport")],
+  ["pmTransport", () => import("@changmen/venue-browser/polymarket/transport/pmTransport"), () => import("@changmen/venue-browser/polymarket/transport/pmTransport")],
+  ["pmTransportMode", () => import("@changmen/venue-browser/polymarket/pmTransportMode"), () => import("@changmen/venue-browser/polymarket/pmTransportMode")],
+  ["pmAutoTransport", () => import("@changmen/venue-browser/polymarket/transport/pmAutoTransport"), () => import("@changmen/venue-browser/polymarket/transport/pmAutoTransport")],
+  ["pmOfficialReachability", () => import("@changmen/venue-browser/polymarket/transport/pmOfficialReachability"), () => import("@changmen/venue-browser/polymarket/transport/pmOfficialReachability")],
+  ["pmRoutingPreference", () => import("@changmen/venue-browser/polymarket/pmRoutingPreference"), () => import("@changmen/venue-browser/polymarket/pmRoutingPreference")],
+  ["pmPublicRoute", () => import("@changmen/venue-browser/polymarket/transport/pmPublicRoute"), () => import("@changmen/venue-browser/polymarket/transport/pmPublicRoute")],
+  ["collect", () => import("@changmen/venue-browser/polymarket/markets/collect"), () => import("@changmen/venue-browser/polymarket/markets/collect")],
+  ["marketIndex", () => import("@changmen/venue-browser/polymarket/markets/marketIndex"), () => import("@changmen/venue-browser/polymarket/markets/marketIndex")],
+  ["parse", () => import("@changmen/venue-browser/polymarket/markets/parse"), () => import("@changmen/venue-browser/polymarket/markets/parse")],
+  ["parseEsportsScore", () => import("@changmen/venue-browser/polymarket/markets/parseEsportsScore"), () => import("@changmen/venue-browser/polymarket/markets/parseEsportsScore")],
+  ["pmFootballDiscovery", () => import("@changmen/venue-browser/polymarket/markets/pmFootballDiscovery"), () => import("@changmen/venue-browser/polymarket/markets/pmFootballDiscovery")],
+  ["pmSportGamma", () => import("@changmen/venue-browser/polymarket/markets/pmSportGamma"), () => import("@changmen/venue-browser/polymarket/markets/pmSportGamma")],
+  ["pmSportGuard", () => import("@changmen/venue-browser/polymarket/markets/pmSportGuard"), () => import("@changmen/venue-browser/polymarket/markets/pmSportGuard")],
+  ["pmMarketGuard", () => import("@changmen/venue-browser/polymarket/markets/pmMarketGuard"), () => import("@changmen/venue-browser/polymarket/markets/pmMarketGuard")],
+  ["pmMapOutcomeStore", () => import("@changmen/venue-browser/polymarket/markets/pmMapOutcomeStore"), () => import("@changmen/venue-browser/polymarket/markets/pmMapOutcomeStore")],
+  ["marketQuoteHub", () => import("@changmen/venue-browser/polymarket/marketQuoteHub"), () => import("@changmen/venue-browser/polymarket/marketQuoteHub")],
+  ["sportQuoteHub", () => import("@changmen/venue-browser/polymarket/sportQuoteHub"), () => import("@changmen/venue-browser/polymarket/sportQuoteHub")],
+  ["pmTokenQuote", () => import("@changmen/venue-browser/polymarket/quotes/pmTokenQuote"), () => import("@changmen/venue-browser/polymarket/quotes/pmTokenQuote")],
+  ["priceQuote", () => import("@changmen/venue-browser/polymarket/priceQuote"), () => import("@changmen/venue-browser/polymarket/priceQuote")],
+  ["pmTickBuffer", () => import("@changmen/venue-browser/polymarket/quotes/pmTickBuffer"), () => import("@changmen/venue-browser/polymarket/quotes/pmTickBuffer")],
+  ["pmTickMetadata", () => import("@changmen/venue-browser/polymarket/quotes/pmTickMetadata"), () => import("@changmen/venue-browser/polymarket/quotes/pmTickMetadata")],
+  ["pmTickPrice", () => import("@changmen/venue-browser/polymarket/pmTickPrice"), () => import("@changmen/venue-browser/polymarket/pmTickPrice")],
+  ["pmTickState", () => import("@changmen/venue-browser/polymarket/pmTickState"), () => import("@changmen/venue-browser/polymarket/pmTickState")],
+  ["pmArbPriceBufferMode", () => import("@changmen/venue-browser/polymarket/quotes/pmArbPriceBufferMode"), () => import("@changmen/venue-browser/polymarket/quotes/pmArbPriceBufferMode")],
+  ["ws", () => import("@changmen/venue-browser/polymarket/ws"), () => import("@changmen/venue-browser/polymarket/ws")],
+  ["wsConfig", () => import("@changmen/venue-browser/polymarket/wsConfig"), () => import("@changmen/venue-browser/polymarket/wsConfig")],
+  ["wsQuotes", () => import("@changmen/venue-browser/polymarket/wsQuotes"), () => import("@changmen/venue-browser/polymarket/wsQuotes")],
+  ["sportMarketWs", () => import("@changmen/venue-browser/polymarket/sportMarketWs"), () => import("@changmen/venue-browser/polymarket/sportMarketWs")],
+  ["sportWsConfig", () => import("@changmen/venue-browser/polymarket/sportWsConfig"), () => import("@changmen/venue-browser/polymarket/sportWsConfig")],
+  ["userWs", () => import("@changmen/venue-browser/polymarket/realtime/userWs"), () => import("@changmen/venue-browser/polymarket/realtime/userWs")],
+  ["userWsMessages", () => import("@changmen/venue-browser/polymarket/realtime/userWsMessages"), () => import("@changmen/venue-browser/polymarket/realtime/userWsMessages")],
+  ["pmMarketWsMode", () => import("@changmen/venue-browser/polymarket/pmMarketWsMode"), () => import("@changmen/venue-browser/polymarket/pmMarketWsMode")],
+  ["pmUserWsMode", () => import("@changmen/venue-browser/polymarket/pmUserWsMode"), () => import("@changmen/venue-browser/polymarket/pmUserWsMode")],
+  ["pmWsSourceMode", () => import("@changmen/venue-browser/polymarket/pmWsSourceMode"), () => import("@changmen/venue-browser/polymarket/pmWsSourceMode")],
+  ["orders", () => import("@changmen/venue-browser/polymarket/orders/history/orders"), () => import("@changmen/venue-browser/polymarket/orders/history/orders")],
+  ["orderStatus", () => import("@changmen/venue-browser/polymarket/orders/facts/orderStatus"), () => import("@changmen/venue-browser/polymarket/orders/facts/orderStatus")],
+  ["orderTypes", () => import("@changmen/venue-browser/polymarket/orders/facts/orderTypes"), () => import("@changmen/venue-browser/polymarket/orders/facts/orderTypes")],
+  ["legOutcome", () => import("@changmen/venue-browser/polymarket/orders/confirmation/legOutcome"), () => import("@changmen/venue-browser/polymarket/orders/confirmation/legOutcome")],
+  ["marketDelay", () => import("@changmen/venue-browser/polymarket/orders/confirmation/marketDelay"), () => import("@changmen/venue-browser/polymarket/orders/confirmation/marketDelay")],
+  ["pmActivity", () => import("@changmen/venue-browser/polymarket/orders/history/pmActivity"), () => import("@changmen/venue-browser/polymarket/orders/history/pmActivity")],
+  ["pmActivityV2", () => import("@changmen/venue-browser/polymarket/orders/history/pmActivityV2"), () => import("@changmen/venue-browser/polymarket/orders/history/pmActivityV2")],
+  ["pmClientApi", () => import("@changmen/venue-browser/polymarket/orders/pmClientApi"), () => import("@changmen/venue-browser/polymarket/orders/pmClientApi")],
+  ["pmHeartbeat", () => import("@changmen/venue-browser/polymarket/orders/confirmation/pmHeartbeat"), () => import("@changmen/venue-browser/polymarket/orders/confirmation/pmHeartbeat")],
+  ["pmLogicalPosition", () => import("@changmen/venue-browser/polymarket/orders/positions/pmLogicalPosition"), () => import("@changmen/venue-browser/polymarket/orders/positions/pmLogicalPosition")],
+  ["pmOrigin", () => import("@changmen/venue-browser/polymarket/orders/positions/pmOrigin"), () => import("@changmen/venue-browser/polymarket/orders/positions/pmOrigin")],
+  ["pmOrderSync", () => import("@changmen/venue-browser/polymarket/orders/history/pmOrderSync"), () => import("@changmen/venue-browser/polymarket/orders/history/pmOrderSync")],
+  ["pmPostFillOrder", () => import("@changmen/venue-browser/polymarket/orders/facts/pmPostFillOrder"), () => import("@changmen/venue-browser/polymarket/orders/facts/pmPostFillOrder")],
+  ["pmStoredOrders", () => import("@changmen/venue-browser/polymarket/orders/history/pmStoredOrders"), () => import("@changmen/venue-browser/polymarket/orders/history/pmStoredOrders")],
+  ["pmTradeHashes", () => import("@changmen/venue-browser/polymarket/orders/facts/pmTradeHashes"), () => import("@changmen/venue-browser/polymarket/orders/facts/pmTradeHashes")],
+  ["tradeFailure", () => import("@changmen/venue-browser/polymarket/orders/facts/tradeFailure"), () => import("@changmen/venue-browser/polymarket/orders/facts/tradeFailure")],
+  ["pmFee", () => import("@changmen/venue-browser/polymarket/orders/pmFee"), () => import("@changmen/venue-browser/polymarket/orders/pmFee")],
+  ["builder", () => import("@changmen/venue-browser/polymarket/submission/client/builder"), () => import("@changmen/venue-browser/polymarket/submission/client/builder")],
+  ["pmBetGuard", () => import("@changmen/venue-browser/polymarket/submission/preflight/pmBetGuard"), () => import("@changmen/venue-browser/polymarket/submission/preflight/pmBetGuard")],
+  ["pmBrowserSubmitClock", () => import("@changmen/venue-browser/polymarket/submission/client/pmBrowserSubmitClock"), () => import("@changmen/venue-browser/polymarket/submission/client/pmBrowserSubmitClock")],
+  ["pmBuyOrderShares", () => import("@changmen/venue-browser/polymarket/pmBuyOrderShares"), () => import("@changmen/venue-browser/polymarket/pmBuyOrderShares")],
+  ["pmDetection", () => import("@changmen/venue-browser/polymarket/submission/preflight/pmDetection"), () => import("@changmen/venue-browser/polymarket/submission/preflight/pmDetection")],
+  ["pmManualSell", () => import("@changmen/venue-browser/polymarket/submission/pmManualSell"), () => import("@changmen/venue-browser/polymarket/submission/pmManualSell")],
+  ["pmMarketOrderOptions", () => import("@changmen/venue-browser/polymarket/pmMarketOrderOptions"), () => import("@changmen/venue-browser/polymarket/pmMarketOrderOptions")],
+  ["pmOrderClientCache", () => import("@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache"), () => import("@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache")],
+  ["pmOrderSubmitMode", () => import("@changmen/venue-browser/polymarket/pmOrderSubmitMode"), () => import("@changmen/venue-browser/polymarket/pmOrderSubmitMode")],
+  ["pmStake", () => import("@changmen/venue-browser/polymarket/submission/preflight/pmStake"), () => import("@changmen/venue-browser/polymarket/submission/preflight/pmStake")],
+  ["pmSubmitJournal", () => import("@changmen/venue-browser/polymarket/submission/recovery/pmSubmitJournal"), () => import("@changmen/venue-browser/polymarket/submission/recovery/pmSubmitJournal")],
+  ["pmUnknownSubmitRecovery", () => import("@changmen/venue-browser/polymarket/submission/recovery/pmUnknownSubmitRecovery"), () => import("@changmen/venue-browser/polymarket/submission/recovery/pmUnknownSubmitRecovery")],
+  ["orderTrace", () => import("@changmen/venue-browser/polymarket/diagnostics/orderTrace"), () => import("@changmen/venue-browser/polymarket/diagnostics/orderTrace")],
+  ["pmExecutionMetrics", () => import("@changmen/venue-browser/polymarket/pmExecutionMetrics"), () => import("@changmen/venue-browser/polymarket/pmExecutionMetrics")],
+  ["pmMarketClientMetrics", () => import("@changmen/venue-browser/polymarket/pmMarketClientMetrics"), () => import("@changmen/venue-browser/polymarket/pmMarketClientMetrics")],
 ] as const;
 
 afterEach(() => {
@@ -101,8 +101,8 @@ describe("pM functional relocation", () => {
   }
 
   it("shares tick state and one listener across old and moved callers", async () => {
-    const legacy = await import("../../pmTickState");
-    const moved = await import("../../quotes/pmTickState");
+    const legacy = await import("@changmen/venue-browser/polymarket/pmTickState");
+    const moved = await import("@changmen/venue-browser/polymarket/pmTickState");
     const listener = vi.fn();
     const stop = legacy.onPmTickChange(listener);
     try {
@@ -119,8 +119,8 @@ describe("pM functional relocation", () => {
   });
 
   it("shares quote listeners without creating a WebSocket connection", async () => {
-    const legacy = await import("../../marketQuoteHub");
-    const moved = await import("../../quotes/marketQuoteHub");
+    const legacy = await import("@changmen/venue-browser/polymarket/marketQuoteHub");
+    const moved = await import("@changmen/venue-browser/polymarket/marketQuoteHub");
     const listener = vi.fn();
     const stop = legacy.onPolymarketMarketQuote(listener);
     try {
@@ -134,8 +134,8 @@ describe("pM functional relocation", () => {
   });
 
   it("shares the stored-order loader registration across both entries", async () => {
-    const legacy = await import("../../pmStoredOrders");
-    const moved = await import("../../orders/history/pmStoredOrders");
+    const legacy = await import("@changmen/venue-browser/polymarket/orders/history/pmStoredOrders");
+    const moved = await import("@changmen/venue-browser/polymarket/orders/history/pmStoredOrders");
     const account = { accountId: 7001, provider: "Polymarket" } as PlatformAccount;
     const loader = vi.fn().mockResolvedValue([]);
     legacy.registerPolymarketStoredVenueOrdersLoader(loader);
@@ -148,8 +148,8 @@ describe("pM functional relocation", () => {
 
   it("starts only one heartbeat session and timer through both entries", async () => {
     vi.useFakeTimers();
-    const legacy = await import("../../pmHeartbeat");
-    const moved = await import("../../orders/confirmation/pmHeartbeat");
+    const legacy = await import("@changmen/venue-browser/polymarket/orders/confirmation/pmHeartbeat");
+    const moved = await import("@changmen/venue-browser/polymarket/orders/confirmation/pmHeartbeat");
     const api = await import("@changmen/venue-browser/polymarket/orders/pmClientApi");
     const post = vi.spyOn(api, "pmPostHeartbeat").mockResolvedValue({ heartbeat_id: "mock-only" });
     const account = { accountId: 7002, provider: "Polymarket" } as PlatformAccount;

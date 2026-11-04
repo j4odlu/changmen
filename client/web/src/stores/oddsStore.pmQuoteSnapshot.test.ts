@@ -5,7 +5,7 @@ import { ViewBetItem } from "@/models/match";
 import { capturePmPriceQuote } from "@/services/polymarketQuotes";
 import { attachPolymarketDetectionQuote } from "@/services/polymarketQuotes";
 import { clearPmTickBufferMetadata, notePmTickBufferBook, resetPmArbPriceBufferPrefsForTests,
-  setPmArbPriceBufferPrefs } from "@changmen/venue-browser/adapter/polymarket";
+  setPmArbPriceBufferPrefs } from "@changmen/venue-browser/polymarket";
 import { useOddsStore } from "./oddsStore";
 
 beforeEach(() => {

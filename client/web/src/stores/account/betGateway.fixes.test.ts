@@ -8,7 +8,7 @@ const m = vi.hoisted(() => ({ session: "one", publisher: true, post: vi.fn(), be
   settle: vi.fn(), outcome: "filled", publish: vi.fn(), sent: vi.fn(), mark: vi.fn() }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => m.session, isAuthSessionCurrent: (v: string) => v === m.session,
   post: m.post, unwrap: (value: { success: number; info?: unknown }) => { if (value.success !== 1) throw new Error("save failed"); return value.info; } }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ pmSubmitScope: () => "owner-wallet", pmAccountSubmitAttempts: () => [],
+vi.mock("@changmen/venue-browser/polymarket", () => ({ pmSubmitScope: () => "owner-wallet", pmAccountSubmitAttempts: () => [],
   pmSubmitMaker: () => "0x1111111111111111111111111111111111111111", hasOpenPolymarketPosition: () => true, resolvePmRemainingShares: () => 20 }));
 vi.mock("@/runtime/providers", () => ({ getProvider: () => ({ betting: m.betting, getOrders: m.getOrders,
   resolveLegOutcome: async (_account: unknown, _result: unknown, opts: { fetchVenueOrders: () => Promise<unknown> }) =>

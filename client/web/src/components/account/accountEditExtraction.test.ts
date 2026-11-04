@@ -7,7 +7,9 @@ import { accountEditGroups, executableAccountSource, originalAccountDialog, orig
 
 const { restorePmAccountConnectionSource } = createRequire(import.meta.url)(join(process.cwd(), "../../scripts/verification/pm-account-connection.mjs"));
 const read = (file: string): string => restorePmAccountConnectionSource("client/web/src/components/account/" + file,
-  readFileSync(join(process.cwd(), "src/components/account", file), "utf8").replaceAll("\r\n", "\n"));
+  // Exact import relocation only, so the original increment/hash proof still checks the complete body.
+  readFileSync(join(process.cwd(), "src/components/account", file), "utf8").replaceAll("\r\n", "\n")
+    .replaceAll('"@changmen/venue-browser/polymarket"', '"@changmen/venue-browser/adapter/polymarket"'));
 const tree = (source: string) => ts.createSourceFile("account.ts", source, ts.ScriptTarget.Latest, true);
 const undoAccess = (source: string) => source.replaceAll("ctx.form", "form");
 const undoCancel = (source: string) => source.replaceAll("polymarketEditor.cancelPending();",

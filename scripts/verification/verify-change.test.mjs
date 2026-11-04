@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { expect, it, vi } from "vitest";
-import { assertCommittedSource, assertStagedSource, changedValidationPaths, runChangeValidation } from "./verify-change.mjs";
+import { assertCommittedSource, assertStagedSource, changedValidationPaths, runChangeValidation, executeValidationChecks } from "./verify-change.mjs";
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-validation-"));
@@ -12,6 +12,18 @@ function fixture() {
   fs.mkdirSync(path.join(root, "docs")); fs.writeFileSync(path.join(root, "docs/notes.md"), "new");
   return root;
 }
+it("large changes use a bounded command and retain the complete invocation-bound path list", () => {
+  const cwd = fixture(), paths = Array.from({ length: 1000 }, (_, i) => `client/web/src/${"long-path/".repeat(8)}file-${i}.ts`);
+  const run = vi.fn((_node, args, options) => {
+    expect(args).toEqual(["scripts/verification/run-self-tests.mjs", "--validation-paths"]);
+    const evidence = JSON.parse(fs.readFileSync(options.env.CHANGMEN_VALIDATION_PATHS_FILE, "utf8"));
+    expect(evidence).toEqual({ invocationId: options.env.CHANGMEN_ACCEPTANCE_INVOCATION, root: fs.realpathSync(cwd), paths });
+    return { status: 0 };
+  });
+  const report = executeValidationChecks({ paths, checks: ["verification-control"] }, { cwd, npm: "npm-cli.js", run });
+  expect(report.results[0].passed).toBe(true);
+  expect(run).toHaveBeenCalledOnce();
+});
 it("documents require no commands and still produce a scoped report", () => {
   const cwd = fixture(), run = vi.fn(() => ({ status: 1 }));
   const report = runChangeValidation([], { cwd, npm: "npm-cli.js", run });

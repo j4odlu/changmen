@@ -36,6 +36,16 @@ it("current invariants accept business evolution without a historical source has
   f.write("rds/entry.js", "export const behavior = 'new implementation';");
   expect(inspectCurrentSourceBoundaries(f.root).violations).toEqual([]);
 });
+it("rejects restored PM runtime facades and package exports while allowing retained tests", () => {
+  const f = fixture();
+  f.write("client/packages/venue-browser/adapter/polymarket/tests/identity.test.ts", "export const testOnly = true;");
+  expect(inspectCurrentSourceBoundaries(f.root).violations).toEqual([]);
+  f.write("client/packages/venue-browser/adapter/polymarket/orders.ts", 'export * from "@changmen/venue-browser/polymarket/orders/history/orders";');
+  f.write("client/packages/venue-browser/package.json", { exports: { "./adapter/polymarket": "./polymarket/index.ts" } });
+  const report = inspectCurrentSourceBoundaries(f.root);
+  expect(report.violations.some(row => row.pattern.includes("migration facades are retired"))).toBe(true);
+  expect(report.violations.some(row => row.pattern.includes("compatibility exports must not return"))).toBe(true);
+});
 for (const [file, value] of [["old/entry.js", "returned"], ["server/db/new.js", "returned"],
   ["packages/shared/match-identity/teams/team_key.ts", "returned identity implementation"],
   ["packages/shared/match-identity/index.js", "returned identity facade"],

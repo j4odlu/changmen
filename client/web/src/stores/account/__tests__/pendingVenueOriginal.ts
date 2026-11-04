@@ -56,7 +56,7 @@ export function pendingHarness(original: boolean, provider = "Polymarket", store
     "@changmen/client-core/models/betResult": { BetResult: ClockBetResult },
     "@changmen/shared/pm_submission": { pmSubmissionFromResult, validatePmSubmission },
     "@changmen/shared/account_multiply": { isPendingConfirmVenueProvider: (p: string) => ["Polymarket", "PredictFun"].includes(p) },
-    "@changmen/venue-browser/adapter/polymarket": { pmSubmitScope: () => control.scope, pmSubmitMaker: () => maker, pmAccountSubmitAttempts: () => control.attempts },
+    "@changmen/venue-browser/polymarket": { pmSubmitScope: () => control.scope, pmSubmitMaker: () => maker, pmAccountSubmitAttempts: () => control.attempts },
     "@/api/client": { getAuthSessionVersion: () => control.session, isAuthSessionCurrent: (v: string) => v === control.session },
     "@/api/order": {
       getPendingPmOrders: async (id: number) => { record("restore", id); if (control.restoreError) throw new Error("offline"); return control.rows; },
@@ -88,7 +88,11 @@ export function pendingHarness(original: boolean, provider = "Polymarket", store
     const cached = modules.get(name);
     if (cached) return cached.exports;
     const module = { exports: {} }; modules.set(name, module);
-    const require = (id: string) => id.startsWith("./pendingVenueConfirmation") ? load(id.slice(2)) : ports[id] ?? {};
+    const require = (id: string) => {
+      // The sealed historical snapshot names the retired entry; bind its mocked port inside this VM only.
+      if (original && id === "@changmen/venue-browser/adapter/polymarket") return ports["@changmen/venue-browser/polymarket"];
+      return id.startsWith("./pendingVenueConfirmation") ? load(id.slice(2)) : ports[id] ?? {};
+    };
     const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
     vm.runInContext(`(function(require, module, exports) {${js}\n})`, context)(require, module, module.exports);
     return module.exports;

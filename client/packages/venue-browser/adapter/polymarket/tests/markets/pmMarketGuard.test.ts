@@ -25,10 +25,20 @@ describe("getPolymarketMarketBlockReason", () => {
     { tokens: [{ token_id: "101" }, { token_id: "101" }] },
     { tokens: [{ token_id: "101" }, {}] },
     { tokens: [{ token_id: 101 }, { token_id: 102 }] },
-    { version: "v2" },
     { version: "v2", positionIds: ["201", "202"] },
   ])("CLOB token rows cannot override conflicting or invalid identity %j", extra => {
     expect(getPolymarketMarketBlockReason({ ...clobV1, ...extra } as PolymarketRawMarket, "101", "clob")).toContain("不一致");
+  });
+
+  test("accepts CLOB V2 token rows only with an explicit CLOB source and retains V2 identity checks", () => {
+    const market = { ...clobV1, version: "v2", clobTokenIds: '["901","902"]' };
+    expect(getPolymarketMarketBlockReason(market, "101", "clob")).toBeNull();
+    expect(getPolymarketMarketBlockReason(market, "901", "clob")).toContain("不一致");
+    expect(getPolymarketMarketBlockReason(market, "101")).toContain("不一致");
+    for (const positionIds of [[], '["101","102"]', [101, 102], ["101", "101"]]) {
+      expect(getPolymarketMarketBlockReason({ ...market, positionIds }, "101", "clob")).toContain("不一致");
+    }
+    expect(getPolymarketMarketBlockReason({ ...market, position_ids: ["201", "202"] }, "101", "clob")).toContain("不一致");
   });
 
   test("preserves CLOB winner and trading state guards with versioned token rows", () => {
@@ -49,91 +59,91 @@ describe("getPolymarketMarketBlockReason", () => {
   });
   test("endpoint prices only apply the underdog guard and do not declare an official result", () => {
     const market: PolymarketRawMarket = {
-      clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+      version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
       outcomePrices: JSON.stringify(["0.0005", "0.9995"]),
       closed: false,
     };
-    const reason = getPolymarketMarketBlockReason(market, "token-home");
+    const reason = getPolymarketMarketBlockReason(market, "101");
     expect(reason).toContain("几乎不可能");
     expect(reason).not.toContain("市场已决出胜负");
   });
 
   test("soft-blocks heavy underdog without resolved market", () => {
     const softMarket: PolymarketRawMarket = {
-      clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+      version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
       outcomePrices: JSON.stringify(["0.05", "0.92"]),
       closed: false,
     };
-    expect(getPolymarketMarketBlockReason(softMarket, "token-home")).toContain("几乎不可能");
+    expect(getPolymarketMarketBlockReason(softMarket, "101")).toContain("几乎不可能");
   });
 
   test("blocks when market is closed or archived", () => {
     expect(getPolymarketMarketBlockReason({
-      clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+      version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
       outcomePrices: JSON.stringify(["0.5", "0.5"]),
       closed: true,
-    }, "token-home")).toContain("已关闭");
+    }, "101")).toContain("已关闭");
     expect(getPolymarketMarketBlockReason({
-      clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+      version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
       outcomePrices: JSON.stringify(["0.5", "0.5"]),
       archived: true,
-    }, "token-home")).toContain("已关闭");
+    }, "101")).toContain("已关闭");
   });
 
   test("blocks when active is false", () => {
     expect(getPolymarketMarketBlockReason({
-      clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+      version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
       outcomePrices: JSON.stringify(["0.5", "0.5"]),
       active: false,
-    }, "token-home")).toContain("未开放");
+    }, "101")).toContain("未开放");
   });
 
   test("blocks when acceptingOrders is false", () => {
     const market: PolymarketRawMarket = {
-      clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+      version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
       outcomePrices: JSON.stringify(["0.5", "0.5"]),
       acceptingOrders: false,
     };
-    expect(getPolymarketMarketBlockReason(market, "token-home")).toContain("已停止交易");
+    expect(getPolymarketMarketBlockReason(market, "101")).toContain("已停止交易");
   });
 
   test("blocks when enable_order_book is false", () => {
     expect(getPolymarketMarketBlockReason({
-      clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+      version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
       outcomePrices: JSON.stringify(["0.5", "0.5"]),
       enable_order_book: false,
-    }, "token-home")).toContain("已停止交易");
+    }, "101")).toContain("已停止交易");
   });
 
   test("does not block when acceptingOrders is omitted", () => {
     const market: PolymarketRawMarket = {
-      clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+      version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
       outcomePrices: JSON.stringify(["0.5", "0.5"]),
     };
-    expect(getPolymarketMarketBlockReason(market, "token-home")).toBeNull();
+    expect(getPolymarketMarketBlockReason(market, "101")).toBeNull();
   });
 
   test("allows buying favorite when price resolved", () => {
     const market: PolymarketRawMarket = {
-      clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+      version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
       outcomePrices: JSON.stringify(["0.0005", "0.9995"]),
       closed: false,
     };
-    expect(getPolymarketMarketBlockReason(market, "token-away")).toBeNull();
+    expect(getPolymarketMarketBlockReason(market, "102")).toBeNull();
   });
 
   test("blocks loser via official tokens[].winner without price ≥0.99", () => {
     const official: PolymarketRawMarket = {
-      clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+      version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
       outcomePrices: JSON.stringify(["0.45", "0.55"]),
       closed: false,
       tokens: [
-        { token_id: "token-home", outcome: "Home", price: 0.45, winner: false },
-        { token_id: "token-away", outcome: "Away", price: 0.55, winner: true },
+        { token_id: "101", outcome: "Home", price: 0.45, winner: false },
+        { token_id: "102", outcome: "Away", price: 0.55, winner: true },
       ],
     };
-    expect(getPolymarketMarketBlockReason(official, "token-home")).toContain("市场已决出胜负");
-    expect(getPolymarketMarketBlockReason(official, "token-away")).toBeNull();
+    expect(getPolymarketMarketBlockReason(official, "101")).toContain("市场已决出胜负");
+    expect(getPolymarketMarketBlockReason(official, "102")).toBeNull();
   });
 });
 

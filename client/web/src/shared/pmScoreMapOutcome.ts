@@ -1,5 +1,5 @@
 import type { PmSportSnapshot } from "@/types/esport";
-import type { PmMapIdentity } from "@changmen/venue-browser/adapter/polymarket";
+import type { PmMapIdentity } from "@changmen/venue-browser/polymarket";
 import { formatPmMatchStatus, isPmMapFinished } from "./pmSportDisplay";
 
 export interface PmScoreMapOutcome {

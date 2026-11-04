@@ -2,10 +2,10 @@ import { Worker } from "node:worker_threads";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { expect, test } from "vitest";
-import type { ShadowWorkerRequest, ShadowWorkerResponse } from "../../submission/preflight/optimized/wsBook/shadowWorkerProtocol";
+import type { ShadowWorkerRequest, ShadowWorkerResponse } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/shadowWorkerProtocol";
 
 test("real isolated production Worker consumes shared frames, compares HTTP and resets on disconnect with no WS constructor", async () => {
-  const entry = fileURLToPath(new URL("../../marketData.worker.ts", import.meta.url));
+  const entry = fileURLToPath(new URL("../../../../pm-book-diagnostics/marketData.worker.ts", import.meta.url));
   const core = await build({ absWorkingDir: fileURLToPath(new URL("../../../../../../..", import.meta.url)),
     entryPoints: [fileURLToPath(new URL("../../../../../pm-market-data-browser/src/bookStore.ts", import.meta.url))],
     bundle: true, write: false, platform: "browser", metafile: true });
@@ -95,7 +95,7 @@ test("real isolated production Worker consumes shared frames, compares HTTP and 
 }, 15_000);
 
 test('real Worker batches preserve the snapshot/begin/delta/HTTP ordering and ACK only after the batch', async () => {
-  const entry = fileURLToPath(new URL('../../marketData.worker.ts', import.meta.url));
+  const entry = fileURLToPath(new URL('../../../../pm-book-diagnostics/marketData.worker.ts', import.meta.url));
   const built = await build({ entryPoints: [entry], bundle: true, write: false, platform: 'browser', format: 'cjs' });
   const worker = new Worker(`const {parentPort} = require('node:worker_threads');
     globalThis.fetch = async () => { throw Error('offline'); };
@@ -131,7 +131,7 @@ test('real Worker batches preserve the snapshot/begin/delta/HTTP ordering and AC
 
 
 test('production Worker keeps public depth across diagnostic attach/detach and has no HTTP without a consumer', async () => {
-  const built = await build({ entryPoints: [fileURLToPath(new URL('../../marketData.worker.ts', import.meta.url))], bundle: true, write: false, platform: 'browser', format: 'cjs' });
+  const built = await build({ entryPoints: [fileURLToPath(new URL('../../../../pm-book-diagnostics/marketData.worker.ts', import.meta.url))], bundle: true, write: false, platform: 'browser', format: 'cjs' });
   const worker = new Worker(`const {parentPort} = require('node:worker_threads');
     globalThis.fetch = async () => { parentPort.postMessage({type:'fetch-observed'}); throw Error('offline'); };
     globalThis.WebSocket = class { constructor() { throw Error('no socket'); } };

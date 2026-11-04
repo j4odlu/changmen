@@ -2,13 +2,13 @@ import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { ArbProgressPolymarketMeta } from "@/types/arbProgress";
 import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
 import type { DetectionQuoteSource } from "@/domain/betting/quoteSource";
-import type { PolymarketBuyCheckData } from "@changmen/venue-browser/adapter/polymarket";
+import type { PolymarketBuyCheckData } from "@changmen/venue-browser/polymarket";
 import {
   detectionMaxPriceFromOdds,
   hasLockedPolymarketDetectionQuote,
   isValidClobPrice,
   type PolymarketOptionQuoteData,
-} from "@changmen/venue-browser/adapter/polymarket";
+} from "@changmen/venue-browser/polymarket";
 
 function shortenTokenId(tokenId: string): string {
   if (tokenId.length <= 16)

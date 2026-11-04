@@ -1,9 +1,9 @@
 import {afterEach,expect,it} from 'vitest';
-import * as oldDepth from '../../pmFokDepthBufferMode';
-import * as hostDepth from '../../fok/pmFokDepthBufferMode';
+import * as oldDepth from '@changmen/venue-browser/polymarket/pmFokDepthBufferMode';
+import * as hostDepth from '@changmen/venue-browser/polymarket/pmFokDepthBufferMode';
 import * as depth from "../../../../polymarket/pmFokDepthBufferMode";
-import * as oldTicks from '../../pmTickState';
-import * as hostTicks from '../../quotes/pmTickState';
+import * as oldTicks from '@changmen/venue-browser/polymarket/pmTickState';
+import * as hostTicks from '@changmen/venue-browser/polymarket/pmTickState';
 import * as ticks from "../../../../polymarket/pmTickState";
 const disposers:Array<()=>void>=[];
 afterEach(()=>{for(const dispose of disposers.splice(0))dispose();depth.resetPmFokDepthBufferPrefsForTests();ticks.clearPmTickStateForTests();});

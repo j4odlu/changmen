@@ -3,7 +3,7 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { AccountStoreContext } from "@/stores/account/context";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { validatePmSubmission, type PmSubmission } from "@changmen/shared/pm_submission";
-import { pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-browser/adapter/polymarket";
+import { pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-browser/polymarket";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { getPendingPmOrders } from "@/api/order";
 import { pendingVenueBetConfirmations, pendingVenueConfirmationTimers, pendingVenueConfirmationResumeVersions, pendingVenueOrderWrites, pendingPmRestoreFlights, pendingPmRestoreTimers, pendingVenueConfirmationSession, persistPendingVenueBetConfirmations } from "./pendingVenueConfirmationState";

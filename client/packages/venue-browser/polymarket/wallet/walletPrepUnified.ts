@@ -11,6 +11,8 @@
  */
 
 import { normalizePolymarketPrivateKey, POLYMARKET_RELAYER_URL_DEFAULT } from "./depositWallet";
+import { ensureCtfNegRiskApprovals } from "./ctfNegRiskApprovals";
+import { POLYGON_POLYMARKET } from "./contracts";
 import {
   createPolygonHttpTransport,
   polygonChainForRpc,
@@ -103,11 +105,13 @@ async function preparePolymarketWalletUnifiedInner(
   }
 
   const [
-    { createSecureClient, remoteBuilderSigning, forkEnvironmentConfig },
+    { createSecureClient, remoteBuilderSigning, forkEnvironmentConfig, AssetType },
     { privateKey },
+    { updateBalanceAllowance },
   ] = await Promise.all([
     import("@polymarket/client"),
     import("@polymarket/client/viem"),
+    import("@polymarket/client/actions"),
   ]);
 
   const pk = normalizePolymarketPrivateKey(input.privateKey);
@@ -152,6 +156,14 @@ async function preparePolymarketWalletUnifiedInner(
 
   const funder = String(client.account.wallet);
   await client.setupTradingApprovals();
+  await ensureCtfNegRiskApprovals(client);
+  // 官方迁移步骤：链上确认后还须刷新 CLOB 的 pUSD 余额/授权缓存。
+  // updateBalanceAllowance 会刷新后重新读取；失败不能返回钱包已就绪。
+  const cache = await updateBalanceAllowance(client, { assetType: AssetType.COLLATERAL });
+  const cached = new Map(Object.entries(cache.allowances).map(([address, amount]) => [address.toLowerCase(), amount]));
+  const exchanges = [POLYGON_POLYMARKET.CTF_EXCHANGE, POLYGON_POLYMARKET.NEG_RISK_EXCHANGE, POLYGON_POLYMARKET.CTF_EXCHANGE_V3];
+  if (exchanges.some(address => (cached.get(address.toLowerCase()) ?? 0n) <= 0n))
+    throw new Error("链上交易授权已确认，但场馆授权缓存尚未同步，请重试账号准备");
 
   return {
     ok: true,

@@ -1,7 +1,7 @@
 import { useFakeMailboxTasks } from '../helpers/mailboxTasks';
 useFakeMailboxTasks();
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { OrderedWorkerMailbox } from '../../realtime/orderedWorkerMailbox';
+import { OrderedWorkerMailbox } from '@changmen/pm-market-data-browser/orderedWorkerMailbox';
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
 test('100-frame burst preserves order in bounded batches; control messages cannot overtake frames', () => {

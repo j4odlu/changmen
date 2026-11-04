@@ -110,7 +110,9 @@ it("records the nearest installed copy and exact owning workspace rather than a 
 });
 it("PM imports have declarations and a Vue host peer while inherited uncertainty remains explicit", () => {
   const report = inspectPmDependencies(fileURLToPath(new URL("../../", import.meta.url)));
-  expect(report.violations).toEqual([]); expect(report.dynamicSites).toHaveLength(48);
+  expect(report.violations).toEqual([]); expect(report.dynamicSites).toHaveLength(49);
+  expect(report.dynamicSites.filter(site => site.file === "client/packages/venue-browser/polymarket/wallet/walletPrepUnified.ts")
+    .map(site => site.spec).sort()).toEqual(["@polymarket/client", "@polymarket/client/actions", "@polymarket/client/viem"]);
   expect(report.dynamicSites.filter(site => site.file === "client/packages/venue-browser/polymarket/auth/credentials.ts")
     .map(site => site.spec).sort()).toEqual(["../wallet/polygonRpc", "@polymarket/client/viem", "viem", "viem/accounts"]);
   expect(report.dynamicSites.some(site => site.file === "server/backend/core/integrations/polymarket/clob_l1.js")).toBe(false);
@@ -167,7 +169,7 @@ it("rejects private Vue runtimes, missing/required peers and a host range mismat
 });
 
 for (const [name, file, addition, diagnostic] of [
-  ["computed PM input", "client/packages/venue-browser/adapter/polymarket/orderBook.ts", "void import(globalThis.unknownInput);", "[pm-dynamic-input]"],
+  ["computed PM input", "client/packages/venue-browser/polymarket/orderBook.ts", "void import(globalThis.unknownInput);", "[pm-dynamic-input]"],
   ["Node loader reaching a browser implementation", "server/backend/core/account/balance_provider.js", 'requirePlatform("Polymarket", "orderBook.ts");', "[pm-node-browser-loader]"],
   ["namespace loader with unknown arguments", "server/backend/core/esport-api/store.js", 'import * as auditLoader from "../shared/adapter_paths.js";auditLoader.backendRequire(globalThis.unknownModule);', "[pm-loader-unknown]"],
   ["namespace loader reaching PM browser", "server/backend/core/esport-api/store.js", 'import * as auditLoader from "../shared/adapter_paths.js";auditLoader.requirePlatform("Polymarket","orderBook.ts");', "[pm-node-browser-loader]"],

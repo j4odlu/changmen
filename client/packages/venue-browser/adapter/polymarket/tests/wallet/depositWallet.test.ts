@@ -109,11 +109,12 @@ describe("buildDepositWalletApprovalCalls", () => {
     expect(ctfApprovals.has(POLYGON_POLYMARKET.NEG_RISK_EXCHANGE.toLowerCase())).toBe(true);
     expect(ctfApprovals.has(POLYGON_POLYMARKET.CTF_COLLATERAL_ADAPTER.toLowerCase())).toBe(true);
     expect(ctfApprovals.has(POLYGON_POLYMARKET.NEG_RISK_CTF_COLLATERAL_ADAPTER.toLowerCase())).toBe(true);
-    // Deposit Wallet allowlist 不含 V1 Exchange / V1 Neg Risk Adapter
+    // 旧 Exchange 不再审批；CTF Neg Risk Adapter 仍需 pUSD + CTF（不增加 USDC）。
     expect(usdcApproves.has(POLYGON_POLYMARKET.CTF_EXCHANGE_V1.toLowerCase())).toBe(false);
     expect(usdcApproves.has(POLYGON_POLYMARKET.NEG_RISK_EXCHANGE_V1.toLowerCase())).toBe(false);
     expect(usdcApproves.has(POLYGON_POLYMARKET.NEG_RISK_ADAPTER_V1.toLowerCase())).toBe(false);
-    expect(ctfApprovals.has(POLYGON_POLYMARKET.NEG_RISK_ADAPTER_V1.toLowerCase())).toBe(false);
+    expect(pusdApproves.has(POLYGON_POLYMARKET.NEG_RISK_ADAPTER_V1.toLowerCase())).toBe(true);
+    expect(ctfApprovals.has(POLYGON_POLYMARKET.NEG_RISK_ADAPTER_V1.toLowerCase())).toBe(true);
   });
 
   test("matches legacy Safe/Proxy approval calldata targets", () => {

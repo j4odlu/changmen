@@ -1,10 +1,10 @@
 import type { GammaMarket, GammaEvent, HistoryPoint, PrematchOptions, PrematchRecord } from "./types.ts";
 /** [changmen 扩展] VPS 统一取登记开赛时间前 1 小时历史价，不代表实际清单时刻。 */
 import { fetchPmPrematchPrices, writePmPrematchPrices } from "@changmen/db";
-import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
+import { polymarketGammaMarketAssetIds } from "@changmen/shared/pm_market_assets";
 
 function tokenIds(market: GammaMarket): string[] {
-  return polymarketMarketAssetIds(market);
+  return polymarketGammaMarketAssetIds(market);
 }
 
 export function readPrematchPoint(data: unknown, cutoff: number): HistoryPoint | null {

@@ -16,6 +16,7 @@ import type { GammaEvent, GammaMarket, DiscoveryResult } from "./types.ts";
  */
 
 import { normalizeEpochMs } from "@changmen/shared/time/match_time";
+import { mergePolymarketClobMarket, polymarketGammaMarketAssetIds } from "@changmen/shared/pm_market_assets";
 import { getConfiguredPlatformDiscovery } from "@changmen/shared/catalog/game_catalog";
 
 export const POLYMARKET_GAMMA_API = "https://gamma-api.polymarket.com";
@@ -278,6 +279,8 @@ async function fetchEsportsKeysetPass(
         // [changmen 扩展] 活跃赛事的已关闭地图仍需查官方胜方，供比赛卡展示结果。
         if (market?.archived === true)
           continue;
+        if (!polymarketGammaMarketAssetIds(market).length)
+          continue;
         const marketKey = marketKeyOf(market);
         if (marketKey && seenMarketIds.has(marketKey))
           continue;
@@ -400,6 +403,11 @@ export async function fetchPolymarketOfficialMarkets(markets: GammaMarket[]): Pr
         const clob = await fetchJson<GammaMarket | null>(`${POLYMARKET_CLOB_API}/markets/${encodeURIComponent(id)}`, { signal });
         // [changmen 扩展] 拒绝错盘响应；仅 overlay 官方 token 结果，不覆盖 Gamma 赛事归属。
         if (String(clob?.condition_id ?? "") !== id || !Array.isArray(clob?.tokens)) {
+          failed++;
+          continue;
+        }
+        // 与订单结算共用完整资产/版本校验；采集仍只补 tokens，不更改 Gamma 价格和状态。
+        if (mergePolymarketClobMarket(clob, enriched[i], id) === enriched[i]) {
           failed++;
           continue;
         }

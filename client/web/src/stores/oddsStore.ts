@@ -20,7 +20,7 @@ import {
   pmEffectiveOddsFromFoEntry,
   isPmTickBufferActive,
   resolvePmDisplayQuote,
-} from "@changmen/venue-browser/adapter/polymarket/pmArbPriceBufferMode";
+} from "@changmen/venue-browser/polymarket/quotes/pmArbPriceBufferMode";
 import {
   isPfArbPriceBufferActive,
   pfEffectiveOddsFromFoEntry,

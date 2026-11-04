@@ -1,11 +1,11 @@
 // Explicit owners for historical single-consumer regressions; not production entry points.
-import { BookStore } from "../../realtime/orderBook/bookStore";
-import type { BookFeedOptions, BookFeed } from "../../realtime/orderBook/feedTypes";
-import { PmOrderBookService } from "../../realtime/orderBook/service";
-import type { WorkerPort } from "../../realtime/orderBook/serviceProtocol";
-import { WsBookShadowRuntime } from "../../submission/preflight/optimized/wsBook/bookRuntime";
-import { WsBookShadowWorkerClient } from "../../submission/preflight/optimized/wsBook/shadowWorkerClient";
-import type { fetchShadowHttpBook } from "../../submission/preflight/optimized/wsBook/bookMetadata";
+import { BookStore } from "@changmen/pm-market-data-browser/bookStore";
+import type { BookFeedOptions, BookFeed } from "@changmen/pm-market-data-browser/feedTypes";
+import { PmOrderBookService } from "@changmen/venue-browser/polymarket/realtime/orderBook/service";
+import type { WorkerPort } from "@changmen/pm-market-data-browser/serviceProtocol";
+import { WsBookShadowRuntime } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/bookRuntime";
+import { WsBookShadowWorkerClient } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/shadowWorkerClient";
+import type { fetchShadowHttpBook } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/bookMetadata";
 export class OwnedRuntimeFixture extends WsBookShadowRuntime {
   readonly store: BookStore;
   readonly feed: BookFeed;

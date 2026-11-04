@@ -3,7 +3,7 @@ import type { PmUpMarket, PmUpObservation, PmUpSignal } from "./upDetector";
 import type { PmUpPrefs } from "./upSettings";
 import type { PmOddsDropQuote } from "./downDetector";
 import type { BrowserPmOddsDropSettings, OddsDropReferenceVenue, OddsDropSelection, PmOddsDropSnapshotResolver, ReferenceVenueQuote, ReferenceVenueQuoteReader } from "./downSettings";
-import { getPmMarketWsSourceMode, onPolymarketMarketQuote } from "@changmen/venue-browser/adapter/polymarket";
+import { getPmMarketWsSourceMode, onPolymarketMarketQuote } from "@changmen/venue-browser/polymarket";
 import { computed, shallowRef, watch } from "vue";
 import { PmUpDetector } from "./upDetector";
 import { indexPmUpMarkets, snapshotPmUpMarket } from "./upMarkets";

@@ -10,7 +10,7 @@ import { createDefaultUserConfig } from "@/types/userConfig";
 import { capturePmTickBufferQuote } from "@/services/polymarketQuotes";
 import { attachPolymarketDetectionQuote } from "@/services/polymarketQuotes";
 import { clearPmTickBufferMetadata, notePmTickBufferBook, setPmArbPriceBufferPrefs,
-  resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-browser/adapter/polymarket";
+  resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-browser/polymarket";
 
 beforeEach(() => { setActivePinia(createPinia()); clearPmTickBufferMetadata(); resetPmArbPriceBufferPrefsForTests(); });
 afterEach(() => { clearPmTickBufferMetadata(); resetPmArbPriceBufferPrefsForTests(); });

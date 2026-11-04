@@ -102,5 +102,7 @@ export function buildDepositWalletApprovalCalls(): DepositWalletCall[] {
     calls.push(createDepositWalletApproveCall(POLYGON_POLYMARKET.PUSD, spender));
     calls.push(createDepositWalletSetApprovalForAllCall(spender));
   }
+  calls.push(createDepositWalletApproveCall(POLYGON_POLYMARKET.PUSD, POLYGON_POLYMARKET.NEG_RISK_ADAPTER_V1));
+  calls.push(createDepositWalletSetApprovalForAllCall(POLYGON_POLYMARKET.NEG_RISK_ADAPTER_V1));
   return calls;
 }

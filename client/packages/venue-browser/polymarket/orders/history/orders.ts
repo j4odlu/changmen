@@ -1,4 +1,4 @@
-import { polymarketMarketAssetIds, polymarketMarketAssetFields } from "@changmen/shared/pm_market_assets";
+import { polymarketMarketAssetIds, polymarketGammaMarketAssetIds, polymarketMarketHasAsset, polymarketMarketAssetForOutcome, polymarketOfficialWinner, mergePolymarketClobMarket, polymarketConditionsAgree } from "@changmen/shared/pm_market_assets";
 import { polymarketDecimalAmount, polymarketBaseUnitAmount } from "@changmen/shared/pm_amounts";
 import type { VenueOrder } from "@changmen/client-core/contract";
 import { sortVenueOrdersNewestFirst } from "@changmen/client-core/contract";
@@ -297,13 +297,7 @@ export type PolymarketSettlementResolution = {
 export function resolvePolymarketOfficialWinningAssetId(
   market: PolymarketRawMarket | undefined,
 ): string | null {
-  const tokens = market?.tokens;
-  if (!Array.isArray(tokens) || !tokens.length) return null;
-  const ids = market?.version == null && market?.positionIds == null && market?.position_ids == null
-    ? null : polymarketMarketAssetIds(market);
-  const winning = tokens.find(t => t?.winner === true && (!ids || ids.includes(String(t.token_id ?? ""))));
-  const id = String(winning?.token_id ?? "").trim();
-  return id || null;
+  return polymarketOfficialWinner(market).assetId;
 }
 
 /**
@@ -314,7 +308,8 @@ export function resolvePolymarketSettlement(
   market: PolymarketRawMarket | undefined,
 ): PolymarketSettlementResolution | null {
   if (!market) return null;
-  const official = resolvePolymarketOfficialWinningAssetId(market);
+  const { assetId: official, ambiguous } = polymarketOfficialWinner(market);
+  if (ambiguous) return null;
   if (official)
     return { winningAssetId: official, kind: "official" };
 
@@ -340,12 +335,7 @@ export function resolvePolymarketWinningAssetId(market: PolymarketRawMarket | un
 function tradeHeldAssetId(trade: PolymarketTradeRow, market?: PolymarketRawMarket): string {
   const assetId = String(trade.asset_id ?? "").trim();
   if (assetId) return assetId;
-  const outcome = String(trade.outcome ?? "").trim();
-  if (!market || !outcome) return "";
-  const outcomes = parseJsonArray(market.outcomes);
-  const idx = outcomes.findIndex(name => name.trim() === outcome);
-  if (idx < 0) return "";
-  return gammaTokenIds(market)[idx] ?? "";
+  return polymarketMarketAssetForOutcome(market, trade.outcome);
 }
 
 /**
@@ -364,7 +354,10 @@ export function applyPolymarketSettlement(
   if (!resolved) return order;
 
   const heldAssetId = tradeHeldAssetId(trade, market);
-  if (!heldAssetId) return order;
+  if ((order.pmTokenId && String(order.pmTokenId).trim() !== heldAssetId)
+    || !polymarketConditionsAgree(order.pmConditionId, trade.market, market?.conditionId, market?.condition_id)) return order;
+  if (!polymarketMarketHasAsset(market, heldAssetId)
+    || !polymarketMarketHasAsset(market, resolved.winningAssetId)) return order;
 
   const matchResult: "win" | "lose" = heldAssetId === resolved.winningAssetId ? "win" : "lose";
 
@@ -1077,8 +1070,9 @@ function settleStoredOrderFromMarket(
   const market = lookupGammaMarket(marketMap, { market: stored.pmConditionId, asset_id: stored.pmTokenId });
   const resolved = resolvePolymarketSettlement(market);
   if (!resolved || !market) return base;
-  const tokens = [...gammaTokenIds(market), ...(market.tokens ?? []).map(t => String(t.token_id ?? ""))];
-  if (!tokens.includes(String(stored.pmTokenId))) return base;
+  if (!polymarketConditionsAgree(stored.pmConditionId, market.conditionId, market.condition_id)) return base;
+  if (!polymarketMarketHasAsset(market, String(stored.pmTokenId))
+    || !polymarketMarketHasAsset(market, resolved.winningAssetId)) return base;
   const result = stored.pmTokenId === resolved.winningAssetId ? "win" : "lose";
   // 只提供盘口赛果；复用既有全成本/部分卖出/卖光保护，不捏造新成交。
   return mergeChangmenStoredWithClob(stored, {
@@ -1170,6 +1164,13 @@ async function fetchGammaMarketsChunk(params: URLSearchParams): Promise<Polymark
 }
 
 function rememberGammaMarket(out: Map<string, PolymarketRawMarket>, market: PolymarketRawMarket): void {
+  if (!polymarketGammaMarketAssetIds(market).length) return;
+  rememberSettlementMarket(out, market);
+}
+
+/** Gamma 入口已解码，或 CLOB 已通过 mergePolymarketClobMarket 校验的结算快照。 */
+function rememberSettlementMarket(out: Map<string, PolymarketRawMarket>, market: PolymarketRawMarket): void {
+  if (!polymarketMarketAssetIds(market).length) return;
   rememberPolymarketMarketBetLabel(market);
   const key = marketConditionId(market);
   if (key) out.set(key, market);
@@ -1245,42 +1246,8 @@ async function fetchMarketsByConditionIds(
       const clob = await polymarketPluginGet<PolymarketRawMarket>(
         `${POLYMARKET_CLOB_API}/markets/${encodeURIComponent(id)}`,
       );
-      let tokens = Array.isArray(clob?.tokens) ? clob.tokens : [];
-      if (out.get(id)?.version === "v2") {
-        const ids = gammaTokenIds(out.get(id)!);
-        tokens = tokens.filter(token => ids.includes(String(token.token_id ?? "")));
-      }
-      if (!tokens.length)
-        continue;
-      const hasWinner = tokens.some(t => t?.winner === true);
-      const existing = out.get(id);
-      const existingPrices = existing?.outcomePrices ?? existing?.outcome_prices;
-      const outcomePrices = hasWinner
-        ? JSON.stringify(tokens.map(t => (t?.winner === true ? "1" : "0")))
-        : (existingPrices
-          ?? JSON.stringify(tokens.map(t => String(t?.price ?? 0))));
-      // [changmen 扩展] Gamma 价格保留其 token 顺序，不能套用 CLOB 返回的另一种顺序。
-      const priceTokenIds = !hasWinner && existingPrices != null
-        ? polymarketMarketAssetIds(existing)
-        : tokens.map(t => String(t?.token_id ?? ""));
-      rememberGammaMarket(out, {
-        ...(existing || {}),
-        version: existing?.version ?? clob?.version,
-        condition_id: id,
-        question: existing?.question ?? clob?.question,
-        title: existing?.title ?? existing?.question ?? clob?.question,
-        slug: existing?.slug ?? clob?.market_slug,
-        closed: Boolean(existing?.closed) || clob?.closed === true || hasWinner,
-        tokens,
-        outcomes: JSON.stringify(!hasWinner && existingPrices != null
-          ? parseJsonArray(existing?.outcomes)
-          : tokens.map(t => String(t?.outcome ?? ""))),
-        outcomePrices,
-        ...polymarketMarketAssetFields(existing ?? clob, priceTokenIds),
-        umaResolutionStatus: hasWinner
-          ? (existing?.umaResolutionStatus || existing?.uma_resolution_status || "settled_normal")
-          : (existing?.umaResolutionStatus ?? existing?.uma_resolution_status),
-      });
+      const merged = mergePolymarketClobMarket(clob, out.get(id), id);
+      if (merged) rememberSettlementMarket(out, merged);
     }
     catch {
       // 单条 CLOB 失败：保留 Gamma（若有），仍可按有效价格提前判定。

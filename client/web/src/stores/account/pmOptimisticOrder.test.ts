@@ -6,7 +6,7 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import { persistPolymarketMatchedBuyOrder } from "./pmOptimisticOrder";
 
 const io = vi.hoisted(() => ({ build: vi.fn(), save: vi.fn() }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ buildPolymarketMatchedBuyVenueOrderFromBet: io.build }));
+vi.mock("@changmen/venue-browser/polymarket", () => ({ buildPolymarketMatchedBuyVenueOrderFromBet: io.build }));
 vi.mock("@/api/order", () => ({ saveOrders: io.save }));
 const account = { provider: "Polymarket", accountId: 317 } as PlatformAccount;
 const option = new BetOption("Polymarket", "match", "condition", "token", 10, "Home", 2);

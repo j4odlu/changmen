@@ -1,12 +1,12 @@
 import { useFakeMailboxTasks } from '../helpers/mailboxTasks';
 useFakeMailboxTasks();
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { BookStore } from "../../realtime/orderBook/bookStore";
+import { BookStore } from "@changmen/pm-market-data-browser/bookStore";
 import { PmOrderBookService } from "@changmen/venue-browser/polymarket/realtime/orderBook/service";
-import { WsBookShadowWorkerClient } from "../../submission/preflight/optimized/wsBook/shadowWorkerClient";
+import { WsBookShadowWorkerClient } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/shadowWorkerClient";
 import { beginWsBookShadow } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
-import type { MarketStreamEvent } from "../../realtime/marketStreamProtocol";
-import type { ServiceMessage, ServiceResponse } from "../../realtime/orderBook/serviceProtocol";
+import type { MarketStreamEvent } from "@changmen/pm-market-data-browser/marketStreamProtocol";
+import type { ServiceMessage, ServiceResponse } from "@changmen/pm-market-data-browser/serviceProtocol";
 
 let owner: PmOrderBookService, book: BookStore, frame: (event: MarketStreamEvent) => void;
 let source: string[], allowed: boolean, sequence: number;

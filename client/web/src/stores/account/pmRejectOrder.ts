@@ -7,7 +7,7 @@ import {
   isPolymarketPostedApiFailure,
   type PolymarketExecutionRejectReason,
   type PolymarketRejectOrderContext,
-} from "@changmen/venue-browser/adapter/polymarket";
+} from "@changmen/venue-browser/polymarket";
 import { saveOrders } from "@/api/order";
 import { pmMakerAmountUsdc, pmSubmissionFromResult } from "@changmen/shared/pm_submission";
 import { scaleUsdtToCnyDisplay } from "@changmen/shared/currency";

@@ -6,7 +6,7 @@ import { createAccountEditFormStateFromPlatformAccount } from "./accountEditForm
 import { PlatformAccount } from "@/models/platformAccount";
 import { createOriginalAccountModule } from "./__tests__/accountEditOriginal";
 import * as parse from "./accountCredentialParse";
-import * as pm from "@changmen/venue-browser/adapter/polymarket";
+import * as pm from "@changmen/venue-browser/polymarket";
 import * as pf from "@changmen/venue-browser/adapter/predictfun";
 import * as vault from "@/security/pmVault";
 import { ElMessage } from "element-plus";
@@ -15,7 +15,7 @@ const m = vi.hoisted(() => ({ unlocked: true, exists: true, cached: "", signer: 
 vi.mock("element-plus", () => ({ ElMessage: { success: m.message, error: m.message } }));
 vi.mock("@/config/apiBase", () => ({ getApiBase: () => "https://app.test" }));
 vi.mock("@/lib/authCredentials", () => ({ createRequestAuthProvider: () => async () => ({}), getRequestAuthHeaders: async () => ({}) }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/polymarket", () => ({
   normalizePolymarketPrivateKey: (key: string) => key,
   resolvePolymarketSignerAddress: m.signer, resolvePolymarketDepositWalletFromPrivateKey: m.deposit,
   createOrDerivePolymarketApiCreds: m.creds, fetchPolymarketRelayerStatus: async () => ({ configured: true }), preparePolymarketWallet: m.prepare,

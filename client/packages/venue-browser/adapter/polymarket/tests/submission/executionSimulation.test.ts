@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { BookLease } from "@changmen/venue-browser/polymarket/realtime/orderBook/service";
-import type { FullBookView } from "../../realtime/orderBook/bookStore";
-import { simulateLocalSource, copySimulationInput, type ExecutionMetadata } from "../../submission/preflight/optimized/wsBook/executionSimulation";
-import { observerClock } from "../../submission/preflight/optimized/wsBook/shadowWorkerProtocol";
+import type { FullBookView } from "@changmen/pm-market-data-browser/bookStore";
+import { simulateLocalSource, copySimulationInput, type ExecutionMetadata } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/executionSimulation";
+import { observerClock } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/shadowWorkerProtocol";
 
 let view: FullBookView, meta: ExecutionMetadata, lease: BookLease, allowed: boolean;
 const input = { tokenId: "1", detectionOdds: 2, maxPrice: .5, apiBetMoney: 5, depth: { enabled: false, multiplier: 1.5 } };

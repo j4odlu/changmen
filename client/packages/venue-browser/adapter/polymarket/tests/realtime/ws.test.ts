@@ -7,12 +7,12 @@ import {
   notePolymarketMarketWsQuote,
   resetOfficialFailStreakForTests,
   startPolymarketMarketWs,
-} from "../../ws";
+} from "@changmen/venue-browser/polymarket/ws";
 import { POLYMARKET_MARKET_WS } from "@changmen/venue-browser/polymarket/api";
 import { getPmMarketWsSourceMode, resetPmMarketWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
 import { resetPmUserWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmUserWsMode";
 import { markPmTransportManualOverride, resetPmTransportManualOverrideForTests } from "@changmen/venue-browser/polymarket/transport/pmAutoTransport";
-import { resetPmRoutingPreferenceForTests, setPmRoutingPreference } from "../../pmRoutingPreference";
+import { resetPmRoutingPreferenceForTests, setPmRoutingPreference } from "@changmen/venue-browser/polymarket/pmRoutingPreference";
 import { setChangmenAuthTokenGetter } from "../../../shared/changmenAuthToken";
 import { PM_MARKET_WS_FORWARD_PATH } from "@changmen/venue-browser/polymarket/wsConfig";
 import { listVenueWsStatuses } from "@changmen/venue-browser/shared/venueWsStatus";

@@ -3,8 +3,8 @@ import { ElMessage } from "element-plus";
 import { computed, ref } from "vue";
 import { getApiBase } from "@/config/apiBase";
 import { createRequestAuthProvider, getRequestAuthHeaders } from "@/lib/authCredentials";
-import { createOrDerivePolymarketApiCreds, type PolymarketApiCreds } from "@changmen/venue-browser/adapter/polymarket";
-import { fetchPolymarketRelayerStatus, preparePolymarketWallet } from "@changmen/venue-browser/adapter/polymarket";
+import { createOrDerivePolymarketApiCreds, type PolymarketApiCreds } from "@changmen/venue-browser/polymarket";
+import { fetchPolymarketRelayerStatus, preparePolymarketWallet } from "@changmen/venue-browser/polymarket";
 import {
   normalizePolymarketApiCreds,
   normalizePolymarketTokenObject,
@@ -14,7 +14,7 @@ import {
   normalizePolymarketPrivateKey,
   resolvePolymarketDepositWalletFromPrivateKey,
   resolvePolymarketSignerAddress,
-} from "@changmen/venue-browser/adapter/polymarket";
+} from "@changmen/venue-browser/polymarket";
 import {
   ensurePmVaultSetup,
   ensurePmVaultUnlocked,

@@ -10,7 +10,7 @@ import trendSource from "./PmPriceTrend.vue?raw";
 import { resolveTrendTarget } from "./target";
 
 const bus = vi.hoisted(() => ({ receive: null as null | ((quote: { assetId: string; bestAsk: number }) => void), subscribe: vi.fn(), unsubscribe: vi.fn() }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/polymarket", () => ({
   onPolymarketMarketQuote: (receive: NonNullable<typeof bus.receive>) => {
     bus.subscribe(); bus.receive = receive;
     return () => { bus.unsubscribe(); bus.receive = null; };

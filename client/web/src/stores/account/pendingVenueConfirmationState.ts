@@ -5,7 +5,7 @@ import type { AccountStoreContext } from "@/stores/account/context";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { BettingEventPayload } from "@/realtime/bettingEventPayload";
 import type { PmSubmission } from "@changmen/shared/pm_submission";
-import { pmSubmitScope } from "@changmen/venue-browser/adapter/polymarket";
+import { pmSubmitScope } from "@changmen/venue-browser/polymarket";
 
 const PENDING_VENUE_CONFIRM_KEY = "PENDING_VENUE_BET_CONFIRM";
 

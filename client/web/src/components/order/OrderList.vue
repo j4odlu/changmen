@@ -69,7 +69,7 @@ import {
   orderListDisplayBlocks,
   orderListDisplayRows,
 } from "@/shared/orderLink";
-import { resolvePmRemainingShares } from "@changmen/venue-browser/adapter/polymarket";
+import { resolvePmRemainingShares } from "@changmen/venue-browser/polymarket";
 import {
   canManualSellPmBuy,
   confirmAndSellPmBuyOrder,

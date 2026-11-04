@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, test, expect, vi } from "vitest";
-import { PassiveBookFeed } from "../../realtime/orderBook/passiveBookFeed";
-import type { MarketStreamEvent } from "../../realtime/marketStreamProtocol";
+import { PassiveBookFeed } from "@changmen/pm-market-data-browser/passiveBookFeed";
+import type { MarketStreamEvent } from "@changmen/pm-market-data-browser/marketStreamProtocol";
 import { OwnedRuntimeFixture as WsBookShadowRuntime } from "../helpers/ownedBookFixtures";
 import { beginWsBookShadow } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 

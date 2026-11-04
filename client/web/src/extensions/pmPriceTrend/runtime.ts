@@ -1,4 +1,4 @@
-import { onPolymarketMarketQuote } from "@changmen/venue-browser/adapter/polymarket";
+import { onPolymarketMarketQuote } from "@changmen/venue-browser/polymarket";
 import { PriceHistory } from "./history";
 
 interface Quote { assetId: string; bestAsk: number }

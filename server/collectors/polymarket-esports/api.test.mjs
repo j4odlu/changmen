@@ -102,6 +102,23 @@ describe("polymarket-esports api helpers", () => {
     }
   });
 
+  it("rejects conflicting V1/V2 asset sets and protocols before exposing official winners", async () => {
+    const realFetch = globalThis.fetch;
+    try {
+      for (const version of ["v1", "v2"]) {
+        const base = { version, conditionId: "condition", ...(version === "v2" ? { positionIds: ["101", "102"] } : { clobTokenIds: '["101","102"]' }) };
+        for (const response of [
+          { version, condition_id: "condition", tokens: [{ token_id: "101", winner: true }, { token_id: "999", winner: false }] },
+          { version: version === "v1" ? "v2" : "v1", condition_id: "condition", tokens: [{ token_id: "101", winner: true }, { token_id: "102", winner: false }] },
+        ]) {
+          globalThis.fetch = async () => ({ ok: true, json: async () => response });
+          const [market] = await fetchPolymarketOfficialMarkets([base]);
+          assert.deepEqual(market.tokens, []);
+        }
+      }
+    } finally { globalThis.fetch = realFetch; }
+  });
+
   it("limits official result queries to eight concurrent requests", async () => {
     const realFetch = globalThis.fetch;
     let active = 0;
@@ -275,13 +292,13 @@ describe("polymarket-esports api helpers", () => {
                 markets: [{
                   condition_id: "c-open",
                   sportsMarketType: "moneyline",
-                  clob_token_ids: "[\"h2\",\"a2\"]",
+                  version: "v1", clobTokenIds: '["101","102"]',
                   outcomes: "[\"A\",\"B\"]",
                   closed: false,
                 }, {
                   condition_id: "c-map-closed",
                   sportsMarketType: "child_moneyline",
-                  clob_token_ids: "[\"hm\",\"am\"]",
+                  version: "v1", clobTokenIds: '["103","104"]',
                   outcomes: "[\"A\",\"B\"]",
                   closed: true,
                 }, {

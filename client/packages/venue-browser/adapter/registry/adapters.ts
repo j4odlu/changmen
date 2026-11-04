@@ -12,7 +12,7 @@ import { imtAdapter } from "../imt";
 import { limitlessAdapter } from "../limitless";
 import { obAdapter } from "../ob";
 import { pbAdapter } from "../pb";
-import { polymarketAdapter } from "../polymarket";
+import { polymarketAdapter } from "../../polymarket";
 import { rayAdapter } from "../ray";
 import { sabaAdapter } from "../saba";
 import { sxbetAdapter } from "../sxbet";

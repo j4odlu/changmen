@@ -1,6 +1,6 @@
 import type { GtcOrderRecord, GtcOrderCommand, GtcOrderContext } from "./core/orderRecord";
 import type { GtcOrderPlan } from "@changmen/shared/pm_gtc_order";
-import type { GtcTradeHistory } from "@changmen/venue-browser/adapter/polymarket/gtc";
+import type { GtcTradeHistory } from "@changmen/venue-browser/polymarket/gtc/index";
 import { canCancelGtcOrder, gtcOrderNeverSubmitted } from "@changmen/shared/pm_gtc_order";
 import { watch } from "vue";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
@@ -144,7 +144,7 @@ export function pollGtcOrder(id: string, history?: () => Promise<GtcTradeHistory
     if (!account || account.provider !== "Polymarket") throw new Error("GTC 原 PM 账号暂不可用，请勿重复下单");
     const binding = accountBinding(account);
     const valid = () => isCurrent() && binding === accountBinding(account) && binding === accountBinding(useAccountStore().findAccount(row.accountId));
-    const api = await import("@changmen/venue-browser/adapter/polymarket/gtc");
+    const api = await import("@changmen/venue-browser/polymarket/gtc/index");
     if (!valid()) throw new Error("GTC 会话或原账号已变更");
     const facts = await api.readGtcFacts(account, row.plan, row.orderId || row.plan.orderHash, row.createdAt, history?.());
     if (!valid()) throw new Error("GTC 会话或原账号已变更");
@@ -171,7 +171,7 @@ export function cancelNativeGtcOrder(id: string): Promise<void> {
     const valid = () => isCurrent() && binding === accountBinding(account) && binding === accountBinding(useAccountStore().findAccount(row.accountId));
     const commandId = crypto.randomUUID(); gtcOrders.cancelInFlight[id] = true;
     const original = await changeGtcOrder(id, { kind: "cancel", commandId });
-    const { pmCancelOrder } = await import("@changmen/venue-browser/adapter/polymarket/gtc");
+    const { pmCancelOrder } = await import("@changmen/venue-browser/polymarket/gtc/index");
     if (!valid()) throw new Error("GTC 会话或原账号已变更");
     try {
       const result = await waitForGtcCancelReceipt(account, original.orderId!, () => pmCancelOrder(account, original.orderId!), valid);
@@ -205,7 +205,7 @@ function watchOrder(id: string): Promise<void> {
     const row = currentGtcOrder(id);
     if (gtcOrderReconciled(row) || !row.pmAuthorized || gtcOrderNeverSubmitted(row) || listeners.has(id)) return;
     const account = useAccountStore().findAccount(row.accountId); if (!account) return;
-    const api = await import("@changmen/venue-browser/adapter/polymarket");
+    const api = await import("@changmen/venue-browser/polymarket");
     if (!isCurrent() || listeners.has(id) || gtcOrderReconciled(currentGtcOrder(id))) return;
     listeners.set(id, api.observePolymarketOrderWatch(account, row.orderId || row.plan.orderHash,
       () => { if (isCurrent()) void pollGtcOrder(id).catch(() => {}); }));
@@ -224,7 +224,7 @@ const loop = createOrderMonitorLoop({
         let history = histories.get(row.accountId);
         if (!history) {
           const since = Math.min(...gtcOrders.records.filter(entry => entry.accountId === row.accountId && !gtcOrderReconciled(entry)).map(entry => entry.createdAt));
-          history = import("@changmen/venue-browser/adapter/polymarket/gtc").then(api => {
+          history = import("@changmen/venue-browser/polymarket/gtc/index").then(api => {
             const account = useAccountStore().findAccount(row.accountId);
             if (!isCurrent() || !account) throw new Error("GTC 会话或原账号已变更");
             return api.readGtcTradeHistory(account, since);

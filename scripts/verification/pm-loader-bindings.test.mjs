@@ -157,11 +157,14 @@ it("covers the real PM graph, runtime preload dependencies and nine reviewed sou
   expect(report.unknownSummary.inherited).toBe(20);
   expect(report.loaderBindings.origins).toHaveLength(8);
   expect(report.loaderBindings.calls).toHaveLength(9);
-  // [changmen 扩展] 图会随真实导入增长；逐个文件的证据和 loader 来源仍完整检查。
+  // [changmen 扩展] 逐个文件证明当前图；退役转发文件减少数量，不以历史文件数量代替覆盖。
   const evidenceFiles = report.loaderBindings.inputEvidence.map(row => row.file);
   expect(report.loaderBindings.scannedSourceFiles).toBe(evidenceFiles.length);
   expect(new Set(evidenceFiles).size).toBe(evidenceFiles.length);
-  expect(evidenceFiles.length).toBeGreaterThanOrEqual(938);
+  for (const file of report.sourceFiles) expect(evidenceFiles).toContain(file);
+  for (const file of ["polymarket/index.ts", "polymarket/fok/bet.ts", "polymarket/gtc/index.ts", "polymarket/wallet/walletPrepUnified.ts"])
+    expect(evidenceFiles).toContain(`client/packages/venue-browser/${file}`);
+  expect(evidenceFiles.some(file => file.startsWith("client/packages/venue-browser/adapter/polymarket/"))).toBe(false);
   expect(evidenceFiles).toContain("client/web/src/runtime/rayOrderMonitor/submissionPreview.ts");
   expect(report.loaderBindings.inputEvidence.some(row => row.file === "packages/shared/catalog/game_catalog_rules.ts")).toBe(true);
   expect(report.loaderBindings.inputEvidence.some(row => row.file === "packages/shared/catalog/game_catalog_rules.js")).toBe(true);

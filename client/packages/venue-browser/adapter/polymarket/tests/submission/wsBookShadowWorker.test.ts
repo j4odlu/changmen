@@ -2,9 +2,9 @@ import { useFakeMailboxTasks } from '../helpers/mailboxTasks';
 useFakeMailboxTasks();
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { OwnedWorkerFixture as WsBookShadowWorkerClient } from "../helpers/ownedBookFixtures";
-import type { ServiceMessage } from "../../realtime/orderBook/serviceProtocol";
+import type { ServiceMessage } from "@changmen/pm-market-data-browser/serviceProtocol";
 import { beginWsBookShadow, type ShadowAttempt } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
-import type { ShadowWorkerRequest, ShadowWorkerResponse } from "../../submission/preflight/optimized/wsBook/shadowWorkerProtocol";
+import type { ShadowWorkerRequest, ShadowWorkerResponse } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/shadowWorkerProtocol";
 
 class FakeWorker {
   onmessage: Worker["onmessage"] = null;

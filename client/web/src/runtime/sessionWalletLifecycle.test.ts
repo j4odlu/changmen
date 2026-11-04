@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   startBalance: vi.fn(),
   startMain: vi.fn(),
 }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/polymarket", () => ({
   preparePolymarketAccountRuntimes: mocks.prepare,
   applyPmAutoTransportOnLogin: async () => ({ marketWsMode: "relay" }),
 }));

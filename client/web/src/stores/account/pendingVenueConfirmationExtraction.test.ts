@@ -6,7 +6,9 @@ import { originalPendingGateway, pendingGroups, pendingHarness, readPending } fr
 
 const parse = (source: string) => ts.createSourceFile("module.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const functions = (source: string) => new Map(parse(source).statements.filter(ts.isFunctionDeclaration).map(n => [n.name!.text, n.getText()]));
-const executable = (source: string) => ts.transpileModule(source.replace(/^export /m, ""), {
+const executable = (source: string) => ts.transpileModule(source.replace(/^export /m, "")
+  // Only the reviewed GTC import moved; the historical executable body remains otherwise exact.
+  .replaceAll('"@changmen/venue-browser/adapter/polymarket/gtc"', '"@changmen/venue-browser/polymarket/gtc/index"'), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, removeComments: true },
 }).outputText.trim();
 const original = functions(originalPendingGateway);

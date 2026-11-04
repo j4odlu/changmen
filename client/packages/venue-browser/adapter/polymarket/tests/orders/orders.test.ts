@@ -26,12 +26,63 @@ import {
 import { collectPolymarketUserAddresses } from "@changmen/venue-browser/polymarket/auth/l2Auth";
 import { polymarketOrderContextFromMarket, type PolymarketRawMarket } from "@changmen/venue-browser/polymarket/markets/parse";
 
+test.each(["v1", "v2"])("%s missing trade assets require an unambiguous, complete outcome mapping", version => {
+  for (const outcomes of ['["Same","Same"]', '["Same"]', '["","Same"]']) {
+    const market = { version, ...(version === "v2" ? { positionIds: ["101", "102"] } : { clobTokenIds: '["101","102"]' }),
+      outcomes, outcomePrices: '["1","0"]' };
+    const order = mapPolymarketTradeToVenueOrder({ taker_order_id: "unmapped", outcome: "Same", size: "10", price: "0.4", side: "BUY" }, market);
+    expect(order).toMatchObject({ status: "none", money: 0 });
+    expect(order?.pmTokenId).toBeUndefined();
+  }
+  const identity = { version, ...(version === "v2" ? { positionIds: ["101", "102"] } : { clobTokenIds: '["101","102"]' }) };
+  expect(mapPolymarketTradeToVenueOrder({ taker_order_id: "mapped", outcome: " Away ", size: "10", price: "0.4" },
+    { ...identity, outcomes: '["Home","Away"]', outcomePrices: '["0","1"]' }))
+    .toMatchObject({ pmTokenId: "102", status: "win", money: 6 });
+  expect(mapPolymarketTradeToVenueOrder({ taker_order_id: "explicit", asset_id: "102", outcome: "Same", size: "10", price: "0.4" },
+    { ...identity, outcomes: '["Same","Same"]', outcomePrices: '["0","1"]' }))
+    .toMatchObject({ pmTokenId: "102", status: "win", money: 6 });
+});
+
+test.each([true, false])("asset conflicts preserve the order before official=%s settlement", official => {
+  const market = { version: "v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]', outcomePrices: '["1","0"]',
+    tokens: [{ token_id: "201", winner: official }, { token_id: "101", winner: false }] };
+  const trade = { asset_id: "101", size: "10", price: "0.4", side: "BUY" };
+  const order = { orderId: "identity-conflict", status: "none", betMoney: 4, reward: 0, money: 0,
+    pmTokenId: "101", pmShares: 10, pmStakeUsdc: 4, pmSellState: "open" } as Parameters<typeof applyPolymarketSettlement>[0];
+  expect(applyPolymarketSettlement(order, trade, market)).toBe(order);
+  const mapped = mapPolymarketTradeToVenueOrder({ ...trade, id: "trade", taker_order_id: "order", status: "CONFIRMED", match_time: "1793797200" }, market);
+  expect(mapped?.status).toBe("none");
+  expect(mapped?.pmSellState).not.toBe("settled");
+});
+
 test("V2 settlement binds prices and official winners only to selected position IDs", () => {
   const market = { version: "v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]', outcomePrices: '["0.01","0.99"]' };
   expect(resolvePolymarketSettlement(market)).toEqual({ winningAssetId: "202", kind: "price" });
   expect(resolvePolymarketSettlement({ ...market, tokens: [{ token_id: "201", winner: true }] })).toEqual({ winningAssetId: "201", kind: "official" });
   expect(resolvePolymarketSettlement({ ...market, tokens: [{ token_id: "101", winner: true }] })).toEqual({ winningAssetId: "202", kind: "price" });
   expect(resolvePolymarketSettlement({ ...market, positionIds: undefined })).toBeNull();
+});
+
+test("settlement binds the held order, trade and market condition before computing money", () => {
+  const market = { version: "v2", conditionId: "condition", positionIds: ["101", "102"], tokens: [{ token_id: "101", winner: true }, { token_id: "102", winner: false }] };
+  const trade = { asset_id: "101", market: "condition", size: "10" };
+  const base = { status: "none", money: 0, reward: 0, betMoney: 4, pmTokenId: "101", pmConditionId: "condition" } as Parameters<typeof applyPolymarketSettlement>[0];
+  const wrongAsset = { ...base, pmTokenId: "102" };
+  expect(applyPolymarketSettlement(wrongAsset, trade, market)).toBe(wrongAsset);
+  expect(applyPolymarketSettlement(base, { ...trade, market: "other" }, market)).toBe(base);
+  expect(applyPolymarketSettlement(base, trade, { ...market, conditionId: "other" })).toBe(base);
+});
+
+test("stored-order settlement excludes stale CTF rows even if the market tokens array contains them", () => {
+  const market = { version: "v2", conditionId: "identity-condition", positionIds: ["201", "202"], clobTokenIds: '["101","102"]',
+    outcomePrices: '["1","0"]', tokens: [{ token_id: "201", winner: true }, { token_id: "101", winner: false }] };
+  const stored = { ...mapPolymarketTradeToVenueOrder({ asset_id: "101", market: "identity-condition", side: "BUY", size: "10", price: "0.4", taker_order_id: "stored-order", status: "CONFIRMED" })!,
+    pmOrigin: "changmen" as const, pmSellState: "open" as const };
+  const [result] = finalizePolymarketVenueOrders([], 0, [stored], new Map([["identity-condition", market]]));
+  expect(result).toMatchObject({ status: "none", pmSellState: "open", money: 0 });
+  expect(result?.pmMatchResult).toBeUndefined();
+  const [validLoser] = finalizePolymarketVenueOrders([], 0, [{ ...stored, pmTokenId: "202" }], new Map([["identity-condition", market]]));
+  expect(validLoser).toMatchObject({ status: "lose", pmSellState: "settled" });
 });
 
 describe("parsePolymarketMicroUsdc", () => {

@@ -1,4 +1,4 @@
-import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
+import { polymarketMarketAssetIds, polymarketGammaMarketAssetIds, polymarketMarketHasAssetMetadata, polymarketClobMarketAssetIds, polymarketMarketAssetFields, polymarketOfficialWinner, polymarketConditionsAgree } from "@changmen/shared/pm_market_assets";
 import { resolvePolymarketOfficialWinningAssetId } from "../orders/history/orders";
 import { parseJsonArray, type PolymarketRawMarket } from "./parse";
 
@@ -51,17 +51,11 @@ export function getPolymarketMarketBlockReason(
   market: PolymarketRawMarket | null | undefined,
   tokenId: string,
   source: "gamma" | "clob" = "gamma",
+  conditionId?: string,
+  protocol?: 2 | 3,
 ): string | null {
   if (!market)
     return null;
-
-  // [changmen 扩展] CLOB v1 /markets/:condition 的资产在 tokens，区别于 Gamma。
-  // 仅补齐该响应缺省的 CTF 字段；明确的资产字段、V2 和未知版本仍按原规则校验。
-  if (source === "clob" && market.version === "v1"
-    && market.clobTokenIds == null && market.clob_token_ids == null
-    && Array.isArray(market.tokens)) {
-    market = { ...market, clobTokenIds: market.tokens.map(token => token?.token_id) };
-  }
 
   // 官方 Market Details：提交前看 active / closed / acceptingOrders
   const accepting = market.acceptingOrders ?? market.accepting_orders;
@@ -74,14 +68,25 @@ export function getPolymarketMarketBlockReason(
     return POLYMARKET_TRADING_DISABLED_MESSAGE;
   const asset = String(tokenId || "").trim();
   if (!asset) return null;
-  const tokens = polymarketMarketAssetIds(market);
+  if (!polymarketConditionsAgree(conditionId, market.condition_id, market.conditionId))
+    return "Polymarket 市场交易资产或版本不一致";
   if (market.version != null && market.version !== "v1" && market.version !== "v2")
     return "Polymarket 市场版本不支持";
-  if ((market.version != null || market.positionIds != null || market.position_ids != null)
-    && !tokens.includes(asset))
+  if (protocol != null && market.version != null && (market.version === "v2" ? 3 : 2) !== protocol)
+    return "Polymarket 市场交易资产或版本不一致";
+  // [changmen 扩展] 明确来源后核对完整集合，冲突不能被字段归一化覆盖。
+  if (source === "clob" && (polymarketMarketHasAssetMetadata(market) || Array.isArray(market.tokens))) {
+    const ids = polymarketClobMarketAssetIds(market);
+    if (!ids.includes(asset)) return "Polymarket 市场交易资产或版本不一致";
+    market = { ...market, ...polymarketMarketAssetFields(market, ids) };
+  }
+  const tokens = source === "gamma" ? polymarketGammaMarketAssetIds(market) : polymarketMarketAssetIds(market);
+  if ((source === "gamma" || polymarketMarketHasAssetMetadata(market)) && !tokens.includes(asset))
     return "Polymarket 市场交易资产或版本不一致";
 
   // [changmen 扩展] 价格提前判定不改变现有下单闸；此处仍只认官方赢家。
+  if (polymarketOfficialWinner(market).ambiguous)
+    return "Polymarket 市场赛果不明确";
   const winning = resolvePolymarketOfficialWinningAssetId(market);
   if (winning && winning !== asset)
     return "Polymarket 市场已决出胜负";

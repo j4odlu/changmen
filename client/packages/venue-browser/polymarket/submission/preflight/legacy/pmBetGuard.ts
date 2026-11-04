@@ -17,7 +17,7 @@ import {
 } from "../../../markets/pmSportGuard";
 
 /** 下单前综合赛况闸：本地 pm_sport → Gamma 兜底 → outcomePrices */
-export async function resolvePolymarketBetBlockReason(option: BetOption): Promise<string | null> {
+export async function resolvePolymarketBetBlockReason(option: BetOption, _requireClobConfirmation = false, bookProtocol?: Promise<2 | 3 | undefined>): Promise<string | null> {
   const local = getPolymarketPmSportBlockReasonFromOption(option);
   if (local)
     return local;
@@ -51,10 +51,11 @@ export async function resolvePolymarketBetBlockReason(option: BetOption): Promis
     }
 
     // CLOB 行优先：Gamma 仍显示接单时 CLOB 可能已 trading is disabled
-    const clobReason = getPolymarketMarketBlockReason(clob, option.itemId, "clob");
+    const protocol = await bookProtocol;
+    const clobReason = getPolymarketMarketBlockReason(clob, option.itemId, "clob", conditionId, protocol);
     if (clobReason)
       return clobReason;
-    const marketReason = getPolymarketMarketBlockReason(market, option.itemId);
+    const marketReason = getPolymarketMarketBlockReason(market, option.itemId, "gamma", conditionId, protocol);
     if (marketReason)
       return marketReason;
   }

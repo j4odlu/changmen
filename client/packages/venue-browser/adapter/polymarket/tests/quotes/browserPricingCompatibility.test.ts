@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 import * as canonical from "@changmen/venue-browser/polymarket/priceQuote";
-import * as legacy from "../../priceQuote";
-import * as nested from "../../quotes/priceQuote";
-import * as policy from "../../pmArbPriceBufferMode";
+import * as legacy from "@changmen/venue-browser/polymarket/priceQuote";
+import * as nested from "@changmen/venue-browser/polymarket/priceQuote";
+import * as policy from "@changmen/venue-browser/polymarket/quotes/pmArbPriceBufferMode";
 
 it("new, nested and public pricing entries expose the same functions", () => {
   for (const entry of [legacy, nested, policy]) {

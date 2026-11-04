@@ -30,6 +30,7 @@ import { pmFokDepthReuseMultiplier, getPmFokDepthBufferPrefs, pmFokDepthBufferNe
 type TickSize = PolymarketTickSize;
 
 interface PolymarketOrderBookResponse {
+  market?: string;
   error?: string;
   asset_id?: string;
   timestamp?: string | number;
@@ -124,11 +125,11 @@ interface PolymarketOrderDiagnostic {
   asks: PolymarketOrderOptions["asks"];
 }
 
-async function fetchOrderOptions(gateway: string, tokenId: string): Promise<PolymarketOrderOptions> {
+async function fetchOrderOptions(gateway: string, tokenId: string, conditionId?: string): Promise<PolymarketOrderOptions> {
   const book = await pmGetBook<PolymarketOrderBookResponse>(tokenId, gateway);
   if (isPolymarketTradingDisabledError(book))
     throw new Error(POLYMARKET_TRADING_DISABLED_MESSAGE);
-  const market = polymarketMarketOrderOptions(book, tokenId);
+  const market = polymarketMarketOrderOptions(book, tokenId, conditionId);
   if (!Array.isArray(book.asks))
     throw new Error("PM 订单簿结构、资产或版本无效");
   const bookTimestamp = Number(book.timestamp) || 0;
@@ -231,6 +232,7 @@ async function resolvePolymarketExecutableBuy(
   detectionOdds: number,
   apiBetMoney: number,
   maxPrice: number,
+  conditionId?: string,
 ): Promise<{
   price: number;
   bookOdds: number;
@@ -241,7 +243,7 @@ async function resolvePolymarketExecutableBuy(
 }> {
   if (!maxPrice || maxPrice <= 0 || maxPrice >= 1)
     throw new Error(`无效检测价 ${maxPrice}（赔率 ${detectionOdds}）`);
-  const orderOptions = await fetchOrderOptions(gateway, tokenId);
+  const orderOptions = await fetchOrderOptions(gateway, tokenId, conditionId);
   const price = calculateBuyMarketLimitPrice(
     orderOptions.asks,
     apiBetMoney,
@@ -408,7 +410,8 @@ export async function checkFokBuy(account: PlatformAccount, option: BetOption, c
       const { market: buySettled, guard: guardSettled, runtime: runtimeSettled, clock: clockSettled } = await runPmBuyPreflight(account, option, {
         sportMode: preflightMode,
         gateway,
-        market: () => resolvePolymarketExecutableBuy(gateway, tokenId, detectionOdds, apiBetMoney, maxPrice),
+        market: () => resolvePolymarketExecutableBuy(gateway, tokenId, detectionOdds, apiBetMoney, maxPrice, option.betId),
+        marketProtocol: buy => buy.orderOptions.version,
         ...(preflightMode === "optimized" ? { shadowInput: { tokenId, detectionOdds, apiBetMoney, maxPrice, depth: getPmFokDepthBufferPrefs() } } : {}),
         role: context?.role,
         requireClobConfirmation: context?.requireClobConfirmation,

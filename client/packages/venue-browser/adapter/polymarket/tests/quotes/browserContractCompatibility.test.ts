@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest';
-import {isValidClobPrice as legacyValid} from '../../pmDetection';
-import {isValidClobPrice as hostValid} from '../../submission/preflight/pmDetection';
+import {isValidClobPrice as legacyValid} from '@changmen/venue-browser/polymarket/submission/preflight/pmDetection';
+import {isValidClobPrice as hostValid} from '@changmen/venue-browser/polymarket/submission/preflight/pmDetection';
 import {isValidClobPrice as canonicalValid} from "../../../../polymarket/pmPriceValidity";
-import {PolymarketPriceAboveDetectionError as LegacyError,isPolymarketPriceAboveDetectionError as legacyCheck} from '../../pmTokenQuote';
-import {PolymarketPriceAboveDetectionError as HostError,isPolymarketPriceAboveDetectionError as hostCheck} from '../../quotes/pmTokenQuote';
+import {PolymarketPriceAboveDetectionError as LegacyError,isPolymarketPriceAboveDetectionError as legacyCheck} from '@changmen/venue-browser/polymarket/quotes/pmTokenQuote';
+import {PolymarketPriceAboveDetectionError as HostError,isPolymarketPriceAboveDetectionError as hostCheck} from '@changmen/venue-browser/polymarket/quotes/pmTokenQuote';
 import {PolymarketPriceAboveDetectionError as CanonicalError,isPolymarketPriceAboveDetectionError as canonicalCheck} from "../../../../polymarket/pmPriceError";
 
 it('all price predicates retain one implementation and the original open interval',()=>{

@@ -25,7 +25,7 @@ import {
   sellPolymarketBuyPosition,
   pmSubmitScope,
   type OrderRowLike,
-} from "@changmen/venue-browser/adapter/polymarket";
+} from "@changmen/venue-browser/polymarket";
 import { pfSubmitSell } from "@changmen/venue-browser/adapter/predictfun";
 import { saveOrders } from "@/api/order";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";

@@ -18,6 +18,7 @@ import { validatePmPriceQuote } from "../priceQuote";
 import { buildPreparedGtcBuy } from "./index";
 
 interface Book {
+  market?: string;
   asset_id?: string;
   timestamp?: string | number;
   version?: string;
@@ -67,6 +68,7 @@ export async function checkGtcBuy(account: PlatformAccount, option: BetOption, _
     const checks = await runPmBuyPreflight(account, option, {
       gateway,
       market: () => pmGetBook<Book>(option.itemId, gateway),
+      marketProtocol: book => polymarketMarketOrderOptions(book, option.itemId, option.betId).version,
       requireClobConfirmation: requireImmediateDepth,
       runtimeBinding: () => snapshot.binding,
       missingCredentialsMessage: "PM 钱包或 API 凭据未就绪",
@@ -82,7 +84,7 @@ export async function checkGtcBuy(account: PlatformAccount, option: BetOption, _
     if (guardTask.value)
       throw new Error(guardTask.value);
     const book = bookTask.value;
-    const market = polymarketMarketOrderOptions(book, option.itemId);
+    const market = polymarketMarketOrderOptions(book, option.itemId, option.betId);
     const bookTimestamp = Number(book.timestamp) || 0;
     const tick = currentPmTick(option.itemId, bookTimestamp) ?? market.tickSize;
     if (tick !== market.tickSize || (quote?.mode === "tick" && quote.tick !== tick))

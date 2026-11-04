@@ -1,4 +1,4 @@
-vi.mock("@changmen/venue-browser/adapter/polymarket", async importOriginal => ({ ...await importOriginal<typeof import("@changmen/venue-browser/adapter/polymarket")>(), validatePolymarketPreparedBuy: () => null }));
+vi.mock("@changmen/venue-browser/polymarket", async importOriginal => ({ ...await importOriginal<typeof import("@changmen/venue-browser/polymarket")>(), validatePolymarketPreparedBuy: () => null }));
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { ArbBetAttemptParams, ArbBetReady } from "@/stores/betting/autoBet/phases/types";

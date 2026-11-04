@@ -6,6 +6,9 @@ import { resolvePolymarketBuilderCode } from "@changmen/venue-browser/polymarket
 import { PM_ORDER_SUBMIT_MODE_KEY, setPmOrderSubmitMode } from "@changmen/venue-browser/polymarket/pmOrderSubmitMode";
 import { preparePolymarketAccountRuntimes, clearPolymarketOrderClientCache } from "@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache";
 import { clearPmSubmitJournalForTests } from "@changmen/venue-browser/polymarket/submission/recovery/pmSubmitJournal";
+import { refreshPolymarketPositionAllowance } from "@changmen/venue-browser/polymarket/wallet/balance";
+import { notePmTickFrame, clearPmTickStateForTests } from "@changmen/venue-browser/polymarket/pmTickState";
+vi.mock("@changmen/venue-browser/polymarket/wallet/balance", () => ({ refreshPolymarketPositionAllowance: vi.fn() }));
 vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({
   pmGetBook: vi.fn(), pmPrepareSubmit: vi.fn(), pmSubmitClockReady: vi.fn(), pmSubmitOrder: vi.fn(),
 }));
@@ -24,6 +27,8 @@ const buy = {
   pmSide: "buy" as const, pmOrigin: "changmen" as const, pmSellState: "open" as const,
 };
 beforeEach(async () => {
+  clearPmTickStateForTests();
+  vi.mocked(refreshPolymarketPositionAllowance).mockReset().mockResolvedValue(undefined);
   localStorage.clear(); clearPmSubmitJournalForTests();
   await preparePolymarketAccountRuntimes([account()]);
   globalThis.localStorage.removeItem(PM_ORDER_SUBMIT_MODE_KEY);
@@ -34,6 +39,35 @@ beforeEach(async () => {
 });
 
 describe("manual sell submission preparation", () => {
+  it.each([undefined, "v2"])("a tick change during the allowance refresh invalidates the %s sell", async version => {
+    vi.mocked(pmGetBook).mockResolvedValueOnce({ asset_id: "123", version, timestamp: "1000", bids: [{ price: "0.51", size: "100" }], tick_size: "0.01", min_order_size: 1, neg_risk: false });
+    vi.mocked(refreshPolymarketPositionAllowance).mockImplementationOnce(async () => {
+      notePmTickFrame(JSON.stringify({ event_type: "tick_size_change", asset_id: "123", new_tick_size: "0.1", timestamp: "2000" }));
+    });
+    expect(await sellPolymarketBuyPosition({ account: account(), buyRow: buy })).toMatchObject({ ok: false, error: expect.stringContaining("tick") });
+    expect(pmSubmitOrder).not.toHaveBeenCalled();
+  });
+  it("a tick change while waiting for dispatch stops the sell before POST", async () => {
+    vi.stubGlobal("navigator", { locks: { request: async (_key: string, action: () => Promise<unknown>) => {
+      notePmTickFrame(JSON.stringify({ event_type: "tick_size_change", asset_id: "123", new_tick_size: "0.1", timestamp: String(Date.now()) }));
+      return action();
+    } } });
+    try {
+      expect(await sellPolymarketBuyPosition({ account: account(), buyRow: buy })).toMatchObject({ ok: false, error: expect.stringContaining("tick") });
+      expect(pmSubmitOrder).not.toHaveBeenCalled();
+    } finally { vi.unstubAllGlobals(); }
+  });
+  it("a control event older than the fetched book does not invalidate a sell", async () => {
+    vi.mocked(pmGetBook).mockResolvedValueOnce({ asset_id: "123", timestamp: "2000", bids: [{ price: "0.51", size: "100" }], tick_size: "0.01", min_order_size: 1, neg_risk: false });
+    notePmTickFrame(JSON.stringify({ event_type: "tick_size_change", asset_id: "123", new_tick_size: "0.1", timestamp: "1000" }));
+    expect(await sellPolymarketBuyPosition({ account: account(), buyRow: buy })).toMatchObject({ error: "FOK 未成交" });
+    expect(pmSubmitOrder).toHaveBeenCalledOnce();
+  });
+  it("does not sign or submit when the position allowance refresh fails", async () => {
+    vi.mocked(refreshPolymarketPositionAllowance).mockRejectedValueOnce(new Error("cache unavailable"));
+    expect(await sellPolymarketBuyPosition({ account: account(), buyRow: buy })).toMatchObject({ ok: false, error: "cache unavailable" });
+    expect(pmSubmitOrder).not.toHaveBeenCalled();
+  });
   it.each(["local", "vps"] as const)("%s sell prepares without requiring an estimate and preserves signed Builder attribution", async mode => {
     setPmOrderSubmitMode(mode);
     const a = account();

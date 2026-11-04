@@ -1,14 +1,14 @@
 // Frozen pre-change implementation for read-only A/B latency regression. Never imported by production.
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
-import { parseTokenConfig, resolveApiCreds, resolvePrivateKey } from "../../../l2Auth";
-import { getPolymarketOrderClientRuntime, polymarketSigningGeneration } from "../../../pmOrderClientCache";
-import { pmPrepareSubmit } from "../../../pmClientApi";
-import { resolvePolymarketBetBlockReason } from "../../../pmBetGuard";
-import { resolvePolymarketBetBlockReason as resolveLegacyBlockReason } from "../../../submission/preflight/legacy/pmBetGuard";
-import type { PmFokPreflightMode } from "../../../submission/preflight/pmFokPreflightMode";
-import { getPolymarketPmSportBlockReasonFromOption } from "../../../pmSportGuard";
-import { measurePmExecution } from "../../../pmExecutionMetrics";
+import { parseTokenConfig, resolveApiCreds, resolvePrivateKey } from "@changmen/venue-browser/polymarket/auth/l2Auth";
+import { getPolymarketOrderClientRuntime, polymarketSigningGeneration } from "@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache";
+import { pmPrepareSubmit } from "@changmen/venue-browser/polymarket/orders/pmClientApi";
+import { resolvePolymarketBetBlockReason } from "@changmen/venue-browser/polymarket/submission/preflight/pmBetGuard";
+import { resolvePolymarketBetBlockReason as resolveLegacyBlockReason } from "@changmen/venue-browser/polymarket/submission/preflight/legacy/pmBetGuard";
+import type { PmFokPreflightMode } from "@changmen/venue-browser/polymarket/submission/preflight/pmFokPreflightMode";
+import { getPolymarketPmSportBlockReasonFromOption } from "@changmen/venue-browser/polymarket/markets/pmSportGuard";
+import { measurePmExecution } from "@changmen/venue-browser/polymarket/pmExecutionMetrics";
 import { resolveOptimizedFokBlockReason } from "./pmBeforeFastGuard";
 
 export interface PmPreflightBinding {

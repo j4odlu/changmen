@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { WsBookShadowWorkerClient } from "../../submission/preflight/optimized/wsBook/shadowWorkerClient";
+import { WsBookShadowWorkerClient } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/shadowWorkerClient";
 import { beginWsBookShadow } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 import { simulateExecutableBuy } from "@changmen/venue-browser/pm-book-diagnostics/executionMath";
 import type { BookConsumerPort, BookLease } from "@changmen/venue-browser/polymarket/realtime/orderBook/service";
-import type { FullBookView } from "../../realtime/orderBook/bookStore";
-import { observerClock } from "../../submission/preflight/optimized/wsBook/shadowWorkerProtocol";
+import type { FullBookView } from "@changmen/pm-market-data-browser/bookStore";
+import { observerClock } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/shadowWorkerProtocol";
 import { runPmBuyPreflight } from "@changmen/venue-browser/polymarket/submission/preflight/pmBuyPreflight";
 
 let client: WsBookShadowWorkerClient, receive: (value: unknown) => void, lease: BookLease, view: FullBookView, allowed: boolean;

@@ -1,3 +1,4 @@
+import { gammaV1 } from "../fixtures/currentGamma";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   clearPmGammaCacheForTests, fetchGammaEventById, fetchGammaMarketByTokenId,
@@ -58,7 +59,7 @@ describe("Gamma short cache", () => {
     const first = read("123"); const second = read("123");
     expect(polymarketPluginGet).toHaveBeenCalledOnce();
     vi.setSystemTime(now + 500);
-    const row = { id: "123", closed: false, live: true };
+    const row = gammaV1(["123", "124"], { id: "123", closed: false, live: true });
     release(kind === "market" ? [row] : row);
     const [a, b] = await Promise.all([first, second]);
     expect(a).toEqual(b); expect(a).not.toBe(b);
@@ -66,64 +67,65 @@ describe("Gamma short cache", () => {
     expect(await read("123")).toMatchObject({ live: true });
     vi.setSystemTime(now + PM_GAMMA_CACHE_MS - 1);
     await read("123"); expect(polymarketPluginGet).toHaveBeenCalledOnce();
-    vi.mocked(polymarketPluginGet).mockResolvedValue(kind === "market" ? [{ closed: true }] : { ended: true });
+    vi.mocked(polymarketPluginGet).mockResolvedValue(kind === "market" ? [gammaV1(["123", "124"], { closed: true })] : { ended: true });
     vi.setSystemTime(now + PM_GAMMA_CACHE_MS);
-    expect(await read("123")).toEqual(kind === "market" ? { closed: true } : { ended: true });
+    expect(await read("123")).toEqual(kind === "market" ? gammaV1(["123", "124"], { closed: true }) : { ended: true });
     expect(polymarketPluginGet).toHaveBeenCalledTimes(2);
   });
 
   test("different event/token identities stay isolated and CLOB always refetches", async () => {
-    vi.mocked(polymarketPluginGet).mockImplementation(async url => url.includes("/markets?") ? [{ closed: false }] : { live: true });
-    await fetchGammaMarketByTokenId("a"); await fetchGammaMarketByTokenId("b");
-    await fetchGammaEventById("a"); await fetchGammaEventById("b");
-    await fetchClobMarketByConditionId("a"); await fetchClobMarketByConditionId("a");
+    vi.mocked(polymarketPluginGet).mockImplementation(async url => url.includes("/markets?") ? [gammaV1(["123", "124"], { closed: false })] : { live: true });
+    await fetchGammaMarketByTokenId("123"); await fetchGammaMarketByTokenId("124");
+    await fetchGammaEventById("123"); await fetchGammaEventById("124");
+    await fetchClobMarketByConditionId("123"); await fetchClobMarketByConditionId("123");
     expect(polymarketPluginGet).toHaveBeenCalledTimes(6);
   });
 
-  test.each([null, [], {}, "bad", { id: "a", title: "metadata only" }, { error: "unavailable" }])("invalid/empty event %j is not cached", async value => {
+  test.each([null, [], {}, "bad", { id: "123", title: "metadata only" }, { error: "unavailable" }])("invalid/empty event %j is not cached", async value => {
     vi.mocked(polymarketPluginGet).mockResolvedValue(value);
-    await fetchGammaEventById("a"); await fetchGammaEventById("a");
+    await fetchGammaEventById("123"); await fetchGammaEventById("123");
     expect(polymarketPluginGet).toHaveBeenCalledTimes(2);
   });
 
   test("errors do not reuse expired successes or prevent a retry", async () => {
     vi.mocked(polymarketPluginGet).mockResolvedValueOnce({ live: true });
-    await fetchGammaEventById("a"); vi.setSystemTime(now + PM_GAMMA_CACHE_MS);
+    await fetchGammaEventById("123"); vi.setSystemTime(now + PM_GAMMA_CACHE_MS);
     vi.mocked(polymarketPluginGet).mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce({ ended: true });
-    await expect(fetchGammaEventById("a")).rejects.toThrow("offline");
-    expect(await fetchGammaEventById("a")).toEqual({ ended: true });
+    await expect(fetchGammaEventById("123")).rejects.toThrow("offline");
+    expect(await fetchGammaEventById("123")).toEqual({ ended: true });
     expect(polymarketPluginGet).toHaveBeenCalledTimes(3);
   });
 
-  test.each([null, [], {}, "bad", [{ error: "unavailable" }], [{ id: "a", title: "metadata only" }]])("invalid/empty market %j is not cached", async value => {
+  test.each([null, [], {}, "bad", [{ error: "unavailable" }], [{ id: "123", title: "metadata only" }]])("invalid/empty market %j is not cached", async value => {
     vi.mocked(polymarketPluginGet).mockResolvedValue(value);
-    expect(await fetchGammaMarketByTokenId("a")).toBeNull();
-    vi.mocked(polymarketPluginGet).mockResolvedValue([{ closed: true }]);
-    expect(await fetchGammaMarketByTokenId("a")).toEqual({ closed: true });
-    expect(polymarketPluginGet).toHaveBeenCalledTimes(2);
+    expect(await fetchGammaMarketByTokenId("123")).toBeNull();
+    vi.mocked(polymarketPluginGet).mockResolvedValue([gammaV1(["123", "124"], { closed: true })]);
+    expect(await fetchGammaMarketByTokenId("123")).toEqual(gammaV1(["123", "124"], { closed: true }));
+    expect(polymarketPluginGet).toHaveBeenCalledTimes(3);
   });
 
   test.each(["market", "event"])("%s expires by monotonic time even if the wall clock still appears within TTL", async kind => {
     const read = kind === "market" ? fetchGammaMarketByTokenId : fetchGammaEventById;
     const tick = vi.spyOn(performance, "now").mockReturnValue(100);
-    vi.mocked(polymarketPluginGet).mockResolvedValue(kind === "market" ? [{ closed: false }] : { live: true });
-    await read("a");
+    vi.mocked(polymarketPluginGet).mockResolvedValue(kind === "market" ? [gammaV1(["123", "124"], { closed: false })] : { live: true });
+    await read("123");
     // 真实经过 2 秒，系统校时回拨后墙钟却只前进了半秒。
     tick.mockReturnValue(100 + PM_GAMMA_CACHE_MS);
     vi.setSystemTime(now + 500);
-    vi.mocked(polymarketPluginGet).mockResolvedValue(kind === "market" ? [{ closed: true }] : { ended: true });
-    expect(await read("a")).toEqual(kind === "market" ? { closed: true } : { ended: true });
+    vi.mocked(polymarketPluginGet).mockResolvedValue(kind === "market" ? [gammaV1(["123", "124"], { closed: true })] : { ended: true });
+    expect(await read("123")).toEqual(kind === "market" ? gammaV1(["123", "124"], { closed: true }) : { ended: true });
     expect(polymarketPluginGet).toHaveBeenCalledTimes(2);
   });
 
   test.each([
-    { tokens: [{ token_id: "winner", winner: true }] },
-    { clobTokenIds: '["a","b"]', outcomePrices: '["0","1"]' },
+    { tokens: [{ token_id: "123", winner: true }] },
+    { version: "v1", clobTokenIds: '["123","124"]', outcomePrices: '["0","1"]' },
     { events: [{ ended: true }] },
   ])("preserves actionable market evidence %j without status flags", async row => {
-    vi.mocked(polymarketPluginGet).mockResolvedValue([row]);
-    expect(await fetchGammaMarketByTokenId("a")).toEqual(row);
-    expect(await fetchGammaMarketByTokenId("a")).toEqual(row);
+    const current = gammaV1(["123", "124"], row);
+    vi.mocked(polymarketPluginGet).mockResolvedValue([current]);
+    expect(await fetchGammaMarketByTokenId("123")).toEqual(current);
+    expect(await fetchGammaMarketByTokenId("123")).toEqual(current);
     expect(polymarketPluginGet).toHaveBeenCalledOnce();
   });
 
@@ -131,19 +133,19 @@ describe("Gamma short cache", () => {
     vi.mocked(polymarketPluginGet).mockImplementationOnce(async () => {
       vi.setSystemTime(now + PM_GAMMA_CACHE_MS); return { live: true };
     }).mockResolvedValue({ live: true });
-    await fetchGammaEventById("a"); await fetchGammaEventById("a");
+    await fetchGammaEventById("123"); await fetchGammaEventById("123");
     expect(polymarketPluginGet).toHaveBeenCalledTimes(2);
-    vi.setSystemTime(now); await fetchGammaEventById("a");
+    vi.setSystemTime(now); await fetchGammaEventById("123");
     expect(polymarketPluginGet).toHaveBeenCalledTimes(3);
   });
 
   test("clearing an in-flight cache cannot restore its old result", async () => {
     let release!: (value: unknown) => void;
     vi.mocked(polymarketPluginGet).mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
-    const old = fetchGammaEventById("a"); clearPmGammaCacheForTests();
+    const old = fetchGammaEventById("123"); clearPmGammaCacheForTests();
     vi.mocked(polymarketPluginGet).mockResolvedValue({ ended: true });
-    await fetchGammaEventById("a"); release({ live: true }); await old;
-    expect(await fetchGammaEventById("a")).toEqual({ ended: true });
+    await fetchGammaEventById("123"); release({ live: true }); await old;
+    expect(await fetchGammaEventById("123")).toEqual({ ended: true });
     expect(polymarketPluginGet).toHaveBeenCalledTimes(2);
   });
 

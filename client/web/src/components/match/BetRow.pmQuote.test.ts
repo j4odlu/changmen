@@ -11,7 +11,7 @@ import { clearAllSignals, signalNow } from "@/extensions/pmSignals/state";
 import { isMapMuteActive, resetMapBetMuteForTests, setFullMatchMuteGlobal, setMap4MuteGlobal } from "@/extensions/mapBetMute";
 import {
   clearPmTickStateForTests, resetPmArbPriceBufferPrefsForTests, setPmArbPriceBufferPrefs,
-} from "@changmen/venue-browser/adapter/polymarket";
+} from "@changmen/venue-browser/polymarket";
 import BetRow from "./BetRow.vue";
 
 vi.mock("element-plus/es/components/base/style/css", () => ({}));

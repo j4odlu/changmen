@@ -56,11 +56,50 @@ GTC 费率和曲线参数在查询边界统一校验：合法数值零可以证�
 
 ## 市场交易资产
 
-[changmen 扩展] 按 [PM Market Details](https://docs.polymarket.com/market-data/market-details) 的 `version` 选择交易资产：`v1` 解析 `clobTokenIds`，`v2` 使用数组 `positionIds`，两组字段同时存在时也不混用。统一入口为 `@changmen/shared/pm_market_assets`，覆盖采集索引、行情、下单前市场核对、历史订单与赛果。ID 始终保留十进制字符串精度；V2 字段缺失、格式错误或不支持的版本不回退到 CTF。旧无版本且没有 V2 字段的 CTF 快照保留兼容。
+[changmen 扩展] 按 [PM Market Details](https://docs.polymarket.com/market-data/market-details) 的 `version` 选择交易资产：`v1` 解析 `clobTokenIds`，`v2` 使用数组 `positionIds`，两组字段同时存在时也不混用。统一入口为 `@changmen/shared/pm_market_assets`，覆盖采集索引、行情、下单前市场核对、历史订单与赛果。ID 始终保留十进制字符串精度；V2 字段缺失、格式错误或不支持的版本不回退到 CTF。
+
+当前 Gamma 网络响应只走 `polymarketGammaMarketAssetIds`：必须显式声明 `v1` / `v2`，使用官方 camelCase 字段，V1 为 JSON 文本、V2 为数组，ID 为十进制字符串。浏览器预检、赛果网络补查、电竞 discovery、足球直采、体育列表和赛前历史价均在网络读取边界应用此规则。缺版本、仅旧别名或格式不符的响应不能触发历史格式兜底。历史订单的纯读取/计算可解析记录中明确保存的旧字段；这不提供交易协议默认值，实际签单仍按当前订单簿规则选择协议。
 
 索引的 `homeTokenId` / `awayTokenId` 保留兼容字段名，保存所选协议的交易资产 ID；新增 `marketVersion` 供持久化后的赛果补查恢复身份。Gamma 资产补查覆盖 `position_ids`，并包含已关闭市场；CLOB 结果不得把 V2 的 ID 换回旧 CTF ID。本次修复不扩展链上 split / merge / redeem 能力。
 
+### FOK / GTC / 卖出共用的协议边界（2026-11-04）
+
+市场协议、订单结构和签名域的版本不是同一个概念。订单结构继续使用 SDK 的 V2 编码；签名域按官方订单簿选择：
+
+| 边界 | CTF 市场 `v1` | Protocol V2 市场 `v2` |
+|------|---------------|-----------------------|
+| Gamma 资产 | JSON 文本 `clobTokenIds` | 数组 `positionIds` |
+| CLOB 市场资产 | `tokens[].token_id` | `tokens[].token_id` |
+| 订单簿版本 | 省略 `version` | `version: "v2"` |
+| EIP-712 域 | `2`，按 `neg_risk` 选择 CTF Exchange | `3`，ExchangeV3 |
+| 持仓授权缓存 | `CONDITIONAL` | `CONDITIONAL-V2` |
+| 买入资金缓存 | `COLLATERAL`（pUSD） | `COLLATERAL`（pUSD） |
+
+`@changmen/shared/pm_market_assets` 统一负责资产字段解析、CLOB token 集合核对、condition 一致性、官方唯一赢家及结果合并。前端订单、后端结算计算、采集赛果使用同一身份规则；CLOB 来源的显式资产字段与 token 行冲突时拒绝，不通过重写元数据消除冲突。合并前核对完整资产集合和明确的协议版本，保留 Gamma 的资产、标签和价格顺序。没有 ID 映射的价格不借用另一接口的排列顺序。
+
+订单、成交与市场的 condition/资产必须对应，才能更新盈亏。多赢家响应保持未知，不能取第一项或降级到价格判定。无冲突时，原有价格提前判定、部分卖出和已卖光保护继续生效。
+
+实时 Gamma 补查与预检不接受缺版本数据。成交缺少资产 ID 时，前后端通过同一共享函数按标签恢复：标签与资产须等长、非空且唯一；残缺或重复标签保持未知，不压缩空项后按位置猜资产。成交明确给出资产 ID 时仍以该 ID 为准。
+
+Gamma 网络解码与结算快照入索引分开：通过资产集合及 condition 校验的 CLOB 官方赛果可独立进入结算，不要求补造 Gamma 的 `version` 字段。Gamma 不可用时，CTF 无版本 CLOB 响应及 V2 CLOB 响应仍按各自官方身份处理；前后端均将请求的 condition 传入合并校验，返回其他市场时不得入索引。
+
+卖出在取簿后、授权缓存刷新后、签单后及实际发送前核对 `tick_size_change` 控制事件；比订单簿新的 tick 变化使本轮失效，不使用旧精度继续发送，也不自动重签重发。旧于订单簿的控制帧不覆盖新簿值。
+
+FOK、GTC 和手动卖出共用 `polymarketMarketOrderOptions` 核对簿资产、condition、最小份额、tick、负风险标志及签名域。经典 FOK / GTC 同一轮已查到的 Gamma/CLOB 明确版本还要与 book 域交叉核对；动态 FOK 保留单次 book 热路径，不追加 Gamma 请求。卖出按所持资产的 book 选择协议，不拿当前市场版本替换旧 CTF 持仓身份。钱包准备按顺序执行 SDK 授权、补齐 CTF Neg Risk Adapter 的 pUSD/CTF 授权、确认链上状态、刷新 CLOB 资金授权缓存；任一步失败不返回就绪。卖出前按订单簿选出的协议刷新对应仓位缓存，失败不发送卖单。CTF Neg Risk Adapter 的旧 redeem 入口退役不代表其交易授权退役。
+
+缓存刷新通过官方 `@polymarket/client/actions` 的 `updateBalanceAllowance` 执行，不能假设默认 SDK 客户端存在同名实例方法。资金缓存读回须确认两种 CTF Exchange 和 ExchangeV3 的有效授权；卖出须读回所选账本与所选 Exchange 的仓位授权。HTTP 成功但授权缺失、为零或只属于另一账本时不返回就绪、不发送卖单。
+
+常规回归包含真实公开 V1/V2 响应的字段投影（`tests/fixtures/protocolMarkets.json`）、四种钱包签名类型 × 买卖 × 两种域 × 负风险组合的真实 SDK 离线签名/哈希校验，以及 FOK 两种模式、GTC、卖出的预检→签单→模拟 ACK 流程。执行深度与回执属于受控场景，真实空 V2 订单簿另测为 FOK 拒绝；这些测试不代表真实账户成交或链上授权验收。
+
+依据：[Market Details](https://docs.polymarket.com/market-data/market-details#market-outcomes)、[Place Orders](https://docs.polymarket.com/trading/place-orders)、[Contracts](https://docs.polymarket.com/resources/contracts#ctf)、[API Migration](https://docs.polymarket.com/migrate/polymarket-v2/api-integrations.md)。
+
 Gamma 已明确返回资产或版本冲突时，查询以专用错误交给新旧下单预检并阻断发送；不能将其吞成普通“未查到”。补查的网络错误也不能清除已取得的冲突证据。
+
+### 当前运行入口
+
+PM 浏览器运行入口统一为 `@changmen/venue-browser/polymarket` 及其当前功能模块。原 `@changmen/venue-browser/adapter/polymarket` 命名空间的 332 个包导出与 211 个运行转发文件已退役；客户端、registry、监听器和 Worker 消费者直接引用当前实现。`scripts/deploy/component-inputs.json` 跟随当前入口，发布范围未缩小。当前源码边界拒绝恢复旧运行文件或旧包导出；原测试位置、冻结清单、迁移审计记录和历史哈希不因此改写。
+
+CTF / Protocol V2 是两种正式协议支持；Gamma / CLOB 各自的官方字段格式在对应接口解析，不能作为“历史兼容”删除。经典 / 动态 FOK 是当前可选的预检算法，其名称 `legacy` 不表示采用过期交易协议。
 
 采集器迁移测试的旧源码哈希仅在 `CHANGMEN_HISTORICAL_AUDIT=1` 时显式核对，原基线不修改；日常仍执行业务回归、严格类型、兼容导出和启动测试，遵循仓库的历史审计与业务验证分离规则。
 

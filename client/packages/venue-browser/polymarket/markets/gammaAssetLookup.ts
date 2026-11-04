@@ -1,4 +1,4 @@
-import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
+import { polymarketGammaMarketAssetIds, polymarketMarketHasAssetMetadata } from "@changmen/shared/pm_market_assets";
 import { POLYMARKET_GAMMA_API } from "../api";
 import type { PolymarketRawMarket } from "./parse";
 
@@ -21,9 +21,10 @@ export async function lookupGammaMarketAsset(id: string, get: (url: string) => P
     for (const candidate of Array.isArray(data) ? data : []) {
       if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
       const market = candidate as PolymarketRawMarket;
-      const modern = market.version != null || market.positionIds != null || market.position_ids != null;
-      if (!modern || polymarketMarketAssetIds(market).includes(id)) return market;
-      incompatible = true;
+      if (polymarketGammaMarketAssetIds(market).includes(id)) return market;
+      if (polymarketMarketHasAssetMetadata(market) || market.conditionId || market.condition_id
+        || [market.active, market.closed, market.archived, market.acceptingOrders].some(value => typeof value === "boolean")
+        || Array.isArray(market.events)) incompatible = true;
     }
   }
   if (incompatible) throw new PmGammaAssetIdentityError();

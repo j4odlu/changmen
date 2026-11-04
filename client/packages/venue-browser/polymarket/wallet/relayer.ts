@@ -113,6 +113,8 @@ export function buildStandardApprovalTransactions(): Transaction[] {
     txs.push(createApproveTransaction(POLYGON.PUSD, spender));
     txs.push(createSetApprovalForAllTransaction(spender));
   }
+  txs.push(createApproveTransaction(POLYGON.PUSD, POLYGON.NEG_RISK_ADAPTER_V1));
+  txs.push(createSetApprovalForAllTransaction(POLYGON.NEG_RISK_ADAPTER_V1));
   return txs;
 }
 

@@ -18,7 +18,7 @@ import {
 import {
   lookupResolutionSourceBySourceMatchId,
   pmMapOutcomeTick,
-} from "@changmen/venue-browser/adapter/polymarket";
+} from "@changmen/venue-browser/polymarket";
 import { computed } from "vue";
 
 /** 原电竞使用 Polymarket 侧栏 SVG；篮球使用自有球形徽标，未知/联赛仍走文字标签。 */

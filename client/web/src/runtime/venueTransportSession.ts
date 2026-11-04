@@ -8,7 +8,7 @@ export async function applyVenueTransportRoutingOnLogin(options: VenueTransportR
     const {
       applyPmAutoTransportOnLogin,
       ensurePolymarketMarketQuoteHub,
-    } = await import("@changmen/venue-browser/adapter/polymarket");
+    } = await import("@changmen/venue-browser/polymarket");
     const result = await applyPmAutoTransportOnLogin();
     if (ensurePmMarketHub && result.marketWsMode === "official")
       ensurePolymarketMarketQuoteHub();
@@ -33,7 +33,7 @@ export async function resetVenueTransportRoutingOnLogout(): Promise<void> {
     const {
       resetPmTransportRoutingOnLogout,
       stopPolymarketMarketQuoteHub,
-    } = await import("@changmen/venue-browser/adapter/polymarket");
+    } = await import("@changmen/venue-browser/polymarket");
     stopPolymarketMarketQuoteHub();
     resetPmTransportRoutingOnLogout();
   }

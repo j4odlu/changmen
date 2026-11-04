@@ -1,4 +1,4 @@
-import { polymarketMarketAssetIds, polymarketMarketAssetFields } from "@changmen/shared/pm_market_assets";
+import { polymarketMarketAssetIds, polymarketGammaMarketAssetIds, polymarketMarketHasAsset, polymarketMarketAssetForOutcome, polymarketOfficialWinner, mergePolymarketClobMarket, polymarketConditionsAgree } from "@changmen/shared/pm_market_assets";
 import { polymarketDecimalAmount } from "@changmen/shared/pm_amounts";
 /**
  * Polymarket 订单结算（服务端 / 运维脚本；对齐 venue-adapter/polymarket/orders.ts）
@@ -50,14 +50,7 @@ export function polymarketBuyStakeUsdc(sizeRaw, price) {
 
 /** 官方：CLOB tokens[].winner === true 的 token_id */
 export function resolvePolymarketOfficialWinningAssetId(market) {
-  const tokens = market?.tokens;
-  if (!Array.isArray(tokens) || !tokens.length)
-    return null;
-  const ids = market?.version == null && market?.positionIds == null && market?.position_ids == null
-    ? null : polymarketMarketAssetIds(market);
-  const winning = tokens.find(t => t?.winner === true && (!ids || ids.includes(String(t.token_id ?? ""))));
-  const id = String(winning?.token_id ?? "").trim();
-  return id || null;
+  return polymarketOfficialWinner(market).assetId;
 }
 
 export function findPolymarketWinnerIndex(prices) {
@@ -73,7 +66,8 @@ export function findPolymarketWinnerIndex(prices) {
 export function resolvePolymarketSettlement(market) {
   if (!market)
     return null;
-  const official = resolvePolymarketOfficialWinningAssetId(market);
+  const { assetId: official, ambiguous } = polymarketOfficialWinner(market);
+  if (ambiguous) return null;
   if (official)
     return { winningAssetId: official, kind: "official" };
   const prices = parseJsonArray(market.outcomePrices ?? market.outcome_prices).map(Number);
@@ -97,14 +91,7 @@ function tradeHeldAssetId(trade, market) {
   const assetId = String(trade?.asset_id ?? trade?.assetId ?? "").trim();
   if (assetId)
     return assetId;
-  const outcome = String(trade?.outcome ?? "").trim();
-  if (!market || !outcome)
-    return "";
-  const outcomes = parseJsonArray(market.outcomes);
-  const idx = outcomes.findIndex(name => name.trim() === outcome);
-  if (idx < 0)
-    return "";
-  return gammaTokenIds(market)[idx] ?? "";
+  return polymarketMarketAssetForOutcome(market, trade?.outcome);
 }
 
 /**
@@ -116,7 +103,9 @@ export function computePolymarketSettlement(trade, market, stakeRaw) {
     return { status: "none", money: 0, reward: 0 };
 
   const heldAssetId = tradeHeldAssetId(trade, market);
-  if (!heldAssetId)
+  if (!polymarketConditionsAgree(trade?.market, market?.conditionId, market?.condition_id)) return null;
+  if (!polymarketMarketHasAsset(market, heldAssetId)
+    || !polymarketMarketHasAsset(market, resolved.winningAssetId))
     return null;
 
   const shares = polymarketShareCount(trade?.size ?? trade?.matched_amount);
@@ -138,7 +127,9 @@ export function computePolymarketSettlementFromOrderRaw(raw, market, stakeUsdc) 
     return { status: "none", money: 0, reward: 0 };
 
   const heldAssetId = String(raw?.pmTokenId ?? "").trim();
-  if (!heldAssetId)
+  if (!polymarketConditionsAgree(raw?.pmConditionId, market?.conditionId, market?.condition_id)) return null;
+  if (!polymarketMarketHasAsset(market, heldAssetId)
+    || !polymarketMarketHasAsset(market, resolved.winningAssetId))
     return null;
 
   const shares = Number(raw?.pmShares) || 0;
@@ -194,6 +185,13 @@ async function fetchGammaMarketsChunk(params) {
 }
 
 function rememberGammaMarket(out, market) {
+  if (!polymarketGammaMarketAssetIds(market).length) return;
+  rememberSettlementMarket(out, market);
+}
+
+/** 已通过 Gamma 解码或 CLOB 合并校验的结算快照；不再次当作 Gamma 线协议解码。 */
+function rememberSettlementMarket(out, market) {
+  if (!polymarketMarketAssetIds(market).length) return;
   const key = marketConditionId(market);
   if (key)
     out.set(key, market);
@@ -283,42 +281,8 @@ export function mapDbStatus(raw) {
 }
 
 /** CLOB /markets/{condition_id} → 结算形状（保留官方 tokens[].winner） */
-export function clobMarketToGammaShape(clob, base) {
-  let tokens = Array.isArray(clob?.tokens) ? clob.tokens : [];
-  if (base?.version === "v2") {
-    const ids = gammaTokenIds(base);
-    tokens = tokens.filter(token => ids.includes(String(token.token_id ?? "")));
-  }
-  if (!tokens.length)
-    return base || null;
-  const hasWinner = tokens.some(t => t?.winner === true);
-  const existingPrices = base?.outcomePrices ?? base?.outcome_prices;
-  const outcomePrices = hasWinner
-    ? JSON.stringify(tokens.map(t => (t?.winner === true ? "1" : "0")))
-    : (existingPrices
-      ?? JSON.stringify(tokens.map(t => String(t?.price ?? 0))));
-  // [changmen 扩展] Gamma 价格必须保留其 token 顺序，缺映射时不借 CLOB 顺序猜赢家。
-  const priceTokenIds = !hasWinner && existingPrices != null
-    ? gammaTokenIds(base)
-    : tokens.map(t => String(t?.token_id ?? ""));
-  return {
-    ...(base || {}),
-    version: base?.version ?? clob?.version,
-    condition_id: clob?.condition_id || base?.condition_id,
-    question: base?.question ?? clob?.question,
-    title: base?.title ?? base?.question ?? clob?.question,
-    slug: base?.slug ?? clob?.market_slug,
-    closed: Boolean(base?.closed) || clob?.closed === true || hasWinner,
-    tokens,
-    outcomes: JSON.stringify(!hasWinner && existingPrices != null
-      ? parseJsonArray(base?.outcomes)
-      : tokens.map(t => String(t?.outcome ?? ""))),
-    outcomePrices,
-    ...polymarketMarketAssetFields(base ?? clob, priceTokenIds),
-    umaResolutionStatus: hasWinner
-      ? (base?.umaResolutionStatus || base?.uma_resolution_status || "settled_normal")
-      : (base?.umaResolutionStatus ?? base?.uma_resolution_status),
-  };
+export function clobMarketToGammaShape(clob, base, expectedConditionId) {
+  return mergePolymarketClobMarket(clob, base, expectedConditionId);
 }
 
 export function orderLabelsFromMarket(market) {
@@ -343,9 +307,9 @@ export async function enrichMarketsFromClob(marketMap, conditionIds, gateway) {
     if (!id)
       continue;
     const clob = await fetchClobMarketByConditionId(id, gateway);
-    const shaped = clobMarketToGammaShape(clob, marketMap.get(id));
+    const shaped = clobMarketToGammaShape(clob, marketMap.get(id), id);
     if (shaped)
-      rememberGammaMarket(marketMap, shaped);
+      rememberSettlementMarket(marketMap, shaped);
   }
   return marketMap;
 }

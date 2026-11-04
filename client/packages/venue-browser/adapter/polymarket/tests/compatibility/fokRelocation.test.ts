@@ -1,13 +1,13 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import * as legacyBet from "../../bet";
-import * as movedBet from "../../fok/bet";
-import * as movedSettlement from "../../fok/orderSettlement";
-import * as movedDepth from "../../fok/pmFokDepthBufferMode";
-import * as movedJobs from "../../fok/settlementJob";
-import * as legacySettlement from "../../orderSettlement";
-import * as legacyDepth from "../../pmFokDepthBufferMode";
-import * as legacyJobs from "../../settlementJob";
+import * as legacyBet from "@changmen/venue-browser/polymarket/fok/bet";
+import * as movedBet from "@changmen/venue-browser/polymarket/fok/bet";
+import * as movedSettlement from "@changmen/venue-browser/polymarket/fok/orderSettlement";
+import * as movedDepth from "@changmen/venue-browser/polymarket/pmFokDepthBufferMode";
+import * as movedJobs from "@changmen/venue-browser/polymarket/fok/settlementJob";
+import * as legacySettlement from "@changmen/venue-browser/polymarket/fok/orderSettlement";
+import * as legacyDepth from "@changmen/venue-browser/polymarket/pmFokDepthBufferMode";
+import * as legacyJobs from "@changmen/venue-browser/polymarket/fok/settlementJob";
 
 afterEach(() => {
   vi.restoreAllMocks();

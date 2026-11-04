@@ -1,12 +1,12 @@
 import {expect,it} from 'vitest';
-import * as originalTicks from '../../pmTickPrice';
-import * as quoteTicks from '../../quotes/pmTickPrice';
+import * as originalTicks from '@changmen/venue-browser/polymarket/pmTickPrice';
+import * as quoteTicks from '@changmen/venue-browser/polymarket/pmTickPrice';
 import * as canonicalTicks from "../../../../polymarket/pmTickPrice";
-import {pmBuyOrderShares as originalShares} from '../../pmBuyOrderShares';
-import {pmBuyOrderShares as preflightShares} from '../../submission/preflight/pmBuyOrderShares';
+import {pmBuyOrderShares as originalShares} from '@changmen/venue-browser/polymarket/pmBuyOrderShares';
+import {pmBuyOrderShares as preflightShares} from '@changmen/venue-browser/polymarket/pmBuyOrderShares';
 import {pmBuyOrderShares as canonicalShares} from "../../../../polymarket/pmBuyOrderShares";
-import {polymarketMarketOrderOptions as originalOptions} from '../../pmMarketOrderOptions';
-import {polymarketMarketOrderOptions as preflightOptions} from '../../submission/preflight/pmMarketOrderOptions';
+import {polymarketMarketOrderOptions as originalOptions} from '@changmen/venue-browser/polymarket/pmMarketOrderOptions';
+import {polymarketMarketOrderOptions as preflightOptions} from '@changmen/venue-browser/polymarket/pmMarketOrderOptions';
 import {polymarketMarketOrderOptions as canonicalOptions} from "../../../../polymarket/pmMarketOrderOptions";
 
 it('all tick entry points expose exactly the same functions',()=>{

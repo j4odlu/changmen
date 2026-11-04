@@ -59,7 +59,6 @@
       ],
       "browserRoots": [
         "client/packages/venue-browser/adapter/browser",
-        "client/packages/venue-browser/adapter/polymarket",
         "client/web/src/runtime/pmMarketData.ts",
         "client/web/src/runtime/pmBookSettings.ts",
         "client/web/src/runtime/pmDynamicWsPreflight.ts",
@@ -83,9 +82,9 @@
     {
       "id": "pm-adapter",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/index.ts",
+      "file": "client/packages/venue-browser/polymarket/index.ts",
       "specifiers": [
-        "@changmen/venue-browser/adapter/polymarket"
+        "@changmen/venue-browser/polymarket"
       ]
     },
     {
@@ -99,70 +98,73 @@
     {
       "id": "pm-original-market-ws",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/realtime/ws.ts"
+      "file": "client/packages/venue-browser/polymarket/ws.ts"
     },
     {
       "id": "pm-original-quote-hub",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/quotes/marketQuoteHub.ts"
+      "file": "client/packages/venue-browser/polymarket/marketQuoteHub.ts"
     },
     {
       "id": "pm-classic-fok",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/fok/bet.ts"
+      "file": "client/packages/venue-browser/polymarket/fok/bet.ts"
     },
     {
       "id": "pm-classic-preflight",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/fok/preflight.ts"
+      "file": "client/packages/venue-browser/polymarket/fok/preflight.ts"
     },
     {
       "id": "pm-preflight-mode",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/pmFokPreflightMode.ts",
+      "file": "client/packages/venue-browser/polymarket/submission/preflight/pmFokPreflightMode.ts",
       "specifiers": [
-        "@changmen/venue-browser/adapter/polymarket/pmFokPreflightMode"
+        "@changmen/venue-browser/polymarket/submission/preflight/pmFokPreflightMode"
       ]
     },
     {
       "id": "pm-market-source",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/realtime/marketStream.ts"
+      "file": "client/packages/venue-browser/polymarket/marketStream.ts"
     },
     {
       "id": "pm-market-source-protocol",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/realtime/marketStreamProtocol.ts"
+      "file": "client/packages/pm-market-data-browser/src/marketStreamProtocol.ts"
     },
     {
       "id": "pm-worker-mailbox",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/realtime/orderedWorkerMailbox.ts"
+      "file": "client/packages/pm-market-data-browser/src/orderedWorkerMailbox.ts"
     },
     {
       "id": "pm-book",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/orderBook.ts",
+      "file": "client/packages/venue-browser/polymarket/orderBook.ts",
       "specifiers": [
-        "@changmen/venue-browser/adapter/polymarket/orderBook"
+        "@changmen/venue-browser/polymarket/orderBook"
       ]
     },
     {
-      "id": "pm-book-core",
+      "id": "pm-browser-package",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/realtime/orderBook/index.ts"
+      "file": "client/packages/pm-market-data-browser/src/index.ts",
+      "specifiers": [
+        "@changmen/pm-market-data-browser"
+      ]
     },
     {
       "id": "pm-book-worker",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/marketData.worker.ts"
+      "file": "client/packages/venue-browser/pm-book-diagnostics/marketData.worker.ts"
     },
     {
       "id": "pm-book-shadow",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/wsBookShadow.ts",
+      "file": "client/packages/venue-browser/pm-book-diagnostics/bookRuntime.ts",
       "specifiers": [
-        "@changmen/venue-browser/adapter/polymarket/wsBookShadow"
+        "@changmen/venue-browser/pm-book-diagnostics/bookRuntime"
       ]
     },
     {
@@ -218,14 +220,6 @@
       "file": "server/backend/core/shared/adapter_paths.js"
     },
     {
-      "id": "pm-browser-package",
-      "environment": "browser",
-      "file": "client/packages/pm-market-data-browser/src/index.ts",
-      "specifiers": [
-        "@changmen/pm-market-data-browser"
-      ]
-    },
-    {
       "id": "pm-browser-worker-runtime",
       "environment": "browser",
       "file": "client/packages/pm-market-data-browser/src/workerRuntime.ts",
@@ -249,9 +243,9 @@
     {
       "id": "pm-readonly-book-source",
       "environment": "browser",
-      "file": "client/packages/venue-browser/adapter/polymarket/orderBookSource.ts",
+      "file": "client/packages/venue-browser/pm-book-source-host.ts",
       "specifiers": [
-        "@changmen/venue-browser/adapter/polymarket/orderBookSource"
+        "@changmen/venue-browser/pm-book-source-host"
       ]
     },
     {

@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 // Test oracle only. Production uses public type exports, not this unstable internal package.
 import { MarketBookEventSchema, MarketPriceChangeEventSchema } from "@polymarket/bindings/subscriptions";
-import { reduceBookFrame } from "../../realtime/orderBook/bookReducer";
+import { reduceBookFrame } from "@changmen/pm-market-data-browser/bookReducer";
 const market = "0x" + "a".repeat(64), timestamp = String(Date.now());
 const book = {event_type:"book",asset_id:"1",market,timestamp,bids:[],asks:[{price:"0.5",size:"10"}],hash:"h"};
 const apply = (event: unknown, current = new Map()) => reduceBookFrame(current,event,new Set(["1"]),1,100,Date.now()).books;

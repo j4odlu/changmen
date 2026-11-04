@@ -12,14 +12,14 @@ import { useOrderStore } from "@/stores/orderStore";
 import { useUserStore } from "@/stores/userStore";
 import { lockPmVault, resetPmVaultAccountUi } from "@/security/pmVault";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
-import { preparePolymarketAccountRuntimes } from "@changmen/venue-browser/adapter/polymarket";
+import { preparePolymarketAccountRuntimes } from "@changmen/venue-browser/polymarket";
 
 async function applyPmTransportRoutingOnLogin(): Promise<void> {
   try {
     const {
       applyPmAutoTransportOnLogin,
       ensurePolymarketMarketQuoteHub,
-    } = await import("@changmen/venue-browser/adapter/polymarket");
+    } = await import("@changmen/venue-browser/polymarket");
     const result = await applyPmAutoTransportOnLogin();
     if (result.marketWsMode === "official")
       ensurePolymarketMarketQuoteHub();
@@ -46,7 +46,7 @@ async function resetPmTransportRoutingOnLogout(): Promise<void> {
     const {
       resetPmTransportRoutingOnLogout,
       stopPolymarketMarketQuoteHub,
-    } = await import("@changmen/venue-browser/adapter/polymarket");
+    } = await import("@changmen/venue-browser/polymarket");
     stopPolymarketMarketQuoteHub();
     resetPmTransportRoutingOnLogout();
   }

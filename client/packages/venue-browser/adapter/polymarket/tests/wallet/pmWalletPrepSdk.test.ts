@@ -4,6 +4,14 @@ const createSecureClient = vi.hoisted(() => vi.fn());
 const remoteBuilderSigning = vi.hoisted(() => vi.fn((cfg: unknown) => cfg));
 const privateKey = vi.hoisted(() => vi.fn(() => ({ kind: "signer" })));
 const setupTradingApprovals = vi.hoisted(() => vi.fn(async () => undefined));
+const updateBalanceAllowance = vi.hoisted(() => vi.fn(async (_client: unknown, _request: unknown): Promise<{ allowances: Record<string, bigint> }> => ({ allowances: {
+  "0xe111180000d2663c0091e4f400237545b87b996b": 1n,
+  "0xe2222d279d744050d28e00520010520000310f59": 1n,
+  "0xe3333700ca9d93003f00f0f71f8515005f6c00aa": 1n,
+} })));
+vi.mock("@polymarket/client/actions", () => ({ updateBalanceAllowance }));
+const ensureCtfNegRiskApprovals = vi.hoisted(() => vi.fn(async (_client: unknown) => undefined));
+vi.mock("../../../../polymarket/wallet/ctfNegRiskApprovals", () => ({ ensureCtfNegRiskApprovals }));
 
 vi.mock("@polymarket/client", () => ({
   createSecureClient,
@@ -13,6 +21,7 @@ vi.mock("@polymarket/client", () => ({
     chainId: 137,
     ...fork,
   }),
+  AssetType: { COLLATERAL: "COLLATERAL" },
 }));
 
 vi.mock("@polymarket/client/viem", () => ({
@@ -33,6 +42,8 @@ afterEach(() => {
   remoteBuilderSigning.mockClear();
   privateKey.mockClear();
   setupTradingApprovals.mockReset();
+  updateBalanceAllowance.mockReset();
+  ensureCtfNegRiskApprovals.mockReset();
 });
 
 describe("resolvePmWalletPrepSdk", () => {
@@ -61,10 +72,35 @@ describe("resolvePmWalletPrepSdk", () => {
     expect(result).toMatchObject({ ok: true, funder: "deposit-wallet" });
     expect(createSecureClient).toHaveBeenCalledOnce();
     expect(setupTradingApprovals).toHaveBeenCalledOnce();
+    expect(updateBalanceAllowance).toHaveBeenCalledExactlyOnceWith(await createSecureClient.mock.results[0].value, { assetType: "COLLATERAL" });
+    expect(updateBalanceAllowance.mock.invocationCallOrder[0]).toBeGreaterThan(ensureCtfNegRiskApprovals.mock.invocationCallOrder[0]!);
+    expect(ensureCtfNegRiskApprovals).toHaveBeenCalledWith(await createSecureClient.mock.results[0].value);
   });
 });
 
 describe("preparePolymarketWalletUnified", () => {
+  test("does not report ready when supplemental CTF approvals fail", async () => {
+    createSecureClient.mockResolvedValue({ account: { wallet: "wallet" }, setupTradingApprovals });
+    ensureCtfNegRiskApprovals.mockRejectedValueOnce(new Error("CTF 负风险适配器授权尚未确认"));
+    const result = await preparePolymarketWalletUnified({
+      privateKey: `0x${"11".repeat(32)}`, signUrl: "https://example.com/sign", authToken: "tok", signatureType: 3,
+    });
+    expect(result).toMatchObject({ ok: false, message: "CTF 负风险适配器授权尚未确认" });
+    expect(updateBalanceAllowance).not.toHaveBeenCalled();
+  });
+  test("does not report ready if the CLOB allowance refresh fails", async () => {
+    createSecureClient.mockResolvedValue({ account: { wallet: "wallet" }, setupTradingApprovals });
+    updateBalanceAllowance.mockRejectedValueOnce(new Error("allowance cache refresh failed"));
+    const result = await preparePolymarketWalletUnified({ privateKey: `0x${"11".repeat(32)}`, signUrl: "https://example.com/sign", authToken: "tok" });
+    expect(result).toMatchObject({ ok: false, message: "allowance cache refresh failed" });
+  });
+  test.each([{}, { "0xe3333700ca9d93003f00f0f71f8515005f6c00aa": 0n }])("does not report ready for an empty or stale allowance cache (%#)", async allowances => {
+    createSecureClient.mockResolvedValue({ account: { wallet: "wallet" }, setupTradingApprovals });
+    updateBalanceAllowance.mockResolvedValueOnce({ allowances });
+    const result = await preparePolymarketWalletUnified({ privateKey: `0x${"11".repeat(32)}`, signUrl: "https://example.com/sign", authToken: "tok" });
+    expect(result).toMatchObject({ ok: false });
+    expect(result.message).toContain("授权缓存尚未同步");
+  });
   test("admits a Cookie session without JWT and configures Cookie/CSRF for remote signing", async () => {
     createSecureClient.mockResolvedValue({ account: { wallet: "wallet" }, setupTradingApprovals });
     const getAuthHeaders = vi.fn().mockResolvedValue({ "X-Changmen-Auth": "cookie", "X-CSRF-Token": "csrf" });

@@ -12,7 +12,7 @@ vi.mock("@/runtime/providers", () => ({ getProvider: () => ({ betting: mocks.bet
 vi.mock("@/domain/betting/resolveVenueLegOutcome", () => ({ resolveVenueLegOutcome: mocks.resolve }));
 vi.mock("@/api/order", () => ({ saveOrders: mocks.save, getPmSubmission: mocks.recover, getPendingPmOrders: mocks.pending }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "session-one", isAuthSessionCurrent: () => true }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", async () => {
+vi.mock("@changmen/venue-browser/polymarket", async () => {
   const { buildPolymarketExecutionRejectVenueOrder, isPolymarketPostedApiFailure } = await import("@changmen/venue-browser/polymarket/orders/facts/orderStatus");
   return { buildPolymarketExecutionRejectVenueOrder, isPolymarketPostedApiFailure,
     pmSubmitScope: () => "owner-wallet", pmAccountSubmitAttempts: () => [],

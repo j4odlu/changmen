@@ -19,6 +19,8 @@ import { pmPrepareSubmit, pmSubmitClockReady, pmGetBook, pmSubmitOrder } from ".
 import { resolvePmOrderSubmitHttpMode } from "../pmOrderSubmitMode";
 import { getPolymarketOrderClientRuntime, polymarketSigningGeneration } from "./client/pmOrderClientCache";
 import { polymarketMarketOrderOptions } from "../pmMarketOrderOptions";
+import { refreshPolymarketPositionAllowance } from "../wallet/balance";
+import { currentPmTick } from "../pmTickState";
 import { guardedPmSubmit, PmSubmitUnknownError, finishPmSubmitAttempt } from "./recovery/pmSubmitJournal";
 import { pmSubmitAttemptForOrder, pmNormalizedSubmitEvidence } from "./recovery/pmSubmitJournal";
 import { recoverPmUnknownSubmission } from "./recovery/pmUnknownSubmitRecovery";
@@ -64,7 +66,9 @@ import { registerPolymarketOrderWatch } from "../realtime/userWs";
 type Hex = `0x${string}`;
 
 interface PolymarketOrderBookResponse {
+  market?: string;
   asset_id?: string;
+  timestamp?: string | number;
   version?: string;
   tick_size?: string | number;
   minimum_tick_size?: string | number;
@@ -685,7 +689,13 @@ export async function sellPolymarketBuyPosition(params: {
       pmPrepareSubmit(params.account),
     ]);
     const bids = parseBidsFromBook(book);
-    const { tickSize, minOrderSize, negRisk, version } = polymarketMarketOrderOptions(book, tokenId);
+    const { tickSize, minOrderSize, negRisk, version } = polymarketMarketOrderOptions(book, tokenId, buy.pmConditionId);
+    const bookTimestamp = Number(book.timestamp) || 0;
+    const validateTick = () => {
+      if ((currentPmTick(tokenId, bookTimestamp) ?? tickSize) !== tickSize)
+        throw new Error("PM tick 已改变，请重新卖出");
+    };
+    validateTick();
 
     const estimated = estimatePolymarketSellProceedsUsdc(bids, sharesWanted);
     if (!(estimated > 0))
@@ -693,6 +703,8 @@ export async function sellPolymarketBuyPosition(params: {
 
     const price = calculateSellMarketLimitPrice(bids, sharesWanted, minOrderSize);
     if (!isPolymarketPriceOnTick(price, tickSize)) throw new Error("PM 卖出限价不符合盘口 tick");
+    await refreshPolymarketPositionAllowance(params.account, tokenId, version, negRisk);
+    validateTick();
     sellLimitPrice = price;
     const orderBody = await createPolymarketFokSellOrderBody(
       gateway,
@@ -711,8 +723,10 @@ export async function sellPolymarketBuyPosition(params: {
       throw new Error("PM 账号或钱包会话已改变，请重新卖出");
     if (!pmSubmitClockReady(params.account))
       throw new Error("PM 提交校时未就绪，请重新卖出");
+    validateTick();
     const result = await guardedPmSubmit(params.account, orderBody,
       { version, negRisk, parentBuyId: String(buy.orderId), validateBeforeDispatch: () => {
+        validateTick();
         if (polymarketSigningGeneration(params.account) !== signingGeneration
           || JSON.stringify([params.account.accountId, params.account.gateway, params.account.token]) !== accountBinding)
           throw new Error("PM 账号或钱包会话已改变，请重新卖出");

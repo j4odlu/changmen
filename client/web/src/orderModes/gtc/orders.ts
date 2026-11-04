@@ -27,7 +27,7 @@ export async function prepareGtcOrder(account: PlatformAccount, option: BetOptio
   const user = useUserStore(); const owner = String(user.userId); const session = getAuthSessionVersion();
   if (!user.isLoggedIn || !user.userId || account.provider !== "Polymarket" || option.type !== "Polymarket")
     throw new Error("请登录后使用 PM GTC");
-  const { prepareManualGtcBuy } = await import("@changmen/venue-browser/adapter/polymarket/gtc");
+  const { prepareManualGtcBuy } = await import("@changmen/venue-browser/polymarket/gtc/index");
   const prepared = Object.freeze({ ...await prepareManualGtcBuy(account, option), tokenId: option.itemId, conditionId: option.betId });
   if (!isAuthSessionCurrent(session) || String(user.userId) !== owner)
     throw new Error("用户会话已变更，禁止继续发送 GTC");
@@ -50,7 +50,7 @@ export async function submitGtcOrder(account: PlatformAccount, prepared: Prepare
   if (binding.started)
     throw new Error("GTC 签单已进入发送流程，禁止重复提交");
   binding.started = true;
-  const { pmSubmitMaker } = await import("@changmen/venue-browser/adapter/polymarket/gtc");
+  const { pmSubmitMaker } = await import("@changmen/venue-browser/polymarket/gtc/index");
   assertSession(); startNativeGtcOrders(owner); assertSession();
   const accounts = useAccountStore();
   const registered = accounts.findAccount(Number(account.accountId));

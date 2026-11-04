@@ -1,12 +1,14 @@
 import { normalizePolymarketTickSize } from "./pmTickPrice";
+import { polymarketConditionsAgree } from "@changmen/shared/pm_market_assets";
 
 /** [changmen 扩展] BUY/SELL 共用同一盘口资产和签名域校验。 */
 export function polymarketMarketOrderOptions(book: {
-  asset_id?: string; version?: string; neg_risk?: boolean;
+  asset_id?: string; market?: string; version?: string; neg_risk?: boolean;
   min_order_size?: string | number; tick_size?: string | number;
   minimum_tick_size?: string | number;
-} | null | undefined, tokenId: string) {
+} | null | undefined, tokenId: string, conditionId?: string) {
   if (!book || String(book.asset_id) !== tokenId
+    || !polymarketConditionsAgree(conditionId, book.market)
     || !["string", "number"].includes(typeof book.min_order_size)
     || !Number.isFinite(Number(book.min_order_size)) || Number(book.min_order_size) <= 0
     || typeof book.neg_risk !== "boolean" || (book.version !== undefined && book.version !== "v2"))

@@ -4,7 +4,7 @@ import { createReadonlyMarketSource } from "../../../../pm-book-source";
 import { pmOrderBookSource } from "@changmen/venue-browser/pm-book-source-host";
 import { pmOrderBookSource as browserSource } from "@changmen/venue-browser/pm-book-source-host";
 import { pmOrderBookSource as hostSource } from "@changmen/venue-browser/pm-book-source-host";
-import { notePmStreamConnecting, observePmMarketStream } from "../../realtime/marketStream";
+import { notePmStreamConnecting, observePmMarketStream } from "@changmen/venue-browser/polymarket/marketStream";
 
 const hub = vi.hoisted(() => ({ assets: [] as string[], read: vi.fn<(consumer: string) => string[]>() }));
 vi.mock("@changmen/venue-browser/polymarket/marketQuoteHub", () => ({

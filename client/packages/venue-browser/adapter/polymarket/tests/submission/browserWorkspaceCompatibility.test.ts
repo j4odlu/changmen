@@ -1,10 +1,10 @@
 import { expect, test } from "vitest";
 import * as publicTick from "@changmen/venue-browser/polymarket/pmTickState";
-import * as oldTick from "../../quotes/pmTickState";
+import * as oldTick from "@changmen/venue-browser/polymarket/pmTickState";
 import * as publicPrefs from "@changmen/venue-browser/polymarket/pmFokDepthBufferMode";
-import * as oldPrefs from "../../fok/pmFokDepthBufferMode";
+import * as oldPrefs from "@changmen/venue-browser/polymarket/pmFokDepthBufferMode";
 import { PolymarketPriceAboveDetectionError as PublicError } from "@changmen/venue-browser/polymarket/pmPriceError";
-import { PolymarketPriceAboveDetectionError as OldError } from "../../quotes/pmTokenQuote";
+import { PolymarketPriceAboveDetectionError as OldError } from "@changmen/venue-browser/polymarket/quotes/pmTokenQuote";
 import * as publicObserver from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 import * as oldObserver from "../../../browser/pm-book-diagnostics/shadowObserver";
 import { createReadonlyMarketSource as publicFactory } from "@changmen/venue-browser/pm-book-source";

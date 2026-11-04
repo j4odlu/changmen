@@ -1,4 +1,4 @@
-import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
+import { polymarketGammaMarketAssetIds } from "@changmen/shared/pm_market_assets";
 /** 足球专用 PM discovery：浏览器直连官方 Gamma/CLOB；不复用或修改电竞 collector。 */
 import type { BetRowDto, ClientMatchDto } from "@changmen/client-core/types/esport";
 import { directGet, directPostJson } from "@changmen/client-core/shared/http";
@@ -167,7 +167,7 @@ function makeBet(matchId: number, seq: number, code: string, line: number | null
 
 function orient(row: JsonRow, home: string, away: string, live: Record<string, number>, totals = false) {
   const outcomes = arrayValue(row.outcomes);
-  const tokens = polymarketMarketAssetIds(row);
+  const tokens = polymarketGammaMarketAssetIds(row);
   const snapshots = arrayValue(row.outcomePrices ?? row.outcome_prices).map(Number);
   let homeIndex = 0;
   if (totals) {
@@ -227,8 +227,7 @@ export async function fetchPmFootballDirect(http: Http = {
     const group = groups.get(key) ?? { id: String(event.id ?? event.slug ?? key), title: baseTitle(title), start, game: gameCode(event), league: leagueName(event), markets: [] };
     for (const market of Array.isArray(event.markets) ? event.markets : []) {
       const code = String(market.sportsMarketType ?? market.sports_market_type ?? "").toLowerCase();
-      if (!polymarketMarketAssetIds(market).length
-        && (market.version != null || market.positionIds != null || market.position_ids != null))
+      if (!polymarketGammaMarketAssetIds(market).length)
         continue;
       if (isOpen(market) && (code === "moneyline" || code === "spreads" || code === "totals"))
         group.markets.push({ ...market, _code: code });
@@ -241,7 +240,7 @@ export async function fetchPmFootballDirect(http: Http = {
     groups.set(key, group);
   }
 
-  const tokenIds = [...new Set([...groups.values()].flatMap(g => g.markets.flatMap(m => polymarketMarketAssetIds(m))))].slice(0, 400);
+  const tokenIds = [...new Set([...groups.values()].flatMap(g => g.markets.flatMap(m => polymarketGammaMarketAssetIds(m))))].slice(0, 400);
   let live: Record<string, number> = {};
   if (tokenIds.length) {
     try {

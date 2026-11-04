@@ -12,7 +12,7 @@ vi.mock("@/security/pmVault", () => ({ mergeVaultKeysIntoAccounts: vi.fn(), migr
   normalizePmVaultUserId: String, refreshPmVaultAccountUi: vi.fn(), stripPrivateKeysForPersist: vi.fn() }));
 vi.mock("@/security/pmVault/retainedPmSession", () => ({ getRetainedPmSessionEpoch: () => mocks.epoch,
   trackPmAccounts: mocks.track, removeRetainedPmAccount: vi.fn(), saveRetainedPmSession: mocks.save }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ preparePolymarketAccountRuntimes: mocks.prepare, warmAllPolymarketUserWs: vi.fn() }));
+vi.mock("@changmen/venue-browser/polymarket", () => ({ preparePolymarketAccountRuntimes: mocks.prepare, warmAllPolymarketUserWs: vi.fn() }));
 vi.mock("@changmen/venue-browser/adapter/predictfun", () => ({}));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({ userId: "u" }) }));
 vi.mock("@/lib/authSession", () => ({ getAuthSessionVersion: () => mocks.auth, isAuthSessionCurrent: (version: string) => version === mocks.auth }));

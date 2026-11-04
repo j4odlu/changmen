@@ -15,7 +15,7 @@ vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => mock.session, isAu
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({ findAccount: () => mock.account }) }));
 vi.mock("@/runtime/orderMonitoring/loop", () => ({ createOrderMonitorLoop: (context: typeof mock.loop) => { mock.loop = context; return { start: vi.fn(), stop: vi.fn() }; } }));
 vi.mock("@changmen/venue-browser/polymarket/gtc/index", () => ({ readGtcFacts: mock.read, pmCancelOrder: mock.cancel, readGtcTradeHistory: mock.history }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", async importOriginal => ({ ...await importOriginal<typeof import("@changmen/venue-browser/adapter/polymarket")>(), observePolymarketOrderWatch: mock.observe }));
+vi.mock("@changmen/venue-browser/polymarket", async importOriginal => ({ ...await importOriginal<typeof import("@changmen/venue-browser/polymarket")>(), observePolymarketOrderWatch: mock.observe }));
 const hash = `0x${"b".repeat(64)}`;
 const plan: GtcOrderPlan = { tokenId: "token", conditionId: "condition", shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", protocol: 2, negRisk: false, route: "direct", orderHash: hash };
 const facts = (quantity = "3", status = "LIVE", fee: string | null = "0"): GtcFacts => ({

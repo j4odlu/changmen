@@ -8,7 +8,7 @@ import { checkBetting as checkGtcBetting } from "@/orderModes/gtc/gateway";
 import { useOddsStore } from "@/stores/oddsStore";
 import { capturePmTickBufferQuote } from "@/services/polymarketQuotes";
 import { notePmTickBufferBook, clearPmTickBufferMetadata, setPmArbPriceBufferPrefs,
-  resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-browser/adapter/polymarket";
+  resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-browser/polymarket";
 
 const check = vi.hoisted(() => vi.fn());
 const gtcCheck = vi.hoisted(() => vi.fn());

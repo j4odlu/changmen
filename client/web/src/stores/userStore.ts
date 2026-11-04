@@ -1,5 +1,5 @@
 import type { UserInfo } from "@/types/esport";
-import { setPmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket";
+import { setPmFokPreflightMode } from "@changmen/venue-browser/polymarket";
 import type { FollowConfig } from "@/types/order";
 import type { ExtensionPrefs } from "@/types/extensionPrefs";
 import { readLegacyPmOddsDropSettings } from "@/extensions/pmSignals/downSettings";
@@ -318,13 +318,13 @@ export const useUserStore = defineStore("user", {
 
     /** Extensions → venue-adapter PM 套利缓冲配置（供后续 FOK/展示接线） */
     async syncPmArbPriceBufferFromPrefs() {
-      const { setPmArbPriceBufferPrefs } = await import("@changmen/venue-browser/adapter/polymarket");
+      const { setPmArbPriceBufferPrefs } = await import("@changmen/venue-browser/polymarket");
       setPmArbPriceBufferPrefs(this.extensionPrefs.pmArbPriceBuffer);
     },
 
     /** Extensions → venue-adapter PM FOK 深度倍数（预检 1× 走出 P 后验 P 及更优） */
     async syncPmFokDepthBufferFromPrefs() {
-      const { setPmFokDepthBufferPrefs } = await import("@changmen/venue-browser/adapter/polymarket");
+      const { setPmFokDepthBufferPrefs } = await import("@changmen/venue-browser/polymarket");
       setPmFokDepthBufferPrefs(this.extensionPrefs.pmFokDepthBuffer ?? {
         enabled: false,
         multiplier: 1.5,

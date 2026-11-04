@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 import * as canonical from "@changmen/venue-browser/polymarket/marketStream";
-import * as legacy from "../../realtime/marketStream";
+import * as legacy from "@changmen/venue-browser/polymarket/marketStream";
 import type { MarketStreamEvent } from "@changmen/pm-market-data-browser/marketStreamProtocol";
 const disposers: Array<() => void> = [];
 afterEach(() => { for (const off of disposers.splice(0)) off(); vi.restoreAllMocks(); });

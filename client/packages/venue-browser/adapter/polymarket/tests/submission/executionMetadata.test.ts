@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { BookStore } from "../../realtime/orderBook/bookStore";
-import { WsBookShadowRuntime } from "../../submission/preflight/optimized/wsBook/bookRuntime";
-import { metadataFromHttpOptions } from "../../submission/preflight/optimized/wsBook/bookMetadata";
+import { BookStore } from "@changmen/pm-market-data-browser/bookStore";
+import { WsBookShadowRuntime } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/bookRuntime";
+import { metadataFromHttpOptions } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/bookMetadata";
 import { beginWsBookShadow } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
-import { observerClock } from "../../submission/preflight/optimized/wsBook/shadowWorkerProtocol";
+import { observerClock } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/shadowWorkerProtocol";
 
 let store: BookStore, consumer: WsBookShadowRuntime, sequence: number;
 const changed = vi.fn();

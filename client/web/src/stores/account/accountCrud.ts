@@ -24,12 +24,12 @@ import {
 } from "@/security/pmVault";
 import { useUserStore } from "@/stores/userStore";
 import { getRetainedPmSessionEpoch, removeRetainedPmAccount, saveRetainedPmSession, trackPmAccounts } from "@/security/pmVault/retainedPmSession";
-import { preparePolymarketAccountRuntimes } from "@changmen/venue-browser/adapter/polymarket";
+import { preparePolymarketAccountRuntimes } from "@changmen/venue-browser/polymarket";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/lib/authSession";
 
 async function warmPolymarketUserWsFromAccounts(accounts: PlatformAccount[]) {
   try {
-    const { warmAllPolymarketUserWs } = await import("@changmen/venue-browser/adapter/polymarket");
+    const { warmAllPolymarketUserWs } = await import("@changmen/venue-browser/polymarket");
     warmAllPolymarketUserWs(accounts);
   }
   catch {

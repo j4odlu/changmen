@@ -4,7 +4,7 @@
  * 缓存：进程内存 + storage/sport/{key}/（见 sport_list_cache.js）。
  */
 
-import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
+import { polymarketGammaMarketAssetIds } from "@changmen/shared/pm_market_assets";
 import {
   readFreshSportListCache,
   readSportListCache,
@@ -474,8 +474,8 @@ async function fetchSportRowsFromGamma(opts) {
             continue;
           const outcomes = parseJsonArray(market.outcomes);
           const prices = parseJsonArray(market.outcomePrices ?? market.outcome_prices);
-          const tokenIds = polymarketMarketAssetIds(market);
-          if (!tokenIds.length && (market.version != null || market.positionIds != null || market.position_ids != null))
+          const tokenIds = polymarketGammaMarketAssetIds(market);
+          if (!tokenIds.length)
             continue;
           if (outcomes.length < 2)
             continue;

@@ -1,4 +1,4 @@
-import type { PmMarketWsSourceMode } from "@changmen/venue-browser/adapter/polymarket";
+import type { PmMarketWsSourceMode } from "@changmen/venue-browser/polymarket";
 import type { PmOddsDropDetectorConfig, PmOddsDropSignal } from "./downDetector";
 import type { PmOddsDropVenueSnapshot } from "./downVenueSnapshot";
 import type { BetSide } from "@/models/match";

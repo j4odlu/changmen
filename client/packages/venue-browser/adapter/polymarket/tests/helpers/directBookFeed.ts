@@ -1,4 +1,4 @@
-import { BOOK_LIMITS, reduceBookFrame, type LocalOrderBook } from "../../realtime/orderBook/bookReducer";
+import { BOOK_LIMITS, reduceBookFrame, type LocalOrderBook } from "@changmen/pm-market-data-browser/bookReducer";
 
 export interface FeedOptions {
   allowed: () => boolean;

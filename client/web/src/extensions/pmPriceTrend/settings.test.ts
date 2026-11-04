@@ -31,7 +31,7 @@ vi.mock("./PmPriceTrend.vue", async () => {
   const { defineComponent, onMounted, onUnmounted } = await import("vue");
   return { default: defineComponent({ setup() { onMounted(mocks.mount); onUnmounted(mocks.unmount); return () => null; } }) };
 });
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ pmMapOutcomeTick: { value: 0 }, lookupResolutionSourceBySourceMatchId: () => null }));
+vi.mock("@changmen/venue-browser/polymarket", () => ({ pmMapOutcomeTick: { value: 0 }, lookupResolutionSourceBySourceMatchId: () => null }));
 vi.mock("@/components/user/PmPfBufferSettings.vue", () => ({ default: { render: () => null } }));
 vi.mock("@/extensions/pmSignals/SignalSettings.vue", () => ({ default: { render: () => null } }));
 vi.mock("element-plus/es/components/base/style/css", () => ({}));

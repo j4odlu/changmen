@@ -5,7 +5,7 @@ import {
   setPolymarketSportAssetIds,
   ensurePolymarketSportMarketConnection,
   clearPolymarketSportHub,
-} from "@changmen/venue-browser/adapter/polymarket";
+} from "@changmen/venue-browser/polymarket";
 import {
   onPredictFunSportHubBound,
   onPredictFunSportQuote,

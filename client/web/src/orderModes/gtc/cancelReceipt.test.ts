@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { waitForGtcCancelReceipt } from "./cancelReceipt";
 
 const ws = vi.hoisted(() => ({ observe: vi.fn(), read: vi.fn(), dispose: vi.fn(), update: () => {} }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/polymarket", () => ({
   observePolymarketOrderWatch: ws.observe, readPolymarketOrderWatch: ws.read,
 }));
 const account = { accountId: 1, provider: "Polymarket", token: "original-account" } as PlatformAccount;

@@ -14,8 +14,9 @@ vi.mock("@changmen/venue-browser/polymarket/orders/pmFee", () => ({ enrichPolyma
 const condition = "0xf2100079b1360cfb3ffe88642455ff3ad6596c029f8c54962985aca7283280dc";
 const token = "57232858937149583352927277805092640185006103000471324975696067551168118876742";
 const market = {
+  version: "v1",
   conditionId: condition, question: "LoL: Team WE vs HANJIN BRION - Game 3 Winner",
-  outcomes: ["Team WE", "HANJIN BRION"], clobTokenIds: ["we-token", token],
+  outcomes: ["Team WE", "HANJIN BRION"], clobTokenIds: JSON.stringify(["101", token]),
   outcomePrices: ["0.0005", "0.9995"], closed: false,
 };
 const saved: VenueOrder = {
@@ -35,7 +36,7 @@ beforeEach(() => {
   mocks.stored.mockResolvedValue([{ ...saved }]);
   mocks.get.mockImplementation(async (url: string) => {
     if (url.includes("gamma-api")) return [market];
-    return { tokens: [{ token_id: "we-token", winner: false, price: 0.0005 }, { token_id: token, winner: false, price: 0.9995 }] };
+    return { tokens: [{ token_id: "101", winner: false, price: 0.0005 }, { token_id: token, winner: false, price: 0.9995 }] };
   });
   // 已缓存盘口名称不能让后续轮询停止读取赛果。
   rememberPolymarketMarketBetLabel(market);
@@ -81,7 +82,7 @@ describe("stored PM buy settlement without a current trade row", () => {
   it("applies an official correction and marks the remaining holding settled", async () => {
     mocks.stored.mockResolvedValue([{ ...saved, status: "win", pmMatchResult: "win", money: 733.01953 }]);
     mocks.get.mockImplementation(async (url: string) => url.includes("gamma-api") ? [market] : {
-      tokens: [{ token_id: "we-token", winner: true }, { token_id: token, winner: false }],
+      tokens: [{ token_id: "101", winner: true }, { token_id: token, winner: false }],
     });
     const [row] = await refreshOrders();
     expect(row).toMatchObject({ status: "lose", pmMatchResult: "lose", pmSellState: "settled" });
@@ -114,7 +115,7 @@ describe("stored PM buy settlement without a current trade row", () => {
     const calls = mocks.get.mock.calls.length;
     expect((await fetchPolymarketVenueOrdersMerged(account))[0]!.status).toBe("none");
     expect(mocks.get).toHaveBeenCalledTimes(calls);
-    finish({ tokens: [{ token_id: "we-token", winner: false }, { token_id: token, winner: true }] });
+    finish({ tokens: [{ token_id: "101", winner: false }, { token_id: token, winner: true }] });
     await vi.waitFor(async () => {
       expect((await fetchPolymarketVenueOrdersMerged(account))[0]).toMatchObject({
         status: "win", pmMatchResult: "win", pmSellState: "settled", link: saved.link,
@@ -133,7 +134,7 @@ describe("stored PM buy settlement without a current trade row", () => {
     expect(row).toMatchObject({ orderId: saved.orderId, link: saved.link, status: "win", pmShares: 142 });
     expect(row!.money).toBeCloseTo(123, 3);
     await vi.waitFor(() => expect(finish).toBeTypeOf("function"));
-    finish({ tokens: [{ token_id: "we-token", winner: true }, { token_id: token, winner: false }] });
+    finish({ tokens: [{ token_id: "101", winner: true }, { token_id: token, winner: false }] });
     await vi.waitFor(async () => expect((await fetchPolymarketVenueOrdersMerged(account))[0])
       .toMatchObject({ status: "lose", pmSellState: "settled", pmShares: 142 }));
   });
@@ -150,7 +151,7 @@ describe("stored PM buy settlement without a current trade row", () => {
     const task = fetchPolymarketVenueOrdersMerged(account).then(rows => { completed = true; return rows; });
     await vi.waitFor(() => expect(finish).toBeTypeOf("function"));
     expect(completed).toBe(false);
-    finish({ tokens: [{ token_id: "we-token", winner: false }, { token_id: token, winner: true }] });
+    finish({ tokens: [{ token_id: "101", winner: false }, { token_id: token, winner: true }] });
     const rows = await task;
     const row = rows.find(row => row.orderId === (scenario === "new order" ? "new-order" : saved.orderId));
     expect(row).toMatchObject({ status: "win", pmShares: scenario === "additional fill" ? 150 : 142 });

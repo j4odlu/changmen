@@ -54,7 +54,7 @@ export function validationCommands(plan, npm, releasePlan) {
     "database-compatibility": { command: [process.execPath, "scripts/deploy/check-database-compatibility.mjs"] },
     "backend-installation": { command: [process.execPath, "scripts/testing/backend-linux-runtime.mjs"] },
     // Source proofs are CPU-heavy; avoid oversubscribing the two-core CI runner.
-    "verification-control": { command: [process.execPath, "scripts/verification/run-self-tests.mjs", ...(plan.paths ?? [])] },
+    "verification-control": { command: [process.execPath, "scripts/verification/run-self-tests.mjs", "--validation-paths"] },
     "verification-node": { command: [process.execPath, "--test", "scripts/verification/fok-source-specialization.test.mjs"] },
     "validation-control": { command: cmd("exec", "--", "vitest", "run", "scripts/verification/validation-plan.test.mjs", "scripts/verification/verify-change.test.mjs", "server/storage/runtime_version.test.mjs", "server/backend/core/shared/runtime_version.test.mjs", "client/web/vite/plugins/runtimeVersion.test.ts", "--maxWorkers=4") },
     "boundaries": { command: cmd("run", "test:checks") },

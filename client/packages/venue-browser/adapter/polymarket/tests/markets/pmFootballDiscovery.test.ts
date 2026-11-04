@@ -56,7 +56,7 @@ describe("pM football official discovery", () => {
               active: true,
               outcomes: JSON.stringify(["South Korea", "Ecuador"]),
               outcomePrices: JSON.stringify([0.5, 0.25]),
-              clobTokenIds: JSON.stringify(["home-token", "away-token"]),
+              version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
             }],
           }],
           next_cursor: "",
@@ -64,8 +64,8 @@ describe("pM football official discovery", () => {
       },
       async post<T>() {
         return {
-          "home-token": { SELL: 0.4 },
-          "away-token": { SELL: 0.2 },
+          "101": { SELL: 0.4 },
+          "102": { SELL: 0.2 },
         } as T;
       },
     });
@@ -93,7 +93,7 @@ describe("pM football official discovery", () => {
               sportsMarketType: "moneyline",
               outcomes: ["South Korea", "Ecuador"],
               outcomePrices: [0.5, 0.5],
-              clobTokenIds: ["live-home", "live-away"],
+              version: "v1", clobTokenIds: JSON.stringify(["103", "104"]),
             }],
           }],
           next_cursor: "",
@@ -123,7 +123,7 @@ describe("pM football official discovery", () => {
               sportsMarketType: "moneyline",
               outcomes: ["Arsenal", "Chelsea"],
               outcomePrices: [0.5, 0.5],
-              clobTokenIds: ["cache-home", "cache-away"],
+              version: "v1", clobTokenIds: JSON.stringify(["105", "106"]),
             }],
           }],
           next_cursor: "",

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { BOOK_LIMITS, decimal, numericAsks, reduceBookFrame, type LocalOrderBook } from "../../realtime/orderBook/bookReducer";
+import { BOOK_LIMITS, decimal, numericAsks, reduceBookFrame, type LocalOrderBook } from "@changmen/pm-market-data-browser/bookReducer";
 import { DirectBookFeed } from "../helpers/directBookFeed";
-import { parseHttpBook } from "../../submission/preflight/optimized/wsBook/bookMetadata";
-import { compareAsks } from "../../submission/preflight/optimized/wsBook/bookRuntime";
+import { parseHttpBook } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/bookMetadata";
+import { compareAsks } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/bookRuntime";
 import { OwnedRuntimeFixture as WsBookShadowRuntime } from "../helpers/ownedBookFixtures";
 import { beginWsBookShadow, registerWsBookShadowObserver, type ShadowAttempt } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
 

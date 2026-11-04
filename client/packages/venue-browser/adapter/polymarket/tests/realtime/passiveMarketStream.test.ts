@@ -1,17 +1,17 @@
 import { useFakeMailboxTasks } from '../helpers/mailboxTasks';
 useFakeMailboxTasks();
 import { beforeEach, afterEach, expect, test, vi } from "vitest";
-import { observePmMarketStream } from "../../realtime/marketStream";
-import type { MarketStreamEvent } from "../../realtime/marketStreamProtocol";
-import { registerPolymarketQuoteAssets, onPolymarketMarketQuote, __testResetPolymarketMarketQuoteHub } from "../../quotes/marketQuoteHub";
+import { observePmMarketStream } from "@changmen/venue-browser/polymarket/marketStream";
+import type { MarketStreamEvent } from "@changmen/pm-market-data-browser/marketStreamProtocol";
+import { registerPolymarketQuoteAssets, onPolymarketMarketQuote, __testResetPolymarketMarketQuoteHub } from "@changmen/venue-browser/polymarket/marketQuoteHub";
 import { resetPmMarketWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
-import { resetPmRoutingPreferenceForTests, setPmRoutingPreference } from "../../pmRoutingPreference";
-import { resetOfficialFailStreakForTests } from "../../ws";
+import { resetPmRoutingPreferenceForTests, setPmRoutingPreference } from "@changmen/venue-browser/polymarket/pmRoutingPreference";
+import { resetOfficialFailStreakForTests } from "@changmen/venue-browser/polymarket/ws";
 import { resetPolymarketLiveQuoteTsForTests } from "@changmen/venue-browser/polymarket/quotes/pmTokenQuote";
 import { OwnedWorkerFixture as WsBookShadowWorkerClient } from "../helpers/ownedBookFixtures";
-import type { ServiceMessage } from "../../realtime/orderBook/serviceProtocol";
+import type { ServiceMessage } from "@changmen/pm-market-data-browser/serviceProtocol";
 import { beginWsBookShadow } from "@changmen/venue-browser/pm-book-diagnostics/shadowObserver";
-import type { ShadowWorkerRequest, ShadowWorkerResponse } from "../../submission/preflight/optimized/wsBook/shadowWorkerProtocol";
+import type { ShadowWorkerRequest, ShadowWorkerResponse } from "@changmen/venue-browser/adapter/browser/pm-book-diagnostics/shadowWorkerProtocol";
 
 class Socket {
   static instances: Socket[] = []; static OPEN = 1;

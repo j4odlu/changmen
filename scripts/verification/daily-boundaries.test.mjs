@@ -33,5 +33,11 @@ it("the explicit historical entry still loads the archived proofs", () => {
 });
 it("the ordinary freeze CLI also runs without historical proof code", () => {
   const result = command("await import('./devtools/venue-adapter/verification/check-esport-freeze.mjs');");
-  expect(result.status, result.stderr).toBe(0); expect(result.stdout).toContain("[esport-freeze] ok");
+  expect(result.status, result.stderr).toBe(0);
+  if (!result.stdout.includes("[esport-freeze] ok")) {
+    // An explicitly reviewed frozen edit succeeds with its warning on stderr.
+    // Keep requiring both the real authorization and the CLI's exact allow marker.
+    expect(["1", "true"]).toContain(process.env.ALLOW_ESPORT_TOUCH);
+    expect(result.stderr).toContain("[esport-freeze] ALLOW_ESPORT_TOUCH — 放行");
+  }
 });

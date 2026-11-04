@@ -6,12 +6,12 @@ import { useMatchStore } from "@/stores/matchStore";
 import { useUserStore } from "@/stores/userStore";
 import type { ViewMatch } from "@/models/match";
 import { installPmTickBufferQuotes, stopPmTickBufferQuotes } from "./pmTickBufferQuotes";
-import { setPmArbPriceBufferPrefs, resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-browser/adapter/polymarket";
-import { notePmTickFrame, notePmTickReconnect, clearPmTickStateForTests } from "@changmen/venue-browser/adapter/polymarket";
-import { pmTickBufferTick } from "@changmen/venue-browser/adapter/polymarket";
+import { setPmArbPriceBufferPrefs, resetPmArbPriceBufferPrefsForTests } from "@changmen/venue-browser/polymarket";
+import { notePmTickFrame, notePmTickReconnect, clearPmTickStateForTests } from "@changmen/venue-browser/polymarket";
+import { pmTickBufferTick } from "@changmen/venue-browser/polymarket";
 const load = vi.hoisted(() => vi.fn());
-vi.mock("@changmen/venue-browser/adapter/polymarket", async importOriginal => ({
-  ...await importOriginal<typeof import("@changmen/venue-browser/adapter/polymarket")>(),
+vi.mock("@changmen/venue-browser/polymarket", async importOriginal => ({
+  ...await importOriginal<typeof import("@changmen/venue-browser/polymarket")>(),
   fetchPmTickBufferTickSize: load,
 }));
 vi.mock("@/api/esport", async importOriginal => ({

@@ -17,6 +17,7 @@ export function inspectCurrentSourceBoundaries(root) {
     return fs.readFileSync(target, "utf8");
   };
   const json = file => JSON.parse(read(file)), violations = [];
+  const retiredPmRoot = "client/packages/venue-browser/adapter/polymarket/";
   const fail = (file, pattern) => violations.push({ rule: "current-source-boundary", file, line: 0, spec: "current contract", pattern });
   const workspace = json("scripts/verification/workspace-layout-relocation.json");
   const node = json("scripts/verification/node-entry-retirement.json");
@@ -47,6 +48,23 @@ export function inspectCurrentSourceBoundaries(root) {
   };
   for (const directory of ["server/backend/db", "server/db"]) scanRetiredRoot(directory);
   scanRetiredRoot("packages/shared/match-identity", "Identity implementations belong to packages/match-identity");
+
+  // PM migration facades are retired; tests may remain beside the former entry paths.
+  const checkRetiredPm = directory => {
+    if (!fs.existsSync(safe(directory))) return;
+    for (const item of fs.readdirSync(safe(directory), { withFileTypes: true })) {
+      if (item.name === "tests" || item.name === "node_modules" || item.name.startsWith(".")) continue;
+      const file = directory + "/" + item.name;
+      if (item.isDirectory()) checkRetiredPm(file);
+      else if (/\.(?:[cm]?[jt]s|json)$/.test(file) && !/\.test\.[cm]?[jt]s$/.test(file)) fail(file, "PM runtime must use the current polymarket entry; migration facades are retired");
+    }
+  };
+  checkRetiredPm(retiredPmRoot.slice(0, -1));
+  const browserPackage = "client/packages/venue-browser/package.json";
+  if (fs.existsSync(safe(browserPackage))) for (const [key, target] of Object.entries(json(browserPackage).exports ?? {})) {
+    if (key === "./adapter/polymarket" || key.startsWith("./adapter/polymarket/") || String(target).includes("/adapter/polymarket/"))
+      fail(browserPackage, "Retired PM compatibility exports must not return: " + key);
+  }
 
   // The old forwarding entries remain forwarding entries, but the canonical
   // implementation may evolve freely. Compare targets, never implementation hashes.
@@ -99,6 +117,7 @@ export function inspectCurrentSourceBoundaries(root) {
     }
   };
   for (const [file, canonical] of facades) try {
+    if (file.startsWith(retiredPmRoot)) continue; // The retired-root check above requires absence, not a replacement forwarding shim.
     if (!forwardingTarget(file) || finalTarget(file) !== finalTarget(canonical)) fail(file, "Compatibility facade must forward only to its current canonical implementation");
   } catch (error) { fail(file, "Invalid compatibility facade: " + error.message); }
 

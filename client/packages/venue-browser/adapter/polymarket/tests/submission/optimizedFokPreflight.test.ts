@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { BetOption } from "@changmen/client-core/models/betOption";
-// Frozen previous guard retained for the before/after replay and Gamma cache regressions.
+// Previous orchestration replay using current module imports and explicit wire-source tags.
 import { resolveOptimizedFokBlockReason as check } from "./fixtures/pmBeforeFastGuard";
 import { resolvePolymarketBetBlockReason as legacy } from "@changmen/venue-browser/polymarket/submission/preflight/legacy/pmBetGuard";
 import { resolvePolymarketBetBlockReason as gtc } from "@changmen/venue-browser/polymarket/submission/preflight/pmBetGuard";
@@ -11,7 +11,7 @@ import { prewarmPmSportForCandidate } from "@changmen/venue-browser/polymarket/m
 import { clearPmExecutionMetrics, getPmExecutionMetrics } from "@changmen/venue-browser/polymarket/pmExecutionMetrics";
 vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({ polymarketPluginGet: vi.fn() }));
 const get = vi.mocked(polymarketPluginGet);
-const option = () => ({ type: "Polymarket", itemId: "token", betId: "condition", bet: { round: 0 },
+const option = () => ({ type: "Polymarket", itemId: "101", betId: "condition", bet: { round: 0 },
   match: { providers: { Polymarket: "event" }, startAt: Date.now() - 60_000,
     pmSport: { live: true, updatedAt: Date.now() } } }) as BetOption;
 let market: Record<string, unknown>;
@@ -19,20 +19,20 @@ let event: Record<string, unknown> | null;
 let clob: Record<string, unknown> | null;
 beforeEach(() => {
   clearPmGammaCacheForTests(); clearPmExecutionMetrics(); get.mockReset();
-  market = { active: true, closed: false }; event = { live: true, ended: false }; clob = { accepting_orders: true };
+  market = { version: "v1", clobTokenIds: '["101","102"]', active: true, closed: false }; event = { live: true, ended: false }; clob = { accepting_orders: true };
   get.mockImplementation(async url => url.includes("/events/") ? event : url.includes("/markets?") ? [market] : clob);
 });
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 
 test("low probability alone does not deny executable optimized FOK; legacy and GTC retain their filter", async () => {
-  market = { ...market, clobTokenIds: '["token","other"]', outcomePrices: '["0.08","0.92"]' };
+  market = { ...market, clobTokenIds: '["101","102"]', outcomePrices: '["0.08","0.92"]' };
   expect(await check(option(), true)).toBeNull();
   expect(await legacy(option())).toContain("几乎不可能");
   expect(await gtc(option(), true)).toContain("几乎不可能");
   expect(getPmExecutionMetrics()).toContainEqual(expect.objectContaining({ preflightMode: "optimized", riskSignal: expect.any(String) }));
 });
 test.each([{ closed: true }, { accepting_orders: false }, { active: false }, { enable_order_book: false },
-  { tokens: [{ token_id: "other", winner: true }] }])("hard trading denial remains enforced: %j", async fields => {
+  { tokens: [{ token_id: "102", winner: true }] }])("hard trading denial remains enforced: %j", async fields => {
   clob = { ...clob, ...fields };
   expect(await check(option(), true)).not.toBeNull();
 });

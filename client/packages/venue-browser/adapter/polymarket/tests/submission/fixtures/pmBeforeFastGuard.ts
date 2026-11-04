@@ -1,14 +1,15 @@
 import type { BetOption } from "@changmen/client-core/models/betOption";
-import type { PolymarketRawMarket } from "../../../parse";
-import { getPolymarketMarketBlockReason } from "../../../pmMarketGuard";
-import { getPolymarketPmSportBlockReason, getPolymarketPmSportBlockReasonFromOption } from "../../../pmSportGuard";
-import { fetchClobMarketByConditionId, fetchGammaEventById, fetchGammaMarketByTokenId, gammaEventToPmSportLike } from "../../../pmSportGamma";
-import { getPmGammaEvidence } from "../../../markets/pmGammaCache";
-import { recordPmExecutionMetric } from "../../../pmExecutionMetrics";
+import type { PolymarketRawMarket } from "@changmen/venue-browser/polymarket/markets/parse";
+import { getPolymarketMarketBlockReason } from "@changmen/venue-browser/polymarket/markets/pmMarketGuard";
+import { getPolymarketPmSportBlockReason, getPolymarketPmSportBlockReasonFromOption } from "@changmen/venue-browser/polymarket/markets/pmSportGuard";
+import { fetchClobMarketByConditionId, fetchGammaEventById, fetchGammaMarketByTokenId, gammaEventToPmSportLike } from "@changmen/venue-browser/polymarket/markets/pmSportGamma";
+import { getPmGammaEvidence } from "@changmen/venue-browser/polymarket/markets/pmGammaCache";
+import { recordPmExecutionMetric } from "@changmen/venue-browser/polymarket/pmExecutionMetrics";
 
 /** [changmen 扩展] 只供优化 FOK 使用。市场状态与冷门价格风控分开，价格/深度由本轮 book 决定。 */
-function tradingBlock(market: PolymarketRawMarket | null, tokenId: string) {
-  return market ? getPolymarketMarketBlockReason({ ...market, outcomePrices: undefined, outcome_prices: undefined }, tokenId) : null;
+// Replay retains the previous orchestration; the current helper requires explicit wire-source tags.
+function tradingBlock(market: PolymarketRawMarket | null, tokenId: string, source: "gamma" | "clob") {
+  return market ? getPolymarketMarketBlockReason({ ...market, outcomePrices: undefined, outcome_prices: undefined }, tokenId, source) : null;
 }
 
 export async function resolveOptimizedFokBlockReason(option: BetOption, automatic = false): Promise<string | null> {
@@ -43,9 +44,9 @@ export async function resolveOptimizedFokBlockReason(option: BetOption, automati
   if (latest) return latest;
 
   // 即使响应已超过复用窗口，明确的拒单/结束证据也不能被忽略。
-  const clobBlock = tradingBlock(clob, option.itemId);
+  const clobBlock = tradingBlock(clob, option.itemId, "clob");
   if (clobBlock) return clobBlock;
-  const marketBlock = tradingBlock(market, option.itemId);
+  const marketBlock = tradingBlock(market, option.itemId, "gamma");
   if (marketBlock) return marketBlock;
   const sports = [gammaEventToPmSportLike(event), ...(Array.isArray(market?.events)
     ? market.events.map(row => gammaEventToPmSportLike(row)) : [])];

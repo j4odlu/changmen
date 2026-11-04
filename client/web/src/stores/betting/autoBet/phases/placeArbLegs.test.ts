@@ -16,7 +16,7 @@ const claimLowOdds = vi.hoisted(() => vi.fn());
 vi.mock("@/extensions/arbBet/lowOddsSingle", () => ({ claimLowOddsMarket: claimLowOdds }));
 
 const validatePrepared = vi.hoisted(() => vi.fn((): string | null => null));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ validatePolymarketPreparedBuy: validatePrepared, recordPmExecutionMetric: vi.fn() }));
+vi.mock("@changmen/venue-browser/polymarket", () => ({ validatePolymarketPreparedBuy: validatePrepared, recordPmExecutionMetric: vi.fn() }));
 const betting = vi.hoisted(() => vi.fn());
 const checkBetting = vi.hoisted(() => vi.fn());
 const retryFailedLeg = vi.hoisted(() => vi.fn());

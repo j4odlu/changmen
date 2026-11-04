@@ -10,7 +10,7 @@ import { startPmSignalMonitor } from "./runtime";
 
 type Quote = { assetId: string; bestAsk: number };
 const hub = vi.hoisted(() => ({ listener: null as ((quote: Quote) => void) | null, subscribe: vi.fn(), unsubscribe: vi.fn() }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/polymarket", () => ({
   onPolymarketMarketQuote: (listener: (quote: Quote) => void) => {
     hub.subscribe(); hub.listener = listener;
     return () => { hub.listener = null; hub.unsubscribe(); };

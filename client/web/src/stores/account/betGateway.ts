@@ -22,7 +22,7 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useUserStore } from "@/stores/userStore";
 import { getRetainedPmPrivateKey } from "@/security/pmVault/retainedPmSession";
 import { persistPendingPmOrder } from "@/stores/account/pmPendingOrder";
-import { capturePmFokPreflightMode, prepareOptimizedFokExecution } from "@changmen/venue-browser/adapter/polymarket";
+import { capturePmFokPreflightMode, prepareOptimizedFokExecution } from "@changmen/venue-browser/polymarket";
 import { notifyPendingVenueConfirm } from "./pendingVenueConfirmationRunner";
 export { pausePendingVenueConfirmations, resumePendingVenueConfirmations } from "./pendingVenueConfirmationRecovery";
 
@@ -133,7 +133,7 @@ export async function checkBetting(
       option.betMoney = venueBetMoney;
     }
     const checked = pm && opts?.pmOrderMode === "GTC"
-      ? await (await import("@changmen/venue-browser/adapter/polymarket/gtc")).checkGtcBuy(account, option, undefined, opts?.pmGtcAllowResting !== true)
+      ? await (await import("@changmen/venue-browser/polymarket/gtc/index")).checkGtcBuy(account, option, undefined, opts?.pmGtcAllowResting !== true)
       : await provider.checkBet(account, option, { role: opts?.role ?? "execute", ...(opts?.requireClobConfirmation ? { requireClobConfirmation: true } : {}) });
     checkedOption = checked;
     try { checked.clientMarket = option.clientMarket; }

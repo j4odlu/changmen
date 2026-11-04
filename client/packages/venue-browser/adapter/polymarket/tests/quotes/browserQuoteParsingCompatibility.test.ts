@@ -1,10 +1,10 @@
 import { expect, test } from "vitest";
 import { bestAskFromBook } from "@changmen/venue-browser/polymarket/bookQuote";
 import { extractPolymarketWsBestAsks as parse } from "@changmen/venue-browser/polymarket/wsQuotes";
-import { bestAskFromBook as oldAsk } from "../../parse";
-import { bestAskFromBook as nestedAsk } from "../../markets/parse";
-import { extractPolymarketWsBestAsks as oldParse } from "../../wsQuotes";
-import { extractPolymarketWsBestAsks as nestedParse } from "../../realtime/wsQuotes";
+import { bestAskFromBook as oldAsk } from "@changmen/venue-browser/polymarket/markets/parse";
+import { bestAskFromBook as nestedAsk } from "@changmen/venue-browser/polymarket/markets/parse";
+import { extractPolymarketWsBestAsks as oldParse } from "@changmen/venue-browser/polymarket/wsQuotes";
+import { extractPolymarketWsBestAsks as nestedParse } from "@changmen/venue-browser/polymarket/wsQuotes";
 
 test("public and both legacy entries use the same functions", () => {
   expect(oldAsk).toBe(bestAskFromBook); expect(nestedAsk).toBe(bestAskFromBook);

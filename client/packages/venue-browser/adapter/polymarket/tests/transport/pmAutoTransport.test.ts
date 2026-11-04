@@ -5,7 +5,7 @@ import {
   resetPmTransportManualOverrideForTests,
   syncPmHttpModeWithMarketWs,
 } from "@changmen/venue-browser/polymarket/transport/pmAutoTransport";
-import { resetPmRoutingPreferenceForTests, setPmRoutingPreference } from "../../pmRoutingPreference";
+import { resetPmRoutingPreferenceForTests, setPmRoutingPreference } from "@changmen/venue-browser/polymarket/pmRoutingPreference";
 import { resetPmMarketWsSourceModeForTests, getPmMarketWsSourceMode, setPmMarketWsSourceMode } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
 import { resetPmUserWsSourceModeForTests, getPmUserWsSourceMode } from "@changmen/venue-browser/polymarket/pmUserWsMode";
 import { setPmHttpModeForTests, resolvePmHttpMode, setPmHttpMode } from "@changmen/venue-browser/polymarket/pmTransportMode";

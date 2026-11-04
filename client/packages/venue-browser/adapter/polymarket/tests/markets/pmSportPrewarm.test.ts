@@ -1,15 +1,16 @@
+import { gammaV1 } from "../fixtures/currentGamma";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 const get = vi.hoisted(() => vi.fn());
 vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({ polymarketPluginGet: get }));
 beforeEach(() => { vi.resetModules(); get.mockReset(); });
 afterEach(() => vi.restoreAllMocks());
-const option = (id = "a") => ({ type: "Polymarket", itemId: id, betId: id, bet: { round: 0 },
+const option = (id = "101") => ({ type: "Polymarket", itemId: id, betId: id, bet: { round: 0 },
   match: { providers: { Polymarket: id }, startAt: Date.now() - 60_000 } }) as BetOption;
 const drain = async () => { for (let i = 0; i < 16; i++) await Promise.resolve(); };
 
 test("candidate prewarm shares Gamma with preflight but never prewarms CLOB", async () => {
-  get.mockImplementation(async (url: string) => url.includes("/markets?") ? [{ active: true }] : { live: true, accepting_orders: true });
+  get.mockImplementation(async (url: string) => url.includes("/markets?") ? [gammaV1(["101", "102"], { active: true })] : { live: true, accepting_orders: true });
   const { prewarmPmSportForCandidate: warm } = await import("@changmen/venue-browser/polymarket/markets/pmSportPrewarm");
   const { resolvePolymarketBetBlockReason: check } = await import("@changmen/venue-browser/polymarket/submission/preflight/pmBetGuard");
   const input = option(); warm(input); warm(input); await drain();

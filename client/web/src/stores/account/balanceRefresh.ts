@@ -70,7 +70,7 @@ async function fetchVenueBalance(account: PlatformAccount): Promise<AccountBalan
     return provider?.getBalance?.(account);
   }
   if (providerId === "polymarket" && account.accountId) {
-    const { fetchPolymarketBalanceViaTransport } = await import("@changmen/venue-browser/adapter/polymarket");
+    const { fetchPolymarketBalanceViaTransport } = await import("@changmen/venue-browser/polymarket");
     return fetchPolymarketBalanceViaTransport(account);
   }
   const provider = getAdapter(account.provider)?.provider;

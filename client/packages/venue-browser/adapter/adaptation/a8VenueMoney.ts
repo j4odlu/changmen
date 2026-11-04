@@ -13,7 +13,7 @@ import {
   scaleUsdtToCnyDisplay,
 } from "@changmen/shared/currency";
 import { isPredictionMarketUsdtStakeProvider } from "@changmen/shared/account_multiply";
-import { polymarketCnyFromUsdt, polymarketUsdtFromCny } from "../polymarket/pmStake";
+import { polymarketCnyFromUsdt, polymarketUsdtFromCny } from "@changmen/venue-browser/polymarket/submission/preflight/pmStake";
 
 function venueToPlanExchange(account: PlatformAccount): number {
   return getExchange(account.currency);

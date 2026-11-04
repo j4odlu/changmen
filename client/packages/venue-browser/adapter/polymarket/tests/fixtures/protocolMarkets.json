@@ -1,0 +1,157 @@
+[
+  {
+    "version": "v1",
+    "capturedOn": "2026-11-04",
+    "projection": "Public wire identity/status fields and the five best actual book levels; no synthetic liquidity in this fixture.",
+    "sources": [
+      "https://gamma-api.polymarket.com/markets/559653",
+      "https://clob.polymarket.com/markets/0xe6bcc2f1dd025ce5e1833190f7c60a71171c94f805df55b9ab0ded695ec93565",
+      "https://clob.polymarket.com/book?token_id=107064985435494333113391038470401719113272800530429703182710416066774068907304"
+    ],
+    "gamma": {
+      "version": "v1",
+      "id": "559653",
+      "conditionId": "0xe6bcc2f1dd025ce5e1833190f7c60a71171c94f805df55b9ab0ded695ec93565",
+      "clobTokenIds": "[\"107064985435494333113391038470401719113272800530429703182710416066774068907304\", \"65176072261324737856085688071627118509549293922582857186996392180609764586527\"]",
+      "outcomes": "[\"Yes\", \"No\"]",
+      "outcomePrices": "[\"0.153\", \"0.847\"]",
+      "active": true,
+      "closed": false,
+      "acceptingOrders": true,
+      "enableOrderBook": true
+    },
+    "clob": {
+      "version": "v1",
+      "condition_id": "0xe6bcc2f1dd025ce5e1833190f7c60a71171c94f805df55b9ab0ded695ec93565",
+      "active": true,
+      "closed": false,
+      "accepting_orders": true,
+      "enable_order_book": true,
+      "tokens": [
+        {
+          "token_id": "107064985435494333113391038470401719113272800530429703182710416066774068907304",
+          "outcome": "Yes",
+          "price": 0.153,
+          "winner": false
+        },
+        {
+          "token_id": "65176072261324737856085688071627118509549293922582857186996392180609764586527",
+          "outcome": "No",
+          "price": 0.847,
+          "winner": false
+        }
+      ]
+    },
+    "book": {
+      "market": "0xe6bcc2f1dd025ce5e1833190f7c60a71171c94f805df55b9ab0ded695ec93565",
+      "asset_id": "107064985435494333113391038470401719113272800530429703182710416066774068907304",
+      "neg_risk": true,
+      "min_order_size": "5",
+      "tick_size": "0.001",
+      "timestamp": "1793800802329",
+      "bids": [
+        {
+          "price": "0.142",
+          "size": "1508.91"
+        },
+        {
+          "price": "0.147",
+          "size": "1000"
+        },
+        {
+          "price": "0.148",
+          "size": "2351.78"
+        },
+        {
+          "price": "0.15",
+          "size": "2815"
+        },
+        {
+          "price": "0.152",
+          "size": "2109.84"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.16",
+          "size": "679"
+        },
+        {
+          "price": "0.159",
+          "size": "200"
+        },
+        {
+          "price": "0.158",
+          "size": "4393.95"
+        },
+        {
+          "price": "0.155",
+          "size": "2995.8"
+        },
+        {
+          "price": "0.154",
+          "size": "1268.33"
+        }
+      ]
+    }
+  },
+  {
+    "version": "v2",
+    "capturedOn": "2026-11-04",
+    "projection": "Public wire identity/status fields and the five best actual book levels; no synthetic liquidity in this fixture.",
+    "sources": [
+      "https://gamma-api.polymarket.com/markets/6255194",
+      "https://clob.polymarket.com/markets/0x021684ae86374010cfed626c67afaf1023000c00000000000000000000000000",
+      "https://clob.polymarket.com/book?token_id=944412068274729391445398613530435636018762177453597551650732970930727813120"
+    ],
+    "gamma": {
+      "version": "v2",
+      "id": "6255194",
+      "conditionId": "0x021684ae86374010cfed626c67afaf1023000c00000000000000000000000000",
+      "clobTokenIds": "[\"944412068274729391445398613530435636018762177453597551650732970930727813120\", \"944412068274729391445398613530435636018762177453597551650732970930727813121\"]",
+      "positionIds": [
+        "944412068274729391445398613530435636018762177453597551650732970930727813120",
+        "944412068274729391445398613530435636018762177453597551650732970930727813121"
+      ],
+      "outcomes": "[\"Yes\", \"No\"]",
+      "outcomePrices": "[\"0.5\", \"0.5\"]",
+      "active": true,
+      "closed": false,
+      "acceptingOrders": true,
+      "enableOrderBook": true
+    },
+    "clob": {
+      "version": "v2",
+      "condition_id": "0x021684ae86374010cfed626c67afaf1023000c00000000000000000000000000",
+      "active": true,
+      "closed": false,
+      "accepting_orders": true,
+      "enable_order_book": true,
+      "tokens": [
+        {
+          "token_id": "944412068274729391445398613530435636018762177453597551650732970930727813120",
+          "outcome": "Yes",
+          "price": 0.5,
+          "winner": false
+        },
+        {
+          "token_id": "944412068274729391445398613530435636018762177453597551650732970930727813121",
+          "outcome": "No",
+          "price": 0.5,
+          "winner": false
+        }
+      ]
+    },
+    "book": {
+      "version": "v2",
+      "market": "0x021684ae86374010cfed626c67afaf1023000c00000000000000000000000000",
+      "asset_id": "944412068274729391445398613530435636018762177453597551650732970930727813120",
+      "neg_risk": true,
+      "min_order_size": "5",
+      "tick_size": "0.01",
+      "timestamp": "1793739957008",
+      "bids": [],
+      "asks": []
+    }
+  }
+]

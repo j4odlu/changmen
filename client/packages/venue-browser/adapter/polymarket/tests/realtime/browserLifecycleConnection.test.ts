@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as market from "@changmen/venue-browser/polymarket/marketQuoteHub";
 import * as sport from "@changmen/venue-browser/polymarket/sportQuoteHub";
-import * as oldMarket from "../../marketQuoteHub";
-import * as oldSport from "../../sportQuoteHub";
+import * as oldMarket from "@changmen/venue-browser/polymarket/marketQuoteHub";
+import * as oldSport from "@changmen/venue-browser/polymarket/sportQuoteHub";
 import { resetPmMarketWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
 import { resetPmRoutingPreferenceForTests } from "@changmen/venue-browser/polymarket/pmRoutingPreference";
 import { resetOfficialFailStreakForTests } from "@changmen/venue-browser/polymarket/ws";

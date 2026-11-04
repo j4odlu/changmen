@@ -24,7 +24,7 @@ const m = vi.hoisted(() => ({ trace: [] as unknown[], member: "member-one", sign
   message: vi.fn(), load: vi.fn(), adapter: vi.fn(), vaultWrite: vi.fn() }));
 vi.mock("element-plus", () => ({ ElMessage: Object.assign((value: unknown) => m.message(value), { success: m.message, error: m.message }),
   ElLoading: { service: () => ({ close: () => {} }) } }));
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({ normalizePolymarketPrivateKey: (key: string) => key,
+vi.mock("@changmen/venue-browser/polymarket", () => ({ normalizePolymarketPrivateKey: (key: string) => key,
   resolvePolymarketSignerAddress: m.signer, resolvePolymarketDepositWalletFromPrivateKey: m.derive,
   createOrDerivePolymarketApiCreds: m.creds, fetchPolymarketRelayerStatus: async () => ({ configured: true }), preparePolymarketWallet: async () => ({ ok: true }) }));
 vi.mock("@changmen/venue-browser/adapter/predictfun", () => ({
@@ -107,11 +107,13 @@ async function setup(old: boolean, provider: model.PlatformAccount["provider"], 
     "./accountCredentialPaste": pasteEditor, "./accountEditSave": saveEditor,
     "./AccountEditPanel.vue": { default: {} }, "@/components/account/AccountEditPanel.vue": { default: {} },
   };
-  for (const spec of ["element-plus", "@changmen/venue-browser/adapter/polymarket", "@changmen/venue-browser/adapter/predictfun", "@/security/pmVault",
+  for (const spec of ["element-plus", "@changmen/venue-browser/polymarket", "@changmen/venue-browser/adapter/predictfun", "@/security/pmVault",
     "@/config/apiBase", "@/lib/authCredentials", "@/api/admin", "@/runtime/venueAdapters", "@/components/account/accountGatewayProbe", "@changmen/venue-browser/adapter/pb"])
     modules[spec] = await vi.importMock(spec);
   const exports: Record<string, unknown> = {};
   runInNewContext(old ? before : after, { exports, require: (spec: string) => {
+    // Historical component bytecode uses its original module name; production exports remain retired.
+    if (old && spec === "@changmen/venue-browser/adapter/polymarket") return modules["@changmen/venue-browser/polymarket"];
     if (!(spec in modules)) throw new Error("Unexpected component dependency: " + spec);
     return modules[spec];
   }, console, Date, JSON, Error, Promise, structuredClone, navigator: globalThis.navigator, window: globalThis.window });

@@ -6,6 +6,7 @@ import {
   clobMarketToGammaShape,
   resolvePolymarketSettlement,
   fetchGammaMarketsByConditionIds,
+  enrichMarketsFromClob,
   lookupGammaMarket,
   polymarketShareCount,
   polymarketBuyStakeUsdc,
@@ -31,6 +32,60 @@ const ilbirsTrade = {
 };
 
 describe("polymarket settlement (server)", () => {
+  it.each([undefined, "v2"])("indexes validated CLOB settlement without a Gamma response (version=%s)", async version => {
+    const clob = { ...(version ? { version } : {}), condition_id: "condition",
+      tokens: [{ token_id: "101", outcome: "Home", winner: true }, { token_id: "102", outcome: "Away", winner: false }] };
+    const request = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, json: async () => clob });
+    try {
+      const markets = await enrichMarketsFromClob(new Map(), ["condition"]);
+      expect(computePolymarketSettlement({ market: "condition", asset_id: "101", size: "10" }, lookupGammaMarket(markets, { market: "condition" }), 4))
+        .toEqual({ status: "win", reward: 10, money: 6, kind: "official" });
+      expect(lookupGammaMarket(markets, { asset_id: "101" })).toBe(markets.get("condition"));
+    } finally { request.mockRestore(); }
+  });
+  it("rejects a CLOB response for a different condition even without Gamma", async () => {
+    const request = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, json: async () => ({ version: "v2", condition_id: "other",
+      tokens: [{ token_id: "101", winner: true }, { token_id: "102", winner: false }] }) });
+    try { expect((await enrichMarketsFromClob(new Map(), ["condition"])).size).toBe(0); }
+    finally { request.mockRestore(); }
+  });
+  it.each(["v1", "v2"])("%s missing trade assets require an unambiguous, complete outcome mapping", version => {
+    for (const outcomes of ['["Same","Same"]', '["Same"]', '["","Same"]']) {
+      const market = { version, ...(version === "v2" ? { positionIds: ["101", "102"] } : { clobTokenIds: '["101","102"]' }),
+        outcomes, outcomePrices: '["1","0"]' };
+      expect(computePolymarketSettlement({ outcome: "Same", size: "10" }, market, 4)).toBeNull();
+    }
+    const identity = { version, ...(version === "v2" ? { positionIds: ["101", "102"] } : { clobTokenIds: '["101","102"]' }) };
+    expect(computePolymarketSettlement({ outcome: " Away ", size: "10" },
+      { ...identity, outcomes: '["Home","Away"]', outcomePrices: '["0","1"]' }, 4)).toMatchObject({ status: "win", money: 6 });
+    expect(computePolymarketSettlement({ asset_id: "102", outcome: "Same", size: "10" },
+      { ...identity, outcomes: '["Same","Same"]', outcomePrices: '["0","1"]' }, 4)).toMatchObject({ status: "win", money: 6 });
+  });
+  it("refuses a trade or stored-order condition mismatch before financial calculations", () => {
+    const market = { version: "v2", conditionId: "condition", positionIds: ["101", "102"], tokens: [{ token_id: "101", winner: true }] };
+    expect(computePolymarketSettlement({ asset_id: "102", market: "other", size: "10" }, market, 4)).toBeNull();
+    expect(computePolymarketSettlementFromOrderRaw({ pmTokenId: "102", pmConditionId: "other", pmShares: 10 }, market, 4)).toBeNull();
+  });
+  it.each(["v1", "v2"])("does not lose a position after a conflicting %s CLOB overlay", version => {
+    const gamma = { version, conditionId: "condition", outcomePrices: '["0.5","0.5"]',
+      ...(version === "v2" ? { positionIds: ["101", "102"] } : { clobTokenIds: '["101","102"]' }) };
+    const mixed = clobMarketToGammaShape({ version, condition_id: "condition", tokens: [{ token_id: "101", winner: false }, { token_id: "999", winner: true }] }, gamma);
+    expect(mixed).toBe(gamma);
+    expect(computePolymarketSettlement({ asset_id: "101", size: "10" }, mixed, 4)?.status).toBe("none");
+  });
+  it.each(["v1", "v2"])("does not use the first of multiple %s winners", version => {
+    const market = { version, ...(version === "v2" ? { positionIds: ["101", "102"] } : { clobTokenIds: '["101","102"]' }),
+      outcomePrices: '["1","0"]', tokens: [{ token_id: "101", winner: true }, { token_id: "102", winner: true }] };
+    expect(resolvePolymarketSettlement(market)).toBeNull();
+    expect(computePolymarketSettlementFromOrderRaw({ pmTokenId: "102", pmShares: 10 }, market, 4)?.status).toBe("none");
+  });
+  it.each([true, false])("does not record an unknown CTF asset as a V2 loser (official=%s)", official => {
+    const market = { version: "v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]', outcomePrices: '["1","0"]',
+      tokens: [{ token_id: "201", winner: official }, { token_id: "101", winner: false }] };
+    expect(computePolymarketSettlement({ asset_id: "101", size: "10" }, market, 4)).toBeNull();
+    expect(computePolymarketSettlementFromOrderRaw({ pmTokenId: "101", pmShares: 10 }, market, 4)).toBeNull();
+    expect(computePolymarketSettlement({ asset_id: "202", size: "10" }, market, 4)).toMatchObject({ status: "lose", money: -4 });
+  });
   it.each([9999, 10000, 10001, 2000000])("keeps normalized CLOB shares in server settlement: %s", shares => {
     expect(polymarketShareCount(String(shares))).toBe(shares);
     expect(polymarketBuyStakeUsdc(String(shares), 0.5)).toBe(shares / 2);
@@ -61,7 +116,7 @@ describe("polymarket settlement (server)", () => {
     const base = { version: "v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]', outcomePrices: '["0.99","0.01"]' };
     expect(resolvePolymarketSettlement(base)).toEqual({ winningAssetId: "201", kind: "price" });
     const reversed = clobMarketToGammaShape({ tokens: [{ token_id: "202", winner: true }, { token_id: "201", winner: false }] }, base);
-    expect(reversed.positionIds).toEqual(["202", "201"]);
+    expect(reversed.positionIds).toEqual(["201", "202"]);
     expect(resolvePolymarketSettlement(reversed)).toEqual({ winningAssetId: "202", kind: "official" });
     expect(resolvePolymarketSettlement(clobMarketToGammaShape({ tokens: [{ token_id: "101", winner: true }] }, base)))
       .toEqual({ winningAssetId: "201", kind: "price" });

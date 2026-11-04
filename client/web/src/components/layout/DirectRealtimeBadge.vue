@@ -42,7 +42,7 @@ import {
   type PmRoutingPreference,
   type PmOrderSubmitMode,
   type PmUserWsSourceMode,
-} from "@changmen/venue-browser/adapter/polymarket";
+} from "@changmen/venue-browser/polymarket";
 import {
   cyclePredictFunMarketWsSourceModeAndReconnect,
   getPfMarketWsSourceMode,

@@ -1,33 +1,33 @@
 // Frozen pre-change FOK entry for browser A/B diagnostics only.
 // [changmen 扩展] FOK 预检与准备状态；公共异步检查由 submission/preflight 承担。
 import { runPmBuyPreflight, matchesPmPreflightBinding } from "./pmBeforeFastPreflight";
-import { capturePmFokPreflightMode, type PmFokPreflightMode } from "../../../submission/preflight/pmFokPreflightMode";
-import { optimizedFokQuoteBlock } from "../../../submission/preflight/optimized/pmExecutableQuote";
+import { capturePmFokPreflightMode, type PmFokPreflightMode } from "@changmen/venue-browser/polymarket/submission/preflight/pmFokPreflightMode";
+import { optimizedFokQuoteBlock } from "@changmen/venue-browser/polymarket/submission/preflight/optimized/pmExecutableQuote";
 import type { PlatformProvider } from "../../../../contract";
 import type { BetOption } from "@changmen/client-core/models/betOption";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { truncateOddsTo3 } from "@changmen/shared/odds_format";
-import { resolvePolymarketVenueStakeUsdc } from "../../../pmStake";
-import { currentPmTick } from "../../../pmTickState";
-import { validatePmPriceQuote, type PmPriceQuote } from "../../../priceQuote";
-import { validatePmTickBufferQuote, notePmTickBufferBook, pmTickBufferTick, type PmTickBufferQuote } from "../../../pmTickBuffer";
-import { pmBuyOrderShares } from "../../../pmBuyOrderShares";
-import { resolvePmHttpMode } from "../../../pmTransportMode";
-import { resolvePmOrderSubmitHttpMode } from "../../../pmOrderSubmitMode";
-import { getPmMarketWsSourceMode } from "../../../pmMarketWsMode";
-import { POLYMARKET_CLOB_API } from "../../../api";
-import { resolvePolymarketBuilderCode } from "../../../builder";
-import { parseTokenConfig, resolvePrivateKey } from "../../../l2Auth";
-import { isPolymarketTradingDisabledError, POLYMARKET_TRADING_DISABLED_MESSAGE } from "../../../pmMarketGuard";
-import { getPolymarketPmSportBlockReasonFromOption } from "../../../pmSportGuard";
-import { isValidClobPrice, resolvePolymarketDetectionMaxPrice, type PolymarketOptionQuoteData } from "../../../pmDetection";
-import { isPolymarketPriceAboveDetectionError, PolymarketPriceAboveDetectionError, syncPolymarketFoOnPriceAboveDetection } from "../../../pmTokenQuote";
-import { isPolymarketPriceOnTick, alignPolymarketPriceToTick, type PolymarketTickSize } from "../../../pmTickPrice";
-import { pmSubmitClockReady, pmGetBook } from "../../../pmClientApi";
-import { polymarketMarketOrderOptions } from "../../../pmMarketOrderOptions";
-import { recordPmExecutionMetric } from "../../../pmExecutionMetrics";
-import { polymarketSigningGeneration, type PolymarketOrderClientRuntime } from "../../../pmOrderClientCache";
-import { pmFokDepthReuseMultiplier, getPmFokDepthBufferPrefs, pmFokDepthBufferNeedUsdc, pmFokFillPriceDepthUsdc } from "../../../pmFokDepthBufferMode";
+import { resolvePolymarketVenueStakeUsdc } from "@changmen/venue-browser/polymarket/submission/preflight/pmStake";
+import { currentPmTick } from "@changmen/venue-browser/polymarket/pmTickState";
+import { validatePmPriceQuote, type PmPriceQuote } from "@changmen/venue-browser/polymarket/priceQuote";
+import { validatePmTickBufferQuote, notePmTickBufferBook, pmTickBufferTick, type PmTickBufferQuote } from "@changmen/venue-browser/polymarket/quotes/pmTickBuffer";
+import { pmBuyOrderShares } from "@changmen/venue-browser/polymarket/pmBuyOrderShares";
+import { resolvePmHttpMode } from "@changmen/venue-browser/polymarket/pmTransportMode";
+import { resolvePmOrderSubmitHttpMode } from "@changmen/venue-browser/polymarket/pmOrderSubmitMode";
+import { getPmMarketWsSourceMode } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
+import { POLYMARKET_CLOB_API } from "@changmen/venue-browser/polymarket/api";
+import { resolvePolymarketBuilderCode } from "@changmen/venue-browser/polymarket/submission/client/builder";
+import { parseTokenConfig, resolvePrivateKey } from "@changmen/venue-browser/polymarket/auth/l2Auth";
+import { isPolymarketTradingDisabledError, POLYMARKET_TRADING_DISABLED_MESSAGE } from "@changmen/venue-browser/polymarket/markets/pmMarketGuard";
+import { getPolymarketPmSportBlockReasonFromOption } from "@changmen/venue-browser/polymarket/markets/pmSportGuard";
+import { isValidClobPrice, resolvePolymarketDetectionMaxPrice, type PolymarketOptionQuoteData } from "@changmen/venue-browser/polymarket/submission/preflight/pmDetection";
+import { isPolymarketPriceAboveDetectionError, PolymarketPriceAboveDetectionError, syncPolymarketFoOnPriceAboveDetection } from "@changmen/venue-browser/polymarket/quotes/pmTokenQuote";
+import { isPolymarketPriceOnTick, alignPolymarketPriceToTick, type PolymarketTickSize } from "@changmen/venue-browser/polymarket/pmTickPrice";
+import { pmSubmitClockReady, pmGetBook } from "@changmen/venue-browser/polymarket/orders/pmClientApi";
+import { polymarketMarketOrderOptions } from "@changmen/venue-browser/polymarket/pmMarketOrderOptions";
+import { recordPmExecutionMetric } from "@changmen/venue-browser/polymarket/pmExecutionMetrics";
+import { polymarketSigningGeneration, type PolymarketOrderClientRuntime } from "@changmen/venue-browser/polymarket/submission/client/pmOrderClientCache";
+import { pmFokDepthReuseMultiplier, getPmFokDepthBufferPrefs, pmFokDepthBufferNeedUsdc, pmFokFillPriceDepthUsdc } from "@changmen/venue-browser/polymarket/pmFokDepthBufferMode";
 type TickSize = PolymarketTickSize;
 
 interface PolymarketOrderBookResponse {

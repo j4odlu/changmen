@@ -8,7 +8,7 @@ import {
   resolvePbWsShadow,
   subscribePbWsShadow,
 } from "@changmen/venue-browser/adapter/pb";
-import { getPolymarketPmSportBlockReason } from "@changmen/venue-browser/adapter/polymarket";
+import { getPolymarketPmSportBlockReason } from "@changmen/venue-browser/polymarket";
 import { lookupRayMapOutcome } from "@changmen/venue-browser/adapter/ray";
 import { storeToRefs } from "pinia";
 import { computed, onUnmounted, ref, watch } from "vue";

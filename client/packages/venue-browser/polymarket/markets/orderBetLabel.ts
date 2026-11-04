@@ -1,4 +1,4 @@
-import { polymarketMarketAssetIds } from "@changmen/shared/pm_market_assets";
+import { polymarketMarketAssetIds, polymarketMarketHasAssetMetadata } from "@changmen/shared/pm_market_assets";
 import type { PolymarketMarketIndexEntry } from "@changmen/api-contract";
 import { polymarketOrderContextFromMarket, type PolymarketRawMarket } from "./parse";
 
@@ -27,7 +27,7 @@ export function rememberPolymarketIndexBetLabel(entry: PolymarketMarketIndexEntr
 
 export function rememberPolymarketMarketBetLabel(market: PolymarketRawMarket): void {
   const tokens = polymarketMarketAssetIds(market);
-  if (!tokens.length && market.version == null && market.positionIds == null && market.position_ids == null)
+  if (!tokens.length && !polymarketMarketHasAssetMetadata(market))
     tokens.push(...(market.tokens ?? []).map(token => String(token.token_id ?? "")).filter(Boolean));
   remember(String(market.conditionId ?? market.condition_id ?? "").trim(), tokens, polymarketOrderContextFromMarket(market).bet);
 }

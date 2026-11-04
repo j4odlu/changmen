@@ -33,6 +33,8 @@ export interface PmBuyPreflightTasks<T> {
   gateway: string;
   /** 每轮只调用一次；FOK/GTC 自己保留报价、份数和深度语义。 */
   market: () => Promise<T>;
+  /** 同一轮 book 的签名域；与已查到的明确市场版本交叉核对，不增加请求。 */
+  marketProtocol?: (market: T) => 2 | 3;
   shadowInput?: import("../../../pm-book-diagnostics/executionMath").SimulationInput;
   role?: "execute" | "precheckOnly";
   requireClobConfirmation?: boolean;
@@ -55,9 +57,11 @@ export async function runPmBuyPreflight<T>(account: PlatformAccount, option: Bet
   const measure = <R>(kind: "guard" | "clock" | "runtime", action: () => Promise<R>) =>
     tasks.measureStages ? measurePmExecution(kind, { tokenId: option.itemId, preflightMode: tasks.sportMode ?? "gtc" }, action) : action();
   const market = tasks.market();
+  // 市场任务失败仍由调用方解释；派生协议不能产生未处理的拒绝。
+  const protocol = tasks.marketProtocol ? market.then(tasks.marketProtocol).catch(() => undefined) : undefined;
   const guard = measure("guard", () => tasks.sportMode === "legacy"
-    ? resolveLegacyBlockReason(option)
-    : resolvePolymarketBetBlockReason(option, tasks.requireClobConfirmation));
+    ? resolveLegacyBlockReason(option, false, protocol)
+    : resolvePolymarketBetBlockReason(option, tasks.requireClobConfirmation, protocol));
   const clock = tasks.role === "precheckOnly" ? Promise.resolve()
     : measure("clock", () => pmPrepareSubmit(account));
   const runtime = tasks.role === "precheckOnly" ? Promise.resolve(null) : measure("runtime", async () => {

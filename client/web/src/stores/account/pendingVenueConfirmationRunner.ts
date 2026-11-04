@@ -13,7 +13,7 @@ import { persistPolymarketExecutionReject } from "@/stores/account/pmRejectOrder
 import { settleArbLegUntilTerminal } from "@/stores/betting/autoBet/arbLegSettle";
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
 import { pmSubmissionFromResult, validatePmSubmission } from "@changmen/shared/pm_submission";
-import { pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-browser/adapter/polymarket";
+import { pmAccountSubmitAttempts, pmSubmitScope, pmSubmitMaker } from "@changmen/venue-browser/polymarket";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { getPmSubmission, saveOrders } from "@/api/order";
 import { confirmVenueBet } from "@/stores/betting/autoBet/confirmVenueBet";

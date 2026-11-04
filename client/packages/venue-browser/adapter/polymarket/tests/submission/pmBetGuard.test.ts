@@ -1,3 +1,4 @@
+import { gammaV1 } from "../fixtures/currentGamma";
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { BetOption as BetOptionClass } from "@changmen/client-core/models/betOption";
 import { resolvePolymarketBetBlockReason } from "@changmen/venue-browser/polymarket/submission/preflight/pmBetGuard";
@@ -11,7 +12,7 @@ vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({
 }));
 
 function option(extra: Record<string, unknown> = {}): BetOptionClass {
-  const o = new BetOptionClass("Polymarket" as never, "m1", "b1", "token-home", 28, "Home", 4.762);
+  const o = new BetOptionClass("Polymarket" as never, "m1", "b1", "101", 28, "Home", 4.762);
   Object.assign(o, {
     bet: { round: 0 },
     match: {
@@ -67,6 +68,18 @@ describe("resolvePolymarketBetBlockReason", () => {
     }
   });
 
+  test.each([resolvePolymarketBetBlockReason, resolveLegacyBlockReason])("accepts matching V2 CLOB token rows through the complete preflight chain", async check => {
+    // Decimal strings retain the full uint256 position ID precision used by live V2 responses.
+    const ids = ["944412068274729391445398613530435636018762177453597551650732970930727813120", "944412068274729391445398613530435636018762177453597551650732970930727813121"];
+    vi.mocked(polymarketPluginGet).mockImplementation(async url => {
+      if (url.includes("/events/")) return { live: true, ended: false };
+      if (url.includes("/markets?")) return [{ version: "v2", positionIds: ids, clobTokenIds: '["101","102"]', active: true, acceptingOrders: true }];
+      return { version: "v2", active: true, closed: false, accepting_orders: true, tokens: ids.map(token_id => ({ token_id, winner: false })) };
+    });
+    expect(await check(option({ itemId: ids[0] }), true)).toBeNull();
+    expect(await check(option({ itemId: ids[1] }), true)).toBeNull();
+  });
+
   test.each([resolvePolymarketBetBlockReason, resolveLegacyBlockReason])("retains an identity conflict when the position fallback is offline", async check => {
     vi.mocked(polymarketPluginGet).mockImplementation(async raw => {
       const url = new URL(raw);
@@ -80,7 +93,7 @@ describe("resolvePolymarketBetBlockReason", () => {
   test("metadata-only Gamma event cannot mask an embedded ended state", async () => {
     vi.mocked(polymarketPluginGet).mockImplementation(async url => {
       if (url.includes("/events/")) return { id: "650650", title: "metadata only" };
-      if (url.includes("/markets?")) return [{ events: [{ ended: true }] }];
+      if (url.includes("/markets?")) return [gammaV1(["101", "102"], { events: [{ ended: true }] })];
       return { accepting_orders: true };
     });
     expect(await resolvePolymarketBetBlockReason(option())).toContain("比赛已结束");
@@ -89,7 +102,7 @@ describe("resolvePolymarketBetBlockReason", () => {
   test.each([0, 1_000, 44_000, 46_000])("WS received %d ms ago never exempts the Gamma sport check", async age => {
     vi.mocked(polymarketPluginGet).mockImplementation(async url => {
       if (url.includes("/events/")) return { ended: true };
-      if (url.includes("/markets?")) return [{ active: true }];
+      if (url.includes("/markets?")) return [gammaV1(["101", "102"], { active: true })];
       return { accepting_orders: true };
     });
     const input = option(); input.match!.pmSport = { live: true, receivedAt: Date.now() - age };
@@ -103,7 +116,7 @@ describe("resolvePolymarketBetBlockReason", () => {
     vi.mocked(polymarketPluginGet).mockImplementation(async url => {
       await gate;
       if (url.includes("/events/")) return { live: true, ended: false };
-      if (url.includes("/markets?")) return [{ active: true }];
+      if (url.includes("/markets?")) return [gammaV1(["101", "102"], { active: true })];
       return { accepting_orders: true };
     });
     const input = option(); const task = resolvePolymarketBetBlockReason(input);
@@ -114,7 +127,7 @@ describe("resolvePolymarketBetBlockReason", () => {
   test.each([null, {}, { accepting_orders: "true" }, new Error("timeout")])("automatic checks reject unknown CLOB state %j", async clob => {
     vi.mocked(polymarketPluginGet).mockImplementation(async url => {
       if (url.includes("/events/")) return { live: true, ended: false };
-      if (url.includes("/markets?")) return [{ active: true }];
+      if (url.includes("/markets?")) return [gammaV1(["101", "102"], { active: true })];
       if (clob instanceof Error) throw clob;
       return clob;
     });
@@ -151,7 +164,7 @@ describe("resolvePolymarketBetBlockReason", () => {
   test("basketball local and Gamma points pass GTC, classic and dynamic FOK sport guards", async () => {
     vi.mocked(polymarketPluginGet).mockImplementation(async url => {
       if (url.includes("/events/")) return { score: "79-71", period: "Q4", live: true, ended: false };
-      if (url.includes("/markets?")) return [{ active: true, acceptingOrders: true }];
+      if (url.includes("/markets?")) return [gammaV1(["101", "102"], { active: true, acceptingOrders: true })];
       return { accepting_orders: true };
     });
     const input = option();
@@ -177,7 +190,7 @@ describe("resolvePolymarketBetBlockReason", () => {
       }
       if (url.includes("/markets?")) {
         return [{
-          clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+          version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
           outcomePrices: JSON.stringify(["0.21", "0.79"]),
         }];
       }
@@ -191,7 +204,7 @@ describe("resolvePolymarketBetBlockReason", () => {
 
   test("outcomePrices blocks when buying heavy underdog token", async () => {
     vi.mocked(polymarketPluginGet).mockResolvedValue([{
-      clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+      version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
       outcomePrices: JSON.stringify(["0.0005", "0.9995"]),
       events: [{ score: "000-000|1-1|Bo3", live: true, period: "3/3" }],
     }]);
@@ -216,7 +229,7 @@ describe("resolvePolymarketBetBlockReason", () => {
     vi.mocked(polymarketPluginGet).mockImplementation(async (url: string) => {
       if (url.includes("gamma-api.polymarket.com/markets?")) {
         return [{
-          clob_token_ids: JSON.stringify(["token-home", "token-away"]),
+          version: "v1", clobTokenIds: JSON.stringify(["101", "102"]),
           outcomePrices: JSON.stringify(["0.5", "0.5"]),
           acceptingOrders: true,
           closed: false,

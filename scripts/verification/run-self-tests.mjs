@@ -4,6 +4,21 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { selectVerificationTests } from "./verification-selection.mjs";
 
+// The parent already writes a per-invocation path list. Avoid expanding large
+// changes into a Windows command line, while rejecting stale/cross-root evidence.
+export function verifierCliInputs(args, { root = process.cwd(), env = process.env, read = file => fs.readFileSync(file, "utf8") } = {}) {
+  if (args.length === 1 && args[0] === "--all") return { changed: [], all: true };
+  if (!args.includes("--validation-paths")) return { changed: args, all: false };
+  if (args.length !== 1 || !env.CHANGMEN_VALIDATION_PATHS_FILE || !env.CHANGMEN_ACCEPTANCE_INVOCATION)
+    throw Error("Validation path evidence is required without additional arguments");
+  const selected = JSON.parse(read(env.CHANGMEN_VALIDATION_PATHS_FILE));
+  if (selected?.invocationId !== env.CHANGMEN_ACCEPTANCE_INVOCATION || selected.root !== fs.realpathSync(root)
+    || !Array.isArray(selected.paths) || selected.paths.some(file => typeof file !== "string" || !file || path.isAbsolute(file)
+      || /^[a-z]:/i.test(file) || file.includes("\\") || file.includes("\0") || file.split("/").includes("..")))
+    throw Error("Changed-path evidence does not belong to this validation");
+  return { changed: selected.paths, all: false };
+}
+
 export function runVerifierSelfTests(changed, { root = process.cwd(), npm = process.env.npm_execpath, run = spawnSync, select = selectVerificationTests, all = false } = {}) {
   if (!npm) throw Error("Run verifier self-tests through npm");
   const selection = all ? { inputs: changed, tests: [], historicalTests: [], reasons: [], all: true } : select(changed, { root });
@@ -34,7 +49,7 @@ export function runVerifierSelfTests(changed, { root = process.cwd(), npm = proc
   return { ...selection, passed: true };
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const args = process.argv.slice(2), all = args.length === 1 && args[0] === "--all";
-  const result = runVerifierSelfTests(all ? args.slice(1) : args, { all });
+  const { changed, all } = verifierCliInputs(process.argv.slice(2));
+  const result = runVerifierSelfTests(changed, { all });
   if (!result.passed) process.exitCode = 1;
 }

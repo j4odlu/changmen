@@ -3,10 +3,24 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { selectVerificationTests } from "./verification-selection.mjs";
-import { runVerifierSelfTests } from "./run-self-tests.mjs";
+import { runVerifierSelfTests, verifierCliInputs } from "./run-self-tests.mjs";
 import { validationPlan } from "./validation-plan.mjs";
 
 const scratch = [];
+it("reads every path from invocation-bound evidence, preserving explicit standalone modes", () => {
+  const f = fixture(), paths = Array.from({ length: 1000 }, (_, i) => `client/web/src/${"long-path/".repeat(8)}file-${i}.ts`);
+  const selected = { invocationId: "current-invocation", root: fs.realpathSync(f.root), paths };
+  const env = { CHANGMEN_VALIDATION_PATHS_FILE: "evidence", CHANGMEN_ACCEPTANCE_INVOCATION: selected.invocationId };
+  expect(verifierCliInputs(["--validation-paths"], { root: f.root, env, read: () => JSON.stringify(selected) })).toEqual({ changed: paths, all: false });
+  expect(verifierCliInputs(["--all"], { env: {} })).toEqual({ changed: [], all: true });
+  expect(verifierCliInputs(["scripts/verification/current-source-boundaries.mjs"], { env: {} }))
+    .toEqual({ changed: ["scripts/verification/current-source-boundaries.mjs"], all: false });
+  for (const changed of [{ ...selected, invocationId: "stale" }, { ...selected, root: "another-root" },
+    { ...selected, paths: null }, ...["../escape", "/absolute", "C:/absolute", "a\\b", "", "a\0b", 42].map(file => ({ ...selected, paths: [file] }))])
+    expect(() => verifierCliInputs(["--validation-paths"], { root: f.root, env, read: () => JSON.stringify(changed) })).toThrow("does not belong");
+  expect(() => verifierCliInputs(["--validation-paths"], { root: f.root, env: {} })).toThrow("required");
+  expect(() => verifierCliInputs(["--validation-paths", "--all"], { root: f.root, env })).toThrow("required");
+});
 afterEach(() => { vi.unstubAllEnvs(); for (const root of scratch.splice(0)) {
   if (path.dirname(root) !== path.resolve(os.tmpdir()) || !path.basename(root).startsWith("changmen-verifier-selection-")) throw Error("Unexpected cleanup path");
   fs.rmSync(root, { recursive: true, force: true });

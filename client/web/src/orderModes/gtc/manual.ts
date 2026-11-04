@@ -11,7 +11,7 @@ import { startNativeGtcOrders } from "./orderRuntime";
 import { prepareGtcOrder, submitGtcOrder } from "./orders";
 import { notifyBet } from "@/shared/betNotification";
 import { nativeGtcNotice } from "./orderPresentation";
-import { lookupPolymarketOrderBetLabel } from "@changmen/venue-browser/adapter/polymarket/orders";
+import { lookupPolymarketOrderBetLabel } from "@changmen/venue-browser/polymarket/orders/history/orders";
 
 /** [changmen 扩展] 单次手动 GTC，不依赖自动下注开关、不触发另一腿或旧 FOK 编排。 */
 export async function executeManualGtc(account: PlatformAccount, input: BetOption, context: {

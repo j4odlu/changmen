@@ -9,9 +9,9 @@ import { getProviders, pickAccount } from "@/stores/account/accountPicker";
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
 import { createDefaultUserConfig } from "@/types/userConfig";
 import { prepareArbAttempt } from "./prepareArbAttempt";
-import { prewarmPmSportForCandidate } from "@changmen/venue-browser/adapter/polymarket";
-import { capturePmFokPreflightMode, setPmFokPreflightMode } from "@changmen/venue-browser/adapter/polymarket";
-vi.mock("@changmen/venue-browser/adapter/polymarket", async importOriginal => ({ ...await importOriginal<typeof import("@changmen/venue-browser/adapter/polymarket")>(), prewarmPmSportForCandidate: vi.fn() }));
+import { prewarmPmSportForCandidate } from "@changmen/venue-browser/polymarket";
+import { capturePmFokPreflightMode, setPmFokPreflightMode } from "@changmen/venue-browser/polymarket";
+vi.mock("@changmen/venue-browser/polymarket", async importOriginal => ({ ...await importOriginal<typeof import("@changmen/venue-browser/polymarket")>(), prewarmPmSportForCandidate: vi.fn() }));
 
 const state = vi.hoisted(() => ({ store: null as unknown as AccountStoreContext }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({

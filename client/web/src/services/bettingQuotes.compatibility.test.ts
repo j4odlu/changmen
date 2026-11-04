@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { afterEach, expect, it } from "vitest";
-import * as pm from "@changmen/venue-browser/adapter/polymarket";
+import * as pm from "@changmen/venue-browser/polymarket";
 import * as pf from "@changmen/venue-browser/adapter/predictfun";
 import * as platforms from "@changmen/venue-browser/adapter/shared";
 import * as priceQuote from "@changmen/venue-browser/polymarket/priceQuote";
@@ -30,8 +30,11 @@ function original<T>(relative: string, modules: Record<string, unknown>): T {
   const exports = {};
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } });
   runInNewContext(output.outputText, { exports, require: (name: string) => {
-    if (!(name in modules)) throw new Error(`Unbound original dependency: ${name}`);
-    return modules[name];
+    // Only the sealed historical VM sees these old identifiers; production package exports stay retired.
+    const entry = name === "@changmen/venue-browser/adapter/polymarket" ? "@changmen/venue-browser/polymarket"
+      : name === "@changmen/venue-browser/adapter/polymarket/priceQuote" ? "@changmen/venue-browser/polymarket/priceQuote" : name;
+    if (!(entry in modules)) throw new Error(`Unbound original dependency: ${name}`);
+    return modules[entry];
   } });
   return exports as T;
 }
@@ -44,7 +47,7 @@ const quotes: DetectionQuoteSource = {
 };
 const modules = {
   "@/stores/oddsStore": { useOddsStore: () => quotes },
-  "@changmen/venue-browser/adapter/polymarket": pm,
+  "@changmen/venue-browser/polymarket": pm,
   "@changmen/venue-browser/adapter/predictfun": pf,
   "@changmen/venue-browser/adapter/shared": platforms,
   "@changmen/venue-browser/polymarket/priceQuote": priceQuote,

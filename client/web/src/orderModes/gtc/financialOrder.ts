@@ -1,6 +1,6 @@
 import type { GtcOrderState, GtcFinancialOrder } from "@changmen/shared/pm_gtc_order";
-import { buildPolymarketMatchedBuyVenueOrderFromFillUsdc } from "@changmen/venue-browser/adapter/polymarket";
-import { scalePolymarketVenueOrdersForDisplay } from "@changmen/venue-browser/adapter/polymarket/orders";
+import { buildPolymarketMatchedBuyVenueOrderFromFillUsdc } from "@changmen/venue-browser/polymarket";
+import { scalePolymarketVenueOrdersForDisplay } from "@changmen/venue-browser/polymarket/orders/history/orders";
 
 /** [changmen 扩展] 原单事实适配；金额、费用舍入、赔率和汇率均由普通 PM 助手处理。 */
 type FinancialState = Pick<GtcOrderState, "orderId" | "matched" | "principal" | "fee" | "complete" | "fills"> & { id: string };

@@ -4,7 +4,7 @@ import { shallowRef } from "vue";
 let emitPmQuote: ((quote: { assetId: string; bestAsk: number }) => void) | null = null;
 let subscribeCalls = 0;
 
-vi.mock("@changmen/venue-browser/adapter/polymarket", () => ({
+vi.mock("@changmen/venue-browser/polymarket", () => ({
   getPmMarketWsSourceMode: () => "official",
   onPolymarketMarketQuote: (listener: typeof emitPmQuote) => {
     subscribeCalls += 1;

@@ -13,7 +13,7 @@ import {
   validatePmTickBufferQuote,
   polymarketClobMatchesOdds,
   type PolymarketOptionQuoteData,
-} from "@changmen/venue-browser/adapter/polymarket";
+} from "@changmen/venue-browser/polymarket";
 
 /**
  * PM 预检前验证建腿时冻结的统一报价；未经过建腿入口的尝试在此首次冻结。

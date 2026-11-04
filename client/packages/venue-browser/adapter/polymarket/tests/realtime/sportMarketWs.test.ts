@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POLYMARKET_MARKET_WS } from "@changmen/venue-browser/polymarket/api";
 import { getPmMarketWsSourceMode, resetPmMarketWsSourceModeForTests, setPmMarketWsSourceMode } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
-import { startPolymarketSportMarketWs } from "../../sportMarketWs";
-import { PM_SPORT_MARKET_WS_FORWARD_PATH } from "../../sportWsConfig";
+import { startPolymarketSportMarketWs } from "@changmen/venue-browser/polymarket/sportMarketWs";
+import { PM_SPORT_MARKET_WS_FORWARD_PATH } from "@changmen/venue-browser/polymarket/sportWsConfig";
 import { onPmTickReconnect } from "@changmen/venue-browser/polymarket/pmTickState";
 
 class FakeWebSocket {

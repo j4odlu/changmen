@@ -13,11 +13,11 @@ export const POLYGON_POLYMARKET = {
   NEG_RISK_EXCHANGE_V1: "0xC5d563A36AE78145C45a50134d48A1215220f80a",
   CTF_EXCHANGE: "0xE111180000d2663C0091e4f400237545B87B996B",
   NEG_RISK_EXCHANGE: "0xe2222d279d744050d28e00520010520000310F59",
-  /** CLOB 1.2.0 Polygon exchangeV3；仅保留订单哈希的既有签名域，不扩展 V2 授权列表。 */
+  /** V2 PositionManager 市场交易合约；统一 SDK 同时准备其交易授权。 */
   CTF_EXCHANGE_V3: "0xe3333700cA9d93003F00f0F71f8515005F6c00Aa",
   /**
-   * CLOB v1 Neg Risk Adapter（已退役）。
-   * Relayer redeem 自 2026-07-17 UTC 起不再接受此地址；勿放入授权 batch。
+   * CTF Neg Risk Adapter。V1 名称为兼容保留；当前官方仍要求 pUSD allowance + CTF operator。
+   * 旧 redeem 入口退役与交易授权要求不同。
    */
   NEG_RISK_ADAPTER_V1: "0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296",
   /** V2 普通市场 split / merge / redeem（pUSD collateral） */
@@ -27,8 +27,8 @@ export const POLYGON_POLYMARKET = {
 } as const;
 
 /**
- * 买卖 + 结算共用的 Exchange / Collateral Adapter spender（仅 CLOB V2）。
- * Deposit Wallet 对 approve spender 有白名单，V1 Exchange / V1 Neg Risk Adapter 不在名单内。
+ * CTF Exchange / Collateral Adapter 的通用 spender。
+ * CTF Neg Risk Adapter 仅需 pUSD + CTF 授权，由调用方单独补入；V2 授权由统一 SDK 准备。
  */
 export function polymarketTradeSpenders(): readonly string[] {
   return [

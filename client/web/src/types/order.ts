@@ -90,7 +90,7 @@ export interface OrderRow {
    * [changmen 扩展] 市场赛果（持有到期）：Win/Lose。
    * 与 Status/Money 脱钩；中途卖出仍可有值。
    */
-  PmMatchResult?: "Win" | "Lose";
+  PmMatchResult?: "Win" | "Lose" | "EqualSplit";
   /** [changmen 扩展] PredictFun 1:1 买卖 */
   PfSide?: "buy" | "sell";
   PfBuyOrderId?: string;

@@ -1,4 +1,5 @@
 import { LoseOrder } from "@/models/loseOrder";
+import type { OrderRow } from "@/types/order";
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { describe, expect, it } from "vitest";
 import {
@@ -331,6 +332,12 @@ describe("orderLink A8 parity", () => {
     expect(text.startsWith("💎")).toBe(true);
   });
 
+  it.each([[67,"Win",-100,-33],[-67,"Lose",100,33],[0,"Return",100,100]] as const)("final half-payout %s is included in the linked final profit",(money,status,other,expected)=>{
+    const rows=[{Type:"Polymarket",OrderID:"split",Link:1780000000000,Status:status,Money:money,BetMoney:268,PmSide:"buy",PmShares:100,PmMatchResult:"EqualSplit",PmSellState:"settled"},
+      {Type:"OB",OrderID:"other",Link:1780000000000,Status:other>0?"Win":"Lose",Money:other,BetMoney:100}];
+    expect(computeOrderGroupProfit(rows as OrderRow[])).toBe(expected);
+    expect(orderLinkLegend(rows as OrderRow[])).not.toContain(" / ");
+  });
   it("computeOrderGroupProfit uses buy Money only; sell Money ignored", () => {
     const profitZeroBuy = computeOrderGroupProfit([
       { Type: "OB", Money: 10 },

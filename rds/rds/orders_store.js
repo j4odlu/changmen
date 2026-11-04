@@ -1850,6 +1850,7 @@ export async function fetchPolymarketOrderAnalytics(startMs, endMs, userIds) {
           ) AS fill_price,
           LOWER(COALESCE(pm.raw->>'pmSellState', '')) AS sell_state,
           CASE
+            WHEN LOWER(COALESCE(pm.raw->>'pmMatchResult', '')) = 'equal_split' THEN NULL
             WHEN LOWER(COALESCE(pm.raw->>'pmMatchResult', '')) IN ('win', 'lose')
               THEN LOWER(pm.raw->>'pmMatchResult')
             WHEN LOWER(pm.status) IN ('win', 'lose')

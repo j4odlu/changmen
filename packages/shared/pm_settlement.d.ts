@@ -1,0 +1,21 @@
+import type { PolymarketAssetMarket } from "./pm_market_assets.js";
+export interface PolymarketFinalResolution {
+  condition_id?: string | null;
+  status?: string;
+  payouts?: number[] | null;
+  resolved_at?: string | null;
+  transaction_hash?: string;
+}
+export interface PolymarketSettlementMarket extends PolymarketAssetMarket {
+  closed?: boolean;
+  umaResolutionStatus?: string;
+  uma_resolution_status?: string;
+  fallbackResolutionType?: string;
+  finalResolution?: PolymarketFinalResolution;
+}
+export function polymarketEqualSplitResolved(market: PolymarketSettlementMarket | null | undefined): boolean;
+export function polymarketNeedsFinalResolution(market: PolymarketSettlementMarket | null | undefined): boolean;
+export function polymarketWithFinalResolution<T extends PolymarketSettlementMarket>(market: T, rows: unknown): T;
+export function polymarketIsEqualSplitOrder(order: { pmMatchResult?: unknown; PmMatchResult?: unknown } | null | undefined): boolean;
+export function polymarketProfitStatus(money: number): "win" | "lose" | "return";
+export function polymarketEqualSplitAmounts(remainingShares: number, remainingCost: number, realizedPnl?: number): {reward:number;money:number;status:"win"|"lose"|"return"} | null;

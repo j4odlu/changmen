@@ -91,6 +91,7 @@ export function adminOrderToOrderRow(
     PmSellProceeds: row.pmSellProceeds,
     PmLastSellOrderId: row.pmLastSellOrderId,
     PmSellState: row.pmSellState,
+    PmMatchResult: row.pmMatchResult === "equal_split" ? "EqualSplit" : row.pmMatchResult === "win" ? "Win" : row.pmMatchResult === "lose" ? "Lose" : undefined,
     PmSide: row.pmSide,
     ...(row.pmGtcExecutionId ? { PmGtcExecutionId: row.pmGtcExecutionId, PmGtcBuyShares: row.pmGtcBuyShares } : {}),
     PmBuyOrderId: row.pmBuyOrderId,

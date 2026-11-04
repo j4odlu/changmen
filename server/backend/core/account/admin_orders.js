@@ -119,6 +119,7 @@ export function mapAdminOrderRow(r, startIndex = null) {
     pmSellProceeds: o.PmSellProceeds,
     pmLastSellOrderId: o.PmLastSellOrderId,
     pmSellState: o.PmSellState,
+    ...(o.PmMatchResult ? { pmMatchResult: o.PmMatchResult === "EqualSplit" ? "equal_split" : o.PmMatchResult.toLowerCase() } : {}),
     pmSide: o.PmSide,
     ...(o.PmGtcExecutionId ? { pmGtcExecutionId: o.PmGtcExecutionId, pmGtcBuyShares: o.PmGtcBuyShares } : {}),
     pmBuyOrderId: o.PmBuyOrderId,

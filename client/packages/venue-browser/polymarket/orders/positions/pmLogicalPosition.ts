@@ -30,7 +30,7 @@ export interface OrderRowLike {
   PmSide?: "buy" | "sell";
   PmBuyOrderId?: string;
   /** 市场赛果（持有到期）：Win/Lose */
-  PmMatchResult?: "Win" | "Lose" | "win" | "lose";
+  PmMatchResult?: "Win" | "Lose" | "win" | "lose" | "EqualSplit" | "equal_split";
 }
 
 function round4(n: number): number {
@@ -135,7 +135,8 @@ export function venueOrderFromOrderRow(row: OrderRowLike): VenueOrder {
     pmBuyOrderId: row.PmBuyOrderId,
     pmMatchResult: (() => {
       const m = String(row.PmMatchResult ?? "").trim().toLowerCase();
-      return m === "win" || m === "lose" ? m : undefined;
+      if (m === "equalsplit") return "equal_split";
+      return m === "win" || m === "lose" || m === "equal_split" ? m : undefined;
     })(),
   };
 }

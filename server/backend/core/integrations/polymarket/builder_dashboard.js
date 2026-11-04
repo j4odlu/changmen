@@ -353,7 +353,7 @@ function mapChangmenOrder(row) {
     })(),
     pmMatchResult: (() => {
       const m = String(raw.pmMatchResult || "").trim().toLowerCase();
-      return m === "win" || m === "lose" ? m : "";
+      return m === "win" || m === "lose" || m === "equal_split" ? m : "";
     })(),
     matchTitle,
     betTitle,

@@ -4,6 +4,7 @@
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { normalizePmMatchResult, parseNum } from "./dto.js";
 import { isPmPendingOrder, validatePmSubmission } from "@changmen/shared/pm_submission";
+import { polymarketIsEqualSplitOrder, polymarketProfitStatus } from "@changmen/shared/pm_settlement";
 
 /** pmShares = 官方 fill，取 RDS/CLOB/入参 最大值，避免 0 覆盖有效值 */
 function preservePmBuyFillShares(prevRaw, o, merged) {
@@ -182,7 +183,7 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
     let nextState = advanceState || advanceAttr
       ? (incomingState ?? prevRaw.pmSellState)
       : (prevRaw.pmSellState ?? merged.pmSellState);
-    if (String(nextState).toLowerCase() === "settled" && (prevState === "closed" || prevState === "partial"))
+    if (String(nextState).toLowerCase() === "settled" && (prevState === "closed" || (prevState === "partial" && !polymarketIsEqualSplitOrder(o))))
       nextState = prevState;
     const incomingMoney = parseNum(o.money ?? o.Money, 0);
     const prevMoney = parseNum(prevRaw.money ?? prevRow?.money, 0);
@@ -319,7 +320,36 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
    * 已结算且无卖出进度：Money 与含费 bet_money 对齐。
    * 防止旧客户端用「名义本金」盈亏回写，侧栏再次出现买入金额≠|盈亏|。
    */
-  if (!isSell) {
+  if (!isSell && polymarketIsEqualSplitOrder(prevRaw) && !polymarketIsEqualSplitOrder(o)) {
+    // An older client must not replace a final split result with its cached paper winner.
+    money = parseNum(prevRow?.money ?? prevRaw.money, money);
+    bet_money = parseNum(prevRow?.bet_money ?? prevRaw.betMoney, bet_money);
+    merged = { ...merged, pmMatchResult: "equal_split", pmSellState: prevRaw.pmSellState,
+      status: prevRow?.status ?? prevRaw.status, money, reward: prevRaw.reward, betMoney: bet_money };
+    // Preserve the inputs as well: a later refresh must not recalculate from a stale cost or fill.
+    for (const field of ["pmStakeUsdc", "pmFeeUsdc", "pmShares", "pmFillPrice", "pmTokenId", "pmConditionId",
+      "pmAttributedSellShares", "pmRealizedPnlUsdc", "pmSellProceeds", "pmLastSellOrderId"]) {
+      if (Object.prototype.hasOwnProperty.call(prevRaw, field)) merged[field] = prevRaw[field];
+      else delete merged[field];
+    }
+  }
+  else if (!isSell && polymarketIsEqualSplitOrder(o)) {
+    merged.pmMatchResult = "equal_split";
+    if (prevState === "closed") {
+      money = parseNum(prevRow?.money ?? prevRaw.money, money);
+      merged.money = money;
+      merged.pmSellState = "closed";
+    }
+    else {
+      // Zero is a valid final P&L; the partial-sale zero-write protection above is not applicable.
+      money = parseNum(o.money ?? o.Money, money);
+      merged.money = money;
+      merged.status = polymarketProfitStatus(money);
+      merged.pmSellState = "settled";
+    }
+  }
+
+  if (!isSell && !polymarketIsEqualSplitOrder(merged)) {
     const st = String(merged.status ?? o.status ?? prevRow?.status ?? "").toLowerCase();
     const sellState = String(merged.pmSellState ?? prevRaw.pmSellState ?? "").toLowerCase();
     const attr = parseNum(merged.pmAttributedSellShares ?? prevRaw.pmAttributedSellShares, 0);

@@ -10,9 +10,11 @@ export async function syncPmGtcSettledOrderFinancials(client, owner, playerId, o
   const updated = [];
   for (const row of selected.rows) {
     const ledger = gtcOrderLedger(row);
-    if (!ledger || (Number(row.money) === ledger.money && JSON.stringify(row.raw) === JSON.stringify(ledger.raw))) continue;
-    const result = await client.query(`UPDATE ${financialOrdersRelation()} SET money=$3,raw=$4
-      WHERE id=$1 AND user_id=$2 RETURNING id,order_id,bet_money,money`, [row.id, owner, ledger.money, ledger.raw]);
+    if (!ledger || (Number(row.money) === ledger.money && JSON.stringify(row.raw) === JSON.stringify(ledger.raw)
+      && (!ledger.status || String(row.status).toLowerCase() === ledger.status))) continue;
+    const result = await client.query(`UPDATE ${financialOrdersRelation()} SET money=$3,raw=$4,status=COALESCE($5,status)
+      WHERE id=$1 AND user_id=$2 RETURNING id,order_id,bet_money,money`, [row.id, owner, ledger.money, ledger.raw,
+      ledger.status ? ledger.status === "win" ? "Win" : ledger.status === "lose" ? "Lose" : "Return" : null]);
     updated.push(...result.rows);
   }
   return updated;

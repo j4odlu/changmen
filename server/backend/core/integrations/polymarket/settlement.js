@@ -1,5 +1,6 @@
 import { polymarketMarketAssetIds, polymarketGammaMarketAssetIds, polymarketMarketHasAsset, polymarketMarketAssetForOutcome, polymarketOfficialWinner, mergePolymarketClobMarket, polymarketConditionsAgree } from "@changmen/shared/pm_market_assets";
 import { polymarketDecimalAmount } from "@changmen/shared/pm_amounts";
+import { polymarketEqualSplitResolved, polymarketNeedsFinalResolution, polymarketWithFinalResolution, polymarketEqualSplitAmounts } from "@changmen/shared/pm_settlement";
 /**
  * Polymarket 订单结算（服务端 / 运维脚本；对齐 venue-adapter/polymarket/orders.ts）
  * - 官方 tokens[].winner：判赢/输
@@ -61,11 +62,13 @@ export function findPolymarketWinnerIndex(prices) {
 }
 
 /**
- * @returns {{ winningAssetId: string, kind: 'official'|'price' } | null}
+ * @returns {{ winningAssetId: string|null, kind: 'official'|'price'|'equal_split' } | null}
  */
 export function resolvePolymarketSettlement(market) {
   if (!market)
     return null;
+  if (polymarketEqualSplitResolved(market))
+    return { winningAssetId: null, kind: "equal_split" };
   const { assetId: official, ambiguous } = polymarketOfficialWinner(market);
   if (ambiguous) return null;
   if (official)
@@ -105,13 +108,16 @@ export function computePolymarketSettlement(trade, market, stakeRaw) {
   const heldAssetId = tradeHeldAssetId(trade, market);
   if (!polymarketConditionsAgree(trade?.market, market?.conditionId, market?.condition_id)) return null;
   if (!polymarketMarketHasAsset(market, heldAssetId)
-    || !polymarketMarketHasAsset(market, resolved.winningAssetId))
+    || (resolved.winningAssetId && !polymarketMarketHasAsset(market, resolved.winningAssetId)))
     return null;
 
   const shares = polymarketShareCount(trade?.size ?? trade?.matched_amount);
   const stake = Number(stakeRaw);
   if (shares <= 0 || !Number.isFinite(stake) || stake <= 0)
     return null;
+
+  if (resolved.kind === "equal_split")
+    return { ...polymarketEqualSplitAmounts(shares, stake), pmMatchResult: "equal_split", kind: resolved.kind };
 
   if (heldAssetId === resolved.winningAssetId) {
     const reward = Math.round(shares * 10000) / 10000;
@@ -129,13 +135,22 @@ export function computePolymarketSettlementFromOrderRaw(raw, market, stakeUsdc) 
   const heldAssetId = String(raw?.pmTokenId ?? "").trim();
   if (!polymarketConditionsAgree(raw?.pmConditionId, market?.conditionId, market?.condition_id)) return null;
   if (!polymarketMarketHasAsset(market, heldAssetId)
-    || !polymarketMarketHasAsset(market, resolved.winningAssetId))
+    || (resolved.winningAssetId && !polymarketMarketHasAsset(market, resolved.winningAssetId)))
     return null;
 
   const shares = Number(raw?.pmShares) || 0;
   const stake = Number(stakeUsdc);
   if (shares <= 0 || !Number.isFinite(stake) || stake <= 0)
     return null;
+
+  if (resolved.kind === "equal_split") {
+    const attributed = Number(raw.pmAttributedSellShares ?? 0);
+    if (!Number.isFinite(attributed) || attributed < 0 || attributed > shares || raw.pmSellState === "closed"
+      || (attributed > 0 && shares - attributed <= 0.01)) return null;
+    if (attributed > 0 && !Number.isFinite(raw.pmRealizedPnlUsdc)) return null;
+    const amounts = polymarketEqualSplitAmounts(shares - attributed, stake, Number(raw.pmRealizedPnlUsdc ?? 0));
+    return amounts ? { ...amounts, pmMatchResult: "equal_split", kind: resolved.kind } : null;
+  }
 
   if (heldAssetId === resolved.winningAssetId) {
     const reward = Math.round(shares * 10000) / 10000;
@@ -277,6 +292,8 @@ export function mapDbStatus(raw) {
     return "Win";
   if (s === "lose")
     return "Lose";
+  if (s === "return")
+    return "Return";
   return "None";
 }
 
@@ -310,6 +327,18 @@ export async function enrichMarketsFromClob(marketMap, conditionIds, gateway) {
     const shaped = clobMarketToGammaShape(clob, marketMap.get(id), id);
     if (shaped)
       rememberSettlementMarket(marketMap, shaped);
+  }
+  const pending = [...new Set(conditionIds.map(normalizeConditionId))].filter(id => polymarketNeedsFinalResolution(marketMap.get(id)));
+  for (let i = 0; i < pending.length; i += 20) {
+    try {
+      const rows = await fetchGammaJson(`https://data-api.polymarket.com/v2/resolutions?${new URLSearchParams({ condition: pending.slice(i, i + 20).join(",") })}`);
+      for (const id of pending.slice(i, i + 20)) {
+        const market = marketMap.get(id);
+        const enriched = polymarketWithFinalResolution(market, rows?.data);
+        if (enriched !== market) rememberSettlementMarket(marketMap, enriched);
+      }
+    }
+    catch { /* Missing finality is unknown; preserve the last known order, never assume a 0.5 payout. */ }
   }
   return marketMap;
 }

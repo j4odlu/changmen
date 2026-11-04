@@ -38,6 +38,12 @@ const pmBuy: OrderRow = {
 };
 
 describe("pmOrderDisplay", () => {
+  it.each([[67,"Win"],[-67,"Lose"],[0,"Return"]] as const)("split result keeps actual profit %s and class %s",(money,status)=>{
+    const row: OrderRow={...pmBuy,PmMatchResult:"EqualSplit",PmSellState:"settled",Status:status,Money:money};
+    expect(resolvePmOrderListStatusClass(row)).toBe(status);
+    expect(pmBuyLifecycleTagText(row)).toBe("50/50 已结算");
+    expect(pmOrderProfitDisplayCny(row)).toBe(money);
+  });
   it("does not treat historical precheck odds as a signed limit", () => {
     const row: OrderRow = { Type: "Polymarket", Status: "Reject", Odds: 2.38, PmStakeUsdc: 9.33 };
     expect(pmOrderSubmissionQuote(row)).toEqual({ priceText: "—", oddsText: "—" });

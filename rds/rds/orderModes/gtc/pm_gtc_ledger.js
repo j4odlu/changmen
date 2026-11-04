@@ -1,4 +1,5 @@
 import { Currency, getExchange } from "@changmen/shared/currency";
+import { polymarketIsEqualSplitOrder, polymarketProfitStatus } from "@changmen/shared/pm_settlement";
 
 const round4 = value => Math.round(value * 10000) / 10000;
 const hasNumber = value => value != null && value !== "" && Number.isFinite(Number(value));
@@ -29,24 +30,26 @@ export function gtcOrderLedger(order) {
   const remaining = Math.max(0, shares - sold);
   const realized = round4(proceeds - allocated);
   const result = String(raw.pmMatchResult ?? order.status ?? "").toLowerCase();
-  const settled = ["win", "lose", "lost"].includes(result);
-  const payout = settled && result === "win" ? remaining : 0;
+  const equalSplit = polymarketIsEqualSplitOrder(raw);
+  const settled = equalSplit || ["win", "lose", "lost"].includes(result);
+  const payout = equalSplit ? remaining * 0.5 : settled && result === "win" ? remaining : 0;
   const pnlUsdc = round4(realized + (settled ? payout - remainingCost : 0));
   const fx = getExchange(Currency.USDT);
   const money = round4(pnlUsdc * fx);
   // 结算/全部卖出直接核对总现金，避免逐次人民币取整或余仓重复结算。
   const finalMoney = settled || (hasSale && remaining <= 0.01)
     ? round4((proceeds + payout) * fx - Number(order.bet_money)) : money;
-  const state = hasSale ? (remaining <= 0.01 ? "closed" : "partial") : raw.pmSellState;
+  const state = hasSale && remaining <= 0.01 ? "closed" : equalSplit ? "settled" : hasSale ? "partial" : raw.pmSellState;
   const events = mergeGtcSellEvents(raw);
   const positionEvents = events && shares > 0 ? { ...raw.positionEvents, sells: events.sells.map(event => ({ ...event,
     pnl: round4(Number(event.proceeds) - round4(cost * Number(event.shares) / shares)) })) } : undefined;
   return { money: shares === 0 && cost === 0 ? 0 : finalMoney,
+    ...(equalSplit && state !== "closed" ? { status: polymarketProfitStatus(finalMoney) } : {}),
     raw: { ...raw, money: shares === 0 && cost === 0 ? 0 : finalMoney,
       reward: round4((proceeds + payout) * fx), pmShares: shares, pmStakeUsdc: remainingCost,
       pmAttributedSellShares: sold, pmRealizedPnlUsdc: hasSale ? realized : 0,
       ...(hasSale ? { pmSellProceeds: proceeds } : {}),
-      ...(settled ? { pmMatchResult: result === "win" ? "win" : "lose" } : {}),
+      ...(settled ? { pmMatchResult: equalSplit ? "equal_split" : result === "win" ? "win" : "lose" } : {}),
       ...(positionEvents ? { positionEvents } : {}),
       ...(state ? { pmSellState: state } : {}),
     } };

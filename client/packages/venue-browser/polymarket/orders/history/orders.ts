@@ -1,11 +1,12 @@
 import { polymarketMarketAssetIds, polymarketGammaMarketAssetIds, polymarketMarketHasAsset, polymarketMarketAssetForOutcome, polymarketOfficialWinner, mergePolymarketClobMarket, polymarketConditionsAgree } from "@changmen/shared/pm_market_assets";
 import { polymarketDecimalAmount, polymarketBaseUnitAmount } from "@changmen/shared/pm_amounts";
+import { polymarketEqualSplitResolved, polymarketNeedsFinalResolution, polymarketWithFinalResolution, polymarketIsEqualSplitOrder, polymarketEqualSplitAmounts } from "@changmen/shared/pm_settlement";
 import type { VenueOrder } from "@changmen/client-core/contract";
 import { sortVenueOrdersNewestFirst } from "@changmen/client-core/contract";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { getExchange, Currency, scaleUsdtToCnyDisplay } from "@changmen/shared/currency";
 import { PLATFORMS } from "@changmen/client-core/shared/platforms";
-import { POLYMARKET_CLOB_API, POLYMARKET_GAMMA_API } from "../../api";
+import { POLYMARKET_CLOB_API, POLYMARKET_GAMMA_API, POLYMARKET_DATA_API } from "../../api";
 import {
   collectPolymarketUserAddressesFromAccount,
   normalizeEthAddress,
@@ -283,10 +284,10 @@ export function findPolymarketWinnerIndex(prices: number[]): number {
   return winners.length === 1 ? winners[0]! : -1;
 }
 
-export type PolymarketSettlementKind = "official" | "price";
+export type PolymarketSettlementKind = "official" | "price" | "equal_split";
 
 export type PolymarketSettlementResolution = {
-  winningAssetId: string;
+  winningAssetId: string | null;
   /** official：隐藏卖出；price：提前判定但保留卖出。 */
   kind: PolymarketSettlementKind;
 };
@@ -308,6 +309,8 @@ export function resolvePolymarketSettlement(
   market: PolymarketRawMarket | undefined,
 ): PolymarketSettlementResolution | null {
   if (!market) return null;
+  if (polymarketEqualSplitResolved(market))
+    return { winningAssetId: null, kind: "equal_split" };
   const { assetId: official, ambiguous } = polymarketOfficialWinner(market);
   if (ambiguous) return null;
   if (official)
@@ -357,7 +360,9 @@ export function applyPolymarketSettlement(
   if ((order.pmTokenId && String(order.pmTokenId).trim() !== heldAssetId)
     || !polymarketConditionsAgree(order.pmConditionId, trade.market, market?.conditionId, market?.condition_id)) return order;
   if (!polymarketMarketHasAsset(market, heldAssetId)
-    || !polymarketMarketHasAsset(market, resolved.winningAssetId)) return order;
+    || (resolved.winningAssetId && !polymarketMarketHasAsset(market, resolved.winningAssetId))) return order;
+
+  if (resolved.kind === "equal_split") return settlePolymarketEqualSplitOrder(order);
 
   const matchResult: "win" | "lose" = heldAssetId === resolved.winningAssetId ? "win" : "lose";
 
@@ -396,6 +401,36 @@ export function applyPolymarketSettlement(
   }
 
   return { ...base, status: "lose", reward: 0, money: -stake };
+}
+
+/** [changmen 扩展] Final payout determines money; financial Win/Lose does not label the match winner. */
+function settlePolymarketEqualSplitOrder(order: VenueOrder): VenueOrder {
+  if (order.pmSide === "sell") return order;
+  const shares = resolvePmFillShares(order);
+  const attr = Number(order.pmAttributedSellShares ?? 0);
+  if (!(shares > 0) || !Number.isFinite(attr) || attr < 0 || attr > shares + 0.01) return order;
+  const base = { ...order, pmMatchResult: "equal_split" as const };
+  // Keep the official fill precision until cash is rounded; rounding shares first can change the payout.
+  const remaining = Math.max(0, shares - attr);
+  if (order.pmSellState === "closed" || (attr > 0 && remaining <= 0.01)) return base;
+  const sold = attr > 0 || order.pmSellState === "partial";
+  const stake = Number(order.pmStakeUsdc);
+  const originalCost = Number(order.betMoney);
+  const remainingCost = sold ? stake : Math.max(Number.isFinite(stake) ? stake : 0, originalCost);
+  if (!Number.isFinite(remainingCost) || remainingCost < 0 || (!sold && remainingCost <= 0)) return order;
+  let realized = 0;
+  if (sold) {
+    if (order.pmRealizedPnlUsdc != null && Number.isFinite(Number(order.pmRealizedPnlUsdc)))
+      realized = Number(order.pmRealizedPnlUsdc);
+    else if (order.pmSellProceeds != null && Number.isFinite(Number(order.pmSellProceeds)) && originalCost > 0)
+      realized = round4(Number(order.pmSellProceeds) - (originalCost - remainingCost));
+    else if (order.pmMatchResult === "win" || order.pmMatchResult === "lose")
+      realized = round4(order.money - (order.pmMatchResult === "win" ? remaining - remainingCost : -remainingCost));
+    else if (order.status === "none" && Number.isFinite(order.money)) realized = order.money;
+    else return order;
+  }
+  const amounts = polymarketEqualSplitAmounts(remaining, remainingCost, realized);
+  return amounts ? { ...base, ...amounts, pmRealizedPnlUsdc: realized, pmSellState: "settled" } : order;
 }
 
 /**
@@ -930,6 +965,16 @@ function mergeChangmenStoredWithClob(stored: VenueOrder, clob: VenueOrder): Venu
     };
   }
   const blockGammaSettlement = changmenSoldOutBlocksGammaSettlement(base);
+  // Final 50/50 supersedes an earlier paper winner, and survives later stale/no-result snapshots.
+  if (polymarketIsEqualSplitOrder(clob) || polymarketIsEqualSplitOrder(base)) {
+    const sameAsset = !!base.pmTokenId && base.pmTokenId === clob.pmTokenId
+      && !!base.pmConditionId && !!clob.pmConditionId && polymarketConditionsAgree(base.pmConditionId, clob.pmConditionId);
+    if (!sameAsset) return polymarketIsEqualSplitOrder(base) ? settlePolymarketEqualSplitOrder(base) : base;
+    return settlePolymarketEqualSplitOrder({ ...base,
+      pmShares: Math.max(Number(base.pmShares) || 0, Number(clob.pmShares) || 0),
+      pmFeeUsdc: base.pmFeeUsdc ?? clob.pmFeeUsdc,
+    });
+  }
   const gammaSettled = clob.status !== "none";
   // 官方 winner 写 settled（隐藏卖出）。
   const officialSettled = clob.pmSellState === "settled";
@@ -1055,7 +1100,8 @@ function isChangmenPolymarketOrder(
 /** [changmen 扩展] 已确认买单的赛果不能依赖近期成交列表再次返回该单。 */
 function needsStoredMarketSettlement(order: VenueOrder): boolean {
   return order.pmSide !== "sell"
-    && !["reject", "return", "pending"].includes(String(order.status).toLowerCase())
+    && !["reject", "pending"].includes(String(order.status).toLowerCase())
+    && (order.status !== "return" || polymarketIsEqualSplitOrder(order))
     && Number(order.pmShares) > 0.0001
     && !!String(order.pmTokenId ?? "").trim()
     && order.pmSellState !== "settled";
@@ -1072,7 +1118,8 @@ function settleStoredOrderFromMarket(
   if (!resolved || !market) return base;
   if (!polymarketConditionsAgree(stored.pmConditionId, market.conditionId, market.condition_id)) return base;
   if (!polymarketMarketHasAsset(market, String(stored.pmTokenId))
-    || !polymarketMarketHasAsset(market, resolved.winningAssetId)) return base;
+    || (resolved.winningAssetId && !polymarketMarketHasAsset(market, resolved.winningAssetId))) return base;
+  if (resolved.kind === "equal_split") return settlePolymarketEqualSplitOrder(base);
   const result = stored.pmTokenId === resolved.winningAssetId ? "win" : "lose";
   // 只提供盘口赛果；复用既有全成本/部分卖出/卖光保护，不捏造新成交。
   return mergeChangmenStoredWithClob(stored, {
@@ -1252,6 +1299,19 @@ async function fetchMarketsByConditionIds(
     catch {
       // 单条 CLOB 失败：保留 Gamma（若有），仍可按有效价格提前判定。
     }
+  }
+  const pending = [...new Set(unique)].filter(id => polymarketNeedsFinalResolution(out.get(id)));
+  for (let i = 0; i < pending.length; i += chunkSize) {
+    const chunk = pending.slice(i, i + chunkSize);
+    try {
+      const response = await polymarketPluginGet<{ data?: unknown }>(`${POLYMARKET_DATA_API}/v2/resolutions?${new URLSearchParams({ condition: chunk.join(",") })}`);
+      for (const id of chunk) {
+        const market = out.get(id)!;
+        const enriched = polymarketWithFinalResolution(market, response?.data);
+        if (enriched !== market) rememberSettlementMarket(out, enriched);
+      }
+    }
+    catch { /* Finality unavailable: preserve known order facts and retry on the next refresh. */ }
   }
   return out;
 }

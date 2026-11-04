@@ -15,10 +15,10 @@ export function parseNum(v, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-/** @internal raw / 入参 → win|lose；其它返回 undefined */
+/** @internal raw / 入参 → win|lose|equal_split；其它返回 undefined */
 export function normalizePmMatchResult(raw) {
   const s = String(raw ?? "").trim().toLowerCase();
-  if (s === "win" || s === "lose")
+  if (s === "win" || s === "lose" || s === "equal_split")
     return s;
   return undefined;
 }
@@ -148,7 +148,7 @@ export function rowToOrder(r) {
     PmBuyOrderId: raw.pmBuyOrderId ? String(raw.pmBuyOrderId) : undefined,
     PmMatchResult: (() => {
       const m = normalizePmMatchResult(raw.pmMatchResult);
-      return m === "win" ? "Win" : m === "lose" ? "Lose" : undefined;
+      return m === "win" ? "Win" : m === "lose" ? "Lose" : m === "equal_split" ? "EqualSplit" : undefined;
     })(),
     /** [changmen 扩展] PredictFun 1:1 买卖 */
     PfSide: raw.pfSide === "buy" || raw.pfSide === "sell" ? raw.pfSide : undefined,

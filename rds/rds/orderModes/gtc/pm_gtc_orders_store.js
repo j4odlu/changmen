@@ -58,9 +58,11 @@ function ordersUpsertSql() {
         'betMoney', orders.bet_money,
         'pmFillPrice', orders.raw->'pmFillPrice', 'pmFeeUsdc', orders.raw->'pmFeeUsdc',
         'pmOrigin', 'changmen', 'pmSide', 'buy',
-        'pmMatchResult', CASE WHEN lower(COALESCE(EXCLUDED.raw->>'pmMatchResult','')) IN ('win','lose','lost') THEN EXCLUDED.raw->'pmMatchResult'
+        'pmMatchResult', CASE WHEN lower(COALESCE(orders.raw->>'pmMatchResult','')) = 'equal_split' THEN orders.raw->'pmMatchResult'
+          WHEN lower(COALESCE(EXCLUDED.raw->>'pmMatchResult','')) IN ('win','lose','lost','equal_split') THEN EXCLUDED.raw->'pmMatchResult'
           ELSE COALESCE(NULLIF(orders.raw->'pmMatchResult','null'::jsonb), CASE WHEN lower(orders.status) IN ('win','lose','lost') THEN to_jsonb(orders.status) END) END,
-        'pmSellState', COALESCE(EXCLUDED.raw->'pmSellState', orders.raw->'pmSellState'),
+        'pmSellState', CASE WHEN lower(COALESCE(orders.raw->>'pmMatchResult','')) = 'equal_split' THEN orders.raw->'pmSellState'
+          ELSE COALESCE(EXCLUDED.raw->'pmSellState', orders.raw->'pmSellState') END,
         'pmShares', (orders.raw->>'pmGtcBuyShares')::float8,
         'pmAttributedSellShares', greatest(COALESCE((orders.raw->>'pmAttributedSellShares')::float8,0),COALESCE((EXCLUDED.raw->>'pmAttributedSellShares')::float8,0)),
         'pmSellProceeds', greatest(COALESCE((orders.raw->>'pmSellProceeds')::float8,0),COALESCE((EXCLUDED.raw->>'pmSellProceeds')::float8,0)),

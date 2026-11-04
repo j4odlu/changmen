@@ -13,6 +13,7 @@ import {
   updateAdminUserBetTarget,
 } from "./admin_service.js";
 import { lastLoginFieldsFromProfile } from "./user_login_meta.js";
+import { mapAdminOrderRow } from "./admin_orders.js";
 
 vi.mock("@changmen/db", () => ({
   fetchOrdersAdminPage: vi.fn(async () => ({
@@ -152,6 +153,11 @@ vi.mock("../auth/role_filter.js", () => ({
 }));
 
 describe("listAdminOrders", () => {
+  it.each([[67, "Win"], [-67, "Lose"], [0, "Return"]])("preserves final split outcome and financial result %s in admin orders", (money, status) => {
+    const result = mapAdminOrderRow({ id: 7, user_id: "u1", provider: "Polymarket", status, money, bet_money: 268,
+      raw: { pmSide: "buy", pmMatchResult: "equal_split", pmSellState: "settled", pmShares: 100 } });
+    expect(result).toMatchObject({ pmMatchResult: "equal_split", pmSellState: "settled", money, status });
+  });
   it("maps multiple rows without treating array index as startIndex", async () => {
     const page = await listAdminOrders({ date: "2026-06-13", pageIndex: 1, pageSize: 50 });
     expect(page.list).toHaveLength(3);

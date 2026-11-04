@@ -62,10 +62,10 @@ export interface PolymarketVenueOrderExtras {
   /** 卖单对应买单 orderId */
   pmBuyOrderId?: string;
   /**
-   * [changmen 扩展] 市场赛果（持有到期视角）：win/lose。
+   * [changmen 扩展] 官方市场赛果：win/lose/equal_split（最终 50/50）。
    * 与 status/money 脱钩——中途卖光仍可写入，供策略分析，不影响卖出盈亏统计。
    */
-  pmMatchResult?: "win" | "lose";
+  pmMatchResult?: "win" | "lose" | "equal_split";
   /**
    * [changmen 扩展] 执行下单后未成交落库用：
    * - unfilled：已受理后 FOK/取消

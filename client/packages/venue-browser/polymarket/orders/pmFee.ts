@@ -1,4 +1,5 @@
 import type { PolymarketActivityBuyCost } from "./history/pmActivity";
+import { polymarketIsEqualSplitOrder, polymarketEqualSplitAmounts } from "@changmen/shared/pm_settlement";
 import { POLYMARKET_CLOB_API } from "../api";
 import { resolvePolymarketBuyCostFromActivity } from "./history/pmActivity";
 import { polymarketPluginGet } from "../transport/transport";
@@ -183,6 +184,7 @@ function applyOfficialBuyCostToOrder<T extends {
   pmSellState?: string;
   pmAttributedSellShares?: number;
   pmSide?: string;
+  pmMatchResult?: string;
 }>(
   order: T,
   allIn: {
@@ -216,6 +218,10 @@ function applyOfficialBuyCostToOrder<T extends {
   const sellState = String(order.pmSellState ?? "").toLowerCase();
   const attr = Number(order.pmAttributedSellShares) || 0;
   const isBuy = String(order.pmSide ?? "buy").toLowerCase() !== "sell";
+  if (isBuy && polymarketIsEqualSplitOrder(order) && attr <= 0.0001 && sellState !== "closed" && sellState !== "partial") {
+    const amounts = polymarketEqualSplitAmounts(shares, allIn.allInStakeUsdc);
+    return amounts ? { ...next, ...amounts, pmMatchResult: "equal_split", pmSellState: "settled" } : next;
+  }
   if (
     isBuy
     && (st === "win" || st === "lose" || st === "lost")
@@ -261,6 +267,7 @@ function activityToOfficialCost(
 export async function enrichPolymarketBuyVenueOrderWithFee<T extends {
   orderId?: string;
   pmSide?: string;
+  pmMatchResult?: string;
   pmFeeUsdc?: number;
   pmConditionId?: string;
   pmTokenId?: string;
@@ -348,7 +355,7 @@ export async function enrichPolymarketBuyVenueOrderWithFee<T extends {
   // 已有 fee 且 activity 未到：未结算保持；已结算则按含费买入金额校准 money
   if (Number.isFinite(feeUsdc) && feeUsdc > 0) {
     const st = String(order.status ?? "").toLowerCase();
-    if ((st === "win" || st === "lose" || st === "lost") && shares > 0 && stakeNow > 0) {
+    if ((st === "win" || st === "lose" || st === "lost" || polymarketIsEqualSplitOrder(order)) && shares > 0 && stakeNow > 0) {
       // fee 已记但 stake 仍贴名义时，补上 fee，避免 money 仍按名义
       const allInStake = (product > 0 && stakeNow <= product + 0.0001)
         ? round4(stakeNow + feeUsdc)

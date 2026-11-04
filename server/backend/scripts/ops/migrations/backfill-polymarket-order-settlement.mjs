@@ -14,6 +14,7 @@ import {
   fetchGammaMarketsByConditionIds,
   computePolymarketSettlement,
   computePolymarketSettlementFromOrderRaw,
+  resolvePolymarketSettlement,
   mapDbStatus,
   normalizeConditionId,
   lookupGammaMarket,
@@ -175,11 +176,18 @@ function soldOutBlocksGammaSettlement(raw) {
 }
 
 function computeSettlementForRow(row, trade, market) {
+  const raw = rawFromRow(row);
+  // A trade's nominal full-size cost cannot replace this order's fees or remaining position.
+  if (resolvePolymarketSettlement(market)?.kind === "equal_split") {
+    const cost = Number(raw.pmStakeUsdc);
+    return raw.pmTokenId && Number.isFinite(cost) && cost > 0
+      ? computePolymarketSettlementFromOrderRaw(raw, market, cost)
+      : null;
+  }
   if (trade) {
     const stakeRaw = rawStakeFromTrade(trade);
     return computePolymarketSettlement(trade, market, stakeRaw);
   }
-  const raw = rawFromRow(row);
   if (!raw.pmTokenId)
     return null;
   const stakeUsdc = stakeUsdcFromRow(row);
@@ -325,7 +333,8 @@ async function settlePlayerOrders(playerId, orders, account, { maxPages, dryRun 
         ...(isUnsettled && computed.status !== "none"
           ? {
             // 与客户端一致：仅官方 winner 写 settled（隐藏卖出）；price≥0.99 保持可卖
-            pmSellState: computed.kind === "official" ? "settled" : (raw.pmSellState || "open"),
+            pmSellState: computed.kind === "official" || computed.kind === "equal_split" ? "settled" : (raw.pmSellState || "open"),
+            ...(computed.pmMatchResult === "equal_split" ? { pmMatchResult: "equal_split" } : {}),
             status: computed.status,
           }
           : {}),

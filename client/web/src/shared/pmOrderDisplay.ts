@@ -5,6 +5,7 @@ import { toFixed } from "@changmen/client-core/shared/format";
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { resolvePmFillShares, resolvePmRemainingShares } from "@changmen/venue-browser/polymarket";
 import { normalizeOrderStatus } from "@/shared/orderDisplay";
+import { polymarketIsEqualSplitOrder } from "@changmen/shared/pm_settlement";
 
 /** Polymarket API 数值：保留有效小数，去掉尾部 0 */
 export function formatPolymarketApiDecimal(value: number, maxDecimals = 6): string {
@@ -50,6 +51,7 @@ export function isPmMarketSettledBuy(row: OrderRow): boolean {
 /** 侧栏买单生命周期小标签文案（角标输赢另见 resolvePmOrderListStatusClass） */
 export function pmBuyLifecycleTagText(row: OrderRow): string | null {
   if (isPmPendingOrder(row)) return "待确认";
+  if (isPmBuyOrderListRow(row) && polymarketIsEqualSplitOrder(row)) return "50/50 已结算";
   if (isPmManuallySoldBuy(row)) {
     const state = String(row.PmSellState ?? "").toLowerCase();
     // 仍有剩余仓：部分卖出；已卖光不再打「已卖出」（角标改输赢，卖出看附属块）
@@ -80,6 +82,12 @@ export function resolvePmOrderListStatusClass(row: OrderRow): string {
   if (isPmPendingOrder(row)) return "PmPending";
   if (!isPmOrderListRow(row))
     return String(normalizeOrderStatus(String(row.Status ?? "None")));
+
+  if (isPmBuyOrderListRow(row) && polymarketIsEqualSplitOrder(row)
+    && (row.PmSellState === "settled" || row.PmSellState === "closed")) {
+    const money = Number(row.Money) || 0;
+    return money > 0 ? "Win" : money < 0 ? "Lose" : "Return";
+  }
 
   const raw = String(normalizeOrderStatus(String(row.Status ?? "None")));
   if (raw !== "None" && raw !== "Pending")

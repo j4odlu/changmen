@@ -202,6 +202,7 @@ export interface AdminOrderRow {
   pmSellProceeds?: number;
   pmLastSellOrderId?: string;
   pmSellState?: "open" | "partial" | "closed" | "settled";
+  pmMatchResult?: "win" | "lose" | "equal_split";
   pmSide?: "buy" | "sell";
   pmGtcExecutionId?: string;
   pmGtcBuyShares?: number;

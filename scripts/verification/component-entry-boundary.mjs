@@ -145,6 +145,8 @@ function inspectComponentSnapshot(root, manifest, { scope }, snapshot) {
   }
   for (const prefix of [...manifest.nodeRoots, ...manifest.nodeOnlyPaths, ...manifest.browserRoots, ...manifest.browserOnlyPaths]) {
     if (!snapshot.exists(safe(prefix))) throw Error(`Missing component root: ${prefix}`);
+    if (snapshot.stat(safe(prefix)).isDirectory() && !walk(prefix).length)
+      throw Error(`Empty component source root: ${prefix}`);
   }
   for (const file of manifest.testEntries) if (!snapshot.exists(safe(file))) throw Error(`Missing test entry: ${file}`);
   for (const file of manifest.conservativeInputs) if (!snapshot.exists(safe(file))) throw Error(`Missing conservative input: ${file}`);

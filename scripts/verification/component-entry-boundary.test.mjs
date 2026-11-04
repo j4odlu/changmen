@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 import { componentImportSites, createComponentInspection, inspectComponentEntries } from "./component-entry-boundary.mjs";
 
@@ -51,6 +51,29 @@ function fixture() {
 const book = "packages/mixed/browser/book.ts";
 
 describe("component entry boundaries", () => {
+  for (const group of ["nodeRoots", "nodeOnlyPaths", "browserRoots", "browserOnlyPaths"])
+    it(`rejects an empty leftover directory in ${group}`, () => {
+      const f = fixture(), empty = "packages/mixed/retired";
+      fs.mkdirSync(path.join(f.root, empty));
+      f.manifest[group].push(empty);
+      expect(() => f.inspect()).toThrow(`Empty component source root: ${empty}`);
+      // Ignored build residue cannot substitute for actual inspectable source.
+      f.write(`${empty}/dist/cache.js`, "export const cache = true;");
+      expect(() => f.inspect()).toThrow(`Empty component source root: ${empty}`);
+      f.write(`${empty}/current.ts`, "export const current = true;");
+      expect(f.inspect().violations).toEqual([]);
+    });
+  it("keeps every declared component source root present in a clean Git checkout", () => {
+    const root = fileURLToPath(new URL("../../", import.meta.url));
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, "scripts/deploy/component-inputs.json"), "utf8"));
+    const tracked = execFileSync("git", ["ls-files", "--cached", "-z"], { cwd: root, encoding: "utf8" }).split("\0").filter(Boolean);
+    const groups = [manifest, ...Object.values(manifest.scopes || {})];
+    for (const group of groups) for (const key of ["nodeRoots", "nodeOnlyPaths", "browserRoots", "browserOnlyPaths"])
+      for (const prefix of group[key] || []) {
+        const normalized = prefix.replace(/\/$/, "");
+        expect(tracked.some(file => file === normalized || file.startsWith(normalized + "/")), `Untracked or retired component root: ${prefix}`).toBe(true);
+      }
+  });
   it("shares reads across expanded graphs without sharing scope-specific inventories", () => {
     const f = fixture();
     f.write("packages/mixed/registry/preload.ts", "export const preload = true;");

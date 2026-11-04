@@ -41,8 +41,8 @@
   ],
   "browserOnlyPaths": [
     "client/packages/venue-browser/adapter/browser/",
-    "client/packages/venue-browser/adapter/polymarket/realtime/orderBook/",
-    "client/packages/venue-browser/adapter/polymarket/submission/preflight/optimized/wsBook/",
+    "client/packages/venue-browser/polymarket/realtime/orderBook/",
+    "client/packages/venue-browser/pm-book-diagnostics/",
     "client/packages/pm-market-data-browser/src/",
     "client/packages/venue-browser/"
   ],

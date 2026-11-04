@@ -21,6 +21,11 @@ vi.mock("@changmen/venue-browser/polymarket/orders/pmFee", async (importOriginal
 });
 
 describe("buildPolymarketMatchedBuyVenueOrderUsdc", () => {
+  it("saves a small raw POST fill without treating its collateral as normalized USDC", () => {
+    expect(buildPolymarketMatchedBuyVenueOrderUsdc("small", {
+      success: true, status: "matched", makingAmount: "5000", takingAmount: "10000",
+    })).toMatchObject({ pmShares: 0.01, betMoney: 0.005, pmStakeUsdc: 0.005, pmFillPrice: 0.5 });
+  });
   it("builds from matched POST making/taking amounts (no fee when rate omitted)", () => {
     const order = buildPolymarketMatchedBuyVenueOrderUsdc(
       "0xabc",

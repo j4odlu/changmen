@@ -204,9 +204,10 @@ test("an unknown manual BUY cannot be adopted by a new arbitrage link or a chang
 
 test("matched SELL receipt quantities remain durable until accounting finishes", async () => {
   await guardedPmSubmit(account, await body("SELL"), { ...context, parentBuyId: "buy-a" },
-    async () => ({ success: true, orderID: "sell-ack", status: "matched", makingAmount: "10", takingAmount: "6" }));
+    async () => ({ success: true, orderID: "sell-ack", status: "matched", makingAmount: "10000000", takingAmount: "6000000" }));
   clearPmSubmitJournalForTests();
   expect(pmAccountSubmitAttempts(account)[0].evidence).toEqual({
+    quantityUnit: "shares",
     row: { id: "sell-ack", status: "matched", size_matched: "10" }, trade: { size: "10", price: "0.6" },
   });
 });

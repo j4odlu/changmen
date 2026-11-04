@@ -33,31 +33,33 @@ it("refuses Builder queries before HTTP when credentials are missing", async () 
   assert.equal(fetch.mock.calls.length, 0);
 });
 
-it("amountToNumber accepts live decimals and docs micro integers", () => {
+it("amountToNumber reads normalized Builder decimals without guessing from magnitude", () => {
   assert.equal(amountToNumber("5.88"), 5.88);
   assert.equal(amountToNumber("19.6"), 19.6);
   assert.equal(amountToNumber("0.12348"), 0.12348);
-  assert.equal(amountToNumber("50000000"), 50);
-  assert.equal(amountToNumber("1000000"), 1);
+  for (const size of [999, 1000, 9999, 10000, 1000000, 50000000]) {
+    assert.equal(amountToNumber(String(size)), size);
+    assert.equal(amountToNumber(String(size) + ".0"), size);
+  }
   assert.equal(amountToNumber("50"), 50);
   assert.equal(amountToNumber(""), 0);
 });
 
-it("normalizeBuilderTrade converts micro USDC and match time", () => {
+it("normalizeBuilderTrade keeps integer-looking normalized shares, USDC and fees", () => {
   const row = normalizeBuilderTrade({
     id: "t1",
     side: "BUY",
-    size: "1000000",
-    sizeUsdc: "500000",
+    size: "10000",
+    sizeUsdc: "5000",
     feeUsdc: "1000",
     price: "0.5",
     matchTime: "1700000000",
     maker: "0x1234567890123456789012345678901234567890",
   });
-  assert.equal(row.sizeUsdc, 0.5);
-  assert.equal(row.sizeShares, 1);
-  assert.equal(row.feeUsdc, 0.001);
-  assert.equal(row.displayFeeUsdc, 0.001);
+  assert.equal(row.sizeUsdc, 5000);
+  assert.equal(row.sizeShares, 10000);
+  assert.equal(row.feeUsdc, 1000);
+  assert.equal(row.displayFeeUsdc, 1000);
   assert.equal(row.matchTime, 1700000000_000);
 });
 

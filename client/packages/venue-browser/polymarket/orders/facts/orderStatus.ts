@@ -2,6 +2,7 @@ import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { isPolymarketTradeFailureRow } from "./tradeFailure";
 import { scaleUsdtToCnyDisplay } from "@changmen/shared/currency";
+import { polymarketBaseUnitAmount } from "@changmen/shared/pm_amounts";
 import type { VenueOrder } from "@changmen/client-core/contract";
 import { parseTokenConfig, resolveApiCreds } from "../../auth/l2Auth";
 import { pmGetOrder, pmGetOpenOrders } from "../pmClientApi";
@@ -371,12 +372,9 @@ export function resolvePolymarketRejectStakeUsdc(
   const req = result.request as {
     order?: { makerAmount?: string | number; side?: string };
   } | undefined;
-  const makerRaw = Number(req?.order?.makerAmount);
-  if (Number.isFinite(makerRaw) && makerRaw > 0) {
-    const fromMaker = makerRaw >= 1000 ? makerRaw / 1_000_000 : makerRaw;
-    if (fromMaker > 0)
-      return round4Usdc(fromMaker);
-  }
+  const fromMaker = polymarketBaseUnitAmount(req?.order?.makerAmount);
+  if (fromMaker > 0)
+    return round4Usdc(fromMaker);
   const fromCtx = Number(ctx.betMoney);
   if (Number.isFinite(fromCtx) && fromCtx > 0)
     return round4Usdc(fromCtx);

@@ -12,8 +12,9 @@ export async function recoverPmUnknownSubmission(account: PlatformAccount, order
   if (!row?.id || row.id.toLowerCase() !== orderHash.toLowerCase()) {
     try { row = await fetchPolymarketOrderRow(account, orderHash) ?? undefined; } catch { /* 继续按精确 trade 查询 */ }
   }
+  // 市场结算只取消未成交余量；原单仍是提交证据，已成交数量继续走普通核验/归账。
   let accepted = Boolean(row?.id && row.id.toLowerCase() === orderHash.toLowerCase()
-    && ["matched", "live", "unmatched", "delayed", "canceled", "cancelled", "expired"].includes(String(row.status).toLowerCase()));
+    && ["matched", "live", "unmatched", "delayed", "canceled", "cancelled", "canceled_market_resolved", "expired"].includes(String(row.status).toLowerCase()));
   let trade: PmRecoveredEvidence["trade"];
   if (!accepted) {
     try {
@@ -28,7 +29,7 @@ export async function recoverPmUnknownSubmission(account: PlatformAccount, order
     }
     catch { /* 未取得证据仍未知 */ }
   }
-  const evidence: PmRecoveredEvidence = { row: row ? { id: row.id, status: row.status,
+  const evidence: PmRecoveredEvidence = { quantityUnit: "shares", row: row ? { id: row.id, status: row.status,
     size_matched: row.size_matched, original_size: row.original_size,
     associate_trades: row.associate_trades } : null, ...(trade ? { trade } : {}) };
   if (accepted && pmSubmitAttemptForOrder(account, orderHash)) {

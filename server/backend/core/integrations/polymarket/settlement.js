@@ -1,4 +1,5 @@
 import { polymarketMarketAssetIds, polymarketMarketAssetFields } from "@changmen/shared/pm_market_assets";
+import { polymarketDecimalAmount } from "@changmen/shared/pm_amounts";
 /**
  * Polymarket 订单结算（服务端 / 运维脚本；对齐 venue-adapter/polymarket/orders.ts）
  * - 官方 tokens[].winner：判赢/输
@@ -8,7 +9,6 @@ import { polymarketMarketAssetIds, polymarketMarketAssetFields } from "@changmen
 import { fetchClobMarketByConditionId } from "./clob_l2.js";
 
 const POLYMARKET_GAMMA_API = "https://gamma-api.polymarket.com";
-const TOKEN_MICRO = 1_000_000;
 const WINNER_PRICE_MIN = 0.99;
 
 export function parseJsonArray(value) {
@@ -37,21 +37,15 @@ function gammaTokenIds(market) {
 }
 
 export function polymarketShareCount(sizeRaw) {
-  const size = Number(sizeRaw);
-  if (!Number.isFinite(size) || size <= 0)
-    return 0;
-  if (size >= 10_000)
-    return size / TOKEN_MICRO;
-  return size;
+  // GET /data/trades 的 size/matched_amount 是份数，绝不根据数量猜单位。
+  return Math.max(0, polymarketDecimalAmount(sizeRaw));
 }
 
 export function polymarketBuyStakeUsdc(sizeRaw, price) {
-  const size = Number(sizeRaw);
-  if (!Number.isFinite(size) || size <= 0 || !Number.isFinite(price) || price <= 0)
+  const shares = polymarketShareCount(sizeRaw);
+  if (shares <= 0 || !Number.isFinite(price) || price <= 0)
     return 0;
-  if (size >= 10_000)
-    return (size / TOKEN_MICRO) * price;
-  return size * price;
+  return shares * price;
 }
 
 /** 官方：CLOB tokens[].winner === true 的 token_id */

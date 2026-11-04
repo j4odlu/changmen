@@ -6,8 +6,11 @@ import { useUserStore } from "../../../shared/webBridge";
 import { resolvePmOrderSubmitHttpMode } from "../../pmOrderSubmitMode";
 import type { PolymarketOrderRow } from "../../orders/facts/orderTypes";
 import { isPmAmbiguousOrderError } from "@changmen/shared/pm_submit_response";
+import { polymarketBaseUnitAmount } from "@changmen/shared/pm_amounts";
 
 export interface PmRecoveredEvidence {
+  /** 新证据统一按归一化份数保存；旧记录可能是 POST 整数或 GET 份数，缺标记时必须重查。 */
+  quantityUnit?: "shares";
   row: PolymarketOrderRow | null;
   trade?: { size: string; price: string };
 }
@@ -92,6 +95,10 @@ export function pmAccountSubmitAttempts(account: PlatformAccount): PmSubmitAttem
 export function pmSubmitAttemptForOrder(account: PlatformAccount, id: string): PmSubmitAttempt | undefined {
   return pmAccountSubmitAttempts(account).find(row => row.orderHash === id || row.acceptedOrderId === id);
 }
+/** 不对无标记的历史记录猜单位；保留原记录及互斥状态，供原单查询核验。 */
+export function pmNormalizedSubmitEvidence(attempt: PmSubmitAttempt | undefined): PmRecoveredEvidence | undefined {
+  return attempt?.evidence?.quantityUnit === "shares" ? attempt.evidence : undefined;
+}
 export function finishPmSubmitAttempt(account: PlatformAccount, id: string): void {
   const row = pmSubmitAttemptForOrder(account, id);
   if (row) save({ ...row, state: "terminal" });
@@ -167,10 +174,10 @@ export async function guardedPmSubmit<T>(account: PlatformAccount, body: unknown
     const response = result as { success?: boolean; orderID?: string; errorMsg?: string; error?: string;
       status?: string; makingAmount?: string | number; takingAmount?: string | number } | null;
     if (response?.success === true && typeof response.orderID === "string" && response.orderID.trim()) {
-      const shares = Number(side === "BUY" ? response.takingAmount : response.makingAmount);
-      const notional = Number(side === "BUY" ? response.makingAmount : response.takingAmount);
+      const shares = polymarketBaseUnitAmount(side === "BUY" ? response.takingAmount : response.makingAmount);
+      const notional = polymarketBaseUnitAmount(side === "BUY" ? response.makingAmount : response.takingAmount);
       const evidence: PmRecoveredEvidence | undefined = String(response.status).toLowerCase() === "matched" && Number.isFinite(shares) && shares > 0
-        ? { row: { id: response.orderID, status: "matched", size_matched: String(shares) },
+        ? { quantityUnit: "shares", row: { id: response.orderID, status: "matched", size_matched: String(shares) },
           ...(Number.isFinite(notional) && notional > 0 ? { trade: { size: String(shares), price: String(notional / shares) } } : {}) } : undefined;
       try { save({ ...row, state: "accepted", acceptedOrderId: response.orderID, evidence }); }
       catch { /* 返回真实 ACK，持久化故障不得变成拒单 */ }

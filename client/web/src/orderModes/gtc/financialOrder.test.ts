@@ -22,13 +22,17 @@ beforeEach(() => { vi.clearAllMocks(); mocks.post.mockResolvedValue({}); });
 describe("gTC uses the ordinary PM financial chain", () => {
   it.each(["0", "0.07971", "0.123456"])("matches every ordinary financial field for fee %s", (fee) => {
     const row = mergeGtcFacts(accepted(), facts(fee));
-    const ordinary = buildPolymarketMatchedBuyVenueOrderForSave(hash, { status: "matched", takingAmount: "9.29" }, { fallbackStakeUsdc: 7.2462, feeUsdc: Number(fee) })!;
+    const ordinary = buildPolymarketMatchedBuyVenueOrderForSave(hash, { status: "matched", makingAmount: "7246200", takingAmount: "9290000" }, { feeUsdc: Number(fee) })!;
     expect(gtcFinancialOrder(row)).toEqual({ pmShares: ordinary.pmShares, pmFillPrice: ordinary.pmFillPrice, pmStakeUsdc: ordinary.pmStakeUsdc, pmFeeUsdc: ordinary.pmFeeUsdc ?? 0, odds: ordinary.odds, betMoney: ordinary.betMoney });
   });
   it("keeps fee rounding and currency conversion identical for the reported order", () => {
     expect(gtcFinancialOrder(mergeGtcFacts(accepted(), facts("0.07971")))).toEqual({ pmShares: 9.29, pmFillPrice: 0.78, pmStakeUsdc: 7.3259, pmFeeUsdc: 0.0797, odds: 1.2821, betMoney: 7.3259 * 6.7 });
   });
-  it("preserves six-decimal official shares in the financial command instead of the ordinary four-decimal quantity", async () => {
+  it("keeps normalized GTC quantities above the old threshold in the common financial chain", () => {
+    expect(gtcFinancialOrder({ id: "large", orderId: hash, matched: "10000", principal: "5000", fee: "0", complete: true, fills: {} }))
+      .toEqual({ pmShares: 10000, pmFillPrice: 0.5, pmStakeUsdc: 5000, pmFeeUsdc: 0, odds: 2, betMoney: 5000 * 6.7 });
+  });
+  it("preserves six-decimal official shares in the common financial command", async () => {
     const row = accepted(); row.plan.shares = "29.27";
     const incoming = {
       order: { id: hash, original: "29.27", matched: "29.260001", status: "MATCHED", tradeIds: ["trade"] },

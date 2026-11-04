@@ -1,4 +1,5 @@
 import { polymarketMarketAssetIds, polymarketMarketAssetFields } from "@changmen/shared/pm_market_assets";
+import { polymarketDecimalAmount, polymarketBaseUnitAmount } from "@changmen/shared/pm_amounts";
 import type { VenueOrder } from "@changmen/client-core/contract";
 import { sortVenueOrdersNewestFirst } from "@changmen/client-core/contract";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
@@ -27,7 +28,6 @@ import { enrichPolymarketOrderPrices } from "./pmOrderPrice";
 
 export { lookupPolymarketOrderBetLabel } from "../../markets/orderBetLabel";
 
-const TOKEN_MICRO = 1_000_000;
 /** 订单 sync + 迟结算缓冲（Phase 2b） */
 const ORDER_LOOKBACK_MS = PM_ORDER_FULL_LOOKBACK_MS;
 const MAX_TRADE_PAGES = 5;
@@ -125,35 +125,22 @@ export function isPolymarketTradeConfirmed(status: string | undefined): boolean 
     || normalized.includes("RETRYING");
 }
 
-/** CLOB REST 多为 6 位 micro；WS/部分响应为可读份数 */
+/** GET /data/trades.size、maker_orders.matched_amount 均按归一化份数计算。 */
 export function polymarketBuyStakeUsdc(sizeRaw: string | number | undefined, price: number): number {
-  const size = Number(sizeRaw);
-  if (!Number.isFinite(size) || size <= 0 || !Number.isFinite(price) || price <= 0)
+  const shares = polymarketShareCount(sizeRaw);
+  if (shares <= 0 || !Number.isFinite(price) || price <= 0)
     return 0;
-  if (size >= 10_000)
-    return (size / TOKEN_MICRO) * price;
-  return size * price;
+  return shares * price;
 }
 
-/** 成交份数（CLOB REST 小数份数 vs micro） */
+/** GET 成交份数和 order.size_matched 已归一化；大额订单也不能再次缩放。 */
 export function polymarketShareCount(sizeRaw: string | number | undefined): number {
-  const size = Number(sizeRaw);
-  if (!Number.isFinite(size) || size <= 0) return 0;
-  if (size >= 10_000) return size / TOKEN_MICRO;
-  return size;
+  return Math.max(0, polymarketDecimalAmount(sizeRaw));
 }
 
-/** CLOB 响应/余额 micro 金额 → USDC（≥10000 视为 6 位 micro） */
+/** 原始 POST 回执金额 → USDC；固定六位整数单位，不接收归一化金额。 */
 export function parsePolymarketMicroUsdc(raw: string | number | undefined): number {
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value <= 0)
-    return 0;
-  const usdc = value >= 10_000 ? value / TOKEN_MICRO : value;
-  return Math.round(usdc * 10000) / 10000;
-}
-
-function round4Fill(n: number): number {
-  return Math.round(n * 10000) / 10000;
+  return polymarketBaseUnitAmount(raw);
 }
 
 /** BUY POST：makingAmount=USDC micro，takingAmount=份数 micro（对齐 bet.test / Polymarket 文档） */
@@ -161,16 +148,8 @@ export function parsePolymarketBuyOrderFill(
   response: { makingAmount?: string | number; takingAmount?: string | number } | null | undefined,
 ): { stakeUsdc: number; shares: number } {
   const stakeUsdc = parsePolymarketMicroUsdc(response?.makingAmount);
-  const shares = polymarketShareCount(response?.takingAmount);
-  if (stakeUsdc > 0 && shares > 0) {
-    const impliedPrice = stakeUsdc / shares;
-    if (impliedPrice > 0 && impliedPrice < 1)
-      return { stakeUsdc: round4Fill(stakeUsdc), shares: round4Fill(shares) };
-  }
-  return {
-    stakeUsdc: stakeUsdc > 0 ? round4Fill(stakeUsdc) : 0,
-    shares: shares > 0 ? round4Fill(shares) : 0,
-  };
+  const shares = polymarketBaseUnitAmount(response?.takingAmount);
+  return { stakeUsdc, shares };
 }
 
 /** SELL POST：makingAmount=份数 micro，takingAmount=USDC micro */
@@ -178,17 +157,8 @@ export function parsePolymarketSellOrderFill(
   response: { makingAmount?: string | number; takingAmount?: string | number } | null | undefined,
 ): { proceedsUsdc: number; sharesSold: number } {
   const proceedsUsdc = parsePolymarketMicroUsdc(response?.takingAmount);
-  // 份数保留 CLOB 原始精度，勿 round4（侧栏要展示订单原始份额）
-  const sharesSold = polymarketShareCount(response?.makingAmount);
-  if (proceedsUsdc > 0 && sharesSold > 0) {
-    const impliedPrice = proceedsUsdc / sharesSold;
-    if (impliedPrice > 0 && impliedPrice < 1)
-      return { proceedsUsdc: round4Fill(proceedsUsdc), sharesSold };
-  }
-  return {
-    proceedsUsdc: proceedsUsdc > 0 ? round4Fill(proceedsUsdc) : 0,
-    sharesSold: sharesSold > 0 ? sharesSold : 0,
-  };
+  const sharesSold = polymarketBaseUnitAmount(response?.makingAmount);
+  return { proceedsUsdc, sharesSold };
 }
 
 /** /data/trades 成交 leg → 份数 + USDC 名义 */

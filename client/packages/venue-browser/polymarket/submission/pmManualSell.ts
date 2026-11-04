@@ -20,7 +20,7 @@ import { resolvePmOrderSubmitHttpMode } from "../pmOrderSubmitMode";
 import { getPolymarketOrderClientRuntime, polymarketSigningGeneration } from "./client/pmOrderClientCache";
 import { polymarketMarketOrderOptions } from "../pmMarketOrderOptions";
 import { guardedPmSubmit, PmSubmitUnknownError, finishPmSubmitAttempt } from "./recovery/pmSubmitJournal";
-import { pmSubmitAttemptForOrder } from "./recovery/pmSubmitJournal";
+import { pmSubmitAttemptForOrder, pmNormalizedSubmitEvidence } from "./recovery/pmSubmitJournal";
 import { recoverPmUnknownSubmission } from "./recovery/pmUnknownSubmitRecovery";
 import { markPolymarketChangmenOrder } from "../orders/positions/pmOrigin";
 import {
@@ -407,8 +407,8 @@ export async function awaitPolymarketManualSellFinalOutcome(params: {
   sharesWanted?: number;
 }): Promise<PolymarketManualSellFinalOutcome> {
   const attempt = pmSubmitAttemptForOrder(params.account, params.sellOrderId);
-  let recoveredEvidence = attempt?.evidence;
-  if (attempt && !params.postResponse && ["dispatching", "submit_unknown"].includes(attempt.state)) {
+  let recoveredEvidence = pmNormalizedSubmitEvidence(attempt);
+  if (attempt && !params.postResponse && (["dispatching", "submit_unknown"].includes(attempt.state) || !recoveredEvidence)) {
     const recovered = await recoverPmUnknownSubmission(params.account, params.sellOrderId, "SELL", attempt.submittedAt);
     if (!recovered)
       return { outcome: "pending", sellOrderId: params.sellOrderId, reason: "卖出提交结果不确定，继续核对原单" };

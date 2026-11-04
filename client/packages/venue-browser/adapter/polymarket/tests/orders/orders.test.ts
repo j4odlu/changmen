@@ -12,6 +12,10 @@ import {
   parsePolymarketBuyOrderFill,
   parsePolymarketSellOrderFill,
   polymarketBuyStakeUsdc,
+  polymarketShareCount,
+  aggregatePolymarketSellTrades,
+  mapPolymarketSellTradeToVenueOrder,
+  resolvePolymarketSellFillWithRetry,
   polymarketTradeRefsOrderId,
   parsePolymarketMicroUsdc,
   resolvePolymarketWinningAssetId,
@@ -36,13 +40,22 @@ describe("parsePolymarketMicroUsdc", () => {
     expect(parsePolymarketMicroUsdc("10000000")).toBe(10);
   });
 
-  test("passes through human-readable amounts", () => {
-    expect(parsePolymarketMicroUsdc("85.5")).toBe(85.5);
-    expect(parsePolymarketMicroUsdc(12)).toBe(12);
+  test.each([["1", 0.000001], ["9999", 0.009999], ["10000", 0.01], ["10001", 0.010001], [12, 0.000012]])("always decodes raw POST integer units: %s", (raw, expected) => {
+    expect(parsePolymarketMicroUsdc(raw)).toBe(expected);
+  });
+
+  test.each(["85.5", "", "0x10", "NaN", "Infinity", -1])("rejects invalid raw integer amounts: %s", raw => {
+    expect(parsePolymarketMicroUsdc(raw)).toBe(0);
   });
 });
 
 describe("parsePolymarketBuyOrderFill", () => {
+  test("keeps small raw POST fills and all six decimal places", () => {
+    expect(parsePolymarketBuyOrderFill({ makingAmount: "5000", takingAmount: "10000" }))
+      .toEqual({ stakeUsdc: 0.005, shares: 0.01 });
+    expect(parsePolymarketBuyOrderFill({ makingAmount: "1", takingAmount: "3" }))
+      .toEqual({ stakeUsdc: 0.000001, shares: 0.000003 });
+  });
   test("parses BUY making=USDC taking=份数 micro (70 CNY @ 1.25)", () => {
     expect(parsePolymarketBuyOrderFill({
       makingAmount: "10000000",
@@ -52,6 +65,16 @@ describe("parsePolymarketBuyOrderFill", () => {
 });
 
 describe("parsePolymarketSellOrderFill", () => {
+  test("decodes small raw POST amounts independently of readable order quantities", () => {
+    expect(parsePolymarketSellOrderFill({ makingAmount: "10000", takingAmount: "5000" }))
+      .toEqual({ sharesSold: 0.01, proceedsUsdc: 0.005 });
+  });
+
+  test("preserves a large normalized order quantity while a delayed sell awaits proceeds", async () => {
+    expect(await resolvePolymarketSellFillWithRetry({} as never, "order", {}, {
+      maxRetries: 0, orderRow: { size_matched: "10000" },
+    })).toEqual({ sharesSold: 10000, proceedsUsdc: 0 });
+  });
   test("parses SELL making=份数 taking=USDC micro", () => {
     expect(parsePolymarketSellOrderFill({
       makingAmount: "12500000",
@@ -87,8 +110,24 @@ describe("polymarketTradeRefsOrderId", () => {
 });
 
 describe("polymarketBuyStakeUsdc", () => {
-  test("parses micro token size from REST", () => {
-    expect(polymarketBuyStakeUsdc("2000000", 0.5)).toBe(1);
+  test.each([9999, 10000, 10001, 2000000])("keeps normalized CLOB shares at every size: %s", shares => {
+    expect(polymarketShareCount(String(shares))).toBe(shares);
+    expect(polymarketBuyStakeUsdc(String(shares), 0.5)).toBe(shares * 0.5);
+  });
+
+  test("merges normalized BUY/SELL fills across the old threshold without changing VWAP or settlement", () => {
+    const rows: PolymarketTradeRow[] = [
+      { taker_order_id: "large", size: "6000", price: "0.5", side: "BUY", status: "CONFIRMED", asset_id: "yes" },
+      { taker_order_id: "large", size: "6000", price: "0.6", side: "BUY", status: "CONFIRMED", asset_id: "yes" },
+    ];
+    const buy = aggregatePolymarketTrades(rows)[0]!;
+    expect(buy).toMatchObject({ size: "12000", price: "0.55" });
+    expect(mapPolymarketTradeToVenueOrder(buy, { tokens: [{ token_id: "yes", winner: true }] }))
+      .toMatchObject({ pmShares: 12000, betMoney: 6600, reward: 12000, money: 5400, status: "win" });
+    const sell = aggregatePolymarketSellTrades(rows.map(row => ({ ...row, side: "SELL" })))[0]!;
+    expect(sell).toMatchObject({ size: "12000", price: "0.55" });
+    expect(mapPolymarketSellTradeToVenueOrder(sell))
+      .toMatchObject({ pmShares: 12000, betMoney: 6600 });
   });
 
   test("parses human-readable share size from WS-like payloads", () => {
@@ -277,7 +316,7 @@ describe("mapPolymarketTradeToVenueOrder", () => {
       market: "0xmarket",
       side: "BUY",
       status: "TRADE_STATUS_CONFIRMED",
-      size: "2000000",
+      size: "2",
       price: "0.5",
       match_time: "1700000000",
       outcome: "Team A",
@@ -305,7 +344,7 @@ describe("mapPolymarketTradeToVenueOrder", () => {
       market: "0x1234567890",
       side: "BUY",
       status: "MATCHED",
-      size: "1000000",
+      size: "1",
       price: "0.25",
       match_time: "1700000100",
       outcome: "Yes",

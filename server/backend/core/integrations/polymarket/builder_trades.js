@@ -1,9 +1,9 @@
 import { createPolymarketBuilderHeaders } from "./relayer_sign_unified.js";
 import { loadPolymarketBuilderCreds } from "./relayer_config.js";
 import { resolvePolymarketBuilderCode } from "./builder_code.js";
+import { polymarketDecimalAmount } from "@changmen/shared/pm_amounts";
 
 const CLOB_HOST = String(process.env.POLYMARKET_CLOB_API || "https://clob.polymarket.com").replace(/\/+$/, "");
-const MICRO = 1_000_000;
 const NO_MORE_CURSOR = "LTE=";
 
 function requireBuilderCreds() {
@@ -41,21 +41,12 @@ export function describeBuilderTradesFetchError(err, url = CLOB_HOST) {
 }
 
 /**
- * CLOB `/builder/trades` 金额：线上返回人类可读小数（如 `"5.88"`）；
- * OpenAPI 示例仍是 6 位微单位整数（如 `"50000000"`）。两者都兼容。
+ * CLOB `/builder/trades` 的 size/sizeUsdc/feeUsdc 是归一化十进制数量。
+ * https://docs.polymarket.com/trading/manage-orders#list-builder-trades
+ * 整数字符串与带小数点字符串使用同一单位。
  */
 export function amountToNumber(raw) {
-  if (raw == null || raw === "")
-    return 0;
-  const s = String(raw).trim();
-  const n = Number(s);
-  if (!Number.isFinite(n))
-    return 0;
-  if (s.includes("."))
-    return n;
-  if (Number.isInteger(n) && Math.abs(n) >= 1000)
-    return n / MICRO;
-  return n;
+  return polymarketDecimalAmount(raw);
 }
 
 export function normalizeBuilderTrade(raw) {

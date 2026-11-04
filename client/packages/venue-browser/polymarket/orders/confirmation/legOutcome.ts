@@ -23,7 +23,7 @@ import { readPolymarketOrderWatch } from "../../realtime/userWs";
 import { tracePolymarketOrder } from "../../diagnostics/orderTrace";
 import { isPolymarketTradeFailureRow } from "../facts/tradeFailure";
 import { recoverPmUnknownSubmission } from "../../submission/recovery/pmUnknownSubmitRecovery";
-import { finishPmSubmitAttempt, pmSubmitAttemptForOrder } from "../../submission/recovery/pmSubmitJournal";
+import { finishPmSubmitAttempt, pmSubmitAttemptForOrder, pmNormalizedSubmitEvidence } from "../../submission/recovery/pmSubmitJournal";
 
 export interface PolymarketLegOutcomeDeps {
   fetchVenueOrders: () => Promise<VenueOrder[]>;
@@ -221,8 +221,10 @@ export async function resolvePolymarketLegOutcome(
   deps: PolymarketLegOutcomeDeps,
   conditionId?: string,
 ): Promise<VenueLegOutcome> {
-  let recoveredRow = result.orderId ? pmSubmitAttemptForOrder(account, result.orderId)?.evidence?.row : undefined;
-  if (result.pmSubmitUnknown) {
+  const attempt = result.orderId ? pmSubmitAttemptForOrder(account, result.orderId) : undefined;
+  const evidence = pmNormalizedSubmitEvidence(attempt);
+  let recoveredRow = evidence?.row;
+  if (result.pmSubmitUnknown || (attempt && result.pending && !evidence)) {
     const recovered = result.orderId && await recoverPmUnknownSubmission(account, result.orderId, "BUY", result.pmSubmittedAt ?? result.beginTime);
     if (!recovered)
       return { orders: [], settlement: "timeout" };

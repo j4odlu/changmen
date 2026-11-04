@@ -14,6 +14,7 @@ import {
   isPolymarketPostFillConfirmed,
   isPolymarketDelayLookupPending,
   isPolymarketRestingNoFill,
+  resolvePolymarketRejectStakeUsdc,
 } from "@changmen/venue-browser/polymarket/orders/facts/orderStatus";
 import { settlePolymarketDelayedOrder } from "@changmen/venue-browser/polymarket/fok/orderSettlement";
 import { BetResult } from "@changmen/client-core/models/betResult";
@@ -22,6 +23,12 @@ const fetchPolymarketConfirmedTradeForOrder = vi.fn();
 const awaitPolymarketOrderWatch = vi.fn();
 
 describe("BUY timeout policy rollback", () => {
+  it.each([["500", 0.0005], ["1000", 0.001], ["10000", 0.01]])("decodes signed makerAmount as base units even below the old threshold: %s", (raw, expected) => {
+    const result = Object.assign(new BetResult("Polymarket", false), {
+      request: { order: { makerAmount: raw, side: "BUY" } },
+    });
+    expect(resolvePolymarketRejectStakeUsdc(result, { betMoney: 12 })).toBe(expected);
+  });
   it.each([
     ["matched", "matched"],
     ["unfilled", "unfilled"],

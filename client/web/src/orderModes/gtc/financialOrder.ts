@@ -1,19 +1,15 @@
 import type { GtcOrderState, GtcFinancialOrder } from "@changmen/shared/pm_gtc_order";
-import { buildPolymarketMatchedBuyVenueOrderUsdc } from "@changmen/venue-browser/adapter/polymarket";
+import { buildPolymarketMatchedBuyVenueOrderFromFillUsdc } from "@changmen/venue-browser/adapter/polymarket";
 import { scalePolymarketVenueOrdersForDisplay } from "@changmen/venue-browser/adapter/polymarket/orders";
 
 /** [changmen 扩展] 原单事实适配；金额、费用舍入、赔率和汇率均由普通 PM 助手处理。 */
 type FinancialState = Pick<GtcOrderState, "orderId" | "matched" | "principal" | "fee" | "complete" | "fills"> & { id: string };
 export function gtcMatchedOrder(row: FinancialState, fee: number) {
-  const usdc = buildPolymarketMatchedBuyVenueOrderUsdc(row.orderId ?? `gtc-pending:${row.id}`, {
-    status: "matched",
-    takingAmount: row.matched,
-  }, { fallbackStakeUsdc: Number(row.principal), feeUsdc: fee });
+  const usdc = buildPolymarketMatchedBuyVenueOrderFromFillUsdc(row.orderId ?? `gtc-pending:${row.id}`, {
+    stakeUsdc: Number(row.principal), shares: Number(row.matched),
+  }, { feeUsdc: fee });
   if (!usdc)
     return null;
-  // [changmen 扩展] 普通 PM 助手的成交份数会舍入到四位；GTC 事实及持久化须保留官方六位数量。
-  // 金额、费用和赔率仍使用普通助手的结果。
-  usdc.pmShares = Number(row.matched);
   return scalePolymarketVenueOrdersForDisplay([usdc])[0]!;
 }
 

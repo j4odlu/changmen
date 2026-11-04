@@ -7,6 +7,8 @@ import {
   resolvePolymarketSettlement,
   fetchGammaMarketsByConditionIds,
   lookupGammaMarket,
+  polymarketShareCount,
+  polymarketBuyStakeUsdc,
 } from "./settlement.js";
 
 const ilbirsTokenWin = "12876938733604859423663202044051912631612545733461708116502231340403727260024";
@@ -29,6 +31,13 @@ const ilbirsTrade = {
 };
 
 describe("polymarket settlement (server)", () => {
+  it.each([9999, 10000, 10001, 2000000])("keeps normalized CLOB shares in server settlement: %s", shares => {
+    expect(polymarketShareCount(String(shares))).toBe(shares);
+    expect(polymarketBuyStakeUsdc(String(shares), 0.5)).toBe(shares / 2);
+    const market = { tokens: [{ token_id: ilbirsTokenWin, winner: true }] };
+    expect(computePolymarketSettlement({ ...ilbirsTrade, size: String(shares) }, market, shares / 2))
+      .toEqual({ status: "win", reward: shares, money: shares / 2, kind: "official" });
+  });
   it("looks up V2 positions when the old Gamma token filter misses, including closed markets", async () => {
     const urls = [];
     const market = { version: "v2", conditionId: "cond-v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]', closed: true };

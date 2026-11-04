@@ -1,4 +1,6 @@
 export interface PolymarketOrderResponseLike {
+  /** 原始 POST /order 回执：六位整数基本单位，BUY 为金额，SELL 为份数。 */
+  makingAmount?: string | number;
   success?: boolean;
   status?: string;
   orderID?: string;

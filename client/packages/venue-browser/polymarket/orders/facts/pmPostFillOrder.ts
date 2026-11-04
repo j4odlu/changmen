@@ -50,10 +50,18 @@ export function buildPolymarketMatchedBuyVenueOrderUsdc(
   response: PolymarketOrderResponseLike | null | undefined,
   ctx: PolymarketMatchedBuyDisplayCtx = {},
 ): VenueOrder | null {
+  return buildPolymarketMatchedBuyVenueOrderFromFillUsdc(orderId, parsePolymarketBuyOrderFill(response), ctx);
+}
+
+/** 已归一化的成交事实共用金额/费用计算；调用方不得伪装成原始 POST 回执。 */
+export function buildPolymarketMatchedBuyVenueOrderFromFillUsdc(
+  orderId: string,
+  fill: { stakeUsdc: number; shares: number },
+  ctx: PolymarketMatchedBuyDisplayCtx = {},
+): VenueOrder | null {
   const id = String(orderId ?? "").trim();
   if (!id)
     return null;
-  const fill = parsePolymarketBuyOrderFill(response);
   let stake = fill.stakeUsdc;
   let shares = fill.shares;
   const fallbackStake = Number(ctx.fallbackStakeUsdc);

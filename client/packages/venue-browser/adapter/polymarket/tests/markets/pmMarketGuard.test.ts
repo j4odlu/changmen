@@ -7,6 +7,39 @@ import {
 import type { PolymarketRawMarket } from "@changmen/venue-browser/polymarket/markets/parse";
 
 describe("getPolymarketMarketBlockReason", () => {
+  const clobV1: PolymarketRawMarket = {
+    version: "v1", active: true, closed: false, accepting_orders: true,
+    tokens: [{ token_id: "101", winner: false }, { token_id: "102", winner: false }],
+  };
+
+  test("reads CLOB v1 token rows without treating Gamma's missing fields as a conflict", () => {
+    expect(getPolymarketMarketBlockReason(clobV1, "101", "clob")).toBeNull();
+    expect(getPolymarketMarketBlockReason(clobV1, "102", "clob")).toBeNull();
+    expect(getPolymarketMarketBlockReason(clobV1, "999", "clob")).toContain("不一致");
+    expect(getPolymarketMarketBlockReason(clobV1, "101")).toContain("不一致");
+  });
+
+  test.each([
+    { clobTokenIds: [] },
+    { clob_token_ids: '["201","202"]' },
+    { tokens: [{ token_id: "101" }, { token_id: "101" }] },
+    { tokens: [{ token_id: "101" }, {}] },
+    { tokens: [{ token_id: 101 }, { token_id: 102 }] },
+    { version: "v2" },
+    { version: "v2", positionIds: ["201", "202"] },
+  ])("CLOB token rows cannot override conflicting or invalid identity %j", extra => {
+    expect(getPolymarketMarketBlockReason({ ...clobV1, ...extra } as PolymarketRawMarket, "101", "clob")).toContain("不一致");
+  });
+
+  test("preserves CLOB winner and trading state guards with versioned token rows", () => {
+    const resolved = { ...clobV1, tokens: [{ token_id: "101", winner: false }, { token_id: "102", winner: true }] };
+    expect(getPolymarketMarketBlockReason(resolved, "101", "clob")).toContain("已决出胜负");
+    expect(getPolymarketMarketBlockReason(resolved, "102", "clob")).toBeNull();
+    expect(getPolymarketMarketBlockReason({ ...clobV1, closed: true }, "101", "clob")).toContain("已关闭");
+    expect(getPolymarketMarketBlockReason({ ...clobV1, accepting_orders: false }, "101", "clob")).toContain("已停止交易");
+    expect(getPolymarketMarketBlockReason({ ...clobV1, version: "v3" }, "101", "clob")).toContain("版本不支持");
+  });
+
   test("checks V2 prices against position IDs and blocks CTF or unsupported identities", () => {
     const market = { version: "v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]', outcomePrices: '["0.01","0.99"]' };
     expect(getPolymarketMarketBlockReason(market, "201")).toContain("几乎不可能");

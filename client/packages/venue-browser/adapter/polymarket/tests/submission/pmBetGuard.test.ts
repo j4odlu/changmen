@@ -35,6 +35,20 @@ describe("resolvePolymarketBetBlockReason", () => {
     vi.mocked(polymarketPluginGet).mockReset();
   });
 
+  test.each([resolvePolymarketBetBlockReason, resolveLegacyBlockReason])("accepts matching versioned CLOB v1 token rows through GTC and classic FOK guards", async check => {
+    const home = "42137992474469840229926679655761509301468389103974987779855791190006097912552";
+    const away = "55809556106801359157703105142839215453079484667235459343348360812163501777680";
+    vi.mocked(polymarketPluginGet).mockImplementation(async url => {
+      if (url.includes("/events/")) return { live: true, ended: false };
+      if (url.includes("/markets?")) return [{ version: "v1", clobTokenIds: JSON.stringify([home, away]), positionIds: ["201", "202"], active: true }];
+      return { version: "v1", active: true, closed: false, accepting_orders: true,
+        tokens: [{ token_id: home, winner: false }, { token_id: away, winner: false }] };
+    });
+    // Liquid / BetBoom 全场资产；Gamma 同时有 positionIds 仍按 v1 CTF 核对。
+    expect(await check(option({ itemId: home }), true)).toBeNull();
+    expect(await check(option({ itemId: away }), true)).toBeNull();
+  });
+
   test.each([resolvePolymarketBetBlockReason, resolveLegacyBlockReason])("blocks modern Gamma identity conflicts through the complete preflight chain", async check => {
     for (const market of [
       { version: "v2", positionIds: ["201", "202"], clobTokenIds: '["101","102"]' },

@@ -50,9 +50,18 @@ export function isPolymarketSubmitTimeoutError(err: unknown): boolean {
 export function getPolymarketMarketBlockReason(
   market: PolymarketRawMarket | null | undefined,
   tokenId: string,
+  source: "gamma" | "clob" = "gamma",
 ): string | null {
   if (!market)
     return null;
+
+  // [changmen 扩展] CLOB v1 /markets/:condition 的资产在 tokens，区别于 Gamma。
+  // 仅补齐该响应缺省的 CTF 字段；明确的资产字段、V2 和未知版本仍按原规则校验。
+  if (source === "clob" && market.version === "v1"
+    && market.clobTokenIds == null && market.clob_token_ids == null
+    && Array.isArray(market.tokens)) {
+    market = { ...market, clobTokenIds: market.tokens.map(token => token?.token_id) };
+  }
 
   // 官方 Market Details：提交前看 active / closed / acceptingOrders
   const accepting = market.acceptingOrders ?? market.accepting_orders;

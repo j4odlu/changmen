@@ -51,7 +51,7 @@ export async function resolvePolymarketBetBlockReason(option: BetOption): Promis
     }
 
     // CLOB 行优先：Gamma 仍显示接单时 CLOB 可能已 trading is disabled
-    const clobReason = getPolymarketMarketBlockReason(clob, option.itemId);
+    const clobReason = getPolymarketMarketBlockReason(clob, option.itemId, "clob");
     if (clobReason)
       return clobReason;
     const marketReason = getPolymarketMarketBlockReason(market, option.itemId);

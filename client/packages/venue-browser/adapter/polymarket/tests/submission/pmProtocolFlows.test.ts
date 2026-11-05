@@ -40,7 +40,6 @@ function useSample(sample: typeof samples[number], controlledDepth = true) {
   io.book.mockResolvedValue(book);
   io.get.mockImplementation(async (raw: string) => {
     const url = new URL(raw);
-    if (url.pathname === "/balance-allowance/update") return {};
     if (url.pathname === "/balance-allowance") return { balance: "10000000", allowances: {
       "0xe111180000d2663c0091e4f400237545b87b996b": "1", "0xe2222d279d744050d28e00520010520000310f59": "1", "0xe3333700ca9d93003f00f0f71f8515005f6c00aa": "1",
     } };
@@ -71,8 +70,7 @@ test.each(flows)("$sample.version $route $flow keeps the selected asset through 
       pmTokenId: option.itemId, pmConditionId: option.betId, pmShares: 10, pmStakeUsdc: 5, pmSide: "buy", pmSellState: "open",
     } });
     expect(result).toMatchObject({ ok: true, sharesSold: 10, proceedsUsdc: 5 });
-    const call = io.get.mock.calls.find(([url]) => String(url).includes("/balance-allowance/update"));
-    expect(new URL(String(call?.[0])).searchParams.get("asset_type")).toBe(sample.version === "v2" ? "CONDITIONAL-V2" : "CONDITIONAL");
+    expect(io.get.mock.calls.some(([url]) => new URL(String(url)).pathname.startsWith("/balance-allowance"))).toBe(false);
   } else {
     setPmFokPreflightMode(flow);
     await polymarketProvider.checkBet!(account, option);

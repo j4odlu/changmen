@@ -19,7 +19,6 @@ import { pmPrepareSubmit, pmSubmitClockReady, pmGetBook, pmSubmitOrder } from ".
 import { resolvePmOrderSubmitHttpMode } from "../pmOrderSubmitMode";
 import { getPolymarketOrderClientRuntime, polymarketSigningGeneration } from "./client/pmOrderClientCache";
 import { polymarketMarketOrderOptions } from "../pmMarketOrderOptions";
-import { refreshPolymarketPositionAllowance } from "../wallet/balance";
 import { currentPmTick } from "../pmTickState";
 import { guardedPmSubmit, PmSubmitUnknownError, finishPmSubmitAttempt } from "./recovery/pmSubmitJournal";
 import { pmSubmitAttemptForOrder, pmNormalizedSubmitEvidence } from "./recovery/pmSubmitJournal";
@@ -703,8 +702,8 @@ export async function sellPolymarketBuyPosition(params: {
 
     const price = calculateSellMarketLimitPrice(bids, sharesWanted, minOrderSize);
     if (!isPolymarketPriceOnTick(price, tickSize)) throw new Error("PM 卖出限价不符合盘口 tick");
-    await refreshPolymarketPositionAllowance(params.account, tokenId, version, negRisk);
-    validateTick();
+    // Follow the SDK's normal order path: refresh allowance caches after approval/state changes,
+    // not unconditionally before every sell. CLOB still validates balance and allowance on POST.
     sellLimitPrice = price;
     const orderBody = await createPolymarketFokSellOrderBody(
       gateway,

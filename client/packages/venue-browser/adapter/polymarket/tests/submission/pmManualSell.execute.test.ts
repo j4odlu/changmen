@@ -39,9 +39,9 @@ beforeEach(async () => {
 });
 
 describe("manual sell submission preparation", () => {
-  it.each([undefined, "v2"])("a tick change during the allowance refresh invalidates the %s sell", async version => {
+  it.each([undefined, "v2"])("a tick change during submission preparation invalidates the %s sell", async version => {
     vi.mocked(pmGetBook).mockResolvedValueOnce({ asset_id: "123", version, timestamp: "1000", bids: [{ price: "0.51", size: "100" }], tick_size: "0.01", min_order_size: 1, neg_risk: false });
-    vi.mocked(refreshPolymarketPositionAllowance).mockImplementationOnce(async () => {
+    vi.mocked(pmPrepareSubmit).mockImplementationOnce(async () => {
       notePmTickFrame(JSON.stringify({ event_type: "tick_size_change", asset_id: "123", new_tick_size: "0.1", timestamp: "2000" }));
     });
     expect(await sellPolymarketBuyPosition({ account: account(), buyRow: buy })).toMatchObject({ ok: false, error: expect.stringContaining("tick") });
@@ -63,10 +63,13 @@ describe("manual sell submission preparation", () => {
     expect(await sellPolymarketBuyPosition({ account: account(), buyRow: buy })).toMatchObject({ error: "FOK 未成交" });
     expect(pmSubmitOrder).toHaveBeenCalledOnce();
   });
-  it("does not sign or submit when the position allowance refresh fails", async () => {
+  it.each([undefined, "v2"])("%s sell preserves CLOB balance/allowance rejection without a cache refresh or resubmit", async version => {
+    vi.mocked(pmGetBook).mockResolvedValueOnce({ asset_id: "123", version, bids: [{ price: "0.5", size: "100" }], tick_size: "0.01", min_order_size: 1, neg_risk: false });
     vi.mocked(refreshPolymarketPositionAllowance).mockRejectedValueOnce(new Error("cache unavailable"));
-    expect(await sellPolymarketBuyPosition({ account: account(), buyRow: buy })).toMatchObject({ ok: false, error: "cache unavailable" });
-    expect(pmSubmitOrder).not.toHaveBeenCalled();
+    vi.mocked(pmSubmitOrder).mockResolvedValueOnce({ success: false, errorMsg: "not enough balance / allowance" });
+    expect(await sellPolymarketBuyPosition({ account: account(), buyRow: buy })).toMatchObject({ ok: false, error: "not enough balance / allowance" });
+    expect(refreshPolymarketPositionAllowance).not.toHaveBeenCalled();
+    expect(pmSubmitOrder).toHaveBeenCalledOnce();
   });
   it.each(["local", "vps"] as const)("%s sell prepares without requiring an estimate and preserves signed Builder attribution", async mode => {
     setPmOrderSubmitMode(mode);
@@ -75,6 +78,7 @@ describe("manual sell submission preparation", () => {
     expect(result.error).toBe("FOK 未成交");
     expect(pmPrepareSubmit).toHaveBeenCalledExactlyOnceWith(a);
     expect(pmSubmitOrder).toHaveBeenCalledOnce();
+    expect(refreshPolymarketPositionAllowance).not.toHaveBeenCalled();
     expect(vi.mocked(pmSubmitOrder).mock.calls[0][1]).toMatchObject({ orderType: "FOK", order: {
       builder: resolvePolymarketBuilderCode(), side: "SELL", signature: expect.stringMatching(/^0x/),
     } });

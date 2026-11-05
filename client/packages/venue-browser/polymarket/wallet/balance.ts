@@ -42,7 +42,7 @@ export async function fetchPolymarketBalanceViaTransport(
   };
 }
 
-/** 授权后/卖出前按协议刷新仓位缓存；CLOB 的两套持仓账本不能混用。 */
+/** 授权变更或明确需要更新缓存时按协议显式刷新；普通卖出不依赖本调用。 */
 export async function refreshPolymarketPositionAllowance(account: PlatformAccount, assetId: string, protocol: 2 | 3, negRisk = false): Promise<void> {
   if (!/^\d+$/.test(assetId) || (protocol !== 2 && protocol !== 3))
     throw new Error("PM 仓位资产或协议无效");

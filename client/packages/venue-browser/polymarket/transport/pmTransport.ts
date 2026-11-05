@@ -275,6 +275,13 @@ async function pmHttpViaVps<T>(
     l2Path: options?.l2Path,
     polyHeaders,
   });
+  // Official updateBalanceAllowance returns void; its successful response can have no body.
+  // https://github.com/Polymarket/rs-clob-client/blob/main/src/clob/client.rs
+  // Keep ordinary reads and POST /order strict; allowance readiness is verified by the next read.
+  if (method === "GET" && options?.account && options.l2Path === "/balance-allowance/update"
+    && new URL(url).pathname === "/balance-allowance/update"
+    && res.status >= 200 && res.status < 300 && !res.text.trim())
+    return undefined as T;
   return unwrapJsonBody<T>(res.text);
 }
 

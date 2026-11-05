@@ -809,19 +809,19 @@ function badgeTitle(row: OrderRow): string {
                   <template v-else>
                     盈亏：{{ toFixed(pmOrderProfitDisplayCny(block.row, rows) ?? 0, 0) }}
                   </template>
+                  <span
+                    v-if="pmLiveUnrealizedPnlText(block.row)"
+                    class="order__live-pnl"
+                    :class="{
+                      pos: (pmLiveUnrealizedPnlCny(block.row) ?? 0) > 0,
+                      neg: (pmLiveUnrealizedPnlCny(block.row) ?? 0) < 0,
+                    }"
+                  >{{ pmLiveUnrealizedPnlText(block.row) }}</span>
                 </div>
                 <div class="order__profit-line order__profit-line--sell-row">
                   <span class="order__sell-row-meta">
                     <span v-if="pmShowLivePrice(block.row)">当前价：{{ pmLivePriceText(block.row) }} </span>
                     <span v-if="pmShowLiveOdds(block.row)">当前赔率：<span class="order__odds">{{ pmLastLineOddsText(block.row) }}</span> </span>
-                    <span
-                      v-if="pmLiveUnrealizedPnlText(block.row)"
-                      class="order__live-pnl"
-                      :class="{
-                        pos: (pmLiveUnrealizedPnlCny(block.row) ?? 0) > 0,
-                        neg: (pmLiveUnrealizedPnlCny(block.row) ?? 0) < 0,
-                      }"
-                    >{{ pmLiveUnrealizedPnlText(block.row) }}</span>
                   </span>
                   <button
                     v-if="showPmSellButton(block.row)"
@@ -860,19 +860,19 @@ function badgeTitle(row: OrderRow): string {
                   <template v-else>
                     盈亏：{{ toFixed(pfOrderProfitDisplayCny(block.row) ?? 0, 0) }}
                   </template>
+                  <span
+                    v-if="pfLiveUnrealizedPnlText(block.row)"
+                    class="order__live-pnl"
+                    :class="{
+                      pos: (pfLiveUnrealizedPnlCny(block.row) ?? 0) > 0,
+                      neg: (pfLiveUnrealizedPnlCny(block.row) ?? 0) < 0,
+                    }"
+                  >{{ pfLiveUnrealizedPnlText(block.row) }}</span>
                 </div>
                 <div class="order__profit-line order__profit-line--sell-row">
                   <span class="order__sell-row-meta">
                     <span v-if="pfShowLivePrice(block.row)">当前价：{{ pfLivePriceText(block.row) }} </span>
                     <span v-if="pfShowLiveOdds(block.row)">当前赔率：<span class="order__odds">{{ pfLastLineOddsText(block.row) }}</span> </span>
-                    <span
-                      v-if="pfLiveUnrealizedPnlText(block.row)"
-                      class="order__live-pnl"
-                      :class="{
-                        pos: (pfLiveUnrealizedPnlCny(block.row) ?? 0) > 0,
-                        neg: (pfLiveUnrealizedPnlCny(block.row) ?? 0) < 0,
-                      }"
-                    >{{ pfLiveUnrealizedPnlText(block.row) }}</span>
                   </span>
                   <button
                     v-if="showPfSellButton(block.row)"

@@ -6,6 +6,11 @@ const order = (raw = {}, extra = {}) => ({ bet_money: 34.17, money: 999, status:
   raw: { pmGtcExecutionId: "own", pmGtcBuyShares: 10, pmGtcBuyCost: 5.1, pmSide: "buy", ...raw }, ...extra });
 const sale = (raw = {}) => order({ pmAttributedSellShares: 4, pmSellProceeds: 2.4, pmSellState: "partial", ...raw });
 describe("GTC cash ledger", () => {
+  it.each([["win",53.4693,"win"],["lose",-71.5527,"lose"],["equal_split",-9.0417,"lose"]])("updates GTC financial status and money together for outcome %s", (result, money, status) => {
+    const ledger=gtcOrderLedger(order({pmGtcBuyShares:18.66,pmGtcBuyCost:10.6795,pmMatchResult:result,pmSellState:"settled"},
+      {bet_money:71.55265000000001,status:"Lose",money:53.4693}));
+    expect(ledger).toMatchObject({money,status,raw:{money,status,pmMatchResult:result}});
+  });
   it("partial/canceled buy charges only actual filled principal plus its fee once", () => {
     const row = order({ pmFeeUsdc: 0.1, pmGtcOpenShares: 15 });
     expect(gtcOrderLedger(row)).toMatchObject({ money: 0, raw: { pmStakeUsdc: 5.1, pmRealizedPnlUsdc: 0 } });

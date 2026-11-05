@@ -66,6 +66,8 @@ export interface PolymarketVenueOrderExtras {
    * 与 status/money 脱钩——中途卖光仍可写入，供策略分析，不影响卖出盈亏统计。
    */
   pmMatchResult?: "win" | "lose" | "equal_split";
+  /** 已核验的官方最终兑付；旧 sellState/status 本身不能证明已核验。 */
+  pmSettlement?: import("@changmen/shared/pm_settlement").PolymarketOrderSettlement;
   /**
    * [changmen 扩展] 执行下单后未成交落库用：
    * - unfilled：已受理后 FOK/取消

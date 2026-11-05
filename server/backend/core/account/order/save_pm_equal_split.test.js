@@ -3,6 +3,18 @@ import { mergeOrderLogicalSave } from "../order_store.js";
 import { rowToOrder } from "./dto.js";
 import { gtcOrderLedger } from "../../../../../rds/rds/orderModes/gtc/pm_gtc_ledger.js";
 const raw = { provider:"Polymarket",pmOrigin:"changmen",pmSide:"buy",pmShares:100,pmStakeUsdc:40,pmSellState:"open",betMoney:268,status:"lose",money:-268,pmMatchResult:"lose" };
+const condition = "0x" + "a".repeat(64);
+const receipt = price => ({ conditionId: condition, assetId: "102", price, source: price === 0.5 ? "resolution" : "clob" });
+
+test.each([[0,"lose",-268],[1,"win",402]])("verified price %s determines the payout independently of a stale financial status", (price, result, expected) => {
+  const incoming = { ...raw, pmTokenId:"102",pmConditionId:condition,pmMatchResult:result,pmSettlement:receipt(price),status:"return",money:0,pmSellState:"settled" };
+  const saved = mergeOrderLogicalSave({ status:"Lose",money:-268,bet_money:268 },raw,incoming,"changmen");
+  expect(saved).toMatchObject({ money:expected,raw:{pmMatchResult:result,pmSettlement:receipt(price),status:expected>0?"win":"lose"} });
+  const late = mergeOrderLogicalSave({status:saved.raw.status,money:saved.money,bet_money:268},saved.raw,
+    {...raw,money:-268,status:"lose",pmTokenId:"102",pmConditionId:condition},"changmen");
+  expect(late).toMatchObject({money:expected,raw:{pmSettlement:receipt(price),pmMatchResult:result}});
+  expect(rowToOrder({provider:"Polymarket",raw:late.raw,money:late.money})).toMatchObject({PmSettlement:receipt(price)});
+});
 test.each([[67,"win"],[-67,"lose"],[0,"return"]])("persist split profit %j with status %s independently of match result",(money,status)=>{
   const saved=mergeOrderLogicalSave({status:"Lose",money:-268,bet_money:268},raw,
     {...raw,pmMatchResult:"equal_split",pmSellState:"settled",reward:335,money,status},"changmen");

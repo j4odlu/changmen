@@ -745,6 +745,11 @@ function badgeTitle(row: OrderRow): string {
               :class="(isPmSellOrderListRow(block.row) || isPfSellOrderListRow(block.row)) ? 'order__pm-tag--sell' : 'order__pm-tag--buy'"
             >{{ pmOrderSideTagText(block.row) || pfOrderSideTagText(block.row) }}</span>
             <span
+              v-if="isPmBuyOrderListRow(block.row) && block.row.PmMatchResult === 'EqualSplit'"
+              class="order__pm-tag"
+              title="官方最终赛果：每份兑付 $0.50；右侧输赢角标表示订单盈亏"
+            >{{ pmBuyLifecycleTagText(block.row) }}</span>
+            <span
               v-if="block.attach && block.sellSource"
               class="order__pm-tag order__pm-tag--pe"
               :class="block.sellSource === 'event' ? 'order__pm-tag--pe-event' : 'order__pm-tag--pe-row'"

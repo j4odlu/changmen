@@ -4,7 +4,7 @@
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { normalizePmMatchResult, parseNum } from "./dto.js";
 import { isPmPendingOrder, validatePmSubmission } from "@changmen/shared/pm_submission";
-import { polymarketIsEqualSplitOrder, polymarketProfitStatus } from "@changmen/shared/pm_settlement";
+import { polymarketIsEqualSplitOrder, polymarketProfitStatus, polymarketVerifiedOrderPayout } from "@changmen/shared/pm_settlement";
 
 /** pmShares = 官方 fill，取 RDS/CLOB/入参 最大值，避免 0 覆盖有效值 */
 function preservePmBuyFillShares(prevRaw, o, merged) {
@@ -320,14 +320,16 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
    * 已结算且无卖出进度：Money 与含费 bet_money 对齐。
    * 防止旧客户端用「名义本金」盈亏回写，侧栏再次出现买入金额≠|盈亏|。
    */
-  if (!isSell && polymarketIsEqualSplitOrder(prevRaw) && !polymarketIsEqualSplitOrder(o)) {
+  const preserveFinalSettlement = !isSell && ((polymarketIsEqualSplitOrder(prevRaw) && !polymarketIsEqualSplitOrder(o))
+    || (polymarketVerifiedOrderPayout(prevRaw) !== undefined && polymarketVerifiedOrderPayout(o) === undefined));
+  if (preserveFinalSettlement) {
     // An older client must not replace a final split result with its cached paper winner.
     money = parseNum(prevRow?.money ?? prevRaw.money, money);
     bet_money = parseNum(prevRow?.bet_money ?? prevRaw.betMoney, bet_money);
-    merged = { ...merged, pmMatchResult: "equal_split", pmSellState: prevRaw.pmSellState,
+    merged = { ...merged, pmMatchResult: prevRaw.pmMatchResult, pmSellState: prevRaw.pmSellState,
       status: prevRow?.status ?? prevRaw.status, money, reward: prevRaw.reward, betMoney: bet_money };
     // Preserve the inputs as well: a later refresh must not recalculate from a stale cost or fill.
-    for (const field of ["pmStakeUsdc", "pmFeeUsdc", "pmShares", "pmFillPrice", "pmTokenId", "pmConditionId",
+    for (const field of ["pmSettlement", "pmStakeUsdc", "pmFeeUsdc", "pmShares", "pmFillPrice", "pmTokenId", "pmConditionId",
       "pmAttributedSellShares", "pmRealizedPnlUsdc", "pmSellProceeds", "pmLastSellOrderId"]) {
       if (Object.prototype.hasOwnProperty.call(prevRaw, field)) merged[field] = prevRaw[field];
       else delete merged[field];
@@ -349,7 +351,7 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
     }
   }
 
-  if (!isSell && !polymarketIsEqualSplitOrder(merged)) {
+  if (!isSell && !preserveFinalSettlement && !polymarketIsEqualSplitOrder(merged)) {
     const st = String(merged.status ?? o.status ?? prevRow?.status ?? "").toLowerCase();
     const sellState = String(merged.pmSellState ?? prevRaw.pmSellState ?? "").toLowerCase();
     const attr = parseNum(merged.pmAttributedSellShares ?? prevRaw.pmAttributedSellShares, 0);
@@ -358,15 +360,18 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
     const noSellProgress = attr <= 0.0001
       && sellState !== "partial"
       && sellState !== "closed";
-    if (noSellProgress && bet > 0 && shares > 0 && (st === "win" || st === "lose" || st === "lost")) {
+    const officialPrice = polymarketVerifiedOrderPayout(merged);
+    if (noSellProgress && bet > 0 && shares > 0 && (officialPrice !== undefined || st === "win" || st === "lose" || st === "lost")) {
       const fx = getExchange(Currency.USDT);
-      const fair = st === "win" ? shares * fx - bet : -bet;
+      const payoutPrice = officialPrice ?? (st === "win" ? 1 : 0);
+      const fair = shares * payoutPrice * fx - bet;
       const fairRounded = Math.round(fair * 10000) / 10000;
-      if (Math.round(Number(money) || 0) !== Math.round(fairRounded)) {
+      if (officialPrice !== undefined || Math.round(Number(money) || 0) !== Math.round(fairRounded)) {
         money = fairRounded;
         merged.money = fairRounded;
-        if (st === "win")
-          merged.reward = Math.round(shares * fx * 10000) / 10000;
+        if (officialPrice !== undefined) merged.status = polymarketProfitStatus(money);
+        if (officialPrice !== undefined || st === "win")
+          merged.reward = Math.round(shares * payoutPrice * fx * 10000) / 10000;
       }
     }
   }

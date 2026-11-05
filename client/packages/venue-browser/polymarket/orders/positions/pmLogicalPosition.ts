@@ -31,6 +31,7 @@ export interface OrderRowLike {
   PmBuyOrderId?: string;
   /** 市场赛果（持有到期）：Win/Lose */
   PmMatchResult?: "Win" | "Lose" | "win" | "lose" | "EqualSplit" | "equal_split";
+  PmSettlement?: import("@changmen/shared/pm_settlement").PolymarketOrderSettlement;
 }
 
 function round4(n: number): number {
@@ -133,6 +134,7 @@ export function venueOrderFromOrderRow(row: OrderRowLike): VenueOrder {
     pmSellState: row.PmSellState ?? (pmSide === "buy" ? "open" : undefined),
     pmSide,
     pmBuyOrderId: row.PmBuyOrderId,
+    pmSettlement: row.PmSettlement,
     pmMatchResult: (() => {
       const m = String(row.PmMatchResult ?? "").trim().toLowerCase();
       if (m === "equalsplit") return "equal_split";

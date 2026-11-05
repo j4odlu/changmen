@@ -44,8 +44,9 @@ export function gtcOrderLedger(order) {
   const positionEvents = events && shares > 0 ? { ...raw.positionEvents, sells: events.sells.map(event => ({ ...event,
     pnl: round4(Number(event.proceeds) - round4(cost * Number(event.shares) / shares)) })) } : undefined;
   return { money: shares === 0 && cost === 0 ? 0 : finalMoney,
-    ...(equalSplit && state !== "closed" ? { status: polymarketProfitStatus(finalMoney) } : {}),
+    ...(settled && state !== "closed" ? { status: polymarketProfitStatus(finalMoney) } : {}),
     raw: { ...raw, money: shares === 0 && cost === 0 ? 0 : finalMoney,
+      ...(settled && state !== "closed" ? { status: polymarketProfitStatus(finalMoney) } : {}),
       reward: round4((proceeds + payout) * fx), pmShares: shares, pmStakeUsdc: remainingCost,
       pmAttributedSellShares: sold, pmRealizedPnlUsdc: hasSale ? realized : 0,
       ...(hasSale ? { pmSellProceeds: proceeds } : {}),

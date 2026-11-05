@@ -678,7 +678,7 @@ export async function fetchOrdersByDatePage(date, userId, pageIndex = 1, pageSiz
  * 按 playerId 读取订单。
  * @param {{ sinceCreateAt?: number }} [opts]
  *   sinceCreateAt>0 时：[changmen 扩展] 只返回窗口内订单，并额外保留
- *   Polymarket 仍有可卖剩余份额的买单（对齐 hasOpenPolymarketPosition / PM_SHARE_DUST=0.01）。
+ *   Polymarket 有剩余份额且仍需官方兑付核验的买单（旧 settled 标记不是最终核验证据）。
  *   省略则全量（MoneyRiskView / A8 Client_GetPlayerOrder）。
  * strict：查询失败向上抛（供 PF 结算/入账等写路径 fail-closed）。
  * 无 pool / 无 userId → `[]`（正常语义，非失败）。
@@ -720,8 +720,15 @@ export async function fetchOrdersByPlayerStrict(playerId, userId, opts = undefin
              OR (
                provider ILIKE 'Polymarket'
                AND coalesce(raw->>'pmSide', '') IS DISTINCT FROM 'sell'
-               AND coalesce(raw->>'pmSellState', '') NOT IN ('closed', 'settled')
-               AND lower(coalesce(status, '')) NOT IN ('reject', 'return', 'pending')
+               AND coalesce(raw->>'pmSellState', '') <> 'closed'
+               AND (coalesce(raw->>'pmSellState', '') <> 'settled' OR NOT COALESCE(
+                 raw->'pmSettlement'->>'assetId' = raw->>'pmTokenId'
+                 AND lower(raw->'pmSettlement'->>'conditionId') = lower(raw->>'pmConditionId')
+                 AND raw->'pmSettlement'->>'source' IN ('resolution', 'clob')
+                 AND ((raw->'pmSettlement'->'price' = '0'::jsonb AND raw->>'pmMatchResult' = 'lose')
+                   OR (raw->'pmSettlement'->'price' = '0.5'::jsonb AND raw->>'pmMatchResult' = 'equal_split')
+                   OR (raw->'pmSettlement'->'price' = '1'::jsonb AND raw->>'pmMatchResult' = 'win')), FALSE))
+               AND lower(coalesce(status, '')) NOT IN ('reject', 'pending')
                AND (
                  coalesce(nullif(raw->>'pmShares', ''), '0')::float8
                  - coalesce(nullif(raw->>'pmAttributedSellShares', ''), '0')::float8

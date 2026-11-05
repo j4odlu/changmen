@@ -1,6 +1,6 @@
 import { polymarketMarketAssetIds, polymarketGammaMarketAssetIds, polymarketMarketHasAsset, polymarketMarketAssetForOutcome, polymarketOfficialWinner, mergePolymarketClobMarket, polymarketConditionsAgree } from "@changmen/shared/pm_market_assets";
 import { polymarketDecimalAmount, polymarketBaseUnitAmount } from "@changmen/shared/pm_amounts";
-import { polymarketEqualSplitResolved, polymarketNeedsFinalResolution, polymarketWithFinalResolution, polymarketIsEqualSplitOrder, polymarketEqualSplitAmounts } from "@changmen/shared/pm_settlement";
+import { polymarketEqualSplitResolved, polymarketNeedsFinalResolution, polymarketWithFinalResolution, polymarketIsEqualSplitOrder, polymarketEqualSplitAmounts, polymarketFinalPayout, polymarketVerifiedOrderPayout } from "@changmen/shared/pm_settlement";
 import type { VenueOrder } from "@changmen/client-core/contract";
 import { sortVenueOrdersNewestFirst } from "@changmen/client-core/contract";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
@@ -362,7 +362,9 @@ export function applyPolymarketSettlement(
   if (!polymarketMarketHasAsset(market, heldAssetId)
     || (resolved.winningAssetId && !polymarketMarketHasAsset(market, resolved.winningAssetId))) return order;
 
-  if (resolved.kind === "equal_split") return settlePolymarketEqualSplitOrder(order);
+  const settlement = polymarketFinalPayout(market, heldAssetId);
+  if (resolved.kind === "equal_split") return settlePolymarketEqualSplitOrder(order, settlement);
+  if (resolved.kind === "price" && polymarketVerifiedOrderPayout(order) !== undefined) return order;
 
   const matchResult: "win" | "lose" = heldAssetId === resolved.winningAssetId ? "win" : "lose";
 
@@ -388,6 +390,7 @@ export function applyPolymarketSettlement(
     ...order,
     pmMatchResult: matchResult,
     pmSellState: nextSellState,
+    ...(settlement ? { pmSettlement: settlement } : {}),
   };
 
   // 已卖光：赛果独立落库，不改盈亏字段
@@ -404,12 +407,12 @@ export function applyPolymarketSettlement(
 }
 
 /** [changmen 扩展] Final payout determines money; financial Win/Lose does not label the match winner. */
-function settlePolymarketEqualSplitOrder(order: VenueOrder): VenueOrder {
+function settlePolymarketEqualSplitOrder(order: VenueOrder, settlement?: VenueOrder["pmSettlement"]): VenueOrder {
   if (order.pmSide === "sell") return order;
   const shares = resolvePmFillShares(order);
   const attr = Number(order.pmAttributedSellShares ?? 0);
   if (!(shares > 0) || !Number.isFinite(attr) || attr < 0 || attr > shares + 0.01) return order;
-  const base = { ...order, pmMatchResult: "equal_split" as const };
+  const base = { ...order, pmMatchResult: "equal_split" as const, ...(settlement ? { pmSettlement: settlement } : {}) };
   // Keep the official fill precision until cash is rounded; rounding shares first can change the payout.
   const remaining = Math.max(0, shares - attr);
   if (order.pmSellState === "closed" || (attr > 0 && remaining <= 0.01)) return base;
@@ -965,6 +968,8 @@ function mergeChangmenStoredWithClob(stored: VenueOrder, clob: VenueOrder): Venu
     };
   }
   const blockGammaSettlement = changmenSoldOutBlocksGammaSettlement(base);
+  if (polymarketVerifiedOrderPayout(base) !== undefined && polymarketVerifiedOrderPayout(clob) === undefined)
+    return base;
   // Final 50/50 supersedes an earlier paper winner, and survives later stale/no-result snapshots.
   if (polymarketIsEqualSplitOrder(clob) || polymarketIsEqualSplitOrder(base)) {
     const sameAsset = !!base.pmTokenId && base.pmTokenId === clob.pmTokenId
@@ -973,7 +978,7 @@ function mergeChangmenStoredWithClob(stored: VenueOrder, clob: VenueOrder): Venu
     return settlePolymarketEqualSplitOrder({ ...base,
       pmShares: Math.max(Number(base.pmShares) || 0, Number(clob.pmShares) || 0),
       pmFeeUsdc: base.pmFeeUsdc ?? clob.pmFeeUsdc,
-    });
+    }, clob.pmSettlement ?? base.pmSettlement);
   }
   const gammaSettled = clob.status !== "none";
   // 官方 winner 写 settled（隐藏卖出）。
@@ -1074,6 +1079,7 @@ function mergeChangmenStoredWithClob(stored: VenueOrder, clob: VenueOrder): Venu
     pmAttributedSellShares: base.pmAttributedSellShares ?? clob.pmAttributedSellShares,
     pmRealizedPnlUsdc: nextRealizedPnlUsdc,
     pmMatchResult: nextMatchResult,
+    ...((clob.pmSettlement ?? base.pmSettlement) ? { pmSettlement: clob.pmSettlement ?? base.pmSettlement } : {}),
     odds: base.odds || clob.odds,
     status: nextStatus,
     money: nextMoney,
@@ -1101,10 +1107,9 @@ function isChangmenPolymarketOrder(
 function needsStoredMarketSettlement(order: VenueOrder): boolean {
   return order.pmSide !== "sell"
     && !["reject", "pending"].includes(String(order.status).toLowerCase())
-    && (order.status !== "return" || polymarketIsEqualSplitOrder(order))
     && Number(order.pmShares) > 0.0001
     && !!String(order.pmTokenId ?? "").trim()
-    && order.pmSellState !== "settled";
+    && polymarketVerifiedOrderPayout(order) === undefined;
 }
 
 function settleStoredOrderFromMarket(
@@ -1119,12 +1124,16 @@ function settleStoredOrderFromMarket(
   if (!polymarketConditionsAgree(stored.pmConditionId, market.conditionId, market.condition_id)) return base;
   if (!polymarketMarketHasAsset(market, String(stored.pmTokenId))
     || (resolved.winningAssetId && !polymarketMarketHasAsset(market, resolved.winningAssetId))) return base;
-  if (resolved.kind === "equal_split") return settlePolymarketEqualSplitOrder(base);
+  const settlement = polymarketFinalPayout(market, String(stored.pmTokenId));
+  if (resolved.kind === "equal_split") return settlePolymarketEqualSplitOrder(base, settlement);
+  // A receipt can only be issued from a final official result, never from a price threshold.
+  if (stored.pmSellState === "settled" && resolved.kind === "price") return base;
   const result = stored.pmTokenId === resolved.winningAssetId ? "win" : "lose";
   // 只提供盘口赛果；复用既有全成本/部分卖出/卖光保护，不捏造新成交。
   return mergeChangmenStoredWithClob(stored, {
     ...base, status: result, pmMatchResult: result,
     pmSellState: resolved.kind === "official" ? "settled" : base.pmSellState,
+    ...(settlement ? { pmSettlement: settlement } : {}),
   });
 }
 

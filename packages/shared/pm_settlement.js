@@ -1,4 +1,27 @@
-import { polymarketMarketAssetIds, polymarketConditionsAgree } from "./pm_market_assets.js";
+import { polymarketMarketAssetIds, polymarketConditionsAgree, polymarketMarketHasAsset, polymarketOfficialWinner } from "./pm_market_assets.js";
+
+/** A final payout receipt is bound to the exact condition and held asset, never the financial status. */
+export function polymarketFinalPayout(market, assetId) {
+  const conditionId = String(market?.conditionId ?? market?.condition_id ?? "").trim().toLowerCase();
+  if (!conditionId || !polymarketConditionsAgree(market?.conditionId, market?.condition_id)
+    || !polymarketMarketHasAsset(market, assetId)) return undefined;
+  if (polymarketEqualSplitResolved(market))
+    return { conditionId, assetId, price: 0.5, source: "resolution" };
+  const winner = polymarketOfficialWinner(market).assetId;
+  if (!winner) return undefined;
+  return { conditionId, assetId, price: winner === assetId ? 1 : 0, source: "clob" };
+}
+
+export function polymarketVerifiedOrderPayout(order) {
+  const receipt = order?.pmSettlement;
+  if (!receipt || !["resolution", "clob"].includes(receipt.source)
+    || ![0, 0.5, 1].includes(receipt.price)
+    || !order.pmConditionId || !receipt.conditionId
+    || !polymarketConditionsAgree(order.pmConditionId, receipt.conditionId)
+    || !order.pmTokenId || receipt.assetId !== order.pmTokenId) return undefined;
+  const result = receipt.price === 0.5 ? "equal_split" : receipt.price === 1 ? "win" : "lose";
+  return order.pmMatchResult === result ? receipt.price : undefined;
+}
 
 /** [changmen 扩展] Data API v2 final payouts are micro-USDC per share, never live prices. */
 export function polymarketEqualSplitResolved(market) {

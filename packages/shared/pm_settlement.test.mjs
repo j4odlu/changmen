@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { polymarketEqualSplitResolved, polymarketNeedsFinalResolution, polymarketWithFinalResolution, polymarketEqualSplitAmounts } from "./pm_settlement.js";
+import { polymarketEqualSplitResolved, polymarketNeedsFinalResolution, polymarketWithFinalResolution, polymarketEqualSplitAmounts, polymarketFinalPayout, polymarketVerifiedOrderPayout } from "./pm_settlement.js";
 
 const condition = "0x" + "a".repeat(64);
 const resolution = { condition_id: condition, status: "resolved", payouts: [500000, 500000] };
@@ -18,6 +18,17 @@ for (const version of ["v1", "v2"]) {
     expect(polymarketEqualSplitResolved({ ...market, condition_id: "wrong", finalResolution: resolution })).toBe(false);
     expect(polymarketEqualSplitResolved({ ...market, version: "future", finalResolution: resolution })).toBe(false);
     expect(polymarketNeedsFinalResolution({ ...market, closed: false })).toBe(false);
+  });
+  test(`${version}: final receipts use official payouts and remain bound to the held asset`, () => {
+    const assetId = version === "v2" ? "201" : "101";
+    const receipt = polymarketFinalPayout({ ...market, finalResolution: resolution }, assetId);
+    const order = { pmConditionId: condition, pmTokenId: assetId, pmMatchResult: "equal_split", pmSettlement: receipt };
+    expect(polymarketVerifiedOrderPayout(order)).toBe(0.5);
+    for (const patch of [{ pmTokenId: "other" }, { pmConditionId: "other" }, { pmMatchResult: "win" },
+      { pmSettlement: { ...receipt, price: "0.5" } }, { pmSettlement: { ...receipt, source: "price" } }])
+      expect(polymarketVerifiedOrderPayout({ ...order, ...patch })).toBeUndefined();
+    expect(polymarketFinalPayout(market, assetId)).toBeUndefined();
+    expect(polymarketFinalPayout({ ...market, finalResolution: resolution }, "other")).toBeUndefined();
   });
 }
 test.each([[100, 40, 0, 50, 10, "win"], [100, 60, 0, 50, -10, "lose"],

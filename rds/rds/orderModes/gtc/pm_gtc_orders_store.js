@@ -58,6 +58,7 @@ function ordersUpsertSql() {
         'betMoney', orders.bet_money,
         'pmFillPrice', orders.raw->'pmFillPrice', 'pmFeeUsdc', orders.raw->'pmFeeUsdc',
         'pmOrigin', 'changmen', 'pmSide', 'buy',
+        'pmSettlement', COALESCE(NULLIF(EXCLUDED.raw->'pmSettlement','null'::jsonb), orders.raw->'pmSettlement'),
         'pmMatchResult', CASE WHEN lower(COALESCE(orders.raw->>'pmMatchResult','')) = 'equal_split' THEN orders.raw->'pmMatchResult'
           WHEN lower(COALESCE(EXCLUDED.raw->>'pmMatchResult','')) IN ('win','lose','lost','equal_split') THEN EXCLUDED.raw->'pmMatchResult'
           ELSE COALESCE(NULLIF(orders.raw->'pmMatchResult','null'::jsonb), CASE WHEN lower(orders.status) IN ('win','lose','lost') THEN to_jsonb(orders.status) END) END,

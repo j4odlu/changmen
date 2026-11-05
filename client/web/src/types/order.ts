@@ -91,6 +91,7 @@ export interface OrderRow {
    * 与 Status/Money 脱钩；中途卖出仍可有值。
    */
   PmMatchResult?: "Win" | "Lose" | "EqualSplit";
+  PmSettlement?: import("@changmen/shared/pm_settlement").PolymarketOrderSettlement;
   /** [changmen 扩展] PredictFun 1:1 买卖 */
   PfSide?: "buy" | "sell";
   PfBuyOrderId?: string;

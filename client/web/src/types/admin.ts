@@ -203,6 +203,7 @@ export interface AdminOrderRow {
   pmLastSellOrderId?: string;
   pmSellState?: "open" | "partial" | "closed" | "settled";
   pmMatchResult?: "win" | "lose" | "equal_split";
+  pmSettlement?: import("@changmen/shared/pm_settlement").PolymarketOrderSettlement;
   pmSide?: "buy" | "sell";
   pmGtcExecutionId?: string;
   pmGtcBuyShares?: number;

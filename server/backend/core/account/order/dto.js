@@ -150,6 +150,7 @@ export function rowToOrder(r) {
       const m = normalizePmMatchResult(raw.pmMatchResult);
       return m === "win" ? "Win" : m === "lose" ? "Lose" : m === "equal_split" ? "EqualSplit" : undefined;
     })(),
+    ...(raw.pmSettlement ? { PmSettlement: raw.pmSettlement } : {}),
     /** [changmen 扩展] PredictFun 1:1 买卖 */
     PfSide: raw.pfSide === "buy" || raw.pfSide === "sell" ? raw.pfSide : undefined,
     PfBuyOrderId: raw.pfBuyOrderId ? String(raw.pfBuyOrderId) : undefined,

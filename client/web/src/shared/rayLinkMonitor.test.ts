@@ -2,6 +2,28 @@ import { describe, expect, it } from "vitest";
 import { buildRayLinkMonitorModel } from "./rayLinkMonitor";
 
 describe("buildRayLinkMonitorModel", () => {
+  it("keeps a confirmed late refusal and its makeup handoff visible while the row is still a preview", () => {
+    const model = buildRayLinkMonitorModel([{ Link: 12, Type: "RAY", OrderID: "original", Status: "Reject", DisplayOnly: true }],
+      null, { status: "rejected", boundOrderId: "original", rejectDelayMs: 5000,
+        autoMakeupStatus: "enqueued", autoMakeupReason: "已交接原补单队列", updatedAt: 200 } as never,
+      { phase: "closed", status: "reject", updatedAt: 200 });
+    expect(model).toMatchObject({ label: "延迟拒单已发现", orderId: "original", detail: "已交接原补单队列" });
+    expect(model.summary).toContain("已进入现有补单队列");
+    expect(model.summary).not.toContain("等待正式确认");
+  });
+  it("keeps an active makeup progress visible while the refused row is still a preview", () => {
+    const model = buildRayLinkMonitorModel([{ Link: 12, Type: "RAY", OrderID: "original", Status: "Reject", DisplayOnly: true }],
+      { phase: "makeup", legs: [{ platform: "RAY", status: "makeup", detail: "补单执行中" }] } as never);
+    expect(model).toMatchObject({ label: "补单处理中", detail: "补单执行中", isLive: true });
+  });
+  it("shows an early venue refusal even while the original execution is still confirming", () => {
+    const model = buildRayLinkMonitorModel([{ Link: 12, Type: "RAY", OrderID: "original", Status: "Reject", DisplayOnly: true }],
+      { legs: [{ platform: "RAY", status: "pending_confirm" }] } as never,
+      { status: "watching" } as never,
+      { phase: "watching", status: "none", updatedAt: 200 });
+    expect(model).toMatchObject({ visible: true, label: "场馆已拒单", tone: "danger", venueStatus: "拒单", orderId: "original" });
+    expect(model.summary).toContain("等待正式确认");
+  });
   it("independent order facts take priority over an old rejection observer or makeup run", () => {
     const model = buildRayLinkMonitorModel([{ Link: 12, Type: "RAY", OrderID: "original", Status: "None" }],
       { phase: "makeup", legs: [] } as never,
@@ -50,9 +72,9 @@ describe("buildRayLinkMonitorModel", () => {
     expect(model.isLive).toBe(false);
   });
 
-  it("shows that a rejected RAY leg was not made up when automatic makeup is off", () => {
+  it.each([undefined, true] as const)("shows a confirmed refusal when automatic makeup is off, including preview=%s", (displayOnly) => {
     const model = buildRayLinkMonitorModel(
-      [{ Link: 12, Type: "RAY", OrderID: "ray-1", Status: "Reject", CreateAt: 100 }],
+      [{ Link: 12, Type: "RAY", OrderID: "ray-1", Status: "Reject", CreateAt: 100, DisplayOnly: displayOnly }],
       {
         phase: "syncing",
         overallLabel: "自动补单已关闭",

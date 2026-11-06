@@ -5,6 +5,15 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    "@changmen/web#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/client/listener/module/**", "$TURBO_ROOT$/client/listener/build/*", "$TURBO_ROOT$/client/listener/tests/**"],
+      "outputs": ["dist/**"]
+    },
+    "@changmen/web#test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/testing/offline-env.mjs", "$TURBO_ROOT$/client/listener/module/**", "$TURBO_ROOT$/client/listener/build/*", "$TURBO_ROOT$/client/listener/tests/**", "!**/*.md", "!**/docs/**"]
+    },
     "dev": {
       "cache": false,
       "persistent": true

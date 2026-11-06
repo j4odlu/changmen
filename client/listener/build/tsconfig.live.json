@@ -1,0 +1,17 @@
+{
+  "extends": "../../web/tsconfig.app.json",
+  "compilerOptions": {
+    "paths": {
+      "@/stores/matchStore": ["../module/matchStore.ts"],
+      "@/stores/match/mainBetLoop": ["../module/mainBetLoop.ts"],
+      "@/stores/betting/a8/runA8ArbRound": ["../module/arbRound.ts"],
+      "@/*": ["../../web/src/*"],
+      "@changmen/arb-core/*": ["../../packages/arb-core/src/*"],
+      "@changmen/client-core/*": ["../../packages/client-core/src/*"],
+      "@changmen/shared/*": ["../../../packages/shared/*"]
+    },
+    "types": ["vite/client", "node"], "incremental": false
+  },
+  "include": ["../module/**/*.ts", "../tests/**/*.ts", "../../web/src/vite-env.d.ts"],
+  "exclude": ["../../web/src/**/*.test.ts", "../../packages/venue-browser/adapter/**/*.test.ts"]
+}

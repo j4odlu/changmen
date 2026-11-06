@@ -3,6 +3,7 @@
   "purpose": "source-ownership-only",
   "publishScopeOptimizationEnabled": false,
   "toolingRoots": [
+    "client/listener/build",
     "devtools/venue-adapter",
     "client/web/vite.config.ts",
     "client/web/vite",
@@ -14,6 +15,9 @@
     "devtools/runtime-tooling"
   ],
   "roots": [
+    "client/listener/module",
+    "client/listener/build",
+    "client/listener/tests",
     "client/web/src",
     "chrome-extension/src",
     "packages",
@@ -32,6 +36,15 @@
   ],
   "compatibilityAssets": [],
   "rules": [
+    {
+      "prefix": "client/listener/build",
+      "layer": "frontend",
+      "role": "tooling"
+    },
+    {
+      "prefix": "client/listener",
+      "layer": "frontend"
+    },
     {
       "prefix": "packages/match-identity",
       "layer": "domain"

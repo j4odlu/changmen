@@ -1,0 +1,160 @@
+{
+  "kind": "listener-arbitrage-design-audit-source-anchors",
+  "date": "2026-10-28",
+  "base_commit": "094770d46640b11a98e2008230c12aabdd5482b3",
+  "coverage": "Selected working-tree source anchors only; not a full dependency graph, build, deployed-artifact or live-system attestation.",
+  "preexisting_tracked_changes": [
+    "packages/shared/package.json",
+    "scripts/catalog-smoke.mjs"
+  ],
+  "files": [
+    {
+      "path": "client/web/src/main.ts",
+      "sha256": "6df14f8aa5ef561fc1265ad41e05e409863d2811174c62f32c6e9b3a0f4e666e"
+    },
+    {
+      "path": "client/web/src/App.vue",
+      "sha256": "7040eefad037b3975d56912911510a7a612d3ce2b21fb910bc4e703b67ca7e1b"
+    },
+    {
+      "path": "client/web/src/views/GateView.vue",
+      "sha256": "5a29db5eb4684b91e4ebb4934ac2ff844ae1e3387a270c5b6eeb771bc80cbb6b"
+    },
+    {
+      "path": "client/web/src/views/HomeView.vue",
+      "sha256": "df38143d53180497389997db33206c3d93e2604d2b64bd6e731d4702d39a8ed9"
+    },
+    {
+      "path": "client/web/src/runtime/appSession.ts",
+      "sha256": "92eec0290fc3781eb213bb4500a735496537b5df61fba70d488278c7b178fbdb"
+    },
+    {
+      "path": "client/web/src/runtime/sessionBoot.ts",
+      "sha256": "cd3b0fae4ae31e945f66de05edf0df364740bdc9a38e28ae68bfea0cbbbca386"
+    },
+    {
+      "path": "client/web/src/runtime/installClientCore.ts",
+      "sha256": "b1d859931c3c5a1492bc5b3ffcf5cded56e66779d2ee388936108195455f8184"
+    },
+    {
+      "path": "client/web/src/runtime/installVenueWebBridge.ts",
+      "sha256": "2962c117590515d6e00816ce9a182492b32fa45f6ca8eb90eac61d85bb81f4f8"
+    },
+    {
+      "path": "client/web/src/router/index.ts",
+      "sha256": "f3247f343e1dafd1c191abd2d70afb9ac3318babd349645f5b666c8550f1e1f5"
+    },
+    {
+      "path": "client/web/src/stores/userStore.ts",
+      "sha256": "86009d7512424b82b21513ced7ce09a14ede76d1c590853e0d5b1f5cb4af2f4e"
+    },
+    {
+      "path": "client/web/src/stores/matchStore.ts",
+      "sha256": "637d5b7533ce0ccfac6be93da068fdd19b2cb63f80eafd5e5d0fb30a5236704b"
+    },
+    {
+      "path": "client/web/src/stores/match/mainBetLoop.ts",
+      "sha256": "0aa54a00ae15c1fcb0b1702c2dfa5fce896f83ecdaa96ec3a0d185530c14c883"
+    },
+    {
+      "path": "client/web/src/stores/betting/runArbBetRound.ts",
+      "sha256": "b60cbf60771409dd08b0721fad70ed66046de1ea8d546737625e6723fe404324"
+    },
+    {
+      "path": "client/web/src/stores/betting/a8/runA8ArbRound.ts",
+      "sha256": "676de58bde4ff5181d6ad6e6a03eb26d860ec30d0a970c0b3462fdcd99d4d7df"
+    },
+    {
+      "path": "client/web/src/stores/betting/autoBet/executeArbBet.ts",
+      "sha256": "9319659c75336845f50bcd714c51c298fcc7b9c0595bf3c4f7974255312cf404"
+    },
+    {
+      "path": "client/web/src/stores/betting/autoBet/phases/prepareArbAttempt.ts",
+      "sha256": "6ac96e7479c70078193bfe38436c7f17f815463f466f7a59a03347847136c576"
+    },
+    {
+      "path": "client/web/src/stores/betting/autoBet/phases/checkArbLegs.ts",
+      "sha256": "43bec78ea41c011ffe078b6e5febb2a8e76bf52aba01ea65ef179fad2acbcdfb"
+    },
+    {
+      "path": "client/web/src/stores/betting/autoBet/phases/placeArbLegs.ts",
+      "sha256": "e2502c3fb3ad5f2fb8d8ce69496c90be6af920af16badfabf05f96f2d25a6817"
+    },
+    {
+      "path": "client/web/src/stores/betting/autoBet/phases/finalizeArbBet.ts",
+      "sha256": "747af372dba30524f91e17c05a87699933eadd8d2dde5159307be15fdab0bd5a"
+    },
+    {
+      "path": "client/web/src/stores/account/balanceRefresh.ts",
+      "sha256": "38b3f5cc2834a5e925dde5677c1cfd4d9c5be13d1eaf35d32ed3a6fb465413fd"
+    },
+    {
+      "path": "client/web/src/shared/betTiming.ts",
+      "sha256": "b2e3151b243bdf825a26814963e0341c541b3c43aeea35295f3f1a469fb8e172"
+    },
+    {
+      "path": "client/web/tsconfig.app.json",
+      "sha256": "998d831ed97d80549fce49be97c5a77962439b00f78280c0bb4bdff4a8656014"
+    },
+    {
+      "path": "client/web/tsconfig.node.json",
+      "sha256": "fd920d35f7b517e9c2663c95970805b674a4d39ac31d4d91a4bfe18dc57eb1b1"
+    },
+    {
+      "path": "client/web/vite.config.ts",
+      "sha256": "0d19e655252b69251a701765342ca3622c1916b2193b012112feed5ef33ec75e"
+    },
+    {
+      "path": "client/web/package.json",
+      "sha256": "9f77a169bd4b7332a1b48d4e7f6890d962acacdb836804137d3ea83857c6452d"
+    },
+    {
+      "path": "client/web/scripts/clean-dist-assets.mjs",
+      "sha256": "4127efebab6ef18bd8770897ec84a1e6fc71cd189356625aa896ae230549c547"
+    },
+    {
+      "path": "client/web/scripts/run-production-build.mjs",
+      "sha256": "cbc1df76e7bc369c6cb54a9d833882e79c5e9df06a6b5f39c04fcee8c849da44"
+    },
+    {
+      "path": "client/packages/arb-core/src/arbitrage/detectArbLegs.ts",
+      "sha256": "7b240e8a8070e9cd20592d74f6d8aa6c5f9a3013d79b3ad166eae50554bf6870"
+    },
+    {
+      "path": "client/packages/arb-core/src/opportunity/detect.ts",
+      "sha256": "ae5486112831505c53c6e3f2ee2a5dfcda217d5e874a950e136e512d29765816"
+    },
+    {
+      "path": "server/backend/core/auth/browser_session.js",
+      "sha256": "4c067558d14c2760488a3d6e93471397de338e1abcbd5eb6da086010c7763a41"
+    },
+    {
+      "path": "server/backend/core/auth/web_session_security.js",
+      "sha256": "53c484017949bc425c0be17099a06e0bb53824bf35e4c0cd8a56abcb7667b82b"
+    },
+    {
+      "path": "server/backend/core/esport-api/router.ts",
+      "sha256": "f03be309d9ff08e555ecc3a2b52a5bcea4b3b9a805f76f009720a8772974658b"
+    },
+    {
+      "path": "scripts/deploy/classify-deploy-scope.mjs",
+      "sha256": "6612e3c601e61141cab6af5054ac7ed376ccf4cbe3085addc5d97d8cbc721e84"
+    },
+    {
+      "path": "scripts/verification/validation-plan.mjs",
+      "sha256": "26540d3129052473c98b411e54545fd351d4a4e8fdeb6c5706bcee6b3fc1c03c"
+    },
+    {
+      "path": "deploy/scripts/release-frontend.sh",
+      "sha256": "8da2a979ae0b932d2a6f500c427c2ded27b62a6baa41b4797c0b4e7c18a2166e"
+    },
+    {
+      "path": "package.json",
+      "sha256": "3089ab5f882e955413bec03b421bde9e3fdfc61fe75e75c57b319b33dd8f37ef"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "86570d2ef87b6deb2bf232e7c7e42768f91ecf3791c1171805175d162764cda4"
+    }
+  ]
+}

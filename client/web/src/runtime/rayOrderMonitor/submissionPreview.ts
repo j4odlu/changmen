@@ -77,7 +77,12 @@ export function beginRaySubmissionPreview(account: PlatformAccount, option: BetO
 }
 
 export function pendingRaySubmissionPreviewAccounts(): PlatformAccount[] {
-  return [...new Set([...previews.values()].filter(preview => !preview.order && preview.current()).map(preview => preview.account))];
+  return [...new Set([...previews.values()].filter(preview => preview.current()
+    && !isTerminalPreview(preview.order)).map(preview => preview.account))];
+}
+
+function isTerminalPreview(order?: VenueOrder): boolean {
+  return Boolean(order && ["reject", "win", "lose", "return"].includes(order.status));
 }
 
 export function retireRaySubmissionPreviews(rows: readonly OrderRow[]): void {
@@ -98,8 +103,15 @@ export function observeRaySubmissionPreviews(account: PlatformAccount, orders: r
   const owned = [...previews.values()].filter(preview => preview.account === account && preview.current());
   const claimed = new Set(owned.map(preview => preview.order?.orderId).filter(Boolean));
   for (const preview of owned) {
-    if (preview.order || startedAt < preview.acceptedAt)
+    if (isTerminalPreview(preview.order) || startedAt < preview.acceptedAt)
       continue;
+    // [changmen 扩展] 已唯一定位的展示单按单号持续核对；不能重新猜配到后续提交。
+    if (preview.order) {
+      const order = orders.find(order => order.provider === "RAY" && order.orderId === preview.order!.orderId);
+      if (order)
+        previews.set(preview.task.key, { ...preview, order: { ...order } });
+      continue;
+    }
     const candidates = orders.filter(order => !claimed.has(order.orderId) && !preview.previousIds.has(order.orderId)
       && order.createAt >= preview.task.submittedAt - 1000
       && (order.venueItemId ? order.venueItemId === preview.itemId : sameText(preview.task.item, order.item))
@@ -128,7 +140,7 @@ export function projectRaySubmissionPreviews(
     const rows = result.get(task.linkId) ?? [];
     rows.push({ DisplayOnly: true, Type: "RAY", PlayerID: account.accountId, OrderID: order.orderId, Link: task.linkId,
       Match: order.match, Bet: order.bet, Item: order.item, Odds: order.odds, BetMoney: order.betMoney,
-      Money: order.money, CreateAt: order.createAt, Status: "RayConfirming",
+      Money: order.money, CreateAt: order.createAt, Status: order.status === "reject" ? "Reject" : "RayConfirming",
       Player: { Platform: account.platformName || "RAY", UserName: account.playerName } });
     result.set(task.linkId, rows);
     added = true;

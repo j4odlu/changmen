@@ -6,6 +6,7 @@
   "canonicalPortSha256": "3563e18df17741a15c0e7a6271ed2da973f34c83c8c04a25d0cb87e9b3c39134",
   "originalDevConfigSha256": "da4829315aefdea33c4ce975f2c0ed3911b7b777a336be7e7eeafd080073445e",
   "activeBuildRoots": [
+    "client/listener/build",
     "client/web/vite.config.ts",
     "client/web/vite",
     "client/web/scripts/bootstrap-dialogs.mjs",

@@ -1,5 +1,7 @@
 # 前端、后端与 RDS 独立发布
 
+[changmen 扩展] 2026-11-06：普通版 `/` 和监听版 `/listener/` 属于同一个前端发布组件。`npm run app:build` 分别构建两张模块图，再合入 `client/web/dist`；共用版本、归档、资源保留、原子切换和回滚。前端发布检查同时校验监听 HTML 和入口资源，监听异常即回滚整个前端。具体入口见 [监听说明](../client/listener/README.md)。
+
 [changmen 扩展] 2026-10-19：通用发布已移除默认 FOK 551 项检查及 22 阶段专项依赖。组件测试/构建、数据库兼容、候选与产物身份校验继续执行；FOK 专项保留独立入口。此前专项接入/复用只作历史记录，当前检查与发布规则见下文。
 
 [changmen 扩展] 生产统一从 GitHub Actions **Validate and release** 发布。本机只开发、验证、commit/push 和只读核验。部署层保持三项职责：

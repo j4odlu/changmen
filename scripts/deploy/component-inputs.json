@@ -33,6 +33,7 @@
     "packages/match-identity"
   ],
   "browserRoots": [
+    "client/listener/module",
     "client/web/src",
     "chrome-extension/src"
   ],
@@ -40,6 +41,7 @@
     "server/backend/scripts/test-packaged-adapter-layout.js"
   ],
   "browserOnlyPaths": [
+    "client/listener/module/",
     "client/packages/venue-browser/adapter/browser/",
     "client/packages/venue-browser/polymarket/realtime/orderBook/",
     "client/packages/venue-browser/pm-book-diagnostics/",

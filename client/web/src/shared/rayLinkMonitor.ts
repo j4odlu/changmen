@@ -80,6 +80,22 @@ export function buildRayLinkMonitorModel(
   const rayLeg = run?.legs.find(leg => isRayProvider(leg.platform));
   const rowStatus = normalizedStatus(row?.Status);
 
+  // [changmen 扩展] 预览只补充确认前的拒单事实，不能遮住正式拒单结果和补单进度。
+  const refusalConfirmed = monitor?.status === "rejected" || rayLeg?.status === "rejected"
+    || rayLeg?.status === "makeup" || run?.phase === "makeup" || run?.overallLabel === "自动补单已关闭";
+  if (row?.DisplayOnly && rowStatus === "reject" && !refusalConfirmed) {
+    return {
+      visible: true,
+      tone: "danger",
+      label: "场馆已拒单",
+      summary: "RAY 已返回拒单，等待正式确认",
+      orderId: String(row.OrderID ?? ""),
+      venueStatus: "拒单",
+      observedAt,
+      isLive: false,
+    };
+  }
+
   // [changmen 扩展] 查询事实决定监控状态，同一模块记录的拒单补单交接结果单独展示。
   if (monitoring && row && monitor?.status !== "rejected") {
     const rejected = normalizedStatus(monitoring.status) === "reject";

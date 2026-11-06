@@ -24,6 +24,14 @@ function fixture(release = false) {
 }
 function commit(root) { git(root, "-c", "user.name=Version Test", "-c", "user.email=version-test@example.invalid", "commit", "-qm", "fixture"); }
 describe("actual runtime source identity", () => {
+  it("fingerprints Listener production sources without generated caches or backend ownership", () => {
+    for (const file of ["module/bootstrap.ts", "build/vite.production.config.ts", "module/index.html"]) {
+      expect(isVersionSource(`client/listener/${file}`, "frontend")).toBe(true);
+      expect(isVersionSource(`client/listener/${file}`, "backend")).toBe(false);
+    }
+    for (const file of ["build/dist/index.js", "build/.cache/temp.js", "build/.reports/check.json", "tests/check.test.ts"])
+      expect(isVersionSource(`client/listener/${file}`, "frontend")).toBe(false);
+  });
   it.each(["frontend", "backend"])("fingerprints relocated packages according to runtime ownership for %s", role => {
     for (const suffix of ["package.json", "src/book.ts", "src/worker.js", "src/style.css", "src/icon.png",
       "tests/book.test.ts", "src/book.test.ts", "node_modules/runtime.js", ".env", "src/.env.local"])
@@ -35,7 +43,7 @@ describe("actual runtime source identity", () => {
     expect(isVersionSource("client/devtools/venue-adapter/sync-package-exports.mjs", role)).toBe(false);
     expect(isVersionSource("client/packages-other/runtime.ts", role)).toBe(false);
   });
-  it.each([["frontend", "client/packages/book"], ["frontend", "devtools/runtime-tooling"], ["backend", "devtools/runtime-tooling"]])
+  it.each([["frontend", "client/listener/module"], ["frontend", "client/listener/build"], ["frontend", "client/packages/book"], ["frontend", "devtools/runtime-tooling"], ["backend", "devtools/runtime-tooling"]])
   ("detects edited, deleted, renamed and untracked relocated code for %s in %s", (role, directory) => {
     const root = fixture(), file = `${directory}/src/book.ts`, original = "export const value = 1;\n";
     try {
@@ -62,7 +70,7 @@ describe("actual runtime source identity", () => {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
-  it.each(["client/packages/book", "devtools/runtime-tooling"])("keeps Git and no-Git inventories equal and detects archived changes in %s", directory => {
+  it.each(["client/listener/module", "client/listener/build", "client/packages/book", "devtools/runtime-tooling"])("keeps Git and no-Git inventories equal and detects archived changes in %s", directory => {
     const root = fixture();
     try {
       const file = `${directory}/src/book.ts`;
@@ -80,7 +88,7 @@ describe("actual runtime source identity", () => {
       }
       write(root, file, "export const value = 2;\n"); write(release, file, "export const value = 2;\n");
       for (const role of ["frontend", "backend"]) {
-        if (directory === "client/packages/book" && role === "backend")
+        if ((directory === "client/packages/book" || directory.startsWith("client/listener/")) && role === "backend")
           expect(readSourceVersion(release, role).sourceFingerprint).toBe(original[role].sourceFingerprint);
         else expect(readSourceVersion(release, role).sourceFingerprint).not.toBe(original[role].sourceFingerprint);
         expect(readSourceVersion(release, role).sourceFingerprint).toBe(readSourceVersion(root, role).sourceFingerprint);

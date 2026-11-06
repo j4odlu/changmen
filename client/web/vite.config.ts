@@ -14,6 +14,7 @@ import { fileURLToPath, URL } from "node:url";
 import { browserNodeBuiltins } from "./vite/plugins/browserNodeBuiltins";
 import { backendPublicAssets } from "./vite/plugins/backendPublicAssets";
 import { matcherDevRedirect } from "./vite/plugins/matcherDevRedirect";
+import { listenerDev } from "./vite/plugins/listenerDev";
 import { runtimeVersionPlugin } from "./vite/plugins/runtimeVersion";
 import { acyclicChunks } from "./vite/plugins/acyclicChunks";
 import { venueManualChunk } from "./vite/venueChunks";
@@ -151,6 +152,7 @@ export default defineConfig(({ command, mode }) => {
   return {
   base: "/",
   plugins: [
+    listenerDev(),
     // 须靠前：alias/optimizeDeps 配置浏览器 Node 全局兼容
     browserNodeBuiltins(),
     backendPublicAssets(),

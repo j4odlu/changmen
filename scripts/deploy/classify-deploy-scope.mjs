@@ -5,7 +5,7 @@
  * @param {string[]} paths
  * @returns {'frontend' | 'backend' | 'full' | 'noop'}
  */
-const frontendRoots = ["client/web/", "client/packages/client-core/", "client/packages/arb-core/",
+const frontendRoots = ["client/web/", "client/listener/", "client/packages/client-core/", "client/packages/arb-core/",
   "client/packages/venue-browser/", "client/packages/pm-market-data-browser/", "client/devtools/"];
 const ciOnlyFiles = new Set(["classify-deploy-scope.mjs", "classify-deploy-scope-cli.mjs", "change-plan.mjs",
   "check-controls.mjs", "release-checks.mjs", "release-summary.mjs", "read-deployed-versions.mjs", "check-database-compatibility.mjs", "release.test.sh", "upgrade-node-runtime.sh"]

@@ -1,4 +1,4 @@
-/** [changmen 扩展] 只读展示独立查单；查到一次即停止，不消费业务上下文或发布事实快照。 */
+/** [changmen 扩展] 只读展示持续查单到正式订单出现或场馆终态，不消费业务上下文或发布事实快照。 */
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { watchEffect } from "vue";
 import { getProvider } from "@/runtime/venueAdapters";

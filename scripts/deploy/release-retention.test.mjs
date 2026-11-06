@@ -75,13 +75,18 @@ test("frontend copies previous own chunks without passing older generations forw
     const folder = path.join(root, name); fs.mkdirSync(path.join(folder, "assets"), { recursive: true });
     fs.writeFileSync(path.join(folder, "index.html"), `<script src="assets/${name}.js"></script>`);
     fs.writeFileSync(path.join(folder, "assets", `${name}.js`), `import('${name}-nested.js')`);
-    fs.writeFileSync(path.join(folder, "assets", `${name}-nested.js`), "code"); return folder;
+    fs.writeFileSync(path.join(folder, "assets", `${name}-nested.js`), "code");
+    fs.mkdirSync(path.join(folder, "assets/listener"), { recursive: true });
+    fs.writeFileSync(path.join(folder, "assets/listener", `${name}.js`), "listener"); return folder;
   };
   try {
     const a = build("a"); fs.writeFileSync(path.join(a, "assets", "historical.js"), "unused");
     const b = build("b"); prepareFrontendAssets(b, a);
+    // The first combined release records its own nested chunks for the next swap.
     assert(fs.existsSync(path.join(b, "assets/a-nested.js"))); assert(!fs.existsSync(path.join(b, "assets/historical.js")));
     const c = build("c"); prepareFrontendAssets(c, b);
+    assert(fs.existsSync(path.join(c, "assets/listener/b.js")));
+    assert(!fs.existsSync(path.join(c, "assets/listener/a.js")));
     assert(fs.existsSync(path.join(c, "assets/b-nested.js"))); assert(!fs.existsSync(path.join(c, "assets/a.js")));
     const before = fs.readFileSync(path.join(c, "assets/c.js"));
     fs.writeFileSync(path.join(b, ".release-assets.json"), JSON.stringify(["assets/../../outside"]));

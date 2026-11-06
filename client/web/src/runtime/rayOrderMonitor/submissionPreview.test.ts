@@ -90,16 +90,36 @@ it("an inactive retry account uses only the display reader, even when its slow r
   release([venue("one", "reject")]); await flush();
   expect(useRayOrderContextStore().taskForLink(link)?.status).toBe("watching");
   expect(observedRayOrders(account())!.orders[0]!.status).toBe("none");
-  expect(display()[0]![1][0]).toMatchObject({ DisplayOnly: true, Status: "RayConfirming" });
+  expect(display()[0]![1][0]).toMatchObject({ DisplayOnly: true, Status: "Reject" });
   expect(mock.regularRead).not.toHaveBeenCalled(); expect(mock.makeup).not.toHaveBeenCalled();
 });
 
-it.each(["none", "reject", "win", "lose", "return"] as const)("stops display queries after finding a %s order, without waiting for formal persistence", async (status) => {
+it.each(["reject", "win", "lose", "return"] as const)("stops display queries after finding a terminal %s order, without waiting for formal persistence", async (status) => {
   account().active = false; mock.rawRead.mockResolvedValue([venue("one", status)]);
   startRayOrderMonitoring(); await getProvider(account())!.betting(account(), option()); await flush();
   await vi.advanceTimersByTimeAsync(20_000);
   expect(mock.rawRead).toHaveBeenCalledOnce(); expect(mock.regularRead).not.toHaveBeenCalled();
+  expect(display()[0]![1][0]!.Status).toBe(status === "reject" ? "Reject" : "RayConfirming");
+});
+
+it("keeps a located unsettled preview fresh and shows a later refusal during the original confirmation wait", async () => {
+  startRayOrderMonitoring(); await getProvider(account())!.betting(account(), option()); await flush();
   expect(display()[0]![1][0]!.Status).toBe("RayConfirming");
+  mock.rawRead.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error("network down"))
+    .mockResolvedValueOnce([venue("other", "reject"), venue()])
+    .mockResolvedValue([venue("one", "reject")]);
+  await vi.advanceTimersByTimeAsync(15_000);
+  expect(display()[0]![1][0]).toMatchObject({ OrderID: "one", Status: "RayConfirming" });
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(display()[0]![1][0]).toMatchObject({ OrderID: "one", Status: "Reject", DisplayOnly: true });
+  const count = mock.rawRead.mock.calls.length;
+  observeRaySubmissionPreviews(account(), [venue()], Date.now());
+  await vi.advanceTimersByTimeAsync(15_000);
+  expect(mock.rawRead).toHaveBeenCalledTimes(count);
+  expect(display()[0]![1][0]!.Status).toBe("Reject");
+  expect(account().active).toBe(true);
+  expect(mock.rows.size).toBe(0); expect(useRayOrderContextStore().tasks.size).toBe(0);
+  expect(mock.regularRead).not.toHaveBeenCalled(); expect(observedRayOrders(account())).toBeUndefined();
 });
 
 it("a business terminal result ends business polling while a display row waits for persistence", async () => {
@@ -113,7 +133,7 @@ it("a business terminal result ends business polling while a display row waits f
   expect(useRayOrderContextStore().taskForLink(link)?.status).toBe("rejected");
   expect(mock.regularRead).toHaveBeenCalledOnce();
   await vi.advanceTimersByTimeAsync(15_000);
-  expect(mock.regularRead).toHaveBeenCalledOnce(); expect(mock.rawRead).toHaveBeenCalledOnce();
+  expect(mock.regularRead).toHaveBeenCalledOnce(); expect(mock.rawRead).toHaveBeenCalledTimes(5);
 });
 
 it("retries display read failures and can display a later submission after the first query has stopped", async () => {
@@ -125,16 +145,16 @@ it("retries display read failures and can display a later submission after the f
   const next = option(); next.diagnosticLinkId = Date.now();
   mock.rawRead.mockResolvedValue([{ ...venue("two"), createAt: Date.now() }]);
   await getProvider(account())!.betting(account(), next); await flush();
-  expect(display()).toHaveLength(2); expect(mock.rawRead).toHaveBeenCalledTimes(3);
+  expect(display()).toHaveLength(2); expect(mock.rawRead).toHaveBeenCalledTimes(4);
 });
 
-it("retries missing venue orders every five seconds and keeps early rejects confirming until rejection detection completes", async () => {
+it("retries missing venue orders every five seconds and displays early refuses without starting rejection detection", async () => {
   mock.rawRead.mockResolvedValueOnce([]).mockResolvedValue([venue("one", "reject")]);
   startRayOrderMonitoring(); await getProvider(account())!.betting(account(), option()); await flush();
   expect(display()).toEqual([]);
   await vi.advanceTimersByTimeAsync(5000);
   expect(mock.rawRead).toHaveBeenCalledTimes(2);
-  expect(display()[0]![1][0]).toMatchObject({ Status: "RayConfirming", DisplayOnly: true });
+  expect(display()[0]![1][0]).toMatchObject({ Status: "Reject", DisplayOnly: true });
   expect(useRayOrderContextStore().tasks.size).toBe(0); expect(mock.regularRead).not.toHaveBeenCalled();
 });
 
@@ -212,11 +232,11 @@ it.each(["logout", "credentials", "account_removed", "admin_preview"])("discards
   await vi.advanceTimersByTimeAsync(15_000); expect(mock.rawRead).toHaveBeenCalledOnce();
 });
 
-it.each([undefined, "initial", "retry"] as const)("previews stay read-only and confirming regardless of submission mode %s", (attempt) => {
+it.each([undefined, "initial", "retry"] as const)("previews display refuses and stay read-only regardless of submission mode %s", (attempt) => {
   const input = option(); input.diagnosticAttempt = attempt; input.orderIndex = 1;
   beginRaySubmissionPreview(account(), input)!(new BetResult("RAY", true));
   observeRaySubmissionPreviews(account(), [venue("one", "reject")], now);
-  expect(display()[0]![1][0]!.Status).toBe("RayConfirming");
+  expect(display()[0]![1][0]!.Status).toBe("Reject");
   expect(useRayOrderContextStore().tasks.size).toBe(0);
 });
 

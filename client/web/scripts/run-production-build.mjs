@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assembleFrontend } from "../vite/assembleFrontend.mjs";
 
 const webDir = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const heapMb = Math.max(1024, Number(process.env.NODE_HEAP_MB) || 2048);
@@ -41,3 +42,10 @@ runNodeScript(vueTsc, ["-b"]);
 
 const viteArgs = process.argv.slice(2);
 runNodeScript(viteBin, viteArgs.length ? viteArgs : ["build", "--base=/"]);
+
+const listener = join(webDir, "../listener");
+runNodeScript(vueTsc, ["--noEmit", "-p", join(listener, "build/tsconfig.live.json")]);
+runNodeScript(vueTsc, ["--noEmit", "-p", join(listener, "build/tsconfig.node.json")]);
+runNodeScript(viteBin, ["build", "--config", join(listener, "build/vite.production.config.ts"), "--mode", "production"]);
+assembleFrontend(join(webDir, "dist"), join(listener, "build/dist"));
+console.log("[build] assembled / and /listener/ in the same frontend release");

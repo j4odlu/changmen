@@ -23,6 +23,7 @@ export function isVersionSource(file, role) {
   // Shared contracts/rules and all Node loader resources remain fingerprinted.
   if (file.startsWith("packages/match-identity/")) return role === "backend";
   if (file.startsWith("client/packages/")) return role === "frontend";
+  if (/^client\/listener\/(?:module|build)\//.test(file)) return role === "frontend" && !/^client\/listener\/build\/\.(?:cache|reports)(?:\/|$)/.test(file);
   if (/^server\/packages\/(?:venue-node-(?:loader|registry)|venue-adapter-tools)\//.test(file) || file.startsWith("server/venues/")) return true;
   if (file.startsWith("devtools/runtime-tooling/")) return true;
   return role === "frontend"
@@ -40,11 +41,12 @@ function walk(root) {
     for (const item of fs.readdirSync(path.join(root, relative), { withFileTypes: true })) {
       const file = relative ? `${relative}/${item.name}` : item.name;
       if (excluded.test(file)) continue;
+      if (/^client\/listener\/build\/\.(?:cache|reports)(?:\/|$)/.test(file)) continue;
       if (item.isDirectory()) visit(file);
       else if (item.isFile()) files.push(file);
     }
   };
-  for (const dir of ["client/web/src", "client/web/public", "client/web/vite", "client/web/scripts", "client/packages", "devtools/runtime-tooling", "packages", "server", "rds", "devtools/platform-probes"])
+  for (const dir of ["client/web/src", "client/web/public", "client/web/vite", "client/web/scripts", "client/listener/module", "client/listener/build", "client/packages", "devtools/runtime-tooling", "packages", "server", "rds", "devtools/platform-probes"])
     if (fs.existsSync(path.join(root, dir))) visit(dir);
   for (const file of ["package.json", "package-lock.json", "client/web/package.json", "client/web/vite.config.ts"])
     if (fs.existsSync(path.join(root, file))) files.push(file);

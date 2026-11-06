@@ -13,6 +13,10 @@ test -f "$release/index.html"
 test -d "$release/assets"
 ls "$release"/assets/index*.js >/dev/null
 grep -Rql 'https://api.changmen.fun' "$release/assets"
+test -f "$release/listener/index.html"
+listener_asset="$(grep -oE 'assets/listener/[^" ]+\.js' "$release/listener/index.html" | head -1)"
+test -n "$listener_asset"
+test -f "$release/$listener_asset"
 app="$repo/client/web"
 mkdir -p "$app"
 previous=""
@@ -47,6 +51,9 @@ test "$(curl "${check_args[@]}" "$base/deploy-version.txt")" = "$sha"
 asset="$(grep -oE 'assets/index-[^" ]+\.js' "$release/index.html" | head -1)"
 test -n "$asset"
 curl "${check_args[@]}" -o /dev/null "$base/$asset"
+# Compare the actual served page: a 200 SPA fallback is not a Listener success.
+test "$(curl "${check_args[@]}" "$base/listener/")" = "$(cat "$release/listener/index.html")"
+test "$(curl "${check_args[@]}" "$base/$listener_asset")" = "$(cat "$release/$listener_asset")"
 curl "${check_args[@]}" "$base/runtime-version.json" | verify_runtime
 if node "$DEPLOY_RUNTIME_VERIFIER" needs-backend "$DEPLOY_EVIDENCE_FILE"; then
   curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3456/api/runtime-version \

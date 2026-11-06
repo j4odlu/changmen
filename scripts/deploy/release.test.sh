@@ -14,6 +14,15 @@ cat > "$fixture/bin/curl" <<'SH'
 test ! -f "$TEST_FAIL_HEALTH" || exit 22
 for arg in "$@"; do
   if [[ "$arg" == */deploy-version.txt ]]; then cat "$DEPLOY_REPO/client/web/dist/deploy-version.txt"; fi
+  if [[ "$arg" == */listener/ ]]; then
+    if [[ -f "${TEST_LISTENER_FALLBACK:-/nonexistent}" ]]; then cat "$DEPLOY_REPO/client/web/dist/index.html"
+    else cat "$DEPLOY_REPO/client/web/dist/listener/index.html"; fi
+  fi
+  if [[ "$arg" == */assets/listener/* && -f "${TEST_LISTENER_ASSET_FAIL:-/nonexistent}" ]]; then exit 22; fi
+  if [[ "$arg" == */assets/listener/* ]]; then
+    if [[ -f "${TEST_LISTENER_ASSET_FALLBACK:-/nonexistent}" ]]; then cat "$DEPLOY_REPO/client/web/dist/index.html"
+    else cat "$DEPLOY_REPO/client/web/dist/assets/listener/index-listener.js"; fi
+  fi
   if [[ "$arg" == */runtime-version.json ]]; then
     if [[ -f "${TEST_SIGNAL_FRONTEND:-/nonexistent}" ]]; then kill -s "$(cat "$TEST_SIGNAL_FRONTEND")" "$PPID"; fi
     if [[ -f "$TEST_WRONG_RUNTIME" ]]; then echo '{"frontend":{"role":"frontend","commit":"wrong"}}'
@@ -78,6 +87,9 @@ evidence_for() {
 export DEPLOY_REPO="$fixture/app" DEPLOY_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa DEPLOY_SEQUENCE=2 DEPLOY_RELEASE_ID=fe-first
 printf '<script src="/assets/index-new.js"></script>' > "$fixture/dist/index.html"
 printf 'https://api.changmen.fun' > "$fixture/dist/assets/index-new.js"
+mkdir -p "$fixture/dist/listener" "$fixture/dist/assets/listener"
+printf '<title>Listener</title><script src="/assets/listener/index-listener.js"></script>' > "$fixture/dist/listener/index.html"
+printf 'https://api.changmen.fun' > "$fixture/dist/assets/listener/index-listener.js"
 printf '{"frontend":{"role":"frontend","commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","sourceFingerprint":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","contractFingerprint":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","startedAt":"2026-10-14T00:00:00Z","dirty":false}}' > "$fixture/dist/runtime-version.json"
 tar -C "$fixture/dist" -czf "$fixture/dist.tgz" .
 evidence_for frontend "$fixture/dist.tgz"
@@ -101,6 +113,18 @@ export DEPLOY_RELEASE_ID=fe-retry
 bash deploy/scripts/release-frontend.sh "$fixture/dist.tgz"
 grep -q '^3 ' "$DEPLOY_REPO/.deploy-state/frontend"
 front_current="$(readlink -f "$DEPLOY_REPO/client/web/dist")"
+# Either a SPA fallback or a broken Listener chunk must roll back BOTH entries.
+export TEST_LISTENER_FALLBACK="$fixture/listener-fallback" TEST_LISTENER_ASSET_FAIL="$fixture/listener-asset-fail"
+export TEST_LISTENER_ASSET_FALLBACK="$fixture/listener-asset-fallback"
+for fault in "$TEST_LISTENER_FALLBACK" "$TEST_LISTENER_ASSET_FAIL" "$TEST_LISTENER_ASSET_FALLBACK"; do
+  export DEPLOY_SEQUENCE=4 DEPLOY_RELEASE_ID="fe-$(basename "$fault")"
+  touch "$fault"
+  if bash deploy/scripts/release-frontend.sh "$fixture/dist.tgz"; then echo 'broken listener accepted'; exit 1; fi
+  test "$(readlink -f "$DEPLOY_REPO/client/web/dist")" = "$front_current"
+  grep -q '^3 ' "$DEPLOY_REPO/.deploy-state/frontend"
+  test -f "$DEPLOY_REPO/client/web/dist/listener/index.html"
+  rm "$fault"
+done
 export DEPLOY_SEQUENCE=4 DEPLOY_RELEASE_ID=fe-wrong-runtime
 touch "$TEST_WRONG_RUNTIME"
 if bash deploy/scripts/release-frontend.sh "$fixture/dist.tgz"; then echo 'wrong frontend runtime accepted'; exit 1; fi

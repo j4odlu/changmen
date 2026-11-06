@@ -6,7 +6,8 @@
 
 import { polymarketMarketSubscribeMessage } from "./api";
 import { startPolymarketSportMarketWs, type PolymarketSportMarketWsHandle } from "./sportMarketWs";
-import { extractPolymarketWsBestAsks } from "./wsQuotes";
+import { extractPolymarketWsQuotes } from "./wsQuotes";
+import { createPmBidQuoteCache } from "./quotes/pmBidQuoteCache";
 import { shouldApplyPolymarketWsQuote } from "./liveQuoteState";
 
 export interface PolymarketSportQuote {
@@ -20,6 +21,9 @@ type ReadyListener = () => void;
 const subscribed = new Set<string>();
 const quoteListeners = new Set<QuoteListener>();
 const readyListeners = new Set<ReadyListener>();
+const bidQuotes = createPmBidQuoteCache();
+export const getPolymarketSportBestBid = bidQuotes.get;
+export const onPolymarketSportBid = bidQuotes.subscribe;
 
 let wsHandle: PolymarketSportMarketWsHandle | null = null;
 let readyEpoch = 0;
@@ -75,6 +79,7 @@ function notifyReady(): void {
 }
 
 function maybeStopTransport(): void {
+  bidQuotes.retain(subscribed);
   if (subscribed.size > 0 || sessionKeepAlive)
     return;
   if (!wsHandle)
@@ -88,9 +93,14 @@ function ensureSportMarketQuoteHub(): void {
   if (wsHandle)
     return;
   wsHandle = startPolymarketSportMarketWs({
-    onOpen: () => resubscribe(true),
+    onOpen: () => { bidQuotes.clear(); resubscribe(true); },
+    onDisconnect: () => bidQuotes.clear(),
     onMessage: (raw) => {
-      for (const update of extractPolymarketWsBestAsks(raw)) {
+      const quotes = extractPolymarketWsQuotes(raw);
+      for (const update of quotes.bids) {
+        if (subscribed.has(update.assetId)) bidQuotes.apply(update);
+      }
+      for (const update of quotes.asks) {
         const price = Number(update.bestAsk);
         if (!Number.isFinite(price))
           continue;
@@ -142,6 +152,7 @@ export function setPolymarketSportAssetIds(assetIds: string[], force = false): v
   subscribed.clear();
   for (const id of next)
     subscribed.add(id);
+  bidQuotes.retain(subscribed);
   // 首次有订阅且 transport 已在跑：打一次 initialDump
   resubscribe(hadTransport && wasEmpty);
 }
@@ -169,12 +180,14 @@ export function clearPolymarketSportHub(): void {
 }
 
 /** @internal vitest */
-export function __testPushPolymarketSportQuote(assetId: string, bestAsk: number): void {
+export function __testPushPolymarketSportQuote(assetId: string, bestAsk: number, bestBid?: number | null): void {
+  if (bestBid !== undefined && subscribed.has(assetId)) bidQuotes.apply({ assetId, bestBid });
   emitQuote(assetId, bestAsk);
 }
 
 /** @internal vitest */
 export function __testResetPolymarketSportQuoteHub(): void {
+  bidQuotes.reset();
   sessionKeepAlive = false;
   subscribed.clear();
   quoteListeners.clear();

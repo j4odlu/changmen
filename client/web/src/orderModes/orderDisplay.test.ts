@@ -4,7 +4,8 @@ import { toFixed } from "@changmen/client-core/shared/format";
 import { applyGtcCommand, createGtcExecution, mergeGtcFacts } from "@changmen/shared/pm_gtc";
 import { renderToString } from "@vue/server-renderer";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { __testPushPolymarketMarketQuote as pushQuote, __testResetPolymarketMarketQuoteHub as resetQuotes } from "@changmen/venue-browser/polymarket";
 import { createSSRApp, h } from "vue";
 import OrderList from "@/components/order/OrderList.vue";
 import { groupOrdersByEffectiveLink, isRebindableOrderRow, orderLinkMapEntries } from "@/shared/orderLink";
@@ -44,6 +45,7 @@ async function render(rows: OrderRow[], selectedDate = date) {
   return html;
 }
 beforeEach(() => { gtcProgress.owner = "owner"; gtcProgress.records = []; gtcProgress.error = ""; });
+afterEach(() => resetQuotes());
 describe("one original produces one ordinary order card", () => {
   it("renders an entered GTC original once with its own progress details", async () => {
     gtcProgress.records = [execution()]; const html = await render([row]);
@@ -204,11 +206,12 @@ describe("one original produces one ordinary order card", () => {
     expect(html).toContain("已取消"); expect(html).not.toContain("盈亏：待结算"); expect(html).not.toContain("取消 PM 剩余挂单");
   });
   it("uses the original token for live quotes and keeps unpersisted display rows out of rebind and sell actions", async () => {
+    pushQuote("token", 0.5, 0.48);
     const current = execution(); current.plan.tokenId = "token"; current.plan.conditionId = "condition";
     const pending = gtcPendingDisplayRows([], [current], date, 0)[0]!;
     expect(pending.PmTokenId).toBe("token"); expect(pending.PmConditionId).toBe("condition"); expect(isRebindableOrderRow(pending)).toBe(false);
     gtcProgress.records = [current]; const html = await render([]);
-    expect(html).toContain("当前价：0.5"); expect(html).not.toContain("order__sell-btn");
+    expect(html).toContain("当前可卖价：0.48"); expect(html).not.toContain("order__sell-btn");
     expect(isRebindableOrderRow(row)).toBe(true);
   });
   it("shows plain team names on originals whose match title contains HTML entities", () => {

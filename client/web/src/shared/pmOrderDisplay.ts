@@ -449,8 +449,9 @@ export function pmOrderOddsText(row: OrderRow): string {
 }
 
 /**
- * 未结买单按实时价标记浮盈亏（CNY，取整）。
- * 市值 = 剩余份额 × 当前价；成本 = 剩余 pmStakeUsdc（无则 fill×买入价）。
+ * [changmen 扩展] 未结买单按实时买一价标记浮盈亏（CNY，取整）。
+ * 市值 = 剩余份额 × best bid；成本 = 剩余 pmStakeUsdc（无则 fill×买入价）。
+ * 买一估值不含卖出费用、整仓吃单深度。
  */
 export function pmUnrealizedPnlAtLiveCny(
   row: OrderRow,

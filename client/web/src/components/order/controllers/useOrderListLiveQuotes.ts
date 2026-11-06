@@ -4,10 +4,11 @@ import type { OrderListSource } from "../orderListTypes";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useSportOddsStore } from "@/stores/sportOddsStore";
 import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
-import { resolvePmRemainingShares } from "@changmen/venue-browser/polymarket";
+import { resolvePmRemainingShares, getPolymarketMarketBestBid, getPolymarketSportBestBid,
+  onPolymarketMarketBid, onPolymarketSportBid } from "@changmen/venue-browser/polymarket";
 import { clobPriceFromDecimalOdds, clobPriceFromFoOddsEntry, formatPolymarketApiDecimal,
   isPmBuyOrderListRow, isPmManuallySoldBuy, pmBuyLifecycleTagText, pmOddsTextFromClobPrice,
-  pmOrderOddsText, pmUnrealizedPnlAtLiveCny, formatLiveUnrealizedPnlText } from "@/shared/pmOrderDisplay";
+  pmUnrealizedPnlAtLiveCny, formatLiveUnrealizedPnlText } from "@/shared/pmOrderDisplay";
 import { isPfBuyOrderListRow, isPfManuallySoldBuy, pfBuyLifecycleTagText, pfOddsTextFromClobPrice,
   pfOrderOddsText, pfUnrealizedPnlAtLiveCny } from "@/shared/pfOrderDisplay";
 
@@ -23,6 +24,7 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
    * 不再订阅全局 quoteTick / sportOdds.tick（任意盘口变价会拖整栏重算）。
    */
   const orderLiveTick = ref(0);
+  const orderBidTick = ref(0);
 
   function liveTokenKey(platform: string, tokenId: string): string {
     return `${platform}:${tokenId}`;
@@ -56,6 +58,13 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
       orderLiveTick.value += 1;
   }
 
+  const bumpBidIfWatched = (assetId: string) => {
+    if (watchedLiveTokens.value.has(liveTokenKey(PLATFORMS.Polymarket, assetId)))
+      orderBidTick.value += 1;
+  };
+  const stopMarketBidWatch = onPolymarketMarketBid(bumpBidIfWatched);
+  const stopSportBidWatch = onPolymarketSportBid(bumpBidIfWatched);
+
   // 在 setup 同步订阅（勿等 onMounted）：避免首屏到 mount 之间漏掉 fo/sport 写入
   stopOddsLiveWatch = oddsStore.$onAction(({ name, args, after }) => {
     after(() => {
@@ -85,26 +94,20 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
   });
 
   /**
-   * 未结算买单实时价：只读、不写 fo。
-   * 与盘口同源：fo.clobPrice → fo.odds→价；体育盘口价在 sportOddsStore（不进 fo）。
+   * [changmen 扩展] PM 持仓实时价直接读官方 WS 买一，不从买入 ask/赔率反推。
+   * 电竞/体育沿用各自行情连接；没有有效 bid 时留空。
    */
   function pmLiveClobPrice(row: OrderRow): number | null {
-    void orderLiveTick.value;
+    void orderBidTick.value;
     const tokenId = String(row.PmTokenId ?? "").trim();
     if (!tokenId)
       return null;
-    const fromFo = clobPriceFromFoOddsEntry(
-      oddsStore.getEntry(PLATFORMS.Polymarket, tokenId),
-    );
-    if (fromFo != null)
-      return fromFo;
-    return clobPriceFromDecimalOdds(sportOddsStore.get(PLATFORMS.Polymarket, tokenId));
+    return getPolymarketMarketBestBid(tokenId) ?? getPolymarketSportBestBid(tokenId);
   }
 
   /**
    * 可卖持仓显示「当前价」行。
-   * 不要求 fo 已有报价（否则首屏/未订阅 token 时连「当前价」字样都没有）；
-   * 无 live 时文案为 —，挂单相关 token 入 fo/sportOdds 后填数。
+   * 不要求已有报价；无买一时显示 —，官方 WS 报价到达后填数。
    */
   function pmShowLivePrice(row: OrderRow): boolean {
     if (!isPmBuyOrderListRow(row))
@@ -131,6 +134,7 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
   }
 
   function pmLiveUnrealizedPnlCny(row: OrderRow): number | null {
+    if (!pmShowLivePrice(row)) return null;
     if (row.DisplayOnly && row.BetMoney == null)
       return null;
     return pmUnrealizedPnlAtLiveCny(row, pmLiveClobPrice(row));
@@ -145,12 +149,12 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
     return pmShowLivePrice(row) && pmLiveClobPrice(row) != null;
   }
 
-  /** 最后一行赔率：有当前价则跟当前价，否则跟买入价 */
+  /** 持仓当前赔率与买一同源，无 bid 时不冒用买入价。 */
   function pmLastLineOddsText(row: OrderRow): string {
     const live = pmLiveClobPrice(row);
     if (live != null)
       return pmOddsTextFromClobPrice(live);
-    return pmOrderOddsText(row);
+    return "—";
   }
 
   function pfLiveClobPrice(row: OrderRow): number | null {
@@ -207,6 +211,8 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
   }
 
   onUnmounted(() => {
+    stopMarketBidWatch();
+    stopSportBidWatch();
     stopOddsLiveWatch?.();
     stopOddsLiveWatch = undefined;
     stopSportLiveWatch?.();

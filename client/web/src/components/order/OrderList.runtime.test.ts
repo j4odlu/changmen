@@ -18,6 +18,7 @@ import OrderTag from "./presentation/OrderTag.vue";
 import tagSource from "./presentation/OrderTag.vue?raw";
 import OrderLiveQuoteLine from "./presentation/OrderLiveQuoteLine.vue";
 import liveSource from "./presentation/OrderLiveQuoteLine.vue?raw";
+import { __testPushPolymarketMarketQuote as pushQuote, __testResetPolymarketMarketQuoteHub as resetQuotes } from "@changmen/venue-browser/polymarket";
 
 const api = vi.hoisted(() => ({ pmSell: vi.fn(), pfSell: vi.fn(), confirm: vi.fn() }));
 const flags = reactive({ pmBusy: false, pfBusy: false, pmClosing: false });
@@ -61,7 +62,7 @@ beforeEach(() => {
   vi.stubGlobal("document", { body: { classList: { remove: vi.fn() } } });
   api.confirm.mockResolvedValue("confirm");
 });
-afterEach(() => { for (const app of apps.splice(0)) app.unmount(); vi.unstubAllGlobals(); });
+afterEach(() => { for (const app of apps.splice(0)) app.unmount(); resetQuotes(); vi.unstubAllGlobals(); });
 function mount(row: OrderRow) {
   const cancelled = vi.fn();
   const props = reactive({ orderEntries: [[1791558222471, [row]]] as Array<[number, OrderRow[]]>, allowPmSell: false, allowPfSell: false });
@@ -84,13 +85,19 @@ it("updates mounted Pending, fills, live prices and 50/50 financial status witho
   expect(text(root)).toContain("申请金额：72 盈亏：待确认");
   Object.assign(row, { Status: "None", PmShares: 20, PmStakeUsdc: 10, PmFillPrice: 0.5 });
   odds.save("Polymarket", { id: "token", odds: 1 / 0.6, clobPrice: 0.6, isLock: false, time: 1791558222471 });
+  pushQuote("token", 0.6, 0.48);
   await nextTick();
   expect(text(root)).toContain("买入金额：72 盈亏：待结算");
-  expect(text(root)).toContain("当前价：0.6"); expect(text(root)).toContain("浮盈：+");
+  expect(text(root)).toContain("当前可卖价：0.48"); expect(text(root)).toContain("浮亏：-3");
+  expect(text(root)).toContain("当前赔率：2.083");
+  pushQuote("token", 0.6, 0.55);
+  await nextTick();
+  expect(text(root)).toContain("当前可卖价：0.55"); expect(text(root)).toContain("浮盈：+7");
   Object.assign(row, { Status: "Lose", Money: -5, PmMatchResult: "EqualSplit", PmSellState: "settled" });
   await nextTick();
   expect(text(root)).toContain("50/50 已结算"); expect(text(root)).toContain("盈亏：-5");
-  expect(find(root, "Lose")).toBeDefined(); expect(text(root)).not.toContain("当前价：");
+  expect(find(root, "Lose")).toBeDefined(); expect(text(root)).not.toContain("当前可卖价：");
+  expect(text(root)).not.toContain("浮盈");
   expect(api.pmSell).not.toHaveBeenCalled(); expect(api.pfSell).not.toHaveBeenCalled();
   expect(row.Money).toBe(-5); expect(row.PmStakeUsdc).toBe(10);
 });

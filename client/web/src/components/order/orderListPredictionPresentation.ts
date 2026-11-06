@@ -28,7 +28,7 @@ interface ProfitDisplay extends AmountDisplay {
   livePnlText: string | null;
   livePnlTone: "positive" | "negative" | "neutral";
 }
-interface LiveQuoteDisplay { showPrice: boolean; showOdds: boolean; priceText: string; oddsText: string }
+interface LiveQuoteDisplay { showPrice: boolean; showOdds: boolean; priceText: string; oddsText: string; priceLabel?: string }
 type BaseDisplay = { venue: "pm" | "pf"; quote: QuoteDisplay };
 export type PredictionDisplay = BaseDisplay & (
   { side: "sell"; amount: AmountDisplay & { sharesText: string | null } }
@@ -59,7 +59,7 @@ export function predictionDisplay(row: OrderRow, peers: OrderRow[], live: LiveQu
         profitText: isPmPendingOrder(row) ? "待确认" : isPendingRow(row) && !pmBuyLifecycleTagText(row)
           ? "待结算" : toFixed(pmOrderProfitDisplayCny(row, peers) ?? 0, 0),
         livePnlText: live.pmLiveUnrealizedPnlText(row), livePnlTone: pnlTone(live.pmLiveUnrealizedPnlCny(row)) },
-      live: { showPrice: live.pmShowLivePrice(row), priceText: live.pmLivePriceText(row),
+      live: { priceLabel: "当前可卖价", showPrice: live.pmShowLivePrice(row), priceText: live.pmLivePriceText(row),
         showOdds: live.pmShowLiveOdds(row), oddsText: live.pmLastLineOddsText(row) } };
   }
   if (isPfOrderListRow(row)) {

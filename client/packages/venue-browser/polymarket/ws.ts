@@ -84,6 +84,7 @@ export interface PolymarketMarketWsHandle {
 type MarketWsOpts = {
   onMessage: (raw: string) => void;
   onOpen: () => void;
+  onDisconnect?: () => void;
 };
 
 /** 真实连接；cycle 换线会替换此引用 */
@@ -222,6 +223,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
   function reconnectNow() {
     if (stopped)
       return;
+    opts.onDisconnect?.();
     clearConnectionTimers();
     const socket = ws;
     ws = null;
@@ -238,6 +240,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
 
   function failConnection(socket: WebSocket, reason: string, error: string) {
     if (stopped || ws !== socket) return;
+    opts.onDisconnect?.();
     clearConnectionTimers();
     ws = null;
     notePmStreamOpen(streamEpoch, false);
@@ -357,6 +360,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
     },
     stop() {
       stopped = true;
+      opts.onDisconnect?.();
       if (reconnectTimer) {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;

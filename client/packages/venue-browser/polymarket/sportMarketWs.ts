@@ -22,6 +22,7 @@ export interface PolymarketSportMarketWsHandle {
 interface SportMarketWsOpts {
   onMessage: (raw: string) => void;
   onOpen: () => void;
+  onDisconnect?: () => void;
 }
 
 type SportWsStatus = "disconnected" | "connecting" | "connected" | "error";
@@ -64,6 +65,7 @@ function createSportMarketWs(opts: SportMarketWsOpts): PolymarketSportMarketWsHa
         return;
       clearPing();
       sourceMode = "official";
+      opts.onDisconnect?.();
       ws = null;
       socket.close();
       scheduleReconnect(0);
@@ -120,6 +122,7 @@ function createSportMarketWs(opts: SportMarketWsOpts): PolymarketSportMarketWsHa
     socket.onclose = () => {
       if (ws !== socket)
         return;
+      opts.onDisconnect?.();
       clearPing();
       clearOfficialRetry();
       ws = null;
@@ -136,6 +139,7 @@ function createSportMarketWs(opts: SportMarketWsOpts): PolymarketSportMarketWsHa
     socket.onerror = () => {
       if (ws !== socket)
         return;
+      opts.onDisconnect?.();
       setSportStatus("error");
       socket.close();
     };
@@ -150,6 +154,7 @@ function createSportMarketWs(opts: SportMarketWsOpts): PolymarketSportMarketWsHa
     },
     stop() {
       stopped = true;
+      opts.onDisconnect?.();
       if (reconnectTimer) {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;

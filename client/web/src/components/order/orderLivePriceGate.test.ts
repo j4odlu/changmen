@@ -6,10 +6,11 @@ import { useOddsStore } from "@/stores/oddsStore";
 import { useSportOddsStore } from "@/stores/sportOddsStore";
 import type { OrderRow } from "@/types/order";
 import { useOrderListLiveQuotes } from "./controllers/useOrderListLiveQuotes";
+import { __testPushPolymarketMarketQuote as pushQuote, __testResetPolymarketMarketQuoteHub as resetQuotes } from "@changmen/venue-browser/polymarket";
 
 // Exercise the actual subscription controller, without a copied implementation.
 const mounted: Array<{ unmount: () => void }> = [];
-afterEach(() => { for (const app of mounted.splice(0)) app.unmount(); vi.restoreAllMocks(); });
+afterEach(() => { for (const app of mounted.splice(0)) app.unmount(); resetQuotes(); vi.restoreAllMocks(); });
 const pm: OrderRow = { Type: "Polymarket", PmTokenId: "tok-order", Status: "None" };
 const pf: OrderRow = { Type: "PredictFun", PfTokenId: "pf-tok", Status: "None" };
 function setup() {
@@ -25,11 +26,13 @@ function setup() {
 }
 const entry = (id: string) => ({ id, odds: 2, clobPrice: 0.5, isLock: false, time: 1791558222471 });
 
-it("ignores unrelated fo saves and reacts to watched tokens", () => {
+it("ignores unrelated quotes and reacts to watched bid-only updates", () => {
   const { odds, read, value } = setup();
   odds.save("OB", entry("ob-1")); odds.save("Polymarket", entry("tok-other"));
   void value.value; expect(read).toHaveBeenCalledTimes(1);
-  odds.save("Polymarket", entry("tok-order"));
+  pushQuote("other", 0.7, 0.6);
+  void value.value; expect(read).toHaveBeenCalledTimes(1);
+  pushQuote("tok-order", 0.7, 0.6);
   void value.value; expect(read).toHaveBeenCalledTimes(2);
 });
 it("reacts to sport saves for watched PF tokens and to clearing", () => {
@@ -45,7 +48,7 @@ it("reacts to watched lock changes and clean, and stops when the list has no wat
   const { odds, props, read, value } = setup();
   odds.updateOddsLock("Polymarket", "unrelated", true);
   void value.value; expect(read).toHaveBeenCalledTimes(1);
-  odds.updateOddsLock("Polymarket", "tok-order", true);
+  odds.updateOddsLock("PredictFun", "pf-tok", true);
   void value.value; expect(read).toHaveBeenCalledTimes(2);
   odds.clean("Polymarket");
   void value.value; expect(read).toHaveBeenCalledTimes(3);

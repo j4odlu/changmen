@@ -13,7 +13,8 @@ import {
   startPolymarketMarketWs,
   type PolymarketMarketWsHandle,
 } from "./ws";
-import { extractPolymarketWsBestAsks } from "./wsQuotes";
+import { extractPolymarketWsQuotes } from "./wsQuotes";
+import { createPmBidQuoteCache } from "./quotes/pmBidQuoteCache";
 import { shouldApplyPolymarketWsQuote } from "./liveQuoteState";
 import { recordPmQuoteToFoMetric } from "./pmExecutionMetrics";
 
@@ -30,6 +31,9 @@ type ReadyListener = () => void;
 const consumers = new Map<string, Set<string>>();
 const quoteListeners = new Set<QuoteListener>();
 const readyListeners = new Set<ReadyListener>();
+const bidQuotes = createPmBidQuoteCache();
+export const getPolymarketMarketBestBid = bidQuotes.get;
+export const onPolymarketMarketBid = bidQuotes.subscribe;
 
 let wsHandle: PolymarketMarketWsHandle | null = null;
 /** 作废已排队的 ready microtask */
@@ -59,6 +63,7 @@ function resubscribe(initialDump: boolean): void {
   if (!wsHandle)
     return;
   const assetIds = mergedAssetIds();
+  bidQuotes.retain(new Set(assetIds));
   notePolymarketMarketWsSubscription(assetIds.length);
   if (assetIds.length)
     wsHandle.send(polymarketMarketSubscribeMessage(assetIds, initialDump));
@@ -94,6 +99,7 @@ function notifyReady(): void {
 function maybeStopTransport(): void {
   if (consumers.size > 0)
     return;
+  bidQuotes.clear();
   notePolymarketMarketWsSubscription(0);
   if (!wsHandle)
     return;
@@ -105,6 +111,7 @@ function maybeStopTransport(): void {
 /** 停掉 market quote transport；logout / session teardown 使用。 */
 export function stopPolymarketMarketQuoteHub(): void {
   consumers.clear();
+  bidQuotes.clear();
   notePolymarketMarketWsSubscription(0);
   if (!wsHandle)
     return;
@@ -118,9 +125,14 @@ export function ensurePolymarketMarketQuoteHub(): void {
   if (wsHandle)
     return;
   wsHandle = startPolymarketMarketWs({
-    onOpen: () => resubscribe(true),
+    onOpen: () => { bidQuotes.clear(); resubscribe(true); },
+    onDisconnect: () => bidQuotes.clear(),
     onMessage: (raw) => {
-      for (const update of extractPolymarketWsBestAsks(raw)) {
+      const quotes = extractPolymarketWsQuotes(raw);
+      for (const update of quotes.bids) {
+        if (mergedAssetHas(update.assetId)) bidQuotes.apply(update);
+      }
+      for (const update of quotes.asks) {
         const price = Number(update.bestAsk);
         if (!Number.isFinite(price))
           continue;
@@ -146,6 +158,11 @@ export function ensurePolymarketMarketQuoteHub(): void {
       return;
     notifyReady();
   });
+}
+
+function mergedAssetHas(assetId: string): boolean {
+  for (const ids of consumers.values()) { if (ids.has(assetId)) return true; }
+  return false;
 }
 
 /**
@@ -229,12 +246,14 @@ export function hasPolymarketQuoteConsumerAsset(
 }
 
 /** @internal vitest */
-export function __testPushPolymarketMarketQuote(assetId: string, bestAsk: number): void {
+export function __testPushPolymarketMarketQuote(assetId: string, bestAsk: number, bestBid?: number | null): void {
+  if (bestBid !== undefined) bidQuotes.apply({ assetId, bestBid });
   emitQuote(assetId, bestAsk);
 }
 
 /** @internal vitest — 拆掉全部消费者并停 transport */
 export function __testResetPolymarketMarketQuoteHub(): void {
+  bidQuotes.reset();
   consumers.clear();
   quoteListeners.clear();
   readyListeners.clear();

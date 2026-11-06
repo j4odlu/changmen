@@ -6,9 +6,10 @@ import { useOddsStore } from "@/stores/oddsStore";
 import { useSportOddsStore } from "@/stores/sportOddsStore";
 import type { OrderRow } from "@/types/order";
 import { useOrderListLiveQuotes } from "./useOrderListLiveQuotes";
+import { __testPushPolymarketMarketQuote as pushQuote, __testResetPolymarketMarketQuoteHub as resetQuotes } from "@changmen/venue-browser/polymarket";
 
 const mounted: Array<{ unmount: () => void }> = [];
-afterEach(() => { for (const app of mounted.splice(0)) app.unmount(); });
+afterEach(() => { for (const app of mounted.splice(0)) app.unmount(); resetQuotes(); vi.restoreAllMocks(); });
 const pm: OrderRow = { Type: "Polymarket", PmSide: "buy", Status: "None", PmTokenId: "pm-token",
   PmShares: 20, PmStakeUsdc: 10, PmFillPrice: 0.5 };
 function setup(rows: OrderRow[] = [pm]) {
@@ -19,19 +20,23 @@ function setup(rows: OrderRow[] = [pm]) {
 }
 function quote(id: string, price: number) { return { id, odds: 1 / price, clobPrice: price, isLock: false, time: 1791558222471 }; }
 
-it("uses existing fo/sport price precedence without writing either cache", () => {
+it("uses best bid for price/odds/P&L, never falls back to the buy ask", () => {
   const { c, odds, sports } = setup();
   expect(c.pmLivePriceText(pm)).toBe("—");
   expect(c.pmShowLivePrice(pm)).toBe(true);
   expect(c.pmShowLiveOdds(pm)).toBe(false);
   sports.save("Polymarket", "pm-token", 2);
-  expect(c.pmLivePriceText(pm)).toBe("0.5");
   odds.save("Polymarket", quote("pm-token", 0.6));
+  expect(c.pmLivePriceText(pm)).toBe("—");
+  expect(c.pmLiveUnrealizedPnlCny(pm)).toBeNull();
+  expect(c.pmLastLineOddsText(pm)).toBe("—");
+  pushQuote("pm-token", 0.6, 0.48);
   const save = vi.spyOn(odds, "save");
-  expect(c.pmLivePriceText(pm)).toBe("0.6");
+  expect(c.pmLivePriceText(pm)).toBe("0.48");
   expect(c.pmShowLiveOdds(pm)).toBe(true);
-  expect(c.pmLiveUnrealizedPnlCny(pm)).toBeGreaterThan(0);
-  expect(c.pmLiveUnrealizedPnlText(pm)).toContain("浮盈");
+  expect(c.pmLastLineOddsText(pm)).toBe("2.083");
+  expect(c.pmLiveUnrealizedPnlCny(pm)).toBe(-3);
+  expect(c.pmLiveUnrealizedPnlText(pm)).toBe("浮亏：-3");
   expect(save).not.toHaveBeenCalled();
   expect(sports.get("Polymarket", "pm-token")).toBe(2);
 });
@@ -41,15 +46,15 @@ it("subscribes during setup, ignores unrelated tokens and follows list changes",
   odds.save("Polymarket", quote("seed", 0.5));
   const read = vi.fn(() => c.pmLivePriceText(pm)), value = computed(read);
   expect(value.value).toBe("—");
-  odds.save("Polymarket", quote("unrelated", 0.7));
+  pushQuote("unrelated", 0.8, 0.7);
   expect(value.value).toBe("—");
   expect(read).toHaveBeenCalledTimes(1);
-  odds.save("Polymarket", quote("pm-token", 0.6));
+  pushQuote("pm-token", 0.7, 0.6);
   expect(value.value).toBe("0.6");
   expect(read).toHaveBeenCalledTimes(2);
   const other = { ...pm, PmTokenId: "next-token" };
   props.orderEntries = [[456, [other]]];
-  odds.save("Polymarket", quote("next-token", 0.7));
+  pushQuote("next-token", 0.8, 0.7);
   expect(c.pmLivePriceText(other)).toBe("0.7");
 });
 it.each([
@@ -81,8 +86,21 @@ it("unmount releases both subscriptions, including after-action callbacks", () =
   expect(value.value).toBe("—");
   unmount(); mounted.pop();
   snapshot.set("pm-token", quote("pm-token", 0.6));
+  pushQuote("pm-token", 0.7, 0.6);
   odds.save("Polymarket", quote("pm-token", 0.6));
   sports.save("Polymarket", "pm-token", 2);
   expect(value.value).toBe("—");
   expect(read).toHaveBeenCalledTimes(1);
+});
+
+it("clears bid-derived P&L when the book empties or the connection stops", () => {
+  const { c } = setup();
+  pushQuote("pm-token", 0.65, 0.6);
+  expect(c.pmLiveUnrealizedPnlCny(pm)).toBe(13);
+  pushQuote("pm-token", 0.65, null);
+  expect(c.pmLivePriceText(pm)).toBe("—");
+  expect(c.pmLiveUnrealizedPnlText(pm)).toBeNull();
+  pushQuote("pm-token", 0.65, 0.6);
+  resetQuotes();
+  expect(c.pmLivePriceText(pm)).toBe("—");
 });

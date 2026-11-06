@@ -1,11 +1,13 @@
 import { renderToString } from "@vue/server-renderer";
 import { createPinia } from "pinia";
 import { createSSRApp, h } from "vue";
-import { expect, it } from "vitest";
+import { afterEach, expect, it } from "vitest";
+import { __testPushPolymarketMarketQuote as pushQuote, __testResetPolymarketMarketQuoteHub as resetQuotes } from "@changmen/venue-browser/polymarket";
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { useOddsStore } from "@/stores/oddsStore";
 import type { OrderRow } from "@/types/order";
 import OrderList from "./OrderList.vue";
+afterEach(() => resetQuotes());
 
 async function render(row: OrderRow, customAmount = false, livePrice?: number) {
   const app = createSSRApp({ render: () => h(OrderList, { orderEntries: [[123, [row]]] },
@@ -14,6 +16,7 @@ async function render(row: OrderRow, customAmount = false, livePrice?: number) {
   if (livePrice != null) useOddsStore(pinia).save("Polymarket", {
     id: "token", odds: 1 / livePrice, clobPrice: livePrice, isLock: false, time: 1791558222471,
   });
+  if (livePrice != null) pushQuote("token", 0.7, livePrice);
   const html = await renderToString(app);
   return { html, text: html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ") };
 }
@@ -47,6 +50,6 @@ it("keeps live P&L beside stake/profit while current price remains in its separa
   const sellRowIndex = html.indexOf("order__profit-line--sell-row");
   expect(liveIndex).toBeGreaterThan(0);
   expect(sellRowIndex).toBeGreaterThan(liveIndex);
-  expect(html.slice(sellRowIndex)).toContain("当前价：0.6");
+  expect(html.slice(sellRowIndex)).toContain("当前可卖价：0.6");
   expect(html.slice(sellRowIndex)).not.toContain("order__live-pnl");
 });

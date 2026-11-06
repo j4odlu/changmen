@@ -44,17 +44,25 @@ test("preserves all 20 computed bodies and both formatting/grouping constants", 
     expect(executableAdminOrderSource(declarations(read(file + ".ts")).get(name)!)).toBe(executableAdminOrderSource(before.get(name)!));
 });
 
-test("keeps every request/copy/close handler, state initializer, public API, template and style unchanged", () => {
+test("keeps the public API and unrelated handlers/display unchanged around the diagnostic retry improvement", () => {
   const next = read("AdminOrderLogsDialog.vue"), script = next.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)![1];
   const moved = new Set(Object.values(adminOrderDialogGroups).flat());
   const handlers = parse(script).statements.filter(ts.isFunctionDeclaration);
   expect(handlers.map(node => node.name!.text).sort()).toEqual([...oldFunctions.keys()].filter(name => !moved.has(name)).sort());
   const nextTree = parse(script);
-  for (const handler of handlers)
+  // Opening resets the selected identity; refresh/operation-log retries now retain
+  // the previous result. Their behavior is exercised by the compiled dialog tests.
+  const queryHandlers = new Set(["open", "openExecution", "loadDiagnosis"]);
+  for (const handler of handlers) if (!queryHandlers.has(handler.name!.text))
     expect(executableAdminOrderSource(handler.getText(nextTree)), handler.name!.text).toBe(executableAdminOrderSource(oldFunctions.get(handler.name!.text)!));
   const before = declarations(originalAdminOrderScript), after = declarations(script);
   for (const name of ["visible", "loading", "error", "data", "title", "requestSequence", "lookupRows", "expanded", "legacyDetailed", "executionLookup", "kindLabel"])
     expect(executableAdminOrderSource(after.get(name)!), name).toBe(executableAdminOrderSource(before.get(name)!));
   expect(script).toContain("defineExpose({ open, openExecution });");
-  expect(next.slice(next.indexOf("</script>"))).toBe(originalAdminOrderDialog.slice(originalAdminOrderDialog.indexOf("</script>")));
+  const templateAndStyle = next.slice(next.indexOf("</script>"))
+    .replace('v-loading="loading && !data"', 'v-loading="loading"')
+    .replace('<template v-if="data">', '<template v-else-if="data">')
+    .replace("data?.legacyLogsLoaded === true ? '扩大操作日志窗口至前后30分钟' : '补查操作日志'",
+      "data?.legacyLogsLoaded === false ? '补查旧日志' : '扩大旧日志窗口至前后30分钟'");
+  expect(templateAndStyle).toBe(originalAdminOrderDialog.slice(originalAdminOrderDialog.indexOf("</script>")));
 });

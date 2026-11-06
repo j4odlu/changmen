@@ -44,6 +44,7 @@ const kindLabel: Record<string, string> = {
 const executionLookup = ref<{ userId: string; linkId?: number; executionId?: string; attemptId?: string; eventId?: string } | null>(null);
 
 async function openExecution(input: NonNullable<typeof executionLookup.value>) {
+  data.value = null;
   executionLookup.value = { ...input };
   lookupRows.value = [];
   expanded.value = false;
@@ -54,6 +55,7 @@ async function openExecution(input: NonNullable<typeof executionLookup.value>) {
 async function open(rows: AdminOrderRow[]) {
   if (!rows.length)
     return;
+  data.value = null;
   executionLookup.value = null;
   lookupRows.value = [...rows];
   expanded.value = false;
@@ -70,7 +72,6 @@ async function loadDiagnosis() {
   visible.value = true;
   loading.value = true;
   error.value = "";
-  data.value = null;
   title.value = head ? `下单诊断 · ${formatLinkId(head.linkId)}` : "执行诊断（包含无落库订单）";
   try {
     const payload = await getAdminOrderLogs({ ...(executionLookup.value || {
@@ -89,7 +90,10 @@ async function loadDiagnosis() {
   catch (e) {
     if (sequence !== requestSequence)
       return;
-    error.value = (e as Error).message || "加载失败";
+    const message = (e as Error).message || "加载失败";
+    error.value = /timeout.*exceeded|timed?\s*out/i.test(message)
+      ? (data.value ? "本次查询超时，已保留此前的诊断内容，可重试补查。" : "诊断查询超时，请稍后重试。")
+      : message;
     ElMessage.error(error.value);
   }
   finally {
@@ -142,12 +146,12 @@ defineExpose({ open, openExecution });
     destroy-on-close
     @close="close"
   >
-    <div v-loading="loading" class="admin-order-log-dialog__scroll">
+    <div v-loading="loading && !data" class="admin-order-log-dialog__scroll">
       <div class="admin-order-log-dialog__body">
         <p v-if="error" class="admin-order-log-dialog__err">
           {{ error }}
         </p>
-        <template v-else-if="data">
+        <template v-if="data">
           <div class="admin-order-log-layout">
             <section class="admin-order-log-overview">
               <div class="admin-order-log-overview__head">
@@ -646,7 +650,7 @@ defineExpose({ open, openExecution });
         复制诊断摘要
       </el-button>
       <el-button :disabled="loading || !lookupRows.length" @click="expandLookup">
-        {{ data?.legacyLogsLoaded === false ? '补查旧日志' : '扩大旧日志窗口至前后30分钟' }}
+        {{ data?.legacyLogsLoaded === true ? '扩大操作日志窗口至前后30分钟' : '补查操作日志' }}
       </el-button>
       <el-button :loading="loading" @click="loadDiagnosis">
         {{ error ? "重试" : "刷新" }}

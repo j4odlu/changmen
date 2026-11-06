@@ -18,10 +18,17 @@ describe("按事件编号查看订单依据", () => {
     await expect(listAdminOrderLogs({ userId: "u2", eventId: "event-123" }, { role: "operator" })).rejects.toThrow("无权查看");
     expect(mocks.lookup).not.toHaveBeenCalled();
   });
-  it("only enables direct-first queries for an explicit boolean flag", async () => {
-    await listAdminOrderLogs({ userId: "u1", linkId: 123, preferDirect: true }, { role: "admin" });
+  it("keeps direct-first enabled after the browser form body is decoded", async () => {
+    const form = new URLSearchParams({ userId: "u1", linkId: "123", preferDirect: "true" });
+    await listAdminOrderLogs(Object.fromEntries(form), { role: "admin" });
     expect(mocks.lookup).toHaveBeenLastCalledWith(expect.objectContaining({ preferDirect: true }));
-    await listAdminOrderLogs({ userId: "u1", linkId: 123, preferDirect: "true" }, { role: "admin" });
+  });
+  it.each([true, "true"])("accepts an explicit true flag from JSON or form data: %s", async preferDirect => {
+    await listAdminOrderLogs({ userId: "u1", linkId: 123, preferDirect }, { role: "admin" });
+    expect(mocks.lookup).toHaveBeenLastCalledWith(expect.objectContaining({ preferDirect: true }));
+  });
+  it.each([false, "false", undefined, null, "", "TRUE", "1", 1, [], {}])("keeps explicit legacy lookup and invalid flags out of direct-first: %j", async preferDirect => {
+    await listAdminOrderLogs({ userId: "u1", linkId: 123, preferDirect }, { role: "admin" });
     expect(mocks.lookup).toHaveBeenLastCalledWith(expect.objectContaining({ preferDirect: false }));
   });
 });

@@ -314,7 +314,8 @@ export async function listAdminOrderLogs(body = {}, caller = null) {
     executionId: body.executionId,
     attemptId: body.attemptId,
     eventId: body.eventId,
-    preferDirect: body.preferDirect === true,
+    // Browser admin requests use form encoding, whose decoded values are strings.
+    preferDirect: body.preferDirect === true || body.preferDirect === "true",
     orderId: orderId ? String(orderId) : undefined,
     domain: body.domain,
     sport: body.sport,

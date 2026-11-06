@@ -33,6 +33,7 @@ type State = ReturnType<typeof presentation.useAdminOrderLogPresentation> & Pick
   open: (rows: AdminOrderRow[]) => Promise<void>;
   openExecution: (lookup: ExecutionLookup) => Promise<void>;
   close: () => void; expandLookup: () => Promise<void>; copyReport: () => Promise<void>;
+  loadDiagnosis: () => Promise<void>;
 };
 const scopes: vue.EffectScope[] = [];
 afterEach(() => { scopes.splice(0).forEach(scope => scope.stop()); });
@@ -259,4 +260,60 @@ test("retains current failure and clipboard denial messages", async () => {
     await state.copyReport(); return { state: ui(state), trace };
   }
   expect(await exercise(false)).toEqual(await exercise(true));
+});
+
+test("operation-log timeout preserves the loaded execution diagnosis and can be retried separately", async () => {
+  const { state, api, clipboard } = setup(false);
+  api.mockResolvedValueOnce(payload("OB", "Pending", "direct"));
+  await state.open([row()]);
+  const loaded = state.data.value;
+  const response = deferred<AdminOrderLogLookup>();
+  api.mockReturnValueOnce(response.promise);
+  const pending = state.expandLookup();
+  expect(state.loading.value).toBe(true);
+  expect(state.data.value).toBe(loaded);
+  expect(api).toHaveBeenLastCalledWith(expect.objectContaining({ preferDirect: false }));
+  response.reject(new Error("timeout of 15000ms exceeded"));
+  await pending;
+  expect(state.loading.value).toBe(false);
+  expect(state.data.value).toBe(loaded);
+  expect(state.error.value).toContain("已保留此前的诊断内容");
+  await state.copyReport();
+  expect(clipboard).toHaveBeenCalledOnce();
+  const logs = { ...payload(), legacyLogsLoaded: true };
+  api.mockResolvedValueOnce(logs);
+  await state.loadDiagnosis();
+  expect(api).toHaveBeenLastCalledWith(expect.objectContaining({ preferDirect: false, paddingMs: undefined }));
+  expect(state.data.value).toEqual(logs);
+  expect(state.error.value).toBe("");
+});
+
+test.each([false, true])("a different selection clears the old diagnosis and ignores an old log failure: execution=%s", async execution => {
+  const { state, api } = setup(false);
+  api.mockResolvedValueOnce(payload("OB", "Win", "direct"));
+  await state.open([row()]);
+  const old = deferred<AdminOrderLogLookup>();
+  api.mockReturnValueOnce(old.promise);
+  const oldRequest = state.expandLookup();
+  const fresh = deferred<AdminOrderLogLookup>();
+  api.mockReturnValueOnce(fresh.promise);
+  const nextRequest = execution
+    ? state.openExecution({ userId: "new-user", executionId: "new-execution" })
+    : state.open([row(at + 1, "new-user")]);
+  expect(state.data.value).toBeNull();
+  old.reject(new Error("timeout of 15000ms exceeded"));
+  await oldRequest;
+  expect(state.error.value).toBe("");
+  expect(state.loading.value).toBe(true);
+  fresh.resolve(payload("Polymarket", "Pending", "direct"));
+  await nextRequest;
+  expect(state.data.value?.orders[0]?.provider).toBe("Polymarket");
+});
+
+test("initial timeouts show a useful message without inventing a previous result", async () => {
+  const { state, api } = setup(false);
+  api.mockRejectedValueOnce(new Error("timeout of 15000ms exceeded"));
+  await state.open([row()]);
+  expect(state.data.value).toBeNull();
+  expect(state.error.value).toBe("诊断查询超时，请稍后重试。");
 });

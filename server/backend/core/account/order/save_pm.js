@@ -1,10 +1,13 @@
 /**
- * Polymarket save 合并（买/卖状态机）。由 mergeOrderLogicalSave 分发。
+ * Polymarket 订单入库前的新旧字段合并（成交事实、费用和买卖进度）。
+ * 由 mergeOrderLogicalSave 分发；最终结算保护交给 polymarket_order_settlement.js。
+ * 本模块不执行数据库写入。
  */
 import { Currency, getExchange } from "@changmen/shared/currency";
-import { normalizePmMatchResult, parseNum } from "./dto.js";
+import { normalizePmMatchResult, parseNum } from "./order_values.js";
 import { isPmPendingOrder, validatePmSubmission } from "@changmen/shared/pm_submission";
-import { polymarketIsEqualSplitOrder, polymarketProfitStatus, polymarketVerifiedOrderPayout } from "@changmen/shared/pm_settlement";
+import { polymarketIsEqualSplitOrder } from "@changmen/shared/pm_settlement";
+import { mergePolymarketSettlementForSave } from "./polymarket_order_settlement.js";
 
 /** pmShares = 官方 fill，取 RDS/CLOB/入参 最大值，避免 0 覆盖有效值 */
 function preservePmBuyFillShares(prevRaw, o, merged) {
@@ -29,10 +32,11 @@ function preservePmFillPrice(prevRaw, o, merged) {
   return undefined;
 }
 
-/** pmFeeUsdc：优先本次入参（activity/公式刷新），避免 Math.max 粘住偏高估 */
+/** pmFeeUsdc：优先本次入参（含显式零费用），避免旧估算粘住。 */
 function preservePmFeeUsdc(prevRaw, o, merged) {
-  const incoming = parseNum(o.pmFeeUsdc ?? o.PmFeeUsdc, NaN);
-  if (Number.isFinite(incoming) && incoming > 0)
+  const value = o.pmFeeUsdc ?? o.PmFeeUsdc;
+  const incoming = value == null || typeof value === "boolean" || String(value).trim() === "" ? NaN : parseNum(value, NaN);
+  if (Number.isFinite(incoming) && incoming >= 0)
     return incoming;
   const fromMerged = parseNum(merged.pmFeeUsdc, NaN);
   if (Number.isFinite(fromMerged) && fromMerged > 0)
@@ -142,7 +146,7 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
   let betMoneyForMerge = originalBet;
   if (!prevBet && hasBetMoneyField && incomingBet > 0)
     betMoneyForMerge = incomingBet;
-  // 未卖出：允许用官网/同步刷新含费全成本（含 activity 校正、首次补 fee）
+  // 未卖出：同步可校正含费全成本；显式零费用也能清除旧估算。
   const prevFee = parseNum(prevRaw.pmFeeUsdc, 0);
   const incomingFee = parseNum(o.pmFeeUsdc ?? o.PmFeeUsdc ?? merged.pmFeeUsdc, 0);
   const sellStarted = prevState === "partial"
@@ -154,7 +158,9 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
     && incomingBet > 0
     && (
       (prevFee <= 0 && incomingFee > 0 && incomingBet > prevBet + 1e-9)
-      || (incomingFee > 0 && Math.abs(incomingBet - prevBet) > 1e-6)
+      || (Object.prototype.hasOwnProperty.call(o, "pmFeeUsdc")
+        && typeof o.pmFeeUsdc === "number" && Number.isFinite(o.pmFeeUsdc) && o.pmFeeUsdc >= 0
+        && Math.abs(incomingBet - prevBet) > 1e-6)
     )
   ) {
     betMoneyForMerge = incomingBet;
@@ -277,6 +283,12 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
     else if (betMoneyForMerge > 0) {
       merged.betMoney = betMoneyForMerge;
       bet_money = betMoneyForMerge;
+      // Late POST/trade-only snapshots must not replace an already reconciled
+      // all-in cost with nominal principal. Sale-progress updates use the branch above.
+      if (Number.isFinite(prevRaw.pmFeeUsdc) && prevRaw.pmFeeUsdc >= 0
+        && !(typeof o.pmFeeUsdc === "number" && Number.isFinite(o.pmFeeUsdc) && o.pmFeeUsdc >= 0)) {
+        merged.pmStakeUsdc = prevRaw.pmStakeUsdc;
+      }
     }
     if (isChangmen) {
       merged.pmOrigin = merged.pmOrigin || "changmen";
@@ -316,65 +328,5 @@ export function mergePolymarketProviderSave(prevRow, prevRaw, o, pmOrigin, merge
       merged.pmLastSellOrderId = prevRaw.pmLastSellOrderId;
   }
 
-  /**
-   * 已结算且无卖出进度：Money 与含费 bet_money 对齐。
-   * 防止旧客户端用「名义本金」盈亏回写，侧栏再次出现买入金额≠|盈亏|。
-   */
-  const preserveFinalSettlement = !isSell && ((polymarketIsEqualSplitOrder(prevRaw) && !polymarketIsEqualSplitOrder(o))
-    || (polymarketVerifiedOrderPayout(prevRaw) !== undefined && polymarketVerifiedOrderPayout(o) === undefined));
-  if (preserveFinalSettlement) {
-    // An older client must not replace a final split result with its cached paper winner.
-    money = parseNum(prevRow?.money ?? prevRaw.money, money);
-    bet_money = parseNum(prevRow?.bet_money ?? prevRaw.betMoney, bet_money);
-    merged = { ...merged, pmMatchResult: prevRaw.pmMatchResult, pmSellState: prevRaw.pmSellState,
-      status: prevRow?.status ?? prevRaw.status, money, reward: prevRaw.reward, betMoney: bet_money };
-    // Preserve the inputs as well: a later refresh must not recalculate from a stale cost or fill.
-    for (const field of ["pmSettlement", "pmStakeUsdc", "pmFeeUsdc", "pmShares", "pmFillPrice", "pmTokenId", "pmConditionId",
-      "pmAttributedSellShares", "pmRealizedPnlUsdc", "pmSellProceeds", "pmLastSellOrderId"]) {
-      if (Object.prototype.hasOwnProperty.call(prevRaw, field)) merged[field] = prevRaw[field];
-      else delete merged[field];
-    }
-  }
-  else if (!isSell && polymarketIsEqualSplitOrder(o)) {
-    merged.pmMatchResult = "equal_split";
-    if (prevState === "closed") {
-      money = parseNum(prevRow?.money ?? prevRaw.money, money);
-      merged.money = money;
-      merged.pmSellState = "closed";
-    }
-    else {
-      // Zero is a valid final P&L; the partial-sale zero-write protection above is not applicable.
-      money = parseNum(o.money ?? o.Money, money);
-      merged.money = money;
-      merged.status = polymarketProfitStatus(money);
-      merged.pmSellState = "settled";
-    }
-  }
-
-  if (!isSell && !preserveFinalSettlement && !polymarketIsEqualSplitOrder(merged)) {
-    const st = String(merged.status ?? o.status ?? prevRow?.status ?? "").toLowerCase();
-    const sellState = String(merged.pmSellState ?? prevRaw.pmSellState ?? "").toLowerCase();
-    const attr = parseNum(merged.pmAttributedSellShares ?? prevRaw.pmAttributedSellShares, 0);
-    const shares = parseNum(merged.pmShares ?? prevRaw.pmShares, 0);
-    const bet = bet_money > 0 ? bet_money : parseNum(merged.betMoney, 0);
-    const noSellProgress = attr <= 0.0001
-      && sellState !== "partial"
-      && sellState !== "closed";
-    const officialPrice = polymarketVerifiedOrderPayout(merged);
-    if (noSellProgress && bet > 0 && shares > 0 && (officialPrice !== undefined || st === "win" || st === "lose" || st === "lost")) {
-      const fx = getExchange(Currency.USDT);
-      const payoutPrice = officialPrice ?? (st === "win" ? 1 : 0);
-      const fair = shares * payoutPrice * fx - bet;
-      const fairRounded = Math.round(fair * 10000) / 10000;
-      if (officialPrice !== undefined || Math.round(Number(money) || 0) !== Math.round(fairRounded)) {
-        money = fairRounded;
-        merged.money = fairRounded;
-        if (officialPrice !== undefined) merged.status = polymarketProfitStatus(money);
-        if (officialPrice !== undefined || st === "win")
-          merged.reward = Math.round(shares * payoutPrice * fx * 10000) / 10000;
-      }
-    }
-  }
-
-  return { raw: merged, money, bet_money };
+  return mergePolymarketSettlementForSave({ prevRow, prevRaw, incoming: o, raw: merged, money, betMoney: bet_money });
 }

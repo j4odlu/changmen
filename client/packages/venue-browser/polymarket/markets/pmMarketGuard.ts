@@ -1,5 +1,5 @@
 import { polymarketMarketAssetIds, polymarketGammaMarketAssetIds, polymarketMarketHasAssetMetadata, polymarketClobMarketAssetIds, polymarketMarketAssetFields, polymarketOfficialWinner, polymarketConditionsAgree } from "@changmen/shared/pm_market_assets";
-import { resolvePolymarketOfficialWinningAssetId } from "../orders/history/orders";
+import { resolvePolymarketOfficialWinningAssetId } from "../orders/history/orderMarketSettlement";
 import { parseJsonArray, type PolymarketRawMarket } from "./parse";
 
 const LOSER_PRICE_MAX = 0.10;

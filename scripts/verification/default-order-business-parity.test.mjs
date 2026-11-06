@@ -1,5 +1,4 @@
 // [changmen 扩展] 线上后端已捕获并核实为此 commit；直接对照完整 provider 记账函数。
-import fs from "node:fs";
 import vm from "node:vm";
 import { execFileSync } from "node:child_process";
 import ts from "typescript";
@@ -8,18 +7,19 @@ import * as currency from "@changmen/shared/currency";
 import * as submission from "@changmen/shared/pm_submission";
 import { normalizePmMatchResult, parseNum } from "../../server/backend/core/account/order/dto.js";
 import { preparePmPendingOrderSave } from "../../server/backend/core/account/order/pm_pending.js";
+import { mergePolymarketProviderSave as currentMerge } from "../../server/backend/core/account/order/save_pm.js";
 
 const onlineBackend = "ed4a158c854d5b28093a76727a6c08081233af14";
 const file = "server/backend/core/account/order/save_pm.js";
-function load(old) {
-  const source = old ? execFileSync("git", ["show", `${onlineBackend}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
+function loadOriginal() {
+  const source = execFileSync("git", ["show", `${onlineBackend}:${file}`], { encoding: "utf8" });
   const exports = {};
   const context = vm.createContext({ exports, require: name => name.endsWith("/currency") ? currency
     : name.endsWith("/pm_submission") ? submission : { normalizePmMatchResult, parseNum } });
   vm.runInContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, context);
   return exports.mergePolymarketProviderSave;
 }
-const previousMerge = load(true), currentMerge = load(false);
+const previousMerge = loadOriginal();
 const snapshot = { orderId: "same", accountId: 292, makerAmount: "100000000", takerAmount: "200000000", stakeUsdc: 100, submittedAt: 1700000000000 };
 const filled = { provider: "Polymarket", order_id: "same", status: "None", bet_money: 670, money: 0,
   raw: { provider: "Polymarket", orderId: "same", status: "none", betMoney: 670, money: 0,

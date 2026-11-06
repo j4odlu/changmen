@@ -23,7 +23,8 @@ vi.mock("./rayOrderBindings", () => ({ syncRayOrderBindings: async () => {} }));
 const id = "11111111-1111-4111-8111-111111111111";
 const link = 1791558222471;
 function order(provider: VenueOrder["provider"] = "RAY", orderId = "other-original"): VenueOrder {
-  return { provider, orderId, createAt: Date.now(), odds: 2, betMoney: 100, money: 0, reward: 0,
+  // These cases test synchronization/attribution, not clock-dependent sorting.
+  return { provider, orderId, createAt: 1791558222471, odds: 2, betMoney: 100, money: 0, reward: 0,
     status: "none", match: "m", bet: "b", item: "i", game: "" };
 }
 async function execution(provider: string) {

@@ -1,7 +1,6 @@
 import type { GtcExecution } from "@changmen/shared/pm_gtc";
 import type { OrderRow } from "@/types/order";
 import { gtcCanFinishWithoutOrders, gtcPmNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc";
-import { resolveGtcFillFee } from "@changmen/venue-browser/polymarket/gtc/index";
 
 /** [changmen 扩展] 只依据原单终态、完整成交/费用证据；比赛结束本身不能证明挂单已终止。 */
 export function gtcPmReconciled(row: GtcExecution): boolean {
@@ -21,7 +20,7 @@ export function gtcPmReconciled(row: GtcExecution): boolean {
   const valid = fills.filter(fill => fill.status !== "FAILED");
   if (valid.some(fill => fill.fee != null && (!Number.isFinite(Number(fill.fee)) || Number(fill.fee) < 0)))
     return false;
-  if (valid.some(fill => fill.fee == null && resolveGtcFillFee(row.plan.feeProof, fill.role, Number(fill.shares), Number(fill.price)) == null))
+  if (valid.some(fill => fill.fee == null))
     return false;
   return gtcUnits(row.order.matched) === gtcUnits(row.matched)
     && valid.reduce((total, fill) => total + gtcUnits(fill.shares), 0n) === gtcUnits(row.matched)

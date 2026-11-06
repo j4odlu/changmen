@@ -13,12 +13,14 @@ import { sourceOwnershipInventory } from "./verification/source-ownership.mjs";
 import { inspectCurrentSourceBoundaries } from "./verification/current-source-boundaries.mjs";
 import { inspectComponentInstallInputs } from "./verification/component-install-inputs.mjs";
 import { inspectFrontendBuildContracts } from "./verification/frontend-build-contracts.mjs";
+import { assertPresentationBoundaries } from "./verification/presentation-boundary.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CHANGMEN_LAYOUT, VENUE_ADAPTER_REL } from "@changmen/storage/paths";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CHANGMEN_ROOT = path.resolve(__dirname, "..");
+assertPresentationBoundaries(CHANGMEN_ROOT);
 // Explicit historical self-tests opt in; ordinary checks never import restoration modules.
 if (process.env.CHANGMEN_HISTORICAL_AUDIT === "1") {
   const { inspectHistoricalMigrations } = await import("./verification/check-historical-migrations.mjs");

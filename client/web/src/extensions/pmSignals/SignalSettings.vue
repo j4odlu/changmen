@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { BrowserPmOddsDropSettings } from "./downSettings";
-import type { PmUpPrefs } from "./upSettings";
+import type { BrowserPmOddsDropSettings, PmUpPrefs } from "@/config/pmSignalSettings";
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/userStore";

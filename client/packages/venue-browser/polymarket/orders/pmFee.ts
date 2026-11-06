@@ -204,8 +204,9 @@ function applyOfficialBuyCostToOrder<T extends {
     ...order,
     pmShares: shares > 0 ? shares : order.pmShares,
     // 直接用官网 activity.price / 撮合均价，不摊费用
-    pmFillPrice: round4(matchPrice),
-    pmFeeUsdc: allIn.feeUsdc > 0 ? allIn.feeUsdc : undefined,
+    pmFillPrice: matchPrice,
+    // Explicit zero clears a previous estimated fee on a genuinely free fill.
+    pmFeeUsdc: allIn.feeUsdc,
     // 金额直接用官网 usdcSize（含费）
     pmStakeUsdc: allIn.allInStakeUsdc,
     betMoney: allIn.allInStakeUsdc,
@@ -261,7 +262,7 @@ function activityToOfficialCost(
 
 /**
  * 未卖出买单：优先用 Data API `/activity` 的 price / size / usdcSize（官网字段，不自算均价）。
- * activity 未索引时回退费率公式。
+ * activity 未索引或原单交易引用不完整时保持已有值，不另算/追加费用。
  * 部分卖出 / closed 不改 stake；持有到期（settled）仍可补费，并按买入金额校准 win/lose 盈亏。
  */
 export async function enrichPolymarketBuyVenueOrderWithFee<T extends {
@@ -310,19 +311,17 @@ export async function enrichPolymarketBuyVenueOrderWithFee<T extends {
   }
 
   const shares = Number(order.pmShares) || 0;
-  const fillPrice = Number(order.pmFillPrice) || 0;
-  const stakeNow = round4(Number(order.pmStakeUsdc) || Number(order.betMoney) || 0);
-  const product = (shares > 0.0001 && fillPrice > 0 && fillPrice < 1)
-    ? round4(shares * fillPrice)
-    : 0;
-
   // 未卖出：有 proxy / 预拉取 activity 就尽量用官网覆盖
   const proxy = String(options?.proxyWallet ?? "").trim().toLowerCase();
   const orderIdKey = String(order.orderId ?? "").trim().toLowerCase();
   const txHashes = orderIdKey && options?.txHashesByOrderId
     ? options.txHashesByOrderId.get(orderIdKey)
     : undefined;
+  // Activity has no CLOB orderId. Never book a same-size, nearby order's cash.
+  if (!txHashes?.length || !order.pmTokenId)
+    return order;
   const matchParams = {
+    proxyWallet: proxy || undefined,
     conditionId: String(order.pmConditionId ?? "").trim() || undefined,
     tokenId: String(order.pmTokenId ?? "").trim() || undefined,
     shares: shares > 0 ? shares : undefined,
@@ -351,61 +350,7 @@ export async function enrichPolymarketBuyVenueOrderWithFee<T extends {
     }
   }
 
-  const feeUsdc = Number(order.pmFeeUsdc);
-  // 已有 fee 且 activity 未到：未结算保持；已结算则按含费买入金额校准 money
-  if (Number.isFinite(feeUsdc) && feeUsdc > 0) {
-    const st = String(order.status ?? "").toLowerCase();
-    if ((st === "win" || st === "lose" || st === "lost" || polymarketIsEqualSplitOrder(order)) && shares > 0 && stakeNow > 0) {
-      // fee 已记但 stake 仍贴名义时，补上 fee，避免 money 仍按名义
-      const allInStake = (product > 0 && stakeNow <= product + 0.0001)
-        ? round4(stakeNow + feeUsdc)
-        : stakeNow;
-      return applyOfficialBuyCostToOrder(order, {
-        feeUsdc,
-        allInStakeUsdc: allInStake,
-        matchPrice: fillPrice,
-        shares,
-      });
-    }
-    return order;
-  }
-
-  if (!(shares > 0) || !(product > 0) || !(fillPrice > 0 && fillPrice < 1))
-    return order;
-
-  // stake 已明显高于名义 → 多半已是含费全成本，勿再叠公式 fee
-  if (stakeNow > product + 0.0001) {
-    const impliedFee = round4(stakeNow - product);
-    return applyOfficialBuyCostToOrder(order, {
-      feeUsdc: impliedFee,
-      allInStakeUsdc: stakeNow,
-      matchPrice: fillPrice,
-      shares,
-    });
-  }
-
-  const conditionId = String(order.pmConditionId ?? "").trim();
-  if (!conditionId)
-    return order;
-
-  const fd = await fetchPolymarketMarketFeeDetails(conditionId);
-  const allIn = computePolymarketBuyAllInStakeUsdc({
-    grossStakeUsdc: product,
-    shares,
-    feeRate: fd.feeRate,
-    exponent: fd.exponent,
-    takerOnly: fd.takerOnly,
-    isTaker: true,
-  });
-  if (!(allIn.allInStakeUsdc > 0))
-    return order;
-
-  return applyOfficialBuyCostToOrder(order, {
-    feeUsdc: allIn.feeUsdc,
-    allInStakeUsdc: allIn.allInStakeUsdc,
-    matchPrice: allIn.fillPrice,
-    shares,
-  });
+  return order;
 }
 
 /** 批量补费；同账号只拉一次 /activity */
@@ -436,6 +381,22 @@ export async function enrichPolymarketBuyOrdersWithFees<T extends {
 ): Promise<T[]> {
   if (!orders.length)
     return orders;
+  const ownersByAssetTx = new Map<string, Set<string>>();
+  for (const order of orders) {
+    if (String(order.pmSide ?? "buy").toLowerCase() === "sell") continue;
+    const id = String(order.orderId ?? "").toLowerCase();
+    for (const tx of options?.txHashesByOrderId?.get(id) ?? []) {
+      const key = `${order.pmTokenId}:${tx.toLowerCase()}`;
+      const owners = ownersByAssetTx.get(key) ?? new Set<string>();
+      owners.add(id); ownersByAssetTx.set(key, owners);
+    }
+  }
+  const unambiguousTxs = new Map(options?.txHashesByOrderId);
+  for (const order of orders) {
+    const id = String(order.orderId ?? "").toLowerCase();
+    if ((unambiguousTxs.get(id) ?? []).some(tx => (ownersByAssetTx.get(`${order.pmTokenId}:${tx.toLowerCase()}`)?.size ?? 0) > 1))
+      unambiguousTxs.delete(id);
+  }
   const proxy = String(options?.proxyWallet ?? "").trim().toLowerCase();
   let activityRows: import("./history/pmActivity").PolymarketActivityTradeRow[] | undefined;
   if (/^0x[0-9a-f]{40}$/.test(proxy)) {
@@ -461,6 +422,6 @@ export async function enrichPolymarketBuyOrdersWithFees<T extends {
   return Promise.all(orders.map(o => enrichPolymarketBuyVenueOrderWithFee(o, {
     proxyWallet: proxy,
     activityRows,
-    txHashesByOrderId: options?.txHashesByOrderId,
+    txHashesByOrderId: unambiguousTxs,
   })));
 }

@@ -6,18 +6,17 @@ import type { PolymarketOrderClientRuntime } from "../submission/client/pmOrderC
 import type { GtcBuyCheckData } from "./contract";
 import { gtcDecimal, gtcFillPrice, gtcUnits } from "@changmen/shared/pm_gtc_order";
 import { POLYMARKET_CLOB_API } from "../api";
-import { parseTokenConfig, resolveApiCreds } from "../auth/l2Auth";
+import { parseTokenConfig, resolveApiCreds, resolveFunder } from "../auth/l2Auth";
 import { pmCancelOrder, pmGetOrder, pmSubmitOrder } from "../orders/pmClientApi";
 import { resolvePmOrderSubmitHttpMode } from "../pmOrderSubmitMode";
 import { pmSignedOrderHash, pmSubmitMaker } from "../submission/recovery/pmSubmitJournal";
-import { polymarketL2Get, polymarketPluginGet } from "../transport/transport";
+import { polymarketL2Get } from "../transport/transport";
 import { warmPolymarketUserWs } from "../realtime/userWs";
-import { parseGtcFeeProof, resolveGtcFillFee } from "./fee";
+import { fetchPolymarketUserActivityTrades, matchPolymarketActivityBuyCostByTxHashes, type PolymarketActivityTradeRow } from "../orders/history/pmActivity";
 import { prepareManualGtcBuy } from "./preparation";
 import { normalizeGtcTradeStatus } from "./tradeStatus";
 
 export { pmCancelOrder, pmSubmitMaker };
-export { resolveGtcFillFee } from "./fee";
 export { checkGtcBuy, checkManualGtcBuy, prepareManualGtcBuy } from "./preparation";
 export { exactGtcSellCash, readGtcSellCash } from "./sellCash";
 
@@ -61,7 +60,7 @@ export async function buildPreparedGtcBuy(account: PlatformAccount, option: BetO
   } };
 }
 export interface GtcAck { success?: boolean; orderID?: string; status?: string; errorMsg?: string; pmSubmitNotSent?: boolean }
-interface Trade { id?: string; taker_order_id?: string; asset_id?: string; side?: string; size?: string; price?: string; status?: string; last_update?: string; match_time?: string; fee_rate_bps?: string; maker_orders?: Array<{ order_id?: string; asset_id?: string; side?: string; matched_amount?: string; price?: string }> }
+interface Trade { id?: string; taker_order_id?: string; asset_id?: string; side?: string; size?: string; price?: string; status?: string; last_update?: string; match_time?: string; transaction_hash?: string; fee_rate_bps?: string; maker_orders?: Array<{ order_id?: string; asset_id?: string; side?: string; matched_amount?: string; price?: string }> }
 
 export function gtcTradeFills(trade: Trade, plan: GtcOrderReference, id: string): GtcFill[] {
   if (!trade.id)
@@ -77,21 +76,20 @@ export function gtcTradeFills(trade: Trade, plan: GtcOrderReference, id: string)
     if (part.asset !== plan.tokenId || part.side?.toUpperCase() !== "BUY")
       throw new Error("GTC 原单成交 token/方向不一致");
     const shares = gtcDecimal(gtcUnits(part.shares)); const price = gtcFillPrice(part.price);
-    const q = Number(shares); const p = Number(price);
     const status = normalizeGtcTradeStatus(trade.status);
     if (!status)
       throw new Error("GTC 成交状态未知");
     const timestamp = Number(trade.last_update || trade.match_time);
     if (!Number.isFinite(timestamp) || timestamp <= 0)
       throw new Error("GTC 成交时间缺失");
-    const resolvedFee = resolveGtcFillFee(plan.feeProof, part.role, q, p);
-    const fee = resolvedFee == null ? null : decimal(resolvedFee);
-    return { key: `${trade.id}:${part.bucket}`, tradeId: trade.id!, bucket: part.bucket, role: part.role, shares, price, fee, status, updatedAt: timestamp < 1e12 ? timestamp * 1000 : timestamp };
+    return { key: `${trade.id}:${part.bucket}`, tradeId: trade.id!, bucket: part.bucket, role: part.role, shares, price, fee: null, status, updatedAt: timestamp < 1e12 ? timestamp * 1000 : timestamp };
   });
 }
 
 /** [changmen 扩展] 同账号 GTC 共享一轮完整成交分页；每张原单仍独立核对身份。 */
 export interface GtcTradeHistory { trades: Trade[]; complete: boolean }
+// 同账号同轮共享的 history 也共享 activity 分页；下一轮新 history 会重新查询。
+const activityByHistory = new WeakMap<GtcTradeHistory, Map<string, Promise<PolymarketActivityTradeRow[]>>>();
 export async function readGtcTradeHistory(account: PlatformAccount, since: number): Promise<GtcTradeHistory> {
   const trades: Trade[] = []; const seen = new Set<string>();
   let cursor = "MA=="; let complete = false;
@@ -131,19 +129,32 @@ export async function readGtcFacts(account: PlatformAccount, plan: GtcOrderRefer
     for (const fill of gtcTradeFills(trade, plan, id)) fills.set(fill.key, fill);
   }
   const ownFills = [...fills.values()];
-  if (ownFills.some(fill => fill.role === "TAKER" && fill.status !== "FAILED" && fill.fee == null)) {
-    try {
-      const market = await polymarketPluginGet<{ fd?: { r?: unknown; e?: unknown; to?: unknown } }>(`${POLYMARKET_CLOB_API}/clob-markets/${encodeURIComponent(plan.conditionId)}`);
-      const proof = parseGtcFeeProof(market?.fd);
-      if (proof) {
-        for (const fill of ownFills.filter(fill => fill.role === "TAKER" && fill.fee == null)) {
-          const fee = resolveGtcFillFee(proof, fill.role, Number(fill.shares), Number(fill.price));
-          if (fee != null)
-            fill.fee = decimal(fee);
-        }
-      }
+  if (ownFills.some(fill => fill.status !== "FAILED")) {
+    const config = parseTokenConfig(account.token);
+    const wallet = String(resolveFunder(config) || resolveApiCreds(config).address || "").toLowerCase();
+    const activityReads = activityByHistory.get(history) ?? new Map<string, Promise<PolymarketActivityTradeRow[]>>();
+    activityByHistory.set(history, activityReads);
+    if (!activityReads.has(wallet)) {
+      const times = history.trades.map(trade => Number(trade.match_time || trade.last_update)).filter(t => Number.isFinite(t) && t > 0);
+      const start = times.length ? Math.min(...times, since / 1000) : since / 1000;
+      activityReads.set(wallet, fetchPolymarketUserActivityTrades(wallet, {
+        side: "BUY", startSec: Math.max(1, Math.floor(start) - 120), endSec: Math.floor(Date.now() / 1000) + 60,
+      }));
     }
-    catch { /* 本单费用保持未知，不能以零费用或预留费用替代。 */ }
+    const activity = await activityReads.get(wallet)!;
+    for (const fill of ownFills.filter(fill => fill.status !== "FAILED")) {
+      const txs = [...new Set(history.trades.filter(trade => trade.id === fill.tradeId)
+        .map(trade => String(trade.transaction_hash ?? "").toLowerCase()).filter(Boolean))];
+      if (txs.length !== 1) continue;
+      const cost = matchPolymarketActivityBuyCostByTxHashes(activity, txs, {
+        proxyWallet: wallet, conditionId: plan.conditionId, tokenId: plan.tokenId,
+      });
+      // One wallet/asset activity may contain other orders: never allocate its total by a guess.
+      if (!cost || Math.abs(cost.shares - Number(fill.shares)) > 0.000001) continue;
+      fill.cost = gtcDecimal(gtcUnits(cost.usdcSize.toFixed(6)));
+      fill.fee = gtcDecimal(gtcUnits(cost.feeUsdc.toFixed(6)));
+      fill.price = gtcFillPrice(String(cost.matchPrice));
+    }
   }
   if (!order) {
     const confirmed = ownFills.filter(fill => fill.status !== "FAILED");

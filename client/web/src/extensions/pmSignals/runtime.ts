@@ -1,16 +1,17 @@
 import type { ViewMatch } from "@/models/match";
 import type { PmUpMarket, PmUpObservation, PmUpSignal } from "./upDetector";
-import type { PmUpPrefs } from "./upSettings";
+import {
+  normalizePmUpPrefs, isReferenceOddsInSignalRange,
+  type PmUpPrefs, type BrowserPmOddsDropSettings, type OddsDropReferenceVenue,
+} from "@/config/pmSignalSettings";
 import type { PmOddsDropQuote } from "./downDetector";
-import type { BrowserPmOddsDropSettings, OddsDropReferenceVenue, OddsDropSelection, PmOddsDropSnapshotResolver, ReferenceVenueQuote, ReferenceVenueQuoteReader } from "./downSettings";
+import type { OddsDropSelection, PmOddsDropSnapshotResolver, ReferenceVenueQuote, ReferenceVenueQuoteReader } from "./downSettings";
 import { getPmMarketWsSourceMode, onPolymarketMarketQuote } from "@changmen/venue-browser/polymarket";
 import { computed, shallowRef, watch } from "vue";
 import { PmUpDetector } from "./upDetector";
 import { indexPmUpMarkets, snapshotPmUpMarket } from "./upMarkets";
 import { clearPmUpSignals, pmOddsDropSignals, pmUpSignals } from "./records";
-import { normalizePmUpPrefs } from "./upSettings";
 import { PmOddsDropDetector } from "./downDetector";
-import { isReferenceOddsInSignalRange } from "./downSettings";
 import { capturePmOddsDropVenueSnapshot, readReferenceVenueQuotes, resolvePmOddsDropVenueSnapshot, type PmOddsDropVenueSnapshot } from "./downVenueSnapshot";
 
 export interface PmSignalMonitorSettings {

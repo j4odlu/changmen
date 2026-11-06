@@ -19,8 +19,8 @@ describe("parsePolymarketActivityBuyCost", () => {
     expect(cost).toMatchObject({
       matchPrice: 0.62,
       shares: 6,
-      usdcSize: 3.7907,
-      feeUsdc: 0.0707,
+      usdcSize: 3.79068,
+      feeUsdc: 0.07068,
     });
     expect(cost!.allInAvgPrice).toBeCloseTo(3.79068 / 6, 5);
   });

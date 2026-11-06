@@ -31,7 +31,7 @@ test("transport verification starts without installed workspace dependencies and
       "scripts/deploy/classify-deploy-scope.mjs", "scripts/deploy/pack-git-repo.mjs",
       "scripts/deploy/acceptance-contract.mjs", "scripts/verification/verify-change.mjs",
       "scripts/deploy/verify-backend-processes.mjs",
-      "scripts/verification/validation-plan.mjs", "server/storage/runtime_version.ts",
+      "scripts/verification/validation-plan.mjs", "scripts/verification/presentation-policy.mjs", "server/storage/runtime_version.ts",
       "devtools/runtime-tooling/runtime_version.js", "devtools/runtime-tooling/package.json",
     ]) {
       const target = path.join(root, file);

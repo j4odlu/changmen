@@ -3,12 +3,12 @@ import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { VenueOrder } from "@changmen/client-core/contract";
 import { PLATFORMS } from "@changmen/client-core/shared/platforms";
 import { isPolymarketBetResultFillConfirmed } from "./orderStatus";
-import { parsePolymarketBuyOrderFill, scalePolymarketVenueOrdersForDisplay } from "../history/orders";
+import { parsePolymarketBuyOrderFill } from "../history/orderTradeAmounts";
+import { scalePolymarketVenueOrdersForDisplay } from "./orderDisplayCurrency";
 import type { PolymarketOrderResponseLike } from "./orderTypes";
 import { lookupPolymarketOrderBetLabel } from "../../markets/orderBetLabel";
 import {
   computePolymarketBuyAllInStakeUsdc,
-  fetchPolymarketMarketFeeDetails,
 } from "../pmFee";
 
 function round4(n: number): number {
@@ -137,29 +137,13 @@ export function buildPolymarketMatchedBuyVenueOrderForSave(
   return scalePolymarketVenueOrdersForDisplay([usdc])[0] ?? null;
 }
 
-/** 查市场费率后合成 matched 买单（CNY） */
+/** activity 尚未索引时保留 POST 的成交本金，不查询当前费率伪造最终成本；后续订单同步取得正式全成本。 */
 export async function buildPolymarketMatchedBuyVenueOrderForSaveAsync(
   orderId: string,
   response: PolymarketOrderResponseLike | null | undefined,
   ctx: PolymarketMatchedBuyDisplayCtx = {},
 ): Promise<VenueOrder | null> {
-  const conditionId = String(ctx.pmConditionId ?? "").trim();
-  let next = { ...ctx };
-  if (
-    conditionId
-    && !(Number(ctx.feeUsdc) >= 0 && Number.isFinite(Number(ctx.feeUsdc)))
-    && !(Number(ctx.feeRate) > 0)
-  ) {
-    const fd = await fetchPolymarketMarketFeeDetails(conditionId);
-    next = {
-      ...next,
-      feeRate: fd.feeRate,
-      feeExponent: fd.exponent,
-      feeTakerOnly: fd.takerOnly,
-      isTaker: ctx.isTaker !== false,
-    };
-  }
-  return buildPolymarketMatchedBuyVenueOrderForSave(orderId, response, next);
+  return buildPolymarketMatchedBuyVenueOrderForSave(orderId, response, ctx);
 }
 
 /**

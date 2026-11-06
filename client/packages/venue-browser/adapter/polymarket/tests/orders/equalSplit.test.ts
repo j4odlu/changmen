@@ -53,7 +53,8 @@ for (const version of ["v1", "v2"] as const) {
 }
 test("fee refresh recomputes a split payout, including a formerly flat order",async()=>{
   const base={...order("v1",50),status:"return",pmMatchResult:"equal_split",pmSellState:"settled",pmFeeUsdc:.1,reward:50};
-  const next=await enrichPolymarketBuyVenueOrderWithFee(base,{activityRows:[{type:"TRADE",side:"BUY",conditionId:condition,asset:"101",size:100,price:.5,usdcSize:50.1,timestamp:1}] as never});
+  const tx=`0x${"a".repeat(64)}`;
+  const next=await enrichPolymarketBuyVenueOrderWithFee({...base,orderId:"order"},{txHashesByOrderId:new Map([["order",[tx]]]),activityRows:[{type:"TRADE",side:"BUY",conditionId:condition,asset:"101",size:100,price:.5,usdcSize:50.1,timestamp:1,transactionHash:tx}]});
   expect(next).toMatchObject({money:-.1,status:"lose",reward:50,pmMatchResult:"equal_split"});
 });
 test("official fractional fill precision is kept until the payout is rounded",()=>{

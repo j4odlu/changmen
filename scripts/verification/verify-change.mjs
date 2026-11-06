@@ -62,6 +62,7 @@ export function validationCommands(plan, npm, releasePlan) {
     backend: { command: cmd("run", "test:backend", "--", "--force") },
     "frontend-typecheck": { command: cmd("run", "typecheck:frontend") },
     frontend: { command: cmd("exec", "--", "vitest", "run", "--maxWorkers=2"), cwd: "client/web" },
+    "frontend-presentation": { command: [process.execPath, "scripts/verification/check-presentation.mjs"] },
     build: { command: cmd("run", "app:build") },
   };
 }

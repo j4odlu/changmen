@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createDefaultPmOddsDropSettings, normalizePmOddsDropSettings, patchPmOddsDropSettings, readLegacyPmOddsDropSettings } from "./downSettings";
+import { createDefaultPmOddsDropSettings, normalizePmOddsDropSettings, patchPmOddsDropSettings } from "@/config/pmSignalSettings";
+import { readLegacyPmOddsDropSettings } from "./downSettings";
 
 const SETTINGS_KEY = "changmen:pm-odds-drop:settings:v1";
 

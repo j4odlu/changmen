@@ -52,7 +52,14 @@ export function currentFreezePaths(root, original) {
   for (const [file, targets] of [...edges]) for (const candidate of [file, ...targets])
     if (candidate.startsWith("packages/venue-adapter/")) add(candidate, candidate.replace("packages/venue-adapter/", "client/packages/venue-browser/"));
   const frozen = new Set([...original, "packages/venue-adapter/polymarket/fok",
-    "client/packages/venue-browser/polymarket/fok", "client/packages/venue-browser/adapter/polymarket/fok"]);
+    "client/packages/venue-browser/polymarket/fok", "client/packages/venue-browser/adapter/polymarket/fok",
+    // Current modules extracted from the frozen orders.ts keep the same gate.
+    ...["orderTradeTypes", "orderTradeAmounts", "orderMarketSettlement", "orderSellAttribution", "orderSyncUpdate", "orderMarketReader", "orderTradeProcessing", "orderTradeMapping"]
+      .map(name => `client/packages/venue-browser/polymarket/orders/history/${name}.ts`),
+    // Pure helper extracted from frozen l2Auth.ts retains its original gate.
+    "client/packages/venue-browser/polymarket/ethAddress.ts",
+    ...["confirmation/tradeLookup", "confirmation/fillResolution", "confirmation/orderFillReader", "facts/orderFillTotals", "facts/tradeReader", "facts/orderDisplayCurrency"]
+      .map(name => `client/packages/venue-browser/polymarket/orders/${name}.ts`)]);
   for (const file of frozen) for (const target of edges.get(file) ?? []) frozen.add(target);
   return [...frozen];
 }

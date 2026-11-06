@@ -1,7 +1,6 @@
 import type { PlatformId } from "@changmen/api-contract";
 import type { BetSide } from "@changmen/client-core/models/match";
-import type { PmUpPrefs } from "./upSettings";
-import { normalizePmUpPrefs } from "./upSettings";
+import { normalizePmUpPrefs, type PmUpPrefs } from "@/config/pmSignalSettings";
 
 export interface PmUpTarget {
   provider: PlatformId;

@@ -4,6 +4,17 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { expect, it, vi } from "vitest";
 import { assertCommittedSource, assertStagedSource, changedValidationPaths, runChangeValidation, executeValidationChecks } from "./verify-change.mjs";
+import { validationPlan } from "./validation-plan.mjs";
+import { presentationComponents } from "./presentation-policy.mjs";
+
+it("a failed presentation check stops before build and cannot produce a passed report", () => {
+  const cwd = fixture(), plan = validationPlan(presentationComponents);
+  const run = vi.fn((_node, args) => ({ status: args.includes("scripts/verification/check-presentation.mjs") ? 1 : 0 }));
+  const report = executeValidationChecks(plan, { cwd, npm: "npm-cli.js", run });
+  expect(report.executionOrder).toEqual(["boundaries", "frontend-presentation"]);
+  expect(report.results.at(-1).passed).toBe(false);
+  expect(run.mock.calls.every(call => !call[1].includes("app:build"))).toBe(true);
+});
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "changmen-validation-"));

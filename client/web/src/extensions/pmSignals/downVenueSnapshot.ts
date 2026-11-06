@@ -1,9 +1,5 @@
-import type {
-  OddsDropReferenceVenue,
-  OddsDropSelection,
-  ReferenceVenueQuote,
-  PmOddsDropSnapshotQuote,
-} from "./downSettings";
+import type { OddsDropReferenceVenue } from "@/config/pmSignalSettings";
+import type { OddsDropSelection, ReferenceVenueQuote, PmOddsDropSnapshotQuote } from "./downSettings";
 import type { BetSide, ViewBet, ViewMatch } from "@/models/match";
 
 export interface PmOddsDropVenueQuote {

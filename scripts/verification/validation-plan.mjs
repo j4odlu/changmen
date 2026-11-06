@@ -1,5 +1,6 @@
 /** [changmen 扩展] 日常检查和发布按范围离线验证；完整专项审计保留独立入口。 */
 import { classifyDeployScope } from "../deploy/classify-deploy-scope.mjs";
+import { isPresentationOnly } from "./presentation-policy.mjs";
 
 const controlPatterns = [
   /^scripts\/check-team-boundaries\.mjs$/,
@@ -29,6 +30,8 @@ export function validationPlan(changedPaths, { publication = false, components =
     else fullReasons.push(file);
   }
   const full = fullReasons.length > 0 || !paths.length || forceTests;
+  const presentationOnly = !full && isPresentationOnly(relevant);
+  const frontendTest = presentationOnly ? "frontend-presentation" : "frontend";
   const testsNeeded = forceTests || !relevant.length || !relevant.every(file => controlPatterns.some(pattern => pattern.test(file))
     || /^deploy\/scripts\/release-(?:common|frontend|backend)\.sh$/.test(file));
   const tier = publication ? components.length === 2 ? "integration" : components[0]
@@ -61,12 +64,12 @@ export function validationPlan(changedPaths, { publication = false, components =
   if (publication) {
     if (!components.includes("backend") || !testsNeeded) releaseChecks.push("boundaries");
     if (components.includes("backend")) releaseChecks.push("router-compile", ...(testsNeeded ? ["backend"] : []));
-    if (components.includes("frontend")) releaseChecks.push(...(testsNeeded ? ["frontend"] : []), "build");
+    if (components.includes("frontend")) releaseChecks.push(...(testsNeeded ? [frontendTest] : []), "build");
   }
   return { tier, paths, fullReasons, immutableFokEntries: 0, snapshotOverridesAllowed: false,
     checks: release ? releaseChecks : [...controlChecks,
       ...(checkFrontend && !checkBackend ? ["boundaries"] : []),
-      ...(checkBackend ? ["router-compile", "backend"] : []), ...(checkFrontend ? ["frontend", "build"] : [])] };
+      ...(checkBackend ? ["router-compile", "backend"] : []), ...(checkFrontend ? [frontendTest, "build"] : [])] };
 }
 export function parseValidationArgs(args) {
   const options = { planOnly: false, staged: false, base: null, releasePlan: "backend-first", event: null, publish: null };

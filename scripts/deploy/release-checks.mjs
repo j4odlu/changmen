@@ -13,7 +13,7 @@ import { assertCommittedSource, executeValidationChecks, validationIdentity, val
 const groups = {
   controls: ["deployment-control", "validation-control", "verification-control", "verification-node", "boundaries"],
   backend: ["router-compile", "backend", "database-compatibility", "backend-installation"],
-  frontend: ["frontend-typecheck", "frontend", "build"],
+  frontend: ["frontend-typecheck", "frontend", "frontend-presentation", "build"],
 };
 const read = file => JSON.parse(fs.readFileSync(file, "utf8"));
 const write = (file, value) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(value, null, 2)); };

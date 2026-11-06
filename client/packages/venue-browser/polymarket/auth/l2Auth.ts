@@ -1,3 +1,5 @@
+import { normalizeEthAddress } from "../ethAddress";
+export { normalizeEthAddress } from "../ethAddress";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { hmac } from "@noble/hashes/hmac";
 import { sha256 } from "@noble/hashes/sha256";
@@ -97,12 +99,6 @@ export function resolveApiCreds(config: PolymarketTokenConfig) {
 
 export function resolveFunder(config: PolymarketTokenConfig): string {
   return config.funder || config.funderAddress || "";
-}
-
-/** 0x 地址小写规范化（非法则空串） */
-export function normalizeEthAddress(raw: string | undefined | null): string {
-  const s = String(raw ?? "").trim().toLowerCase();
-  return /^0x[0-9a-f]{40}$/.test(s) ? s : "";
 }
 
 /** token 内所有可能出现在 CLOB maker_address 的本账户地址 */

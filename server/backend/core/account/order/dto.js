@@ -8,20 +8,8 @@ import { validatePmSubmission } from "@changmen/shared/pm_submission";
 import { computePfHoldShares } from "../../integrations/predictfun/pf_fee.js";
 import { isPredictionSellForCount } from "./kinds.js";
 import { readPositionSellEvents } from "./position_events.js";
-
-/** @internal 与 save 路径共用；暂放 dto，后续可再抽 util */
-export function parseNum(v, fallback = 0) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-/** @internal raw / 入参 → win|lose|equal_split；其它返回 undefined */
-export function normalizePmMatchResult(raw) {
-  const s = String(raw ?? "").trim().toLowerCase();
-  if (s === "win" || s === "lose" || s === "equal_split")
-    return s;
-  return undefined;
-}
+import { parseNum, normalizePmMatchResult } from "./order_values.js";
+export { parseNum, normalizePmMatchResult } from "./order_values.js";
 
 export function resolveStoredLink(link, _orderId, createAt) {
   const n = Number(link);

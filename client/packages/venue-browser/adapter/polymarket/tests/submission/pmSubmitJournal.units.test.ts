@@ -14,9 +14,11 @@ vi.mock("@changmen/venue-browser/polymarket/realtime/userWs", async (load) => ({
 vi.mock("@changmen/venue-browser/polymarket/orders/facts/orderStatus", async (load) => ({
   ...await load<typeof import("@changmen/venue-browser/polymarket/orders/facts/orderStatus")>(), fetchPolymarketOrderRow: mocks.order,
 }));
-vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", async (load) => ({
-  ...await load<typeof import("@changmen/venue-browser/polymarket/orders/history/orders")>(), fetchPolymarketConfirmedTradeForOrder: mocks.trade,
-  resolvePolymarketSellFillWithRetry: mocks.sellFill,
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/tradeLookup", async (load) => ({
+  ...await load<typeof import("@changmen/venue-browser/polymarket/orders/confirmation/tradeLookup")>(), fetchPolymarketConfirmedTradeForOrder: mocks.trade,
+}));
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/fillResolution", async (load) => ({
+  ...await load<typeof import("@changmen/venue-browser/polymarket/orders/confirmation/fillResolution")>(), resolvePolymarketSellFillWithRetry: mocks.sellFill,
 }));
 vi.mock("@changmen/venue-browser/polymarket/fok/settlementJob", async (load) => ({
   ...await load<typeof import("@changmen/venue-browser/polymarket/fok/settlementJob")>(),
@@ -78,6 +80,8 @@ test.each([
 test("reloaded matched SELL records retain ten shares and six USDC, and still block repeat submission", async () => {
   const post = vi.fn(async () => receipt);
   await guardedPmSubmit(account, body(), context, post); clearPmSubmitJournalForTests();
+  mocks.job.mockResolvedValue({ outcome: "matched", row: { status: "MATCHED", size_matched: "10" } });
+  mocks.sellFill.mockResolvedValue({ sharesSold: 10, proceedsUsdc: 6 });
   const outcome = await awaitPolymarketManualSellFinalOutcome({ account, sellOrderId: "ack", buyRow: buy, sharesWanted: 10 });
   expect(outcome).toMatchObject({ outcome: "filled", sharesSold: 10, proceedsUsdc: 6 });
   if (outcome.outcome === "filled") {
@@ -87,10 +91,13 @@ test("reloaded matched SELL records retain ten shares and six USDC, and still bl
   await expect(guardedPmSubmit(account, body(), context, post)).rejects.toBeInstanceOf(PmSubmitUnknownError);
   expect(post).toHaveBeenCalledOnce(); expect(mocks.order).not.toHaveBeenCalled();
   expect(mocks.trade).not.toHaveBeenCalled(); expect(mocks.fetch).not.toHaveBeenCalled();
+  expect(mocks.sellFill).toHaveBeenCalledWith(account, "ack", undefined, expect.any(Object));
 });
 
 test.each(["10000000", "10"])("old SELL evidence %s is replaced by an original-order read, never guessed or rescaled", async size => {
   await legacy(size); mocks.trade.mockResolvedValue({ size: "10", price: "0.6" });
+  mocks.job.mockResolvedValue({ outcome: "matched", row: { status: "MATCHED", size_matched: "10" } });
+  mocks.sellFill.mockResolvedValue({ sharesSold: 10, proceedsUsdc: 6 });
   const outcome = await awaitPolymarketManualSellFinalOutcome({ account, sellOrderId: "ack", buyRow: buy, sharesWanted: 10 });
   expect(outcome).toMatchObject({ outcome: "filled", sharesSold: 10, proceedsUsdc: 6 });
   expect(mocks.order).toHaveBeenCalledExactlyOnceWith(account, "ack");
@@ -157,7 +164,7 @@ test("a terminal cancellation for another order cannot replace legacy evidence o
   expect(post).not.toHaveBeenCalled();
 });
 
-test.each(["0", "3"])("legacy SELL with %s shares closes or reconciles through the ordinary settlement path", async size => {
+test.each(["0", "3"])("legacy SELL with %s shares rejects zero fills but keeps cash-unknown partial fills pending", async size => {
   await legacy("10000000");
   const row = { id: "ack", status: "CANCELED_MARKET_RESOLVED", size_matched: size, original_size: "10", associate_trades: [] };
   mocks.order.mockResolvedValue(row);
@@ -166,14 +173,25 @@ test.each(["0", "3"])("legacy SELL with %s shares closes or reconciles through t
   const outcome = await awaitPolymarketManualSellFinalOutcome({ account, sellOrderId: "ack", buyRow: buy, fallbackPrice: 0.6 });
   if (size === "0") expect(outcome).toMatchObject({ outcome: "unfilled" });
   else {
-    expect(outcome).toMatchObject({ outcome: "filled", sharesSold: 3, proceedsUsdc: 1.8 });
-    if (outcome.outcome === "filled") expect(outcome.ordersToSave.find(order => order.orderId === "buy"))
-      .toMatchObject({ pmSellProceeds: 1.8, pmRealizedPnlUsdc: 0.3 });
+    expect(outcome).toMatchObject({ outcome: "pending" });
+    expect(outcome).not.toHaveProperty("ordersToSave");
   }
   // Recovery alone cannot unlock another SELL before its caller finishes accounting.
   const post = vi.fn();
   await expect(guardedPmSubmit(account, body(), context, post)).rejects.toBeInstanceOf(PmSubmitUnknownError);
   expect(post).not.toHaveBeenCalled();
+});
+
+test("a recovered partial SELL uses verified total cash rather than its quoted price", async () => {
+  await legacy("10000000");
+  const row = { id: "ack", status: "CANCELED_MARKET_RESOLVED", size_matched: "3", original_size: "10", associate_trades: [] };
+  mocks.order.mockResolvedValue(row);
+  mocks.job.mockResolvedValue({ outcome: "unfilled", row: { ...row, size_matched: "0" } });
+  mocks.sellFill.mockResolvedValue({ sharesSold: 3, proceedsUsdc: 2.1 });
+  const outcome = await awaitPolymarketManualSellFinalOutcome({ account, sellOrderId: "ack", buyRow: buy, fallbackPrice: .6 });
+  expect(outcome).toMatchObject({ outcome: "filled", sharesSold: 3, proceedsUsdc: 2.1 });
+  if (outcome.outcome === "filled") expect(outcome.ordersToSave.find(order => order.orderId === "buy"))
+    .toMatchObject({ pmSellProceeds: 2.1, pmRealizedPnlUsdc: .6 });
 });
 
 test("a zero-fill terminal BUY can finish legacy recovery and release its journal entry", async () => {

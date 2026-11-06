@@ -40,8 +40,8 @@ export interface PolymarketActivityBuyCost {
   transactionHash?: string;
 }
 
-function round4(n: number): number {
-  return Math.round(n * 10000) / 10000;
+function roundCash(n: number): number {
+  return Math.round(n * 1_000_000) / 1_000_000;
 }
 
 /** 从 activity TRADE BUY 行解析含费成本；无效返回 null */
@@ -60,21 +60,19 @@ export function parsePolymarketActivityBuyCost(
     return null;
   }
   const notional = matchPrice * shares;
-  let feeUsdc = Math.max(0, usdcSize - notional);
-  // 浮点噪点：差额极小当 0
-  if (feeUsdc < 0.00001)
-    feeUsdc = 0;
+  const feeUsdc = Math.max(0, roundCash(usdcSize - notional));
   // 异常：usdc 小于名义（索引毛刺）则不可信
-  if (usdcSize + 1e-6 < notional)
+  if (notional - usdcSize > 1e-6 + Number.EPSILON * Math.max(1, notional) * 8)
     return null;
   const allInAvgPrice = usdcSize / shares;
-  if (!(allInAvgPrice > 0 && allInAvgPrice < 1))
+  // Fees can put the all-in cost per share above $1; this is not a token price.
+  if (!Number.isFinite(allInAvgPrice) || !(allInAvgPrice > 0))
     return null;
   return {
     matchPrice,
     shares,
-    usdcSize: round4(usdcSize),
-    feeUsdc: round4(feeUsdc),
+    usdcSize: roundCash(usdcSize),
+    feeUsdc: roundCash(feeUsdc),
     allInAvgPrice,
     timestamp: Number(row.timestamp) > 0 ? Number(row.timestamp) : undefined,
     transactionHash: row.transactionHash ? String(row.transactionHash) : undefined,
@@ -82,6 +80,7 @@ export function parsePolymarketActivityBuyCost(
 }
 
 export interface MatchPolymarketActivityBuyParams {
+  proxyWallet?: string;
   conditionId?: string;
   tokenId?: string;
   /** 本地份额（takingAmount） */
@@ -149,6 +148,7 @@ function activityMatchScore(
 }
 
 export interface MatchPolymarketActivityTxFilters {
+  proxyWallet?: string;
   conditionId?: string;
   tokenId?: string;
 }
@@ -174,6 +174,7 @@ export function matchPolymarketActivityBuyCostByTxHashes(
 
   const cond = String(filters?.conditionId ?? "").trim().toLowerCase();
   const asset = String(filters?.tokenId ?? "").trim();
+  const wallet = String(filters?.proxyWallet ?? "").trim().toLowerCase();
   if (!cond && !asset)
     return null;
   const matchedTx = new Set<string>();
@@ -182,6 +183,10 @@ export function matchPolymarketActivityBuyCostByTxHashes(
   for (const row of rows) {
     const tx = String(row.transactionHash ?? "").trim().toLowerCase();
     if (!want.has(tx))
+      continue;
+    if (String(row.type).toUpperCase() !== "TRADE" || String(row.side).toUpperCase() !== "BUY")
+      continue;
+    if (wallet && String(row.proxyWallet ?? "").trim().toLowerCase() !== wallet)
       continue;
     const rowCond = String(row.conditionId ?? "").trim().toLowerCase();
     const rowAsset = String(row.asset ?? "").trim();
@@ -206,7 +211,7 @@ export function matchPolymarketActivityBuyCostByTxHashes(
   if (!hits.length)
     return null;
   if (hits.length === 1)
-    return { ...hits[0]!, usdcSize: round4(hits[0]!.usdcSize) };
+    return { ...hits[0]!, usdcSize: roundCash(hits[0]!.usdcSize) };
 
   let shares = 0;
   let usdcSize = 0;
@@ -228,8 +233,8 @@ export function matchPolymarketActivityBuyCostByTxHashes(
   return {
     matchPrice,
     shares,
-    usdcSize: round4(usdcSize),
-    feeUsdc: round4(feeUsdc),
+    usdcSize: roundCash(usdcSize),
+    feeUsdc: roundCash(feeUsdc),
     allInAvgPrice: usdcSize / shares,
     timestamp,
     transactionHash: hits.map(h => h.transactionHash).filter(Boolean).join(","),
@@ -251,6 +256,7 @@ export function matchPolymarketActivityBuyCost(
   const wantTx = Array.isArray(params.transactionHashes) && params.transactionHashes.length > 0;
   if (wantTx) {
     return matchPolymarketActivityBuyCostByTxHashes(rows, params.transactionHashes, {
+      proxyWallet: params.proxyWallet,
       conditionId: params.conditionId,
       tokenId: params.tokenId,
     });
@@ -270,7 +276,7 @@ export function matchPolymarketActivityBuyCost(
   return parsePolymarketActivityBuyCost(best);
 }
 
-/** GET data-api `/v2/activity`；失败/截断时丢弃整批，调用方保留成本或回退公式。 */
+/** GET data-api `/v2/activity`；失败/截断时丢弃整批，调用方保留已有成本。 */
 export async function fetchPolymarketUserActivityTrades(
   proxyWallet: string,
   options?: PolymarketActivityQuery,
@@ -292,12 +298,14 @@ export async function fetchPolymarketUserActivityTrades(
 }
 
 /**
- * 用官网 activity 解析买单含费成本；索引未到或匹配失败返回 null（调用方回退公式）。
+ * 用官网 activity 解析买单含费成本；原单交易引用未齐、索引未到或匹配失败返回 null。
  */
 export async function resolvePolymarketBuyCostFromActivity(
   proxyWallet: string,
   params: MatchPolymarketActivityBuyParams,
 ): Promise<PolymarketActivityBuyCost | null> {
+  if (!params.tokenId || !params.transactionHashes?.length)
+    return null;
   const createAtMs = Number(params.createAtMs);
   const startSec = createAtMs > 0
     ? Math.max(0, Math.floor((createAtMs > 1e12 ? createAtMs / 1000 : createAtMs) - 900))
@@ -311,5 +319,5 @@ export async function resolvePolymarketBuyCostFromActivity(
     startSec,
     endSec,
   });
-  return matchPolymarketActivityBuyCost(rows, params);
+  return matchPolymarketActivityBuyCost(rows, { ...params, proxyWallet });
 }

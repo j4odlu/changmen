@@ -35,12 +35,13 @@ export interface PolymarketVenueOrderExtras {
   /** [changmen 扩展] 官方订单详情的 price（限价），与成交均价分开。 */
   pmOrderPrice?: number;
   /**
-   * 买单成本 USDC：优先官网 activity.usdcSize（含费）；否则名义+公式 fee。
+   * 买单正式成本：官网 activity.usdc_size 的全部归属成交合计（含实际交易费用）。
+   * activity 未到时保留已有/POST 临时金额，不追加公式费用。
    * 剩余敞口随卖出扣减。
    */
   pmStakeUsdc?: number;
   pmSubmission?: import("@changmen/shared/pm_submission").PmSubmission;
-  /** [changmen 扩展] 手续费 USDC：优先 usdcSize−price×size；否则公式回退 */
+  /** [changmen 扩展] 手续费明细：usdcSize−price×size；仅用于核对，不再加到总成本。 */
   pmFeeUsdc?: number;
   /** CLOB condition_id，User WS 订阅与卖出 delayed 检测 */
   pmConditionId?: string;

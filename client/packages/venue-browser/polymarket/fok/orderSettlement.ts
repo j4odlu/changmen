@@ -1,7 +1,7 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { tracePolymarketOrder, polymarketReadErrorDetails } from "../diagnostics/orderTrace";
 import type { PolymarketOrderRow, PolymarketPollOutcome } from "../orders/facts/orderTypes";
-import { fetchPolymarketConfirmedTradeForOrder } from "../orders/history/orders";
+import { fetchPolymarketConfirmedTradeForOrder } from "../orders/confirmation/tradeLookup";
 import { isPolymarketTradeFailureRow, polymarketFailedBuyTradeRow } from "../orders/facts/tradeFailure";
 import { pmCancelOrder } from "../orders/pmClientApi";
 import { fetchPolymarketOrderRow, interpretPolymarketOrderRow, isPolymarketRestingNoFill, POLYMARKET_WS_FALLBACK_POLL_OPTS, POLYMARKET_WS_FALLBACK_TRADE_CONFIRM_OPTS } from "../orders/facts/orderStatus";

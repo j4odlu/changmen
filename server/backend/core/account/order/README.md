@@ -17,7 +17,9 @@
 | `date_key.js` | 日键 |
 | `kinds.js` | 买/卖判定、卖单不计笔数 |
 | `link.js` | 卖单跟买单 Link、归账日并入、`findOrderRowById`（大小写不敏感） |
-| `save_pm.js` | `mergePolymarketProviderSave` — 仅 Polymarket |
+| `save_pm.js` | PM 订单入库前的新旧字段合并：成交份额、含费成本、买卖进度；不直接写库 |
+| `polymarket_order_settlement.js` | PM 最终结算保护：兑付凭据优先、终态防回滚、50/50 及未卖出订单盈亏校准；纯计算 |
+| `order_values.js` | 订单读写共用的数字转换和 PM 赛果规范化；不加载 DTO、数据库或场馆服务 |
 | `save_pf.js` | `mergePredictFunLogicalSave` — 仅 PredictFun |
 | `save_non_pm.js` | 场馆/其它 + 非 PM 共用 raw 保留 |
 | `position_events.js` | Phase 1 仓位 `positionEvents.sells` 缺省保留 + 按 id 幂等 |
@@ -28,6 +30,7 @@
 - **本单 orderId**：读 prev 与 prefetch 均大小写不敏感；若命中已有行，upsert 主键用**库内** `order_id`，避免 PG 大小写敏感冲突键插出重复行。
 - **仓位卖出事件**：写在买单 `raw.positionEvents.sells[]`；`mergeOrderLogicalSave` 缺省保留、按 sell id 幂等；卖单行剥掉该字段。Phase 1 读路径优先事件；仍双写独立卖单行，盈亏不以事件重算。
 - 勿与合场 `matchMerge` 混淆：这里是订单字段合并，不是多馆比赛合成。
+- `save_pm.js` 继续处理保存流程的字段合并，最终结算规则单向调用 `polymarket_order_settlement.js`。结算模块只依赖共享纯规则与 `order_values.js`，不得导入 `dto.js`、订单存储、数据库或网络服务；单独测试不需要数据库环境。
 
 ## Polymarket 最终 50/50（用户确认，2026-11-05）
 

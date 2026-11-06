@@ -6,6 +6,17 @@ import { afterEach, expect, it } from "vitest";
 import { inspectCurrentSourceBoundaries } from "./current-source-boundaries.mjs";
 import { currentFreezePaths, currentFrozenChanges, validateFreezeManifest, changedFreezeFiles, validationFreezeFiles } from "./current-esport-freeze.mjs";
 
+it("extracted PM snapshot modules retain the frozen order rules without freezing their tests", () => {
+  const paths = currentFreezePaths(process.cwd(), []);
+  const files = [...["orderTradeTypes", "orderTradeAmounts", "orderMarketSettlement", "orderSellAttribution", "orderSyncUpdate", "orderMarketReader", "orderTradeProcessing", "orderTradeMapping"]
+    .map(name => `client/packages/venue-browser/polymarket/orders/history/${name}.ts`),
+    "client/packages/venue-browser/polymarket/ethAddress.ts",
+    ...["confirmation/tradeLookup", "confirmation/fillResolution", "confirmation/orderFillReader", "facts/orderFillTotals", "facts/tradeReader", "facts/orderDisplayCurrency"]
+      .map(name => `client/packages/venue-browser/polymarket/orders/${name}.ts`)];
+  expect(currentFrozenChanges(files, paths)).toEqual(files);
+  expect(currentFrozenChanges(files.map(file => file.replace(/\.ts$/, ".test.ts")), paths)).toEqual([]);
+});
+
 const scratch = [];
 const sha = text => createHash("sha256").update(text).digest("hex");
 afterEach(() => { for (const root of scratch.splice(0)) {

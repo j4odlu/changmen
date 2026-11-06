@@ -37,8 +37,8 @@ vi.mock("@changmen/venue-browser/polymarket/orders/facts/orderStatus", async (im
   };
 });
 
-vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@changmen/venue-browser/polymarket/orders/history/orders")>();
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/fillResolution", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@changmen/venue-browser/polymarket/orders/confirmation/fillResolution")>();
   return {
     ...actual,
     resolvePolymarketSellFillWithRetry: vi.fn(),
@@ -47,7 +47,7 @@ vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", async (impor
 
 import { settlePolymarketDelayedOrder } from "@changmen/venue-browser/polymarket/fok/orderSettlement";
 import { fetchPolymarketOrderRow } from "@changmen/venue-browser/polymarket/orders/facts/orderStatus";
-import { resolvePolymarketSellFillWithRetry } from "@changmen/venue-browser/polymarket/orders/history/orders";
+import { resolvePolymarketSellFillWithRetry } from "@changmen/venue-browser/polymarket/orders/confirmation/fillResolution";
 import { awaitPolymarketManualSellFinalOutcome } from "@changmen/venue-browser/polymarket/submission/pmManualSell";
 import { awaitPolymarketSettlementJob } from "@changmen/venue-browser/polymarket/fok/settlementJob";
 
@@ -140,7 +140,7 @@ describe("awaitPolymarketManualSellFinalOutcome", () => {
       expect(out.reason).toMatch(/待场馆确认/);
   });
 
-  it("matched with size only + fallbackPrice → filled", async () => {
+  it("matched with size only + fallbackPrice stays pending instead of estimating cash", async () => {
     vi.mocked(awaitPolymarketSettlementJob).mockResolvedValue({
       outcome: "matched",
       row: { status: "MATCHED", size_matched: "8" },
@@ -157,14 +157,19 @@ describe("awaitPolymarketManualSellFinalOutcome", () => {
       fallbackPrice: 0.5,
       sharesWanted: 10,
     });
-    expect(out.outcome).toBe("filled");
-    if (out.outcome === "filled") {
-      expect(out.sharesSold).toBe(8);
-      expect(out.proceedsUsdc).toBe(4);
-    }
+    expect(out.outcome).toBe("pending");
+    expect(out).not.toHaveProperty("ordersToSave");
   });
 
-  it("matched without fallbackPrice still filled via buy fill price (anti double-sell)", async () => {
+  it("keeps the original sell pending when confirmed shares lack an actual cash amount", async () => {
+    vi.mocked(awaitPolymarketSettlementJob).mockResolvedValue({ outcome: "matched", row: { status: "MATCHED", size_matched: "8" } });
+    vi.mocked(resolvePolymarketSellFillWithRetry).mockResolvedValue({ sharesSold: 8, proceedsUsdc: 0 });
+    const out = await awaitPolymarketManualSellFinalOutcome({ account: account(), buyRow: buy, sellOrderId: "cash-pending", fallbackPrice: .5, sharesWanted: 10 });
+    expect(out).toMatchObject({ outcome: "pending", sellOrderId: "cash-pending" });
+    expect(out).not.toHaveProperty("ordersToSave");
+  });
+
+  it("matched without cash stays pending and cannot use the buy price as sell proceeds", async () => {
     vi.mocked(awaitPolymarketSettlementJob).mockResolvedValue({
       outcome: "matched",
       row: { status: "MATCHED", size_matched: "4" },
@@ -179,10 +184,7 @@ describe("awaitPolymarketManualSellFinalOutcome", () => {
       buyRow: buy, // pmFillPrice 0.5
       sellOrderId: "0xm2",
     });
-    expect(out.outcome).toBe("filled");
-    if (out.outcome === "filled") {
-      expect(out.sharesSold).toBe(4);
-      expect(out.proceedsUsdc).toBe(2);
-    }
+    expect(out.outcome).toBe("pending");
+    expect(out).not.toHaveProperty("ordersToSave");
   });
 });

@@ -40,12 +40,8 @@ import {
   fetchPolymarketMarketSecondsDelay,
 } from "../orders/confirmation/marketDelay";
 import { settlePolymarketDelayedOrder } from "../fok/orderSettlement";
-import {
-  parsePolymarketSellOrderFill,
-  POLYMARKET_SELL_FILL_RETRY_OPTS,
-  polymarketShareCount,
-  resolvePolymarketSellFillWithRetry,
-} from "../orders/history/orders";
+import { parsePolymarketSellOrderFill, polymarketShareCount } from "../orders/history/orderTradeAmounts";
+import { POLYMARKET_SELL_FILL_RETRY_OPTS, resolvePolymarketSellFillWithRetry } from "../orders/confirmation/fillResolution";
 import {
   fetchPolymarketOrderRow,
   interpretPolymarketOrderRow,
@@ -443,13 +439,8 @@ export async function awaitPolymarketManualSellFinalOutcome(params: {
     });
   }
 
-  const recoveredShares = Number(recoveredEvidence?.trade?.size);
-  const recoveredPrice = Number(recoveredEvidence?.trade?.price);
-  if (recoveredShares > 0 && recoveredPrice > 0 && recoveredPrice < 1) {
-    return buildFilledOutcome({ account: params.account, buy, sellOrderId,
-      sharesSold: recoveredShares, proceedsUsdc: recoveredShares * recoveredPrice,
-      fallbackPrice, sharesWanted });
-  }
+  // Recovery proves submission/identity. Its single trade snapshot does not prove
+  // the complete sold quantity or cash amount; reconcile the original order below.
 
   const conditionId = String(buy.pmConditionId ?? "").trim();
   const delayInfo = conditionId
@@ -524,57 +515,12 @@ export async function awaitPolymarketManualSellFinalOutcome(params: {
     });
   }
 
-  // 有份数无回款：用限价 / 买单成交价估算回款，仍算成交终态（避免误判未成交导致双卖）
-  const rowShares = polymarketShareCount(settled.row?.size_matched);
-  const sharesSold = resolved.sharesSold > 0 ? resolved.sharesSold : rowShares;
-  const estimatePrice = fallbackPrice > 0 && fallbackPrice < 1
-    ? fallbackPrice
-    : (Number(buy.pmFillPrice) > 0 && Number(buy.pmFillPrice) < 1 ? round4(Number(buy.pmFillPrice)) : 0);
-  if (sharesSold > 0 && estimatePrice > 0) {
-    const proceedsUsdc = resolved.proceedsUsdc > 0
-      ? resolved.proceedsUsdc
-      : round4(sharesSold * estimatePrice);
-    if (proceedsUsdc > 0) {
-      return buildFilledOutcome({
-        account: params.account,
-        buy,
-        sellOrderId,
-        sharesSold,
-        proceedsUsdc,
-        fallbackPrice: estimatePrice,
-        sharesWanted,
-      });
-    }
-  }
-
-  // 截止后最终读一次 order 行
+  // Missing actual cash must not become an estimated profit or release the sell lock.
   const lastRow = settled.row ?? await fetchPolymarketOrderRow(params.account, sellOrderId);
   const lastState = interpretPolymarketOrderRow(lastRow);
-  if (lastState === "matched" || settled.outcome === "matched") {
-    const matchedShares = polymarketShareCount(lastRow?.size_matched) || sharesSold;
-    if (matchedShares > 0 && estimatePrice > 0) {
-      return buildFilledOutcome({
-        account: params.account,
-        buy,
-        sellOrderId,
-        sharesSold: matchedShares,
-        proceedsUsdc: round4(matchedShares * estimatePrice),
-        fallbackPrice: estimatePrice,
-        sharesWanted,
-      });
-    }
-    // 已 matched 但无价可估：仍不得判 unfilled（防双卖）；用 dust 回款占位落库
-    if (matchedShares > 0) {
-      return buildFilledOutcome({
-        account: params.account,
-        buy,
-        sellOrderId,
-        sharesSold: matchedShares,
-        proceedsUsdc: round4(matchedShares * 0.01),
-        fallbackPrice: 0.01,
-        sharesWanted,
-      });
-    }
+  if (lastState === "matched" || settled.outcome === "matched"
+    || polymarketShareCount(lastRow?.size_matched) > 0 || resolved.sharesSold > 0) {
+    return { outcome: "pending", sellOrderId, reason: "卖单已有成交证据，完整成交金额仍待场馆确认" };
   }
   if (lastState === "unfilled") {
     return {

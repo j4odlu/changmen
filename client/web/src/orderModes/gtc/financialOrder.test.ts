@@ -19,6 +19,14 @@ function facts(fee: string | null) {
   return { order: { id: hash, original: "9.29", matched: "9.29", status: "MATCHED", tradeIds: ["trade"] }, fills: [{ key: "trade:taker", tradeId: "trade", bucket: "taker", role: "TAKER" as const, shares: "9.29", price: "0.78", fee, status: "CONFIRMED", updatedAt: 3 }], complete: true, observedAt: 3 };
 }
 beforeEach(() => { vi.clearAllMocks(); mocks.post.mockResolvedValue({}); });
+it("uses the exact official activity total, without the ordinary helper's four-decimal cost rounding",()=>{
+  const input=facts("0.123456");input.fills[0]={...input.fills[0]!,cost:"7.369656"} as typeof input.fills[number];
+  const row=mergeGtcFacts(accepted(),input);
+  expect(row.cost).toBe("7.369656");
+  const financial=gtcFinancialOrder(row)!;
+  expect(financial.pmStakeUsdc).toBe(7.369656);expect(financial.pmFeeUsdc).toBe(.123456);
+  expect(financial.betMoney).toBeCloseTo(7.369656*6.7,6);
+});
 describe("gTC uses the ordinary PM financial chain", () => {
   it.each(["0", "0.07971", "0.123456"])("matches every ordinary financial field for fee %s", (fee) => {
     const row = mergeGtcFacts(accepted(), facts(fee));

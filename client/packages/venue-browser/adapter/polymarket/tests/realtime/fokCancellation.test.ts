@@ -5,7 +5,7 @@ import { settlePolymarketDelayedOrder } from "@changmen/venue-browser/polymarket
 
 const reads = vi.hoisted(() => ({ order: vi.fn(), trade: vi.fn() }));
 vi.mock("@changmen/client-core/bridge/clientApi", () => ({ saveUserLog: vi.fn(async () => {}) }));
-vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", () => ({ fetchPolymarketConfirmedTradeForOrder: reads.trade }));
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/tradeLookup", () => ({ fetchPolymarketConfirmedTradeForOrder: reads.trade }));
 vi.mock("@changmen/venue-browser/polymarket/orders/facts/orderStatus", async (original) => ({
   ...await original<typeof import("@changmen/venue-browser/polymarket/orders/facts/orderStatus")>(), fetchPolymarketOrderRow: reads.order,
 }));

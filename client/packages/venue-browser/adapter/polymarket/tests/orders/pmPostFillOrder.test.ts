@@ -157,11 +157,11 @@ describe("buildPolymarketMatchedBuyVenueOrderFromBet", () => {
     matched.beginTime = 1_700_000_000_000;
     const order = await buildPolymarketMatchedBuyVenueOrderFromBet(option, matched);
     const fx = getExchange(Currency.USDT);
-    // 10U 名义 + 0.3 fee（mock feeRate 0.05）→ 10.3 × fx；买入价=撮合价
+    // activity 未到：POST 的 10U 名义暂存，不用当前费率伪造最终成本。
     expect(order?.pmFillPrice).toBe(0.4);
-    expect(order?.pmFeeUsdc).toBe(0.3);
-    expect(order?.pmStakeUsdc).toBe(10.3);
-    expect(order?.betMoney).toBeCloseTo(10.3 * fx, 4);
+    expect(order?.pmFeeUsdc).toBeUndefined();
+    expect(order?.pmStakeUsdc).toBe(10);
+    expect(order?.betMoney).toBeCloseTo(10 * fx, 4);
     expect(order?.item).toBe("A");
     expect(order?.bet).toBe("全场");
     expect(order?.match).toBe("A vs B");

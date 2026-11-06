@@ -3,13 +3,20 @@ import { buildPolymarketMatchedBuyVenueOrderFromFillUsdc } from "@changmen/venue
 import { scalePolymarketVenueOrdersForDisplay } from "@changmen/venue-browser/polymarket/orders/history/orders";
 
 /** [changmen 扩展] 原单事实适配；金额、费用舍入、赔率和汇率均由普通 PM 助手处理。 */
-type FinancialState = Pick<GtcOrderState, "orderId" | "matched" | "principal" | "fee" | "complete" | "fills"> & { id: string };
+type FinancialState = Pick<GtcOrderState, "orderId" | "matched" | "principal" | "cost" | "fee" | "complete" | "fills"> & { id: string };
 export function gtcMatchedOrder(row: FinancialState, fee: number) {
   const usdc = buildPolymarketMatchedBuyVenueOrderFromFillUsdc(row.orderId ?? `gtc-pending:${row.id}`, {
     stakeUsdc: Number(row.principal), shares: Number(row.matched),
   }, { feeUsdc: fee });
   if (!usdc)
     return null;
+  if (row.cost != null) {
+    // The total is official cash, never principal plus a recomputed fee.
+    usdc.pmStakeUsdc = Number(row.cost);
+    usdc.betMoney = Number(row.cost);
+    usdc.pmFeeUsdc = fee;
+    usdc.pmFillPrice = Number(row.principal) / Number(row.matched);
+  }
   return scalePolymarketVenueOrdersForDisplay([usdc])[0]!;
 }
 

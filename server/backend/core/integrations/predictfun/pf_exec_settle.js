@@ -80,20 +80,6 @@ export async function settleResolvedPfOrdersForPlayer(playerId, userId) {
     if (!outcome)
       continue;
 
-    const betMoney = rdsBetMoney(rdsRow);
-    const holdStored = Number(rdsRow?.pfHoldShares ?? rdsRow?.PfHoldShares);
-    if (!(Number.isFinite(holdStored) && holdStored > 0)) {
-      console.warn(
-        "[Pf_Settle] skip: missing pfHoldShares",
-        rdsOrderKey(rdsRow),
-        marketId,
-      );
-      continue;
-    }
-    const shares = holdStored;
-    const bookPrice = Number(rdsRow?.pfBookPrice ?? rdsRow?.PfBookPrice) || 0;
-    const computed = computePfSettlement(betMoney, { shares, bookPrice }, outcome);
-
     let applied = null;
     await withHouseOrderLock(async () => {
       const freshList = await loadPfOrdersStrict(playerId, userId);
@@ -103,6 +89,23 @@ export async function settleResolvedPfOrdersForPlayer(playerId, userId) {
         return;
       if (isPfSellBlockedForSettle(fresh))
         return;
+      // Bind the fetched market to the locked order, not the earlier scan.
+      const freshMarketId = String(fresh.pfMarketId ?? fresh.match ?? fresh.Match ?? "").trim();
+      const freshTokenId = String(fresh.pfTokenId ?? fresh.item ?? fresh.Item ?? "").trim();
+      if (String(fresh.pfSide ?? fresh.PfSide ?? "").toLowerCase() === "sell"
+        || freshMarketId !== marketId || freshTokenId !== tokenId)
+        return;
+
+      // Fills/fees can update while the market request or lock is pending.
+      // Both payout and cost must come from the same locked reread.
+      const shares = Number(fresh.pfHoldShares ?? fresh.PfHoldShares);
+      if (!(Number.isFinite(shares) && shares > 0)) {
+        console.warn("[Pf_Settle] skip: missing pfHoldShares", key, marketId);
+        return;
+      }
+      const betMoney = rdsBetMoney(fresh);
+      const bookPrice = Number(fresh.pfBookPrice ?? fresh.PfBookPrice) || 0;
+      const computed = computePfSettlement(betMoney, { shares, bookPrice }, outcome);
 
       const creditUsdt = computed.balanceDelta > 0 ? roundUsdt(computed.balanceDelta) : 0;
       const userSigned = isPfUserSignedOrder(fresh);

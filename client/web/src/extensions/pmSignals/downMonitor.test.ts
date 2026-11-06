@@ -19,14 +19,14 @@ const {
   isReferenceOddsInSignalRange,
   createDefaultPmOddsDropSettings,
   patchPmOddsDropSettings,
-} = await import("./downSettings");
+} = await import("@/config/pmSignalSettings");
 const pmOddsDropSettings = shallowRef(createDefaultPmOddsDropSettings());
-function updatePmOddsDropSettings(patch: Partial<import("./downSettings").BrowserPmOddsDropSettings>) {
+function updatePmOddsDropSettings(patch: Partial<import("@/config/pmSignalSettings").BrowserPmOddsDropSettings>) {
   pmOddsDropSettings.value = patchPmOddsDropSettings(pmOddsDropSettings.value, patch);
 }
 const { clearPmOddsDropSignals, pmOddsDropSignals } = await import("./records");
 const { startPmSignalMonitor } = await import("./runtime");
-const { createDefaultPmUpPrefs } = await import("./upSettings");
+const { createDefaultPmUpPrefs } = await import("@/config/pmSignalSettings");
 function startPmOddsDropSignalMonitor(
   resolveSnapshot?: import("./downSettings").PmOddsDropSnapshotResolver,
   readReferenceQuotes?: import("./downSettings").ReferenceVenueQuoteReader,

@@ -17,7 +17,7 @@ function jsonField(value, name) {
 }
 export function validateGtcConfirmedResult(input, owner) {
   const allowed = new Set(["status", "acceptedOrder", "clientMarket", "executionId", "orderId", "playerId", "linkId", "createdAt", "revision", "match", "bet", "item", "tokenId", "conditionId", "buyShares", "principalUsdc", "feeUsdc", "fills", "financial"]);
-  const fillFields = new Set(["key", "tradeId", "bucket", "role", "shares", "price", "fee", "status", "updatedAt"]);
+  const fillFields = new Set(["key", "tradeId", "bucket", "role", "shares", "price", "fee", "cost", "status", "updatedAt"]);
   if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some(key => !allowed.has(key)) || !uuid(input.executionId)
     || typeof input.orderId !== "string" || !/^0x[0-9a-f]{64}$/i.test(input.orderId)
     || !Number.isSafeInteger(input.playerId) || input.playerId <= 0 || !Number.isSafeInteger(input.linkId)

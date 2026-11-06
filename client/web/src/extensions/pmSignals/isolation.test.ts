@@ -9,7 +9,7 @@ describe("PM signals isolation", () => {
     const files = [
       "extensions/pmSignals/downDetector.ts",
       "extensions/pmSignals/upDetector.ts",
-      "extensions/pmSignals/upSettings.ts",
+      "config/pmSignalSettings.ts",
       "extensions/pmSignals/records.ts",
       "extensions/pmSignals/downSettings.ts",
       "extensions/pmSignals/downVenueSnapshot.ts",
@@ -52,7 +52,7 @@ describe("PM signals isolation", () => {
     for (const file of ["pm_up", "pmOddsDropSignal"]) {
       expect(existsSync(join(root, "src/extensions", file))).toBe(false);
     }
-    for (const file of ["upSettings.ts", "downSettings.ts", "records.ts"]) {
+    for (const file of ["downSettings.ts", "records.ts"]) {
       const source = readFileSync(join(root, "src/extensions/pmSignals", file), "utf8");
       expect(source).not.toMatch(/onPolymarketMarketQuote|startPmUpMonitor|startPmOddsDropSignalMonitor|setInterval|setTimeout/);
     }

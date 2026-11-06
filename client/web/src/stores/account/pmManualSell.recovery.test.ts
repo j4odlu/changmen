@@ -83,6 +83,20 @@ test("changing wallet preserves the old closing without querying or releasing it
   expect(api.isPmManualSellClosing("buy-one")).toBe(true);
 });
 
+test("cash-pending FOK keeps the sell locked through resume and saves only the later complete patch", async () => {
+  const api = await import("./pmManualSell");
+  api.trackPmManualSellClosing("buy-one", { sellOrderId: "sell-one" }, mocks.account);
+  mocks.final.mockResolvedValueOnce({ outcome: "pending", sellOrderId: "sell-one", reason: "完整成交金额仍待场馆确认" });
+  await api.resumePmManualSellClosings();
+  expect(api.isPmManualSellClosing("buy-one")).toBe(true);
+  expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.finish).not.toHaveBeenCalled(); expect(mocks.sell).not.toHaveBeenCalled();
+  mocks.final.mockResolvedValueOnce({ outcome: "filled", ordersToSave: patch }); mocks.save.mockResolvedValue(undefined);
+  await api.resumePmManualSellClosings();
+  expect(mocks.save).toHaveBeenCalledExactlyOnceWith(mocks.account, patch);
+  expect(mocks.finish).toHaveBeenCalledWith(mocks.account, "sell-one"); expect(api.isPmManualSellClosing("buy-one")).toBe(false);
+  expect(mocks.sell).not.toHaveBeenCalled();
+});
+
 test("a session switch while confirming cannot save the old result under the new session", async () => {
   const api = await import("./pmManualSell");
   api.trackPmManualSellClosing("buy-one", { sellOrderId: "sell-one" }, mocks.account);

@@ -1,6 +1,5 @@
 import type { GtcOrderState } from "@changmen/shared/pm_gtc_order";
 import { gtcDecimal, gtcOrderNeverSubmitted, gtcUnits } from "@changmen/shared/pm_gtc_order";
-import { resolveGtcFillFee } from "@changmen/venue-browser/polymarket/gtc/index";
 import { gtcOriginalOrderActions } from "@/orderModes/gtc/executionIdentity";
 import { legacyGtcQueryIssue } from "./syncStatus";
 
@@ -14,7 +13,7 @@ export function gtcOrderCardView(row: GtcOrderState & { id: string }) {
   const quantitiesAgree = Boolean(row.order) && gtcUnits(row.order!.matched) === matched && detailMatched === matched;
   const takerShares = fills.filter(fill => fill.role === "TAKER").reduce((quantity, fill) => quantity + gtcUnits(fill.shares), 0n);
   const makerShares = fills.filter(fill => fill.role === "MAKER").reduce((quantity, fill) => quantity + gtcUnits(fill.shares), 0n);
-  const fees = fills.map(fill => fill.fee == null ? resolveGtcFillFee(row.plan.feeProof, fill.role, Number(fill.shares), Number(fill.price)) : Number(fill.fee));
+  const fees = fills.map(fill => fill.fee == null ? null : Number(fill.fee));
   const fee = quantitiesAgree && fees.every(value => value != null)
     ? gtcDecimal(fees.reduce<bigint>((sum, value) => sum + gtcUnits(value!.toFixed(6)), 0n))
     : null;

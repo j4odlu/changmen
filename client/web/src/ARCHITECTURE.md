@@ -21,6 +21,7 @@
 | `api/` | 封装 `Client_*` 等后端接口 | `api/esport.ts`（barrel）→ `client` / `auth` / `match` / … |
 | `api/v4.ts` | A8 v4 信用盘试玩（平博/OB/SABA） | `enterCreditPlate` — 详见 [docs/CREDIT_PLATE.md](../docs/CREDIT_PLATE.md) |
 | `src/types/` | web 本地类型（`extensionPrefs`、`admin`）；`esport`/`order` 核心形状见 client-core |
+| `src/config/` | 纯配置类型、默认值和输入规范化；PM 涨降赔信号配置统一位于 `config/pmSignalSettings.ts` |
 | `src/models/` | web 薄 shim：`match`（`getOrderOptions` 扩展）、`platformAccount`（Pinia）、`loseOrder` re-export |
 | `@changmen/client-core/models` | `ViewMatch`、`BetOption`、`LoseOrder` 等领域类 |
 | `@changmen/client-core/types` | `esport` DTO re-export、`order` 补单记录类型 |
@@ -35,6 +36,8 @@
 | `packages/venue-adapter/hg/follow.ts` | HG 跟单循环 | `startHgFollowLoop` |
 
 **原则**：`bet.ts` 不依赖 `collect.ts`；二者都可用 `src/shared/`，但 `bet.ts` 不应依赖 `venue-adapter/shared/`（采集专用）。
+
+[changmen 扩展] `types/` 不反向导入 store 或扩展实现。用户偏好与信号扩展共同引用配置层；浏览器存储读取和监测运行时留在扩展侧。2026-11-06 的配置迁移保留字段、默认值、规范化及检测行为，未调整交易或结算逻辑。
 
 ### 平台能力矩阵（`packages/venue-adapter/registry/adapters.ts`）
 

@@ -11,9 +11,11 @@ vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({ polym
 vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({ pmSubmitOrder: mocks.submit, pmGetOrder: mocks.getOrder, pmCancelOrder: vi.fn() }));
 vi.mock("@changmen/venue-browser/polymarket/submission/recovery/pmSubmitJournal", () => ({ pmSignedOrderHash: () => "order", pmSubmitMaker: () => "maker" }));
 vi.mock("@changmen/venue-browser/polymarket/pmOrderSubmitMode", () => ({ resolvePmOrderSubmitHttpMode: () => "direct" }));
-vi.mock("@changmen/venue-browser/polymarket/auth/l2Auth", () => ({ parseTokenConfig: () => ({}), resolveApiCreds: () => ({ apiKey: "api" }) }));
+vi.mock("@changmen/venue-browser/polymarket/auth/l2Auth", () => ({ parseTokenConfig: () => ({}), resolveFunder: () => `0x${"1".repeat(40)}`, resolveApiCreds: () => ({ apiKey: "api" }) }));
+const tx=`0x${"a".repeat(64)}`;
+const activityPage=(size=3,price=.5,usdc_size=1.5,transaction_hash=tx)=>({data:[{proxy_wallet:`0x${"1".repeat(40)}`,type:"TRADE",side:"BUY",token_id:"token",condition_id:"condition",size,price,usdc_size,transaction_hash,timestamp:1000}],pagination:{has_more:false,next_cursor:null}});
 const plan = { tokenId: "token", conditionId: "condition", shares: "10", feeProof: { rate: "0.1", exponent: 1, takerOnly: true, observedAt: 1 } } as GtcPlan;
-const trade = { id: "t", taker_order_id: "other", asset_id: "token", side: "SELL", size: "100", price: "0.6", status: "CONFIRMED", last_update: "1000", maker_orders: [{ order_id: "order", asset_id: "token", side: "BUY", matched_amount: "3", price: "0.5" }, { order_id: "unrelated", asset_id: "token", side: "BUY", matched_amount: "97", price: "0.5" }] };
+const trade = { id: "t", transaction_hash:tx,taker_order_id: "other", asset_id: "token", side: "SELL", size: "100", price: "0.6", status: "CONFIRMED", last_update: "1000", maker_orders: [{ order_id: "order", asset_id: "token", side: "BUY", matched_amount: "3", price: "0.5" }, { order_id: "unrelated", asset_id: "token", side: "BUY", matched_amount: "97", price: "0.5" }] };
 it("shares one complete account history across originals while retaining exact fill identities", async () => {
   mocks.getOrder.mockImplementation(async (_account, id: string) => ({ id, asset_id: "token", side: "BUY", original_size: "10", size_matched: "3", status: "LIVE", associate_trades: [id === "order" ? "t" : "t2"] }));
   const second = { ...trade, id: "t2", maker_orders: [{ ...trade.maker_orders[0]!, order_id: "second" }] };
@@ -23,7 +25,7 @@ it("shares one complete account history across originals while retaining exact f
   expect(mocks.trades).toHaveBeenCalledOnce(); expect(mocks.getOrder).toHaveBeenCalledTimes(2);
   expect(facts.map(row => row.fills.map(fill => [fill.tradeId, fill.shares]))).toEqual([[["t", "3"]], [["t2", "3"]]]);
 });
-beforeEach(() => { vi.clearAllMocks(); mocks.market.mockResolvedValue({ fd: { r: 0, e: 1, to: true } }); mocks.build.mockImplementation(async ({ size, price }: { size: number; price: number }) => ({ makerAmount: String(Math.round(size * price * 1_000_000)), takerAmount: String(Math.round(size * 1_000_000)) })); mocks.json.mockReturnValue({ orderType: "GTC", order: {} }); });
+beforeEach(() => { vi.clearAllMocks(); mocks.market.mockResolvedValue(activityPage()); mocks.build.mockImplementation(async ({ size, price }: { size: number; price: number }) => ({ makerAmount: String(Math.round(size * price * 1_000_000)), takerAmount: String(Math.round(size * 1_000_000)) })); mocks.json.mockReturnValue({ orderType: "GTC", order: {} }); });
 describe("isolated GTC adapter", () => {
   it.each(["MATCHED", "MINED", "CONFIRMED", "RETRYING", "FAILED", "MATCHED_NOT_BROADCASTED"])("normalizes both wire forms of %s for exact maker and taker fills", (status) => {
     const expected = status === "MATCHED_NOT_BROADCASTED" ? "MATCHED" : status;
@@ -73,7 +75,9 @@ describe("isolated GTC adapter", () => {
   it("reconciles confirmed maker fills with long ratio prices and a MATCHED rounding remainder", async () => {
     const inputPlan = { ...plan, shares: "29.27", orderHash: "order" };
     const parts = [["3.416735", "0.510000043901561"], ["2.163266", "0.5100001571697609"], ["5", "0.51"], ["18.68", "0.51"]];
-    const trades = parts.map(([shares, price], index) => ({ ...trade, id: `t${index}`, maker_orders: [{ ...trade.maker_orders[0]!, matched_amount: shares, price }] }));
+    const trades = parts.map(([shares, price], index) => ({ ...trade, id: `t${index}`,transaction_hash:`0x${String(index+1).repeat(64)}`, maker_orders: [{ ...trade.maker_orders[0]!, matched_amount: shares, price }] }));
+    const cash=[1.742535,1.103265,2.55,9.5268];
+    mocks.market.mockResolvedValue({data:trades.flatMap((t,i)=>activityPage(Number(t.maker_orders[0]!.matched_amount),Number(t.maker_orders[0]!.price),cash[i],t.transaction_hash).data),pagination:{has_more:false,next_cursor:null}});
     mocks.getOrder.mockResolvedValue({ id: "order", asset_id: "token", side: "BUY", original_size: "29.27", size_matched: "29.260001", status: "MATCHED", associate_trades: trades.map(t => t.id) });
     mocks.trades.mockResolvedValue({ data: trades, next_cursor: "LTE=" });
     const facts = await readGtcFacts({} as never, inputPlan, "order", 1);
@@ -87,23 +91,23 @@ describe("isolated GTC adapter", () => {
     const replay = structuredClone(facts);
     replay.fills[1]!.price += "00";
     expect(mergeGtcFacts(row, replay)).toMatchObject({ principal: "14.9226", matched: "29.260001", error: "" });
-    replay.fills[1]!.price = "0.510000157169761";
-    expect(mergeGtcFacts(row, replay).error).toContain("价格冲突");
+    replay.fills[1]!.price = "0.9";
+    expect(()=>mergeGtcFacts(row, replay)).toThrow("成本与成交金额不一致");
   });
   it.each(["NaN", "-0.5", "5e-1", "", undefined])("rejects malformed fill prices %s", (price) => {
     expect(() => gtcTradeFills({ ...trade, maker_orders: [{ ...trade.maker_orders[0]!, price }] }, plan, "order")).toThrow("成交价格");
   });
-  it("uses only exact maker order matched_amount and zero maker fee", () => {
+  it("keeps exact maker shares but does not assume zero builder fees", () => {
     const fills = gtcTradeFills(trade, plan, "order"); expect(fills).toHaveLength(1);
-    expect(fills[0]).toMatchObject({ role: "MAKER", shares: "3", fee: "0", key: "t:order" });
+    expect(fills[0]).toMatchObject({ role: "MAKER", shares: "3", fee: null, key: "t:order" });
   });
-  it("taker uses own size and strictly confirmed market fee proof", () => {
+  it("taker uses own size but current market proof is not an actual cost receipt", () => {
     const fills = gtcTradeFills({ ...trade, taker_order_id: "order", side: "BUY", size: "2", fee_rate_bps: "1000", maker_orders: [] }, plan, "order");
-    expect(fills[0]).toMatchObject({ role: "TAKER", shares: "2", fee: "0.048" });
+    expect(fills[0]).toMatchObject({ role: "TAKER", shares: "2", fee: null });
   });
-  it.each(["0", "1000", undefined])("uses the confirmed market fee rather than legacy trade bps %s", (fee_rate_bps) => {
+  it.each(["0", "1000", undefined])("does not infer actual cost from market proof or legacy trade bps %s", (fee_rate_bps) => {
     const fills = gtcTradeFills({ ...trade, taker_order_id: "order", side: "BUY", size: "9.29", price: "0.78", fee_rate_bps, maker_orders: [] }, { ...plan, feeProof: { ...plan.feeProof!, rate: "0.05" } }, "order");
-    expect(fills[0]?.fee).toBe("0.07971");
+    expect(fills[0]?.fee).toBeNull();
   });
   it("does not assume zero taker fees without a valid market proof", () => {
     const fills = gtcTradeFills({ ...trade, taker_order_id: "order", side: "BUY", size: "2", maker_orders: [] }, { ...plan, feeProof: undefined } as unknown as GtcPlan, "order");
@@ -165,13 +169,13 @@ describe("isolated GTC adapter", () => {
     await expect(prepareGtcBuy({} as never, {} as never)).rejects.toThrow("预算越界");
     expect(mocks.submit).not.toHaveBeenCalled();
   });
-  it("looks up fees only after its own taker fills and preserves actual financial costs", async () => {
-    mocks.market.mockResolvedValue({ fd: { r: 0.05, e: 1, to: true } });
+  it("reads official all-in cash only after exact own taker fills", async () => {
+    mocks.market.mockResolvedValue(activityPage(9.29,.78,7.4));
     mocks.getOrder.mockResolvedValue(null);
     mocks.trades.mockResolvedValue({ data: [{ ...trade, taker_order_id: "order", side: "BUY", size: "9.29", price: "0.78", maker_orders: [] }], next_cursor: "LTE=" });
     const facts = await readGtcFacts({} as never, { ...plan, shares: "9.29", feeProof: undefined }, "order", 1);
-    expect(facts.fills[0]?.fee).toBe("0.07971"); expect(facts.complete).toBe(true);
-    expect(mocks.market).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("/clob-markets/condition"));
+    expect(facts.fills[0]).toMatchObject({cost:"7.4",fee:"0.1538"}); expect(facts.complete).toBe(true);
+    expect(mocks.market).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("/v2/activity?"));
   });
   it.each([{}, { fd: { r: 0.05, e: 2, to: true } },
     ...["", " ", false, true, [], {}].map(r => ({ fd: { r, e: 1, to: true } })),
@@ -186,10 +190,10 @@ describe("isolated GTC adapter", () => {
     expect(facts.fills[0]).toMatchObject({ shares: "10", fee: null, status: "CONFIRMED" });
     expect(facts.complete).toBe(true); expect(mocks.market).toHaveBeenCalledOnce();
   });
-  it("maker fills do not require a fee lookup for new orders", async () => {
+  it("maker fills also obtain actual costs from activity", async () => {
     mocks.getOrder.mockResolvedValue(null); mocks.trades.mockResolvedValue({ data: [trade], next_cursor: "LTE=" });
     const facts = await readGtcFacts({} as never, { ...plan, feeProof: undefined }, "order", 1);
-    expect(facts.fills[0]?.fee).toBe("0"); expect(mocks.market).not.toHaveBeenCalled();
+    expect(facts.fills[0]).toMatchObject({cost:"1.5",fee:"0"}); expect(mocks.market).toHaveBeenCalledOnce();
   });
   it("missing order is not interpreted as rejected or zero", async () => {
     mocks.getOrder.mockResolvedValue(null); mocks.trades.mockResolvedValue({ data: [], next_cursor: "LTE=" });
@@ -202,7 +206,7 @@ describe("isolated GTC adapter", () => {
     mocks.trades.mockResolvedValue({ data: [{ ...trade, taker_order_id: "order", side: "BUY", size: "10", maker_orders: [] }], next_cursor: "LTE=" });
     const facts = await readGtcFacts({} as never, plan, "order", 1);
     expect(facts).toMatchObject({ complete: true, order: { id: "order", original: "10", matched: "10", status: "MATCHED", source: "confirmed-trades" } });
-    expect(facts.error).toBeUndefined(); expect(facts.fills[0]?.fee).toBe("0.24");
+    expect(facts.error).toBeUndefined(); expect(facts.fills[0]?.fee).toBeNull();
   });
   it.each(["MATCHED", "MINED", "FAILED"])("does not infer terminal full confirmation from %s trades", async (status) => {
     mocks.getOrder.mockResolvedValue(null);

@@ -1,6 +1,6 @@
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import { fetchPolymarketOrderRow } from "../../orders/facts/orderStatus";
-import { fetchPolymarketConfirmedTradeForOrder } from "../../orders/history/orders";
+import { fetchPolymarketConfirmedTradeForOrder } from "../../orders/confirmation/tradeLookup";
 import { acceptPmSubmitAttempt, pmSubmitAttemptForOrder, type PmRecoveredEvidence } from "./pmSubmitJournal";
 import { readPolymarketOrderWatch } from "../../realtime/userWs";
 

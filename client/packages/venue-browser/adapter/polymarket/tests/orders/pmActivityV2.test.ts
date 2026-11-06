@@ -78,14 +78,14 @@ describe("data API v2 activity", () => {
     const rows = [trade({ size: 1, usdc_size: 0.400049 }), trade({ size: 1, usdc_size: 0.400049, transaction_hash: tx2 })]
       .map(normalizePolymarketActivityV2Row);
     const cost = matchPolymarketActivityBuyCost(rows, { conditionId: "condition", tokenId: "token", transactionHashes: [tx, tx2] });
-    expect(cost?.usdcSize).toBe(0.8001);
-    expect(cost?.feeUsdc).toBe(0.0001);
+    expect(cost?.usdcSize).toBe(0.800098);
+    expect(cost?.feeUsdc).toBe(0.000098);
   });
 
   it("does not double-round a single fill's fee upwards", () => {
     const cost = parsePolymarketActivityBuyCost(normalizePolymarketActivityV2Row(trade({ size: 1, usdc_size: 0.400049 })));
-    expect(cost?.feeUsdc).toBe(0);
-    expect(cost?.usdcSize).toBe(0.4);
+    expect(cost?.feeUsdc).toBe(0.000049);
+    expect(cost?.usdcSize).toBe(0.400049);
   });
 
   it("preserves public v1/v2 cash economics, including fee-bearing trades", () => {

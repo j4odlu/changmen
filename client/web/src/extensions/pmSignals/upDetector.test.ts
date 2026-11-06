@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PmUpDetector, type PmUpObservation } from "./upDetector";
-import { createDefaultPmUpPrefs } from "./upSettings";
+import { createDefaultPmUpPrefs } from "@/config/pmSignalSettings";
 
 function observation(odds: number, at: number, patch: Partial<PmUpObservation> = {}): PmUpObservation {
   return {

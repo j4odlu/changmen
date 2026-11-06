@@ -1,9 +1,9 @@
-import type { BrowserPmOddsDropSettings } from "./downSettings";
-import type { PmUpPrefs } from "./upSettings";
+import {
+  createDefaultPmOddsDropSettings, patchPmOddsDropSettings, createDefaultPmUpPrefs, normalizePmUpPrefs,
+  type BrowserPmOddsDropSettings, type PmUpPrefs,
+} from "@/config/pmSignalSettings";
 import { toRef } from "vue";
 import { useUserStore } from "@/stores/userStore";
-import { createDefaultPmOddsDropSettings, patchPmOddsDropSettings } from "./downSettings";
-import { createDefaultPmUpPrefs, normalizePmUpPrefs } from "./upSettings";
 
 /** 配置编辑与监测共用用户偏好；显示开关不参与检测。 */
 export function useSignalSettings() {

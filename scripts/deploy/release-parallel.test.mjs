@@ -32,6 +32,7 @@ function fixture(t, scope = "full") {
   write(root, "scripts/deploy/verify-runtime.mjs", fs.readFileSync(new URL("./verify-runtime.mjs", import.meta.url), "utf8"));
   git("add", "."); git("-c", "user.name=Lane Test", "-c", "user.email=lane@example.invalid", "commit", "-qm", "fixture");
   const plan = scope === "ui" ? changePlan(["client/web/src/components/admin/Report.vue"], { purpose: "release" })
+    : scope === "presentation" ? changePlan(["client/web/src/components/order/presentation/OrderProfitLine.vue"], { purpose: "release" })
     : scope === "noop" ? changePlan(["docs/note.md"], { purpose: "release" })
     : scope === "controls" ? changePlan(["scripts/deploy/workflows.test.mjs"], { purpose: "release" })
     : changePlan([], { purpose: "release", requestedScope: scope, unknownBase: true });
@@ -66,6 +67,21 @@ test("independent lanes cover each check once; unknown checks cannot disappear",
   }
   assert.throws(() => releaseLanes({ purpose: "release", checks: ["unknown"] }), /Unassigned/);
   assert.throws(() => releaseLanes({ purpose: "release", checks: ["build", "build"] }), /Duplicate/);
+});
+test("presentation release retains a typed build, pinned evidence and failure blocking", t => {
+  const f = fixture(t, "presentation");
+  assert.deepEqual(f.bundle.plan.checks, ["boundaries", "frontend-presentation", "build"]);
+  assert.deepEqual(f.bundle.lanes.find(row => row.lane === "frontend").checks, ["frontend-presentation", "build"]);
+  assert(f.calls.some(args => args.includes("scripts/verification/check-presentation.mjs")));
+  fs.renameSync(path.join(f.root, "client/web/dist"), path.join(f.root, "client/web/dist.built"));
+  fs.unlinkSync(path.join(f.root, "node_modules"));
+  assert.equal(collectRelease(f.root, env).passed, true);
+  assert(sealEvidence(f.root).archives.frontend);
+  const report = runReleaseLane("frontend", { root: f.root, env, npm: "npm-cli.js",
+    run: (_node, args) => ({ status: args.includes("scripts/verification/check-presentation.mjs") ? 1 : 0 }) });
+  assert.equal(report.passed, false);
+  assert.deepEqual(report.executionOrder, ["frontend-presentation"]);
+  assert.throws(() => collectRelease(f.root, env), /lane failed/);
 });
 test("frontend-only, controls-only and no-op releases do not invent a backend or database requirement", t => {
   for (const scope of ["ui", "controls", "noop"]) {

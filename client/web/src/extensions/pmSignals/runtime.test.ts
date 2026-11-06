@@ -2,9 +2,9 @@ import type { ViewMatch } from "@/models/match";
 import type { PmSignalMonitorSettings } from "./runtime";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { reactive } from "vue";
-import { createDefaultPmUpPrefs } from "./upSettings";
+import { createDefaultPmUpPrefs } from "@/config/pmSignalSettings";
 import { pmOddsDropSignals, pmUpSignals } from "./records";
-import { createDefaultPmOddsDropSettings } from "./downSettings";
+import { createDefaultPmOddsDropSettings } from "@/config/pmSignalSettings";
 import { clearAllSignals } from "./state";
 import { startPmSignalMonitor } from "./runtime";
 

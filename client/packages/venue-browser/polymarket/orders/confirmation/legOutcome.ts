@@ -2,7 +2,7 @@ import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
 import type { ResolveLegOutcomeOpts, VenueLegOutcome, VenueLegSettlement, VenueOrder } from "@changmen/client-core/contract";
 import { sortVenueOrdersNewestFirst } from "@changmen/client-core/contract";
-import { fetchPolymarketConfirmedTradeForOrder } from "../history/orders";
+import { fetchPolymarketConfirmedTradeForOrder } from "./tradeLookup";
 import {
   applyPolymarketSettlementToResult,
   applyPolymarketBuyTimeoutPolicy,

@@ -39,8 +39,8 @@ vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/marketDelay", ()
   resolvePolymarketDelayedPollOpts: (...args: unknown[]) => resolvePolymarketDelayedPollOpts(...args),
 }));
 
-vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@changmen/venue-browser/polymarket/orders/history/orders")>();
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/tradeLookup", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@changmen/venue-browser/polymarket/orders/confirmation/tradeLookup")>();
   return {
     ...actual,
     fetchPolymarketConfirmedTradeForOrder: (...args: unknown[]) =>

@@ -1,114 +1,55 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { createPinia, setActivePinia } from "pinia";
+import { afterEach, expect, it, vi } from "vitest";
+import { createPinia } from "pinia";
+import { computed, reactive } from "vue";
+import { mountComposable } from "@/test/mountComposable";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useSportOddsStore } from "@/stores/sportOddsStore";
-import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
+import type { OrderRow } from "@/types/order";
+import { useOrderListLiveQuotes } from "./controllers/useOrderListLiveQuotes";
 
-/**
- * 订单栏现价过滤逻辑的单测替身：与 OrderList bumpOrderLiveIfWatched 同语义。
- * （不挂载 Vue 组件，避免 OrderList 重依赖。）
- */
-function makeOrderLiveGate(watched: () => Set<string>) {
-  let tick = 0;
-  const key = (platform: string, id: string) => `${platform}:${id}`;
-  const bumpIfWatched = (platform: unknown, oddId: unknown) => {
-    const id = String(oddId ?? "").trim();
-    if (!id)
-      return;
-    if (watched().has(key(String(platform), id)))
-      tick += 1;
-  };
-  return {
-    get tick() {
-      return tick;
-    },
-    attach(odds: ReturnType<typeof useOddsStore>, sport: ReturnType<typeof useSportOddsStore>) {
-      const stopOdds = odds.$onAction(({ name, args, after }) => {
-        after(() => {
-          if (name === "save") {
-            const entry = args[1] as { id?: unknown } | undefined;
-            bumpIfWatched(args[0], entry?.id);
-            return;
-          }
-          if (name === "updateOddsLock") {
-            bumpIfWatched(args[0], args[1]);
-            return;
-          }
-          if (name === "clean" && watched().size > 0)
-            tick += 1;
-        });
-      });
-      const stopSport = sport.$onAction(({ name, args, after }) => {
-        after(() => {
-          if (name === "save") {
-            bumpIfWatched(args[0], args[1]);
-            return;
-          }
-          if (name === "clear" && watched().size > 0)
-            tick += 1;
-        });
-      });
-      return () => {
-        stopOdds();
-        stopSport();
-      };
-    },
-  };
+// Exercise the actual subscription controller, without a copied implementation.
+const mounted: Array<{ unmount: () => void }> = [];
+afterEach(() => { for (const app of mounted.splice(0)) app.unmount(); vi.restoreAllMocks(); });
+const pm: OrderRow = { Type: "Polymarket", PmTokenId: "tok-order", Status: "None" };
+const pf: OrderRow = { Type: "PredictFun", PfTokenId: "pf-tok", Status: "None" };
+function setup() {
+  const pinia = createPinia(), props = reactive({ orderEntries: [[1, [pm, pf]]] as Array<[number, OrderRow[]]> });
+  const app = mountComposable(() => useOrderListLiveQuotes(props), pinia); mounted.push(app);
+  const odds = useOddsStore(pinia), sport = useSportOddsStore(pinia);
+  // Prevent direct cache dependencies from masking the action subscription under test.
+  vi.spyOn(odds, "getEntry").mockReturnValue(undefined);
+  vi.spyOn(sport, "get").mockReturnValue(0);
+  const read = vi.fn(() => `${app.value.pmLivePriceText(pm)} / ${app.value.pfLivePriceText(pf)}`), value = computed(read);
+  expect(value.value).toBe("— / —");
+  return { odds, sport, props, read, value };
 }
+const entry = (id: string) => ({ id, odds: 2, clobPrice: 0.5, isLock: false, time: 1791558222471 });
 
-describe("OrderList live price token gate", () => {
-  beforeEach(() => {
-    setActivePinia(createPinia());
-  });
-
-  it("ignores fo saves for unrelated oddIds", () => {
-    const watched = new Set([`${PLATFORMS.Polymarket}:tok-order`]);
-    const gate = makeOrderLiveGate(() => watched);
-    const odds = useOddsStore();
-    const sport = useSportOddsStore();
-    const stop = gate.attach(odds, sport);
-
-    odds.save(PLATFORMS.OB, { id: "ob-1", odds: 1.9, isLock: false, time: Date.now() });
-    odds.save(PLATFORMS.Polymarket, { id: "tok-other", odds: 1.5, isLock: false, time: Date.now() });
-    expect(gate.tick).toBe(0);
-
-    odds.save(PLATFORMS.Polymarket, {
-      id: "tok-order",
-      odds: 1.6,
-      isLock: false,
-      time: Date.now(),
-      clobPrice: 0.62,
-    });
-    expect(gate.tick).toBe(1);
-
-    stop();
-  });
-
-  it("reacts to sportOdds save for watched PF token only", () => {
-    const watched = new Set([`${PLATFORMS.PredictFun}:pf-tok`]);
-    const gate = makeOrderLiveGate(() => watched);
-    const odds = useOddsStore();
-    const sport = useSportOddsStore();
-    const stop = gate.attach(odds, sport);
-
-    sport.save(PLATFORMS.PredictFun, "other", 1.8);
-    expect(gate.tick).toBe(0);
-    sport.save(PLATFORMS.PredictFun, "pf-tok", 1.9);
-    expect(gate.tick).toBe(1);
-
-    stop();
-  });
-
-  it("bumps on clean when watches exist", () => {
-    const watched = new Set([`${PLATFORMS.Polymarket}:tok`]);
-    const gate = makeOrderLiveGate(() => watched);
-    const odds = useOddsStore();
-    const sport = useSportOddsStore();
-    const stop = gate.attach(odds, sport);
-
-    odds.clean(PLATFORMS.Polymarket);
-    expect(gate.tick).toBe(1);
-
-    stop();
-  });
+it("ignores unrelated fo saves and reacts to watched tokens", () => {
+  const { odds, read, value } = setup();
+  odds.save("OB", entry("ob-1")); odds.save("Polymarket", entry("tok-other"));
+  void value.value; expect(read).toHaveBeenCalledTimes(1);
+  odds.save("Polymarket", entry("tok-order"));
+  void value.value; expect(read).toHaveBeenCalledTimes(2);
+});
+it("reacts to sport saves for watched PF tokens and to clearing", () => {
+  const { sport, read, value } = setup();
+  sport.save("PredictFun", "other", 1.8);
+  void value.value; expect(read).toHaveBeenCalledTimes(1);
+  sport.save("PredictFun", "pf-tok", 1.9);
+  void value.value; expect(read).toHaveBeenCalledTimes(2);
+  sport.clear();
+  void value.value; expect(read).toHaveBeenCalledTimes(3);
+});
+it("reacts to watched lock changes and clean, and stops when the list has no watches", () => {
+  const { odds, props, read, value } = setup();
+  odds.updateOddsLock("Polymarket", "unrelated", true);
+  void value.value; expect(read).toHaveBeenCalledTimes(1);
+  odds.updateOddsLock("Polymarket", "tok-order", true);
+  void value.value; expect(read).toHaveBeenCalledTimes(2);
+  odds.clean("Polymarket");
+  void value.value; expect(read).toHaveBeenCalledTimes(3);
+  props.orderEntries = [];
+  odds.clean("Polymarket");
+  void value.value; expect(read).toHaveBeenCalledTimes(3);
 });

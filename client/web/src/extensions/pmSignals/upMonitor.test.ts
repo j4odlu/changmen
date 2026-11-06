@@ -1,7 +1,7 @@
 import type { ViewMatch } from "@/models/match";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { indexPmUpMarkets, snapshotPmUpMarket } from "./upMarkets";
-import { createDefaultPmUpPrefs } from "./upSettings";
+import { createDefaultPmUpPrefs } from "@/config/pmSignalSettings";
 
 const hub = vi.hoisted(() => ({ listener: null as ((quote: { assetId: string; bestAsk: number }) => void) | null, subscribe: vi.fn(), unsubscribe: vi.fn() }));
 vi.mock("@changmen/venue-browser/polymarket", () => ({
@@ -12,7 +12,7 @@ vi.mock("@changmen/venue-browser/polymarket", () => ({
   getPmMarketWsSourceMode: () => "official",
 }));
 const { pmUpSignals, clearPmUpSignals } = await import("./records");
-const { createDefaultPmOddsDropSettings } = await import("./downSettings");
+const { createDefaultPmOddsDropSettings } = await import("@/config/pmSignalSettings");
 const { startPmSignalMonitor } = await import("./runtime");
 function startPmUpMonitor(config: ReturnType<typeof createDefaultPmUpPrefs>, readMatches: () => readonly ViewMatch[]) {
   return startPmSignalMonitor(() => ({ up: config, down: { ...createDefaultPmOddsDropSettings(), enabled: false } }), readMatches);

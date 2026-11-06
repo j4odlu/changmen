@@ -10,7 +10,7 @@ const pollPolymarketDelayedOrder = vi.fn(async () => ({
   row: { status: "live", size_matched: "0" },
 }));
 
-vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", () => ({
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/tradeLookup", () => ({
   fetchPolymarketConfirmedTradeForOrder: (...args: unknown[]) =>
     fetchPolymarketConfirmedTradeForOrder(...args),
 }));

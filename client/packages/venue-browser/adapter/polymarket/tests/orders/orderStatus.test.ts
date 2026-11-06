@@ -53,7 +53,7 @@ describe("BUY timeout policy rollback", () => {
   });
 });
 
-vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", () => ({
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/tradeLookup", () => ({
   fetchPolymarketConfirmedTradeForOrder: (...args: unknown[]) =>
     fetchPolymarketConfirmedTradeForOrder(...args),
 }));

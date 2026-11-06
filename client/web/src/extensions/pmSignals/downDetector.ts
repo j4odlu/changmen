@@ -1,8 +1,4 @@
-export interface PmOddsDropDetectorConfig {
-  windowMs: number;
-  thresholdPct: number;
-  cooldownMs: number;
-}
+import { DEFAULT_PM_ODDS_DROP_CONFIG, type PmOddsDropDetectorConfig } from "@/config/pmSignalSettings";
 
 export interface PmOddsDropQuote {
   assetId: string;
@@ -36,12 +32,6 @@ interface AssetState {
 
 const MAX_SAMPLES_PER_ASSET = 512;
 const MAX_TRACKED_ASSETS = 4_096;
-
-export const DEFAULT_PM_ODDS_DROP_CONFIG: PmOddsDropDetectorConfig = {
-  windowMs: 5_000,
-  thresholdPct: 5,
-  cooldownMs: 10_000,
-};
 
 function normalizeConfig(config: PmOddsDropDetectorConfig): PmOddsDropDetectorConfig {
   return {

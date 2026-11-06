@@ -25,8 +25,8 @@ vi.mock("@changmen/venue-browser/polymarket/fok/orderSettlement", () => ({
   settlePolymarketDelayedOrder: vi.fn(),
 }));
 
-vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@changmen/venue-browser/polymarket/orders/history/orders")>();
+vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/fillResolution", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@changmen/venue-browser/polymarket/orders/confirmation/fillResolution")>();
   return {
     ...actual,
     resolvePolymarketSellFillWithRetry: vi.fn(),
@@ -35,7 +35,7 @@ vi.mock("@changmen/venue-browser/polymarket/orders/history/orders", async (impor
 
 import { fetchPolymarketMarketSecondsDelay } from "@changmen/venue-browser/polymarket/orders/confirmation/marketDelay";
 import { settlePolymarketDelayedOrder } from "@changmen/venue-browser/polymarket/fok/orderSettlement";
-import { resolvePolymarketSellFillWithRetry } from "@changmen/venue-browser/polymarket/orders/history/orders";
+import { resolvePolymarketSellFillWithRetry } from "@changmen/venue-browser/polymarket/orders/confirmation/fillResolution";
 import { confirmPolymarketManualSellDelayedFill } from "@changmen/venue-browser/polymarket/submission/pmManualSell";
 import {
   awaitPolymarketSettlementJob,

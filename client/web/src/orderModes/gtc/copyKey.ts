@@ -38,6 +38,7 @@ export function gtcCopyKey(row: GtcExecution): string {
       fill.shares,
       fill.price,
       fill.fee,
+      fill.cost,
       fill.status,
       fill.updatedAt,
     ]),

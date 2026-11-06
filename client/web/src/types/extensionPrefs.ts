@@ -1,7 +1,9 @@
 import type { ValueBetSharpPlatform } from "@/config/valueBet";
 import type { PlatformId } from "@/types/esport";
-import { createDefaultPmUpPrefs, normalizePmUpPrefs, type PmUpPrefs } from "@/extensions/pmSignals/upSettings";
-import { createDefaultPmOddsDropSettings, normalizePmOddsDropSettings, type BrowserPmOddsDropSettings } from "@/extensions/pmSignals/downSettings";
+import {
+  createDefaultPmUpPrefs, normalizePmUpPrefs, type PmUpPrefs,
+  createDefaultPmOddsDropSettings, normalizePmOddsDropSettings, type BrowserPmOddsDropSettings,
+} from "@/config/pmSignalSettings";
 import {
   clampValueBetEdgePctRange,
   clampValueBetOddsRange,

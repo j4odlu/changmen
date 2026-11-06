@@ -1,5 +1,41 @@
 import { expect, it } from "vitest";
 import { parseValidationArgs, validationPlan } from "./validation-plan.mjs";
+import { presentationComponents, presentationTests } from "./presentation-policy.mjs";
+
+it.each([false, true])("registered presentation-only changes select focused tests with boundaries/build (release=%s)", publication => {
+  expect(validationPlan([...presentationComponents, "docs/note.md"], { publication, components: ["frontend"] }).checks)
+    .toEqual(["boundaries", "frontend-presentation", "build"]);
+  expect(validationPlan(presentationComponents.map(file => file.replaceAll("/", "\\"))).checks)
+    .toEqual(["boundaries", "frontend-presentation", "build"]);
+});
+it.each([
+  "client/web/src/components/order/OrderList.vue", "client/web/src/components/order/presentation/New.vue",
+  "client/web/src/components/order/controllers/useOrderListActions.ts",
+  "client/web/src/components/order/controllers/useOrderListLiveQuotes.ts",
+  "client/web/src/components/order/controllers/useOrderLinkRebind.ts",
+  "client/web/src/components/order/controllers/useOrderListLabels.ts",
+  "client/web/src/components/order/orderListPresentation.ts", "client/web/src/components/order/orderListTypes.ts",
+  "client/web/src/components/order/orderListPredictionPresentation.ts",
+  "client/web/src/stores/account/venueOrders.ts", "client/web/src/orderModes/fok/execute.ts",
+  "client/web/src/shared/pmOrderDisplay.ts", "packages/shared/pm_settlement.js", "package-lock.json",
+  "unknown/file.ts", "scripts/verification/presentation-policy.mjs", "scripts/deploy/release-checks.mjs",
+])("mixed presentation changes retain full regression for %s", file => {
+  const plan = validationPlan([...presentationComponents, file]);
+  expect(plan.checks).toContain("frontend");
+  expect(plan.checks).not.toContain("frontend-presentation");
+});
+it("only direct presentation tests qualify; parent integration tests retain full frontend coverage", () => {
+  for (const file of presentationTests) {
+    const plan = validationPlan([file]);
+    expect(plan.checks).toContain(file.includes("/presentation/") ? "frontend-presentation" : "frontend");
+  }
+});
+it("backend mixtures and manual/uncertain releases cannot use the presentation subset", () => {
+  for (const options of [{ forceTests: true }, {}]) {
+    const paths = options.forceTests ? presentationComponents : [...presentationComponents, "server/backend/server.js"];
+    expect(validationPlan(paths, options).checks).toContain("frontend");
+  }
+});
 
 it.each([
   [["docs/note.md"], "docs"], [["client/web/src/components/admin/Report.vue"], "frontend"],

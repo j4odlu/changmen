@@ -9,6 +9,8 @@ export interface GtcFill {
   shares: string;
   price: string;
   fee: string | null;
+  /** 官方 activity.usdc_size：本次买入实付全成本，已含所有交易费用。 */
+  cost?: string;
   status: string;
   updatedAt: number;
 }
@@ -65,6 +67,8 @@ export interface GtcOrderFactsState {
   order: GtcOrderFact | null;
   matched: string;
   principal: string;
+  /** 全部有效成交均取得 activity 时才存在；不得另外追加 fee。 */
+  cost?: string;
   fee: string | null;
   open: string | null;
   terminal: boolean;
@@ -146,27 +150,47 @@ export function mergeGtcOrderFacts<T extends GtcOrderFactsState>(previous: T, fa
     if (!fill.key || !fill.tradeId || !["MAKER", "TAKER"].includes(fill.role))
       throw new Error("GTC 成交身份缺失");
     const old = row.fills[fill.key];
+    if (fill.cost != null && (fill.fee == null || gtcUnits(fill.cost) < gtcUnits(fill.fee)))
+      throw new Error("GTC activity 成本或费用无效");
     if (old?.status === "FAILED" && fill.status !== "FAILED")
       continue;
     if (old && fill.updatedAt < old.updatedAt)
       continue;
     if (old?.status === "CONFIRMED" && fill.status !== "CONFIRMED" && fill.status !== "FAILED")
       continue;
-    if (old && (gtcUnits(old.shares) !== gtcUnits(fill.shares) || gtcFillPrice(old.price) !== gtcFillPrice(fill.price))) {
+    if (old && (gtcUnits(old.shares) !== gtcUnits(fill.shares)
+      || (gtcFillPrice(old.price) !== gtcFillPrice(fill.price) && fill.cost == null && old.cost == null))) {
       errors.push("同一成交明细数量或价格冲突"); continue;
     }
-    row.fills[fill.key] = fill;
+    // A delayed trade-only read must not erase a verified activity cash amount.
+    row.fills[fill.key] = old?.cost != null && fill.cost == null
+      ? { ...fill, price: old.price, fee: old.fee, cost: old.cost }
+      : fill;
   }
   let quantity = 0n;
   let principal = 0n;
   let fee = 0n;
   let feeUnknown = false;
+  let cost = 0n;
+  let costUnknown = false;
   for (const fill of Object.values(row.fills)) {
     if (fill.status === "FAILED")
       continue;
     const q = gtcUnits(fill.shares); const p = fillPriceRatio(fill.price);
     if (p.numerator <= 0n || p.numerator >= p.denominator || q <= 0n) { errors.push("成交数量或价格异常"); continue; }
-    quantity += q; principal += q * p.numerator / p.denominator;
+    quantity += q;
+    if (fill.cost != null && fill.fee != null) {
+      const cash = gtcUnits(fill.cost), charge = gtcUnits(fill.fee);
+      const gross = cash - charge;
+      const priceGross = q * p.numerator / p.denominator;
+      if (gross < 0n || (gross > priceGross ? gross - priceGross : priceGross - gross) > 1n)
+        throw new Error("GTC activity 成本与成交金额不一致");
+      principal += gross; cost += cash;
+    }
+    else {
+      principal += q * p.numerator / p.denominator;
+      costUnknown = true;
+    }
     if (fill.fee == null)
       feeUnknown = true;
     else fee += gtcUnits(fill.fee);
@@ -181,6 +205,7 @@ export function mergeGtcOrderFacts<T extends GtcOrderFactsState>(previous: T, fa
   // FAILED 量不继续计作已买入；官方累计量未修订时显示冲突并保留阻断。
   row.matched = gtcDecimal(failedAmount > 0n ? quantity : orderMatched != null && orderMatched > quantity ? orderMatched : quantity);
   row.principal = gtcDecimal(principal);
+  row.cost = costUnknown ? undefined : gtcDecimal(cost);
   row.fee = feeUnknown ? null : gtcDecimal(fee);
   if (feeUnknown)
     errors.push("成交费用待核实");

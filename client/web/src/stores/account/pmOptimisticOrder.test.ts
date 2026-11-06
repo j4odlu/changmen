@@ -25,19 +25,38 @@ function result() {
   } }, { orderID: "original" }), { orderId: "original", beginTime: 1790000000000 });
 }
 
-it("saves the immediate fill without adding signed quantities for odds display", async () => {
+it("keeps the submitted BUY price separately from the actual fill without adding a recovery snapshot or signature", async () => {
   const saved = await persistPolymarketMatchedBuyOrder(account, option, result());
   expect(saved?.pmSubmission).toBeUndefined();
-  expect(saved?.pmOrderPrice).toBeUndefined();
+  expect(saved?.pmOrderPrice).toBe(0.51);
   expect(saved?.pmFillPrice).toBe(0.5044);
   expect(saved?.odds).toBe(2);
   expect(io.save).toHaveBeenCalledWith(account, [saved]);
   expect(JSON.stringify(saved)).not.toContain("must-not-persist");
 });
 
-it("keeps fills without signed evidence and never fabricates a snapshot from option prices", async () => {
-  const missing = result(); missing.request = undefined;
-  expect((await persistPolymarketMatchedBuyOrder(account, option, missing))?.pmSubmission).toBeUndefined();
+it.each(["different-order", "sell", "contradictory-response"])("does not attach inconsistent submission evidence: %s", async scenario => {
+  const submitted = result();
+  if (scenario === "different-order") {
+    submitted.orderId = "different-order";
+    submitted.response = { orderID: "different-order" };
+  }
+  if (scenario === "sell") (submitted.request as { order: { side: string } }).order.side = "SELL";
+  if (scenario === "contradictory-response") submitted.response = { orderID: "different-order" };
+  const saved = await persistPolymarketMatchedBuyOrder(account, option, submitted);
+  expect(saved?.pmSubmission).toBeUndefined();
+  expect(saved?.pmOrderPrice).toBeUndefined();
+  expect(saved?.pmFillPrice).toBe(0.5044);
+  expect(io.save).toHaveBeenCalledWith(account, [saved]);
+});
+
+it.each(["request", "takerAmount"])("keeps fills missing %s without fabricating a submitted price from option prices", async field => {
+  const missing = result();
+  if (field === "request") missing.request = undefined;
+  else delete (missing.request as { order: { takerAmount?: string } }).order.takerAmount;
+  const saved = await persistPolymarketMatchedBuyOrder(account, option, missing);
+  expect(saved?.pmSubmission).toBeUndefined();
+  expect(saved?.pmOrderPrice).toBeUndefined();
   expect(io.save).toHaveBeenCalledTimes(1);
 });
 

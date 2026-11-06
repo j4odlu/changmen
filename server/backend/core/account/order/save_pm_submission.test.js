@@ -24,6 +24,26 @@ it("real fill keeps the actual all-in cost", () => {
   expect(actual.raw.pmFeeUsdc).toBe(0.1);
 });
 
+it("matched BUY keeps its submission display price through later sync without changing the booked amounts", () => {
+  const submission = pmSubmissionFromResult({ orderId: "original", beginTime: snapshot.submittedAt,
+    request: { order: { side: "BUY", makerAmount: "14930000", takerAmount: "27145400" } } }, 317);
+  const incoming = { orderId: "original", status: "none", pmOrderPrice: Number(submission.makerAmount) / Number(submission.takerAmount),
+    pmSide: "buy", pmOrigin: "changmen",
+    betMoney: 102.91803, money: 0, pmStakeUsdc: 15.3609, pmFeeUsdc: 0.4309, pmShares: 27.507637, pmFillPrice: 0.542758362 };
+  const saved = mergePolymarketProviderSave({}, {}, incoming, "changmen", { ...incoming }, 0, incoming.betMoney);
+  const synced = mergePolymarketProviderSave({ order_id: "original", bet_money: saved.bet_money }, saved.raw,
+    { ...incoming, pmOrderPrice: undefined }, "changmen", { ...saved.raw }, saved.money, saved.bet_money);
+  const row = { order_id: "original", player_id: 317, provider: "Polymarket", status: "None", raw: synced.raw,
+    bet_money: synced.bet_money, money: synced.money };
+  expect(rowToOrder(row).PmSubmittedPrice).toBe(14930000 / 27145400);
+  expect(synced.raw.pmSubmission).toBeUndefined();
+  expect(synced.bet_money).toBe(incoming.betMoney);
+  expect(synced.money).toBe(0);
+  expect(synced.raw.pmFillPrice).toBe(incoming.pmFillPrice);
+  expect(synced.raw.pmShares).toBe(incoming.pmShares);
+  expect(synced.raw.pmStakeUsdc).toBe(incoming.pmStakeUsdc);
+});
+
 it("keeps signed quantities as optional display evidence through reject saves and stale sync", () => {
   const original = pmSubmissionFromResult({ orderId: "original", beginTime: snapshot.submittedAt,
     request: { order: { side: "BUY", makerAmount: "14930000", takerAmount: "29860000", signature: "do-not-store" } } }, 317);

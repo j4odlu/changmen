@@ -3,6 +3,7 @@ import type { BetResult } from "@changmen/client-core/models/betResult";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import { buildPolymarketMatchedBuyVenueOrderFromBet } from "@changmen/venue-browser/polymarket";
+import { pmSubmissionFromResult } from "@changmen/shared/pm_submission";
 import { saveOrders } from "@/api/order";
 
 /**
@@ -20,6 +21,10 @@ export async function persistPolymarketMatchedBuyOrder(
   const order = await buildPolymarketMatchedBuyVenueOrderFromBet(option, result);
   if (!order)
     return null;
+  // Store only the same BUY's submitted price; recovery snapshots and fill accounting remain separate.
+  const submission = pmSubmissionFromResult(result, account.accountId);
+  if (submission?.orderId === order.orderId && submission.takerAmount)
+    order.pmOrderPrice = Number(submission.makerAmount) / Number(submission.takerAmount);
   order.clientMarket = option.clientMarket;
   await saveOrders(account, [order]);
   return order;

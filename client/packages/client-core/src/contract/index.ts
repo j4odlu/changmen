@@ -32,7 +32,7 @@ export interface PolymarketVenueOrderExtras {
    * 买单展示均价（0–1）：官网 activity.price / CLOB 撮合均价（不含手续费）。
    */
   pmFillPrice?: number;
-  /** [changmen 扩展] 官方订单详情的 price（限价），与成交均价分开。 */
+  /** [changmen 扩展] 提交限价：官方订单 price 或同笔 BUY 签单金额/份额，与成交均价分开。 */
   pmOrderPrice?: number;
   /**
    * 买单正式成本：官网 activity.usdc_size 的全部归属成交合计（含实际交易费用）。

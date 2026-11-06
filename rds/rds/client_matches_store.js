@@ -4,6 +4,7 @@
  */
 
 import { _jsonb, _writeRds, getPgPool } from "./common.js";
+import { inheritPlatformPmSports } from "./platform_pm_sport.js";
 
 /** 上次写入的活跃 id 集合（ended_at IS NULL），供 fire-and-forget 路径差量标 ended */
 let _lastWrittenIds = new Set();
@@ -158,6 +159,10 @@ async function _rdsWriteClientMatchesLifecycle(pool, payload) {
         [markIds, Number(builtAt) || Date.now()],
       );
     }
+
+    await inheritPlatformPmSports(client, [
+      ...safeActiveRows.map(row => row.id), ...safeEndedRows.map(row => row.id), ...markIds,
+    ]);
 
     await client.query("COMMIT");
     _lastWrittenIds = writtenActiveIds;

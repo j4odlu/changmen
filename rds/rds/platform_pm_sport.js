@@ -19,6 +19,33 @@ export async function fetchPlatformPmSports(eventIds) {
   }
 }
 
+/** 合场提交前承接原生状态；只填空值，保留来源、比分方向和原始更新时间。 */
+export async function inheritPlatformPmSports(client, clientMatchIds) {
+  const ids = [...new Set((clientMatchIds || []).map(Number)
+    .filter(id => Number.isSafeInteger(id) && id > 0))];
+  if (!ids.length) return 0;
+  // to_jsonb(pm) 兼容滚动发布中尚未维护 platform_matches.pm_sport 的数据库。
+  const { rowCount } = await client.query(`
+    WITH saved AS MATERIALIZED (
+      SELECT cm.id, pm.source_match_id AS event_id, to_jsonb(pm)->'pm_sport' AS snapshot
+      FROM client_matches cm
+      JOIN platform_matches pm ON pm.platform = 'Polymarket'
+        AND pm.source_match_id = cm.matchs->>'Polymarket'
+      WHERE cm.id = ANY($1::bigint[]) AND cm.pm_sport IS NULL
+    )
+    UPDATE client_matches cm SET pm_sport = saved.snapshot
+    FROM saved
+    WHERE cm.id = saved.id AND cm.pm_sport IS NULL
+      AND cm.matchs->>'Polymarket' = saved.event_id
+      AND saved.snapshot->>'eventId' = saved.event_id
+      AND (saved.snapshot->>'live' = 'true' OR saved.snapshot->>'ended' = 'true'
+        OR lower(trim(saved.snapshot->>'status')) IN (
+          'not_started', 'scheduled', 'running', 'inprogress', 'finished', 'final', 'f/ot',
+          'suspended', 'delayed', 'postponed', 'canceled', 'cancelled', 'forfeit', 'notnecessary'))`,
+  [ids]);
+  return rowCount || 0;
+}
+
 export async function writePlatformPmSports(snapshots) {
   const records = new Map();
   for (const snapshot of snapshots || []) {

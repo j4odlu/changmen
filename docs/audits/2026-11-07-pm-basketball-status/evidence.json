@@ -1,0 +1,1327 @@
+{
+  "capturedAt": "2026-11-06T20:06:58.569Z",
+  "totals": {
+    "events": 21,
+    "storedValid": 9,
+    "unknown": 12,
+    "unknownProviderNone": 9,
+    "unknownProviderSportsdataio": 3,
+    "linked": 5,
+    "linkedUnknown": 5
+  },
+  "websiteFrontend": {
+    "url": "https://polymarket.com/_next/static/immutable/chunks/2d4raxb03f0v-.js",
+    "snippets": [
+      "{live:!!t.live,ended:!!t.ended,score:t.score??\"0-0\",period:t.period??\"NS\",elapsed:t.elapsed??\"\"",
+      "\"POST\"===e.period?S.P.Postponed:e.ended?S.P.Finished:e.live?S.P.Live:S.P.NotStarted"
+    ]
+  },
+  "providerRegistryUrl": "https://polymarket.com/_next/static/immutable/chunks/443ln_z7q9d07.js",
+  "sportsWorkerUrl": "https://polymarket.com/_next/static/immutable/chunks/0rsc5n-7k2g1p.js",
+  "rows": [
+    {
+      "eventId": "1287169",
+      "clientMatchId": null,
+      "slug": "bkvtb-avt-uni-2026-11-06",
+      "title": "Avtodor vs. Unics Kazan",
+      "gameId": 6025882,
+      "registeredStart": "2026-11-06T15:00:00Z",
+      "resolutionSource": "https://www.vtb-league.com/en/",
+      "providerRegistry": "none",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": true,
+          "value": "NS"
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "bkvtb-avt-uni-2026-11-06",
+        "teams": {
+          "home": "bkvtb-avt",
+          "away": "bkvtb-uni"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "bkvtb",
+        "date": "Fri, Nov 6",
+        "time": "3:00 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T15:00:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {
+        "period": "NS"
+      }
+    },
+    {
+      "eventId": "1288636",
+      "clientMatchId": null,
+      "slug": "cwbb-swesle-furman-2026-11-06",
+      "title": "Southern Wesleyan Warriors vs. Furman Paladins (W)",
+      "gameId": 153741,
+      "registeredStart": "2026-11-06T16:00:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": "Final",
+      "storedSource": "ws",
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": true,
+          "value": false
+        },
+        "ended": {
+          "present": true,
+          "value": true
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": true,
+          "value": "38-77"
+        },
+        "period": {
+          "present": true,
+          "value": "FT"
+        },
+        "elapsed": {
+          "present": true,
+          "value": ""
+        }
+      },
+      "websiteGame": null,
+      "websiteEventDirectFields": null
+    },
+    {
+      "eventId": "1288627",
+      "clientMatchId": null,
+      "slug": "cwbb-indst-seton-2026-11-06",
+      "title": "Indiana State Sycamores vs. Seton Hall Pirates (W)",
+      "gameId": 151241,
+      "registeredStart": "2026-11-06T16:30:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": "Final",
+      "storedSource": "ws",
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": true,
+          "value": false
+        },
+        "ended": {
+          "present": true,
+          "value": true
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": true,
+          "value": "56-74"
+        },
+        "period": {
+          "present": true,
+          "value": "FT"
+        },
+        "elapsed": {
+          "present": true,
+          "value": ""
+        }
+      },
+      "websiteGame": {
+        "event": "cwbb-indst-seton-2026-11-06",
+        "teams": {
+          "home": "cwbb-seton",
+          "away": "cwbb-indst"
+        },
+        "isNegRisk": false,
+        "gameState": "finished",
+        "league": "cwbb",
+        "result": {
+          "status": "win-loss",
+          "winningIdx": 1
+        },
+        "date": "Fri, Nov 6",
+        "time": "4:30 PM",
+        "view": {
+          "type": "league",
+          "section": "hidden"
+        },
+        "timestamp": "2026-11-06T16:30:00.000Z",
+        "live": false,
+        "ended": true,
+        "score": "56-74",
+        "period": "FT",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {
+        "live": false,
+        "ended": true,
+        "score": "56-74",
+        "period": "FT"
+      }
+    },
+    {
+      "eventId": "1288637",
+      "clientMatchId": null,
+      "slug": "cwbb-nwst-ark-2026-11-06",
+      "title": "Northwestern State Demons vs. Arkansas Razorbacks (W)",
+      "gameId": 153742,
+      "registeredStart": "2026-11-06T16:30:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": "Final",
+      "storedSource": "ws",
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": true,
+          "value": false
+        },
+        "ended": {
+          "present": true,
+          "value": true
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": true,
+          "value": "59-89"
+        },
+        "period": {
+          "present": true,
+          "value": "FT"
+        },
+        "elapsed": {
+          "present": true,
+          "value": ""
+        }
+      },
+      "websiteGame": null,
+      "websiteEventDirectFields": null
+    },
+    {
+      "eventId": "1288643",
+      "clientMatchId": null,
+      "slug": "cwbb-utrgv-sdak-2026-11-06",
+      "title": "Texas-Rio Grande Valley Vaqueros vs. South Dakota Coyotes (W)",
+      "gameId": 153745,
+      "registeredStart": "2026-11-06T17:00:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": "Final",
+      "storedSource": "ws",
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": true,
+          "value": false
+        },
+        "ended": {
+          "present": true,
+          "value": true
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": true,
+          "value": "56-68"
+        },
+        "period": {
+          "present": true,
+          "value": "FT"
+        },
+        "elapsed": {
+          "present": true,
+          "value": ""
+        }
+      },
+      "websiteGame": null,
+      "websiteEventDirectFields": null
+    },
+    {
+      "eventId": "1288616",
+      "clientMatchId": "9687",
+      "slug": "euroleague-besiktas-kaunas-2026-11-06",
+      "title": "Besiktas vs. Zalgiris Kaunas",
+      "gameId": 5983048,
+      "registeredStart": "2026-11-06T17:00:00Z",
+      "resolutionSource": "https://www.euroleaguebasketball.net/euroleague/",
+      "providerRegistry": "none",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": false,
+          "value": null
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "euroleague-besiktas-kaunas-2026-11-06",
+        "teams": {
+          "home": "euroleague-besiktas",
+          "away": "euroleague-kaunas"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "euroleague-basketball",
+        "date": "Fri, Nov 6",
+        "time": "5:00 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T17:00:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {}
+    },
+    {
+      "eventId": "1288626",
+      "clientMatchId": null,
+      "slug": "cwbb-ipfw-depaul-2026-11-06",
+      "title": "Purdue Fort Wayne Mastodons vs. DePaul Blue Demons (W)",
+      "gameId": 151239,
+      "registeredStart": "2026-11-06T17:00:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": "Final",
+      "storedSource": "ws",
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": true,
+          "value": false
+        },
+        "ended": {
+          "present": true,
+          "value": true
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": true,
+          "value": "62-87"
+        },
+        "period": {
+          "present": true,
+          "value": "FT"
+        },
+        "elapsed": {
+          "present": true,
+          "value": ""
+        }
+      },
+      "websiteGame": null,
+      "websiteEventDirectFields": null
+    },
+    {
+      "eventId": "1288639",
+      "clientMatchId": null,
+      "slug": "cwbb-lure-jaxst-2026-11-06",
+      "title": "Life Running Eagles vs. Jacksonville State Gamecocks (W)",
+      "gameId": 153743,
+      "registeredStart": "2026-11-06T17:00:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": "Final",
+      "storedSource": "ws",
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": true,
+          "value": false
+        },
+        "ended": {
+          "present": true,
+          "value": true
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": true,
+          "value": "62-77"
+        },
+        "period": {
+          "present": true,
+          "value": "FT"
+        },
+        "elapsed": {
+          "present": true,
+          "value": ""
+        }
+      },
+      "websiteGame": null,
+      "websiteEventDirectFields": null
+    },
+    {
+      "eventId": "1288641",
+      "clientMatchId": null,
+      "slug": "cwbb-drake-kan-2026-11-06",
+      "title": "Drake Bulldogs vs. Kansas Jayhawks (W)",
+      "gameId": 153744,
+      "registeredStart": "2026-11-06T17:00:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": "Final",
+      "storedSource": "ws",
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": true,
+          "value": false
+        },
+        "ended": {
+          "present": true,
+          "value": true
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": true,
+          "value": "49-74"
+        },
+        "period": {
+          "present": true,
+          "value": "FT"
+        },
+        "elapsed": {
+          "present": true,
+          "value": ""
+        }
+      },
+      "websiteGame": null,
+      "websiteEventDirectFields": null
+    },
+    {
+      "eventId": "1288644",
+      "clientMatchId": null,
+      "slug": "cwbb-sutah-nmxst-2026-11-06",
+      "title": "Southern Utah Thunderbirds vs. New Mexico State Aggies (W)",
+      "gameId": 153746,
+      "registeredStart": "2026-11-06T18:00:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": "InProgress",
+      "storedSource": "ws",
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": true,
+          "value": true
+        },
+        "ended": {
+          "present": true,
+          "value": false
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": true,
+          "value": "50-39"
+        },
+        "period": {
+          "present": true,
+          "value": "End OT"
+        },
+        "elapsed": {
+          "present": true,
+          "value": ""
+        }
+      },
+      "websiteGame": null,
+      "websiteEventDirectFields": null
+    },
+    {
+      "eventId": "1288645",
+      "clientMatchId": null,
+      "slug": "cwbb-portst-boise-2026-11-06",
+      "title": "Portland State Vikings vs. Boise State Broncos (W)",
+      "gameId": 153747,
+      "registeredStart": "2026-11-06T18:00:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": false,
+          "value": null
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "cwbb-portst-boise-2026-11-06",
+        "teams": {
+          "home": "cwbb-boise",
+          "away": "cwbb-portst"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "cwbb",
+        "date": "Fri, Nov 6",
+        "time": "6:00 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T18:00:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {}
+    },
+    {
+      "eventId": "1288646",
+      "clientMatchId": null,
+      "slug": "cwbb-drexel-penn-2026-11-06",
+      "title": "Drexel Dragons vs. Penn Quakers (W)",
+      "gameId": 153748,
+      "registeredStart": "2026-11-06T18:00:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": "Final",
+      "storedSource": "ws",
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": true,
+          "value": false
+        },
+        "ended": {
+          "present": true,
+          "value": true
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": true,
+          "value": "70-71"
+        },
+        "period": {
+          "present": true,
+          "value": "FT"
+        },
+        "elapsed": {
+          "present": true,
+          "value": ""
+        }
+      },
+      "websiteGame": null,
+      "websiteEventDirectFields": null
+    },
+    {
+      "eventId": "1324167",
+      "clientMatchId": null,
+      "slug": "bkkls-kk10-spd-2026-11-06",
+      "title": "KK Vojvodina vs. SPD Radnicki Kragujevac",
+      "gameId": 75047944,
+      "registeredStart": "2026-11-06T19:00:00Z",
+      "resolutionSource": "https://kls.rs/",
+      "providerRegistry": "none",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": true,
+          "value": "NS"
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "bkkls-kk10-spd-2026-11-06",
+        "teams": {
+          "home": "bkkls-kk10",
+          "away": "bkkls-spd"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "bkkls-games",
+        "date": "Fri, Nov 6",
+        "time": "7:00 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T19:00:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {
+        "period": "NS"
+      }
+    },
+    {
+      "eventId": "1287170",
+      "clientMatchId": null,
+      "slug": "bkbbl-alb-pho-2026-11-06",
+      "title": "Alba Berlin vs. Phoenix Hagen",
+      "gameId": 5988302,
+      "registeredStart": "2026-11-06T19:00:00Z",
+      "resolutionSource": "https://www.easycredit-bbl.de/en/",
+      "providerRegistry": "none",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": true,
+          "value": "NS"
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "bkbbl-alb-pho-2026-11-06",
+        "teams": {
+          "home": "bkbbl-alb",
+          "away": "bkbbl-pho"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "bkbbl",
+        "date": "Fri, Nov 6",
+        "time": "7:00 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T19:00:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {
+        "period": "NS"
+      }
+    },
+    {
+      "eventId": "1312647",
+      "clientMatchId": "9694",
+      "slug": "bkfr1-bou2-bcm-2026-11-06",
+      "title": "Boulazac vs. BCM Gravelines Dunkerque",
+      "gameId": 6145125,
+      "registeredStart": "2026-11-06T19:00:00Z",
+      "resolutionSource": "https://www.lnb.fr/",
+      "providerRegistry": "none",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": true,
+          "value": "NS"
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "bkfr1-bou2-bcm-2026-11-06",
+        "teams": {
+          "home": "bkfr1-bou2",
+          "away": "bkfr1-bcm"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "pro-a",
+        "date": "Fri, Nov 6",
+        "time": "7:00 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T19:00:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {
+        "period": "NS"
+      }
+    },
+    {
+      "eventId": "1288615",
+      "clientMatchId": "9692",
+      "slug": "euroleague-olympiac-zvezda-2026-11-06",
+      "title": "Olympiacos B.C. vs. KK Crvena Zvezda",
+      "gameId": 5983047,
+      "registeredStart": "2026-11-06T19:15:00Z",
+      "resolutionSource": "https://www.euroleaguebasketball.net/euroleague/",
+      "providerRegistry": "none",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": false,
+          "value": null
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "euroleague-olympiac-zvezda-2026-11-06",
+        "teams": {
+          "home": "euroleague-olympiac",
+          "away": "euroleague-zvezda"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "euroleague-basketball",
+        "date": "Fri, Nov 6",
+        "time": "7:15 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T19:15:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {}
+    },
+    {
+      "eventId": "1319908",
+      "clientMatchId": null,
+      "slug": "bkplk-ast-mks-2026-11-06",
+      "title": "Astoria Bydgoszcz vs. MKS Start Lublin",
+      "gameId": 72676948,
+      "registeredStart": "2026-11-06T19:15:00Z",
+      "resolutionSource": "https://plk.pl/",
+      "providerRegistry": "none",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": true,
+          "value": "NS"
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "bkplk-ast-mks-2026-11-06",
+        "teams": {
+          "home": "bkplk-ast",
+          "away": "bkplk-mks"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "bkplk-games",
+        "date": "Fri, Nov 6",
+        "time": "7:15 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T19:15:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {
+        "period": "NS"
+      }
+    },
+    {
+      "eventId": "1288613",
+      "clientMatchId": "9693",
+      "slug": "euroleague-bologna-dubai-2026-11-06",
+      "title": "Virtus Bologna vs. BC Dubai",
+      "gameId": 5983046,
+      "registeredStart": "2026-11-06T19:30:00Z",
+      "resolutionSource": "https://www.euroleaguebasketball.net/euroleague/",
+      "providerRegistry": "none",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": false,
+          "value": null
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "euroleague-bologna-dubai-2026-11-06",
+        "teams": {
+          "home": "euroleague-bologna",
+          "away": "euroleague-dubai"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "euroleague-basketball",
+        "date": "Fri, Nov 6",
+        "time": "7:30 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T19:30:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {}
+    },
+    {
+      "eventId": "1288612",
+      "clientMatchId": "9695",
+      "slug": "euroleague-partizan-aviv1-2026-11-06",
+      "title": "Partizan vs. Maccabi Tel Aviv",
+      "gameId": 5983045,
+      "registeredStart": "2026-11-06T19:45:00Z",
+      "resolutionSource": "https://www.euroleaguebasketball.net/euroleague/",
+      "providerRegistry": "none",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": false,
+          "value": null
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "euroleague-partizan-aviv1-2026-11-06",
+        "teams": {
+          "home": "euroleague-partizan",
+          "away": "euroleague-aviv1"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "euroleague-basketball",
+        "date": "Fri, Nov 6",
+        "time": "7:45 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T19:45:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {}
+    },
+    {
+      "eventId": "1288647",
+      "clientMatchId": null,
+      "slug": "cwbb-ucdv-ewash-2026-11-06",
+      "title": "UC Davis Aggies vs. Eastern Washington Eagles (W)",
+      "gameId": 153749,
+      "registeredStart": "2026-11-06T21:00:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": false,
+          "value": null
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "cwbb-ucdv-ewash-2026-11-06",
+        "teams": {
+          "home": "cwbb-ewash",
+          "away": "cwbb-ucdv"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "cwbb",
+        "date": "Fri, Nov 6",
+        "time": "9:00 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T21:00:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {}
+    },
+    {
+      "eventId": "1285880",
+      "clientMatchId": null,
+      "slug": "cbb-umass-boscol-2026-11-06",
+      "title": "Massachusetts Minutemen vs. Boston College Eagles",
+      "gameId": 73577,
+      "registeredStart": "2026-11-06T21:00:00Z",
+      "resolutionSource": "https://www.ncaa.com/",
+      "providerRegistry": "sportsdataio",
+      "storedStatus": null,
+      "storedSource": null,
+      "clientStoredStatus": null,
+      "gamma": {
+        "live": {
+          "present": false,
+          "value": null
+        },
+        "ended": {
+          "present": false,
+          "value": null
+        },
+        "status": {
+          "present": false,
+          "value": null
+        },
+        "gameStatus": {
+          "present": false,
+          "value": null
+        },
+        "score": {
+          "present": false,
+          "value": null
+        },
+        "period": {
+          "present": false,
+          "value": null
+        },
+        "elapsed": {
+          "present": false,
+          "value": null
+        }
+      },
+      "websiteGame": {
+        "event": "cbb-umass-boscol-2026-11-06",
+        "teams": {
+          "home": "cbb-boscol",
+          "away": "cbb-umass"
+        },
+        "isNegRisk": false,
+        "gameState": "not-started",
+        "league": "ncaa-cbb",
+        "date": "Fri, Nov 6",
+        "time": "9:00 PM",
+        "view": {
+          "type": "league",
+          "section": "expanded"
+        },
+        "timestamp": "2026-11-06T21:00:00.000Z",
+        "live": false,
+        "ended": false,
+        "score": "0-0",
+        "period": "NS",
+        "elapsed": "",
+        "delayed": false
+      },
+      "websiteEventDirectFields": {}
+    }
+  ],
+  "wsObservations": [
+    {
+      "finishedAt": "2026-11-06T20:08:37.124Z",
+      "seconds": 45,
+      "totalMessages": 34,
+      "leagues": [
+        "efa",
+        "cs2",
+        "swe-",
+        "dota2",
+        "sea",
+        "ere",
+        "challenger",
+        "wta challenger",
+        "fr2",
+        "bun",
+        "epl",
+        "mar1",
+        "elc",
+        "rou1"
+      ],
+      "basketballMessages": 0,
+      "currentBasketballGameIdMessages": 0
+    },
+    {
+      "finishedAt": "2026-11-06T20:18:48.497Z",
+      "seconds": 300.011,
+      "totalMessages": 199,
+      "leagues": [
+        "efa",
+        "cs2",
+        "dota2",
+        "sea",
+        "swe-",
+        "fr2",
+        "epl",
+        "rou1",
+        "ere",
+        "mar1",
+        "elc",
+        "bun",
+        "challenger",
+        "atp",
+        "per1",
+        "fl1",
+        "itsb",
+        "lal",
+        "wta challenger",
+        "cricket"
+      ],
+      "basketballMessages": 0,
+      "currentBasketballGameIdMessages": 0
+    }
+  ]
+}

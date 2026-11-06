@@ -30,6 +30,8 @@ wss://sports-api.polymarket.com/ws
 
 [changmen 扩展] 已有 Gamma 索引响应和 Sports WS 中的有效状态同时按 PM event ID 保存到对应 `platform_matches` 行的 `pm_sport` 字段，不依赖 `match_id`，因此未匹配场次也能保存。只更新已收录的 PM 场次，不创建比赛或改动关联；WS 优先于 Gamma，同来源的旧消息不能覆盖新消息。不增加 HTTP 请求、WS 连接或轮询。普通赛事快照刷新不会清除该字段。
 
+[changmen 扩展] 后合场状态承接：matcher 的合场写库事务在提交前，按当前 `matchs.Polymarket` 的 event ID，从平台场次承接已保存的有效状态，仅填充 `client_matches.pm_sport` 的 SQL NULL。新建合场、已有空状态和本拍结束行均覆盖，不等待下一条 WS/Gamma；保留快照来源、原始更新时间及 PM 比分方向，沿用合场提交后的快照失效与发布路径。已有状态及并发写入的新 WS 状态不覆盖；源状态为空、身份不一致或仅缺字段默认值时不填。平台状态列未维护时跳过承接，不自动修改 schema。隔离 PostgreSQL 回归：根目录 `node scripts/testing/platform-pm-sport-postgres.mjs`。
+
 字段通过独立 RDS 维护完成，采集器启动和代码部署不添加字段。仓库根执行 `node rds/maintenance/platform-pm-sport-schema.mjs` 只读核验；显式加 `--apply` 才添加可空 `jsonb` 字段。上线前单独完成维护，再发布采集器代码。
 
 matcher 右栏按 PM event ID 读取对应平台场次的状态，复用中栏的展示。没有有效状态时显示“状态待更新”，不按时间猜测；滚动发布期间字段尚未初始化时也按未知处理。已匹配比赛原有的 `pm_sport` 写入与客户端广播保持原路径。

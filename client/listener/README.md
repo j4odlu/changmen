@@ -37,3 +37,5 @@ npm run dev
 运行 `npm run app:build`，得到同一个 `client/web/dist`：`/` 为普通版，`/listener/` 为监听版，监听 JS/CSS 位于 `/assets/listener/`。监听使用正式环境及现有 Cookie/API；路由仍采用 hash。构建分别检查两版类型与依赖图，普通版不引入监听 alias。版本信息覆盖两版源码，监听页与普通页共享发布版本。
 
 沿用现有 GitHub Actions 前端归档、原子切换、旧资源保留与回滚。发布健康检查必须读取真实监听 HTML 和入口 JS；监听异常会恢复整个前端上一版。无需增加服务或独立部署流程。本次接入不代表已推送或上线。
+
+既有 Caddy 主机由同一发布流程幂等补充 `{path}/index.html`，使 `/listener`、`/listener/` 正确解析目录入口，并沿用首页的 HTML 缓存策略。配置先验证再重载；重载失败恢复原配置。TLS、客户端证书及 API 代理规则保持原内容。

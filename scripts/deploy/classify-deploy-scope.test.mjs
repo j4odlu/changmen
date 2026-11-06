@@ -7,6 +7,7 @@ describe("classifyDeployScope", () => {
   it("frontend-only for client/web", () => {
     assert.equal(classifyDeployScope(["client/listener/module/runtime.ts"]), "frontend");
     assert.equal(classifyDeployScope(["client/listener/build/vite.production.config.ts"]), "frontend");
+    assert.equal(classifyDeployScope(["scripts/deploy/frontend-static-routing.mjs"]), "frontend");
     assert.equal(classifyDeployScope(["client/web/src/App.vue"]), "frontend");
     assert.equal(classifyDeployScope(["client/web/.env.production"]), "frontend");
   });

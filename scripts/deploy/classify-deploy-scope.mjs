@@ -75,7 +75,7 @@ export function classifyDeployScope(paths) {
       backend = true;
       continue;
     }
-    if (p === "deploy/scripts/release-frontend.sh") {
+    if (p === "deploy/scripts/release-frontend.sh" || p === "scripts/deploy/frontend-static-routing.mjs") {
       frontend = true;
       continue;
     }

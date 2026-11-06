@@ -105,6 +105,7 @@ mkdir -p "$publish_root/scripts/deploy" "$publish_root/deploy/scripts" "$publish
 cp "$source_root/scripts/deploy/publish.sh" "$publish_root/scripts/deploy/"
 cp "$helper" "$publish_root/deploy/scripts/"
 echo '// retention fixture' > "$publish_root/scripts/deploy/release-retention.mjs"
+echo '// routing fixture' > "$publish_root/scripts/deploy/frontend-static-routing.mjs"
 echo 'true' > "$publish_root/deploy/scripts/release-common.sh"
 printf 'echo fixture-activation >&2; exit "${TEST_ACTIVATION_STATUS:-0}"\n' > "$publish_root/deploy/scripts/release-frontend.sh"
 echo '<script src="assets/index-fixture.js"></script>' > "$fixture/dist/index.html"

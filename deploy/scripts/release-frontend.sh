@@ -43,6 +43,9 @@ printf '%s\n' "$sha" > "$release/deploy-version.txt"
 chmod -R a+rX "$release"
 if [[ "$repo" == /root/* ]]; then chmod 711 /root; fi
 chmod a+x "$repo" "$repo/.releases" "$repo/.releases/frontend" "$repo/client" "$app"
+if [[ -n "${DEPLOY_FRONTEND_ROUTING:-}" ]]; then
+  node "$DEPLOY_FRONTEND_ROUTING"
+fi
 switch_link "$release" "$app/dist"
 base="${DEPLOY_FRONTEND_CHECK_URL:-https://changmen.fun}"
 check_args=(--fail --silent --show-error --max-time 10)

@@ -31,7 +31,11 @@ describe("sport / esport UI isolation", () => {
   });
 
   test("OrderList live price watches only order tokens — no global quoteTick", () => {
-    const src = readFileSync(join(root, "components/order/OrderList.vue"), "utf8");
+    const component = readFileSync(join(root, "components/order/OrderList.vue"), "utf8");
+    const controller = readFileSync(join(root, "components/order/controllers/useOrderListLiveQuotes.ts"), "utf8");
+    expect(component).toMatch(/from "\.\/controllers\/useOrderListLiveQuotes"/);
+    expect(component).toMatch(/useOrderListLiveQuotes\(props\)/);
+    const src = `${component}\n${controller}`;
     const odds = readFileSync(join(root, "stores/oddsStore.ts"), "utf8");
     expect(src).toMatch(/orderLiveTick/);
     expect(src).toMatch(/watchedLiveTokens/);

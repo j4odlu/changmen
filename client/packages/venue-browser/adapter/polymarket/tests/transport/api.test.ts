@@ -4,6 +4,7 @@ import {
   POLYMARKET_GAMMA_API,
   POLYMARKET_MARKET_WS,
   polymarketMarketSubscribeMessage,
+  polymarketMarketSubscriptionUpdateMessage,
   polymarketUserSubscribeMessage,
   polymarketUserSubscribeMoreMessage,
 } from "@changmen/venue-browser/polymarket/api";
@@ -45,6 +46,15 @@ describe("Polymarket API (quote endpoints / WS messages)", () => {
     expect(polymarketUserSubscribeMoreMessage(["0x2"])).toEqual({
       markets: ["0x2"],
       operation: "subscribe",
+    });
+  });
+
+  test("builds official incremental market subscription updates", () => {
+    expect(JSON.parse(polymarketMarketSubscriptionUpdateMessage(["c"], "subscribe"))).toEqual({
+      assets_ids: ["c"], operation: "subscribe", custom_feature_enabled: true,
+    });
+    expect(JSON.parse(polymarketMarketSubscriptionUpdateMessage(["a"], "unsubscribe"))).toEqual({
+      assets_ids: ["a"], operation: "unsubscribe",
     });
   });
 });

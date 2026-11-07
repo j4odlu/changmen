@@ -11,15 +11,18 @@ export function isPolymarketMarketIndex(value: unknown): value is PolymarketMark
   return Array.isArray(row.entries) && Array.isArray(row.assetIds);
 }
 
-export function indexEntryToMappedMarket(entry: PolymarketMarketIndexEntry): PolymarketMappedMarket {
+export function indexEntryToMappedMarket(
+  entry: PolymarketMarketIndexEntry,
+  { includePrices = true } = {},
+): PolymarketMappedMarket {
   const sourceMatchId = String(entry.sourceMatchId);
   const marketId = String(entry.marketId);
   const homeTokenId = String(entry.homeTokenId);
   const awayTokenId = String(entry.awayTokenId);
   const homeName = String(entry.homeName);
   const awayName = String(entry.awayName);
-  const homeOdds = Number(entry.homeOdds) || 0;
-  const awayOdds = Number(entry.awayOdds) || 0;
+  const homeOdds = includePrices ? Number(entry.homeOdds) || 0 : 0;
+  const awayOdds = includePrices ? Number(entry.awayOdds) || 0 : 0;
   const status = String(entry.status ?? "Locked");
   const map = Number(entry.map) || 0;
 
@@ -60,6 +63,7 @@ export function applyPolymarketMarketIndex(
     marketsById: Map<string, PolymarketMappedMarket>;
     assetToMarket: Map<string, string>;
   },
+  options = { includePrices: true },
 ): string[] {
   maps.marketsById.clear();
   maps.assetToMarket.clear();
@@ -68,7 +72,7 @@ export function applyPolymarketMarketIndex(
 
   for (const entry of index.entries) {
     rememberPolymarketIndexBetLabel(entry);
-    const mapped = indexEntryToMappedMarket(entry);
+    const mapped = indexEntryToMappedMarket(entry, options);
     maps.marketsById.set(mapped.marketId, mapped);
     maps.assetToMarket.set(mapped.assetIds[0]!, mapped.marketId);
     maps.assetToMarket.set(mapped.assetIds[1]!, mapped.marketId);

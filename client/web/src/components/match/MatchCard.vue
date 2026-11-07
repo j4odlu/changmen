@@ -38,10 +38,11 @@ const props = withDefaults(
     match: ViewMatch;
     /** 仅体育板传入；电竞不传（见 SportMatchBoard） */
     oddsDisplayTick?: number;
+    quoteScope?: "esport" | "sport";
     /** 体育只读：false；电竞默认 true */
     allowBetting?: boolean;
   }>(),
-  { allowBetting: true },
+  { allowBetting: true, quoteScope: "esport" },
 );
 
 const user = useUserStore();
@@ -127,6 +128,7 @@ const pmMatchStatus = computed(() => props.match.pmSport || props.match.provider
           :match="match"
           :bet="bet"
           :odds-display-tick="oddsDisplayTick"
+          :quote-scope="quoteScope"
           :allow-betting="allowBetting"
         />
         <RayBasketballSpreads

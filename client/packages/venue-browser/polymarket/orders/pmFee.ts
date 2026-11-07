@@ -171,6 +171,28 @@ export function clearPolymarketMarketFeeCache(): void {
   feeCache.clear();
 }
 
+/** [changmen 扩展] 仅供赔率旁显；缺失、未知曲线或请求失败均返回未知，不沿用成交核对的零费率回退。 */
+export async function readPolymarketDisplayFeeDetails(
+  conditionId: string,
+): Promise<PolymarketMarketFeeDetails | undefined> {
+  const id = String(conditionId ?? "").trim();
+  if (!id) return undefined;
+  try {
+    const market = await polymarketPluginGet<{ fd?: { r?: unknown; e?: unknown; to?: unknown } }>(
+      `${POLYMARKET_CLOB_API}/clob-markets/${encodeURIComponent(id)}`,
+    );
+    const fd = market?.fd;
+    const rate = fd?.r;
+    if ((typeof rate !== "number" && !(typeof rate === "string" && rate.trim()))
+      || !Number.isFinite(Number(rate)) || Number(rate) < 0
+      || Number(fd?.e) !== 1 || typeof fd?.to !== "boolean") return undefined;
+    return { feeRate: Number(rate), exponent: 1, takerOnly: fd.to };
+  }
+  catch {
+    return undefined;
+  }
+}
+
 function applyOfficialBuyCostToOrder<T extends {
   pmFeeUsdc?: number;
   pmShares?: number;

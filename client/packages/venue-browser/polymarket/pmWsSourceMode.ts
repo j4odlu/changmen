@@ -11,6 +11,7 @@ export interface PmWsSourceModeStore {
   set: (mode: PmWsSourceMode) => PmWsSourceMode;
   cycle: () => PmWsSourceMode;
   resetForTests: (mode?: PmWsSourceMode) => void;
+  subscribe: (listener: (mode: PmWsSourceMode) => void) => () => void;
 }
 
 export function createPmWsSourceModeStore(storageKey: string): PmWsSourceModeStore {
@@ -25,13 +26,22 @@ export function createPmWsSourceModeStore(storageKey: string): PmWsSourceModeSto
   }
 
   let mode: PmWsSourceMode = readStoredSourceMode();
+  const listeners = new Set<(mode: PmWsSourceMode) => void>();
+  function updateMode(next: PmWsSourceMode): void {
+    if (mode === next) return;
+    mode = next;
+    for (const listener of listeners) {
+      try { listener(mode); }
+      catch (err) { console.warn("[Polymarket] source mode listener", err); }
+    }
+  }
 
   return {
     get() {
       return mode;
     },
     set(next) {
-      mode = next;
+      updateMode(next);
       try {
         globalThis.localStorage?.setItem(storageKey, next);
       } catch {
@@ -42,7 +52,7 @@ export function createPmWsSourceModeStore(storageKey: string): PmWsSourceModeSto
     cycle() {
       const idx = SOURCE_MODE_ORDER.indexOf(mode);
       const next = SOURCE_MODE_ORDER[(idx + 1) % SOURCE_MODE_ORDER.length]!;
-      mode = next;
+      updateMode(next);
       try {
         globalThis.localStorage?.setItem(storageKey, next);
       } catch {
@@ -51,12 +61,16 @@ export function createPmWsSourceModeStore(storageKey: string): PmWsSourceModeSto
       return mode;
     },
     resetForTests(next = "changmen") {
-      mode = next;
+      updateMode(next);
       try {
         globalThis.localStorage?.removeItem(storageKey);
       } catch {
         /* ignore */
       }
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => { listeners.delete(listener); };
     },
   };
 }

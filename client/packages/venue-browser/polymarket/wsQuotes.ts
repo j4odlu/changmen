@@ -76,10 +76,10 @@ function bestAsksFromMessages(messages: PolymarketWsMessage[]) {
         }
       }
     }
-    else if (msg.event_type === "book" && msg.asset_id) {
+    else if (msg.event_type === "book" && msg.asset_id && Array.isArray(msg.asks)) {
       const bestAsk = bestAskFromBook({ asks: msg.asks });
-      if (bestAsk > 0)
-        updates.push({ assetId: String(msg.asset_id), bestAsk, ...(timestamp ? { timestamp } : {}) });
+      // 0 表示完整快照明确没有可买卖盘；缺失 asks 字段不等同于空盘。
+      updates.push({ assetId: String(msg.asset_id), bestAsk, ...(timestamp ? { timestamp } : {}) });
     }
   }
   return updates;

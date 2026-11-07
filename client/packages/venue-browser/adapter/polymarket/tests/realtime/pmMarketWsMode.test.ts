@@ -5,6 +5,7 @@ import {
   pmMarketWsSourceModeLabel,
   resetPmMarketWsSourceModeForTests,
   setPmMarketWsSourceMode,
+  onPmMarketWsSourceModeChange,
 } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
 
 describe("pmMarketWsMode", () => {
@@ -21,6 +22,22 @@ describe("pmMarketWsMode", () => {
     expect(cyclePmMarketWsSourceMode()).toBe("official");
     expect(pmMarketWsSourceModeLabel()).toBe("官方源");
     expect(cyclePmMarketWsSourceMode()).toBe("changmen");
+  });
+
+  test("routing observers see changes immediately and can release their subscription", () => {
+    const seen: string[] = [];
+    const stop = onPmMarketWsSourceModeChange(mode => {
+      expect(getPmMarketWsSourceMode()).toBe(mode);
+      seen.push(mode);
+    });
+    try {
+      setPmMarketWsSourceMode("official");
+      setPmMarketWsSourceMode("official");
+      cyclePmMarketWsSourceMode();
+      expect(seen).toEqual(["official", "changmen"]);
+    } finally { stop(); }
+    setPmMarketWsSourceMode("official");
+    expect(seen).toEqual(["official", "changmen"]);
   });
 
   test("persists to localStorage", () => {

@@ -12,6 +12,8 @@ export interface VenueOddsEntry {
   time: number;
   source?: OddsSaveSource;
   clobPrice?: number;
+  /** [changmen 扩展] 区分 PM 目录种子与行情/预检报价；直连不读取目录种子。 */
+  pmQuoteSource?: "http-seed" | "ws" | "book-correct";
   /** [changmen 扩展] Predict.fun market id（下注拉 orderbook 用） */
   marketId?: string;
 }

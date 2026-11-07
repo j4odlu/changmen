@@ -6,8 +6,9 @@
  * 业务消费者：`registerPolymarketQuoteAssets("esport"|"sport", ids)` + `onPolymarketMarketQuote`
  */
 
-import { polymarketMarketSubscribeMessage } from "./api";
+import { polymarketMarketSubscribeMessage, polymarketMarketSubscriptionUpdateMessage } from "./api";
 import {
+  getPmMarketWsSourceMode,
   notePolymarketMarketWsSubscription,
   notePolymarketMarketWsQuote,
   startPolymarketMarketWs,
@@ -30,12 +31,17 @@ type ReadyListener = () => void;
 
 const consumers = new Map<string, Set<string>>();
 const quoteListeners = new Set<QuoteListener>();
+/** 空卖盘独立通知，保留普通 quote 监听器只收到有效价格的契约。 */
+const askUnavailableListeners = new Set<(assetId: string) => void>();
 const readyListeners = new Set<ReadyListener>();
 const bidQuotes = createPmBidQuoteCache();
 export const getPolymarketMarketBestBid = bidQuotes.get;
 export const onPolymarketMarketBid = bidQuotes.subscribe;
 
 let wsHandle: PolymarketMarketWsHandle | null = null;
+/** 只记录当前已打开的官方连接；转发及连接建立前保留原发送方式。 */
+let officialAssets: Set<string> | null = null;
+let officialInitialSent = false;
 /** 作废已排队的 ready microtask */
 let readyEpoch = 0;
 
@@ -65,8 +71,36 @@ function resubscribe(initialDump: boolean): void {
   const assetIds = mergedAssetIds();
   bidQuotes.retain(new Set(assetIds));
   notePolymarketMarketWsSubscription(assetIds.length);
-  if (assetIds.length)
-    wsHandle.send(polymarketMarketSubscribeMessage(assetIds, initialDump));
+  if (officialAssets === null) {
+    if (assetIds.length)
+      wsHandle.send(polymarketMarketSubscribeMessage(assetIds, initialDump));
+    return;
+  }
+  if (!officialInitialSent) {
+    if (assetIds.length) {
+      wsHandle.send(polymarketMarketSubscribeMessage(assetIds));
+      officialAssets = new Set(assetIds);
+      officialInitialSent = true;
+    }
+    return;
+  }
+  const desired = new Set(assetIds);
+  const subscribed = officialAssets;
+  const added = assetIds.filter(id => !subscribed.has(id));
+  const removed = [...officialAssets].filter(id => !desired.has(id));
+  if (added.length) {
+    wsHandle.send(polymarketMarketSubscriptionUpdateMessage(added, "subscribe"));
+    for (const id of added) officialAssets.add(id);
+  }
+  if (removed.length) {
+    wsHandle.send(polymarketMarketSubscriptionUpdateMessage(removed, "unsubscribe"));
+    for (const id of removed) officialAssets.delete(id);
+  }
+}
+
+function resetConnectionSubscriptions(): void {
+  officialAssets = null;
+  officialInitialSent = false;
 }
 
 function emitQuote(assetId: string, bestAsk: number): void {
@@ -85,6 +119,15 @@ function emitQuote(assetId: string, bestAsk: number): void {
   }
 }
 
+function emitAskUnavailable(assetId: string): void {
+  if (!mergedAssetHas(assetId))
+    return;
+  for (const fn of askUnavailableListeners) {
+    try { fn(assetId); }
+    catch (err) { console.warn("[Polymarket] ask unavailable listener", err); }
+  }
+}
+
 function notifyReady(): void {
   for (const fn of readyListeners) {
     try {
@@ -99,6 +142,7 @@ function notifyReady(): void {
 function maybeStopTransport(): void {
   if (consumers.size > 0)
     return;
+  resetConnectionSubscriptions();
   bidQuotes.clear();
   notePolymarketMarketWsSubscription(0);
   if (!wsHandle)
@@ -111,6 +155,7 @@ function maybeStopTransport(): void {
 /** 停掉 market quote transport；logout / session teardown 使用。 */
 export function stopPolymarketMarketQuoteHub(): void {
   consumers.clear();
+  resetConnectionSubscriptions();
   bidQuotes.clear();
   notePolymarketMarketWsSubscription(0);
   if (!wsHandle)
@@ -125,16 +170,23 @@ export function ensurePolymarketMarketQuoteHub(): void {
   if (wsHandle)
     return;
   wsHandle = startPolymarketMarketWs({
-    onOpen: () => { bidQuotes.clear(); resubscribe(true); },
-    onDisconnect: () => bidQuotes.clear(),
+    onOpen: (source = getPmMarketWsSourceMode()) => {
+      resetConnectionSubscriptions();
+      if (source === "official") officialAssets = new Set();
+      bidQuotes.clear();
+      resubscribe(true);
+    },
+    onDisconnect: () => { resetConnectionSubscriptions(); bidQuotes.clear(); },
     onMessage: (raw) => {
       const quotes = extractPolymarketWsQuotes(raw);
       for (const update of quotes.bids) {
         if (mergedAssetHas(update.assetId)) bidQuotes.apply(update);
       }
       for (const update of quotes.asks) {
+        if (typeof update.bestAsk === "string" && !update.bestAsk.trim())
+          continue;
         const price = Number(update.bestAsk);
-        if (!Number.isFinite(price))
+        if (!Number.isFinite(price) || price < 0 || price > 1)
           continue;
         if (!shouldApplyPolymarketWsQuote(update.assetId, update.timestamp)) {
           recordPmQuoteToFoMetric({
@@ -147,7 +199,10 @@ export function ensurePolymarketMarketQuoteHub(): void {
           continue;
         }
         notePolymarketMarketWsQuote(update.timestamp);
-        emitQuote(update.assetId, price);
+        if (price === 0 || price === 1)
+          emitAskUnavailable(update.assetId);
+        else
+          emitQuote(update.assetId, price);
       }
     },
   });
@@ -167,7 +222,7 @@ function mergedAssetHas(assetId: string): boolean {
 
 /**
  * 业务层登记本消费者要订的 CLOB token。
- * @param force 跳过同集合短路（transport 重建后强制重订）
+ * @param force 跳过消费者同集合短路；官方连接仍只发送实际差集，重连由 onOpen 全量恢复。
  */
 export function registerPolymarketQuoteAssets(
   consumerId: PolymarketQuoteConsumerId,
@@ -221,6 +276,12 @@ export function onPolymarketMarketQuote(fn: QuoteListener): () => void {
   };
 }
 
+/** 明确空卖盘或不可买边界价：消费者应使本 token 的旧买入报价失效。 */
+export function onPolymarketMarketAskUnavailable(fn: (assetId: string) => void): () => void {
+  askUnavailableListeners.add(fn);
+  return () => { askUnavailableListeners.delete(fn); };
+}
+
 /** transport (re)start 后通知业务重登记（例如体育 sync(true)）。 */
 export function onPolymarketMarketHubReady(fn: ReadyListener): () => void {
   readyListeners.add(fn);
@@ -256,6 +317,7 @@ export function __testResetPolymarketMarketQuoteHub(): void {
   bidQuotes.reset();
   consumers.clear();
   quoteListeners.clear();
+  askUnavailableListeners.clear();
   readyListeners.clear();
   stopPolymarketMarketQuoteHub();
 }

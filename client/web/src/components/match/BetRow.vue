@@ -14,6 +14,9 @@ import { storeToRefs } from "pinia";
 import { computed, onUnmounted, ref, watch } from "vue";
 import LimitDiagDialog from "@/components/match/LimitDiagDialog.vue";
 import PmPrematchProbability from "@/components/match/PmPrematchProbability.vue";
+import PmFeeOdds from "@/components/match/PmFeeOdds.vue";
+import { resolvePmDisplayQuote } from "@changmen/venue-browser/polymarket/quotes/pmArbPriceBufferMode";
+import { pmFeeDisplayPrice } from "@/shared/pmFeeOddsDisplay";
 import OddsSignalBadges from "@/extensions/pmSignals/OddsSignalBadges.vue";
 import { buildOddsSignalBadges, oddsBadgeKey, type OddsSignalBadge } from "@/extensions/pmSignals/oddsBadges";
 import { pmOddsDropSignals, pmUpSignals } from "@/extensions/pmSignals/records";
@@ -51,13 +54,15 @@ const props = withDefaults(
      * 电竞路径不传；BetRow 不 import sportOddsStore，保持壳共用、store 隔离。
      */
     oddsDisplayTick?: number;
+    /** [changmen 扩展] 页面显式声明报价范围；电竞也有 pmSport 比分，不能据此判断体育板。 */
+    quoteScope?: "esport" | "sport";
     /**
      * [changmen 扩展] 棒/足只读板：禁双击下单 / EV / 补单 / 点选 target，避免误走电竞 manualBet。
      * 电竞默认 true。
      */
     allowBetting?: boolean;
   }>(),
-  { allowBetting: true },
+  { allowBetting: true, quoteScope: "esport" },
 );
 
 const BET_SIDES: BetSide[] = ["Home", "Away"];
@@ -186,8 +191,8 @@ const oddsByItemKey = computed(() => {
   for (const item of props.bet.items) {
     const blocked = item.type === "Polymarket" && pmQuoteBlocked.value;
     out.set(`${item.type}:${item.betId}`, {
-      home: blocked ? 0 : oddsStore.getOdds(item.type, item.homeId, item.fallbackHomeOdds),
-      away: blocked ? 0 : oddsStore.getOdds(item.type, item.awayId, item.fallbackAwayOdds),
+      home: blocked ? 0 : oddsStore.getOdds(item.type, item.homeId, item.fallbackHomeOdds, props.quoteScope),
+      away: blocked ? 0 : oddsStore.getOdds(item.type, item.awayId, item.fallbackAwayOdds, props.quoteScope),
     });
   }
   return out;
@@ -218,7 +223,17 @@ function itemOdds(item: ViewBet["items"][0], side: BetSide) {
 function itemQuotePending(item: ViewBet["items"][0], side: BetSide): boolean {
   if (item.type === "Polymarket" && pmQuoteBlocked.value)
     return false;
-  return props.allowBetting && oddsStore.isQuotePending(item.type, side === "Home" ? item.homeId : item.awayId);
+  return props.allowBetting && oddsStore.isQuotePending(item.type, side === "Home" ? item.homeId : item.awayId,
+    props.quoteScope);
+}
+
+/** [changmen 扩展] 旁显单独读取当前价格，不修改 itemOdds 或交易侧报价。 */
+function pmFeePrice(item: ViewBet["items"][0], side: BetSide): number | undefined {
+  void props.oddsDisplayTick;
+  const id = side === "Home" ? item.homeId : item.awayId;
+  const entry = oddsStore.getPmQuoteEntry(id);
+  return pmFeeDisplayPrice(itemOdds(item, side), entry ? resolvePmDisplayQuote(id, entry) : undefined,
+    side === "Home" ? item.fallbackHomeOdds : item.fallbackAwayOdds);
 }
 
 /** [changmen 扩展] PB WS 影子价旁显；可点选 target / 双击按旁显价下限手动下单；不写 fo */
@@ -577,7 +592,11 @@ function onBetTitleDblClick() {
         >
           <span v-if="item.type === 'RAY' && rayWinner === 'Home'" class="ray-map-win-badge" title="RAY 已确认本方赢得该地图">WIN</span>
           <span class="item-odds__value">{{ itemOdds(item, "Home") || (itemQuotePending(item, 'Home') ? '等待报价' : '')
-          }}<span
+          }}<PmFeeOdds
+            v-if="extensionPrefs.pmFeeAdjustedOddsUi && item.type === 'Polymarket' && itemOdds(item, 'Home') > 1"
+            :condition-id="item.betId"
+            :price="pmFeePrice(item, 'Home')"
+          /><span
             v-if="pbShadowLabel(item, 'Home')"
             class="pb-ws-shadow"
             :class="pbShadowClass(item, 'Home')"
@@ -619,7 +638,11 @@ function onBetTitleDblClick() {
         >
           <span v-if="item.type === 'RAY' && rayWinner === 'Away'" class="ray-map-win-badge" title="RAY 已确认本方赢得该地图">WIN</span>
           <span class="item-odds__value">{{ itemOdds(item, "Away") || (itemQuotePending(item, 'Away') ? '等待报价' : '')
-          }}<span
+          }}<PmFeeOdds
+            v-if="extensionPrefs.pmFeeAdjustedOddsUi && item.type === 'Polymarket' && itemOdds(item, 'Away') > 1"
+            :condition-id="item.betId"
+            :price="pmFeePrice(item, 'Away')"
+          /><span
             v-if="pbShadowLabel(item, 'Away')"
             class="pb-ws-shadow"
             :class="pbShadowClass(item, 'Away')"

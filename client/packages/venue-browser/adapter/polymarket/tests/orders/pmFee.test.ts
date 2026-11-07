@@ -4,13 +4,34 @@ import {
   computePolymarketPlatformFeeUsdc,
   enrichPolymarketBuyVenueOrderWithFee,
   parsePolymarketMarketFeeDetails,
+  readPolymarketDisplayFeeDetails,
 } from "@changmen/venue-browser/polymarket/orders/pmFee";
+import { polymarketPluginGet } from "@changmen/venue-browser/polymarket/transport/transport";
 
 vi.mock("@changmen/venue-browser/polymarket/transport/transport", () => ({
   polymarketPluginGet: vi.fn(async () => ({
     fd: { r: 0.05, e: 1, to: true },
   })),
 }));
+
+describe("display-only fee evidence", () => {
+  it("reads a known curve, including an explicit zero rate", async () => {
+    expect(await readPolymarketDisplayFeeDetails("market")).toEqual({ feeRate: .05, exponent: 1, takerOnly: true });
+    vi.mocked(polymarketPluginGet).mockResolvedValueOnce({ fd: { r: 0, e: 1, to: true } });
+    expect(await readPolymarketDisplayFeeDetails("market")).toEqual({ feeRate: 0, exponent: 1, takerOnly: true });
+  });
+  it("keeps absent, malformed, unsupported and unavailable fees unknown", async () => {
+    for (const row of [{}, { fd: {} }, { fd: { r: null, e: 1, to: true } },
+      { fd: { r: "", e: 1, to: true } }, { fd: { r: -.05, e: 1, to: true } },
+      { fd: { r: .05, e: 2, to: true } }, { fd: { r: .05, e: 1 } }]) {
+      vi.mocked(polymarketPluginGet).mockResolvedValueOnce(row);
+      expect(await readPolymarketDisplayFeeDetails("market")).toBeUndefined();
+    }
+    vi.mocked(polymarketPluginGet).mockRejectedValueOnce(Error("offline"));
+    expect(await readPolymarketDisplayFeeDetails("market")).toBeUndefined();
+    expect(await readPolymarketDisplayFeeDetails("")).toBeUndefined();
+  });
+});
 
 describe("computePolymarketPlatformFeeUsdc", () => {
   it("matches sports fee table at 100 shares @ 0.40 (rate 0.05 → 1.20)", () => {

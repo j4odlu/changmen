@@ -1,5 +1,7 @@
 import type { PlatformId } from "@/types/esport";
 import type { LimitEntry } from "@changmen/client-core/types/limit";
+import type { VenueOddsEntry } from "@changmen/client-core/bridge/oddsAccess";
+import { getPmMarketWsSourceMode } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
 /**
  * 实时赔率缓存（对齐 A8 `Qn()` / match store 内 `p=Qn()`；Pinia id `"counter"`）。
  * changmen Pinia id 为 `"odds"`。勿与 A8 `fo()`（账号 store）混淆。
@@ -43,6 +45,7 @@ export interface OddsEntry {
   odds: number;
   /** [changmen 扩展] Polymarket / PredictFun CLOB best_ask（0~1）；预检限价用，其它平台不填 */
   clobPrice?: number;
+  pmQuoteSource?: VenueOddsEntry["pmQuoteSource"];
   /** [changmen 扩展] Predict.fun market id */
   marketId?: string;
   /** 是否锁盘/不可下注（HTTP 灌盘公式或 MQTT 增量） */
@@ -64,6 +67,11 @@ export type OddsFlashDir = "up" | "down";
 const ODDS_FLASH_MS = 4_000;
 /** OB MQTT `/odd/statusUpdate/`：status === 6 表示盘口开放，否则视为锁盘 */
 const OB_MARKET_OPEN = 6;
+
+function isPmDirectoryOrLegacyHttpQuote(entry: Readonly<OddsEntry> | null | undefined): boolean {
+  // 热更新/旧内存条目尚无细分来源，不能把未标记的 HTTP 初值当成官方实时价。
+  return entry?.pmQuoteSource === "http-seed" || (entry?.source === "http" && !entry.pmQuoteSource);
+}
 
 /** 对齐 A8 `Qn()`（Pinia `"counter"`）— 实时赔率缓存 */
 export const useOddsStore = defineStore("odds", {
@@ -108,6 +116,8 @@ export const useOddsStore = defineStore("odds", {
     /** [changmen 扩展] 报价规则/元数据的显示失效通知，不重写原始赔率。 */
     pmTickBufferEnabled: false,
     pmTickBufferVersion: 0,
+    /** [changmen 扩展] 响应式来源镜像；切换直连后立即停止读取旧目录种子/fallback。 */
+    pmMarketWsSourceMode: getPmMarketWsSourceMode(),
   }),
 
   actions: {
@@ -118,6 +128,11 @@ export const useOddsStore = defineStore("odds", {
      * 订单现价由 OrderList 按挂单 token `$onAction` 局部刷新（不再全局 quoteTick）。
      */
     save(platform: PlatformId, entry: OddsEntry, source: OddsSaveSource = "http") {
+      if (platform === PLATFORMS.Polymarket && entry.pmQuoteSource === "http-seed") {
+        const live = this.data.get(platform)?.get(String(entry.id)) ?? this.pmQuoteSnapshots.get(String(entry.id));
+        // 明确空卖盘也是 WS 状态；目录种子不能在轮询或缓存重建后复活旧可买价。
+        if (this.pmMarketWsSourceMode === "official" || live?.pmQuoteSource === "ws") return;
+      }
       const id = String(entry.id);
       if (!this.data.has(platform))
         this.data.set(platform, new Map());
@@ -140,6 +155,9 @@ export const useOddsStore = defineStore("odds", {
         });
       }
       const next: OddsEntry = { ...entry, id, source };
+      // 纯赔率回写不能抹掉目录种子身份，否则切换直连后会将其误认成实时价。
+      if (platform === PLATFORMS.Polymarket && !next.pmQuoteSource && entry.clobPrice == null)
+        next.pmQuoteSource = (prev ?? this.pmQuoteSnapshots.get(id))?.pmQuoteSource;
       if (next.marketId != null)
         next.marketId = String(next.marketId).trim() || undefined;
       // PredictFun：增量/writeVenueOdds 若漏传 marketId，保留已有值，避免 checkBet 丢 fo 缓存
@@ -178,29 +196,36 @@ export const useOddsStore = defineStore("odds", {
       return Boolean(this.data.get(platform)?.has(String(oddsId)));
     },
 
-    /** 原始条目；未命中返回 undefined（不格式化、不处理锁盘显示逻辑） */
+    /** 原始条目；PM 官方直连屏蔽目录种子，其它平台保持原读取规则。 */
     getEntry(platform: PlatformId, oddsId: string): OddsEntry | undefined {
-      return this.data.get(platform)?.get(String(oddsId));
+      const entry = this.data.get(platform)?.get(String(oddsId));
+      if (platform === PLATFORMS.Polymarket && this.pmMarketWsSourceMode === "official"
+        && isPmDirectoryOrLegacyHttpQuote(entry)) return undefined;
+      return entry;
     },
 
     /** [changmen 扩展] 报价消费者共用的原始卖一入口；实时行情优先于重建快照。 */
     getPmQuoteEntry(oddsId: string): Readonly<OddsEntry> | undefined {
       const id = String(oddsId);
-      return this.getEntry(PLATFORMS.Polymarket, id) ?? this.pmQuoteSnapshots.get(id) ?? undefined;
+      const entry = this.getEntry(PLATFORMS.Polymarket, id) ?? this.pmQuoteSnapshots.get(id) ?? undefined;
+      return this.pmMarketWsSourceMode === "official" && isPmDirectoryOrLegacyHttpQuote(entry)
+        ? undefined : entry;
     },
 
     /**
      * 按 oddId 取展示赔率（对齐 A8 `Qn().getOdds` / `p.getOdds`）。
-     * - 无缓存：返回 fallback（经平台格式化）
+     * - 无缓存：PM 电竞直连等待官方行情；其它路径返回格式化 fallback
      * - 有缓存且 isLock：返回 0（**不用** fallback 顶替锁盘）
      * - 有缓存且未锁：返回格式化后的 row.odds
      * - Polymarket / PredictFun：truncateOddsTo3（1/price 截断）；其它馆 formatDisplayOdds（四舍五入）
      * - [changmen 扩展] PM 可读缓存重建前的完整卖一快照，再按当前规则转换；写入仍是真价。
      */
-    getOdds(platform: PlatformId, oddsId: string, fallback = 0): number {
+    getOdds(platform: PlatformId, oddsId: string, fallback = 0, scope: "esport" | "sport" = "esport"): number {
       if (platform === PLATFORMS.Polymarket) void this.pmTickBufferVersion;
       const row = platform === PLATFORMS.Polymarket
         ? this.getPmQuoteEntry(oddsId) : this.getEntry(platform, oddsId);
+      if (!row && platform === PLATFORMS.Polymarket && scope === "esport" && this.pmMarketWsSourceMode === "official")
+        return 0;
       if (platform === PLATFORMS.Polymarket && (this.pmTickBufferEnabled || isPmTickBufferActive())) {
         const result = resolvePmDisplayQuote(String(oddsId), row);
         return result.status === "ready" ? result.quote.displayOdds : 0;
@@ -220,8 +245,10 @@ export const useOddsStore = defineStore("odds", {
     },
 
     /** [changmen 扩展] 行情正常但报价尚未就绪；UI 不将其误标为场馆封盘。 */
-    isQuotePending(platform: PlatformId, oddsId: string): boolean {
-      if (platform !== PLATFORMS.Polymarket || !isPmTickBufferActive()) return false;
+    isQuotePending(platform: PlatformId, oddsId: string, scope: "esport" | "sport" = "esport"): boolean {
+      if (platform !== PLATFORMS.Polymarket) return false;
+      if (scope === "esport" && this.pmMarketWsSourceMode === "official" && !this.getPmQuoteEntry(oddsId)) return true;
+      if (!isPmTickBufferActive()) return false;
       void this.pmTickBufferVersion;
       return resolvePmDisplayQuote(String(oddsId), this.getPmQuoteEntry(oddsId)).status === "waiting-tick";
     },

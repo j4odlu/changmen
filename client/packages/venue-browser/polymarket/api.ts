@@ -32,8 +32,8 @@ export interface PolymarketSportResult {
 export type { PolymarketWsPriceChange, PolymarketWsMessage } from "./marketMessage";
 
 /**
- * @param initialDump true = 订阅后立即收到 book 快照（连接/重连时用）；
- *                    false = 仅接增量推送（60s 循环重订阅时用，避免快照洪流）。
+ * 初始 market 帧；官方连接运行中增减资产使用 operation 更新。
+ * initialDump=false 保留给现有 CHANGMEN 转发及其他调用方。
  */
 export function polymarketMarketSubscribeMessage(assetIds: string[], initialDump = true): string {
   return JSON.stringify({
@@ -41,6 +41,18 @@ export function polymarketMarketSubscribeMessage(assetIds: string[], initialDump
     type: "market",
     custom_feature_enabled: true,
     initial_dump: initialDump,
+  });
+}
+
+/** 官方 Market WS 的资产差集更新；新增资产由官方返回初始 book。 */
+export function polymarketMarketSubscriptionUpdateMessage(
+  assetIds: string[],
+  operation: "subscribe" | "unsubscribe",
+): string {
+  return JSON.stringify({
+    assets_ids: assetIds,
+    operation,
+    ...(operation === "subscribe" ? { custom_feature_enabled: true } : {}),
   });
 }
 

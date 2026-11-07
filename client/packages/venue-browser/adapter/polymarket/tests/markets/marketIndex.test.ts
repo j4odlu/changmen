@@ -40,4 +40,19 @@ describe("polymarket marketIndex", () => {
     expect(assetToMarket.get("a")).toBe("cond-1");
     expect(lookupPolymarketOrderBetLabel("cond-1", "a")).toBe("全场");
   });
+
+  test("mapping-only initialization ignores odds but retains IDs, status and labels", () => {
+    const maps = { marketsById: new Map(), assetToMarket: new Map() };
+    const ids = applyPolymarketMarketIndex({ updatedAt: 2, assetIds: ["h2", "a2"], entries: [{
+      sourceMatchId: "event", marketId: "condition", sourceBetId: "condition", map: 2,
+      homeTokenId: "h2", awayTokenId: "a2", homeName: "Home", awayName: "Away",
+      homeOdds: 3.571, awayOdds: 1.388, homeClobPrice: 0.28, awayClobPrice: 0.72, status: "Normal",
+    }] }, maps, { includePrices: false });
+    expect(ids).toEqual(["h2", "a2"]);
+    expect(maps.assetToMarket.get("h2")).toBe("condition");
+    expect(maps.marketsById.get("condition").bet).toMatchObject({
+      SourceHomeID: "h2", SourceAwayID: "a2", HomeOdds: 0, AwayOdds: 0, Status: "Normal", Map: 2,
+    });
+    expect(lookupPolymarketOrderBetLabel("condition", "a2")).toBe("地图2");
+  });
 });

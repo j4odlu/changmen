@@ -14,6 +14,8 @@ import {
 } from "@changmen/venue-browser/polymarket";
 import BetRow from "./BetRow.vue";
 
+vi.mock("@/services/pmDisplayFees", () => ({ loadPmDisplayFee: vi.fn().mockResolvedValue(undefined) }));
+
 vi.mock("element-plus/es/components/base/style/css", () => ({}));
 vi.mock("element-plus/es/components/tag/style/css", () => ({}));
 vi.mock("@/stores/createLoseDialogStore", () => ({ useCreateLoseDialogStore: () => ({ show: vi.fn() }) }));
@@ -48,6 +50,7 @@ type State = {
   extensionBet: ViewBet;
   itemOdds: (item: ViewBetItem, side: BetSide) => number;
   itemQuotePending: (item: ViewBetItem, side: BetSide) => boolean;
+  pmFeePrice: (item: ViewBetItem, side: BetSide) => number | undefined;
   evMarker: { evLabel: (item: ViewBetItem, side: BetSide) => string | undefined };
   onOddsDblClick: (item: ViewBetItem, side: BetSide) => void;
   onPbShadowDblClick: (item: ViewBetItem, side: BetSide, e: MouseEvent) => void;
@@ -60,7 +63,8 @@ function item(type: ViewBetItem["type"]): ViewBetItem {
     getItemId(side: BetSide) { return side === "Home" ? this.homeId : this.awayId; },
   } as ViewBetItem;
 }
-function mount(pmSport?: ViewMatch["pmSport"], round = 3, allowBetting = true, liveRound = 0) {
+function mount(pmSport?: ViewMatch["pmSport"], round = 3, allowBetting = true, liveRound = 0,
+  quoteScope: "esport" | "sport" = "esport") {
   const pm = item("Polymarket"); const pb = item("PB");
   const bet = reactive({ id: 1, round, items: [pm, pb], getBetName: () => `地图${round}` } as ViewBet);
   const match = reactive({ id: 1, liveRound, pmSport } as ViewMatch);
@@ -69,7 +73,7 @@ function mount(pmSport?: ViewMatch["pmSport"], round = 3, allowBetting = true, l
     odds.save(entry.type, { id: entry.getItemId(side), odds: entry.type === "Polymarket" ? 3 : 1.9,
       clobPrice: 1 / 3, isLock: false, time: Date.now() });
   const app = renderer.createApp({ render: () => h({ ...BetRow, render: () => h("div") } as Component,
-    { match, bet, allowBetting }) });
+    { match, bet, allowBetting, quoteScope }) });
   app.provide(ssrContextKey, {}); apps.push(app);
   const vm = app.mount(node());
   const state = (vm.$.subTree.component as unknown as { setupState: State }).setupState;
@@ -78,6 +82,65 @@ function mount(pmSport?: ViewMatch["pmSport"], round = 3, allowBetting = true, l
 beforeEach(() => {
   setActivePinia(createPinia()); clearPmTickStateForTests(); resetPmArbPriceBufferPrefsForTests();
   resetMapBetMuteForTests();
+});
+
+it("official esports with PM scoreboard metadata waits for a quote and never restores stale fallback", async () => {
+  const { state, match, bet, pm } = mount({ live: true, currentMap: 3 });
+  const odds = useOddsStore();
+  odds.pmMarketWsSourceMode = "official";
+  odds.data.get("Polymarket")!.clear();
+  expect(state.itemOdds(pm, "Home")).toBe(0);
+  expect(state.itemQuotePending(pm, "Home")).toBe(true);
+  const html = await renderToString(createSSRApp(BetRow, { match, bet }).use(getActivePinia()!));
+  expect(html).toContain("等待报价");
+  match.pmSport = undefined;
+  await nextTick();
+  expect(state.itemOdds(pm, "Home")).toBe(0);
+  expect(state.itemQuotePending(pm, "Home")).toBe(true);
+  match.pmSport = { live: true, currentMap: 3 };
+  await nextTick();
+  expect(state.itemOdds(pm, "Home")).toBe(0);
+  odds.save("Polymarket", { id: pm.homeId, clobPrice: 0.35, odds: 1 / 0.35,
+    isLock: false, time: Date.now(), pmQuoteSource: "ws" }, "mqtt");
+  match.pmSport = undefined;
+  await nextTick();
+  expect(state.itemOdds(pm, "Home")).toBe(2.857);
+  expect(state.itemQuotePending(pm, "Home")).toBe(false);
+});
+
+it.each([undefined, { live: true }])("explicit sport scope keeps its fallback regardless of PM scoreboard: %j", async pmSport => {
+  const { state, pm } = mount(pmSport, 3, true, 0, "sport");
+  const odds = useOddsStore();
+  odds.pmMarketWsSourceMode = "official";
+  odds.data.get("Polymarket")!.clear();
+  await nextTick();
+  expect(state.itemOdds(pm, "Home")).toBe(2);
+  expect(state.itemQuotePending(pm, "Home")).toBe(false);
+});
+
+it("fee odds are opt-in UI only: quotes, targets, EV and manual order arguments stay unchanged", async () => {
+  const { state, pm, pb, match, bet } = mount();
+  const user = useUserStore();
+  const odds = useOddsStore();
+  const before = JSON.stringify(odds.getEntry("Polymarket", pm.homeId));
+  const ev = state.evMarker.evLabel(pm, "Home");
+  const manual = vi.spyOn(useMatchStore(), "manualBet").mockResolvedValue(undefined);
+  const render = () => renderToString(createSSRApp(BetRow, { match, bet }).use(getActivePinia()!));
+  expect(await render()).not.toContain('class="pm-fee-odds"');
+  user.extensionPrefs.pmFeeAdjustedOddsUi = true;
+  await nextTick();
+  const html = await render();
+  expect(html.match(/class="pm-fee-odds"/g)).toHaveLength(2);
+  expect(state.pmFeePrice(pm, "Home")).toBe(1 / 3);
+  expect(state.itemOdds(pm, "Home")).toBe(3);
+  expect(state.itemOdds(pb, "Home")).toBe(1.9);
+  expect(state.evMarker.evLabel(pm, "Home")).toBe(ev);
+  state.onOddsDblClick(pm, "Home");
+  expect(manual).toHaveBeenLastCalledWith(match, bet, pm, "Home");
+  expect(JSON.stringify(odds.getEntry("Polymarket", pm.homeId))).toBe(before);
+  match.pmSport = { ended: true };
+  await nextTick();
+  expect(await render()).not.toContain('class="pm-fee-odds"');
 });
 
 afterEach(() => {

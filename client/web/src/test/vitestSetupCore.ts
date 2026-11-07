@@ -32,6 +32,7 @@ registerOddsAccess({
         side: entry.side,
         time: entry.time ?? Date.now(),
         clobPrice: entry.clobPrice,
+        pmQuoteSource: entry.pmQuoteSource,
         marketId,
       }, source);
     }, undefined);

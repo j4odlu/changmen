@@ -7,14 +7,14 @@ import { extractPolymarketWsBestAsks } from "@changmen/venue-browser/polymarket/
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
 describe("Polymarket collect fo lock contracts", () => {
-  test("WS quote path writes locked:false (do not zero getOdds when other side missing)", () => {
+  test("WS quote locks only its own empty ask (do not lock a priced side when the other side is missing)", () => {
     const src = readFileSync(join(root, "../../polymarket/markets/collect.ts"), "utf8");
     const start = src.indexOf("function updateBetFromAsset");
     const end = src.indexOf("const unQuote", start);
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
     const body = src.slice(start, end);
-    expect(body).toMatch(/locked:\s*false/);
+    expect(body).toMatch(/locked:\s*price === 0/);
     expect(body).not.toMatch(/locked:\s*next\.Status/);
     expect(body).not.toMatch(/locked:\s*next\.Status === "Locked"/);
   });

@@ -33,6 +33,9 @@ import { useOddsStore } from "@/stores/oddsStore";
 import { useUserStore } from "@/stores/userStore";
 import { installPmTickBufferQuotes, stopPmTickBufferQuotes } from "@/runtime/pmTickBufferQuotes";
 import { installPmDynamicWsPreflight, stopPmDynamicWsPreflight } from "@/runtime/pmDynamicWsPreflight";
+import { getPmMarketWsSourceMode, onPmMarketWsSourceModeChange } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
+
+let stopPmQuoteSourceMode: (() => void) | undefined;
 
 /** 注册 client-core 桥接（须在 createPinia 之后、采集/下注启动前调用） */
 export function installClientCoreBridges() {
@@ -53,6 +56,9 @@ export function installClientCoreBridges() {
   });
 
   const odds = useOddsStore();
+  stopPmQuoteSourceMode?.();
+  odds.pmMarketWsSourceMode = getPmMarketWsSourceMode();
+  stopPmQuoteSourceMode = onPmMarketWsSourceModeChange(mode => { odds.pmMarketWsSourceMode = mode; });
   installPmTickBufferQuotes();
   installPmDynamicWsPreflight();
   registerOddsAccess({
@@ -71,6 +77,7 @@ export function installClientCoreBridges() {
         side: entry.side,
         time: entry.time ?? Date.now(),
         clobPrice: entry.clobPrice,
+        pmQuoteSource: entry.pmQuoteSource,
         marketId,
       }, source);
     },
@@ -106,6 +113,8 @@ export function installClientCoreBridges() {
 }
 
 export function clearClientCoreBridges() {
+  stopPmQuoteSourceMode?.();
+  stopPmQuoteSourceMode = undefined;
   stopPmTickBufferQuotes();
   stopPmDynamicWsPreflight();
   clearClientApi();

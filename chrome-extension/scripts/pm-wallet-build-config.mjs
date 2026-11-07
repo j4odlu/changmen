@@ -1,4 +1,4 @@
-import { readDevWebPort } from "../../server/storage/dev_web_config.js";
+import { readDevWebPort } from "@changmen/storage/dev_web_config";
 
 /** [changmen 扩展] Same development configuration as Vite and backend auth. */
 export function readPmWalletDevOrigins(webRoot, env = process.env, platform = process.platform) {

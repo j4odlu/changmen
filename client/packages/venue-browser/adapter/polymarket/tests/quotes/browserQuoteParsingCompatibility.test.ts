@@ -36,7 +36,8 @@ test("mixed frames retain order, raw best ask values and per-change timestamp pr
 
 test("PONG, empty updates and existing malformed-message errors stay unchanged", () => {
   expect(parse("PONG")).toEqual([]); expect(parse("[]")).toEqual([]);
-  expect(parse('{"event_type":"book","asset_id":"a","asks":[]}')).toEqual([]);
+  expect(parse('{"event_type":"book","asset_id":"a","asks":[]}')).toEqual([{ assetId: "a", bestAsk: 0 }]);
+  expect(parse('{"event_type":"book","asset_id":"a","bids":[]}')).toEqual([]);
   expect(() => parse("malformed")).toThrow(SyntaxError);
   expect(() => parse("null")).toThrow(TypeError);
   expect(() => parse('[null]')).toThrow(TypeError);

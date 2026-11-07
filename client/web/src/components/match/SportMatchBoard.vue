@@ -126,6 +126,7 @@ watch(
         <MatchCard
           :match="m"
           :odds-display-tick="oddsDisplayTick"
+          quote-scope="sport"
           :allow-betting="false"
         />
       </div>

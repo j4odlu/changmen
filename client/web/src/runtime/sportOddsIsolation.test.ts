@@ -53,6 +53,7 @@ describe("sport / esport UI isolation", () => {
     expect(src).toMatch(/useSportOddsStore/);
     expect(src).toMatch(/odds-display-tick/);
     expect(src).toMatch(/:allow-betting="false"/);
+    expect(src).toMatch(/quote-scope="sport"/);
   });
 
   test("sportLiveOdds clears sportOdds and listens for hub rebound", () => {

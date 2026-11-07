@@ -226,6 +226,8 @@ export interface ExtensionPrefs extends Record<string, unknown> {
   betRowUi: boolean;
   /** 当前 PM LIVE 地图价格走势；独立显示开关，默认关闭（「界面」Tab）。 */
   pmPriceTrendUi: boolean;
+  /** [changmen 扩展] PM 主赔率后旁显扣费后折算赔率，仅展示；默认关闭（「界面」Tab）。 */
+  pmFeeAdjustedOddsUi: boolean;
   /** 全场/各地图赔率右侧的降赔角标；需 BetRow 扩展 UI，独立于监测开关，默认关闭。 */
   pmOddsDropCardUi: boolean;
   /** 涨赔角标显示，独立于监测开关；需 BetRow 扩展 UI。 */
@@ -412,6 +414,7 @@ export function createDefaultExtensionPrefs(): ExtensionPrefs {
     lowOddsSingleHigherCProbabilityOnly: false,
     betRowUi: false,
     pmPriceTrendUi: false,
+    pmFeeAdjustedOddsUi: false,
     pmOddsDropCardUi: false,
     pmUpCardUi: false,
     pmDown: createDefaultPmOddsDropSettings(),
@@ -572,6 +575,7 @@ export function normalizeExtensionPrefs(raw: unknown): ExtensionPrefs {
     lowOddsSingleHigherCProbabilityOnly: row.lowOddsSingleHigherCProbabilityOnly === true,
     betRowUi: row.betRowUi === true,
     pmPriceTrendUi: row.pmPriceTrendUi === true,
+    pmFeeAdjustedOddsUi: row.pmFeeAdjustedOddsUi === true,
     pmOddsDropCardUi: row.pmOddsDropCardUi === true,
     // 旧配置涨赔开启时也显示角标；仅缺少新字段时沿用旧行为。
     pmUpCardUi: row.pmUpCardUi === undefined ? normalizePmUpPrefs(row.pmUp).enabled : row.pmUpCardUi === true,

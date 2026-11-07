@@ -83,7 +83,7 @@ export interface PolymarketMarketWsHandle {
 
 type MarketWsOpts = {
   onMessage: (raw: string) => void;
-  onOpen: () => void;
+  onOpen: (source?: PmMarketWsSourceMode) => void;
   onDisconnect?: () => void;
 };
 
@@ -289,7 +289,7 @@ function createPolymarketMarketWs(opts: MarketWsOpts): ActiveMarketWsHandle {
       notePmMarketClientConnected(getPmMarketWsSourceMode() === "official" ? "official_connected" : "changmen_connected");
       setPolymarketWsStatus("connected", getPmMarketWsSourceMode() === "official" ? "official_connected" : "changmen_connected");
       notePmStreamOpen(streamEpoch, true);
-      opts.onOpen();
+      opts.onOpen(connectionMode);
       notePmTickReconnect();
       updateSubscriptionWatchdog();
       clearPing();

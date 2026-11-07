@@ -147,7 +147,7 @@ describe("PM collect / hub source contracts", () => {
     expect(src).toMatch(/unregisterPolymarketQuoteConsumer\(QUOTE_CONSUMER\)/);
     expect(src).not.toMatch(/clearPolymarketSportHub/);
     expect(src).toMatch(/onPolymarketMarketHubReady\(\(\) => \{\s*syncEsportAssets\(true\);/);
-    expect(src).toMatch(/if \(index\.updatedAt === lastIndexUpdatedAt\)\s*return;/);
+    expect(src).toMatch(/if \(index\.updatedAt === lastIndexUpdatedAt && sourceMode === lastIndexSourceMode\)\s*return;/);
     expect(src).not.toMatch(/updatedAt === lastIndexUpdatedAt\)[\s\S]{0,80}syncEsportAssets\(true\)/);
     expect(src).toMatch(/marketsById\.clear\(\)/);
     expect(src).toMatch(/assetToMarket\.clear\(\)/);

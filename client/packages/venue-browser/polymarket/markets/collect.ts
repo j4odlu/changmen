@@ -5,6 +5,7 @@
 import { getCollectPlatform } from "@changmen/client-core/bridge/clientApi";
 import { saveVenueOdds, getVenueOddsEntry } from "@changmen/client-core/bridge/oddsAccess";
 import type { CollectBetDto } from "@changmen/client-core/types/collect";
+import type { PolymarketMarketIndex } from "@changmen/api-contract";
 import { PLATFORMS } from "@changmen/client-core/shared/platforms";
 import { wait } from "@changmen/client-core/shared/wait";
 import { notifyCollectError } from "../../shared/collectNotify";
@@ -23,12 +24,14 @@ import {
 import { isValidClobPrice } from "../submission/preflight/pmDetection";
 import {
   onPolymarketMarketHubReady,
+  onPolymarketMarketAskUnavailable,
   onPolymarketMarketQuote,
   registerPolymarketQuoteAssets,
   unregisterPolymarketQuoteConsumer,
 } from "../marketQuoteHub";
 import { recordPmQuoteToFoMetric } from "../pmExecutionMetrics";
 import { saveTokenQuote } from "../quotes/pmTokenQuote";
+import { getPmMarketWsSourceMode, onPmMarketWsSourceModeChange, type PmMarketWsSourceMode } from "../pmMarketWsMode";
 
 export { saveTokenQuote } from "../quotes/pmTokenQuote";
 
@@ -65,6 +68,7 @@ function saveBetOddsToFo(
       saveVenueOdds(PLATFORM, {
         id: homeId,
         odds: bet.HomeOdds,
+        pmQuoteSource: "http-seed",
         ...(prev?.clobPrice != null && isValidClobPrice(prev.clobPrice) ? { clobPrice: prev.clobPrice } : {}),
         isLock: !bet.HomeOdds,
         betId,
@@ -92,6 +96,7 @@ function saveBetOddsToFo(
       saveVenueOdds(PLATFORM, {
         id: awayId,
         odds: bet.AwayOdds,
+        pmQuoteSource: "http-seed",
         ...(prev?.clobPrice != null && isValidClobPrice(prev.clobPrice) ? { clobPrice: prev.clobPrice } : {}),
         isLock: !bet.AwayOdds,
         betId,
@@ -108,7 +113,7 @@ function saveBetOddsToFo(
  *
  * Quote 只写 fo，不调 refreshOddsOnBets（对齐 A8 MQTT→Qn.save；全表同步由主循环 ~100ms
  * + 下单前 prepareArbAttempt 的 updateOdds；展示读 oddsStore）。
- * Index 灌盘后保留一次 refresh，便于 fallback 跟上种子价。
+ * 官方直连只取 Index 映射；转发保留原种子初始化和 refresh。
  */
 export function startPolymarketCollector(): () => void {
   const collect = useCollectStore();
@@ -116,6 +121,8 @@ export function startPolymarketCollector(): () => void {
   const marketsById = new Map<string, PolymarketMappedMarket>();
   const assetToMarket = new Map<string, string>();
   let lastIndexUpdatedAt = 0;
+  let lastIndexSourceMode: PmMarketWsSourceMode | undefined;
+  let latestIndex: PolymarketMarketIndex | null = null;
   let stopped = false;
 
   function esportAssetIds(): string[] {
@@ -156,8 +163,8 @@ export function startPolymarketCollector(): () => void {
     }
 
     const price = Number(bestAsk);
-    // 与 emitQuote / decimalOddsFromProbability 一致：无有效买价不写 fo
-    if (!Number.isFinite(price) || price <= 0 || price >= 1) {
+    // 0 只由显式空卖盘通知传入：锁定本侧并清掉旧价格，而非继续展示旧卖一。
+    if (!Number.isFinite(price) || price < 0 || price >= 1) {
       recordPmQuoteToFoMetric({
         tokenId: assetId,
         quotePrice: price,
@@ -170,7 +177,7 @@ export function startPolymarketCollector(): () => void {
 
     const next: CollectBetDto = { ...mapped.bet };
     const decimalOdds = decimalOddsFromProbability(price);
-    if (!(decimalOdds > 0)) {
+    if (price > 0 && !(decimalOdds > 0)) {
       recordPmQuoteToFoMetric({
         tokenId: assetId,
         quotePrice: price,
@@ -194,7 +201,7 @@ export function startPolymarketCollector(): () => void {
       clobPrice: price,
       betId,
       side,
-      locked: false,
+      locked: price === 0,
     }, "mqtt", "ws");
   }
 
@@ -202,6 +209,10 @@ export function startPolymarketCollector(): () => void {
     if (stopped)
       return;
     updateBetFromAsset(q.assetId, q.bestAsk);
+  });
+  const unUnavailable = onPolymarketMarketAskUnavailable((assetId) => {
+    if (!stopped)
+      updateBetFromAsset(assetId, 0);
   });
 
   const unReady = onPolymarketMarketHubReady(() => {
@@ -218,7 +229,13 @@ export function startPolymarketCollector(): () => void {
     }
 
     const platform = await getCollectPlatform(PLATFORM);
-    const index = isPolymarketMarketIndex(platform?.MarketIndex) ? platform.MarketIndex : null;
+    if (stopped)
+      return;
+    latestIndex = isPolymarketMarketIndex(platform?.MarketIndex) ? platform.MarketIndex : null;
+    applyMarketIndex(latestIndex);
+  }
+
+  function applyMarketIndex(index: PolymarketMarketIndex | null) {
     if (!index?.entries?.length) {
       // 空 Index：卸掉电竞 maps，避免幽灵 asset；勿在从未成功过时反复 clear
       if (lastIndexUpdatedAt !== 0 || index?.outcomeEntries?.length) {
@@ -230,25 +247,36 @@ export function startPolymarketCollector(): () => void {
       syncEsportAssets();
       return;
     }
-    if (index.updatedAt === lastIndexUpdatedAt)
+    const sourceMode = getPmMarketWsSourceMode();
+    if (index.updatedAt === lastIndexUpdatedAt && sourceMode === lastIndexSourceMode)
       return;
     lastIndexUpdatedAt = index.updatedAt;
+    lastIndexSourceMode = sourceMode;
 
-    applyPolymarketMarketIndex(index, { marketsById, assetToMarket });
+    const includePrices = sourceMode !== "official";
+    applyPolymarketMarketIndex(index, { marketsById, assetToMarket }, { includePrices });
     replacePmMapOutcomesFromIndex(index);
-    for (const entry of index.entries) {
-      const mapped = marketsById.get(String(entry.marketId));
-      if (!mapped)
-        continue;
-      saveBetOddsToFo(mapped.bet, "http", {
-        home: entry.homeClobPrice,
-        away: entry.awayClobPrice,
-      });
+    if (includePrices) {
+      for (const entry of index.entries) {
+        const mapped = marketsById.get(String(entry.marketId));
+        if (!mapped)
+          continue;
+        saveBetOddsToFo(mapped.bet, "http", {
+          home: entry.homeClobPrice,
+          away: entry.awayClobPrice,
+        });
+      }
+      matchStore.refreshOddsOnBets();
     }
-    matchStore.refreshOddsOnBets();
     // 集合变了才重订；同集短路。transport 重建靠 onPolymarketMarketHubReady(force)。
     syncEsportAssets();
   }
+
+  const unSourceMode = onPmMarketWsSourceModeChange(() => {
+    // 切源立即复用已取回的目录；不新增 HTTP 请求，也不能被同版本短路挡住。
+    if (!stopped && latestIndex)
+      applyMarketIndex(latestIndex);
+  });
 
   const loop = async () => {
     while (!stopped) {
@@ -268,6 +296,8 @@ export function startPolymarketCollector(): () => void {
   return () => {
     stopped = true;
     unQuote();
+    unUnavailable();
+    unSourceMode();
     unReady();
     unregisterPolymarketQuoteConsumer(QUOTE_CONSUMER);
   };

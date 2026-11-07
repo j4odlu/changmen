@@ -11,6 +11,7 @@ vi.mock("@changmen/venue-browser/shared/webBridge", () => ({
 }));
 vi.mock("@changmen/venue-browser/polymarket/marketQuoteHub", () => ({
   onPolymarketMarketHubReady: () => () => {}, onPolymarketMarketQuote: () => () => {},
+  onPolymarketMarketAskUnavailable: () => () => {},
   registerPolymarketQuoteAssets: state.registerAssets, unregisterPolymarketQuoteConsumer: vi.fn(),
 }));
 vi.mock("@changmen/venue-browser/polymarket/quotes/pmTokenQuote", () => ({ saveTokenQuote: vi.fn() }));

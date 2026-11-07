@@ -26,6 +26,7 @@ export function saveTokenQuote(
     id: params.tokenId,
     odds: decimalOddsFromProbability(params.clobPrice),
     clobPrice: params.clobPrice,
+    pmQuoteSource: metricSource,
     isLock: params.locked,
     betId: params.betId,
     side: params.side,

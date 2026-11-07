@@ -33,6 +33,7 @@ const defaultPrefs = {
   lowOddsSingleHigherCProbabilityOnly: false,
   betRowUi: false,
   pmPriceTrendUi: false,
+  pmFeeAdjustedOddsUi: false,
   pmOddsDropCardUi: false,
   pmUpCardUi: false,
   pmDown: { enabled: false, windowMs: 5_000, thresholdPct: 5, cooldownMs: 10_000, minReferenceOdds: 1.01, maxReferenceOdds: 100, referenceVenue: "Polymarket" },
@@ -64,6 +65,15 @@ const defaultPrefs = {
 };
 
 describe("extensionPrefs", () => {
+  it("keeps PM fee odds display opt-in and persists it without changing the price policy", () => {
+    for (const value of [undefined, null, false, "true", 1])
+      expect(normalizeExtensionPrefs({ pmFeeAdjustedOddsUi: value }).pmFeeAdjustedOddsUi).toBe(false);
+    const prefs = createDefaultExtensionPrefs();
+    expect(prefs.pmFeeAdjustedOddsUi).toBe(false);
+    prefs.pmFeeAdjustedOddsUi = true;
+    expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);
+    expect(prefs.pmArbPriceBuffer).toEqual(defaultPrefs.pmArbPriceBuffer);
+  });
   it("keeps PM price trends off for existing or malformed preferences and persists an explicit opt-in", () => {
     expect(createDefaultExtensionPrefs().pmPriceTrendUi).toBe(false);
     for (const value of [undefined, null, false, "true", 1])

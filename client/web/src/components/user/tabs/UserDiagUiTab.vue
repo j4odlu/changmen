@@ -250,6 +250,16 @@ async function save() {
 
     </el-form>
 
+    <div class="ui-tab__panel">
+      <div class="ui-tab__row">
+        <span>显示 PM 扣费后折算赔率</span>
+        <el-switch v-model="extensionPrefs.pmFeeAdjustedOddsUi" aria-label="显示 PM 扣费后折算赔率" />
+        <p class="ui-tab__desc">
+          在 PM 赔率后显示「/ 扣费后折算赔率」，按盘口 taker 手续费估算，与左侧使用同档价格（含已启用的价格缓冲）。仅供参考，不参与套利计算、配注或下单。
+        </p>
+      </div>
+    </div>
+
     <PmPfBufferSettings />
 
     <div class="flex flex-center">

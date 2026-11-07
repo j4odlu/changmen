@@ -3,6 +3,7 @@ import type { GtcOrderPlan } from "@changmen/shared/pm_gtc_order";
 import type { GtcOrderRecord, GtcOrderContext, GtcOrderCommand } from "./core/orderRecord";
 import { applyGtcOrderCommand, createGtcOrderRecord } from "./core/orderRecord";
 import { BetResult } from "@changmen/client-core/models/betResult";
+import { Currency, getExchange } from "@changmen/shared/currency";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { executeManualGtc } from "./manual";
 import * as pmOrders from "@changmen/venue-browser/polymarket/orders/history/orders";
@@ -41,7 +42,7 @@ beforeEach(() => {
   vi.clearAllMocks(); mocks.valid = true; mocks.row = undefined; mocks.progress.ready = true; mocks.progress.records = [];
   notices.notify.mockReturnValue({ close: notices.close });
   mocks.user.extensionPrefs = { pmGtcV1Participant: false, pmArbOrderMode: "FOK" };
-  mocks.check.mockImplementation(async (_account, option) => { option.betMoney = 5; option.stakeExchange = 6.7; option.data = {}; return option; });
+  mocks.check.mockImplementation(async (_account, option) => { option.betMoney = 5; option.stakeExchange = getExchange(Currency.USDT); option.data = {}; return option; });
   mocks.prepare.mockResolvedValue({ shares: "10", targetShares: "10", price: "0.5", maxPrincipal: "5", allInBudget: "5", protocol: 2, negRisk: false, orderHash: hash, route: "direct", submit: mocks.submit, prepareSubmit: async () => { mocks.validate(); }, validate: mocks.validate });
   mocks.submit.mockResolvedValue({ success: true, orderID: hash, status: "live" });
   mocks.create.mockImplementation(async (id: string, accountId: number, maker: string, plan: GtcOrderPlan, ctx: GtcOrderContext) => createGtcOrderRecord(id, "owner", accountId, maker, plan, ctx, Date.now()));

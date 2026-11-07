@@ -20,7 +20,7 @@ describe("pmArbStake", () => {
       playerName: "pm",
       currency: "USDT",
     });
-    expect(legStakeCny(14, "Polymarket", pmAccount)).toBe(93.8);
+    expect(legStakeCny(14, "Polymarket", pmAccount)).toBe(93.1);
   });
 
   it("hedgeStakeCnyFromLeg uses PM success stake in CNY", () => {

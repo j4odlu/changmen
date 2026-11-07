@@ -34,7 +34,7 @@ beforeEach(() => {
   state.account = { accountId: 292, provider: "Polymarket", token: "{}", balance: 100, loadingBalance: false } as PlatformAccount;
   state.stored = [{ provider: "Polymarket", orderId: "historical-order", pmOrigin: "changmen", pmSide: "buy",
     pmConditionId: market.conditionId, pmTokenId: "102", pmShares: 10, pmStakeUsdc: 5,
-    pmSellState: "open", status: "none", betMoney: 33.5, reward: 67, money: 0, odds: 2, createAt: 1, link: 123,
+    pmSellState: "open", status: "none", betMoney: 33.25, reward: 67, money: 0, odds: 2, createAt: 1, link: 123,
     game: "lol", match: market.question, bet: "地图3", item: "HANJIN BRION" }];
   state.save.mockResolvedValue(undefined);
 });
@@ -74,7 +74,7 @@ it("a failed historical request retains the stored order and cannot block an aut
   await updateVenueOrders(state.account);
   await new Promise(resolve => setTimeout(resolve, 0));
   await updateVenueOrders(state.account);
-  expect(state.save.mock.calls.at(-1)![1][0]).toMatchObject({ status: "none", link: 123, betMoney: 33.5 });
+  expect(state.save.mock.calls.at(-1)![1][0]).toMatchObject({ status: "none", link: 123, betMoney: 33.25 });
   expect(state.account.loadingBalance).toBe(false);
   await runArbBetRound(ctx); expect(state.round).toHaveBeenCalledOnce();
 });

@@ -8,11 +8,11 @@ import {
   scaleUsdtToCnyDisplay,
 } from "./currency.js";
 
-it("getExchange mirrors A8 Pr.exchange", () => {
+it("getExchange uses the configured fixed exchange rate", () => {
   assert.equal(getExchange(Currency.CNY), 1);
-  assert.equal(getExchange(Currency.USDT), 6.7);
+  assert.equal(getExchange(Currency.USDT), 6.65);
   assert.equal(getExchange(undefined), 1);
-  assert.equal(getExchange("USDT"), 6.7);
+  assert.equal(getExchange("USDT"), 6.65);
 });
 
 it("getCurrency normalizes venue codes like A8 Pr.getCurrency", () => {
@@ -31,6 +31,6 @@ it("resolveAccountCurrency uses venue defaults for USDT platforms", () => {
 });
 
 it("scaleUsdtToCnyDisplay converts venue USDT to plan CNY", () => {
-  assert.equal(scaleUsdtToCnyDisplay(14), 93.8);
+  assert.equal(scaleUsdtToCnyDisplay(100), 665);
   assert.equal(scaleUsdtToCnyDisplay(Number.NaN), 0);
 });

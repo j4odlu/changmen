@@ -74,7 +74,7 @@ describe("resolveMakeUpSuccessReference", () => {
       false,
       pmAccount,
     );
-    expect(ref).toEqual({ betMoney: 93.8, betOdds: 1.695 });
+    expect(ref).toEqual({ betMoney: 93.1, betOdds: 1.695 });
   });
 
   it("PM price improvement does not change the A8 option anchor after currency conversion", () => {
@@ -85,7 +85,7 @@ describe("resolveMakeUpSuccessReference", () => {
       { provider: "Polymarket", currency: "USDT" } as never,
       "filled",
     );
-    expect(ref).toEqual({ betMoney: 93.8, betOdds: 2 });
+    expect(ref).toEqual({ betMoney: 93.1, betOdds: 2 });
   });
 
   it("converts PF leg betMoney from USDT to CNY on fallback (same as PM)", () => {
@@ -99,7 +99,7 @@ describe("resolveMakeUpSuccessReference", () => {
       false,
       pfAccount,
     );
-    expect(ref).toEqual({ betMoney: 9.98, betOdds: 1.6 });
+    expect(ref).toEqual({ betMoney: 9.91, betOdds: 1.6 });
   });
 
   it("converts unscaled PM venue order USDC to CNY", () => {
@@ -113,7 +113,7 @@ describe("resolveMakeUpSuccessReference", () => {
       false,
       pmAccount,
     );
-    expect(ref).toEqual({ betMoney: 93.8, betOdds: 1.695 });
+    expect(ref).toEqual({ betMoney: 93.1, betOdds: 1.695 });
   });
 
   it("converts the PM option once without adopting scaled venue amounts (A8)", () => {
@@ -127,7 +127,7 @@ describe("resolveMakeUpSuccessReference", () => {
       false,
       pmAccount,
     );
-    expect(ref).toEqual({ betMoney: 93.8, betOdds: 1.695 });
+    expect(ref).toEqual({ betMoney: 93.1, betOdds: 1.695 });
   });
 });
 

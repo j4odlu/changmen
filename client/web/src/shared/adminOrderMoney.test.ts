@@ -14,7 +14,7 @@ describe("adminOrderMoneyCny", () => {
 
   it("scales PredictFun buy money USDT → CNY", () => {
     expect(adminOrderMoneyCny({ provider: "PredictFun", money: -29.41, pfSide: "buy" }))
-      .toBeCloseTo(-29.41 * 6.7, 6);
+      .toBeCloseTo(-29.41 * 6.65, 6);
   });
 
   it("zeros PredictFun sell money", () => {
@@ -31,7 +31,7 @@ describe("adminOrderMoneyCny", () => {
 
   it("scales PredictFun betMoney", () => {
     expect(adminOrderBetMoneyCny({ provider: "PredictFun", betMoney: 27.21 }))
-      .toBeCloseTo(27.21 * 6.7, 6);
+      .toBeCloseTo(27.21 * 6.65, 6);
   });
 
   it("buy stake sum skips prediction sell proceeds mirror", () => {
@@ -60,6 +60,6 @@ describe("adminOrderMoneyCny", () => {
       { provider: "PredictFun", money: -10, pfSide: "buy" },
       { provider: "PredictFun", money: 0, pfSide: "sell" },
     ]);
-    expect(sum).toBeCloseTo(100 - 10 * 6.7, 6);
+    expect(sum).toBeCloseTo(100 - 10 * 6.65, 6);
   });
 });

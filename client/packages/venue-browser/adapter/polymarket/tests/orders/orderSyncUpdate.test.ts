@@ -18,7 +18,7 @@ function snapshots(version: "v1" | "v2", cost = 40) {
   const ids = version === "v1" ? ["101", "102"] : ["201", "202"];
   const order: VenueOrder = { provider: "Polymarket", orderId: "original", pmOrigin: "changmen", pmSide: "buy",
     pmTokenId: ids[0], pmConditionId: condition, pmShares: 100, pmFillPrice: cost / 100, pmStakeUsdc: cost,
-    pmFeeUsdc: 0.1, betMoney: cost * 6.7, money: 0, reward: 0, status: "none", pmSellState: "open",
+    pmFeeUsdc: 0.1, betMoney: cost * 6.65, money: 0, reward: 0, status: "none", pmSellState: "open",
     odds: 100 / cost, createAt: 123, game: "csgo", match: "Home vs Away", bet: "地图1", item: "Home", link: 456 };
   const market: PolymarketRawMarket = { version, conditionId: condition,
     ...(version === "v2" ? { positionIds: ids, clobTokenIds: '["101","102"]' } : { clobTokenIds: JSON.stringify(ids) }),
@@ -33,7 +33,7 @@ function freeze<T>(value: T): T {
   return value;
 }
 function persist(order: VenueOrder): VenueOrder {
-  return { ...order, betMoney: order.betMoney * 6.7, money: order.money * 6.7, reward: order.reward * 6.7 };
+  return { ...order, betMoney: order.betMoney * 6.65, money: order.money * 6.65, reward: order.reward * 6.65 };
 }
 function resultMarket(market: PolymarketRawMarket, outcome: "win" | "lose" | "equal_split"): PolymarketRawMarket {
   if (outcome === "equal_split") return { ...market, tokens: undefined, outcomePrices: '["0.5","0.5"]',
@@ -70,7 +70,7 @@ for (const version of ["v1", "v2"] as const) {
       "partial sale plus final %s is idempotent and does not add earlier paper profit twice", (outcome, money) => {
         const { order, market } = snapshots(version);
         const partial: VenueOrder = { ...order, pmAttributedSellShares: 40, pmStakeUsdc: 24,
-          pmRealizedPnlUsdc: -4, pmSellProceeds: 12, money: -4 * 6.7, pmSellState: "partial" };
+          pmRealizedPnlUsdc: -4, pmSellProceeds: 12, money: -4 * 6.65, pmSellState: "partial" };
         const finalMarket = freeze(resultMarket(market, outcome));
         const updated = updateStoredPolymarketOrderFromMarket(freeze(partial), finalMarket, "");
         expect(updated).toMatchObject({ money, pmRealizedPnlUsdc: -4, pmAttributedSellShares: 40, pmShares: 100 });
@@ -82,7 +82,7 @@ for (const version of ["v1", "v2"] as const) {
 
     it.each(["win", "lose", "equal_split"] as const)("fully sold order keeps realized money with market %s", outcome => {
       const { order, market } = snapshots(version);
-      const closed: VenueOrder = { ...order, pmAttributedSellShares: 100, pmStakeUsdc: 0, pmSellState: "closed", money: 17 * 6.7 };
+      const closed: VenueOrder = { ...order, pmAttributedSellShares: 100, pmStakeUsdc: 0, pmSellState: "closed", money: 17 * 6.65 };
       expect(updateStoredPolymarketOrderFromMarket(freeze(closed), resultMarket(market, outcome), ""))
         .toMatchObject({ money: 17, pmSellState: "closed", pmMatchResult: outcome });
     });

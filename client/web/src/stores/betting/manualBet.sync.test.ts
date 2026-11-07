@@ -190,8 +190,8 @@ describe("runManualBet post-success sync", () => {
     await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
 
     expect(ElMessageBox.alert).not.toHaveBeenCalled();
-    expect(checkBetting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 13.43 }), { skipAccountRate: true });
-    expect(betting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 13.43 }), expect.any(Number));
+    expect(checkBetting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 13.53 }), { skipAccountRate: true });
+    expect(betting).toHaveBeenCalledWith(account, expect.objectContaining({ betMoney: 13.53 }), expect.any(Number));
   });
 
   it("pM pending: waits then updateVenueOrders without waitForOrderId", async () => {

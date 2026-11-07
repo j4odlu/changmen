@@ -25,7 +25,7 @@ it("uses the exact official activity total, without the ordinary helper's four-d
   expect(row.cost).toBe("7.369656");
   const financial=gtcFinancialOrder(row)!;
   expect(financial.pmStakeUsdc).toBe(7.369656);expect(financial.pmFeeUsdc).toBe(.123456);
-  expect(financial.betMoney).toBeCloseTo(7.369656*6.7,6);
+  expect(financial.betMoney).toBeCloseTo(7.369656*6.65,6);
 });
 describe("gTC uses the ordinary PM financial chain", () => {
   it.each(["0", "0.07971", "0.123456"])("matches every ordinary financial field for fee %s", (fee) => {
@@ -34,11 +34,11 @@ describe("gTC uses the ordinary PM financial chain", () => {
     expect(gtcFinancialOrder(row)).toEqual({ pmShares: ordinary.pmShares, pmFillPrice: ordinary.pmFillPrice, pmStakeUsdc: ordinary.pmStakeUsdc, pmFeeUsdc: ordinary.pmFeeUsdc ?? 0, odds: ordinary.odds, betMoney: ordinary.betMoney });
   });
   it("keeps fee rounding and currency conversion identical for the reported order", () => {
-    expect(gtcFinancialOrder(mergeGtcFacts(accepted(), facts("0.07971")))).toEqual({ pmShares: 9.29, pmFillPrice: 0.78, pmStakeUsdc: 7.3259, pmFeeUsdc: 0.0797, odds: 1.2821, betMoney: 7.3259 * 6.7 });
+    expect(gtcFinancialOrder(mergeGtcFacts(accepted(), facts("0.07971")))).toEqual({ pmShares: 9.29, pmFillPrice: 0.78, pmStakeUsdc: 7.3259, pmFeeUsdc: 0.0797, odds: 1.2821, betMoney: 7.3259 * 6.65 });
   });
   it("keeps normalized GTC quantities above the old threshold in the common financial chain", () => {
     expect(gtcFinancialOrder({ id: "large", orderId: hash, matched: "10000", principal: "5000", fee: "0", complete: true, fills: {} }))
-      .toEqual({ pmShares: 10000, pmFillPrice: 0.5, pmStakeUsdc: 5000, pmFeeUsdc: 0, odds: 2, betMoney: 5000 * 6.7 });
+      .toEqual({ pmShares: 10000, pmFillPrice: 0.5, pmStakeUsdc: 5000, pmFeeUsdc: 0, odds: 2, betMoney: 5000 * 6.65 });
   });
   it("preserves six-decimal official shares in the common financial command", async () => {
     const row = accepted(); row.plan.shares = "29.27";
@@ -49,7 +49,7 @@ describe("gTC uses the ordinary PM financial chain", () => {
     };
     const financial = confirmedGtcResult(mergeGtcFacts(row, incoming))!.financial;
     expect(financial).toMatchObject({ pmShares: 29.260001, pmStakeUsdc: 14.9226, pmFeeUsdc: 0, pmFillPrice: 0.51 });
-    expect(financial.betMoney).toBe(14.9226 * 6.7);
+    expect(financial.betMoney).toBe(14.9226 * 6.65);
   });
   it("does not turn accepted zero or unknown fees into a financial order", () => {
     expect(gtcFinancialOrder(accepted())).toBeUndefined();

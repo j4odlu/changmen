@@ -142,7 +142,7 @@ describe("adminOrderDisplay", () => {
     expect(pmBuyLifecycleTagText(row)).toBeNull();
     expect(resolvePmOrderListStatusClass(row)).toBe("Win");
     // 已卖出买单仍展示原始本金（fill×价），不为 0
-    expect(pmOrderStakeDisplayCny(row)).toBe(Math.round(57.66 * 0.5 * 6.7));
+    expect(pmOrderStakeDisplayCny(row)).toBe(Math.round(57.66 * 0.5 * 6.65));
   });
 
   it("keeps sports markers when admin orders are rendered through OrderList", () => {

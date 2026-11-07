@@ -56,7 +56,7 @@ describe("gTC persistence fails before venue dispatch without durable coordinati
   });
   it("stores ordinary PM price odds while recording the fee-inclusive buy amount", async () => {
     const row = created();
-    row.plan = { ...row.plan, playerId: 1, fx: 6.7, shares: "9.29", linkId: -1000, source: "manual" };
+    row.plan = { ...row.plan, playerId: 1, fx: 6.65, shares: "9.29", linkId: -1000, source: "manual" };
     row.pmAuthorized = true; row.orderId = "hash"; row.submit = "accepted"; row.decision = "closed";
     mocks.query.mockImplementation(async sql => ({ rows: sql.includes("SELECT wallet_key") ? [{ wallet_key: "wallet" }] : sql.includes("SELECT record") ? [{ record: row }] : [] }));
     await mutatePmGtc("owner", "id", row.revision, { kind: "facts", facts: {
@@ -64,10 +64,10 @@ describe("gTC persistence fails before venue dispatch without durable coordinati
       fills: [{ key: "trade:taker", tradeId: "trade", bucket: "taker", role: "TAKER", shares: "9.29", price: "0.78", fee: "0.07971", status: "CONFIRMED", updatedAt: 3 }],
       complete: true,
       observedAt: 3,
-    }, financialOrder: { pmShares: 9.29, pmFillPrice: 0.78, pmStakeUsdc: 7.3259, pmFeeUsdc: 0.0797, odds: 1.2821, betMoney: 7.3259 * 6.7 } });
+    }, financialOrder: { pmShares: 9.29, pmFillPrice: 0.78, pmStakeUsdc: 7.3259, pmFeeUsdc: 0.0797, odds: 1.2821, betMoney: 7.3259 * 6.65 } });
     const insertion = mocks.query.mock.calls.find(([sql]) => sql.startsWith("INSERT INTO orders"));
     expect(insertion[1][7]).toBe(1.2821);
-    expect(insertion[1][8]).toBe(7.3259 * 6.7);
+    expect(insertion[1][8]).toBe(7.3259 * 6.65);
     expect(insertion[1][10]).toMatchObject({ pmShares: 9.29, pmStakeUsdc: 7.3259, pmFeeUsdc: 0.0797, pmGtcExecutionId: "id" });
     const queries = mocks.query.mock.calls;
     const settlement = queries.findIndex(([sql]) => sql.startsWith("SELECT id,bet_money"));

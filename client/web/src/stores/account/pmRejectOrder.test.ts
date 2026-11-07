@@ -59,14 +59,14 @@ describe("persistPolymarketExecutionReject", () => {
     expect(out?.item).toBe("Alpha");
     // 原始 POST makerAmount=10 USDC → 落库 CNY + pmStakeUsdc
     expect(out?.pmStakeUsdc).toBe(10);
-    expect(out?.betMoney).toBeCloseTo(10 * 6.7, 5);
+    expect(out?.betMoney).toBeCloseTo(10 * 6.65, 5);
     expect(out?.link).toBe(55);
     expect(out?.pmRejectReason).toBe("api_failed");
     expect(saveOrders).toHaveBeenCalledTimes(1);
     expect(saveOrders.mock.calls[0][0]).toBe(account);
     expect(saveOrders.mock.calls[0][1][0].orderId).toBe(out!.orderId);
     expect(saveOrders.mock.calls[0][1][0].pmStakeUsdc).toBe(10);
-    expect(saveOrders.mock.calls[0][1][0].betMoney).toBeCloseTo(67, 5);
+    expect(saveOrders.mock.calls[0][1][0].betMoney).toBeCloseTo(66.5, 5);
     expect(refreshOrderListAfterBind).toHaveBeenCalledTimes(1);
   });
 

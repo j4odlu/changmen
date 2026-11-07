@@ -7,7 +7,7 @@ vi.mock("../../account/player_ownership.js", () => ({ assertPlayerOwnedByUser: m
 vi.mock("../../db/store.js", () => ({ refreshAccountsFromRdsIfEmpty: vi.fn() }));
 vi.mock("../../esport-api/store.js", () => ({ default: { getAccountsForUser: mocks.accounts } }));
 const maker = `0x${"a".repeat(40)}`;
-const plan = { playerId: 1, otherPlayerId: 2, originalPmLeg: "A", otherProvider: "RAY", otherTarget: "Away", otherOdds: 2, otherStake: 10, target: "Home", protocol: 2, orderHash: `0x${"b".repeat(64)}`, price: "0.5", shares: "10", targetShares: "10", maxPrincipal: "5", allInBudget: "5", fx: 6.7, parallel: false, negRisk: false, feeProof: { rate: "0", exponent: 1, takerOnly: true, observedAt: 1 } };
+const plan = { playerId: 1, otherPlayerId: 2, originalPmLeg: "A", otherProvider: "RAY", otherTarget: "Away", otherOdds: 2, otherStake: 10, target: "Home", protocol: 2, orderHash: `0x${"b".repeat(64)}`, price: "0.5", shares: "10", targetShares: "10", maxPrincipal: "5", allInBudget: "5", fx: 6.65, parallel: false, negRisk: false, feeProof: { rate: "0", exponent: 1, takerOnly: true, observedAt: 1 } };
 const body = () => ({ id: "11111111-1111-4111-8111-111111111111", maker, plan });
 beforeEach(() => {
   vi.clearAllMocks(); mocks.owned.mockResolvedValue({ ok: true }); mocks.accounts.mockReturnValue([

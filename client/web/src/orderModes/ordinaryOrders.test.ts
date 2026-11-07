@@ -13,7 +13,7 @@ vi.mock("@/stores/messageStore", () => ({ useMessageStore: () => ({ orderReportM
 vi.mock("@/stores/account/pmManualSell", () => ({ resumePmManualSellClosings: vi.fn() }));
 const now = Date.now();
 const fok: OrderRow = { OrderID: "fok", PlayerID: 1, Type: "OB", Link: -now, CreateAt: now, Status: "Win", BetMoney: 100, Money: 2 };
-const gtc: OrderRow = { OrderID: "gtc", PlayerID: 1, Type: "Polymarket", Link: -now - 1, CreateAt: now, Status: "Win", PmSide: "buy", PmGtcExecutionId: "execution", PmShares: 9.29, PmFillPrice: 0.78, PmStakeUsdc: 7.3259, BetMoney: 7.3259 * 6.7, Money: 13 };
+const gtc: OrderRow = { OrderID: "gtc", PlayerID: 1, Type: "Polymarket", Link: -now - 1, CreateAt: now, Status: "Win", PmSide: "buy", PmGtcExecutionId: "execution", PmShares: 9.29, PmFillPrice: 0.78, PmStakeUsdc: 7.3259, BetMoney: 7.3259 * 6.65, Money: 13 };
 beforeEach(() => {
   vi.clearAllMocks(); setActivePinia(createPinia()); useUserStore().userId = 101;
   useAccountStore().accounts = [{ accountId: 1, provider: "Polymarket", balance: 100 }] as PlatformAccount[];

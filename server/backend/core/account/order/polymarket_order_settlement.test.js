@@ -11,17 +11,17 @@ function settle(incoming, prevRaw = base, extra = {}) {
 }
 
 describe("PM persistence settlement policy without database or venue IO", () => {
-  it.each([[0, "lose", -268], [1, "win", 402]])("official payout %s overrides stale financial status", (price, result, money) => {
+  it.each([[0, "lose", -268], [1, "win", 397]])("official payout %s overrides stale financial status", (price, result, money) => {
     const incoming = Object.freeze({ ...base, status: "return", pmMatchResult: result, pmSettlement: receipt(price), pmSellState: "settled" });
     const saved = settle(incoming, Object.freeze({ ...base }));
-    expect(saved).toMatchObject({ money, raw: { status: result, money, reward: price * 670 } });
+    expect(saved).toMatchObject({ money, raw: { status: result, money, reward: price * 665 } });
     expect(incoming.money).toBe(0);
     expect(saved.raw).not.toBe(incoming);
   });
 
   it("a market win with fee-inclusive cost above payout is a financial loss", () => {
     const saved = settle({ ...base, pmShares: 30, betMoney: 268, pmMatchResult: "win", pmSettlement: receipt(1) });
-    expect(saved).toMatchObject({ money: -67, raw: { pmMatchResult: "win", status: "lose", reward: 201 } });
+    expect(saved).toMatchObject({ money: -68.5, raw: { pmMatchResult: "win", status: "lose", reward: 199.5 } });
   });
 
   it.each([0, 0.5, 1])("late snapshots cannot erase payout %s or its calculation inputs", price => {
@@ -47,7 +47,7 @@ describe("PM persistence settlement policy without database or venue IO", () => 
   it("a valid new receipt permits refreshing fee-inclusive costs", () => {
     const previous = { ...base, pmMatchResult: "win", pmSettlement: receipt(1), status: "win", money: 402 };
     const saved = settle({ ...previous, pmStakeUsdc: 40.1, pmFeeUsdc: 0.1, betMoney: 268.67 }, previous);
-    expect(saved).toMatchObject({ money: 401.33, bet_money: 268.67 });
+    expect(saved).toMatchObject({ money: 396.33, bet_money: 268.67 });
   });
 
   it("half payout can legitimately replace earlier partial-sale profit with zero", () => {

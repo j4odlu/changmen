@@ -8,16 +8,16 @@ it("restores reject principal and repeated stale sync cannot inflate it or add f
   const old = { betMoney: 790.6, pmStakeUsdc: 118, pmOrigin: "changmen" };
   const incoming = { orderId: "original", status: "reject", pmSubmission: snapshot };
   const fixed = mergePolymarketProviderSave({ order_id: "original" }, old, incoming, "changmen", { ...old, ...incoming }, 0, 790.6);
-  expect(fixed.bet_money).toBeCloseTo(100.031);
+  expect(fixed.bet_money).toBeCloseTo(14.93 * 6.65);
   const synced = mergePolymarketProviderSave({ order_id: "original" }, fixed.raw,
     { orderId: "original", status: "reject", betMoney: 790.6, pmStakeUsdc: 118 }, "changmen", fixed.raw, 0, 790.6);
-  expect(synced.bet_money).toBeCloseTo(100.031);
+  expect(synced.bet_money).toBeCloseTo(14.93 * 6.65);
   expect(synced.raw.pmStakeUsdc).toBe(14.93);
   expect(synced.raw.reward).toBe(0);
 });
 it("real fill keeps the actual all-in cost", () => {
   const prev = {};
-  const incoming = { orderId: "original", status: "none", betMoney: 101, pmStakeUsdc: 101 / 6.7,
+  const incoming = { orderId: "original", status: "none", betMoney: 101, pmStakeUsdc: 101 / 6.65,
     pmShares: 30, pmFeeUsdc: 0.1, pmFillPrice: 0.5 };
   const actual = mergePolymarketProviderSave({}, prev, incoming, "changmen", { ...prev, ...incoming }, 0, 101);
   expect(actual.bet_money).toBe(101);
@@ -58,7 +58,7 @@ it("keeps signed quantities as optional display evidence through reject saves an
   expect(dto.PmFillPrice).toBeUndefined();
   expect(dto.PmShares).toBeUndefined();
   expect(dto.pmSubmission).toBeUndefined();
-  expect(synced.bet_money).toBeCloseTo(14.93 * 6.7);
+  expect(synced.bet_money).toBeCloseTo(14.93 * 6.65);
   const known = { ...synced.raw, pmOrderPrice: 0.51 };
   const refreshed = mergePolymarketProviderSave({ order_id: "original" }, known,
     { orderId: "original", status: "reject" }, "changmen", {}, 0, synced.bet_money);

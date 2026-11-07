@@ -180,7 +180,7 @@ describe("pmOrderDisplay", () => {
       PmStakeUsdc: 0,
       BetMoney: 0,
     })).toBe("6.756753");
-    // 6.756753 * 0.74 * 6.7 ≈ 33.5 → round 34? actually 33
+    // 6.756753 * 0.74 * 6.65 ≈ 33.5 → round 34? actually 33
     expect(pmOrderStakeDisplayCny({
       ...pmBuy,
       PmSellState: "closed",
@@ -255,7 +255,7 @@ describe("pmOrderDisplay", () => {
   });
 
   it("marks unrealized pnl from live price without using odds", () => {
-    // 成本 5 USDC、6.756753 份；现价 0.9 → 市值≈6.08，盈≈1.08U → ×6.7≈7
+    // 成本 5 USDC、6.756753 份；现价 0.9 → 市值≈6.08，盈≈1.08U → ×6.65≈7
     expect(pmUnrealizedPnlAtLiveCny(pmBuy, 0.9)).toBe(7);
     expect(pmUnrealizedPnlAtLiveCny(pmBuy, 0.5)).toBe(-11);
     expect(pmUnrealizedPnlAtLiveCny(pmBuy, null)).toBeNull();

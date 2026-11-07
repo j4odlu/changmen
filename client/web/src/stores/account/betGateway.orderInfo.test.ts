@@ -114,7 +114,7 @@ describe("Pending is the same stored order throughout confirmation", () => {
     const result = await placeBet(store, account, input, 0, { requirePreparedQuote: true });
     expect(result.orderId).toBe(orderId);
     expect(mocks.save.mock.calls[0]![1][0]).toMatchObject({ ...context, orderId, status: "pending",
-      betMoney: 100.031, money: 0, reward: 0, pmConditionId: "condition", pmTokenId: "token",
+      betMoney: 14.93 * 6.65, money: 0, reward: 0, pmConditionId: "condition", pmTokenId: "token",
       pmSubmission: { makerAmount: "14930000", submittedAt: at } });
     expect(mocks.save.mock.invocationCallOrder[0]).toBeLessThan(mocks.resolve.mock.invocationCallOrder[0]!);
     expect(mocks.save.mock.calls[0]![1][0]).not.toHaveProperty("pmShares");
@@ -145,7 +145,7 @@ describe("Pending is the same stored order throughout confirmation", () => {
     expect(mocks.pending).toHaveBeenCalledWith(292);
     expect(mocks.resolve.mock.calls[1]![1]).toMatchObject({ orderId,
       request: { order: { makerAmount: "14930000" } } });
-    expect(mocks.save.mock.calls[1]![1][0]).toMatchObject({ orderId, status: "reject", betMoney: 100.031 });
+    expect(mocks.save.mock.calls[1]![1][0]).toMatchObject({ orderId, status: "reject", betMoney: 14.93 * 6.65 });
     expect(mocks.betting).toHaveBeenCalledOnce();
     expect(mocks.mark).not.toHaveBeenCalled();
     expect(taskRows()).toEqual([]);
@@ -175,7 +175,7 @@ describe("Pending is the same stored order throughout confirmation", () => {
     expect(taskRows()).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(1000);
     expect(mocks.save).toHaveBeenCalledTimes(3);
-    expect(mocks.save.mock.calls[2]![1][0]).toMatchObject({ orderId, status: "reject", betMoney: 100.031 });
+    expect(mocks.save.mock.calls[2]![1][0]).toMatchObject({ orderId, status: "reject", betMoney: 14.93 * 6.65 });
     expect(mocks.betting).toHaveBeenCalledOnce();
     expect(taskRows()).toEqual([]);
   });

@@ -902,8 +902,8 @@ describe("mapPolymarketTradesToVenueOrders", () => {
       item: "",
       pmSide: "sell" as const,
     }]);
-    expect(scaled[0]?.betMoney).toBeCloseTo(12 * 6.7, 5);
-    expect(scaled[0]?.money).toBeCloseTo(2 * 6.7, 5);
+    expect(scaled[0]?.betMoney).toBeCloseTo(12 * 6.65, 5);
+    expect(scaled[0]?.money).toBeCloseTo(2 * 6.65, 5);
   });
 });
 
@@ -919,7 +919,7 @@ describe("applyPolymarketSettlement", () => {
     };
     const stored = {
       ...mapPolymarketTradeToVenueOrder(trade)!,
-      betMoney: 67, money: 6.7, pmStakeUsdc: 5,
+      betMoney: 66.5, money: 6.65, pmStakeUsdc: 5,
       pmAttributedSellShares: 10,
       pmRealizedPnlUsdc: source === "realized" ? 1 : undefined,
       pmSellProceeds: source === "legacy" ? undefined : 6,

@@ -10,19 +10,19 @@ const market: PolymarketRawMarket = { version: "v1", conditionId: condition, clo
   clobTokenIds: '["101","102"]', outcomePrices: '["0.5","0.5"]',
   finalResolution: { condition_id: condition, status: "resolved", payouts: [500000,500000] } };
 const base: VenueOrder = { provider: "Polymarket", orderId: "buy", createAt: 1, game: "", match: "", bet: "", item: "Away",
-  odds: 2, betMoney: 268, money: 335, reward: 0, status: "lose", pmOrigin: "changmen", pmSide: "buy",
+  odds: 2, betMoney: 40 * 6.65, money: 335, reward: 0, status: "lose", pmOrigin: "changmen", pmSide: "buy",
   pmShares: 100, pmStakeUsdc: 40, pmTokenId: "102", pmConditionId: condition, pmSellState: "settled", pmMatchResult: "win" };
 
 test.each([
-  ["GTC screenshot",18.66,10.6795,71.55265,53.4693,-1.3495],
-  ["FOK screenshot",15.597015,10.6851,71.59017,-71.59017,-2.8866],
+  ["GTC screenshot",18.66,10.6795,71.55265,53.4693,-1.4298],
+  ["FOK screenshot",15.597015,10.6851,71.59017,-71.59017,-2.9669],
 ] as const)("%s: settled legacy row is rechecked without any recent trade",(_label,shares,cost,bet,money,expected)=>{
   const stored={...base,pmShares:shares,pmStakeUsdc:cost,betMoney:bet,money};
   const [next]=mergePolymarketClobWithStoredOrders([], [stored],1,new Map([[condition,market]]));
   expect(next).toMatchObject({ money:expected,status:"lose",pmMatchResult:"equal_split",pmSellState:"settled",
     pmSettlement:{conditionId:condition,assetId:"102",price:0.5,source:"resolution"} });
   const [saved]=scalePolymarketVenueOrdersForDisplay([next!]);
-  expect(saved!.money).toBeCloseTo(expected*6.7,5);
+  expect(saved!.money).toBeCloseTo(expected*6.65,5);
   const again=mergePolymarketClobWithStoredOrders([], [saved!],1,new Map())[0]!;
   expect(again.money).toBe(expected);
   expect(polymarketVerifiedOrderPayout(again)).toBe(0.5);
@@ -53,7 +53,7 @@ test("the final payout receipt survives the public order DTO round trip",()=>{
 });
 
 test("an unverified recent-trade snapshot cannot replace a verified final result",()=>{
-  const stored={...base,status:"win" as const,money:402,pmSettlement:{conditionId:condition,assetId:"102",price:1 as const,source:"clob" as const}};
+  const stored={...base,status:"win" as const,money:60 * 6.65,pmSettlement:{conditionId:condition,assetId:"102",price:1 as const,source:"clob" as const}};
   const stale={...base,status:"lose" as const,money:-40,pmMatchResult:"lose" as const,betMoney:40};
   const [next]=mergePolymarketClobWithStoredOrders([stale],[stored],1);
   expect(next).toMatchObject({money:60,status:"win",pmMatchResult:"win",pmSettlement:stored.pmSettlement});

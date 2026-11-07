@@ -44,10 +44,10 @@ describe("passesMakeUpPrecheck", () => {
 
   it("uses the same PM-only stake conversion and keeps the existing PF handling", () => {
     const account = new PlatformAccount({ accountId: 1, provider: "Polymarket", currency: "USDT" });
-    expect(legStakeCny(15, "Polymarket", account)).toBe(100.5);
-    expect(passesMakeUpPrecheck(input({ order: { betMoney: 100.5, betOdds: 2 }, checked: { type: "Polymarket", odds: 2, betMoney: 15 }, account }))).toBe(false);
+    expect(legStakeCny(15, "Polymarket", account)).toBe(99.75);
+    expect(passesMakeUpPrecheck(input({ order: { betMoney: 99.75, betOdds: 2 }, checked: { type: "Polymarket", odds: 2, betMoney: 15 }, account }))).toBe(false);
     const pfAccount = new PlatformAccount({ accountId: 2, provider: "PredictFun", currency: "USDT" });
-    expect(passesMakeUpPrecheck(input({ order: { betMoney: 100.5, betOdds: 2 }, checked: { type: "PredictFun", odds: 2, betMoney: 15 }, account: pfAccount }))).toBe(true);
+    expect(passesMakeUpPrecheck(input({ order: { betMoney: 99.75, betOdds: 2 }, checked: { type: "PredictFun", odds: 2, betMoney: 15 }, account: pfAccount }))).toBe(true);
   });
 
   it.each([

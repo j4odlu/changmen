@@ -12,9 +12,9 @@ beforeEach(() => { vi.clearAllMocks(); mocks.cash.mockResolvedValue(2.352); });
 describe("GTC manual sale money normalization", () => {
   it("uses net proceeds and USDC realised amount instead of rounded prior CNY", async () => {
     const original = rows(); const result = await reconcileGtcSellFinancials(account, original);
-    expect(result[0]).toMatchObject({ pmSellProceeds: 2.352, pmRealizedPnlUsdc: 0.312, money: 2.0904 });
+    expect(result[0]).toMatchObject({ pmSellProceeds: 2.352, pmRealizedPnlUsdc: 0.312, money: 2.0748 });
     expect(result[0]?.positionEvents?.sells?.[0]?.proceeds).toBe(2.352);
-    expect(result[1]?.betMoney).toBeCloseTo(15.7584);
+    expect(result[1]?.betMoney).toBeCloseTo(15.6408);
     expect(original[0]?.money).toBe(2);
   });
   it("does not query fees or activity for unsold GTC, FOK or unrelated rows", async () => {
@@ -27,7 +27,7 @@ describe("GTC manual sale money normalization", () => {
     original[0]!.positionEvents!.sells![0]!.proceeds = 2.4078;
     original[1]!.betMoney = 16.15;
     const result = await reconcileGtcSellFinancials(account, original);
-    expect(result[0]).toMatchObject({ pmSellProceeds: 2.352, pmRealizedPnlUsdc: 0.312, money: 2.0904 });
+    expect(result[0]).toMatchObject({ pmSellProceeds: 2.352, pmRealizedPnlUsdc: 0.312, money: 2.0748 });
   });
   it("retains a failed cash proof for the existing sale retry rather than inventing proceeds", async () => {
     mocks.cash.mockRejectedValue(new Error("原卖单净回款待核实"));

@@ -6,7 +6,7 @@ const raw = { provider:"Polymarket",pmOrigin:"changmen",pmSide:"buy",pmShares:10
 const condition = "0x" + "a".repeat(64);
 const receipt = price => ({ conditionId: condition, assetId: "102", price, source: price === 0.5 ? "resolution" : "clob" });
 
-test.each([[0,"lose",-268],[1,"win",402]])("verified price %s determines the payout independently of a stale financial status", (price, result, expected) => {
+test.each([[0,"lose",-268],[1,"win",397]])("verified price %s determines the payout independently of a stale financial status", (price, result, expected) => {
   const incoming = { ...raw, pmTokenId:"102",pmConditionId:condition,pmMatchResult:result,pmSettlement:receipt(price),status:"return",money:0,pmSellState:"settled" };
   const saved = mergeOrderLogicalSave({ status:"Lose",money:-268,bet_money:268 },raw,incoming,"changmen");
   expect(saved).toMatchObject({ money:expected,raw:{pmMatchResult:result,pmSettlement:receipt(price),status:expected>0?"win":"lose"} });
@@ -49,11 +49,11 @@ test("sold-out buy keeps realized P&L while its independent market outcome refre
     {...previous,pmMatchResult:"equal_split",pmSellState:"settled",money:67,status:"win"},"changmen");
   expect(saved.money).toBe(113.9);expect(saved.raw.pmSellState).toBe("closed");expect(saved.raw.pmMatchResult).toBe("equal_split");
 });
-test.each([[40,0,0,67,"win"],[60,0,0,-67,"lose"],[50,0,0,0,"return"],[40,40,12,13.4,"win"]])(
+test.each([[40,0,0,66.5,"win"],[60,0,0,-66.5,"lose"],[50,0,0,0,"return"],[40,40,12,13.3,"win"]])(
   "GTC cost %j sold %j proceeds %j uses final half payout",(cost,attr,proceeds,money,status)=>{
-    const ledger=gtcOrderLedger({status:"Lose",bet_money:cost*6.7,money:-cost*6.7,raw:{...raw,pmMatchResult:"equal_split",pmSellState:attr?"partial":"settled",
+    const ledger=gtcOrderLedger({status:"Lose",bet_money:cost*6.65,money:-cost*6.65,raw:{...raw,pmMatchResult:"equal_split",pmSellState:attr?"partial":"settled",
       pmGtcExecutionId:"gtc",pmGtcBuyShares:100,pmGtcBuyCost:cost,pmAttributedSellShares:attr,pmSellProceeds:proceeds}});
     expect(ledger).toMatchObject({money,status,raw:{pmMatchResult:"equal_split",pmSellState:"settled"}});
-    const repeated=gtcOrderLedger({status,bet_money:cost*6.7,money,raw:ledger.raw});
+    const repeated=gtcOrderLedger({status,bet_money:cost*6.65,money,raw:ledger.raw});
     expect(repeated).toEqual(ledger);
   });

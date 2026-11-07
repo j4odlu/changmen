@@ -255,7 +255,7 @@ describe("buildPolymarketExecutionRejectVenueOrder", () => {
     expect(order.orderId).toBe("pm-rej-42-1700000000123-api_failed");
     // ctx.betMoney 为场馆 USDC → 落库 CNY + pmStakeUsdc
     expect(order.pmStakeUsdc).toBe(12.5);
-    expect(order.betMoney).toBeCloseTo(12.5 * 6.7, 5);
+    expect(order.betMoney).toBeCloseTo(12.5 * 6.65, 5);
     expect(order.money).toBe(0);
     expect(order.reward).toBe(0);
     expect(order.link).toBe(99);
@@ -275,7 +275,7 @@ describe("buildPolymarketExecutionRejectVenueOrder", () => {
     expect(order.orderId).toBe("0xabc");
     expect(order.pmRejectReason).toBe("unfilled");
     expect(order.pmStakeUsdc).toBe(5);
-    expect(order.betMoney).toBeCloseTo(5 * 6.7, 5);
+    expect(order.betMoney).toBeCloseTo(5 * 6.65, 5);
   });
 
   it("prefers response.orderID when result.orderId missing", () => {
@@ -300,7 +300,7 @@ describe("buildPolymarketExecutionRejectVenueOrder", () => {
       odds: 9.09,
     });
     expect(order.pmStakeUsdc).toBe(5.88);
-    expect(order.betMoney).toBeCloseTo(5.88 * 6.7, 5);
+    expect(order.betMoney).toBeCloseTo(5.88 * 6.65, 5);
   });
 });
 

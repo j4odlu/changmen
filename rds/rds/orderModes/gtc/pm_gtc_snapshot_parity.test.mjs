@@ -56,21 +56,21 @@ async function run(source, row, command, failAt, onSnapshot, pending) {
 }
 
 function accepted(provider = "RAY", source) {
-  const plan = { shares: "10", orderHash: "hash", originalPmLeg: "A", playerId: 1, otherPlayerId: 2, otherProvider: provider, fx: 6.7, linkId: 123, ...(source ? { source } : {}) };
+  const plan = { shares: "10", orderHash: "hash", originalPmLeg: "A", playerId: 1, otherPlayerId: 2, otherProvider: provider, fx: 6.65, linkId: 123, ...(source ? { source } : {}) };
   const initial = contract.createGtcExecution("id", "owner", "wallet", "maker", plan, 1);
   return contract.applyGtcCommand(contract.applyGtcCommand(initial, { kind: "authorize_pm" }, 2), { kind: "ack", state: "accepted", orderId: "hash" }, 3);
 }
 const facts = () => ({ kind: "facts", facts: {
   order: { id: "hash", original: "10", matched: "10", status: "MATCHED", tradeIds: ["t"] },
   fills: [{ key: "t:maker", tradeId: "t", bucket: "maker", role: "MAKER", shares: "10", price: "0.5", fee: "0", status: "CONFIRMED", updatedAt: 4 }], complete: true, observedAt: 4,
-}, financialOrder: { pmShares: 10, pmFillPrice: 0.5, pmStakeUsdc: 5, pmFeeUsdc: 0, odds: 2, betMoney: 33.5 } });
+}, financialOrder: { pmShares: 10, pmFillPrice: 0.5, pmStakeUsdc: 5, pmFeeUsdc: 0, odds: 2, betMoney: 5 * 6.65 } });
 
 describe("phase 2 preserves actual pre-phase mutation SQL, results and errors", () => {
   it("writes the additional snapshot on an existing financial-eligible partial fill", async () => {
     const command = facts();
     command.facts.order.matched = "5"; command.facts.order.status = "LIVE";
     command.facts.fills[0].shares = "5";
-    command.financialOrder = { pmShares: 5, pmFillPrice: 0.5, pmStakeUsdc: 2.5, pmFeeUsdc: 0, odds: 2, betMoney: 16.75 };
+    command.financialOrder = { pmShares: 5, pmFillPrice: 0.5, pmStakeUsdc: 2.5, pmFeeUsdc: 0, odds: 2, betMoney: 2.5 * 6.65 };
     let written;
     const current = await run(after, accepted(), command, undefined, value => { written = value; });
     expect(current).toEqual(await run(before, accepted(), command));

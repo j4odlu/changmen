@@ -25,8 +25,8 @@ describe("pmLogicalPosition", () => {
 
   it("resolveBuyStakeUsdc falls back from CNY BetMoney when pmStakeUsdc missing", () => {
     const buy = venueOrderFromOrderRow({ ...baseRow, PmStakeUsdc: undefined, BetMoney: 70 });
-    expect(resolveBuyStakeUsdc(buy)).toBeCloseTo(10.4478, 4);
-    expect(getExchange(Currency.USDT)).toBe(6.7);
+    expect(resolveBuyStakeUsdc(buy)).toBeCloseTo(10.5263, 4);
+    expect(getExchange(Currency.USDT)).toBe(6.65);
   });
 
   it("resolvePmRemainingShares subtracts attributed sells", () => {

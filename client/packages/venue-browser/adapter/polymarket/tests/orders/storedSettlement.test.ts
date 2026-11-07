@@ -53,9 +53,9 @@ describe("stored PM buy settlement without a current trade row", () => {
   it("refreshes the 142-share stored order even with a cached label and empty trades", async () => {
     const [row] = await refreshOrders();
     expect(row).toMatchObject({ status: "win", pmMatchResult: "win", pmSellState: "open", pmShares: 142, link: saved.link });
-    expect(row!.money).toBeCloseTo((142 - 32.5941) * 6.7, 5);
-    expect(row!.betMoney).toBeCloseTo(saved.betMoney, 5);
-    expect(row!.reward).toBeCloseTo(142 * 6.7, 5);
+    expect(row!.money).toBeCloseTo((142 - Math.round(saved.betMoney / 6.65 * 10000) / 10000) * 6.65, 5);
+    expect(row!.betMoney).toBeCloseTo(Math.round(saved.betMoney / 6.65 * 10000) / 10000 * 6.65, 5);
+    expect(row!.reward).toBeCloseTo(142 * 6.65, 5);
     expect(saved.status).toBe("none");
   });
 
@@ -86,15 +86,15 @@ describe("stored PM buy settlement without a current trade row", () => {
     });
     const [row] = await refreshOrders();
     expect(row).toMatchObject({ status: "lose", pmMatchResult: "lose", pmSellState: "settled" });
-    expect(row!.money).toBeCloseTo(-saved.betMoney, 5);
+    expect(row!.money).toBeCloseTo(-Math.round(saved.betMoney / 6.65 * 10000) / 10000 * 6.65, 5);
   });
 
   it("is idempotent for partial sells and preserves realized profit", async () => {
     mocks.stored.mockResolvedValue([{ ...saved, pmSellState: "partial", pmAttributedSellShares: 42,
-      pmStakeUsdc: 20, pmRealizedPnlUsdc: 5, money: 5 * 6.7 }]);
+      pmStakeUsdc: 20, pmRealizedPnlUsdc: 5, money: 5 * 6.65 }]);
     const first = await refreshOrders();
-    expect(first[0]!.money).toBeCloseTo((5 + 100 - 20) * 6.7, 5);
-    expect(first[0]!.reward).toBeCloseTo(100 * 6.7, 5);
+    expect(first[0]!.money).toBeCloseTo((5 + 100 - 20) * 6.65, 5);
+    expect(first[0]!.reward).toBeCloseTo(100 * 6.65, 5);
     mocks.stored.mockResolvedValue(first);
     expect((await fetchPolymarketVenueOrdersMerged(account))[0]!.money).toBeCloseTo(first[0]!.money, 5);
   });

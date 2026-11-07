@@ -29,14 +29,14 @@ for (const version of ["v1", "v2"] as const) {
     expect(resolvePolymarketSettlement({...m,finalResolution:{...m.finalResolution,status:"disputed"}})).toBeNull();
   });
   test(`${version}: both old sync paths replace a paper result and remain idempotent`,()=>{
-    const base=order(version);const stored={...base,betMoney:268,money:-268,status:"lose" as const,pmMatchResult:"lose" as const};
+    const base=order(version);const stored={...base,betMoney:40 * 6.65,money:-268,status:"lose" as const,pmMatchResult:"lose" as const};
     const m=market(version),map=new Map([[condition,m]]);
     const trade={taker_order_id:base.orderId,asset_id:base.pmTokenId,market:condition,size:"100",price:"0.4",side:"BUY"};
     const fresh=mapPolymarketTradeToVenueOrder(trade,m)!;
     for(const trades of [[],[fresh]]) {
       const [next]=mergePolymarketClobWithStoredOrders(trades,[stored],1,map);
       expect(next).toMatchObject({status:"win",money:10,reward:50,pmMatchResult:"equal_split",pmSellState:"settled"});
-      const persisted={...next!,betMoney:268,money:67};
+      const persisted={...next!,betMoney:40 * 6.65,money:10 * 6.65};
       const [again]=mergePolymarketClobWithStoredOrders([fresh],[persisted],1,map);
       expect(again).toMatchObject({status:"win",money:10,pmMatchResult:"equal_split"});
     }

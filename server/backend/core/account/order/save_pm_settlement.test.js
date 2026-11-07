@@ -4,7 +4,7 @@ import { gtcOrderLedger } from "../../../../../rds/rds/orderModes/gtc/pm_gtc_led
 
 function settle(status, cost, money, extra = {}) {
   const raw = { status, betMoney: cost, money, pmOrigin: "changmen", pmSide: "buy",
-    pmShares: 9.29, pmFillPrice: 0.78, pmStakeUsdc: cost / 6.7,
+    pmShares: 9.29, pmFillPrice: 0.78, pmStakeUsdc: cost / 6.65,
     pmFeeUsdc: 0.0797, pmSellState: "settled", pmAttributedSellShares: 0, ...extra };
   return mergePolymarketProviderSave({ status, bet_money: cost, money }, raw, raw,
     "changmen", { ...raw }, money, cost);
@@ -37,9 +37,9 @@ describe("FOK legacy settlement and GTC exclusive precision", () => {
   it("does not settle an open pending order", () => {
     expect(settle("none", 49.08353, 0).money).toBe(0);
   });
-  it.each([["Win", 49.08353, 12.86802, 13.1595], ["Lose", 50.34112, -50.49, -50.3411]])(
+  it.each([["Win", 49.08353, 12.86802, 12.695], ["Lose", 50.34112, -50.49, -50.3411]])(
     "GTC %s precision remains exclusively in its own ledger", (status, cost, money, expected) => {
-      const merged = settle(status, cost, money, { pmGtcExecutionId: "own-gtc", pmGtcBuyShares: 9.29, pmGtcBuyCost: cost / 6.7 });
+      const merged = settle(status, cost, money, { pmGtcExecutionId: "own-gtc", pmGtcBuyShares: 9.29, pmGtcBuyCost: cost / 6.65 });
       const ledger = gtcOrderLedger({ status, bet_money: merged.bet_money, money: merged.money, raw: merged.raw });
       expect(ledger.money).toBe(expected);
       expect(ledger.raw.money).toBe(expected);

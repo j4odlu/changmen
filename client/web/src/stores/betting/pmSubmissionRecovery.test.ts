@@ -60,7 +60,7 @@ describe("PM original submission recovery", () => {
     const persist = await resume(order);
     expect(persist).toHaveBeenCalled();
     expect(mocks.save.mock.calls[0][1][0]).toMatchObject({ pmStakeUsdc: 14.93, createAt: snapshot.submittedAt });
-    expect(mocks.save.mock.calls[0][1][0].betMoney).toBeCloseTo(100.031);
+    expect(mocks.save.mock.calls[0][1][0].betMoney).toBeCloseTo(14.93 * 6.65);
     expect(order.pendingPmSubmission).toEqual(snapshot);
   });
 
@@ -73,7 +73,7 @@ describe("PM original submission recovery", () => {
     expect(mocks.recover).not.toHaveBeenCalled();
     expect(mocks.save).toHaveBeenCalledTimes(2);
     for (const call of mocks.save.mock.calls)
-      expect(call[1][0].betMoney).toBeCloseTo(100.031);
+      expect(call[1][0].betMoney).toBeCloseTo(14.93 * 6.65);
   });
 
   it("retains submitted price evidence when a pending reject completes after reload", async () => {
@@ -81,7 +81,7 @@ describe("PM original submission recovery", () => {
     const order = new LoseOrder({ ...legacy().toJSON(), pendingPmSubmission: original });
     await resume(new LoseOrder(order.toJSON()));
     expect(mocks.save.mock.calls[0][1][0].pmSubmission).toMatchObject(original);
-    expect(mocks.save.mock.calls[0][1][0].betMoney).toBeCloseTo(100.031);
+    expect(mocks.save.mock.calls[0][1][0].betMoney).toBeCloseTo(14.93 * 6.65);
   });
 
   it.each(["missing", "network", "wrong-account", "wrong-order"])("%s evidence never writes inferred 118/791", async (kind) => {
@@ -101,7 +101,7 @@ describe("PM original submission recovery", () => {
     expect(mocks.save).not.toHaveBeenCalled();
     mocks.recover.mockResolvedValue(snapshot);
     await resume(order);
-    expect(mocks.save.mock.calls[0][1][0].betMoney).toBeCloseTo(100.031);
+    expect(mocks.save.mock.calls[0][1][0].betMoney).toBeCloseTo(14.93 * 6.65);
   });
 
   it("queue replacement during original amount recovery does not discard its settlement or binding", async () => {
@@ -123,7 +123,7 @@ describe("PM original submission recovery", () => {
     await task;
 
     expect(mocks.settle).toHaveBeenCalledOnce();
-    expect(mocks.save.mock.calls[0][1][0].betMoney).toBeCloseTo(100.031);
+    expect(mocks.save.mock.calls[0][1][0].betMoney).toBeCloseTo(14.93 * 6.65);
     expect(bindArbLegOrder).toHaveBeenCalledOnce();
     expect(orders.get(1)).toBe(replacement);
     expect(replacement.betCount).toBe(3);

@@ -8,7 +8,8 @@ export type CurrencyCode = (typeof Currency)[keyof typeof Currency];
 
 const EXCHANGE = new Map<string, number>([
   [Currency.CNY, 1],
-  [Currency.USDT, 6.7],
+  // [changmen 扩展] 固定折算价 1U = 6.65 CNY；不沿用 A8 的历史汇率。
+  [Currency.USDT, 6.65],
 ]);
 
 /** 场馆默认结算币：未回写 currency 时按 provider 判定 */

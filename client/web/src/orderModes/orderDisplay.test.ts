@@ -262,7 +262,7 @@ describe("one original produces one ordinary order card", () => {
     const financial = gtcFinancialOrder(filled)!;
     const stored = { ...row, PmShares: financial.pmShares, PmFillPrice: financial.pmFillPrice, PmStakeUsdc: financial.pmStakeUsdc, PmFeeUsdc: financial.pmFeeUsdc, BetMoney: financial.betMoney, Odds: financial.odds };
     expect(pmOrderStakeDisplayUsdc(pending)).toBe(7.3259);
-    expect(pmOrderStakeDisplayCny(pending)).toBe(7.3259 * 6.7);
+    expect(pmOrderStakeDisplayCny(pending)).toBe(7.3259 * 6.65);
     expect(pmOrderStakeDisplayCny(stored)).toBe(pmOrderStakeDisplayCny(pending));
     for (const rows of [[], [stored]]) {
       const html = await render(rows);

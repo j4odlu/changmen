@@ -15,7 +15,7 @@ const submission = { orderId: "same-order", accountId: 292, makerAmount: "149300
 const pending = { provider: "Polymarket", orderId: submission.orderId, pmSubmission: submission,
   match: "Team Liquid vs 1w Team", bet: "[地图2] 获胜", item: "Team Liquid", game: "Dota2",
   pmConditionId: "condition", pmTokenId: "token", pmOrigin: "changmen", pmSide: "buy",
-  status: "pending", odds: 1.515, betMoney: 100.031, money: 0, reward: 0,
+  status: "pending", odds: 1.515, betMoney: 14.93 * 6.65, money: 0, reward: 0,
   createAt: submission.submittedAt, link: submission.submittedAt };
 let stored;
 beforeEach(() => {
@@ -28,7 +28,7 @@ it("creates one complete Pending order, then preserves its labels, identity, Lin
   expect(await saveOrder(292, [pending], "owner")).toBe(true);
   const dto = rowToOrder(stored);
   expect(dto).toMatchObject({ OrderID: "same-order", Status: "Pending", Match: pending.match,
-    Bet: pending.bet, Item: pending.item, BetMoney: 100.031 });
+    Bet: pending.bet, Item: pending.item, BetMoney: pending.betMoney });
   expect(dto.PmSubmittedPrice).toBe(Number(submission.makerAmount) / Number(submission.takerAmount));
   expect(dto.PmFillPrice).toBeUndefined(); expect(dto.PmShares).toBeUndefined();
   expect(moneyForProfitAggregate(stored)).toBe(0); expect(betMoneyForProfitAggregate(stored)).toBe(0);
@@ -44,7 +44,7 @@ it("creates one complete Pending order, then preserves its labels, identity, Lin
 it("uses actual fill cost instead of pinning the requested Pending amount, and never regresses a final result", async () => {
   await saveOrder(292, [pending], "owner");
   await saveOrder(292, [{ provider: "Polymarket", orderId: "same-order", status: "none", odds: 1.6,
-    betMoney: 98, pmStakeUsdc: 98 / 6.7, pmShares: 23.4, pmFillPrice: 0.625, pmFeeUsdc: 0.02, money: 0 }], "owner");
+    betMoney: 98, pmStakeUsdc: 98 / 6.65, pmShares: 23.4, pmFillPrice: 0.625, pmFeeUsdc: 0.02, money: 0 }], "owner");
   expect(stored).toMatchObject({ status: "None", bet_money: 98, match: pending.match, bet: pending.bet });
   expect(stored.raw.pmShares).toBe(23.4);
   const filled = structuredClone(stored);
@@ -69,7 +69,7 @@ it("replaces the requested amount with actual zero-fee fill cost when fill evide
   await saveOrder(292, [{ provider: "Polymarket", orderId: "same-order", status: "reject",
     pmRejectReason: "unfilled", betMoney: pending.betMoney, money: 0 }], "owner");
   await saveOrder(292, [{ provider: "Polymarket", orderId: "same-order", status: "none",
-    betMoney: 98, pmStakeUsdc: 98 / 6.7, pmShares: 23.4, pmFillPrice: 0.625, pmFeeUsdc: 0, money: 0 }], "owner");
+    betMoney: 98, pmStakeUsdc: 98 / 6.65, pmShares: 23.4, pmFillPrice: 0.625, pmFeeUsdc: 0, money: 0 }], "owner");
   expect(stored).toMatchObject({ status: "None", bet_money: 98, match: pending.match, bet: pending.bet });
   expect(stored.raw).toMatchObject({ betMoney: 98, pmShares: 23.4 });
   expect(stored.raw).not.toHaveProperty("pmRejectReason");

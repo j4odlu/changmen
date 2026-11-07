@@ -80,19 +80,19 @@ describe("getMonthReport", () => {
     expect(day13.RealProfit).toBe(120);
 
     const day14 = report.list.find(r => String(r.Date).endsWith("-14") || new Date(r.Date).getDate() === 14);
-    // -20 + PredictFun 10*6.7；卖单不计盈亏/流水
-    expect(day14.Profit).toBeCloseTo(-20 + 10 * 6.7, 6);
+    // -20 + PredictFun 10*6.65；卖单不计盈亏/流水
+    expect(day14.Profit).toBeCloseTo(-20 + 10 * 6.65, 6);
     expect(day14.OrderCount).toBe(2);
-    expect(day14.BetMoney).toBeCloseTo(200 + 5 * 6.7, 6);
+    expect(day14.BetMoney).toBeCloseTo(200 + 5 * 6.65, 6);
 
-    expect(report.total.Profit).toBeCloseTo(130 + 10 * 6.7, 6);
+    expect(report.total.Profit).toBeCloseTo(130 + 10 * 6.65, 6);
     expect(report.total.OrderCount).toBe(4);
-    expect(report.total.BetMoney).toBeCloseTo(1700 + 5 * 6.7, 6);
+    expect(report.total.BetMoney).toBeCloseTo(1700 + 5 * 6.65, 6);
     expect(report.total.Deposit).toBe(5200);
     expect(report.total.Withdraw).toBe(1000);
     expect(report.total.Hacked).toBe(30);
     expect(report.total.Wallet).toBe(4200);
-    expect(report.total.RealProfit).toBeCloseTo(100 + 10 * 6.7, 6);
+    expect(report.total.RealProfit).toBeCloseTo(100 + 10 * 6.65, 6);
   });
 
   it("filters by userId when provided", async () => {

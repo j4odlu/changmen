@@ -14,7 +14,7 @@ const hash = `0x${"a".repeat(64)}`, id = "11111111-1111-4111-8111-111111111111";
 const fill = { key: "trade:maker", tradeId: "trade", bucket: "maker", role: "MAKER", shares: "3.000001", price: "0.5", fee: "0", status: "CONFIRMED", updatedAt: 1 };
 const result = () => ({ executionId: id, orderId: hash, playerId: 1, linkId: -100, createdAt: 1, revision: 4,
   match: "m", bet: "b", item: "i", tokenId: "t", conditionId: "c", buyShares: "3.000001", principalUsdc: "1.5", feeUsdc: "0", fills: [fill],
-  financial: { pmShares: 3.000001, pmFillPrice: 0.5, pmStakeUsdc: 1.5, pmFeeUsdc: 0, odds: 2, betMoney: 1.5 * 6.7 } });
+  financial: { pmShares: 3.000001, pmFillPrice: 0.5, pmStakeUsdc: 1.5, pmFeeUsdc: 0, odds: 2, betMoney: 1.5 * 6.65 } });
 // 与 api/client.ts 的 toA8PostBody + urlencoded HTTP 传输一致。
 const formBody = body => Object.fromEntries(new URLSearchParams(Object.entries(body)
   .map(([key, value]) => [key, value && typeof value === "object" ? JSON.stringify(value) : String(value)])));

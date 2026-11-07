@@ -9,7 +9,7 @@ function row(price?: 0 | 0.5 | 1, sold = 0): OrderRowLike {
   const profit = sold === 100 ? 17 : sold ? -4 + (100 - sold) * (price ?? 0) - 40 * (1 - sold / 100)
     : price === undefined ? 0 : 100 * price - 40;
   return { Type: "Polymarket", OrderID: "same", CreateAt: 123, Link: 456, Odds: 2.5,
-    BetMoney: 268, Money: profit * 6.7,
+    BetMoney: 40 * 6.65, Money: profit * 6.65,
     Status: price === undefined ? "None" : price === 0 ? "Lose" : "Win", PmShares: 100,
     PmFillPrice: 0.4, PmStakeUsdc: 40 * (1 - sold / 100), PmFeeUsdc: 0.1,
     PmAttributedSellShares: sold, PmRealizedPnlUsdc: sold ? -4 : undefined, PmSellProceeds: sold ? 12 : undefined,
@@ -34,8 +34,8 @@ it.each([undefined, 0, 0.5, 1] as const)("stored → compute → display preserv
     expect(computed.pmStakeUsdc).toBe(40);
     expect(computed.pmFeeUsdc).toBe(0.1);
     const displayed = scalePolymarketVenueOrdersForDisplay([computed])[0]!;
-    expect(displayed.reward).toBeCloseTo(expectedPayout * 6.7, 4);
-    expect(displayed.betMoney).toBe(268);
+    expect(displayed.reward).toBeCloseTo(expectedPayout * 6.65, 4);
+    expect(displayed.betMoney).toBe(40 * 6.65);
     expect(displayed.money).toBeCloseTo(saved.Money!, 4);
     expect(displayed).toMatchObject({ orderId: "same", link: 456, pmShares: 100, pmTokenId: "101", pmConditionId: condition });
     saved = savedRow(displayed);

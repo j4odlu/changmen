@@ -2,31 +2,31 @@ import { describe, expect, it } from "vitest";
 import { gtcOrderLedger, gtcSellRowEvent, mergeGtcSellEvents } from "./pm_gtc_ledger.js";
 import { sellDbRowToPositionEvent } from "../../../../server/backend/core/account/order/position_events.js";
 
-const order = (raw = {}, extra = {}) => ({ bet_money: 34.17, money: 999, status: "None",
+const order = (raw = {}, extra = {}) => ({ bet_money: 33.915, money: 999, status: "None",
   raw: { pmGtcExecutionId: "own", pmGtcBuyShares: 10, pmGtcBuyCost: 5.1, pmSide: "buy", ...raw }, ...extra });
 const sale = (raw = {}) => order({ pmAttributedSellShares: 4, pmSellProceeds: 2.4, pmSellState: "partial", ...raw });
 describe("GTC cash ledger", () => {
-  it.each([["win",53.4693,"win"],["lose",-71.5527,"lose"],["equal_split",-9.0417,"lose"]])("updates GTC financial status and money together for outcome %s", (result, money, status) => {
+  it.each([["win",53.0703,"win"],["lose",-71.0187,"lose"],["equal_split",-8.9742,"lose"]])("updates GTC financial status and money together for outcome %s", (result, money, status) => {
     const ledger=gtcOrderLedger(order({pmGtcBuyShares:18.66,pmGtcBuyCost:10.6795,pmMatchResult:result,pmSellState:"settled"},
-      {bet_money:71.55265000000001,status:"Lose",money:53.4693}));
+      {bet_money:71.018675,status:"Lose",money:53.0703}));
     expect(ledger).toMatchObject({money,status,raw:{money,status,pmMatchResult:result}});
   });
   it("partial/canceled buy charges only actual filled principal plus its fee once", () => {
     const row = order({ pmFeeUsdc: 0.1, pmGtcOpenShares: 15 });
     expect(gtcOrderLedger(row)).toMatchObject({ money: 0, raw: { pmStakeUsdc: 5.1, pmRealizedPnlUsdc: 0 } });
     row.status = "Lose";
-    expect(gtcOrderLedger(row).money).toBe(-34.17);
+    expect(gtcOrderLedger(row).money).toBe(-33.915);
   });
   it("no-fill canceled/failed trade costs and loses zero", () => {
     expect(gtcOrderLedger(order({ pmGtcBuyShares: 0, pmGtcBuyCost: 0 }, { bet_money: 0, status: "Lose" })).money).toBe(0);
   });
-  it.each([["Win", 32.83], ["Lose", -34.17]])("unsold %s final cash is payout minus original fee-inclusive cost", (status, expected) => {
+  it.each([["Win", 32.585], ["Lose", -33.915]])("unsold %s final cash is payout minus original fee-inclusive cost", (status, expected) => {
     expect(gtcOrderLedger(order({}, { status })).money).toBe(expected);
   });
   it("manual partial sale uses fraction of original all-in cost and leaves the remaining basis", () => {
-    expect(gtcOrderLedger(sale())).toMatchObject({ money: 2.412, raw: { pmRealizedPnlUsdc: 0.36, pmStakeUsdc: 3.06, pmShares: 10 } });
+    expect(gtcOrderLedger(sale())).toMatchObject({ money: 2.394, raw: { pmRealizedPnlUsdc: 0.36, pmStakeUsdc: 3.06, pmShares: 10 } });
   });
-  it.each([["win", 22.11], ["lose", -18.09]])("partial sale then %s counts residual payout once even after repeated sync", (result, expected) => {
+  it.each([["win", 21.945], ["lose", -17.955]])("partial sale then %s counts residual payout once even after repeated sync", (result, expected) => {
     let row = sale({ pmMatchResult: result });
     for (let i=0; i<10; i++) {
       const ledger = gtcOrderLedger(row); expect(ledger.money).toBe(expected);
@@ -36,23 +36,23 @@ describe("GTC cash ledger", () => {
   it("full sell has no remaining settlement amount regardless of win/lose", () => {
     for (const result of [undefined,"win","lose"])
       expect(gtcOrderLedger(sale({ pmAttributedSellShares: 10, pmSellProceeds: 6, pmMatchResult: result })))
-        .toMatchObject({ money: 6.03, raw: { pmStakeUsdc: 0, pmSellState: "closed" } });
+        .toMatchObject({ money: 5.985, raw: { pmStakeUsdc: 0, pmSellState: "closed" } });
   });
   it("ignores old rounded CNY/paper pnl and uses cumulative unrounded sale cash", () => {
-    expect(gtcOrderLedger(sale({ pmSellProceeds: 2.4078, pmRealizedPnlUsdc: 90 }, { money: 998 })).money).toBe(2.4643);
+    expect(gtcOrderLedger(sale({ pmSellProceeds: 2.4078, pmRealizedPnlUsdc: 90 }, { money: 998 })).money).toBe(2.4459);
   });
   it("late fee changes update both realized pnl and remaining cost", () => {
-    const row = sale({ pmGtcBuyCost: 5.2 }); row.bet_money = 34.84;
-    expect(gtcOrderLedger(row)).toMatchObject({ money: 2.144, raw: { pmStakeUsdc: 3.12, pmRealizedPnlUsdc: 0.32 } });
+    const row = sale({ pmGtcBuyCost: 5.2 }); row.bet_money = 34.58;
+    expect(gtcOrderLedger(row)).toMatchObject({ money: 2.128, raw: { pmStakeUsdc: 3.12, pmRealizedPnlUsdc: 0.32 } });
   });
   it("later fills after selling previously filled shares reopen only that order's remaining position", () => {
     const row = sale({ pmGtcBuyShares: 20, pmGtcBuyCost: 10.2, pmAttributedSellShares: 10, pmSellProceeds: 6, pmSellState: "closed" });
-    row.bet_money = 68.34;
-    expect(gtcOrderLedger(row)).toMatchObject({ money: 6.03, raw: { pmShares: 20, pmStakeUsdc: 5.1, pmSellState: "partial" } });
+    row.bet_money = 67.83;
+    expect(gtcOrderLedger(row)).toMatchObject({ money: 5.985, raw: { pmShares: 20, pmStakeUsdc: 5.1, pmSellState: "partial" } });
   });
   it("sell ledger can correct a previous gross/fee estimate downwards using complete exact sell events", () => {
     const row = sale({ pmSellProceeds: 2.5, positionEvents: { sells: [{ id: "s1", shares: 4, proceeds: 2.4 }] } });
-    expect(gtcOrderLedger(row)).toMatchObject({ money: 2.412, raw: { pmSellProceeds: 2.4 } });
+    expect(gtcOrderLedger(row)).toMatchObject({ money: 2.394, raw: { pmSellProceeds: 2.4 } });
   });
   it("incomplete event history cannot wipe out total sale cash", () => {
     const row = sale({ positionEvents: { sells: [{ id: "s1", shares: 2, proceeds: 1.2 }] } });
@@ -60,7 +60,7 @@ describe("GTC cash ledger", () => {
   });
   it("sell dust closes the remaining basis exactly once", () => {
     expect(gtcOrderLedger(sale({ pmAttributedSellShares: 9.995, pmSellProceeds: 6 })))
-      .toMatchObject({ money: 6.03, raw: { pmStakeUsdc: 0, pmAttributedSellShares: 10 } });
+      .toMatchObject({ money: 5.985, raw: { pmStakeUsdc: 0, pmAttributedSellShares: 10 } });
   });
   it.each([{ pmAttributedSellShares: 4 }, { pmSellState: "partial" }, { pmSellProceeds: 2 }, { pmRealizedPnlUsdc: 2 }])("does not invent missing sale evidence %j", raw => {
     expect(gtcOrderLedger(order(raw))).toBeUndefined();
@@ -75,14 +75,14 @@ describe("GTC cash ledger", () => {
     const previous = { positionEvents: { sells: [{ id: "ONE", shares: 3, proceeds: 1.8, at: 1 }, { id: "two", shares: 1, proceeds: 0.6, at: 2 }] } };
     const incoming = { positionEvents: { sells: [{ id: "one", shares: 2, proceeds: 1.2, at: 1 }] } };
     expect(mergeGtcSellEvents(previous, incoming).sells).toHaveLength(2);
-    expect(gtcOrderLedger(sale({ positionEvents: mergeGtcSellEvents(previous, incoming) })).money).toBe(2.412);
+    expect(gtcOrderLedger(sale({ positionEvents: mergeGtcSellEvents(previous, incoming) })).money).toBe(2.394);
   });
   it("sell row's cash comes from proceeds CNY, never its allocated buy basis", () => {
-    expect(gtcSellRowEvent({ order_id: "sale", create_at: 1, bet_money: 16.08,
+    expect(gtcSellRowEvent({ order_id: "sale", create_at: 1, bet_money: 15.96,
       raw: { pmSide: "sell", pmShares: 4, pmStakeUsdc: 2.04 } })).toMatchObject({ proceeds: 2.4, shares: 4 });
   });
   it("historical GTC sell-event backfill uses cash rather than the amortized basis", () => {
-    expect(sellDbRowToPositionEvent({ provider:"Polymarket",order_id:"s",bet_money:16.08,
+    expect(sellDbRowToPositionEvent({ provider:"Polymarket",order_id:"s",bet_money:15.96,
       raw:{pmGtcExecutionId:"g",pmSide:"sell",pmBuyOrderId:"buy",pmShares:4,pmStakeUsdc:2.04} }).event.proceeds).toBe(2.4);
   });
 });

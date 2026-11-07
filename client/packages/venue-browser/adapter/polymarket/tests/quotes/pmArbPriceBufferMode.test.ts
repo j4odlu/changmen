@@ -3,6 +3,8 @@ import {
   getPmArbPriceBufferPrefs,
   isPmArbPriceBufferActive,
   normalizePmArbPriceBufferMultiplier,
+  onPmPricePolicyChange,
+  onPmTickBufferModeChange,
   pmEffectiveOddsFromFoEntry,
   pmExecCapFromRawAsk,
   resetPmArbPriceBufferPrefsForTests,
@@ -24,6 +26,31 @@ describe("pmArbPriceBufferMode", () => {
     setPmArbPriceBufferPrefs({ enabled: true, multiplier: 1.03 });
     expect(getPmArbPriceBufferPrefs()).toEqual({ enabled: true, multiplier: 1.03 });
     expect(isPmArbPriceBufferActive()).toBe(true);
+  });
+
+  it("notifies preference changes once and stops notifications after unsubscribe", () => {
+    const previous = getPmArbPriceBufferPrefs();
+    resetPmArbPriceBufferPrefsForTests();
+    const modes: boolean[] = [];
+    let policies = 0;
+    const stopMode = onPmTickBufferModeChange(enabled => modes.push(enabled));
+    const stopPolicy = onPmPricePolicyChange(() => { policies++; });
+    try {
+      setPmArbPriceBufferPrefs({ enabled: true, mode: "tick", multiplier: 1.02 });
+      expect(getPmArbPriceBufferPrefs()).toEqual({ enabled: true, mode: "tick", multiplier: 1.02 });
+      expect(modes).toEqual([true]);
+      expect(policies).toBe(1);
+      setPmArbPriceBufferPrefs({ enabled: true, mode: "tick", multiplier: 1.02 });
+      expect(policies).toBe(1);
+      stopMode(); stopPolicy();
+      resetPmArbPriceBufferPrefsForTests();
+      expect(getPmArbPriceBufferPrefs()).toEqual({ enabled: false, multiplier: 1.01 });
+      expect(modes).toEqual([true]);
+      expect(policies).toBe(1);
+    } finally {
+      stopMode(); stopPolicy();
+      setPmArbPriceBufferPrefs(previous);
+    }
   });
 
   it("clamps invalid multiplier", () => {

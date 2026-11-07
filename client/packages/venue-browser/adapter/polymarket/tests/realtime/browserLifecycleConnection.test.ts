@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as market from "@changmen/venue-browser/polymarket/marketQuoteHub";
 import * as sport from "@changmen/venue-browser/polymarket/sportQuoteHub";
-import * as oldMarket from "@changmen/venue-browser/polymarket/marketQuoteHub";
-import * as oldSport from "@changmen/venue-browser/polymarket/sportQuoteHub";
 import { resetPmMarketWsSourceModeForTests } from "@changmen/venue-browser/polymarket/pmMarketWsMode";
 import { resetPmRoutingPreferenceForTests } from "@changmen/venue-browser/polymarket/pmRoutingPreference";
 import { resetOfficialFailStreakForTests } from "@changmen/venue-browser/polymarket/ws";
@@ -31,17 +29,29 @@ afterEach(() => {
   market.__testResetPolymarketMarketQuoteHub(); sport.__testResetPolymarketSportQuoteHub();
   vi.unstubAllGlobals(); vi.useRealTimers();
 });
-it("mixed old/new entry calls keep one market connection and an independent sport connection across reconnect and teardown", async () => {
+it("quote observers stay passive and stop receiving updates after disposal", () => {
+  const received = vi.fn(), stop = market.onPolymarketMarketQuote(received);
+  try {
+    market.__testPushPolymarketMarketQuote("migration-only", 0.5);
+    expect(received).toHaveBeenCalledExactlyOnceWith({ assetId: "migration-only", bestAsk: 0.5 });
+    stop();
+    market.__testPushPolymarketMarketQuote("migration-only", 0.6);
+    expect(received).toHaveBeenCalledOnce();
+    expect(Socket.instances).toHaveLength(0);
+  } finally { stop(); }
+});
+
+it("consumer rosters keep one market connection and an independent sport connection across reconnect and teardown", async () => {
   expect(Socket.instances).toHaveLength(0);
   market.registerPolymarketQuoteAssets("first", ["e1"]);
-  oldMarket.registerPolymarketQuoteAssets("second", ["e2"]);
-  oldSport.setPolymarketSportAssetIds(["s1"]);
+  market.registerPolymarketQuoteAssets("second", ["e2"]);
+  sport.setPolymarketSportAssetIds(["s1"]);
   expect(Socket.instances).toHaveLength(2);
   const [esportSocket, sportSocket] = Socket.instances as [Socket, Socket];
   esportSocket.open(); sportSocket.open();
   expect(JSON.parse(esportSocket.sent.at(-1)!)).toMatchObject({ assets_ids: ["e1", "e2"], initial_dump: true });
   expect(JSON.parse(sportSocket.sent.at(-1)!)).toMatchObject({ assets_ids: ["s1"], initial_dump: true });
-  const received = vi.fn(), stop = oldMarket.onPolymarketMarketQuote(received);
+  const received = vi.fn(), stop = market.onPolymarketMarketQuote(received);
   try {
     esportSocket.onmessage?.({ data: JSON.stringify({ event_type: "best_bid_ask", asset_id: "e1", best_ask: "0.5", timestamp: 100 }) });
     expect(received).toHaveBeenCalledExactlyOnceWith({ assetId: "e1", bestAsk: 0.5 });
@@ -50,7 +60,7 @@ it("mixed old/new entry calls keep one market connection and an independent spor
     const reconnected = Socket.instances[2]!; reconnected.open();
     expect(JSON.parse(reconnected.sent.at(-1)!)).toMatchObject({ assets_ids: ["e1", "e2"], initial_dump: true });
     expect(sportSocket.readyState).toBe(Socket.OPEN);
-    oldMarket.unregisterPolymarketQuoteConsumer("first");
+    market.unregisterPolymarketQuoteConsumer("first");
     expect(reconnected.readyState).toBe(Socket.OPEN);
     expect(JSON.parse(reconnected.sent.at(-1)!)).toMatchObject({ assets_ids: ["e2"], initial_dump: false });
     market.unregisterPolymarketQuoteConsumer("second");

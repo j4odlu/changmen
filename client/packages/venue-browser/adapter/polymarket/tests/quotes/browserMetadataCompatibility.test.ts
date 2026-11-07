@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as canonical from "@changmen/venue-browser/polymarket/pmTickMetadata";
 import * as legacy from "@changmen/venue-browser/polymarket/quotes/pmTickMetadata";
-import * as nested from "@changmen/venue-browser/polymarket/quotes/pmTickMetadata";
 import * as buffer from "@changmen/venue-browser/polymarket/quotes/pmTickBuffer";
 import { clearPmTickStateForTests, notePmTickFrame, notePmTickReconnect } from "@changmen/venue-browser/polymarket/pmTickState";
 
@@ -16,12 +15,11 @@ afterEach(() => {
 
 it("old and new entries share every cache function while HTTP stays on the host", () => {
   for (const [name, value] of Object.entries(canonical)) {
-    for (const entry of [legacy, nested, buffer])
+    for (const entry of [legacy, buffer])
       expect((entry as Record<string, unknown>)[name], name).toBe(value);
   }
   expect(canonical).not.toHaveProperty("fetchPmTickBufferTickSize");
-  expect(legacy.fetchPmTickBufferTickSize).toBe(nested.fetchPmTickBufferTickSize);
-  expect(buffer.fetchPmTickBufferTickSize).toBe(nested.fetchPmTickBufferTickSize);
+  expect(buffer.fetchPmTickBufferTickSize).toBe(legacy.fetchPmTickBufferTickSize);
 });
 
 it("mixed entry imports share one cache and deliver a tick change once", () => {
@@ -32,7 +30,7 @@ it("mixed entry imports share one cache and deliver a tick change once", () => {
     changed.mockClear();
     notePmTickFrame(JSON.stringify({ event_type: "tick_size_change", asset_id: "t", new_tick_size: "0.001", timestamp: 200 }));
     expect(changed).toHaveBeenCalledExactlyOnceWith("t");
-    expect(nested.pmTickBufferTick("t")).toBe("0.001");
+    expect(legacy.pmTickBufferTick("t")).toBe("0.001");
     expect(canonical.pmTickBufferTick("t")).toBe("0.001");
   } finally { stop(); }
 });

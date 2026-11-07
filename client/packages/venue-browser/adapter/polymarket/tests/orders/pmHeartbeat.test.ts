@@ -33,9 +33,12 @@ describe("pmHeartbeat", () => {
       token: "{}",
     } as any;
 
+    const initialTimers = vi.getTimerCount();
     ensurePolymarketHeartbeat(account);
     ensurePolymarketHeartbeat(account);
 
+    expect(pmPostHeartbeat).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(initialTimers + 1);
     expect(getPolymarketHeartbeatAccountIdsForTests()).toEqual([42]);
     await Promise.resolve();
     await Promise.resolve();
@@ -44,6 +47,9 @@ describe("pmHeartbeat", () => {
     const callsAfterStart = vi.mocked(pmPostHeartbeat).mock.calls.length;
     await vi.advanceTimersByTimeAsync(POLYMARKET_HEARTBEAT_INTERVAL_MS);
     expect(vi.mocked(pmPostHeartbeat).mock.calls.length).toBeGreaterThan(callsAfterStart);
+    stopPolymarketHeartbeat(42);
+    expect(getPolymarketHeartbeatAccountIdsForTests()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(initialTimers);
   });
 
   it("stop removes session", () => {

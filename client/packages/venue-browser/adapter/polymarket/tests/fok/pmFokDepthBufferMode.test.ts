@@ -21,11 +21,15 @@ describe("pmFokDepthBufferMode", () => {
     expect(pmFokDepthReuseMultiplier()).toBe(1);
   });
 
-  it("setPmFokDepthBufferPrefs mirrors enabled + multiplier", () => {
+  it("applies enabled depth preferences and stops requiring extra depth when disabled", () => {
     setPmFokDepthBufferPrefs({ enabled: true, multiplier: 2 });
     expect(getPmFokDepthBufferPrefs()).toEqual({ enabled: true, multiplier: 2 });
     expect(isPmFokDepthBufferActive()).toBe(true);
     expect(pmFokDepthReuseMultiplier()).toBe(2);
+    expect(pmFokDepthBufferNeedUsdc(10)).toBe(20);
+    setPmFokDepthBufferPrefs({ enabled: false, multiplier: 1.5 });
+    expect(pmFokDepthReuseMultiplier()).toBe(1);
+    expect(pmFokDepthBufferNeedUsdc(10)).toBeNull();
   });
 
   it("clamps invalid multiplier", () => {

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { settlePolymarketDelayedOrder } from "@changmen/venue-browser/polymarket/fok/orderSettlement";
 import {
   awaitPolymarketSettlementJob,
+  clearPolymarketSettlementJob,
   clearPolymarketSettlementJobs,
   getPolymarketSettlementDelayCtx,
   startPolymarketSettlementJob,
@@ -26,20 +27,26 @@ describe("settlementJob", () => {
     clearPolymarketSettlementJobs();
   });
 
-  it("start is idempotent for same accountId+orderId", async () => {
+  it("repeated starts retain the first submission context and share one result until cleared", async () => {
+    const payload = { outcome: "matched" as const, row: { status: "MATCHED" } };
     vi.mocked(settlePolymarketDelayedOrder).mockImplementation(
       () =>
         new Promise(resolve =>
-          setTimeout(() => resolve({ outcome: "matched", row: { status: "MATCHED" } }), 20),
+          setTimeout(() => resolve(payload), 20),
         ),
     );
 
-    startPolymarketSettlementJob(pmAccount(), "0xabc");
-    startPolymarketSettlementJob(pmAccount(), "0xabc");
+    startPolymarketSettlementJob(pmAccount(), "0xabc", { submittedAt: 1000 });
+    startPolymarketSettlementJob(pmAccount(), "0xabc", { submittedAt: 2000 });
 
     expect(settlePolymarketDelayedOrder).toHaveBeenCalledTimes(1);
+    expect(getPolymarketSettlementDelayCtx(pmAccount(), "0xabc")?.submittedAt).toBe(1000);
     const out = await awaitPolymarketSettlementJob(pmAccount(), "0xabc");
     expect(out?.outcome).toBe("matched");
+    expect(out).toBe(payload);
+    expect(await awaitPolymarketSettlementJob(pmAccount(), "0xabc")).toBe(payload);
+    clearPolymarketSettlementJob(pmAccount(), "0xabc");
+    expect(await awaitPolymarketSettlementJob(pmAccount(), "0xabc")).toBeNull();
   });
 
   it("await returns null when no job was started", async () => {

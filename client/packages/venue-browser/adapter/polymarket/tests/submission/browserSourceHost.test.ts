@@ -1,9 +1,8 @@
 import { expect, test, vi } from "vitest";
 import type { ReadonlyMarketSourcePort } from "@changmen/pm-market-data-browser";
 import { createReadonlyMarketSource } from "../../../../pm-book-source";
+import { createReadonlyMarketSource as publicFactory } from "@changmen/venue-browser/pm-book-source";
 import { pmOrderBookSource } from "@changmen/venue-browser/pm-book-source-host";
-import { pmOrderBookSource as browserSource } from "@changmen/venue-browser/pm-book-source-host";
-import { pmOrderBookSource as hostSource } from "@changmen/venue-browser/pm-book-source-host";
 import { notePmStreamConnecting, observePmMarketStream } from "@changmen/venue-browser/polymarket/marketStream";
 
 const hub = vi.hoisted(() => ({ assets: [] as string[], read: vi.fn<(consumer: string) => string[]>() }));
@@ -13,15 +12,13 @@ vi.mock("@changmen/venue-browser/polymarket/marketQuoteHub", () => ({
 
 test("host creates one frozen source without eager observation or asset reads; roster stays live", () => {
   expect(hub.read).not.toHaveBeenCalled();
-  expect(pmOrderBookSource).toBe(browserSource);
-  expect(browserSource).toBe(hostSource);
   expect(Object.isFrozen(pmOrderBookSource)).toBe(true);
   expect(Object.keys(pmOrderBookSource)).toEqual(["observe", "subscribedAssets"]);
   expect(pmOrderBookSource.observe).toBe(observePmMarketStream);
   hub.assets = ["first"];
   expect(pmOrderBookSource.subscribedAssets()).toBe(hub.assets);
   hub.assets = ["next", "last"];
-  expect(browserSource.subscribedAssets()).toBe(hub.assets);
+  expect(pmOrderBookSource.subscribedAssets()).toBe(hub.assets);
   expect(hub.read.mock.calls).toEqual([["esport"], ["esport"]]);
 });
 
@@ -40,7 +37,8 @@ test("public source preserves immediate stream state, live notifications and dis
   } finally { dispose(); }
 });
 
-test("callback binding is passive and preserves function identity, listener and returned disposer", () => {
+test("public factory preserves passive callback binding, function identity and returned disposer", () => {
+  expect(publicFactory).toBe(createReadonlyMarketSource);
   const dispose = vi.fn();
   const observe = vi.fn<ReadonlyMarketSourcePort["observe"]>(() => dispose);
   const subscribedAssets = vi.fn<ReadonlyMarketSourcePort["subscribedAssets"]>(() => ["one"]);

@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { backendProcesses } from "./verify-backend-processes.mjs";
 
+export const FRONTEND_SHARDS = 3;
+
 // Only equivalent invocations may be covered; overlapping/subset suites stay separate.
 export const FULL_CHECK_COVERAGE = Object.freeze({
   "verification-control": "protection-negative", "verification-node": "protection-node",

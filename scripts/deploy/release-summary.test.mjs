@@ -16,8 +16,14 @@ test("missing reports, changed commits and failed jobs never read as a publicati
     assert.match(releaseSummary({ root }), /未取得.*封包证据/);
     save("output/release-validation/evidence.json", { commit: identity.commit, inputFingerprint: identity.inputFingerprint, planFingerprint: report.planFingerprint });
     assert.match(releaseSummary({ root, commit: identity.commit, status: "success" }), /通过，发布仍受后续任务控制/);
+    report.results = [{ check: "frontend", passed: true, elapsedMs: 1200, execution: { strategy: "parallel-shards", parts: [{}, {}, {}] } }];
+    save("output/change-validation/verdict.json", report);
+    assert.match(releaseSummary({ root, commit: identity.commit, status: "success" }), /frontend \| PASS \| 1200 \| 3 分片并行（最大执行耗时）/);
     for (const args of [{ commit: "f".repeat(40) }, { status: "failure" }, { status: "cancelled" }])
       assert.match(releaseSummary({ root, ...args }), /未通过，不能据此放行/);
+    delete report.results[0].execution.parts;
+    save("output/change-validation/verdict.json", report);
+    assert.match(releaseSummary({ root, status: "failure" }), /未通过，不能据此放行/);
     report.plan.requiredChecks.databaseCompatibility = true; save("output/change-validation/verdict.json", report);
     assert.match(releaseSummary({ root }), /database: 缺失/);
     save("output/database-compatibility/verdict.json", { passed: false, results: [{ phase: "history-schema", passed: false, exitCode: 23 }] });

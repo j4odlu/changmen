@@ -47,7 +47,7 @@ export function validationIdentity(root, inputs = validationInputs(root)) {
   return { commit: git(root, "rev-parse", "HEAD").trim(), candidateTree: git(root, "rev-parse", "HEAD^{tree}").trim(),
     inputFingerprint: digest(JSON.stringify(inputs)) };
 }
-export function validationCommands(plan, npm, releasePlan) {
+export function validationCommands(plan, npm, releasePlan, { frontendShard } = {}) {
   const cmd = (...args) => [process.execPath, npm, ...args];
   return {
     "deployment-control": { command: [process.execPath, "scripts/deploy/check-controls.mjs"] },
@@ -61,13 +61,13 @@ export function validationCommands(plan, npm, releasePlan) {
     "router-compile": { command: cmd("run", "compile:router", "--workspace=@changmen/backend") },
     backend: { command: cmd("run", "test:backend", "--", "--force") },
     "frontend-typecheck": { command: cmd("run", "typecheck:frontend") },
-    frontend: { command: [process.execPath, "vite/runFrontendTests.mjs", "--maxWorkers=2"], cwd: "client/web" },
+    frontend: { command: [process.execPath, "vite/runFrontendTests.mjs", "--maxWorkers=2", ...(frontendShard ? [`--shard=${frontendShard}`] : [])], cwd: "client/web" },
     "frontend-presentation": { command: [process.execPath, "scripts/verification/check-presentation.mjs"] },
     build: { command: cmd("run", "app:build") },
   };
 }
-export function executeValidationChecks(plan, { run = spawnSync, npm, cwd }) {
-  const commands = validationCommands(plan, npm, plan.releasePlan), results = [], invocationId = randomUUID();
+export function executeValidationChecks(plan, { run = spawnSync, npm, cwd, frontendShard }) {
+  const commands = validationCommands(plan, npm, plan.releasePlan, { frontendShard }), results = [], invocationId = randomUUID();
   const pathsFile = path.join(cwd, "output/change-validation/changed-paths.json");
   fs.mkdirSync(path.dirname(pathsFile), { recursive: true });
   fs.writeFileSync(pathsFile, JSON.stringify({ invocationId, root: fs.realpathSync(cwd), paths: plan.paths ?? [] }));

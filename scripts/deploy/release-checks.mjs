@@ -7,13 +7,16 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { changePlan, planHash } from "./change-plan.mjs";
 import { assertAccepted, assertCandidate, sha256 } from "./release-evidence.mjs";
-import { assertSupplemental } from "./acceptance-contract.mjs";
+import { assertSupplemental, FRONTEND_SHARDS } from "./acceptance-contract.mjs";
 import { assertCommittedSource, executeValidationChecks, validationIdentity, validationCommands } from "../verification/verify-change.mjs";
 
 const groups = {
   controls: ["deployment-control", "validation-control", "verification-control", "verification-node", "boundaries"],
-  backend: ["router-compile", "backend", "database-compatibility", "backend-installation"],
-  frontend: ["frontend-typecheck", "frontend", "frontend-presentation", "build"],
+  backend: ["router-compile", "backend"],
+  "database-checks": ["database-compatibility"],
+  "backend-runtime": ["backend-installation"],
+  frontend: ["frontend-typecheck", "frontend", "frontend-presentation"],
+  "frontend-build": ["build"],
 };
 const read = file => JSON.parse(fs.readFileSync(file, "utf8"));
 const write = (file, value) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(value, null, 2)); };
@@ -22,8 +25,16 @@ export function releaseLanes(plan) {
   assert.equal(plan.purpose, "release");
   assert.equal(new Set(plan.checks).size, plan.checks.length, "Duplicate release checks");
   for (const check of plan.checks) assert.equal(Object.values(groups).filter(list => list.includes(check)).length, 1, `Unassigned release check: ${check}`);
-  return Object.entries(groups).map(([lane, checks]) => ({ lane, checks: plan.checks.filter(check => checks.includes(check)) }))
-    .filter(item => item.checks.length);
+  return Object.entries(groups).flatMap(([lane, checks]) => {
+    const selected = plan.checks.filter(check => checks.includes(check));
+    if (!selected.length) return [];
+    if (lane !== "frontend" || !selected.includes("frontend")) return [{ lane, checks: selected }];
+    const other = selected.filter(check => check !== "frontend");
+    return [...(other.length ? [{ lane, checks: other }] : []),
+      ...Array.from({ length: FRONTEND_SHARDS }, (_, index) => ({
+        lane: `frontend-${index + 1}`, checks: ["frontend"], frontendShard: `${index + 1}/${FRONTEND_SHARDS}`,
+      }))];
+  });
 }
 export function assertReleaseBundle(bundle, root, env = process.env) {
   assertCommittedSource(root);
@@ -65,9 +76,10 @@ export function runReleaseLane(lane, { root = process.cwd(), env = process.env, 
   const directory = path.join(root, "output/release-lanes"), file = path.join(directory, `${lane}.json`);
   fs.mkdirSync(directory, { recursive: true }); fs.rmSync(file, { force: true });
   const report = { lane, identity: bundle.identity, run: bundle.run, releaseInvocationId: bundle.invocationId,
-    planFingerprint: bundle.planFingerprint, passed: false, sourceStable: false, npm, artifacts: {}, results: [] };
+    planFingerprint: bundle.planFingerprint, passed: false, sourceStable: false, npm, artifacts: {}, results: [],
+    ...(selected.frontendShard ? { frontendShard: selected.frontendShard } : {}) };
   try {
-    Object.assign(report, executeValidationChecks({ ...bundle.plan, checks: selected.checks }, { cwd: root, npm, run }));
+    Object.assign(report, executeValidationChecks({ ...bundle.plan, checks: selected.checks }, { cwd: root, npm, run, frontendShard: selected.frontendShard }));
     report.sourceStable = JSON.stringify(validationIdentity(root)) === JSON.stringify(bundle.identity);
     report.passed = report.sourceStable && report.results.length === selected.checks.length && report.results.every(row => row.passed);
     if (report.passed && selected.checks.includes("database-compatibility")) {
@@ -98,7 +110,7 @@ export function runReleaseLane(lane, { root = process.cwd(), env = process.env, 
 export function mergeReleaseReports(bundle, reports, root, env = process.env) {
   assertReleaseBundle(bundle, root, env);
   assert.equal(reports.length, bundle.lanes.length, "Missing or duplicated release lanes");
-  const rows = new Map(), laneEvidence = [];
+  const rows = new Map(), laneEvidence = [], frontendParts = [];
   for (const selected of bundle.lanes) {
     const matches = reports.filter(report => report.lane === selected.lane);
     assert.equal(matches.length, 1, "Missing or duplicated release lane: " + selected.lane);
@@ -109,6 +121,7 @@ export function mergeReleaseReports(bundle, reports, root, env = process.env) {
     assert.deepEqual(report.run, bundle.run, "Release lane run mismatch");
     assert.equal(report.releaseInvocationId, bundle.invocationId, "Stale release lane invocation");
     assert.equal(report.planFingerprint, bundle.planFingerprint, "Release lane plan mismatch");
+    assert.equal(report.frontendShard, selected.frontendShard, "Release lane shard mismatch");
     assert.match(report.invocationId ?? "", /^[a-f0-9-]{36}$/, "Missing check invocation");
     assert.equal(report.context?.node, bundle.nodeVersion, "Release lane Node runtime mismatch");
     assert.equal(report.context?.platform, process.platform, "Release lane platform mismatch");
@@ -116,14 +129,38 @@ export function mergeReleaseReports(bundle, reports, root, env = process.env) {
     assert.deepEqual(report.executionOrder, selected.checks, "Release lane execution order mismatch");
     assert.deepEqual(report.results.map(row => row.check), selected.checks, "Release lane checks mismatch");
     assert.equal(typeof report.npm, "string"); assert(report.npm.length);
-    const commands = validationCommands(bundle.plan, report.npm, bundle.plan.releasePlan);
+    const commands = validationCommands(bundle.plan, report.npm, bundle.plan.releasePlan, { frontendShard: selected.frontendShard });
     for (const row of report.results) {
       const command = commands[row.check];
       assert.deepEqual(row.execution, { command: command.command, cwd: command.cwd ?? "." }, "Release lane command mismatch");
       assert.equal(row.reusedFrom, undefined, "Release lanes must execute their checks");
-      rows.set(row.check, row);
+      // Validate physical results before aggregating; a forged top-level pass must
+      // not hide a failed, timed-out or terminated shard.
+      assert.equal(row.passed, true, "Release check failed");
+      assert.equal(row.exitCode, 0, "Release check exited unsuccessfully");
+      assert.equal(row.errorCode, null, "Release check failed to start or timed out");
+      assert.equal(row.signal, null, "Release check was terminated");
+      if (row.check === "frontend" && selected.frontendShard) {
+        assert(Number.isFinite(row.elapsedMs) && row.elapsedMs >= 0, "Invalid shard duration");
+        frontendParts.push({ ...row, lane: selected.lane, shard: selected.frontendShard, invocationId: report.invocationId });
+      } else {
+        assert(!rows.has(row.check), "Duplicated release check");
+        rows.set(row.check, row);
+      }
     }
-    laneEvidence.push({ lane: report.lane, invocationId: report.invocationId, context: report.context, artifacts: report.artifacts });
+    laneEvidence.push({ lane: report.lane, invocationId: report.invocationId, context: report.context, artifacts: report.artifacts,
+      ...(selected.frontendShard ? { frontendShard: selected.frontendShard } : {}) });
+  }
+  if (bundle.plan.checks.includes("frontend")) {
+    assert.deepEqual(frontendParts.map(part => part.shard), Array.from({ length: FRONTEND_SHARDS }, (_, index) => `${index + 1}/${FRONTEND_SHARDS}`),
+      "Incomplete or duplicated frontend shards");
+    assert(!rows.has("frontend"), "Unsharded frontend result cannot replace shards");
+    rows.set("frontend", { check: "frontend", passed: true, exitCode: 0, errorCode: null, signal: null,
+      // Maximum execution duration excludes runner scheduling; each physical
+      // duration and invocation remains available in the accepted report.
+      elapsedMs: Math.max(...frontendParts.map(part => part.elapsedMs)),
+      execution: { strategy: "parallel-shards", parts: frontendParts },
+    });
   }
   const report = { checkedAt: new Date().toISOString(), passed: true, sourceStable: true, tier: bundle.plan.tier,
     paths: bundle.plan.paths, immutableFokEntries: bundle.plan.immutableFokEntries, completeRelease: false,
@@ -138,25 +175,26 @@ export function collectRelease(root = process.cwd(), env = process.env) {
   const bundle = read(path.join(root, "output/change-validation/bundle.json")), directory = path.join(root, "output/release-lanes");
   const reports = bundle.lanes.map(item => read(path.join(directory, `${item.lane}.json`)));
   const report = mergeReleaseReports(bundle, reports, root, env);
+  const owner = check => reports.find(item => bundle.lanes.find(lane => lane.lane === item.lane).checks.includes(check));
   if (bundle.plan.requiredChecks.databaseCompatibility) {
     const databaseFile = path.join(directory, "database.json"), database = read(databaseFile);
-    assert.equal(sha256(fs.readFileSync(databaseFile)), reports.find(item => item.lane === "backend").artifacts.database, "Database artifact changed");
+    assert.equal(sha256(fs.readFileSync(databaseFile)), owner("database-compatibility").artifacts.database, "Database artifact changed");
     assertSupplemental(database, "database", report);
     write(path.join(root, "output/database-compatibility/verdict.json"), database);
   }
   if (bundle.plan.requiredChecks.backendInstallation) {
     const file = path.join(directory, "backend-installation.json"), installation = read(file);
-    assert.equal(sha256(fs.readFileSync(file)), reports.find(item => item.lane === "backend").artifacts.backendInstallation, "Backend installation artifact changed");
+    assert.equal(sha256(fs.readFileSync(file)), owner("backend-installation").artifacts.backendInstallation, "Backend installation artifact changed");
     assertSupplemental(installation, "backend-installation", report);
     const archive = fs.readFileSync(path.join(directory, "backend.tgz"));
-    assert.equal(sha256(archive), reports.find(item => item.lane === "backend").artifacts.backend, "Backend artifact changed");
+    assert.equal(sha256(archive), owner("backend-installation").artifacts.backend, "Backend artifact changed");
     assert.equal(sha256(archive), installation.archive.sha256, "Backend archive differs from Linux-tested artifact");
     write(path.join(root, "output/backend-linux-runtime/verdict.json"), installation);
     fs.writeFileSync(path.join(root, "output/backend-linux-runtime/backend.tgz"), archive);
   }
   if (bundle.plan.deployment.components.includes("frontend")) {
     const archive = path.join(directory, "frontend.tgz");
-    assert.equal(sha256(fs.readFileSync(archive)), reports.find(item => item.lane === "frontend").artifacts.frontend, "Frontend artifact changed");
+    assert.equal(sha256(fs.readFileSync(archive)), owner("build").artifacts.frontend, "Frontend artifact changed");
     const dist = path.join(root, "client/web/dist");
     assert(!fs.existsSync(dist) || fs.readdirSync(dist).length === 0, "Frontend artifact destination must be empty");
     fs.mkdirSync(dist, { recursive: true });

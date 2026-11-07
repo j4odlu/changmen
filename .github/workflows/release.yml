@@ -111,7 +111,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Install PostgreSQL for required checks
-        if: matrix.lane == 'backend' && (needs.plan.outputs.database-compatibility == 'true' || needs.plan.outputs.backend-installation == 'true')
+        if: matrix.lane == 'database-checks' || matrix.lane == 'backend-runtime'
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql

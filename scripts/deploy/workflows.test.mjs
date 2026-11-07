@@ -156,7 +156,7 @@ test("independent check runners share a pinned plan; only the collector seals ar
   assert.equal(checks.strategy.matrix, "${{ fromJSON(needs.plan.outputs.matrix) }}");
   assert.equal(checks.steps.filter(s => s.run === "npm ci").length, 1);
   const pg = checks.steps.find(s => s.name === "Install PostgreSQL for required checks");
-  assert.equal(pg.if, "matrix.lane == 'backend' && (needs.plan.outputs.database-compatibility == 'true' || needs.plan.outputs.backend-installation == 'true')");
+  assert.equal(pg.if, "matrix.lane == 'database-checks' || matrix.lane == 'backend-runtime'");
   assert.match(pg.run, /CHANGMEN_TEST_PG_BIN/);
   assert(checks.steps.find(s => s.run?.includes("release-checks.mjs run")).run.includes('"$RELEASE_LANE"'));
   const laneUpload = checks.steps.find(s => s.with?.name === "release-lane-${{ matrix.lane }}");

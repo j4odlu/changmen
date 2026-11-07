@@ -7,7 +7,7 @@ import { execFileSync } from "node:child_process";
 import { changePlan } from "./change-plan.mjs";
 import { prepareRelease, releaseLanes, runReleaseLane, mergeReleaseReports, collectRelease } from "./release-checks.mjs";
 import { DATABASE_PHASES } from "./acceptance-contract.mjs";
-import { sealEvidence, verifySupplementalEvidence } from "./release-evidence.mjs";
+import { sealEvidence, verifySupplementalEvidence, assertAccepted } from "./release-evidence.mjs";
 import { readSourceVersion } from "../../devtools/runtime-tooling/runtime_version.js";
 import { installationProof } from "./fixtures/backend-installation.mjs";
 import { packBackendRepoArchive } from "./pack-git-repo.mjs";
@@ -60,10 +60,17 @@ function fixture(t, scope = "full") {
   const reports = bundle.lanes.map(({ lane }) => runReleaseLane(lane, { root, env, npm: "npm-cli.js", run }));
   return { root, bundle, reports, calls, run };
 }
-test("independent lanes cover each check once; unknown checks cannot disappear", () => {
+test("independent lanes retain every logical check and exactly three declared frontend shards", () => {
   for (const scope of ["frontend", "backend", "full"]) {
     const plan = changePlan([], { purpose: "release", requestedScope: scope });
-    assert.deepEqual(releaseLanes(plan).flatMap(item => item.checks).sort(), [...plan.checks].sort());
+    const lanes = releaseLanes(plan);
+    assert.deepEqual([...new Set(lanes.flatMap(item => item.checks))].sort(), [...plan.checks].sort());
+    assert.deepEqual(lanes.filter(item => item.frontendShard).map(item => item.frontendShard),
+      scope === "backend" ? [] : ["1/3", "2/3", "3/3"]);
+    for (const check of plan.checks.filter(check => check !== "frontend"))
+      assert.equal(lanes.filter(lane => lane.checks.includes(check)).length, 1);
+    for (const check of ["build", "database-compatibility", "backend-installation"])
+      if (plan.checks.includes(check)) assert.equal(lanes.find(lane => lane.checks.includes(check)).checks.length, 1);
   }
   assert.throws(() => releaseLanes({ purpose: "release", checks: ["unknown"] }), /Unassigned/);
   assert.throws(() => releaseLanes({ purpose: "release", checks: ["build", "build"] }), /Duplicate/);
@@ -71,7 +78,8 @@ test("independent lanes cover each check once; unknown checks cannot disappear",
 test("presentation release retains a typed build, pinned evidence and failure blocking", t => {
   const f = fixture(t, "presentation");
   assert.deepEqual(f.bundle.plan.checks, ["boundaries", "frontend-presentation", "build"]);
-  assert.deepEqual(f.bundle.lanes.find(row => row.lane === "frontend").checks, ["frontend-presentation", "build"]);
+  assert.deepEqual(f.bundle.lanes.find(row => row.lane === "frontend").checks, ["frontend-presentation"]);
+  assert.deepEqual(f.bundle.lanes.find(row => row.lane === "frontend-build").checks, ["build"]);
   assert(f.calls.some(args => args.includes("scripts/verification/check-presentation.mjs")));
   fs.renameSync(path.join(f.root, "client/web/dist"), path.join(f.root, "client/web/dist.built"));
   fs.unlinkSync(path.join(f.root, "node_modules"));
@@ -117,9 +125,66 @@ test("all lane reports merge in planned order and seal the exact built artifact 
   assert.equal(fs.readFileSync(path.join(f.root, "client/web/dist/index.html"), "utf8"), "<html>verified build</html>");
   const evidence = sealEvidence(f.root);
   assert(evidence.archives.frontend); assert(evidence.archives.backend);
-  assert.equal(evidence.archives.backend, f.reports.find(row => row.lane === "backend").artifacts.backend);
+  assert.equal(evidence.archives.backend, f.reports.find(row => row.lane === "backend-runtime").artifacts.backend);
   assert.equal(evidence.report.laneEvidence.length, f.bundle.lanes.length);
   verifySupplementalEvidence(evidence, path.join(f.root, "output/release-validation"));
+});
+
+test("frontend acceptance retains every physical command and rejects incomplete or failed shards", t => {
+  const f = fixture(t, "ui");
+  const accepted = mergeReleaseReports(f.bundle, f.reports, f.root, env);
+  const aggregate = accepted.results.find(row => row.check === "frontend");
+  assert.equal(aggregate.execution.strategy, "parallel-shards");
+  assert.deepEqual(aggregate.execution.parts.map(part => part.shard), ["1/3", "2/3", "3/3"]);
+  for (const part of aggregate.execution.parts) assert(part.execution.command.includes(`--shard=${part.shard}`));
+  const partIndex = f.reports.findIndex(report => report.frontendShard === "2/3");
+  for (const mutate of [
+    reports => { reports.splice(partIndex, 1); },
+    reports => { reports[partIndex] = clone(reports.find(row => row.frontendShard === "1/3")); },
+    reports => { reports[partIndex].frontendShard = "1/3"; },
+    reports => { reports[partIndex].results[0].passed = false; },
+    reports => { reports[partIndex].results[0].exitCode = 1; },
+    reports => { reports[partIndex].results[0].errorCode = "ETIMEDOUT"; },
+    reports => { reports[partIndex].results[0].signal = "SIGTERM"; },
+    reports => { reports[partIndex].results[0].elapsedMs = Number.NaN; },
+    reports => { reports[partIndex].results[0].execution.command.pop(); },
+    reports => { reports[partIndex].results[0].execution.command.push("--shard=3/3"); },
+  ]) {
+    const reports = clone(f.reports); mutate(reports);
+    assert.throws(() => mergeReleaseReports(f.bundle, reports, f.root, env));
+  }
+  const changed = clone(f.bundle);
+  changed.lanes = changed.lanes.filter(lane => lane.frontendShard !== "3/3");
+  assert.throws(() => mergeReleaseReports(changed, f.reports, f.root, env), /assignment/);
+  const transported = clone(accepted);
+  for (const part of transported.results.find(row => row.check === "frontend").execution.parts) {
+    const lane = transported.laneEvidence.find(lane => lane.lane === part.lane);
+    lane.context.executable = "/opt/hostedtoolcache/node/26.13.0/x64/bin/node";
+    part.execution.command[0] = lane.context.executable;
+  }
+  assert.doesNotThrow(() => assertAccepted(transported));
+  for (const mutate of [
+    row => { row.execution.parts.pop(); },
+    row => { row.execution.parts[1] = clone(row.execution.parts[0]); },
+    row => { row.execution.parts[0].exitCode = 1; },
+    row => { row.execution.parts[0].execution.command.pop(); },
+    row => { row.execution.parts[0].execution.command[0] = "/unrecorded/node"; },
+    row => { row.execution.parts[0].invocationId = "forged"; },
+    row => { row.execution = {}; },
+  ]) {
+    const altered = clone(accepted); mutate(altered.results.find(row => row.check === "frontend"));
+    assert.throws(() => assertAccepted(altered));
+  }
+});
+
+test("failures in independently scheduled build, database and runtime checks all block collection", t => {
+  for (const lane of ["frontend-build", "database-checks", "backend-runtime", "frontend-3"]) {
+    const f = fixture(t);
+    const failed = runReleaseLane(lane, { root: f.root, env, npm: "npm-cli.js", run: () => ({ status: 1 }) });
+    assert.equal(failed.passed, false);
+    assert.throws(() => collectRelease(f.root, env), /lane failed/);
+    assert.equal(fs.existsSync(path.join(f.root, "output/change-validation/verdict.json")), false);
+  }
 });
 test("missing, duplicated, stale, failed, altered and partially executed lanes never authorize a release", t => {
   const f = fixture(t);
@@ -183,7 +248,7 @@ test("CI identity and planned lane assignment cannot be overridden", t => {
   assert.equal(fs.readFileSync(path.join(f.root, "output/change-validation/node-version"), "utf8"), `${process.version}\n`);
   const otherRuntime = { ...f.bundle, nodeVersion: "v24.0.0-different-runner" };
   assert.throws(() => mergeReleaseReports(otherRuntime, f.reports, f.root, env), /Node runtime differs/);
-  assert.throws(() => runReleaseLane("frontend", { root: f.root, env, npm: "npm-cli.js" }), /Unexpected/);
+  assert.throws(() => runReleaseLane("frontend-1", { root: f.root, env, npm: "npm-cli.js" }), /Unexpected/);
   const altered = clone(f.bundle); altered.lanes[0].checks = [];
   write(f.root, "output/change-validation/bundle.json", altered);
   assert.throws(() => runReleaseLane("controls", { root: f.root, env, npm: "npm-cli.js" }), /assignment/);

@@ -7,6 +7,17 @@ import { assertCommittedSource, assertStagedSource, changedValidationPaths, runC
 import { validationPlan } from "./validation-plan.mjs";
 import { presentationComponents } from "./presentation-policy.mjs";
 
+it("only an explicitly selected CI frontend shard changes its command; daily validation remains complete", () => {
+  const cwd = fixture(), run = vi.fn(() => ({ status: 0 }));
+  const plan = { checks: ["frontend"], paths: [] };
+  const shard = executeValidationChecks(plan, { cwd, npm: "npm-cli.js", run, frontendShard: "2/3" });
+  expect(run.mock.calls[0][1]).toEqual(["vite/runFrontendTests.mjs", "--maxWorkers=2", "--shard=2/3"]);
+  expect(shard.results[0].execution.command).toEqual(run.mock.calls[0].slice(0, 2).flat());
+  run.mockClear();
+  executeValidationChecks(plan, { cwd, npm: "npm-cli.js", run });
+  expect(run.mock.calls[0][1]).toEqual(["vite/runFrontendTests.mjs", "--maxWorkers=2"]);
+});
+
 it("a failed presentation check stops before build and cannot produce a passed report", () => {
   const cwd = fixture(), plan = validationPlan(presentationComponents);
   const run = vi.fn((_node, args) => ({ status: args.includes("scripts/verification/check-presentation.mjs") ? 1 : 0 }));

@@ -12,7 +12,7 @@ export function releaseSummary({ root = process.cwd(), commit = process.env.GITH
     && seal.planFingerprint === report?.planFingerprint;
   let accepted = report?.passed === true && report?.sourceStable === true
     && report.results?.every(row => row.passed === true) && sealed && (!commit || report.identity?.commit === commit);
-  const rows = (report?.results ?? []).map(row => `| ${cell(row.check)} | ${row.passed ? "PASS" : "FAIL"} | ${cell(row.elapsedMs)} | ${row.reusedFrom ? `完整审计 / ${cell(row.reusedFrom.phase)}` : "直接执行"} |`), failures = [];
+  const rows = (report?.results ?? []).map(row => `| ${cell(row.check)} | ${row.passed ? "PASS" : "FAIL"} | ${cell(row.elapsedMs)} | ${row.reusedFrom ? `完整审计 / ${cell(row.reusedFrom.phase)}` : row.execution?.strategy === "parallel-shards" ? `${cell(row.execution.parts?.length)} 分片并行（最大执行耗时）` : "直接执行"} |`), failures = [];
   for (const row of report?.results ?? []) if (!row.passed)
     failures.push(`${cell(row.check)}: exit=${cell(row.exitCode)}, error=${cell(row.errorCode)}, signal=${cell(row.signal)}${row.diagnostic ? `, ${cell(row.diagnostic)}` : ""}`);
   for (const required of plan?.requiredChecks ? supplementalReports(plan) : []) {

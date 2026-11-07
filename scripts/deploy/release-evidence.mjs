@@ -6,10 +6,10 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { changePlan, deployedSelection, planHash } from "./change-plan.mjs";
-import { assertCommittedSource, validationInputs } from "../verification/verify-change.mjs";
+import { assertCommittedSource, validationInputs, validationCommands } from "../verification/verify-change.mjs";
 // Transport jobs use a source checkout without npm install; this module uses Node builtins only.
 import { readSourceVersion } from "../../devtools/runtime-tooling/runtime_version.js";
-import { supplementalReports, assertSupplemental } from "./acceptance-contract.mjs";
+import { supplementalReports, assertSupplemental, FRONTEND_SHARDS } from "./acceptance-contract.mjs";
 
 export const sha256 = value => createHash("sha256").update(value).digest("hex");
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true }).trim();
@@ -33,6 +33,28 @@ export function assertAccepted(report) {
   }
   for (const row of report.results) if (row.reusedFrom)
     assert.equal(plan.requiredChecks.completeRelease, true, "Unapproved reuse without complete audit");
+  const frontend = report.results.find(row => row.check === "frontend");
+  if (frontend && (frontend.execution?.strategy === "parallel-shards" || report.laneEvidence?.some(lane => lane.frontendShard))) {
+    assert.equal(frontend.execution?.strategy, "parallel-shards", "Missing sharded frontend execution");
+    const parts = frontend.execution.parts;
+    assert.deepEqual(parts?.map(part => part.shard), Array.from({ length: FRONTEND_SHARDS }, (_, index) => `${index + 1}/${FRONTEND_SHARDS}`),
+      "Incomplete or duplicated frontend shards");
+    for (const part of parts) {
+      assert.equal(part.check, "frontend"); assert.equal(part.passed, true);
+      assert.equal(part.exitCode, 0); assert.equal(part.errorCode, null); assert.equal(part.signal, null);
+      assert.equal(part.reusedFrom, undefined, "Frontend shards must execute");
+      const lanes = report.laneEvidence?.filter(lane => lane.lane === part.lane && lane.frontendShard === part.shard
+        && lane.invocationId === part.invocationId);
+      assert.equal(lanes?.length, 1, "Frontend shard has no matching lane evidence");
+      const executable = lanes[0].context?.executable;
+      assert.equal(typeof executable, "string"); assert(executable.length);
+      const command = validationCommands(plan, "", plan.releasePlan, { frontendShard: part.shard }).frontend;
+      // Transport may run under a different absolute Node path. Bind to the
+      // producing runner's recorded executable, not the transport host's path.
+      command.command[0] = executable;
+      assert.deepEqual(part.execution, { command: command.command, cwd: command.cwd }, "Frontend shard command changed");
+    }
+  }
   assert.match(report.identity.candidateTree, /^[a-f0-9]{40}$/);
   assert.match(report.identity.inputFingerprint, /^[a-f0-9]{64}$/);
   return plan;

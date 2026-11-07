@@ -2,6 +2,49 @@
 import { ensurePgPoolReady, getPgPool } from "./pg_pool.js";
 import { financialOrdersRelation } from "./rds/native_orders.js";
 
+/** Historical PM audit only. Caller owns the dedicated connection; never writes order data. */
+export async function readPolymarketHistoryAuditSnapshot(client) {
+  if (typeof client?.query !== "function") throw new TypeError("A dedicated audit client is required");
+  await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+  try {
+    await client.query("SET LOCAL statement_timeout = '20s'");
+    await client.query("SET LOCAL lock_timeout = '2s'");
+    const { rows: [session] } = await client.query(
+      "SELECT current_setting('transaction_read_only') AS read_only, transaction_timestamp() AS captured_at",
+    );
+    if (session?.read_only !== "on") throw new Error("History audit requires a read-only transaction");
+    const { rows } = await client.query(`
+      SELECT id, player_id, order_id, link, provider, match, bet, item, odds,
+             bet_money, money, status, create_at, raw,
+             raw->>'pmTokenId' AS token_id_text,
+             raw->>'pmConditionId' AS condition_id_text,
+             jsonb_typeof(raw->'pmTokenId') AS token_id_json_type
+      FROM ${financialOrdersRelation()}
+      WHERE provider = 'Polymarket'
+      ORDER BY id
+    `);
+    const executionIds = [...new Set(rows.map(row => row.raw?.pmGtcExecutionId).filter(id => typeof id === "string" && id))];
+    // A missing execution table is legitimate before the first GTC use.
+    const { rows: [gtcTable] } = await client.query("SELECT to_regclass('pm_gtc_executions') AS relation");
+    const gtcRows = executionIds.length && gtcTable?.relation
+      ? (await client.query("SELECT id::text AS id, active, updated_at, record FROM pm_gtc_executions WHERE id::text = ANY($1::text[]) ORDER BY id", [executionIds])).rows
+      : [];
+    const counterpartRows = gtcRows.length
+      ? (await client.query(`SELECT o.id, o.player_id, o.order_id, o.provider, o.link, o.status,
+          o.bet_money, o.money, o.create_at, e.id::text AS execution_id
+        FROM ${financialOrdersRelation("o")}
+        JOIN pm_gtc_executions e ON o.user_id = e.owner
+          AND o.player_id::text = e.record->'plan'->>'otherPlayerId'
+          AND LOWER(o.order_id) = LOWER(e.record->'other'->>'orderId')
+        WHERE e.id::text = ANY($1::text[]) ORDER BY o.id`, [gtcRows.map(row => row.id)])).rows
+      : [];
+    return { readOnly: true, capturedAt: session.captured_at, rows, gtcRows, counterpartRows };
+  }
+  finally {
+    await client.query("ROLLBACK");
+  }
+}
+
 export async function readSharedVenueAccountRows() {
   await ensurePgPoolReady();
   const pool = getPgPool();

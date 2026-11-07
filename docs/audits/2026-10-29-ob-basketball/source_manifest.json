@@ -1,0 +1,292 @@
+{
+  "checkedAt": "2026-10-29T08:08:58.118Z",
+  "baseCommit": "abf94feb94519319c98d52d17ab7d8c5d63e8d92",
+  "branch": "master",
+  "fileCount": 56,
+  "files": [
+    {
+      "path": "client/packages/venue-browser/adapter/ob/collect.ts",
+      "sha256": "2d1dcf6e891d391de1e70bd0b2d1f09eb210c2f42a6c56ce23f6872204ee8856",
+      "tracked": true
+    },
+    {
+      "path": "client/packages/venue-browser/adapter/ob/mqtt.ts",
+      "sha256": "acc054f5a6a9f6e92e39c7c4939dee20efc2fa67d589c7b0a8460789a44e15ac",
+      "tracked": true
+    },
+    {
+      "path": "client/packages/venue-browser/adapter/ob/bet.ts",
+      "sha256": "bdcc8154a302fe8761e8d50f7d542d2bac532fc175e3a119cc0035cf1fd309f3",
+      "tracked": true
+    },
+    {
+      "path": "client/packages/venue-browser/adapter/ob/index.ts",
+      "sha256": "f5f9d3663572c4cdec26e00866a77f78e5761aaa62a4149e46d58750eefda96b",
+      "tracked": true
+    },
+    {
+      "path": "client/packages/venue-browser/adapter/registry/adapters.ts",
+      "sha256": "462ea2eeef310cf3dd941e968f7ff6031b3dd3c7cc1ba8f68b81ed13068d0ecc",
+      "tracked": true
+    },
+    {
+      "path": "client/packages/client-core/src/types/collect.ts",
+      "sha256": "62e1e32ef560826f26c223c913c084b2f926c6439b4b33c368dcdbb2b66cb2c1",
+      "tracked": true
+    },
+    {
+      "path": "client/packages/client-core/src/models/match.ts",
+      "sha256": "2468c0d58f55013b7d0092a95c0f6a7819c2157f7522e67f12f96bfb8bfa3268",
+      "tracked": true
+    },
+    {
+      "path": "client/packages/client-core/src/models/platformAccount.ts",
+      "sha256": "6cf93d41c58310a60f2480c3402f3f923b79cd345b794fc1ff675f1bf5e3a17e",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/api/collectWire.ts",
+      "sha256": "bc713756f5bdc83913b978a691c2928fc790046daba1651fb7f8f1de31c71025",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/api/match.ts",
+      "sha256": "6458619086e47bed45b83987b0c071b9a4b8a457db75d320b96cee5fe7ea76a3",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/runtime/obSportWs.ts",
+      "sha256": "13bcae86ef087a8a40c8053c911f59f4d685c7edf0d726f29ff28234f4c3ea16",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/runtime/obSportOdds.ts",
+      "sha256": "40ed835df78665a0db2ac37f2e3ca419a1b5e7d6393a6b551dc1a26b73a7796f",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/runtime/obSportLive.ts",
+      "sha256": "e23b07c6b98e4fe90ec07855031a92f320de10a31258f55a1b94312b5949d6fa",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/runtime/obSportCodec.ts",
+      "sha256": "714a648d0e04d05bfab0242f93d2414e88a0c9ea56550b245fd74c3e27508e02",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/runtime/obSportPlaceBet.ts",
+      "sha256": "86c5bec8b3b23597c41a5e21127c765e1e66a2ac6b167e06714da2efbd7e0623",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/runtime/obSportBetAccount.ts",
+      "sha256": "5592c2217912ad2aa8d543a7636f8b01544bcfc79c7d447e522ffc1787465a8a",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/runtime/obSportFootballFetch.ts",
+      "sha256": "259a546fd58ba132a99940489eff32081d9803bc1af4e745cbad602d8231d656",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/runtime/obSportFootballDto.ts",
+      "sha256": "ccf98ba0a13758e6de5112c48ca86af5ecce17bcc2a448083163388d1bfdcd44",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/stores/oddsStore.ts",
+      "sha256": "3bc1a8b942c403581e3c3d222c93c107a9505a2b6404f25456908abe6fdfd225",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/stores/account/accountPicker.ts",
+      "sha256": "744f95696269875c827779153b2bf8ec7be6223764090e502de7814e2432a953",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/stores/account/balanceRefresh.ts",
+      "sha256": "38b3f5cc2834a5e925dde5677c1cfd4d9c5be13d1eaf35d32ed3a6fb465413fd",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/stores/account/venueOrders.ts",
+      "sha256": "ace6b5ff21afa4608b9a344b140f022c9e924af1332888169e8fcf463f6dec35",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/stores/account/betGateway.ts",
+      "sha256": "60567a89fa75d1622b67d0333e414f7812d7698ff96d596520243521a556f599",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/runtime/collectors.ts",
+      "sha256": "1241e494a4a79ab3dece4e1497376723ffcbc41de4950af70f9007d2031a068c",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/router/index.ts",
+      "sha256": "f3247f343e1dafd1c191abd2d70afb9ac3318babd349645f5b666c8550f1e1f5",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/views/SportsWorkspace.vue",
+      "sha256": "d6250539bafd7adb39cae3d58bed27d71c1b7f0595cdb551aa5bea6104228172",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/stores/basketballStore.ts",
+      "sha256": "8cb3cd448e78088e030978d04950ba4b546392d2ffb5e0c2dcb808753458ab22",
+      "tracked": true
+    },
+    {
+      "path": "client/web/src/components/match/BasketballBoard.vue",
+      "sha256": "87af5137800bc7225f37e36eba54d7d9726cb78d8575b66de2b8f5693700411e",
+      "tracked": true
+    },
+    {
+      "path": "packages/shared/catalog/game_catalog.json",
+      "sha256": "427678fa84120cf77ce6e14cb719e7a05f133ece272943e2fd9f304ba0418205",
+      "tracked": true
+    },
+    {
+      "path": "packages/shared/catalog/game_catalog_sports.json",
+      "sha256": "5c6a4718fe89d054d804b8b33de38b38e45d812e578d69af82d5ddd5f6a355a8",
+      "tracked": true
+    },
+    {
+      "path": "packages/shared/catalog/game_catalog.ts",
+      "sha256": "eb8f302a9a2396217f9121102e20d807874ac5ab5d0971d2ddc579d80fe8db8d",
+      "tracked": true
+    },
+    {
+      "path": "packages/shared/catalog/market_catalog.json",
+      "sha256": "9205dc605ded3df3493e214dce653f12c4676fe814520b2d937c9b4daa087f8c",
+      "tracked": true
+    },
+    {
+      "path": "packages/shared/catalog/market_catalog.ts",
+      "sha256": "b03360644c29345bf48d4a8e0c89eb268e802b384b3173f6e7368ecfee2ccef9",
+      "tracked": true
+    },
+    {
+      "path": "packages/shared/catalog/sport_catalog.json",
+      "sha256": "dd7fe0326b3091048c3a7f63af9ee1ace1d4ebf4afb5ece8cba066c3d5b6a20a",
+      "tracked": true
+    },
+    {
+      "path": "packages/api-contract/src/schemas.ts",
+      "sha256": "39cedbc3a2881c4b7a1f70364a2fa8fa6cb546a6f6090d81bbe08a502cc95ecd",
+      "tracked": true
+    },
+    {
+      "path": "packages/api-contract/src/actions.ts",
+      "sha256": "50041c9714d11da506af82de06ac2394cedce2183523db58ac2b071412422ff1",
+      "tracked": true
+    },
+    {
+      "path": "server/backend/core/esport-api/store.js",
+      "sha256": "ea9f8955958223ac9ebcdc877db5b7f457dfb4a02e355f2f7709d3c778f29929",
+      "tracked": true
+    },
+    {
+      "path": "server/backend/core/esport-api/router.ts",
+      "sha256": "f03be309d9ff08e555ecc3a2b52a5bcea4b3b9a805f76f009720a8772974658b",
+      "tracked": true
+    },
+    {
+      "path": "server/backend/core/esport-api/nba_gamma_fetch.js",
+      "sha256": "08d51927dfeed46d9324ce101c89a493f37353c137773d2c7720286f53baceef",
+      "tracked": true
+    },
+    {
+      "path": "server/backend/core/esport-api/sport_predictfun_fetch.js",
+      "sha256": "54021b73821932c03b51e1e3335d65763506ec398695e8abf60df185ce098b03",
+      "tracked": true
+    },
+    {
+      "path": "server/backend/core/esport-api/sport_merge.js",
+      "sha256": "3aad2b01a5eabc6de51172b62f795dc7c06f67b0b1dcea014af09857db3a6bc5",
+      "tracked": true
+    },
+    {
+      "path": "server/backend/core/account/ob_sport_account.js",
+      "sha256": "a3ed1467af286eb62484ece87d37fc698165a45388564b7083c3074964395a22",
+      "tracked": true
+    },
+    {
+      "path": "rds/rds/common.js",
+      "sha256": "6563d9418c4665018f787a7fe9fdf86f531e42e80820fa73d93fdca80a8d9015",
+      "tracked": true
+    },
+    {
+      "path": "rds/rds/platform_collector_store.js",
+      "sha256": "2b2c32bfb2a26b0a5cfc8eb16842451c421046298a156b61b2e04282a9370fb6",
+      "tracked": true
+    },
+    {
+      "path": "rds/rds/team_store.js",
+      "sha256": "f1cd5443f8daf3e58dd765ce5e8c16d188094596b703f4107e27cf9d1aa57d40",
+      "tracked": true
+    },
+    {
+      "path": "server/match/matcher/compose/normalize/native_bets.ts",
+      "sha256": "24add20a96b0b8bf53d0d40f4b2ff93ec11e3912a72a909e3be59e0fb10f5ba4",
+      "tracked": true
+    },
+    {
+      "path": "server/match/matcher/compose/normalize/platform_entry.ts",
+      "sha256": "ef2a0bd692872d832ba6a77e893b4c460981254f5ef38800152272458a10b689",
+      "tracked": true
+    },
+    {
+      "path": "server/match/matcher/compose/structure/resolve_structure.js",
+      "sha256": "7b6f6d2ec97116c864edb5506f7afacbc63dd2be30f382b7f52e6f0353e8b414",
+      "tracked": true
+    },
+    {
+      "path": "server/match/matcher/compose/shape/ended_filter.js",
+      "sha256": "387e50bc2f0a00f8a0ee530c4c1f084b11f4e6a4807dfa430de0fc4b8345c4bb",
+      "tracked": true
+    },
+    {
+      "path": "server/match/matcher/compose/shape/live_shape.js",
+      "sha256": "51bbd830e6a815a76bff89081b99abd4806b3f884500bb1b8339c46e4fb85522",
+      "tracked": true
+    },
+    {
+      "path": "server/match/matcher/compose/basketball_single.test.mjs",
+      "sha256": "0d07f85089bf84ba7b5d8169eb401dccfdb0c90c97f040c6469d0c0d5b771f54",
+      "tracked": true
+    },
+    {
+      "path": "packages/match-identity/teams/team_key.ts",
+      "sha256": "a608ef20d4be5e9624d975552cdcd23290c59a0d320354d90a54108c4165f082",
+      "tracked": true
+    },
+    {
+      "path": "server/collectors/polymarket-sports/sport_state.ts",
+      "sha256": "2216cb09971fb98621b961785ee9ff1745eb676bfa6f532921698a1b156c0273",
+      "tracked": true
+    },
+    {
+      "path": "lines/basketball/line.json",
+      "sha256": "0fa60a346fe16e250e19999257f9b418a810f8d78d1b892d34dc0500a80f95c3",
+      "tracked": true
+    },
+    {
+      "path": "client/listener/module/matchStore.ts",
+      "sha256": "c0c708295d0a8c3b78806597d1e167326c436f6f9789e89d0dc85ca2d27de751",
+      "tracked": false
+    },
+    {
+      "path": "client/listener/tests/router.test.ts",
+      "sha256": "a2da0ca96f3d6f81fe5d4ae34806bfbb41ee4982976dff13977bb8b0b14f58c2",
+      "tracked": false
+    }
+  ],
+  "notes": [
+    "Hashes cover actual working-tree bytes, including pre-existing untracked listener files.",
+    "No claim is made that the whole working tree equals HEAD or has passed production tests."
+  ]
+}

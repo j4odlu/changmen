@@ -1,0 +1,763 @@
+{
+  "kind": "read-only upstream evidence",
+  "capturedDate": "2026-10-29",
+  "timeZone": "Asia/Taipei",
+  "credentialsExcluded": true,
+  "officialBuild": "2026-10-10-16-14-47",
+  "sources": {
+    "shell": "https://user-pc-new.dbgaming.com/",
+    "bundle": "https://user-pc-new.dbgaming.com/2026-10-10-16-14-47/static/js/index-BpmuHnYR.js",
+    "rules": "https://sandbox-topic.dbsporxxxw1box.com/sports-rules/23-as/common/"
+  },
+  "sourceHashes": {
+    "bundleSha256": "3a81010e28112a9b14ca830133f8940069a703cae5dc3dead07faceba672d1d4",
+    "rulesBundleSha256": "98200b991b764af4781288acacdcf67f99dd0e57ce0fe7e252a4844dd885ea99"
+  },
+  "schedules": [
+    {
+      "euid": "30003",
+      "liveRows": 5,
+      "prematchRows": 0,
+      "csids": [
+        "2"
+      ],
+      "leagueExamples": [
+        "Philippines National League",
+        "Philippines NCAA",
+        "BSKT Cup",
+        "Indonesia Basketball League Cup",
+        "IPBL Pro Division"
+      ],
+      "specialRows": [],
+      "savedAt": "2026-10-29T07:21:03.361Z"
+    },
+    {
+      "euid": "3020102",
+      "liveRows": 5,
+      "prematchRows": 86,
+      "csids": [
+        "2"
+      ],
+      "leagueExamples": [
+        "Philippines National League",
+        "Philippines NCAA",
+        "BSKT Cup",
+        "Indonesia Basketball League Cup",
+        "IPBL Pro Division",
+        "NBA",
+        "China CBA",
+        "Korean KBL",
+        "NBA - Fantasy Matches",
+        "Australia NBL",
+        "WNBA - Finals",
+        "Euroleague",
+        "FIBA Europe Cup",
+        "Uruguay Liga",
+        "Japan B League One",
+        "Hong Kong Basketball League"
+      ],
+      "specialRows": [
+        {
+          "mid": "5818076",
+          "league": "NBA - Fantasy Matches",
+          "csid": "2",
+          "mbmty": 1
+        },
+        {
+          "mid": "5818077",
+          "league": "NBA - Fantasy Matches",
+          "csid": "2",
+          "mbmty": 1
+        },
+        {
+          "mid": "5818078",
+          "league": "NBA - Fantasy Matches",
+          "csid": "2",
+          "mbmty": 1
+        }
+      ],
+      "savedAt": "2026-10-29T07:21:03.363Z"
+    },
+    {
+      "euid": "3020202",
+      "liveRows": 0,
+      "prematchRows": 169,
+      "csids": [
+        "2"
+      ],
+      "leagueExamples": [
+        "NBA",
+        "China CBA",
+        "Australia NBL",
+        "Korean KBL",
+        "Euroleague",
+        "PBA Philippine Governors Cup",
+        "Germany BBL",
+        "Spain Liga ACB",
+        "Italy Serie A",
+        "France LNB Elite",
+        "Australia WNBL",
+        "VTB United League",
+        "British Super League",
+        "Greece A1 Basket League",
+        "Georgia Superleague",
+        "Poland PLK"
+      ],
+      "specialRows": [
+        {
+          "mid": "5804684",
+          "league": "FIBA 3x3 Women AmeriCup",
+          "csid": "2",
+          "mbmty": 1
+        },
+        {
+          "mid": "5804685",
+          "league": "FIBA 3x3 Women AmeriCup",
+          "csid": "2",
+          "mbmty": 1
+        },
+        {
+          "mid": "5806519",
+          "league": "FIBA 3x3 Americup",
+          "csid": "2",
+          "mbmty": 1
+        },
+        {
+          "mid": "5804676",
+          "league": "FIBA 3x3 Americup",
+          "csid": "2",
+          "mbmty": 1
+        },
+        {
+          "mid": "5804677",
+          "league": "FIBA 3x3 Americup",
+          "csid": "2",
+          "mbmty": 1
+        }
+      ],
+      "savedAt": "2026-10-29T07:21:03.365Z"
+    }
+  ],
+  "httpExamples": [
+    {
+      "base": {
+        "mid": "5796454",
+        "csid": "2",
+        "tn": "NBA",
+        "tnjc": "NBA",
+        "mhn": "Atlanta Hawks",
+        "man": "Cleveland Cavaliers",
+        "mhid": "33962",
+        "maid": "33966",
+        "mgt": "1793318400000",
+        "ms": 0,
+        "mmp": "0",
+        "mst": "0",
+        "msts": "0",
+        "mlet": "12:00",
+        "mbmty": 1,
+        "msc": []
+      },
+      "fullMoneyline": [
+        {
+          "hpid": "37",
+          "name": "Moneyline",
+          "markets": [
+            {
+              "hid": "141303105071627307",
+              "hs": 0,
+              "options": [
+                {
+                  "oid": "144025224854843616",
+                  "ot": "1",
+                  "os": 1,
+                  "ov": 184000
+                },
+                {
+                  "oid": "146625546024230854",
+                  "ot": "2",
+                  "os": 1,
+                  "ov": 192000
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "otherPlayIds": [
+        "39",
+        "38",
+        "37",
+        "198",
+        "199",
+        "40",
+        "42",
+        "47",
+        "53",
+        "59",
+        "65",
+        "212"
+      ]
+    },
+    {
+      "base": {
+        "mid": "5796395",
+        "csid": "2",
+        "tn": "Australia NBL",
+        "tnjc": "Australia NBL",
+        "mhn": "Brisbane Bullets",
+        "man": "Cairns Taipans",
+        "mhid": "35239",
+        "maid": "35240",
+        "mgt": "1793264400000",
+        "ms": 0,
+        "mmp": "0",
+        "mst": "0",
+        "msts": "0",
+        "mlet": "10:00",
+        "mbmty": 1,
+        "msc": []
+      },
+      "fullMoneyline": [
+        {
+          "hpid": "37",
+          "name": "Moneyline",
+          "markets": [
+            {
+              "hid": "143641425667197234",
+              "hs": 0,
+              "options": [
+                {
+                  "oid": "142540406117125247",
+                  "ot": "1",
+                  "os": 1,
+                  "ov": 176000
+                },
+                {
+                  "oid": "146312003584100345",
+                  "ot": "2",
+                  "os": 1,
+                  "ov": 197000
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "otherPlayIds": [
+        "39",
+        "38",
+        "37",
+        "198",
+        "199",
+        "40",
+        "19",
+        "18",
+        "43",
+        "87",
+        "97",
+        "42",
+        "46",
+        "45",
+        "48",
+        "52",
+        "51",
+        "54",
+        "58",
+        "57",
+        "60",
+        "64",
+        "63",
+        "66",
+        "145",
+        "146",
+        "47",
+        "53",
+        "59",
+        "65",
+        "211",
+        "212"
+      ]
+    },
+    {
+      "base": {
+        "mid": "5815567",
+        "csid": "2",
+        "tn": "Philippines National League",
+        "tnjc": "Philippines National League",
+        "mhn": "Ironclads",
+        "man": "Pathfinders",
+        "mhid": "256976",
+        "maid": "242412",
+        "mgt": "1793254500000",
+        "ms": 1,
+        "mmp": "16",
+        "mst": "0",
+        "msts": "10",
+        "mlet": "10:00",
+        "mbmty": 1,
+        "msc": [
+          "S1|97:77",
+          "S2|43:33",
+          "S3|54:44",
+          "S19|22:12",
+          "S20|21:21",
+          "S21|33:16",
+          "S22|21:28",
+          "S106|0:0",
+          "S107|30:25",
+          "S108|8:6",
+          "S109|0:0",
+          "S110|0:0",
+          "S111|0.0:0.0",
+          "S190|0:0",
+          "S191|0:0",
+          "S1071|0:0",
+          "S1072|30:25",
+          "S1073|100.0:100.0",
+          "S1081|0:0",
+          "S1082|8:6",
+          "S1088|100.0:100.0",
+          "S1111|97:77",
+          "S1235|100.0:100.0",
+          "S10601|0:0",
+          "S10602|0:0",
+          "S10603|0:0",
+          "S10604|0:0",
+          "S10606|0:0",
+          "S10607|0:0",
+          "S10901|0:0",
+          "S10902|0:0",
+          "S10903|0:0",
+          "S10904|0:0"
+        ]
+      },
+      "fullMoneyline": [],
+      "otherPlayIds": []
+    }
+  ],
+  "websocket": {
+    "opened": true,
+    "origin": "http://localhost:5274",
+    "seconds": 25,
+    "subscribedMids": [
+      "5815567",
+      "5814049",
+      "5818549",
+      "5796397",
+      "5818647",
+      "5796454",
+      "5796395"
+    ],
+    "subscribedHpids": [
+      "37",
+      "38",
+      "39"
+    ],
+    "counts": {
+      "C0": 1,
+      "C109": 1,
+      "C102": 12,
+      "C103": 10,
+      "C1021": 2,
+      "C153": 6,
+      "C105": 3,
+      "C110": 11,
+      "C303": 1
+    },
+    "c105": [
+      {
+        "cmd": "C105",
+        "ctsp": "1793258603891",
+        "cd": {
+          "hls2": {
+            "37": [
+              {
+                "chpid": "37",
+                "hid": "145587250075141907",
+                "hmt": 0,
+                "hpid": "37",
+                "hs": 2,
+                "hv": "",
+                "mid": "5818549",
+                "ol": [
+                  {
+                    "obv": "",
+                    "oid": "145313193054922515",
+                    "os": 2,
+                    "ot": "1",
+                    "ov": "",
+                    "ov2": ""
+                  },
+                  {
+                    "obv": "",
+                    "oid": "140281510820253370",
+                    "os": 2,
+                    "ot": "2",
+                    "ov": "",
+                    "ov2": ""
+                  }
+                ],
+                "t": "1793258603891"
+              }
+            ],
+            "39": [
+              {
+                "chpid": "39",
+                "hid": "149124825531521533",
+                "hmt": 0,
+                "hn": 1,
+                "hpid": "39",
+                "hs": 0,
+                "hv": "-11.5",
+                "mid": "5818549",
+                "ol": [
+                  {
+                    "obv": "185000",
+                    "oid": "144420414555423143",
+                    "os": 1,
+                    "ot": "1",
+                    "ov": "185000",
+                    "ov2": "0.85"
+                  },
+                  {
+                    "obv": "183000",
+                    "oid": "143530652143602486",
+                    "os": 1,
+                    "ot": "2",
+                    "ov": "183000",
+                    "ov2": "0.83"
+                  }
+                ],
+                "t": "1793258603891"
+              }
+            ]
+          },
+          "hmt": 0,
+          "ld": "LS_ac1f1b6020261029152323855e699bab_1X_PANDA",
+          "marketLevel": "OL_default",
+          "mid": "5818549",
+          "ms": 1,
+          "time": "1793258603891"
+        }
+      },
+      {
+        "cmd": "C105",
+        "ctsp": "1793258606655",
+        "cd": {
+          "hls2": {
+            "37": [
+              {
+                "chpid": "37",
+                "hid": "145587250075141907",
+                "hmt": 0,
+                "hpid": "37",
+                "hs": 2,
+                "hv": "",
+                "mid": "5818549",
+                "ol": [
+                  {
+                    "obv": "",
+                    "oid": "145313193054922515",
+                    "os": 2,
+                    "ot": "1",
+                    "ov": "",
+                    "ov2": ""
+                  },
+                  {
+                    "obv": "",
+                    "oid": "140281510820253370",
+                    "os": 2,
+                    "ot": "2",
+                    "ov": "",
+                    "ov2": ""
+                  }
+                ],
+                "t": "1793258606655"
+              }
+            ],
+            "38": [
+              {
+                "chpid": "38",
+                "hid": "149789845110619854",
+                "hmt": 0,
+                "hn": 1,
+                "hpid": "38",
+                "hs": 2,
+                "hv": "187.5",
+                "mid": "5818549",
+                "ol": [
+                  {
+                    "obv": "",
+                    "oid": "146010336180264929",
+                    "os": 2,
+                    "ot": "Over",
+                    "ov": "",
+                    "ov2": ""
+                  },
+                  {
+                    "obv": "",
+                    "oid": "140801452201109231",
+                    "os": 2,
+                    "ot": "Under",
+                    "ov": "",
+                    "ov2": ""
+                  }
+                ],
+                "t": "1793258606655"
+              }
+            ],
+            "39": [
+              {
+                "chpid": "39",
+                "hid": "149124825531521533",
+                "hmt": 0,
+                "hn": 1,
+                "hpid": "39",
+                "hs": 2,
+                "hv": "-11.5",
+                "mid": "5818549",
+                "ol": [
+                  {
+                    "obv": "185000",
+                    "oid": "144420414555423143",
+                    "os": 1,
+                    "ot": "1",
+                    "ov": "185000",
+                    "ov2": "0.00"
+                  },
+                  {
+                    "obv": "189000",
+                    "oid": "143530652143602486",
+                    "os": 1,
+                    "ot": "2",
+                    "ov": "189000",
+                    "ov2": "0.00"
+                  }
+                ],
+                "t": "1793258606655"
+              }
+            ]
+          },
+          "hmt": 0,
+          "ld": "2115693438835445762_time_start_PANDA",
+          "marketLevel": "OL_default",
+          "mid": "5818549",
+          "ms": 1,
+          "oType": "MY",
+          "time": "1793258606655"
+        }
+      },
+      {
+        "cmd": "C105",
+        "ctsp": "1793258606742",
+        "cd": {
+          "hls2": {
+            "37": [
+              {
+                "chpid": "37",
+                "hid": "145587250075141907",
+                "hmt": 0,
+                "hpid": "37",
+                "hs": 2,
+                "hv": "",
+                "mid": "5818549",
+                "ol": [
+                  {
+                    "obv": "",
+                    "oid": "145313193054922515",
+                    "os": 2,
+                    "ot": "1",
+                    "ov": "",
+                    "ov2": ""
+                  },
+                  {
+                    "obv": "",
+                    "oid": "140281510820253370",
+                    "os": 2,
+                    "ot": "2",
+                    "ov": "",
+                    "ov2": ""
+                  }
+                ],
+                "t": "1793258606742"
+              }
+            ],
+            "38": [
+              {
+                "chpid": "38",
+                "hid": "149789845110619854",
+                "hmt": 0,
+                "hn": 1,
+                "hpid": "38",
+                "hs": 2,
+                "hv": "187.5",
+                "mid": "5818549",
+                "ol": [
+                  {
+                    "obv": "",
+                    "oid": "146010336180264929",
+                    "os": 2,
+                    "ot": "Over",
+                    "ov": "",
+                    "ov2": ""
+                  },
+                  {
+                    "obv": "",
+                    "oid": "140801452201109231",
+                    "os": 2,
+                    "ot": "Under",
+                    "ov": "",
+                    "ov2": ""
+                  }
+                ],
+                "t": "1793258606742"
+              }
+            ],
+            "39": [
+              {
+                "chpid": "39",
+                "hid": "149124825531521533",
+                "hmt": 0,
+                "hn": 1,
+                "hpid": "39",
+                "hs": 2,
+                "hv": "-11.5",
+                "mid": "5818549",
+                "ol": [
+                  {
+                    "obv": "185000",
+                    "oid": "144420414555423143",
+                    "os": 1,
+                    "ot": "1",
+                    "ov": "185000",
+                    "ov2": "0.00"
+                  },
+                  {
+                    "obv": "189000",
+                    "oid": "143530652143602486",
+                    "os": 1,
+                    "ot": "2",
+                    "ov": "189000",
+                    "ov2": "0.00"
+                  }
+                ],
+                "t": "1793258606742"
+              }
+            ]
+          },
+          "hmt": 0,
+          "ld": "b2640af1fd2c4eaf8fec2464c61f01f5_trade_place_66_37_38_39_64_PANDA",
+          "marketLevel": "OL_default",
+          "mid": "5818549",
+          "ms": 1,
+          "oType": "MY",
+          "time": "1793258606742"
+        }
+      }
+    ],
+    "clockExample": {
+      "cd": {
+        "cmec": "time_start",
+        "cmes": 0,
+        "csid": "2",
+        "et": "1793258591476",
+        "mess": "1",
+        "mid": "5818549",
+        "mmp": "16",
+        "mst": 176,
+        "msts": 176,
+        "t1": 94,
+        "t2": 82,
+        "vf": "0"
+      },
+      "cmd": "C102",
+      "ctsp": "1793258591610",
+      "ld": "2115693438835445762_time_start"
+    },
+    "scoreExample": {
+      "cd": {
+        "csid": "2",
+        "et": "1793258591476",
+        "mid": "5818549",
+        "mpid": "16",
+        "msc": [
+          "S1|94:82",
+          "S2|52:44",
+          "S3|42:38",
+          "S19|26:21",
+          "S20|26:23",
+          "S21|19:20",
+          "S22|23:18",
+          "S106|0:0",
+          "S107|0:0",
+          "S108|0:0",
+          "S109|0:0",
+          "S110|0:0",
+          "S111|0.0:0.0",
+          "S190|0:0",
+          "S191|0:0",
+          "S1071|0:0",
+          "S1072|0:0",
+          "S1073|0.0:0.0",
+          "S1081|0:0",
+          "S1082|0:0",
+          "S1088|0.0:0.0",
+          "S1111|94:82",
+          "S1235|0.0:0.0",
+          "S10601|0:0",
+          "S10602|0:0",
+          "S10603|0:0",
+          "S10604|0:0",
+          "S10606|0:0",
+          "S10607|0:0",
+          "S10901|0:0",
+          "S10902|0:0",
+          "S10903|0:0",
+          "S10904|0:0"
+        ]
+      },
+      "cmd": "C103",
+      "ctsp": "1793258591730",
+      "ld": "2115693438835445762_time_start"
+    },
+    "playChangeExample": {
+      "cd": {
+        "csid": "2",
+        "hpid": "37,39",
+        "mid": "5818647"
+      },
+      "cmd": "C303",
+      "ctsp": "1793258614976",
+      "ld": "LS_ac1f2f0b20261029152333353e11a57f_1X_PANDA,a762ce9287184f26a31537d9a1bd88fa_trade_linkage_mq_odds,LS_ac1f2f0b202610291523335510373e6f_1X_PANDA,0a7b3defcff94d6bb384206298b33800_trade_linkage_mq_odds,LS_ac1f13162026102915233366597168ab_1X_PANDA,LS_ac1f26e720261029152333700897b5df_1X_PANDA,"
+    },
+    "unrelatedC109": {
+      "cd": [
+        {
+          "csid": "1",
+          "hs": 0,
+          "mid": "5818651",
+          "ms": "1"
+        },
+        {
+          "csid": "1",
+          "hs": 0,
+          "mid": "2115705977620664322",
+          "ms": "0"
+        }
+      ],
+      "cmd": "C109",
+      "ctsp": "1793258590299",
+      "ld": "6b86833074bc4e4082f323eeae7a0f6a_trade_playSetStatus_PANDA,AO_0af5191320261029072308715d52be12"
+    },
+    "limits": [
+      "Moneyline C105 samples were locked; continuous open moneyline changes were not observed.",
+      "25 seconds does not establish long-term token refresh, reconnection or final-state behavior."
+    ]
+  },
+  "rulesSummary": {
+    "fullGameIncludesOvertimeUnlessSpecified": true,
+    "quarterFourExcludesOvertime": true,
+    "exceptionRulesForInterruptionAndSomeDraws": true
+  }
+}

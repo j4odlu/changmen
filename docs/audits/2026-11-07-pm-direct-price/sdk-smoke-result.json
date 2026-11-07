@@ -1,0 +1,50 @@
+{
+  "sdk": "0.12.0",
+  "network": "mocked; no network or orders",
+  "passedSdkChecks": [
+    "one shared socket",
+    "initial market frame",
+    "duplicate asset sends no frame",
+    "incremental subscribe",
+    "normalized BBO event",
+    "incremental unsubscribe",
+    "automatic reconnect and resubscribe"
+  ],
+  "normalizedEvent": {
+    "type": "best_bid_ask",
+    "assetId": "101",
+    "bestAsk": "0.40"
+  },
+  "clockGuard": {
+    "simulatedClientClockAheadMs": 5000,
+    "acceptsCurrentExchangeTime": false,
+    "sourceSha256": "389a1dc1c729d4c68db53431eb204a24ef338eb48d9016532f8491735c8bd777"
+  },
+  "sourceHashes": [
+    {
+      "source": "../src/websockets/clob/protocol.ts",
+      "sha256": "13252ce8536debd547e1c4223aafc347151f60239b809e6d20528e5a5d00e123"
+    },
+    {
+      "source": "../src/websockets/clob/market.ts",
+      "sha256": "fc1516c386ece43acd0b00df381b8ca10d0ae23e54a2196241bbf138d2bd2e1a"
+    },
+    {
+      "source": "../src/websockets/heartbeat.ts",
+      "sha256": "fb0bfe9c2d306c7b362f94959e8f2704ff0d1c705238f92858c8cf0e88d7bb96"
+    },
+    {
+      "source": "../src/websockets/lifecycle.ts",
+      "sha256": "8396892361e6db70fba372a2d819a6cbc2162244c1245e624333066612063c5c"
+    },
+    {
+      "source": "../src/actions/subscriptions.ts",
+      "sha256": "18258c8f68c3344a888e3d9b557b8a36f07ff5616e3de6346d9a366ddc427830"
+    }
+  ],
+  "limits": [
+    "No actual network or browser latency measured",
+    "Heartbeat behavior reviewed in source, not time-advanced here",
+    "No claim of production SDK integration compatibility"
+  ]
+}

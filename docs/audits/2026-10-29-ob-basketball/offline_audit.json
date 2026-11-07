@@ -1,0 +1,191 @@
+{
+  "checkedAt": "2026-10-29T08:08:56.416Z",
+  "commit": "abf94feb94519319c98d52d17ab7d8c5d63e8d92",
+  "scope": "Current-source counterexamples for the proposed integration, not acceptance of an implementation",
+  "networkCallsFromProbes": false,
+  "dbWriteFunctionsCalled": false,
+  "betEndpointsCalled": false,
+  "probeCount": 14,
+  "probes": [
+    {
+      "id": "P01",
+      "description": "Current OB game catalog has no sport:2 mapping",
+      "actual": null,
+      "expected": null,
+      "matchedBaseline": true
+    },
+    {
+      "id": "P02",
+      "description": "Current OB saved-bet rules reject proposed basketball full moneyline",
+      "actual": {
+        "byType": false,
+        "byName": false
+      },
+      "expected": {
+        "byType": false,
+        "byName": false
+      },
+      "matchedBaseline": true
+    },
+    {
+      "id": "P03",
+      "description": "Current matcher emits no native source for this basketball bet",
+      "actual": 0,
+      "expected": 0,
+      "matchedBaseline": true
+    },
+    {
+      "id": "P04",
+      "description": "Unknown snapshot scope is stripped by current request schema",
+      "actual": [
+        "provider",
+        "matchs"
+      ],
+      "expected": [
+        "provider",
+        "matchs"
+      ],
+      "matchedBaseline": true
+    },
+    {
+      "id": "P05",
+      "description": "Adding ad hoc metadata does not survive SaveBet wire",
+      "actual": {
+        "oddType": false,
+        "hpid": false,
+        "rawHid": false
+      },
+      "expected": {
+        "oddType": false,
+        "hpid": false,
+        "rawHid": false
+      },
+      "matchedBaseline": true
+    },
+    {
+      "id": "P06",
+      "description": "Matcher projection preserves string IDs but not ad hoc metadata",
+      "actual": {
+        "betId": "sport:37:141303105071627307",
+        "homeId": "sport:144025224854843616",
+        "hpid": false,
+        "rawHid": false
+      },
+      "expected": {
+        "betId": "sport:37:141303105071627307",
+        "homeId": "sport:144025224854843616",
+        "hpid": false,
+        "rawHid": false
+      },
+      "matchedBaseline": true
+    },
+    {
+      "id": "P07",
+      "description": "Existing football score decoder cannot consume basketball S1",
+      "actual": null,
+      "expected": null,
+      "matchedBaseline": true
+    },
+    {
+      "id": "P08",
+      "description": "Existing football C302 handler rejects csid 2",
+      "actual": null,
+      "expected": null,
+      "matchedBaseline": true
+    },
+    {
+      "id": "P09",
+      "description": "No-PM full-only match does not end from explicit non-live IsLive alone",
+      "actual": false,
+      "expected": false,
+      "matchedBaseline": true
+    },
+    {
+      "id": "P10",
+      "description": "OB ViewBetItem cannot quote from Sources prices without local fo",
+      "actual": 0,
+      "expected": 0,
+      "matchedBaseline": true
+    },
+    {
+      "id": "P11",
+      "description": "Converting sampled long option ID to Number loses its decimal identity",
+      "actual": false,
+      "expected": false,
+      "matchedBaseline": true
+    },
+    {
+      "id": "P12",
+      "description": "Original two-venue threshold rejects new single-venue basketball",
+      "actual": 0,
+      "expected": 0,
+      "matchedBaseline": true
+    },
+    {
+      "id": "P13",
+      "description": "Existing OB/backend window excludes start times two hours ahead",
+      "actual": false,
+      "expected": false,
+      "matchedBaseline": true
+    },
+    {
+      "id": "P14",
+      "description": "Actual change planner assigns no code checks to documentation/evidence paths",
+      "actual": {
+        "tier": "docs",
+        "checks": []
+      },
+      "expected": {
+        "tier": "docs",
+        "checks": []
+      },
+      "matchedBaseline": true
+    }
+  ],
+  "documentChangePlan": {
+    "tier": "docs",
+    "paths": [
+      "docs/OB_BASKETBALL_INTEGRATION_PLAN.md",
+      "docs/README.md",
+      "docs/audits/2026-10-29-ob-basketball/README.md",
+      "docs/audits/2026-10-29-ob-basketball/offline_audit.json",
+      "docs/audits/2026-10-29-ob-basketball/reproduce.mjs",
+      "docs/audits/2026-10-29-ob-basketball/source_manifest.json",
+      "docs/audits/2026-10-29-ob-basketball/upstream_samples.json",
+      "docs/audits/OB_BASKETBALL_INTEGRATION_AUDIT_20261029.md",
+      "docs/audits/README.md"
+    ],
+    "fullReasons": [],
+    "immutableFokEntries": 0,
+    "snapshotOverridesAllowed": false,
+    "checks": [],
+    "changedPaths": [
+      "docs/OB_BASKETBALL_INTEGRATION_PLAN.md",
+      "docs/README.md",
+      "docs/audits/2026-10-29-ob-basketball/README.md",
+      "docs/audits/2026-10-29-ob-basketball/offline_audit.json",
+      "docs/audits/2026-10-29-ob-basketball/reproduce.mjs",
+      "docs/audits/2026-10-29-ob-basketball/source_manifest.json",
+      "docs/audits/2026-10-29-ob-basketball/upstream_samples.json",
+      "docs/audits/OB_BASKETBALL_INTEGRATION_AUDIT_20261029.md",
+      "docs/audits/README.md"
+    ],
+    "unknownBase": false,
+    "requestedScope": null,
+    "deployedVersions": null,
+    "liveComponents": null,
+    "eventPaths": null,
+    "purpose": "change",
+    "requiredChecks": {
+      "completeRelease": false,
+      "backendInstallation": false,
+      "databaseCompatibility": false
+    },
+    "deployment": {
+      "scope": "noop",
+      "components": [],
+      "backendFirst": false
+    },
+    "releasePlan": "backend-first"
+  }
+}

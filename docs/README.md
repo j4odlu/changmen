@@ -34,6 +34,7 @@
 | [CATALOG.md](./CATALOG.md) | `sport` / `game` / `market` catalog 字段与扩展规则（**配置单一入口**） |
 | [RAY_PM_BASKETBALL_PHASE1_PLAN.md](./RAY_PM_BASKETBALL_PHASE1_PLAN.md) | 篮球加入电竞分类：RAY/PM 仅增加采集配置、全场获胜；篮球图标、至少双馆下发，含验证记录 |
 | [BASKETBALL_CLIENT_EXTRA_MARKETS_PLAN.md](./BASKETBALL_CLIENT_EXTRA_MARKETS_PLAN.md) | 保持现有策略和全场胜负；首步 RAY 全场让分单馆展示已接入本地源码，跨馆匹配及新增盘口执行待实施；含模块入口、回滚与后续方案 |
+| [OB_BASKETBALL_INTEGRATION_PLAN.md](./OB_BASKETBALL_INTEGRATION_PLAN.md) | OB 体育试玩接入电竞篮球方案：共用 OB、来源快照隔离、行情与交易边界、旧体育篮球退役；尚未实施 |
 | [../server/README.md](../server/README.md) | **服务端包索引**、进程图、常用命令 |
 | [DATA_STORAGE.md](./DATA_STORAGE.md) | 云库 vs 本机 JSON、迁移目录、快照生命周期与 archive |
 | [TEAM_BOUNDARIES.md](./TEAM_BOUNDARIES.md) | 客户端 / 服务端目录边界 |
@@ -85,6 +86,8 @@
 
 | 文档 | 内容 |
 |------|------|
+| [PM_DIRECT_REALTIME_PRICE_PLAN_20261107.md](./PM_DIRECT_REALTIME_PRICE_PLAN_20261107.md) | PM 官方直连实时价格方案；[审计后收敛](./audits/PM_DIRECT_REALTIME_PRICE_PLAN_AUDIT_20261107.md)，[订阅优化](./PM_DIRECT_SUBSCRIPTION_UPDATE_20261107.md)及[直连停用 Index 价格](./PM_DIRECT_INDEX_PRICE_OPT_OUT_20261107.md)均已本机通过，未发布，不改 VPS |
+| [PM_OFFICIAL_SDK_MARKET_EVALUATION_20261107.md](./PM_OFFICIAL_SDK_MARKET_EVALUATION_20261107.md) | 官方 SDK 接管用户直连行情评估；两版各 14 项离线实验，基础能力可用，完整接管先验证生命周期适配，未迁移 |
 | [PM_GTC_MODULE_ISOLATION.md](./PM_GTC_MODULE_ISOLATION.md) | FOK/GTC 与公共订单链路的职责 |
 | [GTC_COMPAT_RETIREMENT_20261014.md](./GTC_COMPAT_RETIREMENT_20261014.md) | 当前两表存储边界与旧兼容退役记录 |
 | [PM_GTC_RECOVER_API.md](./PM_GTC_RECOVER_API.md) | 当前增量恢复接口 |
@@ -92,6 +95,7 @@
 | [PM_SINGLE_LEG_9999_TRADING_STRATEGY_PLAN.md](./PM_SINGLE_LEG_9999_TRADING_STRATEGY_PLAN.md) | PM 9999 单边仓位交易策略研究：多场馆公允价收敛、跟价与做市候选、动态退出、费用、回测对照及分阶段验收；尚未实施或回测 |
 | [SINGLE_LEG_POSITION_TRADING_RESEARCH.md](./SINGLE_LEG_POSITION_TRADING_RESEARCH.md) | 9999 与 LOS 共用仓位管理研究：套利信号入场、平台退出能力、情景敞口、卖出及反向对冲、同入场对照验证；尚未实施 |
 | [SINGLE_LEG_MONITOR.md](./SINGLE_LEG_MONITOR.md) | LOS 与 9999 纯前端仓位模块：监听已有订单缓存、维护会话仓位集合与独立策略接口；具体交易策略待接入 |
+| [ORDER_EXIT_MAKEUP_BAND_PLAN.md](./ORDER_EXIT_MAKEUP_BAND_PLAN.md) | 指定订单复用现有补单上下沿：订单转换、原链路接入与防重复；未实施，含源码审计，PM 止盈挂单单列配套工作 |
 
 ## 未实施设计与历史记录
 

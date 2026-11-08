@@ -78,7 +78,7 @@ function undoStopBoundary(name: string, source: string): string {
 it("preserves all 44 original function bodies except the explicit stop-generation guards", () => {
   let count = 0;
   for (const [module, names] of Object.entries(modules)) {
-    const source = readFileSync(join(process.cwd(), "src/runtime", module + ".ts"), "utf8");
+    const source = readFileSync(join(process.cwd(), "src/runtime", module + ".ts"), "utf8").replaceAll("\r\n", "\n");
     const tree = ts.createSourceFile(module + ".ts", source, ts.ScriptTarget.Latest, true);
     const functions = new Map<string, string>();
     function visit(node: ts.Node) {

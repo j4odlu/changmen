@@ -28,18 +28,30 @@ function seed() {
   ] }, "basketball");
 }
 const render = (value: ViewMatch) => renderToString(createSSRApp(MatchCard, { match: value }).use(pinia));
+const cell = (html: string, side: "home" | "away") => html.match(new RegExp(`<div\\b[^>]*class="[^"]*\\b${side}\\b[^"]*"[^>]*>[\\s\\S]*?<\\/div>`))?.[0] ?? "";
 
 it("inserts a display-only spread after the original winner without changing its bets, and follows actual WS prices and locks", async () => {
   const value = match(); const originalBets = [...value.bets]; seed();
   const html = await render(value);
   expect(html.indexOf("原全场胜负 200")).toBeLessThan(html.indexOf("RAY 篮球全场让分"));
   expect(html).toContain("-4.5"); expect(html).toContain("+4.5");
-  expect(html).toContain("1.95"); expect(html).toContain("锁盘");
+  expect(cell(html, "home")).toContain("1.95");
+  expect(cell(html, "home")).not.toMatch(/class="[^"]*\block\b/);
+  expect(cell(html, "away")).toMatch(/class="[^"]*\block\b/);
+  expect(cell(html, "away")).toMatch(/<span\b[^>]*><\/span>/);
+  expect(html).not.toMatch(/等待报价|锁盘|已结束/);
   expect(html).not.toContain("1.9</span>");
   handleRayRealtimeMessage({ source: "odds", odds: [{ id: "a45", odds: 2.14, status: 1 }] });
-  expect(await render(value)).toContain("2.14");
+  const unlocked = await render(value);
+  expect(cell(unlocked, "away")).toContain("2.14");
+  expect(cell(unlocked, "away")).not.toMatch(/class="[^"]*\block\b/);
   useOddsStore().clean("RAY");
-  expect(await render(value)).toContain("等待报价");
+  const missing = await render(value);
+  for (const side of ["home", "away"] as const) {
+    expect(cell(missing, side)).toMatch(/class="[^"]*\block\b/);
+    expect(cell(missing, side)).toMatch(/<span\b[^>]*><\/span>/);
+  }
+  expect(missing).not.toMatch(/等待报价|锁盘|已结束/);
   expect(value.bets).toEqual(originalBets);
 });
 

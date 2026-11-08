@@ -22,7 +22,7 @@ export const obFootballGroups = {
   obSportFootballDto: ["stableObMatchId", "startTimeMs", "isOutcomeLabel", "displayBetName", "isFootballListMarket", "obListGame", "clampLiveStart", "buildDto", "isObFootballPlaceholderTitle", "mergeMarketRows", "marketsFromRow"],
 };
 export const obRuntimeDir = path.resolve(import.meta.dirname, "..");
-export const readObRuntime = (name: string) => readFileSync(path.join(obRuntimeDir, name + ".ts"), "utf8");
+export const readObRuntime = (name: string) => readFileSync(path.join(obRuntimeDir, name + ".ts"), "utf8").replaceAll("\r\n", "\n");
 export const obAst = (source: string) => ts.createSourceFile("source.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const compiled = new Map<string, string>();
 function compile(source: string) {

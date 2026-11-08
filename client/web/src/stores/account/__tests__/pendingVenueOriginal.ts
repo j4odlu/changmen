@@ -21,7 +21,7 @@ export const pendingGroups = {
   betGateway: ["ensureSharedVaultKeyForAccount", "checkBetting", "placeBet"],
 };
 export const pendingDir = path.resolve(import.meta.dirname, "..");
-export const readPending = (name: string) => readFileSync(path.join(pendingDir, name + ".ts"), "utf8");
+export const readPending = (name: string) => readFileSync(path.join(pendingDir, name + ".ts"), "utf8").replaceAll("\r\n", "\n");
 
 // Run the complete historical gateway and the real extracted modules in separate
 // contexts. Only external effects are substituted; scheduling uses a deterministic

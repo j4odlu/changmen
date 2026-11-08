@@ -146,20 +146,13 @@ export async function executePfUserSignedSell(params) {
       if (!bound.ok)
         throw new Error(bound.msg);
 
-      const result = await predictFunPost("/v1/orders", createOrderBody, jwt);
-      if (!isPredictFunOrderAccepted(result)) {
-        const code = String(result?.data?.code ?? "").trim();
-        throw new Error(code
-          ? `Predict.fun 卖出未受理（code: ${code}）`
-          : "Predict.fun 卖出未受理");
-      }
-
+      // 先写 closing + sellHash 再 POST：官网已受理后 RDS 失败会丢卖单指纹，
+      // 买单仍 open → 用户/编排可再签卖，双卖风险。
       sellHash = String(
         clientOrderHash
         ?? createOrderBody?.data?.order?.hash
         ?? "",
       ).trim();
-      sellApiId = String(result?.data?.orderId ?? "").trim();
       if (!sellHash)
         throw new Error("卖出缺少 order hash，无法确认成交");
 
@@ -190,7 +183,50 @@ export async function executePfUserSignedSell(params) {
         pfUserSigned: true,
       }], userId);
       if (!closingSaved)
-        throw new Error("卖出状态落库失败（closing）");
+        throw new Error("卖出状态落库失败（closing），未向官网提交");
+
+      const result = await predictFunPost("/v1/orders", createOrderBody, jwt);
+      if (!isPredictFunOrderAccepted(result)) {
+        const code = String(result?.data?.code ?? "").trim();
+        // 未受理：回滚 closing → open，允许重新签卖
+        try {
+          await upsertPfServerOrder(playerId, [{
+            orderId: rdsOrderKey(buy),
+            provider: "PredictFun",
+            match: buy.match ?? buy.Match,
+            bet: buy.bet ?? buy.Bet,
+            item: buy.item ?? buy.Item,
+            odds: Number(buy.Odds ?? buy.odds) || 0,
+            betMoney: rdsBetMoney(buy),
+            money: Number(buy.Money ?? buy.money) || 0,
+            status: "none",
+            createAt: Number(buy.CreateAt ?? buy.createAt) || Date.now(),
+            link: buy.Link ?? buy.link,
+            pfMarketId: marketId,
+            pfTokenId: tokenId,
+            pfOrderHash: rdsPfHash(buy),
+            pfApiOrderId: rdsPfApiOrderId(buy),
+            pfSharesWei: buy.pfSharesWei ? String(buy.pfSharesWei) : undefined,
+            pfShares: Number(buy.pfShares) > 0 ? Number(buy.pfShares) : undefined,
+            pfHoldShares: holdShares,
+            pfBookPrice: buy.pfBookPrice,
+            pfSide: "buy",
+            pfSellState: "open",
+            pfNotionalUsdt: buy.pfNotionalUsdt,
+            pfUserSigned: true,
+            pfSellOrderId: "",
+            pfClearSellOrderId: true,
+          }], userId);
+        }
+        catch (rollbackErr) {
+          console.warn("[Pf_Sell] reject rollback failed", sellHash, rollbackErr);
+        }
+        throw new Error(code
+          ? `Predict.fun 卖出未受理（code: ${code}）`
+          : "Predict.fun 卖出未受理");
+      }
+
+      sellApiId = String(result?.data?.orderId ?? "").trim();
     }
 
     const officialFilled = await waitForPredictOrderTerminal(sellHash, jwt);

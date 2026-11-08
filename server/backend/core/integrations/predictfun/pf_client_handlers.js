@@ -229,25 +229,16 @@ export async function handlePfSubmitOrder(body, userId) {
     if (!bound.ok)
       return bound;
 
-    const result = await predictFunPost("/v1/orders", createOrderBody, jwt);
-    if (!isPredictFunOrderAccepted(result)) {
-      const code = String(result?.data?.code ?? "").trim();
-      return {
-        ok: false,
-        msg: code
-          ? `Predict.fun 下单未受理（code: ${code}）`
-          : "Predict.fun 下单未受理",
-      };
-    }
-
+    // 必须先落 Pending 再 POST：否则官网已受理/成交后 RDS 写失败会孤儿仓位，
+    // GetOrder 也找不到行，套利会当拒单补单 → 双暴露。
     const pfOrderHash = String(
       body?.orderHash
       ?? createOrderBody?.data?.order?.hash
-      ?? result?.data?.orderHash
       ?? "",
     ).trim();
-    const pfApiOrderId = String(result?.data?.orderId ?? "").trim();
-    const orderId = pfOrderHash || pfApiOrderId;
+    if (!pfOrderHash)
+      return { ok: false, msg: "orderHash 必填（浏览器已签 hash）" };
+
     const bookOdds = Number(body?.bookOdds) || 0;
     const bookPrice = Number(body?.bookPrice) || 0;
     const apiBetMoney = Number(body?.apiBetMoney) || 0;
@@ -265,7 +256,7 @@ export async function handlePfSubmitOrder(body, userId) {
       },
     });
     const pendingRow = {
-      orderId,
+      orderId: pfOrderHash,
       provider: "PredictFun",
       match: labels.match,
       bet: labels.bet,
@@ -280,25 +271,65 @@ export async function handlePfSubmitOrder(body, userId) {
       pfBookPrice: bookPrice > 0 ? bookPrice : undefined,
       pfNotionalUsdt: stake,
       pfOrderHash,
-      pfApiOrderId,
       pfSide: "buy",
       pfSellState: "open",
       pfFeeRateBps: Number(body?.feeRateBps) >= 0 ? Number(body.feeRateBps) : undefined,
       pfUserSigned: true,
     };
-    const saved = await upsertPfServerOrder(gate.playerId, [pendingRow], userId);
-    if (!saved) {
+    const savedPending = await upsertPfServerOrder(gate.playerId, [pendingRow], userId);
+    if (!savedPending)
+      return { ok: false, msg: "落库失败，未向官网提交订单" };
+
+    let result;
+    try {
+      result = await predictFunPost("/v1/orders", createOrderBody, jwt);
+    }
+    catch (postErr) {
+      // Pending 已在库：GetOrder 可按 hash 对齐；勿当「从未下单」
+      const hint = postErr instanceof Error ? postErr.message : String(postErr);
       return {
         ok: false,
-        msg: `官网已受理但落库失败，请用 GetOrder 补齐（orderHash=${pfOrderHash || orderId}）`,
-        info: { orderId, pfOrderHash, pfApiOrderId, pending: true },
+        msg: `官网提交异常，订单已落库待确认（orderHash=${pfOrderHash}）：${hint}`.slice(0, 200),
+        info: { orderId: pfOrderHash, pfOrderHash, pending: true },
       };
+    }
+
+    if (!isPredictFunOrderAccepted(result)) {
+      const code = String(result?.data?.code ?? "").trim();
+      try {
+        await upsertPfServerOrder(gate.playerId, [{
+          ...pendingRow,
+          status: "reject",
+          pfOfficialStatus: code || "rejected",
+        }], userId);
+      }
+      catch (rejectErr) {
+        console.warn("[Pf_SubmitOrder] reject persist failed", pfOrderHash, rejectErr);
+      }
+      return {
+        ok: false,
+        msg: code
+          ? `Predict.fun 下单未受理（code: ${code}）`
+          : "Predict.fun 下单未受理",
+      };
+    }
+
+    const pfApiOrderId = String(result?.data?.orderId ?? "").trim();
+    if (pfApiOrderId) {
+      const savedApi = await upsertPfServerOrder(gate.playerId, [{
+        ...pendingRow,
+        pfApiOrderId,
+      }], userId);
+      if (!savedApi) {
+        // 官网已受理且 Pending 已在库；apiId 可随后 GetOrder 补齐
+        console.warn("[Pf_SubmitOrder] pfApiOrderId persist failed", pfOrderHash, pfApiOrderId);
+      }
     }
 
     return {
       ok: true,
       info: {
-        orderId,
+        orderId: pfOrderHash,
         code: result?.data?.code ?? "accepted",
         bookPrice,
         bookOdds,

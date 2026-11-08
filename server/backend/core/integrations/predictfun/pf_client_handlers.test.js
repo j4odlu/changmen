@@ -346,7 +346,7 @@ describe("pf_client_handlers", () => {
       success: true,
       data: { orderId: "ord-1", code: "accepted" },
     });
-    upsertPfServerOrder.mockResolvedValueOnce(true);
+    upsertPfServerOrder.mockResolvedValue(true);
 
     const r = await handlePfSubmitOrder({
       playerId: 42,
@@ -384,9 +384,88 @@ describe("pf_client_handlers", () => {
       "user.jwt",
     );
     expect(upsertPfServerOrder).toHaveBeenCalled();
-    const row = upsertPfServerOrder.mock.calls[0][1][0];
+    const pendingCall = upsertPfServerOrder.mock.calls[0];
+    const row = pendingCall[1][0];
     expect(row.pfUserSigned).toBe(true);
     expect(row.status).toBe("Pending");
+    expect(row.orderId).toBe("0xhash1");
+    // Pending 必须先于官网 POST，避免受理后落库失败孤儿仓
+    const pendingOrder = upsertPfServerOrder.mock.invocationCallOrder[0];
+    const postOrder = predictFunPost.mock.invocationCallOrder[0];
+    expect(pendingOrder).toBeLessThan(postOrder);
+  });
+
+  it("SubmitOrder aborts before POST when pending persist fails", async () => {
+    const { predictFunPost } = await import("./pf_api.js");
+    const { upsertPfServerOrder } = await import("./pf_server_order.js");
+    upsertPfServerOrder.mockResolvedValueOnce(false);
+
+    const r = await handlePfSubmitOrder({
+      playerId: 42,
+      mode: "userSigned",
+      jwt: "user.jwt",
+      createOrderBody: {
+        data: {
+          order: {
+            hash: "0xhash-abort",
+            maker: "0xC22eAe5aF78A221b8A27f217C8f37C08D530eE62",
+            signer: "0xC22eAe5aF78A221b8A27f217C8f37C08D530eE62",
+          },
+          strategy: "MARKET",
+          isFillOrKill: true,
+        },
+      },
+      marketId: "830202",
+      tokenId: "tok",
+      apiBetMoney: 5,
+      bookPrice: 0.4,
+      bookOdds: 2.5,
+      orderHash: "0xhash-abort",
+    }, "u1");
+
+    expect(r.ok).toBe(false);
+    expect(String(r.msg)).toMatch(/落库失败.*未向官网提交/);
+    expect(predictFunPost).not.toHaveBeenCalled();
+  });
+
+  it("SubmitOrder marks reject when upstream declines after pending persist", async () => {
+    const { predictFunPost } = await import("./pf_api.js");
+    const { upsertPfServerOrder } = await import("./pf_server_order.js");
+    upsertPfServerOrder.mockResolvedValue(true);
+    predictFunPost.mockResolvedValueOnce({
+      success: false,
+      data: { code: "INSUFFICIENT_BALANCE" },
+    });
+
+    const r = await handlePfSubmitOrder({
+      playerId: 42,
+      mode: "userSigned",
+      jwt: "user.jwt",
+      createOrderBody: {
+        data: {
+          order: {
+            hash: "0xhash-rej",
+            maker: "0xC22eAe5aF78A221b8A27f217C8f37C08D530eE62",
+            signer: "0xC22eAe5aF78A221b8A27f217C8f37C08D530eE62",
+          },
+          strategy: "MARKET",
+          isFillOrKill: true,
+        },
+      },
+      marketId: "830202",
+      tokenId: "tok",
+      apiBetMoney: 5,
+      bookPrice: 0.4,
+      bookOdds: 2.5,
+      orderHash: "0xhash-rej",
+    }, "u1");
+
+    expect(r.ok).toBe(false);
+    expect(String(r.msg)).toMatch(/未受理/);
+    const rejectRow = upsertPfServerOrder.mock.calls
+      .map((c) => c[1]?.[0])
+      .find((o) => o?.status === "reject");
+    expect(rejectRow?.orderId).toBe("0xhash-rej");
   });
 
   it("SubmitOrder accepts form-urlencoded JSON-string createOrderBody", async () => {
@@ -508,6 +587,13 @@ describe("pf_client_handlers", () => {
     );
     expect(accountStore.creditPlayerBalance).not.toHaveBeenCalled();
     expect(accountStore.claimCreditPfPendingOrder).not.toHaveBeenCalled();
+    const closingCallIdx = upsertPfServerOrder.mock.calls.findIndex(
+      (c) => Array.isArray(c[1]) && c[1].some((o) => o.pfSellState === "closing"),
+    );
+    expect(closingCallIdx).toBeGreaterThanOrEqual(0);
+    const closingInvocation = upsertPfServerOrder.mock.invocationCallOrder[closingCallIdx];
+    const postInvocation = predictFunPost.mock.invocationCallOrder[0];
+    expect(closingInvocation).toBeLessThan(postInvocation);
     const closedBatch = upsertPfServerOrder.mock.calls.find(
       (c) => Array.isArray(c[1]) && c[1].some((o) => o.pfSellState === "closed"),
     );
@@ -516,6 +602,57 @@ describe("pf_client_handlers", () => {
     expect(buyClosed.pfUserSigned).toBe(true);
     expect(buyClosed.pfLedgerState).toBe("credited");
     expect(buyClosed.money).toBe(3.75);
+  });
+
+  it("SubmitSell aborts before POST when closing persist fails", async () => {
+    const { predictFunPost } = await import("./pf_api.js");
+    const { upsertPfServerOrder } = await import("./pf_server_order.js");
+
+    sb.fetchOrdersByPlayer.mockResolvedValue([{
+      order_id: "0xbuy-abort",
+      status: "None",
+      bet_money: 10,
+      money: 0,
+      odds: 2.5,
+      create_at: 1,
+      match: "A vs B",
+      item: "主队",
+      link: 0,
+      raw: {
+        pfOrderHash: "0xbuy-abort",
+        pfMarketId: "830202",
+        pfTokenId: "tok",
+        pfHoldShares: 25,
+        pfSide: "buy",
+        pfSellState: "open",
+        pfUserSigned: true,
+        pfNotionalUsdt: 10,
+      },
+    }]);
+    upsertPfServerOrder.mockResolvedValueOnce(false);
+
+    const r = await handlePfSubmitSell({
+      playerId: 42,
+      mode: "userSigned",
+      jwt: "user.jwt",
+      buyOrderId: "0xbuy-abort",
+      orderHash: "0xsell-abort",
+      createOrderBody: {
+        data: {
+          order: {
+            hash: "0xsell-abort",
+            maker: "0xC22eAe5aF78A221b8A27f217C8f37C08D530eE62",
+            signer: "0xC22eAe5aF78A221b8A27f217C8f37C08D530eE62",
+          },
+          strategy: "MARKET",
+          isFillOrKill: true,
+        },
+      },
+    }, "u1");
+
+    expect(r.ok).toBe(false);
+    expect(String(r.msg)).toMatch(/closing.*未向官网提交|落库失败/);
+    expect(predictFunPost).not.toHaveBeenCalled();
   });
 
   it("getOrder rejects unknown orderId without house lookup", async () => {

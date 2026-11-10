@@ -94,6 +94,8 @@ function computeRecommendations(allMatches, clientMatches = []) {
 
   for (const m of allMatches) {
     if (m.ended_client_match_id != null) continue;
+    // [changmen 扩展] PM 已标记结束的来源不再进入右栏待办推荐。
+    if (m.platform === "Polymarket" && m.pm_match_status?.kind === "finished") continue;
     const gk = recommendationGroupKey(m);
     if (!gk)
       continue;

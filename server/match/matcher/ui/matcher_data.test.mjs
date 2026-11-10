@@ -134,6 +134,26 @@ describe("isPlatformMatchLinkedForRec", () => {
 });
 
 describe("computeRecommendations", () => {
+  it.each([{ ended: true }, { status: "finished" }, { status: "final" }, { status: " F/OT " }])(
+    "excludes PM-finished sources from recommendations while retaining platform details: %j", snapshot => {
+      const pm = row({ pm_match_status: clientMatchWithPmStatus({ pm_sport: snapshot }).pm_match_status });
+      const pf = row({ platform: "PredictFun", source_match_id: "281786" });
+      const other = row({ platform: "Limitless", source_match_id: "limitless1" });
+      expect(computeRecommendations([pm, pf], [])).toEqual([]);
+      const recs = computeRecommendations([pm, pf, other], []);
+      expect(recs).toHaveLength(1);
+      expect(recs[0].matches).toEqual([pf, other]);
+      expect(pm.pm_match_status.kind).toBe("finished");
+    },
+  );
+
+  it.each([undefined, { status: "scheduled" }, { status: "running" }, { status: "postponed" }])(
+    "retains PM candidates without a finished status: %j", snapshot => {
+      const pm = row({ pm_match_status: clientMatchWithPmStatus({ matchs: { Polymarket: "800206" }, pm_sport: snapshot }).pm_match_status });
+      expect(computeRecommendations([pm, row({ platform: "PredictFun", source_match_id: "281786" })], [])).toHaveLength(1);
+    },
+  );
+
   it("drops groups already bound to an ended client_match", () => {
     const matches = [
       row({

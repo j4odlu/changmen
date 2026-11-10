@@ -1619,11 +1619,7 @@ function isPlatformMatchLinked(m, plat, cms, platforms) {
 }
 
 function countUnmatched(platforms, cms) {
-  let n = 0;
-  for (const [p, matches] of Object.entries(platforms || {})) {
-    n += (matches || []).filter(m => !isPlatformMatchLinked(m, p, cms || [])).length;
-  }
-  return n;
+  return collectUnmatchedRows(platforms, cms || [], []).length;
 }
 
 function recMatchKeys(recs) {
@@ -1635,15 +1631,7 @@ function recMatchKeys(recs) {
 }
 
 function countOrphans(platforms, recs, cms) {
-  const inRec = recMatchKeys(recs);
-  let n = 0;
-  for (const [p, matches] of Object.entries(platforms || {})) {
-    for (const m of matches || []) {
-      if (isPlatformMatchLinked(m, p, cms || [])) continue;
-      if (!inRec.has(`${p}:${m.source_match_id}`)) n++;
-    }
-  }
-  return n;
+  return collectUnmatchedRows(platforms, cms || [], recs).filter(row => !row.inRecommendation).length;
 }
 
 function resolveGroupClientMatch(rec, cms) {
@@ -2241,6 +2229,8 @@ function collectUnmatchedRows(platforms, cms, recs) {
   const rows = [];
   for (const [p, matches] of Object.entries(platforms || {})) {
     for (const m of matches || []) {
+      // [changmen 扩展] 仅隐藏 PM 明确显示已结束的待办，不按开赛时间推断。
+      if (p === 'Polymarket' && m.pm_match_status?.kind === 'finished') continue;
       if (isPlatformMatchLinked(m, p, cms)) continue;
       const key = `${p}:${m.source_match_id}`;
       rows.push({

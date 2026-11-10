@@ -114,6 +114,31 @@ it("shows the same PM state in right-column recommendation and unmatched rows", 
   }
 });
 
+it("hides PM-finished unmatched rows and keeps both counters aligned across filters", () => {
+  const pm = { platform: "Polymarket", source_match_id: "finished", game: { code: "lol" },
+    home: "Finished Alpha", away: "Beta", pm_match_status: { kind: "finished", label: "已结束" } };
+  const pending = ["live", "pending", "unknown", "postponed"].map(kind => ({ ...pm,
+    source_match_id: kind, home: `Visible ${kind}`, pm_match_status: { kind, label: kind } }));
+  const venueRows = { Polymarket: [pm, ...pending] };
+  const recs = [{ matches: [pending[0]] }];
+  const original = structuredClone(venueRows);
+  const body = {}, count = {};
+  const ctx = context({ venueRows, recs, document: { getElementById: id => id === "unmatched-panels" ? body : count } });
+  runInContext("renderUnmatchedPlatforms(venueRows, recs, [], {}, '')", ctx);
+  expect(count.textContent).toBe(4);
+  expect(body.innerHTML).not.toContain("Finished Alpha");
+  for (const row of pending) expect(body.innerHTML).toContain(row.home);
+  expect(runInContext("countUnmatched(venueRows, [])", ctx)).toBe(4);
+  expect(runInContext("countOrphans(venueRows, recs, [])", ctx)).toBe(3);
+  runInContext("_unmatchedFilter = 'orphan'; renderUnmatchedPlatforms(venueRows, recs, [], {}, '')", ctx);
+  expect(count.textContent).toBe(3);
+  expect(body.innerHTML).not.toContain("Finished Alpha");
+  expect(body.innerHTML).not.toContain("Visible live");
+  runInContext("renderUnmatchedPlatforms(venueRows, recs, [], {}, 'Finished Alpha')", ctx);
+  expect(count.textContent).toBe(0);
+  expect(venueRows).toEqual(original);
+});
+
 it("shows a single RAY basketball source in the unmatched panel without requiring a second venue", () => {
   const ray = { platform: "RAY", source_match_id: "38458886", source_game_id: 1072082,
     game: { code: "basketball", name: "篮球" }, start_time: from, bo: 0,

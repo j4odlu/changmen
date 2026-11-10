@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { venueOrderFromOrderRow, type OrderRowLike } from "../../../../polymarket/orders/positions/pmLogicalPosition";
-import { updateStoredPolymarketOrderFromMarket } from "../../../../polymarket/orders/history/orderSyncUpdate";
+import { updateStoredPolymarketOrderFromClob, updateStoredPolymarketOrderFromMarket } from "../../../../polymarket/orders/history/orderSyncUpdate";
 import { scalePolymarketVenueOrdersForDisplay } from "../../../../polymarket/orders/history/orders";
 import type { VenueOrder } from "@changmen/client-core/contract";
 
@@ -55,4 +55,13 @@ it("a fully sold position has no remaining maturity payout and keeps sale profit
   const loaded = venueOrderFromOrderRow(row(0.5, 100));
   expect(updateStoredPolymarketOrderFromMarket(loaded, undefined, ""))
     .toMatchObject({ money: 17, reward: 0, pmSellState: "closed", pmStakeUsdc: 0 });
+});
+
+it.each([0, 0.5, 1] as const)("corrects the venue label while preserving a verified payout of %s against stale trades", price => {
+  const stored = { ...venueOrderFromOrderRow(row(price)), bet: "[地图3] 获胜" };
+  const clob = { ...stored, status: "none", pmSettlement: undefined, pmMatchResult: undefined } as VenueOrder;
+  const unchanged = updateStoredPolymarketOrderFromClob(stored, clob, "");
+  expect(updateStoredPolymarketOrderFromClob(stored, clob, "全场")).toEqual({ ...unchanged, bet: "全场" });
+  expect(stored.bet).toBe("[地图3] 获胜");
+  expect(updateStoredPolymarketOrderFromClob(stored, { ...clob, pmTokenId: "other-asset" }, "全场").bet).toBe(stored.bet);
 });

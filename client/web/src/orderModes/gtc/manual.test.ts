@@ -61,6 +61,14 @@ describe("manual GTC uses a single-order record", () => {
     await executeManualGtc(account, input(), ctx);
     expect(label).toHaveBeenCalledWith("condition", "token"); expect(mocks.create.mock.calls[0]![4]).toMatchObject({ bet: "全场" }); label.mockRestore();
   });
+  it("preserves and identifies the changmen market while PM metadata is unavailable", async () => {
+    const label = vi.spyOn(pmOrders, "lookupPolymarketOrderBetLabel").mockReturnValueOnce("");
+    try {
+      const ctx = context(); ctx.bet = { id: 2, homeName: "A", awayName: "B", getBetName: () => "[地图3] 获胜" } as never;
+      await executeManualGtc(account, input(), ctx);
+      expect(mocks.create.mock.calls[0]![4]).toMatchObject({ bet: "changmen 盘口：[地图3] 获胜" });
+    } finally { label.mockRestore(); }
+  });
   it("old recovery unavailable does not block a newly persisted manual order", async () => {
     mocks.progress.ready = false;
     await executeManualGtc(account, input(), context()); expect(mocks.create).toHaveBeenCalledOnce(); expect(mocks.submit).toHaveBeenCalledOnce();

@@ -34,11 +34,11 @@ const account = { accountId: 292, provider: "Polymarket", playerName: "f43e" } a
 const store = { accounts: [account], findAccount: () => account, getPlatformName: () => "PM" } as unknown as AccountStoreContext;
 const at = 1_792_686_326_358;
 const orderId = `0x${"5b".repeat(32)}`;
-const context = { game: "Dota2", match: "Team Liquid vs 1w Team", bet: "[地图2] 获胜", item: "Team Liquid" };
+const context = { game: "Dota2", match: "Team Liquid vs 1w Team", bet: "地图2", item: "Team Liquid" };
 function option() {
   const o = new BetOption("Polymarket", "1203867", "condition", "token", 14.93, "Home", 1.515);
   o.match = { title: context.match, game: context.game } as never;
-  o.bet = { id: 20, homeName: "Team Liquid", awayName: "1w Team", getBetName: () => context.bet } as never;
+  o.bet = { id: 20, homeName: "Team Liquid", awayName: "1w Team", getBetName: () => "[地图3] 获胜" } as never;
   o.data = { prepared: true };
   return o;
 }
@@ -54,8 +54,10 @@ function accepted() {
 const taskRows = () => JSON.parse(sessionStorage.getItem("PENDING_VENUE_BET_CONFIRM") || "[]");
 const unfilled = { settlement: "unfilled", orders: [] };
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.resetModules(); vi.clearAllMocks(); vi.useFakeTimers(); vi.setSystemTime(at); sessionStorage.clear();
+  const { rememberPolymarketMarketBetLabel } = await import("@changmen/venue-browser/polymarket/markets/orderBetLabel");
+  rememberPolymarketMarketBetLabel({ condition_id: "condition", question: "Dota 2: Team Liquid vs 1w Team - Game 2 Winner", tokens: [{ token_id: "token" }] });
   mocks.pending.mockResolvedValue([]);
   mocks.save.mockResolvedValue(undefined); mocks.publish.mockResolvedValue(undefined);
   mocks.betting.mockResolvedValue(accepted()); mocks.resolve.mockResolvedValue(unfilled);
@@ -63,6 +65,25 @@ beforeEach(() => {
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
 
 describe("Pending is the same stored order throughout confirmation", () => {
+  it("saves a PM full-match Pending order separately from its composed decider identity", async () => {
+    const { rememberPolymarketMarketBetLabel } = await import("@changmen/venue-browser/polymarket/markets/orderBetLabel");
+    rememberPolymarketMarketBetLabel({ condition_id: "full-condition", groupItemTitle: "Match Winner", tokens: [{ token_id: "token" }] });
+    const { placeBet } = await import("./betGateway");
+    const input = option(); input.betId = "full-condition";
+    input.clientMarket = { matchId: 17, betId: 20, round: 3, game: "Dota2",
+      matchTitle: context.match, betName: "[地图3] 获胜" };
+    await placeBet(store, account, input, 0, { requirePreparedQuote: true });
+    expect(mocks.save.mock.calls[0]![1][0]).toMatchObject({ status: "pending", bet: "全场",
+      pmConditionId: "full-condition", pmTokenId: "token", clientMarket: input.clientMarket });
+  });
+
+  it("identifies the changmen map explicitly when venue metadata is missing", async () => {
+    const { placeBet } = await import("./betGateway");
+    const input = option(); input.betId = "unknown-condition";
+    await placeBet(store, account, input, 0, { requirePreparedQuote: true });
+    expect(mocks.save.mock.calls[0]![1][0]).toMatchObject({ status: "pending", bet: "changmen 盘口：[地图3] 获胜" });
+  });
+
   it("starts manual confirmation immediately but waits for the complete order write before saving a rejection", async () => {
     let finish!: () => void;
     mocks.save.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));

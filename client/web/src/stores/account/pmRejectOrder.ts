@@ -13,6 +13,7 @@ import { pmMakerAmountUsdc, pmSubmissionFromResult } from "@changmen/shared/pm_s
 import { scaleUsdtToCnyDisplay } from "@changmen/shared/currency";
 import { resolveOrderItemLabel } from "@/shared/orderItemDisplay";
 import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
+import { formatChangmenOrderBetLabel, lookupPolymarketOrderBetLabel } from "@changmen/venue-browser/polymarket/markets/orderBetLabel";
 
 /** Reject 落库选项：队名优先，避免管理端只看到 Home/Away */
 function itemLabelFromBetOption(option: BetOption): string {
@@ -43,7 +44,8 @@ function contextFromBetOption(
     odds: Number(option.odds) || 0,
     game: String(option.match?.game ?? ""),
     match: String(option.match?.title ?? ""),
-    bet: String(option.bet?.getBetName?.() ?? ""),
+    bet: lookupPolymarketOrderBetLabel(option.betId, option.itemId)
+      || formatChangmenOrderBetLabel(option.clientMarket?.betName || option.bet?.getBetName?.()),
     item: itemLabelFromBetOption(option),
     ...(link ? { link } : {}),
   };

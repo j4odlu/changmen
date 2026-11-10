@@ -53,6 +53,10 @@ export function changmenSoldOutBlocksGammaSettlement(order: VenueOrder): boolean
 /** changmen 落库行 + CLOB 刷新：绑定/成本以 RDS 为准，成交/赛果以 API 为准 */
 export function updateStoredPolymarketOrderFromClob(stored: VenueOrder, clob: VenueOrder, betLabel: string): VenueOrder {
   const base = storedVenueOrderToUsdc(stored);
+  // [changmen 扩展] 名称纠正不依赖赛果是否需要更新；终态保护仍保留全部财务事实。
+  if (betLabel && base.pmTokenId && base.pmTokenId === clob.pmTokenId
+    && base.pmConditionId && clob.pmConditionId && polymarketConditionsAgree(base.pmConditionId, clob.pmConditionId))
+    base.bet = betLabel;
   const isSell = base.pmSide === "sell" || clob.pmSide === "sell";
   if (isSell) {
     const betUsdc = clob.betMoney > 0 ? clob.betMoney : base.betMoney;

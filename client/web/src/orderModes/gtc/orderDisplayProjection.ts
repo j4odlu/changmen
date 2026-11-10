@@ -11,6 +11,7 @@ import { compareOrderLinkDesc, dropOrphanPolymarketSellGroups, filterOrdersBelon
 import { gtcMatchedOrder } from "./financialOrder";
 import { gtcOrderCardView } from "./orderCardView";
 import { lookupPolymarketOrderBetLabel } from "@changmen/venue-browser/polymarket/orders/history/orders";
+import { formatChangmenOrderBetLabel } from "@changmen/venue-browser/polymarket/markets/orderBetLabel";
 
 function originalItemText(execution: GtcExecution): string {
   const entities: Record<string, string> = { apos: "'", quot: "\"", amp: "&", lt: "<", gt: ">", nbsp: " " };
@@ -43,7 +44,7 @@ function pendingOrderRow(execution: GtcExecution): OrderRow {
     Type: "Polymarket",
     PlayerID: plan.playerId,
     Match: plan.match,
-    Bet: lookupPolymarketOrderBetLabel(plan.conditionId, plan.tokenId) || "盘口待核实",
+    Bet: lookupPolymarketOrderBetLabel(plan.conditionId, plan.tokenId) || formatChangmenOrderBetLabel(plan.bet),
     Item: originalItemText(execution),
     CreateAt: execution.createdAt,
     Status: execution.submit === "rejected" && !view.unsubmitted

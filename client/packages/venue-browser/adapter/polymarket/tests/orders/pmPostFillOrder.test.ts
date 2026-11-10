@@ -179,7 +179,7 @@ describe("buildPolymarketMatchedBuyVenueOrderFromBet", () => {
     } as never;
     option.target = "Away";
     option.itemId = "tok";
-    option.betId = "cond";
+    option.betId = "unknown-condition-for-fallback";
     const matched = new BetResult("Polymarket", true, "ok", {}, {
       success: true,
       status: "matched",
@@ -190,6 +190,7 @@ describe("buildPolymarketMatchedBuyVenueOrderFromBet", () => {
     matched.orderId = "0xm2";
     const order = await buildPolymarketMatchedBuyVenueOrderFromBet(option, matched);
     expect(order?.item).toBe("Right Side");
+    expect(order?.bet).toBe("changmen 盘口：Map 1");
   });
 
   it("falls back through dashed VS match titles", async () => {

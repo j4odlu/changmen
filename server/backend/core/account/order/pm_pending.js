@@ -1,7 +1,8 @@
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { isPmPendingOrder, validatePmSubmission } from "@changmen/shared/pm_submission";
+import { polymarketConditionsAgree } from "@changmen/shared/pm_market_assets";
 
-/** [changmen 扩展] 同一订单的 Pending→成交/拒单合并，静态信息始终由订单保管。 */
+/** [changmen 扩展] 同一订单的 Pending→成交/拒单合并，保留身份，允许同资产的原生盘口名纠正旧标签。 */
 export function preparePmPendingOrderSave(previous, incoming, playerId, provider) {
   if (provider !== "Polymarket") return incoming;
   const prevRaw = previous?.raw || {};
@@ -26,6 +27,13 @@ export function preparePmPendingOrderSave(previous, incoming, playerId, provider
     delete merged.pmRejectMoneyFixedAt;
   }
   for (const name of ["game", "match", "bet", "item", "pmConditionId", "pmTokenId", "venueMatchId", "venueItemId"]) {
+    // [changmen 扩展] 待确认旧单曾保存合场决胜局名称；不能让它永久压过 PM 后续查到的全场盘。
+    // 只接受原生标签和完整的同市场/同 token 身份，拒单说明、空值及其它资产不能改名。
+    if (name === "bet" && /^(?:全场|地图[1-9]\d*)$/.test(String(incoming.bet ?? ""))
+      && String(prevRaw.pmTokenId ?? "").trim() && prevRaw.pmTokenId === incoming.pmTokenId
+      && String(prevRaw.pmConditionId ?? "").trim() && String(incoming.pmConditionId ?? "").trim()
+      && polymarketConditionsAgree(prevRaw.pmConditionId, incoming.pmConditionId))
+      continue;
     const stored = prevRaw[name] || previous?.[name];
     if (String(stored ?? "").trim()) merged[name] = stored;
   }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BetResult } from "@changmen/client-core/models/betResult";
 import { BetOption } from "@changmen/client-core/models/betOption";
 import { persistPolymarketExecutionReject } from "./pmRejectOrder";
+import { rememberPolymarketMarketBetLabel } from "@changmen/venue-browser/polymarket/markets/orderBetLabel";
 
 const { saveOrders, refreshOrderListAfterBind } = vi.hoisted(() => ({
   saveOrders: vi.fn(),
@@ -18,6 +19,7 @@ describe("persistPolymarketExecutionReject", () => {
     saveOrders.mockReset();
     saveOrders.mockResolvedValue(undefined);
     refreshOrderListAfterBind.mockReset();
+    rememberPolymarketMarketBetLabel({ condition_id: "b1", groupItemTitle: "Match Winner", tokens: [{ token_id: "i1" }] });
   });
 
   it("skips non-Polymarket", async () => {
@@ -49,7 +51,7 @@ describe("persistPolymarketExecutionReject", () => {
     });
     const option = new BetOption("Polymarket", "m1", "b1", "i1", 10, "Home", 1.55);
     option.match = { title: "Alpha vs Beta", game: "LoL" } as never;
-    option.bet = { homeName: "Alpha", awayName: "Beta", getBetName: () => "全场" } as never;
+    option.bet = { homeName: "Alpha", awayName: "Beta", getBetName: () => "[地图3] 获胜" } as never;
     const out = await persistPolymarketExecutionReject(account, result, "api_failed", {
       betOption: option,
       linkId: 55,
@@ -57,6 +59,7 @@ describe("persistPolymarketExecutionReject", () => {
     expect(out?.status).toBe("reject");
     expect(out?.orderId).toBe("pm-rej-9-1700000000000-api_failed");
     expect(out?.item).toBe("Alpha");
+    expect(out?.bet).toBe("全场");
     // 原始 POST makerAmount=10 USDC → 落库 CNY + pmStakeUsdc
     expect(out?.pmStakeUsdc).toBe(10);
     expect(out?.betMoney).toBeCloseTo(10 * 6.65, 5);
@@ -136,5 +139,17 @@ describe("persistPolymarketExecutionReject", () => {
     await expect(persistPolymarketExecutionReject({ provider: "Polymarket", accountId: 317 } as never,
       result, "unfilled", { betOption: option })).rejects.toThrow("原始提交记录缺失");
     expect(saveOrders).not.toHaveBeenCalled();
+  });
+
+  it("labels a composed map as changmen when the venue market cannot be verified", async () => {
+    const result = Object.assign(new BetResult("Polymarket", true), { orderId: "0xunknown",
+      request: { order: { side: "BUY", makerAmount: "5000000" } }, beginTime: 100 });
+    const option = new BetOption("Polymarket", "m1", "unknown", "i1", 5, "Home", 1.8);
+    // 刷新后恢复任务只有身份快照，不依赖页面仍持有 ViewBet。
+    option.clientMarket = { matchId: 17, betId: 22, round: 3, game: "DOTA2",
+      matchTitle: "Alpha vs Beta", betName: "[地图3] 获胜" };
+    const out = await persistPolymarketExecutionReject({ provider: "Polymarket", accountId: 3 } as never,
+      result, "unfilled", { betOption: option });
+    expect(out?.bet).toBe("changmen 盘口：[地图3] 获胜");
   });
 });

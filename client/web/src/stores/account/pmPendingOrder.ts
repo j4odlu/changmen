@@ -10,6 +10,7 @@ import { saveOrders } from "@/api/order";
 import { resolveOrderItemLabel } from "@/shared/orderItemDisplay";
 import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
 import { runPendingPmOrderWrite } from "@/services/pendingPmOrderWrites";
+import { formatChangmenOrderBetLabel, lookupPolymarketOrderBetLabel } from "@changmen/venue-browser/polymarket/markets/orderBetLabel";
 
 /** [changmen 扩展] delayed/提交未知仍是同一笔订单；Pending 不代表已成交持仓。 */
 export async function persistPendingPmOrder(
@@ -26,7 +27,8 @@ export async function persistPendingPmOrder(
     createAt: submission.submittedAt, odds: Number(option.odds) || 0,
     betMoney: scaleUsdtToCnyDisplay(submission.stakeUsdc), money: 0, reward: 0,
     game: String(option.match?.game ?? ""), match,
-    bet: String(option.bet?.getBetName?.() ?? ""),
+    bet: lookupPolymarketOrderBetLabel(option.betId, option.itemId)
+      || formatChangmenOrderBetLabel(option.clientMarket?.betName || option.bet?.getBetName?.()),
     item: String(named ?? "").trim() || resolveOrderItemLabel(target, match) || target,
     clientMarket: option.clientMarket,
     pmSubmission: submission, pmSide: "buy", pmOrigin: "changmen",

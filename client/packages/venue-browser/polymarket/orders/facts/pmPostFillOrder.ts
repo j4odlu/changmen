@@ -6,7 +6,7 @@ import { isPolymarketBetResultFillConfirmed } from "./orderStatus";
 import { parsePolymarketBuyOrderFill } from "../history/orderTradeAmounts";
 import { scalePolymarketVenueOrdersForDisplay } from "./orderDisplayCurrency";
 import type { PolymarketOrderResponseLike } from "./orderTypes";
-import { lookupPolymarketOrderBetLabel } from "../../markets/orderBetLabel";
+import { formatChangmenOrderBetLabel, lookupPolymarketOrderBetLabel } from "../../markets/orderBetLabel";
 import {
   computePolymarketBuyAllInStakeUsdc,
 } from "../pmFee";
@@ -190,7 +190,8 @@ export async function buildPolymarketMatchedBuyVenueOrderFromBet(
       createAt: Number(result.beginTime) > 0 ? Number(result.beginTime) : Date.now(),
       game: option.match?.game ?? "",
       match: option.match?.title ?? "",
-      bet: lookupPolymarketOrderBetLabel(option.betId, option.itemId) || "盘口待核实",
+      bet: lookupPolymarketOrderBetLabel(option.betId, option.itemId)
+        || formatChangmenOrderBetLabel(option.clientMarket?.betName || option.bet?.getBetName?.() || option.bet?.name),
       item: String(itemName ?? "").trim(),
       pmTokenId: String(option.itemId ?? "").trim(),
       pmConditionId: String(option.betId ?? "").trim(),

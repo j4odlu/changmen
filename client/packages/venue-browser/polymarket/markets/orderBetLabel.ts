@@ -36,3 +36,10 @@ export function rememberPolymarketMarketBetLabel(market: PolymarketRawMarket): v
 export function lookupPolymarketOrderBetLabel(conditionId: string | undefined, tokenId: string | undefined): string {
   return labels.get(JSON.stringify([String(conditionId ?? "").trim().toLowerCase(), String(tokenId ?? "").trim()])) ?? "";
 }
+
+/** [changmen 扩展] 无场馆元数据时保留合场名称并标明来源；不发布到 PM 原生名称缓存。 */
+export function formatChangmenOrderBetLabel(name: string | undefined | null): string {
+  const label = String(name ?? "").trim();
+  if (label.startsWith("changmen 盘口：")) return label;
+  return `changmen 盘口：${label && label !== "盘口待核实" ? label : "未记录"}`;
+}

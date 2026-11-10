@@ -12,6 +12,7 @@ import { prepareGtcOrder, submitGtcOrder } from "./orders";
 import { notifyBet } from "@/shared/betNotification";
 import { nativeGtcNotice } from "./orderPresentation";
 import { lookupPolymarketOrderBetLabel } from "@changmen/venue-browser/polymarket/orders/history/orders";
+import { formatChangmenOrderBetLabel } from "@changmen/venue-browser/polymarket/markets/orderBetLabel";
 
 /** [changmen 扩展] 单次手动 GTC，不依赖自动下注开关、不触发另一腿或旧 FOK 编排。 */
 export async function executeManualGtc(account: PlatformAccount, input: BetOption, context: {
@@ -47,7 +48,8 @@ export async function executeManualGtc(account: PlatformAccount, input: BetOptio
     const order = await submitGtcOrder(account, prepared, {
       linkId,
       clientMarket: option.clientMarket,
-      match: context.match.title, bet: lookupPolymarketOrderBetLabel(option.betId, option.itemId) || "盘口待核实",
+      match: context.match.title, bet: lookupPolymarketOrderBetLabel(option.betId, option.itemId)
+        || formatChangmenOrderBetLabel(option.clientMarket?.betName || context.bet.getBetName()),
       item: option.target === "Home" ? context.bet.homeName : context.bet.awayName,
     }, (ack, submittedAt) => {
       const accepted = ack.success === true && Boolean(ack.orderID);

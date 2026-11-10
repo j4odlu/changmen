@@ -79,3 +79,33 @@ it("keeps ordinary venue records on their existing save path", () => {
   const ray = { orderId: "ray", provider: "RAY", status: "pending", betMoney: 100 };
   expect(preparePmPendingOrderSave(undefined, ray, 292, "RAY")).toBe(ray);
 });
+
+it("corrects a legacy Pending decider label from the same PM market while retaining strategy identity", async () => {
+  const clientMarket = { matchId: 9992, betId: 40927235, round: 3, game: "DOTA2",
+    matchTitle: "Xipto Esports vs PTime", betName: "[地图3] 获胜" };
+  await saveOrder(292, [{ ...pending, bet: clientMarket.betName, clientMarket }], "owner");
+  await saveOrder(292, [{ ...pending, status: "none", bet: "全场", pmShares: 12.9286,
+    pmFillPrice: 0.28, pmStakeUsdc: 3.768, betMoney: 25.0572 }], "owner");
+  expect(stored).toMatchObject({ bet: "全场", link: pending.link, create_at: pending.createAt,
+    raw: { bet: "全场", clientMarket, pmConditionId: pending.pmConditionId, pmTokenId: pending.pmTokenId,
+      pmSubmission: submission, pmShares: 12.9286 } });
+  const filled = structuredClone(stored);
+  // 已成交的旧单也可在后续同步中纠正，而无需重新下单或重绑。
+  stored.bet = stored.raw.bet = clientMarket.betName;
+  await saveOrder(292, [{ ...stored.raw, bet: "全场" }], "owner");
+  expect(stored).toEqual(filled);
+});
+
+it.each([
+  { bet: "全场", pmConditionId: "other-condition", pmTokenId: "token" },
+  { bet: "全场", pmConditionId: "condition", pmTokenId: "other-token" },
+  { bet: "全场", pmTokenId: "token" },
+  { bet: "全场", pmConditionId: "condition" },
+  { bet: "盘口待核实", pmConditionId: "condition", pmTokenId: "token" },
+  { bet: "[地图3] 获胜", pmConditionId: "condition", pmTokenId: "token" },
+])("preserves the known venue label for an unverified or mismatched update: %j", async patch => {
+  await saveOrder(292, [{ ...pending, bet: "地图2" }], "owner");
+  await saveOrder(292, [{ provider: "Polymarket", orderId: pending.orderId, status: "reject", ...patch }], "owner");
+  expect(stored).toMatchObject({ bet: "地图2", raw: { bet: "地图2",
+    pmConditionId: pending.pmConditionId, pmTokenId: pending.pmTokenId, pmSubmission: submission } });
+});

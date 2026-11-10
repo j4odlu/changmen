@@ -1,10 +1,17 @@
 import type { PolymarketMarketIndexEntry } from "@changmen/api-contract";
 import type { VenueOrder } from "@changmen/client-core/contract";
 import { describe, expect, it } from "vitest";
-import { lookupPolymarketOrderBetLabel, rememberPolymarketIndexBetLabel, rememberPolymarketMarketBetLabel } from "@changmen/venue-browser/polymarket/markets/orderBetLabel";
+import { formatChangmenOrderBetLabel, lookupPolymarketOrderBetLabel, rememberPolymarketIndexBetLabel, rememberPolymarketMarketBetLabel } from "@changmen/venue-browser/polymarket/markets/orderBetLabel";
 import { finalizePolymarketVenueOrders } from "@changmen/venue-browser/polymarket/orders/history/orders";
 
 describe("PM orders use native market labels instead of composer periods", () => {
+  it("marks fallback provenance without contaminating the native cache or duplicating the marker", () => {
+    const fallback = formatChangmenOrderBetLabel("[地图3] 获胜");
+    expect(fallback).toBe("changmen 盘口：[地图3] 获胜");
+    expect(formatChangmenOrderBetLabel(fallback)).toBe(fallback);
+    expect(formatChangmenOrderBetLabel("盘口待核实")).toBe("changmen 盘口：未记录");
+    expect(lookupPolymarketOrderBetLabel("fallback-condition", "fallback-token")).toBe("");
+  });
   it("keeps a full-match token labelled full match after decider projection", () => {
     rememberPolymarketIndexBetLabel({ marketId: "label-full", homeTokenId: "label-home", awayTokenId: "label-away", map: 0 } as PolymarketMarketIndexEntry);
     expect(lookupPolymarketOrderBetLabel("label-full", "label-home")).toBe("全场");

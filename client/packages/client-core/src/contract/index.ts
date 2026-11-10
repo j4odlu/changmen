@@ -136,6 +136,8 @@ export interface VenueOrder extends PolymarketVenueOrderExtras, PredictFunVenueO
   clientMarket?: OrderMarketIdentity;
   provider: PlatformId;
   orderId: string;
+  /** [changmen 扩展] RAY 响应的内部 id，用于单订单详情查询；不替代 orderId（order_number）。 */
+  rayInternalOrderId?: string;
   odds: number;
   createAt: number;
   betMoney: number;

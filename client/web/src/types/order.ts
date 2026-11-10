@@ -25,6 +25,8 @@ export interface OrderRow {
   /** [changmen 扩展] 尚未落库的只读展示行；不能改绑或卖出，原单监控仍可取消剩余挂单。 */
   DisplayOnly?: true;
   OrderID?: number | string;
+  /** [changmen 扩展] RAY 内部详情查询 id，独立于 OrderID 和 Link。 */
+  RayInternalOrderId?: string;
   Link?: number;
   Type?: PlatformId | string;
   Match?: string;

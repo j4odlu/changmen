@@ -13,6 +13,8 @@ import { loadEmbeddedUserOrders } from "@/composables/adminUserWorkspaceMount";
 import { useRayOrderContextStore } from "@/runtime/rayOrderMonitor/contextStore";
 import { projectRaySubmissionPreviews } from "@/runtime/rayOrderMonitor/submissionPreview";
 import { isFootballOrderRow } from "@/shared/orderDomain";
+import { visibleMakeupOrders } from "@/shared/makeupVisibility";
+import { rayLinkMonitorOrder } from "@/shared/rayLinkMonitor";
 import { mergePendingMakeupIntoOrderGroups, orderLinkMapEntries } from "@/shared/orderLink";
 import { useActiveBetRunStore } from "@/stores/activeBetRunStore";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
@@ -53,7 +55,7 @@ const domainFilteredOrders = computed(() => {
 const mergedOrderEntries = computed(() => {
   const merged = mergePendingMakeupIntoOrderGroups(
     domainFilteredOrders.value,
-    loseOrders.value,
+    visibleMakeupOrders(loseOrders.value, config.value.makeUp),
     config.value.makeProfit,
     cancelledOrders.value,
     userStore.extensionPrefs.makeupOddsBand,
@@ -204,9 +206,9 @@ async function onLinkRebindDone() {
       <template v-if="$slots['row-actions']" #row-actions="{ row, link, rows }">
         <slot name="row-actions" :row="row" :link="link" :rows="rows" />
       </template>
-      <template #group-monitor="{ link, rows }">
+      <template #row-monitor="{ row, link, rows }">
         <RayLinkMonitorCard
-          v-if="!embedded"
+          v-if="!embedded && row === rayLinkMonitorOrder(rows)"
           :rows="rows"
           :run="activeRunForLink(link)"
           :monitor="rayMonitorForLink(link)"

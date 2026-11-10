@@ -68,6 +68,8 @@ export function rowToOrder(r) {
     money = 0;
   return {
     OrderID: r.order_id,
+    ...(r.provider === "RAY" && String(raw.rayInternalOrderId ?? "").trim()
+      ? { RayInternalOrderId: String(raw.rayInternalOrderId).trim() } : {}),
     Link: resolveStoredLink(r.link, r.order_id, r.create_at),
     Type: r.provider || "",
     ...(clientMarket ? { ClientMarket: clientMarket } : {}),

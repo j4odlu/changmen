@@ -2,6 +2,7 @@ import type { RayOrderContext } from "@/runtime/rayOrderMonitor/types";
 import type { RayMonitoringState } from "@/runtime/orderMonitoring/rayState";
 import type { ActiveBetRun } from "@/types/activeBetRun";
 import type { OrderRow } from "@/types/order";
+import { isMakeupPendingOrderRow } from "@/shared/orderLink";
 
 export type RayLinkMonitorTone = "neutral" | "info" | "warning" | "danger" | "success";
 
@@ -30,10 +31,10 @@ function statusText(value: unknown): string {
   const status = normalizedStatus(value);
   if (status === "reject")
     return "拒单";
-  if (status === "pending")
-    return "待确认";
+  if (status === "pending" || status === "rayconfirming")
+    return "确认中";
   if (status === "none")
-    return "未结算";
+    return "待结算";
   if (status === "win")
     return "赢";
   if (status === "lose")
@@ -79,6 +80,7 @@ export function buildRayLinkMonitorModel(
   const observedAt = Number(monitor?.updatedAt) || Number(run?.updatedAt) || Number(row?.CreateAt) || 0;
   const rayLeg = run?.legs.find(leg => isRayProvider(leg.platform));
   const rowStatus = normalizedStatus(row?.Status);
+  const makeupRow = rows.find(isMakeupPendingOrderRow);
 
   // [changmen 扩展] 预览只补充确认前的拒单事实，不能遮住正式拒单结果和补单进度。
   const refusalConfirmed = monitor?.status === "rejected" || rayLeg?.status === "rejected"
@@ -180,7 +182,8 @@ export function buildRayLinkMonitorModel(
     }
   }
 
-  if (run?.phase === "makeup" || rayLeg?.status === "makeup") {
+  // [changmen 扩展] 补单状态来自本 Link 的队列显示行，正常腿监控仍保留原始确认上下文。
+  if (makeupRow) {
     return {
       visible: true,
       tone: "warning",
@@ -189,22 +192,8 @@ export function buildRayLinkMonitorModel(
       orderId,
       venueStatus,
       observedAt,
-      detail: rayLeg?.detail,
+      detail: makeupRow.Player?.UserName,
       isLive: true,
-    };
-  }
-
-  if (run?.overallLabel === "自动补单已关闭") {
-    return {
-      visible: true,
-      tone: "danger",
-      label: "拒单已确认",
-      summary: "自动补单已关闭，未执行补单",
-      orderId,
-      venueStatus,
-      observedAt,
-      detail: rayLeg?.detail,
-      isLive: false,
     };
   }
 
@@ -213,12 +202,12 @@ export function buildRayLinkMonitorModel(
       visible: true,
       tone: "danger",
       label: "拒单已确认",
-      summary: "RAY 场馆订单已拒绝，请检查补单处理",
+      summary: "RAY 场馆订单已拒绝",
       orderId,
       venueStatus: "拒单",
       observedAt,
-      detail: rayLeg?.detail,
-      isLive: Boolean(run),
+      detail: rayLeg?.detail?.startsWith("自动补单已关闭") ? undefined : rayLeg?.detail,
+      isLive: Boolean(run && !run.terminalAt),
     };
   }
 

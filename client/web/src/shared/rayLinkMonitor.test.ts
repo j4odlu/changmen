@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { buildRayLinkMonitorModel } from "./rayLinkMonitor";
 
 describe("buildRayLinkMonitorModel", () => {
+  it.each(["Pending", "RayConfirming"])("local %s describes confirmation work without claiming native Pending", (Status) => {
+    const rows = [{ Link: 12, Type: "RAY", OrderID: "original", Status }];
+    expect(buildRayLinkMonitorModel(rows).venueStatus).toBe("确认中");
+    expect(buildRayLinkMonitorModel(rows, null, null, { phase: "watching", status: "pending", updatedAt: 100 }))
+      .toMatchObject({ label: "持续监控中", venueStatus: "确认中", isLive: true });
+  });
   it("keeps a confirmed late refusal and its makeup handoff visible while the row is still a preview", () => {
     const model = buildRayLinkMonitorModel([{ Link: 12, Type: "RAY", OrderID: "original", Status: "Reject", DisplayOnly: true }],
       null, { status: "rejected", boundOrderId: "original", rejectDelayMs: 5000,
@@ -12,7 +18,8 @@ describe("buildRayLinkMonitorModel", () => {
     expect(model.summary).not.toContain("等待正式确认");
   });
   it("keeps an active makeup progress visible while the refused row is still a preview", () => {
-    const model = buildRayLinkMonitorModel([{ Link: 12, Type: "RAY", OrderID: "original", Status: "Reject", DisplayOnly: true }],
+    const model = buildRayLinkMonitorModel([{ Link: 12, Type: "RAY", OrderID: "original", Status: "Reject", DisplayOnly: true },
+      { Link: 12, OrderID: "makeup-1", Status: "Makeup", Player: { UserName: "补单执行中" } }],
       { phase: "makeup", legs: [{ platform: "RAY", status: "makeup", detail: "补单执行中" }] } as never);
     expect(model).toMatchObject({ label: "补单处理中", detail: "补单执行中", isLive: true });
   });
@@ -79,11 +86,13 @@ describe("buildRayLinkMonitorModel", () => {
         phase: "syncing",
         overallLabel: "自动补单已关闭",
         updatedAt: 200,
+        terminalAt: 200,
         legs: [{ platform: "RAY", status: "rejected", detail: "自动补单已关闭，未执行补单" }],
       } as never,
     );
     expect(model.label).toBe("拒单已确认");
-    expect(model.summary).toBe("自动补单已关闭，未执行补单");
+    expect(model.summary).not.toContain("自动补单已关闭");
+    expect(model.detail).toBeUndefined();
     expect(model.isLive).toBe(false);
   });
 });

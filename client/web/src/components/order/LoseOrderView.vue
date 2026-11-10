@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { ElMessageBox } from "element-plus";
 import { storeToRefs } from "pinia";
+import { computed } from "vue";
 import { formatDate } from "@changmen/client-core/shared/format";
+import { visibleMakeupOrders } from "@/shared/makeupVisibility";
 import { useUserStore } from "@/stores/userStore";
 import { useLoseOrderStore } from "@/stores/loseOrderStore";
 import "@/styles/lose-order.css";
 
 const loseStore = useLoseOrderStore();
 const user = useUserStore();
-const { manualOrders } = storeToRefs(loseStore);
+const { orders } = storeToRefs(loseStore);
 const { config } = storeToRefs(user);
+const manualOrders = computed(() => [...visibleMakeupOrders(orders.value, config.value.makeUp).values()]
+  .filter(order => !order.isLinkBoundMakeup()));
 
 function runtimeLabel(order: (typeof manualOrders.value)[number]) {
   if (String(order.pendingVenueOrderId ?? "").trim())
@@ -46,7 +50,7 @@ function remove(betId: number) {
 </script>
 
 <template>
-  <fieldset v-if="manualOrders.length" class="loseorder-container">
+  <fieldset v-if="config.makeUp && manualOrders.length" class="loseorder-container">
     <legend>手动补单 ({{ manualOrders.length }}笔)</legend>
     <div class="loseorders">
       <div v-for="item in manualOrders" :key="item.betId" class="order">

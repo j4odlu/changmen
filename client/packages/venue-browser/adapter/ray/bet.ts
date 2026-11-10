@@ -12,6 +12,9 @@ import { accountGet, accountPostForm } from "./accountHttp";
 import { getCurrency } from "@changmen/shared/currency";
 import { PLATFORMS } from "../shared/platforms";
 import { useMessageStore } from "../shared/webBridge";
+import { beginRayNativeOrderDisplay } from "./nativeOrderDisplay";
+export { lookupRayNativeOrderDisplay, resetRayNativeOrderDisplay } from "./nativeOrderDisplay";
+export type { RayNativeOrderDisplayStatus } from "./nativeOrderDisplay";
 
 interface RayOddsRow {
   odds_id: string | number;
@@ -37,6 +40,9 @@ interface RayOddsRow {
 }
 
 interface RayOrderDetail {
+  live?: number;
+  risk?: number;
+  win?: number;
   title?: string;
   odds?: number | string;
   stake?: number;
@@ -49,6 +55,8 @@ interface RayOrderDetail {
 }
 
 interface RayOrderRow {
+  id?: string | number;
+  live?: number;
   order_number?: string | number;
   status?: number;
   win?: number;
@@ -88,6 +96,8 @@ function mapRayOrderRow(row: RayOrderRow): VenueOrder | null {
   return {
     provider: PLATFORMS.RAY,
     orderId: String(row.order_number ?? ""),
+    // [changmen 扩展] 分开保留内部查询 id，订单关联和去重继续使用原 order_number。
+    ...(row.id != null && String(row.id).trim() ? { rayInternalOrderId: String(row.id).trim() } : {}),
     odds: Number(detail.odds) || 0,
     createAt: parseVenueCreateAt(row.create_time),
     game: String(detail.game_id ?? ""),
@@ -268,12 +278,15 @@ export const rayProvider: PlatformProvider = {
   },
 
   async getOrders(account) {
-    const res = await accountGet<{ code?: number; result?: RayOrderRow[] }>(
+    const display = beginRayNativeOrderDisplay(account);
+    const res = await accountGet<{ code?: number; result?: RayOrderRow[]; time?: string }>(
       account,
       RAY_A8_V2.order,
       { forceDirect: true },
     );
     if (res.code !== 200 || !Array.isArray(res.result)) return [];
+    try { display(res.result, res.time); }
+    catch { /* 只读显示异常不能影响原始查单和拒单检测。 */ }
     const orders: VenueOrder[] = [];
     for (const row of res.result) {
       const mapped = mapRayOrderRow(row);

@@ -161,6 +161,13 @@ describe("rayProvider.getOrders", () => {
     accountGet.mockReset();
   });
 
+  it.each([394004085, "394004085"])("preserves native id %s separately from the existing order identity and financial mapping", async (id) => {
+    accountGet.mockResolvedValue({ code: 200, result: [{ id, order_number: "R-1", status: 0, win: -1,
+      create_time: "2024-01-01 12:00:00", detail: [{ title: "获胜者\nAway", odds: 2.21, stake: 91, match_name: "A vs B", match_stage: "final" }] }] });
+    const orders = await rayProvider.getOrders!(account);
+    expect(orders[0]).toMatchObject({ orderId: "R-1", rayInternalOrderId: "394004085", status: "none", odds: 2.21, betMoney: 91, money: 0 });
+  });
+
   it("status=4 映射为 reject（对齐 A8 vYe）", async () => {
     accountGet.mockResolvedValue({
       code: 200,
@@ -191,6 +198,7 @@ describe("rayProvider.getOrders", () => {
     const orders = await rayProvider.getOrders!(account);
     expect(orders[0]!.status).toBe("reject");
     expect(orders[0]!.orderId).toBe("R-1");
+    expect(orders[0]).not.toHaveProperty("rayInternalOrderId");
     expect(orders[0]).toMatchObject({ venueMatchId: "38450996", venueItemId: "76390520", venueRejectReason: "系统拒绝" });
     expect(orders[0]!.venueSettledAt).toBe(new Date("2024-01-01T12:00:05").getTime());
   });

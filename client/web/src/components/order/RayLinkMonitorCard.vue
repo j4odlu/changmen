@@ -6,8 +6,10 @@ import { formatOrderTime } from "@changmen/client-core/shared/format";
 import { computed, ref } from "vue";
 import { rayMonitoring } from "@/runtime/orderMonitoring/rayState";
 import { buildRayLinkMonitorModel, rayLinkMonitorOrder } from "@/shared/rayLinkMonitor";
+import { projectRayLinkMonitorDisplay } from "@/shared/rayOrderDisplay";
 import { useAccountStore } from "@/stores/accountStore";
 import { useUserStore } from "@/stores/userStore";
+import { useRayOrderDisplay } from "./controllers/useRayOrderDisplay";
 
 const props = defineProps<{
   rows: OrderRow[];
@@ -17,12 +19,18 @@ const props = defineProps<{
 
 const expanded = ref(false);
 const user = useUserStore(); const accounts = useAccountStore();
+const rayStatusClass = useRayOrderDisplay();
 const model = computed(() => {
   const row = rayLinkMonitorOrder(props.rows);
   const monitoring = user.isLoggedIn && !accounts.adminWorkspacePreview && rayMonitoring.owner === String(user.userId)
     ? rayMonitoring.orders.get(`${row?.PlayerID}:${row?.OrderID}`)
     : undefined;
-  return buildRayLinkMonitorModel(props.rows, props.run, props.monitor, monitoring);
+  const result = buildRayLinkMonitorModel(props.rows, props.run, props.monitor, monitoring);
+  const display = row ? rayStatusClass(row) : undefined;
+  const projected = projectRayLinkMonitorDisplay(result, row, display);
+  // 仅隐藏明确结束的任务；独立原单监控优先，重试/等待恢复及 H5 显示终态不算结束。
+  const closed = monitoring ? monitoring.phase === "closed" : props.monitor?.status === "closed";
+  return closed ? { ...projected, visible: false } : projected;
 });
 </script>
 
@@ -36,6 +44,7 @@ const model = computed(() => {
       type="button"
       class="ray-link-monitor__summary"
       :aria-expanded="expanded"
+      :title="model.summary"
       @click="expanded = !expanded"
     >
       <span class="ray-link-monitor__signal" aria-hidden="true" />
@@ -44,12 +53,12 @@ const model = computed(() => {
           <strong>RAY 订单监控</strong>
           <em>{{ model.label }}</em>
         </span>
-        <span class="ray-link-monitor__subtitle">{{ model.summary }}</span>
       </span>
       <span class="ray-link-monitor__chevron" aria-hidden="true">⌄</span>
     </button>
 
     <div v-if="expanded" class="ray-link-monitor__detail">
+      <p class="ray-link-monitor__note">{{ model.summary }}</p>
       <div class="ray-link-monitor__fact">
         <span>场馆单号</span>
         <strong :title="model.orderId || '尚未绑定'">{{ model.orderId || "尚未绑定" }}</strong>
@@ -73,10 +82,10 @@ const model = computed(() => {
 .ray-link-monitor {
   --monitor-accent: #8996aa;
   --monitor-bg: rgba(137, 150, 170, 0.09);
-  margin: 5px 2px 2px;
+  margin: 4px 0 0;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--monitor-accent) 44%, transparent);
-  border-radius: 7px;
+  border-radius: 4px;
   background: linear-gradient(135deg, var(--monitor-bg), rgba(14, 21, 35, 0.34));
   box-shadow: inset 3px 0 0 var(--monitor-accent);
   white-space: normal;
@@ -108,7 +117,9 @@ const model = computed(() => {
   gap: 7px;
   align-items: center;
   width: 100%;
-  padding: 7px 8px 7px 9px;
+  padding: 3px 6px;
+  min-height: 24px;
+  line-height: 18px;
   color: #dfe8f6;
   text-align: left;
   border: 0;
@@ -157,17 +168,6 @@ const model = computed(() => {
   line-height: 15px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--monitor-accent) 12%, transparent);
-}
-
-.ray-link-monitor__subtitle {
-  display: block;
-  margin-top: 2px;
-  overflow: hidden;
-  color: rgba(205, 217, 235, 0.66);
-  font-size: 10px;
-  line-height: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .ray-link-monitor__chevron {

@@ -493,6 +493,7 @@
 }
 
 .orders .status.None,
+.orders .status.RayPending,
 .orders .status.RayConfirming,
 .orders .status.Pending {
   color: #aeaeae;
@@ -500,6 +501,7 @@
   border: 1px solid #aeaeae;
 }
 
+.orders .status.RayPending,
 .orders .status.RayConfirming {
   color: #e6a23c;
 }
@@ -511,6 +513,20 @@
 
 .orders .status.RayConfirming::after {
   content: "确认中";
+}
+
+.orders .status.RayPending::after {
+  content: "待确认";
+}
+
+.orders .status.RaySettled {
+  color: #aeaeae;
+  background: rgba(174, 174, 174, 0.1);
+  border: 1px solid #aeaeae;
+}
+
+.orders .status.RaySettled::after {
+  content: "已结算";
 }
 
 .orders .status.Win {

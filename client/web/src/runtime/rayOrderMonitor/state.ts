@@ -1,5 +1,6 @@
 /** [changmen 扩展] 原单监控的只读展示状态，按用户、账号、单号隔离。 */
 import { reactive } from "vue";
+import { resetRayNativeOrderDisplay } from "@changmen/venue-browser/adapter/ray/bet";
 
 export interface RayMonitoringState { phase: "watching" | "closed"; status?: string; error?: string; updatedAt: number }
 export const rayMonitoring = reactive({ owner: "", orders: new Map<string, RayMonitoringState>() });
@@ -9,4 +10,4 @@ export function setRayMonitoring(owner: string, player: number, id: string | nul
   if (rayMonitoring.owner !== owner) { rayMonitoring.owner = owner; rayMonitoring.orders.clear(); }
   rayMonitoring.orders.set(`${player}:${id}`, { ...state, updatedAt: Date.now() });
 }
-export function resetRayMonitoring(): void { rayMonitoring.owner = ""; rayMonitoring.orders.clear(); }
+export function resetRayMonitoring(): void { rayMonitoring.owner = ""; rayMonitoring.orders.clear(); resetRayNativeOrderDisplay(); }

@@ -24,6 +24,7 @@ import { useOrderListActions } from "./controllers/useOrderListActions";
 import { useOrderListLiveQuotes } from "./controllers/useOrderListLiveQuotes";
 import { useOrderLinkRebind } from "./controllers/useOrderLinkRebind";
 import { useOrderListLabels } from "./controllers/useOrderListLabels";
+import { useRayOrderDisplay } from "./controllers/useRayOrderDisplay";
 
 const props = withDefaults(
   defineProps<{
@@ -57,6 +58,7 @@ const { pfMatchText, pfBetText, pfItemText, peObserveTag } = useOrderListLabels(
 const { statusClass, showPmSellButton, showPfSellButton, onPmSell, onPfSell, onCancelMakeup,
   isPmManualSellInFlight, isPfManualSellInFlight } = useOrderListActions(props, betId => emit("cancelMakeup", betId));
 const liveQuotes = useOrderListLiveQuotes(props);
+const rayStatusClass = useRayOrderDisplay();
 const { drag, badgeClass, badgeTitle, onBadgePointerDown, onBadgePointerMove,
   onBadgePointerUp, onBadgePointerCancel } = useOrderLinkRebind(props, () => emit("linkRebindDone"));
 
@@ -109,7 +111,7 @@ function displayBlocks(rows: OrderRow[]) {
             />
             <OrderStatusBadge :status-class="block.row.Status" />
           </div>
-          <OrderStatusBadge v-else :status-class="statusClass(block.row)" />
+          <OrderStatusBadge v-else :status-class="rayStatusClass(block.row) ?? statusClass(block.row)" />
           <div class="platform flex" :class="platformClass(block.row)">
             <span
               :class="badgeClass(block.row)"
@@ -219,8 +221,11 @@ function displayBlocks(rows: OrderRow[]) {
               <template v-else-if="isMakeupCancelledOrderRow(block.row)">
                 盈亏：补单已手动取消
               </template>
-              <template v-else-if="isPendingRow(block.row)">
-                盈亏：待结算
+              <template v-else-if="['Reject', 'Return', 'RaySettled'].includes(rayStatusClass(block.row) ?? '') && ['None', 'Pending', 'RayConfirming'].includes(String(block.row.Status))">
+                盈亏：{{ rayStatusClass(block.row) === 'Reject' ? '拒单' : rayStatusClass(block.row) === 'Return' ? '退回' : '已结算' }}
+              </template>
+              <template v-else-if="isPendingRow(block.row) || ['RayPending', 'None'].includes(rayStatusClass(block.row) ?? '')">
+                盈亏：{{ rayStatusClass(block.row) === "RayPending" ? "待确认" : "待结算" }}
               </template>
               <template v-else>
                 盈亏：{{ toFixed(Number(block.row.Money) || 0, 0) }}
@@ -244,6 +249,7 @@ function displayBlocks(rows: OrderRow[]) {
           <div class="time">
             买入时间：{{ formatOrderTime(block.row.CreateAt || 0) }}
           </div>
+          <slot name="row-monitor" :row="block.row" :link="link" :rows="rows" />
           <div v-if="$slots['row-actions']" class="order-list__row-actions">
             <slot name="row-actions" :row="block.row" :link="link" :rows="rows" />
           </div>

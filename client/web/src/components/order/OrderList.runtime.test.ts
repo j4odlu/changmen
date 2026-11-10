@@ -19,6 +19,7 @@ import tagSource from "./presentation/OrderTag.vue?raw";
 import OrderLiveQuoteLine from "./presentation/OrderLiveQuoteLine.vue";
 import liveSource from "./presentation/OrderLiveQuoteLine.vue?raw";
 import { __testPushPolymarketMarketQuote as pushQuote, __testResetPolymarketMarketQuoteHub as resetQuotes } from "@changmen/venue-browser/polymarket";
+import * as pmWs from "@changmen/venue-browser/polymarket/ws";
 
 const api = vi.hoisted(() => ({ pmSell: vi.fn(), pfSell: vi.fn(), confirm: vi.fn() }));
 const flags = reactive({ pmBusy: false, pfBusy: false, pmClosing: false });
@@ -61,8 +62,9 @@ beforeEach(() => {
   vi.stubGlobal("window", new EventTarget());
   vi.stubGlobal("document", { body: { classList: { remove: vi.fn() } } });
   api.confirm.mockResolvedValue("confirm");
+  vi.spyOn(pmWs, "startPolymarketMarketWs").mockReturnValue({ send: vi.fn(), stop: vi.fn() });
 });
-afterEach(() => { for (const app of apps.splice(0)) app.unmount(); resetQuotes(); vi.unstubAllGlobals(); });
+afterEach(() => { for (const app of apps.splice(0)) app.unmount(); resetQuotes(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 function mount(row: OrderRow) {
   const cancelled = vi.fn();
   const props = reactive({ orderEntries: [[1791558222471, [row]]] as Array<[number, OrderRow[]]>, allowPmSell: false, allowPfSell: false });

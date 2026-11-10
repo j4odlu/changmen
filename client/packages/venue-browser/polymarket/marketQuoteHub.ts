@@ -223,11 +223,13 @@ function mergedAssetHas(assetId: string): boolean {
 /**
  * 业务层登记本消费者要订的 CLOB token。
  * @param force 跳过消费者同集合短路；官方连接仍只发送实际差集，重连由 onOpen 全量恢复。
+ * @param snapshotOnAdd 新增 token 时向转发请求盘口快照，供安静持仓立即显示买一；默认沿用原行为。
  */
 export function registerPolymarketQuoteAssets(
   consumerId: PolymarketQuoteConsumerId,
   assetIds: string[],
   force = false,
+  snapshotOnAdd = false,
 ): void {
   const key = String(consumerId || "").trim() || "anon";
   const next = new Set<string>();
@@ -253,8 +255,9 @@ export function registerPolymarketQuoteAssets(
     return;
   // 新 consumer 挂到已在跑的 hub：打一次 initialDump（本 consumer 首次登记）
   const isNewConsumer = !consumers.has(key);
+  const needsSnapshot = snapshotOnAdd && [...next].some(id => !prev.has(id));
   consumers.set(key, next);
-  resubscribe(hadTransport && isNewConsumer);
+  resubscribe(hadTransport && (isNewConsumer || needsSnapshot));
 }
 
 /** 业务层注销消费者（collector stop / 关体育 Tab）。 */

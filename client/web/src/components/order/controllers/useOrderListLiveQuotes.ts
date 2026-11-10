@@ -1,11 +1,12 @@
-import { computed, onUnmounted, ref } from "vue";
+import { computed, getCurrentInstance, onMounted, onUnmounted, ref, watch } from "vue";
 import type { OrderRow } from "@/types/order";
 import type { OrderListSource } from "../orderListTypes";
 import { useOddsStore } from "@/stores/oddsStore";
 import { useSportOddsStore } from "@/stores/sportOddsStore";
 import { PLATFORMS } from "@changmen/venue-browser/adapter/shared";
 import { resolvePmRemainingShares, getPolymarketMarketBestBid, getPolymarketSportBestBid,
-  onPolymarketMarketBid, onPolymarketSportBid } from "@changmen/venue-browser/polymarket";
+  onPolymarketMarketBid, onPolymarketSportBid,
+  registerPolymarketQuoteAssets, unregisterPolymarketQuoteConsumer } from "@changmen/venue-browser/polymarket";
 import { clobPriceFromDecimalOdds, clobPriceFromFoOddsEntry, formatPolymarketApiDecimal,
   isPmBuyOrderListRow, isPmManuallySoldBuy, pmBuyLifecycleTagText, pmOddsTextFromClobPrice,
   pmUnrealizedPnlAtLiveCny, formatLiveUnrealizedPnlText } from "@/shared/pmOrderDisplay";
@@ -64,6 +65,24 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
   };
   const stopMarketBidWatch = onPolymarketMarketBid(bumpBidIfWatched);
   const stopSportBidWatch = onPolymarketSportBid(bumpBidIfWatched);
+
+  // [changmen 扩展] 持仓报价不依赖赛事目录；每个订单列表独立登记，卸载时仅释放自身。
+  const pmQuoteConsumer = `orders:${getCurrentInstance()!.uid}`;
+  onMounted(() => {
+    watch(() => {
+      const tokens = new Set<string>();
+      for (const [, rows] of props.orderEntries) {
+        for (const row of rows) {
+          if (!pmShowLivePrice(row) || resolvePmRemainingShares(row) <= 0)
+            continue;
+          const tokenId = String(row.PmTokenId ?? "").trim();
+          if (tokenId)
+            tokens.add(tokenId);
+        }
+      }
+      return [...tokens];
+    }, tokens => registerPolymarketQuoteAssets(pmQuoteConsumer, tokens, false, true), { immediate: true });
+  });
 
   // 在 setup 同步订阅（勿等 onMounted）：避免首屏到 mount 之间漏掉 fo/sport 写入
   stopOddsLiveWatch = oddsStore.$onAction(({ name, args, after }) => {
@@ -217,6 +236,7 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
     stopOddsLiveWatch = undefined;
     stopSportLiveWatch?.();
     stopSportLiveWatch = undefined;
+    unregisterPolymarketQuoteConsumer(pmQuoteConsumer);
   });
 
   return { pmShowLivePrice, pmLivePriceText, pmLiveUnrealizedPnlCny, pmLiveUnrealizedPnlText, pmShowLiveOdds, pmLastLineOddsText, pfShowLivePrice, pfLivePriceText, pfLiveUnrealizedPnlCny, pfLiveUnrealizedPnlText, pfShowLiveOdds, pfLastLineOddsText };

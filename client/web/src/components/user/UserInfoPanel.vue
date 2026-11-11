@@ -147,7 +147,10 @@ const shownUserName = computed(() =>
             type="warning"
             title="管理系统"
             aria-label="管理系统"
-            @click="router.push({ name: 'admin' })"
+            tag="a"
+            :href="router.resolve({ name: 'admin' }).href"
+            target="_blank"
+            rel="noopener noreferrer"
           />
           <el-button
             v-if="showFootballSettings && !embedded"

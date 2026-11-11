@@ -5,6 +5,11 @@ import App from "./App.vue";
 
 const mocks = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn(), rayStart: vi.fn(), user: { isLoggedIn: true, userId: "owner", extensionPrefs: { pmGtcV1Participant: false, pmArbOrderMode: "FOK", uiTheme: "default" } } }));
 const rayStop = vi.hoisted(() => vi.fn());
+vi.mock("vue-router", async () => {
+  const { reactive } = await import("vue");
+  const route = reactive({ matched: [{}], meta: { requiresAdmin: false } });
+  return { useRoute: () => route };
+});
 vi.mock("@/stores/orderStore", async () => {
   const { reactive } = await import("vue");
   const orders = reactive({ orders: new Map<number, { OrderID: string; PmGtcExecutionId?: string }[]>() });
@@ -48,11 +53,14 @@ async function flush() { await nextTick(); await vi.dynamicImportSettled(); awai
 async function user() { return (await import("@/stores/userStore")).useUserStore() as unknown as typeof mocks.user; }
 async function orders() { return (await import("@/stores/orderStore")).useOrderStore(); }
 async function accounts() { return (await import("@/stores/accountStore")).useAccountStore(); }
+async function route() { return (await import("vue-router")).useRoute(); }
 beforeEach(async () => {
   resetGtcOrderProjection(); vi.clearAllMocks();
   (await orders()).orders = new Map(); (await accounts()).adminWorkspacePreview = false;
   const state = await user(); state.isLoggedIn = true; state.userId = "owner";
   Object.assign(state.extensionPrefs, { pmGtcV1Participant: false, pmArbOrderMode: "FOK" });
+  const currentRoute = await route(); currentRoute.meta.requiresAdmin = false;
+  currentRoute.matched = [{} as typeof currentRoute.matched[number]];
 });
 afterEach(() => { app?.unmount(); app = undefined; resetGtcOrderProjection(); });
 function mount() {
@@ -62,6 +70,26 @@ function mount() {
 }
 
 describe("gTC recovery follows owned original orders", () => {
+  it("does not start user venue runtimes on a direct admin visit, and resumes them on the user page", async () => {
+    const currentRoute = await route(); currentRoute.meta.requiresAdmin = true;
+    mount(); await flush();
+    expect(mocks.start).not.toHaveBeenCalled(); expect(mocks.rayStart).not.toHaveBeenCalled();
+    currentRoute.meta.requiresAdmin = false; await flush();
+    expect(mocks.start).toHaveBeenCalledExactlyOnceWith("owner"); expect(mocks.rayStart).toHaveBeenCalledOnce();
+    currentRoute.meta.requiresAdmin = true; await flush();
+    expect(mocks.stop).toHaveBeenCalledOnce(); expect(rayStop).toHaveBeenCalledTimes(2);
+    currentRoute.meta.requiresAdmin = false; await flush();
+    expect(mocks.start).toHaveBeenCalledTimes(2); expect(mocks.rayStart).toHaveBeenCalledTimes(2);
+  });
+  it("waits for the initial route before starting user venue runtimes", async () => {
+    const currentRoute = await route(); currentRoute.matched = [];
+    mount(); await flush();
+    expect(mocks.start).not.toHaveBeenCalled(); expect(mocks.rayStart).not.toHaveBeenCalled();
+    currentRoute.meta.requiresAdmin = true;
+    currentRoute.matched = [{} as typeof currentRoute.matched[number]];
+    await flush();
+    expect(mocks.start).not.toHaveBeenCalled(); expect(mocks.rayStart).not.toHaveBeenCalled();
+  });
   it("changing owner restarts the RAY monitor and entering preview stops it", async () => {
     mount(); await flush(); expect(mocks.rayStart).toHaveBeenCalledOnce();
     (await user()).userId = "next-owner"; await flush(); expect(mocks.rayStart).toHaveBeenCalledTimes(2);

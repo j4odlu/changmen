@@ -29,6 +29,8 @@ import { useRayOrderDisplay } from "./controllers/useRayOrderDisplay";
 const props = withDefaults(
   defineProps<{
     orderEntries: ReadonlyArray<OrderListEntry>;
+    /** 管理端仅展示订单记录，不订阅行情或显示实时估值。 */
+    liveQuotes?: boolean;
     loading?: boolean;
     playerLabel?: (row: OrderRow) => string;
     platformClass?: (row: OrderRow) => string | undefined;
@@ -41,6 +43,7 @@ const props = withDefaults(
   }>(),
   {
     loading: false,
+    liveQuotes: true,
     playerLabel: () => "",
     platformClass: () => undefined,
     allowLinkRebind: false,

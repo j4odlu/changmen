@@ -11,6 +11,7 @@ import { useOrderStore } from "@/stores/orderStore";
 import { useUserStore } from "@/stores/userStore";
 import { resetRayMonitoring, setRayMonitoring } from "@/runtime/orderMonitoring/rayState";
 import OrderView from "./OrderView.vue";
+import { __testPushPolymarketMarketQuote as pushQuote, __testResetPolymarketMarketQuoteHub as resetQuotes } from "@changmen/venue-browser/polymarket";
 
 vi.mock("element-plus/es/components/base/style/css", () => ({}));
 vi.mock("element-plus/es/components/button/style/css", () => ({}));
@@ -58,6 +59,21 @@ function expectNoMakeupExecution(html: string) {
 }
 
 beforeEach(() => { sessionStorage.clear(); resetRayMonitoring(); vi.restoreAllMocks(); });
+
+it("shows cached live PM valuation on the user page but keeps admin user previews on stored order data", async () => {
+  const state = setup();
+  state.orders.orders.set(link, [{ OrderID: "pm", Link: link, Type: "Polymarket", PmSide: "buy", Status: "None",
+    Item: "Home", BetMoney: 100, Odds: 2, PmTokenId: "preview-token", PmShares: 20, PmStakeUsdc: 10, PmFillPrice: 0.5 }]);
+  pushQuote("preview-token", 0.6, 0.55);
+  try {
+    const userHtml = await state.render();
+    expect(userHtml).toContain("浮盈"); expect(userHtml).toContain("当前可卖价");
+    const adminHtml = await state.render(true);
+    expect(adminHtml).toContain("买入价"); expect(adminHtml).toContain("待结算");
+    expect(adminHtml).not.toMatch(/浮盈|浮亏|当前可卖价|当前赔率/);
+  }
+  finally { resetQuotes(); }
+});
 
 function elementsWithClass(node: RootNode | TemplateChildNode, className: string): ElementNode[] {
   const matches = node.type === NodeTypes.ELEMENT && node.props.some(prop => prop.type === NodeTypes.ATTRIBUTE

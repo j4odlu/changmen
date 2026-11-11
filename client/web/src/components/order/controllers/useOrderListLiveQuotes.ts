@@ -15,8 +15,6 @@ import { isPfBuyOrderListRow, isPfManuallySoldBuy, pfBuyLifecycleTagText, pfOdds
 
 /** Read-only order quotes; subscribe synchronously and release both subscriptions on unmount. */
 export function useOrderListLiveQuotes(props: OrderListSource) {
-  let stopOddsLiveWatch: (() => void) | undefined;
-  let stopSportLiveWatch: (() => void) | undefined;
   const oddsStore = useOddsStore();
   const sportOddsStore = useSportOddsStore();
 
@@ -63,14 +61,14 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
     if (watchedLiveTokens.value.has(liveTokenKey(PLATFORMS.Polymarket, assetId)))
       orderBidTick.value += 1;
   };
-  const stopMarketBidWatch = onPolymarketMarketBid(bumpBidIfWatched);
-  const stopSportBidWatch = onPolymarketSportBid(bumpBidIfWatched);
 
   // [changmen 扩展] 持仓报价不依赖赛事目录；每个订单列表独立登记，卸载时仅释放自身。
   const pmQuoteConsumer = `orders:${getCurrentInstance()!.uid}`;
   onMounted(() => {
     watch(() => {
       const tokens = new Set<string>();
+      if (props.liveQuotes === false)
+        return [];
       for (const [, rows] of props.orderEntries) {
         for (const row of rows) {
           if (!pmShowLivePrice(row) || resolvePmRemainingShares(row) <= 0)
@@ -85,38 +83,52 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
   });
 
   // 在 setup 同步订阅（勿等 onMounted）：避免首屏到 mount 之间漏掉 fo/sport 写入
-  stopOddsLiveWatch = oddsStore.$onAction(({ name, args, after }) => {
-    after(() => {
-      if (name === "save") {
-        const entry = args[1] as { id?: unknown } | undefined;
-        bumpOrderLiveIfWatched(args[0], entry?.id);
-        return;
-      }
-      if (name === "updateOddsLock") {
-        bumpOrderLiveIfWatched(args[0], args[1]);
-        return;
-      }
-      if (name === "clean" && watchedLiveTokens.value.size > 0)
-        orderLiveTick.value += 1;
+  watch(() => props.liveQuotes !== false, (enabled, _previous, onCleanup) => {
+    if (!enabled)
+      return;
+    const stopMarketBidWatch = onPolymarketMarketBid(bumpBidIfWatched);
+    const stopSportBidWatch = onPolymarketSportBid(bumpBidIfWatched);
+    const stopOddsLiveWatch = oddsStore.$onAction(({ name, args, after }) => {
+      after(() => {
+        if (name === "save") {
+          const entry = args[1] as { id?: unknown } | undefined;
+          bumpOrderLiveIfWatched(args[0], entry?.id);
+          return;
+        }
+        if (name === "updateOddsLock") {
+          bumpOrderLiveIfWatched(args[0], args[1]);
+          return;
+        }
+        if (name === "clean" && watchedLiveTokens.value.size > 0)
+          orderLiveTick.value += 1;
+      });
     });
-  });
 
-  stopSportLiveWatch = sportOddsStore.$onAction(({ name, args, after }) => {
-    after(() => {
-      if (name === "save") {
-        bumpOrderLiveIfWatched(args[0], args[1]);
-        return;
-      }
-      if (name === "clear" && watchedLiveTokens.value.size > 0)
-        orderLiveTick.value += 1;
+    const stopSportLiveWatch = sportOddsStore.$onAction(({ name, args, after }) => {
+      after(() => {
+        if (name === "save") {
+          bumpOrderLiveIfWatched(args[0], args[1]);
+          return;
+        }
+        if (name === "clear" && watchedLiveTokens.value.size > 0)
+          orderLiveTick.value += 1;
+      });
     });
-  });
+    onCleanup(() => {
+      stopMarketBidWatch();
+      stopSportBidWatch();
+      stopOddsLiveWatch();
+      stopSportLiveWatch();
+    });
+  }, { immediate: true, flush: "sync" });
 
   /**
    * [changmen 扩展] PM 持仓实时价直接读官方 WS 买一，不从买入 ask/赔率反推。
    * 电竞/体育沿用各自行情连接；没有有效 bid 时留空。
    */
   function pmLiveClobPrice(row: OrderRow): number | null {
+    if (props.liveQuotes === false)
+      return null;
     void orderBidTick.value;
     const tokenId = String(row.PmTokenId ?? "").trim();
     if (!tokenId)
@@ -129,6 +141,8 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
    * 不要求已有报价；无买一时显示 —，官方 WS 报价到达后填数。
    */
   function pmShowLivePrice(row: OrderRow): boolean {
+    if (props.liveQuotes === false)
+      return false;
     if (!isPmBuyOrderListRow(row))
       return false;
     // 仅「部分卖出」仍显示当前价；全卖 / 已结算不显示
@@ -177,6 +191,8 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
   }
 
   function pfLiveClobPrice(row: OrderRow): number | null {
+    if (props.liveQuotes === false)
+      return null;
     void orderLiveTick.value;
     const tokenId = String(row.PfTokenId ?? "").trim();
     if (!tokenId)
@@ -190,6 +206,8 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
   }
 
   function pfShowLivePrice(row: OrderRow): boolean {
+    if (props.liveQuotes === false)
+      return false;
     if (!isPfBuyOrderListRow(row))
       return false;
     // 对齐 PM：全卖 / 已结算不显示当前价
@@ -230,12 +248,6 @@ export function useOrderListLiveQuotes(props: OrderListSource) {
   }
 
   onUnmounted(() => {
-    stopMarketBidWatch();
-    stopSportBidWatch();
-    stopOddsLiveWatch?.();
-    stopOddsLiveWatch = undefined;
-    stopSportLiveWatch?.();
-    stopSportLiveWatch = undefined;
     unregisterPolymarketQuoteConsumer(pmQuoteConsumer);
   });
 

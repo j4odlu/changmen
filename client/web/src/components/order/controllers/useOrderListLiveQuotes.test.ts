@@ -22,13 +22,40 @@ afterEach(() => {
 });
 const pm: OrderRow = { Type: "Polymarket", PmSide: "buy", Status: "None", PmTokenId: "pm-token",
   PmShares: 20, PmStakeUsdc: 10, PmFillPrice: 0.5 };
-function setup(rows: OrderRow[] = [pm]) {
-  const props = reactive({ orderEntries: [[123, rows]] as Array<[number, OrderRow[]]> });
+function setup(rows: OrderRow[] = [pm], liveQuotes?: boolean) {
+  const props = reactive({ orderEntries: [[123, rows]] as Array<[number, OrderRow[]]>, liveQuotes });
   const pinia = createPinia();
   const app = mountComposable(() => useOrderListLiveQuotes(props), pinia); mounted.push(app);
   return { ...app, props, c: app.value, odds: useOddsStore(pinia), sports: useSportOddsStore(pinia) };
 }
 function quote(id: string, price: number) { return { id, odds: 1 / price, clobPrice: price, isLock: false, time: 1791558222471 }; }
+
+it("keeps admin lists offline even with PM holdings and cached PF prices", () => {
+  const pf: OrderRow = { Type: "PredictFun", PfSide: "buy", Status: "None", PfTokenId: "pf-token", PfShares: 20, PfNotionalUsdt: 10 };
+  const { c, odds, sports } = setup([pm, pf], false);
+  odds.save("PredictFun", quote("pf-token", 0.4));
+  sports.save("PredictFun", "pf-token", 2);
+  expect(pmWs.startPolymarketMarketWs).not.toHaveBeenCalled();
+  expect(send).not.toHaveBeenCalled();
+  expect(c.pmShowLivePrice(pm)).toBe(false); expect(c.pmShowLiveOdds(pm)).toBe(false);
+  expect(c.pmLiveUnrealizedPnlText(pm)).toBeNull();
+  expect(c.pfShowLivePrice(pf)).toBe(false); expect(c.pfShowLiveOdds(pf)).toBe(false);
+  expect(c.pfLiveUnrealizedPnlText(pf)).toBeNull();
+});
+
+it("releases only this list's PM subscription when live quotes are disabled", async () => {
+  registerPolymarketQuoteAssets("esport", ["match-token"]);
+  const { props, c, unmount } = setup();
+  props.liveQuotes = false; await nextTick();
+  expect(JSON.parse(send.mock.calls.at(-1)![0]).assets_ids).toEqual(["match-token"]);
+  expect(stop).not.toHaveBeenCalled();
+  expect(c.pmLiveUnrealizedPnlText(pm)).toBeNull();
+  props.liveQuotes = true; await nextTick();
+  expect(JSON.parse(send.mock.calls.at(-1)![0]).assets_ids).toEqual(["match-token", "pm-token"]);
+  unmount(); mounted.pop();
+  expect(JSON.parse(send.mock.calls.at(-1)![0]).assets_ids).toEqual(["match-token"]);
+  expect(stop).not.toHaveBeenCalled();
+});
 
 it("subscribes only held PM buy tokens, including price-derived Win/Lose and partial fills, with deduplication", () => {
   setup([

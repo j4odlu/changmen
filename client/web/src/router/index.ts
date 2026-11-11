@@ -126,22 +126,21 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   if (to.meta.public)
     return true;
-  if (!hasAuthSession()) {
+  const user = useUserStore();
+  // [changmen 扩展] 新窗口只有共享 Cookie；先恢复当前窗口会话，再判断后台访问权限。
+  if (!user.ready) {
+    try {
+      await user.restoreSession();
+    }
+    catch { /* 恢复失败由首页展示登录或恢复错误，保留原目标地址。 */ }
+  }
+  if (!hasAuthSession() || !user.ready) {
     if (to.fullPath !== "/") {
       sessionStorage.setItem("gamebet:postLoginRedirect", to.fullPath);
     }
     return { name: "home" };
   }
   if (to.meta.requiresAdmin) {
-    const user = useUserStore();
-    if (!user.ready) {
-      try {
-        await user.fetchUserInfo();
-      }
-      catch {
-        return { name: "home" };
-      }
-    }
     if (!user.canAccessAdmin)
       return { name: "home" };
     if (to.meta.requiresFullAdmin && !user.isAdmin)

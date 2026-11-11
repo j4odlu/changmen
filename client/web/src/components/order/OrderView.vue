@@ -191,6 +191,7 @@ async function onLinkRebindDone() {
 
     <OrderList
       :order-entries="displayOrderEntries"
+      :live-quotes="!embedded"
       :loading="loading || viewLoading"
       :player-label="playerLabel"
       :platform-class="platformClass"

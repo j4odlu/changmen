@@ -1,8 +1,14 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createPinia } from "pinia";
+import type { Component } from "vue";
 import { createRenderer, h, nextTick, reactive, ssrContextKey } from "vue";
 import { useOddsStore } from "@/stores/oddsStore";
 import type { OrderRow } from "@/types/order";
+import type { AdminOrderRow } from "@/types/admin";
+import AdminAccountOrdersColumn from "@/components/admin/AdminAccountOrdersColumn.vue";
+import adminAccountSource from "@/components/admin/AdminAccountOrdersColumn.vue?raw";
+import AdminUserOrdersColumn from "@/components/admin/AdminUserOrdersColumn.vue";
+import adminUserSource from "@/components/admin/AdminUserOrdersColumn.vue?raw";
 import OrderList from "./OrderList.vue";
 import orderSource from "./OrderList.vue?raw";
 import { installClientRender } from "@/test/installClientRender";
@@ -27,16 +33,24 @@ vi.mock("@/stores/account/pmManualSell", () => ({ canManualSellPmBuy: () => true
   isPmManualSellClosing: () => flags.pmClosing, isPmManualSellInFlight: () => flags.pmBusy }));
 vi.mock("@/stores/account/pfManualSell", () => ({ canManualSellPfBuy: () => true, confirmAndSellPfBuyOrder: api.pfSell,
   isPfManualSellInFlight: () => flags.pfBusy }));
-vi.mock("element-plus", () => ({ ElMessageBox: { confirm: api.confirm }, ElMessage: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("element-plus", () => ({ ElMessageBox: { confirm: api.confirm }, ElMessage: { success: vi.fn(), error: vi.fn() },
+  ElButton: { render: () => null }, ElSelect: { render: () => null }, ElOption: { render: () => null } }));
+vi.mock("element-plus/es/components/button/style/css", () => ({}));
+vi.mock("element-plus/es/components/base/style/css", () => ({}));
+vi.mock("element-plus/es/components/select/style/css", () => ({}));
+vi.mock("element-plus/es/components/option/style/css", () => ({}));
 vi.mock("@/shared/pfOrderLabelIndex", () => ({ ensurePfOrderLabelIndex: async () => false }));
 vi.mock("@/orderModes/OrderDetails.vue", () => ({ default: { render: () => null } }));
 vi.mock("@/components/platform/PlatformIcon.vue", () => ({ default: { render: () => null } }));
+vi.mock("@/components/admin/AdminOrderLogsDialog.vue", () => ({ default: { render: () => null } }));
 
 for (const [component, source, filename] of [
   [OrderList, orderSource, "OrderList.vue"], [OrderProfitLine, profitSource, "OrderProfitLine.vue"],
   [OrderQuoteLine, quoteSource, "OrderQuoteLine.vue"], [OrderMarketDetails, marketSource, "OrderMarketDetails.vue"],
   [OrderStatusBadge, statusSource, "OrderStatusBadge.vue"], [OrderTag, tagSource, "OrderTag.vue"],
   [OrderLiveQuoteLine, liveSource, "OrderLiveQuoteLine.vue"],
+  [AdminAccountOrdersColumn, adminAccountSource, "AdminAccountOrdersColumn.vue"],
+  [AdminUserOrdersColumn, adminUserSource, "AdminUserOrdersColumn.vue"],
 ] as const) installClientRender(component, source, filename);
 
 type Host = { tag: string; text: string; props: Record<string, unknown>; parent: Host | null; children: Host[] };
@@ -81,6 +95,27 @@ function find(host: Host, className: string): Host | undefined {
 }
 const pm: OrderRow = { OrderID: "pm", Type: "Polymarket", PmSide: "buy", Status: "Pending", BetMoney: 72,
   Match: "A vs B", Bet: "地图2", Item: "A", PmTokenId: "token", PmSubmittedPrice: 0.5 };
+
+it.each([AdminAccountOrdersColumn, AdminUserOrdersColumn] as Component[])("renders admin order records without opening PM or showing live quotes", async (component) => {
+  const orders: AdminOrderRow[] = [{ id: 1, userId: "owner", playerId: 1, orderId: "pm", linkId: 123,
+    provider: "Polymarket", match: "A vs B", bet: "地图2", item: "A", odds: 2, betMoney: 72, money: 0,
+    status: "None", createAt: 1791558222471, pmSide: "buy", pmTokenId: "token", pmShares: 20, pmStakeUsdc: 10, pmFillPrice: 0.5 },
+  { id: 2, userId: "owner", playerId: 2, orderId: "pf", linkId: 124,
+    provider: "PredictFun", match: "C vs D", bet: "地图1", item: "C", odds: 2, betMoney: 10, money: 0,
+    status: "None", createAt: 1791558222471, pfSide: "buy", pfTokenId: "pf-token", pfShares: 20, pfNotionalUsdt: 10, pfBookPrice: 0.5 }];
+  const root = node("root"), pinia = createPinia();
+  const app = renderer.createApp({ render: () => h(component, { orders, accounts: [], provider: "Polymarket",
+    playerId: 1, playerName: "PM account", userName: "Owner" }) });
+  app.use(pinia); app.provide(ssrContextKey, {});
+  for (const name of ["ElButton", "ElSelect", "ElOption"])
+    app.component(name, { render: () => null });
+  useOddsStore(pinia).save("PredictFun", { id: "pf-token", odds: 2.5, clobPrice: 0.4, isLock: false, time: 1791558222471 });
+  app.mount(root); apps.push(app); await nextTick();
+  expect(text(root)).toContain("Polymarket / #1"); expect(text(root)).toContain("C vs D");
+  expect(text(root)).toContain("买入金额：72"); expect(text(root)).toContain("买入价：0.5");
+  expect(text(root)).not.toMatch(/浮盈|浮亏|当前可卖价|当前价：|当前赔率/);
+  expect(pmWs.startPolymarketMarketWs).not.toHaveBeenCalled();
+});
 
 it("updates mounted Pending, fills, live prices and 50/50 financial status without remounting", async () => {
   const { root, row, odds } = mount({ ...pm, Money: 999 });

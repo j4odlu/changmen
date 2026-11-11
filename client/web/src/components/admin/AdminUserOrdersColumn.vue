@@ -175,6 +175,7 @@ function onDeleteGroup(link: number) {
     <div v-else class="admin-orders-user-col__list">
       <OrderList
         :order-entries="orderEntries"
+        :live-quotes="false"
         :player-label="playerLabel"
         :platform-class="platformClass"
       >

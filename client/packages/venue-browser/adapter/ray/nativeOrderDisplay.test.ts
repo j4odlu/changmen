@@ -81,3 +81,14 @@ it("a reset fences in-flight display responses; empty lists and missing IDs do n
   beginRayNativeOrderDisplay(acc)([]);
   expect(lookupRayNativeOrderDisplay(acc, "one")).toBeUndefined();
 });
+
+it("a newer query invalidates older UI publications before it completes, retaining the last valid snapshot", () => {
+  const acc = account();
+  beginRayNativeOrderDisplay(acc)([{ ...row, live: 0 }]);
+  const obsolete = beginRayNativeOrderDisplay(acc);
+  const replacement = beginRayNativeOrderDisplay(reactive(acc));
+  obsolete([{ ...row, status: 4 }]);
+  expect(lookupRayNativeOrderDisplay(acc, "one")).toBe("Open");
+  replacement([{ ...row, status: 4 }]);
+  expect(lookupRayNativeOrderDisplay(acc, "one")).toBe("Rejected");
+});

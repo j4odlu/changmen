@@ -11,7 +11,7 @@ import OrderMakeupStatusBar from "@/components/order/OrderMakeupStatusBar.vue";
 import RayLinkMonitorCard from "@/components/order/RayLinkMonitorCard.vue";
 import { loadEmbeddedUserOrders } from "@/composables/adminUserWorkspaceMount";
 import { useRayOrderContextStore } from "@/runtime/rayOrderMonitor/contextStore";
-import { projectRaySubmissionPreviews } from "@/runtime/rayOrderMonitor/submissionPreview";
+import { projectRaySubmissionDisplays } from "@/runtime/rayOrderMonitor/submissionDisplay";
 import { isFootballOrderRow } from "@/shared/orderDomain";
 import { visibleMakeupOrders } from "@/shared/makeupVisibility";
 import { rayLinkMonitorOrder } from "@/shared/rayLinkMonitor";
@@ -62,9 +62,9 @@ const mergedOrderEntries = computed(() => {
   );
   return orderLinkMapEntries(merged);
 });
-const previewOrderEntries = computed(() => props.embedded ? mergedOrderEntries.value
-  : projectRaySubmissionPreviews(mergedOrderEntries.value, orderDate.value, filterAccountId.value));
-const displayOrderEntries = computed(() => props.projectOrderEntries?.(previewOrderEntries.value) ?? previewOrderEntries.value);
+const rayProjectedOrderEntries = computed(() => props.embedded ? mergedOrderEntries.value
+  : projectRaySubmissionDisplays(mergedOrderEntries.value, orderDate.value, filterAccountId.value));
+const displayOrderEntries = computed(() => props.projectOrderEntries?.(rayProjectedOrderEntries.value) ?? rayProjectedOrderEntries.value);
 
 const viewLoading = ref(false);
 

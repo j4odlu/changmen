@@ -2,7 +2,7 @@ import type { PlatformProvider } from "@changmen/venue-browser/adapter/contract"
 import type { PlatformAccount } from "@/models/platformAccount";
 import { getProvider as venueProvider } from "@/runtime/venueAdapters";
 import { beginRayOrderObservation } from "./orderMonitoring/rayOrders";
-import { beginRaySubmissionPreview } from "./rayOrderMonitor/submissionPreview";
+import { beginRaySubmissionDisplay } from "./rayOrderMonitor/submissionDisplay";
 
 export { supportedBetProviders } from "@/runtime/venueAdapters";
 const observed = new WeakMap<PlatformProvider, PlatformProvider>();
@@ -15,8 +15,8 @@ export function getProvider(account: PlatformAccount): PlatformProvider | undefi
   let wrapper = observed.get(provider);
   if (!wrapper) {
     wrapper = { ...provider, betting(account, option) {
-      let accept: ReturnType<typeof beginRaySubmissionPreview>;
-      try { accept = beginRaySubmissionPreview(account, option); }
+      let accept: ReturnType<typeof beginRaySubmissionDisplay>;
+      try { accept = beginRaySubmissionDisplay(account, option); }
       catch { /* 提前展示登记失败不阻断原下注。 */ }
       return provider.betting.call(provider, account, option).then((result) => {
         try { accept?.(result); }

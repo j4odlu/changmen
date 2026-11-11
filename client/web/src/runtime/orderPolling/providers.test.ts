@@ -8,8 +8,8 @@ import { observedRayOrders, resetRayOrderResults } from "@/runtime/orderMonitori
 import { getProvider } from "@/runtime/providers";
 import { readRayAccountOrders, resetRayOrderPolling } from "./ray";
 
-const mocks = vi.hoisted(() => ({ read: vi.fn(), check: vi.fn(), bet: vi.fn(), settle: vi.fn(), wait: vi.fn(), preview: vi.fn(), accept: vi.fn() }));
-vi.mock("@/runtime/rayOrderMonitor/submissionPreview", () => ({ beginRaySubmissionPreview: mocks.preview }));
+const mocks = vi.hoisted(() => ({ read: vi.fn(), check: vi.fn(), bet: vi.fn(), settle: vi.fn(), wait: vi.fn(), beginDisplay: vi.fn(), accept: vi.fn() }));
+vi.mock("@/runtime/rayOrderMonitor/submissionDisplay", () => ({ beginRaySubmissionDisplay: mocks.beginDisplay }));
 vi.mock("@/api/client", () => ({ getAuthSessionVersion: () => "owner", isAuthSessionCurrent: () => true }));
 vi.mock("@/runtime/venueAdapters", () => ({ getProvider: () => ({ getOrders: mocks.read, checkBet: mocks.check, betting: mocks.bet, resolveLegOutcome: mocks.settle }) }));
 vi.mock("@changmen/venue-browser/adapter/shared/rejectWait", () => ({ venueRejectWaitBeforePoll: mocks.wait }));
@@ -33,7 +33,7 @@ function order(orderId: string, status: VenueOrder["status"]): VenueOrder {
 beforeEach(() => {
   resetRayOrderPolling(); resetRayOrderResults(); vi.resetAllMocks();
   mocks.read.mockResolvedValue([]); mocks.wait.mockResolvedValue(undefined);
-  mocks.preview.mockReturnValue(mocks.accept);
+  mocks.beginDisplay.mockReturnValue(mocks.accept);
 });
 
 it.each([false, true])("public queries stay independent when active=%s", async (active) => {
@@ -41,7 +41,7 @@ it.each([false, true])("public queries stay independent when active=%s", async (
   const provider = getProvider(acc)!;
   await Promise.all([provider.getOrders!(acc), provider.getOrders!(acc)]);
   expect(mocks.read).toHaveBeenCalledTimes(2);
-  expect(mocks.bet).not.toHaveBeenCalled(); expect(mocks.preview).not.toHaveBeenCalled();
+  expect(mocks.bet).not.toHaveBeenCalled(); expect(mocks.beginDisplay).not.toHaveBeenCalled();
   expect(provider.checkBet).toBe(mocks.check); expect(provider.resolveLegOutcome).toBe(mocks.settle);
 });
 
@@ -91,12 +91,12 @@ it("the RAY submission observer forwards one original call and the exact receipt
   const provider = getProvider(acc)!;
   expect(await provider.betting(acc, option)).toBe(receipt);
   expect(mocks.bet).toHaveBeenCalledExactlyOnceWith(acc, option);
-  expect(mocks.preview).toHaveBeenCalledExactlyOnceWith(acc, option);
+  expect(mocks.beginDisplay).toHaveBeenCalledExactlyOnceWith(acc, option);
   expect(mocks.accept).toHaveBeenCalledExactlyOnceWith(receipt);
   expect(mocks.read).not.toHaveBeenCalled();
 });
 
-it("a rejected submission preserves the original error without accepting a preview", async () => {
+it("a rejected submission preserves the original error without registering display observation", async () => {
   const acc = account(); const option = new BetOption("RAY", "1", "2", "3", 100, "Home", 2);
   const error = new Error("original submission failed"); mocks.bet.mockRejectedValue(error);
   await expect(getProvider(acc)!.betting(acc, option)).rejects.toBe(error);

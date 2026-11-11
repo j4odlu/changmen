@@ -11,13 +11,13 @@ export interface RayNativeOrderDisplayRow {
 }
 export type RayNativeOrderDisplayStatus = "Pending" | "Open" | "Rejected" | "Returned" | "Settled";
 interface Snapshot {
-  sequence: number;
   binding: string;
   receivedAt: number;
   serverAt?: number;
   rows: ReadonlyMap<string, RayNativeOrderDisplayRow>;
 }
 let snapshots = new WeakMap<PlatformAccount, Snapshot>();
+let latestRequests = new WeakMap<PlatformAccount, number>();
 let generation = 0;
 let sequence = 0;
 export const rayNativeOrderDisplay = shallowReactive({ revision: 0 });
@@ -65,9 +65,11 @@ export function rayNativeOrderDisplayStatus(row: RayNativeOrderDisplayRow, now: 
 export function beginRayNativeOrderDisplay(account: PlatformAccount): (rows: readonly RayNativeOrderDisplayRow[], serverTime?: string) => void {
   const original = binding(account), stamp = generation, request = ++sequence;
   const key = toRaw(account);
+  // 更新资格在查询开始时交接；新查询失败时保留已发布快照，也不恢复旧在途请求的资格。
+  latestRequests.set(key, request);
   return (rows, serverTime) => {
     if (stamp !== generation || account.provider !== "RAY" || binding(account) !== original
-      || (snapshots.get(key)?.sequence ?? 0) > request) return;
+      || latestRequests.get(key) !== request) return;
     const receivedAt = Date.now();
     const serverAt = serverTime ? Date.parse(serverTime) : NaN;
     const copy = new Map<string, RayNativeOrderDisplayRow>();
@@ -79,7 +81,7 @@ export function beginRayNativeOrderDisplay(account: PlatformAccount): (rows: rea
         detail: Object.freeze((row.detail ?? []).map(detail => Object.freeze({ live: detail.live, risk: detail.risk, win: detail.win }))),
       }));
     }
-    snapshots.set(key, { sequence: request, binding: original, receivedAt, serverAt: Number.isFinite(serverAt) ? serverAt : undefined, rows: copy });
+    snapshots.set(key, { binding: original, receivedAt, serverAt: Number.isFinite(serverAt) ? serverAt : undefined, rows: copy });
     rayNativeOrderDisplay.revision++;
   };
 }
@@ -96,5 +98,5 @@ export function lookupRayNativeOrderDisplay(account: PlatformAccount, orderId: s
 }
 
 export function resetRayNativeOrderDisplay(): void {
-  generation++; snapshots = new WeakMap(); rayNativeOrderDisplay.revision++;
+  generation++; snapshots = new WeakMap(); latestRequests = new WeakMap(); rayNativeOrderDisplay.revision++;
 }

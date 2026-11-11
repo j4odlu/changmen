@@ -2,7 +2,9 @@
 import type { VenueOrder } from "@changmen/venue-browser/adapter/contract";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { OrderRow } from "@/types/order";
+import { watchEffect } from "vue";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
+import { getProvider } from "@/runtime/venueAdapters";
 import { readRayAccountOrders, resetRayOrderPolling } from "@/runtime/orderPolling/ray";
 import { rayMonitoring, resetRayMonitoring, setRayMonitoring } from "./state";
 import { useAccountStore } from "@/stores/accountStore";
@@ -13,19 +15,28 @@ import { rayClientStatus, updateRayOrdersLocally } from "./localOrders";
 import { bindRayOrderContexts, observeRayOrderContexts, resumeRayContextMakeup } from "./contexts";
 import { useRayOrderContextStore } from "./contextStore";
 
-import { startRaySubmissionPreviewPolling, stopRaySubmissionPreviewPolling } from "./submissionPreviewPolling";
+import {
+  observeRaySubmissionDisplays, pendingRaySubmissionDisplayAccounts, resetRaySubmissionDisplays,
+  retireRaySubmissionDisplays, setRaySubmissionDisplayWake,
+} from "./submissionDisplay";
 
 export const RAY_ORDER_POLL_MS = 5000;
 export const RAY_ORDER_RECOVERY_MS = 60_000;
 const tasks = new Map<string, OrderRow>();
 const finished = new Set<string>();
-const polling = new Map<number, Promise<void>>();
+const polling = new Map<number, { displayOnly: boolean }>();
 const recovering = new Map<number, Promise<void>>();
 const recoveredAt = new Map<number, number>();
+// 业务监控的间隔只由业务查询推进；只读显示查询不能推迟原业务节奏。
 const polledAt = new Map<number, number>();
+const queriedAt = new Map<number, number>();
+const submissionEpochs = new Map<number, number>();
 let owner = "";
 let generation = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
+let running = false;
+let nextTickAt = 0;
+let stopWatching: (() => void) | undefined;
 const key = (row: OrderRow) => `${row.PlayerID}:${row.OrderID}`;
 const terminal = (status: unknown) => ["win", "lose", "lost", "return", "reject"].includes(String(status).toLowerCase());
 const storageKey = () => `changmen:ray-order-monitor:v1:${owner}`;
@@ -124,19 +135,49 @@ function reportError(player: number, error: unknown): void {
       setRayMonitoring(owner, player, String(row.OrderID), { phase: "watching", status: String(row.Status), error: error instanceof Error ? error.message : String(error) });
   }
 }
-function pollAccount(account: PlatformAccount): void {
+function retireDisplayedOrders(): void {
+  retireRaySubmissionDisplays([...useOrderStore().orders.values()].flat());
+}
+function pollAccount(account: PlatformAccount, immediateDisplay = false): void {
   const player = account.accountId;
-  // 原下注确认窗口仍使用自己的查单；后台查询不能覆盖在途确认结果。
-  if (polling.has(player) || account.active || (polledAt.has(player) && Date.now() - polledAt.get(player)! < RAY_ORDER_POLL_MS))
+  retireDisplayedOrders();
+  const needsDisplay = pendingRaySubmissionDisplayAccounts().includes(account);
+  if (immediateDisplay && !needsDisplay)
     return;
   const originals = new Set([...tasks.values()].filter(row => row.PlayerID === player).map(key));
-  if (!originals.size && !useRayOrderContextStore().activeTasks.some(task => task.accountId === player))
+  const contexts = useRayOrderContextStore().activeTasks.filter(task => task.accountId === player);
+  const canObserve = !account.active && (originals.size > 0 || contexts.length > 0);
+  if (!canObserve && !needsDisplay)
     return;
-  polledAt.set(player, Date.now());
+  // 查询用途在发出时固定；早期展示结果不能在回包时升级为拒单/补单依据。
+  const displayOnly = immediateDisplay || !canObserve;
+  const previous = polling.get(player);
+  // 正常监控接替尚未返回的纯展示请求；被替代回包作废，不再阻塞确认后的监控。
+  const takingOver = !displayOnly && previous?.displayOnly === true;
+  const lastRead = (displayOnly ? queriedAt : polledAt).get(player);
+  if ((previous && !takingOver)
+    || (!immediateDisplay && lastRead !== undefined && Date.now() - lastRead < RAY_ORDER_POLL_MS))
+    return;
+  const epoch = submissionEpochs.get(player);
+  const contextKeys = new Set(contexts.map(task => task.key));
+  const startedAt = Date.now();
+  queriedAt.set(player, startedAt);
+  if (!displayOnly)
+    polledAt.set(player, startedAt);
   const current = capture(account);
-  const task = (async () => {
-    const orders = await readRayAccountOrders(account);
-    if (!current() || account.active)
+  const request = { displayOnly };
+  polling.set(player, request);
+  void (async () => {
+    const orders = displayOnly
+      ? await getProvider(account)?.getOrders?.(account) ?? []
+      : await readRayAccountOrders(account);
+    if (!current() || polling.get(player) !== request)
+      return;
+    observeRaySubmissionDisplays(account, orders, startedAt);
+    retireDisplayedOrders();
+    // 保留原确认窗口保护；跨越新提交或新确认上下文的回包留给下一次新查询处理。
+    if (displayOnly || account.active || submissionEpochs.get(player) !== epoch
+      || useRayOrderContextStore().activeTasks.some(task => task.accountId === player && !contextKeys.has(task.key)))
       return;
     recoverRaySettlement();
     bindRayOrderContexts(account, orders, () => current() && !account.active);
@@ -177,13 +218,14 @@ function pollAccount(account: PlatformAccount): void {
     persist();
     observeRayOrderContexts(player, contextOrders, current);
   })().catch((error) => {
-    if (current() && !account.active)
+    if (!displayOnly && polling.get(player) === request && current() && !account.active && submissionEpochs.get(player) === epoch)
       reportError(player, error);
   }).finally(() => {
-    if (polling.get(player) === task)
+    if (polling.get(player) === request) {
       polling.delete(player);
+      scheduleNextPoll();
+    }
   });
-  polling.set(player, task);
 }
 export function pollRaySettlement(): void {
   if (!useUserStore().userId || useUserStore().isLoggedIn === false || useAccountStore().adminWorkspacePreview)
@@ -201,25 +243,62 @@ export function pollRaySettlement(): void {
   }
 }
 function clearRuntime(): void {
-  generation++; tasks.clear(); finished.clear(); polling.clear(); recovering.clear(); recoveredAt.clear(); polledAt.clear();
+  generation++; tasks.clear(); finished.clear(); polling.clear(); recovering.clear(); recoveredAt.clear(); polledAt.clear(); queriedAt.clear(); submissionEpochs.clear();
 }
 export function stopRaySettlement(): void { clearRuntime(); owner = ""; }
+/** 一个定时器兼顾原业务心跳和只读显示的到期时间；额外显示唤醒不执行业务轮询。 */
+function scheduleNextPoll(): void {
+  if (!running)
+    return;
+  let dueAt = nextTickAt;
+  for (const account of pendingRaySubmissionDisplayAccounts()) {
+    if (!polling.has(account.accountId))
+      dueAt = Math.min(dueAt, (queriedAt.get(account.accountId) ?? Date.now()) + RAY_ORDER_POLL_MS);
+  }
+  clearTimeout(timer);
+  const stamp = generation;
+  timer = setTimeout(() => {
+    timer = undefined;
+    if (!running || stamp !== generation)
+      return;
+    if (Date.now() >= nextTickAt) {
+      nextTickAt = Date.now() + RAY_ORDER_POLL_MS;
+      pollRaySettlement();
+    }
+    else {
+      for (const account of pendingRaySubmissionDisplayAccounts()) {
+        if (!polling.has(account.accountId) && Date.now() - (queriedAt.get(account.accountId) ?? 0) >= RAY_ORDER_POLL_MS) {
+          const current = useAccountStore().findAccount(account.accountId);
+          if (current === account)
+            pollAccount(current, true);
+        }
+      }
+    }
+    scheduleNextPoll();
+  }, Math.max(0, dueAt - Date.now()));
+}
 export function startRayOrderMonitoring(): void {
-  if (timer)
+  if (running)
     return;
   recoverRaySettlement();
-  startRaySubmissionPreviewPolling();
-  const stamp = generation;
-  const tick = () => {
-    if (stamp !== generation)
+  running = true;
+  nextTickAt = Date.now() + RAY_ORDER_POLL_MS;
+  stopWatching = watchEffect(retireDisplayedOrders);
+  setRaySubmissionDisplayWake((account) => {
+    const currentAccount = useAccountStore().findAccount(account.accountId);
+    if (!currentAccount || currentAccount !== account)
       return;
-    pollRaySettlement();
-    timer = setTimeout(tick, RAY_ORDER_POLL_MS);
-  };
-  tick();
+    submissionEpochs.set(account.accountId, (submissionEpochs.get(account.accountId) ?? 0) + 1);
+    pollAccount(currentAccount, true);
+    scheduleNextPoll();
+  });
+  pollRaySettlement();
+  scheduleNextPoll();
 }
 export function stopRayOrderMonitoring(): void {
+  running = false;
   clearTimeout(timer); timer = undefined;
-  stopRaySubmissionPreviewPolling();
+  stopWatching?.(); stopWatching = undefined;
+  resetRaySubmissionDisplays();
   stopRaySettlement(); resetRayOrderPolling(); resetRayMonitoring();
 }

@@ -463,6 +463,11 @@ function nextAction(run: ActiveBetRun): string {
     : gtc.decision === "open" ? "正在核对 GTC 原单与对侧订单。"
       : "本轮提交已结束；继续展示原单核对结果，GTC 不自动补单。";
   const mode = activeBetRunMode(run);
+  if (mode === "obSingle") {
+    if (run.terminalAt) return "本轮 OB 单边下单已结束；对冲腿按配置跳过，不补单。";
+    if (run.phase === "preparing" || run.phase === "checking") return "两腿均须通过预检，再仅提交 OB。";
+    return "仅跟踪 OB 原单；对冲腿不下单、不补单。";
+  }
   if (mode === "lowOddsSingle") {
     if (run.terminalAt) return "🎯 本轮已结束；高赔腿跳过，不补单。";
     if (run.phase === "preparing" || run.phase === "checking") return "两腿均须通过预检，再选低赔腿提交。";
@@ -575,6 +580,7 @@ function orderLabel(run: ActiveBetRun, index: number): string {
             <div class="active-bet-run__mode" :data-mode="activeBetRunMode(activeRun)">
               下单模式 · <strong>{{ activeBetRunModeLabel(activeRun) }}{{ activeGtc ? ' · PM GTC' : '' }}</strong>
               <span v-if="activeBetRunMode(activeRun) === 'lowOddsSingle'">双腿预检，仅提交低赔腿；每盘口一次，不补单</span>
+              <span v-else-if="activeBetRunMode(activeRun) === 'obSingle'">双腿预检，仅提交 OB；对冲腿按配置跳过，不补单</span>
               <span v-else-if="activeBetRunMode(activeRun) === 'single9999'">只提交下单腿，9999 侧不下单</span>
             </div>
             <div class="active-bet-run__run-meta">

@@ -7,7 +7,7 @@ import type { UserConfig } from "@/types/userConfig";
 
 export interface ArbBetReady {
   /** [changmen 扩展] 本次冻结的策略；缺省保持原流程。 */
-  executionMode?: "normal" | "lowOddsSingle";
+  executionMode?: "normal" | "lowOddsSingle" | "obSingle";
   executionSide?: "A" | "B";
   lowOddsMarketKeys?: string[];
   legA: BetOption;
@@ -86,7 +86,7 @@ export function resolveArbLegPlaceOutcome(
 }
 
 export interface ArbBetAttemptParams {
-  executionMode?: "normal" | "lowOddsSingle";
+  executionMode?: "normal" | "lowOddsSingle" | "obSingle";
   match: ViewMatch;
   bet: ViewBet;
   config: UserConfig;

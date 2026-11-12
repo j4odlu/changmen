@@ -28,7 +28,7 @@ export function activeBetRunMode(run: Pick<ActiveBetRun, "mode" | "linkId">) {
 
 export function activeBetRunModeLabel(run: Pick<ActiveBetRun, "mode" | "linkId">): string {
   const mode = activeBetRunMode(run);
-  return mode === "lowOddsSingle" ? "🎯 LOS" : mode === "single9999" ? "9999 单边下单" : mode === "arb" ? "双边套利" : mode === "valueBet" ? "正EV 单腿下单" : "模式未记录";
+  return mode === "obSingle" ? "OB 单边下单" : mode === "lowOddsSingle" ? "🎯 LOS" : mode === "single9999" ? "9999 单边下单" : mode === "arb" ? "双边套利" : mode === "valueBet" ? "正EV 单腿下单" : "模式未记录";
 }
 
 export function activeBetLegRole(leg: ActiveBetLeg): string {

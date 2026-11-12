@@ -547,11 +547,11 @@ describe("extensionPrefs", () => {
     expect(toggleArbAllowedPlatform(["PB"], "PB", all)).toEqual(["PB"]);
     expect(toggleArbAllowedPlatform(["PB", "IM"], "PB", all)).toEqual(["PB", "IM"]);
   });
-  it("🎯 only activates explicitly and survives Extensions save/load", () => {
+  it.each(["lowOddsSingle", "obSingle"])("%s only activates explicitly and survives Extensions save/load", mode => {
     for (const mode of [undefined, null, "low", true, "NORMAL"])
       expect(normalizeExtensionPrefs({ arbExecutionMode: mode }).arbExecutionMode).toBe("normal");
-    const prefs = normalizeExtensionPrefs({ arbExecutionMode: "lowOddsSingle" });
-    expect(prefs.arbExecutionMode).toBe("lowOddsSingle");
+    const prefs = normalizeExtensionPrefs({ arbExecutionMode: mode });
+    expect(prefs.arbExecutionMode).toBe(mode);
     expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);
   });
 

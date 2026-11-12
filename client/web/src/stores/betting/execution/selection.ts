@@ -7,10 +7,11 @@ export interface ExecutionSelection {
   readonly orderMode: "FOK" | "GTC";
 }
 
-export function captureArbExecutionSelection(): { readonly executionMode?: "lowOddsSingle" } {
+export function captureArbExecutionSelection(): { readonly executionMode?: "lowOddsSingle" | "obSingle" } {
   const user = getActivePinia() ? useUserStore() : undefined;
+  const mode = user?.extensionPrefs.arbExecutionMode;
   return Object.freeze({
-    ...(user?.extensionPrefs.arbExecutionMode === "lowOddsSingle" ? { executionMode: "lowOddsSingle" as const } : {}),
+    ...(mode === "lowOddsSingle" || mode === "obSingle" ? { executionMode: mode } : {}),
   });
 }
 

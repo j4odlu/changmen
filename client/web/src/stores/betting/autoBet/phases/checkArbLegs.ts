@@ -60,10 +60,12 @@ export async function checkArbLegs(
 ): Promise<ArbBetChecked | null> {
   const { bet, config, setMessage, trace } = params;
   const accountStore = useAccountStore();
+  const obSingle = ready.executionMode === "obSingle";
+  const singleExecution = ready.executionMode === "lowOddsSingle" || obSingle;
   const requireHigherCProbability = ready.executionMode === "lowOddsSingle"
     && useUserStore().extensionPrefs.lowOddsSingleHigherCProbabilityOnly === true;
-  if (ready.executionMode === "lowOddsSingle" && (!ready.accountA || !ready.accountB || ready.singleLegByRate)) {
-    trace?.finish("skip", "🎯 需要普通模式双腿预检，不支持 9999 单边");
+  if (singleExecution && (!ready.accountA || !ready.accountB || ready.singleLegByRate)) {
+    trace?.finish("skip", obSingle ? "OB 单边需要普通模式双腿预检，不支持 9999 单边" : "🎯 需要普通模式双腿预检，不支持 9999 单边");
     return null;
   }
   let {
@@ -208,7 +210,7 @@ export async function checkArbLegs(
   }
 
   const dualPrecheckFailed = (checkAccountA && !legA.data) || (checkAccountB && !legB.data)
-    || (ready.executionMode === "lowOddsSingle" && (legA.checkError || legB.checkError));
+    || (singleExecution && (legA.checkError || legB.checkError));
 
   if (dualPrecheckFailed) {
     const parts = [
@@ -262,10 +264,12 @@ export async function checkArbLegs(
   );
 
   let executionSide: "A" | "B" | undefined;
-  if (ready.executionMode === "lowOddsSingle") {
-    const side = lowOddsExecutionSide(legA, legB);
+  if (singleExecution) {
+    const obSide = (legA.type === "OB") !== (legB.type === "OB")
+      ? (legA.type === "OB" ? "A" : "B") : null;
+    const side = obSingle ? obSide : lowOddsExecutionSide(legA, legB);
     if (!side) {
-      const reason = "🎯 两腿赔率相同或无效，跳过本次";
+      const reason = obSingle ? "OB 单边需要恰好一条 OB 腿，跳过本次" : "🎯 两腿赔率相同或无效，跳过本次";
       trace?.finish("skip", reason); syncActiveBetFail(bet.id, reason); return null;
     }
     if (requireHigherCProbability) {

@@ -19,6 +19,29 @@ describe("套利结果通知与辅助进度报告", () => {
     sessionStorage.clear();
   });
 
+  it.each(["A", "B"] as const)("OB 单边位于 %s 时，通知明确对冲腿跳过且不发布双腿锁利推单", side => {
+    const messages = useMessageStore();
+    const match = { id: 1, title: "A vs B" };
+    const bet = { id: 2, getBetName: () => "地图1" };
+    const ob = { type: "OB", target: "Home", odds: 3, betMoney: 100, match, bet };
+    const peer = { type: "Polymarket", target: "Away", odds: 1.8, betMoney: 60, match, bet };
+    const account = { provider: "OB", playerName: "ob1" };
+    const result = { success: true, message: "已受理" };
+    const placed = { executionMode: "obSingle", executionSide: side, betBothLegs: false, linkId: 1700000000000,
+      legA: side === "A" ? ob : peer, legB: side === "B" ? ob : peer,
+      accountA: side === "A" ? account : undefined, accountB: side === "B" ? account : undefined,
+      resultA: side === "A" ? result : undefined, resultB: side === "B" ? result : undefined,
+    } as unknown as ArbBetPlaced;
+    sendArbBettingMessageIfNeeded({ match, bet } as ArbBetAttemptParams, placed,
+      { rejectA: false, rejectB: false } as ArbLegSettleSnapshot);
+    expect(messages.telegramQueue).toHaveLength(1);
+    expect(messages.telegramQueue[0]).toContain("Polymarket（OB 对冲腿）");
+    expect(messages.telegramQueue[0]).toContain("本侧按模式跳过下注；不补单");
+    expect(messages.telegramQueue[0]).not.toContain("9999");
+    expect(messages.telegramQueue[0]).not.toContain("高赔腿");
+    expect(messages.pushQueue).toHaveLength(0);
+  });
+
   it.each([true, false])("进度报告开关=%s 时，连续拒单的原通知都入队", (enabled) => {
     user.message.notifyArbProgress = enabled;
     const messages = useMessageStore();

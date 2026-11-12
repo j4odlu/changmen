@@ -50,6 +50,21 @@ describe("activeBetRunStore", () => {
     }
   });
 
+  it("finishes an OB single run without waiting for its skipped peer", () => {
+    const store = useActiveBetRunStore();
+    syncActiveBetBegin({ match: { id: 1, title: "A vs B" }, bet: { id: 100, getBetName: () => "全场" },
+      legA: { type: "OB", target: "Home" }, legB: { type: "RAY", target: "Away" },
+      accountA: { playerName: "ob" }, accountB: { playerName: "ray" }, linkId: 1000,
+      betBothLegs: true, executionMode: "obSingle" } as never);
+    expect(store.runs.get(100)?.mode).toBe("obSingle");
+    syncActiveBetAfterRejectSync(100, { hasA: true, hasB: false, rejectA: false, rejectB: false,
+      okA: true, okB: false, makeupQueued: false, placeOutcomeA: "filled_pending_settle", placeOutcomeB: "not_attempted" });
+    expect(store.runs.get(100)?.overallLabel).toBe("OB 单边已成交");
+    expect(store.runs.get(100)?.terminalAt).toBeTypeOf("number");
+    vi.advanceTimersByTime(ACTIVE_BET_TERMINAL_LINGER_MS);
+    expect(store.runs.has(100)).toBe(false);
+  });
+
   it("tracks arb begin through dual-leg success and removes terminal run after a short linger", () => {
     const store = useActiveBetRunStore();
     syncActiveBetBegin({

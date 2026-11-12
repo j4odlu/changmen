@@ -311,6 +311,38 @@ describe("checkArbLegs", () => {
     expect(out).toBeNull();
     expect(checkBetting).toHaveBeenCalledTimes(2);
   });
+  it.each(["A", "B"] as const)("OB single selects OB on %s regardless of odds or LOS C filter", async side => {
+    extensionPrefs.lowOddsSingleHigherCProbabilityOnly = true;
+    const input = { ...ready(leg(side === "A" ? "OB" : "RAY", 100, 3), leg(side === "B" ? "OB" : "RAY", 60, 3)), executionMode: "obSingle" as const };
+    const output = await checkArbLegs(params, input);
+    expect(checkBetting).toHaveBeenCalledTimes(2);
+    expect(output?.executionSide).toBe(side);
+    expect(output?.betBothLegs).toBe(false);
+    expect(side === "A" ? output?.accountB : output?.accountA).toBeUndefined();
+    expect(output?.checkAccountA).toBe(input.accountA);
+    expect(output?.checkAccountB).toBe(input.accountB);
+    expect(output?.legA.betMoney).toBe(100);
+    expect(output?.legB.betMoney).toBe(60);
+    expect((side === "A" ? output?.legA : output?.legB)?.orderIndex).toBe(1);
+  });
+
+  it.each(["OB", "RAY"])("OB single blocks the pair when %s precheck fails", async provider => {
+    checkBetting.mockImplementation(async (acc, option: BetOption) => {
+      option.data = { ok: true };
+      if (acc.provider === provider) option.checkError = "invalid quote";
+      return option;
+    });
+    expect(await checkArbLegs(params, { ...ready(leg("OB", 100, 3), leg("RAY", 60, 1.8)), executionMode: "obSingle" })).toBeNull();
+    expect(checkBetting).toHaveBeenCalledTimes(2);
+  });
+
+  it("OB single requires both live accounts and rejects 9999 without prechecking", async () => {
+    const input = { ...ready(leg("OB", 100, 3), leg("RAY", 60, 1.8)), executionMode: "obSingle" as const };
+    expect(await checkArbLegs(params, { ...input, accountB: undefined })).toBeNull();
+    expect(await checkArbLegs(params, { ...input, singleLegByRate: true })).toBeNull();
+    expect(checkBetting).not.toHaveBeenCalled();
+  });
+
   it("🎯 waits for both checks, selects updated odds and preserves each stake", async () => {
     const input = { ...ready(leg("OB", 100, 1.6), leg("RAY", 60, 3.0)), executionMode: "lowOddsSingle" as const };
     let finishB!: () => void;

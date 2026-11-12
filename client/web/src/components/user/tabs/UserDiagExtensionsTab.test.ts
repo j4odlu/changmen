@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   save: vi.fn(),
   select: undefined as ((value: string) => void) | undefined,
   selectPreflight: undefined as ((value: string) => void) | undefined,
+  selectExecution: undefined as ((value: string) => void) | undefined,
   switches: new Map<string, { disabled: boolean; value: boolean; change: (value: boolean) => void }>(),
 }));
 
@@ -71,12 +72,13 @@ vi.mock("element-plus/es", async () => {
     ElRadioGroup: defineComponent({
       props: ["modelValue"],
       emits: ["update:modelValue", "change"],
-      setup(props, { emit, slots }) {
+      setup(props, { emit, slots, attrs }) {
         const select = (value: string) => {
           emit("update:modelValue", value);
           emit("change", value);
         };
-        if (props.modelValue === "FOK" || props.modelValue === "GTC") mocks.select = select;
+        if (attrs["aria-label"] === "对冲下注模式") mocks.selectExecution = select;
+        else if (props.modelValue === "FOK" || props.modelValue === "GTC") mocks.select = select;
         else mocks.selectPreflight = select;
         return () => h("div", slots.default?.());
       },
@@ -97,6 +99,7 @@ beforeEach(() => {
   mocks.buttons.clear();
   mocks.select = undefined;
   mocks.selectPreflight = undefined;
+  mocks.selectExecution = undefined;
   mocks.switches.clear();
   setPmFokPreflightMode("legacy");
   for (const key of Object.values(PM_BOOK_KEYS)) localStorage.removeItem(key);
@@ -187,7 +190,24 @@ describe("PM arbitrage retirement and preflight settings", () => {
     expect(mocks.save).not.toHaveBeenCalled();
   });
 
-  it("places all four unchanged 9999 settings directly below hedge mode without changing saved preferences", async () => {
+  it("selects OB mode independently of LOS filters and saves via the existing Extensions action", async () => {
+    const user = useUserStore();
+    user.extensionPrefs.lowOddsSingleHigherCProbabilityOnly = true;
+    await renderToString(createSSRApp(Tab));
+    mocks.selectExecution!("obSingle");
+    expect(user.extensionPrefs.arbExecutionMode).toBe("obSingle");
+    expect(mocks.save).not.toHaveBeenCalled();
+    const html = await renderToString(createSSRApp(Tab));
+    expect(html).toContain('data-mode="obSingle"');
+    expect(html).toContain("不含 OB 时按普通模式执行");
+    expect(html).toContain("不套用 LOS 的每盘口一次和 C 行筛选");
+    expect(html).not.toContain('aria-label="LOS 仅下C行高胜率方"');
+    expect(user.extensionPrefs.lowOddsSingleHigherCProbabilityOnly).toBe(true);
+    await mocks.buttons.get("保存")!();
+    expect(mocks.save).toHaveBeenCalledOnce();
+  });
+
+  it("places all four unchanged 9999 settings in a sibling section below hedge mode without changing saved preferences", async () => {
     const user = useUserStore();
     user.extensionPrefs.singleLeg9999Precheck = false;
     user.extensionPrefs.singleLeg9999UseValueBetMoney = true;
@@ -198,10 +218,16 @@ describe("PM arbitrage retirement and preflight settings", () => {
     expect(html).toContain('aria-label="对冲下注模式"');
     expect(html).not.toContain("自动下注模式");
     const mode = html.indexOf("对冲下注模式");
+    const modeEnd = html.indexOf("</section>", mode);
+    const section = html.indexOf('aria-labelledby="single-leg-9999-heading"');
     const settings = html.indexOf('aria-label="9999 单边配置"');
     const venues = html.indexOf("场馆参与");
-    expect(settings).toBeGreaterThan(mode);
+    expect(section).toBeGreaterThan(modeEnd);
+    expect(settings).toBeGreaterThan(section);
     expect(settings).toBeLessThan(venues);
+    expect(html).toContain("9999 单边设置");
+    expect(html).toContain("普通流程按账号比例生效；LOS 不叠加");
+    expect(html).toContain("含 OB 的组合不叠加，不含 OB 时按原规则执行");
     for (const label of ["9999 单边预检", "9999 用正EV金额", "9999 仅下C行高胜率方", "9999 同图次数"])
       expect(html.split(label)).toHaveLength(2);
     expect(JSON.stringify(user.extensionPrefs)).toBe(before);

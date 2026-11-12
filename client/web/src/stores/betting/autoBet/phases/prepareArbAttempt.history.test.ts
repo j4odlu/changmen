@@ -84,6 +84,23 @@ function seedHistory(fixture: ReturnType<typeof makeFixture>, history: typeof hi
 }
 
 
+it.each([["OB", "RAY"], ["Polymarket", "OB"], ["RAY", "PB"]] as const)("OB mode only changes selected pairs containing OB (%s + %s)", async (a, b) => {
+  const fixture = makeFixture([a, b], "count");
+  const ready = await prepareArbAttempt({ ...fixture.params, executionMode: "obSingle" });
+  expect(ready?.executionMode).toBe(a === "OB" || b === "OB" ? "obSingle" : undefined);
+  expect(ready?.betBothLegs).toBe(true);
+  expect(ready?.accountA).toBe(fixture.accounts[0]); expect(ready?.accountB).toBe(fixture.accounts[1]);
+  expect(ready?.singleLegByRate).toBe(false);
+  expect(ready?.lowOddsMarketKeys).toBeUndefined();
+  expect(ready?.linkId).toBeGreaterThan(0);
+});
+
+it("OB mode skips an OB pair when the peer only has a 9999 account", async () => {
+  const fixture = makeFixture(["OB", "RAY"], "count");
+  fixture.accounts[1]!.rateConfig = [{ minOdds: 0, maxOdds: 0, rate: 9999 }];
+  expect(await prepareArbAttempt({ ...fixture.params, executionMode: "obSingle" })).toBeNull();
+});
+
 it("🎯 keeps both normal accounts for LOS precheck and skips a consumed market", async () => {
   const fixture = makeFixture(["Polymarket", "RAY"], "count");
   const params = { ...fixture.params, executionMode: "lowOddsSingle" as const };

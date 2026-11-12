@@ -117,6 +117,7 @@ async function save() {
         <el-radio-group v-model="extensionPrefs.arbExecutionMode" aria-label="对冲下注模式">
           <el-radio-button value="normal">普通模式</el-radio-button>
           <el-radio-button value="lowOddsSingle">LOS</el-radio-button>
+          <el-radio-button value="obSingle">含 OB 仅下 OB</el-radio-button>
         </el-radio-group>
       </div>
       <div v-if="extensionPrefs.arbExecutionMode === 'lowOddsSingle'" class="execution-mode__details">
@@ -147,11 +148,23 @@ async function save() {
           <p>盘口次数按当前浏览器及用户保留，刷新不重置，不跨设备共享。LOS 暂不与 PM GTC 或 9999 单边组合。</p>
         </details>
       </div>
+      <div v-else-if="extensionPrefs.arbExecutionMode === 'obSingle'" class="execution-mode__details">
+        <div class="execution-mode__intro">
+          <span class="execution-mode__name">含 OB 仅下 OB</span>
+          <div class="execution-mode__rules" aria-label="OB 单边提交规则">
+            <span>双腿预检</span><span>只下 OB</span><span>不补单</span>
+          </div>
+        </div>
+        <p>选中的套利组合包含 OB 时，两腿预检通过后仅提交 OB，对冲腿按配置跳过。不含 OB 时按普通模式执行。</p>
+        <p>OB 金额、下注次数和间隔沿用现有设置，不套用 LOS 的每盘口一次和 C 行筛选。</p>
+        <p>这是套利信号触发的 OB 单边下注，存在单边敞口。含 OB 时不与 9999 单边组合，两腿均须有可用账号。</p>
+      </div>
       <p v-else class="execution-mode__normal-note">按原有下注设置执行。</p>
-      <el-form label-position="left" label-width="158px" class="execution-mode__9999" aria-label="9999 单边配置">
-        <h3 class="extensions-tab__heading">
-          9999
-        </h3>
+    </section>
+    <section class="extensions-tab__panel single-leg-9999" aria-labelledby="single-leg-9999-heading">
+      <h3 id="single-leg-9999-heading" class="extensions-tab__heading">9999 单边设置</h3>
+      <p class="extensions-tab__section-desc">由账号买入比例 9999 触发。普通流程按账号比例生效；LOS 不叠加；含 OB 仅下 OB 模式下，含 OB 的组合不叠加，不含 OB 时按原规则执行。</p>
+      <el-form label-position="left" label-width="158px" class="single-leg-9999__form" aria-label="9999 单边配置">
 
         <el-form-item>
           <template #label>
@@ -535,7 +548,8 @@ async function save() {
   min-width: min(780px, 92vw);
 }
 
-.extensions-tab__panel.execution-mode {
+.extensions-tab__panel.execution-mode,
+.extensions-tab__panel.single-leg-9999 {
   margin-bottom: 16px;
   padding: 18px 20px;
 }
@@ -592,21 +606,16 @@ async function save() {
 
 @media (max-width: 600px) {
   .execution-mode__header { align-items: flex-start; flex-direction: column; gap: 12px; }
-  .extensions-tab__panel.execution-mode { padding: 16px; }
+  .extensions-tab__panel.execution-mode,
+  .extensions-tab__panel.single-leg-9999 { padding: 16px; }
 }
 
 
-.execution-mode__9999 {
+.single-leg-9999__form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 24px;
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-
-.execution-mode__9999 > .extensions-tab__heading {
-  grid-column: 1 / -1;
+  margin-top: 14px;
 }
 
 .extensions-tab__cols > .extensions-tab__panel:only-child {

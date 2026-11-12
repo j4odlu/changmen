@@ -73,6 +73,8 @@ export async function placeArbLegs(
   const dispatchStart = checked.precheckCompletedAt ?? performance.now();
   const hasPm = [legA.type, legB.type].includes("Polymarket");
   const lowOddsSingle = checked.executionMode === "lowOddsSingle";
+  const obSingle = checked.executionMode === "obSingle";
+  const singleExecution = lowOddsSingle || obSingle;
   function submitLeg(account: PlatformAccount, leg: BetOption) {
     if (hasPm) recordPmExecutionMetric({ kind: "dispatch", tokenId: leg.itemId,
       stage: leg.type, linkId, ms: performance.now() - dispatchStart, success: true });
@@ -108,14 +110,16 @@ export async function placeArbLegs(
     trace?.event("预检", mixedBlockReason);
     mixedBlocked = true;
   }
-  if (lowOddsSingle) {
+  if (singleExecution) {
     const validSingle = !betBothLegs && checked.executionSide
       && Boolean(accountA) !== Boolean(accountB)
       && (checked.executionSide === "A" ? Boolean(accountA) : Boolean(accountB))
       && checked.checkAccountA && checked.checkAccountB && legA.data && legB.data
-      && !legA.checkError && !legB.checkError;
-    if (!validSingle) { mixedBlocked = true; mixedBlockReason = "🎯 双预检或单腿执行计划不完整，未提交"; }
-    if (!mixedBlocked) {
+      && !legA.checkError && !legB.checkError
+      && (!obSingle || ((legA.type === "OB") !== (legB.type === "OB")
+        && (checked.executionSide === "A" ? legA.type : legB.type) === "OB"));
+    if (!validSingle) { mixedBlocked = true; mixedBlockReason = obSingle ? "OB 双预检或单腿执行计划不完整，未提交" : "🎯 双预检或单腿执行计划不完整，未提交"; }
+    if (lowOddsSingle && !mixedBlocked) {
       try {
         if (!await claimLowOddsMarket(checked.lowOddsMarketKeys ?? [])) {
           mixedBlocked = true; mixedBlockReason = "🎯 本盘口已提交过，跳过";
@@ -125,8 +129,9 @@ export async function placeArbLegs(
         mixedBlocked = true; mixedBlockReason = error instanceof Error ? error.message : "🎯 盘口次数占位失败，未提交";
       }
     }
-    syncActiveBetLeg(bet.id, checked.executionSide === "A" ? "B" : "A", "skipped", "🎯 高赔腿主动跳过，不补单");
-    trace?.event("模式", "🎯 LOS：高赔腿主动跳过，不补单");
+    const skipDetail = obSingle ? "OB 对冲腿按配置跳过，不补单" : "🎯 高赔腿主动跳过，不补单";
+    syncActiveBetLeg(bet.id, checked.executionSide === "A" ? "B" : "A", "skipped", skipDetail);
+    trace?.event("模式", obSingle ? "仅下 OB：对冲腿按配置跳过，不补单" : "🎯 LOS：高赔腿主动跳过，不补单");
   }
   if (mixedBlocked)
     observeArbSubmissionBlocked(checked, "pair_submit_blocked", mixedBlockReason);
@@ -182,7 +187,7 @@ export async function placeArbLegs(
     // A 失败：B 保持 not_attempted，仍回传编排层
   }
 
-  if (!lowOddsSingle && resultB?.success && !resultA?.success) {
+  if (!singleExecution && resultB?.success && !resultA?.success) {
     [legA, legB] = [legB, legA];
     [accountA, accountB] = [accountB, accountA];
     [resultA, resultB] = [resultB, resultA];
@@ -203,7 +208,7 @@ export async function placeArbLegs(
       .join(" · "),
   );
 
-  if (betBothLegs && resultA?.success && !resultB?.success && !resultB?.pmSubmitUnknown && attemptedB) {
+  if (!singleExecution && betBothLegs && resultA?.success && !resultB?.success && !resultB?.pmSubmitUnknown && attemptedB) {
     trace?.event("重试", `anyOdds 换腿补 ${legB.type} ${legB.target}`);
     const retry = await retryFailedLeg(
       match,

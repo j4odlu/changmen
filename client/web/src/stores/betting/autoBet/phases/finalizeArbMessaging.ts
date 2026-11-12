@@ -21,9 +21,9 @@ function singleLegRatePeer(
 ): BettingMessageSingleLegRatePeer | null {
   const { match, bet, config } = params;
   const { legA, legB, accountA, accountB } = placed;
-  if (placed.executionMode === "lowOddsSingle") {
+  if (placed.executionMode === "lowOddsSingle" || placed.executionMode === "obSingle") {
     const skippedLeg = placed.executionSide === "A" ? legB : legA;
-    return { kind: "lowOddsSingle", options: skippedLeg, platformLabel: skippedLeg.type };
+    return { kind: placed.executionMode, options: skippedLeg, platformLabel: skippedLeg.type };
   }
   const matchStore = useMatchStore();
   const accountStore = useAccountStore();
@@ -134,12 +134,15 @@ export function finishArbExecutionTrace(
   outcome: ArbFinalizeOutcome,
 ): void {
   const { trace } = params;
-  if (placed.executionMode === "lowOddsSingle") {
+  if (placed.executionMode === "lowOddsSingle" || placed.executionMode === "obSingle") {
     const side = placed.executionSide;
     const pending = side === "A" ? settle.pendingConfirmA : settle.pendingConfirmB;
     const ok = side === "A" ? outcome.okA : outcome.okB;
+    const obSingle = placed.executionMode === "obSingle";
     trace?.finish(ok ? "success" : pending ? "partial" : "fail",
-      ok ? "🎯 LOS已成交" : pending ? "🎯 原单待确认，不重发" : "🎯 本次未成单，不补单");
+      obSingle
+        ? ok ? "OB 单边已成交；对冲腿按配置跳过" : pending ? "OB 原单待确认；对冲腿不下单" : "OB 本次未成单，不补单"
+        : ok ? "🎯 LOS已成交" : pending ? "🎯 原单待确认，不重发" : "🎯 本次未成单，不补单");
     return;
   }
   const { legA, legB, resultA, resultB } = placed;

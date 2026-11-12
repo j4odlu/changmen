@@ -647,6 +647,40 @@ describe("placeArbLegs two-leg report contract", () => {
     expect(getOddsEntry).not.toHaveBeenCalled();
     expect(betting).toHaveBeenCalledTimes(1);
   });
+  it.each(["Parallel", "Custom", "Low", "High"] as const)("OB single only posts OB under %s sorting, for either side and success or failure", async betSorting => {
+    for (const side of ["A", "B"] as const) {
+      for (const success of [true, false]) {
+        betting.mockClear();
+        const ob = leg("OB");
+        const peer = leg("RAY", "Away");
+        const input = checked({ executionMode: "obSingle", executionSide: side, betBothLegs: false,
+          legA: side === "A" ? ob : peer, legB: side === "B" ? ob : peer,
+          accountA: side === "A" ? account("OB") : undefined,
+          accountB: side === "B" ? account("OB") : undefined,
+          checkAccountA: account(side === "A" ? "OB" : "RAY"), checkAccountB: account(side === "B" ? "OB" : "RAY"),
+        });
+        betting.mockResolvedValueOnce(new BetResult("OB", success));
+        const out = await placeArbLegs({ ...params, config: { ...params.config, betSorting, anyOdds: true, makeUp: true } }, input);
+        expect(betting).toHaveBeenCalledOnce();
+        expect(betting.mock.calls[0]![1]).toBe(ob);
+        expect(out.legA).toBe(input.legA); expect(out.legB).toBe(input.legB);
+        expect(side === "A" ? out.placeOutcomeB : out.placeOutcomeA).toBe("not_attempted");
+        expect(syncActiveBetLeg).toHaveBeenCalledWith(params.bet.id, side === "A" ? "B" : "A", "skipped", "OB 对冲腿按配置跳过，不补单");
+      }
+    }
+    expect(retryFailedLeg).not.toHaveBeenCalled();
+    expect(claimLowOdds).not.toHaveBeenCalled();
+  });
+
+  it("OB single refuses a plan selecting the non-OB leg or lacking peer precheck", async () => {
+    const input = checked({ executionMode: "obSingle", executionSide: "B", betBothLegs: false,
+      accountA: undefined, checkAccountA: account("OB"), checkAccountB: account("RAY") });
+    await placeArbLegs(params, input);
+    await placeArbLegs(params, { ...input, executionSide: "A", accountA: account("OB"), accountB: undefined, checkAccountB: undefined });
+    expect(betting).not.toHaveBeenCalled();
+    expect(retryFailedLeg).not.toHaveBeenCalled();
+  });
+
   it.each(["A", "B"] as const)("🎯 sends only %s even with Parallel/anyOdds, preserving identity and stake", async side => {
     claimLowOdds.mockResolvedValueOnce(true);
     const input = checked({ executionMode: "lowOddsSingle", executionSide: side, betBothLegs: false,

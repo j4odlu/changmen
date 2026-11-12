@@ -61,6 +61,7 @@ export function syncActiveBetBegin(params: {
   checkAccountB?: PlatformAccount;
   linkId: number;
   betBothLegs: boolean;
+  executionMode?: "obSingle";
 }) {
   const store = activeStore();
   if (!store)
@@ -105,9 +106,9 @@ export function syncActiveBetBegin(params: {
     matchTitle: match.title,
     betName: bet.getBetName(),
     linkId,
-    mode: isLowOddsSingleLink(linkId) ? "lowOddsSingle" : params.betBothLegs ? "arb" : "single9999",
+    mode: params.executionMode ?? (isLowOddsSingleLink(linkId) ? "lowOddsSingle" : params.betBothLegs ? "arb" : "single9999"),
     phase: "preparing",
-    overallLabel: isLowOddsSingleLink(linkId) ? "🎯 双腿预检后只下低赔腿" : params.betBothLegs ? "准备双边套利" : "准备 9999 单边下单",
+    overallLabel: params.executionMode === "obSingle" ? "双腿预检后仅下 OB" : isLowOddsSingleLink(linkId) ? "🎯 双腿预检后只下低赔腿" : params.betBothLegs ? "准备双边套利" : "准备 9999 单边下单",
     legs,
   });
   if (checkAccountA)
@@ -562,8 +563,8 @@ export function syncActiveBetAfterRejectSync(
   }
 
   // [changmen 扩展] 9999 仅以下单腿收尾，不等待仅预检/不参与的另一腿成交。
-  if ((run?.mode === "single9999" || run?.mode === "lowOddsSingle") && ((flags.hasA && flags.okA) || (flags.hasB && flags.okB))) {
-    store.scheduleTerminalRemoval(betId, undefined, run?.mode === "lowOddsSingle" ? "🎯 LOS已成交" : "单边下单已完成");
+  if ((run?.mode === "single9999" || run?.mode === "lowOddsSingle" || run?.mode === "obSingle") && ((flags.hasA && flags.okA) || (flags.hasB && flags.okB))) {
+    store.scheduleTerminalRemoval(betId, undefined, run?.mode === "obSingle" ? "OB 单边已成交" : run?.mode === "lowOddsSingle" ? "🎯 LOS已成交" : "单边下单已完成");
     return;
   }
 

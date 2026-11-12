@@ -983,6 +983,25 @@ describe("finalizeArbBet makeup enqueue", () => {
       { pendingConfirmA: false, pendingConfirmB: false },
     );
   });
+  it.each([false, true])("OB single settles only OB and never makes up the peer (rejected=%s)", async rejected => {
+    autoSellEnabled.value = true;
+    settleArbLeg.mockResolvedValueOnce(packLegSync({ orders: [venueOrder("ob-only", rejected ? "reject" : "none", 1.9)], rejected }));
+    const placed = makePlaced({ executionMode: "obSingle", executionSide: "A", betBothLegs: false,
+      accountB: undefined, resultB: undefined, placeOutcomeB: "not_attempted" });
+    const deliver = vi.fn();
+    const trace = createArbExecutionTrace(params.match, params.bet, undefined, deliver);
+    await finalizeArbBet({ ...params, trace, config: { ...params.config, makeUp: true, anyOdds: true } }, placed);
+    expect(settleArbLeg).toHaveBeenCalledOnce();
+    expect(settleArbLeg.mock.calls[0]![0]).toBe(placed.accountA);
+    expect(applyArbMakeUpFromRejects).not.toHaveBeenCalled();
+    expect(autoSell).not.toHaveBeenCalled();
+    expect(recordSingleLeg9999MapFill).not.toHaveBeenCalled();
+    expect(bettingMessage).toHaveBeenCalledWith(expect.objectContaining({ account: placed.accountA, reject: rejected }),
+      expect.objectContaining({ kind: "obSingle", options: placed.legB }), placed.linkId);
+    expect(markSuccessfulBet).toHaveBeenCalledTimes(rejected ? 0 : 1);
+    expect(deliver).toHaveBeenCalledWith(expect.objectContaining({ outcome: rejected ? "fail" : "success" }));
+  });
+
   it("🎯 confirms only the submitted leg and bypasses makeup and auto-sell", async () => {
     autoSellEnabled.value = true;
     settleArbLeg.mockResolvedValueOnce(packLegSync({ orders: [venueOrder("ray-low-odds", "none", 1.8)], rejected: false }));

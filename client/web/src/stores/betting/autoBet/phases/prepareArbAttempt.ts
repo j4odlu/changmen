@@ -85,6 +85,8 @@ export async function prepareArbAttempt(
 
   const legA = options[0];
   const legB = options[1];
+  // [changmen 扩展] 仅选中的套利组合含 OB 时转单腿；其它组合完全沿用普通流程。
+  const obSingle = params.executionMode === "obSingle" && [legA.type, legB.type].includes("OB");
   // [changmen 扩展] PM 自动套利固定使用 FOK，在选号前冻结预检方式。
   for (const leg of options) {
     if (leg.type !== "Polymarket") continue;
@@ -147,8 +149,8 @@ export async function prepareArbAttempt(
   });
 
   const betBothLegs = Boolean(accountA) && Boolean(accountB);
-  if (lowOddsSingle && !betBothLegs) {
-    trace?.finish("skip", "🎯 LOS需要两腿均有可用账号并通过预检");
+  if ((lowOddsSingle || obSingle) && !betBothLegs) {
+    trace?.finish("skip", obSingle ? "OB 单边需要两腿均有可用账号并通过预检" : "🎯 LOS需要两腿均有可用账号并通过预检");
     return null;
   }
   const lowOddsKeys = lowOddsSingle ? lowOddsMarketKeys(String(userStore.userId || ""), match, bet, options) : undefined;
@@ -300,10 +302,12 @@ export async function prepareArbAttempt(
     checkAccountB,
     linkId,
     betBothLegs,
+    ...(obSingle ? { executionMode: "obSingle" as const } : {}),
   });
 
   return {
     ...(lowOddsSingle ? { executionMode: "lowOddsSingle" as const, lowOddsMarketKeys: lowOddsKeys } : {}),
+    ...(obSingle ? { executionMode: "obSingle" as const } : {}),
     legA,
     legB,
     accountA,

@@ -72,18 +72,9 @@ export async function fetchPolymarketPublicProfile(
 export async function resolvePolymarketVenueIdentityFromToken(
   token: string | undefined,
 ): Promise<PolymarketVenueIdentity | undefined> {
-  const config = parseTokenConfig(token);
-  // [changmen 扩展] Deposit Wallet 不一定有 Gamma 资料；回查签名钱包，
-  // 仍绑定官方资料中的身份，不能直接把派生地址当作新的账号 ID。
-  const addresses = new Set([
-    resolvePolymarketProfileAddress(config),
-    normalizeEthAddress(config.walletAddress || config.address),
-  ].filter(Boolean));
-  for (const address of addresses) {
-    const profile = await fetchPolymarketPublicProfile(address);
-    const identity = mapPolymarketPublicProfile(profile);
-    if (identity?.venueMemberId)
-      return identity;
-  }
-  return undefined;
+  const address = resolvePolymarketProfileAddress(token);
+  if (!address)
+    return undefined;
+  const profile = await fetchPolymarketPublicProfile(address);
+  return mapPolymarketPublicProfile(profile);
 }

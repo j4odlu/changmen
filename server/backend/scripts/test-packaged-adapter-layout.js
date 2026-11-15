@@ -1,48 +1,32 @@
 import fs from "node:fs";
 import path from "node:path";
+import { BACKEND_ROOT } from "@changmen/storage/paths";
 import { syncPlatformAdapterBackendBundle } from "@changmen/venue-node/sync-backend-bundle.mjs";
-import { syncPlatformNodeBundle } from "../../platform-probes/scripts/sync-backend-bundle.mjs";
 
-const adapterDst = syncPlatformAdapterBackendBundle();
-const nodeDst = syncPlatformNodeBundle();
-
-process.env.GAMEBET_ADAPTER_ROOT = adapterDst;
-process.env.GAMEBET_NODE_ROOT = nodeDst;
-
-const {
-  getAdapterRoot,
-  adapterRequire,
-  initAdapterRegistry,
-  initEsmPlatformBackends,
-  requirePlatform,
-  reqS,
-  resetAdapterRootForTests,
-} = await import("../core/shared/adapter_paths.js");
-
-resetAdapterRootForTests();
-process.env.GAMEBET_ADAPTER_ROOT = adapterDst;
-process.env.GAMEBET_NODE_ROOT = nodeDst;
-await initAdapterRegistry();
-await initEsmPlatformBackends();
-
-console.log("packaged adapter:", getAdapterRoot());
-if (path.resolve(getAdapterRoot()) !== path.resolve(adapterDst)) {
-  throw new Error(`expected packaged adapter ${adapterDst}, got ${getAdapterRoot()}`);
+const scratch = fs.mkdtempSync(path.join(BACKEND_ROOT, ".platform-layout-"));
+const previous = Object.fromEntries(["GAMEBET_ADAPTER_ROOT", "GAMEBET_NODE_ROOT"].map(key => [key, process.env[key]]));
+try {
+  const adapterDst = syncPlatformAdapterBackendBundle({ dst: path.join(scratch, "runtime") });
+  process.env.GAMEBET_ADAPTER_ROOT = adapterDst;
+  process.env.GAMEBET_NODE_ROOT = adapterDst;
+  const { getAdapterRoot, adapterRequire, initAdapterRegistry, initEsmPlatformBackends,
+    requirePlatform, reqS, resetAdapterRootForTests } = await import("../core/shared/adapter_paths.js");
+  resetAdapterRootForTests();
+  await initAdapterRegistry();
+  await initEsmPlatformBackends();
+  if (path.resolve(getAdapterRoot()) !== path.resolve(adapterDst)) throw Error("Packaged runtime root mismatch");
+  adapterRequire("registry", "feeds.js");
+  for (const platform of ["OB", "RAY", "TF", "PB"]) requirePlatform(platform, "node", "session.js");
+  if (fs.existsSync(path.join(adapterDst, "hg"))) throw Error("Optional HG probe must not enter the runtime bundle");
+  requirePlatform("IA", "node", "collect_credentials.js");
+  const catalog = reqS("catalog/market_catalog");
+  if (typeof catalog.getDefaultMarketCode !== "function") throw TypeError("Shared catalog export missing");
+  console.log("packaged runtime OK: platform modules load without a probe bundle");
+} finally {
+  for (const [key, value] of Object.entries(previous)) {
+    if (value === undefined) delete process.env[key]; else process.env[key] = value;
+  }
+  const target = path.resolve(scratch), parent = path.resolve(BACKEND_ROOT);
+  if (path.dirname(target) !== parent || !path.basename(target).startsWith(".platform-layout-")) throw Error("Unexpected fixture cleanup target");
+  fs.rmSync(target, { recursive: true, force: true });
 }
-
-adapterRequire("registry", "feeds.js");
-requirePlatform("OB", "node", "session.js");
-requirePlatform("RAY", "node", "session.js");
-
-const marketCatalog = reqS("catalog/market_catalog");
-if (typeof marketCatalog.getDefaultMarketCode !== "function") {
-  throw new TypeError("shared/catalog/market_catalog did not export getDefaultMarketCode");
-}
-console.log("shared resolve OK:", marketCatalog.getDefaultMarketCode("OB"));
-
-console.log("packaged layout OK");
-
-delete process.env.GAMEBET_ADAPTER_ROOT;
-delete process.env.GAMEBET_NODE_ROOT;
-fs.rmSync(adapterDst, { recursive: true, force: true });
-fs.rmSync(nodeDst, { recursive: true, force: true });

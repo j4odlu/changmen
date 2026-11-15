@@ -17,9 +17,9 @@ beforeAll(() => {
 const inspect = (actual = sites, options = {}) => inspectPmSharedLoaders(root, actual, { env: {}, ...options });
 
 it("classifies the actual PM closure while retaining every original unknown", () => {
-  expect(sites).toHaveLength(20);
-  expect(evidence.records).toHaveLength(20);
-  expect(evidence.byClass).toEqual({ "fixed-target": 12, "environment-dependent": 3, "parameter-unknown": 5 });
+  expect(sites).toHaveLength(15);
+  expect(evidence.records).toHaveLength(15);
+  expect(evidence.byClass).toEqual({ "fixed-target": 7, "environment-dependent": 3, "parameter-unknown": 5 });
   expect(evidence.violations).toEqual([]);
   expect(evidence.records.every(row => row.closed === false)).toBe(true);
   expect(evidence.sourceContracts).toHaveLength(7);
@@ -32,9 +32,7 @@ it("records default target hashes, locked pg resolution and the bounded preload 
   const result = inspect().defaultScenario;
   expect(result.applicableToAuditorProcess).toBe(true);
   expect(result.targetEvidence.map(row => row.file).sort()).toEqual([
-    "server/platform-probes/hg/session.js", "server/platform-probes/ob/session.js",
-    "server/platform-probes/pb/session.js", "server/platform-probes/ray/core.js",
-    "server/platform-probes/ray/session.js", "server/venues/registry/runtime/registry/feeds.js",
+    "server/venues/registry/runtime/registry/feeds.js",
     "server/venues/registry/runtime/registry/paths.js",
   ].sort());
   for (const row of [...result.targetEvidence, ...result.preloadPackages, ...result.preloadFiles, result.pg, result.manifest]) {
@@ -44,19 +42,20 @@ it("records default target hashes, locked pg resolution and the bounded preload 
   const lock = JSON.parse(source("package-lock.json"));
   expect(result.pg.version).toBe(lock.packages[result.pg.lockKey].version);
   expect(result.pg.searchPaths).toEqual(["apps/backend/node_modules", "node_modules", "server/node_modules"]);
-  expect(result.preloadFiles.length).toBeGreaterThan(0);
-  expect(result.preloadFiles.every(row => /^server\/platform-probes\/[^/]+\/[^/_][^/]*\.js$/.test(row.file))).toBe(true);
+  expect(result.preloadFiles).toHaveLength(8);
+  expect(result.preloadFiles.some(row=>row.file.endsWith("/ws.js"))).toBe(false);
+  expect(result.preloadFiles.every(row => /^server\/venues\/registry\/runtime\/[^/]+\/[^/_][^/]*\.js$/.test(row.file))).toBe(true);
   expect(result.runtimeExecuted).toBe(false);
   expect(result.moduleDependencyClosuresCertified).toBe(false);
 });
 it("keeps three generic APIs open even though this recognized PM call set does not instantiate them", () => {
-  expect(inspect().defaultScenario.recognizedRequests).toEqual({ requirePlatform: 5, adapterRequireRegistryFastPath: 1, reqS: 0, backendRequire: 0, adapterRequireGeneric: 0 });
+  expect(inspect().defaultScenario.recognizedRequests).toEqual({ requirePlatform: 0, adapterRequireRegistryFastPath: 1, reqS: 0, backendRequire: 0, adapterRequireGeneric: 0 });
   const unknowns = evidence.records.filter(row => row.classification === "parameter-unknown");
   expect(unknowns).toHaveLength(5);
   expect(unknowns.every(row => row.targetNameDetermined === false && row.closed === false)).toBe(true);
 });
 for (const [name, mutate] of [
-  ["a new shared computed call", rows => [...rows, { file: "server/backend/core/account/balance_provider.js", kind: "custom-loader", loaderSymbol: "reqS", expression: "runtimeInput", arguments: [null] }]],
+  ["a new shared computed call", rows => [...rows, { file: "server/backend/core/esport-api/store.js", kind: "custom-loader", loaderSymbol: "reqS", expression: "runtimeInput", arguments: [null] }]],
   ["a redirected literal target", rows => rows.map(row => row.loaderSymbol === "adapterRequire" ? { ...row, arguments: ["polymarket", "orderBook.ts"] } : row)],
   ["a duplicated record", rows => [...rows, rows[0]]],
   ["a missing record", rows => rows.slice(1)],
@@ -66,7 +65,7 @@ for (const [name, mutate] of [
   expect(result.defaultScenario).toBeUndefined();
   expect(result.safeToNarrowPublishScope).toBe(false);
 });
-for (const key of ["CHANGMEN_ADAPTER_ROOT", "GAMEBET_ADAPTER_ROOT", "CHANGMEN_PLATFORM_PROBES_ROOT", "GAMEBET_NODE_ROOT", "CHANGMEN_BACKEND_ROOT", "NODE_PATH", "NODE_OPTIONS"]) {
+for (const key of ["CHANGMEN_ADAPTER_ROOT", "GAMEBET_ADAPTER_ROOT", "CHANGMEN_NODE_ROOT", "GAMEBET_NODE_ROOT", "CHANGMEN_BACKEND_ROOT", "NODE_PATH", "NODE_OPTIONS"]) {
   it(`marks ${key} coverage as unverified without reading or printing an external value`, () => {
     const secret = "Z:/never-read-this-external-root/private-value";
     const result = inspect(sites, { env: { [key]: secret } });
@@ -122,4 +121,10 @@ it("rejects unparseable or incomplete source contracts", () => {
   expect(() => sharedLoaderSourceSignature("bad.js", "function (" )).toThrow("Cannot inspect");
   expect(() => sharedLoaderSourceSignature("bad.js", "const n=1;", "pg-loader")).toThrow("Incomplete PG");
   expect(() => sharedLoaderSourceSignature("bad.js", "", "unknown")).toThrow("Unknown source selector");
+});
+
+it("ignores the retired probe-root override when reviewing the backend runtime",()=>{
+  const result=inspect(sites,{env:{CHANGMEN_PLATFORM_PROBES_ROOT:"Z:/unavailable-probes"}});
+  expect(result.defaultScenario.applicableToAuditorProcess).toBe(true);
+  expect(result.violations).toEqual([]);
 });

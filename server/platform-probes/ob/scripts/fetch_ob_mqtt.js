@@ -1,11 +1,11 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * OB realtime odds via MQTT over WebSocket.
  */
 
 import { backendRequire } from "../../backend/_paths.js";
-import * as Core from "../core.js";
-import { login, fetchGameView } from "../session.js";
+import * as Core from "@changmen/venue-node/runtime/ob/core.js";
+import { login, fetchGameView } from "@changmen/venue-node/runtime/ob/session.js";
 
 const mqtt = backendRequire("mqtt");
 

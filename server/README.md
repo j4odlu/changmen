@@ -1,13 +1,13 @@
 # server/ — 服务端 monorepo 包
 
-changmen 服务端包含 14 个 **npm workspace**：主进程 `backend` 提供 HTTP API 与静态托管；`matcher` 写 `client_matches`；其余为平台设施、内部库或采集进程。RDS 数据层位于根目录 `rds/`，包名仍为 `@changmen/db`。全仓 24 个包的职责见 [workspace 总览](../docs/WORKSPACE_LAYOUT.md)。
+changmen 服务端包含 14 个 **npm workspace**：主进程 `backend` 提供 HTTP API 与静态托管；`matcher` 写 `client_matches`；其余为平台设施、内部库或采集进程。RDS 数据层位于根目录 `rds/`，包名仍为 `@changmen/db`。全仓 25 个包的职责见 [workspace 总览](../docs/WORKSPACE_LAYOUT.md)。
 
 **团队边界**：[docs/TEAM_BOUNDARIES.md](../docs/TEAM_BOUNDARIES.md) · **总架构**：[docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) · **部署**：[PRODUCTION_DEPLOYMENT.md](../PRODUCTION_DEPLOYMENT.md)
 
 ## 进程与数据流（主链路）
 
 ```text
-浏览器 venue-adapter
+浏览器 venue-browser / Chrome 插件
     │  API_SaveMatch / API_SaveBet / API_SaveLiveTimer
     ▼
 server/backend  ──写入──►  RDS platform_* / live_timers
@@ -20,7 +20,9 @@ server/match/matcher ──compose/──► 唯一合场写路径
     │                      server/match/resolver（可选队名）
     └──读写──► @changmen/db ──► RDS client_matches
 
-本机 JSON（凭证/初赔等）── @changmen/storage ──► server/backend/storage/
+VPS collector ──独占写──► RDS platform_*（vps_http_ws 平台）
+
+本机 JSON（凭证等）── @changmen/storage ──► server/backend/storage/
 ```
 
 **扩展实时（可选，生产 PM2 常开 PM Sports）**：
@@ -56,19 +58,19 @@ polymarket-sports ──WS──► 写 client_matches.pm_sport
 |--------|------|
 | `esport-api/` | 路由、`store`、platform_sync、Save* / GetMatchs |
 | `account/` | 场馆账号、订单、报表（[README](backend/core/account/README.md)） |
-| `auth/` | JWT、action 权限 |
+| `auth/` | Cookie 会话、CSRF 与 action 权限 |
 | `integrations/polymarket/` | PM 下单/结算/relayer（API 侧） |
 | `integrations/a8/` | A8 v4 / esport 客户端 |
 | `admin_tools/` | Telegram、订单通知、运维辅助 |
 | `shared/` | adapter_paths、storage 再导出、catalog 测试 |
 
-**SQL 迁移**在 `db/assets/migrations/`，维护实现与测试在 `db/maintenance/`；应用层通过 `@changmen/db` 使用数据层。backend 的 `npm run db:apply` 直接执行数据层正式入口，旧目录副本已退役。
+**SQL 迁移**在根目录 `rds/assets/migrations/`，维护实现与测试在 `rds/maintenance/`；应用层通过 `@changmen/db` 使用数据层。backend 的 `npm run db:apply` 直接执行数据层正式入口，旧目录副本已退役。
 
 ## 常用命令（在 `changmen/`）
 
 | 命令 | 作用 |
 |------|------|
-| `npm run web` | 启动 backend（Win `:3560` / 其它 `:3456`，内嵌 matchMerge） |
+| `npm run web` | 启动 backend（Win `:3700` / 其它 `:3456`，内嵌 matchMerge） |
 | `npm run matcher:ui` | 人工关联赛事 UI `http://localhost:4567` |
 | `npm run pm-sports` | Polymarket Sports 守护进程 |
 | `npm run value-bet` | 价值投注扫描循环 |
@@ -76,7 +78,7 @@ polymarket-sports ──WS──► 写 client_matches.pm_sport
 | `npm run db:apply` | 应用 RDS 迁移（backend workspace） |
 | `npm run check:boundaries` | 客户端 / 服务端 import 边界检查 |
 
-Windows 一键：`BAT\dev.bat`（backend + Vite，内嵌 matchMerge）。生产 PM2：`ecosystem.config.cjs`（`changmen-esport`、`changmen-pm-sports`）。
+Windows 一键：`BAT\dev-esport.bat`（backend + Vite，内嵌 matchMerge）。生产 PM2：`ecosystem.config.cjs`（`changmen-esport`、`changmen-pm-sports`）。
 
 ## 脚本在哪
 
@@ -91,7 +93,7 @@ Windows 一键：`BAT\dev.bat`（backend + Vite，内嵌 matchMerge）。生产 
 |------|------|
 | API 形状 / 鉴权 / 代理 | `server/backend` |
 | 合并规则 / 新平台入 client_matches | `packages/match-identity` + `server/match/matcher` |
-| 表结构 / 查询 | `server/db`（SQL 位于 `assets/migrations/`） |
+| 表结构 / 查询 | `rds`（SQL 位于 `assets/migrations/`） |
 | 本地 platforms.json / 路径 | `@changmen/storage` |
-| 浏览器采集 | **`packages/venue-adapter`**（不在 server 内实现采集） |
+| 浏览器采集 | `client/packages/venue-browser`；VPS 平台采集在 `server/collectors` |
 | PM 体育实时比分 | `polymarket-sports` + `realtime-hub` + 前端 `pmSportRealtime` |

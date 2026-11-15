@@ -6,7 +6,7 @@ import { pmSubmitRejectionFromHttp } from "@changmen/shared/pm_submit_response";
 import { clobClockInfo, prepareClobClock } from "./clob_clock.js";
 import * as accountStore from "../../account/account_store.js";
 import { assertPlayerOwnedByUser } from "../../account/player_ownership.js";
-import { enrichAccountFromPlatformDefaults } from "../../account/balance_provider.js";
+import { enrichPmAccountFromPlatformDefaults } from "./account_defaults.js";
 import * as dbStore from "../../db/store.js";
 import store from "../../esport-api/store.js";
 import { fetchPolymarketCollateralBalance } from "./balance.js";
@@ -190,7 +190,7 @@ export async function handleRefreshPmBalance(body, userId) {
     return { ok: false, msg: "account 不存在" };
   if (String(row.provider ?? "").trim().toLowerCase() !== "polymarket")
     return { ok: false, msg: "仅 Polymarket 账号可用 Pm_RefreshBalance" };
-  const enriched = enrichAccountFromPlatformDefaults(row);
+  const enriched = enrichPmAccountFromPlatformDefaults(row);
   if (!enriched.token)
     return { ok: false, msg: "PM 账号缺少 token" };
   try {

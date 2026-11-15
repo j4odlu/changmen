@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { login, fetchOdds } from "../session.js";
-import * as Core from "../core.js";
+import { login, fetchOdds } from "@changmen/venue-node/runtime/ray/session.js";
+import * as Core from "@changmen/venue-node/runtime/ray/core.js";
 
 async function main() {
   const matchId = process.argv[2];

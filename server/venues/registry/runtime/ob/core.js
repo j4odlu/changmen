@@ -3,16 +3,16 @@ import {
   obFormatNormalizedMarketName,
 } from "@changmen/shared/catalog/market_catalog";
 
-/** �̿ڿ���̬��game/view �� market.status ����֪��Ͷעֵ */
+/** 盘口开放态：game/view 中 market.status 的已知可投注值 */
 const MARKET_STATUS_OPEN = 6;
 
-/** visible / suspended ����֪����ֵ */
+/** visible / suspended 的已知开放值 */
 const MARKET_VISIBLE_SHOW = 1;
 const MARKET_SUSPENDED_OFF = 0;
 
 /**
- * �ж��̿��Ƿ����̣�����Ͷעչʾ̬����
- * ������ A8/����ɼ���һ�£�����ͬʱ�����Ϊ���š�
+ * 判断盘口是否锁盘（不可投注展示态）。
+ * 规则与 A8/插件采集端一致：三者同时满足才为开放。
  */
 function isMarketLocked({ status, visible, suspended } = {}) {
   const s = numberOrZero(status);
@@ -22,7 +22,7 @@ function isMarketLocked({ status, visible, suspended } = {}) {
 }
 
 /**
- * �� OB ԭʼ�̿��ֶν���Ϊ�ɶ�״̬��HTTP ���� / MQTT ���������ã���
+ * 将 OB 原始盘口字段解析为可读状态（HTTP 快照 / MQTT 增量均可用）。
  * @returns {{ locked: boolean, code: string, label: string, reasons: string[] }}
  */
 function describeMarketStatus(fields = {}) {
@@ -35,45 +35,45 @@ function describeMarketStatus(fields = {}) {
 
   if (status !== MARKET_STATUS_OPEN) {
     if (status === 9 || status === 12 || settleCount > 0) {
-      reasons.push(`status=${status}�������ѽ��㣬settle_count=${settleCount}��`);
+      reasons.push(`status=${status}（疑似已结算，settle_count=${settleCount}）`);
     } else if (status === 7) {
-      reasons.push(`status=7������/ͣͶ�������ڹ�����̣�`);
+      reasons.push(`status=7（锁盘/停投，常见于滚球封盘）`);
     } else {
-      reasons.push(`status=${status}���ǿ���ֵ ${MARKET_STATUS_OPEN}��`);
+      reasons.push(`status=${status}（非开放值 ${MARKET_STATUS_OPEN}）`);
     }
   }
-  if (visible !== MARKET_VISIBLE_SHOW) reasons.push(`visible=${visible}����չʾ��`);
+  if (visible !== MARKET_VISIBLE_SHOW) reasons.push(`visible=${visible}（非展示）`);
   if (suspended !== MARKET_SUSPENDED_OFF) {
     const st = fields.suspended_type ?? fields.suspendedType;
     reasons.push(
       st != null && st !== 0
-        ? `suspended=${suspended}����ͣ��suspended_type=${st}��`
-        : `suspended=${suspended}����ͣ��`
+        ? `suspended=${suspended}（暂停，suspended_type=${st}）`
+        : `suspended=${suspended}（暂停）`
     );
   }
 
   let code = "open";
-  let label = "��Ͷע";
+  let label = "可投注";
   if (locked) {
     if (status === 9 || status === 12 || settleCount > 0) {
       code = "settled";
-      label = "�ѽ���";
+      label = "已结算";
     } else if (suspended !== MARKET_SUSPENDED_OFF) {
       code = "suspended";
-      label = "��ͣ";
+      label = "暂停";
     } else if (visible !== MARKET_VISIBLE_SHOW) {
       code = "hidden";
-      label = "���ɼ�";
+      label = "不可见";
     } else {
       code = "locked";
-      label = "����";
+      label = "锁盘";
     }
   }
 
   return { locked, code, label, reasons };
 }
 
-/** �Ӵ�ȷ��ַ��������������� "1:0" �� { home: 1, away: 1, total: 2 } */
+/** 从大比分字符串解析局数，如 "1:0" → { home: 1, away: 0, total: 1 } */
 function parseScore(scoreStr) {
   const parts = cleanText(scoreStr).split(":").map((x) => numberOrZero(x));
   const home = parts[0] || 0;
@@ -81,7 +81,7 @@ function parseScore(scoreStr) {
   return { home, away, total: home + away };
 }
 
-/** game/index ����������״̬�ֶΣ�HTTP ��ʼ�� / ��ʱˢ�£� */
+/** game/index 单条比赛的状态字段（HTTP 初始化 / 定时刷新） */
 function extractMatchFieldsFromIndex(item) {
   return {
     isLive: numberOrZero(item.is_live),
@@ -95,7 +95,7 @@ function extractMatchFieldsFromIndex(item) {
 }
 
 /**
- * ������״̬������ game/index��MQTT ��ֱ�����ͱ������󣬿���ʱ index ˢ�� + �̿� MQTT ��ӷ�ӳ��
+ * 比赛级状态（来自 game/index，MQTT 不直接推送比赛对象，靠定时 index 刷新 + 盘口 MQTT 间接反映）
  */
 function describeMatchStatus(fields = {}) {
   const isLive = numberOrZero(fields.isLive ?? fields.is_live);
@@ -109,16 +109,16 @@ function describeMatchStatus(fields = {}) {
 
   if (visible !== MARKET_VISIBLE_SHOW) {
     code = "hidden";
-    label = "���ɼ�";
+    label = "不可见";
   } else if (suspended !== MARKET_SUSPENDED_OFF) {
     code = "suspended";
-    label = "������ͣ";
+    label = "整场暂停";
   } else if (isLive === 2) {
     code = "live";
-    label = score ? `������ ${score}` : "������";
+    label = score ? `进行中 ${score}` : "进行中";
   } else if (isLive === 1) {
     code = "scheduled";
-    label = "δ����";
+    label = "未开赛";
   }
 
   return {
@@ -133,7 +133,7 @@ function describeMatchStatus(fields = {}) {
   };
 }
 
-/** game/getTimer �� ��ǰ�����еĵ�ͼ��round�� */
+/** game/getTimer → 当前进行中的地图（round） */
 function normalizeGetTimer(response) {
   if (!response || response.status !== "true" || !response.data) return {};
   const out = {};
@@ -153,7 +153,7 @@ function normalizeGetTimer(response) {
 }
 
 /**
- * ��ͼ/stage ״̬��HTTP game/view ��ʼ�� + MQTT �������� locked + getTimer �굱ǰ��
+ * 地图/stage 状态：HTTP game/view 初始化 + MQTT 更新主盘 locked + getTimer 标当前局
  */
 function describeStageStatus({
   stageId,
@@ -171,17 +171,17 @@ function describeStageStatus({
 
   if (ms.code === "settled") {
     code = "settled";
-    label = "�ѽ���";
+    label = "已结算";
   } else if (winLocked) {
     code = ms.code === "suspended" ? "suspended" : "locked";
-    label = ms.label || "����";
+    label = ms.label || "锁盘";
   } else {
     code = "open";
-    label = "��Ͷע";
+    label = "可投注";
   }
 
   if (isCurrentMap && isLive === 2) {
-    label = `${label} �� ��ǰ��`;
+    label = `${label} · 当前局`;
   }
 
   return {
@@ -194,7 +194,7 @@ function describeStageStatus({
   };
 }
 
-/** ���� timer / ����״̬ˢ�� byMatch ������ stageStatus */
+/** 根据 timer / 主盘状态刷新 byMatch 内所有 stageStatus */
 function refreshStageStatuses(detail, match, timer) {
   if (!detail?.stages?.length) return detail;
   for (const stage of detail.stages) {
@@ -209,7 +209,7 @@ function refreshStageStatuses(detail, match, timer) {
   return detail;
 }
 
-/** MQTT ���������Ƿ���ˢ�� stage */
+/** MQTT 锁盘类变更是否需刷新 stage */
 function isMqttLockChange(type) {
   return (
     type === "market.statusUpdate" ||
@@ -284,29 +284,29 @@ function buildGameIndexQuery({ gameId = "0", flag = 1, day = 1 } = {}) {
   return `/game/index?${params.toString()}`;
 }
 
-/** ���� flag/day �ƶ����̷�Χ��ǩ���� live ̽����һ�£� */
+/** 根据 flag/day 推断赛程范围标签（与 live 探测结果一致） */
 function describeIndexSource(flag, day) {
   const f = Number(flag);
   const d = Number(day);
-  if (f === 0) return { scope: "all", label: "ȫ������" };
-  if (f === 1) return { scope: "today", label: "����" };
+  if (f === 0) return { scope: "all", label: "全部赛程" };
+  if (f === 1) return { scope: "today", label: "今日" };
   if (f === 2) {
-    if (d === 0) return { scope: "today", label: "����(�Ӽ�)" };
-    if (d === 1) return { scope: "tomorrow", label: "����" };
-    return { scope: "future", label: `δ��+${d}��` };
+    if (d === 0) return { scope: "today", label: "今日(子集)" };
+    if (d === 1) return { scope: "tomorrow", label: "明日" };
+    return { scope: "future", label: `未来+${d}日` };
   }
-  if (f === 3) return { scope: "week", label: "��һ��" };
+  if (f === 3) return { scope: "week", label: "近一周" };
   if (f === 4) {
-    if (d === 1) return { scope: "tomorrow", label: "����" };
-    return { scope: "future", label: `δ��+${d}��` };
+    if (d === 1) return { scope: "tomorrow", label: "明日" };
+    return { scope: "future", label: `未来+${d}日` };
   }
-  if (f === 5) return { scope: "past", label: "�ѽ���" };
+  if (f === 5) return { scope: "past", label: "已结束" };
   return { scope: "unknown", label: `flag=${f}&day=${d}` };
 }
 
 function liveStatusLabel(isLive) {
-  if (isLive === 2) return "������";
-  if (isLive === 1) return "δ����";
+  if (isLive === 2) return "进行中";
+  if (isLive === 1) return "未开赛";
   return "δ֪";
 }
 

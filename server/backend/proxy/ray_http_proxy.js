@@ -18,7 +18,7 @@ function originFromReferer(referer) {
   }
 }
 
-/** platforms.json �?A8 写死采集凭证 �?环境变量 �?ACCOUNT（下注账号，非采集） */
+/** platforms.json → A8 写死采集凭证 → 环境变量 → ACCOUNT（下注账号，非采集） */
 function resolveRayCredentials() {
   const row = store.getPlatform("RAY") || {};
   const a8 = getRayA8CollectCredentials();
@@ -34,7 +34,8 @@ function resolveRayCredentials() {
 }
 
 /**
- * Frontve：代�?RAY v2 API（Authorization 来自 platforms.json）�? * GET /esport/ray/proxy?path=match&query=match_type=2&page=1
+ * Frontve：代发 RAY v2 API（Authorization 来自 platforms.json）。
+ * GET /esport/ray/proxy?path=match&query=match_type=2&page=1
  */
 async function tryRayHttpProxy(req, res) {
   const pathname = req.url.split("?")[0];

@@ -2,7 +2,7 @@
   "name": "@changmen/platform-probes",
   "private": true,
   "type": "commonjs",
-  "description": "各平台可选探针/CLI（changmen/devtools，非主链路）",
+  "description": "Optional venue probes and CLI; runtime modules come from @changmen/venue-node",
   "scripts": {
     "ob:login": "node scripts/platform-cli.mjs ob fetch_ob_login.js",
     "ob:view": "node scripts/platform-cli.mjs ob fetch_ob_view.js",
@@ -29,6 +29,7 @@
   "dependencies": {
     "@changmen/db": "file:../../rds",
     "@changmen/storage": "file:../storage",
-    "@changmen/shared": "file:../../packages/shared"
+    "@changmen/shared": "file:../../packages/shared",
+    "@changmen/venue-node": "file:../venues"
   }
 }

@@ -8,7 +8,7 @@
 
 | 参考源（只读） | changmen 实现 |
 |----------------|----------------|
-| [`../../../../A8/index0706.js`](../../../../A8/index0706.js) | 前端：[`../ob/`](../ob/)、[`../ray/`](../ray/)、[`../../providers/`](../../providers/) |
+| [`../../../../A8/index0706.js`](../../../../A8/index0706.js) | 前端：[`../ob/`](../../../packages/venue-browser/adapter/ob)、[`../ray/`](../../../packages/venue-browser/adapter/ray)、[`../../providers/`](../../../packages/venue-browser/adapter) |
 
 ---
 
@@ -47,13 +47,13 @@
 | 场景 | 实现 | 说明 |
 |------|------|------|
 | **采集（常态）** | `getCollectPlatform("OB")` → `Client_GetCollectPlatform` | 读 `platforms.json`（与 A8 同 API 语义） |
-| **采集（补货）** | `refreshObCollectToken()`（[`ob/helpers.ts`](../ob/helpers.ts)） | 条件与 A8 相同：`game/index` + `data === "token"` |
-| **试玩 API** | `OB_DEMO_LOGIN_URL`（[`api/v4.ts`](../../api/v4.ts)） | 与 A8 相同：**浏览器直连** `gY`（不经 `/api/ob/demo-login`） |
+| **采集（补货）** | `refreshObCollectToken()`（[`ob/helpers.ts`](../../../packages/venue-browser/adapter/ob/collect.ts)） | 条件与 A8 相同：`game/index` + `data === "token"` |
+| **试玩 API** | `OB_DEMO_LOGIN_URL`（[`api/v4.ts`](../../src/api/v4.ts)） | 与 A8 相同：**浏览器直连** `gY`（不经 `/api/ob/demo-login`） |
 | **UI「试玩」** | `enterCreditPlate("OB")` → `fetchObDemoUrl()` | 直连试玩 URL → 确认后 `window.open(pc)` |
 | **后端扩展** | `ensurePlatformCredentials()` → `syncObLogin()` | 启动时可用试玩 API 写入 **gateway + token** 到 `platforms.json`（**A8 前端采集器无此步骤**） |
-| **下注** | [`AccountEditDialog.vue`](../../components/account/AccountEditDialog.vue) | 与 A8 `AccountInfoView` 相同：剪贴板 Base64 → `ACCOUNT` |
+| **下注** | [`AccountEditDialog.vue`](../../src/components/account/AccountEditDialog.vue) | 与 A8 `AccountInfoView` 相同：剪贴板 Base64 → `ACCOUNT` |
 
-后端仍保留 `GET /api/ob/demo-login`（[`server.js`](../../../backend/server.js)），供 `ob_session.js`、探针脚本使用；**Vue 采集与试玩 UI 已不对接该代理**。
+后端仍保留 `GET /api/ob/demo-login`（[`server.js`](../../../../server/backend/server.js)），供 `ob_session.js`、探针脚本使用；**Vue 采集与试玩 UI 已不对接该代理**。
 
 ### OB Token 对照
 
@@ -91,7 +91,7 @@ waitForUser
 | MQTT | 主机 `47.115.75.57`，路径 `/esport/ws/OB` |
 | 队徽 | CDN `uphw-cdn4.shudarong.com` → `pc.json` + `${base}/${path}` |
 
-### changmen（[`ob/index.ts`](../ob/index.ts)）
+### changmen（[`ob/index.ts`](../../../packages/venue-browser/adapter/ob/index.ts)）
 
 **部署**（见 [A8_OB_REPLICATE_PLAN.md](../../docs/A8_OB_REPLICATE_PLAN.md)）：比赛列表来自浏览器 `saveMatch` → matcher → `Client_GetMatchs`。服务端 FeedHub 已删除（2026-06）。
 
@@ -133,7 +133,7 @@ startObCollector（约 3s 后 connectObMqtt）
 
 ### changmen
 
-- [`providers/obProvider.ts`](../../providers/obProvider.ts)：对齐 A8 的 `uid`、`secret_key`、`/game/bet` 表单结构。
+- [`providers/obProvider.ts`](../../../packages/venue-browser/adapter/ob/bet.ts)：对齐 A8 的 `uid`、`secret_key`、`/game/bet` 表单结构。
 - 经 `packages/venue-adapter/ob/accountHttp.ts` 的 `accountGet` / `accountPostForm`（底层仍复用通用 http-relay）。
 - 离线契约（无需账号）：`npm run test:ob-provider`（或 `npm run test:ob` 含 GetMatchs 形态校验）。
 
@@ -162,7 +162,7 @@ startObCollector（约 3s 后 connectObMqtt）
 
 | 场景 | 实现 | 说明 |
 |------|------|------|
-| **采集** | `getCollectPlatform("RAY")` | 后端 [`router.js`](../../../backend/core/esport-api/router.js) 对 RAY **忽略** `platforms.json` 中的 token，强制 [`collect_credentials.js`](../../../../devtools/platform-probes/ray/collect_credentials.js)（与 A8 bundle **相同** gateway + JWT） |
+| **采集** | `getCollectPlatform("RAY")` | 后端 [`router.js`](../../../../server/backend/core/esport-api/router.js) 对 RAY **忽略** `platforms.json` 中的 token，强制 [`collect_credentials.js`](../../../../server/venues/registry/runtime/ray/collect_credentials.js)（与 A8 bundle **相同** gateway + JWT） |
 | **启动同步** | `syncRayFromA8()` | 将同一套凭证写入 `platforms.json`（便于探针；API 仍强制 A8 凭证） |
 | **环境变量** | `RAY_COLLECT_USE_ENV=1` | 可用 `RAY_TOKEN` / `RAY_GATEWAY` 覆盖（**非 A8 行为**） |
 | **下注** | `AccountEditDialog` 剪贴板 | 同 A8 → `rayProvider` 使用 `account.token` |
@@ -195,7 +195,7 @@ waitForUser
   → wait(30s) 循环
 ```
 
-### changmen（[`ray/index.ts`](../ray/index.ts)）
+### changmen（[`ray/index.ts`](../../../packages/venue-browser/adapter/ray/index.ts)）
 
 ```text
 startRayCollector
@@ -216,7 +216,7 @@ startRayCollector
 | WebSocket | 浏览器 → `47.115.75.57/esport/ws/RAY` | dev backend relay；生产同源 relay |
 | 队徽 CDN | `statics.freestaticsasia.com` | 同左（`rayLogo`） |
 
-详细模块见 [RAY.md](./RAY.md)。后端 WS 说明见 [`devtools/platform-probes/ray/ws.js`](../../../../devtools/platform-probes/ray/ws.js)、[`proxy/ray_http_proxy.js`](../../../backend/proxy/ray_http_proxy.js)。
+详细模块见 [RAY.md](./RAY.md)。后端 WS 说明见 [`devtools/platform-probes/ray/ws.js`](../../../../server/platform-probes/ray/ws.js)、[`proxy/ray_http_proxy.js`](../../../../server/backend/proxy/ray_http_proxy.js)。
 
 ---
 
@@ -270,24 +270,24 @@ startRayCollector
 
 | 能力 | A8（bundle） | changmen |
 |------|--------------|----------|
-| 采集入口 | `UMe` | [`ob/index.ts`](../ob/index.ts) `startObCollector` |
-| Token 刷新 | `$Me` + `gY` | [`ob/helpers.ts`](../ob/helpers.ts) `refreshObCollectToken` |
-| 采集 HTTP | `Rr.get` + `Ak` | [`ob/http.ts`](../ob/http.ts) `collectObGet` |
-| MQTT | 插件内 `RMe.connect` | [`ob/mqtt.ts`](../ob/mqtt.ts) |
-| 试玩 UI | `UserCollectView` | [`api/v4.ts`](../../api/v4.ts) `enterCreditPlate("OB")` |
-| 下注 | OB Provider（bundle） | [`providers/obProvider.ts`](../../providers/obProvider.ts) |
-| 后端 OB | — | [`devtools/platform-probes/ob/`](../../../../devtools/platform-probes/ob/)、[`esport-api/router.js`](../../../backend/core/esport-api/router.js) |
+| 采集入口 | `UMe` | [`ob/index.ts`](../../../packages/venue-browser/adapter/ob/index.ts) `startObCollector` |
+| Token 刷新 | `$Me` + `gY` | [`ob/helpers.ts`](../../../packages/venue-browser/adapter/ob/collect.ts) `refreshObCollectToken` |
+| 采集 HTTP | `Rr.get` + `Ak` | [`ob/http.ts`](../../../packages/venue-browser/adapter/ob/markets.ts) `collectObGet` |
+| MQTT | 插件内 `RMe.connect` | [`ob/mqtt.ts`](../../../packages/venue-browser/adapter/ob/mqtt.ts) |
+| 试玩 UI | `UserCollectView` | [`api/v4.ts`](../../src/api/v4.ts) `enterCreditPlate("OB")` |
+| 下注 | OB Provider（bundle） | [`providers/obProvider.ts`](../../../packages/venue-browser/adapter/ob/bet.ts) |
+| 后端 OB | — | [`devtools/platform-probes/ob/`](../../../../server/platform-probes/ob)、[`esport-api/router.js`](../../../../server/backend/core/esport-api/router.js) |
 
 ## RAY
 
 | 能力 | A8（bundle） | changmen |
 |------|--------------|----------|
-| 采集入口 | `vQe` / `bQe()` | [`ray/index.ts`](../ray/index.ts) `startRayCollector` |
-| 采集凭证 | 插件内对象 `t` | [`a8Collect.ts`](../ray/a8Collect.ts) + [`collect_credentials.js`](../../../../devtools/platform-probes/ray/collect_credentials.js) |
-| 采集 HTTP | `Rr.get` + `Authorization` | [`ray/http.ts`](../ray/http.ts) `collectRayGet` |
-| WS | `47.115.75.57` SC | [`ray/index.ts`](../ray/index.ts) + [`ray_http_proxy.js`](../../../backend/proxy/ray_http_proxy.js) |
-| 下注 | `vYe` | [`providers/rayProvider.ts`](../../providers/rayProvider.ts) |
-| 账号粘贴 | `AccountInfoView` | [`AccountEditDialog.vue`](../../components/account/AccountEditDialog.vue) |
+| 采集入口 | `vQe` / `bQe()` | [`ray/index.ts`](../../../packages/venue-browser/adapter/ray/index.ts) `startRayCollector` |
+| 采集凭证 | 插件内对象 `t` | [`a8Collect.ts`](../../../packages/venue-browser/adapter/ray/a8Collect.ts) + [`collect_credentials.js`](../../../../server/venues/registry/runtime/ray/collect_credentials.js) |
+| 采集 HTTP | `Rr.get` + `Authorization` | [`ray/http.ts`](../../../packages/venue-browser/adapter/ray/collect.ts) `collectRayGet` |
+| WS | `47.115.75.57` SC | [`ray/index.ts`](../../../packages/venue-browser/adapter/ray/index.ts) + [`ray_http_proxy.js`](../../../../server/backend/proxy/ray_http_proxy.js) |
+| 下注 | `vYe` | [`providers/rayProvider.ts`](../../../packages/venue-browser/adapter/ray/bet.ts) |
+| 账号粘贴 | `AccountInfoView` | [`AccountEditDialog.vue`](../../src/components/account/AccountEditDialog.vue) |
 
 ---
 

@@ -64,7 +64,7 @@ flowchart LR
 - 场馆实时赔率可以直接更新前端 `oddsStore`，并非全部绕经 RDS。
 - `client_matches` 的合场主体由 compose 写入；`pm_sport` 等附加字段还有独立更新方。因此应按字段和业务语义指定所有权，不能把“唯一合场算法”理解成“整张表只有一个写入方”。
 
-对应源码：[采集接入](../../../server/backend/core/esport-api/store.js)、[合场调度](../../../server/match/matcher/ops/match_merge_once.js)、[PM 状态写入](../../../server/collectors/polymarket-sports/index.js)、[进程清单](../../../deploy/ecosystem.config.cjs)。
+对应源码：[采集接入](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/esport-api/store.js)、[合场调度](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/match/matcher/ops/match_merge_once.js)、[PM 状态写入](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/collectors/polymarket-sports/index.js)、[进程清单](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/deploy/ecosystem.config.cjs)。
 
 ## 必须保护的 A8 行为
 
@@ -104,9 +104,9 @@ flowchart LR
 
 ### F01 统一建库脚本遗漏字段迁移
 
-确定事实：[apply-rds-schema.mjs](../../../server/backend/scripts/apply-rds-schema.mjs:133) 从 033 跳到 035，从 038 跳到 040，没有执行 [034](../../../server/backend/db/migrations/034_platform_bets_market_id.sql) 与 [039](../../../server/backend/db/migrations/039_platform_bets_line_id.sql)。baseline 的 `platform_bets` 也不含这两个字段。
+确定事实：[apply-rds-schema.mjs](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/scripts/apply-rds-schema.mjs#L133) 从 033 跳到 035，从 038 跳到 040，没有执行 [034](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/db/migrations/034_platform_bets_market_id.sql) 与 [039](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/db/migrations/039_platform_bets_line_id.sql)。baseline 的 `platform_bets` 也不含这两个字段。
 
-[platform_collector_store.js](../../../server/db/rds/platform_collector_store.js:321) 的 INSERT、UPDATE 和 SELECT 已使用 `market_id`、`line_id`。因此只按统一脚本初始化的环境不能满足当前代码。现有生产库是否由人工补过，需要单独只读核对。
+[platform_collector_store.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/db/rds/platform_collector_store.js#L321) 的 INSERT、UPDATE 和 SELECT 已使用 `market_id`、`line_id`。因此只按统一脚本初始化的环境不能满足当前代码。现有生产库是否由人工补过，需要单独只读核对。
 
 处理：建立显式迁移清单与执行记录、checksum、迁移互斥；在临时 PostgreSQL 上验证从空库和上一版本升级两条路径。静态脚本还列出 002，但它是已弃用 no-op，应登记为历史排除，不能把所有遗漏项直接批量执行。
 
@@ -114,9 +114,9 @@ flowchart LR
 
 确定链路：
 
-1. [batchSavePlayerAccountRecords](../../../server/db/rds/player_store.js:1225) 捕获普通 UPDATE 异常后返回 `0`；场馆账号唯一冲突会另外抛错。
-2. [replaceAccountsForUser](../../../server/backend/core/db/store.js:205) await 后不检查更新行数，直接更新 `_accountsCache`。
-3. [handleSaveAccounts](../../../server/backend/core/account/account_service.js:339) 可以继续 prune，最终返回成功。
+1. [batchSavePlayerAccountRecords](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/db/rds/player_store.js#L1225) 捕获普通 UPDATE 异常后返回 `0`；场馆账号唯一冲突会另外抛错。
+2. [replaceAccountsForUser](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/db/store.js#L205) await 后不检查更新行数，直接更新 `_accountsCache`。
+3. [handleSaveAccounts](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/account/account_service.js#L339) 可以继续 prune，最终返回成功。
 
 本目录脚本使用真实 `replaceAccountsForUser` 函数体和返回 0 的模拟持久化依赖，已复现内存被更新。此复现不连接 RDS；实际 SQL 故障返回 0 的分支由源码确认。
 
@@ -124,7 +124,7 @@ flowchart LR
 
 ### F03 账号保存与删除缺少统一事务
 
-[handleSaveAccounts](../../../server/backend/core/account/account_service.js:280) 先校验与合并，再写账号并更新缓存，最后调用 `prunePlayersNotInList`。批量 UPDATE 和软删使用独立数据库调用；没有把整个保存动作包在一个事务内，prune 的结果也没有成为最终成功条件。
+[handleSaveAccounts](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/account/account_service.js#L280) 先校验与合并，再写账号并更新缓存，最后调用 `prunePlayersNotInList`。批量 UPDATE 和软删使用独立数据库调用；没有把整个保存动作包在一个事务内，prune 的结果也没有成为最终成功条件。
 
 由此存在保存成功但 prune 失败、以及多个请求在校验与提交之间交错的风险。这里是可达的结构性风险，未在生产制造并发故障。
 
@@ -134,13 +134,13 @@ flowchart LR
 
 `server/db/package.json` 没有 `scripts.test`，Turbo dry-run 中 `@changmen/db#test` 为 `<NONEXISTENT>`。因此 `npm test`、`test:backend` 的 Turbo 任务不会自行收集该包已有的 rds 测试。
 
-[backend 的 test 命令](../../../server/backend/package.json:65) 是显式目录和文件白名单，没有包含 `core/account`、`core/db`。账号、订单相关测试文件虽存在，也不能据此认定在默认后端任务中执行。`npm run analyze:deps` 同样没有列入根 `test:checks`，导致边界检查通过而内部架构检查失败。
+[backend 的 test 命令](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/package.json#L65) 是显式目录和文件白名单，没有包含 `core/account`、`core/db`。账号、订单相关测试文件虽存在，也不能据此认定在默认后端任务中执行。`npm run analyze:deps` 同样没有列入根 `test:checks`，导致边界检查通过而内部架构检查失败。
 
 处理：接入适合各文件的测试执行器，区分 Vitest、`node --test` 和直接 Node assert 脚本，避免简单扩大 glob 后误报无 suite 或误跑需要外部环境的脚本。发布证据记录实际执行的测试清单与数量。先补接线，再把这些检查作为重构保障。
 
 ### F05 profile 的整行回滚可能撤销后续成功修改
 
-[updateProfileSetting](../../../server/backend/core/db/store.js:90) 和 [setUserSetting](../../../server/backend/core/db/store.js:253) 先修改内存、await 数据库，失败时恢复之前的整行。
+[updateProfileSetting](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/db/store.js#L90) 和 [setUserSetting](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/db/store.js#L253) 先修改内存、await 数据库，失败时恢复之前的整行。
 
 已用真实 `updateProfileSetting` 函数体复现：请求 A 保存未完成，请求 B 修改并成功，然后 A 失败，内存恢复到 A 之前的行，B 的成功修改也随之消失。复现只用了内存中的模拟依赖。
 
@@ -148,7 +148,7 @@ flowchart LR
 
 ### F06 matcher 与 backend 的源码边界没有真正隔离
 
-[match_merge_once.js](../../../server/match/matcher/ops/match_merge_once.js:3) 和 [rds_snapshot_cache.js](../../../server/match/matcher/ops/rds_snapshot_cache.js:2) 直接相对路径导入 backend 的 `db/store`、`esport-api/store`、`matcher_mode`。backend 又导入 matcher。这是源码层面的双向依赖，不要求 package.json 出现循环才构成耦合。
+[match_merge_once.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/match/matcher/ops/match_merge_once.js#L3) 和 [rds_snapshot_cache.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/match/matcher/ops/rds_snapshot_cache.js#L2) 直接相对路径导入 backend 的 `db/store`、`esport-api/store`、`matcher_mode`。backend 又导入 matcher。这是源码层面的双向依赖，不要求 package.json 出现循环才构成耦合。
 
 现有 `check:boundaries` 通过，因为 server-match 规则没有禁止这些反向导入。目录隔离已经存在，职责隔离尚未完成。
 
@@ -158,7 +158,7 @@ flowchart LR
 
 AST 分析排除测试与纯类型 import 后，仅静态运行时 import 就形成一个 **54 文件**强连通分量；加入可解析的字面量动态 import 后，最大分量为 **91 文件**。强连通意味着这些文件沿依赖边互相可达，不等于每次执行都产生循环初始化错误。图没有解析跨 workspace 依赖和运行时 bridge，不能当成全项目完整依赖图。
 
-现有架构检查返回 5 条违规：domain/betting → stores/account；domain/polymarket → stores/betting、stores/odds；domain/predictfun → stores/odds；types → extensions/valueBet。其中有纯类型边，不能把 5 条全部描述成运行时循环。真实业务边可见 [PM 报价读取](../../../client/web/src/domain/polymarket/attachDetectionQuote.ts:4)、[accountPicker 引用](../../../client/web/src/domain/betting/describeArbPrepareSkip.ts:7)。
+现有架构检查返回 5 条违规：domain/betting → stores/account；domain/polymarket → stores/betting、stores/odds；domain/predictfun → stores/odds；types → extensions/valueBet。其中有纯类型边，不能把 5 条全部描述成运行时循环。真实业务边可见 [PM 报价读取](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/client/web/src/domain/polymarket/attachDetectionQuote.ts#L4)、[accountPicker 引用](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/client/web/src/domain/betting/describeArbPrepareSkip.ts#L7)。
 
 已有好的起点：`client-core` 的 API/odds bridge、venue bridge、adapter contract。应沿这些既有接口收拢职责，避免再新建一套通用框架。
 
@@ -166,15 +166,15 @@ AST 分析排除测试与纯类型 import 后，仅静态运行时 import 就形
 
 ### F08 契约包还不足以独立保护跨端改动
 
-确定事实：契约包已有 actions、DTO、Zod 和 URL 构造，方向正确；但 `test:api-contract` 当前只运行 URL 断言。[openapi.yaml](../../../packages/api-contract/openapi.yaml) 主要是路径索引，未定义完整请求体、响应与错误矩阵。SaveMatch 等 schema 只先验证外层 JSON 字符串；GetMatchs 出站校验有意宽松且 warn-only。
+确定事实：契约包已有 actions、DTO、Zod 和 URL 构造，方向正确；但 `test:api-contract` 当前只运行 URL 断言。[openapi.yaml](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/packages/api-contract/openapi.yaml) 主要是路径索引，未定义完整请求体、响应与错误矩阵。SaveMatch 等 schema 只先验证外层 JSON 字符串；GetMatchs 出站校验有意宽松且 warn-only。
 
-[action_registry](../../../server/backend/core/esport-api/action_registry.ts:45) 从同一 action 列表建立映射，再验证列表覆盖，主要证明分类索引完整，不能证明每个 action 的真实 handler 和返回语义均正确。
+[action_registry](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/esport-api/action_registry.ts#L45) 从同一 action 列表建立映射，再验证列表覆盖，主要证明分类索引完整，不能证明每个 action 的真实 handler 和返回语义均正确。
 
 处理：按 ACCOUNT、GetMatchs、Save*、Order 分批建立表单请求、响应、空值、失败结果的回放样本。兼容层负责字段大小写、单位和历史别名，内部业务使用明确模型。先回放与 shadow 校验，再考虑收紧验证；不能直接用更严格 schema 拒绝 A8 当前会发的输入。
 
 ### F09 列表数据与版本标记分开读取
 
-[loadClientMatchesFromDb](../../../server/backend/core/db/store.js:484) 先查列表，再独立获取 meta，随后用 meta 标记已加载的数据。在两次查询之间若发生合场提交，旧列表可能被标成新版本，后续 meta 相同则复用旧列表。下一轮内嵌合场更新或 90 秒兜底可以缩短这种状态，但不能证明读取原子一致。
+[loadClientMatchesFromDb](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/db/store.js#L484) 先查列表，再独立获取 meta，随后用 meta 标记已加载的数据。在两次查询之间若发生合场提交，旧列表可能被标成新版本，后续 meta 相同则复用旧列表。下一轮内嵌合场更新或 90 秒兜底可以缩短这种状态，但不能证明读取原子一致。
 
 另有维护成本：热命中仍需查 meta；空列表不满足 `_clientMatches.size` 条件，会继续走列表查询；多个请求缺少合并中的刷新 Promise。它们会增加查询数，但本次没有测量生产负载，不能据此声称数据库已经过载。
 
@@ -182,7 +182,7 @@ AST 分析排除测试与纯类型 import 后，仅静态运行时 import 就形
 
 ### F10 异步快照写入缺少完整失败闭环
 
-[common.js](../../../server/db/rds/common.js:71) 已具备同 key 合并、同 key 活跃写串行和队列上限，这是应保留的机制。剩余问题是满队列无法合并时丢弃本次写入；SQL 执行失败只写 warn；统计未提供完整的失败、重试与最后成功时间；[shutdown](../../../server/backend/server.js:269) 未显式停止 matcher 与排空写队列。
+[common.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/db/rds/common.js#L71) 已具备同 key 合并、同 key 活跃写串行和队列上限，这是应保留的机制。剩余问题是满队列无法合并时丢弃本次写入；SQL 执行失败只写 warn；统计未提供完整的失败、重试与最后成功时间；[shutdown](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/server.js#L269) 未显式停止 matcher 与排空写队列。
 
 上报热缓存可以先成功，但 matcher 又以 RDS 中源记录的存在性为约束，因此持久化缺口可能表现成合场缺失。下一次采集通常可重建快照，不能把这种数据与不可丢失的订单混为一类。
 
@@ -190,15 +190,15 @@ AST 分析排除测试与纯类型 import 后，仅静态运行时 import 就形
 
 ### F11 在线检测与业务就绪需要分开
 
-[server.js](../../../server/backend/server.js:250) 监听后异步拉取 profiles、恢复采集快照，并以已完成 Promise 启动 matcher。这样做有避免启动被全量 hydrate 拖住的既有原因，不能简单改成所有初始化全局串行等待。
+[server.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/server.js#L250) 监听后异步拉取 profiles、恢复采集快照，并以已完成 Promise 启动 matcher。这样做有避免启动被全量 hydrate 拖住的既有原因，不能简单改成所有初始化全局串行等待。
 
-[完整 health](../../../server/backend/http_routes.js:410) 面向本机或有权限的管理用户，已检查 DB 并提供池、Hub 与 API 时延信息；诊断接口也已有 matcher 和写队列信息。其成功主要由 DB 连接决定，未把 schema 能力、最近合场成功、快照年龄与初始化阶段组合为业务 readiness。外部公共 health 还有更轻的存活响应，使用时需明确是哪一种。
+[完整 health](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/http_routes.js#L410) 面向本机或有权限的管理用户，已检查 DB 并提供池、Hub 与 API 时延信息；诊断接口也已有 matcher 和写队列信息。其成功主要由 DB 连接决定，未把 schema 能力、最近合场成功、快照年龄与初始化阶段组合为业务 readiness。外部公共 health 还有更轻的存活响应，使用时需明确是哪一种。
 
 处理：保留轻量 liveness；新增或细化分能力 readiness，让登录、账号、采集、列表分别报告状态。启动入口统一管理资源及停止顺序。继续保持单 esport 实例，不能在缓存一致性和凭证共享问题解决前用 PM2 cluster 扩容。
 
 ### F12 局部代码变化被发布规则放大
 
-[classify-deploy-scope](../../../scripts/deploy/classify-deploy-scope.mjs:67) 将整个 `packages/` 判为双端；[validation-plan](../../../scripts/verification/validation-plan.mjs:8) 将大量核心目录判为本地 full 验证。可复跑例子：
+[classify-deploy-scope](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/scripts/deploy/classify-deploy-scope.mjs#L67) 将整个 `packages/` 判为双端；[validation-plan](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/scripts/verification/validation-plan.mjs#L8) 将大量核心目录判为本地 full 验证。可复跑例子：
 
 | 单文件修改 | 日常验证范围 | 发布组件范围 |
 | --- | --- | --- |
@@ -213,7 +213,7 @@ AST 分析排除测试与纯类型 import 后，仅静态运行时 import 就形
 
 ### F13 schema 生命周期分散
 
-除 F01 的显式遗漏外，[pm_gtc_store](../../../server/db/rds/orderModes/gtc/pm_gtc_store.js:9) 仍在业务写入时 lazy CREATE TABLE/INDEX，另有 `server/db/schema` 和专项 apply 脚本。普通订单读取已尽量避免触发 GTC schema，这一点应继续保留。
+除 F01 的显式遗漏外，[pm_gtc_store](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/db/rds/orderModes/gtc/pm_gtc_store.js#L9) 仍在业务写入时 lazy CREATE TABLE/INDEX，另有 `server/db/schema` 和专项 apply 脚本。普通订单读取已尽量避免触发 GTC schema，这一点应继续保留。
 
 处理：建立统一 schema 清单，声明每个模块所需版本与可选能力。先在部署中补齐显式迁移与能力检查，再保留一段兼容期的 lazy 兜底，确认旧环境升级后才移除业务 DDL。不要直接扫描所有 SQL 执行；其中有历史迁移、弃用脚本和执行前置条件。
 

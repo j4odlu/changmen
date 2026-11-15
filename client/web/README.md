@@ -6,12 +6,12 @@
 
 | 职责 | 负责方 | 接口 / 状态 |
 |------|--------|-------------|
-| 比赛列表 | **客户端** 采集 + **服务端** matcher | `API_SaveMatch` → `client_matches` → `Client_GetMatchs` |
-| 赔率 | **客户端** 采集 + `oddsStore` | `API_SaveBet`；内存 fo（对齐 A8） |
+| 比赛列表 | 按 manifest 采集 + **服务端** matcher | `API_SaveMatch` → `client_matches` → `Client_GetMatchs` |
+| 赔率 | 平台行情 + `oddsStore` | `API_SaveBet`；内存 fo（对齐 A8） |
 
-服务端**不**跑平台 Feed 拉数（FeedHub 已删除）。列表来自客户端上报 + matcher 合并。
+browser / plugin 平台从客户端上报；`vps_http_ws` 平台由 `server/collectors` 独占写入，浏览器 Save* 被拒绝。matcher 将各平台数据合并为 `client_matches`。
 
-> 术语：用户中心「赛事采集」开关 = 是否**回传** `SaveMatch`/`SaveBet`，不是是否连接平台或更新 `oddsStore`。
+> 浏览器平台术语：用户中心「赛事采集」开关 = 是否**回传** `SaveMatch`/`SaveBet`，不是是否连接平台或更新 `oddsStore`。
 
 Chrome 扩展见 [`chrome-extension/`](../../chrome-extension/)。
 
@@ -35,11 +35,11 @@ Chrome 扩展见 [`chrome-extension/`](../../chrome-extension/)。
 ```bash
 npm run app:build   # 构建 → dist/，由服务端托管 /
 npm run app:dev     # 开发 Vite（Win http://localhost:5274 / 其它 :5174，proxy → backend）
-BAT\dev.bat         # 后端 + Vite 一键启动
+BAT\dev-esport.bat         # 后端 + Vite 一键启动
 ```
 
 ## 与 server/backend 的关系
 
 - HTTP：`/esport/*`、`/common/*` → 服务端 `esport-api`
-- 浏览器采集经 `@changmen/venue-adapter` 上报 `API_SaveMatch` / `API_SaveBet`；WS 由浏览器直连平台或 A8 聚合机
+- 浏览器采集经 `@changmen/venue-browser/adapter` 上报 `API_SaveMatch` / `API_SaveBet`；WS 由浏览器直连平台或 A8 聚合机
 - 样式 `/esport2/assets/*` → 服务端 `public/esport2/`

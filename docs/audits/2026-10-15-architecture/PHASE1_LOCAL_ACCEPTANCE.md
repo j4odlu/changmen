@@ -10,15 +10,15 @@
 
 | 问题 | 当前行为 | 主要实现 |
 | --- | --- | --- |
-| 账号写入确认 | 普通 SQL 异常向上抛出；更新行数不足视为失败；成功确认后才更新缓存 | [player_store.js](../../../server/db/rds/player_store.js)、[store.js](../../../server/backend/core/db/store.js) |
-| ACCOUNT 保存事务 | 锁定用户 profile 与本人活跃 players，读取 RDS 当前状态，在同一事务内校验归属、保护既有字段、写入和 prune；失败全部回滚 | [account_service.js](../../../server/backend/core/account/account_service.js)、[player_ownership.js](../../../server/backend/core/account/player_ownership.js) |
-| 同用户并发保存 | 进程内队列协调提交与缓存发布；数据库用户行锁约束并发事务，包括本人账号为空的情况 | [user_write_queue.js](../../../server/backend/core/db/user_write_queue.js) |
-| 配置失败回滚竞态 | 同用户的 UpdateSetting、USERCONFIG、CollectConfig 和其它 KV 写入共用配置队列；失败不发布缓存，不再恢复整行旧快照 | [store.js](../../../server/backend/core/db/store.js)、[profile_store.js](../../../server/db/rds/profile_store.js) |
-| 未等待的账号同步 | 两处后端余额同步现在等待账号写入，失败进入既有错误处理；使用独立数组，避免提前修改缓存 | [PM handler](../../../server/backend/core/integrations/polymarket/pm_client_handlers.js)、[account_service.js](../../../server/backend/core/account/account_service.js) |
-| 漏执行迁移 | 显式清单包含 034、039 及两个订单观察迁移；共 42 项；002 为已弃用 no-op，明确排除 | [apply-rds-schema.mjs](../../../server/backend/scripts/apply-rds-schema.mjs) |
-| 迁移执行可靠性 | 会话级 advisory lock 覆盖整份清单；每项 DDL 与执行记录同事务；重复执行跳过已完成项；历史内容校验和变动时失败 | [rds-migrations.mjs](../../../server/backend/scripts/rds-migrations.mjs) |
+| 账号写入确认 | 普通 SQL 异常向上抛出；更新行数不足视为失败；成功确认后才更新缓存 | [player_store.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/db/rds/player_store.js)、[store.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/db/store.js) |
+| ACCOUNT 保存事务 | 锁定用户 profile 与本人活跃 players，读取 RDS 当前状态，在同一事务内校验归属、保护既有字段、写入和 prune；失败全部回滚 | [account_service.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/account/account_service.js)、[player_ownership.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/account/player_ownership.js) |
+| 同用户并发保存 | 进程内队列协调提交与缓存发布；数据库用户行锁约束并发事务，包括本人账号为空的情况 | [user_write_queue.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/db/user_write_queue.js) |
+| 配置失败回滚竞态 | 同用户的 UpdateSetting、USERCONFIG、CollectConfig 和其它 KV 写入共用配置队列；失败不发布缓存，不再恢复整行旧快照 | [store.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/db/store.js)、[profile_store.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/db/rds/profile_store.js) |
+| 未等待的账号同步 | 两处后端余额同步现在等待账号写入，失败进入既有错误处理；使用独立数组，避免提前修改缓存 | [PM handler](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/integrations/polymarket/pm_client_handlers.js)、[account_service.js](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/core/account/account_service.js) |
+| 漏执行迁移 | 显式清单包含 034、039 及两个订单观察迁移；共 42 项；002 为已弃用 no-op，明确排除 | [apply-rds-schema.mjs](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/scripts/apply-rds-schema.mjs) |
+| 迁移执行可靠性 | 会话级 advisory lock 覆盖整份清单；每项 DDL 与执行记录同事务；重复执行跳过已完成项；历史内容校验和变动时失败 | [rds-migrations.mjs](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/server/backend/scripts/rds-migrations.mjs) |
 | 默认测试漏跑 | DB workspace 有了 test 任务；backend 加入 core/account、core/db、迁移测试；纯 Node 文件单独运行；修复一项依赖仓库根 cwd 的 GTC 测试路径 | 两包 package.json 与 Vitest 配置 |
-| 测试环境与缓存 | 新接入的 backend/DB 测试使用临时 storage 和不可用的回环数据库地址；Turbo 将测试环境脚本纳入 test 输入 | [offline-env.mjs](../../../scripts/testing/offline-env.mjs)、[turbo.json](../../../turbo.json) |
+| 测试环境与缓存 | 新接入的 backend/DB 测试使用临时 storage 和不可用的回环数据库地址；Turbo 将测试环境脚本纳入 test 输入 | [offline-env.mjs](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/scripts/testing/offline-env.mjs)、[turbo.json](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/turbo.json) |
 
 后端数据入口原有精确保护未修改。事务通过已有 `saveAccountRecordsForOwner` 的显式 `replaceWith` 选项进入，没有改动受保护的 `server/db/index.js` 或订单实现，也没有放宽保护基线。
 
@@ -34,7 +34,7 @@
 
 命令：`npm run test:phase1:postgres`。
 
-[验证脚本](../../../scripts/testing/phase1-postgres.mjs) 使用本机 PostgreSQL 18.6 创建独立临时集群，只监听 `127.0.0.1` 的临时端口。初始化、查询和应用模块的所有数据库地址均指向这个集群；结束时停止集群并清理本轮目录。无需使用项目现有数据库配置。
+[验证脚本](https://github.com/j4odlu/changmen/blob/1632d6905061f56fcc7af7039914ca26d743ed48/scripts/testing/phase1-postgres.mjs) 使用本机 PostgreSQL 18.6 创建独立临时集群，只监听 `127.0.0.1` 的临时端口。初始化、查询和应用模块的所有数据库地址均指向这个集群；结束时停止集群并清理本轮目录。无需使用项目现有数据库配置。
 
 12 组场景全部通过：
 

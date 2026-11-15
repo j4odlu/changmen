@@ -27,11 +27,11 @@ function parseScoreline(raw) {
 
 export function stageFromTabName(tabName) {
   const name = String(tabName || "").trim();
-  if (!name || name === "MATCH") return { stageId: 0, label: "ȫ��", mapOption: "", marketOption: "MATCH" };
+  if (!name || name === "MATCH") return { stageId: 0, label: "全场", mapOption: "", marketOption: "MATCH" };
   const mapMatch = name.match(/^MAP\s*(\d+)$/i);
   if (mapMatch) {
     const n = Number(mapMatch[1]);
-    return { stageId: n, label: `��ͼ${n}`, mapOption: name, marketOption: "MAP" };
+    return { stageId: n, label: `地图${n}`, mapOption: name, marketOption: "MAP" };
   }
   return null;
 }
@@ -117,7 +117,7 @@ function buildStageFromMarket(market, stageMeta) {
 
   return {
     stageId,
-    label: stageMeta?.label || (stageId === 0 ? "ȫ��" : `��ͼ${stageId}`),
+    label: stageMeta?.label || (stageId === 0 ? "全场" : `地图${stageId}`),
     winHome: Number(homeSel.euro_odds) || null,
     winAway: Number(awaySel.euro_odds) || null,
     winHomeId: selectionOddsId(marketId, "home"),
@@ -125,8 +125,8 @@ function buildStageFromMarket(market, stageMeta) {
     winMarketId: marketId,
     winLocked: locked,
     winMarketStatus: locked
-      ? { code: "locked", label: "����" }
-      : { code: "open", label: "��Ͷע" },
+      ? { code: "locked", label: "锁盘" }
+      : { code: "open", label: "可投注" },
     betName: market.market_name,
     mapOption: market.map_option || stageMeta?.mapOption || "",
   };

@@ -36,7 +36,7 @@ function stageIdsForBo(bo) {
 }
 
 function stageLabel(stageId) {
-  return stageId === 0 ? "ȫ��" : `��ͼ${stageId}`;
+  return stageId === 0 ? "全场" : `地图${stageId}`;
 }
 
 function teamLogoUrl(path) {
@@ -69,12 +69,12 @@ function extractScoreFromTeams(teams) {
   return { home: 0, away: 0, text: "0:0" };
 }
 
-/** RAY �̿� status��1=��Ͷ��������Ϊ���̣��� A8 checkBet һ�£� */
+/** RAY 盘口 status：1=可投，其它视为锁盘（与 A8 checkBet 一致） */
 function describeOddStatus(status) {
   const code = numberOrZero(status);
-  if (code === 1) return { locked: false, code: "open", label: "��Ͷע" };
-  if (code === 4) return { locked: true, code: "closed", label: "�ѹر�" };
-  return { locked: true, code: "locked", label: `����(${code})` };
+  if (code === 1) return { locked: false, code: "open", label: "可投注" };
+  if (code === 4) return { locked: true, code: "closed", label: "已关闭" };
+  return { locked: true, code: "locked", label: `锁盘(${code})` };
 }
 
 function describeMatchStatus(match) {
@@ -88,16 +88,16 @@ function describeMatchStatus(match) {
   if (status === 2) isLive = true;
 
   let code = "scheduled";
-  let label = "δ����";
+  let label = "未开赛";
   if (isLive) {
     code = "live";
-    label = score.text && score.text !== "0:0" ? `������ ${score.text}` : "������";
+    label = score.text && score.text !== "0:0" ? `进行中 ${score.text}` : "进行中";
   } else if (end && end <= now) {
     code = "ended";
-    label = "�ѽ���";
+    label = "已结束";
   } else if (start > now) {
     code = "scheduled";
-    label = "δ����";
+    label = "未开赛";
   }
 
   return {
@@ -152,7 +152,7 @@ function normalizeMatchListItem(raw, options = {}) {
     },
     tournament: cleanText(raw.tournament_name || raw.tournament_short_name),
     scheduleScope: startTime <= now ? "live" : "upcoming",
-    scheduleLabel: startTime <= now ? "����/������" : "δ����",
+    scheduleLabel: startTime <= now ? "滚球/进行中" : "未开赛",
     raw,
   };
 }

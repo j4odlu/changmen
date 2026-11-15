@@ -29,9 +29,9 @@
 | 顺序 | 文件 | 看什么 |
 |------|------|--------|
 | 1 | [`docs/platforms/OB.md`](./platforms/OB.md) | 流程总览 |
-| 2 | [`packages/venue-adapter/ob/collect.ts`](../../../packages/venue-adapter/ob/collect.ts) | 30s 轮询、`runPool`、何时拉比赛 |
-| 3 | [`packages/venue-adapter/ob/markets.ts`](../../../packages/venue-adapter/ob/markets.ts) | `game/view` → `oddsStore.save` → `saveBets` |
-| 4 | [`packages/venue-adapter/ob/mqtt.ts`](../../../packages/venue-adapter/ob/mqtt.ts) | 浏览器直连 OB MQTT、3 个 `/market/*` topic |
+| 2 | [`packages/venue-adapter/ob/collect.ts`](../../packages/venue-browser/adapter/ob/collect.ts) | 30s 轮询、`runPool`、何时拉比赛 |
+| 3 | [`packages/venue-adapter/ob/markets.ts`](../../packages/venue-browser/adapter/ob/markets.ts) | `game/view` → `oddsStore.save` → `saveBets` |
+| 4 | [`packages/venue-adapter/ob/mqtt.ts`](../../packages/venue-browser/adapter/ob/mqtt.ts) | 浏览器直连 OB MQTT、3 个 `/market/*` topic |
 | 5 | [`src/stores/oddsStore.ts`](../src/stores/oddsStore.ts) | `OddsEntry` 结构、`save` / 锁盘 |
 | 6 | [`src/api/match.ts`](../src/api/match.ts) | `saveMatch` / `saveBets` 调后端 |
 
@@ -89,7 +89,7 @@ BetRow → item.getOdds()
 
 | 顺序 | 文件 | 看什么 |
 |------|------|--------|
-| 1 | [`packages/venue-adapter/registry/adapters.ts`](../../../packages/venue-adapter/registry/adapters.ts) | 平台是否注册采集/下注 |
+| 1 | [`packages/venue-adapter/registry/adapters.ts`](../../packages/venue-browser/adapter/registry/adapters.ts) | 平台是否注册采集/下注 |
 | 2 | [`src/runtime/collectors.ts`](../src/runtime/collectors.ts) | `buildCollectorFactories()` 启停 |
 | 3 | [`packages/venue-adapter/{平台}/collect.ts`](../../../packages/venue-adapter/) | 该平台轮询/WS |
 | 4 | [`docs/platforms/A8_COMPARE_*.md`](./platforms/) | 对齐审计（运维可选） |

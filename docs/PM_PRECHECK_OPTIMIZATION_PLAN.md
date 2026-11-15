@@ -114,8 +114,8 @@
 
 代码依据：
 
-- [bet.ts](../packages/venue-adapter/polymarket/bet.ts)：`checkBet`、`diagnosePolymarketBuyCheckReuse`、`resolvePolymarketExecutableBuyForBet`、`betting`。
-- [pmBetGuard.ts](../packages/venue-adapter/polymarket/pmBetGuard.ts)、[pmMarketGuard.ts](../packages/venue-adapter/polymarket/pmMarketGuard.ts)、[pmSportGamma.ts](../packages/venue-adapter/polymarket/pmSportGamma.ts)。
+- [bet.ts](../client/packages/venue-browser/polymarket/fok/bet.ts)：`checkBet`、`diagnosePolymarketBuyCheckReuse`、`resolvePolymarketExecutableBuyForBet`、`betting`。
+- [pmBetGuard.ts](../client/packages/venue-browser/polymarket/submission/preflight/pmBetGuard.ts)、[pmMarketGuard.ts](../client/packages/venue-browser/polymarket/markets/pmMarketGuard.ts)、[pmSportGamma.ts](../client/packages/venue-browser/polymarket/markets/pmSportGamma.ts)。
 - [checkArbLegs.ts](../client/web/src/stores/betting/autoBet/phases/checkArbLegs.ts)、[placeArbLegs.ts](../client/web/src/stores/betting/autoBet/phases/placeArbLegs.ts)。
 - [betGateway.ts](../client/web/src/stores/account/betGateway.ts)：上层 `requirePreparedQuote` 目前只阻止 data 缺失时的自动预检，不能约束 PM adapter 内部的复检。
 
@@ -135,7 +135,7 @@
 
 ### 路由与准备时间
 
-[pmTransport.ts](../packages/venue-adapter/polymarket/pmTransport.ts) 在 HTTP 为 vps、行情源为 official 的特定组合下，book 先直连最多 800ms，公开市场查询先直连最多 1500ms，然后回退 VPS。网络长期不通时可能每次重复等待。
+[pmTransport.ts](../client/packages/venue-browser/polymarket/transport/pmTransport.ts) 在 HTTP 为 vps、行情源为 official 的特定组合下，book 先直连最多 800ms，公开市场查询先直连最多 1500ms，然后回退 VPS。网络长期不通时可能每次重复等待。
 
 此处的 1500ms 是公开请求直连超时，与 book 复用年龄阈值是两个独立配置。本方案移除的是提交时的簿年龄门槛，不顺带删除网络超时。
 
@@ -500,7 +500,7 @@ npm run check:venue-adapter
 触及冻结路径时，在已确定范围内使用 `ALLOW_ESPORT_TOUCH=1` 显式放行，不删除冻结列表。涉及 Hub 时补跑：
 
 ```text
-npm run test:quote-hub-contracts --workspace=@changmen/venue-adapter
+npm exec --workspace=@changmen/web -- vitest run marketQuoteHub.contracts marketQuoteHub.lifecycle
 ```
 
 后端变更执行对应服务端测试，发布构建执行 `npm run app:build`。文档修订本身只检查内容、链接及差异。

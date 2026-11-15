@@ -10,7 +10,7 @@
 目标：订单事实及完整执行控制都进入 `orders`，最终物理撤掉 `pm_gtc_executions`。  
 当前进度：阶段一离线预检及阶段二本地兼容、脚本和回归已实现，缺订单回填工具补齐后本机 PostgreSQL 64/64 通过（保留原 40 项）。生产 21:06 仅新增 7 列；按后续明确授权，21:45–21:46 在实际 VPS 版本本机兼容验收通过后，为原指定 37 条已有财务订单复制六个控制字段，原 16 列及财务资格不动。旧表保留且仍为唯一控制权威，完整阶段二结构、FALSE 行及控制切换未应用，未提交或部署。见 [缺订单本机验收](../../../output/pm-gtc-orders-pending-local/验收报告.md)、[仅增列验收](../../../output/pm-gtc-orders-production-add-columns-20261011/验收报告.md)及 [37 条旧版兼容与回填验收](../../../output/pm-gtc-orders-legacy-compat-backfill-20261011/验收报告.md)。
 
-这是用户对目标的明确修订，替代此前“只扩展财务行快照、停在旧阶段二”的当前范围。此前实现和验收记录继续保留为历史证据，见 [原数据统一实施记录](../../PM_GTC_ORDER_DATA_UNIFICATION_PLAN.md)。不会把列表投影、增加 `raw.pmGtcOrderSnapshot` 或临时 `DisplayOnly` 行算作并表完成。
+这是用户对目标的明确修订，替代此前“只扩展财务行快照、停在旧阶段二”的当前范围。此前实现和验收记录继续保留为历史证据，见 [原数据统一实施记录](https://github.com/j4odlu/changmen/blob/49e03a2a43dd026ccce6090d56c388e0b38f293a/docs/PM_GTC_ORDER_DATA_UNIFICATION_PLAN.md)。不会把列表投影、增加 `raw.pmGtcOrderSnapshot` 或临时 `DisplayOnly` 行算作并表完成。
 
 ## 1. 最终模型
 

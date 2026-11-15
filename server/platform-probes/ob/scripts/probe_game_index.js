@@ -1,6 +1,6 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 
-import { login, obGet } from "../session.js";
+import { login, obGet } from "@changmen/venue-node/runtime/ob/session.js";
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));

@@ -1,30 +1,17 @@
-# SABA 平台
+# SABA Node 探针
 
-A8 采集模式�?*页面解析 + 自有 WebSocket**�?
+Node 探针解析赛事页面；浏览器 adapter 负责生产页面解析及 WebSocket 数据。
 
-## 数据�?
+环境变量：`SABA_GATEWAY`、`SABA_TOKEN`；可选 `SABA_GAME_IDS`、`SABA_SPORT_PATH`、`SABA_USER_AGENT`。
 
-```text
-GET  {gateway}/{token}/ESports/43/ALL?mode=m0&market=L  �?解析 ES.url/id/account
-POST LoginCheckin/Index（心跳）
-WS   wss://{host}  �?m/o/done/reset 消息
-赔率 key：{oddsid}:Home / {oddsid}:Away（马来盘转欧赔）
-```
-
-## 启用
+从仓库根运行：
 
 ```powershell
-$env:ENABLE_SABA = "1"
-$env:SABA_GATEWAY = "https://..."
-$env:SABA_TOKEN = "..."
-$env:SABA_GAME_IDS = "43"    # 可选，联赛�?id 过滤
-npm run web
+npm run saba:parse --workspace=@changmen/platform-probes
 ```
 
-CLI 解析页面�?
+旧 `ENABLE_SABA` Feed 和 `/platforms/saba/` 页面已退役。
 
-```powershell
-npm run saba:parse
-```
+本目录是按需调试入口。采集模式以 `packages/venue-adapter/registry/manifest.json` 为准；浏览器平台的 CollectConfig 只控制上报，VPS 平台由 collector 独占写入。命令需要有效会话，可能访问平台；不会因启动 backend 自动运行。
 
-页面：`http://localhost:3456/platforms/saba/`
+[探针包说明](../../README.md)；[本机开发](../../../../LOCAL_DEV.md)；[平台说明](../../../../client/web/docs/platforms/SABA.md)。

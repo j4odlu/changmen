@@ -6,7 +6,8 @@ const { obHeaders } = requirePlatform("OB", "node", "session.js");
 const ALLOWED_PREFIX = "/game/";
 
 /**
- * Frontve / 跨域控制台：代发 OB gateway GET（凭证来�?platforms.json）�? * GET /esport/ob/proxy?path=game/index&query=game_id=0&flag=1&day=1
+ * Frontve / 跨域控制台：代发 OB gateway GET（凭证来自 platforms.json）。
+ * GET /esport/ob/proxy?path=game/index&query=game_id=0&flag=1&day=1
  */
 export async function tryObHttpProxy(req, res) {
   const pathname = req.url.split("?")[0];

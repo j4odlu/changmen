@@ -1,139 +1,91 @@
 # changmen 架构
 
-> [changmen 扩展] **文档状态（2026-10-22）：现行入口，含历史迁移段落。下文带日期的 server/packages/venue-node-*、server/db 和 19 个后端 workspace 等记录不代表当前目录；物理位置与安装清单统一以 [WORKSPACE_LAYOUT](./WORKSPACE_LAYOUT.md) 为准**
+当前源码归属见 [workspace 总览](WORKSPACE_LAYOUT.md)，开发规则以本机 `AGENTS.md` 为准，常用命令见 [LOCAL_DEV.md](../LOCAL_DEV.md)，生产发布见 [独立部署](INDEPENDENT_DEPLOYMENT.md)。本文描述当前结构；历史迁移记录不作为现行操作步骤。
 
-单一架构文档入口。命令与日常开发见 [../AGENTS.md](../AGENTS.md)。
+changmen 保持单仓：客户端位于 `client/` 与 `chrome-extension/`，服务端位于 `server/`，数据层位于根目录 `rds/`。workspace 清单以根 `package.json` 为准。身份领域包 `packages/match-identity` 只依赖 shared，供 matcher、resolver 和 RDS 使用，客户端禁止引用。
 
-[changmen 扩展] 当前目录以 [workspace 总览](WORKSPACE_LAYOUT.md) 为准：前端 `client/`、后端 `server/`、数据层根目录 `rds/`；25 个 workspace。服务端平台基础设施合并为 `server/venues` / `@changmen/venue-node`，三个兼容 workspace 已退役。赛事身份规则归独立领域包 `packages/match-identity` / `@changmen/match-identity`，供 matcher、resolver 和 RDS 使用；客户端与 shared 不得依赖它。下方带日期的记录用于解释迁移历史。
+## 当前目录
 
-[changmen 扩展] 2026-10-20 当前物理归属：浏览器 adapter 与测试位于 `client/packages/venue-browser`，旧目录 595 个浏览器文件及 4 个 Node 兼容入口已退役；Node loader/registry 实现位于 `server/packages/venue-node-*`，后端瘦包工具实现位于 `server/packages/venue-adapter-tools`。旧 adapter 目录保留验证命令、生成 manifest 与配套文档，下方按日期保留历史记录。后端八进程的 19 个 workspace 已通过离线独立安装、路由编译和模块解析对比；原 11 处动态路径已在默认 workspace 根下完成有界认证，外部 SDK 内部与自定义运行根不在该结论内，详见 [动态路径认证](BACKEND_DYNAMIC_PATH_CERTIFICATION.md)。平台探针的 93 个文件已迁入 `server/platform-probes`；默认 Node 资源根也已收进 `server/venues/registry/runtime`，后端独立安装不再复制旧 adapter 目录，生产发布方式未变。
-
-[changmen 扩展] 2026-10-18 [文件夹隔离](FOLDER_ISOLATION.md)：浏览器公共簿包和前端维护工具已实际迁入 `client/packages` 与 `client/devtools`。下方目录树区分当前落点与冻结兼容区域；前端专属旧包、扩展及 Node 工具仍有剩余迁移项，不宣称全树已隔离。
-
-[changmen 扩展] 2026-10-17 源码归属补充：浏览器诊断实现位于 `packages/venue-adapter/browser`；RDS 维护与结构观察位于 `server/db`；公共身份规则位于 `packages/shared/match-identity`，原 identity 目录保留兼容。resolver / matcher 仍为后端。当前冻结路径和未完成项见 [四类源码隔离记录](SOURCE_FILE_ISOLATION_20261017.md)。
-
-[changmen 扩展] 2026-10-18 [matcher 只读检查](audits/MATCHER_READONLY_AUDIT_20261018.md)：生产内嵌合场持续运行；三个 scraper 不在日常启动链，但保有历史补数标签，不能直接认定无用。发现映射 DAL 丢失 game 字段和三个辅助命令的既有语法错误；本轮未改匹配算法或生产数据。
-
-[changmen 扩展] 2026-10-20 [matcher 统一产出有效比赛方案](MATCH_PUBLICATION_CONSISTENCY_PLAN.md)与[历史链路审计](audits/MATCH_PUBLICATION_CONSISTENCY_AUDIT_20261019.md)：方案为 matcher 计算并保存当前有效结果，用户接口与 matcher 当前列表直接读取，不在读取端另行过滤平台来源。分三步实施且每步可暂停；拟在 client_matches 增加最小结果字段，保持既有身份与结束规则，不新增发布服务或通知协议。方案尚未实施。
-
-[changmen 扩展] RDS 的 43 个有效迁移 SQL 与结构基线主文件位于 `rds/assets/`，维护代码经本包 `maintenance/assets.mjs` 读取；backend 原路径的 44 份兼容副本和 7 个维护入口已退役，4 个维护测试迁入 `rds/maintenance/`。无 backend 目录的干净安装与维护验收通过，历史 SQL/checksum 保持；详情见同一源码隔离记录。
-
-## 目标目录（monorepo，档 B；未更新的旧目录以 workspace 总览为准）
-
-```
+```text
 changmen/
 ├── client/
-│   ├── web/                     # Vue 控制台
-│   ├── packages/pm-market-data-browser/ # 浏览器公共簿 workspace
-│   └── devtools/venue-adapter/   # 前端维护工具
-├── chrome-extension/            # MV3 扩展
+│   ├── web/                         # Vue 控制台
+│   ├── listener/                    # 监听版入口及构建配置
+│   ├── packages/                    # arb-core、client-core、venue-browser、pm-market-data-browser
+│   └── devtools/venue-adapter/       # 前端维护工具
+├── chrome-extension/                # MV3 扩展
 ├── server/
-│   ├── backend/                 # HTTP API、代理、静态托管
-│   │   └── scripts/             # 常驻运维；ops/；archive/
-│   ├── collectors/              # VPS daemon：polymarket-sports、predictfun-collector
-│   ├── match/                   # 赛事匹配模块（三层）
-│   │   ├── resolver/            # @changmen/team-resolver（RDS 队伍映射 + 体育队名规则）
-│   │   └── matcher/             # @changmen/matcher（compose/ 合场 + 调度 + 人工 UI）
-│   ├── db/                      # @changmen/db
-│   ├── storage/                 # @changmen/storage（本机 JSON 路径）
-│   ├── ws_forward/              # @changmen/ws-forward（backend 挂载）
-│   ├── realtime-hub/            # @changmen/realtime-hub（Socket.IO 推送）
-│   └── value-bet/               # @changmen/value-bet（正 EV 扫描 daemon）
-├── scripts/
-│   ├── deploy/                  # 本机 → HK VPS（deploy202.bat 等）
-│   ├── sync/                    # 本机 .env 片段 → VPS
-│   ├── fixtures/                # API 探针快照
-│   └── archive/                 # 废弃仓级脚本
-├── deploy/scripts/              # VPS bash（canonical；见 deploy/scripts/README.md）
-├── lines/                       # 产品线锚点（line.json；电竞代码仍在根）
-├── server/platform-probes/    # 可选探针 CLI
-├── packages/
-│   ├── match-identity/          # @changmen/match-identity：身份领域规则（严格 TS）
-│   ├── shared/                  # @changmen/shared
-│   ├── api-contract/            # HTTP 契约
-│   ├── client-core/             # 前端共享模型；冻结旧目录，尚未迁入 client
-│   └── venue-adapter/           # 当前双端目录，含冻结 loader/registry 与浏览器平台源码
+│   ├── backend/                     # HTTP API、代理、宿主服务
+│   ├── venues/                      # @changmen/venue-node：平台运行模块、loader、registry、打包工具
+│   ├── platform-probes/             # 可选 Node 平台探针
+│   ├── collectors/                  # VPS discovery 与平台快照采集
+│   ├── match/{matcher,resolver}/     # 合场与队名规范化
+│   ├── storage/                     # 本地路径、JSON、环境配置
+│   ├── ws_forward/                  # WebSocket 转发及独立 market hubs
+│   ├── realtime-hub/                # 用户频道实时推送
+│   └── value-bet/                   # 正 EV 服务
+├── rds/                             # @changmen/db：数据访问、assets、maintenance
+├── packages/{shared,api-contract,match-identity}/
+├── packages/venue-adapter/           # 历史兼容检查入口与生成资产；不是运行时 workspace
+├── devtools/runtime-tooling/         # 开发与构建共享工具
+├── scripts/                         # 仓级检查、发布控制、同步工具
+├── deploy/                          # 进程配置、VPS 激活与回滚脚本
+├── sh/                              # Linux 本机脚本
+├── lines/                           # 产品线 manifest
 └── docs/
 ```
 
-## 迁移进度
+历史目录迁移与验收见 [源码隔离记录](SOURCE_FILE_ISOLATION_20261017.md)、[文件夹隔离记录](FOLDER_ISOLATION.md) 和 [后端动态路径认证](BACKEND_DYNAMIC_PATH_CERTIFICATION.md)。旧目录、安装数量及当时待办不代表当前状态。
 
-| 阶段 | 内容 | 状态 |
-|------|------|------|
-| 1–15 | 见历史（`packages/*` + `apps/*` 阶段） | ✅ 完成 |
-| 16 | **档 B**：`client/` + `server/` 物理分区；`apps/` 退役 | ✅ 完成 |
-| 17 | `server/collectors/` daemon 归集；server 子包 README；`backend/scripts` 再分层 | ✅ 完成 |
-| 18 | `scripts/sync/`；`deploy/scripts/README`；`backend/scripts` 根目录收尾 | ✅ 完成 |
-| 19 | 目录整理**冻结**；`scripts/sync` 边界收拢；collectors 子 README | ✅ 完成 |
-| I1 | **路径单点登记**：`CHANGMEN_LAYOUT` + [PATH_REGISTRY.md](./PATH_REGISTRY.md) | ✅ 完成 |
-| I2a | **venue-adapter 包化**：`exports` + web 去 tsconfig include | ✅ 完成 |
-| I2b | **web import 包名化**：`@venue/*` → `@changmen/venue-adapter/*` | ✅ 完成 |
-| I3a | **删 web shim**：`domain/arbitrage`、`providerKeys`、`arbOpportunity` 薄层 → `@changmen/arb-core` | ✅ 完成 |
-| I3b | **venue-adapter barrel**：web 深 import 收拢到 `contract`/`registry`/`adaptation`/`shared`/`polymarket`/平台 index | ✅ 完成 |
-| I3c | **删 client-core shim**：web 薄 re-export → 直连 `@changmen/client-core/*`；`arbOpportunity` 仅保留 `syncArbRuntime` | ✅ 完成 |
-| I3d | **venue 包内聚**：`@venue/*` → `@changmen/venue-adapter/*`；web 移除 `@venue` tsconfig/vite alias | ✅ 完成 |
-| I3e | **exports 白名单**：`sync-package-exports` + web barrel 校验；删 `shared/platform` shim | ✅ 完成 |
+### 新文件归属
 
-旧路径 `platform_adapter/`、`gamebet_*` 仅出现在历史章节或迁移对照中；**以本表与代码 `package.json` / `adapter_paths` 为准**。
-
-### 目录整理冻结（阶段 19 后）
-
-此后**不再大规模物理搬家**；新脚本按下列落点添加：
+新文件按职责放入现有模块；目录整理不随日常业务改动扩大范围：
 
 | 类型 | 落点 |
 |------|------|
-| 本机 → VPS 部署 | `scripts/deploy/` |
+| Actions 发布控制与运输 | `scripts/deploy/` |
 | 本机 → VPS env | `scripts/sync/` |
 | VPS bash | `deploy/scripts/` |
 | 后端启动 / 日常 CLI | `server/backend/scripts/` 根（**冻结**，极少新增） |
-| 后端迁移 / 归档兜底 | `server/backend/scripts/ops/migrations/` |
+| 数据库资产 / 维护 / 历史脚本 | `rds/assets/`、`rds/maintenance/`、`rds/maintenance/legacy/` |
 | 排障 / deploy 自检 | `server/backend/scripts/ops/diagnostics/` |
-| 事故修复 | `server/backend/scripts/ops/incidents/` |
+| 后端业务事故编排 | `server/backend/scripts/ops/incidents/`；数据库操作经 `@changmen/db` |
 | 临时探针 | `*/archive/` 或 `backend/scripts/archive/` |
 | 新运动 VPS collector | `server/collectors/{name}/` |
 
 ## 依赖方向
 
+```text
+client/web ──平台实现──► @changmen/venue-browser
+client/web ──共享模型/套利──► @changmen/client-core / @changmen/arb-core
+client/web ──HTTP/实时频道──► server/backend
+浏览器/插件 ──采集上报──► server/backend ──持久化──► @changmen/db (rds)
+VPS collectors ──平台快照──► @changmen/db
+server/backend ──宿主端口注入──► @changmen/matcher
+matcher ──合场算法──► compose/ ──数据访问──► @changmen/db
+matcher / resolver / rds ──身份规则──► @changmen/match-identity
+server/backend / probes ──Node 平台加载──► @changmen/venue-node
 ```
-client/web ──@changmen/venue-adapter──► packages/venue-adapter
-client/web ──HTTP───────► server/backend
-client/web ──@changmen/api-contract──► HTTP 路径与 DTO
-server/backend ──@changmen/api-contract──► EsportAction
-chrome-extension ─（代理/凭证）─► 各平台源站
 
-packages/venue-adapter ──采集上报──► server/backend (API_SaveMatch/SaveBet)
-server/backend ──读写────► server/db (@changmen/db)
-server/match/matcher ──matchMerge──► 包内 compose/（合场算法）
-server/match/matcher ──共享工具──► @changmen/match-identity (teams / ids / time windows)
-server/match/matcher ──队名────► @changmen/team-resolver（workspace 依赖，可选）
-resolver 辅助 scraper（开发工具） ──requirePlatform──► @changmen/venue-node（原实现）
-
-server/backend ──requirePlatform──► @changmen/venue-node（原冻结实现）
-server/db ──公共队名规则──► @changmen/match-identity
-server/backend ──可选拷贝──► server/backend/platform_adapter（瘦包 / GAMEBET_ADAPTER_ROOT）
-```
+客户端不导入服务端或 RDS 实现；matcher 不反向导入 backend，宿主能力经 `runtime_ports.js` 注入。跨端共享规则和 HTTP 契约分别归 shared 与 api-contract。
 
 ## packages 说明
 
 ### `packages/shared` (`@changmen/shared`)
 
 跨进程共享：游戏/玩法 catalog、赔率格式化、IM 解析、**A8 采集开赛时间窗**（仅未来 1h 上限，无过去下限）。Polymarket 电竞 discovery 窗（主 pass 过去 6h + 未来 1h）在 `server/collectors/polymarket-esports/api.js` [changmen 扩展]；浏览器不扫盘。  
-数据层与路径解析见 `@changmen/db`（`paths.js`、`load_env.js`）。  
+数据库访问见 `@changmen/db`；本地路径和环境加载见 `@changmen/storage`。
 npm workspace 成员；通过 `@changmen/shared` 包名引用。
 
-### `packages/venue-adapter` (`@changmen/venue-adapter`)
+### 浏览器平台与 Node 平台设施
 
-各平台采集与下注的 canonical 源码。前端通过 `@changmen/venue-adapter`（Vite alias → `packages/venue-adapter`）。
+浏览器采集、报价、下单实现归 `client/packages/venue-browser`，经 `@changmen/venue-browser` 公共入口使用；Node loader/registry 及瘦包工具归 `server/venues`，公开包名为 `@changmen/venue-node`。探针位于 `server/platform-probes`，不参与默认浏览器采集链。旧 `packages/venue-adapter` 只保留兼容检查入口、生成资产和历史文档。
 
-**目录语义**：`{platform}/` 为浏览器采集（`collect.ts` / `bet.ts`）；Node 探针与会话模块在 `@changmen/platform-probes`（`devtools/platform-probes/{platform}/`），经 `requirePlatform(id, "node", …)` 加载。详见 [venue-adapter/README.md](../packages/venue-adapter/README.md) 与 [platform-probes/README.md](../devtools/platform-probes/README.md)。
+平台目录的唯一维护源为 `packages/shared/catalog/venue_manifest.json`；修改后运行 `npm run sync:venue-manifest` 和 `npm run check:venue-manifest`，一并提交生成副本。
 
-各平台 CLI 采集脚本定义在本包 `package.json`；`server/backend` 通过 `npm run <script> --workspace=@changmen/venue-adapter` 转发。
+Node 资源解析由 `server/venues/loader/adapter_paths.mjs` 的 `getAdapterRoot()` 管理：先看显式 `CHANGMEN_ADAPTER_ROOT`（兼容 `GAMEBET_ADAPTER_ROOT`），再看 `@changmen/storage` 定义的默认资源根 `server/venues/registry/runtime`、Node 包根与已有瘦包位置。不要恢复旧 adapter 运行实现。
 
-**服务端解析顺序**（`loader/adapter_paths.mjs`）：
-
-1. `GAMEBET_ADAPTER_ROOT`（瘦包显式指定）
-2. `packages/venue-adapter`（**标准 monorepo**，无需拷贝）
-3. `server/backend/platform_adapter`（`npm run sync:platform-adapter` 生成，已 gitignore）
+可选瘦包工具：从仓库根运行 `npm run sync:platform-adapter --workspace=@changmen/backend`。生产仍统一从 Actions 发布经过验收的制品，不能用本机打包代替发布验收。参见 [浏览器包](../client/packages/venue-browser/README.md)、[Node 探针](../server/platform-probes/README.md)。
 
 ## `server/match` — 赛事匹配模块
 
@@ -167,7 +119,7 @@ resolver 与 matcher 通过 workspace 依赖复用；测试：`npm run test --wo
 | 组件 | Windows | Linux / 其它 |
 |------|---------|----------------|
 | Vite（`client/web`） | `5274` | `5174` |
-| `server/backend` | `3560` | `3456` |
+| `server/backend` | `3700` | `3456` |
 
 Windows 上 Hyper-V 常保留 TCP `5123–5222`，故 Vite 不用 `5174`。配置见 `client/web/vite.config.ts` 与 `server/backend/server.js`。
 
@@ -181,7 +133,7 @@ Windows 上 Hyper-V 常保留 TCP `5123–5222`，故 Vite 不用 `5174`。配�
 ## 数据流
 
 ```
-浏览器/插件 (venue-adapter) → API_SaveMatch/SaveBet/SaveLiveTimer → backend → RDS platform_*
+浏览器/插件 (venue-browser) → API_SaveMatch/SaveBet/SaveLiveTimer → backend → RDS platform_*
 matcher 30s 循环（内嵌 esport）→ matchMergeOnce → composeOnce（生产默认）写库 → client_matches
 Client_GetMatchs 只读 client_matches → web（不做 Round/promote overlay）
 embedded：SaveLiveTimer debounce ~3s 触发 matchMerge（`MATCHER_TIMER_DEBOUNCE_MS`）
@@ -202,6 +154,6 @@ embedded：SaveLiveTimer debounce ~3s 触发 matchMerge（`MATCHER_TIMER_DEBOUNC
 - [../lines/README.md](../lines/README.md) — 产品线锚点 `lines/{code}/`
 - [CATALOG.md](./CATALOG.md) — sport / game / market catalog（配置单一入口）
 - [../server/README.md](../server/README.md) — 服务端各 workspace 包与进程
-- [../AGENTS.md](../AGENTS.md) — 命令、表结构、采集间隔
+- [../LOCAL_DEV.md](../LOCAL_DEV.md) — 本机开发、依赖和环境配置；执行规则另见本机 `AGENTS.md`
 - [DATA_STORAGE.md](./DATA_STORAGE.md) — RDS / JSON 边界与 **API 数据策略**（memory-first）
 - [../PRODUCTION_DEPLOYMENT.md](../PRODUCTION_DEPLOYMENT.md) — 生产部署

@@ -18,7 +18,8 @@ const nodeEntries = {
       "./registry/paths.js": "./registry/paths.js",
       "./registry/feeds.js": "./registry/feeds.js",
       "./registry/manifest.json": "./registry/manifest.json",
-      "./sync-backend-bundle.mjs": "./sync-backend-bundle.mjs"
+      "./sync-backend-bundle.mjs": "./sync-backend-bundle.mjs",
+      "./runtime/*": "./registry/runtime/*"
     },
     "files": [
       "loader",
@@ -26,7 +27,6 @@ const nodeEntries = {
       "sync-backend-bundle.mjs"
     ],
     "dependencies": {
-      "@changmen/platform-probes": "file:../platform-probes",
       "@changmen/shared": "file:../../packages/shared",
       "@changmen/storage": "file:../storage"
     }
@@ -64,8 +64,8 @@ export function inspectVenueNodeDependencies(root) {
     fail("server/backend/package.json", "@changmen/venue-node", "The backend facade requires its own production Node loader declaration");
   if (backend?.pkg.dependencies?.["@changmen/venue-node"] !== "file:../venues")
     fail("server/backend/package.json", "@changmen/venue-node", "Backend bundle validation must declare its existing Node tool workspace");
-  if (backend?.pkg.scripts?.["sync:platform-adapter"] !== "npm run sync:backend-bundle --workspace=@changmen/venue-node && npm run sync:backend-bundle --workspace=@changmen/platform-probes")
-    fail("server/backend/package.json", "sync:platform-adapter", "Backend manual sync must keep the original adapter-then-probes sequence through the Node tool owner");
+  if (backend?.pkg.scripts?.["sync:platform-adapter"] !== "npm run sync:backend-bundle --workspace=@changmen/venue-node")
+    fail("server/backend/package.json", "sync:platform-adapter", "Backend manual sync must contain only its server runtime owner");
   for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"])
     for (const name of forbidden) if (backend?.pkg[group]?.[name])
       fail("server/backend/package.json", name, `Backend must not pull browser/mixed hosts through ${group}`);
@@ -108,6 +108,7 @@ export function inspectVenueNodeDependencies(root) {
       const dependencies = Object.assign({}, owner.pkg.dependencies, owner.pkg.optionalDependencies, owner.pkg.peerDependencies);
       for (const [dep, range] of Object.entries(dependencies)) {
         const via = [...item.via, dep];
+        if (dep === "@changmen/platform-probes") fail(owner.file, dep, "Optional probes must not appear in a Node production closure");
         if (forbidden.has(dep)) fail(owner.file, dep, `Browser/mixed package in declared Node production closure: ${via.join(" -> ")}`);
         const target = packages.get(dep);
         if (target) {

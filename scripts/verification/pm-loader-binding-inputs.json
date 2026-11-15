@@ -18,22 +18,6 @@
     {
       "file": "server/venues/loader/adapter_paths.mjs",
       "symbol": "requirePlatform"
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.js",
-      "symbol": "reqS"
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.js",
-      "symbol": "backendRequire"
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "symbol": "reqS"
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "symbol": "backendRequire"
     }
   ],
   "facade": {
@@ -45,52 +29,8 @@
       "requirePlatform": "server/venues/loader/adapter_paths.mjs#requirePlatform"
     }
   },
-  "sourceContracts": [
-    {
-      "file": "server/platform-probes/backend/_paths.js",
-      "selector": "module",
-      "signature": "a58af42214cd5b09cd9d3baa94ada6a5fba6a225e2953316deb0072fe396e1f6"
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "selector": "module",
-      "signature": "f62c1ea53fd921ce4e6764c115a0ff56a629142762b0b509a1fadfdf81622209"
-    }
-  ],
+  "sourceContracts": [],
   "calls": [
-    {
-      "file": "server/platform-probes/ia/ws.js",
-      "origin": {
-        "file": "server/platform-probes/backend/_paths.js",
-        "symbol": "backendRequire"
-      },
-      "arguments": [
-        "socket.io-client"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/platform-probes/ray/ws.js",
-      "origin": {
-        "file": "server/platform-probes/backend/_paths.js",
-        "symbol": "backendRequire"
-      },
-      "arguments": [
-        "socketcluster-client"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/platform-probes/tf/ws.js",
-      "origin": {
-        "file": "server/platform-probes/backend/_paths.js",
-        "symbol": "backendRequire"
-      },
-      "arguments": [
-        "ws"
-      ],
-      "count": 1
-    },
     {
       "file": "server/backend/core/esport-api/store.js",
       "origin": {
@@ -100,71 +40,6 @@
       "arguments": [
         "registry",
         "feeds.js"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/account/balance_provider.js",
-      "origin": {
-        "file": "server/venues/loader/adapter_paths.mjs",
-        "symbol": "requirePlatform"
-      },
-      "arguments": [
-        "PB",
-        "node",
-        "session.js"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/account/balance_provider.js",
-      "origin": {
-        "file": "server/venues/loader/adapter_paths.mjs",
-        "symbol": "requirePlatform"
-      },
-      "arguments": [
-        "HG",
-        "node",
-        "session.js"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/account/balance_provider.js",
-      "origin": {
-        "file": "server/venues/loader/adapter_paths.mjs",
-        "symbol": "requirePlatform"
-      },
-      "arguments": [
-        "OB",
-        "node",
-        "session.js"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/account/balance_provider.js",
-      "origin": {
-        "file": "server/venues/loader/adapter_paths.mjs",
-        "symbol": "requirePlatform"
-      },
-      "arguments": [
-        "RAY",
-        "node",
-        "session.js"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/account/balance_provider.js",
-      "origin": {
-        "file": "server/venues/loader/adapter_paths.mjs",
-        "symbol": "requirePlatform"
-      },
-      "arguments": [
-        "RAY",
-        "node",
-        "core.js"
       ],
       "count": 1
     }

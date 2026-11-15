@@ -18,7 +18,7 @@ changmen 使用 **RDS（PostgreSQL）** 与 **本机 JSON**。数据层入口为
 | `orders` | 电竞下单 API | 前端电竞订单 / 管理端订单查询 | **仅电竞**；足球禁止写入 |
 | `football_orders` | 足球页 `Client_SaveFootballOrder` | 足球侧栏 Pinia / `Client_GetFootballOrders` / 管理端足球订单 | 与 `orders` 物理隔离；禁止 `Client_SaveOrder`；前端不写 localStorage；`status`/`profit` 由 C201 + `queryOrderStatus` / yewurecord 列表回写 |
 
-- **RDS 迁移**：`server/backend/db/migrations/`（含 `033_sport_matcher_tables.sql`；`node scripts/apply-rds-schema.mjs`）
+- **RDS 资产与维护**：SQL 位于 `rds/assets/migrations/`，实现位于 `rds/maintenance/`。现网按具体需求独立维护；默认结构检查只读，空库初始化须显式使用 `--initialize`，不随应用发布重放历史 SQL。
 - **统一 DB 入口**：`@changmen/db`（`rds/index.js`）
 
 ## 本机 JSON（开发 / 凭证 / legacy）
@@ -43,7 +43,7 @@ changmen 使用 **RDS（PostgreSQL）** 与 **本机 JSON**。数据层入口为
 | `platform_matches` / `platform_bets` / `live_timers` | **SaveMatch / SaveLiveTimer 全量快照** + 孤儿删除（不在本批 = 平台认为已消失） |
 | `client_matches` 离开活跃列表 | matchMerge 每轮 diff 删除 → 移入 `client_matches_history` |
 | `client_matches` 长期未 matchMerge | matcher 每小时 **archive**（`rds/archive_stale.js`，`built_at` 1h 阈值） |
-| 手动兜底 | `npm run db:archive-stale`（`scripts/ops/migrations/archive-stale-client-matches.mjs`） |
+| 手动兜底 | 从根目录运行 `npm run db:archive-stale --workspace=@changmen/backend`（backend `scripts/ops/migrations/archive-stale-client-matches.mjs`） |
 
 详见 [ARCHITECTURE.md](./ARCHITECTURE.md) 数据流。
 
@@ -93,9 +93,10 @@ changmen 使用 **RDS（PostgreSQL）** 与 **本机 JSON**。数据层入口为
 
 | Action | 模式 | 说明 |
 |--------|------|------|
-| `Client_Login` | R | 必须 RDS 验密；成功后 `loadProfileById` 灌内存 |
-| `Client_Logout` / `Client_RefreshToken` | R | token 会话在 RDS |
-| `Client_GetUserInfo` | M | JWT 后纯内存 profile |
+| `/auth/login` | R→M | Cookie 登录，RDS 验密及创建浏览器会话后加载 profile 缓存 |
+| `/auth/logout` / `/auth/session` | R | 注销或核验浏览器会话；写请求按接口要求校验 CSRF |
+| `Client_Login` / `Client_Logout` / `Client_RefreshToken` | 兼容入口 | 默认 Cookie 模式拒绝旧 JWT 登录链；仅显式兼容模式保留，不能作为当前网页接入方式 |
+| `Client_GetUserInfo` | M | 会话鉴权后读取内存 profile |
 | `Client_UpdateSetting` | R→M | 等待 `writeProfileAsync` 确认后发布配置缓存；失败不发布 |
 | `Client_SaveData` / `Client_GetData` | R→M / M | 配置按用户协调，写 RDS 确认后发布缓存；ACCOUNT 单独走 players 事务路径 |
 

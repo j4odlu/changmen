@@ -6,7 +6,7 @@
  */
 
 import { nativeSourcesByMap } from "../../../../server/match/matcher/compose/normalize/native_bets.ts";
-import { fetchOdds, login } from "../session.js";
+import { fetchOdds, login } from "@changmen/venue-node/runtime/ray/session.js";
 import { groupRayOddsToSaveBets } from "../shared/save_bets.js";
 
 async function main() {

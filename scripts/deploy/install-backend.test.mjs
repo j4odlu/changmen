@@ -37,7 +37,7 @@ function fixture(t) {
   };
   return { root, profile, npm, installed };
 }
-test("the production installer selects six Node roots, enables lifecycle scripts and verifies actual workspace targets", t => {
+test("the production installer selects the eight process entries, enables lifecycle scripts and verifies actual workspace targets", t => {
   const f = fixture(t);
   const report = installBackend(f.root, { npm: f.npm, run: (node, args, options) => {
     assert.equal(node, process.execPath); assert.deepEqual(args, [f.npm, ...f.profile.installArgs]);
@@ -45,7 +45,8 @@ test("the production installer selects six Node roots, enables lifecycle scripts
     assert(args.includes("--omit=dev")); assert(!args.includes("--include=dev"));
     assert.equal(options.cwd, f.root); f.installed(); return { status: 0 };
   } });
-  assert.equal(report.passed, true); assert.equal(report.workspaces.length, 17);
+  assert.equal(report.passed, true); assert.equal(report.workspaces.length, 16);
+  assert(!report.workspaces.includes("@changmen/platform-probes"));
   assert.equal(report.developmentToolsAbsent, true); assert.equal(report.precompiledRouterVerified, true);
 });
 test("failed or timed-out installation cannot be accepted even with existing links", t => {

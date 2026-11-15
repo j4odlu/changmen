@@ -1,10 +1,10 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * OB batch snapshot: login → game/index → game/view (multiple matches) → getTimer.
  */
 
-import * as Core from "../core.js";
-import { login, obGet } from "../session.js";
+import * as Core from "@changmen/venue-node/runtime/ob/core.js";
+import { login, obGet } from "@changmen/venue-node/runtime/ob/session.js";
 
 function formatTime(tsSec) {
   if (!tsSec) return "";

@@ -1,4 +1,4 @@
-import { rayMatchStage } from "./match_stage.js";
+import { rayMatchStage } from "@changmen/venue-node/runtime/ray/shared/match_stage.js";
 
 /** ESM（探针 verify_save_bets 等）；浏览器 canonical 见 platform-adapter/ray/shared/save_bets.ts */
 function isRayOddCollectable(p, betRe) {

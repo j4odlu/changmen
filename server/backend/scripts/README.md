@@ -2,7 +2,7 @@
 
 后端运维与启动脚本。`npm run` 入口见 `server/backend/package.json`。
 
-数据库维护脚本已集中到 [`rds/maintenance/`](../../db/maintenance/)；累计 140 个历史脚本归入 [`legacy/`](../../db/maintenance/legacy/)，旧文件删除。本目录保留启动、后台业务及平台编排、混合脚本和待拆的数据访问。
+数据库维护脚本已集中到 [`rds/maintenance/`](../../../rds/maintenance)；累计 140 个历史脚本归入 [`legacy/`](../../../rds/maintenance/legacy)，旧文件删除。本目录保留启动、后台业务及平台编排、混合脚本和待拆的数据访问。
 
 ## 目录
 

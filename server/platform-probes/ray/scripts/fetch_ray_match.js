@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { login, fetchMatchPage } from "../session.js";
-import * as Core from "../core.js";
+import { login, fetchMatchPage } from "@changmen/venue-node/runtime/ray/session.js";
+import * as Core from "@changmen/venue-node/runtime/ray/core.js";
 
 async function main() {
   const session = await login();

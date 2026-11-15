@@ -6,7 +6,7 @@ export function sleep(ms) {
 }
 
 export function compileBetName(session) {
-  const raw = session?.betName || "([ȫ��].+��ʤ$)|([��ͼ\\d+]\\s*��ʤ��$)";
+  const raw = session?.betName || "(\\[全场\\].+获胜$)|(\\[地图\\d+\\]\\s*获胜者$)";
   return new RegExp(raw);
 }
 
@@ -38,7 +38,7 @@ function pickTeamNames(row) {
     row?.away_name ||
     row?.team2_name ||
     "";
-  return { home: String(home || "����").trim(), away: String(away || "�Ͷ�").trim() };
+  return { home: String(home || "主队").trim(), away: String(away || "客队").trim() };
 }
 
 function pickTeamId(row, side) {
@@ -77,9 +77,9 @@ export function normalizeListEvent(row, filter = {}) {
 }
 
 function betKeyFromChild(child) {
-  let prefix = "[ȫ��]";
+  let prefix = "[全场]";
   if (child.match !== 0 && child.match != null) {
-    prefix = `[��ͼ${child.match}]`;
+    prefix = `[地图${child.match}]`;
   }
   return `${prefix}${child.name || ""}`;
 }
@@ -103,7 +103,7 @@ export function extractStagesFromPlays(plays, betNameRegex) {
       if (!matchesWinBet(child, betNameRegex)) continue;
       const mapNum = Number(child.match) || 0;
       const stageId = mapNum;
-      const label = stageId === 0 ? "ȫ��" : `��ͼ${stageId}`;
+      const label = stageId === 0 ? "全场" : `地图${stageId}`;
       const points = child.team_points || [];
       const homePt = points[0];
       const awayPt = points[1];

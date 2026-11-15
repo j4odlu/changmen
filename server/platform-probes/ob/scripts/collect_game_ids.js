@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * 从 OB game/index + CDN pc.json 收集 game_id，合并到 ob_game_ids.json
  */
@@ -6,8 +6,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import * as Core from "../core.js";
-import { login, obGet } from "../session.js";
+import * as Core from "@changmen/venue-node/runtime/ob/core.js";
+import { login, obGet } from "@changmen/venue-node/runtime/ob/session.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(__dirname, "../data/ob_game_ids.json");

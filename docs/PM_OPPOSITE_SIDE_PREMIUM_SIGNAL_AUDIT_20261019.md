@@ -18,8 +18,8 @@ P1 指会直接影响信号真实性、研究数据完整性或收益结论的�
 
 - [合场模型](../packages/client-core/src/models/match.ts)与[API DTO](../packages/api-contract/src/dto.ts)。
 - [赔率缓存](../client/web/src/stores/oddsStore.ts)与[赔率读写桥](../packages/client-core/src/bridge/oddsAccess.ts)。
-- [PM 行情总线](../packages/venue-adapter/polymarket/quotes/marketQuoteHub.ts)、[PM 报价写入](../packages/venue-adapter/polymarket/quotes/pmTokenQuote.ts)和[PM 电竞采集](../packages/venue-adapter/polymarket/markets/collect.ts)。
-- [PB 采集](../packages/venue-adapter/pb/collect.ts)、[PB 行情写入](../packages/venue-adapter/pb/markets.ts)、[OB 行情写入](../packages/venue-adapter/ob/markets.ts)和[RAY 采集](../packages/venue-adapter/ray/collect.ts)。
+- [PM 行情总线](../client/packages/venue-browser/polymarket/marketQuoteHub.ts)、[PM 报价写入](../client/packages/venue-browser/polymarket/quotes/pmTokenQuote.ts)和[PM 电竞采集](../client/packages/venue-browser/polymarket/markets/collect.ts)。
+- [PB 采集](../client/packages/venue-browser/adapter/pb/collect.ts)、[PB 行情写入](../client/packages/venue-browser/adapter/pb/markets.ts)、[OB 行情写入](../client/packages/venue-browser/adapter/ob/markets.ts)和[RAY 采集](../client/packages/venue-browser/adapter/ray/collect.ts)。
 - [现有统一观察运行时](../client/web/src/extensions/pmSignals/runtime.ts)与[隔离测试](../client/web/src/extensions/pmSignals/isolation.test.ts)。
 - [正 EV 数学](../client/web/src/extensions/valueBet/evCalc.ts)、[FOK 保护脚本](../scripts/verification/verify-fok-execution-parity.mjs)与[前端测试配置](../client/web/vite.config.ts)。
 

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * Step 1: OB login — get token, gateway, MQTT endpoints.
  *
@@ -7,7 +7,7 @@
  *   node platforms/ob/scripts/fetch_ob_login.js "<login url>"
  */
 
-import { DEFAULT_LOGIN_URL, login } from "../session.js";
+import { DEFAULT_LOGIN_URL, login } from "@changmen/venue-node/runtime/ob/session.js";
 
 async function main() {
   const loginUrl = process.argv[2] || DEFAULT_LOGIN_URL;

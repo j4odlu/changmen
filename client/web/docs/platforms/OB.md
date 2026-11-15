@@ -28,7 +28,7 @@ syncObLiveTimer → API_SaveLiveTimer
 
 CollectConfig 关：仍 game/view + fo + MQTT；**不** saveMatch/saveBets。
 
-**MQTT**：[changmen 扩展] `packages/venue-adapter/ob/realtime.ts` 支持官方试玩源直连和 CHANGMEN 转发。`mqttSession.ts` 从试玩登录结果解析官方 MQTT 地址并查询 memberId，clientId 为 `mqttjs_dj{memberId}`；CHANGMEN 模式通过 `/esport/ws-forward/OB?u=...` 转发到同一官方源。连接配置不使用固定 clientId，也不把采集 HTTP token 当作 MQTT username；账密定义见 `mqttConfig.ts`。
+**MQTT**：[changmen 扩展] `client/packages/venue-browser/adapter/ob/realtime.ts` 支持官方试玩源直连和 CHANGMEN 转发。同目录的 `mqttSession.ts` 从试玩登录结果解析官方 MQTT 地址并查询 memberId，clientId 为 `mqttjs_dj{memberId}`；CHANGMEN 模式通过 `/esport/ws-forward/OB?u=...` 转发到同一官方源。连接配置不使用固定 clientId，也不把采集 HTTP token 当作 MQTT username；账密定义见 `mqttConfig.ts`。
 
 项目数据流见 [ARCHITECTURE.md](../../../../docs/ARCHITECTURE.md)。
 
@@ -59,9 +59,9 @@ list.filter(row => games.includes(gid) && num(row.start_time) < horizon);
 | HTTP | `ob/http.ts` → `directGet`（**Axios/XHR**，对齐 A8 `Rr.get`）直连 OB `gateway` |
 | MQTT | [changmen 扩展] 官方试玩源直连或 CHANGMEN 转发，配置由 `mqttSession.ts` 生成 |
 
-[changmen 扩展] backend 启动时由 `core/esport-api/platform_sync.js` 的 `resolveObSession()` 准备采集配置。试玩地址定义见 `packages/venue-adapter/ob/constants.ts`。
+[changmen 扩展] backend 启动时由 `server/backend/core/esport-api/platform_sync.js` 的 `resolveObSession()` 准备采集配置。试玩地址定义见 `client/packages/venue-browser/adapter/ob/constants.ts`。
 
-[A8 可证实] token 失效后的刷新只通过 `API_UpdatePlatform({ provider: "OB", token })` 更新 token，不更新 gateway。当前 `refreshObCollectToken()` 从试玩响应的 `data.token` 或 `data.pc` URL 提取 token，见 `packages/venue-adapter/ob/collect.ts`。
+[A8 可证实] token 失效后的刷新只通过 `API_UpdatePlatform({ provider: "OB", token })` 更新 token，不更新 gateway。当前 `refreshObCollectToken()` 从试玩响应的 `data.token` 或 `data.pc` URL 提取 token，见 `client/packages/venue-browser/adapter/ob/collect.ts`。
 
 试玩 UI：`api/v4.ts` → `enterCreditPlate("OB")`（仅 `window.open(pc)`，不写采集配置）。
 

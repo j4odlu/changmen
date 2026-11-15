@@ -94,6 +94,10 @@ afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 describe.each(["legacy", "registry"])("core HTTP consumer contracts (%s dispatch)", mode => {
   beforeEach(() => vi.stubEnv("ESPORT_ACTION_DISPATCH", mode));
+  it("keeps the legacy balance refresh action deprecated", async () => {
+    expect((await request("Client_RefreshAccountBalance", { playerId: 17 })).body)
+      .toEqual(failure("已废弃：PM 余额请用 Pm_RefreshBalance"));
+  });
   it("forwards optional raw RAY results without changing legacy or other venue SaveBet calls", async () => {
     const fields = { provider: "RAY", matchId: "1", bets: "[]" };
     const result = { id: "1", status: 1, round: "bo3", odds: [] };

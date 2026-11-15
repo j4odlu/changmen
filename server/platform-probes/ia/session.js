@@ -42,7 +42,7 @@ function buildSessionFromRow(row) {
     betName:
       row.betName ||
       process.env.IA_BET_NAME ||
-      "([ȫ��].+��ʤ$)|([��ͼ\\d].+��ʤ��$)",
+      "([全场].+获胜$)|([地图\\d].+获胜者$)",
     gameIds: Array.isArray(row.games) ? row.games.map(String) : parseGameIdsEnv(),
     fetchedAt: null,
   };
@@ -64,7 +64,7 @@ export function tryLoadSession() {
 export function loadSession() {
   const session = tryLoadSession();
   if (!session) {
-    throw new Error("ȱ�� IA ƾ֤��IA_GATEWAY + IA_TOKEN �� platforms.json��");
+    throw new Error("缺少 IA 凭证（IA_GATEWAY + IA_TOKEN 或 platforms.json）");
   }
   return session;
 }

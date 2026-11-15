@@ -20,16 +20,17 @@ beforeAll(() => {
 
 it("certifies all original dynamic sites and the recursively expanded default project inputs", () => {
   expect(certificate.records).toHaveLength(11);
-  expect(certificate.expandedRecords).toHaveLength(19);
-  expect(certificate.bindings.calls).toHaveLength(22);
-  expect(certificate.preloadFiles).toHaveLength(20);
+  expect(certificate.expandedRecords).toHaveLength(11);
+  expect(certificate.bindings.calls).toHaveLength(14);
+  expect(certificate.preloadFiles).toHaveLength(8);
   expect(certificate.uncertified).toEqual([]);
   expect(certificate.graph.unresolved).toEqual([]);
   expect(certificate.defaultProjectClosureCertified).toBe(true);
   expect(certificate.externalDependencyInternalsCertified).toBe(false);
   expect(certificate.productionEnvironmentCertified).toBe(false);
   expect(certificate.expandedRecords.every(row => row.certified && row.proof)).toBe(true);
-  expect(certificate.graph.files).toContain("server/platform-probes/hg/session.js");
+  expect(certificate.graph.files).toContain("server/venues/registry/runtime/ob/session.js");
+  expect(certificate.graph.files.some(file => file.startsWith("server/platform-probes/"))).toBe(false);
   expect(certificate.graph.files.some(file => file.startsWith("client/") || file.startsWith("packages/venue-adapter/"))).toBe(false);
 });
 

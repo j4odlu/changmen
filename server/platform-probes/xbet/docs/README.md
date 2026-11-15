@@ -1,17 +1,9 @@
-# XBet 平台
+# XBet Node 探针
 
-A8 采集模式�?*聚合 WebSocket**（频�?`XBet` / `XBet:Score`）�?
+浏览器通过共享 Socket.IO 频道 `XBet` / `XBet:Score` 处理赔率及比分。
 
-## 数据�?
+本平台没有独立 Node 采集命令；浏览器入口为 `client/packages/venue-browser/adapter/xbet/`。下注能力以当前 manifest 为准。
 
-```text
-A8 聚合 Socket.IO �?join room XBet
-赔率 key：{betId}:1（主�?/ {betId}:3（客�?
-比分：channel XBet:Score
-```
+本目录是按需调试入口。采集模式以 `packages/venue-adapter/registry/manifest.json` 为准；浏览器平台的 CollectConfig 只控制上报，VPS 平台由 collector 独占写入。命令需要有效会话，可能访问平台；不会因启动 backend 自动运行。
 
-生产实现：`../../collect.ts` + 包级 `shared/socket/`�?
-
-`ENABLE_XBET` 为历�?Dashboard 开关，已删除。在 web 控制�?**CollectConfig** 中启�?XBet 采集即可�?
-
-仅采集、无下注（manifest `bet: false`）�?
+[探针包说明](../../README.md)；[本机开发](../../../../LOCAL_DEV.md)；[平台说明](../../../../client/web/docs/platforms/XBET.md)。

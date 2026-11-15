@@ -1,6 +1,6 @@
 # server/backend — 服务端（Node）
 
-HTTP API（`Client_*` / `API_*`）、各平台 HTTP 代理、静态托管。开发默认 `localhost:3560`（Windows）/ `3456`。
+HTTP API（`Client_*` / `API_*`）、各平台 HTTP 代理、静态托管。开发默认 `localhost:3700`（Windows）/ `3456`。
 
 ## 快速启动
 
@@ -11,7 +11,7 @@ npm install
 npm run web
 ```
 
-Windows：`BAT\setup-dev-env.bat`（首次）→ `BAT\dev.bat` 或 `BAT\backend.bat`。
+Windows：`BAT\setup-dev-env.bat`（首次）→ `BAT\dev-esport.bat` 或 `BAT\backend.bat`。
 
 ## 文档（细节见专题页）
 
@@ -20,10 +20,10 @@ Windows：`BAT\setup-dev-env.bat`（首次）→ `BAT\dev.bat` 或 `BAT\backend.
 | 架构与 monorepo | [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) · [server/README.md](../README.md) |
 | 数据存储边界 | [docs/DATA_STORAGE.md](../../docs/DATA_STORAGE.md) |
 | 生产部署 | [PRODUCTION_DEPLOYMENT.md](../../PRODUCTION_DEPLOYMENT.md) |
-| 项目共识 / 命令 | [readme.md](../../readme.md) · [CLAUDE.md](../../CLAUDE.md) |
+| 项目共识 / 命令 | [readme.md](../../readme.md) · [LOCAL_DEV.md](../../LOCAL_DEV.md) |
 | 游戏 / 玩法 catalog | [docs/CATALOG.md](../../docs/CATALOG.md) |
 | HTTP / WS 代理 | [proxy/README.md](./proxy/README.md) |
-| 平台适配器 | [packages/venue-adapter/README.md](../../packages/venue-adapter/README.md) |
+| 平台适配器 | [浏览器实现](../../client/packages/venue-browser/README.md) · [Node loader](../venues/README.md) |
 | 新控制台 / v4 | [client/web/docs/CREDIT_PLATE.md](../../client/web/docs/CREDIT_PLATE.md) |
 | 运维脚本 | [scripts/README.md](../../scripts/README.md) |
 | 本机 JSON（storage/） | [STORAGE.md](./STORAGE.md) |
@@ -43,4 +43,4 @@ public/              # 静态资源（URL 仍为 /esport2/*，见 public/README.
 
 RDS 迁移 SQL、结构基线与维护代码/测试统一位于 `rds/assets/` 和 `rds/maintenance/`；backend 的旧资产副本及 7 个维护分派入口已删除。
 
-平台 canonical 实现位于 `packages/venue-adapter/`，由 `core/shared/adapter_paths.js` 加载。
+Node 平台运行模块、loader / registry 位于 `server/venues/`，`core/shared/adapter_paths.js` 转出 `@changmen/venue-node` 公共入口。浏览器实现位于 `client/packages/venue-browser/`，不由 backend 加载。

@@ -7,11 +7,12 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 it("reports real frontend/backend/RDS declarations without claiming installation isolation", () => {
   const report = inspectComponentInstallInputs(root);
   expect(report.violations).toEqual([]); expect(report.profiles.frontend.workspaces).toHaveLength(7);
-  expect(report.profiles.backend.workspaces).toHaveLength(14);
+  expect(report.profiles.backend.workspaces).toHaveLength(13);
   expect(report.profiles.rds.workspaces).toEqual([
     "@changmen/api-contract", "@changmen/db", "@changmen/match-identity", "@changmen/runtime-tooling", "@changmen/shared", "@changmen/storage",
   ]);
   expect(report.profiles.backend.workspaces).not.toContain("@changmen/venue-adapter");
+  expect(report.profiles.backend.workspaces).not.toContain("@changmen/platform-probes");
   expect(report.frontendBackendEdges).toEqual([]); expect(report.frontendDeclarationsIsolated).toBe(true);
   expect(report.profiles.frontend.build.directExternalPackages).toContain("vite");
   expect(report.profiles.frontend.directExternalPackages).not.toContain("vite");

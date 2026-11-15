@@ -1,39 +1,17 @@
-# PM 测试目录
+# PM 测试入口
 
-[changmen 扩展] 2026-10-11 将原根目录 72 个测试按功能迁入本目录，不改变断言、mock 的原模块目标或测试运行规则。原位置不留测试再导出，避免 Vitest 重复发现。gtc/ 中原相邻测试保持。
+[changmen 扩展] 此处保留历史目录说明。当前浏览器 PM 测试位于 `client/packages/venue-browser/adapter/polymarket/tests/`；生产实现位于 `client/packages/venue-browser/polymarket/`。旧 `@changmen/venue-adapter` 浏览器运行入口已退役。
 
-| 目录 | 测试文件数 |
-| --- | ---: |
-| `auth/` | 2 |
-| `wallet/` | 6 |
-| `transport/` | 5 |
-| `markets/` | 7 |
-| `quotes/` | 7 |
-| `realtime/` | 8 |
-| `orders/` | 19 |
-| `submission/` | 10 |
-| `diagnostics/` | 2 |
-| `fok/` | 4 |
-| `compatibility/` | 2 |
-
-测试默认继续使用根目录旧模块入口，mock 同样指向这些入口；compatibility 同时读取旧入口和真正实现以验证导出及单例。collect/marketQuoteHub 的源码契约继续检查完整实现，根目录定位适配新位置。
-
-仓库根运行 PM 专项：
+从仓库根运行 PM 测试：
 
 ```powershell
-npm run test --workspace=@changmen/web -- ../../packages/venue-adapter/polymarket --reporter=dot
+npm exec --workspace=@changmen/web -- vitest run ../packages/venue-browser/adapter/polymarket/tests
 ```
 
-仓库根运行新旧入口兼容测试：
+行情总线契约：
 
 ```powershell
-npm run test --workspace=@changmen/web -- ../../packages/venue-adapter/polymarket/tests/compatibility --reporter=dot
+npm exec --workspace=@changmen/web -- vitest run marketQuoteHub.contracts marketQuoteHub.lifecycle
 ```
 
-行情总线闸门命令保持名称，包内 script 已更新本次移动的测试路径：
-
-```powershell
-npm run test:quote-hub-contracts --workspace=@changmen/venue-adapter
-```
-
-完整前端测试仍以 `npm run test:frontend` 为准；既有 live 测试仍保持原跳过及显式启用规则。本次未改变网络或场馆交易资格。
+完整前端回归使用 `npm run test:frontend`。live 测试继续按原跳过及显式启用条件执行；离线验证不应提供真实下单凭证。

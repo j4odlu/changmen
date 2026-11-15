@@ -108,11 +108,6 @@ vi.mock("../esport-api/user_kv.js", () => ({
   wrapObjectDirect: (v) => v,
 }));
 
-vi.mock("./balance_provider.js", () => ({
-  enrichAccountFromPlatformDefaults: (a) => a,
-  getAccountBalance: vi.fn(),
-}));
-
 vi.mock("./user_presence.js", () => ({
   resolvePresenceState: () => ({}),
 }));

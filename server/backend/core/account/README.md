@@ -11,8 +11,7 @@ core/esport-api/router.js
     ↕
 core/account/account_service.js
     ├─ account_store.js     tag_platforms / players（owner_user_id）/ money_logs
-    ├─ player_ownership.js  每用户 playerId 归属校验
-    └─ balance_provider.js  PB、HG 等 getBalance
+    └─ player_ownership.js  每用户 playerId 归属校验
 profiles.accounts (jsonb)   ← [changmen 实现] 持久化 SaveData(ACCOUNT) 的 JSON 数组
 ```
 
@@ -54,21 +53,19 @@ npm run account:import-platform -- "<base64>" --sync-store
 ## CLI
 
 ```bash
-cd scripts
+cd server/backend
 npm run account:tags
 npm run account:create -- --platform 信用盘A --player user01
 npm run account:list
-npm run account:refresh
 ```
 
 ## 余额刷新
 
-`balance_provider.js` 当前接入：
+普通平台由客户端 adapter 查询余额，再经 `Client_UpdateBalance` 写入；PF 余额继续走服务端账本链路。
 
-- **PB** — `pb_session.fetchBalance`
-- **HG** — `hg_session.fetchBalance`
+PM 使用 `Pm_RefreshBalance`，由 `core/integrations/polymarket/pm_client_handlers.js` 校验账号归属、查询余额并等待 RDS 写入后同步缓存。缺少凭证时由同目录的 `account_defaults.js` 沿用原有平台配置补全规则，已有账号字段优先。
 
-其他 provider 返回 `null`，控制台显示余额未知（与 A8 未配置凭证时行为一致）。后续可在 `balance_provider.js` 按场馆扩展。
+旧 `Client_RefreshAccountBalance` 继续返回已废弃提示。`npm run account:refresh` 保留退役提示并以非零状态退出，不加载账号服务、不初始化数据库；不再支持旧的服务端批量余额刷新。
 
 ## 数据文件
 

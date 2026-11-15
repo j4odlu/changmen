@@ -51,6 +51,7 @@ const accounts = [{
 
 vi.mock("../../esport-api/store.js", () => ({
   default: {
+    getPlatform: vi.fn(() => null),
     getAccountsForUser: () => accounts,
     updateAccountForUser: vi.fn(async (_uid, id, updates) => {
       const row = accounts.find(row => row.accountId === id);
@@ -70,10 +71,6 @@ vi.mock("../../account/player_ownership.js", () => ({
 vi.mock("../../account/account_store.js", () => ({
   updatePlayerBalance: vi.fn(async (_id, bal) => ({ total: bal })),
   getAccountsFromKv: vi.fn(() => accounts),
-}));
-
-vi.mock("../../account/balance_provider.js", () => ({
-  enrichAccountFromPlatformDefaults: (a) => a,
 }));
 
 vi.mock("@changmen/shared/account_multiply", () => ({
@@ -263,6 +260,39 @@ describe("pm_client_handlers", () => {
     expect(res.ok).toBe(true);
     expect(res.info).toMatchObject({ balance: 12.5, currency: "USDT" });
     expect(updatePlayerBalance).toHaveBeenCalledWith(47, 12.5, "user-1");
+  });
+
+  test("Pm_RefreshBalance retains the platform credential fallback after ownership validation", async () => {
+    const store = (await import("../../esport-api/store.js")).default;
+    const { fetchPolymarketCollateralBalance } = await import("./balance.js");
+    const { updatePlayerBalance } = await import("../../account/account_store.js");
+    const original = accounts[0];
+    accounts[0] = { ...original, gateway: "account-gateway", token: "" };
+    store.getPlatform.mockReturnValueOnce({ gateway: "default-gateway", token: "default-token" });
+    try {
+      expect((await handleRefreshPmBalance({ playerId: 47 }, "user-1")).ok).toBe(true);
+      expect(store.getPlatform).toHaveBeenCalledWith("POLYMARKET");
+      expect(fetchPolymarketCollateralBalance).toHaveBeenCalledWith(expect.objectContaining({
+        gateway: "account-gateway", token: "default-token", referer: "default-gateway",
+      }));
+      expect(updatePlayerBalance.mock.invocationCallOrder[0]).toBeLessThan(store.updateAccountForUser.mock.invocationCallOrder[0]);
+    }
+    finally {
+      accounts[0] = original;
+    }
+  });
+
+  test("Pm_RefreshBalance rejects foreign accounts before credentials, balance requests or writes", async () => {
+    const { assertPlayerOwnedByUser } = await import("../../account/player_ownership.js");
+    const store = (await import("../../esport-api/store.js")).default;
+    const { fetchPolymarketCollateralBalance } = await import("./balance.js");
+    const { updatePlayerBalance } = await import("../../account/account_store.js");
+    assertPlayerOwnedByUser.mockResolvedValueOnce({ ok: false, msg: "not owned" });
+    expect(await handleRefreshPmBalance({ playerId: 47 }, "other-user")).toEqual({ ok: false, msg: "not owned" });
+    expect(store.getPlatform).not.toHaveBeenCalled();
+    expect(fetchPolymarketCollateralBalance).not.toHaveBeenCalled();
+    expect(updatePlayerBalance).not.toHaveBeenCalled();
+    expect(store.updateAccountForUser).not.toHaveBeenCalled();
   });
 
   test("Pm_RefreshBalance returns the current synchronized amount instead of replaying its earlier sample", async () => {

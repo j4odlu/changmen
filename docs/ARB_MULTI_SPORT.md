@@ -262,7 +262,7 @@ POD 警报与场馆比赛、盘口、报价的匹配统一经 `client/web/src/ru
 
 ### N3 schema（已建 · 接线见下节）
 
-Migration：[`033_sport_matcher_tables.sql`](../server/backend/db/migrations/033_sport_matcher_tables.sql)（`apply-rds-schema` 已挂）。  
+Migration：[`033_sport_matcher_tables.sql`](../rds/assets/migrations/033_sport_matcher_tables.sql)（`apply-rds-schema` 已挂）。
 Store：`rds/rds/sport_{client_matches,venue,team}_store.js`；隔离 smoke：`npm run test:catalog-smoke` 含 `sport_matcher_tables.smoke`。
 
 | 表 | 角色 |
@@ -309,8 +309,8 @@ PF 仍可暂共用电竞侧 hub（后续再拆）；PM 已完全隔离。
 **生命周期契约测（合并闸门，改 hub/collect/ws 前必绿）**：
 
 ```bat
-cd packages\venue-adapter
-npm run test:quote-hub-contracts
+# 从仓库根执行
+npm exec --workspace=@changmen/web -- vitest run marketQuoteHub.contracts marketQuoteHub.lifecycle
 ```
 
 | 契约 | 文件 |
@@ -329,8 +329,8 @@ PM 体育与电竞 **分 hub**；为避免体育 PR 再「顺手动电竞」：
 |----|------|
 | **冻结** | 清单 [`packages/venue-adapter/esport-freeze.json`](../packages/venue-adapter/esport-freeze.json)：PM/PF `collect`、fo/`oddsStore`/`mainBetLoop`、PM 下注结算栈等 |
 | **可改** | `marketQuoteHub` / `sportQuoteHub` / `ws*`、`sportLiveOdds`、`sportOddsStore`、`SportMatchBoard*` |
-| **闸门** | `npm run check:esport-freeze --workspace=@changmen/venue-adapter`（已挂 `check:venue-adapter`） |
-| **解冻** | `ALLOW_ESPORT_TOUCH=1` 或 `npm run check:esport-freeze:allow`；改 hub/collect 后仍须绿 `test:quote-hub-contracts` |
+| **闸门** | `npm run check:venue-adapter`（已挂 `check:venue-adapter`） |
+| **解冻** | 核对范围后显式设置 `ALLOW_ESPORT_TOUCH=1`；不得改冻结基线。改 hub/collect 后仍须运行上面的行情契约测试 |
 
 体育/N3.5 迭代默认 **不要** 改冻结面文件；CI / 本地碰到 diff 踩冻结面会失败。
 

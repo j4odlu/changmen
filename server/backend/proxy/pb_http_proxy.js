@@ -43,7 +43,8 @@ function pickForwardHeaders(reqHeaders, sessionHeaders) {
 }
 
 /**
- * 控制�?PB 下单/余额：Yn.get/post �?本地 Node 代发（凭证来�?platforms.json / PB_* env）�? * GET|POST /esport/pb/proxy?url=<encoded upstream URL>
+ * 控制台 PB 下单/余额：Yn.get/post → 本地 Node 代发（凭证来自 platforms.json / PB_* env）。
+ * GET|POST /esport/pb/proxy?url=<encoded upstream URL>
  */
 async function tryPbHttpProxy(req, res) {
   const pathname = req.url.split("?")[0];

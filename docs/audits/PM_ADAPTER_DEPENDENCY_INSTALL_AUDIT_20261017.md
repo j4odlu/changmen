@@ -1,5 +1,7 @@
 # PM adapter 依赖声明与干净安装验证
 
+> 2026-11-08 本机维护补记：下文记录 2026-10-17 的历史安装实验。`output/pm-dependency-install-20261017/` 的大型夹具与安装副本已清理，保留报告仍在原路径，其余非依赖归档及恢复入口见 [LOCAL_DEV.md](../../LOCAL_DEV.md#本机归档记录)。历史 `node_modules` 未归档；下方命令需先重新准备对应源码和安装环境，不能直接在剩余报告目录运行。本补记不改变原批次结果或验收范围。
+
 [changmen 扩展] 2026-10-17，在 `E:\River\arb\changmen` 实施，提交基线仍为 `abdfce46d46f562c208ea0d832b6cafc02fd2360`。本轮承接[动态依赖审计](PM_DYNAMIC_DEPENDENCY_AUDIT_20261017.md)，只收口 adapter 的 PM 直接依赖与 Vue 宿主关系。未 commit/push、未部署。
 
 后续[共享loader/DB逐条证据](PM_SHARED_LOADER_EVIDENCE_AUDIT_20261017.md)将保留的20条记录分为12条固定目标、3条环境相关、5条参数未知，并补充默认路径库存和变更拒绝检查。本记录中的干净安装对比保持原样，未在后续批次重复安装或修改生产loader/DB。

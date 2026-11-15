@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { describePlatformGame } from "@changmen/shared/catalog/game_catalog";
 import { parseEuroOddsPayload } from "../core.js";
-import { loadSession, fetchEuroOdds, fetchBalance, buildAuthHeaders } from "../session.js";
+import { loadSession, fetchEuroOdds, fetchBalance, buildAuthHeaders } from "@changmen/venue-node/runtime/pb/session.js";
 
 async function main() {
   const cmd = process.argv[2] || "list";
@@ -31,7 +31,7 @@ async function main() {
     }
     const match = parsed.matches.find((m) => m.matchId === String(matchId));
     if (!match) {
-      console.error(`δ�ҵ����� ${matchId}`);
+      console.error(`未找到赛事 ${matchId}`);
       process.exit(1);
     }
     const game = describePlatformGame("PB", match.gameId);

@@ -2,7 +2,7 @@
  * OB 锁盘判定 — 对照 A8 / changmen / 官网 HTTP 语义（观察与单测用，非运行时唯一真源）。
  *
  * HTTP 灌盘真源：`obBlockLocked`（本文件 `httpBlockLocked` 直接复用）。
- * 官网 MQTT 全量回放见 `devtools/platform-probes/ob/core.js`（可选探针，日常可不装）。
+ * 官网 MQTT 解析参考 `server/venues/registry/runtime/ob/core.js`。
  */
 
 import {

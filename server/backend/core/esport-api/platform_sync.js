@@ -17,7 +17,7 @@ function syncObFromSession(session) {
   return true;
 }
 
-/** ?? data/esport/platforms.json ??????gateway/token???????? feed ???? */
+/** 复用 platforms.json 中已有的采集 gateway/token */
 function syncObFromStore() {
   const row = store.getPlatform("OB");
   if (!row?.gateway || !row?.token)
@@ -41,7 +41,7 @@ async function probeObSession(gateway, token) {
 }
 
 /**
- * Feed / ?????? platforms.json ????????login ?????? index??
+ * 采集配置优先复用 platforms.json 有效会话，无效时重新试玩登录。
  */
 async function resolveObSession() {
   const row = store.getPlatform("OB");
@@ -93,14 +93,14 @@ function syncRayFromEnv() {
   store.setPlatform("RAY", {
     gateway: process.env.RAY_GATEWAY || "https://cfinfo.365raylinks.com",
     token,
-    betName: "^????",
+    betName: "^获胜者$",
     games: getActivePlatformGameIds("RAY").map(String),
   });
   return true;
 }
 
 function syncRayFromSession(_session) {
-  // RAY ???? A8 ?????feed ?? session ????platforms.json
+  // RAY 采集使用既有 A8 凭证；登录 session 不写入 platforms.json
   return syncRayFromA8();
 }
 
@@ -143,7 +143,7 @@ async function syncTfFromLocal() {
     store.setPlatform("TF", {
       gateway: creds.gateway,
       token: creds.token,
-      betName: creds.betName || store.getPlatform("TF")?.betName || "^????",
+      betName: creds.betName || store.getPlatform("TF")?.betName || "^获胜者$",
       games: creds.games.length ? creds.games : getActivePlatformGameIds("TF").map(String),
     });
     return true;
@@ -162,7 +162,7 @@ function syncTfFromEnv() {
   store.setPlatform("TF", {
     gateway,
     token,
-    betName: process.env.TF_BET_NAME || "^????",
+    betName: process.env.TF_BET_NAME || "^获胜者$",
     games: getActivePlatformGameIds("TF").map(String),
   });
   return true;
@@ -174,7 +174,7 @@ function syncTfFromSession(session) {
   store.setPlatform("TF", {
     gateway: session.gateway,
     token: session.token,
-    betName: session.betName || store.getPlatform("TF")?.betName || "^????",
+    betName: session.betName || store.getPlatform("TF")?.betName || "^获胜者$",
     games: (session.gameIds || getActivePlatformGameIds("TF")).map(String),
   });
   return true;
@@ -202,7 +202,7 @@ function syncIaFromEnv() {
     betName:
       process.env.IA_BET_NAME
       || store.getPlatform("IA")?.betName
-      || "([??].+??$)|([??\\d].+????)",
+      || "([全场].+获胜$)|([地图\\d].+获胜者$)",
     games: getActivePlatformGameIds("IA").map(String),
   });
   return true;

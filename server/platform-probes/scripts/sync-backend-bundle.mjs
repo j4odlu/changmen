@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 将 devtools/platform-probes 同步到 server/backend/platform_node（瘦包部署）。
+ * 将可选探针工具同步到 server/backend/platform_node；后端运行资源由 venue-node 单独交付。
  */
 
 import fs from "node:fs";
@@ -30,8 +30,8 @@ export function syncPlatformNodeBundle(options = {}) {
   const src = options.src ?? NODE_PKG_ROOT;
   const dst = options.dst ?? path.join(BACKEND_ROOT, "platform_node");
 
-  if (!fs.existsSync(path.join(src, "ob", "session.js"))) {
-    throw new Error(`platform-probes source missing ob/session.js: ${src}`);
+  if (!fs.existsSync(path.join(src, "ob", "scripts", "fetch_ob_login.js"))) {
+    throw new Error(`platform-probes source missing ob/scripts/fetch_ob_login.js: ${src}`);
   }
 
   if (fs.existsSync(dst)) {

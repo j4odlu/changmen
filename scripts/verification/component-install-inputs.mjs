@@ -94,7 +94,7 @@ export function venueBrowserDeclarationBoundary(packages) {
     || tools.pkg.exports?.["./sync-backend-bundle.mjs"] !== "./sync-backend-bundle.mjs"
     || JSON.stringify(tools.pkg.files) !== JSON.stringify(["loader", "registry", "sync-backend-bundle.mjs"])
     || JSON.stringify(tools.pkg.scripts) !== JSON.stringify({ "sync:backend-bundle": "node sync-backend-bundle.mjs" })
-    || JSON.stringify(tools.pkg.dependencies) !== JSON.stringify({ "@changmen/platform-probes": "file:../platform-probes", "@changmen/shared": "file:../../packages/shared", "@changmen/storage": "file:../storage" }))
+    || JSON.stringify(tools.pkg.dependencies) !== JSON.stringify({ "@changmen/shared": "file:../../packages/shared", "@changmen/storage": "file:../storage" }))
     violations.push({ file: "server/venues/package.json", spec: "@changmen/venue-node",
       pattern: "Backend bundle tool must declare its shared catalog and Node storage dependencies from its server workspace" });
   if (adapter) violations.push({ file: "packages/venue-adapter/package.json", spec: "@changmen/venue-adapter", pattern: "Retired adapter workspace must not return" });

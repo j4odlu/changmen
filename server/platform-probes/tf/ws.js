@@ -3,7 +3,7 @@
  * 若需探测，显式传入 options.wsUrl / 环境变量 TF_WS_URL。
  */
 import { backendRequire } from "../backend/_paths.js";
-import { stripTokenPrefix } from "./auth.js";
+import { stripTokenPrefix } from "@changmen/venue-node/runtime/tf/auth.js";
 
 const WebSocket = backendRequire("ws");
 

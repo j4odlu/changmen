@@ -116,9 +116,9 @@ it("PM imports have declarations and a Vue host peer while inherited uncertainty
   expect(report.dynamicSites.filter(site => site.file === "client/packages/venue-browser/polymarket/auth/credentials.ts")
     .map(site => site.spec).sort()).toEqual(["../wallet/polygonRpc", "@polymarket/client/viem", "viem", "viem/accounts"]);
   expect(report.dynamicSites.some(site => site.file === "server/backend/core/integrations/polymarket/clob_l1.js")).toBe(false);
-  expect(report.unknownSummary).toEqual({ raw: 20, primary: 0, explainedPrimary: 0, unexplainedPrimary: 0, inherited: 20 });
-  expect(report.sharedLoaderEvidence.byClass).toEqual({ "fixed-target": 12, "environment-dependent": 3, "parameter-unknown": 5 });
-  expect(report.loaderBindings.calls).toHaveLength(9);
+  expect(report.unknownSummary).toEqual({ raw: 15, primary: 0, explainedPrimary: 0, unexplainedPrimary: 0, inherited: 15 });
+  expect(report.sharedLoaderEvidence.byClass).toEqual({ "fixed-target": 7, "environment-dependent": 3, "parameter-unknown": 5 });
+  expect(report.loaderBindings.calls).toHaveLength(1);
   expect(report.loaderBindings.safeToNarrowPublishScope).toBe(false);
   expect(report.sourceFiles.some(file => file.startsWith("server/backend/scripts/"))).toBe(false);
   expect(report.sourceFiles.filter(file => file.startsWith("devtools/"))).toEqual(["devtools/runtime-tooling/dev_web_port.js"]);
@@ -170,10 +170,10 @@ it("rejects private Vue runtimes, missing/required peers and a host range mismat
 
 for (const [name, file, addition, diagnostic] of [
   ["computed PM input", "client/packages/venue-browser/polymarket/orderBook.ts", "void import(globalThis.unknownInput);", "[pm-dynamic-input]"],
-  ["Node loader reaching a browser implementation", "server/backend/core/account/balance_provider.js", 'requirePlatform("Polymarket", "orderBook.ts");', "[pm-node-browser-loader]"],
+  ["Node loader reaching a browser implementation", "server/backend/core/esport-api/store.js", 'import { requirePlatform } from "../shared/adapter_paths.js";requirePlatform("Polymarket", "orderBook.ts");', "[pm-node-browser-loader]"],
   ["namespace loader with unknown arguments", "server/backend/core/esport-api/store.js", 'import * as auditLoader from "../shared/adapter_paths.js";auditLoader.backendRequire(globalThis.unknownModule);', "[pm-loader-unknown]"],
   ["namespace loader reaching PM browser", "server/backend/core/esport-api/store.js", 'import * as auditLoader from "../shared/adapter_paths.js";auditLoader.requirePlatform("Polymarket","orderBook.ts");', "[pm-node-browser-loader]"],
-  ["opaque module acquisition in preload", "server/platform-probes/ray/ws.js", "void import(globalThis.unknownPreload);", "[pm-loader-unknown]"],
+  ["opaque module acquisition in preload", "server/venues/registry/runtime/ray/session.js", "void import(globalThis.unknownPreload);", "[pm-loader-unknown]"],
   ["changed loader interpretation", "server/venues/loader/adapter_paths.mjs", "void 0;", "[pm-shared-loader]"],
 ]) it(`daily boundary CLI rejects ${name} without a historical audit`, () => {
   const code = `import fs from "node:fs";const read=fs.readFileSync;
@@ -191,8 +191,8 @@ for (const [name, file, addition, diagnostic] of [
 it("daily CLI accepts an equivalent namespace rewrite and still checks the current dependency graph",()=>{
   const code=`import fs from "node:fs";const read=fs.readFileSync;
     fs.readFileSync=function(file,...args){const source=read.call(this,file,...args);
-      return typeof source==="string"&&String(file).replaceAll("\\\\","/").endsWith("/server/platform-probes/ray/ws.js")
-        ?source.replace('import { backendRequire }','import * as boundLoader').replace('backendRequire("socketcluster-client")','boundLoader.backendRequire("socketcluster-client")'):source;};
+      return typeof source==="string"&&String(file).replaceAll("\\\\","/").endsWith("/server/venues/registry/runtime/ray/session.js")
+        ?source.replace('import { getActivePlatformGameIds }','import * as gameCatalog').replaceAll('getActivePlatformGameIds(', 'gameCatalog.getActivePlatformGameIds('):source;};
     await import("./scripts/check-team-boundaries.mjs");`;
   const result=spawnSync(process.execPath,["--input-type=module","--eval",code],{
     cwd:fileURLToPath(new URL("../../",import.meta.url)),encoding:"utf8",timeout:35000,maxBuffer:2*1024*1024,

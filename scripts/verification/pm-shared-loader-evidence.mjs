@@ -95,22 +95,25 @@ export function inspectPmSharedLoaders(root, sites, { env = process.env, readSou
       else if (record.loaderSymbol === "requirePlatform") {
         const entry = manifest.find(row => row.id.toLowerCase() === args[0].toLowerCase());
         if (!entry || !/^[a-zA-Z0-9_-]+$/.test(entry.dir) || !["node", "backend"].includes(args[1])) throw Error(`Unreviewed platform target: ${args.join("/")}`);
-        addTarget(`server/platform-probes/${entry.dir}/${args.slice(2).join("/")}`, "server/platform-probes");
+        addTarget(`server/venues/registry/runtime/${entry.dir}/${args.slice(2).join("/")}`, "server/venues/registry/runtime");
       }
     }
     for (const file of ["server/venues/registry/runtime/registry/paths.js", "server/venues/registry/runtime/registry/feeds.js"]) addTarget(file, "server/venues/registry/runtime/registry");
-    // Enumerate exactly the runtime's top-level ESM file rule; never import files or descend into scripts/.
-    const preloadFiles = [], preloadPackages = [];
-    for (const entry of manifest) {
-      if (!/^[a-zA-Z0-9_-]+$/.test(entry.dir)) throw Error(`Unsafe manifest directory: ${entry.dir}`);
-      const dir = `server/platform-probes/${entry.dir}`, pkg = `${dir}/package.json`;
-      if (!fs.existsSync(path.join(root, pkg))) continue;
-      const evidence = fileEvidence(root, pkg, "server/platform-probes");
-      let data;
-      try { data = readJson(path.join(root, pkg)); } catch { throw Error(`Uninspectable preload package: ${pkg}`); }
-      preloadPackages.push({ ...evidence, module: data.type === "module" });
-      if (data.type !== "module") continue;
-      for (const file of fs.readdirSync(path.join(root, dir)).sort()) if (file.endsWith(".js") && !file.startsWith("_") && fs.statSync(path.join(root, dir, file)).isFile()) preloadFiles.push(fileEvidence(root, `${dir}/${file}`, "server/platform-probes"));
+    // Read the loader's literal inventory without importing application code.
+    const loaderFile = "server/venues/loader/adapter_paths.mjs";
+    const loaderTree = ts.createSourceFile(loaderFile, readSource(loaderFile), ts.ScriptTarget.Latest, true);
+    const inventories = loaderTree.statements.filter(ts.isVariableStatement).flatMap(statement =>
+      [...statement.declarationList.declarations].filter(row => ts.isIdentifier(row.name) && row.name.text === "PLATFORM_ESM_MODULES"));
+    if (inventories.length !== 1 || !ts.isArrayLiteralExpression(inventories[0].initializer)) throw Error("Missing explicit Node preload inventory");
+    const preloadFiles = [], preloadPackages = [fileEvidence(root, "server/venues/registry/runtime/package.json", "server/venues/registry/runtime")];
+    const seen = new Set();
+    for (const row of inventories[0].initializer.elements) {
+      if (!ts.isArrayLiteralExpression(row) || row.elements.length !== 2 || !row.elements.every(ts.isStringLiteral)) throw Error("Non-literal Node preload entry");
+      const [platform, file] = row.elements.map(value => value.text), entry = manifest.find(value => value.id === platform);
+      if (!entry || !/^[a-zA-Z0-9_-]+$/.test(entry.dir) || !/^[a-zA-Z0-9_]+\.js$/.test(file)) throw Error("Invalid Node preload entry");
+      const target = `server/venues/registry/runtime/${entry.dir}/${file}`;
+      if (seen.has(target)) throw Error("Duplicate Node preload entry");
+      seen.add(target); preloadFiles.push(fileEvidence(root, target, "server/venues/registry/runtime"));
     }
     const searchPaths = ["apps/backend/node_modules", "node_modules", "server/node_modules"];
     const pg = createRequire(path.join(root, "rds/pg_pool.js")).resolve("pg", { paths: searchPaths.map(file => path.join(root, file)) });
@@ -144,6 +147,6 @@ export function inspectPmSharedLoaders(root, sites, { env = process.env, readSou
     runtimeRootsCertified: false, safeToNarrowPublishScope: false, publishScopeOptimizationEnabled: false,
     limitations: ["Fixed relative names may still have overridden roots; classification does not certify an absolute production target.",
       "Parameter ports remain genuinely open APIs; current recognized PM call sites do not invoke reqS/backendRequire or adapterRequire's generic branch.",
-      "Only directly requested files and manifest-selected top-level module names/hashes are read; no historical script recursion or application execution."],
+      "Only directly requested files and explicitly listed runtime module names/hashes are read; no historical script recursion or application execution."],
     violations };
 }

@@ -7,7 +7,7 @@
     {
       "file": "server/venues/loader/adapter_paths.mjs",
       "selector": "module",
-      "signature": "cde7904563c9a40702213b08af36b0c05013dc0000badb23a8c0546e8951a009"
+      "signature": "501b289c6d3731405bf7b653ab25778f07d77e8b84f8bc85ebab116d613c541c"
     },
     {
       "file": "rds/pg_pool.js",
@@ -22,7 +22,7 @@
     {
       "file": "server/venues/registry/paths.js",
       "selector": "module",
-      "signature": "0bca072c5069e618ded921921e149bf04af20b411739425c0d54728943120f30"
+      "signature": "766b5d273a71f1bf272dce66716c03a66bd6daa72080dd70e42bbff7db8301d9"
     },
     {
       "file": "server/venues/registry/runtime/registry/paths.js",
@@ -43,84 +43,9 @@
       "file": "server/storage/changmen_root.ts",
       "selector": "module",
       "signature": "0dc81fac1638c650cb119be44704f0ceeb651ff673f7ba6f85a72d0013321aa5"
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.js",
-      "selector": "module",
-      "signature": "a58af42214cd5b09cd9d3baa94ada6a5fba6a225e2953316deb0072fe396e1f6"
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "selector": "module",
-      "signature": "f62c1ea53fd921ce4e6764c115a0ff56a629142762b0b509a1fadfdf81622209"
     }
   ],
   "calls": [
-    {
-      "file": "server/backend/core/account/balance_provider.js",
-      "origin": {
-        "file": "server/venues/loader/adapter_paths.mjs",
-        "symbol": "requirePlatform"
-      },
-      "arguments": [
-        "HG",
-        "node",
-        "session.js"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/account/balance_provider.js",
-      "origin": {
-        "file": "server/venues/loader/adapter_paths.mjs",
-        "symbol": "requirePlatform"
-      },
-      "arguments": [
-        "OB",
-        "node",
-        "session.js"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/account/balance_provider.js",
-      "origin": {
-        "file": "server/venues/loader/adapter_paths.mjs",
-        "symbol": "requirePlatform"
-      },
-      "arguments": [
-        "PB",
-        "node",
-        "session.js"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/account/balance_provider.js",
-      "origin": {
-        "file": "server/venues/loader/adapter_paths.mjs",
-        "symbol": "requirePlatform"
-      },
-      "arguments": [
-        "RAY",
-        "node",
-        "core.js"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/backend/core/account/balance_provider.js",
-      "origin": {
-        "file": "server/venues/loader/adapter_paths.mjs",
-        "symbol": "requirePlatform"
-      },
-      "arguments": [
-        "RAY",
-        "node",
-        "session.js"
-      ],
-      "count": 1
-    },
     {
       "file": "server/backend/core/esport-api/platform_sync.js",
       "origin": {
@@ -300,39 +225,6 @@
         "session.js"
       ],
       "count": 1
-    },
-    {
-      "file": "server/platform-probes/ia/ws.js",
-      "origin": {
-        "file": "server/platform-probes/backend/_paths.js",
-        "symbol": "backendRequire"
-      },
-      "arguments": [
-        "socket.io-client"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/platform-probes/ray/ws.js",
-      "origin": {
-        "file": "server/platform-probes/backend/_paths.js",
-        "symbol": "backendRequire"
-      },
-      "arguments": [
-        "socketcluster-client"
-      ],
-      "count": 1
-    },
-    {
-      "file": "server/platform-probes/tf/ws.js",
-      "origin": {
-        "file": "server/platform-probes/backend/_paths.js",
-        "symbol": "backendRequire"
-      },
-      "arguments": [
-        "ws"
-      ],
-      "count": 1
     }
   ],
   "dynamicSites": [
@@ -351,90 +243,6 @@
       "kind": "require",
       "spec": null,
       "expression": "require.resolve(\"pg\", { paths: searchPaths })",
-      "loader": "require",
-      "arguments": [
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "kind": "computed-loader",
-      "spec": null,
-      "expression": "entry",
-      "loader": "require.resolve",
-      "arguments": [
-        null,
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "kind": "computed-loader",
-      "spec": null,
-      "expression": "specifier",
-      "loader": "require.resolve",
-      "arguments": [
-        null,
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "kind": "require",
-      "spec": null,
-      "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
-      "loader": "require",
-      "arguments": [
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.cjs",
-      "kind": "require",
-      "spec": null,
-      "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
-      "loader": "require",
-      "arguments": [
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.js",
-      "kind": "computed-loader",
-      "spec": null,
-      "expression": "entry",
-      "loader": "require.resolve",
-      "arguments": [
-        null,
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.js",
-      "kind": "computed-loader",
-      "spec": null,
-      "expression": "specifier",
-      "loader": "require.resolve",
-      "arguments": [
-        null,
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.js",
-      "kind": "require",
-      "spec": null,
-      "expression": "require.resolve(entry, { paths: RESOLVE_PATHS })",
-      "loader": "require",
-      "arguments": [
-        null
-      ]
-    },
-    {
-      "file": "server/platform-probes/backend/_paths.js",
-      "kind": "require",
-      "spec": null,
-      "expression": "require.resolve(specifier, { paths: RESOLVE_PATHS })",
       "loader": "require",
       "arguments": [
         null
@@ -534,26 +342,14 @@
     }
   ],
   "preloadFiles": [
-    "server/platform-probes/ob/core.js",
-    "server/platform-probes/ob/session.js",
-    "server/platform-probes/ray/collect_credentials.js",
-    "server/platform-probes/ray/core.js",
-    "server/platform-probes/ray/ray_game_ids.js",
-    "server/platform-probes/ray/session.js",
-    "server/platform-probes/ray/ws.js",
-    "server/platform-probes/tf/auth.js",
-    "server/platform-probes/tf/collect_credentials.js",
-    "server/platform-probes/tf/core.js",
-    "server/platform-probes/tf/game_ids.js",
-    "server/platform-probes/tf/session.js",
-    "server/platform-probes/tf/ws.js",
-    "server/platform-probes/ia/collect_credentials.js",
-    "server/platform-probes/ia/core.js",
-    "server/platform-probes/ia/game_ids.js",
-    "server/platform-probes/ia/session.js",
-    "server/platform-probes/ia/ws.js",
-    "server/platform-probes/pb/core.js",
-    "server/platform-probes/pb/session.js"
+    "server/venues/registry/runtime/ob/session.js",
+    "server/venues/registry/runtime/ray/session.js",
+    "server/venues/registry/runtime/ray/core.js",
+    "server/venues/registry/runtime/ray/collect_credentials.js",
+    "server/venues/registry/runtime/tf/session.js",
+    "server/venues/registry/runtime/tf/collect_credentials.js",
+    "server/venues/registry/runtime/ia/collect_credentials.js",
+    "server/venues/registry/runtime/pb/session.js"
   ],
   "entries": [
     {

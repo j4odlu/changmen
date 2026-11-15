@@ -151,12 +151,12 @@ it("rejects invalid origins, syntax and duplicate call registrations", () => {
   const expected = [{ file: "entry.ts", origin, arguments: ["ws"], count: 1 }];
   expect(() => fixture("", {}, { expected: [...expected, ...expected] })).toThrow("Invalid source-bound");
 });
-it("covers the real PM graph, runtime preload dependencies and nine reviewed source-bound calls", () => {
+it("covers the real PM graph, runtime preload dependencies and the remaining registry loader call", () => {
   const root = fileURLToPath(new URL("../../", import.meta.url)), report = inspectPmDependencies(root);
   expect(report.violations).toEqual([]);
-  expect(report.unknownSummary.inherited).toBe(20);
-  expect(report.loaderBindings.origins).toHaveLength(8);
-  expect(report.loaderBindings.calls).toHaveLength(9);
+  expect(report.unknownSummary.inherited).toBe(15);
+  expect(report.loaderBindings.origins).toHaveLength(4);
+  expect(report.loaderBindings.calls).toHaveLength(1);
   // [changmen 扩展] 逐个文件证明当前图；退役转发文件减少数量，不以历史文件数量代替覆盖。
   const evidenceFiles = report.loaderBindings.inputEvidence.map(row => row.file);
   expect(report.loaderBindings.scannedSourceFiles).toBe(evidenceFiles.length);
@@ -165,7 +165,7 @@ it("covers the real PM graph, runtime preload dependencies and nine reviewed sou
   for (const file of ["polymarket/index.ts", "polymarket/fok/bet.ts", "polymarket/gtc/index.ts", "polymarket/wallet/walletPrepUnified.ts"])
     expect(evidenceFiles).toContain(`client/packages/venue-browser/${file}`);
   expect(evidenceFiles.some(file => file.startsWith("client/packages/venue-browser/adapter/polymarket/"))).toBe(false);
-  expect(evidenceFiles).toContain("client/web/src/runtime/rayOrderMonitor/submissionPreview.ts");
+  expect(evidenceFiles).toContain("server/venues/registry/runtime/ray/session.js");
   expect(report.loaderBindings.inputEvidence.some(row => row.file === "packages/shared/catalog/game_catalog_rules.ts")).toBe(true);
   expect(report.loaderBindings.inputEvidence.some(row => row.file === "packages/shared/catalog/game_catalog_rules.js")).toBe(true);
   // [changmen 扩展] PM2 retains index.js while discovery runs the typed implementations.
@@ -177,9 +177,10 @@ it("covers the real PM graph, runtime preload dependencies and nine reviewed sou
   for (const file of ["server/storage/dev_web_config.ts", "devtools/runtime-tooling/dev_web_port.js"])
     expect(report.loaderBindings.inputEvidence.some(row => row.file === file)).toBe(true);
   expect(report.loaderBindings.inputEvidence.some(row => row.file.includes("/scripts/"))).toBe(false);
-  expect(report.loaderBindings.runtimeRoots).toHaveLength(21);
-  expect(report.loaderBindings.originalUnknowns).toBe(20);
-  expect(report.loaderBindings.rawUnknowns).toBe(31);
+  expect(report.loaderBindings.runtimeRoots).toHaveLength(10);
+  expect(evidenceFiles.some(file=>file.startsWith("server/platform-probes/"))).toBe(false);
+  expect(report.loaderBindings.originalUnknowns).toBe(15);
+  expect(report.loaderBindings.rawUnknowns).toBe(15);
   expect(report.loaderBindings.runtimeRootsCertified).toBe(false);
   expect(report.loaderBindings.safeToNarrowPublishScope).toBe(false);
 }, 60_000); // Full graph scans share CPU with the other verification workers in CI.

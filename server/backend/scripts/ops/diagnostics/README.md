@@ -2,7 +2,7 @@
 
 排障与巡检：`diag-*`、`mem_diag_*`、`probe-hk-relay`、`post-deploy-check`、`polymarket-builder-trades`。
 
-累计 30 个数据库巡检已迁至 [`rds/maintenance/legacy/diagnostics/`](../../../../db/maintenance/legacy/diagnostics/)，本目录保留平台/后台业务诊断。
+累计 30 个数据库巡检已迁至 [`rds/maintenance/legacy/diagnostics/`](../../../../../rds/maintenance/legacy/diagnostics)，本目录保留平台/后台业务诊断。
 
 | 脚本 | npm 命令 |
 |------|----------|

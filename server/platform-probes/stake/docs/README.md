@@ -1,28 +1,17 @@
-# Stake 平台
+# Stake Node 探针
 
-A8 采集模式�?*GraphQL 快照（可选）+ A8 Stake 聚合频道**�?
+Node 探针通过 GraphQL 获取快照；生产采集方式以 manifest 与浏览器 adapter 为准。
 
-## 数据�?
+环境变量：`STAKE_ACCESS_TOKEN`（兼容 `STAKE_TOKEN`）；可选 `STAKE_API_URL`、`STAKE_SPORTS`。
 
-```text
-HTTP  POST /_api/graphql SportIndex（插�?token�?
-WS    A8 聚合 Stake 房间 �?bets[]（homeId / awayId �?outcome id�?
-```
-
-## 启用
+从仓库根运行：
 
 ```powershell
-$env:ENABLE_STAKE = "1"
-$env:STAKE_API_URL = "https://stake.com"
-$env:STAKE_ACCESS_TOKEN = "..."
-$env:A8_SOCKET_TOKEN = "..."   # 可选，WS 增量
-npm run web
+npm run stake:sports --workspace=@changmen/platform-probes
 ```
 
-CLI 拉快照：
+旧 `ENABLE_STAKE` Feed 和 `/platforms/stake/` 页面已退役。
 
-```powershell
-npm run stake:sports
-```
+本目录是按需调试入口。采集模式以 `packages/venue-adapter/registry/manifest.json` 为准；浏览器平台的 CollectConfig 只控制上报，VPS 平台由 collector 独占写入。命令需要有效会话，可能访问平台；不会因启动 backend 自动运行。
 
-页面：`http://localhost:3456/platforms/stake/`
+[探针包说明](../../README.md)；[本机开发](../../../../LOCAL_DEV.md)；[平台说明](../../../../client/web/docs/platforms/STAKE.md)。

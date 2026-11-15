@@ -45,7 +45,7 @@ function buildSessionFromRow(row) {
     provider: "TF",
     gateway: normalizeGateway(row.gateway),
     token: row.token,
-    betName: row.betName || process.env.TF_BET_NAME || "^��ʤ��$",
+    betName: row.betName || process.env.TF_BET_NAME || "^获胜者$",
     gameIds: Array.isArray(row.games) ? row.games.map(String) : parseGameIdsEnv(),
     fetchedAt: null,
   };
@@ -67,7 +67,7 @@ export function tryLoadSession() {
 export function loadSession() {
   const session = tryLoadSession();
   if (!session) {
-    throw new Error("ȱ�� TF ƾ֤��TF_GATEWAY + TF_TOKEN �� platforms.json��");
+    throw new Error("缺少 TF 凭证（TF_GATEWAY + TF_TOKEN 或 platforms.json）");
   }
   return session;
 }

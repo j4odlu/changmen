@@ -1,6 +1,6 @@
 # changmen 文档索引
 
-日常开发从 [readme.md](../readme.md)（摘要）与 [AGENTS.md](../AGENTS.md)（命令与开发规则）入手；本页汇总专题文档。
+日常开发从 [readme.md](../readme.md)（摘要）与 [LOCAL_DEV.md](../LOCAL_DEV.md)（本机开发）入手；本机开发规则另见根目录 `AGENTS.md`（当前不纳入 Git）。本页汇总专题文档。
 
 ## 文档地图
 
@@ -24,7 +24,8 @@
 
 | 文档 | 内容 |
 |------|------|
-| [WORKSPACE_LAYOUT.md](./WORKSPACE_LAYOUT.md) | **当前物理目录、24 个 workspace、后端定向安装与归档布局** |
+| [WORKSPACE_LAYOUT.md](./WORKSPACE_LAYOUT.md) | **当前物理目录、25 个 workspace、后端定向安装与归档布局** |
+| [LOCAL_DEV.md](../LOCAL_DEV.md) | 本机依赖安装、workspace 链接、空间清理与归档恢复入口 |
 | [INDEPENDENT_DEPLOYMENT.md](./INDEPENDENT_DEPLOYMENT.md) | 当前独立发布、候选校验与回退 |
 | [ACTIONS_VALIDATION_PERFORMANCE_20261019.md](./ACTIONS_VALIDATION_PERFORMANCE_20261019.md) | 当前通用发布验收归属，FOK 专项按需执行 |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Monorepo 结构、`client/*` / `server/*` / `packages/*`、数据流、**本地开发端口** |
@@ -53,7 +54,7 @@
 | `client/web` | [README.md](../client/web/README.md) · [MIGRATION.md](../client/web/MIGRATION.md) · [src/ARCHITECTURE.md](../client/web/src/ARCHITECTURE.md) |
 | `rds` | [README.md](../rds/README.md) |
 | `server/storage` | [README.md](../server/storage/README.md) |
-| `packages/shared/match-identity` | 共享赛事身份纯实现；参见 [身份模型](./MATCH_IDENTITY_MODEL.md) |
+| `packages/match-identity` | 赛事身份领域包；参见 [身份模型](./MATCH_IDENTITY_MODEL.md) |
 | `server/match/resolver` | [README.md](../server/match/resolver/README.md) |
 | `server/match/matcher` | [README.md](../server/match/matcher/README.md) |
 | `server/realtime-hub` | [README.md](../server/realtime-hub/README.md) |
@@ -101,7 +102,7 @@
 
 | 文档 / 范围 | 状态 |
 | --- | --- |
-| [MATCH_PUBLICATION_CONSISTENCY_PLAN.md](./MATCH_PUBLICATION_CONSISTENCY_PLAN.md) | 合场统一产出设计，未实施 |
+| [MATCH_PUBLICATION_CONSISTENCY_PLAN.md](./MATCH_PUBLICATION_CONSISTENCY_PLAN.md) | 当前合场统一产出规则与实施说明 |
 | [PM_BOOK_RECOVERY_AND_EVIDENCE_PLAN_20261017.md](./PM_BOOK_RECOVERY_AND_EVIDENCE_PLAN_20261017.md) | 恢复与差异取证设计，未实施；原启用限制继续适用 |
 | [PM_OPPOSITE_SIDE_PREMIUM_SIGNAL_PLAN.md](./PM_OPPOSITE_SIDE_PREMIUM_SIGNAL_PLAN.md) | 对侧溢价观察设计，未实施 |
 | `VENUE_BROWSER_*_20261019.md` 及客户端 / Node / manifest 隔离记录 | 历史迁移证据，当前布局见 WORKSPACE_LAYOUT |

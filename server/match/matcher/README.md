@@ -61,7 +61,7 @@ PM 赛事身份匹配、已到开赛时间且明确结束时，整场结束，�
 ## 依赖
 
 - `packages/match-identity`（`@changmen/match-identity`）— 队名、时间窗与 client_match ID 共享工具
-- `server/db` — 读写 `platform_matches` / `client_matches` 等（`@changmen/db`）
+- `rds` — 经 `@changmen/db` 读写 `platform_matches` / `client_matches` 等
 - `server/match/resolver`（`@changmen/team-resolver`）— 可选队名 canonical 插件
 
 matcher 源码不导入 backend。backend 经 `runtime_ports.js` 注入采集热快照、提交发布、人工结束缓存移除及鉴权；缺少宿主鉴权时拒绝访问。

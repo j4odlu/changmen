@@ -128,3 +128,9 @@ for (const [name, source] of [
   const f = fixture(); f.editBundle(() => source);
   expect(inspectVenueNodeDependencies(f.root).violations.length).toBeGreaterThan(0);
 });
+
+for (const group of ["dependencies", "optionalDependencies", "peerDependencies"])
+it(`rejects restoring optional probes to backend production ${group}`, () => {
+  const f=fixture();f.edit("server/backend/package.json",p=>{p[group]={...p[group],"@changmen/platform-probes":"file:../platform-probes"};});
+  expect(inspectVenueNodeDependencies(f.root).violations.some(row=>row.spec==="@changmen/platform-probes"&&row.pattern.includes("Optional probes"))).toBe(true);
+});

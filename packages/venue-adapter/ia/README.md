@@ -10,7 +10,7 @@
 | `bet.ts` | `iaProvider`（CYe） |
 | `shared/` | 盘口解析、SaveBet 行构建 |
 
-**文档**：[client/web/docs/platforms/IA.md](../../web/docs/platforms/IA.md)
+**文档**：[client/web/docs/platforms/IA.md](../../../client/web/docs/platforms/IA.md)
 
 探针 CLI：
 

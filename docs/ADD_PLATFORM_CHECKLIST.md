@@ -46,7 +46,7 @@
 | A3 | 可选 `server/platform-probes/{dir}/` | Node 探针 / 会话；经 `requirePlatform`；**非**主链路必需 |
 | A4 | `platform_sync.js` | **仅当**要有 trial/env 默认凭证写入 `platforms.json` 时加 `syncXxx*` 并挂 `ensurePlatformCredentials` |
 | A5 | HTTP 代理白名单 | 若走 backend relay：`HTTP_RELAY_ALLOWED_HOSTS` / 各馆 proxy 模块 |
-| A6 | 合场 | 确认 `server/match/identity` / catalog 有该馆盘口规则；队名映射按需 |
+| A6 | 合场 | 核对 `packages/match-identity` 身份规则、共享 catalog 及 `server/match/matcher/compose` 盘口投影；队名映射经 resolver/RDS 按需维护 |
 | A7 | 测 | adapter 冒烟 / 馆专项测；`npm run check:boundaries` |
 
 参考：OB（`http_mqtt`）、RAY（`http_ws`）。

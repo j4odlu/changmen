@@ -15,7 +15,7 @@ A8 仅有 `index.js` 可见，**A8 服务端为黑盒**。changmen 后端为自�
 - [A8 可证实] 前端 `stores/account` 的加载、`persistAccounts` 及余额刷新后保存的时序与 API 调用须与 bundle 一致，不增加空列表 skip 或 admin 预览 skip save。
 - [changmen 扩展] 管理端用户工作区预览使用 `adminWorkspacePreview`。后端须拒绝空列表覆盖已有账号及非本人 `playerId` 保存，不能依赖前端跳过保存来保证安全。
 - 后端模型调整按「兼容 → 迁移 → 内部重构」推进，保持 `Client_*` 线协议、对外 bigint `accountId` 及订单 `player_id` 关联。
-- 手动改库后按本文运维说明刷新缓存；不得跨 profile 复制凭证。账号巡检使用 `server/backend/scripts/audit-accounts-full.mjs`。
+- 手动改库后按本文运维说明刷新缓存；不得跨 profile 复制凭证。旧账号巡检入口已归 `rds/maintenance/legacy/`，仅供历史维护取证。
 
 ## 存储（players 唯一真相）
 
@@ -29,7 +29,7 @@ players
   credit / total_balance
   account_data jsonb    ← 凭证 gateway/token、限额 rateConfig、game 等其余线协议字段
 
-profiles.accounts jsonb ← 已弃写；部署时从 jsonb backfill 到 players 后运行时不再读写
+profiles.accounts jsonb ← 已弃写；仅保留历史迁移背景，当前运行时不再读写，部署不做 backfill
 ```
 
 对外 `Client_GetData(ACCOUNT)` / `Client_SaveData(ACCOUNT)` 仍返回/接收完整 JSON 数组；后端在读写时与 `players` 行互转（`rds/player_account_record.js`）。
@@ -107,26 +107,12 @@ orders / money_logs
 
 详细 checklist：`packages/venue-adapter/polymarket/PM_SELL_CHECKLIST.md`；PF 契约：`packages/venue-adapter/predictfun/README.md`。
 
-账本巡检（只读）：
-
-```bat
-cd changmen\server\backend
-node scripts\ops\diagnostics\audit-order-sidebar-health.mjs --days 30
-node scripts\ops\diagnostics\audit-position-dual-write.mjs --days 30
-node scripts\ops\incidents\scan-fix-pm-sell-pnl-double.mjs --dry-run
-```
-
 ## 运维
 
-```bat
-cd changmen\server\backend
-node scripts\ops\migrations\migrate-players-owner-user-id.mjs
-node scripts\ops\migrations\finalize-players-owner-user-id.mjs
-npm run db:apply   rem 含 028 account_data 列
-node scripts\ops\migrations\migrate-accounts-jsonb-to-players.mjs
-node scripts\audit-accounts-full.mjs
-```
+当前应用发布不运行 owner 回填、`profiles.accounts → players` 迁移或历史账号清理。账号、订单和凭证维护须按具体需求单独核对目标用户、现状、备份、执行与验收方案；不得跨 profile 复制凭证。
 
-部署脚本顺序：backup（players 快照）→ owner 回填 → apply 028 → jsonb→players backfill → pm2 restart。
+旧账号迁移、账本巡检及事故修复脚本已归 `rds/maintenance/legacy/`，参见 [历史维护说明](../rds/maintenance/legacy/README.md)。旧 backend 命令路径已退役，不恢复转发入口，也不将历史脚本作为日常部署顺序。历史脚本仍需核对参数、依赖和实际读写行为，不能仅凭名称认定为只读。
 
-手动改 RDS 后 `loadProfileById(uid)` 或 pm2 restart `changmen-esport` 刷新内存账号缓存。
+数据库结构核验从仓库根运行 `npm run check:rds-schema --workspace=@changmen/backend`，只读检查实际数据库，不回填账号。具体迁移独立执行，发布与回滚边界见 [独立部署](INDEPENDENT_DEPLOYMENT.md)。
+
+经审核手动维护 RDS 后，由服务端调用 `loadProfileById(uid)` 重新加载该用户缓存，或通过受管后端发布/重启流程刷新；不能把直接改库等同于当前进程缓存已更新。

@@ -49,7 +49,7 @@ export function resetAdapterRootForTests() {
 /**
  * platform-adapter 根目录。
  * - 显式：`CHANGMEN_ADAPTER_ROOT`（瘦包 / 测试；兼容 `GAMEBET_ADAPTER_ROOT`）
- * - 开发：`changmen/packages/venue-adapter`（workspace 包）
+ * - 默认：`server/venues/registry/runtime`（@changmen/venue-node 自有资源）
  * - 可选拷贝：`server/backend/platform_adapter`（`npm run sync:platform-adapter`）
  */
 export function getAdapterRoot() {
@@ -142,28 +142,24 @@ export function resolvePlatformFile(id, ...segments) {
   return getRegistryPaths().resolvePlatformFile(id, ...segments);
 }
 
-/** 预加载已迁 ESM 的平台顶层 *.js（`@changmen/platform-probes/{platform}/`） */
+// Only backend runtime entries are preloaded. CLI and probe WebSocket modules are optional.
+const PLATFORM_ESM_MODULES = [
+  ["OB", "session.js"],
+  ["RAY", "session.js"],
+  ["RAY", "core.js"],
+  ["RAY", "collect_credentials.js"],
+  ["TF", "session.js"],
+  ["TF", "collect_credentials.js"],
+  ["IA", "collect_credentials.js"],
+  ["PB", "session.js"],
+];
+
 export async function initEsmPlatformBackends() {
   ensureRegistryLoaded();
-  const nodeRoot = _registryPaths.getPlatformNodeRoot();
-  for (const entry of _registryPaths.MANIFEST) {
-    const backendDir = path.join(nodeRoot, entry.dir);
-    const pkgPath = path.join(backendDir, "package.json");
-    if (!fs.existsSync(pkgPath)) continue;
-    let pkg;
-    try {
-      pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-    } catch {
-      continue;
-    }
-    if (pkg.type !== "module") continue;
-    for (const file of fs.readdirSync(backendDir)) {
-      if (!file.endsWith(".js") || file.startsWith("_")) continue;
-      const abs = path.join(backendDir, file);
-      if (!fs.statSync(abs).isFile()) continue;
-      if (!_esmPlatformModuleCache.has(abs)) {
-        _esmPlatformModuleCache.set(abs, await import(pathToFileURL(abs).href));
-      }
+  for (const [platform, file] of PLATFORM_ESM_MODULES) {
+    const abs = _registryPaths.resolvePlatformFile(platform, "node", file);
+    if (!_esmPlatformModuleCache.has(abs)) {
+      _esmPlatformModuleCache.set(abs, await import(pathToFileURL(abs).href));
     }
   }
 }
@@ -184,7 +180,7 @@ function loadPlatformModule(abs) {
   }
 }
 
-/** require(platform_adapter/{dir}/...) — ESM 平台走预加载缓存 */
+/** Load a server-owned platform module; ESM entries use the preload cache */
 export function requirePlatform(id, ...segments) {
   return loadPlatformModule(resolvePlatformFile(id, ...segments));
 }

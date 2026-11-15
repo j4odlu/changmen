@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import manifest from "./manifest.json" with { type: "json" };
-import { BACKEND_ROOT, CHANGMEN_ROOT, PLATFORM_PROBES_ROOT, VENUE_ADAPTER_ROOT } from "@changmen/storage/paths";
+import { BACKEND_ROOT, VENUE_ADAPTER_ROOT } from "@changmen/storage/paths";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -11,7 +11,7 @@ const REGISTRY_ROOT = __dirname;
 const ADAPTER_ROOT = fs.existsSync(path.join(VENUE_ADAPTER_ROOT, "registry", "manifest.json"))
   ? VENUE_ADAPTER_ROOT
   : path.join(REGISTRY_ROOT, "..");
-const DEFAULT_PROBES_ROOT = PLATFORM_PROBES_ROOT;
+
 
 /** @typedef {import("./manifest.json")[number]} PlatformManifestEntry */
 
@@ -48,41 +48,23 @@ export function platformDir(id) {
 /** requirePlatform 第二段字面量（历史兼容 `"backend"`） */
 export const PLATFORM_NODE_DIR = "node";
 
-function probesRootLooksValid(abs) {
+function runtimeRootLooksValid(abs) {
   return fs.existsSync(path.join(abs, "ob", "session.js"));
 }
 
-/**
- * @changmen/platform-probes 包根（与 platform-adapter 并列）。
- * - `CHANGMEN_PLATFORM_PROBES_ROOT` / `CHANGMEN_NODE_ROOT`（瘦包 / 测试；兼容 `GAMEBET_*`）
- * - 开发：`changmen/devtools/platform-probes`
- * - 瘦包：`server/backend/platform_node`（历史目录名，同步产物）
- */
+/** Server-owned Node resources; NODE_ROOT remains available for explicit slim-bundle roots. */
 export function getPlatformNodeRoot() {
   if (_platformNodeRootOverride) return _platformNodeRootOverride;
-
-  const forced =
-    process.env.CHANGMEN_PLATFORM_PROBES_ROOT?.trim()
-    || process.env.GAMEBET_PLATFORM_PROBES_ROOT?.trim()
-    || process.env.CHANGMEN_NODE_ROOT?.trim()
-    || process.env.GAMEBET_NODE_ROOT?.trim();
+  const forced = process.env.CHANGMEN_NODE_ROOT?.trim() || process.env.GAMEBET_NODE_ROOT?.trim();
   if (forced) {
     const abs = path.resolve(forced);
-    if (probesRootLooksValid(abs)) return abs;
-    throw new Error(`CHANGMEN_PLATFORM_PROBES_ROOT invalid (no ob/session.js): ${abs}`);
+    if (runtimeRootLooksValid(abs)) return abs;
+    throw new Error(`CHANGMEN_NODE_ROOT invalid (no ob/session.js): ${abs}`);
   }
-
-  if (probesRootLooksValid(DEFAULT_PROBES_ROOT)) return DEFAULT_PROBES_ROOT;
-
-  const bundled = path.join(BACKEND_ROOT, "platform_node");
-  if (probesRootLooksValid(bundled)) {
-    return bundled;
-  }
-
-  throw new Error(
-    `platform-probes not found: expected devtools/platform-probes (dev) or server/backend/platform_node (packaged); ` +
-      `set CHANGMEN_PLATFORM_PROBES_ROOT if using a custom path`,
-  );
+  if (runtimeRootLooksValid(ADAPTER_ROOT)) return ADAPTER_ROOT;
+  const bundled = path.join(BACKEND_ROOT, "platform_adapter");
+  if (runtimeRootLooksValid(bundled)) return bundled;
+  throw new Error("Node runtime not found: expected @changmen/venue-node resources or CHANGMEN_NODE_ROOT");
 }
 
 function normalizeNodeSegments(segments) {
@@ -92,7 +74,7 @@ function normalizeNodeSegments(segments) {
   return segments;
 }
 
-/** `requirePlatform(id, "node", …)` → `platform-probes/{dir}/…` */
+/** `requirePlatform(id, "node", …)` → server-owned `registry/runtime/{dir}/…` */
 export function resolvePlatformFile(id, ...segments) {
   const dir = platformDir(id);
   const normalized = normalizeNodeSegments(segments);

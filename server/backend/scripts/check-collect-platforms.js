@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * ???????? + ???live ??
+ * 采集平台配置审计 + 可选 live 探针
  *
- * ??:
+ * 用法:
  *   npm run check:collect
  *   npm run check:collect -- --probe
  *   npm run check:collect -- --json
@@ -42,19 +42,19 @@ const ALL_PLATFORMS = [
   "PredictFun",
 ];
 
-/** ??gamebet_frontend collectors ????????*/
+/** 与 gamebet_frontend collectors 对齐的凭证需求 */
 const SPEC = {
-  OB: { needsGateway: true, needsToken: true, note: "HTTP game/index + MQTT ??" },
-  RAY: { needsGateway: true, needsToken: true, note: "HTTP match/odds?API ?? A8 ?????? },
+  OB: { needsGateway: true, needsToken: true, note: "HTTP game/index + MQTT 直连" },
+  RAY: { needsGateway: true, needsToken: true, note: "HTTP match/odds（API 强制 A8 写死凭证）" },
   TF: { needsGateway: true, needsToken: true, note: "WS auth + /api/v8/events" },
   IA: { needsGateway: true, needsToken: false, note: "Socket.IO + HTTP" },
-  PB: { needsGateway: true, needsToken: true, note: "?? cookie/token JSON" },
+  PB: { needsGateway: true, needsToken: true, note: "嵌套 cookie/token JSON" },
   IMT: { needsGateway: true, needsToken: true, note: "POST delta/full" },
-  SABA: { needsGateway: true, needsToken: true, note: "?? path token + WS" },
+  SABA: { needsGateway: true, needsToken: true, note: "页面 path token + WS" },
   Stake: { needsGateway: true, needsToken: true, note: "GraphQL x-access-token" },
-  IM: { needsGateway: true, needsToken: false, note: "A8 Socket ?? IM + ??" },
-  XBet: { needsGateway: true, needsToken: false, note: "A8 Socket ?? XBet + ??" },
-  HG: { needsGateway: false, needsToken: false, note: "????????" },
+  IM: { needsGateway: true, needsToken: false, note: "A8 Socket 频道 IM + 插件" },
+  XBet: { needsGateway: true, needsToken: false, note: "A8 Socket 频道 XBet + 插件" },
+  HG: { needsGateway: false, needsToken: false, note: "占位，无赔率采集" },
   Dex: { needsGateway: false, needsToken: false, note: "plugin_http paused" },
   Polymarket: { needsGateway: false, needsToken: false, note: "VPS collector + MarketIndex" },
   Limitless: { needsGateway: false, needsToken: false, note: "plugin_http_ws" },
@@ -77,8 +77,8 @@ function parseArgs(argv) {
 function mask(value) {
   if (!value) return "";
   const s = String(value);
-  if (s.length <= 12) return `${s.slice(0, 4)}?`;
-  return `${s.slice(0, 8)}??{s.slice(-4)} (${s.length})`;
+  if (s.length <= 12) return `${s.slice(0, 4)}…`;
+  return `${s.slice(0, 8)}…${s.slice(-4)} (${s.length})`;
 }
 
 function loadPlatformsJson() {
@@ -98,7 +98,7 @@ function loadAccounts() {
   }
 }
 
-/** ?? esport-api/router.js Client_GetCollectPlatform */
+/** 对齐 esport-api/router.js Client_GetCollectPlatform */
 function effectiveCollectPlatform(provider) {
   const row = store.getPlatform(provider);
   const catalogBetName =
@@ -193,7 +193,7 @@ async function fetchApiPlatforms() {
     password: "admin",
   });
   if (login.success !== 1 || !login.info?.token) {
-    throw new Error(`Client_Login ??: ${login.msg || "unknown"}`);
+    throw new Error(`Client_Login 失败: ${login.msg || "unknown"}`);
   }
   const token = login.info.token;
   const out = {};
@@ -225,7 +225,7 @@ async function probePlatform(provider) {
     case "OB": {
       const row = store.getPlatform("OB");
       if (!row?.gateway || !row?.token) {
-        return { skipped: true, reason: "??OB ??" };
+        return { skipped: true, reason: "缺少 OB 会话" };
       }
       const { obGet } = requirePlatform("OB", "node", "session.js");
       const r = await obGet(row.gateway, "/game/index?game_id=0&flag=1&day=1", row.token);
@@ -241,66 +241,57 @@ async function probePlatform(provider) {
     case "PB": {
       const { tryLoadSession, fetchEuroOdds } = requirePlatform("PB", "node", "session.js");
       const session = tryLoadSession();
-      if (!session) return { skipped: true, reason: "??PB ??" };
+      if (!session) return { skipped: true, reason: "缺少 PB 会话" };
       const payload = await fetchEuroOdds(session);
-      const { parseEuroOddsPayload } = requirePlatform("PB", "node", "core.js");
+      const { parseEuroOddsPayload } = await import("@changmen/platform-probes/pb/core.js");
       const parsed = parseEuroOddsPayload(payload);
       return { ok: parsed.matches.length >= 0, detail: `matches=${parsed.matches.length}` };
     }
     case "TF": {
       const { tryLoadSession, tfGet } = requirePlatform("TF", "node", "session.js");
       const session = tryLoadSession();
-      if (!session) return { skipped: true, reason: "??TF ??" };
+      if (!session) return { skipped: true, reason: "缺少 TF 会话" };
       const data = await tfGet(session, "/api/v8/events/", { page: "1", limit: "5" });
       const count = Array.isArray(data?.results) ? data.results.length : 0;
       return { ok: true, detail: `events=${count}` };
     }
     case "IA": {
-      const { tryLoadSession, fetchGameList } = requirePlatform("IA", "node", "session.js");
+      const { tryLoadSession, fetchGameList } = await import("@changmen/platform-probes/ia/session.js");
       const session = tryLoadSession();
-      if (!session) return { skipped: true, reason: "??IA ??" };
+      if (!session) return { skipped: true, reason: "缺少 IA 会话" };
       const list = await fetchGameList(session);
       const count = Array.isArray(list) ? list.length : 0;
       return { ok: true, detail: `matches=${count}` };
     }
     case "IMT": {
-      const { tryLoadSession, fetchAllLiveEvents } = requirePlatform(
-        "IMT", "node",
-        "session.js",
-      );
+      const { tryLoadSession, fetchAllLiveEvents } = await import("@changmen/platform-probes/imt/session.js");
       const session = tryLoadSession();
-      if (!session) return { skipped: true, reason: "??IMT ??" };
+      if (!session) return { skipped: true, reason: "缺少 IMT 会话" };
       const data = await fetchAllLiveEvents(session, session.sportIds);
       const count = Array.isArray(data?.Events) ? data.Events.length : 0;
       return { ok: true, detail: `events=${count}` };
     }
     case "SABA": {
-      const { tryLoadSession, fetchEsportsPage } = requirePlatform(
-        "SABA", "node",
-        "session.js",
-      );
+      const { tryLoadSession, fetchEsportsPage } = await import("@changmen/platform-probes/saba/session.js");
       const session = tryLoadSession();
-      if (!session) return { skipped: true, reason: "??SABA ??" };
+      if (!session) return { skipped: true, reason: "缺少 SABA 会话" };
       const html = await fetchEsportsPage(session);
-      const Core = requirePlatform("SABA", "node", "core.js");
+      const Core = await import("@changmen/platform-probes/saba/core.js");
       const parsed = Core.parseEsportsPage(html, session.gateway);
       return { ok: Boolean(parsed), detail: parsed ? "page parsed" : "parse failed" };
     }
     case "Stake": {
-      const { tryLoadSession, fetchAllSports } = requirePlatform(
-        "Stake", "node",
-        "session.js",
-      );
+      const { tryLoadSession, fetchAllSports } = await import("@changmen/platform-probes/stake/session.js");
       const session = tryLoadSession();
-      if (!session) return { skipped: true, reason: "??Stake ??" };
+      if (!session) return { skipped: true, reason: "缺少 Stake 会话" };
       const rows = await fetchAllSports(session);
       return { ok: Array.isArray(rows), detail: `sports=${rows.length}` };
     }
     case "IM":
     case "XBet":
-      return { skipped: true, reason: "A8 Socket + ???? HTTP ??" };
+      return { skipped: true, reason: "A8 Socket + 插件，无 HTTP 探针" };
     case "HG":
-      return { skipped: true, reason: "????" };
+      return { skipped: true, reason: "占位平台" };
     default:
       return { skipped: true, reason: "unknown" };
   }
@@ -380,38 +371,38 @@ async function runAudit(opts) {
 }
 
 function printHuman(report) {
-  console.log("=== ???????? ===");
-  console.log(`??: ${report.platformsJsonPath}`);
-  console.log(`platforms.json ??: ${report.platformsJsonKeys.join(", ") || "(??"}`);
+  console.log("=== 采集平台配置审计 ===");
+  console.log(`文件: ${report.platformsJsonPath}`);
+  console.log(`platforms.json 条目: ${report.platformsJsonKeys.join(", ") || "(空)"}`);
   console.log("");
 
   for (const row of report.rows) {
     console.log(
-      `${row.provider.padEnd(6)} ${row.status.padEnd(8)} gw=${row.effective.gatewayMask || "(??"} token=${row.effective.tokenMask || "(??"}`,
+      `${row.provider.padEnd(6)} ${row.status.padEnd(8)} gw=${row.effective.gatewayMask || "(空)"} token=${row.effective.tokenMask || "(空)"}`,
     );
     console.log(
-      `       ??: ${row.effective.source}${row.effective.games != null ? ` ? games=${row.effective.games}` : ""}`,
+      `       来源: ${row.effective.source}${row.effective.games != null ? ` · games=${row.effective.games}` : ""}`,
     );
     if (row.accounts) {
       console.log(
-        `       ??: ${row.accounts.count} ??(gw=${row.accounts.withGateway} tok=${row.accounts.withToken} bal=${row.accounts.withBalance})`,
+        `       账号: ${row.accounts.count} 条 (gw=${row.accounts.withGateway} tok=${row.accounts.withToken} bal=${row.accounts.withBalance})`,
       );
     }
     if (row.api && !row.api.error) {
-      const sync = row.api.matchesEffective ? "??? : "????;
+      const sync = row.api.matchesEffective ? "一致" : "不一致";
       console.log(
-        `       API: gw=${row.api.gatewayMask || "(??"} tokenLen=${row.api.tokenLen} (${sync})`,
+        `       API: gw=${row.api.gatewayMask || "(空)"} tokenLen=${row.api.tokenLen} (${sync})`,
       );
     } else if (row.api?.error) {
-      console.log(`       API: ?? (${row.api.error})`);
+      console.log(`       API: 跳过 (${row.api.error})`);
     }
     if (row.probe) {
       if (row.probe.skipped) {
-        console.log(`       ??: ?? ??${row.probe.reason}`);
+        console.log(`       探针: 跳过 — ${row.probe.reason}`);
       } else if (row.probe.ok) {
-        console.log(`       ??: OK ??${row.probe.detail || ""}`);
+        console.log(`       探针: OK — ${row.probe.detail || ""}`);
       } else {
-        console.log(`       ??: FAIL ??${row.probe.error || row.probe.detail || ""}`);
+        console.log(`       探针: FAIL — ${row.probe.error || row.probe.detail || ""}`);
       }
     }
     console.log(`       ${row.note}`);
@@ -419,18 +410,18 @@ function printHuman(report) {
   }
 
   if (report.missingRequired > 0) {
-    console.log(`??${report.missingRequired} ???????????? HG/IM/XBet ???token?`);
-    console.log("  ??: npm run account:import-platform -- <base64> --sync-store");
-    console.log("  ????TF_GATEWAY/TF_TOKEN?IA_*?IMT_*?SABA_*?STAKE_ACCESS_TOKEN ??????);
+    console.log(`⚠ ${report.missingRequired} 个平台缺少采集凭证（不含 HG/IM/XBet 可选 token）`);
+    console.log("  补全: npm run account:import-platform -- <base64> --sync-store");
+    console.log("  或设置 TF_GATEWAY/TF_TOKEN、IA_*、IMT_*、SABA_*、STAKE_ACCESS_TOKEN 等环境变量");
   } else {
-    console.log("????????????);
+    console.log("✓ 所有必需凭证已配置");
   }
 }
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.help) {
-    console.log("??: npm run check:collect [--probe] [--json]");
+    console.log("用法: npm run check:collect [--probe] [--json]");
     process.exit(0);
   }
 

@@ -12,7 +12,7 @@ import { num, obBlockLabel, parseObOddField } from "./parse_fields";
 let cachedPattern: string | undefined;
 let cachedRe: RegExp | undefined;
 
-/** 缓存 platform.BetName 对应正则，避免每�?new RegExp */
+/** 缓存 platform.BetName 对应正则，避免每轮 new RegExp */
 export function compileObBetNameRe(betName: string | undefined): RegExp {
   const pattern = betName || ".*";
   if (cachedPattern === pattern && cachedRe) {
@@ -28,7 +28,9 @@ export function obBlockLocked(block: Record<string, unknown>): boolean {
 }
 
 /**
- * A8 UMe：单 block 是否进入 saveBets / fo�? * catalog：优�?odd_type_id（命中则不再�?betName）；否则 platform BetName + obLegacyWinBetName�? */
+ * A8 UMe：单 block 是否进入 saveBets / fo。
+ * catalog：优先 odd_type_id（命中则不再走 betName）；否则 platform BetName + obLegacyWinBetName。
+ */
 export function isObBlockCollectable(
   block: Record<string, unknown>,
   label: string,
@@ -65,7 +67,7 @@ function findObMainOddsSides(entries: Array<Record<string, unknown>>): {
   return { home, away };
 }
 
-/** game/view �?block �?SaveBet 行；不可采集或缺主客赔率时返�?null */
+/** game/view 单 block → SaveBet 行；不可采集或缺主客赔率时返回 null */
 export function obBlockToSaveBetRow(
   block: Record<string, unknown>,
   matchId: string,
@@ -95,7 +97,7 @@ export function obBlockToSaveBetRow(
   };
 }
 
-/** game/view data[] �?SaveBet 行（Report 层；�?fo 灌入使用同一�?isObBlockCollectable�?*/
+/** game/view data[] → SaveBet 行（Report 层；与 fo 灌入使用同一套 isObBlockCollectable） */
 export function buildObSaveBetRowsFromViewBlocks(
   blocks: Array<Record<string, unknown>>,
   matchId: string,
@@ -114,7 +116,7 @@ export function buildObSaveBetRowsFromViewBlocks(
   return bets;
 }
 
-/** fo 灌入用的赔率条目（Ingest 层；不含 Pinia，由 markets 写入 oddsStore�?*/
+/** fo 灌入用的赔率条目（Ingest 层；不含 Pinia，由 markets 写入 oddsStore） */
 export function listObBlockFoOddEntries(
   block: Record<string, unknown>,
   locked: boolean,

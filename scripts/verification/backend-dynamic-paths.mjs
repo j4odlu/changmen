@@ -12,23 +12,19 @@ import { sharedLoaderSourceSignature } from "./pm-shared-loader-evidence.mjs";
 const central = "server/venues/loader/adapter_paths.mjs";
 const registry = "server/venues/registry";
 const runtime = `${registry}/runtime`;
-const probes = "server/platform-probes";
-const helpers = [`${probes}/backend/_paths.js`, `${probes}/backend/_paths.cjs`];
 const pgFiles = ["rds/pg_pool.js", "rds/resolve_database_url.js"];
-export const dynamicPathEnvironmentKeys = ["CHANGMEN_ADAPTER_ROOT", "GAMEBET_ADAPTER_ROOT", "CHANGMEN_PLATFORM_PROBES_ROOT",
-  "GAMEBET_PLATFORM_PROBES_ROOT", "CHANGMEN_NODE_ROOT", "GAMEBET_NODE_ROOT", "CHANGMEN_BACKEND_ROOT", "GAMEBET_BACKEND_ROOT", "NODE_PATH", "NODE_OPTIONS"];
+export const dynamicPathEnvironmentKeys = ["CHANGMEN_ADAPTER_ROOT", "GAMEBET_ADAPTER_ROOT", "CHANGMEN_NODE_ROOT", "GAMEBET_NODE_ROOT", "CHANGMEN_BACKEND_ROOT", "GAMEBET_BACKEND_ROOT", "NODE_PATH", "NODE_OPTIONS"];
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
 const key = row => JSON.stringify([row.file, row.kind, row.expression, row.loader, row.arguments]);
 const callKey = row => JSON.stringify([row.file, row.origin, row.arguments]);
 export const dynamicPathOrigins = [
   ...["reqS", "backendRequire", "adapterRequire", "requirePlatform", "getRegistryPaths", "resolvePlatformFile", "resetAdapterRootForTests"].map(symbol => ({ file: central, symbol })),
-  ...helpers.flatMap(file => ["reqS", "backendRequire"].map(symbol => ({ file, symbol }))),
   ...["setPlatformNodeRootForTests", "resetPlatformNodeRootForTests", "resolvePlatformFile", "platformAdapterPath"].map(symbol => ({ file: `${registry}/paths.js`, symbol })),
 ];
 export const dynamicPathContractFiles = [
   { file: central, selector: "module" }, ...pgFiles.map(file => ({ file, selector: "pg-loader" })),
   ...[`${registry}/paths.js`, `${runtime}/registry/paths.js`, `${runtime}/registry/feeds.js`,
-    "server/storage/paths.ts", "server/storage/changmen_root.ts", ...helpers].map(file => ({ file, selector: "module" })),
+    "server/storage/paths.ts", "server/storage/changmen_root.ts"].map(file => ({ file, selector: "module" })),
 ];
 
 function safe(root, file) {
@@ -36,7 +32,7 @@ function safe(root, file) {
     && !file.split("/").some(part => ["..", ".", ""].includes(part)), `Invalid runtime target: ${file}`);
   const real = fs.realpathSync(path.join(root, file)), relative = path.relative(root, real).replaceAll("\\", "/");
   assert(relative !== ".." && !relative.startsWith("../") && !path.isAbsolute(relative), `Runtime target escaped installation: ${file}`);
-  assert(!/^(?:client|chrome-extension|packages\/venue-adapter|devtools\/platform-probes)(?:\/|$)/.test(relative), `Browser/legacy runtime target: ${file}`);
+  assert(!/^(?:client|chrome-extension|packages\/venue-adapter|devtools\/platform-probes|server\/platform-probes)(?:\/|$)/.test(relative), `Browser/legacy runtime target: ${file}`);
   return { real, relative };
 }
 function evidence(root, file) {
@@ -82,7 +78,7 @@ function resolveRequest(root, call, manifest) {
   if (symbol === "requirePlatform") {
     const entry = manifest.find(row => row.id.toUpperCase() === args[0]?.toUpperCase());
     assert(entry && ["node", "backend"].includes(args[1]) && args.length > 2, "Unreviewed platform request");
-    return evidence(root, `${probes}/${entry.dir}/${args.slice(2).join("/")}`);
+    return evidence(root, `${runtime}/${entry.dir}/${args.slice(2).join("/")}`);
   }
   assert(["reqS", "backendRequire"].includes(symbol), `Unreviewed root/registry capability call: ${symbol}`);
   const spec = symbol === "reqS" ? `@changmen/shared/${args.join("/")}` : args[0];
@@ -114,14 +110,21 @@ export function certifyBackendDynamicPaths(root, entries, env, { policy = JSON.p
   assert(manifest.every(row => /^[a-zA-Z0-9_-]+$/.test(row.dir)), "Unsafe manifest directory");
   assert.equal(new Set(manifest.map(row => row.id.toUpperCase())).size, manifest.length, "Duplicate manifest IDs");
   assert.equal(new Set(manifest.map(row => row.dir)).size, manifest.length, "Duplicate manifest directories");
-  const preloadFiles = [], packages = [];
-  for (const entry of manifest) {
-    const pkg = `${probes}/${entry.dir}/package.json`;
-    if (!fs.existsSync(path.join(root, pkg))) continue;
-    const row = evidence(root, pkg), data = JSON.parse(fs.readFileSync(safe(root, pkg).real, "utf8")); packages.push({ ...row, module: data.type === "module" });
-    if (data.type !== "module") continue;
-    for (const name of fs.readdirSync(path.join(root, probes, entry.dir)).sort())
-      if (name.endsWith(".js") && !name.startsWith("_") && fs.statSync(path.join(root, probes, entry.dir, name)).isFile()) preloadFiles.push(evidence(root, `${probes}/${entry.dir}/${name}`));
+  // Match the loader's explicit inventory without executing platform code.
+  const loaderTree = ts.createSourceFile(central, fs.readFileSync(safe(root, central).real, "utf8"), ts.ScriptTarget.Latest, true);
+  const inventories = loaderTree.statements.filter(ts.isVariableStatement).flatMap(statement =>
+    [...statement.declarationList.declarations].filter(row => ts.isIdentifier(row.name) && row.name.text === "PLATFORM_ESM_MODULES"));
+  assert(inventories.length === 1 && ts.isArrayLiteralExpression(inventories[0].initializer), "Missing explicit Node preload inventory");
+  const preloadFiles = [], packages = [{ ...evidence(root, `${runtime}/package.json`), module: true }];
+  assert.equal(JSON.parse(fs.readFileSync(safe(root, `${runtime}/package.json`).real, "utf8")).type, "module", "Node runtime root must be ESM");
+  const seen = new Set();
+  for (const row of inventories[0].initializer.elements) {
+    assert(ts.isArrayLiteralExpression(row) && row.elements.length === 2 && row.elements.every(ts.isStringLiteral), "Non-literal Node preload entry");
+    const [platform, file] = row.elements.map(value => value.text), entry = manifest.find(value => value.id === platform);
+    assert(entry && /^[a-zA-Z0-9_]+\.js$/.test(file), "Invalid Node preload entry");
+    const target = `${runtime}/${entry.dir}/${file}`;
+    assert(!seen.has(target), "Duplicate Node preload entry");
+    seen.add(target); preloadFiles.push(evidence(root, target));
   }
   if (!discovery) assert.deepEqual(preloadFiles.map(row => row.file), policy.preloadFiles, "Default preload inventory changed");
   const pg = pgFiles.map(file => {
@@ -129,7 +132,7 @@ export function certifyBackendDynamicPaths(root, entries, env, { policy = JSON.p
     const target = createRequire(path.join(root, file)).resolve("pg", { paths: searchPaths.map(dir => path.join(root, dir)) });
     return { importer: file, searchPaths, ...evidence(root, path.relative(root, target).replaceAll("\\", "/")) };
   });
-  const cache = new Map(), seeds = new Set([`${runtime}/registry/paths.js`, `${runtime}/registry/feeds.js`, ...helpers, ...preloadFiles.map(row => row.file)]);
+  const cache = new Map(), seeds = new Set([`${runtime}/registry/paths.js`, `${runtime}/registry/feeds.js`, ...preloadFiles.map(row => row.file)]);
   let graph, bindings, targets;
   for (let pass = 0; pass < 12; pass++) {
     graph = captureBackendResolution(root, entries, env, { additionalFiles: [...seeds], cache });
@@ -159,7 +162,7 @@ export function certifyBackendDynamicPaths(root, entries, env, { policy = JSON.p
     let proof;
     if (pgFiles.includes(row.file)) proof = { kind: "fixed-pg-target", targets: pg.filter(item => item.importer === row.file) };
     else if (row.expression === "pathsUrl" || row.expression === "feedsUrl") proof = { kind: "default-registry", targets: [evidence(root, `${runtime}/registry/${row.expression === "pathsUrl" ? "paths" : "feeds"}.js`)] };
-    else if (row.expression === "pathToFileURL(abs).href") proof = { kind: "manifest-esm-preload", targets: preloadFiles };
+    else if (row.expression === "pathToFileURL(abs).href") proof = { kind: "explicit-esm-preload", targets: preloadFiles };
     else if (row.expression === "abs") proof = { kind: "source-bound-platform-requests", targets: targets.filter(item => item.call.origin.symbol === "requirePlatform") };
     else if (row.expression === "path.join(getAdapterRoot(), ...segments)") proof = { kind: "generic-branch-unreachable", calls: bindings.calls.filter(item => item.origin.file === central && item.origin.symbol === "adapterRequire"), genericCalls: 0 };
     else if (["entry", "specifier", "require.resolve(entry, { paths: RESOLVE_PATHS })", "require.resolve(specifier, { paths: RESOLVE_PATHS })"].includes(row.expression)) {
@@ -168,7 +171,7 @@ export function certifyBackendDynamicPaths(root, entries, env, { policy = JSON.p
       proof = { kind: calls.length ? "source-bound-package-requests" : "parameter-port-unused", calls,
         targets: targets.filter(item => item.call.origin.file === row.file && item.call.origin.symbol === symbol) };
     }
-    assert(proof && [central, ...helpers, ...pgFiles].includes(row.file), `Missing dynamic proof: ${row.file}:${row.expression}`);
+    assert(proof && [central, ...pgFiles].includes(row.file), `Missing dynamic proof: ${row.file}:${row.expression}`);
     if (proof.kind === "parameter-port-unused") assert.equal(proof.calls.length, 0, "Previously unused central parameter port is now used");
     return { ...row, certified: true, proof };
   });

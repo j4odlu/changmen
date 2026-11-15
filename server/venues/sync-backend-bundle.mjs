@@ -64,7 +64,7 @@ export function syncPlatformAdapterBackendBundle(options = {}) {
     if (name === "_template") continue;
     const from = path.join(src, name), to = path.join(dst, name);
     if (!fs.statSync(from).isDirectory()) fs.copyFileSync(from, to);
-    else if (ADAPTER_INFRA.has(name) || options.includeBrowserSources) cpDir(from, to);
+    else if (isDefault || ADAPTER_INFRA.has(name) || options.includeBrowserSources) cpDir(from, to);
   }
   for (const [relative, bytes] of materialized) {
     const target = path.join(dst, relative); fs.mkdirSync(path.dirname(target), { recursive: true }); fs.writeFileSync(target, bytes);

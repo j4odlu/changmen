@@ -1,14 +1,14 @@
-# 生产部署 Checklist（M1 — 架构冻结）
+# 生产部署与运维说明
 
 changmen 是 **客户端 + 服务端** 系统。`localhost` 与 `.bat` 仅用于开发联调；生产环境客户端连**远程 API**，服务端与 RDS 跑在服务器/云上。
 
 > [changmen 扩展] 2026-10-15 用户明确要求：所有生产部署统一通过 GitHub Actions **Validate and release**（`.github/workflows/release.yml`）执行。本机只进行开发、验证、commit/push 和只读状态核验，不执行生产部署。推送 `master` 后由 Actions 验收并发布；前后端独立变更分别发布；共享依赖或接口联动变更才先发布后端，再发布前端。RDS 维护不随应用发布执行。
 
-> [changmen 扩展] 独立的数据库检查命令只核验结构，不执行历史编号 SQL，不补写迁移账本，不运行 `profiles.accounts → players`、storage JSON 导入、owner 回填/孤儿软删除。显式运行 `npm run check:rds-schema` 时，使用只读事务核对字段类型、空值限制、默认值、约束、索引、序列、函数和触发器；缺失或不兼容时检查命令失败，列出差异，不自动修复。第五轮候选后端发布在任何进程激活前调用同一只读核验，失败保留旧进程、链接与发布标记。正确的存量库无论有没有迁移账本都可核验。
+> [changmen 扩展] 独立的数据库检查命令只核验结构，不执行历史编号 SQL，不补写迁移账本，不运行 `profiles.accounts → players`、storage JSON 导入、owner 回填/孤儿软删除。从仓库根显式运行 `npm run check:rds-schema --workspace=@changmen/backend` 时，使用只读事务核对字段类型、空值限制、默认值、约束、索引、序列、函数和触发器；缺失或不兼容时检查命令失败，列出差异，不自动修复。后端发布在任何进程激活前调用同一只读核验，失败保留旧进程、链接与发布标记。正确的存量库无论有没有迁移账本都可核验。
 >
 > 历史迁移工具只供单独的数据维护使用，运行前需检查具体数据范围、备份和 dry-run。下文新机初始化/历史迁移步骤不应当作存量生产的日常发布动作。代码版本回退不撤销已提交的数据库修改。
 
-最后更新：2026-06-14
+最后更新：2026-11-13
 
 [changmen 扩展] 2026-11-02 运行时基线：Node.js **26.13.0 LTS**。新机使用 Node 26 安装源；存量 VPS 运行时切换通过 Actions **Upgrade Node runtime** 执行，并要求同一提交的 **Validate and release** 已成功。具体校验与回滚见 [独立发布配置](./docs/INDEPENDENT_DEPLOYMENT.md#配置与版本目录)。下文历史发布记录中的旧版本号保留当时事实。
 
@@ -110,8 +110,8 @@ Caddy 分流只是把「谁托管静态」从 Node 挪到 Caddy，职责更清�
 
 | 团队 | 改什么 | 生产动作 |
 |------|--------|----------|
-| 客户端 | `client/web`、`venue-adapter`、`chrome-extension` | `app:build` → 更新 `dist` |
-| 服务端 | `server/backend`、`matcher`、`server/db` 等 | `pm2 restart` 对应进程 |
+| 客户端 | `client/web`、`client/packages`、`chrome-extension` | Actions 验收并切换前端制品；扩展单独打包分发 |
+| 服务端 | `server/backend`、`server/match`、`server/venues` 等 | Actions 验收候选后激活受影响进程；RDS 维护独立执行 |
 
 集成只走 HTTP `/esport/*`（`@changmen/api-contract`），禁止跨团队 `import` 源码。见 [docs/TEAM_BOUNDARIES.md](./docs/TEAM_BOUNDARIES.md)。
 
@@ -119,15 +119,11 @@ Caddy 分流只是把「谁托管静态」从 Node 挪到 Caddy，职责更清�
 
 ## 3. 服务端部署步骤
 
-**一键迁移到新 VPS**（从 Windows 开发机）：复制 `BAT\migrate-server.local.bat.example` → `BAT\migrate-server.local.bat`，填 `MIGRATE_NEW_HOST`，执行 `BAT\migrate-server.bat`。脚本会自动：旧机 `.env` + `storage/` → 新机、`git clone`/`pull`、`npm install`、RDS schema、PM2、Caddy、本机 `app:build` 上传 `dist`，并更新 `deploy-server.local.bat`。
+生产发布统一通过 GitHub Actions **Validate and release**；本机不执行迁服或原地覆盖部署。新机器接管需单独核对运行环境、共享配置、数据库兼容性及回滚基线，不能复用旧脚本自动重放迁移或账号回填。
 
 ### 3.1 依赖与环境
 
-```bash
-cd changmen
-npm install          # workspaces: server/backend、server/match/matcher、packages/*
-npm install  # 首次：安装全部 workspaces（含 client/web）
-```
+本机开发依赖从仓库根运行 `npm install`。生产候选由 Actions 安装、构建和封包，VPS 按已验收制品定向安装运行依赖；不手工安装整套前端 workspace。
 
 | 变量 | 生产 | 说明 |
 |------|------|------|
@@ -137,13 +133,13 @@ npm install  # 首次：安装全部 workspaces（含 client/web）
 | `WEB_AUTH_CSRF_SECRET` | **必填** | 独立随机密钥，至少 32 字符；不复用或同时轮换 JWT_SECRET |
 | `WEB_AUTH_ORIGINS` | `https://changmen.fun,https://www.changmen.fun,https://api.changmen.fun` | 精确 Origin 白名单；matcher 位于 API 子域，其写请求也需要允许该 Origin；API 子域 Caddy 必须反代 `/auth/*` |
 | `JWT_SECRET` | **必填** | HS256 密钥（至少 32 个随机字节；已有密钥勿在升级时同步轮换） |
-| `JWT_ACCESS_TTL` | `15m` | 短期 access token；前端会自动续期并重放一次过期请求 |
-| `JWT_BROWSER_ACCESS_TTL` | `15m` | 浏览器 access token；独立于旧生产环境里可能保留的 `JWT_ACCESS_TTL=7d` |
+| `JWT_ACCESS_TTL` | `15m` | 服务端 JWT/显式兼容模式配置；当前网页不保存或发送 access token |
+| `JWT_BROWSER_ACCESS_TTL` | `15m` | 浏览器会话桥接凭据的服务端有效期；浏览器仍只使用 HttpOnly Cookie |
 | `JWT_REFRESH_TTL` | `30d` | 旧客户端可轮换 refresh token 有效期；浏览器使用 HttpOnly 会话 |
-| `JWT_ISSUER` / `JWT_AUDIENCE` | `changmen-auth` / `changmen-api` | 新 JWT 的签发方与受众校验；旧 JWT 在过渡期仍兼容 |
+| `JWT_ISSUER` / `JWT_AUDIENCE` | `changmen-auth` / `changmen-api` | 服务端 JWT 签发及受众校验；不代表默认网页允许旧 JWT 登录 |
 | `CHANGMEN_DB_SCRIPT` | `rds` | 数据层固定 RDS（兼容旧名 `GAMEBET_DB_SCRIPT`） |
 | `PORT` | `3456` 或反代端口 | HTTP 监听 |
-| `A8_AUTH` | **`1`（默认）** | JWT 登录；勿用 `users.json` |
+| `A8_AUTH` | **`1`（默认）** | 开启用户鉴权；网页使用 Cookie 会话，生产禁用开发免登 |
 | `NODE_ENV` | `production` | 常规 Node 约定 |
 
 **不要设置**（已停用）：`A8_V4_URL`（v4 信用盘不再转发 `api.a8.to`）。
@@ -158,27 +154,31 @@ HTTP 代理（按需，见 [server/backend/proxy/README.md](./server/backend/pro
 
 ### 3.2 数据库
 
-RDS 结构/数据维护独立执行。下面命令仅说明新空库初始化入口；它包含历史迁移，不能作为现网日常发布步骤重跑。现网应评审并执行具体所需迁移，先保证新旧应用兼容。第五轮候选后端 Action 在激活前检查连接及结构，不重放 SQL 或回填账号。
+RDS 结构和数据维护独立于应用发布。后端激活前执行只读结构核验，失败保留旧进程、链接与成功记录；不重放 SQL 或回填账号。
+
+从仓库根手动核验配置的数据库：
 
 ```bash
-cd changmen/server/backend
-npm run db:apply
+npm run check:rds-schema --workspace=@changmen/backend
 ```
 
-上述命令直接执行数据层维护入口，默认只读核验；也可用 `npm run check:rds-schema`。核验清单来自空白临时 PostgreSQL 按显式 43 项有效 SQL 创建的结构，不是从线上数据库录制；各 SQL 的校验值同时固定在清单中。新增/更改结构时必须更新核验要求，不能删掉缺失项以通过检查。独立运行时表不要求从编号迁移创建。已验证历史结构使用独立、明确的兼容规则，保留原始核验基线；规则与范围见 docs/DATABASE_UPGRADE_COMPATIBILITY.md。
+`npm run db:apply --workspace=@changmen/backend` 默认也仅核验结构，不执行历史 SQL。命令读取实际配置并连接数据库，不是离线诊断；核验基线与维护实现位于 `rds/assets/`、`rds/maintenance/`。具体兼容规则见 [数据库升级与兼容](docs/DATABASE_UPGRADE_COMPATIBILITY.md)。
 
-**只有全新空库初始化**使用 `npm run db:initialize`（直接执行 `rds/maintenance/apply-rds-schema.mjs --initialize`）；已有业务表时拒绝执行。存量库若缺字段或索引，应单独准备并审核具体修复，不把全部历史 SQL 当成补齐方法。日常发布不会调用初始化命令。
+仅全新空库初始化使用 `npm run db:initialize --workspace=@changmen/backend`（`rds/maintenance/apply-rds-schema.mjs --initialize`）；已有业务表时拒绝执行。存量库缺字段或索引时，应单独准备、审核并执行所需变更，不把全部历史 SQL 当作补齐方法。
 
 POD 足球自动跟单上线前必须确认 `042_pod_bet_executions.sql` 已执行；前端自动下注依赖该表做跨标签页、跨设备幂等。完整发布顺序见 [docs/POD_AUTO_FOLLOW.md](./docs/POD_AUTO_FOLLOW.md)。
 
-过期 `client_matches` 由 `server/match/matcher` 每小时 archive（`rds/archive_stale.js`，1 小时 `built_at` 阈值）。平台数据由 SaveMatch 快照生命周期负责，不再定时扫表。手动兜底：`npm run db:archive-stale`（`scripts/ops/migrations/archive-stale-client-matches.mjs`）。
+过期 `client_matches` 由 `server/match/matcher` 每小时 archive（`rds/archive_stale.js`，1 小时 `built_at` 阈值）。平台数据由 SaveMatch 快照生命周期负责，不再定时扫表。手动兜底：从根目录运行 `npm run db:archive-stale --workspace=@changmen/backend`（backend `scripts/ops/migrations/archive-stale-client-matches.mjs`）。
 
-### 3.3 构建并托管前端
+### 3.3 前端构建与托管
+
+本机验证构建：
 
 ```bash
-cd changmen
 npm run app:build
 ```
+
+生产静态资源由 Actions 发布已验收归档，不手工上传本机 dist。
 
 产物在 `client/web/dist/`。推荐由 Caddy 托管静态（见 §2.1）；若未分流，后端启动时也会托管 `/`（见 `server/backend/server.js`）。
 
@@ -186,11 +186,7 @@ npm run app:build
 
 **生产默认（电竞主栈 + 足球 PM discovery）**：`changmen-esport`（内嵌 matcher）+ `changmen-pm-market-hub` + `changmen-pm-sport-market-hub` + `changmen-predictfun-market-hub` + `changmen-pm-sports` + `changmen-polymarket-collector` + `changmen-predictfun-collector` + `changmen-pm-football-collector`。（`changmen-sxbet-*` 已暂停，不进默认 `--only`。）
 
-```bash
-cd changmen
-# 推荐主栈（含 PM/PF 电竞 discovery、PM 足球 discovery 与独立 WS hubs）
-pm2 start deploy/ecosystem.config.cjs --only changmen-esport,changmen-pm-market-hub,changmen-pm-sport-market-hub,changmen-predictfun-market-hub,changmen-pm-sports,changmen-polymarket-collector,changmen-predictfun-collector,changmen-pm-football-collector
-```
+进程入口、cwd 和环境参数由 `deploy/ecosystem.config.cjs` 管理，Actions 在已验收的后端版本目录中激活它们。不要在原工作目录直接执行 `pm2 start` 或 `git pull` 代替受管发布。
 
 `ecosystem.config.cjs` 注册上述进程；matchMerge 随 `changmen-esport` 内嵌启动（`MATCHER_INTERVAL_MS`，默认 30s）。唯一合场写路径：`matchMergeOnce` → `@changmen/matcher`。**勿**另起独立 match-composer WRITE 进程（防双写 `client_matches`）；回滚走 git revert / 版本回退。
 
@@ -202,13 +198,13 @@ pm2 start deploy/ecosystem.config.cjs --only changmen-esport,changmen-pm-market-
 
 `changmen-predictfun-collector` 直连 `api.predict.fun`（`PREDICT_FUN_API_KEY`），写电竞 `platform_matches` / `platform_bets` 与 `predictfun_market_index.json`，默认随电竞主栈启动。浏览器 Predict.fun 采集器**仅**经 `ws-forward` hub 订阅 orderbook → `fo`。足球 `Client_GetFootballMatchs` 不调用 PF REST。
 
-**SXBet 已暂停**：`changmen-sxbet-collector` / `changmen-sxbet-market-hub` 仍在 ecosystem 中，但 deploy 会 `pm2 delete`，默认不启动。恢复时改回 manifest `collect: true` 并手动 `pm2 start … --only changmen-sxbet-collector,changmen-sxbet-market-hub`。
+**SXBet 已暂停**：`changmen-sxbet-collector` / `changmen-sxbet-market-hub` 仍在 ecosystem 中，但 deploy 会 `pm2 delete`，默认不启动。恢复时须同时核对 manifest 采集开关、部署脚本暂停列表与进程配置，独立评审后通过 Actions 验收恢复，不能只手动拉起进程。
 
-生产建议用 systemd / pm2 / Docker Compose 托管，并配置重启策略。
+当前生产使用受管 PM2 进程及 systemd 运行时服务；运行时切换按 Actions **Upgrade Node runtime** 流程执行。
 
-### 3.4 venue-adapter（Node 库 / CLI）
+### 3.5 Node 平台设施与可选瘦包
 
-Node 探针在 **`@changmen/platform-probes`**（`devtools/platform-probes/`，瘦包同步为 `server/backend/platform_node`），与 `platform_adapter` 并列。**日常开发可不使用。**
+Node 探针在 **`@changmen/platform-probes`**（`server/platform-probes/`，瘦包同步为 `server/backend/platform_node`），与 `platform_adapter` 并列。**日常开发可不使用。**
 
 **标准部署**：GitHub Actions **Validate and release** 统一验收并运输制品，按组件切换独立版本目录。后端在候选目录安装/编译后激活现有进程；原地 `git pull` 不再用于受管生产发布。详见 [独立部署](./docs/INDEPENDENT_DEPLOYMENT.md)。
 
@@ -225,13 +221,13 @@ npm run sync:platform-adapter --workspace=@changmen/backend
 
 冒烟：`npm run test:adapter --workspace=@changmen/backend`（模拟瘦包布局）。
 
-### 3.5 健康检查
+### 3.6 健康检查
 
 | 检查 | 期望 |
 |------|------|
 | `GET /api/games` | 200 + JSON |
 | `GET /api/proxy/status` | `{ enabled: false, wsRelay: false }`（WS 不经本机） |
-| `POST /esport/Client_GetMatchs`（带 JWT） | 200 或业务码 |
+| `POST /esport/Client_GetMatchs`（Cookie 会话，按接口要求携带 CSRF） | HTTP 200，且业务结果成功 |
 
 ---
 
@@ -239,7 +235,7 @@ npm run sync:platform-adapter --workspace=@changmen/backend
 
 ### 4.1 访问方式
 
-- **浏览器**：打开 `https://your-domain.com/`，登录 JWT 用户（`users` 表）
+- **浏览器**：打开 `https://your-domain.com/`，经 `/auth/login` 登录，使用 HttpOnly Cookie 会话
 - **Chrome 插件**：操作员在 Chrome/Edge 安装 `chrome-extension`（见 4.2）。PB / Stake 采集与 v4 代发**依赖插件**。
 
 ### 4.2 Chrome 插件
@@ -274,7 +270,7 @@ npm run build
 
 ## 5. 安全（生产必读）
 
-详见仓库根目录 [SECURITY_NOTES.md](../SECURITY_NOTES.md)。
+鉴权配置见上文 §3.1；API 与数据访问边界见 [团队边界](docs/TEAM_BOUNDARIES.md)。
 
 | 优先级 | 项 |
 |--------|-----|
@@ -311,7 +307,7 @@ Actions → **Validate and release** → Run workflow → 选择 `frontend` / `b
 | 共享依赖/API 联动，或手动 full | 后端成功后再发布前端 | 是 |
 | 仅 RDS 维护文件 | 不触发应用发布；另行评审维护 | 否 |
 
-前端独立发布不要求后端在线。第五轮候选后端发布做有边界的只读结构核验，不执行历史迁移、账号回填或数据清理。两端分别保留必要的版本/健康检查和应用回滚；数据库不随应用回滚。FOK 保护与 A8 前端语义不变。
+前端独立发布不要求后端在线。后端发布激活前执行只读结构核验，不执行历史迁移、账号回填或数据清理。两端分别保留必要的版本/健康检查和应用回滚；数据库不随应用回滚。FOK 保护与 A8 前端语义不变。
 
 本机不直接执行生产部署。版本目录、检查及回滚边界见 [INDEPENDENT_DEPLOYMENT.md](docs/INDEPENDENT_DEPLOYMENT.md)。
 
@@ -321,23 +317,15 @@ Actions → **Validate and release** → Run workflow → 选择 `frontend` / `b
 |----|----------------|--------------|------|
 | API 地址 | Vite → `VITE_API_PROXY`（VPS） | Vite → 本机 backend | 同源 `/esport` |
 | 启动 | `./sh/dev-esport.sh remote` | `./sh/dev-esport.sh` / `npm run dev` | `npm run web`（内嵌 matchMerge） |
-| 认证 | 生产账号 + mTLS 客户端证（代理带证） | 可 `A8_AUTH=0` + TJ01 | JWT + mTLS |
+| 认证 | Cookie 会话 + mTLS 客户端证（代理带证） | 默认 Cookie 会话；开发免登仅用于隔离环境 | Cookie 会话 + mTLS |
 | 采集 | 本机浏览器 + 插件 → VPS | 本机浏览器 + 插件 → 本机 | 各操作员客户端上报同一 RDS |
 | Node Feed | **不存在** | **不存在** | **不存在** |
 
 ---
 
-## 7. M1 完成标准
+## 7. 历史阶段记录
 
-- [x] 服务端已删除 FeedHub / `ESPORT_BRIDGE` 代码路径
-- [x] 文档统一「客户端采集 + 服务端聚合」表述
-- [x] 本文档定义生产拓扑与环境变量
-- [ ] 选定生产域名并完成首次 RDS schema + 双进程部署
-- [ ] 至少一台客户端连远程 API 登录成功
-
-M1 签字后进入 **M2**（OB/RAY/IM 采集 E2E），见 [client/web/docs/A8_WALKTHROUGH_CHECKLIST.md](./client/web/docs/A8_WALKTHROUGH_CHECKLIST.md)。
-
----
+早期 M1/M2 清单属于项目启动阶段，不代表当前待办或发布验收。当前组件范围、检查、激活和回滚统一见 [独立部署](docs/INDEPENDENT_DEPLOYMENT.md)；平台实机走查另见 [A8 走查清单](client/web/docs/A8_WALKTHROUGH_CHECKLIST.md)。
 
 ## 8. 相关文档
 
@@ -346,6 +334,6 @@ M1 签字后进入 **M2**（OB/RAY/IM 采集 E2E），见 [client/web/docs/A8_WA
 | [readme.md](./readme.md) | 项目共识、目录 |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | monorepo 布局、迁移阶段、adapter 解析 |
 | [docs/TEAM_BOUNDARIES.md](./docs/TEAM_BOUNDARIES.md) | 两团队目录归属、独立发版 |
-| [CLAUDE.md](./CLAUDE.md) | 开发命令、RDS 表 |
+| [LOCAL_DEV.md](./LOCAL_DEV.md) | 本机开发与环境配置；执行规则另见本机 `AGENTS.md` |
 | [server/backend/README.md](./server/backend/README.md) | API、HTTP 代理环境变量 |
 | [scripts/README.md](./scripts/README.md) | `.bat` 脚本说明 |

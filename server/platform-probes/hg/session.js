@@ -2,7 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { ESPORT_DATA_DIR } = require("../backend/_paths.cjs");
+const { ESPORT_DATA_DIR } = require("@changmen/storage/paths");
 
 const PLATFORMS_FILE = path.join(ESPORT_DATA_DIR, "platforms.json");
 

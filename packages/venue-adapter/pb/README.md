@@ -9,7 +9,7 @@
 
 生产代码在平台根目录，不在 `frontend/`。
 
-**会话类型 / token 判定 / 与 A8 `k0` 差异**：见 [`client/web/docs/platforms/PB.md`](../../web/docs/platforms/PB.md)「会话类型（从 token 判定）」。
+**会话类型 / token 判定 / 与 A8 `k0` 差异**：见 [`client/web/docs/platforms/PB.md`](../../../client/web/docs/platforms/PB.md)「会话类型（从 token 判定）」。
 
 **采集调度：** 默认 **A8**（仅 live 5s 写 `fo`）。用户中心「赛事采集」→「PB changmen 扩展」开启后：live+prematch 双循环、赛前也写 fo；影子旁显见 `wsShadowOdds` / `PB_WS.md`。
 

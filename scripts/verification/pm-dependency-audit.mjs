@@ -34,7 +34,7 @@ export function pmNodeBrowserLoaderTarget(site) {
   if (symbol === "adapterRequire") target = path.posix.normalize(`packages/venue-adapter/${args.join("/")}`);
   if (symbol === "requirePlatform" && args[0].toLowerCase() === "polymarket") {
     target = ["node", "backend"].includes(args[1])
-      ? path.posix.normalize(`server/platform-probes/polymarket/${args.slice(2).join("/")}`)
+      ? path.posix.normalize(`server/venues/registry/runtime/polymarket/${args.slice(2).join("/")}`)
       : path.posix.normalize(`packages/venue-adapter/polymarket/${args.slice(1).join("/")}`);
   }
   return target && (inside(target, "packages/venue-adapter/polymarket") && !inside(target, "packages/venue-adapter/polymarket/shared")

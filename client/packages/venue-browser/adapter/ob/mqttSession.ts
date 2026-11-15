@@ -31,7 +31,7 @@ function decodeBase64Json(value: string): Record<string, unknown> {
   return JSON.parse(atob(decoded)) as Record<string, unknown>;
 }
 
-/** 对齐 `@changmen/platform-probes/ob/core.js` parseObEntryUrl */
+/** 对齐 `@changmen/venue-node/runtime/ob/core.js` 的 parseObEntryUrl（协议参考） */
 function parseObEntryUrl(rawUrl: string): ObEntry {
   const url = new URL(rawUrl);
   const addrRaw = url.searchParams.get("addr") || "";

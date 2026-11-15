@@ -1,11 +1,11 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 
 /**
  * 扫描 OB game/view 盘口 status / visible / suspended 组合分布。
  */
 
-import * as Core from "../core.js";
-import { login, obGet, fetchGameView } from "../session.js";
+import * as Core from "@changmen/venue-node/runtime/ob/core.js";
+import { login, obGet, fetchGameView } from "@changmen/venue-node/runtime/ob/session.js";
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));

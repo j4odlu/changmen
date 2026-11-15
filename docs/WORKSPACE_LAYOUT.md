@@ -2,6 +2,8 @@
 
 当前保持单仓，前端、后端和 RDS 数据层在根目录上区分归属。目录是职责边界；只有需要独立依赖、构建、测试或运行的模块才声明 npm workspace。
 
+npm workspace 是仓库内的包管理单元，统一从根目录安装依赖，模块通过 `@changmen/*` 包名引用。安装生成的本地包链接指向实际源码；嵌套 `node_modules` 也可能承载不同版本的依赖。Git worktree 是额外检出的代码工作目录，与 npm workspace 是不同概念。本机安装、链接检查与历史产物清理见 [LOCAL_DEV.md](../LOCAL_DEV.md)。workspace 清单以根 `package.json` 为准。
+
 | 位置 | 职责 | workspace 数量 |
 | --- | --- | ---: |
 | `client/` 与 `chrome-extension/` | 网页、扩展、浏览器平台与客户端内部库 | 6 |
@@ -16,7 +18,7 @@
 `server/venues/` 是一个 `@changmen/venue-node` workspace：
 
 - `loader/`：平台模块加载和宿主能力。
-- `registry/`：平台清单、路径和默认 `runtime/` 资源。
+- `registry/`：平台清单、路径和默认 `runtime/` 资源；后端必需的会话、鉴权与采集配置模块归此处，探针通过公开入口复用。
 - `sync-backend-bundle.mjs`：生成已有后端瘦包布局的工具。
 
 Node loader、registry 和打包工具不再各自占一个 workspace。调用方使用包公开入口；打包产物仍保持原 `loader/`、`registry/` 等结构。

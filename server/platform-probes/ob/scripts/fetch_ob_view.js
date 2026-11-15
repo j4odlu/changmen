@@ -1,9 +1,9 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * Fetch OB market snapshot from /game/view.
  */
 
-import { login, fetchGameView } from "../session.js";
+import { login, fetchGameView } from "@changmen/venue-node/runtime/ob/session.js";
 
 const DEFAULT_TOKEN = process.env.OB_TOKEN || "";
 

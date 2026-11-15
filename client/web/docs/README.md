@@ -13,7 +13,7 @@
 | **changmen 扩展** | matcher、WS relay、`http-relay`、Electron 壳等——**不在** A8 bundle 中 |
 | **CollectConfig** | A8：`collect: new Map()`，全关，仅 `Client_GetData("CollectConfig")` 回填；changmen 已对齐（空库 seed `collect: []`，前端无 fallback） |
 
-**架构**：客户端采集 + 服务端聚合。开发用 `BAT\dev.bat parity` / `BAT\dev.bat`；生产见 [../../../../../PRODUCTION_DEPLOYMENT.md](../../../../../PRODUCTION_DEPLOYMENT.md)。
+**架构**：客户端采集 + 服务端聚合。开发用 `BAT\dev.bat parity` / `BAT\dev.bat`；生产见 [../../../../../PRODUCTION_DEPLOYMENT.md](../../../PRODUCTION_DEPLOYMENT.md)。
 
 **已删除（2026-06）**：Node FeedHub、`ESPORT_BRIDGE`、服务端直连平台 Feed。勿在文档中再写「模式 D / 双轨」。
 

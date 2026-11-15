@@ -12,10 +12,6 @@ import {
 import * as accountStore from "./account_store.js";
 import { preserveStoredAccountToken } from "./account_token_preserve.js";
 import {
-  enrichAccountFromPlatformDefaults,
-  getAccountBalance,
-} from "./balance_provider.js";
-import {
   isObSportBetToken,
   mergeSportObPatch,
   preserveSportObOnAccountSave,
@@ -520,37 +516,6 @@ function handleGetData(key, userId) {
   return { ok: true, info: parsed, direct: parsed };
 }
 
-async function refreshAccountBalance(accountRow, userId) {
-  const enriched = enrichAccountFromPlatformDefaults(accountRow);
-  // PredictFun：余额只认 RDS（Pf_* / 管理端授信），禁止批量刷新用场馆探测回写
-  if (String(enriched.provider ?? "").trim() === "PredictFun")
-    return { account: enriched, balance: null };
-  if (!enriched.gateway || !enriched.token) {
-    return { account: enriched, balance: null };
-  }
-  try {
-    const bal = await getAccountBalance(enriched);
-    if (!bal)
-      return { account: enriched, balance: null };
-    if (enriched.accountId) {
-      await accountStore.updatePlayerBalance(enriched.accountId, bal.balance, userId);
-    }
-    return { account: enriched, balance: bal };
-  }
-  catch {
-    return { account: enriched, balance: null };
-  }
-}
-
-async function refreshAllAccountBalances(userId) {
-  const accounts = userId ? store.getAccountsForUser(userId) : accountStore.getAccountsFromKv();
-  const results = [];
-  for (const row of accounts) {
-    results.push(await refreshAccountBalance(row, userId));
-  }
-  return results;
-}
-
 async function handleGetUserProfit() {
   const rows = await orderStore.listUserProfitRank();
   return { ok: true, info: rows };
@@ -606,43 +571,6 @@ async function handleRebindOrderLink(body, userId) {
   };
 }
 
-async function syncAccountRowInKv(accountId, updates, userId) {
-  if (userId) return store.updateAccountForUser(userId, accountId, updates, { preserveBalance: true });
-  const list = (userId ? store.getAccountsForUser(userId) : accountStore.getAccountsFromKv()).map(row => ({ ...row }));
-  const idx = list.findIndex(row => String(row.accountId) === String(accountId));
-  if (idx < 0)
-    return null;
-  list[idx] = { ...list[idx], ...updates, updateTime: Date.now() };
-  return list[idx];
-}
-
-async function handleRefreshAccountBalance(body, userId) {
-  const playerId = body.playerId;
-  if (!playerId)
-    return { ok: false, msg: "playerId 必填" };
-  const owned = await assertPlayerOwnedByUser(playerId, userId);
-  if (!owned.ok)
-    return owned;
-  const accounts = userId ? store.getAccountsForUser(userId) : accountStore.getAccountsFromKv();
-  const row = enrichAccountRowFromPlayer(
-    accounts.find(r => String(r.accountId) === String(playerId)),
-  );
-  if (!row)
-    return { ok: false, msg: "account 不存在" };
-  const result = await refreshAccountBalance(row, userId);
-  if (result.balance != null) {
-    const balance = Number(result.balance.balance) || 0;
-    const credit = Number(row.credit) || 0;
-    const synced = await syncAccountRowInKv(playerId, {
-      balance,
-      currency: result.balance.currency || row.currency || "CNY",
-      totalProfit: balance - credit,
-    }, userId);
-    return synced ? { ok: true, info: synced } : { ok: false, msg: "account 不存在" };
-  }
-  return { ok: true, info: { ...row, balance: undefined } };
-}
-
 async function handleSaveUserLog(body, userId) {
   if (!userId)
     return { ok: false, msg: "请先登录" };
@@ -677,7 +605,6 @@ export {
   handleGetUserProfit,
   handleGetUsers,
   handleRebindOrderLink,
-  handleRefreshAccountBalance,
   handleSaveAccounts,
   handleSaveData,
   handleSaveMoneyLog,
@@ -688,7 +615,4 @@ export {
   handleUpdateBalance,
   isPredictFunClientSaveOrderRequest,
   isPredictFunPlayerRow,
-  refreshAccountBalance,
-  refreshAllAccountBalances,
-  syncAccountRowInKv,
 };

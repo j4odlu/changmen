@@ -73,10 +73,8 @@ describe("adapter_paths", () => {
     }
   });
 
-  it("requirePlatform loads IA session module (ESM backend)", () => {
-    const { tryLoadSession, fetchGameList } = requirePlatform("IA", "node", "session.js");
-    expect(typeof tryLoadSession).toBe("function");
-    expect(typeof fetchGameList).toBe("function");
+  it("does not load the optional IA HTTP probe through the runtime loader", () => {
+    expect(() => requirePlatform("IA", "node", "session.js")).toThrow();
   });
 
   it("requirePlatform loads IA collect_credentials (ESM backend)", () => {
@@ -97,9 +95,7 @@ describe("adapter_paths", () => {
     expect(typeof parsePbTokenBalance).toBe("function");
   });
 
-  it("requirePlatform loads PB core module (ESM backend)", () => {
-    const { parseEuroOddsPayload, slugify } = requirePlatform("PB", "node", "core.js");
-    expect(typeof parseEuroOddsPayload).toBe("function");
-    expect(slugify("League of Legends")).toBe("league-of-legends");
+  it("does not load the optional PB parser through the runtime loader", () => {
+    expect(() => requirePlatform("PB", "node", "core.js")).toThrow();
   });
 });

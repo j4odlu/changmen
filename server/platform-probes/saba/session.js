@@ -121,6 +121,7 @@ function persistPlatform(session, wsConfig) {
 
 module.exports = {
   tryLoadSession,
+  fetchEsportsPage,
   resolveWsConfig,
   loginCheckin,
   persistPlatform,

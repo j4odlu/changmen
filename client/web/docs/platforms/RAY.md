@@ -43,7 +43,7 @@ matcher 的 `ray_match_risk.js` 统一判断：RAY 原生状态为赛前、开�
 
 | 用途 | changmen | A8 原版 |
 |------|----------|---------|
-| **采集** | [`a8Collect.ts`](./a8Collect.ts) 内联 `t`（与 `devtools/platform-probes/ray/collect_credentials.js` 同步）；**不**调 `Client_GetCollectPlatform` | 插件 `bQe` 内写死 gateway + JWT + games |
+| **采集** | [`a8Collect.ts`](../../../packages/venue-browser/adapter/ray/a8Collect.ts) 内联 `t`（与 `devtools/platform-probes/ray/collect_credentials.js` 同步）；**不**调 `Client_GetCollectPlatform` | 插件 `bQe` 内写死 gateway + JWT + games |
 | **下注** | 剪贴板 → `ACCOUNT` → `rayProvider` | 同左 |
 
 `Client_GetCollectPlatform(RAY)` 仍返回同一 JWT（供探针/其它工具）；采集器与 A8 一样只读内联对象。

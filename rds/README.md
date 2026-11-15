@@ -35,7 +35,7 @@ PostgreSQL / RDS **数据层唯一入口**。业务代码只 `import` 本包，�
 | `maintenance/assets.mjs` | 维护代码统一按自身包位置读取资产，不回退 backend 路径 |
 | `assets/archive/` | 不参与有效迁移的历史 SQL；目前保留已退役的 `002_prune_pg_cron.sql` |
 
-[changmen 扩展] 队伍存取直接使用 `@changmen/match-identity`，不再引用 server/match 实现；身份领域包已直接声明。维护逻辑、SQL、结构基线与维护测试均归本包，backend 原有 44 份资产副本和 7 个维护入口已删除，初始化、只读核验及显式维护语义保持不变。批次记录见 [源码隔离记录](../../docs/SOURCE_FILE_ISOLATION_20261017.md)。
+[changmen 扩展] 队伍存取直接使用 `@changmen/match-identity`，不再引用 server/match 实现；身份领域包已直接声明。维护逻辑、SQL、结构基线与维护测试均归本包，backend 原有 44 份资产副本和 7 个维护入口已删除，初始化、只读核验及显式维护语义保持不变。批次记录见 [源码隔离记录](../docs/SOURCE_FILE_ISOLATION_20261017.md)。
 
 `check-rds-schema.mjs` 与 `apply-rds-schema.mjs` 位于本包 `maintenance/`，可直接执行；backend npm 命令直接执行此处文件。默认命令只读，只有显式 `--initialize` 可初始化空库，已有业务表仍拒绝初始化。导入这些模块不加载 `.env` 或打开连接。
 
@@ -47,7 +47,7 @@ PostgreSQL / RDS **数据层唯一入口**。业务代码只 `import` 本包，�
 node scripts/verification/rds-assets.mjs --check
 ```
 
-`--check` 核验完整主资产、历史 checksum 和旧资产缺席，不写文件、不连接数据库；原 `--sync` 生成功能已退役。`002_prune_pg_cron.sql` 原字节归档，不进入有效迁移清单。固定旧消费者继续由 Git 历史快照物化验证，完整 551 保护不变。
+`--check` 核验完整主资产、历史 checksum 和旧资产缺席，不写文件、不连接数据库；原 `--sync` 生成功能已退役。`002_prune_pg_cron.sql` 原字节归档，不进入有效迁移清单。固定旧消费者的 Git 历史快照与 551 项 FOK 清单保留，按显式历史取证命令执行；日常验证按改动范围选择。
 
 结构专项脚本统一位于 `maintenance/`：`apply-sport-matcher-033.mjs`、`verify-team-provider-ids.mjs`、`apply-client-certificate-schema.mjs`、`check-migration-tables.mjs`。两个 apply 命令只在显式维护时执行；表引用检查 `node rds/maintenance/check-migration-tables.mjs` 只读源码和 SQL，不连接数据库。旧 backend 路径已删除。
 

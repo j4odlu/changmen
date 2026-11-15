@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * OB 混合采集探针：HTTP 轮询（game/index + game/view + getTimer）+ MQTT 订阅。
  * 对齐 changmen 前端 / A8 UMe 语义（每局 unsub→view→sub，stage 间隔 1.5s，处理 3 个 /market/*）。
@@ -15,8 +15,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { backendRequire } from "../../backend/_paths.js";
-import * as Core from "../core.js";
-import { login, obGet, fetchGetTimer, DEFAULT_LOGIN_URL } from "../session.js";
+import * as Core from "@changmen/venue-node/runtime/ob/core.js";
+import { login, obGet, fetchGetTimer, DEFAULT_LOGIN_URL } from "@changmen/venue-node/runtime/ob/session.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const mqtt = backendRequire("mqtt");

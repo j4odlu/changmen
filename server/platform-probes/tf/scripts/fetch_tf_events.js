@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as Core from "../core.js";
-import { loadSession, fetchTodayEvents, fetchEventMarkets } from "../session.js";
+import { loadSession, fetchTodayEvents, fetchEventMarkets } from "@changmen/venue-node/runtime/tf/session.js";
 
 async function main() {
   const session = loadSession();

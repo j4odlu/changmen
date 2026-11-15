@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
+import { readPolymarketSellCash } from "../../../../polymarket/orders/confirmation/orderSellCash";
+vi.mock("../../../../polymarket/orders/confirmation/orderSellCash", () => ({ readPolymarketSellCash: vi.fn() }));
 
 vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/marketDelay", () => ({
   fetchPolymarketMarketSecondsDelay: vi.fn(async () => ({
@@ -78,13 +80,14 @@ const buy = {
 
 describe("awaitPolymarketManualSellFinalOutcome", () => {
   beforeEach(() => {
+    vi.mocked(readPolymarketSellCash).mockReset().mockResolvedValue({ sharesSold: 10, proceedsUsdc: 5.4, fillPrice: .55 });
     vi.mocked(awaitPolymarketSettlementJob).mockReset();
     vi.mocked(settlePolymarketDelayedOrder).mockReset();
     vi.mocked(resolvePolymarketSellFillWithRetry).mockReset();
     vi.mocked(fetchPolymarketOrderRow).mockReset();
   });
 
-  it("filled from post response without polling", async () => {
+  it("uses net cash after a full POST receipt, preserving the gross execution price", async () => {
     const out = await awaitPolymarketManualSellFinalOutcome({
       account: account(),
       buyRow: buy,
@@ -95,10 +98,23 @@ describe("awaitPolymarketManualSellFinalOutcome", () => {
     expect(out.outcome).toBe("filled");
     if (out.outcome === "filled") {
       expect(out.sharesSold).toBe(10);
-      expect(out.proceedsUsdc).toBe(5.5);
+      expect(out.proceedsUsdc).toBe(5.4);
+      expect(out.fillPrice).toBe(.55);
+      expect(out.ordersToSave[0]).toMatchObject({ pmSellProceeds: 5.4, pmRealizedPnlUsdc: .4 });
+      expect(out.ordersToSave[1]).toMatchObject({ pmFillPrice: .55, pmRealizedPnlUsdc: .4 });
       expect(out.ordersToSave.length).toBe(2);
     }
     expect(awaitPolymarketSettlementJob).not.toHaveBeenCalled();
+    expect(readPolymarketSellCash).toHaveBeenCalledWith(expect.anything(), "0xs", 10, "tok", "0xc");
+  });
+
+  it.each([null, new Error("activity unavailable")])("a full POST without net cash stays pending: %s", async cash => {
+    if (cash instanceof Error) vi.mocked(readPolymarketSellCash).mockRejectedValueOnce(cash);
+    else vi.mocked(readPolymarketSellCash).mockResolvedValueOnce(cash);
+    const out = await awaitPolymarketManualSellFinalOutcome({ account: account(), buyRow: buy, sellOrderId: "same-sell",
+      postResponse: { makingAmount: "10000000", takingAmount: "5500000" } });
+    expect(out).toMatchObject({ outcome: "pending", sellOrderId: "same-sell", reason: expect.stringContaining("净回款") });
+    expect(out).not.toHaveProperty("ordersToSave");
   });
 
   it("unfilled when settlement says unfilled", async () => {

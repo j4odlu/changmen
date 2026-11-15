@@ -123,3 +123,24 @@ it("fill snapshots keep POST micro units separate from normalized trade amounts"
   expect(parsePolymarketBuyOrderFill({ makingAmount: "40000000", takingAmount: "100000000" })).toEqual({ stakeUsdc: 40, shares: 100 });
   expect(polymarketTradeFillAmounts({ size: "1000000", price: "0.4" })).toEqual({ shares: 1000000, usdc: 400000 });
 });
+
+it.each([5.08, 0])("repeated CLOB sync keeps saved net sell cash %s and its realised profit", net => {
+  const { order } = snapshots("v1");
+  const profit = Math.round((net - 5) * 10000) / 10000;
+  const sell: VenueOrder = { ...order, orderId: "sale", pmSide: "sell", pmBuyOrderId: "original",
+    pmShares: 10, pmFillPrice: .52, odds: 1 / .52, pmStakeUsdc: 5, pmRealizedPnlUsdc: profit,
+    betMoney: Math.round(net * 6.65 * 100) / 100, money: 0 };
+  const gross: VenueOrder = { ...sell, betMoney: 5.2, pmRealizedPnlUsdc: .2 };
+  const result = updateStoredPolymarketOrderFromClob(freeze(sell), freeze(gross), "");
+  expect(result).toMatchObject({ betMoney: net, pmRealizedPnlUsdc: profit, pmFillPrice: .52, money: 0 });
+  expect(updateStoredPolymarketOrderFromClob(persist(result), gross, ""))
+    .toMatchObject({ betMoney: net, pmRealizedPnlUsdc: profit });
+});
+
+it.each([undefined, null, NaN, -1])("does not invent saved net cash when a legacy sale has invalid cost %s", cost => {
+  const { order } = snapshots("v1");
+  const sell: VenueOrder = { ...order, orderId: "sale", pmSide: "sell", pmBuyOrderId: "original",
+    pmShares: 10, pmFillPrice: .52, pmStakeUsdc: cost as number, pmRealizedPnlUsdc: .08, betMoney: 5.2 * 6.65 };
+  const refreshed: VenueOrder = { ...sell, pmStakeUsdc: 5, betMoney: 5.2 };
+  expect(updateStoredPolymarketOrderFromClob(freeze(sell), freeze(refreshed), "").betMoney).toBe(5.2);
+});

@@ -1,8 +1,34 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   matchPolymarketActivityBuyCost,
+  matchPolymarketActivityCashByTxHashes,
   parsePolymarketActivityBuyCost,
 } from "@changmen/venue-browser/polymarket/orders/history/pmActivity";
+
+describe("BUY and SELL share exact activity cash reconciliation", () => {
+  const tx = `0x${"a".repeat(64)}`, wallet = `0x${"1".repeat(40)}`;
+  const filters = { proxyWallet: wallet, conditionId: "condition", tokenId: "token" };
+  const row = { type: "TRADE", side: "SELL", proxyWallet: wallet, conditionId: "condition", asset: "token",
+    transactionHash: tx, size: 10, price: .6, usdcSize: 5.88 };
+  it.each(["BUY", "SELL"] as const)("uses %s actual cash and exposes the fee without applying it again", side => {
+    const data = { ...row, side, usdcSize: side === "BUY" ? 6.12 : 5.88 };
+    const result = matchPolymarketActivityCashByTxHashes([data, data], [tx], filters, side);
+    expect(result).toMatchObject({ shares: 10, matchPrice: .6, usdcSize: data.usdcSize, feeUsdc: .12 });
+  });
+  it("keeps full cash precision across transactions, using the buy matcher sum and deduplication", () => {
+    const tx2 = `0x${"b".repeat(64)}`;
+    const rows = [{ ...row, size: 4, usdcSize: 2.350459 }, { ...row, transactionHash: tx2, size: 6, usdcSize: 3.529549 }];
+    expect(matchPolymarketActivityCashByTxHashes(rows, [tx, tx2], filters, "SELL"))
+      .toMatchObject({ shares: 10, usdcSize: 5.880008, feeUsdc: .119992 });
+  });
+  it.each([undefined, null, NaN, -1, 6.1])("rejects missing or invalid SELL cash %s", usdcSize => {
+    expect(matchPolymarketActivityCashByTxHashes([{ ...row, usdcSize: usdcSize as number }], [tx], filters, "SELL")).toBeNull();
+  });
+  it("distinguishes verified zero proceeds from unknown cash", () => {
+    expect(matchPolymarketActivityCashByTxHashes([{ ...row, usdcSize: 0 }], [tx], filters, "SELL"))
+      .toMatchObject({ shares: 10, usdcSize: 0, feeUsdc: 6 });
+  });
+});
 
 describe("parsePolymarketActivityBuyCost", () => {
   it("parses sports buy: usdcSize = notional + fee", () => {

@@ -4,7 +4,7 @@ import type { PolymarketTradeRow } from "../history/orderTradeTypes";
 import { pmGetOrder, pmGetTradesById } from "../pmClientApi";
 import { polymarketOrderFillTradeIds, polymarketOrderFillTotals, type PolymarketFillOrderSnapshot } from "../facts/orderFillTotals";
 
-export async function readPolymarketOrderFillAmounts(account: PlatformAccount, orderId: string, side: "BUY" | "SELL", minimumShares = 0) {
+export async function readPolymarketOrderFillEvidence(account: PlatformAccount, orderId: string, side: "BUY" | "SELL", minimumShares = 0) {
   const id = String(orderId ?? "").trim();
   if (!id) return null;
   try {
@@ -29,10 +29,17 @@ export async function readPolymarketOrderFillAmounts(account: PlatformAccount, o
     if (!latestIds || latestIds.length !== ids.length || latestIds.some(value => !ids.includes(value))
       || latest.asset_id !== first.asset_id || latest.market !== first.market
       || Number(latest.size_matched) !== Number(first.size_matched)) return null;
-    return polymarketOrderFillTotals(latest, batches.flat(), id, side, minimumShares);
+    const trades = batches.flat();
+    const totals = polymarketOrderFillTotals(latest, trades, id, side, minimumShares);
+    return totals ? { ...totals, order: latest, trades } : null;
   }
   catch {
     // Unknown amounts remain unknown; the caller may retry the same original order.
     return null;
   }
+}
+
+export async function readPolymarketOrderFillAmounts(account: PlatformAccount, orderId: string, side: "BUY" | "SELL", minimumShares = 0) {
+  const evidence = await readPolymarketOrderFillEvidence(account, orderId, side, minimumShares);
+  return evidence ? { shares: evidence.shares, usdc: evidence.usdc } : null;
 }

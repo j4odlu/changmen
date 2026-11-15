@@ -6,7 +6,8 @@ import { recoverPmUnknownSubmission } from "@changmen/venue-browser/polymarket/s
 import { awaitPolymarketManualSellFinalOutcome } from "@changmen/venue-browser/polymarket/submission/pmManualSell";
 import { resolvePolymarketLegOutcome } from "@changmen/venue-browser/polymarket/orders/confirmation/legOutcome";
 
-const mocks = vi.hoisted(() => ({ order: vi.fn(), trade: vi.fn(), watch: vi.fn(), fetch: vi.fn(), job: vi.fn(), sellFill: vi.fn() }));
+const mocks = vi.hoisted(() => ({ order: vi.fn(), trade: vi.fn(), watch: vi.fn(), fetch: vi.fn(), job: vi.fn(), sellFill: vi.fn(), cash: vi.fn() }));
+vi.mock("../../../../polymarket/orders/confirmation/orderSellCash", () => ({ readPolymarketSellCash: mocks.cash }));
 vi.mock("@changmen/venue-browser/shared/webBridge", () => ({ useUserStore: () => ({ userId: 1 }) }));
 vi.mock("@changmen/venue-browser/polymarket/realtime/userWs", async (load) => ({
   ...await load<typeof import("@changmen/venue-browser/polymarket/realtime/userWs")>(), readPolymarketOrderWatch: mocks.watch,
@@ -54,6 +55,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", mocks.fetch);
   mocks.order.mockResolvedValue(null); mocks.trade.mockResolvedValue(null); mocks.watch.mockReturnValue(undefined);
   mocks.job.mockResolvedValue(undefined); mocks.sellFill.mockResolvedValue({ sharesSold: 0, proceedsUsdc: 0 });
+  mocks.cash.mockReset().mockResolvedValue({ sharesSold: 10, proceedsUsdc: 6, fillPrice: .6 });
 });
 
 async function legacy(size: string, side: "BUY" | "SELL" = "SELL") {
@@ -188,10 +190,11 @@ test("a recovered partial SELL uses verified total cash rather than its quoted p
   mocks.order.mockResolvedValue(row);
   mocks.job.mockResolvedValue({ outcome: "unfilled", row: { ...row, size_matched: "0" } });
   mocks.sellFill.mockResolvedValue({ sharesSold: 3, proceedsUsdc: 2.1 });
+  mocks.cash.mockResolvedValue({ sharesSold: 3, proceedsUsdc: 2.05, fillPrice: .7 });
   const outcome = await awaitPolymarketManualSellFinalOutcome({ account, sellOrderId: "ack", buyRow: buy, fallbackPrice: .6 });
-  expect(outcome).toMatchObject({ outcome: "filled", sharesSold: 3, proceedsUsdc: 2.1 });
+  expect(outcome).toMatchObject({ outcome: "filled", sharesSold: 3, proceedsUsdc: 2.05, fillPrice: .7 });
   if (outcome.outcome === "filled") expect(outcome.ordersToSave.find(order => order.orderId === "buy"))
-    .toMatchObject({ pmSellProceeds: 2.1, pmRealizedPnlUsdc: .6 });
+    .toMatchObject({ pmSellProceeds: 2.05, pmRealizedPnlUsdc: .55 });
 });
 
 test("a zero-fill terminal BUY can finish legacy recovery and release its journal entry", async () => {

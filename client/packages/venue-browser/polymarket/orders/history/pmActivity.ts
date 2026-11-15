@@ -26,19 +26,21 @@ export interface PolymarketActivityTradeRow {
   outcome?: string;
 }
 
-export interface PolymarketActivityBuyCost {
+export interface PolymarketActivityTradeCash {
   /** 撮合价（activity.price，不含费） */
   matchPrice: number;
   shares: number;
-  /** 钱包实扣 USDC（含费） */
+  /** BUY 为钱包实扣（含费），SELL 为钱包实收（扣费后） */
   usdcSize: number;
-  /** usdcSize − matchPrice×shares */
+  /** BUY 为实扣减名义金额；SELL 为名义金额减实收 */
   feeUsdc: number;
-  /** 含费均价 = usdcSize/shares（对齐官网 ¢ 徽章） */
+  /** 实扣/实收均价 = usdcSize/shares */
   allInAvgPrice: number;
   timestamp?: number;
   transactionHash?: string;
 }
+
+export type PolymarketActivityBuyCost = PolymarketActivityTradeCash;
 
 function roundCash(n: number): number {
   return Math.round(n * 1_000_000) / 1_000_000;
@@ -48,25 +50,34 @@ function roundCash(n: number): number {
 export function parsePolymarketActivityBuyCost(
   row: PolymarketActivityTradeRow | null | undefined,
 ): PolymarketActivityBuyCost | null {
+  return parsePolymarketActivityTradeCash(row, "BUY");
+}
+
+function parsePolymarketActivityTradeCash(
+  row: PolymarketActivityTradeRow | null | undefined,
+  side: "BUY" | "SELL",
+): PolymarketActivityTradeCash | null {
   if (!row || String(row.type ?? "").toUpperCase() !== "TRADE")
     return null;
-  if (String(row.side ?? "").toUpperCase() !== "BUY")
+  if (String(row.side ?? "").toUpperCase() !== side)
     return null;
   const matchPrice = Number(row.price);
   const shares = Number(row.size);
   const usdcSize = Number(row.usdcSize);
   if (!Number.isFinite(matchPrice) || !Number.isFinite(shares) || !Number.isFinite(usdcSize)
-    || !(matchPrice > 0 && matchPrice < 1) || !(shares > 0) || !(usdcSize > 0)) {
+    || !(matchPrice > 0 && matchPrice < 1) || !(shares > 0)
+    || row.usdcSize == null || (side === "BUY" ? !(usdcSize > 0) : usdcSize < 0)) {
     return null;
   }
   const notional = matchPrice * shares;
-  const feeUsdc = Math.max(0, roundCash(usdcSize - notional));
-  // 异常：usdc 小于名义（索引毛刺）则不可信
-  if (notional - usdcSize > 1e-6 + Number.EPSILON * Math.max(1, notional) * 8)
+  const fee = side === "BUY" ? usdcSize - notional : notional - usdcSize;
+  const feeUsdc = Math.max(0, roundCash(fee));
+  // BUY 实扣不得小于名义；SELL 实收不得大于名义（容许原币舍入误差）。
+  if (-fee > 1e-6 + Number.EPSILON * Math.max(1, notional) * 8)
     return null;
   const allInAvgPrice = usdcSize / shares;
   // Fees can put the all-in cost per share above $1; this is not a token price.
-  if (!Number.isFinite(allInAvgPrice) || !(allInAvgPrice > 0))
+  if (!Number.isFinite(allInAvgPrice) || (side === "BUY" ? !(allInAvgPrice > 0) : allInAvgPrice < 0))
     return null;
   return {
     matchPrice,
@@ -163,6 +174,16 @@ export function matchPolymarketActivityBuyCostByTxHashes(
   transactionHashes: string[] | null | undefined,
   filters?: MatchPolymarketActivityTxFilters,
 ): PolymarketActivityBuyCost | null {
+  return matchPolymarketActivityCashByTxHashes(rows, transactionHashes, filters, "BUY");
+}
+
+/** [changmen 扩展] 买卖共用同一套流水归属、去重和原币汇总规则。 */
+export function matchPolymarketActivityCashByTxHashes(
+  rows: PolymarketActivityTradeRow[] | null | undefined,
+  transactionHashes: string[] | null | undefined,
+  filters: MatchPolymarketActivityTxFilters | undefined,
+  side: "BUY" | "SELL",
+): PolymarketActivityTradeCash | null {
   if (!Array.isArray(rows) || !rows.length || !Array.isArray(transactionHashes))
     return null;
   const hashes = transactionHashes.map(h => String(h ?? "").trim().toLowerCase());
@@ -178,13 +199,13 @@ export function matchPolymarketActivityBuyCostByTxHashes(
   if (!cond && !asset)
     return null;
   const matchedTx = new Set<string>();
-  const hits: PolymarketActivityBuyCost[] = [];
+  const hits: PolymarketActivityTradeCash[] = [];
   const seenRow = new Set<string>();
   for (const row of rows) {
     const tx = String(row.transactionHash ?? "").trim().toLowerCase();
     if (!want.has(tx))
       continue;
-    if (String(row.type).toUpperCase() !== "TRADE" || String(row.side).toUpperCase() !== "BUY")
+    if (String(row.type).toUpperCase() !== "TRADE" || String(row.side).toUpperCase() !== side)
       continue;
     if (wallet && String(row.proxyWallet ?? "").trim().toLowerCase() !== wallet)
       continue;
@@ -194,7 +215,7 @@ export function matchPolymarketActivityBuyCostByTxHashes(
       continue;
     if (asset && asset !== rowAsset)
       continue;
-    const cost = parsePolymarketActivityBuyCost(row);
+    const cost = parsePolymarketActivityTradeCash(row, side);
     if (!cost)
       return null;
     matchedTx.add(tx);
@@ -225,11 +246,11 @@ export function matchPolymarketActivityBuyCostByTxHashes(
       timestamp = h.timestamp;
   }
   if (!Number.isFinite(shares) || !Number.isFinite(usdcSize) || !Number.isFinite(notional)
-    || !(shares > 0) || !(usdcSize > 0)) {
+    || !(shares > 0) || (side === "BUY" ? !(usdcSize > 0) : usdcSize < 0)) {
     return null;
   }
   const matchPrice = notional / shares;
-  const feeUsdc = Math.max(0, usdcSize - notional);
+  const feeUsdc = Math.max(0, side === "BUY" ? usdcSize - notional : notional - usdcSize);
   return {
     matchPrice,
     shares,

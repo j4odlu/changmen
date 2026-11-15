@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlatformAccount } from "@changmen/client-core/models/platformAccount";
+import { readPolymarketSellCash } from "../../../../polymarket/orders/confirmation/orderSellCash";
+vi.mock("../../../../polymarket/orders/confirmation/orderSellCash", () => ({ readPolymarketSellCash: vi.fn() }));
 
 vi.mock("@changmen/venue-browser/polymarket/orders/confirmation/marketDelay", () => ({
   fetchPolymarketMarketSecondsDelay: vi.fn(),
@@ -49,6 +51,9 @@ function account(): PlatformAccount {
 
 describe("confirmPolymarketManualSellDelayedFill", () => {
   beforeEach(() => {
+    vi.mocked(readPolymarketSellCash).mockReset().mockImplementation(async (_account, _id, shares) => ({
+      sharesSold: shares, proceedsUsdc: shares * .54, fillPrice: .55,
+    }));
     vi.mocked(fetchPolymarketMarketSecondsDelay).mockReset();
     vi.mocked(registerPolymarketOrderWatch).mockReset();
     vi.mocked(startPolymarketSettlementJob).mockReset();
@@ -79,7 +84,7 @@ describe("confirmPolymarketManualSellDelayedFill", () => {
       postResponse: { status: "delayed" } as never,
     });
 
-    expect(out).toEqual({ sharesSold: 10, proceedsUsdc: 5.5 });
+    expect(out).toEqual({ sharesSold: 10, proceedsUsdc: 5.4 });
     expect(fetchPolymarketMarketSecondsDelay).toHaveBeenCalledWith("0xcond");
     expect(registerPolymarketOrderWatch).toHaveBeenCalledWith(
       expect.anything(),

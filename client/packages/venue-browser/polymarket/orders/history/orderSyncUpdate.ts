@@ -59,7 +59,14 @@ export function updateStoredPolymarketOrderFromClob(stored: VenueOrder, clob: Ve
     base.bet = betLabel;
   const isSell = base.pmSide === "sell" || clob.pmSide === "sell";
   if (isSell) {
-    const betUsdc = clob.betMoney > 0 ? clob.betMoney : base.betMoney;
+    // 已绑定卖单的回款由已保存的原币成本与盈亏确定，不能被 CLOB 毛成交额覆盖。
+    // 使用原币事实也避免从两位 CNY 镜像反算时损失净回款精度。
+    const savedProceeds = base.pmBuyOrderId && stored.pmRealizedPnlUsdc != null && stored.pmStakeUsdc != null
+      && Number.isFinite(Number(stored.pmRealizedPnlUsdc)) && Number.isFinite(Number(stored.pmStakeUsdc))
+      && Number(stored.pmStakeUsdc) >= 0
+      ? round4(Number(stored.pmRealizedPnlUsdc) + Number(stored.pmStakeUsdc)) : NaN;
+    const betUsdc = Number.isFinite(savedProceeds) && savedProceeds >= 0
+      ? savedProceeds : (clob.betMoney > 0 ? clob.betMoney : base.betMoney);
     const costUsdc = base.pmStakeUsdc ?? 0;
     const profitUsdc = costUsdc > 0 && betUsdc > 0
       ? round4(betUsdc - costUsdc)

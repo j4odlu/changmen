@@ -12,6 +12,9 @@ import { clearPmSubmitJournalForTests } from "@changmen/venue-browser/polymarket
 import { clearPmTickStateForTests } from "@changmen/venue-browser/polymarket/pmTickState";
 import { resetPmFokDepthBufferPrefsForTests } from "@changmen/venue-browser/polymarket/pmFokDepthBufferMode";
 import samples from "../fixtures/protocolMarkets.json";
+vi.mock("../../../../polymarket/orders/confirmation/orderSellCash", () => ({
+  readPolymarketSellCash: async () => ({ sharesSold: 10, proceedsUsdc: 4.95, fillPrice: .5 }),
+}));
 
 const io = vi.hoisted(() => ({ book: vi.fn(), get: vi.fn(), submit: vi.fn() }));
 vi.mock("@changmen/venue-browser/polymarket/orders/pmClientApi", () => ({ pmGetBook: io.book, pmSubmitOrder: io.submit,
@@ -69,7 +72,7 @@ test.each(flows)("$sample.version $route $flow keeps the selected asset through 
       provider: "Polymarket", orderId: "held-buy", odds: 2, createAt: 1, betMoney: 5, reward: 0, money: 0, status: "none", game: "", match: "", bet: "", item: "",
       pmTokenId: option.itemId, pmConditionId: option.betId, pmShares: 10, pmStakeUsdc: 5, pmSide: "buy", pmSellState: "open",
     } });
-    expect(result).toMatchObject({ ok: true, sharesSold: 10, proceedsUsdc: 5 });
+    expect(result).toMatchObject({ ok: true, sharesSold: 10, proceedsUsdc: 4.95, fillPrice: .5 });
     expect(io.get.mock.calls.some(([url]) => new URL(String(url)).pathname.startsWith("/balance-allowance"))).toBe(false);
   } else {
     setPmFokPreflightMode(flow);

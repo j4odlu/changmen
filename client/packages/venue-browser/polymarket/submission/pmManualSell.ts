@@ -42,6 +42,7 @@ import {
 import { settlePolymarketDelayedOrder } from "../fok/orderSettlement";
 import { parsePolymarketSellOrderFill, polymarketShareCount } from "../orders/history/orderTradeAmounts";
 import { POLYMARKET_SELL_FILL_RETRY_OPTS, resolvePolymarketSellFillWithRetry } from "../orders/confirmation/fillResolution";
+import { readPolymarketSellCash } from "../orders/confirmation/orderSellCash";
 import {
   fetchPolymarketOrderRow,
   interpretPolymarketOrderRow,
@@ -355,16 +356,20 @@ function normalizeManualSellBuy(buyRow: OrderRowLike | VenueOrder): VenueOrder {
     : venueOrderFromOrderRow(buyRow);
 }
 
-function buildFilledOutcome(params: {
+async function buildFilledOutcome(params: {
   account: PlatformAccount;
   buy: VenueOrder;
   sellOrderId: string;
   sharesSold: number;
-  proceedsUsdc: number;
   fallbackPrice: number;
   sharesWanted: number;
-}): Extract<PolymarketManualSellFinalOutcome, { outcome: "filled" }> {
-  const fillPriceRaw = params.proceedsUsdc / params.sharesSold;
+}): Promise<PolymarketManualSellFinalOutcome> {
+  // POST 与 trades 的名义金额不作为净回款，索引滞后时继续核对同一卖单。
+  const cash = await readPolymarketSellCash(params.account, params.sellOrderId, params.sharesSold,
+    params.buy.pmTokenId, params.buy.pmConditionId).catch(() => null);
+  if (!cash) return { outcome: "pending", sellOrderId: params.sellOrderId, reason: "卖单已成交，扣费后净回款仍待场馆确认" };
+  const { sharesSold, proceedsUsdc } = cash;
+  const fillPriceRaw = cash.fillPrice;
   const fillPrice = fillPriceRaw > 0 && fillPriceRaw < 1
     ? round4(fillPriceRaw)
     : (params.fallbackPrice > 0 && params.fallbackPrice < 1 ? round4(params.fallbackPrice) : round4(fillPriceRaw));
@@ -372,19 +377,19 @@ function buildFilledOutcome(params: {
   const ordersToSave = buildSellAndBuyPatchOrders({
     buy: { ...params.buy, provider: PLATFORMS.Polymarket },
     sellOrderId: params.sellOrderId,
-    sharesSold: params.sharesSold,
-    proceedsUsdc: params.proceedsUsdc,
+    sharesSold,
+    proceedsUsdc,
     fillPrice,
     createAt: Date.now(),
   });
   return {
     outcome: "filled",
     sellOrderId: params.sellOrderId,
-    sharesSold: params.sharesSold,
-    proceedsUsdc: params.proceedsUsdc,
+    sharesSold,
+    proceedsUsdc,
     fillPrice,
     ordersToSave,
-    partialFill: params.sharesSold + 0.05 < params.sharesWanted,
+    partialFill: sharesSold + 0.05 < params.sharesWanted,
   };
 }
 
@@ -433,7 +438,6 @@ export async function awaitPolymarketManualSellFinalOutcome(params: {
       buy,
       sellOrderId,
       sharesSold: fromPost.sharesSold,
-      proceedsUsdc: fromPost.proceedsUsdc,
       fallbackPrice,
       sharesWanted,
     });
@@ -509,7 +513,6 @@ export async function awaitPolymarketManualSellFinalOutcome(params: {
       buy,
       sellOrderId,
       sharesSold: resolved.sharesSold,
-      proceedsUsdc: resolved.proceedsUsdc,
       fallbackPrice,
       sharesWanted,
     });
